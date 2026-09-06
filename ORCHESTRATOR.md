@@ -1,6 +1,6 @@
 # Scrapkeep swarm operating manual
 
-Revision 3. Operational Sprint 0 is authorized by [the implementation request](docs/project/sprint-0/AUTHORIZATION.md). The previous prepare stage is complete. The foundation sprint remains proposed and unstarted.
+Revision 3. Operational Sprint 0 is authorized by [the implementation request](docs/project/sprint-0/AUTHORIZATION.md). The previous prepare stage is complete. Foundation execution authorization is recorded only in TRACKING.md.
 
 ## Read first and preserve authority
 
