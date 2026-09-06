@@ -1,6 +1,6 @@
 # Scrapkeep execution backlog
 
-Edition 2 · Updated 6 September 2026 · Existing cards remain revision 1; PUB-01 revision 2 includes the completed repository-local workflow package
+Edition 3 · Updated 6 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package
 
 Use **an in-repo board in [TRACKING.md](TRACKING.md)** to keep assignments, evidence and integration history beside the work. This board was selected while the checkout was local-only and remains the sole execution board after private GitHub publication.
 
@@ -15,16 +15,15 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 - [Proposed first sprint](#proposed-first-sprint)
 - [Task catalogue](#task-catalogue) and individual cards
 - [Open questions](#open-questions)
-- [Source dispositions](#source-dispositions)
-- [Source inventory](#source-inventory)
+- [Source dispositions and inventory](docs/project/SOURCE-DISPOSITIONS.md)
 
 ## Task contract
 
-The original cards retain revision 1 from preparation handoff. PUB-01 is a separate revision-2 publication card. S means one bounded deliverable; M means coupled changes with one acceptance boundary. L is a nonassignable parent and must be split before admission. There are no assignable L cards here. Card revisions are immutable when pinned to an attempt; retain old revisions in the admitted source snapshot and record changes in TRACKING.
+Cards retain revision 1 from preparation handoff unless a recorded definition change raised them. After the accepted 6 September audit, HF-01, HF-02, HF-05, HF-08, HF-09 and HF-10 are revision 2, and HF-03a/b, HF-04a/b, HF-06a/b and HF-07a/b are the revision-1 replacements of four split cards. PUB-01 is a separate revision-2 publication card. S means one bounded deliverable; M means coupled changes with one acceptance boundary. L is a nonassignable parent and must be split before admission. There are no assignable L cards here. Card revisions are immutable when pinned to an attempt; retain old revisions in the admitted source snapshot and record changes in TRACKING.
 
-All workers read BIBLE.md, accepted ADRs, this card, ORCHESTRATOR.md, TRACKING.md and CONTRIBUTING.md. Sources below give the exact additional sections and prerequisites. The coordinator supplies these files and accepted dependency evidence in a self-contained packet; no worker must recover conversation history. A dependency output is a future input until its producer is done. A listed output path is permitted scope, not an existing file or a live lease.
+All workers read the Bible sections and accepted ADR sections their card names, this card, ORCHESTRATOR.md, TRACKING.md and CONTRIBUTING.md. Sources below give the exact additional sections and prerequisites. The coordinator supplies these files and accepted dependency evidence in a self-contained packet; no worker must recover conversation history. A dependency output is a future input until its producer is done. A listed output path is permitted scope, not an existing file or a live lease. Every `docs/tech/sections/` output uses the headings Sources, Contract, Scenarios, Unresolved questions, Re-verification triggers, Procedure performed and Evidence limits. The coordinator checks those headings and every local `#anchor` on admission with `npm run check:docs`; `npm run check:project` validates file links only.
 
-For documentation cards, completion means a reviewed, source-cited contract, not a running implementation. Every output identifies sources, unresolved question IDs, procedure actually performed and evidence limits. Store verification receipts under the card's explicit artifacts/local/tasks/ID/ directory. Workers return disjoint section drafts; the coordinator admits shared documents serially. An independent reviewer report is itself reviewed for coverage by a different reviewer before it is accepted.
+For documentation cards, completion means a reviewed, source-cited contract, not a running implementation. Every output identifies sources, unresolved question IDs, procedure actually performed and evidence limits. Work under `artifacts/local/tasks/ID/` (ignored). At handoff copy every receipt the coordinator will cite into `artifacts/foundation-sprint-2026-09/tasks/ID/` and list each file in the candidate manifest, because `artifacts/local/` is not committed. Workers return disjoint section drafts; the coordinator admits shared documents serially.
 
 Native implementation cannot yet receive complete atomic cards: the production ownership map and system/schema contracts are future inputs, and the selected qualification/content scope is missing. Q-E01 and the affected product questions explicitly gate that work. After their closure, the coordinator creates scoped implementation cards with exact paths and measurable behavior. Contract completion never closes the corresponding production behavior by implication.
 
@@ -32,42 +31,59 @@ The LG cards apply only to the maintained browser proofs/player. They require a 
 
 ## Proposed first sprint
 
-Ten foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this sprint. None needs an unanswered external product value to produce its specified documentation. Unknown values remain named and gate later implementation.
+Fourteen foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this sprint. Open questions that shape a card are registered on it as non-blocking; each such contract must hold under every candidate answer, and HF-07b may submit a proposed Q-E09 protocol. Unknown values remain named and gate later implementation. The S0 prepare-stage proofs are a separate family scheduled into the writer slots these waves leave idle.
 
 | ID | Outcome | Dependencies | Owner / size |
 | --- | --- | --- | --- |
 | [HF-01](#hf-01) | Specify production paths and contribution conventions | None | Conventions / M |
 | [HF-02](#hf-02) | Create constraints and evidence register | None | Verification / S |
-| [HF-03](#hf-03) | Specify module ownership and dependency interfaces | [HF-01](#hf-01) | Runtime / M |
-| [HF-04](#hf-04) | Specify tick, pause and scene lifecycle | [HF-03](#hf-03) | Runtime / M |
-| [HF-05](#hf-05) | Specify stable content identity and admission | [HF-03](#hf-03) | Content / M |
-| [HF-06](#hf-06) | Map content schemas to persistence coverage | [HF-05](#hf-05) | Content / M |
-| [HF-07](#hf-07) | Specify save envelope and durable commit boundaries | [HF-04](#hf-04), [HF-06](#hf-06) | Persistence / M |
-| [HF-08](#hf-08) | Specify save failure and conservative recovery | [HF-07](#hf-07) | Persistence / M |
-| [HF-09](#hf-09) | Specify schema and gameplay-content migration | [HF-06](#hf-06), [HF-07](#hf-07) | Persistence / M |
-| [HF-10](#hf-10) | Review the complete foundation contract | [HF-01](#hf-01), [HF-02](#hf-02), [HF-03](#hf-03), [HF-04](#hf-04), [HF-05](#hf-05), [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09) | Independent review / M |
+| [HF-03a](#hf-03a) | Specify module ownership and owned records | [HF-01](#hf-01) | Runtime / M |
+| [HF-03b](#hf-03b) | Specify dependency edges and interface walkthroughs | [HF-03a](#hf-03a) | Runtime / M |
+| [HF-04a](#hf-04a) | Specify tick, pause and scene lifecycle | [HF-03a](#hf-03a) | Runtime / M |
+| [HF-04b](#hf-04b) | Specify runtime patterns and typed sketches | [HF-04a](#hf-04a) | Runtime / M |
+| [HF-05](#hf-05) | Specify stable content identity and admission | [HF-03a](#hf-03a) | Content / M |
+| [HF-06a](#hf-06a) | Inventory authored content and its treatment | [HF-05](#hf-05) | Content / M |
+| [HF-06b](#hf-06b) | Map matrix rows to persistence projections | [HF-06a](#hf-06a) | Persistence / M |
+| [HF-07a](#hf-07a) | Specify the save envelope and preferences record | [HF-06b](#hf-06b) | Persistence / S |
+| [HF-07b](#hf-07b) | Specify durable commit boundaries | [HF-04a](#hf-04a), [HF-07a](#hf-07a) | Persistence / M |
+| [HF-08](#hf-08) | Specify save failure and conservative recovery | [HF-07b](#hf-07b) | Persistence / M |
+| [HF-09](#hf-09) | Specify schema and gameplay-content migration | [HF-06b](#hf-06b), [HF-07b](#hf-07b) | Persistence / M |
+| [HF-10](#hf-10) | Review the complete foundation contract | [HF-01](#hf-01), [HF-02](#hf-02), [HF-03a](#hf-03a), [HF-03b](#hf-03b), [HF-04a](#hf-04a), [HF-04b](#hf-04b), [HF-05](#hf-05), [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [HF-07b](#hf-07b), [HF-08](#hf-08), [HF-09](#hf-09) | Independent review / M |
 
-Schedule HF-01 and HF-02 first; then HF-03; then HF-04 and HF-05; then HF-06; then HF-07; then HF-08 and HF-09; finally HF-10. These are dependency waves, not promises of duration. A reviewer uses one of the three delegate slots. Early completed work may proceed through review while the other writer runs if ownership is disjoint.
+Schedule in dependency waves under the two-writer ceiling. W1 HF-01 and HF-02. W2 HF-03a beside S0-01. W3 HF-04a and HF-05. W4 HF-03b and HF-04b. W5 HF-06a beside S0-05. W6 HF-06b beside S0-07. W7 HF-07a beside S0-04. W8 HF-07b beside S0-08. W9 HF-08 and HF-09. W10 HF-10, whose reviewer slot leaves a writer slot for S0-06. S0-02 and S0-03 precede W1; they need no engine and make the integration checks executable. These are dependency waves, not promises of duration. A reviewer uses one of the three delegate slots, and one fresh reviewer may read a wave's two candidates together. After HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b and HF-05 are admitted, the coordinator runs one integrated read of them before assigning HF-06a; findings return through changes_requested. Early completed work may proceed through review while the other writer runs if ownership is disjoint. The audit's seven-wave order placed S0-01 beside HF-03, S0-05 and S0-07 beside HF-06, and S0-04, S0-06 and S0-08 beside HF-07 with spill into the next idle slot; the four splits add three waves under the same ceiling, and each proof lands before or beside the card whose "re-verify when S0-0x lands" trigger names it, or that trigger fires on the admitted card.
 
 HF-10 produces a scoped foundation review. It does not stand in for all per-system designs, the assembled TECH_BIBLE.md or TH-31's final architecture audit. That later audit must separate paper schema consistency from unperformed native roundtrip qualification.
 
 ## Task catalogue
 
-HF covers foundation contracts; PD covers production-facing briefs; TH covers later engineering sections and assembly; SC splits authored schema families; LG preserves bounded browser/player work. Numeric ordering does not override dependencies.
+HF covers foundation contracts; S0 covers prepare-stage tooling and executable ADR proofs; PD covers production-facing briefs; TH covers later engineering sections and assembly; SC splits authored schema families; LG preserves bounded browser/player work. Numeric ordering does not override dependencies.
 
 | ID | Concrete outcome | Role | Size |
 | --- | --- | --- | --- |
 | [PUB-01](#pub-01) | Publish SCRAPKEEP privately and record the session handoff | Coordinator | M |
 | [HF-01](#hf-01) | Specify production paths and contribution conventions | Conventions | M |
 | [HF-02](#hf-02) | Create constraints and evidence register | Verification | S |
-| [HF-03](#hf-03) | Specify module ownership and dependency interfaces | Runtime | M |
-| [HF-04](#hf-04) | Specify tick, pause and scene lifecycle | Runtime | M |
+| [HF-03a](#hf-03a) | Specify module ownership and owned records | Runtime | M |
+| [HF-03b](#hf-03b) | Specify dependency edges and interface walkthroughs | Runtime | M |
+| [HF-04a](#hf-04a) | Specify tick, pause and scene lifecycle | Runtime | M |
+| [HF-04b](#hf-04b) | Specify runtime patterns and typed sketches | Runtime | M |
 | [HF-05](#hf-05) | Specify stable content identity and admission | Content | M |
-| [HF-06](#hf-06) | Map content schemas to persistence coverage | Content | M |
-| [HF-07](#hf-07) | Specify save envelope and durable commit boundaries | Persistence | M |
+| [HF-06a](#hf-06a) | Inventory authored content and its treatment | Content | M |
+| [HF-06b](#hf-06b) | Map matrix rows to persistence projections | Persistence | M |
+| [HF-07a](#hf-07a) | Specify the save envelope and preferences record | Persistence | S |
+| [HF-07b](#hf-07b) | Specify durable commit boundaries | Persistence | M |
 | [HF-08](#hf-08) | Specify save failure and conservative recovery | Persistence | M |
 | [HF-09](#hf-09) | Specify schema and gameplay-content migration | Persistence | M |
 | [HF-10](#hf-10) | Review the complete foundation contract | Independent review | M |
+| [S0-01](#s0-01) | Pin the Godot 4.7.2 toolchain and prove a typed offline headless boot | Verification | M |
+| [S0-02](#s0-02) | Add the documentation-only check command | Tooling | S |
+| [S0-03](#s0-03) | Add the verification-scope selector and reserve the native check command | Verification | S |
+| [S0-04](#s0-04) | Prove runtime ownership under TADR-002 and TADR-005 | Runtime | M |
+| [S0-05](#s0-05) | Prove typed Resource identity, admission and immutability headlessly | Content | S |
+| [S0-06](#s0-06) | Prove binary-tree admission rejection and failed-reload retention | Content | S |
+| [S0-07](#s0-07) | Author the TADR-004 save-owner proof and fixtures | Persistence | S |
+| [S0-08](#s0-08) | Execute the TADR-004 proof and record evidence | Verification | S |
+| [S0-09](#s0-09) | Export presets and CI smoke workflow (parked) | Verification | M |
 | [PD-01](#pd-01) | Write the production art acceptance brief | Technical art | M |
 | [PD-02](#pd-02) | Specify production interface states and acceptance | Rendering/input/UI | M |
 | [PD-03](#pd-03) | Write the sound and feel event brief | Audio | M |
@@ -154,29 +170,36 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-01: Specify production paths and contribution conventions
 
-**Card revision:** 1 · **Owner:** Conventions · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Conventions · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (scene/Resource ownership, source assets and generated imports)
 - [CONTRIBUTING.md § Editing conventions](CONTRIBUTING.md#editing-conventions)
+- [CONTRIBUTING.md § Handoff and version control](CONTRIBUTING.md#handoff-and-version-control) (commit and PR rules)
+- [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (both browser entries stay preserved)
+- [docs/project/ASSETS.md](docs/project/ASSETS.md) and [artifacts/README.md](artifacts/README.md) (asset provenance and output retention)
 - [BIBLE.md § Architecture and implementation handoff](BIBLE.md#architecture-and-implementation-handoff)
+- Godot 4.7 project-organization documentation, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
 
 **Dependencies:** None. **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-01-production-conventions.md`; `artifacts/local/tasks/HF-01/`.
+**Files touched:** `docs/tech/sections/HF-01-production-conventions.md`; `artifacts/local/tasks/HF-01/`. The coordinator pre-creates `docs/tech/sections/` with an index stub before wave 1 so that HF-01 and HF-02 hold file-level leases.
 
 **Definition of done:**
 
-1. Define future production directory, file naming, typed GDScript boundary, scene/Resource ownership and review conventions without modifying the browser layout.
+1. One path-family table with the columns path family (glob), owner role, permitted content, forbidden content and governing ADR line. It covers scripts, scenes, definition Resources, source assets, generated imports, tests, tools and docs. No row overlaps `/`, `/orchard.html`, `src/`, `server/`, `tests/`, `tools/` or `artifacts/`. Re-verify when S0-01 lands.
 2. Specify contribution rules for source assets, generated imports, validation and documentation ownership; preserve both browser entries and data.
-3. List exact implementation path families that later scoped cards may own.
-4. State repository layout, naming, code style, commit/PR rules and definition of done; convention changes cannot create a remote or authorize publication.
+3. List exact implementation path families that later scoped cards may own, including the `native/` root that S0-01 materializes. Re-verify when S0-01 lands.
+4. State naming, the typed GDScript boundary, scene/Resource ownership, code style, commit/PR rules and a numbered definition-of-done checklist a reviewer can tick. Convention changes cannot create a remote or authorize publication.
+5. Tag every engine-layout fact (project root, cache and import sidecar locations, export presets) "unverified until a scaffold proof exists". S0-01 is that proof.
 
 **Verification and evidence:**
 
-- Review path map for overlap with both browser entries and historical evidence.
-- Check every convention against accepted engine/content ADRs and existing contribution requirements.
+- Review the path table for overlap with both browser entries and historical evidence.
+- Check every convention against the accepted engine/content ADRs and existing contribution requirements.
+- Check the table has all five columns and that every S0-01 file falls inside exactly one row.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -184,13 +207,15 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-02: Create constraints and evidence register
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Verification · **Size:** S · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
 - [docs/LIGHTNING-VERIFICATION.md § Sustained rendered load](docs/LIGHTNING-VERIFICATION.md#sustained-rendered-load)
+- [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md), [artifacts/performance-stress.json](artifacts/performance-stress.json) and [artifacts/performance-stress-final.json](artifacts/performance-stress-final.json) (historical browser measurements)
 - [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences)
+- [Q-E03](#q-e03), [Q-E04](#q-e04) and [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) row D28
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
 **Dependencies:** None. **Blocking questions:** None.
@@ -199,73 +224,140 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Definition of done:**
 
-1. Separate approved constraints, proposed budgets, historical browser measurements and unmeasured native requirements.
-2. Define units, workload, target identity, sampling method and owner required to admit frame, memory, load and asset budgets.
-3. Record Q-E03/Q-E04 without inventing hardware, renderer or numeric limits.
+1. Separate approved constraints, proposed budgets, historical browser measurements and unmeasured native requirements. Every row carries exactly one of those four classifications.
+2. Define units, workload, target identity, sampling method and owner required to admit frame, memory, load and asset budgets. A skeleton whose native rows read "unmeasured" is a valid S completion. Re-verify when S0-01 lands, which produces the first native run record; the first measurement under Q-E03 supersedes the row.
+3. Negative check. No numeric frame, memory, load or asset value appears without a `measured:<artifact path>` or `proposed:Q-E03` tag. Record Q-E03/Q-E04 without inventing hardware, renderer or numeric limits.
 
 **Verification and evidence:**
 
 - Trace each claimed measurement to exact retained evidence and identify its method/version limits.
-- Review all budget cells for explicit units and proposed or measured classification.
+- Grep every numeric budget cell for its `measured:` or `proposed:` tag and its unit.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-03"></a>
+<a id="hf-03a"></a>
 
-### HF-03: Specify module ownership and dependency interfaces
+### HF-03a: Specify module ownership and owned records
 
 **Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (content-admission owner)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (persistence owner)
 - [BIBLE.md § Architecture and implementation handoff](BIBLE.md#architecture-and-implementation-handoff)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
+- Godot 4.7 documentation for autoload, `class_name` and `preload`, resolved by the coordinator and supplied in the packet.
 
 **Dependencies:** [HF-01](#hf-01). **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-03-module-map.md`; `artifacts/local/tasks/HF-03/`.
+**Files touched:** `docs/tech/sections/HF-03a-module-map.md`; `artifacts/local/tasks/HF-03a/`.
 
 **Definition of done:**
 
-1. Define named modules, owned mutable records, allowed imports and command/result interfaces under one session authority.
-2. Assign collision queries, encounter timing, run/profile mutation, persistence, content admission and presentation to explicit owners.
-3. Draw dependency directions and forbid hidden gameplay mutation through signals or rendering.
+1. One module table with the columns module, owned mutable records, allowed imports, exposed commands and published results, under one session authority. Re-verify when S0-01 lands, because allowed imports drift from observed autoload, `class_name` and `preload` behavior.
+2. Assign collision queries, encounter timing, run/profile mutation, persistence, content admission and presentation to explicit owners. Each owner row cites its TADR line.
+3. Name every record that exactly one module may mutate. A record with two owners is a defect in the output, not a note.
 
 **Verification and evidence:**
 
-- Walk an attack, an equipment change and an encounter replacement through only allowed interfaces.
-- Inspect the dependency graph for cycles and duplicate mutation authority.
+- Inspect the table for a module with no owned record and for a record with two owners.
+- Check each owner assignment against the cited TADR lines.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-04"></a>
+<a id="hf-03b"></a>
 
-### HF-04: Specify tick, pause and scene lifecycle
+### HF-03b: Specify dependency edges and interface walkthroughs
 
 **Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- [docs/adr/0003-authoritative-attack-geometry.md](docs/adr/0003-authoritative-attack-geometry.md) (attack walkthrough precedent)
+- [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows), [BIBLE.md § Inventory, equipment and transformations](BIBLE.md#inventory-equipment-and-transformations) and [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 
-**Dependencies:** [HF-03](#hf-03). **Blocking questions:** None.
+**Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-04-runtime-lifecycle.md`; `artifacts/local/tasks/HF-04/`.
+**Files touched:** `docs/tech/sections/HF-03b-dependency-graph.md`; `artifacts/local/tasks/HF-03b/`.
 
 **Definition of done:**
 
-1. Define fixed-tick phases, command admission, collision synchronization, published result lifetime and overload policy with unresolved rates labeled.
-2. Separate release of held input, cancellation of prepared actions, solo pause and resume.
-3. Define encounter replacement and scoped connection teardown while run/profile ownership survives.
-4. Name the game-loop, state-machine, scoped signal/message and scene-lifecycle patterns. Include a minimal typed GDScript sketch and when not to use each; document time/tick ownership and event ordering.
+1. An adjacency list of allowed dependency edges between HF-03a modules, from which a reviewer's cycle check reproduces. Forbid hidden gameplay mutation through signals or rendering. Re-verify when S0-04 lands.
+2. Three walkthroughs (an attack, an equipment change, an encounter replacement) appear in the output as step tables naming the interface used at each step.
+3. Every walkthrough step uses a listed edge. A step that needs an unlisted edge is a defect to report, not an edge to add silently.
 
 **Verification and evidence:**
 
-- Tabletop start, focus loss during preparation, pause/resume, slow frame and scene replacement; identify each owner and order.
-- Check no path permits a second tick owner, replayed held action or stale scene callback.
+- Reproduce the cycle check from the adjacency list and record the result.
+- Check each walkthrough step against the edge list and the HF-03a owner table.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-04a"></a>
+
+### HF-04a: Specify tick, pause and scene lifecycle
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- [adr/TADR-002-runtime-model.md § Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration) (pause qualification)
+- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md) (focus-loss precedent the production rule preserves)
+- [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings) and [BIBLE.md § Movement, camera and active aim](BIBLE.md#movement-camera-and-active-aim)
+- `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (unresolved rates land in its register)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+
+**Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `artifacts/local/tasks/HF-04a/`.
+
+**Definition of done:**
+
+1. Define fixed-tick phases, command admission, collision synchronization, published result lifetime and overload policy. Unresolved rates are labelled and routed to HF-02's register under Q-E03. Re-verify when S0-04 lands.
+2. Separate release of held input, cancellation of prepared actions, solo pause and resume as four operations, each with its own owner and order. Re-verify when S0-04 lands.
+3. Define encounter replacement and scoped connection teardown while run/profile ownership survives.
+4. Enumerate every engine callback that may advance gameplay time and name exactly one owner. List every other callback under a Forbidden heading.
+5. Five tabletop scenarios (start, focus loss during preparation, pause and resume, slow frame, scene replacement) appear in the output as step tables identifying each owner and order.
+
+**Verification and evidence:**
+
+- Check no path permits a second tick owner, a replayed held action or a stale scene callback.
+- Check each scenario step against the callback list in item 4.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-04b"></a>
+
+### HF-04b: Specify runtime patterns and typed sketches
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (typed GDScript)
+- Godot 4.7 static-typing documentation, resolved by the coordinator and supplied in the packet.
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
+
+**Dependencies:** [HF-04a](#hf-04a). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/HF-04b-runtime-patterns.md`; `artifacts/local/tasks/HF-04b/`.
+
+**Definition of done:**
+
+1. Name the game-loop, state-machine, scoped signal/message and scene-lifecycle patterns and when not to use each. Document time/tick ownership and event ordering under HF-04a.
+2. Include a minimal typed GDScript sketch per pattern. Mark every sketch "unparsed: no editor run in this card; re-verify at scaffold proof". Re-verify when S0-04 lands; revision 2 of this card replaces each sketch with a link to the S0-04 source.
+3. State for each pattern which HF-03a module may own it.
+
+**Verification and evidence:**
+
+- Confirm each sketch carries the unparsed marker and names its HF-03a owner.
+- The reviewer confirms presence and typed form only; no sketch is executed under this card.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -273,88 +365,161 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-05: Specify stable content identity and admission
 
-**Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Content · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (catalogue/content revisions and pinning)
+- `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (path families)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- [docs/project/ASSETS.md](docs/project/ASSETS.md)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-03](#hf-03). **Blocking questions:** None.
+**Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/HF-05-content-admission.md`; `artifacts/local/tasks/HF-05/`.
 
 **Definition of done:**
 
-1. Define stable domain IDs, catalogue/content revisions, immutable Resource definitions and fresh session records.
-2. Describe import, structural validation, semantic validation, admission and failed reload retention at safe boundaries.
-3. Define missing-ID diagnostics and active-run content pinning without silent remapping.
+1. Define stable domain IDs, catalogue/content revisions, immutable Resource definitions and fresh session records. Immutability is an enforced rule, not a file-extension guarantee. Re-verify when S0-05 lands.
+2. A state table (draft, imported, structurally valid, semantically valid, admitted, rejected-reload, pinned) with its transitions and the safe boundary at which each occurs. Re-verify when S0-06 lands.
+3. Define missing-ID diagnostics, naming the diagnostic and its fields, and active-run content pinning without silent remapping.
+4. Four traces (a draft, an admitted definition, a rejected reload, a pinned active run) appear in the output as step tables over the item 2 states.
 
 **Verification and evidence:**
 
-- Trace one draft, admitted definition, rejected reload and pinned active run through the proposed state transitions.
 - Check identity remains independent of display name, file path and engine Resource ID.
+- Check every trace uses only item 2 transitions.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-06"></a>
+<a id="hf-06a"></a>
 
-### HF-06: Map content schemas to persistence coverage
+### HF-06a: Inventory authored content and its treatment
 
 **Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (the eight-family enumeration)
 - [adr/TADR-003-content-pipeline.md § Later qualification and reconsideration](adr/TADR-003-content-pipeline.md#later-qualification-and-reconsideration)
-- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
-- [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems)
+- [BIBLE.md § 3. Maps & Areas](BIBLE.md#3-maps--areas), [§ 4. Characters](BIBLE.md#4-characters), [§ 5. Weapons & Items](BIBLE.md#5-weapons--items), [§ 6. Core Systems](BIBLE.md#6-core-systems), [§ 7. Art Direction](BIBLE.md#7-art-direction), [§ 8. Audio & Feel](BIBLE.md#8-audio--feel) and [§ 9. Glossary](BIBLE.md#9-glossary)
+- `artifacts/local/tasks/HF-06a/nouns.md`, the coordinator-supplied noun list drawn from the BIBLE § 3-9 headings and included in the packet
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (owned definitions)
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
 
-**Dependencies:** [HF-05](#hf-05). **Blocking questions:** None.
+**Dependencies:** [HF-05](#hf-05). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P14](#q-p14), [Q-P15](#q-p15), [Q-E09](#q-e09). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
 
-**Files touched:** `docs/tech/sections/HF-06-schema-coverage.md`; `artifacts/local/tasks/HF-06/`.
+**Files touched:** `docs/tech/sections/HF-06a-schema-inventory.md`; `docs/tech/sections/HF-06a-schema-inventory.csv`; `artifacts/local/tasks/HF-06a/`.
 
 **Definition of done:**
 
-1. Inventory every character, attack, tree/node, item, recipe, encounter, world/generation, device and companion authored type. Also cover audio/visual references, interface preferences, narrative/glossary definitions, events, secrets and permanent discovery/unlock content, or give an explicit representation/exclusion rationale.
-2. Map each mutable runtime projection to JSON saving or an explicit transient/reconstructed exclusion.
-3. For each row name an authoring codec, save projection, example producer and future executable proof; immutable Resources are not serialized as live engine objects.
+1. A matrix with one row per TADR-003 § Decision family plus one row per noun in the supplied `nouns.md`. Each row has a stable row ID and exactly one treatment: schema, embedded-record, or excluded with a rationale. Re-verify when S0-05 lands, because ID-versus-path identity drifts.
+2. Each row names the producing card (SC-01 through SC-08, or a TH card) that will author its definition schema.
+3. A machine-readable copy (CSV) carries the same row IDs. Nine downstream cards reference "HF-06 matrix rows" by these IDs.
+4. Rows shaped by Q-P14, Q-P15 or Q-E09 carry the question ID and a treatment that holds under every candidate answer.
 
 **Verification and evidence:**
 
-- Cross-check every Core Systems noun against the matrix, including preferences and permanent discoveries.
-- Check every row has an owned definition and either a persistence roundtrip requirement or a reasoned exclusion.
+- Cross-check every supplied noun and every family against the matrix.
+- Check row IDs are unique and the CSV and Markdown agree one for one.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-07"></a>
+<a id="hf-06b"></a>
 
-### HF-07: Specify save envelope and durable commit boundaries
+### HF-06b: Map matrix rows to persistence projections
 
 **Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- [adr/TADR-003-content-pipeline.md § Consequences](adr/TADR-003-content-pipeline.md#consequences)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
+- `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05)
+- `docs/tech/sections/HF-06a-schema-inventory.md` and `.csv` from [HF-06a](#hf-06a) (must be admitted before assignment)
 
-**Dependencies:** [HF-04](#hf-04), [HF-06](#hf-06). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P14](#q-p14), [Q-P15](#q-p15), [Q-E09](#q-e09). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
 
-**Files touched:** `docs/tech/sections/HF-07-save-envelope.md`; `artifacts/local/tasks/HF-07/`.
+**Files touched:** `docs/tech/sections/HF-06b-persistence-projection.md`; `docs/tech/sections/HF-06b-persistence-projection.csv`; `artifacts/local/tasks/HF-06b/`.
 
 **Definition of done:**
 
-1. Describe the versioned aggregate envelope, profile, checkpoint, lifecycle facts, generation/content/transaction identity and separate preferences record.
-2. Specify ordering and acknowledgements for level completion, reward/offer resolution, revival use and terminal settlement.
-3. Keep unresolved revival/interruption product choices explicit and preserve nonduplication under every allowed policy.
+1. For every HF-06a row, one save column value from json-projection, transient-reconstructed or immutable-by-id; the latter two carry a rationale. Immutable Resources are not serialized as live engine objects.
+2. For each json-projection row, name the authoring codec, the save projection and the card owning the executable roundtrip proof (TH-22). Re-verify when S0-08 lands.
+3. A machine-readable copy keyed by the HF-06a row IDs.
+4. Device, companion and discovery rows hold under every candidate answer to Q-P15 and Q-E09.
 
 **Verification and evidence:**
 
-- Tabletop duplicate completion, revival with an older spatial checkpoint, terminal defeat and stable offered choice restore.
+- Check every HF-06a row has exactly one save column value.
+- Check no row serializes a Resource as a live engine object.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-07a"></a>
+
+### HF-07a: Specify the save envelope and preferences record
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** S · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-004-persistence.md § Context](adr/TADR-004-persistence.md#context) and [§ Decision](adr/TADR-004-persistence.md#decision)
+- [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves) and [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings) (preferences)
+- [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) rows D26 and D27
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (owning modules)
+- `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+
+**Dependencies:** [HF-06b](#hf-06b). **Blocking questions:** None. **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P16](#q-p16). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
+
+**Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `artifacts/local/tasks/HF-07a/`.
+
+**Definition of done:**
+
+1. A field table for the envelope (schema version, content revision, generation, transaction), profile, checkpoint, lifecycle facts and the separate preferences record. Each field has a type, an owning module from HF-03a and a source or question ID. Re-verify when S0-07 lands.
+2. A stable anchor per field group and a machine-readable copy. HF-07b, HF-08, HF-09, TH-11 and TH-21 reference fields by these names.
+3. Fields shaped by Q-E09 or Q-P16 carry the question ID and a shape that holds under every candidate answer.
+
+**Verification and evidence:**
+
+- Check every field carries all three attributes.
+- Check the envelope identifies generation, content and transaction without a field that only one candidate policy needs.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-07b"></a>
+
+### HF-07b: Specify durable commit boundaries
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (revival and interruption hold on a failed write)
+- [Q-P16](#q-p16) and [Q-E09](#q-e09)
+- [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) rows D26 and D27
+- [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (level completion seam)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) (must be admitted before assignment)
+
+**Dependencies:** [HF-04a](#hf-04a), [HF-07a](#hf-07a). **Blocking questions:** None. **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P16](#q-p16). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
+
+**Files touched:** `docs/tech/sections/HF-07b-commit-boundaries.md`; `artifacts/local/tasks/HF-07b/`.
+
+**Definition of done:**
+
+1. For each transition (level completion, reward/offer resolution, revival use, terminal settlement), a numbered stage list of stage, validate, commit and acknowledge that names the observable state before and after. Re-verify when S0-08 lands.
+2. Enumerate the candidate revival/interruption policies, at minimum resume at the last completed level, resume mid-level from a checkpoint, and forfeit the level. Show the nonduplication invariants hold under each. Label the candidates pending Q-P16.
+3. Keep unresolved revival/interruption product choices explicit. The Persistence half of Q-E09 (write-timing protocol) may be submitted as a proposed answer.
+4. Four tabletop cases (duplicate completion, revival with an older spatial checkpoint, terminal defeat, stable offered-choice restore) appear in the output as step tables.
+
+**Verification and evidence:**
+
 - Review that only a validated committed generation can be acknowledged as durable.
+- Check each tabletop case against the stage lists under every candidate policy.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -362,28 +527,32 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-08: Specify save failure and conservative recovery
 
-**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
-- [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (hold on a failed write) and [§ Consequences](adr/TADR-004-persistence.md#consequences) (ordering and single writer)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (target OS families)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (seam with PD-02 interface states)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) and `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
+- Godot 4.7 `FileAccess` and `OS` documentation, resolved by the coordinator and supplied in the packet.
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-07](#hf-07). **Blocking questions:** None.
+**Dependencies:** [HF-07b](#hf-07b). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/HF-08-save-recovery.md`; `artifacts/local/tasks/HF-08/`.
 
 **Definition of done:**
 
-1. Define single-writer protocol, write/flush/commit ordering and OS-specific qualification questions without claiming rename alone proves durability.
-2. Specify failed critical transition handling and user-visible retry/recovery states.
-3. Preserve corrupt or ambiguous files and refuse rollback to a living/unspent generation when lifecycle continuity cannot be established.
+1. Define the single-writer protocol and write/flush/commit ordering. For each TADR-001 target OS family, one row with the qualification question, the engine API surface by documentation reference and the evidence method. Never claim rename alone proves durability. Every stage is marked "unqualified on paper; re-verify when S0-08 lands, and again when the TH-22 proof lands".
+2. A state table of failure class by transition stage giving the held state, message class, and permitted and forbidden actions, including user-visible retry and recovery states.
+3. Preserve corrupt or ambiguous files and refuse rollback to a living/unspent generation when lifecycle continuity cannot be established. An ambiguity-conditions checklist names each condition.
+4. An interruption matrix at every HF-07b commit stage for rewards, revival and terminal facts, stored in the output as enumerable test-case rows.
 
 **Verification and evidence:**
 
-- Construct an interruption matrix at every proposed commit stage for rewards, revival and terminal facts.
 - Review corrupt newest generation, unknown version, full disk and retry cases for false success or silent data loss.
+- Check every matrix row names a stage, an outcome and a held state.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -391,30 +560,34 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-09: Specify schema and gameplay-content migration
 
-**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-003-content-pipeline.md § Consequences](adr/TADR-003-content-pipeline.md#consequences)
-- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) and [§ Consequences](adr/TADR-004-persistence.md#consequences) (browser storage preservation)
+- [Q-E05](#q-e05)
+- `src/campaign.js:115` and `src/progress-store.js:45`, the two browser storage records this card preserves
+- `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (content compatibility and missing IDs)
+- `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) and `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-06](#hf-06), [HF-07](#hf-07). **Blocking questions:** None.
+**Dependencies:** [HF-06b](#hf-06b), [HF-07b](#hf-07b). **Blocking questions:** None. **Registered non-blocking questions:** [Q-E05](#q-e05). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
 
 **Files touched:** `docs/tech/sections/HF-09-schema-migration.md`; `artifacts/local/tasks/HF-09/`.
 
 **Definition of done:**
 
-1. Define supported schema/content compatibility, migration chaining, validation and original preservation until new commit.
-2. Specify missing ID, incompatible content and newer-format handling without rerolling, losing discoveries or adding active effects.
-3. Separate preservation of browser profiles from an undecided import/retirement policy in Q-E05.
+1. (1a) A compatibility predicate over schema version, content revision and catalogue version with an accept, migrate or reject table.
+2. (1b) Chaining as ordered single-step migrations, each validated before the next; the original stays untouched until the migrated generation commits through the HF-07b protocol. Re-verify when S0-08 lands.
+3. Specify missing ID, incompatible content and newer-format handling without rerolling, losing discoveries or adding active effects. One tabletop case per negative appears in the output.
+4. Name the browser records preserved by file and key (`src/campaign.js:115`, `src/progress-store.js:45`). State that HF-09 reads none of them. Q-E05 gates any import, and the contract holds under every candidate answer.
 
 **Verification and evidence:**
 
-- Walk one compatible migration, rejected future version, missing recipe and repeated load through the proposed rules.
-- Review that no migration implicitly imports or overwrites existing browser storage.
+- Walk one compatible migration, a rejected future version, a missing recipe and a repeated load through the proposed rules.
+- Review that no migration implicitly imports or overwrites the named browser storage.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -422,7 +595,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-10: Review the complete foundation contract
 
-**Card revision:** 1 · **Owner:** Independent review · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Independent review · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
@@ -433,31 +606,328 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - [adr/TADR-005-networking-scope.md](adr/TADR-005-networking-scope.md)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
 - `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (must be admitted before assignment)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) and `docs/tech/sections/HF-03b-dependency-graph.md` from [HF-03b](#hf-03b) (must be admitted before assignment)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) and `docs/tech/sections/HF-04b-runtime-patterns.md` from [HF-04b](#hf-04b) (must be admitted before assignment)
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) and `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) and `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
 - `docs/tech/sections/HF-08-save-recovery.md` from [HF-08](#hf-08) (must be admitted before assignment)
 - `docs/tech/sections/HF-09-schema-migration.md` from [HF-09](#hf-09) (must be admitted before assignment)
+- The pinned card revision of each output above and its retained receipts under `artifacts/foundation-sprint-2026-09/tasks/ID/`
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03](#hf-03), [HF-04](#hf-04), [HF-05](#hf-05), [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09). **Blocking questions:** None.
+**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03a](#hf-03a), [HF-03b](#hf-03b), [HF-04a](#hf-04a), [HF-04b](#hf-04b), [HF-05](#hf-05), [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [HF-07b](#hf-07b), [HF-08](#hf-08), [HF-09](#hf-09). **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-10-foundation-review.md`; `artifacts/local/tasks/HF-10/`.
+**Files touched:** `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md`; `artifacts/foundation-sprint-2026-09/tasks/HF-10/` (retained receipts); `artifacts/local/tasks/HF-10/`. The report is review evidence recorded by the coordinator, not a TECH_BIBLE section.
 
 **Definition of done:**
 
-1. Produce an independent report with required fixes, notes, evidence level and exact reviewed draft identities.
-2. Check module boundaries, tick ownership, content/persistence coverage, transition order and unresolved parameter gates.
-3. Reviewer reports only; coordinator owns canonical admission and corrective assignments.
+1. Produce an independent report with required fixes, notes, evidence level and the exact reviewed draft identity (commit or content hash) of every output.
+2. One matrix with one row per foundation output (the audit's nine-by-five form, extended to the thirteen outputs after the splits) and five check columns: module boundaries, tick ownership, content/persistence coverage, transition order and unresolved parameter gates. Each cell is PASS, FAIL or NOTES, with a path and line per FAIL.
+3. Reproduce every paper scenario (walkthroughs, traces, tabletop cases and the interruption matrix) from the retained receipts. No cell asserts native behavior.
+4. The reviewer reports only. The coordinator records the report, and a second fresh reviewer checks its coverage before it is recorded, per ORCHESTRATOR § Handoff and review.
 
 **Verification and evidence:**
 
-- Read all nine foundation outputs together and reproduce their paper scenarios.
+- Read all thirteen foundation outputs together and reproduce their paper scenarios from the retained receipts.
 - Check author/reviewer independence and distinguish source review from future native qualification.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="s0-01"></a>
+
+### S0-01: Pin the Godot 4.7.2 toolchain and prove a typed offline headless boot
+
+**Card revision:** 1 · **Owner:** Verification (Conventions co-signs the root path) · **Size:** M · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (pinned editor, typed GDScript)
+- [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (offline solo)
+- [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (the root stays disjoint from both browser entries)
+- `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01), or the interim root path the coordinator records in TRACKING as a question answer
+- [TRACKING.md](TRACKING.md) event EV-0024, the install record (editor at `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64`, version `4.7.2.stable.official.ed1daf0bf`, official 4.7.2-stable release, SHA512 verified against the release sums)
+- Godot 4.7 command-line reference, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
+
+**Dependencies:** [HF-01](#hf-01) or the interim path answer. **Blocking questions:** None. **Blocking item:** engine installed on this machine under EV-0024; export templates parked.
+
+**Files touched:** `native/project.godot`; `native/tests/smoke_boot.gd`; `native/tests/fixtures/untyped_negative.gd`; `docs/tech/native-toolchain.md`; `scripts/native-smoke.mjs`; `.gitignore` (add `native/.godot/`); optional `package.json` `check:native` entry; `artifacts/local/tasks/S0-01/`. The `native/` root and `docs/tech/native-toolchain.md` are provisional pending HF-01, and the toolchain document says so.
+
+**Definition of done:**
+
+1. `docs/tech/native-toolchain.md` records the installed editor: version string, official release archive name, SHA512 digest as verified under EV-0024, install path and machine identity. It records export templates as not installed and parked with S0-09, and states that its own path is provisional pending HF-01.
+2. `native/project.godot` carries the project name, no renderer override, and the static-typing warnings-as-errors keys cited from the resolved 4.7 documentation.
+3. `native/tests/smoke_boot.gd` is typed, extends SceneTree, prints a marker and the engine version, and calls `quit()`.
+4. `native/tests/fixtures/untyped_negative.gd` fails to load under the item 2 settings.
+5. `scripts/native-smoke.mjs` runs outside `verify`, resolves the binary through an environment variable or the recorded path, runs the positive, negative and static networking-grep checks, and writes `artifacts/local/native-smoke/report.json` with commands, exit codes, stdout, host identity and a sha256 manifest of `native/`.
+6. The `verify` stage list is unchanged and `npm run check:project` passes.
+7. `index.html`, `orchard.html`, `src/`, `server/` and `tests/` are unchanged.
+
+**Verification and evidence:**
+
+- Positive run exits 0 and prints the identity line; negative run exits nonzero; positive rerun with the network unavailable by a recorded method.
+- `node scripts/native-smoke.mjs`; `npm run check:project`.
+- The receipt records the Godot version string, host, offline method and the observed `quit()` exit code.
+
+**Boundary:** No game code, scene, Resource, save, input or rendering. Linux host only; nothing about Windows, controllers or feel. No export, CI or publication. Proves engine launch, typed parsing and exit only.
+
+<a id="s0-02"></a>
+
+### S0-02: Add the documentation-only check command
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [ORCHESTRATOR.md § Serial integration and completion](ORCHESTRATOR.md#serial-integration-and-completion) (manifest and documentation-only checks)
+- [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification)
+- [TRACKING.md](TRACKING.md) (event sequence and index-row rules)
+- [§ Task contract](#task-contract) above (card field set and required output headings)
+- `scripts/check-project.mjs` (reuse its link regex and fence stripping)
+- [artifacts/publication-2026-09-06/document-checks.json](artifacts/publication-2026-09-06/document-checks.json) (the unpreserved PUB-01 anchor check)
+
+**Dependencies:** None. **Blocking questions:** None. **Blocking item:** coordinator ruling on whether a tooling card may run the build-containing `verify`.
+
+**Files touched:** `scripts/check-docs.mjs`; `package.json` (scripts block only); `tests/check-docs.test.js`; `CONTRIBUTING.md` (one table row); `artifacts/local/tasks/S0-02/`.
+
+**Definition of done:**
+
+1. `npm run check:docs` checks local file links and heading and `<a id>` anchors in root `*.md`, `adr/**`, `docs/**` and `artifacts/**/README.md`, stripping fences and skipping remote URLs.
+2. It validates every BACKLOG card field set, the preceding anchor matching the card ID, resolving dependency and question links, and rejects an assignable L.
+3. It checks TRACKING `EV-NNNN` numbers are strictly increasing with no gaps and no blank line inside the append-only events table, and that every index row links an existing BACKLOG anchor and names an existing event.
+4. When `docs/tech/sections/` exists, each section carries the seven required headings from § Task contract.
+5. It writes `artifacts/local/check-docs/report.json` with a sha256 manifest of every checked Markdown file and a limits line.
+6. The `verify.mjs` stage list is unchanged and the existing tooling test holds.
+
+**Verification and evidence:**
+
+- `npm run check:docs` passes on the integrated tree; fixtures with a broken anchor, a card missing Boundary and a duplicated EV each fail naming the path.
+- `npm run check:project` and `npm test` pass; `verify` only if the coordinator authorizes the build.
+
+**Boundary:** Tooling only. Structural evidence, not contract correctness. Implemented under PS-01; the coordinator records its live state.
+
+<a id="s0-03"></a>
+
+### S0-03: Add the verification-scope selector and reserve the native check command
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [ORCHESTRATOR.md § Serial integration and completion](ORCHESTRATOR.md#serial-integration-and-completion)
+- [.agents/skills/scrapkeep-verify/SKILL.md](.agents/skills/scrapkeep-verify/SKILL.md) and [AGENTS.md](AGENTS.md)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
+- `scripts/check-docs.mjs` from [S0-02](#s0-02)
+
+**Dependencies:** [S0-02](#s0-02). **Blocking questions:** None. **Blocking item:** None.
+
+**Files touched:** `scripts/check-scope.mjs`; `package.json` (scripts block only); `tests/check-scope.test.js`; `CONTRIBUTING.md` (scope-to-command map); `artifacts/local/tasks/S0-03/`.
+
+**Definition of done:**
+
+1. `npm run check:scope -- <base> <candidate>` classifies changed paths into documentation-only, browser-proof, tooling, native (`*.gd`, `*.tscn`, `*.tres`, `project.godot`, `export_presets.cfg`) or mixed, and prints the exact required commands with evidence-class labels. It exits nonzero when a documentation-only scope mixes with build-requiring paths under a no-build instruction.
+2. The map appears in CONTRIBUTING § Verification and the scrapkeep-verify skill table cites it.
+3. `check:godot` is documented as a reserved name, unavailable until the engineering handoff, with no body; `verify.mjs` is unmodified.
+4. Hosted CI is recorded as parked with its unpark conditions; no workflow file is added.
+
+**Verification and evidence:**
+
+- Unit fixtures per class plus the mixed refusal.
+- `npm run check:docs` and `npm test` pass.
+
+**Boundary:** Tooling and contribution docs only. No Godot command, no CI, no admission authority outside the coordinator. Implemented under PS-01; the coordinator records its live state.
+
+<a id="s0-04"></a>
+
+### S0-04: Prove runtime ownership under TADR-002 and TADR-005
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision), [§ Consequences](adr/TADR-002-runtime-model.md#consequences) and [§ Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration)
+- [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (pause and menu focus)
+- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
+- `src/orchard/simulation.js:140`, `:347-374`, `:417-421` and `tests/orchard.test.js:12-15`, `:327-337`, the browser precedent to differ from and not port
+- S0-01 evidence and toolchain record
+- Godot 4.7 documentation for `_physics_process`, `Node.process_mode`, `SceneTree.paused`, `SceneTree.physics_frame`, `Engine.physics_ticks_per_second`, `Engine.is_in_physics_frame`, application focus notifications and `SceneTree.quit(exit_code)`, resolved by the coordinator and supplied in the packet.
+
+**Dependencies:** [S0-01](#s0-01), plus the path decision (HF-01 admission or the interim path answer). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `native/proofs/tadr-002/project.godot`; `native/proofs/tadr-002/proof_runner.gd`; `native/proofs/tadr-002/session_owner.gd`; `native/proofs/tadr-002/encounter_coordinator.gd`; `native/proofs/tadr-002/encounter_state.gd`; `native/proofs/tadr-002/input_adapter.gd`; `native/proofs/tadr-002/menu_probe.gd`; `native/proofs/tadr-002/intruder.gd`; `docs/tech/proofs/S0-04-runtime-ownership.md`; `artifacts/local/tasks/S0-04/`. Paths under `native/` and `docs/tech/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. Cite the resolved 4.7 documentation for every API above and save the receipt.
+2. Implement phases A through E exactly (single physics-callback owner, second source rejected, positive control cast, pause freezes gameplay while an always-process node runs, focus loss clears held input and cancels prepared actions without manufacturing a cast), typed, with no accumulator, no `Input` singleton and no addon.
+3. The run exits 0 on the pinned host with stdout and `result.json` under `artifacts/local/godot-proof/S0-04/`.
+4. The proof document states the proven and not-proven lists verbatim and logs the tick rate as a placeholder, never a chosen value.
+5. The handoff proposes the HF-04b revision 2 sketch-replacement text.
+
+**Verification and evidence:**
+
+- `godot --headless --path native/proofs/tadr-002 --script res://proof_runner.gd`; expect exit 0 and five PASS lines.
+- Fault injection (the intruder mutates state directly) yields exit 1; the reviewer reads source and stdout and reruns.
+
+**Boundary:** No rendering, physics bodies, scene replacement, save, export, CI, addon or browser changes. Not qualification evidence; proves ADR rules only.
+
+<a id="s0-05"></a>
+
+### S0-05: Prove typed Resource identity, admission and immutability headlessly
+
+**Card revision:** 1 · **Owner:** Content · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision)
+- [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression) (tree shape only)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
+- S0-01 evidence and toolchain record
+- Godot 4.7 documentation for `Resource`, `class_name` and typed `@export`, resolved by the coordinator and supplied in the packet.
+
+**Dependencies:** [S0-01](#s0-01). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `native/proofs/tadr-003/project.godot`; `native/proofs/tadr-003/definitions/slot_tree_definition.gd`; `native/proofs/tadr-003/definitions/catalogue.gd`; `native/proofs/tadr-003/fixtures/placeholder_tree.tres`; `native/proofs/tadr-003/fixtures/renamed_copy/placeholder_tree_other_name.tres`; `native/proofs/tadr-003/tools/validate_catalogue.gd`; `artifacts/local/tasks/S0-05/`. Paths under `native/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. A typed `SlotTreeDefinition` Resource saved as text `.tres` with only `id`, `content_revision`, `nodes` and `edges` fields, so no product value can be smuggled in.
+2. `register` refuses the same id from a different path or filename; `resolve` returns the first registration.
+3. A `duplicate()` session record is mutated, the reload is unchanged and `resolve` returns the original.
+4. The headless `--script` command exits 0 with a per-check summary.
+
+**Verification and evidence:**
+
+- Run on the pinned 4.7.2; capture stdout, exit code, `godot --version` and a sha256 manifest under `artifacts/local/tasks/S0-05/`.
+- The reviewer confirms the renamed copy differs in path and filename, no field can hold a cost, effect or name, and every id carries the `proof.` prefix.
+
+**Boundary:** Disposable. No production path, content, import, hot reload, `.tscn` or save format. Browser proofs untouched. Deletable once HF-05 and HF-06a cite it.
+
+<a id="s0-06"></a>
+
+### S0-06: Prove binary-tree admission rejection and failed-reload retention
+
+**Card revision:** 1 · **Owner:** Content (Verification reviews) · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (structural admission and failed-reload retention)
+- [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression)
+- S0-05 outputs
+
+**Dependencies:** [S0-05](#s0-05). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `native/proofs/tadr-003/definitions/tree_rules.gd`; `native/proofs/tadr-003/fixtures/malformed_tree.tres`; `native/proofs/tadr-003/fixtures/candidate_bad/`; `native/proofs/tadr-003/tools/validate_catalogue.gd` (extend); `artifacts/local/tasks/S0-06/`. Paths under `native/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. `tree_rules.validate` returns an empty list for the good fixture and at least one diagnostic naming the id and the failed check for the malformed fixture (reconvergence, unreachable leaf).
+2. The validator with a malformed candidate exits nonzero with the diagnostic.
+3. A failed staged catalogue leaves the prior active catalogue in place; `resolve` still succeeds.
+4. A fixture without the `proof.` prefix is refused.
+
+**Verification and evidence:**
+
+- Two runs (exit 0 for the good fixture; nonzero for the candidate) logged with exit codes and `godot --version`.
+- The reviewer confirms the defect is structural, so the rule rejected it and typing did not, per TADR-003 § Decision.
+
+**Boundary:** Semantic rules (lineage per slot, start access, milestones, recipe endpoints, compatibility) are out of scope. No safe-encounter-boundary behavior is proven.
+
+<a id="s0-07"></a>
+
+### S0-07: Author the TADR-004 save-owner proof and fixtures
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) and [§ Consequences](adr/TADR-004-persistence.md#consequences)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) if admitted, else a placeholder envelope with no discovery field and no browser IDs
+- `server/store.js:103-124` and `tests/progress-store.test.js:72-133` as prior art only, not reuse
+- Godot 4.7 documentation for `FileAccess`, `DirAccess` and `JSON`, resolved by the coordinator and supplied in the packet.
+
+**Dependencies:** [HF-01](#hf-01) or a placeholder path. **Blocking questions:** None. **Blocking item:** none for authoring; engine install to run.
+
+**Files touched:** `native/proofs/tadr-004-save/project.godot`; `native/proofs/tadr-004-save/save_owner.gd`; `native/proofs/tadr-004-save/run_proof.gd`; `native/proofs/tadr-004-save/fixtures/`; `native/proofs/tadr-004-save/README.md`; `artifacts/local/tasks/S0-07/`. Paths under `native/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. A typed `SaveOwner` with the six methods `stage`, `validate`, `commit`, `acknowledge`, `recover` and `resolve_lifecycle`, in the order stage, validate, commit, acknowledge; `validate` re-reads the staged bytes, not the in-memory record.
+2. Cases a through e (f optional) with stated inputs, outputs and exit codes: commit path, round trip, newer schema (c1, c2), interruption (d1, d2) and lifecycle authority (e).
+3. Fixtures for c2, d1, d2 and e under three fixture directories.
+4. The README states the command, the run-directory rule, the evidence layout and the TADR-004 § Consequences non-claim verbatim (temporary files, a rename, a checksum or a backup alone do not prove power-loss durability).
+5. Every API absent from the resolved documentation receipt is marked unverified.
+
+**Verification and evidence:**
+
+- Source review against TADR-004 § Decision and § Consequences.
+- Fixture JSON parses under Node (syntax only); no Godot execution is claimed by this card.
+
+**Boundary:** No game code, no future `user://` layout, no browser storage reads, no discovery field, no migration implementation, no CI. Placeholders only.
+
+<a id="s0-08"></a>
+
+### S0-08: Execute the TADR-004 proof and record evidence
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- S0-07 outputs (proof, fixtures, README)
+- [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification) (evidence classes)
+- S0-01 toolchain record
+
+**Dependencies:** [S0-07](#s0-07), [S0-01](#s0-01). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `artifacts/local/proofs/tadr-004/<run-id>/`; `artifacts/local/tasks/S0-08/`; suggested HF-08 matrix cross-references travel in the handoff, not in HF-08's file.
+
+**Definition of done:**
+
+1. One headless run exits 0 with every case PASS.
+2. Engine version and OS are recorded.
+3. `result.json` names the method "headless fixture run".
+4. An explicit statement that flush/fsync durability and non-Linux rename semantics are not asserted.
+
+**Verification and evidence:**
+
+- Rerun twice for idempotence.
+- The reviewer reads `result.json` against the S0-07 case table.
+
+**Boundary:** Linux only. No CI, no templates. Certifies nothing and closes no HF card; HF-08's re-verify trigger consumes it.
+
+<a id="s0-09"></a>
+
+### S0-09: Export presets and CI smoke workflow (parked)
+
+**Parked.** Export templates are not installed, and template use and pushing a workflow to `main` are outside the current authorization (TRACKING EV-0019 and EV-0024); this is stage 2-3 of the CI path. Nothing below is assignable until the coordinator records an unpark with the extended authorization.
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) and [§ Consequences](adr/TADR-001-engine-language-platforms.md#consequences)
+- [adr/TADR-005-networking-scope.md § Consequences](adr/TADR-005-networking-scope.md#consequences)
+- S0-01 outputs
+- Godot 4.7 export command-line documentation and the template download record, resolved by the coordinator when unparked.
+
+**Dependencies:** [S0-01](#s0-01). **Blocking questions:** [Q-E06](#q-e06) before any export leaves the machine. **Blocking item:** authorization extended to templates and to pushing a workflow.
+
+**Files touched:** `native/export_presets.cfg`; `scripts/native-smoke.mjs` (`--export` mode); `.github/workflows/native-smoke.yml`; `docs/tech/native-toolchain.md` (the CI install mirrors the pin); `artifacts/local/tasks/S0-09/`.
+
+**Definition of done:**
+
+1. Exactly two presets, Linux x64 and Windows x64, with their names referenced verbatim and no credentials.
+2. `--export` runs both to absolute paths under `artifacts/local/native-export/linux/` and `artifacts/local/native-export/windows/`, asserting exit 0, presence, size and sha256.
+3. The Linux export launches and exits 0; the Windows export is file-existence only unless a Windows runner executes it.
+4. The workflow on `ubuntu-latest` downloads the editor and templates by URL, verifies the recorded digests, runs the smoke and exports and uploads `report.json`; no marketplace action is required; an optional `windows-latest` job is costed separately.
+5. No export is committed or published.
+
+**Verification and evidence:**
+
+- The two export commands; `node scripts/native-smoke.mjs --export`.
+- One green CI run on the pinned SHA, logged to `artifacts/local/tasks/S0-09/`.
+
+**Boundary:** Export success is not qualification. Nothing is distributed; Q-E06 stays untouched until an export leaves the machine. Windows is unproven without execution. The renderer stays default (Q-E04 open). Smoke-script presence in exports is noted for Q-E13 and TH-26.
 
 <a id="pd-01"></a>
 
@@ -562,8 +1032,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § The complete loop](BIBLE.md#the-complete-loop)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -593,8 +1063,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Movement, camera and active aim](BIBLE.md#movement-camera-and-active-aim)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -624,8 +1094,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -655,8 +1125,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Abilities, ultimates and combat rhythm](BIBLE.md#abilities-ultimates-and-combat-rhythm)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -686,8 +1156,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Electromagnetic collection, recycling and growth](BIBLE.md#electromagnetic-collection-recycling-and-growth)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -717,8 +1187,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -749,8 +1219,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -781,8 +1251,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Inventory, equipment and transformations](BIBLE.md#inventory-equipment-and-transformations)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -813,8 +1283,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Themed loot, attunement and fixed secrets](BIBLE.md#themed-loot-attunement-and-fixed-secrets)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -844,8 +1314,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Devices and one main companion](BIBLE.md#devices-and-one-main-companion)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -876,8 +1346,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -907,8 +1377,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 - `docs/product/sections/PD-02-interface-states.md` from [PD-02](#pd-02) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10), [PD-02](#pd-02). **Blocking questions:** None.
@@ -1085,12 +1555,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
 - [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` from [TH-02](#th-02) (must be admitted before assignment)
 - `docs/tech/sections/TH-12-hud-dashboard-and-settings.md` from [TH-12](#th-12) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-04](#hf-04), [TH-02](#th-02), [TH-12](#th-12). **Blocking questions:** None.
+**Dependencies:** [HF-04a](#hf-04a), [TH-02](#th-02), [TH-12](#th-12). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-18-input-integration.md`; `artifacts/local/tasks/TH-18/`.
 
@@ -1142,7 +1612,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/schemas/SC-01.md` from [SC-01](#sc-01) (must be admitted before assignment)
 - `docs/tech/schemas/SC-02.md` from [SC-02](#sc-02) (must be admitted before assignment)
 - `docs/tech/schemas/SC-03.md` from [SC-03](#sc-03) (must be admitted before assignment)
@@ -1153,7 +1623,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - `docs/tech/schemas/SC-08.md` from [SC-08](#sc-08) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-06](#hf-06), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-20-authored-schemas.md`; `artifacts/local/tasks/TH-20/`.
 
@@ -1341,12 +1811,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Carry-forward map](docs/project/AGENT-PLAYTEST-ENGINEERING.md#carry-forward-map)
 - [adr/TADR-002-runtime-model.md § Consequences](adr/TADR-002-runtime-model.md#consequences)
 - [tools/agent-player/README.md](tools/agent-player/README.md)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 - `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment)
 - `docs/tech/sections/TH-23-gameplay-native-tests.md` from [TH-23](#th-23) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-03](#hf-03), [TH-14](#th-14), [TH-23](#th-23). **Blocking questions:** None.
+**Dependencies:** [HF-03a](#hf-03a), [TH-14](#th-14), [TH-23](#th-23). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-26-tooling-debug.md`; `artifacts/local/tasks/TH-26/`.
 
@@ -1445,7 +1915,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 - `docs/tech/sections/TH-22-content-persistence-tests.md` from [TH-22](#th-22) (must be admitted before assignment)
 - `docs/tech/sections/TH-23-gameplay-native-tests.md` from [TH-23](#th-23) (must be admitted before assignment)
 - `docs/tech/sections/TH-24-platform-performance.md` from [TH-24](#th-24) (must be admitted before assignment)
@@ -1481,14 +1951,18 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - [adr/README.md](adr/README.md)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
 - `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (must be admitted before assignment)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `docs/tech/sections/HF-03b-dependency-graph.md` from [HF-03b](#hf-03b) (must be admitted before assignment)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
+- `docs/tech/sections/HF-04b-runtime-patterns.md` from [HF-04b](#hf-04b) (must be admitted before assignment)
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
+- `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) (must be admitted before assignment)
+- `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
 - `docs/tech/sections/HF-08-save-recovery.md` from [HF-08](#hf-08) (must be admitted before assignment)
 - `docs/tech/sections/HF-09-schema-migration.md` from [HF-09](#hf-09) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 - `docs/tech/sections/TH-01-complete-loop.md` from [TH-01](#th-01) (must be admitted before assignment)
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` from [TH-02](#th-02) (must be admitted before assignment)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` from [TH-03](#th-03) (must be admitted before assignment)
@@ -1528,7 +2002,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - `docs/tech/schemas/SC-08.md` from [SC-08](#sc-08) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03](#hf-03), [HF-04](#hf-04), [HF-05](#hf-05), [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09), [HF-10](#hf-10), [TH-01](#th-01), [TH-02](#th-02), [TH-03](#th-03), [TH-04](#th-04), [TH-05](#th-05), [TH-06](#th-06), [TH-07](#th-07), [TH-08](#th-08), [TH-09](#th-09), [TH-10](#th-10), [TH-11](#th-11), [TH-12](#th-12), [TH-13](#th-13), [TH-14](#th-14), [TH-15](#th-15), [TH-16](#th-16), [TH-17](#th-17), [TH-18](#th-18), [TH-19](#th-19), [TH-20](#th-20), [TH-21](#th-21), [TH-22](#th-22), [TH-23](#th-23), [TH-24](#th-24), [TH-25](#th-25), [TH-26](#th-26), [TH-27](#th-27), [TH-28](#th-28), [TH-29](#th-29), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
+**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03a](#hf-03a), [HF-03b](#hf-03b), [HF-04a](#hf-04a), [HF-04b](#hf-04b), [HF-05](#hf-05), [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [HF-07b](#hf-07b), [HF-08](#hf-08), [HF-09](#hf-09), [HF-10](#hf-10), [TH-01](#th-01), [TH-02](#th-02), [TH-03](#th-03), [TH-04](#th-04), [TH-05](#th-05), [TH-06](#th-06), [TH-07](#th-07), [TH-08](#th-08), [TH-09](#th-09), [TH-10](#th-10), [TH-11](#th-11), [TH-12](#th-12), [TH-13](#th-13), [TH-14](#th-14), [TH-15](#th-15), [TH-16](#th-16), [TH-17](#th-17), [TH-18](#th-18), [TH-19](#th-19), [TH-20](#th-20), [TH-21](#th-21), [TH-22](#th-22), [TH-23](#th-23), [TH-24](#th-24), [TH-25](#th-25), [TH-26](#th-26), [TH-27](#th-27), [TH-28](#th-28), [TH-29](#th-29), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
 
 **Files touched:** `TECH_BIBLE.md`; `artifacts/local/tasks/TH-30/`.
 
@@ -1587,13 +2061,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` from [TH-04](#th-04) (must be admitted before assignment)
 - `docs/tech/sections/TH-07-four-slots-and-milestone-progression.md` from [TH-07](#th-07) (must be admitted before assignment)
 - [BIBLE.md § 4. Characters](BIBLE.md#4-characters) (characters, class kits, four slots, binary trees and milestone nodes)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-04](#th-04), [TH-07](#th-07). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-04](#th-04), [TH-07](#th-07). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-01.md`; `artifacts/local/tasks/SC-01/`.
 
@@ -1619,14 +2093,14 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` from [TH-03](#th-03) (must be admitted before assignment)
 - `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` from [TH-04](#th-04) (must be admitted before assignment)
 - `docs/tech/sections/TH-13-chaos-outcomes.md` from [TH-13](#th-13) (must be admitted before assignment)
 - [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows) (committed attacks, hit geometry, telegraphs, abilities, ultimates and chaos outcomes)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-03](#th-03), [TH-04](#th-04), [TH-13](#th-13). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-03](#th-03), [TH-04](#th-04), [TH-13](#th-13). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-02.md`; `artifacts/local/tasks/SC-02/`.
 
@@ -1652,13 +2126,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-08-inventory-equipment-and-transformations.md` from [TH-08](#th-08) (must be admitted before assignment)
 - `docs/tech/sections/TH-09-themed-loot-attunement-and-fixed-secrets.md` from [TH-09](#th-09) (must be admitted before assignment)
 - [BIBLE.md § 5. Weapons & Items](BIBLE.md#5-weapons--items) (items, equipment, modifiers, transformations, attunement and fixed recipes)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-08](#th-08), [TH-09](#th-09). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-08](#th-08), [TH-09](#th-09). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-03.md`; `artifacts/local/tasks/SC-03/`.
 
@@ -1684,12 +2158,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-06-encounters-waves-and-enemies.md` from [TH-06](#th-06) (must be admitted before assignment)
 - [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies) (enemy archetypes, attack references, waves, bosses, encounter admission and objective records)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-06](#th-06). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-06](#th-06). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-04.md`; `artifacts/local/tasks/SC-04/`.
 
@@ -1715,13 +2189,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` from [TH-11](#th-11) (must be admitted before assignment)
 - `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment)
 - [BIBLE.md § 3. Maps & Areas](BIBLE.md#3-maps--areas) (regions, areas, level modules, routes, generation constraints, events and secrets)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-11](#th-11), [TH-14](#th-14). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-11](#th-11), [TH-14](#th-14). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-05.md`; `artifacts/local/tasks/SC-05/`.
 
@@ -1747,12 +2221,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-10-devices-and-one-main-companion.md` from [TH-10](#th-10) (must be admitted before assignment)
 - [BIBLE.md § Devices and one main companion](BIBLE.md#devices-and-one-main-companion) (devices, companion chassis, interchangeable components and command capabilities)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-10](#th-10). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-10](#th-10). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-06.md`; `artifacts/local/tasks/SC-06/`.
 
@@ -1778,14 +2252,14 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-12-hud-dashboard-and-settings.md` from [TH-12](#th-12) (must be admitted before assignment)
 - `docs/tech/sections/TH-16-rendering-integration.md` from [TH-16](#th-16) (must be admitted before assignment)
 - `docs/tech/sections/TH-17-audio-integration.md` from [TH-17](#th-17) (must be admitted before assignment)
 - [BIBLE.md § 8. Audio & Feel](BIBLE.md#8-audio--feel) (audio cues, visual references and interface settings)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-12](#th-12), [TH-16](#th-16), [TH-17](#th-17). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-12](#th-12), [TH-16](#th-16), [TH-17](#th-17). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-07.md`; `artifacts/local/tasks/SC-07/`.
 
@@ -1811,13 +2285,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-09-themed-loot-attunement-and-fixed-secrets.md` from [TH-09](#th-09) (must be admitted before assignment)
 - `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` from [TH-11](#th-11) (must be admitted before assignment)
 - [BIBLE.md § 9. Glossary](BIBLE.md#9-glossary) (dialogue, glossary entries, discoveries and permanent unlock definitions)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-09](#th-09), [TH-11](#th-11). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-09](#th-09), [TH-11](#th-11). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-08.md`; `artifacts/local/tasks/SC-08/`.
 
@@ -2711,545 +3185,6 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Evidence needed to close:** Each selected type has an explicit objective/reward boundary and required route accessibility. Historical timers and counter-only entry requirements remain proposals.
 
-## Source dispositions
+## Source records
 
-The following cross-reference preserves every P/T/R/D/BD identifier, plus unnumbered planning obligations, core-system headings, selected concept-art receipts and the requested engineering sections. “Completed” means only the specific historical decision, concept correction or version-qualified proof described in that row. It grants no new task completion, native support claim or implementation authorization.
-
-Source identity is retained in the [preparation manifest](artifacts/swarm-prep-2026-09-06/verification.json). Named proof reports remain authoritative for their own source/configuration and method. The [old backlog](docs/project/BACKLOG.md) is dated history; its original body is preserved. Duplicate and parked rows retain their reason so a future worker does not recreate old work.
-
-### Historical identifiers
-
-| Source ID | Record | Disposition | Task/question reference | Scope and evidence |
-| --- | --- | --- | --- | --- |
-| P01 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | completed | None | docs/project/INCREMENT-01-lightning-playtest.md records Andrew original orchard play and concrete control/physics/UI feedback. No duration was recorded; this does not close the new P10 playtest. |
-| P02 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [LG-01](#lg-01) | Retain encounter pacing/circling assessment inside Andrew current lightning feedback. Any tuning needs a separate scoped browser wave; 41.96-second scripted clear in docs/LIGHTNING-VERIFICATION.md is not human balance. |
-| P03 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [LG-02](#lg-02) | Physical hardware qualification remains distinct from synthetic DOM and native-agent input evidence. |
-| P04 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | completed | None | docs/project/INCREMENT-01-lightning-playtest.md records the approved increment and docs/LIGHTNING-VERIFICATION.md records executed local/browser checks. Approval/completion is limited to the lightning prototype. |
-| P05 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | parked | None | adr/TADR-001-engine-language-platforms.md excludes mobile from initial Windows/Linux production scope. Revisit only for new approved platform scope. |
-| P06 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-P06](#q-p06), [Q-P07](#q-p07), [Q-P08](#q-p08), [Q-P09](#q-p09) | Current Bible candidate cast/world/fiction decisions replace automatic admission of older research candidates. Product lane owns precise candidate follow-ups. |
-| P07 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-P23](#q-p23), [Q-P07](#q-p07), [Q-P12](#q-p12) | Seeded procedural levels are accepted; technique and selected production world/route remain separate decisions. |
-| P08 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [TH-23](#th-23), [TH-26](#th-26) | Generated-level telemetry becomes a production verification/tooling contract. Old browser telemetry implementation cannot run without a selected generated-level scope and Q-E01 handoff. |
-| P09 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | parked | None | D02 mass/deflect foundation was not adopted. docs/audit-2026-09-05/worker-2-combat.md retains the Sluiceback experiment if a future deflect increment is explicitly selected. |
-| P10 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [LG-01](#lg-01) | Current human feedback remains open; docs/LIGHTNING-VERIFICATION.md separates technical proof from controls, density and readability judgments. |
-| P11 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [TH-07](#th-07) | Bounded progression contract has Q-P10/Q-P11 product gaps; binary tree topology is settled. Product design values remain missing, not implemented by a technical page. |
-| P12 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [TH-11](#th-11), [TH-14](#th-14), [HF-07](#hf-07), [HF-08](#hf-08) | Run/route/save design decomposes into explicit contracts. Q-P12/Q-P16 and Q-P23 retain missing product/generation rules. |
-| P13 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [TH-08](#th-08), [TH-09](#th-09) | Inventory/loot/fixed recipe contracts are separate; Q-P14 retains eligibility/recipe/disclosure choices. |
-| P14 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [TH-13](#th-13) | Chaos commitment contract is separate from Q-P13 tuning and Q-P06 production cast selection. Creative notebook inventions remain product scope. |
-| T01 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-E07](#q-e07) | Local Git history exists; no remote publication is authorized by preparation. CONTRIBUTING.md records baseline 4db9b31 and explicit remote gate. |
-| T02 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-E08](#q-e08) | Browser QA packaging remains relevant only to distribution of the two browser proofs; it is separate from production Godot diagnostics. |
-| T03 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [HF-02](#hf-02), [TH-24](#th-24) | Record measured browser RTX 4080 evidence and design named-hardware native qualification. Q-E03 retains target/budget choice; existing sixty-second result is not full-world proof. |
-| T04 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-E06](#q-e06) | A source license and concrete shipped-asset notices remain release inputs; local metadata alone is insufficient. |
-| T05 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09), [TH-21](#th-21) | Split checkpoint/profile work into coverage, commit, recovery, migration and schema examples; browser data preservation remains mandatory and import policy is Q-E05. |
-| T06 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-E10](#q-e10) | Old browser lane-aware implementation has no selected defense encounter. TH-06 owns native design once its encounter context is supplied. |
-| T07 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-P23](#q-p23), [Q-E01](#q-e01) | Old z-only browser groundHeight task is not a known Godot code task. TH-15 owns collision qualification; selected terrain/production paths must precede implementation. |
-| T08 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-P36](#q-p36) | The admitted inference-only or ungrounded enemy additions need dated occupational sources or inference relabeling before admission; product lane owns candidate source-grounding inventory. |
-| T09 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | parked | [Q-P06](#q-p06), [Q-E05](#q-e05) | Existing browser portrait keep/redraw work depends on selected cast and whether browser proofs remain product-facing. Preserve existing assets until that scope is selected. |
-| T10 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [TH-16](#th-16), [TH-24](#th-24) | Readability qualification follows approved Bible art and selected renderer/hardware. Historical Furnace City floor test is not automatically a production content task. |
-| T11 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | question | [Q-P23](#q-p23), [Q-E01](#q-e01) | Reusable orchard browser pockets depend on old generation assumptions. Native generation/content contracts must establish actual assets and paths before implementation. |
-| T12 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | superseded | [Q-P17](#q-p17), [TH-17](#th-17) | BIBLE.md Audio & Feel now supplies a concrete sound direction proposal. Product decision Q-P17 and engine integration TH-17 retain remaining work; no recorded sound/mix is proven. |
-| T13 | [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | task | [LG-03](#lg-03), [LG-04](#lg-04), [LG-05](#lg-05), [Q-E11](#q-e11), [LG-07](#lg-07), [Q-E12](#q-e12) | docs/project/AGENT-PLAYTEST-ENGINEERING.md and artifacts/agent-recovery-2026-09-06/README.md establish runner, semantic flow, versioned evidence and bounded recovery. Profiles, known perception errors, arbitrary equipment and regression comparisons remain. Three terminal trials do not establish human skill or Godot compatibility. |
-| D01 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | [LG-01](#lg-01) | Implemented lightning increment superseded the mass-first four-increment sequence; later build still needs scoped go. Source: docs/project/DECISION-REGISTER.md row D01. |
-| D02 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Mass penalties, Roll-Through and Shed Vent were not adopted; retained combat paper is historical research. Source: docs/project/DECISION-REGISTER.md row D02. |
-| D03 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-02](#th-02), [TH-08](#th-08) | BIBLE.md Movement and Inventory retain playful movement and optional transformations. This completes direction only, not production mechanics. Source: docs/project/DECISION-REGISTER.md row D03. |
-| D04 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E07](#q-e07) | Exact remote and upload authorization remain open. Source: docs/project/DECISION-REGISTER.md row D04. |
-| D05 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E08](#q-e08) | Separate historical browser QA packaging from future production diagnostics. Source: docs/project/DECISION-REGISTER.md row D05. |
-| D06 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P07](#q-p07), [Q-P08](#q-p08) | Approved Bible retains candidate catalogue and Furnace Fleet premise choices; fixed campaign order is superseded. Source: docs/project/DECISION-REGISTER.md row D06. |
-| D07 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-01](#th-01), [TH-11](#th-11) | BIBLE.md Complete loop and Runs retain four-world 60–75 minute target. No full run or human timing proof exists. Source: docs/project/DECISION-REGISTER.md row D07. |
-| D08 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P23](#q-p23) | Seeded procedural direction remains settled; generation technique is unresolved. Source: docs/project/DECISION-REGISTER.md row D08. |
-| D09 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P12](#q-p12) | Catalogue/repeat/first-world/final-encounter choices remain under current Bible. Source: docs/project/DECISION-REGISTER.md row D09. |
-| D10 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P07](#q-p07), [Q-E01](#q-e01) | Next authored kit must be chosen from current production catalogue and scoped implementation; old paper recommendation is not selection. Source: docs/project/DECISION-REGISTER.md row D10. |
-| D11 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Glassjaw/Old Ironroot Yard Commons placement was never accepted. Current BIBLE.md area catalogue does not canonize those historical moves; reopen only with selected enemy content. Source: docs/project/DECISION-REGISTER.md row D11. |
-| D12 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Kiln Strider/Harvest Roads association belongs to an older unselected world candidate; retain ENEMY-ROSTER.md proposal. Source: docs/project/DECISION-REGISTER.md row D12. |
-| D13 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Jettling admission is an old Spillway roster proposal, not selected production content; retain ENEMY-ROSTER.md grounding requirement. Source: docs/project/DECISION-REGISTER.md row D13. |
-| D14 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Furnace City reprise/native mix depends on a world absent from the current five-area comparison set. No old increment-2 implementation is authorized. Source: docs/project/DECISION-REGISTER.md row D14. |
-| D15 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E10](#q-e10) | No universal concurrency cap is selected; evaluate explicit readable encounter admission. Source: docs/project/DECISION-REGISTER.md row D15. |
-| D16 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Graftmender device-binding extension is an unadopted roster mechanic, not an existing engine defect. Source: docs/project/DECISION-REGISTER.md row D16. |
-| D17 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P06](#q-p06) | Creative development is delegated; production cast/species selection remains explicit. Source: docs/project/DECISION-REGISTER.md row D17. |
-| D18 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P17](#q-p17), [Q-P31](#q-p31) | Current Audio & Feel proposal does not settle bark count, recorded voice or combat text; product audio decision must preserve this residual detail. Source: docs/project/DECISION-REGISTER.md row D18. |
-| D19 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P33](#q-p33) | Approved place-based lighting style does not by itself select fixed keyframes versus dynamic weather/day-night. Product lane must retain this residual presentation choice. Source: docs/project/DECISION-REGISTER.md row D19. |
-| D20 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | task | [TH-16](#th-16), [TH-24](#th-24) | Approved Art Direction supersedes the older grim/matte palette premise; actual dark-ground threat readability still requires rendering/hardware qualification. Source: docs/project/DECISION-REGISTER.md row D20. |
-| D21 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E10](#q-e10) | Timed-defense completion depends on selected encounter scope. Source: docs/project/DECISION-REGISTER.md row D21. |
-| D22 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | [Q-P24](#q-p24), [Q-P25](#q-p25) | Rowkeeper trellis/miniboss and persistent arena alteration are older unselected encounter proposals. No current save schema silently adopts persistent terrain effects. Source: docs/project/DECISION-REGISTER.md row D22. |
-| D23 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | [Q-P37](#q-p37), [Q-P38](#q-p38) | Scrapbook-only branch gating is a historical optional-content proposal, not an accepted route rule. Source: docs/project/DECISION-REGISTER.md row D23. |
-| D24 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [HF-07](#hf-07), [TH-11](#th-11) | BIBLE.md Runs explicitly fixes completed-level next-entrance resume. This ruling does not prove save implementation. Source: docs/project/DECISION-REGISTER.md row D24. |
-| D25 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P14](#q-p14) | Reward counts/cadence and seen/declined discovery ledger detail remain part of loot/disclosure design. Source: docs/project/DECISION-REGISTER.md row D25. |
-| D26 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E09](#q-e09) | Aggregate ownership does not settle publisher discovery retention timing. Source: docs/project/DECISION-REGISTER.md row D26. |
-| D27 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | task | [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09), [TH-21](#th-21) | Production schema/compatibility work is decomposed; Q-E05 separately gates any browser import or retirement. Source: docs/project/DECISION-REGISTER.md row D27. |
-| D28 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E03](#q-e03) | Historical RTX 4080 browser sample is not an accepted native minimum or budget. Source: docs/project/DECISION-REGISTER.md row D28. |
-| D29 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | [HF-01](#hf-01) | Accepted TADR-001 settles Godot 4.7.2 standard/typed GDScript and Windows/Linux intent. Older engine-open trigger is stale; qualification remains future. Source: docs/project/DECISION-REGISTER.md row D29. |
-| D30 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | [TH-15](#th-15) | Accepted TADR-002 uses engine-native physical world with one collision-query owner. No browser physics-library or extra dependency evaluation is currently scoped. Source: docs/project/DECISION-REGISTER.md row D30. |
-| D31 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Accepted TADR-001 excludes mobile from initial production scope; touch is outside current browser increment. Source: docs/project/DECISION-REGISTER.md row D31. |
-| D32 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-E06](#q-e06) | Project/source-asset redistribution terms and notices require explicit release review. Source: docs/project/DECISION-REGISTER.md row D32. |
-| D33 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P08](#q-p08) | Fleet motive and antagonist truthfulness remain a fiction choice; current premise does not select the old binary wording. Source: docs/project/DECISION-REGISTER.md row D33. |
-| D34 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [Q-P06](#q-p06) | D57 delegates labeled creative treatment of the unclear sketch. Transcription and automatic roster admission are not established. Source: docs/project/DECISION-REGISTER.md row D34. |
-| D35 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | First Stoker Damper defection is an older unselected Furnace City narrative beat. Preserve as research until that content is requested. Source: docs/project/DECISION-REGISTER.md row D35. |
-| D36 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | [Q-P06](#q-p06), [Q-P13](#q-p13) | Accepted notebook interpretation replaces earlier lightning-only keep/adapt/park framing. No compulsory learning service or drone role. Source: docs/project/DECISION-REGISTER.md row D36. |
-| D37 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Furnace City crew-rescue finale remains an older candidate beat; current Bible does not select a fixed finale. Source: docs/project/DECISION-REGISTER.md row D37. |
-| D38 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | None | Old Windworks mint exception is tied to superseded matte/palette assumptions and an unselected world. Current BIBLE.md approved Art Direction owns production styling. Source: docs/project/DECISION-REGISTER.md row D38. |
-| D39 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | parked | None | Harvest Roads cargo destruction/protection remains an older unselected-world narrative/mechanical proposal. Source: docs/project/DECISION-REGISTER.md row D39. |
-| D40 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | None | DECISION-REGISTER.md Current rulings explicitly says D40 does not block approved Bible art. Browser palette remains historical until scoped change. Source: docs/project/DECISION-REGISTER.md row D40. |
-| D41 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | superseded | None | DECISION-REGISTER.md Current rulings explicitly says D41 does not block approved Bible art. Matte-only premise is superseded. Source: docs/project/DECISION-REGISTER.md row D41. |
-| D42 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-02](#th-02), [TH-05](#th-05), [TH-16](#th-16) | BIBLE.md Movement and Growth require ordinary route clearance and readable growing machinery; no universal giant transformation or mass gate is implied. Physical qualification remains future. Source: docs/project/DECISION-REGISTER.md row D42. |
-| D43 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P15](#q-p15) | Cooldown/two-conductor limit is implemented only in lightning; production capacity/resource/ownership remains the explicit device lifecycle gap. Source: docs/project/DECISION-REGISTER.md row D43. |
-| D44 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P15](#q-p15) | Lifetime, replacement, recall and cross-level device persistence remain open. Source: docs/project/DECISION-REGISTER.md row D44. |
-| D45 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-04](#th-04), [TH-10](#th-10) | BIBLE.md Abilities retains useful moving combat and quick autonomous support without a stationary build screen. Exact class triggers and automation remain content work. Source: docs/project/DECISION-REGISTER.md row D45. |
-| D46 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-08](#th-08) | BIBLE.md Inventory accepts full optional transformations and safe effective-build reconstruction. Exact item behaviors remain open. Source: docs/project/DECISION-REGISTER.md row D46. |
-| D47 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P15](#q-p15) | One main companion is settled; component assembly, commands and lifecycle remain open. Prototype primer is limited proof. Source: docs/project/DECISION-REGISTER.md row D47. |
-| D48 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-06](#th-06) | BIBLE.md Abilities and Encounters retains earned dominance and readable spatial challenge. Enemy counts/counterplay and final balance remain unqualified. Source: docs/project/DECISION-REGISTER.md row D48. |
-| D49 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-11](#th-11) | D49 and BIBLE.md Runs settle two eligible destination offers and reference boundaries. Catalogue/route policy remains Q-P12. Source: docs/project/DECISION-REGISTER.md row D49. |
-| D50 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-07](#th-07), [TH-20](#th-20) | BIBLE.md Four slots settles four trees and 1/2/4/8 binary topology. No final character/node catalogue is implemented. Source: docs/project/DECISION-REGISTER.md row D50. |
-| D51 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-07](#th-07) | BIBLE.md Four slots settles weapon/mobility entry access, world-one hero/ultimate unlock and gameplay milestones. Costs/supply remain Q-P10/Q-P11. Source: docs/project/DECISION-REGISTER.md row D51. |
-| D52 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-07](#th-07), [TH-08](#th-08), [Q-P18](#q-p18) | BIBLE.md separates special tree respec from between-fight equipment freedom. Special opportunity scope/refund/frequency remain product design. Source: docs/project/DECISION-REGISTER.md row D52. |
-| D53 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-09](#th-09) | BIBLE.md Loot settles world-themed random acquisition and attunement direction; exact items and compatibility remain Q-P14. Source: docs/project/DECISION-REGISTER.md row D53. |
-| D54 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [TH-09](#th-09) | BIBLE.md fixed-secret eligibility is deterministic from selected endpoints. Recipes/disclosure remain Q-P14 and executable behavior remains absent. Source: docs/project/DECISION-REGISTER.md row D54. |
-| D55 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [HF-07](#hf-07), [HF-08](#hf-08), [TH-11](#th-11) | BIBLE.md Runs fixes one standard revival, terminal second death and rebuild-each-run power. No production durability proof exists. Source: docs/project/DECISION-REGISTER.md row D55. |
-| D56 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P13](#q-p13), [TH-13](#th-13) | Directed fire, automatic short field and occasional harmful multi-effect miscasts are accepted; tuning and warning design remain unresolved. Source: docs/project/DECISION-REGISTER.md row D56. |
-| D57 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | completed | [Q-P06](#q-p06) | D57 and BIBLE.md approval delegate labeled creative development without automatic production roster or learning-system approval. Source: docs/project/DECISION-REGISTER.md row D57. |
-| D58 | [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | question | [Q-P16](#q-p16) | Revival health/placement and unfinished-level interruption policy remain explicit, while no-reroll/no-duplicate invariants are settled. Source: docs/project/DECISION-REGISTER.md row D58. |
-| BD-01 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P01](#q-p01) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-02 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P02](#q-p02) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-03 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P03](#q-p03) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-04 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P04](#q-p04) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-05 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P05](#q-p05) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-06 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P06](#q-p06) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-07 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P07](#q-p07) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-08 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P08](#q-p08) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-09 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P09](#q-p09) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-10 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P10](#q-p10) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-11 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P11](#q-p11) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-12 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P12](#q-p12) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-13 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P13](#q-p13) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-14 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P14](#q-p14) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-15 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P15](#q-p15) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-16 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P16](#q-p16) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| BD-17 | [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | question | [Q-P17](#q-p17) | The approved Bible preserves this explicit content choice. No answer is inferred from illustrations or product approval. |
-| R01 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P21](#q-p21), [Q-P22](#q-p22), [Q-P26](#q-p26), [Q-P27](#q-p27) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R02 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P21](#q-p21), [Q-P22](#q-p22), [Q-P30](#q-p30) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R03 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P21](#q-p21), [Q-P25](#q-p25), [Q-P38](#q-p38) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R04 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P10](#q-p10), [Q-P11](#q-p11), [Q-P26](#q-p26), [Q-P27](#q-p27) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R05 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | completed | None | Preservation is established only for the existing browser entries. docs/adr/0001-two-playable-entries.md and docs/LIGHTNING-VERIFICATION.md record both entries; this does not consolidate or prove a future production game. |
-| R06 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | parked | [Q-P35](#q-p35) | Offline solo is settled; enjoyment evidence and later co-op remain separate. Mapped questions retain the production work that remains before bounded implementation cards can be written. Offline solo is settled by TADR-005; no multiplayer/social scope is active. |
-| R07 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P01](#q-p01), [Q-P02](#q-p02), [Q-P03](#q-p03), [Q-P04](#q-p04), [Q-P05](#q-p05), [Q-P06](#q-p06), [Q-P11](#q-p11), [Q-P20](#q-p20) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R08 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P19](#q-p19), [Q-P22](#q-p22) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R09 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P15](#q-p15), [Q-P29](#q-p29) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R10 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P20](#q-p20) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R11 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P07](#q-p07), [Q-P12](#q-p12), [Q-P23](#q-p23), [Q-P38](#q-p38) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R12 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P37](#q-p37) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R13 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P22](#q-p22), [Q-P24](#q-p24), [Q-P25](#q-p25) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R14 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P26](#q-p26), [Q-P31](#q-p31), [Q-P34](#q-p34), [Q-P35](#q-p35) | Free/local tooling and explicit external-service decisions remain an execution constraint; docs/project/ASSETS.md records only current assets. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R15 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P18](#q-p18), [Q-P19](#q-p19), [Q-P30](#q-p30) | Bounded orchard implementation is recorded in docs/LIGHTNING-VERIFICATION.md and docs/LIGHTNING-PLAYGUIDE.md; human feel and full-game scope remain unproved. Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R16 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P10](#q-p10), [Q-P11](#q-p11) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R17 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P18](#q-p18) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R18 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P14](#q-p14), [Q-P19](#q-p19), [Q-P37](#q-p37), [Q-P38](#q-p38) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R19 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P16](#q-p16), [Q-P37](#q-p37) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-| R20 | [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | question | [Q-P11](#q-p11), [Q-P13](#q-p13) | Mapped questions retain the production work that remains before bounded implementation cards can be written. |
-
-### Unnumbered requirements, systems and evidence
-
-| Source requirement / evidence | Record | Disposition | Task/question reference | Scope and evidence |
-| --- | --- | --- | --- | --- |
-| CORE: The complete loop | [BIBLE.md](BIBLE.md) | task | [TH-01](#th-01) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Movement, camera and active aim | [BIBLE.md](BIBLE.md) | task | [TH-02](#th-02) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: A committed attack means what it shows | [BIBLE.md](BIBLE.md) | task | [TH-03](#th-03) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Abilities, ultimates and combat rhythm | [BIBLE.md](BIBLE.md) | task | [TH-04](#th-04) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Electromagnetic collection, recycling and growth | [BIBLE.md](BIBLE.md) | task | [TH-05](#th-05) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Encounters, waves and enemies | [BIBLE.md](BIBLE.md) | task | [TH-06](#th-06) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Four slots and milestone progression | [BIBLE.md](BIBLE.md) | task | [TH-07](#th-07) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Inventory, equipment and transformations | [BIBLE.md](BIBLE.md) | task | [TH-08](#th-08) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Themed loot, attunement and fixed secrets | [BIBLE.md](BIBLE.md) | task | [TH-09](#th-09) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Devices and one main companion | [BIBLE.md](BIBLE.md) | task | [TH-10](#th-10) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Runs, regions, exits and saves | [BIBLE.md](BIBLE.md) | task | [TH-11](#th-11) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: HUD, dashboard and settings | [BIBLE.md](BIBLE.md) | task | [TH-12](#th-12) | Dedicated system contract page; implementation and physical validation remain separate. |
-| CORE: Architecture and implementation handoff | [BIBLE.md](BIBLE.md) | task | [HF-01](#hf-01), [HF-03](#hf-03), [TH-29](#th-29) | Foundation owns paths/interfaces; later handoff owns scoped native qualification readiness. Accepted TADRs supersede engine-open wording. |
-| T13.order-1 | [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | completed | None | artifacts/agent-player-2026-09-06/README.md and artifacts/agent-recovery-2026-09-06/README.md record maintained runner and cleanup; exact dated configurations only. |
-| T13.order-2 | [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | task | [LG-07](#lg-07) | Core flow and three terminal runs have artifacts/agent-recovery-2026-09-06/README.md evidence; arbitrary equipment editing remains unsupported. |
-| T13.order-3 | [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | task | [LG-03](#lg-03), [Q-E11](#q-e11) | Versioned evidence exists, but comparisons and reproducibility classification still need bounded acceptance; native timing prevents deterministic-replay claim. |
-| T13.order-4 | [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | task | [LG-03](#lg-03), [LG-04](#lg-04), [LG-05](#lg-05) | Measured profiles and known detector errors remain; general human-like tactics are not established. |
-| T13.order-5 | [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | question | [Q-E11](#q-e11) | Baseline/candidate integration must detect then remove a scoped regression. |
-| T13.order-6 | [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | question | [Q-E12](#q-e12) | Broader app coverage is need-driven, not a standing platform-expansion task. |
-| TECH.section: Constraints & Budgets | [adr/README.md](adr/README.md) | task | [HF-02](#hf-02), [TH-24](#th-24) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Module Map | [adr/README.md](adr/README.md) | task | [HF-03](#hf-03), [TH-27](#th-27) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Runtime Patterns | [adr/README.md](adr/README.md) | task | [HF-04](#hf-04), [TH-14](#th-14), [TH-15](#th-15) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Data Model & Content Pipeline | [adr/README.md](adr/README.md) | task | [HF-05](#hf-05), [HF-06](#hf-06), [TH-19](#th-19), [TH-20](#th-20) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: System Designs | [adr/README.md](adr/README.md) | task | [TH-01](#th-01), [TH-02](#th-02), [TH-03](#th-03), [TH-04](#th-04), [TH-05](#th-05), [TH-06](#th-06), [TH-07](#th-07), [TH-08](#th-08), [TH-09](#th-09), [TH-10](#th-10), [TH-11](#th-11), [TH-12](#th-12), [TH-13](#th-13) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Persistence | [adr/README.md](adr/README.md) | task | [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09), [TH-21](#th-21) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Rendering, Audio, Input Integration | [adr/README.md](adr/README.md) | task | [TH-16](#th-16), [TH-17](#th-17), [TH-18](#th-18) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Tooling & Debug | [adr/README.md](adr/README.md) | task | [TH-26](#th-26) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Testing Strategy | [adr/README.md](adr/README.md) | task | [TH-22](#th-22), [TH-23](#th-23), [TH-24](#th-24), [TH-25](#th-25) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| TECH.section: Conventions | [adr/README.md](adr/README.md) | task | [HF-01](#hf-01), [TH-29](#th-29) | Ten-section structure from accepted engineering handoff request; root supplied exact heading contract. ADR index supplies the planned deliverable and evidence boundary. |
-| BIBLE-useful-starting-kit | [BIBLE.md](BIBLE.md) | question | [Q-P06](#q-p06), [Q-P11](#q-p11), [Q-P20](#q-p20), [Q-P21](#q-p21) | Starting weapon and mobility must work before rare loot. Final kit content and feel still need a selected scope. |
-| BIBLE-collect-recycle-fabricate | [BIBLE.md](BIBLE.md) | question | [Q-P10](#q-p10), [Q-P26](#q-p26), [Q-P27](#q-p27) | Accumulation and fabrication are approved; material policy, authored mechanisms and movement evidence remain open. |
-| BIBLE-branch-node-effects | [BIBLE.md](BIBLE.md) | question | [Q-P11](#q-p11) | Binary topology is settled; node effects and prototype action mapping are not. |
-| BIBLE-respec-scope-frequency-refunds | [BIBLE.md](BIBLE.md) | question | [Q-P18](#q-p18) | Respec permission is settled; opportunity content and refund rules remain unselected. |
-| BIBLE-inventory-capacity-replacement | [BIBLE.md](BIBLE.md) | question | [Q-P19](#q-p19) | Four progression slots do not establish inventory/equipment capacity. |
-| BIBLE-ultimate-cadence | [BIBLE.md](BIBLE.md) | question | [Q-P20](#q-p20) | Useful class-action charging is settled; formulas and timing require a selected kit. |
-| BIBLE-device-lifecycle | [BIBLE.md](BIBLE.md) | question | [Q-P15](#q-p15) | Capacity, lifetime, recall, resources and cross-level persistence require explicit rules. |
-| BIBLE-companion-assembly-support | [BIBLE.md](BIBLE.md) | question | [Q-P15](#q-p15), [Q-P29](#q-p29) | One main assembled companion is settled; parts, controls and appearance remain open. |
-| BIBLE-fixed-secret-eligibility-disclosure | [BIBLE.md](BIBLE.md) | question | [Q-P14](#q-p14) | Fixed effects and persistent knowledge are settled; exact recipes and presentation remain content work. |
-| BIBLE-revival-health-placement-interruption | [BIBLE.md](BIBLE.md) | question | [Q-P16](#q-p16) | One revival and next-entrance completed-level resume stay fixed; unfinished-level behavior is unresolved. |
-| BIBLE-permanent-options | [BIBLE.md](BIBLE.md) | question | [Q-P37](#q-p37) | Option/challenge unlocks persist; the initial catalogue and conditions are not specified. |
-| BIBLE-mounted-equipment-scale | [BIBLE.md](BIBLE.md) | question | [Q-P22](#q-p22), [Q-P26](#q-p26) | E01/E02 relative D comparisons do not establish mounted dimensions or route clearance. |
-| BIBLE-rolling-articulation | [BIBLE.md](BIBLE.md) | question | [Q-P27](#q-p27) | M01/M05/E02 tread and support forms do not prove irregular-core rolling articulation. |
-| BIBLE-growth-upgrade-visual-states | [BIBLE.md](BIBLE.md) | question | [Q-P11](#q-p11), [Q-P26](#q-p26), [Q-P27](#q-p27) | Meaningful hardware/effect changes are required, but selected character states and production assets need scope. |
-| BIBLE-material-and-lighting-production | [BIBLE.md](BIBLE.md) | question | [Q-P26](#q-p26), [Q-P33](#q-p33) | Grease/material and Southwest light direction is approved. Runtime material fidelity, detail budget and selected regional lighting need production work. |
-| BIBLE-interface-layout-production | [BIBLE.md](BIBLE.md) | question | [Q-P30](#q-p30) | U01/U02 illustrate states; production layout, view distances and hardware evidence remain open. |
-| BIBLE-audio-production | [BIBLE.md](BIBLE.md) | question | [Q-P17](#q-p17), [Q-P31](#q-p31), [Q-P32](#q-p32) | F01 is a concept sheet. Music, samples, mix, motion, long-session listening and controller comfort remain untested. |
-| BIBLE-character-arcs-supporting-scenes | [BIBLE.md](BIBLE.md) | question | [Q-P08](#q-p08), [Q-P09](#q-p09), [Q-P28](#q-p28) | Arcs, optional exchanges, Moss and Brindle are proposals. No dialogue inventory or launch supporting cast is selected. |
-| BIBLE-weapon-device-candidates | [BIBLE.md](BIBLE.md) | question | [Q-P06](#q-p06), [Q-P11](#q-p11), [Q-P15](#q-p15) | Hook-driver/winch, mortar/nest, claw/clamp, emitter/post and laser/prism remain qualitative candidates. |
-| BIBLE-regional-loot-candidates | [BIBLE.md](BIBLE.md) | question | [Q-P07](#q-p07), [Q-P14](#q-p14) | Coupling, regulator, linkage, exchanger and vane bearing are theme proposals, not a drop table. |
-| BIBLE-Yard-Commons-content | [BIBLE.md](BIBLE.md) | question | [Q-P07](#q-p07), [Q-P24](#q-p24), [Q-P25](#q-p25), [Q-P33](#q-p33), [Q-P38](#q-p38) | Rocky washes, service aprons, handlers and depot encounters need selected regional production scope. |
-| BIBLE-Spillway-Works-content | [BIBLE.md](BIBLE.md) | question | [Q-P07](#q-p07), [Q-P24](#q-p24), [Q-P25](#q-p25), [Q-P33](#q-p33), [Q-P38](#q-p38) | Water handling, pump encounters, basin changes and maintenance chambers remain proposed. |
-| BIBLE-Iron-Orchard-content | [BIBLE.md](BIBLE.md) | question | [Q-P07](#q-p07), [Q-P24](#q-p24), [Q-P25](#q-p25), [Q-P33](#q-p33), [Q-P38](#q-p38) | Full generated region, seedhouse defense and terrain-changing Grand Pruner remain proposed beyond the bounded arm. |
-| BIBLE-Foundry-Crown-content | [BIBLE.md](BIBLE.md) | question | [Q-P07](#q-p07), [Q-P24](#q-p24), [Q-P25](#q-p25), [Q-P33](#q-p33), [Q-P38](#q-p38) | Cableway loads, mountain encounters and platform consequences remain proposed. Mass-gated rails were not adopted. |
-| BIBLE-Pale-Basin-content | [BIBLE.md](BIBLE.md) | question | [Q-P07](#q-p07), [Q-P24](#q-p24), [Q-P25](#q-p25), [Q-P33](#q-p33), [Q-P38](#q-p38) | Dune handling, excavation encounters and terrain change remain proposed; image relief does not change the dry-dune identity. |
-| DISCOVERY-remaining-design-decisions | [docs/DISCOVERY.md](docs/DISCOVERY.md) | duplicate | [Q-P10](#q-p10), [Q-P11](#q-p11), [Q-P12](#q-p12), [Q-P13](#q-p13), [Q-P14](#q-p14), [Q-P15](#q-p15), [Q-P16](#q-p16), [Q-P18](#q-p18), [Q-P19](#q-p19), [Q-P22](#q-p22), [Q-P23](#q-p23) | The numbered remaining list duplicates retained questions; its tree-shape wording is superseded by the accepted binary rule. |
-| DISCOVERY-coop-later | [docs/DISCOVERY.md](docs/DISCOVERY.md) | parked | None | Offline solo production remains settled. Later co-op and player collision fantasy does not authorize networking. Offline solo is settled by TADR-005; no multiplayer/social scope is active. |
-| DISCOVERY-notebook-character-sketches | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | parked | [Q-P06](#q-p06) | Bomb drone, elongated elemental being, body shifter, gunslinger and uncertain Jib/bing-bong/ghost sketches remain creative alternatives outside a selected roster. |
-| CHARACTER-older-roster-staging | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | superseded | [Q-P06](#q-p06), [Q-P08](#q-p08), [Q-P28](#q-p28) | The old Pip/Vane mapping, four-pilot staging and fixed overseer rungs do not select the Bible cast or route. |
-| CHARACTER-capsule-lineup-study | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | question | [Q-P06](#q-p06), [Q-P26](#q-p26) | The four-pilot 64 px study requires a selected cast and production batch. Bible C01-C05/G01 are concept identity evidence, not production turnarounds. |
-| CHARACTER-overseer-heraldry-study | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | question | [Q-P08](#q-p08), [Q-P28](#q-p28) | Brindle plus five overseers is not an approved supporting roster. |
-| CHARACTER-companion-module-turnaround | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | question | [Q-P15](#q-p15), [Q-P26](#q-p26), [Q-P29](#q-p29) | SNIP-3 and three modules are proposals. Module appearance/animation needs an admitted assembly. |
-| CHARACTER-Scrapbook-voice-copy-barks | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | question | [Q-P28](#q-p28), [Q-P37](#q-p37) | Moss narrator, five tabs, 12 barks per pilot and prose budgets are writing proposals, not selected final copy. |
-| CHARACTER-mastery-titles-expression-motion | [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | question | [Q-P06](#q-p06), [Q-P26](#q-p26), [Q-P27](#q-p27), [Q-P28](#q-p28), [Q-P37](#q-p37) | Per-class titles, capsule event expressions and movement personality require selected content. Baseline titles do not prove future class progression. |
-| WORLD-route-clearance-contract | [docs/WORLD-ENVIRONMENTS.md](docs/WORLD-ENVIRONMENTS.md) | question | [Q-P22](#q-p22), [Q-P24](#q-p24) | 2D widths, route dimensions and movement values are historical proposals. Preserve ordinary-growth passage and visible escape as approved invariants. |
-| WORLD-wayfinding-weather-base-chips | [docs/WORLD-ENVIRONMENTS.md](docs/WORLD-ENVIRONMENTS.md) | question | [Q-P33](#q-p33), [Q-P34](#q-p34) | Signs, static lighting/weather policy and physical biome chips require selection. Old five-color miniature constraints are superseded. |
-| WORLD-Windworks-Harvest-Roads-Furnace-City | [docs/WORLD-ENVIRONMENTS.md](docs/WORLD-ENVIRONMENTS.md) | parked | [Q-P07](#q-p07) | Retain the older optional kits for catalogue choice; no catalogue size or fixed finale follows. |
-| WORLD-next-Spillway-kit | [docs/WORLD-ENVIRONMENTS.md](docs/WORLD-ENVIRONMENTS.md) | question | [Q-P07](#q-p07), [Q-P24](#q-p24), [Q-P25](#q-p25) | The recommended Spillway minimal kit, sluice beat, signs and water ambience remain contingent on next-region scope. |
-| LEVEL-authored-versus-terrain-generation | [docs/LEVEL-DESIGN.md](docs/LEVEL-DESIGN.md) | question | [Q-P23](#q-p23) | Seeded compact levels are settled; authored module versus terrain assembly remains open. |
-| LEVEL-branches-defense-and-boss-patterns | [docs/LEVEL-DESIGN.md](docs/LEVEL-DESIGN.md) | question | [Q-P12](#q-p12), [Q-P22](#q-p22), [Q-P24](#q-p24), [Q-P25](#q-p25), [Q-P38](#q-p38) | Pocket types, mouth/anchor dimensions, defense completion and boss consequences remain proposals, to be selected and re-derived for actual production movement. |
-| LEVEL-historical-orchard-five-pocket-example | [docs/LEVEL-DESIGN.md](docs/LEVEL-DESIGN.md) | superseded | [Q-P23](#q-p23), [Q-P38](#q-p38) | The fixed sequence, three-stage schedule and mass/deflect prerequisites are historical. Candidate spatial ideas remain available through the selected module question. |
-| LEVEL-duration-branch-telemetry-hypotheses | [docs/LEVEL-DESIGN.md](docs/LEVEL-DESIGN.md) | question | [Q-P35](#q-p35) | Proposed 10-14 minute stage and floor-of-8-minute thresholds were never accepted and conflict with earned fast clears. A new bounded evidence procedure must use the four-world target. |
-| ENEMY-candidate-world-library | [docs/ENEMY-ROSTER.md](docs/ENEMY-ROSTER.md) | question | [Q-P25](#q-p25) | All named family members, pressure roles, elites, bosses and values are a library for scope selection, not a production roster. |
-| ENEMY-13-inferred-occupations | [docs/ENEMY-ROSTER.md](docs/ENEMY-ROSTER.md) | question | [Q-P36](#q-p36) | Thirteen newly inferred designs require URL/access-date qualification before being called grounded. Reference work is bounded by admitted content. |
-| ENEMY-candidate-reconciliations | [docs/ENEMY-ROSTER.md](docs/ENEMY-ROSTER.md) | question | [Q-P07](#q-p07), [Q-P25](#q-p25) | Glassjaw, Old Ironroot, Scooplet reuse, Kiln Strider, Plowback and Jettling placements remain proposals. |
-| ENEMY-historical-build-order | [docs/ENEMY-ROSTER.md](docs/ENEMY-ROSTER.md) | superseded | [Q-P25](#q-p25) | The twelve-step deflect/mass-first order is a historical dependency study, not the next sprint. |
-| ART-ball-build-state-turnaround | [docs/audit-2026-09-05/worker-4-universe.md](docs/audit-2026-09-05/worker-4-universe.md) | question | [Q-P06](#q-p06), [Q-P11](#q-p11), [Q-P26](#q-p26), [Q-P27](#q-p27) | Three stages by four class signatures was a proposed art study. Re-scope from selected characters and actual tree hardware, not old prototype roster. |
-| ART-Snipcart-articulated-blockout | [docs/audit-2026-09-05/worker-4-universe.md](docs/audit-2026-09-05/worker-4-universe.md) | question | [Q-P25](#q-p25), [Q-P26](#q-p26) | Authored fork/brace model, three scales and glTF animation study remain production proposals. Existing procedural mechanisms do not complete a Blender rig. |
-| ART-Pip-capsule-expression-sheet | [docs/audit-2026-09-05/worker-4-universe.md](docs/audit-2026-09-05/worker-4-universe.md) | superseded | [Q-P06](#q-p06), [Q-P26](#q-p26), [Q-P28](#q-p28) | The claim that this sheet would close hamster species canon is superseded by the approved Bible candidate cast. Expression and enclosure production needs selected scope. |
-| ART-biome-palette-keyframes | [docs/audit-2026-09-05/worker-4-universe.md](docs/audit-2026-09-05/worker-4-universe.md) | superseded | [Q-P07](#q-p07), [Q-P26](#q-p26), [Q-P33](#q-p33) | Old fixed-rung cream/orange/mint keyframes are superseded by approved Section 7 and regional Bible concepts. Selected production lighting remains open. |
-| ART-figurine-blockout | [docs/audit-2026-09-05/worker-4-universe.md](docs/audit-2026-09-05/worker-4-universe.md) | question | [Q-P34](#q-p34) | 60 mm Pip, part thickness and minimal-support checks are unapproved physical-product proposals. Concept grey renders do not prove a printable or safe product. |
-| ART-historical-miniature-palette | [docs/ART-DIRECTION.md](docs/ART-DIRECTION.md) | superseded | None | The approved BIBLE Section 7 replaces pristine miniature, matte-only and cream/orange palette instructions for future work. Historical images and prototype evidence remain preserved. |
-| CONCEPT-orchard-motion-closure-limits | [docs/CONCEPT-STUDY-03.md](docs/CONCEPT-STUDY-03.md) | question | [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P27](#q-p27) | Old boss band, closed-cut/retraction, collection and safe trajectory limitations remain production-motion questions; this is not a request to redo corrected Bible images. |
-| MARKET-prices-reviews-patterns | [docs/MARKET-RESEARCH.md](docs/MARKET-RESEARCH.md) | completed | None | docs/MARKET-SOURCES.md records the 5 September three-game snapshot and 30-review convenience sample. No representative demand, revenue, current price or reproduced gameplay defect claim follows. |
-| MARKET-next-rolling-playground | [docs/MARKET-RESEARCH.md](docs/MARKET-RESEARCH.md) | parked | [Q-P35](#q-p35) | Historical ramp/bumper playground and scale comparison require current purpose before new execution. Existing lightning implementation does not prove human enjoyment. This is an unselected historical research proposal; no new experiment is authorized by the current foundation scope. |
-| MARKET-30-45-minute-pacing | [docs/MARKET-RESEARCH.md](docs/MARKET-RESEARCH.md) | superseded | [Q-P12](#q-p12), [Q-P35](#q-p35) | The earlier pacing target is replaced by accepted 60-75 minute runs through four worlds. Old study conclusions remain dated. |
-| BIBLE-art-acceptance-contract | [BIBLE.md](BIBLE.md) | task | [PD-01](#pd-01) | This bounded documentation task can record open values and gate production without choosing them. |
-| BIBLE-interface-state-specification | [BIBLE.md](BIBLE.md) | task | [PD-02](#pd-02) | This bounded documentation task can record open values and gate production without choosing them. |
-| BIBLE-audio-event-specification | [BIBLE.md](BIBLE.md) | task | [PD-03](#pd-03) | This bounded documentation task can record open values and gate production without choosing them. |
-| IMG-P01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/P01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-W01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/W01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-W02 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/W02-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-W03 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/W03-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-W04 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/W04-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M00 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/M00-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/M01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M02 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/M02-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M03 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/M03-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M04 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/M04-v2.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M05 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/M05-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-C01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/C01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-C02 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/C02-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-C03 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/C03-v2.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-C04 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/C04-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-C05 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/C05-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-E01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/E01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-E02 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/E02-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-U01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/U01-v2.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-U02 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/U02-v3.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-A01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/A01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-A02 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/A02-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-A03 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/A03-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-F01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/F01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-G01 | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Selected concept docs/bible/images/G01-v1.png passed the documented image review. docs/bible/production/independent-review.md and COHESION_REPORT.md record scope and notes. No model, rig, hitbox, motion, audio or human-play evidence is implied. |
-| IMG-M04-correction | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Pilot enclosure corrected in M04-v2. Evidence: docs/bible/production/owner-revisions.json and docs/bible/production/independent-review.md. Concept/document inspection only; no repeat correction work remains. |
-| IMG-C03-correction | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | B label corrected in C03-v2. Evidence: docs/bible/production/owner-revisions.json and docs/bible/production/independent-review.md. Concept/document inspection only; no repeat correction work remains. |
-| IMG-U01-correction | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Single revival, mechanical companion and irregular chassis corrected in U01-v2. Evidence: docs/bible/production/owner-revisions.json and docs/bible/production/independent-review.md. Concept/document inspection only; no repeat correction work remains. |
-| IMG-U02-automatic-correction | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | Eight leaves corrected in U02-v2, later replaced by the explicit owner revision. Evidence: docs/bible/production/owner-revisions.json and docs/bible/production/independent-review.md. Concept/document inspection only; no repeat correction work remains. |
-| IMG-U02-owner-revision | [COHESION_REPORT.md](COHESION_REPORT.md) | completed | None | U02-v3 records the accepted 15-node, 14-edge binary tree with eight leaves. Evidence: docs/bible/production/owner-revisions.json and docs/bible/production/independent-review.md. Concept/document inspection only; no repeat correction work remains. |
-| BIBLE-section-01 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-02 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-03 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-04 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-05 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-06 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-07 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-08 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| BIBLE-section-09 | [BIBLE.md](BIBLE.md) | completed | None | COHESION_REPORT.md records delivery and review of this manuscript section. Its concept work is complete; retained questions and production documentation tasks cover remaining scoped work. No implementation completion follows. |
-| TAXONOMY-family-sheet-and-storyboard | [docs/ENEMY-TAXONOMY.md](docs/ENEMY-TAXONOMY.md) | completed | None | docs/CONCEPT-STUDY-03.md and docs/ORCHARD-ENCOUNTER-STUDY.md record the completed family/art/paper follow-up with closure, scale and motion limits. No new redraw is required and full authored rigs remain Q-P25/Q-P26 work. |
-| TAXONOMY-playable-relative-miniboss-study | [docs/ENEMY-TAXONOMY.md](docs/ENEMY-TAXONOMY.md) | question | [Q-P25](#q-p25), [Q-P35](#q-p35) | The proposed ordinary-relative plus miniboss test is not complete full-boss evidence; select an enemy scope and question before execution. |
-| COMBAT-Sluiceback-basin-experiment | [docs/CONFLICT-AND-COMBAT.md](docs/CONFLICT-AND-COMBAT.md) | parked | [Q-P21](#q-p21), [Q-P25](#q-p25), [Q-P35](#q-p35) | The timed guard/basin/bumper proposal remains a historical alternative. Its defensive rhythm is unselected, and later lightning evidence does not silently authorize it. This is an unselected historical research proposal; no new experiment is authorized by the current foundation scope. |
-| DESIGN-INDEX-research-and-production-navigation | [docs/DESIGN-INDEX.md](docs/DESIGN-INDEX.md) | superseded | None | Its dated active-P10 and engine-open status must be reconciled by root with the current approved preparation. Its links remain useful historical source navigation. |
-| NOTE-transcription | [docs/HANDWRITTEN-NOTES.md](docs/HANDWRITTEN-NOTES.md) | completed | None | Four original photos and the uncertainty-marked transcription are preserved in docs/discovery/source-notes-2026-08-21/. Source reading only, not current content approval. |
-| NOTE-five-levels-and-two-rewards | [docs/HANDWRITTEN-NOTES.md](docs/HANDWRITTEN-NOTES.md) | superseded | [Q-P12](#q-p12), [Q-P14](#q-p14) | Accepted Discovery supplies four worlds and two destination offers, not a boss in every level or a universal two-item reward count. |
-| NOTE-unclear-ghost-and-quantum-words | [docs/HANDWRITTEN-NOTES.md](docs/HANDWRITTEN-NOTES.md) | parked | [Q-P06](#q-p06) | Unclear names and phrases remain unresolved until Andrew supplies a reading or selects these characters; no transcription guess is required. |
-| NOTE-meaningful-visual-skill-progress | [docs/HANDWRITTEN-NOTES.md](docs/HANDWRITTEN-NOTES.md) | duplicate | [Q-P11](#q-p11), [Q-P26](#q-p26), [Q-P27](#q-p27) | Approved Bible preserves visible mechanical growth; tree content and asset motion already have scoped questions. |
-| NOTE-bomb-drone-and-oil-sketch | [docs/HANDWRITTEN-NOTES.md](docs/HANDWRITTEN-NOTES.md) | parked | [Q-P06](#q-p06), [Q-P22](#q-p22), [Q-P24](#q-p24) | Bomb drone learning and oil-slick terrain are candidate character/item/enemy ideas, with no mandatory learning service or launch slot. |
-| ORCHARD-first-playable-proof | [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | completed | None | docs/FIRST-BUILD-VERIFICATION.md records the later bounded hero, Snipcart, Spreadleg, Pruner-arm and salvage proof. Its synthetic/browser evidence does not close the human learning/enjoyment observations. |
-| ORCHARD-teaching-observations | [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | duplicate | [Q-P21](#q-p21), [Q-P35](#q-p35) | Route changes, unprompted counter recognition, maximum-growth control and baseline/strong-build comparison belong to the selected player-evidence scope. LG-01 retains current human feedback. |
-| ORCHARD-four-poses-pivots-spool | [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | duplicate | [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P27](#q-p27) | Position/brace/operate/release, lowering Spreadleg frame and traceable spool-to-arm path inform a selected authored rig; no full Grand Pruner motion is proven. |
-| ORCHARD-greybox-clearance-and-recovery | [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | duplicate | [Q-P21](#q-p21), [Q-P22](#q-p22), [Q-P24](#q-p24), [Q-P30](#q-p30) | 2D is a construction starting point. Check achievable outer routes, device placement, growth-camera obstruction and post-hit recovery for actual selected movement. |
-| ORCHARD-companion-parts-and-fitting | [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | duplicate | [Q-P14](#q-p14), [Q-P15](#q-p15), [Q-P29](#q-p29) | Shear/Brace companion combination, priming eligibility, device vulnerability and assembly timing are content proposals already covered by item/lifecycle questions. |
-| ORCHARD-boss-terrain-breaks | [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | duplicate | [Q-P24](#q-p24), [Q-P25](#q-p25) | Damage, loosened salvage and supported traversable structural breaks are separate possible outcomes. Full boss terrain consequences require scope. |
-| ORCHARD-VISUAL-delivery-and-corrections | [docs/ORCHARD-VISUAL-SWARM.md](docs/ORCHARD-VISUAL-SWARM.md) | completed | None | docs/CONCEPT-STUDY-03.md and docs/ORCHARD-ENCOUNTER-STUDY.md retain corrected images, pose brief and paper review. 49 links/image hashes are historical document evidence, not rig or motion proof. |
-| ORCHARD-VISUAL-aggregation-rules | [docs/ORCHARD-VISUAL-SWARM.md](docs/ORCHARD-VISUAL-SWARM.md) | duplicate | [Q-P22](#q-p22), [Q-P25](#q-p25), [Q-P27](#q-p27) | Inward jaws/outward feet, articulated legs, dependable collision envelope, autonomous enemies and staggered first lesson remain bounded mechanism references. |
-| ORCHARD-VISUAL-art-limitations | [docs/ORCHARD-VISUAL-SWARM.md](docs/ORCHARD-VISUAL-SWARM.md) | duplicate | [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P27](#q-p27) | Narrow preparation wedge, side/front camera, unclear band and incomplete retraction remain production-study limitations, not a request to redo approved Bible corrections. |
-| COMBAT-SWARM-delivered | [docs/COMBAT-DESIGN-SWARM.md](docs/COMBAT-DESIGN-SWARM.md) | completed | None | docs/CONFLICT-AND-COMBAT.md and docs/CONCEPT-STUDY-02.md record delivered research, four-panel art and independent paper review. No gameplay evidence accompanied the pass. |
-| COMBAT-SWARM-open-conflict-defense-scale | [docs/COMBAT-DESIGN-SWARM.md](docs/COMBAT-DESIGN-SWARM.md) | duplicate | [Q-P08](#q-p08), [Q-P21](#q-p21), [Q-P22](#q-p22), [Q-P25](#q-p25), [Q-P35](#q-p35) | Conflict, guard/protection proposals, scale and first experiment remain covered. The old 30-45 minute target is superseded by the accepted run. |
-| CONCEPT01-generated-study | [docs/CONCEPT-STUDY-01.md](docs/CONCEPT-STUDY-01.md) | completed | None | public/art/03-industrial-dungeon-study.png and this source preserve the generated image and inspection. No model, rig or engine/performance proof follows. |
-| CONCEPT01-oversized-frame-and-orderly-shell | [docs/CONCEPT-STUDY-01.md](docs/CONCEPT-STUDY-01.md) | superseded | [Q-P22](#q-p22), [Q-P26](#q-p26), [Q-P27](#q-p27), [Q-P30](#q-p30) | The approved Bible replaces the old clean miniature/composition target. Production camera, growth envelope and cockpit/articulation work remain separately scoped. |
-| CONCEPT02-generated-sheet | [docs/CONCEPT-STUDY-02.md](docs/CONCEPT-STUDY-02.md) | completed | None | public/art/04-furnace-fleet-enemies.png and this source retain four labeled machine concepts and visual inspection; no functional joints, hitboxes or runtime import. |
-| CONCEPT02-weathering-and-acting | [docs/CONCEPT-STUDY-02.md](docs/CONCEPT-STUDY-02.md) | superseded | [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P27](#q-p27) | Bible Section 7 settles the greasy material direction. Proposed characters/enemies still need scoped acting, articulation and scale studies; no old palette repair is required. |
-| AUDIT-recorded-probe | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | completed | None | The synthetic simulation probe and historical 73-test result are recorded here. docs/PLANNING-PREP-SWARM.md corrects initial cooldown versus approach and limits the undocumented 90-degree realign measurement. No human feel claim follows. |
-| AUDIT-mass-deflect-shed-first | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | superseded | [Q-P10](#q-p10), [Q-P21](#q-p21), [Q-P35](#q-p35) | The mass/deflect-first ordering and mandatory handling penalties were superseded by approved lightning direction and Bible. Optional future experiments require current purpose. |
-| AUDIT-registries-modifiers-run-save | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | superseded | None | The old Three.js target layout is replaced by HF-03/HF-05 and TH-04/TH-06/TH-08/TH-20 plus persistence contracts. This is no longer a runnable registry migration order. |
-| AUDIT-three-stage-five-rung-ladder | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | superseded | [Q-P07](#q-p07), [Q-P12](#q-p12) | Three stages, five fixed beats and campaign ladder are superseded by four-world procedural runs and unselected catalogue/route details. |
-| AUDIT-unlocks-and-Scrapbook | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | duplicate | [Q-P28](#q-p28), [Q-P37](#q-p37) | All classes before hour 7, ten-hour entry guarantees, observed entries and daily/friend hooks remain candidate content. Offline solo and rebuilt combat power are settled. |
-| AUDIT-requisition-hamster-and-palette | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | superseded | [Q-P06](#q-p06), [Q-P08](#q-p08), [Q-P09](#q-p09) | Approved Bible supersedes hamster-as-canon and old palette. Fiction and cast remain explicit choices rather than this audit recommendation. |
-| AUDIT-five-art-steps | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | duplicate | [Q-P06](#q-p06), [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P27](#q-p27), [Q-P33](#q-p33), [Q-P34](#q-p34) | Each step already has a product coverage row from worker-4-universe: build states, authored Snipcart rig, pilot expression, regional lighting and figurine. |
-| AUDIT-version-control | [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | completed | None | docs/PLANNING-PREP-SWARM.md records real Git baseline 4db9b31 and planning branch integration. Off-machine publication is still Q-E07, not completed backup. |
-| DEEP-RESEARCH-delivery-coherence | [docs/DEEP-RESEARCH-SWARM.md](docs/DEEP-RESEARCH-SWARM.md) | completed | None | Five documents, 13 level fixes, four runtime coherence fixes and later character fixes are documented in docs/research-2026-09-05/REVIEW-NOTES.md. Paper consistency only; unselected numeric rules remain proposals. |
-| DEEP-RESEARCH-inferred-enemy-count | [docs/DEEP-RESEARCH-SWARM.md](docs/DEEP-RESEARCH-SWARM.md) | duplicate | [Q-P25](#q-p25), [Q-P36](#q-p36) | The historical thirteen count is disputed by REVIEW-NOTES, which lists 16 new rows and 15 inference tags. Qualify the actual admitted names, not an assumed total. |
-| TAXONOMY-SWARM-delivery-corrections | [docs/ENEMY-TAXONOMY-SWARM.md](docs/ENEMY-TAXONOMY-SWARM.md) | completed | None | docs/ENEMY-TAXONOMY.md records three families and correction of magnet-cassette failure, Rinsebelly compaction, Grand Pruner binding and naming. Document research only. |
-| TAXONOMY-SWARM-future-family-admission | [docs/ENEMY-TAXONOMY-SWARM.md](docs/ENEMY-TAXONOMY-SWARM.md) | duplicate | [Q-P25](#q-p25), [Q-P36](#q-p36) | Shared physical mechanisms, tells, counters and salvage remain admission material for selected content, not 27 approved production configurations. |
-| PLANNING-PREP-delivery | [docs/PLANNING-PREP-SWARM.md](docs/PLANNING-PREP-SWARM.md) | completed | None | This historical record documents Git baseline, decision register, planning protocol and source checks, with local-only storage. No native-engine foundation task is completed by it. |
-| PLANNING-PREP-90-degree-evidence | [docs/PLANNING-PREP-SWARM.md](docs/PLANNING-PREP-SWARM.md) | duplicate | [Q-P21](#q-p21), [Q-P35](#q-p35) | The 90-degree realign figure lacks a retained reproducible method. Future handling acceptance must measure a declared procedure; no historical arithmetic is promoted to human feel. |
-| PLANNING-PREP-first-protocol-run | [docs/PLANNING-PREP-SWARM.md](docs/PLANNING-PREP-SWARM.md) | superseded | None | The dated next-session statement is replaced by current ORCHESTRATOR/TRACKING preparation and explicit future sprint gate. It is not an unstarted game feature. |
-| REVIEW-NOTES-L013 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Character bible (CHARACTER-BIBLE.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L014 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Four character citation corrections are recorded as applied in this file preamble and docs/DEEP-RESEARCH-SWARM.md. Historical document correction only. |
-| REVIEW-NOTES-L015 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | The Brindle in-motion staging correction is recorded as applied after the research run. It does not approve this scene or antagonist. |
-| REVIEW-NOTES-L016 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P06](#q-p06), [Q-E05](#q-e05) | Do not silently reassign baseline blueprints to the future cast or delete saved options; candidate cast and import policy own the decision. |
-| REVIEW-NOTES-L017 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P07](#q-p07), [Q-P25](#q-p25) | Rustwater/Yard naming and Cancrusher/Old Ironroot placement remain catalogue and enemy selection questions. |
-| REVIEW-NOTES-L018 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P25](#q-p25), [Q-P28](#q-p28) | Bible candidate-status rules replace the old implication of a settled Yardmaster owner; no production cast is chosen. |
-| REVIEW-NOTES-L019 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P08](#q-p08), [Q-P28](#q-p28) | Brindle motive and Damper defection require selected narrative scope, not an invented recommendation. |
-| REVIEW-NOTES-L020 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P21](#q-p21), [Q-P27](#q-p27) | Class movement versus decorative motion must follow the selected kit and approved movement, not the old universal mass model. |
-| REVIEW-NOTES-L021 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P06](#q-p06), [Q-P26](#q-p26), [Q-P27](#q-p27) | A selected Fuse production brief needs a recognizable idle/home pose; the old four-pilot sheet does not supply it. |
-| REVIEW-NOTES-L022 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [PD-01](#pd-01) | Approved Bible material/readability rules replace the old exclusive accent-color assignment. |
-| REVIEW-NOTES-L023 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [LG-01](#lg-01), [TH-23](#th-23) | Retain the threat-pose versus banner readability observation in human acceptance; historical warnings are not proven adequate. |
-| REVIEW-NOTES-L024 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P28](#q-p28) | The old exact-two-places animal rule does not define Bible supporting-character scope. No command balcony is automatically admitted. |
-| REVIEW-NOTES-L025 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P28](#q-p28), [Q-P29](#q-p29), [Q-P37](#q-p37) | Archetypes, epithets, mastery titles and designations remain proposed content and need explicit selection. |
-| REVIEW-NOTES-L026 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P06](#q-p06) | Notebook transfers remain candidate choices under the approved Bible; old verdicts do not close publisher choices. |
-| REVIEW-NOTES-L027 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Character bible (CHARACTER-BIBLE.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L031 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Character bible (CHARACTER-BIBLE.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L032 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | [Q-P29](#q-p29) | Editorial tightening of an unselected companion prose proposal is retained for reuse, not a new production task. |
-| REVIEW-NOTES-L033 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P29](#q-p29), [Q-P15](#q-p15) | Companion epithet identity must distinguish chassis-type naming from a persistent assembled-instance identity before saving it. |
-| REVIEW-NOTES-L034 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-10](#th-10), [TH-20](#th-20) | Companion module/behavior/expression/audio fields belong in the admitted companion contract and schema catalogue, with unselected content gated. |
-| REVIEW-NOTES-L035 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P28](#q-p28), [Q-P37](#q-p37) | The 120-entry text count has no derivation and must not become production scope. Select the actual entry/bark inventory. |
-| REVIEW-NOTES-L036 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [PD-02](#pd-02), [TH-18](#th-18) | Controller navigation and any naming entry require explicit usability/input treatment. |
-| REVIEW-NOTES-L037 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Old shorthand citation legend cleanup is retained for reuse of this historical proposal. Final canonical cards use actual full paths. |
-| REVIEW-NOTES-L038 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Character bible (CHARACTER-BIBLE.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L042 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P06](#q-p06), [Q-P28](#q-p28) | Character bible (CHARACTER-BIBLE.md): Do the proposed names Vane and Fuse land, and do you accept Rivet as the mole laser machinist and Moss as the hedgehog quartermaster, or do you want to supply your own names and species? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L043 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P08](#q-p08) | Character bible (CHARACTER-BIBLE.md): Is Admiral Brindle sincerely wrong about the harvest arithmetic or knowingly lying? The bible writes him sincere; the whole antagonist tone hangs on this fork. Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L044 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P28](#q-p28), [Q-P31](#q-p31) | Character bible (CHARACTER-BIBLE.md): How much text should combat carry at launch: silent text chirps as recommended, recorded voice barks, or full silence? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L045 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P06](#q-p06) | Character bible (CHARACTER-BIBLE.md): The notebook's ghost character has an unresolved name (docs/HANDWRITTEN-NOTES.md:61-64): can you supply the reading, and should it be developed or stay parked? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L046 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P08](#q-p08), [Q-P28](#q-p28) | Character bible (CHARACTER-BIBLE.md): Should First Stoker Damper's defection be a committed campaign beat, an optional discovery, or cut? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L055 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Enemy roster (ENEMY-ROSTER.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L056 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Enemy roster (ENEMY-ROSTER.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L057 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Off-by-one enemy registry gate citation is preserved as an unapplied historical note; the old build order is superseded. |
-| REVIEW-NOTES-L058 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Binbug historical speed pointer correction remains an unapplied source note. Actual content stats must come from an admitted version. |
-| REVIEW-NOTES-L059 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P25](#q-p25), [Q-P36](#q-p36) | Recount named additions before admission: review lists 16 new rows and 15 inference tags, not the historical 13. Requisitioner lacks a grounding tag. |
-| REVIEW-NOTES-L060 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P15](#q-p15), [Q-P25](#q-p25) | Companion conscription and device drain/encasement are unapproved extensions. Select capture/recovery guarantees explicitly for any admitted enemy. |
-| REVIEW-NOTES-L061 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P21](#q-p21), [Q-P25](#q-p25) | Greatfan cannot silently require the unapproved Shed Vent action; selected protection rules need achievable ordinary counters. |
-| REVIEW-NOTES-L062 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P21](#q-p21), [Q-P25](#q-p25) | The old two-answer protection floor belongs to defensive/roster selection and cannot be silently omitted or promoted as settled. |
-| REVIEW-NOTES-L063 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P25](#q-p25) | Pegjack stomp and Crossbelly shove are proposed extra attacks, not inherited taxonomy behavior. |
-| REVIEW-NOTES-L064 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P14](#q-p14), [Q-P25](#q-p25) | Brakebogie Ballast Skate versus terrain salvage needs explicit reward identity for admitted content. |
-| REVIEW-NOTES-L065 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P12](#q-p12) | Accepted four-world structure supersedes the old rung-to-stage reconciliation. |
-| REVIEW-NOTES-L066 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P25](#q-p25) | Scooplet/Rackspan support-role extensions remain proposals, not publisher-confirmed roles. |
-| REVIEW-NOTES-L067 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P14](#q-p14), [Q-P37](#q-p37) | Override Bolt ownership, discovery-by-observation and duplicate reward handling need explicit selected item/discovery rules. |
-| REVIEW-NOTES-L068 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P08](#q-p08), [Q-P25](#q-p25) | Brindle hitbox status and enemy admission rules remain proposals; baseline labels stay preserved. |
-| REVIEW-NOTES-L069 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P25](#q-p25) | Whether veterans derive from modifiers or explicit rows must be fixed for the admitted roster. Historical abbreviation cleanup is retained for reuse. |
-| REVIEW-NOTES-L073 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Enemy roster (ENEMY-ROSTER.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L074 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | duplicate | [Q-P25](#q-p25), [Q-P36](#q-p36) | Duplicates the canon critic count discrepancy; qualify admitted names instead of the stale 34/21/13 total. |
-| REVIEW-NOTES-L075 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | duplicate | [Q-P36](#q-p36) | Duplicates the inference-tag mismatch and missing Requisitioner grounding. |
-| REVIEW-NOTES-L076 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Duplicate historical off-by-one registry-gate reference, retained for reuse rather than source rewrite now. |
-| REVIEW-NOTES-L077 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P25](#q-p25), [Q-P36](#q-p36) | Old twelve-enemy next-action order has been replaced by bounded content selection; no implementation card inherits its missing acceptance steps. |
-| REVIEW-NOTES-L078 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-06](#th-06), [TH-23](#th-23) | Translate accepted readability floors into explicit tests with a declared method; old prose floors are not numeric acceptance. |
-| REVIEW-NOTES-L079 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Enemy roster (ENEMY-ROSTER.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L080 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Enemy roster (ENEMY-ROSTER.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L081 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Enemy roster (ENEMY-ROSTER.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L085 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P25](#q-p25) | Enemy roster (ENEMY-ROSTER.md): Do the demo names Glassjaw and Old Ironroot become Yard Commons canon, or stay reserved for something else? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L086 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P07](#q-p07), [Q-P25](#q-p25) | Enemy roster (ENEMY-ROSTER.md): Is Kiln Strider the Harvest Roads boss, or do you want it kept as an alternative first-campaign encounter? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L087 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P07](#q-p07), [Q-P25](#q-p25) | Enemy roster (ENEMY-ROSTER.md): Should Furnace City's worker mix lean on overseer veteran reprises as proposed, or get a fully new native family? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L088 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P25](#q-p25) | Enemy roster (ENEMY-ROSTER.md): Is the simultaneous-windup ceiling (two staggered workers plus one boss subsystem at rung 5) the escalation cap you want, or should late rungs go denser? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L089 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P15](#q-p15), [Q-P25](#q-p25) | Enemy roster (ENEMY-ROSTER.md): May Graftmender gain device-binding pressure, or should it stay strictly a module-reconnection enemy? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L098 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | World environments (WORLD-ENVIRONMENTS.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L099 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P21](#q-p21), [Q-P24](#q-p24), [Q-P25](#q-p25) | Heavy-versus-deflectable slag drum semantics require explicit selected combat/terrain rules; old grade model is unadopted. |
-| REVIEW-NOTES-L100 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P24](#q-p24), [Q-P25](#q-p25) | Spillway drain cannot assume float-type enemies absent from the selected roster; select a grounded interaction or named new admission. |
-| REVIEW-NOTES-L101 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Historical figurine rule-2 citation is off by one. Its old dimensions remain unselected and are not imported. |
-| REVIEW-NOTES-L102 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P24](#q-p24) | Harvest cargo needs an explicit collectible-versus-protected distinction before terrain consequences enter production. |
-| REVIEW-NOTES-L103 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-15](#th-15), [TH-23](#th-23) | 2D is unvalidated construction guidance; actual movement, maximum growth and escape must be qualified. |
-| REVIEW-NOTES-L104 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P12](#q-p12) | The old rung-to-three-stage mapping is superseded by the accepted four-world run. |
-| REVIEW-NOTES-L105 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P07](#q-p07), [Q-P12](#q-p12) | Historical rung numbers and fixed finale positions are not the approved route. |
-| REVIEW-NOTES-L106 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-E05](#q-e05) | Future Yard Commons content cannot silently replace the preserved baseline; browser retention policy governs consolidation. |
-| REVIEW-NOTES-L107 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [PD-01](#pd-01) | Approved Section 7 permits shaped material reflections; no matte-only exception approval is needed. |
-| REVIEW-NOTES-L108 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [PD-01](#pd-01), [Q-P33](#q-p33) | Old hex divergence does not reopen the approved Bible palette. Selected runtime regional lighting remains production work. |
-| REVIEW-NOTES-L109 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P22](#q-p22), [Q-P24](#q-p24) | Mass-gated rail capture is unselected terrain/handling scope, not a consequence of the rolling pillar. |
-| REVIEW-NOTES-L110 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P33](#q-p33) | Time-of-day lighting keyframes remain selected regional production details, without falsely attributing an old reference. |
-| REVIEW-NOTES-L114 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | World environments (WORLD-ENVIRONMENTS.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L115 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Padding a historical environment document to an old word/line-count target has no current deliverable value. |
-| REVIEW-NOTES-L116 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-23](#th-23) | Any admitted sluice beat needs concrete route and warning evidence. Its old minimum-kit proposal is not already qualified. |
-| REVIEW-NOTES-L117 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-20](#th-20), [TH-19](#th-19) | Selected terrain module dimensions/tags and import fields belong to the schema/admission contracts, not inferred from prose. |
-| REVIEW-NOTES-L118 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-18](#th-18), [TH-23](#th-23) | Selected current/grip/rail/wind effects require analog-control observations and actual controller evidence. |
-| REVIEW-NOTES-L119 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-23](#th-23) | Use one named reproducible method for traversal measurements; no tuning multipliers are qualified by paper review. |
-| REVIEW-NOTES-L123 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P07](#q-p07) | World environments (WORLD-ENVIRONMENTS.md): Do you approve Spillway Works as the next authored biome, or do you want the Yard Commons rebuilt to campaign quality first since a playable yard already exists? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L124 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P08](#q-p08), [Q-P28](#q-p28) | World environments (WORLD-ENVIRONMENTS.md): The Furnace City kit protects the Fleet's own conscripted crews as the finale's stakes. Is that the ending argument you want, or should the finale stay purely adversarial? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L125 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [PD-01](#pd-01) | The approved Bible palette supersedes the old exclusive-mint-color rule; no art-direction approval is reopened. |
-| REVIEW-NOTES-L126 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [PD-01](#pd-01) | Approved greasy material and lighting direction supersedes the old playful-miniature versus grim-weathering gate. Production readability remains to qualify. |
-| REVIEW-NOTES-L127 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P24](#q-p24) | World environments (WORLD-ENVIRONMENTS.md): Should the Harvest Roads derail beat destroy stolen cargo for spectacle, or must recovered cargo always survive intact to honor the protect-the-lived-in rule? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L138 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L139 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L140 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L141 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L142 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L143 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L144 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L145 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L146 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L147 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L148 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L149 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L150 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L151 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L155 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Level design (LEVEL-DESIGN.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L156 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-14](#th-14), [TH-20](#th-20) | The schema catalogue must cover selected defense/objective/anchors and boss phase/weak-point fields, or explicitly exclude those pocket types. |
-| REVIEW-NOTES-L157 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P22](#q-p22), [TH-23](#th-23) | Nearest/adjacent mouth reachability was corrected in the dated study; selected production geometry must re-derive reachability. |
-| REVIEW-NOTES-L158 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-23](#th-23) | The old about-8-units-per-second exit figure lacks a derivation; do not import it as acceptance. Use the actual qualification method. |
-| REVIEW-NOTES-L162 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P23](#q-p23) | Level design (LEVEL-DESIGN.md): Do you approve Model C, seeded arrangement of authored pockets, as the production stage model, or do you prefer fully authored stages or tile assembly? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L163 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P12](#q-p12) | Level design (LEVEL-DESIGN.md): Which biome triple routes the first expedition: does Iron Orchard become expedition stage 1 because it is already built, or does the campaign ladder order (Yard Commons, Spillway Works, Iron Orchard) also govern expedition routing? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L164 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P38](#q-p38) | Level design (LEVEL-DESIGN.md): Should defense beats be strictly timer-held at fixed length even when a skilled player clears waves early? The P02 pacing answer depends on this. Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L165 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P24](#q-p24), [Q-P25](#q-p25) | Level design (LEVEL-DESIGN.md): Is the Rowkeeper the right miniboss fantasy for the orchard trellis gate, and may a miniboss permanently alter the boss arena approach (countered rows staying open into the Grand Pruner fight)? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L166 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P37](#q-p37), [Q-P38](#q-p38) | Level design (LEVEL-DESIGN.md): May a branch gate Scrapbook-only sightings with no run-power payoff, or must every branch reward build content? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L175 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Runtime blueprint (RUNTIME-BLUEPRINT.md), Canon findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L176 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [HF-09](#hf-09), [TH-21](#th-21) | Migration must cover nested receipts, IDs and derived allowed sets; a top-level version change is insufficient. |
-| REVIEW-NOTES-L177 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [HF-09](#hf-09), [TH-21](#th-21) | Preserve or explicitly migrate baseline blueprints under Q-E05 rather than silently dropping them. |
-| REVIEW-NOTES-L178 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | The Sluiceback worked-example conflict is recorded as reconciled in the runtime conflict-fix notes. This is a paper consistency fix, not boss implementation. |
-| REVIEW-NOTES-L179 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [HF-05](#hf-05), [TH-21](#th-21) | Content ID and save ID examples/validators must agree, including any prefix separator; schema examples cannot reject their own IDs. |
-| REVIEW-NOTES-L180 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | None | Settled Godot/physics qualification and approved movement supersede the old engine-open mass/deflect section premise. |
-| REVIEW-NOTES-L181 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Historical runtime section-number cleanup remains a source note; new cards identify exact inputs and outputs. |
-| REVIEW-NOTES-L182 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [Q-P21](#q-p21), [Q-P25](#q-p25) | Historical admission/grade models are proposals. Approved Bible and selected content rules govern future contracts. |
-| REVIEW-NOTES-L183 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-E05](#q-e05) | Baseline turret tables and retained browser profiles cannot be retired by an old inference. |
-| REVIEW-NOTES-L184 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P19](#q-p19) | Brace max-three was a proposed cap, not current behavior. Selected stacking limits need an explicit rule. |
-| REVIEW-NOTES-L185 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | [TH-15](#th-15), [TH-19](#th-19), [TH-24](#th-24) | Settled engine selection replaces old Context7 ID mismatch as a decision issue; physics/import/performance still require actual qualification. |
-| REVIEW-NOTES-L186 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | parked | None | Historical line-pointer and draw-call proposal cleanup retained for reuse; new qualification uses actual source and measured budgets. |
-| REVIEW-NOTES-L190 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Runtime blueprint (RUNTIME-BLUEPRINT.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L191 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Runtime blueprint (RUNTIME-BLUEPRINT.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L192 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-18](#th-18) | Input contracts need typed intent examples and explicit duplicate-poll/focus checks. Old app/input.js path is not the native layout. |
-| REVIEW-NOTES-L193 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | task | [TH-17](#th-17) | Audio integration requires event mapping and observable acceptance; old app/audio.js consolidation is not a native implementation card. |
-| REVIEW-NOTES-L194 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Runtime blueprint (RUNTIME-BLUEPRINT.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L195 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Runtime blueprint (RUNTIME-BLUEPRINT.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L196 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Runtime blueprint (RUNTIME-BLUEPRINT.md), Craft findings: reviewer method, strength or no-action observation retained at its dated paper/source-inspection scope. It supplies no current runtime or human evidence. |
-| REVIEW-NOTES-L200 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P16](#q-p16) | Runtime blueprint (RUNTIME-BLUEPRINT.md): Resume rule: is resuming an interrupted expedition from the last interstitial acceptable, or should any closed tab settle the run as abandoned? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L201 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-P37](#q-p37) | Runtime blueprint (RUNTIME-BLUEPRINT.md): Does the pick-one-of-two ledger record only boss rewards, or every offered choice at every interstitial? Existing question retains this detail; old timing/roster/palette assumptions remain subordinate to the approved Bible. |
-| REVIEW-NOTES-L202 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-E03](#q-e03) | Named target hardware and budgets remain the existing engineering hardware question. |
-| REVIEW-NOTES-L203 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | superseded | None | Godot 4.7.2 standard with typed GDScript is settled; no engine comparison remains to schedule. |
-| REVIEW-NOTES-L204 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | question | [Q-E09](#q-e09) | Permanent discovery write timing, receipt versus profile boundaries and interruption durability belong to the existing persistence question. |
-| REVIEW-NOTES-L208 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L209 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L210 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L211 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L212 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L213 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L214 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L215 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L216 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Cross-lane conflicts (all resolved in-run), Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L220 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Conflict fix notes, Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L221 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Conflict fix notes, Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L222 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Conflict fix notes, Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L223 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Conflict fix notes, Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| REVIEW-NOTES-L224 | [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | completed | None | Conflict fix notes, Open questions for Andrew: this source and docs/DEEP-RESEARCH-SWARM.md record the corresponding correction or cross-lane reconciliation. Completion is historical document revision only, not approval or runtime proof of its proposed values. |
-| FIRST-PROOF.contract | [docs/FIRST-BUILD-CONTRACT.md](docs/FIRST-BUILD-CONTRACT.md) | completed | None | Bounded orchard implementation recorded by docs/FIRST-BUILD-VERIFICATION.md and artifacts/orchard-first-build/production-http.json; not the production game. Later lightning contract replaces its input/scene specifics. |
-| FIRST-PROOF.pacing | [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md) | task | [LG-01](#lg-01) | 37-second precise script is dated evidence, not human balance; current lightning observation succeeds this playtest. |
-| FIRST-PROOF.hardware | [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md) | question | [LG-02](#lg-02), [Q-P30](#q-p30) | Physical mouse/controller and camera ergonomics remain qualified only by real device observation; mobile initial production scope is excluded. |
-| FIRST-PROOF.scale | [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md) | question | [Q-P22](#q-p22), [Q-P25](#q-p25), [TH-24](#th-24) | Historical radius, giant arm and brief rendering sample are not approved production dimensions or performance budgets. |
-| FIRST-PROOF.swarm | [docs/FIRST-BUILD-SWARM.md](docs/FIRST-BUILD-SWARM.md) | completed | None | Historical implementation and independent correction receipts are retained in docs/FIRST-BUILD-VERIFICATION.md; old no-Git condition and engine-open language are superseded by the current checkout and accepted TADRs. |
-| LEADS.external-services | [docs/LEAD-CAPTURE.md](docs/LEAD-CAPTURE.md) | parked | None | Hosted proxy/origin/abuse settings, provider credentials, approved sender, ownership/unsubscribe and privacy/consent review apply only to a separately authorized publishing or messaging project. No service integration, export or campaign is active; existing local records are preserved. |
-| HOUSEKEEPING.closeout | [docs/project/HOUSEKEEPING.md](docs/project/HOUSEKEEPING.md) | completed | None | artifacts/housekeeping-2026-09-05/report.json, runtime-comparison.json and tests.log establish the six-stage historical structural closeout, 73 tests and unchanged first-proof sources. No current runtime check is implied. |
-| HOUSEKEEPING.remaining | [docs/project/HOUSEKEEPING.md](docs/project/HOUSEKEEPING.md) | duplicate | [LG-01](#lg-01), [LG-02](#lg-02), [Q-E07](#q-e07), [Q-E08](#q-e08), [TH-24](#th-24) | Remote, playtest, pressure, hardware/performance and packaging already map to P/T records; no second queue. |
-| BASELINE.retention | [docs/BASELINE-GUIDE.md](docs/BASELINE-GUIDE.md) | completed | None | docs/RETENTION-VERIFICATION.md holds dated expedition/collection proof. Its 15–17 simulation minutes, mastery, daily/friend links and optional signup are browser evidence only; preservation is enforced by Q-E05 and existing ADR 0001. |
-| BROWSER-ADR.0001 | [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) | duplicate | [Q-E05](#q-e05) | Retained implementation boundary and evidence links. Revisit triggers apply only when the named change is selected; no browser consolidation, new asset batch or broader desktop adapter is implicitly scheduled. |
-| BROWSER-ADR.0002 | [docs/adr/0002-simulation-boundary.md](docs/adr/0002-simulation-boundary.md) | duplicate | [HF-03](#hf-03), [HF-04](#hf-04) | Retained implementation boundary and evidence links. Revisit triggers apply only when the named change is selected; no browser consolidation, new asset batch or broader desktop adapter is implicitly scheduled. |
-| BROWSER-ADR.0003 | [docs/adr/0003-authoritative-attack-geometry.md](docs/adr/0003-authoritative-attack-geometry.md) | duplicate | [TH-03](#th-03), [TH-15](#th-15) | Retained implementation boundary and evidence links. Revisit triggers apply only when the named change is selected; no browser consolidation, new asset batch or broader desktop adapter is implicitly scheduled. |
-| BROWSER-ADR.0004 | [docs/adr/0004-procedural-prototype-assets.md](docs/adr/0004-procedural-prototype-assets.md) | duplicate | [PD-01](#pd-01), [TH-19](#th-19), [Q-P26](#q-p26) | Retained implementation boundary and evidence links. Revisit triggers apply only when the named change is selected; no browser consolidation, new asset batch or broader desktop adapter is implicitly scheduled. |
-| BROWSER-ADR.0006 | [docs/adr/0006-agent-playtest-workspaces.md](docs/adr/0006-agent-playtest-workspaces.md) | duplicate | [LG-03](#lg-03), [LG-04](#lg-04), [LG-05](#lg-05), [LG-07](#lg-07), [Q-E12](#q-e12) | Retained implementation boundary and evidence links. Revisit triggers apply only when the named change is selected; no browser consolidation, new asset batch or broader desktop adapter is implicitly scheduled. |
-| BROWSER-ADR.READ | [docs/adr/README.md](docs/adr/README.md) | duplicate | None | Retained implementation boundary and evidence links. Revisit triggers apply only when the named change is selected; no browser consolidation, new asset batch or broader desktop adapter is implicitly scheduled. |
-| ARCH.move-1 | [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | duplicate | [HF-03](#hf-03), [TH-04](#th-04), [SC-01](#sc-01) | Class-kit registry ownership transfers to native contracts; no automatic JS registry rewrite. |
-| ARCH.move-2 | [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | duplicate | [TH-08](#th-08), [SC-03](#sc-03) | Modifier/transformative build contracts supersede proposed scattered browser-hook refactor. |
-| ARCH.move-3 | [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | duplicate | [TH-06](#th-06), [SC-04](#sc-04) | Enemy definition/behavior ownership belongs to native catalogue and encounters. |
-| ARCH.move-4 | [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | duplicate | [HF-07](#hf-07), [TH-01](#th-01), [TH-11](#th-11) | Serializable carried build and outer lifecycle retained; old three-stage/30–45 minute proposal is superseded by the current Bible. |
-| ARCH.move-5 | [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | duplicate | [HF-07](#hf-07), [HF-09](#hf-09), [TH-21](#th-21), [Q-E05](#q-e05) | Generalized profile direction retained; production JSON protocol does not wholesale import browser localStorage implementation. |
-| ARCH.engine-git-debt | [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | superseded | [Q-E07](#q-e07), [Q-E05](#q-e05) | Engine uncertainty is closed by TADR-001; local Git now exists at dc72a02. Unselected cleanup of Game.update, per-kind branches, duplicated audio and collection mixing is not a native build requirement. Browser proofs remain separate; remote/import decisions stay explicit. |
-| COMBAT.deflect-mass | [docs/audit-2026-09-05/worker-2-combat.md](docs/audit-2026-09-05/worker-2-combat.md) | parked | None | Roll-Through, mass penalties, Shed Vent and their Sluiceback experiment were not adopted (D02/P09). Old numerical combat economy and 90-second paper fight are retained research, not runnable tasks. |
-| COMBAT.kits-counterplay | [docs/audit-2026-09-05/worker-2-combat.md](docs/audit-2026-09-05/worker-2-combat.md) | duplicate | [Q-P11](#q-p11), [Q-P13](#q-p13), [Q-P20](#q-p20), [Q-P25](#q-p25), [TH-03](#th-03), [TH-04](#th-04), [TH-06](#th-06) | Lash Hook, Hop-Jet, Coherence Beam, lightning network, deflect-grade enemy table, offcut redirection and anticipation proposals need selected kit/roster scope; source numbers do not become production defaults. |
-| META.cadence | [docs/audit-2026-09-05/worker-3-meta.md](docs/audit-2026-09-05/worker-3-meta.md) | superseded | [TH-11](#th-11), [Q-P12](#q-p12) | Three stages/five beats and 38-minute paper cadence are superseded by the current four-world, 60–75 minute target. No measured full-run result exists. |
-| META.unlocks-discovery | [docs/audit-2026-09-05/worker-3-meta.md](docs/audit-2026-09-05/worker-3-meta.md) | question | [Q-P37](#q-p37), [Q-P14](#q-p14), [Q-E09](#q-e09) | Exact unlock triggers, keepsake cog option, class order, first-ten-hours curve, seen/not-taken content, mystery disclosure and Scrapbook tabs remain selected-content choices; no permanent combat-stat grind is adopted. |
-| META.collection | [docs/audit-2026-09-05/worker-3-meta.md](docs/audit-2026-09-05/worker-3-meta.md) | question | [Q-P28](#q-p28), [Q-P29](#q-p29), [Q-P34](#q-p34), [Q-P37](#q-p37) | Diorama, generalized field cards, cosmetic titles/finishes and figurine-linked poses require selected narrative/companion/collection scope. Existing browser collection remains preserved. |
-| META.social | [docs/audit-2026-09-05/worker-3-meta.md](docs/audit-2026-09-05/worker-3-meta.md) | parked | None | Friend/daily social extension proposals do not enter current offline solo production automatically. No backend, account or challenge service is planned. |
-| META.reuse-retire | [docs/audit-2026-09-05/worker-3-meta.md](docs/audit-2026-09-05/worker-3-meta.md) | superseded | [HF-09](#hf-09), [Q-E05](#q-e05) | Production uses accepted native JSON/save contracts. Do not copy progress-store.js wholesale, retire either browser entry, import data or adopt old roster/tuning without scoped authorization. |
-
-## Source inventory
-
-This is the bounded source set inspected for this preparation. The disposition rows above identify actionable work; referenced evidence is retained at its original version. Historical source headings below are navigation descriptions, not current execution state.
-
-| Source | Sections inspected | Treatment |
-| --- | --- | --- |
-| [BIBLE.md](BIBLE.md) | 1. Pillars & Fantasy; 6. Core Systems; 7. Art Direction; 8. Audio & Feel; Architecture and implementation handoff; Sections 1-9 body and captions; Appendix A repeated prompts excluded | Thirteen core headings mapped; product gaps stay questions; engine-open wording superseded by accepted TADR metadata. All explicit gaps map to Q-P records; completed manuscripts and 25 selected images retain concept-only evidence. |
-| [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md) | Character direction picks; World and fiction choices; System gaps carried from planning; Sound and presentation proposal; All character, world, systems, sound and image-choice sections | BD references preserve product-owned values; root maps to product question IDs. BD-01 through BD-17 each map to the corresponding Q-P01 through Q-P17. |
-| [COHESION_REPORT.md](COHESION_REPORT.md) | Verdict, corrections, all-image table, nine-section review, retained limits and verification scope | Completed corrections preserved; articulation, size and production evidence remain questions. |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Verification; Editing conventions; Handoff and version control; Full file | Browser verification and physical limits retained; no production implementation layout inferred. Documentation-only scope, two entries, evidence classes and provenance preserved; no runtime tests executed. |
-| [adr/README.md](adr/README.md) | Decisions to review; Review boundary and next step | Planned ten-section handoff, assembly, full audit and native qualification boundary retained; accepted status supplied by current authorized brief. |
-| [adr/TADR-001-engine-language-platforms.md](adr/TADR-001-engine-language-platforms.md) | Context; Options; Decision; Consequences; Later qualification and reconsideration | Settled production engine/platform intent drives paths and future qualification; no runtime claim. |
-| [adr/TADR-002-runtime-model.md](adr/TADR-002-runtime-model.md) | Context; Options; Decision; Consequences; Later qualification and reconsideration | Explicit hybrid/session/tick/query authority drives runtime and per-system pages. |
-| [adr/TADR-003-content-pipeline.md](adr/TADR-003-content-pipeline.md) | Context; Options; Decision; Consequences; Later qualification and reconsideration | Stable Resource identities, admission and schema/roundtrip coverage split into bounded producers. |
-| [adr/TADR-004-persistence.md](adr/TADR-004-persistence.md) | Context; Options; Decision; Consequences; Later qualification and reconsideration | Aggregate save protocol, critical lifecycle facts, failure and migration split into foundation and examples. |
-| [adr/TADR-005-networking-scope.md](adr/TADR-005-networking-scope.md) | Context; Options; Decision; Consequences; Later qualification and reconsideration | Offline solo remains settled; no networking subsystem tasks. |
-| [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md) | Accepted policy and results; Comparison and rejected variants; Responsiveness and ownership; Limits and retention | Three terminal trials, 76 focused tests and limited pixel reliability preserved as historical evidence. |
-| [docs/ART-DIRECTION.md](docs/ART-DIRECTION.md) | Full historical art record | Old miniature and matte constraints superseded by BIBLE Section 7; named image/runtime evidence preserved. |
-| [docs/BASELINE-GUIDE.md](docs/BASELINE-GUIDE.md) | Baseline controls; Baseline expedition and collection; Baseline build and verification; Baseline art and implementation | Preserve old yard gameplay, collection, mastery and local-only capture; do not inherit its 15-wave content or budgets into production. |
-| [docs/CHARACTER-BIBLE.md](docs/CHARACTER-BIBLE.md) | Headings and candidate roster/status inventory; accepted systems; supporting cast/Scrapbook/voice; notebook alternatives; titles/expressions/motion; next three art studies and evidence limits | Old roster and fixed-stage assumptions superseded; three proposed studies, narrative copy and companion identity questions retained. |
-| [docs/COMBAT-DESIGN-SWARM.md](docs/COMBAT-DESIGN-SWARM.md) | Phases; Team; Delivered | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/CONCEPT-STUDY-01.md](docs/CONCEPT-STUDY-01.md) | Output and inspection; Prompt | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/CONCEPT-STUDY-02.md](docs/CONCEPT-STUDY-02.md) | Method and intent; Visual inspection; Generation prompt | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/CONCEPT-STUDY-03.md](docs/CONCEPT-STUDY-03.md) | Selected family, storyboard, method, team review and limits | Completed visual studies retained with unresolved motion/geometry limitation. |
-| [docs/CONFLICT-AND-COMBAT.md](docs/CONFLICT-AND-COMBAT.md) | Simultaneous threats, pressure/readability, evidence/open choices and recommended first experiment | No mandatory deflect rule inferred; Sluiceback experiment remains a selected-study question. |
-| [docs/DEEP-RESEARCH-SWARM.md](docs/DEEP-RESEARCH-SWARM.md) | Delivered documents; Cross-lane conflicts resolved; Evidence limits | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/DESIGN-AUDIT.md](docs/DESIGN-AUDIT.md) | Evidence basis; Coordinator playfeel probe; The keystone: make mass real; High-impact areas, ranked; What the lanes recommend, condensed; Coordinator reconciliation; Proposed build sequence; Evidence limits | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/DESIGN-INDEX.md](docs/DESIGN-INDEX.md) | Full design desk | Historical navigation, research limits and superseded status accounted. |
-| [docs/DISCOVERY.md](docs/DISCOVERY.md) | Accepted notebook interview, publisher direction, historical build/research, production-tool and remaining decisions sections | Established rules retained; explicit content gaps, figurines and later co-op accounted. |
-| [docs/ENEMY-ROSTER.md](docs/ENEMY-ROSTER.md) | World headings and proposal/status rows; support roles; elite and difficulty headings; registry fields; historical order; reconciliations and evidence limits | Named library is preserved through roster selection; thirteen inferred additions need bounded qualification, not automatic implementation. |
-| [docs/ENEMY-TAXONOMY-SWARM.md](docs/ENEMY-TAXONOMY-SWARM.md) | Phases; Scope and acceptance; Result | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/ENEMY-TAXONOMY.md](docs/ENEMY-TAXONOMY.md) | Family teaching table and PM decisions/evidence/follow-up sections | Completed conceptual follow-up separated from future authored rig and playable miniboss studies. |
-| [docs/FIRST-BUILD-CONTRACT.md](docs/FIRST-BUILD-CONTRACT.md) | Integration conventions; Simulation module; Model module; Parent scope; Verification | Historical first proof; increment 01 supersedes old exact interfaces and numbers. |
-| [docs/FIRST-BUILD-SWARM.md](docs/FIRST-BUILD-SWARM.md) | Frame/Fan out/Aggregate/Report; Verification checkpoint; Integration decisions | Completed first-proof teamwork, local staged admission and evidence history; no automatic engine/class/expedition continuation. |
-| [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md) | Accepted scope; Executed checks; Visual inspection; Playtest limits and next decisions | Keep exact historical browser evidence and forward outstanding human/hardware/content questions. |
-| [docs/HANDWRITTEN-NOTES.md](docs/HANDWRITTEN-NOTES.md) | Photo 1: game rule; Photo 2: game design ideas, continued; Photo 3: adaptive character and dungeon worlds; Photo 4: characters, continued; Accepted later clarification; Historical interpretation for Scrapkeep; Clarifications worth preserving | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/LEAD-CAPTURE.md](docs/LEAD-CAPTURE.md) | Commands; Environment; API; Local records; Unconfigured messaging | Preserved optional local browser service; distribution and messaging are outside the selected production scope. |
-| [docs/LEVEL-DESIGN.md](docs/LEVEL-DESIGN.md) | Accepted structure; section inventory; procedural technique/schema; branch/defense/boss proposal inventory; four-world pacing; historical worked example/telemetry and evidence limits | Generation, selected encounter types and physical dimensions remain open. Historical schedule and thresholds not adopted. |
-| [docs/LIGHTNING-VERIFICATION.md](docs/LIGHTNING-VERIFICATION.md) | Result and limits; Executed checks; Sustained rendered load; Evidence | Exact historical browser evidence, synthetic/human separation and RTX 4080 scope retained. |
-| [docs/MARKET-RESEARCH.md](docs/MARKET-RESEARCH.md) | Finding, comparisons, commercial limits, three proposed relationships, team and next evidence | Completed dated study preserved; proposed experiments and unmeasured enjoyment/demand are separately gated. |
-| [docs/MARKET-SOURCES.md](docs/MARKET-SOURCES.md) | Snapshot, review method/IDs, player-report caveat and interpretation | Dated convenience sample is evidence of reported opinions only; no current pricing or representative-demand claim. |
-| [docs/ORCHARD-ENCOUNTER-STUDY.md](docs/ORCHARD-ENCOUNTER-STUDY.md) | What this study settles provisionally; Ninety-second teaching encounter; Four poses to carry through animation; Clearance and camera contract for a future greybox; Salvage that remembers its previous job; Boss damage changes the place; Evidence and production landing | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/ORCHARD-VISUAL-SWARM.md](docs/ORCHARD-VISUAL-SWARM.md) | Scope; Decisions during aggregation; Deliverables; Review result | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/PLANNING-PREP-SWARM.md](docs/PLANNING-PREP-SWARM.md) | What ran; Ground-truth check; Evidence limits | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [docs/RUNTIME-BLUEPRINT.md](docs/RUNTIME-BLUEPRINT.md) | 1. System ownership; 2. Run coordination and checkpoints; 3. Content and build interfaces; 4. Permanent profile and migration; 5. Scene and asset lifecycle; 6. Movement and encounter physics; 7. Input and dashboard; 8. Audio and character expression; 9. Validation strategy; 10. Remaining implementation decisions and engine gate; Evidence limits | Target contracts and validation scenarios reused; old DOM/Three.js engine-open prescriptions limited to browser proofs. |
-| [docs/WORLD-ENVIRONMENTS.md](docs/WORLD-ENVIRONMENTS.md) | Opening scope, world rewards, historical snapshot, shared rules, candidate-kit headings, next biome and evidence limits | Seven kits remain candidates; first region, mechanics, weather/signs and figurine chips are questions. |
-| [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) | Context/decision; Consequences and revisit conditions | Historical browser/player implementation boundaries, distinct from accepted production TADRs. |
-| [docs/adr/0002-simulation-boundary.md](docs/adr/0002-simulation-boundary.md) | Context/decision; Consequences and revisit conditions | Historical browser/player implementation boundaries, distinct from accepted production TADRs. |
-| [docs/adr/0003-authoritative-attack-geometry.md](docs/adr/0003-authoritative-attack-geometry.md) | Context/decision; Consequences and revisit conditions | Historical browser/player implementation boundaries, distinct from accepted production TADRs. |
-| [docs/adr/0004-procedural-prototype-assets.md](docs/adr/0004-procedural-prototype-assets.md) | Context/decision; Consequences and revisit conditions | Historical browser/player implementation boundaries, distinct from accepted production TADRs. |
-| [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md) | Context; Decision; Consequences; Revisit trigger | Current cancel/clear/capture semantics are a production contract reference, not native implementation. |
-| [docs/adr/0006-agent-playtest-workspaces.md](docs/adr/0006-agent-playtest-workspaces.md) | Context/decision; Consequences and revisit conditions | Historical browser/player implementation boundaries, distinct from accepted production TADRs. |
-| [docs/adr/README.md](docs/adr/README.md) | Context/decision; Consequences and revisit conditions | Historical browser/player implementation boundaries, distinct from accepted production TADRs. |
-| [docs/audit-2026-09-05/worker-1-architecture.md](docs/audit-2026-09-05/worker-1-architecture.md) | Module map; Extensibility assessment; Top 5 architectural moves; Duplication and divergence; Engine question; Risks and debt | Source-read historical proposals; current TADRs govern native architecture and explicit questions gate scope. |
-| [docs/audit-2026-09-05/worker-2-combat.md](docs/audit-2026-09-05/worker-2-combat.md) | Defensive rhythm; Mass currency; Class kit skeletons; Enemy counterplay grammar; Anticipation beats; Written fight; Evidence limits | Paper combat alternatives and tuning cannot supersede current movement/kit rulings. |
-| [docs/audit-2026-09-05/worker-3-meta.md](docs/audit-2026-09-05/worker-3-meta.md) | Expedition skeleton; Unlock architecture; Discovery-as-progression; Collection layer; Return hooks; Reuse-or-retire; Open items | Current route/lifecycle rules supersede old pacing; optional content stays explicitly selected. |
-| [docs/audit-2026-09-05/worker-4-universe.md](docs/audit-2026-09-05/worker-4-universe.md) | Enemy silhouette rule, figurine-readiness and five-step art pipeline | Every next art step has a question or superseded disposition; physical print claims remain unproved. |
-| [docs/project/AGENT-PLAYTEST-ENGINEERING.md](docs/project/AGENT-PLAYTEST-ENGINEERING.md) | Carry-forward map; Operational desktop foundation; Ordered work and completion checks; Resume the next engineering unit; Evidence boundaries | Completed bounded tooling evidence retained; remaining browser/player units decomposed separately from Godot. |
-| [docs/project/ASSETS.md](docs/project/ASSETS.md) | Asset and tool provenance; Full provenance inventory and admission/release paragraphs | Current prototype source/license inventory only; final release policy stays Q-E06. Current asset evidence supports the art/audio briefs; future production source/license details remain required. |
-| [docs/project/BACKLOG.md](docs/project/BACKLOG.md) | Ordered backlog; Completed planning decisions; Completed this closeout | Every P01–P14 and T01–T13 disposition retained individually. |
-| [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) | Current rulings; Tier A; Tier B; Tier C; Accepted notebook rulings and remaining lifecycle detail; Evidence limits | Every D01–D58 mapped individually; old art/engine assumptions superseded; unselected legacy candidates explicitly parked. |
-| [docs/project/HOUSEKEEPING.md](docs/project/HOUSEKEEPING.md) | Work sequence; Environment constraint; Results; Remaining work | Completed closeout at dated evidence; root TRACKING owns later status. |
-| [docs/project/INCREMENT-01-lightning-playtest.md](docs/project/INCREMENT-01-lightning-playtest.md) | Goal; Requirements; Exclusions; Ownership; Acceptance; Gate; Closeout; Integration contract | Historical approval and browser completion kept separate from future production. |
-| [docs/project/PLANNING.md](docs/project/PLANNING.md) | Roles; Phases 0–4; What this protocol does not do | Separate preparation, engineering documentation and gameplay go gates retained. |
-| [docs/project/README.md](docs/project/README.md) | Sources of truth; Start the next session; Full project desk | Navigation and old dynamic status reconciliation left to root. Navigation and dated status given to root for minimal reconciliation. |
-| [docs/project/REQUIREMENTS.md](docs/project/REQUIREMENTS.md) | R01-R20 and change rule | Every requirement individually mapped; bounded prototype claims are not full-game completion. |
-| [docs/research-2026-09-05/REVIEW-NOTES.md](docs/research-2026-09-05/REVIEW-NOTES.md) | Character bible (CHARACTER-BIBLE.md); Enemy roster (ENEMY-ROSTER.md); World environments (WORLD-ENVIRONMENTS.md); Level design (LEVEL-DESIGN.md); Runtime blueprint (RUNTIME-BLUEPRINT.md); Cross-lane conflicts (all resolved in-run); Conflict fix notes | All unnumbered planning to-dos, findings, rulings and evidence limits have explicit coverage rows. Historical completed work remains method-limited; current task/question IDs hold the surviving work. |
-| [tools/agent-player/README.md](tools/agent-player/README.md) | Commands; Evidence and interpretation; Maintained boundaries | Current runner, supported configured rewards and unsupported arbitrary equipment editing confirmed. |
+Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOSITIONS.md](docs/project/SOURCE-DISPOSITIONS.md), moved there verbatim on 6 September 2026. The coordinator owns that file. It preserves every P/T/R/D/BD identifier, the unnumbered planning obligations, core-system headings, selected concept-art receipts and requested engineering sections, and its task and question links point back to the cards and questions in this file. A disposition row grants no task completion, native support claim or implementation authorization.
