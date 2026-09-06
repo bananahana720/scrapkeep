@@ -8,6 +8,6 @@ Read [the project desk](docs/project/README.md) and [CONTRIBUTING.md](CONTRIBUTI
 - Damage and telegraphs must consume the same committed geometry. A visually convincing animation is insufficient evidence of a correct hitbox.
 - Use the locked dependencies and existing free local tools. No dependency upgrade, engine migration, paid service, deployment, or new full-game feature is implied by housekeeping.
 - Run `npm run verify` for a completed change. This checks local project structure, asserted tests, models, and production serving. Use the browser checks in CONTRIBUTING when UI, input, camera, or render behavior changes; the command does not establish those.
-- Writing agents use disjoint worktrees when Git works, otherwise separate staging copies. The coordinator admits changes serially. All Codex agents use the configured Astra roles.
+- Writing agents use disjoint worktrees by default; separate staging copies are the fallback only on a host without Git. The coordinator admits changes serially. All Codex agents use the configured Astra roles.
 - Keep evidence scoped to the version and method actually checked. Write disposable outputs under `artifacts/local/`; preserve named historical build evidence. See `artifacts/README.md`.
 - Update the relevant ADR when a durable decision changes, and the backlog when an item is resolved. Keep one canonical record per concern. No task, reminder, or persistent memory is created by a project note.

@@ -15,7 +15,9 @@ Two read-only Astra reviewers inspect architecture and tooling while the coordin
 
 ## Environment constraint
 
-`git status --short` currently fails because `.git` is an empty read-only environment path. Version-control setup remains an explicitly tracked environment task. The files can be verified and handed off here; no commit, branch, or remote backup is claimed.
+At the time of this closeout, `git status --short` failed because `.git` was an empty read-only environment path, so the files were verified and handed off without a commit, branch, or remote backup; version control stayed a tracked environment task (backlog T01).
+
+That is resolved. The checkout is now real: branch `main`, baseline commit `4db9b31`, with `.gitignore` covering `node_modules`, `dist`, `.private`, `.env`, and `artifacts/local`. Writing agents use disjoint worktrees and the coordinator admits changes on branches with ordinary review. No remote is configured yet, so there is still no off-machine backup until Andrew authorizes one and it is published.
 
 ## Results
 
@@ -33,6 +35,6 @@ Two read-only Astra high agents inspected architecture and tooling. A fresh Astr
 
 ## Remaining work
 
-The [backlog](BACKLOG.md) owns the real Git-checkout handoff, publisher playtest, ranged pressure, hardware/performance evidence and release-packaging decisions. No full-game feature, next sprint or new session goal was created during housekeeping. Dependency versions and game behavior were unchanged.
+The [backlog](BACKLOG.md) owns choosing a remote and publishing, publisher playtest, ranged pressure, hardware/performance evidence and release-packaging decisions. No full-game feature, next sprint or new session goal was created during housekeeping. Dependency versions and game behavior were unchanged.
 
 The append-only [decision trail](../decisions.tsv) preserves this closeout's choices and the review correction. Retained evidence lives under `artifacts/housekeeping-2026-09-05/`; disposable reruns do not replace it.
