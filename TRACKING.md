@@ -114,7 +114,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
-| [HF-03a](BACKLOG.md#hf-03a) | 1 | 6 | review | none | none | EV-0083 |
+| [HF-03a](BACKLOG.md#hf-03a) | 1 | 7 | review | none | none | EV-0085 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 3 | queued | HF-03a output not yet admitted | none | EV-0078 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 1 | queued | HF-03a | none | EV-0029 |
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 3 | queued | HF-04a | none | EV-0084 |
@@ -330,6 +330,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0082 | 2026-09-06T22:33:28.806659+00:00 | Coordinator / checkpoint | HF-03a | Worker observed draft in leased worktree: seven modules,22 uniquely assigned records and11 paper scenarios. Only leased section changed; source/unique-owner receipts and candidate commit in preparation. No blocker. Host dispatch confirms Astra/high; internal introspection unavailable. |
 | EV-0083 | 2026-09-06T22:36:31.350909+00:00 | Coordinator / handoff | HF-03a | HF-03a-A1 candidate7209ac5c11309beddf0a057c51c296881f9fd9be stopped and clean. Only leased section changed; hash95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc. Coordinator independently ran no-build scope/docs/project PASS. Original84-check receipt and portable scripts retained in tasks/HF-03a/attempt-1. Fresh review pending; lease closed after stopped handoff. |
 | EV-0084 | 2026-09-06T22:37:54.559149+00:00 | Coordinator / amendment acceptance and propagation | AM-FF-001, HF-04b | Fresh ff-amendment-review gpt-6-astra high PASS+NOTES on exact proposal. Coordinator accepts factual correction and jointly admits HF-04b revision2, preserving architecture and unparsed lifecycle gaps. Reviewer noted pending-cancel queue logging is not an assertion. HF-04b remains queued behind HF-04a, no lease. Source/card and decision enter the same commit; propagation receipt follows. artifacts/foundation-sprint-2026-09/amendments/AM-FF-001/review.md |
+| EV-0085 | 2026-09-06T22:41:44.137804+00:00 | Coordinator / independent review | HF-03a | Fresh ff-hf03a-review CLI session01a078de-470a-7c61-803b-27a5e79adb9d, actual gpt-6-astra high/read-only, PASS+NOTES on candidate7209ac5c and sectionhash95fbd03d. All DoD and11 semantic scenarios pass; independently84 checks,7 modules/22 owners and9 acyclic edges. Note: full BACKLOG snapshot guard drifts after unrelated HF04b amendment; exact HF03a card unchanged. Serial admission pending. tasks/HF-03a/review.md |
 
 
 ## Preparation checkpoint
@@ -520,6 +521,6 @@ Last reported event: EV-0077. First execution poke baseline: 2/14 done (HF-01, H
 - Latest checkpoint: 2026-09-06T22:36:31.351421+00:00; stopped writer, clean candidate and exact output inspected; coordinator scope/docs/project pass; fresh review pending.
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-03a/assignment.md).
-- Review: not_run.
+- Review: ff-hf03a-review, fresh CLI gpt-6-astra high with actual banner, PASS+NOTES on candidate `7209ac5c11309beddf0a057c51c296881f9fd9be`; [verbatim report](artifacts/foundation-sprint-2026-09/tasks/HF-03a/review.md).
 
 - Handoff evidence: [retained attempt1](artifacts/foundation-sprint-2026-09/tasks/HF-03a/attempt-1/handoff.json).
