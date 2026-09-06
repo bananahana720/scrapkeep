@@ -110,7 +110,7 @@ The original `/` and `/orchard.html` entries remain distinct. No new game featur
 - [Maintained player qualification and retained failures](../../artifacts/agent-player-2026-09-06/README.md)
 - Controller operations. The installed desktop controller's `agent-desktop/README.md` under the user's local share directory for codex-native-input, outside this repository.
 - Installed controller verification. `agent-desktop/verification/receipt.json` in the same installation.
-- [Dated playtest and rerun notes](../../artifacts/local/player-playtest-2026-09-06/README.md)
+- [Dated playtest and rerun notes](../../artifacts/agent-player-2026-09-06/README.md)
 - Full research and implementation report. `linux-computer-use-progress.md` in the Codex visualizations directory dated 6 September 2026 under the user's Codex home, outside this repository.
 - [Game project desk](README.md), [backlog](BACKLOG.md), [current game verification](../LIGHTNING-VERIFICATION.md)
 
