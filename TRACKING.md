@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **Foundation-full authorized** by Andrew: PLEASE IMPLEMENT THIS PLAN, completing all fourteen HF cards with no intermediate approval pauses. Documentation-only. HF-01rev3 and HF-02rev2 remain done; Foundation-01 passed EV-0077 and Operational Sprint 0 passed EV-0064 remain historical. The pending Foundation-02 approval pause is superseded for this set only. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | foundation_coordinator (/root/foundation_coordinator), explicit gpt-6-astra xhigh selection; sole board and integration writer after EV-0080. Root task remains read-only oversight. |
-| Active task attempts / write leases | See full foundation attempt records and task index; coordinator serializes ownership. Active writers never exceed two. |
+| Active task attempts / write leases | No active writer after HF-03a handoff; its lease is closed. Next HF-04a/HF-05 wave awaits recorded assignment, within two-writer ceiling. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. The full foundation authorization covers only the fourteen selected HF cards and necessary scoped factual amendments. Other task families remain outside this scope. PUB-01 retains its separate historical authorization.
@@ -110,13 +110,13 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | PS-06 (S0-01, S0-04, S0-05, S0-06, S0-07, S0-08) | interim | 7 | done | none | PS-06-A1 | EV-0034 |
 | [HF-01](BACKLOG.md#hf-01) | 3 | 9 | done | none | HF-01-A1 | EV-0075 |
 | [HF-02](BACKLOG.md#hf-02) | 2 | 7 | done | none | HF-02-A1 | EV-0072 |
-| [HF-05](BACKLOG.md#hf-05) | 2 | 2 | queued | HF-03a | none | EV-0029 |
+| [HF-05](BACKLOG.md#hf-05) | 2 | 3 | ready | none | none | EV-0087 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
-| [HF-03a](BACKLOG.md#hf-03a) | 1 | 7 | review | none | none | EV-0085 |
-| [HF-03b](BACKLOG.md#hf-03b) | 1 | 3 | queued | HF-03a output not yet admitted | none | EV-0078 |
-| [HF-04a](BACKLOG.md#hf-04a) | 1 | 1 | queued | HF-03a | none | EV-0029 |
+| [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
+| [HF-03b](BACKLOG.md#hf-03b) | 1 | 4 | ready | none | none | EV-0087 |
+| [HF-04a](BACKLOG.md#hf-04a) | 1 | 2 | ready | none | none | EV-0087 |
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 3 | queued | HF-04a | none | EV-0084 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 1 | queued | HF-06a | none | EV-0029 |
@@ -331,6 +331,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0083 | 2026-09-06T22:36:31.350909+00:00 | Coordinator / handoff | HF-03a | HF-03a-A1 candidate7209ac5c11309beddf0a057c51c296881f9fd9be stopped and clean. Only leased section changed; hash95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc. Coordinator independently ran no-build scope/docs/project PASS. Original84-check receipt and portable scripts retained in tasks/HF-03a/attempt-1. Fresh review pending; lease closed after stopped handoff. |
 | EV-0084 | 2026-09-06T22:37:54.559149+00:00 | Coordinator / amendment acceptance and propagation | AM-FF-001, HF-04b | Fresh ff-amendment-review gpt-6-astra high PASS+NOTES on exact proposal. Coordinator accepts factual correction and jointly admits HF-04b revision2, preserving architecture and unparsed lifecycle gaps. Reviewer noted pending-cancel queue logging is not an assertion. HF-04b remains queued behind HF-04a, no lease. Source/card and decision enter the same commit; propagation receipt follows. artifacts/foundation-sprint-2026-09/amendments/AM-FF-001/review.md |
 | EV-0085 | 2026-09-06T22:41:44.137804+00:00 | Coordinator / independent review | HF-03a | Fresh ff-hf03a-review CLI session01a078de-470a-7c61-803b-27a5e79adb9d, actual gpt-6-astra high/read-only, PASS+NOTES on candidate7209ac5c and sectionhash95fbd03d. All DoD and11 semantic scenarios pass; independently84 checks,7 modules/22 owners and9 acyclic edges. Note: full BACKLOG snapshot guard drifts after unrelated HF04b amendment; exact HF03a card unchanged. Serial admission pending. tasks/HF-03a/review.md |
+| EV-0086 | 2026-09-06T22:42:57.683847+00:00 | Coordinator / completion | HF-03a | HF-03a-A1 revision1 DONE at integrated3f56a82ea7b74ebd6769b5ea50653d9d2452453a, candidate7209ac5c, fresh independent PASS+NOTES. Integrated scope/docs/project PASS; section hash identical to reviewed candidate. Original84-check candidate receipt retained; integrated replay83 pass plus one precisely reconciled whole-BACKLOG guard due solely to admitted HF04b amendment. No failed DoD. Writer stopped and lease closed. tasks/HF-03a/coordinator-integrated/source-reconciliation.json |
+| EV-0087 | 2026-09-06T22:42:57.684729+00:00 | Coordinator / readiness | HF-04a, HF-05, HF-03b | Admitted HF03a section and retained independent/integrated receipts inspected at3f56a82e; HF04a rev1, HF05 rev2 and HF03b rev1 now input-ready. HF04a/HF05 are the next disjoint writer wave; HF03b follows when capacity permits. No new product answer or native scope. |
 
 
 ## Preparation checkpoint
@@ -510,17 +512,19 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Full foundation reporting checkpoint
 
-Last reported event: EV-0077. First execution poke baseline: 2/14 done (HF-01, HF-02), no active worker. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
+Last reported event: EV-0087. Latest admitted checkpoint: 3/14 done (HF-01, HF-02, HF-03a); no active writer after the first handoff. Since EV-0077: full scope authorized, HF04b factual revision2 admitted, HF03a admitted; HF04a/HF05/HF03b input-ready. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
 
 ## HF-03a-A1 full foundation attempt
 
 - Assignee: foundation_hf03a, gpt-6-astra high selected by explicit accepted host dispatch; internal introspection unavailable; card revision 1; attempt HF-03a-A1; exclusive lease HF-03a-L1 closed after stopped handoff.
 - Owned files: `docs/tech/sections/HF-03a-module-map.md`; `artifacts/local/tasks/HF-03a/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-03a.
 - Base identity: `9cb8f51f901a6944428a7dcbea964ac0d4fc7634`; accepted dependency files from this base.
-- Candidate identity: `7209ac5c11309beddf0a057c51c296881f9fd9be`. Integrated identity: null.
-- Latest checkpoint: 2026-09-06T22:36:31.351421+00:00; stopped writer, clean candidate and exact output inspected; coordinator scope/docs/project pass; fresh review pending.
+- Candidate identity: `7209ac5c11309beddf0a057c51c296881f9fd9be`. Integrated identity: `3f56a82ea7b74ebd6769b5ea50653d9d2452453a`.
+- Latest checkpoint: 2026-09-06T22:42:57.684341+00:00; independent PASS+NOTES, serial admission and integrated scope/docs/project/source checks pass; writer stopped and lease closed.
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-03a/assignment.md).
 - Review: ff-hf03a-review, fresh CLI gpt-6-astra high with actual banner, PASS+NOTES on candidate `7209ac5c11309beddf0a057c51c296881f9fd9be`; [verbatim report](artifacts/foundation-sprint-2026-09/tasks/HF-03a/review.md).
 
 - Handoff evidence: [retained attempt1](artifacts/foundation-sprint-2026-09/tasks/HF-03a/attempt-1/handoff.json).
+
+- Integrated evidence: [source reconciliation](artifacts/foundation-sprint-2026-09/tasks/HF-03a/coordinator-integrated/source-reconciliation.json), [checks](artifacts/foundation-sprint-2026-09/tasks/HF-03a/coordinator-integrated/verification.json).
