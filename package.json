@@ -20,6 +20,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "check:scope": "node scripts/check-scope.mjs",
     "check:build": "node scripts/check-build.mjs",
+    "native:smoke": "node scripts/native-smoke.mjs",
     "probe:balance": "node tests/balance.mjs",
     "playtest:agent": "node scripts/agent-playtest.mjs",
     "test:agent": "node scripts/agent-playtest.mjs --self-test"
