@@ -12,7 +12,7 @@ The service uses Node built-ins. The project must use ES modules and Node 22 or 
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `node server/index.js`                 | Starts the API and serves existing `dist` files on `127.0.0.1:8787`.                                           |
 | `node --env-file=.env server/index.js` | Loads explicitly configured environment values from `.env`. The service does not automatically load that file. |
-| `node --test tests/leads.test.js`      | Tests HTTP capture using synthetic contacts and temporary directories.                                         |
+| `npm run test:leads`                   | Tests HTTP capture using synthetic contacts and temporary directories.                                         |
 
 During development, Vite proxies `/api` to `http://127.0.0.1:8787`. Vite must deny access to `**/.private/**`, `**/leads.json`, `**/leads-*.tmp`, and `**/leads.lock`, in addition to its default deny rules. These rules prevent the development server from exposing local contact records. The Node production server serves only `dist`, rejects hidden paths and static symlink escapes, and never exposes a lead-list endpoint.
 

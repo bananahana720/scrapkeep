@@ -480,10 +480,23 @@ def main():
     return 0 if report["passed"] else 1
 
 
+def interrupt(signum, frame):
+    """Turn the first stop signal into KeyboardInterrupt and ignore any repeat.
+
+    A terminal Ctrl-C reaches the runner twice, once from the kernel and once
+    forwarded by the attached wrapper. A second KeyboardInterrupt inside the
+    cleanup path would skip the lease release and the final report.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    raise KeyboardInterrupt(f"signal {signum}")
+
+
+def install_interrupt_handler():
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, interrupt)
+
+
 if __name__ == "__main__":
-
-    def interrupt(signum, frame):
-        raise KeyboardInterrupt(f"signal {signum}")
-
-    signal.signal(signal.SIGTERM, interrupt)
+    install_interrupt_handler()
     raise SystemExit(main())

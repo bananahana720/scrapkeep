@@ -1,6 +1,8 @@
 // The Python runner stays attached to this wrapper on purpose. It holds a
-// leased desktop and real keyboard/mouse input, so a killed wrapper must take
-// the runner down with it instead of orphaning a process that keeps typing.
+// leased desktop and real keyboard/mouse input, so a terminal Ctrl-C or a
+// signal to this process group reaches the runner as well as the wrapper.
+// A SIGKILLed wrapper forwards nothing and can leave the runner alive; stop
+// the runner directly in that case.
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";

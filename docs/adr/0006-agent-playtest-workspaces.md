@@ -22,6 +22,10 @@ The maintained game runner lives in `tools/agent-player/` and imports this insta
 
 These workspaces share Unix authority and session services. They are not security VMs, and application launch requires checking that a distinct instance appears in the child desktop. Semantic button/editable-text success does not establish general desktop parity or skillful gameplay. The historical direct player is superseded by the maintained leased runner and must not share a managed desktop.
 
+## Amendment 2026-09-06
+
+The runner pins the installed controller with `tools/agent-player/controller-manifest.json`; `run.py` recomputes every controller `*.py` hash before it builds or leases, refuses to run on a mismatch unless `--allow-controller-drift` is passed, and records the outcome in its report (PS-05b).
+
 ## Revisit trigger
 
 Revisit when a required editor/toolkit cannot expose useful controls, an application forwards to a host instance, stronger filesystem/process isolation is required, or a different compositor becomes a supported target. Keep the accepted independent-workspace behavior while changing its implementation.
