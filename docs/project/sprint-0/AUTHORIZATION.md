@@ -15,3 +15,7 @@ Sprint-close prepares at most four small or medium cards for Andrew's approval. 
 Andrew asked to run jobs locally during implementation. CI therefore uses a temporary one-job self-hosted runner on this machine for this private repository. The workflow is manually dispatched, with no persistent runner service and no hosted-runner minutes. Preserve report JSON in the job log/summary and local evidence, without uploading binary or report artifacts. Stop and unregister the runner after the bounded job.
 
 The local workflow is prepared within the approved implementation scope. Runner registration remains a separate execution-access approval: automatic approval review refused registration without explicit consent to GitHub Actions executing the reviewed job on this machine. No runner has been registered. This approval blocker does not change the required Linux CI evidence.
+
+## Runner execution approval
+
+After the pending-closure handoff, Andrew explicitly answered "approved - proceed" to the request to register a temporary one-job runner for `bananahana720/scrapkeep`, execute the reviewed workflow locally and remove it afterward. That specific execution-access approval supersedes the registration blocker above. No service, hosted job, paid usage, binary upload or broader repository access is authorized.
