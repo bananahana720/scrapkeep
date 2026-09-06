@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **Foundation-full authorized** by Andrew: PLEASE IMPLEMENT THIS PLAN, completing all fourteen HF cards with no intermediate approval pauses. Documentation-only. HF-01rev3 and HF-02rev2 remain done; Foundation-01 passed EV-0077 and Operational Sprint 0 passed EV-0064 remain historical. The pending Foundation-02 approval pause is superseded for this set only. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | foundation_coordinator (/root/foundation_coordinator), explicit gpt-6-astra xhigh selection; sole board and integration writer after EV-0080. Root task remains read-only oversight. |
-| Active task attempts / write leases | No active writer after HF-03a handoff; its lease is closed. Next HF-04a/HF-05 wave awaits recorded assignment, within two-writer ceiling. |
+| Active task attempts / write leases | See full foundation attempt records and task index; coordinator serializes ownership. Active writers never exceed two. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. The full foundation authorization covers only the fourteen selected HF cards and necessary scoped factual amendments. Other task families remain outside this scope. PUB-01 retains its separate historical authorization.
@@ -110,13 +110,13 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | PS-06 (S0-01, S0-04, S0-05, S0-06, S0-07, S0-08) | interim | 7 | done | none | PS-06-A1 | EV-0034 |
 | [HF-01](BACKLOG.md#hf-01) | 3 | 9 | done | none | HF-01-A1 | EV-0075 |
 | [HF-02](BACKLOG.md#hf-02) | 2 | 7 | done | none | HF-02-A1 | EV-0072 |
-| [HF-05](BACKLOG.md#hf-05) | 2 | 3 | ready | none | none | EV-0087 |
+| [HF-05](BACKLOG.md#hf-05) | 2 | 4 | in_progress | none | none | EV-0089 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 4 | ready | none | none | EV-0087 |
-| [HF-04a](BACKLOG.md#hf-04a) | 1 | 2 | ready | none | none | EV-0087 |
+| [HF-04a](BACKLOG.md#hf-04a) | 1 | 3 | in_progress | none | none | EV-0088 |
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 3 | queued | HF-04a | none | EV-0084 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 1 | queued | HF-06a | none | EV-0029 |
@@ -333,6 +333,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0085 | 2026-09-06T22:41:44.137804+00:00 | Coordinator / independent review | HF-03a | Fresh ff-hf03a-review CLI session01a078de-470a-7c61-803b-27a5e79adb9d, actual gpt-6-astra high/read-only, PASS+NOTES on candidate7209ac5c and sectionhash95fbd03d. All DoD and11 semantic scenarios pass; independently84 checks,7 modules/22 owners and9 acyclic edges. Note: full BACKLOG snapshot guard drifts after unrelated HF04b amendment; exact HF03a card unchanged. Serial admission pending. tasks/HF-03a/review.md |
 | EV-0086 | 2026-09-06T22:42:57.683847+00:00 | Coordinator / completion | HF-03a | HF-03a-A1 revision1 DONE at integrated3f56a82ea7b74ebd6769b5ea50653d9d2452453a, candidate7209ac5c, fresh independent PASS+NOTES. Integrated scope/docs/project PASS; section hash identical to reviewed candidate. Original84-check candidate receipt retained; integrated replay83 pass plus one precisely reconciled whole-BACKLOG guard due solely to admitted HF04b amendment. No failed DoD. Writer stopped and lease closed. tasks/HF-03a/coordinator-integrated/source-reconciliation.json |
 | EV-0087 | 2026-09-06T22:42:57.684729+00:00 | Coordinator / readiness | HF-04a, HF-05, HF-03b | Admitted HF03a section and retained independent/integrated receipts inspected at3f56a82e; HF04a rev1, HF05 rev2 and HF03b rev1 now input-ready. HF04a/HF05 are the next disjoint writer wave; HF03b follows when capacity permits. No new product answer or native scope. |
+| EV-0088 | 2026-09-06T22:43:45.042168+00:00 | Coordinator / assignment/lease | HF-04a | HF-04a-A1 revision1, writer /root/foundation_hf03a requested gpt-6-astra high; base 7a73c5b5f44806c83924661b054051818174f07e verified in /home/andrew/Projects/scrapkeep-wt-HF-04a; conflict-free file-level lease HF-04a-L1 recorded before dispatch. Inputs and dependency artifacts inspected; full card and source/evidence instructions in artifacts/foundation-sprint-2026-09/tasks/HF-04a/assignment.md. No build. |
+| EV-0089 | 2026-09-06T22:43:45.046619+00:00 | Coordinator / assignment/lease | HF-05 | HF-05-A1 revision2, writer /root/foundation_trigger_review requested gpt-6-astra high; base 7a73c5b5f44806c83924661b054051818174f07e verified in /home/andrew/Projects/scrapkeep-wt-HF-05; conflict-free file-level lease HF-05-L1 recorded before dispatch. Inputs and dependency artifacts inspected; full card and source/evidence instructions in artifacts/foundation-sprint-2026-09/tasks/HF-05/assignment.md. No build. |
 
 
 ## Preparation checkpoint
@@ -528,3 +530,25 @@ Last reported event: EV-0087. Latest admitted checkpoint: 3/14 done (HF-01, HF-0
 - Handoff evidence: [retained attempt1](artifacts/foundation-sprint-2026-09/tasks/HF-03a/attempt-1/handoff.json).
 
 - Integrated evidence: [source reconciliation](artifacts/foundation-sprint-2026-09/tasks/HF-03a/coordinator-integrated/source-reconciliation.json), [checks](artifacts/foundation-sprint-2026-09/tasks/HF-03a/coordinator-integrated/verification.json).
+
+## HF-04a-A1 full foundation attempt
+
+- Assignee: /root/foundation_hf03a, gpt-6-astra high requested; card revision 1; attempt HF-04a-A1; exclusive lease HF-04a-L1 active.
+- Owned files: `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `artifacts/local/tasks/HF-04a/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-04a.
+- Base identity: `7a73c5b5f44806c83924661b054051818174f07e`; accepted dependency files from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-06T22:43:45.042577+00:00; assignment recorded, no worker output yet. Next: author and verify the exact card.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-04a/assignment.md).
+- Review: not_run.
+
+## HF-05-A1 full foundation attempt
+
+- Assignee: /root/foundation_trigger_review, gpt-6-astra high requested; card revision 2; attempt HF-05-A1; exclusive lease HF-05-L1 active.
+- Owned files: `docs/tech/sections/HF-05-content-admission.md`; `artifacts/local/tasks/HF-05/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-05.
+- Base identity: `7a73c5b5f44806c83924661b054051818174f07e`; accepted dependency files from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-06T22:43:45.046923+00:00; assignment recorded, no worker output yet. Next: author and verify the exact card.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-05/assignment.md).
+- Review: not_run.
