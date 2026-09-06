@@ -27,6 +27,12 @@ const M = {
     emissive: "#ffc157",
     emissiveIntensity: 0.8,
   }),
+  lightning: new THREE.MeshStandardMaterial({
+    color: "#bdffff",
+    emissive: "#41dfff",
+    emissiveIntensity: 1.7,
+    roughness: 0.3,
+  }),
   glass: new THREE.MeshPhysicalMaterial({
     color: "#b8e5d7",
     transparent: true,
@@ -204,7 +210,8 @@ function poseShears(tool, open) {
 export function createHero() {
   const hero = new THREE.Group();
   hero.name = "Scrapkeep hamster";
-  const shell = rigid(hero);
+  const deformation = rigid(hero);
+  const shell = rigid(deformation);
   const cageGeometry = new THREE.TorusGeometry(0.9, 0.045, 6, 28);
   for (let i = 0; i < 3; i++) {
     const rib = mesh(shell, cageGeometry, i === 1 ? M.copper : M.steel);
@@ -300,7 +307,55 @@ export function createHero() {
   consolidate(brace);
   shear.visible = false;
   brace.visible = false;
-  hero.userData = { shell, cockpit, ports, shear, brace };
+  const lightning = rigid(hero);
+  for (const side of [-1, 1]) {
+    rod(
+      lightning,
+      M.copper,
+      side * 0.55,
+      0.3,
+      0.2,
+      side * 0.55,
+      0.65,
+      -0.52,
+      0.07,
+    );
+    for (let i = 0; i < 3; i++) {
+      const coil = mesh(
+        lightning,
+        G.ring,
+        M.lightning,
+        side * 0.55,
+        0.56,
+        -0.1 - i * 0.17,
+        0.12,
+      );
+      coil.rotation.x = 0.4;
+    }
+    rod(
+      lightning,
+      M.steel,
+      side * 0.55,
+      0.65,
+      -0.52,
+      side * 0.18,
+      0.25,
+      -0.92,
+      0.055,
+    );
+    ball(lightning, M.lightning, side * 0.18, 0.25, -0.92, 0.095);
+  }
+  ball(lightning, M.lightning, 0, 0.45, 0, 0.12);
+  consolidate(lightning);
+  hero.userData = {
+    shell,
+    deformation,
+    cockpit,
+    ports,
+    shear,
+    brace,
+    lightning,
+  };
   return hero;
 }
 export function updateHero(group, player, dt, time) {
@@ -313,6 +368,16 @@ export function updateHero(group, player, dt, time) {
     rollingRotation.setFromAxisAngle(rollingAxis, (speed * dt) / player.radius);
     data.shell.quaternion.premultiply(rollingRotation);
   }
+  const compression = Math.min(
+    0.16,
+    Math.max(0, player.landingImpact || 0) * 0.012,
+  );
+  data.deformation.scale.set(
+    1 + compression * 0.5,
+    1 - compression,
+    1 + compression * 0.5,
+  );
+  data.lightning.rotation.y = -player.yaw;
   data.cockpit.rotation.y = -player.yaw;
   data.ports.rotation.y = -player.yaw;
   data.cockpit.rotation.z = Math.sin(time * 4) * Math.min(speed * 0.003, 0.035);
@@ -747,6 +812,35 @@ export function createCompanion() {
   tool.position.set(0, 0.7, -0.2);
   poseShears(tool, 0.28);
   group.userData.shears = tool.userData.jaws;
+  return group;
+}
+
+export function createConductor() {
+  const group = new THREE.Group();
+  group.name = "Storm conductor";
+  const chassis = rigid(group);
+  for (let i = 0; i < 3; i++) {
+    const angle = (i * Math.PI * 2) / 3;
+    rod(
+      chassis,
+      M.steel,
+      0,
+      0.28,
+      0,
+      Math.sin(angle) * 0.6,
+      0.08,
+      Math.cos(angle) * 0.6,
+      0.09,
+    );
+  }
+  rod(chassis, M.copper, 0, 0.15, 0, 0, 1.3, 0, 0.1);
+  for (const y of [0.5, 0.75, 1]) {
+    const coil = mesh(chassis, G.ring, M.cream, 0, y, 0, 0.26);
+    coil.rotation.x = Math.PI / 2;
+  }
+  consolidate(chassis);
+  const electrode = ball(group, M.lightning, 0, 1.35, 0, 0.22);
+  group.userData.electrode = electrode;
   return group;
 }
 

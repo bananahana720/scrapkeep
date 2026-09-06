@@ -8,6 +8,7 @@ import {
   updateEnemy,
   createPickup,
   createCompanion,
+  createConductor,
   createGreenhouse,
 } from "./models.js";
 
@@ -86,8 +87,10 @@ export class OrchardScene {
     this.scene.fog = new THREE.Fog(0xb4cbd0, 48, 110);
     this.camera = new THREE.PerspectiveCamera(65, 1, 0.12, 180);
     this.yaw = 0;
-    this.pitch = 0.32;
+    this.pitch = 0.24;
     this.zoom = 1;
+    this.view = { aiming: false, sensitivity: 1, impactShake: 0.35 };
+    this.focusBlend = 0;
     this.cameraReady = false;
     this.shake = 0;
     this.follow = new THREE.Vector3();
@@ -118,6 +121,9 @@ export class OrchardScene {
     this.hero = createHero();
     this.scene.add(this.hero);
     this.enemies = new Map();
+    this.enemyPool = new Map();
+    this.conductors = new Map();
+    this.conductorPool = [];
     this.pickups = new Map();
     this.pickupPool = new Map();
     this.hazards = new Map();
@@ -126,18 +132,10 @@ export class OrchardScene {
     this.scene.add(this.companion);
     this.effects = [];
     this.effectGeo = new THREE.CylinderGeometry(1, 1, 1, 6);
-    this.effectMats = {
-      shoot: new THREE.MeshBasicMaterial({
-        color: 0xbaf8ec,
-        transparent: true,
-      }),
-      hit: new THREE.MeshBasicMaterial({ color: 0xffdf8b, transparent: true }),
-      hurt: new THREE.MeshBasicMaterial({ color: 0xec6643, transparent: true }),
-      collect: new THREE.MeshBasicMaterial({
-        color: 0x9bf1d6,
-        transparent: true,
-      }),
-    };
+    this.effectPool = [];
+    this.preview = this.makeAttackVisual();
+    this.preview.group.visible = false;
+    this.conductorLink = this.makeAttackVisual();
     this.particles = [];
     this.particleMesh = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.1, 0.1, 0.1),
@@ -152,7 +150,7 @@ export class OrchardScene {
     this.resize();
   }
   buildEnvironment() {
-    const geo = new THREE.PlaneGeometry(100, 115, 40, 60);
+    const geo = new THREE.PlaneGeometry(100, 116, 40, 116);
     geo.rotateX(-Math.PI / 2);
     const positions = geo.attributes.position,
       colors = [];
@@ -361,81 +359,113 @@ export class OrchardScene {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
   }
+  setView({ aiming, sensitivity, impactShake } = {}) {
+    if (aiming !== undefined) this.view.aiming = !!aiming;
+    if (Number.isFinite(sensitivity))
+      this.view.sensitivity = clamp(sensitivity, 0.2, 3);
+    if (Number.isFinite(impactShake))
+      this.view.impactShake = clamp(impactShake, 0, 1);
+  }
   orbit(dx, dy) {
-    this.yaw += dx * 0.003;
-    this.pitch = clamp(this.pitch + dy * 0.002, 0.06, 0.72);
+    this.yaw += dx * 0.003 * this.view.sensitivity;
+    this.pitch = clamp(
+      this.pitch + dy * 0.002 * this.view.sensitivity,
+      -1.22,
+      1.22,
+    );
+    if (this.lastPlayer) this.frameCamera(this.lastPlayer, 0);
   }
   resetCamera() {
     this.yaw = 0;
-    this.pitch = 0.32;
+    this.pitch = 0.24;
+    this.focusBlend = 0;
     this.cameraReady = false;
+    this.lastPlayer = null;
   }
-  frameCamera(p, dt, ready) {
-    const f = new THREE.Vector3(Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+  aimRay() {
+    this.camera.updateMatrixWorld();
+    this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
+    const { origin, direction } = this.raycaster.ray;
+    return {
+      origin: { x: origin.x, y: origin.y, z: origin.z },
+      direction: { x: direction.x, y: direction.y, z: direction.z },
+    };
+  }
+  frameCamera(p, dt) {
+    this.lastPlayer = p;
+    const direction = new THREE.Vector3(
+      Math.sin(this.yaw) * Math.cos(this.pitch),
+      -Math.sin(this.pitch),
+      -Math.cos(this.yaw) * Math.cos(this.pitch),
+    );
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, Math.sin(this.yaw));
     const focus = new THREE.Vector3(p.x, p.y + 0.55, p.z);
     if (!this.cameraReady) {
       this.follow.copy(focus);
       this.cameraReady = true;
     }
-    this.follow.lerp(focus, 1 - Math.exp(-dt * 14));
-    const distance = (7.2 + p.radius * 1.8) * this.zoom;
-    const desired = this.follow
-      .clone()
-      .addScaledVector(f, -distance * Math.cos(this.pitch))
-      .addScaledVector(right, ready ? 2.7 : 1.35);
-    desired.y += distance * Math.sin(this.pitch) + 1.65;
-    const delta = desired.clone().sub(this.follow),
-      length = delta.length();
-    this.raycaster.set(this.follow, delta.normalize());
-    this.raycaster.far = length;
+    this.follow.lerp(focus, 1 - Math.exp(-dt * 22));
+    this.focusBlend +=
+      ((this.view.aiming ? 1 : 0) - this.focusBlend) * (1 - Math.exp(-dt * 12));
+    const distance = (6.4 + p.radius * 1.2 - this.focusBlend * 2.4) * this.zoom;
+    const pivot = this.follow.clone().addScaledVector(right, 1.05);
+    const desired = pivot.clone().addScaledVector(direction, -distance);
+    const delta = desired.clone().sub(this.follow);
+    this.raycaster.set(this.follow, delta.clone().normalize());
+    this.raycaster.far = delta.length();
     const hit = this.raycaster.intersectObjects(this.blockers, false)[0];
     if (hit)
       desired
         .copy(this.follow)
-        .addScaledVector(delta, Math.max(2.1, hit.distance - 0.5));
+        .addScaledVector(delta.normalize(), Math.max(1, hit.distance - 0.5));
     desired.y = Math.max(desired.y, groundHeight(desired.x, desired.z) + 0.65);
     this.camera.position.copy(desired);
-    this.target.copy(this.follow).addScaledVector(f, 6.2);
-    this.target.y -= 0.8;
-    if (this.shake > 0) {
+    this.target.copy(pivot).addScaledVector(direction, 30);
+    if (this.shake > 0 && this.view.impactShake > 0) {
+      const shake = this.shake * this.view.impactShake;
       this.camera.position.x +=
-        Math.sin(performance.now() * 0.079) * this.shake * 0.1;
+        Math.sin(performance.now() * 0.079) * shake * 0.045;
       this.camera.position.y +=
-        Math.cos(performance.now() * 0.06) * this.shake * 0.07;
+        Math.cos(performance.now() * 0.06) * shake * 0.03;
     }
     this.shake = Math.max(0, this.shake - dt * 5);
+    this.camera.fov = 65 - this.focusBlend * 12;
+    this.camera.updateProjectionMatrix();
     this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();
+    this.raycaster.far = Infinity;
   }
   screenPoint(x, y, z) {
     this.tmp.set(x, y, z).project(this.camera);
     return {
       x: (this.tmp.x * 0.5 + 0.5) * innerWidth,
       y: (-0.5 * this.tmp.y + 0.5) * innerHeight,
-      visible: this.tmp.z < 1 && this.tmp.z > -1,
+      visible:
+        this.tmp.z < 1 &&
+        this.tmp.z > -1 &&
+        Math.abs(this.tmp.x) <= 1 &&
+        Math.abs(this.tmp.y) <= 1,
+      behind: this.tmp.z > 1,
     };
-  }
-  aimPoint(p) {
-    const x = p.x + Math.sin(this.yaw) * 18,
-      z = p.z - Math.cos(this.yaw) * 18;
-    return this.screenPoint(x, groundHeight(x, z) + 1.35, z);
   }
   update(game, dt) {
     updateHero(this.hero, game.player, dt, game.time);
     for (const e of game.enemies) {
+      if (e.state === "dead") continue;
       if (!this.enemies.has(e.id)) {
-        const m = createEnemy(e.kind);
+        const m = this.enemyPool.get(e.kind)?.pop() || createEnemy(e.kind);
         this.scene.add(m);
         this.enemies.set(e.id, m);
       }
       const model = this.enemies.get(e.id);
       updateEnemy(model, e, game.time);
     }
-    const ids = new Set(game.enemies.map((e) => e.id));
+    const ids = new Set(
+      game.enemies.filter((e) => e.state !== "dead").map((e) => e.id),
+    );
     for (const [id, m] of this.enemies)
       if (!ids.has(id)) {
-        this.scene.remove(m);
+        this.poolEnemy(m);
         this.enemies.delete(id);
       }
     for (const p of game.pickups) {
@@ -471,8 +501,8 @@ export class OrchardScene {
         this.pickups.delete(id);
       }
     const buddy = game.companion;
-    this.companion.visible = !!buddy?.active;
-    if (buddy?.active) {
+    this.companion.visible = !!buddy?.active && buddy.enabled !== false;
+    if (this.companion.visible) {
       this.companion.position.set(buddy.x, buddy.y, buddy.z);
       this.companion.rotation.y = -(buddy.yaw || 0);
       if (this.companion.userData.shears) {
@@ -484,10 +514,133 @@ export class OrchardScene {
           );
       }
     }
+    this.updateConductors(game.conductors || []);
+    this.updateAttackVisual(
+      this.conductorLink,
+      game.conductorLinks?.length
+        ? { valid: true, segments: game.conductorLinks }
+        : null,
+      0.6,
+      0x74ffe3,
+    );
+    this.updateAttackVisual(
+      this.preview,
+      game.mode === "playing" ? game.targeting : null,
+    );
     this.updateHazards(game.hazards || []);
     this.updateEffects(dt);
-    this.frameCamera(game.player, dt, game.mode === "ready");
+    this.frameCamera(game.player, dt);
     this.renderer.render(this.scene, this.camera);
+  }
+  makeAttackVisual() {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xafffff,
+      transparent: true,
+      depthWrite: false,
+    });
+    const pieces = Array.from({ length: 32 }, () => {
+      const mesh = new THREE.Mesh(this.effectGeo, mat);
+      mesh.visible = false;
+      group.add(mesh);
+      return mesh;
+    });
+    const ringGeometry = new THREE.BufferGeometry();
+    ringGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(64 * 6 * 3), 3).setUsage(
+        THREE.DynamicDrawUsage,
+      ),
+    );
+    const ring = new THREE.Mesh(ringGeometry, mat);
+    ring.material.side = THREE.DoubleSide;
+    group.add(ring);
+    const marker = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), mat);
+    group.add(marker);
+    group.visible = false;
+    this.scene.add(group);
+    return { group, mat, pieces, ring, marker };
+  }
+  updateAttackVisual(record, attack, opacity = 0.85, color) {
+    record.group.visible = !!attack;
+    if (!attack) return;
+    record.mat.color.setHex(
+      color ??
+        (attack.valid ? (attack.blocked ? 0xffc471 : 0xb9ffff) : 0xff705b),
+    );
+    record.mat.opacity = opacity;
+    record.pieces.forEach((mesh, i) => {
+      const segment = attack.segments?.[i];
+      mesh.visible = !!segment;
+      if (!segment) return;
+      const { from, to } = segment;
+      const delta = this.tmp.set(to.x - from.x, to.y - from.y, to.z - from.z);
+      const length = delta.length();
+      mesh.position.set(
+        (from.x + to.x) / 2,
+        (from.y + to.y) / 2,
+        (from.z + to.z) / 2,
+      );
+      mesh.quaternion.setFromUnitVectors(
+        UP,
+        delta.multiplyScalar(1 / Math.max(length, 1e-8)),
+      );
+      mesh.scale.set(0.025, length, 0.025);
+    });
+    const point = attack.point;
+    record.marker.visible = !!point;
+    if (point)
+      record.marker.position.set(
+        point.x,
+        point.y + (attack.kind === "bolt" ? 0 : 0.1),
+        point.z,
+      );
+    record.ring.visible = !!point && attack.radius > 0;
+    if (record.ring.visible) {
+      const positions = record.ring.geometry.attributes.position;
+      let index = 0;
+      for (let i = 0; i < 64; i++) {
+        const a = (i * Math.PI) / 32,
+          b = ((i + 1) * Math.PI) / 32;
+        const inner = Math.max(0, attack.radius - 0.07),
+          outer = attack.radius;
+        for (const [angle, radius] of [
+          [a, inner],
+          [a, outer],
+          [b, outer],
+          [a, inner],
+          [b, outer],
+          [b, inner],
+        ]) {
+          const x = point.x + Math.sin(angle) * radius,
+            z = point.z + Math.cos(angle) * radius;
+          positions.setXYZ(index++, x, groundHeight(x, z) + 0.09, z);
+        }
+      }
+      positions.needsUpdate = true;
+      record.ring.geometry.computeBoundingSphere();
+    }
+  }
+  updateConductors(conductors) {
+    const ids = new Set(conductors.map((c) => c.id));
+    for (const [id, model] of this.conductors) {
+      if (ids.has(id)) continue;
+      model.removeFromParent();
+      this.conductorPool.push(model);
+      this.conductors.delete(id);
+    }
+    for (const c of conductors) {
+      if (!this.conductors.has(c.id)) {
+        const model = this.conductorPool.pop() || createConductor();
+        this.conductors.set(c.id, model);
+        this.scene.add(model);
+      }
+      const model = this.conductors.get(c.id);
+      model.position.set(c.x, c.y, c.z);
+      model.userData.electrode.scale.setScalar(
+        0.22 * (1 + Math.max(0, c.flash || 0) * 0.7),
+      );
+    }
   }
   makeHazard(h) {
     const group = new THREE.Group(),
@@ -609,7 +762,22 @@ export class OrchardScene {
       group.add(chunk);
     }
     this.scene.add(group);
-    return { group, pieces, fill, outline, chunk };
+    const heightGeometry = new THREE.BufferGeometry();
+    heightGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(6 * 6 * 3), 3).setUsage(
+        THREE.DynamicDrawUsage,
+      ),
+    );
+    const heightMaterial = new THREE.LineBasicMaterial({
+      color: 0xff447c,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false,
+    });
+    const height = new THREE.LineSegments(heightGeometry, heightMaterial);
+    group.add(height);
+    return { group, pieces, fill, outline, chunk, height };
   }
   updateHazards(hazards) {
     const alive = new Set();
@@ -619,13 +787,42 @@ export class OrchardScene {
       if (!this.hazards.has(id)) this.hazards.set(id, this.makeHazard(h));
       const record = this.hazards.get(id),
         active = h.state === "active";
-      record.fill.opacity = active ? 0.04 : 0.19 + h.phase * 0.12;
-      record.outline.opacity = active ? 0.15 : 0.35;
+      record.fill.color.setHex(h.jumpable === false ? 0xf03d69 : 0xe49d21);
+      record.outline.color.setHex(h.jumpable === false ? 0x6e102c : 0x503814);
+      record.fill.opacity = active ? 0.1 : 0.2 + h.phase * 0.12;
+      record.outline.opacity = active ? 0.65 : 0.95;
+      record.height.visible =
+        h.jumpable === false &&
+        Number.isFinite(h.yMin) &&
+        Number.isFinite(h.yMax);
+      if (record.height.visible) {
+        const positions = record.height.geometry.attributes.position;
+        let index = 0;
+        for (const segment of (h.segments?.length
+          ? h.segments
+          : h.previewSegments || []
+        ).slice(0, 6)) {
+          for (const [x, y, z] of [
+            [segment.x1, h.yMin, segment.z1],
+            [segment.x1, h.yMax, segment.z1],
+            [segment.x1, h.yMax, segment.z1],
+            [segment.x2, h.yMax, segment.z2],
+            [segment.x2, h.yMax, segment.z2],
+            [segment.x2, h.yMin, segment.z2],
+          ])
+            positions.setXYZ(index++, x, y, z);
+        }
+        record.height.geometry.setDrawRange(0, index);
+        positions.needsUpdate = true;
+        record.height.geometry.computeBoundingSphere();
+      }
       if (record.chunk) {
         record.chunk.visible = active;
         record.chunk.position.set(
           h.x,
-          groundHeight(h.x, h.z) + (h.bodyRadius || 0.65),
+          Number.isFinite(h.yMin) && Number.isFinite(h.yMax)
+            ? (h.yMin + h.yMax) / 2
+            : groundHeight(h.x, h.z) + (h.bodyRadius || 0.65),
           h.z,
         );
         record.chunk.rotation.set(h.z * 1.6, h.x * 0.8, h.phase * 5);
@@ -662,30 +859,55 @@ export class OrchardScene {
       }
   }
   event(e) {
-    if (e.type === "shoot" && e.targetX !== undefined) {
-      const start = new THREE.Vector3(e.x, e.y ?? 1.4, e.z),
-        end = new THREE.Vector3(e.targetX, e.targetY ?? 1.3, e.targetZ);
-      const m = new THREE.Mesh(this.effectGeo, this.effectMats.shoot.clone()),
-        delta = end.clone().sub(start);
-      m.position.copy(start).add(end).multiplyScalar(0.5);
-      m.quaternion.setFromUnitVectors(UP, delta.clone().normalize());
-      m.scale.set(
-        0.035 + (e.amount || 0) * 0.0003,
-        delta.length(),
-        0.035 + (e.amount || 0) * 0.0003,
-      );
-      this.scene.add(m);
-      this.effects.push({ mesh: m, life: 0.18, max: 0.18 });
+    if (e.type === "attack" && e.attack) {
+      if (this.effects.length >= 16) {
+        const old = this.effects.shift();
+        old.visual.group.visible = false;
+        this.effectPool.push(old.visual);
+      }
+      const visual = this.effectPool.pop() || this.makeAttackVisual();
+      const color = e.echo
+        ? 0xd6aaff
+        : e.source === "companion"
+          ? 0xffe8a0
+          : e.source === "conductor"
+            ? 0x74ffe3
+            : 0xc8ffff;
+      this.updateAttackVisual(visual, e.attack, 1, color);
+      for (const piece of visual.pieces)
+        piece.scale.x = piece.scale.z = e.echo ? 0.035 : 0.055;
+      this.effects.push({
+        visual,
+        life: e.attack.kind === "strike" ? 0.4 : 0.18,
+        max: e.attack.kind === "strike" ? 0.4 : 0.18,
+      });
     }
-    if (["hit", "hurt", "ram", "collect", "companion"].includes(e.type)) {
+    if (
+      [
+        "hit",
+        "hurt",
+        "ram",
+        "collect",
+        "companion",
+        "land",
+        "bounce",
+        "spawn",
+      ].includes(e.type)
+    ) {
       const color =
         e.type === "collect"
           ? 0xa8f1ca
           : e.type === "hurt"
             ? 0xf77c52
-            : 0xffd87e;
+            : e.type === "bounce"
+              ? 0xaaffff
+              : 0xffd87e;
       for (let i = 0; i < (e.type === "collect" ? 9 : 14); i++)
-        if (this.particles.length < 220)
+        if (
+          this.particles.length < 220 &&
+          Number.isFinite(e.x) &&
+          Number.isFinite(e.z)
+        )
           this.particles.push({
             x: e.x,
             y: e.y ?? 1,
@@ -696,18 +918,18 @@ export class OrchardScene {
             life: 0.35 + Math.random() * 0.45,
             color,
           });
-      if (["ram", "hurt"].includes(e.type)) this.shake = 0.6;
+      if (["ram", "hurt", "land", "bounce"].includes(e.type)) this.shake = 0.6;
     }
   }
   updateEffects(dt) {
     this.effects = this.effects.filter((e) => {
       e.life -= dt;
       if (e.life <= 0) {
-        this.scene.remove(e.mesh);
-        e.mesh.material.dispose();
+        e.visual.group.visible = false;
+        this.effectPool.push(e.visual);
         return false;
       }
-      e.mesh.material.opacity = e.life / e.max;
+      e.visual.mat.opacity = e.life / e.max;
       return true;
     });
     this.particles = this.particles.filter((p) => {
@@ -735,14 +957,26 @@ export class OrchardScene {
     for (const m of this.pickups.values()) this.poolPickup(m);
     this.pickups.clear();
     for (const e of this.effects) {
-      this.scene.remove(e.mesh);
-      e.mesh.material.dispose();
+      e.visual.group.visible = false;
+      this.effectPool.push(e.visual);
     }
+    for (const m of this.enemies.values()) this.poolEnemy(m);
+    this.enemies.clear();
+    this.updateConductors([]);
+    this.updateAttackVisual(this.conductorLink, null);
+    this.updateAttackVisual(this.preview, null);
+    this.particleMesh.count = 0;
     this.effects.length = 0;
     this.updateHazards([]);
     this.particles.length = 0;
     this.shake = 0;
     this.resetCamera();
+  }
+  poolEnemy(mesh) {
+    mesh.removeFromParent();
+    const kind = mesh.userData.kind;
+    if (!this.enemyPool.has(kind)) this.enemyPool.set(kind, []);
+    this.enemyPool.get(kind).push(mesh);
   }
   poolPickup(mesh) {
     this.scene.remove(mesh);

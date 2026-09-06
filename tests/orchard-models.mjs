@@ -7,6 +7,7 @@ import {
   updateEnemy,
   createPickup,
   createCompanion,
+  createConductor,
   createGreenhouse,
 } from "../src/orchard/models.js";
 const counts = (group) => {
@@ -55,6 +56,16 @@ for (const radius of [1, 1.4, 1.65]) {
   assert.equal(hero.scale.x, radius);
   assert(hero.userData.shear.visible && hero.userData.brace.visible);
 }
+Object.assign(player, { y: 7.5, grounded: false, landingImpact: 10 });
+updateHero(hero, player, 1 / 60, 11);
+assert.equal(hero.position.y, 7.5);
+assert.equal(
+  hero.scale.y,
+  player.radius,
+  "landing deformation never changes the model root or camera anchor",
+);
+assert(hero.userData.deformation.scale.y < 1);
+assert(hero.userData.lightning.visible);
 results.hero = counts(hero);
 // Check the actual cockpit vertices in unscaled hero space: the entire pilot
 // and glass cabin must fit inside the rolling cage at every growth stage.
@@ -169,6 +180,10 @@ const companion = createCompanion();
 finite(companion);
 results.companion = counts(companion);
 assert.equal(companion.userData.shears.length, 2);
+const conductor = createConductor();
+finite(conductor);
+results.conductor = counts(conductor);
+assert.equal(conductor.userData.electrode.position.y, 1.35);
 const greenhouse = createGreenhouse();
 finite(greenhouse);
 results.greenhouse = counts(greenhouse);
