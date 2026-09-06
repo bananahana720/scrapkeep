@@ -1,0 +1,37 @@
+{
+  "name": "scrapkeep",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "server": "node server/index.js",
+    "start": "node server/index.js",
+    "test:expedition": "node tests/expedition-balance.mjs",
+    "test:leads:browser": "node tests/lead-browser.mjs",
+    "test": "node --test tests/*.test.js",
+    "test:orchard:models": "node tests/orchard-models.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:balance": "node tests/balance.mjs",
+    "verify": "node scripts/verify.mjs",
+    "check:project": "node scripts/check-project.mjs",
+    "check:build": "node scripts/check-build.mjs",
+    "probe:balance": "node tests/balance.mjs"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0",
+    "prettier": "^3.9.6",
+    "vite": "^7.1.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
