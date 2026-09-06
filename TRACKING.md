@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 revision 3 attempt 2 is in progress; local CI execution awaits explicit transient runner registration approval. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. HF remains awaiting_review. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for operational Sprint 0. Prior session history follows. Session `scrapkeep-1c` (claude-fable-5-1, observed `CLAUDE_EFFORT=high`) coordinated the prepare-stage program and closed with EV-0034. Delegates run on the project definitions at low, medium, high or xhigh as recorded per lease. |
-| Active task attempts / write leases | S0-09-L1 (attempt 2); S0-13 writer stopped for review. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
+| Active task attempts / write leases | S0-09-L1 (attempt 2). S0-13-L1 closed. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
@@ -182,7 +182,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-10](BACKLOG.md#s0-10) | 1 | 2 | done | none | S0-10-A2 | EV-0036 |
 | [S0-11](BACKLOG.md#s0-11) | 1 | 5 | done | none | S0-11-A1 | EV-0042 |
 | [S0-12](BACKLOG.md#s0-12) | 1 | 5 | done | none | S0-12-A1 | EV-0045 |
-| [S0-13](BACKLOG.md#s0-13) | 1 | 6 | review | none | none | EV-0054 |
+| [S0-13](BACKLOG.md#s0-13) | 1 | 7 | done | none | S0-13-A2 | EV-0055 |
 | [S0-14](BACKLOG.md#s0-14) | 1 | 1 | queued | dependency | none | EV-0035 |
 
 ## Question state index
@@ -300,6 +300,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0052 | 2026-09-06T21:03:55.810457+00:00 | Coordinator / review | S0-09 | Attempt 1 76cbb6c independent FAIL at level4: authentic archive plus altered installed Windows template passed all37 checks; Godot editor configuration escaped isolated run. Attempt2 must compare consumed template hashes before export and isolate XDG_CONFIG_HOME. CI and visible receipts remain separate pending evidence. |
 | EV-0053 | 2026-09-06T21:03:55.820618+00:00 | Coordinator / assignment | S0-09 | Attempt2 gpt-6-astra high, same verified worktree/base and permitted files; S0-09-L1 renewed. Correct two findings with regression tests; no runner registration or dispatch. |
 | EV-0054 | 2026-09-06T21:04:49.148835+00:00 | Coordinator / handoff | S0-13 | Attempt2 e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b returned clean with completed-predecessor reconciliation and81 scoped tests PASS; writer stopped, independent rereview pending. |
+| EV-0055 | 2026-09-06T21:07:48.109601+00:00 | Coordinator / admission | S0-13 | Attempt2 e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b independent PASS at level4 (81 tests and prior-sprint repro); serial integrated identity25262d2ad908001d5c61478f147f4e20a4968a8c, scope/docs/project/npm verify PASS. S0-13 done; leaseL1 closed. Reviewer session reused; no real sprint closure claimed. |
 
 
 ## Preparation checkpoint
@@ -361,12 +362,12 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 
 ### S0-13 attempts
 
-- Card revision 1; assignee amendments, gpt-6-astra high, reused writer session. Lease S0-13-L1 suspended for review; writer stopped.
+- Card revision 1; assignee amendments, gpt-6-astra high, reused writer session. Lease S0-13-L1 closed after attempt2 admission; writer stopped.
 - Worktree `/home/andrew/Projects/scrapkeep-wt-S0-13-operational`; branch `wt/S0-13-operational`; original base `6b2394502010c3454548523ef9fe7077d600088e`.
 - Owned files exactly S0-13 card set and standard generated check receipts.
 - Attempt 1 candidate `ad18bf8cd216aa2784d2dfd3e2ec1dfa301ea199`; independent FAIL: earlier-sprint completed prerequisites rejected. Preserved reproduction `/tmp/s0-13-predecessor-review-wXfGbf/` and coordinator event EV-0050.
-- Attempt 2 candidate `e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b`; independent review pending; integrated identity none. Writer and coordinator scoped tests81 PASS. Evidence `artifacts/local/tasks/S0-13/`, writer attempt-2 subdirectory. Reused nonauthor reviewer session under recorded host limit.
-- Blocker: independent review and serial admission pending.
+- Attempt 2 candidate `e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b`; independent PASS; integrated identity `25262d2ad908001d5c61478f147f4e20a4968a8c`. Writer, reviewer and coordinator scoped tests81 PASS; integrated npm verify/docs/project PASS. Evidence `artifacts/local/tasks/S0-13/`, writer attempt-2 subdirectory. Reused nonauthor reviewer session under recorded host limit.
+- Blockers: none. Accepted attempt S0-13-A2; lease closed.
 
 ### S0-09 attempts
 
