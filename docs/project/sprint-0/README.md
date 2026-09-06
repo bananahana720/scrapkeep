@@ -1,6 +1,6 @@
 # Operational Sprint 0 handoff
 
-[TRACKING](../../../TRACKING.md) owns the current outcome, exact tested commit and pending actions. [Authorization](AUTHORIZATION.md) owns the scope. The integrated app uses synthetic values to exercise session ownership, coordinated ticks, typed content, mutable-state isolation and save/resume across processes. It is a technical proof with a success screen and Exit button. It contains no playable game loop.
+[TRACKING](../../../TRACKING.md#operational-sprint-0-closure-record) owns the current outcome, exact tested commit and pending actions. [The recorded closure receipt](closure.json) preserves the checked evidence manifest. [Authorization](AUTHORIZATION.md) owns the scope. The integrated app uses synthetic values to exercise session ownership, coordinated ticks, typed content, mutable-state isolation and save/resume across processes. It is a technical proof with a success screen and Exit button. It contains no playable game loop.
 
 ## Reproduce the local job
 

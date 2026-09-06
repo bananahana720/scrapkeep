@@ -10,10 +10,10 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | --- | --- |
 | Preparation | Authorized by Andrew's explicit instruction to implement the three-document plan. |
 | Proposed sprint | HF-01 through HF-10, foundation engineering contracts only. |
-| Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 revision 3 attempt 2 is under review; local CI execution awaits explicit transient runner registration approval. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
+| Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 revision 3 is blocked on explicit transient runner registration approval and CI execution. Local implementation and visible export checks pass; Sprint 0 closure is pending_evidence. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. HF remains awaiting_review. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for operational Sprint 0. Prior session history follows. Session `scrapkeep-1c` (claude-fable-5-1, observed `CLAUDE_EFFORT=high`) coordinated the prepare-stage program and closed with EV-0034. Delegates run on the project definitions at low, medium, high or xhigh as recorded per lease. |
-| Active task attempts / write leases | No active writers. S0-09-L1 suspended for review; S0-13-L1 closed. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
+| Active task attempts / write leases | None. All operational writer leases closed at the pending closure checkpoint. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
@@ -130,7 +130,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-06](BACKLOG.md#s0-06) | 1 | 3 | done | none | PS-06-A1 | EV-0033 |
 | [S0-07](BACKLOG.md#s0-07) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
 | [S0-08](BACKLOG.md#s0-08) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
-| [S0-09](BACKLOG.md#s0-09) | 3 | 8 | review | CI registration approval required | none | EV-0056 |
+| [S0-09](BACKLOG.md#s0-09) | 3 | 9 | blocked | Explicit local runner registration approval and CI result required | none | EV-0057 |
 | [PD-01](BACKLOG.md#pd-01) | 1 | 1 | queued | HF-01 | none | EV-0002 |
 | [PD-02](BACKLOG.md#pd-02) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
 | [PD-03](BACKLOG.md#pd-03) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
@@ -183,7 +183,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-11](BACKLOG.md#s0-11) | 1 | 5 | done | none | S0-11-A1 | EV-0042 |
 | [S0-12](BACKLOG.md#s0-12) | 1 | 5 | done | none | S0-12-A1 | EV-0045 |
 | [S0-13](BACKLOG.md#s0-13) | 1 | 7 | done | none | S0-13-A2 | EV-0055 |
-| [S0-14](BACKLOG.md#s0-14) | 1 | 1 | queued | dependency | none | EV-0035 |
+| [S0-14](BACKLOG.md#s0-14) | 1 | 2 | blocked | S0-09 incomplete; fresh final integrated review required | none | EV-0057 |
 
 ## Question state index
 
@@ -302,6 +302,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0054 | 2026-09-06T21:04:49.148835+00:00 | Coordinator / handoff | S0-13 | Attempt2 e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b returned clean with completed-predecessor reconciliation and81 scoped tests PASS; writer stopped, independent rereview pending. |
 | EV-0055 | 2026-09-06T21:07:48.109601+00:00 | Coordinator / admission | S0-13 | Attempt2 e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b independent PASS at level4 (81 tests and prior-sprint repro); serial integrated identity25262d2ad908001d5c61478f147f4e20a4968a8c, scope/docs/project/npm verify PASS. S0-13 done; leaseL1 closed. Reviewer session reused; no real sprint closure claimed. |
 | EV-0056 | 2026-09-06T21:09:14.188826+00:00 | Coordinator / handoff | S0-09 | Attempt2 candidate19192bb051a3f236a435c94887a5dda1f4672e9d returned clean, 37 export checks and11 subprocess tests PASS; template-drift negative refuses export, config confined to fresh run. Writer stopped; independent rereview and final combined verification pending. No CI runner registered. |
+| EV-0057 | 2026-09-06T21:16:36.355322+00:00 | Coordinator / closure checkpoint | S0-09, S0-14, operational-s0 | Integrated source196e17bf2450ef1931f103f48c55316dea7e3337 clean-checkout npmci/docs/project/full verify PASS,92 targeted tests PASS,37 native checks PASS. Linux exported visible fresh-process Resume16checks0fail, Exit0 and unchanged saves. Closure pending_evidence: S0-09 incomplete (CI execution absent), fresh final integrated reviewer unavailable in this session. Repeated identical receipt produced identical result and no canonical mutations. Receipt ebbbe60a252ab601998e45ea04ab03d79ac2b81ab118795fb375cbd6970c5724. No sprint completion event. Writer leases closed; owned desktop released/stopped; no runner registered. Next HF-01rev2/HF-02rev2 proposal awaiting_review. |
 
 
 ## Preparation checkpoint
@@ -372,11 +373,11 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 
 ### S0-09 attempts
 
-- Card revision 3; assignee native_integration, gpt-6-astra high, reused writer session. Lease S0-09-L1 suspended for review; writer stopped.
+- Card revision 3; assignee native_integration, gpt-6-astra high, reused writer session. Lease S0-09-L1 closed at pending closure checkpoint; writer stopped.
 - Worktree `/home/andrew/Projects/scrapkeep-wt-S0-09-operational`; branch `wt/S0-09-operational`; original base `0061112518cc0ef37bdb1448240690fe402b362f`.
 - Owned files exactly S0-09 card set and standard generated verification outputs.
 - Attempt 1 candidate `76cbb6caed6fcd085a1c7e1a39c7947462273978`; independent FAIL: altered installed template passed pinning and Godot configuration escaped isolation. Reproductions `/tmp/s0-09-independent-review-ejhmlh06/checkout/artifacts/local/native-smoke/`.
-- Attempt 2 candidate `19192bb051a3f236a435c94887a5dda1f4672e9d` fixes both findings; independent rereview pending, integrated identity none.37 real export checks and11 subprocess tests PASS. Root owns visible verification and approval-gated transient runner lifecycle.
+- Attempt 2 candidate `19192bb051a3f236a435c94887a5dda1f4672e9d` fixes both findings; independent source/local PASS; assembled integrated source `196e17bf2450ef1931f103f48c55316dea7e3337` passes37 real export checks,11 harness tests and full verification. Visible exported resume/Exit passed separately. Full task acceptance withheld until required CI evidence. Root owns visible verification and approval-gated transient runner lifecycle.
 - Blocker: explicit runner-registration approval and actual CI result remain required. No runner registered.
 
 ## Next bounded foundation proposal
@@ -391,3 +392,19 @@ Authorization: **awaiting_review**. Approval owner: Andrew. Objective: define pr
 Canonical scopes and exact write sets remain [HF-01](BACKLOG.md#hf-01) and [HF-02](BACKLOG.md#hf-02). Admit serially after independent review. No build, engine changes or feature implementation belongs to this documentation-only proposal. Other twelve foundation cards are outside this bounded sprint.
 
 Inputs checked: accepted TADRs, contribution rules, both preserved proofs, existing S0 scaffold/runtime evidence, historical browser evidence and named questions. The coordinator resolved [Godot 4.7 project organization](https://docs.godotengine.org/en/4.7/tutorials/best_practices/project_organization.html) on 6 September 2026 for HF-01's future packet. Before initial dispatch, the coordinator must create the sections directory and index stub required by HF-01; the two proposed output files remain disjoint. Q-E03 and Q-E04 remain unresolved constraints for HF-02 to record; they do not block its documentation-only register. Q-E01 and Q-E06 remain open for later direction and licensing decisions. No proposed answer is inferred from Sprint 0's synthetic fixtures.
+
+## Operational Sprint 0 closure record
+
+Outcome: **pending_evidence**. This records an incomplete closure, not SPRINT COMPLETE. Tested integrated source: `196e17bf2450ef1931f103f48c55316dea7e3337`; method: fresh disposable clone, locked install, documentation/project checks, full verification, real editor/export harness, independent nonauthor scenario/source review, managed visible Linux export and Exit. The later administrative commit retaining this record does not replace that tested identity.
+
+Delivery snapshot at the tested source: S0-10, S0-11, S0-12 and S0-13 done; S0-09 under review and incomplete. This checkpoint transitions S0-09 to blocked and leaves S0-14 blocked. Existing S0-01..S0-08 completions are preserved. All writers are stopped, all write leases closed, and the owned test desktop was released/stopped. No runner registration or CI dispatch occurred.
+
+Required missing evidence: one reviewed local Actions job at the tested source and a fresh final integrated review. The host agent capacity limit prevented another fresh session, so later reviews reused a nonauthor Astra/high reviewer. Their observed results remain independent of implementation, but do not satisfy fresh-session final review. S0-14 has not completed its full review or closure DoD.
+
+Evidence: [closure receipt](docs/project/sprint-0/closure.json), `artifacts/local/sprint-0/final/closure-result.json`, `repeat-receipt.json`, `integrated-review.md`, `native-report.json`, `verify-report.json`, `visible-receipt.json`, and `visible/`. Checks:92 targeted tests,37 native checks, six-stage full verification; all pass locally. Both browser proofs remain separate; no UI paths changed, so the applicable tooling gate uses the full built-entry and invariant checks without claiming interactive browser play. Windows was exported and not executed. Pillars and enjoyment are not applicable to this synthetic technical proof and remain untested.
+
+Retro and grooming: S0-10 initial source-record defects, S0-13 historical-prerequisite defect, and S0-09 template/config defects were corrected within their existing cards and rereviewed; no duplicate repair tasks were created. No real specification amendment request was submitted; the template/examples are not live requests. The coordinator classified the corrected findings as implementation/record defects that preserve accepted product and architecture decisions. No accepted amendment remains unapplied. Future contradictions follow the admitted request and propagation contract. Review of the next proposal is recorded above; no foundation card started or gained dispatch authority.
+
+Repeat handling: the same receipt bytes returned the same result twice, with TRACKING, BACKLOG and ORCHESTRATOR hashes unchanged. This is the sole pending-closure event for that receipt. A later CI or review receipt must preserve this outcome and reference it as previousReceipt; do not duplicate tasks, amendments or a completion event.
+
+Next action: obtain explicit permission to register a temporary one-job GitHub Actions runner for the reviewed private-repository workflow, then execute and remove it. No hosted/paid fallback or artifact upload is authorized. After CI and fresh final review, rerun the close procedure against its exact integrated identity and prepare the same bounded HF proposal for Andrew's approval.

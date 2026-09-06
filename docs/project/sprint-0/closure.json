@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "sprintId": "operational-s0-2026-09-06",
+  "integratedCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+  "scopeKind": "native-proof",
+  "decisionOwner": "Coordinator",
+  "authorization": {
+    "owner": "Andrew",
+    "reference": "docs/project/sprint-0/AUTHORIZATION.md; explicit implementation request"
+  },
+  "previousReceipt": null,
+  "selectedTasks": [
+    {
+      "id": "S0-09",
+      "revision": 3,
+      "state": "review"
+    },
+    {
+      "id": "S0-10",
+      "revision": 1,
+      "state": "done"
+    },
+    {
+      "id": "S0-11",
+      "revision": 1,
+      "state": "done"
+    },
+    {
+      "id": "S0-12",
+      "revision": 1,
+      "state": "done"
+    },
+    {
+      "id": "S0-13",
+      "revision": 1,
+      "state": "done"
+    }
+  ],
+  "completedPredecessors": [],
+  "activeLeases": 0,
+  "gameplay": {
+    "applicable": false,
+    "reason": "Synthetic technical proof; no playable slice or human enjoyment test"
+  },
+  "toolchain": {
+    "engineVersion": "4.7.2.stable.official.ed1daf0bf",
+    "editorSha256": "8d106cbe6144c2dc7e881d61d2429c1a8a76e6b22ef48bd5e48dcf934953f71e",
+    "templatesSha256": "f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011"
+  },
+  "amendments": [],
+  "retroActions": [
+    {
+      "cause": "Closeout rejected valid historical prerequisites",
+      "disposition": "Corrected and reviewed in S0-13 attempt2; current reconciliation kept separate from selected deliveries",
+      "reference": "artifacts/local/tasks/S0-13/review.md"
+    },
+    {
+      "cause": "Installed template drift passed while authentic archive remained; editor configuration escaped isolated data/cache",
+      "disposition": "Corrected and reviewed in S0-09 attempt2; exact consumed hashes and configuration isolation checked",
+      "reference": "artifacts/local/tasks/S0-09/review.md"
+    },
+    {
+      "cause": "Transient runner registration requires explicit execution-access approval",
+      "disposition": "No runner registered; S0-09 remains blocked, current gate not green",
+      "reference": "docs/project/sprint-0/AUTHORIZATION.md"
+    },
+    {
+      "cause": "Host agent capacity prevented fresh reviewer sessions after initial contract review",
+      "disposition": "Nonauthor reviewer reused, limitation retained; fresh final integrated review still required",
+      "reference": "TRACKING.md"
+    }
+  ],
+  "groomingChanges": [
+    {
+      "cause": "Fourteen-card foundation exceeds bounded sprint selection",
+      "disposition": "Prepare HF-01rev2 and HF-02rev2 only, awaiting_review; remaining twelve excluded",
+      "reference": "TRACKING.md#next-bounded-foundation-proposal"
+    }
+  ],
+  "gates": [
+    {
+      "id": "docs",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/docs.log",
+          "sha256": "c82b385ddbeaf47e06b74f4ef689ca56c54f5fc8a7cf2aab16f543bef2793303",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "npm run check:docs in clean checkout",
+          "limits": "Structure and local links only"
+        }
+      ]
+    },
+    {
+      "id": "project",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/project.log",
+          "sha256": "49457f152e035ea8cfe425afd65b3e96a883cf49803816807528f87699034a29",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "npm run check:project in clean checkout",
+          "limits": "Project files and package metadata only"
+        }
+      ]
+    },
+    {
+      "id": "scenario-review",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/integrated-review.md",
+          "sha256": "9e8b3cad7ac4029377fe4e3d08043f57822c28d3d4993597e45efe9d56b4c3dc",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "Independent nonauthor review plus executed scenario tests",
+          "limits": "Reused reviewer session; no fresh-session review claim",
+          "independent": true,
+          "reviewer": "contract_review_a2 / gpt-6-astra high / reused session"
+        }
+      ]
+    },
+    {
+      "id": "adr-harness",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/native-report.json",
+          "sha256": "d6f97022554f6b9f52ddd549e33607e0dd6205ee62f021fb04c01c03d24fd6d4",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "node scripts/native-smoke.mjs --export",
+          "limits": "Linux technical proofs; no gameplay qualification"
+        }
+      ]
+    },
+    {
+      "id": "linux-export",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/native-report.json",
+          "sha256": "d6f97022554f6b9f52ddd549e33607e0dd6205ee62f021fb04c01c03d24fd6d4",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "Pinned Linux x64 export",
+          "limits": "One synthetic proof artifact"
+        }
+      ]
+    },
+    {
+      "id": "windows-export",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/native-report.json",
+          "sha256": "d6f97022554f6b9f52ddd549e33607e0dd6205ee62f021fb04c01c03d24fd6d4",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "Pinned Windows x64 export",
+          "limits": "Windows not executed"
+        }
+      ]
+    },
+    {
+      "id": "linux-local",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/visible-receipt.json",
+          "sha256": "460c1f058891d119c0f010016b9d02d47be04452179e22fe3606a977df232eda",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "Managed visible Linux resume, screenshot and Exit click with process exit receipt",
+          "limits": "Observed synthetic screen; no gameplay or hardware qualification",
+          "visible": true,
+          "success": true,
+          "exitWorked": true
+        }
+      ]
+    },
+    {
+      "id": "linux-ci",
+      "required": true,
+      "status": "pending_evidence",
+      "evidence": []
+    },
+    {
+      "id": "fresh-integrated-review",
+      "required": true,
+      "status": "pending_evidence",
+      "evidence": []
+    },
+    {
+      "id": "browser-proof-preservation",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/final/verify.log",
+          "sha256": "e9b28a2980ccced732014ae9b23d0ed555a4dff755f3601981964d7cd844d4d6",
+          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "status": "passed",
+          "method": "npm run verify in clean checkout",
+          "limits": "Both built entries/linked assets and automated invariants; UI unchanged so no new interactive browser run required"
+        }
+      ]
+    }
+  ],
+  "nextProposal": {
+    "status": "awaiting_review",
+    "approvalOwner": "Andrew",
+    "objective": "Define production path ownership and a constraints/evidence register for subsequent foundation contracts",
+    "unresolvedQuestions": [
+      "Q-E03 and Q-E04 remain nonblocking register inputs; Q-E01 and Q-E06 remain open for later implementation/direction"
+    ],
+    "prerequisite": "Operational Sprint 0 must close before dispatch approval; coordinator creates HF sections index before assignment",
+    "cards": [
+      {
+        "id": "HF-01",
+        "revision": 2,
+        "size": "M",
+        "dependencies": [],
+        "questions": [],
+        "permittedActions": [
+          "Scoped documentation",
+          "Official-source research",
+          "Structure/link checks",
+          "Independent review"
+        ],
+        "acceptance": [
+          "Every HF-01 revision2 DoD criterion",
+          "Five-column nonoverlapping path-family table",
+          "Reconcile actual S0 scaffold evidence and preserve both browser proofs"
+        ],
+        "inputReady": true,
+        "initialDispatch": true
+      },
+      {
+        "id": "HF-02",
+        "revision": 2,
+        "size": "S",
+        "dependencies": [],
+        "questions": [],
+        "permittedActions": [
+          "Scoped documentation",
+          "Evidence inspection",
+          "Structure/link checks",
+          "Independent review"
+        ],
+        "acceptance": [
+          "Every HF-02 revision2 DoD criterion",
+          "Four-class constraints/evidence register with explicit units/method/owner",
+          "Source tags on numeric budgets; preserve named unknowns"
+        ],
+        "inputReady": true,
+        "initialDispatch": true
+      }
+    ]
+  }
+}
