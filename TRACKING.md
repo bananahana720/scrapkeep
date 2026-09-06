@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 is queued at revision 2. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. HF remains awaiting_review. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for operational Sprint 0. Prior session history follows. Session `scrapkeep-1c` (claude-fable-5-1, observed `CLAUDE_EFFORT=high`) coordinated the prepare-stage program and closed with EV-0034. Delegates run on the project definitions at low, medium, high or xhigh as recorded per lease. |
-| Active task attempts / write leases | S0-10-A1 coordinator documentation lease. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
+| Active task attempts / write leases | S0-11-L1 and S0-12-L1. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
@@ -180,8 +180,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [LG-05](BACKLOG.md#lg-05) | 1 | 1 | queued | LG-03, LG-04 | none | EV-0002 |
 | [LG-07](BACKLOG.md#lg-07) | 1 | 1 | queued | LG-03 | none | EV-0002 |
 | [S0-10](BACKLOG.md#s0-10) | 1 | 2 | done | none | S0-10-A2 | EV-0036 |
-| [S0-11](BACKLOG.md#s0-11) | 1 | 1 | queued | dependency | none | EV-0035 |
-| [S0-12](BACKLOG.md#s0-12) | 1 | 1 | queued | dependency | none | EV-0035 |
+| [S0-11](BACKLOG.md#s0-11) | 1 | 2 | in_progress | none | none | EV-0037 |
+| [S0-12](BACKLOG.md#s0-12) | 1 | 2 | in_progress | none | none | EV-0037 |
 | [S0-13](BACKLOG.md#s0-13) | 1 | 1 | queued | dependency | none | EV-0035 |
 | [S0-14](BACKLOG.md#s0-14) | 1 | 1 | queued | dependency | none | EV-0035 |
 
@@ -282,6 +282,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0034 | 2026-09-06T20:12:34Z | Coordinator / review admissions, integrations, program checkpoint, record correction | PS-05b, PS-06, S0-07, S0-08, program | PS-05b: fresh `scrapkeep-reviewer` (xhigh) PASS+NOTES on attempt 2 (`fcca2c8`): handler ignores both signals before raising and is installed for both; the subprocess test drives a live child with two SIGINTs; the real-runner demonstration reached the build and never a desktop lease. Notes: the 20 ms double-signal run landed after cleanup had finished, so the double-signal-during-cleanup guarantee rests on the unit test; ignore dispositions are never restored, so a hung cleanup needs SIGKILL (README states it). Record correction: EV-0030 said the installed controller does not call `start_new_session` or `killpg`; that was the coordinator misreading its own grep, the controller's `seat.py` uses `start_new_session=True` and `os.killpg`, as attempt 2's README records. Merged no-ff (CONTRIBUTING table union again), PS-05b done, record revision 4 → 5, lease PS-05-L2 closed. Follow-ups kept: explicit `/api/*` refusal in the static handler; the manifest pins the controller's `verification/` workspace script; a missing manifest path raises a traceback; `--write-controller-manifest` accepts playtest flags; the three remaining `implementation/` trees under `final-live`, `relocation-live`, `stationary-live`. S0-07 and S0-08: `scrapkeep-reviewer-medium` PASS+NOTES on `90f08c4` (validate reads the temp bytes; `recover` never removes or renames; ambiguity rule judged to satisfy TADR-004 line 40; convergence performs no write to `save.json`; TADR-004 line 38 quoted verbatim; `ERROR:` stderr lines cannot trip the runner). Follow-ups for HF-07b (a same-transaction candidate with different content converges silently and its temp is deleted; acknowledge persistence) and HF-08 (two rows are paper-only; same-generation and truncated-temp edges). Merged no-ff (README Proofs section folded a third time); S0-07 and S0-08 done; PS-06 done, all six proof cards accepted. Integrated identity `e7c2f8d301f12915728ecc8cf590e9e8ef6a0253`. Full gate run on that identity, retained as `artifacts/prepare-stage-2026-09-06/final-gates.txt`: `npm run verify` six stages PASS; `npm test`, `npm run test:leads`, `npm run test:agent` exit 0; `npm run check:docs` 110 files, 72 cards, 33 events, 0 failures; `npm run check:project` 92 files, 1,818 links; `npm run native:smoke` ten checks PASS (boot, typing negative, networking grep over 16 files, offline boot, and the three proof pairs). Program checkpoint: every prepare-stage unit PS-01 through PS-06 is done; S0-09 stays parked on Q-E06 and the template and workflow authorization; gate G-02 (branch rules) is blocked by the GitHub Free plan, not by a decision; gate G-03 (the shared pstack `verify.py`) waits for Andrew; the settings effort key moved to a documented top-level `effortLevel` and a fresh coordinator session must confirm `CLAUDE_EFFORT=xhigh`. The HF sprint is dispatchable from the amended cards and waits only for Andrew's go; HF-01 and HF-02 are ready. Coordinator session `scrapkeep-1c` closes its coordination with this event; leases closed; worktree directories removed, candidate branches retained as history. |
 | EV-0035 | 2026-09-06T20:31:11.283120+00:00 | Coordinator / authorization, definition import, readiness and assignment | S0-09, S0-10, S0-11, S0-12, S0-13, S0-14, program | Andrew explicitly requested implementation of the operational Sprint 0 plan. S0-09 revision 1 → 2, parked → queued, record revision 1 → 2. New cards imported revision 1; S0-10 ready → in_progress with coordinator lease S0-10-L1 at baseline 20d26f402e7a136c6533a2ecdac857f40ebb1961. Other new cards queued. HF remains awaiting_review. [Authorization](docs/project/sprint-0/AUTHORIZATION.md). |
 | EV-0036 | 2026-09-06T20:34:52.444089+00:00 | Coordinator / review, correction and admission | S0-10 | Attempt 1 at b3e7fac received FAIL from contract_review, Astra high, source/scenario level 2. Corrected stale current authorization and CI evidence path at 2d6ac8497517d6f856114a5ec1e64fa294572ff0. Dismissed mistaken Accepted attempt finding and clarified schema. Fresh contract_review_a2, Astra high, returned PASS at that exact identity with no findings. check:docs and check:project passed. S0-10 review → done, lease closed. Native and amendment dependencies now eligible. |
+| EV-0037 | 2026-09-06T20:35:11.835125+00:00 | Coordinator / readiness and assignment | S0-11, S0-12 | S0-10 admitted. Both cards queued → ready → in_progress at base 1eb4a220fb48de80efded0a6459c98020fb7ed26. Verified separate worktrees scrapkeep-wt-S0-11-operational and scrapkeep-wt-S0-12-operational with matching HEAD. Leases S0-11-L1 and S0-12-L1 granted to amendments and native_integration, Astra high. Throughput checkpoint confirms disjoint file sets and coordinator-only records. |
 
 
 ## Preparation checkpoint
@@ -324,3 +325,19 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 - Checkpoint at EV-0035. Closeout contract drafted; no native or export code changed.
 - Evidence pending scoped document checks and independent review.
 - Blockers none.
+
+### S0-11-A1
+
+- Card revision 1; assignee amendments, gpt-6-astra high; lease S0-11-L1 active.
+- Owned files exactly the S0-11 card permitted set.
+- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-11-operational`; branch `wt/S0-11-operational`; verified base `1eb4a220fb48de80efded0a6459c98020fb7ed26`.
+- Candidate/integrated identity null; review not_run; evidence pending.
+- Latest checkpoint EV-0037; blockers none.
+
+### S0-12-A1
+
+- Card revision 1; assignee native_integration, gpt-6-astra high; lease S0-12-L1 active.
+- Owned files exactly the S0-12 card permitted set.
+- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-12-operational`; branch `wt/S0-12-operational`; verified base `1eb4a220fb48de80efded0a6459c98020fb7ed26`.
+- Candidate/integrated identity null; review not_run; evidence pending.
+- Latest checkpoint EV-0037; blockers none.
