@@ -108,7 +108,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | PS-05a (tooling follow-ups, FRONT-MATTER anchors, artifact manifests) | interim | 3 | done | none | PS-05-A1 | EV-0027 |
 | PS-05b (audit rec 9, 14; lead server, controller pin) | interim | 5 | done | none | PS-05-A2 | EV-0034 |
 | PS-06 (S0-01, S0-04, S0-05, S0-06, S0-07, S0-08) | interim | 7 | done | none | PS-06-A1 | EV-0034 |
-| [HF-01](BACKLOG.md#hf-01) | 2 | 4 | in_progress | none; approved documentation only | none | EV-0066 |
+| [HF-01](BACKLOG.md#hf-01) | 3 | 6 | in_progress | AM-F01-001 admitted; revision3, unchanged lease | none | EV-0068 |
 | [HF-02](BACKLOG.md#hf-02) | 2 | 4 | in_progress | none; approved documentation only | none | EV-0066 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 2 | queued | HF-03a | none | EV-0029 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
@@ -312,6 +312,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0064 | 2026-09-06T21:39:25.672456+00:00 | Coordinator / sprint closure | S0-14, operational-s0 | PASSED at integrated e54e429c76f3d83641c0127b4e44fe7eb8b2098f. Fresh integrated s0_final_fresh and separate fresh coverage s0_review_coverage (both gpt-6-astra high) PASS. Final receipt 6a2b53d5591922b83e2771a3eb81f04b9e836b07f6bb11df60bb5fec7b5bebbb supersedes pending ebbbe60a252ab601998e45ea04ab03d79ac2b81ab118795fb375cbd6970c5724; repeated exactbytes returned identical PASS, synthetic missing/stale/failingCI and unauthorizeddispatch refused. All delivery tasks done, amendments reconciled, leases closed; S0-14 done/A1. HF-01rev2/HF-02rev2 remain awaiting_review, no dispatch. Windows execution and gameplay/Pillars untested. One completed-sprint event only. |
 | EV-0065 | 2026-09-06T21:52:17.950707+00:00 | Coordinator / authorization | foundation-01, HF-01, HF-02 | Andrew explicitly approved the concrete HF-01 revision2 / HF-02 revision2 recommendation. Documentation-only execution authorized; at most two isolated writers and one independent Astra reviewer, serial admission, no builds. Existing inputs verified at f58291842b43511cb3ea94374a504f2881b53cab. Coordinator creates sections index before leases. Historical Sprint 0 proposal receipt remains unchanged. |
 | EV-0066 | 2026-09-06T21:53:04.718987+00:00 | Coordinator / assignment/lease | HF-01, HF-02 | Both revision2 cards rechecked input-ready; no predecessors or blocking questions. Worktrees created and HEAD verified at 3ab3477bc8731f157e9cdff31598251e20acef98. File-level leases HF-01-L1 / HF-02-L1 assigned to hf01_writer / hf02_writer (gpt-6-astra high), attempts A1. No shared-document worker edits; coordinator alone admits serially. |
+| EV-0067 | 2026-09-06T21:54:42.883761+00:00 | Coordinator / block/amendment proposal | HF-01 | HF-01-A1 reported contradictory revision2 path-table coverage after S0-01 landed. Native-table drafting stopped; lease HF-01-L1 retained for source review and request packet only. Coordinator triage: factual stale acceptance wording, no product/architecture change; independent reviewer checks proposed correction before admission. HF-02 unaffected; HF-03a remains unassigned behind HF-01. |
+| EV-0068 | 2026-09-06T21:56:33.995603+00:00 | Coordinator / amendment admission/definition change | AM-F01-001, HF-01 | Accepted request revision1 as factual documentation correction preserving architecture/product decisions. HF-01 card2→3: native table exhaustive native coverage; separate support/config/docs/evidence accounting; per-fact reconciliation of admitted scaffold instead of stale unverified status. Independent hf_foundation_review Astra high PASS on request sha256 bad97013eb0b2319e94c1a4ac611400e71fd75bc3d18730242f52a12438ede96. docs/project checks PASS. Source and card admitted together; HF-01-L1 scope unchanged, readiness rechecked, affected drafting may resume after commit identity supplied. Dependent HF-03a remains queued until HF-01 done. |
 
 
 ## Preparation checkpoint
@@ -442,7 +444,7 @@ Next proposal: HF-01 revision2 (M) and HF-02 revision2 (S), documentation only, 
 
 ## HF-01-A1 foundation-01 attempt
 
-- Assignee: hf01_writer, gpt-6-astra, configured high; card revision 2; attempt HF-01-A1; exclusive lease HF-01-L1 active.
+- Assignee: hf01_writer, gpt-6-astra, configured high; original card revision 2, amended revision 3 via AM-F01-001; attempt HF-01-A1; exclusive lease HF-01-L1 active.
 - Owned files: `docs/tech/sections/HF-01-production-conventions.md` and `artifacts/local/tasks/HF-01/` only in `/home/andrew/Projects/scrapkeep-wt-HF-01`.
 - Base identity: `3ab3477bc8731f157e9cdff31598251e20acef98`, verified worktree HEAD; no task predecessors.
 - Candidate / integrated identity: none / none.

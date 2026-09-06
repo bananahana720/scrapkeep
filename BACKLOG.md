@@ -170,7 +170,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 ### HF-01: Specify production paths and contribution conventions
 
-**Card revision:** 2 · **Owner:** Conventions · **Size:** M · **Lane:** foundation
+**Card revision:** 3 · **Owner:** Conventions · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
@@ -189,17 +189,17 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Definition of done:**
 
-1. One path-family table with the columns path family (glob), owner role, permitted content, forbidden content and governing ADR line. It covers scripts, scenes, definition Resources, source assets, generated imports, tests, tools and docs. No row overlaps `/`, `/orchard.html`, `src/`, `server/`, `tests/`, `tools/` or `artifacts/`. Re-verify when S0-01 lands.
+1. One path-family table with the columns path family (glob), owner role, permitted content, forbidden content and governing ADR line. It covers scripts, scenes, definition Resources, source assets, generated imports, tests, tools and docs. No row overlaps `/`, `/orchard.html`, `src/`, `server/`, `tests/`, `tools/` or `artifacts/`. Reconcile against the admitted S0-01 scaffold and record the checked revision.
 2. Specify contribution rules for source assets, generated imports, validation and documentation ownership; preserve both browser entries and data.
-3. List exact implementation path families that later scoped cards may own, including the `native/` root that S0-01 materializes. Re-verify when S0-01 lands.
+3. List exact implementation path families that later scoped cards may own, including the `native/` root that S0-01 materializes. Reconcile those families against the admitted S0-01 scaffold without moving existing files.
 4. State naming, the typed GDScript boundary, scene/Resource ownership, code style, commit/PR rules and a numbered definition-of-done checklist a reviewer can tick. Convention changes cannot create a remote or authorize publication.
-5. Tag every engine-layout fact (project root, cache and import sidecar locations, export presets) "unverified until a scaffold proof exists". S0-01 is that proof.
+5. For each engine-layout fact (project root, cache and import sidecar locations, export presets), record its evidence status and exact source/proof identity. Use "unverified until a scaffold proof exists" for a layout claim lacking an applicable proof. Reconcile the admitted S0-01 evidence and later admitted Sprint 0 evidence separately; a boot proof does not prove every import or export detail.
 
 **Verification and evidence:**
 
 - Review the path table for overlap with both browser entries and historical evidence.
 - Check every convention against the accepted engine/content ADRs and existing contribution requirements.
-- Check the table has all five columns and that every S0-01 file falls inside exactly one row.
+- Check the table has all five columns and every S0-01 native implementation file falls inside exactly one row. Separately account for every admitted S0-01 support/configuration/documentation file and its required disposable evidence destinations, naming existing ownership without granting production path ownership. No production row may overlap the protected browser, tooling or artifact paths in DoD 1.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
