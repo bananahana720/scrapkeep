@@ -17,8 +17,13 @@ const negativeMarker = "SCRAPKEEP_SMOKE_NEGATIVE";
 const networkingClasses =
   /HTTPRequest|ENet|WebSocket|MultiplayerAPI|PacketPeer|StreamPeer|HTTPClient|UDPServer|TCPServer/;
 const reportFile = path.join(root, "artifacts/local/native-smoke/report.json");
+const proofsDirectory = path.join(projectDirectory, "proofs");
+const proofRunner = "proof_runner.gd";
+const faultArgument = "--inject-fault";
+const failLine = /^\S+ \S+ FAIL /m;
+const proofLine = /^\S+ (\S+ (PASS|FAIL) |SUMMARY )/;
 const limits =
-  "Proves a headless boot of the pinned editor binary on one Linux host only. Not qualification evidence for any target, export, renderer, input device or feel (adr/TADR-001-engine-language-platforms.md lines 35 and 39).";
+  "Proves a headless boot of the pinned editor binary on one Linux host only, plus each headless proof under native/proofs against its own ADR rule. Not qualification evidence for any target, export, renderer, input device or feel (adr/TADR-001-engine-language-platforms.md lines 35 and 39).";
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -171,6 +176,75 @@ function offlineBoot(binary, engineVersion) {
   );
 }
 
+async function discoverProofs() {
+  const directory = path.join(root, proofsDirectory);
+  try {
+    await access(directory);
+  } catch {
+    return [];
+  }
+  const proofs = [];
+  for (const item of await readdir(directory, { withFileTypes: true })) {
+    if (!item.isDirectory()) continue;
+    const script = path.join(directory, item.name, proofRunner);
+    try {
+      await access(script);
+      proofs.push({
+        name: item.name,
+        script: "res://proofs/" + item.name + "/" + proofRunner,
+      });
+    } catch {
+      continue;
+    }
+  }
+  return proofs.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function proofOutcome(id, execution, failures, detail) {
+  return {
+    ...outcome(id, execution, failures, detail),
+    assertionLines: execution.stdout
+      .split("\n")
+      .filter((line) => proofLine.test(line)),
+  };
+}
+
+function proofRun(binary, proof) {
+  const execution = run(binary, bootArguments(proof.script));
+  const failures = [];
+  if (execution.exitCode !== 0)
+    failures.push("expected exit 0, got " + execution.exitCode);
+  const fail = failLine.exec(execution.stdout);
+  if (fail) failures.push("FAIL line present: " + fail[0].trim());
+  return proofOutcome(
+    "proof-" + proof.name,
+    execution,
+    failures,
+    "proof exited 0 with no FAIL line",
+  );
+}
+
+function proofFaultRun(binary, proof) {
+  const execution = run(binary, [
+    ...bootArguments(proof.script),
+    "--",
+    faultArgument,
+  ]);
+  const failures = [];
+  if (execution.exitCode !== 1)
+    failures.push(
+      "expected exit 1 under " + faultArgument + ", got " + execution.exitCode,
+    );
+  if (!failLine.test(execution.stdout))
+    failures.push("no FAIL line under " + faultArgument);
+  return proofOutcome(
+    "proof-" + proof.name + "-inject-fault",
+    execution,
+    failures,
+    "injected fault was caught: exit 1 with a FAIL line",
+  );
+}
+
 async function hashFiles(files) {
   const hashes = {};
   for (const file of files)
@@ -220,6 +294,8 @@ async function main() {
     await networkingGrep(files),
     offlineBoot(binary, engineVersion),
   ];
+  for (const proof of await discoverProofs())
+    checks.push(proofRun(binary, proof), proofFaultRun(binary, proof));
   for (const check of checks) announce(check);
   const report = {
     schema: "scrapkeep-native-smoke/1",
