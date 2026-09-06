@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **approved** for foundation-01: HF-01 revision2 and HF-02 revision2 only, by Andrew: “approved - proceed. I defer to your recommendations”. Documentation, source research, checks, independent review and serial admission are authorized. The other twelve HF cards and feature work remain outside scope. Operational Sprint 0 is closed passed (EV-0063). |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for foundation-01. Historical coordinator records remain below. |
-| Active task attempts / write leases | HF-01-A1 / HF-01-L1 and HF-02-A1 / HF-02-L1; disjoint section files and local task evidence in verified worktrees. |
+| Active task attempts / write leases | No active writer leases. HF-01-A1 under independent review; HF-02-A1 accepted. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. Foundation-01 approval applies only to HF-01 and HF-02. Subsequent proposals require their own approval. PUB-01 is the separately authorized publication task.
@@ -108,8 +108,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | PS-05a (tooling follow-ups, FRONT-MATTER anchors, artifact manifests) | interim | 3 | done | none | PS-05-A1 | EV-0027 |
 | PS-05b (audit rec 9, 14; lead server, controller pin) | interim | 5 | done | none | PS-05-A2 | EV-0034 |
 | PS-06 (S0-01, S0-04, S0-05, S0-06, S0-07, S0-08) | interim | 7 | done | none | PS-06-A1 | EV-0034 |
-| [HF-01](BACKLOG.md#hf-01) | 3 | 6 | in_progress | AM-F01-001 admitted; revision3, unchanged lease | none | EV-0068 |
-| [HF-02](BACKLOG.md#hf-02) | 2 | 6 | review | independent PASS; awaiting integrated checks | none | EV-0071 |
+| [HF-01](BACKLOG.md#hf-01) | 3 | 8 | review | independent PASS; awaiting integrated checks | none | EV-0074 |
+| [HF-02](BACKLOG.md#hf-02) | 2 | 7 | done | none | HF-02-A1 | EV-0072 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 2 | queued | HF-03a | none | EV-0029 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
@@ -317,6 +317,9 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0069 | 2026-09-06T21:57:50.096740+00:00 | Coordinator / backlog grooming/definition change | TH-19 | Discovered during HF-01: .gitignore excludes native/**/*.import and native-smoke copy/hash filters omit .import. No production imported assets are present. TADR-003 retains authored import settings; official Godot4.7 import-process confirms settings adjacent to sources versus generated .godot/imported cache. TH-19 card1→2 retains M/docs-only scope and dependencies, adds explicit repair/proof specification and changed-setting rejection scenario before production asset admission. Current runtime remains unchanged; independent integrated review will check grooming. |
 | EV-0070 | 2026-09-06T21:59:58.559141+00:00 | Coordinator / handoff | HF-02 | HF-02-A1 handed off candidate18e174a44e777211b498a1ac269b5be62b31dc70, one permitted sectionfile sha256 c025eadc6a59d79e497df183345aa68ae994c5216046f46757310507f6e8382d. Writer stopped with clean trackedworktree; HF-02-L1 released. Scoped docs/project/scope plus25-row and5negative source/tag scenarios PASS. Independent review pending; no done claim. |
 | EV-0071 | 2026-09-06T22:01:39.546804+00:00 | Coordinator / review | HF-02 | Independent hf_foundation_review gpt-6-astra high PASS candidate18e174a44e777211b498a1ac269b5be62b31dc70. All25 classified rows and exact historical JSON/manifest/statistics traced; scope/docs/project independently passed. No findings. Serial admission follows; review alone does not complete card. |
+| EV-0072 | 2026-09-06T22:02:09.595220+00:00 | Coordinator / integration/completion | HF-02 | Serially admitted candidate18e174a at integrated2a4f2efb052a4bcdf1eb1b7572379a3add62f495. Integrated scope/docs/project all PASS, section bytes match independently reviewed SHA. HF-02-A1 accepted done, HF-02-L1 closed, no failed DoD. Receipt set retained artifacts/foundation-sprint-2026-09/tasks/HF-02/. |
+| EV-0073 | 2026-09-06T22:02:47.057743+00:00 | Coordinator / handoff | HF-01 | HF-01-A1 revision3 candidate dabdca42165cfc5f41f5d11a6fb2aaff0e0bd18a produced from3ab3477 plus accepted amendment2bb86d3. Only sectionfile changed. Writer stopped, tracked worktree clean, HF-01-L1 released. Scope/docs/project/coverage PASS:13 rows,4 scaffoldnative files,5 support files,32 currentnative paths and10 future examples. Independent review pending. |
+| EV-0074 | 2026-09-06T22:04:09.011901+00:00 | Coordinator / review | HF-01 | Independent hf_foundation_review Astra high PASS on candidate dabdca42165cfc5f41f5d11a6fb2aaff0e0bd18a rev3 and amendment2bb86d3. Exact section sha256 f562c9ac2447e04998febec12861de5d708995b3f07040dedba2f03daada8dba. Five official sources and13rows/32nativepaths/4S001native/9S001delta coverage independently checked, scoped checks PASS. No findings; pending integrated checks. |
 
 
 ## Preparation checkpoint
@@ -447,7 +450,7 @@ Next proposal: HF-01 revision2 (M) and HF-02 revision2 (S), documentation only, 
 
 ## HF-01-A1 foundation-01 attempt
 
-- Assignee: hf01_writer, gpt-6-astra, configured high; original card revision 2, amended revision 3 via AM-F01-001; attempt HF-01-A1; exclusive lease HF-01-L1 active.
+- Assignee: hf01_writer, gpt-6-astra, configured high; original card revision 2, amended revision 3 via AM-F01-001; attempt HF-01-A1; exclusive lease HF-01-L1 closed at handoff.
 - Owned files: `docs/tech/sections/HF-01-production-conventions.md` and `artifacts/local/tasks/HF-01/` only in `/home/andrew/Projects/scrapkeep-wt-HF-01`.
 - Base identity: `3ab3477bc8731f157e9cdff31598251e20acef98`, verified worktree HEAD; no task predecessors.
 - Candidate / integrated identity: none / none.
@@ -460,7 +463,22 @@ Next proposal: HF-01 revision2 (M) and HF-02 revision2 (S), documentation only, 
 - Assignee: hf02_writer, gpt-6-astra, configured high; card revision 2; attempt HF-02-A1; exclusive lease HF-02-L1 closed at handoff.
 - Owned files: `docs/tech/sections/HF-02-constraints-evidence.md` and `artifacts/local/tasks/HF-02/` only in `/home/andrew/Projects/scrapkeep-wt-HF-02`.
 - Base identity: `3ab3477bc8731f157e9cdff31598251e20acef98`, verified worktree HEAD; no task predecessors.
-- Candidate / integrated identity: none / none.
-- Latest checkpoint: assignment recorded before dispatch; next step source/scenario review and document candidate.
-- Evidence: pending candidate packet; no completion claim.
-- Review: not_run. Last event: EV-0066.
+- Candidate / integrated identity: `18e174a44e777211b498a1ac269b5be62b31dc70` / `2a4f2efb052a4bcdf1eb1b7572379a3add62f495`.
+- Latest checkpoint: writer stopped, independent PASS and serial integration with scoped checks passed; lease closed.
+- Evidence: [retained task receipts](artifacts/foundation-sprint-2026-09/tasks/HF-02/verification.json) and [independent review](artifacts/foundation-sprint-2026-09/tasks/HF-02/review.json).
+- Review: hf_foundation_review, gpt-6-astra high, PASS. Last event: EV-0072.
+
+## Foundation-02 proposal
+
+Authorization: **awaiting_review**. Approval owner: Andrew. Objective: define one session's mutable-record ownership and the allowed dependency paths used by attack, equipment and encounter changes.
+
+| Selected card | Size | Dependency order and readiness | Permitted actions | Acceptance |
+| --- | --- | --- | --- | --- |
+| HF-03a revision 1 | M | First; initial dispatch only after HF-01 is admitted and current inputs rechecked. | Scoped documentation, official source research, source/scenario checks, independent review. | Five-column module table covering owned mutable records, imports, commands and published results under one session authority; every required owner and ADR citation, no duplicate mutator. |
+| HF-03b revision 1 | M | Second; requires admitted HF-03a output. Not input-ready for initial dispatch. | Scoped documentation, dependency-cycle and walkthrough checks, independent review. | Reproducible dependency adjacency/cycle check; attack, equipment and encounter walkthroughs use only listed interfaces and preserve committed geometry. |
+
+Exact source inputs and file leases remain in [HF-03a](BACKLOG.md#hf-03a) and [HF-03b](BACKLOG.md#hf-03b). This is a two-card documentation sprint; no build, engine changes, asset admission, runtime feature or automatic future dispatch follows. A newly observed integration failure takes priority over this proposal.
+
+The coordinator resolved the official Godot 4.7 [autoload](https://docs.godotengine.org/en/4.7/tutorials/scripting/singletons_autoload.html) and [GDScript class/preload reference](https://docs.godotengine.org/en/4.7/tutorials/scripting/gdscript/gdscript_basics.html) on 6 September 2026 for the eventual HF-03a packet. Accepted TADR-002 session ownership governs their use; an autoload alone does not enforce singleton ownership. Existing native proofs must be inspected at assignment without a new execution claim.
+
+Unresolved questions: no blocking owner question for either documentation card. Q-E03 budgets, Q-E04 renderer and applicable product parameters remain unanswered and must not be invented in the contracts. If a walkthrough needs such an answer, record the boundary and gate dependent implementation. HF-03b's absent producer output is a real dependency; approval cannot substitute for it. Next-sprint proposal status grants no execution authority.
