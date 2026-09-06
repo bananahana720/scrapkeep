@@ -1,5 +1,7 @@
 # Expedition verification
 
+> **Historical record, frozen during execution preparation on 6 September 2026.** This receipt covers the expedition pass of the original yard. The [lightning verification record](LIGHTNING-VERIFICATION.md) owns the current browser-proof evidence, and [TRACKING.md](../TRACKING.md) is the only execution board.
+
 This pass turns the existing rolling-turret game into a finite expedition and an optional figurine-interest signup flow. The delivered build remains local.
 
 ## Verified behavior

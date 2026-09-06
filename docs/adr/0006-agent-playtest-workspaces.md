@@ -26,4 +26,4 @@ These workspaces share Unix authority and session services. They are not securit
 
 Revisit when a required editor/toolkit cannot expose useful controls, an application forwards to a host instance, stronger filesystem/process isolation is required, or a different compositor becomes a supported target. Keep the accepted independent-workspace behavior while changing its implementation.
 
-Sources: [engineering scope](../project/AGENT-PLAYTEST-ENGINEERING.md), [installed operations guide](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md), [current controller evidence](/home/andrew/.local/share/codex-native-input/agent-desktop/verification/workspaces-2026-09-06/receipt.json).
+Sources: [engineering scope](../project/AGENT-PLAYTEST-ENGINEERING.md), the installed desktop controller's operations guide and its named-workspace receipt (`agent-desktop/README.md` and `agent-desktop/verification/workspaces-2026-09-06/receipt.json` under the user's local share directory for codex-native-input, outside this repository).

@@ -1,5 +1,7 @@
 # The Iron Orchard play guide
 
+> **Historical record, frozen during execution preparation on 6 September 2026.** This guide describes the first orchard build. The [lightning play guide](LIGHTNING-PLAYGUIDE.md) and the [lightning increment contract](project/INCREMENT-01-lightning-playtest.md) own the current orchard controls and scope, and [TRACKING.md](../TRACKING.md) is the only execution board.
+
 The Iron Orchard is a standalone first playable encounter. Pip pilots a rolling scrap machine past two kinds of orchard worker and one large Grand Pruner arm. Dismantling that arm ends the run. The original yard remains at `/`.
 
 The user approved this first build and its session goal on 5 September 2026. Implementation and build verification are complete. This guide describes the controls and mechanics; the [verification receipt](FIRST-BUILD-VERIFICATION.md) records results and remaining playtest limits.

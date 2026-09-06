@@ -58,7 +58,7 @@ After the research and visual passes, Andrew approved building the first orchard
 
 The first build implements a close third-person rolling ball, aimed charge-release pulses, a low-cooldown burst, braking, Snipcart's inward jaws, Spreadleg's outward feet, and one large Pruner arm. The arm also tosses an announced rolling offcut to pressure distant attacks. Earned Shear and Brace parts change behavior and appearance; one optional following Shear Buddy primes nearby enemies. The proof uses the existing Three.js runtime. No engine migration, full class roster, co-op, complete expedition, or permanent progression is included.
 
-The simulation and model work is delivered and admitted. The live DOM-input expedition, visual inspection, production build, and regression checks passed. The [play guide](FIRST-BUILD-PLAYGUIDE.md), [build-team record](FIRST-BUILD-SWARM.md), and [verification receipt](FIRST-BUILD-VERIFICATION.md) describe the current implementation and evidence. The verification receipt records the accepted first-build result and the remaining playtest limits.
+The simulation and model work is delivered and admitted. The live DOM-input expedition, visual inspection, production build, and regression checks passed. The [play guide](FIRST-BUILD-PLAYGUIDE.md), [build-team record](FIRST-BUILD-SWARM.md), and [verification receipt](FIRST-BUILD-VERIFICATION.md) describe that historical first build and its evidence. The verification receipt records the accepted first-build result and the remaining playtest limits. The [lightning increment contract](project/INCREMENT-01-lightning-playtest.md) owns the current orchard implementation.
 
 ## Publisher direction
 

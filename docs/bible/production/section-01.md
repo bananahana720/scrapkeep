@@ -47,8 +47,8 @@ Use these decision tests:
 
 You are the pilot who sees a future machine in everyone else's discarded parts. You bank a lopsided ball of salvage around a cutting arm, rebound clear, and feel loose metal tug toward the cockpit's coils. Inside, something clatters into place. The next shot behaves differently because of what you found and how you chose to build it. Your companion buys you a moment; you turn that moment into an absurd chain reaction. Then the noise drops away, and the road opens toward a green river settlement beneath an enormous sandstone wall. Your mech is heavier, uglier and unmistakably yours. There is another way through the world ahead, and you want to find out what it will let you make.
 
-![An improvised rolling mech collects scrap beside a river settlement in a large sandstone canyon.](</home/andrew/Projects/test-game-2/docs/bible/images/P01-v1.png>)
+![An improvised rolling mech collects scrap beside a river settlement in a large sandstone canyon.](<../../../docs/bible/images/P01-v1.png>)
 
 *P01. Fantasy key image, creative proposal. Magnetic collection, an enclosed pilot and a worked-in canyon settlement express the intended relationship between machine and world. The anonymous fox-like pilot does not select a character direction. The front three-quarter viewpoint serves this key image. Collection is the focus; the fabrication sequence is developed in the equipment and audio sheets.*
 
-Source basis: [Publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>), and [shared production brief](</home/andrew/Projects/test-game-2/docs/bible/production/SECTION-BRIEF.md>).
+Source basis: [Publisher discovery](<../../../docs/DISCOVERY.md>), [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>), and [shared production brief](<../../../docs/bible/production/SECTION-BRIEF.md>).

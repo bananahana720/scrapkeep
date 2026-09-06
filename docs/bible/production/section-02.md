@@ -6,7 +6,7 @@ SCRAPKEEP's world has learned to live with machinery too useful to throw away an
 
 The history, customs and relationships developed in this section are creative proposals for this review edition. They follow the approved visual direction; they do not establish final canon, a launch roster or a mandatory route. Here, a world means a run-region. The wider universe's astronomy remains unspecified.
 
-![A small rolling mech beneath cool mountains and metalworking terraces](</home/andrew/Projects/test-game-2/docs/bible/images/W01-v1.png>)
+![A small rolling mech beneath cool mountains and metalworking terraces](<../../../docs/bible/images/W01-v1.png>)
 
 *W01 · Regional establishing shot, proposal. Foundry Crown places worked metal beneath forested slopes and immense mountain walls. The anonymous pilot is a scale reference, not a selected character direction.*
 
@@ -28,7 +28,7 @@ These places exchange skills and components without becoming interchangeable. A 
 
 The accepted run visits four worlds in 60–75 minutes, with two random destination choices at transitions. Five comparison pages do not choose the catalogue size, starting world, route order or finale. Every region must introduce its local conflict clearly even when it appears first.
 
-![An inhabited scrapyard settlement in cactus foothills](</home/andrew/Projects/test-game-2/docs/bible/images/W02-v1.png>)
+![An inhabited scrapyard settlement in cactus foothills](<../../../docs/bible/images/W02-v1.png>)
 
 *W02 · Settlement establishing shot, proposal. Yard Commons has homes, shared shade and an open repair court. A visible magnetic handler makes salvage part of ordinary work.*
 
@@ -46,7 +46,7 @@ An itinerant apprentice such as Fuse gives those relationships motion. Fuse coll
 
 Shared work should reveal affection without a speech. One mechanic braces a housing before the other asks. Someone adds a muffler to a borrowed tool and returns the old part in a labeled pouch. Moss, as a supporting workshop keeper, remembers which pilot never packs spare insulation. These moments give the player reasons to recognize a place on a later run.
 
-![Mechanics servicing a pump beside a mech's internal recycling equipment](</home/andrew/Projects/test-game-2/docs/bible/images/W03-v1.png>)
+![Mechanics servicing a pump beside a mech's internal recycling equipment](<../../../docs/bible/images/W03-v1.png>)
 
 *W03 · Workplace establishing shot, proposal. At Spillway Works, pump maintenance and the mech's internal fabrication sit in one working room. The service bay does not establish a required crafting station.*
 
@@ -64,8 +64,8 @@ The three shared pillars shape how this fiction reaches play. **Joyful physical 
 
 Humor comes from skilled people and temperamental machinery. A triumphant prototype catches its maker's spare wrench. A repaired door works perfectly after its owner has learned to climb through the window. Damage can be loud and absurd, while the next quiet shot still shows somebody tending a plant in a reused tin.
 
-![A mechanic fitting fresh hardware beside a chipped mug and a small plant](</home/andrew/Projects/test-game-2/docs/bible/images/W04-v1.png>)
+![A mechanic fitting fresh hardware beside a chipped mug and a small plant](<../../../docs/bible/images/W04-v1.png>)
 
 *W04 · Intimate mechanism and life detail, proposal. A new brace, used tools and a small comfort show what continuing to repair this world feels like. Fabrication imagery defines neither upgrade costs nor a new progression schedule.*
 
-Source context: [Publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [character development](</home/andrew/Projects/test-game-2/docs/CHARACTER-BIBLE.md>), [environment candidates](</home/andrew/Projects/test-game-2/docs/WORLD-ENVIRONMENTS.md>) and the [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>). Their older fixed-route, roster and finish proposals are superseded where this review's shared brief says so.
+Source context: [Publisher discovery](<../../../docs/DISCOVERY.md>), [character development](<../../../docs/CHARACTER-BIBLE.md>), [environment candidates](<../../../docs/WORLD-ENVIRONMENTS.md>) and the [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>). Their older fixed-route, roster and finish proposals are superseded where this review's shared brief says so.
