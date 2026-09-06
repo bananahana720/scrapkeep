@@ -1,6 +1,6 @@
 # Scrapkeep swarm operating manual
 
-Revision 2. Documentation preparation approved 6 September 2026. The prepare-stage program is in progress; the foundation sprint is proposed, not started.
+Revision 3. Operational Sprint 0 is authorized by [the implementation request](docs/project/sprint-0/AUTHORIZATION.md). The previous prepare stage is complete. The foundation sprint remains proposed and unstarted.
 
 ## Read first and preserve authority
 
@@ -8,7 +8,7 @@ Start at the Bible contents at [BIBLE.md § Contents](BIBLE.md#contents) (`BIBLE
 
 The settled baseline is Godot 4.7.2 standard edition, typed GDScript, explicit hybrid/session ownership, native Resource/scene content, JSON aggregate saves and offline solo play. Do not reopen it because an older document says the engine is undecided. Preserve the approved art direction and binary trees. Questions concern missing details, not permission to replace settled choices.
 
-These documents authorize preparation. A ready card is not permission to start its sprint. TRACKING must contain the applicable user scope authorization before dispatch. Native implementation additionally requires the completed engineering handoff, resolved task-specific questions and a scoped build authorization. The existing browser entries remain separate working proofs.
+These documents authorize preparation. A ready card is not permission to start its sprint. TRACKING must contain the applicable user scope authorization before dispatch. Production native implementation additionally requires the completed engineering handoff, resolved task-specific questions and a scoped build authorization. The authorized operational Sprint 0 extends prepare-stage proofs to an integrated smoke scene and exports before that handoff. The existing browser entries remain separate working proofs.
 
 Task definitions live only in BACKLOG. Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOSITIONS.md](docs/project/SOURCE-DISPOSITIONS.md), which the coordinator owns. Live task and question states live only in TRACKING. This manual owns operating rules. Older planning records are dated evidence, not additional active queues.
 
@@ -115,8 +115,36 @@ Recording an unknown is a valid completion for a documentation card whose defini
 
 Park or cancel a task only with a sourced disposition. Stop its worker and handle the lease first. Reopening done/parked/cancelled work requires a recorded reason, a revised card when scope changed, and fresh readiness checks. Do not reuse old review evidence for a changed acceptance contract.
 
+## Sprint closure
+
+The coordinator invokes [the sprint-close prompt](docs/project/prompts/sprint-close.md) when the selected sprint has no remaining active writer or task requiring work. A blocked card may be handed back through failed or pending closure; it cannot be silently counted as complete. Task completion is not sprint completion.
+
+1. Stop dispatch. Reconcile every lease and attempt. Pin the integrated commit and require a clean tracked worktree. A candidate in another worktree is not the integrated result.
+2. Reconcile specification amendment requests under [Specification contradictions](#specification-contradictions). Admit accepted amendments and affected card revisions together. Review changed implementation and rerun affected checks. Pin the resulting commit before collecting final evidence.
+3. Execute the scope's integrated gate on that commit. Native proof sprints run the ADR harness, export both targets, execute Linux locally and in CI, and retain reports with commit and toolchain identities. The first local Linux launch must be visible with success and a working exit action. Windows export alone establishes no Windows execution.
+4. Review rejected attempts, blockers and discovered work. Record each cause and disposition. Preserve evidence and prior completion history. A newly discovered regression creates an atomic repair card or an explicit reopen.
+5. Groom BACKLOG. Revise sizes, dependencies and questions. Every new card needs exact inputs, permitted files, observable acceptance and a verification method. Record each definition change and readiness decision in TRACKING.
+6. Prepare one next-sprint proposal with one objective and at most four S/M cards. Prioritize integration repairs, then prerequisites for accepted direction, then other eligible work. Name card revisions, dependency order, questions, permitted actions and acceptance. Only cards with complete current inputs may be in the initial dispatch set. The proposal stays awaiting_review; it grants no execution authority.
+7. Record a closure receipt and outcome in TRACKING. `passed` requires every applicable gate to pass, no active lease and no unresolved applicable amendment or incomplete selected task. `failed` names an observed failed gate. `pending_evidence` names absent, stale, skipped-required or inconclusive evidence. A repair card or next-sprint proposal never changes a failed gate to a pass.
+
+The receipt identifies sprint ID, integrated commit, scope kind, selected task revisions and states, required gates and evidence paths, lease count, amendment dispositions, retro actions, grooming changes and the next proposal. Gate evidence names its source commit, command or method, result and limitations. A documentation-only scope uses document and scenario checks with no build. Sprint 0 explicitly marks gameplay/Pillars not applicable because it contains no playable slice. That is not a gameplay pass.
+
+Each gameplay sprint declares its playable objective and applicable Bible Pillars decision tests before dispatch. Closeout needs automated smoke and Andrew's human playtest evidence for physical mastery, visible build changes and meaningful world discovery as applicable. Missing required human feedback stays pending_evidence. Automated play cannot approve enjoyment. Performance and hardware claims require their own measurements.
+
+The coordinator writes one closure result per sprint and integrated commit. A repeated request attaches to the same result and reuses existing task/amendment IDs. A new result after a code change names the previous receipt. Append compensating events rather than deleting history. Never accept evidence from a different source commit merely because task names match.
+
+## Specification contradictions
+
+A worker encountering a contradiction stops affected work and submits an ADR-style request using [the amendment template](docs/project/sprint-0/amendment-request.md). Unaffected leased work may continue. The worker cites conflicting source clauses, observed evidence, affected cards, the proposed change, alternatives and compatibility consequences. It cannot silently deviate or edit shared authority.
+
+The coordinator first distinguishes implementation defects from specification defects. Implementation defects return through changes_requested. Andrew decides changes to accepted architecture or product direction. The coordinator may correct a factual documentation error supported by observed evidence only when the correction preserves those decisions.
+
+A request is proposed, accepted, rejected or deferred. Acceptance is not admission. TRACKING records the decision owner, evidence, affected cards and the separate source/card propagation receipt. Dependent work remains blocked until every required accepted amendment is admitted. An accepted but unapplied amendment is still a blocker. Rejected requests return affected work to the unchanged contract only after readiness is checked. Deferred contradictions remain blockers for affected work.
+
+Blocking amendments may be admitted during a sprint. Update authoritative source clauses and affected card revisions together, review the changed acceptance contract, record propagation and recheck readiness before work resumes. The closeout reconciles all remaining requests before pinning final evidence. Never defer a needed source change to closeout while implementing against an unaccepted design.
+
 ## Checkpoint and handback
 
-At a safe stop, leave no unowned active writer. Record remaining leases, worker/process status, integrated evidence, blockers and next eligible tasks. Release a lease only after its owner has stopped or completed the verified handoff. A pending review or blocked environment remains pending; it does not become done because a session is ending.
+When selected sprint work is exhausted, invoke [Sprint closure](#sprint-closure) before reporting SPRINT COMPLETE. At a safe stop, leave no unowned active writer. Record remaining leases, worker/process status, integrated evidence, blockers and next eligible tasks. Release a lease only after its owner has stopped or completed the verified handoff. A pending review or blocked environment remains pending; it does not become done because a session is ending.
 
 HF-01 through HF-10, with HF-03, HF-04, HF-06 and HF-07 split into a and b cards, form the proposed foundation sprint; the S0 cards form the prepare-stage program. HF-01 and HF-02 can be input-ready while sprint authorization is awaiting_review. Later contracts, per-system pages, full TECH_BIBLE assembly and the final architecture audit remain separate cards. Their absence is visible in the board. No game execution, remote setup, publication or scheduled work follows automatically from delivery of this manual.

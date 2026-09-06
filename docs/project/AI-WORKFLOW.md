@@ -49,3 +49,7 @@ The Claude port's migration receipts were disposable and lived under the gitigno
 - [Claude Code Advanced Patterns](https://resources.anthropic.com/hubfs/Claude%20Code%20Advanced%20Patterns_%20Subagents,%20MCP,%20and%20Scaling%20to%20Real%20Codebases.pdf), a March 2026 webinar deck, distinguishes project instructions, hooks and MCP, and describes focused subagents and separate worktrees. It is architecture guidance, not a current configuration schema.
 - [Effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) supports loading exact source references as needed. [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) motivates incremental work and durable progress. We adapt that pattern to the existing tracking board rather than adding its example progress files.
 - Current [subagent documentation](https://code.claude.com/docs/en/sub-agents) and [model configuration](https://code.claude.com/docs/en/model-config) define supported model/effort fields, worktree defaults and fallback controls. The migration inspected Claude Code 2.1.261 on 6 September 2026. Documentation support does not prove this account can execute a request.
+
+## Sprint handback
+
+When the selected sprint exhausts its work, run [sprint-close](prompts/sprint-close.md). The [operating manual](../../ORCHESTRATOR.md#sprint-closure) owns the closure rules. A next-sprint proposal stays awaiting_review.

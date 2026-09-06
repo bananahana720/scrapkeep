@@ -22,6 +22,10 @@ ORCHESTRATOR owns the assignment packet, concurrency, leases, review and accepta
 9. Serial integration. Integrate one approved candidate at a time per [ORCHESTRATOR.md#serial-integration-and-completion](../../../ORCHESTRATOR.md#serial-integration-and-completion). Rerun the commands `check:scope` named on the integrated result. A failure keeps the task out of done with its evidence retained.
 10. Done event. Record candidate, review and integrated identities separately and append the completion event, per the review to done row of [TRACKING.md#transition-authority](../../../TRACKING.md#transition-authority). Prerequisites unlock only then.
 
+## Sprint handback
+
+When the selected sprint has no remaining active work, invoke [the sprint-close prompt](../../../docs/project/prompts/sprint-close.md) before reporting SPRINT COMPLETE. Task completion alone cannot close a sprint. Specification contradictions follow [the amendment rule](../../../ORCHESTRATOR.md#specification-contradictions); stop affected work and submit a request rather than deviating.
+
 ## Host adapter and base identity
 
 - Claude Code: use `scrapkeep-writer`, `scrapkeep-writer-medium` or `scrapkeep-writer-low` for writes, `scrapkeep-explorer` for source inspection and `scrapkeep-reviewer` or `scrapkeep-reviewer-medium` for independent review. Assign effort by importance and difficulty; each definition pins the model and one effort, and a prompt cannot change it. Avoid built-in Explore/Plan or advisor defaults unless actual model and effort are verified to match policy.

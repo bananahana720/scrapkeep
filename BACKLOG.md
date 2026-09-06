@@ -897,11 +897,11 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 <a id="s0-09"></a>
 
-### S0-09: Export presets and CI smoke workflow (parked)
+### S0-09: Export presets and CI smoke workflow
 
-**Parked.** Export templates are not installed, and template use and pushing a workflow to `main` are outside the current authorization (TRACKING EV-0019 and EV-0024); this is stage 2-3 of the CI path. Nothing below is assignable until the coordinator records an unpark with the extended authorization.
+**Revised under operational Sprint 0.** [The implementation request](docs/project/sprint-0/AUTHORIZATION.md) authorizes templates, local exports and the private CI workflow. Previous parked history remains in TRACKING.
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** prepare
+**Card revision:** 2 · **Owner:** Verification · **Size:** M · **Lane:** prepare
 
 **Source and inputs:**
 
@@ -910,24 +910,154 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - S0-01 outputs
 - Godot 4.7 export command-line documentation and the template download record, resolved by the coordinator when unparked.
 
-**Dependencies:** [S0-01](#s0-01). **Blocking questions:** [Q-E06](#q-e06) before any export leaves the machine. **Blocking item:** authorization extended to templates and to pushing a workflow.
+**Dependencies:** [S0-01](#s0-01); [S0-12](#s0-12). **Blocking questions:** None for internal CI generation and report retention. [Q-E06](#q-e06) stays open for external distribution.
 
-**Files touched:** `native/export_presets.cfg`; `scripts/native-smoke.mjs` (`--export` mode); `.github/workflows/native-smoke.yml`; `docs/tech/native-toolchain.md` (the CI install mirrors the pin); `artifacts/local/tasks/S0-09/`.
+**Files touched:** `native/export_presets.cfg`; `scripts/native-smoke.mjs` (`--export` mode); `.github/workflows/native-smoke.yml`; `docs/tech/native-toolchain.md` (the CI install mirrors the pin); `tests/native-smoke.test.js`; `artifacts/local/tasks/S0-09/`.
 
 **Definition of done:**
 
 1. Exactly two presets, Linux x64 and Windows x64, with their names referenced verbatim and no credentials.
 2. `--export` runs both to absolute paths under `artifacts/local/native-export/linux/` and `artifacts/local/native-export/windows/`, asserting exit 0, presence, size and sha256.
-3. The Linux export launches and exits 0; the Windows export is file-existence only unless a Windows runner executes it.
+3. The Linux export visibly launches locally, reports success and exits through its Exit action; CI launches it headlessly with a required success marker. Positive stage/resume execute in fresh processes and faults, timeouts, missing markers and failed exports fail the harness; the Windows export is file-existence only unless a Windows runner executes it.
 4. The workflow on `ubuntu-latest` downloads the editor and templates by URL, verifies the recorded digests, runs the smoke and exports and uploads `report.json`; no marketplace action is required; an optional `windows-latest` job is costed separately.
 5. No export is committed or published.
 
 **Verification and evidence:**
 
 - The two export commands; `node scripts/native-smoke.mjs --export`.
-- One green CI run on the pinned SHA, logged to `artifacts/local/tasks/S0-09/`.
+- One green CI run on the pinned SHA, logged to `tests/native-smoke.test.js`; `artifacts/local/tasks/S0-09/`.
 
-**Boundary:** Export success is not qualification. Nothing is distributed; Q-E06 stays untouched until an export leaves the machine. Windows is unproven without execution. The renderer stays default (Q-E04 open). Smoke-script presence in exports is noted for Q-E13 and TH-26.
+**Boundary:** Export success is not qualification. Nothing is distributed or uploaded as a binary; CI generates binaries internally and retains reports only. Q-E06 remains open. Only included CI allowance may be used. Windows is unproven without execution. The renderer stays default (Q-E04 open). Smoke-script presence in exports is noted for Q-E13 and TH-26.
+
+<a id="s0-10"></a>
+
+### S0-10: Establish sprint closure and selection
+
+**Card revision:** 1 · **Owner:** Coordinator · **Size:** S · **Lane:** operational-s0
+
+**Source and inputs:**
+
+- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
+
+**Dependencies:** None. **Blocking questions:** None within the synthetic proof scope.
+
+**Files touched:** ORCHESTRATOR.md; TRACKING.md; BACKLOG.md; docs/project/prompts/sprint-close.md; docs/project/sprint-0/AUTHORIZATION.md; docs/project/sprint-0/amendment-request.md placeholder; docs/project/AI-WORKFLOW.md; .agents/skills/scrapkeep-task/SKILL.md; .agents/skills/scrapkeep-verify/SKILL.md
+
+**Definition of done:**
+
+1. Define closure outcomes, exact-commit evidence, retro/grooming, at most four S/M proposed cards and approval-only dispatch. Define amendment authority and propagation. Wire handback to the canonical close prompt.
+2. Retain source identity, evidence limits and independent review.
+
+**Verification and evidence:**
+
+- npm run check:docs; npm run check:project; independent scenario review.
+
+**Boundary:** Operational proof and workflow scope only. No game features, production qualification, paid services or release. Coordinator alone admits shared records.
+
+<a id="s0-11"></a>
+
+### S0-11: Supply specification amendment packets
+
+**Card revision:** 1 · **Owner:** Coordinator · **Size:** S · **Lane:** operational-s0
+
+**Source and inputs:**
+
+- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
+
+**Dependencies:** [S0-10](#s0-10). **Blocking questions:** None within the synthetic proof scope.
+
+**Files touched:** docs/project/sprint-0/amendment-request.md; docs/project/sprint-0/amendment-examples.md; artifacts/local/tasks/S0-11/
+
+**Definition of done:**
+
+1. Supply every contradiction field, decision and propagation evidence. Include examples for implementation defect, factual correction, architecture change and deferred contradiction. Return proposed shared-document changes to the coordinator.
+2. Retain source identity, evidence limits and independent review.
+
+**Verification and evidence:**
+
+- npm run check:docs; independent contradiction scenario review.
+
+**Boundary:** Operational proof and workflow scope only. No game features, production qualification, paid services or release. Coordinator alone admits shared records.
+
+<a id="s0-12"></a>
+
+### S0-12: Run one integrated native smoke scene
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** operational-s0
+
+**Source and inputs:**
+
+- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
+
+**Dependencies:** [S0-10](#s0-10); [S0-04](#s0-04); [S0-06](#s0-06); [S0-08](#s0-08). **Blocking questions:** None within the synthetic proof scope.
+
+**Files touched:** native/integration/; native/project.godot; native/README.md; artifacts/local/tasks/S0-12/
+
+**Definition of done:**
+
+1. Compose existing session/tick, typed content and save components. Persist and resume synthetic state across fresh processes. Expose a minimal success/failure screen and Exit button. Support headless automation and injected failure. Do not mutate fixtures or user saves.
+2. Retain source identity, evidence limits and independent review.
+
+**Verification and evidence:**
+
+- Pinned Godot headless runs with isolated data directory, positive and fault cases; source review; later exported launch in S0-09.
+
+**Boundary:** Operational proof and workflow scope only. No game features, production qualification, paid services or release. Coordinator alone admits shared records.
+
+<a id="s0-13"></a>
+
+### S0-13: Reject invalid sprint closeout receipts
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** operational-s0
+
+**Source and inputs:**
+
+- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
+
+**Dependencies:** [S0-10](#s0-10); [S0-11](#s0-11). **Blocking questions:** None within the synthetic proof scope.
+
+**Files touched:** scripts/sprint-close.mjs; tests/sprint-close.test.js; scripts/check-docs.mjs; tests/check-docs.test.js; tests/fixtures/check-docs/; docs/project/sprint-0/closure-receipt.md; artifacts/local/tasks/S0-13/
+
+**Definition of done:**
+
+1. Validate structured closure receipts with required evidence identity, outcomes, no active leases or incomplete tasks, amendment propagation and bounded next proposal. Missing/stale evidence stays pending; failed gates stay failed. Idempotent repeated receipt checking does not mutate canonical state. Add documentation checks for close prompt linkage and required contract sections.
+2. Retain source identity, evidence limits and independent review.
+
+**Verification and evidence:**
+
+- node --test tests/sprint-close.test.js tests/check-docs.test.js; npm run check:docs; injected malformed/stale/failed receipts.
+
+**Boundary:** Operational proof and workflow scope only. No game features, production qualification, paid services or release. Coordinator alone admits shared records.
+
+<a id="s0-14"></a>
+
+### S0-14: Review and close operational Sprint 0
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** operational-s0
+
+**Source and inputs:**
+
+- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
+
+**Dependencies:** [S0-09](#s0-09); [S0-10](#s0-10); [S0-11](#s0-11); [S0-12](#s0-12); [S0-13](#s0-13). **Blocking questions:** None within the synthetic proof scope.
+
+**Files touched:** TRACKING.md; BACKLOG.md; CONTRIBUTING.md; docs/project/README.md; docs/project/sprint-0/README.md; docs/project/sprint-0/closure.json; artifacts/local/sprint-0/
+
+**Definition of done:**
+
+1. Independently review the integrated result and review coverage. Run required checks at a pinned clean commit. Retain local visible Linux launch and CI evidence. Run closeout once and repeat safely. Prepare at most four S/M HF cards awaiting_review. Do not call the sprint complete on missing evidence.
+2. Retain source identity, evidence limits and independent review.
+
+**Verification and evidence:**
+
+- npm run check:scope -- <base> <candidate>; applicable checks; node scripts/sprint-close.mjs <receipt>; fresh review of the sprint-level review.
+
+**Boundary:** Operational proof and workflow scope only. No game features, production qualification, paid services or release. Coordinator alone admits shared records.
 
 <a id="pd-01"></a>
 

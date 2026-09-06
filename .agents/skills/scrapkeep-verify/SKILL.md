@@ -21,6 +21,7 @@ Verification is scoped to the artifact; a passing unrelated suite cannot qualify
 | --- | --- |
 | Documentation or agent configuration | `npm run check:docs` (links, anchors, BACKLOG card completeness, TRACKING event sequence), `npm run check:project`, skill and agent frontmatter validation when touched, and scenario review of the changed contract. No game build for a documentation-only scope. |
 | Browser-proof code | `npm run verify`; add CONTRIBUTING's browser checks for UI, input, camera or render changes. Preserve checks for both entries. |
+| Authorized native proof | Operational Sprint 0 uses `npm run native:smoke` and `node scripts/native-smoke.mjs --export` after S0-09 admission, plus visible local Linux launch and CI at the checked commit. This prepare-stage exception is not production or hardware qualification. |
 | Native game | Read the accepted engineering handoff and task-specific command contract. If it is unavailable, report a blocker; `check:godot` is reserved until that handoff lands. Do not invent Godot commands or substitute browser tests. |
 | Maintained native player | Read `tools/agent-player/README.md` and the task scope. Use the documented controller-free checks and bounded native trials only when authorized. Acquire a fresh lease/desktop identity. |
 
