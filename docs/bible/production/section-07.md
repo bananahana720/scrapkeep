@@ -87,7 +87,7 @@ Begin a material pass by asking what touches the part. A hinge pumps grease out 
 
 Keep painted steel, rubber, copper, glass and oily joints distinct at gameplay distance. Broad rough paint establishes the body. Smaller exposed edges and contact faces catch sharper light. Reserve the darkest grease for useful pockets between readable forms. A fresh welded patch can interrupt old damage and make the owner present in the object. Tiny scratches belong late in the process, after the intake, cockpit and working tool already read.
 
-![A01 material placement comparison](</home/andrew/Projects/test-game-2/docs/bible/images/A01-v1.png>)
+![A01 material placement comparison](<../../../docs/bible/images/A01-v1.png>)
 
 *A01. Teaching proposal, AD-04. DO places wear by material and use. DON'T coats the same mech with uniform dirty shading. The mistake is indiscriminate grime, not dirt itself; the approved world should look substantially worked.*
 
@@ -97,7 +97,7 @@ Choose the weather, time of day and open-sky color before adding device lights. 
 
 Vegetation is part of regional structure. Draw its broad bands and relationship to rock before placing individual plants. Industrial terraces need believable ground or supports. Roads respond to slope, water and clearance. These decisions make a region recognizable when its machinery is removed. The same rocky crest should remain recognizable when settlement detail is added.
 
-![A02 mountain regional identity comparison](</home/andrew/Projects/test-game-2/docs/bible/images/A02-v1.png>)
+![A02 mountain regional identity comparison](<../../../docs/bible/images/A02-v1.png>)
 
 *A02. Teaching proposal, AD-06, using the Foundry Crown candidate. DO keeps cool forested slopes and an exposed rocky summit coherent. DON'T inserts desert cactus across the same mountain. The buildings, light and landform stay comparable so misplaced vegetation is the visible lesson.*
 
@@ -117,7 +117,7 @@ Compare the same weapon or skill assembly before and after construction. Show th
 
 In a chase view, the player needs to see the attacking tool, its dangerous ground, and somewhere to move. Build that composition before adding steam and sparks. Effects can intensify at the source, trail behind movement and spill into unused screen space. Their brightness should not erase the shape that tells the player what happens next.
 
-![A03 combat readability comparison](</home/andrew/Projects/test-game-2/docs/bible/images/A03-v1.png>)
+![A03 combat readability comparison](<../../../docs/bible/images/A03-v1.png>)
 
 *A03. Diagrammatic combat mockup, AD-08. DO exposes the raised cutter, danger footprint, right-side escape and instrument panels. DON'T blankets the matching attack with effects. The illustrated footprint communicates intended geometry; it does not verify a hitbox or lock the future HUD.*
 

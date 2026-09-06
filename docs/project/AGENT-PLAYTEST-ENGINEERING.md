@@ -16,7 +16,7 @@ The maintained runner landed in commit `db7d8cf`. Target continuity and bounded 
 
 | Reusable capability | Maintained location | Carry-forward boundary |
 | --- | --- | --- |
-| Native physical input, text, pointer, capture and exact-window semantic actions | [Installed controller guide](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md) | Imported by the game runner. Preserve one implementation and its focus, identity and stop checks. |
+| Native physical input, text, pointer, capture and exact-window semantic actions | The installed desktop controller's guide (`agent-desktop/README.md` under the user's local share directory for codex-native-input, outside this repository) | Imported by the game runner. Preserve one implementation and its focus, identity and stop checks. |
 | Named agent desktops and actor leases | Controller `seat.py`, `ownership.py` and [ADR 0006](../adr/0006-agent-playtest-workspaces.md) | One GUI actor per leased desktop. Separate Git worktrees isolate source edits. Both share the host's Unix authority. |
 | Build, play, menus, cleanup and provenance | [Maintained runner](../../tools/agent-player/README.md) and `scripts/agent-playtest.mjs` | One local command uses a private build and an exclusive evidence directory. No temporary player copy is required. |
 | Fast assertions and native behavioral checks | [Contribution guide](../../CONTRIBUTING.md#verification) | Project verification, focused player tests and native trials establish different claims. Human feel remains P10. |
@@ -64,7 +64,7 @@ On 6 September, the coordinator and a delegated agent used the installed control
 
 Managed actions require a bounded actor lease and retain a per-workspace cross-process lock through cleanup. The historical direct player bypasses that ownership layer and must not run concurrently in a claimed desktop. The shared emergency stop remains independent of operation locks.
 
-The [operations guide](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md) owns commands and assignments. The [named-workspace receipt](/home/andrew/.local/share/codex-native-input/agent-desktop/verification/workspaces-2026-09-06/receipt.json) owns current checks, timings, captures and source hashes. [ADR 0006](../adr/0006-agent-playtest-workspaces.md) records the architecture.
+The installed desktop controller's operations guide (`agent-desktop/README.md` under the user's local share directory for codex-native-input, outside this repository) owns commands and assignments. Its named-workspace receipt (`agent-desktop/verification/workspaces-2026-09-06/receipt.json` in the same installation) owns current checks, timings, captures and source hashes. [ADR 0006](../adr/0006-agent-playtest-workspaces.md) records the architecture.
 
 ## Ordered work and completion checks
 
@@ -108,10 +108,10 @@ The original `/` and `/orchard.html` entries remain distinct. No new game featur
 - [Maintained runner guide](../../tools/agent-player/README.md)
 - [Target continuity and recovery qualification](../../artifacts/agent-recovery-2026-09-06/README.md)
 - [Maintained player qualification and retained failures](../../artifacts/agent-player-2026-09-06/README.md)
-- [Controller operations](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md)
-- [Installed controller verification](/home/andrew/.local/share/codex-native-input/agent-desktop/verification/receipt.json)
-- [Dated playtest and rerun notes](../../artifacts/local/player-playtest-2026-09-06/README.md)
-- [Full research and implementation report](/home/andrew/.codex/visualizations/2026/09/06/01a0756b-5162-7ec0-a604-8b599be7ff2e/linux-computer-use-progress.md)
+- Controller operations. The installed desktop controller's `agent-desktop/README.md` under the user's local share directory for codex-native-input, outside this repository.
+- Installed controller verification. `agent-desktop/verification/receipt.json` in the same installation.
+- [Dated playtest and rerun notes](../../artifacts/agent-player-2026-09-06/README.md)
+- Full research and implementation report. `linux-computer-use-progress.md` in the Codex visualizations directory dated 6 September 2026 under the user's Codex home, outside this repository.
 - [Game project desk](README.md), [backlog](BACKLOG.md), [current game verification](../LIGHTNING-VERIFICATION.md)
 
 Disposable evidence may be cleaned under `artifacts/local`; the engineering plan and its evidence limits survive here. The executable player is maintained outside disposable artifacts. Keep dated qualification receipts under `artifacts/agent-player-2026-09-06/` and `artifacts/agent-recovery-2026-09-06/` and routine runs under `artifacts/local/agent-playtests/`. The runner guide owns current commands; this plan owns remaining scope.

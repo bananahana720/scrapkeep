@@ -60,8 +60,8 @@ Propose separate music and effects controls, reduced camera motion and a restrai
 
 ### Audio and motion concept sheet
 
-![Four phases of a rolling salvage mech's action, with mechanical sound-source studies beneath.](</home/andrew/Projects/test-game-2/docs/bible/images/F01-v1.png>)
+![Four phases of a rolling salvage mech's action, with mechanical sound-source studies beneath.](<../../../docs/bible/images/F01-v1.png>)
 
 *F01. Annotated audio-and-motion concept proposal. ATTRACT pairs coil hum with metal chatter; BUILD pairs ratchet, press and latch; STRIKE pairs contact crack with body thump; SETTLE pairs spring return with vent sigh. The bottom strip shows an electromagnet and washers, a ratchet assembly, a steel plate and rubber mallet, and a pressure-release valve. The staged cutaway proposes construction; it is not engineering proof, a recording or tested feel.*
 
-Source basis: [Publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [runtime audio direction](</home/andrew/Projects/test-game-2/docs/RUNTIME-BLUEPRINT.md#8-audio-and-character-expression>), [asset provenance](</home/andrew/Projects/test-game-2/docs/project/ASSETS.md>), and [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>).
+Source basis: [Publisher discovery](<../../../docs/DISCOVERY.md>), [runtime audio direction](<../../../docs/RUNTIME-BLUEPRINT.md#8-audio-and-character-expression>), [asset provenance](<../../../docs/project/ASSETS.md>), and [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>).

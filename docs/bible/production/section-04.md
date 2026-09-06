@@ -8,7 +8,7 @@ Every candidate retains an irregular rolling salvage body, electromagnetic colle
 
 ### 4.1 Sable, fox from the Switchback Enclaves
 
-![Sable character comparison](</home/andrew/Projects/test-game-2/docs/bible/images/C01-v1.png>)
+![Sable character comparison](<../../../docs/bible/images/C01-v1.png>)
 
 *C01, proposal. A at left uses paired compact winches; B in the middle uses an offset crane arch; C at right uses a crescent collector collar and folding anchors. The fox remains the same individual across all three.*
 
@@ -29,7 +29,7 @@ A emphasizes a low center of mass and tightly packed quiet machinery. B exposes 
 
 ### 4.2 Kest, bird from the Highdraft Roosts
 
-![Kest character comparison](</home/andrew/Projects/test-game-2/docs/bible/images/C02-v1.png>)
+![Kest character comparison](<../../../docs/bible/images/C02-v1.png>)
 
 *C02, proposal. A at left carries two guarded lift fans; B in the middle suspends a rotor inside a tall hoop; C at right distributes lift through bell-shaped ducts. All retain a rolling scrap core and enclosed cockpit.*
 
@@ -50,7 +50,7 @@ A puts lateral lift hardware beside a compact mortar and reads broad and nimble.
 
 ### 4.3 Tarn, tiger from the Redjaw Workshops
 
-![Tarn character comparison](</home/andrew/Projects/test-game-2/docs/bible/images/C03-v2.png>)
+![Tarn character comparison](<../../../docs/bible/images/C03-v2.png>)
 
 *C03, proposal. A at left has paired piston claws; B is the middle panel with one large braced claw; C at right has slender linked talons. The corrected sheet labels all three directions explicitly; none is selected.*
 
@@ -71,7 +71,7 @@ A concentrates strength into short paired wrists. B makes leverage and counterwe
 
 ### 4.4 Fuse, squirrel itinerant apprentice
 
-![Fuse character comparison](</home/andrew/Projects/test-game-2/docs/bible/images/C04-v1.png>)
+![Fuse character comparison](<../../../docs/bible/images/C04-v1.png>)
 
 *C04, proposal. A at left stacks pressure canisters beside an aiming barrel; B in the middle uses a low switchboard collar and transformer blocks; C at right suspends discharge heads on a cable hoop.*
 
@@ -92,7 +92,7 @@ A wears its precarious equipment stack openly. B packs the same ambition into a 
 
 ### 4.5 Rivet, mole machinist
 
-![Rivet character comparison](</home/andrew/Projects/test-game-2/docs/bible/images/C05-v1.png>)
+![Rivet character comparison](<../../../docs/bible/images/C05-v1.png>)
 
 *C05, proposal. A at left carries a long optical bench; B in the middle surrounds a large collimator with a split yoke; C at right folds an articulated mirror tower above the rolling body.*
 
@@ -119,4 +119,4 @@ Admiral Brindle is the proposed leader of the Furnace Fleet, retaining the earli
 
 The pilots' differences create scene material without a fixed party. Sable disguises effort; Kest wants effort performed correctly. Tarn offers a steady hand; Fuse mistakes that patience for permission. Rivet can recognize the sound of Fuse's good idea before anyone sees its bad wiring. Use these relationships in optional exchanges and aftermaths so a solo run works with whichever character and route the player chooses.
 
-Source basis: [publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [earlier character reference](</home/andrew/Projects/test-game-2/docs/CHARACTER-BIBLE.md>), [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>), and [this edition's production brief](</home/andrew/Projects/test-game-2/docs/bible/production/SECTION-BRIEF.md>). Character fiction, the kit sketches and all five comparison sheets remain proposals.
+Source basis: [publisher discovery](<../../../docs/DISCOVERY.md>), [earlier character reference](<../../../docs/CHARACTER-BIBLE.md>), [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>), and [this edition's production brief](<../../../docs/bible/production/SECTION-BRIEF.md>). Character fiction, the kit sketches and all five comparison sheets remain proposals.

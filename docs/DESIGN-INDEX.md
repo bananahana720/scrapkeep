@@ -10,7 +10,7 @@ The [accepted notebook interview](DISCOVERY.md#accepted-notebook-interview) upda
 
 ## Start here
 
-The [project desk](project/README.md) owns current status, requirements and the backlog. Development conventions are in [CONTRIBUTING](../CONTRIBUTING.md); durable implementation choices are in the [ADR index](adr/README.md).
+The [project desk](project/README.md) owns orientation and requirements, [BACKLOG.md](../BACKLOG.md) owns task definitions, and [TRACKING.md](../TRACKING.md) owns current status as the only execution board. Development conventions are in [CONTRIBUTING](../CONTRIBUTING.md); durable implementation choices are in the [ADR index](adr/README.md).
 
 | To review                                                   | Open                                                                                                                                  | Status                                                                                         |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -64,4 +64,4 @@ Workers own bounded assignments; the coordinator integrates changes and records 
 
 ## Current production checkpoint
 
-The current increment addresses Andrew's first playtest: mouse-look shooting, double jump and rebounds, denser waves, accurate previews, and a readable combat HUD with a paused dashboard. The [lightning play guide](LIGHTNING-PLAYGUIDE.md) describes the controls and reward choices. Andrew's next playtest must establish handling, density and readability. A full stage, production engine migration, and complete boss roster require later scope decisions.
+The current increment addresses Andrew's first playtest: mouse-look shooting, double jump and rebounds, denser waves, accurate previews, and a readable combat HUD with a paused dashboard. The [lightning play guide](LIGHTNING-PLAYGUIDE.md) describes the controls and reward choices. Andrew's next playtest must establish handling, density and readability. A full stage and complete boss roster require later scope decisions. The production engine direction is settled by the [accepted engineering ADRs](../adr/README.md); its implementation is a separate authorized task, not an open scope decision.

@@ -4,7 +4,7 @@ Use these spellings across writing, art and content definitions. Each named iden
 
 ### Illustrated identity key
 
-![Five candidate pilot portraits above five distinct regional landscape vignettes.](</home/andrew/Projects/test-game-2/docs/bible/images/G01-v1.png>)
+![Five candidate pilot portraits above five distinct regional landscape vignettes.](<../../../docs/bible/images/G01-v1.png>)
 
 *G01. Illustrated reference proposal. Portrait keys: 01 Sable, 02 Kest, 03 Tarn, 04 Fuse, 05 Rivet. Landscape keys: 06 Yard Commons, 07 Spillway Works, 08 The Iron Orchard, 09 Foundry Crown, 10 Pale Basin. The rows are independent lists. Their columns assign neither home regions nor route order. Cropped cockpit portraits establish identity without selecting any A/B/C mech direction. The sheet's detailed fur and close cockpit treatment remain illustrative, not final character models.*
 
@@ -91,4 +91,4 @@ These definitions record how this Bible uses a reference. They grant no permissi
 | Standard revival | The run's single recovery from lethal defeat. A later death ends the run; companion rescue does not silently replenish it. |
 | World | Run-region containing compact encounter levels and a boss. Four worlds form a successful run; five catalogue candidates do not select its route. |
 
-Definitions follow the corresponding sections above. Prototype aliases are reconciled against the [lightning play guide](</home/andrew/Projects/test-game-2/docs/LIGHTNING-PLAYGUIDE.md>) and [character planning](</home/andrew/Projects/test-game-2/docs/CHARACTER-BIBLE.md>); external reference boundaries follow the approved Art Direction and Appendix B.
+Definitions follow the corresponding sections above. Prototype aliases are reconciled against the [lightning play guide](<../../../docs/LIGHTNING-PLAYGUIDE.md>) and [character planning](<../../../docs/CHARACTER-BIBLE.md>); external reference boundaries follow the approved Art Direction and Appendix B.

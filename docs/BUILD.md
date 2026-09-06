@@ -1,5 +1,7 @@
 # Scrapkeep build plan
 
+> **Historical record, frozen during execution preparation on 6 September 2026.** This plan describes the original rolling-turret build. The [lightning increment contract](project/INCREMENT-01-lightning-playtest.md) owns the current browser-proof scope, and [TRACKING.md](../TRACKING.md) is the only execution board.
+
 The central test: rolling into scenery must visibly attach a working outward-facing turret, immediately increasing the ball's ability to defend a base against enemies following the maze.
 
 ## Definition of done

@@ -1,5 +1,7 @@
 # Scrapkeep verification
 
+> **Historical record, frozen during execution preparation on 6 September 2026.** This receipt covers the original rolling-turret build. The [lightning verification record](LIGHTNING-VERIFICATION.md) owns the current browser-proof evidence, and [TRACKING.md](../TRACKING.md) is the only execution board.
+
 Completed locally on 5 September 2026 UTC.
 
 ## Result

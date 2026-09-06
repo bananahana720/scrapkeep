@@ -121,13 +121,13 @@ Permanent discoveries, learned recipes, options and challenges survive defeat. T
 
 The combat HUD answers immediate questions: health, remaining standard revival, current objective, aim, available actions, cooldowns and ultimate charge. Threat cues should be selective and visible around the action. Collection feedback can acknowledge an intake without turning the center of the screen into a reward ticker.
 
-![Chase-view combat HUD with health, objective and four action slots.](</home/andrew/Projects/test-game-2/docs/bible/images/U01-v2.png>)
+![Chase-view combat HUD with health, objective and four action slots.](<../../../docs/bible/images/U01-v2.png>)
 
 *U01. Combat HUD mockup, creative proposal. The four labeled cells are Weapon, Hero Skill, Mobility and Ultimate. The corrected mockup uses one AVAILABLE revival indicator, an assembled mechanical companion and a strongly irregular rolling scrap core. Layout and anonymous hardware remain proposals.*
 
 The dashboard gives more space to the character, equipment, companion, map and settings. Its states must distinguish locked slot, unavailable upgrade, permitted equipment swap and special tree respec. The comparison below proposes those distinctions. Its map expresses a four-world journey and two destination options without selecting a canonical route.
 
-![Three dashboard states separate equipment swaps, special tree respec and next-world selection.](</home/andrew/Projects/test-game-2/docs/bible/images/U02-v3.png>)
+![Three dashboard states separate equipment swaps, special tree respec and next-world selection.](<../../../docs/bible/images/U02-v3.png>)
 
 *U02. Dashboard mockups, creative proposal. Equipment is reconfigured between fights; tree respec requires a special opportunity; Map shows a separate destination choice. Andrew's requested revision shows the accepted binary tree: one root branches to two nodes, then four, then eight endpoints, with one connected route selected. Exact node effects and milestone allocation remain open. Comparison bars and anonymous hardware are layout studies.*
 
@@ -135,10 +135,10 @@ Readable workshop instrumentation uses solid dark backing, clear labels and rest
 
 ### Architecture and implementation handoff
 
-The orchard keeps authoritative combat in `src/orchard/simulation.js`, rendering in `scene.js`, procedural models in `models.js`, and input/UI orchestration in `main.js`. Damage and telegraphs share committed geometry. Both `/` and `/orchard.html` remain available. The current locked Three.js/Vite stack supports the prototypes. The [accepted engineering ADRs](</home/andrew/Projects/test-game-2/adr/README.md>) define the separate production direction without changing what these proofs currently implement.
+The orchard keeps authoritative combat in `src/orchard/simulation.js`, rendering in `scene.js`, procedural models in `models.js`, and input/UI orchestration in `main.js`. Damage and telegraphs share committed geometry. Both `/` and `/orchard.html` remain available. The current locked Three.js/Vite stack supports the prototypes. The [accepted engineering ADRs](<../../../adr/README.md>) define the separate production direction without changing what these proofs currently implement.
 
 Future content definitions describe possible characters, trees, items, encounters and recipes. Encounter simulation owns immediate actions and outcomes. Run state carries selections, inventory, route choices, companion, revival and checkpoint status. Permanent progression stores discoveries and unlocked options. Rendering consumes those decisions; it must not reroll loot, miscasts or route offers.
 
 The next systems design work should settle milestone and material allocation, route policy, respec scope, attunement and recipe disclosure, plus revival and interruption behavior. These unresolved details constrain implementation; the approved Bible is not approval to code them. Full-run progression and saving require their own scenario tests and human play, beyond the existing encounter evidence.
 
-Source basis: [Publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [runtime blueprint](</home/andrew/Projects/test-game-2/docs/RUNTIME-BLUEPRINT.md>), [requirements](</home/andrew/Projects/test-game-2/docs/project/REQUIREMENTS.md>), [current lightning contract](</home/andrew/Projects/test-game-2/docs/project/INCREMENT-01-lightning-playtest.md>), and [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>).
+Source basis: [Publisher discovery](<../../../docs/DISCOVERY.md>), [runtime blueprint](<../../../docs/RUNTIME-BLUEPRINT.md>), [requirements](<../../../docs/project/REQUIREMENTS.md>), [current lightning contract](<../../../docs/project/INCREMENT-01-lightning-playtest.md>), and [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>).

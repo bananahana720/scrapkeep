@@ -8,7 +8,7 @@ npm run playtest:agent -- --trials 3 --max-seconds 300
 
 The command builds a private production copy, serves it on a temporary loopback port, opens `/orchard.html` in the dedicated `playtest` desktop, handles visible menus, and plays with native keyboard/mouse input. It closes its desktop and server when finished. Andrew can keep using the host mouse and keyboard. The `game` and `studio` workspaces remain available for interactive work.
 
-This requires the installed [desktop controller](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md), nested Hyprland, Chromium, grim, and Python with NumPy and Pillow. The launcher uses Codex's bundled Python when present; `CODEX_PLAYER_PYTHON` selects another existing interpreter. It imports the installed input controller, not a copied implementation. No API key or paid service is used.
+This requires the installed desktop controller (its guide is `agent-desktop/README.md` under the user's local share directory for codex-native-input, outside this repository), nested Hyprland, Chromium, grim, and Python with NumPy and Pillow. The launcher uses Codex's bundled Python when present; `CODEX_PLAYER_PYTHON` selects another existing interpreter. It imports the installed input controller, not a copied implementation. No API key or paid service is used.
 
 ## Commands
 

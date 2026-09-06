@@ -10,7 +10,7 @@ Every pilot enters with a useful weapon and special mobility. Ordinary rolling a
 
 Active aim distinguishes the weapon. Low-cooldown abilities and quick autonomous deployments keep the pilot moving. A deployed device is an expression of the kit, not a fifth progression slot. Class-earned ultimates build toward a deliberate moment of power. Their exact earning formulas remain open.
 
-![Five weapons and their related devices on a workshop comparison sheet.](</home/andrew/Projects/test-game-2/docs/bible/images/E01-v1.png>)
+![Five weapons and their related devices on a workshop comparison sheet.](<../../../docs/bible/images/E01-v1.png>)
 
 *E01, equipment proposal. Upper row, left to right: hook-driver, mortar, claw, emitter and cutting laser. Lower row: winch anchor, mortar nest, clamping device, discharge post and prism device. Both rows share the D reference for starter-mech diameter. The tools are shown larger than D, providing a conceptual relative-size and material comparison. Mounted dimensions and route clearance remain future design work.*
 
@@ -30,7 +30,7 @@ Scrap first answers the physical fantasy. Pole pieces draw loose metal toward a 
 
 The art can show steel cut into a brace, copper wound onto a conductor and rubber reused as insulation. Grease stays in bearings; an old painted casing can surround a freshly machined contact. That contrast makes the repair visible.
 
-![An internal recycler cutaway, four hardware changes and five recovered regional modules.](</home/andrew/Projects/test-game-2/docs/bible/images/E02-v1.png>)
+![An internal recycler cutaway, four hardware changes and five recovered regional modules.](<../../../docs/bible/images/E02-v1.png>)
 
 *E02, fabrication and loot proposal. The cutaway shows collect, recycle and fabricate; paired studies show changes to weapon, main hero skill, mobility and ultimate. The lower row compares coupling, regulator, linkage, heat exchanger and vane bearing. The cutaway is enlarged independently; the lower lineup uses one common D reference and baseline. The upper upgrade samples compare mechanisms rather than final mounted dimensions. The pronounced tread supports do not resolve how the irregular core rolls; this is an explanatory construction study.*
 
@@ -73,4 +73,4 @@ The future build can include transformative items that replace movement or attac
 
 A saved ongoing run preserves its acquired equipment and selected paths at the next level entrance. Loading does not duplicate rewards, refill a spent revival or add another copy of a recipe effect. Reconfiguring items changes the current build; it does not quietly respec a tree. These distinctions let the player enjoy an outrageous combination now and still have a new machine to build next time.
 
-Source basis: [publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [runtime blueprint](</home/andrew/Projects/test-game-2/docs/RUNTIME-BLUEPRINT.md>), [lightning contract](</home/andrew/Projects/test-game-2/docs/project/INCREMENT-01-lightning-playtest.md>), [prototype play guide](</home/andrew/Projects/test-game-2/docs/LIGHTNING-PLAYGUIDE.md>), and [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>).
+Source basis: [publisher discovery](<../../../docs/DISCOVERY.md>), [runtime blueprint](<../../../docs/RUNTIME-BLUEPRINT.md>), [lightning contract](<../../../docs/project/INCREMENT-01-lightning-playtest.md>), [prototype play guide](<../../../docs/LIGHTNING-PLAYGUIDE.md>), and [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>).

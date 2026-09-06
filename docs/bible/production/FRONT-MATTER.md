@@ -4,7 +4,7 @@
 
 Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work.
 
-Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The [cohesion report](</home/andrew/Projects/test-game-2/COHESION_REPORT.md>) records image and text review; the [decisions list](</home/andrew/Projects/test-game-2/BIBLE_DECISIONS.md>) collects the choices still belonging to Andrew.
+Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The [cohesion report](<../../../COHESION_REPORT.md>) records image and text review; the [decisions list](<../../../BIBLE_DECISIONS.md>) collects the choices still belonging to Andrew.
 
 ## How to read this edition
 

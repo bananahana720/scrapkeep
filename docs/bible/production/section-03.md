@@ -6,7 +6,7 @@ These five area pages compare possible worlds for SCRAPKEEP. They are a creative
 
 The overview is a conceptual catalogue map, explicitly **not a fixed route or geographic survey**. Its separated landform samples express differences in terrain, work and atmosphere. Their positions carry no travel distance, adjacency or astronomical meaning. Read the individual key art for natural scale and the prose for proposed play.
 
-![Five separate landform samples compare the named area candidates without connecting routes.](</home/andrew/Projects/test-game-2/docs/bible/images/M00-v1.png>)
+![Five separate landform samples compare the named area candidates without connecting routes.](<../../../docs/bible/images/M00-v1.png>)
 
 *M00. Conceptual catalogue diagram. Yard Commons, Spillway Works, The Iron Orchard, Foundry Crown and Pale Basin receive equal status. No fixed route. The Pale Basin sample overstates hard white cliffs; its intended identity is the sculpted dune field developed in M05.*
 
@@ -16,7 +16,7 @@ Each selected world must accommodate the build arriving there. It introduces its
 
 *Creative proposal adapting an existing area candidate. Sonoran desert foothills, repair settlement and rocky washes; no starting-world assignment.*
 
-![A Sonoran repair settlement sits beside a rocky wash, with an enclosed salvage pilot and magnetic crane in the foreground.](</home/andrew/Projects/test-game-2/docs/bible/images/M01-v1.png>)
+![A Sonoran repair settlement sits beside a rocky wash, with an enclosed salvage pilot and magnetic crane in the foreground.](<../../../docs/bible/images/M01-v1.png>)
 
 *M01. Yard Commons key-art proposal. Saguaros, sparse branching trees, raised repair benches and an open wash establish the setting. The protected scrap body and attached tread forms are a silhouette study; this still image does not resolve rolling articulation.*
 
@@ -32,7 +32,7 @@ Discoveries draw on insulated collector parts, rugged couplings and compact serv
 
 *Creative proposal adapting an existing area candidate. Sandstone canyon, green river corridor and reclaimed water infrastructure.*
 
-![A green river flows through large sandstone walls beside pump houses, suspended service paths and a broad foreground shelf.](</home/andrew/Projects/test-game-2/docs/bible/images/M02-v1.png>)
+![A green river flows through large sandstone walls beside pump houses, suspended service paths and a broad foreground shelf.](<../../../docs/bible/images/M02-v1.png>)
 
 *M02. Spillway Works key-art proposal. The river, leafy corridor and canyon walls carry the scale; patched machinery follows their edges. The concept suggests a dry bypass but does not verify continuous traversal clearance.*
 
@@ -50,7 +50,7 @@ The reward vocabulary comes from sealed housings, flow-control vanes and magneti
 
 *Creative proposal for a full region adapted from the existing bounded orchard encounter. Upland cultivated valley, irrigation and maintained machinery.*
 
-![A cared-for orchard valley has tree rows, a patched greenhouse, irrigation pipes and a large supported pruning arm beside a wide apron.](</home/andrew/Projects/test-game-2/docs/bible/images/M03-v1.png>)
+![A cared-for orchard valley has tree rows, a patched greenhouse, irrigation pipes and a large supported pruning arm beside a wide apron.](<../../../docs/bible/images/M03-v1.png>)
 
 *M03. The Iron Orchard key-art proposal. Cultivation, generous turning space and an oversized working tool express the region. This scene is not a screenshot or a design proof for a complete Grand Pruner boss.*
 
@@ -68,7 +68,7 @@ Reward vocabulary includes cutting linkages, bracing shoes and compact tending m
 
 *Creative proposal adapting an existing foundry candidate. Forested mountain slopes, metalworking terraces and high rocky ridges.*
 
-![Cableways and small foundry terraces climb a forested gray mountain slope toward an exposed ridge.](</home/andrew/Projects/test-game-2/docs/bible/images/M04-v2.png>)
+![Cableways and small foundry terraces climb a forested gray mountain slope toward an exposed ridge.](<../../../docs/bible/images/M04-v2.png>)
 
 *M04. Foundry Crown key-art proposal. Forest, ridge and supported workshops define the setting. The corrected scene encloses the pilot in a framed glass cockpit integrated with the rolling scrap body.*
 
@@ -86,7 +86,7 @@ Discoveries draw on cable drums, heat-shield panels, alignment fixtures and reus
 
 *New creative area proposal. Fictional white gypsum-like dunes, buried machinery and wind-driven maintenance; no finale assignment.*
 
-![White sculpted dunes surround partly buried machinery, a wind-driven maintenance rig and a hard-packed service strip.](</home/andrew/Projects/test-game-2/docs/bible/images/M05-v1.png>)
+![White sculpted dunes surround partly buried machinery, a wind-driven maintenance rig and a hard-packed service strip.](<../../../docs/bible/images/M05-v1.png>)
 
 *M05. Pale Basin key-art proposal. White mineral dunes, sparse margin plants and dark exposed machinery establish the contrast. The pale ground is dry mineral sand. The foreground body's tread-heavy contact forms remain a concept study of an irregular rolling mech, with locomotion articulation unresolved by the still image.*
 
@@ -100,4 +100,4 @@ An encounter might begin as a salvage inspection, then reveal the working portio
 
 Reward vocabulary comes from abrasion guards, intake screens, wind-driven linkages and exposed collector parts. Their proposed build roles involve shaping collection or adapting a device's behavior; none are required counters for entering the region. **Joyful physical mastery** tests the visibility beyond a crest. **Scrap becomes your build** gives excavated hardware a working purpose. **A world worth crossing** asks whether vast pale land and stubborn maintenance hold interest between fights.
 
-Source basis: [Publisher discovery](</home/andrew/Projects/test-game-2/docs/DISCOVERY.md>), [world environment candidates](</home/andrew/Projects/test-game-2/docs/WORLD-ENVIRONMENTS.md>), [level-design study](</home/andrew/Projects/test-game-2/docs/LEVEL-DESIGN.md>), [decision register](</home/andrew/Projects/test-game-2/docs/project/DECISION-REGISTER.md>), and the [approved art direction](</home/andrew/Projects/test-game-2/docs/bible/ART-DIRECTION-LOCK.md>). Earlier kit measurements, fixed route roles and old palettes are not specifications for these revised region proposals.
+Source basis: [Publisher discovery](<../../../docs/DISCOVERY.md>), [world environment candidates](<../../../docs/WORLD-ENVIRONMENTS.md>), [level-design study](<../../../docs/LEVEL-DESIGN.md>), [decision register](<../../../docs/project/DECISION-REGISTER.md>), and the [approved art direction](<../../../docs/bible/ART-DIRECTION-LOCK.md>). Earlier kit measurements, fixed route roles and old palettes are not specifications for these revised region proposals.

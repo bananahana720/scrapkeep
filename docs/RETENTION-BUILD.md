@@ -1,5 +1,7 @@
 # Scrapkeep expedition build
 
+> **Historical record, frozen during execution preparation on 6 September 2026.** This checklist describes the expedition build of the original yard. The [lightning increment contract](project/INCREMENT-01-lightning-playtest.md) owns the current browser-proof scope, and [TRACKING.md](../TRACKING.md) is the only execution board.
+
 ## Checklist
 
 - [x] Read pstack Principles and runtime; inspect the existing game.
