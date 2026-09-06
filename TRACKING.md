@@ -13,8 +13,8 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **awaiting_review**. No worker may start a sprint task. |
 | Native game/build authorization | **none**. No engine install, code/asset production or qualification run is authorized by this delivery. |
 | Active coordinator for sprint execution | none |
-| Active task attempts / write leases | PUB-01 / PUB-01-A1 / PUB-01-L1, coordinator publication only; no sprint lease. |
-| Remote / publication | Andrew authorized private `bananahana720/scrapkeep`, default `main`, branches `main` and `codex/lightning-playtest`. PUB-01 records execution; creation/upload pending. |
+| Active task attempts / write leases | PUB-01-A1 / PUB-01-L1 retained for coordinator closeout only; no sprint lease. |
+| Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
 
@@ -85,12 +85,12 @@ Unlogged handoffs cannot be reviewed as accepted work. Unlogged scope changes ca
 
 ### PUB-01-A1
 
-- Assignee: current root coordinator (`gpt-6-astra`); card revision 2; lease PUB-01-L1.
+- Assignee: publication root coordinator (`gpt-6-astra`); card revision 2; attempt PUB-01-A1; lease PUB-01-L1 retained through closeout verification.
 - Owned files: the explicit PUB-01 publication edit set. Pre-existing planning files are admitted from the publication baseline, with the completed repository-local workflow package admitted unchanged from [its frozen manifest](artifacts/publication-2026-09-06/concurrent-package.json).
 - Base identity: `dc72a02cd7a0fbe1f00b3ce71d36448364f93294` plus that publication baseline manifest.
-- Candidate identity: [publication candidate manifest](artifacts/publication-2026-09-06/candidate-manifest.json). Integrated identity: not yet committed.
-- Latest checkpoint: 2026-09-06T16:24:31+00:00; complete staged snapshot screened and checked. Six original approved-source whitespace warnings are recorded in [whitespace-check.json](artifacts/publication-2026-09-06/whitespace-check.json); publication deltas are clean. Final independent review is underway.
-- Evidence: [authorization](artifacts/publication-2026-09-06/AUTHORIZATION.md), [document checks](artifacts/publication-2026-09-06/document-checks.json), [content screen](artifacts/publication-2026-09-06/content-screen.json), [independent review](artifacts/publication-2026-09-06/REVIEW.md); no upload has occurred.
+- Candidate identity: [publication candidate manifest](artifacts/publication-2026-09-06/candidate-manifest.json). Integrated identity: `73c427203c9263affa747938e586325842357b0c`; reviewed candidate plus coordinator evidence metadata committed serially.
+- Latest checkpoint: 2026-09-06T16:36:20+00:00; owner/privacy/default and both branch SHAs verified after successful push. Initial remote tree matches all local modes/blobs. [Closeout](artifacts/publication-2026-09-06/CLOSEOUT.md) records evidence and the next-session entry point; final receipt commit is verified again after upload.
+- Evidence: [authorization](artifacts/publication-2026-09-06/AUTHORIZATION.md), [document checks](artifacts/publication-2026-09-06/document-checks.json), [content screen](artifacts/publication-2026-09-06/content-screen.json), [independent review](artifacts/publication-2026-09-06/REVIEW.md); [verified remote publication](artifacts/publication-2026-09-06/publication.json).
 - Review: private_publication_review (independent Astra), **PASS+NOTES** on the pinned candidate and evidence overlay; [report](artifacts/publication-2026-09-06/REVIEW.md). Six original whitespace warnings accepted with preservation proof. No sprint worker has been assigned.
 
 
@@ -100,7 +100,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 
 | Task ID | Card rev | Record rev | State | Blockers / admission | Accepted attempt | Last event |
 | --- | --- | --- | --- | --- | --- | --- |
-| [PUB-01](BACKLOG.md#pub-01) | 2 | 8 | review | Local commit and private remote verification pending | none | EV-0015 |
+| [PUB-01](BACKLOG.md#pub-01) | 2 | 10 | review | Closeout commit/push and final tip/clean-tree checks | none | EV-0017 |
 | [HF-01](BACKLOG.md#hf-01) | 1 | 2 | ready | Sprint authorization awaiting_review | none | EV-0003 |
 | [HF-02](BACKLOG.md#hf-02) | 1 | 2 | ready | Sprint authorization awaiting_review | none | EV-0003 |
 | [HF-03](BACKLOG.md#hf-03) | 1 | 1 | queued | HF-01 | none | EV-0002 |
@@ -239,6 +239,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0013 | 2026-09-06T16:20:00+00:00 | Coordinator / verified handoff | PUB-01 | in_progress → review, record revision 5 → 6. Frozen candidate and source package have portable links, unchanged protected content, clean whitespace/project checks and zero screened credential/contact matches. Staged file identities are in candidate-manifest.json; independent review requested. No commit or upload yet. |
 | EV-0014 | 2026-09-06T16:24:31+00:00 | Coordinator / evidence correction and checkpoint | PUB-01 | review unchanged, record revision 6 → 7. EV-0013 used the working-tree whitespace result; the full staged check subsequently exposed six pre-existing warnings in approved sources. [whitespace-check.json](artifacts/publication-2026-09-06/whitespace-check.json) proves preservation; new publication deltas pass. Approved text and prompt bytes remain unchanged. Final review includes this explicit exception. |
 | EV-0015 | 2026-09-06T16:27:50+00:00 | Coordinator / independent review admission | PUB-01 | review unchanged, record revision 7 → 8. Independent Astra PASS+NOTES accepted on frozen staged content and identified evidence overlay. No blocking finding; the original whitespace exception is supported. Coordinator admits the review and receipts serially, checks the integrated candidate, then commits and performs the authorized private publication. Remote completion remains pending. |
+| EV-0016 | 2026-09-06T16:31:55+00:00 | Coordinator / integration, creation and recovery checkpoint | PUB-01 | review unchanged, record revision 8 → 9. Integrated `73c427203c9263affa747938e586325842357b0c`, rechecked project documentation, and fast-forwarded main. Created the exact private destination and verified owner/privacy/default main before upload. Initial push failed before authentication because the global helper referenced a removed gh executable; corrected this repository’s helper to the installed authenticated gh, leaving global/home configuration unchanged. Retried only the two authorized branches; final remote verification remains pending. |
+| EV-0017 | 2026-09-06T16:36:20+00:00 | Coordinator / verified publication and closeout | PUB-01 | review unchanged, record revision 9 → 10. Independent PASS+NOTES and serial integration accepted; published `73c427203c9263affa747938e586325842357b0c` to exactly the two authorized branches. GitHub owner/private/default main, transport SHAs and all 1,213 remote file identities verified. Independent closeout review accepted the content; its completion-timing finding is resolved by retaining review state. Attempt PUB-01-A1 and coordinator lease remain active. Publication receipt and closeout checkpoint record observed results; commit/push them and verify final remote tips plus a clean tree before recording completion. No foundation task dispatched. |
 
 ## Preparation checkpoint
 
@@ -248,4 +250,4 @@ The backlog contains 58 bounded task cards, 50 defined questions and 458 source 
 
 Game sources, dependency files and runtime media remain unchanged against the preparation baseline. Only documentation, source-status navigation and preparation evidence changed. No engine installation, runtime verification/build, asset generation, external publication or sprint execution occurred. No future task is credited as done.
 
-**Current action:** Complete the separately authorized PUB-01 private publication and session handoff. The proposed HF-01–HF-10 foundation sprint remains awaiting Andrew's review. No automation or background run was created.
+**Next-session entry point:** Read [README](README.md) and [the publication closeout](artifacts/publication-2026-09-06/CLOSEOUT.md), then review HF-01–HF-10 with Andrew. The private backup is established; the foundation sprint still requires his explicit go/no-go. No automation or background run was created.
