@@ -90,7 +90,7 @@ Entry. The go row exists. Models come from the host's pstack model file, not fro
 3. Write each brief with the poteto template verbatim. GOAL, SCOPE, CONTEXT, ACCEPTANCE, VERIFY, TIMEBOX, FORBIDDEN, REPORT. SCOPE lists the lane's files from the ownership table. CONTEXT names the increment document path and the decisions.tsv rows the lane depends on.
 4. Writers report on the shared verdict scale. PASS, PASS+NOTES, FAIL, BLOCKED, INCONCLUSIVE, each with its evidence level.
 5. The coordinator admits changes serially. One lane's branch merges, then `npm run verify` runs, then the next lane. A red gate stops admission until the failure is fixed or the lane is reverted.
-6. Before closeout, spawn one fresh read-only reviewer against the admitted result. Its prompt carries the poteto panel paragraph verbatim plus the read-only line. One reviewer is one opinion. The coordinator reads the diff and writes its own summary.
+6. Before closeout, spawn one fresh read-only reviewer against the admitted result. Its prompt carries the poteto panel paragraph verbatim plus the read-only line. One reviewer is one opinion. The coordinator reads the diff and writes its own summary. A FAIL sends each named finding back to the owning lane, or to the coordinator for files outside every lane, and the gate and a fresh reviewer run again before closeout.
 7. Failure policy follows poteto. A dropout means proceed with N-1 and record it. BLOCKED gets a respawn after the environment heals. Garbage output gets a fresh respawn with consolidated scope, two retries, then the lane is abandoned and recorded.
 
 Exit. Every lane is admitted or recorded as abandoned. The gate is green on the integrated result. The reviewer verdict is PASS or PASS+NOTES.

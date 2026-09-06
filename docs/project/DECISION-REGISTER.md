@@ -75,9 +75,9 @@ Tiering. Tier A gates the next build increment, the audit's increment 1 feel exp
 2. D04, the remote rule. The local checkout exists; whether any remote may receive it is a fact only Andrew holds.
 3. D02, mass trades plus Roll-Through deflect plus Shed Vent. This is the content of increment 1 and the keystone all three lanes converge on.
 4. D03, class handling versus mass-governed steering. Increment 1 should implement one handling model, not two.
-5. D05, QA packaging. It fixes how the increment 1 fixture harness ships and closes T02 before any external build.
+5. D05, QA packaging. It fixes how the increment 1 fixture harness ships and closes T02 before any external build. Increment 1 can start before it is ruled.
 
-If time remains, D06 and D07 are the Tier B entries every deep-research document rests on, and D10 is the next authored biome that P04 scoping cites.
+If time remains, take up to two of D06, D07 and D10, which keeps the session inside the protocol's cap of seven rulings. D06 and D07 are the Tier B entries every deep-research document rests on; D10 is the next authored biome that P04 scoping cites. D30, the physics library, runs on its keep-hand-rolled-math default during increment 1 and needs no ruling first.
 
 ## Evidence limits
 

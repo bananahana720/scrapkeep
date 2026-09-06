@@ -13,11 +13,11 @@ The coordinator ran the baseline checks first. `npm run verify` passed all six s
 | Desk consistency | sonnet | Git-state text in [CONTRIBUTING](../CONTRIBUTING.md), [AGENTS](../AGENTS.md), [closeout](project/HOUSEKEEPING.md), backlog T01; three appended [decision trail](decisions.tsv) rows for the audit, the research pass, and the Git init | PASS, level 4 (reported as "ship it") |
 | Ground-truth check | sonnet, read-only | Verification of the numbers the audit cites from `src/orchard/`, below | PASS+NOTES, level 2 |
 
-The coordinator merged the three writer branches with no-fast-forward merges, narrowed register entry D04 to the remaining remote question because the local checkout now exists, wired the desk cross-links, removed a hardcoded home path from the skill, and wrote this record. One fresh read-only reviewer then inspected the integrated diff; its result is recorded in the decision trail.
+The coordinator merged the three writer branches with no-fast-forward merges, narrowed register entry D04 to the remaining remote question because the local checkout now exists, wired the desk cross-links, removed a hardcoded home path from the skill, and wrote this record. One fresh read-only reviewer (fable) then inspected the integrated diff and returned PASS+NOTES at evidence level 3: coverage of all 25 review-notes questions confirmed, no path to implementation before a recorded go, no stale environment text in the desk. Its six findings were applied, except that dated audit records keep their original environment text as history.
 
 ## Ground-truth check
 
-Every measured constant the [design audit](DESIGN-AUDIT.md) cites matches current source at evidence level 2: top roll speed 7.4 at `simulation.js:323`, acceleration 25 at `:329`, the Snipcart windup, active and recovery durations in `ENEMY_CONFIG`, the 2.1x counter multiplier and 1.3x primed multiplier on one line at `:681`, burst speed 19 at `:297`, the z-only `groundHeight` ramp at `:57`, and the global `_workerGap` windup gate at `:405`. The 73-test count holds. Two probe-table numbers derive arithmetically from the cited constants (0.25 s to 85 percent speed; 1.15 u/s a quarter second after release).
+Every measured constant the [design audit](DESIGN-AUDIT.md) cites matches current source at evidence level 2: top roll speed 7.4 at `simulation.js:323`, acceleration 25 at `:329`, the Snipcart windup, active and recovery durations in `ENEMY_CONFIG`, the 2.1x counter multiplier and 1.3x primed multiplier on one line at `:681`, burst speed 19 at `:297`, the z-only `groundHeight` ramp at `:57`, and the global `_workerGap` windup gate at `:407`. The 73-test count holds. Two probe-table numbers derive arithmetically from the cited constants (0.25 s to 85 percent speed; 1.15 u/s a quarter second after release).
 
 Three notes for the planning conversation.
 
@@ -25,7 +25,7 @@ Three notes for the planning conversation.
 - The audit's "kind-string branching duplicated across three files" is under-cited by its own working paper, which names two files. A third, `src/orchard/main.js`, does branch on kind for labels, so the count is right and the citation is incomplete. The registry recommendation stands.
 - The 90-degree realign figures (0.30 s, 0.14 s braking) carry no citation and could not be reproduced from static code under two plausible definitions. Treat them as live-probe measurements without a recorded method.
 
-The 9.5 u/s deflect threshold has no counterpart in code; no deflect mechanic exists. Save schema v2 is proposal only; the current profile check is a literal `version === 1` in `campaign.js` and `progress-store.js` with no migration hook.
+The 9.5 u/s deflect threshold has no counterpart in code; no deflect mechanic exists. Save schema v2 is proposal only; the current profile checks are literal comparisons against `1` (`campaign.js:115`, `progress-store.js:45`) with no migration hook.
 
 ## Evidence limits
 
