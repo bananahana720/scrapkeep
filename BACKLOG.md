@@ -1,6 +1,6 @@
 # Scrapkeep execution backlog
 
-Edition 2 · Updated 6 September 2026 · Existing cards remain revision 1; PUB-01 revision 2 includes the completed repository-local workflow package
+Edition 3 · Updated 6 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package
 
 Use **an in-repo board in [TRACKING.md](TRACKING.md)** to keep assignments, evidence and integration history beside the work. This board was selected while the checkout was local-only and remains the sole execution board after private GitHub publication.
 
@@ -19,11 +19,11 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 
 ## Task contract
 
-The original cards retain revision 1 from preparation handoff. PUB-01 is a separate revision-2 publication card. S means one bounded deliverable; M means coupled changes with one acceptance boundary. L is a nonassignable parent and must be split before admission. There are no assignable L cards here. Card revisions are immutable when pinned to an attempt; retain old revisions in the admitted source snapshot and record changes in TRACKING.
+Cards retain revision 1 from preparation handoff unless a recorded definition change raised them. After the accepted 6 September audit, HF-01, HF-02, HF-05, HF-08, HF-09 and HF-10 are revision 2, and HF-03a/b, HF-04a/b, HF-06a/b and HF-07a/b are the revision-1 replacements of four split cards. PUB-01 is a separate revision-2 publication card. S means one bounded deliverable; M means coupled changes with one acceptance boundary. L is a nonassignable parent and must be split before admission. There are no assignable L cards here. Card revisions are immutable when pinned to an attempt; retain old revisions in the admitted source snapshot and record changes in TRACKING.
 
-All workers read BIBLE.md, accepted ADRs, this card, ORCHESTRATOR.md, TRACKING.md and CONTRIBUTING.md. Sources below give the exact additional sections and prerequisites. The coordinator supplies these files and accepted dependency evidence in a self-contained packet; no worker must recover conversation history. A dependency output is a future input until its producer is done. A listed output path is permitted scope, not an existing file or a live lease.
+All workers read the Bible sections and accepted ADR sections their card names, this card, ORCHESTRATOR.md, TRACKING.md and CONTRIBUTING.md. Sources below give the exact additional sections and prerequisites. The coordinator supplies these files and accepted dependency evidence in a self-contained packet; no worker must recover conversation history. A dependency output is a future input until its producer is done. A listed output path is permitted scope, not an existing file or a live lease. Every `docs/tech/sections/` output uses the headings Sources, Contract, Scenarios, Unresolved questions, Re-verification triggers, Procedure performed and Evidence limits. The coordinator checks those headings and every local `#anchor` on admission with `npm run check:docs`; `npm run check:project` validates file links only.
 
-For documentation cards, completion means a reviewed, source-cited contract, not a running implementation. Every output identifies sources, unresolved question IDs, procedure actually performed and evidence limits. Store verification receipts under the card's explicit artifacts/local/tasks/ID/ directory. Workers return disjoint section drafts; the coordinator admits shared documents serially. An independent reviewer report is itself reviewed for coverage by a different reviewer before it is accepted.
+For documentation cards, completion means a reviewed, source-cited contract, not a running implementation. Every output identifies sources, unresolved question IDs, procedure actually performed and evidence limits. Work under `artifacts/local/tasks/ID/` (ignored). At handoff copy every receipt the coordinator will cite into `artifacts/foundation-sprint-2026-09/tasks/ID/` and list each file in the candidate manifest, because `artifacts/local/` is not committed. Workers return disjoint section drafts; the coordinator admits shared documents serially.
 
 Native implementation cannot yet receive complete atomic cards: the production ownership map and system/schema contracts are future inputs, and the selected qualification/content scope is missing. Q-E01 and the affected product questions explicitly gate that work. After their closure, the coordinator creates scoped implementation cards with exact paths and measurable behavior. Contract completion never closes the corresponding production behavior by implication.
 
@@ -31,22 +31,26 @@ The LG cards apply only to the maintained browser proofs/player. They require a 
 
 ## Proposed first sprint
 
-Ten foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this sprint. None needs an unanswered external product value to produce its specified documentation. Unknown values remain named and gate later implementation.
+Fourteen foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this sprint. Open questions that shape a card are registered on it as non-blocking; each such contract must hold under every candidate answer, and HF-07b may submit a proposed Q-E09 protocol. Unknown values remain named and gate later implementation. The S0 prepare-stage proofs are a separate family scheduled into the writer slots these waves leave idle.
 
 | ID | Outcome | Dependencies | Owner / size |
 | --- | --- | --- | --- |
 | [HF-01](#hf-01) | Specify production paths and contribution conventions | None | Conventions / M |
 | [HF-02](#hf-02) | Create constraints and evidence register | None | Verification / S |
-| [HF-03](#hf-03) | Specify module ownership and dependency interfaces | [HF-01](#hf-01) | Runtime / M |
-| [HF-04](#hf-04) | Specify tick, pause and scene lifecycle | [HF-03](#hf-03) | Runtime / M |
-| [HF-05](#hf-05) | Specify stable content identity and admission | [HF-03](#hf-03) | Content / M |
-| [HF-06](#hf-06) | Map content schemas to persistence coverage | [HF-05](#hf-05) | Content / M |
-| [HF-07](#hf-07) | Specify save envelope and durable commit boundaries | [HF-04](#hf-04), [HF-06](#hf-06) | Persistence / M |
-| [HF-08](#hf-08) | Specify save failure and conservative recovery | [HF-07](#hf-07) | Persistence / M |
-| [HF-09](#hf-09) | Specify schema and gameplay-content migration | [HF-06](#hf-06), [HF-07](#hf-07) | Persistence / M |
-| [HF-10](#hf-10) | Review the complete foundation contract | [HF-01](#hf-01), [HF-02](#hf-02), [HF-03](#hf-03), [HF-04](#hf-04), [HF-05](#hf-05), [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09) | Independent review / M |
+| [HF-03a](#hf-03a) | Specify module ownership and owned records | [HF-01](#hf-01) | Runtime / M |
+| [HF-03b](#hf-03b) | Specify dependency edges and interface walkthroughs | [HF-03a](#hf-03a) | Runtime / M |
+| [HF-04a](#hf-04a) | Specify tick, pause and scene lifecycle | [HF-03a](#hf-03a) | Runtime / M |
+| [HF-04b](#hf-04b) | Specify runtime patterns and typed sketches | [HF-04a](#hf-04a) | Runtime / M |
+| [HF-05](#hf-05) | Specify stable content identity and admission | [HF-03a](#hf-03a) | Content / M |
+| [HF-06a](#hf-06a) | Inventory authored content and its treatment | [HF-05](#hf-05) | Content / M |
+| [HF-06b](#hf-06b) | Map matrix rows to persistence projections | [HF-06a](#hf-06a) | Persistence / M |
+| [HF-07a](#hf-07a) | Specify the save envelope and preferences record | [HF-06b](#hf-06b) | Persistence / S |
+| [HF-07b](#hf-07b) | Specify durable commit boundaries | [HF-04a](#hf-04a), [HF-07a](#hf-07a) | Persistence / M |
+| [HF-08](#hf-08) | Specify save failure and conservative recovery | [HF-07b](#hf-07b) | Persistence / M |
+| [HF-09](#hf-09) | Specify schema and gameplay-content migration | [HF-06b](#hf-06b), [HF-07b](#hf-07b) | Persistence / M |
+| [HF-10](#hf-10) | Review the complete foundation contract | [HF-01](#hf-01), [HF-02](#hf-02), [HF-03a](#hf-03a), [HF-03b](#hf-03b), [HF-04a](#hf-04a), [HF-04b](#hf-04b), [HF-05](#hf-05), [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [HF-07b](#hf-07b), [HF-08](#hf-08), [HF-09](#hf-09) | Independent review / M |
 
-Schedule HF-01 and HF-02 first; then HF-03; then HF-04 and HF-05; then HF-06; then HF-07; then HF-08 and HF-09; finally HF-10. These are dependency waves, not promises of duration. A reviewer uses one of the three delegate slots. Early completed work may proceed through review while the other writer runs if ownership is disjoint.
+Schedule in dependency waves under the two-writer ceiling. W1 HF-01 and HF-02. W2 HF-03a beside S0-01. W3 HF-04a and HF-05. W4 HF-03b and HF-04b. W5 HF-06a beside S0-05. W6 HF-06b beside S0-07. W7 HF-07a beside S0-04. W8 HF-07b beside S0-08. W9 HF-08 and HF-09. W10 HF-10, whose reviewer slot leaves a writer slot for S0-06. S0-02 and S0-03 precede W1; they need no engine and make the integration checks executable. These are dependency waves, not promises of duration. A reviewer uses one of the three delegate slots, and one fresh reviewer may read a wave's two candidates together. After HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b and HF-05 are admitted, the coordinator runs one integrated read of them before assigning HF-06a; findings return through changes_requested. Early completed work may proceed through review while the other writer runs if ownership is disjoint. The audit's seven-wave order placed S0-01 beside HF-03, S0-05 and S0-07 beside HF-06, and S0-04, S0-06 and S0-08 beside HF-07 with spill into the next idle slot; the four splits add three waves under the same ceiling, and each proof lands before or beside the card whose "re-verify when S0-0x lands" trigger names it, or that trigger fires on the admitted card.
 
 HF-10 produces a scoped foundation review. It does not stand in for all per-system designs, the assembled TECH_BIBLE.md or TH-31's final architecture audit. That later audit must separate paper schema consistency from unperformed native roundtrip qualification.
 
@@ -59,11 +63,15 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 | [PUB-01](#pub-01) | Publish SCRAPKEEP privately and record the session handoff | Coordinator | M |
 | [HF-01](#hf-01) | Specify production paths and contribution conventions | Conventions | M |
 | [HF-02](#hf-02) | Create constraints and evidence register | Verification | S |
-| [HF-03](#hf-03) | Specify module ownership and dependency interfaces | Runtime | M |
-| [HF-04](#hf-04) | Specify tick, pause and scene lifecycle | Runtime | M |
+| [HF-03a](#hf-03a) | Specify module ownership and owned records | Runtime | M |
+| [HF-03b](#hf-03b) | Specify dependency edges and interface walkthroughs | Runtime | M |
+| [HF-04a](#hf-04a) | Specify tick, pause and scene lifecycle | Runtime | M |
+| [HF-04b](#hf-04b) | Specify runtime patterns and typed sketches | Runtime | M |
 | [HF-05](#hf-05) | Specify stable content identity and admission | Content | M |
-| [HF-06](#hf-06) | Map content schemas to persistence coverage | Content | M |
-| [HF-07](#hf-07) | Specify save envelope and durable commit boundaries | Persistence | M |
+| [HF-06a](#hf-06a) | Inventory authored content and its treatment | Content | M |
+| [HF-06b](#hf-06b) | Map matrix rows to persistence projections | Persistence | M |
+| [HF-07a](#hf-07a) | Specify the save envelope and preferences record | Persistence | S |
+| [HF-07b](#hf-07b) | Specify durable commit boundaries | Persistence | M |
 | [HF-08](#hf-08) | Specify save failure and conservative recovery | Persistence | M |
 | [HF-09](#hf-09) | Specify schema and gameplay-content migration | Persistence | M |
 | [HF-10](#hf-10) | Review the complete foundation contract | Independent review | M |
@@ -153,29 +161,36 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-01: Specify production paths and contribution conventions
 
-**Card revision:** 1 · **Owner:** Conventions · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Conventions · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (scene/Resource ownership, source assets and generated imports)
 - [CONTRIBUTING.md § Editing conventions](CONTRIBUTING.md#editing-conventions)
+- [CONTRIBUTING.md § Handoff and version control](CONTRIBUTING.md#handoff-and-version-control) (commit and PR rules)
+- [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (both browser entries stay preserved)
+- [docs/project/ASSETS.md](docs/project/ASSETS.md) and [artifacts/README.md](artifacts/README.md) (asset provenance and output retention)
 - [BIBLE.md § Architecture and implementation handoff](BIBLE.md#architecture-and-implementation-handoff)
+- Godot 4.7 project-organization documentation, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
 
 **Dependencies:** None. **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-01-production-conventions.md`; `artifacts/local/tasks/HF-01/`.
+**Files touched:** `docs/tech/sections/HF-01-production-conventions.md`; `artifacts/local/tasks/HF-01/`. The coordinator pre-creates `docs/tech/sections/` with an index stub before wave 1 so that HF-01 and HF-02 hold file-level leases.
 
 **Definition of done:**
 
-1. Define future production directory, file naming, typed GDScript boundary, scene/Resource ownership and review conventions without modifying the browser layout.
+1. One path-family table with the columns path family (glob), owner role, permitted content, forbidden content and governing ADR line. It covers scripts, scenes, definition Resources, source assets, generated imports, tests, tools and docs. No row overlaps `/`, `/orchard.html`, `src/`, `server/`, `tests/`, `tools/` or `artifacts/`. Re-verify when S0-01 lands.
 2. Specify contribution rules for source assets, generated imports, validation and documentation ownership; preserve both browser entries and data.
-3. List exact implementation path families that later scoped cards may own.
-4. State repository layout, naming, code style, commit/PR rules and definition of done; convention changes cannot create a remote or authorize publication.
+3. List exact implementation path families that later scoped cards may own, including the `native/` root that S0-01 materializes. Re-verify when S0-01 lands.
+4. State naming, the typed GDScript boundary, scene/Resource ownership, code style, commit/PR rules and a numbered definition-of-done checklist a reviewer can tick. Convention changes cannot create a remote or authorize publication.
+5. Tag every engine-layout fact (project root, cache and import sidecar locations, export presets) "unverified until a scaffold proof exists". S0-01 is that proof.
 
 **Verification and evidence:**
 
-- Review path map for overlap with both browser entries and historical evidence.
-- Check every convention against accepted engine/content ADRs and existing contribution requirements.
+- Review the path table for overlap with both browser entries and historical evidence.
+- Check every convention against the accepted engine/content ADRs and existing contribution requirements.
+- Check the table has all five columns and that every S0-01 file falls inside exactly one row.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -183,13 +198,15 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-02: Create constraints and evidence register
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Verification · **Size:** S · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
 - [docs/LIGHTNING-VERIFICATION.md § Sustained rendered load](docs/LIGHTNING-VERIFICATION.md#sustained-rendered-load)
+- [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md), [artifacts/performance-stress.json](artifacts/performance-stress.json) and [artifacts/performance-stress-final.json](artifacts/performance-stress-final.json) (historical browser measurements)
 - [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences)
+- [Q-E03](#q-e03), [Q-E04](#q-e04) and [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) row D28
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
 **Dependencies:** None. **Blocking questions:** None.
@@ -198,73 +215,140 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Definition of done:**
 
-1. Separate approved constraints, proposed budgets, historical browser measurements and unmeasured native requirements.
-2. Define units, workload, target identity, sampling method and owner required to admit frame, memory, load and asset budgets.
-3. Record Q-E03/Q-E04 without inventing hardware, renderer or numeric limits.
+1. Separate approved constraints, proposed budgets, historical browser measurements and unmeasured native requirements. Every row carries exactly one of those four classifications.
+2. Define units, workload, target identity, sampling method and owner required to admit frame, memory, load and asset budgets. A skeleton whose native rows read "unmeasured" is a valid S completion. Re-verify when S0-01 lands, which produces the first native run record; the first measurement under Q-E03 supersedes the row.
+3. Negative check. No numeric frame, memory, load or asset value appears without a `measured:<artifact path>` or `proposed:Q-E03` tag. Record Q-E03/Q-E04 without inventing hardware, renderer or numeric limits.
 
 **Verification and evidence:**
 
 - Trace each claimed measurement to exact retained evidence and identify its method/version limits.
-- Review all budget cells for explicit units and proposed or measured classification.
+- Grep every numeric budget cell for its `measured:` or `proposed:` tag and its unit.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-03"></a>
+<a id="hf-03a"></a>
 
-### HF-03: Specify module ownership and dependency interfaces
+### HF-03a: Specify module ownership and owned records
 
 **Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (content-admission owner)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (persistence owner)
 - [BIBLE.md § Architecture and implementation handoff](BIBLE.md#architecture-and-implementation-handoff)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
+- Godot 4.7 documentation for autoload, `class_name` and `preload`, resolved by the coordinator and supplied in the packet.
 
 **Dependencies:** [HF-01](#hf-01). **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-03-module-map.md`; `artifacts/local/tasks/HF-03/`.
+**Files touched:** `docs/tech/sections/HF-03a-module-map.md`; `artifacts/local/tasks/HF-03a/`.
 
 **Definition of done:**
 
-1. Define named modules, owned mutable records, allowed imports and command/result interfaces under one session authority.
-2. Assign collision queries, encounter timing, run/profile mutation, persistence, content admission and presentation to explicit owners.
-3. Draw dependency directions and forbid hidden gameplay mutation through signals or rendering.
+1. One module table with the columns module, owned mutable records, allowed imports, exposed commands and published results, under one session authority. Re-verify when S0-01 lands, because allowed imports drift from observed autoload, `class_name` and `preload` behavior.
+2. Assign collision queries, encounter timing, run/profile mutation, persistence, content admission and presentation to explicit owners. Each owner row cites its TADR line.
+3. Name every record that exactly one module may mutate. A record with two owners is a defect in the output, not a note.
 
 **Verification and evidence:**
 
-- Walk an attack, an equipment change and an encounter replacement through only allowed interfaces.
-- Inspect the dependency graph for cycles and duplicate mutation authority.
+- Inspect the table for a module with no owned record and for a record with two owners.
+- Check each owner assignment against the cited TADR lines.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-04"></a>
+<a id="hf-03b"></a>
 
-### HF-04: Specify tick, pause and scene lifecycle
+### HF-03b: Specify dependency edges and interface walkthroughs
 
 **Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- [docs/adr/0003-authoritative-attack-geometry.md](docs/adr/0003-authoritative-attack-geometry.md) (attack walkthrough precedent)
+- [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows), [BIBLE.md § Inventory, equipment and transformations](BIBLE.md#inventory-equipment-and-transformations) and [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 
-**Dependencies:** [HF-03](#hf-03). **Blocking questions:** None.
+**Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-04-runtime-lifecycle.md`; `artifacts/local/tasks/HF-04/`.
+**Files touched:** `docs/tech/sections/HF-03b-dependency-graph.md`; `artifacts/local/tasks/HF-03b/`.
 
 **Definition of done:**
 
-1. Define fixed-tick phases, command admission, collision synchronization, published result lifetime and overload policy with unresolved rates labeled.
-2. Separate release of held input, cancellation of prepared actions, solo pause and resume.
-3. Define encounter replacement and scoped connection teardown while run/profile ownership survives.
-4. Name the game-loop, state-machine, scoped signal/message and scene-lifecycle patterns. Include a minimal typed GDScript sketch and when not to use each; document time/tick ownership and event ordering.
+1. An adjacency list of allowed dependency edges between HF-03a modules, from which a reviewer's cycle check reproduces. Forbid hidden gameplay mutation through signals or rendering. Re-verify when S0-04 lands.
+2. Three walkthroughs (an attack, an equipment change, an encounter replacement) appear in the output as step tables naming the interface used at each step.
+3. Every walkthrough step uses a listed edge. A step that needs an unlisted edge is a defect to report, not an edge to add silently.
 
 **Verification and evidence:**
 
-- Tabletop start, focus loss during preparation, pause/resume, slow frame and scene replacement; identify each owner and order.
-- Check no path permits a second tick owner, replayed held action or stale scene callback.
+- Reproduce the cycle check from the adjacency list and record the result.
+- Check each walkthrough step against the edge list and the HF-03a owner table.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-04a"></a>
+
+### HF-04a: Specify tick, pause and scene lifecycle
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- [adr/TADR-002-runtime-model.md § Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration) (pause qualification)
+- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md) (focus-loss precedent the production rule preserves)
+- [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings) and [BIBLE.md § Movement, camera and active aim](BIBLE.md#movement-camera-and-active-aim)
+- `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (unresolved rates land in its register)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+
+**Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `artifacts/local/tasks/HF-04a/`.
+
+**Definition of done:**
+
+1. Define fixed-tick phases, command admission, collision synchronization, published result lifetime and overload policy. Unresolved rates are labelled and routed to HF-02's register under Q-E03. Re-verify when S0-04 lands.
+2. Separate release of held input, cancellation of prepared actions, solo pause and resume as four operations, each with its own owner and order. Re-verify when S0-04 lands.
+3. Define encounter replacement and scoped connection teardown while run/profile ownership survives.
+4. Enumerate every engine callback that may advance gameplay time and name exactly one owner. List every other callback under a Forbidden heading.
+5. Five tabletop scenarios (start, focus loss during preparation, pause and resume, slow frame, scene replacement) appear in the output as step tables identifying each owner and order.
+
+**Verification and evidence:**
+
+- Check no path permits a second tick owner, a replayed held action or a stale scene callback.
+- Check each scenario step against the callback list in item 4.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-04b"></a>
+
+### HF-04b: Specify runtime patterns and typed sketches
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (typed GDScript)
+- Godot 4.7 static-typing documentation, resolved by the coordinator and supplied in the packet.
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
+
+**Dependencies:** [HF-04a](#hf-04a). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/HF-04b-runtime-patterns.md`; `artifacts/local/tasks/HF-04b/`.
+
+**Definition of done:**
+
+1. Name the game-loop, state-machine, scoped signal/message and scene-lifecycle patterns and when not to use each. Document time/tick ownership and event ordering under HF-04a.
+2. Include a minimal typed GDScript sketch per pattern. Mark every sketch "unparsed: no editor run in this card; re-verify at scaffold proof". Re-verify when S0-04 lands; revision 2 of this card replaces each sketch with a link to the S0-04 source.
+3. State for each pattern which HF-03a module may own it.
+
+**Verification and evidence:**
+
+- Confirm each sketch carries the unparsed marker and names its HF-03a owner.
+- The reviewer confirms presence and typed form only; no sketch is executed under this card.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -272,88 +356,161 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-05: Specify stable content identity and admission
 
-**Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Content · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (catalogue/content revisions and pinning)
+- `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (path families)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- [docs/project/ASSETS.md](docs/project/ASSETS.md)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-03](#hf-03). **Blocking questions:** None.
+**Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/HF-05-content-admission.md`; `artifacts/local/tasks/HF-05/`.
 
 **Definition of done:**
 
-1. Define stable domain IDs, catalogue/content revisions, immutable Resource definitions and fresh session records.
-2. Describe import, structural validation, semantic validation, admission and failed reload retention at safe boundaries.
-3. Define missing-ID diagnostics and active-run content pinning without silent remapping.
+1. Define stable domain IDs, catalogue/content revisions, immutable Resource definitions and fresh session records. Immutability is an enforced rule, not a file-extension guarantee. Re-verify when S0-05 lands.
+2. A state table (draft, imported, structurally valid, semantically valid, admitted, rejected-reload, pinned) with its transitions and the safe boundary at which each occurs. Re-verify when S0-06 lands.
+3. Define missing-ID diagnostics, naming the diagnostic and its fields, and active-run content pinning without silent remapping.
+4. Four traces (a draft, an admitted definition, a rejected reload, a pinned active run) appear in the output as step tables over the item 2 states.
 
 **Verification and evidence:**
 
-- Trace one draft, admitted definition, rejected reload and pinned active run through the proposed state transitions.
 - Check identity remains independent of display name, file path and engine Resource ID.
+- Check every trace uses only item 2 transitions.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-06"></a>
+<a id="hf-06a"></a>
 
-### HF-06: Map content schemas to persistence coverage
+### HF-06a: Inventory authored content and its treatment
 
 **Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (the eight-family enumeration)
 - [adr/TADR-003-content-pipeline.md § Later qualification and reconsideration](adr/TADR-003-content-pipeline.md#later-qualification-and-reconsideration)
-- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
-- [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems)
+- [BIBLE.md § 3. Maps & Areas](BIBLE.md#3-maps--areas), [§ 4. Characters](BIBLE.md#4-characters), [§ 5. Weapons & Items](BIBLE.md#5-weapons--items), [§ 6. Core Systems](BIBLE.md#6-core-systems), [§ 7. Art Direction](BIBLE.md#7-art-direction), [§ 8. Audio & Feel](BIBLE.md#8-audio--feel) and [§ 9. Glossary](BIBLE.md#9-glossary)
+- `artifacts/local/tasks/HF-06a/nouns.md`, the coordinator-supplied noun list drawn from the BIBLE § 3-9 headings and included in the packet
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (owned definitions)
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
 
-**Dependencies:** [HF-05](#hf-05). **Blocking questions:** None.
+**Dependencies:** [HF-05](#hf-05). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P14](#q-p14), [Q-P15](#q-p15), [Q-E09](#q-e09). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
 
-**Files touched:** `docs/tech/sections/HF-06-schema-coverage.md`; `artifacts/local/tasks/HF-06/`.
+**Files touched:** `docs/tech/sections/HF-06a-schema-inventory.md`; `docs/tech/sections/HF-06a-schema-inventory.csv`; `artifacts/local/tasks/HF-06a/`.
 
 **Definition of done:**
 
-1. Inventory every character, attack, tree/node, item, recipe, encounter, world/generation, device and companion authored type. Also cover audio/visual references, interface preferences, narrative/glossary definitions, events, secrets and permanent discovery/unlock content, or give an explicit representation/exclusion rationale.
-2. Map each mutable runtime projection to JSON saving or an explicit transient/reconstructed exclusion.
-3. For each row name an authoring codec, save projection, example producer and future executable proof; immutable Resources are not serialized as live engine objects.
+1. A matrix with one row per TADR-003 § Decision family plus one row per noun in the supplied `nouns.md`. Each row has a stable row ID and exactly one treatment: schema, embedded-record, or excluded with a rationale. Re-verify when S0-05 lands, because ID-versus-path identity drifts.
+2. Each row names the producing card (SC-01 through SC-08, or a TH card) that will author its definition schema.
+3. A machine-readable copy (CSV) carries the same row IDs. Nine downstream cards reference "HF-06 matrix rows" by these IDs.
+4. Rows shaped by Q-P14, Q-P15 or Q-E09 carry the question ID and a treatment that holds under every candidate answer.
 
 **Verification and evidence:**
 
-- Cross-check every Core Systems noun against the matrix, including preferences and permanent discoveries.
-- Check every row has an owned definition and either a persistence roundtrip requirement or a reasoned exclusion.
+- Cross-check every supplied noun and every family against the matrix.
+- Check row IDs are unique and the CSV and Markdown agree one for one.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
-<a id="hf-07"></a>
+<a id="hf-06b"></a>
 
-### HF-07: Specify save envelope and durable commit boundaries
+### HF-06b: Map matrix rows to persistence projections
 
 **Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- [adr/TADR-003-content-pipeline.md § Consequences](adr/TADR-003-content-pipeline.md#consequences)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
+- `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05)
+- `docs/tech/sections/HF-06a-schema-inventory.md` and `.csv` from [HF-06a](#hf-06a) (must be admitted before assignment)
 
-**Dependencies:** [HF-04](#hf-04), [HF-06](#hf-06). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P14](#q-p14), [Q-P15](#q-p15), [Q-E09](#q-e09). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
 
-**Files touched:** `docs/tech/sections/HF-07-save-envelope.md`; `artifacts/local/tasks/HF-07/`.
+**Files touched:** `docs/tech/sections/HF-06b-persistence-projection.md`; `docs/tech/sections/HF-06b-persistence-projection.csv`; `artifacts/local/tasks/HF-06b/`.
 
 **Definition of done:**
 
-1. Describe the versioned aggregate envelope, profile, checkpoint, lifecycle facts, generation/content/transaction identity and separate preferences record.
-2. Specify ordering and acknowledgements for level completion, reward/offer resolution, revival use and terminal settlement.
-3. Keep unresolved revival/interruption product choices explicit and preserve nonduplication under every allowed policy.
+1. For every HF-06a row, one save column value from json-projection, transient-reconstructed or immutable-by-id; the latter two carry a rationale. Immutable Resources are not serialized as live engine objects.
+2. For each json-projection row, name the authoring codec, the save projection and the card owning the executable roundtrip proof (TH-22). Re-verify when S0-08 lands.
+3. A machine-readable copy keyed by the HF-06a row IDs.
+4. Device, companion and discovery rows hold under every candidate answer to Q-P15 and Q-E09.
 
 **Verification and evidence:**
 
-- Tabletop duplicate completion, revival with an older spatial checkpoint, terminal defeat and stable offered choice restore.
+- Check every HF-06a row has exactly one save column value.
+- Check no row serializes a Resource as a live engine object.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-07a"></a>
+
+### HF-07a: Specify the save envelope and preferences record
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** S · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-004-persistence.md § Context](adr/TADR-004-persistence.md#context) and [§ Decision](adr/TADR-004-persistence.md#decision)
+- [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves) and [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings) (preferences)
+- [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) rows D26 and D27
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (owning modules)
+- `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+
+**Dependencies:** [HF-06b](#hf-06b). **Blocking questions:** None. **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P16](#q-p16). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
+
+**Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `artifacts/local/tasks/HF-07a/`.
+
+**Definition of done:**
+
+1. A field table for the envelope (schema version, content revision, generation, transaction), profile, checkpoint, lifecycle facts and the separate preferences record. Each field has a type, an owning module from HF-03a and a source or question ID. Re-verify when S0-07 lands.
+2. A stable anchor per field group and a machine-readable copy. HF-07b, HF-08, HF-09, TH-11 and TH-21 reference fields by these names.
+3. Fields shaped by Q-E09 or Q-P16 carry the question ID and a shape that holds under every candidate answer.
+
+**Verification and evidence:**
+
+- Check every field carries all three attributes.
+- Check the envelope identifies generation, content and transaction without a field that only one candidate policy needs.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="hf-07b"></a>
+
+### HF-07b: Specify durable commit boundaries
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
+
+**Source and inputs:**
+
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (revival and interruption hold on a failed write)
+- [Q-P16](#q-p16) and [Q-E09](#q-e09)
+- [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) rows D26 and D27
+- [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (level completion seam)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) (must be admitted before assignment)
+
+**Dependencies:** [HF-04a](#hf-04a), [HF-07a](#hf-07a). **Blocking questions:** None. **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P16](#q-p16). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
+
+**Files touched:** `docs/tech/sections/HF-07b-commit-boundaries.md`; `artifacts/local/tasks/HF-07b/`.
+
+**Definition of done:**
+
+1. For each transition (level completion, reward/offer resolution, revival use, terminal settlement), a numbered stage list of stage, validate, commit and acknowledge that names the observable state before and after. Re-verify when S0-08 lands.
+2. Enumerate the candidate revival/interruption policies, at minimum resume at the last completed level, resume mid-level from a checkpoint, and forfeit the level. Show the nonduplication invariants hold under each. Label the candidates pending Q-P16.
+3. Keep unresolved revival/interruption product choices explicit. The Persistence half of Q-E09 (write-timing protocol) may be submitted as a proposed answer.
+4. Four tabletop cases (duplicate completion, revival with an older spatial checkpoint, terminal defeat, stable offered-choice restore) appear in the output as step tables.
+
+**Verification and evidence:**
+
 - Review that only a validated committed generation can be acknowledged as durable.
+- Check each tabletop case against the stage lists under every candidate policy.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -361,28 +518,32 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-08: Specify save failure and conservative recovery
 
-**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
-- [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (hold on a failed write) and [§ Consequences](adr/TADR-004-persistence.md#consequences) (ordering and single writer)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (target OS families)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (seam with PD-02 interface states)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) and `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
+- Godot 4.7 `FileAccess` and `OS` documentation, resolved by the coordinator and supplied in the packet.
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-07](#hf-07). **Blocking questions:** None.
+**Dependencies:** [HF-07b](#hf-07b). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/HF-08-save-recovery.md`; `artifacts/local/tasks/HF-08/`.
 
 **Definition of done:**
 
-1. Define single-writer protocol, write/flush/commit ordering and OS-specific qualification questions without claiming rename alone proves durability.
-2. Specify failed critical transition handling and user-visible retry/recovery states.
-3. Preserve corrupt or ambiguous files and refuse rollback to a living/unspent generation when lifecycle continuity cannot be established.
+1. Define the single-writer protocol and write/flush/commit ordering. For each TADR-001 target OS family, one row with the qualification question, the engine API surface by documentation reference and the evidence method. Never claim rename alone proves durability. Every stage is marked "unqualified on paper; re-verify when S0-08 lands, and again when the TH-22 proof lands".
+2. A state table of failure class by transition stage giving the held state, message class, and permitted and forbidden actions, including user-visible retry and recovery states.
+3. Preserve corrupt or ambiguous files and refuse rollback to a living/unspent generation when lifecycle continuity cannot be established. An ambiguity-conditions checklist names each condition.
+4. An interruption matrix at every HF-07b commit stage for rewards, revival and terminal facts, stored in the output as enumerable test-case rows.
 
 **Verification and evidence:**
 
-- Construct an interruption matrix at every proposed commit stage for rewards, revival and terminal facts.
 - Review corrupt newest generation, unknown version, full disk and retry cases for false success or silent data loss.
+- Check every matrix row names a stage, an outcome and a held state.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -390,30 +551,34 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-09: Specify schema and gameplay-content migration
 
-**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
 - [adr/TADR-003-content-pipeline.md § Consequences](adr/TADR-003-content-pipeline.md#consequences)
-- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) and [§ Consequences](adr/TADR-004-persistence.md#consequences) (browser storage preservation)
+- [Q-E05](#q-e05)
+- `src/campaign.js:115` and `src/progress-store.js:45`, the two browser storage records this card preserves
+- `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (content compatibility and missing IDs)
+- `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) and `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-06](#hf-06), [HF-07](#hf-07). **Blocking questions:** None.
+**Dependencies:** [HF-06b](#hf-06b), [HF-07b](#hf-07b). **Blocking questions:** None. **Registered non-blocking questions:** [Q-E05](#q-e05). The contract must hold under every candidate answer; the card may submit a proposed protocol for the engineering half of a question as `proposed` in TRACKING, never as an answer.
 
 **Files touched:** `docs/tech/sections/HF-09-schema-migration.md`; `artifacts/local/tasks/HF-09/`.
 
 **Definition of done:**
 
-1. Define supported schema/content compatibility, migration chaining, validation and original preservation until new commit.
-2. Specify missing ID, incompatible content and newer-format handling without rerolling, losing discoveries or adding active effects.
-3. Separate preservation of browser profiles from an undecided import/retirement policy in Q-E05.
+1. (1a) A compatibility predicate over schema version, content revision and catalogue version with an accept, migrate or reject table.
+2. (1b) Chaining as ordered single-step migrations, each validated before the next; the original stays untouched until the migrated generation commits through the HF-07b protocol. Re-verify when S0-08 lands.
+3. Specify missing ID, incompatible content and newer-format handling without rerolling, losing discoveries or adding active effects. One tabletop case per negative appears in the output.
+4. Name the browser records preserved by file and key (`src/campaign.js:115`, `src/progress-store.js:45`). State that HF-09 reads none of them. Q-E05 gates any import, and the contract holds under every candidate answer.
 
 **Verification and evidence:**
 
-- Walk one compatible migration, rejected future version, missing recipe and repeated load through the proposed rules.
-- Review that no migration implicitly imports or overwrites existing browser storage.
+- Walk one compatible migration, a rejected future version, a missing recipe and a repeated load through the proposed rules.
+- Review that no migration implicitly imports or overwrites the named browser storage.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 
@@ -421,7 +586,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 ### HF-10: Review the complete foundation contract
 
-**Card revision:** 1 · **Owner:** Independent review · **Size:** M · **Lane:** foundation
+**Card revision:** 2 · **Owner:** Independent review · **Size:** M · **Lane:** foundation
 
 **Source and inputs:**
 
@@ -432,28 +597,30 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - [adr/TADR-005-networking-scope.md](adr/TADR-005-networking-scope.md)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
 - `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (must be admitted before assignment)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) and `docs/tech/sections/HF-03b-dependency-graph.md` from [HF-03b](#hf-03b) (must be admitted before assignment)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) and `docs/tech/sections/HF-04b-runtime-patterns.md` from [HF-04b](#hf-04b) (must be admitted before assignment)
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) and `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) and `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
 - `docs/tech/sections/HF-08-save-recovery.md` from [HF-08](#hf-08) (must be admitted before assignment)
 - `docs/tech/sections/HF-09-schema-migration.md` from [HF-09](#hf-09) (must be admitted before assignment)
+- The pinned card revision of each output above and its retained receipts under `artifacts/foundation-sprint-2026-09/tasks/ID/`
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03](#hf-03), [HF-04](#hf-04), [HF-05](#hf-05), [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09). **Blocking questions:** None.
+**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03a](#hf-03a), [HF-03b](#hf-03b), [HF-04a](#hf-04a), [HF-04b](#hf-04b), [HF-05](#hf-05), [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [HF-07b](#hf-07b), [HF-08](#hf-08), [HF-09](#hf-09). **Blocking questions:** None.
 
-**Files touched:** `docs/tech/sections/HF-10-foundation-review.md`; `artifacts/local/tasks/HF-10/`.
+**Files touched:** `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md`; `artifacts/foundation-sprint-2026-09/tasks/HF-10/` (retained receipts); `artifacts/local/tasks/HF-10/`. The report is review evidence recorded by the coordinator, not a TECH_BIBLE section.
 
 **Definition of done:**
 
-1. Produce an independent report with required fixes, notes, evidence level and exact reviewed draft identities.
-2. Check module boundaries, tick ownership, content/persistence coverage, transition order and unresolved parameter gates.
-3. Reviewer reports only; coordinator owns canonical admission and corrective assignments.
+1. Produce an independent report with required fixes, notes, evidence level and the exact reviewed draft identity (commit or content hash) of every output.
+2. One matrix with one row per foundation output (the audit's nine-by-five form, extended to the thirteen outputs after the splits) and five check columns: module boundaries, tick ownership, content/persistence coverage, transition order and unresolved parameter gates. Each cell is PASS, FAIL or NOTES, with a path and line per FAIL.
+3. Reproduce every paper scenario (walkthroughs, traces, tabletop cases and the interruption matrix) from the retained receipts. No cell asserts native behavior.
+4. The reviewer reports only. The coordinator records the report, and a second fresh reviewer checks its coverage before it is recorded, per ORCHESTRATOR § Handoff and review.
 
 **Verification and evidence:**
 
-- Read all nine foundation outputs together and reproduce their paper scenarios.
+- Read all thirteen foundation outputs together and reproduce their paper scenarios from the retained receipts.
 - Check author/reviewer independence and distinguish source review from future native qualification.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
@@ -561,8 +728,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § The complete loop](BIBLE.md#the-complete-loop)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -592,8 +759,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Movement, camera and active aim](BIBLE.md#movement-camera-and-active-aim)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -623,8 +790,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -654,8 +821,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Abilities, ultimates and combat rhythm](BIBLE.md#abilities-ultimates-and-combat-rhythm)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -685,8 +852,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Electromagnetic collection, recycling and growth](BIBLE.md#electromagnetic-collection-recycling-and-growth)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -716,8 +883,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -748,8 +915,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -780,8 +947,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Inventory, equipment and transformations](BIBLE.md#inventory-equipment-and-transformations)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -812,8 +979,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Themed loot, attunement and fixed secrets](BIBLE.md#themed-loot-attunement-and-fixed-secrets)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -843,8 +1010,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Devices and one main companion](BIBLE.md#devices-and-one-main-companion)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -875,8 +1042,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
 
@@ -906,8 +1073,8 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings)
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 - `docs/product/sections/PD-02-interface-states.md` from [PD-02](#pd-02) (must be admitted before assignment)
 
 **Dependencies:** [HF-10](#hf-10), [PD-02](#pd-02). **Blocking questions:** None.
@@ -1084,12 +1251,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
 - [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` from [TH-02](#th-02) (must be admitted before assignment)
 - `docs/tech/sections/TH-12-hud-dashboard-and-settings.md` from [TH-12](#th-12) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-04](#hf-04), [TH-02](#th-02), [TH-12](#th-12). **Blocking questions:** None.
+**Dependencies:** [HF-04a](#hf-04a), [TH-02](#th-02), [TH-12](#th-12). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-18-input-integration.md`; `artifacts/local/tasks/TH-18/`.
 
@@ -1141,7 +1308,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/schemas/SC-01.md` from [SC-01](#sc-01) (must be admitted before assignment)
 - `docs/tech/schemas/SC-02.md` from [SC-02](#sc-02) (must be admitted before assignment)
 - `docs/tech/schemas/SC-03.md` from [SC-03](#sc-03) (must be admitted before assignment)
@@ -1152,7 +1319,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - `docs/tech/schemas/SC-08.md` from [SC-08](#sc-08) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-06](#hf-06), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-20-authored-schemas.md`; `artifacts/local/tasks/TH-20/`.
 
@@ -1340,12 +1507,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Carry-forward map](docs/project/AGENT-PLAYTEST-ENGINEERING.md#carry-forward-map)
 - [adr/TADR-002-runtime-model.md § Consequences](adr/TADR-002-runtime-model.md#consequences)
 - [tools/agent-player/README.md](tools/agent-player/README.md)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 - `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment)
 - `docs/tech/sections/TH-23-gameplay-native-tests.md` from [TH-23](#th-23) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-03](#hf-03), [TH-14](#th-14), [TH-23](#th-23). **Blocking questions:** None.
+**Dependencies:** [HF-03a](#hf-03a), [TH-14](#th-14), [TH-23](#th-23). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-26-tooling-debug.md`; `artifacts/local/tasks/TH-26/`.
 
@@ -1444,7 +1611,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 - [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 - `docs/tech/sections/TH-22-content-persistence-tests.md` from [TH-22](#th-22) (must be admitted before assignment)
 - `docs/tech/sections/TH-23-gameplay-native-tests.md` from [TH-23](#th-23) (must be admitted before assignment)
 - `docs/tech/sections/TH-24-platform-performance.md` from [TH-24](#th-24) (must be admitted before assignment)
@@ -1480,14 +1647,18 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - [adr/README.md](adr/README.md)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
 - `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (must be admitted before assignment)
-- `docs/tech/sections/HF-03-module-map.md` from [HF-03](#hf-03) (must be admitted before assignment)
-- `docs/tech/sections/HF-04-runtime-lifecycle.md` from [HF-04](#hf-04) (must be admitted before assignment)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `docs/tech/sections/HF-03b-dependency-graph.md` from [HF-03b](#hf-03b) (must be admitted before assignment)
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
+- `docs/tech/sections/HF-04b-runtime-patterns.md` from [HF-04b](#hf-04b) (must be admitted before assignment)
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
-- `docs/tech/sections/HF-07-save-envelope.md` from [HF-07](#hf-07) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
+- `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) (must be admitted before assignment)
+- `docs/tech/sections/HF-07b-commit-boundaries.md` from [HF-07b](#hf-07b) (must be admitted before assignment)
 - `docs/tech/sections/HF-08-save-recovery.md` from [HF-08](#hf-08) (must be admitted before assignment)
 - `docs/tech/sections/HF-09-schema-migration.md` from [HF-09](#hf-09) (must be admitted before assignment)
-- `docs/tech/sections/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 - `docs/tech/sections/TH-01-complete-loop.md` from [TH-01](#th-01) (must be admitted before assignment)
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` from [TH-02](#th-02) (must be admitted before assignment)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` from [TH-03](#th-03) (must be admitted before assignment)
@@ -1527,7 +1698,7 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - `docs/tech/schemas/SC-08.md` from [SC-08](#sc-08) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
-**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03](#hf-03), [HF-04](#hf-04), [HF-05](#hf-05), [HF-06](#hf-06), [HF-07](#hf-07), [HF-08](#hf-08), [HF-09](#hf-09), [HF-10](#hf-10), [TH-01](#th-01), [TH-02](#th-02), [TH-03](#th-03), [TH-04](#th-04), [TH-05](#th-05), [TH-06](#th-06), [TH-07](#th-07), [TH-08](#th-08), [TH-09](#th-09), [TH-10](#th-10), [TH-11](#th-11), [TH-12](#th-12), [TH-13](#th-13), [TH-14](#th-14), [TH-15](#th-15), [TH-16](#th-16), [TH-17](#th-17), [TH-18](#th-18), [TH-19](#th-19), [TH-20](#th-20), [TH-21](#th-21), [TH-22](#th-22), [TH-23](#th-23), [TH-24](#th-24), [TH-25](#th-25), [TH-26](#th-26), [TH-27](#th-27), [TH-28](#th-28), [TH-29](#th-29), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
+**Dependencies:** [HF-01](#hf-01), [HF-02](#hf-02), [HF-03a](#hf-03a), [HF-03b](#hf-03b), [HF-04a](#hf-04a), [HF-04b](#hf-04b), [HF-05](#hf-05), [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [HF-07b](#hf-07b), [HF-08](#hf-08), [HF-09](#hf-09), [HF-10](#hf-10), [TH-01](#th-01), [TH-02](#th-02), [TH-03](#th-03), [TH-04](#th-04), [TH-05](#th-05), [TH-06](#th-06), [TH-07](#th-07), [TH-08](#th-08), [TH-09](#th-09), [TH-10](#th-10), [TH-11](#th-11), [TH-12](#th-12), [TH-13](#th-13), [TH-14](#th-14), [TH-15](#th-15), [TH-16](#th-16), [TH-17](#th-17), [TH-18](#th-18), [TH-19](#th-19), [TH-20](#th-20), [TH-21](#th-21), [TH-22](#th-22), [TH-23](#th-23), [TH-24](#th-24), [TH-25](#th-25), [TH-26](#th-26), [TH-27](#th-27), [TH-28](#th-28), [TH-29](#th-29), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
 
 **Files touched:** `TECH_BIBLE.md`; `artifacts/local/tasks/TH-30/`.
 
@@ -1586,13 +1757,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` from [TH-04](#th-04) (must be admitted before assignment)
 - `docs/tech/sections/TH-07-four-slots-and-milestone-progression.md` from [TH-07](#th-07) (must be admitted before assignment)
 - [BIBLE.md § 4. Characters](BIBLE.md#4-characters) (characters, class kits, four slots, binary trees and milestone nodes)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-04](#th-04), [TH-07](#th-07). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-04](#th-04), [TH-07](#th-07). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-01.md`; `artifacts/local/tasks/SC-01/`.
 
@@ -1618,14 +1789,14 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` from [TH-03](#th-03) (must be admitted before assignment)
 - `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` from [TH-04](#th-04) (must be admitted before assignment)
 - `docs/tech/sections/TH-13-chaos-outcomes.md` from [TH-13](#th-13) (must be admitted before assignment)
 - [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows) (committed attacks, hit geometry, telegraphs, abilities, ultimates and chaos outcomes)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-03](#th-03), [TH-04](#th-04), [TH-13](#th-13). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-03](#th-03), [TH-04](#th-04), [TH-13](#th-13). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-02.md`; `artifacts/local/tasks/SC-02/`.
 
@@ -1651,13 +1822,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-08-inventory-equipment-and-transformations.md` from [TH-08](#th-08) (must be admitted before assignment)
 - `docs/tech/sections/TH-09-themed-loot-attunement-and-fixed-secrets.md` from [TH-09](#th-09) (must be admitted before assignment)
 - [BIBLE.md § 5. Weapons & Items](BIBLE.md#5-weapons--items) (items, equipment, modifiers, transformations, attunement and fixed recipes)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-08](#th-08), [TH-09](#th-09). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-08](#th-08), [TH-09](#th-09). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-03.md`; `artifacts/local/tasks/SC-03/`.
 
@@ -1683,12 +1854,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-06-encounters-waves-and-enemies.md` from [TH-06](#th-06) (must be admitted before assignment)
 - [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies) (enemy archetypes, attack references, waves, bosses, encounter admission and objective records)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-06](#th-06). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-06](#th-06). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-04.md`; `artifacts/local/tasks/SC-04/`.
 
@@ -1714,13 +1885,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` from [TH-11](#th-11) (must be admitted before assignment)
 - `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment)
 - [BIBLE.md § 3. Maps & Areas](BIBLE.md#3-maps--areas) (regions, areas, level modules, routes, generation constraints, events and secrets)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-11](#th-11), [TH-14](#th-14). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-11](#th-11), [TH-14](#th-14). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-05.md`; `artifacts/local/tasks/SC-05/`.
 
@@ -1746,12 +1917,12 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-10-devices-and-one-main-companion.md` from [TH-10](#th-10) (must be admitted before assignment)
 - [BIBLE.md § Devices and one main companion](BIBLE.md#devices-and-one-main-companion) (devices, companion chassis, interchangeable components and command capabilities)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-10](#th-10). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-10](#th-10). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-06.md`; `artifacts/local/tasks/SC-06/`.
 
@@ -1777,14 +1948,14 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-12-hud-dashboard-and-settings.md` from [TH-12](#th-12) (must be admitted before assignment)
 - `docs/tech/sections/TH-16-rendering-integration.md` from [TH-16](#th-16) (must be admitted before assignment)
 - `docs/tech/sections/TH-17-audio-integration.md` from [TH-17](#th-17) (must be admitted before assignment)
 - [BIBLE.md § 8. Audio & Feel](BIBLE.md#8-audio--feel) (audio cues, visual references and interface settings)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-12](#th-12), [TH-16](#th-16), [TH-17](#th-17). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-12](#th-12), [TH-16](#th-16), [TH-17](#th-17). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-07.md`; `artifacts/local/tasks/SC-07/`.
 
@@ -1810,13 +1981,13 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 
 **Source and inputs:**
 
-- `docs/tech/sections/HF-06-schema-coverage.md` from [HF-06](#hf-06) (must be admitted before assignment)
+- `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-09-themed-loot-attunement-and-fixed-secrets.md` from [TH-09](#th-09) (must be admitted before assignment)
 - `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` from [TH-11](#th-11) (must be admitted before assignment)
 - [BIBLE.md § 9. Glossary](BIBLE.md#9-glossary) (dialogue, glossary entries, discoveries and permanent unlock definitions)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
-**Dependencies:** [HF-06](#hf-06), [TH-09](#th-09), [TH-11](#th-11). **Blocking questions:** None.
+**Dependencies:** [HF-06a](#hf-06a), [TH-09](#th-09), [TH-11](#th-11). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/schemas/SC-08.md`; `artifacts/local/tasks/SC-08/`.
 
