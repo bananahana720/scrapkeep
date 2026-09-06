@@ -45,7 +45,12 @@ const classes = [
   {
     name: "documentation-only",
     build: false,
-    patterns: [/\.md$/, /\.tsv$/, /^docs\//, /^adr\//, /^artifacts\//],
+    patterns: [
+      /^(?!scripts\/|tests\/).*\.(md|tsv)$/,
+      /^docs\//,
+      /^adr\//,
+      /^artifacts\//,
+    ],
     commands: ["npm run check:docs", "npm run check:project"],
     evidence: "structural documentation checks; no build or runtime evidence",
   },
