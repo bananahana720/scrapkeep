@@ -1709,12 +1709,14 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 ### TH-19: Specify source-asset import and export admission
 
-**Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** technical handoff
+**Card revision:** 2 · **Owner:** Content · **Size:** M · **Lane:** technical handoff
 
 **Source and inputs:**
 
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision)
 - [docs/project/ASSETS.md](docs/project/ASSETS.md)
+- `.gitignore` native import-sidecar exclusion and `scripts/native-smoke.mjs` copy/hash exclusions, as observed during HF-01; re-inspect at assignment.
+- Godot 4.7 import-process documentation: https://docs.godotengine.org/en/4.7/tutorials/assets_pipeline/import_process.html (source-adjacent import settings versus generated cache).
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
 - `docs/tech/sections/TH-16-rendering-integration.md` from [TH-16](#th-16) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
@@ -1727,10 +1729,12 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 1. Define source provenance, import settings, generated-output handling, scene/Resource references and export manifest validation.
 2. Separate concept images from production asset admission and retain required notices from Q-E06.
+3. Reconcile the proof-only `.import` ignore and harness exclusions with retention of authored import settings. Specify the exact scoped staging/runner repair and synthetic import proof required before admitting production source assets; the documentation card does not perform that repair or qualify imports. Record source-adjacent settings and generated `.godot/imported/` as different ownership classes.
 
 **Verification and evidence:**
 
 - Follow one source asset to exported reference and one missing reference through rejection; no production asset is generated here.
+- Include a changed import-setting scenario: settings must survive a clean checkout and affect the admitted source identity; generated cache must remain rebuildable. Reject production asset readiness while the applicable staging/runner repair and import proof are absent.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
 

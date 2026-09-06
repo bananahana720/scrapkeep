@@ -152,7 +152,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [TH-16](BACKLOG.md#th-16) | 1 | 1 | queued | TH-03, TH-05, TH-10, PD-01 | none | EV-0002 |
 | [TH-17](BACKLOG.md#th-17) | 1 | 1 | queued | TH-04, TH-12, PD-03 | none | EV-0002 |
 | [TH-18](BACKLOG.md#th-18) | 1 | 2 | queued | HF-04a, TH-02, TH-12 | none | EV-0029 |
-| [TH-19](BACKLOG.md#th-19) | 1 | 1 | queued | HF-05, TH-16 | none | EV-0002 |
+| [TH-19](BACKLOG.md#th-19) | 2 | 2 | queued | HF-05, TH-16; later import staging/proof requirement recorded | none | EV-0069 |
 | [TH-20](BACKLOG.md#th-20) | 1 | 2 | queued | HF-06a, SC-01, SC-02, SC-03, SC-04, SC-05, SC-06, SC-07, SC-08 | none | EV-0029 |
 | [TH-21](BACKLOG.md#th-21) | 1 | 1 | queued | HF-08, HF-09, TH-20 | none | EV-0002 |
 | [TH-22](BACKLOG.md#th-22) | 1 | 1 | queued | TH-20, TH-21 | none | EV-0002 |
@@ -314,6 +314,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0066 | 2026-09-06T21:53:04.718987+00:00 | Coordinator / assignment/lease | HF-01, HF-02 | Both revision2 cards rechecked input-ready; no predecessors or blocking questions. Worktrees created and HEAD verified at 3ab3477bc8731f157e9cdff31598251e20acef98. File-level leases HF-01-L1 / HF-02-L1 assigned to hf01_writer / hf02_writer (gpt-6-astra high), attempts A1. No shared-document worker edits; coordinator alone admits serially. |
 | EV-0067 | 2026-09-06T21:54:42.883761+00:00 | Coordinator / block/amendment proposal | HF-01 | HF-01-A1 reported contradictory revision2 path-table coverage after S0-01 landed. Native-table drafting stopped; lease HF-01-L1 retained for source review and request packet only. Coordinator triage: factual stale acceptance wording, no product/architecture change; independent reviewer checks proposed correction before admission. HF-02 unaffected; HF-03a remains unassigned behind HF-01. |
 | EV-0068 | 2026-09-06T21:56:33.995603+00:00 | Coordinator / amendment admission/definition change | AM-F01-001, HF-01 | Accepted request revision1 as factual documentation correction preserving architecture/product decisions. HF-01 card2→3: native table exhaustive native coverage; separate support/config/docs/evidence accounting; per-fact reconciliation of admitted scaffold instead of stale unverified status. Independent hf_foundation_review Astra high PASS on request sha256 bad97013eb0b2319e94c1a4ac611400e71fd75bc3d18730242f52a12438ede96. docs/project checks PASS. Source and card admitted together; HF-01-L1 scope unchanged, readiness rechecked, affected drafting may resume after commit identity supplied. Dependent HF-03a remains queued until HF-01 done. |
+| EV-0069 | 2026-09-06T21:57:50.096740+00:00 | Coordinator / backlog grooming/definition change | TH-19 | Discovered during HF-01: .gitignore excludes native/**/*.import and native-smoke copy/hash filters omit .import. No production imported assets are present. TADR-003 retains authored import settings; official Godot4.7 import-process confirms settings adjacent to sources versus generated .godot/imported cache. TH-19 card1→2 retains M/docs-only scope and dependencies, adds explicit repair/proof specification and changed-setting rejection scenario before production asset admission. Current runtime remains unchanged; independent integrated review will check grooming. |
 
 
 ## Preparation checkpoint
