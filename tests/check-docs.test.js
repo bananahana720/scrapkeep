@@ -11,7 +11,7 @@ const fixtures = path.join(root, "tests/fixtures/check-docs");
 
 // The fixture root sits one level below the temporary directory so a link
 // that climbs out of the root can point at a file that really exists.
-async function runFixture(name) {
+async function runFixture(name, remove = null) {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-docs-"));
   try {
     const docsRoot = path.join(temporary, "repo");
@@ -20,6 +20,7 @@ async function runFixture(name) {
     await cp(path.join(fixtures, "base"), docsRoot, { recursive: true });
     if (name !== "base")
       await cp(path.join(fixtures, name), docsRoot, { recursive: true });
+    if (remove) await rm(path.join(docsRoot, remove));
     const report = path.join(temporary, "report.json");
     const child = spawnSync(
       process.execPath,
@@ -50,8 +51,12 @@ test("a valid fixture passes with a manifest, interim rows and a limits line", a
   assert.equal(report.result, "pass");
   assert.deepEqual(Object.keys(report.manifest).sort(), [
     "BACKLOG.md",
+    "ORCHESTRATOR.md",
     "README.md",
     "TRACKING.md",
+    "docs/project/prompts/sprint-close.md",
+    "docs/project/sprint-0/amendment-request.md",
+    "docs/project/sprint-0/closure-receipt.md",
   ]);
   for (const hash of Object.values(report.manifest))
     assert.match(hash, /^[0-9a-f]{64}$/);
@@ -78,6 +83,8 @@ test("events outside the EV-NNNN form are not sequenced", async () => {
 });
 
 const failing = [
+  ["closure-link", "ORCHESTRATOR.md:0", /missing required closure link/],
+  ["closure-heading", "docs/project/sprint-0/amendment-request.md:0", /missing required closure heading: Admission and propagation receipt/],
   ["broken-anchor", "README.md:3", /broken anchor: BACKLOG\.md#hf-99/],
   ["broken-anchor", "README.md:3", /broken anchor: #missing-heading/],
   ["absolute-link", "README.md:3", /non-portable absolute link: \/home\//],
@@ -142,4 +149,10 @@ test("the duplicate event also breaks the Last event reference for its row", asy
       /Last event EV-0002 is not in the events table/.test(finding.message),
     ),
   );
+});
+
+test("missing sprint-close prompt fails the closure contract", async () => {
+  const { status, report } = await runFixture("base", "docs/project/prompts/sprint-close.md");
+  assert.equal(status, 1);
+  assert.ok(report.findings.some((finding) => finding.check === "closure" && /required closure contract missing/.test(finding.message)));
 });

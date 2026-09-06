@@ -458,6 +458,35 @@ async function checkSections(docs) {
   return files.length;
 }
 
+async function checkClosureContract(docs) {
+  const contracts = {
+    "ORCHESTRATOR.md": ["Sprint closure", "Specification contradictions"],
+    "docs/project/prompts/sprint-close.md": ["Close the selected sprint"],
+    "docs/project/sprint-0/amendment-request.md": ["Request identity and context", "Conflicting clauses and observation", "Classification and proposed change", "Decision record", "Admission and propagation receipt", "Closure disposition"],
+    "docs/project/sprint-0/closure-receipt.md": ["Receipt schema", "Mandatory gates", "Run the checker", "Evidence limits"],
+  };
+  for (const [file, headings] of Object.entries(contracts)) {
+    if (!(await exists(path.join(docs.root, file)))) {
+      docs.fail("closure", file, 0, "required closure contract missing");
+      continue;
+    }
+    const { anchors } = await docs.load(file);
+    for (const heading of headings)
+      if (!anchors.has(slugify(heading)))
+        docs.fail("closure", file, 0, "missing required closure heading: " + heading);
+  }
+  for (const [file, target] of [
+    ["ORCHESTRATOR.md", "docs/project/prompts/sprint-close.md"],
+    ["ORCHESTRATOR.md", "docs/project/sprint-0/amendment-request.md"],
+    ["docs/project/prompts/sprint-close.md", "../../../ORCHESTRATOR.md#sprint-closure"],
+  ]) {
+    if (!(await exists(path.join(docs.root, file)))) continue;
+    const { lines } = await docs.load(file);
+    const linked = lines.some((line) => [...line.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].some((match) => match[1] === target));
+    if (!linked) docs.fail("closure", file, 0, "missing required closure link: " + target);
+  }
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -467,6 +496,7 @@ async function main() {
   const cards = await checkBacklog(docs);
   const tracking = await checkTracking(docs);
   const sections = await checkSections(docs);
+  await checkClosureContract(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort())
     manifest[file] = docs.cache.get(file).sha256;
