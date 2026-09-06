@@ -16,3 +16,5 @@ leads.json
 leads-*.tmp
 leads.lock
 .claude/worktrees/
+native/.godot/
+native/**/*.import
