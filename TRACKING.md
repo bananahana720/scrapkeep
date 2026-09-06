@@ -181,7 +181,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [LG-07](BACKLOG.md#lg-07) | 1 | 1 | queued | LG-03 | none | EV-0002 |
 | [S0-10](BACKLOG.md#s0-10) | 1 | 2 | done | none | S0-10-A2 | EV-0036 |
 | [S0-11](BACKLOG.md#s0-11) | 1 | 5 | done | none | S0-11-A1 | EV-0042 |
-| [S0-12](BACKLOG.md#s0-12) | 1 | 4 | review | serial admission | none | EV-0044 |
+| [S0-12](BACKLOG.md#s0-12) | 1 | 5 | done | none | S0-12-A1 | EV-0045 |
 | [S0-13](BACKLOG.md#s0-13) | 1 | 2 | in_progress | none | none | EV-0043 |
 | [S0-14](BACKLOG.md#s0-14) | 1 | 1 | queued | dependency | none | EV-0035 |
 
@@ -290,6 +290,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0042 | 2026-09-06T20:44:05.488447+00:00 | Coordinator / integration and completion | S0-11 | Candidate 1a2759f315f0cdc5a8ecac6954cab5be52ca9909 independently PASS+NOTES, integrated as 0185087e06f1833ce0b66e5821a1788bb34bd7f6. Coordinator reran check:docs and check:project successfully. review → done; S0-11-L1 closed. S0-13 dependencies now complete. |
 | EV-0043 | 2026-09-06T20:44:23.424614+00:00 | Coordinator / readiness and assignment | S0-13 | Both dependencies done. S0-13 queued → ready → in_progress, lease S0-13-L1 to amendments reused worker session at gpt-6-astra high, worktree scrapkeep-wt-S0-13-operational branch wt/S0-13-operational base 6b2394502010c3454548523ef9fe7077d600088e verified. Writer owns exactly S0-13 card files and generated check receipts; coordinator alone writes canonical records. |
 | EV-0044 | 2026-09-06T20:45:27.828524+00:00 | Coordinator / independent review | S0-12 | Nonauthor contract_review_a2, gpt-6-astra high, independently ran the headless verification procedure against f6a9561924c65bdbddf7c395c3f1fec917086f33. All ten functional cases pass including fresh process and network-isolated pair; save bytes preserved. PASS level 4. Visible input and exports remain S0-09. Reused review session disclosed. Serial admission next. |
+| EV-0045 | 2026-09-06T20:46:26.895692+00:00 | Coordinator / integration and completion | S0-12 | Candidate f6a9561924c65bdbddf7c395c3f1fec917086f33 PASS level4, integrated aea16db8b6570a59442448b9cc0e87b995c804fd. Coordinator reran native:smoke and all ten stage/resume/fault/offline cases against integrated source; docs/project pass. review → done; S0-12-L1 closed. S0-09 revision3 now eligible. Exported visible launch remains its required gate. |
 
 
 ## Preparation checkpoint
@@ -343,7 +344,7 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 
 ### S0-12-A1
 
-- Card revision 1; assignee native_integration, gpt-6-astra high; lease S0-12-L1 active.
+- Card revision 1; assignee native_integration, gpt-6-astra high; lease S0-12-L1 closed.
 - Owned files exactly the S0-12 card permitted set.
 - Worktree `/home/andrew/Projects/scrapkeep-wt-S0-12-operational`; branch `wt/S0-12-operational`; verified base `1eb4a220fb48de80efded0a6459c98020fb7ed26`.
 - Candidate/integrated identity null; review not_run; evidence pending.
