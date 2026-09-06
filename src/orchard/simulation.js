@@ -66,6 +66,8 @@ export const LIGHTNING_CONFIG = Object.freeze({
     cooldown: 3,
     interval: 1.1,
     max: 2,
+    linkRadius: 0.5,
+    linkHalfHeight: 1,
   }),
   ultimate: Object.freeze({
     duration: 8,
@@ -520,6 +522,16 @@ export class OrchardGame {
       p.y += p.vy * dt;
     }
     this._boundPlayer();
+    for (const id of this._landingHits) {
+      const enemy = this.enemies.find((candidate) => candidate.id === id);
+      if (
+        !enemy ||
+        enemy.state === "dead" ||
+        p.y - p.radius > enemy.y + enemy.bodyHeight + 0.1 ||
+        distance(p, enemy) > p.radius + enemy.radius + 0.1
+      )
+        this._landingHits.delete(id);
+    }
     this._updateEnemies(dt);
     if (this.mode !== "playing") return;
     this._updateOffcuts(dt);
@@ -1119,6 +1131,8 @@ export class OrchardGame {
             this.conductors.slice(-(LIGHTNING_CONFIG.conductor.max - 1)),
           );
           attack.targetIds = pulse.targetIds;
+          attack.segments.push(...pulse.segments);
+          attack.corridors = pulse.corridors;
         } else
           attack.targetIds = this.enemies
             .filter(
@@ -1181,13 +1195,15 @@ export class OrchardGame {
               center(enemy),
             )
           );
-        if (
-          attack.kind === "conductor" &&
-          length3(attack.origin, center(enemy)) <=
-            attack.radius + enemy.radius &&
-          this._visible(attack.origin, center(enemy))
-        )
-          return true;
+        if (attack.kind === "conductor")
+          return (
+            this._visible(attack.origin, center(enemy)) &&
+            (length3(attack.origin, center(enemy)) <=
+              attack.radius + enemy.radius ||
+              (attack.corridors || []).some((corridor) =>
+                this._corridorHits(corridor, enemy),
+              ))
+          );
         return attack.segments.some(
           ({ from, to }) =>
             this._bodyRay(from, towards(from, to), length3(from, to), enemy) !==
@@ -1269,6 +1285,43 @@ export class OrchardGame {
     this._executeAttack(attack, 20, "player");
   }
 
+  _conductorCorridors(conductor, others = this.conductors) {
+    const from = { x: conductor.x, y: conductor.y + 1.35, z: conductor.z };
+    return others
+      .filter(
+        (other) =>
+          other !== conductor &&
+          distance(other, conductor) <= LIGHTNING_CONFIG.conductor.radius * 2 &&
+          this._visible(from, { ...other, y: other.y + 1.35 }),
+      )
+      .map((other) => {
+        const to = { x: other.x, y: other.y + 1.35, z: other.z };
+        return {
+          from: { ...from },
+          to,
+          radius: LIGHTNING_CONFIG.conductor.linkRadius,
+          yMin:
+            Math.min(from.y, to.y) - LIGHTNING_CONFIG.conductor.linkHalfHeight,
+          yMax:
+            Math.max(from.y, to.y) + LIGHTNING_CONFIG.conductor.linkHalfHeight,
+        };
+      });
+  }
+
+  _corridorHits(corridor, enemy) {
+    return (
+      pointSegmentDistance(enemy.x, enemy.z, {
+        x1: corridor.from.x,
+        z1: corridor.from.z,
+        x2: corridor.to.x,
+        z2: corridor.to.z,
+      }) <=
+        enemy.radius + corridor.radius &&
+      enemy.y <= corridor.yMax &&
+      enemy.y + enemy.bodyHeight >= corridor.yMin
+    );
+  }
+
   _conductorAttack(conductor, others = this.conductors) {
     const origin = { x: conductor.x, y: conductor.y + 1.35, z: conductor.z };
     const attack = {
@@ -1281,33 +1334,13 @@ export class OrchardGame {
       targetIds: [],
       blocked: false,
     };
-    const links = others
-      .filter(
-        (other) =>
-          other !== conductor &&
-          distance(other, conductor) <= LIGHTNING_CONFIG.conductor.radius * 2 &&
-          this._visible(origin, { ...other, y: other.y + 1.35 }),
-      )
-      .map((other) => ({
-        from: { ...origin },
-        to: { x: other.x, y: other.y + 1.35, z: other.z },
-      }));
-    attack.segments.push(...links);
+    attack.corridors = this._conductorCorridors(conductor, others);
+    attack.segments.push(...attack.corridors);
     for (const enemy of this.enemies) {
       if (enemy.state === "dead" || !this._visible(origin, center(enemy)))
         continue;
-      const linked = links.some(
-        (segment) =>
-          pointSegmentDistance(enemy.x, enemy.z, {
-            x1: segment.from.x,
-            z1: segment.from.z,
-            x2: segment.to.x,
-            z2: segment.to.z,
-          }) <
-            enemy.radius + 0.5 &&
-          enemy.y <= Math.max(segment.from.y, segment.to.y) + 1 &&
-          enemy.y + enemy.bodyHeight >=
-            Math.min(segment.from.y, segment.to.y) - 1,
+      const linked = attack.corridors.some((corridor) =>
+        this._corridorHits(corridor, enemy),
       );
       if (
         length3(origin, center(enemy)) <=
@@ -1322,17 +1355,10 @@ export class OrchardGame {
   }
 
   _updateConductors(dt) {
-    this.conductorLinks = [];
-    if (this.conductors.length === 2) {
-      const [a, b] = this.conductors;
-      const from = { x: a.x, y: a.y + 1.35, z: a.z },
-        to = { x: b.x, y: b.y + 1.35, z: b.z };
-      if (
-        distance(a, b) <= LIGHTNING_CONFIG.conductor.radius * 2 &&
-        this._visible(from, to)
-      )
-        this.conductorLinks.push({ from, to });
-    }
+    this.conductorLinks =
+      this.conductors.length === 2
+        ? this._conductorCorridors(this.conductors[0], [this.conductors[1]])
+        : [];
     for (const conductor of this.conductors) {
       conductor.cooldown = Math.max(0, conductor.cooldown - dt);
       conductor.flash = Math.max(0, conductor.flash - dt);

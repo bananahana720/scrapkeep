@@ -834,9 +834,12 @@ test("Ground Loop and Echo combine across sources without recursive echoes and c
     const attack = {
       kind: source === "player" ? "bolt" : source,
       valid: true,
-      origin: game._weaponOrigin(),
+      origin:
+        source === "conductor"
+          ? { x: other.x, y: 1, z: other.z }
+          : game._weaponOrigin(),
       point: { x: other.x, y: 1, z: other.z },
-      radius: 0,
+      radius: source === "conductor" ? LIGHTNING_CONFIG.conductor.radius : 0,
       blocked: false,
       segments: [
         {
@@ -1029,5 +1032,80 @@ test("conductor activity accelerates during ultimate and ordinary fire can disma
   assert.equal(
     game.pickups.filter((pickup) => pickup.kind === "scrap").length,
     4,
+  );
+});
+
+test("conductor placement previews the same connected corridor width and vertical bounds that damage consumes", () => {
+  const { game, enemy } = fixture("snipcart", { x: -7, z: 10 });
+  Object.assign(enemy, { x: 4, z: 0, state: "recovery", cooldown: 100 });
+  game.conductors = [
+    { id: "existing", x: 7, y: 0, z: 0, cooldown: 100, flash: 0 },
+  ];
+  const aim = rayTo(game, { x: -7, y: 0, z: 0 });
+  const preview = game.previewAttack("conductor", aim);
+  assert(preview.valid);
+  assert(
+    Math.hypot(enemy.x - preview.point.x, enemy.z - preview.point.z) >
+      LIGHTNING_CONFIG.conductor.radius + enemy.radius,
+    "target lies beyond proposed conductor's radial reach",
+  );
+  assert(preview.targetIds.includes(enemy.id));
+  const corridor = preview.corridors[0];
+  assert.deepEqual(corridor, {
+    from: { x: -7, y: 1.35, z: 0 },
+    to: { x: 7, y: 1.35, z: 0 },
+    radius: 0.5,
+    yMin: 0.3500000000000001,
+    yMax: 2.35,
+  });
+  assert(
+    preview.segments.some(
+      (segment) => JSON.stringify(segment) === JSON.stringify(corridor),
+    ),
+    "ordinary trajectory rendering also includes the complete link",
+  );
+  assert(game._cast("conductor", aim));
+  game._updateConductors(0.11);
+  const pulse = game
+    .drainEvents()
+    .find((event) => event.type === "attack" && event.source === "conductor");
+  assert.deepEqual(pulse.attack.corridors, preview.corridors);
+  assert.deepEqual(pulse.attack.targetIds, preview.targetIds);
+  assert.equal(enemy.maxHp - enemy.hp, LIGHTNING_CONFIG.conductor.damage);
+  Object.assign(enemy, { z: enemy.radius + corridor.radius - 0.001 });
+  assert(
+    game._repeatAttack(pulse.attack).targetIds.includes(enemy.id),
+    "echo uses the visible corridor radius",
+  );
+  enemy.z += 0.002;
+  assert(!game._repeatAttack(pulse.attack).targetIds.includes(enemy.id));
+  Object.assign(enemy, { z: 0, y: corridor.yMax + 0.001 });
+  assert(
+    !game._repeatAttack(pulse.attack).targetIds.includes(enemy.id),
+    "targets above the visible band are safe",
+  );
+});
+
+test("a new descent can rebound on the same worker after vertical separation", () => {
+  const { game, enemy } = fixture("snipcart", { x: 0, z: 0 });
+  Object.assign(enemy, {
+    state: "recovery",
+    hp: 1000,
+    maxHp: 1000,
+    cooldown: 100,
+  });
+  Object.assign(game.player, { y: 2.93, grounded: false, vy: -8, airJumps: 0 });
+  game.update(1 / 120);
+  assert.equal(enemy.hp, 958);
+  tick(game, 0.2);
+  assert.equal(enemy.hp, 958, "separated ascent causes no duplicate impact");
+  tick(game, 0.6);
+  assert.equal(enemy.hp, 916, "next descending contact is a new landing");
+  assert.equal(game.player.x, 0);
+  assert.equal(game.player.z, 0);
+  assert(game.player.vy > 0);
+  assert.equal(
+    game.drainEvents().filter((event) => event.type === "bounce").length,
+    2,
   );
 });
