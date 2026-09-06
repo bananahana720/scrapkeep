@@ -1,6 +1,6 @@
 # Scrapkeep in Claude Code and Codex
 
-Both apps use the same project authority and three canonical skills. Claude loads `CLAUDE.md`, which imports `AGENTS.md`; its skill directories link to `.agents/skills`. Shared pstack remains installed once at `/home/andrew/.config/pstack/plugin`.
+Both apps use the same project authority and three canonical skills. Claude loads `CLAUDE.md`, which imports `AGENTS.md`; its skill directories link to `.agents/skills`. Shared pstack remains installed once at `/home/andrew/.config/pstack/plugin`. The pstack runtime contract is `/home/andrew/.config/pstack/runtime.md`; the skills and `AGENTS.md` refer to it by role and this file records its path once.
 
 ## Use it
 
@@ -9,7 +9,7 @@ Start a fresh session in this repository after configuration changes.
 | Request | Workflow |
 | --- | --- |
 | "Plan the next Scrapkeep session" | `plan-session` reads the board and discusses unresolved choices. It does not start the proposed sprint. |
-| "Implement approved card <ID>" | `scrapkeep-task` checks authorization and prerequisites before assigning isolated work. |
+| "Implement approved card <ID>" | `scrapkeep-task` checks authorization and prerequisites before assigning isolated work. Its numbered procedure links the ORCHESTRATOR and TRACKING sections that own each rule. |
 | "Verify this Scrapkeep change" | `scrapkeep-verify` selects checks for the actual artifact and reports evidence limits. |
 
 Claude commands are `/plan-session`, `/scrapkeep-task` and `/scrapkeep-verify`. Codex can select these skills from the request or use `$plan-session`, `$scrapkeep-task` and `$scrapkeep-verify`.
@@ -18,23 +18,30 @@ Claude commands are `/plan-session`, `/scrapkeep-task` and `/scrapkeep-verify`. 
 
 ## Host behavior
 
-Claude pstack roles use pinned Fable 5.1. Exploration and ordinary writes use high effort; coordination, debugging and review use xhigh; explicitly scoped hardest roles use max. The game project disables automatic model switching and fallback chains. Its three agent definitions pin role model/effort, and explorer/reviewer tool lists exclude shell and edits. The coordinator runs executable checks and gives the reviewer their exact receipts.
+Claude pstack roles use pinned Fable 5.1 at four effort tiers. Six project agent definitions under `.claude/agents/` pin the model and one effort each. `scrapkeep-writer-low` runs at low, `scrapkeep-writer-medium` and `scrapkeep-reviewer-medium` at medium, `scrapkeep-writer` and `scrapkeep-explorer` at high, and `scrapkeep-reviewer` at xhigh. The coordinator session runs at xhigh. The coordinator assigns each unit's effort by its importance and difficulty; a mechanical fully specified edit takes low, a bounded prepare-stage unit takes medium, design judgement takes high, and review of consequential candidates takes xhigh. Explorer and reviewer tool lists exclude shell and edits. Reviewers read the packet acceptance and the coordinator's receipts, never the writer's brief.
+
+The game project disables automatic model switching and fallback chains. Runtime evidence for effort is the `CLAUDE_EFFORT` environment variable; a writer reads it with `env | grep CLAUDE_EFFORT`, and a read-only agent reports it only if the host exposes it. The coordinator observed `CLAUDE_EFFORT=high` while `.claude/settings.json` keyed xhigh under an undocumented `modelSettings` entry. On 6 September 2026 the settings file was corrected to the documented top-level `"effortLevel": "xhigh"` key, per the settings reference fetched through Context7. Confirm the fix by reading `CLAUDE_EFFORT` in a fresh coordinator session.
+
+The same settings file makes approval gates mechanical. `permissions.deny` blocks force pushes, `npm publish` and `gh repo delete`; `permissions.ask` prompts for `git push`, `gh repo`, `gh api`, `npm install`, `npm i` and `npm uninstall`. The coordinator pushes reviewed work and answers the prompt; `npm ci` from the lockfile stays unrestricted.
 
 Codex retains its existing Astra role map. Both maps live under `/home/andrew/.config/pstack/models/`. A prompt does not set runtime model/effort. Verify actual metadata; report unavailable capabilities or substitutions before accepting a lane. This policy does not promise the model used by every internal utility request.
 
-Claude's native worktree may start at the default branch, so check its base and required inputs before edits. If the base differs, stop and launch from a worktree explicitly created at the accepted revision. Never import all uncommitted owner changes as a shortcut. Preserve leases across interruptions until the owner is confirmed stopped and its artifacts inspected.
+Writers no longer self-isolate. The coordinator creates each writer's worktree at the recorded base with `scripts/new-worktree.sh <task-id> <base-sha>`, which exits nonzero when HEAD differs, and names the path, branch and base SHA in the packet. The writer's first command verifies that identity and stops on a mismatch. Never import all uncommitted owner changes as a shortcut. Preserve leases across interruptions until the owner is confirmed stopped and its artifacts inspected.
 
 ## Check the installation
 
 ```sh
-python /home/andrew/.config/pstack/verify.py --project /home/andrew/Projects/test-game-2
+python /home/andrew/.config/pstack/verify.py --project /home/andrew/Projects/scrapkeep
 python /home/andrew/.config/pstack/test_verify.py
 claude plugin details pstack
+npm run check:project
+npm run check:docs
+npm run check:scope -- <base> <candidate> [--no-build]
 ```
 
-The verifier covers installation, routing and project skill structure. Behavioral receipts and model metadata are separate evidence. `npm run verify` qualifies browser-proof code, not configuration, human game feel or the future native game. Do not run a game build for a documentation-only task. Missing browser tools remain a verification gap.
+The pstack verifier's project section checks that `CLAUDE.md` imports `AGENTS.md`, that each of the three `.claude/skills` entries is a symlink resolving to its `.agents/skills` body, that each skill's frontmatter is discoverable, and that no skill names an obsolete planning file. It does not test routing, agent definitions or behavior. `npm run check:project` checks required files, package/lock metadata and local file links. `npm run check:docs` adds anchors, BACKLOG card completeness and the TRACKING event sequence. `npm run check:scope` classifies changed paths between two commits and prints the commands that scope requires. `npm run verify` qualifies browser-proof code, not configuration, human game feel or the future native game. `check:godot` is reserved until the engineering handoff. Do not run a game build for a documentation-only task. Missing browser tools remain a verification gap.
 
-Migration receipts and restoration instructions are in `artifacts/local/claude-port/REPORT.md`. That file is a delivery receipt, not another task board. Backups and the guarded restoration script are named there. No new plugin bundle, service, permission rule or game feature accompanies this port.
+The Claude port's migration receipts were disposable and lived under the gitignored `artifacts/local/`. The tracked evidence for the current configuration is the accepted audit under `artifacts/ai-first-audit-2026-09-06/`. No new plugin bundle, service or game feature accompanies this configuration; the permission rules above are the only gates added.
 
 ## Source-backed design
 
