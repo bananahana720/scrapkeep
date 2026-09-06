@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **awaiting_review**. No worker may start a sprint task. |
 | Native game/build authorization | **none**. No engine install, code/asset production or qualification run is authorized by this delivery. |
 | Active coordinator for sprint execution | none |
-| Active task attempts / write leases | PUB-01-A1 / PUB-01-L1 retained for coordinator closeout only; no sprint lease. |
+| Active task attempts / write leases | none; PUB-01-A1 accepted and PUB-01-L1 closed after closeout verification. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
@@ -85,11 +85,11 @@ Unlogged handoffs cannot be reviewed as accepted work. Unlogged scope changes ca
 
 ### PUB-01-A1
 
-- Assignee: publication root coordinator (`gpt-6-astra`); card revision 2; attempt PUB-01-A1; lease PUB-01-L1 retained through closeout verification.
-- Owned files: the explicit PUB-01 publication edit set. Pre-existing planning files are admitted from the publication baseline, with the completed repository-local workflow package admitted unchanged from [its frozen manifest](artifacts/publication-2026-09-06/concurrent-package.json).
+- Assignee: publication root coordinator (`gpt-6-astra`); card revision 2; accepted attempt PUB-01-A1; lease PUB-01-L1 closed. Active owned files: none.
+- Historical owned files: the explicit PUB-01 publication edit set. Pre-existing planning files are admitted from the publication baseline, with the completed repository-local workflow package admitted unchanged from [its frozen manifest](artifacts/publication-2026-09-06/concurrent-package.json).
 - Base identity: `dc72a02cd7a0fbe1f00b3ce71d36448364f93294` plus that publication baseline manifest.
-- Candidate identity: [publication candidate manifest](artifacts/publication-2026-09-06/candidate-manifest.json). Integrated identity: `73c427203c9263affa747938e586325842357b0c`; reviewed candidate plus coordinator evidence metadata committed serially.
-- Latest checkpoint: 2026-09-06T16:36:20+00:00; owner/privacy/default and both branch SHAs verified after successful push. Initial remote tree matches all local modes/blobs. [Closeout](artifacts/publication-2026-09-06/CLOSEOUT.md) records evidence and the next-session entry point; final receipt commit is verified again after upload.
+- Candidate identity: [publication candidate manifest](artifacts/publication-2026-09-06/candidate-manifest.json). Integrated identity: `73c427203c9263affa747938e586325842357b0c`; closeout identity: `6d7967856448c2f4d5e2f7b316e59b72c0bd4560`. Both stages committed serially and verified remotely; [closeout verification](artifacts/publication-2026-09-06/closeout-verification.json) precedes this terminal event.
+- Latest checkpoint: 2026-09-06T16:40:13+00:00; all publication and closeout requirements verified, including both remote tips and clean working tree at `6d7967856448c2f4d5e2f7b316e59b72c0bd4560`. PUB-01 complete; no active worker or sprint lease. The terminal record is committed after this observed result.
 - Evidence: [authorization](artifacts/publication-2026-09-06/AUTHORIZATION.md), [document checks](artifacts/publication-2026-09-06/document-checks.json), [content screen](artifacts/publication-2026-09-06/content-screen.json), [independent review](artifacts/publication-2026-09-06/REVIEW.md); [verified remote publication](artifacts/publication-2026-09-06/publication.json).
 - Review: private_publication_review (independent Astra), **PASS+NOTES** on the pinned candidate and evidence overlay; [report](artifacts/publication-2026-09-06/REVIEW.md). Six original whitespace warnings accepted with preservation proof. No sprint worker has been assigned.
 
@@ -100,7 +100,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 
 | Task ID | Card rev | Record rev | State | Blockers / admission | Accepted attempt | Last event |
 | --- | --- | --- | --- | --- | --- | --- |
-| [PUB-01](BACKLOG.md#pub-01) | 2 | 10 | review | Closeout commit/push and final tip/clean-tree checks | none | EV-0017 |
+| [PUB-01](BACKLOG.md#pub-01) | 2 | 11 | done | none | PUB-01-A1 | EV-0018 |
 | [HF-01](BACKLOG.md#hf-01) | 1 | 2 | ready | Sprint authorization awaiting_review | none | EV-0003 |
 | [HF-02](BACKLOG.md#hf-02) | 1 | 2 | ready | Sprint authorization awaiting_review | none | EV-0003 |
 | [HF-03](BACKLOG.md#hf-03) | 1 | 1 | queued | HF-01 | none | EV-0002 |
@@ -241,6 +241,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0015 | 2026-09-06T16:27:50+00:00 | Coordinator / independent review admission | PUB-01 | review unchanged, record revision 7 → 8. Independent Astra PASS+NOTES accepted on frozen staged content and identified evidence overlay. No blocking finding; the original whitespace exception is supported. Coordinator admits the review and receipts serially, checks the integrated candidate, then commits and performs the authorized private publication. Remote completion remains pending. |
 | EV-0016 | 2026-09-06T16:31:55+00:00 | Coordinator / integration, creation and recovery checkpoint | PUB-01 | review unchanged, record revision 8 → 9. Integrated `73c427203c9263affa747938e586325842357b0c`, rechecked project documentation, and fast-forwarded main. Created the exact private destination and verified owner/privacy/default main before upload. Initial push failed before authentication because the global helper referenced a removed gh executable; corrected this repository’s helper to the installed authenticated gh, leaving global/home configuration unchanged. Retried only the two authorized branches; final remote verification remains pending. |
 | EV-0017 | 2026-09-06T16:36:20+00:00 | Coordinator / verified publication and closeout | PUB-01 | review unchanged, record revision 9 → 10. Independent PASS+NOTES and serial integration accepted; published `73c427203c9263affa747938e586325842357b0c` to exactly the two authorized branches. GitHub owner/private/default main, transport SHAs and all 1,213 remote file identities verified. Independent closeout review accepted the content; its completion-timing finding is resolved by retaining review state. Attempt PUB-01-A1 and coordinator lease remain active. Publication receipt and closeout checkpoint record observed results; commit/push them and verify final remote tips plus a clean tree before recording completion. No foundation task dispatched. |
+| EV-0018 | 2026-09-06T16:40:13+00:00 | Coordinator / verified completion | PUB-01 | review → done, record revision 10 → 11. Closeout commit `6d7967856448c2f4d5e2f7b316e59b72c0bd4560` was pushed successfully to both authorized branches; owner/private/default main and all 1,217 remote modes/blobs match locally. Project check passed and working tree was clean before this transition. [closeout-verification.json](artifacts/publication-2026-09-06/closeout-verification.json) retains the observed proof. PUB-01-A1 accepted and PUB-01-L1 closed; no remaining publication blocker. Coordinator persists this terminal event and verifies its administrative commit is also backed up. |
 
 ## Preparation checkpoint
 
