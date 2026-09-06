@@ -8,6 +8,8 @@ Players need the announced path and the damaging tool to agree. Attack preparati
 
 ## Consequences and revisit trigger
 
+Increment 01 extends committed geometry into height-aware enemy hazards and player weapon paths/areas. The simulation selects the camera aim point, resolves obstruction from the weapon origin, and supplies the descriptor used by both preview and casting. A drawing cannot independently choose its impact point. The [current contract](../project/INCREMENT-01-lightning-playtest.md) owns those interfaces.
+
 An art change to blade reach or foot placement can change combat. Verify geometry and gameplay together. A larger enemy can repeat learned mechanics because its tool family retains the same visual logic. The current representation is intentionally simple; new tools may need another shape. Preserve one authoritative geometry definition when extending it.
 
 Evidence: [tool paths and transitions](../../src/orchard/simulation.js), [hazard renderer](../../src/orchard/scene.js), [model checks](../../tests/orchard-models.mjs), [renderer regressions](../../tests/orchard-renderer.test.js).

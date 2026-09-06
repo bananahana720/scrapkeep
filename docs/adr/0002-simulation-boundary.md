@@ -10,6 +10,8 @@ The orchard simulation runs at 120 Hz with bounded elapsed-time handling. The ba
 
 ## Consequences and revisit trigger
 
+Increment 01 extends this boundary with vertical player state, wave/intermission state, equipment and simulation-owned attack descriptors. Camera rays enter as plain vectors; Three.js objects and DOM events remain outside the simulation. The [current contract](../project/INCREMENT-01-lightning-playtest.md) defines the interface.
+
 State and event contracts must remain explicit. Avoid DOM, rendering and audio dependencies in the simulation. Renderer state does not decide damage. A richer physics/terrain model may require another boundary, but any change must retain deterministic gameplay checks and explain how presentation reads authoritative state.
 
 Evidence: [simulation](../../src/orchard/simulation.js), [orchestration](../../src/orchard/main.js), [contract](../FIRST-BUILD-CONTRACT.md), [simulation tests](../../tests/orchard.test.js).

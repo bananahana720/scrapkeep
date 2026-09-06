@@ -8,7 +8,7 @@ Make the orchard a readable, responsive third-person lightning caster encounter 
 
 ## Requirements
 
-R01-R04 and R07-R10 are advanced by this increment. R05 preserves the original yard. R06 remains solo first. R11 remains a later full expedition; this increment uses one arena. R12 keeps run power temporary. R14 retains the installed free/local stack.
+R01-R04, R07-R10 and R15 are advanced by this increment. R05 preserves the original yard. R06 remains solo first. R11 remains a later full expedition; this increment uses one arena. R12 keeps run power temporary. R14 retains the installed free/local stack.
 
 Andrew's first orchard playtest found decent movement but insufficient bounce, impact, and jumping; insufficient enemy volume; and an eye-straining, scattered interface. He wants automatic mouse look, right-mouse focused third-person aim, projectile/area previews, wave encounters, and a toggleable management dashboard. No playtest duration or measured performance was supplied.
 
@@ -80,7 +80,7 @@ The deterministic simulation remains DOM/Three-free, 120 Hz, Y-up. Models and re
 
 ### Rendering API
 
-- Preserve OrchardScene constructor, resize/orbit/resetCamera/update/event/render/clear/screenPoint as currently used. Add aimRay() -> {origin,direction} using the current camera center ray and setView({aiming,sensitivity,impactShake}). orbit consumes configured sensitivity. Pitch must support aiming upward and downward, unlike the old fixed-height targeting.
+- Preserve OrchardScene constructor, resize/orbit/resetCamera/update/event/clear/screenPoint as currently used. Add aimRay() -> {origin,direction} using the current camera center ray and setView({aiming,sensitivity,impactShake}). orbit consumes configured sensitivity. Pitch must support aiming upward and downward, unlike the old fixed-height targeting.
 - The UI uses world.aimRay() as simulation input; rendering displays game.targeting and attack events exactly. Aim preview is drawn from weapon origin. Ground shapes are depth-aware and use contrasting outlines. RMB changes camera framing smoothly while preserving the intended target.
 - Hero visuals follow actual y. Decorative landing compression and wobble cannot alter collision geometry or rotate the camera. Add lightweight lightning attachments and conductor models. Pool or dispose per-effect resources, including wave restarts.
 
@@ -94,6 +94,6 @@ The deterministic simulation remains DOM/Three-free, 120 Hz, Y-up. Models and re
 ## Execution checklist
 
 - [x] Frame: approved scope, source inspection, baseline verification and ownership contract.
-- [ ] Fan out: three isolated Astra writers.
+- [x] Fan out: three isolated Astra writers.
 - [ ] Aggregate: serial admission, integrated verification, browser exercise and independent review.
 - [ ] Report: evidence, remaining human playtest and one launch link.

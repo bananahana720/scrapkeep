@@ -1,6 +1,6 @@
 # Project desk
 
-Updated 5 September 2026. **The Iron Orchard first proof is complete and ready for Andrew's playtest.** The next build has not been scoped. The repository is a real Git checkout on `main`; the design audit and deep-research pass are indexed, and their open decisions sit in one register. The original yard remains a separate playable baseline.
+Updated 5 September 2026. **Increment 01, the lightning caster playtest, is approved and in implementation.** Andrew's first orchard playtest requested automatic mouse look, accurate spell previews, jumping and rebounds, dense waves, and a readable interface. The [approved increment](INCREMENT-01-lightning-playtest.md) owns scope, lane boundaries and the current integration contract. The original yard remains a separate playable baseline. Verification of the new increment is pending.
 
 ## Start the next session
 
@@ -12,7 +12,7 @@ Run the [planning protocol](PLANNING.md). In Claude Code the `plan-session` proj
 4. Only after a recorded go, hand lanes to isolated writers, admit serially behind the gate, and review independently.
 5. Close out: requirements/ADR, backlog, decision trail, this status line, one next action.
 
-The immediate product question is whether rolling out of a committed attack and returning for a strong hit is satisfying. The precise script's damage-free 37-second clear also makes ranged pressure a concrete tuning question. Neither result calls for a full class-system implementation before feedback.
+The immediate product question is whether the new caster controls, double jump, denser waves and readable HUD satisfy Andrew's playtest feedback. The earlier 37-second scripted clear remains historical first-proof evidence.
 
 ## Sources of truth
 

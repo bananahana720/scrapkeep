@@ -2,7 +2,15 @@
 
 Updated 5 September 2026. This record preserves publisher interviews and research, followed by the authorized first-build scope below. The user has now approved the orchard proof and its session goal. The broader concepts remain proposals unless explicitly confirmed. The original playable yard remains the baseline at `/`.
 
-## Authorized first-build scope
+## Approved lightning caster direction
+
+Andrew played the first orchard proof and requested an MMORPG-style caster/shooter with hero weapons and abilities. He clarified that this describes combat and character systems; solo expeditions remain the scope and co-op comes later. Movement was decent, but he wanted physical impacts, double jumping and bouncing across small enemies. He found the scattered, tiny HUD hard to read and requested a toggleable management dashboard.
+
+The next increment uses one lightning hero with primary fire, two combat abilities, mobility and an ultimate. Mouse movement controls the view, right mouse focuses third-person aim, and holding/releasing a targeted ability previews/casts its actual path or area. Three denser waves replace the first proof's fixed encounter.
+
+The planning choices are approved: growth feels powerful and playful; rare optional items can replace core movement and attacks; shared modifiers affect compatible weapons, devices and companions; exceptional builds can dominate; acquired items can be reconfigured between fights; one main companion anchors a run. The [lightning increment](project/INCREMENT-01-lightning-playtest.md) includes Ground Loop, Echo and the existing priming companion as a small playable example. Andrew explicitly requested implementation of that plan. It supersedes the audit's mass-and-deflect proposal as the next build, while the remaining research stays proposed.
+
+## Historical first-build scope
 
 After the research and visual passes, Andrew approved building the first orchard proof and setting its session goal. The authorized entry is `/orchard.html`, with the original yard preserved at `/`.
 

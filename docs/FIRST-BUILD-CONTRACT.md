@@ -1,5 +1,7 @@
 # First orchard build contract
 
+Historical contract for the completed first proof. [Increment 01](project/INCREMENT-01-lightning-playtest.md) owns the approved replacement interfaces, vertical movement, waves and caster controls. The original verification receipts retain their original scope.
+
 Goal authorized 5 September 2026. New playable entry `/orchard.html`, preserving the original `/` demo. Three.js 0.180 and existing Vite/Node tools; no engine migration or external assets.
 
 ## Integration conventions
