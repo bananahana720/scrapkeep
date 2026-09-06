@@ -89,14 +89,17 @@ async function markdownFiles(root) {
 }
 
 // Fenced blocks are blanked rather than removed so findings keep their line numbers.
-function visibleLines(content) {
+// Link scanning drops whole code spans; anchor collection keeps their text and
+// drops only the backticks, matching how GitHub slugs a heading with inline code.
+function visibleLines(content, keepCodeText = false) {
   let fenced = false;
   return content.split("\n").map((line) => {
     if (/^\s*(```|~~~)/.test(line)) {
       fenced = !fenced;
       return "";
     }
-    return fenced ? "" : line.replace(/`[^`]*`/g, "");
+    if (fenced) return "";
+    return keepCodeText ? line.replace(/`/g, "") : line.replace(/`[^`]*`/g, "");
   });
 }
 
@@ -141,7 +144,7 @@ class Documents {
       this.cache.set(file, {
         content,
         lines,
-        anchors: collectAnchors(lines),
+        anchors: collectAnchors(visibleLines(content, true)),
         sha256: createHash("sha256").update(content).digest("hex"),
       });
     }
@@ -179,15 +182,34 @@ async function checkLinks(docs, file) {
         continue;
       }
       const [rawPath, rawAnchor] = target.split("#");
-      const anchor = rawAnchor ? decodeURIComponent(rawAnchor) : "";
-      let targetFile = file;
-      if (rawPath) {
-        targetFile = path.posix.normalize(
-          path.posix.join(
-            path.posix.dirname(file),
-            decodeURIComponent(rawPath),
-          ),
+      let anchor = "";
+      let decodedPath = "";
+      try {
+        anchor = rawAnchor ? decodeURIComponent(rawAnchor) : "";
+        decodedPath = rawPath ? decodeURIComponent(rawPath) : "";
+      } catch {
+        docs.fail(
+          "links",
+          file,
+          number,
+          "malformed percent-encoding in link: " + target,
         );
+        continue;
+      }
+      let targetFile = file;
+      if (decodedPath) {
+        targetFile = path.posix.normalize(
+          path.posix.join(path.posix.dirname(file), decodedPath),
+        );
+        if (targetFile === ".." || targetFile.startsWith("../")) {
+          docs.fail(
+            "links",
+            file,
+            number,
+            "link escapes repository: " + target,
+          );
+          continue;
+        }
         if (!(await exists(path.join(docs.root, targetFile)))) {
           docs.fail("links", file, number, "missing link target: " + target);
           continue;
@@ -228,7 +250,7 @@ async function checkBacklog(docs) {
   const { lines, anchors } = await docs.load(file);
   let cards = 0;
   for (const [index, line] of lines.entries()) {
-    const heading = /^###\s+([A-Z]+-[A-Z0-9]+):\s/.exec(line);
+    const heading = /^###\s+([A-Z][A-Z0-9]*-[A-Z0-9]+):\s/.exec(line);
     if (!heading) continue;
     const id = heading[1];
     const number = index + 1;
@@ -324,7 +346,7 @@ async function checkTracking(docs) {
     docs.fail("tracking", file, 0, "missing section ## Append-only events");
   else {
     const rows = events.rows.filter((row) =>
-      /^EV-\d+$/.test(row.cells[0] ?? ""),
+      /^EV-\d{4}$/.test(row.cells[0] ?? ""),
     );
     let previous = 0;
     for (const row of rows) {

@@ -35,7 +35,16 @@ for (const scenario of cases)
     const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-scope-"));
     try {
       git(temporary, "init", "-q");
-      git(temporary, "commit", "-q", "--allow-empty", "-m", "base");
+      git(
+        temporary,
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "base",
+      );
       const base = git(temporary, "rev-parse", "HEAD");
       for (const file of scenario.paths) {
         await mkdir(path.join(temporary, path.dirname(file)), {
@@ -44,7 +53,16 @@ for (const scenario of cases)
         await writeFile(path.join(temporary, file), "x\n");
       }
       git(temporary, "add", "-A");
-      git(temporary, "commit", "-q", "-m", "candidate");
+      git(
+        temporary,
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "candidate",
+      );
       const candidate = git(temporary, "rev-parse", "HEAD");
       const child = spawnSync(
         process.execPath,
@@ -72,6 +90,8 @@ for (const scenario of cases)
       for (const file of scenario.paths) assert.ok(child.stdout.includes(file));
       if (scenario.status === 1)
         assert.match(child.stdout, /refused: --no-build was given/);
+      if (scenario.paths.length === 0)
+        assert.match(child.stdout, /none \(no changed paths\)/);
     } finally {
       await rm(temporary, { recursive: true, force: true });
     }
