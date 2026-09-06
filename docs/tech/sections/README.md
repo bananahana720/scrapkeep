@@ -8,6 +8,9 @@
 
 Coordinator-owned index. Section documents are admitted independently and do not constitute the assembled TECH_BIBLE.
 
+- [HF-01: Production paths and contribution conventions](HF-01-production-conventions.md).
+- [HF-02: Constraints and evidence register](HF-02-constraints-evidence.md).
+
 ## Scenarios
 
 Use the exact card and admitted dependency sections before drafting a section. A missing section is not an implemented contract.
