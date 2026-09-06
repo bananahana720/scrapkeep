@@ -3,6 +3,7 @@ config_version=5
 [application]
 
 config/name="scrapkeep-native-proofs"
+run/main_scene="res://integration/smoke.tscn"
 config/features=PackedStringArray("4.7")
 
 [debug]
