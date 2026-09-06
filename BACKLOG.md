@@ -56,7 +56,7 @@ HF-10 produces a scoped foundation review. It does not stand in for all per-syst
 
 ## Task catalogue
 
-HF covers foundation contracts; PD covers production-facing briefs; TH covers later engineering sections and assembly; SC splits authored schema families; LG preserves bounded browser/player work. Numeric ordering does not override dependencies.
+HF covers foundation contracts; S0 covers prepare-stage tooling and executable ADR proofs; PD covers production-facing briefs; TH covers later engineering sections and assembly; SC splits authored schema families; LG preserves bounded browser/player work. Numeric ordering does not override dependencies.
 
 | ID | Concrete outcome | Role | Size |
 | --- | --- | --- | --- |
@@ -75,6 +75,15 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 | [HF-08](#hf-08) | Specify save failure and conservative recovery | Persistence | M |
 | [HF-09](#hf-09) | Specify schema and gameplay-content migration | Persistence | M |
 | [HF-10](#hf-10) | Review the complete foundation contract | Independent review | M |
+| [S0-01](#s0-01) | Pin the Godot 4.7.2 toolchain and prove a typed offline headless boot | Verification | M |
+| [S0-02](#s0-02) | Add the documentation-only check command | Tooling | S |
+| [S0-03](#s0-03) | Add the verification-scope selector and reserve the native check command | Verification | S |
+| [S0-04](#s0-04) | Prove runtime ownership under TADR-002 and TADR-005 | Runtime | M |
+| [S0-05](#s0-05) | Prove typed Resource identity, admission and immutability headlessly | Content | S |
+| [S0-06](#s0-06) | Prove binary-tree admission rejection and failed-reload retention | Content | S |
+| [S0-07](#s0-07) | Author the TADR-004 save-owner proof and fixtures | Persistence | S |
+| [S0-08](#s0-08) | Execute the TADR-004 proof and record evidence | Verification | S |
+| [S0-09](#s0-09) | Export presets and CI smoke workflow (parked) | Verification | M |
 | [PD-01](#pd-01) | Write the production art acceptance brief | Technical art | M |
 | [PD-02](#pd-02) | Specify production interface states and acceptance | Rendering/input/UI | M |
 | [PD-03](#pd-03) | Write the sound and feel event brief | Audio | M |
@@ -624,6 +633,301 @@ HF covers foundation contracts; PD covers production-facing briefs; TH covers la
 - Check author/reviewer independence and distinguish source review from future native qualification.
 
 **Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+<a id="s0-01"></a>
+
+### S0-01: Pin the Godot 4.7.2 toolchain and prove a typed offline headless boot
+
+**Card revision:** 1 · **Owner:** Verification (Conventions co-signs the root path) · **Size:** M · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (pinned editor, typed GDScript)
+- [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (offline solo)
+- [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (the root stays disjoint from both browser entries)
+- `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01), or the interim root path the coordinator records in TRACKING as a question answer
+- [TRACKING.md](TRACKING.md) event EV-0024, the install record: editor at `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64`, version `4.7.2.stable.official.ed1daf0bf`, official 4.7.2-stable release, SHA512 verified against the release sums
+- Godot 4.7 command-line reference, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
+
+**Dependencies:** [HF-01](#hf-01) or the interim path answer. **Blocking questions:** None. **Blocking item:** engine installed on this machine under EV-0024; export templates parked.
+
+**Files touched:** `native/project.godot`; `native/tests/smoke_boot.gd`; `native/tests/fixtures/untyped_negative.gd`; `docs/tech/native-toolchain.md`; `scripts/native-smoke.mjs`; `.gitignore` (add `native/.godot/`); optional `package.json` `check:native` entry; `artifacts/local/tasks/S0-01/`. The `native/` root and `docs/tech/native-toolchain.md` are provisional pending HF-01, and the toolchain document says so.
+
+**Definition of done:**
+
+1. `docs/tech/native-toolchain.md` records the installed editor: version string, official release archive name, SHA512 digest as verified under EV-0024, install path and machine identity. It records export templates as not installed and parked with S0-09, and states that its own path is provisional pending HF-01.
+2. `native/project.godot` carries the project name, no renderer override, and the static-typing warnings-as-errors keys cited from the resolved 4.7 documentation.
+3. `native/tests/smoke_boot.gd` is typed, extends SceneTree, prints a marker and the engine version, and calls `quit()`.
+4. `native/tests/fixtures/untyped_negative.gd` fails to load under the item 2 settings.
+5. `scripts/native-smoke.mjs` runs outside `verify`, resolves the binary through an environment variable or the recorded path, runs the positive, negative and static networking-grep checks, and writes `artifacts/local/native-smoke/report.json` with commands, exit codes, stdout, host identity and a sha256 manifest of `native/`.
+6. The `verify` stage list is unchanged and `npm run check:project` passes.
+7. `index.html`, `orchard.html`, `src/`, `server/` and `tests/` are unchanged.
+
+**Verification and evidence:**
+
+- Positive run exits 0 and prints the identity line; negative run exits nonzero; positive rerun with the network unavailable by a recorded method.
+- `node scripts/native-smoke.mjs`; `npm run check:project`.
+- The receipt records the Godot version string, host, offline method and the observed `quit()` exit code.
+
+**Boundary:** No game code, scene, Resource, save, input or rendering. Linux host only; nothing about Windows, controllers or feel. No export, CI or publication. Proves engine launch, typed parsing and exit only.
+
+<a id="s0-02"></a>
+
+### S0-02: Add the documentation-only check command
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [ORCHESTRATOR.md § Serial integration and completion](ORCHESTRATOR.md#serial-integration-and-completion) (manifest and documentation-only checks)
+- [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification)
+- [TRACKING.md](TRACKING.md) (event sequence and index-row rules)
+- [§ Task contract](#task-contract) above (card field set and required output headings)
+- `scripts/check-project.mjs` (reuse its link regex and fence stripping)
+- [artifacts/publication-2026-09-06/document-checks.json](artifacts/publication-2026-09-06/document-checks.json) (the unpreserved PUB-01 anchor check)
+
+**Dependencies:** None. **Blocking questions:** None. **Blocking item:** coordinator ruling on whether a tooling card may run the build-containing `verify`.
+
+**Files touched:** `scripts/check-docs.mjs`; `package.json` (scripts block only); `tests/check-docs.test.js`; `CONTRIBUTING.md` (one table row); `artifacts/local/tasks/S0-02/`.
+
+**Definition of done:**
+
+1. `npm run check:docs` checks local file links and heading and `<a id>` anchors in root `*.md`, `adr/**`, `docs/**` and `artifacts/**/README.md`, stripping fences and skipping remote URLs.
+2. It validates every BACKLOG card field set, the preceding anchor matching the card ID, resolving dependency and question links, and rejects an assignable L.
+3. It checks TRACKING `EV-NNNN` numbers are strictly increasing with no gaps and no blank line inside the append-only events table, and that every index row links an existing BACKLOG anchor and names an existing event.
+4. When `docs/tech/sections/` exists, each section carries the seven required headings from § Task contract.
+5. It writes `artifacts/local/check-docs/report.json` with a sha256 manifest of every checked Markdown file and a limits line.
+6. The `verify.mjs` stage list is unchanged and the existing tooling test holds.
+
+**Verification and evidence:**
+
+- `npm run check:docs` passes on the integrated tree; fixtures with a broken anchor, a card missing Boundary and a duplicated EV each fail naming the path.
+- `npm run check:project` and `npm test` pass; `verify` only if the coordinator authorizes the build.
+
+**Boundary:** Tooling only. Structural evidence, not contract correctness. Implemented under PS-01; the coordinator records its live state.
+
+<a id="s0-03"></a>
+
+### S0-03: Add the verification-scope selector and reserve the native check command
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [ORCHESTRATOR.md § Serial integration and completion](ORCHESTRATOR.md#serial-integration-and-completion)
+- [.agents/skills/scrapkeep-verify/SKILL.md](.agents/skills/scrapkeep-verify/SKILL.md) and [AGENTS.md](AGENTS.md)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
+- `scripts/check-docs.mjs` from [S0-02](#s0-02)
+
+**Dependencies:** [S0-02](#s0-02). **Blocking questions:** None. **Blocking item:** None.
+
+**Files touched:** `scripts/check-scope.mjs`; `package.json` (scripts block only); `tests/check-scope.test.js`; `CONTRIBUTING.md` (scope-to-command map); `artifacts/local/tasks/S0-03/`.
+
+**Definition of done:**
+
+1. `npm run check:scope -- <base> <candidate>` classifies changed paths into documentation-only, browser-proof, tooling, native (`*.gd`, `*.tscn`, `*.tres`, `project.godot`, `export_presets.cfg`) or mixed, and prints the exact required commands with evidence-class labels. It exits nonzero when a documentation-only scope mixes with build-requiring paths under a no-build instruction.
+2. The map appears in CONTRIBUTING § Verification and the scrapkeep-verify skill table cites it.
+3. `check:godot` is documented as a reserved name, unavailable until the engineering handoff, with no body; `verify.mjs` is unmodified.
+4. Hosted CI is recorded as parked with its unpark conditions; no workflow file is added.
+
+**Verification and evidence:**
+
+- Unit fixtures per class plus the mixed refusal.
+- `npm run check:docs` and `npm test` pass.
+
+**Boundary:** Tooling and contribution docs only. No Godot command, no CI, no admission authority outside the coordinator. Implemented under PS-01; the coordinator records its live state.
+
+<a id="s0-04"></a>
+
+### S0-04: Prove runtime ownership under TADR-002 and TADR-005
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision), [§ Consequences](adr/TADR-002-runtime-model.md#consequences) and [§ Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration)
+- [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (pause and menu focus)
+- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
+- Browser precedent to differ from, not port: `src/orchard/simulation.js:140`, `:347-374`, `:417-421` and `tests/orchard.test.js:12-15`, `:327-337`
+- S0-01 evidence and toolchain record
+- Godot 4.7 documentation for `_physics_process`, `Node.process_mode`, `SceneTree.paused`, `SceneTree.physics_frame`, `Engine.physics_ticks_per_second`, `Engine.is_in_physics_frame`, application focus notifications and `SceneTree.quit(exit_code)`, resolved by the coordinator and supplied in the packet.
+
+**Dependencies:** [S0-01](#s0-01), plus the path decision (HF-01 admission or the interim path answer). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `native/proofs/tadr-002/project.godot`; `native/proofs/tadr-002/proof_runner.gd`; `native/proofs/tadr-002/session_owner.gd`; `native/proofs/tadr-002/encounter_coordinator.gd`; `native/proofs/tadr-002/encounter_state.gd`; `native/proofs/tadr-002/input_adapter.gd`; `native/proofs/tadr-002/menu_probe.gd`; `native/proofs/tadr-002/intruder.gd`; `docs/tech/proofs/S0-04-runtime-ownership.md`; `artifacts/local/tasks/S0-04/`. Paths under `native/` and `docs/tech/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. Cite the resolved 4.7 documentation for every API above and save the receipt.
+2. Implement phases A through E exactly (single physics-callback owner, second source rejected, positive control cast, pause freezes gameplay while an always-process node runs, focus loss clears held input and cancels prepared actions without manufacturing a cast), typed, with no accumulator, no `Input` singleton and no addon.
+3. The run exits 0 on the pinned host with stdout and `result.json` under `artifacts/local/godot-proof/S0-04/`.
+4. The proof document states the proven and not-proven lists verbatim and logs the tick rate as a placeholder, never a chosen value.
+5. The handoff proposes the HF-04b revision 2 sketch-replacement text.
+
+**Verification and evidence:**
+
+- `godot --headless --path native/proofs/tadr-002 --script res://proof_runner.gd`; expect exit 0 and five PASS lines.
+- Fault injection (the intruder mutates state directly) yields exit 1; the reviewer reads source and stdout and reruns.
+
+**Boundary:** No rendering, physics bodies, scene replacement, save, export, CI, addon or browser changes. Not qualification evidence; proves ADR rules only.
+
+<a id="s0-05"></a>
+
+### S0-05: Prove typed Resource identity, admission and immutability headlessly
+
+**Card revision:** 1 · **Owner:** Content · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision)
+- [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression) (tree shape only)
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
+- S0-01 evidence and toolchain record
+- Godot 4.7 documentation for `Resource`, `class_name` and typed `@export`, resolved by the coordinator and supplied in the packet.
+
+**Dependencies:** [S0-01](#s0-01). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `native/proofs/tadr-003/project.godot`; `native/proofs/tadr-003/definitions/slot_tree_definition.gd`; `native/proofs/tadr-003/definitions/catalogue.gd`; `native/proofs/tadr-003/fixtures/placeholder_tree.tres`; `native/proofs/tadr-003/fixtures/renamed_copy/placeholder_tree_other_name.tres`; `native/proofs/tadr-003/tools/validate_catalogue.gd`; `artifacts/local/tasks/S0-05/`. Paths under `native/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. A typed `SlotTreeDefinition` Resource saved as text `.tres` with only `id`, `content_revision`, `nodes` and `edges` fields, so no product value can be smuggled in.
+2. `register` refuses the same id from a different path or filename; `resolve` returns the first registration.
+3. A `duplicate()` session record is mutated, the reload is unchanged and `resolve` returns the original.
+4. The headless `--script` command exits 0 with a per-check summary.
+
+**Verification and evidence:**
+
+- Run on the pinned 4.7.2; capture stdout, exit code, `godot --version` and a sha256 manifest under `artifacts/local/tasks/S0-05/`.
+- The reviewer confirms the renamed copy differs in path and filename, no field can hold a cost, effect or name, and every id carries the `proof.` prefix.
+
+**Boundary:** Disposable. No production path, content, import, hot reload, `.tscn` or save format. Browser proofs untouched. Deletable once HF-05 and HF-06a cite it.
+
+<a id="s0-06"></a>
+
+### S0-06: Prove binary-tree admission rejection and failed-reload retention
+
+**Card revision:** 1 · **Owner:** Content (Verification reviews) · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (structural admission and failed-reload retention)
+- [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression)
+- S0-05 outputs
+
+**Dependencies:** [S0-05](#s0-05). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `native/proofs/tadr-003/definitions/tree_rules.gd`; `native/proofs/tadr-003/fixtures/malformed_tree.tres`; `native/proofs/tadr-003/fixtures/candidate_bad/`; `native/proofs/tadr-003/tools/validate_catalogue.gd` (extend); `artifacts/local/tasks/S0-06/`. Paths under `native/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. `tree_rules.validate` returns an empty list for the good fixture and at least one diagnostic naming the id and the failed check for the malformed fixture (reconvergence, unreachable leaf).
+2. The validator with a malformed candidate exits nonzero with the diagnostic.
+3. A failed staged catalogue leaves the prior active catalogue in place; `resolve` still succeeds.
+4. A fixture without the `proof.` prefix is refused.
+
+**Verification and evidence:**
+
+- Two runs (exit 0 for the good fixture; nonzero for the candidate) logged with exit codes and `godot --version`.
+- The reviewer confirms the defect is structural: the rule rejected it, not typing, per TADR-003 § Decision.
+
+**Boundary:** Semantic rules (lineage per slot, start access, milestones, recipe endpoints, compatibility) are out of scope. No safe-encounter-boundary behavior is proven.
+
+<a id="s0-07"></a>
+
+### S0-07: Author the TADR-004 save-owner proof and fixtures
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) and [§ Consequences](adr/TADR-004-persistence.md#consequences)
+- `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) if admitted, else a placeholder envelope with no discovery field and no browser IDs
+- Prior art only, not reuse: `server/store.js:103-124` and `tests/progress-store.test.js:72-133`
+- Godot 4.7 documentation for `FileAccess`, `DirAccess` and `JSON`, resolved by the coordinator and supplied in the packet.
+
+**Dependencies:** [HF-01](#hf-01) or a placeholder path. **Blocking questions:** None. **Blocking item:** none for authoring; engine install to run.
+
+**Files touched:** `native/proofs/tadr-004-save/project.godot`; `native/proofs/tadr-004-save/save_owner.gd`; `native/proofs/tadr-004-save/run_proof.gd`; `native/proofs/tadr-004-save/fixtures/`; `native/proofs/tadr-004-save/README.md`; `artifacts/local/tasks/S0-07/`. Paths under `native/` are provisional pending HF-01.
+
+**Definition of done:**
+
+1. A typed `SaveOwner` with the six methods `stage`, `validate`, `commit`, `acknowledge`, `recover` and `resolve_lifecycle`, in the order stage, validate, commit, acknowledge; `validate` re-reads the staged bytes, not the in-memory record.
+2. Cases a through e (f optional) with stated inputs, outputs and exit codes: commit path, round trip, newer schema (c1, c2), interruption (d1, d2) and lifecycle authority (e).
+3. Fixtures for c2, d1, d2 and e under three fixture directories.
+4. The README states the command, the run-directory rule, the evidence layout and the TADR-004 § Consequences non-claim verbatim (temporary files, a rename, a checksum or a backup alone do not prove power-loss durability).
+5. Every API absent from the resolved documentation receipt is marked unverified.
+
+**Verification and evidence:**
+
+- Source review against TADR-004 § Decision and § Consequences.
+- Fixture JSON parses under Node (syntax only); no Godot execution is claimed by this card.
+
+**Boundary:** No game code, no future `user://` layout, no browser storage reads, no discovery field, no migration implementation, no CI. Placeholders only.
+
+<a id="s0-08"></a>
+
+### S0-08: Execute the TADR-004 proof and record evidence
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** prepare
+
+**Source and inputs:**
+
+- S0-07 outputs (proof, fixtures, README)
+- [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification) (evidence classes)
+- S0-01 toolchain record
+
+**Dependencies:** [S0-07](#s0-07), [S0-01](#s0-01). **Blocking questions:** None. **Blocking item:** engine install (satisfied on this machine under EV-0024; the coordinator confirms at admission).
+
+**Files touched:** `artifacts/local/proofs/tadr-004/<run-id>/`; `artifacts/local/tasks/S0-08/`; suggested HF-08 matrix cross-references travel in the handoff, not in HF-08's file.
+
+**Definition of done:**
+
+1. One headless run exits 0 with every case PASS.
+2. Engine version and OS are recorded.
+3. `result.json` names the method "headless fixture run".
+4. An explicit statement that flush/fsync durability and non-Linux rename semantics are not asserted.
+
+**Verification and evidence:**
+
+- Rerun twice for idempotence.
+- The reviewer reads `result.json` against the S0-07 case table.
+
+**Boundary:** Linux only. No CI, no templates. Certifies nothing and closes no HF card; HF-08's re-verify trigger consumes it.
+
+<a id="s0-09"></a>
+
+### S0-09: Export presets and CI smoke workflow (parked)
+
+**Parked.** Export templates are not installed, and template use and pushing a workflow to `main` are outside the current authorization (TRACKING EV-0019 and EV-0024); this is stage 2-3 of the CI path. Nothing below is assignable until the coordinator records an unpark with the extended authorization.
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** prepare
+
+**Source and inputs:**
+
+- [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) and [§ Consequences](adr/TADR-001-engine-language-platforms.md#consequences)
+- [adr/TADR-005-networking-scope.md § Consequences](adr/TADR-005-networking-scope.md#consequences)
+- S0-01 outputs
+- Godot 4.7 export command-line documentation and the template download record, resolved by the coordinator when unparked.
+
+**Dependencies:** [S0-01](#s0-01). **Blocking questions:** [Q-E06](#q-e06) before any export leaves the machine. **Blocking item:** authorization extended to templates and to pushing a workflow.
+
+**Files touched:** `native/export_presets.cfg`; `scripts/native-smoke.mjs` (`--export` mode); `.github/workflows/native-smoke.yml`; `docs/tech/native-toolchain.md` (the CI install mirrors the pin); `artifacts/local/tasks/S0-09/`.
+
+**Definition of done:**
+
+1. Exactly two presets, Linux x64 and Windows x64, with their names referenced verbatim and no credentials.
+2. `--export` runs both to absolute paths under `artifacts/local/native-export/linux/` and `artifacts/local/native-export/windows/`, asserting exit 0, presence, size and sha256.
+3. The Linux export launches and exits 0; the Windows export is file-existence only unless a Windows runner executes it.
+4. The workflow on `ubuntu-latest` downloads the editor and templates by URL, verifies the recorded digests, runs the smoke and exports and uploads `report.json`; no marketplace action is required; an optional `windows-latest` job is costed separately.
+5. No export is committed or published.
+
+**Verification and evidence:**
+
+- The two export commands; `node scripts/native-smoke.mjs --export`.
+- One green CI run on the pinned SHA, logged to `artifacts/local/tasks/S0-09/`.
+
+**Boundary:** Export success is not qualification. Nothing is distributed; Q-E06 stays untouched until an export leaves the machine. Windows is unproven without execution. The renderer stays default (Q-E04 open). Smoke-script presence in exports is noted for Q-E13 and TH-26.
 
 <a id="pd-01"></a>
 
