@@ -83,6 +83,7 @@ let last = performance.now(),
   hudTimer = 0,
   lastMode = game.mode,
   toastLife = 0;
+let eventSequence = 0;
 let frames = 0,
   padPrevious = [],
   padBlocked = true;
@@ -583,6 +584,7 @@ function processEvents() {
     world.event(event);
     sound(event.type);
     eventLog.push({
+      sequence: ++eventSequence,
       type: event.type,
       kind: event.attack?.kind,
       source: event.source,
@@ -697,25 +699,32 @@ function updateHUD() {
       return `<div class="enemy-label" style="left:${pt.x}px;top:${pt.y}px"><span>${e.kind === "pruner" ? "PRUNER ARM" : e.kind.toUpperCase()}${e.state === "recovery" ? " · EXPOSED" : ""}</span><div><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%"></i></div></div>`;
     })
     .join("");
-  const threat = game.enemies
+  const threat = game.hazards
     .filter(
-      (e) =>
-        e.hp > 0 &&
-        ["windup", "active"].includes(e.state) &&
-        Math.hypot(e.x - p.x, e.z - p.z) < 20,
+      (hazard) =>
+        ["windup", "active"].includes(hazard.state) &&
+        Math.hypot(hazard.x - p.x, hazard.z - p.z) <=
+          hazard.range + (hazard.radius || 0) + p.radius,
     )
-    .map((e) => ({
-      e,
+    .map((hazard) => ({
+      hazard,
+      distance: Math.hypot(hazard.x - p.x, hazard.z - p.z),
       a: Math.atan2(
-        Math.sin(Math.atan2(e.x - p.x, p.z - e.z) - world.yaw),
-        Math.cos(Math.atan2(e.x - p.x, p.z - e.z) - world.yaw),
+        Math.sin(Math.atan2(hazard.x - p.x, p.z - hazard.z) - world.yaw),
+        Math.cos(Math.atan2(hazard.x - p.x, p.z - hazard.z) - world.yaw),
       ),
     }))
-    .find((v) => Math.abs(v.a) > 0.8);
+    .filter((candidate) => Math.abs(candidate.a) > 0.8)
+    .sort((a, b) => a.distance - b.distance)[0];
   $("threat").hidden = !threat || game.mode !== "playing";
-  if (threat)
+  if (threat) {
+    const direction =
+      Math.abs(threat.a) > 2 ? "↓ Behind" : threat.a < 0 ? "← Left" : "Right →";
+    const attack =
+      threat.hazard.kind === "offcut" ? "offcut incoming" : "tool attack";
     $("threat").textContent =
-      `${Math.abs(threat.a) > 2 ? "↓ Behind" : threat.a < 0 ? "← Left" : "Right →"} · ${threat.e.kind === "spreadleg" ? "low sweep · jump" : threat.e.kind === "pruner" ? "tall arm attack" : "shears preparing"}`;
+      `${direction} · ${attack} · ${threat.hazard.jumpable ? "low · jump clear" : "tall · move clear"}`;
+  }
 }
 function frame(now) {
   const elapsed = Math.max(0, now - last),

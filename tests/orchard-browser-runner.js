@@ -633,7 +633,16 @@ export function installOrchardQA(api) {
       const g = stagePopulation(true);
       await advance(0.1);
       const before = api.performance(),
-        start = performance.now();
+        start = performance.now(),
+        simulationStart = g.time;
+      let lastEventSequence = api.events().at(-1)?.sequence || 0;
+      const attackActivity = {
+        player: 0,
+        conductor: 0,
+        companion: 0,
+        echoes: 0,
+        groundLoop: 0,
+      };
       let maximumWorkers = 0,
         minimumWorkers = Infinity,
         maximumBosses = 0,
@@ -642,9 +651,26 @@ export function installOrchardQA(api) {
       const counters = [];
       pointer("pointerdown", 0);
       key("KeyW");
-      while (performance.now() - start < 60000) {
+      while (
+        performance.now() - start < 60000 ||
+        g.time - simulationStart < 60
+      ) {
+        if (performance.now() - start > 180000)
+          throw new Error(
+            "Stress simulation did not advance sixty seconds within three real minutes",
+          );
+        if (g.mode !== "playing")
+          throw new Error("Stress simulation unexpectedly paused or ended");
+        for (const event of api.events()) {
+          if (event.sequence <= lastEventSequence) continue;
+          lastEventSequence = event.sequence;
+          if (event.type !== "attack") continue;
+          if (event.source in attackActivity) attackActivity[event.source]++;
+          if (event.echo) attackActivity.echoes++;
+          if (event.kind === "ground-loop") attackActivity.groundLoop++;
+        }
         const elapsed = (performance.now() - start) / 1000;
-        results.textContent = `STRESS FIXTURE ${elapsed.toFixed(1)} / 60.0 seconds\n14 durable workers + boss; both modifiers; two conductors; companion.\nNormal requestAnimationFrame rendering; no fast-forward.`;
+        results.textContent = `STRESS FIXTURE ${(g.time - simulationStart).toFixed(1)} / 60.0 simulation seconds · ${elapsed.toFixed(1)}s real time\n14 durable workers + boss; both modifiers; two conductors; companion.\nNormal requestAnimationFrame rendering; no fast-forward.`;
         const target = g.enemies[Math.floor(elapsed / 3) % 14];
         aimAt({
           x: target.x,
@@ -701,6 +727,8 @@ export function installOrchardQA(api) {
         debug = gl.getExtension("WEBGL_debug_renderer_info");
       const report = {
         durationMs: performance.now() - start,
+        simulationTimeDelta: g.time - simulationStart,
+        attackActivity,
         viewport: {
           width: innerWidth,
           height: innerHeight,
@@ -742,6 +770,7 @@ export function installOrchardQA(api) {
       check(
         "Sixty seconds rendered at the worker cap",
         report.durationMs >= 60000 &&
+          report.simulationTimeDelta >= 60 &&
           minimumWorkers === 14 &&
           maximumWorkers === 14 &&
           maximumBosses === 1,
@@ -751,6 +780,14 @@ export function installOrchardQA(api) {
         g.inventory.equipped.length === 2 &&
           g.conductors.length === 2 &&
           g.companion?.enabled,
+      );
+      check(
+        "Player, conductors, companion and Echo produced attacks",
+        attackActivity.player > 0 &&
+          attackActivity.conductor > 0 &&
+          attackActivity.companion > 0 &&
+          attackActivity.echoes > 0,
+        JSON.stringify(attackActivity),
       );
       check("No browser errors during stress", report.errors.length === 0);
       check(
