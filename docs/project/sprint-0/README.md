@@ -21,7 +21,7 @@ The workflow is manual and targets the `scrapkeep-s0` label on a one-job local s
 
 ## Close the sprint
 
-Follow [the authoritative procedure](../../../ORCHESTRATOR.md#sprint-closure) through [the reusable prompt](../prompts/sprint-close.md). Reconcile the delivery cards, amendments and stopped leases before evaluating the receipt. S0-14 is the closure-control card; it is excluded from its own selected delivery set and completes only when that set passes.
+Use [the receipt schema](closure-receipt.md) to preserve evidence. Follow [the authoritative procedure](../../../ORCHESTRATOR.md#sprint-closure) through [the reusable prompt](../prompts/sprint-close.md). Reconcile the delivery cards, amendments and stopped leases before evaluating the receipt. S0-14 is the closure-control card; it is excluded from its own selected delivery set and completes only when that set passes.
 
 Preserve the clean tested source identity separately from the later administrative commit that records the result. The checker grants no dispatch authority. A failure recorded as a backlog repair remains a failed current gate. Repeating identical receipt bytes against unchanged source and evidence must yield the same result without creating another event.
 
