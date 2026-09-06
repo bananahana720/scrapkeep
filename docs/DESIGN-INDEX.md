@@ -26,6 +26,7 @@ The [project desk](project/README.md) owns current status, requirements and the 
 
 | To review | Open | Status |
 | --- | --- | --- |
+| Every open decision from the audit and research, tiered, with the first-session agenda | [Decision register](project/DECISION-REGISTER.md) | 48 entries; five Tier A entries gate the next increment |
 | High-impact areas, playfeel probe findings, and the proposed build sequence | [Design audit](DESIGN-AUDIT.md) | Synthesis of the audit swarm; recommendations pending approval |
 | Character canon: pilots, Brindle and overseers, companions, Scrapbook voice | [Character bible](CHARACTER-BIBLE.md) | Proposals staged, pending Andrew's approval |
 | Full campaign enemy roster, all seven rungs, data-ready admission rows | [Campaign enemy roster](ENEMY-ROSTER.md) | Proposal, pending approval of the audit canon it extends |
@@ -51,7 +52,7 @@ The orchard proof tests the relationship proposed by the latest study. Snipcart'
 
 ## Team records
 
-[First-build team](FIRST-BUILD-SWARM.md) · [Combat research swarm](COMBAT-DESIGN-SWARM.md) · [Taxonomy research swarm](ENEMY-TAXONOMY-SWARM.md) · [Orchard visual and encounter swarm](ORCHARD-VISUAL-SWARM.md) · [Deep research swarm](DEEP-RESEARCH-SWARM.md).
+[First-build team](FIRST-BUILD-SWARM.md) · [Combat research swarm](COMBAT-DESIGN-SWARM.md) · [Taxonomy research swarm](ENEMY-TAXONOMY-SWARM.md) · [Orchard visual and encounter swarm](ORCHARD-VISUAL-SWARM.md) · [Deep research swarm](DEEP-RESEARCH-SWARM.md) · [Planning-prep swarm](PLANNING-PREP-SWARM.md).
 
 Workers own bounded assignments; the coordinator integrates changes and records conflicts. The earlier research passes did not authorize implementation or create a session goal. The user subsequently approved this first build and its goal. Simulation and model lanes are now admitted; the coordinator completed build and integration verification.
 

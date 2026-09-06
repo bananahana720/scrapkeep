@@ -26,7 +26,7 @@
 | T11 / medium | Package the orchard environment as reusable pocket modules | The current arena is hand-laid; the seeded-stage model needs a module kit per biome | Scene owner / medium | Iron Orchard stage-1 pockets assemble from the module kit |
 | T12 / medium | Write the one-page audio and voice direction note | The character bible fixes a bark budget but no audio direction document exists | Coordinator / small | Note admitted to the desk; the bark budget confirmed or revised there |
 
-Detailed evidence for P01–P03 and T02–T03: [first-build verification](../FIRST-BUILD-VERIFICATION.md). P06–P09 and T05–T12 come from the 5 September deep-research pass; their documents are indexed in the [design desk](../DESIGN-INDEX.md) and the critics' notes in [review notes](../research-2026-09-05/REVIEW-NOTES.md). Source/licensing inventory: [assets](ASSETS.md). Current environment finding: [closeout](HOUSEKEEPING.md).
+Detailed evidence for P01–P03 and T02–T03: [first-build verification](../FIRST-BUILD-VERIFICATION.md). P06–P09 and T05–T12 come from the 5 September deep-research pass; their documents are indexed in the [design desk](../DESIGN-INDEX.md) and the critics' notes in [review notes](../research-2026-09-05/REVIEW-NOTES.md). Source/licensing inventory: [assets](ASSETS.md). Current environment finding: [closeout](HOUSEKEEPING.md). Every decision-typed row above maps to an entry in the [decision register](DECISION-REGISTER.md), which the [planning protocol](PLANNING.md) works through before scoping.
 
 ## Completed this closeout
 

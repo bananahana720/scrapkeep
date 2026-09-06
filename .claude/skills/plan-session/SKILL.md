@@ -13,7 +13,7 @@ Read [docs/project/PLANNING.md](../../../docs/project/PLANNING.md) in full and f
 | Present one decision with a recommendation and 2 to 4 options | AskUserQuestion, one call per decision, "Park it" always an option |
 | The Phase 2 go/no-go question | AskUserQuestion with go, revise, and park |
 | Append a `docs/decisions.tsv` row or edit the register | Edit |
-| Spawn a writer | Agent with `isolation: "worktree"`, model from the `feature, refactoring` role in the host model file named by `/home/andrew/.config/pstack/runtime.md` |
+| Spawn a writer | Agent with `isolation: "worktree"`, model from the `feature, refactoring` role in the host model file named by the pstack runtime contract. If isolation fails to resolve a base branch, create the worktree by hand per PLANNING.md Phase 3 step 2 and name its path in SCOPE |
 | Spawn the fresh reviewer | Agent without isolation, read-only, model from the `judgment and prose` role |
 | Admit a lane and run the gate | Bash, `git merge` then `npm run verify`, one lane at a time |
 
