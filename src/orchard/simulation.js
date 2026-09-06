@@ -72,7 +72,20 @@ export const LIGHTNING_CONFIG = Object.freeze({
     chainMultiplier: 1.8,
     conductorMultiplier: 2.5,
   }),
-  movement: Object.freeze({ jumpSpeed: 10.5, airJumpSpeed: 9.5, gravity: 25 }),
+  movement: Object.freeze({
+    jumpSpeed: 10.5,
+    airJumpSpeed: 9.5,
+    gravity: 25,
+    ramDamage: 23,
+    shearRamBonus: 9,
+    maxShearBonus: 3,
+    ramCooldown: 1.45,
+    braceCooldownBonus: 0.22,
+    minRamCooldown: 0.85,
+    braceProtection: 0.15,
+    maxBraceProtection: 0.3,
+  }),
+  companion: Object.freeze({ damage: 7, interval: 2.5, range: 4.8 }),
 });
 export const ITEM_CONFIG = Object.freeze({
   "ground-loop": Object.freeze({
@@ -467,7 +480,11 @@ export class OrchardGame {
       p.vx = dir.x * 19;
       p.vz = dir.z * 19;
       p.dashTime = 0.24;
-      p.dashCooldown = Math.max(0.85, 1.45 - p.brace * 0.22);
+      p.dashCooldown = Math.max(
+        LIGHTNING_CONFIG.movement.minRamCooldown,
+        LIGHTNING_CONFIG.movement.ramCooldown -
+          p.brace * LIGHTNING_CONFIG.movement.braceCooldownBonus,
+      );
       this._ramHits.clear();
       this._event("ram", p, { text: "Burst", kind: "burst" });
     }
@@ -900,7 +917,14 @@ export class OrchardGame {
       this._ramHits.add(enemy.id);
       const weakGap = Math.hypot(p.x - enemy.weakX, p.z - enemy.weakZ);
       const counter = enemy.state === "recovery" && weakGap < p.radius + 1.9;
-      this._damage(enemy, 23 + Math.min(p.shear, 3) * 9, counter, "ram");
+      this._damage(
+        enemy,
+        LIGHTNING_CONFIG.movement.ramDamage +
+          Math.min(p.shear, LIGHTNING_CONFIG.movement.maxShearBonus) *
+            LIGHTNING_CONFIG.movement.shearRamBonus,
+        counter,
+        "ram",
+      );
       this._groundLoop(enemy);
       this._event("ram", p, {
         kind: "impact",
@@ -1595,7 +1619,13 @@ export class OrchardGame {
   _hurt(amount, enemy) {
     const p = this.player;
     if (p.hurtTime > 0 || this.mode !== "playing") return;
-    const damage = amount * (1 - Math.min(0.3, p.brace * 0.15));
+    const damage =
+      amount *
+      (1 -
+        Math.min(
+          LIGHTNING_CONFIG.movement.maxBraceProtection,
+          p.brace * LIGHTNING_CONFIG.movement.braceProtection,
+        ));
     const dealt = Math.min(p.hp, damage);
     p.hp = Math.max(0, p.hp - damage);
     p.hurtTime = 1.05;
@@ -1684,7 +1714,7 @@ export class OrchardGame {
             x: buddy.x,
             y: buddy.y + 0.7,
             z: buddy.z,
-          }) < 4.8 &&
+          }) < LIGHTNING_CONFIG.companion.range &&
           this._visible(
             { x: buddy.x, y: buddy.y + 0.7, z: buddy.z },
             center(candidate),
@@ -1693,7 +1723,7 @@ export class OrchardGame {
       .sort((a, b) => distance(a, buddy) - distance(b, buddy))[0];
     buddy.yaw = enemy ? yawTo(buddy, enemy) : p.yaw;
     if (enemy && buddy.cooldown <= 0) {
-      buddy.cooldown = 2.5;
+      buddy.cooldown = LIGHTNING_CONFIG.companion.interval;
       buddy.flash = 0.24;
       const origin = { x: buddy.x, y: buddy.y + 0.7, z: buddy.z };
       const point = center(enemy);
@@ -1708,7 +1738,7 @@ export class OrchardGame {
           targetIds: [enemy.id],
           blocked: false,
         },
-        7,
+        LIGHTNING_CONFIG.companion.damage,
         "companion",
       );
       this._event("companion", buddy, {
