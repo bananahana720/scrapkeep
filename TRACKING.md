@@ -10,10 +10,10 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | --- | --- |
 | Preparation | Authorized by Andrew's explicit instruction to implement the three-document plan. |
 | Proposed sprint | HF-01 through HF-10, foundation engineering contracts only. |
-| Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 revision 3 is under review; local CI execution awaits explicit transient runner registration approval. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
+| Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 revision 3 attempt 2 is in progress; local CI execution awaits explicit transient runner registration approval. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. HF remains awaiting_review. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for operational Sprint 0. Prior session history follows. Session `scrapkeep-1c` (claude-fable-5-1, observed `CLAUDE_EFFORT=high`) coordinated the prepare-stage program and closed with EV-0034. Delegates run on the project definitions at low, medium, high or xhigh as recorded per lease. |
-| Active task attempts / write leases | S0-13-L1 (attempt 2); S0-09 writer stopped for review. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
+| Active task attempts / write leases | S0-09-L1 (attempt 2); S0-13 writer stopped for review. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
@@ -130,7 +130,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-06](BACKLOG.md#s0-06) | 1 | 3 | done | none | PS-06-A1 | EV-0033 |
 | [S0-07](BACKLOG.md#s0-07) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
 | [S0-08](BACKLOG.md#s0-08) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
-| [S0-09](BACKLOG.md#s0-09) | 3 | 5 | review | CI runner registration approval required | none | EV-0051 |
+| [S0-09](BACKLOG.md#s0-09) | 3 | 7 | in_progress | CI registration approval required | none | EV-0053 |
 | [PD-01](BACKLOG.md#pd-01) | 1 | 1 | queued | HF-01 | none | EV-0002 |
 | [PD-02](BACKLOG.md#pd-02) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
 | [PD-03](BACKLOG.md#pd-03) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
@@ -182,7 +182,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-10](BACKLOG.md#s0-10) | 1 | 2 | done | none | S0-10-A2 | EV-0036 |
 | [S0-11](BACKLOG.md#s0-11) | 1 | 5 | done | none | S0-11-A1 | EV-0042 |
 | [S0-12](BACKLOG.md#s0-12) | 1 | 5 | done | none | S0-12-A1 | EV-0045 |
-| [S0-13](BACKLOG.md#s0-13) | 1 | 5 | in_progress | none | none | EV-0050 |
+| [S0-13](BACKLOG.md#s0-13) | 1 | 6 | review | none | none | EV-0054 |
 | [S0-14](BACKLOG.md#s0-14) | 1 | 1 | queued | dependency | none | EV-0035 |
 
 ## Question state index
@@ -297,6 +297,9 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0049 | 2026-09-06T21:00:25.347536+00:00 | Coordinator / review | S0-13 | Attempt 1 ad18bf8 received independent FAIL: prior-sprint completed prerequisites incorrectly rejected. Preserve current delivery set; attempt 2 adds evidenced completed-predecessor reconciliation. Reviewer session reused under recorded host capacity limit. |
 | EV-0050 | 2026-09-06T21:00:25.357827+00:00 | Coordinator / assignment | S0-13 | Attempt 2 authorized within existing write set and worktree; S0-13-L1 renewed for required predecessor fix and tests, gpt-6-astra high. No scope expansion. |
 | EV-0051 | 2026-09-06T21:00:25.359710+00:00 | Coordinator / handoff | S0-09 | Candidate 76cbb6caed6fcd085a1c7e1a39c7947462273978 returned clean: 37 native export checks and npm verify PASS. Writer stopped. Independent review and visible export evidence pending; CI blocked on explicit transient runner registration approval. |
+| EV-0052 | 2026-09-06T21:03:55.810457+00:00 | Coordinator / review | S0-09 | Attempt 1 76cbb6c independent FAIL at level4: authentic archive plus altered installed Windows template passed all37 checks; Godot editor configuration escaped isolated run. Attempt2 must compare consumed template hashes before export and isolate XDG_CONFIG_HOME. CI and visible receipts remain separate pending evidence. |
+| EV-0053 | 2026-09-06T21:03:55.820618+00:00 | Coordinator / assignment | S0-09 | Attempt2 gpt-6-astra high, same verified worktree/base and permitted files; S0-09-L1 renewed. Correct two findings with regression tests; no runner registration or dispatch. |
+| EV-0054 | 2026-09-06T21:04:49.148835+00:00 | Coordinator / handoff | S0-13 | Attempt2 e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b returned clean with completed-predecessor reconciliation and81 scoped tests PASS; writer stopped, independent rereview pending. |
 
 
 ## Preparation checkpoint
@@ -356,17 +359,33 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 - Candidate `f6a9561924c65bdbddf7c395c3f1fec917086f33`; integrated `aea16db8b6570a59442448b9cc0e87b995c804fd`. Review contract_review_a2 PASS with independent headless runs level4; reused nonauthor session. Evidence `artifacts/local/tasks/S0-12/` including coordinator integrated checks.
 - Latest checkpoint EV-0037; blockers none.
 
-### S0-13-A1
+### S0-13 attempts
 
-- Card revision 1; assignee amendments, gpt-6-astra high; lease S0-13-L1 active.
-- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-13-operational`; branch `wt/S0-13-operational`; base `6b2394502010c3454548523ef9fe7077d600088e`.
+- Card revision 1; assignee amendments, gpt-6-astra high, reused writer session. Lease S0-13-L1 suspended for review; writer stopped.
+- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-13-operational`; branch `wt/S0-13-operational`; original base `6b2394502010c3454548523ef9fe7077d600088e`.
 - Owned files exactly S0-13 card set and standard generated check receipts.
-- Candidate/integrated identity null; review not_run; evidence pending; no blockers.
+- Attempt 1 candidate `ad18bf8cd216aa2784d2dfd3e2ec1dfa301ea199`; independent FAIL: earlier-sprint completed prerequisites rejected. Preserved reproduction `/tmp/s0-13-predecessor-review-wXfGbf/` and coordinator event EV-0050.
+- Attempt 2 candidate `e5e4df9fe827e1aa90610ffe5081bd0f2f4acf9b`; independent review pending; integrated identity none. Writer and coordinator scoped tests81 PASS. Evidence `artifacts/local/tasks/S0-13/`, writer attempt-2 subdirectory. Reused nonauthor reviewer session under recorded host limit.
+- Blocker: independent review and serial admission pending.
 
-### S0-09-A1
+### S0-09 attempts
 
-- Card revision 3; assignee native_integration, gpt-6-astra high; lease S0-09-L1 active.
-- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-09-operational`; branch `wt/S0-09-operational`; base `0061112518cc0ef37bdb1448240690fe402b362f`.
+- Card revision 3; assignee native_integration, gpt-6-astra high, reused writer session. Lease S0-09-L1 active for attempt 2.
+- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-09-operational`; branch `wt/S0-09-operational`; original base `0061112518cc0ef37bdb1448240690fe402b362f`.
 - Owned files exactly S0-09 card set and standard generated verification outputs.
-- Candidate/integrated identity null; review not_run; evidence pending. Root owns visible verification and transient runner lifecycle.
-- Blockers none.
+- Attempt 1 candidate `76cbb6caed6fcd085a1c7e1a39c7947462273978`; independent FAIL: altered installed template passed pinning and Godot configuration escaped isolation. Reproductions `/tmp/s0-09-independent-review-ejhmlh06/checkout/artifacts/local/native-smoke/`.
+- Attempt 2 authorized for those two fixes; candidate and integrated identities pending. Review not_run for revised candidate. Root owns visible verification and approval-gated transient runner lifecycle.
+- Blocker: explicit runner-registration approval and actual CI result remain required. No runner registered.
+
+## Next bounded foundation proposal
+
+Authorization: **awaiting_review**. Approval owner: Andrew. Objective: define production path ownership and a constraints/evidence register so subsequent foundation contracts have consistent inputs. This proposal grants no dispatch authority. Operational Sprint 0 must first satisfy its outstanding integration evidence; a discovered integration failure takes priority over this proposal.
+
+| Selected revision | Size | Dependency order / initial readiness | Permitted action types | Acceptance |
+| --- | --- | --- | --- | --- |
+| HF-01 revision 2 | M | First wave; no task predecessors or blocking questions; input-ready | Scoped documentation, official-source research, structure/link checks, independent review | Deliver the five-column path-family table, exact ownership and contribution rules, preserve both browser proofs, reconcile existing S0 scaffold evidence, satisfy every current HF-01 DoD item. |
+| HF-02 revision 2 | S | Same first wave; no task predecessors or blocking questions; input-ready | Scoped documentation, evidence inspection, structure/link checks, independent review | Deliver the four-class constraints/evidence register, units/method/identity/owner for each proposed budget, source tags on numbers, named unknowns, satisfy every current HF-02 DoD item. |
+
+Canonical scopes and exact write sets remain [HF-01](BACKLOG.md#hf-01) and [HF-02](BACKLOG.md#hf-02). Admit serially after independent review. No build, engine changes or feature implementation belongs to this documentation-only proposal. Other twelve foundation cards are outside this bounded sprint.
+
+Inputs checked: accepted TADRs, contribution rules, both preserved proofs, existing S0 scaffold/runtime evidence, historical browser evidence and named questions. The coordinator resolved [Godot 4.7 project organization](https://docs.godotengine.org/en/4.7/tutorials/best_practices/project_organization.html) on 6 September 2026 for HF-01's future packet. Before initial dispatch, the coordinator must create the sections directory and index stub required by HF-01; the two proposed output files remain disjoint. Q-E03 and Q-E04 remain unresolved constraints for HF-02 to record; they do not block its documentation-only register. Q-E01 and Q-E06 remain open for later direction and licensing decisions. No proposed answer is inferred from Sprint 0's synthetic fixtures.
