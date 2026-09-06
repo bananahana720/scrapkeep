@@ -256,3 +256,85 @@ test("restart returns dynamic models and effects to bounded pools and clears ove
     "repeated clear must not add duplicate pool entries",
   );
 });
+
+test("conductor placement, live link and Echo preserve capsule width and absolute height", () => {
+  const scene = attackHarness();
+  const corridor = {
+    from: { x: 0, y: 1.35, z: -12 },
+    to: { x: 0, y: 3.85, z: -25 },
+    radius: 0.5,
+    yMin: 0.35,
+    yMax: 4.85,
+  };
+  const descriptor = {
+    kind: "conductor",
+    valid: true,
+    segments: [corridor],
+    corridors: [corridor],
+  };
+  const preview = scene.makeAttackVisual();
+  scene.updateAttackVisual(preview, descriptor);
+  const visual = preview.corridors[0];
+  assert.equal(visual.group.visible, true);
+  assert.equal(preview.corridors[1].group.visible, false);
+  const body = visual.body.geometry.attributes.position;
+  let widest = 0,
+    north = Infinity,
+    south = -Infinity;
+  for (let i = 0; i < body.count; i++) {
+    const x = body.getX(i),
+      y = body.getY(i),
+      z = body.getZ(i);
+    widest = Math.max(widest, Math.abs(x));
+    north = Math.min(north, z);
+    south = Math.max(south, z);
+    const closestZ = Math.max(-25, Math.min(-12, z));
+    assert.ok(Math.hypot(x, z - closestZ) <= corridor.radius + 1e-6);
+    assert.ok(
+      Math.min(Math.abs(y - corridor.yMin), Math.abs(y - corridor.yMax)) < 1e-6,
+    );
+  }
+  assert.ok(Math.abs(widest - 0.5) < 1e-6);
+  assert.ok(Math.abs(north + 25.5) < 1e-6);
+  assert.ok(Math.abs(south + 11.5) < 1e-6);
+  const footprint = visual.footprint.geometry.attributes.position;
+  for (let i = 0; i < footprint.count; i++) {
+    assert.ok(
+      Math.abs(
+        footprint.getY(i) -
+          groundHeight(footprint.getX(i), footprint.getZ(i)) -
+          0.11,
+      ) < 1e-6,
+    );
+  }
+  const live = scene.makeAttackVisual();
+  scene.updateAttackVisual(live, {
+    valid: true,
+    segments: [corridor],
+    corridors: [corridor],
+  });
+  assert.deepEqual(
+    live.corridors[0].body.geometry.attributes.position.array,
+    body.array,
+  );
+  scene.event({
+    type: "attack",
+    source: "conductor",
+    echo: true,
+    attack: descriptor,
+  });
+  assert.deepEqual(
+    scene.effects[0].visual.corridors[0].body.geometry.attributes.position
+      .array,
+    body.array,
+  );
+  const geometryId = visual.body.geometry.uuid;
+  scene.updateAttackVisual(preview, { ...descriptor, corridors: [] });
+  assert.equal(visual.group.visible, false);
+  scene.updateAttackVisual(preview, descriptor);
+  assert.equal(
+    visual.body.geometry.uuid,
+    geometryId,
+    "target movement reuses fixed corridor buffers",
+  );
+});
