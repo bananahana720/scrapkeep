@@ -4,50 +4,58 @@ import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "@fontsource/dm-sans/latin-700.css";
 import "./styles.css";
-import { OrchardGame, groundHeight } from "./simulation.js";
+import {
+  OrchardGame,
+  ARENA,
+  LIGHTNING_CONFIG,
+  ITEM_CONFIG,
+} from "./simulation.js";
 import { OrchardScene } from "./scene.js";
 
 const $ = (id) => document.getElementById(id);
-const icon = (name) =>
-  ({ pause: "Ⅱ", play: "▶", arrow: "↗", sound: "♪", mute: "×", close: "×" })[
-    name
-  ] || "●";
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const qaEnabled = new URLSearchParams(location.search).has("qa");
+const settings = { sensitivity: 1, audio: 0.45, uiScale: 1, impactShake: 0.35 };
+try {
+  const saved = JSON.parse(localStorage.getItem("orchard-settings") || "{}");
+  for (const [name, lo, hi] of [
+    ["sensitivity", 0.25, 2],
+    ["audio", 0, 1],
+    ["uiScale", 0.85, 1.25],
+    ["impactShake", 0, 1],
+  ]) {
+    if (Number.isFinite(saved[name]))
+      settings[name] = clamp(saved[name], lo, hi);
+  }
+} catch {
+  /* Preferences are optional when storage is unavailable. */
+}
+const controlCopy = `<dl class="controls-list"><div><dt>Mouse + WASD</dt><dd>Look freely; roll with the camera.</dd></div><div><dt>Hold LMB / RMB</dt><dd>Repeat lightning / focused aim.</dd></div><div><dt>Hold, release Q / E</dt><dd>Preview, then cast strike / conductor.</dd></div><div><dt>Space / Shift / Ctrl</dt><dd>Double jump / ram burst / brake.</dd></div><div><dt>R / I / Escape</dt><dd>Ultimate / dashboard / cancel or pause.</dd></div></dl>`;
 $("orchard-app").innerHTML = `
-  <header class="orchard-top">
-    <a href="/" class="wordmark"><span class="brand-mark">S</span> SCRAPKEEP</a>
-    <div class="chapter"><i></i><span>FIELD EXPEDITION</span><b>THE IRON ORCHARD</b></div>
-    <nav aria-label="Game controls"><button id="audio-toggle" aria-label="Enable sound">♪ OFF</button><button id="guide" aria-label="Open field guide">?</button><button id="pause" aria-label="Pause" hidden>Ⅱ</button><a class="old-yard" href="/">ORIGINAL YARD ↗</a></nav>
-  </header>
-  <section id="welcome" class="welcome">
-    <div class="eyebrow"><span></span> A LITTLE HERO. A VERY BIG PROBLEM.</div>
-    <h1>MAKE A<br><em>LITTLE</em><br>CHAOS.</h1>
-    <p class="lead">The orchard has a mind of its own.<br>Take its tools for a spin.</p>
-    <div class="pilot-card"><span class="pilot-symbol">◉</span><div><b>PIP / SCRAP PILOT</b><p>One tiny hamster. Whatever the yard gives you.</p></div></div>
-    <button id="start" class="primary">ROLL INTO THE ORCHARD <span>↗</span></button>
-    <div class="welcome-controls"><span><kbd>WASD</kbd> ROLL</span><span><kbd>SPACE</kbd> RAM</span><span><kbd>HOLD F</kbd> CHARGE</span></div>
-    <p class="build-note">FIRST PLAYABLE STUDY · A SHORT COMBAT EXPEDITION</p>
-  </section>
-  <div id="play-hud" hidden>
-    <section class="objective"><span class="eyebrow">YOUR NEXT GOOD IDEA</span><h2 id="objective-title">Borrow their tools.</h2><p id="objective-text">Roll up loose scrap. Bait a cut, then hit the open housing.</p><div class="route"><i id="route-1"></i><i id="route-2"></i><i id="route-3"></i><span id="route-label">CUTTINGS → SUPPORT ROW → SEEDHOUSE</span></div></section>
-    <section id="boss-card" class="boss-card" hidden><span>THE GRAND PRUNER</span><b>THE RIGHT HAND OF THE ORCHARD</b><div><i id="boss-fill"></i></div></section>
-    <div id="reticle" class="reticle" aria-hidden="true"><i></i><span></span></div>
-    <div id="target-label" class="target-label"></div>
-    <div id="threat" class="threat" role="status" aria-live="polite"></div>
-    <section class="pilot-status"><div class="micro">PIP <span id="hull-value">100 / 100</span></div><div class="hull-track"><i id="hull-fill"></i></div><div class="pilot-stats"><span><b id="speed">0</b> SPEED</span><span><b id="scrap">0</b> SCRAP</span><span><b id="size">1.0</b> SCALE</span></div></section>
-    <section class="action-dock">
-      <button id="ram-button" class="action"><kbd>SPACE</kbd><div><b>RAM BURST</b><span id="ram-state">READY</span></div><i id="ram-fill"></i></button>
-      <div class="pulse-action"><div><span>HOLD <kbd>F</kbd> OR <kbd>LMB</kbd></span><b id="pulse-state">CHARGE PULSE</b></div><div class="charge-track"><i id="charge-fill"></i></div><small>RELEASE TO FIRE</small></div>
-      <button id="buddy-button" class="action"><kbd>E</kbd><div><b>SHEAR BUDDY</b><span id="buddy-state">FIND A LINKAGE</span></div></button>
-    </section>
-    <section class="mechanisms"><span class="micro">MADE FROM YOUR ADVENTURE</span><div id="shear-part" class="part"><span>⌁</span><div><b>SHEAR LINKAGE</b><small>Find one on a Snipcart</small></div></div><div id="brace-part" class="part"><span>Ⅱ</span><div><b>ADJUSTABLE BRACE</b><small>Find one on a Spreadleg</small></div></div></section>
-    <div class="control-hint"><kbd>SHIFT</kbd> BRAKE <span>·</span> MOUSE / ARROWS AIM <span>·</span> <kbd>C</kbd> FACE FORWARD</div>
-    <div id="enemy-labels"></div>
-  </div>
-  <div id="toast" class="toast" role="status" aria-live="polite"><small id="toast-kicker"></small><strong id="toast-message"></strong></div>
-  <div id="hurt-flash"></div>
-  <section id="overlay" class="overlay" hidden aria-modal="true" role="dialog" aria-labelledby="overlay-title"><div class="overlay-card"><span id="overlay-kicker" class="eyebrow"></span><h2 id="overlay-title"></h2><div id="overlay-copy"></div><div id="overlay-buttons"></div></div></section>
-  <div class="touch-pad" id="touch-controls" hidden><div id="touch-stick"><i></i></div><div class="touch-actions"><button id="touch-fire">PULSE</button><button id="touch-ram">RAM</button><button id="touch-brake">BRAKE</button><button id="touch-buddy">BUDDY</button></div></div>
-`;
+<header class="orchard-top"><a href="/" class="wordmark"><span>ϟ</span> SCRAPKEEP</a><span class="chapter">THE IRON ORCHARD</span><button id="dashboard-button" hidden><kbd>I</kbd> Dashboard</button></header>
+<main id="welcome" class="welcome"><span class="eyebrow">LIGHTNING CASTER · PLAYTEST 01</span><h1>A LITTLE<br>THUNDER.</h1><p class="lead">Roll in. Light up the orchard.<br>Build something a little unreasonable.</p><button id="start" class="primary">Enter the orchard <span>↗</span></button><p class="capture-note">Click to capture your mouse. Escape pauses and releases it.</p><div class="welcome-controls">${controlCopy}</div><p id="device-note" class="secondary-text">One arena. Three waves. Rebuild between fights.</p></main>
+<div id="play-hud" hidden>
+<section class="wave-panel"><span id="wave-title" class="eyebrow">WAVE 1 / 3</span><strong id="wave-objective">Clear the orchard</strong><span id="wave-count" class="secondary-text"></span></section>
+<div id="reticle" class="reticle" aria-hidden="true"><i></i><b></b></div><div id="target-feedback" class="target-feedback"></div>
+<div id="threat" class="threat" role="status"></div><div id="entry-labels"></div><div id="enemy-labels"></div>
+<div class="combat-bottom"><section id="pilot-status" class="pilot-status"><div class="health-caption"><strong>HULL</strong><span id="hull-value"></span></div><div class="hull-track"><i id="hull-fill"></i></div><div class="pilot-meta"><span id="air-state"></span><span id="scrap-value"></span></div></section>
+<section class="ability-bar" aria-label="Abilities">${[
+  ["bolt", "LMB", "ϟ", "Lightning"],
+  ["strike", "Q", "◎", "Strike"],
+  ["conductor", "E", "♜", "Conductor"],
+  ["dash", "SHIFT", "➜", "Ram"],
+  ["ultimate", "R", "✦", "Overcharge"],
+]
+  .map(
+    ([id, key, symbol, name]) =>
+      `<div id="ability-${id}" class="ability"><kbd>${key}</kbd><span class="ability-symbol" aria-hidden="true">${symbol}</span><strong>${name}</strong><span id="state-${id}" class="ability-state">Ready</span><i></i></div>`,
+  )
+  .join(
+    "",
+  )}</section><p class="combat-hint"><kbd>SPACE</kbd> double jump <span>·</span> <kbd>RMB</kbd> focus <span>·</span> <kbd>I</kbd> dashboard</p></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div><div id="hurt-flash"></div>
+<dialog id="dashboard" aria-labelledby="dialog-title"><div class="dialog-heading"><div><span id="dialog-kicker" class="eyebrow"></span><h2 id="dialog-title"></h2></div><button id="close-dialog" class="icon-button" aria-label="Close dashboard">×</button></div><nav id="dashboard-tabs" aria-label="Dashboard sections"></nav><div id="dialog-body"></div><footer id="dialog-footer"></footer></dialog>`;
+
 const canvas = $("orchard-world"),
   game = new OrchardGame();
 let world;
@@ -55,599 +63,678 @@ try {
   world = new OrchardScene(canvas);
 } catch (error) {
   $("orchard-app").innerHTML =
-    '<section class="fatal"><h1>The orchard could not start.</h1><p>This build needs WebGL 2. Reload or try a browser with 3D acceleration enabled.</p><button onclick="location.reload()">RELOAD</button><a href="/">Original yard</a></section>';
+    '<main class="fatal"><h1>The orchard could not start.</h1><p>This playtest needs WebGL 2 and 3D acceleration.</p><button onclick="location.reload()">Reload</button><a href="/">Original yard</a></main>';
   throw error;
 }
-const keys = new Set();
-const input = {
-  fire: false,
-  dash: false,
-  deploy: false,
-  brake: false,
-  touchX: 0,
-  touchZ: 0,
-};
+const dialog = $("dashboard"),
+  keys = new Set(),
+  pulses = new Set(),
+  blockedKeys = new Set();
+let mouseFire = false,
+  mouseAim = false,
+  cancelNext = false,
+  qaInput = false;
+let dialogKind = null,
+  selectedTab = "Character",
+  previousFocus = null,
+  capturePending = false;
 let last = performance.now(),
   accumulator = 0,
-  toastLife = 0,
   hudTimer = 0,
-  guideOpen = false,
-  guideWasPlaying = false,
-  mouseDown = false,
-  rightDrag = false,
-  lastPointer = null;
-let lastMode = game.mode,
-  samples = [],
-  frameCount = 0;
-const audio = { ctx: null, enabled: false };
-function sound(type, amount = 1) {
-  if (!audio.enabled || !audio.ctx) return;
-  const ctx = audio.ctx,
-    t = ctx.currentTime;
-  const settings = {
-    shoot: [185, 620, 0.12, "triangle"],
-    hit: [210, 85, 0.09, "square"],
-    ram: [130, 40, 0.18, "sawtooth"],
-    collect: [500, 900, 0.14, "sine"],
-    hurt: [95, 45, 0.2, "triangle"],
-    deploy: [290, 580, 0.2, "sine"],
-    win: [440, 880, 0.7, "sine"],
-    companion: [500, 700, 0.05, "sine"],
-  }[type];
-  if (!settings) return;
-  const [f0, f1, dur, wave] = settings,
-    osc = ctx.createOscillator(),
-    gain = ctx.createGain();
-  osc.type = wave;
-  osc.frequency.setValueAtTime(f0, t);
-  osc.frequency.exponentialRampToValueAtTime(f1, t + dur);
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.linearRampToValueAtTime(type === "hurt" ? 0.05 : 0.025, t + 0.012);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(t);
-  osc.stop(t + dur + 0.02);
-}
-function enableSound() {
-  if (!audio.ctx)
-    audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  audio.ctx.resume();
-  audio.enabled = !audio.enabled;
-  $("audio-toggle").textContent = audio.enabled ? "♪ ON" : "♪ OFF";
-  $("audio-toggle").setAttribute(
-    "aria-label",
-    audio.enabled ? "Mute sound" : "Enable sound",
-  );
-}
-$("audio-toggle").onclick = enableSound;
-function clearInput() {
-  keys.clear();
-  input.fire = false;
-  input.dash = false;
-  input.deploy = false;
-  input.brake = false;
-  input.touchX = input.touchZ = 0;
-  mouseDown = false;
-  rightDrag = false;
-  lastPointer = null;
-  $("touch-stick").firstElementChild.style.transform = "translate(0,0)";
-}
-function toast(kicker, message, duration = 3) {
-  $("toast-kicker").textContent = kicker;
-  $("toast-message").textContent = message;
-  $("toast").classList.add("show");
-  toastLife = duration;
-}
-function lockPointer() {
-  if (
-    document.pointerLockElement !== canvas &&
-    window.matchMedia("(pointer:fine)").matches
-  ) {
-    try {
-      canvas.requestPointerLock?.()?.catch(() => {});
-    } catch {}
+  lastMode = game.mode,
+  toastLife = 0;
+let frames = 0,
+  padPrevious = [],
+  padBlocked = true;
+const frameTimes = [],
+  errorLog = [],
+  eventLog = [];
+const audio = { ctx: null };
+window.addEventListener("error", (event) => errorLog.push(event.message));
+window.addEventListener("unhandledrejection", (event) =>
+  errorLog.push(String(event.reason)),
+);
+function applySettings() {
+  document.documentElement.style.setProperty("--ui-scale", settings.uiScale);
+  world.setView({
+    aiming: mouseAim,
+    sensitivity: settings.sensitivity,
+    impactShake: settings.impactShake,
+  });
+  try {
+    localStorage.setItem("orchard-settings", JSON.stringify(settings));
+  } catch {
+    /* Optional storage. */
   }
+}
+applySettings();
+function enableAudio() {
+  if (!settings.audio) return;
+  try {
+    audio.ctx ||= new (window.AudioContext || window.webkitAudioContext)();
+    audio.ctx.resume().catch(() => {});
+  } catch {
+    /* Silent play remains available. */
+  }
+}
+function sound(type) {
+  if (!audio.ctx || !settings.audio) return;
+  const tone = {
+    attack: [450, 150, 0.08],
+    hit: [190, 80, 0.08],
+    ram: [110, 40, 0.16],
+    land: [85, 35, 0.13],
+    bounce: [180, 360, 0.13],
+    collect: [500, 850, 0.13],
+    hurt: [95, 40, 0.2],
+    win: [440, 880, 0.6],
+    wave: [350, 550, 0.2],
+  }[type];
+  if (!tone) return;
+  const t = audio.ctx.currentTime,
+    oscillator = audio.ctx.createOscillator(),
+    gain = audio.ctx.createGain();
+  oscillator.type = type === "attack" ? "triangle" : "sine";
+  oscillator.frequency.setValueAtTime(tone[0], t);
+  oscillator.frequency.exponentialRampToValueAtTime(tone[1], t + tone[2]);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.linearRampToValueAtTime(settings.audio * 0.07, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + tone[2]);
+  oscillator.connect(gain).connect(audio.ctx.destination);
+  oscillator.start(t);
+  oscillator.stop(t + tone[2] + 0.01);
+}
+function clearInput() {
+  for (const code of keys) blockedKeys.add(code);
+  keys.clear();
+  pulses.clear();
+  mouseFire = false;
+  mouseAim = false;
+  padBlocked = true;
+  cancelNext = true;
+  game.cancelActions();
+  applySettings();
 }
 function releasePointer() {
   if (document.pointerLockElement === canvas) document.exitPointerLock();
 }
-function start() {
+function closeModal() {
+  if (dialog.open) dialog.close();
+  dialogKind = null;
+  previousFocus?.focus?.();
+}
+function showModal(kind, title, kicker) {
   clearInput();
-  guideOpen = false;
+  releasePointer();
+  dialogKind = kind;
+  $("dialog-title").textContent = title;
+  $("dialog-kicker").textContent = kicker;
+  $("close-dialog").hidden = kind !== "dashboard";
+  $("dashboard-tabs").hidden = kind !== "dashboard";
+  if (!dialog.open) {
+    previousFocus = document.activeElement;
+    dialog.showModal();
+  }
+}
+function captureFailure() {
+  capturePending = false;
+  if (qaInput || game.mode !== "playing") return;
+  game.pause();
+  showModal("capture", "Click to take control", "MOUSE CAPTURE NEEDED");
+  $("dialog-body").innerHTML =
+    "<p>Your browser did not capture the mouse. Click below to try again. If it keeps failing, focus this browser tab and check its pointer-lock permission.</p>";
+  $("dialog-footer").innerHTML =
+    '<button id="capture-retry" class="primary">Capture mouse & resume</button><button id="capture-settings">Open dashboard</button>';
+  $("capture-retry").onclick = resume;
+  $("capture-settings").onclick = () => openDashboard();
+}
+function acquirePointer() {
+  if (qaInput) return;
+  if (document.pointerLockElement === canvas) return;
+  capturePending = true;
+  try {
+    const request = canvas.requestPointerLock();
+    request?.catch(captureFailure);
+    setTimeout(() => {
+      if (capturePending && document.pointerLockElement !== canvas)
+        captureFailure();
+    }, 1000);
+  } catch {
+    captureFailure();
+  }
+}
+function start(options = {}) {
+  qaInput = qaEnabled && options.qa === true;
+  closeModal();
+  clearInput();
   game.reset();
   game.start();
   world.clear();
   world.resetCamera();
   accumulator = 0;
   $("welcome").hidden = true;
-  $("overlay").hidden = true;
   $("play-hud").hidden = false;
-  $("pause").hidden = false;
-  $("touch-controls").hidden = !window.matchMedia("(pointer:coarse)").matches;
+  $("dashboard-button").hidden = false;
   lastMode = game.mode;
   canvas.focus();
-  lockPointer();
-  toast("WELCOME TO THE IRON ORCHARD", "Read the tool. Keep your exit.", 3.2);
+  enableAudio();
+  acquirePointer();
   updateHUD();
 }
-$("start").onclick = start;
-function pause() {
-  if (game.mode === "playing") {
-    game.pause();
-    clearInput();
-    releasePointer();
-    showPause();
-  } else if (game.mode === "paused" && !guideOpen) {
-    game.resume();
-    $("overlay").hidden = true;
-    canvas.focus();
-    lockPointer();
-  }
-}
-$("pause").onclick = pause;
-function overlay(kicker, title, copy, buttons) {
-  $("overlay-kicker").textContent = kicker;
-  $("overlay-title").textContent = title;
-  $("overlay-copy").innerHTML = copy;
-  $("overlay-buttons").innerHTML = buttons;
-  $("overlay").hidden = false;
-  $("overlay-buttons").querySelector("button")?.focus();
-}
-function showPause() {
-  overlay(
-    "TAKE A BREATHER",
-    "PARKED, FOR NOW.",
-    "<p>The orchard will wait. Your roll continues right here.</p>",
-    '<button class="primary" id="resume">KEEP ROLLING <span>↗</span></button><button class="secondary" id="restart">START FRESH</button>',
-  );
-  $("resume").onclick = pause;
-  $("restart").onclick = start;
-}
-function guide() {
-  if (guideOpen) {
-    guideOpen = false;
-    $("overlay").hidden = true;
-    if (guideWasPlaying) {
-      game.resume();
-      canvas.focus();
-      lockPointer();
-    } else if (game.mode === "paused") showPause();
-    else if (["won", "lost"].includes(game.mode)) finish();
-    return;
-  }
-  guideWasPlaying = game.mode === "playing";
-  guideOpen = true;
-  if (guideWasPlaying) game.pause();
+function resume() {
+  closeModal();
   clearInput();
-  releasePointer();
-  overlay(
-    "FIELD NOTES",
-    "A LITTLE KNOW-HOW.",
-    '<div class="guide-grid"><p><kbd>WASD</kbd><b>ROLL</b>Steer your momentum. Shift brakes for a tighter turn.</p><p><kbd>MOUSE / ARROWS</kbd><b>AIM</b>Click the world to capture the mouse, or hold right mouse to look around. C faces your travel direction.</p><p><kbd>SPACE</kbd><b>RAM BURST</b>A short burst. Hit a retracted housing for a stronger counter.</p><p><kbd>HOLD F / LMB</kbd><b>CHARGE PULSE</b>Release an aimed shot. A full charge hits hard. Ordinary shots work on every machine.</p><p><kbd>E</kbd><b>SHEAR BUDDY</b>Collect a Shear Linkage to deploy your own little support machine.</p><p><kbd>ESC / P</kbd><b>PAUSE</b>Restart from the pause or results screen.</p></div><p class="guide-note">Snipcart closes its jaws. Spreadleg pushes its feet outward. The giant arm repeats a familiar commitment. Amber shows preparation; the tool movement tells you where to go.</p><p class="guide-note">Gamepad: left stick roll, right stick aim, A ram, LT brake, hold/release RT pulse, X buddy, Start pause.</p>',
-    '<button class="primary" id="close-guide">BACK TO IT <span>↗</span></button>',
-  );
-  $("close-guide").onclick = guide;
+  game.resume();
+  accumulator = 0;
+  canvas.focus();
+  enableAudio();
+  if (game.mode === "playing") acquirePointer();
+  else showRewards();
 }
-$("guide").onclick = guide;
-window.addEventListener("keydown", (e) => {
-  if (
-    ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
-      e.code,
+function openDashboard(tab = selectedTab) {
+  if (game.mode === "ready") return;
+  if (game.mode === "playing") game.pause();
+  selectedTab = tab;
+  showModal(
+    "dashboard",
+    "Your lightning caster",
+    game.mode === "intermission"
+      ? "BETWEEN WAVES · RECONFIGURE"
+      : "PAUSED · INSPECT YOUR BUILD",
+  );
+  $("dashboard-tabs").innerHTML = [
+    "Character",
+    "Equipment",
+    "Companion",
+    "Map",
+    "Settings",
+  ]
+    .map(
+      (name) =>
+        `<button data-tab="${name}" aria-current="${name === tab ? "page" : "false"}">${name}</button>`,
     )
+    .join("");
+  for (const button of $("dashboard-tabs").querySelectorAll("button"))
+    button.onclick = () => {
+      selectedTab = button.dataset.tab;
+      renderDashboard();
+      for (const b of $("dashboard-tabs").children)
+        b.setAttribute("aria-current", b === button ? "page" : "false");
+    };
+  $("dialog-footer").innerHTML =
+    `<button id="resume" class="primary">${game.mode === "intermission" ? "Back to rewards" : "Resume play"}</button><button id="restart">Restart run</button><a href="/">Original yard ↗</a>`;
+  $("resume").onclick = resume;
+  $("restart").onclick = () => start({ qa: qaInput });
+  renderDashboard();
+}
+function renderDashboard() {
+  const p = game.player,
+    equipped = game.inventory.equipped,
+    editable = game.mode === "intermission",
+    config = LIGHTNING_CONFIG;
+  const movement = config.movement;
+  const ramDamage =
+    movement.ramDamage +
+    Math.min(p.shear, movement.maxShearBonus) * movement.shearRamBonus;
+  const ramCooldown = Math.max(
+    movement.minRamCooldown,
+    movement.ramCooldown - p.brace * movement.braceCooldownBonus,
+  );
+  const protection = Math.min(
+    movement.maxBraceProtection,
+    p.brace * movement.braceProtection,
+  );
+  const stats = (rows) =>
+    `<dl class="stat-grid">${rows.map(([name, value]) => `<div><dt>${name}</dt><dd>${value}</dd></div>`).join("")}</dl>`;
+  if (selectedTab === "Character")
+    $("dialog-body").innerHTML = `${stats([
+      ["Hull", `${Math.ceil(p.hp)} / ${p.maxHp}`],
+      ["Ball radius", `${p.radius.toFixed(2)} m`],
+      [
+        "Lightning bolt",
+        `${config.bolt.damage} damage / ${config.bolt.interval}s`,
+      ],
+      ["Bolt reach", `${config.bolt.range} m`],
+      ["Ram burst", `${ramDamage} damage / ${ramCooldown.toFixed(2)}s`],
+      [
+        "Brace protection",
+        `${Math.round(protection * 100)}% less incoming damage`,
+      ],
+      [
+        "Chain reach",
+        `${(config.bolt.chainRange * (p.ultimateTime > 0 ? config.ultimate.chainMultiplier : 1)).toFixed(1)} m${p.ultimateTime > 0 ? " · overcharged" : ""}`,
+      ],
+      [
+        "Ground strike",
+        `${config.strike.damage} damage · ${config.strike.radius} m radius`,
+      ],
+      [
+        "Conductor",
+        `${config.conductor.damage} damage / ${(config.conductor.interval / (p.ultimateTime > 0 ? config.ultimate.conductorMultiplier : 1)).toFixed(2)}s · ${config.conductor.max} active`,
+      ],
+      [
+        "Overcharge",
+        `${config.ultimate.duration} seconds · ${Math.floor(p.ultimateCharge)}% ready`,
+      ],
+    ])}<p>${equipped.includes("echo") ? "Echo repeats compatible lightning, conductor and companion attacks once at half strength." : "Earn ultimate charge by hitting multiple enemies with lightning."} ${equipped.includes("ground-loop") ? "Ground Loop adds lightning chains to body impacts." : "Descending onto smaller workers damages them and restores an air jump."}</p><details class="controls-details"><summary>Controls</summary>${controlCopy}<p>Controller: left stick move, right stick look, A jump, B ram, RT lightning, LT focus, LB strike, RB conductor, Y ultimate, View dashboard, Start pause.</p></details>`;
+  if (selectedTab === "Equipment") {
+    $("dialog-body").innerHTML =
+      `<p class="section-note">${editable ? "Enable or disable acquired items before continuing." : "Equipment changes unlock between waves."}</p><div class="equipment-grid">${Object.values(
+        ITEM_CONFIG,
+      )
+        .map((item) => {
+          const acquired = game.inventory.acquired.includes(item.id);
+          return `<article class="item-card"><span class="eyebrow">${acquired ? "ACQUIRED" : "NOT ACQUIRED"}</span><h3>${item.name}</h3><p>${item.description}</p><label class="toggle-row"><input type="checkbox" data-item="${item.id}" ${equipped.includes(item.id) ? "checked" : ""} ${!editable || !acquired ? "disabled" : ""}> Enabled</label></article>`;
+        })
+        .join("")}</div>${stats([
+        ["Shear Linkage", `${p.shear} collected · ${ramDamage} ram damage`],
+        [
+          "Adjustable Brace",
+          `${p.brace} collected · ${ramCooldown.toFixed(2)}s burst recovery · ${Math.round(protection * 100)}% protection`,
+        ],
+        ["Scrap", `${p.scrap} collected · automatic growth`],
+      ])}`;
+    for (const toggle of $("dialog-body").querySelectorAll("[data-item]"))
+      toggle.onchange = () => {
+        game.setItemEnabled(toggle.dataset.item, toggle.checked);
+        renderDashboard();
+      };
+  }
+  if (selectedTab === "Companion") {
+    const buddy = game.companion,
+      unlocked = p.shear > 0;
+    $("dialog-body").innerHTML =
+      `<div class="companion-card"><span class="companion-symbol" aria-hidden="true">⌁</span><div><span class="eyebrow">ONE MAIN COMPANION</span><h3>Shear buddy</h3><p>${unlocked ? "Your priming companion follows and attacks nearby workers. The first Shear Linkage equipped it automatically." : "Collect a Shear Linkage from defeated workers to unlock and equip your priming companion."}</p><label class="toggle-row"><input id="companion-enabled" type="checkbox" ${buddy?.enabled ? "checked" : ""} ${!editable || !unlocked ? "disabled" : ""}> Companion enabled</label></div></div><p>${config.companion.damage} damage every ${config.companion.interval}s · ${config.companion.range} m reach. Hits prime enemy housings.</p><p>${equipped.includes("echo") ? "Echo is equipped: compatible companion attacks repeat once at half strength." : "Shared compatible modifiers apply automatically to your companion."}</p><p class="secondary-text">${editable ? "Companion changes are available now." : "Reconfigure your companion between waves."}</p>`;
+    $("companion-enabled").onchange = (event) => {
+      game.setCompanionEnabled(event.target.checked);
+      renderDashboard();
+    };
+  }
+  if (selectedTab === "Map") {
+    const sx = (x) => ((x - ARENA.minX) / (ARENA.maxX - ARENA.minX)) * 380 + 10,
+      sy = (z) => ((z - ARENA.minZ) / (ARENA.maxZ - ARENA.minZ)) * 400 + 10;
+    $("dialog-body").innerHTML =
+      `<div class="map-layout"><svg class="arena-map" viewBox="0 0 400 420" role="img" aria-label="Arena map showing your position, live enemies, conductors and available pickups"><rect x="10" y="10" width="380" height="400" rx="12" fill="#102b2a" stroke="#52776e"/><path d="M140 12 V408 M260 12 V408" stroke="#2c4a3d" stroke-width="32"/><text x="200" y="35" text-anchor="middle" fill="#b9d4c5" font-size="16">SEEDHOUSE</text>${game.pickups
+        .filter((v) => !v.collected)
+        .map(
+          (v) =>
+            `<circle cx="${sx(v.x)}" cy="${sy(v.z)}" r="3" fill="#e6c96e"/>`,
+        )
+        .join("")}${game.enemies
+        .filter((v) => v.hp > 0)
+        .map(
+          (v) =>
+            `<circle cx="${sx(v.x)}" cy="${sy(v.z)}" r="${v.kind === "pruner" ? 8 : 4}" fill="#ff907a"/>`,
+        )
+        .join(
+          "",
+        )}${game.conductors.map((v) => `<rect x="${sx(v.x) - 4}" y="${sy(v.z) - 4}" width="8" height="8" fill="#7ceded"/>`).join("")}<circle cx="${sx(p.x)}" cy="${sy(p.z)}" r="7" fill="#fff" stroke="#5ce6db" stroke-width="3"/></svg><div><h3>The Iron Orchard</h3><p>White / cyan: you and conductors</p><p>Coral: live enemies</p><p>Gold: uncollected parts</p><p class="secondary-text">Safe reward breaks begin after every cleared wave. The final wave includes the Pruner arm.</p></div></div>`;
+  }
+  if (selectedTab === "Settings") {
+    $("dialog-body").innerHTML = `<div class="settings-list">${[
+      ["sensitivity", "Mouse sensitivity", 0.25, 2, 0.05],
+      ["audio", "Audio volume", 0, 1, 0.05],
+      ["uiScale", "Interface scale", 0.85, 1.25, 0.05],
+      ["impactShake", "Impact shake", 0, 1, 0.05],
+    ]
+      .map(
+        ([id, name, min, max, step]) =>
+          `<label for="setting-${id}"><span>${name}<output id="value-${id}">${Math.round(settings[id] * 100)}%</output></span><input id="setting-${id}" type="range" min="${min}" max="${max}" step="${step}" value="${settings[id]}"></label>`,
+      )
+      .join(
+        "",
+      )}</div><p class="secondary-text">Preferences save on this browser. Run equipment and rewards reset with each new run.</p>`;
+    for (const name of Object.keys(settings))
+      $("setting-" + name).oninput = (event) => {
+        settings[name] = Number(event.target.value);
+        $("value-" + name).textContent = Math.round(settings[name] * 100) + "%";
+        applySettings();
+        if (name === "audio") enableAudio();
+      };
+  }
+}
+function showRewards() {
+  if (game.mode !== "intermission") return;
+  showModal(
+    "rewards",
+    "Make the next wave yours",
+    `WAVE ${game.wave.index} CLEARED`,
+  );
+  $("dialog-body").innerHTML =
+    `<p>A safe moment to collect your reward and adjust your equipment.</p><div class="reward-grid">${game.rewards.map((reward) => `<button class="reward-card" data-reward="${reward.id}" ${game.wave.rewardChosen ? "disabled" : ""}><span class="eyebrow">CHOOSE ONE</span><strong>${reward.name}</strong><span>${reward.description}</span></button>`).join("")}</div><p id="reward-confirmation" role="status">${game.wave.rewardChosen ? "Reward acquired. Your equipment is ready to reconfigure." : "Choose one reward to continue."}</p>`;
+  $("dialog-footer").innerHTML =
+    `<button id="continue-wave" class="primary" ${game.wave.rewardChosen ? "" : "disabled"}>Continue to wave ${game.wave.index + 1}</button><button id="reward-equipment">Equipment & companion</button>`;
+  for (const button of $("dialog-body").querySelectorAll("[data-reward]"))
+    button.onclick = () => {
+      if (game.chooseReward(button.dataset.reward)) showRewards();
+    };
+  $("continue-wave").onclick = () => {
+    if (game.continueWave()) {
+      closeModal();
+      clearInput();
+      lastMode = game.mode;
+      canvas.focus();
+      acquirePointer();
+    }
+  };
+  $("reward-equipment").onclick = () => openDashboard("Equipment");
+}
+function finish() {
+  const won = game.mode === "won";
+  showModal(
+    "results",
+    won ? "The orchard is yours." : "One more spark?",
+    won ? "ALL THREE WAVES CLEARED" : "RUN ENDED",
+  );
+  $("dialog-body").innerHTML =
+    `<p>${won ? "You cleared every worker and the Pruner arm." : "Jump through low attacks, keep moving, and use your conductors to hold the crowd."}</p><dl class="stat-grid"><div><dt>Wave</dt><dd>${game.wave.index} / 3</dd></div><div><dt>Time</dt><dd>${Math.round(game.time)}s</dd></div><div><dt>Scrap collected</dt><dd>${game.player.scrap}</dd></div></dl>`;
+  $("dialog-footer").innerHTML =
+    '<button id="play-again" class="primary">Start a fresh run</button><a href="/">Original yard ↗</a>';
+  $("play-again").onclick = () => start({ qa: qaInput });
+}
+function dismiss() {
+  if (dialogKind === "dashboard") resume();
+  else if (game.mode === "playing") {
+    if (game.preparedAbility || keys.has("KeyQ") || keys.has("KeyE")) {
+      clearInput();
+    } else openDashboard();
+  }
+}
+$("start").onclick = () => start();
+$("dashboard-button").onclick = () => openDashboard();
+$("close-dialog").onclick = dismiss;
+dialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  dismiss();
+});
+window.addEventListener("keydown", (event) => {
+  if (event.code === "Escape") {
+    if (!dialog.open) {
+      event.preventDefault();
+      if (!event.repeat) dismiss();
+    }
+    return;
+  }
+  if (
+    event.code === "KeyI" &&
+    !event.repeat &&
+    !["INPUT", "TEXTAREA"].includes(event.target.tagName)
+  ) {
+    event.preventDefault();
+    if (dialogKind === "dashboard") resume();
+    else if (!dialog.open) openDashboard();
+    return;
+  }
+  if (dialog.open || game.mode !== "playing") return;
+  if (["Space", "ControlLeft", "ControlRight"].includes(event.code))
+    event.preventDefault();
+  if (!event.repeat && !blockedKeys.has(event.code)) {
+    keys.add(event.code);
+    pulses.add(event.code);
+  }
+});
+window.addEventListener("keyup", (event) => {
+  keys.delete(event.code);
+  blockedKeys.delete(event.code);
+});
+canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+canvas.addEventListener("pointerdown", (event) => {
+  if (game.mode !== "playing" || event.pointerType !== "mouse") return;
+  if (document.pointerLockElement !== canvas && !qaInput) {
+    clearInput();
+    acquirePointer();
+    return;
+  }
+  if (event.button === 0) mouseFire = true;
+  if (event.button === 2) mouseAim = true;
+});
+window.addEventListener("pointerup", (event) => {
+  if (event.button === 0) mouseFire = false;
+  if (event.button === 2) mouseAim = false;
+});
+window.addEventListener("pointermove", (event) => {
+  if (
+    game.mode === "playing" &&
+    (document.pointerLockElement === canvas || (qaInput && !event.isTrusted))
   )
-    e.preventDefault();
-  if (e.code === "KeyH") {
-    if (!e.repeat) guide();
-    return;
-  }
-  if (e.code === "Tab" && !$("overlay").hidden) {
-    const items = [...$("overlay").querySelectorAll("button,a[href]")];
-    if (e.shiftKey && document.activeElement === items[0]) {
-      e.preventDefault();
-      items.at(-1)?.focus();
-    } else if (!e.shiftKey && document.activeElement === items.at(-1)) {
-      e.preventDefault();
-      items[0]?.focus();
-    }
-    return;
-  }
-  if (e.code === "Escape" || e.code === "KeyP") {
-    if (!e.repeat) {
-      if (guideOpen) guide();
-      else pause();
-    }
-    return;
-  }
-  if (e.code === "KeyR" && game.mode !== "ready") {
-    if (!e.repeat) start();
-    return;
-  }
-  if (e.code === "Enter" && game.mode === "ready") {
-    e.preventDefault();
-    start();
-    return;
-  }
-  if (e.code === "KeyM" && !e.repeat) {
-    enableSound();
-    return;
-  }
-  if (game.mode !== "playing") return;
-  keys.add(e.code);
-  if (e.code === "Space" && !e.repeat) input.dash = true;
-  if (e.code === "KeyE" && !e.repeat) input.deploy = true;
-  if (e.code === "KeyC" && !e.repeat) {
-    const p = game.player;
-    if (Math.hypot(p.vx, p.vz) > 0.4) world.yaw = Math.atan2(p.vx, -p.vz);
-    else world.yaw = p.yaw;
-  }
-});
-window.addEventListener("keyup", (e) => keys.delete(e.code));
-canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-canvas.addEventListener("pointerdown", (e) => {
-  if (game.mode !== "playing") return;
-  if (e.pointerType === "mouse") {
-    if (e.button === 0) {
-      mouseDown = true;
-      if (document.pointerLockElement !== canvas) lockPointer();
-    }
-    if (e.button === 2) {
-      rightDrag = true;
-      lastPointer = { x: e.clientX, y: e.clientY };
-    }
-  }
-});
-window.addEventListener("pointerup", (e) => {
-  if (e.button === 0) mouseDown = false;
-  if (e.button === 2) {
-    rightDrag = false;
-    lastPointer = null;
-  }
-});
-window.addEventListener("pointermove", (e) => {
-  if (game.mode !== "playing") return;
-  if (document.pointerLockElement === canvas)
-    world.orbit(e.movementX, e.movementY);
-  else if (rightDrag && lastPointer) {
-    world.orbit(e.clientX - lastPointer.x, e.clientY - lastPointer.y);
-    lastPointer = { x: e.clientX, y: e.clientY };
-  }
+    world.orbit(event.movementX, event.movementY);
 });
 document.addEventListener("pointerlockchange", () => {
-  if (document.pointerLockElement !== canvas) {
-    mouseDown = false;
-  }
+  if (document.pointerLockElement === canvas) {
+    capturePending = false;
+    clearInput();
+    canvas.focus();
+  } else if (game.mode === "playing" && !qaInput && !dialog.open)
+    openDashboard();
 });
+document.addEventListener("pointerlockerror", captureFailure);
 window.addEventListener("blur", () => {
   clearInput();
-  if (game.mode === "playing") {
-    game.pause();
-    showPause();
-    releasePointer();
-  }
+  if (game.mode === "playing" && !qaInput) openDashboard();
 });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && game.mode === "playing") {
     clearInput();
-    game.pause();
-    showPause();
+    openDashboard();
   }
 });
 window.addEventListener("resize", () => world.resize());
-$("ram-button").onclick = () => {
-  if (game.mode === "playing") input.dash = true;
-};
-$("buddy-button").onclick = () => {
-  if (game.mode === "playing") input.deploy = true;
-};
-$("touch-ram").onclick = () => {
-  input.dash = true;
-};
-$("touch-buddy").onclick = () => {
-  input.deploy = true;
-};
-for (const [id, field] of [
-  ["touch-fire", "fire"],
-  ["touch-brake", "brake"],
-]) {
-  $(id).addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    input[field] = true;
-    $(id).setPointerCapture(e.pointerId);
-  });
-  for (const event of ["pointerup", "pointercancel"])
-    $(id).addEventListener(event, () => (input[field] = false));
-}
-let stickId = null;
-$("touch-stick").addEventListener("pointerdown", (e) => {
-  stickId = e.pointerId;
-  $("touch-stick").setPointerCapture(e.pointerId);
-  moveStick(e);
-});
-$("touch-stick").addEventListener("pointermove", (e) => {
-  if (e.pointerId === stickId) moveStick(e);
-});
-for (const event of ["pointerup", "pointercancel"])
-  $("touch-stick").addEventListener(event, () => {
-    stickId = null;
-    input.touchX = input.touchZ = 0;
-    $("touch-stick").firstElementChild.style.transform = "translate(0,0)";
-  });
-function moveStick(e) {
-  const b = $("touch-stick").getBoundingClientRect(),
-    x = e.clientX - b.left - b.width / 2,
-    z = e.clientY - b.top - b.height / 2,
-    d = Math.max(40, Math.hypot(x, z));
-  input.touchX = x / d;
-  input.touchZ = z / d;
-  $("touch-stick").firstElementChild.style.transform =
-    `translate(${(x / d) * 30}px,${(z / d) * 30}px)`;
-}
-let padPrevious = [];
+if (matchMedia("(pointer:coarse)").matches)
+  $("device-note").textContent =
+    "This playtest needs a keyboard and mouse, or a controller. Touch controls are not available.";
 function controls(dt) {
-  let sx = Number(keys.has("KeyD")) - Number(keys.has("KeyA")) + input.touchX;
-  let sz = Number(keys.has("KeyS")) - Number(keys.has("KeyW")) + input.touchZ;
-  world.yaw +=
-    (Number(keys.has("ArrowRight")) - Number(keys.has("ArrowLeft"))) * dt * 1.6;
-  world.pitch = Math.max(
-    0.06,
-    Math.min(
-      0.72,
-      world.pitch +
-        (Number(keys.has("ArrowDown")) - Number(keys.has("ArrowUp"))) *
-          dt *
-          0.8,
-    ),
-  );
-  let fire = mouseDown || keys.has("KeyF") || input.fire,
-    brake = keys.has("ShiftLeft") || keys.has("ShiftRight") || input.brake;
+  const down = (...codes) =>
+    codes.some((code) => keys.has(code) || pulses.has(code));
+  let sx = Number(down("KeyD")) - Number(down("KeyA")),
+    sz = Number(down("KeyS")) - Number(down("KeyW"));
+  const state = {
+    fire: mouseFire,
+    strike: down("KeyQ"),
+    conductor: down("KeyE"),
+    dash: down("ShiftLeft", "ShiftRight"),
+    jump: down("Space"),
+    ultimate: down("KeyR"),
+    brake: down("ControlLeft", "ControlRight"),
+  };
+  let focus = mouseAim;
   const pad = navigator.getGamepads?.()[0];
   if (pad) {
-    const dead = (n) => (Math.abs(n) > 0.16 ? n : 0);
-    sx += dead(pad.axes[0]);
-    sz += dead(pad.axes[1]);
-    world.yaw += dead(pad.axes[2] || 0) * dt * 2;
-    world.pitch = Math.max(
-      0.06,
-      Math.min(0.72, world.pitch + dead(pad.axes[3] || 0) * dt * 1.2),
-    );
-    fire = fire || pad.buttons[7]?.value > 0.2;
-    brake = brake || pad.buttons[6]?.value > 0.2;
-    if (pad.buttons[0]?.pressed && !padPrevious[0]) input.dash = true;
-    if (pad.buttons[2]?.pressed && !padPrevious[2]) input.deploy = true;
-    if (pad.buttons[9]?.pressed && !padPrevious[9]) pause();
+    const dead = (n) => (Math.abs(n || 0) > 0.16 ? n : 0),
+      pressed = (i) => !!pad.buttons[i]?.pressed;
+    if (
+      padBlocked &&
+      !pad.buttons.some((b) => b.pressed) &&
+      !pad.axes.some((n) => Math.abs(n) > 0.16)
+    )
+      padBlocked = false;
+    if (!padBlocked) {
+      sx += dead(pad.axes[0]);
+      sz += dead(pad.axes[1]);
+      world.orbit(dead(pad.axes[2]) * dt * 650, dead(pad.axes[3]) * dt * 500);
+      state.fire ||= pad.buttons[7]?.value > 0.2;
+      focus ||= pad.buttons[6]?.value > 0.2;
+      state.jump ||= pressed(0);
+      state.dash ||= pressed(1);
+      state.strike ||= pressed(4);
+      state.conductor ||= pressed(5);
+      state.ultimate ||= pressed(3);
+      if ((pressed(9) && !padPrevious[9]) || (pressed(8) && !padPrevious[8]))
+        openDashboard();
+    }
     padPrevious = pad.buttons.map((b) => b.pressed);
   }
-  const d = Math.max(1, Math.hypot(sx, sz));
-  sx /= d;
-  sz /= d;
-  const c = Math.cos(world.yaw),
+  world.setView({
+    aiming: focus,
+    sensitivity: settings.sensitivity,
+    impactShake: settings.impactShake,
+  });
+  const length = Math.max(1, Math.hypot(sx, sz)),
+    c = Math.cos(world.yaw),
     s = Math.sin(world.yaw);
-  const result = {
-    x: c * sx - s * sz,
-    z: s * sx + c * sz,
-    aimYaw: world.yaw,
-    fire,
-    brake,
-    dash: input.dash,
-    deploy: input.deploy,
+  pulses.clear();
+  const cancel = cancelNext;
+  cancelNext = false;
+  return {
+    x: (c * sx - s * sz) / length,
+    z: (s * sx + c * sz) / length,
+    aim: world.aimRay(),
+    ...state,
+    cancel,
   };
-  input.dash = false;
-  input.deploy = false;
-  return result;
 }
-function events() {
-  for (const e of game.drainEvents()) {
-    world.event(e);
-    sound(e.type, e.amount);
-    if (e.type === "collect") {
-      if (e.kind === "shear")
-        toast(
-          "NEW MECHANISM",
-          "Shear Linkage · harder rams + your own buddy",
-          4,
-        );
-      if (e.kind === "brace")
-        toast(
-          "NEW MECHANISM",
-          "Adjustable Brace · recover your burst sooner",
-          4,
-        );
-    }
-    if (e.type === "hurt") {
+function processEvents() {
+  for (const event of game.drainEvents()) {
+    world.event(event);
+    sound(event.type);
+    eventLog.push({
+      type: event.type,
+      kind: event.attack?.kind,
+      source: event.source,
+      echo: event.echo,
+      time: game.time,
+    });
+    if (eventLog.length > 600) eventLog.shift();
+    if (event.type === "collect" && ["shear", "brace"].includes(event.kind))
+      toast(
+        event.kind === "shear"
+          ? "Shear Linkage · stronger rams + companion"
+          : "Adjustable Brace · faster ram recovery",
+      );
+    if (event.type === "spawn")
+      toast(event.text || "Workers entering the orchard", 2);
+    if (event.type === "hurt") {
       $("hurt-flash").classList.remove("hit");
       void $("hurt-flash").offsetWidth;
       $("hurt-flash").classList.add("hit");
     }
-    if (e.type === "deploy")
-      toast("A LITTLE HELP", "Shear buddy is on the job.", 2);
-    if (e.type === "hit" && e.text === "Housing counter!")
-      toast("YOU READ THAT PERFECTLY", "HOUSING COUNTER", 1.2);
   }
 }
-function finish() {
-  clearInput();
-  releasePointer();
-  $("pause").hidden = true;
-  const won = game.mode === "won";
-  overlay(
-    won ? "THE ORCHARD CAN BREATHE AGAIN" : "SOME GOOD SCRAP IN THERE",
-    won ? "SMALL HERO.<br>BIG DENT." : "ONE MORE ROLL?",
-    `<p>${won ? "You learned the little machines. Then took a piece of the giant." : "That tool had your number. Try a wider exit, then bank back into the opening."}</p><div class="result-stats"><div><b>${game.stats.counters || 0}</b><span>COUNTERS</span></div><div><b>${game.stats.collected || 0}</b><span>PARTS COLLECTED</span></div><div><b>${Math.round(game.time)}s</b><span>IN THE ORCHARD</span></div></div>`,
-    '<button class="primary" id="play-again">TAKE ANOTHER SPIN <span>↗</span></button><a class="secondary" href="/">VISIT THE ORIGINAL YARD ↗</a>',
-  );
-  // The outcome title is fixed trusted copy, not player data.
-  $("overlay-title").innerHTML = won
-    ? "SMALL HERO.<br>BIG DENT."
-    : "ONE MORE ROLL?";
-  $("play-again").onclick = start;
+function toast(message, life = 3) {
+  $("toast").textContent = message;
+  $("toast").classList.add("show");
+  toastLife = life;
 }
 function updateHUD() {
   const p = game.player,
-    speed = Math.hypot(p.vx, p.vz);
+    w = game.wave,
+    targeting = game.targeting;
   $("hull-value").textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
-  $("hull-fill").style.width = `${Math.max(0, (p.hp / p.maxHp) * 100)}%`;
-  $("pilot-status")?.classList.toggle("critical", p.hp / p.maxHp < 0.3);
-  $("speed").textContent = speed.toFixed(1);
-  $("scrap").textContent = p.scrap;
-  $("size").textContent = (p.radius || 1).toFixed(2);
-  $("ram-state").textContent =
-    p.dashCooldown > 0 ? `${p.dashCooldown.toFixed(1)}s` : "READY";
-  $("ram-fill").style.transform =
-    `scaleX(${Math.min(1, p.dashCooldown / 1.45)})`;
-  $("charge-fill").style.width = `${(p.charge || 0) * 100}%`;
-  $("pulse-state").textContent =
-    p.charge >= 0.98
-      ? "FULL CHARGE"
-      : p.charge > 0.02
-        ? "CHARGING"
-        : "CHARGE PULSE";
-  $("reticle").classList.toggle("charged", p.charge >= 0.98);
-  $("buddy-state").textContent = p.shear
-    ? game.companion?.active
-      ? "FOLLOWING YOU"
-      : "READY TO DEPLOY"
-    : "FIND A LINKAGE";
-  for (const [key, name, effect] of [
-    ["shear", "SHEAR LINKAGE", "Harder rams · buddy unlocked"],
-    ["brace", "ADJUSTABLE BRACE", "Faster burst recovery"],
-  ]) {
-    const count = p[key] || 0,
-      el = $(key + "-part");
-    el.classList.toggle("found", count > 0);
-    el.querySelector("b").textContent = name + (count > 1 ? ` ×${count}` : "");
-    el.querySelector("small").textContent = count
-      ? effect
-      : key === "shear"
-        ? "Find one on a Snipcart"
-        : "Find one on a Spreadleg";
+  $("hull-fill").style.width = `${clamp((p.hp / p.maxHp) * 100, 0, 100)}%`;
+  $("pilot-status").classList.toggle("critical", p.hp / p.maxHp < 0.3);
+  $("air-state").textContent = p.grounded
+    ? "Double jump ready"
+    : `${p.airJumps} air jump${p.airJumps === 1 ? "" : "s"}`;
+  $("scrap-value").textContent = `${p.scrap} scrap`;
+  $("wave-title").textContent = `WAVE ${w.index} / ${w.total}`;
+  $("wave-objective").textContent =
+    w.index === 3 ? "Clear the workers & Pruner" : "Clear the wave";
+  $("wave-count").textContent =
+    `${w.remaining} remaining · ${w.queued} incoming`;
+  const cooldowns = {
+    bolt: p.shotCooldown,
+    strike: p.strikeCooldown,
+    conductor: p.conductorCooldown,
+    dash: p.dashCooldown,
+    ultimate: p.ultimateTime,
+  };
+  for (const [id, cooldown] of Object.entries(cooldowns)) {
+    $("state-" + id).textContent =
+      id === "ultimate"
+        ? p.ultimateTime > 0
+          ? `${p.ultimateTime.toFixed(1)}s active`
+          : `${Math.floor(p.ultimateCharge)}%`
+        : cooldown > 0
+          ? `${cooldown.toFixed(1)}s`
+          : id === "conductor"
+            ? `${game.conductors.length} / 2 · ready`
+            : "Ready";
+    $("ability-" + id).classList.toggle("cooling", cooldown > 0);
+    $("ability-" + id).classList.toggle(
+      "prepared",
+      game.preparedAbility === id ||
+        (id === "ultimate" && p.ultimateCharge >= 100),
+    );
   }
-  const boss = game.enemies.find((e) => e.kind === "pruner");
-  const bossNear = boss && p.z < -16 && game.mode === "playing";
-  $("boss-card").hidden = !bossNear;
-  if (boss)
-    $("boss-fill").style.width =
-      `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
-  if (p.z < -16) {
-    $("objective-title").textContent = "You know this move.";
-    $("objective-text").textContent =
-      "The same fork. A much bigger arm. Leave the sweep and hit the housing.";
-  } else if (p.z < 3) {
-    $("objective-title").textContent = "Watch the feet.";
-    $("objective-text").textContent =
-      "Spreadleg pushes outward. Stay beyond its feet, then return to the exposed housing.";
-  } else if (p.shear) {
-    $("objective-title").textContent = "Make it work for you.";
-    $("objective-text").textContent =
-      "Press E to deploy your shear buddy. Follow the service road uphill.";
-  } else {
-    $("objective-title").textContent = "Borrow their tools.";
-    $("objective-text").textContent =
-      "Bait Snipcart's closing jaws. Roll clear, then ram the retracted housing.";
-  }
-  [1, 2, 3].forEach((n, i) =>
-    $("route-" + n).classList.toggle("passed", p.z < [12, 0, -18][i]),
-  );
-  const aimed = game.enemies
-    .filter((e) => e.hp > 0)
-    .map((e) => {
-      const dx = e.x - p.x,
-        dz = e.z - p.z,
-        d = Math.hypot(dx, dz),
-        a = Math.atan2(dx, -dz) - world.yaw;
-      return { e, d, a: Math.atan2(Math.sin(a), Math.cos(a)) };
-    })
-    .filter((t) => t.d < 28 && Math.abs(t.a) < 0.16)
-    .sort((a, b) => a.d - b.d)[0];
-  $("target-label").textContent = aimed
-    ? (aimed.e.state === "recovery" ? "HOUSING EXPOSED · " : "") +
-      (aimed.e.kind === "snipcart"
-        ? "SNIPCART"
-        : aimed.e.kind === "spreadleg"
-          ? "SPREADLEG"
-          : "GRAND PRUNER")
-    : "";
-  $("target-label").classList.toggle("exposed", aimed?.e.state === "recovery");
-  const aim = world.aimPoint(p);
-  $("reticle").style.left = aim.x + "px";
-  $("reticle").style.top = aim.y + "px";
-  $("target-label").style.left = aim.x + "px";
-  $("target-label").style.top = aim.y + 24 + "px";
-  const threatening = game.enemies
-    .filter((e) => e.hp > 0 && ["windup", "active"].includes(e.state))
-    .sort(
-      (a, b) =>
-        Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z),
-    )[0];
-  $("threat").classList.toggle(
-    "show",
-    !!threatening && game.mode === "playing",
-  );
-  if (threatening) {
-    const a =
-      Math.atan2(threatening.x - p.x, -(threatening.z - p.z)) - world.yaw;
-    const relative = Math.atan2(Math.sin(a), Math.cos(a));
-    const direction =
-      Math.abs(relative) > 1.8
-        ? "BEHIND YOU"
-        : relative < -0.65
-          ? "LEFT"
-          : relative > 0.65
-            ? "RIGHT"
-            : "AHEAD";
-    $("threat").textContent =
-      `${direction} · ${threatening.kind === "spreadleg" ? "FEET SPREADING" : threatening.attackStyle === "toss" ? "OFFCUT INCOMING" : threatening.kind === "pruner" ? "ARM COMMITTING" : "SHEARS CLOSING"}`;
-  }
-  $("enemy-labels").innerHTML = game.enemies
-    .filter(
-      (e) => e.hp > 0 && e.active && Math.hypot(e.x - p.x, e.z - p.z) < 24,
-    )
-    .map((e) => {
-      const pt = world.screenPoint(
-        e.x,
-        e.y + (e.kind === "pruner" ? 6 : 3.1),
-        e.z,
-      );
-      if (
-        !pt.visible ||
-        pt.x < 20 ||
-        pt.x > innerWidth - 20 ||
-        pt.y < 90 ||
-        pt.y > innerHeight - 190
-      )
-        return "";
-      return `<div class="enemy-label ${e.state === "recovery" ? "open" : ""}" style="left:${pt.x}px;top:${pt.y}px"><span>${e.kind === "snipcart" ? "SNIPCART" : e.kind === "spreadleg" ? "SPREADLEG" : "PRUNER ARM"}</span><div><i style="width:${(e.hp / e.maxHp) * 100}%"></i></div>${e.state === "recovery" ? "<b>OPEN</b>" : ""}</div>`;
+  $("reticle").classList.toggle("focused", world.view.aiming);
+  $("reticle").classList.toggle("invalid", !!targeting && !targeting.valid);
+  $("target-feedback").textContent = game.preparedAbility
+    ? `${game.preparedAbility === "strike" ? "Ground strike" : "Storm conductor"} · ${targeting?.valid ? "release to cast" : "invalid placement"} · Esc cancel`
+    : targeting?.blocked
+      ? "Blocked"
+      : "";
+  $("entry-labels").innerHTML = (w.entries || [])
+    .map((entry) => {
+      const point = world.screenPoint(entry.x, 3, entry.z);
+      const bearing = Math.atan2(entry.x - p.x, p.z - entry.z) - world.yaw;
+      const relative = Math.atan2(Math.sin(bearing), Math.cos(bearing));
+      const x = point.visible
+        ? clamp(point.x, 100, innerWidth - 100)
+        : relative < 0
+          ? 110
+          : innerWidth - 110;
+      const y = point.visible
+        ? clamp(point.y, 200, innerHeight - 230)
+        : innerHeight * 0.42;
+      return `<div class="entry-label" style="left:${x}px;top:${y}px"><b>${point.visible ? "◇" : Math.abs(relative) > 2 ? "↓" : relative < 0 ? "←" : "→"} ${entry.kinds.length} incoming</b><span>${Math.max(0, entry.time - game.time).toFixed(1)}s · ${entry.z < -16 ? "seedhouse" : entry.x < 0 ? "west rows" : "east rows"}</span></div>`;
     })
     .join("");
+  const aimed = new Set(targeting?.targetIds || []);
+  $("enemy-labels").innerHTML = game.enemies
+    .filter(
+      (e) =>
+        e.hp > 0 &&
+        (aimed.has(e.id) ||
+          e.hitFlash > 0 ||
+          ((e.state === "windup" || e.state === "active") &&
+            Math.hypot(e.x - p.x, e.z - p.z) < 15)),
+    )
+    .map((e) => {
+      const pt = world.screenPoint(e.x, e.y + (e.bodyHeight || 3) + 0.6, e.z);
+      if (
+        !pt.visible ||
+        pt.y < 100 ||
+        pt.y > innerHeight - 190 ||
+        pt.x < 30 ||
+        pt.x > innerWidth - 30
+      )
+        return "";
+      return `<div class="enemy-label" style="left:${pt.x}px;top:${pt.y}px"><span>${e.kind === "pruner" ? "PRUNER ARM" : e.kind.toUpperCase()}${e.state === "recovery" ? " · EXPOSED" : ""}</span><div><i style="width:${clamp((e.hp / e.maxHp) * 100, 0, 100)}%"></i></div></div>`;
+    })
+    .join("");
+  const threat = game.enemies
+    .filter(
+      (e) =>
+        e.hp > 0 &&
+        ["windup", "active"].includes(e.state) &&
+        Math.hypot(e.x - p.x, e.z - p.z) < 20,
+    )
+    .map((e) => ({
+      e,
+      a: Math.atan2(
+        Math.sin(Math.atan2(e.x - p.x, p.z - e.z) - world.yaw),
+        Math.cos(Math.atan2(e.x - p.x, p.z - e.z) - world.yaw),
+      ),
+    }))
+    .find((v) => Math.abs(v.a) > 0.8);
+  $("threat").hidden = !threat || game.mode !== "playing";
+  if (threat)
+    $("threat").textContent =
+      `${Math.abs(threat.a) > 2 ? "↓ Behind" : threat.a < 0 ? "← Left" : "Right →"} · ${threat.e.kind === "spreadleg" ? "low sweep · jump" : threat.e.kind === "pruner" ? "tall arm attack" : "shears preparing"}`;
 }
 function frame(now) {
-  const elapsed = Math.max(0, (now - last) / 1000),
-    dt = Math.min(0.05, elapsed);
+  const elapsed = Math.max(0, now - last),
+    dt = Math.min(0.05, elapsed / 1000);
   last = now;
-  if (elapsed > 0) {
-    samples.push(1 / elapsed);
-    if (samples.length > 120) samples.shift();
-  }
-  if (game.mode !== "playing") {
-    const pad = navigator.getGamepads?.()[0];
-    if (pad) {
-      const startPressed = pad.buttons[9]?.pressed && !padPrevious[9];
-      const confirmPressed = pad.buttons[0]?.pressed && !padPrevious[0];
-      if (game.mode === "paused" && startPressed) {
-        if (guideOpen) guide();
-        else pause();
-      } else if (
-        ["ready", "won", "lost"].includes(game.mode) &&
-        (startPressed || confirmPressed)
-      )
-        start();
-      padPrevious = pad.buttons.map((b) => b.pressed);
-    }
-  }
+  frameTimes.push(elapsed);
+  if (frameTimes.length > 30000) frameTimes.shift();
+  frames++;
   if (game.mode === "playing") {
     accumulator += dt;
     while (accumulator >= 1 / 120) {
-      game.update(1 / 120, controls(1 / 120));
-      events();
+      const input = controls(1 / 120);
+      if (game.mode !== "playing") break;
+      game.update(1 / 120, input);
+      processEvents();
       accumulator -= 1 / 120;
       if (game.mode !== "playing") {
         accumulator = 0;
@@ -655,7 +742,10 @@ function frame(now) {
       }
     }
   } else accumulator = 0;
-  world.update(game, game.mode === "paused" ? 0 : dt);
+  world.update(
+    game,
+    game.mode === "paused" || game.mode === "intermission" ? 0 : dt,
+  );
   if (toastLife > 0) {
     toastLife -= dt;
     if (toastLife <= 0) $("toast").classList.remove("show");
@@ -667,33 +757,41 @@ function frame(now) {
   }
   if (game.mode !== lastMode) {
     lastMode = game.mode;
-    if (["won", "lost"].includes(game.mode)) finish();
+    if (game.mode === "intermission") showRewards();
+    else if (["won", "lost"].includes(game.mode)) finish();
   }
-  frameCount++;
   requestAnimationFrame(frame);
 }
 updateHUD();
 requestAnimationFrame(frame);
-if (new URLSearchParams(location.search).has("qa")) {
+if (qaEnabled) {
   window.__orchard = {
     game,
     world,
-    start,
-    pause,
+    start: () => start({ qa: true }),
+    pause: openDashboard,
+    resume,
+    clearInput,
     snapshot: () => game.snapshot(),
+    controls: () => ({
+      keys: [...keys],
+      pulses: [...pulses],
+      mouseFire,
+      mouseAim,
+      qaInput,
+    }),
     performance: () => ({
-      frames: frameCount,
-      fps: samples.length
-        ? samples.reduce((a, b) => a + b, 0) / samples.length
-        : 0,
+      frames,
+      frameTimes: [...frameTimes],
       drawCalls: world.renderer.info.render.calls,
       triangles: world.renderer.info.render.triangles,
+      geometries: world.renderer.info.memory.geometries,
+      textures: world.renderer.info.memory.textures,
+      errors: [...errorLog],
     }),
-    controls: () => ({ keys: [...keys], ...input }),
+    events: () => [...eventLog],
   };
-  import("../../tests/orchard-browser-runner.js").then(
-    ({ installOrchardQA }) => {
-      installOrchardQA(window.__orchard);
-    },
+  import("../../tests/orchard-browser-runner.js").then(({ installOrchardQA }) =>
+    installOrchardQA(window.__orchard),
   );
 }
