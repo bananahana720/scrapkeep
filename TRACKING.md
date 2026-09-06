@@ -109,7 +109,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | PS-05b (audit rec 9, 14; lead server, controller pin) | interim | 5 | done | none | PS-05-A2 | EV-0034 |
 | PS-06 (S0-01, S0-04, S0-05, S0-06, S0-07, S0-08) | interim | 7 | done | none | PS-06-A1 | EV-0034 |
 | [HF-01](BACKLOG.md#hf-01) | 3 | 6 | in_progress | AM-F01-001 admitted; revision3, unchanged lease | none | EV-0068 |
-| [HF-02](BACKLOG.md#hf-02) | 2 | 4 | in_progress | none; approved documentation only | none | EV-0066 |
+| [HF-02](BACKLOG.md#hf-02) | 2 | 6 | review | independent PASS; awaiting integrated checks | none | EV-0071 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 2 | queued | HF-03a | none | EV-0029 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
@@ -315,6 +315,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0067 | 2026-09-06T21:54:42.883761+00:00 | Coordinator / block/amendment proposal | HF-01 | HF-01-A1 reported contradictory revision2 path-table coverage after S0-01 landed. Native-table drafting stopped; lease HF-01-L1 retained for source review and request packet only. Coordinator triage: factual stale acceptance wording, no product/architecture change; independent reviewer checks proposed correction before admission. HF-02 unaffected; HF-03a remains unassigned behind HF-01. |
 | EV-0068 | 2026-09-06T21:56:33.995603+00:00 | Coordinator / amendment admission/definition change | AM-F01-001, HF-01 | Accepted request revision1 as factual documentation correction preserving architecture/product decisions. HF-01 card2→3: native table exhaustive native coverage; separate support/config/docs/evidence accounting; per-fact reconciliation of admitted scaffold instead of stale unverified status. Independent hf_foundation_review Astra high PASS on request sha256 bad97013eb0b2319e94c1a4ac611400e71fd75bc3d18730242f52a12438ede96. docs/project checks PASS. Source and card admitted together; HF-01-L1 scope unchanged, readiness rechecked, affected drafting may resume after commit identity supplied. Dependent HF-03a remains queued until HF-01 done. |
 | EV-0069 | 2026-09-06T21:57:50.096740+00:00 | Coordinator / backlog grooming/definition change | TH-19 | Discovered during HF-01: .gitignore excludes native/**/*.import and native-smoke copy/hash filters omit .import. No production imported assets are present. TADR-003 retains authored import settings; official Godot4.7 import-process confirms settings adjacent to sources versus generated .godot/imported cache. TH-19 card1→2 retains M/docs-only scope and dependencies, adds explicit repair/proof specification and changed-setting rejection scenario before production asset admission. Current runtime remains unchanged; independent integrated review will check grooming. |
+| EV-0070 | 2026-09-06T21:59:58.559141+00:00 | Coordinator / handoff | HF-02 | HF-02-A1 handed off candidate18e174a44e777211b498a1ac269b5be62b31dc70, one permitted sectionfile sha256 c025eadc6a59d79e497df183345aa68ae994c5216046f46757310507f6e8382d. Writer stopped with clean trackedworktree; HF-02-L1 released. Scoped docs/project/scope plus25-row and5negative source/tag scenarios PASS. Independent review pending; no done claim. |
+| EV-0071 | 2026-09-06T22:01:39.546804+00:00 | Coordinator / review | HF-02 | Independent hf_foundation_review gpt-6-astra high PASS candidate18e174a44e777211b498a1ac269b5be62b31dc70. All25 classified rows and exact historical JSON/manifest/statistics traced; scope/docs/project independently passed. No findings. Serial admission follows; review alone does not complete card. |
 
 
 ## Preparation checkpoint
@@ -455,7 +457,7 @@ Next proposal: HF-01 revision2 (M) and HF-02 revision2 (S), documentation only, 
 
 ## HF-02-A1 foundation-01 attempt
 
-- Assignee: hf02_writer, gpt-6-astra, configured high; card revision 2; attempt HF-02-A1; exclusive lease HF-02-L1 active.
+- Assignee: hf02_writer, gpt-6-astra, configured high; card revision 2; attempt HF-02-A1; exclusive lease HF-02-L1 closed at handoff.
 - Owned files: `docs/tech/sections/HF-02-constraints-evidence.md` and `artifacts/local/tasks/HF-02/` only in `/home/andrew/Projects/scrapkeep-wt-HF-02`.
 - Base identity: `3ab3477bc8731f157e9cdff31598251e20acef98`, verified worktree HEAD; no task predecessors.
 - Candidate / integrated identity: none / none.
