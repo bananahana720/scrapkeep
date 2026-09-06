@@ -15,3 +15,4 @@ __pycache__/
 leads.json
 leads-*.tmp
 leads.lock
+.claude/worktrees/
