@@ -8,6 +8,21 @@ The maintained `npm run playtest:agent` command launches the correct game build 
 
 The engineering is authorized in the session. Closing the session records the next work; it does not start a background job, create a reminder, approve a new gameplay increment, or publish the project.
 
+## Carry-forward map
+
+The maintained runner landed in commit `db7d8cf`. Target continuity and bounded recovery landed in `3077799`. The latter passed three consecutive terminal trials, won/won/lost, with all pause checks passed. Its [qualification](../../artifacts/agent-recovery-2026-09-06/README.md) owns the 76-test result, native timings, interruption check and retained failures. This is the current starting point; the assisted experiments below explain how the controller developed.
+
+| Reusable capability | Maintained location | Carry-forward boundary |
+| --- | --- | --- |
+| Native physical input, text, pointer, capture and exact-window semantic actions | [Installed controller guide](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md) | Imported by the game runner. Preserve one implementation and its focus, identity and stop checks. |
+| Named agent desktops and actor leases | Controller `seat.py`, `ownership.py` and [ADR 0006](../adr/0006-agent-playtest-workspaces.md) | One GUI actor per leased desktop. Separate Git worktrees isolate source edits. Both share the host's Unix authority. |
+| Build, play, menus, cleanup and provenance | [Maintained runner](../../tools/agent-player/README.md) and `scripts/agent-playtest.mjs` | One local command uses a private build and an exclusive evidence directory. No temporary player copy is required. |
+| Fast assertions and native behavioral checks | [Contribution guide](../../CONTRIBUTING.md#verification) | Project verification, focused player tests and native trials establish different claims. Human feel remains P10. |
+| Recovery cases and comparison material | [Recovery probe](../../tools/agent-player/tests/probe_recovery.py), fixtures and [retained qualification](../../artifacts/agent-recovery-2026-09-06/README.md) | Failed variants remain available with exact source and game identities. The reusable development comparison loop is still open. |
+| Recoverable controller source | [Source snapshot and manifest](../../artifacts/agent-infrastructure-2026-09-06/README.md) | The archive preserves the external controller dependency and registration references. It is not an active fork or a tested portable installer. |
+
+The snapshot keeps the successful source bytes in the project history. Browser profiles, runtime leases and full host configuration remain outside it. There is no configured Git remote, so this session has not established an off-machine backup.
+
 ## Verified starting point
 
 - The installed controller now has named `game` and `studio` desktops, separate working directories/browser profiles, cross-process writer leases, and ten MCP tools per workspace. It supports exact-window Chromium actions and GTK button/text actions, plus bounded native input, screenshots, typing and scrolling. The existing `native_desktop` service retains its shared-desktop scope.
@@ -27,11 +42,19 @@ The original assisted playthrough preceded the aggregate-modifier correction. La
 | Physical modifier key events alone did not maintain Ctrl+Shift for the letter key. | Aggregate libxkbcommon state and explicit Wayland modifier messages, with neutral cleanup. | Keep the live shortcut check in reusable verification. |
 | A click could beat the compositor's cursor warp and hit the previous location. | A 40 ms positioning interval before button press. | Replace assumptions with observable cursor synchronization if available; do not remove the delay without proof. |
 | Screenshot processing blocked timely control; a foreground tree made per-pixel component search pathological. | Separate input owner and observer; equivalent horizontal-span component merging. | Measure each stage independently and keep capture/detection away from the input owner. |
-| A generic green-panel heuristic falsely ended a trial. | More specific game-menu geometry checks in the experiment. | Replace brittle modal detection with a tested screen-state model and accessible menu signals. |
+| A generic green-panel heuristic falsely ended a trial. | The maintained flow now requires positive semantic screen states and unique visible controls. Pixel menu cues release input before that read. | Keep gameplay interruption separate from authoritative victory or defeat classification. |
 | Failed startup and concurrent lifecycle commands could lose process ownership. | Per-child cleanup, start-time identities, bounded waits and a lifecycle lock. | Preserve ownership through cancellation, restart and disconnect tests. |
 | A fresh Chromium profile still received a system-injected extension popup. | Extensions/default apps disabled in the child. | Verify window inventory and keep accessibility tied to exact PID/frame identity. |
 | Renderer accessibility did not enable Chromium's native AT-SPI bridge. | Child-scoped ACCESSIBILITY_ENABLED=1, NO_AT_BRIDGE=0 and complete renderer accessibility. | Treat native app registration as separate from browser rendering and test each toolkit when needed. |
 | A passed run and a passed later input fix are different evidence. | Dated screenshots, logs and installed source hashes exist. | The maintained runner must record exact game/controller/perception versions for every run. |
+| Reassociation before expiry revived an old target identity. | Target age is checked before matching returning detections. | Validate lifetime before association whenever an observed object can disappear. |
+| Brief detections repeatedly restarted vertical scanning and postponed search. | Persistent combat timing and an accumulated level-framed scan budget survive interruptions. | Decide explicitly which clocks pause, continue or reset. Test intermittent evidence, not only steady inputs. |
+| Coupled forward turning did not establish useful exploration. | Search rotates in place; bounded relocation moves straight and yields to new targets. | Separate observation from repositioning when concurrent movement undermines the search. Command duration is not measured spatial coverage. |
+| Policy memory could outlive the image that justified an action. | Existing frame authority still expires after 500 ms and releases input before observer cleanup. | Remembered state can guide the next observation; it cannot renew permission to keep acting on stale pixels. |
+| A new strategy won once and then stalled. | Candidate source stayed frozen through repeated terminal trials; unsuccessful variants remain retained. | Require repeated matching-scenario evidence before admission. Small batches do not establish a win rate or human skill. |
+| A fixed scenario seed was mistaken for varying random scenarios. | The ordinary constructor's seed 42 and timing limits are now explicit in reports. | Same seed is insufficient for deterministic replay when action, capture and rendering timing vary. |
+
+These patterns are already represented in code, focused tests or provenance fields. Future work extends those mechanisms instead of relying on a new agent to remember prose. Tests cover the named failures; they do not prove general obstacle navigation or human-like tactics.
 
 ## Operational desktop foundation
 
@@ -56,11 +79,21 @@ The order below is the default execution sequence. Complete and verify each unit
 
 The maintained source now lives in `tools/agent-player/` and imports the installed controller. It builds privately, owns a dedicated desktop lease, handles visible menus, and writes source-versioned reports. Core start, combat, default reward/equipment, pause/resume, defeat, victory and restart paths have live evidence. Arbitrary equipment checkbox editing remains unsupported; defaults auto-equip. Evidence records are inspectable and rerunnable, not deterministic replay.
 
-The [maintained-player qualification](../../artifacts/agent-player-2026-09-06/README.md) records 44 focused tests, project verification, a final smoke/pause pass, three consecutive defeat/restart cycles and a 0.316-second interruption cleanup. Two earlier visual variants won and then timed out on their next trial. Both latest visual configurations timed out; reliable full clears are unfinished.
+The earlier [maintained-player qualification](../../artifacts/agent-player-2026-09-06/README.md) records 44 focused tests, project verification, a final smoke/pause pass, three consecutive defeat/restart cycles and a 0.316-second interruption cleanup. Two visual variants won and then timed out on their next trial. Its last two configurations timed out. The recovery qualification below supersedes that combat acceptance state while retaining those failures.
 
 The [target-continuity and recovery qualification](../../artifacts/agent-recovery-2026-09-06/README.md) completes that engineering unit: the final policy reached three consecutive terminal outcomes, won/won/lost, with pause/resume in each and no stall timeout. Seventy-six focused tests and project verification passed; same-policy interruption cleaned up in 0.264 seconds. Stationary search now has a persistent scan budget, target association survives brief occlusion, and bounded relocation changes viewpoint without mixing translation into the scan. The baseline and rejected variants remain in the qualification, so this is not a general win-rate claim.
 
 Next are measured tactics/player profiles and baseline/candidate regression comparison. Known perception limits now include confirmed conductor-foot and warm-notification false positives, plus occluded or merged faces. Keep these cases in comparisons before claiming broader visual reliability. Do not start another open-ended plugin search unless the implementation encounters a specific missing capability.
+
+## Resume the next engineering unit
+
+1. Read this guide, the runner guide and the latest retained qualification. Inspect branch and working changes before editing. At closeout, unrelated publisher/design documentation remained uncommitted; it is owner work to preserve.
+2. Inspect the installed controller and current tool inventory. Discover live workspace identities when a native run starts. Do not reuse a PID, window address or lease from a receipt. The source snapshot supports drift inspection without replacing the installation.
+3. Run `npm run test:agent` and `npm run verify` for the current checkout. Use the runner guide's bounded smoke and pause check to establish the current native path before changing tactics.
+4. Begin order 4 with a fixed scenario/configuration matrix and a baseline report. Define the metric, accepted terminal outcomes and failure categories before measuring one tactical or profile change. Keep the ordinary game and input controller fixed during that comparison. Treat novice/ordinary/expert names as test strategies until validated by human play.
+5. Carry the same evidence contract into order 5's automated comparison. Its completion check requires detecting and then removing a bounded introduced regression. A new gameplay increment still follows its own project approval.
+
+The first resumed engineering action is the fresh baseline and comparison definition. This closeout launches no tests in the background and makes no scheduling commitment. P10's human assessment of movement feel and build escalation remains the product decision the tooling supports.
 
 ## Evidence boundaries
 
