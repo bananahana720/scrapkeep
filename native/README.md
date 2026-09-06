@@ -37,6 +37,10 @@ The 4.7 documentation fetched for this card (`artifacts/local/tasks/S0-01/ctx7-g
 
 It proves that the pinned binary boots headless on this Linux host, enforces the typing keys, names no networking class, and boots again with the network unavailable. It does not prove a window, renderer, input device, scene, save, export, another operating system, controller feel or performance. Nothing here is qualification evidence under TADR-001.
 
+## Proofs
+
+`proofs/tadr-004/` is the TADR-004 save-owner hello world (cards S0-07 and S0-08). Run it with `--headless --path native --script res://proofs/tadr-004/proof_runner.gd`; add `-- --inject-fault` to prove the runner reports a missing newer-schema rejection with exit 1. Every case prints `S0-07 <case> PASS|FAIL <detail>` and the run ends with one `SUMMARY` JSON line. Exit 0 means every case passed, 1 an assertion failure, 2 an environment failure and 3 a harness error. Run directories go under `artifacts/local/proofs/tadr-004/<run-id>/`, never `user://`. Fixtures under `proofs/tadr-004/fixtures/` are copied per case and never mutated in place. The design and API receipt are in [the S0-07 page](../docs/tech/proofs/S0-07-save-owner.md) and the executed evidence in [the S0-08 page](../docs/tech/proofs/S0-08-save-evidence.md). Temporary files, a rename, a checksum or a backup alone do not prove power-loss durability.
+
 ## Reuse for later proofs
 
 Later proofs can add a `tests/<name>.gd` script that extends `SceneTree`, keep every declaration typed, print one marker line and call `quit(code)`. Run them the same way with `--headless --path native --script res://tests/<name>.gd`, and read the exit code directly rather than through a pipe.
