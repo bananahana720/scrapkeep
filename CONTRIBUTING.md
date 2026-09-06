@@ -59,6 +59,6 @@ Use an ADR for a durable module boundary, delivery/runtime choice, or data/asset
 
 After a change, update its canonical docs, record executed checks and material limits, and leave one concrete next action in the project desk/backlog. The append-only [decision trail](docs/decisions.tsv) records meaningful choices, not every command.
 
-This environment currently exposes an unusable read-only `.git` placeholder. Do not fabricate commits or initialize a replacement to satisfy a workflow. The backlog tracks a normal-checkout handoff. In a real checkout, inspect status, review changes, and use that repository's branch/review conventions.
+Earlier sessions worked against an unusable read-only `.git` placeholder and staged files by hand instead of committing. That is resolved: this is now a real checkout on branch `main` with a baseline commit (`4db9b31`). Inspect status, review changes, and commit on a branch using ordinary review before merging. Writing agents work in disjoint worktrees rather than staging copies. No remote is configured yet; choosing one and publishing follows Andrew's explicit authorization, so there is still no off-machine backup.
 
-Keep `node_modules/`, `dist/`, secrets and disposable evidence untracked. [Artifact retention](artifacts/README.md) and [asset provenance](docs/project/ASSETS.md) describe the remaining buckets.
+Keep `node_modules/`, `dist/`, secrets and disposable evidence untracked (see `.gitignore`). [Artifact retention](artifacts/README.md) and [asset provenance](docs/project/ASSETS.md) describe the remaining buckets.
