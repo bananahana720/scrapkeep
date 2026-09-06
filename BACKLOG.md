@@ -646,7 +646,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (offline solo)
 - [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (the root stays disjoint from both browser entries)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01), or the interim root path the coordinator records in TRACKING as a question answer
-- [TRACKING.md](TRACKING.md) event EV-0024, the install record: editor at `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64`, version `4.7.2.stable.official.ed1daf0bf`, official 4.7.2-stable release, SHA512 verified against the release sums
+- [TRACKING.md](TRACKING.md) event EV-0024, the install record (editor at `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64`, version `4.7.2.stable.official.ed1daf0bf`, official 4.7.2-stable release, SHA512 verified against the release sums)
 - Godot 4.7 command-line reference, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
 
 **Dependencies:** [HF-01](#hf-01) or the interim path answer. **Blocking questions:** None. **Blocking item:** engine installed on this machine under EV-0024; export templates parked.
@@ -748,7 +748,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision), [§ Consequences](adr/TADR-002-runtime-model.md#consequences) and [§ Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration)
 - [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (pause and menu focus)
 - [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
-- Browser precedent to differ from, not port: `src/orchard/simulation.js:140`, `:347-374`, `:417-421` and `tests/orchard.test.js:12-15`, `:327-337`
+- `src/orchard/simulation.js:140`, `:347-374`, `:417-421` and `tests/orchard.test.js:12-15`, `:327-337`, the browser precedent to differ from and not port
 - S0-01 evidence and toolchain record
 - Godot 4.7 documentation for `_physics_process`, `Node.process_mode`, `SceneTree.paused`, `SceneTree.physics_frame`, `Engine.physics_ticks_per_second`, `Engine.is_in_physics_frame`, application focus notifications and `SceneTree.quit(exit_code)`, resolved by the coordinator and supplied in the packet.
 
@@ -829,7 +829,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Verification and evidence:**
 
 - Two runs (exit 0 for the good fixture; nonzero for the candidate) logged with exit codes and `godot --version`.
-- The reviewer confirms the defect is structural: the rule rejected it, not typing, per TADR-003 § Decision.
+- The reviewer confirms the defect is structural, so the rule rejected it and typing did not, per TADR-003 § Decision.
 
 **Boundary:** Semantic rules (lineage per slot, start access, milestones, recipe endpoints, compatibility) are out of scope. No safe-encounter-boundary behavior is proven.
 
@@ -843,7 +843,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 - [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) and [§ Consequences](adr/TADR-004-persistence.md#consequences)
 - `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) if admitted, else a placeholder envelope with no discovery field and no browser IDs
-- Prior art only, not reuse: `server/store.js:103-124` and `tests/progress-store.test.js:72-133`
+- `server/store.js:103-124` and `tests/progress-store.test.js:72-133` as prior art only, not reuse
 - Godot 4.7 documentation for `FileAccess`, `DirAccess` and `JSON`, resolved by the coordinator and supplied in the packet.
 
 **Dependencies:** [HF-01](#hf-01) or a placeholder path. **Blocking questions:** None. **Blocking item:** none for authoring; engine install to run.
