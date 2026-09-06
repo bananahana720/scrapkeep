@@ -8,7 +8,7 @@ export function installOrchardQA(api) {
   const panel = document.createElement("details");
   panel.id = "orchard-qa";
   panel.innerHTML =
-    '<summary>Playtest verification</summary><p>QA uses synthetic DOM input. Mouse capture is checked separately in normal play.</p><button id="qa-controls">Run DOM input replay</button><button id="qa-fixtures">Run state fixtures</button><button id="qa-expedition">Run input expedition</button><button id="qa-stress">Run 60-second bounded stress</button><button id="qa-windup">View low / tall attack fixture</button><button id="qa-boss">View final wave fixture</button><button id="qa-hero">View airborne caster fixture</button><pre id="qa-results" aria-live="polite">Ready. Fixtures and earned progression are recorded separately.</pre><a id="qa-download" hidden>Download evidence JSON</a>';
+    '<summary>Playtest verification</summary><p>QA uses synthetic DOM input. Mouse capture is checked separately in normal play.</p><button id="qa-controls">Run DOM input replay</button><button id="qa-fixtures">Run state fixtures</button><button id="qa-expedition">Run input expedition</button><button id="qa-stress">Run 60-second bounded stress</button><button id="qa-windup">View low / tall attack fixture</button><button id="qa-boss">View final wave fixture</button><button id="qa-hero">View airborne caster fixture</button><button id="qa-lightning">View lightning placement fixture</button><pre id="qa-results" aria-live="polite">Ready. Fixtures and earned progression are recorded separately.</pre><a id="qa-download" hidden>Download evidence JSON</a>';
   document.body.appendChild(panel);
   const results = panel.querySelector("#qa-results"),
     canvas = document.getElementById("orchard-world");
@@ -623,6 +623,7 @@ export function installOrchardQA(api) {
       p.hp = p.maxHp = 1e8;
       for (const e of g.enemies) e.hp = e.maxHp = 1e8;
     }
+    g._updateWaves(0);
     api.world.resetCamera();
     return g;
   }
@@ -815,13 +816,44 @@ export function installOrchardQA(api) {
       finish(error);
     }
   };
+  panel.querySelector("#qa-lightning").onclick = () => {
+    if (running) return;
+    const g = stagePopulation();
+    Object.assign(g.player, { x: 0, y: 1, z: 14 });
+    g.conductors = [
+      { id: "fixture-conductor", x: 7, y: 0, z: 0, cooldown: 1, flash: 0 },
+    ];
+    g.enemies = g.enemies
+      .filter((enemy) => enemy.kind === "snipcart")
+      .slice(0, 3);
+    for (const [i, enemy] of g.enemies.entries()) {
+      Object.assign(enemy, { x: [-9, 4, 9][i], y: 0, z: [-3, 0, -6][i] });
+    }
+    g._updateWaves(0);
+    const origin = g._weaponOrigin();
+    const attack = g.previewAttack("conductor", {
+      origin,
+      direction: { x: -7, y: -origin.y, z: -14 },
+    });
+    g._updateConductors(0);
+    api.world.pitch = 0.42;
+    park();
+    api.world.event({ type: "attack", attack, source: "player", echo: false });
+    api.world.update(g, 0);
+    panel.open = false;
+    results.textContent =
+      "VISUAL FIXTURE: captured placement geometry with circular reach and its connected damage corridor. Simulation is paused.";
+  };
   panel.querySelector("#qa-windup").onclick = () => {
     if (running) return;
     const g = stagePopulation();
     g.player.z = 8;
+    g.enemies = ["spreadleg", "snipcart", "pruner"].map((kind) =>
+      g.enemies.find((enemy) => enemy.kind === kind),
+    );
     for (const [i, enemy] of g.enemies.entries()) {
-      enemy.x = (i % 2 ? 1 : -1) * 4;
-      enemy.z = -4 - Math.floor(i / 2) * 4;
+      enemy.x = [-5, 5, 0][i];
+      enemy.z = [-1, -1, -8][i];
       enemy.y = groundHeight(enemy.x, enemy.z);
       enemy.yaw = Math.PI;
       enemy.state = "windup";
@@ -830,6 +862,7 @@ export function installOrchardQA(api) {
       enemy.attackStyle = "sweep";
     }
     g._updateEnemies(0);
+    g._updateWaves(0);
     park();
     api.world.update(g, 0);
     panel.open = false;
