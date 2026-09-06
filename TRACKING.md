@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **approved** for foundation-01: HF-01 revision2 and HF-02 revision2 only, by Andrew: “approved - proceed. I defer to your recommendations”. Documentation, source research, checks, independent review and serial admission are authorized. The other twelve HF cards and feature work remain outside scope. Operational Sprint 0 is closed passed (EV-0063). |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for foundation-01. Historical coordinator records remain below. |
-| Active task attempts / write leases | None. S0-14-L1 and all delivery leases closed before final receipt evaluation. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
+| Active task attempts / write leases | HF-01-A1 / HF-01-L1 and HF-02-A1 / HF-02-L1; disjoint section files and local task evidence in verified worktrees. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. Foundation-01 approval applies only to HF-01 and HF-02. Subsequent proposals require their own approval. PUB-01 is the separately authorized publication task.
@@ -108,8 +108,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | PS-05a (tooling follow-ups, FRONT-MATTER anchors, artifact manifests) | interim | 3 | done | none | PS-05-A1 | EV-0027 |
 | PS-05b (audit rec 9, 14; lead server, controller pin) | interim | 5 | done | none | PS-05-A2 | EV-0034 |
 | PS-06 (S0-01, S0-04, S0-05, S0-06, S0-07, S0-08) | interim | 7 | done | none | PS-06-A1 | EV-0034 |
-| [HF-01](BACKLOG.md#hf-01) | 2 | 3 | ready | Sprint authorization awaiting_review | none | EV-0029 |
-| [HF-02](BACKLOG.md#hf-02) | 2 | 3 | ready | Sprint authorization awaiting_review | none | EV-0029 |
+| [HF-01](BACKLOG.md#hf-01) | 2 | 4 | in_progress | none; approved documentation only | none | EV-0066 |
+| [HF-02](BACKLOG.md#hf-02) | 2 | 4 | in_progress | none; approved documentation only | none | EV-0066 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 2 | queued | HF-03a | none | EV-0029 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
@@ -311,6 +311,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0063 | 2026-09-06T21:37:43.606711+00:00 | Coordinator / lease reconciliation | S0-14 | Fresh integrated s0_final_fresh and separate fresh coverage s0_review_coverage PASS at e54e429. Coordinator draft complete; S0-14-L1 closed before receipt evaluation. No active writer leases or outstanding amendment requests. Remaining action is deterministic receipt evaluation and its administrative recording. |
 | EV-0064 | 2026-09-06T21:39:25.672456+00:00 | Coordinator / sprint closure | S0-14, operational-s0 | PASSED at integrated e54e429c76f3d83641c0127b4e44fe7eb8b2098f. Fresh integrated s0_final_fresh and separate fresh coverage s0_review_coverage (both gpt-6-astra high) PASS. Final receipt 6a2b53d5591922b83e2771a3eb81f04b9e836b07f6bb11df60bb5fec7b5bebbb supersedes pending ebbbe60a252ab601998e45ea04ab03d79ac2b81ab118795fb375cbd6970c5724; repeated exactbytes returned identical PASS, synthetic missing/stale/failingCI and unauthorizeddispatch refused. All delivery tasks done, amendments reconciled, leases closed; S0-14 done/A1. HF-01rev2/HF-02rev2 remain awaiting_review, no dispatch. Windows execution and gameplay/Pillars untested. One completed-sprint event only. |
 | EV-0065 | 2026-09-06T21:52:17.950707+00:00 | Coordinator / authorization | foundation-01, HF-01, HF-02 | Andrew explicitly approved the concrete HF-01 revision2 / HF-02 revision2 recommendation. Documentation-only execution authorized; at most two isolated writers and one independent Astra reviewer, serial admission, no builds. Existing inputs verified at f58291842b43511cb3ea94374a504f2881b53cab. Coordinator creates sections index before leases. Historical Sprint 0 proposal receipt remains unchanged. |
+| EV-0066 | 2026-09-06T21:53:04.718987+00:00 | Coordinator / assignment/lease | HF-01, HF-02 | Both revision2 cards rechecked input-ready; no predecessors or blocking questions. Worktrees created and HEAD verified at 3ab3477bc8731f157e9cdff31598251e20acef98. File-level leases HF-01-L1 / HF-02-L1 assigned to hf01_writer / hf02_writer (gpt-6-astra high), attempts A1. No shared-document worker edits; coordinator alone admits serially. |
 
 
 ## Preparation checkpoint
@@ -438,3 +439,23 @@ Fresh independent integrated review: s0_final_fresh, gpt-6-astra high, PASS. Sep
 Retro: initial closeout record defects and historical-prerequisite validation were repaired within S0-10/S0-13. S0-09's consumed-template pinning and config isolation were corrected in attempt2; real GitHub workflow parsing exposed unsupported job-level context placement, corrected and freshly reviewed in the final allowed attempt3. No new repair card duplicates those resolved defects. The coordinator reconciled the amendment inventory: no live specification amendment was submitted and no accepted amendment remains unapplied. These fixes preserve accepted product/architecture decisions. For S0-09 revision3 DoD4, the explicit final sentence and Andrew's local-run clarification govern report retention in logs/summary without uploaded artifact storage; the older phrase about uploading report.json does not authorize an artifact upload. The pinned card revision and its historical wording are preserved.
 
 Next proposal: HF-01 revision2 (M) and HF-02 revision2 (S), documentation only, objective and acceptance detailed above. Inputs remain ready; Q-E03/Q-E04 are register unknowns, not invented budgets. The coordinator creates the sections index before any approved dispatch. This proposal remains **awaiting_review**. No foundation work was started or dispatched. Q-E06 remains open. The other twelve foundation cards remain outside the bounded proposal.
+
+## HF-01-A1 foundation-01 attempt
+
+- Assignee: hf01_writer, gpt-6-astra, configured high; card revision 2; attempt HF-01-A1; exclusive lease HF-01-L1 active.
+- Owned files: `docs/tech/sections/HF-01-production-conventions.md` and `artifacts/local/tasks/HF-01/` only in `/home/andrew/Projects/scrapkeep-wt-HF-01`.
+- Base identity: `3ab3477bc8731f157e9cdff31598251e20acef98`, verified worktree HEAD; no task predecessors.
+- Candidate / integrated identity: none / none.
+- Latest checkpoint: assignment recorded before dispatch; next step source/scenario review and document candidate.
+- Evidence: pending candidate packet; no completion claim.
+- Review: not_run. Last event: EV-0066.
+
+## HF-02-A1 foundation-01 attempt
+
+- Assignee: hf02_writer, gpt-6-astra, configured high; card revision 2; attempt HF-02-A1; exclusive lease HF-02-L1 active.
+- Owned files: `docs/tech/sections/HF-02-constraints-evidence.md` and `artifacts/local/tasks/HF-02/` only in `/home/andrew/Projects/scrapkeep-wt-HF-02`.
+- Base identity: `3ab3477bc8731f157e9cdff31598251e20acef98`, verified worktree HEAD; no task predecessors.
+- Candidate / integrated identity: none / none.
+- Latest checkpoint: assignment recorded before dispatch; next step source/scenario review and document candidate.
+- Evidence: pending candidate packet; no completion claim.
+- Review: not_run. Last event: EV-0066.
