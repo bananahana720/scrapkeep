@@ -177,13 +177,24 @@ function showModal(kind, title, kicker) {
     dialog.showModal();
   }
 }
-function captureFailure() {
+function captureFailure(reason) {
+  const detail = {
+    name: reason?.name || reason?.type || "CaptureTimeout",
+    message: reason?.message || "The browser did not confirm pointer capture.",
+    documentFocused: document.hasFocus(),
+    visibility: document.visibilityState,
+    supported: typeof canvas.requestPointerLock === "function",
+  };
+  canvas.dataset.captureError = JSON.stringify(detail);
+  if ($("capture-detail"))
+    $("capture-detail").textContent = `${detail.name}: ${detail.message}`;
   capturePending = false;
   if (qaInput || game.mode !== "playing") return;
   game.pause();
   showModal("capture", "Click to take control", "MOUSE CAPTURE NEEDED");
   $("dialog-body").innerHTML =
-    "<p>Your browser did not capture the mouse. Click below to try again. If it keeps failing, focus this browser tab and check its pointer-lock permission.</p>";
+    '<p>Your browser did not capture the mouse. Click below to try again. If it keeps failing, focus this browser tab and check its pointer-lock permission.</p><p id="capture-detail" class="secondary-text"></p>';
+  $("capture-detail").textContent = `${detail.name}: ${detail.message}`;
   $("dialog-footer").innerHTML =
     '<button id="capture-retry" class="primary">Capture mouse & resume</button><button id="capture-settings">Open dashboard</button>';
   $("capture-retry").onclick = resume;
@@ -200,8 +211,8 @@ function acquirePointer() {
       if (capturePending && document.pointerLockElement !== canvas)
         captureFailure();
     }, 1000);
-  } catch {
-    captureFailure();
+  } catch (error) {
+    captureFailure(error);
   }
 }
 function start(options = {}) {
