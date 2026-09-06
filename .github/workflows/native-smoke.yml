@@ -10,13 +10,19 @@ jobs:
   native-smoke:
     runs-on: [self-hosted, linux, x64, scrapkeep-s0]
     timeout-minutes: 20
-    env:
-      XDG_DATA_HOME: ${{ runner.temp }}/scrapkeep-s0-${{ github.run_id }}-${{ github.run_attempt }}/data
-      XDG_CACHE_HOME: ${{ runner.temp }}/scrapkeep-s0-${{ github.run_id }}-${{ github.run_attempt }}/cache
-      npm_config_cache: ${{ runner.temp }}/scrapkeep-s0-${{ github.run_id }}-${{ github.run_attempt }}/npm-cache
-      GODOT_BIN: ${{ runner.temp }}/scrapkeep-s0-${{ github.run_id }}-${{ github.run_attempt }}/Godot_v4.7.2-stable_linux.x86_64
-      GODOT_TEMPLATES_ARCHIVE: ${{ runner.temp }}/scrapkeep-s0-${{ github.run_id }}-${{ github.run_attempt }}/templates.tpz
     steps:
+      - name: Initialize temporary toolchain paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain_dir="$RUNNER_TEMP/scrapkeep-s0-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          {
+            printf 'XDG_DATA_HOME=%s/data\n' "$toolchain_dir"
+            printf 'XDG_CACHE_HOME=%s/cache\n' "$toolchain_dir"
+            printf 'npm_config_cache=%s/npm-cache\n' "$toolchain_dir"
+            printf 'GODOT_BIN=%s/Godot_v4.7.2-stable_linux.x86_64\n' "$toolchain_dir"
+            printf 'GODOT_TEMPLATES_ARCHIVE=%s/templates.tpz\n' "$toolchain_dir"
+          } >> "$GITHUB_ENV"
       - name: Check out the dispatched commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
