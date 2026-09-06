@@ -180,8 +180,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [LG-05](BACKLOG.md#lg-05) | 1 | 1 | queued | LG-03, LG-04 | none | EV-0002 |
 | [LG-07](BACKLOG.md#lg-07) | 1 | 1 | queued | LG-03 | none | EV-0002 |
 | [S0-10](BACKLOG.md#s0-10) | 1 | 2 | done | none | S0-10-A2 | EV-0036 |
-| [S0-11](BACKLOG.md#s0-11) | 1 | 2 | in_progress | none | none | EV-0037 |
-| [S0-12](BACKLOG.md#s0-12) | 1 | 2 | in_progress | none | none | EV-0037 |
+| [S0-11](BACKLOG.md#s0-11) | 1 | 4 | review | serial admission | none | EV-0041 |
+| [S0-12](BACKLOG.md#s0-12) | 1 | 3 | review | independent review | none | EV-0040 |
 | [S0-13](BACKLOG.md#s0-13) | 1 | 1 | queued | dependency | none | EV-0035 |
 | [S0-14](BACKLOG.md#s0-14) | 1 | 1 | queued | dependency | none | EV-0035 |
 
@@ -284,6 +284,9 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0036 | 2026-09-06T20:34:52.444089+00:00 | Coordinator / review, correction and admission | S0-10 | Attempt 1 at b3e7fac received FAIL from contract_review, Astra high, source/scenario level 2. Corrected stale current authorization and CI evidence path at 2d6ac8497517d6f856114a5ec1e64fa294572ff0. Dismissed mistaken Accepted attempt finding and clarified schema. Fresh contract_review_a2, Astra high, returned PASS at that exact identity with no findings. check:docs and check:project passed. S0-10 review → done, lease closed. Native and amendment dependencies now eligible. |
 | EV-0037 | 2026-09-06T20:35:11.835125+00:00 | Coordinator / readiness and assignment | S0-11, S0-12 | S0-10 admitted. Both cards queued → ready → in_progress at base 1eb4a220fb48de80efded0a6459c98020fb7ed26. Verified separate worktrees scrapkeep-wt-S0-11-operational and scrapkeep-wt-S0-12-operational with matching HEAD. Leases S0-11-L1 and S0-12-L1 granted to amendments and native_integration, Astra high. Throughput checkpoint confirms disjoint file sets and coordinator-only records. |
 | EV-0038 | 2026-09-06T20:39:35.204728+00:00 | Coordinator / definition change and user scope clarification | S0-09, program | Andrew asked to run jobs locally. S0-09 revision 2 → 3 keeps exported Linux execution and GitHub commit/result evidence but uses an ephemeral local self-hosted runner, manual dispatch only. No service, hosted minutes, artifact uploads or paid usage. Docs resolved from official GitHub Actions runner guidance. Read-only Chrome verified existing Actions $0 stop-usage budget; no account setting changed. |
+| EV-0039 | 2026-09-06T20:41:29.579098+00:00 | Coordinator / handoff | S0-11 | amendments, gpt-6-astra high, stopped writing. Candidate 1a2759f315f0cdc5a8ecac6954cab5be52ca9909 changes exactly two leased Markdown files. check:docs, check:project, scope --no-build and diff --check pass. in_progress → review. Independent review pending; lease retained until admission. |
+| EV-0040 | 2026-09-06T20:42:54.631105+00:00 | Coordinator / handoff | S0-12 | Native candidate f6a9561924c65bdbddf7c395c3f1fec917086f33 at the verified worktree composes existing proof components. Actual editor stage/resume and offline pair pass; injected faults and nonempty/missing/unknown-input cases fail as expected. Source has an always-processing result UI with Exit. Writer headless receipts copied under artifacts/local/tasks/S0-12. in_progress → review; visible/export checks remain S0-09. Lease retained for review. |
+| EV-0041 | 2026-09-06T20:43:32.929242+00:00 | Coordinator / independent review | S0-11 | contract_review_a2, gpt-6-astra high, returned PASS+NOTES on 1a2759f315f0cdc5a8ecac6954cab5be52ca9909, source/scenario level 2. Synthetic example dependency wording is nonblocking and explicitly fictional. Host agent-thread cap prevented a new session; reviewer did not author candidate but reused its read-only review session, disclosed as one opinion. Serial admission next. |
 
 
 ## Preparation checkpoint
