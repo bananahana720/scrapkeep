@@ -9,3 +9,9 @@ npm-debug.log*
 .DS_Store
 __pycache__/
 *.pyc
+*.pem
+*.crt
+*.key
+leads.json
+leads-*.tmp
+leads.lock

@@ -1,0 +1,57 @@
+[
+  {
+    "name": "documentation-only",
+    "paths": ["docs/tech/sections/HF-01.md", "adr/TADR-009.md", "README.md"],
+    "scope": "documentation-only",
+    "commands": ["npm run check:docs", "npm run check:project"],
+    "noBuild": true,
+    "status": 0
+  },
+  {
+    "name": "browser-proof with UI paths",
+    "paths": ["src/orchard/simulation.js", "orchard.html"],
+    "scope": "browser-proof",
+    "commands": [
+      "npm run verify",
+      "CONTRIBUTING.md Verification browser checks"
+    ],
+    "noBuild": false,
+    "status": 0
+  },
+  {
+    "name": "tooling",
+    "paths": [
+      "scripts/check-docs.mjs",
+      "tests/check-docs.test.js",
+      "package.json"
+    ],
+    "scope": "tooling",
+    "commands": ["npm run verify"],
+    "noBuild": false,
+    "status": 0
+  },
+  {
+    "name": "native",
+    "paths": ["native/project.godot", "native/main.tscn", "native/player.gd"],
+    "scope": "native",
+    "commands": ["npm run check:godot"],
+    "noBuild": false,
+    "status": 0
+  },
+  {
+    "name": "configuration",
+    "paths": [".claude/agents/scrapkeep-writer.md", ".gitignore"],
+    "scope": "configuration",
+    "commands": ["npm run check:docs", "scenario review"],
+    "noBuild": true,
+    "status": 0
+  },
+  {
+    "name": "mixed refused under --no-build",
+    "paths": ["docs/tech/sections/HF-01.md", "src/orchard/scene.js"],
+    "scope": "mixed",
+    "commands": ["npm run check:docs", "npm run verify"],
+    "noBuild": true,
+    "status": 1
+  }
+]
