@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "sprintId": "operational-s0-2026-09-06",
-  "integratedCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+  "integratedCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
   "scopeKind": "native-proof",
   "decisionOwner": "Coordinator",
   "authorization": {
     "owner": "Andrew",
     "reference": "docs/project/sprint-0/AUTHORIZATION.md; explicit implementation request"
   },
-  "previousReceipt": null,
+  "previousReceipt": "ebbbe60a252ab601998e45ea04ab03d79ac2b81ab118795fb375cbd6970c5724",
   "selectedTasks": [
     {
       "id": "S0-09",
       "revision": 3,
-      "state": "review"
+      "state": "done"
     },
     {
       "id": "S0-10",
@@ -61,13 +61,23 @@
     },
     {
       "cause": "Transient runner registration requires explicit execution-access approval",
-      "disposition": "No runner registered; S0-09 remains blocked, current gate not green",
+      "disposition": "Andrew explicitly approved one-job local registration; job34060932888 passed and runner removed; no hosted minutes or uploaded artifacts",
       "reference": "docs/project/sprint-0/AUTHORIZATION.md"
     },
     {
       "cause": "Host agent capacity prevented fresh reviewer sessions after initial contract review",
-      "disposition": "Nonauthor reviewer reused, limitation retained; fresh final integrated review still required",
+      "disposition": "Fresh integrated and separate fresh coverage reviewers completed on resumed turn; both passed, prior session-limit gap resolved",
       "reference": "TRACKING.md"
+    },
+    {
+      "cause": "GitHub rejected runner.temp in job-level env before job execution",
+      "disposition": "Final S0-09 revision moved setup into runtime bootstrap; fresh shell review and real CI now pass",
+      "reference": "artifacts/local/sprint-0/final/dispatch-validation.json"
+    },
+    {
+      "cause": "Hidden parent preview caused capture timeouts until bounded visible test expired",
+      "disposition": "Retained failed attempt; made owned preview visible and repeated visible-2 successfully without changing app or desktop configuration",
+      "reference": "artifacts/local/sprint-0/closed/visible-receipt.json"
     }
   ],
   "groomingChanges": [
@@ -84,9 +94,9 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/docs.log",
-          "sha256": "c82b385ddbeaf47e06b74f4ef689ca56c54f5fc8a7cf2aab16f543bef2793303",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/docs.log",
+          "sha256": "ec6fb1d6ea417337444eacb76cad0c42eafa1dc3dd24f736824636149cc7a439",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "npm run check:docs in clean checkout",
           "limits": "Structure and local links only"
@@ -99,9 +109,9 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/project.log",
-          "sha256": "49457f152e035ea8cfe425afd65b3e96a883cf49803816807528f87699034a29",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/project.log",
+          "sha256": "cf6a6119eceeb807262e3a2ed16a4a24987b72a9377e0d893edbf6d60443d8a4",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "npm run check:project in clean checkout",
           "limits": "Project files and package metadata only"
@@ -114,14 +124,14 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/integrated-review.md",
-          "sha256": "9e8b3cad7ac4029377fe4e3d08043f57822c28d3d4993597e45efe9d56b4c3dc",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/integrated-review.md",
+          "sha256": "1c269139cc2b9507deffb6679a856b5322a0a8858310679af74f74a92a6ea213",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
-          "method": "Independent nonauthor review plus executed scenario tests",
-          "limits": "Reused reviewer session; no fresh-session review claim",
+          "method": "Fresh independent review and92 targeted tests at final source; actual CI log/report comparison",
+          "limits": "One fresh nonauthor review; no gameplay qualification",
           "independent": true,
-          "reviewer": "contract_review_a2 / gpt-6-astra high / reused session"
+          "reviewer": "s0_final_fresh / gpt-6-astra high / fresh session"
         }
       ]
     },
@@ -131,9 +141,9 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/native-report.json",
-          "sha256": "d6f97022554f6b9f52ddd549e33607e0dd6205ee62f021fb04c01c03d24fd6d4",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/native-report.json",
+          "sha256": "9360ba38365de88f37e3acd8a2352d2c00f4972ab9e83d69fa0f770c1cf6559e",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "node scripts/native-smoke.mjs --export",
           "limits": "Linux technical proofs; no gameplay qualification"
@@ -146,9 +156,9 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/native-report.json",
-          "sha256": "d6f97022554f6b9f52ddd549e33607e0dd6205ee62f021fb04c01c03d24fd6d4",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/native-report.json",
+          "sha256": "9360ba38365de88f37e3acd8a2352d2c00f4972ab9e83d69fa0f770c1cf6559e",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "Pinned Linux x64 export",
           "limits": "One synthetic proof artifact"
@@ -161,9 +171,9 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/native-report.json",
-          "sha256": "d6f97022554f6b9f52ddd549e33607e0dd6205ee62f021fb04c01c03d24fd6d4",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/native-report.json",
+          "sha256": "9360ba38365de88f37e3acd8a2352d2c00f4972ab9e83d69fa0f770c1cf6559e",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "Pinned Windows x64 export",
           "limits": "Windows not executed"
@@ -176,9 +186,9 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/visible-receipt.json",
-          "sha256": "460c1f058891d119c0f010016b9d02d47be04452179e22fe3606a977df232eda",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/visible-receipt.json",
+          "sha256": "09abf7bfbd9dfc99a7ae5fabe66495af706c424846dd1de192891d5999aeb89e",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "Managed visible Linux resume, screenshot and Exit click with process exit receipt",
           "limits": "Observed synthetic screen; no gameplay or hardware qualification",
@@ -191,14 +201,36 @@
     {
       "id": "linux-ci",
       "required": true,
-      "status": "pending_evidence",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/closed/ci-native-report.json",
+          "sha256": "a1dc6bb304e8abfa13662aaeee9381b2cff4a755778d2a842c7c749c155b6c7e",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
+          "status": "passed",
+          "method": "GitHub manual workflow run34060932888 executed on ephemeral local self-hosted runnerid2; actual job log matches retained native JSON",
+          "limits": "Linux execution and two export artifacts only; no Windows execution or gameplay qualification",
+          "runId": "34060932888",
+          "toolchainIdentity": "Godot4.7.2.stable.official.ed1daf0bf pinned editor and consumed templates"
+        }
+      ]
     },
     {
       "id": "fresh-integrated-review",
       "required": true,
-      "status": "pending_evidence",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/closed/integrated-review.md",
+          "sha256": "1c269139cc2b9507deffb6679a856b5322a0a8858310679af74f74a92a6ea213",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
+          "status": "passed",
+          "method": "Fresh nonauthor s0_final_fresh integrated source and evidence review",
+          "limits": "One independent reviewer; source/runtime evidence boundaries explicit",
+          "independent": true,
+          "reviewer": "s0_final_fresh / gpt-6-astra high"
+        }
+      ]
     },
     {
       "id": "browser-proof-preservation",
@@ -206,12 +238,44 @@
       "status": "passed",
       "evidence": [
         {
-          "path": "artifacts/local/sprint-0/final/verify.log",
-          "sha256": "e9b28a2980ccced732014ae9b23d0ed555a4dff755f3601981964d7cd844d4d6",
-          "sourceCommit": "196e17bf2450ef1931f103f48c55316dea7e3337",
+          "path": "artifacts/local/sprint-0/closed/verify.log",
+          "sha256": "0cefb3bceec863223794750258aaf739e6ba0fe903fe7ff8ace2bf451a81f8cd",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
           "status": "passed",
           "method": "npm run verify in clean checkout",
           "limits": "Both built entries/linked assets and automated invariants; UI unchanged so no new interactive browser run required"
+        }
+      ]
+    },
+    {
+      "id": "fresh-review-coverage",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/closed/coverage-review.md",
+          "sha256": "d7e062ea253b420ed1550967fe31bfcc71c8e6d65c5e987e8fcbc2dac2ffea4e",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
+          "status": "passed",
+          "method": "Fresh nonauthor s0_review_coverage reviewed integrated report coverage and independently matched source/evidence hashes and actual CI log JSON",
+          "limits": "Independent review of coverage; no additional human gameplay claim",
+          "independent": true,
+          "reviewer": "s0_review_coverage / gpt-6-astra high / fresh session"
+        }
+      ]
+    },
+    {
+      "id": "runner-cleanup",
+      "required": true,
+      "status": "passed",
+      "evidence": [
+        {
+          "path": "artifacts/local/sprint-0/closed/runner-cleanup.json",
+          "sha256": "e184c6f384140a58cd7e37562392daf966f353d824b05532753cb74de850c831",
+          "sourceCommit": "e54e429c76f3d83641c0127b4e44fe7eb8b2098f",
+          "status": "passed",
+          "method": "Ephemeral runner exited0, repository runnersAPI confirms zero registrations and temporary local runner directory removed",
+          "limits": "One approved job only; no service or artifact uploads"
         }
       ]
     }

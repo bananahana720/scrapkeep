@@ -8,7 +8,7 @@ This file turns the approved planning into bounded work. It contains no live exe
 
 Godot 4.7.2 standard, typed GDScript, explicit hybrid/session ownership, native Resource/scene content, JSON aggregate saves and offline solo are settled. The approved art direction and 1/2/4/8 branching trees are settled. Old engine-open, matte-only and fan-shaped-tree references do not reopen them.
 
-The initial authorization covered preparation documents. Andrew subsequently authorized the bounded private publication in PUB-01. The foundation sprint below is proposed for Andrew's review. TECH_BIBLE.md and its full AUDIT_REPORT.md remain future outputs; no engine, asset, game or sprint work accompanies this delivery.
+The initial authorization covered preparation documents. Andrew subsequently authorized private publication in PUB-01 and the [operational Sprint 0 proof scope](docs/project/sprint-0/AUTHORIZATION.md). The fourteen-card foundation set below is a dependency programme, not a dispatch authorization. TRACKING selects the current bounded proposal under ORCHESTRATOR's maximum-four-card rule. TECH_BIBLE.md and its full AUDIT_REPORT.md remain future outputs; no production feature work is authorized by these definitions.
 
 ## Navigation
 
@@ -31,7 +31,7 @@ The LG cards apply only to the maintained browser proofs/player. They require a 
 
 ## Proposed first sprint
 
-Fourteen foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this sprint. Open questions that shape a card are registered on it as non-blocking; each such contract must hold under every candidate answer, and HF-07b may submit a proposed Q-E09 protocol. Unknown values remain named and gate later implementation. The S0 prepare-stage proofs are a separate family scheduled into the writer slots these waves leave idle.
+Fourteen foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this foundation programme. Open questions that shape a card are registered on it as non-blocking; each such contract must hold under every candidate answer, and HF-07b may submit a proposed Q-E09 protocol. Unknown values remain named and gate later implementation. The S0 prepare-stage proofs are a separate family scheduled into the writer slots these waves leave idle.
 
 | ID | Outcome | Dependencies | Owner / size |
 | --- | --- | --- | --- |
