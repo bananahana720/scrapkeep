@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **awaiting_review** for the amended HF sprint (HF-01, HF-02, HF-03a/b, HF-04a/b, HF-05, HF-06a/b, HF-07a/b, HF-08, HF-09, HF-10 at the revisions imported by EV-0029). The prepare-stage program PS-01..PS-06 authorized by Andrew on 6 September 2026 is complete (EV-0034). Operational Sprint 0 is authorized by EV-0035; S0-09 is queued at revision 2. HF-01 and HF-02 are ready; dispatch waits for Andrew's explicit go. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. HF remains awaiting_review. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Codex root for operational Sprint 0. Prior session history follows. Session `scrapkeep-1c` (claude-fable-5-1, observed `CLAUDE_EFFORT=high`) coordinated the prepare-stage program and closed with EV-0034. Delegates run on the project definitions at low, medium, high or xhigh as recorded per lease. |
-| Active task attempts / write leases | S0-11-L1 and S0-12-L1. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
+| Active task attempts / write leases | S0-09-L1 and S0-13-L1. See operational attempts. Historical closure follows. PUB-01-A1 and every PS attempt are accepted; all leases closed (EV-0034). |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
 Ready means that a selected card has complete inputs. It does not bypass the program authorization row. HF-01 and HF-02 can be ready while the proposed sprint is awaiting review. No foundation-sprint row represents work already started or a future result already produced. PUB-01 is the separately authorized publication task.
@@ -130,7 +130,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-06](BACKLOG.md#s0-06) | 1 | 3 | done | none | PS-06-A1 | EV-0033 |
 | [S0-07](BACKLOG.md#s0-07) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
 | [S0-08](BACKLOG.md#s0-08) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
-| [S0-09](BACKLOG.md#s0-09) | 3 | 3 | queued | S0-12 | none | EV-0038 |
+| [S0-09](BACKLOG.md#s0-09) | 3 | 4 | in_progress | none | none | EV-0046 |
 | [PD-01](BACKLOG.md#pd-01) | 1 | 1 | queued | HF-01 | none | EV-0002 |
 | [PD-02](BACKLOG.md#pd-02) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
 | [PD-03](BACKLOG.md#pd-03) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
@@ -291,6 +291,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0043 | 2026-09-06T20:44:23.424614+00:00 | Coordinator / readiness and assignment | S0-13 | Both dependencies done. S0-13 queued → ready → in_progress, lease S0-13-L1 to amendments reused worker session at gpt-6-astra high, worktree scrapkeep-wt-S0-13-operational branch wt/S0-13-operational base 6b2394502010c3454548523ef9fe7077d600088e verified. Writer owns exactly S0-13 card files and generated check receipts; coordinator alone writes canonical records. |
 | EV-0044 | 2026-09-06T20:45:27.828524+00:00 | Coordinator / independent review | S0-12 | Nonauthor contract_review_a2, gpt-6-astra high, independently ran the headless verification procedure against f6a9561924c65bdbddf7c395c3f1fec917086f33. All ten functional cases pass including fresh process and network-isolated pair; save bytes preserved. PASS level 4. Visible input and exports remain S0-09. Reused review session disclosed. Serial admission next. |
 | EV-0045 | 2026-09-06T20:46:26.895692+00:00 | Coordinator / integration and completion | S0-12 | Candidate f6a9561924c65bdbddf7c395c3f1fec917086f33 PASS level4, integrated aea16db8b6570a59442448b9cc0e87b995c804fd. Coordinator reran native:smoke and all ten stage/resume/fault/offline cases against integrated source; docs/project pass. review → done; S0-12-L1 closed. S0-09 revision3 now eligible. Exported visible launch remains its required gate. |
+| EV-0046 | 2026-09-06T20:46:44.636206+00:00 | Coordinator / readiness and assignment | S0-09 | Revision3 dependencies complete. queued → ready → in_progress. Lease S0-09-L1 to native_integration at gpt-6-astra high in new verified worktree scrapkeep-wt-S0-09-operational, branch wt/S0-09-operational, base 0061112518cc0ef37bdb1448240690fe402b362f. Exact card files only. Local one-shot Actions execution supersedes hosted runner; root handles runner registration and visible checks. No overlap with S0-13. |
+| EV-0047 | 2026-09-06T20:52:03.601585+00:00 | Coordinator / checkpoint and execution permission block | S0-09, S0-13, program | S0-09 local exports/harness and S0-13 receipt tests continue in disjoint worktrees. Temporary self-hosted runner registration was rejected by automatic approval review because GitHub Actions local code execution needs explicit registration authorization. No registration occurred and no hosted fallback is used. Complete unaffected local implementation, then present exact registration approval. Main-scene preliminary visible Wayland launch and actual Exit click passed; this is editor evidence, not export evidence. |
 
 
 ## Preparation checkpoint
@@ -330,8 +332,8 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 - Owned files are exactly S0-10's card paths plus its local review evidence.
 - Base identity `20d26f402e7a136c6533a2ecdac857f40ebb1961`.
 - Attempt 1 candidate b3e7fac failed review; attempt 2 candidate and integrated identity `2d6ac8497517d6f856114a5ec1e64fa294572ff0`, fresh reviewer contract_review_a2 PASS, source/scenario level 2.
-- Checkpoint at EV-0035. Closeout contract drafted; no native or export code changed.
-- Evidence pending scoped document checks and independent review.
+- Accepted attempt S0-10-A2; checkpoint EV-0036. Documentation contract admitted; no native/export behavior claimed.
+- Evidence `artifacts/local/tasks/S0-10/review.md` and scoped document/project receipts; independent PASS level 2.
 - Blockers none.
 
 ### S0-11-A1
@@ -339,7 +341,7 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 - Card revision 1; assignee amendments, gpt-6-astra high; lease S0-11-L1 closed.
 - Owned files exactly the S0-11 card permitted set.
 - Worktree `/home/andrew/Projects/scrapkeep-wt-S0-11-operational`; branch `wt/S0-11-operational`; verified base `1eb4a220fb48de80efded0a6459c98020fb7ed26`.
-- Candidate/integrated identity null; review not_run; evidence pending.
+- Candidate `1a2759f315f0cdc5a8ecac6954cab5be52ca9909`; integrated `0185087e06f1833ce0b66e5821a1788bb34bd7f6`. Review contract_review_a2 PASS+NOTES level2; reused nonauthor session. Evidence `artifacts/local/tasks/S0-11/` including coordinator integrated checks.
 - Latest checkpoint EV-0037; blockers none.
 
 ### S0-12-A1
@@ -347,7 +349,7 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 - Card revision 1; assignee native_integration, gpt-6-astra high; lease S0-12-L1 closed.
 - Owned files exactly the S0-12 card permitted set.
 - Worktree `/home/andrew/Projects/scrapkeep-wt-S0-12-operational`; branch `wt/S0-12-operational`; verified base `1eb4a220fb48de80efded0a6459c98020fb7ed26`.
-- Candidate/integrated identity null; review not_run; evidence pending.
+- Candidate `f6a9561924c65bdbddf7c395c3f1fec917086f33`; integrated `aea16db8b6570a59442448b9cc0e87b995c804fd`. Review contract_review_a2 PASS with independent headless runs level4; reused nonauthor session. Evidence `artifacts/local/tasks/S0-12/` including coordinator integrated checks.
 - Latest checkpoint EV-0037; blockers none.
 
 ### S0-13-A1
@@ -356,3 +358,11 @@ Every writer reported `CLAUDE_EFFORT` matching its definition where the host exp
 - Worktree `/home/andrew/Projects/scrapkeep-wt-S0-13-operational`; branch `wt/S0-13-operational`; base `6b2394502010c3454548523ef9fe7077d600088e`.
 - Owned files exactly S0-13 card set and standard generated check receipts.
 - Candidate/integrated identity null; review not_run; evidence pending; no blockers.
+
+### S0-09-A1
+
+- Card revision 3; assignee native_integration, gpt-6-astra high; lease S0-09-L1 active.
+- Worktree `/home/andrew/Projects/scrapkeep-wt-S0-09-operational`; branch `wt/S0-09-operational`; base `0061112518cc0ef37bdb1448240690fe402b362f`.
+- Owned files exactly S0-09 card set and standard generated verification outputs.
+- Candidate/integrated identity null; review not_run; evidence pending. Root owns visible verification and transient runner lifecycle.
+- Blockers none.
