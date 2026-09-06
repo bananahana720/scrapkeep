@@ -53,6 +53,16 @@ Spacing, strafing and timed abilities remain repeatable test tactics. The passiv
 
 The dialog cue is qualified for the controller's 1280×900 viewport and current orchard UI. It releases gameplay input before a semantic state read; pixels alone never establish victory or defeat. Unknown/ambiguous UI, missing or stale frames, focus loss, emergency stop and controller failure end the trial with a failure reason. Authority expires after 500 ms without a fresh frame; the input loop releases before waiting for capture cleanup.
 
+## Controller contract
+
+The runner drives the installed controller at `~/.local/share/codex-native-input/agent-desktop`. That code is outside this repository, so two explicit contracts pin it.
+
+Pinned identity. [`controller-manifest.json`](controller-manifest.json) records the sha256 and byte size of every `*.py` under the controller directory (recursive, `__pycache__` skipped). `run.py` recomputes them before it builds or leases anything and stops with a nonzero exit naming the first mismatching file. `--allow-controller-drift` runs anyway; the report's `controller` block records the manifest path, the match result, the first mismatch and whether drift was allowed. The end-of-run comparison against the start hashes is kept as `controller_unchanged`. After reviewing a controller change, regenerate the manifest with `npm run playtest:agent -- --write-controller-manifest` and commit it. `--controller-manifest <path>` points at another manifest for tests.
+
+Session isolation. The controller's `seat.py` launches the nested compositor and browser with `start_new_session=True` and manages them with `os.killpg`, so the nested desktop already sits outside the terminal's process group. A terminal Ctrl-C reaches the wrapper and `run.py`, not the compositor. `run.py` handles `SIGINT` and `SIGTERM` by ignoring further stop signals and raising one `KeyboardInterrupt`, so trial cleanup, lease release and the final `report.json` complete even when the terminal and the wrapper both deliver a signal. A cleanup that hangs after that point needs `SIGKILL`.
+
+Private functions. `desktop.py` calls three underscore-private controller functions on the seat object: `_stop_unlocked()` to stop a running compositor inside a held lease, `_start_unlocked(url)` to launch the workspace and return its manifest, and `_session_environment(status)` to derive the process environment for the current session. They are private in the controller and may change without notice. A manifest mismatch is the signal to reread `seat.py` before trusting them.
+
 ## Maintained boundaries
 
 | Module | Responsibility |

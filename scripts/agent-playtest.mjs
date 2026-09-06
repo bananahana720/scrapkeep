@@ -1,3 +1,8 @@
+// The Python runner stays attached to this wrapper on purpose. It holds a
+// leased desktop and real keyboard/mouse input, so a terminal Ctrl-C or a
+// signal to this process group reaches the runner as well as the wrapper.
+// A SIGKILLed wrapper forwards nothing and can leave the runner alive; stop
+// the runner directly in that case.
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -16,7 +21,6 @@ const entry = fileURLToPath(
 );
 const child = spawn(python, [entry, ...process.argv.slice(2)], {
   stdio: "inherit",
-  detached: true,
 });
 let stopping = false;
 for (const signal of ["SIGINT", "SIGTERM"])

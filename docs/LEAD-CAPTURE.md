@@ -1,5 +1,7 @@
 # Lead capture reference
 
+> **Frozen legacy reference, 6 September 2026.** The lead-capture server is preserved evidence, not a live verification dependency. `npm run verify` and `npm test` no longer exercise it; run `npm run test:leads` and `npm run test:leads:browser` explicitly. See [ADR 0001, amendment 2026-09-06](adr/0001-two-playable-entries.md#amendment-2026-09-06).
+
 The Node service stores email and SMS opt-ins on this machine. It sends no email, text message, webhook, or CRM request. `delivery: "stored"` means the server completed a durable local write. It does not mean a message was delivered or that the contact belongs to the person who submitted it.
 
 ## Commands
@@ -10,7 +12,7 @@ The service uses Node built-ins. The project must use ES modules and Node 22 or 
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `node server/index.js`                 | Starts the API and serves existing `dist` files on `127.0.0.1:8787`.                                           |
 | `node --env-file=.env server/index.js` | Loads explicitly configured environment values from `.env`. The service does not automatically load that file. |
-| `node --test tests/leads.test.js`      | Tests HTTP capture using synthetic contacts and temporary directories.                                         |
+| `npm run test:leads`                   | Tests HTTP capture using synthetic contacts and temporary directories.                                         |
 
 During development, Vite proxies `/api` to `http://127.0.0.1:8787`. Vite must deny access to `**/.private/**`, `**/leads.json`, `**/leads-*.tmp`, and `**/leads.lock`, in addition to its default deny rules. These rules prevent the development server from exposing local contact records. The Node production server serves only `dist`, rejects hidden paths and static symlink escapes, and never exposes a lead-list endpoint.
 

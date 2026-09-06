@@ -2,6 +2,7 @@
 """Build, run and record bounded native orchard playtests in a dedicated workspace."""
 
 import argparse
+import hashlib
 import http.server
 import json
 import re
@@ -16,6 +17,72 @@ from functools import partial
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+CONTROLLER_ROOT = Path.home() / ".local/share/codex-native-input/agent-desktop"
+CONTROLLER_MANIFEST = Path(__file__).resolve().parent / "controller-manifest.json"
+
+
+def controller_files(root):
+    return sorted(
+        path
+        for path in Path(root).rglob("*.py")
+        if path.is_file() and "__pycache__" not in path.parts
+    )
+
+
+def controller_entries(root):
+    return {
+        str(path.relative_to(root)): {
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "size": path.stat().st_size,
+        }
+        for path in controller_files(root)
+    }
+
+
+def first_controller_mismatch(expected, actual):
+    """Name the first file whose hash or size differs, is missing or is unexpected."""
+    for name in sorted(set(expected) | set(actual)):
+        if expected.get(name) != actual.get(name):
+            return name
+    return None
+
+
+def portable_label(root):
+    root, home = Path(root), Path.home()
+    return "~/" + str(root.relative_to(home)) if root.is_relative_to(home) else str(root)
+
+
+def write_controller_manifest(root, manifest):
+    manifest.write_text(
+        json.dumps(
+            {
+                "controller_root": portable_label(root),
+                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "files": controller_entries(root),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+def check_controller(root, manifest, allow_drift):
+    expected = json.loads(manifest.read_text())["files"]
+    actual = controller_entries(root)
+    mismatch = first_controller_mismatch(expected, actual)
+    if mismatch and not allow_drift:
+        raise SystemExit(
+            f"Controller drift: {mismatch} under {root} does not match {manifest}. "
+            "Regenerate the manifest with --write-controller-manifest after reviewing "
+            "the controller, or pass --allow-controller-drift to run against it anyway."
+        )
+    return {
+        "manifest": str(manifest),
+        "matched": mismatch is None,
+        "first_mismatch": mismatch,
+        "drift_allowed": allow_drift,
+        "hashes": actual,
+    }
 
 
 def prepare_output(requested, workspace):
@@ -45,11 +112,12 @@ def arguments():
     parser.add_argument("--pause-check", action="store_true")
     parser.add_argument("--restart-check", action="store_true")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--controller-root", type=Path, default=CONTROLLER_ROOT)
     parser.add_argument(
-        "--controller-root",
-        type=Path,
-        default=Path.home() / ".local/share/codex-native-input/agent-desktop",
+        "--controller-manifest", type=Path, default=CONTROLLER_MANIFEST
     )
+    parser.add_argument("--allow-controller-drift", action="store_true")
+    parser.add_argument("--write-controller-manifest", action="store_true")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", args.workspace) or args.workspace in (
@@ -289,6 +357,13 @@ def main():
         return (
             0 if unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful() else 1
         )
+    if args.write_controller_manifest:
+        write_controller_manifest(args.controller_root, args.controller_manifest)
+        print(json.dumps({"manifest": str(args.controller_manifest)}), flush=True)
+        return 0
+    controller = check_controller(
+        args.controller_root, args.controller_manifest, args.allow_controller_drift
+    )
     from desktop import Desktop
     from evidence import hashes
     from flow import REWARD_NAMES
@@ -323,9 +398,8 @@ def main():
         "trials": [],
         "cleanup_errors": [],
     }
-    report["controller_hashes"] = hashes(
-        args.controller_root.glob("*.py"), args.controller_root
-    )
+    report["controller"] = controller
+    report["controller_hashes"] = controller["hashes"]
     report["runtime"] = {
         "python": sys.version,
         "numpy": numpy.__version__,
@@ -372,9 +446,9 @@ def main():
         report["source_unchanged"] = report["source_hashes"] == hashes(
             source_files(), ROOT
         )
-        report["controller_unchanged"] = report["controller_hashes"] == hashes(
-            args.controller_root.glob("*.py"), args.controller_root
-        )
+        report["controller_unchanged"] = report[
+            "controller_hashes"
+        ] == controller_entries(args.controller_root)
         report["ended_at"] = time.time()
         report["passed"] = (
             len(report["trials"]) == args.trials
@@ -406,10 +480,23 @@ def main():
     return 0 if report["passed"] else 1
 
 
+def interrupt(signum, frame):
+    """Turn the first stop signal into KeyboardInterrupt and ignore any repeat.
+
+    A terminal Ctrl-C reaches the runner twice, once from the kernel and once
+    forwarded by the attached wrapper. A second KeyboardInterrupt inside the
+    cleanup path would skip the lease release and the final report.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    raise KeyboardInterrupt(f"signal {signum}")
+
+
+def install_interrupt_handler():
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, interrupt)
+
+
 if __name__ == "__main__":
-
-    def interrupt(signum, frame):
-        raise KeyboardInterrupt(f"signal {signum}")
-
-    signal.signal(signal.SIGTERM, interrupt)
+    install_interrupt_handler()
     raise SystemExit(main())

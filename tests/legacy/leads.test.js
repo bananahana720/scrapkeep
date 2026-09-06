@@ -12,7 +12,7 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createLeadServer } from "../server/index.js";
+import { createLeadServer } from "../../server/index.js";
 
 const submission = (overrides = {}) => ({
   email: "synthetic@example.test",
