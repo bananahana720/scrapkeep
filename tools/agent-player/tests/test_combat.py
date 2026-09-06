@@ -110,6 +110,55 @@ class CombatSafetyTests(unittest.TestCase):
         self.assertLessEqual(max(event[2]["lease_seconds"] for event in states), 0.5)
         self.assertIn("stale frame", evidence.records[-1][1]["reason"])
 
+    def test_remembered_target_cannot_extend_frame_authority(self):
+        item = frame()
+        item["targets"] = [{"x": 700, "y": 400, "box": [694, 396, 706, 404]}]
+        desktop, evidence = self.run_failure(observer(item), "stale frame")
+        record = evidence.records[-1][1]["frames"][0]["policy"]
+        self.assertIsNotNone(record["track"])
+        states = [event for event in desktop.controller.events if event[0] == "state"]
+        self.assertLessEqual(max(event[2]["lease_seconds"] for event in states), 0.5)
+        self.assertEqual(desktop.controller.events[-1], ("release",))
+
+    def test_fresh_frozen_scene_retries_until_segment_limit_then_releases(self):
+        clock = Clock()
+        desktop = Desktop()
+        evidence = Evidence()
+        policy = Policy()
+
+        @contextmanager
+        def factory(unused):
+            class FreshObserver:
+                error = None
+
+                @property
+                def latest(self):
+                    item = frame()
+                    item.update(
+                        id=int(clock.value * 10),
+                        time=clock.value,
+                        scene_change={"changed_fraction": 0},
+                    )
+                    return item
+
+            yield FreshObserver()
+
+        play(
+            desktop,
+            policy,
+            32,
+            evidence,
+            observer_factory=factory,
+            clock=clock.now,
+            sleep=clock.sleep,
+        )
+        self.assertGreater(policy.recovery.attempt, 4)
+        self.assertEqual(evidence.records[-1][1]["reason"], "segment_limit")
+        states = [event for event in desktop.controller.events if event[0] == "state"]
+        self.assertTrue(any("KeyW" in event[1][0] for event in states))
+        self.assertTrue(any("KeyS" in event[1][0] for event in states))
+        self.assertEqual(desktop.controller.events[-1], ("release",))
+
     def test_menu_cue_releases_before_any_gameplay(self):
         clock = Clock()
         desktop = Desktop()

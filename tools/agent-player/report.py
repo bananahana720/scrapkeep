@@ -204,7 +204,8 @@ def write_report(output, report):
         "",
         "Combat decisions use screenshots; menu decisions use exposed accessibility names and roles. "
         "The player does not read or mutate simulation state. Saved action records and periodic screenshots "
-        "support inspection and reruns, but timing and game randomness are nondeterministic. "
+        "support inspection and reruns; asynchronous input, capture and scheduling affect the trajectory. "
+        "The player does not read a live scenario seed. "
         "No deterministic replay, video recording, human enjoyment, or physical controller result is established.",
     ]
     if report.get("error"):

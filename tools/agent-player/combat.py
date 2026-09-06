@@ -75,7 +75,8 @@ def play(
                         width=frame["width"],
                         height=frame["height"],
                         lower_sky_fraction=frame.get("lower_sky_fraction"),
-                        recovering_sky=policy.recovering_sky,
+                        upper_ground_fraction=frame.get("upper_ground_fraction"),
+                        policy=policy.diagnostics(),
                     )
                     evidence.frame(frame)
                 intent = policy.step(dt)

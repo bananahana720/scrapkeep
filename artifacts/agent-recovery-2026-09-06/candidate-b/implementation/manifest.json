@@ -1,0 +1,12 @@
+{
+  "base_commit": "db7d8cfd21f5bbb710e756c2eda3f285c15f87f6",
+  "source_sha256": {
+    "tools/agent-player/combat.py": "2ea42e2e6d16b760db47f6cf61ae6963696c48106f571692538f82e21da46f3c",
+    "tools/agent-player/observer.py": "0f78db0f3f6ad17ab495ed55007cf065e2d889d466b81efd47d77afbc655d3e0",
+    "tools/agent-player/policy.py": "fc795ca37e088d75e031e55980adcfcf03c13e854edb8c96fe5aa28617975467",
+    "tools/agent-player/tests/probe_recovery.py": "fe5e3cf1c664f33a2f2097473d30e5221de48a0cd2fa231f2cae1c49d441cfda",
+    "tools/agent-player/tests/test_combat.py": "f8f6b10fd96ac529bd0cc90371ab62dead3d75f27f7e8b1321245f04d0dd295c",
+    "tools/agent-player/tests/test_policy.py": "e09ee1ddae702b4295ebf34fac48a05eab834c415a033126a4e81e63ea455292",
+    "tools/agent-player/tests/test_recovery.py": "0ce6f0ef598210805e4ea3ef6ecaad57e0ba106c3f58d50c2feafd1cc0af1c0f"
+  }
+}

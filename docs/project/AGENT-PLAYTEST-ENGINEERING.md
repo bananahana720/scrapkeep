@@ -58,7 +58,9 @@ The maintained source now lives in `tools/agent-player/` and imports the install
 
 The [maintained-player qualification](../../artifacts/agent-player-2026-09-06/README.md) records 44 focused tests, project verification, a final smoke/pause pass, three consecutive defeat/restart cycles and a 0.316-second interruption cleanup. Two earlier visual variants won and then timed out on their next trial. Both latest visual configurations timed out; reliable full clears are unfinished.
 
-The next engineering unit is target continuity and obstacle recovery, measured against retained stall captures before another bounded live comparison. Known detector limits include occluded or merged faces and decorative scenery faces. Follow that with player profiles and baseline/candidate regression comparison. Do not start another open-ended plugin search unless this implementation encounters a specific missing capability.
+The [target-continuity and recovery qualification](../../artifacts/agent-recovery-2026-09-06/README.md) completes that engineering unit: the final policy reached three consecutive terminal outcomes, won/won/lost, with pause/resume in each and no stall timeout. Seventy-six focused tests and project verification passed; same-policy interruption cleaned up in 0.264 seconds. Stationary search now has a persistent scan budget, target association survives brief occlusion, and bounded relocation changes viewpoint without mixing translation into the scan. The baseline and rejected variants remain in the qualification, so this is not a general win-rate claim.
+
+Next are measured tactics/player profiles and baseline/candidate regression comparison. Known perception limits now include confirmed conductor-foot and warm-notification false positives, plus occluded or merged faces. Keep these cases in comparisons before claiming broader visual reliability. Do not start another open-ended plugin search unless the implementation encounters a specific missing capability.
 
 ## Evidence boundaries
 
@@ -69,6 +71,7 @@ The original `/` and `/orchard.html` entries remain distinct. No new game featur
 ## Reference map
 
 - [Maintained runner guide](../../tools/agent-player/README.md)
+- [Target continuity and recovery qualification](../../artifacts/agent-recovery-2026-09-06/README.md)
 - [Maintained player qualification and retained failures](../../artifacts/agent-player-2026-09-06/README.md)
 - [Controller operations](/home/andrew/.local/share/codex-native-input/agent-desktop/README.md)
 - [Installed controller verification](/home/andrew/.local/share/codex-native-input/agent-desktop/verification/receipt.json)
@@ -76,4 +79,4 @@ The original `/` and `/orchard.html` entries remain distinct. No new game featur
 - [Full research and implementation report](/home/andrew/.codex/visualizations/2026/09/06/01a0756b-5162-7ec0-a604-8b599be7ff2e/linux-computer-use-progress.md)
 - [Game project desk](README.md), [backlog](BACKLOG.md), [current game verification](../LIGHTNING-VERIFICATION.md)
 
-Disposable evidence may be cleaned under `artifacts/local`; the engineering plan and its evidence limits survive here. The executable player is maintained outside disposable artifacts. Keep dated qualification receipts under `artifacts/agent-player-2026-09-06/` and routine runs under `artifacts/local/agent-playtests/`. The runner guide owns current commands; this plan owns remaining scope.
+Disposable evidence may be cleaned under `artifacts/local`; the engineering plan and its evidence limits survive here. The executable player is maintained outside disposable artifacts. Keep dated qualification receipts under `artifacts/agent-player-2026-09-06/` and `artifacts/agent-recovery-2026-09-06/` and routine runs under `artifacts/local/agent-playtests/`. The runner guide owns current commands; this plan owns remaining scope.

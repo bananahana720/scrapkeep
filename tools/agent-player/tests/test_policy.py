@@ -21,13 +21,13 @@ class FramingRecoveryTests(unittest.TestCase):
 
     def test_reacquisition_does_not_cancel_bounded_disengagement(self):
         policy = Policy()
-        policy.aim(frame(0.9))
-        policy.step(3.1)
+        policy.aim(frame())
+        policy.step(14.1)
         policy.aim(frame(0.9))
         self.assertIn("KeyS", policy.motion.keys)
         target = dict(x=640, y=450, box=[630, 440, 650, 455])
         policy.aim(frame(0.9, [target]))
-        self.assertFalse(policy.recovering_sky)
+        self.assertEqual(policy.framing, "level")
         self.assertIn("KeyS", policy.motion.keys)
         self.assertEqual(policy.motion.look[0], 0)
         policy.step(2)
@@ -38,14 +38,14 @@ class FramingRecoveryTests(unittest.TestCase):
     def test_search_backpedal_is_bounded_and_passive_never_moves(self):
         policy = Policy()
         policy.aim(frame())
-        policy.step(3.1)
+        policy.step(14.1)
         policy.aim(frame())
         self.assertIn("KeyS", policy.motion.keys)
         self.assertEqual(policy.motion.look[0], 0)
         self.assertNotIn("ShiftLeft", policy.step(0.02).keys)
         policy.step(2)
         policy.aim(frame())
-        self.assertFalse(policy.motion.keys)
+        self.assertIn("KeyW", policy.motion.keys)
         passive = Policy("passive")
         passive.aim(frame(0.99))
         self.assertFalse(passive.step(20).keys)
@@ -66,6 +66,10 @@ class FramingRecoveryTests(unittest.TestCase):
         policy.aim(frame())
         self.assertGreater(policy.motion.look[1], 0)
         self.assertNotIn("Space", policy.step(0.02).keys)
-        policy.step(3)
-        policy.aim(frame())
-        self.assertLess(policy.motion.look[1], 0)
+        upward_scan = False
+        for _ in range(160):
+            policy.step(0.1)
+            policy.aim(frame())
+            upward_scan |= policy.motion.look[1] < 0
+            self.assertNotIn("Space", policy.motion.keys)
+        self.assertTrue(upward_scan)

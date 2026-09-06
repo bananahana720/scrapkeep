@@ -9,6 +9,49 @@ from PIL import Image
 from vision import detect
 
 
+class SceneChange:
+    def __init__(self):
+        self.previous = None
+
+    def measure(self, image):
+        small = np.asarray(
+            image.convert("L").resize((64, 48), Image.Resampling.BOX)
+        ).astype(np.int16)
+        sample = np.concatenate(
+            (small[12:35, 3:20].ravel(), small[12:35, 44:61].ravel())
+        )
+        result = {
+            "changed_fraction": None,
+            "mean_luma_delta": None,
+            "basis": "side_bands_excluding_hud_and_avatar",
+        }
+        if self.previous is not None:
+            delta = np.abs(sample - self.previous)
+            result.update(
+                changed_fraction=round(float((delta > 6).mean()), 4),
+                mean_luma_delta=round(float(delta.mean()), 3),
+            )
+        self.previous = sample
+        return result
+
+
+def upper_ground_fraction(image):
+    a = np.asarray(image.convert("RGB")).astype(np.int16)
+    h, w = a.shape[:2]
+    band = a[int(h * 0.12) : int(h * 0.32), int(w * 0.30) : int(w * 0.72)]
+    r, g, b = band.transpose(2, 0, 1)
+    return float(
+        (
+            (r > 150)
+            & (g > 145)
+            & (b > 90)
+            & (r - b > 25)
+            & (g - b > 25)
+            & (abs(r - g) < 35)
+        ).mean()
+    )
+
+
 def lower_sky_fraction(image):
     """Recognize lost upward framing from visible sky below the crosshair."""
     a = np.asarray(image.convert("RGB"))
@@ -66,6 +109,7 @@ class Observer:
 
     def _run(self):
         number = 0
+        scene_change = SceneChange()
         try:
             while not self.stop.is_set():
                 started = time.monotonic()
@@ -86,6 +130,8 @@ class Observer:
                     "targets": targets,
                     "modal": modal,
                     "lower_sky_fraction": lower_sky_fraction(image),
+                    "upper_ground_fraction": upper_ground_fraction(image),
+                    "scene_change": scene_change.measure(image),
                     "capture_ms": capture_seconds * 1000,
                     "observe_ms": (time.monotonic() - started) * 1000,
                 }
