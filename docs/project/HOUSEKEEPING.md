@@ -1,5 +1,7 @@
 # Session closeout
 
+Historical closeout record. Its remaining-work references are preserved below; current definitions are in [the root backlog](../../BACKLOG.md), and current execution state is in [TRACKING](../../TRACKING.md).
+
 Requested 5 September 2026. Keep the first playable build intact while making the project understandable and repeatable for the next contributor.
 
 Done means the developer entry point identifies current scope and sources of truth; accepted implementation choices have ADRs; open work has priority and closure criteria; a local verification command checks structure, tests, model invariants and the production build; and an independent reviewer checks the result. Browser evidence from the first build remains dated evidence unless the browser is rerun.

@@ -1,5 +1,7 @@
 # Scrapkeep art direction
 
+**Historical first-proof art record.** The [Art & Game Bible, Section 7](../BIBLE.md#7-art-direction) now owns the approved visual direction: greasy electromagnetic salvage, internal fabrication and Southwest landscapes. The clean miniature palette and finish below remain evidence of the earlier prototype, not instructions for new art. Original prompts and implementation history are preserved.
+
 The governing rule is a miniature salvage yard: warm ivory concrete, deep petrol shadows, safety orange machinery, and mint energy. Low-poly silhouettes and repeatable geometry keep the concept buildable in real-time WebGL.
 
 Both concepts were generated with the built-in Codex imagegen tool. They are visual targets, not baked backgrounds. All scenery, enemies, the rolling sphere and turret attachments in the game are real 3D geometry.

@@ -4,6 +4,8 @@ Transcribed 5 September 2026 from four supplied photographs. The dated pages rea
 
 These pages describe an earlier game idea. The transcription preserves that source; the interpretation at the end proposes connections to Scrapkeep without treating every note as an adopted requirement.
 
+<!-- prettier-ignore-start -->
+
 ## Photo 1: game rule
 
 [Original photograph](discovery/source-notes-2026-08-21/photo-1.jpg)
@@ -67,24 +69,32 @@ The emphasis on meaningful items and visible/gameplay changes is clear even thou
 
 The ghost's name is left unresolved. The elongated letters in the oil-slick idea appear intentional.
 
-## Interpretation for Scrapkeep
+<!-- prettier-ignore-end -->
 
-The following is the coordinator's interpretation, not a literal transcription or a finalized feature list.
+## Accepted later clarification
 
-| Source idea | Possible connection to Scrapkeep |
-| --- | --- |
-| Mechanics should have a fun purpose | Each subsystem should improve an action, decision or discovery that the player enjoys. Narrative and character expression can reinforce that purpose. |
-| Hero, mobility and ultimate moves | A useful candidate structure for four different chassis. It still needs controller and aiming tests, especially alongside automated scrap turrets. |
-| Visual and mechanical progression align | A meaningful pickup should leave a visible change on the ball, its weapon effects or how it moves. |
-| Five levels, exploration and themed bosses | A candidate dungeon expedition structure. Five finished levels are not yet committed scope. |
-| Boss reward offers one of two major upgrades | A candidate moment for a visible class transformation or build-changing item. The exact reward count and cadence remain open. |
-| Amateur chaos caster | Personality can come from visibly improvised machinery and unstable-looking effects; random loss of player control is not automatically required. |
-| Oil-slick character | A candidate movement/terrain interaction: lay a fast route for the ball or a slippery path for enemies. It could be an item or an enemy mechanic rather than an additional launch class. |
-| Newly conscious adaptive bomb drone | A future character concept, or a behavior/theme for a deployable companion; not a requirement to add runtime AI services. |
+The [notebook interview in Discovery](DISCOVERY.md#accepted-notebook-interview) now owns the accepted interpretation. It confirms four slot trees, four-world runs, meaningful themed loot, fixed secret combinations, one revival and between-level saves. It also confirms multi-element chaos casting with occasional harmful failures. The earlier five-level/boss-per-level structure and lightning-only interpretation are superseded. The bomb drone remains a character idea with no mandatory role or learning system.
+
+Andrew delegated creative development of the other sketches. This does not resolve illegible source words; the transcription and photographs above remain unchanged.
+
+## Historical interpretation for Scrapkeep
+
+The following preserves the coordinator's original interpretation. It is historical, not a literal transcription or current requirements. Later rulings above take precedence.
+
+| Source idea                                  | Possible connection to Scrapkeep                                                                                                                                                         |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mechanics should have a fun purpose          | Each subsystem should improve an action, decision or discovery that the player enjoys. Narrative and character expression can reinforce that purpose.                                    |
+| Hero, mobility and ultimate moves            | A useful candidate structure for four different chassis. It still needs controller and aiming tests, especially alongside automated scrap turrets.                                       |
+| Visual and mechanical progression align      | A meaningful pickup should leave a visible change on the ball, its weapon effects or how it moves.                                                                                       |
+| Five levels, exploration and themed bosses   | A candidate dungeon expedition structure. Five finished levels are not yet committed scope.                                                                                              |
+| Boss reward offers one of two major upgrades | A candidate moment for a visible class transformation or build-changing item. The exact reward count and cadence remain open.                                                            |
+| Amateur chaos caster                         | Personality can come from visibly improvised machinery and unstable-looking effects; random loss of player control is not automatically required.                                        |
+| Oil-slick character                          | A candidate movement/terrain interaction: lay a fast route for the ball or a slippery path for enemies. It could be an item or an enemy mechanic rather than an additional launch class. |
+| Newly conscious adaptive bomb drone          | A future character concept, or a behavior/theme for a deployable companion; not a requirement to add runtime AI services.                                                                |
 
 Andrew's live interview adds two confirmed preferences beyond the notebook: Brimstone/combination play and Mom's Knife-style high-damage skill shots are key combat references; solo play comes before co-op.
 
-A useful next design question is the relationship between this dungeon journey and the original tower-defense loop. Exploration with occasional defense encounters, defense maps with exploration breaks, and alternating stage types each support different pacing and movement demands.
+The earlier question about dungeon versus tower-defense structure is superseded by the accepted run design. Bloons now informs only upgrade-tree structure; it does not prescribe the combat loop.
 
 ## Clarifications worth preserving
 

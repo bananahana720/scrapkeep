@@ -2,6 +2,8 @@
 
 Start with the [project desk](docs/project/README.md). The code map and decisions are in the [ADR index](docs/adr/README.md); the [lightning increment contract](docs/project/INCREMENT-01-lightning-playtest.md) owns current state, geometry and input conventions. The [first-proof contract](docs/FIRST-BUILD-CONTRACT.md) is historical.
 
+For swarm work, read [ORCHESTRATOR.md](ORCHESTRATOR.md), the task definition in [BACKLOG.md](BACKLOG.md) and the sole execution board in [TRACKING.md](TRACKING.md). The [production ADRs](adr/README.md) are accepted; the complete engineering Bible remains a future documentation deliverable. Existing browser conventions below continue to govern the two preserved proofs.
+
 ## Install and run
 
 Use Node matching `package.json#engines` and the committed lockfile. The declared range follows the installed Vite requirement. This session ran Node 26.8.1; other supported versions have not been checked here.
@@ -59,8 +61,8 @@ Use an ADR for a durable module boundary, delivery/runtime choice, or data/asset
 
 ## Handoff and version control
 
-After a change, update its canonical docs, record executed checks and material limits, and leave one concrete next action in the project desk/backlog. The append-only [decision trail](docs/decisions.tsv) records meaningful choices, not every command.
+After a change, update its canonical docs, record executed checks and material limits, and record execution state and the next action in TRACKING.md. BACKLOG.md owns definitions, not live status. The append-only [decision trail](docs/decisions.tsv) records meaningful choices, not every command.
 
-Earlier sessions worked against an unusable read-only `.git` placeholder and staged files by hand instead of committing. That is resolved: this is now a real checkout on branch `main` with a baseline commit (`4db9b31`). Inspect status, review changes, and commit on a branch using ordinary review before merging. Writing agents work in disjoint worktrees rather than staging copies. No remote is configured yet; choosing one and publishing follows Andrew's explicit authorization, so there is still no off-machine backup.
+The repository preserves local history beginning at baseline `4db9b31`. Andrew authorized the private GitHub repository `bananahana720/scrapkeep`, with `main` as the default branch and publication of `main` plus `codex/lightning-playtest`. [TRACKING.md](TRACKING.md) records the actual publication state and verified revision. Inspect the current branch and worktree before editing; never infer them from a historical receipt. Commit reviewed changes before integrating, preserve owner work, and keep writing agents in disjoint worktrees. Experimental branches remain local unless separately authorized.
 
 Keep `node_modules/`, `dist/`, secrets and disposable evidence untracked (see `.gitignore`). [Artifact retention](artifacts/README.md) and [asset provenance](docs/project/ASSETS.md) describe the remaining buckets.

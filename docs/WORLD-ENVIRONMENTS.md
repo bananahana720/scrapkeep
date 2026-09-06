@@ -1,12 +1,18 @@
 # World and environment kits
 
-5 September 2026. Per-biome environment kits for the Scrapkeep campaign ladder, deep enough to brief the level lane and the art pipeline, grounded in what the orchard slice already proves.
+Updated 5 September 2026 after the notebook interview. These are candidate environment kits for the world catalogue. [Discovery](DISCOVERY.md#accepted-notebook-interview) owns the accepted four-world, 60–75 minute run with compact procedural encounter levels and world bosses. At transitions to another world the player picks one of two randomly selected destinations.
 
-Everything below labeled proposal awaits Andrew's approval. The Requisition premise, the seven-rung ladder, and the mass-as-currency handling model are working canon from the 5 September audit (docs/DESIGN-AUDIT.md:45, docs/audit-2026-09-05/worker-4-universe.md:56-70) and are themselves pending approval. Kits that build on them inherit that status.
+The seven kits below are a creative library, not a fixed campaign order, a launch commitment or the number of worlds visited in a run. Catalogue size, repeat rules, starting world and final-boss placement remain open. Requisition fiction, biome-specific mechanics, lighting and exact dimensions remain proposals. The old mass-as-currency model was not adopted.
 
-## What the orchard tech already proves
+## World content and rewards
 
-These observations set the cost model for every kit.
+A selected world supplies its encounter palette, terrain vocabulary, themed enemies, event/secret-room opportunities and item pool. Rare enemies, events, secrets and bosses should award items whose appearance and effects belong to that area and universe. Attunement can connect those items to specific characters or other items; fixed endpoint-combination bonuses belong to the build system rather than the world's random loot roll.
+
+A world definition must work at its selected position in a generated route. Do not assume the player previously visited another named biome to learn a necessary counter or traversal mechanic. Level milestones contribute to all four trees, including opening-world slot unlocks; exact encounter counts and costs remain design work. See [level design](LEVEL-DESIGN.md) and the [runtime blueprint](RUNTIME-BLUEPRINT.md) for those boundaries.
+
+## Historical orchard technology snapshot
+
+These observations were recorded against the first proof. Numerical constants and source-line locations are historical; the current caster has jumping, rebounds and denser waves. Recheck against the [lightning contract](project/INCREMENT-01-lightning-playtest.md) before using a kit's cost estimate.
 
 - One scalar heightfield drives everything. `groundHeight(x, z)` is a single exported function (src/orchard/simulation.js:57-59, a 2.5 unit ramp between z equals -14 and -23). The scene samples it for the ground mesh, fences, signs, worn tracks, telegraph decals, and the camera floor (src/orchard/scene.js:166, 195, 292, 348, 511, 397). Any biome whose terrain reads as a heightfield inherits all of this for the cost of one function.
 - Attack telegraphs are world-space capsules the renderer draws exactly as the simulation collides them (src/orchard/simulation.js:72-76, src/orchard/scene.js:508-558). Any biome hazard expressed as capsules gets preview, active stroke, and fairness for free.
@@ -43,11 +49,11 @@ Options considered: dynamic weather, day-night cycles, or fixed lighting keyfram
 
 One 40 to 60 mm terrain module per biome doubles as the figurine base: Yard curb corner, Spillway sluice-gate lip, Orchard apron with nursery tray, Foundry rail-siding curve, Windworks louver ring, Harvest Roads flatbed deck edge, Furnace City conveyor street plate. Each is named in its biome's module table below so the game kit and the product share one Blender source.
 
-## Biome kits
+## Candidate biome kits
 
-Each kit below is a proposal. Module sizes are stated in D (route clearance unit) and simulation units where the orchard gives a reference: the orchard's central path band is 14 units wide with soil shoulders to x equals 18.9 and fences at 20 (src/orchard/scene.js:168-171, 192-199).
+Each kit below is a proposal. References to rungs in the retained fiction and tuning prose describe the old library progression, not mandatory run order. Module sizes are stated in D (route clearance unit) and simulation units where the orchard gives a reference: the orchard's central path band is 14 units wide with soil shoulders to x equals 18.9 and fences at 20 (src/orchard/scene.js:168-171, 192-199).
 
-### 1. Yard Commons (home, campaign rung 1)
+### 1. Yard Commons (candidate home world)
 
 **Terrain modules.** Curb straight (4 units, matches the orchard fence bay rhythm at src/orchard/scene.js:193), curb corner 90 (4x4, the figurine chip), retaining wall low (1.5 high, bankable), maze tee, service ramp, allotment plot (6x4), gantry footing (3x3, tippable), depot facade (camera blocker). Eight modules; everything is orthogonal and curb-joined, per the concept's zigzag maze language (docs/ART-DIRECTION.md:13 prompt).
 **Traversal twist.** Curb banking. Curb contact converts lateral velocity instead of zeroing it, unlike the arena clamp that kills velocity on the axis it stops (src/orchard/simulation.js:346-355). Touches acceleration only: a curb is a free steering assist worth roughly the 25 accel budget for one bounce. Speed target, burst, and radius stay at reference values. The yard is the calibration rig where the player learns the servo before any biome bends it.
@@ -59,7 +65,7 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 **Defense space.** Objective (the depot reactor) on a raised pad inside a 1.5D standoff keep-out: no deploys, no enemy path. The keep-out nests inside the levels lane's objective ring at radius 14 to 18 units (LEVEL-DESIGN.md:63-66). Devices anchor on that ring, one per class per lane, never in lanes (LEVEL-DESIGN.md:146-151). Two curb-fed approach lanes at 2D or wider feed the ring.
 **What the player protects.** The commons itself: allotment plots, residents' stored belongings, the keepers' depot. Lived-in clutter that is never collectible, extending the never-absorbed rule (docs/audit-2026-09-05/worker-4-universe.md:86).
 
-### 2. Spillway Works (campaign rung 2)
+### 2. Spillway Works (candidate)
 
 **Terrain modules.** Channel straight (3D wide floor, 1 unit walls), channel bend 45, bypass gutter (2D, the guaranteed dry route), settling basin (12x12, drainable), sluice gate (3 units wide, the figurine chip and the beat trigger), weir step (0.6 unit drop, one-way at reference accel), catwalk pier (camera blocker), pumphouse facade, reed-bed margin. Nine modules.
 **Traversal twist.** Water as a current field, one signed scalar plus a flow vector per channel. Wet channels add the flow vector to the servo's target velocity (the speed target at src/orchard/simulation.js:323-325 gets a bias term): with the flow you effectively roll above 7.4, against it below. Submerged floors also cut acceleration from 25 toward roughly 15 (drag). Burst is deliberately unaffected, so a burst across a wet channel is the skill answer. Radius untouched. Draining a basin removes both modifiers at once, which is the point of the beat.
@@ -71,7 +77,7 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 **Defense space.** Defend the pumphouse intake: the objective sits at basin edge, approach lanes are one wet channel (fast for enemies too) and one dry gutter, both 2D. The drain beat legitimately reshapes the defense mid-encounter, which is the biome's tactical thesis.
 **What the player protects.** The town's water: the pumphouse that keeps homes dry and the reed-bed margins with herons and frogs. Wildlife and the working pump are never collectible.
 
-### 3. The Iron Orchard (campaign rung 3, partially built)
+### 3. The Iron Orchard (bounded encounter implemented)
 
 **Terrain modules (naming what exists, then extending).** Terrace ramp (the 2.5 unit groundHeight rise, src/orchard/simulation.js:57-59), turning apron (the encounter clearing, worn track rings at src/orchard/scene.js:338-342), tree row (instanced trunk, leaf, apple set at src/orchard/scene.js:222-266), fence bay (4 unit rhythm), nursery table, irrigation stand, seedhouse facade, greenhouse (camera-blocked large structure, src/orchard/scene.js:275-288), apron with nursery tray (the figurine chip). The extension work is packaging these as reusable placements rather than the current single hand-laid arena.
 **Traversal twist.** Grip bands. Soft cultivated soil multiplies acceleration by about 0.8; swept aprons are reference; terrace lips demand either the ramp route or a burst to climb. Touches acceleration and burst, never speed target, so the top-speed feel stays constant and the choice is where you can reach it. The current build already renders the three ground bands (path, soil, sage at src/orchard/scene.js:168-173) that this twist would activate.
@@ -83,10 +89,10 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 **Defense space.** The seedhouse terrace: a 1.5D standoff keep-out around the seedhouse door, no deploys and no enemy path inside it, nested inside the objective ring at radius 14 to 18 units (LEVEL-DESIGN.md:63-66). Anchors sit on that ring, one per class per lane, never in lanes (LEVEL-DESIGN.md:146-151). The terrace ramp and the outer service route are the two 2D lanes, per the existing bypass contract (docs/ORCHARD-ENCOUNTER-STUDY.md:49-51).
 **What the player protects.** Healthy trees, protected contact surfaces, repaired equipment (docs/ORCHARD-ENCOUNTER-STUDY.md:13). The generalization rule for all biomes: every rung names its cultivated thing, and that thing is never collectible.
 
-### 4. Foundry Crown (campaign rung 4)
+### 4. Foundry Crown (candidate)
 
 **Terrain modules.** Rail siding straight (groove 1D wide), rail siding curve (the figurine chip), switch point, slag drum (rollable heavy prop), casting rack aisle (3D), crane aisle floor (open 6D arena), ladle gantry (overhead mover, camera blocker), quench pool (1x weir step reuse from Spillway), furnace hammer footing. Nine modules, two reused.
-**Traversal twist.** Rails and overhead motion. A grooved rail captures the ball above half mass: while riding, effective speed target rises from 7.4 toward 9, but lateral acceleration drops to zero until a switch point or a burst breaks the groove. That is a straight trade on the two servo knobs (src/orchard/simulation.js:323, 329) and it makes mass (radius) a route decision, which is the audit's keystone ask (docs/DESIGN-AUDIT.md:26, 42). Swinging ladle loads are moving hazard capsules on schedules; their shadows are the tell, per the family silhouette rule (docs/audit-2026-09-05/worker-4-universe.md:115).
+**Traversal twist.** Rails and overhead motion. Historical mass-gated rail proposal, not adopted: a grooved rail captures the ball above half mass: while riding, effective speed target rises from 7.4 toward 9, but lateral acceleration drops to zero until a switch point or a burst breaks the groove. That is a straight trade on the two servo knobs (src/orchard/simulation.js:323, 329) and it makes mass (radius) a route decision, which is the audit's keystone ask (docs/DESIGN-AUDIT.md:26, 42). Swinging ladle loads are moving hazard capsules on schedules; their shadows are the tell, per the family silhouette rule (docs/audit-2026-09-05/worker-4-universe.md:115).
 **Interactive and destructible set.** Casting racks (topple into bank angles), slag drums (heavy deflectable projectiles when rammed), chain hoists (drop their load on a weak-point hit). Consequence beat: the furnace hammer craters the arena on a fixed telegraphed schedule; wrecked carriages become new bank angles (docs/audit-2026-09-05/worker-4-universe.md:63). The player learns to fight on the hammer's clock and then to bait enemies under it.
 **Requisition set dressing.** Cranes and clampcarts keep foundry-guild livery and shift boards under Fleet stencils. The Fleet notice here is a production ledger, numbers climbing rung over rung. Keepers' lamp room glows warm behind glass as the untouched heart of the place.
 **Palette keyframe (hex values are proposals).** Ash ivory #b8b2a4, fire-dark iron #241f1c, copper #b06a3f, ember glow #ffb066 (emissive), petrol gloom #183b3e. Accent: copper and ember glow in a dark aisle. This rung absorbs the Fleet sheet's weathering gap deliberately: dark is the place, not the machines' character (docs/audit-2026-09-05/worker-4-universe.md:18).
@@ -95,7 +101,7 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 **Defense space.** Defend the lamp room and pattern loft door: crane aisle as the 6D arena, two rail-fed lanes at 2D, hammer crater zone marked by a permanent track ring. Overhead movers must never violate contract rule 2.
 **What the player protects.** The master patterns, generations of wooden casting patterns in the loft, and the swallows nesting in the crane aisle rafters.
 
-### 5. The Windworks (expansion rung)
+### 5. The Windworks (candidate)
 
 **Terrain modules.** Canvas duct run (3D bore), plenum chamber (8x8), louver ring (the figurine chip), intake cone, exhaust jet nozzle, streamer mast (current preview), gallery catwalk, great fan housing (camera blocker), canary gallery front. Nine modules.
 **Traversal twist.** Air adds and steals momentum. Intake cones apply a directed acceleration term toward themselves; exhaust jets aligned with a burst extend its carry; headwinds cut the effective speed target from 7.4 toward 5.5. Touches acceleration, burst, and speed target, and every current is previewed by fabric streamers before the player commits, extending the preview grammar (docs/audit-2026-09-05/worker-4-universe.md:64).
@@ -107,7 +113,7 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 **Defense space.** Defend the canary gallery and fresh-air head: plenum chamber arena, one duct lane and one catwalk lane at 2D, currents legal in lanes only if a still bypass exists (contract rule 1).
 **What the player protects.** The mine town's breathable air: the fresh-air galleries, the canary coops, roosting bats. The stakes are invisible, so the canaries make them visible.
 
-### 6. The Harvest Roads (expansion rung)
+### 6. The Harvest Roads (candidate)
 
 **Terrain modules.** Roadbed straight, roadbed cut (banked), flatbed deck (4x8, moving floor), coupler gap (0.5 to 1.5 units), waystation platform, hedgerow margin, cargo stack (lashed homes and harvest, protected), road-train engine footing (camera blocker), flatbed deck edge (the figurine chip). Nine modules.
 **Traversal twist.** The floor has a velocity. Flatbed surfaces add a frame velocity to the servo target, so relative handling stays reference while world-space routes slide. Coupler gaps make radius a traversal stat for the first time: a grown ball bridges a gap a small ball must burst across. Touches speed target (frame bias) and radius, leaving acceleration alone so deck fighting feels like home (docs/audit-2026-09-05/worker-4-universe.md:65).
@@ -119,7 +125,7 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 **Defense space.** Defend a waystation as the train bears down: platform arena, the roadbed and the hedgerow service path as the two 2D lanes. Aboard the train, each deck is its own small arena and the standoff keep-out is the car itself.
 **What the player protects.** The stolen cargo, homes and harvests to be recovered intact, plus the waystations and hedgerow wildlife along the road.
 
-### 7. The Furnace City (campaign rung 5, finale)
+### 7. The Furnace City (candidate finale setting)
 
 **Terrain modules.** Conveyor street plate (the figurine chip), tilting deck section (8x8), counterweight district block (scheduled mover), service corridor (2D, the guaranteed honest route), stack base, heat-main crossing, crew-quarters facade (protected), engine gallery (boss arena, camera-blocked), mooring gantry. Nine modules, several re-skinning Foundry and Harvest Roads tech.
 **Traversal twist.** The arena is a machine that moves (docs/audit-2026-09-05/worker-4-universe.md:66). Tilting decks add a persistent downslope acceleration bias; conveyor streets reuse the Harvest Roads frame velocity; counterweight districts move whole blocks on telegraphed schedules, applying the enemy commitment grammar to architecture itself. Every knob bent earlier in the campaign returns at once, and the service corridors are always reference-handling relief valves per contract rule 1.
@@ -133,18 +139,18 @@ Each kit below is a proposal. Module sizes are stated in D (route clearance unit
 
 ## Next biome after the orchard (contested, one recommendation)
 
-Candidates: Yard Commons (rebuild of the existing demo), Spillway Works, Foundry Crown. **Recommendation: Spillway Works.** Rationale grounded in what src/orchard proves:
+Candidates remain Yard Commons, Spillway Works and Foundry Crown. Spillway Works remains a paper recommendation because its current-field idea and Cancrusher family offer a distinct encounter. The older claim that it is necessarily the cheapest extension has not been verified against the caster controller. The basin deflect experiment is parked, and adjacency in the old campaign ladder is no longer a selection reason.
 
-- The water twist is the cheapest new tech that changes handling. The heightfield pattern (src/orchard/simulation.js:57) extends to one more scalar field with a flow vector; no new collision, camera, or telegraph systems are needed, and the current bias plugs into the same servo lines the audit already targets for the mass experiment (src/orchard/simulation.js:323-332).
-- The enemy dependency is the best-specified family: the Cancrusher line with five workers plus the Sluiceback miniboss (docs/audit-2026-09-05/worker-4-universe.md:61), and the design audit's increment 2 already asks for Sluiceback as the basin experiment before other systems build on the deflect economy (docs/DESIGN-AUDIT.md:85, 38).
-- It is campaign rung 2, adjacent to the built rung 3, so the first two authored biomes are contiguous in the ladder rather than skipping.
+D10/P07 owns the next kit choice; D09/P12 owns the first-world and route policy. Choosing a content kit does not choose its fixed run position.
 
 **Minimum viable kit:** 6 of the 9 modules (channel straight, channel bend, bypass gutter, settling basin, sluice gate, pumphouse facade), 3 enemies (Scooplet, Rackspan, Sluiceback), the one sluice-drain consequence beat, the palette keyframe, two civic signs plus one Fleet notice, and the water-noise audio bed. Everything else in the kit is additive after the drain beat proves out.
 
 ## Evidence limits
 
+The following bullets preserve the original environment research's evidence statement. Its implementation observations are a first-proof snapshot. Accepted notebook direction above supersedes the campaign order and mass assumptions; the candidate kits remain unimplemented beyond their explicitly cited orchard elements.
+
 - Read this session: docs/audit-2026-09-05/worker-4-universe.md, docs/ART-DIRECTION.md, docs/ORCHARD-ENCOUNTER-STUDY.md, docs/MARKET-RESEARCH.md, docs/DESIGN-AUDIT.md, docs/project/REQUIREMENTS.md, docs/project/ASSETS.md, src/orchard/scene.js in full, and targeted portions of src/orchard/simulation.js (lines 40-90, 315-360, 600-620) plus grep of src/orchard/models.js function names and src/orchard/main.js audio lines. Claims about those files cite exact lines.
 - Not read: docs/ENEMY-TAXONOMY.md, docs/CONFLICT-AND-COMBAT.md, and the other audit workers directly; taxonomy and combat claims here are cited through worker-4 and DESIGN-AUDIT quotations of them and inherit any transcription error.
 - All module names, sizes, hex values outside src/orchard/scene.js:14-24 and docs/ART-DIRECTION.md:13, parameter multipliers, and beat timings are design proposals, not measured or playtested values. D has no confirmed numeric value in anything read this session; it is defined, not measured (docs/ORCHARD-ENCOUNTER-STUDY.md:47).
 - No runtime was executed, no image generated, no repo file written. The Foundry telegraph-brightness note and every handling multiplier need the same fixture-probe treatment the audit used before any number hardens.
-- The whole document depends on working canon (Requisition premise, seven-rung ladder, mass-as-currency) that is itself pending Andrew's approval per docs/DESIGN-AUDIT.md:3.
+- The original kit fiction used the proposed Requisition premise and seven-rung ladder. The ladder is now historical, and mass-as-currency was not adopted. Reusing a kit does not accept those assumptions.

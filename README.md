@@ -1,4 +1,18 @@
-# Scrapkeep
+# SCRAPKEEP
+
+A greasy junkyard adventure in a steam-cyberpunk universe. Pilots drive electromagnetic mechs that collect metal, grow, and recycle scrap into evolving weapons and skills across Southwest-inspired landscapes.
+
+## Start here
+
+- [Art & Game Bible](BIBLE.md): approved product and visual reference.
+- [Engineering ADRs](adr/README.md): accepted production architecture.
+- [Backlog](BACKLOG.md): atomic task definitions and remaining questions.
+- [Orchestrator](ORCHESTRATOR.md): worker assignment, ownership, review and integration rules.
+- [Tracking](TRACKING.md): the sole execution board and next-session checkpoint.
+
+Production direction is Godot with typed GDScript. The existing browser games below remain preserved proofs. The foundation-contract sprint is proposed and has not started; the complete engineering Bible remains future work.
+
+## Existing playable proofs
 
 Scrapkeep has two playable entries. The Iron Orchard is the lightning caster playtest: a rolling hero, three waves, and equipment that changes how attacks combine. The original yard remains available as the baseline demo.
 
@@ -13,7 +27,7 @@ The [design desk](docs/DESIGN-INDEX.md) connects the current build to accepted d
 
 ## Developer and project navigation
 
-[Developer guide](CONTRIBUTING.md) · [Project desk and status](docs/project/README.md) · [Requirements](docs/project/REQUIREMENTS.md) · [Backlog](docs/project/BACKLOG.md) · [Architecture decisions](docs/adr/README.md)
+[Developer guide](CONTRIBUTING.md) · [Project desk](docs/project/README.md) · [Requirements](docs/project/REQUIREMENTS.md) · [Current backlog](BACKLOG.md) · [Browser implementation ADRs](docs/adr/README.md)
 
 Run `npm run verify` for local structural, automated and built-entry checks. Browser verification remains a separate step described in the developer guide.
 

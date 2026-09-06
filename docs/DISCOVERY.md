@@ -1,12 +1,54 @@
 # Scrapkeep publisher discovery
 
-Updated 5 September 2026. This record preserves publisher interviews and research, followed by the authorized first-build scope below. The user has now approved the orchard proof and its session goal. The broader concepts remain proposals unless explicitly confirmed. The original playable yard remains the baseline at `/`.
+Updated 5 September 2026. This record owns accepted publisher direction. The notebook interview below updates the future game design; it does not expand the implemented lightning increment. The original yard remains the baseline at `/`. Historical research and build scopes retain their stated evidence limits.
+
+## Accepted notebook interview
+
+Andrew clarified the four notebook photos in conversation and approved recording the resulting design across the project. This section supersedes the earlier expedition duration, stage-count reconciliation and notebook interpretations. The [requirements](project/REQUIREMENTS.md) track implementation status; the [decision register](project/DECISION-REGISTER.md) tracks rulings and remaining choices; the [runtime blueprint](RUNTIME-BLUEPRINT.md) owns the target system boundaries.
+
+### Run, worlds and levels
+
+A successful run lasts **60–75 minutes** and crosses **four worlds**. A world contains procedurally generated compact encounter levels followed by its world boss. Clear a level and choose an exit onward. Regular levels can contain waves, exploration, events and occasional minibosses; an ordinary level does not require a boss. Completing the final encounter wins the run.
+
+At transitions to another world, randomly offer two destinations and let the player pick one. Four worlds is the run length, not the size of the world catalogue. The catalogue size, repeat rules, first-world selection, exact levels per world and whether the final encounter is world four's boss or a separate encounter remain open. Seeded generation is accepted; the choice between authored encounter assembly and procedural terrain techniques is still design work. The notebook's five-level count and boss at every level are superseded.
+
+### Character build and progression
+
+Every character has four customizable slots: **weapon, main hero skill, mobility and ultimate**. Each slot has its own character-specific branching tree with eight possible endpoints. A slot follows one route; crosspathing is not part of this structure. Andrew clarified the branching shape during the 6 September Bible review: one root forks to two upgrade nodes, each forks again to four nodes, and each of those forks to eight endpoints. Every nonterminal node has exactly two children; the selected path stays in one connected lineage. Four slots does not prescribe four playable characters. See the [Bible systems reference](../BIBLE.md#6-core-systems).
+
+Begin a run with a weapon and special mobility. Ordinary movement is always available. The main hero skill and ultimate unlock during the opening world. Both slot access and deeper upgrades advance through combat, encounters, events, objectives and area milestones, without elapsed-time gates. A normal successful route should reach an endpoint in all four trees by the final boss. Exact node effects, costs and milestone allocations remain open; the binary branching shape is settled. Major mechanical upgrades should also change visible character, weapon or effect design.
+
+Changing a selected skill-tree branch requires a special respec opportunity, such as a room or event. This is separate from reconfiguring acquired items between fights, which remains accepted. Optional transformative items may replace core movement or attacks; compatible shared modifiers can affect the player, devices and companion. One main companion remains the run's anchor, with temporary helpers possible as effects.
+
+### Loot and secret combinations
+
+Items are a separate, randomly encountered source of meaningful build changes. Rare enemies, random events, secret rooms and bosses can award them. Their appearance and mechanics belong to the world, area and universe that produces them. They may augment or attune to specific characters, other items, or both.
+
+Certain combinations of selected slot endpoints grant **fixed secret bonuses** to a route or the whole character. The same eligible combination produces the same effect. The surprise comes from discovering the recipe, not rerolling its reward. Recipe effects, eligibility and disclosure details remain future content work. Exceptional combinations may dominate familiar encounters; the existing earned-dominance ruling still applies.
+
+### Defeat, saving and permanent progression
+
+Each run has one standard revival. A subsequent death ends the run. Save completed progress and the build between levels, then resume at the next level entrance. Consumed revival and resolved rewards must survive saving and loading without being granted twice. Exact revival health, placement and interruption during an unfinished level remain open implementation decisions.
+
+Discoveries and permanent unlocks survive defeat. Between runs, unlock options and challenges while rebuilding combat power during each run. A discovered secret recipe can become permanent knowledge; its combat bonus still requires the eligible build in the current run. Permanent profile data and a resumable run checkpoint serve different purposes.
+
+### Reference boundaries and creative direction
+
+- Overwatch informs distinct weapons, active aiming and hero abilities.
+- Bloons informs only the tower upgrade-tree design pattern for the four character slots. It does not introduce tower-defense gameplay, an economy or crosspath rules.
+- Hades informs encounter levels, maps and area progression.
+
+The chaos magician combines a directed weapon with a shorter-range automatic field, like a mobile Tesla coil. It can release multiple elements and effects. The character is an overconfident novice, usually capable of the intended spell but occasionally miscasting. Some failures genuinely hurt or inconvenience the magician. This is not an always-random attack kit, an electricity-only rule, or approval of an instability meter. Miscast frequency, severity and the element pool remain open.
+
+The current lightning prototype is a distinct implemented kit, with two combat abilities alongside primary, mobility and ultimate. It does not implement these four upgrade trees or the chaos trait. Mapping that prototype or the proposed Fuse character to the future magician is still design work.
+
+Andrew delegated creative development of names, personalities, visual expression and comic mishaps. The newly conscious bomb drone is character inspiration; it does not require a learning system or a companion role. Other notebook sketches remain available for creative exploration. Proposed names, species and fiction remain labeled as inventions, and uncertain handwriting stays uncertain in the [source transcription](HANDWRITTEN-NOTES.md).
 
 ## Approved lightning caster direction
 
 Andrew played the first orchard proof and requested an MMORPG-style caster/shooter with hero weapons and abilities. He clarified that this describes combat and character systems; solo expeditions remain the scope and co-op comes later. Movement was decent, but he wanted physical impacts, double jumping and bouncing across small enemies. He found the scattered, tiny HUD hard to read and requested a toggleable management dashboard.
 
-The next increment uses one lightning hero with primary fire, two combat abilities, mobility and an ultimate. Mouse movement controls the view, right mouse focuses third-person aim, and holding/releasing a targeted ability previews/casts its actual path or area. Three denser waves replace the first proof's fixed encounter.
+The implemented increment uses one lightning hero with primary fire, two combat abilities, mobility and an ultimate. Mouse movement controls the view, right mouse focuses third-person aim, and holding/releasing a targeted ability previews/casts its actual path or area. Three denser waves replace the first proof's fixed encounter.
 
 The planning choices are approved: growth feels powerful and playful; rare optional items can replace core movement and attacks; shared modifiers affect compatible weapons, devices and companions; exceptional builds can dominate; acquired items can be reconfigured between fights; one main companion anchors a run. The [lightning increment](project/INCREMENT-01-lightning-playtest.md) includes Ground Loop, Echo and the existing priming companion as a small playable example. Andrew explicitly requested implementation of that plan. It supersedes the audit's mass-and-deflect proposal as the next build, while the remaining research stays proposed.
 
@@ -20,7 +62,7 @@ The simulation and model work is delivered and admitted. The live DOM-input expe
 
 ## Publisher direction
 
-Andrew wants a standalone PC/controller game, with physical figurines as a companion product. His latest clarification places **Katamari-like rolling, collecting and chaotic collisions at the center of the appeal and character design**. Cute animal pilots live inside an irregular ball of accumulated scrap, weapons and machinery. Classes, aimed attacks, item combinations and infrastructure should reinforce that physical identity. The intended view is close third person, with increasingly epic themed difficulty areas. Bumping enemies and, eventually, other players is part of the fantasy; solo first remains confirmed.
+Andrew wants a standalone PC/controller game, with physical figurines as a companion product. His earlier interview established **Katamari-like rolling, collecting and chaotic collisions as a core part of the appeal and character design**, alongside the later caster/shooter direction. Cute animal pilots live inside an irregular ball of accumulated scrap, weapons and machinery. Classes, aimed attacks, item combinations and infrastructure should reinforce that physical identity. The intended view is close third person, with increasingly epic themed difficulty areas. Bumping enemies and, eventually, other players is part of the fantasy; solo first remains confirmed.
 
 The requested class fantasies are grapple traversal, hovering mortar bombardment, a cyborg laser ball, and a lightning wizard ball. Map discoveries and earned rewards should include both class-specific upgrades and general improvements.
 
@@ -34,11 +76,11 @@ Andrew identified **Dungeon Defenders** as the reference for autonomous, themati
 
 Andrew enjoys **AI companions and infrastructure built on the fly**. Autonomous support is part of the desired play experience. He also wants enemies to have a fighting chance and gameplay to remain challenging and engaging.
 
-Andrew clarified the desired companion impact: **prime enemies for damage or status effects, buff the player or eventual teammates, and intervene during clutch emergency moments**. Their value should be evident in combat. He chose to **find and assemble different companions from run loot, creating unusual combinations**. The roster, component system, number of active companions and direct command controls remain open. Solo-first scope still applies.
+Andrew clarified the desired companion impact: **prime enemies for damage or status effects, buff the player or eventual teammates, and intervene during clutch emergency moments**. Their value should be evident in combat. He chose to **find and assemble different companions from run loot, creating unusual combinations**. One main companion is confirmed; roster, detailed component rules and direct command controls remain open. Solo-first scope still applies.
 
 Andrew explicitly prefers **low-cooldown abilities and ultimate moves that charge through class-specific mechanics**. Exact timings, charging rules and the ultimate abilities themselves remain design work.
 
-Andrew chose **an expedition through themed stages, each with exploration, combat and defense encounters, optional branches, and a boss**. A successful standard expedition should take **about 30–45 minutes**, including exploration and choices. Stage count, route generation and encounter cadence remain open.
+The earlier interview proposed 30–45 minute themed expeditions. That duration is superseded by the [accepted notebook interview](#accepted-notebook-interview): four worlds and 60–75 minutes, with compact procedural levels and world bosses.
 
 Between expeditions, **unlock new classes, items, companion parts and challenges; rebuild combat power during each run**. This settles the earlier question about permanent combat-stat progression.
 
@@ -68,34 +110,24 @@ These hypotheses are untested. No claim of player enjoyment, balance, commercial
 
 ### Working expedition flow
 
-The themed-stage structure is confirmed. The following flow is a coordinator proposal that connects the confirmed combat and loot preferences:
-
-1. Enter a stage with a recognizable environmental theme and encounter rules.
-2. Explore and fight, collecting machinery, items and companion parts. Choose optional branches whose risks and possible rewards affect the current build.
-3. During defense encounters, deploy class infrastructure while moving and fight alongside autonomous support.
-4. Complete the stage boss and choose a substantial reward; the notebook's pick-one-of-two idea is a candidate reward format.
-5. Carry the current ball, item build and assembled companions into the next themed stage.
-
-The proposed continuity preserves the run's accumulated build across stages. Which terrain devices persist, which resources transfer and how between-stage recovery works remain undecided. The earlier notebook's five-level count is a candidate, not a commitment to five produced stages.
-
-Progression between expeditions is confirmed as unlocking options and challenges. The existing demo's cosmetic mastery is background; the expanded game's combat power is rebuilt within each expedition.
+The [accepted notebook interview](#run-worlds-and-levels) owns the run structure. Level completion carries the build forward and creates the between-level save boundary. World completion offers two destination choices when another world remains. Item reward formats are separate decisions; a two-world offer does not prescribe two-item rewards. Device persistence across levels and recovery between encounters remain open.
 
 ### Example item exploration
 
 **Echo Canister** is a proposed shared item whose class effect repeats at its original location after a delay. A grapple could leave a delayed pulling pulse at an anchor; a mortar could deliver a second impact; a laser could leave a beam afterimage; lightning could discharge again from its first conductor. This is an example for discussing Andrew's taste, not a finalized item or implementation contract.
 
-An exceptional combination should be allowed to feel exceptional. We have not decided whether items may replace a class's attack, introduce self-damage, produce harmful combinations, or deliberately enable a run to become nearly effortless.
+Optional attack and movement replacements and earned dominance are accepted. Harmful item combinations need their own design; the chaos magician's accepted occasional failures do not settle every item tradeoff.
 
 ### Class infrastructure exploration
 
 The requirement for autonomous, thematic infrastructure and combat-time deployment is confirmed. The examples and economy recommendation below are design proposals, not accepted ability specifications.
 
-| Class | Autonomous structure example | Optional player interaction |
-| --- | --- | --- |
-| Grapple | A winch mast intermittently pulls light enemies away from a dangerous approach | Swing from the mast to wind up a stronger pull, combining repositioning with crowd control |
-| Hover mortar | A compact mortar nest bombards a nearby approach | An aimed airborne designation directs its next volley; baseline fire continues without instructions |
-| Laser | A prism sentry covers a narrow firing corridor | Land a charged shot through its prism to redirect or split the player's attack around terrain |
-| Lightning | Linked storm rods periodically discharge across the space between them | Rolling past deposits charge; the class attack can discharge through the network |
+| Class        | Autonomous structure example                                                   | Optional player interaction                                                                         |
+| ------------ | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Grapple      | A winch mast intermittently pulls light enemies away from a dangerous approach | Swing from the mast to wind up a stronger pull, combining repositioning with crowd control          |
+| Hover mortar | A compact mortar nest bombards a nearby approach                               | An aimed airborne designation directs its next volley; baseline fire continues without instructions |
+| Laser        | A prism sentry covers a narrow firing corridor                                 | Land a charged shot through its prism to redirect or split the player's attack around terrain       |
+| Lightning    | Linked storm rods periodically discharge across the space between them         | Rolling past deposits charge; the class attack can discharge through the network                    |
 
 The shared-item question now covers both the pilot's weapons and compatible deployed structures. For example, an Echo Canister could create a delayed repeat in the player's attack and in a structure's discharge, with different placement consequences. No exact eligibility, stacking or balance rules have been selected.
 
@@ -107,12 +139,12 @@ Quick deployment should suit the chosen combat emphasis. Avoid a required statio
 
 Confirmed direction: low-cooldown abilities and class-specific ultimate charging. The following table illustrates distinct combat rhythms; names, effects and triggers are proposals.
 
-| Class | Example useful actions that earn ultimate charge | Example ultimate payoff |
-| --- | --- | --- |
-| Grapple | Successful swing attacks, displacing threatening enemies, releasing stored winch energy into a group | Gather a temporary mass of scrap around the ball, then choose a powerful slingshot trajectory through the siege |
-| Hover mortar | Well-placed airborne bombardments and successful designated nest volleys | Transform into a flying artillery platform with a brief period of expanded lift and coordinated bombardment |
-| Laser | Piercing lined-up threats, hitting exposed weak points, or landing a redirected shot through a prism | Sustain a major cutting beam whose route can be shaped through the deployed prism setup |
-| Lightning | Effective multi-enemy chains and discharges through strategically placed conductors | Ride lightning between deployed rods, with each relocation triggering a network pulse |
+| Class        | Example useful actions that earn ultimate charge                                                     | Example ultimate payoff                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Grapple      | Successful swing attacks, displacing threatening enemies, releasing stored winch energy into a group | Gather a temporary mass of scrap around the ball, then choose a powerful slingshot trajectory through the siege |
+| Hover mortar | Well-placed airborne bombardments and successful designated nest volleys                             | Transform into a flying artillery platform with a brief period of expanded lift and coordinated bombardment     |
+| Laser        | Piercing lined-up threats, hitting exposed weak points, or landing a redirected shot through a prism | Sustain a major cutting beam whose route can be shaped through the deployed prism setup                         |
+| Lightning    | Effective multi-enemy chains and discharges through strategically placed conductors                  | Ride lightning between deployed rods, with each relocation triggering a network pulse                           |
 
 The intended rhythm is frequent decisions followed by an earned change in play. Charge should reward useful class-specific contributions. Shared items may modify compatible attacks, autonomous devices and ultimate effects, so the run build remains relevant throughout. No numbers, timer model or detailed effect-composition rules are settled.
 
@@ -120,11 +152,11 @@ The intended rhythm is frequent decisions followed by an earned change in play. 
 
 The companion behavior preference is now explicit. The examples below are coordinator proposals for expressing it:
 
-| Desired contribution | Example behavior | Player opportunity |
-| --- | --- | --- |
-| Prime a target | Apply a visible conductive mark to a threatening enemy | Land a signature attack to trigger a stronger effect or spread the status |
-| Provide a buff | Project a brief protective or offensive field during a committed attack | Finish the charged shot or use the opening to reposition |
-| Clutch intervention | Intercept a charging enemy, deploy a decoy or create a short escape corridor | Recover through movement and a deliberate follow-up action |
+| Desired contribution | Example behavior                                                             | Player opportunity                                                        |
+| -------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Prime a target       | Apply a visible conductive mark to a threatening enemy                       | Land a signature attack to trigger a stronger effect or spread the status |
+| Provide a buff       | Project a brief protective or offensive field during a committed attack      | Finish the charged shot or use the opening to reposition                  |
+| Clutch intervention  | Intercept a charging enemy, deploy a decoy or create a short escape corridor | Recover through movement and a deliberate follow-up action                |
 
 Recommended design emphasis: make the companion's contribution readable through animation, effects and reactions. A rescue should create a recoverable opportunity that the player can exploit. Its availability and recovery should be understandable so the player can learn to trust it while enemies remain threatening. Direct damage may be part of a companion's kit, but setup, support and intervention are the confirmed attractions.
 
@@ -134,13 +166,13 @@ One candidate is a small modular assembly: a found chassis supplies the form and
 
 Coordinator recommendation: devices and companions should do useful work independently while creating opportunities for player intervention. Enemies should contest that support through readable behavior. These examples are proposed encounter designs, not implemented AI:
 
-| Enemy example | Pressure on the player's setup | Opportunity for response |
-| --- | --- | --- |
-| Saboteur | Approaches an exposed device and begins a visible dismantling action | Interrupt it, reposition the device or protect its approach |
-| Shield carrier | Covers a group's advance from one direction | Flank, displace it or use the class's indirect attack geometry |
-| Flanking raider | Takes an alternate approach to bypass concentrated fire | Place a quick interception device or use mobility to intervene |
+| Enemy example   | Pressure on the player's setup                                       | Opportunity for response                                       |
+| --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Saboteur        | Approaches an exposed device and begins a visible dismantling action | Interrupt it, reposition the device or protect its approach    |
+| Shield carrier  | Covers a group's advance from one direction                          | Flank, displace it or use the class's indirect attack geometry |
+| Flanking raider | Takes an alternate approach to bypass concentrated fire              | Place a quick interception device or use mobility to intervene |
 
-Enemy actions need visible commitments and understandable consequences. Challenge should come from choosing positions, targets and timing as well as enemy strength. Exceptional item combinations can still overwhelm familiar threats; harder encounters can introduce new behaviors and spatial demands. The acceptable degree of build-breaking power and enemy adaptation is still an interview question.
+Enemy actions need visible commitments and understandable consequences. Challenge should come from choosing positions, targets and timing as well as enemy strength. Exceptional item combinations can still overwhelm familiar threats; harder encounters can introduce new behaviors and spatial demands. Earned dominance is accepted; specific enemy adaptation remains design work.
 
 ## Research findings and sources
 
@@ -153,14 +185,14 @@ Enemy actions need visible commitments and understandable consequences. Challeng
 
 ### Competitive set
 
-| Reference | Why it matters |
-| --- | --- |
-| [Go Mecha Ball](https://store.steampowered.com/app/2008510/Go_Mecha_Ball/) | A close existing combination of rolling mechs, acrobatic movement and roguelite weapons/upgrades. A rolling mech alone cannot be the claimed distinction. |
-| [Roboquest](https://store.steampowered.com/app/692890/Roboquest/) | Responsive movement, class-specific upgrade choices and synergies. |
-| [Risk of Rain 2](https://store.steampowered.com/app/632360/Risk_of_Rain_2/) | Third-person character mastery and escalating item interactions. |
-| [Orcs Must Die! Deathtrap](https://store.steampowered.com/app/2273980/Orcs_Must_Die_Deathtrap/) | Close-camera action, class powers, traps and roguelite defense. |
-| [The Riftbreaker](https://store.steampowered.com/app/780310/The_Riftbreaker/) | The relationship between mecha combat, exploration and defending an expanding base. |
-| [Dungeon Defenders](https://store.steampowered.com/app/65800/Dungeon_Defenders/) | Class identity across both direct combat and autonomous infrastructure; a central publisher reference. |
+| Reference                                                                                       | Why it matters                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Go Mecha Ball](https://store.steampowered.com/app/2008510/Go_Mecha_Ball/)                      | A close existing combination of rolling mechs, acrobatic movement and roguelite weapons/upgrades. A rolling mech alone cannot be the claimed distinction. |
+| [Roboquest](https://store.steampowered.com/app/692890/Roboquest/)                               | Responsive movement, class-specific upgrade choices and synergies.                                                                                        |
+| [Risk of Rain 2](https://store.steampowered.com/app/632360/Risk_of_Rain_2/)                     | Third-person character mastery and escalating item interactions.                                                                                          |
+| [Orcs Must Die! Deathtrap](https://store.steampowered.com/app/2273980/Orcs_Must_Die_Deathtrap/) | Close-camera action, class powers, traps and roguelite defense.                                                                                           |
+| [The Riftbreaker](https://store.steampowered.com/app/780310/The_Riftbreaker/)                   | The relationship between mecha combat, exploration and defending an expanding base.                                                                       |
+| [Dungeon Defenders](https://store.steampowered.com/app/65800/Dungeon_Defenders/)                | Class identity across both direct combat and autonomous infrastructure; a central publisher reference.                                                    |
 
 The initial price comparison found displayed dollar prices of $19.99 for Gunfire Reborn, $24.99 each for Roboquest and Risk of Rain 2, and $29.99 for Deathtrap on 5 September 2026. These are storefront observations, not a recommended Scrapkeep price. No sales or revenue estimate was established.
 
@@ -188,22 +220,21 @@ This table describes the earlier research pass, not the later build verification
 
 All delegated roles used `gpt-6-astra` at high reasoning effort.
 
-| Lead | Completed work | Evidence limit |
-| --- | --- | --- |
-| Combat and camera | Source inspection, movement/action-defense references, 28-review player-response sample | No live movement prototype or representative player survey |
-| Classes and world | Class/loot concepts, world alternatives, Isaac/TF2 follow-up, and infrastructure economy review | Concepts and source interpretation; balance untested |
-| Technology and art | Architecture inspection, Context7 queries, free-tool shortlist | No engine migration, imported animation or performance verification |
-| Coordinator | Publisher interview, competition synthesis, visual study and this record | Discovery remains open |
+| Lead               | Completed work                                                                                  | Evidence limit                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Combat and camera  | Source inspection, movement/action-defense references, 28-review player-response sample         | No live movement prototype or representative player survey          |
+| Classes and world  | Class/loot concepts, world alternatives, Isaac/TF2 follow-up, and infrastructure economy review | Concepts and source interpretation; balance untested                |
+| Technology and art | Architecture inspection, Context7 queries, free-tool shortlist                                  | No engine migration, imported animation or performance verification |
+| Coordinator        | Publisher interview, competition synthesis, visual study and this record                        | Discovery remains open                                              |
 
-## Open publisher questions
+## Remaining design decisions
 
-1. How should enormous late-run spectacle affect playable terrain and enemy interactions while preserving the chosen mech-scale routes?
-2. Should deployment use construction capacity while preserving the ball's arsenal, or trade carried modules for stronger emplacements?
-3. How long do structures remain, and how freely can the player replace or recall them while moving?
-4. How much attack automation, aiming and resource management should piloting require alongside deployment?
-5. How far should rare items be allowed to rewrite a class, and which kinds of harmful tradeoff are enjoyable?
-6. What stage count and exploration/defense cadence fit a 30–45 minute expedition? Which earlier character sketches should transfer into Scrapkeep?
-7. How literal should companion assembly be, how many can be active, and how much direct command input should they need?
-8. Which kinds of enemy counterplay remain enjoyable when the player has assembled an exceptional build?
+Settled choices are recorded in the [decision register](project/DECISION-REGISTER.md); they should not be asked again without a new reason. The following work remains:
 
-The earlier interview left production scope and a session goal open. The user subsequently approved the bounded orchard build and its goal. That first proof completed build and integration verification; the broader publisher questions above remain open.
+1. World catalogue, repeat rules, first-world selection, final-boss placement, level counts and the procedural generation technique.
+2. Tree shapes, costs and milestone allocation; special respec presentation; fixed secret recipes and discovery feedback.
+3. Revival health and placement, unfinished-level interruption behavior, checkpoint persistence and profile migration.
+4. Chaos element/effect pool, failure frequency and severity, and its relationship to the proposed roster and implemented lightning kit.
+5. Device persistence and recall, detailed companion assembly and commands, harmful item tradeoffs, and the terrain effects of exceptional transformations.
+
+The lightning playtest remains the active product task. The notebook interview authorizes design alignment; later gameplay implementation needs a bounded scope of its own.

@@ -1,5 +1,7 @@
 # Agent playtesting engineering
 
+**Historical engineering and evidence record, retained 6 September 2026.** Current task definitions and dispositions are in [the root BACKLOG](../../BACKLOG.md); current scope, admission and execution state are in [TRACKING](../../TRACKING.md). The earlier session authorization and resume instructions below do not dispatch an LG work wave. Follow [ORCHESTRATOR](../../ORCHESTRATOR.md) before assigning work. Preserve the dated implementation and evidence that follow.
+
 Updated 6 September 2026. Andrew's session-close direction is to prioritize completing the remaining control and playtest engineering so the agent can accelerate game development. This document owns that work under backlog T13. The installed controller guide owns operating instructions; dated receipts own measured results. P10 still owns Andrew's feedback on play feel.
 
 ## Outcome

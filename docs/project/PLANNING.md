@@ -1,27 +1,31 @@
 # Planning mode
 
+> **Historical single-increment protocol.** [ORCHESTRATOR.md](../../ORCHESTRATOR.md) now owns worker assignment, tracking, review and checkpoint rules. Read the root [backlog](../../BACKLOG.md) and [board](../../TRACKING.md) for current scope. The old P10 priority, clean-checkout stop and automatic build preflight below do not override the current documentation-only authorization. Retain this file as the source for previous increments.
+
 Updated 5 September 2026. This protocol runs one planning session for Scrapkeep. It settles Andrew's key decisions in conversation, scopes one bounded increment, and only then hands implementation to an agent swarm with verification gates. It is host neutral. Claude Code invokes it through the `plan-session` project skill. Codex reads this file directly.
 
 **The one rule.** No implementation starts until Phase 2 has recorded a scoped increment document and Andrew has said go. A proposal, an audit, a research desk, or a backlog row is not approval to build.
 
+The notebook interview has already settled the direction recorded in D07/D24 and D49–D57. Apply those rulings without re-interviewing Andrew. P10 remains the current product task; P11–P14 hold future design. The mass/deflect-first agenda and the audit's fixed increment sequence are superseded. An explicitly requested documentation synchronization records existing direction and does not authorize dependent gameplay scope.
+
 ## Roles
 
-| Who | Decides |
-| --- | --- |
-| Andrew | Publisher preference, scope, priority, and the go/no-go on each increment |
-| Coordinator (the agent running this protocol) | Integration, technical records, lane partition, admission, and closeout |
-| Writers | Only the files their lane owns, inside their own worktree |
-| Reviewer | Nothing. It reports observations. The coordinator applies changes |
+| Who                                           | Decides                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| Andrew                                        | Publisher preference, scope, priority, and the go/no-go on each increment |
+| Coordinator (the agent running this protocol) | Integration, technical records, lane partition, admission, and closeout   |
+| Writers                                       | Only the files their lane owns, inside their own worktree                 |
+| Reviewer                                      | Nothing. It reports observations. The coordinator applies changes         |
 
 ## Phases at a glance
 
-| Phase | Entry condition | Exit artifact | Who decides exit |
-| --- | --- | --- | --- |
-| 0 Preflight | Session starts | Situation brief in chat | Coordinator |
-| 1 Decide | Brief delivered | New rows in `docs/decisions.tsv` and updated register statuses | Andrew, one ruling at a time |
-| 2 Scope | Tier A blockers ruled or parked | `docs/project/INCREMENT-<nn>-<slug>.md` plus a go row | Andrew |
-| 3 Swarm | Go row recorded | Admitted changes on `main`, gate green, reviewer verdict | Coordinator |
-| 4 Closeout | Reviewer verdict is PASS or PASS+NOTES | Updated canonical docs and one next action | Coordinator |
+| Phase       | Entry condition                        | Exit artifact                                                  | Who decides exit             |
+| ----------- | -------------------------------------- | -------------------------------------------------------------- | ---------------------------- |
+| 0 Preflight | Session starts                         | Situation brief in chat                                        | Coordinator                  |
+| 1 Decide    | Brief delivered                        | New rows in `docs/decisions.tsv` and updated register statuses | Andrew, one ruling at a time |
+| 2 Scope     | Tier A blockers ruled or parked        | `docs/project/INCREMENT-<nn>-<slug>.md` plus a go row          | Andrew                       |
+| 3 Swarm     | Go row recorded                        | Admitted changes on `main`, gate green, reviewer verdict       | Coordinator                  |
+| 4 Closeout  | Reviewer verdict is PASS or PASS+NOTES | Updated canonical docs and one next action                     | Coordinator                  |
 
 ## Phase 0. Preflight
 
@@ -30,14 +34,14 @@ The agent runs this alone and asks no questions.
 1. `git status --short` is clean. If not, stop and report the dirty paths.
 2. `npm run verify` is green. If not, the session's first candidate increment is the fix.
 3. Read the [project desk](README.md), the [backlog](BACKLOG.md), and the [requirements](REQUIREMENTS.md).
-4. Load the decision register at docs/project/DECISION-REGISTER.md. List the Tier A entries whose Status is still Open.
-5. Write a one-paragraph situation brief. Name the last closed increment, the gate result, the count of open Tier A entries, and the top backlog item.
+4. Load the [decision register](DECISION-REGISTER.md). List unresolved decisions that the candidate work actually depends on; skip ruled and superseded entries.
+5. Write a one-paragraph situation brief. Name the current increment, gate result, relevant open dependencies and top backlog item.
 
 Exit. The brief is in chat. Andrew has not been asked anything yet.
 
 ## Phase 1. Decide with Andrew
 
-Present decisions from the register one at a time. At most seven per session. Order by tier, then by backlog dependency.
+Present only unresolved decisions relevant to the candidate work, one at a time. At most seven per session. Order by backlog dependency; historic tier labels do not override current rulings.
 
 Each decision uses the host's structured question tool. In Claude Code that is AskUserQuestion. In Codex it is asynchronous user input. Each question carries these parts.
 
@@ -65,17 +69,17 @@ Entry. Every Tier A decision the candidate increment depends on is ruled or park
 
 Write `docs/project/INCREMENT-<nn>-<slug>.md`, modeled on the [first-build contract](../FIRST-BUILD-CONTRACT.md). `<nn>` is two digits, starting at 01. The document has these sections in this order.
 
-| Section | Content |
-| --- | --- |
-| Goal | One sentence. What a player or contributor can observe when it lands |
-| Requirements | Requirement IDs touched, per [REQUIREMENTS.md](REQUIREMENTS.md) |
-| Exclusions | What this increment explicitly does not do, named item by item |
-| Ownership | One row per lane. The files each lane may write. Files outside the table belong to the coordinator |
-| Acceptance | Numbered criteria. Each names its evidence type. Fixture, Node test, browser check, or playtest |
-| Gate | `npm run verify` plus the named browser checks from [CONTRIBUTING](../../CONTRIBUTING.md) that the changes require |
-| Closeout | ADR to add or amend, backlog rows to close or add, decisions.tsv rows, README status line |
+| Section      | Content                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Goal         | One sentence. What a player or contributor can observe when it lands                                               |
+| Requirements | Requirement IDs touched, per [REQUIREMENTS.md](REQUIREMENTS.md)                                                    |
+| Exclusions   | What this increment explicitly does not do, named item by item                                                     |
+| Ownership    | One row per lane. The files each lane may write. Files outside the table belong to the coordinator                 |
+| Acceptance   | Numbered criteria. Each names its evidence type. Fixture, Node test, browser check, or playtest                    |
+| Gate         | `npm run verify` plus the named browser checks from [CONTRIBUTING](../../CONTRIBUTING.md) that the changes require |
+| Closeout     | ADR to add or amend, backlog rows to close or add, decisions.tsv rows, README status line                          |
 
-The [design audit's proposed build sequence](../DESIGN-AUDIT.md) is the kind of increment this phase scopes. Take one step of it, not the sequence.
+Use the current backlog and accepted requirements to choose the candidate. The [design audit](../DESIGN-AUDIT.md) is historical research, not an approved implementation sequence.
 
 Ask Andrew one go/no-go question with the document written. The options are go, revise, or park. Record a go as a decisions.tsv row with the increment path in `evidence`.
 

@@ -1,47 +1,59 @@
 # Level design: spatial grammar for expedition stages
 
-5 September 2026. This document proposes the spatial grammar for Scrapkeep expedition stages, from per-beat pocket sizing through a fully worked Iron Orchard stage buildable against the current runtime, and it is a proposal desk document, not committed scope.
+Updated 5 September 2026 after the notebook interview. [Discovery](DISCOVERY.md#accepted-notebook-interview) owns accepted direction. This desk develops level patterns under that direction; numerical layouts remain proposals. The [lightning increment](project/INCREMENT-01-lightning-playtest.md) owns the current playable encounter.
 
-Confirmed constraints this grammar serves: themed 30 to 45 minute expeditions with exploration, combat and defense encounters, optional branches, and a boss (docs/project/REQUIREMENTS.md:17, R11); close third person with ordinary growth fitting designed routes (REQUIREMENTS.md:8, R02); readable enemy commitments (REQUIREMENTS.md:9, R03). Working canon from the 5 September audit, pending Andrew's approval wherever it is load-bearing below: three stages of five beats each (docs/audit-2026-09-05/worker-3-meta.md:38), the Roll-Through deflect with deflectable, heavy, and grab attack grades (docs/audit-2026-09-05/worker-2-combat.md:39-48), the biome ladder with Iron Orchard as a campaign rung (docs/DESIGN-AUDIT.md:67), and the reconciliation that an expedition routes three stages through the campaign's biomes (docs/DESIGN-AUDIT.md:78).
+## Accepted world and level structure
 
-## The measured envelope
+A successful run crosses four worlds in 60–75 minutes. Each world contains seeded procedural compact encounter levels, culminating in its world boss. Clearing a level opens the onward exit choice and the between-level save boundary. A regular level can contain waves, exploration, an event or an occasional miniboss. A boss is not required in every level.
 
-Every size in this document is justified against these observed numbers.
+At a world transition, offer two randomly selected destinations and let the player choose one. The world catalogue can be larger than the four-world route; its size, repeats, first-world policy and final-boss placement remain open. The earlier three-stage reconciliation, fixed five-beat sequence and notebook five-level count are superseded.
 
-| Quantity | Value | Source |
-| --- | --- | --- |
-| Max roll speed | 7.4 u/s (2.2 braking) | src/orchard/simulation.js:323 |
-| Burst | 19 u/s for 0.24 s, 4.56 u displacement | simulation.js:297-299 |
-| Burst cooldown | max(0.85, 1.45 - brace x 0.22) s | simulation.js:300 |
-| Steering accel | 25 (48 braking) + brace x 4 | simulation.js:329 |
-| Player radius | 1.0 to 1.65, so max diameter D = 3.3 u | simulation.js:778-781 |
-| Proven arena | x [-19,19], z [-37,27]: 38 x 64 u | simulation.js:1-6 |
-| Terrain height | one ramp band, 0 to 2.5 u over z -14 to -23, z only | simulation.js:57-59 |
-| Enemy wake radii | 12 / 13 / 22 (snipcart / spreadleg / pruner) | simulation.js:12, 25, 38 |
-| Enemy windups | 1.15 / 1.3 / 1.75 s | simulation.js:16, 29, 42 |
-| Pruner toss line | released 6.51 u ahead, 31.5 u path, 9 u/s, 3.5 s life | simulation.js:513-524, 536-537, 567 |
-| Chase camera | fov 65, distance (7.2 + radius x 1.8) x zoom, so 9.0 to 10.2 u | src/orchard/scene.js:87, 382 |
-| Enemy label horizon | labels render only within 24 u | src/orchard/main.js:600-603 |
-| Threat banner | nearest windup or active enemy, four direction buckets | main.js:575-598 |
-| One-windup rule | one non-Pruner windup at a time, 0.8 s stagger | simulation.js:406-413, 422 |
-| Concurrency proven | 5 enemies, max 4 live offcuts, 1 companion | simulation.js:151-157, 527 |
-| Seed determinism | OrchardGame({seed}), LCG in _random | simulation.js:124-126, 751-754 |
+Use distinct terms: a world is a themed segment of the run; a level is one compact encounter area; a pocket is a candidate spatial module inside a level. A branch may be an optional room or route. Do not make every level contain the older worked example's full exploration/defense/miniboss/boss sequence.
+
+Level rewards and milestones must support weapon/mobility at entry, hero skill/ultimate during world one, and all four selected tree endpoints by the final boss on a normal successful route. Optional exploration offers meaningful themed loot and discoveries; special respec events permit branch changes. Progression comes from gameplay accomplishments, not time gates. Acquired items remain reconfigurable between fights.
+
+Rare enemies, events, secret rooms and bosses are distinct reward opportunities. World-appropriate item pools can attune to characters or items. Hidden endpoint combinations resolve fixed bonuses through the build system, rather than adding another random level reward. See the [runtime blueprint](RUNTIME-BLUEPRINT.md) for progression and checkpoint ownership.
+
+## Historical first-proof measurements
+
+The following table and spatial studies were written against the original orchard proof. Their source-line references and numerical limits are a dated snapshot, not the current lightning contract. Re-measure dimensions, enemy concurrency, jump routes and camera behavior before admitting a generated level. Mass/deflect assumptions below are unselected research.
+
+These measurements explain the older example sizes; they do not establish full-run timing or current caster limits.
+
+| Quantity            | Value                                                          | Source                              |
+| ------------------- | -------------------------------------------------------------- | ----------------------------------- |
+| Max roll speed      | 7.4 u/s (2.2 braking)                                          | src/orchard/simulation.js:323       |
+| Burst               | 19 u/s for 0.24 s, 4.56 u displacement                         | simulation.js:297-299               |
+| Burst cooldown      | max(0.85, 1.45 - brace x 0.22) s                               | simulation.js:300                   |
+| Steering accel      | 25 (48 braking) + brace x 4                                    | simulation.js:329                   |
+| Player radius       | 1.0 to 1.65, so max diameter D = 3.3 u                         | simulation.js:778-781               |
+| Proven arena        | x [-19,19], z [-37,27]: 38 x 64 u                              | simulation.js:1-6                   |
+| Terrain height      | one ramp band, 0 to 2.5 u over z -14 to -23, z only            | simulation.js:57-59                 |
+| Enemy wake radii    | 12 / 13 / 22 (snipcart / spreadleg / pruner)                   | simulation.js:12, 25, 38            |
+| Enemy windups       | 1.15 / 1.3 / 1.75 s                                            | simulation.js:16, 29, 42            |
+| Pruner toss line    | released 6.51 u ahead, 31.5 u path, 9 u/s, 3.5 s life          | simulation.js:513-524, 536-537, 567 |
+| Chase camera        | fov 65, distance (7.2 + radius x 1.8) x zoom, so 9.0 to 10.2 u | src/orchard/scene.js:87, 382        |
+| Enemy label horizon | labels render only within 24 u                                 | src/orchard/main.js:600-603         |
+| Threat banner       | nearest windup or active enemy, four direction buckets         | main.js:575-598                     |
+| One-windup rule     | one non-Pruner windup at a time, 0.8 s stagger                 | simulation.js:406-413, 422          |
+| Concurrency proven  | 5 enemies, max 4 live offcuts, 1 companion                     | simulation.js:151-157, 527          |
+| Seed determinism    | OrchardGame({seed}), LCG in _random                            | simulation.js:124-126, 751-754      |
 
 Derived: crossing the proven arena lengthwise takes 8.6 s at max roll. A threat at the 24 u label horizon gives 3.2 s of closing warning at max roll, against windups of 1.15 to 1.75 s. The clearance unit is D = 3.3 u; the study's construction rule is 2D = 6.6 u clear width for a dependable route (docs/ORCHARD-ENCOUNTER-STUDY.md:47-49).
 
 The standing problems this grammar must answer: a large world and a close camera create a defense-awareness problem (docs/DISCOVERY.md:55); the windup pose is subtle at chase distance and the world-space banner carries most of the warning load (docs/DESIGN-AUDIT.md:28); and a precise player cleared all five enemies in about 37 seconds without damage (docs/project/BACKLOG.md:9, P02; 37.05 s in docs/FIRST-BUILD-CONTRACT.md:28), so combat length cannot be the pacing mechanism.
 
-## Spatial grammar per beat (proposal)
+## Spatial patterns from the first-proof study (proposal)
 
-Shared vocabulary. A stage is a spine of pockets. A pocket is one bounded playable space with its own encounter budget. A mouth is a readable opening between pockets or into a branch. A ring is a closed circuit of at least 2D width. All sizes assume the current handling; if the mass-in-handling experiment (DESIGN-AUDIT.md:84) changes accel or top speed, re-derive from the table above.
+Shared vocabulary. In this historical study a stage was a spine of pockets. In the accepted design these are candidate spatial modules for compact encounter levels. A pocket has its own encounter budget. A mouth is a readable opening between pockets or into a branch. A ring is a closed circuit of at least 2D width. All sizes assume the historical handling table. Re-derive them for the current caster and any selected transformation; the mass experiment is not an implementation prerequisite.
 
 ### Explore pocket
 
 - Size: 30 to 40 u wide, 40 to 70 u long. That is 5.4 to 9.5 s to cross at max roll, and the proven 38 x 64 arena is the ceiling reference (simulation.js:1-6).
 - No wake zone for the first 20 u from the entry mouth, so arrival is always a safe read (the study's arrive beat: tools do ordinary work before aggression, ORCHARD-ENCOUNTER-STUDY.md:21).
-- Scrap lines trace the intended route the way the current build's nine floor pickups trace the approach (simulation.js:162-172). Density guidance is in the pacing section.
+- Scrap lines trace the intended route the way the first proof's nine floor pickups trace the approach (simulation.js:162-172). Density guidance is in the pacing section.
 - At most two awake-able workers, placed so their wake circles (12 to 13 u) do not overlap the entry read.
-- Vertical: one ramp band of at most 2.5 u rise, matching the only terrain shape the runtime supports today (simulation.js:57-59; docs/FIRST-BUILD-CONTRACT.md:8).
+- Vertical: one ramp band of at most 2.5 u rise, matching the first proof's terrain shape (simulation.js:57-59; docs/FIRST-BUILD-CONTRACT.md:8).
 
 ### Combat pocket
 
@@ -71,34 +83,30 @@ Shared vocabulary. A stage is a spine of pockets. A pocket is one bounded playab
 - Must contain the full toss threat line: release 6.51 u ahead of the arm plus 31.5 u of travel is 38 u (simulation.js:513-524), and offcuts expire at the bounds anyway (simulation.js:567-572), so the arena diagonal should exceed 40 u for the toss to read as a dodgeable lane rather than an instant wall hit.
 - Destruction changes the space per the boss section below without ever narrowing the ring under 2D.
 
-### Threat-communication rules (extends the implemented banner)
+### Historical banner extension proposal
 
-The implemented banner shows one line for the nearest windup or active enemy, bucketed AHEAD, LEFT, RIGHT, BEHIND YOU (main.js:575-598). The audit found it carries most of the warning load (DESIGN-AUDIT.md:28). Proposed extensions:
+The first-proof banner showed one line for the nearest windup or active enemy, bucketed AHEAD, LEFT, RIGHT, BEHIND YOU (main.js:575-598). The audit found it carries most of the warning load (DESIGN-AUDIT.md:28). Proposed extensions:
 
-1. One line only, priority ordered: grab, then heavy, then deflectable, then proximity. Today ordering is distance only (main.js:577-580). Grades are pending Roll-Through approval (worker-2-combat.md:47).
+1. One line only, priority ordered: grab, then heavy, then deflectable, then proximity. Its ordering was distance only (main.js:577-580). Grades are pending Roll-Through approval (worker-2-combat.md:47).
 2. In defense arenas the banner names the mouth, not just the direction: "LEFT MOUTH, SABOTEUR ON RODS."
 3. On-camera commitments may rely on pose plus the 17-sample stroke preview (simulation.js:488-492). Off-camera commitments always banner.
 4. No windup-capable enemy spawns inside the rear 120 degrees within its own reach of the player. Rear threats must enter through a mouth or seam first, so BEHIND YOU always has a spatial explanation.
 5. Lead-time invariant: any threat whose first damaging action can land within 2 s must have been on screen or in banner scope at least 3 s earlier. This is directly checkable in telemetry.
 
-## Authored versus generated (proposal, one recommendation)
+## Procedural generation technique (open)
 
-Three models, judged against the 30 to 45 minute target (REQUIREMENTS.md:17), the daily-seed and friend-challenge mechanisms the meta lane keeps (worker-3-meta.md:70, 132-134, citing src/campaign.js:206-256), production cost, and replay variety (the delayed-variety complaint the meta lane cites at worker-3-meta.md:21).
+Seeded procedural levels are accepted. The implementation technique remains D08/P07 work. Compare candidate techniques against compact encounter readability, route clearance, replay variety and the 60–75 minute full-run target. Generation alone cannot guarantee an exact human completion time.
 
-| Criterion | A: fully authored stages | B: tile assembly from terrain kits | C: seeded arrangement of authored pockets |
-| --- | --- | --- | --- |
-| 30-45 min fit | Exact, tuned once | Length drifts with tile luck | Exact: seed picks from fixed-budget pocket sequences |
-| Daily seed / friend challenge | Meaningless (same stage daily) | Fully meaningful | Fully meaningful: seed encodes pocket order, branch content, admissions |
-| Production cost | Highest per replayable hour; every variant is a full stage | Lowest per square unit, highest in kit tooling and QA of emergent junctions | Per-pocket cost; each pocket built and cleared once, reused many arrangements |
-| Replay variety | Weakest; the exact complaint pattern the meta lane flags | Highest, but incoherent | High and coherent |
-| Clearance and camera contract | Verified by hand once | Emergent junctions can silently close the 2D route; this generalizes the study's route-closure worry about clutter and deployed devices (ORCHARD-ENCOUNTER-STUDY.md:51) to generated junctions | Verified per pocket at author time; seams are the only join risk |
-| Readability | Best | Worst; wake overlaps and rear spawns become luck | Good; separation rules enforced at the pocket boundary |
+| Technique                                        | Useful property                              | Main validation need                                                                |
+| ------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Seeded arrangement of authored encounter modules | Reuses readable, individually tested spaces  | Check joins, route variety and content budgets across seeds                         |
+| Procedural terrain/tile assembly                 | More spatial variation from reusable terrain | Check generated clearances, reachable exits, camera obstruction and enemy placement |
 
-Recommendation: Model C, seeded arrangement of authored pockets. Each biome owns a pocket library (explore, combat, branch, defense, boss variants), every pocket individually passes the clearance and camera contract (ORCHARD-ENCOUNTER-STUDY.md:47-53), and the seed selects the arrangement, branch contents, enemy admissions, and boss layout variant. The runtime is already seed-deterministic (simulation.js:124-126, 751-754), so the daily seed stays a shared puzzle and friend challenges encode a full arrangement. The universe lane's terrain modules double as the pocket kit pieces and the figurine bases (worker-4-universe.md:126). Model B's kit still exists, but as authoring vocabulary, not as a runtime assembler.
+Recommendation remains seeded authored encounter modules, subject to a scoped generation decision. A fully fixed authored campaign does not meet the selected procedural direction. Daily challenges and friend features remain separate future proposals.
 
 ### Pocket record schema (proposal)
 
-Model C needs an authorable record per pocket instance, not just the per-type size bands above. Proposed shape:
+If authored module assembly is selected, the older pocket record below is a candidate. Its dimensions and ramp restrictions come from the first-proof snapshot, not accepted generation limits:
 
 ```
 pocket_record {
@@ -115,7 +123,7 @@ pocket_record {
 }
 ```
 
-Seed mapping: a stage template is an ordered list of typed slots, one per beat. The seed drives the existing LCG (simulation.js:124-126, 751-754). Each slot consumes one draw to index into the biome's pocket list of that slot's type; further draws pick branch contents, admissions from the pocket's admission list, and the boss layout variant. Same seed, same arrangement. Reuse check for the comparison table's cost and variety claims: P01 telemetry logs pocket_id per arrangement, and each library pocket should appear in at least 2 of the first 10 seeded arrangements, which is what makes the per-pocket cost claim checkable rather than asserted.
+Candidate seed mapping: select encounter content and compatible spatial modules inside the chosen world, then validate their connections and enemy admissions. Store stable identities for offered exits and rewards so resuming a completed level does not reroll them. The exact generator and random-stream arrangement remain D08/P07 work. A fixed slot for each of the older five beats is not required.
 
 ## Branch design patterns (proposal)
 
@@ -129,26 +137,26 @@ Seed mapping: a stage template is an ordered list of typed slots, one per beat. 
 
 1. The loop. Leaves the spine and rejoins it 20 to 30 u ahead. A toll fight midway, a scrap line plus one cache as payment. 45 to 60 s. The loop is never faster than the spine, so skipping it is always a clean pacing choice.
 2. The cellar. A dead end 30 to 40 u deep, in and back through the same mouth. The richest rewards live here (companion chassis, a transformative item), and the return trip faces the now-awake guard. 60 to 90 s.
-3. The gallery. A parallel corridor beside the spine, raised up to 2.5 u (the only vertical the runtime supports, simulation.js:57-59), overlooking the next pocket. Risk is exposure to an offcut lane; reward is scouting: Scrapbook sightings, and an entry angle or firing line into the next combat pocket that suits mortar and laser sightlines. 30 to 45 s.
+3. The gallery. A parallel corridor beside the spine, raised up to 2.5 u (the first proof's ramp height, simulation.js:57-59), overlooking the next pocket. Risk is exposure to an offcut lane; reward is scouting: Scrapbook sightings, and an entry angle or firing line into the next combat pocket that suits mortar and laser sightlines. 30 to 45 s.
 
 ### What a branch may gate
 
-A branch may gate additive build content only: items, companion parts, scrap mass, Scrapbook entries, ult-charge opportunities. A branch must never gate the stage exit, the boss's spatial counter route, baseline class function, or the run's only repair economy. This extends the standing rule that baseline attacks always work and no loot is mandatory (FIRST-BUILD-CONTRACT.md:26); hearts must keep dropping on the spine through kills and boss-class counters as they do today (simulation.js:693-694, 722).
+A branch may gate additive build content only: items, companion parts, scrap mass, Scrapbook entries, ult-charge opportunities. A branch must never gate the stage exit, the boss's spatial counter route, baseline class function, or the run's only repair economy. This extends the standing rule that baseline attacks always work and no loot is mandatory (FIRST-BUILD-CONTRACT.md:26); hearts must keep dropping on the spine through kills and boss-class counters as in the first proof (simulation.js:693-694, 722).
 
 ## Defense arena patterns (proposal)
 
-Lane counts follow the meta lane's escalation, where two lanes arrive as the stage 2 twist (worker-3-meta.md:52): stage 1 runs one lane plus a flanker seam, stage 2 runs two lanes plus a seam, stage 3 runs three mouths with one that shifts mid-encounter. Defense beats are timer-held, 2.5 minutes at stage 1 (worker-3-meta.md:49); clearing fast earns collection and deploy time between waves, never a shorter beat. That is half the answer to P02.
+Defense is a candidate encounter type within a world. Tune lane count, wave composition and repositioning against the current caster kit and the encounter's position in the run. The old stage-index escalation and fixed 2.5-minute hold are historical examples, not accepted pacing rules. Whether a timed defense can end early remains D21; the duration target does not approve forced waiting after a skilled clear.
 
 ### Deploy surfaces and anchors, all four classes
 
 Anchors sit on the objective ring. Every arena provides at least one anchor per class per lane. The confirmed part is the requirement for autonomous, thematic infrastructure deployed during combat (DISCOVERY.md:25, 83); the four device examples below are the publisher record's proposals, not accepted ability specifications (DISCOVERY.md:83, 85-91).
 
-| Class | Anchor requirement | Placement rule |
-| --- | --- | --- |
-| Grapple winch mast (DISCOVERY.md:87) | Post socket with overhead clearance | Ring point at a lane midpoint, so the mast drags light enemies off the lane axis |
-| Hover mortar nest (DISCOVERY.md:88) | Flat pad about 3 u, open sky | Ring point with sightline over two mouths; the 0.9 s shell flight (worker-2-combat.md:94) needs the arc unobstructed |
-| Laser prism sentry (DISCOVERY.md:89) | Corridor mouth 8 u or narrower, wall plate opposite | Covers the seam, the narrowest approach, and gives Refraction shots a bend point |
-| Lightning storm rods (DISCOVERY.md:90) | Paired sockets flanking a lane, 6 to 10 u gap | The lane itself becomes the arc gap; rolling past deposits charge |
+| Class                                  | Anchor requirement                                  | Placement rule                                                                                                       |
+| -------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Grapple winch mast (DISCOVERY.md:87)   | Post socket with overhead clearance                 | Ring point at a lane midpoint, so the mast drags light enemies off the lane axis                                     |
+| Hover mortar nest (DISCOVERY.md:88)    | Flat pad about 3 u, open sky                        | Ring point with sightline over two mouths; the 0.9 s shell flight (worker-2-combat.md:94) needs the arc unobstructed |
+| Laser prism sentry (DISCOVERY.md:89)   | Corridor mouth 8 u or narrower, wall plate opposite | Covers the seam, the narrowest approach, and gives Refraction shots a bend point                                     |
+| Lightning storm rods (DISCOVERY.md:90) | Paired sockets flanking a lane, 6 to 10 u gap       | The lane itself becomes the arc gap; rolling past deposits charge                                                    |
 
 ### How pressure roles path
 
@@ -158,7 +166,7 @@ The three pressure roles are proposed encounter designs (DISCOVERY.md:127), not 
 - Shield carrier: fronts the widest lane at walking pace, covering the group from one direction. The ring is the flanking tool; its cover never faces two mouths at once.
 - Flanking raider (DISCOVERY.md:133), flanker for short below: uses the seam, and every seam crossing has a fixed audible cue plus banner line. Flankers are the only role allowed to end up behind the camera, and only after a named crossing.
 
-Runtime note: the one-windup rule serializes worker strokes globally (simulation.js:406-413, 422). Multi-lane defense needs that gap to become per-lane, or waves will queue politely behind one another. Target shape: the single stagger gate becomes a map keyed by lane id, one gate per mouth, seam included. Acceptance test: two lanes in the stage-1 defense arena each hold an active windup at the same time, and neither suppresses the other. This is a needed simulation extension, flagged in the backlog items.
+Historical runtime note: the original one-windup rule serialized worker strokes globally (simulation.js:406-413, 422). Multi-lane defense needs that gap to become per-lane, or waves will queue politely behind one another. Target shape: the single stagger gate becomes a map keyed by lane id, one gate per mouth, seam included. Acceptance test: two lanes in the stage-1 defense arena each hold an active windup at the same time, and neither suppresses the other. The current lightning proof already permits multiple worker windups. Any lane-aware extension must be scoped against a selected generated encounter, as tracked by T06.
 
 ### The repositioning rule (answers DISCOVERY.md:55)
 
@@ -172,39 +180,21 @@ Each biome's boss beat is its consequence-scale beat: the fight changes the plac
 - Spillway Works, Cancrusher (taxonomy root per the working canon). Basin arena; phase transitions drain or flood channels, so lanes move rather than vanish. Every newly opened channel is cut at 2D minimum. Offcut-style debris rides the water line, reusing the announced-projectile grammar (simulation.js:513-539).
 - Foundry Crown, Counterweight Crown. The furnace hammer craters the arena and wrecked carriages become new bank angles, exactly the universe lane's row (worker-4-universe.md:63). Craters are bowls with a full-width rim route; the rim is the ring.
 
-Phase rule: each destruction transition is a scripted 10 to 15 s beat with no new windups, doubling as the boss fight's internal rest beat and as a floor on boss duration that a high-damage build cannot skip.
+Candidate phase rule: destruction transitions create readable rest beats. Their timing needs playtesting; forced duration floors are not accepted.
 
-## Pacing map, 38-minute reference run (proposal)
+## Pacing the four-world run
 
-Built on the meta lane's minute map (worker-3-meta.md:44-53). Tension is a 1 to 5 design intent, not a measurement.
+Target 60–75 minutes for a normal successful run, including exploration and choices. This replaces the historical 38-minute map and its forced 60-percent duration floor. Exact world/level counts within the four-world route and encounter allocations remain P12 work. Do not infer an equal time split or guarantee duration from a procedural seed.
 
-| Time | Beat | Tension | What holds the clock |
-| --- | --- | --- | --- |
-| 0:00-1:00 | Embark, class select, roll-in | 1 | Fixed |
-| 1:00-5:00 | Stage 1 explore pocket | 2 | Travel distance and collection weaving |
-| 5:00-8:00 | Combat pockets plus branch | 3 | Travel between pockets, branch commitment; combat floor is short |
-| 8:00-10:30 | Defense arena | 4 | Wave timers, never kill speed |
-| 10:30-12:30 | Stage 1 boss | 5 | Phase gates with destruction transitions |
-| 12:30-13:00 | Interstitial, no threats | 1 | Fixed rest |
-| 13:00-26:00 | Stage 2, five beats, +1 min explore, two-lane defense, chassis branch | 2 to 5 | Same holders, larger spine |
-| 26:00-38:00 | Stage 3: compressed explore, biggest defense, finale boss about 4 min | 3 to 5 | Defense timers plus boss phases |
+Use combat, exploration, reward decisions and quieter transitions to vary pressure. Successful fast clears may shorten encounters; the accepted earned-dominance direction should survive pacing design. Timed objectives must earn their place as gameplay rather than pad the clock. D21 retains the specific defense-completion decision.
 
-Rest beats are structural: the two interstitials, a 30 to 45 s post-defense sweep with spawns off, and the 10 s gate landing before each boss with the banner silent. Rule: no two tension-4-plus segments touch without at least 30 s at tension 2 or below.
+Measure full-run and per-level duration together with progression milestones, branch participation, deaths/revival, reward decisions and world transitions. Confirm a normal route reaches all four tree endpoints by the final boss without requiring every secret room. Collectible density should make navigation and combat decisions useful, not force collection loops to fill minutes. Numerical drop rates and density budgets remain tuning work.
 
-### Collectible density guidance, and the P02 answer
+## Historical worked example: Iron Orchard stage 1
 
-The current build spreads 9 floor scrap across the whole 38 x 64 arena (simulation.js:162-172) and a precise player cleared everything in about 37 s (BACKLOG.md:9), meaning combat carried both the clock and the collection. Stage design inverts that:
+This five-pocket, timer-held stage is preserved as a historical design study. It is not an accepted compact level or a template for each world. Its three-stage-era timing and first-proof counts are superseded; modules and encounter ideas can be adapted after D08. The old pacing map survives in the [meta paper](audit-2026-09-05/worker-3-meta.md).
 
-- Explore pockets: 12 to 18 floor scrap each, one piece per 4 to 6 s of intended rolling, laid in lines that draw the route.
-- Combat pockets: 4 or fewer on the floor; counters pay once per attack cycle (simulation.js:689-695).
-- Defense arenas: 6 to 9 scrap pre-seeded at ring anchors as deploy fuel (3 scrap per device under the combat lane's economy, worker-2-combat.md:71).
-- Boss arenas: start clean; scrap arrives only through counters.
-
-The P02 rule: combat cannot carry the clock. A precise player may collapse combat to its floor, and the stage must still hold at least 60 percent of its design duration through travel distance (spine length), branch commitment time, timer-held defense waves, and boss phase gates. For the 12-minute reference stage: about 5 min of traversal and collection, 2.5 min of timer-held defense, at least 2 min of phase-gated boss, 0.5 min interstitial. A 37-second-per-pocket clear still lands near 10 minutes, comfortably above the floor at about 83 percent. Kill speed compresses only combat's own slice, about a sixth of the stage.
-
-## Worked example: Iron Orchard, expedition stage 1 (proposal)
-
-Sized to demonstrated runtime capability: one 38 x 64 arena with 5 concurrent enemies, 4 live offcuts, a z-based ramp band, a greenhouse backdrop of 22 x 13 x 12 at (0, 2.5, -39), pickups, one companion, world-space banner and labels (simulation.js:1-6, 151-157, 527, 57-59; FIRST-BUILD-CONTRACT.md:36; main.js:575-618). The stage is five such pocket-scale spaces joined by mouths; no single pocket exceeds what src/orchard already renders. Total footprint about 200 x 90 u. North is -Z (forward at yaw 0, FIRST-BUILD-CONTRACT.md:6). On the pacing map, R is folded inside the defense beat's 8:00-10:30 row; it is not a sixth clock item, and the boss row starts when the player crosses the opened gate.
+Sized to the first proof's demonstrated runtime capability: one 38 x 64 arena with 5 concurrent enemies, 4 live offcuts, a z-based ramp band, a greenhouse backdrop of 22 x 13 x 12 at (0, 2.5, -39), pickups, one companion, world-space banner and labels (simulation.js:1-6, 151-157, 527, 57-59; FIRST-BUILD-CONTRACT.md:36; main.js:575-618). The stage is five such pocket-scale spaces joined by mouths; no single pocket exceeds what src/orchard already renders. Total footprint about 200 x 90 u. North is -Z (forward at yaw 0, FIRST-BUILD-CONTRACT.md:6). On the pacing map, R is folded inside the defense beat's 8:00-10:30 row; it is not a sixth clock item, and the boss row starts when the player crosses the opened gate.
 
 ```
    north = -Z          Legend  ==  mouth/gate    ~ ramp band (0 to 2.5)
@@ -245,25 +235,25 @@ Sized to demonstrated runtime capability: one 38 x 64 arena with 5 concurrent en
 
 ### Encounter table
 
-Attack grades are pending Roll-Through approval (worker-2-combat.md:47). All enemies except the Rowkeeper are implemented kinds (simulation.js:8-48).
+Attack grades are pending Roll-Through approval (worker-2-combat.md:47). All enemies except the Rowkeeper were implemented kinds in the first proof (simulation.js:8-48).
 
-| Space | Enemies and placement | Content and drops | Notes |
-| --- | --- | --- | --- |
-| A explore | 1 snipcart at mid-left, 1 spreadleg at mid-right; wake circles clear of the entry read | 14 floor scrap in two lines; first Scrapbook sightings | Teaching beat, mirrors the study's 90 s sequence (ORCHARD-ENCOUNTER-STUDY.md:19-27) |
-| B combat | 2 snipcarts on the flanks, 1 spreadleg center; separation keeps wakes off both branch mouths | Counter drops only; 4 floor scrap | One-windup rule makes this a routing puzzle, not a damage race |
-| B1 loop branch | 1 snipcart toll mid-loop; an offcut lane crosses the far leg (announced straight path, simulation.js:450-466) | Shear cache (ram damage economy, FIRST-BUILD-PLAYGUIDE.md:57), scrap line | Rejoins spine before D; never faster than the spine |
-| B2 cellar branch | Spreadleg pair guarding the chamber; return trip fights them awake | Companion chassis (assembly loot, DISCOVERY.md:29) | Richest reward, deepest commitment |
-| D defense | Waves below | 8 pre-seeded scrap at ring anchors | Timer-held 2.5 min |
-| R Rowkeeper | Miniboss, admission row below | Service Yoke on defeat (ENEMY-ROSTER.md:89); trellis pins latch at gate-row sockets in the gate terrain, locking rows open for the remainder of the expedition | Teaches grade escalation before the boss |
-| E boss | Grand Pruner, two arms plus spool | Pick-one-of-two reward (worker-3-meta.md:104) | Phases below |
+| Space            | Enemies and placement                                                                                         | Content and drops                                                                                                                                              | Notes                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| A explore        | 1 snipcart at mid-left, 1 spreadleg at mid-right; wake circles clear of the entry read                        | 14 floor scrap in two lines; first Scrapbook sightings                                                                                                         | Teaching beat, mirrors the study's 90 s sequence (ORCHARD-ENCOUNTER-STUDY.md:19-27) |
+| B combat         | 2 snipcarts on the flanks, 1 spreadleg center; separation keeps wakes off both branch mouths                  | Counter drops only; 4 floor scrap                                                                                                                              | One-windup rule makes this a routing puzzle, not a damage race                      |
+| B1 loop branch   | 1 snipcart toll mid-loop; an offcut lane crosses the far leg (announced straight path, simulation.js:450-466) | Shear cache (ram damage economy, FIRST-BUILD-PLAYGUIDE.md:57), scrap line                                                                                      | Rejoins spine before D; never faster than the spine                                 |
+| B2 cellar branch | Spreadleg pair guarding the chamber; return trip fights them awake                                            | Companion chassis (assembly loot, DISCOVERY.md:29)                                                                                                             | Richest reward, deepest commitment                                                  |
+| D defense        | Waves below                                                                                                   | 8 pre-seeded scrap at ring anchors                                                                                                                             | Timer-held 2.5 min                                                                  |
+| R Rowkeeper      | Miniboss, admission row below                                                                                 | Service Yoke on defeat (ENEMY-ROSTER.md:89); trellis pins latch at gate-row sockets in the gate terrain, locking rows open for the remainder of the expedition | Teaches grade escalation before the boss                                            |
+| E boss           | Grand Pruner, two arms plus spool                                                                             | Pick-one-of-two reward (worker-3-meta.md:104)                                                                                                                  | Phases below                                                                        |
 
 ### Defense wave composition (stage 1, one lane plus seam, 2.5 min timer)
 
-| Window | M1 lane (10 u) | M2 seam (6.6 u) | Pressure role expressed |
-| --- | --- | --- | --- |
-| 0:00-0:50 | 2 snipcarts, staggered | 1 spreadleg | Baseline lane pressure |
-| 0:50-1:40 | Shield-role spreadleg fronting 1 snipcart | Saboteur-role snipcart paths to the nearest deployed device, visible dismantle over 6 s | Banner names the mouth |
-| 1:40-2:30 | Offcut tosser beyond the mouth opens a rolling lane down M1 (reuses the implemented offcut hazard, simulation.js:526-539) | Flanker spreadleg crosses the seam after the audible cue | Peak read load, still one read one burst |
+| Window    | M1 lane (10 u)                                                                                                            | M2 seam (6.6 u)                                                                         | Pressure role expressed                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 0:00-0:50 | 2 snipcarts, staggered                                                                                                    | 1 spreadleg                                                                             | Baseline lane pressure                   |
+| 0:50-1:40 | Shield-role spreadleg fronting 1 snipcart                                                                                 | Saboteur-role snipcart paths to the nearest deployed device, visible dismantle over 6 s | Banner names the mouth                   |
+| 1:40-2:30 | Offcut tosser beyond the mouth opens a rolling lane down M1 (reuses the implemented offcut hazard, simulation.js:526-539) | Flanker spreadleg crosses the seam after the audible cue                                | Peak read load, still one read one burst |
 
 Runtime caveat: role behaviors (saboteur, shield, flanker) are unimplemented concepts (DISCOVERY.md:129-133), and wave 3 threatens as drawn only after the per-lane windup extension in the defense section lands.
 
@@ -277,9 +267,9 @@ Per the admission grammar (worker-2-combat.md:121-135): telegraph, the spreading
 
 Terrace ring 56 x 48 around the greenhouse hub (backdrop proven at 22 x 13 x 12, FIRST-BUILD-CONTRACT.md:36). Phase 1: one arm, implemented behavior, sweep reach 6.51 and the 38 u toss line contained inside the ring (simulation.js:35-47, 513-524). Phase 2: second arm activates on the far quadrant; the binding spool band visibly selects the active arm (ORCHARD-ENCOUNTER-STUDY.md:43); the trellis rows the player opened at R determine which service alcoves are usable cover. Phase 3: sufficiently countered structures fold into a bank ramp, a chord across the ring interior that grants the counter route to the spool latch (ORCHARD-ENCOUNTER-STUDY.md:74-79). Each phase transition is a 10 to 15 s no-windup destruction beat. The ring never narrows below 6.6 u; offcut lanes always have a lateral exit within the burst-plus-roll reach of about 8 u per second of warning.
 
-## Playtest telemetry for P01 (proposal)
+## Historical telemetry proposal for the worked example
 
-What to record in the human playtest (BACKLOG.md:7) to validate this grammar. The sim already exposes stats and a drainable event stream (simulation.js:179-186, 843-847); items 2, 3, and 7 need small event additions.
+The following was proposed for the older worked example. P01 is complete; P08 owns future level telemetry, and P10 remains the active lightning playtest. The sim already exposes stats and a drainable event stream (simulation.js:179-186, 843-847); items 2, 3, and 7 need small event additions.
 
 1. Per-beat timestamps: entry and exit times for each pocket, against the pacing map.
 2. Time-to-clear per combat pocket, distribution against the 37 s precision floor (BACKLOG.md:9).
@@ -296,5 +286,7 @@ What to record in the human playtest (BACKLOG.md:7) to validate this grammar. Th
 Proposed pass criteria to pre-register, not agreed acceptance criteria: no more than 1 in 10 hits arrives without banner or screen coverage 3 s prior; a mid-skill stage 1 lands between 10 and 14 min; a precise player cannot land under 8; branch entry rate is neither near 0 nor near 1.
 
 ## Evidence limits
+
+The remaining paragraph preserves the original study's evidence statement. Its references to a three-stage skeleton and pending mass/deflect model are historical, not current direction. The accepted notebook additions above are design decisions, not playable level evidence.
 
 All constants cited to src/orchard/simulation.js, scene.js, main.js, and the docs above were read in this session. Every size, count, timer, and pattern in the grammar, the branch and defense and boss sections, the pacing map, the worked example, and the telemetry thresholds is a design proposal; none has fixture, playtest, or performance evidence. The Roll-Through deflect grades, the three-stage five-beat skeleton, the biome ladder, the Requisition premise, and the pressure roles are working canon from the 5 September audit, all pending Andrew's approval; the Rowkeeper is an existing taxonomy miniboss (ENEMY-TAXONOMY.md:136, 151) with no implementation. The 3.2 s label-horizon warning and the 8.6 s arena crossing are arithmetic on cited constants, not measurements of play. Two runtime gaps are load-bearing and observed, not designed around silently. First, groundHeight ignores x and samples z only (simulation.js:57-59), so multi-pocket terrain needs a terrain-field extension. Target signature: keep the existing groundHeight(x, z) call but resolve it per pocket, through a local height sample in each pocket record or a heightmap keyed by pocket_id. Acceptance test: each of stage 1's five pockets reports correct height at its own ramp band, with no cross-pocket bleed. Second, the global one-windup stagger (simulation.js:406-413) must become per-lane before any multi-lane defense wave can pressure as drawn; the target shape and acceptance test are in the defense section. Inference, uncited: the estimate that the chase camera reads about 30 to 40 u of ground ahead is judged from fov 65 and the 9 to 10.2 u chase distance (scene.js:87, 382), not from a captured frame.
