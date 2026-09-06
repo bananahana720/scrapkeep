@@ -319,6 +319,41 @@ const pinnedBinaryHash =
   "8d106cbe6144c2dc7e881d61d2429c1a8a76e6b22ef48bd5e48dcf934953f71e";
 const templateArchiveHash =
   "ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079";
+const pinnedTemplateHashes = {
+  "linux_release.x86_64":
+    "d9f79ab89b5ae369aeed11c6052d402e8218cd503bf85b4a235f9c30c46a7c63",
+  "windows_release_x86_64.exe":
+    "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+  "version.txt":
+    "38885c88f75abbc797a1db7559719800279a00cfb9fa8b2e2868a7f6f84bad2e",
+};
+
+export function templateCheck(name, artifact) {
+  const expectedSha256 = pinnedTemplateHashes[name];
+  const matchesPin =
+    artifact?.size > 0 &&
+    expectedSha256 !== undefined &&
+    artifact.sha256 === expectedSha256;
+  return {
+    id: "template-" + name,
+    status: matchesPin ? "pass" : "fail",
+    expectedSha256,
+    actualSha256: artifact?.sha256 ?? null,
+    detail: matchesPin
+      ? "consumed template SHA256 matches the recorded pin"
+      : "consumed template missing or SHA256 differs from the recorded pin",
+  };
+}
+
+export function godotEnvironment(runDirectory, inherited = process.env) {
+  return {
+    ...inherited,
+    XDG_DATA_HOME: path.join(runDirectory, "user-data"),
+    XDG_CACHE_HOME: path.join(runDirectory, "cache"),
+    XDG_CONFIG_HOME: path.join(runDirectory, "config"),
+  };
+}
+
 const exportLimits =
   "Operational synthetic proof only. Linux editor and export execute headlessly; Windows export is file evidence only. Offline checks marked skip supply no offline execution evidence. No visible window, Exit input, renderer selection, hardware support, power-loss durability, performance or gameplay qualification is implied. Proof scripts remain in these internal exports; Q-E13 and TH-26 govern later removal. No binaries are distributed.";
 
@@ -530,20 +565,12 @@ async function exportSmoke(binary, runDirectory, checks, artifacts, toolchain) {
     process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
   const templates = path.join(dataHome, "godot/export_templates/4.7.2.stable");
   toolchain.templates = [];
-  for (const name of [
-    "linux_release.x86_64",
-    "windows_release_x86_64.exe",
-    "version.txt",
-  ]) {
+  for (const name of Object.keys(pinnedTemplateHashes)) {
     const artifact = await artifactOf(path.join(templates, name));
     toolchain.templates.push(
       artifact || { path: path.join(templates, name), missing: true },
     );
-    checks.push({
-      id: "template-" + name,
-      status: artifact?.size > 0 ? "pass" : "fail",
-      detail: "installed template identity recorded",
-    });
+    checks.push(templateCheck(name, artifact));
   }
   if (process.env.GODOT_TEMPLATES_ARCHIVE) {
     toolchain.templatesArchive = {
@@ -560,6 +587,7 @@ async function exportSmoke(binary, runDirectory, checks, artifacts, toolchain) {
       detail: "template archive SHA512 matches recorded release",
     });
   }
+  if (checks.some((check) => check.status === "fail")) return;
   for (const preset of [
     { name: "Linux x64", platform: "linux", filename: "scrapkeep.x86_64" },
     { name: "Windows x64", platform: "windows", filename: "scrapkeep.exe" },
@@ -639,11 +667,7 @@ async function main() {
     path.join(path.dirname(reportFile), "run-"),
   );
   projectDirectory = path.join(runDirectory, "native");
-  runtimeEnvironment = {
-    ...process.env,
-    XDG_DATA_HOME: path.join(runDirectory, "user-data"),
-    XDG_CACHE_HOME: path.join(runDirectory, "cache"),
-  };
+  runtimeEnvironment = godotEnvironment(runDirectory);
   if (exporting) {
     const templateSource = path.join(
       process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share"),
@@ -704,6 +728,11 @@ async function main() {
     sourceStatus,
     mode: exporting ? "export" : "proofs",
     runDirectory,
+    runtimePaths: {
+      data: runtimeEnvironment.XDG_DATA_HOME,
+      cache: runtimeEnvironment.XDG_CACHE_HOME,
+      config: runtimeEnvironment.XDG_CONFIG_HOME,
+    },
     artifacts,
     toolchain,
     generatedAt: new Date().toISOString(),
