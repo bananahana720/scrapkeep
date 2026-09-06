@@ -1,6 +1,6 @@
 # Increment 01: lightning caster playtest
 
-Status: approved by Andrew for implementation in this conversation on 5 September 2026, Phoenix time. The explicit request was "PLEASE IMPLEMENT THIS PLAN" followed by the complete agreed plan. Implementation and verification are in progress. No remote publication is authorized.
+Status: approved by Andrew for implementation in this conversation on 5 September 2026, Phoenix time. The explicit request was "PLEASE IMPLEMENT THIS PLAN" followed by the complete agreed plan. Implementation and technical verification are complete; successful physical mouse capture and Andrew's human playtest remain open in the [verification record](../LIGHTNING-VERIFICATION.md). No remote publication is authorized.
 
 ## Goal
 
@@ -69,9 +69,9 @@ The deterministic simulation remains DOM/Three-free, 120 Hz, Y-up. Models and re
 - update(dt, input): input has normalized world x/z, aim {origin:{x,y,z}, direction:{x,y,z}}, held fire/strike/conductor/dash/jump/ultimate/brake, and cancel. Action edges and release casts belong to the simulation. Retain aimYaw as a deterministic fallback for tests, not as the production aiming interface.
 - Lifecycle methods reset/start/pause/resume/snapshot/drainEvents remain. mode adds intermission. Pausing remembers whether to resume playing or intermission. cancelActions() clears pending actions and targeting; callers also clear held UI state.
 - previewAttack(kind, aim) is read-only and returns an attack descriptor. kind is bolt, strike or conductor. Both automatic targeting updates and actual casts use this method. game.targeting exposes the current descriptor; game.preparedAbility is null, strike or conductor.
-- Descriptor shape: {kind, valid, origin:{x,y,z}, point:{x,y,z}, segments:[{from:{x,y,z},to:{x,y,z}}], radius, targetIds:[], blocked}. Camera aim selects a world point; weapon-origin geometry is authoritative and cannot shoot through intervening terrain. Ground casts require valid in-bounds terrain and weapon line of sight. Non-gameplay scenery outside bounds is not cover.
+- Descriptor shape: {kind, valid, origin:{x,y,z}, point:{x,y,z}, segments:[{from:{x,y,z},to:{x,y,z}}], radius, targetIds:[], blocked}. Conductor connections additionally expose corridors [{from,to,radius,yMin,yMax}]; placement previews, persistent game.conductorLinks, pulses and Echo share their horizontal capsule and absolute vertical bounds. Camera aim selects a world point; weapon-origin geometry is authoritative and cannot shoot through intervening terrain. Ground casts require valid in-bounds terrain and weapon line of sight. Non-gameplay scenery outside bounds is not cover.
 - player retains x/y/z/vx/vz/radius/yaw/hp/maxHp/scrap/shear/brace/dashCooldown/dashTime/hurtTime/shotCooldown. Add vy, grounded, airJumps, landingImpact, strikeCooldown, conductorCooldown, ultimateCharge (0..100), ultimateTime. Keep charge at zero until old presentation callers migrate; then it may be removed.
-- wave: {index:1..3,total:3,remaining,queued,active,cleared,rewardChosen}. rewards is an array of {id,name,description}. chooseReward(id) returns boolean and applies once. continueWave() returns boolean and requires chosen reward and intermission.
+- wave: {index:1..3,total:3,remaining,queued,active,cleared,rewardChosen,entries:[{x,z,kinds,time}]}. Announced entries drive projected and directional arrival cues. rewards is an array of {id,name,description}. chooseReward(id) returns boolean and applies once. continueWave() returns boolean and requires chosen reward and intermission.
 - inventory: {acquired:[],equipped:[]}, IDs ground-loop and echo. setItemEnabled(id,enabled) returns boolean; only intermission permits changes. setCompanionEnabled(enabled) follows the same rule. companion retains existing state plus enabled. conductors: [{id,x,y,z,cooldown,flash}]. Two maximum; placing a third replaces the oldest. No scrap cost; clear conductors between waves.
 - Enemy records retain their old pose/combat fields and add bodyHeight. Existing hazards retain segments/previewSegments and add yMin/yMax (absolute world limits), plus jumpable. These ranges must follow visible tool heights, with renderer tests protecting their agreement. Offcuts also use height-aware collision.
 - Event type attack carries {attack:descriptor,source:player|conductor|companion,echo:boolean,amount}. Old hit/hurt/ram/collect/phase/companion/land/bounce/wave/spawn/win/lose events may carry text and coordinates for feedback. Echo captures the original eligible action and cannot enqueue another echo. snapshot() includes new state and remains detached/JSON-friendly.
@@ -95,5 +95,7 @@ The deterministic simulation remains DOM/Three-free, 120 Hz, Y-up. Models and re
 
 - [x] Frame: approved scope, source inspection, baseline verification and ownership contract.
 - [x] Fan out: three isolated Astra writers.
-- [ ] Aggregate: serial admission, integrated verification, browser exercise and independent review.
-- [ ] Report: evidence, remaining human playtest and one launch link.
+- [x] Aggregate: serial admission, integrated verification, browser exercise and independent review.
+- [x] Report: [executed evidence](../LIGHTNING-VERIFICATION.md), [play guide](../LIGHTNING-PLAYGUIDE.md), remaining human playtest and launch link.
+
+Final source head: `49175ac`; the named verification artifact records source hashes. Technical checks passed with the documented physical-capture limit.

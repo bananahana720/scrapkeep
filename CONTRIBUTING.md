@@ -1,6 +1,6 @@
 # Developing Scrapkeep
 
-Start with the [project desk](docs/project/README.md). The code map and decisions are in the [ADR index](docs/adr/README.md); the [orchard contract](docs/FIRST-BUILD-CONTRACT.md) owns detailed state and geometry conventions.
+Start with the [project desk](docs/project/README.md). The code map and decisions are in the [ADR index](docs/adr/README.md); the [lightning increment contract](docs/project/INCREMENT-01-lightning-playtest.md) owns current state, geometry and input conventions. The [first-proof contract](docs/FIRST-BUILD-CONTRACT.md) is historical.
 
 ## Install and run
 
@@ -42,7 +42,7 @@ This runs project checks, all Node tests, model invariants, the asserted baselin
 Set `CHROMIUM_PATH` for a non-default browser path and `GAME_URL` for the baseline replay's Vite origin. In Codex, follow the available browser tool's control restrictions. The supported interactive paths are:
 
 - Baseline development `/?qa&quality=low`: **Run regression replay**. Baseline QA is excluded from production.
-- Orchard development or production `/orchard.html?qa`: **Run DOM input replay**, **Run state fixtures**, and **Run input expedition**. Record them separately. Fixture screenshots stage state; the input expedition uses ordinary handlers with scripted precision.
+- Orchard development or production `/orchard.html?qa`: **Run DOM input replay**, **Run state fixtures**, and **Run input expedition**. Record them separately. Fixture screenshots stage state; the input expedition uses ordinary handlers with scripted precision. **Run 60-second bounded stress** stages durable enemies and the full build, then requires normal simulation, rendering and attack activity for sixty seconds. Its JSON records graphics identity, frame samples, simulation advancement and renderer counters. Keep the tab visible during replays.
 - A normal URL: inspect start, gameplay, pause/help, results and restart after presentation changes. Test actual hardware before claiming controller or mobile support.
 
 No browser session, human enjoyment, or performance benchmark is implied by `npm run verify`.

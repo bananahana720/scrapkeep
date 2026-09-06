@@ -1,6 +1,6 @@
 # Scrapkeep design desk
 
-5 September 2026. The user has authorized the first playable orchard proof and its session goal. The orchard route is implemented and verified as a playable proof. The original yard remains the baseline demo at `/`. Earlier research and art retain their original evidence limits.
+5 September 2026. Andrew approved the lightning caster increment after playing the first orchard proof. The new controls, waves, equipment and dashboard are implemented; technical checks passed; Andrew's next playtest is open. The original yard remains the baseline demo at `/`. Earlier research and art retain their original evidence limits.
 
 **Working identity:** roll a cute animal's accumulated scrap ball through a threatened world; outplay its machines, make their parts useful, and turn familiar physical actions into increasingly enormous consequences.
 
@@ -10,8 +10,8 @@ The [project desk](project/README.md) owns current status, requirements and the 
 
 | To review | Open | Status |
 | --- | --- | --- |
-| The current orchard build | [Play guide](FIRST-BUILD-PLAYGUIDE.md) and [verification record](FIRST-BUILD-VERIFICATION.md) | Playable; production build, input expedition and visual checks passed |
-| Build scope, ownership, and admission | [Integration contract](FIRST-BUILD-CONTRACT.md) and [team record](FIRST-BUILD-SWARM.md) | Worker lanes integrated; independent review fixes verified |
+| The current orchard build | [Lightning play guide](LIGHTNING-PLAYGUIDE.md) and [approved increment](project/INCREMENT-01-lightning-playtest.md) | Implemented; technical checks passed, human playtest next |
+| Historical first proof | [Integration contract](FIRST-BUILD-CONTRACT.md), [verification](FIRST-BUILD-VERIFICATION.md), and [team record](FIRST-BUILD-SWARM.md) | Preserved dated evidence |
 | The latest enemy family art and combat storyboard | [Orchard concept study](CONCEPT-STUDY-03.md) | Visual proposals with inspection notes |
 | The research brief behind the current encounter | [Orchard encounter study](ORCHARD-ENCOUNTER-STUDY.md) | Historical paper sequence and pose brief; the playable implementation is documented separately |
 | Boss-derived enemy hierarchies | [Enemy taxonomy](ENEMY-TAXONOMY.md) | Three researched families; expanded roster is a comparison palette |
@@ -26,7 +26,7 @@ The [project desk](project/README.md) owns current status, requirements and the 
 
 | To review | Open | Status |
 | --- | --- | --- |
-| Every open decision from the audit and research, tiered, with the first-session agenda | [Decision register](project/DECISION-REGISTER.md) | 48 entries; five Tier A entries gate the next increment |
+| Every open decision from the audit and research, tiered, with the first-session agenda | [Decision register](project/DECISION-REGISTER.md) | Current rulings and remaining decisions; approved lightning scope is recorded separately |
 | High-impact areas, playfeel probe findings, and the proposed build sequence | [Design audit](DESIGN-AUDIT.md) | Synthesis of the audit swarm; recommendations pending approval |
 | Character canon: pilots, Brindle and overseers, companions, Scrapbook voice | [Character bible](CHARACTER-BIBLE.md) | Proposals staged, pending Andrew's approval |
 | Full campaign enemy roster, all seven rungs, data-ready admission rows | [Campaign enemy roster](ENEMY-ROSTER.md) | Proposal, pending approval of the audit canon it extends |
@@ -58,4 +58,4 @@ Workers own bounded assignments; the coordinator integrates changes and records 
 
 ## Current production checkpoint
 
-The authorized orchard proof is ready for Andrew's playtest. The next design question is whether the rolling and recovery counters feel good enough to support the class/item layer. The first build uses a close chase camera, accelerated rolling, braking, a burst, spatial evasion, and bounded growth. The [play guide](FIRST-BUILD-PLAYGUIDE.md) describes those implemented choices. Whether players understand the cues and enjoy the handling remains a playtesting question. A full stage, production engine migration, and complete boss roster require later scope decisions.
+The current increment addresses Andrew's first playtest: mouse-look shooting, double jump and rebounds, denser waves, accurate previews, and a readable combat HUD with a paused dashboard. The [lightning play guide](LIGHTNING-PLAYGUIDE.md) describes the controls and reward choices. Andrew's next playtest must establish handling, density and readability. A full stage, production engine migration, and complete boss roster require later scope decisions.

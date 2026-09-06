@@ -1,6 +1,6 @@
 # 0005: Caster input and solo dashboard lifecycle
 
-Date: 5 September 2026. Status: accepted for increment 01; implementation verification pending.
+Date: 5 September 2026. Status: accepted and implemented for increment 01. See [technical evidence and physical-capture limits](../LIGHTNING-VERIFICATION.md).
 
 ## Context
 

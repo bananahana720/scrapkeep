@@ -1,13 +1,13 @@
 # Scrapkeep
 
-Scrapkeep now has two playable entries. The Iron Orchard is the authorized first proof of the expanded rolling-combat direction. The original yard remains available as the baseline demo.
+Scrapkeep has two playable entries. The Iron Orchard is the lightning caster playtest: a rolling hero, three waves, and equipment that changes how attacks combine. The original yard remains available as the baseline demo.
 
 | Entry | Scope | Status |
 | --- | --- | --- |
-| `/orchard.html` | Close third-person rolling, aimed charge-release pulses, committed machine attacks, earned mechanisms, and one optional companion | Playable; build and integration checks passed |
+| `/orchard.html` | Mouse-look shooting, double jump and rebounds, lightning abilities, three waves, rewards, and a paused equipment dashboard | Playable; technical checks passed, human playtest next |
 | `/` | Original 15-wave tower-defense expedition, hero classes, collection, and optional figurine signup | Preserved baseline |
 
-The user approved the orchard build and its session goal on 5 September 2026. That authorization covers the bounded first proof, not the complete expanded game. The [play guide](docs/FIRST-BUILD-PLAYGUIDE.md) describes current orchard controls and mechanics. The [first-build verification record](docs/FIRST-BUILD-VERIFICATION.md) owns acceptance results and remaining limits.
+Andrew approved [Increment 01](docs/project/INCREMENT-01-lightning-playtest.md) on 5 September 2026. Its [play guide](docs/LIGHTNING-PLAYGUIDE.md) describes current orchard controls and mechanics. The [first-build verification record](docs/FIRST-BUILD-VERIFICATION.md) preserves historical evidence from the earlier proof.
 
 The [design desk](docs/DESIGN-INDEX.md) connects the current build to accepted direction, research, concept art, and the broader proposals.
 
@@ -31,15 +31,15 @@ Open [the orchard](http://127.0.0.1:8787/orchard.html) or [the original yard](ht
 
 Set your brand, store URL, privacy URL, and storage location through `.env.example`. To load a saved `.env`, run `node --env-file=.env server/index.js`. Contact capture writes to private local storage. It does not send email or SMS or sync a CRM. See [the capture setup](docs/LEAD-CAPTURE.md).
 
-## Iron Orchard first playable
+## Iron Orchard lightning playtest
 
-WASD rolls relative to the camera. Mouse movement or the arrow keys changes aim. Hold F or the left mouse button to charge a pulse, then release to fire. Space bursts, Shift brakes, and E deploys Shear Buddy after a Shear Linkage is earned. Escape or P pauses; R starts a fresh run.
+Mouse movement controls the view; WASD rolls relative to it. Hold left mouse for repeat lightning bolts and right mouse for focused aim. Hold and release Q for a ground strike or E for a conductor. Space jumps, including one additional air jump; Shift bursts and Ctrl brakes. R activates a charged ultimate. I opens the dashboard; Escape cancels targeting or pauses. Restart is in the menu.
 
-Snipcart closes inward. Spreadleg pushes its feet outward. The Grand Pruner arm uses a close sweep or a rolling offcut at distance. Each attack announces and locks its path. Ordinary attacks always damage live machines, while an exposed housing rewards a recovery counter. Collected Shear and Brace parts alter the ball's appearance and behavior.
+Snipcart closes inward. Spreadleg pushes its feet outward. The Pruner arm uses a tall close sweep or a low rolling offcut at distance. Attacks commit their geometry, including height. Descending onto smaller enemies rebounds; compatible lightning chains and Echo can amplify body impacts, conductors and the companion.
 
-The encounter ends when the single Pruner arm is dismantled. Workers and companion deployment are optional. Classes, a full expedition, co-op, permanent progression, and a complete multi-arm boss remain later work.
+Clear three waves, choosing a reward and reconfiguring between fights. Final victory requires defeating all remaining workers and the Pruner. Additional classes, a full expedition, co-op, permanent progression, and a complete multi-arm boss remain later work.
 
-See the [full controls and mechanics](docs/FIRST-BUILD-PLAYGUIDE.md), [integration contract](docs/FIRST-BUILD-CONTRACT.md), and [build-team record](docs/FIRST-BUILD-SWARM.md). Build and integration verification passed. Difficulty and human handling remain playtest questions; the verification record distinguishes ordinary input replays from staged fixtures.
+See the [full controls and mechanics](docs/LIGHTNING-PLAYGUIDE.md) and [integration contract](docs/project/INCREMENT-01-lightning-playtest.md). Difficulty, handling and readability remain Andrew's playtest questions. Automated replays and staged fixtures provide separate evidence.
 
 ## Original yard
 

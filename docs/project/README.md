@@ -1,6 +1,6 @@
 # Project desk
 
-Updated 5 September 2026. **Increment 01, the lightning caster playtest, is approved and in implementation.** Andrew's first orchard playtest requested automatic mouse look, accurate spell previews, jumping and rebounds, dense waves, and a readable interface. The [approved increment](INCREMENT-01-lightning-playtest.md) owns scope, lane boundaries and the current integration contract. The original yard remains a separate playable baseline. Verification of the new increment is pending.
+Updated 5 September 2026. **Increment 01, the lightning caster playtest, is implemented and ready for Andrew's next playtest.** Andrew's first orchard playtest requested automatic mouse look, accurate spell previews, jumping and rebounds, dense waves, and a readable interface. The [approved increment](INCREMENT-01-lightning-playtest.md) owns scope, lane boundaries and the current integration contract. The original yard remains a separate playable baseline. The [verification record](../LIGHTNING-VERIFICATION.md) records passed checks and the remaining physical capture and human playtest limits.
 
 ## Start the next session
 
@@ -24,7 +24,9 @@ The immediate product question is whether the new caster controls, double jump, 
 | Open decisions awaiting Andrew, tiered and ordered | [Decision register](DECISION-REGISTER.md) |
 | How a planning session runs, from decisions to swarm | [Planning protocol](PLANNING.md) |
 | Accepted publisher preferences and unresolved choices | [Discovery](../DISCOVERY.md) |
-| Detailed first-proof module and geometry contract | [Build contract](../FIRST-BUILD-CONTRACT.md) |
+| Current module, geometry and input contract | [Lightning increment](INCREMENT-01-lightning-playtest.md) |
+| Current controls and executed evidence | [Play guide](../LIGHTNING-PLAYGUIDE.md), [verification](../LIGHTNING-VERIFICATION.md) |
+| Historical first-proof module and geometry contract | [Build contract](../FIRST-BUILD-CONTRACT.md) |
 | Durable implementation decisions | [ADRs](../adr/README.md) |
 | Executed first-build evidence and limits | [Verification](../FIRST-BUILD-VERIFICATION.md) |
 | Art, competition and enemy-family research navigation | [Design desk](../DESIGN-INDEX.md) |
