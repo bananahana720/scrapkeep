@@ -1,6 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import {
+  access,
+  cp,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +20,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
   "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 const pinnedVersion = "4.7.2.stable.official.ed1daf0bf";
-const projectDirectory = "native";
+const sourceDirectory = "native";
+let projectDirectory = sourceDirectory;
+let runtimeEnvironment = process.env;
 const positiveScript = "res://tests/smoke_boot.gd";
 const negativeScript = "res://tests/fixtures/untyped_negative.gd";
 const marker = /^SCRAPKEEP_SMOKE (\S+) typed$/m;
@@ -17,7 +30,7 @@ const negativeMarker = "SCRAPKEEP_SMOKE_NEGATIVE";
 const networkingClasses =
   /HTTPRequest|ENet|WebSocket|MultiplayerAPI|PacketPeer|StreamPeer|HTTPClient|UDPServer|TCPServer/;
 const reportFile = path.join(root, "artifacts/local/native-smoke/report.json");
-const proofsDirectory = path.join(projectDirectory, "proofs");
+const proofsDirectory = path.join(sourceDirectory, "proofs");
 const proofRunner = "proof_runner.gd";
 const faultArgument = "--inject-fault";
 const failLine = /^\S+ \S+ FAIL /m;
@@ -25,15 +38,21 @@ const proofLine = /^\S+ (\S+ (PASS|FAIL) |SUMMARY )/;
 const limits =
   "Proves a headless boot of the pinned editor binary on one Linux host only, plus each headless proof under native/proofs against its own ADR rule. Not qualification evidence for any target, export, renderer, input device or feel (adr/TADR-001-engine-language-platforms.md lines 35 and 39).";
 
-function run(command, args) {
+export function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
     encoding: "utf8",
+    env: runtimeEnvironment,
     timeout: 60_000,
+    killSignal: "SIGKILL",
+    maxBuffer: 8 * 1024 * 1024,
+    ...options,
   });
-  if (result.error) throw result.error;
   return {
-    command: [command, ...args].join(" "),
+    command: [command, ...args],
+    error: result.error
+      ? { code: result.error.code, message: result.error.message }
+      : null,
     exitCode: result.status,
     signal: result.signal,
     stdout: result.stdout ?? "",
@@ -46,12 +65,20 @@ function excerpt(text) {
 }
 
 function outcome(id, execution, failures, detail) {
+  failures = [
+    ...executionFailures(execution, {
+      expectedCode: null,
+      allowScriptErrors: true,
+    }),
+    ...failures,
+  ];
   return {
     id,
     status: failures.length === 0 ? "pass" : "fail",
     command: execution.command,
     exitCode: execution.exitCode,
     signal: execution.signal,
+    error: execution.error,
     stdoutExcerpt: excerpt(execution.stdout),
     stderrExcerpt: excerpt(execution.stderr),
     detail: failures.length === 0 ? detail : failures.join("; "),
@@ -63,7 +90,7 @@ function bootArguments(script) {
 }
 
 function positiveFailures(execution, engineVersion) {
-  const failures = [];
+  const failures = executionFailures(execution, { expectedCode: null });
   if (execution.exitCode !== 0)
     failures.push("expected exit 0, got " + execution.exitCode);
   const found = marker.exec(execution.stdout);
@@ -89,6 +116,8 @@ function positiveBoot(binary, engineVersion) {
 function negativeBoot(binary) {
   const execution = run(binary, bootArguments(negativeScript));
   const failures = [];
+  if (execution.exitCode !== 1)
+    failures.push("expected exit 1, got " + execution.exitCode);
   if (execution.exitCode === 0) failures.push("untyped fixture exited 0");
   if (execution.stdout.includes(negativeMarker))
     failures.push("untyped fixture reached _init");
@@ -211,11 +240,13 @@ function proofOutcome(id, execution, failures, detail) {
 
 function proofRun(binary, proof) {
   const execution = run(binary, bootArguments(proof.script));
-  const failures = [];
+  const failures = executionFailures(execution, { expectedCode: null });
   if (execution.exitCode !== 0)
     failures.push("expected exit 0, got " + execution.exitCode);
   const fail = failLine.exec(execution.stdout);
   if (fail) failures.push("FAIL line present: " + fail[0].trim());
+  if (!/^\S+ \S+ PASS /m.test(execution.stdout))
+    failures.push("proof assertion marker absent");
   return proofOutcome(
     "proof-" + proof.name,
     execution,
@@ -230,7 +261,7 @@ function proofFaultRun(binary, proof) {
     "--",
     faultArgument,
   ]);
-  const failures = [];
+  const failures = executionFailures(execution, { expectedCode: null });
   if (execution.exitCode !== 1)
     failures.push(
       "expected exit 1 under " + faultArgument + ", got " + execution.exitCode,
@@ -284,10 +315,355 @@ function announce(check) {
   );
 }
 
+const pinnedBinaryHash =
+  "8d106cbe6144c2dc7e881d61d2429c1a8a76e6b22ef48bd5e48dcf934953f71e";
+const templateArchiveHash =
+  "ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079";
+const exportLimits =
+  "Operational synthetic proof only. Linux editor and export execute headlessly; Windows export is file evidence only. Offline checks marked skip supply no offline execution evidence. No visible window, Exit input, renderer selection, hardware support, power-loss durability, performance or gameplay qualification is implied. Proof scripts remain in these internal exports; Q-E13 and TH-26 govern later removal. No binaries are distributed.";
+
+export function executionFailures(
+  execution,
+  {
+    expectedCode = 0,
+    requiredMarker,
+    allowScriptErrors = false,
+    rejectErrors = false,
+  } = {},
+) {
+  const failures = [];
+  if (execution.error)
+    failures.push(
+      "subprocess error: " +
+        execution.error.code +
+        " " +
+        execution.error.message,
+    );
+  if (execution.signal) failures.push("terminated by " + execution.signal);
+  if (execution.exitCode === null)
+    failures.push("process did not exit normally");
+  if (expectedCode !== null && execution.exitCode !== expectedCode)
+    failures.push(
+      "expected exit " + expectedCode + ", got " + execution.exitCode,
+    );
+  const output = execution.stdout + "\n" + execution.stderr;
+  if (!allowScriptErrors && /SCRIPT ERROR:|Parse Error:/.test(output))
+    failures.push("engine script error");
+  if (rejectErrors && /^ERROR:/m.test(output))
+    failures.push("engine export/import error");
+  if (requiredMarker && !requiredMarker.test(execution.stdout))
+    failures.push("required marker absent: " + requiredMarker.source);
+  return failures;
+}
+
+export function exportFailures(execution, artifact) {
+  const failures = executionFailures(execution, { rejectErrors: true });
+  if (
+    !artifact ||
+    artifact.size <= 0 ||
+    !/^[a-f0-9]{64}$/.test(artifact.sha256)
+  )
+    failures.push("export file missing, empty or unhashed");
+  return failures;
+}
+
+async function digest(file, algorithm = "sha256") {
+  const hash = createHash(algorithm);
+  for await (const chunk of createReadStream(file)) hash.update(chunk);
+  return hash.digest("hex");
+}
+
+async function artifactOf(file) {
+  try {
+    const info = await stat(file);
+    if (!info.isFile()) return null;
+    return { path: file, size: info.size, sha256: await digest(file) };
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function integratedRun(
+  id,
+  binary,
+  args,
+  mode,
+  dataDirectory,
+  fault = false,
+  offline = false,
+) {
+  const userArgs = [
+    "--",
+    "--" + mode,
+    "--data-dir",
+    dataDirectory,
+    "--auto-exit",
+    ...(fault ? [faultArgument] : []),
+  ];
+  const execution = offline
+    ? run("unshare", ["-rn", binary, ...args, ...userArgs])
+    : run(binary, [...args, ...userArgs]);
+  const requiredMarker = new RegExp(
+    "^SCRAPKEEP_INTEGRATION " +
+      mode.toUpperCase() +
+      " " +
+      (fault ? "FAIL" : "PASS") +
+      "$",
+    "m",
+  );
+  const failures = executionFailures(execution, {
+    expectedCode: fault ? 1 : 0,
+    requiredMarker,
+  });
+  const summaryLine = execution.stdout
+    .split("\n")
+    .find((line) => line.startsWith("SCRAPKEEP_INTEGRATION SUMMARY "));
+  let summary = null;
+  try {
+    summary = JSON.parse(
+      summaryLine?.slice("SCRAPKEEP_INTEGRATION SUMMARY ".length),
+    );
+    if (
+      summary.mode !== mode ||
+      summary.exit_code !== (fault ? 1 : 0) ||
+      !Array.isArray(summary.failures) ||
+      summary.failures.length > 0 !== fault
+    )
+      failures.push("integration summary disagrees with expected result");
+  } catch {
+    failures.push("integration summary missing or invalid");
+  }
+  if (!fault && /^SCRAPKEEP_INTEGRATION CHECK FAIL /m.test(execution.stdout))
+    failures.push("failed integration assertion");
+  return {
+    ...outcome(
+      id,
+      execution,
+      failures,
+      "main scene " + mode + (fault ? " detected injected fault" : " passed"),
+    ),
+    summary,
+  };
+}
+
+async function integratedPair(
+  id,
+  binary,
+  args,
+  dataRoot,
+  checks,
+  offline = false,
+) {
+  const data = path.join(dataRoot, id);
+  checks.push(
+    integratedRun(id + "-stage", binary, args, "stage", data, false, offline),
+  );
+  const saved = await artifactOf(path.join(data, "save.json"));
+  checks.push(
+    integratedRun(id + "-resume", binary, args, "resume", data, false, offline),
+  );
+  checks.push(
+    integratedRun(
+      id + "-resume-fault",
+      binary,
+      args,
+      "resume",
+      data,
+      true,
+      offline,
+    ),
+  );
+  const after = await artifactOf(path.join(data, "save.json"));
+  checks.push({
+    id: id + "-save-preservation",
+    status: saved && after && saved.sha256 === after.sha256 ? "pass" : "fail",
+    detail: "resume and resume fault preserve the staged save bytes",
+    beforeSha256: saved?.sha256,
+    afterSha256: after?.sha256,
+  });
+  const faultData = data + "-stage-fault";
+  checks.push(
+    integratedRun(
+      id + "-stage-fault",
+      binary,
+      args,
+      "stage",
+      faultData,
+      true,
+      offline,
+    ),
+  );
+  checks.push({
+    id: id + "-fault-no-commit",
+    status: (await artifactOf(path.join(faultData, "save.json")))
+      ? "fail"
+      : "pass",
+    detail: "stage validation fault leaves no committed save",
+  });
+}
+
+async function exportSmoke(binary, runDirectory, checks, artifacts, toolchain) {
+  const imported = run(binary, [
+    "--headless",
+    "--path",
+    projectDirectory,
+    "--editor",
+    "--import",
+  ]);
+  const importCheck = outcome(
+    "editor-import",
+    imported,
+    executionFailures(imported, { rejectErrors: true }),
+    "fresh staged source imported without script errors",
+  );
+  checks.push(importCheck);
+  if (importCheck.status !== "pass") return;
+  await integratedPair(
+    "editor",
+    binary,
+    ["--headless", "--path", projectDirectory],
+    runDirectory,
+    checks,
+  );
+  const dataHome =
+    process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
+  const templates = path.join(dataHome, "godot/export_templates/4.7.2.stable");
+  toolchain.templates = [];
+  for (const name of [
+    "linux_release.x86_64",
+    "windows_release_x86_64.exe",
+    "version.txt",
+  ]) {
+    const artifact = await artifactOf(path.join(templates, name));
+    toolchain.templates.push(
+      artifact || { path: path.join(templates, name), missing: true },
+    );
+    checks.push({
+      id: "template-" + name,
+      status: artifact?.size > 0 ? "pass" : "fail",
+      detail: "installed template identity recorded",
+    });
+  }
+  if (process.env.GODOT_TEMPLATES_ARCHIVE) {
+    toolchain.templatesArchive = {
+      path: process.env.GODOT_TEMPLATES_ARCHIVE,
+      sha512: await digest(process.env.GODOT_TEMPLATES_ARCHIVE, "sha512"),
+      expectedSha512: templateArchiveHash,
+    };
+    checks.push({
+      id: "templates-archive-pin",
+      status:
+        toolchain.templatesArchive.sha512 === templateArchiveHash
+          ? "pass"
+          : "fail",
+      detail: "template archive SHA512 matches recorded release",
+    });
+  }
+  for (const preset of [
+    { name: "Linux x64", platform: "linux", filename: "scrapkeep.x86_64" },
+    { name: "Windows x64", platform: "windows", filename: "scrapkeep.exe" },
+  ]) {
+    const output = path.join(
+      root,
+      "artifacts/local/native-export",
+      preset.platform,
+      path.basename(runDirectory),
+      preset.filename,
+    );
+    await mkdir(path.dirname(output), { recursive: true });
+    const execution = run(binary, [
+      "--headless",
+      "--path",
+      projectDirectory,
+      "--export-release",
+      preset.name,
+      output,
+    ]);
+    const artifact = await artifactOf(output);
+    const check = outcome(
+      "export-" + preset.platform,
+      execution,
+      exportFailures(execution, artifact),
+      preset.name + " exported to a fresh absolute path",
+    );
+    checks.push(check);
+    if (artifact)
+      artifacts.push({
+        ...artifact,
+        preset: preset.name,
+        executed: preset.platform === "linux" && check.status === "pass",
+      });
+    if (preset.platform === "linux" && check.status === "pass") {
+      await integratedPair(
+        "linux-export",
+        output,
+        ["--headless"],
+        runDirectory,
+        checks,
+      );
+      const offline = run("unshare", ["-rn", "true"]);
+      if (executionFailures(offline).length === 0)
+        await integratedPair(
+          "offline-linux-export",
+          output,
+          ["--headless"],
+          runDirectory,
+          checks,
+          true,
+        );
+      else
+        checks.push({
+          id: "offline-linux-export",
+          status: "skip",
+          command: offline.command,
+          detail: "unshare unavailable; no offline exported execution evidence",
+          stderrExcerpt: excerpt(offline.stderr),
+          error: offline.error,
+        });
+    }
+  }
+}
+
 async function main() {
+  const args = process.argv.slice(2);
+  if (args.some((arg) => arg !== "--export") || args.length > 1)
+    throw new Error("Usage: node scripts/native-smoke.mjs [--export]");
+  const exporting = args.includes("--export");
+  const sourceCommit = run("git", ["rev-parse", "HEAD"]).stdout.trim();
+  const sourceStatus = run("git", ["status", "--porcelain"]).stdout.trim();
+  const sourceFiles = await walk(path.join(root, sourceDirectory));
+  const sourceHashes = await hashFiles(sourceFiles);
+  await mkdir(path.dirname(reportFile), { recursive: true });
+  const runDirectory = await mkdtemp(
+    path.join(path.dirname(reportFile), "run-"),
+  );
+  projectDirectory = path.join(runDirectory, "native");
+  runtimeEnvironment = {
+    ...process.env,
+    XDG_DATA_HOME: path.join(runDirectory, "user-data"),
+    XDG_CACHE_HOME: path.join(runDirectory, "cache"),
+  };
+  if (exporting) {
+    const templateSource = path.join(
+      process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share"),
+      "godot/export_templates/4.7.2.stable",
+    );
+    const templateLink = path.join(
+      runtimeEnvironment.XDG_DATA_HOME,
+      "godot/export_templates/4.7.2.stable",
+    );
+    await mkdir(path.dirname(templateLink), { recursive: true });
+    await symlink(templateSource, templateLink);
+  }
+  await cp(path.join(root, sourceDirectory), projectDirectory, {
+    recursive: true,
+    filter: (file) =>
+      !file.split(path.sep).includes(".godot") && !file.endsWith(".import"),
+  });
   const { binary, source } = await resolveBinary();
   const engineVersion = engineVersionOf(binary);
-  const files = await walk(path.join(root, projectDirectory));
+  const files = sourceFiles;
   const checks = [
     positiveBoot(binary, engineVersion),
     negativeBoot(binary),
@@ -296,9 +672,40 @@ async function main() {
   ];
   for (const proof of await discoverProofs())
     checks.push(proofRun(binary, proof), proofFaultRun(binary, proof));
+  const engineHash = await digest(binary);
+  checks.push({
+    id: "engine-pin",
+    status:
+      engineVersion === pinnedVersion && engineHash === pinnedBinaryHash
+        ? "pass"
+        : "fail",
+    detail: "version and binary SHA256 must match the recorded pin",
+  });
+  const artifacts = [];
+  const toolchain = { editorSha256: engineHash };
+  if (exporting)
+    await exportSmoke(binary, runDirectory, checks, artifacts, toolchain);
+  const afterHashes = await hashFiles(
+    await walk(path.join(root, sourceDirectory)),
+  );
+  checks.push({
+    id: "source-preservation",
+    status:
+      JSON.stringify(sourceHashes) === JSON.stringify(afterHashes)
+        ? "pass"
+        : "fail",
+    detail: "native source hashes unchanged through import and execution",
+  });
   for (const check of checks) announce(check);
   const report = {
-    schema: "scrapkeep-native-smoke/1",
+    schema: "scrapkeep-native-smoke/2",
+    sourceCommit,
+    sourceDirty: sourceStatus !== "",
+    sourceStatus,
+    mode: exporting ? "export" : "proofs",
+    runDirectory,
+    artifacts,
+    toolchain,
     generatedAt: new Date().toISOString(),
     host: {
       platform: os.platform(),
@@ -315,8 +722,8 @@ async function main() {
       matchesPin: engineVersion === pinnedVersion,
     },
     checks,
-    files: await hashFiles(files),
-    limits,
+    files: sourceHashes,
+    limits: exporting ? exportLimits : limits,
     verdict: checks.every((check) => check.status !== "fail") ? "pass" : "fail",
   };
   if (!report.engine.matchesPin)
@@ -331,12 +738,32 @@ async function main() {
       ". Report: " +
       reportFile +
       "\n" +
-      limits,
+      (exporting ? exportLimits : limits),
   );
   process.exitCode = report.verdict === "pass" ? 0 : 1;
 }
 
-main().catch((error) => {
-  console.error("native:smoke internal error: " + error.message);
-  process.exitCode = 2;
-});
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch(async (error) => {
+    console.error("native:smoke internal error: " + error.message);
+    await mkdir(path.dirname(reportFile), { recursive: true });
+    await writeFile(
+      reportFile,
+      JSON.stringify(
+        {
+          schema: "scrapkeep-native-smoke/2",
+          sourceCommit: run("git", ["rev-parse", "HEAD"]).stdout.trim(),
+          verdict: "fail",
+          checks: [{ id: "harness", status: "fail", detail: error.message }],
+          artifacts: [],
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    process.exitCode = 2;
+  });
+}
