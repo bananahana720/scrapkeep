@@ -1,0 +1,2 @@
+new-worktree exit 0
+new-worktree rerun exit 1
