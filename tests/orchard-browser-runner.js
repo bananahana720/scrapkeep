@@ -185,27 +185,29 @@ export function installOrchardQA(api) {
           api.game.player.strikeCooldown === 0,
       );
       await until(() => api.game.player.grounded);
+      for (let i = 0; i < 12; i++) {
+        const p = api.game.player;
+        aimAt({ x: p.x, y: groundHeight(p.x, p.z - 8), z: p.z - 8 });
+        await wait(16);
+      }
       key("KeyQ");
       await advance(0.06);
-      const valid = api.game.targeting.valid;
+      check("Q previews valid nearby terrain", api.game.targeting.valid);
       key("KeyQ", "keyup");
       await advance(0.04);
       check(
-        "Q release commits valid preview or preserves cooldown when invalid",
-        valid
-          ? api.game.player.strikeCooldown > 0
-          : api.game.player.strikeCooldown === 0,
+        "Q release commits the circular strike",
+        api.game.player.strikeCooldown > 0,
       );
       key("KeyE");
       await advance(0.06);
-      const conductorValid = api.game.targeting.valid;
+      check("E previews valid nearby terrain", api.game.targeting.valid);
       key("KeyE", "keyup");
       await advance(0.04);
       check(
-        "E release places valid conductor or preserves cooldown",
-        conductorValid
-          ? api.game.conductors.length === 1
-          : api.game.player.conductorCooldown === 0,
+        "E release places a storm conductor",
+        api.game.conductors.length === 1 &&
+          api.game.player.conductorCooldown > 0,
       );
       await tap("ShiftLeft");
       await advance(0.025);

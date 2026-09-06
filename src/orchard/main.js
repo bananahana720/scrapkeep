@@ -455,11 +455,7 @@ window.addEventListener("keydown", (event) => {
     }
     return;
   }
-  if (
-    event.code === "KeyI" &&
-    !event.repeat &&
-    !["INPUT", "TEXTAREA"].includes(event.target.tagName)
-  ) {
+  if (event.code === "KeyI" && !event.repeat) {
     event.preventDefault();
     if (dialogKind === "dashboard") resume();
     else if (!dialog.open) openDashboard();
