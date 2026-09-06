@@ -925,7 +925,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Verification and evidence:**
 
 - The two export commands; `node scripts/native-smoke.mjs --export`.
-- One green CI run on the pinned SHA, logged to `tests/native-smoke.test.js`; `artifacts/local/tasks/S0-09/`.
+- One green CI run on the pinned SHA, logged to `artifacts/local/tasks/S0-09/`.
 
 **Boundary:** Export success is not qualification. Nothing is distributed or uploaded as a binary; CI generates binaries internally and retains reports only. Q-E06 remains open. Only included CI allowance may be used. Windows is unproven without execution. The renderer stays default (Q-E04 open). Smoke-script presence in exports is noted for Q-E13 and TH-26.
 
