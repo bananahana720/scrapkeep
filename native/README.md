@@ -48,6 +48,8 @@ godot --headless --path native --script res://proofs/tadr-002/proof_runner.gd
 godot --headless --path native --script res://proofs/tadr-002/proof_runner.gd -- --inject-fault
 ```
 
+`proofs/tadr-003/` holds the S0-05 and S0-06 proof for TADR-003. `proof_runner.gd` extends `SceneTree`, loads the text `.tres` fixtures under `proofs/tadr-003/fixtures/`, runs the S0-05 cases (`roundtrip`, `identity`, `immutability`, `prefix`) and the S0-06 cases (`rule_accepts`, `rule_rejects`, `failed_reload`, `admission_exit`), prints one `S0-0x <case> PASS|FAIL <detail>` line per case and a final JSON summary, and exits 0 when every case passes, 1 on any `FAIL` and 3 on a harness error. Run it with `--headless --path native --script res://proofs/tadr-003/proof_runner.gd`; append `-- --inject-fault` to bypass the admission rule and get the expected `FAIL` line and exit 1. The definitions use an untyped `const X = preload(...)` to reference each other because a headless `--script` run has no editor class cache, so `class_name` does not resolve across files. Contracts, probed APIs and limits are in [the S0-05 page](../docs/tech/proofs/S0-05-content-identity.md) and [the S0-06 page](../docs/tech/proofs/S0-06-content-admission.md).
+
 ## Reuse for later proofs
 
 Later proofs can add a `tests/<name>.gd` script that extends `SceneTree`, keep every declaration typed, print one marker line and call `quit(code)`. Run them the same way with `--headless --path native --script res://tests/<name>.gd`, and read the exit code directly rather than through a pipe.
