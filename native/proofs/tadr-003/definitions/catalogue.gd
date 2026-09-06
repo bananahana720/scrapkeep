@@ -2,6 +2,7 @@ class_name ProofCatalogue
 extends RefCounted
 
 const SlotTreeDefinition = preload("res://proofs/tadr-003/definitions/slot_tree_definition.gd")
+const TreeRules = preload("res://proofs/tadr-003/definitions/tree_rules.gd")
 
 const ID_PREFIX: String = "proof."
 
@@ -47,4 +48,5 @@ static func admission_problems(def: SlotTreeDefinition) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	if not String(def.id).begins_with(ID_PREFIX):
 		out.append("%s: id_prefix: id must start with %s" % [def.id, ID_PREFIX])
+	out.append_array(TreeRules.validate(def))
 	return out

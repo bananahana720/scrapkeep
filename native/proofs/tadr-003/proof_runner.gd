@@ -4,28 +4,33 @@ extends SceneTree
 # An untyped preload constant carries the script class; a ": GDScript" annotation would hide its statics.
 const SlotTreeDefinition = preload("res://proofs/tadr-003/definitions/slot_tree_definition.gd")
 const ProofCatalogue = preload("res://proofs/tadr-003/definitions/catalogue.gd")
+const TreeRules = preload("res://proofs/tadr-003/definitions/tree_rules.gd")
 
 const FIXTURE_DIR: String = "res://proofs/tadr-003/fixtures"
 const PLACEHOLDER_PATH: String = FIXTURE_DIR + "/placeholder_tree.tres"
 const RENAMED_PATH: String = FIXTURE_DIR + "/renamed_copy/placeholder_tree_other_name.tres"
+const MALFORMED_PATH: String = FIXTURE_DIR + "/candidate_bad/malformed_tree.tres"
 const ROUNDTRIP_PATH: String = "user://s0-05-roundtrip.tres"
 const PLACEHOLDER_ID: StringName = &"proof.tree.placeholder"
-const NODE_COUNT: int = 15
-const NONTERMINAL_COUNT: int = 7
+const MALFORMED_ID: StringName = &"proof.tree.malformed"
+const FAULT_FLAG: String = "--inject-fault"
 
 const EXIT_PASS: int = 0
 const EXIT_FAIL: int = 1
 const EXIT_HARNESS: int = 3
 
+var _inject_fault: bool = false
 var _passed: int = 0
 var _failed: int = 0
 
 
 func _init() -> void:
+	_inject_fault = OS.get_cmdline_user_args().has(FAULT_FLAG)
 	var code: int = run()
 	var summary: Dictionary = {
 		"proof": "tadr-003",
 		"engine": version_token(),
+		"inject_fault": _inject_fault,
 		"cases": _passed + _failed,
 		"passed": _passed,
 		"failed": _failed,
@@ -49,13 +54,18 @@ func version_token() -> String:
 func run() -> int:
 	var placeholder: SlotTreeDefinition = load_fixture(PLACEHOLDER_PATH)
 	var renamed: SlotTreeDefinition = load_fixture(RENAMED_PATH)
-	if placeholder == null or renamed == null:
+	var malformed: SlotTreeDefinition = load_fixture(MALFORMED_PATH)
+	if placeholder == null or renamed == null or malformed == null:
 		return EXIT_HARNESS
 	var catalogue: ProofCatalogue = ProofCatalogue.new()
 	case_roundtrip(placeholder)
 	case_identity(catalogue, placeholder, renamed)
 	case_immutability(catalogue)
 	case_prefix(catalogue)
+	case_rule_accepts(placeholder)
+	case_rule_rejects(placeholder, malformed)
+	case_failed_reload(catalogue, placeholder, malformed)
+	case_admission_exit(catalogue)
 	return EXIT_FAIL if _failed > 0 else EXIT_PASS
 
 
@@ -76,14 +86,14 @@ func check(card: String, case_name: String, ok: bool, detail: String) -> void:
 
 func expected_nodes() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
-	for index: int in range(NODE_COUNT):
+	for index: int in range(TreeRules.NODE_COUNT):
 		out.append("n%d" % index)
 	return out
 
 
 func expected_edges() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
-	for parent: int in range(NONTERMINAL_COUNT):
+	for parent: int in range(TreeRules.NODE_COUNT - TreeRules.ENDPOINT_COUNT):
 		out.append("n%d>n%d" % [parent, 2 * parent + 1])
 		out.append("n%d>n%d" % [parent, 2 * parent + 2])
 	return out
@@ -122,7 +132,7 @@ func case_immutability(catalogue: ProofCatalogue) -> void:
 	record.nodes[0] = "session"
 	record.edges.append("session>edge")
 	record.content_revision = 99
-	var record_changed: bool = record.nodes[0] == "session" and record.edges.size() == expected_edges().size() + 1 and record.content_revision == 99
+	var record_changed: bool = record.nodes[0] == "session" and record.edges.size() == TreeRules.EDGE_COUNT + 1 and record.content_revision == 99
 	var cached_unchanged: bool = matches_authored(cached) and catalogue.resolve(PLACEHOLDER_ID) == cached
 	var same_path: SlotTreeDefinition = ResourceLoader.load(PLACEHOLDER_PATH) as SlotTreeDefinition
 	var cached_reload_unchanged: bool = same_path == cached and matches_authored(same_path)
@@ -146,3 +156,67 @@ func case_prefix(catalogue: ProofCatalogue) -> void:
 	var not_resolvable: bool = catalogue.resolve(&"tree.unprefixed") == null
 	var ok: bool = result == ERR_INVALID_DATA and names_check and not_resolvable
 	check("S0-05", "prefix", ok, "register=%d expected=%d diagnostic_names_check=%s resolve_is_null=%s" % [result, ERR_INVALID_DATA, names_check, not_resolvable])
+
+
+func shape(def: SlotTreeDefinition) -> Dictionary:
+	var child_counts: Dictionary[String, int] = {}
+	for node: String in def.nodes:
+		child_counts[node] = 0
+	for edge: String in def.edges:
+		var parent: String = edge.split(TreeRules.EDGE_SEPARATOR)[0]
+		if child_counts.has(parent):
+			child_counts[parent] += 1
+	var endpoints: int = 0
+	var two_children: bool = true
+	for node: String in def.nodes:
+		if child_counts[node] == 0:
+			endpoints += 1
+		elif child_counts[node] != TreeRules.CHILDREN_PER_NONTERMINAL:
+			two_children = false
+	return {"nodes": def.nodes.size(), "edges": def.edges.size(), "endpoints": endpoints, "two_children": two_children}
+
+
+func case_rule_accepts(placeholder: SlotTreeDefinition) -> void:
+	var diagnostics: PackedStringArray = TreeRules.validate(placeholder)
+	check("S0-06", "rule_accepts", diagnostics.is_empty(), "diagnostics=%d" % diagnostics.size())
+
+
+func case_rule_rejects(placeholder: SlotTreeDefinition, malformed: SlotTreeDefinition) -> void:
+	var good: Dictionary = shape(placeholder)
+	var good_nodes: int = good["nodes"]
+	var good_edges: int = good["edges"]
+	var good_endpoints: int = good["endpoints"]
+	var good_two_children: bool = good["two_children"]
+	var good_shape: bool = good_nodes == TreeRules.NODE_COUNT and good_edges == TreeRules.EDGE_COUNT and good_endpoints == TreeRules.ENDPOINT_COUNT and good_two_children
+	var diagnostics: PackedStringArray = PackedStringArray() if _inject_fault else TreeRules.validate(malformed)
+	var reconvergence: bool = false
+	var unreachable: bool = false
+	var names_id: bool = not diagnostics.is_empty()
+	for diagnostic: String in diagnostics:
+		names_id = names_id and diagnostic.begins_with(String(MALFORMED_ID))
+		reconvergence = reconvergence or diagnostic.contains("reconvergence")
+		unreachable = unreachable or diagnostic.contains("unreachable")
+	var ok: bool = good_shape and names_id and reconvergence and unreachable
+	var mode: String = "rule_bypassed_by_%s" % FAULT_FLAG if _inject_fault else "rule_applied"
+	check("S0-06", "rule_rejects", ok, "%s good_tree=%d/%d/%d two_children=%s diagnostics=%d names_id=%s reconvergence=%s unreachable=%s" % [mode, good_nodes, good_edges, good_endpoints, good_two_children, diagnostics.size(), names_id, reconvergence, unreachable])
+	for diagnostic: String in diagnostics:
+		print("DIAG %s" % diagnostic)
+
+
+func case_failed_reload(catalogue: ProofCatalogue, placeholder: SlotTreeDefinition, malformed: SlotTreeDefinition) -> void:
+	var revision_before: int = catalogue.content_revision
+	var bad_set: Array[SlotTreeDefinition] = [placeholder, malformed]
+	var bad_result: Error = catalogue.stage(bad_set)
+	var bad_diagnostics: int = catalogue.diagnostics.size()
+	var kept: bool = catalogue.resolve(PLACEHOLDER_ID) == placeholder and catalogue.resolve(MALFORMED_ID) == null and catalogue.content_revision == revision_before
+	var good_set: Array[SlotTreeDefinition] = [placeholder]
+	var good_result: Error = catalogue.stage(good_set)
+	var swapped: bool = catalogue.resolve(PLACEHOLDER_ID) == placeholder and catalogue.content_revision == revision_before + 1
+	var ok: bool = bad_result == ERR_INVALID_DATA and bad_diagnostics > 0 and kept and good_result == OK and swapped
+	check("S0-06", "failed_reload", ok, "bad_stage=%d expected=%d diagnostics=%d active_kept=%s good_stage=%d swapped=%s catalogue_revision=%d" % [bad_result, ERR_INVALID_DATA, bad_diagnostics, kept, good_result, swapped, catalogue.content_revision])
+
+
+func case_admission_exit(catalogue: ProofCatalogue) -> void:
+	var planned: int = EXIT_FAIL if _failed > 0 else EXIT_PASS
+	var malformed_absent: bool = catalogue.resolve(MALFORMED_ID) == null
+	check("S0-06", "admission_exit", malformed_absent, "malformed_absent_from_active=%s failed_cases=%d planned_exit=%d inject_fault=%s" % [malformed_absent, _failed, planned, _inject_fault])
