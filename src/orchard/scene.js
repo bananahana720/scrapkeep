@@ -543,9 +543,24 @@ export class OrchardScene {
       transparent: true,
       depthWrite: false,
     });
+    const backingMaterial = new THREE.MeshBasicMaterial({
+      color: 0x10252c,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const halos = Array.from({ length: 32 }, () => {
+      const mesh = new THREE.Mesh(this.effectGeo, backingMaterial);
+      mesh.visible = false;
+      mesh.renderOrder = 1;
+      group.add(mesh);
+      return mesh;
+    });
     const pieces = Array.from({ length: 32 }, () => {
       const mesh = new THREE.Mesh(this.effectGeo, mat);
       mesh.visible = false;
+      mesh.renderOrder = 2;
       group.add(mesh);
       return mesh;
     });
@@ -558,7 +573,10 @@ export class OrchardScene {
     );
     const ring = new THREE.Mesh(ringGeometry, mat);
     ring.material.side = THREE.DoubleSide;
-    group.add(ring);
+    const ringBacking = new THREE.Mesh(ringGeometry.clone(), backingMaterial);
+    ringBacking.renderOrder = 1;
+    ring.renderOrder = 2;
+    group.add(ringBacking, ring);
     const marker = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), mat);
     group.add(marker);
     const corridors = Array.from({ length: 2 }, () => {
@@ -576,18 +594,31 @@ export class OrchardScene {
       const fillMaterial = mat.clone();
       const body = new THREE.Mesh(geometry(), fillMaterial);
       const footprint = new THREE.Mesh(geometry(), mat);
+      const footprintBacking = new THREE.Mesh(geometry(), backingMaterial);
+      footprintBacking.renderOrder = 1;
+      footprint.renderOrder = 2;
       const outline = new THREE.LineSegments(
         geometry(),
         new THREE.LineBasicMaterial({ transparent: true, depthWrite: false }),
       );
-      corridor.add(body, footprint, outline);
+      corridor.add(body, footprintBacking, footprint, outline);
       corridor.visible = false;
       group.add(corridor);
-      return { group: corridor, body, footprint, outline };
+      return { group: corridor, body, footprint, footprintBacking, outline };
     });
     group.visible = false;
     this.scene.add(group);
-    return { group, mat, pieces, ring, marker, corridors };
+    return {
+      group,
+      mat,
+      backingMaterial,
+      pieces,
+      halos,
+      ring,
+      ringBacking,
+      marker,
+      corridors,
+    };
   }
   updateAttackVisual(record, attack, opacity = 0.85, color) {
     record.group.visible = !!attack;
@@ -597,10 +628,12 @@ export class OrchardScene {
         (attack.valid ? (attack.blocked ? 0xffc471 : 0xb9ffff) : 0xff705b),
     );
     record.mat.opacity = opacity;
+    record.backingMaterial.opacity = Math.min(1, opacity + 0.15);
     this.updateCorridors(record, attack.corridors || [], opacity);
     record.pieces.forEach((mesh, i) => {
       const segment = attack.segments?.[i];
       mesh.visible = !!segment;
+      record.halos[i].visible = !!segment;
       if (!segment) return;
       const { from, to } = segment;
       const delta = this.tmp.set(to.x - from.x, to.y - from.y, to.z - from.z);
@@ -615,6 +648,9 @@ export class OrchardScene {
         delta.multiplyScalar(1 / Math.max(length, 1e-8)),
       );
       mesh.scale.set(0.025, length, 0.025);
+      record.halos[i].position.copy(mesh.position);
+      record.halos[i].quaternion.copy(mesh.quaternion);
+      record.halos[i].scale.set(0.05, length, 0.05);
     });
     const point = attack.point;
     record.marker.visible = !!point;
@@ -625,29 +661,35 @@ export class OrchardScene {
         point.z,
       );
     record.ring.visible = !!point && attack.radius > 0;
+    record.ringBacking.visible = record.ring.visible;
     if (record.ring.visible) {
-      const positions = record.ring.geometry.attributes.position;
-      let index = 0;
-      for (let i = 0; i < 64; i++) {
-        const a = (i * Math.PI) / 32,
-          b = ((i + 1) * Math.PI) / 32;
-        const inner = Math.max(0, attack.radius - 0.07),
-          outer = attack.radius;
-        for (const [angle, radius] of [
-          [a, inner],
-          [a, outer],
-          [b, outer],
-          [a, inner],
-          [b, outer],
-          [b, inner],
-        ]) {
-          const x = point.x + Math.sin(angle) * radius,
-            z = point.z + Math.cos(angle) * radius;
-          positions.setXYZ(index++, x, groundHeight(x, z) + 0.09, z);
+      for (const [mesh, inset, width, lift] of [
+        [record.ringBacking, 0, 0.18, 0.085],
+        [record.ring, 0.05, 0.07, 0.09],
+      ]) {
+        const positions = mesh.geometry.attributes.position;
+        let index = 0;
+        for (let i = 0; i < 64; i++) {
+          const a = (i * Math.PI) / 32,
+            b = ((i + 1) * Math.PI) / 32;
+          const outer = Math.max(0, attack.radius - inset),
+            inner = Math.max(0, outer - width);
+          for (const [angle, radius] of [
+            [a, inner],
+            [a, outer],
+            [b, outer],
+            [a, inner],
+            [b, outer],
+            [b, inner],
+          ]) {
+            const x = point.x + Math.sin(angle) * radius,
+              z = point.z + Math.cos(angle) * radius;
+            positions.setXYZ(index++, x, groundHeight(x, z) + lift, z);
+          }
         }
+        positions.needsUpdate = true;
+        mesh.geometry.computeBoundingSphere();
       }
-      positions.needsUpdate = true;
-      record.ring.geometry.computeBoundingSphere();
     }
   }
   updateCorridors(record, corridors, opacity) {
@@ -666,13 +708,14 @@ export class OrchardScene {
           perimeter.push({
             x: point.x + Math.cos(a) * radius,
             z: point.z + Math.sin(a) * radius,
-            innerX: point.x + Math.cos(a) * Math.max(0, radius - 0.06),
-            innerZ: point.z + Math.sin(a) * Math.max(0, radius - 0.06),
+            centerX: point.x,
+            centerZ: point.z,
+            cos: Math.cos(a),
+            sin: Math.sin(a),
           });
         }
       }
       const body = visual.body.geometry.attributes.position;
-      const footprint = visual.footprint.geometry.attributes.position;
       const outline = visual.outline.geometry.attributes.position;
       let vertex = 0;
       for (let i = 0; i < perimeter.length; i++) {
@@ -687,20 +730,27 @@ export class OrchardScene {
           [a, yMax],
         ])
           body.setXYZ(vertex++, point.x, y, point.z);
-        let at = i * 6;
-        for (const [point, inner] of [
-          [a, false],
-          [b, false],
-          [b, true],
-          [a, false],
-          [b, true],
-          [a, true],
+        for (const [mesh, inset, width, lift] of [
+          [visual.footprintBacking, 0, 0.18, 0.105],
+          [visual.footprint, 0.05, 0.07, 0.11],
         ]) {
-          const x = inner ? point.innerX : point.x,
-            z = inner ? point.innerZ : point.z;
-          footprint.setXYZ(at++, x, groundHeight(x, z) + 0.11, z);
+          const positions = mesh.geometry.attributes.position;
+          let at = i * 6;
+          for (const [point, inner] of [
+            [a, false],
+            [b, false],
+            [b, true],
+            [a, false],
+            [b, true],
+            [a, true],
+          ]) {
+            const r = Math.max(0, radius - inset - (inner ? width : 0));
+            const x = point.centerX + point.cos * r,
+              z = point.centerZ + point.sin * r;
+            positions.setXYZ(at++, x, groundHeight(x, z) + lift, z);
+          }
         }
-        at = i * 6;
+        let at = i * 6;
         for (const [point, y] of [
           [a, yMin],
           [b, yMin],
@@ -711,14 +761,19 @@ export class OrchardScene {
         ])
           outline.setXYZ(at++, point.x, y, point.z);
       }
-      for (const mesh of [visual.body, visual.footprint, visual.outline]) {
+      for (const mesh of [
+        visual.body,
+        visual.footprint,
+        visual.footprintBacking,
+        visual.outline,
+      ]) {
         mesh.geometry.attributes.position.needsUpdate = true;
         mesh.geometry.computeBoundingSphere();
       }
       visual.body.material.color.copy(record.mat.color);
       visual.body.material.opacity = opacity * 0.1;
-      visual.outline.material.color.copy(record.mat.color);
-      visual.outline.material.opacity = opacity * 0.3;
+      visual.outline.material.color.setHex(0x10252c);
+      visual.outline.material.opacity = Math.min(1, opacity + 0.15);
     });
   }
   updateConductors(conductors) {
@@ -976,6 +1031,8 @@ export class OrchardScene {
       this.updateAttackVisual(visual, e.attack, 1, color);
       for (const piece of visual.pieces)
         piece.scale.x = piece.scale.z = e.echo ? 0.035 : 0.055;
+      for (const halo of visual.halos)
+        halo.scale.x = halo.scale.z = e.echo ? 0.06 : 0.085;
       this.effects.push({
         visual,
         life: e.attack.kind === "strike" ? 0.4 : 0.18,
@@ -1030,9 +1087,10 @@ export class OrchardScene {
         return false;
       }
       e.visual.mat.opacity = e.life / e.max;
+      e.visual.backingMaterial.opacity = e.life / e.max;
       for (const corridor of e.visual.corridors) {
         corridor.body.material.opacity = (e.life / e.max) * 0.1;
-        corridor.outline.material.opacity = (e.life / e.max) * 0.3;
+        corridor.outline.material.opacity = e.life / e.max;
       }
       return true;
     });

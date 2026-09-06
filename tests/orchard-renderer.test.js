@@ -338,3 +338,55 @@ test("conductor placement, live link and Echo preserve capsule width and absolut
     "target movement reuses fixed corridor buffers",
   );
 });
+
+test("attack outlines contrast with bright terrain without enlarging their affected areas", () => {
+  const scene = attackHarness(),
+    visual = scene.makeAttackVisual();
+  const corridor = {
+    from: { x: 0, y: 1.35, z: 0 },
+    to: { x: 0, y: 1.35, z: -8 },
+    radius: 0.5,
+    yMin: 0.35,
+    yMax: 2.35,
+  };
+  scene.updateAttackVisual(visual, { ...attack, corridors: [corridor] });
+  assert.equal(visual.backingMaterial.color.getHex(), 0x10252c);
+  assert.ok(visual.backingMaterial.opacity >= 0.85);
+  assert.equal(visual.ringBacking.visible, true);
+  const ring = visual.ringBacking.geometry.attributes.position;
+  let largestRadius = 0;
+  for (let i = 0; i < ring.count; i++) {
+    const radius = Math.hypot(
+      ring.getX(i) - attack.point.x,
+      ring.getZ(i) - attack.point.z,
+    );
+    largestRadius = Math.max(largestRadius, radius);
+    assert.ok(
+      radius <= attack.radius + 1e-6,
+      "dark boundary stays inside authoritative area",
+    );
+  }
+  assert.ok(Math.abs(largestRadius - attack.radius) < 1e-6);
+  const band = visual.corridors[0];
+  assert.equal(band.outline.material.color.getHex(), 0x10252c);
+  assert.ok(band.outline.material.opacity >= 0.85);
+  const footprint = band.footprintBacking.geometry.attributes.position;
+  for (let i = 0; i < footprint.count; i++) {
+    const x = footprint.getX(i),
+      z = footprint.getZ(i);
+    assert.ok(
+      Math.hypot(x, z - Math.max(-8, Math.min(0, z))) <= corridor.radius + 1e-6,
+    );
+  }
+  assert.deepEqual(
+    visual.halos[0].position.toArray(),
+    visual.pieces[0].position.toArray(),
+  );
+  assert.equal(visual.halos[0].scale.y, visual.pieces[0].scale.y);
+  assert.ok(visual.halos[0].scale.x > visual.pieces[0].scale.x);
+  const geometryId = visual.ringBacking.geometry.uuid;
+  scene.updateAttackVisual(visual, { ...attack, radius: 0, segments: [] });
+  assert.equal(visual.ringBacking.visible, false);
+  assert.equal(visual.halos[0].visible, false);
+  assert.equal(visual.ringBacking.geometry.uuid, geometryId);
+});
