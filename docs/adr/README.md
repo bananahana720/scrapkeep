@@ -9,5 +9,6 @@ These are retrospective records of the accepted first-proof implementation, reco
 | [0003](0003-authoritative-attack-geometry.md) | Use shared committed geometry for damage and telegraphs | Accepted |
 | [0004](0004-procedural-prototype-assets.md) | Use procedural prototype models and separate concept evidence | Accepted for first proof |
 | [0005](0005-caster-input-and-dashboard.md) | Caster input, pointer capture and solo dashboard lifecycle | Accepted for increment 01; verification pending |
+| [0006](0006-agent-playtest-workspaces.md) | Use separate named desktops and actor leases for agent playtesting | Accepted and operational for the verified Hyprland/Chromium/GTK paths |
 
 For a new decision, add the next numbered Markdown file with date, status, context, decision, consequences, revisit trigger and source links. Keep a superseded ADR and link its replacement. Do not use ADRs for task status or parameter tuning; those belong in the backlog and source.

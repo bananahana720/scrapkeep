@@ -38,6 +38,8 @@ This runs project checks, all Node tests, model invariants, the asserted baselin
 | `npm run check:build` | Built HTML and linked-asset HTTP checks. Build first. |
 | `npm run test:browser` | Existing baseline replay; requires running Vite, Chromium, and an environment permitting browser automation. |
 | `npm run test:leads:browser` | Built baseline signup checks using synthetic records and its own temporary server. Requires Chromium. |
+| `npm run test:agent` | Controller-free checks of the native player's menu selection, stale-frame release, cancellation and evidence reporting. Requires Python with NumPy and Pillow. |
+| `npm run playtest:agent -- --trials 3 --max-seconds 300` | Builds and plays the normal orchard through native controls in a leased Linux desktop. Saves outcomes, actions, screenshots and source hashes, then closes its desktop. Requires the installed local controller; see the [runner guide](tools/agent-player/README.md). |
 
 Set `CHROMIUM_PATH` for a non-default browser path and `GAME_URL` for the baseline replay's Vite origin. In Codex, follow the available browser tool's control restrictions. The supported interactive paths are:
 

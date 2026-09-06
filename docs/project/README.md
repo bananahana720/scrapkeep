@@ -2,6 +2,8 @@
 
 Updated 5 September 2026. **Increment 01, the lightning caster playtest, is implemented and ready for Andrew's next playtest.** Andrew's first orchard playtest requested automatic mouse look, accurate spell previews, jumping and rebounds, dense waves, and a readable interface. The [approved increment](INCREMENT-01-lightning-playtest.md) owns scope, lane boundaries and the current integration contract. The original yard remains a separate playable baseline. The [verification record](../LIGHTNING-VERIFICATION.md) records passed checks and the remaining physical capture and human playtest limits.
 
+Andrew's 6 September tooling priority is [T13, agent playtesting engineering](AGENT-PLAYTEST-ENGINEERING.md). Independent Linux controls and the [maintained native player](../../tools/agent-player/README.md) are operational. Control and game-flow checks passed; earlier variants cleared the game, but the latest visual configurations timed out. Next are target continuity and obstacle recovery, followed by measured profiles and regression comparisons. This supports P10 and does not replace Andrew's play feedback or authorize another gameplay increment.
+
 ## Start the next session
 
 Run the [planning protocol](PLANNING.md). In Claude Code the `plan-session` project skill invokes it. Its phases are:

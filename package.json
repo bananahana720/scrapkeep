@@ -18,7 +18,9 @@
     "verify": "node scripts/verify.mjs",
     "check:project": "node scripts/check-project.mjs",
     "check:build": "node scripts/check-build.mjs",
-    "probe:balance": "node tests/balance.mjs"
+    "probe:balance": "node tests/balance.mjs",
+    "playtest:agent": "node scripts/agent-playtest.mjs",
+    "test:agent": "node scripts/agent-playtest.mjs --self-test"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "^5.3.0",
