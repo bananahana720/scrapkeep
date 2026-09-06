@@ -10,6 +10,7 @@ const defaults = {
   gameplay: ["docs", "project", "automated-smoke", "human-playtest"],
 };
 const statuses = ["passed", "failed", "pending_evidence", "skipped", "inconclusive"];
+const taskStates = ["queued", "ready", "in_progress", "review", "changes_requested", "blocked", "done", "parked", "cancelled"];
 const sha = { test: (value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value) };
 const commit = { test: (value) => typeof value === "string" && /^[a-f0-9]{40}$/.test(value) };
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -99,8 +100,31 @@ export async function checkReceipt(receipt, { root, receiptHash }) {
     const field = `selectedTasks[${index}]`;
     const task = record(value, field);
     revision(task.revision, field + ".revision");
-    require(["queued", "ready", "in_progress", "review", "changes_requested", "blocked", "done", "parked", "cancelled"].includes(task.state), field + ".state", "unknown task state");
+    require(taskStates.includes(task.state), field + ".state", "unknown task state");
     if (task.state !== "done") pending(field, "selected delivery task is incomplete");
+  }
+  const completed = new Set(tasks.filter((task) => task?.state === "done").map((task) => task.id));
+  const predecessors = r.completedPredecessors === undefined ? [] : array(r.completedPredecessors, "completedPredecessors");
+  unique(predecessors, "completedPredecessors");
+  const predecessorIds = new Set(predecessors.map((task) => task?.id));
+  for (const [index, value] of predecessors.entries()) {
+    const field = `completedPredecessors[${index}]`;
+    const firstIssue = issues.length;
+    const predecessor = record(value, field);
+    revision(predecessor.revision, field + ".revision");
+    require(!tasks.some((task) => task?.id === predecessor.id), field, "predecessor must be separate from selected delivery tasks");
+    require(taskStates.includes(predecessor.state), field + ".state", "unknown predecessor state");
+    if (predecessor.state !== "done") pending(field, "predecessor is not complete");
+    if (require(commit.test(predecessor.acceptedCommit), field + ".acceptedCommit", "expected a full accepted commit SHA") && rootPath) {
+      try {
+        execFileSync("git", ["-C", rootPath, "merge-base", "--is-ancestor", predecessor.acceptedCommit, "HEAD"], { stdio: "ignore" });
+      } catch {
+        pending(field, "accepted predecessor commit is unavailable or not integrated into this checkout");
+      }
+    }
+    if (!predecessor.reconciliationEvidence) pending(field, "missing current predecessor reconciliation evidence");
+    else await evidence(predecessor.reconciliationEvidence, field + ".reconciliationEvidence");
+    if (issues.length === firstIssue && rootPath) completed.add(predecessor.id);
   }
   require(Number.isInteger(r.activeLeases) && r.activeLeases >= 0, "activeLeases", "expected a nonnegative count");
   if (r.activeLeases !== 0) pending("activeLeases", "all write leases must be reconciled");
@@ -248,10 +272,16 @@ export async function checkReceipt(receipt, { root, receiptHash }) {
       for (const item of items) string(item, field + "." + name);
     }
     for (const dependency of dependencies) {
-      if (!tasks.some((task) => task?.id === dependency && task.state === "done") && !cards.slice(0, index).some((item) => item?.id === dependency)) fail(field, "dependency is neither completed nor earlier in proposal: " + dependency);
+      if (!completed.has(dependency) && !cards.slice(0, index).some((item) => item?.id === dependency)) {
+        if (predecessorIds.has(dependency)) pending(field, "predecessor dependency lacks valid completion evidence: " + dependency);
+        else fail(field, "dependency is neither completed nor earlier in proposal: " + dependency);
+      }
     }
-    if (card.initialDispatch && (!card.inputReady || questions.length || dependencies.some((id) => !tasks.some((task) => task?.id === id && task.state === "done")))) {
-      fail(field, "initial dispatch contains a blocked card");
+    if (card.initialDispatch) {
+      if (!card.inputReady || questions.length || dependencies.some((id) => !completed.has(id) && !predecessorIds.has(id))) {
+        fail(field, "initial dispatch contains a blocked card");
+      }
+      if (dependencies.some((id) => predecessorIds.has(id) && !completed.has(id))) pending(field, "initial dispatch awaits predecessor reconciliation");
     }
   }
 

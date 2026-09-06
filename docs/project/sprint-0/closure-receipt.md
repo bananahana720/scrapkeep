@@ -16,6 +16,7 @@ Version 1 uses the following fields. Unknown extra fields do not grant authority
 | `authorization` | `owner` is `Andrew`; `reference` identifies the actual scope authorization. |
 | `previousReceipt` | `null` for the first result, otherwise the previous receipt's SHA256. Preserve the prior receipt. |
 | `selectedTasks` | Nonempty array of unique delivery-task objects with `id`, positive `revision`, and `state`. Every selected delivery task must be `done`. |
+| `completedPredecessors` | Optional array of prior-sprint completion snapshots described below. Omit it or use `[]` when none are needed. Historical tasks stay outside `selectedTasks`. |
 | `activeLeases` | Nonnegative integer. Closure requires zero active write leases. |
 | `gates` | Unique gate objects described below. Default gates cannot be omitted or marked optional. |
 | `gameplay` | For a proof, `{ "applicable": false, "reason": "No playable slice" }`. Gameplay scope uses `applicable: true`, an `objective`, and nonempty `pillars` objects with unique `id` and `test`. |
@@ -26,7 +27,32 @@ Version 1 uses the following fields. Unknown extra fields do not grant authority
 
 The closure-control card evaluates the delivery set. For operational Sprint 0, S0-14 completes after evaluating S0-09, S0-10, S0-11, S0-12, and S0-13. Do not include S0-14 in its own `selectedTasks`. Reconcile all writer leases before checking the receipt. The coordinator then records the result and completes S0-14 as an administrative closure action. This ordering does not excuse an incomplete delivery card.
 
-A next-proposal card names `id`, positive `revision`, `size` of `S` or `M`, and arrays of `dependencies`, `questions`, `permittedActions`, and `acceptance`. Actions and acceptance cannot be empty. `inputReady` and `initialDispatch` are booleans. List proposed cards in dependency order. Dependencies must name completed selected tasks or earlier proposed cards. Initial dispatch permits only input-ready cards with no unresolved questions and dependencies already done. A card waiting on an earlier proposed card stays outside initial dispatch. Zero proposed cards is valid when the objective explains why none is eligible.
+A next-proposal card names `id`, positive `revision`, `size` of `S` or `M`, and arrays of `dependencies`, `questions`, `permittedActions`, and `acceptance`. Actions and acceptance cannot be empty. `inputReady` and `initialDispatch` are booleans. List proposed cards in dependency order. Dependencies must name completed selected tasks, validated `completedPredecessors`, or earlier proposed cards. Initial dispatch permits only input-ready cards with no unresolved questions and dependencies already done. A card waiting on an earlier proposed card stays outside initial dispatch. Zero proposed cards is valid when the objective explains why none is eligible.
+
+### Completed predecessors
+
+A proposed card may depend on work accepted in an earlier sprint. Record that work separately in `completedPredecessors` with unique `id`, positive `revision`, `state: "done"`, full `acceptedCommit`, and `reconciliationEvidence`. The accepted commit must exist in the checkout's history and be an ancestor of its HEAD. Do not duplicate an ID from `selectedTasks`.
+
+`reconciliationEvidence` uses the evidence fields below. Its `sourceCommit` is the current `integratedCommit`; its file records the accepted task/card revision, original accepted commit, retained evidence, and current readiness review. That review confirms that the accepted output remains applicable and has not been reopened. The old acceptance identity remains historical. Current reconciliation does not claim the original implementation was rerun.
+
+Only a complete snapshot with valid current evidence satisfies a next-proposal dependency or its initial dispatch check. Missing, stale, skipped, or inconclusive reconciliation stays `pending_evidence`. An incomplete predecessor or an accepted commit that is unavailable or not integrated also stays pending. A failed reconciliation stays `failed`. Unknown dependency IDs remain invalid. The reviewer checks the snapshot against the canonical board; the checker cannot authenticate a declared completion.
+
+```json
+{
+  "id": "EXAMPLE-PRIOR",
+  "revision": 2,
+  "state": "done",
+  "acceptedCommit": "<40-hex historical accepted commit>",
+  "reconciliationEvidence": {
+    "path": "artifacts/local/sprint-0/prior-task-review.md",
+    "sha256": "<64-hex file hash>",
+    "sourceCommit": "<40-hex current integrated commit>",
+    "status": "passed",
+    "method": "Reconcile the accepted card, retained evidence, and current board",
+    "limits": "Source review only; no historical runtime test repeated"
+  }
+}
+```
 
 ### Gates and evidence
 
@@ -111,6 +137,7 @@ This documentation-only skeleton is intentionally incomplete. Replace placeholde
   "authorization": { "owner": "Andrew", "reference": "<actual scope record>" },
   "previousReceipt": null,
   "selectedTasks": [{ "id": "EXAMPLE-01", "revision": 1, "state": "done" }],
+  "completedPredecessors": [],
   "activeLeases": 0,
   "gates": [
     { "id": "docs", "required": true, "status": "pending_evidence", "evidence": [] },

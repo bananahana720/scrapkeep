@@ -189,3 +189,65 @@ for (const malformed of ["{", "null", "[]", "42", '{"schemaVersion":1,"gates":[n
     assert.equal((await run(root, malformed)).result.outcome, "failed");
   });
 }
+
+async function predecessorFixture(t) {
+  const f = await fixture(t);
+  const acceptedCommit = f.r.integratedCommit;
+  git(f.root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "--allow-empty", "-m", "current sprint");
+  f.r.integratedCommit = git(f.root, "rev-parse", "HEAD");
+  f.evidence.sourceCommit = f.r.integratedCommit;
+  for (const gate of f.r.gates) for (const entry of gate.evidence) entry.sourceCommit = f.r.integratedCommit;
+  f.r.completedPredecessors = [{ id: "OLD-01", revision: 2, state: "done", acceptedCommit, reconciliationEvidence: { ...f.evidence } }];
+  f.r.nextProposal.cards[0].dependencies = ["OLD-01"];
+  return f;
+}
+
+test("a reconciled prior-sprint prerequisite enables initial dispatch without joining selectedTasks", async (t) => {
+  const { root, r } = await predecessorFixture(t);
+  const selected = structuredClone(r.selectedTasks);
+  assert.notEqual(r.completedPredecessors[0].acceptedCommit, r.integratedCommit);
+  const first = await run(root, r);
+  assert.equal(first.result.outcome, "passed", first.stdout);
+  assert.deepEqual(JSON.parse(await readFile(first.file, "utf8")).selectedTasks, selected);
+  assert.equal((await run(root, r)).stdout, first.stdout);
+});
+
+const invalidPredecessors = [
+  ["stale reconciliation commit", (p) => p.reconciliationEvidence.sourceCommit = p.acceptedCommit, "pending_evidence", /different commit/],
+  ["stale reconciliation bytes", (p) => p.reconciliationEvidence.sha256 = "a".repeat(64), "pending_evidence", /hash differs/],
+  ["missing reconciliation", (p) => delete p.reconciliationEvidence, "pending_evidence", /missing current predecessor/],
+  ["missing reconciliation file", (p) => p.reconciliationEvidence.path = "absent", "pending_evidence", /missing or unreadable/],
+  ["missing predecessor state", (p) => delete p.state, "failed", /unknown predecessor state/],
+  ["incomplete prior work", (p) => p.state = "review", "pending_evidence", /not complete/],
+  ["skipped reconciliation", (p) => p.reconciliationEvidence.status = "skipped", "pending_evidence", /not passed/],
+  ["failed reconciliation", (p) => p.reconciliationEvidence.status = "failed", "failed", /evidence failure/],
+  ["unknown accepted commit", (p) => p.acceptedCommit = "a".repeat(40), "pending_evidence", /unavailable or not integrated/],
+  ["malformed accepted identity", (p) => p.acceptedCommit = "unknown", "failed", /accepted commit SHA/],
+  ["missing card revision", (p) => delete p.revision, "failed", /positive revision/],
+];
+for (const [name, mutate, outcome, message] of invalidPredecessors) {
+  test(name + " cannot admit an earlier-sprint dependency", async (t) => {
+    const { root, r } = await predecessorFixture(t);
+    mutate(r.completedPredecessors[0]);
+    const { result, stdout } = await run(root, r);
+    assert.equal(result.outcome, outcome, stdout);
+    assert.ok(result.issues.some((issue) => message.test(issue.message)), stdout);
+  });
+}
+
+test("an unknown predecessor cannot be invented by a proposal dependency", async (t) => {
+  const { root, r } = await predecessorFixture(t);
+  r.nextProposal.cards[0].dependencies = ["UNKNOWN-01"];
+  const { result, stdout } = await run(root, r);
+  assert.equal(result.outcome, "failed", stdout);
+  assert.ok(result.issues.some((issue) => /dependency is neither completed/.test(issue.message)), stdout);
+});
+
+test("predecessor inventory rejects duplicates and overlap with selected deliveries", async (t) => {
+  const { root, r } = await predecessorFixture(t);
+  r.completedPredecessors.push({ ...r.completedPredecessors[0] });
+  assert.equal((await run(root, r)).result.outcome, "failed");
+  r.completedPredecessors.pop();
+  r.completedPredecessors[0].id = r.selectedTasks[0].id;
+  assert.equal((await run(root, r)).result.outcome, "failed");
+});
