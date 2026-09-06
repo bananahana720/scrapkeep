@@ -2,7 +2,7 @@
 
 There are two kinds of output in this directory.
 
-- Named build records, including `orchard-first-build/`, earlier screenshots, JSON receipts and `visual-iterations/`, are historical evidence. Their source version, test method and limitations belong in the linked verification document. Historical JavaScript snapshots are not active source.
+- Named build records, including `orchard-first-build/`, earlier screenshots, JSON receipts and `visual-iterations/`, are historical evidence. Their source version, test method and limitations belong in the linked verification document. Historical JavaScript snapshots are not active source. Where a record once held a full source copy, an `implementation-manifest.json` with per-file sha256 and byte sizes plus a diff against the live source replaces it.
 - `local/` is disposable, ignored output from current commands. `npm run verify` writes `local/verify/`; the browser wrappers and balance probe write here by default. `ARTIFACT_DIR` can select another destination for those wrappers/probes. Do not point it at a retained build record.
 
 Rerunning a test must not silently replace a dated claim. When retaining a new result, copy the needed files to a named build/session directory, record source hashes or a real commit, commands, date, outcome and evidence type, and link that record from the owning verification document. A PASS from a fixture is not a human playthrough.

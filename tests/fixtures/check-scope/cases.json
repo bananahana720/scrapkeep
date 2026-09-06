@@ -53,5 +53,49 @@
     "commands": ["npm run check:docs", "npm run verify"],
     "noBuild": true,
     "status": 1
+  },
+  {
+    "name": "native-player",
+    "paths": [
+      "tools/agent-player/policy.py",
+      "tools/agent-player/README.md",
+      "scripts/agent-playtest.mjs"
+    ],
+    "scope": "native-player",
+    "commands": ["npm run test:agent"],
+    "noBuild": true,
+    "status": 0
+  },
+  {
+    "name": "instruction files as configuration",
+    "paths": ["AGENTS.md", "CLAUDE.md"],
+    "scope": "configuration",
+    "commands": ["npm run check:docs", "scenario review"],
+    "noBuild": true,
+    "status": 0
+  },
+  {
+    "name": "native Markdown as documentation-only",
+    "paths": ["native/README.md", "native/docs/notes.md"],
+    "scope": "documentation-only",
+    "commands": ["npm run check:docs", "npm run check:project"],
+    "noBuild": true,
+    "status": 0
+  },
+  {
+    "name": "other",
+    "paths": ["Makefile"],
+    "scope": "other",
+    "commands": ["npm run verify"],
+    "noBuild": false,
+    "status": 0
+  },
+  {
+    "name": "empty",
+    "paths": [],
+    "scope": "empty",
+    "commands": [],
+    "noBuild": true,
+    "status": 0
   }
 ]

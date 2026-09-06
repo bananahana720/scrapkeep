@@ -7,8 +7,8 @@ const scriptRoot = path.resolve(
   "..",
 );
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
-// Order matters: the first matching class wins, so configuration and native
-// paths are claimed before the broad Markdown rule.
+// Order matters: the first matching class wins, so configuration, native and
+// native-player paths are claimed before the broad Markdown rule.
 const classes = [
   {
     name: "configuration",
@@ -17,6 +17,8 @@ const classes = [
       /^\.claude\//,
       /^\.agents\//,
       /^\.codex\//,
+      /^AGENTS\.md$/,
+      /^CLAUDE\.md$/,
       /^\.gitignore$/,
       /^\.env\.example$/,
     ],
@@ -30,7 +32,7 @@ const classes = [
     name: "native",
     build: true,
     patterns: [
-      /^native\//,
+      /^native\/(?!.*\.md$)/,
       /\.gd$/,
       /\.tscn$/,
       /\.tres$/,
@@ -41,6 +43,14 @@ const classes = [
       "npm run check:godot (reserved name, currently unavailable until the engineering handoff)",
     ],
     evidence: "unavailable; no native check command exists yet",
+  },
+  {
+    name: "native-player",
+    build: false,
+    patterns: [/^tools\/agent-player\//, /^scripts\/agent-playtest\.mjs$/],
+    commands: ["npm run test:agent"],
+    evidence:
+      "controller-free Python checks of the native player; no desktop session or build implied",
   },
   {
     name: "documentation-only",
