@@ -63,7 +63,7 @@ test("a valid fixture passes with a manifest, interim rows and a limits line", a
 test("card IDs with a digit in the prefix are counted", async () => {
   const { status, report, stdout } = await runFixture("card-s0");
   assert.equal(status, 0, stdout);
-  assert.equal(report.checked.cards, 2);
+  assert.equal(report.checked.cards, 3);
 });
 
 test("a heading with inline code slugs like GitHub", async () => {

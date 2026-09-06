@@ -250,7 +250,7 @@ async function checkBacklog(docs) {
   const { lines, anchors } = await docs.load(file);
   let cards = 0;
   for (const [index, line] of lines.entries()) {
-    const heading = /^###\s+([A-Z][A-Z0-9]*-[A-Z0-9]+):\s/.exec(line);
+    const heading = /^###\s+([A-Z][A-Z0-9]*-[A-Z0-9]+[a-z]?):\s/.exec(line);
     if (!heading) continue;
     const id = heading[1];
     const number = index + 1;

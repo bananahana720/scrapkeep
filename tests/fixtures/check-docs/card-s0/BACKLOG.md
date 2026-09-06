@@ -36,6 +36,24 @@
 
 **Boundary:** none.
 
+<a id="hf-99b"></a>
+
+### HF-99b: Split fixture card
+
+**Card revision:** 1 · **Owner:** Native · **Size:** S · **Lane:** fixture
+
+**Source and inputs:** [README](README.md)
+
+**Dependencies:** [HF-01](#hf-01). **Blocking questions:** None.
+
+**Files touched:** none.
+
+**Definition of done:** none.
+
+**Verification and evidence:** none.
+
+**Boundary:** none.
+
 <a id="q-e01"></a>
 
 ### Q-E01: First question
