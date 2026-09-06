@@ -1,10 +1,22 @@
 {
   "model": "claude-fable-5-1[1m]",
-  "modelSettings": {
-    "claude-fable-5-1": {
-      "effortLevel": "xhigh"
-    }
-  },
+  "effortLevel": "xhigh",
   "switchModelsOnFlag": false,
-  "fallbackModel": []
+  "fallbackModel": [],
+  "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(npm publish*)",
+      "Bash(gh repo delete*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "Bash(npm install*)",
+      "Bash(npm i *)",
+      "Bash(npm uninstall*)"
+    ]
+  }
 }
