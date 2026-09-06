@@ -130,7 +130,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-06](BACKLOG.md#s0-06) | 1 | 3 | done | none | PS-06-A1 | EV-0033 |
 | [S0-07](BACKLOG.md#s0-07) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
 | [S0-08](BACKLOG.md#s0-08) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
-| [S0-09](BACKLOG.md#s0-09) | 2 | 2 | queued | S0-12 | none | EV-0035 |
+| [S0-09](BACKLOG.md#s0-09) | 3 | 3 | queued | S0-12 | none | EV-0038 |
 | [PD-01](BACKLOG.md#pd-01) | 1 | 1 | queued | HF-01 | none | EV-0002 |
 | [PD-02](BACKLOG.md#pd-02) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
 | [PD-03](BACKLOG.md#pd-03) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
@@ -283,6 +283,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0035 | 2026-09-06T20:31:11.283120+00:00 | Coordinator / authorization, definition import, readiness and assignment | S0-09, S0-10, S0-11, S0-12, S0-13, S0-14, program | Andrew explicitly requested implementation of the operational Sprint 0 plan. S0-09 revision 1 → 2, parked → queued, record revision 1 → 2. New cards imported revision 1; S0-10 ready → in_progress with coordinator lease S0-10-L1 at baseline 20d26f402e7a136c6533a2ecdac857f40ebb1961. Other new cards queued. HF remains awaiting_review. [Authorization](docs/project/sprint-0/AUTHORIZATION.md). |
 | EV-0036 | 2026-09-06T20:34:52.444089+00:00 | Coordinator / review, correction and admission | S0-10 | Attempt 1 at b3e7fac received FAIL from contract_review, Astra high, source/scenario level 2. Corrected stale current authorization and CI evidence path at 2d6ac8497517d6f856114a5ec1e64fa294572ff0. Dismissed mistaken Accepted attempt finding and clarified schema. Fresh contract_review_a2, Astra high, returned PASS at that exact identity with no findings. check:docs and check:project passed. S0-10 review → done, lease closed. Native and amendment dependencies now eligible. |
 | EV-0037 | 2026-09-06T20:35:11.835125+00:00 | Coordinator / readiness and assignment | S0-11, S0-12 | S0-10 admitted. Both cards queued → ready → in_progress at base 1eb4a220fb48de80efded0a6459c98020fb7ed26. Verified separate worktrees scrapkeep-wt-S0-11-operational and scrapkeep-wt-S0-12-operational with matching HEAD. Leases S0-11-L1 and S0-12-L1 granted to amendments and native_integration, Astra high. Throughput checkpoint confirms disjoint file sets and coordinator-only records. |
+| EV-0038 | 2026-09-06T20:39:35.204728+00:00 | Coordinator / definition change and user scope clarification | S0-09, program | Andrew asked to run jobs locally. S0-09 revision 2 → 3 keeps exported Linux execution and GitHub commit/result evidence but uses an ephemeral local self-hosted runner, manual dispatch only. No service, hosted minutes, artifact uploads or paid usage. Docs resolved from official GitHub Actions runner guidance. Read-only Chrome verified existing Actions $0 stop-usage budget; no account setting changed. |
 
 
 ## Preparation checkpoint

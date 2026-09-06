@@ -901,7 +901,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Revised under operational Sprint 0.** [The implementation request](docs/project/sprint-0/AUTHORIZATION.md) authorizes templates, local exports and the private CI workflow. Previous parked history remains in TRACKING.
 
-**Card revision:** 2 · **Owner:** Verification · **Size:** M · **Lane:** prepare
+**Card revision:** 3 · **Owner:** Verification · **Size:** M · **Lane:** prepare
 
 **Source and inputs:**
 
@@ -919,7 +919,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 1. Exactly two presets, Linux x64 and Windows x64, with their names referenced verbatim and no credentials.
 2. `--export` runs both to absolute paths under `artifacts/local/native-export/linux/` and `artifacts/local/native-export/windows/`, asserting exit 0, presence, size and sha256.
 3. The Linux export visibly launches locally, reports success and exits through its Exit action; CI launches it headlessly with a required success marker. Positive stage/resume execute in fresh processes and faults, timeouts, missing markers and failed exports fail the harness; the Windows export is file-existence only unless a Windows runner executes it.
-4. The workflow on `ubuntu-latest` downloads the editor and templates by URL, verifies the recorded digests, runs the smoke and exports and uploads `report.json`; no marketplace action is required; an optional `windows-latest` job is costed separately.
+4. The manually dispatched workflow uses `[self-hosted, linux, x64, scrapkeep-s0]` on a temporary local one-job runner. It downloads the editor and templates by URL, verifies the recorded digests, runs the smoke and exports and uploads `report.json`; no marketplace action is required; no hosted runner or Windows execution job is included. Retain the small report in the job log/summary, without uploaded artifact storage.
 5. No export is committed or published.
 
 **Verification and evidence:**
