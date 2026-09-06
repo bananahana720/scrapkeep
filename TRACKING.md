@@ -9,14 +9,14 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Field | Value |
 | --- | --- |
 | Preparation | Authorized by Andrew's explicit instruction to implement the three-document plan. |
-| Proposed sprint | Foundation-02: HF-03a revision1 then HF-03b revision1; [bounded proposal](#foundation-02-proposal), awaiting_review. |
-| Sprint authorization | **Foundation-01 closed passed** at EV-0077. Andrew approved HF-01 revision2 and HF-02 revision2; factual AM-F01-001 revised HF-01 to3 before resumption. Both selected cards are done. **Foundation-02 awaiting_review**; no further dispatch authority. Operational Sprint 0 remains closed passed at EV-0064. |
+| Proposed sprint | Foundation-full-2026-09-06: fixed fourteen-card foundation set; approved execution at EV-0078. No follow-on selection. |
+| Sprint authorization | **Foundation-full authorized** by Andrew: PLEASE IMPLEMENT THIS PLAN, completing all fourteen HF cards with no intermediate approval pauses. Documentation-only. HF-01rev3 and HF-02rev2 remain done; Foundation-01 passed EV-0077 and Operational Sprint 0 passed EV-0064 remain historical. The pending Foundation-02 approval pause is superseded for this set only. |
 | Native game/build authorization | **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
-| Active coordinator for sprint execution | No active sprint. Codex root completed foundation-01; historical coordinator records remain below. |
-| Active task attempts / write leases | None. HF-01-A1 and HF-02-A1 accepted; both writers stopped and leases closed. Foundation-01 closure passed; no further worker dispatched. |
+| Active coordinator for sprint execution | Codex root task 01a078ca-a52d-7b11-9086-de7296f94f3c; sole board writer, full foundation scope. |
+| Active task attempts / write leases | None yet. HF-03a is the sole initial input-ready card. Assignment follows recorded packet and verified worktree. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
-Ready means that a selected card has complete inputs. It does not bypass the program authorization row. Foundation-01 approval applies only to HF-01 and HF-02. Subsequent proposals require their own approval. PUB-01 is the separately authorized publication task.
+Ready means that a selected card has complete inputs. It does not bypass the program authorization row. The full foundation authorization covers only the fourteen selected HF cards and necessary scoped factual amendments. Other task families remain outside this scope. PUB-01 retains its separate historical authorization.
 
 ## Task record schema
 
@@ -114,8 +114,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-08](BACKLOG.md#hf-08) | 2 | 2 | queued | HF-07b | none | EV-0029 |
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
-| [HF-03a](BACKLOG.md#hf-03a) | 1 | 2 | ready | none; foundation-02 awaiting_review | none | EV-0076 |
-| [HF-03b](BACKLOG.md#hf-03b) | 1 | 2 | queued | HF-03a output not yet admitted; no initial dispatch | none | EV-0076 |
+| [HF-03a](BACKLOG.md#hf-03a) | 1 | 3 | ready | none; full foundation authorized | none | EV-0078 |
+| [HF-03b](BACKLOG.md#hf-03b) | 1 | 3 | queued | HF-03a output not yet admitted | none | EV-0078 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 1 | queued | HF-03a | none | EV-0029 |
 | [HF-04b](BACKLOG.md#hf-04b) | 1 | 1 | queued | HF-04a | none | EV-0029 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
@@ -323,6 +323,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0075 | 2026-09-06T22:04:53.502554+00:00 | Coordinator / integration/completion | HF-01 | Serially admitted candidate dabdca4 at integrateda618e2602b7218efb03ee6be7d2ed05b32f44da6, exact reviewed sectionbytes. Integrated scope/docs/project PASS. HF-01-A1 revision3 done; HF-01-L1 closed. AM-F01-001 accepted wording propagated and no failed DoD remains. Both selected deliveries complete; stop dispatch and invoke ORCHESTRATOR sprint closure. |
 | EV-0076 | 2026-09-06T22:04:53.513300+00:00 | Coordinator / readiness | HF-03a, HF-03b | HF-03a revision1 input readiness admitted after HF-01rev3 completion: section exists, accepted TADR002/003/004 and Bible sources present, official Godot4.7 autoload/class_name/preload pages resolved. No blocking questions. State ready does not authorize foundation-02 dispatch. HF-03b revision1 remains queued behind missing HF-03a output; excluded from initial dispatch. |
 | EV-0077 | 2026-09-06T22:08:26.329376+00:00 | Coordinator / sprint closure | foundation-01, HF-01, HF-02 | PASSED at clean integrated2aa25fea08b6a5788bebd2874621fb52bce0b6cc. HF-01rev3 and HF-02rev2 done, both writers/leases closed. Independent hf_foundation_review Astra high integratedPASS plus docs/project/focusedpath/register checksPASS. Receipt0448325185cf7f427dd84f9650fb042cdcebbbe3cb500d59c397a7256b117dc2; ninebad-receipt scenarios rejected, identicalrepeat and canonicalhashes unchanged. AM-F01-001 reconciled; TH-19rev2 retains discovered import prerequisite. Foundation-02 HF-03arev1 thenHF-03brev1 awaiting_review, only03ainitialready; no dispatch. Documentation-only; no new build/CI/gameplay or hardware claims. One completed-sprint event. |
+| EV-0078 | 2026-09-06T22:24:58.256099+00:00 | Coordinator / authorization/coordination | foundation-full, HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09, HF-10 | Andrew explicitly requested implementation of the approved full fourteen-card plan. Fixed denominator14, starting2done; no inter-batch approval pause or subsequent sprint dispatch. Documentation-only; no builds/native execution/publication/automation. Max two isolated writers and one fresh reviewer. Preserve prior closures. Pin current revisions; reconcile admitted S0 proof triggers before affected assignments. Empty awaiting_review follow-on selection at closure is the explicit scoped exception to next-proposal preparation. Clean start0167d6533c64d939ff129f227dd2cafc3f1f99a4. |
 
 
 ## Preparation checkpoint
@@ -499,3 +500,7 @@ Grooming: TH-19 revision2 now requires the source-import settings staging/runner
 Nine mutated receipt scenarios refused closure: missing, stale and failing evidence; pending or unpropagated amendment; stale selected-card revision; active lease; blocked initial dispatch; proposal dispatch authority. Repeating the valid receipt returned identical PASS and left BACKLOG/TRACKING bytes unchanged. This is the sole completed-sprint event for this scope and source.
 
 Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 then HF-03b revision1, remains **awaiting_review**. It grants no dispatch authority. No build, native execution, CI job or browser session ran for this documentation scope; historical Sprint 0 runtime evidence remains at its original checked version. Native performance, Windows execution, Pillars and human enjoyment remain unqualified. Q-E03, Q-E04 and Q-E06 remain open.
+
+## Full foundation reporting checkpoint
+
+Last reported event: EV-0077. First execution poke baseline: 2/14 done (HF-01, HF-02), no active worker. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
