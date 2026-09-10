@@ -27,8 +27,13 @@ const positiveScript = "res://tests/smoke_boot.gd";
 const negativeScript = "res://tests/fixtures/untyped_negative.gd";
 const marker = /^SCRAPKEEP_SMOKE (\S+) typed$/m;
 const negativeMarker = "SCRAPKEEP_SMOKE_NEGATIVE";
-const networkingClasses =
-  /HTTPRequest|ENet|WebSocket|MultiplayerAPI|PacketPeer|StreamPeer|HTTPClient|UDPServer|TCPServer/;
+// Every transport, peer and replication class the offline-solo decision
+// excludes (adr/TADR-005-networking-scope.md, Decision: no networking
+// subsystem, no replication, no server deployment). The list carries the peer,
+// WebRTC, replication, DTLS and UPnP families an earlier revision scanned
+// past, so the guard matches the scope a reader assumes it enforces.
+export const forbiddenNetworkingClasses =
+  /HTTPRequest|ENet|WebSocket|MultiplayerAPI|PacketPeer|StreamPeer|HTTPClient|UDPServer|TCPServer|MultiplayerPeer|WebRTC|SceneMultiplayer|DTLSServer|UPNP/;
 const reportFile = path.join(root, "artifacts/local/native-smoke/report.json");
 const proofsDirectory = path.join(sourceDirectory, "proofs");
 const proofRunner = "proof_runner.gd";
@@ -142,35 +147,83 @@ async function walk(directory) {
   return files.sort();
 }
 
-async function networkingGrep(files) {
-  const scanned = files.filter(
-    (file) => file.endsWith(".gd") || file.endsWith("project.godot"),
-  );
+// The scan list comes from the repository, not from a hard-coded subset or an
+// extension filter: git already knows every tracked file under the directory,
+// and --others --exclude-standard adds a file that is new or not yet committed
+// (ignored build output such as native/.godot stays out), so a file added
+// later cannot silently escape the check.
+function derivationCommand(directory) {
+  return "git ls-files -z --cached --others --exclude-standard -- " + directory;
+}
+
+export function repositoryFiles(directory = sourceDirectory) {
+  const listing = run("git", [
+    "ls-files",
+    "-z",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    directory,
+  ]);
+  if (listing.error || listing.exitCode !== 0)
+    throw new Error(
+      "could not derive the file list for " +
+        directory +
+        " from git: " +
+        (listing.error ? listing.error.message : "exit " + listing.exitCode),
+    );
+  return listing.stdout
+    .split("\0")
+    .filter(Boolean)
+    .map((file) => path.resolve(root, file))
+    .sort();
+}
+
+function repositoryPath(file) {
+  return path.relative(root, file).split(path.sep).join("/");
+}
+
+export async function networkingGrep(files, derivation = null) {
+  const scanned = [...files].sort();
   const hits = [];
   for (const file of scanned) {
     const lines = (await readFile(file, "utf8")).split("\n");
     lines.forEach((line, index) => {
-      if (networkingClasses.test(line))
-        hits.push(path.relative(root, file) + ":" + (index + 1));
+      const named = line.match(forbiddenNetworkingClasses);
+      if (named)
+        hits.push(repositoryPath(file) + ":" + (index + 1) + ":" + named[0]);
     });
   }
+  const command =
+    "grep -E " +
+    JSON.stringify(forbiddenNetworkingClasses.source) +
+    " " +
+    scanned.map(repositoryPath).join(" ");
   return {
     id: "networking-grep",
-    status: hits.length === 0 ? "pass" : "fail",
-    command:
-      "grep -E " +
-      JSON.stringify(networkingClasses.source) +
-      " " +
-      scanned.map((file) => path.relative(root, file)).join(" "),
+    status: scanned.length > 0 && hits.length === 0 ? "pass" : "fail",
+    command: scanned.length > 0 ? command : (derivation ?? command),
     exitCode: null,
     signal: null,
     stdoutExcerpt: hits.join("\n"),
     stderrExcerpt: "",
+    derivation,
+    scannedFiles: scanned.map(repositoryPath),
     detail:
-      hits.length === 0
-        ? "no networking class named in " + scanned.length + " scanned files"
-        : "networking class named at " + hits.join(", "),
+      scanned.length === 0
+        ? "no file was derived for the native networking scan; an unread tree cannot pass"
+        : hits.length === 0
+          ? "no networking class named in " + scanned.length + " scanned files"
+          : "networking class named at " + hits.join(", "),
   };
+}
+
+export async function networkingScan(directory = sourceDirectory) {
+  return networkingGrep(
+    repositoryFiles(directory),
+    derivationCommand(directory),
+  );
 }
 
 function offlineBoot(binary, engineVersion) {
@@ -687,11 +740,10 @@ async function main() {
   });
   const { binary, source } = await resolveBinary();
   const engineVersion = engineVersionOf(binary);
-  const files = sourceFiles;
   const checks = [
     positiveBoot(binary, engineVersion),
     negativeBoot(binary),
-    await networkingGrep(files),
+    await networkingScan(),
     offlineBoot(binary, engineVersion),
   ];
   for (const proof of await discoverProofs())

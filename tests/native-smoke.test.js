@@ -1,17 +1,41 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   executionFailures,
   exportFailures,
+  forbiddenNetworkingClasses,
   godotEnvironment,
+  networkingGrep,
+  networkingScan,
+  repositoryFiles,
   run,
   templateCheck,
 } from "../scripts/native-smoke.mjs";
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const plantedDirectory = "tests/fixtures/native-smoke/planted";
+// The five families the earlier forbidden list missed, each planted on line 2
+// of a file the previous `.gd`/`project.godot` filter never opened.
+const plantedSymbols = [
+  ["DTLSServer", "planted_dtls_server.txt"],
+  ["MultiplayerPeer", "planted_multiplayer_peer.txt"],
+  ["SceneMultiplayer", "planted_scene_multiplayer.txt"],
+  ["UPNP", "planted_upnp.txt"],
+  ["WebRTC", "planted_web_rtc.txt"],
+];
+const plantedHits = [
+  plantedDirectory + "/planted_dtls_server.txt:2:DTLSServer",
+  plantedDirectory + "/planted_multiplayer_peer.txt:2:MultiplayerPeer",
+  plantedDirectory + "/planted_prose_note.md:3:ENet",
+  plantedDirectory + "/planted_scene_multiplayer.txt:2:SceneMultiplayer",
+  plantedDirectory + "/planted_upnp.txt:2:UPNP",
+  plantedDirectory + "/planted_web_rtc.txt:2:WebRTC",
+];
 const passMarker = /^SCRAPKEEP_INTEGRATION STAGE PASS$/m;
 const execute = (source, options) =>
   run(process.execPath, ["-e", source], options);
@@ -157,4 +181,132 @@ test("child process writes settings into its run instead of inherited user confi
   assert.equal(env.XDG_DATA_HOME, path.join(runDirectory, "user-data"));
   assert.equal(env.XDG_CACHE_HOME, path.join(runDirectory, "cache"));
   assert.equal(inherited.XDG_CONFIG_HOME, inheritedConfig);
+});
+
+test("forbidden list names the whole networking family", () => {
+  const families = [
+    "HTTPRequest",
+    "ENet",
+    "WebSocket",
+    "MultiplayerAPI",
+    "PacketPeer",
+    "StreamPeer",
+    "HTTPClient",
+    "UDPServer",
+    "TCPServer",
+    ...plantedSymbols.map(([symbol]) => symbol),
+  ];
+  for (const family of families)
+    assert.match(
+      family,
+      forbiddenNetworkingClasses,
+      family + " must stay listed",
+    );
+});
+
+test("planted fixture fails the widened scan with its exact message", async () => {
+  const check = await networkingScan(plantedDirectory);
+  assert.equal(check.status, "fail");
+  assert.equal(
+    check.derivation,
+    "git ls-files -z --cached --others --exclude-standard -- " +
+      plantedDirectory,
+  );
+  assert.equal(check.scannedFiles.length, plantedHits.length);
+  assert.equal(check.stdoutExcerpt, plantedHits.join("\n"));
+  assert.equal(
+    check.detail,
+    "networking class named at " + plantedHits.join(", "),
+  );
+});
+
+for (const [symbol, file] of plantedSymbols) {
+  test(
+    "the widened list detects " + symbol + " in a non-script file",
+    async () => {
+      const check = await networkingGrep([
+        path.join(root, plantedDirectory, file),
+      ]);
+      assert.equal(check.status, "fail");
+      assert.equal(
+        check.detail,
+        "networking class named at " +
+          plantedDirectory +
+          "/" +
+          file +
+          ":2:" +
+          symbol,
+      );
+    },
+  );
+}
+
+test("the real native tree passes with every tracked file scanned", async () => {
+  const tracked = run("git", ["ls-files", "-z", "--", "native"])
+    .stdout.split("\0")
+    .filter(Boolean)
+    .sort();
+  const scanned = repositoryFiles("native").map((file) =>
+    path.relative(root, file).split(path.sep).join("/"),
+  );
+  assert.deepEqual(
+    scanned.filter((file) => tracked.includes(file)),
+    tracked,
+  );
+  for (const file of [
+    "native/README.md",
+    "native/export_presets.cfg",
+    "native/integration/smoke.gd.uid",
+    "native/proofs/tadr-003/fixtures/placeholder_tree.tres",
+    "native/proofs/tadr-004/fixtures/lifecycle/save.json",
+  ])
+    assert.ok(
+      scanned.includes(file),
+      file + " must be scanned instead of skipped by an extension filter",
+    );
+  const check = await networkingScan("native");
+  assert.equal(check.status, "pass");
+  assert.deepEqual(check.scannedFiles, scanned);
+  assert.equal(
+    check.derivation,
+    "git ls-files -z --cached --others --exclude-standard -- native",
+  );
+  assert.equal(
+    check.detail,
+    "no networking class named in " + scanned.length + " scanned files",
+  );
+});
+
+test("a file added after the last commit cannot escape the scan", async (t) => {
+  const directory = "tests/fixtures/native-smoke/derived";
+  const added = directory + "/added_after_commit.txt";
+  await mkdir(path.join(root, directory), { recursive: true });
+  t.after(() =>
+    rm(path.join(root, directory), { recursive: true, force: true }),
+  );
+  await writeFile(path.join(root, added), "transport = WebRTC\n");
+  assert.equal(
+    run("git", [
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "--",
+      directory,
+    ]).stdout.trim(),
+    added,
+    "the fixture must be an untracked, newly added file",
+  );
+  const check = await networkingScan(directory);
+  assert.equal(check.status, "fail");
+  assert.equal(
+    check.detail,
+    "networking class named at " + added + ":1:WebRTC",
+  );
+});
+
+test("an empty scan list cannot pass", async () => {
+  const check = await networkingGrep([]);
+  assert.equal(check.status, "fail");
+  assert.equal(check.scannedFiles.length, 0);
+  assert.match(check.detail, /unread tree cannot pass/);
 });
