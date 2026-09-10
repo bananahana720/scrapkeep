@@ -3329,7 +3329,7 @@ Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOS
 
 ## Audit repair cards (10 September 2026)
 
-Defined from the read-only audit at `artifacts/local/audit-2026-09-10/`. Andrew approved the Tier 1 + 2
+Defined from the read-only audit at `artifacts/audit-2026-09-10/`. Andrew approved the Tier 1 + 2
 wave on 10 September 2026; authorization and leases live in `TRACKING.md`. These cards change checking
 and verification behaviour only; none of them changes game rules, product direction or dependencies.
 
@@ -3343,7 +3343,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 - `TRACKING.md` § Task record schema (`:30` state vocabulary) and § Task state index
 - `scripts/check-docs.mjs` (existing `tracking` checks)
-- [Audit finding L6-01 and card L6-A](artifacts/local/audit-2026-09-10/lane-6-code-tooling.md)
+- [Audit finding L6-01 and card L6-A](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3370,7 +3370,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 - `docs/project/sprint-0/closure.json` (12 pinned `path` + `sha256` entries)
 - `artifacts/local/sprint-0/closed/` (the disposable location those pins currently resolve to)
-- [Audit findings H-01, T5-1 and T5-6](artifacts/local/audit-2026-09-10/lane-5-hygiene.md)
+- [Audit findings H-01, T5-1 and T5-6](artifacts/audit-2026-09-10/lane-5-hygiene.md)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3398,7 +3398,7 @@ and verification behaviour only; none of them changes game rules, product direct
 - `src/game.js` `PATH` (`:2-23`, 20 points)
 - `tests/expedition-balance.mjs` (hard-coded 18-point route, a different shape)
 - `scripts/verify.mjs` (asserted victory stage) and `tests/balance.mjs` (non-asserted probe)
-- [Audit finding L6-05](artifacts/local/audit-2026-09-10/lane-6-code-tooling.md)
+- [Audit finding L6-05](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3424,7 +3424,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 - `scripts/native-smoke.mjs` (`:30`, `:147` scan 16 of 32 native files)
 - `TRACKING.md:276` (the recorded, unimplemented follow-up)
-- [Audit finding L6-07 and card L6-E](artifacts/local/audit-2026-09-10/lane-6-code-tooling.md)
+- [Audit finding L6-07 and card L6-E](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
 
 **Dependencies:** None. **Blocking questions:** None.
 
