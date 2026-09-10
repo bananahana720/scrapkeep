@@ -82,6 +82,47 @@ test("events outside the EV-NNNN form are not sequenced", async () => {
   assert.equal(report.checked.events, 2);
 });
 
+test("every board state passes and a program-level event does not make rows stale", async () => {
+  const { status, report, stdout } = await runFixture("state-vocabulary");
+  assert.equal(status, 0, stdout);
+  assert.equal(report.failures, 0);
+  assert.equal(report.checked.states, 9);
+});
+
+test("a row pointing at the last event that names its record is current", async () => {
+  const { status, report, stdout } = await runFixture("last-event-current");
+  assert.equal(status, 0, stdout);
+  assert.equal(report.failures, 0);
+});
+
+test("the historical IN_REVIEW token fails the state vocabulary rule", async () => {
+  const { status, stdout, report } = await runFixture("state-in-review");
+  assert.equal(status, 1, stdout);
+  assert.equal(report.failures, 1, stdout);
+  const [finding] = report.findings.filter((entry) => entry.level === "failure");
+  assert.equal(finding.check, "tracking");
+  assert.equal(finding.file, "TRACKING.md");
+  assert.equal(finding.line, 7);
+  assert.match(
+    finding.message,
+    /^\[HF-01\]\(BACKLOG\.md#hf-01\): state "IN_REVIEW" is not in the state vocabulary \(queued, blocked, ready, in_progress, review, changes_requested, done, parked, cancelled\)$/,
+  );
+  assert.match(stdout, /FAILURE tracking TRACKING\.md:7 /);
+  assert.match(stdout, /check:docs fail: .* 1 failures\./);
+});
+
+test("a row whose Last event predates a later event naming it fails alone", async () => {
+  const { status, stdout, report } = await runFixture("last-event-predates");
+  assert.equal(status, 1, stdout);
+  assert.equal(report.failures, 1, stdout);
+  const [finding] = report.findings.filter((entry) => entry.level === "failure");
+  assert.equal(finding.line, 7);
+  assert.match(
+    finding.message,
+    /Last event EV-0001 predates EV-0002, which also names HF-01$/,
+  );
+});
+
 const failing = [
   ["closure-link", "ORCHESTRATOR.md:0", /missing required closure link/],
   ["closure-heading", "docs/project/sprint-0/amendment-request.md:0", /missing required closure heading: Admission and propagation receipt/],
@@ -116,6 +157,16 @@ const failing = [
     /malformed percent-encoding in link: BACK%ZZLOG\.md/,
   ],
   ["blank-line-events", "TRACKING.md:21", /blank line inside the events table/],
+  [
+    "last-event-unresolvable",
+    "TRACKING.md:7",
+    /Last event is not an EV-NNNN id: "not-yet"/,
+  ],
+  [
+    "last-event-unresolvable",
+    "TRACKING.md:8",
+    /Last event EV-0099 is not in the events table/,
+  ],
   [
     "missing-section-heading",
     "docs/tech/sections/HF-01-fixture.md:0",
