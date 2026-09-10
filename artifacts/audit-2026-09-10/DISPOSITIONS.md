@@ -97,7 +97,7 @@ Severity: S1 authority/trust · S2 maintenance hazard · S3 cosmetic · S4 disk 
 | H-07 | S2 | 9 of 12 retained evidence dirs lack `README.md`; 674 tracked files have no orientation | Add short READMEs (source commit, method, limits) | no |
 | F-P5 | S3 | `TRACKING.md` has ~38 glued word+digit corruptions (`from3ab3477`, `sha7eb7ad2c…`) vs 0 in peer docs; `candidate<sha>` gluing can break parsing | Fix under the recovery/board correction; confirm cause via lane 6 | no |
 | H-08 | S3 | 268 tracked files in 70 byte-identical groups inside retained evidence (877 KB redundant) | Prefer leaving as-is; hardlinking would obscure provenance | no |
-| H-09 | S3 | `public/art/` 21.1 MiB has **zero live-code references** yet Vite copies it into `dist/` every build | Move concept art under `docs/` and update 12 links (cross-lane with 4) | yes |
+| H-09 | S3 | `public/art/` 21.1 MiB has **zero live-code references** yet Vite copies it into `dist/` every build | **DONE (AR-05, integrated d6ac257)** — moved to `docs/art/`, 21 references updated across 11 documents; a fresh build now produces no `dist/art/` at all | no |
 | H-10 | S3 | 27 loose undated files at `artifacts/` root (2.9 MB) | Group into a named record with a README | no |
 | H-13 | S3 | `package.json` `start` and `test:balance` duplicate other scripts, referenced nowhere | Optional removal or document as aliases | no |
 | H-15 | S3 | `.claude/settings.local.json` ignored only by a **host-global** rule, not the repo's | Add repo `.gitignore` line | no |
