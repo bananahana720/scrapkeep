@@ -26,7 +26,7 @@ All designs and suggested tuning are hypotheses until tested. No paid providers,
 ## Delivered
 
 - [Conflict and combat brief](CONFLICT-AND-COMBAT.md): two conflict candidates, six ordinary enemy roles and an alternative large harvester, two minibosses, two major bosses, defense/protection rules and a candidate first experiment.
-- [Enemy concept sheet](../public/art/04-furnace-fleet-enemies.png) and [exact prompt/inspection](CONCEPT-STUDY-02.md): built-in image generation, four machine concepts, visually inspected.
+- [Enemy concept sheet](art/04-furnace-fleet-enemies.png) and [exact prompt/inspection](CONCEPT-STUDY-02.md): built-in image generation, four machine concepts, visually inspected.
 - [Publisher record](DISCOVERY.md): current exploration request captured without treating proposed controls or fiction as approved.
 
 No agent dropouts. New behavior remains INCONCLUSIVE at evidence levels 2–3: document references and paper scenarios, with no playable verification. Local document links were checked. The concept image is visually inspected artwork, not evidence that its machinery or combat works.

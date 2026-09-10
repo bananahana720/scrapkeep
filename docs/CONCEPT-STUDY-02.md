@@ -6,7 +6,7 @@
 
 Generated with the built-in image generation tool. No input reference image was supplied. This is a new raster concept sheet, not an edit of the first scene study, a runtime screenshot, a model, rig, or animation. The sheet compares two regular enemies, a miniboss, and a major boss. A small accumulated player ball supplies scale in the boss panel.
 
-The prompt below is preserved exactly. The generated result is saved at [04-furnace-fleet-enemies.png](../public/art/04-furnace-fleet-enemies.png).
+The prompt below is preserved exactly. The generated result is saved at [04-furnace-fleet-enemies.png](art/04-furnace-fleet-enemies.png).
 
 ## Visual inspection
 

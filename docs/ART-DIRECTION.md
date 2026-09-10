@@ -8,7 +8,7 @@ Both concepts were generated with the built-in Codex imagegen tool. They are vis
 
 ## Concept 1: yard overview
 
-Saved in `public/art/01-yard-concept.png`.
+Saved in `docs/art/01-yard-concept.png`.
 
 Prompt:
 
@@ -16,7 +16,7 @@ Use-case: stylized-concept. Create a polished 16:9 target gameplay art concept f
 
 ## Concept 2: rolling arsenal
 
-Saved in `public/art/02-arsenal-concept.png`. The first image was supplied as the visual reference.
+Saved in `docs/art/02-arsenal-concept.png`. The first image was supplied as the visual reference.
 
 Prompt:
 

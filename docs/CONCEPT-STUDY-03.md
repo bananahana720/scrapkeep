@@ -6,9 +6,9 @@ The strongest result is the repeated pruning mechanism: a little worker and a gi
 
 ## Selected family direction
 
-![Revised orchard family concept sheet](../public/art/05-pruner-family-study-v2.png)
+![Revised orchard family concept sheet](art/05-pruner-family-study-v2.png)
 
-The selected revision is [05-pruner-family-study-v2.png](../public/art/05-pruner-family-study-v2.png). The [first version](../public/art/05-pruner-family-study.png) remains as the iteration record.
+The selected revision is [05-pruner-family-study-v2.png](art/05-pruner-family-study-v2.png). The [first version](art/05-pruner-family-study.png) remains as the iteration record.
 
 The sheet visibly connects Snipcart and Grand Pruner through curved shears, large circular pivots and cream links. Spreadleg's broad padded shoes give it a different working end. The revision removes its distracting raised upper arms, leaving the compact upper fork and two legs as the primary silhouette.
 
@@ -20,9 +20,9 @@ These limits matter for the next articulated study. The image selects a promisin
 
 ## Selected combat storyboard
 
-![Revised six-panel orchard combat storyboard](../public/art/06-orchard-combat-storyboard-v2.png)
+![Revised six-panel orchard combat storyboard](art/06-orchard-combat-storyboard-v2.png)
 
-The selected revision is [06-orchard-combat-storyboard-v2.png](../public/art/06-orchard-combat-storyboard-v2.png). The [first version](../public/art/06-orchard-combat-storyboard.png) remains for comparison.
+The selected revision is [06-orchard-combat-storyboard-v2.png](art/06-orchard-combat-storyboard-v2.png). The [first version](art/06-orchard-combat-storyboard.png) remains for comparison.
 
 The top row proposes reading Snipcart, rolling clear of its cut, then banking into a local housing to loosen a cream linkage. The bottom row transfers preparation, committed reach and recovery to a much larger tool. It depicts one exchange with the boss, not its complete defeat.
 
@@ -34,7 +34,7 @@ The storyboard communicates the proposed exchange and the player's character. Us
 
 ## Method and exact prompts
 
-All four images were made with the built-in image generation tool, already authorized for concept development. No external reference photo was copied into an asset. The first family sheet used a new text prompt; subsequent images used our generated art as a local design reference. Originals remain in the generated-image output directory, with project copies preserved under `public/art/`.
+All four images were made with the built-in image generation tool, already authorized for concept development. No external reference photo was copied into an asset. The first family sheet used a new text prompt; subsequent images used our generated art as a local design reference. Originals remain in the generated-image output directory, with project copies preserved under `docs/art/`.
 
 | Output | Input/reference role | Exact prompt |
 | --- | --- | --- |
