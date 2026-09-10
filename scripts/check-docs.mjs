@@ -31,6 +31,30 @@ const sectionHeadings = [
   "Procedure performed",
   "Evidence limits",
 ];
+// TRACKING.md § Task record schema owns this vocabulary (the `state` row); the
+// question index has its own four states and is deliberately not checked here.
+const taskStates = [
+  "queued",
+  "blocked",
+  "ready",
+  "in_progress",
+  "review",
+  "changes_requested",
+  "done",
+  "parked",
+  "cancelled",
+];
+// TRACKING.md § Event schema and write discipline allows a batch event to name
+// an explicit ID list, so a program-level event names records as authorization
+// scope rather than as changed records and cannot make an index row stale:
+// EV-0077 (sprint closure) and EV-0078 (authorization/coordination) name all
+// fourteen foundation cards while their rows correctly still point at each
+// card's own last change (EV-0075, EV-0072, EV-0029). Every other event that
+// names a record can make that record's row stale.
+const programEvent = /authorization|coordination|closure/i;
+// Record IDs as a cell writes them: HF-01, HF-03a, S0-09, PS-05a, Q-E01.
+const recordIdPattern = /[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+[a-z]?/g;
+const recordIds = (cell) => [...new Set(cell.match(recordIdPattern) ?? [])];
 
 function parseArguments(argv) {
   const options = { root: scriptRoot, report: null };
@@ -387,7 +411,24 @@ async function checkTracking(docs) {
           );
     }
   }
+  // Which records each change-carrying event names, so an index row can be
+  // compared against events that arrived after its own Last event.
+  const namedEvents = new Map();
+  if (events) {
+    const header = events.rows[0]?.cells ?? [];
+    const affectedIndex = header.indexOf("Affected records");
+    const kindIndex = header.indexOf("Actor / kind");
+    for (const row of events.rows) {
+      if (!/^EV-\d{4}$/.test(row.cells[0] ?? "")) continue;
+      if (programEvent.test(row.cells[kindIndex >= 0 ? kindIndex : 2] ?? ""))
+        continue;
+      const event = { id: row.cells[0], sequence: Number(row.cells[0].slice(3)) };
+      for (const id of recordIds(row.cells[affectedIndex >= 0 ? affectedIndex : 3] ?? ""))
+        namedEvents.set(id, [...(namedEvents.get(id) ?? []), event]);
+    }
+  }
   const interim = [];
+  let states = 0;
   const backlogAnchors = (await exists(path.join(docs.root, "BACKLOG.md")))
     ? (await docs.load("BACKLOG.md")).anchors
     : new Set();
@@ -397,10 +438,19 @@ async function checkTracking(docs) {
       docs.fail("tracking", file, 0, "missing section " + heading);
       continue;
     }
+    const header = table.rows[0]?.cells ?? [];
+    const lastEventIndex = header.indexOf("Last event");
+    const stateIndex = header.indexOf("State");
+    const taskIndex = heading === "## Task state index";
+    if (taskIndex && stateIndex < 0)
+      docs.fail("tracking", file, table.start + 1, "task index has no State column");
     for (const row of table.rows) {
       const head = row.cells[0] ?? "";
       if (/^(Task ID|Question)$/.test(head)) continue;
       const link = /^\[([^\]]+)\]\(BACKLOG\.md#([^)]+)\)/.exec(head);
+      // The row names its record through the link text, or through the first
+      // token of an interim row ("PS-06 (S0-01, S0-04)" is PS-06).
+      const record = (link ? link[1] : head.split(/[\s(]/)[0]).trim();
       if (!link) interim.push({ line: row.line, row: head });
       else if (!backlogAnchors.has(link[2]))
         docs.fail(
@@ -409,7 +459,26 @@ async function checkTracking(docs) {
           row.line,
           head + ": BACKLOG.md#" + link[2] + " has no anchor",
         );
-      const lastEvent = row.cells[row.cells.length - 1] ?? "";
+      if (taskIndex && stateIndex >= 0) {
+        states++;
+        const state = row.cells[stateIndex] ?? "";
+        if (!taskStates.includes(state))
+          docs.fail(
+            "tracking",
+            file,
+            row.line,
+            head +
+              ": state " +
+              JSON.stringify(state) +
+              " is not in the state vocabulary (" +
+              taskStates.join(", ") +
+              ")",
+          );
+      }
+      const lastEvent =
+        lastEventIndex >= 0
+          ? (row.cells[lastEventIndex] ?? "")
+          : (row.cells[row.cells.length - 1] ?? "");
       if (!/^EV-\d{4}$/.test(lastEvent))
         docs.fail(
           "tracking",
@@ -426,6 +495,25 @@ async function checkTracking(docs) {
           row.line,
           head + ": Last event " + lastEvent + " is not in the events table",
         );
+      else {
+        const value = Number(lastEvent.slice(3));
+        const later = (namedEvents.get(record) ?? [])
+          .filter((event) => event.sequence > value)
+          .sort((left, right) => right.sequence - left.sequence);
+        if (later.length)
+          docs.fail(
+            "tracking",
+            file,
+            row.line,
+            head +
+              ": Last event " +
+              lastEvent +
+              " predates " +
+              later[0].id +
+              ", which also names " +
+              record,
+          );
+      }
     }
   }
   for (const row of interim)
@@ -435,7 +523,7 @@ async function checkTracking(docs) {
       row.line,
       "interim row without a BACKLOG link: " + row.row,
     );
-  return { events: sequence.size, interim };
+  return { events: sequence.size, interim, states };
 }
 
 async function checkSections(docs) {
@@ -511,6 +599,7 @@ async function main() {
       links,
       cards,
       events: tracking.events,
+      states: tracking.states,
       sections,
     },
     failures: failures.length,
