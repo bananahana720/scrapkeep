@@ -10,7 +10,7 @@ A greasy junkyard adventure in a steam-cyberpunk universe. Pilots drive electrom
 - [Orchestrator](ORCHESTRATOR.md): worker assignment, ownership, review and integration rules.
 - [Tracking](TRACKING.md): the sole execution board and next-session checkpoint.
 
-Production direction is Godot with typed GDScript. The existing browser games below remain preserved proofs. The foundation-contract sprint is proposed and has not started; the complete engineering Bible remains future work.
+Production direction is Godot with typed GDScript. The existing browser games below remain preserved proofs. The fourteen-card foundation sprint is authorized as documentation-only work and is in progress ([program authorization](TRACKING.md#program-authorization)); the complete engineering Bible remains future work.
 
 ## Existing playable proofs
 

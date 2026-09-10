@@ -19,7 +19,7 @@ Two read-only Astra reviewers inspect architecture and tooling while the coordin
 
 At the time of this closeout, `git status --short` failed because `.git` was an empty read-only environment path, so the files were verified and handed off without a commit, branch, or remote backup; version control stayed a tracked environment task (backlog T01).
 
-That is resolved. The checkout is now real: branch `main`, baseline commit `4db9b31`, with `.gitignore` covering `node_modules`, `dist`, `.private`, `.env`, and `artifacts/local`. Writing agents use disjoint worktrees and the coordinator admits changes on branches with ordinary review. No remote is configured yet, so there is still no off-machine backup until Andrew authorizes one and it is published.
+That is resolved. The checkout is now real: branch `main`, baseline commit `4db9b31`, with `.gitignore` covering `node_modules`, `dist`, `.private`, `.env`, and `artifacts/local`. Writing agents use disjoint worktrees and the coordinator admits changes on branches with ordinary review. Superseded 2026-09-06: a private remote is now configured and was verified (`TRACKING.md` EV-0018), so this historical note no longer describes the current state; work committed since the last published tip remains unpushed.
 
 ## Results
 

@@ -8,7 +8,7 @@ This file turns the approved planning into bounded work. It contains no live exe
 
 Godot 4.7.2 standard, typed GDScript, explicit hybrid/session ownership, native Resource/scene content, JSON aggregate saves and offline solo are settled. The approved art direction and 1/2/4/8 branching trees are settled. Old engine-open, matte-only and fan-shaped-tree references do not reopen them.
 
-The initial authorization covered preparation documents. Andrew subsequently authorized private publication in PUB-01 and the [operational Sprint 0 proof scope](docs/project/sprint-0/AUTHORIZATION.md). The fourteen-card foundation set below is a dependency programme, not a dispatch authorization. TRACKING selects the current bounded proposal under ORCHESTRATOR's maximum-four-card rule. TECH_BIBLE.md and its full AUDIT_REPORT.md remain future outputs; no production feature work is authorized by these definitions.
+The initial authorization covered preparation documents. Andrew subsequently authorized private publication in PUB-01 and the [operational Sprint 0 proof scope](docs/project/sprint-0/AUTHORIZATION.md). The fourteen-card foundation set below is a dependency programme, not a dispatch authorization; it was authorized as documentation-only work on 6 September 2026. Authorization lives in `TRACKING.md` ([program authorization](TRACKING.md#program-authorization)); this file never grants it. TECH_BIBLE.md and its full AUDIT_REPORT.md remain future outputs; no production feature work is authorized by these definitions.
 
 ## Navigation
 
