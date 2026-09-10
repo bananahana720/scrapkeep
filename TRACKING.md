@@ -189,7 +189,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [AR-03](BACKLOG.md#ar-03) | 1 | 4 | done | none | AR-03-A1 | EV-0111 |
 | [AR-04](BACKLOG.md#ar-04) | 1 | 4 | done | none | AR-04-A1 | EV-0112 |
 | [AR-05](BACKLOG.md#ar-05) | 1 | 3 | review | none | AR-05-A2 | EV-0116 |
-| [AR-06](BACKLOG.md#ar-06) | 1 | 2 | in_progress | none | AR-06-A1 | EV-0114 |
+| [AR-06](BACKLOG.md#ar-06) | 1 | 3 | review | none | AR-06-A1 | EV-0116 |
 | [AR-07](BACKLOG.md#ar-07) | 1 | 2 | in_progress | none | AR-07-A1 | EV-0114 |
 
 ## Question state index
