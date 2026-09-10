@@ -116,7 +116,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 4 | ready | none | none | EV-0087 |
-| [HF-04a](BACKLOG.md#hf-04a) | 1 | 5 | review | none | none | EV-0091 |
+| [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 3 | queued | HF-04a | none | EV-0084 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 1 | queued | HF-06a | none | EV-0029 |
@@ -341,6 +341,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0093 | 2026-09-10T16:42:05+00:00 | Coordinator / ownership recovery | (record) | Coordination transfer after the cut-off session, authorized by Andrew on 2026-09-10. No writer or coordinator process survives (process and /proc cwd scan). Reconciled event sequence EV-0001..EV-0092 is contiguous with no gaps or duplicates; the final board write (EV-0090..EV-0092 plus the HF-04a row and two attempt records) was uncommitted and is admitted by this transfer. Recorded substitution: TRACKING.md:15 names `/root/foundation_coordinator` at gpt-6-astra xhigh while the active host map selects high, and this session cannot verify its own runtime model from inside; the pair is reported as unverified rather than silently chosen. No lease state is changed by this event. |
 | EV-0094 | 2026-09-10T16:42:05+00:00 | Coordinator / handoff | HF-05 | HF-05-A1/L1 writer stopped; the delivered candidate was never recorded before the cut-off. Candidate ea522c3eac2cb12c44d9918910a3ec0b10a604c0 (branch wt/HF-05, base 7a73c5b5f44806c83924661b054051818174f07e); delivered section docs/tech/sections/HF-05-content-admission.md, 202 lines, blob 8ceb841d535cc78a94d1b9024d93bc544c91028f, sha256 7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6. Retained receipts: artifacts/foundation-sprint-2026-09/tasks/HF-05/attempt-1/ (21 files, byte-identical to the worktree evidence and to the pre-cleanup audit archive). Final paper/source receipt 126 checks PASS; docs/project and scope checks exit 0; handoff records stopped_writer true. HF-05-L1 closed. Row set to review at record revision 5. Correction: EV-0092's count of 118 has no supporting artifact. |
 | EV-0095 | 2026-09-10T16:42:05+00:00 | Coordinator / assignment | HF-04a, HF-05 | One fresh independent reviewer assigned to the disjoint wave: HF-04a candidate 72178cf (section sha256 7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb) and HF-05 candidate ea522c3 (section sha256 7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6), per the wave-review rule. The reviewer wrote neither candidate and holds no write lease. Review scope includes each card's acceptance, Bible/ADR boundaries, and the reproduction hazard where run_checks.py rewrites handoff.json from the passed repository HEAD, so retained attempt-1 receipts are immutable evidence. Neither candidate may be integrated before an independent PASS; HF-04b and HF-06a stay locked on done. |
+| EV-0096 | 2026-09-10T16:51:33+00:00 | Coordinator / review admission, integration | HF-04a | Independent wave review PASS+NOTES on candidate 72178cf (section sha256 7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb, 207 lines) by a fresh reviewer that wrote neither candidate. Evidence method: identity re-derivation (one parent at base 7a73c5b5, one leased file, clean worktree, receipts byte-identical to worktree and archive), hand re-derivation of every count (1 C-TICK owner, 8 forbidden families, P0-P6, O1-O4, 5 tables, 29 scenario rows), exact source-line checks against HF-01/HF-02/HF-03a, TADR-002/0005 and BIBLE, and check:docs plus check:project re-run inside the candidate worktree. Serial admission: the reviewed bytes were copied unchanged into docs/tech/sections/HF-04a-runtime-lifecycle.md and the integrated checks pass. Recorded constraints (no candidate edit): the retained run_checks.py derives its candidate from the passed root's HEAD and rewrites 7 of 11 retained receipts in place, so it must be run from scratch with output outside the retained directory and never against main. HF-04a-A1 done; HF-04b's dependency is satisfied. |
 
 ## Preparation checkpoint
 
@@ -519,7 +520,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Full foundation reporting checkpoint
 
-Last reported event: EV-0095. Latest admitted checkpoint: 3/14 done (HF-01, HF-02, HF-03a). HF-04a (EV-0091) and HF-05 (EV-0094) are both in review; one fresh independent reviewer is assigned to the disjoint wave at EV-0095. Since EV-0077: full scope authorized, HF-04b factual revision 2 admitted, HF-03a admitted; HF-03b remains input-ready. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
+Last reported event: EV-0096. Latest admitted checkpoint: 4/14 done (HF-01, HF-02, HF-03a, HF-04a). HF-04a was admitted at EV-0096 on an independent PASS+NOTES; HF-05 (EV-0094) remains in review. Since EV-0077: full scope authorized, HF-04b factual revision 2 admitted, HF-03a admitted; HF-03b remains input-ready. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
 
 ## HF-03a-A1 full foundation attempt
 
@@ -541,11 +542,11 @@ Last reported event: EV-0095. Latest admitted checkpoint: 3/14 done (HF-01, HF-0
 - Assignee: /root/foundation_hf03a, gpt-6-astra high requested; card revision 1; attempt HF-04a-A1; exclusive lease HF-04a-L1 closed, writer stopped.
 - Owned files: `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `artifacts/local/tasks/HF-04a/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-04a.
 - Base identity: `7a73c5b5f44806c83924661b054051818174f07e`; accepted dependency files from this base.
-- Candidate identity: `72178cf58a39e9ca1c70922eca830776573f3ce8`. Integrated identity: null.
+- Candidate identity: `72178cf58a39e9ca1c70922eca830776573f3ce8`. Integrated identity: recorded at EV-0096.
 - Latest checkpoint: 2026-09-06T22:50:44.762671+00:00; actual draft inspected, 5 scenario tables and single-owner callback contract; handoff completed (candidate produced, checks run, lease closed, review pending).
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-04a/assignment.md).
-- Review: fresh ff-hf04a-review pending.
+- Review: PASS+NOTES by a fresh independent wave reviewer (EV-0096); no blocking finding. Recorded constraint: the retained run_checks.py takes its candidate from the passed root's HEAD and rewrites 7 of 11 retained receipts in place - run it from scratch with output outside the retained directory, never against main.
 - Handoff: [original attempt](artifacts/foundation-sprint-2026-09/tasks/HF-04a/attempt-1/handoff.json).
 
 ## HF-05-A1 full foundation attempt

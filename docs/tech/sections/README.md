@@ -11,6 +11,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [HF-01: Production paths and contribution conventions](HF-01-production-conventions.md).
 - [HF-02: Constraints and evidence register](HF-02-constraints-evidence.md).
 - [HF-03a: Module ownership and owned records](HF-03a-module-map.md).
+- [HF-04a: Fixed tick, pause and encounter lifecycle](HF-04a-runtime-lifecycle.md).
 
 ## Scenarios
 
