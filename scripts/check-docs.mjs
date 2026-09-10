@@ -56,6 +56,39 @@ const programEvent = /authorization|coordination|closure/i;
 const recordIdPattern = /[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+[a-z]?/g;
 const recordIds = (cell) => [...new Set(cell.match(recordIdPattern) ?? [])];
 
+// Event archives -- the declaration the coordinator authors against.
+//
+// An event may move out of TRACKING.md into a tracked archive without breaking
+// the index rows that cite it, but a moved event must be *declared*, never
+// guessed from a path or a file name. A Markdown file declares itself an event
+// archive with a level-2 heading whose text is exactly `Event archive`:
+//
+//     ## Event archive
+//
+// The declaration is the only thing that makes a file an event archive; its
+// path and name are free. The coordinator's chosen location,
+// docs/project/tracking/EVENTS-0001-0057.md, is therefore recognised, but so is
+// any other name in documentation scope. The event rows are the table rows under
+// that heading (up to the next `##` heading) with the same
+// `Sequence | UTC timestamp | Actor / kind | Affected records | Change and
+// evidence` columns as TRACKING.md § Append-only events, so the split moves rows
+// verbatim. A file may carry more than one `## Event archive` section.
+//
+// A heading that only resembles the declaration (`# Event archive`,
+// `## Event Archive`, `## Event archives`, `## Event archive: EV-0001..EV-0057`)
+// is a failure rather than a silent no-op, so a mistyped archive cannot quietly
+// stop resolving ids. Documenting the heading inside a fenced code block stays
+// safe: fenced lines are blanked before scanning.
+//
+// Checked sources are the live board plus every declared archive in the
+// documentation scope this checker already walks (top-level *.md, adr/**,
+// docs/**, artifacts/*/README.md, excluding artifacts/local/). TRACKING.md is
+// never also read as an archive, and scratch or worktree copies are out of
+// scope, so a copy of an archive cannot make a real id look duplicated.
+const eventArchiveHeading = "## Event archive";
+const eventArchiveHeadingLike = /^#{1,6}\s+Events?\s+archives?\b/i;
+const isEventId = (cell) => /^EV-\d{4}$/.test(cell ?? "");
+
 function parseArguments(argv) {
   const options = { root: scriptRoot, report: null };
   for (let index = 0; index < argv.length; index++) {
@@ -339,49 +372,146 @@ async function checkBacklog(docs) {
   return cards;
 }
 
-function tableRows(lines, sectionHeading) {
-  const start = lines.findIndex((line) => line.trim() === sectionHeading);
-  if (start < 0) return null;
-  let end = start + 1;
-  while (end < lines.length && !/^##\s/.test(lines[end])) end++;
-  const rows = [];
-  for (let index = start + 1; index < end; index++) {
-    const line = lines[index];
-    if (!line.startsWith("|") || /^\|\s*-{3}/.test(line)) continue;
-    const cells = line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    rows.push({ line: index + 1, cells });
+// Every section whose heading text is exactly the given one, so an archive that
+// repeats the declaration is read whole instead of dropping the later rows.
+function tableSections(lines, sectionHeading) {
+  const sections = [];
+  for (let start = 0; start < lines.length; start++) {
+    if (lines[start].trim() !== sectionHeading) continue;
+    let end = start + 1;
+    while (end < lines.length && !/^##\s/.test(lines[end])) end++;
+    const rows = [];
+    for (let index = start + 1; index < end; index++) {
+      const line = lines[index];
+      if (!line.startsWith("|") || /^\|\s*-{3}/.test(line)) continue;
+      const cells = line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim());
+      rows.push({ line: index + 1, cells });
+    }
+    sections.push({ start, end, rows });
   }
-  return { start, end, rows };
+  return sections;
+}
+
+function tableRows(lines, sectionHeading) {
+  const section = tableSections(lines, sectionHeading)[0];
+  return section
+    ? { start: section.start, end: section.end, rows: section.rows }
+    : null;
+}
+
+// Every declared event archive in documentation scope, as an event source:
+// { file, lines, sections, rows } with rows already limited to EV-NNNN ids.
+async function eventArchives(docs) {
+  const archives = [];
+  for (const file of await markdownFiles(docs.root)) {
+    if (file === "TRACKING.md") continue;
+    const { lines } = await docs.load(file);
+    const declared = [];
+    for (const [index, line] of lines.entries())
+      if (eventArchiveHeadingLike.test(line.trim())) declared.push(index + 1);
+    if (!declared.length) continue;
+    const exact = [];
+    for (const line of declared)
+      if (lines[line - 1].trim() === eventArchiveHeading) exact.push(line);
+      else
+        docs.fail(
+          "tracking",
+          file,
+          line,
+          "malformed event archive heading: " +
+            JSON.stringify(lines[line - 1].trim()) +
+            " (an event archive declares itself with a level-2 heading that is exactly " +
+            JSON.stringify(eventArchiveHeading) +
+            ")",
+        );
+    if (!exact.length) continue;
+    const sections = tableSections(lines, eventArchiveHeading);
+    const rows = sections
+      .flatMap((section) => section.rows)
+      .filter((row) => isEventId(row.cells[0]));
+    if (!rows.length) {
+      docs.fail(
+        "tracking",
+        file,
+        exact[0],
+        "declared event archive holds no EV-NNNN event rows",
+      );
+      continue;
+    }
+    archives.push({ file, lines, sections, rows });
+  }
+  return archives;
 }
 
 async function checkTracking(docs) {
   const file = "TRACKING.md";
   if (!(await exists(path.join(docs.root, file)))) {
     docs.fail("tracking", file, 0, "required board file missing");
-    return { events: 0, interim: [] };
+    return { events: 0, interim: [], states: 0, archives: 0 };
   }
   const { lines } = await docs.load(file);
   const events = tableRows(lines, "## Append-only events");
-  const sequence = new Set();
   if (!events)
     docs.fail("tracking", file, 0, "missing section ## Append-only events");
-  else {
-    const rows = events.rows.filter((row) =>
-      /^EV-\d{4}$/.test(row.cells[0] ?? ""),
-    );
-    let previous = 0;
-    for (const row of rows) {
+  // Event sources: the live board, then every archive that declares itself an
+  // event archive. The board keeps the shape the AR-01 rules were written
+  // against; archives contribute ids, sequence positions and named records.
+  const archives = await eventArchives(docs);
+  const sources = [
+    {
+      file,
+      lines,
+      sections: events ? [events] : [],
+      rows: (events?.rows ?? []).filter((row) => isEventId(row.cells[0])),
+    },
+    ...archives,
+  ];
+  const lowest = (source) =>
+    Math.min(...source.rows.map((row) => Number(row.cells[0].slice(3))));
+  // The id space is checked over the ordered union of sources: each source keeps
+  // its own file order, and the sources themselves are ordered by their lowest
+  // event id, so an archived EV-0001..EV-0057 prefix precedes the board's
+  // EV-0058.. continuation. With no archive this is exactly the single-table
+  // ascending, gap-free sequence the board has always been checked against, and
+  // an id that appears twice in or across sources is still a failure.
+  const ordered = sources
+    .filter((source) => source.rows.length)
+    .sort((left, right) => {
+      const byEvent = lowest(left) - lowest(right);
+      if (byEvent) return byEvent;
+      if (left.file === right.file) return 0;
+      if (left.file === file) return -1;
+      if (right.file === file) return 1;
+      return left.file.localeCompare(right.file);
+    });
+  const sequence = new Set();
+  const firstSeen = new Map();
+  let previous = 0;
+  for (const source of ordered)
+    for (const row of source.rows) {
       const id = row.cells[0];
       const value = Number(id.slice(3));
-      if (sequence.has(id))
-        docs.fail("tracking", file, row.line, "duplicate event " + id);
-      else if (value !== previous + 1)
+      if (sequence.has(id)) {
+        const first = firstSeen.get(id);
         docs.fail(
           "tracking",
-          file,
+          source.file,
+          row.line,
+          "duplicate event " +
+            id +
+            " (first seen in " +
+            first.file +
+            ":" +
+            first.line +
+            ")",
+        );
+      } else if (value !== previous + 1)
+        docs.fail(
+          "tracking",
+          source.file,
           row.line,
           "event sequence break: " +
             id +
@@ -389,37 +519,44 @@ async function checkTracking(docs) {
             String(previous).padStart(4, "0"),
         );
       sequence.add(id);
+      if (!firstSeen.has(id))
+        firstSeen.set(id, { file: source.file, line: row.line });
       previous = Math.max(previous, value);
     }
-    if (rows.length) {
+  // The events table stays one unbroken table in every source, archive included.
+  for (const source of sources)
+    for (const section of source.sections) {
+      const rows = section.rows.filter((row) => isEventId(row.cells[0]));
+      if (!rows.length) continue;
       const first = rows[0].line - 1;
       const last = rows[rows.length - 1].line - 1;
       for (let index = first; index <= last; index++)
-        if (lines[index].trim() === "")
+        if (source.lines[index].trim() === "")
           docs.fail(
             "tracking",
-            file,
+            source.file,
             index + 1,
             "blank line inside the events table",
           );
-        else if (!lines[index].startsWith("|"))
+        else if (!source.lines[index].startsWith("|"))
           docs.fail(
             "tracking",
-            file,
+            source.file,
             index + 1,
             "non-table line inside the events table",
           );
     }
-  }
   // Which records each change-carrying event names, so an index row can be
-  // compared against events that arrived after its own Last event.
+  // compared against events that arrived after its own Last event. Archived
+  // events take part here too, which is what keeps the stale-row rule alive once
+  // the events it compares have moved out of the board, and still lets a later
+  // board event make a row that points into an archive stale.
   const namedEvents = new Map();
-  if (events) {
-    const header = events.rows[0]?.cells ?? [];
+  for (const source of sources) {
+    const header = source.sections[0]?.rows[0]?.cells ?? [];
     const affectedIndex = header.indexOf("Affected records");
     const kindIndex = header.indexOf("Actor / kind");
-    for (const row of events.rows) {
-      if (!/^EV-\d{4}$/.test(row.cells[0] ?? "")) continue;
+    for (const row of source.rows) {
       if (programEvent.test(row.cells[kindIndex >= 0 ? kindIndex : 2] ?? ""))
         continue;
       const event = { id: row.cells[0], sequence: Number(row.cells[0].slice(3)) };
@@ -523,7 +660,7 @@ async function checkTracking(docs) {
       row.line,
       "interim row without a BACKLOG link: " + row.row,
     );
-  return { events: sequence.size, interim, states };
+  return { events: sequence.size, interim, states, archives: archives.length };
 }
 
 async function checkSections(docs) {
@@ -599,6 +736,7 @@ async function main() {
       links,
       cards,
       events: tracking.events,
+      archives: tracking.archives,
       states: tracking.states,
       sections,
     },

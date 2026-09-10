@@ -95,6 +95,27 @@ test("a row pointing at the last event that names its record is current", async 
   assert.equal(report.failures, 0);
 });
 
+test("an event archived out of the board still resolves for the row that cites it", async () => {
+  const { status, report, stdout } = await runFixture("archive-resolves");
+  assert.equal(status, 0, stdout);
+  assert.equal(report.failures, 0);
+  assert.equal(report.checked.events, 3);
+  assert.equal(report.checked.archives, 1);
+});
+
+test("the stale rule compares a row that points into an archive against board events", async () => {
+  const { status, stdout, report } = await runFixture("archive-row-stale-later");
+  assert.equal(status, 1, stdout);
+  assert.equal(report.failures, 1, stdout);
+  const [finding] = report.findings.filter((entry) => entry.level === "failure");
+  assert.equal(finding.file, "TRACKING.md");
+  assert.equal(finding.line, 7);
+  assert.match(
+    finding.message,
+    /Last event EV-0001 predates EV-0002, which also names HF-01$/,
+  );
+});
+
 test("the historical IN_REVIEW token fails the state vocabulary rule", async () => {
   const { status, stdout, report } = await runFixture("state-in-review");
   assert.equal(status, 1, stdout);
@@ -171,6 +192,36 @@ const failing = [
     "missing-section-heading",
     "docs/tech/sections/HF-01-fixture.md:0",
     /missing required heading: Procedure performed/,
+  ],
+  [
+    "archive-missing-id",
+    "TRACKING.md:8",
+    /PS-01 \(interim\): Last event EV-0099 is not in the events table/,
+  ],
+  [
+    "archive-duplicate-id",
+    "TRACKING.md:20",
+    /duplicate event EV-0002 \(first seen in docs\/project\/tracking\/EVENTS-0001-0002\.md:8\)/,
+  ],
+  [
+    "archive-stale-later",
+    "TRACKING.md:7",
+    /Last event EV-0001 predates EV-0002, which also names HF-01/,
+  ],
+  [
+    "archive-row-stale-later",
+    "TRACKING.md:7",
+    /Last event EV-0001 predates EV-0002, which also names HF-01/,
+  ],
+  [
+    "archive-heading-malformed",
+    "docs/project/tracking/EVENTS-0001-0002.md:1",
+    /malformed event archive heading: "# Event archive" \(an event archive declares itself with a level-2 heading that is exactly "## Event archive"\)/,
+  ],
+  [
+    "archive-heading-malformed",
+    "docs/project/tracking/EVENTS-0001-0002.md:6",
+    /malformed event archive heading: "## Event archives" \(an event archive declares itself with a level-2 heading that is exactly "## Event archive"\)/,
   ],
 ];
 
