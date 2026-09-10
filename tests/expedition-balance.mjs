@@ -79,12 +79,15 @@ export function simulate(
     }
     let input = { x: 0, z: 0 };
     if (policy === "patrol") {
-      // Walk the shipped path end to end and back, with the probe's traversal in
-      // `tests/balance.mjs`: aim at the current waypoint, advance on arrival,
-      // reverse at the ends. A modulo wrap would instead aim the player from the
-      // last shipped point straight back to the first, across the maze and off
-      // the route the game publishes, so the gate would stop patrolling the
-      // geometry it claims to patrol.
+      // Walk the shipped path end to end and back, aiming at the current
+      // waypoint, advancing on arrival and reversing at the ends. The probe in
+      // `tests/balance.mjs` shares this geometry but not this traversal detail:
+      // it starts at waypoint 3, advances at d < 0.65 and dashes when d > 3,
+      // while this gate starts at 0, advances at d < 1 and never dashes. The
+      // modulo wrap this replaced still visited every waypoint, so it did not
+      // strand the player; its defect was the unpublished straight leg from the
+      // last shipped point back to the first, once per lap, off the route the
+      // game publishes.
       const target = route[waypoint];
       const dx = target[0] - g.player.x,
         dz = target[1] - g.player.z,

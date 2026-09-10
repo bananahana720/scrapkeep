@@ -27,11 +27,14 @@ const positiveScript = "res://tests/smoke_boot.gd";
 const negativeScript = "res://tests/fixtures/untyped_negative.gd";
 const marker = /^SCRAPKEEP_SMOKE (\S+) typed$/m;
 const negativeMarker = "SCRAPKEEP_SMOKE_NEGATIVE";
-// Every transport, peer and replication class the offline-solo decision
-// excludes (adr/TADR-005-networking-scope.md, Decision: no networking
-// subsystem, no replication, no server deployment). The list carries the peer,
-// WebRTC, replication, DTLS and UPnP families an earlier revision scanned
-// past, so the guard matches the scope a reader assumes it enforces.
+// The excluded networking classes this guard names
+// (adr/TADR-005-networking-scope.md, Decision: no networking subsystem, no
+// replication, no server deployment). Card AR-04 added five of them —
+// MultiplayerPeer, WebRTC, SceneMultiplayer, DTLSServer and UPNP — to the
+// transport and peer families an earlier revision already carried. It is not
+// every excluded class: the replication nodes MultiplayerSpawner and
+// MultiplayerSynchronizer are absent, so the list guards named networking
+// entry points rather than the whole scope the decision excludes.
 export const forbiddenNetworkingClasses =
   /HTTPRequest|ENet|WebSocket|MultiplayerAPI|PacketPeer|StreamPeer|HTTPClient|UDPServer|TCPServer|MultiplayerPeer|WebRTC|SceneMultiplayer|DTLSServer|UPNP/;
 const reportFile = path.join(root, "artifacts/local/native-smoke/report.json");
