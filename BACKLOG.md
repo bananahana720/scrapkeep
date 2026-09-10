@@ -3440,3 +3440,84 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Boundary:** Checker scope only. No engine change and no claim that the native tree was executed.
 
+<a id="ar-05"></a>
+
+### AR-05: Move documentation-only concept art out of the served tree
+
+**Card revision:** 1 · **Owner:** Technical art · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- [Audit finding H-09](artifacts/audit-2026-09-10/lane-5-hygiene.md) and [card L6-F](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
+- `docs/project/ASSETS.md` (retain the original file names)
+- `public/art/` (8 PNGs, 22,149,367 bytes) and the tracked documents that reference them
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `public/art/*.png` (8 files, moved); the new tracked art directory under `docs/`; every tracked document that links them.
+
+**Definition of done:**
+
+1. The eight PNGs live under `docs/` beside the concept studies that cite them, keeping their exact file names and bytes.
+2. Every tracked reference is updated, including `docs/CONCEPT-STUDY-0*.md`, `docs/ART-DIRECTION.md`, `docs/project/ASSETS.md`, `docs/project/SOURCE-DISPOSITIONS.md`, `TRACKING.md` and the audit records under `artifacts/audit-2026-09-10/`.
+3. `public/art/` no longer exists, so a production build stops copying 21 MB of documentation art into `dist/art/`.
+4. No live code reference exists or is introduced: `index.html`, `orchard.html`, `src/`, `server/`, `scripts/` and `tests/` load none of these files (verify, do not assume).
+
+**Verification and evidence:** `npm run check:docs` and `npm run check:project` exit 0; a repository-wide search shows no remaining `public/art` reference except any deliberately recorded historical note; `git ls-files public/art` is empty and `git ls-files <new directory>` lists 8 files. The build-copy effect is verified at admission by the coordinator through `npm run verify`, which this attempt must not run.
+
+**Boundary:** A path move and link update only. No image is deleted, re-encoded or renamed, and no page or build configuration changes.
+
+<a id="ar-06"></a>
+
+### AR-06: Close the three accepted review follow-ups
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- [Wave review AR-03/AR-04](artifacts/audit-2026-09-10/review-wave-ar03-ar04.md) — the accepted notes
+- `tests/expedition-balance.mjs` (AR-03 comments), `scripts/native-smoke.mjs` (AR-04 comment), `artifacts/README.md` (the cited-but-unpinned list)
+- `docs/project/sprint-0/closure.json` (which cites `artifacts/local/sprint-0/final/dispatch-validation.json`)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `tests/expedition-balance.mjs` (comments only); `scripts/native-smoke.mjs` (comment only); `artifacts/README.md`.
+
+**Definition of done:**
+
+1. The AR-03 comments describe the defect accurately: the replaced modulo wrap still visited every waypoint, so the claim that it stopped patrolling the geometry is removed or corrected, and the "probe's traversal" description matches what the probe actually does or is stated as approximate.
+2. The AR-04 comment matches the list it describes. The forbidden list is **not** extended: either the comment stops claiming every replication class, or it names what is and is not covered. Adding `MultiplayerSpawner` or `MultiplayerSynchronizer` is out of scope for this card.
+3. `artifacts/README.md` names `artifacts/local/sprint-0/final/dispatch-validation.json` among the cited-but-unpinned local paths and records that `docs/project/sprint-0/closure.json` cites it.
+4. No executable behaviour changes in any of the three files.
+
+**Verification and evidence:** `npm test` exit 0 with the same pass count as before the change, proving the edits are comment-only in the two scripts; `npm run check:docs` exit 0; quote the three changed passages in the handoff.
+
+**Boundary:** Comment and document accuracy only. No behaviour change, no forbidden-list extension, no reformatting of unrelated lines.
+
+<a id="ar-07"></a>
+
+### AR-07: Let the documentation check read archived events
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- [Audit finding L3-25/L3-30 and card L3 Task 6](artifacts/audit-2026-09-10/lane-3-canonical.md)
+- `scripts/check-docs.mjs` (the `tracking` event checks, including the AR-01 rules)
+- `TRACKING.md` (112 events; 117 index rows whose `Last event` is at or before EV-0057)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `scripts/check-docs.mjs`; `tests/check-docs.test.js`; new fixtures under `tests/fixtures/check-docs/**`.
+
+**Definition of done:**
+
+1. The checker resolves event IDs from `TRACKING.md` **and** from tracked archive files that declare themselves as event archives, so an event may move to an archive without breaking a row that cites it.
+2. Archive membership is not silently accepted: an ID that appears in no checked source still fails, and a duplicate ID across sources fails.
+3. The three AR-01 rules keep working across the boundary — state vocabulary, unresolvable `Last event`, and a `Last event` that predates a later record-level event naming the same record, including when the later event is in an archive or the row points into one.
+4. Fixtures cover: an event resolved from an archive, a missing ID, a duplicate ID, and a stale row whose later naming event lives in an archive.
+
+**Verification and evidence:** `npm test` and `npm run check:docs` exit 0 on the current board; each new fixture is shown failing without its rule. State the file-name convention the checker recognises for an archive so the coordinator can perform the split against it.
+
+**Boundary:** Checker capability only. This card does **not** move any event, does not edit `TRACKING.md`, and creates no archive; the coordinator performs the split afterwards.
+
