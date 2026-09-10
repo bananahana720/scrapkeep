@@ -3337,7 +3337,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 ### AR-01: Validate live board state in the documentation check
 
-**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
+**Card revision:** 2 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
 
 **Source and inputs:**
 
@@ -3352,7 +3352,7 @@ and verification behaviour only; none of them changes game rules, product direct
 **Definition of done:**
 
 1. `check:docs` fails when a task-index `State` cell is not one of the values defined at `TRACKING.md:30`.
-2. `check:docs` fails when a row's `Last event` cannot be resolved, or predates an older event that names the same record, so a delivered handoff cannot stay invisible behind a stale row.
+2. `check:docs` fails when a row's `Last event` cannot be resolved, or predates a later **record-level** event that names the same record, so a delivered handoff cannot stay invisible behind a stale row. Program-level events - those whose kind cell names authorization, coordination or closure - legitimately name many records without changing any of them and are excluded. The exclusion is documented in the checker and carries a negative control proving it is load-bearing. When the board adopts a structured event-kind field, this exclusion must key off that field rather than free text (definition change, revision 2, 10 September 2026: the revision-1 wording said "any later event" and was unsatisfiable together with item 4, because EV-0077 and EV-0078 name all fourteen foundation cards).
 3. Both rules carry passing and failing fixtures in `tests/check-docs.test.js`, including a fixture that reproduces the historical `IN_REVIEW` token.
 4. The current board passes both rules without any board edit.
 
