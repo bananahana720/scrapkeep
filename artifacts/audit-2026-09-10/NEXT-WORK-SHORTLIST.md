@@ -20,6 +20,20 @@ verification method before dispatch (ORCHESTRATOR, "Questions and scope changes"
 | T5-8 strip generated material from worktrees; A1–A2 worktree/branch pruning | cleanup execution (~1.14 GB) |
 | H-01 immediate risk: the 12 hash-pinned closure files | archived and re-verified in `preserved/sprint-0-closure/` |
 
+## Completed since this shortlist was written
+
+All four Tier 1 + 2 repair cards are **done and integrated**, each through its own worktree, a fresh
+independent review and serial admission: AR-01 (`e1e15fe`, checker validates board state), AR-02
+(`c689cb8`, closure evidence chain tracked), AR-03 (`2995598`, asserted gate patrols the shipped PATH),
+AR-04 (`ae42480`, native scan covers all 32 files). Retention items executed: `sprint-0/final/` exports
+pruned (175 MB) and the S0-09 worktree with its 872 MB of unique exports removed, both with hashes
+recorded; `main` is pushed.
+
+**Still open:** the `test-game-2` capture decision (1.3 GB of playtest captures), the `public/art` move,
+the TRACKING archive split, and three small accepted follow-ups — AR-03's overstated comments, AR-04's
+unlisted `MultiplayerSpawner`/`MultiplayerSynchronizer`, and the missing `dispatch-validation.json` line
+in `artifacts/README.md`.
+
 ## In flight
 
 - **L2-C5 + L2-C6** — one fresh independent reviewer for the disjoint HF-04a (`72178cf`) and HF-05
