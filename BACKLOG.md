@@ -3326,3 +3326,117 @@ An affected documentation card can record an unknown where its DoD explicitly al
 ## Source records
 
 Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOSITIONS.md](docs/project/SOURCE-DISPOSITIONS.md), moved there verbatim on 6 September 2026. The coordinator owns that file. It preserves every P/T/R/D/BD identifier, the unnumbered planning obligations, core-system headings, selected concept-art receipts and requested engineering sections, and its task and question links point back to the cards and questions in this file. A disposition row grants no task completion, native support claim or implementation authorization.
+
+## Audit repair cards (10 September 2026)
+
+Defined from the read-only audit at `artifacts/local/audit-2026-09-10/`. Andrew approved the Tier 1 + 2
+wave on 10 September 2026; authorization and leases live in `TRACKING.md`. These cards change checking
+and verification behaviour only; none of them changes game rules, product direction or dependencies.
+
+<a id="ar-01"></a>
+
+### AR-01: Validate live board state in the documentation check
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- `TRACKING.md` § Task record schema (`:30` state vocabulary) and § Task state index
+- `scripts/check-docs.mjs` (existing `tracking` checks)
+- [Audit finding L6-01 and card L6-A](artifacts/local/audit-2026-09-10/lane-6-code-tooling.md)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `scripts/check-docs.mjs`; `tests/check-docs.test.js`.
+
+**Definition of done:**
+
+1. `check:docs` fails when a task-index `State` cell is not one of the values defined at `TRACKING.md:30`.
+2. `check:docs` fails when a row's `Last event` cannot be resolved, or predates an older event that names the same record, so a delivered handoff cannot stay invisible behind a stale row.
+3. Both rules carry passing and failing fixtures in `tests/check-docs.test.js`, including a fixture that reproduces the historical `IN_REVIEW` token.
+4. The current board passes both rules without any board edit.
+
+**Verification and evidence:** `npm test` and `npm run check:docs` (documentation-only scope; no build). The failing fixtures must be shown failing.
+
+**Boundary:** Checker only. No board content change, no runtime behaviour, no new dependency.
+
+<a id="ar-02"></a>
+
+### AR-02: Track the Sprint 0 closure evidence chain and state the disposal contract
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- `docs/project/sprint-0/closure.json` (12 pinned `path` + `sha256` entries)
+- `artifacts/local/sprint-0/closed/` (the disposable location those pins currently resolve to)
+- [Audit findings H-01, T5-1 and T5-6](artifacts/local/audit-2026-09-10/lane-5-hygiene.md)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `artifacts/sprint-0-closure-2026-09-06/` (new); `docs/project/sprint-0/closure.json` (path values only); `artifacts/local/README.md` (new); `docs/project/sprint-0/README.md`.
+
+**Definition of done:**
+
+1. The nine distinct files pinned by `closure.json` exist under a tracked directory, byte-identical to the pinned hashes.
+2. The pinned `path` values resolve through tracked files, so the authority record no longer depends on a directory `AGENTS.md` calls disposable.
+3. `artifacts/local/README.md` states the disposal contract and names every pin-critical path that must be copied before any cleanup.
+4. `node scripts/sprint-close.mjs` still validates the receipt unchanged in behaviour.
+
+**Verification and evidence:** a `path` + `sha256` walk over `closure.json` reporting `present+match=12`; `git ls-files artifacts/sprint-0-closure-2026-09-06`; `npm run check:docs` and `npm run check:project`. If the validator forbids the repointed paths, stop and submit an amendment request rather than weakening the check.
+
+**Boundary:** Evidence relocation and documentation only. The closure gates are not re-run and no gate result is changed.
+
+<a id="ar-03"></a>
+
+### AR-03: Make the asserted expedition gate patrol the shipped path
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- `src/game.js` `PATH` (`:2-23`, 20 points)
+- `tests/expedition-balance.mjs` (hard-coded 18-point route, a different shape)
+- `scripts/verify.mjs` (asserted victory stage) and `tests/balance.mjs` (non-asserted probe)
+- [Audit finding L6-05](artifacts/local/audit-2026-09-10/lane-6-code-tooling.md)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `tests/expedition-balance.mjs`; `tests/balance.mjs` if the probe duplicates the route.
+
+**Definition of done:**
+
+1. The asserted route is derived from the shipped `PATH` (imported or asserted equal), so the two cannot drift.
+2. The probe and the asserted gate use the same geometry.
+3. The balance assertions still pass, and a deliberate `PATH` change is shown to move the asserted route.
+
+**Verification and evidence:** `node tests/expedition-balance.mjs` and `npm test`. `npm run verify` runs the build and belongs to admission, not to this attempt.
+
+**Boundary:** Test integrity only. `PATH` itself is a gameplay value and must not change.
+
+<a id="ar-04"></a>
+
+### AR-04: Widen the native networking check to the whole tree
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- `scripts/native-smoke.mjs` (`:30`, `:147` scan 16 of 32 native files)
+- `TRACKING.md:276` (the recorded, unimplemented follow-up)
+- [Audit finding L6-07 and card L6-E](artifacts/local/audit-2026-09-10/lane-6-code-tooling.md)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `scripts/native-smoke.mjs`; `tests/native-smoke.test.js`.
+
+**Definition of done:**
+
+1. The networking scan covers every tracked file under `native/`, not a subset.
+2. The forbidden list includes `MultiplayerPeer`, `WebRTC`, `SceneMultiplayer`, `DTLSServer` and `UPNP`.
+3. A fixture with a planted forbidden symbol is shown failing; the real tree passes.
+
+**Verification and evidence:** `npm test` (the `native-smoke` unit checks). `npm run native:smoke` needs the Godot toolchain and is recorded as a separate, hardware-dependent check when it is available.
+
+**Boundary:** Checker scope only. No engine change and no claim that the native tree was executed.
+
