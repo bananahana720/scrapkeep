@@ -64,3 +64,20 @@ Write `artifacts/local/tasks/AR-02/handoff.json` with: task, revision, attempt, 
 commit, branch, worktree, changed paths, the hash-walk output, the commands you ran, and any blocker.
 Return a short summary: candidate SHA, changed paths, hash-walk result, validator result, remaining
 uncertainty.
+
+---
+
+## Correction note (coordinator, 2026-09-10, after attempt 1)
+
+Two facts in the packet above were wrong or superseded. They are recorded here rather than edited in
+place, so the assignment actually issued stays legible:
+
+1. **Worktree path.** The packet names `/home/andrew/Projects/scrapkeep-wt-AR-02`. That path does not
+   exist and cannot: sibling worktrees beside the repository are not writable under this host's file
+   sandbox. The real worktree is `.claude/worktrees/AR-02` (branch `wt/AR-02`), which is the repo's own
+   gitignored worktree path.
+2. **Base.** The packet's base `641f09f…` predates `2baddad`, where the `AR-02` card and its `<a id="ar-02">`
+   anchor were added. Attempt 2 must be rebuilt on `2baddad` (or later accepted state) and may link the
+   card as `[AR-02](../../BACKLOG.md#ar-02)`.
+
+Attempt 2 also carries a lease amendment (AR-02-L2) adding `artifacts/README.md`.
