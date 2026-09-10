@@ -29,10 +29,11 @@ AR-04 (`ae42480`, native scan covers all 32 files). Retention items executed: `s
 pruned (175 MB) and the S0-09 worktree with its 872 MB of unique exports removed, both with hashes
 recorded; `main` is pushed.
 
-**Still open:** the `test-game-2` capture decision (1.3 GB of playtest captures), the `public/art` move,
-the TRACKING archive split, and three small accepted follow-ups — AR-03's overstated comments, AR-04's
-unlisted `MultiplayerSpawner`/`MultiplayerSynchronizer`, and the missing `dispatch-validation.json` line
-in `artifacts/README.md`.
+**Still open:** the `test-game-2` capture decision (1.3 GB of playtest captures, owner-only), and one
+small follow-up the AR-07 reviewer found — the check-docs archive fixtures carry no relative links, so
+they cannot catch the link-depth case that had to be handled by hand during the split. Everything else
+from the Tier 1-4 list is done, including the `public/art` move (AR-05), the three review follow-ups
+(AR-06), the archive prerequisite (AR-07) and the TRACKING split itself (EV-0122).
 
 ## In flight
 
