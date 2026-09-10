@@ -16,4 +16,4 @@ Before distribution, perform the release inventory and notice task in [T04](BACK
 
 For a new asset, record its local source or upstream URL, creator/provider, license evidence, transformations and actual use before admission. Preserve editable originals outside generated `dist/`. Record scale/axes and animation details for imported 3D assets. Paid tools, automatic downloads and remote publishing are separate decisions.
 
-Public runtime content is copied into the Vite build. Keeping unused concepts there currently adds build weight; decide which belong in a distribution package during T04 rather than deleting the research history in housekeeping.
+Public runtime content is copied into the Vite build. The concept images now live under `docs/art/`, outside the served tree, so they no longer add build weight; decide which belong in a distribution package during T04 rather than deleting the research history in housekeeping.
