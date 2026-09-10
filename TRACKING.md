@@ -186,8 +186,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-14](BACKLOG.md#s0-14) | 1 | 4 | done | none | S0-14-A1 | EV-0064 |
 | [AR-01](BACKLOG.md#ar-01) | 3 | 6 | done | none | AR-01-A1 | EV-0105 |
 | [AR-02](BACKLOG.md#ar-02) | 2 | 5 | done | none | AR-02-A2 | EV-0105 |
-| [AR-03](BACKLOG.md#ar-03) | 1 | 1 | queued | none | none | EV-0098 |
-| [AR-04](BACKLOG.md#ar-04) | 1 | 1 | queued | none | none | EV-0098 |
+| [AR-03](BACKLOG.md#ar-03) | 1 | 1 | in_progress | none | AR-03-A1 | EV-0106 |
+| [AR-04](BACKLOG.md#ar-04) | 1 | 1 | in_progress | none | AR-04-A1 | EV-0106 |
 
 ## Question state index
 
@@ -355,6 +355,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0103 | 2026-09-10T17:15:27+00:00 | Coordinator / integration, completion | AR-01 | AR-01 admitted serially at integrated identity  (no-ff merge of reviewed candidate 61fee5b). Integrated checks on that exact result: npm test 193 pass / 0 fail; check:docs exit 0 on the current board (81 cards, 102 events, 88 states, 0 failures); check:project exit 0. Lease AR-01-L1 closed. AR-01-A1 done at card revision 3. The checker now catches both defect classes the audit found by hand: an out-of-vocabulary State cell and a row left stale by a later record-level event. |
 | EV-0104 | 2026-09-10T17:15:55+00:00 | Coordinator / integration, completion | AR-02 | AR-02 admitted serially at integrated identity c689cb860d76b6815c50f829e25d3488316e3b28 (no-ff merge of reviewed candidate c5c02d3, rebuilt on the accepted base after two corrections). Integrated checks on that exact result: check:docs exit 0 (124 files, 3416 links, 0 failures), check:project exit 0 (104 files, 2019 links), npm test 193 pass / 0 fail. Lease AR-02-L2 closed. AR-02-A2 done at card revision 2. The tracked authority record docs/project/sprint-0/closure.json now resolves all 12 pinned entries through tracked files that are byte-identical to their pins, so the Sprint 0 closure audit chain no longer depends on a directory the project calls disposable. Accepted note carried forward: artifacts/README.md omits artifacts/local/sprint-0/final/dispatch-validation.json from its cited-but-unpinned list. |
 | EV-0105 | 2026-09-10T17:15:55+00:00 | Coordinator / record correction | AR-01 | Correction: EV-0103's integrated-identity field is empty because the shell variable holding it did not survive between tool invocations. The intended and verified value is the AR-01 no-ff integration commit e1e15fe650f62ddcce62480dcac27a8bb5fe3473. No other field of EV-0103 is affected and no history is rewritten, per the append-only rule. |
+| EV-0106 | 2026-09-10T17:16:31+00:00 | Coordinator / assignment/lease | AR-03, AR-04 | Second repair pair dispatched at base 642afe0eadd9a7f97c3bd1352609faf8560f70d5: AR-03-A1 (Verification, lease AR-03-L1) in .claude/worktrees/AR-03 to make the asserted expedition gate derive its route from the shipped src/game.js PATH instead of a hard-coded 18-point list that no longer matches the game's 20 points; AR-04-A1 (Tooling, lease AR-04-L1) in .claude/worktrees/AR-04 to widen the native networking scan from 16 of 32 tracked native files to the whole tree and add MultiplayerPeer, WebRTC, SceneMultiplayer, DTLSServer and UPNP to the forbidden list, with a planted-symbol fixture. Both leases are file-level and conflict-free; full packets at artifacts/audit-repair-2026-09-10/tasks/. Neither card changes gameplay values, engine, dependencies or product direction. |
 
 ## Preparation checkpoint
 
