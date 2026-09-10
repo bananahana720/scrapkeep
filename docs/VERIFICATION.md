@@ -62,8 +62,8 @@ Evidence: `artifacts/balance.json`. This demonstrates a useful difference betwee
 
 ## Visual evidence
 
-- `public/art/01-yard-concept.png`: generated overview target.
-- `public/art/02-arsenal-concept.png`: generated rolling-arsenal target.
+- `docs/art/01-yard-concept.png`: generated overview target.
+- `docs/art/02-arsenal-concept.png`: generated rolling-arsenal target.
 - `artifacts/01-title-screen.png`: finished desktop title and class selection.
 - `artifacts/02-gameplay.png`: normal gameplay, without benchmark fixtures.
 - `artifacts/03-pause.png`: pause interface.

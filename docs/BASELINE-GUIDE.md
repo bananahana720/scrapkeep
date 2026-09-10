@@ -67,6 +67,6 @@ npm run preview
 
 Vite, Three.js, WebGL 2, local fonts and synthesized Web Audio. No paid services or network assets are needed at runtime. Static scenery is merged into vertex-colored opaque and emissive batches; bullets, particles and enemy health bars use instanced rendering. Device pixel ratio is capped at 1.65. GTAO contact shading, filtered shadows, bloom and multisample antialiasing complete the scene. The FX toggle disables postprocessing and shadows and caps pixel ratio at 1 for slower devices. Phones start with reduced effects. Gameplay advances at a fixed 60 Hz with bounded catch-up.
 
-The two generated concepts are in `public/art/`. Prompts and the visual iteration notes are in `docs/ART-DIRECTION.md`. The actual game uses 3D geometry rather than a flattened concept background.
+The two generated concepts are in `docs/art/`. Prompts and the visual iteration notes are in `docs/ART-DIRECTION.md`. The actual game uses 3D geometry rather than a flattened concept background.
 
 See [the baseline retention verification record](RETENTION-VERIFICATION.md) for this expedition pass. `docs/VERIFICATION.md` records the earlier baseline. This is a separate experiment from the 3D-printing hub and Homehub.

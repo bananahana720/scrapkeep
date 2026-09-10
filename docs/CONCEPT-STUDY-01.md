@@ -1,10 +1,10 @@
 # Concept study 01: industrial dungeon chase view
 
-Exploratory art direction, 5 September 2026. Generated using the built-in imagegen tool with `public/art/02-arsenal-concept.png` as a palette and machinery reference. This is concept art, not a screenshot, model, rig, animation or approved level design.
+Exploratory art direction, 5 September 2026. Generated using the built-in imagegen tool with `docs/art/02-arsenal-concept.png` as a palette and machinery reference. This is concept art, not a screenshot, model, rig, animation or approved level design.
 
 ## Output and inspection
 
-[Generated concept](../public/art/03-industrial-dungeon-study.png)
+[Generated concept](art/03-industrial-dungeon-study.png)
 
 The generated image visibly shows a small animal inside a glazed spherical mech, a grapple connected to a crane, a close perspective camera, large industrial dungeon architecture, enemies, loose pickups, and the mint reactor. It retains the demo's machinery and palette while exploring greater environmental scale.
 

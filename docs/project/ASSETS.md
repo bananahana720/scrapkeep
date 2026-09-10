@@ -6,7 +6,7 @@ This is an inventory of the current local prototype, inspected 5 September 2026.
 | --- | --- | --- |
 | Orchard meshes, articulation, environment and sound | [models](../../src/orchard/models.js), [scene](../../src/orchard/scene.js), [audio/input](../../src/orchard/main.js), authored during this project | Source is canonical; no imported rig or animation clip |
 | Baseline procedural art and sound | `src/art.js`, `src/world.js`, `src/audio.js` | Existing baseline implementation |
-| Eight concept images in public/art | [art direction](../ART-DIRECTION.md), [study 01](../CONCEPT-STUDY-01.md), [study 02](../CONCEPT-STUDY-02.md), [study 03](../CONCEPT-STUDY-03.md), [prompt files](../art-prompts/) | Generated design references; retain original names and distinguish studies from playable captures |
+| Eight concept images in docs/art | [art direction](../ART-DIRECTION.md), [study 01](../CONCEPT-STUDY-01.md), [study 02](../CONCEPT-STUDY-02.md), [study 03](../CONCEPT-STUDY-03.md), [prompt files](../art-prompts/) | Generated design references; retain original names and distinguish studies from playable captures |
 | Andrew's notebook photos | [transcription and source record](../HANDWRITTEN-NOTES.md) | Research under docs/discovery; not public runtime assets |
 | Three.js | Locked npm package; local package metadata declares MIT; full text at `node_modules/three/LICENSE` | Runtime dependency |
 | Barlow Condensed, DM Sans, IBM Plex Mono | Locked @fontsource packages; each local package declares OFL-1.1 and includes LICENSE | Local bundled font files |
