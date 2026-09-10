@@ -3337,7 +3337,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 ### AR-01: Validate live board state in the documentation check
 
-**Card revision:** 2 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
+**Card revision:** 3 · **Owner:** Tooling · **Size:** S · **Lane:** audit-repair
 
 **Source and inputs:**
 
@@ -3347,7 +3347,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Dependencies:** None. **Blocking questions:** None.
 
-**Files touched:** `scripts/check-docs.mjs`; `tests/check-docs.test.js`.
+**Files touched:** `scripts/check-docs.mjs`; `tests/check-docs.test.js`; `tests/fixtures/check-docs/**` (fixture directories; definition change, revision 3, 10 September 2026, to match lease AR-01-L1, which authorized the fixture set the revision-2 card did not list).
 
 **Definition of done:**
 
@@ -3364,7 +3364,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 ### AR-02: Track the Sprint 0 closure evidence chain and state the disposal contract
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** audit-repair
+**Card revision:** 2 · **Owner:** Verification · **Size:** S · **Lane:** audit-repair
 
 **Source and inputs:**
 
@@ -3374,13 +3374,13 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Dependencies:** None. **Blocking questions:** None.
 
-**Files touched:** `artifacts/sprint-0-closure-2026-09-06/` (new); `docs/project/sprint-0/closure.json` (path values only); `artifacts/local/README.md` (new); `docs/project/sprint-0/README.md`.
+**Files touched:** `artifacts/sprint-0-closure-2026-09-06/` (new); `docs/project/sprint-0/closure.json` (path values only); `artifacts/README.md`; `docs/project/sprint-0/README.md`. (Definition change, revision 2, 10 September 2026: the contract must live in the tracked artifacts/README.md, not inside the disposable tree it warns about, per lease AR-02-L2 and the audit's no-tracked-file-under-an-ignored-path property.)
 
 **Definition of done:**
 
 1. The nine distinct files pinned by `closure.json` exist under a tracked directory, byte-identical to the pinned hashes.
 2. The pinned `path` values resolve through tracked files, so the authority record no longer depends on a directory `AGENTS.md` calls disposable.
-3. `artifacts/local/README.md` states the disposal contract and names every pin-critical path that must be copied before any cleanup.
+3. `artifacts/README.md` states the disposal contract and names every pin-critical path that must be copied before any cleanup.
 4. `node scripts/sprint-close.mjs` still validates the receipt unchanged in behaviour.
 
 **Verification and evidence:** a `path` + `sha256` walk over `closure.json` reporting `present+match=12`; `git ls-files artifacts/sprint-0-closure-2026-09-06`; `npm run check:docs` and `npm run check:project`. If the validator forbids the repointed paths, stop and submit an amendment request rather than weakening the check.
