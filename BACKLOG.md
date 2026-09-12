@@ -3521,3 +3521,33 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Boundary:** Checker capability only. This card does **not** move any event, does not edit `TRACKING.md`, and creates no archive; the coordinator performs the split afterwards.
 
+
+<a id="ar-08"></a>
+
+### AR-08: Reconcile stale coordination records with the admitted state
+
+**Card revision:** 1 · **Owner:** Coordinator · **Size:** S · **Lane:** audit-repair
+
+**Source and inputs:**
+
+- [Repository audit of 12 September 2026](artifacts/audit-2026-09-12/README.md), its `checks.log` and `git-hygiene.sh`
+- `TRACKING.md` task state index and events EV-0099 to EV-0125 (the admitted state the records must match)
+- `docs/FIRST-BUILD-CONTRACT.md` line 3 (the historical-banner form to copy)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `docs/project/README.md`; `BACKLOG.md` (edition line and the prose under "Proposed first sprint" only); `ORCHESTRATOR.md` (revision header and closing paragraph only); `adr/README.md` (one sentence); `docs/RUNTIME-BLUEPRINT.md`; `docs/PLANNING-PREP-SWARM.md`; `docs/project/HOUSEKEEPING.md`; `docs/project/ASSETS.md`.
+
+**Definition of done:**
+
+1. The dated status paragraph in `docs/project/README.md` states the admitted state at the card's base: five of fourteen foundation cards done with HF-03a, HF-04a and HF-05 named and linked, the AR-01 to AR-07 wave admitted, and the event archive in place. It links `TRACKING.md` for live counts instead of restating them.
+2. The `BACKLOG.md` edition line carries the card's date, and the prose under "Proposed first sprint" says the fourteen-card set was authorized at EV-0078. The heading text stays unchanged so existing anchors hold.
+3. The `ORCHESTRATOR.md` revision header no longer presents Operational Sprint 0 as the current authorization, and its closing paragraph no longer says foundation authorization is awaiting review; both defer to the TRACKING authorization row.
+4. `adr/README.md` no longer says the per-system pages have not been produced; it links `docs/tech/sections/README.md`.
+5. `docs/RUNTIME-BLUEPRINT.md` and `docs/PLANNING-PREP-SWARM.md` open with a historical banner in the form of `docs/FIRST-BUILD-CONTRACT.md` line 3, naming what superseded them (TADR-002 for the blueprint's ownership table; the HOUSEKEEPING remote record and the historical planning protocol for the swarm record's line 32 claims).
+6. `docs/project/HOUSEKEEPING.md` line 40 and `docs/project/ASSETS.md` line 15 point their backlog and T04 references at the root `BACKLOG.md` or `docs/project/SOURCE-DISPOSITIONS.md` instead of the frozen `docs/project/BACKLOG.md`.
+7. Every heading and anchor another file links to is unchanged. `npm run check:docs` and `npm run check:project` exit 0.
+
+**Verification and evidence:** `npm run check:docs` and `npm run check:project` on the candidate; no build. The reviewer reads each changed paragraph against the TRACKING rows and events it cites and confirms no claim exceeds an admitted state.
+
+**Boundary:** Documentation-only. This card does **not** edit `TRACKING.md` (the coordinator corrects board records through events), does not change any card definition, dependency, ADR status or question, deletes no artifact, and leaves the unreferenced artifact files and `artifacts/visual-iterations/*.js` snapshots named in the audit for a separate disposition.
