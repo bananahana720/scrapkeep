@@ -117,7 +117,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 5 | in_progress | none | none | EV-0127 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
-| [HF-04b](BACKLOG.md#hf-04b) | 2 | 5 | in_progress | none | none | EV-0128 |
+| [HF-04b](BACKLOG.md#hf-04b) | 2 | 6 | review | none | none | EV-0129 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 1 | queued | HF-06a | none | EV-0029 |
 | [HF-07a](BACKLOG.md#hf-07a) | 1 | 1 | queued | HF-06b | none | EV-0029 |
@@ -191,7 +191,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [AR-05](BACKLOG.md#ar-05) | 1 | 4 | done | none | AR-05-A2 | EV-0118 |
 | [AR-06](BACKLOG.md#ar-06) | 1 | 4 | done | none | AR-06-A1 | EV-0119 |
 | [AR-07](BACKLOG.md#ar-07) | 1 | 5 | done | none | AR-07-A1 | EV-0121 |
-| [AR-08](BACKLOG.md#ar-08) | 1 | 1 | ready | none | none | EV-0124 |
+| [AR-08](BACKLOG.md#ar-08) | 1 | 2 | in_progress | none | none | EV-0130 |
 
 ## Question state index
 
@@ -325,6 +325,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0126 | 2026-09-12T23:46:44+00:00 | Coordinator / readiness | HF-04b | HF-04b queued to ready at card revision 2, record revision 3 to 4. Dependency HF-04a is done (EV-0096) and its output docs/tech/sections/HF-04a-runtime-lifecycle.md exists at base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b; HF-03a section, docs/tech/proofs/S0-04-runtime-ownership.md, the seven scripts under native/proofs/tadr-002/ and artifacts/prepare-stage-2026-09-06/tasks/S0-04/S0-04-int-proof-run.txt and S0-04-int-proof-fault.txt are all present. The coordinator-resolved Godot 4.7 static typing documentation (Context7 library /websites/godotengine_en_4_7; static_typing.html, gdscript_basics.html, gdscript_styleguide.html) is retained at artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt. No live lease overlaps its write set. Authorization EV-0078 covers it. |
 | EV-0127 | 2026-09-12T23:46:44+00:00 | Coordinator / assignment, lease | HF-03b | HF-03b ready to in_progress at card revision 1, record revision 4 to 5. Attempt HF-03b-A1, exclusive lease HF-03b-L1 over docs/tech/sections/HF-03b-dependency-graph.md and artifacts/local/tasks/HF-03b/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-03b on branch wt/HF-03b created by scripts/new-worktree.sh at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b. Packet artifacts/foundation-sprint-2026-09/tasks/HF-03b/assignment.md. Writer scrapkeep-writer (claude-fable-5-1, effort high pinned in the agent definition; runtime CLAUDE_EFFORT to be reported). Admission: authorization EV-0078; card pinned; HF-03a done at 3f56a82 with its section present at base; no lease overlap; base inspected clean. |
 | EV-0128 | 2026-09-12T23:46:44+00:00 | Coordinator / assignment, lease | HF-04b | HF-04b ready to in_progress at card revision 2, record revision 4 to 5. Attempt HF-04b-A1, exclusive lease HF-04b-L1 over docs/tech/sections/HF-04b-runtime-patterns.md and artifacts/local/tasks/HF-04b/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-04b on branch wt/HF-04b at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b. Packet artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md with the resolved Godot references. Writer scrapkeep-writer (claude-fable-5-1, effort high pinned). Two writers active, within the ceiling; the AR-08 worktree /home/andrew/Projects/scrapkeep-wt-AR-08 was created at the same base so its README claim stays true at its recorded base, and AR-08 stays ready until a writer slot frees. |
+| EV-0129 | 2026-09-12T23:58:49+00:00 | Worker handoff / coordinator review admission | HF-04b | HF-04b-A1 in_progress to review, record revision 5 to 6. Handoff matches lease HF-04b-L1 and card revision 2: one tracked change docs/tech/sections/HF-04b-runtime-patterns.md (sha256 edb1be2392fb5828627b02556482c336cc8e2174497ba5cff262880436b21475) at candidate 691a878ebc176e99a2fb64c3d44437a5242b4d7c on wt/HF-04b from base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b, worktree clean, writer reported CLAUDE_EFFORT=high and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, and the writer's check_patterns.py exit 0 with 163 checks and 0 failures; receipts retained under artifacts/foundation-sprint-2026-09/tasks/HF-04b/attempt-1/. Writer notes recorded: prettier 3.9.6 was fetched into the npx cache with no manifest change; no mid-task checkpoint channel existed; the sections index needs its HF-04b row at admission. Fresh scrapkeep-reviewer (claude-fable-5-1 high) assigned; reviewer occupies the third delegate slot. |
+| EV-0130 | 2026-09-12T23:58:49+00:00 | Coordinator / assignment, lease | AR-08 | AR-08 ready to in_progress at card revision 1, record revision 1 to 2. Attempt AR-08-A1, exclusive lease AR-08-L1 over the eight permitted files named in the card plus artifacts/local/tasks/AR-08/. Worktree /home/andrew/Projects/scrapkeep-wt-AR-08 on branch wt/AR-08 at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b (created before any wave-1 integration, EV-0128). Packet artifacts/foundation-sprint-2026-09/tasks/AR-08/assignment.md. Writer scrapkeep-writer-low (claude-fable-5-1, effort low pinned). Admission: authorization EV-0124; no dependencies; no lease overlap with HF-03b-L1 or HF-04b-L1; the HF-04b writer slot freed at EV-0129 so two writers remain active. |
 
 ## Preparation checkpoint
 
@@ -563,8 +565,19 @@ Last reported event: EV-0128. Latest admitted checkpoint: 5/14 foundation cards 
 - Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 2; attempt HF-04b-A1; exclusive lease HF-04b-L1 active.
 - Owned files: `docs/tech/sections/HF-04b-runtime-patterns.md`; `artifacts/local/tasks/HF-04b/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-04b, branch wt/HF-04b.
 - Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`; accepted dependency HF-04a and HF-03a section bytes from this base.
+- Candidate identity: `691a878ebc176e99a2fb64c3d44437a5242b4d7c`. Integrated identity: null.
+- Latest checkpoint: handoff recorded at EV-0129; candidate committed, coordinator reran scope/docs/project and the 163-check paper script on the candidate, all exit 0; writer stopped; independent review pending.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md); [Godot documentation receipt](artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-04b/attempt-1/verification.json).
+- Review: pending, fresh scrapkeep-reviewer assigned at EV-0129.
+
+## AR-08-A1 audit-repair attempt
+
+- Assignee: scrapkeep-writer-low, claude-fable-5-1 low pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt AR-08-A1; exclusive lease AR-08-L1 active.
+- Owned files: `docs/project/README.md`; `BACKLOG.md` (edition line and the prose under "Proposed first sprint" only); `ORCHESTRATOR.md` (revision header and closing paragraph only); `adr/README.md` (one sentence); `docs/RUNTIME-BLUEPRINT.md`; `docs/PLANNING-PREP-SWARM.md`; `docs/project/HOUSEKEEPING.md`; `docs/project/ASSETS.md`; `artifacts/local/tasks/AR-08/`. Worktree: /home/andrew/Projects/scrapkeep-wt-AR-08, branch wt/AR-08.
+- Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`, the admitted state its records must describe.
 - Candidate identity: null. Integrated identity: null.
 - Latest checkpoint: null.
 - Blockers: none at admission.
-- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md); [Godot documentation receipt](artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt).
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/AR-08/assignment.md).
 - Review: not_run.
