@@ -115,9 +115,9 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
-| [HF-03b](BACKLOG.md#hf-03b) | 1 | 4 | ready | none | none | EV-0087 |
+| [HF-03b](BACKLOG.md#hf-03b) | 1 | 5 | in_progress | none | none | EV-0127 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
-| [HF-04b](BACKLOG.md#hf-04b) | 2 | 3 | queued | HF-04a | none | EV-0084 |
+| [HF-04b](BACKLOG.md#hf-04b) | 2 | 5 | in_progress | none | none | EV-0128 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 1 | queued | HF-06a | none | EV-0029 |
 | [HF-07a](BACKLOG.md#hf-07a) | 1 | 1 | queued | HF-06b | none | EV-0029 |
@@ -322,6 +322,9 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0123 | 2026-09-10T17:56:33+00:00 | Coordinator / record correction | (record) | The two proposal sections that still presented themselves as current were marked historical, closing finding L3-03: 'Next bounded foundation proposal' (the HF-01 revision 2 / HF-02 revision 2 pair) and 'Foundation-02 proposal' (HF-03a / HF-03b) both said Authorization awaiting_review long after the fourteen-card set was authorized at EV-0078. Each now carries a superseded marker stating that it grants no dispatch authority and that its awaiting_review status is the state it held when written. The headings were deliberately left unchanged because 11 files link to the Foundation-02 anchor and retitling would have broken them; check:docs confirms every link still resolves. This is a factual correction of stale live state, not a change to any accepted decision, and it does not retire the sections or alter their content. |
 | EV-0124 | 2026-09-12T23:31:13+00:00 | Coordinator / definition import, authorization, readiness | AR-08 | Andrew instructed "open the repair card" after the 12 September read-only audit (artifacts/audit-2026-09-12/README.md; at base 30d6b72: npm run verify PASS on all six stages, npm test 211 pass / 0 fail, check:docs 0 failures, check:project pass). AR-08 "Reconcile stale coordination records with the admitted state" defined at card revision 1 and imported; readiness admitted: no dependencies, no blocking questions, every input present, no live lease overlaps its write set. Authorization: Andrew's instruction extends the audit-repair family (EV-0098, EV-0113) to this documentation-only card. It is ready, not dispatched. Local hygiene performed under the same instruction, outside the board: the nine integrated worktrees (wt/AR-01 to wt/AR-07, wt/HF-04a, wt/HF-05) were removed with their branches after verifying every tree clean and every branch's content byte-identical in main; about 1.75 GB freed; no tracked file changed. |
 | EV-0125 | 2026-09-12T23:31:13+00:00 | Coordinator / record correction | (record) | Two board self-descriptions corrected to the admitted state, found by the 12 September audit. The Full foundation reporting checkpoint still said "Last reported event: EV-0098" with AR-01 and AR-02 in progress and AR-03 and AR-04 queued, while all seven AR cards were done by EV-0121; it now reports the state at this event. The active-coordinator row still named /root/foundation_coordinator, a process EV-0093 found gone; it now names the Andrew-directed Claude Code coordinator session with the unverified-pair disclosure carried forward. No task state, lease or question changed. |
+| EV-0126 | 2026-09-12T23:46:44+00:00 | Coordinator / readiness | HF-04b | HF-04b queued to ready at card revision 2, record revision 3 to 4. Dependency HF-04a is done (EV-0096) and its output docs/tech/sections/HF-04a-runtime-lifecycle.md exists at base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b; HF-03a section, docs/tech/proofs/S0-04-runtime-ownership.md, the seven scripts under native/proofs/tadr-002/ and artifacts/prepare-stage-2026-09-06/tasks/S0-04/S0-04-int-proof-run.txt and S0-04-int-proof-fault.txt are all present. The coordinator-resolved Godot 4.7 static typing documentation (Context7 library /websites/godotengine_en_4_7; static_typing.html, gdscript_basics.html, gdscript_styleguide.html) is retained at artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt. No live lease overlaps its write set. Authorization EV-0078 covers it. |
+| EV-0127 | 2026-09-12T23:46:44+00:00 | Coordinator / assignment, lease | HF-03b | HF-03b ready to in_progress at card revision 1, record revision 4 to 5. Attempt HF-03b-A1, exclusive lease HF-03b-L1 over docs/tech/sections/HF-03b-dependency-graph.md and artifacts/local/tasks/HF-03b/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-03b on branch wt/HF-03b created by scripts/new-worktree.sh at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b. Packet artifacts/foundation-sprint-2026-09/tasks/HF-03b/assignment.md. Writer scrapkeep-writer (claude-fable-5-1, effort high pinned in the agent definition; runtime CLAUDE_EFFORT to be reported). Admission: authorization EV-0078; card pinned; HF-03a done at 3f56a82 with its section present at base; no lease overlap; base inspected clean. |
+| EV-0128 | 2026-09-12T23:46:44+00:00 | Coordinator / assignment, lease | HF-04b | HF-04b ready to in_progress at card revision 2, record revision 4 to 5. Attempt HF-04b-A1, exclusive lease HF-04b-L1 over docs/tech/sections/HF-04b-runtime-patterns.md and artifacts/local/tasks/HF-04b/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-04b on branch wt/HF-04b at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b. Packet artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md with the resolved Godot references. Writer scrapkeep-writer (claude-fable-5-1, effort high pinned). Two writers active, within the ceiling; the AR-08 worktree /home/andrew/Projects/scrapkeep-wt-AR-08 was created at the same base so its README claim stays true at its recorded base, and AR-08 stays ready until a writer slot frees. |
 
 ## Preparation checkpoint
 
@@ -504,7 +507,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Full foundation reporting checkpoint
 
-Last reported event: EV-0125. Latest admitted checkpoint: 5/14 foundation cards done (HF-01, HF-02, HF-03a, HF-04a, HF-05), all on independent review. The audit Tier 1+2 repair wave is complete: AR-01 to AR-07 done (EV-0103 to EV-0121) and the event archive split performed (EV-0122). AR-08 is ready and undispatched (EV-0124). HF-03b remains input-ready and undispatched; HF-04b and HF-06a have satisfied dependencies but remain queued. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
+Last reported event: EV-0128. Latest admitted checkpoint: 5/14 foundation cards done (HF-01, HF-02, HF-03a, HF-04a, HF-05), all on independent review. AR-01 to AR-07 done (EV-0103 to EV-0121); event archive split performed (EV-0122). Wave 1 of the sprint wrap is active: HF-03b-A1 and HF-04b-A1 in progress (EV-0127, EV-0128); AR-08 ready with its worktree pre-created at base d98803c (EV-0128). Planned order after wave 1: integrated read of HF-01 to HF-05 outputs, then HF-06a, HF-06b, HF-07a, HF-07b, HF-08 with HF-09, HF-10, sprint closure. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
 
 ## HF-03a-A1 full foundation attempt
 
@@ -543,3 +546,25 @@ Last reported event: EV-0125. Latest admitted checkpoint: 5/14 foundation cards 
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-05/assignment.md); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-05/attempt-1/handoff.json).
 - Review: PASS+NOTES by the fresh independent wave reviewer (EV-0097); no blocking finding. Recorded notes: run check_contract.py from scratch with the report outside the retained directory (it writes paper-check.json in place), and correct the section line 8 citation from TADR-004 to TADR-003:41 at the next revision.
+
+## HF-03b-A1 full foundation attempt
+
+- Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt HF-03b-A1; exclusive lease HF-03b-L1 active.
+- Owned files: `docs/tech/sections/HF-03b-dependency-graph.md`; `artifacts/local/tasks/HF-03b/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-03b, branch wt/HF-03b.
+- Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`; accepted dependency HF-03a section bytes from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-03b/assignment.md).
+- Review: not_run.
+
+## HF-04b-A1 full foundation attempt
+
+- Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 2; attempt HF-04b-A1; exclusive lease HF-04b-L1 active.
+- Owned files: `docs/tech/sections/HF-04b-runtime-patterns.md`; `artifacts/local/tasks/HF-04b/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-04b, branch wt/HF-04b.
+- Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`; accepted dependency HF-04a and HF-03a section bytes from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md); [Godot documentation receipt](artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt).
+- Review: not_run.
