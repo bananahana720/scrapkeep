@@ -37,6 +37,6 @@ Two read-only Astra high agents inspected architecture and tooling. A fresh Astr
 
 ## Remaining work
 
-The [backlog](BACKLOG.md) owns choosing a remote and publishing, publisher playtest, ranged pressure, hardware/performance evidence and release-packaging decisions. No full-game feature, next sprint or new session goal was created during housekeeping. Dependency versions and game behavior were unchanged.
+The [root backlog](../../BACKLOG.md) owns choosing a remote and publishing, publisher playtest, ranged pressure, hardware/performance evidence and release-packaging decisions. No full-game feature, next sprint or new session goal was created during housekeeping. Dependency versions and game behavior were unchanged.
 
 The append-only [decision trail](../decisions.tsv) preserves this closeout's choices and the review correction. Retained evidence lives under `artifacts/housekeeping-2026-09-05/`; disposable reruns do not replace it.

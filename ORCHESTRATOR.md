@@ -1,6 +1,6 @@
 # Scrapkeep swarm operating manual
 
-Revision 3. Operational Sprint 0 is authorized by [the implementation request](docs/project/sprint-0/AUTHORIZATION.md). The previous prepare stage is complete. Foundation execution authorization is recorded only in TRACKING.md.
+Revision 4. The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. The current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
 
 ## Read first and preserve authority
 
@@ -147,4 +147,4 @@ Blocking amendments may be admitted during a sprint. Update authoritative source
 
 When selected sprint work is exhausted, invoke [Sprint closure](#sprint-closure) before reporting SPRINT COMPLETE. At a safe stop, leave no unowned active writer. Record remaining leases, worker/process status, integrated evidence, blockers and next eligible tasks. Release a lease only after its owner has stopped or completed the verified handoff. A pending review or blocked environment remains pending; it does not become done because a session is ending.
 
-HF-01 through HF-10, with HF-03, HF-04, HF-06 and HF-07 split into a and b cards, form the proposed foundation sprint; the S0 cards form the prepare-stage program. HF-01 and HF-02 can be input-ready while sprint authorization is awaiting_review. Later contracts, per-system pages, full TECH_BIBLE assembly and the final architecture audit remain separate cards. Their absence is visible in the board. No game execution, remote setup, publication or scheduled work follows automatically from delivery of this manual.
+HF-01 through HF-10, with HF-03, HF-04, HF-06 and HF-07 split into a and b cards, form the fourteen-card foundation set; the S0 cards form the closed prepare-stage program. The [TRACKING.md program authorization row](TRACKING.md#program-authorization) states what is authorized and the task index states each card's state; this manual restates neither. Per-system pages, full TECH_BIBLE assembly and the final architecture audit remain separate cards. Their absence is visible in the board. No game execution, remote setup, publication or scheduled work follows automatically from delivery of this manual.

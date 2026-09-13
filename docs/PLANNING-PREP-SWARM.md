@@ -1,5 +1,7 @@
 # Planning-prep swarm record
 
+Historical team record for the completed planning-preparation pass. The [housekeeping remote record](project/HOUSEKEEPING.md#environment-constraint) supersedes the no-remote claim under Evidence limits, and the [historical planning protocol](project/PLANNING.md) supersedes the claim there that the protocol's first execution is the next session; [ORCHESTRATOR.md](../ORCHESTRATOR.md) now owns dispatch. The text below retains its original dated wording.
+
 5 September 2026. Team record for the housekeeping and planning-preparation pass Andrew requested after the deep-research swarm. The goal was to review that research, settle the environment, and give the repository a planning mode that settles decisions with Andrew before any swarm implements. Nothing in this pass changed game behavior, dependencies, or scope.
 
 ## What ran
