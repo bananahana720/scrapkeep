@@ -1,8 +1,8 @@
 ---
 name: scrapkeep-writer-medium
-description: Implement one authorized Scrapkeep card at medium effort in the coordinator-created worktree named in its packet. Use for bounded prepare-stage units where the coordinator supplies a complete packet.
-model: claude-fable-5-1
-effort: medium
+description: Implement one authorized Scrapkeep card on Opus 5 high in the coordinator-created worktree named in its packet. Use for bounded prepare-stage units where the coordinator supplies a complete packet.
+model: claude-opus-5
+effort: high
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 
