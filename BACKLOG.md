@@ -1,6 +1,6 @@
 # Scrapkeep execution backlog
 
-Edition 3 · Updated 12 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package; AR-08 reconciled the sprint prose with the admitted state
+Edition 3 · Updated 13 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package; AR-08 reconciled the sprint prose with the admitted state
 
 Use **an in-repo board in [TRACKING.md](TRACKING.md)** to keep assignments, evidence and integration history beside the work. This board was selected while the checkout was local-only and remains the sole execution board after private GitHub publication.
 
@@ -3551,3 +3551,40 @@ and verification behaviour only; none of them changes game rules, product direct
 **Verification and evidence:** `npm run check:docs` and `npm run check:project` on the candidate; no build. The reviewer reads each changed paragraph against the TRACKING rows and events it cites and confirms no claim exceeds an admitted state.
 
 **Boundary:** Documentation-only. This card does **not** edit `TRACKING.md` (the coordinator corrects board records through events), does not change any card definition, dependency, ADR status or question, deletes no artifact, and leaves the unreferenced artifact files and `artifacts/visual-iterations/*.js` snapshots named in the audit for a separate disposition.
+
+## Foundation repair cards (13 September 2026)
+
+Defined at the Foundation-full sprint closure from the HF-10 foundation review
+(`artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md`). These cards correct admitted
+foundation sections in place; none changes game rules, product direction, an ADR or a card dependency.
+
+<a id="fr-01"></a>
+
+### FR-01: Apply the HF-10 required fixes to the foundation sections
+
+**Card revision:** 1 · **Owner:** Coordinator · **Size:** M · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- [HF-10 foundation review](artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md), required fixes RF-1 to RF-9 with their exact path and line, and its notes N-01 onward
+- The admitted sections `docs/tech/sections/HF-04b-runtime-patterns.md`, `HF-06a-schema-inventory.md`, `HF-06b-persistence-projection.md`, `HF-07a-save-envelope.md` and `.csv`, `HF-07b-commit-boundaries.md`, `HF-08-save-recovery.md` at the closure commit
+- `docs/tech/sections/HF-03a-module-map.md` lines 31, 32, 49 and `HF-03b-dependency-graph.md` line 185 (the names RF-1 and RF-6 must align to)
+- The retained paper checks under `artifacts/foundation-sprint-2026-09/tasks/<id>/attempt-1/` for each section touched
+
+**Dependencies:** [HF-10](#hf-10). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P16](#q-p16), [Q-E09](#q-e09). No fix may answer a question or assume a proposed protocol.
+
+**Files touched:** `docs/tech/sections/HF-04b-runtime-patterns.md`; `docs/tech/sections/HF-06a-schema-inventory.md`; `docs/tech/sections/HF-06b-persistence-projection.md`; `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `artifacts/local/tasks/FR-01/`.
+
+**Definition of done:**
+
+1. RF-1: the HF-04b sketch uses an Encounter command HF-03a line 32 lists, or the call is removed; no other sketch line changes.
+2. RF-2 and RF-3: the HF-06a line 58 question list and the HF-06b line 10 and line 81 claims state exactly what the matrices carry.
+3. RF-4 and RF-5: HF-07a gives `run.checkpoint.build`, `run.checkpoint.equipment` and `run.checkpoint.companion` container rows in both the Markdown and the CSV, and links its own CSV in a "Machine-readable copy" block in the HF-06b form.
+4. RF-6 and RF-7: HF-07b names Persistence as the stager at C1.1, and assigns C4's T9 commit to a named transition (folding presentation into Transition A or adding a stated exception), with the four-stage invariants re-argued for that path.
+5. RF-8 and RF-9: HF-08 makes the candidate-path rule and FC-03 retry consistent with P1 and P2 (an attempt ordinal or a stated overwrite exemption), and R5 routes FC-13 with no candidate, FC-14 as a load failure and `incompatible_content` to named user-visible states.
+6. Every retained paper check for a touched section still exits 0 from its retained copy with `--out` outside the retained directory, updated only where a fix changes a cited line, and the HF-10 matrix cells those fixes clear are listed with their new PASS justification in the handoff.
+7. Card revisions of the touched sections are not changed; each section's Procedure performed records the revision-in-place with the RF identifiers and the closure event.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and the seven retained paper checks rerun from their retained copies; the reviewer re-walks C4 and V3 by hand under the corrected rules. No build.
+
+**Boundary:** Documentation-only. This card applies only the nine required fixes; every HF-10 note stays a note for a later revision, no question is answered, no envelope key is added or removed, and no card definition or dependency changes.
