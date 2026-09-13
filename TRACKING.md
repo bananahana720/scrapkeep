@@ -120,7 +120,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 8 | done | none | HF-04b-A1 | EV-0133 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 6 | done | none | HF-06a-A1 | EV-0146 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 6 | done | none | HF-06b-A1 | EV-0153 |
-| [HF-07a](BACKLOG.md#hf-07a) | 1 | 2 | ready | none | none | EV-0154 |
+| [HF-07a](BACKLOG.md#hf-07a) | 1 | 3 | in_progress | none | none | EV-0155 |
 | [HF-07b](BACKLOG.md#hf-07b) | 1 | 1 | queued | HF-04a, HF-07a | none | EV-0029 |
 | [S0-01](BACKLOG.md#s0-01) | 1 | 1 | done | none | PS-06-A1 | EV-0029 |
 | [S0-02](BACKLOG.md#s0-02) | 1 | 1 | done | none | PS-01-A1 | EV-0029 |
@@ -351,6 +351,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0152 | 2026-09-13T00:59:41+00:00 | Independent reviewer / review, coordinator disposition | HF-06b | Fresh scrapkeep-reviewer (claude-fable-5-1 medium) PASS+NOTES on candidate 69bf3c7114a1dff98c5384bc278d0729738cd4eb, no blocking finding: DoD 1 to 4 verified at evidence levels 2 and 3 (22 rows sampled against HF-06a treatments and HF-05 immutability, all 14 json rows carrying codec, projection and TH-22, projection vocabulary traced to TADR-004:24-30 and HF-03a:45,49, S0-08 reconciliation by source review, CSV parity by hand on twelve rows, both question poles argued and neither proposal assumed), prohibitions and headings verified. Five accepted notes recorded verbatim in artifacts/foundation-sprint-2026-09/tasks/HF-06b/review.md: line 10 says question tags are copied unchanged while F-08 adds Q-E09; line 81 misstates which rows name Q-P16; unreferenced immutable-by-id rows say only nothing is projected; the no-definition-no-state case wording overstates the trace for governance rows; C11 at line 209 prescribes a TH-22 test case. Disposition: the reviewer asked that note 1 be corrected before admission; the coordinator admits the candidate unchanged because ORCHESTRATOR admits PASS+NOTES whenever no note violates the DoD and forbids broadening a lease during integration, and records notes 1 and 2 as required corrections for the next HF-06b revision and as HF-10 review input, with note 5 carried to TH-22's readiness review. |
 | EV-0153 | 2026-09-13T00:59:41+00:00 | Coordinator / integration, completion | HF-06b | HF-06b admitted serially at integrated identity 4d9af64d4c3f82ed2ab51c4fa68e1e0ac5ab2669 (no-ff merge of reviewed candidate 69bf3c7114a1dff98c5384bc278d0729738cd4eb into main). Admission checks on that exact result: check:scope 2d33632136918703a2d64d9ca8f05bf03d45fcd4..4d9af64d4c3f82ed2ab51c4fa68e1e0ac5ab2669 --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, check_projection.py exit 0 with 41 passed; both output hashes unchanged from the candidate; receipts under artifacts/foundation-sprint-2026-09/tasks/HF-06b/coordinator-integrated/. Lease HF-06b-L1 closed, worktree and branch wt/HF-06b removed. HF-06b-A1 done at card revision 1, record revision 4 to 6. The sections index gains its HF-06b row in this admission commit. Nine of fourteen foundation cards done. |
 | EV-0154 | 2026-09-13T01:00:10+00:00 | Coordinator / readiness | HF-07a | HF-07a queued to ready at card revision 1, record revision 1 to 2. Dependency HF-06b done (EV-0153) with docs/tech/sections/HF-06b-persistence-projection.md and .csv present; HF-03a section present; DECISION-REGISTER rows D26 and D27 present at docs/project/DECISION-REGISTER.md:49-50. Registered non-blocking questions Q-E09 (proposed, EV-0144 and EV-0151) and Q-P16 (open) have no product answer; the contract must hold under every candidate answer. No live lease exists. Authorization EV-0078 covers it. |
+| EV-0155 | 2026-09-13T01:00:10+00:00 | Coordinator / assignment, lease | HF-07a | HF-07a ready to in_progress at card revision 1, record revision 2 to 3. Attempt HF-07a-A1, exclusive lease HF-07a-L1 over docs/tech/sections/HF-07a-save-envelope.md, docs/tech/sections/HF-07a-save-envelope.csv and artifacts/local/tasks/HF-07a/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-07a on branch wt/HF-07a at verified base 5f459b0407dce4fbb060a1a8421a00fb8bb5e0c1. Packet artifacts/foundation-sprint-2026-09/tasks/HF-07a/assignment.md carrying the HF-06b and HF-03a hashes, TADR-004 and decision-register anchors, question state and downstream consumers. Writer scrapkeep-writer-medium (claude-opus-5 high under EV-0149; first delegate on the remapped tier, so its reported CLAUDE_EFFORT is checked against high). Admission: authorization EV-0078; card pinned; HF-06b done with both outputs present at base; no lease overlap; base inspected clean. One writer active. |
 
 ## Preparation checkpoint
 
@@ -627,3 +628,14 @@ Last reported event: EV-0153. Latest admitted checkpoint: 9/14 foundation cards 
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-06b/assignment.md); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-06b/attempt-1/verification.json).
 - Review: fresh scrapkeep-reviewer (claude-fable-5-1 medium), **PASS+NOTES** on candidate `69bf3c7114a1dff98c5384bc278d0729738cd4eb`; [verbatim report](artifacts/foundation-sprint-2026-09/tasks/HF-06b/review.md); notes 1 and 2 are required corrections at the next revision (EV-0152). Integrated evidence: [checks](artifacts/foundation-sprint-2026-09/tasks/HF-06b/coordinator-integrated/verification.json).
+
+## HF-07a-A1 full foundation attempt
+
+- Assignee: scrapkeep-writer-medium, claude-opus-5 high pinned by agent definition after EV-0149 (runtime effort reported at handoff); card revision 1; attempt HF-07a-A1; exclusive lease HF-07a-L1 active.
+- Owned files: `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `artifacts/local/tasks/HF-07a/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-07a, branch wt/HF-07a.
+- Base identity: `5f459b0407dce4fbb060a1a8421a00fb8bb5e0c1`; accepted dependency HF-06b (md and csv) and HF-03a section bytes from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-07a/assignment.md).
+- Review: not_run.
