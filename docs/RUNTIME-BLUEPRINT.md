@@ -1,5 +1,7 @@
 # Runtime blueprint
 
+Historical boundary sketch for the pre-production runtime. [TADR-002](../adr/TADR-002-runtime-model.md) owns the accepted runtime model and supersedes the ownership table in section 1; the [HF-03a module map](tech/sections/HF-03a-module-map.md) owns the admitted module contract. The text below retains its original dated wording.
+
 Updated 5 September 2026 after the notebook interview. [Discovery](DISCOVERY.md#accepted-notebook-interview) owns accepted product direction. This blueprint owns the target system responsibilities and design constraints; proposed modules and persistence work are not implemented by this documentation update.
 
 The [lightning increment](project/INCREMENT-01-lightning-playtest.md) owns the current integration contract, and [lightning verification](LIGHTNING-VERIFICATION.md) owns executed evidence. The older [architecture audit](audit-2026-09-05/worker-1-architecture.md) and [meta-system paper](audit-2026-09-05/worker-3-meta.md) remain historical research. Their three-stage expedition, mass-first sequence and schema-v2 sketch no longer define the target runtime.

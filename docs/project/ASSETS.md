@@ -12,7 +12,7 @@ This is an inventory of the current local prototype, inspected 5 September 2026.
 | Barlow Condensed, DM Sans, IBM Plex Mono | Locked @fontsource packages; each local package declares OFL-1.1 and includes LICENSE | Local bundled font files |
 | Vite, Playwright, Prettier | Locked development dependencies | Existing local tooling; this closeout adds no packages |
 
-Before distribution, perform the release inventory and notice task in [T04](BACKLOG.md). Package license declarations are evidence about installed packages, not a license grant for the whole project. No repository-wide LICENSE has been selected here.
+Before distribution, perform the release inventory and notice task recorded as [T04](SOURCE-DISPOSITIONS.md#historical-identifiers) in the source dispositions, carried by [Q-E06](../../BACKLOG.md#q-e06). Package license declarations are evidence about installed packages, not a license grant for the whole project. No repository-wide LICENSE has been selected here.
 
 For a new asset, record its local source or upstream URL, creator/provider, license evidence, transformations and actual use before admission. Preserve editable originals outside generated `dist/`. Record scale/axes and animation details for imported 3D assets. Paid tools, automatic downloads and remote publishing are separate decisions.
 

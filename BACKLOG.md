@@ -1,6 +1,6 @@
 # Scrapkeep execution backlog
 
-Edition 3 · Updated 6 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package
+Edition 3 · Updated 12 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package; AR-08 reconciled the sprint prose with the admitted state
 
 Use **an in-repo board in [TRACKING.md](TRACKING.md)** to keep assignments, evidence and integration history beside the work. This board was selected while the checkout was local-only and remains the sole execution board after private GitHub publication.
 
@@ -31,7 +31,7 @@ The LG cards apply only to the maintained browser proofs/player. They require a 
 
 ## Proposed first sprint
 
-Fourteen foundation-contract cards form one closed dependency set. HF-01 and HF-02 have no predecessors; every other predecessor is inside this foundation programme. Open questions that shape a card are registered on it as non-blocking; each such contract must hold under every candidate answer, and HF-07b may submit a proposed Q-E09 protocol. Unknown values remain named and gate later implementation. The S0 prepare-stage proofs are a separate family scheduled into the writer slots these waves leave idle.
+Fourteen foundation-contract cards form one closed dependency set. Andrew authorized the whole fourteen-card set as documentation-only work at [TRACKING.md](TRACKING.md) EV-0078; the board's task index owns each card's current state. HF-01 and HF-02 have no predecessors; every other predecessor is inside this foundation programme. Open questions that shape a card are registered on it as non-blocking; each such contract must hold under every candidate answer, and HF-07b may submit a proposed Q-E09 protocol. Unknown values remain named and gate later implementation. The S0 prepare-stage proofs are a separate family scheduled into the writer slots these waves leave idle.
 
 | ID | Outcome | Dependencies | Owner / size |
 | --- | --- | --- | --- |
