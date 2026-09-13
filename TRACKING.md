@@ -111,8 +111,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-01](BACKLOG.md#hf-01) | 3 | 9 | done | none | HF-01-A1 | EV-0075 |
 | [HF-02](BACKLOG.md#hf-02) | 2 | 7 | done | none | HF-02-A1 | EV-0072 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 6 | done | none | HF-05-A1 | EV-0097 |
-| [HF-08](BACKLOG.md#hf-08) | 2 | 3 | ready | none | none | EV-0166 |
-| [HF-09](BACKLOG.md#hf-09) | 2 | 3 | ready | none | none | EV-0166 |
+| [HF-08](BACKLOG.md#hf-08) | 2 | 4 | in_progress | none | none | EV-0167 |
+| [HF-09](BACKLOG.md#hf-09) | 2 | 4 | in_progress | none | none | EV-0168 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 8 | done | none | HF-03b-A1 | EV-0136 |
@@ -363,6 +363,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0164 | 2026-09-13T01:49:38+00:00 | Independent reviewer / review, coordinator disposition | HF-07b | Fresh scrapkeep-reviewer (claude-fable-5-1 medium) PASS+NOTES on candidate 30e194b16a93acb6696225863fc4cb072133866c, no blocking finding: DoD 1 to 4 and the acknowledgement derivation verified at evidence level 3 (all four stage lists and the HF-04a seam walked against HF-04a:67,90,108,113, two invariants walked through all seven policies, C2 and C4 replayed by hand under two policies each, no path found that acknowledges an unvalidated or uncommitted generation), both writer decisions judged inside the card and TADR-004, prohibitions and headings clean. Six accepted notes recorded verbatim in artifacts/foundation-sprint-2026-09/tasks/HF-07b/review.md: Transition D's validate list at line 105 omits the array-preservation gate its P4 column relies on, which the model enforces as a common gate; C4's open-offer commit T9 names no transition; line 36 versus C1.1 differ on who stages; the 240 model runs are 80 distinct runs because the R dimension is inert, so lines 151 and 277 overstate coverage; the Q-E09 pole wording overlaps EV-0157 and EV-0163 as a description not a pick; the preferences decision fully decides a question shared with HF-08. Disposition: admitted unchanged under the PASS+NOTES rule; note 1 is a required correction at the next HF-07b revision and HF-10 review input, notes 2 to 4 are carried to the same revision, and HF-08's packet reserves the preferences failure-handling half to HF-08. |
 | EV-0165 | 2026-09-13T01:49:38+00:00 | Coordinator / integration, completion | HF-07b | HF-07b admitted serially at integrated identity ee242771c9562c0868d84c640f41baffa84f402a (no-ff merge of reviewed candidate 30e194b16a93acb6696225863fc4cb072133866c into main). Admission checks on that exact result: check:scope 79ed9c5790a896c85f769c5b4e4745aef6b4200d..ee242771c9562c0868d84c640f41baffa84f402a --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, check_boundaries.py exit 0 with 172 checks and 3 controls detected; section hash unchanged from the candidate; receipts under artifacts/foundation-sprint-2026-09/tasks/HF-07b/coordinator-integrated/. Lease HF-07b-L1 closed, worktree and branch wt/HF-07b removed. HF-07b-A1 done at card revision 1, record revision 4 to 6. The sections index gains its HF-07b row in this admission commit. Eleven of fourteen foundation cards done; HF-08 and HF-09 are now dependency-complete. |
 | EV-0166 | 2026-09-13T01:50:16+00:00 | Coordinator / readiness | HF-08, HF-09 | HF-08 queued to ready at card revision 2 and HF-09 queued to ready at card revision 2, each record revision 2 to 3. HF-08's dependency HF-07b is done (EV-0165) with docs/tech/sections/HF-07b-commit-boundaries.md present, HF-07a and HF-03a sections present, the coordinator-resolved Godot 4.7 FileAccess, DirAccess, OS and data-path documentation retained at artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess-os.txt. HF-09's dependencies HF-06b (EV-0153) and HF-07b (EV-0165) are done with their sections present, HF-05 and HF-07a present, and the two browser storage records resolved by file, line and key at artifacts/foundation-sprint-2026-09/tasks/HF-09/storage-keys.md (src/collection.js:29-31 keys scrapkeep.collection.v1 and scrapkeep.qa.collection.v1, src/progress-store.js:8,45, src/campaign.js:115). Registered non-blocking question Q-E05 (HF-09) is open; HF-08 registers none. The two write sets are disjoint files, so both may run together under the two-writer ceiling. Authorization EV-0078 covers both. |
+| EV-0167 | 2026-09-13T01:50:17+00:00 | Coordinator / assignment, lease | HF-08 | HF-08 ready to in_progress at card revision 2, record revision 3 to 4. Attempt HF-08-A1, exclusive lease HF-08-L1 over docs/tech/sections/HF-08-save-recovery.md and artifacts/local/tasks/HF-08/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-08 on branch wt/HF-08 at verified base 2db978b7e8220e8b414d808d2a7d782b72492b58. Packet artifacts/foundation-sprint-2026-09/tasks/HF-08/assignment.md carrying the HF-07a, HF-07b and HF-03a hashes, TADR-004 and TADR-001 anchors, the resolved Godot references and the reserved preferences failure-handling half. Writer scrapkeep-writer (claude-opus-5 high under EV-0149). Admission: authorization EV-0078; card pinned; HF-07b done with output present at base; no lease overlap; base inspected clean. |
+| EV-0168 | 2026-09-13T01:50:17+00:00 | Coordinator / assignment, lease | HF-09 | HF-09 ready to in_progress at card revision 2, record revision 3 to 4. Attempt HF-09-A1, exclusive lease HF-09-L1 over docs/tech/sections/HF-09-schema-migration.md and artifacts/local/tasks/HF-09/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-09 on branch wt/HF-09 at the same verified base 2db978b7e8220e8b414d808d2a7d782b72492b58. Packet artifacts/foundation-sprint-2026-09/tasks/HF-09/assignment.md carrying the HF-06b, HF-07a, HF-07b and HF-05 hashes, TADR-003 and TADR-004 anchors, the Q-E05 anchor and the resolved browser storage keys. Writer scrapkeep-writer (claude-opus-5 high under EV-0149). Admission: authorization EV-0078; card pinned; HF-06b and HF-07b done with outputs present at base; no lease overlap with HF-08-L1; base inspected clean. Two writers active, within the ceiling. |
 
 ## Preparation checkpoint
 
@@ -661,3 +663,25 @@ Last reported event: EV-0153. Latest admitted checkpoint: 9/14 foundation cards 
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-07b/assignment.md); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-07b/attempt-1/verification.json).
 - Review: fresh scrapkeep-reviewer (claude-fable-5-1 medium), **PASS+NOTES** on candidate `30e194b16a93acb6696225863fc4cb072133866c`; [verbatim report](artifacts/foundation-sprint-2026-09/tasks/HF-07b/review.md); note 1 is a required correction at the next revision (EV-0164). Integrated evidence: [checks](artifacts/foundation-sprint-2026-09/tasks/HF-07b/coordinator-integrated/verification.json).
+
+## HF-08-A1 full foundation attempt
+
+- Assignee: scrapkeep-writer, claude-opus-5 high pinned by agent definition after EV-0149 (runtime effort reported at handoff); card revision 2; attempt HF-08-A1; exclusive lease HF-08-L1 active.
+- Owned files: `docs/tech/sections/HF-08-save-recovery.md`; `artifacts/local/tasks/HF-08/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-08, branch wt/HF-08.
+- Base identity: `2db978b7e8220e8b414d808d2a7d782b72492b58`; accepted dependency HF-07b, HF-07a and HF-03a section bytes from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-08/assignment.md); [Godot documentation receipt](artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess-os.txt).
+- Review: not_run.
+
+## HF-09-A1 full foundation attempt
+
+- Assignee: scrapkeep-writer, claude-opus-5 high pinned by agent definition after EV-0149 (runtime effort reported at handoff); card revision 2; attempt HF-09-A1; exclusive lease HF-09-L1 active.
+- Owned files: `docs/tech/sections/HF-09-schema-migration.md`; `artifacts/local/tasks/HF-09/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-09, branch wt/HF-09.
+- Base identity: `2db978b7e8220e8b414d808d2a7d782b72492b58`; accepted dependency HF-06b (md and csv), HF-07a (md and csv), HF-07b and HF-05 section bytes from this base.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null.
+- Blockers: none at admission.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-09/assignment.md); [browser storage keys](artifacts/foundation-sprint-2026-09/tasks/HF-09/storage-keys.md).
+- Review: not_run.
