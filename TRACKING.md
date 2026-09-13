@@ -115,7 +115,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-09](BACKLOG.md#hf-09) | 2 | 2 | queued | HF-06b, HF-07b | none | EV-0029 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 2 | queued | HF-01, HF-02, HF-03a, HF-03b, HF-04a, HF-04b, HF-05, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 | none | EV-0029 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
-| [HF-03b](BACKLOG.md#hf-03b) | 1 | 5 | in_progress | none | none | EV-0127 |
+| [HF-03b](BACKLOG.md#hf-03b) | 1 | 6 | review | none | none | EV-0131 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 6 | review | none | none | EV-0129 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
@@ -327,6 +327,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0128 | 2026-09-12T23:46:44+00:00 | Coordinator / assignment, lease | HF-04b | HF-04b ready to in_progress at card revision 2, record revision 4 to 5. Attempt HF-04b-A1, exclusive lease HF-04b-L1 over docs/tech/sections/HF-04b-runtime-patterns.md and artifacts/local/tasks/HF-04b/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-04b on branch wt/HF-04b at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b. Packet artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md with the resolved Godot references. Writer scrapkeep-writer (claude-fable-5-1, effort high pinned). Two writers active, within the ceiling; the AR-08 worktree /home/andrew/Projects/scrapkeep-wt-AR-08 was created at the same base so its README claim stays true at its recorded base, and AR-08 stays ready until a writer slot frees. |
 | EV-0129 | 2026-09-12T23:58:49+00:00 | Worker handoff / coordinator review admission | HF-04b | HF-04b-A1 in_progress to review, record revision 5 to 6. Handoff matches lease HF-04b-L1 and card revision 2: one tracked change docs/tech/sections/HF-04b-runtime-patterns.md (sha256 edb1be2392fb5828627b02556482c336cc8e2174497ba5cff262880436b21475) at candidate 691a878ebc176e99a2fb64c3d44437a5242b4d7c on wt/HF-04b from base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b, worktree clean, writer reported CLAUDE_EFFORT=high and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, and the writer's check_patterns.py exit 0 with 163 checks and 0 failures; receipts retained under artifacts/foundation-sprint-2026-09/tasks/HF-04b/attempt-1/. Writer notes recorded: prettier 3.9.6 was fetched into the npx cache with no manifest change; no mid-task checkpoint channel existed; the sections index needs its HF-04b row at admission. Fresh scrapkeep-reviewer (claude-fable-5-1 high) assigned; reviewer occupies the third delegate slot. |
 | EV-0130 | 2026-09-12T23:58:49+00:00 | Coordinator / assignment, lease | AR-08 | AR-08 ready to in_progress at card revision 1, record revision 1 to 2. Attempt AR-08-A1, exclusive lease AR-08-L1 over the eight permitted files named in the card plus artifacts/local/tasks/AR-08/. Worktree /home/andrew/Projects/scrapkeep-wt-AR-08 on branch wt/AR-08 at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b (created before any wave-1 integration, EV-0128). Packet artifacts/foundation-sprint-2026-09/tasks/AR-08/assignment.md. Writer scrapkeep-writer-low (claude-fable-5-1, effort low pinned). Admission: authorization EV-0124; no dependencies; no lease overlap with HF-03b-L1 or HF-04b-L1; the HF-04b writer slot freed at EV-0129 so two writers remain active. |
+| EV-0131 | 2026-09-13T00:02:34+00:00 | Worker handoff / coordinator review admission | HF-03b | HF-03b-A1 in_progress to review, record revision 5 to 6. Handoff matches lease HF-03b-L1 and card revision 1: one tracked change docs/tech/sections/HF-03b-dependency-graph.md (sha256 7c29b6ee0fcff3749c0d30d69b3977d529732338dd794ee0019d6a6a1392d183) at candidate 9d5e98076e81131a93721af9c6f59dba849196f0 on wt/HF-03b from base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b, worktree clean, writer reported CLAUDE_EFFORT=high and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, and the writer's check_graph.py with --out outside the retained directory exit 0 with 406 checks, 0 failures and topological order Session, Encounter, Persistence, Presentation, CollisionQueries, InputAdapter, ContentAdmission, Values; receipts retained under artifacts/foundation-sprint-2026-09/tasks/HF-03b/attempt-1/. Writer notes recorded: DF-01 routes aim authority through InputFrame samples on D08 rather than an unlisted PresentationState edge, stated as a dependency route only; W2 E6 durability is conditional on HF-07a/b; the sections index needs its HF-03b row at admission. Independent review queued behind the HF-04b review because the reviewer slot is occupied; a fresh scrapkeep-reviewer is assigned when it frees. |
 
 ## Preparation checkpoint
 
@@ -554,11 +555,11 @@ Last reported event: EV-0128. Latest admitted checkpoint: 5/14 foundation cards 
 - Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt HF-03b-A1; exclusive lease HF-03b-L1 active.
 - Owned files: `docs/tech/sections/HF-03b-dependency-graph.md`; `artifacts/local/tasks/HF-03b/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-03b, branch wt/HF-03b.
 - Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`; accepted dependency HF-03a section bytes from this base.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: null.
+- Candidate identity: `9d5e98076e81131a93721af9c6f59dba849196f0`. Integrated identity: null.
+- Latest checkpoint: handoff recorded at EV-0131; candidate committed, coordinator reran scope/docs/project and the 406-check graph script on the candidate, all exit 0; writer stopped; independent review pending.
 - Blockers: none at admission.
-- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-03b/assignment.md).
-- Review: not_run.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-03b/assignment.md); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-03b/attempt-1/verification.json).
+- Review: pending; reviewer to be assigned when the review slot frees (EV-0131).
 
 ## HF-04b-A1 full foundation attempt
 
