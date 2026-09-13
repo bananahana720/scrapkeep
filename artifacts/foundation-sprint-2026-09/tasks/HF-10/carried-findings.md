@@ -23,3 +23,9 @@ Coordinator-compiled from the recorded per-card reviews and the integrated read.
 ## Question state at compilation
 
 Q-P14, Q-P15, Q-E09 and Q-P16 are `proposed` (EV-0144, EV-0151, EV-0157, EV-0163): engineering-half protocols only, no product answer. Q-E05 and Q-E03 are open. HF-10 confirms that no section treats any of these as settled.
+
+## Added after wave 6
+
+- HF-08 (EV-0174): the candidate-path rule at line 52 (one path per transaction_id) contradicts FC-02/FC-03 retry with P1/P2 preservation at lines 124-125, 166-167, walked through at V3.3 (required correction); R5 leaves a corrupt committed record with no candidate (FC-13 MC-UNSUPPORTED) without a user-visible state and routes FC-14 to a save-hold state (required correction); AC-2 refuses same-transaction same-generation candidate pairs an ordinary retry produces; three matrix cells say "is durable"; FC-13's new-run path has no preserve-first mechanism like PW7; retry_transition and TransitionStatus are at HF-03a:31 not :35.
+- HF-09 (EV-0172): the model's schema step exercises no rename or add so G4, G9 and the added-values rule are untested; thirteen per-gate still-safe checks are vacuous; W4.8 convergence has no driving test; line 216 says suffix prefix; the third predicate axis is handle resolution rather than a catalogue version compare, sourced to HF-07a:172,181.
+- Cross-read requested by both writers: HF-08 line 367 requires that a migration commit through HF-08's ordering; HF-09 defers everything after a reject to HF-08. HF-10 confirms the seam is consistent in both directions.
