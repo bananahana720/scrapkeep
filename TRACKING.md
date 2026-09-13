@@ -117,7 +117,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 6 | review | none | none | EV-0131 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
-| [HF-04b](BACKLOG.md#hf-04b) | 2 | 6 | review | none | none | EV-0129 |
+| [HF-04b](BACKLOG.md#hf-04b) | 2 | 8 | done | none | HF-04b-A1 | EV-0133 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 1 | queued | HF-05 | none | EV-0029 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 1 | queued | HF-06a | none | EV-0029 |
 | [HF-07a](BACKLOG.md#hf-07a) | 1 | 1 | queued | HF-06b | none | EV-0029 |
@@ -191,7 +191,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [AR-05](BACKLOG.md#ar-05) | 1 | 4 | done | none | AR-05-A2 | EV-0118 |
 | [AR-06](BACKLOG.md#ar-06) | 1 | 4 | done | none | AR-06-A1 | EV-0119 |
 | [AR-07](BACKLOG.md#ar-07) | 1 | 5 | done | none | AR-07-A1 | EV-0121 |
-| [AR-08](BACKLOG.md#ar-08) | 1 | 2 | in_progress | none | none | EV-0130 |
+| [AR-08](BACKLOG.md#ar-08) | 1 | 3 | review | none | none | EV-0134 |
 
 ## Question state index
 
@@ -328,6 +328,9 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0129 | 2026-09-12T23:58:49+00:00 | Worker handoff / coordinator review admission | HF-04b | HF-04b-A1 in_progress to review, record revision 5 to 6. Handoff matches lease HF-04b-L1 and card revision 2: one tracked change docs/tech/sections/HF-04b-runtime-patterns.md (sha256 edb1be2392fb5828627b02556482c336cc8e2174497ba5cff262880436b21475) at candidate 691a878ebc176e99a2fb64c3d44437a5242b4d7c on wt/HF-04b from base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b, worktree clean, writer reported CLAUDE_EFFORT=high and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, and the writer's check_patterns.py exit 0 with 163 checks and 0 failures; receipts retained under artifacts/foundation-sprint-2026-09/tasks/HF-04b/attempt-1/. Writer notes recorded: prettier 3.9.6 was fetched into the npx cache with no manifest change; no mid-task checkpoint channel existed; the sections index needs its HF-04b row at admission. Fresh scrapkeep-reviewer (claude-fable-5-1 high) assigned; reviewer occupies the third delegate slot. |
 | EV-0130 | 2026-09-12T23:58:49+00:00 | Coordinator / assignment, lease | AR-08 | AR-08 ready to in_progress at card revision 1, record revision 1 to 2. Attempt AR-08-A1, exclusive lease AR-08-L1 over the eight permitted files named in the card plus artifacts/local/tasks/AR-08/. Worktree /home/andrew/Projects/scrapkeep-wt-AR-08 on branch wt/AR-08 at verified base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b (created before any wave-1 integration, EV-0128). Packet artifacts/foundation-sprint-2026-09/tasks/AR-08/assignment.md. Writer scrapkeep-writer-low (claude-fable-5-1, effort low pinned). Admission: authorization EV-0124; no dependencies; no lease overlap with HF-03b-L1 or HF-04b-L1; the HF-04b writer slot freed at EV-0129 so two writers remain active. |
 | EV-0131 | 2026-09-13T00:02:34+00:00 | Worker handoff / coordinator review admission | HF-03b | HF-03b-A1 in_progress to review, record revision 5 to 6. Handoff matches lease HF-03b-L1 and card revision 1: one tracked change docs/tech/sections/HF-03b-dependency-graph.md (sha256 7c29b6ee0fcff3749c0d30d69b3977d529732338dd794ee0019d6a6a1392d183) at candidate 9d5e98076e81131a93721af9c6f59dba849196f0 on wt/HF-03b from base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b, worktree clean, writer reported CLAUDE_EFFORT=high and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, and the writer's check_graph.py with --out outside the retained directory exit 0 with 406 checks, 0 failures and topological order Session, Encounter, Persistence, Presentation, CollisionQueries, InputAdapter, ContentAdmission, Values; receipts retained under artifacts/foundation-sprint-2026-09/tasks/HF-03b/attempt-1/. Writer notes recorded: DF-01 routes aim authority through InputFrame samples on D08 rather than an unlisted PresentationState edge, stated as a dependency route only; W2 E6 durability is conditional on HF-07a/b; the sections index needs its HF-03b row at admission. Independent review queued behind the HF-04b review because the reviewer slot is occupied; a fresh scrapkeep-reviewer is assigned when it frees. |
+| EV-0132 | 2026-09-13T00:04:47+00:00 | Independent reviewer / review | HF-04b | Fresh scrapkeep-reviewer (claude-fable-5-1 high) PASS+NOTES on candidate 691a878ebc176e99a2fb64c3d44437a5242b4d7c, no blocking finding: DoD 1 to 3 verified at evidence level 3 (every HF-04a, HF-03a, proof-script and receipt citation walked line by line), headings, marker text and owner naming at level 2, hashes, single-commit pins and exit codes at level 4 from coordinator receipts. Six accepted notes recorded verbatim in artifacts/foundation-sprint-2026-09/tasks/HF-04b/review.md: section line 82 attributes typed for-loop variables to the ctx7 receipt, which does not contain them (evidenced instead by the admitted scripts); line 67 overstates X1 as supporting out-of-phase rejection, which only X4 asserts; line 52 is a source reading under a column headed as assertion-established; check_patterns.py CITED_LINES omits fault receipt lines 4-5 and 10-14 (confirmed PASS manually) and its owner-row check accepts a module name in any column; line 27 lists CollisionQueries contact observations loosely. None violates the DoD; the first two are carried to the next HF-04b revision and to the HF-10 review input. |
+| EV-0133 | 2026-09-13T00:04:47+00:00 | Coordinator / integration, completion | HF-04b | HF-04b admitted serially at integrated identity 2fdc9afc2464a1804bbf4022d307c118eb5bd4a4 (no-ff merge of reviewed candidate 691a878ebc176e99a2fb64c3d44437a5242b4d7c into main). Admission checks on that exact result: check:scope d98803c555bedcd3d68e5d82efafb1a2d0bcf31b..2fdc9afc2464a1804bbf4022d307c118eb5bd4a4 --no-build exit 0 (documentation-only), check:docs exit 0, check:project exit 0, check_patterns.py exit 0 with 163 checks and 0 failures; section sha256 edb1be2392fb5828627b02556482c336cc8e2174497ba5cff262880436b21475 unchanged from the candidate; receipts under artifacts/foundation-sprint-2026-09/tasks/HF-04b/coordinator-integrated/. Lease HF-04b-L1 closed, worktree and branch wt/HF-04b removed after verifying the merge. HF-04b-A1 done at card revision 2, record revision 6 to 8. The sections index gains its HF-04b row in this admission commit. |
+| EV-0134 | 2026-09-13T00:04:47+00:00 | Worker handoff / coordinator review admission | AR-08 | AR-08-A1 in_progress to review, record revision 2 to 3. Handoff matches lease AR-08-L1 and card revision 1: eight tracked files changed, 12 insertions and 8 deletions, no heading changed, at candidate 73cbb5f955aea2ce7408de71ba2ea62fd6bfce71 on wt/AR-08 from base d98803c555bedcd3d68e5d82efafb1a2d0bcf31b, worktree clean, writer reported CLAUDE_EFFORT=low and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only, 8 paths), check:docs exit 0, check:project exit 0, and the writer's paper-check.mjs 16 of 16 passed; receipts and the candidate diff retained under artifacts/foundation-sprint-2026-09/tasks/AR-08/attempt-1/. Writer follow-up recorded for the reviewer: docs/project/ASSETS.md line 15 now frames T04 through Q-E06 from SOURCE-DISPOSITIONS line 31, beyond the bare link retarget the card required. Fresh scrapkeep-reviewer-medium (claude-fable-5-1 medium) assigned; two reviewers and no writer are active, within the ceiling. |
 
 ## Preparation checkpoint
 
@@ -510,7 +513,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Full foundation reporting checkpoint
 
-Last reported event: EV-0128. Latest admitted checkpoint: 5/14 foundation cards done (HF-01, HF-02, HF-03a, HF-04a, HF-05), all on independent review. AR-01 to AR-07 done (EV-0103 to EV-0121); event archive split performed (EV-0122). Wave 1 of the sprint wrap is active: HF-03b-A1 and HF-04b-A1 in progress (EV-0127, EV-0128); AR-08 ready with its worktree pre-created at base d98803c (EV-0128). Planned order after wave 1: integrated read of HF-01 to HF-05 outputs, then HF-06a, HF-06b, HF-07a, HF-07b, HF-08 with HF-09, HF-10, sprint closure. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
+Last reported event: EV-0134. Latest admitted checkpoint: 6/14 foundation cards done (HF-01, HF-02, HF-03a, HF-04a, HF-04b, HF-05), all on independent review. AR-01 to AR-07 done (EV-0103 to EV-0121); event archive split performed (EV-0122). Wave 1 of the sprint wrap: HF-04b done at 2fdc9af (EV-0133); HF-03b-A1 in review (EV-0131); AR-08-A1 in review (EV-0134). Next: integrated read of HF-01 to HF-05 outputs once HF-03b is admitted, then HF-06a, HF-06b, HF-07a, HF-07b, HF-08 with HF-09, HF-10, sprint closure. Compute counts from the task index on every poke. Only admitted DONE states count; candidate work does not. Session execution and manual pokes only.
 
 ## HF-03a-A1 full foundation attempt
 
@@ -563,22 +566,22 @@ Last reported event: EV-0128. Latest admitted checkpoint: 5/14 foundation cards 
 
 ## HF-04b-A1 full foundation attempt
 
-- Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 2; attempt HF-04b-A1; exclusive lease HF-04b-L1 active.
+- Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 2; attempt HF-04b-A1; exclusive lease HF-04b-L1 closed, writer stopped.
 - Owned files: `docs/tech/sections/HF-04b-runtime-patterns.md`; `artifacts/local/tasks/HF-04b/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-04b, branch wt/HF-04b.
 - Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`; accepted dependency HF-04a and HF-03a section bytes from this base.
-- Candidate identity: `691a878ebc176e99a2fb64c3d44437a5242b4d7c`. Integrated identity: null.
-- Latest checkpoint: handoff recorded at EV-0129; candidate committed, coordinator reran scope/docs/project and the 163-check paper script on the candidate, all exit 0; writer stopped; independent review pending.
+- Candidate identity: `691a878ebc176e99a2fb64c3d44437a5242b4d7c`. Integrated identity: `2fdc9afc2464a1804bbf4022d307c118eb5bd4a4`.
+- Latest checkpoint: independent PASS+NOTES (EV-0132), serial admission and integrated scope/docs/project/paper checks pass (EV-0133); writer stopped and lease closed.
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-04b/assignment.md); [Godot documentation receipt](artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-04b/attempt-1/verification.json).
-- Review: pending, fresh scrapkeep-reviewer assigned at EV-0129.
+- Review: fresh scrapkeep-reviewer (claude-fable-5-1 high), **PASS+NOTES** on candidate `691a878ebc176e99a2fb64c3d44437a5242b4d7c`; [verbatim report](artifacts/foundation-sprint-2026-09/tasks/HF-04b/review.md). Integrated evidence: [checks](artifacts/foundation-sprint-2026-09/tasks/HF-04b/coordinator-integrated/verification.json).
 
 ## AR-08-A1 audit-repair attempt
 
 - Assignee: scrapkeep-writer-low, claude-fable-5-1 low pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt AR-08-A1; exclusive lease AR-08-L1 active.
 - Owned files: `docs/project/README.md`; `BACKLOG.md` (edition line and the prose under "Proposed first sprint" only); `ORCHESTRATOR.md` (revision header and closing paragraph only); `adr/README.md` (one sentence); `docs/RUNTIME-BLUEPRINT.md`; `docs/PLANNING-PREP-SWARM.md`; `docs/project/HOUSEKEEPING.md`; `docs/project/ASSETS.md`; `artifacts/local/tasks/AR-08/`. Worktree: /home/andrew/Projects/scrapkeep-wt-AR-08, branch wt/AR-08.
 - Base identity: `d98803c555bedcd3d68e5d82efafb1a2d0bcf31b`, the admitted state its records must describe.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: null.
+- Candidate identity: `73cbb5f955aea2ce7408de71ba2ea62fd6bfce71`. Integrated identity: null.
+- Latest checkpoint: handoff recorded at EV-0134; eight files changed, coordinator reran scope/docs/project and the 16-assertion paper check on the candidate, all pass; writer stopped; independent review pending.
 - Blockers: none at admission.
-- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/AR-08/assignment.md).
-- Review: not_run.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/AR-08/assignment.md); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/AR-08/attempt-1/verification.json); [candidate diff](artifacts/foundation-sprint-2026-09/tasks/AR-08/attempt-1/candidate.diff).
+- Review: pending, fresh scrapkeep-reviewer-medium assigned at EV-0134.

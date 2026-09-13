@@ -1,11 +1,13 @@
 {
   "task": "HF-04b",
   "attempt": "HF-04b-A1",
-  "generated": "2026-09-12T23:58:24.171652+00:00",
-  "root": "/home/andrew/Projects/scrapkeep-wt-HF-04b",
-  "head": "691a878ebc176e99a2fb64c3d44437a5242b4d7c",
-  "branch": "wt/HF-04b",
-  "dirty": [],
+  "generated": "2026-09-13T00:04:08.077389+00:00",
+  "root": "/home/andrew/Projects/scrapkeep",
+  "head": "2fdc9afc2464a1804bbf4022d307c118eb5bd4a4",
+  "branch": "main",
+  "dirty": [
+    "?? artifacts/foundation-sprint-2026-09/tasks/HF-04b/review.md"
+  ],
   "result": "pass",
   "checks": 163,
   "failures": 0,

@@ -12,6 +12,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [HF-02: Constraints and evidence register](HF-02-constraints-evidence.md).
 - [HF-03a: Module ownership and owned records](HF-03a-module-map.md).
 - [HF-04a: Fixed tick, pause and encounter lifecycle](HF-04a-runtime-lifecycle.md).
+- [HF-04b: Runtime patterns and typed sketches](HF-04b-runtime-patterns.md).
 - [HF-05: Stable content identity and admission](HF-05-content-admission.md).
 
 ## Scenarios
