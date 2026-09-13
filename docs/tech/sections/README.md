@@ -16,6 +16,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [HF-04b: Runtime patterns and typed sketches](HF-04b-runtime-patterns.md).
 - [HF-05: Stable content identity and admission](HF-05-content-admission.md).
 - [HF-06a: Authored content inventory and treatment](HF-06a-schema-inventory.md) with its [CSV copy](HF-06a-schema-inventory.csv).
+- [HF-06b: Matrix rows mapped to persistence projections](HF-06b-persistence-projection.md) with its [CSV copy](HF-06b-persistence-projection.csv).
 
 ## Scenarios
 
