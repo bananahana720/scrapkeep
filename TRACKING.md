@@ -119,7 +119,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 8 | done | none | HF-04b-A1 | EV-0133 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 6 | done | none | HF-06a-A1 | EV-0146 |
-| [HF-06b](BACKLOG.md#hf-06b) | 1 | 3 | in_progress | none | none | EV-0148 |
+| [HF-06b](BACKLOG.md#hf-06b) | 1 | 4 | review | none | none | EV-0150 |
 | [HF-07a](BACKLOG.md#hf-07a) | 1 | 1 | queued | HF-06b | none | EV-0029 |
 | [HF-07b](BACKLOG.md#hf-07b) | 1 | 1 | queued | HF-04a, HF-07a | none | EV-0029 |
 | [S0-01](BACKLOG.md#s0-01) | 1 | 1 | done | none | PS-06-A1 | EV-0029 |
@@ -206,7 +206,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | [Q-E06](BACKLOG.md#q-e06) | 1 | open | none | EV-0004 |
 | [Q-E07](BACKLOG.md#q-e07) | 2 | resolved | Andrew: private `bananahana720/scrapkeep`; default `main`; publish `main` and `codex/lightning-playtest`. [Authorization](artifacts/publication-2026-09-06/AUTHORIZATION.md). | EV-0007 |
 | [Q-E08](BACKLOG.md#q-e08) | 1 | open | none | EV-0004 |
-| [Q-E09](BACKLOG.md#q-e09) | 2 | proposed | HF-06a-A1 engineering-half protocol recorded at EV-0144; product half unanswered. | EV-0144 |
+| [Q-E09](BACKLOG.md#q-e09) | 3 | proposed | HF-06a-A1 and HF-06b-A1 engineering-half protocols recorded at EV-0144 and EV-0151; product half unanswered. | EV-0151 |
 | [Q-E10](BACKLOG.md#q-e10) | 1 | open | none | EV-0004 |
 | [Q-E11](BACKLOG.md#q-e11) | 1 | open | none | EV-0004 |
 | [Q-E12](BACKLOG.md#q-e12) | 1 | open | none | EV-0004 |
@@ -225,7 +225,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | [Q-P12](BACKLOG.md#q-p12) | 1 | open | none | EV-0004 |
 | [Q-P13](BACKLOG.md#q-p13) | 1 | open | none | EV-0004 |
 | [Q-P14](BACKLOG.md#q-p14) | 2 | proposed | HF-06a-A1 engineering-half protocol recorded at EV-0144; product half unanswered. | EV-0144 |
-| [Q-P15](BACKLOG.md#q-p15) | 2 | proposed | HF-06a-A1 engineering-half protocol recorded at EV-0144; product half unanswered. | EV-0144 |
+| [Q-P15](BACKLOG.md#q-p15) | 3 | proposed | HF-06a-A1 and HF-06b-A1 engineering-half protocols recorded at EV-0144 and EV-0151; product half unanswered. | EV-0151 |
 | [Q-P16](BACKLOG.md#q-p16) | 1 | open | none | EV-0004 |
 | [Q-P17](BACKLOG.md#q-p17) | 1 | open | none | EV-0004 |
 | [Q-P18](BACKLOG.md#q-p18) | 1 | open | none | EV-0004 |
@@ -346,6 +346,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0147 | 2026-09-13T00:37:38+00:00 | Coordinator / readiness | HF-06b | HF-06b queued to ready at card revision 1, record revision 1 to 2. Dependency HF-06a done (EV-0146) with docs/tech/sections/HF-06a-schema-inventory.md and .csv present; HF-05 section present. Registered non-blocking questions Q-P14, Q-P15 and Q-E09 are in proposed state (EV-0144) with no product answer; the contract must hold under every candidate answer. No live lease exists. Authorization EV-0078 covers it. |
 | EV-0148 | 2026-09-13T00:37:38+00:00 | Coordinator / assignment, lease | HF-06b | HF-06b ready to in_progress at card revision 1, record revision 2 to 3. Attempt HF-06b-A1, exclusive lease HF-06b-L1 over docs/tech/sections/HF-06b-persistence-projection.md, docs/tech/sections/HF-06b-persistence-projection.csv and artifacts/local/tasks/HF-06b/. Worktree /home/andrew/Projects/scrapkeep-wt-HF-06b on branch wt/HF-06b at verified base 2d33632136918703a2d64d9ca8f05bf03d45fcd4. Packet artifacts/foundation-sprint-2026-09/tasks/HF-06b/assignment.md carrying the HF-06a and HF-05 hashes, question anchors and proposed-state warning, TH-22 anchor and the carried review notes. Writer scrapkeep-writer (claude-fable-5-1, effort high pinned). Admission: authorization EV-0078; card pinned; HF-06a done with both outputs present at base; no lease overlap; base inspected clean. One writer active. |
 | EV-0149 | 2026-09-13T00:41:28+00:00 | Andrew / authorization; coordinator / coordination change | (record) | Andrew found the delegate routing off: every sprint-wrap delegate so far (six writers, five reviewers, one integrated read) ran on claude-fable-5-1 because ORCHESTRATOR line 17, AGENTS.md line 11 and all six .claude/agents definitions pinned Fable, while the pstack map Andrew set on 2026-09-12 routes implementation to Opus 5 high, lookups to Sonnet 5 and only consequential judgement to Fable. On Andrew's explicit yes the coordinator remapped the definitions: scrapkeep-writer and scrapkeep-writer-medium to claude-opus-5 high, scrapkeep-writer-low to claude-sonnet-5 high, scrapkeep-explorer to claude-sonnet-5 medium, scrapkeep-reviewer-medium to claude-opus-5 high, scrapkeep-reviewer to claude-fable-5-1 medium; Fable high is escalation only. The three pin sentences (ORCHESTRATOR.md:17, AGENTS.md:11, docs/project/AI-WORKFLOW.md:21) now state the same tiers. check:docs and check:project exit 0. Effect: HF-06b-A1, already running on the old Fable high pin, is unchanged; HF-06b's review and every later unit use the new tiers, with Fable medium reserved for reviews that turn on Bible, ADR or contract judgement, the integrated reads and HF-10. Definition changes register at the next spawn; the coordinator checks each delegate's reported CLAUDE_EFFORT against the new pin and treats a mismatch as a capability blocker. Recorded as a coordination change, not a task; no card, lease or question state changed. |
+| EV-0150 | 2026-09-13T00:55:09+00:00 | Worker handoff / coordinator review admission | HF-06b | HF-06b-A1 in_progress to review, record revision 3 to 4. Handoff matches lease HF-06b-L1 and card revision 1: two tracked changes, docs/tech/sections/HF-06b-persistence-projection.md (sha256 63cb58810eac36da3c70855868873c60ffb25f1c32c0c8e1b73e7adcceefd7f2) and .csv (8ba1476b42ad206eea09bc6ea411a5f297afdcb1f4d596cdf686b4afdf8cec15), at candidate 69bf3c7114a1dff98c5384bc278d0729738cd4eb on wt/HF-06b from base 2d33632136918703a2d64d9ca8f05bf03d45fcd4, worktree clean, writer reported CLAUDE_EFFORT=high on the pre-EV-0149 Fable pin and stopped. Coordinator reran from scratch on the candidate: check:scope --no-build exit 0 (documentation-only, 2 paths), check:docs exit 0, check:project exit 0, and the writer's check_projection.py with --out outside the retained directory exit 0 with 41 passed and 0 failed (closed save-value set, case pairing, no engine-object tokens, HF-06a ID and treatment parity, md/csv parity, S0-08 receipt hashes); receipts under artifacts/foundation-sprint-2026-09/tasks/HF-06b/attempt-1/. Writer's reported judgment calls for the reviewer: excluded guidance rows carry immutable-by-id under a no-definition-no-state case; N-018 loop position is transient-reconstructed with lifecycle facts on N-028; rule 4 makes every projected ID a JSON string from the S0-08 float observation; F-08 adds a Q-E09 tag beyond HF-06a's. Fresh scrapkeep-reviewer (claude-fable-5-1 medium under EV-0149) assigned: the persistence contract turns on TADR-004 judgement. |
+| EV-0151 | 2026-09-13T00:55:09+00:00 | Worker proposal / question state | Q-P15, Q-E09 | HF-06b-A1 submitted further engineering-half protocols, recorded as proposed alongside the EV-0144 proposals and not as answers; the HF-06b contract explicitly does not assume either. Q-P15: HF-07a reserves checkpoint.device-carry-over as a possibly-empty list of device domain ID plus typed counters regardless of the product answer. Q-E09: the profile projection is class-free on the save side (a set of IDs committed once per transaction) and any durability class is a definition field, so the save shape is identical under every answer. Records Q-P15 and Q-E09 advance to revision 3, state proposed. The product halves remain Andrew's. |
 
 ## Preparation checkpoint
 
@@ -617,8 +619,8 @@ Last reported event: EV-0138. Latest admitted checkpoint: 7/14 foundation cards 
 - Assignee: scrapkeep-writer, claude-fable-5-1 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt HF-06b-A1; exclusive lease HF-06b-L1 active.
 - Owned files: `docs/tech/sections/HF-06b-persistence-projection.md`; `docs/tech/sections/HF-06b-persistence-projection.csv`; `artifacts/local/tasks/HF-06b/`. Worktree: /home/andrew/Projects/scrapkeep-wt-HF-06b, branch wt/HF-06b.
 - Base identity: `2d33632136918703a2d64d9ca8f05bf03d45fcd4`; accepted dependency HF-06a (md and csv) and HF-05 section bytes from this base.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: null.
+- Candidate identity: `69bf3c7114a1dff98c5384bc278d0729738cd4eb`. Integrated identity: null.
+- Latest checkpoint: handoff recorded at EV-0150; candidate committed, coordinator reran scope/docs/project and the 41-check projection script on the candidate, all pass; two question protocols recorded as proposed at EV-0151; writer stopped; independent review pending.
 - Blockers: none at admission.
-- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-06b/assignment.md).
-- Review: not_run.
+- Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-06b/assignment.md); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-06b/attempt-1/verification.json).
+- Review: pending, fresh scrapkeep-reviewer (Fable medium) assigned at EV-0150.
