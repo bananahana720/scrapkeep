@@ -3337,6 +3337,21 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Evidence needed to close:** Andrew's answer names whether a live run may be replaced and what durable record, if any, the abandoned run leaves. FR-02's Transition S and HF-08's rejection row for a differing `run.run_id` are then revised in place without weakening the monotonic lifecycle facts.
 
+<a id="q-p40"></a>
+
+### Q-P40: How a successful run closes its durable record
+
+**Source:** TH-01 handoff (TRACKING EV-0199) reading [BIBLE.md § The complete loop](BIBLE.md#the-complete-loop) line 582 against `docs/tech/sections/HF-07b-commit-boundaries.md` Transition D and the [FR-02](#fr-02) run-start rule.
+
+**Missing information:** The Bible ends a successful run at the final encounter, but the only lifecycle-closing durable fact is `run.lifecycle.terminal`, set by the second death. Does a won run close the run record, and how is the outcome recorded?
+
+**Decision owner:** Andrew for the product half; Persistence for the protocol half.
+
+**Affected work:** [FR-02](#fr-02) (run-start admission and the outcome fact), HF-07b Transition D, [TH-11](#th-11).
+
+**Evidence needed to close:** Andrew's answer names whether victory and defeat share one closing fact and where the outcome lives. Recorded answer (15 September 2026, TRACKING EV-0202): terminal means the run is over for both victory and defeat, and a separate durable outcome fact records won versus lost; FR-02 revision 2 carries the protocol half.
+
+
 ## Source records
 
 Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOSITIONS.md](docs/project/SOURCE-DISPOSITIONS.md), moved there verbatim on 6 September 2026. The coordinator owns that file. It preserves every P/T/R/D/BD identifier, the unnumbered planning obligations, core-system headings, selected concept-art receipts and requested engineering sections, and its task and question links point back to the cards and questions in this file. A disposition row grants no task completion, native support claim or implementation authorization.
@@ -3607,7 +3622,7 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 ### FR-02: Add the run-start transition and split initial-run facts from the checkpoint
 
-**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
+**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
 
 **Source and inputs:**
 
@@ -3618,7 +3633,7 @@ foundation sections in place; none changes game rules, product direction, an ADR
 - The [NP-01](#np-01) evidence page for the executed re-stage and lifecycle-regression gates, consumed once as the `native/proofs/tadr-004/**` re-verification trigger at HF-07a line 243, HF-07b line 269 and HF-08 line 373
 - The retained paper checks `artifacts/foundation-sprint-2026-09/tasks/HF-07a/attempt-1/check_envelope.py`, `HF-07b/attempt-1/check_boundaries.py` and `HF-08/attempt-1/check_recovery.py` as FR-01 leaves them
 
-**Dependencies:** [FR-01](#fr-01), [NP-01](#np-01). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P16](#q-p16), [Q-E09](#q-e09), [Q-P39](#q-p39). No item may answer a question; the shape must hold under P1, P2 and P3.
+**Dependencies:** [FR-01](#fr-01), [NP-01](#np-01). **Blocking questions:** None ([Q-P40](#q-p40) is resolved by Andrew's recorded answer at TRACKING EV-0202). **Registered non-blocking questions:** [Q-P16](#q-p16), [Q-E09](#q-e09), [Q-P39](#q-p39). No item may answer an open question; the shape must hold under P1, P2 and P3.
 
 **Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `artifacts/foundation-sprint-2026-09/tasks/HF-07a/attempt-1/check_envelope.py`, `HF-07b/attempt-1/check_boundaries.py` and `HF-08/attempt-1/check_recovery.py` (expected-value pins only); `artifacts/local/tasks/FR-02/`.
 
@@ -3630,11 +3645,12 @@ foundation sections in place; none changes game rules, product direction, an ADR
 4. HF-07a splits the envelope by one naming rule stated once: a fact that exists at Transition S before any level completes lives under `run.start.*`; a fact produced by completing a level stays under `run.checkpoint.*`; the Q-P16 reservation becomes `run.interruption` (`object or null`, group `reserved`, still carrying no keys). Concrete rows: `run.start` (object, when-present), `run.start.character_id` (moved from `run.checkpoint.build.character_id`), `run.start.entrance_id` (the resume position while `run.checkpoint` is null; `run.checkpoint.next_entrance` afterwards) and `run.start.rng_state[]` in the lines 44 to 46 shape. A new group `run-start` with anchor `run-start-fields`; Markdown and CSV in parity; the envelope keeps six top-level keys.
 5. Scenarios: HF-07a S9 "new run after a terminal run" and S10 "first-level revival then interruption, checkpoint null" read under P1, P2 and P3; HF-07b C5 "run start after terminal defeat" as a step table of six or more rows carrying the "Under every candidate policy" sentence; HF-08 matrix rows IM-S1 to IM-S5 for the five stop points of Transition S and walkthrough V7 "stale old-run candidate after S committed".
 6. The three retained checks are re-pinned, not weakened: `check_envelope.py` field count, group list, group counts, anchors, the interruption field name and the run-identity dot rule; `check_recovery.py` CSV field count and the transition enumeration extended with `S` so the matrix cross product includes IM-S1 to IM-S5; `check_boundaries.py` transition and case enumerations extended with `S` and C5 and its replay extended to C5. Each exits 0 from its retained copy with `--out` outside the retained directory.
-7. Card revisions of the touched sections are not changed; each section's Procedure performed records the revision-in-place with the finding identifiers, the consumed NP-01 trigger and the closure event.
+7. Card revisions of the touched sections are not changed; each section's Procedure performed records the revision-in-place with the finding identifiers, the consumed NP-01 trigger, the Q-P40 answer and the closure event.
+8. Q-P40 protocol half (revision 2): `run.lifecycle.terminal` means the run is over for victory and defeat alike, and a new lifecycle row `run.lifecycle.outcome` (an enumerated string, `won` or `lost`, present exactly when `terminal` is true and null otherwise, set once with `terminal` and never changed) is added to HF-07a in both copies with its source (BIBLE line 582; Andrew's answer at TRACKING EV-0202). HF-07b Transition D gains the victory path: completing the final encounter settles `terminal` true with `outcome` `won` through the same four stages, the common validator treats `outcome` as monotonic with `terminal` (present iff terminal, never rewritten), and N5 reads for both outcomes. HF-08's IM-D rows and V-series read under both outcomes, and Transition S's admission rule stays 'no run or terminal run', now covering a won run. HF-07a scenario S11 'final encounter won, then a new run' walks the pair.
 
-**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and the three retained paper checks rerun from their retained copies with `--out` under `artifacts/local/tasks/FR-02/`; the reviewer re-walks C5 and V7 by hand and reads S10 under P2 and P3. No build.
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and the three retained paper checks rerun from their retained copies with `--out` under `artifacts/local/tasks/FR-02/`; the reviewer re-walks C5, V7 and S11 by hand and reads S10 under P2 and P3. No build.
 
-**Boundary:** Documentation-only. No answer to Q-P16, Q-E09 or Q-P39; no rule for replacing a live run; no keys inside `run.interruption`; no runtime or proof code; no card revision or dependency change outside this card.
+**Boundary:** Documentation-only. No answer to Q-P16, Q-E09 or Q-P39; no rule for replacing a live run; no keys inside `run.interruption`; no results-screen, reward or presentation rule for a won run beyond the durable facts; no runtime or proof code; no card revision or dependency change outside this card.
 
 ## Native proof repair cards (15 September 2026)
 
