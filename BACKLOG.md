@@ -3786,6 +3786,33 @@ hand. These cards add the missing lever; none changes a contract.
 
 **Boundary:** Tooling only. It does not rewrite citations, re-pin hashes or judge whether a drift matters; that stays with a card and a reviewer.
 
+<a id="tl-02"></a>
+
+### TL-02: No-build tooling class and the drift check in the scope map
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** tooling
+
+**Source and inputs:**
+
+- `scripts/check-scope.mjs` and `tests/check-scope.test.js`, the scope classifier and its tests; `CONTRIBUTING.md` lines 35 to 37 (the check table) and the scope-to-command paragraph at line 53
+- TRACKING EV-0223: TL-01's candidate was classed tooling, whose required command `npm run verify` builds, under an authorization that forbade builds, so the coordinator substituted `npm test` and recorded the gap
+- TRACKING EV-0205, EV-0212 and EV-0216: TH-01 and HF-09 went stale against their dependencies with no mechanical signal until a check was rerun by hand; `scripts/check-drift.mjs` (TL-01, EV-0223) now detects it but is not in any required-command set
+
+**Dependencies:** [TL-01](#tl-01). **Blocking questions:** None.
+
+**Files touched:** `scripts/check-scope.mjs`; `tests/check-scope.test.js`; `CONTRIBUTING.md` (the check table row for `check:scope` and the scope-to-command paragraph); `artifacts/local/tasks/TL-02/`.
+
+**Definition of done:**
+
+1. `npm run check:scope -- <base> <candidate> --no-build` classifies a change confined to `scripts/*.mjs`, `tests/*.test.js`, `package.json` scripts entries and documentation as `tooling-no-build` and names `npm test`, `npm run check:docs`, `npm run check:project` and `npm run check:drift` as its required commands; a change touching `src/`, `server/`, `vite` configuration, dependencies or the lockfile still classes as build-requiring and `--no-build` still refuses it.
+2. The documentation-only class's required commands gain `npm run check:drift`.
+3. `tests/check-scope.test.js` covers the new class with one positive case, one boundary case that must still refuse `--no-build`, and the documentation-only command list including `check:drift`; `npm test` exit 0.
+4. CONTRIBUTING's check table and scope-to-command paragraph state the new class and the added command; no dependency, lockfile or build change.
+
+**Verification and evidence:** `npm test`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and `npm run check:scope -- <base> <candidate> --no-build` on the candidate itself (which must class as `tooling-no-build`). No build.
+
+**Boundary:** Tooling only. No change to what any check asserts; no new gate beyond adding an existing check to the required lists.
+
 ## Native proof repair cards (15 September 2026)
 
 Defined from the adversarial review of 15 September 2026 (TRACKING EV-0187). The review read the
