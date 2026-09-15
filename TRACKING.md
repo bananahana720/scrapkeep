@@ -137,7 +137,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [PD-03](BACKLOG.md#pd-03) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
 | [TH-01](BACKLOG.md#th-01) | 1 | 9 | done | none | TH-01-A1 | EV-0213 |
 | [TH-02](BACKLOG.md#th-02) | 1 | 10 | done | none | TH-02-A2 | EV-0234 |
-| [TH-03](BACKLOG.md#th-03) | 1 | 7 | in_progress | none | none | EV-0237 |
+| [TH-03](BACKLOG.md#th-03) | 1 | 8 | review | none | none | EV-0239 |
 | [TH-04](BACKLOG.md#th-04) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-05](BACKLOG.md#th-05) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-06](BACKLOG.md#th-06) | 1 | 1 | queued | HF-10 | none | EV-0002 |
@@ -444,6 +444,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0236 | 2026-09-16T10:20:00+00:00 | Independent reviewer / review; Coordinator / changes_requested | TH-03 | Independent review PASS+NOTES, evidence level 3 for DC-1 to DC-4, ten interface rows and the TH-02 seam (walked against sources), on candidate 96c5eea8b99c1b471a791d2a2a79115a820591c4 by scrapkeep-reviewer (Fable 5.1 medium, read-only). DoD 1 to 4 and both verification items met with citations; ADR 0003 cited as precedent not authority; CH-06 restates BIBLE 497 and DISCOVERY 41 and gates every opening on Q-P13; AO-05 and Seam 1 agree with the admitted TH-02 MO-02 and MO-03, MI-09 and MI-10 byte-equivalent to AT-08 and AT-12; the writer's two judgement calls confirmed against HF-10 N-05 and N-04(c); the candidate question (a required telegraph that cannot be drawn) judged a real gap at this base with FM-06 adopting no answer. Five notes. The coordinator sends note 2 back as a bounded attempt 2 because it is an implied product answer in a contract sentence: lines 181 and 322 say the shorter automatic field is 'prepared the same way' and 'previewed provisionally' while BIBLE 497 governs only the magician; the fix is to say it is committed through the same P4 resolution. Notes carried to grooming: (1) FM-06's open behaviour is gated on Q-P30 whose register text does not cover it, to be registered as its own question; (3) TH-02 MP-14 and TH-03 TP-15 and TP-19 route jump-height thresholds to different question owners (Q-E10 versus Q-P25, Q-P21, Q-P22), one owner to be chosen at the next readiness review; (4) AT-05 records the provisional descriptor in AttackLedger per HF-03b A4, inherited; (5) unverifiable Procedure claims. TH-03 review to changes_requested, record revision 5 to 6; lease TH-03-L1 retained for attempt 2 by the same writer. |
 | EV-0237 | 2026-09-16T10:22:00+00:00 | Coordinator / assignment | TH-03 | TH-03 changes_requested to in_progress, record revision 6 to 7, attempt TH-03-A2 on the same worktree and branch continuing from 96c5eea8b99c1b471a791d2a2a79115a820591c4, lease TH-03-L1 unchanged. Directive: reword lines 181 and 322 so the automatic field is committed through the same P4 resolution without a stated player prepare or preview stage, add the attempt-2 sentence to the Procedure performed, rerun the checks and report the new candidate SHA. No other edit. Same writer resumed with context intact. |
 | EV-0238 | 2026-09-16T10:35:00+00:00 | Coordinator / question proposal, correction | Q-P41, HF-04b | Q-P41 'A required telegraph that cannot be drawn' registered open from the TH-03 review (EV-0236 note 1), owner Andrew for the product half and Runtime for the protocol half; TH-03's FM-06 will cite it in place of Q-P30 at its next revision. Coordinator factual correction to docs/tech/sections/HF-04b-runtime-patterns.md line 9: the Context7 receipt it names is now linked at its retained path artifacts/foundation-sprint-2026-09/tasks/HF-04b/ctx7-godot-static-typing.txt, so npm run check:drift binds every stated hash in the corpus (zero UNBOUND); no other text changes and the stated hash is unchanged. HF-04b record revision advanced with no state change. |
+| EV-0239 | 2026-09-16T10:55:00+00:00 | Worker handoff / Coordinator verification | TH-03 | TH-03-A2 handoff: in_progress to review, record revision 7 to 8. Candidate 7b8bec0d8782d0dbe9fd3a96455e49c32681f1a3 on wt/TH-03 (new commit over attempt 1; four insertions and two deletions at lines 181, 322 and a new Procedure sentence at 367). CH-01 and AC.1 now say the automatic field's commitments use the same P4 resolution and descriptor parts, state that no cited source gives it a player preparation or preview stage, and leave that unset under Q-P13. Coordinator rerun: the two old phrasings absent, check:scope --no-build exit 0, check:docs exit 0, check:project exit 0, the paper check exit 0. Same reviewer (scrapkeep-reviewer, Fable 5.1 medium) resumed for a bounded re-review of the two lines. |
 
 ## Preparation checkpoint
 
@@ -626,7 +627,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Repair-and-handoff reporting checkpoint
 
-Last reported event: EV-0238. Repair-and-handoff-2026-09-15 is closed with outcome passed at pinned commit 62c00fd58b9726ce4a696643945af7956f228978: FR-01, NP-01, FR-02 and TH-01 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0217 (Handoff-2-2026-09-16: FR-03, TL-01, TH-02, TH-03; FR-03 and TL-01 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
+Last reported event: EV-0239. Repair-and-handoff-2026-09-15 is closed with outcome passed at pinned commit 62c00fd58b9726ce4a696643945af7956f228978: FR-01, NP-01, FR-02 and TH-01 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0217 (Handoff-2-2026-09-16: FR-03, TL-01, TH-02, TH-03; FR-03 and TL-01 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
 
 ## Repair-and-handoff closure record
 
@@ -692,8 +693,8 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Assignee: scrapkeep-writer, claude-opus-5 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt TH-03-A1, lease TH-03-L1 open.
 - Owned files: `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`; `artifacts/local/tasks/TH-03/`. Worktree /home/andrew/Projects/scrapkeep-wt-TH-03, branch wt/TH-03.
 - Base identity: `3902e0b29b2a5fd1fd9607a7ff366663ae9d44c0`; dependency HF-10 done at EV-0183.
-- Candidate identity: attempt 1 `96c5eea8b99c1b471a791d2a2a79115a820591c4` (changes_requested at EV-0236); attempt 2 pending. Integrated identity: null.
-- Latest checkpoint: 2026-09-16T10:22:00+00:00; attempt 2 assigned (EV-0237) for the implied product answer at lines 181 and 322; same writer, same lease.
+- Candidate identity: attempt 1 `96c5eea8b99c1b471a791d2a2a79115a820591c4` (changes_requested at EV-0236); attempt 2 `7b8bec0d8782d0dbe9fd3a96455e49c32681f1a3`. Integrated identity: null.
+- Latest checkpoint: 2026-09-16T10:55:00+00:00; attempt-2 handoff verified by the coordinator (EV-0239), writer stopped, lease retained until admission, bounded re-review pending.
 
 ## TH-02-A1 handoff-2 attempt
 
