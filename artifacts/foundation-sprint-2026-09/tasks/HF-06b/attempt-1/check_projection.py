@@ -48,7 +48,7 @@ QUESTIONS = ["Q-P14", "Q-P15", "Q-E09"]
 REQUIRED_TAGS = {"Q-P15": ["F-06", "F-07", "N-027"], "Q-E09": ["F-08", "N-017", "N-026", "N-028"]}
 EXPECTED = {
     "base": "2d33632136918703a2d64d9ca8f05bf03d45fcd4",
-    "hf06a_md_sha256": "c83973f76c9e057b87d6af52c112e22ca2af13a37e631a3b842742a1dbcf403b",
+    "hf06a_md_sha256": "fd0bd9b345aef1e0b5aec4383055ed8e692ab01f7fb1194924cbed1201ff5fa7",
     "hf06a_csv_sha256": "efc090287ed9a6bcfe481da2a0d73c6e462e135b6ed1ac04c55c6917dcac37e6",
     "hf05_sha256": "7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6",
     "hf03a_sha256": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",

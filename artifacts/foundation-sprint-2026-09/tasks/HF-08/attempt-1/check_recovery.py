@@ -20,9 +20,9 @@ import sys
 SECTION = "docs/tech/sections/HF-08-save-recovery.md"
 RECEIPT = "artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess-os.txt"
 DEPS = {
-    "docs/tech/sections/HF-07a-save-envelope.md": "1d295df34c40e60b9d0e66a22de7691ce3fcf261ffb84a4a80fe49b2eb91ea0a",
-    "docs/tech/sections/HF-07a-save-envelope.csv": "df4b60f562cc5dce2db2e23a7cb6a932e9e3c472572ad2114045070f3704753a",
-    "docs/tech/sections/HF-07b-commit-boundaries.md": "f07f6154e1947ef64f090271d6ec8ab826385a3f23d72a2d1dc38181d8b42863",
+    "docs/tech/sections/HF-07a-save-envelope.md": "a3539f6c5b784370f4a1873d18c551b4f36c3fd6d72cc1611769677d8dbd7863",
+    "docs/tech/sections/HF-07a-save-envelope.csv": "21f82d0e3649bea791778dfeee3d12e217e6ff2b77d9ddf6a848dc725d35ebaa",
+    "docs/tech/sections/HF-07b-commit-boundaries.md": "a036ef78a99f99877035079ff225be559123f8bad9995e3e60190887a8c1147f",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     RECEIPT: "2697c931d49c4375247467e00d4bfcc661de1e71c7d1a6ad24e6319615e7291a",
 }
@@ -230,7 +230,7 @@ def run_document_checks(root, text, mutate=None):
              or t in {"schema_version", "content_revision", "generation", "transaction_id"}}
     unknown = sorted(n for n in named if n not in csv_fields)
     sub("parity.every_named_field_in_hf07a_csv", not unknown, f"unknown: {unknown}")
-    sub("parity.csv_field_count", len(csv_fields) == 60, f"{len(csv_fields)} fields")
+    sub("parity.csv_field_count", len(csv_fields) == 63, f"{len(csv_fields)} fields")
 
     # 9. prohibitions, over the contract itself rather than the procedure prose that
     # names the tokens this check refuses
@@ -292,9 +292,9 @@ def run_document_checks(root, text, mutate=None):
         ("docs/tech/sections/HF-07b-commit-boundaries.md", 157, "not a gameplay commit"),
         ("docs/tech/sections/HF-07b-commit-boundaries.md", 263, "HF-08"),
         ("docs/tech/sections/HF-07a-save-envelope.md", 53, "never treated as a default"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 172, "exactly six keys"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 182, "backup pointer"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 184, "HF-08"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 175, "exactly six keys"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 185, "backup pointer"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 187, "HF-08"),
         ("docs/tech/sections/HF-03a-module-map.md", 35, "RecoveryDiagnostic"),
         ("docs/tech/sections/HF-03a-module-map.md", 49, "preserved-source references"),
         ("docs/tech/sections/HF-03a-module-map.md", 51, "consumed as a snapshot"),
@@ -302,8 +302,8 @@ def run_document_checks(root, text, mutate=None):
         ("docs/tech/proofs/S0-08-save-evidence.md", 51, "ambiguous_lifecycle"),
         ("docs/tech/proofs/S0-08-save-evidence.md", 99, "not asserted"),
         ("docs/tech/proofs/S0-07-save-owner.md", 42, "ambiguous_lifecycle"),
-        ("docs/tech/proofs/S0-07-save-owner.md", 85, "rename_absolute"),
-        ("docs/tech/proofs/S0-07-save-owner.md", 107, "tighten"),
+        ("docs/tech/proofs/S0-07-save-owner.md", 91, "rename_absolute"),
+        ("docs/tech/proofs/S0-07-save-owner.md", 113, "tighten"),
         ("BIBLE.md", 582, "One standard revival"),
         ("BIBLE.md", 584, "refill a spent revival"),
         ("BIBLE.md", 602, "pointer recapture"),

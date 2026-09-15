@@ -52,8 +52,8 @@ REVIVAL_POLICIES = ["R1", "R2", "R3"]
 
 # Declared dependency bytes. The section states each of these; the check confirms the files match.
 DECLARED_SHA = {
-    HF07A_MD: "1d295df34c40e60b9d0e66a22de7691ce3fcf261ffb84a4a80fe49b2eb91ea0a",
-    HF07A_CSV: "df4b60f562cc5dce2db2e23a7cb6a932e9e3c472572ad2114045070f3704753a",
+    HF07A_MD: "a3539f6c5b784370f4a1873d18c551b4f36c3fd6d72cc1611769677d8dbd7863",
+    HF07A_CSV: "21f82d0e3649bea791778dfeee3d12e217e6ff2b77d9ddf6a848dc725d35ebaa",
     HF04A_MD: "7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
 }
@@ -108,12 +108,12 @@ CITATIONS = [
     (HF07A_MD, 61, "Array order is fixed"),
     (HF07A_MD, 62, "preferences record holds no gameplay progress"),
     (HF07A_MD, 80, "A terminal run stays present"),
-    (HF07A_MD, 143, "may not create a second standard revival"),
-    (HF07A_MD, 148, "Reserved for the unfinished-level interruption rule"),
-    (HF07A_MD, 156, "revival_spent"),
-    (HF07A_MD, 157, "terminal"),
-    (HF07A_MD, 172, "exactly six keys"),
-    (HF07A_MD, 184, "HF-07b"),
+    (HF07A_MD, 146, "may not create a second standard revival"),
+    (HF07A_MD, 151, "Reserved for the unfinished-level interruption rule"),
+    (HF07A_MD, 159, "revival_spent"),
+    (HF07A_MD, 160, "terminal"),
+    (HF07A_MD, 175, "exactly six keys"),
+    (HF07A_MD, 187, "HF-07b"),
     ("docs/tech/sections/HF-03a-module-map.md", 45, "RunState"),
     ("docs/tech/sections/HF-03a-module-map.md", 49, "SaveTransactionState"),
     ("docs/tech/sections/HF-03a-module-map.md", 58, "takes precedence"),
@@ -148,7 +148,7 @@ NON_DEPENDENCIES = ["mount_id"]
 # HF-07a carries no row for these three intermediate containers (its review note N3). The section may name
 # them only inside the sentence that disclaims the dependency, and nowhere else.
 DISCLAIMED_CONTAINERS = ["run.checkpoint.build", "run.checkpoint.equipment", "run.checkpoint.companion"]
-DISCLAIMER = "carry no row in HF-07a, and nothing here treats them as contract fields"
+DISCLAIMER = "now carry container rows in HF-07a, so every field path this section names resolves there"
 
 FIELD_RE = re.compile(r"`((?:run|profile|preferences)\.[A-Za-z0-9_.\[\]]*|schema_version|content_revision|generation|transaction_id)`")
 
@@ -884,7 +884,7 @@ def main():
     with csv_path.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             known.add(row["field"])
-    check.record("HF-07a CSV holds 60 fields", len(known) == 60, "found %d" % len(known))
+    check.record("HF-07a CSV holds 63 fields", len(known) == 63, "found %d" % len(known))
     # The disclaimer sentence is excluded from the resolution check and checked separately below.
     disclaimer_line = next((l for l in lines if DISCLAIMER in l), "")
     check.record("section disclaims the three unrowed containers", bool(disclaimer_line))
