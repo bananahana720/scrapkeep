@@ -2733,7 +2733,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** HF-07; TH-09; TH-21; future discovery implementation
 
-**Evidence needed to close:** Explicit discovery scenarios name loss/retention behavior and integrate with the single save aggregate without duplicate awards.
+**Evidence needed to close:** Explicit discovery scenarios name loss/retention behavior and integrate with the single save aggregate without duplicate awards. Recorded answer (16 September 2026, TRACKING EV-0250): discovery facts commit only at the next durable transition (A, C or D, and S where a run starts); no immediate discovery transition; a discovery made in a level interrupted before completion is lost, consistent with Q-P16's P1. Protocol half carried by FR-05.
 
 <a id="q-e10"></a>
 
@@ -3727,7 +3727,7 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 ### FR-05: Propagate the Q-P16, Q-P39 and Q-P41 answers into the persistence and runtime contracts
 
-**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
+**Card revision:** 3 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
 
 **Source and inputs:**
 
@@ -3737,7 +3737,7 @@ foundation sections in place; none changes game rules, product direction, an ADR
 - The retained checks for HF-07a, HF-07b, HF-08, TH-01 and TH-03
 - Andrew's decision at TRACKING EV-0248 (revision 2): reduced motion is a fifth saved preference, `preferences.reduced_motion`, distinct from `impact_shake`; the numeric bounds of [Q-P32](#q-p32) stay open until a playable native slice exists. `docs/tech/sections/HF-07a-save-envelope.md` preferences rows (lines 184 to 188) and its record rule (line 204), `HF-06b-persistence-projection.md` preferences group, `TH-02-movement-camera-and-active-aim.md` ME-11 and MP-22, `BIBLE.md` line 602
 
-**Dependencies:** [FR-04](#fr-04). **Blocking questions:** None (Q-P16, Q-P39 and Q-P41 are resolved at EV-0247; the reduced-motion setting is decided at EV-0248). **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P32](#q-p32). No item may answer a question that remains open.
+**Dependencies:** [FR-04](#fr-04). **Blocking questions:** None (Q-P16, Q-P39 and Q-P41 are resolved at EV-0247; the reduced-motion setting is decided at EV-0248; Q-E09 is resolved at EV-0250). **Registered non-blocking questions:** [Q-P32](#q-p32). No item may answer a question that remains open.
 
 **Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `docs/tech/sections/HF-06b-persistence-projection.md`; `docs/tech/sections/HF-06b-persistence-projection.csv`; `docs/tech/sections/TH-01-complete-loop.md`; `docs/tech/sections/TH-02-movement-camera-and-active-aim.md`; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`; the retained check scripts for HF-06b, HF-07a, HF-07b, HF-08 (expected-value pins and enumerations only); `artifacts/local/tasks/FR-05/`.
 
@@ -3748,10 +3748,11 @@ foundation sections in place; none changes game rules, product direction, an ADR
 3. HF-04a's failure-mode table and TH-03 FM-06 state the hold-with-diagnostic behaviour for a required telegraph that cannot be drawn, citing Q-P41, without changing the readability requirement.
 4. TH-01 EC-05 and EC-06 read under P1 and R2 and cite the resolved questions; the retained checks for HF-06b, HF-07a, HF-07b, HF-08, TH-01, TH-02 and TH-03 exit 0 re-pinned not weakened; `npm run check:drift` exit 0; card revisions unchanged; each Procedure performed records the revision-in-place and the answers consumed.
 5. Revision 2: HF-07a's preferences record carries a fifth setting `preferences.reduced_motion` (type, presence, owner, source BIBLE line 602 and EV-0248, meaning: a comfort setting distinct from `impact_shake`, its bound a parameter under Q-P32) in both copies with the record rule and field counts updated; HF-06b projects it in the preferences group in both copies; HF-08's preference-write rule reads five settings; TH-02 ME-11 and MP-22 name the field and keep the bound gated on Q-P32. The placeholder proof envelope under `native/proofs/tadr-004/` is not changed by this card; its paper gap is recorded as a re-verification trigger for a later proof card.
+6. Revision 3, Q-E09 (TRACKING EV-0250): HF-07b's discovery-timing clauses adopt 'commit only at the next durable transition' (A, C, D and S), with the engineering-half protocols recorded at EV-0144, EV-0151, EV-0157 and EV-0163 retained as history; HF-07a's `profile.*` rows and HF-08's readings under Q-E09 read under the adopted rule; no immediate discovery transition is added; the loss case for an interrupted level is stated once beside P1.
 
 **Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and the five retained checks; the reviewer re-walks C5 with the abandonment steps and TH-01's RT route under R2. No build.
 
-**Boundary:** Documentation-only. No answer to Q-E09; Q-P32's numeric bounds stay open and only the reduced-motion setting is added; the revival health value stays a parameter; no new schema version; no runtime or proof code.
+**Boundary:** Documentation-only. Q-P32's numeric bounds stay open and only the reduced-motion setting is added; the revival health value stays a parameter; no new schema version; no runtime or proof code.
 
 ## Tooling repair cards (16 September 2026)
 
