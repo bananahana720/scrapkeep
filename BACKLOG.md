@@ -3680,6 +3680,39 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 **Boundary:** Documentation-only. No new schema version, migration step or compatibility predicate; no question answered; no other section or script changed.
 
+## Tooling repair cards (16 September 2026)
+
+Defined at the Repair-and-handoff-2026-09-15 sprint closure from its retro. Two admitted sections went stale
+against their dependencies inside one sprint and nothing mechanical said so until a retained check was rerun by
+hand. These cards add the missing lever; none changes a contract.
+
+<a id="tl-01"></a>
+
+### TL-01: Dependency-hash drift check for admitted sections
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** tooling
+
+**Source and inputs:**
+
+- The Sources convention every admitted section follows: a bullet per dependency naming the file and its `section bytes SHA256` at the section's base (for example `docs/tech/sections/TH-01-complete-loop.md` lines 8 to 16 and `HF-08-save-recovery.md` lines 9 to 15)
+- `scripts/check-docs.mjs` (the structural documentation gate) and `package.json` scripts `check:docs`, `check:project`, `check:scope`
+- TRACKING EV-0205 and EV-0212, where TH-01 and HF-09 were found stale against HF-07a and HF-07b only when their retained checks were rerun
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `scripts/check-drift.mjs` (new); `package.json` (one `check:drift` script entry, no dependency change); `CONTRIBUTING.md` (one sentence naming the command under the documentation checks); `artifacts/local/tasks/TL-01/`.
+
+**Definition of done:**
+
+1. `npm run check:drift` scans every `docs/tech/sections/*.md`, parses each Sources bullet that names a repository path and a `SHA256` value, recomputes the file's SHA-256 at the working tree, and prints one line per mismatch naming the citing section, the dependency path, the stated and actual hashes; exit 1 on any mismatch, exit 0 otherwise, with a one-line limits statement that it proves hash agreement only.
+2. Run at the closure commit of Repair-and-handoff-2026-09-15 it reports exactly the HF-09 drift against HF-07a and HF-07b (and any other stale section it finds), and reports nothing for TH-01, HF-07a, HF-07b and HF-08.
+3. A synthetic negative control (a copied section with one altered hash under `artifacts/local/tasks/TL-01/`) is detected; the control run is retained.
+4. No dependency added; the script uses `node:crypto` and `node:fs` only.
+
+**Verification and evidence:** `npm run check:drift` at the candidate with its output retained; `npm run check:docs`; `npm run check:project`; `npm run check:scope -- <base> <candidate> --no-build`. No build.
+
+**Boundary:** Tooling only. It does not rewrite citations, re-pin hashes or judge whether a drift matters; that stays with a card and a reviewer.
+
 ## Native proof repair cards (15 September 2026)
 
 Defined from the adversarial review of 15 September 2026 (TRACKING EV-0187). The review read the
