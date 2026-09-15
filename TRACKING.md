@@ -196,7 +196,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [FR-01](BACKLOG.md#fr-01) | 1 | 9 | done | none | FR-01-A2 | EV-0201 |
 | [FR-02](BACKLOG.md#fr-02) | 2 | 10 | done | none | FR-02-A2 | EV-0212 |
 | [FR-03](BACKLOG.md#fr-03) | 1 | 3 | in_progress | none | none | EV-0219 |
-| [TL-01](BACKLOG.md#tl-01) | 1 | 3 | in_progress | none | none | EV-0220 |
+| [TL-01](BACKLOG.md#tl-01) | 1 | 4 | review | none | none | EV-0221 |
 | [NP-01](BACKLOG.md#np-01) | 1 | 6 | done | none | NP-01-A1 | EV-0193 |
 
 ## Question state index
@@ -425,6 +425,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0218 | 2026-09-16T04:22:00+00:00 | Andrew / decision; Coordinator / record | (record) | adr/TADR-004-persistence.md gains an 'Amendment 2026-09-16' section recording Andrew's Q-P40 answer (terminal covers victory and defeat; a separate outcome fact records which) and pointing at the admitted HF-07a and HF-07b rows, per the AGENTS rule that a durable decision change updates its ADR; no other ADR text changes. Andrew chose this over folding it into FR-03 or leaving the ADR as is; the integrated read at EV-0216 raised it. Coordinator factual record under Andrew's instruction. |
 | EV-0219 | 2026-09-16T04:35:00+00:00 | Coordinator / assignment, lease | FR-03 | FR-03 ready to in_progress at card revision 1, record revision 2 to 3. Attempt FR-03-A1, exclusive lease FR-03-L1 over docs/tech/sections/HF-09-schema-migration.md, the HF-09 retained check_migration.py (pins and citation lines only) and artifacts/local/tasks/FR-03/. Worktree /home/andrew/Projects/scrapkeep-wt-FR-03 on branch wt/FR-03 at verified base 301e58738dd8ae54b8e62c25a9ec95e25d7235c4. Packet artifacts/handoff-2-2026-09-16/tasks/FR-03/assignment.md carrying the exact card, the fifteen-item drift inventory pointers, the retained renumber tool, the citation-sweep rule, the Q-P40 and TADR-004 amendment facts. Writer scrapkeep-writer (claude-opus-5 high). Reviewer to be assigned fresh at handoff: scrapkeep-reviewer (Fable 5.1 medium), because migration walkthroughs across Transition D and S are contract judgement. |
 | EV-0220 | 2026-09-16T04:36:00+00:00 | Coordinator / assignment, lease | TL-01 | TL-01 ready to in_progress at card revision 1, record revision 2 to 3. Attempt TL-01-A1, exclusive lease TL-01-L1 over scripts/check-drift.mjs, one package.json script entry, one CONTRIBUTING.md sentence and artifacts/local/tasks/TL-01/. Worktree /home/andrew/Projects/scrapkeep-wt-TL-01 on branch wt/TL-01 at verified base 301e58738dd8ae54b8e62c25a9ec95e25d7235c4. Packet artifacts/handoff-2-2026-09-16/tasks/TL-01/assignment.md carrying the exact card, the three observed hash-bullet forms with counts, the binding rule, the ground truth for DoD 2 at this base and the negative-control requirement. Write sets of FR-03-L1 and TL-01-L1 are disjoint; two writers active. Writer scrapkeep-writer (claude-opus-5 high). Reviewer to be assigned fresh at handoff: scrapkeep-reviewer-medium (Opus 5 high), because acceptance is mechanical (exit codes, reported lines, control detection, no dependency). |
+| EV-0221 | 2026-09-16T05:22:00+00:00 | Worker handoff / Coordinator verification | TL-01 | TL-01-A1 handoff: in_progress to review, record revision 3 to 4. Candidate 4d702ac8244bfeb57b87cc95a15beb1661dbb80d on wt/TL-01 at base 301e58738dd8ae54b8e62c25a9ec95e25d7235c4; three changed paths inside the lease (scripts/check-drift.mjs new at 202 lines, one package.json script line, one CONTRIBUTING table row), no dependency or lockfile change. Writer reported CLAUDE_EFFORT=high and runtime model Opus 5. Coordinator rerun: check:drift exit 1 reporting exactly HF-09's four stale hashes (HF-06b, HF-07a md and csv, HF-07b) and one UNBOUND bullet at HF-04b line 9 whose receipt is named without a repository link, nothing for TH-01, HF-07a, HF-07b or HF-08; the negative control detected (exit 1, one line) and its unaltered twin exit 0; check:docs and check:project exit 0. Evidence decision: check:scope classifies the change as mixed tooling and documentation and names npm run verify, which builds; the EV-0217 authorization forbids builds for TL-01, so verify is not run and the coordinator substitutes npm test (no build) on the integrated commit; in the candidate worktree npm test fails three tests for one environmental cause, no node_modules there, while the same suite exits 0 on main at the same base. Writer design note for review: the packet's nearest-preceding-link binding rule was refined to skip anchored BACKLOG and TRACKING links and external URLs, otherwise HF-08 reports false drift; two flags (--sections, --resolve-from) replace a single root so the control can resolve dependencies from the real sections directory. Receipts under artifacts/handoff-2-2026-09-16/tasks/TL-01/coordinator-candidate/. Fresh reviewer scrapkeep-reviewer-medium (Opus 5 high) assigned, read-only. |
 
 ## Preparation checkpoint
 
@@ -607,7 +608,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Repair-and-handoff reporting checkpoint
 
-Last reported event: EV-0220. Repair-and-handoff-2026-09-15 is closed with outcome passed at pinned commit 62c00fd58b9726ce4a696643945af7956f228978: FR-01, NP-01, FR-02 and TH-01 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0217 (Handoff-2-2026-09-16: FR-03, TL-01, TH-02, TH-03; FR-03 and TL-01 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
+Last reported event: EV-0221. Repair-and-handoff-2026-09-15 is closed with outcome passed at pinned commit 62c00fd58b9726ce4a696643945af7956f228978: FR-01, NP-01, FR-02 and TH-01 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0217 (Handoff-2-2026-09-16: FR-03, TL-01, TH-02, TH-03; FR-03 and TL-01 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
 
 ## Repair-and-handoff closure record
 
@@ -681,8 +682,8 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Assignee: scrapkeep-writer, claude-opus-5 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt TL-01-A1, lease TL-01-L1 open.
 - Owned files: `scripts/check-drift.mjs`; `package.json` (one script entry); `CONTRIBUTING.md` (one sentence); `artifacts/local/tasks/TL-01/`. Worktree /home/andrew/Projects/scrapkeep-wt-TL-01, branch wt/TL-01.
 - Base identity: `301e58738dd8ae54b8e62c25a9ec95e25d7235c4`; no dependencies.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: null; assignment recorded at EV-0220, writer dispatched.
+- Candidate identity: `4d702ac8244bfeb57b87cc95a15beb1661dbb80d`. Integrated identity: null.
+- Latest checkpoint: 2026-09-16T05:22:00+00:00; handoff verified by the coordinator (EV-0221), writer stopped, lease retained until admission, independent review pending.
 
 ## FR-02-A1 repair-and-handoff attempt
 
