@@ -22,16 +22,23 @@ var committed_error: Error = OK
 var converged: bool = false
 var acknowledged: Array[String] = []
 var inject_fault_accept_newer_schema: bool = false
+var inject_fault_accept_restaged_candidate: bool = false
+var inject_fault_accept_lifecycle_regression: bool = false
 
 var _validated_temp: String = ""
+var _validated_sha: String = ""
 var _commit_ok_transactions: Array[String] = []
 
 
-## The fault flag exists only so the runner can prove it detects a missing
-## newer-schema rejection; it is never set outside `--inject-fault`.
-func _init(save_root: String, accept_newer_schema_fault: bool = false) -> void:
+## The fault flags exist only so the runner can prove it detects a missing
+## rejection; none is set outside `--inject-fault`. Each one disables exactly
+## one gate: the newer-schema rejection in `parse_envelope`, the re-stage gate
+## across `stage` and `commit`, and the lifecycle gate in `validate`.
+func _init(save_root: String, accept_newer_schema_fault: bool = false, accept_restaged_candidate_fault: bool = false, accept_lifecycle_regression_fault: bool = false) -> void:
 	root = save_root
 	inject_fault_accept_newer_schema = accept_newer_schema_fault
+	inject_fault_accept_restaged_candidate = accept_restaged_candidate_fault
+	inject_fault_accept_lifecycle_regression = accept_lifecycle_regression_fault
 	_load_committed()
 
 
@@ -44,6 +51,10 @@ func temp_path_for(transaction_id: String) -> String:
 
 
 func stage(aggregate: Dictionary) -> String:
+	if not inject_fault_accept_restaged_candidate:
+		converged = false
+		_validated_temp = ""
+		_validated_sha = ""
 	var transaction_id: String = str(aggregate.get("transaction_id", ""))
 	if transaction_id.is_empty():
 		push_error("stage refused: aggregate has no transaction_id")
@@ -66,35 +77,52 @@ func stage(aggregate: Dictionary) -> String:
 func validate(temp_path: String) -> Error:
 	converged = false
 	_validated_temp = ""
+	_validated_sha = ""
 	var read: Dictionary = read_envelope(temp_path)
 	var read_error: Error = read["error"]
 	if read_error != OK:
 		return read_error
+	var staged_sha: String = read["sha256"]
 	var candidate: Dictionary = read["aggregate"]
 	if committed_error != OK:
 		return committed_error
 	if committed.is_empty():
-		_validated_temp = temp_path
+		_record_validated(temp_path, staged_sha)
 		return OK
 	var candidate_transaction: String = candidate["transaction_id"]
 	var committed_transaction: String = committed["transaction_id"]
 	if candidate_transaction == committed_transaction:
 		converged = true
-		_validated_temp = temp_path
+		_record_validated(temp_path, staged_sha)
 		return OK
 	var candidate_generation: int = candidate["generation"]
 	var committed_generation: int = committed["generation"]
 	if candidate_generation <= committed_generation:
 		return ERR_ALREADY_EXISTS
-	_validated_temp = temp_path
+	# A strictly newer generation still loses every lifecycle fact it dropped,
+	# so the merge that recovery would perform has to be a no-op here or the
+	# candidate is refused before it can commit (HF-07b lines 116 and 117).
+	var resolved: Dictionary = resolve_lifecycle(candidate, committed)
+	var resolved_run: Dictionary = resolved["run"]
+	var candidate_run: Dictionary = candidate["run"]
+	if resolved_run["lifecycle"] != candidate_run["lifecycle"] and not inject_fault_accept_lifecycle_regression:
+		return ERR_LOCKED
+	_record_validated(temp_path, staged_sha)
 	return OK
 
 
 func commit(temp_path: String) -> Error:
 	if temp_path.is_empty() or temp_path != _validated_temp:
 		return ERR_UNCONFIGURED
-	_validated_temp = ""
 	var read: Dictionary = read_envelope(temp_path)
+	var staged_sha: String = read["sha256"]
+	# Eligibility belongs to the bytes validate read, not to the path, so a
+	# candidate re-staged over that path is refused here too (HF-07b line 50).
+	var restaged: bool = staged_sha != _validated_sha
+	_validated_temp = ""
+	_validated_sha = ""
+	if restaged and not inject_fault_accept_restaged_candidate:
+		return ERR_UNCONFIGURED
 	var read_error: Error = read["error"]
 	if read_error != OK:
 		return read_error
@@ -216,14 +244,17 @@ func serialize(aggregate: Dictionary) -> String:
 
 
 ## Reads bytes from disk, parses them and casts JSON numbers to int at the
-## envelope boundary. Returns {"error": Error, "aggregate": Dictionary}.
+## envelope boundary. Returns {"error": Error, "aggregate": Dictionary,
+## "sha256": String}; the digest covers the bytes this call read.
 func read_envelope(path: String) -> Dictionary:
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return {"error": FileAccess.get_open_error(), "aggregate": {}}
+		return {"error": FileAccess.get_open_error(), "aggregate": {}, "sha256": ""}
 	var text: String = file.get_as_text()
 	file.close()
-	return parse_envelope(text)
+	var read: Dictionary = parse_envelope(text)
+	read["sha256"] = text.sha256_text()
+	return read
 
 
 func parse_envelope(text: String) -> Dictionary:
@@ -290,6 +321,11 @@ static func _has_string(source: Dictionary, key: String) -> bool:
 
 static func _has_bool(source: Dictionary, key: String) -> bool:
 	return typeof(source.get(key)) == TYPE_BOOL
+
+
+func _record_validated(temp_path: String, staged_sha: String) -> void:
+	_validated_temp = temp_path
+	_validated_sha = staged_sha
 
 
 ## An unreadable or unsupported committed file blocks every later commit so

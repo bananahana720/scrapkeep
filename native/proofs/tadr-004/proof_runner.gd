@@ -24,6 +24,9 @@ const CASES: Array[String] = [
 	"lifecycle_spent",
 	"lifecycle_terminal",
 	"converged",
+	"restage_after_validate",
+	"lifecycle_regression_spent",
+	"lifecycle_regression_terminal",
 ]
 
 const FIXTURES: Dictionary = {
@@ -32,6 +35,9 @@ const FIXTURES: Dictionary = {
 	"interruption_ambiguous": "interruption_ambiguous",
 	"lifecycle_spent": "lifecycle",
 	"lifecycle_terminal": "lifecycle",
+	"restage_after_validate": "lifecycle",
+	"lifecycle_regression_spent": "lifecycle",
+	"lifecycle_regression_terminal": "lifecycle",
 }
 
 var inject_fault: bool = false
@@ -407,6 +413,87 @@ func case_converged(case_root: String) -> void:
 	check(get_int(recovered_aggregate, "generation") == 1, "generation changed after a converged duplicate")
 	check(get_string(recovered, "status") == SaveOwner.STATUS_COMMITTED, "recover status after convergence " + str(recovered["status"]))
 	note("re-staged txn-0001 converged with generation 1 and sha256 %s unchanged" % sha_before.substr(0, 12))
+
+
+## The three repair cases construct an owner with every fault flag wired to
+## `--inject-fault`, so the run proves the new gates are noticed when removed.
+func repaired_owner(case_root: String) -> SaveOwner:
+	return SaveOwner.new(case_root, inject_fault, inject_fault, inject_fault)
+
+
+func case_restage_after_validate(case_root: String) -> void:
+	var owner: SaveOwner = repaired_owner(case_root)
+	var save_path: String = owner.save_path()
+	var sha_before: String = FileAccess.get_sha256(save_path)
+	var first: Dictionary = placeholder_aggregate(6, "txn-0011", true, false)
+	var temp: String = owner.stage(first)
+	if not check(not temp.is_empty(), "stage of the first candidate failed"):
+		return
+	var validate_error: Error = owner.validate(temp)
+	check(validate_error == OK, "validate of the first candidate returned " + error_string(validate_error))
+	var validated_sha: String = FileAccess.get_sha256(temp)
+	var restaged: Dictionary = placeholder_aggregate(7, "txn-0011", true, false)
+	var restaged_temp: String = owner.stage(restaged)
+	check(restaged_temp == temp, "re-stage wrote a different temp path")
+	check(FileAccess.get_sha256(temp) != validated_sha, "re-stage left the staged bytes unchanged")
+	var commit_error: Error = owner.commit(temp)
+	check(commit_error == ERR_UNCONFIGURED, "commit of a re-staged candidate returned " + error_string(commit_error))
+	check(FileAccess.get_sha256(save_path) == sha_before, "save.json changed after a re-staged candidate")
+	check(FileAccess.file_exists(temp), "re-staged temp was not preserved")
+	var recovered: Dictionary = owner.recover()
+	var recovered_aggregate: Dictionary = recovered["aggregate"]
+	check(get_int(recovered_aggregate, "generation") == 5, "committed generation " + str(recovered_aggregate.get("generation")) + " after a refused re-stage")
+	note("candidate validated at generation 6 then re-staged at generation 7 over the same temp, commit refused with ERR_UNCONFIGURED, committed sha256 %s unchanged, re-staged temp preserved" % sha_before.substr(0, 12))
+
+
+func case_lifecycle_regression_spent(case_root: String) -> void:
+	var owner: SaveOwner = repaired_owner(case_root)
+	var save_path: String = owner.save_path()
+	var sha_before: String = FileAccess.get_sha256(save_path)
+	var committed: Dictionary = load_fixture_aggregate(owner, "save.json")
+	if not _failures.is_empty():
+		return
+	var committed_run: Dictionary = committed["run"]
+	var committed_lifecycle: Dictionary = committed_run["lifecycle"]
+	check(get_bool(committed_lifecycle, "revival_spent"), "fixture save.json does not carry revival_spent")
+	var candidate: Dictionary = placeholder_aggregate(6, "txn-0012", false, false)
+	var temp: String = owner.stage(candidate)
+	if not check(not temp.is_empty(), "stage of the regressing candidate failed"):
+		return
+	var validate_error: Error = owner.validate(temp)
+	check(validate_error == ERR_LOCKED, "validate of a generation 6 candidate clearing revival_spent returned " + error_string(validate_error))
+	var commit_error: Error = owner.commit(temp)
+	check(commit_error == ERR_UNCONFIGURED, "commit of the rejected candidate returned " + error_string(commit_error))
+	check(FileAccess.get_sha256(save_path) == sha_before, "save.json changed after a revival_spent regression")
+	check(FileAccess.file_exists(temp), "rejected temp was not preserved")
+	note("generation 6 candidate clearing revival_spent rejected with %s, committed sha256 %s unchanged, rejected temp preserved" % [error_string(ERR_LOCKED), sha_before.substr(0, 12)])
+
+
+func case_lifecycle_regression_terminal(case_root: String) -> void:
+	var owner: SaveOwner = repaired_owner(case_root)
+	var terminal_record: Dictionary = load_fixture_aggregate(owner, "terminal.json")
+	if not _failures.is_empty():
+		return
+	if not commit_through_protocol(owner, terminal_record):
+		return
+	var save_path: String = owner.save_path()
+	var sha_before: String = FileAccess.get_sha256(save_path)
+	var terminal_run: Dictionary = terminal_record["run"]
+	var terminal_lifecycle: Dictionary = terminal_run["lifecycle"]
+	var committed_spent: bool = get_bool(terminal_lifecycle, "revival_spent")
+	var candidate: Dictionary = placeholder_aggregate(7, "txn-0013", committed_spent, false)
+	var temp: String = owner.stage(candidate)
+	if not check(not temp.is_empty(), "stage of the reopening candidate failed"):
+		return
+	var validate_error: Error = owner.validate(temp)
+	check(validate_error == ERR_LOCKED, "validate of a generation 7 candidate clearing terminal returned " + error_string(validate_error))
+	var commit_error: Error = owner.commit(temp)
+	check(commit_error == ERR_UNCONFIGURED, "commit of the reopening candidate returned " + error_string(commit_error))
+	check(FileAccess.get_sha256(save_path) == sha_before, "save.json changed after a terminal regression")
+	check(FileAccess.file_exists(temp), "rejected temp was not preserved")
+	var recovered: Dictionary = owner.recover()
+	check(not get_bool(recovered, "playable"), "committed terminal run reported playable after the refusal")
+	note("committed terminal generation 6 refuses a generation 7 candidate clearing terminal with %s, committed sha256 %s unchanged, rejected temp preserved, run still not playable" % [error_string(ERR_LOCKED), sha_before.substr(0, 12)])
 
 
 func check_idempotence() -> bool:
