@@ -1474,7 +1474,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 ### TH-11: Specify run routing and lifecycle
 
-**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** technical handoff
+**Card revision:** 2 · **Owner:** Runtime · **Size:** M · **Lane:** technical handoff
 
 **Source and inputs:**
 
@@ -1483,7 +1483,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 - `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
 
-**Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
+**Dependencies:** [HF-10](#hf-10), [FR-04](#fr-04) (revision 2: TH-01's run-start and terminal prose must be reconciled to the FR-02 contract before this card reads it). **Blocking questions:** None.
 
 **Files touched:** `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md`; `artifacts/local/tasks/TH-11/`.
 
@@ -3693,6 +3693,35 @@ foundation sections in place; none changes game rules, product direction, an ADR
 **Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and `check_migration.py` from its retained copy; the reviewer re-walks one migration walkthrough across Transition D under the `won` outcome. No build.
 
 **Boundary:** Documentation-only. No new schema version, migration step or compatibility predicate; no question answered; no other section or script changed.
+
+<a id="fr-04"></a>
+
+### FR-04: Reconcile TH-01, TH-02 and TH-03 after the FR-02 persistence contract
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** S · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- The Handoff-2 integrated read (TRACKING EV-0243) finding F1: `docs/tech/sections/TH-01-complete-loop.md` states the FR-02 hashes for HF-07a and HF-07b (lines 13 and 14) while lines 47, 55, 171, 233 to 235, 251, 292 and 306 still describe run start as undefined, Transition D as death-only, the durable projection as `run.checkpoint.*` and `run.lifecycle.*` only, and no committed resume point before the first level; its own re-verification trigger at line 310 named FR-02 integration and was not applied
+- The integrated `docs/tech/sections/HF-07a-save-envelope.md` (`run.start` at line 102, `run.start.entrance_id` at 114, `run.lifecycle.outcome` at 176) and `HF-07b-commit-boundaries.md` (Transition D's victory path at 105, Transition S at 112 to 121, admission at 116), `HF-09-schema-migration.md` lines 146, 193, 297 and 298
+- Findings F2 to F4 of the same read: `TH-02-movement-camera-and-active-aim.md` line 17 and `TH-03-a-committed-attack-means-what-it-shows.md` line 18 claim TH-01 cites Q-P40 (it does not); Session's held-state read of the D02 world diagnostic is classed F-LIFECYCLE at TH-01 line 80, F-CONTROL at TH-02 line 91 and F-PROCESS at TH-03 line 105 against `HF-04a-runtime-lifecycle.md` line 166; TH-02 MP-14 (line 228) routes jumpable-height thresholds to Q-E10 while TH-03 TP-15 and TP-19 (lines 242 and 246) route them to Q-P25, Q-P21 and Q-P22, with the read's recommendation (enemy height bands under Q-P25; player jump and air envelopes under Q-P21 with Q-P22 for growth; Q-E10 admission and pressure only)
+- Findings F9 and F10: TH-01 claims a complete interface set (line 24) but has no row for reading `ActionRequest` on D05 and omits `AimPreview` from IF-17 and IF-27; TH-02 line 30 places every MA state inside RL2 while MR.1 places MA-09 at RL4
+- The retained paper checks `artifacts/repair-handoff-2026-09-15/tasks/TH-01/coordinator-candidate/check_loop.py`, `artifacts/handoff-2-2026-09-16/tasks/TH-02/coordinator-candidate/check_movement.py` and `artifacts/handoff-2-2026-09-16/tasks/TH-03/coordinator-candidate/check_attack.py`
+
+**Dependencies:** [TH-03](#th-03). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P16](#q-p16), [Q-P39](#q-p39), [Q-P41](#q-p41), [Q-P32](#q-p32). No item may answer a question.
+
+**Files touched:** `docs/tech/sections/TH-01-complete-loop.md`; `docs/tech/sections/TH-02-movement-camera-and-active-aim.md`; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`; `artifacts/local/tasks/FR-04/`.
+
+**Definition of done:**
+
+1. TH-01's run-start, terminal and durable-projection prose reads the integrated HF-07a and HF-07b: RL1 enters through Transition S, RL8 and RL9 close through Transition D under both outcomes with `run.lifecycle.outcome`, the durable projection names `run.start.*` and `run.interruption`, EC-06 and the first-level interruption case name `run.start.entrance_id` as the committed resume position, the seam paragraph states run start as settled by FR-02 and Q-P40, and FR-02 is no longer described as concurrent; RS.3 and the RL1 durable row updated; the fired trigger at line 310 recorded as consumed.
+2. TH-02 line 17 and TH-03 line 18 no longer claim TH-01 cites Q-P40; the D02 diagnostic read carries one callback class across TH-01, TH-02 and TH-03 matching HF-04a line 166; TH-02 MP-14 re-pointed to Q-P21 and Q-P22 with Q-E10 left to admission and pressure, no question answered.
+3. TH-01 gains the `ActionRequest` D05 read row and `AimPreview` in IF-17 and IF-27 where HF-03b permits; TH-02 line 30 and MR.1 agree on where MA-09 sits.
+4. The three paper checks exit 0 from their retained copies; `npm run check:drift` exit 0; card revisions unchanged; each Procedure performed records the revision-in-place with the finding identifiers and the closure event.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and the three paper checks; the reviewer re-walks TH-01's RT.1 to RT.15 under the `won` outcome and RS.1 to RS.3 through Transition S. No build.
+
+**Boundary:** Documentation-only. No answer to Q-P16, Q-P32, Q-P39 or Q-P41; no new state, rule or field; no HF section changed; the reduced-motion preference (integrated-read F5) stays a note pending Q-P32 and an HF-07a amendment.
 
 ## Tooling repair cards (16 September 2026)
 
