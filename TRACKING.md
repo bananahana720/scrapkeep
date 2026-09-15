@@ -9,8 +9,8 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Field | Value |
 | --- | --- |
 | Preparation | Authorized by Andrew's explicit instruction to implement the three-document plan. |
-| Proposed sprint | Handoff-3-2026-09-16: FR-04, TH-05, TH-04 (revision 1) and TH-11 (revision 2), initial dispatch FR-04 and TH-05; approved at EV-0244. Handoff-2-2026-09-16 closed passed at EV-0243; Repair-and-handoff-2026-09-15 at EV-0216; Foundation-full-2026-09-06 at EV-0185. |
-| Sprint authorization | **FR-04, TH-05, TH-04 and TH-11 authorized** by Andrew on 16 September 2026 (EV-0244). Objective: repair TH-01 against the FR-02 persistence contract, then continue the runtime handoff. All documentation-only: scoped section edits or new sections, paper checks, documentation, project and drift checks, independent review. Handoff-2-2026-09-16 closed passed at EV-0243. Foundation-full (authorized EV-0078, closed passed EV-0185), Foundation-01 (EV-0077) and Operational Sprint 0 (EV-0064) are historical. |
+| Proposed sprint | Handoff-3-2026-09-16: FR-04, TH-05, FR-05 (revision 2) and TH-11 (revision 2), initial dispatch FR-04 and TH-05; approved at EV-0244, amended at EV-0248 (FR-05 replaces TH-04). Handoff-2-2026-09-16 closed passed at EV-0243; Repair-and-handoff-2026-09-15 at EV-0216; Foundation-full-2026-09-06 at EV-0185. |
+| Sprint authorization | **FR-04, TH-05, FR-05 and TH-11 authorized** by Andrew on 16 September 2026 (EV-0244, amended at EV-0248: FR-05 replaces TH-04). Objective: repair TH-01 against the FR-02 persistence contract, propagate the resolved product questions, then continue the runtime handoff. All documentation-only: scoped section edits or new sections, paper checks, documentation, project and drift checks, independent review. Handoff-2-2026-09-16 closed passed at EV-0243. Foundation-full (authorized EV-0078, closed passed EV-0185), Foundation-01 (EV-0077) and Operational Sprint 0 (EV-0064) are historical. |
 | Native game/build authorization | **None active.** NP-01's proof repair (authorized EV-0188, done EV-0193) is historical: edits confined to `native/proofs/tadr-004/` and its proof pages, verified by headless `npm run native:smoke`; no export, feature or production code. Earlier historical: **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Andrew-directed Claude Code coordinator session (claude-fable-5-1 selected; effort not verifiable from inside the session, as EV-0093 disclosed), sole board and integration writer since the EV-0093 transfer. The foundation_coordinator process named before EV-0093 ended at the cut-off recorded there. |
 | Active task attempts / write leases | FR-04-L1 (EV-0245) and TH-05-L1 (EV-0246) open, disjoint write sets. Active writers never exceed two. Active writers never exceed two. |
@@ -138,7 +138,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [TH-01](BACKLOG.md#th-01) | 1 | 9 | done | none | TH-01-A1 | EV-0213 |
 | [TH-02](BACKLOG.md#th-02) | 1 | 10 | done | none | TH-02-A2 | EV-0234 |
 | [TH-03](BACKLOG.md#th-03) | 1 | 10 | done | none | TH-03-A2 | EV-0241 |
-| [TH-04](BACKLOG.md#th-04) | 1 | 2 | ready | none; authorized at EV-0244, dispatch after the initial set | none | EV-0244 |
+| [TH-04](BACKLOG.md#th-04) | 1 | 3 | queued | none; removed from Handoff-3 at EV-0248, proposed for the next sprint | none | EV-0248 |
 | [TH-05](BACKLOG.md#th-05) | 1 | 3 | in_progress | none | none | EV-0246 |
 | [TH-06](BACKLOG.md#th-06) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-07](BACKLOG.md#th-07) | 1 | 1 | queued | HF-10 | none | EV-0002 |
@@ -147,7 +147,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [TH-10](BACKLOG.md#th-10) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-11](BACKLOG.md#th-11) | 2 | 3 | queued | dependency FR-04; authorized at EV-0244 | none | EV-0244 |
 | [FR-04](BACKLOG.md#fr-04) | 1 | 3 | in_progress | none | none | EV-0245 |
-| [FR-05](BACKLOG.md#fr-05) | 1 | 1 | queued | dependency FR-04; outside the authorized set pending Andrew's widening decision | none | EV-0247 |
+| [FR-05](BACKLOG.md#fr-05) | 2 | 2 | queued | dependency FR-04; authorized at EV-0248, dispatch when FR-04 is admitted | none | EV-0248 |
 | [TH-12](BACKLOG.md#th-12) | 1 | 1 | queued | HF-10, PD-02 | none | EV-0002 |
 | [TH-13](BACKLOG.md#th-13) | 1 | 1 | queued | TH-03, TH-04 | none | EV-0002 |
 | [TH-14](BACKLOG.md#th-14) | 1 | 1 | queued | TH-06, TH-11 | none | EV-0002 |
@@ -250,7 +250,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | [Q-P29](BACKLOG.md#q-p29) | 1 | open | none | EV-0004 |
 | [Q-P30](BACKLOG.md#q-p30) | 1 | open | none | EV-0004 |
 | [Q-P31](BACKLOG.md#q-p31) | 1 | open | none | EV-0004 |
-| [Q-P32](BACKLOG.md#q-p32) | 1 | open | none | EV-0004 |
+| [Q-P32](BACKLOG.md#q-p32) | 2 | open | Andrew, 16 September 2026 (EV-0248): reduced motion is a fifth saved preference (FR-05); numeric bounds stay open until a playable native slice exists. | EV-0248 |
 | [Q-P33](BACKLOG.md#q-p33) | 1 | open | none | EV-0004 |
 | [Q-P34](BACKLOG.md#q-p34) | 1 | open | none | EV-0004 |
 | [Q-P35](BACKLOG.md#q-p35) | 1 | open | none | EV-0004 |
@@ -637,7 +637,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Handoff-2 reporting checkpoint
 
-Last reported event: EV-0247. Handoff-2-2026-09-16 is closed with outcome passed at pinned commit aaa90b1dcb8f22708e5e847ea2be26e987ad0fe9: FR-03, TL-01, TH-02 and TH-03 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0244 (Handoff-3-2026-09-16: FR-04, TH-05, TH-04, TH-11 revision 2; FR-04 and TH-05 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
+Last reported event: EV-0248. Handoff-2-2026-09-16 is closed with outcome passed at pinned commit aaa90b1dcb8f22708e5e847ea2be26e987ad0fe9: FR-03, TL-01, TH-02 and TH-03 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0244 and amended it at EV-0248 (Handoff-3-2026-09-16: FR-04, TH-05, FR-05, TH-11; FR-04 and TH-05 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
 
 ## Handoff-2 closure record
 

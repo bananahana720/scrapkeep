@@ -3727,7 +3727,7 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 ### FR-05: Propagate the Q-P16, Q-P39 and Q-P41 answers into the persistence and runtime contracts
 
-**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
+**Card revision:** 2 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
 
 **Source and inputs:**
 
@@ -3735,21 +3735,23 @@ foundation sections in place; none changes game rules, product direction, an ADR
 - `docs/tech/sections/HF-07b-commit-boundaries.md`: the candidate policy table (P1 to P4, R1 to R3, around lines 139 to 149), Transition S admission (line 116), the invariants under every candidate policy, C5; `HF-07a-save-envelope.md`: `run.interruption` (line 104) and the Q-P16 rows; `HF-08-save-recovery.md`: FC-19 (line 142), V7, the policy readings P1 and P2 in the retry rules
 - `docs/tech/sections/TH-01-complete-loop.md` EC-05 and EC-06 and the seam paragraph, `TH-03-a-committed-attack-means-what-it-shows.md` FM-06 (line 217), `HF-04a-runtime-lifecycle.md` failure-mode table (lines 100 and 112), each at the [FR-04](#fr-04) integrated identity
 - The retained checks for HF-07a, HF-07b, HF-08, TH-01 and TH-03
+- Andrew's decision at TRACKING EV-0248 (revision 2): reduced motion is a fifth saved preference, `preferences.reduced_motion`, distinct from `impact_shake`; the numeric bounds of [Q-P32](#q-p32) stay open until a playable native slice exists. `docs/tech/sections/HF-07a-save-envelope.md` preferences rows (lines 184 to 188) and its record rule (line 204), `HF-06b-persistence-projection.md` preferences group, `TH-02-movement-camera-and-active-aim.md` ME-11 and MP-22, `BIBLE.md` line 602
 
-**Dependencies:** [FR-04](#fr-04). **Blocking questions:** None (Q-P16, Q-P39 and Q-P41 are resolved at EV-0247). **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P32](#q-p32). No item may answer a question that remains open.
+**Dependencies:** [FR-04](#fr-04). **Blocking questions:** None (Q-P16, Q-P39 and Q-P41 are resolved at EV-0247; the reduced-motion setting is decided at EV-0248). **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P32](#q-p32). No item may answer a question that remains open.
 
-**Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `docs/tech/sections/TH-01-complete-loop.md`; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`; the retained check scripts for HF-07a, HF-07b, HF-08 (expected-value pins and enumerations only); `artifacts/local/tasks/FR-05/`.
+**Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `docs/tech/sections/HF-06b-persistence-projection.md`; `docs/tech/sections/HF-06b-persistence-projection.csv`; `docs/tech/sections/TH-01-complete-loop.md`; `docs/tech/sections/TH-02-movement-camera-and-active-aim.md`; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`; the retained check scripts for HF-06b, HF-07a, HF-07b, HF-08 (expected-value pins and enumerations only); `artifacts/local/tasks/FR-05/`.
 
 **Definition of done:**
 
 1. HF-07b adopts P1 and R2: the candidate policy table becomes the adopted policy with the rejected candidates retained as history, `run.interruption` is stated null in every committed document, Transition C's revival reads in place with the health value as a sourced or gated parameter, and every "under every candidate policy" clause reads under the adopted one.
 2. HF-07b Transition S admits a live-run replacement by requiring a preceding Transition D with `outcome` `lost` in the same session before S, stated as two transactions and two generations; HF-08 FC-19 and V7 read under that rule; HF-07a's `run.lifecycle.outcome` row names abandonment as a `lost` outcome; C5 gains the abandonment steps.
 3. HF-04a's failure-mode table and TH-03 FM-06 state the hold-with-diagnostic behaviour for a required telegraph that cannot be drawn, citing Q-P41, without changing the readability requirement.
-4. TH-01 EC-05 and EC-06 read under P1 and R2 and cite the resolved questions; the retained checks for HF-07a, HF-07b, HF-08, TH-01 and TH-03 exit 0 re-pinned not weakened; `npm run check:drift` exit 0; card revisions unchanged; each Procedure performed records the revision-in-place and the answers consumed.
+4. TH-01 EC-05 and EC-06 read under P1 and R2 and cite the resolved questions; the retained checks for HF-06b, HF-07a, HF-07b, HF-08, TH-01, TH-02 and TH-03 exit 0 re-pinned not weakened; `npm run check:drift` exit 0; card revisions unchanged; each Procedure performed records the revision-in-place and the answers consumed.
+5. Revision 2: HF-07a's preferences record carries a fifth setting `preferences.reduced_motion` (type, presence, owner, source BIBLE line 602 and EV-0248, meaning: a comfort setting distinct from `impact_shake`, its bound a parameter under Q-P32) in both copies with the record rule and field counts updated; HF-06b projects it in the preferences group in both copies; HF-08's preference-write rule reads five settings; TH-02 ME-11 and MP-22 name the field and keep the bound gated on Q-P32. The placeholder proof envelope under `native/proofs/tadr-004/` is not changed by this card; its paper gap is recorded as a re-verification trigger for a later proof card.
 
 **Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and the five retained checks; the reviewer re-walks C5 with the abandonment steps and TH-01's RT route under R2. No build.
 
-**Boundary:** Documentation-only. No answer to Q-E09 or Q-P32; the revival health value stays a parameter; no new schema version; no runtime or proof code.
+**Boundary:** Documentation-only. No answer to Q-E09; Q-P32's numeric bounds stay open and only the reduced-motion setting is added; the revival health value stays a parameter; no new schema version; no runtime or proof code.
 
 ## Tooling repair cards (16 September 2026)
 
