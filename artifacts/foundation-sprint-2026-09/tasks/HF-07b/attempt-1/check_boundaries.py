@@ -34,6 +34,7 @@ TRANSITIONS = {
     "Transition B: reward and offer resolution": "B",
     "Transition C: revival use": "C",
     "Transition D: terminal settlement": "D",
+    "Transition S: run start": "S",
 }
 STAGE_NAMES = ["Stage", "Validate", "Commit", "Acknowledge"]
 
@@ -42,6 +43,7 @@ CASES = {
     "C2: revival with an older spatial checkpoint": "C2",
     "C3: terminal defeat": "C3",
     "C4: stable offered-choice restore": "C4",
+    "C5: run start after terminal defeat": "C5",
 }
 
 INVARIANTS = ["N1", "N2", "N3", "N4", "N5", "N6", "N7"]
@@ -52,8 +54,8 @@ REVIVAL_POLICIES = ["R1", "R2", "R3"]
 
 # Declared dependency bytes. The section states each of these; the check confirms the files match.
 DECLARED_SHA = {
-    HF07A_MD: "a3539f6c5b784370f4a1873d18c551b4f36c3fd6d72cc1611769677d8dbd7863",
-    HF07A_CSV: "21f82d0e3649bea791778dfeee3d12e217e6ff2b77d9ddf6a848dc725d35ebaa",
+    HF07A_MD: "b175783f17cc3a8db516b4a194958d9e408554cbca222b27dc7cb81288d13bd1",
+    HF07A_CSV: "206f6aeaf4068240a297bd378be84663cbc91b3937236421ea8e2b0c7edd0bde",
     HF04A_MD: "7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
 }
@@ -100,20 +102,20 @@ CITATIONS = [
     (HF04A_MD, 173, "T5.2"),
     (HF04A_MD, 176, "T5.5"),
     (HF04A_MD, 178, "T5.7"),
-    (HF07A_MD, 23, "path from its document's root"),
-    (HF07A_MD, 43, "No numeric field in the aggregate is a float"),
-    (HF07A_MD, 53, "never treated as a default"),
-    (HF07A_MD, 58, "Derived state is never stored"),
-    (HF07A_MD, 60, "A generator seed never replaces a stored outcome"),
-    (HF07A_MD, 61, "Array order is fixed"),
-    (HF07A_MD, 62, "preferences record holds no gameplay progress"),
-    (HF07A_MD, 80, "A terminal run stays present"),
-    (HF07A_MD, 146, "may not create a second standard revival"),
-    (HF07A_MD, 151, "Reserved for the unfinished-level interruption rule"),
-    (HF07A_MD, 159, "revival_spent"),
-    (HF07A_MD, 160, "terminal"),
-    (HF07A_MD, 175, "exactly six keys"),
-    (HF07A_MD, 187, "HF-07b"),
+    (HF07A_MD, 24, "path from its document's root"),
+    (HF07A_MD, 46, "No numeric field in the aggregate is a float"),
+    (HF07A_MD, 56, "never treated as a default"),
+    (HF07A_MD, 61, "Derived state is never stored"),
+    (HF07A_MD, 63, "A generator seed never replaces a stored outcome"),
+    (HF07A_MD, 64, "Array order is fixed"),
+    (HF07A_MD, 65, "preferences record holds no gameplay progress"),
+    (HF07A_MD, 83, "A terminal run stays present"),
+    (HF07A_MD, 162, "may not create a second standard revival"),
+    (HF07A_MD, 104, "Reserved for the unfinished-level interruption rule"),
+    (HF07A_MD, 174, "revival_spent"),
+    (HF07A_MD, 175, "terminal"),
+    (HF07A_MD, 191, "exactly six keys"),
+    (HF07A_MD, 204, "HF-07b"),
     ("docs/tech/sections/HF-03a-module-map.md", 45, "RunState"),
     ("docs/tech/sections/HF-03a-module-map.md", 49, "SaveTransactionState"),
     ("docs/tech/sections/HF-03a-module-map.md", 58, "takes precedence"),
@@ -137,7 +139,7 @@ CITATIONS = [
     ("docs/tech/proofs/S0-08-save-evidence.md", 101, "Automated execution establishes no human feel"),
 ]
 
-# HF-07a lines 174 to 182 reject these envelope keys. The section must not ask for one.
+# HF-07a lines 193 to 202 reject these envelope keys. The section must not ask for one.
 FORBIDDEN_TOKENS = [
     "durability_class", "commit_class", "write_reason", "interruption_kind", "resume_mode",
     "mid_level_flag", "playable_flag", "checkpoint_generation", "checkpoint_timestamp",
@@ -213,8 +215,10 @@ class Owner:
         self.C = {
             "generation": 0, "transaction_id": "T0",
             "profile": {"discoveries": [], "recipes": [], "unlocks": []},
-            "run": {"run_id": "run-1", "checkpoint": None,
-                    "lifecycle": {"revival_spent": False, "terminal": False}},
+            "run": {"run_id": "run-1",
+                    "start": {"character_id": "chr-a", "entrance_id": "E0", "rng_state": []},
+                    "checkpoint": None, "interruption": None,
+                    "lifecycle": {"revival_spent": False, "terminal": False, "outcome": None}},
         }
         self.S = {}           # transaction_id -> candidate
         self.A = set(["T0"])  # acknowledged transaction identities, live only
@@ -262,16 +266,45 @@ class Owner:
         if cand["generation"] <= self.C["generation"]:
             self.eligible = None
             raise HoldError("validate rejected: generation not greater than committed")
-        # monotonic lifecycle flags (N4, N5)
-        for flag in ("revival_spent", "terminal"):
-            if self.C["run"]["lifecycle"][flag] and not cand["run"]["lifecycle"][flag]:
+        # N5: run is never set back to null once it is an object
+        if self.C["run"] is not None and cand["run"] is None:
+            self.eligible = None
+            raise HoldError("validate rejected: run dropped")
+        same_run = (self.C["run"] is not None and cand["run"] is not None
+                    and cand["run"]["run_id"] == self.C["run"]["run_id"])
+        if cand["run"] is not None and not same_run:
+            # A differing run_id is admitted only as a Transition S candidate. Anything else is FC-19.
+            committed = self.C["run"]
+            if committed is not None and not committed["lifecycle"]["terminal"]:
                 self.eligible = None
-                raise HoldError("validate rejected: %s weakened" % flag)
-        # N5: run stays present with a stable run_id
-        if self.C["run"] is not None:
-            if cand["run"] is None or cand["run"]["run_id"] != self.C["run"]["run_id"]:
+                raise HoldError("validate rejected: FC-19 a differing run_id against a live run")
+            start = cand["run"].get("start") or {}
+            if not cand["run"]["run_id"] or not start.get("character_id") or not start.get("entrance_id"):
                 self.eligible = None
-                raise HoldError("validate rejected: run dropped or run_id changed")
+                raise HoldError("validate rejected: a run start carries no populated run.start")
+            if cand["run"]["checkpoint"] is not None or cand["run"]["interruption"] is not None:
+                self.eligible = None
+                raise HoldError("validate rejected: a run start carries a checkpoint or an interruption")
+            lc = cand["run"]["lifecycle"]
+            if lc["revival_spent"] or lc["terminal"] or lc["outcome"] is not None:
+                self.eligible = None
+                raise HoldError("validate rejected: a run start carries a lifecycle fact")
+        if same_run:
+            # monotonic lifecycle flags inside one run (N4, N5)
+            for flag in ("revival_spent", "terminal"):
+                if self.C["run"]["lifecycle"][flag] and not cand["run"]["lifecycle"][flag]:
+                    self.eligible = None
+                    raise HoldError("validate rejected: %s weakened" % flag)
+            old_lc, new_lc = self.C["run"]["lifecycle"], cand["run"]["lifecycle"]
+            if (new_lc["outcome"] is not None) != new_lc["terminal"]:
+                self.eligible = None
+                raise HoldError("validate rejected: outcome is not present exactly when terminal")
+            if new_lc["outcome"] is not None and new_lc["outcome"] not in ("won", "lost"):
+                self.eligible = None
+                raise HoldError("validate rejected: outcome outside the enumeration")
+            if old_lc["outcome"] is not None and new_lc["outcome"] != old_lc["outcome"]:
+                self.eligible = None
+                raise HoldError("validate rejected: outcome rewritten")
         # N7: the three knowledge sets only grow and stay unique
         for key in ("discoveries", "recipes", "unlocks"):
             before, after = self.C["profile"][key], cand["profile"][key]
@@ -316,11 +349,11 @@ class Owner:
                 if o["chosen_option_id"] is not None and o["chosen_option_id"] not in o["option_ids"]:
                     self.eligible = None
                     raise HoldError("validate rejected: chosen_option_id not among option_ids")
-            # the interruption record may not hold encounter state
-            interruption = ck_new.get("interruption")
-            if interruption is not None and "encounter_state" in interruption:
-                self.eligible = None
-                raise HoldError("validate rejected: interruption holds encounter state")
+        # the interruption record may not hold encounter state, with or without a checkpoint
+        interruption = (cand["run"] or {}).get("interruption")
+        if interruption is not None and "encounter_state" in interruption:
+            self.eligible = None
+            raise HoldError("validate rejected: interruption holds encounter state")
         if extra:
             extra(self.C, cand)
         self.eligible = ("ok", txn)
@@ -365,11 +398,11 @@ class Owner:
 
 def new_checkpoint(entrance):
     return {
-        "build": {"character_id": "chr-a", "slots": []},
+        "build": {"slots": []},
         "equipment": {"owned": [], "equipped": []},
         "resolved_rewards": [], "offered_choices": [], "route": [],
         "generation_decisions": [], "rng_state": [], "companion": {},
-        "device_carry_over": [], "next_entrance": entrance, "interruption": None,
+        "device_carry_over": [], "next_entrance": entrance,
     }
 
 
@@ -381,15 +414,26 @@ def check_invariants(o, state, where):
     for txn in o.A:
         if txn not in state["committed_txns"]:
             fails.append("D1.5 %s acknowledged without a committed generation" % txn)
-    # N4 / N5 monotonicity across the whole history
-    if state["revival_spent_seen"] and not c["run"]["lifecycle"]["revival_spent"]:
-        fails.append("N4 revival_spent regressed")
-    if state["terminal_seen"] and not c["run"]["lifecycle"]["terminal"]:
-        fails.append("N5 terminal regressed")
-    if state["terminal_seen"] and o.restore()["derived_playable"]:
-        fails.append("N5 a terminal run derived playable")
+    fails.extend(state["boundary_fails"])
+    state["boundary_fails"] = []
+    # N4 / N5 monotonicity inside one run. A run boundary is checked by boundary_fails, not here,
+    # because the two runs have separate histories; N6 and N7 below stay save-wide.
     if c["run"] is not None and c["run"]["run_id"] != state["run_id"]:
-        fails.append("N5 run_id changed")
+        fails.extend(check_boundary(c["run"], state))
+    else:
+        if state["revival_spent_seen"] and not c["run"]["lifecycle"]["revival_spent"]:
+            fails.append("N4 revival_spent regressed")
+        if state["terminal_seen"] and not c["run"]["lifecycle"]["terminal"]:
+            fails.append("N5 terminal regressed")
+        if state["terminal_seen"] and o.restore()["derived_playable"]:
+            fails.append("N5 a terminal run derived playable")
+        lc = c["run"]["lifecycle"]
+        if (lc["outcome"] is not None) != lc["terminal"]:
+            fails.append("N5 outcome is not present exactly when terminal")
+        if lc["outcome"] is not None and lc["outcome"] not in ("won", "lost"):
+            fails.append("N5 outcome outside the enumeration")
+        if state["outcome_seen"] is not None and lc["outcome"] != state["outcome_seen"]:
+            fails.append("N5 outcome rewritten")
     ck = (c["run"] or {}).get("checkpoint")
     if ck is not None:
         ids = [s["settlement_id"] for s in ck["resolved_rewards"]]
@@ -409,9 +453,10 @@ def check_invariants(o, state, where):
                 fails.append("N3 offer %s rerolled" % off["offer_id"])
             if off["chosen_option_id"] is not None and off["chosen_option_id"] not in off["option_ids"]:
                 fails.append("N3 chosen_option_id not among option_ids")
-        if ck.get("interruption") is not None:
-            if c["run"]["lifecycle"]["revival_spent"] is False and state["revival_spent_seen"]:
-                fails.append("N4 interruption cleared revival_spent")
+    if c["run"] is not None and c["run"].get("interruption") is not None:
+        if c["run"]["lifecycle"]["revival_spent"] is False and state["revival_spent_seen"] \
+                and c["run"]["run_id"] == state["run_id"]:
+            fails.append("N4 interruption cleared revival_spent")
     for key in ("discoveries", "recipes", "unlocks"):
         v = c["profile"][key]
         if len(v) != len(set(v)):
@@ -425,13 +470,43 @@ def check_invariants(o, state, where):
     return ["%s: %s" % (where, f) for f in fails]
 
 
+def check_boundary(run, state):
+    """Transition S is the only way a committed run_id changes. These are its durable conditions."""
+    fails = []
+    if state["run_id"] is not None and not state["terminal_seen"]:
+        fails.append("N5 a new run replaced a live run")
+    if run["run_id"] in state["run_ids_seen"]:
+        # A property of this replay's history, not a durable gate: the aggregate holds one run, so the
+        # contract can only compare a candidate with the committed run_id (HF-07b Transition S validate).
+        fails.append("replay history: a run_id recurred after its run was replaced")
+    if run["checkpoint"] is not None or run.get("interruption") is not None:
+        fails.append("S a started run carries a checkpoint or an interruption")
+    lc = run["lifecycle"]
+    if lc["revival_spent"] or lc["terminal"] or lc["outcome"] is not None:
+        fails.append("S a started run carries a lifecycle fact")
+    if not (run.get("start") or {}).get("entrance_id"):
+        fails.append("S a started run carries no run.start")
+    return fails
+
+
 def observe(o, state):
     state["committed_txns"].add(o.C["transaction_id"])
+    if o.C["run"] is not None and o.C["run"]["run_id"] != state["run_id"]:
+        state["boundary_fails"].extend(check_boundary(o.C["run"], state))
+        state["run_ids_seen"].add(o.C["run"]["run_id"])
+        state["run_id"] = o.C["run"]["run_id"]
+        state["revival_spent_seen"] = False
+        state["terminal_seen"] = False
+        state["outcome_seen"] = None
+        state["settlements_seen"] = set()
+        state["offers_seen"] = {}
     if o.C["run"] is not None:
         if o.C["run"]["lifecycle"]["revival_spent"]:
             state["revival_spent_seen"] = True
         if o.C["run"]["lifecycle"]["terminal"]:
             state["terminal_seen"] = True
+        if o.C["run"]["lifecycle"]["outcome"] is not None:
+            state["outcome_seen"] = o.C["run"]["lifecycle"]["outcome"]
         ck = o.C["run"].get("checkpoint")
         if ck is not None:
             for s in ck["resolved_rewards"]:
@@ -445,6 +520,7 @@ def observe(o, state):
 def fresh_state(o):
     return {"committed_txns": {o.C["transaction_id"]}, "revival_spent_seen": False,
             "terminal_seen": False, "run_id": o.C["run"]["run_id"],
+            "run_ids_seen": {o.C["run"]["run_id"]}, "outcome_seen": None, "boundary_fails": [],
             "settlements_seen": set(), "offers_seen": {},
             "knowledge_seen": {"discoveries": set(), "recipes": set(), "unlocks": set()}}
 
@@ -456,10 +532,8 @@ def apply_policy(o, state, interruption, revival, fails, tag):
     R1 to R3 write nothing: revival health and placement are encounter values under every answer.
     """
     if interruption in ("P2", "P3"):
-        if o.C["run"]["checkpoint"] is None:
-            return
         def mutate(c):
-            c["run"]["checkpoint"]["interruption"] = {"policy_supplied_key": "value"}
+            c["run"]["interruption"] = {"policy_supplied_key": "value"}
         try:
             o.transition(tag + "-int", mutate)
         except HoldError:
@@ -468,7 +542,7 @@ def apply_policy(o, state, interruption, revival, fails, tag):
         fails.extend(check_invariants(o, state, "%s/%s after interruption record" % (tag, interruption)))
         # a policy that tried to clear a lifecycle flag must be rejected at validate
         def bad(c):
-            c["run"]["checkpoint"]["interruption"] = {"resume": "here"}
+            c["run"]["interruption"] = {"resume": "here"}
             c["run"]["lifecycle"]["revival_spent"] = False
             c["run"]["lifecycle"]["terminal"] = False
         if state["revival_spent_seen"] or state["terminal_seen"]:
@@ -483,6 +557,7 @@ def apply_policy(o, state, interruption, revival, fails, tag):
             return
         def mutate(c):
             c["run"]["lifecycle"]["terminal"] = True
+            c["run"]["lifecycle"]["outcome"] = "lost"
         try:
             o.transition(tag + "-term", mutate)
         except HoldError:
@@ -570,8 +645,11 @@ def case_c3(o, state, fails, fail_at=None):
     observe(o, state)
     o.transition("T6", lambda c: c["run"]["lifecycle"].__setitem__("revival_spent", True))
     observe(o, state)
+    def close(c):
+        c["run"]["lifecycle"]["terminal"] = True
+        c["run"]["lifecycle"]["outcome"] = "lost"
     try:
-        o.transition("T7", lambda c: c["run"]["lifecycle"].__setitem__("terminal", True), fail_at=fail_at)
+        o.transition("T7", close, fail_at=fail_at)
     except HoldError as exc:
         if o.playable_released and fail_at in ("stage", "validate", "commit"):
             fails.append("C3 hold: another playable state resumed through an unproven terminal write")
@@ -647,7 +725,90 @@ def case_c4(o, state, fails, fail_at=None):
     fails.extend(check_invariants(o, state, "C4 after refusing an invalid choice"))
 
 
-CASE_FNS = {"C1": case_c1, "C2": case_c2, "C3": case_c3, "C4": case_c4}
+def new_run(run_id, character, entrance):
+    return {"run_id": run_id,
+            "start": {"character_id": character, "entrance_id": entrance, "rng_state": []},
+            "checkpoint": None, "interruption": None,
+            "lifecycle": {"revival_spent": False, "terminal": False, "outcome": None}}
+
+
+def case_c5(o, state, fails, fail_at=None):
+    """C5 run start after terminal defeat, then after a won run."""
+    o.transition("T5", lambda c: c["run"].__setitem__("checkpoint", new_checkpoint("E3")))
+    observe(o, state)
+    o.transition("T6", lambda c: c["run"]["lifecycle"].__setitem__("revival_spent", True))
+    observe(o, state)
+
+    def close(c):
+        c["run"]["lifecycle"]["terminal"] = True
+        c["run"]["lifecycle"]["outcome"] = "lost"
+    o.transition("T7", close)
+    observe(o, state)
+    fails.extend(check_invariants(o, state, "C5 after the terminal close"))
+    closed = o.committed()
+
+    try:
+        o.transition("T11", lambda c: c.__setitem__("run", new_run("run-2", "chr-b", "E0")),
+                     fail_at=fail_at)
+    except HoldError as exc:
+        if o.playable_released and fail_at in ("stage", "validate", "commit"):
+            fails.append("C5 hold: a new run was presented as started after a %s failure" % fail_at)
+        if fail_at in ("stage", "validate", "commit"):
+            if o.C["run"]["run_id"] != closed["run"]["run_id"] or not o.C["run"]["lifecycle"]["terminal"]:
+                fails.append("C5 hold: the committed run changed while the start was held")
+        if o.C["transaction_id"] == "T11":
+            observe(o, state)  # the commit landed and only the acknowledge failed
+        fails.extend(check_invariants(o, state, "C5 held at %s (%s)" % (fail_at, exc)))
+        return
+    observe(o, state)
+    if o.C["run"]["run_id"] != "run-2":
+        fails.append("C5 the new run did not become the committed run")
+    if o.C["run"]["checkpoint"] is not None or o.C["run"]["interruption"] is not None:
+        fails.append("C5 a started run committed a checkpoint or an interruption")
+    if not o.restore()["derived_playable"]:
+        fails.append("C5 the started run did not restore playable")
+    for key in ("discoveries", "recipes", "unlocks"):
+        if not set(state["knowledge_seen"][key]) <= set(o.C["profile"][key]):
+            fails.append("C5 %s did not survive the run boundary" % key)
+    fails.extend(check_invariants(o, state, "C5 after the run start"))
+
+    # a start over the live run is refused, whatever identity it carries
+    for txn, rid in (("T12", "run-3"), ("T13", "run-1")):
+        rejected = False
+        try:
+            o.stage(txn, lambda c, r=rid: c.__setitem__("run", new_run(r, "chr-c", "E0")))
+            o.validate(txn)
+        except HoldError:
+            rejected = True
+        if not rejected:
+            fails.append("C5 a run start was admitted over a live run (%s)" % rid)
+    fails.extend(check_invariants(o, state, "C5 after refusing a start over a live run"))
+
+    # the same admission rule covers a won run, and a closed identity is never reused
+    def win(c):
+        c["run"]["lifecycle"]["terminal"] = True
+        c["run"]["lifecycle"]["outcome"] = "won"
+    o.transition("T14", win)
+    observe(o, state)
+    if o.restore()["derived_playable"]:
+        fails.append("C5 a won run restored playable")
+    fails.extend(check_invariants(o, state, "C5 after the victory close"))
+    rejected = False
+    try:
+        o.stage("T15", lambda c: c.__setitem__("run", new_run("run-2", "chr-d", "E0")))
+        o.validate("T15")
+    except HoldError:
+        rejected = True
+    if not rejected:
+        fails.append("C5 a run start carrying the committed run_id was admitted")
+    o.transition("T16", lambda c: c.__setitem__("run", new_run("run-4", "chr-d", "E0")))
+    observe(o, state)
+    if not o.restore()["derived_playable"]:
+        fails.append("C5 a run started after a won run did not restore playable")
+    fails.extend(check_invariants(o, state, "C5 after a run start over a won run"))
+
+
+CASE_FNS = {"C1": case_c1, "C2": case_c2, "C3": case_c3, "C4": case_c4, "C5": case_c5}
 
 
 def replay(check):
@@ -656,7 +817,7 @@ def replay(check):
     runs = 0
     for interruption in INTERRUPTION_POLICIES:
         for revival in REVIVAL_POLICIES:
-            for case in ("C1", "C2", "C3", "C4"):
+            for case in ("C1", "C2", "C3", "C4", "C5"):
                 for fail_at in (None, "stage", "validate", "commit", "acknowledge"):
                     o = Owner()
                     state = fresh_state(o)
@@ -884,7 +1045,7 @@ def main():
     with csv_path.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             known.add(row["field"])
-    check.record("HF-07a CSV holds 63 fields", len(known) == 63, "found %d" % len(known))
+    check.record("HF-07a CSV holds 69 fields", len(known) == 69, "found %d" % len(known))
     # The disclaimer sentence is excluded from the resolution check and checked separately below.
     disclaimer_line = next((l for l in lines if DISCLAIMER in l), "")
     check.record("section disclaims the three unrowed containers", bool(disclaimer_line))
@@ -898,7 +1059,7 @@ def main():
     unknown = sorted(n for n in mentioned if n not in known)
     check.record("every field name resolves in the HF-07a CSV (%d mentioned)" % len(mentioned),
                  not unknown, "unknown: %s" % unknown[:8])
-    for required in ["run.checkpoint.interruption", "run.lifecycle.revival_spent", "run.lifecycle.terminal",
+    for required in ["run.interruption", "run.lifecycle.revival_spent", "run.lifecycle.terminal",
                      "run.checkpoint.resolved_rewards", "run.checkpoint.offered_choices",
                      "run.checkpoint.next_entrance", "generation", "transaction_id",
                      "schema_version", "content_revision"]:

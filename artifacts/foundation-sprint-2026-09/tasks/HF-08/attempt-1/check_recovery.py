@@ -20,9 +20,9 @@ import sys
 SECTION = "docs/tech/sections/HF-08-save-recovery.md"
 RECEIPT = "artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess-os.txt"
 DEPS = {
-    "docs/tech/sections/HF-07a-save-envelope.md": "a3539f6c5b784370f4a1873d18c551b4f36c3fd6d72cc1611769677d8dbd7863",
-    "docs/tech/sections/HF-07a-save-envelope.csv": "21f82d0e3649bea791778dfeee3d12e217e6ff2b77d9ddf6a848dc725d35ebaa",
-    "docs/tech/sections/HF-07b-commit-boundaries.md": "a036ef78a99f99877035079ff225be559123f8bad9995e3e60190887a8c1147f",
+    "docs/tech/sections/HF-07a-save-envelope.md": "b175783f17cc3a8db516b4a194958d9e408554cbca222b27dc7cb81288d13bd1",
+    "docs/tech/sections/HF-07a-save-envelope.csv": "206f6aeaf4068240a297bd378be84663cbc91b3937236421ea8e2b0c7edd0bde",
+    "docs/tech/sections/HF-07b-commit-boundaries.md": "1f83d7de5822ddca55b6aa3d418e9577e636cf0846d31b9b2475a15d6360e781",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     RECEIPT: "2697c931d49c4375247467e00d4bfcc661de1e71c7d1a6ad24e6319615e7291a",
 }
@@ -36,7 +36,7 @@ STATUSES = ["missing", "committed", "committed_stale_temp", "corrupt",
 MESSAGE_CLASSES = ["MC-RETRYABLE", "MC-INVALID", "MC-UNSUPPORTED", "MC-AMBIGUOUS",
                    "MC-PREFERENCE"]
 STAGE_POINTS = ["SP0", "SP1", "SP2", "SP3a", "SP3b", "SP4"]
-TRANSITIONS = ["A", "B", "C", "D"]
+TRANSITIONS = ["A", "B", "C", "D", "S"]
 MATRIX_POINTS = ["SP1", "SP2", "SP3a", "SP3b", "SP4"]
 FORBIDDEN_TOKENS = ["mount_id", "retain_revision", "read_initial_snapshot"]
 REJECTED_KEYS = ["durability_class", "commit_class", "write_reason", "interruption_kind",
@@ -154,7 +154,7 @@ def run_document_checks(root, text, mutate=None):
     _, f_rows = find_table(tbls, "Failure class", "Point", "Held state", "Message class")
     ids = [r[0] for r in f_rows]
     sub("dod2.failure_classes_complete",
-        ids == [f"FC-{i:02d}" for i in range(1, 19)], f"{ids}")
+        ids == [f"FC-{i:02d}" for i in range(1, 20)], f"{ids}")
     for r in f_rows:
         sub(f"dod2.row_complete[{r[0]}]", len(r) == 7 and all(c for c in r[3:7]),
             "held state, message class, permitted and forbidden all nonempty")
@@ -230,7 +230,7 @@ def run_document_checks(root, text, mutate=None):
              or t in {"schema_version", "content_revision", "generation", "transaction_id"}}
     unknown = sorted(n for n in named if n not in csv_fields)
     sub("parity.every_named_field_in_hf07a_csv", not unknown, f"unknown: {unknown}")
-    sub("parity.csv_field_count", len(csv_fields) == 63, f"{len(csv_fields)} fields")
+    sub("parity.csv_field_count", len(csv_fields) == 69, f"{len(csv_fields)} fields")
 
     # 9. prohibitions, over the contract itself rather than the procedure prose that
     # names the tokens this check refuses
@@ -279,22 +279,24 @@ def run_document_checks(root, text, mutate=None):
         ("adr/TADR-001-engine-language-platforms.md", 23, "Windows 11 x64 and Linux x64"),
         ("adr/TADR-001-engine-language-platforms.md", 29, "is not proof that this game"),
         ("adr/TADR-001-engine-language-platforms.md", 39, "desktop exports"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 30, "is written only by a commit"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 41, "hold rule"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 49, "D1.1"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 51, "D1.3"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 52, "D1.4"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 68, "SEAM-6"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 82, "commit together"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 96, "durability is unknown"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 107, "before another playable state"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 155, "no durable trace"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 157, "not a gameplay commit"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 263, "HF-08"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 53, "never treated as a default"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 175, "exactly six keys"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 185, "backup pointer"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 187, "HF-08"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 31, "is written only by a commit"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 42, "hold rule"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 52, "D1.1"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 54, "D1.3"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 55, "D1.4"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 71, "SEAM-6"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 85, "commit together"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 99, "durability is unknown"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 110, "before another playable state"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 116, "admission rule"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 169, "no durable trace"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 171, "not a gameplay commit"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 298, "HF-08"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 56, "never treated as a default"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 176, "won"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 191, "exactly six keys"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 201, "backup pointer"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 204, "HF-08"),
         ("docs/tech/sections/HF-03a-module-map.md", 35, "RecoveryDiagnostic"),
         ("docs/tech/sections/HF-03a-module-map.md", 49, "preserved-source references"),
         ("docs/tech/sections/HF-03a-module-map.md", 51, "consumed as a snapshot"),
@@ -431,8 +433,10 @@ MATRIX_MODEL = {
 
 def replay_matrix():
     """Replay the twenty documented rows through the same model."""
-    base = {"A": (False, False), "B": (False, False), "C": (False, False), "D": (True, False)}
-    after = {"A": (False, False), "B": (False, False), "C": (True, False), "D": (True, True)}
+    base = {"A": (False, False), "B": (False, False), "C": (False, False), "D": (True, False),
+            "S": (True, True)}
+    after = {"A": (False, False), "B": (False, False), "C": (True, False), "D": (True, True),
+             "S": (False, False)}
     out, failures = [], []
     for t in TRANSITIONS:
         rs0, t0 = base[t]
@@ -462,6 +466,11 @@ def replay_matrix():
         ("D", "SP1"): ("committed_stale_temp", True), ("D", "SP2"): ("ambiguous_lifecycle", False),
         ("D", "SP3a"): ("ambiguous_lifecycle", False), ("D", "SP3b"): ("committed", False),
         ("D", "SP4"): ("committed", False),
+        # Transition S: the committed record is the closed run until WO5 lands, so the first three rows are
+        # not playable because that run is over, and the last two are the started run.
+        ("S", "SP1"): ("committed_stale_temp", False), ("S", "SP2"): ("committed_stale_temp", False),
+        ("S", "SP3a"): ("committed_stale_temp", False), ("S", "SP3b"): ("committed", True),
+        ("S", "SP4"): ("committed", True),
     }
     for row in out:
         key = (row["id"][3], row["point"])

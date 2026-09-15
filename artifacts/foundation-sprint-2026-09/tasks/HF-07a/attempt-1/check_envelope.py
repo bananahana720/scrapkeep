@@ -29,11 +29,12 @@ CSV_COLUMNS = ["field", "group", "type", "presence", "owner_module", "owner_reco
 MD_HEAD = ["Field", "Type", "Presence", "Owner (HF-03a)", "Produced from", "HF-06b group", "Source",
            "Questions", "Meaning and rule"]
 
-GROUPS = ["envelope", "profile", "run-identity", "checkpoint", "lifecycle", "preferences"]
+GROUPS = ["envelope", "profile", "run-identity", "run-start", "checkpoint", "lifecycle", "preferences"]
 ANCHORS = {
     "envelope": "envelope-fields",
     "profile": "profile-fields",
     "run-identity": "run-identity-fields",
+    "run-start": "run-start-fields",
     "checkpoint": "checkpoint-fields",
     "lifecycle": "lifecycle-fields",
     "preferences": "preferences-fields",
@@ -42,6 +43,7 @@ GROUP_TITLES = {
     "envelope": "The envelope",
     "profile": "The profile",
     "run-identity": "The run identity",
+    "run-start": "The run start",
     "checkpoint": "The checkpoint",
     "lifecycle": "The lifecycle facts",
     "preferences": "The preferences record",
@@ -72,7 +74,7 @@ AGGREGATE_NUMERIC_FIELDS = {
     "run.checkpoint.device_carry_over[].counters",
 }
 QE09_FIELDS = {"profile.discoveries", "profile.recipes", "profile.unlocks"}
-QP16_FIELDS = {"run.checkpoint.interruption", "run.lifecycle.revival_spent"}
+QP16_FIELDS = {"run.interruption", "run.lifecycle.revival_spent"}
 QP15_FIELDS = {
     "run.checkpoint.companion.chassis_id", "run.checkpoint.companion.component_ids",
     "run.checkpoint.companion.command_ids", "run.checkpoint.device_carry_over",
@@ -81,6 +83,7 @@ QP15_FIELDS = {
 GROUP_PREFIX = {
     "profile": "profile.",
     "run-identity": "run.",
+    "run-start": "run.start.",
     "checkpoint": "run.checkpoint.",
     "lifecycle": "run.lifecycle.",
     "preferences": "preferences.",
@@ -100,9 +103,9 @@ EXPECTED = {
     "s0_07_run_exit_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
     "card_lines": (466, 495),
     "card_sha256": "35255efcf54d49ec92d1e2395c1c349d488cb0836ee8d79ffb98e476e9f0e157",
-    "field_count": 63,
-    "group_counts": {"envelope": 6, "profile": 3, "run-identity": 3, "checkpoint": 44, "lifecycle": 2,
-                     "preferences": 5},
+    "field_count": 69,
+    "group_counts": {"envelope": 6, "profile": 3, "run-identity": 5, "run-start": 5,
+                     "checkpoint": 42, "lifecycle": 3, "preferences": 5},
     "d26_line": 49,
     "d27_line": 50,
     "hf06b_rule4_line": 34,
@@ -306,8 +309,8 @@ def main():
     c.ok("qp16-tagged", QP16_FIELDS <= tagged["Q-P16"], str(sorted(tagged["Q-P16"])))
     c.ok("qp15-tagged", QP15_FIELDS <= tagged["Q-P15"], str(sorted(tagged["Q-P15"])))
     by_name = {r["field"]: r for r in rows}
-    c.ok("interruption-nullable", by_name["run.checkpoint.interruption"]["type"] == "object or null")
-    c.ok("interruption-reserved", by_name["run.checkpoint.interruption"]["projection_group"] == "reserved")
+    c.ok("interruption-nullable", by_name["run.interruption"]["type"] == "object or null")
+    c.ok("interruption-reserved", by_name["run.interruption"]["projection_group"] == "reserved")
     c.ok("carryover-array", by_name["run.checkpoint.device_carry_over"]["type"] == "array of object")
     c.ok("carryover-may-be-empty",
          "empty" in by_name["run.checkpoint.device_carry_over"]["meaning"])
