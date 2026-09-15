@@ -3013,7 +3013,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Revival presentation, run checkpoint behavior and interrupted-level recovery
 
-**Evidence needed to close:** Health, placement and interrupted-level policy are recorded without replenishing spent revival or duplicating rewards. Completed-level resume remains the next entrance.
+**Evidence needed to close:** Health, placement and interrupted-level policy are recorded without replenishing spent revival or duplicating rewards. Completed-level resume remains the next entrance. Recorded answer (16 September 2026, TRACKING EV-0247): interruption policy P1, resume at the last completed level; mid-level progress is lost and the run resumes at `run.checkpoint.next_entrance`, `run.interruption` stays null in every committed document. Revival policy R2, revive in place with a named health value left to tuning. Protocol half carried by FR-05; the tuning value stays a parameter row.
 
 <a id="q-p17"></a>
 
@@ -3335,7 +3335,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** The run-start transition [FR-02](#fr-02) admits only when no run exists or the committed run is terminal and records this question for the live-run case; the Session `start_run` command; run presentation on the dashboard.
 
-**Evidence needed to close:** Andrew's answer names whether a live run may be replaced and what durable record, if any, the abandoned run leaves. FR-02's Transition S and HF-08's rejection row for a differing `run.run_id` are then revised in place without weakening the monotonic lifecycle facts.
+**Evidence needed to close:** Andrew's answer names whether a live run may be replaced and what durable record, if any, the abandoned run leaves. FR-02's Transition S and HF-08's rejection row for a differing `run.run_id` are then revised in place without weakening the monotonic lifecycle facts. Recorded answer (16 September 2026, TRACKING EV-0247): yes; starting a new run while a run is alive abandons it as a defeat. The Session commits Transition D with `run.lifecycle.outcome` `lost` for the live run, then Transition S; one closing fact, no new field, profile knowledge kept. Protocol half carried by FR-05.
 
 <a id="q-p41"></a>
 
@@ -3349,7 +3349,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** TH-03 FM-06 (commitment unchanged, failure diagnosed, hold decision open), TH-06 encounter scheduling, HF-04a's failure-mode table.
 
-**Evidence needed to close:** Andrew's answer names the behaviour and its disclosure; FM-06 and HF-04a's table are then revised in place without weakening the readability requirement.
+**Evidence needed to close:** Andrew's answer names the behaviour and its disclosure; FM-06 and HF-04a's table are then revised in place without weakening the readability requirement. Recorded answer (16 September 2026, TRACKING EV-0247): hold the encounter and show a diagnostic; the commitment is unchanged, play holds as for a failed critical write, and readability never silently degrades. Protocol half carried by FR-05.
 
 <a id="q-p40"></a>
 
@@ -3722,6 +3722,34 @@ foundation sections in place; none changes game rules, product direction, an ADR
 **Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and the three paper checks; the reviewer re-walks TH-01's RT.1 to RT.15 under the `won` outcome and RS.1 to RS.3 through Transition S. No build.
 
 **Boundary:** Documentation-only. No answer to Q-P16, Q-P32, Q-P39 or Q-P41; no new state, rule or field; no HF section changed; the reduced-motion preference (integrated-read F5) stays a note pending Q-P32 and an HF-07a amendment.
+
+<a id="fr-05"></a>
+
+### FR-05: Propagate the Q-P16, Q-P39 and Q-P41 answers into the persistence and runtime contracts
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- Andrew's recorded answers at TRACKING EV-0247: [Q-P39](#q-p39) (abandoning a live run is a defeat: Transition D with `outcome` `lost`, then Transition S), [Q-P16](#q-p16) (interruption P1, resume at the last completed level; revival R2, revive in place with a named health value left to tuning), [Q-P41](#q-p41) (a required telegraph that cannot be drawn holds the encounter with a diagnostic)
+- `docs/tech/sections/HF-07b-commit-boundaries.md`: the candidate policy table (P1 to P4, R1 to R3, around lines 139 to 149), Transition S admission (line 116), the invariants under every candidate policy, C5; `HF-07a-save-envelope.md`: `run.interruption` (line 104) and the Q-P16 rows; `HF-08-save-recovery.md`: FC-19 (line 142), V7, the policy readings P1 and P2 in the retry rules
+- `docs/tech/sections/TH-01-complete-loop.md` EC-05 and EC-06 and the seam paragraph, `TH-03-a-committed-attack-means-what-it-shows.md` FM-06 (line 217), `HF-04a-runtime-lifecycle.md` failure-mode table (lines 100 and 112), each at the [FR-04](#fr-04) integrated identity
+- The retained checks for HF-07a, HF-07b, HF-08, TH-01 and TH-03
+
+**Dependencies:** [FR-04](#fr-04). **Blocking questions:** None (Q-P16, Q-P39 and Q-P41 are resolved at EV-0247). **Registered non-blocking questions:** [Q-E09](#q-e09), [Q-P32](#q-p32). No item may answer a question that remains open.
+
+**Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `docs/tech/sections/TH-01-complete-loop.md`; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`; the retained check scripts for HF-07a, HF-07b, HF-08 (expected-value pins and enumerations only); `artifacts/local/tasks/FR-05/`.
+
+**Definition of done:**
+
+1. HF-07b adopts P1 and R2: the candidate policy table becomes the adopted policy with the rejected candidates retained as history, `run.interruption` is stated null in every committed document, Transition C's revival reads in place with the health value as a sourced or gated parameter, and every "under every candidate policy" clause reads under the adopted one.
+2. HF-07b Transition S admits a live-run replacement by requiring a preceding Transition D with `outcome` `lost` in the same session before S, stated as two transactions and two generations; HF-08 FC-19 and V7 read under that rule; HF-07a's `run.lifecycle.outcome` row names abandonment as a `lost` outcome; C5 gains the abandonment steps.
+3. HF-04a's failure-mode table and TH-03 FM-06 state the hold-with-diagnostic behaviour for a required telegraph that cannot be drawn, citing Q-P41, without changing the readability requirement.
+4. TH-01 EC-05 and EC-06 read under P1 and R2 and cite the resolved questions; the retained checks for HF-07a, HF-07b, HF-08, TH-01 and TH-03 exit 0 re-pinned not weakened; `npm run check:drift` exit 0; card revisions unchanged; each Procedure performed records the revision-in-place and the answers consumed.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and the five retained checks; the reviewer re-walks C5 with the abandonment steps and TH-01's RT route under R2. No build.
+
+**Boundary:** Documentation-only. No answer to Q-E09 or Q-P32; the revival health value stays a parameter; no new schema version; no runtime or proof code.
 
 ## Tooling repair cards (16 September 2026)
 

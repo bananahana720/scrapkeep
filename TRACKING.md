@@ -147,6 +147,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [TH-10](BACKLOG.md#th-10) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-11](BACKLOG.md#th-11) | 2 | 3 | queued | dependency FR-04; authorized at EV-0244 | none | EV-0244 |
 | [FR-04](BACKLOG.md#fr-04) | 1 | 3 | in_progress | none | none | EV-0245 |
+| [FR-05](BACKLOG.md#fr-05) | 1 | 1 | queued | dependency FR-04; outside the authorized set pending Andrew's widening decision | none | EV-0247 |
 | [TH-12](BACKLOG.md#th-12) | 1 | 1 | queued | HF-10, PD-02 | none | EV-0002 |
 | [TH-13](BACKLOG.md#th-13) | 1 | 1 | queued | TH-03, TH-04 | none | EV-0002 |
 | [TH-14](BACKLOG.md#th-14) | 1 | 1 | queued | TH-06, TH-11 | none | EV-0002 |
@@ -233,7 +234,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | [Q-P13](BACKLOG.md#q-p13) | 1 | open | none | EV-0004 |
 | [Q-P14](BACKLOG.md#q-p14) | 2 | proposed | HF-06a-A1 engineering-half protocol recorded at EV-0144; product half unanswered. | EV-0144 |
 | [Q-P15](BACKLOG.md#q-p15) | 3 | proposed | HF-06a-A1 and HF-06b-A1 engineering-half protocols recorded at EV-0144 and EV-0151; product half unanswered. | EV-0151 |
-| [Q-P16](BACKLOG.md#q-p16) | 2 | proposed | HF-07a-A1 engineering-half protocol recorded at EV-0157; product half unanswered. | EV-0157 |
+| [Q-P16](BACKLOG.md#q-p16) | 3 | resolved | Andrew, 16 September 2026: interruption P1 (resume at the last completed level, run.interruption null); revival R2 (in place, health value to tuning). Protocol half carried by FR-05. | EV-0247 |
 | [Q-P17](BACKLOG.md#q-p17) | 1 | open | none | EV-0004 |
 | [Q-P18](BACKLOG.md#q-p18) | 1 | open | none | EV-0004 |
 | [Q-P19](BACKLOG.md#q-p19) | 1 | open | none | EV-0004 |
@@ -256,8 +257,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | [Q-P36](BACKLOG.md#q-p36) | 1 | open | none | EV-0004 |
 | [Q-P37](BACKLOG.md#q-p37) | 1 | open | none | EV-0004 |
 | [Q-P38](BACKLOG.md#q-p38) | 1 | open | none | EV-0004 |
-| [Q-P39](BACKLOG.md#q-p39) | 1 | open | none | EV-0187 |
-| [Q-P41](BACKLOG.md#q-p41) | 1 | open | none | EV-0238 |
+| [Q-P39](BACKLOG.md#q-p39) | 2 | resolved | Andrew, 16 September 2026: abandoning a live run is a defeat; Transition D with outcome lost, then S. Protocol half carried by FR-05. | EV-0247 |
+| [Q-P41](BACKLOG.md#q-p41) | 2 | resolved | Andrew, 16 September 2026: hold the encounter and show a diagnostic. Protocol half carried by FR-05. | EV-0247 |
 | [Q-P40](BACKLOG.md#q-p40) | 1 | resolved | Andrew, 15 September 2026: terminal means over for victory and defeat; a separate outcome fact records won versus lost. Protocol half carried by FR-02 revision 2. | EV-0202 |
 
 ## Append-only events
@@ -453,6 +454,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0244 | 2026-09-16T12:40:00+00:00 | Andrew / authorization; Coordinator / readiness | FR-04, TH-05, TH-04, TH-11 | Andrew read the Handoff-2 closure summary in the coordinator session and answered 'Approve all four, dispatch FR-04 and TH-05'. Sprint Handoff-3-2026-09-16 authorized for FR-04 revision 1, TH-05 revision 1, TH-04 revision 1 and TH-11 revision 2 under the receipt's objective (repair TH-01 against the FR-02 persistence contract, then continue the runtime handoff with collection and growth, abilities, and run routing and lifecycle); all documentation-only. Initial dispatch FR-04 and TH-05; TH-04 follows when a slot frees; TH-11 only after FR-04 is admitted. Readiness admitted: FR-04 (dependency TH-03 done at EV-0241, inputs present, record revision 1 to 2), TH-05 (dependency HF-10, record revision 1 to 2), TH-04 (record revision 1 to 2, dispatch deferred); TH-11 stays queued on FR-04 (record revision 2 to 3). Push cadence unchanged. |
 | EV-0245 | 2026-09-16T12:55:00+00:00 | Coordinator / assignment, lease | FR-04 | FR-04 ready to in_progress at card revision 1, record revision 2 to 3. Attempt FR-04-A1, exclusive lease FR-04-L1 over docs/tech/sections/TH-01-complete-loop.md, TH-02-movement-camera-and-active-aim.md, TH-03-a-committed-attack-means-what-it-shows.md and artifacts/local/tasks/FR-04/. Worktree /home/andrew/Projects/scrapkeep-wt-FR-04 on branch wt/FR-04 at verified base c91dadfc720e481e6fcb4147180a8d05febd567f. Packet artifacts/handoff-3-2026-09-16/tasks/FR-04/assignment.md carrying the exact card, the integrated-read findings with line numbers, the HF-07a and HF-07b anchors for the meaning changes, the HF-04a class for the D02 read, the MP-14 re-pointing rule and the paper-check requirements. Writer scrapkeep-writer (claude-opus-5 high). Reviewer to be assigned fresh at handoff: scrapkeep-reviewer (Fable 5.1 medium), because the run-start and terminal prose is contract judgement against HF-07b and the Bible. |
 | EV-0246 | 2026-09-16T12:56:00+00:00 | Coordinator / assignment, lease | TH-05 | TH-05 ready to in_progress at card revision 1, record revision 2 to 3. Attempt TH-05-A1, exclusive lease TH-05-L1 over docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md and artifacts/local/tasks/TH-05/. Worktree /home/andrew/Projects/scrapkeep-wt-TH-05 on branch wt/TH-05 at verified base c91dadfc720e481e6fcb4147180a8d05febd567f. Packet artifacts/handoff-3-2026-09-16/tasks/TH-05/assignment.md carrying the exact card, the TH-02 sibling and its seam, the HF-05 and HF-07a constraints on content identity and durable fields, the question owners (Q-P10, Q-P22, Q-P21, Q-P14), the FR-04 concurrency note and the paper-check requirements. Write sets of FR-04-L1 and TH-05-L1 are disjoint; two writers active. Writer scrapkeep-writer (claude-opus-5 high). Reviewer to be assigned fresh at handoff: scrapkeep-reviewer (Fable 5.1 medium), because acceptance turns on Bible and ADR judgement. |
+| EV-0247 | 2026-09-16T13:20:00+00:00 | Andrew / question resolution; Coordinator / definition import | Q-P39, Q-P16, Q-P41, FR-05 | Andrew resolved three product questions by structured answer in the coordinator session, each chosen from the candidates the admitted sections list. Q-P39: yes, abandoning a live run is a defeat (Transition D with outcome lost, then Transition S; one closing fact, no new field, knowledge kept); the alternatives forfeit-without-record and must-end-first were declined. Q-P16: interruption policy P1, resume at the last completed level with run.interruption null; revival policy R2, revive in place with the health value left to tuning; P2, P3 and R1, R3 declined. Q-P41: hold the encounter and show a diagnostic; continue-with-diagnostic and end-as-forfeit declined. Q-P32 was not put; its bounds remain open. Question index: Q-P39, Q-P16 and Q-P41 resolved at record revision 2. FR-05 'Propagate the Q-P16, Q-P39 and Q-P41 answers into the persistence and runtime contracts' defined at card revision 1 (M, foundation-repair; HF-07a, HF-07b, HF-08, HF-04a, TH-01, TH-03 and three retained checks; dependency FR-04 because FR-04 holds TH-01 and TH-03 now) and imported queued; outside the authorized set pending Andrew's choice to widen Handoff-3 or defer to the next proposal. |
 
 ## Preparation checkpoint
 
@@ -635,7 +637,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Handoff-2 reporting checkpoint
 
-Last reported event: EV-0246. Handoff-2-2026-09-16 is closed with outcome passed at pinned commit aaa90b1dcb8f22708e5e847ea2be26e987ad0fe9: FR-03, TL-01, TH-02 and TH-03 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0244 (Handoff-3-2026-09-16: FR-04, TH-05, TH-04, TH-11 revision 2; FR-04 and TH-05 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
+Last reported event: EV-0247. Handoff-2-2026-09-16 is closed with outcome passed at pinned commit aaa90b1dcb8f22708e5e847ea2be26e987ad0fe9: FR-03, TL-01, TH-02 and TH-03 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0244 (Handoff-3-2026-09-16: FR-04, TH-05, TH-04, TH-11 revision 2; FR-04 and TH-05 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
 
 ## Handoff-2 closure record
 
