@@ -1,6 +1,6 @@
 # Scrapkeep execution backlog
 
-Edition 3 · Updated 13 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package; AR-08 reconciled the sprint prose with the admitted state
+Edition 3 · Updated 15 September 2026 · HF cards amended and split per the accepted AI-first audit under PS-04; PUB-01 revision 2 includes the completed repository-local workflow package; AR-08 reconciled the sprint prose with the admitted state; FR-02, NP-01 and Q-P39 imported from the 15 September adversarial review
 
 Use **an in-repo board in [TRACKING.md](TRACKING.md)** to keep assignments, evidence and integration history beside the work. This board was selected while the checkout was local-only and remains the sole execution board after private GitHub publication.
 
@@ -3323,6 +3323,20 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Evidence needed to close:** Each selected type has an explicit objective/reward boundary and required route accessibility. Historical timers and counter-only entry requirements remain proposals.
 
+<a id="q-p39"></a>
+
+### Q-P39: Starting a new run while a run is alive
+
+**Source:** Adversarial review of 15 September 2026 (finding F1, `docs/tech/sections/HF-07b-commit-boundaries.md` line 37 and line 117 against `HF-07a-save-envelope.md` line 99); [BIBLE.md § The complete loop](BIBLE.md#the-complete-loop) states no rule for abandoning a run.
+
+**Missing information:** May the player start a new run while the current run is alive and not terminal, and if so, does abandoning count as a defeat, a forfeit without a defeat record, or something else?
+
+**Decision owner:** Andrew
+
+**Affected work:** The run-start transition [FR-02](#fr-02) admits only when no run exists or the committed run is terminal and records this question for the live-run case; the Session `start_run` command; run presentation on the dashboard.
+
+**Evidence needed to close:** Andrew's answer names whether a live run may be replaced and what durable record, if any, the abandoned run leaves. FR-02's Transition S and HF-08's rejection row for a differing `run.run_id` are then revised in place without weakening the monotonic lifecycle facts.
+
 ## Source records
 
 Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOSITIONS.md](docs/project/SOURCE-DISPOSITIONS.md), moved there verbatim on 6 September 2026. The coordinator owns that file. It preserves every P/T/R/D/BD identifier, the unnumbered planning obligations, core-system headings, selected concept-art receipts and requested engineering sections, and its task and question links point back to the cards and questions in this file. A disposition row grants no task completion, native support claim or implementation authorization.
@@ -3588,3 +3602,75 @@ foundation sections in place; none changes game rules, product direction, an ADR
 **Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and the seven retained paper checks rerun from their retained copies; the reviewer re-walks C4 and V3 by hand under the corrected rules. No build.
 
 **Boundary:** Documentation-only. This card applies only the nine required fixes; every HF-10 note stays a note for a later revision, no question is answered, no envelope key is added or removed, and no card definition or dependency changes.
+
+<a id="fr-02"></a>
+
+### FR-02: Add the run-start transition and split initial-run facts from the checkpoint
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** M · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- The adversarial review of 15 September 2026 (TRACKING EV-0187), findings F1 and F5: the common validator at `docs/tech/sections/HF-07b-commit-boundaries.md` line 37 and N5 at line 117 reject every fresh run after a terminal run, because `HF-07a-save-envelope.md` line 99 replaces `run.run_id` only by starting a new run; and `run.checkpoint` (line 100) is null until the first level completes while the character, generator state, next entrance and the Q-P16 reservation (line 148) live beneath it
+- The [FR-01](#fr-01) result at its accepted integrated commit: `docs/tech/sections/HF-07a-save-envelope.md` and `.csv`, `HF-07b-commit-boundaries.md`, `HF-08-save-recovery.md`
+- `HF-07b-commit-boundaries.md` lines 36 to 39 (the four-stage form), lines 125 to 138 (P1 to P4, pending Q-P16), line 52 (D1.4) and line 119 (N7); `HF-07a-save-envelope.md` lines 44 to 46 (RNG stream shape), lines 174 to 182 (rejected keys); `HF-08-save-recovery.md` line 140 (FC-18, the last failure class) and line 157 (`MC-INVALID` routing)
+- `docs/tech/sections/HF-04a-*.md` line 131 (`start_run` and `restore_run` are Session commands)
+- The [NP-01](#np-01) evidence page for the executed re-stage and lifecycle-regression gates, consumed once as the `native/proofs/tadr-004/**` re-verification trigger at HF-07a line 243, HF-07b line 269 and HF-08 line 373
+- The retained paper checks `artifacts/foundation-sprint-2026-09/tasks/HF-07a/attempt-1/check_envelope.py`, `HF-07b/attempt-1/check_boundaries.py` and `HF-08/attempt-1/check_recovery.py` as FR-01 leaves them
+
+**Dependencies:** [FR-01](#fr-01), [NP-01](#np-01). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P16](#q-p16), [Q-E09](#q-e09), [Q-P39](#q-p39). No item may answer a question; the shape must hold under P1, P2 and P3.
+
+**Files touched:** `docs/tech/sections/HF-07a-save-envelope.md`; `docs/tech/sections/HF-07a-save-envelope.csv`; `docs/tech/sections/HF-07b-commit-boundaries.md`; `docs/tech/sections/HF-08-save-recovery.md`; `artifacts/foundation-sprint-2026-09/tasks/HF-07a/attempt-1/check_envelope.py`, `HF-07b/attempt-1/check_boundaries.py` and `HF-08/attempt-1/check_recovery.py` (expected-value pins only); `artifacts/local/tasks/FR-02/`.
+
+**Definition of done:**
+
+1. HF-07b gains Transition S, run start, in the four-stage form of lines 36 to 39. Its validate rule admits a candidate only when the committed `run` is null or the committed `run.lifecycle.terminal` is true; the candidate carries a new `run.run_id`, both lifecycle flags false, `run.checkpoint` null, `run.interruption` null and `run.start` populated. The live-run case cites Q-P39 and decides nothing.
+2. The common validator at line 37 is scoped by run identity: the monotonic `revival_spent` and `terminal` checks and "run stays present" apply when the candidate and committed `run.run_id` match; a differing `run.run_id` is accepted only as a Transition S candidate; any other differing-`run_id` candidate is rejected as a new HF-08 R4 failure class numbered after FC-18 with message class `MC-INVALID`. N5 reads "unchanged in every transition except S".
+3. One aggregate rule states that `generation` orders the save, not the run: Transition S commits at `G+1` with D1.4 unchanged, and the `profile.*` sets carry forward unchanged under N7.
+4. HF-07a splits the envelope by one naming rule stated once: a fact that exists at Transition S before any level completes lives under `run.start.*`; a fact produced by completing a level stays under `run.checkpoint.*`; the Q-P16 reservation becomes `run.interruption` (`object or null`, group `reserved`, still carrying no keys). Concrete rows: `run.start` (object, when-present), `run.start.character_id` (moved from `run.checkpoint.build.character_id`), `run.start.entrance_id` (the resume position while `run.checkpoint` is null; `run.checkpoint.next_entrance` afterwards) and `run.start.rng_state[]` in the lines 44 to 46 shape. A new group `run-start` with anchor `run-start-fields`; Markdown and CSV in parity; the envelope keeps six top-level keys.
+5. Scenarios: HF-07a S9 "new run after a terminal run" and S10 "first-level revival then interruption, checkpoint null" read under P1, P2 and P3; HF-07b C5 "run start after terminal defeat" as a step table of six or more rows carrying the "Under every candidate policy" sentence; HF-08 matrix rows IM-S1 to IM-S5 for the five stop points of Transition S and walkthrough V7 "stale old-run candidate after S committed".
+6. The three retained checks are re-pinned, not weakened: `check_envelope.py` field count, group list, group counts, anchors, the interruption field name and the run-identity dot rule; `check_recovery.py` CSV field count and the transition enumeration extended with `S` so the matrix cross product includes IM-S1 to IM-S5; `check_boundaries.py` transition and case enumerations extended with `S` and C5 and its replay extended to C5. Each exits 0 from its retained copy with `--out` outside the retained directory.
+7. Card revisions of the touched sections are not changed; each section's Procedure performed records the revision-in-place with the finding identifiers, the consumed NP-01 trigger and the closure event.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and the three retained paper checks rerun from their retained copies with `--out` under `artifacts/local/tasks/FR-02/`; the reviewer re-walks C5 and V7 by hand and reads S10 under P2 and P3. No build.
+
+**Boundary:** Documentation-only. No answer to Q-P16, Q-E09 or Q-P39; no rule for replacing a live run; no keys inside `run.interruption`; no runtime or proof code; no card revision or dependency change outside this card.
+
+## Native proof repair cards (15 September 2026)
+
+Defined from the adversarial review of 15 September 2026 (TRACKING EV-0187). The review read the
+placeholder save owner under `native/proofs/tadr-004/` against the admitted HF-07b contract and found
+two gates the contract requires and the proof does not enforce. These cards change proof code that
+proves ADR rules only; none adds a game feature, an export, a qualification run or production code.
+
+<a id="np-01"></a>
+
+### NP-01: Repair the TADR-004 save-owner re-stage and lifecycle gates
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** S · **Lane:** native-proof-repair
+
+**Source and inputs:**
+
+- The adversarial review of 15 September 2026 (TRACKING EV-0187), findings F2 and F3: `native/proofs/tadr-004/save_owner.gd` `stage()` (lines 46 to 63) overwrites the deterministic temp path without clearing `_validated_temp`, and `commit()` (lines 93 to 114) checks only path equality, so a validated-then-restaged candidate commits; `validate()` (lines 85 to 90) gates only `generation`, so a higher-generation candidate can clear `terminal` or `revival_spent`, and `resolve_lifecycle()` (lines 176 to 193) runs only from `recover()`
+- `docs/tech/sections/HF-07b-commit-boundaries.md` line 37 (common validator), line 50 (D1.2: a candidate validated and then re-staged is not eligible), lines 116 and 117 (N4, N5); `adr/TADR-004-*.md` line 30
+- `native/proofs/tadr-004/proof_runner.gd` lines 17 to 27 (`CASES`) and its fixture mapping; `native/proofs/tadr-004/fixtures/lifecycle/` (`save.json`, `older.json`, `terminal.json`), unchanged
+- `docs/tech/proofs/S0-07-save-owner.md` (the API receipt and drift tripwires at lines 127 to 133) and `docs/tech/proofs/S0-08-save-evidence.md` lines 81 to 90 (the direct invocation form); the S0-07 card names `native/proofs/tadr-004-save/` as provisional paths and the admitted paths are `native/proofs/tadr-004/`
+- `scripts/native-smoke.mjs` (`npm run native:smoke`): headless runs of every `native/proofs/*/proof_runner.gd` with the pinned Godot 4.7.2 binary, the fault-injection pass and the engine-pin check
+
+**Dependencies:** None. **Blocking questions:** None. Requires the scoped native proof-repair authorization in the TRACKING program authorization row before dispatch.
+
+**Files touched:** `native/proofs/tadr-004/save_owner.gd`; `native/proofs/tadr-004/proof_runner.gd`; `docs/tech/proofs/S0-07-save-owner.md` (in-place extension only; the substrings pinned at lines 39 to 41 and 45 stay on those lines); `docs/tech/proofs/NP-01-save-owner-repair.md` (new); `artifacts/local/tasks/NP-01/`.
+
+**Definition of done:**
+
+1. `stage()` clears `_validated_temp` and `converged` on entry; `validate()` records the SHA-256 of the staged bytes it read; `commit()` refuses with `ERR_UNCONFIGURED` when the path or the staged bytes differ from the candidate that last validated. A validated-then-restaged candidate cannot commit (D1.2).
+2. `validate()` calls `resolve_lifecycle(candidate, committed)` after the generation gate and returns a distinct `Error` value, not `ERR_ALREADY_EXISTS`, when the resolved flags differ from the candidate's; a higher-generation candidate cannot clear `revival_spent` or `terminal` (N4, N5). The existing `--inject-fault` argument can additionally disable this gate so the harness proves it is noticed.
+3. `CASES` gains `restage_after_validate`, `lifecycle_regression_spent` and `lifecycle_regression_terminal`, built in-runner from `placeholder_aggregate` over the existing `fixtures/lifecycle/` files without changing any fixture byte. Each asserts the rejection code, `ERR_UNCONFIGURED` on the following commit, `save.json` bytes unchanged, the temp preserved, and a FAIL line under fault injection.
+4. `docs/tech/proofs/S0-07-save-owner.md` gains the three case rows and two drift tripwires for the new gates; `docs/tech/proofs/NP-01-save-owner-repair.md` records the fresh execution in the S0-08 form (commands, exit codes, per-case summaries, fixture hashes, limits). `S0-08-save-evidence.md` is unchanged as a dated execution record.
+5. `npm run native:smoke` exits 0 with `proof-tadr-004`, `proof-tadr-004-inject-fault` (exit 1 with a FAIL line), `engine-pin` and `source-preservation` all PASS, and the direct runs in the S0-08 form are saved under `artifacts/local/tasks/NP-01/`.
+
+**Verification and evidence:** `npm run native:smoke` on the candidate and again on the integrated commit; the direct headless invocations from `S0-08-save-evidence.md` lines 85 to 90 with their exit codes; `npm run check:docs`; `npm run check:scope -- <base> <candidate>`. The reviewer reads the diff against the five items and the coordinator's smoke receipts.
+
+**Boundary:** Proof code only. No production Persistence module, no export, no other proof, no envelope or fixture change, no `run_id` in the proof envelope (that gate stays paper until FR-02 lands and a later proof card carries it), no engine or dependency change.
+
+**Parked proposal, not a card.** The adversarial review also recommended that, once the persistence contracts settle and TH-01 to TH-03 are admitted, the first native scope be one bounded playable slice: satisfying starting movement, one upgrade that visibly changes a useful action, readable committed attack geometry, and save and reload across a defeat and a fresh run, qualified before the four-tree, equipment and companion combinations expand. Andrew parked it on 15 September 2026 as a proposal for the next sprint proposal. It has no card, no inputs, no files and no authority; it waits on the TH cards, on the completed engineering handoff and on Andrew's next-scope decision.
