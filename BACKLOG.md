@@ -3337,6 +3337,20 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Evidence needed to close:** Andrew's answer names whether a live run may be replaced and what durable record, if any, the abandoned run leaves. FR-02's Transition S and HF-08's rejection row for a differing `run.run_id` are then revised in place without weakening the monotonic lifecycle facts.
 
+<a id="q-p41"></a>
+
+### Q-P41: A required telegraph that cannot be drawn
+
+**Source:** TH-03 handoff (TRACKING EV-0235, EV-0236) reading `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` FM-06 against [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows) lines 491 and 525 and `HF-04a-runtime-lifecycle.md` lines 100 and 112.
+
+**Missing information:** When a committed attack's required telegraph cannot be drawn mid-encounter (a presentation failure, not an optional cosmetic), does the encounter hold, continue with a diagnostic, or end the level? HF-04a lets Presentation omit only optional cosmetics and requires view readiness at initialization; no source states the mid-encounter case.
+
+**Decision owner:** Andrew for whether play may continue without the telegraph; Runtime for the protocol.
+
+**Affected work:** TH-03 FM-06 (commitment unchanged, failure diagnosed, hold decision open), TH-06 encounter scheduling, HF-04a's failure-mode table.
+
+**Evidence needed to close:** Andrew's answer names the behaviour and its disclosure; FM-06 and HF-04a's table are then revised in place without weakening the readability requirement.
+
 <a id="q-p40"></a>
 
 ### Q-P40: How a successful run closes its durable record
