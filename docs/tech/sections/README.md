@@ -21,6 +21,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [HF-07b: Durable commit boundaries](HF-07b-commit-boundaries.md).
 - [HF-08: Save failure and conservative recovery](HF-08-save-recovery.md).
 - [HF-09: Schema and gameplay-content migration](HF-09-schema-migration.md).
+- [TH-01: The complete run loop](TH-01-complete-loop.md).
 
 ## Scenarios
 
