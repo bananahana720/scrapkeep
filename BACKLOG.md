@@ -3652,6 +3652,34 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 **Boundary:** Documentation-only. No answer to Q-P16, Q-E09 or Q-P39; no rule for replacing a live run; no keys inside `run.interruption`; no results-screen, reward or presentation rule for a won run beyond the durable facts; no runtime or proof code; no card revision or dependency change outside this card.
 
+<a id="fr-03"></a>
+
+### FR-03: Revise HF-09 for the FR-01 and FR-02 field set
+
+**Card revision:** 1 · **Owner:** Persistence · **Size:** S · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- `docs/tech/sections/HF-09-schema-migration.md` as admitted (HF-09 revision at EV-0173), whose re-verification trigger on HF-07a and HF-07b changes fired when [FR-01](#fr-01) and [FR-02](#fr-02) were integrated (TRACKING EV-0201, EV-0212)
+- The integrated `docs/tech/sections/HF-07a-save-envelope.md` and `.csv` (sixty-nine fields in seven groups; `run.start.*`, `run.interruption`, `run.lifecycle.outcome`; `run.checkpoint.build.character_id` and `run.checkpoint.interruption` removed), `HF-07b-commit-boundaries.md` (Transition S, run_id-scoped validator, Transition D victory path) and `HF-06b-persistence-projection.md` at the FR-02 integrated identity
+- `artifacts/foundation-sprint-2026-09/tasks/HF-09/attempt-1/check_migration.py` and its failures on the integrated tree recorded at TRACKING EV-0212: `hf07a.csv.sixty_fields`, `fields.all_exist_in_hf07a_csv` (`run.checkpoint.interruption`), four `envelope.rejected_key` guards, and the S0-07 page citation at line 116 (now 122 after NP-01)
+- `docs/tech/proofs/S0-07-save-owner.md` at the NP-01 integrated identity for the shifted citations
+
+**Dependencies:** [FR-02](#fr-02). **Blocking questions:** None. **Registered non-blocking questions:** [Q-P16](#q-p16), [Q-E09](#q-e09), [Q-P39](#q-p39). No item may answer a question.
+
+**Files touched:** `docs/tech/sections/HF-09-schema-migration.md`; `artifacts/foundation-sprint-2026-09/tasks/HF-09/attempt-1/check_migration.py` (expected-value pins and citation lines only); `artifacts/local/tasks/FR-03/`.
+
+**Definition of done:**
+
+1. Every HF-09 statement about the HF-07a field set (count, groups, named paths, the rejected-key guards) reads the integrated HF-07a: sixty-nine fields, `run.interruption` in place of `run.checkpoint.interruption`, `run.start.*` and `run.lifecycle.outcome` classified for migration by value with their source rows, and the M-series steps still write no field outside the admitted contract.
+2. Every HF-07a, HF-07b, HF-06b and S0-07 line citation and stated dependency hash in HF-09 resolves to the integrated bytes; the migration walkthroughs that cross Transition D read under both outcomes and name Transition S where a migrated save starts a run.
+3. `check_migration.py` re-pinned, not weakened, and exiting 0 from its retained copy with `--out` outside the retained directory; no assertion removed.
+4. HF-09's card revision is unchanged; its Procedure performed records the revision-in-place, the FR-01 and FR-02 triggers consumed and the closure event.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, and `check_migration.py` from its retained copy; the reviewer re-walks one migration walkthrough across Transition D under the `won` outcome. No build.
+
+**Boundary:** Documentation-only. No new schema version, migration step or compatibility predicate; no question answered; no other section or script changed.
+
 ## Native proof repair cards (15 September 2026)
 
 Defined from the adversarial review of 15 September 2026 (TRACKING EV-0187). The review read the
