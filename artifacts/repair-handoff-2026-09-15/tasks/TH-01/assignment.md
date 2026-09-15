@@ -18,4 +18,33 @@ REPORT: Commit only permitted files on your branch and leave the tracked worktre
 
 ## Exact card
 
-{card}
+### TH-01: Specify the complete run loop
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** technical handoff
+
+**Source and inputs:**
+
+- [BIBLE.md § The complete loop](BIBLE.md#the-complete-loop)
+- [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
+- `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
+- `artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md` from [HF-10](#hf-10) (must be admitted before assignment)
+
+**Dependencies:** [HF-10](#hf-10). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/TH-01-complete-loop.md`; `artifacts/local/tasks/TH-01/`.
+
+**Definition of done:**
+
+1. Define encounter, intermission, world transition and terminal states with carried state and owner.
+2. Map four-world target, rebuild-each-run power and permanent discoveries without inventing levels, routes or duration tuning.
+3. Name every accessed module and tie all commands, records and events to HF-03 permissions.
+4. Include explicit sections for interfaces, owned data, algorithms/update order, edge cases, failure modes and tunable parameters; each parameter is sourced or has a question ID. Check all module access against HF-03.
+
+**Verification and evidence:**
+
+- Walk one successful route and one terminal route at contract level.
+- Check every required product parameter is either sourced or explicitly unresolved; paper traces are not executable evidence.
+
+**Boundary:** Documentation contract only. Record unresolved product parameters explicitly and gate dependent implementation. No engine behavior or executable test is established by this card.
+
+Coordinator correction after handoff: the exact card above was appended at EV-0199; the writer reported the placeholder and used BACKLOG.md lines 1161 to 1187 directly.
