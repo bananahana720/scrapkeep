@@ -54,7 +54,7 @@ REVIVAL_POLICIES = ["R1", "R2", "R3"]
 
 # Declared dependency bytes. The section states each of these; the check confirms the files match.
 DECLARED_SHA = {
-    HF07A_MD: "4e7e240ad9463ebcbdd2638218b5e4d30dd1578840d5bad811e4c986dda026a0",
+    HF07A_MD: "b175783f17cc3a8db516b4a194958d9e408554cbca222b27dc7cb81288d13bd1",
     HF07A_CSV: "206f6aeaf4068240a297bd378be84663cbc91b3937236421ea8e2b0c7edd0bde",
     HF04A_MD: "7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
@@ -225,7 +225,6 @@ class Owner:
         self.pending = None   # Session's PendingTransition
         self.playable_released = True
         self.eligible = None  # the one candidate that last validated OK
-        self.run_ids = {"run-1"}  # every run identity this save has committed
         self.log = []
 
     # -- observables -------------------------------------------------------------------------------
@@ -279,9 +278,6 @@ class Owner:
             if committed is not None and not committed["lifecycle"]["terminal"]:
                 self.eligible = None
                 raise HoldError("validate rejected: FC-19 a differing run_id against a live run")
-            if cand["run"]["run_id"] in self.run_ids:
-                self.eligible = None
-                raise HoldError("validate rejected: FC-19 a reused run_id")
             start = cand["run"].get("start") or {}
             if not cand["run"]["run_id"] or not start.get("character_id") or not start.get("entrance_id"):
                 self.eligible = None
@@ -378,8 +374,6 @@ class Owner:
             return "converged"
         self.C = self.S.pop(txn)
         self.eligible = None
-        if self.C["run"] is not None:
-            self.run_ids.add(self.C["run"]["run_id"])
         self.log.append(("commit", txn, self.C["generation"]))
         return "ok"
 
@@ -482,7 +476,9 @@ def check_boundary(run, state):
     if state["run_id"] is not None and not state["terminal_seen"]:
         fails.append("N5 a new run replaced a live run")
     if run["run_id"] in state["run_ids_seen"]:
-        fails.append("N5 a run_id was reused")
+        # A property of this replay's history, not a durable gate: the aggregate holds one run, so the
+        # contract can only compare a candidate with the committed run_id (HF-07b Transition S validate).
+        fails.append("replay history: a run_id recurred after its run was replaced")
     if run["checkpoint"] is not None or run.get("interruption") is not None:
         fails.append("S a started run carries a checkpoint or an interruption")
     lc = run["lifecycle"]
@@ -799,12 +795,12 @@ def case_c5(o, state, fails, fail_at=None):
     fails.extend(check_invariants(o, state, "C5 after the victory close"))
     rejected = False
     try:
-        o.stage("T15", lambda c: c.__setitem__("run", new_run("run-1", "chr-d", "E0")))
+        o.stage("T15", lambda c: c.__setitem__("run", new_run("run-2", "chr-d", "E0")))
         o.validate("T15")
     except HoldError:
         rejected = True
     if not rejected:
-        fails.append("C5 a closed run's identity was reused by a later run start")
+        fails.append("C5 a run start carrying the committed run_id was admitted")
     o.transition("T16", lambda c: c.__setitem__("run", new_run("run-4", "chr-d", "E0")))
     observe(o, state)
     if not o.restore()["derived_playable"]:
