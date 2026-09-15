@@ -112,7 +112,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-02](BACKLOG.md#hf-02) | 2 | 7 | done | none | HF-02-A1 | EV-0072 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 6 | done | none | HF-05-A1 | EV-0097 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 7 | done | none | HF-08-A1 | EV-0175 |
-| [HF-09](BACKLOG.md#hf-09) | 2 | 7 | done | none | HF-09-A1 | EV-0173 |
+| [HF-09](BACKLOG.md#hf-09) | 2 | 8 | done | none; re-verification trigger fired at EV-0212, revision carried by FR-03 | HF-09-A1 | EV-0212 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 9 | done | none | HF-10-A2 | EV-0183 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 8 | done | none | HF-03b-A1 | EV-0136 |
