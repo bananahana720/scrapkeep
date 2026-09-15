@@ -121,7 +121,7 @@ func replace_encounter(request: ReplaceEncounterRequest) -> TransitionStatus:
 		return TransitionStatus.new(incoming, TransitionStatus.HELD, readiness.diagnostic)
 	control.active_encounter = incoming
 	control.closing_encounter = EncounterIdentity.none()
-	presentation.present_snapshot(encounter.read_initial_snapshot())
+	presentation.present_snapshot(encounter.read_committed_results())
 	_bind_scoped_results(incoming)
 	return resume()
 
@@ -189,6 +189,8 @@ Verified clean worktree `wt/HF-04b` at base `d98803c555bedcd3d68e5d82efafb1a2d0b
 Script SHA256 values at this base: `encounter_coordinator.gd` `12fbe3ffae55cc28e3eb76b5f4c676097dbdfe37aee68e53259496dc2e21e06a`; `encounter_state.gd` `edcaa69aec05a9122f7a8e43f653a94a0a2151a745edb956de16e0e5f1b4b1fc`; `input_adapter.gd` `4cfd73130161089a57e29196bade8c73757cc7c771242c6ab9b631c0fcac86c9`; `intruder.gd` `6acda6f23a8ed6171918fb6ed37d710dea167ab989d46d5e20c157755d26445d`; `menu_probe.gd` `7d977c48f08cf8844b50d61f1dfdb76d27f454d70136ae21fb7c548fbc35461c`; `proof_runner.gd` `26951707b179ac5105d474dbe1a266c730da5fe88bc05c2b3a69eab82d5b6ede`; `session_owner.gd` `0ce10bca17c03e84d8dbabf9a9d07e94f670ce676424a25a95a915e53c71e889`.
 
 Executable paper checks are under `artifacts/local/tasks/HF-04b/` (ignored). Run `python artifacts/local/tasks/HF-04b/check_patterns.py <repository-root>`; it writes `patterns-report.json` beside itself. It confirms every linked source and receipt exists with the hash above, that each script's only commit is the pinned one, that every cited `check` line and receipt line holds the quoted text, that `native/project.godot` carries the six error-level keys and `native-smoke.mjs` carries `discoverProofs` and the fault argument, that every fenced GDScript block in this section carries the unparsed marker, that every `var`, `func` and `for` in those blocks is typed without `:=`, that all four patterns name an HF-03a owner, and that the three non-proof statements are present. The required gate is `npm run check:scope -- d98803c555bedcd3d68e5d82efafb1a2d0bcf31b <candidate> --no-build`, `npm run check:docs` with its report directed into the task directory, and `npm run check:project`. The coordinator reruns them independently and retains the receipts. The writer edited no shared board or index.
+
+Revision in place under FR-01, after the Foundation-full-2026-09-06 closure at EV-0185 (pinned integrated commit `f7ba9665d4f95c6eedffae664c8d0122c65bdeaa`): **RF-1** of the HF-10 foundation review. The scene-lifecycle sketch line that presents the new encounter's first snapshot now calls `read_committed_results`, which HF-03a line 32 lists among Encounter's exposed commands and which HF-03b line 185 (R16) already names for this exact step. The previous name `read_initial_snapshot` was a call across the D01 edge onto a foreign module, so line 82's sketch-local placeholder exemption did not reach it and the catalogue rule at line 21 (a pattern "adds no module, import edge or global") was violated. No other sketch line, no card revision and no question state changed, and every retained HF-04b paper check still exits 0.
 
 ## Evidence limits
 
