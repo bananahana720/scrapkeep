@@ -24,7 +24,7 @@ The game project disables automatic model switching and fallback chains. Runtime
 
 The same settings file makes approval gates mechanical. `permissions.deny` blocks force pushes, `npm publish` and `gh repo delete`; `permissions.ask` prompts for `git push`, `gh repo`, `gh api`, `npm install`, `npm i` and `npm uninstall`. The coordinator pushes reviewed work and answers the prompt; `npm ci` from the lockfile stays unrestricted.
 
-Codex retains its existing Astra role map. Both maps live under `/home/andrew/.config/pstack/models/`. A prompt does not set runtime model/effort. Verify actual metadata; report unavailable capabilities or substitutions before accepting a lane. This policy does not promise the model used by every internal utility request.
+Codex retains its existing Astra role map. Six matching Codex role files under `.codex/agents/` carry the same names, descriptions and packet instructions with a `model_reasoning_effort` pin for Codex desktop sessions. Both maps live under `/home/andrew/.config/pstack/models/`. A prompt does not set runtime model/effort. Verify actual metadata; report unavailable capabilities or substitutions before accepting a lane. This policy does not promise the model used by every internal utility request.
 
 Writers no longer self-isolate. The coordinator creates each writer's worktree at the recorded base with `scripts/new-worktree.sh <task-id> <base-sha>`, which exits nonzero when HEAD differs, and names the path, branch and base SHA in the packet. The writer's first command verifies that identity and stops on a mismatch. Never import all uncommitted owner changes as a shortcut. Preserve leases across interruptions until the owner is confirmed stopped and its artifacts inspected.
 
