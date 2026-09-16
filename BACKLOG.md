@@ -3111,7 +3111,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Generator implementation, authored layouts and terrain kits
 
-**Evidence needed to close:** Andrew selects the initial technique and bounded content set against clearance, readable encounters and replay variety. Fixed historical pocket sequences are not inherited.
+**Evidence needed to close:** Andrew selects the initial technique and bounded content set against clearance, readable encounters and replay variety. Fixed historical pocket sequences are not inherited. Partial answer recorded (16 September 2026, TRACKING EV-0275): the five candidate worlds of the Bible's area catalogue are the launch run-region set; with a fixed start (Q-P12) every run visits four of the five and skips exactly one. Region ids and per-region content remain with the content cards.
 
 <a id="q-p24"></a>
 
@@ -3139,7 +3139,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Enemy cards, boss phases, attacks, loot and occupational-reference qualification
 
-**Evidence needed to close:** A bounded named roster and accepted attack/defense grammar are recorded. One implemented Pruner arm does not select the complete Grand Pruner or historical build order.
+**Evidence needed to close:** A bounded named roster and accepted attack/defense grammar are recorded. One implemented Pruner arm does not select the complete Grand Pruner or historical build order. Partial answer recorded (16 September 2026, TRACKING EV-0275): the five candidate worlds of the Bible's area catalogue are the launch run-region set; with a fixed start (Q-P12) every run visits four of the five and skips exactly one. Region ids and per-region content remain with the content cards.
 
 <a id="q-p26"></a>
 
