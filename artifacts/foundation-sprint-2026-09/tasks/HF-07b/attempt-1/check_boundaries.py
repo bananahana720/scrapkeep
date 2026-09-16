@@ -54,9 +54,9 @@ REVIVAL_POLICIES = ["R1", "R2", "R3"]
 
 # Declared dependency bytes. The section states each of these; the check confirms the files match.
 DECLARED_SHA = {
-    HF07A_MD: "b175783f17cc3a8db516b4a194958d9e408554cbca222b27dc7cb81288d13bd1",
-    HF07A_CSV: "206f6aeaf4068240a297bd378be84663cbc91b3937236421ea8e2b0c7edd0bde",
-    HF04A_MD: "7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb",
+    HF07A_MD: "2a64198c34a7d67ea7b4781982598360689eeeef02ac5e6c2bce6bc7739088a9",
+    HF07A_CSV: "8569b0ddac201ed274da3ab03be33d9ebe07487d17f7d5e2591e1271c0c4eb63",
+    HF04A_MD: "cca7c341b0a163b0010e47c948af3d749e74c9a7fb61f475a3d332824215f91a",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
 }
 
@@ -114,8 +114,8 @@ CITATIONS = [
     (HF07A_MD, 104, "Reserved for the unfinished-level interruption rule"),
     (HF07A_MD, 174, "revival_spent"),
     (HF07A_MD, 175, "terminal"),
-    (HF07A_MD, 191, "exactly six keys"),
-    (HF07A_MD, 204, "HF-07b"),
+    (HF07A_MD, 192, "exactly six keys"),
+    (HF07A_MD, 205, "HF-07b"),
     ("docs/tech/sections/HF-03a-module-map.md", 45, "RunState"),
     ("docs/tech/sections/HF-03a-module-map.md", 49, "SaveTransactionState"),
     ("docs/tech/sections/HF-03a-module-map.md", 58, "takes precedence"),
@@ -1001,14 +1001,31 @@ def main():
         check.record("invariant %s present" % n, ("| %s |" % n) in text)
     for p in INTERRUPTION_POLICIES + REVIVAL_POLICIES:
         check.record("policy %s present" % p, ("| %s |" % p) in text)
-    check.record("candidates labelled pending Q-P16", "pending Q-P16" in text)
-    check.record("Q-E09 kept unanswered", "adopts neither it nor any other proposal" in text)
-    # "when Q-P16 is answered" in the re-verification triggers is a trigger, not an adoption; exclude it.
-    adoption = re.findall(r"(?<!when )Q-(?:E09|P16) is (?:now )?answered|this section adopts (?:the|answer)", text)
-    check.record("no adopted answer language", not adoption, "%s" % adoption[:3])
+    # FR-05 re-pins the three labelling checks: Q-P16, Q-P39 and Q-E09 are resolved at TRACKING
+    # EV-0247 and EV-0250, so the section must now carry the adopted answers explicitly and mark the
+    # candidates it rejected as retained history. The strictness is unchanged; the expected strings are.
+    for adopted in ("| P1 |", "| R2 |"):
+        row = [l for l in lines if l.startswith(adopted)]
+        check.record("policy %s marked adopted" % adopted.strip("| "),
+                     bool(row) and "**Adopted**" in row[0], row[:1])
+    for rejected in ("| P2 |", "| P3 |", "| P4 |", "| R1 |", "| R3 |"):
+        row = [l for l in lines if l.startswith(rejected)]
+        check.record("policy %s marked rejected and retained" % rejected.strip("| "),
+                     bool(row) and "Rejected, retained as history" in row[0], row[:1])
+    check.record("Q-E09 adopted rule stated", "commit only at the next durable transition" in text
+                 and "no immediate discovery transition" in text)
+    check.record("Q-P39 abandonment ordering stated",
+                 "two transactions and two generations" in text
+                 and "no candidate may both close a run and start another" in text)
+    # No question that is still open may be answered here: Q-P32's bounds and the revival health value
+    # in particular. The three resolved answers are required above rather than forbidden.
+    open_answer = re.findall(r"Q-(?:P32|P12|P14|P15|P37) is (?:now )?(?:answered|resolved)"
+                             r"|this section sets the (?:bound|health value)"
+                             r"|the revival health value is \d", text)
+    check.record("no answer to a question that is still open", not open_answer, "%s" % open_answer[:3])
 
     # 6. the invariant-by-policy matrix has a filled cell for every invariant and policy column
-    m_start = text.find("### The invariants under every candidate policy")
+    m_start = text.find("### The invariants under the adopted policy and every candidate it replaced")
     m_end = text.find("### Two decisions this card owns")
     matrix = text[m_start:m_end] if m_start > 0 and m_end > m_start else ""
     for n in INVARIANTS:
@@ -1045,7 +1062,7 @@ def main():
     with csv_path.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             known.add(row["field"])
-    check.record("HF-07a CSV holds 69 fields", len(known) == 69, "found %d" % len(known))
+    check.record("HF-07a CSV holds 70 fields", len(known) == 70, "found %d" % len(known))
     # The disclaimer sentence is excluded from the resolution check and checked separately below.
     disclaimer_line = next((l for l in lines if DISCLAIMER in l), "")
     check.record("section disclaims the three unrowed containers", bool(disclaimer_line))

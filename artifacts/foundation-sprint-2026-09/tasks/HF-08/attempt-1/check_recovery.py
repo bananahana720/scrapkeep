@@ -20,9 +20,9 @@ import sys
 SECTION = "docs/tech/sections/HF-08-save-recovery.md"
 RECEIPT = "artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess-os.txt"
 DEPS = {
-    "docs/tech/sections/HF-07a-save-envelope.md": "b175783f17cc3a8db516b4a194958d9e408554cbca222b27dc7cb81288d13bd1",
-    "docs/tech/sections/HF-07a-save-envelope.csv": "206f6aeaf4068240a297bd378be84663cbc91b3937236421ea8e2b0c7edd0bde",
-    "docs/tech/sections/HF-07b-commit-boundaries.md": "1f83d7de5822ddca55b6aa3d418e9577e636cf0846d31b9b2475a15d6360e781",
+    "docs/tech/sections/HF-07a-save-envelope.md": "2a64198c34a7d67ea7b4781982598360689eeeef02ac5e6c2bce6bc7739088a9",
+    "docs/tech/sections/HF-07a-save-envelope.csv": "8569b0ddac201ed274da3ab03be33d9ebe07487d17f7d5e2591e1271c0c4eb63",
+    "docs/tech/sections/HF-07b-commit-boundaries.md": "2442df053e76fbbe525693e80ff5b7e16e0a7789fa9713412a5bf31b05c03972",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     RECEIPT: "2697c931d49c4375247467e00d4bfcc661de1e71c7d1a6ad24e6319615e7291a",
 }
@@ -230,7 +230,7 @@ def run_document_checks(root, text, mutate=None):
              or t in {"schema_version", "content_revision", "generation", "transaction_id"}}
     unknown = sorted(n for n in named if n not in csv_fields)
     sub("parity.every_named_field_in_hf07a_csv", not unknown, f"unknown: {unknown}")
-    sub("parity.csv_field_count", len(csv_fields) == 69, f"{len(csv_fields)} fields")
+    sub("parity.csv_field_count", len(csv_fields) == 70, f"{len(csv_fields)} fields")
 
     # 9. prohibitions, over the contract itself rather than the procedure prose that
     # names the tokens this check refuses
@@ -241,8 +241,12 @@ def run_document_checks(root, text, mutate=None):
     sub("prohibition.no_rejected_envelope_key", not present, f"{present}")
     adopts = re.compile(r"this section (adopts|selects|chooses) (P[1-4]|R[1-3])\b", re.I)
     sub("questions.no_adopted_candidate", not adopts.search(body), "")
-    sub("questions.disclaimers_present",
-        "no candidate is adopted" in body and "No proposal recorded" in body, "")
+    # FR-05: Q-P16, Q-P39 and Q-E09 are resolved (TRACKING EV-0247, EV-0250), so this section must state
+    # the answers it reads rather than a disclaimer that no answer exists. Same strictness, new strings.
+    sub("questions.resolved_readings_present",
+        "interruption policy P1 with revival policy R2" in body
+        and "abandoning a live run is a defeat" in body
+        and "only at the next durable transition" in body, "")
 
     # 10. receipt citations resolve and carry the API they are cited for
     receipt_lines = read(root, RECEIPT).splitlines()
@@ -289,14 +293,14 @@ def run_document_checks(root, text, mutate=None):
         ("docs/tech/sections/HF-07b-commit-boundaries.md", 99, "durability is unknown"),
         ("docs/tech/sections/HF-07b-commit-boundaries.md", 110, "before another playable state"),
         ("docs/tech/sections/HF-07b-commit-boundaries.md", 116, "admission rule"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 169, "no durable trace"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 171, "not a gameplay commit"),
-        ("docs/tech/sections/HF-07b-commit-boundaries.md", 298, "HF-08"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 173, "no durable trace"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 175, "not a gameplay commit"),
+        ("docs/tech/sections/HF-07b-commit-boundaries.md", 307, "HF-08"),
         ("docs/tech/sections/HF-07a-save-envelope.md", 56, "never treated as a default"),
         ("docs/tech/sections/HF-07a-save-envelope.md", 176, "won"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 191, "exactly six keys"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 201, "backup pointer"),
-        ("docs/tech/sections/HF-07a-save-envelope.md", 204, "HF-08"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 192, "exactly six keys"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 202, "backup pointer"),
+        ("docs/tech/sections/HF-07a-save-envelope.md", 205, "HF-08"),
         ("docs/tech/sections/HF-03a-module-map.md", 35, "RecoveryDiagnostic"),
         ("docs/tech/sections/HF-03a-module-map.md", 49, "preserved-source references"),
         ("docs/tech/sections/HF-03a-module-map.md", 51, "consumed as a snapshot"),
