@@ -33,6 +33,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [TH-10: Devices and one main companion](TH-10-devices-and-one-main-companion.md).
 - [TH-11: Runs, regions, exits and saves](TH-11-runs-regions-exits-and-saves.md).
 - [TH-13: Chaos outcome commitment](TH-13-chaos-outcomes.md).
+- [TH-14: Randomness and generated-level interfaces](TH-14-randomness-generation.md).
 - [TH-15: Collision queries and physical-world qualification](TH-15-physics-query-contract.md).
 
 ## Scenarios

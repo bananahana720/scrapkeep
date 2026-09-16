@@ -339,7 +339,7 @@ def apply_control(text, name):
         return text.replace(marker, injected + marker, 1)
     if name == "gated-value":
         return text.replace(
-            "| GP-09 | Generation technique | unset; seeded authored assembly",
+            "| GP-09 | Generation technique | unset; neither seeded authored assembly",
             "| GP-09 | Generation technique | seeded authored assembly",
             1,
         )
