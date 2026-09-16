@@ -152,7 +152,7 @@ Every row names one HF-03a command, published result or owned record on one HF-0
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | UI-01 | Read the player's action request and the focus or modal notification before routing either | Session to InputAdapter | D05 | `ActionRequest`, `FocusOrModalRequest` | F-PROCESS | RL2 for an action request; any state for a focus or modal request | TH-01 IF-35 line 108; HF-03b line 31 |
 | UI-02 | Handle focus or a modal change | Session | local | `handle_focus_or_modal_change` | F-CONTROL | any ticking state | TH-01 IF-31 line 104; HF-04a line 92 |
-| UI-03 | Release held physical input and set the input context, O1 | Session to InputAdapter | D05 | `clear_physical_input`, `set_input_context` | F-CONTROL | RL2 to RL8 | HF-04a lines 87, 90; HF-03b line 31 |
+| UI-03 | Release held physical input and set the input context, O1 | Session to InputAdapter | D05 | `clear_physical_input`, `set_input_context` | F-CONTROL | RL2, RL3, RL7 and RL8 | HF-04a lines 87, 90; HF-03b line 31 |
 | UI-04 | Cancel uncommitted preparation, O2 | Session to Encounter | D01 | `cancel_prepared` | F-CONTROL | RL3, RL7, RL8 and the RL2 exit to a modal (TH-01 IF-15 line 88 names RL3, RL7, RL8 and EC-1; HF-04a line 92 adds the modal exit) | HF-04a line 88; HF-03b line 27 |
 | UI-05 | Solo pause and resume, O3 and O4 | Session | local | `request_pause`, `resume` | F-CONTROL | RL2 to RL8 | HF-04a lines 89, 90; TH-01 IF-16 line 89 |
 | UI-06 | Read the encounter's identified committed results and the provisional preview beside them | Session to Encounter | D01 | `read_committed_results`; `EncounterSnapshot`, `CommittedAttack`, `EncounterResult`, `AimPreview` | F-PROCESS | RL2, RL3, RL7, RL8 | TH-01 IF-17 line 90; HF-03b line 27 |
