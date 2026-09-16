@@ -3027,7 +3027,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Revival presentation, run checkpoint behavior and interrupted-level recovery
 
-**Evidence needed to close:** Health, placement and interrupted-level policy are recorded without replenishing spent revival or duplicating rewards. Completed-level resume remains the next entrance. Recorded answer (16 September 2026, TRACKING EV-0247): interruption policy P1, resume at the last completed level; mid-level progress is lost and the run resumes at `run.checkpoint.next_entrance`, `run.interruption` stays null in every committed document. Revival policy R2, revive in place with a named health value left to tuning. Protocol half carried by FR-05; the tuning value stays a parameter row.
+**Evidence needed to close:** Health, placement and interrupted-level policy are recorded without replenishing spent revival or duplicating rewards. Completed-level resume remains the next entrance. Recorded answer (16 September 2026, TRACKING EV-0247): interruption policy P1, resume at the last completed level; mid-level progress is lost and the run resumes at `run.checkpoint.next_entrance`, `run.interruption` stays null in every committed document. Revival policy R2, revive in place with a named health value left to tuning. Confirmed (17 September 2026, TRACKING EV-0300): an equipment swap made at the intermission is lost with an interrupted level, since the intermission stages nothing and the swap commits with the next level completion (TH-08 EO-12, EX-12). Protocol half carried by FR-05; the tuning value stays a parameter row.
 
 <a id="q-p17"></a>
 
