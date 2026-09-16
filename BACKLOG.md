@@ -3049,7 +3049,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Source:** [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression)
 
-**Missing information:** What grants respec access, how often can it occur, which branches can change, and what refund and presentation rules apply?
+**Missing information:** What grants respec access, how often can it occur, which branches can change, and what refund and presentation rules apply? Scope recorded (17 September 2026, TRACKING EV-0314): a slot's tree is fixed for the character (BIBLE, four character-specific trees), so a respec changes node selections within the slot's tree and never the tree itself; TH-07 PR-05 and PX-20 read it that way.
 
 **Decision owner:** Andrew
 
