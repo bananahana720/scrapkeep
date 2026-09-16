@@ -64,7 +64,7 @@ HF06B_GROUPS = [
 ]
 LOCAL_GROUPS = ["envelope", "container", "reserved"]
 
-QUESTIONS = {"Q-E09", "Q-P14", "Q-P15", "Q-P16"}
+QUESTIONS = {"Q-E09", "Q-P14", "Q-P15", "Q-P16", "Q-P32"}  # FR-05: preferences.reduced_motion carries Q-P32 for its bound
 CARD_QUESTIONS = {"Q-E09", "Q-P16"}
 
 ENVELOPE_KEYS = ["schema_version", "content_revision", "generation", "transaction_id", "profile", "run"]
@@ -96,16 +96,16 @@ GAMEPLAY_TERM = re.compile(r"character|item|tree|recipe|unlock|region|device|com
 
 EXPECTED = {
     "base": "5f459b0407dce4fbb060a1a8421a00fb8bb5e0c1",
-    "hf06b_md_sha256": "9ae0481990ebeb71d49be4a3d09d84a9cfc9bd85ca7cce5595ab6dcc2fe869ce",
-    "hf06b_csv_sha256": "8ba1476b42ad206eea09bc6ea411a5f297afdcb1f4d596cdf686b4afdf8cec15",
+    "hf06b_md_sha256": "83f6e4ba248518d1979e1428ace02ec99fea202722ab6aa0bab531f766094014",
+    "hf06b_csv_sha256": "b42918083688be02511496932e20db19305e7407dc785d740b4e0fedf6779a48",
     "hf03a_sha256": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     "s0_07_run_normal_sha256": "f2b0d512b806f43c07bd49a1775a84a2ac7109b0c3465a79c37c68764f33d28c",
     "s0_07_run_exit_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
     "card_lines": (466, 495),
     "card_sha256": "35255efcf54d49ec92d1e2395c1c349d488cb0836ee8d79ffb98e476e9f0e157",
-    "field_count": 69,
+    "field_count": 70,
     "group_counts": {"envelope": 6, "profile": 3, "run-identity": 5, "run-start": 5,
-                     "checkpoint": 42, "lifecycle": 3, "preferences": 5},
+                     "checkpoint": 42, "lifecycle": 3, "preferences": 6},
     "d26_line": 49,
     "d27_line": 50,
     "hf06b_rule4_line": 34,
