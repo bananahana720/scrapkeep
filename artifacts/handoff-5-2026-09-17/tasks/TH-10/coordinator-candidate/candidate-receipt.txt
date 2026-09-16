@@ -1,0 +1,4 @@
+ .../TH-10-devices-and-one-main-companion.md        | 472 +++++++++++++++++++++
+ 1 file changed, 472 insertions(+)
+abc69db941441c124209eba88047f84b95285a54fd31a4fa7ec4a17242ceb5c1  docs/tech/sections/TH-10-devices-and-one-main-companion.md
+coordinator rerun at 20e3e9771d71b79b3433385b07084b539dbcac2b, 2026-09-17T10:05Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (23 sections); check:project exit 0; check:drift exit 0 (23 sections, 148 hashes); check_contract.py (writer paper check, rerun from a coordinator copy) exit 0 PASS, 3/3 controls.
