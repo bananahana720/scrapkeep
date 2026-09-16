@@ -272,7 +272,7 @@ Every row carries either a source line or a question ID. `unset` means no cited 
 | XT-26 | Impact response, shake, overlap priority and reduced motion for a miscast | unset | Q-P32; BIBLE lines 495, 731 | XA-13 |
 | XT-27 | First production character, whether the chaos magician is it, and the fixtures or native slice that could execute anything above | unset | Q-P06; Q-P23; Q-E01 | Any implementation or execution of this contract |
 
-Two further facts an outcome may touch are named and not chosen here: which facts create a permanent discovery is unset under Q-P37 and when a discovery fact becomes durable is unset under Q-E09. Neither is a chaos rule; a cast reaches the profile only through the accepted encounter result (XA-11).
+Two further facts an outcome may touch are named and not chosen here: which facts create a permanent discovery is unset under Q-P37, and a discovery fact becomes durable at the next durable transition A, C, D or S (the Q-E09 answer at TRACKING EV-0250; HF-07b line 139). Neither is a chaos rule; a cast reaches the profile only through the accepted encounter result (XA-11).
 
 ### Seams stated and not decided
 
@@ -282,7 +282,7 @@ Two further facts an outcome may touch are named and not chosen here: which fact
 
 **Seam 3: the run's consequences, to TH-01 and HF-07b.** A lethal or otherwise consequential outcome settles nothing inside the encounter. RL7's revival hold, RL8's terminal settlement and HF-07b's Transitions C and D own everything after the publication, and this section names them without performing them (XH-05, XI-27).
 
-**Seam 4: the concurrent cards.** [TH-07](../../../BACKLOG.md#th-07) and [TH-09](../../../BACKLOG.md#th-09) are being written in other worktrees and neither is admitted, so no byte of either is cited. Two boundaries hold under whatever they specify. A progression or respec change reaches a chaos cast only as a rebuilt capability set installed at Session's authorized boundary, and a commitment already made keeps its descriptor and its outcome across that install (XE-09). A loot or fixed-recipe result is a run-level fact settled from an accepted encounter result and is never a second draw inside a commitment; if a recipe or attunement bonus changes what an outcome applies, it arrives as values in the installed build and changes no rule above (XA-11, XE-09).
+**Seam 4: the concurrent cards.** [TH-07](../../../BACKLOG.md#th-07) and [TH-09](../../../BACKLOG.md#th-09) were written in other worktrees and admitted later (TRACKING EV-0315, EV-0324); no byte of either is cited. Rechecked at the Handoff-5 closure integrated read (TRACKING EV-0325) against the admitted bytes with no change needed. Two boundaries hold under whatever they specify. A progression or respec change reaches a chaos cast only as a rebuilt capability set installed at Session's authorized boundary, and a commitment already made keeps its descriptor and its outcome across that install (XE-09). A loot drop is a run-level fact settled once from an accepted encounter result, a fixed-recipe result is a rebuild output that is never settled or committed, and neither is a second draw inside a commitment; if a recipe or attunement bonus changes what an outcome applies, it arrives as values in the installed build and changes no rule above (XA-11, XE-09).
 
 ## Scenarios
 
