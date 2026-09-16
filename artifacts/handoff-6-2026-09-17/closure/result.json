@@ -4,18 +4,7 @@
   "closureKey": "3a2b7215d756281ff7045ab9d8dc5f02a6c27c44d87a1569e547728c2a7b6207",
   "sprintId": "handoff-6-2026-09-17",
   "integratedCommit": "9229f83ed87687e53710cc47bbbcb9810aecf52c",
-  "outcome": "pending_evidence",
-  "issues": [
-    {
-      "outcome": "pending_evidence",
-      "field": "integratedCommit",
-      "message": "checkout HEAD differs from tested commit"
-    },
-    {
-      "outcome": "pending_evidence",
-      "field": "worktree",
-      "message": "tracked worktree is dirty"
-    }
-  ],
+  "outcome": "passed",
+  "issues": [],
   "limits": "Checks receipt structure, local evidence bytes, commit identity, and recorded authority. Does not authenticate statements, discover omitted tasks/amendments, execute gates, or mutate canonical records."
 }
