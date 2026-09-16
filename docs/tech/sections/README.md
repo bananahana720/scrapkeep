@@ -26,6 +26,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [TH-03: A committed attack means what it shows](TH-03-a-committed-attack-means-what-it-shows.md).
 - [TH-04: Abilities, ultimates and combat rhythm](TH-04-abilities-ultimates-and-combat-rhythm.md).
 - [TH-05: Electromagnetic collection, recycling and growth](TH-05-electromagnetic-collection-recycling-and-growth.md).
+- [TH-06: Encounters, waves and enemies](TH-06-encounters-waves-and-enemies.md).
 - [TH-11: Runs, regions, exits and saves](TH-11-runs-regions-exits-and-saves.md).
 
 ## Scenarios
