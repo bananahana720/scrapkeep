@@ -47,15 +47,15 @@ def sha256(path: Path) -> str:
 
 DEPENDENCY_HASHES = {
     "docs/tech/sections/HF-06b-persistence-projection.md":
-        "9ae0481990ebeb71d49be4a3d09d84a9cfc9bd85ca7cce5595ab6dcc2fe869ce",
+        "83f6e4ba248518d1979e1428ace02ec99fea202722ab6aa0bab531f766094014",
     "docs/tech/sections/HF-06b-persistence-projection.csv":
-        "8ba1476b42ad206eea09bc6ea411a5f297afdcb1f4d596cdf686b4afdf8cec15",
+        "b42918083688be02511496932e20db19305e7407dc785d740b4e0fedf6779a48",
     "docs/tech/sections/HF-07a-save-envelope.md":
-        "b175783f17cc3a8db516b4a194958d9e408554cbca222b27dc7cb81288d13bd1",
+        "267a5880e27e66436d31a669776b73ac502be73409a78e17084c89d8d9a61e8d",
     "docs/tech/sections/HF-07a-save-envelope.csv":
-        "206f6aeaf4068240a297bd378be84663cbc91b3937236421ea8e2b0c7edd0bde",
+        "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
     "docs/tech/sections/HF-07b-commit-boundaries.md":
-        "1f83d7de5822ddca55b6aa3d418e9577e636cf0846d31b9b2475a15d6360e781",
+        "0bcf60022ee4ef7c42f39f3714fd7947a1b7375f6ddf5be5f0d94c5c5940ae91",
     "docs/tech/sections/HF-05-content-admission.md":
         "7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6",
 }
@@ -171,16 +171,16 @@ CITED_LINES = [
     ("docs/tech/sections/HF-07a-save-envelope.md", 176, "the enumerated string won or lost and no other value"),
     ("docs/tech/sections/HF-07a-save-envelope.md", 184, "preferences can migrate without touching gameplay progress"),
     ("docs/tech/sections/HF-07a-save-envelope.md", 188, "impact_shake"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 191, "exactly six keys"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 193, "Rejected envelope field"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 198, "`playable` flag"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 200, "second copy could disagree with the first"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 201, "migration marker, backup pointer or recovery status"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 202, "A results-screen, reward or presentation key for a won run"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 204, "no `generation` or `transaction_id`"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 272, "migration remain HF-09's"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 276, "trigger in card item 1 is consumed above by source review"),
-    ("docs/tech/sections/HF-07a-save-envelope.md", 280, "requires an amendment rather than a silent addition"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 192, "exactly six keys"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 194, "Rejected envelope field"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 199, "`playable` flag"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 201, "second copy could disagree with the first"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 202, "migration marker, backup pointer or recovery status"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 203, "A results-screen, reward or presentation key for a won run"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 205, "no `generation` or `transaction_id`"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 273, "migration remain HF-09's"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 277, "trigger in card item 1 is consumed above by source review"),
+    ("docs/tech/sections/HF-07a-save-envelope.md", 281, "requires an amendment rather than a silent addition"),
     # HF-07b
     ("docs/tech/sections/HF-07b-commit-boundaries.md", 27, "not durable and is never read as gameplay state"),
     ("docs/tech/sections/HF-07b-commit-boundaries.md", 35, "same four stages in this order"),
@@ -196,16 +196,16 @@ CITED_LINES = [
     ("docs/tech/sections/HF-07b-commit-boundaries.md", 103, "### Transition D: terminal settlement"),
     ("docs/tech/sections/HF-07b-commit-boundaries.md", 112, "### Transition S: run start"),
     ("docs/tech/sections/HF-07b-commit-boundaries.md", 116, "admitted only when the committed `run` is null or the committed `run.lifecycle.terminal` is true"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 127, "| N1 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 128, "| N2 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 129, "| N3 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 130, "| N4 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 131, "| N5 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 132, "| N6 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 133, "| N7 |"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 169, "Acknowledgement leaves no durable trace"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 171, "A preferences write is not a gameplay commit"),
-    ("docs/tech/sections/HF-07b-commit-boundaries.md", 298, "Versioning and migration are"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 129, "| N1 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 130, "| N2 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 131, "| N3 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 132, "| N4 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 133, "| N5 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 134, "| N6 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 135, "| N7 |"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 173, "Acknowledgement leaves no durable trace"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 175, "A preferences write is not a gameplay commit"),
+    ("docs/tech/sections/HF-07b-commit-boundaries.md", 307, "Versioning and migration are"),
     # S0-07 and S0-08
     ("docs/tech/proofs/S0-07-save-owner.md", 39, "`validate(temp_path) -> Error`"),
     ("docs/tech/proofs/S0-07-save-owner.md", 40, "`commit(temp_path) -> Error`"),
@@ -378,7 +378,7 @@ def structural_checks(root: Path, text: str) -> None:
     csv_path = root / "docs/tech/sections/HF-07a-save-envelope.csv"
     with csv_path.open(newline="", encoding="utf-8") as fh:
         fields = {row["field"] for row in csv.DictReader(fh)}
-    check("hf07a.csv.sixty_nine_fields", len(fields) == 69, "%d fields" % len(fields))
+    check("hf07a.csv.seventy_fields", len(fields) == 70, "%d fields" % len(fields))
 
     mentioned = set(re.findall(r"`((?:run|profile|preferences)\.[A-Za-z0-9_.\[\]]*[A-Za-z0-9_\]])`", text))
     unknown = sorted(f for f in mentioned if f not in fields and f not in NON_ROW_CONTAINERS)
@@ -398,7 +398,7 @@ def structural_checks(root: Path, text: str) -> None:
     # Rejected envelope keys appear only where HF-07a's rejection is cited.
     for phrase in REJECTED_KEY_PHRASES:
         bad = [ln for ln in lines
-               if phrase in ln and "193 to 202" not in ln and "line 198" not in ln]
+               if phrase in ln and "194 to 203" not in ln and "line 199" not in ln]
         check("envelope.rejected_key.%s" % phrase.replace(" ", "_"), not bad,
               "unguarded mention: %r" % (bad[:1],))
     check("envelope.six_keys", "exactly six keys" in text)
