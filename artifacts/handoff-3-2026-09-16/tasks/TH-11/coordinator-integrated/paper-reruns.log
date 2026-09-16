@@ -1,0 +1,5 @@
+TH-01 check_loop EXIT=0
+TH-02 check_movement EXIT=0
+TH-03 check_attack EXIT=0
+TH-05 check_collection EXIT=1
+TH-11 check_routing EXIT=1

@@ -25,6 +25,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [TH-02: Movement, camera and active aim](TH-02-movement-camera-and-active-aim.md).
 - [TH-03: A committed attack means what it shows](TH-03-a-committed-attack-means-what-it-shows.md).
 - [TH-05: Electromagnetic collection, recycling and growth](TH-05-electromagnetic-collection-recycling-and-growth.md).
+- [TH-11: Runs, regions, exits and saves](TH-11-runs-regions-exits-and-saves.md).
 
 ## Scenarios
 
