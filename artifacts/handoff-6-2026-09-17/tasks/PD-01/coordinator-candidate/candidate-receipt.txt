@@ -1,0 +1,3 @@
+ docs/product/sections/PD-01-art-acceptance.md | 191 ++++++++++++++++++++++++++
+ 1 file changed, 191 insertions(+)
+458233645e895a4b55c5f1a172d44ca49e0ab0a446764d6314d3d4f557d61f5b  docs/product/sections/PD-01-art-acceptance.md
