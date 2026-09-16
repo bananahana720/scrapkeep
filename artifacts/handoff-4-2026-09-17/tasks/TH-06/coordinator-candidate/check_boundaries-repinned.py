@@ -54,8 +54,8 @@ REVIVAL_POLICIES = ["R1", "R2", "R3"]
 
 # Declared dependency bytes. The section states each of these; the check confirms the files match.
 DECLARED_SHA = {
-    HF07A_MD: "dfcd6a98d2fe8d07f69ff5bb336f563192604ad383a106b05902d9a60ea87d06",
-    HF07A_CSV: "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
+    HF07A_MD: "4c37b7b32197642e1a312758449b8ebede05d3a0788e92b74a6a9f95ed97c010",
+    HF07A_CSV: "1c553120d0988bfbf3d5644946904fb603b3a3617091764ce170eb1cbb798b00",
     HF04A_MD: "e0058ee153804188424a753f1d4af8a3dc9fee4b45e7c82bc6625df7f80fe43d",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
 }

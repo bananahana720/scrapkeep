@@ -4,3 +4,4 @@ Admitted product documentation sections, one per prepare-stage design card, writ
 
 - [PD-01: Production art acceptance brief](PD-01-art-acceptance.md).
 - [PD-02: Production interface states and acceptance](PD-02-interface-states.md).
+- [PD-03: Sound and feel event brief](PD-03-sound-feel-events.md).

@@ -20,9 +20,9 @@ import sys
 SECTION = "docs/tech/sections/HF-08-save-recovery.md"
 RECEIPT = "artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess-os.txt"
 DEPS = {
-    "docs/tech/sections/HF-07a-save-envelope.md": "dfcd6a98d2fe8d07f69ff5bb336f563192604ad383a106b05902d9a60ea87d06",
-    "docs/tech/sections/HF-07a-save-envelope.csv": "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
-    "docs/tech/sections/HF-07b-commit-boundaries.md": "7c8e9edf4833560c7312a20cf82123915813610fcd175c9eba733b5669ce76da",
+    "docs/tech/sections/HF-07a-save-envelope.md": "4c37b7b32197642e1a312758449b8ebede05d3a0788e92b74a6a9f95ed97c010",
+    "docs/tech/sections/HF-07a-save-envelope.csv": "1c553120d0988bfbf3d5644946904fb603b3a3617091764ce170eb1cbb798b00",
+    "docs/tech/sections/HF-07b-commit-boundaries.md": "b1b88c2922d56eb7d9f9b581f387e8eb6aeb148d12ff23f4de4c53ba5d929122",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     RECEIPT: "2697c931d49c4375247467e00d4bfcc661de1e71c7d1a6ad24e6319615e7291a",
 }
