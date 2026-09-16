@@ -13,9 +13,8 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 ## Navigation
 
 - [Proposed first sprint](#proposed-first-sprint)
-- [Task catalogue](#task-catalogue) and individual cards
+- [Task catalogue](#task-catalogue) and individual cards, including the [asset production cards](#asset-production-cards-16-september-2026)
 - [Open questions](#open-questions)
-- [Asset production cards](#asset-production-cards-16-september-2026)
 - [Source dispositions and inventory](docs/project/SOURCE-DISPOSITIONS.md)
 
 ## Task contract
@@ -1761,7 +1760,6 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - `docs/tech/schemas/SC-07.md` from [SC-07](#sc-07) (must be admitted before assignment)
 - `docs/tech/schemas/SC-08.md` from [SC-08](#sc-08) (must be admitted before assignment)
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
-- `artifacts/handoff-8-2026-09-16/closure/integrated-read-R1.md` carried findings B4 (SC-03 rebuild inputs against TH-08 EQ-03 and EP-31), B5 (companion part families across SC-03 `companion_part_ids`, SC-06's three F-07 families, SC-08 Seam 8 and SC-06 line 340's inbound glossary expectation) and B6 as corrected by FR-11; SC-03 review R3 notes 2 and 4 (`id_family` keyed to the proposed `id-string` value; the TH-20 pairing sentence) at `artifacts/handoff-8-2026-09-16/tasks/SC-03/review-R3.md`
 
 **Dependencies:** [HF-06a](#hf-06a), [SC-01](#sc-01), [SC-02](#sc-02), [SC-03](#sc-03), [SC-04](#sc-04), [SC-05](#sc-05), [SC-06](#sc-06), [SC-07](#sc-07), [SC-08](#sc-08). **Blocking questions:** None.
 
@@ -1770,9 +1768,8 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Definition of done:**
 
 1. Produce one index mapping every HF-06 authored row to its admitted SC-01–SC-08 definition and example.
-2. Identify cross-family reference/type conflicts and return corrections to the owning card; do not rewrite all schemas in this card.
+2. Identify cross-family reference/type conflicts, including integrated read findings B4 (SC-03 rebuild inputs against TH-08 EQ-03 and EP-31) and B5 (companion part families across SC-03, SC-06's three F-07 families and SC-08 Seam 8) in `artifacts/handoff-8-2026-09-16/closure/integrated-read-R1.md` and SC-03 review R3 notes 2 and 4 in `artifacts/handoff-8-2026-09-16/tasks/SC-03/review-R3.md`, and return corrections to the owning card, keeping Q-P15-dependent presence clauses gated; do not rewrite all schemas in this card.
 3. Confirm no content type is orphaned and every save projection or explicit exclusion reaches TH-21.
-4. Dispose integrated read findings B4 and B5 and the SC-03 R3 notes named in Sources: return each needed interface or family correction to its owning card, or record why none is needed, keeping Q-P15-dependent presence clauses gated.
 
 **Verification and evidence:**
 
