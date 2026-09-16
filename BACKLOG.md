@@ -2985,7 +2985,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Chaos outcomes, warnings, audio, safety of mobility and kit tuning
 
-**Evidence needed to close:** The pool, eligibility, outcome limits and warning policy are explicit. Directed attacks normally work as intended and no instability meter is inferred.
+**Evidence needed to close:** The pool, eligibility, outcome limits and warning policy are explicit. Directed attacks normally work as intended and no instability meter is inferred. Partial answer recorded (17 September 2026, TRACKING EV-0322): a miscast never changes the previewed danger shape (origin, shape, frame, height band, targets); it changes the outcome and, for a window not declared before resolution, the recovery boundary. TH-03's 'means what it shows' and single-query rules stand; TH-13 XG-06 and XT-15 read it that way. Pool, eligibility, frequency, severity and warnings remain open.
 
 <a id="q-p14"></a>
 
