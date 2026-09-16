@@ -2791,6 +2791,20 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Evidence needed to close:** An explicit command/access and build-packaging contract distinguishes instrumented diagnostics, native input and player-facing evidence while keeping offline scope.
 
+<a id="q-e14"></a>
+
+### Q-E14: Same-tick defeat and completion candidate ordering
+
+**Source:** TH-06 review note 2 (17 September 2026): [docs/tech/sections/TH-06-encounters-waves-and-enemies.md](docs/tech/sections/TH-06-encounters-waves-and-enemies.md) EE-07 and ET-18; [docs/tech/sections/HF-07b-commit-boundaries.md](docs/tech/sections/HF-07b-commit-boundaries.md) Transitions A, C and D (Transition A carries `revival_spent` unchanged and Transition C changes nothing else, so the two facts cannot share one candidate).
+
+**Missing information:** When a lethal hero outcome and an objective completion are published from the same tick, in what order does Session stage the resulting HF-07b candidates, and what does a crash between the two leave in the save? The product half is answered: defeat wins (Q-P38 partial answer, TRACKING EV-0296), so the lethal side's Transition C or D is settled before any completion candidate and the completion counts only if the hero is alive after the R2 revive.
+
+**Decision owner:** Runtime with Persistence
+
+**Affected work:** TH-06 EE-07 and ET-18; HF-07b's transition catalogue; TH-01 RL7 and RL8; the future Session implementation
+
+**Evidence needed to close:** HF-07b names the candidate order and the recovery outcome for a crash between the two candidates, and a paper walk shows no checkpoint is earned on a tick the run ended.
+
 <a id="q-p01"></a>
 
 ### Q-P01: Sable construction
