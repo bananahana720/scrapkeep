@@ -31,7 +31,7 @@ Read the active host's pstack model map at assignment time. Codex uses only `gpt
 | Independent review | Read actual candidate/integrated artifacts and report findings | Does not edit the candidate, approve its own work, merge or write the board. |
 | Andrew | Missing product choices, launch scope, human feedback and consequential authorization | Agent success cannot substitute for Andrew's play feedback. |
 
-At most three delegates may run alongside the coordinator. A reviewer consumes one of those slots, leaving at most two writers. Use a lower limit when the host provides fewer slots. Idle or interrupted agents do not regain write authority merely because a slot becomes available. This is a concurrency ceiling, not a requirement to keep every slot busy.
+At most six delegates may run alongside the coordinator: at most four writers and at most two reviewers or read-only explorers (Andrew, TRACKING EV-0367; the earlier ceiling was three delegates with at most two writers). Use a lower limit when the host provides fewer slots. While Fable runs on usage credit, Andrew's EV-0367 routing sends per-card review to `scrapkeep-reviewer-medium` and keeps `scrapkeep-reviewer` for one integrated read per sprint unless he asks for more. Idle or interrupted agents do not regain write authority merely because a slot becomes available. This is a concurrency ceiling, not a requirement to keep every slot busy.
 
 ## Admission and assignment
 
