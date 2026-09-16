@@ -121,7 +121,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-04b](BACKLOG.md#hf-04b) | 2 | 10 | done | none; line 10 hash re-pointed at EV-0270 | HF-04b-A1 | EV-0270 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 6 | done | none | HF-06a-A1 | EV-0146 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 6 | done | none | HF-06b-A1 | EV-0153 |
-| [HF-07a](BACKLOG.md#hf-07a) | 1 | 6 | done | none | HF-07a-A1 | EV-0159 |
+| [HF-07a](BACKLOG.md#hf-07a) | 1 | 7 | done | none | HF-07a-A1 | EV-0345 |
 | [HF-07b](BACKLOG.md#hf-07b) | 1 | 6 | done | none | HF-07b-A1 | EV-0165 |
 | [S0-01](BACKLOG.md#s0-01) | 1 | 1 | done | none | PS-06-A1 | EV-0029 |
 | [S0-02](BACKLOG.md#s0-02) | 1 | 1 | done | none | PS-01-A1 | EV-0029 |
@@ -132,15 +132,15 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [S0-07](BACKLOG.md#s0-07) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
 | [S0-08](BACKLOG.md#s0-08) | 1 | 4 | done | none | PS-06-A1 | EV-0034 |
 | [S0-09](BACKLOG.md#s0-09) | 3 | 12 | done | none | S0-09-A3 | EV-0061 |
-| [PD-01](BACKLOG.md#pd-01) | 1 | 5 | done | none | none | EV-0341 |
-| [PD-02](BACKLOG.md#pd-02) | 1 | 5 | done | none | none | EV-0343 |
+| [PD-01](BACKLOG.md#pd-01) | 1 | 6 | done | none | none | EV-0345 |
+| [PD-02](BACKLOG.md#pd-02) | 1 | 6 | done | none | none | EV-0345 |
 | [PD-03](BACKLOG.md#pd-03) | 1 | 1 | queued | Separate wave admission | none | EV-0002 |
 | [TH-01](BACKLOG.md#th-01) | 1 | 10 | done | none; RL5 and RS.15 corrected to HF-07a route semantics at EV-0280 | TH-01-A1 | EV-0280 |
 | [TH-02](BACKLOG.md#th-02) | 1 | 11 | done | none; MO-03 unlock authority corrected at EV-0284 | TH-02-A2 | EV-0284 |
 | [TH-03](BACKLOG.md#th-03) | 1 | 10 | done | none | TH-03-A2 | EV-0241 |
 | [TH-04](BACKLOG.md#th-04) | 1 | 8 | done | none | none | EV-0303 |
 | [TH-05](BACKLOG.md#th-05) | 1 | 11 | done | none | TH-05-A2 | EV-0271 |
-| [TH-06](BACKLOG.md#th-06) | 1 | 7 | done | none | none | EV-0311 |
+| [TH-06](BACKLOG.md#th-06) | 1 | 8 | done | none | none | EV-0345 |
 | [TH-07](BACKLOG.md#th-07) | 1 | 6 | done | none | none | EV-0325 |
 | [TH-08](BACKLOG.md#th-08) | 1 | 8 | done | none | none | EV-0325 |
 | [TH-09](BACKLOG.md#th-09) | 1 | 8 | done | none | none | EV-0325 |
@@ -151,8 +151,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [FR-06](BACKLOG.md#fr-06) | 1 | 1 | queued | TH-14 | none | EV-0344 |
 | [TH-12](BACKLOG.md#th-12) | 1 | 1 | queued | HF-10, PD-02 | none | EV-0002 |
 | [TH-13](BACKLOG.md#th-13) | 1 | 8 | done | none | none | EV-0337 |
-| [TH-14](BACKLOG.md#th-14) | 1 | 5 | done | none | none | EV-0337 |
-| [TH-15](BACKLOG.md#th-15) | 1 | 5 | done | none | none | EV-0335 |
+| [TH-14](BACKLOG.md#th-14) | 1 | 6 | done | none | none | EV-0345 |
+| [TH-15](BACKLOG.md#th-15) | 1 | 6 | done | none | none | EV-0345 |
 | [TH-16](BACKLOG.md#th-16) | 1 | 1 | queued | TH-03, TH-05, TH-10, PD-01 | none | EV-0002 |
 | [TH-17](BACKLOG.md#th-17) | 1 | 1 | queued | TH-04, TH-12, PD-03 | none | EV-0002 |
 | [TH-18](BACKLOG.md#th-18) | 1 | 2 | queued | HF-04a, TH-02, TH-12 | none | EV-0029 |
@@ -556,6 +556,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0342 | 2026-09-17T20:30:00+00:00 | Independent reviewer / review | PD-02 | Independent review PASS+NOTES, evidence level 2 by the reviewer's scale (every cited line read at the worktree bytes; receipts not rerun), on candidate b576fc180c69cc4be69c85215c1289979cd1d005 by scrapkeep-reviewer (claude-fable-5-1 medium, wrote none of the bytes). All four definition-of-done items counted delivered (6 views, 10 states, 16 IP rows, 14 FP rows, 16 scenarios, 65 steps, 6 display rules, a 12-row transition walk); nineteen citations across TH-01, TH-04, TH-07, TH-08, TH-10, TH-11, HF-04a and HF-03b say what the rows say; every state's basis resolves to HF-07a or a published value except IS-08; one gameplay step and ten navigation steps with submit_action reachable only from the gameplay step; recorded answers read as recorded; prototype evidence historical; nothing Bible or ADR. Six notes: (1) VW-1 listed the RL7 revival hold among the HUD's ends while TH-01 IF-29 releases views at RL3 and RL8 only and RS-S9 resumes the same encounter; (2) VW-6 and RS-V6 admitted a preferences change under a mid-encounter pause while TH-01 IF-32 admits it at RL4 and RL9 only; (3) IS-08's basis named no field; (4) the Q-P30 exposure claim over-reached; (5) HF-07a line 184 is preferences.schema_version; (6) two reload steps classed navigation. Disposition: all six corrected by the coordinator at admission (RL7 holds rather than ends; settings changes admitted at RL4 and RL9 with a mid-encounter view admitting no change and RS-V6 closing to the surface it opened from; IS-08 reads run.lifecycle.revival_spent false; the Q-P30 exposure narrowed to the scenarios that name it; the schema_version line named; reloads classed control as restore_run). |
 | EV-0343 | 2026-09-17T20:40:00+00:00 | Coordinator / integration, completion | PD-02 | PD-02 admitted serially at integrated identity 8eac49b6a7017bfccc7a4782b95d906a5e56a1d2 (no-ff merge of the candidate plus the coordinator's correction commit 98af4e6f0a9a38935a8699192f508f3cdf7d6a89 and the product README line). Section sha256 now 3bad72ef64c3e6e9899d9502d524a89042b42edb49c46d6f624efdcfba8225d3. Integrated checks: check:scope --no-build documentation-only, check:docs exit 0, check:project exit 0, the paper check rerun at the integrated commit exit 0 (3/3 controls; sixteen stated hashes proved by it, product sections being outside check:drift's scan). Receipts under artifacts/handoff-6-2026-09-17/tasks/PD-02/coordinator-candidate/. PD-02 done at card revision 1, record revision 4 to 5; lease PD-02-L1 closed; worktree scrapkeep-wt-PD-02 removed; TH-12's PD-02 dependency satisfied. Dispatch stopped: all four Handoff-6 cards done, zero leases. |
 | EV-0344 | 2026-09-17T21:00:00+00:00 | Coordinator / definition import; Andrew / coordination | FR-06, TL-03 | Andrew's structured answer in the coordinator session on the Handoff-7 composition: 'TH-12, TH-16, FR-06, TL-03', with FR-06 and TL-03 to be defined by the coordinator for his approval at closure. Two cards imported into BACKLOG in the FR-01 field form: FR-06 revision 1 (S, foundation-repair, owner Runtime with Persistence; scope HF-04a line 24's control-drain randomness rule to gameplay randomness per the EV-0336 ruling, and close HF-07b's offer-only generator gap recorded at EV-0337 with a new HF-08 R4 row; depends on TH-14) and TL-03 revision 1 (S, tooling, owner Tooling; widen scripts/check-drift.mjs to docs/product/sections with tests, the README gap sentence and CONTRIBUTING; depends on TL-02). Both queued at record revision 1; neither is authorized by this event. They enter the Handoff-6 closure receipt's next proposal beside TH-12 (PD-02 dependency satisfied at EV-0343) and TH-16 (PD-01 dependency satisfied at EV-0341). |
+| EV-0345 | 2026-09-17T21:40:00+00:00 | Independent reviewer / integrated read; Coordinator / factual corrections | TH-14, TH-15, PD-01, PD-02, TH-06, HF-07a | Integrated read over TH-14, TH-15, PD-01 and PD-02 at 31b0aaab939c693aa96b4495af7fb59375edb899 by scrapkeep-reviewer (claude-fable-5-1 medium, wrote none of the bytes): FAIL, evidence level 1 by the reviewer's scale (static inspection), nine findings, none needing Andrew. F1 the intermission order differed: TH-14 GB.10 to GB.11 and TH-11 line 217 initialize the replacement then install, TH-15 QG.1 to QG.2 and PI-02 installed first with the extent riding initialize_encounter, and TH-06 WL.9 to WL.10 installed into an identity WL.10 had not yet initialized; F2 TH-06 EO-13 said the encounter's randomness is drawn once per commitment at P4 while TH-09 LI-10 and TH-14 GO-04 draw the reward result at P5; F3 TH-14 GV-02 and GP-12 gated the clearance a level must admit on Q-P23 and Q-P24 where TH-15, TH-02, TH-05 and PD-01 gate it on Q-P22; F4 TH-14 GP-25 left open whether a generation-time clearance query is possible, which TH-15 PO-01 and TH-14's own GV-01 settle; F5 fired re-verification triggers in both TH-14 and TH-15 (each named the other unadmitted) and TH-14's GO-04 reconciliation note; F6 PD-02 VW-6's pause cell let a settings change take effect mid-encounter against TH-01 IF-32; F7 initialize_encounter payload vocabulary (seed versus initial stream positions), optional; F8 minor paraphrases; F9 HF-07a line 295 still read sixty-nine fields. Coordinator corrections at closure: the intermission order fixed as initialize then install before eligibility in TH-15 (QG.1 and QG.2 swapped in content, PI-02 reworded) and TH-06 (WL.9 and WL.10 swapped in content), matching TH-11 and TH-14; TH-06 EO-13 distinguishes the P4 commitment draw from the P5 reward draw; TH-14 GV-02 and GP-12 add Q-P22 and GP-25 keeps only the qualification half; every fired trigger and seam sentence names the admission event and this recheck; PD-02's pause cell admits a change at RL4 and RL9 only; HF-07a line 295 records the seventy count after FR-05; TH-15 line 18 reads XD-06 as no chaos draw. The HF-07a edit cascaded through every citing section; the drift fixpoint converged after five passes (check:drift 0 mismatches over 28 sections and 228 hashes), the product sections' stated hashes re-pointed by hand because check:drift does not scan them (TL-03), and all 23 retained paper checks rerun green. F7 left as wording. Agreeing: the D07-only query seam, attach_world position, the generator record, the durable surface and question gating across the four. |
 
 ## Preparation checkpoint
 
@@ -738,7 +739,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Handoff-5 reporting checkpoint
 
-Last reported event: EV-0344. Handoff-5-2026-09-17 is closed with outcome passed at pinned commit 3ab2c10ec48184139d4e42e766aa3f68b3091dab: TH-07, TH-10, TH-09 and TH-13 done. Andrew approved Handoff-6 at EV-0327 (TH-14, TH-15, PD-01, PD-02; TH-14 and TH-15 dispatched at EV-0328 and EV-0329). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
+Last reported event: EV-0345. Handoff-5-2026-09-17 is closed with outcome passed at pinned commit 3ab2c10ec48184139d4e42e766aa3f68b3091dab: TH-07, TH-10, TH-09 and TH-13 done. Andrew approved Handoff-6 at EV-0327 (TH-14, TH-15, PD-01, PD-02; TH-14 and TH-15 dispatched at EV-0328 and EV-0329). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
 
 ## Handoff-5 closure record
 

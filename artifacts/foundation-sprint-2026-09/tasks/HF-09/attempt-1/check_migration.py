@@ -51,11 +51,11 @@ DEPENDENCY_HASHES = {
     "docs/tech/sections/HF-06b-persistence-projection.csv":
         "b42918083688be02511496932e20db19305e7407dc785d740b4e0fedf6779a48",
     "docs/tech/sections/HF-07a-save-envelope.md":
-        "267a5880e27e66436d31a669776b73ac502be73409a78e17084c89d8d9a61e8d",
+        "dfcd6a98d2fe8d07f69ff5bb336f563192604ad383a106b05902d9a60ea87d06",
     "docs/tech/sections/HF-07a-save-envelope.csv":
         "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
     "docs/tech/sections/HF-07b-commit-boundaries.md":
-        "0bcf60022ee4ef7c42f39f3714fd7947a1b7375f6ddf5be5f0d94c5c5940ae91",
+        "901ce28c13428fac7612aa10f242e72f211190d3fd838124154e52a2d6a9cd38",
     "docs/tech/sections/HF-05-content-admission.md":
         "7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6",
 }
