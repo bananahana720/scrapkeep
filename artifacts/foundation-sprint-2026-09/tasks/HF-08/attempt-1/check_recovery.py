@@ -22,7 +22,7 @@ RECEIPT = "artifacts/foundation-sprint-2026-09/tasks/HF-08/ctx7-godot-fileaccess
 DEPS = {
     "docs/tech/sections/HF-07a-save-envelope.md": "dfcd6a98d2fe8d07f69ff5bb336f563192604ad383a106b05902d9a60ea87d06",
     "docs/tech/sections/HF-07a-save-envelope.csv": "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
-    "docs/tech/sections/HF-07b-commit-boundaries.md": "901ce28c13428fac7612aa10f242e72f211190d3fd838124154e52a2d6a9cd38",
+    "docs/tech/sections/HF-07b-commit-boundaries.md": "7c8e9edf4833560c7312a20cf82123915813610fcd175c9eba733b5669ce76da",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     RECEIPT: "2697c931d49c4375247467e00d4bfcc661de1e71c7d1a6ad24e6319615e7291a",
 }
@@ -154,7 +154,7 @@ def run_document_checks(root, text, mutate=None):
     _, f_rows = find_table(tbls, "Failure class", "Point", "Held state", "Message class")
     ids = [r[0] for r in f_rows]
     sub("dod2.failure_classes_complete",
-        ids == [f"FC-{i:02d}" for i in range(1, 20)], f"{ids}")
+        ids == [f"FC-{i:02d}" for i in range(1, 21)], f"{ids}")
     for r in f_rows:
         sub(f"dod2.row_complete[{r[0]}]", len(r) == 7 and all(c for c in r[3:7]),
             "held state, message class, permitted and forbidden all nonempty")
