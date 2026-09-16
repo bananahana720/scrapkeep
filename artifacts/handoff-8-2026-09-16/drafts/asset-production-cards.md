@@ -4,15 +4,16 @@ Staging draft DRAFT-ASSETS attempt A2, lease DRAFT-ASSETS-L2, revised at base `0
 
 ## How to read these drafts
 
-- **IDs.** Proposed families are `NQ` (native qualification), `ART` (art production) and `SND` (sound production); `AP-` and `AA-` rows already exist in TH-04, TH-10 and TRACKING. Attempt A2 retires NQ-02 by merging it into NQ-01, splits ART-23 into ART-23 (rig) and ART-29 (stage clips), and adds NQ-03 (the fully grown clearance evidence card). One question register entry, Q-P42, is proposed at the end of this file. The coordinator decides final IDs.
+- **IDs.** Proposed families are `NQ` (native qualification), `ART` (art production) and `SND` (sound production); `AP-` and `AA-` rows already exist in TH-04, TH-10 and TRACKING. Attempt A2 retires NQ-02 by merging it into NQ-01, splits ART-23 into ART-23 (rig) and ART-29 (stage clips), and adds NQ-03 (the fully grown clearance evidence card). One question register entry, Q-P42, is proposed at the end of this file with Andrew's approach-level answer (TRACKING EV-0447 decision 3). The coordinator decides final IDs.
 - **Links.** Dependency and question links use BACKLOG anchors so a card can be pasted into BACKLOG unchanged; the proposed Q-P42 anchor resolves inside this file until imported. Paths are repository-relative and backticked.
 - **Batch.** TRACKING EV-0372 recorded the scope: the shared rolling core and enclosed cockpit, Fuse and its mounted tool at one growth state, one Iron Orchard enemy family and one Iron Orchard environment module set, hybrid motion, and Fuse's construction C with carried risks in `artifacts/handoff-8-2026-09-16/decisions/Q-P04-fuse-construction.json`.
 - **Andrew's decisions at TRACKING EV-0423, recorded as production direction and not as card authorization.** Decision 1: art and sound production starts with concept sheets and rough blockouts after the current sprint, while final models, rigs, animation and sounds wait for the playable native build (Q-E01). Decision 2: the batch's one growth state is the starting mech, and the fully grown clearance check is a separate evidence card (NQ-03). Decision 3: concept art is made by image prompts plus paintover, with provenance recorded per PD-01's PF rows. Decision 4: the orchard browser proof's camera distance is the provisional silhouette distance for Fuse's model-lock check, rechecked in the native slice; it is not an answer to Q-P32's bounds.
+- **Andrew's decisions at TRACKING EV-0447, recorded the same way.** Decision 1: the batch asset list and its file locations are recorded before the budget, so rough blockouts may be proposed for the next sprint, while the measured budget stays open until the native slice measures it and final models still wait for it. Decision 2: the orchard browser proof's camera distance is also the provisional silhouette distance for the Iron Orchard enemies, rechecked in the native slice; it is not an answer to Q-P32's bounds. Decision 3: enemy-family motion is hybrid, with procedural locomotion and turning in Godot and hand-keyed Blender wind-up and attack clips; the specifics stay open under Q-P42.
 - **Two stages.** A card whose Lane says `concept stage` is proposed for the sprint after the current one under decision 1 and runs only inside a sprint Andrew authorizes. A card whose Lane says `native stage` names the gate `Q-E01 native slice and Andrew's production authorization` in its Blocking questions field and cannot be ready before both exist.
 - **Evidence classes.** A static check, a staged fixture, an automated native trial, a human session and a hardware or performance measurement are different evidence (PD-01 line 76; TH-16 RQ-08). A review by Andrew is recorded separately as a human review record under PD-01 PF-12 and is not one of those five classes. Every Verification field names its evidence separately, states what is not established, and ends with the steps that need a human's hands.
 - **Tools.** Blender, Krita and Audacity are not installed on this machine at the base. Installing a tool is Andrew's hands-on step, never a card outcome. The version installed at first use is pinned in the PD-01 PF-06 recipe row of each record that uses it (drafting question DQ-03). Blender, Krita, Audacity or Godot execution by an agent needs Andrew's execution authorization recorded in TRACKING before assignment.
-- **Tool facts.** Blender and Godot behaviour is cited only from Context7 receipts, written as receipt name and line. The receipts' tracked destination is `artifacts/handoff-8-2026-09-16/drafts/ctx7/`; copying them there from the writer's ignored `artifacts/local/tasks/DRAFT-ASSETS/ctx7/` is a coordinator step before import (DQ-11). The Blender receipts come from the unversioned manual. Anything not retrieved is stated as a limit.
-- **Paths.** Proposed paths follow the HF-01 families; `docs/art/production/**` and the Audio-owned writes in Technical-art families need the HF-01 amendment proposed in DQ-01. `rolling_core` and `fuse` are proposed `<unit>` path groupings, never durable IDs (HF-01 line 21); `<enemy_unit>` and `<orchard_modules_unit>` stay placeholders until Q-P25 and Q-P26 supply content (DQ-13).
+- **Tool facts.** Blender and Godot behaviour is cited only from Context7 receipts, written as receipt name and line. The receipts are tracked at `artifacts/handoff-8-2026-09-16/drafts/ctx7/`, copied in attempt A3 from the writer's ignored `artifacts/local/tasks/DRAFT-ASSETS/ctx7/` (DQ-11), and every card cites them by that path. The Blender receipts come from the unversioned manual. Anything not retrieved is stated as a limit.
+- **Paths.** Proposed paths follow the HF-01 families; `docs/art/production/**` and the Audio-owned path rows for `source-assets/*/audio/**` and `native/content/*/assets/audio/**` need the HF-01 amendment proposed in DQ-01. `rolling_core`, `fuse`, `iron_orchard_enemies` and `iron_orchard_modules` are the path groupings for the batch's file locations recorded at TRACKING EV-0447 decision 1, never durable IDs (HF-01 line 21; DQ-13). Paths inside a grouping are split per card so that cards able to run at the same time lease disjoint files.
 - **Values.** No card states a count, budget, polycount, bone count, texture size, loudness, duration, distance or frame rate. Each such value is a parameter tied to its question or source line.
 
 ## Native qualification
@@ -79,7 +80,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 **Definition of done:**
 
 1. A view set for the shared core and cockpit: a PD-01 VW-04 turnaround that answers where the cockpit is, what moves, how scrap enters and which feature identifies the role; a PD-01 VW-05 cutaway of intake, sorting paths and fabrication chamber with its enlargement stated; a PD-01 VW-01 gameplay view; and a PD-01 VW-10 motion sequence captioned approximate. The PD-01 VW-02 beauty view is a separate member.
-2. Each sheet is made by image prompts plus paintover (TRACKING EV-0423 decision 3). Its provenance record carries the prompt text and generator under PD-01 PF-03 and PF-04, the paintover and its tool under PD-01 PF-06, and any reference image it paints over; a reference stays a concept record (TH-19 CI-04).
+2. Each sheet is made by image prompts plus paintover (TRACKING EV-0423 decision 3). Its provenance record carries the prompt text and generator under PD-01 PF-03 and PF-04, the paintover and its tool under PD-01 PF-06, and any reference image it paints over; a reference stays a concept record (TH-19 CI-04). The image generator and its output terms are recorded as PD-01 PF-05 license evidence before the generator is first used (HF-01 line 72; ASSETS.md line 17).
 3. No sheet carries a class tool. The cockpit encloses a neutral pilot silhouette captioned as a placeholder, not a species selection (PD-01 AC-20; Q-P06).
 4. Growth is shown at the starting mech (TRACKING EV-0423 decision 2), with no mass value (Q-P10); the ordinary maximum envelope stays unset (TH-02 MP-16; Q-P22) and is not depicted as settled.
 5. Each sheet carries PD-01 PF-01 to PF-13 and PF-15 and a caption stating image ID, proposal status and what it does not establish. No caption or record claims that a generated image proves articulation, mounting dimension, growth extent or route clearance (PD-01 line 63; PD-01 AC-22, PE-01, PE-02 and PE-04).
@@ -132,13 +133,13 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - BIBLE.md § 7 line 719 (leave useful gaps around moving assemblies); § 5.1 line 416 (landmarks that mounts grow around)
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 PF-06, PF-08, PF-09, PE-02 and PE-03
 - `docs/tech/sections/TH-19-asset-import-export.md` TH-19 OC-01, PV-01 and PV-02; `docs/tech/sections/HF-01-production-conventions.md` lines 31 and 72
-- BACKLOG Q-P26's closure evidence: a bounded manifest and allowed output paths before production assets become runnable cards
+- TRACKING EV-0447 decision 1: the batch asset list and file locations are recorded before the budget, so rough blockouts may be proposed for the next sprint; Q-P26's measured budget stays open
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-16 and MP-17; `docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md` TH-05 CO-11 and CO-14
 - `docs/DISCOVERY.md` line 215 (model and pivot authoring in Blender)
 
-**Dependencies:** [ART-01](#art-01), [ART-02](#art-02). **Blocking questions:** [Q-P26](#q-p26) (bounded manifest and allowed output paths for `source-assets/**`). Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-P10](#q-p10), [Q-P13](#q-p13), [Q-P22](#q-p22), [Q-P27](#q-p27).
+**Dependencies:** [ART-01](#art-01), [ART-02](#art-02). **Blocking questions:** None. Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1, with the batch asset list and file locations recorded at TRACKING EV-0447 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-P10](#q-p10), [Q-P13](#q-p13), [Q-P22](#q-p22), [Q-P26](#q-p26) (the measured budget only), [Q-P27](#q-p27).
 
-**Files touched:** `source-assets/rolling_core/blockout/**` and `source-assets/fuse/blockout/**` (editable Blender masters; HF-01 line 31); `source-assets/rolling_core/provenance/**` and `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-03/` (renders).
+**Files touched:** `source-assets/rolling_core/blockout/**` and `source-assets/fuse/blockout/**` (editable Blender masters; HF-01 line 31); `source-assets/rolling_core/provenance/blockout/**` and `source-assets/fuse/provenance/blockout/**`; `artifacts/local/tasks/ART-03/` (renders).
 
 **Definition of done:**
 
@@ -196,7 +197,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RT-01 to RT-07, RQ-02, RQ-03, RQ-07 and RM-06; `docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md` TH-05 CO-11 and CO-14
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-03, MP-06, MP-16, MP-17 and MP-23; `docs/tech/sections/HF-04a-runtime-lifecycle.md` line 22
 - BIBLE.md lines 481, 487, 725, 727 and 719
-- Context7 receipt `g2-skeleton.txt` lines 50, 58 and 66 (a skeleton modifier's per-update pose hook, influence blending by the parent skeleton, and a pose-override caution), cited as documented candidates only
+- Context7 receipt `artifacts/handoff-8-2026-09-16/drafts/ctx7/g2-skeleton.txt` lines 50, 58 and 66 (a skeleton modifier's per-update pose hook, influence blending by the parent skeleton, and a pose-override caution), cited as documented candidates only
 - ART-03's moving-and-stable part list
 
 **Dependencies:** [ART-03](#art-03). **Blocking questions:** None. Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-P21](#q-p21), [Q-P22](#q-p22), [Q-P27](#q-p27), [Q-P32](#q-p32). This card produces input for Andrew's Q-P27 answer and does not answer it.
@@ -226,21 +227,22 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 **Source and inputs:**
 
 - ART-03's blockout, ART-04's lock verdict, and ART-05's brief with Andrew's recorded Q-P27 answer; TRACKING EV-0423 decisions 1 and 2
+- `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` TH-04 AS-01 to AS-04, AA-02 and AA-03; `docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md` TH-05 CO-11
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 AC-01, AC-02, AC-05, AC-06, AC-07 and AC-09; PD-01 PF-01 to PF-15; PD-01 PE-02 and PE-03; PD-01 VW-01, VW-02 and VW-04
 - BIBLE.md § 5.2 line 422; § 7 lines 645, 699 and 701
 - `docs/tech/sections/TH-19-asset-import-export.md` TH-19 OC-01, PV-01 to PV-05, NO-02 and NO-03; `docs/tech/sections/HF-01-production-conventions.md` lines 31, 68 and 72
 - `docs/DISCOVERY.md` line 211 (Blender and Krita as free local candidates)
-- Context7 receipt `b4-gltf-export.txt` lines 16 and 24 (the exporter supports meshes and textures; quads and n-gons are triangulated on export)
+- Context7 receipt `artifacts/handoff-8-2026-09-16/drafts/ctx7/b4-gltf-export.txt` lines 16 and 24 (the exporter supports meshes and textures; quads and n-gons are triangulated on export)
 
 **Dependencies:** [ART-03](#art-03), [ART-04](#art-04), [ART-05](#art-05). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E04](#q-e04), [Q-P10](#q-p10), [Q-P22](#q-p22).
 
-**Files touched:** `source-assets/rolling_core/**` (Blender master, texture masters, provenance and notice records); `artifacts/local/tasks/ART-06/`.
+**Files touched:** `source-assets/rolling_core/model/**` (Blender master), `source-assets/rolling_core/textures/**` (texture masters) and `source-assets/rolling_core/provenance/model/**` (provenance and notice records); `artifacts/local/tasks/ART-06/`.
 
 **Definition of done:**
 
 1. Final topology is separated into the moving and stable parts the approved brief names, with pivots at the brief's joints.
 2. UVs and texture masters place wear by material and use (PD-01 AC-05) and keep materials distinct at gameplay distance (PD-01 AC-06). Mesh and texture limits come from the Q-P26 and Q-E03 answers, recorded as review parameters; the card states no limit of its own.
-3. The model is at the starting mech (TRACKING EV-0423 decision 2), with its extent recorded as a PD-01 PE-03 record; no grown state is modelled.
+3. The model is at the starting mech (TRACKING EV-0423 decision 2). Its PD-01 PE-03 record names the capability-set selection it derives from: the run-start set, with weapon and special mobility available and the main hero skill and ultimate locked (TH-04 AS-01 to AS-04; TH-04 AA-02), holding only the slot selections the run's initial state holds (TH-04 AA-03), and reaching the encounter only as an installed value (TH-05 CO-11). No grown state is modelled.
 4. The TH-19 OC-01 record carries PD-01 PF-01 to PF-13 and PF-15, tool versions pinned in PD-01 PF-06, license evidence and notice obligation for every texture source (TH-19 NO-02, NO-03), and the recipe to the future runtime input (TH-19 PV-03).
 5. No runtime input is written. Export to `native/content/` belongs to ART-17.
 
@@ -263,7 +265,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [ART-02](#art-02), [ART-03](#art-03), [ART-04](#art-04). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P06](#q-p06) (species and animal-only cast), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P27](#q-p27).
 
-**Files touched:** `source-assets/fuse/pilot/**`; `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-07/`.
+**Files touched:** `source-assets/fuse/pilot/**`; `source-assets/fuse/provenance/pilot/**`; `artifacts/local/tasks/ART-07/`.
 
 **Definition of done:**
 
@@ -291,7 +293,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [ART-02](#art-02), [ART-03](#art-03), [ART-04](#art-04), [ART-06](#art-06). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P13](#q-p13) (which elements, and so which heads), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P20](#q-p20), [Q-P22](#q-p22).
 
-**Files touched:** `source-assets/fuse/tool/**`; `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-08/`.
+**Files touched:** `source-assets/fuse/tool/**`; `source-assets/fuse/provenance/tool/**`; `artifacts/local/tasks/ART-08/`.
 
 **Definition of done:**
 
@@ -313,20 +315,20 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 **Source and inputs:**
 
 - ART-05's brief with Andrew's recorded Q-P27 answer; ART-06's master; TRACKING EV-0423 decision 1
-- Context7 receipts `b1-armatures.txt` lines 8, 16 and 24 (armature deform parenting with automatic, envelope or empty-group weights; a bone's Deform toggle excludes it), `b2-weight-paint.txt` lines 20 and 28 (painting bone vertex groups; deform groups), `b4-gltf-export.txt` lines 4, 8 and 16 (the glTF exporter covers armatures and skinning), `g1b-gltf-skinned-import.txt` lines 22 to 36 and 83 to 94 (glTF skins and skeletons in Godot's import state)
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` lines 8, 16 and 24 (armature deform parenting with automatic, envelope or empty-group weights; a bone's Deform toggle excludes it), `artifacts/handoff-8-2026-09-16/drafts/ctx7/b2-weight-paint.txt` lines 20 and 28 (painting bone vertex groups; deform groups), `artifacts/handoff-8-2026-09-16/drafts/ctx7/b4-gltf-export.txt` lines 4, 8 and 16 (the glTF exporter covers armatures and skinning), `artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` lines 22 to 36 and 83 to 94 (glTF skins and skeletons in Godot's import state)
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 PF-09 and PE-01; `docs/tech/sections/TH-19-asset-import-export.md` TH-19 PV-05
 
 **Dependencies:** [ART-05](#art-05), [ART-06](#art-06). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P21](#q-p21), [Q-P22](#q-p22).
 
-**Files touched:** `source-assets/rolling_core/**` (the armature in the master; PD-01 PF-09 record); `artifacts/local/tasks/ART-09/` (test export and renders).
+**Files touched:** `source-assets/rolling_core/model/**` (the armature in the master) and `source-assets/rolling_core/provenance/rig/**` (PD-01 PF-09 record); `artifacts/local/tasks/ART-09/` (test export and renders).
 
 **Definition of done:**
 
-1. Bones exist exactly for the parts the approved brief marks as procedurally driven, named for the Godot-side driver of ART-14, with deform and non-deform bones distinguished (`b1-armatures.txt` line 24), including the mount bones the hoop attaches to.
-2. Skin weights use the method recorded under PD-01 PF-09, whether automatic, envelope or painted (`b1-armatures.txt` lines 8 and 16; `b2-weight-paint.txt` line 20), and are reviewed at every joint.
+1. Bones exist exactly for the parts the approved brief marks as procedurally driven, named for the Godot-side driver of ART-14, with deform and non-deform bones distinguished (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` line 24), including the mount bones the hoop attaches to.
+2. Skin weights use the method recorded under PD-01 PF-09, whether automatic, envelope or painted (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` lines 8 and 16; `artifacts/handoff-8-2026-09-16/drafts/ctx7/b2-weight-paint.txt` line 20), and are reviewed at every joint.
 3. No hand-keyed action is authored on these bones (EV-0372 hybrid split).
 4. PD-01 PF-09 records the bone list, rest pose, units and axes. The bone count stays within the Q-P26 and Q-E03 answers, and the card states none.
-5. A test export in glTF 2.0 (`b4-gltf-export.txt` line 4) with skinning goes to the receipts directory only, to show the rig exports. It is not a runtime input.
+5. A test export in glTF 2.0 (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b4-gltf-export.txt` line 4) with skinning goes to the receipts directory only, to show the rig exports. It is not a runtime input.
 
 **Verification and evidence:** Static: PD-01 PF-09 record and bone naming against the brief. Human review record (PD-01 PF-12): Andrew reviews pose-range renders for deformation at joints and PD-01 AC-02. Not established: Godot import of the skeleton, procedural behaviour or PD-01 PE-01's trial. Human-hands steps: Andrew installs Blender and records execution authorization; Andrew's review.
 
@@ -342,18 +344,18 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 - ART-07's master; ART-05's brief and Andrew's recorded Q-P27 answer (expressions are hand-keyed Blender clips, EV-0372); TRACKING EV-0423 decision 1
 - BIBLE.md line 346
-- Context7 receipts `b1-armatures.txt` lines 8 and 16; `b2-weight-paint.txt` lines 20 and 28; `b3-actions-nla.txt` line 8 (NLA tracks hold action strips)
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` lines 8 and 16; `artifacts/handoff-8-2026-09-16/drafts/ctx7/b2-weight-paint.txt` lines 20 and 28; `artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 8 (NLA tracks hold action strips)
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 PF-09
 
-**Dependencies:** [ART-05](#art-05), [ART-07](#art-07). **Blocking questions:** [Q-E01](#q-e01), [Q-P06](#q-p06), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
+**Dependencies:** [ART-05](#art-05), [ART-07](#art-07). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P06](#q-p06), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
 
-**Files touched:** `source-assets/fuse/pilot/**`; `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-10/`.
+**Files touched:** `source-assets/fuse/pilot/**`; `source-assets/fuse/provenance/pilot/**`; `artifacts/local/tasks/ART-10/`.
 
 **Definition of done:**
 
 1. An armature whose controls cover the whole-seated-body expression range the Q-P27 answer lists (BIBLE line 346).
 2. Weights use a method recorded under PD-01 PF-09 and are reviewed at every joint the answered expressions move.
-3. PD-01 PF-09 records the bone list, rest pose, units and axes within the Q-P26 answer. A test export goes to receipts only.
+3. PD-01 PF-09 records the bone list, rest pose, units and axes within the Q-P26 and Q-E03 answers. A test export goes to receipts only.
 
 **Verification and evidence:** Static: PD-01 PF-09 record. Human review record (PD-01 PF-12): Andrew reviews pose renders for each answered expression's extreme. Not established: clip quality, in-engine playback or human feel. Human-hands steps: Andrew installs Blender and records execution authorization; Andrew's review.
 
@@ -371,18 +373,18 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - The EV-0372 carried risk: each head a visible working mechanism
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RC-02, RR-01 and RR-10; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 TP-06
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 AC-10, PE-02 and PF-09
-- Context7 receipts `b1-armatures.txt` lines 8 and 16; `b3-actions-nla.txt` line 8
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` lines 8 and 16; `artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 8
 
-**Dependencies:** [ART-05](#art-05), [ART-08](#art-08), [ART-09](#art-09). **Blocking questions:** [Q-E01](#q-e01), [Q-P13](#q-p13), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
+**Dependencies:** [ART-05](#art-05), [ART-08](#art-08), [ART-09](#art-09). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P13](#q-p13), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
 
-**Files touched:** `source-assets/fuse/tool/**`; `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-11/`.
+**Files touched:** `source-assets/fuse/tool/**`; `source-assets/fuse/provenance/tool/**`; `artifacts/local/tasks/ART-11/`.
 
 **Definition of done:**
 
 1. Each head's working mechanism has its own controls, so its action is visible and not a material change (PD-01 AC-10).
 2. The nozzle's aim reference is a separate control that head actions never move, because committed geometry originates at the weapon and a miscast never moves it (TH-03 TP-06; TH-16 RR-01, RR-10). At runtime a view sets it only from published values Session supplies (TH-16 RC-02).
 3. The hoop's attachment to ART-09's mount bones is recorded against PD-01 PE-02.
-4. PD-01 PF-09 record within the Q-P26 answer. A test export goes to receipts only.
+4. PD-01 PF-09 record within the Q-P26 and Q-E03 answers. A test export goes to receipts only.
 
 **Verification and evidence:** Static: PD-01 PF-09 record and control list against the Q-P13 head set. Human review record (PD-01 PF-12): Andrew reviews renders of each head's mechanism at its extremes. Not established: in-engine playback, miscast localization or effect alignment. Human-hands steps: Andrew installs Blender and records execution authorization; Andrew's review.
 
@@ -398,16 +400,16 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 - ART-10's rig; Andrew's recorded Q-P27 answer listing expressions and phases; TRACKING EV-0423 decision 1
 - BIBLE.md lines 346 and 350
-- Context7 receipts `b3-actions-nla.txt` lines 8, 32 and 40 (actions as NLA strips; Push Down moves the active action into a track; the glTF exporter's NLA Tracks mode exports each track as its own animation); `g1b-gltf-skinned-import.txt` lines 14 and 53 (glTF animations become animations in an AnimationPlayer node on import)
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` lines 8, 32 and 40 (actions as NLA strips; Push Down moves the active action into a track; the glTF exporter's NLA Tracks mode exports each track as its own animation); `artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` lines 14 and 53 (glTF animations become animations in an AnimationPlayer node on import)
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RE-07 and RT-07; `docs/tech/sections/HF-04a-runtime-lifecycle.md` line 22; `docs/tech/sections/HF-01-production-conventions.md` line 68
 
-**Dependencies:** [ART-10](#art-10). **Blocking questions:** [Q-E01](#q-e01), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P13](#q-p13), [Q-P28](#q-p28).
+**Dependencies:** [ART-10](#art-10). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P13](#q-p13), [Q-P28](#q-p28).
 
-**Files touched:** `source-assets/fuse/pilot/**` (actions in the master); `source-assets/fuse/provenance/**` (PD-01 PF-09 per clip); `artifacts/local/tasks/ART-12/` (captures and test export).
+**Files touched:** `source-assets/fuse/pilot/**` (actions in the master); `source-assets/fuse/provenance/pilot/**` (PD-01 PF-09 per clip); `artifacts/local/tasks/ART-12/` (captures and test export).
 
 **Definition of done:**
 
-1. One action per expression in the Q-P27 answer, each on its own NLA track so the exporter's NLA Tracks mode emits it as an independent animation (`b3-actions-nla.txt` line 40), with snake_case names (HF-01 line 68).
+1. One action per expression in the Q-P27 answer, each on its own NLA track so the exporter's NLA Tracks mode emits it as an independent animation (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 40), with snake_case names (HF-01 line 68).
 2. Each clip's record names the published fact meant to trigger it. No clip decides, times or advances gameplay (TH-16 RE-07, RT-07; HF-04a line 22).
 3. Clip lengths and the authoring frame rate are recorded as parameters under the Q-P27 answer, with no value in the card.
 4. No clip is synchronized to a voiced line or bark (Q-P28).
@@ -428,15 +430,15 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - TRACKING EV-0411 and FR-07's accepted AM-H8-003: kit weapon, main hero skill, mobility and ultimate actions reference ability definitions (HF-06a row N-021) that reference the attacks they produce
 - BIBLE.md lines 354, 357, 413 and 428
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RE-05, RE-07, RR-10 and RT-07; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 CH-05 and EP-01
-- Context7 receipts `b3-actions-nla.txt` line 40; `g1b-gltf-skinned-import.txt` lines 14 and 53
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 40; `artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` lines 14 and 53
 
-**Dependencies:** [ART-04](#art-04), [ART-11](#art-11), [FR-07](#fr-07). **Blocking questions:** [Q-E01](#q-e01), [Q-P13](#q-p13), [Q-P20](#q-p20), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P11](#q-p11).
+**Dependencies:** [ART-04](#art-04), [ART-11](#art-11), [FR-07](#fr-07). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P13](#q-p13), [Q-P20](#q-p20), [Q-P26](#q-p26), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P11](#q-p11).
 
-**Files touched:** `source-assets/fuse/tool/**`; `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-13/`.
+**Files touched:** `source-assets/fuse/tool/**`; `source-assets/fuse/provenance/tool/**`; `artifacts/local/tasks/ART-13/`.
 
 **Definition of done:**
 
-1. One action per tool action in the Q-P27 answer, each on its own NLA track (`b3-actions-nla.txt` line 40). Candidate names come from BIBLE lines 354, 357 and 428 and are used only where the answer admits them. A miscast action exists only for an element Q-P13 makes miscastable, and an ultimate action only as Q-P20 defines it.
+1. One action per tool action in the Q-P27 answer, each on its own NLA track (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 40). Candidate names come from BIBLE lines 354, 357 and 428 and are used only where the answer admits them. A miscast action exists only for an element Q-P13 makes miscastable, and an ultimate action only as Q-P20 defines it.
 2. Each clip's record names its trigger as the published result of an ability definition or of an attack that ability produces (AM-H8-003 through FR-07), never a raw input.
 3. No clip moves the nozzle aim control, and a miscast clip stays local to one head (TH-16 RR-10; EV-0372 carried risk).
 4. No clip decides, rerolls or advances an outcome (TH-16 RE-05, RE-07, RT-07; TH-03 CH-05).
@@ -458,10 +460,10 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RC-02, RT-01 to RT-08, RM-06, RQ-02, RQ-03 and RE-06
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-04, MP-06, MP-16 and MP-23; `docs/tech/sections/HF-04a-runtime-lifecycle.md` line 22
 - `docs/tech/sections/HF-01-production-conventions.md` lines 26, 27, 66 and 68; Godot 4.7.2 (BACKLOG.md line 9) with typed GDScript
-- Context7 receipts `g2-skeleton.txt` lines 8, 50, 58 and 66; `g3-animtree.txt` lines 75 and 83 (AnimationTree for blending beyond the player's fixed cross-fades)
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/g2-skeleton.txt` lines 8, 50, 58 and 66; `artifacts/handoff-8-2026-09-16/drafts/ctx7/g3-animtree.txt` lines 75 and 83 (AnimationTree for blending beyond the player's fixed cross-fades)
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 PE-01
 
-**Dependencies:** [ART-05](#art-05), [ART-09](#art-09), [ART-12](#art-12), [ART-13](#art-13), [ART-17](#art-17), [ART-18](#art-18), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E04](#q-e04), [Q-P22](#q-p22), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E03](#q-e03), [Q-P21](#q-p21), [Q-P32](#q-p32).
+**Dependencies:** [ART-05](#art-05), [ART-09](#art-09), [ART-12](#art-12), [ART-13](#art-13), [ART-17](#art-17), [ART-18](#art-18), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P22](#q-p22), [Q-P27](#q-p27). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P21](#q-p21), [Q-P32](#q-p32).
 
 **Files touched:** `native/presentation/motion/rolling_core_motion.gd` and its UID sidecar; `native/presentation/motion/rolling_core_motion.tscn` (the presentation composition that binds the script to the admitted core scene; HF-01 line 27); `artifacts/local/tasks/ART-14/`.
 
@@ -469,7 +471,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 1. Typed GDScript drives exactly ART-09's procedural bones from the published pose, extent and movement values Session supplies on D06 (TH-16 RC-02, RM-06), with the mechanism the approved brief selects from retrieved documentation.
 2. Motion holds when no newer snapshot exists and on pause (TH-16 RT-02, RT-03). It is display-only with no writeback (TH-16 RT-05) and never advances a gameplay interval (TH-16 RT-07; HF-04a line 22).
-3. The ART-12 and ART-13 clips imported by ART-18 play over the procedural pose, and the blending method and precedence are recorded (`g3-animtree.txt` lines 75 and 83).
+3. The ART-12 and ART-13 clips imported by ART-18 play over the procedural pose, and the blending method and precedence are recorded (`artifacts/handoff-8-2026-09-16/drafts/ctx7/g3-animtree.txt` lines 75 and 83).
 4. Rates and ranges are read from parameters tied to the Q-P21, Q-P22 and Q-P32 answers. No authored tuning is duplicated in code (HF-01 line 26).
 5. PD-01 PE-01's trial runs with the command the engineering handoff (TH-29) names and is recorded with source identity. If no command exists, the card returns blocked.
 
@@ -488,12 +490,12 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RC-03, RE-01 to RE-09, RR-01, RR-05, RR-06, RR-08, RR-10, RP-16, RP-17, RP-20, RX-09 and RX-12
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 AT-17, CH-03, CH-05 and TP-06; `docs/tech/sections/TH-13-chaos-outcomes.md` TH-13 XP-01, XP-02 and XP-04
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 AC-03, AC-16 and VW-11; BIBLE.md lines 493, 495 and 731
-- Context7 receipt `g4-particles.txt` lines 26, 81 and 91 (a `GPUParticles3D` node needs a process material and at least one draw pass; the process material can be a ParticleProcessMaterial or carry a particles shader)
+- Context7 receipt `artifacts/handoff-8-2026-09-16/drafts/ctx7/g4-particles.txt` lines 26, 81 and 91 (a `GPUParticles3D` node needs a process material and at least one draw pass; the process material can be a ParticleProcessMaterial or carry a particles shader)
 - `docs/tech/sections/HF-01-production-conventions.md` line 30 (materials permitted, shader source not named; DQ-02) and line 31; TH-19 IG-01 to IG-07 (no runtime input before the gates); ART-11's head controls; TRACKING EV-0423 decision 1
 
-**Dependencies:** [ART-04](#art-04), [ART-11](#art-11). **Blocking questions:** [Q-E01](#q-e01), [Q-P13](#q-p13), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P30](#q-p30), [Q-P32](#q-p32), [Q-P38](#q-p38).
+**Dependencies:** [ART-04](#art-04), [ART-11](#art-11). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P13](#q-p13), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E04](#q-e04), [Q-P30](#q-p30), [Q-P32](#q-p32), [Q-P38](#q-p38).
 
-**Files touched:** `source-assets/fuse/effects/**` (effect specification records, texture masters and provenance); `artifacts/local/tasks/ART-15/`. Nothing under `native/`; runtime effect scenes and materials are built at ART-19 after the import gates.
+**Files touched:** `source-assets/fuse/effects/**` (effect specification records, texture masters and provenance); `artifacts/local/tasks/ART-15/`. Nothing under the native tree; runtime effect scenes and materials are built at ART-19 after the import gates.
 
 **Definition of done:**
 
@@ -520,7 +522,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RR-08, RR-09, RR-10, RT-07 and RP-17; `docs/tech/sections/TH-13-chaos-outcomes.md` TH-13 XP-02 and XP-06; `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 CH-03 and TP-22
 - ART-13's miscast clips and ART-15's effect specifications
 
-**Dependencies:** [ART-13](#art-13), [ART-15](#art-15). **Blocking questions:** [Q-E01](#q-e01), [Q-P13](#q-p13), [Q-P26](#q-p26), [Q-P30](#q-p30), [Q-P38](#q-p38). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E04](#q-e04).
+**Dependencies:** [ART-13](#art-13), [ART-15](#art-15). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P13](#q-p13), [Q-P26](#q-p26), [Q-P30](#q-p30), [Q-P38](#q-p38). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E04](#q-e04).
 
 **Files touched:** `source-assets/fuse/effects/**`; `artifacts/local/tasks/ART-16/`.
 
@@ -545,12 +547,12 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - `docs/tech/sections/TH-19-asset-import-export.md` TH-19 OC-01 to OC-05, PV-01 to PV-07, IS-01 to IS-09, SI-01 to SI-06, GO-01 to GO-06, AR-01 to AR-08, EM-01 to EM-08, NO-02 to NO-04, AG-01 to AG-09 and IG-01 to IG-07, and walk W1 at lines 306 to 329
 - `docs/tech/sections/HF-05-content-admission.md` lines 24, 25, 49 and 52; `docs/tech/sections/HF-01-production-conventions.md` lines 30, 36, 61, 72 and 85
 - `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RM-01, RM-02 and RM-07; `docs/product/sections/PD-01-art-acceptance.md` PD-01 PF-11
-- Context7 receipts `b3-actions-nla.txt` line 40 and `b4-gltf-export.txt` line 40 (export modes); `g1-gltf-import.txt` lines 8 and 111 (a post-import script is set through the Custom Script import property); `g1b-gltf-skinned-import.txt` lines 22 to 36 and 83 to 94
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 40 and `artifacts/handoff-8-2026-09-16/drafts/ctx7/b4-gltf-export.txt` line 40 (export modes); `artifacts/handoff-8-2026-09-16/drafts/ctx7/g1-gltf-import.txt` lines 8 and 111 (a post-import script is set through the Custom Script import property); `artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` lines 22 to 36 and 83 to 94
 - NQ-01's receipts; ART-06 and ART-09 masters; TRACKING EV-0423 decision 1
 
 **Dependencies:** [NQ-01](#nq-01), [ART-06](#art-06), [ART-09](#art-09), [SC-01](#sc-01), [SC-07](#sc-07), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-E13](#q-e13).
 
-**Files touched:** `native/content/rolling_core/assets/**` (exported glTF input and textures with their `.import` sidecars); `native/content/rolling_core/scenes/**` (composition scene); `source-assets/rolling_core/provenance/**` (TH-19 PV-02 links and recipe); `artifacts/local/tasks/ART-17/`.
+**Files touched:** `native/content/rolling_core/assets/**` (exported glTF input and textures with their `.import` sidecars); `native/content/rolling_core/scenes/**` (composition scene); `source-assets/rolling_core/provenance/import/**` (TH-19 PV-02 links and recipe); `artifacts/local/tasks/ART-17/`.
 
 **Definition of done:**
 
@@ -576,17 +578,17 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 - Every ART-17 source row
 - TRACKING EV-0411 and FR-07's accepted AM-H8-003: slot actions reference ability definitions (HF-06a row N-021), and HF-06a row N-013 distinguishes a slot action's visual reference from an attack's
 - TRACKING EV-0423 decision 4: the provisional distance of ART-04 is rechecked in the native slice
-- Context7 receipt `g1b-gltf-skinned-import.txt` lines 14 and 53 (glTF animations become AnimationPlayer animations on import)
+- Context7 receipt `artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` lines 14 and 53 (glTF animations become AnimationPlayer animations on import)
 - ART-04's check record; ART-07, ART-08, ART-10, ART-11, ART-12 and ART-13 masters and PD-01 PF-09 records
 
 **Dependencies:** [NQ-01](#nq-01), [ART-04](#art-04), [ART-07](#art-07), [ART-08](#art-08), [ART-10](#art-10), [ART-11](#art-11), [ART-12](#art-12), [ART-13](#art-13), [ART-17](#art-17), [FR-07](#fr-07), [SC-01](#sc-01), [SC-02](#sc-02), [SC-07](#sc-07), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P06](#q-p06), [Q-P13](#q-p13), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-E13](#q-e13), [Q-P32](#q-p32).
 
-**Files touched:** `native/content/fuse/assets/**` (pilot and tool inputs with sidecars, excluding `effects/`); `native/content/fuse/scenes/**` (pilot and tool composition mounted on ART-17's core scene, excluding `effects/`); `source-assets/fuse/provenance/**`; `docs/art/production/fuse/review/**` (the native recheck record; DQ-01); `artifacts/local/tasks/ART-18/`.
+**Files touched:** `native/content/fuse/assets/pilot/**` and `native/content/fuse/assets/tool/**` (inputs with sidecars; the effects folder is ART-19's and the audio folder belongs to the sound import card); `native/content/fuse/scenes/pilot/**` and `native/content/fuse/scenes/tool/**` (compositions mounted on ART-17's core scene); `source-assets/fuse/provenance/import/**`; `docs/art/production/fuse/review/native/**` (the native recheck record; DQ-01); `artifacts/local/tasks/ART-18/`.
 
 **Definition of done:**
 
 1. ART-17 items 1 to 6 hold for the pilot and tool inputs.
-2. Every clip in the ART-12 and ART-13 records is present after import under its recorded name (`g1b-gltf-skinned-import.txt` line 53). A missing or renamed clip is a rejection.
+2. Every clip in the ART-12 and ART-13 records is present after import under its recorded name (`artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` line 53). A missing or renamed clip is a rejection.
 3. Each tool-action clip's binding names the ability definition or produced attack its record names (AM-H8-003 through FR-07), and the tool's visual reference is kept distinct from an attack's (HF-06a row N-013).
 4. The tool mounts on the core scene at ART-11's recorded attachment, and the nozzle aim control is left for published values (TH-16 RC-02).
 5. ART-04's silhouette and sightline check is repeated at the native slice's camera and recorded beside ART-04's provisional verdict; a disagreement returns the model to Andrew as a finding (TRACKING EV-0423 decision 4).
@@ -604,16 +606,16 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 **Source and inputs:**
 
 - Every ART-17 source row; `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RE-02 to RE-04, RP-17 and RX-10
-- ART-15 and ART-16 specifications and texture masters; Context7 receipt `g4-particles.txt` lines 81 and 91
+- ART-15 and ART-16 specifications and texture masters; Context7 receipt `artifacts/handoff-8-2026-09-16/drafts/ctx7/g4-particles.txt` lines 81 and 91
 - TRACKING EV-0411 and FR-07 (HF-06a row N-013's visual references); TRACKING EV-0423 decision 1
 
 **Dependencies:** [NQ-01](#nq-01), [ART-15](#art-15), [ART-16](#art-16), [ART-18](#art-18), [FR-07](#fr-07), [SC-02](#sc-02), [SC-07](#sc-07), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P13](#q-p13), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-P30](#q-p30), [Q-P38](#q-p38).
 
-**Files touched:** `native/content/fuse/assets/effects/**` (textures, process materials and sidecars); `native/content/fuse/scenes/effects/**` (effect scenes); `source-assets/fuse/provenance/**`; `artifacts/local/tasks/ART-19/`.
+**Files touched:** `native/content/fuse/assets/effects/**` (textures, process materials and sidecars); `native/content/fuse/scenes/effects/**` (effect scenes); `source-assets/fuse/provenance/effects_import/**`; `artifacts/local/tasks/ART-19/`.
 
 **Definition of done:**
 
-1. After TH-19 IG-01 to IG-07 are closed (TH-19 AG-01), one effect scene per ART-15 specification and one per ART-16 tell is built with the process material and draw pass the specification names (`g4-particles.txt` lines 81 and 91).
+1. After TH-19 IG-01 to IG-07 are closed (TH-19 AG-01), one effect scene per ART-15 specification and one per ART-16 tell is built with the process material and draw pass the specification names (`artifacts/handoff-8-2026-09-16/drafts/ctx7/g4-particles.txt` lines 81 and 91).
 2. ART-17 items 2 to 6 hold for every effect input.
 3. A presentation-only effect replacement is staged as a new catalogue revision, and it keeps the gameplay content revision only after validation (TH-16 RE-04; TH-19 SI-04).
 
@@ -639,7 +641,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [PD-01](#pd-01). **Blocking questions:** None. Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-E10](#q-e10), [Q-P25](#q-p25), [Q-P33](#q-p33). The sheets support Andrew's Q-P25 selection and select nothing.
 
-**Files touched:** `docs/art/production/<enemy_unit>/**` (DQ-01); `artifacts/local/tasks/ART-20/`.
+**Files touched:** `docs/art/production/iron_orchard_enemies/**` (DQ-01); `artifacts/local/tasks/ART-20/`.
 
 **Definition of done:**
 
@@ -660,23 +662,25 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Source and inputs:**
 
-- ART-20's sheets; Andrew's recorded Q-P25 answer naming the family and its attack grammar; TRACKING EV-0423 decision 1
+- ART-20's sheets; Andrew's recorded Q-P25 answer naming the family and its attack grammar; TRACKING EV-0423 decision 1; TRACKING EV-0447 decisions 1 and 2 (the orchard camera distance is the provisional distance for these enemies, rechecked natively)
+- `src/orchard/scene.js` lines 410 and 412: the orchard chase camera's distance expression and the camera position derived from it
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 EN-1 to EN-4, EP-01 and TP-15; `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RR-02, RR-05 and RR-06
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-04 and MP-23; `docs/product/sections/PD-01-art-acceptance.md` PD-01 AC-16 and VW-01
 
-**Dependencies:** [ART-20](#art-20). **Blocking questions:** [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P32](#q-p32) (EV-0423 decision 4 names Fuse's check only). Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-E10](#q-e10).
+**Dependencies:** [ART-20](#art-20). **Blocking questions:** [Q-P25](#q-p25). Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1, with the batch asset list and file locations recorded at TRACKING EV-0447 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-E10](#q-e10), [Q-P26](#q-p26) (the measured budget only), [Q-P32](#q-p32) (the provisional distance is Andrew's decision at TRACKING EV-0447 decision 2, not an answer to Q-P32's bounds; the native recheck belongs to ART-24).
 
-**Files touched:** `source-assets/<enemy_unit>/blockout/**`; `source-assets/<enemy_unit>/provenance/**`; `docs/art/production/<enemy_unit>/review/**` (DQ-01); `artifacts/local/tasks/ART-21/`.
+**Files touched:** `source-assets/iron_orchard_enemies/blockout/**`; `source-assets/iron_orchard_enemies/provenance/blockout/**`; `docs/art/production/iron_orchard_enemies/review/**` (DQ-01); `artifacts/local/tasks/ART-21/`.
 
 **Definition of done:**
 
 1. Rough blockouts for each family member the Q-P25 answer names, with a held pose for each of that member's attack stages (TH-03 EN-1 to EN-4).
-2. Renders at the camera distance the recorded answer allows (TH-02 MP-23) record, per stage pose, whether the tool, danger footprint and escape stay visible (TH-16 RR-05) and whether the height band reads (TH-16 RR-02).
-3. The check record ends with a lock or revise verdict recorded by Andrew.
+2. Renders at the provisional distance record, per stage pose, whether the tool, danger footprint and escape stay visible (TH-16 RR-05) and whether the height band reads (TH-16 RR-02).
+3. The check record states the provisional distance as the orchard expression at `src/orchard/scene.js` line 410 evaluated for each member, with every input to that expression named, and labels it provisional under TRACKING EV-0447 decision 2 (TH-02 MP-23 stays unset); the card writes no distance value of its own.
+4. The check record ends with a lock or revise verdict recorded by Andrew, and names the native recheck at the native slice's camera as an open obligation carried by ART-24.
 
 **Verification and evidence:** Human review record (PD-01 PF-12): Andrew's verdict. Static: every stage pose has renders at the recorded camera parameters. Not established: committed geometry, timing or play readability. Human-hands steps: Andrew installs Blender and records execution authorization; Andrew's verdict.
 
-**Boundary:** No shape, band or window value. Blocked without a recorded Q-P32 answer or an Andrew decision extending decision 4 to this check.
+**Boundary:** No shape, band or window value. The provisional distance is Andrew's decision and not an answer to Q-P32.
 
 <a id="art-22"></a>
 
@@ -692,7 +696,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [ART-21](#art-21). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P25](#q-p25), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
 
-**Files touched:** `source-assets/<enemy_unit>/**`; `artifacts/local/tasks/ART-22/`.
+**Files touched:** `source-assets/iron_orchard_enemies/models/**`, `source-assets/iron_orchard_enemies/textures/**` and `source-assets/iron_orchard_enemies/provenance/model/**`; `artifacts/local/tasks/ART-22/`.
 
 **Definition of done:**
 
@@ -712,20 +716,21 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Source and inputs:**
 
-- ART-22's masters; Andrew's recorded Q-P25 answer and Q-P42 answer; TRACKING EV-0423 decision 1
+- ART-22's masters; Andrew's recorded Q-P25 answer; TRACKING EV-0423 decision 1; TRACKING EV-0447 decision 3 (hybrid enemy motion: procedural locomotion and turning in Godot, hand-keyed Blender wind-up and attack clips; specifics open)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 EN-1 to EN-4 and EP-01
-- Context7 receipts `b1-armatures.txt` lines 8, 16 and 24; `b2-weight-paint.txt` line 20
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` lines 8, 16 and 24; `artifacts/handoff-8-2026-09-16/drafts/ctx7/b2-weight-paint.txt` line 20
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 PF-09
 
-**Dependencies:** [ART-22](#art-22). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P42](#q-p42) (proposed: enemy family motion treatment). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
+**Dependencies:** [ART-22](#art-22). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P25](#q-p25), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P42](#q-p42) (the hybrid approach is recorded at TRACKING EV-0447 decision 3; the per-member split is the parameter row in item 2).
 
-**Files touched:** `source-assets/<enemy_unit>/**` (armatures in the masters); `source-assets/<enemy_unit>/provenance/**`; `artifacts/local/tasks/ART-23/`.
+**Files touched:** `source-assets/iron_orchard_enemies/models/**` (armatures in the masters); `source-assets/iron_orchard_enemies/provenance/rig/**`; `artifacts/local/tasks/ART-23/`.
 
 **Definition of done:**
 
-1. An armature for each member's working-tool joints, covering every attack stage the Q-P25 answer names (TH-03 EN-1 to EN-4), under the motion treatment the Q-P42 answer selects.
-2. Weights use a method recorded under PD-01 PF-09 (`b1-armatures.txt` lines 8 and 16; `b2-weight-paint.txt` line 20).
-3. PD-01 PF-09 records the bone list, rest pose, units and axes within the Q-P26 and Q-E03 answers. A test export goes to receipts only.
+1. An armature for each member covering every attack stage the Q-P25 answer names (TH-03 EN-1 to EN-4), under the hybrid approach of TRACKING EV-0447 decision 3: bones for locomotion and turning are named for a Godot-side procedural driver, and working-tool joints carry controls for hand-keyed wind-up and attack clips.
+2. Parameter row: which motions of each member are procedural and which are keyed, recovery included. Value unset, gated on the specifics Q-P42 leaves open; bones for a motion whose treatment is unset are recorded as provisional.
+3. Weights use a method recorded under PD-01 PF-09 (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b1-armatures.txt` lines 8 and 16; `artifacts/handoff-8-2026-09-16/drafts/ctx7/b2-weight-paint.txt` line 20).
+4. PD-01 PF-09 records the bone list, rest pose, units and axes within the Q-P26 and Q-E03 answers. A test export goes to receipts only.
 
 **Verification and evidence:** Static: PD-01 PF-09 record against the Q-P25 attack list. Human review record (PD-01 PF-12): Andrew reviews pose-range renders of each tool. Not established: clip quality, committed geometry or playback. Human-hands steps: Andrew installs Blender and records execution authorization; Andrew's review.
 
@@ -739,19 +744,20 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Source and inputs:**
 
-- ART-23's rigs; Andrew's recorded Q-P25 and Q-P42 answers; TRACKING EV-0423 decision 1
+- ART-23's rigs; Andrew's recorded Q-P25 answer; TRACKING EV-0423 decision 1; TRACKING EV-0447 decision 3 (hand-keyed Blender wind-up and attack clips; procedural locomotion and turning in Godot; specifics open)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` TH-03 EN-1 to EN-4, EP-01, EP-09, AO-01 and TP-15; `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RR-01, RR-07, RE-05 and RT-07
-- Context7 receipts `b3-actions-nla.txt` lines 8 and 40
+- Context7 receipts `artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` lines 8 and 40
 
-**Dependencies:** [ART-21](#art-21), [ART-23](#art-23). **Blocking questions:** [Q-E01](#q-e01), [Q-P25](#q-p25), [Q-P26](#q-p26), [Q-P42](#q-p42). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1).
+**Dependencies:** [ART-21](#art-21), [ART-23](#art-23). **Blocking questions:** [Q-E01](#q-e01), [Q-P25](#q-p25), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-P42](#q-p42) (the hybrid approach is recorded at TRACKING EV-0447 decision 3; which stages are keyed per member is the parameter row in item 2).
 
-**Files touched:** `source-assets/<enemy_unit>/**` (actions in the masters); `source-assets/<enemy_unit>/provenance/**`; `artifacts/local/tasks/ART-29/`.
+**Files touched:** `source-assets/iron_orchard_enemies/models/**` (actions in the masters); `source-assets/iron_orchard_enemies/provenance/clips/**`; `artifacts/local/tasks/ART-29/`.
 
 **Definition of done:**
 
-1. One action per attack stage per attack in the Q-P25 answer (TH-03 EN-1 to EN-4), each on its own NLA track (`b3-actions-nla.txt` line 40), made by the method the Q-P42 answer selects.
-2. Poses present the declared geometry and never define it (TH-16 RR-01, RE-05; TH-03 EP-01). Clip progress never advances a windup, active window or recovery (TH-03 AO-01; TH-16 RT-07).
-3. Stage lengths are parameters under TH-03 TP-15 and Q-P25, with no value.
+1. One hand-keyed action per wind-up and attack stage per attack in the Q-P25 answer (TH-03 EN-1 to EN-3), each on its own NLA track (`artifacts/handoff-8-2026-09-16/drafts/ctx7/b3-actions-nla.txt` line 40), under TRACKING EV-0447 decision 3; locomotion and turning are procedural in Godot and are not keyed here.
+2. Parameter row: whether each member's recovery stage (TH-03 EN-4) and any other motion is keyed or procedural. Value unset, gated on the specifics Q-P42 leaves open.
+3. Poses present the declared geometry and never define it (TH-16 RR-01, RE-05; TH-03 EP-01). Clip progress never advances a windup, active window or recovery (TH-03 AO-01; TH-16 RT-07).
+4. Stage lengths are parameters under TH-03 TP-15 and Q-P25, with no value.
 
 **Verification and evidence:** Static: PD-01 PF-09 per clip. Human review record (PD-01 PF-12): Andrew reviews captures of each stage at the ART-21 camera distance. Not established: alignment with committed geometry, timing or play readability. Human-hands steps: Andrew installs Blender and records execution authorization; Andrew's review.
 
@@ -765,19 +771,20 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Source and inputs:**
 
-- Every ART-17 source row; ART-22 and ART-23 masters and ART-29 clip records; TRACKING EV-0423 decision 1
+- Every ART-17 source row; ART-21's check record, ART-22 and ART-23 masters and ART-29 clip records; TRACKING EV-0423 decision 1; TRACKING EV-0447 decision 2 (native recheck of the provisional distance)
 
-**Dependencies:** [NQ-01](#nq-01), [ART-22](#art-22), [ART-23](#art-23), [ART-29](#art-29), [SC-02](#sc-02), [SC-04](#sc-04), [SC-07](#sc-07), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P25](#q-p25), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-E13](#q-e13).
+**Dependencies:** [NQ-01](#nq-01), [ART-21](#art-21), [ART-22](#art-22), [ART-23](#art-23), [ART-29](#art-29), [SC-02](#sc-02), [SC-04](#sc-04), [SC-07](#sc-07), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P25](#q-p25), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-E13](#q-e13).
 
-**Files touched:** `native/content/<enemy_unit>/assets/**`; `native/content/<enemy_unit>/scenes/**`; `source-assets/<enemy_unit>/provenance/**`; `artifacts/local/tasks/ART-24/`.
+**Files touched:** `native/content/iron_orchard_enemies/assets/models/**` (inputs with sidecars; the audio folder belongs to the sound import card); `native/content/iron_orchard_enemies/scenes/**`; `source-assets/iron_orchard_enemies/provenance/import/**`; `docs/art/production/iron_orchard_enemies/review/native/**` (the native recheck record; DQ-01); `artifacts/local/tasks/ART-24/`.
 
 **Definition of done:**
 
 1. ART-17 items 1 to 6 hold for every member input.
-2. Every stage clip is present after import under its recorded name (`g1b-gltf-skinned-import.txt` line 53).
+2. Every stage clip is present after import under its recorded name (`artifacts/handoff-8-2026-09-16/drafts/ctx7/g1b-gltf-skinned-import.txt` line 53).
 3. Scenes reference the enemy definition by domain ID and carry no attack value (TH-19 AR-07; TH-16 RE-05).
+4. ART-21's telegraph-pose check is repeated at the native slice's camera and recorded beside ART-21's provisional verdict; a disagreement returns the member to Andrew as a finding (TRACKING EV-0447 decision 2).
 
-**Verification and evidence:** As ART-17, plus the imported clip-name check. Human review record (PD-01 PF-12): Andrew reviews in-engine captures of each stage. Not established: telegraph readability in play, which needs PD-03 AU-02 or a play session. Human-hands steps: as ART-17.
+**Verification and evidence:** As ART-17, plus the imported clip-name check. Human review record (PD-01 PF-12): Andrew reviews in-engine captures of each stage and the native recheck. Not established: telegraph readability in play, which needs PD-03 AU-02 or a play session, or Q-P32's bounds. Human-hands steps: as ART-17, and Andrew's native recheck verdict.
 
 **Boundary:** As ART-17. No encounter or enemy definition authoring. Re-size check as ART-22.
 
@@ -797,7 +804,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [PD-01](#pd-01). **Blocking questions:** None. Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-P07](#q-p07), [Q-P22](#q-p22), [Q-P23](#q-p23), [Q-P24](#q-p24), [Q-P26](#q-p26), [Q-P33](#q-p33).
 
-**Files touched:** `docs/art/production/<orchard_modules_unit>/**` (DQ-01); `artifacts/local/tasks/ART-25/`.
+**Files touched:** `docs/art/production/iron_orchard_modules/**` (DQ-01); `artifacts/local/tasks/ART-25/`.
 
 **Definition of done:**
 
@@ -819,17 +826,17 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Source and inputs:**
 
-- ART-25's sheets; Andrew's recorded Q-P26 answer naming the module set; TRACKING EV-0423 decisions 1 and 2
+- ART-25's sheets and Andrew's review record of them; the module set recorded at TRACKING EV-0447 decision 1; TRACKING EV-0423 decisions 1 and 2
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-17; `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RQ-04
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 AC-12, AC-17 and PE-04; BIBLE.md lines 487 and 711
 
-**Dependencies:** [ART-25](#art-25). **Blocking questions:** [Q-P23](#q-p23), [Q-P26](#q-p26). Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-P22](#q-p22), [Q-P24](#q-p24), [Q-P33](#q-p33).
+**Dependencies:** [ART-25](#art-25). **Blocking questions:** [Q-P23](#q-p23). Gate: proposed for the sprint after the current one under TRACKING EV-0423 decision 1, with the batch asset list and file locations recorded at TRACKING EV-0447 decision 1; runs only inside a sprint Andrew authorizes. **Registered non-blocking questions:** [Q-P22](#q-p22), [Q-P24](#q-p24), [Q-P26](#q-p26) (the measured budget only), [Q-P33](#q-p33).
 
-**Files touched:** `source-assets/<orchard_modules_unit>/blockout/**`; `source-assets/<orchard_modules_unit>/provenance/**`; `artifacts/local/tasks/ART-26/`.
+**Files touched:** `source-assets/iron_orchard_modules/blockout/**`; `source-assets/iron_orchard_modules/provenance/blockout/**`; `artifacts/local/tasks/ART-26/`.
 
 **Definition of done:**
 
-1. Rough blockouts for each module in the Q-P26 answer, with connection points assembled as the Q-P23 answer allows.
+1. Rough blockouts for each candidate module ART-25's sheet names and Andrew's review record keeps, with connection points assembled as the Q-P23 answer allows.
 2. Each passage is labelled with its intended route role; clearance is not measured here, because the fully grown clearance check is NQ-03's executed trial (TRACKING EV-0423 decision 2; PD-01 PE-04).
 3. Provenance records carry PD-01 PF-01 to PF-13 and PF-15, with the Blender version pinned in PD-01 PF-06.
 
@@ -851,7 +858,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [ART-26](#art-26). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E04](#q-e04), [Q-P33](#q-p33).
 
-**Files touched:** `source-assets/<orchard_modules_unit>/**`; `artifacts/local/tasks/ART-27/`.
+**Files touched:** `source-assets/iron_orchard_modules/models/**`, `source-assets/iron_orchard_modules/textures/**` and `source-assets/iron_orchard_modules/provenance/model/**`; `artifacts/local/tasks/ART-27/`.
 
 **Definition of done:**
 
@@ -875,7 +882,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 **Dependencies:** [NQ-01](#nq-01), [ART-27](#art-27), [SC-05](#sc-05), [SC-07](#sc-07), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-E04](#q-e04), [Q-P23](#q-p23), [Q-P26](#q-p26). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-E13](#q-e13).
 
-**Files touched:** `native/content/<orchard_modules_unit>/assets/**`; `native/content/<orchard_modules_unit>/scenes/**`; `source-assets/<orchard_modules_unit>/provenance/**`; `artifacts/local/tasks/ART-28/`.
+**Files touched:** `native/content/iron_orchard_modules/assets/**`; `native/content/iron_orchard_modules/scenes/**`; `source-assets/iron_orchard_modules/provenance/import/**`; `artifacts/local/tasks/ART-28/`.
 
 **Definition of done:**
 
@@ -896,16 +903,16 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 - TRACKING EV-0423 decision 2: the fully grown clearance check is a separate evidence card
 - `docs/product/sections/PD-01-art-acceptance.md` PD-01 PE-04; BIBLE.md line 487 (test the loop at ordinary maximum growth)
-- `docs/tech/sections/TH-15-physics-query-contract.md` TH-15 PX-09 and PX-10; `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-16 and MP-17; `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RQ-04 and RQ-05; `docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md` TH-05 CO-11
+- `docs/tech/sections/TH-15-physics-query-contract.md` TH-15 PX-09 (its two-extent setup only) and TH-15 PX-10 (install timing, not used); `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` TH-02 MP-16 and MP-17; `docs/tech/sections/TH-16-rendering-integration.md` TH-16 RQ-04 and RQ-05; `docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md` TH-05 CO-11
 - The modules ART-28 admitted, and the module collision geometry the TH-15 card named in DQ-05 supplies
 
-**Dependencies:** [ART-28](#art-28), [TH-15](#th-15), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-P22](#q-p22) (ordinary maximum envelope and minimum clearance). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1); not assignable until the module collision card DQ-05 disposes is defined and done. **Registered non-blocking questions:** [Q-P23](#q-p23), [Q-P24](#q-p24).
+**Dependencies:** [ART-28](#art-28), [TH-15](#th-15), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-P22](#q-p22) (ordinary maximum envelope and minimum clearance). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1); held back from the closure definition import until the module collision card DQ-05 names exists (TRACKING EV-0435). **Registered non-blocking questions:** [Q-P23](#q-p23), [Q-P24](#q-p24).
 
 **Files touched:** `native/tests/clearance/orchard_modules_clearance.gd` and its UID sidecar (proposed name, renamed only if the engineering handoff names another; HF-01 line 33); `artifacts/local/tasks/NQ-03/`.
 
 **Definition of done:**
 
-1. The TH-15 PX-09 and PX-10 trials run against each admitted module passage with the starter extent and the ordinary maximum extent the Q-P22 answer records, installed as values through the rebuild route (TH-05 CO-11), using the handoff's command.
+1. Using TH-15 PX-09's two-extent setup with this card's own pass rule, not the expected observation of TH-15 PX-09 that the larger extent is stopped, each admitted module passage runs with the starter extent and the ordinary maximum extent the Q-P22 answer records, installed as values through the rebuild route (TH-05 CO-11), with the handoff's command. TH-15 PX-10 tests install timing, not passage clearance, and is not used.
 2. Each passage's result is recorded as pass or content defect; a passage that fits only the starter is a defect and the runtime never shrinks the actor (TH-16 RQ-04).
 3. PD-01 PE-04 is reported satisfied only for the recorded modules, host and version.
 
@@ -915,7 +922,7 @@ Ordered so the concept-to-import path for the shared core and Fuse reads first.
 
 ## Sound production
 
-Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions, and on the playable native build (TRACKING EV-0423 decision 1; BIBLE line 747). No card here produces a listening result that stands in for PD-03's audition matrix, which needs that build (PD-03 AU-01 to AU-06).
+Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions, and on the playable native build (TRACKING EV-0423 decision 1; BIBLE line 747). No card here produces a listening result that stands in for PD-03's audition matrix, which needs that build (PD-03 AU-01 to AU-06). Sound cards do not block on Q-P26: BACKLOG Q-P26's affected work names models, textures, rigs, attachment sizing, material and lighting work and import checks, not audio, and Q-P31 is the sound batch's manifest gate (a recorded deviation from attempt A2's required change 5).
 
 <a id="snd-01"></a>
 
@@ -933,7 +940,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 
 **Dependencies:** [FR-07](#fr-07), [PD-03](#pd-03), [TH-17](#th-17). **Blocking questions:** [Q-E01](#q-e01), [Q-P31](#q-p31), [Q-P32](#q-p32). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-P06](#q-p06), [Q-P28](#q-p28).
 
-**Files touched:** `source-assets/fuse/audio/**` (editable masters, synthesis recipes and provenance with license evidence; HF-01 line 31 with the DQ-01 Audio amendment); `artifacts/local/tasks/SND-01/`.
+**Files touched:** `source-assets/fuse/audio/weapon/**` (editable masters, synthesis recipes and provenance with license evidence; HF-01 line 31 with the DQ-01 Audio amendment); `artifacts/local/tasks/SND-01/`.
 
 **Definition of done:**
 
@@ -960,7 +967,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 
 **Dependencies:** [FR-07](#fr-07), [PD-03](#pd-03), [SND-01](#snd-01), [TH-17](#th-17). **Blocking questions:** [Q-E01](#q-e01), [Q-P13](#q-p13), [Q-P31](#q-p31), [Q-P32](#q-p32). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06).
 
-**Files touched:** `source-assets/fuse/audio/**`; `artifacts/local/tasks/SND-02/`.
+**Files touched:** `source-assets/fuse/audio/field_miscast/**`; `artifacts/local/tasks/SND-02/`.
 
 **Definition of done:**
 
@@ -985,7 +992,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 
 **Dependencies:** [FR-07](#fr-07), [PD-03](#pd-03), [SND-01](#snd-01), [TH-17](#th-17). **Blocking questions:** [Q-E01](#q-e01), [Q-P17](#q-p17), [Q-P20](#q-p20), [Q-P31](#q-p31), [Q-P32](#q-p32). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06).
 
-**Files touched:** `source-assets/fuse/audio/**`; `artifacts/local/tasks/SND-03/`.
+**Files touched:** `source-assets/fuse/audio/ultimate/**`; `artifacts/local/tasks/SND-03/`.
 
 **Definition of done:**
 
@@ -1011,7 +1018,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 
 **Dependencies:** [ART-29](#art-29), [PD-03](#pd-03), [TH-17](#th-17). **Blocking questions:** [Q-E01](#q-e01), [Q-P25](#q-p25), [Q-P31](#q-p31), [Q-P32](#q-p32). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06), [Q-P30](#q-p30).
 
-**Files touched:** `source-assets/<enemy_unit>/audio/**`; `artifacts/local/tasks/SND-04/`.
+**Files touched:** `source-assets/iron_orchard_enemies/audio/warnings/**`; `artifacts/local/tasks/SND-04/`.
 
 **Definition of done:**
 
@@ -1038,7 +1045,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 
 **Dependencies:** [NQ-01](#nq-01), [SND-01](#snd-01), [SND-02](#snd-02), [SND-03](#snd-03), [SND-04](#snd-04), [SC-07](#sc-07), [TH-17](#th-17), [TH-29](#th-29), [TH-31](#th-31). **Blocking questions:** [Q-E01](#q-e01), [Q-E03](#q-e03), [Q-P31](#q-p31). Gate: Q-E01 native slice and Andrew's production authorization (TRACKING EV-0423 decision 1). **Registered non-blocking questions:** [Q-E06](#q-e06).
 
-**Files touched:** `native/content/fuse/assets/audio/**` and `native/content/<enemy_unit>/assets/audio/**` (inputs with `.import` sidecars; DQ-01 Audio amendment); `source-assets/fuse/provenance/**` and `source-assets/<enemy_unit>/provenance/**`; `artifacts/local/tasks/SND-05/`.
+**Files touched:** `native/content/fuse/assets/audio/**` and `native/content/iron_orchard_enemies/assets/audio/**` (inputs with `.import` sidecars; DQ-01 Audio amendment); `source-assets/fuse/audio/import/**` and `source-assets/iron_orchard_enemies/audio/import/**` (recipes and provenance links); `artifacts/local/tasks/SND-05/`.
 
 **Definition of done:**
 
@@ -1053,7 +1060,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 
 ## Proposed register entry
 
-Proposed for the coordinator's definition import; the ID is the next free number after the register's last entry and is the coordinator's to confirm. It replaces A1's drafting question DQ-04 (review R1 B4).
+Proposed for the coordinator's definition import; the ID is the next free number after the register's last entry and is the coordinator's to confirm. It replaces A1's drafting question DQ-04 (review R1 B4) and carries Andrew's approach-level answer (TRACKING EV-0447 decision 3).
 
 <a id="q-p42"></a>
 
@@ -1061,10 +1068,10 @@ Proposed for the coordinator's definition import; the ID is the next free number
 
 **Source:** BACKLOG Q-P27's missing information names the selected mech only; TRACKING EV-0372 recorded the hybrid treatment for the mech and nothing for enemies; TH-03 EP-01 and AO-01.
 
-**Missing information:** For the Iron Orchard enemy family, which motion treatment carries each attack stage: hand-keyed Blender clips, procedural motion in Godot, or a stated mix, and which parts are stable?
+**Missing information:** The approach is recorded at TRACKING EV-0447 decision 3: hybrid, with procedural locomotion and turning in Godot and hand-keyed Blender wind-up and attack clips. Still missing: for each family member, which motions are procedural and which are keyed, recovery included, and which parts are stable.
 
 **Decision owner:** Andrew
 
-**Affected work:** ART-23 and ART-29, and through them ART-24 and SND-04.
+**Affected work:** The parameter rows of ART-23 and ART-29, and through them ART-24 and SND-04.
 
 **Evidence needed to close:** A recorded selection per family member naming the treatment for each attack stage, with poses still presenting the declared geometry and never advancing a window.
