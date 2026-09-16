@@ -1,0 +1,4 @@
+ .../TH-04-abilities-ultimates-and-combat-rhythm.md | 424 +++++++++++++++++++++
+ 1 file changed, 424 insertions(+)
+882f5dc63088d0faaa82e8bd365b4cacfe0db2f678a93ad719cf410f09166851  docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md
+coordinator rerun at 3ffa8cd6f265e7a34f6593ea0188b11ecd672572, 2026-09-17T03:50Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (20 sections); check:project exit 0; check:drift exit 0; check_abilities.py (writer paper check, rerun from a coordinator copy) exit 0 result pass.
