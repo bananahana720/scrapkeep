@@ -1,0 +1,6 @@
+check-docs EXIT=0
+check-drift EXIT=0
+check-drift-schemas EXIT=0
+paper-fr07 EXIT=0
+retained-SC-03 EXIT=0
+retained-SC-08 EXIT=0
