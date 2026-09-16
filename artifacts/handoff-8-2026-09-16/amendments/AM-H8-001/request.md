@@ -9,9 +9,9 @@
 | Requester and owner | Raised by independent review R1 of SC-01 (scrapkeep-reviewer-medium, claude-opus-5 high) on candidate 46c5c199ad1bb00d0d7f117e5316aa47ecf43df8 from attempt SC-01-A1 (lease SC-01-L1, scrapkeep-writer, claude-opus-5 high, CLAUDE_EFFORT=high), whose writer disclosed the gap as its Seam 1. Received by the Handoff-8 coordinator (claude-opus-5). |
 | Program and authorization | Handoff-8-2026-09-16, TRACKING EV-0367 (PD-03, TH-18, TH-19, SC-01 to SC-06, SC-08; documentation-only). No repair card for HF-06a is in that scope. |
 | Source identity | Base bb97c4111d1e7b2dd40cae575eccde17878b07c5; worktree /home/andrew/Projects/scrapkeep-wt-SC-01 on wt/SC-01, clean; candidate 46c5c19; review report artifacts/handoff-8-2026-09-16/tasks/SC-01/review-R1.md. |
-| Request state | `proposed` |
+| Request state | `accepted` (revision 1) |
 | Decision owner | Coordinator for classification; Andrew for adding a repair card to the authorized scope. |
-| Admission state | Pending. |
+| Admission state | Pending: FR-07 to be defined in BACKLOG and admitted after the other Handoff-8 schema cards. |
 | Affected work | SC-01 revision 1 (attempt SC-01-A1, lease released, blocked). TH-20 (reconciles the catalogue) and TH-21 depend on SC-01. Admitted sections citing HF-06a, HF-06b or HF-07a would take stated-hash re-points only. |
 | Safe continuation | SC-02, SC-03, SC-04, TH-18-A2 and TH-19 review continue; none types slots. |
 
@@ -31,8 +31,8 @@ Specification defect (an omission in the admitted matrix), not an implementation
 
 | Field | Required entry |
 | --- | --- |
-| Decision | Pending: Andrew's scope decision on adding the repair card. |
-| Accepted scope | none yet |
+| Decision | Accepted, 2026-09-16. Coordinator classification: specification omission in HF-06a. Andrew's scope decision by structured answer 'Add the fix, run it last': one foundation-repair card FR-07 joins Handoff-8 and dispatches after SC-02 to SC-06 and SC-08 are admitted; SC-01 attempt 2 follows FR-07. |
+| Accepted scope | FR-07 revision 1 as defined at its BACKLOG definition-import event: type the slot definition in HF-06a with matching HF-06b and HF-07a cells, drift fixpoint over citing sections and schema contracts, retained checks re-pinned; no new field, transition or save shape. |
 | Implementation defect | not applicable |
 | Rejected request | not applicable |
 | Deferred request | not applicable |
