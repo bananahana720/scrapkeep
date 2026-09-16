@@ -13,7 +13,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Sprint authorization | **TL-02, TH-04, TH-06 and TH-08 authorized** by Andrew on 17 September 2026 (EV-0283). Objective: make staleness and no-build tooling mechanical in the scope map, then continue the runtime handoff. TH-04, TH-06 and TH-08 documentation-only; TL-02 tooling only (check-scope.mjs, its test, CONTRIBUTING; npm test as its no-build gate; no dependency, no build). Handoff-3-2026-09-16 closed passed at EV-0282. All documentation-only: scoped section edits or new sections, paper checks, documentation, project and drift checks, independent review. Handoff-2-2026-09-16 closed passed at EV-0243. Foundation-full (authorized EV-0078, closed passed EV-0185), Foundation-01 (EV-0077) and Operational Sprint 0 (EV-0064) are historical. |
 | Native game/build authorization | **None active.** NP-01's proof repair (authorized EV-0188, done EV-0193) is historical: edits confined to `native/proofs/tadr-004/` and its proof pages, verified by headless `npm run native:smoke`; no export, feature or production code. Earlier historical: **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
 | Active coordinator for sprint execution | Andrew-directed Claude Code coordinator session (claude-fable-5-1 selected; effort not verifiable from inside the session, as EV-0093 disclosed), sole board and integration writer since the EV-0093 transfer. The foundation_coordinator process named before EV-0093 ended at the cut-off recorded there. |
-| Active task attempts / write leases | None open; every Handoff-3 lease closed by EV-0280 and the sprint closed at EV-0282. Active writers never exceed two. Active writers never exceed two. |
+| Active task attempts / write leases | TL-02-L1 (EV-0285) and TH-04-L1 (EV-0286) open, disjoint write sets. Active writers never exceed two. Active writers never exceed two. Active writers never exceed two. |
 | (historical) | FR-02-L1 closed at EV-0212, TH-01-L1 at EV-0204, FR-01-L1 at EV-0201, NP-01-L1 at EV-0193. See the attempt records and task index. Active writers never exceed two. |
 | Remote / publication | Verified [private bananahana720/scrapkeep](https://github.com/bananahana720/scrapkeep), default `main`; only `main` and `codex/lightning-playtest` published. See the accepted PUB-01 attempt and [publication receipt](artifacts/publication-2026-09-06/publication.json). |
 
@@ -138,7 +138,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [TH-01](BACKLOG.md#th-01) | 1 | 10 | done | none; RL5 and RS.15 corrected to HF-07a route semantics at EV-0280 | TH-01-A1 | EV-0280 |
 | [TH-02](BACKLOG.md#th-02) | 1 | 11 | done | none; MO-03 unlock authority corrected at EV-0284 | TH-02-A2 | EV-0284 |
 | [TH-03](BACKLOG.md#th-03) | 1 | 10 | done | none | TH-03-A2 | EV-0241 |
-| [TH-04](BACKLOG.md#th-04) | 1 | 4 | ready | none; authorized at EV-0283 | none | EV-0283 |
+| [TH-04](BACKLOG.md#th-04) | 1 | 5 | in_progress | none | none | EV-0286 |
 | [TH-05](BACKLOG.md#th-05) | 1 | 11 | done | none | TH-05-A2 | EV-0271 |
 | [TH-06](BACKLOG.md#th-06) | 1 | 2 | ready | none; authorized at EV-0283, dispatch after the initial set | none | EV-0283 |
 | [TH-07](BACKLOG.md#th-07) | 1 | 1 | queued | HF-10 | none | EV-0002 |
@@ -199,7 +199,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [FR-02](BACKLOG.md#fr-02) | 2 | 10 | done | none | FR-02-A2 | EV-0212 |
 | [FR-03](BACKLOG.md#fr-03) | 1 | 6 | done | none | FR-03-A1 | EV-0227 |
 | [TL-01](BACKLOG.md#tl-01) | 1 | 6 | done | none | TL-01-A1 | EV-0223 |
-| [TL-02](BACKLOG.md#tl-02) | 1 | 2 | ready | none; authorized at EV-0283 | none | EV-0283 |
+| [TL-02](BACKLOG.md#tl-02) | 1 | 3 | in_progress | none | none | EV-0285 |
 | [NP-01](BACKLOG.md#np-01) | 1 | 6 | done | none | NP-01-A1 | EV-0193 |
 
 ## Question state index
@@ -493,6 +493,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0282 | 2026-09-17T01:00:00+00:00 | Coordinator / sprint closure, completion | (record) | SPRINT COMPLETE for Handoff-3-2026-09-16. Closure executed per ORCHESTRATOR § Sprint closure: dispatch stopped with zero leases and zero worktrees; integrated commit pinned at bd0b46f18dc0c61a38fd0278a62413e2a23bb559 with a clean tracked tree after the closure correction pass (EV-0281); no specification amendment request was filed; the gate run on that commit: check:docs exit 0 (19 sections), check:project exit 0, npm run check:drift exit 0 (87 stated hashes, zero mismatches, zero unbound), npm test exit 0 (211 pass), and the twelve paper checks (HF-04b, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09, TH-01, TH-02, TH-03, TH-05, TH-11) exit 0 from copies; scenario review supplied by the four per-card independent reviews (EV-0259, EV-0263, EV-0269, EV-0279) and one integrated read over the five TH sections and the persistence chain (scrapkeep-reviewer, Fable 5.1 medium: PASS+NOTES, six stale-prose findings repaired at EV-0281, four routing recommendations carried). Receipt docs/project/handoff-3/closure.json (sha256 4def408fcd71b57f…) evaluated by scripts/sprint-close.mjs at the pinned commit: outcome passed, zero issues, result retained at artifacts/handoff-3-2026-09-16/closure/result.json with the gate logs beside it. Retro and grooming recorded in the closure record. One next-sprint proposal of four S/M cards (TL-02, TH-04, TH-06, TH-08; initial dispatch TL-02 and TH-04) prepared and left awaiting_review per Andrew's stated preference (EV-0249, EV-0275). For Andrew at the next decision: Q-P10 costs, supply and mass values; Q-P12 eligibility details and level counts; Q-P32 bounds; the TH-02 versus TH-03 unlocking authority for a presentation-owned aim point (a TADR-002 amendment would be the unlock). This administrative commit carries the record; the checked source identity remains bd0b46f18dc0c61a38fd0278a62413e2a23bb559. |
 | EV-0283 | 2026-09-17T01:20:00+00:00 | Andrew / authorization; Coordinator / readiness | TL-02, TH-04, TH-06, TH-08 | Andrew read the Handoff-3 closure summary in the coordinator session and answered 'Approve all four, dispatch TL-02 and TH-04'. Sprint Handoff-4-2026-09-17 authorized for TL-02 revision 1, TH-04 revision 1, TH-06 revision 1 and TH-08 revision 1 under the receipt's objective (make staleness and no-build tooling mechanical in the scope map, then continue the runtime handoff with abilities, encounters and inventory). TH-04, TH-06 and TH-08 documentation-only; TL-02 tooling only (scripts/check-scope.mjs, its test, CONTRIBUTING; npm test as its no-build gate; no dependency, no build). Initial dispatch TL-02 and TH-04; TH-06 and TH-08 follow as slots free. Readiness admitted: TL-02 (dependency TL-01 done at EV-0223, record revision 1 to 2), TH-04 (dependency HF-10, record revision 3 to 4), TH-06 and TH-08 (record revision 1 to 2 each, dispatch deferred). Push cadence unchanged. |
 | EV-0284 | 2026-09-17T01:22:00+00:00 | Andrew / decision; Coordinator / correction | Q-P32, TH-02 | Andrew decided the integrated read's F6: a presentation-owned aim point is unlockable only by an amendment to TADR-002, and Q-P32 owns feel bounds only (a Q-P32 unlock and keeping both readings declined). Recorded as a further partial decision on Q-P32. Coordinator correction under that decision: TH-02 MO-03's unlock clause re-pointed to the TADR-002 amendment with a Procedure note, aligning with TH-03 AO-05; TH-02's stated hash propagated to its citers to a fixpoint; no other text changed. |
+| EV-0285 | 2026-09-17T01:45:00+00:00 | Coordinator / assignment, lease | TL-02 | TL-02 ready to in_progress at card revision 1, record revision 2 to 3. Attempt TL-02-A1, exclusive lease TL-02-L1 over scripts/check-scope.mjs, tests/check-scope.test.js, the CONTRIBUTING.md check:scope row and scope-to-command paragraph, and artifacts/local/tasks/TL-02/. Worktree /home/andrew/Projects/scrapkeep-wt-TL-02 on branch wt/TL-02 at verified base a2f874b94d724952f67ce343dd5787f10e7ff210. Packet artifacts/handoff-4-2026-09-17/tasks/TL-02/assignment.md carrying the exact card, the classifier's current classes and refusal text, the EV-0223 evidence gap, the class boundary and the package.json scripts-versus-dependency distinction to test. Writer scrapkeep-writer (claude-opus-5 high). Reviewer to be assigned fresh at handoff: scrapkeep-reviewer-medium (Opus 5 high), because acceptance is mechanical (classes, commands, tests, no dependency). |
+| EV-0286 | 2026-09-17T01:46:00+00:00 | Coordinator / assignment, lease | TH-04 | TH-04 ready to in_progress at card revision 1, record revision 4 to 5. Attempt TH-04-A1, exclusive lease TH-04-L1 over docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md and artifacts/local/tasks/TH-04/. Worktree /home/andrew/Projects/scrapkeep-wt-TH-04 on branch wt/TH-04 at verified base a2f874b94d724952f67ce343dd5787f10e7ff210. Packet artifacts/handoff-4-2026-09-17/tasks/TH-04/assignment.md carrying the exact card, the TH-03 sibling and its ability seam, the resolved and open questions, the prototype evidence to separate, the check:drift requirement and the paper-check requirements. Write sets of TL-02-L1 and TH-04-L1 are disjoint; two writers active. Writer scrapkeep-writer (claude-opus-5 high). Reviewer to be assigned fresh at handoff: scrapkeep-reviewer (Fable 5.1 medium), because acceptance turns on Bible and ADR judgement. |
 
 ## Preparation checkpoint
 
@@ -675,7 +677,7 @@ Next: the [Foundation-02 proposal](#foundation-02-proposal), HF-03a revision1 th
 
 ## Handoff-3 reporting checkpoint
 
-Last reported event: EV-0284. Handoff-3-2026-09-16 is closed with outcome passed at pinned commit bd0b46f18dc0c61a38fd0278a62413e2a23bb559: FR-04, TH-05, FR-05 and TH-11 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0283 (Handoff-4-2026-09-17: TL-02, TH-04, TH-06, TH-08; TL-02 and TH-04 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
+Last reported event: EV-0286. Handoff-3-2026-09-16 is closed with outcome passed at pinned commit bd0b46f18dc0c61a38fd0278a62413e2a23bb559: FR-04, TH-05, FR-05 and TH-11 done, zero leases, zero worktrees. Andrew approved the next sprint at EV-0283 (Handoff-4-2026-09-17: TL-02, TH-04, TH-06, TH-08; TL-02 and TH-04 dispatch first). Compute counts from the task index on every poke. Only admitted DONE states count. Session execution and manual pokes only.
 
 ## Handoff-3 closure record
 
@@ -771,6 +773,22 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Candidate identity: `eba203191813dea88da29d223029cb9b9c4ef8db`. Integrated identity: `1b7eae43f9d00dd943bce3a0c4d22612d2a19ace`.
 - Latest checkpoint: 2026-09-16T03:00:00+00:00; independent PASS+NOTES (EV-0203); reopened to blocked at EV-0205 for dependency drift; the coordinator's citation pass at EV-0212 re-pointed hashes and citations on integrated identity `1fa4c938bf40e4c10f2cc7357c2d733e9a6f20f0` where the paper check exits 0; done at EV-0213.
 - Review: scrapkeep-reviewer (Fable 5.1 medium), PASS+NOTES at level 3; seven non-blocking notes recorded at EV-0203.
+
+## TL-02-A1 handoff-4 attempt
+
+- Assignee: scrapkeep-writer, claude-opus-5 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt TL-02-A1, lease TL-02-L1 open.
+- Owned files: `scripts/check-scope.mjs`; `tests/check-scope.test.js`; `CONTRIBUTING.md` (one row, one paragraph); `artifacts/local/tasks/TL-02/`. Worktree /home/andrew/Projects/scrapkeep-wt-TL-02, branch wt/TL-02.
+- Base identity: `a2f874b94d724952f67ce343dd5787f10e7ff210`; dependency TL-01 done at EV-0223.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null; assignment recorded at EV-0285, writer dispatched.
+
+## TH-04-A1 handoff-4 attempt
+
+- Assignee: scrapkeep-writer, claude-opus-5 high pinned by agent definition (runtime effort reported at handoff); card revision 1; attempt TH-04-A1, lease TH-04-L1 open.
+- Owned files: `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md`; `artifacts/local/tasks/TH-04/`. Worktree /home/andrew/Projects/scrapkeep-wt-TH-04, branch wt/TH-04.
+- Base identity: `a2f874b94d724952f67ce343dd5787f10e7ff210`; dependency HF-10 done at EV-0183.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: null; assignment recorded at EV-0286, writer dispatched.
 
 ## TH-11-A1 handoff-3 attempt
 
