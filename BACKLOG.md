@@ -2323,14 +2323,14 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 ### SC-05: Specify world and level definitions
 
-**Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** schema contracts
+**Card revision:** 2 · **Owner:** Content · **Size:** M · **Lane:** schema contracts
 
 **Source and inputs:**
 
 - `docs/tech/sections/HF-06a-schema-inventory.md` from [HF-06a](#hf-06a) (must be admitted before assignment)
 - `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` from [TH-11](#th-11) (must be admitted before assignment)
 - `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment)
-- [BIBLE.md § 3. Maps & Areas](BIBLE.md#3-maps--areas) (regions, areas, level modules, routes, generation constraints, events and secrets)
+- [BIBLE.md § 3. Maps & Areas](BIBLE.md#3-maps--areas) (regions, areas, level modules, routes, exits and generation constraints; events and secret rooms are F-04 objective definitions owned by SC-04 per TH-06 UN-05 and AM-H8-004)
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (Native Resource/scene authoring)
 
 **Dependencies:** [HF-06a](#hf-06a), [TH-11](#th-11), [TH-14](#th-14). **Blocking questions:** None.
@@ -2339,7 +2339,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Definition of done:**
 
-1. Cover only regions, areas, level modules, routes, generation constraints, events and secrets; identify its HF-06 matrix rows and referenced foreign definitions.
+1. Cover only regions, areas, level modules, routes, exits and generation constraints; identify its HF-06 matrix rows and referenced foreign definitions, including the F-04 objective definitions through which levels reach events and secret rooms.
 2. For each type specify fields, types, identity/version rules, references, validation diagnostics and one labeled illustrative authored record.
 3. Document the mutable save projection or explicit immutable/transient exclusion, with paper roundtrip expectations and an executable qualification obligation.
 4. Keep unchosen content and numeric values symbolic and linked to question IDs; examples must not become production canon.
@@ -3794,6 +3794,35 @@ foundation sections in place; none changes game rules, product direction, an ADR
 **Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, the retained HF-04b, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 checks and the TH-01, TH-13 and TH-14 paper checks rerun from copies with `--out` under `artifacts/local/tasks/FR-06/`; one integrated read over the citing sections. No build.
 
 **Boundary:** Documentation contract only. No new transition, stage or field; no answer to Q-P23, Q-E03 or Q-E14; no runtime code.
+
+<a id="fr-07"></a>
+
+### FR-07: Type the slot definition and route kit actions through abilities in the content matrix
+
+**Card revision:** 1 · **Owner:** Content with Persistence · **Size:** M · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- `artifacts/handoff-8-2026-09-16/amendments/AM-H8-001/request.md` (accepted): `docs/tech/sections/HF-06a-schema-inventory.md` lines 22, 46, 97 and 193 type no slot definition while `docs/tech/sections/HF-07a-save-envelope.md` line 127 gives each slot its own domain ID; SC-01 review R1 B1
+- `artifacts/handoff-8-2026-09-16/amendments/AM-H8-002/request.md` (accepted): `docs/tech/sections/HF-06b-persistence-projection.md` line 114 names the level and encounter by ID against `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` line 45 and HF-07a line 70
+- `artifacts/handoff-8-2026-09-16/amendments/AM-H8-003/request.md` (accepted, Andrew's decision): kit weapon, main hero skill, mobility and ultimate actions reference N-021 ability definitions by ID and expected family `ability`; an ability references the F-02 attacks it produces; a mobility action may produce none; every produced attack stays under TH-03. HF-06a rows F-01, N-007 to N-011, N-013, N-016, N-019 and N-021; HF-06b N-009; `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` AS-01 to AS-04, EL-04, AI-25 and Seam 1
+- `artifacts/handoff-8-2026-09-16/amendments/AM-H8-004/request.md` (accepted, option 1): event and secret-room types are F-04 objective definitions owned by SC-04 per `docs/tech/sections/TH-06-encounters-waves-and-enemies.md` UN-05 (line 119); HF-06a N-024 and HF-06b N-024 call a respec opportunity an SC-05 event definition, repeated at `docs/tech/sections/TH-07-four-slots-and-milestone-progression.md` Seam 5
+- `docs/tech/sections/HF-06a-schema-inventory.csv`, `docs/tech/sections/HF-06b-persistence-projection.csv`, `docs/tech/sections/HF-07a-save-envelope.csv`
+
+**Dependencies:** [HF-06a](#hf-06a), [HF-06b](#hf-06b), [HF-07a](#hf-07a), [TH-04](#th-04), [TH-06](#th-06), [TH-07](#th-07), [TH-11](#th-11). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/HF-06a-schema-inventory.md` and `.csv`; `docs/tech/sections/HF-06b-persistence-projection.md` and `.csv`; `docs/tech/sections/HF-07a-save-envelope.md` and `.csv` (the `slot_id` source cell only, if its row changes); `docs/tech/sections/TH-07-four-slots-and-milestone-progression.md` (Seam 5's respec-opportunity sentence only); the retained HF-06a, HF-06b and HF-07a check scripts (pins only); the stated hashes and line citations of every technical, product and schema section that cites a changed file (re-pointed, no rule change); `artifacts/local/tasks/FR-07/`.
+
+**Definition of done:**
+
+1. HF-06a types the slot definition under its line 193 re-verification, either as a new noun row numbered after the last or by rewording N-024 so its rationale names both slot and slot-tree definitions, chosen by HF-06a's own row rules with the choice stated; HF-06b carries the matching projection or exclusion cell and HF-07a line 127's source cell names the row that types the slot; Markdown and CSV agree.
+2. HF-06a rows F-01, N-007 to N-011 and N-019 state that kit actions reference N-021 ability definitions by ID and expected family `ability` and that an ability references the F-02 attacks it produces, a mobility action possibly none; N-013 distinguishes a slot action's visual reference from an attack's; N-016 distinguishes replacing a mobility action from replacing an attack; N-021 names the attacks it references; HF-06b N-009 states that planted-limb attacks stay F-02 within an ability; Markdown and CSV agree; no HF-07a field changes.
+3. HF-06a N-024 and HF-06b N-024 (Markdown and CSV) and TH-07 Seam 5 state that a respec opportunity is an F-04 objective definition (SC-04) under Q-P18, not an SC-05 event definition, citing TH-06 UN-05. HF-06b line 114's clause names the accepted route decision and next entrance only and cites TH-11 line 45, with no level or encounter ID.
+4. Every section citing a changed file is re-pointed by a drift fixpoint over the technical and product corpora and `docs/tech/schemas`, and each citing sentence is read for meaning; no citing section's rule changes; the retained HF-06a, HF-06b and HF-07a checks are re-pinned, not weakened; `npm run check:drift` and `node scripts/check-drift.mjs --sections docs/tech/schemas` exit 0 with zero mismatches.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, `node scripts/check-drift.mjs --sections docs/tech/schemas`, the retained HF-06a, HF-06b, HF-07a, HF-08 and HF-09 checks rerun from copies with `--out` under `artifacts/local/tasks/FR-07/`, and a paper check that compares every changed rationale cell between Markdown and CSV and asserts each row's named family references; independent review against the four accepted amendments. No build.
+
+**Boundary:** Documentation contract only. No new save field, transition, stage or command; no answer to Q-P06, Q-P10, Q-P11, Q-P13 or Q-P18; no schema contract edited beyond stated hashes and line citations; no runtime code.
 
 ## Tooling repair cards (16 September 2026)
 
