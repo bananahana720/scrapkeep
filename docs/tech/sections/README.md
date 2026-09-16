@@ -24,6 +24,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [TH-01: The complete run loop](TH-01-complete-loop.md).
 - [TH-02: Movement, camera and active aim](TH-02-movement-camera-and-active-aim.md).
 - [TH-03: A committed attack means what it shows](TH-03-a-committed-attack-means-what-it-shows.md).
+- [TH-04: Abilities, ultimates and combat rhythm](TH-04-abilities-ultimates-and-combat-rhythm.md).
 - [TH-05: Electromagnetic collection, recycling and growth](TH-05-electromagnetic-collection-recycling-and-growth.md).
 - [TH-11: Runs, regions, exits and saves](TH-11-runs-regions-exits-and-saves.md).
 
