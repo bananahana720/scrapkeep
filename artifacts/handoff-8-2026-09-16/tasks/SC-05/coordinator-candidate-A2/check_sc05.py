@@ -854,7 +854,7 @@ CONTROLS = [
     ("NC11-undeclared-field", "A6-encode-decode",
      '"composition_key": "illustrative-composition-a",', '"composition_key": "illustrative-composition-a",\n  "event_ids": [],'),
     ("NC12-stale-sc04-hash", "A8-stated-hashes",
-     "2bb8c5696a7e4f211e0cc00a4522473b1934d68c192b6f32bdcb8b1685eb2c7b",
+     "f216f7c94f2495b2966f617f57e2eef264000f3be0dbdc7917aa7d7e0494dae6",
      "2bb8c5696a7e4f211e0cc00a4522473b1934d68c192b6f32bdcb8b1685eb2c7c"),
     ("NC8-stale-hash", "A8-stated-hashes",
      "7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6",
