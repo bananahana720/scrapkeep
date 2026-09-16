@@ -5,14 +5,14 @@
 | Field | Required entry |
 | --- | --- |
 | Request ID and title | AM-H8-006: Andrew's UI-only input exception (menu and interface navigation sounds at the input moment) departs from admitted TH-16's rule that every audible cue plays from a published fact in F-PROCESS. |
-| Request revision and date | Revision 1, 2026-09-16 (UTC). |
+| Request revision and date | Revision 2, 2026-09-16 (UTC). Revision 1 named TH-16 and TH-17 only; revision 2 adds HF-04a line 46 (coordinator reading while defining FR-08) and HF-06a N-051 line 124 (PD-03 review R3 note R3-N2). |
 | Requester and owner | Raised as blocking finding BF-1 of independent review R2 of PD-03 closure repair candidate 3baba5a354df013cfe42be64beefdbd53191e287 (scrapkeep-reviewer-medium, claude-opus-5 high), retained at artifacts/handoff-8-2026-09-16/tasks/PD-03/review-R2.md; received by the Handoff-8 coordinator (claude-opus-5). |
 | Program and authorization | Handoff-8-2026-09-16, TRACKING EV-0367; Andrew's product decision at EV-0453 on integrated read finding B3. |
 | Source identity | Main at 156310763985b7d6698e1ee52fabf08b27d4b3b1 (TH-16 unchanged since its Handoff-7 admission, EV-0365). |
 | Request state | `accepted` (revision 1) |
 | Decision owner | Andrew: product direction (EV-0453, "Instant UI clicks"). The TH-16 wording that realizes it is a technical revision needing its own card, reviewed attempt and authorization. |
-| Admission state | Not admitted. Propagation needs a TH-16 revision card (proposed FR-08) in a later sprint. |
-| Affected work | TH-16 (done, Handoff-7; RI-14, RV-5, Seam 4 need the named exception); TH-17 (queued; owns the click plumbing and must not realize input-moment playback before admission). PD-03 records the decision and gates SE-14's input-moment playback on this amendment's admission, so PD-03 depends on this request's decision, not on its propagation. |
+| Admission state | Not admitted. Propagation is card FR-08 (HF-04a F-INPUT row, TH-16 RI-14, RV-5 and Seam 4, HF-06a N-051 check), proposed for a later sprint. |
+| Affected work | HF-04a (done; line 46's F-INPUT row lets Presentation record UI requests only, so starting a click there needs the same named exception); HF-06a (done; N-051 line 124 says cues are consumed from committed results, which FR-08 checks and qualifies for UI-request-keyed clicks); TH-16 (done, Handoff-7; RI-14, RV-5, Seam 4 need the named exception); TH-17 (queued; owns the click plumbing and must not realize input-moment playback before admission). PD-03 records the decision and gates SE-14's input-moment playback on this amendment's admission, so PD-03 depends on this request's decision, not on its propagation. |
 | Safe continuation | PD-03 attempt 3 states the exception as Andrew's decision, names the TH-16 rules it departs from and gates it; until admission SE-14 follows TH-16's published-fact rule. No other Handoff-8 output is affected. |
 
 ## Conflicting clauses and observation
