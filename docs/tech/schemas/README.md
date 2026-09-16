@@ -9,3 +9,4 @@
 Coordinator-owned index. Schema contracts are admitted independently; TH-20 reconciles them into one catalogue, and none of them is the assembled TECH_BIBLE.
 
 - [SC-03: Item and recipe definitions](SC-03.md).
+- [SC-04: Enemy and encounter definitions](SC-04.md).
