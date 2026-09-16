@@ -11,7 +11,7 @@
 | Source identity | Base `56e579a078e80e8cd4ba4298553b8b8942357109`; worktree `/home/andrew/Projects/scrapkeep-wt-SC-05`; branch `wt/SC-05`; candidate commit named in the SC-05-A1 handoff; no other dirty tracked file. |
 | Request state | `accepted` (revision 1, option 1) |
 | Decision owner | Coordinator for the matrix-omission classification and propagation. Andrew only if the resolution changes card scope in a way EV-0367 does not cover. Q-P38 (event and secret-room type selection) and Q-P18 (respec opportunity rules) stay Andrew's product questions whatever is decided here. |
-| Admission state | Pending. |
+| Admission state | Pending at request revision 1. Applied by FR-07; accepted integrated identity `93989a43aa93f3c3c8d964646141f95df297ce21`, EV-0437. |
 | Affected work | SC-05 revision 1, attempt A1, lease SC-05-L1: card item 1's events and secrets only. SC-04 revision 1 (concurrent; F-04 objective definitions). SC-01 revision 1 (row N-024's wording; already blocked on AM-H8-001). TH-20 (reconciliation). TH-07's Seam 5 wording, if the event owner moves. |
 | Safe continuation | SC-05-A1 continues for the five types that have rows: region (area), level module, route, exit and generation constraint. They are delivered in `docs/tech/schemas/SC-05.md`, where events and secrets are withheld and no field reserves a place for them. The writer stops after the handoff. |
 
@@ -55,8 +55,8 @@ Compatibility: no save field changes under either option. Objective state is `En
 
 ## Admission and propagation receipt
 
-Pending acceptance. Required propagation under option 1: HF-06a N-024 rationale and its CSV cell; HF-06b N-024 rationale and its CSV cell; TH-07 Seam 5; SC-05 card revision 2; a note on SC-04's card if its scope wording needs it; stated-hash fixpoint over every citing section; an independent review of the changed acceptance contract.
+Applied by FR-07; accepted integrated identity `93989a43aa93f3c3c8d964646141f95df297ce21`, EV-0437. At request revision 1 this receipt read: pending acceptance. Required propagation under option 1: HF-06a N-024 rationale and its CSV cell; HF-06b N-024 rationale and its CSV cell; TH-07 Seam 5; SC-05 card revision 2; a note on SC-04's card if its scope wording needs it; stated-hash fixpoint over every citing section; an independent review of the changed acceptance contract.
 
 ## Closure disposition
 
-Open until the coordinator records a decision. SC-05's events and secrets remain blocked on it; SC-05's other five types do not depend on it.
+Propagation completed by FR-07. Q-P18 and Q-P38 remain open product questions. At request revision 1 this disposition read: open until the coordinator records a decision, with SC-05's events and secrets blocked on it and SC-05's other five types not depending on it.
