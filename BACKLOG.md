@@ -3237,7 +3237,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Camera and audio tuning, settings and comfort review
 
-**Evidence needed to close:** Provisional limits and observable threat-readability/comfort criteria are recorded for the selected kit and target setup.
+**Evidence needed to close:** Provisional limits and observable threat-readability/comfort criteria are recorded for the selected kit and target setup. Further decision recorded (17 September 2026, TRACKING EV-0284): a presentation-owned aim point is unlockable only by a TADR-002 amendment; this question owns feel bounds only.
 
 <a id="q-p33"></a>
 
