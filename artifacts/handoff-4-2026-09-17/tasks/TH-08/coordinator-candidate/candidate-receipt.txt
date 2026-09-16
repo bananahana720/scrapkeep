@@ -1,0 +1,4 @@
+ ...H-08-inventory-equipment-and-transformations.md | 414 +++++++++++++++++++++
+ 1 file changed, 414 insertions(+)
+f3b43413e5775f4177433f9cadc132716b510a19eb8d9fb9eb58a0a629499ffb  docs/tech/sections/TH-08-inventory-equipment-and-transformations.md
+coordinator rerun at 511501855082bc68e9d6064ad16fd8b1888683dd (main at 11dc3ba, TH-06 admitted after this base; TH-08 cites no TH-06 bytes), 2026-09-17T06:30Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (21 sections); check:project exit 0; check:drift exit 0 (21 sections, 117 hashes); check_contract.py (writer paper check, rerun from a coordinator copy, --root --out) exit 0, 29 PASS, 0 FAIL, 2 NOTE, 4/4 controls.
