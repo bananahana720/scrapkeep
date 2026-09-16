@@ -3321,7 +3321,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Event and defense encounters, reward content, branch layouts and intermission UI
 
-**Evidence needed to close:** Each selected type has an explicit objective/reward boundary and required route accessibility. Historical timers and counter-only entry requirements remain proposals.
+**Evidence needed to close:** Each selected type has an explicit objective/reward boundary and required route accessibility. Historical timers and counter-only entry requirements remain proposals. Partial answer recorded (17 September 2026, TRACKING EV-0296): when an objective completion and a lethal outcome on the hero are staged in the same tick, defeat wins; the lethal outcome applies first, the Q-P16 R2 revive resolves, and the completion counts only if the hero is alive after that, so no checkpoint is earned on a tick the run ended. Type selection, rewards and reconfiguration boundaries remain open.
 
 <a id="q-p39"></a>
 
