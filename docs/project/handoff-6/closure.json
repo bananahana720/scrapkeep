@@ -272,14 +272,7 @@
       ]
     }
   ],
-  "amendments": [
-    {
-      "id": "TH-14 amendment request",
-      "state": "ruled",
-      "disposition": "The packet's durable-field enumeration omitted run.checkpoint.generation_decisions[] (an HF-07a CSV row); ruled a packet omission, the section names it, no card or ADR change.",
-      "reference": "TRACKING.md EV-0330"
-    }
-  ],
+  "amendments": [],
   "retroActions": [
     {
       "cause": "The TH-14 packet enumerated the durable fields the writer could name and left one out; the writer filed an amendment request and continued rather than stopping.",

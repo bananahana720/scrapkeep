@@ -1,40 +1,20 @@
 {
   "schemaVersion": 1,
-  "receiptId": "0bd8b09e01c87e8b98ed58f9351fa8b576c728542fd8b33640afba7dd8967bf3",
+  "receiptId": "311a9c5425e5844bb85e76bca8abdb8dd17cdf7d9e02d5559489959fce20e3e5",
   "closureKey": "3a2b7215d756281ff7045ab9d8dc5f02a6c27c44d87a1569e547728c2a7b6207",
   "sprintId": "handoff-6-2026-09-17",
   "integratedCommit": "9229f83ed87687e53710cc47bbbcb9810aecf52c",
-  "outcome": "failed",
+  "outcome": "pending_evidence",
   "issues": [
     {
-      "outcome": "failed",
-      "field": "amendments[0].applicable",
-      "message": "expected a boolean"
+      "outcome": "pending_evidence",
+      "field": "integratedCommit",
+      "message": "checkout HEAD differs from tested commit"
     },
     {
-      "outcome": "failed",
-      "field": "amendments[0].state",
-      "message": "unknown amendment state"
-    },
-    {
-      "outcome": "failed",
-      "field": "amendments[0].kind",
-      "message": "unknown amendment kind"
-    },
-    {
-      "outcome": "failed",
-      "field": "amendments[0].decisionOwner",
-      "message": "decision belongs to Coordinator"
-    },
-    {
-      "outcome": "failed",
-      "field": "amendments[0].reason",
-      "message": "expected nonempty text"
-    },
-    {
-      "outcome": "failed",
-      "field": "amendments[0].affectedCards",
-      "message": "expected an array"
+      "outcome": "pending_evidence",
+      "field": "worktree",
+      "message": "tracked worktree is dirty"
     }
   ],
   "limits": "Checks receipt structure, local evidence bytes, commit identity, and recorded authority. Does not authenticate statements, discover omitted tasks/amendments, execute gates, or mutate canonical records."
