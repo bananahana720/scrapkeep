@@ -96,8 +96,8 @@ GAMEPLAY_TERM = re.compile(r"character|item|tree|recipe|unlock|region|device|com
 
 EXPECTED = {
     "base": "5f459b0407dce4fbb060a1a8421a00fb8bb5e0c1",
-    "hf06b_md_sha256": "bbd5edb186636bafea1b7ba9d75bbf9ceb3d7ab1cf5d23a6e32c95154d8aadf9",
-    "hf06b_csv_sha256": "e4f23fc334277fe41ed05eef71b136b050d9163c83e616010afce62326413783",
+    "hf06b_md_sha256": "83f6e4ba248518d1979e1428ace02ec99fea202722ab6aa0bab531f766094014",
+    "hf06b_csv_sha256": "b42918083688be02511496932e20db19305e7407dc785d740b4e0fedf6779a48",
     "hf03a_sha256": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     "s0_07_run_normal_sha256": "f2b0d512b806f43c07bd49a1775a84a2ac7109b0c3465a79c37c68764f33d28c",
     "s0_07_run_exit_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
