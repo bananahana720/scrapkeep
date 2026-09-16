@@ -11,3 +11,4 @@ Coordinator-owned index. Schema contracts are admitted independently; TH-20 reco
 - [SC-03: Item and recipe definitions](SC-03.md).
 - [SC-04: Enemy and encounter definitions](SC-04.md).
 - [SC-05: World and level definitions](SC-05.md).
+- [SC-08: Narrative and discovery definitions](SC-08.md).
