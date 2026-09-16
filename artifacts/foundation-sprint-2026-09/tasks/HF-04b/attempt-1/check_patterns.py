@@ -29,7 +29,7 @@ HASHES = {
     "native/proofs/tadr-002/session_owner.gd": "0ce10bca17c03e84d8dbabf9a9d07e94f670ce676424a25a95a915e53c71e889",
     "artifacts/prepare-stage-2026-09-06/tasks/S0-04/S0-04-int-proof-run.txt": "06df793046406c3f15e73a2e8bf5c60d564b8c534ee11e12999fd5768d6a3ad8",
     "artifacts/prepare-stage-2026-09-06/tasks/S0-04/S0-04-int-proof-fault.txt": "8d4a7289821c5622c7159a364ed5a7ba1f6715a1ce76af4faa3e4cc86f11ab98",
-    "docs/tech/sections/HF-04a-runtime-lifecycle.md": "cca7c341b0a163b0010e47c948af3d749e74c9a7fb61f475a3d332824215f91a",
+    "docs/tech/sections/HF-04a-runtime-lifecycle.md": "e0058ee153804188424a753f1d4af8a3dc9fee4b45e7c82bc6625df7f80fe43d",
     "docs/tech/sections/HF-03a-module-map.md": "95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc",
     "docs/tech/proofs/S0-04-runtime-ownership.md": "c8c223d5e147c099b9291dc422b0c832b81ac7f0a4f9fcfc973d4e8a045d466d",
     "native/project.godot": "4af482fbc0489396ea4b2ab2906987f4805d60e12a5eb2ee651296926edaa409",

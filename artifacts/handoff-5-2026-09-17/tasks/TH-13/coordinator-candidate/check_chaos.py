@@ -331,7 +331,7 @@ def run_assertions(root, section_text, findings):
         "consumes no random draw" in th04, "TH-04 AA-07's no-random-draw clause not found"
     )
     findings.check(
-        "cannot decrement a cooldown, move an actor, consume randomness" in hf04a,
+        "cannot decrement a cooldown, move an actor, consume gameplay randomness" in hf04a,
         "HF-04a line 24's control-drain clause not found",
     )
     findings.check(

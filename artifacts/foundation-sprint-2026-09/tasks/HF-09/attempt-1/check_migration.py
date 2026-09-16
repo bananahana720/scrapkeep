@@ -55,7 +55,7 @@ DEPENDENCY_HASHES = {
     "docs/tech/sections/HF-07a-save-envelope.csv":
         "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
     "docs/tech/sections/HF-07b-commit-boundaries.md":
-        "901ce28c13428fac7612aa10f242e72f211190d3fd838124154e52a2d6a9cd38",
+        "7c8e9edf4833560c7312a20cf82123915813610fcd175c9eba733b5669ce76da",
     "docs/tech/sections/HF-05-content-admission.md":
         "7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6",
 }
