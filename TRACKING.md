@@ -113,12 +113,12 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [HF-02](BACKLOG.md#hf-02) | 2 | 7 | done | none | HF-02-A1 | EV-0072 |
 | [HF-05](BACKLOG.md#hf-05) | 2 | 6 | done | none | HF-05-A1 | EV-0097 |
 | [HF-08](BACKLOG.md#hf-08) | 2 | 7 | done | none | HF-08-A1 | EV-0175 |
-| [HF-09](BACKLOG.md#hf-09) | 2 | 10 | done | none; re-pointed to the FR-05 bytes at EV-0270 | HF-09-A1 | EV-0270 |
+| [HF-09](BACKLOG.md#hf-09) | 2 | 11 | done | none; re-pointed to the FR-05 bytes at EV-0270 | HF-09-A1 | EV-0364 |
 | [HF-10](BACKLOG.md#hf-10) | 2 | 9 | done | none | HF-10-A2 | EV-0183 |
 | [HF-03a](BACKLOG.md#hf-03a) | 1 | 8 | done | none | HF-03a-A1 | EV-0086 |
 | [HF-03b](BACKLOG.md#hf-03b) | 1 | 8 | done | none | HF-03b-A1 | EV-0136 |
 | [HF-04a](BACKLOG.md#hf-04a) | 1 | 6 | done | none | HF-04a-A1 | EV-0096 |
-| [HF-04b](BACKLOG.md#hf-04b) | 2 | 10 | done | none; line 10 hash re-pointed at EV-0270 | HF-04b-A1 | EV-0270 |
+| [HF-04b](BACKLOG.md#hf-04b) | 2 | 11 | done | none; line 10 hash re-pointed at EV-0270 | HF-04b-A1 | EV-0364 |
 | [HF-06a](BACKLOG.md#hf-06a) | 1 | 6 | done | none | HF-06a-A1 | EV-0146 |
 | [HF-06b](BACKLOG.md#hf-06b) | 1 | 6 | done | none | HF-06b-A1 | EV-0153 |
 | [HF-07a](BACKLOG.md#hf-07a) | 1 | 7 | done | none | HF-07a-A1 | EV-0345 |
@@ -150,7 +150,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [FR-05](BACKLOG.md#fr-05) | 3 | 11 | done | none | FR-05-A2 | EV-0270 |
 | [FR-06](BACKLOG.md#fr-06) | 1 | 5 | done | none | none | EV-0364 |
 | [TH-12](BACKLOG.md#th-12) | 1 | 5 | done | none | none | EV-0353 |
-| [TH-13](BACKLOG.md#th-13) | 1 | 8 | done | none | none | EV-0337 |
+| [TH-13](BACKLOG.md#th-13) | 1 | 9 | done | none | none | EV-0364 |
 | [TH-14](BACKLOG.md#th-14) | 1 | 7 | done | none | none | EV-0364 |
 | [TH-15](BACKLOG.md#th-15) | 1 | 6 | done | none | none | EV-0345 |
 | [TH-16](BACKLOG.md#th-16) | 1 | 5 | done | none | none | EV-0356 |
