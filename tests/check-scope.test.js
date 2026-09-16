@@ -14,6 +14,95 @@ const cases = JSON.parse(
   ),
 );
 
+const basePackage = {
+  name: "fixture",
+  private: true,
+  scripts: { test: "node --test tests/*.test.js" },
+  dependencies: { three: "^0.180.0" },
+};
+
+function packageJson(overrides) {
+  return JSON.stringify({ ...basePackage, ...overrides }, null, 2) + "\n";
+}
+
+// The shared fixture file states paths only. These scenarios also need file
+// content at both revisions, because the tooling-no-build class reads
+// package.json to tell a scripts entry from a dependency change.
+const contentCases = [
+  {
+    name: "tooling-no-build for scripts, tests, package.json scripts and docs",
+    baseFiles: { "package.json": packageJson() },
+    paths: [
+      "scripts/check-scope.mjs",
+      "tests/check-scope.test.js",
+      "package.json",
+      "CONTRIBUTING.md",
+    ],
+    contents: {
+      "package.json": packageJson({
+        scripts: {
+          test: "node --test tests/*.test.js",
+          "check:drift": "node scripts/check-drift.mjs",
+        },
+      }),
+    },
+    scope: "tooling-no-build",
+    commands: [
+      "npm test",
+      "npm run check:docs",
+      "npm run check:project",
+      "npm run check:drift",
+    ],
+    noBuild: true,
+    status: 0,
+  },
+  {
+    name: "a package.json dependency edit as build-requiring tooling",
+    baseFiles: { "package.json": packageJson() },
+    paths: ["package.json"],
+    contents: {
+      "package.json": packageJson({ dependencies: { three: "^0.181.0" } }),
+    },
+    scope: "tooling",
+    commands: ["npm run verify"],
+    noBuild: true,
+    status: 1,
+  },
+  {
+    name: "the lockfile beside tooling paths as build-requiring",
+    paths: ["package-lock.json", "scripts/check-scope.mjs"],
+    scope: "mixed",
+    commands: ["npm run verify"],
+    noBuild: true,
+    status: 1,
+  },
+  {
+    name: "game and server sources beside tooling paths as build-requiring",
+    paths: [
+      "src/orchard/scene.js",
+      "server/index.js",
+      "vite.config.js",
+      "scripts/check-scope.mjs",
+    ],
+    scope: "mixed",
+    commands: ["npm run verify"],
+    noBuild: true,
+    status: 1,
+  },
+  {
+    name: "documentation-only including the drift check",
+    paths: ["docs/tech/sections/HF-01.md", "README.md"],
+    scope: "documentation-only",
+    commands: [
+      "npm run check:docs",
+      "npm run check:project",
+      "npm run check:drift",
+    ],
+    noBuild: true,
+    status: 0,
+  },
+];
+
 function git(cwd, ...args) {
   const child = spawnSync("git", args, {
     cwd,
@@ -30,40 +119,37 @@ function git(cwd, ...args) {
   return child.stdout.trim();
 }
 
-for (const scenario of cases)
+function commit(cwd, message) {
+  git(cwd, "add", "-A");
+  git(
+    cwd,
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "-q",
+    "--allow-empty",
+    "-m",
+    message,
+  );
+  return git(cwd, "rev-parse", "HEAD");
+}
+
+async function write(cwd, file, content) {
+  await mkdir(path.join(cwd, path.dirname(file)), { recursive: true });
+  await writeFile(path.join(cwd, file), content);
+}
+
+for (const scenario of [...cases, ...contentCases])
   test("check:scope classifies " + scenario.name, async () => {
     const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-scope-"));
     try {
       git(temporary, "init", "-q");
-      git(
-        temporary,
-        "-c",
-        "commit.gpgsign=false",
-        "commit",
-        "-q",
-        "--allow-empty",
-        "-m",
-        "base",
-      );
-      const base = git(temporary, "rev-parse", "HEAD");
-      for (const file of scenario.paths) {
-        await mkdir(path.join(temporary, path.dirname(file)), {
-          recursive: true,
-        });
-        await writeFile(path.join(temporary, file), "x\n");
-      }
-      git(temporary, "add", "-A");
-      git(
-        temporary,
-        "-c",
-        "commit.gpgsign=false",
-        "commit",
-        "-q",
-        "--allow-empty",
-        "-m",
-        "candidate",
-      );
-      const candidate = git(temporary, "rev-parse", "HEAD");
+      for (const [file, content] of Object.entries(scenario.baseFiles ?? {}))
+        await write(temporary, file, content);
+      const base = commit(temporary, "base");
+      for (const file of scenario.paths)
+        await write(temporary, file, scenario.contents?.[file] ?? "x\n");
+      const candidate = commit(temporary, "candidate");
       const child = spawnSync(
         process.execPath,
         [

@@ -7,6 +7,7 @@ const scriptRoot = path.resolve(
   "..",
 );
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
+const noBuildToolingPaths = [/^scripts\/.*\.mjs$/, /^tests\/.*\.test\.js$/];
 // Order matters: the first matching class wins, so configuration, native and
 // native-player paths are claimed before the broad Markdown rule.
 const classes = [
@@ -61,7 +62,11 @@ const classes = [
       /^adr\//,
       /^artifacts\//,
     ],
-    commands: ["npm run check:docs", "npm run check:project"],
+    commands: [
+      "npm run check:docs",
+      "npm run check:project",
+      "npm run check:drift",
+    ],
     evidence: "structural documentation checks; no build or runtime evidence",
   },
   {
@@ -71,6 +76,21 @@ const classes = [
     commands: ["npm run verify"],
     evidence:
       "asserted tests and a production build; no browser session implied",
+  },
+  {
+    name: "tooling-no-build",
+    build: false,
+    // No single path claims this class; toolingNoBuild promotes a whole change
+    // set out of tooling below, so classify() must never select it per file.
+    patterns: [],
+    commands: [
+      "npm test",
+      "npm run check:docs",
+      "npm run check:project",
+      "npm run check:drift",
+    ],
+    evidence:
+      "asserted tests and structural documentation checks; no build, browser session or dependency change implied",
   },
   {
     name: "tooling",
@@ -124,6 +144,45 @@ function classify(file) {
   );
 }
 
+function readJsonAtRevision(root, revision, file) {
+  const git = spawnSync("git", ["-C", root, "show", revision + ":" + file], {
+    encoding: "utf8",
+  });
+  if (git.status !== 0) return null;
+  try {
+    return JSON.parse(git.stdout);
+  } catch {
+    return null;
+  }
+}
+
+// package.json holds scripts beside dependencies, so its path cannot say which
+// one moved; an unreadable or unparsable revision counts as a dependency change.
+function packageJsonScriptsOnly(root, base, candidate) {
+  const before = readJsonAtRevision(root, base, "package.json");
+  const after = readJsonAtRevision(root, candidate, "package.json");
+  if (!before || !after) return false;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  keys.delete("scripts");
+  return [...keys].every(
+    (key) => JSON.stringify(before[key]) === JSON.stringify(after[key]),
+  );
+}
+
+function toolingNoBuild(groups, scriptsOnlyPackage) {
+  const tooling = groups.get("tooling");
+  if (!tooling) return false;
+  const beside = [...groups.keys()].filter(
+    (name) => name !== "tooling" && name !== "documentation-only",
+  );
+  if (beside.length) return false;
+  return tooling.every(
+    (file) =>
+      noBuildToolingPaths.some((pattern) => pattern.test(file)) ||
+      (file === "package.json" && scriptsOnlyPackage),
+  );
+}
+
 function main() {
   const options = parseArguments(process.argv.slice(2));
   const [base, candidate] = options.revisions;
@@ -133,6 +192,16 @@ function main() {
     const entry = classify(file);
     if (!groups.has(entry.name)) groups.set(entry.name, []);
     groups.get(entry.name).push(file);
+  }
+  if (
+    toolingNoBuild(
+      groups,
+      files.includes("package.json") &&
+        packageJsonScriptsOnly(options.root, base, candidate),
+    )
+  ) {
+    groups.clear();
+    groups.set("tooling-no-build", files);
   }
   const present = classes.filter((entry) => groups.has(entry.name));
   const scope =
