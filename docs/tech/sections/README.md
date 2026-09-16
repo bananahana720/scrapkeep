@@ -37,6 +37,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [TH-14: Randomness and generated-level interfaces](TH-14-randomness-generation.md).
 - [TH-15: Collision queries and physical-world qualification](TH-15-physics-query-contract.md).
 - [TH-16: Rendering and effect integration](TH-16-rendering-integration.md).
+- [TH-18: Input-device and focus integration](TH-18-input-integration.md).
 - [TH-19: Source-asset import and export admission](TH-19-asset-import-export.md).
 
 ## Scenarios
