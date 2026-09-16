@@ -29,6 +29,7 @@ Coordinator-owned index. Section documents are admitted independently and do not
 - [TH-06: Encounters, waves and enemies](TH-06-encounters-waves-and-enemies.md).
 - [TH-07: Four slots and milestone progression](TH-07-four-slots-and-milestone-progression.md).
 - [TH-08: Inventory, equipment and transformations](TH-08-inventory-equipment-and-transformations.md).
+- [TH-09: Themed loot, attunement and fixed secrets](TH-09-themed-loot-attunement-and-fixed-secrets.md).
 - [TH-10: Devices and one main companion](TH-10-devices-and-one-main-companion.md).
 - [TH-11: Runs, regions, exits and saves](TH-11-runs-regions-exits-and-saves.md).
 - [TH-13: Chaos outcome commitment](TH-13-chaos-outcomes.md).

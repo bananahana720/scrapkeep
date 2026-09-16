@@ -205,8 +205,7 @@ def walk_order_ok(precondition, steps):
         # A mention of RL3 is not the exit. The gate is the step that performs
         # the RL2-to-RL3 exit or satisfies the level's objective.
         if gate_index is None and re.search(
-            r"RL2-to-RL3 exit|satisfies the level's objective|objective completion"
-            r"|\bAt RL3\b",
+            r"RL2-to-RL3 exit|satisfies the level's objective|objective completion",
             row,
         ):
             gate_index = index

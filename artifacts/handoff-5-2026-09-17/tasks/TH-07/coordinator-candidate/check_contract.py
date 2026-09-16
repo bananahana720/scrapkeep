@@ -380,7 +380,7 @@ def main():
         "docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md": "b22db42cfb164f32b1fef59a1e531d1317f06382c6714cb3ca8dd2593e9302ed",
         "docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md": "f165392f6fb820f31bba50270d0c1f433eaf763afab7faf4b7302cfa124b73c0",
         "docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md": "587afd267b039ff123ba51f8a5f3afd7a26e87467db4d6b6e43e93670f08c82f",
-        "docs/tech/sections/TH-08-inventory-equipment-and-transformations.md": "25c62fb34bdc727bdc9ed705a89b4103cb5f403b92df6e54cb2d2359a0f804d8",
+        "docs/tech/sections/TH-08-inventory-equipment-and-transformations.md": "527d1c7c3584885bc502881bcc374d814bbe375638933b23b6ad52ea0753d2c9",
         "docs/tech/sections/TH-11-runs-regions-exits-and-saves.md": "4f705ee341dc5f53ae421f5605dba771ea797ce4f05ab4214db6b0df7483e9d3",
         "artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md": "ba7e4cf9e5d0c50fb8f4bb438f737e60d9fd6702baaabcaabaab86018826da30",
         "src/orchard/simulation.js": "5c82acfbd87761f8d94976b0485e6c0b0eb2ec03d1b133af17f12ad1eb1121bd",
