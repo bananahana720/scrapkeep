@@ -2957,7 +2957,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Run routing, level content budgets and final encounter
 
-**Evidence needed to close:** A route policy specifies legal starting and subsequent worlds, repeat handling, level counts and whether world four boss is the finale. Four worlds and two destination offers remain fixed. Partial answers recorded (16 September 2026, TRACKING EV-0273): route policy is a fixed starting world (the yard settlement, Yard Commons), no repeats and any order after, with each transition's two offers drawn from the unvisited pool; the fourth world's boss is the finale, whichever world is fourth, so every catalogue world needs a finale-capable boss variant; levels per world stay a tunable parameter bounded only by the 60 to 75 minute run. Destination-eligibility details and level counts remain open. Carried into TH-11 at attempt 1.
+**Evidence needed to close:** A route policy specifies legal starting and subsequent worlds, repeat handling, level counts and whether world four boss is the finale. Four worlds and two destination offers remain fixed. Partial answers recorded (16 September 2026, TRACKING EV-0273): route policy is a fixed starting world (the yard settlement, Yard Commons), no repeats and any order after, with each transition's two offers drawn from the unvisited pool; the fourth world's boss is the finale, whichever world is fourth, so every run region other than the fixed starting world needs a finale-capable boss variant; levels per world stay a tunable parameter bounded only by the 60 to 75 minute run. Destination-eligibility details and level counts remain open. Carried into TH-11 at attempt 1.
 
 <a id="q-p13"></a>
 
