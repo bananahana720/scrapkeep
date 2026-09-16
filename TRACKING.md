@@ -145,7 +145,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [TH-08](BACKLOG.md#th-08) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-09](BACKLOG.md#th-09) | 1 | 1 | queued | HF-10 | none | EV-0002 |
 | [TH-10](BACKLOG.md#th-10) | 1 | 1 | queued | HF-10 | none | EV-0002 |
-| [TH-11](BACKLOG.md#th-11) | 2 | 4 | in_progress | none | none | EV-0272 |
+| [TH-11](BACKLOG.md#th-11) | 2 | 5 | in_progress | none; Q-P12 partial answers sent mid-attempt at EV-0273 | none | EV-0273 |
 | [FR-04](BACKLOG.md#fr-04) | 1 | 9 | done | none | FR-04-A2 | EV-0260 |
 | [FR-05](BACKLOG.md#fr-05) | 3 | 11 | done | none | FR-05-A2 | EV-0270 |
 | [TH-12](BACKLOG.md#th-12) | 1 | 1 | queued | HF-10, PD-02 | none | EV-0002 |
