@@ -3768,6 +3768,33 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 **Boundary:** Documentation-only. Q-P32's numeric bounds stay open and only the reduced-motion setting is added; the revival health value stays a parameter; no new schema version; no runtime or proof code.
 
+<a id="fr-06"></a>
+
+### FR-06: Scope HF-04a's control-drain randomness rule and close HF-07b's offer-only generator gap
+
+**Card revision:** 1 · **Owner:** Runtime with Persistence · **Size:** S · **Lane:** foundation-repair
+
+**Source and inputs:**
+
+- `docs/tech/sections/HF-04a-runtime-lifecycle.md` line 24: the non-advancing control drain "cannot ... consume randomness", read unqualified, while HF-07b line 76 runs the destination-offer generator in Session's accepted-results batch, TH-01 RL6 offers destinations in a non-ticking state and TH-11 lines 83 and 100 place the route draw in Session; TH-14 GG-02 reads the rule as scoped to gameplay randomness and TRACKING EV-0336 ruled for that reading with a clarification carried
+- `docs/tech/sections/HF-07b-commit-boundaries.md` lines 76 and 79: Transition A's offer-only path moves no field but the `offered_choices[]` entry, so a route draw made after the completion has committed cannot carry `run.checkpoint.rng_state` and the route position would be reinstalled stale on restore (TH-14 GB.3 walks the same-batch path and records the gap; TRACKING EV-0336, EV-0337)
+- `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment); `docs/tech/sections/TH-13-chaos-outcomes.md` XD-06 as reworded at EV-0337
+
+**Dependencies:** [TH-14](#th-14). **Blocking questions:** None.
+
+**Files touched:** `docs/tech/sections/HF-04a-runtime-lifecycle.md`; `docs/tech/sections/HF-07b-commit-boundaries.md`; the retained HF-04a and HF-07b check scripts (pins only); the stated hashes and line citations of every section that cites HF-04a or HF-07b (re-pointed, no prose change unless a citation's meaning moved); `artifacts/local/tasks/FR-06/`.
+
+**Definition of done:**
+
+1. HF-04a line 24 scopes the control drain's prohibition to gameplay randomness (the encounter's `EncounterRandomState`), states that Session's run-level route and layout streams are consumed in the control drain at the positions TH-11 and TH-14 fix, and cites TH-14 GR-01, GR-02 and GG-02.
+2. HF-07b states that a destination offer opened by a completed level rides that level's Transition A candidate with `run.checkpoint.rng_state`, and that the offer-only path is admissible only for an offer whose draw consumed no run-level stream position; a candidate on the offer-only path whose route position moved is rejected as a new HF-08 R4 row numbered after the last, message class `MC-INVALID`.
+3. Every section citing HF-04a line 24 or HF-07b lines 76 and 79 is re-pointed by the drift fixpoint and read for meaning; TH-13 XD-06, TH-14 GB.3, GB.4 and Seam 5 reading 1 cite the corrected text; no rule in any citing section changes.
+4. The HF-04a and HF-07b retained checks are re-pinned, not weakened; `npm run check:drift` exit 0 with zero mismatches.
+
+**Verification and evidence:** `npm run check:scope -- <base> <candidate> --no-build`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, the retained HF-04b, HF-06a, HF-06b, HF-07a, HF-07b, HF-08, HF-09 checks and the TH-01, TH-13 and TH-14 paper checks rerun from copies with `--out` under `artifacts/local/tasks/FR-06/`; one integrated read over the citing sections. No build.
+
+**Boundary:** Documentation contract only. No new transition, stage or field; no answer to Q-P23, Q-E03 or Q-E14; no runtime code.
+
 ## Tooling repair cards (16 September 2026)
 
 Defined at the Repair-and-handoff-2026-09-15 sprint closure from its retro. Two admitted sections went stale
@@ -3827,6 +3854,33 @@ hand. These cards add the missing lever; none changes a contract.
 **Verification and evidence:** `npm test`, `npm run check:docs`, `npm run check:project`, `npm run check:drift`, and `npm run check:scope -- <base> <candidate> --no-build` on the candidate itself (which must class as `tooling-no-build`). No build.
 
 **Boundary:** Tooling only. No change to what any check asserts; no new gate beyond adding an existing check to the required lists.
+
+<a id="tl-03"></a>
+
+### TL-03: Widen the drift check to the product sections
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** tooling
+
+**Source and inputs:**
+
+- `scripts/check-drift.mjs` (TL-01, EV-0223) scans `docs/tech/sections` only; PD-01 and PD-02 (EV-0341, EV-0343) state SHA256 dependency hashes in the same Sources-bullet form under `docs/product/sections`, proved today only by their retained paper checks
+- `docs/product/sections/README.md`, the coordinator-owned index that records the gap
+- `scripts/check-scope.mjs` and `tests/check-scope.test.js` (TL-02, EV-0289): the documentation-only and tooling-no-build classes and their required commands; `CONTRIBUTING.md` check table
+
+**Dependencies:** [TL-02](#tl-02). **Blocking questions:** None.
+
+**Files touched:** `scripts/check-drift.mjs`; `tests/check-drift.test.js` (new or extended); `docs/product/sections/README.md` (the gap sentence); `CONTRIBUTING.md` (the check table row for `check:drift`); `artifacts/local/tasks/TL-03/`.
+
+**Definition of done:**
+
+1. `npm run check:drift` scans `docs/tech/sections` and `docs/product/sections`, resolves each product section's stated dependencies from the citing file's own directory and from `docs/tech/sections`, and reports the same DRIFT line form for both.
+2. A stated hash in a product section that mismatches, or a link it cannot bind, fails the check exactly as a technical section's does; a product section with no stated hashes is reported unbound, not passed.
+3. Tests cover one product section that binds, one that mismatches and one unbound; `npm test` exit 0.
+4. The product README's gap sentence and CONTRIBUTING's check table state the widened scan; `npm run check:scope` classes the candidate `tooling-no-build`; no dependency, lockfile or build change.
+
+**Verification and evidence:** `npm test`, `npm run check:docs`, `npm run check:project`, `npm run check:drift` (exit 0 over both directories at the candidate), and `npm run check:scope -- <base> <candidate> --no-build`. No build.
+
+**Boundary:** Tooling only. No change to what a technical section's check asserts; no change to any section's bytes beyond the README sentence.
 
 ## Native proof repair cards (15 September 2026)
 
