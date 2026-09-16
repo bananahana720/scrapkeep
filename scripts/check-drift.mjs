@@ -3,7 +3,8 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
-const defaultSections = path.join(repositoryRoot, "docs/tech/sections");
+const technicalSections = path.join(repositoryRoot, "docs/tech/sections");
+const productSections = path.join(repositoryRoot, "docs/product/sections");
 const limits =
   "Hash agreement only. A match proves the dependency's bytes are the ones the citing section recorded; it proves nothing about whether the citation, the line numbers or the claim built on them is still correct, and a mismatch is a finding for a card and a reviewer, not a defect this check judges.";
 
@@ -27,6 +28,34 @@ const tokenPattern = new RegExp(
 // "nearest preceding link" bind to the file the hash was taken from.
 const registerAnchors = new Set(["BACKLOG.md", "TRACKING.md"]);
 
+// Both corpora state hashes in the same Sources-bullet form and report the
+// same DRIFT line form. They differ in resolution and in what an empty section
+// means. A technical section cites files relative to itself only. A product
+// section cites the technical sections it depends on, so a link that does not
+// exist beside it is resolved from docs/tech/sections next, and a product
+// section that states no dependency hash at all is reported unbound instead of
+// passing silently -- an admitted product section is required to state the
+// bytes it depends on, and the Handoff-6 closure had to re-point those hashes
+// by hand because nothing scanned them. The technical corpus keeps exactly the
+// assertions it made before this check was widened.
+const technicalCorpus = {
+  label: "technical",
+  root: technicalSections,
+  fallbacks: [],
+  requireCitations: false,
+};
+const productCorpus = {
+  label: "product",
+  root: productSections,
+  fallbacks: [technicalSections],
+  requireCitations: true,
+};
+
+// A directory index is the coordinator's, is not an admitted section and
+// states no dependency hashes by design, so it is still scanned for any hash
+// it does state but is never reported unbound for stating none.
+const indexName = "README.md";
+
 function citablePath(target) {
   const withoutFragment = target.split("#")[0].trim();
   if (!withoutFragment) return null;
@@ -47,18 +76,30 @@ function display(file) {
   return relative.startsWith("..") ? file : relative;
 }
 
+// `--sections` keeps its meaning, the technical corpus over an explicit root,
+// so an existing copy run is unchanged; `--product-sections` is its product
+// equivalent. Naming either root scans that corpus alone; naming neither scans
+// both admitted corpora.
 function parseArguments(argv) {
-  const options = { sections: defaultSections, resolveFrom: null };
+  let technical = null;
+  let product = null;
+  let resolveFrom = null;
   for (let index = 0; index < argv.length; index++) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if (flag === "--sections" && value) options.sections = path.resolve(value);
+    if (flag === "--sections" && value) technical = path.resolve(value);
+    else if (flag === "--product-sections" && value)
+      product = path.resolve(value);
     else if (flag === "--resolve-from" && value)
-      options.resolveFrom = path.resolve(value);
+      resolveFrom = path.resolve(value);
     else throw new Error("Unknown argument: " + flag);
     index++;
   }
-  return options;
+  const corpora = [];
+  if (technical) corpora.push({ ...technicalCorpus, root: technical });
+  if (product) corpora.push({ ...productCorpus, root: product });
+  if (!corpora.length) corpora.push(technicalCorpus, productCorpus);
+  return { corpora, resolveFrom };
 }
 
 // Fenced blocks are blanked rather than removed so findings keep their line
@@ -110,9 +151,26 @@ async function digest(file) {
   return digests.get(file);
 }
 
-async function checkSection(options, sectionFile, findings) {
+// The first root that holds the linked file is the one the hash is compared
+// against, so a fallback root can never mask a dependency that exists beside
+// the citing section. A link no root resolves is reported against the citing
+// section's own resolution with an actual of `missing`, exactly as a technical
+// section's unresolvable link is.
+async function bind(roots, link) {
+  const candidates = roots.map((root) => path.resolve(root, link));
+  for (const candidate of candidates) {
+    const actual = await digest(candidate);
+    if (actual !== null) return { file: candidate, actual };
+  }
+  return { file: candidates[0], actual: null };
+}
+
+async function checkSection(corpus, options, sectionFile, findings) {
   const relativeSection = display(sectionFile);
-  const resolveFrom = options.resolveFrom ?? path.dirname(sectionFile);
+  const roots = [
+    options.resolveFrom ?? path.dirname(sectionFile),
+    ...corpus.fallbacks,
+  ];
   const lines = visibleLines(await readFile(sectionFile, "utf8"));
   let citations = 0;
   for (const bullet of sourcesBullets(lines)) {
@@ -138,8 +196,7 @@ async function checkSection(options, sectionFile, findings) {
         });
         continue;
       }
-      const dependency = path.resolve(resolveFrom, link);
-      const actual = await digest(dependency);
+      const { file, actual } = await bind(roots, link);
       if (actual === hash.toLowerCase()) continue;
       findings.push({
         level: "mismatch",
@@ -149,7 +206,7 @@ async function checkSection(options, sectionFile, findings) {
           ":" +
           bullet.line +
           " " +
-          display(dependency) +
+          display(file) +
           " stated " +
           hash.toLowerCase() +
           " actual " +
@@ -157,41 +214,97 @@ async function checkSection(options, sectionFile, findings) {
       });
     }
   }
+  if (
+    corpus.requireCitations &&
+    citations === 0 &&
+    path.basename(sectionFile) !== indexName
+  )
+    findings.push({
+      level: "unbound",
+      text:
+        "UNBOUND " +
+        relativeSection +
+        " states no dependency hash in its Sources bullets",
+    });
   return citations;
 }
 
-async function main() {
-  const options = parseArguments(process.argv.slice(2));
-  const entries = await readdir(options.sections, { withFileTypes: true });
+async function checkCorpus(corpus, options) {
+  const entries = await readdir(corpus.root, { withFileTypes: true });
   const sections = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-    .map((entry) => path.join(options.sections, entry.name))
+    .map((entry) => path.join(corpus.root, entry.name))
     .sort();
   const findings = [];
   let citations = 0;
   for (const section of sections)
-    citations += await checkSection(options, section, findings);
-  const mismatches = findings.filter((finding) => finding.level === "mismatch");
-  const unbound = findings.length - mismatches.length;
-  for (const finding of findings) console.log(finding.text);
+    citations += await checkSection(corpus, options, section, findings);
+  const mismatches = findings.filter(
+    (finding) => finding.level === "mismatch",
+  ).length;
+  return {
+    corpus,
+    findings,
+    sections: sections.length,
+    citations,
+    mismatches,
+    unbound: findings.length - mismatches,
+  };
+}
+
+function counts(totals) {
+  return (
+    totals.sections +
+    " sections, " +
+    totals.citations +
+    " stated hashes, " +
+    totals.mismatches +
+    " mismatches, " +
+    totals.unbound +
+    " unbound"
+  );
+}
+
+async function main() {
+  const options = parseArguments(process.argv.slice(2));
+  const results = [];
+  for (const corpus of options.corpora)
+    results.push(await checkCorpus(corpus, options));
+  const totals = { sections: 0, citations: 0, mismatches: 0, unbound: 0 };
+  for (const result of results)
+    for (const key of Object.keys(totals)) totals[key] += result[key];
+  for (const result of results)
+    for (const finding of result.findings) console.log(finding.text);
+  for (const result of results)
+    console.log(
+      "check:drift " +
+        result.corpus.label +
+        " " +
+        (result.mismatches ? "fail" : "pass") +
+        ": " +
+        counts(result) +
+        ". Scanned " +
+        display(result.corpus.root) +
+        ", dependencies resolved from " +
+        (options.resolveFrom
+          ? display(options.resolveFrom)
+          : "each citing file") +
+        (result.corpus.fallbacks.length
+          ? " then " + result.corpus.fallbacks.map(display).join(" then ")
+          : ""),
+    );
   console.log(
     "check:drift " +
-      (mismatches.length ? "fail" : "pass") +
+      (totals.mismatches ? "fail" : "pass") +
       ": " +
-      sections.length +
-      " sections, " +
-      citations +
-      " stated hashes, " +
-      mismatches.length +
-      " mismatches, " +
-      unbound +
-      " unbound. Scanned " +
-      display(options.sections) +
-      ", dependencies resolved from " +
-      (options.resolveFrom ? display(options.resolveFrom) : "each citing file"),
+      counts(totals) +
+      " over " +
+      results.length +
+      (results.length === 1 ? " corpus: " : " corpora: ") +
+      results.map((result) => result.corpus.label).join(", "),
   );
   console.log(limits);
-  process.exitCode = mismatches.length ? 1 : 0;
+  process.exitCode = totals.mismatches ? 1 : 0;
 }
 
 try {
