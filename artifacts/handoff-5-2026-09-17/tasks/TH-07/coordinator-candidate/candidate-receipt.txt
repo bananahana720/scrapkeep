@@ -1,0 +1,4 @@
+ .../TH-07-four-slots-and-milestone-progression.md  | 490 +++++++++++++++++++++
+ 1 file changed, 490 insertions(+)
+1d0b9276ce391354fb8eeba6989bedfbcf90645e4db4c8779e7bd25f5520aeac  docs/tech/sections/TH-07-four-slots-and-milestone-progression.md
+coordinator rerun at 8b925df4d0bca7167857d9bbe1a02f071ebda467 (main at 517507e, TH-10 admitted after this base with a TH-06 EE-15 correction), 2026-09-17T11:10Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (23 sections); check:project exit 0; check:drift exit 0 at the worktree (23 sections, 149 hashes); check_contract.py (writer paper check, rerun from a coordinator copy) exit 0, 36 PASS, 0 FAIL, 4/4 controls.
