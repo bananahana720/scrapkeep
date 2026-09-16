@@ -47,15 +47,15 @@ def sha256(path: Path) -> str:
 
 DEPENDENCY_HASHES = {
     "docs/tech/sections/HF-06b-persistence-projection.md":
-        "83f6e4ba248518d1979e1428ace02ec99fea202722ab6aa0bab531f766094014",
+        "d2344ecf38788778f0c334a06f16490b1c83522ebb5ee04643505fc8ca06814d",
     "docs/tech/sections/HF-06b-persistence-projection.csv":
-        "b42918083688be02511496932e20db19305e7407dc785d740b4e0fedf6779a48",
+        "e56c1627c46a85b6aad8d0a4f8aeddc8f1e2b6bfb0eb790ff49e86772e9c24b5",
     "docs/tech/sections/HF-07a-save-envelope.md":
-        "dfcd6a98d2fe8d07f69ff5bb336f563192604ad383a106b05902d9a60ea87d06",
+        "4c37b7b32197642e1a312758449b8ebede05d3a0788e92b74a6a9f95ed97c010",
     "docs/tech/sections/HF-07a-save-envelope.csv":
-        "96212b0087f2cd971e272078679e39e3ba24417d2ce8d01f92b312e4dc827941",
+        "1c553120d0988bfbf3d5644946904fb603b3a3617091764ce170eb1cbb798b00",
     "docs/tech/sections/HF-07b-commit-boundaries.md":
-        "7c8e9edf4833560c7312a20cf82123915813610fcd175c9eba733b5669ce76da",
+        "b1b88c2922d56eb7d9f9b581f387e8eb6aeb148d12ff23f4de4c53ba5d929122",
     "docs/tech/sections/HF-05-content-admission.md":
         "7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6",
 }
