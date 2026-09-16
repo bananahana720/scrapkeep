@@ -1,0 +1,4 @@
+ docs/tech/sections/TH-16-rendering-integration.md | 416 ++++++++++++++++++++++
+ 1 file changed, 416 insertions(+)
+c9eab082bf7fd4c42738f564f381cd72f701f9f45fdba316a8083688ef4351a2  docs/tech/sections/TH-16-rendering-integration.md
+coordinator rerun at 6a22d99d874376e7ae869d1ecc248e8f5a2ef2d9 (main at 309ff86; TH-12 in review, not admitted), 2026-09-18T00:20Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (29 sections at the worktree); check:project exit 0; check:drift exit 0 at the worktree (29 sections, 247 hashes); check_rendering.py (writer paper check, rerun from a coordinator copy) exit 0, 3/3 controls.
