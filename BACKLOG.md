@@ -2929,7 +2929,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Affected work:** Economy tuning, fabrication, milestone rewards and content budgets
 
-**Evidence needed to close:** An explicit material rule and supply policy support opening-world slot access and all four endpoints by the final boss without elapsed-time gates.
+**Evidence needed to close:** An explicit material rule and supply policy support opening-world slot access and all four endpoints by the final boss without elapsed-time gates. Partial answers recorded (16 September 2026, TRACKING EV-0255): a milestone upgrade earned mid-encounter grows the chassis and becomes usable at the next intermission only; recovered material is consumed as collected with milestone unlocks and the rebuilt chassis as the only durable trace, so no material balance field is added; attraction pulls through cover within range, so no obstruction test is needed. Milestone costs, supply rates and visible mass values remain open. Carried into TH-05 at its next attempt.
 
 <a id="q-p11"></a>
 
