@@ -278,7 +278,7 @@ def main():
         "docs/tech/sections/TH-01-complete-loop.md": "754d724e5fb57caf78f48254089c9fc35e7db21f60191c7164a12278e6a47e18",
         "docs/tech/sections/TH-02-movement-camera-and-active-aim.md": "280c11a429c54cbe20e728f1b6cc2be33c12b8da8b461b93fcc2c22d48659c3a",
         "docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md": "b22db42cfb164f32b1fef59a1e531d1317f06382c6714cb3ca8dd2593e9302ed",
-        "docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md": "eca4ff8996498f8258e47310f77615133fd340957bb0cef1afe01f25078ec83e",
+        "docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md": "f165392f6fb820f31bba50270d0c1f433eaf763afab7faf4b7302cfa124b73c0",
         "docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md": "587afd267b039ff123ba51f8a5f3afd7a26e87467db4d6b6e43e93670f08c82f",
         "artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md": "ba7e4cf9e5d0c50fb8f4bb438f737e60d9fd6702baaabcaabaab86018826da30",
         "docs/project/INCREMENT-01-lightning-playtest.md": "12c28df3d6a612177bedb125197300d5d853c793e6acce7b83b2eb40d07c85f2",

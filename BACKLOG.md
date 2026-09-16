@@ -2741,7 +2741,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 **Source:** [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D15 and D21); [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
 
-**Missing information:** For the first selected encounter, what readable overlapping-attack admission policy and pressure limits apply? Completion and objective rules belong to Q-P38.
+**Missing information:** For the first selected encounter, what readable overlapping-attack admission policy and pressure limits apply? Completion and objective rules belong to Q-P38. Scope recorded (17 September 2026, TRACKING EV-0303): the policy and its pressure limits govern every attack commitment, enemy or player, so a limit may refuse a player ability or ultimate activation; TH-04 AV-08 and TH-06 AM-06 read it that way.
 
 **Decision owner:** Andrew with encounter designer recommendation
 
