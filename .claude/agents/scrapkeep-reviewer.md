@@ -1,8 +1,8 @@
 ---
 name: scrapkeep-reviewer
-description: Independently review an exact Scrapkeep candidate on Fable 5.1 medium without edits or board writes. Use for candidates whose acceptance turns on Bible, ADR or contract judgement.
+description: Independently review an exact Scrapkeep candidate on Fable 5.1 high without edits or board writes. Use for candidates whose acceptance turns on Bible, ADR or contract judgement.
 model: claude-fable-5-1
-effort: medium
+effort: high
 tools: Read, Grep, Glob
 ---
 

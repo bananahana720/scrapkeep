@@ -28,7 +28,7 @@ When the selected sprint has no remaining active work, invoke [the sprint-close 
 
 ## Host adapter and base identity
 
-- Claude Code: use `scrapkeep-writer`, `scrapkeep-writer-medium` or `scrapkeep-writer-low` for writes, `scrapkeep-explorer` for source inspection and `scrapkeep-reviewer` or `scrapkeep-reviewer-medium` for independent review. Assign effort by importance and difficulty; each definition pins the model and one effort, and a prompt cannot change it. Avoid built-in Explore/Plan or advisor defaults unless actual model and effort are verified to match policy.
+- Claude Code: use `scrapkeep-writer` or `scrapkeep-writer-low` for writes, `scrapkeep-explorer` for source inspection and `scrapkeep-reviewer` or `scrapkeep-reviewer-medium` for independent review. Pick the definition by importance and difficulty; each pins its model at effort high, and a prompt cannot change it. Avoid built-in Explore/Plan or advisor defaults unless actual model and effort are verified to match policy.
 - Codex: create distinct worktrees explicitly at the accepted revision and use the available collaboration tool with the configured Astra model and effort. A task name alone provides no filesystem isolation.
 - For either app, compare the requested model/effort with the host map and actual runtime metadata. In Claude Code the `CLAUDE_EFFORT` environment variable is the runtime evidence; ask each agent to report it. A mismatch or rejected required model/effort blocks the lane. Verify the actual worktree base and write scope before admission. Follow the existing prose-staging exception when applicable. The coordinator runs executable checks and supplies the exact artifact and evidence to review.
 
