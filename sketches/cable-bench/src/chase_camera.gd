@@ -30,11 +30,16 @@ func setup(target_ref, tuning_ref) -> void:
 	# the world (layer 1) without catching the player ball (layer 2).
 	arm.collision_mask = 1
 	add_child(arm)
+	# The arm rewrites its direct child's transform every physics tick, so shake and
+	# roll go on a grandchild; writing them on the arm's child snapped the camera to
+	# the pivot on every frame between ticks.
+	var mount := Node3D.new()
+	arm.add_child(mount)
 	cam = Camera3D.new()
 	cam.fov = 65.0
 	cam.far = 700.0
 	cam.current = true
-	arm.add_child(cam)
+	mount.add_child(cam)
 	global_position = target.ball_position()
 
 
