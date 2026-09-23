@@ -8,6 +8,8 @@
 
 Coordinator-owned index. Section documents are admitted independently and do not constitute the assembled TECH_BIBLE.
 
+Square-one review status (TRACKING EV-0480). Andrew's direction moved from compact levels to open momentum stages. The process lens classified each section against that direction. **Changes:** TH-01, TH-02, TH-05, TH-09, TH-10, TH-11, TH-15, HF-06a, HF-06b and HF-07b assume compact levels, waves, arena-seeded pickups or secret rooms. **Parked:** TH-06 and TH-14 encode the level shape that Q-P23 has not decided. Every other section survives unchanged. These are review labels, not amendments; each section stays admitted as written until a heavy-lane card changes it.
+
 - [HF-01: Production paths and contribution conventions](HF-01-production-conventions.md).
 - [HF-02: Constraints and evidence register](HF-02-constraints-evidence.md).
 - [HF-03a: Module ownership and owned records](HF-03a-module-map.md).

@@ -1,5 +1,17 @@
 [
   {
+    "name": "sketch claims Godot files and Markdown under sketches/",
+    "paths": [
+      "sketches/ball-lab/project.godot",
+      "sketches/ball-lab/player.gd",
+      "sketches/ball-lab/README.md"
+    ],
+    "scope": "sketch",
+    "commands": ["npm run sketch:smoke"],
+    "noBuild": true,
+    "status": 0
+  },
+  {
     "name": "documentation-only",
     "paths": ["docs/tech/sections/HF-01.md", "adr/TADR-009.md", "README.md"],
     "scope": "documentation-only",

@@ -8,6 +8,8 @@
 
 Coordinator-owned index. Schema contracts are admitted independently; TH-20 reconciles them into one catalogue, and none of them is the assembled TECH_BIBLE.
 
+Square-one review status (TRACKING EV-0480). **Parked:** SC-04 (encounter, wave, boss and objective types) and SC-05 (level types and module encounter slots) encode the compact-level shape that open momentum stages replace. SC-01, SC-02, SC-03, SC-06 and SC-08 survive. These are review labels, not amendments.
+
 - [SC-01: Character and progression definitions](SC-01.md).
 - [SC-02: Attack, chaos-outcome and ability definitions](SC-02.md).
 - [SC-03: Item and recipe definitions](SC-03.md).

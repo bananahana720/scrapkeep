@@ -8,9 +8,20 @@ const scriptRoot = path.resolve(
 );
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
 const noBuildToolingPaths = [/^scripts\/.*\.mjs$/, /^tests\/.*\.test\.js$/];
-// Order matters: the first matching class wins, so configuration, native and
-// native-player paths are claimed before the broad Markdown rule.
+// Order matters: the first matching class wins, so sketch, configuration,
+// native and native-player paths are claimed before the broad Markdown rule.
 const classes = [
+  {
+    name: "sketch",
+    build: false,
+    patterns: [/^sketches\//],
+    commands: [
+      "npm run sketch:smoke",
+      "Andrew plays the sketch; record the verdict in docs/playtests/PLAYTEST-LOG.md",
+    ],
+    evidence:
+      "headless Godot boot and sketch tests; feel needs Andrew's play (ORCHESTRATOR, Light play lane)",
+  },
   {
     name: "configuration",
     build: false,

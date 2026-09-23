@@ -1,6 +1,6 @@
 # Scrapkeep swarm operating manual
 
-Revision 4. The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. The current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
+Revision 5. The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. The current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
 
 ## Read first and preserve authority
 
@@ -106,6 +106,14 @@ Only the coordinator transitions review to done after independent approval, succ
 For legacy code changes, use the applicable checks in CONTRIBUTING, including `npm run verify` when builds are authorized and the required browser/physical checks. For this preparation and the documentation-only foundation sprint, run `npm run check:docs` (local links and anchors, card field sets, event sequence, required section headings) as the documentation-only command and `npm run check:scope -- <base> <candidate>` as the scope-selection command that prints the required checks; PS-01 delivers both under S0-02 and S0-03. Until they are admitted, the coordinator runs the equivalent checks by script and retains the receipt. Add schema/contract coverage and explicit scenario review. Do not run the build-containing verification command under a no-build instruction. Future Godot qualification commands come from the engineering handoff; the existing browser suite cannot certify the native game.
 
 A fixture, source review, automated play, human session and hardware/performance measurement are different evidence. Every result states which method was used, its version and its limits. Historical completed work retains its historical scope. A new failure or changed requirement needs a recorded reopen or new task; it does not rewrite old evidence as if a different version had been tested.
+
+## Light play lane
+
+Andrew chose this lane on 22 September 2026 (TRACKING EV-0479, EV-0480) for throwaway gameplay sketches. Entry test: `npm run check:scope -- <base> <candidate>` reports only `sketch`, which claims `sketches/`. Each sketch is a self-contained Godot project under `sketches/<name>/`. Any other class, a mixed scope, or a `package.json` dependency edit exits to the heavy lane above.
+
+Loop: one writer on one `proto/<name>` branch in its own worktree, `npm run sketch:smoke`, Andrew plays, an entry with Andrew's verdict goes to [the playtest log](docs/playtests/PLAYTEST-LOG.md), then the coordinator merges. No card, lease, packet revision or independent reviewer is required. Andrew's play is the review, and no automated result substitutes for it. TRACKING receives an event only when the lane is entered or left, a question changes state, or a sketch is promoted.
+
+Sketches are not proofs. Their checks qualify nothing, typed-GDScript warnings are optional, and promotion into `native/`, `/`, `/orchard.html`, the Bible or an ADR is a heavy-lane decision.
 
 ## Questions and scope changes
 

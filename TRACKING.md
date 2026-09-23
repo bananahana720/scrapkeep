@@ -9,6 +9,7 @@ Use this file as the only execution-state authority. [BACKLOG.md](BACKLOG.md) de
 | Field | Value |
 | --- | --- |
 | Preparation | Authorized by Andrew's explicit instruction to implement the three-document plan. |
+| Light play lane | **Authorized** by Andrew for Godot sketches under `sketches/` (EV-0479, EV-0480; ORCHESTRATOR § Light play lane). No card, lease or reviewer; Andrew's play is the review; verdicts go to docs/playtests/PLAYTEST-LOG.md. |
 | Proposed sprint | Handoff-9 proposal, **deferred** by Andrew at EV-0479 pending the square-one review; previously awaiting_review (Handoff-8 closure receipt, EV-0475): FR-08, FR-11, FR-09 and ART-01, each at revision 1; initial dispatch FR-08, FR-11 and FR-09; ART-01 follows FR-09. Objective: close Handoff-8's carried integration repairs and open the concept-art lane. The proposal grants no execution authority. Handoff-8-2026-09-16 closed passed at EV-0475; Handoff-7-2026-09-17 closed passed at EV-0366; Handoff-6-2026-09-17 closed passed at EV-0346; Handoff-5-2026-09-17 closed passed at EV-0326; Handoff-4-2026-09-17 closed passed at EV-0304; Handoff-3-2026-09-16 closed passed at EV-0282; Handoff-2-2026-09-16 closed passed at EV-0243; Repair-and-handoff-2026-09-15 at EV-0216; Foundation-full-2026-09-06 at EV-0185. |
 | Sprint authorization | **None active.** Handoff-8-2026-09-16 (PD-03, TH-18, TH-19, SC-01 to SC-06, SC-08 authorized EV-0367; FR-07 added EV-0392; documentation-only; per-card review on Opus 5 high and the integrated read on gpt-6-astra high after Fable credit ran out, EV-0406) closed passed at EV-0475. Handoff-7-2026-09-17 (TH-12, TH-16, FR-06, TL-03; authorized EV-0347) closed passed at EV-0366. Handoff-6-2026-09-17 (TH-14, TH-15, PD-01, PD-02; authorized EV-0327) closed passed at EV-0346. Handoff-5-2026-09-17 (TH-07, TH-10, TH-09, TH-13; authorized EV-0305) closed passed at EV-0326. Handoff-4-2026-09-17 closed passed at EV-0304. Handoff-3-2026-09-16 closed passed at EV-0282. All documentation-only: scoped section edits or new sections, paper checks, documentation, project and drift checks, independent review. Handoff-2-2026-09-16 closed passed at EV-0243. Foundation-full (authorized EV-0078, closed passed EV-0185), Foundation-01 (EV-0077) and Operational Sprint 0 (EV-0064) are historical. |
 | Native game/build authorization | **None active.** NP-01's proof repair (authorized EV-0188, done EV-0193) is historical: edits confined to `native/proofs/tadr-004/` and its proof pages, verified by headless `npm run native:smoke`; no export, feature or production code. Earlier historical: **Operational Sprint 0 proofs and exports authorized** by [implementation request](docs/project/sprint-0/AUTHORIZATION.md), superseding the earlier parked template/workflow scope. Foundation-01 is documentation-only; it authorizes no new native execution. Historical scope follows. **prepare-stage proofs only.** The pinned Godot 4.7.2 standard editor is installed on this machine under Andrew's confirmation (EV-0024); export templates and exports were parked until EV-0035. Proof code lives under `native/` and proves ADR rules only; no game feature, asset or qualification run is authorized. |
@@ -251,67 +252,67 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 
 | Question | Record rev | State | Answer / evidence | Last event |
 | --- | --- | --- | --- | --- |
-| [Q-E01](BACKLOG.md#q-e01) | 1 | open | none | EV-0004 |
-| [Q-E03](BACKLOG.md#q-e03) | 1 | open | none | EV-0004 |
-| [Q-E04](BACKLOG.md#q-e04) | 1 | open | none | EV-0004 |
-| [Q-E05](BACKLOG.md#q-e05) | 2 | proposed | HF-09-A1 engineering-half protocol recorded at EV-0170; product half unanswered. | EV-0170 |
+| [Q-E01](BACKLOG.md#q-e01) | 2 | parked | none | EV-0480 |
+| [Q-E03](BACKLOG.md#q-e03) | 2 | parked | none | EV-0480 |
+| [Q-E04](BACKLOG.md#q-e04) | 2 | parked | none | EV-0480 |
+| [Q-E05](BACKLOG.md#q-e05) | 3 | parked | HF-09-A1 engineering-half protocol recorded at EV-0170; product half unanswered. | EV-0480 |
 | [Q-E06](BACKLOG.md#q-e06) | 1 | open | none | EV-0004 |
 | [Q-E07](BACKLOG.md#q-e07) | 2 | resolved | Andrew: private `bananahana720/scrapkeep`; default `main`; publish `main` and `codex/lightning-playtest`. [Authorization](artifacts/publication-2026-09-06/AUTHORIZATION.md). | EV-0007 |
-| [Q-E08](BACKLOG.md#q-e08) | 1 | open | none | EV-0004 |
+| [Q-E08](BACKLOG.md#q-e08) | 2 | parked | none | EV-0480 |
 | [Q-E09](BACKLOG.md#q-e09) | 6 | resolved | Andrew, 16 September 2026: discovery facts commit only at the next durable transition; no immediate transition. Engineering-half protocols at EV-0144, EV-0151, EV-0157, EV-0163 retained as history; protocol half carried by FR-05. | EV-0250 |
 | [Q-E10](BACKLOG.md#q-e10) | 2 | open | Andrew, 17 September 2026 (EV-0303): scope is every attack commitment, enemy or player. Policy and limits still open. | EV-0303 |
-| [Q-E11](BACKLOG.md#q-e11) | 1 | open | none | EV-0004 |
-| [Q-E12](BACKLOG.md#q-e12) | 1 | open | none | EV-0004 |
-| [Q-E13](BACKLOG.md#q-e13) | 1 | open | none | EV-0004 |
-| [Q-E14](BACKLOG.md#q-e14) | 1 | open | none; registered at EV-0297 from the TH-06 review, non-blocking | EV-0297 |
-| [Q-P01](BACKLOG.md#q-p01) | 1 | open | none | EV-0004 |
-| [Q-P02](BACKLOG.md#q-p02) | 1 | open | none | EV-0004 |
-| [Q-P03](BACKLOG.md#q-p03) | 1 | open | none | EV-0004 |
+| [Q-E11](BACKLOG.md#q-e11) | 2 | parked | none | EV-0480 |
+| [Q-E12](BACKLOG.md#q-e12) | 2 | parked | none | EV-0480 |
+| [Q-E13](BACKLOG.md#q-e13) | 2 | parked | none | EV-0480 |
+| [Q-E14](BACKLOG.md#q-e14) | 2 | parked | none; registered at EV-0297 from the TH-06 review, non-blocking | EV-0480 |
+| [Q-P01](BACKLOG.md#q-p01) | 2 | parked | none | EV-0480 |
+| [Q-P02](BACKLOG.md#q-p02) | 2 | parked | none | EV-0480 |
+| [Q-P03](BACKLOG.md#q-p03) | 2 | parked | none | EV-0480 |
 | [Q-P04](BACKLOG.md#q-p04) | 2 | resolved | Andrew delegated, 16 September 2026 (EV-0372): construction C, cable hoop with separate discharge heads, selected by the coordinator on a Fable advisory; an override reopens it. | EV-0372 |
-| [Q-P05](BACKLOG.md#q-p05) | 1 | open | none | EV-0004 |
+| [Q-P05](BACKLOG.md#q-p05) | 2 | parked | none | EV-0480 |
 | [Q-P06](BACKLOG.md#q-p06) | 2 | open | Andrew, 16 September 2026 (EV-0372): first pilot only; Fuse supplies the first complete kit; the other four stay candidates. Roster size, species and animal-only cast open. | EV-0372 |
 | [Q-P07](BACKLOG.md#q-p07) | 1 | open | none | EV-0004 |
-| [Q-P08](BACKLOG.md#q-p08) | 1 | open | none | EV-0004 |
-| [Q-P09](BACKLOG.md#q-p09) | 1 | open | none | EV-0004 |
+| [Q-P08](BACKLOG.md#q-p08) | 2 | parked | none | EV-0480 |
+| [Q-P09](BACKLOG.md#q-p09) | 2 | parked | none | EV-0480 |
 | [Q-P10](BACKLOG.md#q-p10) | 2 | open | Andrew, 16 September 2026 (EV-0255): growth at the next intermission; material consumed as collected, milestones the durable trace; attraction through cover. Costs, supply and mass values open. | EV-0255 |
-| [Q-P11](BACKLOG.md#q-p11) | 1 | open | none | EV-0004 |
+| [Q-P11](BACKLOG.md#q-p11) | 2 | parked | none | EV-0480 |
 | [Q-P12](BACKLOG.md#q-p12) | 2 | open | Andrew, 16 September 2026 (EV-0273): fixed start, no repeats, any order; fourth world's boss is the finale; levels per world a tuning parameter. Eligibility details and counts open. | EV-0273 |
-| [Q-P13](BACKLOG.md#q-p13) | 2 | open | Andrew, 17 September 2026 (EV-0322): a miscast never changes the previewed danger shape. Pool, eligibility, frequency, severity and warnings open. | EV-0322 |
-| [Q-P14](BACKLOG.md#q-p14) | 2 | proposed | HF-06a-A1 engineering-half protocol recorded at EV-0144; product half unanswered. | EV-0144 |
-| [Q-P15](BACKLOG.md#q-p15) | 3 | proposed | HF-06a-A1 and HF-06b-A1 engineering-half protocols recorded at EV-0144 and EV-0151; product half unanswered. | EV-0151 |
+| [Q-P13](BACKLOG.md#q-p13) | 3 | parked | Andrew, 17 September 2026 (EV-0322): a miscast never changes the previewed danger shape. Pool, eligibility, frequency, severity and warnings open. | EV-0480 |
+| [Q-P14](BACKLOG.md#q-p14) | 3 | parked | HF-06a-A1 engineering-half protocol recorded at EV-0144; product half unanswered. | EV-0480 |
+| [Q-P15](BACKLOG.md#q-p15) | 4 | parked | HF-06a-A1 and HF-06b-A1 engineering-half protocols recorded at EV-0144 and EV-0151; product half unanswered. | EV-0480 |
 | [Q-P16](BACKLOG.md#q-p16) | 4 | resolved | Andrew, 16 September 2026: interruption P1 (resume at the last completed level, run.interruption null); revival R2 (in place, health value to tuning). Protocol half carried by FR-05. Confirmed 17 September 2026 (EV-0300): an intermission equipment swap is lost with an interrupted level. | EV-0300 |
-| [Q-P17](BACKLOG.md#q-p17) | 1 | open | none | EV-0004 |
-| [Q-P18](BACKLOG.md#q-p18) | 2 | open | Andrew, 17 September 2026 (EV-0314): a slot's tree is fixed for the character; a respec changes node selections only. Grant, frequency, scope and refunds open. | EV-0314 |
-| [Q-P19](BACKLOG.md#q-p19) | 1 | open | none | EV-0004 |
-| [Q-P20](BACKLOG.md#q-p20) | 1 | open | none | EV-0004 |
+| [Q-P17](BACKLOG.md#q-p17) | 2 | parked | none | EV-0480 |
+| [Q-P18](BACKLOG.md#q-p18) | 3 | parked | Andrew, 17 September 2026 (EV-0314): a slot's tree is fixed for the character; a respec changes node selections only. Grant, frequency, scope and refunds open. | EV-0480 |
+| [Q-P19](BACKLOG.md#q-p19) | 2 | parked | none | EV-0480 |
+| [Q-P20](BACKLOG.md#q-p20) | 2 | parked | none | EV-0480 |
 | [Q-P21](BACKLOG.md#q-p21) | 1 | open | none | EV-0004 |
 | [Q-P22](BACKLOG.md#q-p22) | 1 | open | none | EV-0004 |
 | [Q-P23](BACKLOG.md#q-p23) | 2 | open | Andrew, 16 September 2026 (EV-0275): the five catalogue worlds are the launch run-region set; ids and content open. | EV-0275 |
 | [Q-P24](BACKLOG.md#q-p24) | 1 | open | none | EV-0004 |
-| [Q-P25](BACKLOG.md#q-p25) | 2 | open | Andrew, 16 September 2026 (EV-0275): the five catalogue worlds are the launch run-region set; ids and content open. | EV-0275 |
-| [Q-P26](BACKLOG.md#q-p26) | 11 | open | Andrew, 16 September 2026 (EV-0372, EV-0423, EV-0447): first batch asset list and file locations recorded before the budget (shared core and cockpit, Fuse hoop and tool at starting mech, Iron Orchard enemy family and module set); blockouts before the native slice, final assets after. Measured budget open. | EV-0452 |
+| [Q-P25](BACKLOG.md#q-p25) | 3 | parked | Andrew, 16 September 2026 (EV-0275): the five catalogue worlds are the launch run-region set; ids and content open. | EV-0480 |
+| [Q-P26](BACKLOG.md#q-p26) | 12 | parked | Andrew, 16 September 2026 (EV-0372, EV-0423, EV-0447): first batch asset list and file locations recorded before the budget (shared core and cockpit, Fuse hoop and tool at starting mech, Iron Orchard enemy family and module set); blockouts before the native slice, final assets after. Measured budget open. | EV-0480 |
 | [Q-P27](BACKLOG.md#q-p27) | 2 | open | Andrew, 16 September 2026 (EV-0372): hybrid, procedural Godot motion for core, suspension and retraction; hand-keyed Blender clips for pilot and tool actions. Specifics open. | EV-0372 |
-| [Q-P28](BACKLOG.md#q-p28) | 1 | open | none | EV-0004 |
-| [Q-P29](BACKLOG.md#q-p29) | 1 | open | none | EV-0004 |
-| [Q-P30](BACKLOG.md#q-p30) | 1 | open | none | EV-0004 |
-| [Q-P31](BACKLOG.md#q-p31) | 1 | open | none | EV-0004 |
+| [Q-P28](BACKLOG.md#q-p28) | 2 | parked | none | EV-0480 |
+| [Q-P29](BACKLOG.md#q-p29) | 2 | parked | none | EV-0480 |
+| [Q-P30](BACKLOG.md#q-p30) | 2 | parked | none | EV-0480 |
+| [Q-P31](BACKLOG.md#q-p31) | 2 | parked | none | EV-0480 |
 | [Q-P32](BACKLOG.md#q-p32) | 5 | open | Andrew, 17 September 2026 (EV-0284): a presentation-owned aim point is unlockable only by a TADR-002 amendment; Q-P32 owns bounds, which stay open until a native slice plays; reduced motion a saved preference (EV-0248). | EV-0447 |
 | [Q-P33](BACKLOG.md#q-p33) | 1 | open | none | EV-0004 |
-| [Q-P34](BACKLOG.md#q-p34) | 1 | open | none | EV-0004 |
-| [Q-P35](BACKLOG.md#q-p35) | 1 | open | none | EV-0004 |
-| [Q-P36](BACKLOG.md#q-p36) | 1 | open | none | EV-0004 |
-| [Q-P37](BACKLOG.md#q-p37) | 1 | open | none | EV-0004 |
+| [Q-P34](BACKLOG.md#q-p34) | 2 | parked | none | EV-0480 |
+| [Q-P35](BACKLOG.md#q-p35) | 2 | parked | none | EV-0480 |
+| [Q-P36](BACKLOG.md#q-p36) | 2 | parked | none | EV-0480 |
+| [Q-P37](BACKLOG.md#q-p37) | 2 | parked | none | EV-0480 |
 | [Q-P38](BACKLOG.md#q-p38) | 2 | open | Andrew, 17 September 2026 (EV-0296): a same-tick completion and lethal hero outcome resolves as defeat wins; the completion counts only if the hero is alive after R2 revive. Types, rewards and reconfiguration boundaries open. | EV-0296 |
 | [Q-P39](BACKLOG.md#q-p39) | 2 | resolved | Andrew, 16 September 2026: abandoning a live run is a defeat; Transition D with outcome lost, then S. Protocol half carried by FR-05. | EV-0247 |
 | [Q-P41](BACKLOG.md#q-p41) | 2 | resolved | Andrew, 16 September 2026: hold the encounter and show a diagnostic. Protocol half carried by FR-05. | EV-0247 |
 | [Q-P40](BACKLOG.md#q-p40) | 1 | resolved | Andrew, 15 September 2026: terminal means over for victory and defeat; a separate outcome fact records won versus lost. Protocol half carried by FR-02 revision 2. | EV-0202 |
-| [Q-P42](BACKLOG.md#q-p42) | 1 | open | Andrew, 16 September 2026 (EV-0447 decision 3): hybrid approach, procedural locomotion and turning in Godot with hand-keyed Blender wind-up and attack clips; per-member treatment open. | EV-0470 |
-| [Q-P43](BACKLOG.md#q-p43) | 1 | open | none | EV-0470 |
-| [Q-P44](BACKLOG.md#q-p44) | 1 | open | none | EV-0470 |
-| [Q-P45](BACKLOG.md#q-p45) | 1 | open | none | EV-0470 |
-| [Q-P46](BACKLOG.md#q-p46) | 1 | open | none | EV-0470 |
-| [Q-P47](BACKLOG.md#q-p47) | 1 | open | none | EV-0470 |
-| [Q-P48](BACKLOG.md#q-p48) | 1 | open | none | EV-0470 |
+| [Q-P42](BACKLOG.md#q-p42) | 2 | parked | Andrew, 16 September 2026 (EV-0447 decision 3): hybrid approach, procedural locomotion and turning in Godot with hand-keyed Blender wind-up and attack clips; per-member treatment open. | EV-0480 |
+| [Q-P43](BACKLOG.md#q-p43) | 2 | parked | none | EV-0480 |
+| [Q-P44](BACKLOG.md#q-p44) | 2 | parked | none | EV-0480 |
+| [Q-P45](BACKLOG.md#q-p45) | 2 | parked | none | EV-0480 |
+| [Q-P46](BACKLOG.md#q-p46) | 2 | parked | none | EV-0480 |
+| [Q-P47](BACKLOG.md#q-p47) | 2 | parked | none | EV-0480 |
+| [Q-P48](BACKLOG.md#q-p48) | 2 | parked | none | EV-0480 |
 
 ## Append-only events
 
@@ -739,6 +740,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0477 | 2026-09-16T22:17:46+00:00 | Andrew / approval, merge authorization; Coordinator / merge, publication record | (record) | Andrew approved pull request #1 (https://github.com/bananahana720/scrapkeep/pull/1, branch handoff-8-closure at 30c8b190794a867c1fdf59a7a1b5a098ba33e803) and asked for it to be merged and pushed. Before merging, GitHub reported the pull request open, not a draft, mergeable with merge state CLEAN, and its one status check (GitGuardian Security Checks) completed with conclusion SUCCESS. Merged with a merge commit at 98801436d14d6e1e6d16392dd47e8d4defe19db8 (2026-09-16T22:17:23Z), keeping all 128 commits the board cites; local main fast-forwarded to it, and check:docs, check:project, check:drift and the docs/tech/schemas scan exit 0 there. This record is pushed to main directly under the same request. The approval covers the pull request only: the Handoff-9 proposal stays awaiting_review with no sprint authorized, and AM-H8-007 and Q-P42 to Q-P48 stay open. The handoff-8-closure branch is left on the remote. |
 | EV-0478 | 2026-09-19T17:55:10+00:00 | Andrew / authorization; coordinator / coordination change | (record) | Andrew reset the Claude delegate routing on 2026-09-19: every delegate runs at high (low and medium are drift), Opus 5 is his usual main and orchestration model, Fable 5.1 is the hard tier by default and no longer escalation-only. The project session default in .claude/settings.json moved from claude-fable-5-1[1m] to claude-opus-5[1m] at high (Andrew still selects Fable per session when he wants it). Agent definitions: scrapkeep-explorer to claude-sonnet-5 high, scrapkeep-reviewer to claude-fable-5-1 high, scrapkeep-writer-medium removed as an exact duplicate of scrapkeep-writer (claude-opus-5 high); scrapkeep-writer, scrapkeep-writer-low (claude-sonnet-5 high) and scrapkeep-reviewer-medium (claude-opus-5 high) unchanged. The pin sentences at ORCHESTRATOR.md:17, AGENTS.md:11, docs/project/AI-WORKFLOW.md:21 and .agents/skills/scrapkeep-task/SKILL.md:31 now state the same tiers. Shared map: /home/andrew/.config/pstack/models/claude.md; backup at /home/andrew/.config/pstack/backups/claude-high-routing-20260919T175123Z. Effect: no attempt is in progress; every later unit uses the new pins, and the coordinator checks each delegate's reported CLAUDE_EFFORT against high. Recorded as a coordination change, not a task; no card, lease or question state changed. |
 | EV-0479 | 2026-09-23T01:26:22+00:00 | Andrew / direction, authorization; coordinator / coordination change | Handoff-9 proposal (FR-08, FR-11, FR-09, ART-01) | Andrew played the rebuilt orchard (`/orchard.html`, increment 01) for the first time and gave this verdict: "the implementation was off and not very good, wasnt very inspiring. it was a static room like level - looking for more of a exploring, more open world to play a rougelite in". His target is Risk of Rain 2 open stages combined with a momentum playground: open 3D stages to roam, loot, secrets and an exit trigger, on terrain built for rolling, with combat in the world rather than in rooms. He directed a square-one review before any further build. Sacred and not under review: the rolling scrap mech, scrap becomes your build, the roguelite run, and the steam-cyberpunk Southwest art direction. Everything else is open, including level and run structure, the engine and the process. Handoff-9 moves from awaiting_review to deferred, not rejected. Andrew also chose a light play lane for prototype iteration (build, verify, Andrew plays, commit); its exact wording waits for the review. The verdict is entry 1 of [the playtest log](docs/playtests/PLAYTEST-LOG.md). No card, lease or question state changed; AM-H8-007 and Q-P42 to Q-P48 stay open. |
+| EV-0480 | 2026-09-23T02:05:00+00:00 | Andrew / decision, authorization; coordinator / park, coordination change | 40 questions listed below; ORCHESTRATOR revision 5 | The square-one review ran as four read-only lenses on scrapkeep-reviewer (game design, feel root cause, technology, process and corpus). Each report was gated by the coordinator with cited spot checks. Andrew decided three things. (1) Stage greyboxes are built in Godot 4.7.2, not the browser. The technology lens found that prototype tuning does not carry into the native game (HF-02 C-movement) and that Godot's choice never rested on level shape (TADR-001), so the engine stands. (2) The first two stage concepts are Spillway Drop and Cable Bench. A movement "ball lab" sketch comes first, because the feel lens found the orchard's movement has no momentum or terrain normal (src/orchard/simulation.js:505-516, :147-149). (3) Andrew delegated the process choices to the coordinator's recommendation. Applied here: the light play lane (ORCHESTRATOR § Light play lane, the `sketch` check:scope class for `sketches/`, `npm run sketch:smoke`) is authorized for Godot sketches. Parked from open or proposed, with answers retained, sourced from EV-0479 because they depend on the old compact-level shape or on native qualification: Q-E01, Q-E03, Q-E04, Q-E05, Q-E08, Q-E11, Q-E12, Q-E13, Q-E14, Q-P01, Q-P02, Q-P03, Q-P05, Q-P08, Q-P09, Q-P11, Q-P13, Q-P14, Q-P15, Q-P17, Q-P18, Q-P19, Q-P20, Q-P25, Q-P26, Q-P28, Q-P29, Q-P30, Q-P31, Q-P34, Q-P35, Q-P36, Q-P37, Q-P42, Q-P43, Q-P44, Q-P45, Q-P46, Q-P47, Q-P48. Still open: Q-E06, Q-E10, Q-P06, Q-P07, Q-P10, Q-P12, Q-P21, Q-P22, Q-P23, Q-P24, Q-P27, Q-P32, Q-P33, Q-P38. The Bible stays unamended until a greybox plays well. BIBLE.md:519 and :963 still describe compact levels. The archive of old events is deferred. |
 
 ## Preparation checkpoint
 
