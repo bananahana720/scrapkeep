@@ -5,8 +5,9 @@ const SENSITIVITY := 0.0022
 
 var target
 var tuning
-var yaw := 0.0
-var pitch := -0.28
+# Spawn looks down the run, so W drives you into the hill rather than up it.
+var yaw := PI
+var pitch := -0.30
 
 var arm: SpringArm3D
 var cam: Camera3D
@@ -21,7 +22,7 @@ func setup(target_ref, tuning_ref) -> void:
 	tuning = tuning_ref
 	arm = SpringArm3D.new()
 	var probe := SphereShape3D.new()
-	probe.radius = 0.45
+	probe.radius = 0.3
 	arm.shape = probe
 	arm.spring_length = 8.0
 	arm.margin = 0.25
@@ -59,7 +60,7 @@ func _process(delta: float) -> void:
 	# Speed pulls the camera back and widens the lens; the lag tightens so the ball
 	# does not slide off screen once it is quick.
 	var follow := 1.0 - exp(-lerpf(6.0, 15.0, fraction) * delta)
-	global_position = global_position.lerp(target.ball_position() + Vector3.UP * 0.7, follow)
+	global_position = global_position.lerp(target.ball_position() + Vector3.UP * 0.8, follow)
 	var ease := 1.0 - exp(-4.0 * delta)
 	arm.spring_length = lerpf(arm.spring_length, lerpf(7.5, 10.5, fraction), ease)
 	cam.fov = lerpf(cam.fov, lerpf(65.0, 82.0, fraction), ease)

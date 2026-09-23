@@ -85,5 +85,14 @@ through it. `mode_check.gd` covers driving, the Tab toggle carrying position and
 the descending rebound restoring the air jump, and enemy knockback. Both exit non-zero on
 failure.
 
+`tests/shot.gd` is the visual spot check: it opens a window, renders the spawn view and
+saves a PNG (pass a path after `--`, otherwise it lands in `user://`). It is how the
+terrain was confirmed to be visible and right way up, since a trimesh with inverted
+winding is invisible from above and has no collision either.
+
+```bash
+$GODOT --path sketches/ball-lab --script res://tests/shot.gd -- /tmp/spawn.png
+```
+
 These prove the systems run and the slope physics does what it claims. They say nothing
 about how any of it feels.
