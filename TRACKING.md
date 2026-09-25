@@ -259,11 +259,11 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-09](BACKLOG.md#jl-09) | 1 | 3 | in_progress | none | none | EV-0507 |
 | [JL-10](BACKLOG.md#jl-10) | 1 | 4 | done | none | JL-10-A1 | EV-0509 |
 | [JL-11](BACKLOG.md#jl-11) | 1 | 3 | in_progress | none | none | EV-0507 |
-| [JL-12](BACKLOG.md#jl-12) | 1 | 4 | review | none | none | EV-0505 |
+| [JL-12](BACKLOG.md#jl-12) | 1 | 5 | done | none | JL-12-A1 | EV-0511 |
 | [JL-13](BACKLOG.md#jl-13) | 1 | 1 | queued | JL-09 | none | EV-0510 |
 | [JL-14](BACKLOG.md#jl-14) | 1 | 1 | queued | JL-11 | none | EV-0510 |
-| [JL-15](BACKLOG.md#jl-15) | 1 | 1 | queued | JL-12 | none | EV-0510 |
-| [JL-16](BACKLOG.md#jl-16) | 1 | 1 | queued | JL-12 | none | EV-0510 |
+| [JL-15](BACKLOG.md#jl-15) | 1 | 2 | ready | none | none | EV-0511 |
+| [JL-16](BACKLOG.md#jl-16) | 1 | 2 | ready | none | none | EV-0511 |
 
 ## Question state index
 
@@ -790,6 +790,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0508 | 2026-09-25T18:34:56+00:00 | Coordinator / wave close checkpoint | (record) | Wave 2 retro, the first computed by the JL-08 collector on the coordinator branch (record under `artifacts/local/runs/`, retro at `artifacts/local/runs/program/wave-2.md`): first-pass review 7 of 9 cards (78%); median cycle 0.32 h per card; rework 0.23 per card; blocked 0; model substitution 0 over 24 delegates; event-time skew still 0.58 h at its historical maximum (EV-0491), none since EV-0492. The collector flagged one untracked commit, 6bfad8d, the EV-0500 commit that changed ORCHESTRATOR.md (an event cannot cite its own commit); this event cites it. Token means per card are inflated about twofold by the ledger overcount (EV-0498) and are not used for decisions until that fix lands. Changes for Wave 3, already applied: Godot and process-running cards go to Opus after JL-06's first-review failure on Sonnet; overlapping edits to one file are merged serially, and the later branch merges the coordinator head before its review (JL-12); a card that fixes another card's review notes names the note ids. |
 | EV-0509 | 2026-09-25T18:36:40+00:00 | Independent reviewer / review; coordinator / integration | JL-10 | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on 8ff1dcd: the exporter writes nothing to gameplay nodes; the identity test is valid (no autoload, static, shared group query or gameplay RNG could mask a difference; the exact comparison and a nudge first seen at tick 451 in both modes); nothing from the wall clock or randomness reaches the `jev` block. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-10.md](artifacts/jev-lab-2026-09-25/reviews/JL-10.md). Merged at 5f95c81; integrated `npm run sketch:smoke` pass, `npm test` 341/0, `npm run verify` six stages pass. JL-10 moves review to done, record revision 3 to 4; lease JL-10-L1 closes. The "Andrew plays the sketch" step `check:scope` printed is not applicable: no gameplay changed, and instrumentation is heavy-lane. Carried forward as JL-13 contract items: take the first snapshot at least one physics tick after `Scenarios.place()` (state-000000 is otherwise stale: speed tier and the rigid teleport lag); collapse raw `shockwave` emissions into one hit per enemy and contact stretch before any stomp/ram count, because one kinematic ram emitted 45 waves and a rigid stomp registered as a ram (both are gameplay findings for the sketch's owner, not exporter defects); `KICKER_AT` measures to the ramp centre, not its lip (about 8 m short), which JL-21 recalibrates. |
 | EV-0510 | 2026-09-25T18:37:29+00:00 | Coordinator / definition import | JL-13, JL-14, JL-15, JL-16; hash tokens in the section files | BACKLOG gains the Wave 4 cards at revision 1, appended so no earlier line moves, each carrying the review notes routed to it: JL-13 (Godot steering agent and telemetry; the stale first snapshot and knock-collapse contract items from EV-0509), JL-14 (verdict cache, the jev arm and replay; `score.mjs` argument guard and `decision.model` from EV-0493; the real Jev `usage` field names confirmed by a capped five-call live smoke), JL-15 (preflight controls with an injected `decideFn`, the epoch record JL-12's gate reads, and a `control_separation` threshold from EV-0504; one live control run against q1 reported as-is) and JL-16 (`scrapkeep stats`, lab verb routing, and JL-06's NB1 and NB3 from EV-0505). All four are queued on unfinished dependencies: JL-13 on JL-09 (JL-10 is done), JL-14 on JL-11, JL-15 and JL-16 on JL-12. Hash tokens re-pointed (four passes). |
+| EV-0511 | 2026-09-25T18:39:41+00:00 | Independent reviewer / review; coordinator / integration, readiness | JL-12, JL-15, JL-16 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on fa1156b: every exit code 0 to 4 is reachable for its intended reason and tested through the real CLI; Newcombe is signed so positive is improvement; `untiered` metrics are printed but do not drive the exit; the `record.mjs` resolution keeps JL-06's structure with JL-12's block inside the mismatch branch, and the NB2 retry test fails without its fix. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-12.md](artifacts/jev-lab-2026-09-25/reviews/JL-12.md). The coordinator confirmed the range from 346063a to fa1156b touches only the six leased files plus `tests/lab-record.test.js`, where the writer added the NB2 test (accepted). The branch commits ab94bcf (the merge of the coordinator head into `wt/JL-12`) and fa1156b (the NB2 fix) and the merge ff46943 are named here. Integrated `npm test` 359/0, `npm run verify` six stages pass; the collector now rates the 0.58 h historical skew as a warning under the tightened threshold. JL-12 moves review to done, record revision 4 to 5; lease JL-12-L1 closes. JL-15 and JL-16 move queued to ready. Carried forward: to JL-15, wire `epochValid` into the gate (today `lever_effect` always reads insufficient, exit 3; the epoch rule is insufficient for an unproven reading and exit 4 for a changed instrument), and make pinning require an epoch that passed controls and the blind corpus (today a run type that omits those metrics pins cleanly); to JL-16, label the rate line for `corpus_blind_weighted` and `dead_tier` as approximated n trials, and report a pin rate outside 0 to 1 as inconclusive rather than skipping it; to JL-25, the `andrew-anchor` staleness exemption (EV-0504), excluding `sources.json` and `run-owner.json` from pin copies, and a test of the uncaught-error exit 4. |
 
 ## Preparation checkpoint
 
@@ -1765,15 +1766,15 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 
 ## JL-12-A1 Jev Lab attempt
 
-- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-12-A1; exclusive lease JL-12-L1 open.
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-12-A1; exclusive lease JL-12-L1 closed, writer stopped.
 - Owned files: `scripts/lab/gate.mjs`; `scripts/lab/record.mjs`; `scripts/lab/metrics/{status,core,program,ball-lab}.mjs`; `tests/lab-gate.test.js`; `tests/lab-metrics.test.js`; `artifacts/local/tasks/JL-12/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-12` on `wt/JL-12`, created by `scripts/new-worktree.sh`.
 - Base identity: `bdf0bb68f11b80e32531491eb0dd0596ca99983a`.
-- Candidate identity: `7b58356ae3914d6478389f0fcc53b51e23ced06e`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T18:26:01+00:00; handoff received, in review (EV-0504).
+- Candidate identity: `fa1156b6a499047c58a519a509f7e09b8a9b8082` (7b58356, the merge ab94bcf of the coordinator head, and the NB2 fix fa1156b). Integrated identity: `ff46943` (merge into `wt/JL-coord`).
+- Latest checkpoint: 2026-09-25T18:39:41+00:00; review PASS+NOTES, admitted serially (EV-0511).
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-12/` in the worktree.
-- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+- Review: fresh scrapkeep-reviewer (claude-fable-5-1 per host prompt), **PASS+NOTES** on fa1156b; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-12.md). Integrated: `npm test` 359/0, `npm run verify` six stages pass.
 
 ## JL-09-A1 Jev Lab attempt
 
