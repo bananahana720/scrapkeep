@@ -219,11 +219,19 @@ export async function runControls({
     else results.push(await thresholdControl(control, questions, decideFn));
   }
   const runs = results.flatMap((result) => result.runs);
+  // Each field is totalled on its own; a field no call reported stays null.
   const tokens = Object.fromEntries(
-    TOKEN_FIELDS.map((field) => [
-      field,
-      runs.reduce((sum, run) => sum + (Number(run.usage[field]) || 0), 0),
-    ]),
+    TOKEN_FIELDS.map((field) => {
+      const reported = runs
+        .map((run) => run.usage[field])
+        .filter((value) => Number.isFinite(value));
+      return [
+        field,
+        reported.length === 0
+          ? null
+          : reported.reduce((sum, value) => sum + value, 0),
+      ];
+    }),
   );
   return {
     instrument: instrumentIdentity(questions),

@@ -287,6 +287,20 @@ test("tokens are totalled per field and never merged, with the resolved models",
     cache_creation_input_tokens: 24,
   });
   assert.deepEqual(result.resolved_models, ["jev-stub-1"]);
+  // The live API reports input and output only; a field no call reported
+  // stays null rather than reading as zero spend.
+  const { decideFn: plain } = stub(sensible);
+  const sparse = async (state, options, settings) => {
+    const decision = await plain(state, options, settings);
+    return { ...decision, usage: { input_tokens: 700, output_tokens: 80 } };
+  };
+  const live = await runControls({ questions, decideFn: sparse, controls });
+  assert.deepEqual(live.tokens, {
+    input_tokens: 5600,
+    output_tokens: 640,
+    cache_read_input_tokens: null,
+    cache_creation_input_tokens: null,
+  });
 });
 
 test("a failed control exits 6 before the batch starts", async () => {
