@@ -17,6 +17,15 @@ import { fileURLToPath } from "node:url";
 import { STATUS } from "../scripts/lab/metrics/status.mjs";
 import { METRICS } from "../scripts/lab/metrics/index.mjs";
 import { SCHEMA, createRun } from "../scripts/lab/record.mjs";
+import {
+  instrumentIdentity,
+  loadQuestionSet,
+} from "../tools/jev-player/decide.mjs";
+import {
+  BLIND_NOT_RUN,
+  epochRecord,
+  writeEpochRecord,
+} from "../tools/jev-player/preflight.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gateScript = path.join(root, "scripts/lab/gate.mjs");
@@ -82,6 +91,7 @@ async function fixture(t) {
   t.after(() => rm(temporary, { recursive: true, force: true }));
   const runs = path.join(temporary, "runs");
   const artifacts = path.join(temporary, "artifacts");
+  const epochs = path.join(temporary, "epochs");
   await mkdir(runs, { recursive: true });
   const write = async (run) => {
     await mkdir(path.join(runs, run.id), { recursive: true });
@@ -94,7 +104,16 @@ async function fixture(t) {
   const gate = (...args) => {
     const result = spawnSync(
       process.execPath,
-      [gateScript, ...args, "--runs", runs, "--artifacts", artifacts],
+      [
+        gateScript,
+        ...args,
+        "--runs",
+        runs,
+        "--artifacts",
+        artifacts,
+        "--epochs",
+        epochs,
+      ],
       { encoding: "utf8" },
     );
     return {
@@ -111,7 +130,7 @@ async function fixture(t) {
     assert.equal(pinned.code, 0, pinned.out + pinned.err);
     return base;
   };
-  return { temporary, runs, artifacts, write, gate, pinBase };
+  return { temporary, runs, artifacts, epochs, write, gate, pinBase };
 }
 
 async function pinDirectories(artifacts) {
@@ -189,7 +208,7 @@ test("exit 0 when nothing regresses and untiered KRIs are ignored", async (t) =>
       kris: {
         api_error_rate: { value: 0.9, n: 40, ci: null },
         escaped_defects: { value: 12, n: 1, ci: null },
-        control_separation: { value: 0, n: 0, ci: null },
+        low_conf_rate: { value: 0, n: 0, ci: null },
       },
       kpis: { tokens_per_decision: { value: 900, n: 2, ci: null } },
     }),
@@ -354,4 +373,100 @@ test("gate.mjs names no status and reads STATUS only through evaluate", async ()
   const words = new RegExp(`\\b(${Object.keys(STATUS).join("|")})\\b`, "i");
   assert.equal(words.exec(source), null);
   assert.doesNotMatch(source, /\bSTATUS\b/);
+});
+
+// The q1 instrument, and an epoch record for it built by preflight.mjs from a
+// controls result and a blind result.
+const questions = loadQuestionSet();
+const instrument = instrumentIdentity(questions);
+const BLIND_PASSED = {
+  status: "pass",
+  passed: true,
+  exit: 0,
+  reason: "Blind corpus passes.",
+  cases: 24,
+  weighted: 0.93,
+  severe_misses: 0,
+};
+
+async function writeEpoch(
+  epochs,
+  { controls = true, blind = BLIND_PASSED } = {},
+) {
+  const result = {
+    instrument,
+    controls_version: "c1",
+    controls_sha: "c".repeat(64),
+    passed: controls,
+    controls: [],
+  };
+  return writeEpochRecord(
+    epochRecord({ questions, controls: result, blind }),
+    epochs,
+  );
+}
+
+const withInstrument = (id, overrides = {}) =>
+  record(id, {
+    ...overrides,
+    provenance: { instrument, ...overrides.provenance },
+  });
+
+test("--pin refuses a run with an instrument until its epoch passed controls and the blind corpus", async (t) => {
+  const { artifacts, epochs, write, gate } = await fixture(t);
+  const run = withInstrument("jev-run");
+  await write(run);
+  const attempt = () => gate("--pin", run.id, "--as", "jev-base");
+
+  const none = attempt();
+  assert.equal(none.code, 4, none.out + none.err);
+  assert.match(none.out, /no epoch record/);
+  assert.match(none.err, /refus/);
+
+  await writeEpoch(epochs, { blind: BLIND_NOT_RUN });
+  const pending = attempt();
+  assert.equal(pending.code, 4, pending.out + pending.err);
+  assert.match(pending.out, /blind corpus/);
+
+  await writeEpoch(epochs, { controls: false });
+  const failed = attempt();
+  assert.equal(failed.code, 4, failed.out + failed.err);
+  assert.match(failed.out, /controls failed/);
+  assert.deepEqual(await pinDirectories(artifacts), []);
+
+  const other = withInstrument("other-model", {
+    provenance: { instrument: { ...instrument, model: "jev-next" } },
+  });
+  await write(other);
+  await writeEpoch(epochs);
+  const mismatched = gate("--pin", other.id, "--as", "other");
+  assert.equal(mismatched.code, 4, "an epoch answers only for its instrument");
+
+  const valid = attempt();
+  assert.equal(valid.code, 0, valid.out + valid.err);
+  assert.equal((await pinDirectories(artifacts)).length, 1);
+});
+
+test("lever_effect is judged once the candidate's epoch is valid, and held otherwise", async (t) => {
+  const { epochs, write, gate, pinBase } = await fixture(t);
+  await writeEpoch(epochs);
+  await pinBase({ provenance: { instrument } });
+  const lever = { kpis: { lever_effect: { value: 0.4, n: 200, ci: null } } };
+  const judged = await write(withInstrument("judged", lever));
+  const passed = gate(judged, "--against", "base");
+  assert.equal(passed.code, 0, passed.out + passed.err);
+  assert.match(
+    passed.out,
+    new RegExp(`${STATUS.untiered.glyph} ${STATUS.untiered.word} lever_effect`),
+  );
+
+  await writeEpoch(epochs, { blind: BLIND_NOT_RUN });
+  const held = gate(judged, "--against", "base");
+  assert.equal(held.code, 3, held.out + held.err);
+  assert.match(
+    held.out,
+    new RegExp(
+      `${STATUS.insufficient.glyph} ${STATUS.insufficient.word} lever_effect`,
+    ),
+  );
 });

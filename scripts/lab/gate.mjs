@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 import { RUNS_ROOT, SCHEMA } from "./record.mjs";
+import { EPOCHS_ROOT, epochStatus } from "../../tools/jev-player/preflight.mjs";
 import { getMetric } from "./metrics/index.mjs";
 import { EXIT, evaluate, worstExit } from "./metrics/status.mjs";
 import { newcombe, wilson } from "./stats.mjs";
@@ -32,8 +33,8 @@ export const RATES = [
 ];
 
 const USAGE = `Usage:
-  node scripts/lab/gate.mjs --pin <run_id> --as <name> [--runs dir] [--artifacts dir]
-  node scripts/lab/gate.mjs <run_id|run dir> --against <pin name|pin dir> [--runs dir] [--artifacts dir]
+  node scripts/lab/gate.mjs --pin <run_id> --as <name> [--runs dir] [--artifacts dir] [--epochs dir]
+  node scripts/lab/gate.mjs <run_id|run dir> --against <pin name|pin dir> [--runs dir] [--artifacts dir] [--epochs dir]
 Exit codes: 0 pass, 1 a metric past its fail limit or a conclusive regression, 2 usage, 3 inconclusive, 4 instrument invalid.`;
 
 class UsageError extends Error {}
@@ -112,7 +113,7 @@ function render(status, id, measure, tty) {
   return tty ? `${status.ansi}${text}\x1b[0m` : text;
 }
 
-function assessMetrics(record, tty) {
+function assessMetrics(record, tty, epochValid) {
   const found = [];
   for (const [kind, bucket] of [
     ["kpi", record.kpis],
@@ -136,7 +137,7 @@ function assessMetrics(record, tty) {
         );
         continue;
       }
-      const status = evaluate(metric, measure);
+      const status = evaluate(metric, measure, { epochValid });
       found.push(outcome(status.exit, render(status, id, measure, tty)));
     }
   }
@@ -144,8 +145,8 @@ function assessMetrics(record, tty) {
 }
 
 // What a run shows on its own: its schema, recorded result, tree state and
-// every metric's status.
-function assessRun(record, label, tty) {
+// every metric's status. epochValid comes from the run's epoch record.
+function assessRun(record, label, tty, epochValid = false) {
   if (record?.schema !== SCHEMA)
     return [outcome(EXIT.invalid, `${label} is not a ${SCHEMA} record`)];
   const found = [];
@@ -167,7 +168,7 @@ function assessRun(record, label, tty) {
     found.push(
       outcome(EXIT.inconclusive, `${label} ran on a dirty tree at ${head}`),
     );
-  return [...found, ...assessMetrics(record, tty)];
+  return [...found, ...assessMetrics(record, tty, epochValid)];
 }
 
 function reading(record, id) {
@@ -252,11 +253,32 @@ function againstPin(candidate, pin, name) {
   return found;
 }
 
-async function pinRun({ reference, name, runs, artifacts, tty, out, err }) {
+// A run that carries an instrument identity is pinnable only when that
+// epoch's record shows passed controls and a passed blind corpus (plan § 4).
+// A run without one (no jev arm) has no epoch to prove.
+async function pinRun({
+  reference,
+  name,
+  runs,
+  artifacts,
+  epochs,
+  tty,
+  out,
+  err,
+}) {
   if (!slug.test(name)) throw new UsageError(`pin name ${name} is not a slug`);
   const source = await resolveRun(reference, runs);
   const record = await readRun(source);
-  const found = assessRun(record, `run ${reference}`, tty);
+  const instrument = record?.provenance?.instrument ?? null;
+  const epoch = await epochStatus(instrument, epochs);
+  const found = assessRun(record, `run ${reference}`, tty, epoch.valid);
+  if (instrument !== null && !epoch.valid)
+    found.push(
+      outcome(
+        EXIT.invalid,
+        `run ${reference}'s epoch has not passed controls and the blind corpus: ${epoch.reason}`,
+      ),
+    );
   for (const { text } of found) out.write(`${text}\n`);
   const exit = worstExit(found.map((one) => one.exit));
   if (exit !== EXIT.pass) {
@@ -291,7 +313,15 @@ async function pinRun({ reference, name, runs, artifacts, tty, out, err }) {
   return EXIT.pass;
 }
 
-async function gateRun({ reference, against, runs, artifacts, tty, out }) {
+async function gateRun({
+  reference,
+  against,
+  runs,
+  artifacts,
+  epochs,
+  tty,
+  out,
+}) {
   const candidateDirectory = await resolveRun(reference, runs);
   const pinDirectory = await resolvePin(against, artifacts);
   const candidate = await readRun(candidateDirectory);
@@ -301,7 +331,16 @@ async function gateRun({ reference, against, runs, artifacts, tty, out }) {
     throw new UsageError(
       `candidate type ${candidate.type} cannot be gated against a ${pin.type} pin`,
     );
-  const found = assessRun(candidate, `candidate ${reference}`, tty);
+  const epoch = await epochStatus(
+    candidate?.provenance?.instrument ?? null,
+    epochs,
+  );
+  const found = assessRun(
+    candidate,
+    `candidate ${reference}`,
+    tty,
+    epoch.valid,
+  );
   if (pin?.schema !== SCHEMA)
     found.push(
       outcome(EXIT.invalid, `pin ${against} is not a ${SCHEMA} record`),
@@ -328,6 +367,7 @@ export async function main(
           against: { type: "string" },
           runs: { type: "string" },
           artifacts: { type: "string" },
+          epochs: { type: "string" },
         },
         allowPositionals: true,
         strict: true,
@@ -339,6 +379,7 @@ export async function main(
     const common = {
       runs: path.resolve(values.runs ?? RUNS_ROOT),
       artifacts: path.resolve(values.artifacts ?? ARTIFACTS_ROOT),
+      epochs: path.resolve(values.epochs ?? EPOCHS_ROOT),
       tty: out.isTTY === true,
       out,
       err,
