@@ -49,6 +49,23 @@ export const STATUS = Object.freeze({
   untiered: entry("untiered", "#4fa3d9", "◇", "ignore", EXIT.pass),
 });
 
+// The page around the statuses, from the same colors.toml (mode "dark", so
+// there is no light variant). None of these means a status. accent is the
+// theme's accent and marks what waits for Andrew; epoch is its cyan and marks
+// an instrument change.
+export const PAGE = Object.freeze({
+  background: "#0b1419",
+  deep: "#081015",
+  panel: "#13212a",
+  rule: "#1e3440",
+  muted: "#3a5563",
+  text: "#cfe3e6",
+  soft: "#a9c3c8",
+  bright: "#eaf6f7",
+  accent: "#ff9e3d",
+  epoch: "#2ee6d6",
+});
+
 // Metrics that mean nothing until their epoch has passed its controls. The
 // registry shape has no field for this, so the rule lives beside evaluate.
 const EPOCH_BOUND = new Set(["lever_effect"]);

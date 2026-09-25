@@ -25,7 +25,7 @@ Layers: ${LAYERS.join(", ")}.`;
 
 class UsageError extends Error {}
 
-const number = (value) => String(Number(value.toFixed(4)));
+export const number = (value) => String(Number(value.toFixed(4)));
 
 function signed(value) {
   const text = number(value);
@@ -39,7 +39,8 @@ const CHANGE_TEXT = {
   none: () => "no pin",
 };
 
-const changeText = (comparison) => CHANGE_TEXT[comparison.kind](comparison);
+export const changeText = (comparison) =>
+  CHANGE_TEXT[comparison.kind](comparison);
 
 function metricLine(metric, model, pins, tty) {
   const reading = latestReading(model, metric.id);

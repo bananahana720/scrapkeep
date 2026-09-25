@@ -654,6 +654,7 @@ const labScripts = path.join(root, "scripts", "lab");
 const LAB_VERBS = {
   stats: "stats-cli.mjs",
   gate: "gate.mjs",
+  dash: "dash.mjs",
 };
 const LAB_SUBVERBS = {
   run: "harness.mjs",
