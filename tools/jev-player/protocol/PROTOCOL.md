@@ -10,7 +10,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 - **Closed.** An unknown field is invalid, except inside `sim` (state) and `meta` (intent).
 - **No wall clock in Godot files.** Godot's files hold ticks, never times of day or elapsed milliseconds. That keeps `trace_hash` identical when Node answers slowly.
 - **Numbering.** `NNNNNN` is the snapshot's `seq`, zero-padded to six digits and starting at `000000`. `intent-NNNNNN.json` answers `state-NNNNNN.json`.
-- **Closed directory.** `<io>` holds only the file names in the table below (plus their `.tmp` siblings while being written); Node's `validateTrial()` rejects any other name.
+- **Closed directory.** `<io>` holds only the file names in the table below. Node ignores any file whose name ends in `.tmp`; `validateTrial()` rejects any other name.
 
 ## Files
 
@@ -57,7 +57,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 | Field | Rule |
 | --- | --- |
 | `reason` | `interrupted`, `arm_error` (for example a Jev API failure) or `replay_miss` (`--replay` found no cached verdict) |
-| `message` | Optional string |
+| `message` | Optional; when present, a non-empty string |
 
 ### `error.json`
 
@@ -102,7 +102,7 @@ Godot runs with `--fixed-fps 90`, so frames and physics ticks are 1:1. With D = 
 3. At tick t + k it needs `intent-seq`. If the intent is not there, Godot blocks inside `_physics_process` (polling with `OS.delay_msec`), not with `tree.paused`. While blocking it also watches for `abort.json`.
 4. When the intent arrives, Godot validates it, applies it at tick t + k exactly, and appends an `intent` event with that tick. The intent is held until the next one applies at t + D + k.
 
-Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `abort.json` at every snapshot and while blocking.
+Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `abort.json` at every snapshot and while blocking. A snapshot after seq 0 requires the previous intent file: `validateTrial()` rejects `state-seq` (seq > 0) when `intent-(seq-1)` is missing.
 
 ## Timeouts and exit codes
 
@@ -136,6 +136,8 @@ A **step** is the wall time from Node renaming `intent-N` into place to the next
 `verdictKey(instrument, jev)` is the SHA-256 of `canonicalJson({protocol, questions_sha, model, confidence_floor, gate_version, state, options})`. `instrument` is `instrumentIdentity()` from `decide.mjs`. `state` and `options` are the `jev` block exactly as Godot wrote it, before the gate, because `gate_version` already covers gate changes. Canonical JSON sorts object keys at every depth, keeps array order and has no whitespace. Node computes the key; Godot never computes or checks it. The cache itself belongs to JL-14.
 
 ## The `jev` block (corpus schema)
+
+Every whole-number field and every steps-of-0.1 field in this block is ≥ 0; there is no signed field in the `jev` block.
 
 | Path | Type and quantisation |
 | --- | --- |
