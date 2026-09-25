@@ -1,0 +1,8 @@
+{
+  "protocol": "scrapkeep-jev/1",
+  "seq": 2,
+  "intent": "__proto__",
+  "arm": "scripted",
+  "source": "rule",
+  "meta": {}
+}

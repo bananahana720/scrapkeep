@@ -47,6 +47,11 @@ const isObject = (value) =>
 const onGrid = (value, step) =>
   Number.isFinite(value) &&
   Math.abs(value / step - Math.round(value / step)) < 1e-9;
+// Whether `key` names one of the table's own entries. A plain `table[key]`
+// reaches Object.prototype ("constructor", "__proto__", "toString"), and
+// Object.hasOwn alone converts an array key such as ["jev"] to "jev".
+const ownKey = (table, key) =>
+  typeof key === "string" && Object.hasOwn(table, key);
 
 // A field kind is a function (value) -> message | null.
 const kinds = {
@@ -74,9 +79,9 @@ const kinds = {
   tier: (v) =>
     SPEED_TIERS.includes(v) ? null : `must be one of ${SPEED_TIERS.join(", ")}`,
   intentId: (v) =>
-    Object.hasOwn(INTENTS, v) ? null : "must be an intent id from decide.mjs",
+    ownKey(INTENTS, v) ? null : "must be an intent id from decide.mjs",
   heldIntent: (v) =>
-    v === null || Object.hasOwn(INTENTS, v)
+    v === null || ownKey(INTENTS, v)
       ? null
       : "must be null or an intent id from decide.mjs",
 };
@@ -316,7 +321,7 @@ export function validateIntent(message, context = {}) {
     meta: null,
   });
   if (!ok) return errors;
-  const sources = ARMS[message.arm];
+  const sources = ownKey(ARMS, message.arm) ? ARMS[message.arm] : undefined;
   if (sources !== undefined && !sources.includes(message.source)) {
     errors.push({
       path: "source",
@@ -453,7 +458,9 @@ export function validateEvents(text) {
         errors.push({ path: at, message: "is not one JSON value" });
         return;
       }
-      const fields = EVENTS[event?.kind];
+      const fields = ownKey(EVENTS, event?.kind)
+        ? EVENTS[event.kind]
+        : undefined;
       if (fields === undefined) {
         errors.push({
           path: `${at}.kind`,

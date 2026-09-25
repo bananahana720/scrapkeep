@@ -44,6 +44,30 @@ test("the sketch's fixture copy matches the canonical fixtures byte for byte", (
   assert.deepEqual(treeDifferences(expected, readTree(copy)), []);
 });
 
+// jev_io.gd ports decide.mjs's precondition gate by hand, so both files pin the
+// gate's version and PROTOCOL.md states it. A gate change bumps all three.
+test("jev_io.gd and PROTOCOL.md pin decide.mjs's GATE_VERSION", () => {
+  const constant = (file, pattern) => {
+    const found = readFileSync(path.join(root, file), "utf8").match(pattern);
+    assert.ok(found, `${file} states GATE_VERSION`);
+    return Number(found[1]);
+  };
+  const node = constant(
+    "tools/jev-player/decide.mjs",
+    /^export const GATE_VERSION = (\d+);$/m,
+  );
+  const godot = constant(
+    "sketches/ball-lab/src/jev/jev_io.gd",
+    /^const GATE_VERSION := (\d+)$/m,
+  );
+  const prose = constant(
+    "tools/jev-player/protocol/PROTOCOL.md",
+    /`GATE_VERSION` is (\d+)/,
+  );
+  assert.equal(godot, node, "jev_io.gd GATE_VERSION");
+  assert.equal(prose, node, "PROTOCOL.md GATE_VERSION");
+});
+
 test("a missing, extra or changed file is a difference", () => {
   const bytes = (text) => Buffer.from(text, "utf8");
   const expected = new Map([
