@@ -255,11 +255,11 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-06](BACKLOG.md#jl-06) | 1 | 5 | in_progress | none | none | EV-0501 |
 | [JL-07](BACKLOG.md#jl-07) | 1 | 5 | done | none | JL-07-A1 | EV-0500 |
 | [JL-08](BACKLOG.md#jl-08) | 1 | 4 | done | none | JL-08-A1 | EV-0498 |
-| [JL-05b](BACKLOG.md#jl-05b) | 1 | 1 | ready | none | none | EV-0502 |
+| [JL-05b](BACKLOG.md#jl-05b) | 1 | 3 | review | none | none | EV-0504 |
 | [JL-09](BACKLOG.md#jl-09) | 1 | 1 | queued | JL-05b | none | EV-0502 |
-| [JL-10](BACKLOG.md#jl-10) | 1 | 1 | ready | none | none | EV-0502 |
+| [JL-10](BACKLOG.md#jl-10) | 1 | 2 | in_progress | none | none | EV-0503 |
 | [JL-11](BACKLOG.md#jl-11) | 1 | 1 | queued | JL-05b, JL-06 | none | EV-0502 |
-| [JL-12](BACKLOG.md#jl-12) | 1 | 1 | ready | none | none | EV-0502 |
+| [JL-12](BACKLOG.md#jl-12) | 1 | 3 | review | none | none | EV-0504 |
 
 ## Question state index
 
@@ -778,6 +778,8 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0500 | 2026-09-25T18:07:38+00:00 | Independent reviewer / review; coordinator / integration, coordination change | JL-07; ORCHESTRATOR.md revision 6; docs/playtests/PLAYTEST-LOG.md | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on e9b977a (report at [artifacts/jev-lab-2026-09-25/reviews/JL-07.md](artifacts/jev-lab-2026-09-25/reviews/JL-07.md)). The coordinator asked for three fixes before admission, and the writer delivered them at 17eceb6: the CLI takes `--file` and `--log` so no test rewrites the tracked `verdicts.ndjson`; each quote must sit in its own entry's Verdict bullet, each anchor must equal that entry's heading slug, and each `build_sha` must be named in that entry's section; both lines use one compact convention with the enclosing quote marks. The coordinator verified them directly: 14/14 tests, a clean tree after the test run, and `node scripts/lab/verdicts.mjs` exit 0. Merged at 0f763a6; integrated `npm test` 318/0, `npm run verify` six stages pass. JL-07 moves in_progress to review to done, record revision 3 to 5; lease JL-07-L1 closes. **Coordination change:** the review found that JL-07's entry-count test would fail `npm test` on the next light-lane play unless a verdict line is added, so the light play lane loop (ORCHESTRATOR, now revision 6, which also records EV-0484's pin change) and the playtest log's after-play line gain one step: the coordinator appends the verdict line and `node scripts/lab/verdicts.mjs` must pass before merging. Andrew's play itself is unchanged; the step is the coordinator's. Hash tokens re-pointed. |
 | EV-0501 | 2026-09-25T18:11:36+00:00 | Worker handoff; independent reviewer / review; coordinator / changes requested, assignment | JL-06 | JL-06 handed off 2797ce7 with real headless Godot measurements (ball-lab at jobs=1 17.8 s and jobs=4 10.3 s; a 20-repeat soak with 0 failed repeats, 0 crashes and 0 flaky checks over 5 checks) and the JL-01 hardening notes a, b, c, e and f fixed and tested. The writer correctly signed its commits as Sonnet 5, which the packet had wrongly given as Opus 5.5. A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned **FAIL** on three blocking findings: suite records are created after the suite runs, so their start time, head and start source digest are sampled at the end and the mid-run source-change guard cannot fire; `scrapkeep shot` through `claude-open` prints "saved" before any file exists, because `claude-open` only dispatches; CONTRIBUTING carries none of the measured numbers, and a computed "about 7.7 s" per boot survives in `play.mjs` against a measured 3.6 s. The review also confirms JL-08's collector does not read the moved `provenance.sources.files`, and that the soak's `flake_rate` covers sketch checks only and cannot speak to the intermittent `npm test` failures at EV-0497. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-06-A1.md](artifacts/jev-lab-2026-09-25/reviews/JL-06-A1.md). JL-06 moves in_progress to review to changes_requested to in_progress, record revision 2 to 5, as attempt JL-06-A2 under lease JL-06-L2 (L1 closed), resuming the same writer with the three blocking fixes and seven small non-blocking ones. Retro signal: a Sonnet card needed rework, so the plan moves cards of this kind (tooling that runs real processes) to Opus from Wave 3. Open need: a repeat harness for `npm test` itself to measure the EV-0497 flakes. |
 | EV-0502 | 2026-09-25T18:13:00+00:00 | Coordinator / definition import, readiness | JL-05b, JL-09, JL-10, JL-11, JL-12; hash tokens in the section files | BACKLOG gains the Wave 3 cards at revision 1, appended so no earlier line moves: JL-05b (the protocol document and fixture patch the JL-05 review asked for before any Godot port), JL-09 (Godot protocol I/O with a byte-identical fixture copy and a drift test), JL-10 (read-only state synthesis, proven identical with the exporter on or off, and the seven ball-lab scenarios), JL-11 (harness and seeded random and scripted arms against a fake Godot; `decide.mjs` exports its fallback so `protocol.mjs` stops duplicating it; a per-batch call cap) and JL-12 (gate and pinning, sticky `invalid`, a tracked-without-threshold state for the nine threshold-less KRIs, the `lever_effect` epoch rule, and `event_time_skew` tightened to warn above 0.25 h). JL-05b, JL-10 and JL-12 move absent to ready (dependencies done, authorization EV-0484). JL-09 is queued on JL-05b, and JL-11 on JL-05b and JL-06. Model assignment follows the EV-0501 retro signal: the Godot and process-running cards (JL-09, JL-10, JL-11) and JL-12 go to Opus 5.5; JL-05b is fully specified documentation and fixtures and goes to Sonnet 5. Hash tokens re-pointed (four passes). |
+| EV-0503 | 2026-09-25T18:13:17+00:00 | Coordinator / assignment, lease | JL-05b, JL-10, JL-12 | Wave 3 first batch dispatched: each card moves ready to in_progress, record revision 1 to 2, with attempt and lease A1/L1 over the files in its attempt record. Worktrees at base bdf0bb6 (EV-0502), verified, with the `node_modules` link. Writers: JL-05b on scrapkeep-writer-low (Sonnet 5), JL-10 and JL-12 on scrapkeep-writer (Opus 5.5), all high. Active writers: four with JL-06-A2. JL-09 and JL-11 wait for JL-05b and JL-06. |
+| EV-0504 | 2026-09-25T18:26:01+00:00 | Worker handoff / coordinator review admission | JL-05b, JL-12 | JL-05b handed off 15b1be2 (PROTOCOL.md now states every rule `protocol.mjs` enforces; intent-before-trace enforced with fixtures; a state with no answering intent rejected; eight trial-level invalid fixtures; exact-path fixture tests; revert-and-rerun proves the two new invariants are exercised; `npm test` 318/0, verify passes) and is in Fable review. JL-12 handed off 7b58356 (gate with pinning and exit codes 0 to 4 tested through the real CLI; `invalid` stays invalid on a source mismatch with `reported_result` kept; an `untiered` status, Neon Noir blue, for every non-sentinel metric without thresholds, which the gate ignores; the `lever_effect` epoch rule; `event_time_skew` warn above 0.25 h, so EV-0492's 0.58 h now warns; `npm test` 335/0, verify passes) and waits for Fable, one review at a time. JL-12 and JL-06-A2 both edit `scripts/lab/record.mjs`, a known overlap: JL-12's change is one hunk in the source-mismatch branch, to be merged serially. Coordinator rulings to apply at JL-12's admission: the `andrew-anchor` pin is exempt from the 7-day staleness rule because it records Andrew's played build; a threshold for `control_separation` (plan exit 4) is carried to JL-15; plan § 4's `event_time_skew` cell is superseded by the code. Both move in_progress to review, record revision 2 to 3. |
 
 ## Preparation checkpoint
 
@@ -1726,4 +1728,40 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: A1 review at [artifacts/jev-lab-2026-09-25/reviews/JL-06-A1.md](artifacts/jev-lab-2026-09-25/reviews/JL-06-A1.md).
 - Review: planned fresh scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-05b-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer-low, Sonnet 5 at high; card revision 1; attempt JL-05b-A1; exclusive lease JL-05b-L1 open.
+- Owned files: `tools/jev-player/protocol/{PROTOCOL.md,protocol.mjs,fixtures/}`; `tools/jev-player/tests/protocol.test.js`; `artifacts/local/tasks/JL-05b/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-05b` on `wt/JL-05b`, created by `scripts/new-worktree.sh`.
+- Base identity: `bdf0bb68f11b80e32531491eb0dd0596ca99983a`.
+- Candidate identity: `15b1be26cd6d8a1f943be101f1964d6ee0d78357`. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:26:01+00:00; handoff received, in review (EV-0504).
+- Blockers: none.
+- Evidence: writer receipts under `artifacts/local/tasks/JL-05b/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-10-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-10-A1; exclusive lease JL-10-L1 open.
+- Owned files: `sketches/ball-lab/src/jev/{jev_state.gd,scenarios.gd}`; `sketches/ball-lab/tests/jev_state_test.gd`; `artifacts/local/tasks/JL-10/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-10` on `wt/JL-10`, created by `scripts/new-worktree.sh`.
+- Base identity: `bdf0bb68f11b80e32531491eb0dd0596ca99983a`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:13:17+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-10/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-12-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-12-A1; exclusive lease JL-12-L1 open.
+- Owned files: `scripts/lab/gate.mjs`; `scripts/lab/record.mjs`; `scripts/lab/metrics/{status,core,program,ball-lab}.mjs`; `tests/lab-gate.test.js`; `tests/lab-metrics.test.js`; `artifacts/local/tasks/JL-12/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-12` on `wt/JL-12`, created by `scripts/new-worktree.sh`.
+- Base identity: `bdf0bb68f11b80e32531491eb0dd0596ca99983a`.
+- Candidate identity: `7b58356ae3914d6478389f0fcc53b51e23ced06e`. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:26:01+00:00; handoff received, in review (EV-0504).
+- Blockers: none.
+- Evidence: writer receipts under `artifacts/local/tasks/JL-12/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
 
