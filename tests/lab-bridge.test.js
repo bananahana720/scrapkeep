@@ -906,6 +906,31 @@ test(
   },
 );
 
+// JL-21b: run-to-pad's limit is per physics mode (scenarios.gd MODE_LIMITS_S),
+// chosen when jev_run.gd places the ball; --time-limit-s still wins.
+test(
+  "bridge: the runner takes the scenario's limit for its physics mode, and an override still wins",
+  { skip: noGodot, timeout: 60_000 },
+  async (t) => {
+    const { runs } = await fixture(t);
+    const limitTicks = async (mode, override) => {
+      const base = godotLaunch({ mode, maxTicks: TIMING.snapshot_every });
+      const launch = (request) => {
+        const spec = base(request);
+        const extra = override === undefined ? [] : [`--time-limit-s=${override}`];
+        return { ...spec, args: [...spec.args, ...extra] };
+      };
+      launch.label = base.label;
+      const { trials } = await runBatch({ scenario: "run-to-pad", arm: "scripted", seed: 0, runs, launch });
+      assert.equal(trials[0].outcome, "complete", JSON.stringify(trials[0]));
+      return trials[0].scenario_result.limit_ticks;
+    };
+    assert.equal(await limitTicks("kinematic"), 248 * TIMING.tick_hz);
+    assert.equal(await limitTicks("rigid"), 45 * TIMING.tick_hz);
+    assert.equal(await limitTicks("kinematic", 135), 135 * TIMING.tick_hz);
+  },
+);
+
 test(
   "bridge: no intent within the timeout is error intent_timeout at the blocking tick, exit 5",
   { skip: noGodot, timeout: 60_000 },

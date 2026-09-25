@@ -1,11 +1,8 @@
 extends RefCounted
 
 # Ball-lab UAT scenarios (plan section 3). Each is a spawn, an objective, a time limit
-# and a success predicate, all placed with field.gd's coordinates. The time limits are
-# the initial values. JL-21 applied max(initial, 2x scripted p90) over 20 scripted trials
-# per mode and kept every one: downhill-run and kicker-gap finish well inside theirs,
-# and on the four choice scenarios the scripted arm's p90 lies past three times the
-# limit in at least one mode, so there is no p90 to double.
+# and a success predicate, all placed with field.gd's coordinates. The time limits in
+# make() are the initial values; MODE_LIMITS_S replaces them per physics mode.
 #
 # `Run` tracks one trial's progress from a read-only view (jev_state.gd) and judges
 # it; `place()` is the harness's one gameplay write, putting the ball at the spawn.
@@ -37,6 +34,15 @@ const SERVICE_RAMP := Vector3(50.0, 4.6, 76.0)
 const SERVICE_RAMP_HALF := Vector2(4.5, 19.0)
 # The weave runs through the zigzag row A-B-C-D-E: one gate between each neighbour.
 const WEAVE := [0, 1, 2, 3, 4]
+
+# JL-21b: max(initial, 2x scripted p90) per scenario and physics mode, 20 scripted
+# trials each, p90 read at 3x the limit where it was censored at the limit. Only these
+# gave a number. downhill-run and kicker-gap finish well inside theirs; the other
+# choice-scenario modes stay censored at 3x (inconclusive) and keep the initial limit.
+const MODE_LIMITS_S := {
+	"run-to-pad": {"kinematic": 248.0},
+	"dummy-knock": {"kinematic": 272.0},
+}
 
 # Anomalies, as PROTOCOL.md's events table defines them.
 const OVERSPEED := 80.0
@@ -128,6 +134,7 @@ static func _scenario(id: String, spawn: Vector3, velocity: Vector3, kind: Strin
 		"velocity": velocity,
 		"objective": {"kind": kind, "point": point, "radius": radius},
 		"time_limit_s": limit_s,
+		"initial_limit_s": limit_s,
 		"arm": "",
 		"params": {},
 		"dynamic_objective": false,
@@ -144,7 +151,16 @@ static func _jittered(scenario: Dictionary) -> Dictionary:
 # Puts the ball at the scenario's spawn with its start velocity. This is harness
 # setup, the only gameplay write in the Jev lab files; jev_state.gd never writes.
 # `seed` >= 0 applies the scenario's jitter; tests place at the nominal spawn.
+#
+# place() also sets the limit for the lab's physics mode: jev_run.gd calls it after
+# set_mode() and before building the Run. Its --time-limit-s is written earlier, so a
+# limit other than the initial one is that override and is kept; an override equal to
+# the initial limit cannot be told apart and gets the mode's limit.
 static func place(lab, scenario: Dictionary, seed := -1) -> void:
+	var by_mode: Dictionary = MODE_LIMITS_S.get(scenario["id"], {})
+	var mode: String = lab.player.mode_name()
+	if by_mode.has(mode) and scenario["time_limit_s"] == scenario["initial_limit_s"]:
+		scenario["time_limit_s"] = by_mode[mode]
 	lab.player.reset_to(spawn_for(scenario, seed))
 	if scenario["velocity"] != Vector3.ZERO:
 		lab.player.active_body().set_velocity_now(scenario["velocity"])
