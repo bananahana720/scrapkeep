@@ -5742,30 +5742,58 @@ Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-0
 
 <a id="jl-18"></a>
 
-### JL-18: Neutral question set q2, c2 controls, and preflight in every jev batch
+### JL-18: Neutral question set q2 and the c2 controls
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+**Card revision:** 2 · **Owner:** Verification · **Size:** S · **Lane:** Jev Lab
+
+Revision 2 (EV-0524) splits the original card so the prompt author never meets the blind corpus: this card is the prompt side only; the harness wiring and blind scoring moved to [JL-18b](#jl-18b).
 
 **Source and inputs:**
 
-- Plan § 1; `tools/jev-player/{decide.mjs,questions/,preflight.mjs,controls/c1.json}`; `scripts/lab/harness.mjs`
-- Carried: the JL-15 review (EV-0520) on equalising facts across the wording-swap arms, a max-shift line, the swap on the free-cache state, length-matched options, storing `resolved_models`, not overwriting a passed epoch with an all-error run, and deriving validity from per-control results; the JL-14 alias risk (EV-0521); the JL-04 review (EV-0498) on one compass verb, case 10's flood entry and a state-diagnostic subscore
+- Plan § 1; `tools/jev-player/{decide.mjs,questions/,preflight.mjs,controls/c1.json}`; the audit (A1, A7, A18) and the JL-15 review (EV-0520) on the c1 controls
+- Carried: equalise decision-bearing facts across the wording-swap arms by putting them in the option text, add a max-shift line, run the swap on the free-cache state too, length-match options
 
-**Dependencies:** [JL-14](#jl-14), [JL-15](#jl-15). **Blocking questions:** None.
+**Dependencies:** [JL-15](#jl-15). **Blocking questions:** None.
 
-**Files touched:** `tools/jev-player/questions/{q2-neutral.json,INDEX.json}`; `tools/jev-player/controls/c2.json`; `tools/jev-player/preflight.mjs`; `tools/jev-player/score.mjs` (the state-diagnostic subscore); `scripts/lab/harness.mjs` (preflight before any jev batch); `scripts/lab/verdict-cache.mjs` (resolved-model check on a hit); `tools/jev-player/tests/`; `tests/lab-jev-arm.test.js`; `artifacts/local/tasks/JL-18/`.
+**Files touched:** `tools/jev-player/questions/{q2-neutral.json,INDEX.json}`; `tools/jev-player/controls/c2.json`; `tools/jev-player/preflight.mjs` (the max-shift line only); `tools/jev-player/tests/`; `artifacts/local/tasks/JL-18/`.
 
 **Definition of done:**
 
-1. `q2-neutral.json` states mechanics only, with no valuation, and is pinned; its author reads no blind case and no review that names blind cases (the burn rule).
-2. `c2.json` puts every decision-bearing fact in the option text for both wording-swap arms, adds the free-cache swap and a max-shift line, and length-matches options.
-3. Every jev batch runs preflight first and refuses with exit 6 on failure; the epoch record stores `resolved_models`, is not overwritten by an all-error run, and derives validity from per-control results.
-4. A verdict-cache hit whose stored resolved model differs from the batch's is treated as a miss and recorded.
-5. Live: q2 with c2 is run, and the blind corpus is scored under q2 with the state-diagnostic subscore; results are reported as they fall, and the epoch record is filled.
+1. `q2-neutral.json` states mechanics only, with no valuation of any option, is pinned in `INDEX.json`, and passes the pin and snapshot tests; its author reads no blind case, no blind-corpus file and no review that names blind cases.
+2. `c2.json` puts every decision-bearing fact in the option text for both wording-swap arms, adds the swap on the free-cache state, adds a provisional max-shift line recorded beside the same-choice rule, and length-matches options.
+3. One live preflight of q2 with c2 is run and reported as it falls, with the epoch record written; no wording or threshold is tuned after the result.
 
-**Verification and evidence:** `npm test`; `npm run verify`; the live preflight and blind score, retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+**Verification and evidence:** `npm test`; `npm run verify`; the live preflight, retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
-**Boundary:** Blind cases stay unseen by the q2 author; only aggregates reach them.
+**Boundary:** Prompt side only; no harness, cache or scoring change.
+
+<a id="jl-18b"></a>
+
+### JL-18b: Preflight in every jev batch, the cache model check, and the blind score under q2
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- `scripts/lab/{harness,verdict-cache,arms}.mjs`; `tools/jev-player/{preflight,score}.mjs`; `artifacts/jev-lab-2026-09-25/blind-diagnostic.json` (the state-diagnostic case ids, prepared by the coordinator from the JL-04 attempt-3 review)
+- Carried: from the JL-14 review (EV-0523) F1 (`model_mismatch` mapped to invalid; anchor all-hit batches on the preflight's resolved model), F3 (argument errors exit 2) and F6 (unknown causes default to fail); from the JL-15 review (EV-0520) storing `resolved_models`, not overwriting a passed epoch with an all-error run, and deriving validity from per-control results
+
+**Dependencies:** [JL-14](#jl-14), [JL-15](#jl-15); DoD 5 also needs [JL-18](#jl-18). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/{harness,verdict-cache}.mjs`; `tools/jev-player/preflight.mjs` (epoch record fields and validity); `tools/jev-player/score.mjs` (the state-diagnostic subscore); `tools/jev-player/protocol/{PROTOCOL.md,protocol.mjs}` (outcome rows and the null-state guard only); `tests/lab-jev-arm.test.js`; `tests/lab-harness.test.js`; `tools/jev-player/tests/{preflight,score}.test.js`; `artifacts/local/tasks/JL-18b/`.
+
+**Definition of done:**
+
+1. Every jev batch runs preflight first and refuses with exit 6 on failure; the preflight's resolved model anchors the batch.
+2. A cache hit whose stored resolved model differs from the batch's anchor is treated as a miss in a live batch and aborts with `model_mismatch`, mapped to invalid, in a replay or mixed batch; harness argument errors exit 2; an unknown abort cause defaults to fail.
+3. The epoch record stores `resolved_models`, is not overwritten by an all-error run, and derives validity from per-control results with the expected control count.
+4. `score.mjs` reports a state-diagnostic subscore from `blind-diagnostic.json` beside the blind total, aggregates only.
+5. From the JL-05c review (EV-0524): PROTOCOL.md's arm-failure row names `replay_miss` beside `arm_error`, its precedence prose matches the harness (a Node-side rejection outranks crash), and `validateTrial` does not throw on a state file whose content is JSON `null`.
+6. After JL-18 lands: the blind corpus is scored live under q2, the epoch record's blind result is filled, and the result is reported as it falls.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the live blind score, retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** The writer of this card must not write or edit any question set; blind results reach a question-set author only as aggregates.
 
 <a id="jl-19"></a>
 
