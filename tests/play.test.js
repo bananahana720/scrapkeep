@@ -15,7 +15,6 @@ import {
   labRoute,
   orderFor,
   orderingNote,
-  requestOrder,
   testEntry,
   repeatCount,
   resolve,
@@ -719,4 +718,29 @@ test("watch asks for an order when checks outnumber jobs, and never on the first
   assert.deepEqual(seen, [{ names, saved: "src/a.gd" }]);
   assert.equal(orderFor({ directory: "/x" }, names, undefined, 2, { request }), undefined);
   assert.equal(seen.length, 1);
+});
+
+test("a throwing reporter cannot stop the pool; every check still runs and returns", async () => {
+  const sketch = await fakeSketch();
+  const events = [];
+  const plan = {
+    import: { ms: 1, ok: true },
+    boot: { ms: 30, ok: true },
+    "a_test.gd": { ms: 5, ok: false },
+    "b_test.gd": { ms: 10, ok: true },
+  };
+  const result = await testEntry(sketch.entry, 3, {
+    stream: true,
+    run: scriptedRun(plan, events),
+    report: (r) => {
+      if (r.label !== "fake import") throw new Error("reporter broke");
+      return r.ok;
+    },
+    log: () => {
+      throw new Error("log broke");
+    },
+  });
+  assert.equal(result.results.length, 4);
+  assert.deepEqual(events.filter((e) => e.startsWith("end")).length, 4, "no child left running");
+  await sketch.done();
 });

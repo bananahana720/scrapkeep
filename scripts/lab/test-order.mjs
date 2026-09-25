@@ -20,14 +20,22 @@
 // - Ranking: on the 16-case check set the first failing check came at mean
 //   rank 2.0 in Jev's order against 6.375 in the current order.
 // - Time, measured on real Godot runs to the first failing check's streamed
-//   line (A2): at --jobs=1 on 4 mutations, Jev's order was faster than the
-//   current order on 2 and slower on 2. The A1 first_red_s figures are a
-//   simulation (simulatedFirstFail below), not observed times.
-// - The order only changes what runs first when checks outnumber jobs. For
-//   ball-lab's 4 checks and the default of up to 8 jobs it has no effect, so
-//   watch does not ask for an order there and says so once per session.
-// - A duration tie-break for near-equal scores was tried after the A1 results
-//   (post-hoc), measured worse, and is switched off.
+//   line (A2), on A1's 8-check scratch copies of ball-lab. The coordinator
+//   named three mutations from the A1 review before measuring
+//   (g-hist-camera-snap, g-reset-velocity, g-stage-tier-string). On those
+//   three, Jev's order against the current order was faster on 1 and slower
+//   on 2 at --jobs=1; at --jobs=2, camera-snap was a tie and 2 were slower.
+//   The writer added g-protocol-bump after seeing its simulated result;
+//   counting it, --jobs=1 is faster on 2 and slower on 2. The A1 first_red_s
+//   figures are a simulation (simulatedFirstFail below), not observed times.
+// - The order only changes what runs first when checks outnumber jobs.
+//   Catalogued ball-lab now has 4 checks against a default of up to 8 jobs,
+//   so there it has no effect: watch does not ask for an order and says so
+//   once per session.
+// - A duration tie-break for near-equal scores was tried after the A1
+//   results. It was worse on the pre-registered rank (2.19 against 2.0) and
+//   faster in 5 of 8 measured cells (1 equal, 2 slower). It is post-hoc, so it
+//   is switched off.
 //
 // Library: orderTests({ diff, changed, tests }, deps) -> result; never throws.
 // CLI:     node scripts/lab/test-order.mjs order --dir <sketch> --check <id>... [--changed <file>]

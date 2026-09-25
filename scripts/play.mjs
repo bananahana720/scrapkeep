@@ -215,7 +215,12 @@ async function inPool(jobs, limit, onDone) {
       while (next < jobs.length) {
         const index = next++;
         results[index] = await jobs[index]();
-        onDone?.(results[index]);
+        try {
+          onDone?.(results[index]);
+        } catch {
+          // A broken reporter must not stop the pool; the checks still
+          // running would outlive watch as orphaned Godot processes.
+        }
       }
     }),
   );
@@ -294,9 +299,13 @@ export async function testEntry(
   let firstFail;
   const onDone = stream
     ? (result) => {
-        ok = report(result) && ok;
-        if (!result.ok && firstFail === undefined) {
+        ok = result.ok && ok;
+        const firstHere = !result.ok && firstFail === undefined;
+        if (firstHere) {
           firstFail = (Date.now() - started) / 1000;
+        }
+        report(result);
+        if (firstHere) {
           log(`${red("  RED")} ${result.label} after ${firstFail.toFixed(1)} s`);
         }
       }
