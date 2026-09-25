@@ -1,0 +1,87 @@
+# Project skills
+
+Each directory here is one skill that Claude Code and Codex both load. Claude reaches it through a symlink in `.claude/skills/`; Codex reads it here. This page says when to add a skill and how to write one.
+
+| Skill | Kind | Use it to |
+| --- | --- | --- |
+| `plan-session` | project | plan the next scope or discuss unresolved decisions |
+| `scrapkeep-task` | project | execute an authorized card with isolated work, review and admission |
+| `scrapkeep-verify` | project | choose and run the checks that qualify an artifact |
+| `scrapkeep-lab` | project | run, extend, gate or port the headless Godot lab |
+| `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
+
+## Decide whether it is a skill
+
+Add a skill only when all three hold:
+
+- A fresh agent would search for its trigger, and no existing description covers that trigger.
+- It needs at least two references of its own.
+- It has a distinct owner or reviewer tier.
+
+Otherwise, add a section or a reference to the closest skill. A new stage lab is a row in `.agents/skills/scrapkeep-lab/references/port-a-stage.md`, not a skill.
+
+## Name it
+
+- A project skill is `scrapkeep-<noun>`.
+- A portable skill is a plain noun phrase with no project word in it, and it names no repository path, card id, event id, engine or stage.
+- The directory name equals the frontmatter `name`.
+
+## Write the trigger
+
+The `description` is one or two sentences. Name the artifacts the skill acts on and the verbs, then say "Use for" or "Use when", then name by skill what it leaves to others. Before committing, test it with three prompts: one it should catch, one near miss, and one that belongs to another skill.
+
+## Place the files
+
+1. Write the body at `.agents/skills/<name>/SKILL.md` and keep it at 120 lines or fewer after the frontmatter.
+2. Put detail under `.agents/skills/<name>/references/`.
+3. Link it for Claude: `ln -s ../../.agents/skills/<name> .claude/skills/<name>`.
+4. Register it in `docs/project/AI-WORKFLOW.md` and on the skills line of `AGENTS.md`.
+5. Start `.agents/skills/<name>/references/lessons.md` with the lesson format below, even if it has one lesson.
+6. Run `npm run check:skills` and fix every finding before the coordinator commits.
+
+## Write lessons
+
+A lesson is one bullet in `.agents/skills/<name>/references/lessons.md`. Its status is `established`, `provisional` or `retracted`. A new lesson starts as `provisional` unless a second independent run or review, or a recorded ruling, supports it. A retracted lesson keeps its text and fills `Overturned by`, and the rule line that cited it changes in the same commit. Every change adds a row to the file's `## Changelog`.
+
+A rule line in `.agents/skills/<name>/SKILL.md` ends with the lesson id it rests on, for example `(SKL-07)`. A rule with no lesson says "(design choice)".
+
+## Template
+
+Copy this into a new `.agents/skills/<name>/SKILL.md`. There is no template directory, because a skill loader would list it as a skill.
+
+```markdown
+---
+name: <name>
+description: "<Verb> <artifacts> ... Use for <requests>; <neighbour work> stays in <other-skill>."
+---
+
+# <Title as a task>
+
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+
+<One paragraph: what this skill owns and which skills own the neighbouring work.>
+
+## Procedure
+
+1. <Step. Cite the lesson it rests on (XXX-01) or say "(design choice)".>
+2. <Step.>
+
+## Lessons and updates
+
+[references/lessons.md](references/lessons.md) holds XXX-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row.
+
+## Host adapter
+
+- Claude Code: `/<name>`.
+- Codex: `$<name>`.
+- Both apps read this same body. Report the actual model and `CLAUDE_EFFORT` or its absence.
+```
+
+Lesson format for `.agents/skills/<name>/references/lessons.md`:
+
+```markdown
+- **XXX-01** · status: provisional · since: YYYY-MM-DD · origin: <where it came from>
+  <The rule, in one or two sentences.>
+  Evidence: <EV-nnnn; path:line of the review, result or source>.
+  Overturned by: —
+```
