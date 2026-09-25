@@ -5979,12 +5979,13 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 
 ### JL-25: Gate qualification
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+**Card revision:** 2 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
 
 **Source and inputs:**
 
 - Plan § 4 "Gate" and § "Verification" step 5 (exit codes 1 → 0 → 4); `scripts/lab/{gate,record,harness}.mjs`
 - Carried: EV-0504 (the `andrew-anchor` pin is exempt from staleness), EV-0511 (exclude `sources.json` and `run-owner.json` from pin copies; test the uncaught-error exit 4), EV-0523 (a replay's call cap defaults from its source run), EV-0536 (a null-model replay anchor counts as a mismatch)
+- Revision 2 (EV-0546, JL-21 review): rigid runs flip about 1 trial in 20, so trace equality and replay gates apply to kinematic records only; rigid records gate on distributions with n ≥ 20; `margin_vs_scripted` is not gated until JL-28 lands; `bench-climb` is exempt from `unreachable_scenarios` until `hit_kicker` is reachable
 
 **Dependencies:** [JL-21](#jl-21). **Blocking questions:** None.
 
@@ -6048,13 +6049,14 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 
 ### JL-28: Arm comparison across the three sketches
 
-**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+**Card revision:** 2 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
 
 **Source and inputs:**
 
-- JL-21, JL-26, JL-27 records; the registry; the gameplay findings recorded at EV-0531 and EV-0534
+- JL-21, JL-21b, JL-26, JL-27 records; the registry; the gameplay findings recorded at EV-0531 and EV-0534
+- Revision 2 (EV-0546, JL-21 review): pre-register the scenario's own success predicate as the sole primary metric and progress metrics (gates, knocks) as exploratory; both physics modes; seeds 1000 to 1019 paired by spawn jitter; state that n = 20 resolves only differences of about 0.3; state the direction expected from JL-21 (random above scripted) as the hypothesis; require a multi-option share of at least 0.5 per scenario as a validity check; name JL-21b's knocked-threat rule as the instrument epoch
 
-**Dependencies:** [JL-25](#jl-25), [JL-26](#jl-26), [JL-27](#jl-27). **Blocking questions:** None.
+**Dependencies:** [JL-21b](#jl-21b), [JL-25](#jl-25), [JL-26](#jl-26), [JL-27](#jl-27). **Blocking questions:** None.
 
 **Files touched:** `artifacts/jev-lab-2026-09-25/experiments/arms/`; `artifacts/local/tasks/JL-28/`.
 
@@ -6088,3 +6090,30 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 **Verification and evidence:** `npm test`; `npm run verify`; `npm run sketch:smoke`; `check:docs`; `check:drift`; the integrated read.
 
 **Boundary:** No new feature.
+
+<a id="jl-21b"></a>
+
+### JL-21b: Knocked threats leave the state; re-derive per-mode limits
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- JL-21 review F1, F5, F6 ([report](artifacts/jev-lab-2026-09-25/reviews/JL-21.md)); JL-21 evidence under `artifacts/jev-lab-2026-09-25/live/JL-21/`
+- `sketches/ball-lab/src/jev/{jev_state,scenarios,jev_run}.gd`; `scripts/lab/arms.mjs`; `scripts/lab/harness.mjs`
+
+**Dependencies:** [JL-21](#jl-21). **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/jev_state.gd`; `sketches/ball-lab/tests/jev_state_test.gd`; `tests/lab-bridge.test.js`; `sketches/ball-lab/src/jev/scenarios.gd` (time limits only); `artifacts/local/tasks/JL-21b/`.
+
+**Definition of done:**
+
+1. A dummy knocked in the current trial is left out of the exported threats, for every arm alike, using the Telemetry contact stretches; the ladder in `arms.mjs` is unchanged. Tested red then green.
+2. The JL-21 arms batches are re-run at the committed head (both modes, 20 trials per arm and scenario, seed 1), and the multi-option share and success rates are reported beside JL-21's, labelled as a new instrument epoch.
+3. Time limits are re-derived per scenario and per physics mode with max(initial, 2 × scripted p90); any scenario whose scripted p90 is still censored at 3 × the limit is recorded as inconclusive with its limit unchanged.
+4. Every batch cited ran at the committed head with a clean tree.
+
+**Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; the retained batches; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No gameplay file (`enemy.gd`, `field.gd`, `ball_rules.gd` and the rest stay unchanged); no ladder tuning; no Jev call.
+
