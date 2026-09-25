@@ -262,13 +262,13 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-11](BACKLOG.md#jl-11) | 1 | 5 | done | none | JL-11-A1 | EV-0514 |
 | [JL-12](BACKLOG.md#jl-12) | 1 | 5 | done | none | JL-12-A1 | EV-0511 |
 | [JL-13](BACKLOG.md#jl-13) | 1 | 3 | in_progress | none | none | EV-0518 |
-| [JL-14](BACKLOG.md#jl-14) | 1 | 4 | review | none | none | EV-0521 |
+| [JL-14](BACKLOG.md#jl-14) | 1 | 5 | done | none | JL-14-A1 | EV-0523 |
 | [JL-15](BACKLOG.md#jl-15) | 1 | 5 | done | none | JL-15-A1 | EV-0520 |
 | [JL-16](BACKLOG.md#jl-16) | 1 | 5 | done | none | JL-16-A1 | EV-0519 |
-| [JL-17](BACKLOG.md#jl-17) | 1 | 1 | queued | JL-13, JL-14 | none | EV-0522 |
-| [JL-18](BACKLOG.md#jl-18) | 1 | 1 | queued | JL-14 | none | EV-0522 |
-| [JL-19](BACKLOG.md#jl-19) | 1 | 1 | queued | JL-14 | none | EV-0522 |
-| [JL-20](BACKLOG.md#jl-20) | 1 | 1 | queued | JL-14 | none | EV-0522 |
+| [JL-17](BACKLOG.md#jl-17) | 1 | 2 | queued | JL-13 | none | EV-0523 |
+| [JL-18](BACKLOG.md#jl-18) | 1 | 2 | ready | none | none | EV-0523 |
+| [JL-19](BACKLOG.md#jl-19) | 1 | 2 | ready | none | none | EV-0523 |
+| [JL-20](BACKLOG.md#jl-20) | 1 | 2 | ready | none | none | EV-0523 |
 
 ## Question state index
 
@@ -807,6 +807,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0520 | 2026-09-25T19:01:00+00:00 | Independent reviewer / review; coordinator / integration, correction | JL-15 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on 62e83f9: every DoD item met; free-cache and lethal-option test what plan § 1 says; the live run's probabilities, 8 calls, `jev-1.13.0`, 5804 input and 634 output tokens and exit 6 all check out against the retained files; the gate's dependency on `preflight.mjs` runs in the right direction. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-15.md](artifacts/jev-lab-2026-09-25/reviews/JL-15.md). The coordinator verified that `controls/c1.json` hashes to the recorded `controls_sha` 4effa639 and was last changed at c078854, 22 seconds before the live run started, so nothing was tuned after the result. **Qualification of the EV-0516 finding:** the wording-swap arms differ in information as well as framing (q1 states that scrap has no use other than buying caches and that the tier rises on a timer; c1's neutral text states neither), so the flip is live evidence consistent with audit A1 but does not isolate leading wording. **Correction to EV-0516:** the cache-token fields were absent from every call's `usage`; the retained totals print 0 because the run was made at c078854, and 7f5f44f totals an unreported field as null; the run was not repeated. Merged at 4398499 (gate.mjs auto-merged with JL-16's hunks); integrated `npm test` 414/0, `npm run verify` six stages pass. JL-15 moves review to done, record revision 4 to 5; lease JL-15-L1 closes. Carried to JL-18 with q2 and c2: equalise decision-bearing facts across the wording-swap arms (put them in the option text), add a max-shift line, run the swap on the free-cache state too, length-match options, store `resolved_models` in the epoch record and decide whether the resolved model joins the instrument identity, do not overwrite a passed epoch with an all-error run, derive epoch validity from per-control results. Carried to the next card that edits `core.mjs`: move `control_separation`'s definition into its `says` line. |
 | EV-0521 | 2026-09-25T19:04:17+00:00 | Worker handoff / coordinator review admission | JL-14 | JL-14 handed off 2707f7b: the jev arm calls `decide()` once per non-forced snapshot, caches each verdict under `verdictKey()`, records the resolved model and token fields separately and respects the call cap; `--replay` makes no call and a miss aborts with `replay_miss`; JL-11's N1, N2, N4 and N6 and EV-0493's `score.mjs` guard are done; `npm test` 400/0, verify passes. **First live jev batch** (pillar-weave, one trial against `fake-godot.mjs`, cap 5): 4 calls, all HTTP 200, resolved model `jev-1.13.0`, `input_tokens` 2791 and `output_tokens` 284, batch pass; Jev's response carries exactly `answers`, `model` and `usage`, and `usage` carries only `input_tokens` and `output_tokens`, which settles EV-0489. Replay with every network call blocked: 0 calls, 4 cache hits, identical `trace_hash` c2abb02f. `decide.mjs` was not changed; it already returned both fields. Open risk carried to JL-18 with EV-0520's matching note: the verdict key uses the alias `jev-latest`, so when the alias moves, cached verdicts from `jev-1.13.0` would be served under the same key; the stored resolved model makes the mismatch detectable. In Fable review because the arm and cache are the instrument. Automated trials against a fake Godot, not a feel verdict. |
 | EV-0522 | 2026-09-25T19:05:00+00:00 | Coordinator / definition import | JL-17, JL-18, JL-19, JL-20; hash tokens in the section files | BACKLOG gains the Wave 5 cards at revision 1, appended so no earlier line moves: JL-17 (the Godot runner, a real-Godot launch with process-group cleanup and D and k in the record, and the bridge test that intents apply at exactly t + k with identical `trace_hash` under random responder delays; scoped exception because runner and harness seam change together; carries JL-11's N3 and N5), JL-18 (neutral q2 under the burn rule, c2 controls that equalise facts across the wording-swap arms, preflight before every jev batch, a resolved-model check on cache hits, and the blind corpus scored under q2 with a state-diagnostic subscore; carries EV-0498, EV-0520 and EV-0521), JL-19 (Jev failure triage with a labelled corpus, a blind adversarial set and the `assert(false)` control, advisory only) and JL-20 (verdict tagging with hand labels first). All four are queued: JL-17 on JL-13 and JL-14, the rest on JL-14. Hash tokens re-pointed. |
+| EV-0523 | 2026-09-25T19:09:51+00:00 | Independent reviewer / review; coordinator / integration, evidence retention, readiness | JL-14, JL-17, JL-18, JL-19, JL-20 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on 2707f7b: every DoD item and carried note met; replay is provably call-free from the code path (`decideFn` is first referenced after the replay guard), and the live and replay records share `trace_hash` c2abb02f at a clean head. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-14.md](artifacts/jev-lab-2026-09-25/reviews/JL-14.md). Merged at 88777df; integrated `npm test` 438/0, `npm run verify` six stages pass. JL-14 moves review to done, record revision 4 to 5; lease JL-14-L1 closes. **Evidence retention (F5):** the live and replay batch records, the verdict cache and the finding file are copied from disposable `artifacts/local/` to [artifacts/jev-lab-2026-09-25/live/JL-14/](artifacts/jev-lab-2026-09-25/live/JL-14/live-finding.json), and JL-15's live control run to `artifacts/jev-lab-2026-09-25/live/JL-15/` (268 KB together). Readiness: JL-18, JL-19 and JL-20 move queued to ready; JL-17 stays queued on JL-13 alone. Carried to JL-18, the next owner of `harness.mjs`: F1, a batch that mixes a cached verdict and a live call from different resolved models currently aborts as `arm_throw` (exit 1); make it `model_mismatch`, mapped to invalid (exit 4), and anchor all-hit batches on the preflight's resolved model; F3, catch `runBatch` argument errors and exit 2; F6, default an unknown `abort.cause` to fail. Carried to the next `record.mjs` owner: F2, record unreported token fields as null, not 0. Carried to JL-25: F4, default a replay's call cap from its source run. |
 
 ## Preparation checkpoint
 
@@ -1842,15 +1843,15 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 
 ## JL-14-A1 Jev Lab attempt
 
-- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-14-A1; exclusive lease JL-14-L1 open.
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-14-A1; exclusive lease JL-14-L1 closed, writer stopped.
 - Owned files: `scripts/lab/{harness,arms,verdict-cache}.mjs`; `tools/jev-player/{score,decide}.mjs`; `tests/lab-jev-arm.test.js`; `tests/lab-harness.test.js`; `tools/jev-player/tests/score.test.js`; `artifacts/local/tasks/JL-14/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-14` on `wt/JL-14`, created by `scripts/new-worktree.sh`.
 - Base identity: `8b618e7ca0cc49755fd3d02dc4aa12660939bcf5`.
-- Candidate identity: `2707f7b07a6470057c8746c1977fa9aa5ccc4dd7`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T19:04:17+00:00; handoff received, in review (EV-0521).
+- Candidate identity: `2707f7b07a6470057c8746c1977fa9aa5ccc4dd7`. Integrated identity: `88777df` (merge into `wt/JL-coord`).
+- Latest checkpoint: 2026-09-25T19:09:51+00:00; review PASS+NOTES, admitted serially (EV-0523).
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-14/` in the worktree.
-- Review: not_run; planned scrapkeep-reviewer (Fable 5.1), because the jev arm and its cache are the instrument.
+- Review: fresh scrapkeep-reviewer (claude-fable-5-1 per host prompt), **PASS+NOTES** on 2707f7b; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-14.md). Integrated: `npm test` 438/0, `npm run verify` six stages pass. Live records retained at `artifacts/jev-lab-2026-09-25/live/JL-14/`.
 
 ## JL-13-A1 Jev Lab attempt
 
