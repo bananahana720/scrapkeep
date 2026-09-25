@@ -246,7 +246,9 @@ function reportCheck(result) {
 // Import must land before anything else opens the project, so it runs alone.
 // The result list always carries every check that actually ran, so a caller
 // building a run record never has to guess which ones were skipped.
-async function testEntry(entry, limit) {
+// `order`, when given, resolves to a proposed run order for the checks after
+// import; anything but a permutation of them leaves the current order.
+async function testEntry(entry, limit, { order } = {}) {
   const base = ["--headless", "--path", entry.directory];
   const importResult = await runHeadless(`${entry.id} import`, [
     ...base,
@@ -256,15 +258,23 @@ async function testEntry(entry, limit) {
   if (!reportCheck(importResult)) {
     return { ok: false, results };
   }
-  const jobs = [
-    () => runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]),
-  ];
+  const byName = new Map([
+    [
+      "boot",
+      () => runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]),
+    ],
+  ]);
   for (const script of testScripts(entry.directory)) {
     const name = script.replace("res://tests/", "");
-    jobs.push(() =>
+    byName.set(name, () =>
       runHeadless(`${entry.id} ${name}`, [...base, "--script", script]),
     );
   }
+  let names = [...byName.keys()];
+  if (order !== undefined) {
+    names = applyOrder(names, (await order).order);
+  }
+  const jobs = names.map((name) => byName.get(name));
   let ok = true;
   for (const result of await inPool(jobs, limit)) {
     ok = reportCheck(result) && ok;
@@ -530,6 +540,79 @@ export async function waitForShot(out, options = {}) {
 // .import files during an import pass; watching those would retrigger forever.
 const ignored = /(\.uid|\.import|\.godot\/|~$)/;
 
+// The only order watch will run is a permutation of its checks, so no answer
+// can drop, add or repeat one.
+export function applyOrder(names, proposed) {
+  if (!Array.isArray(proposed) || proposed.length !== names.length) {
+    return names;
+  }
+  const offered = new Set(proposed);
+  if (
+    offered.size !== names.length ||
+    !names.every((name) => offered.has(name))
+  ) {
+    return names;
+  }
+  return proposed;
+}
+
+function runChild(args, timeoutMs) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, args, {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let stdout = "";
+    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    child.stdout.on("data", (chunk) => (stdout += chunk));
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve({ status: null, stdout });
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status, stdout });
+    });
+  });
+}
+
+// JL-23: Jev's run order comes from scripts/lab/test-order.mjs in a child
+// process, not an import, so no module on the gate path loads it. It runs
+// alongside the import pass, and any failure means the current order.
+const testOrderScript = path.join(root, "scripts", "lab", "test-order.mjs");
+
+export async function requestOrder(
+  entry,
+  names,
+  saved,
+  { run = runChild, timeoutMs = 12_000 } = {},
+) {
+  const args = [testOrderScript, "order", "--dir", entry.directory];
+  for (const name of names) {
+    args.push("--check", name);
+  }
+  if (saved !== undefined) {
+    args.push("--changed", saved);
+  }
+  try {
+    const { status, stdout } = await run(args, timeoutMs);
+    if (status !== 0) {
+      return { order: names, source: "current", reason: `exit ${status}` };
+    }
+    const reply = JSON.parse(stdout.trim().split("\n").at(-1));
+    const order = applyOrder(names, reply.order);
+    if (order === names || reply.source !== "jev") {
+      return {
+        order: names,
+        source: "current",
+        reason: reply.reason ?? "not a permutation",
+      };
+    }
+    return { order, source: "jev", gap: reply.order_gap?.max };
+  } catch (error) {
+    return { order: names, source: "current", reason: error.name };
+  }
+}
+
 async function watch(targets, limit) {
   const roots = targets.map((entry) => entry.directory);
   console.log(bold("\n  watching " + targets.map((e) => e.id).join(", ")));
@@ -538,26 +621,43 @@ async function watch(targets, limit) {
   let running = false;
   let queued = null;
 
-  async function fire(entry, reason) {
+  async function fire(entry, reason, saved) {
     if (running) {
-      queued = entry;
+      queued = { entry, saved };
       return;
     }
     running = true;
     const started = Date.now();
     console.log(`\n${cyan("→")} ${bold(entry.id)} ${dim(reason)}`);
-    const { ok } = await testEntry(entry, limit);
+    // The first run has no save to judge, so it keeps the current order.
+    let order;
+    if (saved !== undefined) {
+      const names = [
+        "boot",
+        ...testScripts(entry.directory).map((s) => s.replace("res://tests/", "")),
+      ];
+      order = requestOrder(entry, names, saved);
+    }
+    const { ok } = await testEntry(entry, limit, { order });
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
     if (ok) {
       console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);
     } else {
       console.log(`${red("  RED")} ${entry.id} ${dim(seconds + "s")}`);
     }
+    if (order !== undefined) {
+      const used = await order;
+      const note =
+        used.source === "jev"
+          ? `jev, forward/reverse gap ${used.gap?.toFixed(2)}`
+          : `current (${used.reason})`;
+      console.log(dim(`  order: ${note}`));
+    }
     running = false;
     if (queued !== null) {
       const next = queued;
       queued = null;
-      await fire(next, "queued while running");
+      await fire(next.entry, "queued while running", next.saved);
     }
   }
 
@@ -568,7 +668,7 @@ async function watch(targets, limit) {
         return;
       }
       clearTimeout(debounce);
-      debounce = setTimeout(() => fire(entry, "changed " + file), 180);
+      debounce = setTimeout(() => fire(entry, "changed " + file, file), 180);
     });
   }
   // Nothing has changed yet, so show the current colour before waiting.
