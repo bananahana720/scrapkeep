@@ -266,9 +266,9 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-15](BACKLOG.md#jl-15) | 1 | 5 | done | none | JL-15-A1 | EV-0520 |
 | [JL-16](BACKLOG.md#jl-16) | 1 | 5 | done | none | JL-16-A1 | EV-0519 |
 | [JL-17](BACKLOG.md#jl-17) | 1 | 2 | queued | JL-13 | none | EV-0523 |
-| [JL-18](BACKLOG.md#jl-18) | 2 | 3 | ready | none | none | EV-0524 |
-| [JL-18b](BACKLOG.md#jl-18b) | 1 | 1 | ready | none | none | EV-0524 |
-| [JL-19](BACKLOG.md#jl-19) | 1 | 2 | ready | none | none | EV-0523 |
+| [JL-18](BACKLOG.md#jl-18) | 2 | 4 | in_progress | none | none | EV-0525 |
+| [JL-18b](BACKLOG.md#jl-18b) | 1 | 2 | in_progress | none | none | EV-0525 |
+| [JL-19](BACKLOG.md#jl-19) | 1 | 3 | in_progress | none | none | EV-0525 |
 | [JL-20](BACKLOG.md#jl-20) | 1 | 2 | ready | none | none | EV-0523 |
 
 ## Question state index
@@ -810,6 +810,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0522 | 2026-09-25T19:05:00+00:00 | Coordinator / definition import | JL-17, JL-18, JL-19, JL-20; hash tokens in the section files | BACKLOG gains the Wave 5 cards at revision 1, appended so no earlier line moves: JL-17 (the Godot runner, a real-Godot launch with process-group cleanup and D and k in the record, and the bridge test that intents apply at exactly t + k with identical `trace_hash` under random responder delays; scoped exception because runner and harness seam change together; carries JL-11's N3 and N5), JL-18 (neutral q2 under the burn rule, c2 controls that equalise facts across the wording-swap arms, preflight before every jev batch, a resolved-model check on cache hits, and the blind corpus scored under q2 with a state-diagnostic subscore; carries EV-0498, EV-0520 and EV-0521), JL-19 (Jev failure triage with a labelled corpus, a blind adversarial set and the `assert(false)` control, advisory only) and JL-20 (verdict tagging with hand labels first). All four are queued: JL-17 on JL-13 and JL-14, the rest on JL-14. Hash tokens re-pointed. |
 | EV-0523 | 2026-09-25T19:09:51+00:00 | Independent reviewer / review; coordinator / integration, evidence retention, readiness | JL-14, JL-17, JL-18, JL-19, JL-20 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on 2707f7b: every DoD item and carried note met; replay is provably call-free from the code path (`decideFn` is first referenced after the replay guard), and the live and replay records share `trace_hash` c2abb02f at a clean head. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-14.md](artifacts/jev-lab-2026-09-25/reviews/JL-14.md). Merged at 88777df; integrated `npm test` 438/0, `npm run verify` six stages pass. JL-14 moves review to done, record revision 4 to 5; lease JL-14-L1 closes. **Evidence retention (F5):** the live and replay batch records, the verdict cache and the finding file are copied from disposable `artifacts/local/` to [artifacts/jev-lab-2026-09-25/live/JL-14/](artifacts/jev-lab-2026-09-25/live/JL-14/live-finding.json), and JL-15's live control run to `artifacts/jev-lab-2026-09-25/live/JL-15/` (268 KB together). Readiness: JL-18, JL-19 and JL-20 move queued to ready; JL-17 stays queued on JL-13 alone. Carried to JL-18, the next owner of `harness.mjs`: F1, a batch that mixes a cached verdict and a live call from different resolved models currently aborts as `arm_throw` (exit 1); make it `model_mismatch`, mapped to invalid (exit 4), and anchor all-hit batches on the preflight's resolved model; F3, catch `runBatch` argument errors and exit 2; F6, default an unknown `abort.cause` to fail. Carried to the next `record.mjs` owner: F2, record unreported token fields as null, not 0. Carried to JL-25: F4, default a replay's call cap from its source run. |
 | EV-0524 | 2026-09-25T19:12:15+00:00 | Worker handoff; independent reviewer / review; coordinator / integration, definition change, definition import | JL-05c, JL-18, JL-18b; hash tokens in the section files | **JL-05c** handed off d4f9b70 and a fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES: own-string-key lookups guard event kinds, arms, option ids and the `decide.mjs` precondition (plain `Object.hasOwn` would still accept `["ram_target"]`); base Node wrongly accepted 5 and threw on 4 of the 27 new fixtures, and after the fix Node and Godot agree on all of them (Godot 81 of 81 valid and 38 of 38 invalid at the indexed path); whole numbers are exact on both sides; PROTOCOL.md states the gate rules and `GATE_VERSION` 1, which a parity test checks across `decide.mjs`, `jev_io.gd` and PROTOCOL.md; valid behaviour of `decide.mjs` is unchanged, so no gate-version bump. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-05c.md](artifacts/jev-lab-2026-09-25/reviews/JL-05c.md). Merged at 348ae22; integrated `sketch:smoke` pass, `npm test` 439/0, `npm run verify` six stages pass. JL-05c moves in_progress to review to done, record revision 2 to 4; lease JL-05c-L1 closes. The "Andrew plays the sketch" step does not apply (validator and fixtures only). **Definition change:** JL-18 moves to card revision 2, the prompt side only (q2, c2 and one live preflight), because scoring the blind corpus needs the state-diagnostic case ids and a question-set author must never see blind case ids; the harness wiring, cache model check, epoch-record fixes and the live blind score move to the new card **JL-18b**, whose writer may not write any question set. JL-18b also takes the JL-05c review's N1 (PROTOCOL.md's arm-failure row must name `replay_miss`), N2 (precedence prose: a Node-side rejection outranks crash) and N4 (`validateTrial` must not throw on a state file that is JSON `null`). The coordinator wrote [artifacts/jev-lab-2026-09-25/blind-diagnostic.json](artifacts/jev-lab-2026-09-25/blind-diagnostic.json), the 11 state-diagnostic case ids mapped from the JL-04 attempt-3 review's case positions; a question-set author must not read it. JL-18 (revision 2) and JL-18b are ready. Hash tokens re-pointed. |
+| EV-0525 | 2026-09-25T19:12:43+00:00 | Coordinator / assignment, lease | JL-18, JL-18b, JL-19 | JL-18 (revision 2), JL-18b and JL-19 move ready to in_progress with attempt and lease A1/L1, all on scrapkeep-writer (Opus 5.5 high), worktrees at base 1c20a2c with the `node_modules` link. JL-18's writer is the q2 author: its packet forbids `corpus-blind.json`, its PROVENANCE, `blind-diagnostic.json`, every review that names blind cases, and TRACKING (which names blind cases in EV-0490 and EV-0496). JL-18b does its DoD 1 to 5 now and waits for JL-18's merge for the live blind score. Live Jev calls authorized under EV-0484: JL-18's q2 preflight capped at 30, JL-19's corpus scoring capped at 80. Active writers: four (JL-13, JL-18, JL-18b, JL-19); JL-20 waits for a slot. |
 
 ## Preparation checkpoint
 
@@ -1878,4 +1879,40 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-05c/` in the worktree.
 - Review: fresh scrapkeep-reviewer-medium (claude-opus-5-5 per host prompt), **PASS+NOTES** on d4f9b70; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-05c.md). Integrated: `npm run sketch:smoke` pass, `npm test` 439/0, `npm run verify` six stages pass.
+
+## JL-18-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 2; attempt JL-18-A1; exclusive lease JL-18-L1 open.
+- Owned files: as JL-18 revision 2 lists.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-18` on `wt/JL-18`, created by `scripts/new-worktree.sh`.
+- Base identity: `1c20a2c1cafb0ea612925c49860e552f945beeca`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T19:12:43+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-18/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1), held to the same blindness.
+
+## JL-18b-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-18b-A1; exclusive lease JL-18b-L1 open.
+- Owned files: as JL-18b lists.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-18b` on `wt/JL-18b`, created by `scripts/new-worktree.sh`.
+- Base identity: `1c20a2c1cafb0ea612925c49860e552f945beeca`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T19:12:43+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-18b/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-19-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-19-A1; exclusive lease JL-19-L1 open.
+- Owned files: `scripts/lab/{triage.mjs,triage-corpus.json}`; `tests/lab-triage.test.js`; `artifacts/local/tasks/JL-19/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-19` on `wt/JL-19`, created by `scripts/new-worktree.sh`.
+- Base identity: `1c20a2c1cafb0ea612925c49860e552f945beeca`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T19:12:43+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-19/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
 
