@@ -19,6 +19,8 @@ import {
   simulatedFirstFail,
   sketchInput,
   staticOrder,
+  TIE_WIDTH,
+  rankScores,
 } from "../scripts/lab/test-order.mjs";
 import { applyOrder, requestOrder } from "../scripts/play.mjs";
 
@@ -461,4 +463,34 @@ test("no import chain from the gate path reaches test-order", async () => {
   const fromPlay = await reachable("scripts/play.mjs");
   assert.ok(fromPlay.has(path.join(root, "scripts/lab/metrics/core.mjs")), "the walk goes transitive");
   assert.ok((await reachable("tests/lab-test-order.test.js")).has(target), "the walk would see it");
+});
+
+test("near-tied scores run the shorter check first; clear leads and unknown times keep score order (A2)", () => {
+  const ids = ["slow", "quick", "mid", "low"];
+  const scores = {
+    slow: { mean: 0.47 },
+    quick: { mean: 0.43 },
+    mid: { mean: 0.46 },
+    low: { mean: 0.2 },
+  };
+  assert.equal(TIE_WIDTH, 0.1);
+  assert.deepEqual(rankScores(ids, scores, { slow: 12, quick: 3, mid: 9, low: 0.1 }), ["quick", "mid", "slow", "low"]);
+  assert.deepEqual(rankScores(ids, scores), ["slow", "mid", "quick", "low"]);
+  assert.deepEqual(rankScores(ids, scores, { slow: 12 }), ["slow", "mid", "quick", "low"]);
+  // The window is anchored on the highest score in it, so it cannot chain.
+  const chain = { a: { mean: 0.5 }, b: { mean: 0.42 }, c: { mean: 0.34 } };
+  assert.deepEqual(rankScores(["a", "b", "c"], chain, { a: 9, b: 5, c: 1 }), ["b", "a", "c"]);
+});
+
+test("orderTests breaks near ties by each check's seconds, also on a cache hit", async () => {
+  const s = await scratch();
+  const table = { boot: 0.3, "camera_test.gd": 0.1, "jev_io_test.gd": 0.35, "slope_test.gd": 0.1 };
+  const deps = { call: async (request) => replyFor(request, table), cacheDir: s.cacheDir, logFile: s.logFile };
+  const plain = await orderTests(INPUT, deps);
+  assert.deepEqual(plain.order.slice(0, 2), ["jev_io_test.gd", "boot"]);
+  const timed = TESTS.map((t) => ({ ...t, seconds: { boot: 2.5, "jev_io_test.gd": 7 }[t.id] }));
+  const hit = await orderTests({ ...INPUT, tests: timed }, deps);
+  assert.equal(hit.cached, true);
+  assert.deepEqual(hit.order.slice(0, 2), ["boot", "jev_io_test.gd"]);
+  await s.done();
 });

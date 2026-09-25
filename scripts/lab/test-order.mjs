@@ -16,6 +16,15 @@
 // Nothing on the gate path imports this file. play.mjs's watch runs it as a
 // child process (the `order` CLI below) and checks the answer it gets back.
 //
+// Limits, as measured in JL-23 (receipts under artifacts/local/tasks/JL-23/):
+// - The order only changes what runs first when checks outnumber jobs. With
+//   ball-lab's 8 checks and the default of up to 8 jobs, all start at once and
+//   the order changes nothing; watch prints both numbers once per session.
+// - A1's first_red_s figures are a simulation (simulatedFirstFail below) from
+//   durations measured in one 8-way labelling run. A2's figures are measured:
+//   wall time to the first failing check's streamed line in watch, on real Godot runs at --jobs=1 and
+//   --jobs=2. Each receipt names which of the two it is.
+//
 // Library: orderTests({ diff, changed, tests }, deps) -> result; never throws.
 // CLI:     node scripts/lab/test-order.mjs order --dir <sketch> --check <id>... [--changed <file>]
 //          node scripts/lab/test-order.mjs score <cases.json>... --out <dir> --max-calls <n>
@@ -121,7 +130,8 @@ function normaliseTests(tests, options) {
     }
     seen.add(test.id);
     const refs = Array.isArray(test.refs) ? test.refs.filter((ref) => typeof ref === "string") : [];
-    return { id: test.id, shown: clean(test.id, options), refs: refs.map((ref) => clean(ref, options)) };
+    const seconds = Number.isFinite(test.seconds) && test.seconds >= 0 ? test.seconds : undefined;
+    return { id: test.id, shown: clean(test.id, options), refs: refs.map((ref) => clean(ref, options)), seconds };
   });
 }
 
@@ -149,8 +159,35 @@ function checkReply(reply, layout) {
   return reply;
 }
 
-// Sorted by the averaged score, highest first; equal scores keep the current
-// order, so an uninformative answer changes nothing.
+// A1 review N1: on near-equal scores Jev put a 12 s check ahead of a 4 s one
+// and lost time to the current order. Scores closer than TIE_WIDTH to the
+// highest score in their window count as tied (the widest forward/reverse gap
+// measured was 0.06), and a tied window runs its shorter checks first when
+// every check in it has a measured time. This rule was set after the A1
+// results, so its score is reported as post-hoc.
+export const TIE_WIDTH = 0.1;
+
+// Highest averaged score first; equal scores keep the current order, so an
+// uninformative answer changes nothing.
+export function rankScores(ids, scores, seconds = {}) {
+  const items = ids
+    .map((id, index) => ({ id, index, mean: scores[id].mean, s: seconds[id] }))
+    .sort((a, b) => b.mean - a.mean || a.index - b.index);
+  const order = [];
+  let start = 0;
+  while (start < items.length) {
+    let end = start;
+    while (end < items.length && items[start].mean - items[end].mean < TIE_WIDTH) end += 1;
+    const window = items.slice(start, end);
+    if (window.every((item) => Number.isFinite(item.s))) {
+      window.sort((a, b) => a.s - b.s || b.mean - a.mean || a.index - b.index);
+    }
+    order.push(...window.map((item) => item.id));
+    start = end;
+  }
+  return order;
+}
+
 export function compose(reply, layout) {
   const scores = {};
   layout.tests.forEach((id, i) => {
@@ -231,6 +268,7 @@ export async function orderTests(
     return current(ids.every((id) => typeof id === "string") ? ids : [], `input could not be prepared: ${error.name}`);
   }
   const ids = tests.map((test) => test.id);
+  const seconds = Object.fromEntries(tests.filter((test) => test.seconds !== undefined).map((test) => [test.id, test.seconds]));
   if (ids.length < 2) return current(ids, "nothing to order");
   if (state.diff.trim() === "") return current(ids, "nothing changed");
   if (call === undefined && resolvedKey === null) return current(ids, "no TypeSafe key");
@@ -244,7 +282,9 @@ export async function orderTests(
   );
   try {
     const hit = await cache.get(cacheKey);
-    if (hit !== null) return { ...hit.result, cached: true, input_sha256: inputSha };
+    if (hit !== null) {
+      return { ...hit.result, order: rankScores(ids, hit.result.scores, seconds), cached: true, input_sha256: inputSha };
+    }
   } catch {
     // An unreadable entry is a miss, never an order.
   }
@@ -298,7 +338,7 @@ export async function orderTests(
   } catch {
     // An unwritable cache costs a repeat call later, nothing more.
   }
-  return { ...result, cached: false, input_sha256: inputSha };
+  return { ...result, order: rankScores(ids, result.scores, seconds), cached: false, input_sha256: inputSha };
 }
 
 const GD_LOAD = /\b(?:pre)?load\(\s*"res:\/\/([^"]+)"\s*\)/g;
@@ -336,8 +376,10 @@ export function firstFailRank(order, failing) {
 }
 
 // Seconds from the save to the first failing check's result, with the checks
-// pulled in order by `jobs` workers after the import pass, the way play.mjs's
-// pool runs them. Durations are measured per check.
+// pulled in order by `jobs` workers after the import pass. This is a
+// simulation from per-check durations measured in a labelling run, and it
+// assumes a runner that shows each result the moment it finishes: watch has
+// streamed since JL-23-A2, `scrapkeep test` still reports after the pool.
 export function simulatedFirstFail(order, failing, durations, { jobs, importS }) {
   const lanes = Array.from({ length: Math.max(1, jobs) }, () => 0);
   let first = Infinity;
@@ -488,7 +530,7 @@ function git(dir, args, { differs = false } = {}) {
 // whole (a test written first is often the check that fails), the changed
 // and new file names, and each check's directly loaded files. Read-only: the
 // index is never touched.
-export function sketchInput(dir, checks, saved) {
+export function sketchInput(dir, checks, saved, seconds = {}) {
   const lines = (text) => text.split("\n").filter((line) => line !== "" && !IGNORED.test(line));
   const added = lines(git(dir, ["ls-files", "--others", "--exclude-standard", "--", "."]));
   const changed = [
@@ -505,10 +547,11 @@ export function sketchInput(dir, checks, saved) {
   const project = existsSync(path.join(dir, "project.godot")) ? readFileSync(path.join(dir, "project.godot"), "utf8") : "";
   const main = /run\/main_scene="res:\/\/([^"]+)"/.exec(project)?.[1];
   const tests = checks.map((id) => {
-    if (id === "boot") return { id, refs: main ? [main] : [] };
+    const timed = Number.isFinite(seconds[id]) ? { seconds: seconds[id] } : {};
+    if (id === "boot") return { id, refs: main ? [main] : [], ...timed };
     const file = path.join(dir, "tests", id);
     const text = existsSync(file) ? readFileSync(file, "utf8") : "";
-    return { id, file: `tests/${id}`, refs: referencesOf(text, { kind: "gdscript" }) };
+    return { id, file: `tests/${id}`, refs: referencesOf(text, { kind: "gdscript" }), ...timed };
   });
   return { diff, changed, tests };
 }
@@ -521,14 +564,18 @@ export async function main(argv = process.argv.slice(2)) {
       options: {
         dir: { type: "string" },
         check: { type: "string", multiple: true, default: [] },
+        seconds: { type: "string", multiple: true, default: [] },
         changed: { type: "string" },
       },
     });
     if (values.dir === undefined) {
-      console.error("usage: test-order.mjs order --dir <sketch> --check <id>... [--changed <file>]");
+      console.error("usage: test-order.mjs order --dir <sketch> --check <id>... [--changed <file>] [--seconds <id>=<s>...]");
       return 2;
     }
-    const result = await orderTests(sketchInput(values.dir, values.check, values.changed));
+    const seconds = Object.fromEntries(
+      values.seconds.map((pair) => [pair.slice(0, pair.lastIndexOf("=")), Number(pair.slice(pair.lastIndexOf("=") + 1))]),
+    );
+    const result = await orderTests(sketchInput(values.dir, values.check, values.changed, seconds));
     const { order, source, reason, order_gap, cached } = result;
     console.log(JSON.stringify({ order, source, reason, order_gap, cached }));
     return 0;

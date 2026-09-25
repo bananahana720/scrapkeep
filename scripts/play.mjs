@@ -206,7 +206,7 @@ function runHeadless(label, args) {
   });
 }
 
-async function inPool(jobs, limit) {
+async function inPool(jobs, limit, onDone) {
   const results = [];
   let next = 0;
   const width = Math.max(1, Math.min(limit, jobs.length));
@@ -215,6 +215,7 @@ async function inPool(jobs, limit) {
       while (next < jobs.length) {
         const index = next++;
         results[index] = await jobs[index]();
+        onDone?.(results[index]);
       }
     }),
   );
@@ -251,39 +252,68 @@ function reportCheck(result) {
 // building a run record never has to guess which ones were skipped.
 // `order`, when given, resolves to a proposed run order for the checks after
 // import; anything but a permutation of them leaves the current order.
-async function testEntry(entry, limit, { order } = {}) {
+// `stream` is watch's: each check is reported the moment it finishes and the
+// first failure prints one RED line timed from `started`, while the rest keep
+// running. Without it (`scrapkeep test`) every check is reported in list order
+// once the pool is done, as before.
+export async function testEntry(
+  entry,
+  limit,
+  {
+    order,
+    stream = false,
+    started = Date.now(),
+    run = runHeadless,
+    report = reportCheck,
+    log = console.log,
+  } = {},
+) {
   const base = ["--headless", "--path", entry.directory];
-  const importResult = await runHeadless(`${entry.id} import`, [
-    ...base,
-    "--import",
-  ]);
+  const importResult = await run(`${entry.id} import`, [...base, "--import"]);
   const results = [importResult];
-  if (!reportCheck(importResult)) {
+  if (!report(importResult)) {
     return { ok: false, results };
   }
   const byName = new Map([
-    [
-      "boot",
-      () => runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]),
-    ],
+    ["boot", () => run(`${entry.id} boot`, [...base, "--quit-after", "300"])],
   ]);
   for (const script of testScripts(entry.directory)) {
     const name = script.replace("res://tests/", "");
     byName.set(name, () =>
-      runHeadless(`${entry.id} ${name}`, [...base, "--script", script]),
+      run(`${entry.id} ${name}`, [...base, "--script", script]),
     );
   }
   let names = [...byName.keys()];
+  let used;
   if (order !== undefined) {
-    names = applyOrder(names, (await order).order);
+    used = await order;
+    names = applyOrder(names, used.order);
   }
-  const jobs = names.map((name) => byName.get(name));
+  const seconds = {};
+  const jobs = names.map((name) => async () => {
+    const begun = Date.now();
+    const result = await byName.get(name)();
+    seconds[name] = (Date.now() - begun) / 1000;
+    return result;
+  });
   let ok = true;
-  for (const result of await inPool(jobs, limit)) {
-    ok = reportCheck(result) && ok;
+  let firstFail;
+  const onDone = stream
+    ? (result) => {
+        ok = report(result) && ok;
+        if (!result.ok && firstFail === undefined) {
+          firstFail = (Date.now() - started) / 1000;
+          log(`${red("  RED")} ${result.label} after ${firstFail.toFixed(1)} s`);
+        }
+      }
+    : undefined;
+  for (const result of await inPool(jobs, limit, onDone)) {
+    if (!stream) {
+      ok = report(result) && ok;
+    }
     results.push(result);
   }
-  return { ok, results };
+  return { ok, results, seconds, first_fail_s: firstFail, order: used };
 }
 
 async function runSuite(targets, limit) {
@@ -583,11 +613,19 @@ function runChild(args, timeoutMs) {
 // alongside the import pass, and any failure means the current order.
 const testOrderScript = path.join(root, "scripts", "lab", "test-order.mjs");
 
+// Stated where the user sees it, once per session (JL-23 review B1).
+export function orderingNote(checks, jobs) {
+  if (checks <= jobs) {
+    return `ordering: ${checks} checks, ${jobs} at a time; every check starts at once, so the order changes nothing here (it matters only when checks outnumber jobs)`;
+  }
+  return `ordering: ${checks} checks, ${jobs} at a time; the order decides which checks run first`;
+}
+
 export async function requestOrder(
   entry,
   names,
   saved,
-  { run = runChild, timeoutMs = 12_000 } = {},
+  { run = runChild, timeoutMs = 12_000, seconds = {} } = {},
 ) {
   const args = [testOrderScript, "order", "--dir", entry.directory];
   for (const name of names) {
@@ -595,6 +633,11 @@ export async function requestOrder(
   }
   if (saved !== undefined) {
     args.push("--changed", saved);
+  }
+  for (const name of names) {
+    if (Number.isFinite(seconds[name])) {
+      args.push("--seconds", `${name}=${seconds[name]}`);
+    }
   }
   try {
     const { status, stdout } = await run(args, timeoutMs);
@@ -619,10 +662,18 @@ export async function requestOrder(
 async function watch(targets, limit) {
   const roots = targets.map((entry) => entry.directory);
   console.log(bold("\n  watching " + targets.map((e) => e.id).join(", ")));
-  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop.\n"));
+  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop."));
+  for (const entry of targets) {
+    const checks = 1 + testScripts(entry.directory).length;
+    console.log(dim(`  ${entry.id} ${orderingNote(checks, limit)}`));
+  }
+  console.log("");
 
   let running = false;
   let queued = null;
+  // Each check's last measured seconds, per sketch: near-tied Jev scores run
+  // the shorter check first.
+  const lastSeconds = new Map();
 
   async function fire(entry, reason, saved) {
     if (running) {
@@ -639,17 +690,30 @@ async function watch(targets, limit) {
         "boot",
         ...testScripts(entry.directory).map((s) => s.replace("res://tests/", "")),
       ];
-      order = requestOrder(entry, names, saved);
+      order = requestOrder(entry, names, saved, {
+        seconds: lastSeconds.get(entry.id) ?? {},
+      });
     }
-    const { ok } = await testEntry(entry, limit, { order });
+    const result = await testEntry(entry, limit, {
+      order,
+      stream: true,
+      started,
+    });
+    if (result.seconds !== undefined) {
+      lastSeconds.set(entry.id, {
+        ...lastSeconds.get(entry.id),
+        ...result.seconds,
+      });
+    }
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    if (ok) {
+    if (result.ok) {
       console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);
     } else {
       console.log(`${red("  RED")} ${entry.id} ${dim(seconds + "s")}`);
     }
-    if (order !== undefined) {
-      const used = await order;
+    // A failed import never waited for the order, and neither does this.
+    const used = result.order;
+    if (used !== undefined) {
       const note =
         used.source === "jev"
           ? `jev, forward/reverse gap ${used.gap?.toFixed(2)}`
