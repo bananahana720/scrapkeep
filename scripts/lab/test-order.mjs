@@ -478,23 +478,30 @@ export async function scoreFiles(
 
 const IGNORED = /(\.uid|\.import|\.godot\/|~$)/;
 
-function git(dir, args) {
+// `git diff --no-index` exits 1 when the files differ, which is the answer.
+function git(dir, args, { differs = false } = {}) {
   const result = spawnSync("git", args, { cwd: dir, encoding: "utf8" });
-  return result.status === 0 ? result.stdout : "";
+  return result.status === 0 || (differs && result.status === 1) ? result.stdout : "";
 }
 
-// What watch knows on a save: the sketch's uncommitted diff, its changed and
-// new files, and each check's directly loaded files.
+// What watch knows on a save: the sketch's uncommitted diff, new files shown
+// whole (a test written first is often the check that fails), the changed
+// and new file names, and each check's directly loaded files. Read-only: the
+// index is never touched.
 export function sketchInput(dir, checks, saved) {
   const lines = (text) => text.split("\n").filter((line) => line !== "" && !IGNORED.test(line));
+  const added = lines(git(dir, ["ls-files", "--others", "--exclude-standard", "--", "."]));
   const changed = [
     ...new Set([
       ...lines(git(dir, ["diff", "HEAD", "--name-only", "--relative", "--", "."])),
-      ...lines(git(dir, ["ls-files", "--others", "--exclude-standard", "--", "."])),
+      ...added,
       ...(saved ? [saved] : []),
     ]),
   ];
-  const diff = git(dir, ["diff", "HEAD", "--relative", "--", "."]);
+  const diff = [
+    git(dir, ["diff", "HEAD", "--relative", "--", "."]),
+    ...added.map((file) => git(dir, ["diff", "--no-index", "--", "/dev/null", file], { differs: true })),
+  ].join("");
   const project = existsSync(path.join(dir, "project.godot")) ? readFileSync(path.join(dir, "project.godot"), "utf8") : "";
   const main = /run\/main_scene="res:\/\/([^"]+)"/.exec(project)?.[1];
   const tests = checks.map((id) => {

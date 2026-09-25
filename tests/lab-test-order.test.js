@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,7 @@ import {
   scoreCases,
   scoreFiles,
   simulatedFirstFail,
+  sketchInput,
   staticOrder,
 } from "../scripts/lab/test-order.mjs";
 import { applyOrder, requestOrder } from "../scripts/play.mjs";
@@ -335,6 +337,41 @@ test("score mode caps live calls and retains the resolved model and token fields
   assert.deepEqual(set.models, ["jev-9"]);
   assert.deepEqual(set.usage_totals, { input_tokens: 900, output_tokens: 40 });
   assert.ok(existsSync(path.join(s.dir, "out", "score.json")));
+  await s.done();
+});
+
+test("a save's input is the uncommitted diff, new files whole, and each check's loads", async () => {
+  const s = await scratch();
+  const git = (...args) => {
+    const r = spawnSync("git", args, {
+      cwd: s.dir,
+      encoding: "utf8",
+      env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@localhost", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@localhost" },
+    });
+    assert.equal(r.status, 0, r.stderr);
+  };
+  await mkdir(path.join(s.dir, "src"), { recursive: true });
+  await mkdir(path.join(s.dir, "tests"), { recursive: true });
+  await writeFile(path.join(s.dir, "project.godot"), 'run/main_scene="res://main.tscn"\n');
+  await writeFile(path.join(s.dir, "src/a.gd"), "func f():\n\treturn 1\n");
+  await writeFile(path.join(s.dir, "tests/a_test.gd"), 'const A := preload("res://src/a.gd")\n');
+  git("init", "-q");
+  git("add", "-A");
+  git("commit", "-q", "-m", "base");
+  await writeFile(path.join(s.dir, "src/a.gd"), "func f():\n\treturn 2\n");
+  await writeFile(path.join(s.dir, "tests/b_test.gd"), "extends SceneTree\n# new check\n");
+  await writeFile(path.join(s.dir, "src/a.gd.uid"), "uid://x\n");
+  const input = sketchInput(s.dir, ["boot", "a_test.gd", "b_test.gd"], "src/a.gd");
+  assert.deepEqual(input.changed.sort(), ["src/a.gd", "tests/b_test.gd"]);
+  assert.match(input.diff, /\+\treturn 2/);
+  assert.match(input.diff, /\+# new check/);
+  assert.deepEqual(input.tests, [
+    { id: "boot", refs: ["main.tscn"] },
+    { id: "a_test.gd", file: "tests/a_test.gd", refs: ["src/a.gd"] },
+    { id: "b_test.gd", file: "tests/b_test.gd", refs: [] },
+  ]);
+  const staged = spawnSync("git", ["diff", "--cached", "--name-only"], { cwd: s.dir, encoding: "utf8" });
+  assert.equal(staged.stdout, "", "the index is untouched");
   await s.done();
 });
 
