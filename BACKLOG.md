@@ -5870,3 +5870,221 @@ Andrew's decision at EV-0527: one redesign, fixed before any call; if it still f
 **Verification and evidence:** `npm test`; `npm run verify`; the Phase A review; the retained Phase B results; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** An experiment, not an instrument change.
+
+## Jev Lab re-scope after the Jev-as-player park (25 September 2026)
+
+Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, EV-0540, EV-0541); the arm comparisons below use the scripted and random arms, and Jev keeps its test-loop roles (JL-19, JL-20, JL-23, JL-24).
+
+<a id="jl-21"></a>
+
+### JL-21: Scenario calibration with real choices
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 3 (scenarios; recalibrate limits to `max(initial, 2 × scripted p90)`; the D and k sweep); `sketches/ball-lab/src/jev/*.gd`; `scripts/lab/{harness,godot-launch}.mjs`
+- Carried: JL-10 review N3 and JL-13 review (`KICKER_AT` to the lip); JL-13 review N1 (the ram placement inside the shallow kicker) and N5 (count knocks from Telemetry in `JevState` and scenario progress); JL-17 review N1 (the orphaned final snapshot), N2 (record the scenario's own result), N3 (`downhill-run` forces every answer), N5 (determinism evidence)
+
+**Dependencies:** [JL-17](#jl-17). **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/{jev_state,scenarios,jev_run}.gd`; `sketches/ball-lab/tests/jev_*_test.gd` (placements and budgets only); `scripts/lab/harness.mjs` (the scenario result in records); `scripts/lab/metrics/ball-lab.mjs`; `tests/lab-*.test.js` as needed; `artifacts/local/tasks/JL-21/`. Scoped exception to the no-mixing rule: the runner and the record change together.
+
+**Definition of done:**
+
+1. At least three scenarios offer real choices in most snapshots (threats in range, the kicker reachable, loot), and the scripted and random arms produce measurably different outcomes on them.
+2. Time limits recalibrated to `max(initial, 2 × scripted p90)` from at least 20 trials per scenario; `requires_speed_ms` and `KICKER_AT` recalibrated to the lip; the D and k sweep runs over pairs with k < D; results recorded.
+3. Knocks counted from Telemetry everywhere; the scenario's own success or timeout is written to `done.json`'s summary or the batch record; no snapshot is written after the trial has ended.
+4. Determinism evidence widened: a contact scenario with multi-option snapshots, a sensitivity control (the hash changes when k or an answer changes), repeated identical rigid runs, several random-arm seeds.
+
+**Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; the calibration batches retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No gameplay change; no Jev player arm.
+
+<a id="jl-22"></a>
+
+### JL-22: The lab dashboard
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Output" (`scrapkeep dash`: a local HTML page, inline SVG, no script, `default-src 'none'`, Neon Noir palette through `status.mjs`); `scripts/lab/{model,stats-cli,gate}.mjs`
+- Carried from the JL-16 review (EV-0519): one epoch key (the canonical instrument plus the answered model), trend breaks per series, no crash on a stray pin file, correct "no pin" wording
+
+**Dependencies:** [JL-16](#jl-16). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/dash.mjs`; `scripts/lab/model.mjs`; `scripts/play.mjs` (the `dash` verb); `tests/lab-dash.test.js`; `tests/lab-stats.test.js`; `artifacts/local/tasks/JL-22/`.
+
+**Definition of done:**
+
+1. `scrapkeep dash` writes `artifacts/local/dash/index.html` with, in order: "Waiting for Andrew" (unplayed builds and the playtest checklist), per-layer tiles with sparklines, arms side by side per scenario, trends with threshold bands and epoch rules, the Jev test-loop scores (triage, tagging) with their qualifications, findings and limits.
+2. Every registry id appears exactly once; no colour appears outside `STATUS`; the page loads with no script and a `default-src 'none'` policy.
+3. A headless Chromium screenshot of the real page is retained; the page is readable at phone width.
+4. The four JL-16 notes are fixed.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the screenshot; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Local file only; no server, no network.
+
+<a id="jl-23"></a>
+
+### JL-23: Jev test ordering for `scrapkeep watch`
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 5 (JL-23 row: which checks will this save break? Score per test; reorders only, never skips; control: a test that imports the changed file must outrank one that does not); `scripts/play.mjs` (`watch`); `scripts/lab/triage.mjs` (the redaction, cache and call-log pattern); `scripts/lab/metrics/tdd.mjs` (`first_red_s`)
+
+**Dependencies:** [JL-19](#jl-19). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/test-order.mjs`; `scripts/play.mjs` (the `watch` ordering hook only); `tests/lab-test-order.test.js`; `artifacts/local/tasks/JL-23/`.
+
+**Definition of done:**
+
+1. On a save, `watch` asks one typed Jev call for a per-test failure score from the redacted diff and test names, orders the run by it, and never skips a test; with no key or on error it falls back to the current order.
+2. Labelled cases plus a separately labelled check set measure `first_red_s` against the unordered run; the import control passes.
+3. Nothing on the gate path imports it (transitive check).
+
+**Verification and evidence:** `npm test`; `npm run verify`; the scored cases retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Ordering only.
+
+<a id="jl-24"></a>
+
+### JL-24: Jev coverage-gap check
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 5 (JL-24 row: is this change exercised by any test? Noul per test; the `untested_change` KRI; control: a file with no test at all must be flagged); `scripts/lab/triage.mjs` pattern; `scripts/lab/metrics/tdd.mjs`
+
+**Dependencies:** [JL-19](#jl-19). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/coverage-gap.mjs`; `tests/lab-coverage-gap.test.js`; `artifacts/local/tasks/JL-24/`.
+
+**Definition of done:**
+
+1. Given a diff, one typed Jev call per changed file asks whether any existing test exercises it, using test names and imports as context; redacted, cached, with a deterministic fallback (a static import scan).
+2. It feeds `untested_change` as advisory output; labelled cases plus a separately labelled check set; the no-test control is flagged.
+3. Nothing on the gate path imports it.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the scored cases retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Advisory only.
+
+<a id="jl-25"></a>
+
+### JL-25: Gate qualification
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Gate" and § "Verification" step 5 (exit codes 1 → 0 → 4); `scripts/lab/{gate,record,harness}.mjs`
+- Carried: EV-0504 (the `andrew-anchor` pin is exempt from staleness), EV-0511 (exclude `sources.json` and `run-owner.json` from pin copies; test the uncaught-error exit 4), EV-0523 (a replay's call cap defaults from its source run), EV-0536 (a null-model replay anchor counts as a mismatch)
+
+**Dependencies:** [JL-21](#jl-21). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/{gate,harness}.mjs`; `tests/lab-gate.test.js`; `tests/lab-jev-arm.test.js`; `artifacts/jev-lab-2026-09-25/pins/`; `artifacts/local/tasks/JL-25/`.
+
+**Definition of done:**
+
+1. A baseline of scripted-arm and suite records is pinned, including `andrew-anchor` for the build Andrew played (dc94b2c), which never goes stale.
+2. Qualification on real records: an injected bounded regression exits 1, removing it exits 0, an invalid record exits 4, an instrument change against a pin exits 4, too few samples exits 3; each result retained.
+3. The carried notes are fixed.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the qualification runs retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No new metric.
+
+<a id="jl-26"></a>
+
+### JL-26: `lab/cable-bench`
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § "Waves" row 7; `proto/cable-bench` at 29dcbcf; the ball-lab `src/jev/` stack
+
+**Dependencies:** [JL-21](#jl-21). **Blocking questions:** None.
+
+**Files touched:** a new branch `lab/cable-bench` from 29dcbcf, with `sketches/cable-bench/src/jev/` adapters, `seed_override` in `stage.gd`, and `scripts/lab/metrics/cable-bench.mjs`; `artifacts/local/tasks/JL-26/`. `proto/cable-bench` stays byte-identical.
+
+**Definition of done:**
+
+1. The runner, state export, steering and telemetry run on Cable Bench with the random and scripted arms; the existing stage tests pass unchanged.
+2. Stage metrics are registered; at least 20 trials per arm are retained.
+3. `proto/cable-bench`'s head is unchanged before and after.
+
+**Verification and evidence:** the stage's `sketch:smoke`; `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No gameplay change; no merge into `proto/*` or `main`.
+
+<a id="jl-27"></a>
+
+### JL-27: `lab/spillway-drop`
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- As JL-26, for `proto/spillway-drop` at af89c89
+
+**Dependencies:** [JL-21](#jl-21). **Blocking questions:** None.
+
+**Files touched:** a new branch `lab/spillway-drop` from af89c89, with `sketches/spillway-drop/src/jev/` adapters, `seed_override` in `stage.gd`, and `scripts/lab/metrics/spillway.mjs`; `artifacts/local/tasks/JL-27/`. `proto/spillway-drop` stays byte-identical.
+
+**Definition of done:** As JL-26, for Spillway Drop.
+
+**Verification and evidence:** As JL-26.
+
+**Boundary:** As JL-26.
+
+<a id="jl-28"></a>
+
+### JL-28: Arm comparison across the three sketches
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- JL-21, JL-26, JL-27 records; the registry; the gameplay findings recorded at EV-0531 and EV-0534
+
+**Dependencies:** [JL-25](#jl-25), [JL-26](#jl-26), [JL-27](#jl-27). **Blocking questions:** None.
+
+**Files touched:** `artifacts/jev-lab-2026-09-25/experiments/arms/`; `artifacts/local/tasks/JL-28/`.
+
+**Definition of done:**
+
+1. A pre-registered comparison of the scripted and random arms on the mechanics metrics (stuck rate, dead tier, anomalies, scenario success) across ball-lab, Cable Bench and Spillway Drop, run once and reported as it falls, labelled "automated; not a feel verdict".
+2. A list of gameplay findings for Andrew with the evidence behind each, ready for his next play.
+
+**Verification and evidence:** the retained runs and report; a Fable read.
+
+**Boundary:** No Jev player arm; nothing here is a feel verdict.
+
+<a id="jl-29"></a>
+
+### JL-29: Program close
+
+**Card revision:** 1 · **Owner:** Coordinator · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:** Every JL card and event; the plan's § "Verification"
+
+**Dependencies:** [JL-22](#jl-22), [JL-23](#jl-23), [JL-24](#jl-24), [JL-28](#jl-28). **Blocking questions:** None.
+
+**Files touched:** `CONTRIBUTING.md`; `tools/jev-player/README.md`; `.agents/skills/scrapkeep-verify/SKILL.md` (a Jev Lab method row); `artifacts/jev-lab-2026-09-25/RETRO.md`; TRACKING (coordinator only).
+
+**Definition of done:**
+
+1. Docs describe how to run the lab, the gate, the dashboard and the Jev test-loop tools, with each tool's measured limits.
+2. The final retro reports every program metric and the Jev findings with their qualifications.
+3. A Fable integrated read of the whole branch passes; `wt/JL-coord` merges into `main`; pushing waits for Andrew's go.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run sketch:smoke`; `check:docs`; `check:drift`; the integrated read.
+
+**Boundary:** No new feature.
