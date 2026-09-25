@@ -1,10 +1,16 @@
 // The three arms of plan section 2: `random` (seeded) is the floor, `scripted`
 // (a rule ladder) is the baseline, and `jev` is the candidate. Each arm answers
-// one snapshot at a time with {intent, source, meta}. The harness never calls
-// an arm when a single option is offered; it answers that snapshot `forced`
-// with the arm's forcedMeta().
-import { instrumentIdentity } from "../../tools/jev-player/decide.mjs";
-import { ARMS } from "../../tools/jev-player/protocol/protocol.mjs";
+// one snapshot at a time with {intent, source, meta}; `choose` receives the
+// state file's whole jev block as `jev` beside the gated `offered` list. The
+// harness never calls an arm when a single option is offered; it answers that
+// snapshot `forced` with the arm's forcedMeta().
+import {
+  decide,
+  instrumentIdentity,
+  loadQuestionSet,
+} from "../../tools/jev-player/decide.mjs";
+import { ARMS, verdictKey } from "../../tools/jev-player/protocol/protocol.mjs";
+import { openVerdictCache } from "./verdict-cache.mjs";
 
 export const ARM_NAMES = Object.keys(ARMS);
 
@@ -100,21 +106,81 @@ function scriptedArm() {
   };
 }
 
-// JL-14 builds the real arm (verdict cache, replay, live calls). Until then any
-// snapshot that needs a choice throws, the harness aborts the trial with
-// arm_error, and nothing leaves the machine. Forced answers still need the
-// instrument epoch, which comes from the pinned local question files.
-function jevStub({ instrument = instrumentIdentity() }) {
+// An arm failure that tells the harness how to abort: `reason` is the
+// protocol's abort.json reason and `cause` the run record's finer label.
+function armFailure(message, cause, reason = "arm_error") {
+  return Object.assign(new Error(message), { abort: { reason, cause } });
+}
+
+// The candidate. Each snapshot's verdict is looked up under verdictKey() first;
+// a miss calls decideFn once and caches the answer. With `replay` a miss is a
+// replay_miss abort and decideFn is never called, so a replay makes no network
+// call by construction. `jev` on the answer tells the harness what to add to
+// the record's Jev ledger: the resolved model, and the raw usage for a live
+// call only.
+function jevArm({
+  questions = loadQuestionSet(),
+  instrument = instrumentIdentity(questions),
+  decideFn = decide,
+  cache = openVerdictCache(),
+  replay = false,
+}) {
+  if (instrument.questions_sha !== questions.sha) {
+    throw new Error(
+      `the instrument's questions_sha does not match question set ${questions.version}`,
+    );
+  }
+  const meta = (key, verdict) => ({
+    questions_sha: instrument.questions_sha,
+    verdict_key: key,
+    model: verdict.model ?? null,
+    confidence: verdict.confidence,
+    low_confidence: verdict.lowConfidence,
+    raw_intent: verdict.rawIntent,
+  });
   return {
     name: "jev",
     forcedMeta: () => ({ questions_sha: instrument.questions_sha }),
-    async choose() {
-      throw new Error("the jev arm is a stub until JL-14 builds it");
+    async choose({ jev }) {
+      const key = verdictKey(instrument, jev);
+      const hit = await cache.get(key);
+      if (hit !== null) {
+        return {
+          intent: hit.verdict.intent,
+          source: "cache",
+          meta: meta(key, hit.verdict),
+          jev: { model: hit.verdict.model ?? null, cached: true },
+        };
+      }
+      if (replay) {
+        throw armFailure(
+          `replay has no cached verdict ${key} in ${cache.directory}`,
+          "replay_miss",
+          "replay_miss",
+        );
+      }
+      let verdict;
+      try {
+        verdict = await decideFn(jev.state, jev.options, { questions });
+      } catch (error) {
+        throw armFailure(`Jev call failed: ${error.message}`, "api_error");
+      }
+      await cache.put(key, { instrument, verdict });
+      return {
+        intent: verdict.intent,
+        source: "live",
+        meta: meta(key, verdict),
+        jev: {
+          model: verdict.model ?? null,
+          usage: verdict.usage ?? {},
+          cached: false,
+        },
+      };
     },
   };
 }
 
-const FACTORIES = { random: randomArm, scripted: scriptedArm, jev: jevStub };
+const FACTORIES = { random: randomArm, scripted: scriptedArm, jev: jevArm };
 
 export function createArm(name, options = {}) {
   const factory = FACTORIES[name];

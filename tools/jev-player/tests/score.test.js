@@ -2,17 +2,43 @@
 // calls Jev.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 import {
   buildReport,
   gateVerdict,
   loadAuthored,
   loadBlind,
+  parseArgs,
+  REPORT_FILE,
   scoreCase,
   summarize,
+  validateCases,
 } from "../score.mjs";
+
+const scorePath = fileURLToPath(new URL("../score.mjs", import.meta.url));
+
+// The CLI runs with fetch replaced by one that exits 99, so a flag that leaks
+// into scoring fails loudly instead of spending a call.
+const noNetwork = `data:text/javascript,${encodeURIComponent(
+  'globalThis.fetch = () => { process.stderr.write("network call\\n"); process.exit(99); };',
+)}`;
+function cli(...args) {
+  return spawnSync(
+    process.execPath,
+    ["--import", noNetwork, scorePath, ...args],
+    {
+      encoding: "utf8",
+      env: { ...process.env, TYPESAFE_API_KEY: "test-key-never-sent" },
+    },
+  );
+}
+const reportStamp = () =>
+  existsSync(REPORT_FILE) ? statSync(REPORT_FILE).mtimeMs : null;
 
 const kicker = {
   id: "kicker",
@@ -148,4 +174,88 @@ test("the report keeps authored and blind apart and marks only blind as gating",
   const noBlind = buildReport({ authored, blind: null, instrument: {} });
   assert.equal(noBlind.blind, null);
   assert.equal(noBlind.gate.exit, 3);
+});
+
+// --- EV-0493: arguments first, --help, --dry-run, decision.model ---------------
+
+test("each score record carries the model Jev resolved", () => {
+  const record = scoreCase(kicker, decision({ model: "jev-resolved-7" }));
+  assert.equal(record.model, "jev-resolved-7");
+});
+
+test("parseArgs reads --help and --dry-run and refuses anything else", () => {
+  assert.deepEqual(parseArgs([]), { help: false, dryRun: false });
+  assert.deepEqual(parseArgs(["--help"]), { help: true, dryRun: false });
+  assert.deepEqual(parseArgs(["-h"]), { help: true, dryRun: false });
+  assert.deepEqual(parseArgs(["--dry-run"]), { help: false, dryRun: true });
+  assert.throws(() => parseArgs(["--live"]), /--live/);
+  assert.throws(() => parseArgs(["corpus.json"]), /corpus\.json/);
+});
+
+test("--help prints usage and exits 0 without a call or a report", () => {
+  const before = reportStamp();
+  const result = cli("--help");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /usage/i);
+  assert.match(result.stdout, /--dry-run/);
+  assert.doesNotMatch(result.stderr, /network call/);
+  assert.equal(reportStamp(), before);
+});
+
+test("an unknown argument exits 2 with usage before anything runs", () => {
+  const before = reportStamp();
+  const result = cli("--score-everything");
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /usage/i);
+  assert.equal(reportStamp(), before);
+});
+
+test("--dry-run validates the corpora and question set, makes no call and prints no blind case", () => {
+  const before = reportStamp();
+  const result = cli("--dry-run");
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /network call/);
+  assert.match(result.stdout, /Authored corpus: 16 cases, 0 faults/);
+  assert.match(result.stdout, /no Jev call/i);
+  assert.equal(reportStamp(), before);
+  const blind = loadBlind();
+  if (blind !== null) {
+    assert.match(
+      result.stdout,
+      new RegExp(`Blind corpus: ${blind.length} cases, 0 faults`),
+    );
+    const leaked = blind.filter(
+      (testCase) =>
+        result.stdout.includes(testCase.id) ||
+        result.stderr.includes(testCase.id),
+    ).length;
+    assert.equal(leaked, 0, "the dry run printed blind case ids");
+  }
+});
+
+test("validateCases names each fault by index and field, never by value", () => {
+  const good = loadAuthored();
+  assert.deepEqual(validateCases(good, "authored"), []);
+  const bad = [
+    { ...good[0], severity: "catastrophic" },
+    { ...good[1], accept: [] },
+    { ...good[2], options: [{ id: "teleport", why: "x" }] },
+    { ...good[3], id: good[0].id },
+    { ...good[4], state: null },
+  ];
+  const faults = validateCases(bad, "blind");
+  assert.deepEqual(
+    faults.map((fault) => fault.path),
+    [
+      "blind[0].severity",
+      "blind[1].accept",
+      "blind[2].options[0].id",
+      "blind[3].id",
+      "blind[4].state",
+    ],
+  );
+  for (const fault of faults) {
+    assert.doesNotMatch(fault.message, /catastrophic|teleport/);
+    assert.ok(!fault.message.includes(good[0].id));
+  }
 });

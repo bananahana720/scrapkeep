@@ -9,13 +9,140 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { decide, instrumentIdentity, loadQuestionSet } from "./decide.mjs";
+import {
+  buildQuestions,
+  decide,
+  instrumentIdentity,
+  INTENTS,
+  loadQuestionSet,
+  offeredOptions,
+} from "./decide.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const WEIGHT = { severe: 5, moderate: 2, minor: 1 };
 const BLIND_MIN_CASES = 20;
 const GATE_WEIGHTED_MIN = 0.8;
+export const REPORT_FILE = path.join(
+  root,
+  "artifacts",
+  "local",
+  "jev-player",
+  "corpus-score.json",
+);
+
+export const USAGE = `usage: node tools/jev-player/score.mjs [--dry-run | --help]
+  (no flag)   score both corpora against live Jev, one call per case, and
+              write ${path.relative(root, REPORT_FILE)}
+  --dry-run   load and validate the corpora and the question set; no call
+  --help, -h  print this and exit`;
+
+// Arguments are read before anything else, so no flag can fall through to
+// scoring and spend calls.
+export function parseArgs(argv) {
+  const options = { help: false, dryRun: false };
+  for (const word of argv) {
+    if (word === "--help" || word === "-h") {
+      options.help = true;
+    } else if (word === "--dry-run") {
+      options.dryRun = true;
+    } else {
+      throw new Error(`unknown argument ${word}`);
+    }
+  }
+  return options;
+}
+
+// Faults name the case by index and field only, never by id or value, so a
+// dry run over the blind corpus prints nothing a labeller could learn from.
+export function validateCases(cases, label) {
+  const faults = [];
+  const fault = (at, message) =>
+    faults.push({ path: `${label}${at}`, message });
+  if (!Array.isArray(cases)) {
+    fault("", "must be a list of cases");
+    return faults;
+  }
+  const seen = new Set();
+  cases.forEach((testCase, index) => {
+    const at = `[${index}]`;
+    if (testCase === null || typeof testCase !== "object") {
+      fault(at, "must be an object");
+      return;
+    }
+    const { id, block, severity, accept, state, options } = testCase;
+    if (typeof id !== "string" || id === "") {
+      fault(`${at}.id`, "must be a non-empty string");
+    } else if (seen.has(id)) {
+      fault(`${at}.id`, "repeats an earlier case's id");
+    } else {
+      seen.add(id);
+    }
+    if (typeof block !== "string" || block === "") {
+      fault(`${at}.block`, "must be a non-empty string");
+    }
+    if (!Object.hasOwn(WEIGHT, severity)) {
+      fault(
+        `${at}.severity`,
+        `must be one of ${Object.keys(WEIGHT).join(", ")}`,
+      );
+    }
+    if (
+      !Array.isArray(accept) ||
+      accept.length === 0 ||
+      !accept.every((intent) => Object.hasOwn(INTENTS, intent))
+    ) {
+      fault(`${at}.accept`, "must be a non-empty list of known intents");
+    }
+    if (
+      state === null ||
+      typeof state !== "object" ||
+      state.self === null ||
+      typeof state.self !== "object"
+    ) {
+      fault(`${at}.state`, "must be an object with a self block");
+      return;
+    }
+    if (!Array.isArray(options) || options.length === 0) {
+      fault(`${at}.options`, "must be a non-empty list");
+      return;
+    }
+    options.forEach((option, n) => {
+      if (!Object.hasOwn(INTENTS, option?.id)) {
+        fault(`${at}.options[${n}].id`, "must be a known intent");
+      }
+      if (typeof option?.why !== "string" || option.why === "") {
+        fault(`${at}.options[${n}].why`, "must be a non-empty string");
+      }
+    });
+  });
+  return faults;
+}
+
+// The question set must carry all three questions, and every case must build
+// a request from it exactly as a live run would, short of sending it.
+function validateQuestions(questions, cases) {
+  const faults = [];
+  for (const name of ["intent", "danger", "greedy"]) {
+    if (questions[name] === null || typeof questions[name] !== "object") {
+      faults.push({ path: `questions.${name}`, message: "is missing" });
+    }
+  }
+  if (faults.length > 0) return faults;
+  cases.forEach(([label, list]) =>
+    list.forEach((testCase, index) => {
+      try {
+        buildQuestions(offeredOptions(testCase), questions);
+      } catch {
+        faults.push({
+          path: `${label}[${index}]`,
+          message: "cannot build a request from the question set",
+        });
+      }
+    }),
+  );
+  return faults;
+}
 
 export function loadAuthored(file = path.join(here, "corpus.json")) {
   const data = JSON.parse(readFileSync(file, "utf8"));
@@ -56,6 +183,7 @@ export function scoreCase(testCase, decision) {
     greedy: decision.greedy,
     latencyMs: decision.latencyMs,
     gatedOut: decision.gatedOut,
+    model: decision.model,
     inputTokens: decision.usage.input_tokens,
     note: testCase.note,
   };
@@ -177,12 +305,52 @@ async function scoreAll(cases, questions) {
   );
 }
 
-async function main() {
+function dryRun(questions) {
+  const authored = loadAuthored();
+  const blind = loadBlind();
+  const corpora = [["authored", authored]];
+  if (blind !== null) corpora.push(["blind", blind]);
+  const faults = corpora.flatMap(([label, cases]) =>
+    validateCases(cases, label),
+  );
+  if (faults.length === 0)
+    faults.push(...validateQuestions(questions, corpora));
+  const count = (label) =>
+    faults.filter((fault) => fault.path.startsWith(label)).length;
+  console.log(
+    `Authored corpus: ${authored.length} cases, ${count("authored")} faults`,
+  );
+  console.log(
+    blind === null
+      ? "Blind corpus: absent."
+      : `Blind corpus: ${blind.length} cases, ${count("blind")} faults`,
+  );
+  for (const fault of faults) console.log(`  ${fault.path} ${fault.message}`);
+  console.log("Dry run: no Jev call was made and no report was written.");
+  return faults.length === 0 ? 0 : 1;
+}
+
+async function main(argv) {
+  let options;
+  try {
+    options = parseArgs(argv);
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(2);
+  }
+  if (options.help) {
+    console.log(USAGE);
+    process.exit(0);
+  }
   const questions = loadQuestionSet();
   const instrument = instrumentIdentity(questions);
   console.log(
     `Question set ${questions.version} (${questions.status}), sha ${instrument.questions_sha.slice(0, 12)}`,
   );
+  if (options.dryRun) {
+    process.exit(dryRun(questions));
+  }
   const blindCases = loadBlind();
   const report = buildReport({
     when: new Date().toISOString(),
@@ -199,15 +367,15 @@ async function main() {
   }
   console.log(`\nGate: ${report.gate.reason} (exit ${report.gate.exit})`);
 
-  const out = path.join(root, "artifacts", "local", "jev-player");
-  mkdirSync(out, { recursive: true });
-  const file = path.join(out, "corpus-score.json");
-  writeFileSync(file, JSON.stringify(report, null, 2));
-  console.log(`Report: ${file}`);
+  mkdirSync(path.dirname(REPORT_FILE), { recursive: true });
+  writeFileSync(REPORT_FILE, JSON.stringify(report, null, 2));
+  console.log(`Report: ${REPORT_FILE}`);
   console.log(
     "Corpus agreement only. It says nothing about whether the game is fun.",
   );
   process.exit(report.gate.exit);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main(process.argv.slice(2));
+}

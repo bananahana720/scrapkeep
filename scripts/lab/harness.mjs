@@ -16,10 +16,18 @@
 //   - An arm that throws, answers an intent that fails validateIntent(), or is
 //     refused by the per-batch call cap also aborts with `arm_error`; Godot
 //     then writes done.json {reason: aborted} and the outcome is `aborted`.
-// trial_abort_rate counts every trial whose outcome is not `complete`.
+//     A replaying jev arm with no cached verdict aborts with `replay_miss`.
+// abort.json carries only the protocol reason. The trial entry in the run
+// record adds abort.cause (ABORT_EFFECT's keys), which decides what the abort
+// means for the batch and feeds api_error_rate. trial_abort_rate counts every
+// trial whose outcome is not `complete`; engine_crash counts `crash` trials.
+//
+// Trial i of a batch with seed s runs with seed s * 1000 + i, so batches whose
+// seeds differ share no trial seed; a batch is therefore capped at 1000 trials.
 //
 //   node scripts/lab/harness.mjs <scenario> [--arm scripted|random|jev]
 //     [-n trials] [--seed N] [--call-cap N] [--root runs-dir]
+//     [--cache verdict-dir] [--replay]
 //     [--stall-at N | --crash-at N | --invalid-at N | --error-at N]
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -29,7 +37,10 @@ import { performance } from "node:perf_hooks";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
-import { instrumentIdentity } from "../../tools/jev-player/decide.mjs";
+import {
+  instrumentIdentity,
+  loadQuestionSet,
+} from "../../tools/jev-player/decide.mjs";
 import {
   ARMS,
   fileName,
@@ -46,8 +57,10 @@ import {
 } from "../../tools/jev-player/protocol/protocol.mjs";
 import { createArm } from "./arms.mjs";
 import { METRICS } from "./metrics/index.mjs";
+import { EXIT } from "./metrics/status.mjs";
 import { createRun } from "./record.mjs";
 import { wilson } from "./stats.mjs";
+import { openVerdictCache, VERDICT_CACHE_ROOT } from "./verdict-cache.mjs";
 
 export const FAKE_GODOT = fileURLToPath(
   new URL("./fake-godot.mjs", import.meta.url),
@@ -55,8 +68,8 @@ export const FAKE_GODOT = fileURLToPath(
 
 // callCap is the runaway guard EV-0484 asks JL-11 for: the most arm calls one
 // batch may make. Forced answers never count. 1000 is provisional; it covers
-// twenty trials of the longest scripted scenario many times over, and JL-14
-// sets it per batch for the live jev arm.
+// twenty trials of the longest scripted scenario many times over. For the jev
+// arm a cache hit is still an arm call, so live Jev calls never exceed it.
 export const DEFAULTS = Object.freeze({
   trials: 1,
   seed: 1,
@@ -64,6 +77,38 @@ export const DEFAULTS = Object.freeze({
   watchdogFloorMs: WATCHDOG_FLOOR_MS,
   pollMs: 10,
 });
+
+export const TRIAL_SEED_STRIDE = 1000;
+
+// What each Node-side abort cause says about the batch. An API failure or the
+// call cap says nothing about the game, so it can only leave the batch
+// inconclusive; a broken arm or answer, or a replay that cannot reproduce, is
+// a failure of the run itself.
+const ABORT_EFFECT = {
+  node_invalid: "invalid",
+  arm_throw: "fail",
+  intent_invalid: "fail",
+  replay_miss: "fail",
+  call_cap: "inconclusive",
+  api_error: "inconclusive",
+};
+
+// Worst first: an invalid instrument voids the batch, then any conclusive
+// failure (crash, stall, error:*, a failing abort) outranks an inconclusive
+// trial, so a cap or an API error later in a batch cannot hide a crash.
+const RESULT_ORDER = ["invalid", "fail", "inconclusive", "pass"];
+
+function trialEffect({ outcome, abort }) {
+  if (outcome === "complete") return "pass";
+  if (outcome === "invalid") return "invalid";
+  if (outcome === "aborted" && abort !== null) return ABORT_EFFECT[abort.cause];
+  return "fail";
+}
+
+export function batchResult(trials) {
+  const effects = new Set(trials.map(trialEffect));
+  return RESULT_ORDER.find((result) => effects.has(result));
+}
 
 const slug = /^[a-z0-9][a-z0-9-]*$/;
 const MAX_ERRORS = 50;
@@ -113,6 +158,14 @@ async function readJson(io, name) {
   }
 }
 
+function parseOrUndefined(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
 async function readTrialFiles(io) {
   const files = {};
   for (const name of await readdir(io)) {
@@ -140,6 +193,7 @@ async function runTrial({
   floorMs,
   pollMs,
   budget,
+  run,
 }) {
   await mkdir(io, { recursive: true });
   const entry = {
@@ -147,6 +201,7 @@ async function runTrial({
     io: null,
     seed,
     outcome: null,
+    trace_hash: null,
     abort: null,
     exit: { code: null, signal: null },
     snapshots: 0,
@@ -253,6 +308,7 @@ async function runTrial({
           budget.capped = true;
           abort = {
             reason: "arm_error",
+            cause: "call_cap",
             message: `the batch call cap of ${budget.cap} arm calls is reached`,
           };
           break;
@@ -260,10 +316,18 @@ async function runTrial({
           budget.used += 1;
           entry.arm_calls += 1;
           try {
-            choice = await arm.choose({ seq, state: state.jev.state, offered });
+            choice = await arm.choose({
+              seq,
+              state: state.jev.state,
+              offered,
+              jev: state.jev,
+            });
+            if (choice.jev !== undefined) run.jev(choice.jev);
           } catch (error) {
             abort = {
               reason: "arm_error",
+              cause: "arm_throw",
+              ...error.abort,
               message: `${armName} arm: ${error.message}`,
             };
             break;
@@ -282,6 +346,7 @@ async function runTrial({
           const [first] = intentErrors;
           abort = {
             reason: "arm_error",
+            cause: "intent_invalid",
             message: `${armName} arm answered ${fileName("intent", seq)} invalidly: ${first.path} ${first.message}`,
           };
           break;
@@ -295,11 +360,16 @@ async function runTrial({
       const [first] = rejected.errors;
       abort = {
         reason: "arm_error",
+        cause: "node_invalid",
         message: `${rejected.file} failed validation: ${first.path} ${first.message}`,
       };
     }
     if (abort !== null && !stalled && !gone) {
-      const message = { protocol: PROTOCOL, ...abort };
+      const message = {
+        protocol: PROTOCOL,
+        reason: abort.reason,
+        message: abort.message,
+      };
       if (validateAbort(message).length > 0) {
         throw new Error(
           `harness built an invalid abort.json: ${JSON.stringify(message)}`,
@@ -338,14 +408,21 @@ async function runTrial({
     existsSync(path.join(io, "events.ndjson.tmp")) &&
     !Object.hasOwn(files, "events.ndjson");
   entry.median_step_ms = medianOf(steps);
+  // validateTrial has already reported a malformed done.json or error.json;
+  // here it only has to end as invalid instead of throwing past the record.
+  const done = Object.hasOwn(files, "done.json")
+    ? parseOrUndefined(files["done.json"])
+    : undefined;
+  entry.trace_hash = done?.trace_hash ?? null;
   if (stalled) {
     entry.outcome = "stall";
   } else if (rejected !== null) {
     entry.outcome = "invalid";
   } else if (Object.hasOwn(files, "done.json")) {
-    entry.outcome = JSON.parse(files["done.json"]).reason ?? "invalid";
+    entry.outcome = done?.reason ?? "invalid";
   } else if (Object.hasOwn(files, "error.json")) {
-    entry.outcome = `error:${JSON.parse(files["error.json"]).code}`;
+    const code = parseOrUndefined(files["error.json"])?.code;
+    entry.outcome = code === undefined ? "invalid" : `error:${code}`;
   } else {
     entry.outcome = "crash";
   }
@@ -367,6 +444,9 @@ export async function runBatch({
   pollMs = DEFAULTS.pollMs,
   runs = {},
   instrument,
+  decideFn,
+  verdictCache = VERDICT_CACHE_ROOT,
+  replay = false,
 } = {}) {
   if (!Object.hasOwn(ARMS, armName ?? "")) {
     throw new Error(
@@ -376,20 +456,36 @@ export async function runBatch({
   if (!slug.test(scenario ?? "")) {
     throw new Error(`scenario "${scenario}" is not a slug`);
   }
-  if (!Number.isInteger(trials) || trials < 1) {
-    throw new Error(`trials must be a whole number >= 1, got ${trials}`);
+  if (!Number.isInteger(trials) || trials < 1 || trials > TRIAL_SEED_STRIDE) {
+    throw new Error(
+      `trials must be a whole number from 1 to ${TRIAL_SEED_STRIDE}, got ${trials}`,
+    );
   }
   if (!Number.isInteger(callCap) || callCap < 1) {
     throw new Error(`the call cap must be a whole number >= 1, got ${callCap}`);
   }
-  if (!Number.isInteger(seed)) {
+  if (!Number.isSafeInteger(seed * TRIAL_SEED_STRIDE + trials)) {
     throw new Error(`seed must be a whole number, got ${seed}`);
   }
   if (!(watchdogFloorMs > 0)) {
     throw new Error(`watchdogFloorMs must be > 0, got ${watchdogFloorMs}`);
   }
-  const armInstrument =
-    armName === "jev" ? (instrument ?? instrumentIdentity()) : null;
+  if (replay && armName !== "jev") {
+    throw new Error(`replay needs the jev arm, not ${armName}`);
+  }
+  let armOptions = {};
+  let armInstrument = null;
+  if (armName === "jev") {
+    const questions = loadQuestionSet();
+    armInstrument = instrument ?? instrumentIdentity(questions);
+    armOptions = {
+      questions,
+      instrument: armInstrument,
+      cache: openVerdictCache(verdictCache),
+      replay,
+      ...(decideFn === undefined ? {} : { decideFn }),
+    };
+  }
   // play.mjs's pattern: the record keeps this object, so what the batch learns
   // (per-trial outcomes, calls spent) is filled in before finish().
   const config = {
@@ -397,9 +493,13 @@ export async function runBatch({
     arm: armName,
     requested_trials: trials,
     seed,
+    trial_seed_stride: TRIAL_SEED_STRIDE,
     call_cap: callCap,
     watchdog_floor_ms: watchdogFloorMs,
     launcher: launch.label ?? "custom",
+    ...(armName === "jev"
+      ? { replay, verdict_cache: armOptions.cache.directory }
+      : {}),
     arm_calls: 0,
     capped: false,
     trials: [],
@@ -415,11 +515,8 @@ export async function runBatch({
   const budget = { cap: callCap, used: 0, capped: false };
   for (let trial = 0; trial < trials; trial += 1) {
     // Each trial's arm gets its own seed, so trial i replays alone.
-    const trialSeed = seed + trial;
-    const arm = createArm(armName, {
-      seed: trialSeed,
-      ...(armInstrument === null ? {} : { instrument: armInstrument }),
-    });
+    const trialSeed = seed * TRIAL_SEED_STRIDE + trial;
+    const arm = createArm(armName, { seed: trialSeed, ...armOptions });
     const io = path.join(
       run.directory,
       "trials",
@@ -436,6 +533,7 @@ export async function runBatch({
       floorMs: watchdogFloorMs,
       pollMs,
       budget,
+      run,
     });
     entry.io = path.relative(run.directory, io);
     config.trials.push(entry);
@@ -454,6 +552,37 @@ export async function runBatch({
     n,
     ci: [interval.lower, interval.upper],
   });
+  run.kri("engine_crash", {
+    value: config.trials.filter((entry) => entry.outcome === "crash").length,
+    n,
+    ci: null,
+  });
+  if (armName === "jev") {
+    const apiErrors = config.trials.filter(
+      (entry) => entry.abort?.cause === "api_error",
+    ).length;
+    const attempts = run.provenance.jev.calls + apiErrors;
+    if (attempts === 0) {
+      run.kri("api_error_rate", { value: null, n: 0, ci: null });
+    } else {
+      const errors = wilson(apiErrors, attempts);
+      run.kri("api_error_rate", {
+        value: apiErrors / attempts,
+        n: attempts,
+        ci: [errors.lower, errors.upper],
+      });
+    }
+    if (apiErrors > 0) {
+      run.limit(
+        `${apiErrors} of ${attempts} Jev calls ended in an API error; an API failure says nothing about the game, so those trials count as inconclusive, not failed.`,
+      );
+    }
+    if (replay) {
+      run.limit(
+        `Replay: every verdict came from ${config.verdict_cache}; no Jev call was made.`,
+      );
+    }
+  }
   if (budget.capped) {
     run.limit(
       `The batch call cap of ${callCap} arm calls was reached; ${n} of ${trials} trials ran.`,
@@ -465,15 +594,7 @@ export async function runBatch({
       "fake-godot replays scripted snapshots; no physics was simulated.",
     );
   }
-  const outcomes = config.trials.map((entry) => entry.outcome);
-  const result = outcomes.includes("invalid")
-    ? "invalid"
-    : budget.capped
-      ? "inconclusive"
-      : ended > 0
-        ? "fail"
-        : "pass";
-  const record = await run.finish({ result });
+  const record = await run.finish({ result: batchResult(config.trials) });
   return {
     record,
     trials: config.trials,
@@ -505,11 +626,17 @@ function parseArgs(argv) {
       options.scenario = word;
       continue;
     }
+    if (word === "--replay") {
+      options.replay = true;
+      continue;
+    }
     const value = words.shift();
     if (word === "--arm") {
       options.arm = value;
-    } else if (word === "--root") {
+    } else if (word === "--root" && value !== undefined) {
       options.root = path.resolve(value);
+    } else if (word === "--cache" && value !== undefined) {
+      options.cache = path.resolve(value);
     } else if (
       Object.hasOwn(numbers, word) &&
       Number.isInteger(Number(value))
@@ -528,7 +655,7 @@ function parseArgs(argv) {
   }
   if (options.scenario === undefined) {
     throw new Error(
-      "usage: harness.mjs <scenario> [--arm scripted|random|jev] [-n N] [--seed N] [--call-cap N] [--root DIR]",
+      "usage: harness.mjs <scenario> [--arm scripted|random|jev] [-n N] [--seed N] [--call-cap N] [--root DIR] [--cache DIR] [--replay]",
     );
   }
   return options;
@@ -549,6 +676,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     seed,
     callCap,
     root,
+    cache,
+    replay = false,
     launchFlags,
   } = options;
   const { record, trials: done } = await runBatch({
@@ -559,21 +688,29 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     callCap,
     launch: fakeGodot(launchFlags),
     runs: root === undefined ? {} : { root },
+    replay,
+    ...(cache === undefined ? {} : { verdictCache: cache }),
   });
   for (const entry of done) {
     const note =
       entry.abort === null
         ? ""
-        : ` (abort ${entry.abort.reason}: ${entry.abort.message})`;
+        : ` (abort ${entry.abort.reason}/${entry.abort.cause}: ${entry.abort.message})`;
     console.log(
-      `trial ${entry.trial}: ${entry.outcome}, ${entry.snapshots} snapshots, ${entry.arm_calls} arm calls, ${entry.forced} forced${note}`,
+      `trial ${entry.trial}: ${entry.outcome}, ${entry.snapshots} snapshots, ${entry.arm_calls} arm calls, ${entry.forced} forced, trace_hash ${entry.trace_hash}${note}`,
     );
   }
   const rate = record.kris.trial_abort_rate;
   console.log(
-    `trial_abort_rate ${rate.value.toFixed(2)} over ${rate.n}; result ${record.result}`,
+    `trial_abort_rate ${rate.value.toFixed(2)} over ${rate.n}; engine_crash ${record.kris.engine_crash.value}; result ${record.result}`,
   );
+  if (arm === "jev") {
+    const { model, calls, cache_hits: hits } = record.provenance.jev;
+    console.log(
+      `jev: ${calls} live calls, ${hits} cache hits, model ${model}${replay ? ", replay" : ""}`,
+    );
+  }
   console.log(`run record: ${record.id}`);
   console.log("Automated; not a feel verdict.");
-  process.exit(record.result === "pass" ? 0 : 1);
+  process.exit(EXIT[record.result]);
 }
