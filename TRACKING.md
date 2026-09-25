@@ -758,6 +758,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0489 | 2026-09-25T17:55:00+00:00 | Independent reviewer / review; coordinator / integration | JL-01 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on b788c70 with no blocking finding; the report is retained at [artifacts/jev-lab-2026-09-25/reviews/JL-01.md](artifacts/jev-lab-2026-09-25/reviews/JL-01.md). The coordinator merged `wt/JL-01` into `wt/JL-coord` at 9535e0e and reran on the integrated tree: `npm test` 243/0, `npm run verify` six stages pass, `check:drift` 349/0; receipts under `artifacts/local/tasks/JL-01/integrated/`. JL-01 moves review to done, record revision 3 to 4; lease JL-01-L1 closes. Non-blocking notes carried forward: index `seq` from a line count breaks on a missing trailing newline, and `finished` is set before the write (harden in a JL-01 revision or before JL-12 pins runs); `provenance.sources.files` stores every per-file hash in each `run.json` (drop or externalise before JL-12); a source mismatch downgrades `invalid` to `inconclusive` with the original result kept only in prose (decide in JL-12's packet); Jev usage names other than `input_tokens` are assumed and default to 0 (JL-14 confirms the real response shape); an injected `uuid` is not validated; `rebuildIndex()` throws on a missing root. JL-01's extra fields `id`, `label`, `seq`, `started_at` and `finished_at` are part of `scrapkeep-run/1`. JL-02 is in Fable review; JL-03 is queued behind it; JL-04 is in routine review. |
 | EV-0490 | 2026-09-25T18:00:00+00:00 | Independent reviewer / review; coordinator / changes requested, assignment | JL-04 | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt), held to the labeller's blindness rules, returned PASS+NOTES on 450ac13; the report is retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A1.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A1.md). The DoD is met, but the coordinator requests changes before admission because one note undermines what the card is for: several losing options carry their own refutation in the option text ("HP is 100 of 100", "no threat is present", affordability arithmetic), and one winning option states its success, so a model could score by reading options instead of state and inflate blind scores. JL-04 moves review to changes_requested to in_progress, record revision 3 to 5, as attempt JL-04-A2 under lease JL-04-L2, resuming the same labeller instance so its isolated context is kept. Requested: neutral action-only option wording with the facts moved to `state`; severity minor or drop for `blind-sd-safety-klaxon-in-basin`; the note/state mismatch in `blind-cb-econ-secret-early`; a tuning-based decision on `stomp_target` in `blind-cb-combat-ram-blazing`; exact paraphrase in two notes; PROVENANCE gains the source commits (29dcbcf, af89c89, 581f5f8), the settled-versus-dropped reasoning for the start-exit case, a validation-rule description instead of gitignored script paths, and the BACKLOG JL-04 section as a disclosed input. The reviewer's two admission points are coordinator steps: `npm run verify` runs on the integrated result, and the A1 `check:drift` failure is the base issue repaired at EV-0487. The review cites case ids, so whoever authors a question set must not read it. |
 | EV-0491 | 2026-09-25T18:10:00+00:00 | Independent reviewer / review; coordinator / integration | JL-02 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on 83f2766 with no blocking finding. It recomputed every Wilson and Newcombe reference cell by hand; all are correct, including the 6/7 − 2/7 lower bound the writer had set from its own output (0.0582 is what the formula gives), so no cell remains self-referential. The report is retained at [artifacts/jev-lab-2026-09-25/reviews/JL-02.md](artifacts/jev-lab-2026-09-25/reviews/JL-02.md). The coordinator merged `wt/JL-02` at 912bedf and reran on the integrated tree: `npm test` 258/0 (JL-02's leak scan passes with JL-01's `record.mjs` present), `npm run verify` six stages pass, `check:drift` 349/0; receipts under `artifacts/local/tasks/JL-02/integrated/`. JL-02 moves review to done, record revision 3 to 4; lease JL-02-L1 closes. Carried forward: nine KRIs have no thresholds in the plan and can only render green (`unreachable_scenarios`, `escaped_defects`, `untested_change`, `trial_abort_rate`, `api_error_rate`, `low_conf_rate`, `rework_per_card`, `triage_misroute`, `control_separation`), so JL-12 must give them thresholds or a distinct tracked-without-threshold rendering before the gate relies on them; JL-12's gate cannot name a status outside `status.mjs` and branches on `gate`/`exit`; `lever_effect`'s epoch rule is a JL-12 gate behaviour (exit 4); the `min_n` rule (1 sentinel or single reading, 5 per card or per minute, 20 rates and percentiles) goes into a comment or plan § 4; two reference cells sit within 5e-6 of a rounding boundary; `npm test` now needs `python3`, to be listed in CONTRIBUTING by JL-06. |
+| EV-0492 | 2026-09-25T17:37:59+00:00 | Coordinator / correction | (record) | The coordinator stamped EV-0486 to EV-0491 with estimated times instead of the clock, the fault the audit found in EV-0483 (A3). Found by comparing the delegate ledger (`~/.claude/state/delegates.tsv`) with the board. The board is append-only, so the real times, each the UTC commit time of the commit that recorded the event, are: EV-0484 17:09:28Z (stated 17:10:00), EV-0485 17:15:21Z (17:16:00), EV-0486 17:16:09Z (17:20:00), EV-0487 17:22:54Z (17:30:00), EV-0488 17:27:37Z (17:45:00), EV-0489 17:28:44Z (17:55:00), EV-0490 17:30:14Z (18:00:00), EV-0491 17:35:01Z (18:10:00). The largest skew is 35 minutes ahead. The mutable checkpoint lines in the JL attempt records are corrected in place to the same times. From this event on, every event time is read from `date -u` when the row is written. The same ledger confirms the Wave 1 routing: all six writer runs and the routine review ran on `claude-opus-5-5`, both Fable reviews and the audit on `claude-fable-5-1`, all at high; no substitution. |
 
 ## Preparation checkpoint
 
@@ -1582,7 +1583,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-01` on `wt/JL-01`, created by `scripts/new-worktree.sh`.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
 - Candidate identity: `b788c7064f0945025e46f3cf75760a6547f3aae2`. Integrated identity: `9535e0e` (merge into `wt/JL-coord`).
-- Latest checkpoint: 2026-09-25T17:55:00+00:00; review PASS+NOTES, admitted serially (EV-0489).
+- Latest checkpoint: 2026-09-25T17:28:44+00:00; review PASS+NOTES, admitted serially (EV-0489).
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-01/` in the worktree.
 - Review: fresh scrapkeep-reviewer (claude-fable-5-1 per host prompt), **PASS+NOTES** on b788c70; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-01.md). Integrated: `npm test` 243/0, `npm run verify` six stages pass, `check:drift` 349/0.
@@ -1594,7 +1595,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-02` on `wt/JL-02`, created by `scripts/new-worktree.sh`.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
 - Candidate identity: `83f276684ca9ec0019fd7ca20c20faa4ecae15cb`. Integrated identity: `912bedf` (merge into `wt/JL-coord`).
-- Latest checkpoint: 2026-09-25T18:10:00+00:00; review PASS+NOTES, admitted serially (EV-0491).
+- Latest checkpoint: 2026-09-25T17:35:01+00:00; review PASS+NOTES, admitted serially (EV-0491).
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-02/` in the worktree.
 - Review: fresh scrapkeep-reviewer (claude-fable-5-1 per host prompt), **PASS+NOTES** on 83f2766 with every Wilson and Newcombe reference cell recomputed by hand; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-02.md). Integrated: `npm test` 258/0, `npm run verify` six stages pass, `check:drift` 349/0.
@@ -1606,7 +1607,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-03` on `wt/JL-03`, created by `scripts/new-worktree.sh`.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
 - Candidate identity: `4a0fed35da047ad01db34b30db10785afc448feb`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:45:00+00:00; handoff received, in review (EV-0488).
+- Latest checkpoint: 2026-09-25T17:27:37+00:00; handoff received, in review (EV-0488).
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-03/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
@@ -1618,7 +1619,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-04` on `wt/JL-04`, created by `scripts/new-worktree.sh`.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
 - Candidate identity: `450ac1397f11d2ed288070a8950d1cbad9c0a947`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:45:00+00:00; handoff received, in review (EV-0488).
+- Latest checkpoint: 2026-09-25T17:27:37+00:00; handoff received, in review (EV-0488).
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-04/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
@@ -1630,7 +1631,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-04` on `wt/JL-04`, continuing from the A1 candidate.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`; A1 candidate `450ac1397f11d2ed288070a8950d1cbad9c0a947`.
 - Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T18:00:00+00:00; changes requested from the A1 review, resumed.
+- Latest checkpoint: 2026-09-25T17:30:14+00:00; changes requested from the A1 review, resumed.
 - Blockers: none.
 - Evidence: A1 review retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A1.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A1.md).
 - Review: planned re-review by a fresh scrapkeep-reviewer-medium (Opus 5.5), bound by the same blindness rules.
