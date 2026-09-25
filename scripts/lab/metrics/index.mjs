@@ -1,5 +1,6 @@
 import ballLab from "./ball-lab.mjs";
 import cableBench, { measure as cableBenchMeasure } from "./cable-bench.mjs";
+import spillway, { measure as spillwayMeasure } from "./spillway.mjs";
 import core from "./core.mjs";
 import tdd from "./tdd.mjs";
 import program from "./program.mjs";
@@ -81,6 +82,10 @@ export const STAGES = Object.freeze({
   "cable-bench": Object.freeze({
     metrics: mergeLayers(cableBench),
     measure: cableBenchMeasure,
+  }),
+  "spillway-drop": Object.freeze({
+    metrics: mergeLayers(spillway),
+    measure: spillwayMeasure,
   }),
 });
 
