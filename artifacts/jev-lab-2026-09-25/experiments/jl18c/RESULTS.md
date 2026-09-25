@@ -15,6 +15,8 @@ The pre-registration is [PREREGISTRATION.md](PREREGISTRATION.md). Nothing in it 
 
 Not blocked: 216 of 216 calls were made, 0 failed, and every call resolved one model, `jev-1.13.0`.
 
+**In plain terms.** Under the preference-Noul method, take_cache was the top-rated option in all 18 `e-free-cache` calls. It failed only on the pre-registered 0.2 margin: per-order gaps were 0.10 to 0.14 (per-call 0.06 to 0.18). So the park for that method rests on that margin. The no-objective states are not real game states. Their passing is a lead about how prompts are built, not evidence that the arm as designed works.
+
 **Leads.** These diagnostic cells passed in every order. Under the pre-registered rule they do not change a park:
 - `c-no-objective`
 - `c-no-objective-two`
@@ -32,14 +34,14 @@ Not blocked: 216 of 216 calls were made, 0 failed, and every call resolved one m
 | Random reward | no | lift +0.0995 against line 0.1, just under the line |
 | Priming | no | lift +0.0095 against line 0.1 |
 | Preference (read, and `a-free-cache` and `c-no-objective` both below 0.6) | no | `c-no-objective` mean 0.781 |
-| Scope (`d-free-heal`) | passes | 6/6 orders, 0.613 to 0.807. By the pre-registered row, the discount is specific to caches or their buffs |
+| Scope (`d-free-heal`) | passes | 6/6 orders, 0.613 to 0.807. By the pre-registered row, the discount is specific to caches or their buffs. That holds for the Choice method only: under the Noul method `e-free-heal` fails on the same margin shape as `e-free-cache` (push_objective Noul 0.596 on average; take_repair top-rated in 18 of 18 calls; per-order gaps 0.107 to 0.147) |
 | Asking method (`e-*` passes where the matching Choice cell fails) | no | `e-free-cache` and `a-free-cache` both fail; `e-no-objective` and `c-no-objective` both pass |
 
-By the pre-registered rules, the free-cache failure is explained by position and framing, not by reading, priming or a residual preference. Removing the objective from the state, the option id and the option text lifts P(take_cache) from 0.478 to 0.781, and that cell passes in every order. The every-order rule still fails the verdict cell, because the verdict cells keep the objective-naming push option.
+By the pre-registered rules, the free-cache failure is explained by position and framing, not by reading, priming or preference, as pre-registered (a prior that survives removing the objective). Removing the objective from the state, the option id and the option text lifts P(take_cache) from 0.478 to 0.781, and that cell passes in every order. The every-order rule still fails the verdict cell, because the verdict cells keep the objective-naming push option.
 
 Two observations that are not pre-registered rows, reported for the reviewer:
 - **Position has a different shape from JL-18's.** JL-18 hypothesised a last-position boost. Here the first position is the depressed one, in every Choice cell flagged: `a-free-cache` 0.39, `c-no-objective` 0.697, `d-free-heal` 0.617 and `f-free-cache` 0.392, each the lowest of its positions.
-- **The Noul method removed position without reaching the margin.** No `e-*` cell was flagged: probe ranges were 0.007 to 0.018. But in `e-free-cache` the objective-naming push option still drew a Noul of 0.57, which is what held the gap under 0.2. `e-no-objective`, where `roll_on` drew 0.459, cleared the margin in every order (0.23 to 0.257).
+- **Under the Noul method no position effect was flagged, and the margin was still not reached.** No `e-*` cell was flagged: probe ranges were 0.007 to 0.018. But in `e-free-cache` the objective-naming push option still drew a Noul of 0.57, which is what held the gap under 0.2. `e-no-objective`, where `roll_on` drew 0.459, cleared the margin in every order (0.23 to 0.257).
 
 ## Run facts
 
@@ -267,9 +269,9 @@ By position: 1: mean 0.392, min 0.35, max 0.44, SD 0.03 (n 6); 2: mean 0.553, mi
 
 | Comparison | Baseline | Treatment | Reads | Baseline mean | Treatment mean | Lift | Line | Indicated |
 |---|---|---|---|---|---|---|---|---|
-| framing | a-free-cache | c-no-objective | probe | 0.478 | 0.781 | 0.303 | 0.1 | yes |
-| sibling-with-objective | a-free-cache | c-free-cache-two | share | 0.517 | 0.455 | -0.062 | 0.1 | no |
-| sibling-without-objective | c-no-objective | c-no-objective-two | share | 0.887 | 0.84 | -0.047 | 0.1 | no |
-| random-buff | a-free-cache | d-named-buff | probe | 0.478 | 0.578 | 0.1 | 0.1 | no |
-| priming | a-free-cache | f-free-cache | probe | 0.478 | 0.488 | 0.009 | 0.1 | no |
+| framing | a-free-cache | c-no-objective | probe | 0.4783 | 0.7811 | 0.3028 | 0.1000 | yes |
+| sibling-with-objective | a-free-cache | c-free-cache-two | share | 0.5168 | 0.4550 | -0.0618 | 0.1000 | no |
+| sibling-without-objective | c-no-objective | c-no-objective-two | share | 0.8873 | 0.8400 | -0.0473 | 0.1000 | no |
+| random-buff | a-free-cache | d-named-buff | probe | 0.4783 | 0.5778 | 0.0995 | 0.1000 | no |
+| priming | a-free-cache | f-free-cache | probe | 0.4783 | 0.4878 | 0.0095 | 0.1000 | no |
 
