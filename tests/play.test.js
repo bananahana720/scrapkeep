@@ -12,10 +12,14 @@ import {
   findOnPath,
   flakeRate,
   jobLimit,
+  labRoute,
   repeatCount,
   resolve,
   runTestSuite,
+  SHOT_TIMEOUT_MS,
+  shotLaunchFailure,
   shotOutputPath,
+  shotSpawnOptions,
   slugLabel,
   waitForShot,
   waitUntil,
@@ -200,6 +204,156 @@ test("shotOutputPath refuses an explicit output path under /tmp (N6)", () => {
     () => shotOutputPath(root, entry, "/tmp/nested/dir/explicit.png"),
     /\/tmp/,
   );
+});
+
+test("shotOutputPath resolves the path before refusing /tmp, so .. and //tmp cannot slip in (NB3)", () => {
+  const entry = { sketch: "ball-lab" };
+  const climbs = "../".repeat(root.split("/").length + 4);
+  for (const hostile of [
+    `${climbs}tmp/x.png`,
+    "//tmp/x.png",
+    "/tmp/../tmp/x.png",
+    "/home/../tmp/x.png",
+  ]) {
+    assert.throws(
+      () => shotOutputPath(root, entry, hostile),
+      /may not be under/,
+      hostile,
+    );
+  }
+  assert.throws(
+    () =>
+      shotOutputPath(root, entry, "/scratch/tmpdir/x.png", {
+        tmpRoots: ["/tmp", "/scratch/tmpdir"],
+      }),
+    /scratch\/tmpdir/,
+    "os.tmpdir() is refused as well as /tmp",
+  );
+  assert.equal(
+    shotOutputPath(root, entry, "/tmpfoo/x.png").out,
+    "/tmpfoo/x.png",
+    "a sibling that merely starts with tmp is allowed",
+  );
+  const nested = shotOutputPath(root, entry, "a/../b.png");
+  assert.equal(nested.out, path.join(nested.shotsDir, "b.png"));
+});
+
+test("shotOutputPath refuses os.tmpdir() by default", () => {
+  const entry = { sketch: "ball-lab" };
+  assert.throws(
+    () => shotOutputPath(root, entry, path.join(os.tmpdir(), "shot.png")),
+    /may not be under/,
+  );
+});
+
+test("the shot spawn carries a process timeout, and a hung child is killed (NB1)", () => {
+  const options = shotSpawnOptions();
+  assert.equal(options.timeout, SHOT_TIMEOUT_MS);
+  assert.ok(Number.isFinite(SHOT_TIMEOUT_MS) && SHOT_TIMEOUT_MS > 0);
+  assert.equal(options.killSignal, "SIGKILL");
+  assert.equal(options.stdio, "inherit");
+
+  const started = Date.now();
+  const hung = spawnSync(
+    process.execPath,
+    ["-e", "setTimeout(() => {}, 30000)"],
+    { ...shotSpawnOptions({ timeoutMs: 300 }), stdio: "ignore" },
+  );
+  assert.ok(Date.now() - started < 10_000, "killed well before it would exit");
+  const failure = shotLaunchFailure(hung, 300);
+  assert.equal(failure.code, 1);
+  assert.match(failure.message, /did not exit within 0\.3 s/);
+
+  assert.equal(shotLaunchFailure({ status: 0, signal: null }), null);
+  assert.deepEqual(shotLaunchFailure({ status: 5, signal: null }), {
+    code: 5,
+    message: "the shot process exited with status 5",
+  });
+  const missing = shotLaunchFailure({
+    status: null,
+    signal: null,
+    error: Object.assign(new Error("spawn nope ENOENT"), { code: "ENOENT" }),
+  });
+  assert.equal(missing.code, 1);
+  assert.match(missing.message, /could not start: spawn nope ENOENT/);
+});
+
+test("labRoute sends stats, gate and lab sub-verbs to their scripts", () => {
+  const lab = path.join(root, "scripts", "lab");
+  const exists = () => true;
+  assert.deepEqual(labRoute(["stats", "--layer", "program"], { exists }), {
+    script: path.join(lab, "stats-cli.mjs"),
+    args: ["--layer", "program"],
+  });
+  assert.deepEqual(labRoute(["gate", "r1", "--against", "base"], { exists }), {
+    script: path.join(lab, "gate.mjs"),
+    args: ["r1", "--against", "base"],
+  });
+  assert.deepEqual(
+    labRoute(["lab", "run", "downhill-run", "--arm", "scripted", "-n", "20"], {
+      exists,
+    }),
+    {
+      script: path.join(lab, "harness.mjs"),
+      args: ["downhill-run", "--arm", "scripted", "-n", "20"],
+    },
+  );
+  assert.deepEqual(labRoute(["lab", "program", "--since", "x"], { exists }), {
+    script: path.join(lab, "program.mjs"),
+    args: ["--since", "x"],
+  });
+  assert.equal(
+    labRoute(["lab", "verdicts"], { exists }).script,
+    path.join(lab, "verdicts.mjs"),
+  );
+  for (const words of [["lab"], ["lab", "bogus"]]) {
+    const routed = labRoute(words, { exists });
+    assert.equal(routed.exit, 2, words.join(" "));
+    assert.match(routed.error, /lab run\|program\|verdicts/);
+  }
+  const unbuilt = labRoute(["lab", "run", "x"], {
+    exists: (file) => !file.endsWith("harness.mjs"),
+  });
+  assert.equal(unbuilt.exit, 2);
+  assert.match(unbuilt.error, /harness\.mjs is not built yet/);
+  for (const words of [[], ["play", "x"], ["test"], ["mobility"], ["--all"]])
+    assert.equal(labRoute(words, { exists }), null, words.join(" "));
+});
+
+test("play.mjs routes lab verbs before it looks for Godot", async (t) => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-route-"));
+  t.after(() => rm(temporary, { recursive: true, force: true }));
+  const env = { ...process.env, GODOT_BIN: path.join(temporary, "no-godot") };
+  const run = (...args) =>
+    spawnSync(
+      process.execPath,
+      [path.join(root, "scripts/play.mjs"), ...args],
+      {
+        encoding: "utf8",
+        env,
+      },
+    );
+  const stats = run(
+    "stats",
+    "--layer",
+    "human",
+    "--runs",
+    path.join(temporary, "runs"),
+    "--artifacts",
+    path.join(temporary, "artifacts"),
+  );
+  assert.equal(stats.status, 0, stats.stdout + stats.stderr);
+  assert.match(stats.stdout, / agent_agreement /);
+  assert.match(stats.stdout, / unplayed_green /);
+  const gate = run("gate");
+  assert.equal(gate.status, 2, gate.stdout + gate.stderr);
+  assert.match(gate.stderr, /scripts\/lab\/gate\.mjs --pin/);
+  const lab = run("lab");
+  assert.equal(lab.status, 2);
+  assert.doesNotMatch(lab.stderr, /Godot binary not found/);
+  const sketch = run("list");
+  assert.equal(sketch.status, 2, "a sketch verb still needs Godot");
+  assert.match(sketch.stderr, /Godot binary not found/);
 });
 
 test("resolve still prefers an exact id, then a primary among prefix or substring hits", () => {

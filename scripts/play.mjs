@@ -16,13 +16,14 @@ import {
   watch as watchFs,
   writeFileSync,
 } from "node:fs";
-import { cpus } from "node:os";
+import { cpus, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { binary, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
 import { createRun } from "./lab/record.mjs";
 import { METRICS } from "./lab/metrics/index.mjs";
+import { EXIT } from "./lab/metrics/status.mjs";
 import { wilson } from "./lab/stats.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -442,21 +443,55 @@ export function findOnPath(name, env = process.env) {
 }
 
 // Default output lives under artifacts/local/shots/, never /tmp (audit A8).
-// A relative name is joined there; an absolute path is honoured as given so
-// an explicit destination still works, unless it is under /tmp, which is
-// refused outright rather than silently allowed back in through an argument.
-export function shotOutputPath(repoRoot, entry, requested) {
+// A relative name is joined there; an absolute path is honoured so an
+// explicit destination still works. The refusal checks the resolved path, so
+// `..` segments and `//tmp` cannot bring /tmp or os.tmpdir() back in (NB3).
+export function shotOutputPath(
+  repoRoot,
+  entry,
+  requested,
+  { tmpRoots = ["/tmp", tmpdir()] } = {},
+) {
   const shotsDir = path.join(repoRoot, "artifacts", "local", "shots");
-  if (requested !== undefined && path.isAbsolute(requested)) {
-    if (requested === "/tmp" || requested.startsWith("/tmp/")) {
+  const name = requested || `${entry.sketch}-spawn.png`;
+  const out = path.resolve(shotsDir, name);
+  for (const tmp of tmpRoots.map((one) => path.resolve(one))) {
+    if (out === tmp || out.startsWith(tmp + path.sep)) {
       throw new Error(
-        `shot output "${requested}" may not be under /tmp (audit A8)`,
+        `shot output "${name}" resolves to ${out}, which may not be under ${tmp} (audit A8)`,
       );
     }
-    return { shotsDir, out: requested };
   }
-  const name = requested || `${entry.sketch}-spawn.png`;
-  return { shotsDir, out: path.join(shotsDir, name) };
+  return { shotsDir, out };
+}
+
+// Only the file wait below had a limit, and it starts after the launch
+// returns, so a hung headless Godot hung the command (NB1).
+export const SHOT_TIMEOUT_MS = 60_000;
+
+export function shotSpawnOptions({ timeoutMs = SHOT_TIMEOUT_MS } = {}) {
+  return { stdio: "inherit", timeout: timeoutMs, killSignal: "SIGKILL" };
+}
+
+export function shotLaunchFailure(result, timeoutMs = SHOT_TIMEOUT_MS) {
+  if (result.error?.code === "ETIMEDOUT") {
+    return {
+      code: 1,
+      message: `the shot process did not exit within ${timeoutMs / 1000} s and was killed`,
+    };
+  } else if (result.error !== undefined && result.error !== null) {
+    return {
+      code: 1,
+      message: `the shot process could not start: ${result.error.message}`,
+    };
+  } else if (result.status !== 0) {
+    const how =
+      result.status === null
+        ? `was killed by ${result.signal}`
+        : `exited with status ${result.status}`;
+    return { code: result.status ?? 1, message: `the shot process ${how}` };
+  }
+  return null;
 }
 
 // claude-open (audit-fixed shot routing) only dispatches the launch through
@@ -579,6 +614,9 @@ function showList(entries, all) {
   console.log(
     dim("\n  play <name> | test [name] | shot <name> [out.png] | list"),
   );
+  console.log(
+    dim("  stats [--layer <layer>] | gate <run> --against <pin> | lab run"),
+  );
   console.log(dim("  Names match on any unambiguous prefix: play mobility"));
   console.log(
     dim("\n  Headless checks prove the systems run. Feel needs your play.\n"),
@@ -612,7 +650,73 @@ function requireEntry(entries, name) {
   }
 }
 
+const labScripts = path.join(root, "scripts", "lab");
+const LAB_VERBS = {
+  stats: "stats-cli.mjs",
+  gate: "gate.mjs",
+};
+const LAB_SUBVERBS = {
+  run: "harness.mjs",
+  program: "program.mjs",
+  verdicts: "verdicts.mjs",
+};
+
+// The lab verbs need no Godot and no sketch catalogue, so they are routed
+// before either is looked up. Arguments after the verb pass through as-is.
+export function labRoute(words, { exists = existsSync } = {}) {
+  const [verb, ...rest] = words;
+  let file;
+  let args = rest;
+  if (Object.hasOwn(LAB_VERBS, verb)) {
+    file = LAB_VERBS[verb];
+  } else if (verb === "lab") {
+    const [sub, ...subArgs] = rest;
+    if (!Object.hasOwn(LAB_SUBVERBS, sub)) {
+      return {
+        exit: EXIT.usage,
+        error: `Usage: scrapkeep lab run|program|verdicts [args]${sub === undefined ? "" : ` (not "${sub}")`}`,
+      };
+    }
+    file = LAB_SUBVERBS[sub];
+    args = subArgs;
+  } else {
+    return null;
+  }
+  const script = path.join(labScripts, file);
+  if (!exists(script)) {
+    return {
+      exit: EXIT.usage,
+      error: `scripts/lab/${file} is not built yet on this checkout.`,
+    };
+  }
+  return { script, args };
+}
+
+function runLab(route) {
+  if (route.error !== undefined) {
+    console.error(route.error);
+    process.exit(route.exit);
+  }
+  const result = spawnSync(process.execPath, [route.script, ...route.args], {
+    stdio: "inherit",
+  });
+  if (result.status === null) {
+    // A lab script that could not finish measured nothing; exit 1 would read
+    // as a red KRI, so this reports an invalid instrument as gate.mjs does.
+    console.error(
+      `${path.basename(route.script)} did not finish: ${result.error?.message ?? result.signal}`,
+    );
+    process.exit(EXIT.invalid);
+  }
+  process.exit(result.status);
+}
+
 async function main(argv) {
+  const routed = labRoute(argv);
+  if (routed !== null) {
+    runLab(routed);
+    return;
+  }
   const passthrough = argv.indexOf("--");
   const extra = passthrough === -1 ? [] : argv.slice(passthrough + 1);
   const words = passthrough === -1 ? argv : argv.slice(0, passthrough);
@@ -729,19 +833,21 @@ async function main(argv) {
             "shot.gd needs a real window; opened via claude-open on workspace 10.\n",
           ),
         );
-        result = spawnSync(opener, [binary, ...scriptArgs], {
-          stdio: "inherit",
-        });
+        result = spawnSync(opener, [binary, ...scriptArgs], shotSpawnOptions());
       } else {
         console.log(
           dim("claude-open not found on PATH; running headless instead.\n"),
         );
-        result = spawnSync(binary, ["--headless", ...scriptArgs], {
-          stdio: "inherit",
-        });
+        result = spawnSync(
+          binary,
+          ["--headless", ...scriptArgs],
+          shotSpawnOptions(),
+        );
       }
-      if (result.status !== 0) {
-        process.exit(result.status === null ? 1 : result.status);
+      const failure = shotLaunchFailure(result);
+      if (failure !== null) {
+        console.error(failure.message);
+        process.exit(failure.code);
         return;
       }
       // claude-open dispatches and returns before Godot writes the file, so

@@ -186,19 +186,38 @@ function reading(record, id) {
 const round = (value) => Number(value.toFixed(4));
 const interval = ({ lower, upper }) => `[${round(lower)}, ${round(upper)}]`;
 
+// A severity-weighted score and a share of time are not counts, so their
+// compare line says the x/n it prints is value × n rounded.
+const APPROXIMATED = new Set(["corpus_blind_weighted", "dead_tier"]);
+
+// A finite value outside 0..1 is a mis-scaled rate (a percentage, say): it
+// cannot be compared, and it must not pass unnoticed.
+function misScaled(record, id, whose) {
+  const value = (record.kpis?.[id] ?? record.kris?.[id])?.value;
+  if (!Number.isFinite(value) || (value >= 0 && value <= 1)) return null;
+  return outcome(
+    EXIT.inconclusive,
+    `compare ${id}: ${whose} rate ${value} is not a proportion in 0..1, inconclusive`,
+  );
+}
+
 // Newcombe's interval for the change, signed so that positive is better. It
 // passes when the whole interval clears -TOLERANCE, regresses when all of it
 // lies below, and is inconclusive when it straddles.
 function compareRate(id, candidate, pin) {
   const before = reading(pin, id);
-  if (before === null) return [];
+  if (before === null) {
+    const scaled = misScaled(pin, id, "the pin's");
+    return scaled === null ? [] : [scaled];
+  }
   const after = reading(candidate, id);
   if (after === null)
     return [
-      outcome(
-        EXIT.inconclusive,
-        `compare ${id}: the pin has a rate and the candidate has none, inconclusive`,
-      ),
+      misScaled(candidate, id, "the candidate's") ??
+        outcome(
+          EXIT.inconclusive,
+          `compare ${id}: the pin has a rate and the candidate has none, inconclusive`,
+        ),
     ];
   const better = getMetric(id).thresholds.worse === "lower";
   const change = better
@@ -215,6 +234,7 @@ function compareRate(id, candidate, pin) {
   }
   const text = [
     `compare ${id}`,
+    ...(APPROXIMATED.has(id) ? ["(approximated as n trials)"] : []),
     `${after.x}/${after.n} ${interval(wilson(after.x, after.n))}`,
     `against ${before.x}/${before.n} ${interval(wilson(before.x, before.n))}:`,
     `improvement ${round(change.estimate)} ${interval(change)},`,
