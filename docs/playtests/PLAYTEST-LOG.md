@@ -12,12 +12,24 @@ Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three s
 | Spillway Drop | `proto/spillway-drop` at `af89c89` | Do stacked shelves, sluice chutes and a slow bypass ramp create route choice? It also has a 90 s basin flood that reveals a secret hatch. |
 | Cable Bench | `proto/cable-bench` at `29dcbcf` | Does a 45 s difficulty clock with rising cache prices make looting versus leaving a real choice? It also has kicker-gated benches and cableway hazards. |
 
-Launch any of them with the pinned binary. The mobility kit's README and each stage's README list controls and "what to try first".
+Launch any of them with the `scrapkeep` launcher, which finds sketches across every
+worktree. The mobility kit's README and each stage's README list controls and "what to
+try first".
+
+```sh
+scrapkeep                 # list what is playable, with branch, head and the question it asks
+scrapkeep mobility        # play the mobility kit
+scrapkeep spillway        # play Spillway Drop
+scrapkeep cable           # play Cable Bench
+scrapkeep test            # headless import, boot and tests/*.gd for every sketch in every worktree
+```
+
+`npm run play` is the same tool from inside the repo. It reads the pinned binary from
+`scripts/sketch-smoke.mjs`; set `GODOT_BIN` to override it and `SCRAPKEEP_ROOT` to point the
+wrapper at a different checkout. The long form still works:
 
 ```sh
 /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path /home/andrew/Projects/scrapkeep-worktrees/mobility-kit/sketches/ball-lab
-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path /home/andrew/Projects/scrapkeep-worktrees/spillway-drop/sketches/spillway-drop
-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path /home/andrew/Projects/scrapkeep-worktrees/cable-bench/sketches/cable-bench
 ```
 
 If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/scrapkeep-worktrees/<name> proto/<name>`.

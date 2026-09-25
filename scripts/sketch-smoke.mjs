@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
   "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
-const binary = process.env.GODOT_BIN || recordedBinary;
+export const binary = process.env.GODOT_BIN || recordedBinary;
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
 
 export function sketchDirectories(sketchRoot) {
