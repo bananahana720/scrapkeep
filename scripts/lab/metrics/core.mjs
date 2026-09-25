@@ -80,12 +80,19 @@ const agent = [
     min_n: 1,
     says: "Edits to corpus labels after they were frozen.",
   },
+  // The value is the success-rate gap between the arm under test and the
+  // seeded random floor arm (plan § 5 step 3: the random arm scores
+  // measurably worse). Fail below 0.1 because the gate's own TOLERANCE is 0.1:
+  // a gap inside it is one the gate's comparisons cannot tell from noise, which
+  // is the plan's "arms can't be separated". Warn below 0.2, twice that
+  // tolerance, so a gap is flagged while it still clears the fail line.
+  // Provisional, like the c1 control lines; JL-21 calibrates from live arms.
   {
     id: "control_separation",
     layer: "agent",
     kind: "kri",
     sentinel: false,
-    thresholds: null,
+    thresholds: { worse: "lower", warn: 0.2, fail: 0.1 },
     min_n: 20,
     says: "How far apart the control arms land; arms that cannot be told apart make the instrument invalid.",
   },
