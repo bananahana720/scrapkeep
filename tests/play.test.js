@@ -13,6 +13,9 @@ import {
   flakeRate,
   jobLimit,
   labRoute,
+  orderFor,
+  orderingNote,
+  testEntry,
   repeatCount,
   resolve,
   runTestSuite,
@@ -552,4 +555,192 @@ test("runTestSuite writes suite_wall_s/suite_pass/engine_crash and per-check out
     "fixture boot",
     "fixture import",
   ]);
+});
+
+// JL-23-A2: a sketch directory with two test scripts, and a fake Godot run
+// whose finish times are scripted per label.
+async function fakeSketch() {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-play-stream-"));
+  await mkdir(path.join(dir, "tests"), { recursive: true });
+  await writeFile(path.join(dir, "tests", "a_test.gd"), "extends SceneTree\n");
+  await writeFile(path.join(dir, "tests", "b_test.gd"), "extends SceneTree\n");
+  return { entry: { id: "fake", directory: dir }, done: () => rm(dir, { recursive: true, force: true }) };
+}
+
+function scriptedRun(plan, events) {
+  return (label) =>
+    new Promise((resolveRun) => {
+      const { ms, ok } = plan[label.replace(/^fake /, "")];
+      events.push(`start ${label}`);
+      setTimeout(() => {
+        events.push(`end ${label}`);
+        resolveRun({ label, ok, status: ok ? 0 : 1, crashed: false, output: "" });
+      }, ms);
+    });
+}
+
+test("the test verb still reports every check in list order after the pool (unchanged output)", async () => {
+  const sketch = await fakeSketch();
+  const events = [];
+  const plan = {
+    import: { ms: 1, ok: true },
+    boot: { ms: 60, ok: true },
+    "a_test.gd": { ms: 5, ok: false },
+    "b_test.gd": { ms: 20, ok: true },
+  };
+  const reported = [];
+  const logged = [];
+  const result = await testEntry(sketch.entry, 3, {
+    run: scriptedRun(plan, events),
+    report: (r) => {
+      reported.push(`${r.label} ${events.includes("end fake boot")}`);
+      return r.ok;
+    },
+    log: (line) => logged.push(line),
+  });
+  assert.deepEqual(reported, ["fake import false", "fake boot true", "fake a_test.gd true", "fake b_test.gd true"]);
+  assert.deepEqual(logged, []);
+  assert.equal(result.ok, false);
+  assert.equal(result.first_fail_s, undefined);
+  const source = await import("node:fs/promises").then((fs) => fs.readFile(path.join(root, "scripts/play.mjs"), "utf8"));
+  assert.match(source, /const entryResult = await testEntry\(entry, limit\);/, "runSuite passes no stream option");
+  await sketch.done();
+});
+
+test("watch streams each check as it finishes and prints one RED line at the first failure", async () => {
+  const sketch = await fakeSketch();
+  const events = [];
+  const plan = {
+    import: { ms: 1, ok: true },
+    boot: { ms: 80, ok: true },
+    "a_test.gd": { ms: 10, ok: false },
+    "b_test.gd": { ms: 30, ok: false },
+  };
+  const reported = [];
+  const logged = [];
+  const started = Date.now();
+  const result = await testEntry(sketch.entry, 3, {
+    stream: true,
+    started,
+    run: scriptedRun(plan, events),
+    report: (r) => {
+      reported.push(`${r.label} ${events.includes("end fake boot")}`);
+      return r.ok;
+    },
+    log: (line) => logged.push({ line, bootDone: events.includes("end fake boot") }),
+  });
+  assert.deepEqual(reported, ["fake import false", "fake a_test.gd false", "fake b_test.gd false", "fake boot true"]);
+  assert.equal(logged.length, 1, "one RED line, at the first failure only");
+  assert.match(logged[0].line, /RED.* fake a_test\.gd after \d+\.\d s/);
+  assert.equal(logged[0].bootDone, false, "printed while other checks still run");
+  assert.ok(events.includes("end fake boot"), "no check is killed early");
+  assert.equal(result.results.length, 4);
+  assert.ok(result.first_fail_s >= 0 && result.first_fail_s < 1);
+  await sketch.done();
+});
+
+test("a failed import returns at once, without waiting for the order (N9)", async () => {
+  const sketch = await fakeSketch();
+  const plan = { import: { ms: 1, ok: false } };
+  const t0 = Date.now();
+  const result = await testEntry(sketch.entry, 2, {
+    stream: true,
+    order: new Promise(() => {}),
+    run: scriptedRun(plan, []),
+    report: (r) => r.ok,
+    log: () => {},
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.order, undefined);
+  assert.ok(Date.now() - t0 < 500);
+  await sketch.done();
+});
+
+test("an applied order is returned so watch can say which order ran", async () => {
+  const sketch = await fakeSketch();
+  const events = [];
+  const plan = {
+    import: { ms: 1, ok: true },
+    boot: { ms: 1, ok: true },
+    "a_test.gd": { ms: 1, ok: true },
+    "b_test.gd": { ms: 1, ok: true },
+  };
+  const used = { order: ["b_test.gd", "boot", "a_test.gd"], source: "jev" };
+  const result = await testEntry(sketch.entry, 1, {
+    stream: true,
+    order: Promise.resolve(used),
+    run: scriptedRun(plan, events),
+    report: (r) => r.ok,
+    log: () => {},
+  });
+  assert.deepEqual(events.filter((e) => e.startsWith("start")), [
+    "start fake import",
+    "start fake b_test.gd",
+    "start fake boot",
+    "start fake a_test.gd",
+  ]);
+  assert.equal(result.order, used);
+  await sketch.done();
+});
+
+test("the ordering note says when order can change nothing", () => {
+  assert.equal(
+    orderingNote(8, 8),
+    "ordering: 8 checks, 8 at a time; every check starts at once, so the order changes nothing here (it matters only when checks outnumber jobs)",
+  );
+  assert.equal(
+    orderingNote(8, 2),
+    "ordering: 8 checks, 2 at a time; the order decides which checks run first",
+  );
+});
+
+test("watch asks for no order when every check starts at once", async () => {
+  let asked = 0;
+  const request = async () => {
+    asked += 1;
+    return { order: [], source: "jev" };
+  };
+  const names = ["boot", "a.gd", "b.gd", "c.gd"];
+  assert.equal(orderFor({ directory: "/x" }, names, "src/a.gd", 8, { request }), undefined);
+  assert.equal(orderFor({ directory: "/x" }, names, "src/a.gd", 4, { request }), undefined);
+  assert.equal(asked, 0, "no child, no call, no cache write");
+});
+
+test("watch asks for an order when checks outnumber jobs, and never on the first run", async () => {
+  const seen = [];
+  const request = async (entry, names, saved) => {
+    seen.push({ names, saved });
+    return { order: names, source: "current", reason: "stub" };
+  };
+  const names = ["boot", "a.gd", "b.gd", "c.gd"];
+  const order = orderFor({ directory: "/x" }, names, "src/a.gd", 2, { request });
+  assert.deepEqual((await order).order, names);
+  assert.deepEqual(seen, [{ names, saved: "src/a.gd" }]);
+  assert.equal(orderFor({ directory: "/x" }, names, undefined, 2, { request }), undefined);
+  assert.equal(seen.length, 1);
+});
+
+test("a throwing reporter cannot stop the pool; every check still runs and returns", async () => {
+  const sketch = await fakeSketch();
+  const events = [];
+  const plan = {
+    import: { ms: 1, ok: true },
+    boot: { ms: 30, ok: true },
+    "a_test.gd": { ms: 5, ok: false },
+    "b_test.gd": { ms: 10, ok: true },
+  };
+  const result = await testEntry(sketch.entry, 3, {
+    stream: true,
+    run: scriptedRun(plan, events),
+    report: (r) => {
+      if (r.label !== "fake import") throw new Error("reporter broke");
+      return r.ok;
+    },
+    log: () => {
+      throw new Error("log broke");
+    },
+  });
+  assert.equal(result.results.length, 4);
+  assert.deepEqual(events.filter((e) => e.startsWith("end")).length, 4, "no child left running");
+  await sketch.done();
 });
