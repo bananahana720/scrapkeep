@@ -30,13 +30,15 @@ const MODES := [PlayerBall.KINEMATIC, PlayerBall.RIGID]
 const TARGET_ENEMY := 0
 const EVADE_CLEAR := 15.0
 # Ticks at 90 Hz each placement may take, in both modes: 1.5x the slower mode's ticks
-# when this was written (push 712, kicker 363, stomp 121, ram 192, evade 250, stuck 124),
-# rounded up to a multiple of 30.
+# when this was written (push 712, kicker 363, stomp 121, ram 151, evade 250, stuck 124),
+# rounded up to a multiple of 30. They are regression guards, not reach criteria
+# (JL-13 review, N2). JL-21 moved the ram placement off the shallow kicker and
+# re-derived its budget.
 const BUDGETS := {
 	"push_objective": 1080,
 	"hit_kicker": 570,
 	"stomp_target": 210,
-	"ram_target": 300,
+	"ram_target": 240,
 	"evade_hazard": 390,
 	"stuck": 210,
 }
@@ -145,7 +147,7 @@ func _place(trial: Dictionary) -> void:
 
 
 # One fixed placement per intent. The enemy intents all use dummy 0, which starts at
-# (18, 30) on the flat west of the pad; each trial has its own world, so they share it.
+# (18, 30), south-west of the pad; each trial has its own world, so they share it.
 func _placement(name: String) -> Dictionary:
 	var enemy := {"enemy": TARGET_ENEMY}
 	var bench: Vector3 = Scenarios.Geo.bench_point()
@@ -158,7 +160,9 @@ func _placement(name: String) -> Dictionary:
 		"stomp_target":
 			return _spot("stomp_target", Field.drop_point(6.0, 30.0), enemy)
 		"ram_target":
-			return _spot("ram_target", Field.drop_point(-2.0, 30.0), enemy)
+			# East of the shallow kicker's footprint (x -13..1, z 15..37); inside it the
+			# ball started wedged under the box (JL-13 review, N1).
+			return _spot("ram_target", Field.drop_point(8.0, 12.0), enemy)
 		"evade_hazard":
 			return _spot("evade_hazard", Field.drop_point(24.0, 24.0), enemy)
 		"stuck":
@@ -347,6 +351,14 @@ func _check_knock_collapse() -> void:
 	var expected := [[10, 2, "ram", 46], [20, 3, "stomp", 1], [55 + Telemetry.KNOCK_GAP_TICKS * 2, 2, "stomp", 1]]
 	_report("knock collapse", got == expected and telemetry.raw_waves == 48 and telemetry.knock_count("ram") == 1,
 		"48 waves collapse to %s (gap %d ticks)" % [JSON.stringify(got), Telemetry.KNOCK_GAP_TICKS])
+	# JevState's sim block and Scenarios.Run count the same stretches (JL-13 review, N5).
+	var state := JevState.new(null)
+	state.knocks = view.knocks
+	var counts := {}
+	for kind in ["stomp", "ram", "other"]:
+		counts[kind] = [state.knock_count(kind), telemetry.knock_count(kind)]
+	_report("knock count", counts.values().all(func(pair): return pair[0] == pair[1]),
+		"JevState vs Telemetry per kind %s" % JSON.stringify(counts))
 
 
 # The lip jev_agent.gd computes is the built kicker's top far edge.
@@ -359,9 +371,10 @@ func _check_kicker_lip(lab) -> void:
 				if shape is CollisionShape3D and shape.shape is BoxShape3D:
 					var size: Vector3 = shape.shape.size
 					built = child.transform * Vector3(0.0, size.y * 0.5, size.z * 0.5)
-	var centre := Vector2(JevState.KICKER_AT.x, JevState.KICKER_AT.y)
-	_report("kicker lip", built.distance_to(lip) < 0.001, "lip (%.2f, %.2f, %.2f), built (%.2f, %.2f, %.2f); JevState.KICKER_AT is %.1f m short of it"
-		% [lip.x, lip.y, lip.z, built.x, built.y, built.z, centre.distance_to(Vector2(lip.x, lip.z))])
+	var offered: Vector3 = JevState.kicker_lip()
+	_report("kicker lip", built.distance_to(lip) < 0.001 and built.distance_to(offered) < 0.001,
+		"lip (%.2f, %.2f, %.2f), built (%.2f, %.2f, %.2f), JevState's hit_kicker point (%.2f, %.2f, %.2f)"
+		% [lip.x, lip.y, lip.z, built.x, built.y, built.z, offered.x, offered.y, offered.z])
 
 
 func _out_dir() -> String:

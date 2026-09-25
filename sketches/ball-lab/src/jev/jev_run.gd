@@ -6,7 +6,7 @@ extends SceneTree
 #
 #   godot --headless --fixed-fps 90 --path sketches/ball-lab --script res://src/jev/jev_run.gd \
 #     -- --io=<dir> --scenario=<id> [--seed=N] [--mode=kinematic|rigid] [--snapshot-every=D]
-#     [--hold-ticks=k] [--intent-timeout-s=S] [--max-ticks=N]
+#     [--hold-ticks=k] [--intent-timeout-s=S] [--max-ticks=N] [--time-limit-s=L]
 #
 # `--fixed-fps 90` makes one frame one physics tick, so a run goes faster than real
 # time and the summary line's frame count equals its tick count. The trial counts
@@ -15,7 +15,10 @@ extends SceneTree
 # (OS.delay_msec, never tree.paused, which would pause Jolt) until the intent for that
 # state arrives, and applies it at exactly t + k. It ends when the scenario succeeds
 # or times out, or at --max-ticks. Exit codes follow PROTOCOL.md: 0 done, 1 internal,
-# 4 intent_invalid, 5 intent_timeout.
+# 4 intent_invalid, 5 intent_timeout. --time-limit-s replaces the scenario's own time
+# limit, for JL-21's calibration probes past it. The last stdout lines are the
+# scenario's own result as `jev_run: scenario {json}`, which harness.mjs records, and
+# a summary.
 #
 # Trial holds the whole contract so tests/jev_bridge_test.gd can run it on a lab of
 # its own; this SceneTree only parses the arguments and owns the process.
@@ -63,6 +66,8 @@ func _process(_delta: float) -> bool:
 
 
 func _end() -> void:
+	if _trial.run != null:
+		print("jev_run: scenario %s" % JSON.stringify(_trial.scenario_result()))
 	print("jev_run: %s; %d frames, %d ticks" % [_trial.summary(), _frames, _trial.view_tick()])
 	_trial.close()
 	_lab.queue_free()
@@ -88,6 +93,7 @@ class Trial:
 		"hold_ticks": 26,
 		"intent_timeout_s": 30,
 		"max_ticks": 0,
+		"time_limit_s": 0,
 	}
 	const EXIT := {"complete": 0, "aborted": 0, "internal": 1, "intent_invalid": 4, "intent_timeout": 5}
 	const POLL_MS := 2
@@ -126,7 +132,7 @@ class Trial:
 	# `--key=value` user arguments. A malformed one leaves `usage` set.
 	static func parse_args(args: PackedStringArray) -> Dictionary:
 		var out := {}
-		var numbers := ["seed", "snapshot-every", "hold-ticks", "intent-timeout-s", "max-ticks"]
+		var numbers := ["seed", "snapshot-every", "hold-ticks", "intent-timeout-s", "max-ticks", "time-limit-s"]
 		for arg in args:
 			var at := arg.find("=")
 			if not arg.begins_with("--") or at < 0:
@@ -164,11 +170,15 @@ class Trial:
 			return _stop("internal", null, 0, "unknown physics mode %s" % settings["mode"])
 		if scenario.is_empty():
 			return _stop("internal", null, 0, "unknown scenario %s" % settings.get("scenario", ""))
-		if every < 1 or hold < 0 or hold >= every or settings["intent_timeout_s"] < 1 or settings["max_ticks"] < 0:
-			return _stop("internal", null, 0, "bad schedule D=%d k=%d timeout %d s" % [every, hold, settings["intent_timeout_s"]])
+		if every < 1 or hold < 0 or hold >= every or settings["intent_timeout_s"] < 1 or settings["max_ticks"] < 0 \
+				or settings["time_limit_s"] < 0:
+			return _stop("internal", null, 0, "bad schedule D=%d k=%d timeout %d s limit %d s" % [every, hold,
+				settings["intent_timeout_s"], settings["time_limit_s"]])
+		if settings["time_limit_s"] > 0:
+			scenario["time_limit_s"] = float(settings["time_limit_s"])
 		seed(settings["seed"])
 		lab.player.set_mode(mode)
-		Scenarios.place(lab, scenario)
+		Scenarios.place(lab, scenario, settings["seed"])
 		agent = JevAgent.new(lab)
 		agent.install()
 		run = Scenarios.Run.new(scenario, Engine.physics_ticks_per_second)
@@ -202,7 +212,12 @@ class Trial:
 			view.advance()
 		var t: int = view.tick
 		var every: int = settings["snapshot_every"]
-		if t % every == 0:
+		# The end is judged before a state falls due, so none is written once the trial
+		# has ended (JL-17 review, N1). An intent due this tick still applies: its state
+		# was written while the trial ran, and PROTOCOL.md needs its intent event.
+		var limit: int = settings["max_ticks"]
+		var ended: bool = run.result() != "running" or (limit > 0 and t >= limit)
+		if not ended and t % every == 0:
 			if _abort_seen():
 				return _done("aborted")
 			var state := {"seq": t / every, "tick": t, "held": _held}
@@ -220,8 +235,7 @@ class Trial:
 		if not telemetry.errors.is_empty():
 			_stop("internal", null, t, "events: %s" % JSON.stringify(telemetry.errors[0]))
 			return true
-		var limit: int = settings["max_ticks"]
-		if run.result() != "running" or (limit > 0 and t >= limit):
+		if ended:
 			return _done("complete")
 		return false
 
@@ -299,6 +313,27 @@ class Trial:
 	func close() -> void:
 		if view != null:
 			view.detach()
+
+	# The scenario's own judgement, for the harness's batch record (JL-17 review, N2).
+	# PROTOCOL.md's done.json is closed, so this travels on stdout as one JSON line.
+	func scenario_result() -> Dictionary:
+		var progress: Dictionary = run.progress
+		return {
+			"id": run.scenario["label"],
+			"result": run.result(),
+			"success_tick": run.success_tick,
+			"limit_ticks": progress["limit_ticks"],
+			"tick": view_tick(),
+			"knocks": {"stomp": telemetry.knock_count("stomp"), "ram": telemetry.knock_count("ram")},
+			"knocked": progress["knocked"].size(),
+			"gates": progress["gates"],
+			"route": progress["route"],
+			"bench_tick": progress["bench_tick"],
+			"lip": progress["lip"],
+			"anomalies": progress["anomalies"].size(),
+			"applied": applied,
+			"blocked": blocked,
+		}
 
 	# Knocks are Telemetry's collapsed contact stretches, not JevState's raw waves
 	# (JL-13 review).

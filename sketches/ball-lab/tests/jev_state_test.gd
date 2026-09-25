@@ -426,10 +426,32 @@ func _check_scenarios() -> void:
 
 	var low := Scenarios.make("kicker-gap@14")
 	var high := Scenarios.make("kicker-gap@28")
+	var up_ramp: Vector3 = high["velocity"].normalized()
 	var ok_range: bool = not low.is_empty() and not high.is_empty() and Scenarios.make("kicker-gap@13.9").is_empty() \
-		and Scenarios.make("kicker-gap@28.1").is_empty() and high["velocity"] == Vector3(0.0, 0.0, 28.0) \
+		and Scenarios.make("kicker-gap@28.1").is_empty() and is_equal_approx(high["velocity"].length(), 28.0) \
+		and up_ramp.y > 0.5 and up_ramp.z > 0.8 and high["spawn"].distance_to(JevState.kicker_lip()) < 2.5 \
 		and Scenarios.make("kicker-gap")["params"]["speed"] == Scenarios.KICKER_SPEED_DEFAULT
-	_report("kicker-gap", ok_range, "speed parameter accepts 14 and 28 m/s, refuses 13.9 and 28.1")
+	_report("kicker-gap", ok_range, "speed parameter accepts 14 and 28 m/s up the ramp from just short of the lip, refuses 13.9 and 28.1")
+
+	# Seeded jitter: the same seed gives the same spawn, every spawn stays in its disc,
+	# and no seed means the nominal spawn.
+	var jitter_ok := true
+	var jittered := 0
+	for scenario in scenarios:
+		var radius: float = scenario["jitter_m"]
+		if radius <= 0.0:
+			jitter_ok = jitter_ok and Scenarios.spawn_for(scenario, 5) == scenario["spawn"]
+			continue
+		jittered += 1
+		jitter_ok = jitter_ok and Scenarios.spawn_for(scenario) == scenario["spawn"]
+		var moved := 0
+		for trial_seed in range(1000, 1200):
+			var at: Vector3 = Scenarios.spawn_for(scenario, trial_seed)
+			var off := Vector2(at.x - scenario["spawn"].x, at.z - scenario["spawn"].z).length()
+			jitter_ok = jitter_ok and at.is_finite() and off <= radius + 0.001 and at == Scenarios.spawn_for(scenario, trial_seed)
+			moved += 1 if off > 0.01 else 0
+		jitter_ok = jitter_ok and moved == 200
+	_report("jitter", jitter_ok and jittered == 4, "%d scenarios jitter their spawn by seed within %.0f m; the rest ignore the seed" % [jittered, Scenarios.JITTER_M])
 
 	var crossing := Scenarios.Geo.crosses(Vector2(0, -1), Vector2(0, 1), Vector2(-1, 0), Vector2(1, 0)) \
 		and not Scenarios.Geo.crosses(Vector2(0, 1), Vector2(0, 2), Vector2(-1, 0), Vector2(1, 0))

@@ -9,6 +9,11 @@
 // delay and check that each intent applies at exactly state.tick + k and that
 // trace_hash does not depend on the delays, in each physics mode. A rigid-mode
 // divergence is reported as stochastic, not failed.
+//
+// JL-21 adds the scenario's own result on stdout and in the record, the
+// `@<speed>` scenario ids, --time-limit-s, no state on the end tick, and the
+// widened determinism evidence: dummy-knock with choices and contact, and a
+// negative control where k or one answer changes the hash.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
@@ -50,7 +55,7 @@ const noGodot = existsSync(GODOT_BINARY)
   ? false
   : `the Godot binary is missing at ${GODOT_BINARY}; set GODOT_BIN to run the bridge cases`;
 const MODES = ["kinematic", "rigid"];
-// Six snapshots of downhill-run; enough intents to see every delay pattern.
+// Five snapshots of downhill-run (none at the end tick); enough intents to see every delay pattern.
 const BRIDGE_TICKS = 5 * TIMING.snapshot_every;
 
 function git(repository, ...args) {
@@ -199,6 +204,123 @@ test("env and cwd from the launch reach the spawned process", async (t) => {
     process.env.PATH,
     "the launch env adds to the harness env",
   );
+});
+
+// jev_run.gd prints the scenario's own judgement as one stdout line, because
+// done.json is closed; the harness keeps it per trial and sums it per batch.
+test("the scenario's own result from stdout reaches the trial entry and the batch record", async (t) => {
+  const { runs } = await fixture(t);
+  const fake = fakeGodot();
+  const lines = [
+    {
+      id: "dummy-knock",
+      result: "success",
+      success_tick: 700,
+      limit_ticks: 5400,
+      tick: 700,
+      knocks: { stomp: 1, ram: 2 },
+      knocked: 3,
+      lip: [],
+    },
+    {
+      id: "dummy-knock",
+      result: "timeout",
+      success_tick: -1,
+      limit_ticks: 5400,
+      tick: 5401,
+      knocks: { stomp: 0, ram: 1 },
+      knocked: 1,
+      lip: [],
+    },
+  ];
+  const launch = (request) => {
+    const { command, args } = fake(request);
+    const line = `jev_run: scenario ${JSON.stringify(lines[request.trial])}`;
+    return {
+      command: process.execPath,
+      args: [
+        "-e",
+        `console.log("Godot Engine banner");
+         const run = require("node:child_process").spawnSync(${JSON.stringify(command)}, ${JSON.stringify(args)}, { stdio: "inherit" });
+         console.log(${JSON.stringify(line)});
+         console.log("jev_run: dummy-knock kinematic seed 0: complete at tick 700");
+         process.exit(run.status ?? 1);`,
+      ],
+    };
+  };
+  launch.label = "fake-godot with a scenario line";
+  const { record, trials } = await runBatch({
+    scenario: "downhill-run",
+    arm: "scripted",
+    trials: 2,
+    runs,
+    launch,
+  });
+  assert.deepEqual(
+    trials.map((entry) => entry.outcome),
+    ["complete", "complete"],
+  );
+  assert.deepEqual(trials[0].scenario_result, lines[0]);
+  assert.deepEqual(trials[1].scenario_result, lines[1]);
+  assert.deepEqual(record.config.scenario_results, {
+    success: 1,
+    timeout: 1,
+    running: 0,
+    unreported: 0,
+  });
+  assert.deepEqual(record.kris.unreachable_scenarios, {
+    value: 0,
+    n: 1,
+    ci: null,
+  });
+  assert.deepEqual(record.kpis.stomp_ram_split, {
+    value: 0.25,
+    n: 4,
+    ci: null,
+  });
+});
+
+test("a parameterised scenario such as kicker-gap@21 runs under a slug label", async (t) => {
+  const { runs } = await fixture(t);
+  const seen = [];
+  const launch = (request) => {
+    seen.push(request.scenario);
+    return { command: process.execPath, args: ["-e", ""] };
+  };
+  const { record } = await runBatch({
+    scenario: "kicker-gap@21.5",
+    arm: "scripted",
+    runs,
+    launch,
+  });
+  assert.deepEqual(seen, ["kicker-gap@21.5"]);
+  assert.equal(record.config.scenario, "kicker-gap@21.5");
+  assert.match(record.id, /-kicker-gap-at-21p5-scripted-/);
+  for (const scenario of ["kicker-gap@", "kicker-gap@fast", "@21", "a@1@2"]) {
+    await assert.rejects(
+      runBatch({ scenario, arm: "scripted", runs }),
+      /is not a slug/,
+      scenario,
+    );
+  }
+});
+
+test("a launch that prints no scenario line leaves the result unreported", async (t) => {
+  const { runs } = await fixture(t);
+  const { record, trials } = await runBatch({
+    scenario: "downhill-run",
+    arm: "scripted",
+    runs,
+  });
+  assert.equal(trials[0].scenario_result, null);
+  assert.deepEqual(record.config.scenario_results, {
+    success: 0,
+    timeout: 0,
+    running: 0,
+    unreported: 1,
+  });
+  assert.equal(record.kris.unreachable_scenarios, undefined);
+  assert.equal(record.kpis.stomp_ram_split, undefined);
 });
 
 test("a stalled launch's whole process group is killed, not only its direct child", async (t) => {
@@ -361,6 +483,9 @@ async function drive(
   {
     mode,
     seed = 7,
+    scenario = "downhill-run",
+    holdTicks = TIMING.hold_ticks,
+    armName = "scripted",
     delays = () => 0,
     answer,
     silent,
@@ -373,11 +498,11 @@ async function drive(
   const launch = godotLaunch({ mode, maxTicks, intentTimeoutS });
   const { command, args, env } = launch({
     io,
-    scenario: "downhill-run",
+    scenario,
     seed,
     trial: 0,
     snapshotEvery: TIMING.snapshot_every,
-    holdTicks: TIMING.hold_ticks,
+    holdTicks,
   });
   const child = spawn(command, args, {
     env: { ...process.env, ...env },
@@ -401,7 +526,8 @@ async function drive(
       resolve();
     }),
   );
-  const arm = createArm("scripted", { seed });
+  const arm = createArm(armName, { seed });
+  let multi = 0;
   const started = Date.now();
   for (let seq = 0; ; seq += 1) {
     const name = fileName("state", seq);
@@ -419,6 +545,7 @@ async function drive(
     if (silent !== undefined && seq >= silent) break;
     const state = JSON.parse(await readFile(path.join(io, name), "utf8"));
     const offered = offeredOptions(state.jev);
+    if (offered.length > 1) multi += 1;
     const choice =
       offered.length === 1
         ? { intent: offered[0].id, source: "forced", meta: arm.forcedMeta() }
@@ -432,10 +559,10 @@ async function drive(
       protocol: PROTOCOL,
       seq,
       intent: choice.intent,
-      arm: "scripted",
+      arm: armName,
       source: choice.source,
       meta: choice.meta,
-      ...(answer?.(seq, offered) ?? {}),
+      ...(answer?.(seq, offered, choice) ?? {}),
     };
     await sleep(delays(seq));
     await writeAtomic(path.join(io, fileName("intent", seq)), intent);
@@ -446,7 +573,7 @@ async function drive(
     if (!name.endsWith(".tmp"))
       files[name] = await readFile(path.join(io, name), "utf8");
   }
-  return { code, files, stdout };
+  return { code, files, stdout, multi };
 }
 
 const events = (files) =>
@@ -556,6 +683,110 @@ for (const mode of MODES) {
   );
 }
 
+// JL-21 (JL-17 review, N5): the same property on a contact scenario whose
+// snapshots offer real choices, so intent timing could matter; the three
+// delay patterns are also three repeated runs of identical inputs. Rigid mode
+// makes contact too, but the game does not credit a rigid stomp (the known
+// limit in jev_agent_test.gd), so only kinematic must show knock events.
+const CONTACT = {
+  scenario: "dummy-knock",
+  maxTicks: 10 * TIMING.snapshot_every,
+};
+const traceHash = (result) => JSON.parse(result.files["done.json"]).trace_hash;
+
+for (const mode of MODES) {
+  test(
+    `bridge, ${mode}: dummy-knock, with choices and knocks, keeps one trace_hash across responder delays`,
+    { skip: noGodot, timeout: 240_000 },
+    async (t) => {
+      const { temporary } = await fixture(t);
+      const runs = {};
+      for (const [name, pattern] of Object.entries(PATTERNS)) {
+        const result = await drive(t, {
+          mode,
+          ...CONTACT,
+          io: path.join(temporary, mode, name),
+          delays: pattern(31 + name.length),
+        });
+        assert.equal(result.code, 0, result.stdout);
+        assert.deepEqual(validateTrial(result.files), [], `${mode}/${name}`);
+        const done = JSON.parse(result.files["done.json"]);
+        runs[name] = {
+          hash: done.trace_hash,
+          snapshots: done.snapshots,
+          multi: result.multi,
+          knocks: events(result.files).filter((e) => e.kind === "knock")
+            .length,
+        };
+      }
+      t.diagnostic(`${mode}: ${JSON.stringify(runs)}`);
+      for (const [name, run] of Object.entries(runs)) {
+        if (mode === "kinematic")
+          assert.ok(run.knocks >= 1, `${mode}/${name} made contact`);
+        assert.ok(
+          run.multi * 2 > run.snapshots,
+          `${mode}/${name}: most snapshots offer two or more options`,
+        );
+      }
+      const hashes = new Set(Object.values(runs).map((run) => run.hash));
+      if (mode === "rigid" && hashes.size > 1) {
+        t.diagnostic(
+          `rigid: STOCHASTIC, ${hashes.size} distinct trace_hash values over ${Object.keys(runs).length} runs`,
+        );
+        return;
+      }
+      assert.equal(hashes.size, 1, `${mode} trace_hash differs across delays`);
+    },
+  );
+}
+
+// The negative control: hash equality above is only evidence if the hash
+// moves when the inputs do. A later k, or one different answer, must change it,
+// and the changed answer must leave every event before it applies untouched.
+test(
+  "bridge, kinematic: trace_hash changes when k or one answer changes",
+  { skip: noGodot, timeout: 120_000 },
+  async (t) => {
+    const { temporary } = await fixture(t);
+    const base = await drive(t, {
+      mode: "kinematic",
+      ...CONTACT,
+      io: path.join(temporary, "base"),
+    });
+    const laterK = await drive(t, {
+      mode: "kinematic",
+      ...CONTACT,
+      holdTicks: 54,
+      io: path.join(temporary, "k54"),
+    });
+    let changed = null;
+    const otherAnswer = await drive(t, {
+      mode: "kinematic",
+      ...CONTACT,
+      io: path.join(temporary, "answer"),
+      answer: (seq, offered, choice) => {
+        if (changed !== null || seq < 3 || offered.length < 2) return undefined;
+        changed = seq;
+        return { intent: offered.find((one) => one.id !== choice.intent).id };
+      },
+    });
+    for (const result of [base, laterK, otherAnswer]) {
+      assert.equal(result.code, 0, result.stdout);
+      assert.deepEqual(validateTrial(result.files), []);
+    }
+    assert.notEqual(changed, null, "some snapshot offered a choice");
+    assert.notEqual(traceHash(laterK), traceHash(base), "k 54 vs 26");
+    assert.notEqual(traceHash(otherAnswer), traceHash(base), "one answer");
+    const applies = changed * TIMING.snapshot_every + TIMING.hold_ticks;
+    const before = (result) =>
+      events(result.files).filter((event) => event.tick < applies);
+    assert.deepEqual(before(otherAnswer), before(base));
+    t.diagnostic(
+      `base ${traceHash(base)}, k54 ${traceHash(laterK)}, answer changed at seq ${changed} ${traceHash(otherAnswer)}`,
+    );
+  },
+);
+
 test(
   "bridge: the harness drives real Godot through godotLaunch to the same trace",
   { skip: noGodot, timeout: 120_000 },
@@ -571,6 +802,23 @@ test(
     assert.equal(trials[0].outcome, "complete", JSON.stringify(trials[0]));
     assert.deepEqual(trials[0].errors, []);
     assert.match(record.config.launcher, /godot/);
+    // The trial ends at tick 450, a multiple of D: no state is written there
+    // (JL-17 review, N1), and max-ticks leaves the scenario running.
+    const done = JSON.parse(
+      await readFile(path.join(runs.root, record.id, trials[0].io, "done.json"), "utf8"),
+    );
+    assert.equal(done.tick, BRIDGE_TICKS);
+    assert.equal(trials[0].snapshots, BRIDGE_TICKS / TIMING.snapshot_every);
+    assert.equal(done.snapshots, trials[0].snapshots);
+    assert.equal(trials[0].scenario_result?.id, "downhill-run");
+    assert.equal(trials[0].scenario_result?.result, "running");
+    assert.equal(trials[0].scenario_result?.tick, BRIDGE_TICKS);
+    assert.deepEqual(record.config.scenario_results, {
+      success: 0,
+      timeout: 0,
+      running: 1,
+      unreported: 0,
+    });
     const direct = await drive(t, {
       mode: "kinematic",
       seed: 0,
@@ -580,6 +828,35 @@ test(
       JSON.parse(direct.files["done.json"]).trace_hash,
       trials[0].trace_hash,
     );
+  },
+);
+
+// JL-21's limit calibration probes past a scenario's limit when the scripted
+// p90 is censored there; --time-limit-s replaces the limit for that trial.
+test(
+  "bridge: --time-limit-s replaces the scenario's limit and the result line reports it",
+  { skip: noGodot, timeout: 60_000 },
+  async (t) => {
+    const { runs } = await fixture(t);
+    const base = godotLaunch({ mode: "kinematic" });
+    const launch = (request) => {
+      const spec = base(request);
+      return { ...spec, args: [...spec.args, "--time-limit-s=2"] };
+    };
+    launch.label = `${base.label} time-limit 2 s`;
+    const { trials } = await runBatch({
+      scenario: "downhill-run",
+      arm: "scripted",
+      seed: 0,
+      runs,
+      launch,
+    });
+    assert.equal(trials[0].outcome, "complete", JSON.stringify(trials[0]));
+    assert.deepEqual(trials[0].errors, []);
+    const result = trials[0].scenario_result;
+    assert.equal(result.limit_ticks, 2 * TIMING.tick_hz);
+    assert.equal(result.result, "timeout");
+    assert.equal(result.tick, 2 * TIMING.tick_hz + 1);
   },
 );
 
