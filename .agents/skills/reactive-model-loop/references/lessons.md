@@ -1,6 +1,6 @@
 # Lesson ledger
 
-Each lesson is one rule with its status, origin and evidence. `SKILL.md` and the other references cite lessons by id. Statuses:
+Each lesson is one rule with its status, origin and evidence. This skill's SKILL.md and the other references cite lessons by id. Statuses:
 
 - `provisional`: the default. One run, one review or one source supports it.
 - `established`: a second independent run or review supports it.
