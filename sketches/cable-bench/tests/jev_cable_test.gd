@@ -2,8 +2,9 @@ extends SceneTree
 
 # JL-26: the Jev Lab port on Cable Bench. It checks that stage.gd's seed_override keeps
 # the hand-picked seeds by default and moves all three stage streams together; that the
-# exported state passes protocol v1's validator; that a knocked foe leaves the threats
-# and the attack offers; that hit_kicker carries no speed gate; that take_cache needs
+# exported state passes protocol v1's validator; that a knocked foe that is still alive
+# stays a threat and an attack target, and a dead one leaves (stage-threat-rule 2);
+# that hit_kicker carries no speed gate; that take_cache needs
 # an affordable cache; and that the route from the spawn climbs every switchback to the
 # forge. Headless, no input.
 
@@ -75,6 +76,19 @@ func _seeds() -> void:
 		c._rng.seed != 90210 and c.scrap_field.rng.seed != 4711 and c.director.rng.seed != 1337)
 	_check("two stages with seed_override 5 scatter the same scrap", _scrap(c) == _scrap(d))
 	_check("seed_override 5 scatters different scrap from the default", _scrap(a) != _scrap(c))
+	# N5: seed 0 maps each stream to its default seed, so trial seed 0 replays the
+	# hand-picked stage. Batch trial seeds are batch seed x 1000 + i, so only a batch
+	# run with --seed 0 meets it, at its trial 0.
+	_check("seed_override 0 gives the default seeds", a._seed_for(90210) == 90210 and _seed_with(0, 4711) == 4711)
+
+
+func _seed_with(override: int, default_seed: int) -> int:
+	var stage = _stages[0]
+	var kept: int = stage.seed_override
+	stage.seed_override = override
+	var out: int = stage._seed_for(default_seed)
+	stage.seed_override = kept
+	return out
 
 
 func _state() -> void:
@@ -107,9 +121,16 @@ func _knocked() -> void:
 	stage.player.shockwave.emit(foe.global_position, JevState.STOMP_STRENGTH)
 	var after: Array = view.threats()
 	var offers: Array = view.options(view.jev_block()["state"]).map(func(option): return option["id"])
-	_check("a chaser 8 m away is a threat before the knock", before.any(func(t): return t["kind"] == "chaser"))
-	_check("the knocked chaser leaves the threats", not after.any(func(t): return t["kind"] == "chaser"))
-	_check("and the stomp and ram offers", not offers.has("stomp_target") and not offers.has("ram_target"))
+	var chaser := func(t): return t["kind"] == "chaser"
+	_check("a chaser 8 m away is a threat before the knock", before.any(chaser))
+	_check("the knock is recorded against that chaser", view.knocked.has(String(foe.name)))
+	_check("the knocked chaser, still alive, stays a threat", after.any(chaser))
+	_check("and stays a stomp and ram target", offers.has("stomp_target") and offers.has("ram_target"))
+	foe.take_damage(foe.hp + 1.0)
+	var dead: Array = view.threats()
+	var dead_offers: Array = view.options(view.jev_block()["state"]).map(func(option): return option["id"])
+	_check("a dead chaser leaves the threats", not dead.any(chaser))
+	_check("and the stomp and ram offers", not dead_offers.has("stomp_target") and not dead_offers.has("ram_target"))
 	view.detach()
 
 

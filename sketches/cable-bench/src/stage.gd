@@ -35,7 +35,10 @@ const SCRAP_COUNT := 84
 var test_mode := false
 # A Jev Lab trial sets this before the stage enters the tree, so one trial seed fixes
 # every stage random stream: cache buffs, the scrap scatter and drops, and the
-# director. -1 keeps the hand-picked seeds below.
+# director. -1 keeps the hand-picked seeds below, and so does 0, because each stream's
+# seed is seed_override * 1000003 + its default. That is harmless: seed 0 simply
+# replays the hand-picked stage, and lab batches use trial seeds of batch seed x 1000
+# + i, so only a batch run with --seed 0 meets it, at its trial 0.
 var seed_override := -1
 
 var tuning

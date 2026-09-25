@@ -223,7 +223,7 @@ func seek(out, point: Vector3, arrive := false, avoid := false) -> Vector3:
 
 func _around_foes(dir: Vector3, ahead: float) -> Vector3:
 	var bent := dir
-	for foe in view.foes(true):
+	for foe in view.foes():
 		var rel := _flat(foe.global_position - _at)
 		var along := rel.dot(dir)
 		if along <= 0.0 or along >= ahead:
@@ -519,7 +519,7 @@ func _evade_heading() -> Vector3:
 func _retreat(out) -> Vector3:
 	if _retreat_dir == Vector3.ZERO:
 		var pull := 0.0
-		for foe in view.foes(true):
+		for foe in view.foes():
 			var rel := _flat(foe.global_position - _at)
 			if rel.length() <= TARGET_RANGE:
 				pull += rel.x / maxf(1.0, rel.length())
@@ -530,7 +530,7 @@ func _retreat(out) -> Vector3:
 	var carrot := _at + _retreat_dir * RETREAT_CARROT
 	var dir := seek(out, carrot, false, true)
 	var hunted := false
-	for foe in view.foes(true):
+	for foe in view.foes():
 		if foe.global_position.distance_to(_at) < 6.0:
 			hunted = true
 	if hunted and _near_ground():
@@ -569,11 +569,11 @@ func _ring(out) -> Vector3:
 	return carrot
 
 
-# The goal's foe while it is live and not knocked, else the nearest such foe.
+# The goal's foe while it is live, else the nearest live foe (stage-threat-rule 2: a
+# knocked foe stays a target until it is dead).
 func _foe():
 	var foe = goal.get("foe")
-	if foe != null and is_instance_valid(foe) and not foe.is_queued_for_deletion() \
-			and not view.knocked.has(String(foe.name)):
+	if foe != null and is_instance_valid(foe) and not foe.is_queued_for_deletion() and foe.hp > 0.0:
 		return foe
 	var best = null
 	var best_d := TARGET_RANGE

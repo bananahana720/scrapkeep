@@ -12,11 +12,12 @@ extends RefCounted
 # once per physics tick and `view.snapshot()` whenever a state is due. `run` is an
 # optional `Scenarios.Run`; it supplies the objective and is fed every tick.
 #
-# Knocked foes (the JL-21b rule, carried from JL-21's review): once the ball has
-# knocked a foe in this trial, by stomp or ram, that foe leaves the exported threats
-# and the stomp, ram and evade offers for the rest of the trial, for every arm alike.
-# A knocked Cable Bench foe keeps its remaining HP and keeps chasing, so this hides a
-# live foe; it is the lab's rule, not the game's.
+# Threats (stage-threat-rule 2, the coordinator's JL-26 ruling): a threat leaves the
+# exported state only when the game has taken it out of play. A knocked Cable Bench foe
+# keeps its HP and keeps chasing, so it stays a threat and a stomp, ram and evade
+# target until it is dead or freed; only dead or freed foes are dropped, for every arm
+# alike. Ball-lab keeps its own rule, since its dummies cannot die. `knocked` still
+# records which foes the ball has knocked, for the result line.
 #
 # Speed gates (JL-21 review, F4). hit_kicker carries no requires_speed_ms: the east
 # ledge needs about 26 m/s at the ramp, which no ball has at decision time, and the
@@ -71,7 +72,8 @@ var tick_hz := 90
 # of the foe the wave was emitted on, or "". These are raw waves; knock_count() counts
 # contact stretches.
 var knocks: Array = []
-# Names of the foes the ball has knocked by stomp or ram in this trial.
+# Names of the foes the ball has knocked by stomp or ram in this trial. Recorded only;
+# it filters nothing.
 var knocked := {}
 var cableway_hits := 0
 # Foe contact hits on the ball by foe kind, seen when a foe's contact cooldown restarts
@@ -123,7 +125,7 @@ func advance() -> void:
 
 # A foe's contact cooldown only rises when it has just damaged the ball.
 func _watch_contacts() -> void:
-	for foe in foes(true):
+	for foe in foes():
 		var name := String(foe.name)
 		var clock: float = foe._contact_clock
 		if clock > float(_contact_clocks.get(name, 0.0)):
@@ -158,7 +160,7 @@ func _on_struck(body: Node) -> void:
 func _foe_at(at: Vector3) -> String:
 	var best := ""
 	var best_d := INF
-	for foe in foes(true):
+	for foe in foes():
 		var d: float = foe.global_position.distance_to(at)
 		if d < best_d:
 			best_d = d
@@ -184,15 +186,13 @@ func time_s() -> int:
 	return int(floor(float(tick) / float(tick_hz)))
 
 
-# Live foes in spawn order. `with_knocked` false leaves out the ones knocked this trial.
-func foes(with_knocked := false) -> Array:
+# Live foes in spawn order: dead (hp 0) and freed ones are out of play.
+func foes() -> Array:
 	var out := []
 	if stage.director == null:
 		return out
 	for child in stage.director.get_children():
 		if not (child is Foe) or child.is_queued_for_deletion() or child.hp <= 0.0:
-			continue
-		if not with_knocked and knocked.has(String(child.name)):
 			continue
 		out.append(child)
 	return out
@@ -270,7 +270,7 @@ func sim_block() -> Dictionary:
 		"hp": stage.run.hp,
 		"phase": stage.run.phase_name(),
 		"stage_time": stage.run.stage_time,
-		"foes": foes(true).size(),
+		"foes": foes().size(),
 		"knocked": knocked.size(),
 		"knocks": {"stomp": knock_count("stomp"), "ram": knock_count("ram"), "other": knock_count("other")},
 	}
@@ -298,8 +298,8 @@ func buffs() -> Array:
 
 
 # Threat entries with their nodes, most urgent first: loads and shots that arrive
-# within HAZARD_WARN_S by arrival time, then foes within THREAT_RANGE by distance, ties
-# in spawn order. Knocked foes are left out.
+# within HAZARD_WARN_S by arrival time, then live foes within THREAT_RANGE by distance,
+# ties in spawn order.
 func threat_entries() -> Array:
 	var at := position()
 	var v := velocity()
