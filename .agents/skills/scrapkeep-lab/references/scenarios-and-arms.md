@@ -32,7 +32,9 @@ The exported threat list decides what every arm sees, so its rule is part of the
 
 Stage-threat-rule 2 is a coordinator ruling (EV-0550). It changed the rule for stages whose foes survive a hit; the JL-26 and JL-27 writers had applied the JL-21b rule as instructed, and their A2 attempts re-ran under the ruling (EV-0553). For a new stage, answer the middle column from the stage's own source before the first batch, and ask the coordinator for a ruling if the answer is mixed.
 
-The JL-21b rule is a card at this base, not merged code: `sketches/ball-lab/src/jev/jev_state.gd` still exports knocked dummies until JL-21b is admitted.
+The JL-21b rule is not merged on this branch: `sketches/ball-lab/src/jev/jev_state.gd` still exports knocked dummies until JL-21b is admitted. Its first attempt found the state rule alone incomplete, because `_goal()` in `sketches/ball-lab/src/jev/jev_run.gd` gives stomp and ram no target and the executor attacks the nearest dummy, knocked or not; the second attempt changes the executor (SKL-31, EV-0556).
+
+Whether a trial ends at death is the same kind of per-stage instrument choice. Ball-lab's dummies deal no damage (`artifacts/jev-lab-2026-09-25/reviews/JL-21.md:11`); Cable Bench and Spillway Drop end the trial at death (SKL-32).
 
 ## Arms
 

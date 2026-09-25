@@ -15,11 +15,13 @@ This skill produces lab evidence and says what it means. `reactive-model-loop` o
 - Harness: `scripts/lab/harness.mjs` (batches, outcomes, call cap), `scripts/lab/godot-launch.mjs` (real Godot, `--sketch`, `stageFor`), `scripts/lab/arms.mjs`, `scripts/lab/record.mjs`, `scripts/lab/gate.mjs`, `scripts/lab/verdict-cache.mjs`, `scripts/lab/metrics/index.mjs` (`METRICS`, `STAGES`).
 - Godot side, under `sketches/ball-lab/src/jev/`: the runner `sketches/ball-lab/src/jev/jev_run.gd`, the validator `sketches/ball-lab/src/jev/jev_io.gd`, the exported state `sketches/ball-lab/src/jev/jev_state.gd`, steering in `sketches/ball-lab/src/jev/jev_agent.gd`, scenarios in `sketches/ball-lab/src/jev/scenarios.gd` and knock counting in `sketches/ball-lab/src/jev/telemetry.gd`.
 - CLI (`scripts/play.mjs`): `scrapkeep lab run|program|verdicts`, `scrapkeep gate <run> --against <pin>`, `scrapkeep stats`, `scrapkeep dash`. `scrapkeep lab run` is `scripts/lab/harness.mjs`, which drives the fake Godot in `scripts/lab/fake-godot.mjs`. Real batches run through `node scripts/lab/godot-launch.mjs <scenario> [--arm scripted|random|jev] [-n trials] [--seed N] [--mode kinematic|rigid] [--call-cap N] [--sketch dir]`.
+- `scrapkeep` is the wrapper `scripts/bin/scrapkeep` for `node scripts/play.mjs`. It runs the checkout named by `SCRAPKEEP_ROOT`, default the main checkout, so from a worktree run `node scripts/play.mjs` or set `SCRAPKEEP_ROOT` (SKL-23).
+- Current state: pins under `artifacts/jev-lab-2026-09-25/pins/`; epoch records under `EPOCHS_ROOT` in `tools/jev-player/preflight.mjs` (`artifacts/local/epochs/<key>.json`, disposable); rulings and card state in the latest TRACKING event rows for the card. A question-text author reads none of TRACKING and gets rulings from the packet (SKL-26).
 - Evidence: retained under `artifacts/jev-lab-2026-09-25/live/`, `artifacts/jev-lab-2026-09-25/pins/`, `artifacts/jev-lab-2026-09-25/reviews/` and `artifacts/jev-lab-2026-09-25/experiments/`; disposable runs under `artifacts/local/runs/<run-id>/` and task receipts under `artifacts/local/tasks/<task-id>/`.
 
 ## 2. Protocol
 
-Read [references/protocol.md](references/protocol.md) before changing a file format, a validator or the gate rules.
+Read [references/protocol.md](references/protocol.md) before changing a file format, a validator or the gate rules (design choice).
 
 - Each protocol file has one writer, is written as `.tmp` then renamed, and has a closed schema; a new field is a new protocol string (SKL-01).
 - Godot blocks with `OS.delay_msec`, never `tree.paused`; keep D = 90, k = 26 and k < D (SKL-02).
@@ -31,7 +33,7 @@ Read [references/protocol.md](references/protocol.md) before changing a file for
 
 ## 3. Determinism per physics mode
 
-Read [references/determinism.md](references/determinism.md) before reading or gating a rigid result.
+Read [references/determinism.md](references/determinism.md) before reading or gating a rigid result (design choice).
 
 - Kinematic runs reproduce exactly; treat a kinematic hash change as a real behaviour change (SKL-08).
 - Rigid runs do not reproduce exactly and a divergence can flip the outcome; never hold a rigid record to trace equality (SKL-09).
@@ -40,10 +42,12 @@ Read [references/determinism.md](references/determinism.md) before reading or ga
 
 ## 4. Scenarios and arms
 
-Read [references/scenarios-and-arms.md](references/scenarios-and-arms.md) to add a scenario or an arm.
+Read [references/scenarios-and-arms.md](references/scenarios-and-arms.md) to add a scenario or an arm (design choice).
 
 - A hand-written baseline needs a termination condition, or it scores below random; fix it in the shared state, not in one arm (SKL-14).
 - Decide the threat-export rule per stage before the first batch. Stage-threat-rule 2 (EV-0550) is a coordinator ruling: a threat leaves the state only when the game has taken it out of play (SKL-15).
+- The stomp and ram executor must act on the threat the state reports, or a state rule is only half applied (SKL-31).
+- Decide per stage whether a trial ends at death before the first batch; post-death snapshots pollute per-snapshot measures (SKL-32).
 - Jitter spawns from the trial seed so arms share paired starts (SKL-16).
 - Report the multi-option share; an all-forced scenario cannot separate arms (SKL-30).
 - Keep a later comparison's pre-registered seeds out of exploratory batches (SKL-29).
@@ -54,7 +58,7 @@ Read [references/scenarios-and-arms.md](references/scenarios-and-arms.md) to add
 
 ## 5. Records, gates, pins and epochs
 
-Read [references/records-gates-pins.md](references/records-gates-pins.md) before cutting a pin or reporting a gate exit.
+Read [references/records-gates-pins.md](references/records-gates-pins.md) before cutting a pin or reporting a gate exit (design choice).
 
 - Each batch writes one `"scrapkeep-run/1"` record in its own directory, claimed through `artifacts/local/runs/<run-id>/run-owner.json` with exclusive create (design choice).
 - The gate exits 0 pass, 1 differs or red, 2 usage, 3 inconclusive, 4 instrument invalid (design choice).
@@ -66,7 +70,7 @@ Read [references/records-gates-pins.md](references/records-gates-pins.md) before
 
 ## 6. Port the lab to a stage
 
-Follow [references/port-a-stage.md](references/port-a-stage.md). Copy `sketches/ball-lab/src/jev/jev_io.gd` byte for byte with a drift test (SKL-06), rebuild the stage-specific state, scenarios and telemetry wiring, add one `STAGES` entry, and run the stage with `--sketch` (design choice). Settle the threat rule before the first batch (SKL-15). Work on a lab branch cut from the stage's proto head and confirm the proto head is unchanged before and after (design choice).
+Follow [references/port-a-stage.md](references/port-a-stage.md). Copy `sketches/ball-lab/src/jev/jev_io.gd` byte for byte with a drift test (SKL-06), rebuild the stage-specific state, scenarios and telemetry wiring, add one `STAGES` entry, and run the stage with `--sketch` (design choice). Settle the threat rule (SKL-15) and whether a trial ends at death (SKL-32) before the first batch. Work on a lab branch cut from the stage's proto head and confirm the proto head is unchanged before and after (design choice).
 
 ## 7. Evidence rules
 
@@ -79,7 +83,7 @@ Follow [references/port-a-stage.md](references/port-a-stage.md). Copy `sketches/
 
 ## 8. Lessons and updates
 
-[references/lessons.md](references/lessons.md) holds SKL-01 onward, each with status (`established`, `provisional` or `retracted`), evidence and `Overturned by`, the RML origin map and the changelog. When a result changes, update the owning file in the same commit:
+[references/lessons.md](references/lessons.md) holds SKL-01 onward, each with status (`established`, `provisional` or `retracted`), evidence and `Overturned by`, the RML origin map and the changelog. When a result changes, update the owning file in the same commit (the table below is a design choice):
 
 | Change | Update | Reviewer |
 | --- | --- | --- |
@@ -90,7 +94,7 @@ Follow [references/port-a-stage.md](references/port-a-stage.md). Copy `sketches/
 | New result that overturns a lesson | mark it `retracted`, fill `Overturned by`, edit the citing rule line | `scrapkeep-reviewer` |
 | New lesson | append as `provisional` with evidence | `scrapkeep-reviewer-medium` |
 
-Add a changelog row for each change. Run `npm run check:skills` before handing a skill edit to the coordinator.
+Add a changelog row for each change, using one of the change types in the table above (design choice). Run `npm run check:skills` before handing a skill edit to the coordinator.
 
 ## Host adapter
 

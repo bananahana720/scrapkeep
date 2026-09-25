@@ -8,7 +8,7 @@ Status values:
 - `provisional`: one run or one review supports it. Promote it only when a second independent run or review cites it.
 - `retracted`: a later result overturned it. Keep the text, fill `Overturned by`, and edit the citing rule line in the same commit.
 
-Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-lab-2026-09-25/reviews/<card>.md:<line>`, and other files by repository path and line. Every line was opened and checked on 2026-09-25 at base `0d02138`.
+Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-lab-2026-09-25/reviews/<card>.md:<line>`, and other files by repository path and line. Every line was opened and checked on 2026-09-25: SKL-01 to SKL-30 at base `0d02138`, and SKL-31, SKL-32 and the revised origin-map rows after merging the coordinator branch at a1f2eda.
 
 ## Lessons
 
@@ -162,22 +162,32 @@ Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-l
   Evidence: `artifacts/jev-lab-2026-09-25/reviews/JL-17.md:13` (N3); EV-0542; EV-0546 (JL-21 raised the share to 0.71 to 1.00 on four scenarios).
   Overturned by: —
 
+- **SKL-31** · status: provisional · since: 2026-09-25 · origin: JL-21b-A1 handoff
+  The executor must act on the threat the exported state reports. A state rule that hides a threat is incomplete while the executor picks its own target. On ball-lab, `_goal()` passes no target for stomp or ram, so the executor stomped the nearest dummy, knocked or not, and scripted trials still averaged 36 to 64 stomp stretches after the state fix.
+  Evidence: EV-0556 (the finding and the JL-21b-A2 lease widening); `sketches/ball-lab/src/jev/jev_run.gd:280-283` (`_goal()` returns a target only for `push_objective`).
+  Overturned by: —
+
+- **SKL-32** · status: provisional · since: 2026-09-25 · origin: JL-27 review, coordinator ruling
+  Decide per stage whether a trial ends at death before the first batch, and record the choice as the stage's instrument epoch. A Spillway Drop trial kept running after death, so roughly half to two thirds of rigid snapshots came after it and every per-snapshot measure pooled them; the success predicate was unaffected. The ruling ends a Spillway trial at death, as Cable Bench's does.
+  Evidence: `artifacts/jev-lab-2026-09-25/reviews/JL-27.md:17` (F1); EV-0555 (ruling, new epoch, JL-27-A3).
+  Overturned by: —
+
 ## External caveat
 
 Token figures on the board that came from the delegate ledger before EV-0498 are inflated: the ledger summed usage over repeated transcript records instead of deduplicating by request id. The fix lives outside this repository (EV-0498). Treat those figures as upper bounds.
 
 ## RML origin map
 
-Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids come from the JL-30 portable-skill candidate at 85d16a5, which was in review when this map was written; if review renumbers them, this table changes in the same commit. Every citation below was opened and confirmed at base `0d02138`. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
+Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids the JL-30a review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
 
 | RML id | SKL id or citation |
 | --- | --- |
 | RML-01 | Public prior art, unaudited: `artifacts/jev-lab-2026-09-25/skills/prior-art-jev-games.md:40` (every surveyed project splits intent from execution) |
 | RML-02 | SKL-18; `artifacts/jev-lab-2026-09-25/reviews/JL-21.md:19`; the lab/cable-bench header in its jev_state.gd, lines 22-25 |
 | RML-03 | SKL-24; `artifacts/jev-lab-2026-09-25/plan.md:203`; `artifacts/jev-lab-2026-09-25/reviews/JL-19.md:40`; `artifacts/jev-lab-2026-09-25/reviews/JL-20.md:36` |
-| RML-04 | `tools/jev-player/decide.mjs:24-25` (inventory said 25-26); `artifacts/jev-lab-2026-09-25/reviews/JL-03.md:15-17` (N2, N3); `tools/jev-player/protocol/PROTOCOL.md:154`, `:158` |
-| RML-05 | `artifacts/jev-lab-2026-09-25/reviews/JL-15.md:22` (N5); `artifacts/jev-lab-2026-09-25/reviews/JL-18b.md:23`; EV-0521 |
-| RML-06 | `tools/jev-player/decide.mjs:20-23`; `artifacts/jev-lab-2026-09-25/reviews/JL-03.md:33`; `artifacts/jev-lab-2026-09-25/audit/README.md:100` (A6), `:110` (A13). The inventory's `artifacts/jev-lab-2026-09-25/reviews/JL-15.md:22` is unconfirmed: that line is N5, about the model alias |
+| RML-04 | `tools/jev-player/decide.mjs:25-26`; `artifacts/jev-lab-2026-09-25/reviews/JL-03.md:15-17` (N2, N3); `tools/jev-player/protocol/PROTOCOL.md:154`, `:158` |
+| RML-05 | `artifacts/jev-lab-2026-09-25/reviews/JL-15.md:22` (N5); `artifacts/jev-lab-2026-09-25/reviews/JL-18b.md:23`; EV-0521. Public survey, unaudited: `artifacts/jev-lab-2026-09-25/skills/prior-art-jev-games.md:45` (three projects named) and `:64` ("four of six"), the disagreement the lesson notes |
+| RML-06 | `tools/jev-player/decide.mjs:21-24` (the floor constant is at 24); `artifacts/jev-lab-2026-09-25/reviews/JL-03.md:33`; `artifacts/jev-lab-2026-09-25/audit/README.md:100` (A6), `:110` (A13). The inventory's `artifacts/jev-lab-2026-09-25/reviews/JL-15.md:22` is unconfirmed: that line is N5, about the model alias |
 | RML-07 | `artifacts/jev-lab-2026-09-25/audit/README.md:13-14` (findings 1 and 2); `artifacts/jev-lab-2026-09-25/plan.md:47` (A1); EV-0485 |
 | RML-08 | `artifacts/jev-lab-2026-09-25/experiments/jl18c/RESULTS.md:32`, `:40`; EV-0540 |
 | RML-09 | Public prior art, unaudited: `artifacts/jev-lab-2026-09-25/skills/prior-art-jev-games.md:33` (the "Limits of Jev 1.13" quote) |
@@ -193,7 +203,7 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | RML-19 | SKL-26 in part; `artifacts/jev-lab-2026-09-25/reviews/JL-19.md:21` (finding 2); EV-0532 (ruling); EV-0525 |
 | RML-20 | `artifacts/jev-lab-2026-09-25/reviews/JL-04-A3.md:11` (N1), `:17` (N2); `artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md:11` (F1); EV-0496 |
 | RML-21 | `artifacts/jev-lab-2026-09-25/audit/README.md:16` (finding 4), `:78-89`; EV-0532; EV-0549 |
-| RML-22 | SKL-14 |
+| RML-22 | SKL-14; SKL-15 for the caveat that hiding after a hit is right only where the mechanic removes the threat. Public reports, unaudited: `artifacts/jev-lab-2026-09-25/skills/prior-art-jev-games.md:46` (one project tied a hand-coded heuristic); the article claim that a scripted bot would win is not in that survey and is unconfirmed here |
 | RML-23 | SKL-16 |
 | RML-24 | `artifacts/jev-lab-2026-09-25/experiments/jl18c/PREREGISTRATION.md:170`, `:202-210`; `artifacts/jev-lab-2026-09-25/experiments/jl18c/RESULTS.md:46-56`; EV-0538; EV-0540 |
 | RML-25 | `artifacts/jev-lab-2026-09-25/experiments/jl18c/PREREGISTRATION.md:154`; `artifacts/jev-lab-2026-09-25/experiments/jl18c/RESULTS.md:42-44` |
@@ -212,9 +222,12 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | RML-38 | EV-0498 (the fix lives outside this repository); see the external caveat above |
 | RML-39 | `artifacts/jev-lab-2026-09-25/audit/README.md:52`, `:74-75`, `:112` (A15); EV-0485. The inventory's reference to the JL-15 review is unconfirmed: that review states no latency figure |
 | RML-40 | Public prior art, unaudited: `artifacts/jev-lab-2026-09-25/skills/prior-art-jev-games.md:18` (a persisted dollar cap) |
-| RML-41 | SKL-13; EV-0536 |
+| RML-41 | `artifacts/jev-lab-2026-09-25/reviews/JL-21.md:21` (F5, batches on a dirty tree); EV-0536 (`tree-at-run.txt` retained beside the head) |
 | RML-42 | `artifacts/jev-lab-2026-09-25/audit/README.md:13-17`; EV-0485; EV-0491; EV-0538 |
-| RML-43 | SKL-02; SKL-09; `tools/jev-player/protocol/PROTOCOL.md:98-107`, `:178-182` |
+| RML-43 | SKL-02; SKL-08; SKL-09; `tools/jev-player/protocol/PROTOCOL.md:98-107`, `:178-182`; EV-0546 (360 of 360 kinematic repeat pairs; rigid about 1 in 20) |
+| RML-44 | SKL-15; EV-0550; `artifacts/jev-lab-2026-09-25/reviews/JL-26.md:18-23` |
+| RML-45 | SKL-12; `artifacts/jev-lab-2026-09-25/reviews/JL-21.md:34` |
+| RML-46 | SKL-13; EV-0546 |
 
 ## Changelog
 
@@ -222,3 +235,6 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | --- | --- | --- | --- | --- |
 | 2026-09-25 | New lesson (not overturning) | SKL-01 to SKL-30 | JL-30 skill writer b, attempt A1, base `0d02138` | pending |
 | 2026-09-25 | Origin map | RML-01 to RML-43 | `reactive-model-loop` candidate 85d16a5; each citation re-checked against the primary file | pending |
+| 2026-09-25 | New lesson (not overturning) | SKL-31, SKL-32 | EV-0555, EV-0556, `artifacts/jev-lab-2026-09-25/reviews/JL-27.md:17`; JL-30 writer b, attempt A2 | pending |
+| 2026-09-25 | New lesson (not overturning); closest type for the origin map, which adds no lesson | RML-44 to RML-46 mapped; RML-02, 05, 22, 27, 28, 41 and 43 re-read against the revised ledger, RML-05, 22, 41 and 43 re-pointed; RML-04 and RML-06 line numbers corrected | merged `reactive-model-loop` at a1f2eda; writer b review B1 and N1 | pending |
+| 2026-09-25 | New lesson (not overturning); correction of the change type above | none | The "Origin map" row above uses a type outside the section 4a list; its closest type is "New lesson (not overturning)". Row kept as written, since this log is append-only (writer b review N5) | pending |
