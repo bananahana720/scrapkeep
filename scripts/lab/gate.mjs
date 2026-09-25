@@ -32,6 +32,38 @@ export const RATES = [
   "flake_rate",
 ];
 
+// The pin for the build Andrew played (dc94b2c). It records a human verdict,
+// not machine evidence that ages, so it never goes stale (EV-0504).
+export const ANCHOR = "andrew-anchor";
+
+// Revision 2 (EV-0546, JL-21 review F2): rigid (Jolt) runs flip about 1 trial
+// in 20 on the same seed, so only kinematic records are held to exact trace
+// equality; rigid records gate on distributions over at least RIGID_MIN_N
+// trials, and a change no larger than the floor is not read as a regression.
+export const RIGID_FLOOR = 0.05;
+export const RIGID_MIN_N = 20;
+
+// Shown without a tier until the named card lands; no threshold is implied.
+export const NOT_GATED = Object.freeze({ margin_vs_scripted: "JL-28" });
+
+// Scenarios whose goal no arm can reach yet, so a batch on them never counts
+// unreachable_scenarios against a pin.
+export const UNREACHABLE_EXEMPT = Object.freeze({
+  "bench-climb": "hit_kicker is not reachable yet (JL-21 review F4)",
+});
+
+// A pin keeps what the gate reads (run.json, a verdict cache). Per-file source
+// hashes, the ownership claim and per-trial io directories stay behind: the
+// gate reads trace hashes and trial seeds from run.json alone (EV-0511).
+export const PIN_OMITS = Object.freeze([
+  "sources.json",
+  "run-owner.json",
+  "trials",
+]);
+
+// What must match for two batches to be compared at all.
+const LIKE_FOR_LIKE = ["scenario", "arm", "snapshot_every", "hold_ticks"];
+
 const USAGE = `Usage:
   node scripts/lab/gate.mjs --pin <run_id> --as <name> [--runs dir] [--artifacts dir] [--epochs dir]
   node scripts/lab/gate.mjs <run_id|run dir> --against <pin name|pin dir> [--runs dir] [--artifacts dir] [--epochs dir]
@@ -137,8 +169,19 @@ function assessMetrics(record, tty, epochValid) {
         );
         continue;
       }
-      const status = evaluate(metric, measure, { epochValid });
-      found.push(outcome(status.exit, render(status, id, measure, tty)));
+      const held = NOT_GATED[id];
+      const judged =
+        held === undefined
+          ? metric
+          : { ...metric, sentinel: false, thresholds: null };
+      const status = evaluate(judged, measure, { epochValid });
+      const text = render(status, id, measure, tty);
+      found.push(
+        outcome(
+          status.exit,
+          held === undefined ? text : `${text} (not gated until ${held})`,
+        ),
+      );
     }
   }
   return found;
@@ -244,7 +287,135 @@ function compareRate(id, candidate, pin) {
   return [outcome(exit, text)];
 }
 
-function againstPin(candidate, pin, name) {
+function physicsMode(record) {
+  const words = String(record.config?.launcher ?? "").split(/\s+/);
+  return ["kinematic", "rigid"].find((mode) => words.includes(mode)) ?? null;
+}
+
+const maxTicks = (record) =>
+  /max-ticks (\d+)/.exec(record.config?.launcher ?? "")?.[1] ?? null;
+
+// Two batches are comparable only on the same scenario, arm, D, k, physics
+// mode and tick cap; anything else is a usage error, like a type mismatch.
+function batchMismatch(candidate, pin) {
+  for (const key of LIKE_FOR_LIKE) {
+    const [after, before] = [candidate.config?.[key], pin.config?.[key]];
+    if (after !== before) return `${key} ${after} against the pin's ${before}`;
+  }
+  if (physicsMode(candidate) !== physicsMode(pin))
+    return `${physicsMode(candidate)} physics against the pin's ${physicsMode(pin)}`;
+  if (maxTicks(candidate) !== maxTicks(pin))
+    return `max-ticks ${maxTicks(candidate)} against the pin's ${maxTicks(pin)}`;
+  return null;
+}
+
+const trialsOf = (record) =>
+  Array.isArray(record.config?.trials) ? record.config.trials : [];
+
+const trialSeed = (record, entry) =>
+  record.config.seed * (record.config.trial_seed_stride ?? 1000) + entry.trial;
+
+// Kinematic trials are reproducible (JL-21: 360 of 360 repeat pairs), so every
+// trial seed the pin also ran must give the pin's trace_hash; a divergence is
+// a replay_repro occurrence. Rigid trials are not held to it.
+function traceEquality(candidate, pin, name, tty) {
+  const mode = physicsMode(candidate);
+  if (mode !== "kinematic")
+    return [
+      outcome(
+        EXIT.pass,
+        `trace equality not gated: ${mode ?? "unknown"} physics, and rigid runs flip about 1 trial in 20 (EV-0546), so this batch gates on distributions only`,
+      ),
+    ];
+  const pinned = new Map(
+    trialsOf(pin).map((entry) => [trialSeed(pin, entry), entry.trace_hash]),
+  );
+  const diverged = [];
+  let shared = 0;
+  for (const entry of trialsOf(candidate)) {
+    const seed = trialSeed(candidate, entry);
+    if (!pinned.has(seed)) continue;
+    shared += 1;
+    if (entry.trace_hash === null || entry.trace_hash !== pinned.get(seed))
+      diverged.push(entry.trial);
+  }
+  if (shared === 0)
+    return [
+      outcome(
+        EXIT.inconclusive,
+        `trace equality: no trial seed is shared with pin ${name}, so the kinematic trace gate cannot run`,
+      ),
+    ];
+  const measure = { value: diverged.length, n: shared };
+  const status = evaluate(getMetric("replay_repro"), measure);
+  const detail =
+    diverged.length === 0 ? "" : `; trials ${diverged.join(", ")} diverge`;
+  return [
+    outcome(
+      status.exit,
+      `${render(status, "replay_repro", measure, tty)} kinematic trace equality against pin ${name}: ${shared - diverged.length} of ${shared} trials reproduce${detail}`,
+    ),
+  ];
+}
+
+// A scenario the pin reached and the candidate never reached is a regression.
+// For a rigid batch whose pin reached it no more often than the floor, the
+// flip is within the nondeterminism, so it is inconclusive instead.
+function reachability(candidate, pin, name) {
+  const scenario = String(candidate.config?.scenario ?? "");
+  const exempt = UNREACHABLE_EXEMPT[scenario.split("@")[0]];
+  if (exempt !== undefined)
+    return [
+      outcome(
+        EXIT.pass,
+        `unreachable_scenarios not counted for ${scenario}: ${exempt}`,
+      ),
+    ];
+  const before = pin.kris?.unreachable_scenarios?.value;
+  const after = candidate.kris?.unreachable_scenarios?.value;
+  if (before !== 0 || after !== 1) return [];
+  const reached = pin.config?.scenario_results?.success ?? 0;
+  const floor = Math.ceil(RIGID_FLOOR * trialsOf(pin).length);
+  if (physicsMode(candidate) !== "kinematic" && reached <= floor)
+    return [
+      outcome(
+        EXIT.inconclusive,
+        `unreachable_scenarios: pin ${name} reached ${scenario} in ${reached} of ${trialsOf(pin).length} trials, within the rigid floor of ${floor}, and the candidate in none; inconclusive`,
+      ),
+    ];
+  return [
+    outcome(
+      EXIT.fail,
+      `unreachable_scenarios: pin ${name} reached ${scenario} in ${reached} of ${trialsOf(pin).length} trials and the candidate in none; regressed`,
+    ),
+  ];
+}
+
+function againstBatch(candidate, pin, name, tty) {
+  const found = traceEquality(candidate, pin, name, tty);
+  if (physicsMode(candidate) !== "kinematic") {
+    const [after, before] = [trialsOf(candidate).length, trialsOf(pin).length];
+    found.push(
+      after >= RIGID_MIN_N && before >= RIGID_MIN_N
+        ? outcome(
+            EXIT.pass,
+            `distributions over ${after} and ${before} trials; nondeterminism floor ${RIGID_FLOOR} (1 trial in 20), tolerance ${TOLERANCE}`,
+          )
+        : outcome(
+            EXIT.inconclusive,
+            `distributions need at least ${RIGID_MIN_N} trials on each side; the candidate has ${after} and pin ${name} ${before}, inconclusive`,
+          ),
+    );
+  }
+  return [...found, ...reachability(candidate, pin, name)];
+}
+
+function againstPin(
+  candidate,
+  pin,
+  name,
+  { anchor = false, tty = false } = {},
+) {
   const found = [];
   if (
     JSON.stringify(canonical(candidate.provenance?.instrument ?? null)) !==
@@ -262,7 +433,14 @@ function againstPin(candidate, pin, name) {
     value: Number.isFinite(ageDays) ? Math.max(0, ageDays) : Number.NaN,
     n: 1,
   });
-  if (age.gate === "fail" || age.gate === "inconclusive")
+  if (anchor)
+    found.push(
+      outcome(
+        EXIT.pass,
+        `pin ${name} is ${ANCHOR}, the build Andrew played; it never goes stale`,
+      ),
+    );
+  else if (age.gate === "fail" || age.gate === "inconclusive")
     found.push(
       outcome(
         EXIT.inconclusive,
@@ -270,7 +448,23 @@ function againstPin(candidate, pin, name) {
       ),
     );
   for (const id of RATES) found.push(...compareRate(id, candidate, pin));
+  if (candidate.type === "batch")
+    found.push(...againstBatch(candidate, pin, name, tty));
   return found;
+}
+
+// The name a pin was made under, from its pin.json; a pin directory passed
+// by path without one goes by its directory name.
+async function pinName(directory) {
+  try {
+    const meta = JSON.parse(
+      await readFile(path.join(directory, "pin.json"), "utf8"),
+    );
+    if (typeof meta?.name === "string") return meta.name;
+  } catch (error) {
+    if (!(error instanceof SyntaxError) && error.code !== "ENOENT") throw error;
+  }
+  return path.basename(directory);
 }
 
 // A run that carries an instrument identity is pinnable only when that
@@ -315,7 +509,14 @@ async function pinRun({
       throw new UsageError(`pin ${name} already exists at ${target}`);
     throw error;
   }
-  await cp(source, target, { recursive: true, force: false });
+  const omitted = (await readdir(source)).filter((entry) =>
+    PIN_OMITS.includes(entry),
+  );
+  await cp(source, target, {
+    recursive: true,
+    force: false,
+    filter: (from) => !PIN_OMITS.includes(path.relative(source, from)),
+  });
   await writeFile(
     path.join(target, "pin.json"),
     JSON.stringify(
@@ -324,6 +525,7 @@ async function pinRun({
         run_id: record.id,
         source,
         pinned_at: new Date().toISOString(),
+        omitted,
       },
       null,
       2,
@@ -351,6 +553,15 @@ async function gateRun({
     throw new UsageError(
       `candidate type ${candidate.type} cannot be gated against a ${pin.type} pin`,
     );
+  const mismatch =
+    bothValid && candidate.type === "batch"
+      ? batchMismatch(candidate, pin)
+      : null;
+  if (mismatch !== null)
+    throw new UsageError(
+      `candidate batch cannot be gated against pin ${against}: ${mismatch}`,
+    );
+  const name = await pinName(pinDirectory);
   const epoch = await epochStatus(
     candidate?.provenance?.instrument ?? null,
     epochs,
@@ -365,7 +576,13 @@ async function gateRun({
     found.push(
       outcome(EXIT.invalid, `pin ${against} is not a ${SCHEMA} record`),
     );
-  else if (bothValid) found.push(...againstPin(candidate, pin, against));
+  else if (bothValid)
+    found.push(
+      ...againstPin(candidate, pin, against, {
+        anchor: name === ANCHOR,
+        tty,
+      }),
+    );
   for (const { text } of found) out.write(`${text}\n`);
   const exit = worstExit(found.map((one) => one.exit));
   out.write(`gate exit ${exit}\n`);

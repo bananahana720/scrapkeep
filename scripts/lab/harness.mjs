@@ -91,7 +91,7 @@ import {
 import { createArm } from "./arms.mjs";
 import { METRICS } from "./metrics/index.mjs";
 import { EXIT } from "./metrics/status.mjs";
-import { createRun } from "./record.mjs";
+import { createRun, RUNS_ROOT } from "./record.mjs";
 import { wilson } from "./stats.mjs";
 import {
   anchoredCache,
@@ -453,11 +453,13 @@ async function runTrial({
             if (choice.jev !== undefined) {
               const model = choice.jev.model ?? null;
               const expected = anchor.model ?? run.provenance.jev.model;
-              if (expected !== null && model !== expected) {
+              // A verdict with no recorded model cannot anchor a replay or
+              // match an anchor, so it is a mismatch (EV-0536).
+              if (model === null || (expected !== null && model !== expected)) {
                 abort = {
                   reason: "arm_error",
                   cause: "model_mismatch",
-                  message: `${armName} arm: a ${choice.source} verdict came from ${model}, but the batch is anchored on ${expected}`,
+                  message: `${armName} arm: a ${choice.source} verdict came from ${model ?? "no recorded model"}, but the batch is anchored on ${expected ?? "its first verdict's model"}`,
                 };
                 break;
               }
@@ -581,12 +583,60 @@ async function runTrial({
   return entry;
 }
 
+// A replay's source is the newest live jev batch in the same runs root that
+// wrote the same verdict cache for the same scenario and seed. Its call cap is
+// the replay's default, so a replay is never capped below the run it
+// reproduces (EV-0523, JL-14 review F4).
+export async function findReplaySource({ root, scenario, seed, verdictCache }) {
+  let text;
+  try {
+    text = await readFile(path.join(root, "index.ndjson"), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  const label = `${scenarioLabel(scenario)}-jev`;
+  const entries = [];
+  for (const line of text.split("\n")) {
+    if (line.trim() === "") continue;
+    try {
+      entries.push(JSON.parse(line));
+    } catch {
+      // A truncated last line (record.mjs readIndexEntries) names no run.
+    }
+  }
+  const candidates = entries
+    .filter((entry) => entry.type === "batch" && entry.label === label)
+    .sort((a, b) => b.seq - a.seq);
+  for (const entry of candidates) {
+    let record;
+    try {
+      record = JSON.parse(
+        await readFile(path.join(root, entry.id, "run.json"), "utf8"),
+      );
+    } catch (error) {
+      if (error.code === "ENOENT" || error instanceof SyntaxError) continue;
+      throw error;
+    }
+    const { config } = record;
+    if (
+      config?.replay === false &&
+      config.scenario === scenario &&
+      config.seed === seed &&
+      Number.isInteger(config.call_cap) &&
+      path.resolve(config.verdict_cache ?? "") === path.resolve(verdictCache)
+    )
+      return record;
+  }
+  return null;
+}
+
 export async function runBatch({
   scenario,
   arm: armName,
   trials = DEFAULTS.trials,
   seed = DEFAULTS.seed,
-  callCap = DEFAULTS.callCap,
+  callCap,
   launch = fakeGodot(),
   watchdogFloorMs = DEFAULTS.watchdogFloorMs,
   pollMs = DEFAULTS.pollMs,
@@ -614,7 +664,7 @@ export async function runBatch({
       `trials must be a whole number from 1 to ${TRIAL_SEED_STRIDE}, got ${trials}`,
     );
   }
-  if (!Number.isInteger(callCap) || callCap < 1) {
+  if (callCap !== undefined && (!Number.isInteger(callCap) || callCap < 1)) {
     throw new UsageError(
       `the call cap must be a whole number >= 1, got ${callCap}`,
     );
@@ -644,6 +694,8 @@ export async function runBatch({
   }
   let armOptions = {};
   let armInstrument = null;
+  let cap = callCap ?? DEFAULTS.callCap;
+  let replaySource = null;
   const anchor = { model: null, mismatches: 0 };
   let preflightResult = null;
   let preflightSummary = null;
@@ -692,6 +744,15 @@ export async function runBatch({
       anchor.model = models[0];
       cache = anchoredCache(cache, anchor);
     }
+    if (replay && callCap === undefined) {
+      replaySource = await findReplaySource({
+        root: runs.root ?? RUNS_ROOT,
+        scenario,
+        seed,
+        verdictCache: cache.directory,
+      });
+      cap = replaySource?.config.call_cap ?? cap;
+    }
     armOptions = {
       questions,
       instrument: armInstrument,
@@ -708,7 +769,7 @@ export async function runBatch({
     requested_trials: trials,
     seed,
     trial_seed_stride: TRIAL_SEED_STRIDE,
-    call_cap: callCap,
+    call_cap: cap,
     watchdog_floor_ms: watchdogFloorMs,
     snapshot_every: snapshotEvery,
     hold_ticks: holdTicks,
@@ -716,6 +777,7 @@ export async function runBatch({
     ...(armName === "jev"
       ? {
           replay,
+          ...(replay ? { replay_of: replaySource?.id ?? null } : {}),
           verdict_cache: armOptions.cache.directory,
           preflight: preflightSummary,
           anchor_model: anchor.model,
@@ -734,7 +796,7 @@ export async function runBatch({
     instrument: armInstrument,
     ...runs,
   });
-  const budget = { cap: callCap, used: 0, capped: false };
+  const budget = { cap, used: 0, capped: false };
   const interrupt = { signal: null, killTrial: null };
   const onSignal = (signal) => {
     if (interrupt.signal === null) {
@@ -858,6 +920,17 @@ export async function runBatch({
       run.limit(
         `Replay: every verdict came from ${config.verdict_cache}; no Jev call was made, so no preflight ran and the batch is anchored on its first verdict's model.`,
       );
+      if (callCap !== undefined) {
+        run.limit(`Replay call cap ${cap} was given explicitly.`);
+      } else if (replaySource !== null) {
+        run.limit(
+          `Replay call cap ${cap} is the call cap of its source run ${replaySource.id}.`,
+        );
+      } else {
+        run.limit(
+          `No live source run for this replay was found under the runs root, so the call cap is the default ${cap}.`,
+        );
+      }
     } else {
       run.limit(
         `Preflight: controls ${preflightSummary.controls_version} passed in ${preflightSummary.calls} live calls; the batch is anchored on ${anchor.model}.`,
@@ -883,7 +956,7 @@ export async function runBatch({
   }
   if (budget.capped) {
     run.limit(
-      `The batch call cap of ${callCap} arm calls was reached; ${n} of ${trials} trials ran.`,
+      `The batch call cap of ${cap} arm calls was reached; ${n} of ${trials} trials ran.`,
     );
   }
   run.limit(`Automated trials against ${config.launcher}; not a feel verdict.`);
