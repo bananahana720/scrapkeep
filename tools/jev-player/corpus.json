@@ -1,5 +1,5 @@
 {
-  "note": "Labeled decision points for the Jev player. `accept` lists every intent a competent player could defend; `severity` is what a miss costs. severe = the run ends or a hazard lands, moderate = a real loss of tempo or resources, minor = taste. The adversarial block is written so the greedy or obvious answer is wrong. Options may carry hard preconditions (requires_speed_ms); decide.mjs drops any option the engine could not execute before Jev ever sees the choice.",
+  "note": "Labeled decision points for the Jev player. `accept` lists every intent a competent player could defend; `severity` is what a miss costs. severe = the run ends or a hazard lands, moderate = a real loss of tempo or resources, minor = taste. The adversarial block is written so the greedy or obvious answer is wrong. Options may carry hard preconditions (requires_speed_ms); decide.mjs drops any option the engine could not execute before Jev ever sees the choice. Cache options state the ~1 s stopping cost: a negative control showed the model priced an unstated detour and declined a free cache.",
   "cases": [
     {
       "id": "hazard-imminent",
@@ -99,7 +99,7 @@
         },
         {
           "id": "take_cache",
-          "why": "A cache sits 14 m away costing 141 scrap; you hold 150"
+          "why": "You are already rolling over it; opening costs about one second of stopping. A cache sits 14 m away costing 141 scrap; you hold 150"
         }
       ]
     },
@@ -177,7 +177,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "A cache is within reach costing 25 scrap of the 140 held, at tier 1"
+          "why": "You are already rolling over it; opening costs about one second of stopping. A cache is within reach costing 25 scrap of the 140 held, at tier 1"
         },
         {
           "id": "push_objective",
@@ -229,7 +229,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "A cache within reach costs 187 scrap of the 190 held, at tier 5"
+          "why": "You are already rolling over it; opening costs about one second of stopping. A cache within reach costs 187 scrap of the 190 held, at tier 5"
         },
         {
           "id": "push_objective",
@@ -282,7 +282,7 @@
         },
         {
           "id": "take_cache",
-          "why": "The east ledge cache above costs 63 scrap of the 120 held"
+          "why": "You are already rolling over it; opening costs about one second of stopping. The east ledge cache above costs 63 scrap of the 120 held"
         }
       ]
     },
@@ -517,7 +517,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "The maintenance hatch secret is uncovered 8 m away and costs only 20 scrap"
+          "why": "You are already rolling over it; opening costs about one second of stopping. The maintenance hatch secret is uncovered 8 m away and costs only 20 scrap"
         },
         {
           "id": "push_objective",
@@ -578,7 +578,7 @@
         },
         {
           "id": "take_cache",
-          "why": "The hatch secret sits at the bottom of the basin for 20 scrap"
+          "why": "You are already rolling over it; opening costs about one second of stopping. The hatch secret sits at the bottom of the basin for 20 scrap"
         }
       ]
     }
@@ -624,7 +624,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "A cache 5 m ahead costs 25 scrap of the 200 held, the cheapest reach on the mountain"
+          "why": "You are already rolling over it; opening costs about one second of stopping. A cache 5 m ahead costs 25 scrap of the 200 held, the cheapest reach on the mountain"
         },
         {
           "id": "evade_hazard",
@@ -697,9 +697,10 @@
       "severity": "moderate",
       "accept": [
         "push_objective",
-        "start_exit"
+        "start_exit",
+        "take_cache"
       ],
-      "note": "Full health and no threats invite looting, but tier 5 at 300 s means the clock is the only thing killing you.",
+      "note": "LABEL CORRECTED 2026-09-25. Originally accepted only push_objective or start_exit, on the reasoning that at tier 5 the clock is the only thing killing you. That reasoning was wrong once the states began stating the real cost of a cache: opening one you are already rolling over costs about a second, not a tier. Scrap buys nothing at the end of a run, 260 is held, and a 60 s exit charge with a miniboss is next, so buying a permanent buff first is defensible. The corpus was wrong, not the model.",
       "state": {
         "self": {
           "speed_ms": 13.0,
@@ -729,7 +730,7 @@
         },
         {
           "id": "take_cache",
-          "why": "A cache within reach costs 187 scrap of the 260 held"
+          "why": "You are already rolling over it; opening costs about one second of stopping. A cache within reach costs 187 scrap of the 260 held"
         },
         {
           "id": "push_objective",

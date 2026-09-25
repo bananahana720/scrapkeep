@@ -63,15 +63,51 @@ Measured 25 September 2026 against `jev-1.13.0`:
 | Latency | median 286 ms, max 324 ms |
 | Input tokens | mean 706 per decision, three questions asked in one request |
 
-The one standing disagreement is `cheap-cache-early`: at tier 1, holding 140 scrap,
-with a 25-scrap cache in reach and no threats, Jev drives past it. It is left failing
-rather than tuned away, because it may be the corpus that is wrong.
+The one standing disagreement is `kicker-has-speed`, and the interesting part is the
+confidence: 0.01, a flat distribution, the model has no opinion. It is left failing
+rather than relabelled. It is also why `CONFIDENCE_FLOOR` exists: below it the player
+holds `push_objective` rather than committing to the top of a coin flip.
 
-**A design signal worth its own look.** The `greedy` judgement came back above 0.5 on
-every single case, 0.55 to 0.86 — the model reads looting as costing more than it
-returns, everywhere, at every tier. If that holds up it is an answer to the question
-Cable Bench was built to ask, and the answer is that the cache economy is priced too
-high for the clock it runs against.
+One label was corrected rather than defended. `adv-full-hp-clock-burning` originally
+accepted only skipping the cache at tier 5. Once states began stating the real time
+cost, that reasoning failed: a cache you are already rolling over costs a second, not
+a tier, scrap buys nothing at the end of a run, and a miniboss is next. The corpus was
+wrong. The change and its reason are recorded in the case's own note.
+
+**The negative control, and why it matters more than the score.** The first sweep
+returned 0/30: no state took the cache, at any tier, at any price. That read as a
+finding about the cache economy. It was a finding about the prompt. The control —
+offer a cache priced at zero scrap and see whether it gets taken — failed at 0.18
+against 0.81. Two causes, both in this code:
+
+- The instruction said scrubbing speed "costs you" and that time spent is "never
+  free". That is a valuation, not a rule. The question contained its own answer.
+- No state said what opening a cache actually costs in time, so the model priced
+  an imagined detour. In the game you roll over it and press E: about a second.
+
+With the instruction reduced to mechanics and the time cost stated, the control
+passes (0.62 take on a free cache) and the sweep inverts. Run `sweep.mjs` and any
+change to the questions has to clear the control first.
+
+## What the sweep found
+
+90 decisions across tier 1-5, three scrap-surplus levels and two threat levels.
+
+| Condition | Cache taken |
+| --- | --- |
+| No threat nearby | **15/15 states, every tier, every price** |
+| One chaser 26 m away | 4/15 states, and erratic (0/3, 1/3, 2/3 within a row) |
+
+The stage prices caches at `25 * tier^1.25`, from 25 scrap to 187, on the theory
+that the rising price is what makes "one more cache" a decision. In this sweep the
+price does nothing. Tier 1 at 25 scrap and tier 5 at 187 both get taken every time
+when nothing is chasing you. What flips the answer is whether a threat is present,
+and those rows sit right on the boundary, which is where a real decision lives.
+
+So the decision is real, but it is not the decision the stage was designed around.
+It is a threat-proximity decision wearing a price tag. Worth testing against your
+own play before changing anything: the instrument agrees with a labeled corpus, it
+has not played the game.
 
 ## Limits
 

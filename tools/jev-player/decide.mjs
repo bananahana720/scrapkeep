@@ -15,6 +15,9 @@ import { readFileSync } from "node:fs";
 
 const ENDPOINT = "https://api.typesafe.ai/v1/systemone";
 const MODEL = "jev-latest";
+// Tuned against the corpus, not guessed: every case the corpus labels confidently
+// lands well above this, and the one flat distribution falls below it.
+export const CONFIDENCE_FLOOR = 0.05;
 
 export function apiKey() {
   if (process.env.TYPESAFE_API_KEY) {
@@ -90,8 +93,14 @@ export function buildQuestions(options) {
     // One narrow judgement: given what is reachable right now, what next?
     intent: {
       type: "choice",
+      // Mechanics only. An earlier version of this instruction said that scrubbing
+      // speed "costs you" and that time spent is "never free", which is a valuation,
+      // not a rule. A negative control caught it: with that wording the model
+      // declined a cache priced at zero scrap, 0.18 against 0.81. The sweep built on
+      // it was measuring the prompt. State what the game does and let the judgement
+      // be the judgement.
       instructions:
-        "You are playing a rolling scrap mech in a roguelite stage. Momentum is the currency: you damage enemies only by landing on them from above or ramming above the fast speed tier, and any action that scrubs speed costs you. A difficulty clock rises on a fixed timer whether you act or not, so time spent is never free. Choose the single best intent to hold for the next second or two.",
+        "You are playing a rolling scrap mech in a roguelite stage. The mechanics: you damage enemies only by landing on them from above, or by ramming while above the fast speed tier, so speed is what makes combat possible. A difficulty tier rises on a fixed timer and raises enemy health, spawn rate and cache prices. Caches cost scrap and grant permanent stacking buffs that last the rest of the run. Scrap has no use other than buying caches, so scrap still held at the end of the run bought nothing. Choose the single best intent to hold for the next second or two.",
       criteria,
     },
     // Asked in the same request, so it costs one round trip rather than two.
@@ -146,9 +155,17 @@ export async function decide(state, options, { key = apiKey(), signal } = {}) {
     throw new Error(`Jev ${response.status}: ${body.slice(0, 300)}`);
   }
   const data = await response.json();
+  // A Choice confidence near zero means the distribution is flat: the model has
+  // no opinion, and acting on the top of a coin flip makes the player jitter
+  // between intents on consecutive ticks. The corpus has a live example
+  // (kicker-has-speed, confidence 0.01), so below the floor the player holds the
+  // one intent that is always executable instead of committing to a guess.
+  const confident = data.answers.intent.confidence >= CONFIDENCE_FLOOR;
   return {
     gatedOut: dropped,
-    intent: data.answers.intent.choice,
+    intent: confident ? data.answers.intent.choice : "push_objective",
+    lowConfidence: !confident,
+    rawIntent: data.answers.intent.choice,
     confidence: data.answers.intent.confidence,
     probabilities: data.answers.intent.probabilities,
     danger: data.answers.danger.score,
