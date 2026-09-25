@@ -329,11 +329,13 @@ export async function createRun({
         changed,
         files: start.files,
       };
+      // A changed source can only lower confidence, so invalid stays invalid.
       if (!provenance.sources.matched) {
+        provenance.sources.reported_result = result;
+        if (result !== "invalid") result = "inconclusive";
         limits.push(
-          `${changed.length} source files changed during the run, so the recorded result "${result}" was replaced with "inconclusive".`,
+          `${changed.length} source files changed during the run, so the reported result "${provenance.sources.reported_result}" is recorded as "${result}".`,
         );
-        result = "inconclusive";
       }
       await mkdir(root, { recursive: true });
       return withIndexLock(root, async () => {

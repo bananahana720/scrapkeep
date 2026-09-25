@@ -5,7 +5,12 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { STATUS, evaluate } from "../scripts/lab/metrics/status.mjs";
+import {
+  EXIT,
+  STATUS,
+  evaluate,
+  worstExit,
+} from "../scripts/lab/metrics/status.mjs";
 import {
   METRICS,
   getMetric,
@@ -95,7 +100,9 @@ const PLAN_SENTINELS = [
 
 // The plan's amber and red limits are stored as warn and fail, the gate
 // effects they trigger, so no status word appears outside STATUS. Rates and
-// percentages are fractions; event_time_skew is in hours.
+// percentages are fractions; event_time_skew is in hours. event_time_skew
+// departs from the plan's 1 h / 24 h: JL-12 lowered it to 0.25 h / 1 h after
+// the 1 h warn missed EV-0492's 0.58 h skew (EV-0498).
 const PLAN_THRESHOLDS = {
   stuck_per_trial: { worse: "higher", warn: 0.2, fail: 0.5 },
   dead_tier: { worse: "lower", warn: 0.05, fail: 0.01 },
@@ -106,12 +113,27 @@ const PLAN_THRESHOLDS = {
   flake_rate: { worse: "higher", warn: 0.01, fail: 0.05 },
   evidence_age_d: { worse: "higher", warn: 3, fail: 7 },
   first_pass_review: { worse: "lower", warn: 0.7, fail: 0.5 },
-  event_time_skew: { worse: "higher", warn: 1, fail: 24 },
+  event_time_skew: { worse: "higher", warn: 0.25, fail: 1 },
   unplayed_green: { worse: "higher", warn: 2, fail: 4 },
 };
 
+// Non-sentinel KRIs the plan gives no thresholds. The first nine are the ones
+// EV-0491 named; overclaim's 0.77 is a per-reply cut, not a rate limit.
+const UNTIERED_KRIS = [
+  "unreachable_scenarios",
+  "escaped_defects",
+  "untested_change",
+  "trial_abort_rate",
+  "api_error_rate",
+  "low_conf_rate",
+  "rework_per_card",
+  "triage_misroute",
+  "control_separation",
+  "overclaim",
+];
+
 const HEX = /#[0-9a-f]{6}\b/i;
-const STATUS_WORD = /\b(green|amber|red|insufficient)\b/i;
+const STATUS_WORD = new RegExp(`\\b(${Object.keys(STATUS).join("|")})\\b`, "i");
 
 function leaks(text) {
   return text
@@ -133,6 +155,7 @@ test("STATUS owns colour, glyph, ANSI, gate effect and exit code per status", ()
     "amber",
     "red",
     "insufficient",
+    "untiered",
   ]);
   const expected = {
     green: {
@@ -163,6 +186,13 @@ test("STATUS owns colour, glyph, ANSI, gate effect and exit code per status", ()
       gate: "inconclusive",
       exit: 3,
     },
+    untiered: {
+      hex: "#4fa3d9",
+      glyph: "◇",
+      rgb: "79;163;217",
+      gate: "ignore",
+      exit: 0,
+    },
   };
   for (const [word, want] of Object.entries(expected)) {
     const entry = STATUS[word];
@@ -182,6 +212,7 @@ test("the leak scanner flags hex colours and status words", () => {
   assert.equal(leaks("return 'Red';").length, 1);
   assert.equal(leaks("a metric shows insufficient").length, 1);
   assert.equal(leaks("status.amber").length, 1);
+  assert.equal(leaks("an Untiered KRI").length, 1);
   assert.deepEqual(leaks("unplayed_green required entered #fff"), []);
 });
 
@@ -323,19 +354,82 @@ test("below min_n a metric is insufficient, never green", () => {
     STATUS.insufficient,
   );
   assert.equal(evaluate(flake, { value: null, n: 100 }), STATUS.insufficient);
-  const untiered = getMetric("tokens_per_decision");
-  assert.equal(evaluate(untiered, { value: 12, n: 0 }), STATUS.insufficient);
-  assert.equal(
-    evaluate(untiered, { value: 12, n: untiered.min_n }),
-    STATUS.green,
-  );
-  for (const metric of METRICS) {
+  for (const metric of METRICS.filter(
+    (candidate) => candidate.sentinel || candidate.thresholds !== null,
+  )) {
     assert.equal(
       evaluate(metric, { value: 0, n: 0 }),
       STATUS.insufficient,
       metric.id,
     );
   }
+});
+
+test("a metric without thresholds is untiered at any n, never a pass colour", () => {
+  const untiered = METRICS.filter(
+    (metric) => !metric.sentinel && metric.thresholds === null,
+  );
+  assert.deepEqual(
+    untiered
+      .filter((metric) => metric.kind === "kri")
+      .map((metric) => metric.id)
+      .toSorted(),
+    UNTIERED_KRIS.toSorted(),
+  );
+  for (const metric of untiered.filter((one) => one.id !== "lever_effect")) {
+    for (const measure of [
+      { value: 0, n: 0 },
+      { value: 12, n: 400 },
+      { value: null, n: 400 },
+    ])
+      assert.equal(evaluate(metric, measure), STATUS.untiered, metric.id);
+  }
+  const passColours = Object.values(STATUS)
+    .filter((entry) => entry.gate === "pass")
+    .map((entry) => entry.hex);
+  assert.ok(!passColours.includes(STATUS.untiered.hex));
+  assert.equal(new Set(Object.values(STATUS).map((one) => one.hex)).size, 5);
+  assert.equal(new Set(Object.values(STATUS).map((one) => one.glyph)).size, 5);
+});
+
+test("lever_effect stays insufficient until its epoch has passed controls", () => {
+  const lever = getMetric("lever_effect");
+  const measure = { value: 0.4, n: 200 };
+  assert.equal(evaluate(lever, measure), STATUS.insufficient);
+  assert.equal(
+    evaluate(lever, measure, { epochValid: false }),
+    STATUS.insufficient,
+  );
+  assert.equal(evaluate(lever, measure, { epochValid: true }), STATUS.untiered);
+  const flake = getMetric("flake_rate");
+  assert.equal(evaluate(flake, { value: 0, n: 20 }), STATUS.green);
+});
+
+test("event_time_skew warns above 0.25 h and fails above 1 h", () => {
+  const skew = getMetric("event_time_skew");
+  const at = (value) => evaluate(skew, { value, n: 8 });
+  assert.equal(at(0.25), STATUS.green);
+  assert.equal(at(0.26), STATUS.amber);
+  assert.equal(at(2099 / 3600), STATUS.amber, "EV-0492's 0.58 h");
+  assert.equal(at(1), STATUS.amber);
+  assert.equal(at(1.01), STATUS.red);
+});
+
+test("worstExit ranks invalid over fail over inconclusive over pass", () => {
+  assert.deepEqual(EXIT, {
+    pass: 0,
+    fail: 1,
+    usage: 2,
+    inconclusive: 3,
+    invalid: 4,
+  });
+  assert.equal(worstExit([]), 0);
+  assert.equal(worstExit([0, 0]), 0);
+  assert.equal(worstExit([0, 3]), 3);
+  assert.equal(worstExit([3, 1, 0]), 1);
+  assert.equal(worstExit([1, 4, 3]), 4);
+  for (const entry of Object.values(STATUS))
+    assert.ok(Object.values(EXIT).includes(entry.exit), entry.word);
 });
 
 test("a sentinel goes to the red status on one occurrence, whatever n is", () => {
