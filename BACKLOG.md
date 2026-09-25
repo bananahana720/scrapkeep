@@ -5686,3 +5686,30 @@ Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-0
 **Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** No dashboard (JL-22), no new metric.
+
+<a id="jl-05c"></a>
+
+### JL-05c: Protocol validator defects and the rules left only in code
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- The JL-09 review, `artifacts/jev-lab-2026-09-25/reviews/JL-09.md` N1, N2 and N3, and the JL-11 review N7 (EV-0513, EV-0514, EV-0517)
+- `tools/jev-player/protocol/{PROTOCOL.md,protocol.mjs,fixtures/}`; `tools/jev-player/decide.mjs`; `sketches/ball-lab/src/jev/jev_io.gd`
+
+**Dependencies:** [JL-09](#jl-09). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/protocol/{PROTOCOL.md,protocol.mjs,fixtures/}`; `tools/jev-player/decide.mjs` (the `PRECONDITION` lookup only); `tools/jev-player/tests/protocol.test.js`; `sketches/ball-lab/src/jev/fixtures/` (the byte-identical copy only); `sketches/ball-lab/src/jev/jev_io.gd` (whole-number exactness and a `GATE_VERSION` constant only); `tests/jev-fixtures.test.js`; `artifacts/local/tasks/JL-05c/`. Scoped exception to the Jev Lab rule that no card mixes `tools/` with `sketches/`: the drift test forces the fixture copy to change with the canonical fixtures, and the Godot validator must agree with the Node judge.
+
+**Definition of done:**
+
+1. Node looks up event kinds, arms and preconditions with own-property checks, so `constructor`, `__proto__`, `toString` and array values are rejected or reported as errors, never accepted or thrown; fixtures cover each.
+2. PROTOCOL.md and `protocol.mjs` agree on whole numbers (one rule, applied on both sides), on non-empty strings, and on the gate: PROTOCOL.md states the four precondition rules and `GATE_VERSION`, and `jev_io.gd` pins the same `GATE_VERSION`, asserted by `tests/jev-fixtures.test.js`.
+3. Gate fixtures cover `start_exit`, ram dropped, stomp dropped and `hit_kicker` kept; Node and Godot agree on all of them.
+4. PROTOCOL.md states the `abort{arm_error}` write on a Node-side invalid state and classifies a Godot that hangs after writing `done.json`.
+5. The protocol string stays `scrapkeep-jev/1`; no message field is added.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run sketch:smoke`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No behaviour change for valid input; no new message field.
