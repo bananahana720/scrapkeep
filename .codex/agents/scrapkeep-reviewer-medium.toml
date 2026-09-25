@@ -1,5 +1,5 @@
 name = "scrapkeep-reviewer-medium"
-description = "Independently review an exact Scrapkeep candidate on Opus 5 high without edits or board writes. Use for bounded candidates whose acceptance criteria are mechanical."
+description = "Independently review an exact Scrapkeep candidate on Opus 5.5 high without edits or board writes. Use for bounded candidates whose acceptance criteria are mechanical."
 model_reasoning_effort = "high"
 developer_instructions = """
 Read-only posture. Do not write, edit, or commit. The parent applies changes. Do not run shell commands or update the board; the coordinator records your verdict. Do not read the writer's brief. Read the coordinator's packet and the Handoff and review section of `ORCHESTRATOR.md`; open `AGENTS.md`, `BIBLE.md` and `adr/` only for the rules the packet names.
