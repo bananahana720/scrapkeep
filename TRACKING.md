@@ -247,10 +247,10 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [SND-04](BACKLOG.md#snd-04) | 1 | 1 | queued | ART-29, TH-17, FR-09, Q-E01, Q-P25, Q-P31, Q-P32, Q-E01 native slice and production authorization gate | none | EV-0470 |
 | [SND-05](BACKLOG.md#snd-05) | 1 | 1 | queued | NQ-01, SND-01, SND-02, SND-03, SND-04, SC-07, TH-17, TH-29, TH-31, FR-09, Q-E01, Q-E03, Q-P31, Q-E01 native slice and production authorization gate | none | EV-0470 |
 | [JL-00](BACKLOG.md#jl-00) | 1 | 2 | done | none | JL-00-A1 | EV-0485 |
-| [JL-01](BACKLOG.md#jl-01) | 1 | 1 | ready | none | none | EV-0485 |
-| [JL-02](BACKLOG.md#jl-02) | 1 | 1 | ready | none | none | EV-0485 |
-| [JL-03](BACKLOG.md#jl-03) | 1 | 1 | ready | none | none | EV-0485 |
-| [JL-04](BACKLOG.md#jl-04) | 1 | 1 | ready | none | none | EV-0485 |
+| [JL-01](BACKLOG.md#jl-01) | 1 | 2 | in_progress | none | none | EV-0486 |
+| [JL-02](BACKLOG.md#jl-02) | 1 | 2 | in_progress | none | none | EV-0486 |
+| [JL-03](BACKLOG.md#jl-03) | 1 | 2 | in_progress | none | none | EV-0486 |
+| [JL-04](BACKLOG.md#jl-04) | 1 | 2 | in_progress | none | none | EV-0486 |
 
 ## Question state index
 
@@ -752,6 +752,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0483 | 2026-09-25T00:00:00+00:00 | Andrew / request; coordinator / tooling change | scripts/play.mjs, package.json, CONTRIBUTING.md, docs/playtests/PLAYTEST-LOG.md | Andrew's long launch path failed (`$GODOT` did not persist between shell invocations) and he asked for a CLI that makes playing and checking the sketches easy. `scripts/play.mjs` discovers sketches by walking `git worktree list`, so the three unplayed sketches in sibling worktrees are addressable by short name (`scrapkeep mobility|spillway|cable`), with `test`, `shot` and a default listing that prints each sketch's branch, head and question. A worktree's primary sketch outranks the reference copies of ball-lab. Binary resolution is imported from `scripts/sketch-smoke.mjs`, which gained only an `export` keyword, so the `sketch:smoke` receipts cited at EV-0482 are unaffected. `npm run play` and `npm run sketch:test` are the in-repo entry points; `~/.local/bin/scrapkeep` is the wrapper. `npm run check:scope` classifies the change `tooling-no-build`; its four required commands pass (`npm test` 229/0, `check:docs` 166 files 0 failures, `check:project`, `check:drift` 349 hashes 0 mismatches), and the stricter `npm run verify` passes all six stages. `node scripts/play.mjs test` passes 34 headless checks across all six sketches in four worktrees, against the five `sketch:smoke` covered from this checkout before. Observed while running it: the three proto branches carry the EV-0482 chase-camera fix but not `tests/camera_test.gd`, so no regression test guards it there; folded into the merge after Andrew plays. No card, lease, question or sketch head changed; the branches under review are untouched. |
 | EV-0484 | 2026-09-25T17:10:00+00:00 | Andrew / authorization; coordinator / program authorization, coordination change | Jev Lab program (card family JL); .claude/agents/scrapkeep-writer.md, .claude/agents/scrapkeep-reviewer-medium.md, AGENTS.md, ORCHESTRATOR.md, .codex/agents descriptions | Andrew asked at 14:03Z for a formal program run by coordinated agents ("divide and conquer") with KPI and KRI feedback on mechanics, stability and the work itself, and at 14:15Z said Jev should be a high-value part of the TDD loop. He approved the program plan, retained at [artifacts/jev-lab-2026-09-25/plan.md](artifacts/jev-lab-2026-09-25/plan.md). Scope: card family JL (JL-00 to JL-29); every card runs in the heavy lane (BACKLOG card, `scripts/new-worktree.sh` worktree, packet, attempt record and event before dispatch, `check:scope` receipts, fresh independent reviewer, serial coordinator integration). Ball-lab first, then new `lab/cable-bench` from 29dcbcf and `lab/spillway-drop` from af89c89; the `proto/*` heads stay byte-identical and `lab/*` never merges into `proto/*`. No card mixes `tools/` with `sketches/`. At most four writers and two reviewers, one Fable review at a time. TypeSafe Jev calls are authorized with cost not a constraint; each batch carries a call cap set in JL-11. Automated play is reported as "automated; not a feel verdict", and the three unplayed sketches (EV-0482) remain Andrew's to play. Coordinator: the fork of `scrapkeep-1d` claimed the program at 14:35Z, created `/home/andrew/Projects/scrapkeep-wt-JL-coord` on `wt/JL-coord` at 9a7f7ae, then hung after `EnterWorktree` at 14:36Z with no further writes; Andrew moved the role to a new Claude Code session (claude-opus-5-5 host-reported, effort high) that works on the coordinator worktree by absolute path, and the fork was sent a stand-down message. Coordination change, Andrew before 17:08Z: the `claude-opus-5` pins on scrapkeep-writer and scrapkeep-reviewer-medium move to `claude-opus-5-5` at high (50ef20c; `check:docs` 0 failures). Agent definitions load at session start, so this session passes the Opus 5.5 model explicitly until sessions restart. JL-00, the audit of 41ab9f6, 7a3c159, 9c067de, 9a7f7ae and EV-0483, went to scrapkeep-reviewer (Fable 5.1); its return is also the Fable availability probe. No card, lease, question or sketch head changed. |
 | EV-0485 | 2026-09-25T17:16:00+00:00 | Independent reviewer / audit; coordinator / definition import, correction, retraction, readiness | JL-00 to JL-04; EV-0483; 41ab9f6, 7a3c159, 9c067de, 9a7f7ae | JL-00 returned FAIL from scrapkeep-reviewer (runtime claude-fable-5-1 per the host prompt, so Fable is available) and is retained verbatim at [artifacts/jev-lab-2026-09-25/audit/README.md](artifacts/jev-lab-2026-09-25/audit/README.md). The coordinator spot-checked three citations and all hold: `sweep.mjs:138` counts a cell as taken when `takeRate > 0.5`, and the retained `artifacts/local/jev-player/cache-economy-sweep.json` in the main checkout gives 6 of 15 pressured cells taken (tier 1 three of three, tier 3 two, tier 4 one), not the README's 4 of 15; `decide.mjs:163-168` replaces a sub-floor choice with `push_objective`; `score.mjs:22` scores that post-floor intent. **Corrections.** EV-0483's time `2026-09-25T00:00:00+00:00` is wrong: 7a3c159, the change it records, was authored at 13:22:08Z. Its `npm test` 229/0, `check:drift` 349/0 and `npm run verify` receipts were not retained and stand unverified. 9c067de (13:52Z) and 9a7f7ae (13:58Z) were committed with no card, event or review; this event reconciles them. 9c067de has a retained verify receipt (13:51:51Z, six stages exit 0, `npm test` 235/235); 9a7f7ae has none, and its `tools/` change is class `tooling`, which requires `npm run verify`. None of the four commits had a card, lease, packet or fresh reviewer (ORCHESTRATOR:38-45). **Retracted** until re-tested under JL-18 and JL-28: the sweep conclusion that cache price has no effect and threat proximity decides, with its numbers (4/15; 0/3, 1/3, 2/3), because the retained artifact contradicts it and tier, price, elapsed time and scrap held move together in `sweep.mjs:36-52`; the negative-control outcome (0.18 vs 0.81, then 0.62) and "0/30 first sweep", which have no code and no artifact; "adversarial 4/4" and "39/41" as instrument evidence, because they depend on the same-session relabel of `adv-full-hp-clock-burning` (37/41 and 3/4 on the original labels), and that case is burned for any blind set; the README metrics table (286 ms, 324 ms, 706 tokens; the retained run gives 294, 309, 749); and "tuned against the corpus" for `CONFIDENCE_FLOOR`, which rests on one case. Surviving as stated: the launcher's discovery, precedence, single `export` change and entry points; the 34-check count; the missing `camera_test.gd` on the three proto worktrees; corpus size and weights; the precondition rule and its six offline tests. New findings A11 to A19 are routed: A13 (scoring discards `rawIntent`), A14 (untested `start_exit`, all-gated fallback, floor, prompt snapshot) and A18 (dead `danger` and `greedy` outputs) to JL-03; A16 (CONTRIBUTING lacks `watch`, `--jobs` and `jev:score`) and A19 (the `~/.local/bin/scrapkeep` wrapper is untracked) to JL-06; A17 (the blanket cache-option prefix contradicts `low-hp-chaser`) to JL-03. **Definition import.** BACKLOG gains the Jev Lab section and cards JL-00 to JL-04 at revision 1. JL-00 was dispatched before its card was written; recorded as a deviation. JL-00 attempt JL-00-A1 is done. JL-01 to JL-04 move absent to ready: program authorization EV-0484, no dependency beyond JL-00, no blocking question. |
+| EV-0486 | 2026-09-25T17:20:00+00:00 | Coordinator / assignment, lease | JL-01, JL-02, JL-03, JL-04 | Wave 1 dispatched. Each card moves ready to in_progress at card revision 1, record revision 1 to 2, with attempt JL-0N-A1 and exclusive lease JL-0N-L1 over the files in its attempt record. Worktrees `/home/andrew/Projects/scrapkeep-wt-JL-01` to `-JL-04` were created by `scripts/new-worktree.sh` at base 581f5f8 (EV-0485) and verified at that head. JL-01 to JL-03 get a symlink to the main checkout's `node_modules` so `npm run verify` can build; `node_modules` is added to the repository's `info/exclude` so the link is never committed. JL-04's labeller receives only the schema file `artifacts/local/tasks/JL-04/schema.md` and the permitted inputs named in its card; the coordinator checks its tool log for forbidden reads before review. Writers: scrapkeep-writer on Opus 5.5 high. Planned review: Fable 5.1 for JL-01 to JL-03, one at a time; Opus 5.5 routine review for JL-04. Active writers: four, the program limit. |
 
 ## Preparation checkpoint
 
@@ -1568,3 +1569,52 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none at admission.
 - Evidence: [assignment packet](artifacts/foundation-sprint-2026-09/tasks/HF-10/assignment.md); [carried findings](artifacts/foundation-sprint-2026-09/tasks/HF-10/carried-findings.md); [manifest](artifacts/foundation-sprint-2026-09/tasks/HF-10/manifest.json); [attempt-1 receipts](artifacts/foundation-sprint-2026-09/tasks/HF-10/attempt-1/verification.json).
 - Review: second fresh scrapkeep-reviewer (claude-fable-5-1 medium) **FAIL on coverage** for attempt 1 (EV-0179; [report](artifacts/foundation-sprint-2026-09/tasks/HF-10/review-coverage-1.md)); attempt HF-10-A2 assigned at EV-0180 with [the revised packet](artifacts/foundation-sprint-2026-09/tasks/HF-10/assignment-A2.md); a different fresh scrapkeep-reviewer (claude-fable-5-1 medium) **PASS+NOTES on coverage** for attempt 2 (EV-0182; [report](artifacts/foundation-sprint-2026-09/tasks/HF-10/review-coverage-2.md)). The recorded foundation review is [HF-10-foundation-review.md](artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md). Integrated evidence: [checks](artifacts/foundation-sprint-2026-09/tasks/HF-10/coordinator-integrated/verification.json).
+
+## JL-01-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high (definition pin claude-opus-5-5 at 50ef20c; this session passes the model explicitly because definitions load at session start); card revision 1; attempt JL-01-A1; exclusive lease JL-01-L1 open.
+- Owned files: `scripts/lab/record.mjs`; `tests/lab-record.test.js`; `package.json` (test file list only); `artifacts/local/tasks/JL-01/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-01` on `wt/JL-01`, created by `scripts/new-worktree.sh`.
+- Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:20:00+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-01/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-02-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high (definition pin claude-opus-5-5 at 50ef20c; this session passes the model explicitly because definitions load at session start); card revision 1; attempt JL-02-A1; exclusive lease JL-02-L1 open.
+- Owned files: `scripts/lab/metrics/{index,status,core,program,human,tdd,ball-lab}.mjs`; `scripts/lab/stats.mjs`; `tests/lab-metrics.test.js`; `package.json` (test file list only); `artifacts/local/tasks/JL-02/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-02` on `wt/JL-02`, created by `scripts/new-worktree.sh`.
+- Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:20:00+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-02/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-03-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high (definition pin claude-opus-5-5 at 50ef20c; this session passes the model explicitly because definitions load at session start); card revision 1; attempt JL-03-A1; exclusive lease JL-03-L1 open.
+- Owned files: `tools/jev-player/questions/`; `tools/jev-player/{decide.mjs,score.mjs,README.md,corpus.json}` (corpus: option wording only, A17); `tools/jev-player/tests/`; `artifacts/local/tasks/JL-03/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-03` on `wt/JL-03`, created by `scripts/new-worktree.sh`.
+- Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:20:00+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-03/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-04-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high (definition pin claude-opus-5-5 at 50ef20c; this session passes the model explicitly because definitions load at session start); card revision 1; attempt JL-04-A1; exclusive lease JL-04-L1 open.
+- Owned files: `tools/jev-player/corpus-blind.json`; `tools/jev-player/corpus-blind.PROVENANCE.md`; `artifacts/local/tasks/JL-04/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-04` on `wt/JL-04`, created by `scripts/new-worktree.sh`.
+- Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:20:00+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-04/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
