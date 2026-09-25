@@ -87,7 +87,7 @@ The two-option cell on the original state is an addition to the review's list. T
 
 | Cell | Call | State | Calls | Pass rule |
 |---|---|---|---|---|
-| `d-free-heal` | Choice | free-heal | 18 | in every order, mean P(take_repair) ≥ 0.6 |
+| `d-free-heal` | Choice | free-heal | 18 | in every order, mean P(take_repair) ≥ 0.6 (diagnostic, not a verdict cell) |
 | `d-named-buff` | Choice | free-cache-named-buff | 18 | as a-free-cache |
 
 `d-named-buff` was added after the JL-18b contrast, before any call. It changes one thing from free-cache, the random reward.
@@ -101,7 +101,7 @@ One call per state holds one Noul per option, keyed by option id, and no Choice.
 | Cell | State | Calls | Pass rule, in every order (per-order mean over 3 repeats) |
 |---|---|---|---|
 | `e-free-cache` | free-cache | 6 × 3 = 18 | Noul(take_cache) ≥ 0.6 and Noul(take_cache) − max(other Nouls) ≥ 0.2 |
-| `e-free-heal` | free-heal | 18 | Noul(take_repair) ≥ 0.6 and exceeds every other option's by ≥ 0.2 |
+| `e-free-heal` | free-heal | 18 | Noul(take_repair) ≥ 0.6 and exceeds every other option's by ≥ 0.2 (diagnostic, not a verdict cell) |
 | `e-lethal` | lethal-option | 18 | Noul(ram_target) ≤ 0.2 and max(other Nouls) − Noul(ram_target) ≥ 0.2 |
 | `e-no-objective` | free-cache-no-objective | 18 | as e-free-cache |
 
@@ -156,14 +156,18 @@ These are the pre-stated readings. The Phase B report states which rows fired an
 ## Overall verdict rule
 
 - **BLOCKED** (no verdict) when 10 or more calls fail, or when the successful calls resolve more than one model. The retained answers are reported. Any rerun is a new decision with its own budget.
-- **Candidate** when at least one asking design clears all of its verdict cells in every order:
-  - **Choice:** `a-free-cache`, `a-lethal` and `d-free-heal`.
-  - **Preference Nouls:** `e-free-cache`, `e-lethal` and `e-free-heal`.
+- **Candidate** when at least one asking method clears free-cache and lethal-option in every order:
+  - **Choice:** `a-free-cache` and `a-lethal`.
+  - **Preference Nouls:** `e-free-cache` and `e-lethal`.
 
   A candidate becomes the subject of a follow-up card. Adopting it into the arm is not part of JL-18c.
 - **Park** otherwise, per EV-0527.
 
-**Leads.** Diagnostic cells (`c-no-objective`, `c-no-objective-two`, `c-free-cache-two`, `d-named-buff`, `e-no-objective`, `f-free-cache`) that pass are listed as leads for any future reopening. A passing lead does not change a park. The verdict cells were chosen so a candidate must take a free dominant option of two kinds and refuse a lethal one, under one asking method.
+**Free-heal cells are diagnostics.** `d-free-heal` and `e-free-heal` stay in the plan and in the call budget. They locate whether the discount is specific to caches (the scope rows above) and do not decide the verdict.
+
+**Leads.** Diagnostic cells (`c-no-objective`, `c-no-objective-two`, `c-free-cache-two`, `d-named-buff`, `e-no-objective`, `f-free-cache`) that pass are listed as leads for any future reopening. A passing lead does not change a park. The verdict cells are the game's real controls, so a candidate must take the free cache and refuse the lethal ram under one asking method.
+
+**Change record.** Before any call, the free-heal cells were removed from both methods' verdict cells. The Fable review of this pre-registration (N1) questioned letting a hypothetical repair pad decide the verdict, and the coordinator decided, on Andrew's deferral, that the verdict rests on the game's real controls only. Every cell, text, line and the 216-call budget are otherwise unchanged. Per review § 5, the runner also now records provenance before the first call and after the last, which does not change the plan.
 
 ## Budget and cap
 
@@ -182,7 +186,7 @@ The cap is 216 calls, made once. `runPlan` refuses a plan whose length is not th
 ## Phase B procedure
 
 1. The coordinator confirms that this commit is the reviewed one and the worktree is clean.
-2. Run once: `node tools/jev-player/experiments/jl18c/run.mjs --live`. It writes every result to `artifacts/local/tasks/JL-18c/live/jl18c-<start>.calls.jsonl` as it lands. At the end it writes the full record (hashes, instrument, every result, the analysis) to `jl18c-<start>.json` and prints one line per cell, the comparisons, the explanations and the verdict.
+2. Run once: `node tools/jev-player/experiments/jl18c/run.mjs --live`. Before the first call and again after the last it writes `jl18c-<start>.provenance-before.json` and `jl18c-<start>.provenance-after.json` to the output folder, each holding `git rev-parse HEAD`, `git status --porcelain` and the sha256 of this file. It writes every result to `artifacts/local/tasks/JL-18c/live/jl18c-<start>.calls.jsonl` as it lands. At the end it writes the full record (hashes, instrument, every result, the analysis) to `jl18c-<start>.json` and prints one line per cell, the comparisons, the explanations and the verdict.
 3. Retain stdout, stderr and the exit code. Report every cell as it fell, including failed calls.
 4. A crash mid-run counts as BLOCKED. The JSONL keeps every paid answer.
 
@@ -201,8 +205,8 @@ The runner reads these files from `tools/jev-player/experiments/jl18c/`. `--live
 
 - `states.json` sha256 `bf2ac2bfba8749a7f9e58ce3168c4fbd952784c50caf2642c4fb66ac8c0b6457`
 - `questions.json` sha256 `8150c3b99d052b60fce8e03150bca8313fb54587d4e8533a5c07ee36cabf8ad6`
-- `design.json` sha256 `fcb3aaa2d00b3c3c22681598441499b680bbfc5854c8c121c3f1e96427629781`
-- `run.mjs` sha256 `2147b6791800302d36271a354c67b3ba6b2e11d37f0210c71241aaa13666c205`
+- `design.json` sha256 `d83c6cef0023dc34403723a86e5946c34752761d012e3473f9da9f84abe2ccba`
+- `run.mjs` sha256 `613d2c3cf5e60c82b1719ae174f761d322868425c132f51967b5f0959aa8c2fa`
 
 ## Rendered examples
 

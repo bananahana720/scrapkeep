@@ -44,8 +44,8 @@
   },
   "verdict": {
     "candidates": {
-      "choice": ["a-free-cache", "a-lethal", "d-free-heal"],
-      "preference": ["e-free-cache", "e-lethal", "e-free-heal"]
+      "choice": ["a-free-cache", "a-lethal"],
+      "preference": ["e-free-cache", "e-lethal"]
     },
     "leads": ["c-no-objective", "c-no-objective-two", "c-free-cache-two", "d-named-buff", "e-no-objective", "f-free-cache"]
   }

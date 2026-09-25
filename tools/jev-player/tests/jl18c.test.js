@@ -3,6 +3,7 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,7 @@ import {
   loadExperiment,
   lockMismatches,
   PREREGISTRATION,
+  provenance,
   renderReport,
   runPlan,
 } from "../experiments/jl18c/run.mjs";
@@ -390,6 +392,37 @@ test("runPlan refuses a plan whose length is not the budget", async () => {
     /budget/,
   );
   assert.equal(called, 0);
+});
+
+test("the free-heal cells are diagnostics: failing them does not stop a candidate", async () => {
+  const results = await runPlan(
+    plan,
+    stubSender({
+      choice: (ids) =>
+        ids.includes("take_repair") ? spread(ids, "push_objective", 0.9) : idealChoice(ids),
+      noul: (key) => (key === "take_repair" ? 0.1 : idealNoul(key)),
+    }),
+    experiment.design.budget,
+  );
+  const analysis = analyse(experiment, results);
+  assert.equal(analysis.cells["d-free-heal"].passed, false);
+  assert.equal(analysis.cells["e-free-heal"].passed, false);
+  assert.equal(analysis.verdict.verdict, "candidate");
+  assert.deepEqual(analysis.verdict.candidates, ["choice", "preference"]);
+  assert.match(analysis.explanations.dominance_scope, /not taken/);
+});
+
+test("provenance records the head, the worktree status and the pre-registration's sha256", () => {
+  const git = (...args) =>
+    spawnSync("git", args, { cwd: EXPERIMENT_DIR, encoding: "utf8" }).stdout;
+  const record = provenance();
+  assert.equal(record.head, git("rev-parse", "HEAD").trim());
+  assert.equal(record.status, git("status", "--porcelain"));
+  assert.equal(
+    record.preregistration_sha256,
+    createHash("sha256").update(readFileSync(PREREGISTRATION)).digest("hex"),
+  );
+  assert.ok(!Number.isNaN(Date.parse(record.at)));
 });
 
 test("the pre-registration pins the sha256 of every input and the runner", () => {

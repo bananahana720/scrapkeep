@@ -4,6 +4,7 @@
 // pre-registration pins their sha256 and this file's. --dry-run prints every
 // request body and the call count; --live refuses to start unless the pins
 // match, then makes exactly the budgeted calls once, with no retries.
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
@@ -64,6 +65,19 @@ export function lockMismatches(text, experiment = loadExperiment()) {
     (name) =>
       `${name} sha256 ${experiment.hashes[name]} is not pinned in the pre-registration`,
   );
+}
+
+// Written before the first live call and after the last, so the record shows
+// which commit ran and whether anything changed underneath it.
+export function provenance() {
+  const git = (...args) =>
+    execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" });
+  return {
+    at: new Date().toISOString(),
+    head: git("rev-parse", "HEAD").trim(),
+    status: git("status", "--porcelain"),
+    preregistration_sha256: sha256(readFileSync(PREREGISTRATION)),
+  };
 }
 
 function permutations(items) {
@@ -620,9 +634,16 @@ async function main(argv) {
   await mkdir(out, { recursive: true });
   const stamp = started.toISOString().replaceAll(":", "-");
   const stream = path.join(out, `jl18c-${stamp}.calls.jsonl`);
+  const record = (when) =>
+    writeFile(
+      path.join(out, `jl18c-${stamp}.provenance-${when}.json`),
+      JSON.stringify(provenance(), null, 2) + "\n",
+    );
+  await record("before");
   const results = await runPlan(plan, liveSender(key), budget, (result) =>
     appendFile(stream, JSON.stringify(result) + "\n"),
   );
+  await record("after");
   const analysis = analyse(experiment, results);
   const file = path.join(out, `jl18c-${stamp}.json`);
   await writeFile(
