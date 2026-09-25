@@ -71,6 +71,125 @@ export const PAGE = Object.freeze({
   epoch: "#2ee6d6",
 });
 
+// What each intent looks like wherever a decision is drawn: the watch overlay
+// in Godot, the replay page and the terminal. Hues are colors.toml's blue,
+// cyan, magenta and bright keys; green, yellow and red stay with the statuses
+// and accent with Andrew's marks. The two attacks on a dummy share magenta.
+// `shape` is a closed polygon in a unit box, y down, drawn at any size.
+function intent(word, hex, glyph, shape) {
+  return Object.freeze({ word, hex, glyph, shape: Object.freeze(shape) });
+}
+
+export const INTENT = Object.freeze({
+  push_objective: intent("push", "#4fa3d9", "→", [
+    [-1, -0.35],
+    [0.15, -0.35],
+    [0.15, -0.85],
+    [1, 0],
+    [0.15, 0.85],
+    [0.15, 0.35],
+    [-1, 0.35],
+  ]),
+  hit_kicker: intent("kicker", "#2ee6d6", "◢", [
+    [-1, 0.75],
+    [1, 0.75],
+    [1, -0.95],
+  ]),
+  stomp_target: intent("stomp", "#f08cbd", "▼", [
+    [-0.95, -0.75],
+    [0.95, -0.75],
+    [0, 0.95],
+  ]),
+  ram_target: intent("ram", "#e0569b", "◆", [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+  ]),
+  evade_hazard: intent("evade", "#ffe29a", "ϟ", [
+    [-0.25, -1],
+    [0.65, -1],
+    [0.15, -0.15],
+    [0.75, -0.15],
+    [-0.45, 1],
+    [-0.05, 0.1],
+    [-0.65, 0.1],
+  ]),
+  sweep_scrap: intent("sweep", "#a8f0c4", "◠", [
+    [-1, 0.4],
+    [-0.6, -0.5],
+    [0, -0.8],
+    [0.6, -0.5],
+    [1, 0.4],
+    [0.5, 0.4],
+    [0, -0.2],
+    [-0.5, 0.4],
+  ]),
+  take_cache: intent("cache", "#8cc6ee", "■", [
+    [-0.8, -0.8],
+    [0.8, -0.8],
+    [0.8, 0.8],
+    [-0.8, 0.8],
+  ]),
+  retreat_regen: intent("retreat", "#8ff5ec", "←", [
+    [1, -0.35],
+    [-0.15, -0.35],
+    [-0.15, -0.85],
+    [-1, 0],
+    [-0.15, 0.85],
+    [-0.15, 0.35],
+    [1, 0.35],
+  ]),
+  start_exit: intent("exit", "#ff7a96", "◎", [
+    [0, -1],
+    [0.7, -0.7],
+    [1, 0],
+    [0.7, 0.7],
+    [0, 1],
+    [-0.7, 0.7],
+    [-1, 0],
+    [-0.7, -0.7],
+  ]),
+});
+
+// How a decision was made, so a chip never presents a rule, a draw, a cache
+// hit or a fallback as a Jev choice. Only `live` is Jev answering now.
+export const SOURCE = Object.freeze({
+  live: Object.freeze({ word: "JEV", hex: PAGE.bright }),
+  cache: Object.freeze({ word: "CACHED", hex: PAGE.soft }),
+  forced: Object.freeze({ word: "FORCED", hex: STATUS.insufficient.ink }),
+  fallback: Object.freeze({ word: "FALLBACK", hex: STATUS.amber.hex }),
+  rule: Object.freeze({ word: "RULE", hex: PAGE.soft }),
+  seeded: Object.freeze({ word: "SEEDED", hex: PAGE.soft }),
+  failed: Object.freeze({ word: "FAILED", hex: STATUS.red.hex }),
+});
+
+// Watch mode's own labels. A watch record is never evidence; a Jev watch run
+// is a demo because its epoch need not have passed its controls.
+export const WATCH = Object.freeze({
+  demo: Object.freeze({
+    record: "demo, not evidence",
+    banner: "DEMO — not evidence",
+    hex: STATUS.amber.hex,
+    glyph: STATUS.amber.glyph,
+  }),
+  watch: Object.freeze({
+    record: "watch, not evidence",
+    banner: "WATCH — not evidence",
+    hex: PAGE.soft,
+    glyph: STATUS.untiered.glyph,
+  }),
+  mark: Object.freeze({ word: "MARK", hex: PAGE.accent }),
+  // The overlay's preflight line and end card; the replay page's anomalies.
+  verdict: Object.freeze({
+    pass: STATUS.green,
+    warn: STATUS.amber,
+    fail: STATUS.red,
+  }),
+  anomaly: Object.freeze({ hex: STATUS.red.hex }),
+  knock: Object.freeze({ hex: PAGE.soft }),
+});
+
 // Metrics that mean nothing until their epoch has passed its controls. The
 // registry shape has no field for this, so the rule lives beside evaluate.
 const EPOCH_BOUND = new Set(["lever_effect"]);

@@ -90,7 +90,7 @@ import {
 } from "../../tools/jev-player/protocol/protocol.mjs";
 import { createArm } from "./arms.mjs";
 import { METRICS } from "./metrics/index.mjs";
-import { EXIT } from "./metrics/status.mjs";
+import { EXIT, WATCH } from "./metrics/status.mjs";
 import { createRun, RUNS_ROOT } from "./record.mjs";
 import { wilson } from "./stats.mjs";
 import {
@@ -281,6 +281,7 @@ async function runTrial({
   snapshotEvery,
   holdTicks,
   interrupt,
+  watch,
 }) {
   await mkdir(io, { recursive: true });
   const entry = {
@@ -423,6 +424,7 @@ async function runTrial({
         const state = read.value;
         entry.snapshots += 1;
         const offered = offeredOptions(state.jev);
+        const decided = { latencyMs: 0, error: null };
         let choice;
         if (offered.length === 1) {
           // One offered option: the answer is fixed, so no arm is asked.
@@ -443,6 +445,7 @@ async function runTrial({
         } else {
           budget.used += 1;
           entry.arm_calls += 1;
+          const asked = performance.now();
           try {
             choice = await arm.choose({
               seq,
@@ -450,6 +453,7 @@ async function runTrial({
               offered,
               jev: state.jev,
             });
+            decided.latencyMs = performance.now() - asked;
             if (choice.jev !== undefined) {
               const model = choice.jev.model ?? null;
               const expected = anchor.model ?? run.provenance.jev.model;
@@ -472,9 +476,25 @@ async function runTrial({
               ...error.abort,
               message: `${armName} arm: ${error.message}`,
             };
-            break;
+            decided.latencyMs = performance.now() - asked;
+            decided.error = abort.message;
           }
         }
+        if (watch !== null) {
+          await watch.onDecision?.({
+            trial,
+            io,
+            seq,
+            tick: state.tick,
+            state,
+            offered,
+            forced: choice?.source === "forced",
+            choice: decided.error === null ? choice : null,
+            error: decided.error,
+            latencyMs: decided.latencyMs,
+          });
+        }
+        if (abort !== null) break;
         const intent = {
           protocol: PROTOCOL,
           seq,
@@ -655,6 +675,12 @@ export async function runBatch({
   // records them from the parsed scenario results.
   registry = METRICS,
   measure = null,
+  // Watch mode (JL-31): {sessionCap, onPreflight, onDecision}. A jev watch
+  // runs even when its preflight fails, as a demo; the preflight's live calls
+  // count against sessionCap. Every decision is reported to onDecision. The
+  // record carries config.watch, which the gate refuses. null leaves the
+  // batch exactly as it was.
+  watch = null,
 } = {}) {
   if (!Object.hasOwn(ARMS, armName ?? "")) {
     throw new UsageError(
@@ -735,7 +761,14 @@ export async function runBatch({
           models.length === 1 ? "1 model" : `${models.length} models`;
         reason = `the preflight resolved ${count} (${models.join(", ")}), so the batch has no single model to anchor on`;
       }
-      if (reason !== null) {
+      if (watch !== null) {
+        await watch.onPreflight?.({
+          summary: preflightSummary,
+          controls: preflightResult,
+          reason,
+        });
+      }
+      if (reason !== null && watch === null) {
         return {
           exit: PREFLIGHT_EXIT,
           reason,
@@ -746,8 +779,13 @@ export async function runBatch({
           id: null,
         };
       }
-      anchor.model = models[0];
-      cache = anchoredCache(cache, anchor);
+      if (models.length === 1 && typeof models[0] === "string") {
+        anchor.model = models[0];
+        cache = anchoredCache(cache, anchor);
+      }
+      if (watch !== null) {
+        cap = Math.max(0, watch.sessionCap - (preflightSummary.calls ?? 0));
+      }
     }
     if (replay && callCap === undefined) {
       replaySource = await findReplaySource({
@@ -789,6 +827,17 @@ export async function runBatch({
           model_mismatches: 0,
         }
       : {}),
+    ...(watch === null
+      ? {}
+      : {
+          watch: {
+            label: (armName === "jev" ? WATCH.demo : WATCH.watch).record,
+            demo: armName === "jev",
+            session_cap: watch.sessionCap,
+            preflight_calls: preflightSummary?.calls ?? 0,
+            arm_cap: cap,
+          },
+        }),
     arm_calls: 0,
     capped: false,
     trials: [],
@@ -841,6 +890,7 @@ export async function runBatch({
         snapshotEvery,
         holdTicks,
         interrupt,
+        watch,
       });
       entry.io = path.relative(run.directory, io);
       config.trials.push(entry);
@@ -937,9 +987,13 @@ export async function runBatch({
           `No live source run for this replay was found under the runs root, so the call cap is the default ${cap}.`,
         );
       }
-    } else {
+    } else if (preflightSummary.passed) {
       run.limit(
         `Preflight: controls ${preflightSummary.controls_version} passed in ${preflightSummary.calls} live calls; the batch is anchored on ${anchor.model}.`,
+      );
+    } else {
+      run.limit(
+        `Preflight: controls ${preflightSummary.controls_version} did not pass in ${preflightSummary.calls} live calls; watch mode ran the batch anyway, anchored on ${anchor.model ?? "its first verdict's model"}.`,
       );
     }
     if (anchor.mismatches > 0) {
@@ -963,6 +1017,11 @@ export async function runBatch({
   if (budget.capped) {
     run.limit(
       `The batch call cap of ${cap} arm calls was reached; ${n} of ${trials} trials ran.`,
+    );
+  }
+  if (watch !== null) {
+    run.limit(
+      `Watch mode: ${config.watch.label}. Launched in a window for Andrew to look at, with at most ${watch.sessionCap} live Jev calls in the session; the gate refuses watch records.`,
     );
   }
   run.limit(`Automated trials against ${config.launcher}; not a feel verdict.`);

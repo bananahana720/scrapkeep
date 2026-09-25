@@ -201,6 +201,15 @@ function assessRun(record, label, tty, epochValid = false) {
     found.push(
       outcome(RESULT_EXIT[record.result], `${label} result ${record.result}`),
     );
+  // A watch record ran in a window for Andrew to look at (JL-31); a Jev one
+  // may come from an epoch that never passed its controls.
+  if (record.config?.watch !== undefined)
+    found.push(
+      outcome(
+        EXIT.invalid,
+        `${label} is a watch-mode record, ${record.config.watch?.label ?? "not evidence"}`,
+      ),
+    );
   const { sources, dirty, head } = record.provenance ?? {};
   if (sources?.matched === false)
     found.push(
