@@ -115,10 +115,12 @@ const PLAN_THRESHOLDS = {
   first_pass_review: { worse: "lower", warn: 0.7, fail: 0.5 },
   event_time_skew: { worse: "higher", warn: 0.25, fail: 1 },
   unplayed_green: { worse: "higher", warn: 2, fail: 4 },
+  control_separation: { worse: "lower", warn: 0.2, fail: 0.1 },
 };
 
-// Non-sentinel KRIs the plan gives no thresholds. The first nine are the ones
-// EV-0491 named; overclaim's 0.77 is a per-reply cut, not a rate limit.
+// Non-sentinel KRIs the plan gives no thresholds. The first eight are ones
+// EV-0491 named (control_separation got its threshold in JL-15); overclaim's
+// 0.77 is a per-reply cut, not a rate limit.
 const UNTIERED_KRIS = [
   "unreachable_scenarios",
   "escaped_defects",
@@ -128,7 +130,6 @@ const UNTIERED_KRIS = [
   "low_conf_rate",
   "rework_per_card",
   "triage_misroute",
-  "control_separation",
   "overclaim",
 ];
 
