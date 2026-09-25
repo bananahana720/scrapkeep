@@ -2,9 +2,19 @@
 // <io> directory per trial, over protocol v1 (tools/jev-player/protocol/
 // PROTOCOL.md), and writes one scrapkeep-run/1 record per batch.
 //
-// Godot is whatever `launch({io, scenario, seed, trial})` names as
-// {command, args}. fakeGodot() points it at scripts/lab/fake-godot.mjs; the
-// real Godot runner (JL-17) plugs in through the same function.
+// Godot is whatever `launch({io, scenario, seed, trial, snapshotEvery,
+// holdTicks})` names as {command, args, env?, cwd?}; env is added to the
+// harness's own. fakeGodot() points it at scripts/lab/fake-godot.mjs and
+// godotLaunch() in godot-launch.mjs at the real runner (JL-17). Each launch
+// runs in its own process group, and the watchdog kills the whole group, so a
+// Godot started through a wrapper does not outlive its trial. hello.json must
+// echo the requested D (snapshot_every) and k (hold_ticks); the record stores
+// both.
+//
+// SIGINT or SIGTERM to the harness writes abort{interrupted} into the running
+// trial, waits for Godot's done.json, records the trial as aborted with cause
+// `interrupted` and starts no further trial; the batch record is still
+// written. A second signal kills the running trial's process group at once.
 //
 // Outcomes follow PROTOCOL.md's "Timeouts and exit codes" table: complete,
 // aborted, error:<code>, stall, crash, invalid. Two Node-side decisions:
@@ -61,6 +71,7 @@ import {
   fileName,
   offeredOptions,
   PROTOCOL,
+  TIMING,
   validateAbort,
   validateHello,
   validateIntent,
@@ -95,7 +106,11 @@ export const DEFAULTS = Object.freeze({
   callCap: 1000,
   watchdogFloorMs: WATCHDOG_FLOOR_MS,
   pollMs: 10,
+  snapshotEvery: TIMING.snapshot_every,
+  holdTicks: TIMING.hold_ticks,
 });
+
+const SIGNALS = ["SIGINT", "SIGTERM"];
 
 export const TRIAL_SEED_STRIDE = 1000;
 
@@ -110,8 +125,10 @@ export const JEV_DEFAULTS = Object.freeze({
 // call cap says nothing about the game, so it can only leave the batch
 // inconclusive; a broken arm or answer, or a replay that cannot reproduce, is
 // a failure of the run itself. A verdict from another model means the
-// instrument moved, so it voids the batch. A cause not listed here fails.
+// instrument moved, so it voids the batch. An interrupted batch was stopped by
+// its operator, which says nothing either way. A cause not listed here fails.
 const ABORT_EFFECT = {
+  interrupted: "inconclusive",
   node_invalid: "invalid",
   model_mismatch: "invalid",
   arm_throw: "fail",
@@ -234,6 +251,9 @@ async function runTrial({
   budget,
   run,
   anchor,
+  snapshotEvery,
+  holdTicks,
+  interrupt,
 }) {
   await mkdir(io, { recursive: true });
   const entry = {
@@ -254,8 +274,22 @@ async function runTrial({
     events_tmp_only: false,
     errors: [],
   };
-  const { command, args } = launch({ io, scenario, seed, trial });
-  const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
+  const { command, args, env, cwd } = launch({
+    io,
+    scenario,
+    seed,
+    trial,
+    snapshotEvery,
+    holdTicks,
+  });
+  // detached: the child leads a new process group, so killGroup() reaches
+  // whatever it starts.
+  const child = spawn(command, args, {
+    stdio: ["ignore", "ignore", "pipe"],
+    detached: true,
+    env: { ...process.env, ...env },
+    ...(cwd === undefined ? {} : { cwd }),
+  });
   let stderr = "";
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => {
@@ -281,16 +315,25 @@ async function runTrial({
   let rejected = null; // a Godot file Node refused: {file, errors}
   let abort = null; // what Node writes to abort.json
 
+  const killGroup = () => {
+    if (child.pid === undefined) return;
+    try {
+      process.kill(-child.pid, "SIGKILL");
+    } catch (error) {
+      if (error.code !== "ESRCH") throw error;
+    }
+  };
   const kill = async (waitingFor) => {
     stalled = true;
     entry.waiting_for = waitingFor;
-    child.kill("SIGKILL");
+    killGroup();
     await exited;
   };
+  interrupt.killTrial = killGroup;
   // Polls for the first of `names`. The watchdog runs only while Node waits
   // for Godot: from spawn, from hello, and from each intent's rename; never
-  // while an arm is choosing.
-  const waitFor = async (names) => {
+  // while an arm is choosing. A harness signal ends an interruptible wait.
+  const waitFor = async (names, { interruptible = true } = {}) => {
     const limit = watchdogLimit(steps, floorMs);
     entry.watchdog_ms = limit;
     const started = performance.now();
@@ -304,6 +347,7 @@ async function runTrial({
         return hit;
       }
       if (exitedBefore) return null;
+      if (interruptible && interrupt.signal !== null) return null;
       if (performance.now() - started > limit) {
         await kill(names[0]);
         return null;
@@ -321,6 +365,17 @@ async function runTrial({
       const errors = hello.errors ?? validateHello(hello.value);
       if (errors.length === 0 && hello.value.scenario !== scenario) {
         errors.push({ path: "scenario", message: `must be ${scenario}` });
+      }
+      for (const [field, requested] of [
+        ["snapshot_every", snapshotEvery],
+        ["hold_ticks", holdTicks],
+      ]) {
+        if (errors.length === 0 && hello.value[field] !== requested) {
+          errors.push({
+            path: field,
+            message: `must be the requested ${requested}, got ${hello.value[field]}`,
+          });
+        }
       }
       if (errors.length > 0) rejected = { file: "hello.json", errors };
       for (let seq = 0; rejected === null && abort === null; seq += 1) {
@@ -416,6 +471,13 @@ async function runTrial({
         message: `${rejected.file} failed validation: ${first.path} ${first.message}`,
       };
     }
+    if (abort === null && interrupt.signal !== null) {
+      abort = {
+        reason: "interrupted",
+        cause: "interrupted",
+        message: `the harness received ${interrupt.signal}`,
+      };
+    }
     if (abort !== null && !stalled && !gone) {
       const message = {
         protocol: PROTOCOL,
@@ -429,7 +491,7 @@ async function runTrial({
       }
       await writeAtomic(path.join(io, "abort.json"), message);
       entry.abort = abort;
-      await waitFor(["done.json", "error.json"]);
+      await waitFor(["done.json", "error.json"], { interruptible: false });
     } else if (abort !== null) {
       entry.abort = abort;
     }
@@ -447,10 +509,10 @@ async function runTrial({
       timer.abort();
     }
   } finally {
-    if (!gone) {
-      child.kill("SIGKILL");
-      await exited;
-    }
+    interrupt.killTrial = null;
+    // Also reaches anything the child left running in its group.
+    killGroup();
+    if (!gone) await exited;
   }
 
   const files = await readTrialFiles(io);
@@ -501,6 +563,9 @@ export async function runBatch({
   replay = false,
   preflight = beforeJevBatch,
   controls,
+  snapshotEvery = DEFAULTS.snapshotEvery,
+  holdTicks = DEFAULTS.holdTicks,
+  signals = SIGNALS,
 } = {}) {
   if (!Object.hasOwn(ARMS, armName ?? "")) {
     throw new UsageError(
@@ -528,6 +593,20 @@ export async function runBatch({
   }
   if (replay && armName !== "jev") {
     throw new UsageError(`replay needs the jev arm, not ${armName}`);
+  }
+  if (!Number.isInteger(snapshotEvery) || snapshotEvery < 1) {
+    throw new UsageError(
+      `snapshotEvery (D) must be a whole number >= 1, got ${snapshotEvery}`,
+    );
+  }
+  if (
+    !Number.isInteger(holdTicks) ||
+    holdTicks < 0 ||
+    holdTicks >= snapshotEvery
+  ) {
+    throw new UsageError(
+      `holdTicks (k) must be a whole number from 0 to snapshotEvery - 1 (${snapshotEvery - 1}), got ${holdTicks}`,
+    );
   }
   let armOptions = {};
   let armInstrument = null;
@@ -597,6 +676,8 @@ export async function runBatch({
     trial_seed_stride: TRIAL_SEED_STRIDE,
     call_cap: callCap,
     watchdog_floor_ms: watchdogFloorMs,
+    snapshot_every: snapshotEvery,
+    hold_ticks: holdTicks,
     launcher: launch.label ?? "custom",
     ...(armName === "jev"
       ? {
@@ -620,32 +701,52 @@ export async function runBatch({
     ...runs,
   });
   const budget = { cap: callCap, used: 0, capped: false };
-  for (let trial = 0; trial < trials; trial += 1) {
-    // Each trial's arm gets its own seed, so trial i replays alone.
-    const trialSeed = seed * TRIAL_SEED_STRIDE + trial;
-    const arm = createArm(armName, { seed: trialSeed, ...armOptions });
-    const io = path.join(
-      run.directory,
-      "trials",
-      String(trial).padStart(3, "0"),
-    );
-    const entry = await runTrial({
-      trial,
-      io,
-      scenario,
-      armName,
-      arm,
-      seed: trialSeed,
-      launch,
-      floorMs: watchdogFloorMs,
-      pollMs,
-      budget,
-      run,
-      anchor,
-    });
-    entry.io = path.relative(run.directory, io);
-    config.trials.push(entry);
-    if (budget.capped || entry.abort?.cause === "model_mismatch") break;
+  const interrupt = { signal: null, killTrial: null };
+  const onSignal = (signal) => {
+    if (interrupt.signal === null) {
+      interrupt.signal = signal;
+    } else {
+      interrupt.killTrial?.();
+    }
+  };
+  for (const signal of signals) process.on(signal, onSignal);
+  try {
+    for (
+      let trial = 0;
+      trial < trials && interrupt.signal === null;
+      trial += 1
+    ) {
+      // Each trial's arm gets its own seed, so trial i replays alone.
+      const trialSeed = seed * TRIAL_SEED_STRIDE + trial;
+      const arm = createArm(armName, { seed: trialSeed, ...armOptions });
+      const io = path.join(
+        run.directory,
+        "trials",
+        String(trial).padStart(3, "0"),
+      );
+      const entry = await runTrial({
+        trial,
+        io,
+        scenario,
+        armName,
+        arm,
+        seed: trialSeed,
+        launch,
+        floorMs: watchdogFloorMs,
+        pollMs,
+        budget,
+        run,
+        anchor,
+        snapshotEvery,
+        holdTicks,
+        interrupt,
+      });
+      entry.io = path.relative(run.directory, io);
+      config.trials.push(entry);
+      if (budget.capped || entry.abort?.cause === "model_mismatch") break;
+    }
+  } finally {
+    for (const signal of signals) process.off(signal, onSignal);
   }
   config.arm_calls = budget.used;
   config.capped = budget.capped;
@@ -710,6 +811,11 @@ export async function runBatch({
         "A verdict came from another model than the batch's anchor, so the instrument changed mid-batch; the batch stopped there and is void.",
       );
     }
+  }
+  if (interrupt.signal !== null) {
+    run.limit(
+      `The harness received ${interrupt.signal}; it wrote abort interrupted and stopped after ${n} of ${trials} trials.`,
+    );
   }
   if (budget.capped) {
     run.limit(
