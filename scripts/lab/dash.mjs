@@ -59,14 +59,14 @@ const SHOWN = evaluate(
 
 // Facts the coordinator admitted in TRACKING that no run record carries.
 // Each cites its row; change the row and this table together.
-const ADMITTED = {
+export const ADMITTED = {
   gameplay: {
     source: "EV-0534 (JL-13 review)",
     lines: [
       "Rigid mode: a centred stomp is not credited.",
       "Rigid mode: the grounded flag flickers on flat ground, so jump, brake and drive flicker with it.",
       "Kinematic mode: the tilted boxes' raised ends leave wedge gaps narrower than the ball, and a pinned ball reports rising speed and a cruise tier while it does not move.",
-      "The service-ramp top is a step of about 1.6 m, more than the ball's radius, so the slow route needs a jump.",
+      "Service ramp: about 1.6 m step at the top.",
     ],
   },
   triage: {
@@ -76,7 +76,10 @@ const ADMITTED = {
       { role: "blind", earned: 65, possible: 71 },
       { role: "authored", earned: 73, possible: 81 },
     ],
-    note: "0 severe misses; both controls answered by Jev. Advisory only: a rerun never turns a failed check into a pass.",
+    note: "0 severe misses; both controls answered by Jev.",
+    advisory:
+      "Advisory only: a rerun counts toward flake_rate and never turns a failing result into a passing one.",
+    advisorySource: "BACKLOG JL-19 DoD 3",
   },
   tagging: {
     title: "Verdict tagging (JL-20)",
@@ -88,8 +91,15 @@ const ADMITTED = {
   parked: {
     source: "EV-0540, EV-0541",
     line: "Jev as player is parked for this program: it reads the options correctly but overweights an option that names the level's goal, so it failed the free-cache control in every order. The scripted and random arms carry the mechanics metrics; Jev keeps its test-loop roles.",
+    qualification:
+      "Under the per-option yes/no method, take_cache ranked first in all 18 free-cache calls and failed only on the pre-registered 0.2 margin (EV-0541).",
   },
 };
+
+const ADMITTED_AS_OF = JSON.stringify(ADMITTED)
+  .match(/EV-\d{4}/g)
+  .toSorted()
+  .at(-1);
 
 const ESCAPES = {
   "&": "&amp;",
@@ -102,35 +112,86 @@ const esc = (text) => String(text).replace(/[&<>"']/g, (one) => ESCAPES[one]);
 const short = (sha) => (sha ?? "none").slice(0, 7);
 const valueText = (measure) =>
   Number.isFinite(measure?.value) ? number(measure.value) : "none";
-const tint = (hex) => `style="--status: ${hex}"`;
+const tint = (status) =>
+  `style="--status: ${status.hex}; --ink: ${status.ink}"`;
 const breakable = (id) => id.replaceAll("_", "_<wbr>");
 
-// A sketch waits for Andrew until some verdict's build holds the same
-// committed sketch tree as the branch head. `last` is the newest verdict
-// whose build held any version of it.
-export function sketchState(entry, verdicts, treeAt) {
-  const now = entry.head ? treeAt(entry.head, entry.sketch) : null;
-  let played = false;
+// A sketch waits for Andrew until some verdict's build differs from the
+// branch head only in paths that do not change play (IGNORED). `last` is the
+// newest verdict whose build held the sketch; `changes` are the commit
+// subjects since it that touch play.
+export function sketchState(entry, verdicts, probe) {
   let last = null;
+  let played = false;
   for (const verdict of verdicts) {
-    const then = treeAt(verdict.build_sha, entry.sketch);
-    if (then === null) continue;
-    if (now !== null && then === now) played = true;
+    if (!probe.present(verdict.build_sha, entry.sketch)) continue;
     if (last === null || verdict.entry > last.entry)
       last = { entry: verdict.entry, build_sha: verdict.build_sha };
+    if (
+      entry.head &&
+      probe.changed(verdict.build_sha, entry.head, entry.sketch).length === 0
+    )
+      played = true;
   }
-  return { waiting: !played, last };
+  const changes =
+    played || last === null || !entry.head
+      ? []
+      : probe.subjects(last.build_sha, entry.head, entry.sketch);
+  return { waiting: !played, last, changes };
 }
 
-function gitTree(repo) {
-  return (sha, sketch) => {
-    const result = spawnSync(
-      "git",
-      ["-C", repo, "rev-parse", "--verify", "-q", `${sha}:sketches/${sketch}`],
-      { encoding: "utf8" },
-    );
-    return result.status === 0 ? result.stdout.trim() : null;
+// Headless tests, Godot uid files and the README do not change what Andrew
+// would play.
+const IGNORED = (sketch) => [
+  `sketches/${sketch}`,
+  `:(exclude)sketches/${sketch}/tests`,
+  `:(exclude,glob)sketches/${sketch}/**/*.uid`,
+  `:(exclude,glob)sketches/${sketch}/**/README.md`,
+];
+
+function gitProbe(repo) {
+  const run = (...args) =>
+    spawnSync("git", ["-C", repo, ...args], { encoding: "utf8" });
+  const lines = (result) =>
+    result.status === 0 ? result.stdout.split("\n").filter(Boolean) : [];
+  return {
+    present: (sha, sketch) =>
+      run("cat-file", "-e", `${sha}:sketches/${sketch}`).status === 0,
+    changed: (from, to, sketch) =>
+      lines(run("diff", "--name-only", from, to, "--", ...IGNORED(sketch))),
+    subjects: (from, to, sketch) =>
+      lines(
+        run(
+          "log",
+          "--format=%h %s",
+          `${from}..${to}`,
+          "--",
+          ...IGNORED(sketch),
+        ),
+      ),
   };
+}
+
+// The card's line is the sketch's own README: its bolded question, else its
+// first heading, else its first line.
+function readmeLine(directory) {
+  let text;
+  try {
+    text = readFileSync(path.join(directory, "README.md"), "utf8").slice(
+      0,
+      2000,
+    );
+  } catch {
+    return "";
+  }
+  const asked = text.match(/\*\*([^*]{12,160}\?)\*\*/);
+  if (asked !== null) return asked[1].replace(/\s+/g, " ").trim();
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const heading = lines.find((line) => line.startsWith("#"));
+  return (heading ?? lines[0] ?? "").replace(/^#+\s*/, "");
 }
 
 function readVerdicts(file) {
@@ -162,10 +223,14 @@ export async function collect({ runs, artifacts, repo }) {
     log: path.join(repo, "docs", "playtests", "PLAYTEST-LOG.md"),
     git: repo,
   });
-  const treeAt = gitTree(repo);
+  const probe = gitProbe(repo);
   const sketches = catalogue(repo)
     .filter((entry) => entry.primary && SKETCH_BRANCH.test(entry.branch ?? ""))
-    .map((entry) => ({ ...entry, ...sketchState(entry, verdicts, treeAt) }));
+    .map((entry) => ({
+      ...entry,
+      line: readmeLine(entry.directory),
+      ...sketchState(entry, verdicts, probe),
+    }));
   return { model, pins, verdicts, index, sketches };
 }
 
@@ -201,6 +266,12 @@ function sparkline(segments, hex) {
   return `<svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">${marks.join("")}</svg>`;
 }
 
+// Where a missing reading has an answer elsewhere on the page, say where.
+const NO_READING = {
+  unplayed_green:
+    'not yet recorded; <a href="#waiting">see Waiting for Andrew</a>',
+};
+
 function tile(metric, data) {
   const reading = latestReading(data.model, metric.id);
   const measure = reading?.measure ?? { value: null, n: 0 };
@@ -211,13 +282,13 @@ function tile(metric, data) {
       : (data.model.trends.get(metric.id)?.get(reading.series) ?? []);
   const where =
     reading === null
-      ? "no reading"
+      ? (NO_READING[metric.id] ?? "no reading")
       : `${esc(reading.series)} · seq ${reading.record.seq}`;
   const change =
     reading === null
       ? ""
       : `<p class="change">${esc(changeText(compareToPin(reading, data.pins)))}</p>`;
-  return `<article class="tile" id="m-${metric.id}" data-metric="${metric.id}" ${tint(status.hex)}>
+  return `<article class="tile" id="m-${metric.id}" data-metric="${metric.id}" ${tint(status)}>
 <header><span class="glyph">${status.glyph}</span><code class="id">${breakable(metric.id)}</code><span class="word">${status.word}</span></header>
 <p class="value">${valueText(measure)} <small>n=${measure.n ?? 0} · ${metric.kind}${metric.sentinel ? " · sentinel" : ""}</small></p>
 ${sparkline(segments, status.hex)}
@@ -239,7 +310,7 @@ function tally(data) {
   return [...counts]
     .map(
       ([status, count]) =>
-        `<li class="chip${count === 0 ? " none" : ""}" ${tint(status.hex)}><span class="glyph">${status.glyph}</span> ${count} ${status.word}</li>`,
+        `<li class="chip${count === 0 ? " none" : ""}" ${tint(status)}><span class="glyph">${status.glyph}</span> ${count} ${status.word}</li>`,
     )
     .join("");
 }
@@ -252,12 +323,24 @@ function waiting(data) {
         entry.last === null
           ? "never played"
           : `changed since entry ${entry.last.entry} (build ${short(entry.last.build_sha)})`;
-      return `<li class="build"><strong>${esc(entry.id)}</strong>${entry.id === entry.sketch ? "" : ` <span class="where">sketch ${esc(entry.sketch)}</span>`} <span class="where">${esc(entry.branch)}@${esc(entry.head)}</span>
-<span class="history">${history}</span>${entry.question === "" ? "" : `<q>${esc(entry.question)}</q>`}</li>`;
+      const changes =
+        entry.changes.length === 0
+          ? ""
+          : `<ul class="changes">${entry.changes
+              .slice(0, 5)
+              .map((subject) => `<li>${esc(subject)}</li>`)
+              .join(
+                "",
+              )}${entry.changes.length > 5 ? `<li>and ${entry.changes.length - 5} more</li>` : ""}</ul>`;
+      return `<li class="build" data-sketch="${esc(entry.sketch)}"><strong>${esc(entry.id)}</strong>${entry.id === entry.sketch ? "" : ` <span class="where">sketch ${esc(entry.sketch)}</span>`} <span class="where">${esc(entry.branch)}@${esc(entry.head)}</span>
+<span class="history">${history}</span>${entry.line === "" ? "" : `<q>${esc(entry.line)}</q>`}${changes}</li>`;
     })
     .join("\n");
   const steps = due
-    .map((entry) => `<li><code>scrapkeep ${esc(entry.id)}</code></li>`)
+    .map(
+      (entry) =>
+        `<li class="play"><code>scrapkeep ${esc(entry.id)}</code></li>`,
+    )
     .join("");
   const latest = data.verdicts.at(-1);
   const index = data.index.ok
@@ -322,7 +405,7 @@ function arms(data) {
         const measure = record.kpis?.[metric.id] ?? record.kris?.[metric.id];
         if (measure === undefined) return `<td class="empty">·</td>`;
         const status = evaluate(metric, measure);
-        return `<td ${tint(status.hex)}><span class="glyph">${status.glyph}</span> ${valueText(measure)}</td>`;
+        return `<td ${tint(status)}><span class="glyph">${status.glyph}</span> ${valueText(measure)}</td>`;
       };
       const rows = [
         `<tr data-row="result"><th>result</th>${columns.map((arm) => `<td>${esc(runs.get(arm).result)}</td>`).join("")}</tr>`,
@@ -351,17 +434,24 @@ function runsHaveJev(data) {
   );
 }
 
-// The warn and fail bands take their colour from evaluate() at a value
+// The warn and fail bands take their status from evaluate() at a value
 // inside each band, so a band always matches the status a reading there gets.
+// The fail band is filled more heavily, so the two differ by fill as well as
+// by hue.
 function bands(metric, low, high) {
   const { thresholds } = metric;
   if (metric.sentinel || thresholds === null) return [];
   const { warn, fail, worse } = thresholds;
   const beyond = worse === "higher" ? high : low;
-  const probe = (value) => evaluate(metric, { value, n: metric.min_n }).hex;
+  const probe = (value) => evaluate(metric, { value, n: metric.min_n });
   return [
-    { from: warn, to: fail, hex: probe((warn + fail) / 2) },
-    { from: fail, to: beyond, hex: probe(fail + (fail - warn)) },
+    { from: warn, to: fail, status: probe((warn + fail) / 2), opacity: 0.1 },
+    {
+      from: fail,
+      to: beyond,
+      status: probe(fail + (fail - warn)),
+      opacity: 0.3,
+    },
   ];
 }
 
@@ -374,7 +464,7 @@ function trendChart(metric, series, segments) {
   let low = Math.min(...values, ...limits);
   let high = Math.max(...values, ...limits);
   const pad = (high - low || Math.abs(high) || 1) * 0.15;
-  low -= pad;
+  low = low >= 0 ? Math.max(0, low - pad) : low - pad;
   high += pad;
   const [W, H, L, R, T, B] = [320, 110, 44, 8, 8, 16];
   const axis = (value) => String(Number(value.toPrecision(3)));
@@ -389,16 +479,19 @@ function trendChart(metric, series, segments) {
   for (const band of bands(metric, low, high)) {
     const top = y(clamp(Math.max(band.from, band.to)));
     const bottom = y(clamp(Math.min(band.from, band.to)));
+    if (bottom - top < 0.5) continue;
     const edge = y(clamp(band.from));
+    const { hex, ink, gate } = band.status;
     parts.push(
-      `<rect x="${L}" y="${top.toFixed(1)}" width="${W - L - R}" height="${(bottom - top).toFixed(1)}" fill="${band.hex}" fill-opacity="0.1"/>`,
-      `<line x1="${L}" y1="${edge.toFixed(1)}" x2="${W - R}" y2="${edge.toFixed(1)}" stroke="${band.hex}" stroke-opacity="0.7" stroke-dasharray="4 3"/>`,
+      `<rect class="band" x="${L}" y="${top.toFixed(1)}" width="${W - L - R}" height="${(bottom - top).toFixed(1)}" fill="${hex}" fill-opacity="${band.opacity}"/>`,
+      `<line x1="${L}" y1="${edge.toFixed(1)}" x2="${W - R}" y2="${edge.toFixed(1)}" stroke="${hex}" stroke-opacity="0.7" stroke-dasharray="4 3"/>`,
+      `<text class="band-label" x="${W - R - 3}" y="${(Math.min(top, bottom - 2) + Math.min(9, bottom - top)).toFixed(1)}" text-anchor="end" fill="${ink}">${gate}</text>`,
     );
   }
   parts.push(
     `<line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${PAGE.rule}"/>`,
-    `<text x="${L - 4}" y="${(T + 8).toFixed(1)}" text-anchor="end">${axis(high)}</text>`,
-    `<text x="${L - 4}" y="${H - B}" text-anchor="end">${axis(low)}</text>`,
+    `<text class="axis" x="${L - 4}" y="${(T + 8).toFixed(1)}" text-anchor="end">${axis(high)}</text>`,
+    `<text class="axis" x="${L - 4}" y="${H - B}" text-anchor="end">${axis(low)}</text>`,
   );
   let index = 0;
   for (const [position, segment] of segments.entries()) {
@@ -447,7 +540,10 @@ function trends(data) {
     const bySeries = data.model.trends.get(metric.id);
     if (bySeries === undefined) continue;
     for (const [series, segments] of bySeries) {
-      if (segments.flatMap((segment) => segment.points).length < 2) continue;
+      const finite = segments
+        .flatMap((segment) => segment.points)
+        .filter((point) => Number.isFinite(point.value));
+      if (finite.length < 2) continue;
       charts.push(trendChart(metric, series, segments));
     }
   }
@@ -459,7 +555,7 @@ ${charts.length === 0 ? "<p>No series has two readings yet.</p>" : `<div class="
 
 function scoreTile({ role, earned, possible }, qualification) {
   const share = `${((earned / possible) * 100).toFixed(1)}%`;
-  return `<div class="score" ${tint(SHOWN.hex)}>
+  return `<div class="score" ${tint(SHOWN)}>
 <p class="role"><span class="glyph">${SHOWN.glyph}</span> ${esc(role)}</p>
 <p class="value">${earned} of ${possible} <small>${share}</small></p>
 <p class="qualification">${esc(qualification)}</p>
@@ -468,16 +564,17 @@ function scoreTile({ role, earned, possible }, qualification) {
 
 function testLoop() {
   const { triage, tagging, parked } = ADMITTED;
-  return `<aside class="parked" id="parked"><h3>Parked instrument</h3><p>${esc(parked.line)}</p><p class="source">${parked.source}</p></aside>
+  return `<aside class="parked" id="parked"><h3>Parked instrument</h3><p>${esc(parked.line)}</p><p>${esc(parked.qualification)}</p><p class="source">${parked.source}</p></aside>
 <div class="loop">
 <div class="card"><h3>${triage.title}</h3>
 <div class="pair">${triage.scores.map((score) => scoreTile(score, SCORE_LABELS[score.role])).join("")}</div>
-<p>${esc(triage.note)}</p><p class="source">${triage.source}</p></div>
+<p>${esc(triage.note)}</p><p class="source">${triage.source}</p>
+<p>${esc(triage.advisory)}</p><p class="source">${triage.advisorySource}</p></div>
 <div class="card"><h3>${tagging.title}</h3>
 <div class="pair">${tagging.scores.map((score) => scoreTile(score, tagging.qualification)).join("")}</div>
 <p class="source">${tagging.source}</p></div>
 </div>
-<p class="note"><span class="glyph" ${tint(SHOWN.hex)}>${SHOWN.glyph}</span> ${SHOWN.word}: shown as admitted, never gated.</p>`;
+<p class="note"><span class="glyph" ${tint(SHOWN)}>${SHOWN.glyph}</span> ${SHOWN.word}: shown as admitted, never gated.</p>`;
 }
 
 function findings(data) {
@@ -489,7 +586,7 @@ function findings(data) {
     const series = esc(seriesOf(record));
     for (const finding of record.findings ?? [])
       items.push(
-        `<li><p>${esc(finding.summary ?? JSON.stringify(finding))}</p><p class="where">${series} · seq ${record.seq}</p><pre><code>${esc(finding.repro)}</code></pre></li>`,
+        `<li><p>${esc(finding.summary ?? JSON.stringify(finding))}</p><p class="where">${series} · seq ${record.seq}</p>${typeof finding.repro === "string" && finding.repro.trim() !== "" ? `<pre><code>${esc(finding.repro)}</code></pre>` : `<p class="where">no repro recorded</p>`}</li>`,
       );
     for (const limit of record.limits ?? [])
       limits.push(
@@ -515,8 +612,8 @@ header.top p { margin: 0.25rem 0; color: var(--soft); overflow-wrap: anywhere; }
 nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0.75rem 0; font-size: 0.9rem; }
 a { color: var(--soft); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 0.75rem 0 0; list-style: none; }
-.chip.none { opacity: 0.5; }
-.chip { padding: 0.15rem 0.6rem; border: 1px solid var(--status); border-radius: 999px; color: var(--status); font-size: 0.85rem; }
+.chip.none { border-style: dashed; }
+.chip { padding: 0.15rem 0.6rem; border: 1px solid var(--status); border-radius: 999px; color: var(--ink); font-size: 0.85rem; }
 section { margin-top: 1.5rem; padding: 1rem clamp(0.75rem, 2vw, 1.25rem); background: var(--deep); border: 1px solid var(--rule); border-radius: 10px; }
 section h2 { margin: 0 0 0.5rem; color: var(--bright); font-size: 1.2rem; }
 h3 { margin: 1.1rem 0 0.4rem; color: var(--soft); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -538,8 +635,8 @@ section[data-section="waiting"] h2 { color: var(--accent); }
 .tile:target { outline: 2px solid var(--status); }
 .tile header { display: flex; align-items: baseline; gap: 0.4rem; }
 .tile .id { color: var(--bright); overflow-wrap: break-word; flex: 1; min-width: 0; }
-.tile .word { color: var(--status); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.glyph { color: var(--status); }
+.tile .word { color: var(--ink); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.glyph { color: var(--ink); }
 .tile .value { margin: 0.2rem 0 0; font-size: 1.25rem; color: var(--bright); }
 .tile p { margin: 0.15rem 0; }
 .tile .says { color: var(--soft); font-size: 0.85rem; }
@@ -548,7 +645,7 @@ section[data-section="waiting"] h2 { color: var(--accent); }
 .scroll { overflow-x: auto; }
 table { border-collapse: collapse; min-width: 100%; font-size: 0.9rem; }
 th, td { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--rule); text-align: left; white-space: nowrap; }
-td[style] { color: var(--status); }
+td[style] { color: var(--ink); }
 td.empty { color: var(--muted); }
 .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); gap: 0.75rem; }
 .trend { margin: 0; padding: 0.5rem; background: var(--panel); border-radius: 8px; }
@@ -605,7 +702,7 @@ export function renderPage(data, { now = new Date() } = {}) {
 <body>
 <main>
 <header class="top"><h1>Scrapkeep lab</h1>
-<p>${runs} · written ${now.toISOString()}</p>
+<p>${runs} · written ${now.toISOString()} · admitted results as of ${ADMITTED_AS_OF}</p>
 <ul class="chips">${tally(data)}</ul>
 <nav>${SECTIONS.map(({ id, title }) => `<a href="#${id}">${title}</a>`).join("")}</nav>
 </header>

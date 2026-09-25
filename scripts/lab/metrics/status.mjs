@@ -19,13 +19,17 @@ export function worstExit(codes) {
   return SEVERITY.find((code) => codes.includes(code)) ?? EXIT.pass;
 }
 
-function entry(word, hex, glyph, gate, exit) {
+// ink is the colour for text in the status: the hex itself, except where the
+// hex falls under 4.5:1 on the page's panels and a lighter shade of the same
+// hue carries the words instead.
+function entry(word, hex, glyph, gate, exit, ink = hex) {
   const rgb = [1, 3, 5]
     .map((start) => parseInt(hex.slice(start, start + 2), 16))
     .join(";");
   return Object.freeze({
     word,
     hex,
+    ink,
     glyph,
     ansi: `\x1b[38;2;${rgb}m`,
     gate,
@@ -45,6 +49,7 @@ export const STATUS = Object.freeze({
     "○",
     "inconclusive",
     EXIT.inconclusive,
+    "#7e9aa2",
   ),
   untiered: entry("untiered", "#4fa3d9", "◇", "ignore", EXIT.pass),
 });

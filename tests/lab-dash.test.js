@@ -11,8 +11,10 @@ import { STATUS, PAGE, evaluate } from "../scripts/lab/metrics/status.mjs";
 import { METRICS, getMetric } from "../scripts/lab/metrics/index.mjs";
 import { SCHEMA } from "../scripts/lab/record.mjs";
 import { SCORE_LABELS } from "../scripts/lab/triage.mjs";
-import { labRoute } from "../scripts/play.mjs";
-import { CSP, DASH_FILE, SECTIONS, sketchState } from "../scripts/lab/dash.mjs";
+import { catalogue, labRoute, resolve } from "../scripts/play.mjs";
+import * as dashModule from "../scripts/lab/dash.mjs";
+
+const { CSP, DASH_FILE, SECTIONS, sketchState } = dashModule;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dashScript = path.join(root, "scripts/lab/dash.mjs");
@@ -234,7 +236,7 @@ test("the page uses only STATUS and PAGE colours, no script and a default-src 'n
   const html = await dash().html;
   const allowed = new Set(
     [
-      ...Object.values(STATUS).map((one) => one.hex),
+      ...Object.values(STATUS).flatMap((one) => [one.hex, one.ink]),
       ...Object.values(PAGE),
     ].map((hex) => hex.toLowerCase()),
   );
@@ -374,61 +376,47 @@ function git(cwd, ...args) {
   return result.stdout.trim();
 }
 
-test("a sketch branch waits until a verdict's build holds the same committed sketch", async (t) => {
-  const { temporary, repo, dash } = await fixture(t);
-  git(repo, "init", "-q", "-b", "main");
-  const sketch = async (tree, name, text) => {
-    await mkdir(path.join(tree, "sketches", name), { recursive: true });
-    await writeFile(path.join(tree, "sketches", name, "project.godot"), text);
-    await writeFile(
-      path.join(tree, "sketches", name, "README.md"),
-      `# ${name}\n\n**Does the ${name} sketch feel good to roll through?**\n`,
-    );
-    git(tree, "add", "-A");
-    git(tree, "commit", "-q", "-m", name);
-    return git(tree, "rev-parse", "HEAD");
-  };
-  const played = await sketch(repo, "alpha", "a1\n");
-  await writeFile(
-    path.join(repo, "docs", "playtests", "verdicts.ndjson"),
-    JSON.stringify({
-      entry: 1,
-      build_sha: played,
-      anchor: "x",
-      quote: '"fun"',
-      tags: [],
-    }) + "\n",
-  );
-  const trees = (sha, name) => {
-    const result = spawnSync(
-      "git",
-      ["rev-parse", "--verify", "-q", `${sha}:sketches/${name}`],
-      {
-        cwd: repo,
-        encoding: "utf8",
-      },
-    );
-    return result.status === 0 ? result.stdout.trim() : null;
-  };
-  const verdicts = [{ entry: 1, build_sha: played }];
-  assert.deepEqual(
-    sketchState({ sketch: "alpha", head: played }, verdicts, trees),
-    {
-      waiting: false,
-      last: { entry: 1, build_sha: played },
-    },
-  );
+async function put(tree, file, text) {
+  await mkdir(path.dirname(path.join(tree, file)), { recursive: true });
+  await writeFile(path.join(tree, file), text);
+}
 
+async function commit(tree, subject, files) {
+  for (const [file, text] of Object.entries(files)) await put(tree, file, text);
+  git(tree, "add", "-A");
+  git(tree, "commit", "-q", "-m", subject);
+  return git(tree, "rev-parse", "HEAD");
+}
+
+// main holds alpha, played at its first commit; proto/beta adds beta, whose
+// README has a heading but no bolded question; wt/agent is agent work.
+async function sketchRepo(t) {
+  const context = await fixture(t);
+  const { temporary, repo } = context;
+  git(repo, "init", "-q", "-b", "main");
+  const played = await commit(repo, "alpha: first greybox", {
+    "sketches/alpha/project.godot": "a1\n",
+    "sketches/alpha/src/roll.gd": "speed = 1\n",
+    "sketches/alpha/README.md":
+      "# alpha\n\n**Does the alpha sketch feel good to roll through?**\n",
+  });
+  await commit(repo, "docs: record the alpha verdict", {
+    "docs/playtests/verdicts.ndjson":
+      JSON.stringify({
+        entry: 1,
+        build_sha: played,
+        anchor: "x",
+        quote: '"fun"',
+        tags: [],
+      }) + "\n",
+  });
   const beta = path.join(temporary, "beta");
   git(repo, "worktree", "add", "-q", beta, "-b", "proto/beta");
-  const betaHead = await sketch(beta, "beta", "b1\n");
-  assert.deepEqual(
-    sketchState({ sketch: "beta", head: betaHead }, verdicts, trees),
-    {
-      waiting: true,
-      last: null,
-    },
-  );
+  await commit(beta, "beta: a bench to push against", {
+    "sketches/beta/project.godot": "b1\n",
+    "sketches/beta/README.md":
+      "# beta bench\n\nA long opening sentence that the play list would fall back to here.\n",
+  });
   git(
     repo,
     "worktree",
@@ -438,35 +426,238 @@ test("a sketch branch waits until a verdict's build holds the same committed ske
     "-b",
     "wt/agent",
   );
+  return { ...context, played, beta };
+}
 
-  const alphaHead = await sketch(repo, "alpha", "a2\n");
-  const changed = sketchState(
-    { sketch: "alpha", head: alphaHead },
-    verdicts,
-    trees,
-  );
-  assert.equal(changed.waiting, true);
-  assert.equal(changed.last.entry, 1);
-
-  const html = await dash().html;
-  const waiting = html.match(
-    /<section[^>]*data-section="waiting"[\s\S]*?<\/section>/,
+const section = (html, id) =>
+  html.match(
+    new RegExp(`<section[^>]*data-section="${id}"[\\s\\S]*?</section>`),
   )[0];
-  assert.match(waiting, /changed since entry 1/);
-  assert.match(waiting, /never played/);
+const checklistIds = (html) =>
+  [
+    ...section(html, "waiting")
+      .match(/<ol[^>]*class="checklist"[\s\S]*?<\/ol>/)[0]
+      .matchAll(/<li class="play"><code>scrapkeep ([^<]+)<\/code>/g),
+  ].map((m) => m[1]);
+
+test("sketchState: played when a verdict's build differs only in tests, uid files or README", () => {
+  const probe = (changed) => ({
+    present: (sha) => sha !== "absent",
+    changed: () => changed,
+    subjects: () => ["abc1234 alpha: faster roll"],
+  });
+  const verdicts = [
+    { entry: 1, build_sha: "old" },
+    { entry: 2, build_sha: "absent" },
+  ];
+  const entry = { sketch: "alpha", head: "new" };
+  assert.deepEqual(sketchState(entry, verdicts, probe([])), {
+    waiting: false,
+    last: { entry: 1, build_sha: "old" },
+    changes: [],
+  });
+  assert.deepEqual(
+    sketchState(entry, verdicts, probe(["sketches/alpha/src/roll.gd"])),
+    {
+      waiting: true,
+      last: { entry: 1, build_sha: "old" },
+      changes: ["abc1234 alpha: faster roll"],
+    },
+  );
+  assert.deepEqual(sketchState(entry, [verdicts[1]], probe([])), {
+    waiting: true,
+    last: null,
+    changes: [],
+  });
+});
+
+// Review B1: the page is written from a linked worktree, but `scrapkeep`
+// runs from the main checkout, so every printed id must resolve there.
+test("checklist ids written from a linked worktree resolve to their own entries from main", async (t) => {
+  const { repo, beta, dash } = await sketchRepo(t);
+  await commit(repo, "alpha: faster roll", {
+    "sketches/alpha/src/roll.gd": "speed = 2\n",
+  });
+  const html = await dash("--repo", beta).html;
+  const ids = checklistIds(html);
+  assert.deepEqual(ids.toSorted(), ["alpha", "beta"]);
+  const entries = catalogue(repo);
+  for (const id of ids) {
+    const found = resolve(entries, id);
+    assert.equal(found.entry?.id, id, `scrapkeep ${id} is ambiguous or wrong`);
+  }
+  assert.doesNotMatch(section(html, "waiting"), /scrapkeep agent/);
+});
+
+test("waiting ignores tests, uid files and README; a real change lists its commit subjects", async (t) => {
+  const { repo, dash } = await sketchRepo(t);
+  await commit(repo, "alpha: add a camera test", {
+    "sketches/alpha/tests/camera_test.gd": "extends Node\n",
+    "sketches/alpha/tests/camera_test.gd.uid": "uid://x\n",
+    "sketches/alpha/src/roll.gd.uid": "uid://y\n",
+    "sketches/alpha/README.md": "# alpha\n\n**Does it roll?**\n",
+  });
+  let waiting = section(await dash().html, "waiting");
+  assert.deepEqual(
+    checklistIds(waiting),
+    ["beta"],
+    "alpha is unchanged where it counts",
+  );
+  await commit(repo, "alpha: faster roll", {
+    "sketches/alpha/src/roll.gd": "speed = 2\n",
+  });
+  waiting = section(await dash().html, "waiting");
+  assert.deepEqual(checklistIds(waiting), ["alpha", "beta"]);
+  const alpha = waiting.match(
+    /<li class="build"[^>]*data-sketch="alpha"[\s\S]*?<\/li>/,
+  )[0];
+  assert.match(alpha, /changed since entry 1/);
+  assert.match(alpha, /alpha: faster roll/);
+  assert.doesNotMatch(alpha, /add a camera test/);
+});
+
+test("a card shows its own README's bolded question, else its own first heading", async (t) => {
+  const { dash } = await sketchRepo(t);
+  const waiting = section(await dash().html, "waiting");
+  const beta = waiting.match(
+    /<li class="build"[^>]*data-sketch="beta"[\s\S]*?<\/li>/,
+  )[0];
+  assert.match(beta, /never played/);
+  assert.match(beta, /beta bench/);
+  assert.doesNotMatch(beta, /opening sentence|alpha/);
+});
+
+test("every EV row cited by the admitted results exists in TRACKING, and the page stamps the newest", async (t) => {
+  const tracking = path.join(root, "TRACKING.md");
+  assert.ok(
+    existsSync(tracking),
+    "TRACKING.md must exist; this check fails closed",
+  );
+  const rows = new Set(
+    [...(await readFile(tracking, "utf8")).matchAll(/^\| (EV-\d{4}) \|/gm)].map(
+      (m) => m[1],
+    ),
+  );
+  const cited = [
+    ...new Set(JSON.stringify(dashModule.ADMITTED).match(/EV-\d{4}/g)),
+  ].toSorted();
+  assert.ok(cited.length > 0);
+  for (const id of cited)
+    assert.ok(rows.has(id), `${id} is not a TRACKING event row`);
+  const { dash } = await fixture(t);
+  const html = await dash().html;
+  assert.match(html, new RegExp(`admitted results as of ${cited.at(-1)}`));
+  const text = JSON.stringify(dashModule.ADMITTED);
+  assert.match(text, /about 1\.6 m step/);
+  assert.doesNotMatch(text, /radius|needs a jump/);
+  assert.match(text, /BACKLOG JL-19 DoD 3/);
+  assert.match(text, /all 18/);
+  assert.match(text, /pre-registered 0\.2 margin/);
+});
+
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5]
+    .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+const contrast = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].toSorted((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+function hue(hex) {
+  const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  const h =
+    max === r
+      ? ((g - b) / d) % 6
+      : max === g
+        ? (b - r) / d + 2
+        : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+
+test("status ink reads at 4.5:1 on every page surface, in its colour's hue family", async (t) => {
+  for (const status of Object.values(STATUS)) {
+    for (const surface of [PAGE.panel, PAGE.deep, PAGE.background])
+      assert.ok(
+        contrast(status.ink, surface) >= 4.5,
+        `${status.word} ink ${status.ink} on ${surface}: ${contrast(status.ink, surface).toFixed(2)}`,
+      );
+    assert.ok(
+      Math.abs(hue(status.ink) - hue(status.hex)) <= 10,
+      `${status.word} hue`,
+    );
+  }
+  const { dash } = await fixture(t);
+  const html = await dash().html;
+  const chipRule = html.match(/\.chip\.none \{[^}]*\}/)[0];
+  assert.doesNotMatch(chipRule, /opacity/, "a zero chip keeps full contrast");
+  assert.match(html, /\.tile \.word \{[^}]*color: var\(--ink\)/);
+});
+
+test("warn and fail bands differ in fill and label; a count axis never goes negative", async (t) => {
+  const { dash } = await populated(t);
+  const html = await dash().html;
+  const review = section(html, "trends").match(
+    /<figure[^>]*data-trend="first_pass_review program\/wt"[\s\S]*?<\/figure>/,
+  )[0];
+  const bands = [...review.matchAll(/<rect[^>]*class="band"[^>]*>/g)].map(
+    (m) => m[0],
+  );
+  assert.equal(bands.length, 2);
+  const opacity = bands.map((band) => band.match(/fill-opacity="([^"]+)"/)[1]);
+  assert.notEqual(opacity[0], opacity[1], "fills differ, not only the edges");
+  for (const status of [STATUS.amber, STATUS.red])
+    assert.ok(
+      review.includes(`>${status.gate}</text>`),
+      `${status.gate} label`,
+    );
+  for (const [, label] of section(html, "trends").matchAll(
+    /<text[^>]*class="axis"[^>]*>([^<]*)<\/text>/g,
+  ))
+    assert.ok(!label.startsWith("-"), `negative axis label ${label}`);
+});
+
+test("unplayed_green with no reading points to the waiting section instead of a value", async (t) => {
+  const { dash } = await fixture(t);
+  const tile = (await dash().html).match(
+    /<article[^>]*data-metric="unplayed_green"[\s\S]*?<\/article>/,
+  )[0];
   assert.match(
-    waiting,
-    /<ol[^>]*class="checklist"[\s\S]*scrapkeep alpha[\s\S]*scrapkeep beta/,
+    tile,
+    /not yet recorded; <a href="#waiting">see Waiting for Andrew<\/a>/,
   );
-  assert.match(waiting, /Does the beta sketch feel good to roll through\?/);
-  assert.doesNotMatch(
-    waiting,
-    /scrapkeep agent/,
-    "an agent worktree is work in progress, not a build to play",
+  assert.match(tile, /none/);
+});
+
+test("non-finite readings and a finding with no repro do not break the page", async (t) => {
+  const { write, dash } = await fixture(t);
+  for (const [seq, value] of [
+    [0, null],
+    [1, "NaN"],
+    [2, null],
+  ])
+    await write(
+      record(`n${seq}`, {
+        seq,
+        kpis: { suite_wall_s: { value, n: 20, ci: null } },
+        findings: seq === 2 ? [{ summary: "no command to rerun" }] : [],
+      }),
+    );
+  const result = dash();
+  assert.equal(result.code, 0, result.err);
+  const html = await result.html;
+  const rendered = html.replace(/<p class="says">[^<]*<\/p>/g, "");
+  assert.equal(
+    rendered.match(/[^\n]{0,60}(NaN|Infinity|undefined)[^\n]{0,20}/)?.[0] ??
+      null,
+    null,
   );
-  assert.match(
-    waiting,
-    /EV-0534/,
-    "the admitted gameplay findings wait for Andrew too",
-  );
+  assert.match(section(html, "findings"), /no command to rerun/);
+  assert.match(section(html, "findings"), /no repro recorded/);
 });
