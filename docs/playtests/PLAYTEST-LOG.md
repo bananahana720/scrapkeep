@@ -34,7 +34,7 @@ wrapper at a different checkout. The long form still works:
 
 If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/scrapkeep-worktrees/<name> proto/<name>`.
 
-After play: log the verdict here, merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
+After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
 
 ## 2. Ball lab, first human play
 

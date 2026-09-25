@@ -1,6 +1,6 @@
 # Scrapkeep swarm operating manual
 
-Revision 5. The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. The current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
+Revision 6 (2026-09-25: Opus pins moved to Opus 5.5, EV-0484; the light play lane appends each verdict to `docs/playtests/verdicts.ndjson`, EV-0500). The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. The current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
 
 ## Read first and preserve authority
 
@@ -111,7 +111,7 @@ A fixture, source review, automated play, human session and hardware/performance
 
 Andrew chose this lane on 22 September 2026 (TRACKING EV-0479, EV-0480) for throwaway gameplay sketches. Entry test: `npm run check:scope -- <base> <candidate>` reports only `sketch`, which claims `sketches/`. Each sketch is a self-contained Godot project under `sketches/<name>/`. Any other class, a mixed scope, or a `package.json` dependency edit exits to the heavy lane above.
 
-Loop: one writer on one `proto/<name>` branch in its own worktree, `npm run sketch:smoke`, Andrew plays, an entry with Andrew's verdict goes to [the playtest log](docs/playtests/PLAYTEST-LOG.md), then the coordinator merges. No card, lease, packet revision or independent reviewer is required. Andrew's play is the review, and no automated result substitutes for it. TRACKING receives an event only when the lane is entered or left, a question changes state, or a sketch is promoted.
+Loop: one writer on one `proto/<name>` branch in its own worktree, `npm run sketch:smoke`, Andrew plays, an entry with Andrew's verdict goes to [the playtest log](docs/playtests/PLAYTEST-LOG.md), the coordinator appends its line to `docs/playtests/verdicts.ndjson` (the verdict span copied verbatim; `node scripts/lab/verdicts.mjs` must pass, and `npm test` fails until it does), then the coordinator merges. No card, lease, packet revision or independent reviewer is required. Andrew's play is the review, and no automated result substitutes for it. TRACKING receives an event only when the lane is entered or left, a question changes state, or a sketch is promoted.
 
 Sketches are not proofs. Their checks qualify nothing, typed-GDScript warnings are optional, and promotion into `native/`, `/`, `/orchard.html`, the Bible or an ADR is a heavy-lane decision.
 
