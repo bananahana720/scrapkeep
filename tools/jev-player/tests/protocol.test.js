@@ -75,16 +75,16 @@ function check(entry) {
   }
 }
 
-test("the validators accept every valid fixture and reject every invalid one at the named path", () => {
+test("the validators accept every valid fixture and reject every invalid one at exactly the named path", () => {
   for (const entry of index.fixtures) {
     const errors = check(entry);
     if (entry.valid) {
       assert.deepEqual(errors, [], `${entry.file} should be valid`);
     } else {
-      assert.ok(errors.length > 0, `${entry.file} should be invalid`);
-      assert.ok(
-        errors.some((error) => error.path === entry.path),
-        `${entry.file} should fail at ${entry.path}; got ${JSON.stringify(errors)}`,
+      assert.deepEqual(
+        errors.map((error) => error.path),
+        [entry.path],
+        `${entry.file} should fail with exactly one error at ${entry.path}; got ${JSON.stringify(errors)}`,
       );
     }
   }
@@ -138,9 +138,10 @@ test("each trial directory is judged as a whole, including the tick schedule", (
     if (trial.valid) {
       assert.deepEqual(errors, [], `${trial.dir} should be valid`);
     } else {
-      assert.ok(
-        errors.some((error) => error.path === trial.path),
-        `${trial.dir} should fail at ${trial.path}; got ${JSON.stringify(errors)}`,
+      assert.deepEqual(
+        errors.map((error) => error.path),
+        [trial.path],
+        `${trial.dir} should fail with exactly one error at ${trial.path}; got ${JSON.stringify(errors)}`,
       );
     }
   }

@@ -440,6 +440,11 @@ export function validateEvents(text) {
     errors.push({ path: "events", message: "must end with a newline" });
   }
   let last = -1;
+  // The most recent tick at which a trace line was seen, so an intent line
+  // arriving at that same tick (PROTOCOL.md: "at an equal tick, an intent
+  // line comes before the trace line") is caught. Equality only; ticks are
+  // otherwise non-decreasing, checked below.
+  let traceTick = null;
   text
     .replace(/\n$/, "")
     .split("\n")
@@ -468,6 +473,13 @@ export function validateEvents(text) {
             message: `goes back from ${last}`,
           });
         }
+        if (event.kind === "intent" && event.tick === traceTick) {
+          errors.push({
+            path: at,
+            message: "an intent line must come before the trace line at the same tick",
+          });
+        }
+        if (event.kind === "trace") traceTick = event.tick;
         last = Math.max(last, event.tick);
       }
     });
@@ -574,6 +586,19 @@ export function validateTrial(files) {
     }
   });
   parsedStates.forEach((state, seq) => {
+    // Godot cannot reach seq without intent-(seq-1) applying first. Only
+    // checked when state-(seq-1) itself exists; a missing prior state is
+    // already reported above as a contiguity fault, not a missing intent.
+    if (
+      seq > 0 &&
+      parsedStates[seq - 1] !== undefined &&
+      parsedIntents[seq - 1] === undefined
+    ) {
+      errors.push({
+        path: fileName("intent", seq - 1),
+        message: `is required before ${fileName("state", seq)} can be written`,
+      });
+    }
     const expected =
       seq === 0 ? null : (parsedIntents[seq - 1]?.intent ?? null);
     if (state !== undefined && state.held !== expected) {

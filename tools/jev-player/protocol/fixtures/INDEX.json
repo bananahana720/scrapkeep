@@ -306,6 +306,291 @@
       "valid": false,
       "path": "events[2].tick",
       "note": "Ticks never decrease."
+    },
+    {
+      "file": "valid/events-intent-before-trace.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "At tick 26 the intent line comes before the trace line, as an equal tick requires."
+    },
+    {
+      "file": "invalid/events-trace-before-intent.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[2]",
+      "note": "At tick 26 the trace line was written before the intent line."
+    },
+    {
+      "file": "trial-missing-intent/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-missing-intent"
+    },
+    {
+      "file": "trial-missing-intent/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-missing-intent"
+    },
+    {
+      "file": "trial-missing-intent/state-000001.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-missing-intent"
+    },
+    {
+      "file": "trial-wrong-protocol/hello.json",
+      "type": "hello",
+      "valid": false,
+      "note": "hello.json names \"scrapkeep-jev/2\" instead of \"scrapkeep-jev/1\".",
+      "path": "protocol"
+    },
+    {
+      "file": "trial-wrong-protocol/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-wrong-protocol"
+    },
+    {
+      "file": "trial-wrong-protocol/intent-000000.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-wrong-protocol/state-000000.json",
+      "note": "part of trial-wrong-protocol"
+    },
+    {
+      "file": "trial-wrong-protocol/state-000001.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-wrong-protocol"
+    },
+    {
+      "file": "trial-wrong-protocol/intent-000001.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-wrong-protocol/state-000001.json",
+      "note": "part of trial-wrong-protocol"
+    },
+    {
+      "file": "trial-wrong-protocol/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-wrong-protocol"
+    },
+    {
+      "file": "trial-wrong-protocol/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-wrong-protocol"
+    },
+    {
+      "file": "trial-intent-unsnapshotted/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-intent-unsnapshotted"
+    },
+    {
+      "file": "trial-intent-unsnapshotted/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-intent-unsnapshotted"
+    },
+    {
+      "file": "trial-intent-unsnapshotted/intent-000000.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-intent-unsnapshotted/state-000000.json",
+      "note": "part of trial-intent-unsnapshotted"
+    },
+    {
+      "file": "trial-intent-unsnapshotted/intent-000001.json",
+      "type": "intent",
+      "valid": true,
+      "note": "part of trial-intent-unsnapshotted"
+    },
+    {
+      "file": "trial-noncontiguous/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-noncontiguous"
+    },
+    {
+      "file": "trial-noncontiguous/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-noncontiguous"
+    },
+    {
+      "file": "trial-noncontiguous/state-000002.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-noncontiguous"
+    },
+    {
+      "file": "trial-snapshots-mismatch/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-snapshots-mismatch/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-snapshots-mismatch/intent-000000.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-snapshots-mismatch/state-000000.json",
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-snapshots-mismatch/state-000001.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-snapshots-mismatch/intent-000001.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-snapshots-mismatch/state-000001.json",
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-snapshots-mismatch/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-snapshots-mismatch/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-snapshots-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/intent-000000.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-hash-mismatch/state-000000.json",
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/state-000001.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/intent-000001.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-hash-mismatch/state-000001.json",
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-hash-mismatch/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-hash-mismatch"
+    },
+    {
+      "file": "trial-done-beside-error/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-done-beside-error"
+    },
+    {
+      "file": "trial-done-beside-error/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-done-beside-error"
+    },
+    {
+      "file": "trial-done-beside-error/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-done-beside-error"
+    },
+    {
+      "file": "trial-done-beside-error/error.json",
+      "type": "error",
+      "valid": true,
+      "note": "part of trial-done-beside-error"
+    },
+    {
+      "file": "trial-done-beside-error/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-done-beside-error"
+    },
+    {
+      "file": "trial-aborted-no-abort/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-aborted-no-abort"
+    },
+    {
+      "file": "trial-aborted-no-abort/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-aborted-no-abort"
+    },
+    {
+      "file": "trial-aborted-no-abort/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-aborted-no-abort"
+    },
+    {
+      "file": "trial-aborted-no-abort/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-aborted-no-abort"
+    },
+    {
+      "file": "trial-timeout-tick-mismatch/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-timeout-tick-mismatch"
+    },
+    {
+      "file": "trial-timeout-tick-mismatch/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-timeout-tick-mismatch"
+    },
+    {
+      "file": "trial-timeout-tick-mismatch/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-timeout-tick-mismatch"
+    },
+    {
+      "file": "trial-timeout-tick-mismatch/error.json",
+      "type": "error",
+      "valid": true,
+      "note": "part of trial-timeout-tick-mismatch"
     }
   ],
   "trials": [
@@ -335,6 +620,60 @@
       "valid": false,
       "path": "events.ndjson:events[19].tick",
       "note": "Intent 1 applied at 117 instead of 90 + 26 = 116."
+    },
+    {
+      "dir": "trial-missing-intent",
+      "valid": false,
+      "path": "intent-000000.json",
+      "note": "state-000001.json exists but intent-000000.json was never written."
+    },
+    {
+      "dir": "trial-wrong-protocol",
+      "valid": false,
+      "path": "hello.json:protocol",
+      "note": "hello.json names \"scrapkeep-jev/2\"."
+    },
+    {
+      "dir": "trial-intent-unsnapshotted",
+      "valid": false,
+      "path": "intent-000001.json",
+      "note": "intent-000001.json answers state-000001.json, which was never snapshotted."
+    },
+    {
+      "dir": "trial-noncontiguous",
+      "valid": false,
+      "path": "state-000001.json",
+      "note": "state-000001.json is missing; state-000002.json follows state-000000.json directly."
+    },
+    {
+      "dir": "trial-snapshots-mismatch",
+      "valid": false,
+      "path": "done.json:snapshots",
+      "note": "done.json claims 3 snapshots; only 2 were written."
+    },
+    {
+      "dir": "trial-hash-mismatch",
+      "valid": false,
+      "path": "done.json:trace_hash",
+      "note": "done.json's trace_hash does not match the sha256 of events.ndjson."
+    },
+    {
+      "dir": "trial-done-beside-error",
+      "valid": false,
+      "path": "done.json",
+      "note": "done.json cannot sit beside error.json."
+    },
+    {
+      "dir": "trial-aborted-no-abort",
+      "valid": false,
+      "path": "done.json:reason",
+      "note": "done.json says aborted, but there is no abort.json."
+    },
+    {
+      "dir": "trial-timeout-tick-mismatch",
+      "valid": false,
+      "path": "error.json:tick",
+      "note": "error.json says tick 25; state-000000.json plus hold_ticks is 26."
     }
   ]
 }
