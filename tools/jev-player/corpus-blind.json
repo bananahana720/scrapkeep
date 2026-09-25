@@ -1,5 +1,5 @@
 {
-  "note": "JL-04 blind corpus, attempt JL-04-A1. Labelled from the stage READMEs, tuning.gd files, ball-lab README and BIBLE.md only; no prompt, authored corpus or Jev output was seen. A case the prompt author sees is burned and moves to the authored set.",
+  "note": "JL-04 blind corpus, attempt JL-04-A2 (revision of A1). Labelled from the stage READMEs, tuning.gd files, ball-lab README and BIBLE.md only; no prompt, authored corpus or Jev output was seen. Option `why` lines state only what the action does; decisive facts are in `state`. A case the prompt author sees is burned and moves to the authored set.",
   "cases": [
     {
       "id": "blind-cb-dom-cableway-lethal",
@@ -8,7 +8,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "cable-bench README L52-54: a cableway load takes 12 HP and knocks back; at 10 HP staying on the lamp disc ends the run (L77 Scrapped at 0 HP).",
+      "note": "cable-bench README L52-54: the load 'takes 12 HP off you'; at 10 HP that reaches 0, and L77 'At 0 HP you get Scrapped'.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -18,15 +18,16 @@
         "self": {
           "hp": 10,
           "grounded": true,
-          "speed_ms": 12,
-          "speed_tier": "cruise",
+          "speed_ms": 2,
+          "speed_tier": "walk",
           "air_jump_available": true,
           "location": "bench 1 siding",
-          "over": "cableway lamp disc"
+          "over": "cableway lamp disc with scrap on it"
         },
         "scrap": {
           "held": 40
         },
+        "buffs": [],
         "threats": [
           {
             "kind": "cableway",
@@ -42,15 +43,15 @@
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll off the lamp disc before the load arrives."
+          "why": "Roll off the lamp disc."
         },
         {
           "id": "sweep_scrap",
-          "why": "Continue along the siding through the disc, collecting the scrap on it."
+          "why": "Collect the scrap on the lamp disc."
         },
         {
           "id": "retreat_regen",
-          "why": "Stop on the spot and wait for regeneration to start."
+          "why": "Stop on the lamp disc and wait for regeneration."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -75,7 +76,7 @@
       "accept": [
         "sweep_scrap"
       ],
-      "note": "cable-bench README L63-64: the 6 m magnet pulls scrap in on a pass; L68: the tier rises every 45 s, so idling at full HP with no threat gains nothing.",
+      "note": "cable-bench README L63-64: a 6 m magnet pulls scrap in on a pass; L72-73 max HP is 100 with no buffs, so waiting at 100 HP gains no HP while L68 the tier rises every 45 s.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -89,21 +90,22 @@
           "speed_tier": "cruise",
           "air_jump_available": true,
           "location": "bench 0 siding",
-          "over": "rail trough"
+          "over": "rail trough, scrap 3 m ahead on the current line"
         },
         "scrap": {
           "held": 6
         },
+        "buffs": [],
         "threats": []
       },
       "options": [
         {
           "id": "sweep_scrap",
-          "why": "Keep rolling down the trough; scrap lies 3 m ahead on the current line."
+          "why": "Roll on down the trough over the scrap ahead."
         },
         {
           "id": "retreat_regen",
-          "why": "Stop and wait in place; HP is 100 of 100."
+          "why": "Stop in place and wait for regeneration."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -128,7 +130,7 @@
       "accept": [
         "push_objective"
       ],
-      "note": "cable-bench README L65-66: a tier-3 cache costs 99 scrap; with 40 held it cannot be opened, so pressing E there does nothing.",
+      "note": "cable-bench README L65-66: cache cost is 25 * tier^1.25, 99 scrap at tier 3; the 40 held do not cover it.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -142,7 +144,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "bench 3 road",
-          "over": "ground cache"
+          "over": "ground cache, price 99 scrap"
         },
         "objective": {
           "kind": "reach_exit",
@@ -157,7 +159,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "Press E at this cache; it costs 99 scrap and 40 are held."
+          "why": "Press E to open this cache."
         },
         {
           "id": "push_objective",
@@ -186,7 +188,7 @@
       "accept": [
         "sweep_scrap"
       ],
-      "note": "spillway-drop README L68-69: caches cost 25 scrap at the lowest; with 15 held this one cannot be opened.",
+      "note": "spillway-drop README L68-69: a cache opens 'for a scrap cost (25 rising to 73...)'; this one is priced 25 and 15 are held.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -200,7 +202,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "mid shelf bench",
-          "over": "open cache"
+          "over": "open cache, price 25 scrap"
         },
         "scrap": {
           "held": 15
@@ -210,7 +212,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "Press E at this cache; it costs 25 scrap and 15 are held."
+          "why": "Press E to open this cache."
         },
         {
           "id": "sweep_scrap",
@@ -239,7 +241,7 @@
       "accept": [
         "sweep_scrap"
       ],
-      "note": "spillway-drop README L65-67: pickups on the chute floor are pulled in from 6 m; L72: the tier rises every 45 s, so idling at full HP gains nothing.",
+      "note": "spillway-drop README L65-67: pickups are 'magnetically pulled in from 6 m'; L78 max HP is 100 with no buffs, so waiting at 100 HP gains no HP while L72 the tier rises every 45 s.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -253,21 +255,22 @@
           "speed_tier": "cruise",
           "air_jump_available": true,
           "location": "west sluice",
-          "over": "chute floor"
+          "over": "chute floor, scrap 4 m ahead on the current line"
         },
         "scrap": {
           "held": 4
         },
+        "buffs": [],
         "threats": []
       },
       "options": [
         {
           "id": "sweep_scrap",
-          "why": "Keep rolling down the chute; scrap lies 4 m ahead on the current line."
+          "why": "Roll on down the chute over the scrap ahead."
         },
         {
           "id": "retreat_regen",
-          "why": "Brake to a stop and wait; HP is 100 of 100."
+          "why": "Brake to a stop and wait for regeneration."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -292,7 +295,7 @@
       "accept": [
         "stomp_target"
       ],
-      "note": "cable-bench README L71-72: landing on a foe from above deals 26 damage and restores the air jump; the ball is already descending onto it.",
+      "note": "cable-bench README L71-72: 'Land on a foe from above for a stomp (26 damage, and you get your air jump back)'; the air jump is spent and the chaser is directly below.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -320,11 +323,11 @@
       "options": [
         {
           "id": "stomp_target",
-          "why": "Steer the descent onto the chaser below."
+          "why": "Steer the landing onto the chaser."
         },
         {
           "id": "evade_hazard",
-          "why": "Use air control to steer the landing away from the chaser."
+          "why": "Steer the landing away from the chaser."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -347,10 +350,9 @@
       "block": "combat",
       "severity": "minor",
       "accept": [
-        "ram_target",
-        "stomp_target"
+        "ram_target"
       ],
-      "note": "cable-bench README L71-73: a ram above the fast tier deals speed x 1.7 (about 48 at 28 m/s) and a stomp deals 26; L69 chasers run you down if left.",
+      "note": "cable-bench README L71-73: a ram above the fast tier deals speed x 1.7, about 48 at 28 m/s; tuning.gd jump 13 / gravity 26 gives about 1.0 s of air, about 28 m at 28 m/s, past a chaser 15 m ahead. L69 'Chasers run you down'.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -378,11 +380,11 @@
       "options": [
         {
           "id": "ram_target",
-          "why": "Hold the line and hit the chaser at 28 m/s."
+          "why": "Hold the line into the chaser."
         },
         {
           "id": "stomp_target",
-          "why": "Jump and come down on the chaser from above."
+          "why": "Jump now to land on the chaser."
         },
         {
           "id": "evade_hazard",
@@ -412,7 +414,7 @@
         "stomp_target",
         "evade_hazard"
       ],
-      "note": "cable-bench README L71-72 and ball-lab README L63-64: rams only damage above the fast tier; at walk speed contact deals nothing, while a stomp deals 26.",
+      "note": "cable-bench README L71-72: 'ram one above the fast tier for speed x 1.7 damage', and a stomp deals 26; ball-lab README L64: 'hit one from the side above the fast tier to knock it away'. No ram damage is stated at walk speed.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -439,15 +441,15 @@
       "options": [
         {
           "id": "ram_target",
-          "why": "Roll into the chaser at 4 m/s."
+          "why": "Roll into the chaser."
         },
         {
           "id": "stomp_target",
-          "why": "Jump and come down on the chaser from above."
+          "why": "Jump to land on the chaser."
         },
         {
           "id": "evade_hazard",
-          "why": "Turn away and open distance from the chaser."
+          "why": "Turn away from the chaser."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -472,7 +474,7 @@
       "accept": [
         "stomp_target"
       ],
-      "note": "spillway-drop README L76-77: landing on an enemy from above damages it and gives the air jump back; the ball is already descending onto it.",
+      "note": "spillway-drop README L76-77: landing on an enemy from above damages it and 'also gives your air jump back'; the air jump is spent and the chaser is below.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -500,11 +502,11 @@
       "options": [
         {
           "id": "stomp_target",
-          "why": "Steer the descent onto the chaser below."
+          "why": "Steer the landing onto the chaser."
         },
         {
           "id": "evade_hazard",
-          "why": "Use air control to steer the landing away from the chaser."
+          "why": "Steer the landing away from the chaser."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -530,7 +532,7 @@
         "ram_target",
         "evade_hazard"
       ],
-      "note": "spillway-drop README L74-78: lobbers fire slow telegraphed arcs so standing still is expensive; a ram above the fast tier damages; BIBLE L489-495 the response is to move.",
+      "note": "spillway-drop README L74-75: lobbers 'fire slow, telegraphed arcs, so standing still is expensive'; L77-78 ramming 'above the fast tier' damages, scaled by speed.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -560,15 +562,15 @@
       "options": [
         {
           "id": "ram_target",
-          "why": "Drive straight at the lobber, 20 m away, at 24 m/s."
+          "why": "Drive straight at the lobber."
         },
         {
           "id": "evade_hazard",
-          "why": "Swerve off the marked landing spot and keep moving."
+          "why": "Swerve off the marked landing spot."
         },
         {
           "id": "retreat_regen",
-          "why": "Brake and hold here to let HP regenerate."
+          "why": "Brake and hold position for regeneration."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -594,7 +596,7 @@
         "stomp_target",
         "evade_hazard"
       ],
-      "note": "spillway-drop README L73-77 and ball-lab README L63-64: rams only damage above the fast tier; at walk speed a stomp is the damaging contact, or move off the arc.",
+      "note": "spillway-drop README L76-78: 'You damage an enemy by landing on it from above ... or by ramming it above the fast tier'; no ram damage is stated at walk speed. L74-75 lobbers 'fire slow, telegraphed arcs'.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -624,11 +626,11 @@
       "options": [
         {
           "id": "ram_target",
-          "why": "Roll into the lobber at 3 m/s."
+          "why": "Roll into the lobber."
         },
         {
           "id": "stomp_target",
-          "why": "Jump and come down on the lobber from above."
+          "why": "Jump to land on the lobber."
         },
         {
           "id": "evade_hazard",
@@ -657,7 +659,7 @@
       "accept": [
         "take_cache"
       ],
-      "note": "cable-bench README L65-67: a tier-1 cache costs 25 scrap for a stacking buff; the ball is already on it, so there is no detour cost.",
+      "note": "cable-bench README L65-67: 25 scrap at tier 1 buys 'a random stacking buff'; the ball is on the cache, so opening it needs no detour.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -671,7 +673,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "bench 0 road",
-          "over": "ground cache"
+          "over": "ground cache, price 25 scrap"
         },
         "objective": {
           "kind": "reach_exit",
@@ -686,11 +688,11 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "Press E to open this cache for 25 scrap; 32 are held."
+          "why": "Press E to open this cache."
         },
         {
           "id": "push_objective",
-          "why": "Drive on toward the first switchback without opening it."
+          "why": "Drive on toward the first switchback."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -715,7 +717,7 @@
       "accept": [
         "take_cache"
       ],
-      "note": "cable-bench README L55-57: the horseshoe cache on bench 2 is the cheapest reach on the mountain if found early; its gap is 15 m away and the scrap covers the tier-2 cost (L65).",
+      "note": "cable-bench README L55-57: the horseshoe cache 'is the cheapest reach on the mountain if you find it early'; the ball is 15 m from its gap and 70 held covers the tier-2 cost from L65 (about 59).",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -729,7 +731,7 @@
           "speed_tier": "cruise",
           "air_jump_available": true,
           "location": "bench 2 west, near (-150, 30)",
-          "over": "wrecked plate horseshoe gap"
+          "over": "open ground 15 m from the horseshoe gap"
         },
         "objective": {
           "kind": "reach_exit",
@@ -744,15 +746,15 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "Roll through the gap and open the horseshoe cache, about 59 scrap at tier 2."
+          "why": "Roll through the horseshoe gap and open the cache inside."
         },
         {
           "id": "sweep_scrap",
-          "why": "Continue east along the bench-2 siding collecting scrap."
+          "why": "Continue east along the bench-2 siding."
         },
         {
           "id": "push_objective",
-          "why": "Head straight for the next switchback road."
+          "why": "Head for the next switchback road."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -777,7 +779,7 @@
       "accept": [
         "take_cache"
       ],
-      "note": "spillway-drop README L68-71: open caches start at 25 scrap for a stacking buff; the ball is already at this one.",
+      "note": "spillway-drop README L68-71: a cache opens for its scrap cost and grants one stacking buff; this one is priced 25, 40 are held and the ball is already at it.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -791,7 +793,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "mid shelf bench",
-          "over": "open cache"
+          "over": "open cache, price 25 scrap"
         },
         "scrap": {
           "held": 40
@@ -801,11 +803,11 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "Press E to open this cache for 25 scrap; 40 are held."
+          "why": "Press E to open this cache."
         },
         {
           "id": "sweep_scrap",
-          "why": "Roll past it along the bench-edge scrap line."
+          "why": "Roll past along the bench-edge scrap line."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -830,7 +832,7 @@
       "accept": [
         "take_cache"
       ],
-      "note": "spillway-drop README L58-61, L68-70 and L97: after the first flood drains the hatch is open and it is the cheapest cache at 20 scrap.",
+      "note": "spillway-drop README L60-61 and L69-70: after the first flood drains, the open hatch 'is the secret cache', priced 20; L97 'The secret is the cheapest cache'.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -844,7 +846,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "lower basin",
-          "over": "maintenance hatch"
+          "over": "open maintenance hatch cache, price 20 scrap"
         },
         "objective": {
           "kind": "reach_exit",
@@ -859,11 +861,11 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "Press E at the open hatch cache for 20 scrap; 30 are held."
+          "why": "Press E to open the hatch cache."
         },
         {
           "id": "push_objective",
-          "why": "Head for the bypass ramp and the pump house without opening it."
+          "why": "Head for the bypass ramp and the pump house."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -888,7 +890,7 @@
       "accept": [
         "push_objective"
       ],
-      "note": "cable-bench README L74-77: when the charge fills, rolling into the rig clears the stage; the director is spiked and the tier clock keeps rising.",
+      "note": "cable-bench README L76: 'When it fills, roll into the rig for Stage clear'; L75-76 leaving stalls the charge 'but never the tier clock', and the charge spikes the director.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -901,11 +903,11 @@
           "speed_ms": 8,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "forge apron",
+          "location": "forge apron; nearest ground cache 120 m downhill",
           "over": "verdigris ring"
         },
         "objective": {
-          "kind": "enter_rig",
+          "kind": "enter_rig, charge full",
           "distance_m": 5,
           "inside_ring": true
         },
@@ -923,11 +925,11 @@
       "options": [
         {
           "id": "push_objective",
-          "why": "Roll into the rig, 5 m away."
+          "why": "Roll into the rig."
         },
         {
           "id": "take_cache",
-          "why": "Leave the apron for a ground cache 120 m downhill."
+          "why": "Drive to the ground cache downhill."
         },
         {
           "id": "sweep_scrap",
@@ -956,7 +958,7 @@
       "accept": [
         "push_objective"
       ],
-      "note": "cable-bench README L74-76: leaving the 30 m ring stalls the charge but never the tier clock, and the charge spikes the director.",
+      "note": "cable-bench README L74-76: 'You must stay inside the ring; leaving stalls the charge but never the tier clock', and the charge spikes the director.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -969,11 +971,11 @@
           "speed_ms": 10,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "forge apron",
+          "location": "forge apron; nearest cache 80 m away, outside the ring",
           "over": "verdigris ring"
         },
         "objective": {
-          "kind": "exit_charge",
+          "kind": "exit_charge, 20 of 60 s banked",
           "distance_m": 12,
           "inside_ring": true
         },
@@ -991,11 +993,11 @@
       "options": [
         {
           "id": "push_objective",
-          "why": "Stay inside the ring while the charge runs; 40 s remain."
+          "why": "Stay inside the ring while the charge runs."
         },
         {
           "id": "take_cache",
-          "why": "Leave the ring for a cache 80 m away, costing 99 scrap."
+          "why": "Leave the ring for the nearest cache."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1020,7 +1022,7 @@
       "accept": [
         "start_exit"
       ],
-      "note": "cable-bench README L65-70: no cache is affordable and every 45 s raises both cache cost and foe strength, so delay only adds difficulty; L74 E at the rig starts the charge.",
+      "note": "cable-bench README L65-66: at tier 3 a cache costs 99 and 20 are held; L68-69 the tier rises every 45 s, spawning foes 'faster and tougher each tier', and cost rises with tier. L74 E at the rig starts the charge.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1033,7 +1035,7 @@
           "speed_ms": 1,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "forge apron",
+          "location": "forge apron; nearest cache 60 m away",
           "over": "exit rig"
         },
         "objective": {
@@ -1049,15 +1051,15 @@
       "options": [
         {
           "id": "start_exit",
-          "why": "Press E at the rig to start the 60 s charge."
+          "why": "Press E at the rig to start the charge."
         },
         {
           "id": "sweep_scrap",
-          "why": "Drive back down to the bench-4 siding to collect scrap."
+          "why": "Drive back down to the bench-4 siding for scrap."
         },
         {
           "id": "take_cache",
-          "why": "Go to the nearest cache, 60 m away, costing 99 scrap."
+          "why": "Drive to the nearest cache."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1082,7 +1084,7 @@
       "accept": [
         "push_objective"
       ],
-      "note": "spillway-drop README L79-81 and L126-127: the charge requires staying within 30 m of the pump house; time out of the zone banks nothing while the director is spiked.",
+      "note": "spillway-drop README L79-81: 'you have to stay within 30 m of it' and the director spikes for the whole charge; L126-127 exit_test asserts 'time out of the zone banks nothing'.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -1095,11 +1097,11 @@
           "speed_ms": 9,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "top shelf by pump house",
-          "over": "exit zone"
+          "location": "top shelf by pump house; nearest chute scrap line 60 m away, outside the zone",
+          "over": "exit zone, radius 30 m"
         },
         "objective": {
-          "kind": "exit_charge",
+          "kind": "exit_charge, 25 of 60 s banked",
           "distance_m": 10,
           "inside_ring": true
         },
@@ -1117,11 +1119,11 @@
       "options": [
         {
           "id": "push_objective",
-          "why": "Stay within 30 m of the pump house while the charge runs."
+          "why": "Stay inside the exit zone while the charge runs."
         },
         {
           "id": "sweep_scrap",
-          "why": "Leave for the scrap line on a chute 60 m away."
+          "why": "Leave for the scrap line on the nearest chute."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1146,7 +1148,7 @@
       "accept": [
         "push_objective"
       ],
-      "note": "spillway-drop README L79-81: when the charge finishes, rolling through the gate ring clears the stage; the director is spiked until then.",
+      "note": "spillway-drop README L80-81: 'When it finishes, roll through the gate ring for the clear screen'; L79-80 the director spikes for the whole charge.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -1163,7 +1165,7 @@
           "over": "exit zone"
         },
         "objective": {
-          "kind": "enter_gate_ring",
+          "kind": "enter_gate_ring, charge full",
           "distance_m": 10,
           "inside_ring": true
         },
@@ -1181,11 +1183,11 @@
       "options": [
         {
           "id": "push_objective",
-          "why": "Roll through the gate ring, 10 m away."
+          "why": "Roll through the gate ring."
         },
         {
           "id": "sweep_scrap",
-          "why": "Drop into the west sluice to collect chute scrap."
+          "why": "Drop into the west sluice for its scrap."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1210,7 +1212,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "cable-bench README L69-70: lobbers lob telegraphed arcs at where you are to punish staying put; L73 regen needs 5 s without a hit, which a hit resets; BIBLE L491.",
+      "note": "cable-bench README L69-70: lobbers 'lob telegraphed arcs at where you are, to punish fighting on the spot'; L73 regen starts 'five seconds after you were last hit'.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1243,7 +1245,7 @@
         },
         {
           "id": "retreat_regen",
-          "why": "Hold position; the last hit was 4 s ago and regen starts at 5 s."
+          "why": "Hold position for regeneration."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1268,7 +1270,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "cable-bench README L74-75: the charge only needs the ball inside the ring, so moving within it keeps charging; L69-70 the arc lands where the ball is.",
+      "note": "cable-bench README L74-75: 'You must stay inside the ring; leaving stalls the charge', so a move within the ring keeps charging; L69-70 lobbers lob arcs 'at where you are'.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1282,7 +1284,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "forge apron",
-          "over": "verdigris ring"
+          "over": "verdigris ring, radius 30 m, 27 m from its edge"
         },
         "objective": {
           "kind": "exit_charge",
@@ -1302,11 +1304,11 @@
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll to another point inside the 30 m ring, off the marked spot."
+          "why": "Roll to another point inside the ring, off the marked spot."
         },
         {
           "id": "push_objective",
-          "why": "Hold still beside the rig while the charge runs."
+          "why": "Hold position beside the rig while the charge runs."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1327,11 +1329,11 @@
     {
       "id": "blind-sd-safety-klaxon-in-basin",
       "block": "safety",
-      "severity": "moderate",
+      "severity": "minor",
       "accept": [
         "evade_hazard"
       ],
-      "note": "spillway-drop README L58-60 and L95-96: the water makes the basin slow with drag and a current to its middle, and L74-75 lobbers punish standing still; BIBLE L209 the klaxon announces the change.",
+      "note": "spillway-drop README L58-60: after the klaxon, 6 s of rising water, then flood with 'heavy drag and a current toward the middle of the basin'; L95-96 'the water makes the basin slow'. No flood damage is stated.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -1355,22 +1357,17 @@
             "kind": "flood",
             "water_rises_in_s": 3,
             "effect": "heavy drag and a current toward the basin middle"
-          },
-          {
-            "kind": "lobber",
-            "distance_m": 40,
-            "telegraphing": false
           }
         ]
       },
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll up out of the basin toward the bypass ramp."
+          "why": "Roll uphill toward the basin rim."
         },
         {
           "id": "sweep_scrap",
-          "why": "Collect the basin scrap 20 m further toward the middle."
+          "why": "Roll toward the basin middle for its scrap."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1395,7 +1392,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "spillway-drop README L79-80: the charge only needs the ball within 30 m of the pump house, so moving within it keeps charging; L74-75 the arc punishes standing still.",
+      "note": "spillway-drop README L79-80: the charge needs the ball 'within 30 m of it', so a move within the zone keeps charging; L74-75 lobbers fire arcs 'so standing still is expensive'.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -1409,7 +1406,7 @@
           "speed_tier": "walk",
           "air_jump_available": true,
           "location": "top shelf by pump house",
-          "over": "exit zone"
+          "over": "exit zone, radius 30 m, 26 m from its edge"
         },
         "objective": {
           "kind": "exit_charge",
@@ -1429,11 +1426,11 @@
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll to another point within 30 m of the pump house, off the marked spot."
+          "why": "Roll to another point inside the exit zone, off the marked spot."
         },
         {
           "id": "push_objective",
-          "why": "Hold still beside the terminal while the charge runs."
+          "why": "Hold position beside the terminal while the charge runs."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1458,7 +1455,7 @@
       "accept": [
         "sweep_scrap"
       ],
-      "note": "cable-bench README L85-86 and kicker_test L109: about 9 m/s stalls a metre up the kicker; 26 m/s clears the gap.",
+      "note": "cable-bench README L85-86: 'about 9 m/s stalls a metre up the ramp, 26 m/s clears the gap'; kicker_test L109 asserts a 9 m/s launch does not land on the mesa.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1472,7 +1469,7 @@
           "speed_tier": "cruise",
           "air_jump_available": true,
           "location": "bench 1 siding",
-          "over": "rail trough before east ledge kicker"
+          "over": "rail trough before the east ledge kicker"
         },
         "scrap": {
           "held": 30
@@ -1482,12 +1479,12 @@
       "options": [
         {
           "id": "hit_kicker",
-          "why": "Take the east ledge kicker at the current 9 m/s.",
+          "why": "Take the east ledge kicker up to the ledge cache.",
           "requires_speed_ms": 26
         },
         {
           "id": "sweep_scrap",
-          "why": "Stay in the trough past the kicker, collecting siding scrap."
+          "why": "Stay in the trough past the kicker over the siding scrap."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1512,7 +1509,7 @@
       "accept": [
         "hit_kicker"
       ],
-      "note": "cable-bench README L47-51 and L84-86: the kicker sits on the siding line, 26 m/s clears it, and the ledge cache is affordable at tier 1 (L65).",
+      "note": "cable-bench README L48-51 and L84-86: the kicker is 'the only way up at speed' to the ledge cache and 26 m/s clears it; at tier 1 the cache costs 25 (L65) and 45 are held.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1526,7 +1523,7 @@
           "speed_tier": "blazing",
           "air_jump_available": true,
           "location": "bench 1 siding",
-          "over": "rail trough before east ledge kicker"
+          "over": "rail trough before the east ledge kicker"
         },
         "scrap": {
           "held": 45
@@ -1536,12 +1533,12 @@
       "options": [
         {
           "id": "hit_kicker",
-          "why": "Take the east ledge kicker at 27 m/s to the ledge cache.",
+          "why": "Take the east ledge kicker up to the ledge cache.",
           "requires_speed_ms": 26
         },
         {
           "id": "sweep_scrap",
-          "why": "Stay in the trough past the kicker, collecting siding scrap."
+          "why": "Stay in the trough past the kicker over the siding scrap."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1567,7 +1564,7 @@
         "sweep_scrap",
         "push_objective"
       ],
-      "note": "cable-bench README L46-47 and L81-83: the spawn faces the bench-0 siding, which is both the scrap line and the route to the first switchback.",
+      "note": "cable-bench README L81-83: the camera 'is already aimed down the first line: west along the bench-0 siding toward the road at x=-130'; L47 the siding 'is where the scrap is'.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1591,6 +1588,7 @@
         "scrap": {
           "held": 0
         },
+        "buffs": [],
         "threats": []
       },
       "options": [
@@ -1604,11 +1602,11 @@
         },
         {
           "id": "retreat_regen",
-          "why": "Wait at the spawn; HP is 100 of 100."
+          "why": "Wait at the spawn for regeneration."
         },
         {
           "id": "evade_hazard",
-          "why": "Steer away from the siding; no threat is present."
+          "why": "Steer off the siding line."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1633,7 +1631,7 @@
       "accept": [
         "sweep_scrap"
       ],
-      "note": "spillway-drop README L41-42, L49-51 and L65-66: the spawn faces the west sluice, whose floor carries scrap and which carries the ball down with no input.",
+      "note": "spillway-drop README L41-42: 'You spawn at the mouth of the west sluice, aimed down it'; L49-51 the chute carries the ball with no input; L65-66 scrap lies along chute floors.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -1652,6 +1650,7 @@
         "scrap": {
           "held": 0
         },
+        "buffs": [],
         "threats": []
       },
       "options": [
@@ -1661,11 +1660,11 @@
         },
         {
           "id": "retreat_regen",
-          "why": "Brake and wait at the sluice mouth; HP is 100 of 100."
+          "why": "Brake at the sluice mouth and wait for regeneration."
         },
         {
           "id": "evade_hazard",
-          "why": "Steer out of the sluice; no threat is present."
+          "why": "Steer out of the sluice."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1690,7 +1689,7 @@
       "accept": [
         "sweep_scrap"
       ],
-      "note": "spillway-drop README L44-45 and L58-60: the flood fills the lower basin; the mid shelf stands 15 m above it, so the klaxon there does not change the ball's ground.",
+      "note": "spillway-drop README L43-45 and L58-60: the flood's drag and current act toward 'the middle of the basin' at 0 m, and the mid shelf is at 15 m. The README states no water height, so the case is minor.",
       "state": {
         "stage": {
           "name": "spillway-drop",
