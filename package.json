@@ -12,7 +12,7 @@
     "test:expedition": "node tests/expedition-balance.mjs",
     "test:leads": "node --test tests/legacy/leads.test.js",
     "test:leads:browser": "node tests/lead-browser.mjs",
-    "test": "node --test tests/*.test.js",
+    "test": "node --test tests/*.test.js tools/jev-player/tests/*.test.js",
     "test:orchard:models": "node tests/orchard-models.mjs",
     "test:browser": "node tests/browser.mjs",
     "test:balance": "node tests/balance.mjs",
@@ -26,6 +26,7 @@
     "sketch:smoke": "node scripts/sketch-smoke.mjs",
     "play": "node scripts/play.mjs",
     "sketch:test": "node scripts/play.mjs test",
+    "jev:score": "node tools/jev-player/score.mjs",
     "probe:balance": "node tests/balance.mjs",
     "playtest:agent": "node scripts/agent-playtest.mjs",
     "test:agent": "node scripts/agent-playtest.mjs --self-test"

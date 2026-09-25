@@ -5,8 +5,15 @@
 // so discovery walks `git worktree list` rather than this repo's sketches/
 // directory alone. Binary resolution is imported from sketch-smoke so the
 // pinned 4.7.2 path is stated in exactly one place.
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  watch as watchFs,
+  writeFileSync,
+} from "node:fs";
+import { cpus } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -158,32 +165,163 @@ export function resolve(entries, name) {
   return { ambiguous: [] };
 }
 
+// Each check is a separate Godot boot costing about 7.7 s, nearly all of it
+// startup, so wall clock is set by how many run at once rather than by the work.
+// The checks share no state, so they fan out freely.
 function runHeadless(label, args) {
-  const result = spawnSync(binary, args, {
-    encoding: "utf8",
-    timeout: 120_000,
+  return new Promise((resolve) => {
+    const child = spawn(binary, args);
+    let output = "";
+    const timer = setTimeout(() => child.kill("SIGKILL"), 120_000);
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({
+        label,
+        ok: status === 0 && !errorLine.test(output),
+        status,
+        output,
+      });
+    });
   });
-  const output = (result.stdout || "") + (result.stderr || "");
-  const ok = result.status === 0 && !errorLine.test(output);
-  if (ok) {
-    console.log(`${green("PASS")} ${label}`);
+}
+
+async function inPool(jobs, limit) {
+  const results = [];
+  let next = 0;
+  const width = Math.max(1, Math.min(limit, jobs.length));
+  await Promise.all(
+    Array.from({ length: width }, async () => {
+      while (next < jobs.length) {
+        const index = next++;
+        results[index] = await jobs[index]();
+      }
+    }),
+  );
+  return results;
+}
+
+// A failure under concurrency can be intermittent, and an intermittent failure
+// whose output scrolled away is not diagnosable. Every failing check keeps its
+// full output on disk so the next flake can be read rather than guessed at.
+const failureLog = path.join(root, "artifacts", "local", "sketch-tests");
+
+function reportCheck(result) {
+  if (result.ok) {
+    console.log(`${green("PASS")} ${result.label}`);
   } else {
-    console.log(`${red("FAIL")} ${label} exit=${result.status}`);
-    console.log(output.split("\n").slice(-40).join("\n"));
+    console.log(`${red("FAIL")} ${result.label} exit=${result.status}`);
+    console.log(result.output.split("\n").slice(-40).join("\n"));
+    try {
+      mkdirSync(failureLog, { recursive: true });
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const slug = result.label.replace(/[^a-z0-9]+/gi, "-");
+      const file = path.join(failureLog, `${stamp}-${slug}.log`);
+      writeFileSync(file, result.output);
+      console.log(dim(`     full output: ${file}`));
+    } catch {
+      // Never let evidence capture take down the run that produced it.
+    }
+  }
+  return result.ok;
+}
+
+// Import must land before anything else opens the project, so it runs alone.
+async function testEntry(entry, limit) {
+  const base = ["--headless", "--path", entry.directory];
+  const imported = reportCheck(
+    await runHeadless(`${entry.id} import`, [...base, "--import"]),
+  );
+  if (!imported) {
+    return false;
+  }
+  const jobs = [
+    () => runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]),
+  ];
+  for (const script of testScripts(entry.directory)) {
+    const name = script.replace("res://tests/", "");
+    jobs.push(() =>
+      runHeadless(`${entry.id} ${name}`, [...base, "--script", script]),
+    );
+  }
+  let ok = true;
+  for (const result of await inPool(jobs, limit)) {
+    ok = reportCheck(result) && ok;
   }
   return ok;
 }
 
-function testEntry(entry) {
-  const base = ["--headless", "--path", entry.directory];
-  let ok = runHeadless(`${entry.id} import`, [...base, "--import"]);
-  ok = runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]) && ok;
-  for (const script of testScripts(entry.directory)) {
-    const name = script.replace("res://tests/", "");
-    ok =
-      runHeadless(`${entry.id} ${name}`, [...base, "--script", script]) && ok;
+export function jobLimit(words) {
+  const flag = words.find((word) => word.startsWith("--jobs="));
+  if (flag !== undefined) {
+    return Math.max(1, Number.parseInt(flag.slice(7), 10) || 1);
+  } else {
+    // Each Godot boot is mostly single-threaded startup, so the useful width is
+    // near the core count; leave two cores for the editor and the compositor.
+    return Math.max(2, Math.min(8, cpus().length - 2));
+  }
+}
+
+async function runSuite(targets, limit) {
+  let ok = true;
+  for (const entry of targets) {
+    ok = (await testEntry(entry, limit)) && ok;
   }
   return ok;
+}
+
+// A sketch's own sources and tests are the only inputs to its checks, so a
+// change under its directory is the whole trigger. Godot rewrites .uid and
+// .import files during an import pass; watching those would retrigger forever.
+const ignored = /(\.uid|\.import|\.godot\/|~$)/;
+
+async function watch(targets, limit) {
+  const roots = targets.map((entry) => entry.directory);
+  console.log(bold("\n  watching " + targets.map((e) => e.id).join(", ")));
+  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop.\n"));
+
+  let running = false;
+  let queued = null;
+
+  async function fire(entry, reason) {
+    if (running) {
+      queued = entry;
+      return;
+    }
+    running = true;
+    const started = Date.now();
+    console.log(`\n${cyan("→")} ${bold(entry.id)} ${dim(reason)}`);
+    const ok = await testEntry(entry, limit);
+    const seconds = ((Date.now() - started) / 1000).toFixed(1);
+    if (ok) {
+      console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);
+    } else {
+      console.log(`${red("  RED")} ${entry.id} ${dim(seconds + "s")}`);
+    }
+    running = false;
+    if (queued !== null) {
+      const next = queued;
+      queued = null;
+      await fire(next, "queued while running");
+    }
+  }
+
+  for (const entry of targets) {
+    let debounce = null;
+    watchFs(entry.directory, { recursive: true }, (_event, file) => {
+      if (file === null || ignored.test(file)) {
+        return;
+      }
+      clearTimeout(debounce);
+      debounce = setTimeout(() => fire(entry, "changed " + file), 180);
+    });
+  }
+  // Nothing has changed yet, so show the current colour before waiting.
+  for (const entry of targets) {
+    await fire(entry, "first run");
+  }
+  await new Promise(() => {});
 }
 
 function showList(entries, all) {
@@ -255,7 +393,7 @@ function requireEntry(entries, name) {
   }
 }
 
-function main(argv) {
+async function main(argv) {
   const passthrough = argv.indexOf("--");
   const extra = passthrough === -1 ? [] : argv.slice(passthrough + 1);
   const words = passthrough === -1 ? argv : argv.slice(0, passthrough);
@@ -264,7 +402,7 @@ function main(argv) {
   let command = words[0];
   let name = words[1];
   // A bare name is the common case: `scrapkeep mobility` should just play it.
-  const verbs = ["play", "test", "shot", "list", "help"];
+  const verbs = ["play", "test", "watch", "shot", "list", "help"];
   if (command !== undefined && command.startsWith("--")) {
     command = "list";
   } else if (command !== undefined && !verbs.includes(command)) {
@@ -291,20 +429,26 @@ function main(argv) {
       stdio: "inherit",
     });
     process.exit(result.status === null ? 1 : result.status);
-  } else if (command === "test") {
+  } else if (command === "test" || command === "watch") {
     let targets = entries;
-    if (name !== undefined) {
+    if (name !== undefined && !name.startsWith("--")) {
       targets = [requireEntry(entries, name)];
     }
-    let ok = true;
-    for (const entry of targets) {
-      ok = testEntry(entry) && ok;
+    const limit = jobLimit(words);
+    if (command === "test") {
+      const started = Date.now();
+      const ok = await runSuite(targets, limit);
+      const seconds = ((Date.now() - started) / 1000).toFixed(1);
+      const verdict = ok ? green("pass") : red("fail");
+      console.log(
+        `\nsketch tests ${verdict} in ${seconds}s across ${targets.length} sketch(es), ${limit} at a time.`,
+      );
+      console.log(dim("Headless boot and tests only; feel needs your play."));
+      process.exit(ok ? 0 : 1);
+    } else {
+      await watch(targets, limit);
+      return;
     }
-    const verdict = ok ? green("pass") : red("fail");
-    console.log(
-      `\nsketch tests ${verdict}: ${targets.length} sketch(es). Headless boot and tests only; feel needs your play.`,
-    );
-    process.exit(ok ? 0 : 1);
   } else if (command === "shot") {
     const entry = requireEntry(entries, name);
     const tool = path.join(entry.directory, "tools", "shot.gd");
