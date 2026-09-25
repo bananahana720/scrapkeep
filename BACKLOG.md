@@ -14,6 +14,7 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 
 - [Proposed first sprint](#proposed-first-sprint)
 - [Task catalogue](#task-catalogue) and individual cards, including the [asset production cards](#asset-production-cards-16-september-2026)
+- [Jev Lab cards](#jev-lab-cards-25-september-2026)
 - [Open questions](#open-questions)
 - [Source dispositions and inventory](docs/project/SOURCE-DISPOSITIONS.md)
 
@@ -5204,3 +5205,143 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 **Verification and evidence:** Automated native: import and validation of a staged copy by the handoff's commands. Static: sidecars tracked, provenance complete. Human review record: Andrew's listening review of the imported cues, recorded as one listener's opinion. Not established: PD-03 AU-01 to AU-06, PD-03 FT-01 and FT-02, playback hardware or the mix. Human-hands steps: Andrew records Godot execution authorization; Andrew's listening review.
 
 **Boundary:** As ART-17. No cue definitions, which belong to SC-07. No bus or mix. Re-size check: split by owner unit if the Q-P31 answer's batch exceeds one M card.
+## Jev Lab cards (25 September 2026)
+
+Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-09-25/plan.md](artifacts/jev-lab-2026-09-25/plan.md); its architecture sections are the design source for every JL card. Every JL card runs in the heavy lane: worktree from `scripts/new-worktree.sh`, packet, attempt record and event before dispatch, `check:scope` receipts under `artifacts/local/tasks/JL-NN/`, a fresh independent reviewer and serial coordinator integration. No JL card mixes `tools/` or `scripts/` with `sketches/`. Automated play is never a feel verdict. Cards are added one wave at a time so each wave's retro can change the next wave's cards.
+
+<a id="jl-00"></a>
+
+### JL-00: Audit the Opus 5 tooling commits and EV-0483
+
+**Card revision:** 1 · **Owner:** Coordinator with an independent reviewer · **Size:** S · **Lane:** Jev Lab (audit)
+
+**Source and inputs:**
+
+- Commits 41ab9f6, 7a3c159, 9c067de and 9a7f7ae; TRACKING EV-0483
+- The plan's "Audit of the Opus 5 work" table, findings A1 to A10, from a prior read-only pass
+- `tools/jev-player/`, `scripts/play.mjs`, ORCHESTRATOR (tooling class and light play lane)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `artifacts/jev-lab-2026-09-25/audit/README.md`; TRACKING (coordinator only, EV-0485).
+
+**Definition of done:**
+
+1. A claims ledger marks every factual or performance claim in the four commit messages, the jev-player README and EV-0483 as verified, unverified or retracted, with file:line evidence.
+2. The label-edit history of `tools/jev-player/corpus.json` is listed case by case from `git log -p`.
+3. Each of A1 to A10 is confirmed, revised or rejected with evidence; new findings are numbered from A11.
+4. EV-0485 records the correction of EV-0483's timestamp, any retraction the audit confirms and the reconciliation of the commits that have no event.
+
+**Verification and evidence:** The reviewer's report retained verbatim; the coordinator spot-checks at least three cited lines; `npm run check:docs`.
+
+**Boundary:** No code change. Fixes land in the cards that own each file (JL-03, JL-06 and later).
+
+<a id="jl-01"></a>
+
+### JL-01: Run record `scrapkeep-run/1` and its index
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Run record `scrapkeep-run/1`"
+- `tools/agent-player/run.py:88-99` (exclusive output directory claimed with `x`), `tools/agent-player/evidence.py:11-36` (hash provenance, NDJSON)
+
+**Dependencies:** [JL-00](#jl-00). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/record.mjs`; `tests/lab-record.test.js`; `package.json` (the `test` script's file list only, if needed); `artifacts/local/tasks/JL-01/`.
+
+**Definition of done:**
+
+1. `createRun({type, label})` claims an exclusive `artifacts/local/runs/<ts>-<type>-<label>-<uuid8>/` by opening `run-owner.json` with the `wx` flag; a second claim of the same directory fails.
+2. `run.json` carries `schema: "scrapkeep-run/1"`, `type`, `result`, `provenance` (git head, branch, dirty flag, source hashes at start and end, tool versions, an `instrument` block, and Jev model, call, token and cache counts), `config`, `kpis` and `kris` as `{value, n, ci}`, `findings` each with a repro command, and `limits`. A start/end source-hash mismatch forces `result: "inconclusive"`.
+3. Metric ids are validated against an injected registry; an unknown id throws. (The registry itself is JL-02.)
+4. `index.ndjson` is append-only, and `rebuildIndex()` reproduces it byte-identically from the run directories.
+5. Node built-ins only; no dependency or lockfile change.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints; receipts under `artifacts/local/tasks/JL-01/`.
+
+**Boundary:** No metric definitions, no Godot code, no gate logic.
+
+<a id="jl-02"></a>
+
+### JL-02: Metric registry, status table and statistics
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Registry", the KPI/KRI layer table and "Gate → Statistics"
+- `tools/agent-player/report.py` (nearest-rank percentiles)
+- `~/.config/omarchy/themes/neon-noir/colors.toml` (palette)
+
+**Dependencies:** [JL-00](#jl-00). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/metrics/{index,status,core,program,human,tdd,ball-lab}.mjs`; `scripts/lab/stats.mjs`; `tests/lab-metrics.test.js`; `package.json` (the `test` script's file list only, if needed); `artifacts/local/tasks/JL-02/`.
+
+**Definition of done:**
+
+1. One `STATUS` table owns each status's colour, glyph, ANSI code, gate effect and exit code: green `#7fd9a0` ●, amber `#ffd166` ▲, red `#ef476f` ■, insufficient `#5e7a82` ○. A test fails if a hex colour or status word appears elsewhere under `scripts/lab/`.
+2. Every metric id in the plan's layer table for the mechanics (ball-lab), agent, stability, pipeline, TDD, program and human layers is defined once as `{id, layer, kind, sentinel, thresholds, min_n, says}`; `index.mjs` merges the layers and rejects a duplicate id.
+3. A metric below its `min_n` evaluates to insufficient, never green; a sentinel goes red on one occurrence.
+4. `stats.mjs` gives Wilson intervals, Newcombe differences and nearest-rank p50/p95. Tests check them against published reference values and against `report.py` on a shared fixture.
+5. Node built-ins only.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints; receipts under `artifacts/local/tasks/JL-02/`.
+
+**Boundary:** Cable Bench and Spillway Drop metrics belong to JL-26 and JL-27. No gate CLI (JL-12), no output formatting beyond `says`.
+
+<a id="jl-03"></a>
+
+### JL-03: Versioned question sets and the jev-player retractions
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 1 "Question sets are versioned files" and "Instrument epoch"; audit findings A1, A2, A6 and A10 as dispositioned by JL-00
+- `tools/jev-player/{decide.mjs,score.mjs,README.md,corpus.json,tests/gate.test.js}`
+
+**Dependencies:** [JL-00](#jl-00). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/questions/{q1-original.json,INDEX.json}`; `tools/jev-player/decide.mjs`; `tools/jev-player/score.mjs`; `tools/jev-player/README.md`; `tools/jev-player/tests/`; `artifacts/local/tasks/JL-03/`.
+
+**Definition of done:**
+
+1. `questions/q1-original.json` holds today's intent, danger, greedy and rationale wording verbatim with `status: "retracted-leading"`; `INDEX.json` pins its sha256, and a test fails when a published question file's bytes change.
+2. `decide.mjs` loads a question set by version and exports `GATE_VERSION` and `instrumentIdentity()` returning `{questions_sha, model, confidence_floor, gate_version}`; the existing gate tests pass unchanged under q1.
+3. `score.mjs` reports the authored and blind corpora separately and never merges them; only the blind score is marked as gating.
+4. The README retracts the sweep conclusion, calls `CONFIDENCE_FLOOR` provisional, and is rewritten plainly.
+5. `score.mjs` records `rawIntent` and `lowConfidence` for every case and reports floor-induced failures separately from model misses (audit A13).
+6. Offline tests cover the `start_exit` precondition, the all-gated fallback, the confidence floor, and a snapshot of the built questions so prompt drift fails `npm test` (A14).
+7. The blanket "already rolling over it" prefix is removed from `take_cache` options where the case states a distance (A17, at least `low-hp-chaser`); labels are unchanged. The README says the `danger` and `greedy` answers are recorded but drive no decision (A18).
+8. No test makes a live Jev call.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints; receipts under `artifacts/local/tasks/JL-03/`.
+
+**Boundary:** No new question wording (q2 is JL-18), no preflight (JL-15), no blind corpus content (JL-04).
+
+<a id="jl-04"></a>
+
+### JL-04: Blind corpus, labelled in isolation
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 1 "Blind corpus"
+- Permitted inputs only: the READMEs and `src/tuning.gd` of Cable Bench (`proto/cable-bench` at 29dcbcf, `sketches/cable-bench/`), Spillway Drop (`proto/spillway-drop` at af89c89, `sketches/spillway-drop/`) and ball-lab (`sketches/ball-lab/`); `BIBLE.md`; and the schema-only description of a case supplied in the packet
+
+**Dependencies:** [JL-00](#jl-00). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/corpus-blind.json`; `tools/jev-player/corpus-blind.PROVENANCE.md`; `artifacts/local/tasks/JL-04/`.
+
+**Definition of done:**
+
+1. At least 20 cases in the packet's schema, each with an expected choice, a severity weight and `{labeller, date, inputs_seen, prompt_epoch}`; at least four are dominance cases where one option is plainly better regardless of wording.
+2. The labeller read no forbidden input: `tools/jev-player/decide.mjs`, `README.md`, `corpus.json`, `sweep.mjs`, `score.mjs`, any Jev output, the plan or the audit. The coordinator confirms this from the delegate's tool log.
+3. The provenance file states the inputs seen, the labelling rule for each case family and the rule that a case the prompt author sees is burned and moves to the authored set.
+
+**Verification and evidence:** JSON parses against the packet schema; the coordinator's tool-log check; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No scoring, no Jev calls, no prompt wording. Blind results reach the prompt author only as aggregates.
