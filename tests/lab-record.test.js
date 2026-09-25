@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   appendFile,
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
@@ -143,10 +144,15 @@ test("run.json carries the scrapkeep-run/1 record with provenance", async (t) =>
   assert.equal(provenance.head, git(repository, "rev-parse", "HEAD"));
   assert.equal(provenance.branch, "lab");
   assert.equal(provenance.dirty, false);
-  assert.deepEqual(Object.keys(provenance.sources.files), ["src/tuning.txt"]);
+  assert.equal("files" in provenance.sources, false);
   assert.equal(provenance.sources.start, provenance.sources.end);
   assert.equal(provenance.sources.matched, true);
   assert.deepEqual(provenance.sources.changed, []);
+  const sidecar = JSON.parse(
+    await readFile(path.join(run.directory, "sources.json"), "utf8"),
+  );
+  assert.deepEqual(Object.keys(sidecar.start), ["src/tuning.txt"]);
+  assert.deepEqual(Object.keys(sidecar.end), ["src/tuning.txt"]);
   assert.deepEqual(provenance.versions, {
     node: process.version,
     godot: "4.6.1.stable",
@@ -284,6 +290,60 @@ test("a run started after the index was deleted rebuilds it before appending", a
     await rebuildIndex({ root: runs }),
     await readFile(index, "utf8"),
   );
+});
+
+test("an injected uuid must look like a hex id", async (t) => {
+  const { start } = await fixture(t);
+  await assert.rejects(start({ uuid: "../../escape" }), /uuid/);
+  await assert.rejects(start({ uuid: "short" }), /uuid/);
+  const run = await start({ uuid: "0123456789abcdef" });
+  assert.match(run.id, /0123456789abcdef$|01234567$/);
+});
+
+test("seq is max(seq)+1 of the parsed index, and a missing trailing newline is repaired before the append", async (t) => {
+  const { runs, start } = await fixture(t);
+  const index = path.join(runs, "index.ndjson");
+  await (await start({ label: "one" })).finish({ result: "pass" });
+  const original = await readFile(index, "utf8");
+  assert.ok(original.endsWith("\n"));
+  // Simulate a hand-edited index: seq bumped ahead and the trailing newline
+  // dropped, as a killed writer or a manual edit could leave it.
+  const corrupted = JSON.stringify({ ...JSON.parse(original), seq: 5 });
+  await writeFile(index, corrupted);
+  const record = await (await start({ label: "two" })).finish({
+    result: "pass",
+  });
+  assert.equal(record.seq, 6);
+  const repaired = await readFile(index, "utf8");
+  const lines = repaired.trimEnd().split("\n").map((one) => JSON.parse(one));
+  assert.deepEqual(
+    lines.map((one) => one.seq),
+    [5, 6],
+  );
+  assert.ok(repaired.endsWith("\n"));
+});
+
+test("finished is set only after the locked write succeeds", async (t) => {
+  const { start } = await fixture(t);
+  const run = await start();
+  await chmod(run.directory, 0o500);
+  try {
+    await assert.rejects(run.finish({ result: "pass" }), /EACCES|EPERM/);
+  } finally {
+    await chmod(run.directory, 0o700);
+  }
+  // The failed write never set `finished`, so a retry is a normal finish
+  // rather than an "already finished" error.
+  const record = await run.finish({ result: "pass" });
+  assert.equal(record.result, "pass");
+  await assert.rejects(run.finish({ result: "pass" }), /finished/);
+});
+
+test("rebuildIndex on a missing runs root returns an empty index", async (t) => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-lab-"));
+  t.after(() => rm(temporary, { recursive: true, force: true }));
+  const missing = path.join(temporary, "never-created");
+  assert.equal(await rebuildIndex({ root: missing }), "");
 });
 
 test("the record writer imports Node built-ins only", async () => {

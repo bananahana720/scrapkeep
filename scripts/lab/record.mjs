@@ -28,6 +28,7 @@ export const DEFAULT_SOURCES = [
 ];
 
 const slug = /^[a-z0-9][a-z0-9-]*$/;
+const uuidPattern = /^[0-9a-f]{8,}$/;
 const lockWaitMs = 10_000;
 const tokenFields = [
   "input_tokens",
@@ -128,6 +129,23 @@ function timestamp(now) {
     .replace(/[-:]/g, "");
 }
 
+// Tolerant of a corrupted or hand-edited index: blank lines are dropped and
+// each remaining one is parsed on its own, so one bad line cannot hide seq
+// collisions on every other line.
+function parseIndexLines(text) {
+  return text
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line));
+}
+
+// A line count is wrong the moment a line is missing or duplicated; the next
+// seq is one past the highest one actually on disk.
+function nextSeq(lines) {
+  if (lines.length === 0) return 0;
+  return Math.max(...lines.map((line) => line.seq)) + 1;
+}
+
 function indexLine(record) {
   return (
     JSON.stringify({
@@ -177,7 +195,14 @@ async function withIndexLock(root, work) {
 
 async function buildIndex(root) {
   const records = [];
-  for (const entry of await readdir(root, { withFileTypes: true })) {
+  let listing;
+  try {
+    listing = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return "";
+    throw error;
+  }
+  for (const entry of listing) {
     if (!entry.isDirectory()) continue;
     let text;
     try {
@@ -235,6 +260,8 @@ export async function createRun({
     throw new Error(`run type "${type}" is not a slug`);
   if (!slug.test(label ?? ""))
     throw new Error(`run label "${label}" is not a slug`);
+  if (!uuidPattern.test(uuid))
+    throw new Error(`uuid "${uuid}" must match ${uuidPattern}`);
   const known = metricIds(registry);
   const provenance = {
     head: git(repository, "rev-parse", "HEAD").trim(),
@@ -318,16 +345,17 @@ export async function createRun({
         throw new Error(
           `result "${result}" is not one of ${RESULTS.join(", ")}`,
         );
-      finished = true;
       const end = await sourceHashes(repository, sources);
       const changed = changedFiles(start.files, end.files);
+      // Per-file hashes are bulky (thousands of entries under DEFAULT_SOURCES)
+      // and buildIndex/rebuildIndex never need them, so they live beside
+      // run.json rather than inside it; the digests and changed list stay.
       provenance.sources = {
         paths: sources,
         start: start.digest,
         end: end.digest,
         matched: start.digest === end.digest,
         changed,
-        files: start.files,
       };
       if (!provenance.sources.matched) {
         limits.push(
@@ -336,19 +364,20 @@ export async function createRun({
         result = "inconclusive";
       }
       await mkdir(root, { recursive: true });
-      return withIndexLock(root, async () => {
+      const record = await withIndexLock(root, async () => {
         let existing = await readIndex(root);
         if (existing === null) {
           existing = await buildIndex(root);
           await replaceIndex(root, existing);
         }
-        const record = {
+        const seq = nextSeq(parseIndexLines(existing));
+        const built = {
           schema: SCHEMA,
           id,
           type,
           label,
           result,
-          seq: existing.split("\n").length - 1,
+          seq,
           started_at: now.toISOString(),
           finished_at: new Date().toISOString(),
           provenance,
@@ -360,13 +389,25 @@ export async function createRun({
         };
         await writeFile(
           path.join(directory, "run.json"),
-          JSON.stringify(record, null, 2) + "\n",
+          JSON.stringify(built, null, 2) + "\n",
         );
-        await writeFile(path.join(root, "index.ndjson"), indexLine(record), {
+        await writeFile(
+          path.join(directory, "sources.json"),
+          JSON.stringify({ start: start.files, end: end.files }, null, 2) +
+            "\n",
+        );
+        // A missing trailing newline would glue this append onto the last
+        // line, so it is repaired on disk before the append lands.
+        if (existing.length > 0 && !existing.endsWith("\n")) {
+          await replaceIndex(root, existing + "\n");
+        }
+        await writeFile(path.join(root, "index.ndjson"), indexLine(built), {
           flag: "a",
         });
-        return record;
+        return built;
       });
+      finished = true;
+      return record;
     },
   };
 }

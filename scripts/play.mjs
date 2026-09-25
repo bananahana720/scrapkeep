@@ -7,6 +7,8 @@
 // pinned 4.7.2 path is stated in exactly one place.
 import { spawn, spawnSync } from "node:child_process";
 import {
+  accessSync,
+  constants,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -18,6 +20,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { binary, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
+import { createRun } from "./lab/record.mjs";
+import { METRICS } from "./lab/metrics/index.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
@@ -172,15 +176,22 @@ function runHeadless(label, args) {
   return new Promise((resolve) => {
     const child = spawn(binary, args);
     let output = "";
-    const timer = setTimeout(() => child.kill("SIGKILL"), 120_000);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, 120_000);
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status) => {
+    child.on("close", (status, signal) => {
       clearTimeout(timer);
       resolve({
         label,
         ok: status === 0 && !errorLine.test(output),
         status,
+        // Killed by a signal that was not our own timeout: the engine went
+        // down rather than the check simply failing its assertions.
+        crashed: signal !== null && !timedOut,
         output,
       });
     });
@@ -228,13 +239,17 @@ function reportCheck(result) {
 }
 
 // Import must land before anything else opens the project, so it runs alone.
+// The result list always carries every check that actually ran, so a caller
+// building a run record never has to guess which ones were skipped.
 async function testEntry(entry, limit) {
   const base = ["--headless", "--path", entry.directory];
-  const imported = reportCheck(
-    await runHeadless(`${entry.id} import`, [...base, "--import"]),
-  );
-  if (!imported) {
-    return false;
+  const importResult = await runHeadless(`${entry.id} import`, [
+    ...base,
+    "--import",
+  ]);
+  const results = [importResult];
+  if (!reportCheck(importResult)) {
+    return { ok: false, results };
   }
   const jobs = [
     () => runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]),
@@ -248,8 +263,20 @@ async function testEntry(entry, limit) {
   let ok = true;
   for (const result of await inPool(jobs, limit)) {
     ok = reportCheck(result) && ok;
+    results.push(result);
   }
-  return ok;
+  return { ok, results };
+}
+
+async function runSuite(targets, limit) {
+  let ok = true;
+  const results = [];
+  for (const entry of targets) {
+    const entryResult = await testEntry(entry, limit);
+    ok = entryResult.ok && ok;
+    results.push(...entryResult.results);
+  }
+  return { ok, results };
 }
 
 export function jobLimit(words) {
@@ -263,12 +290,101 @@ export function jobLimit(words) {
   }
 }
 
-async function runSuite(targets, limit) {
-  let ok = true;
-  for (const entry of targets) {
-    ok = (await testEntry(entry, limit)) && ok;
+export function repeatCount(words) {
+  const flag = words.find((word) => word.startsWith("--repeat="));
+  if (flag === undefined) return 1;
+  return Math.max(1, Number.parseInt(flag.slice(9), 10) || 1);
+}
+
+// A slug fit for record.mjs's type/label fields: lowercase, alphanumeric
+// runs joined by a single dash, never empty.
+export function slugLabel(text) {
+  const slug = String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug === "" ? "run" : slug;
+}
+
+// One row per check label across every repeat it ran on. A check the import
+// failure skipped on some repeat contributes no outcome for that repeat
+// rather than a fabricated one, so its row is simply shorter.
+export function aggregateOutcomes(repeatResults) {
+  const byLabel = new Map();
+  for (const results of repeatResults) {
+    for (const { label, ok } of results) {
+      if (!byLabel.has(label)) byLabel.set(label, []);
+      byLabel.get(label).push(ok ? "pass" : "fail");
+    }
   }
-  return ok;
+  return byLabel;
+}
+
+// The fraction of checks whose outcome disagreed across the repeats it ran
+// on; a rerun never turns a failure into a pass (metrics/core.mjs), so any
+// disagreement at all counts as flake, not just fail-then-pass in that order.
+export function flakeRate(byLabel) {
+  let disagreeing = 0;
+  for (const outcomes of byLabel.values()) {
+    if (new Set(outcomes).size > 1) disagreeing += 1;
+  }
+  return {
+    value: byLabel.size === 0 ? null : disagreeing / byLabel.size,
+    n: byLabel.size,
+    ci: null,
+  };
+}
+
+// Pure aggregation from N repeats of runSuite's results into the measures a
+// `scrapkeep-run/1` record needs: no filesystem or Godot access, so this is
+// unit-testable with synthetic results.
+export function buildTestMeasures({ repeatResults, repeatSeconds, repeatOks }) {
+  const repeats = repeatResults.length;
+  const totalSeconds = repeatSeconds.reduce((sum, s) => sum + s, 0);
+  const flat = repeatResults.flat();
+  const crashCount = flat.filter((r) => r.crashed).length;
+  const measures = {
+    suite_wall_s: { value: totalSeconds / repeats, n: repeats, ci: null },
+    suite_pass: {
+      value: repeatOks.filter((ok) => !ok).length,
+      n: repeats,
+      ci: null,
+    },
+    engine_crash: { value: crashCount, n: flat.length, ci: null },
+  };
+  const checks = [...aggregateOutcomes(repeatResults)].map(
+    ([label, outcomes]) => ({ label, outcomes }),
+  );
+  const flake = repeats > 1 ? flakeRate(aggregateOutcomes(repeatResults)) : null;
+  return { measures, checks, flake, totalSeconds };
+}
+
+// Resolves an executable by name against PATH without shelling out, so it is
+// deterministic under test with an injected env.
+export function findOnPath(name, env = process.env) {
+  const dirs = (env.PATH || "").split(path.delimiter).filter(Boolean);
+  for (const dir of dirs) {
+    const candidate = path.join(dir, name);
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+// Default output lives under artifacts/local/shots/, never /tmp (audit A8).
+// A relative name is joined there; an absolute path is honoured as given so
+// an explicit destination still works.
+export function shotOutputPath(repoRoot, entry, requested) {
+  const shotsDir = path.join(repoRoot, "artifacts", "local", "shots");
+  if (requested !== undefined && path.isAbsolute(requested)) {
+    return { shotsDir, out: requested };
+  }
+  const name = requested || `${entry.sketch}-spawn.png`;
+  return { shotsDir, out: path.join(shotsDir, name) };
 }
 
 // A sketch's own sources and tests are the only inputs to its checks, so a
@@ -292,7 +408,7 @@ async function watch(targets, limit) {
     running = true;
     const started = Date.now();
     console.log(`\n${cyan("→")} ${bold(entry.id)} ${dim(reason)}`);
-    const ok = await testEntry(entry, limit);
+    const { ok } = await testEntry(entry, limit);
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
     if (ok) {
       console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);
@@ -431,20 +547,58 @@ async function main(argv) {
     process.exit(result.status === null ? 1 : result.status);
   } else if (command === "test" || command === "watch") {
     let targets = entries;
+    // A leading `--jobs=`/`--repeat=` flag with no sketch name leaves `name`
+    // holding that flag string, so only a non-flag `name` names a target.
+    let targetName;
     if (name !== undefined && !name.startsWith("--")) {
       targets = [requireEntry(entries, name)];
+      targetName = name;
     }
     const limit = jobLimit(words);
     if (command === "test") {
-      const started = Date.now();
-      const ok = await runSuite(targets, limit);
-      const seconds = ((Date.now() - started) / 1000).toFixed(1);
-      const verdict = ok ? green("pass") : red("fail");
+      const repeats = repeatCount(words);
+      const repeatResults = [];
+      const repeatSeconds = [];
+      const repeatOks = [];
+      for (let i = 0; i < repeats; i++) {
+        const started = Date.now();
+        const { ok, results } = await runSuite(targets, limit);
+        repeatSeconds.push((Date.now() - started) / 1000);
+        repeatResults.push(results);
+        repeatOks.push(ok);
+      }
+      const overallOk = repeatOks.every(Boolean);
+      const { measures, checks, flake, totalSeconds } = buildTestMeasures({
+        repeatResults,
+        repeatSeconds,
+        repeatOks,
+      });
+      const verdict = overallOk ? green("pass") : red("fail");
+      const repeatNote = repeats > 1 ? `, ${repeats} repeats` : "";
       console.log(
-        `\nsketch tests ${verdict} in ${seconds}s across ${targets.length} sketch(es), ${limit} at a time.`,
+        `\nsketch tests ${verdict} in ${totalSeconds.toFixed(1)}s across ${targets.length} sketch(es), ${limit} at a time${repeatNote}.`,
       );
       console.log(dim("Headless boot and tests only; feel needs your play."));
-      process.exit(ok ? 0 : 1);
+
+      const run = await createRun({
+        type: "suite",
+        label: slugLabel(targetName ?? "all"),
+        registry: METRICS,
+        config: {
+          target: targetName ?? "all",
+          jobs: limit,
+          repeat: repeats,
+          checks,
+        },
+      });
+      run.kpi("suite_wall_s", measures.suite_wall_s);
+      run.kri("suite_pass", measures.suite_pass);
+      run.kri("engine_crash", measures.engine_crash);
+      if (flake !== null) run.kri("flake_rate", flake);
+      const record = await run.finish({ result: overallOk ? "pass" : "fail" });
+      console.log(dim(`  run record: ${record.id}`));
+
+      process.exit(overallOk ? 0 : 1);
     } else {
       await watch(targets, limit);
       return;
@@ -456,21 +610,36 @@ async function main(argv) {
       console.error(`${entry.id} has no tools/shot.gd.`);
       process.exit(2);
     } else {
-      const out = words[2] || `/tmp/${entry.sketch}-spawn.png`;
-      console.log(dim("shot.gd needs a real window; one opens briefly.\n"));
-      const result = spawnSync(
-        binary,
-        [
-          "--path",
-          entry.directory,
-          "--script",
-          "res://tools/shot.gd",
-          "--",
-          out,
-          ...extra,
-        ],
-        { stdio: "inherit" },
-      );
+      const { shotsDir, out } = shotOutputPath(root, entry, words[2]);
+      mkdirSync(shotsDir, { recursive: true });
+      const scriptArgs = [
+        "--path",
+        entry.directory,
+        "--script",
+        "res://tools/shot.gd",
+        "--",
+        out,
+        ...extra,
+      ];
+      const opener = findOnPath("claude-open");
+      let result;
+      if (opener !== null) {
+        console.log(
+          dim(
+            "shot.gd needs a real window; opened via claude-open on workspace 10.\n",
+          ),
+        );
+        result = spawnSync(opener, [binary, ...scriptArgs], {
+          stdio: "inherit",
+        });
+      } else {
+        console.log(
+          dim("claude-open not found on PATH; running headless instead.\n"),
+        );
+        result = spawnSync(binary, ["--headless", ...scriptArgs], {
+          stdio: "inherit",
+        });
+      }
       if (result.status === 0) {
         console.log(`${green("saved")} ${out}`);
       } else {
