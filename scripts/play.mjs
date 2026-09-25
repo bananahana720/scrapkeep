@@ -114,10 +114,13 @@ function questionOf(directory) {
   }
 }
 
+// Ids must not depend on which checkout asks: `git worktree list` names the
+// main worktree first, and only its primary sketch goes by the bare name.
 export function catalogue(repoRoot) {
   const entries = [];
-  const mainName = path.basename(repoRoot);
-  for (const tree of worktrees(repoRoot)) {
+  const trees = worktrees(repoRoot);
+  const mainPath = trees[0].path;
+  for (const tree of trees) {
     const directories = sketchDirectories(path.join(tree.path, "sketches"));
     const treeName = path.basename(tree.path);
     const primary = pickPrimary(directories, treeName);
@@ -125,7 +128,7 @@ export function catalogue(repoRoot) {
       const sketch = path.basename(directory);
       const isPrimary = directory === primary;
       let id = `${treeName}/${sketch}`;
-      if (isPrimary && treeName === mainName) {
+      if (isPrimary && tree.path === mainPath) {
         id = sketch;
       } else if (isPrimary) {
         id = treeName;
@@ -654,6 +657,7 @@ const labScripts = path.join(root, "scripts", "lab");
 const LAB_VERBS = {
   stats: "stats-cli.mjs",
   gate: "gate.mjs",
+  dash: "dash.mjs",
 };
 const LAB_SUBVERBS = {
   run: "harness.mjs",

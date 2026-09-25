@@ -19,13 +19,17 @@ export function worstExit(codes) {
   return SEVERITY.find((code) => codes.includes(code)) ?? EXIT.pass;
 }
 
-function entry(word, hex, glyph, gate, exit) {
+// ink is the colour for text in the status: the hex itself, except where the
+// hex falls under 4.5:1 on the page's panels and a lighter shade of the same
+// hue carries the words instead.
+function entry(word, hex, glyph, gate, exit, ink = hex) {
   const rgb = [1, 3, 5]
     .map((start) => parseInt(hex.slice(start, start + 2), 16))
     .join(";");
   return Object.freeze({
     word,
     hex,
+    ink,
     glyph,
     ansi: `\x1b[38;2;${rgb}m`,
     gate,
@@ -45,8 +49,26 @@ export const STATUS = Object.freeze({
     "○",
     "inconclusive",
     EXIT.inconclusive,
+    "#7e9aa2",
   ),
   untiered: entry("untiered", "#4fa3d9", "◇", "ignore", EXIT.pass),
+});
+
+// The page around the statuses, from the same colors.toml (mode "dark", so
+// there is no light variant). None of these means a status. accent is the
+// theme's accent and marks what waits for Andrew; epoch is its cyan and marks
+// an instrument change.
+export const PAGE = Object.freeze({
+  background: "#0b1419",
+  deep: "#081015",
+  panel: "#13212a",
+  rule: "#1e3440",
+  muted: "#3a5563",
+  text: "#cfe3e6",
+  soft: "#a9c3c8",
+  bright: "#eaf6f7",
+  accent: "#ff9e3d",
+  epoch: "#2ee6d6",
 });
 
 // Metrics that mean nothing until their epoch has passed its controls. The
