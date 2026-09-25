@@ -16,7 +16,7 @@ import { parseArgs } from "node:util";
 
 import { TIMING } from "../../tools/jev-player/protocol/protocol.mjs";
 import { binary } from "../sketch-smoke.mjs";
-import * as harness from "./harness.mjs";
+import { runBatch, UsageError } from "./harness.mjs";
 import { EXIT } from "./metrics/status.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -138,42 +138,47 @@ async function main(argv) {
     console.error(`Godot binary not found at ${GODOT_BINARY}; set GODOT_BIN`);
     return EXIT.usage;
   }
-  // A live jev batch must run the preflight controls first (JL-18b wires them
-  // into runBatch). A harness without them would spend live calls unchecked.
-  if (
-    options.arm === "jev" &&
-    !options.replay &&
-    harness.JEV_DEFAULTS === undefined
-  ) {
-    console.error(
-      "this harness runs no preflight before a jev batch (JL-18b); refusing to make live Jev calls without it",
-    );
-    return EXIT.usage;
-  }
   const defined = (entries) =>
     Object.fromEntries(entries.filter(([, value]) => value !== undefined));
-  const batch = await harness.runBatch({
-    launch,
-    ...defined([
-      ["scenario", options.scenario],
-      ["arm", options.arm],
-      ["trials", options.trials],
-      ["seed", options.seed],
-      ["callCap", options.callCap],
-      ["snapshotEvery", options.snapshotEvery],
-      ["holdTicks", options.holdTicks],
-      ["replay", options.replay],
-      ["verdictCache", options.cache],
-    ]),
-    runs: options.root === undefined ? {} : { root: options.root },
-  });
+  let batch;
+  try {
+    batch = await runBatch({
+      launch,
+      ...defined([
+        ["scenario", options.scenario],
+        ["arm", options.arm],
+        ["trials", options.trials],
+        ["seed", options.seed],
+        ["callCap", options.callCap],
+        ["snapshotEvery", options.snapshotEvery],
+        ["holdTicks", options.holdTicks],
+        ["replay", options.replay],
+        ["verdictCache", options.cache],
+      ]),
+      runs: options.root === undefined ? {} : { root: options.root },
+    });
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    console.error(error.message);
+    return EXIT.usage;
+  }
   if (batch.record === null) {
+    const { preflight } = batch;
     console.log(`preflight refused the batch: ${batch.reason}`);
+    console.log(
+      `preflight: ${preflight.questions_version}/${preflight.controls_version}, ${preflight.calls} live calls, models ${preflight.resolved_models.join(", ")}, tokens ${JSON.stringify(preflight.tokens)}`,
+    );
+    for (const control of preflight.controls) {
+      console.log(
+        `  ${control.id}: ${control.passed ? "passed" : `did not pass (${control.reason})`}`,
+      );
+    }
+    console.log(`preflight result: ${JSON.stringify(preflight)}`);
     console.log("No trial ran and no run record was written.");
     return batch.exit;
   }
   const { record, trials, directory } = batch;
-  if (batch.preflight !== undefined && batch.preflight !== null) {
+  if (batch.preflight !== null) {
     console.log(`preflight: ${batch.preflight.calls} live calls`);
   }
   for (const entry of trials) {

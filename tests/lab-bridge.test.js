@@ -675,6 +675,26 @@ test(
   },
 );
 
+test(
+  "the godot-launch CLI exits 2 on a harness usage error, before any Godot process",
+  { skip: noGodot },
+  () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.join(root, "scripts/lab/godot-launch.mjs"),
+        "downhill-run",
+        "--hold-ticks",
+        "90",
+      ],
+      { encoding: "utf8", timeout: 30_000 },
+    );
+    assert.equal(result.status, 2, result.stdout + result.stderr);
+    assert.match(result.stderr, /holdTicks \(k\)/);
+    assert.doesNotMatch(result.stderr, /at .*harness\.mjs/);
+  },
+);
+
 test("godot-launch.mjs runs the Godot binary sketch-smoke pins", () => {
   assert.equal(GODOT_BINARY, smokeBinary);
 });

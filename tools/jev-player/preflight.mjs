@@ -11,7 +11,7 @@
 // blind-corpus result, and the epoch counts as valid only when both passed.
 // scripts/lab/gate.mjs reads that validity for lever_effect and for --pin.
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -323,7 +323,20 @@ export function blindResult(report, instrument) {
     reason: report.gate.reason,
     cases: summary?.cases ?? 0,
     weighted: summary?.weighted ?? null,
-    severe_misses: summary?.severeMisses?.length ?? 0,
+    severe_misses:
+      summary?.severeMissCount ?? summary?.severeMisses?.length ?? 0,
+    diagnostic: diagnosticResult(report.blind?.diagnostic),
+  };
+}
+
+// score.mjs's state-diagnostic subscore, which already carries counts only.
+function diagnosticResult(diagnostic) {
+  if (diagnostic === null || typeof diagnostic !== "object") return null;
+  return {
+    cases: diagnostic.cases,
+    weighted: diagnostic.weighted,
+    plain_pass: diagnostic.plainPass,
+    severe_misses: diagnostic.severeMissCount,
   };
 }
 
@@ -339,6 +352,8 @@ export function epochRecord({
     schema: EPOCH_SCHEMA,
     instrument: controls.instrument,
     questions_version: questions.version,
+    // The instrument names the model alias; these are the models that answered.
+    resolved_models: controls.resolved_models ?? [],
     controls: {
       version: controls.controls_version,
       sha: controls.controls_sha,
@@ -353,6 +368,7 @@ export function epochRecord({
           choice: run.choice,
           p: run.p ?? null,
           probabilities: run.probabilities ?? null,
+          error: run.error ?? null,
         })),
       })),
     },
@@ -362,9 +378,25 @@ export function epochRecord({
   };
 }
 
+// True when the record holds runs and every one of them is a failed call: the
+// run measured the API, not the instrument.
+function allCallsFailed(record) {
+  const results = record.controls?.results;
+  if (!Array.isArray(results)) return false;
+  const runs = results.flatMap((result) => result.runs ?? []);
+  return runs.length > 0 && runs.every((run) => (run.error ?? null) !== null);
+}
+
+// An all-error run never replaces an existing record for its instrument; it is
+// kept beside it as <key>.error.json, which readEpoch never reads. The path
+// written is returned either way.
 export async function writeEpochRecord(record, dir = EPOCHS_ROOT) {
   await mkdir(dir, { recursive: true });
-  const file = path.join(dir, `${instrumentKey(record.instrument)}.json`);
+  const key = instrumentKey(record.instrument);
+  let file = path.join(dir, `${key}.json`);
+  if (allCallsFailed(record) && existsSync(file)) {
+    file = path.join(dir, `${key}.error.json`);
+  }
   const temporary = `${file}.tmp-${process.pid}`;
   await writeFile(temporary, JSON.stringify(record, null, 2) + "\n");
   await rename(temporary, file);
@@ -395,8 +427,14 @@ export async function readEpoch(instrument, dir = EPOCHS_ROOT) {
   return record?.schema === EPOCH_SCHEMA && same ? record : null;
 }
 
-// Validity is recomputed from the two results, not read from the stored flag.
-export async function epochStatus(instrument, dir = EPOCHS_ROOT) {
+// Validity is recomputed, never read from the stored `valid` flag: the
+// controls count as passed only when every stored per-control result passed
+// and there is one result for each control in the controls file it names.
+export async function epochStatus(
+  instrument,
+  dir = EPOCHS_ROOT,
+  controlsDir = CONTROLS_DIR,
+) {
   if (instrument === null || typeof instrument !== "object")
     return { valid: false, reason: "the run carries no instrument" };
   const record = await readEpoch(instrument, dir);
@@ -405,8 +443,32 @@ export async function epochStatus(instrument, dir = EPOCHS_ROOT) {
       valid: false,
       reason: `no epoch record for this instrument under ${dir}`,
     };
-  if (record.controls?.passed !== true)
+  const results = record.controls?.results;
+  if (
+    record.controls?.passed !== true ||
+    !Array.isArray(results) ||
+    !results.every((result) => result?.passed === true)
+  )
     return { valid: false, reason: "its controls failed" };
+  const version = record.controls.version;
+  let expected = null;
+  if (typeof version === "string" && /^[a-z0-9][a-z0-9-]*$/.test(version)) {
+    try {
+      expected = loadControls(version, controlsDir).controls.length;
+    } catch {
+      expected = null;
+    }
+  }
+  if (expected === null)
+    return {
+      valid: false,
+      reason: `its controls file ${version} cannot be read`,
+    };
+  if (results.length !== expected)
+    return {
+      valid: false,
+      reason: `it holds ${results.length} of the ${expected} control results ${version} expects`,
+    };
   if (record.blind?.passed !== true)
     return {
       valid: false,
