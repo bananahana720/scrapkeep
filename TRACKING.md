@@ -250,10 +250,10 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-01](BACKLOG.md#jl-01) | 1 | 4 | done | none | JL-01-A1 | EV-0489 |
 | [JL-02](BACKLOG.md#jl-02) | 1 | 4 | done | none | JL-02-A1 | EV-0491 |
 | [JL-03](BACKLOG.md#jl-03) | 1 | 4 | done | none | JL-03-A1 | EV-0493 |
-| [JL-04](BACKLOG.md#jl-04) | 1 | 8 | in_progress | none | none | EV-0496 |
+| [JL-04](BACKLOG.md#jl-04) | 1 | 9 | review | none | none | EV-0497 |
 | [JL-05](BACKLOG.md#jl-05) | 1 | 3 | review | none | none | EV-0497 |
 | [JL-06](BACKLOG.md#jl-06) | 1 | 2 | in_progress | none | none | EV-0495 |
-| [JL-07](BACKLOG.md#jl-07) | 1 | 2 | in_progress | none | none | EV-0495 |
+| [JL-07](BACKLOG.md#jl-07) | 1 | 3 | in_progress | none | none | EV-0497 |
 | [JL-08](BACKLOG.md#jl-08) | 1 | 3 | review | none | none | EV-0497 |
 
 ## Question state index
@@ -1676,7 +1676,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-07` on `wt/JL-07`, created by `scripts/new-worktree.sh`.
 - Base identity: `d1c4a00afdd1043efb4009207dc254eb42e13025`.
 - Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:41:01+00:00; dispatched.
+- Latest checkpoint: 2026-09-25T17:54:29+00:00; first handoff bb024da withheld entry 2 as ambiguous; coordinator ruled on the quote span and resumed the writer (EV-0497).
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-07/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
@@ -1699,8 +1699,8 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `tools/jev-player/corpus-blind.json`; `tools/jev-player/corpus-blind.PROVENANCE.md`; `artifacts/local/tasks/JL-04/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-04` on `wt/JL-04`, continuing from the A2 candidate 0927a31.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:42:58+00:00; changes requested from the A2 re-review, resumed.
+- Candidate identity: `489d00ceb7c3485981331c7e96d4b8779f951a24`. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:54:29+00:00; handoff received (text-only baseline 19 of 31), in re-review (EV-0497).
 - Blockers: none.
 - Evidence: A2 re-review retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md).
 - Review: planned fresh scrapkeep-reviewer-medium (Opus 5.5) under the blindness rules, plus the text-only baseline receipt.
