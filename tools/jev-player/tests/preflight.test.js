@@ -532,8 +532,45 @@ test("blindResult keeps only the aggregate of a score report", () => {
     cases: 24,
     weighted: 0.91,
     severe_misses: 1,
+    diagnostic: null,
   });
   assert.doesNotMatch(JSON.stringify(result), /secret-case-id|another-id/);
+  const withDiagnostic = blindResult(
+    {
+      ...report,
+      blind: {
+        ...report.blind,
+        diagnostic: {
+          cases: 11,
+          listed: 11,
+          earned: 30,
+          possible: 40,
+          weighted: 0.75,
+          plainPass: 8,
+          severeMissCount: 1,
+        },
+      },
+    },
+    instrument,
+  );
+  const aggregated = blindResult(
+    {
+      ...report,
+      blind: {
+        gating: true,
+        summary: { cases: 24, weighted: 0.91, severeMissCount: 2 },
+        diagnostic: null,
+      },
+    },
+    instrument,
+  );
+  assert.equal(aggregated.severe_misses, 2);
+  assert.deepEqual(withDiagnostic.diagnostic, {
+    cases: 11,
+    weighted: 0.75,
+    plain_pass: 8,
+    severe_misses: 1,
+  });
   const passing = blindResult(
     {
       ...report,
@@ -664,4 +701,127 @@ test("an epoch record answers only for its exact instrument", async (t) => {
     (await epochStatus(instrument, path.join(directory, "absent"))).valid,
     false,
   );
+});
+
+// --- JL-18b: resolved models, all-error runs, validity from the results -----
+
+const BLIND_PASSED = {
+  status: "pass",
+  passed: true,
+  exit: 0,
+  reason: "Blind corpus passes.",
+  cases: 24,
+  weighted: 0.93,
+  severe_misses: 0,
+};
+
+const throwing = async () => {
+  throw new Error("Jev 503: busy");
+};
+
+test("the epoch record stores the models the controls resolved and each run's error", async () => {
+  const { decideFn } = stub(sensible);
+  const passed = await runControls({ questions, decideFn, controls });
+  const record = epochRecord({ questions, controls: passed });
+  assert.deepEqual(record.resolved_models, ["jev-stub-1"]);
+  assert.ok(record.controls.results.every((result) => result.runs.length > 0));
+  for (const result of record.controls.results)
+    for (const run of result.runs) assert.equal(run.error, null);
+
+  const down = await runControls({ questions, decideFn: throwing, controls });
+  const failed = epochRecord({ questions, controls: down });
+  assert.deepEqual(failed.resolved_models, [null]);
+  for (const result of failed.controls.results)
+    for (const run of result.runs) assert.match(run.error, /503/);
+});
+
+test("an all-error preflight never replaces an existing epoch record; it writes an error file beside it", async (t) => {
+  const directory = await scratch(t);
+  const { decideFn } = stub(sensible);
+  const passed = await runControls({ questions, decideFn, controls });
+  const good = epochRecord({
+    questions,
+    controls: passed,
+    blind: BLIND_PASSED,
+  });
+  const file = await writeEpochRecord(good, directory);
+
+  const down = await runControls({ questions, decideFn: throwing, controls });
+  const errored = await writeEpochRecord(
+    epochRecord({ questions, controls: down, blind: BLIND_PASSED }),
+    directory,
+  );
+  assert.notEqual(errored, file);
+  assert.equal(errored, file.replace(/\.json$/, ".error.json"));
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), good);
+  assert.equal(
+    JSON.parse(await readFile(errored, "utf8")).controls.passed,
+    false,
+  );
+  assert.deepEqual((await epochStatus(instrument, directory)).valid, true);
+
+  // A run with at least one answer is a real result and does replace it.
+  const { decideFn: bad } = stub(firstListed(0.7));
+  const failed = await runControls({ questions, decideFn: bad, controls });
+  assert.equal(
+    await writeEpochRecord(
+      epochRecord({ questions, controls: failed, blind: BLIND_PASSED }),
+      directory,
+    ),
+    file,
+  );
+  assert.equal((await epochStatus(instrument, directory)).valid, false);
+
+  // With nothing to protect, an all-error run is written as the record.
+  const fresh = await scratch(t);
+  const only = await writeEpochRecord(
+    epochRecord({ questions, controls: down }),
+    fresh,
+  );
+  assert.equal(path.basename(only), path.basename(file));
+});
+
+test("epochStatus derives the controls from each stored result, not the stored flag", async (t) => {
+  const directory = await scratch(t);
+  const { decideFn } = stub(sensible);
+  const passed = await runControls({ questions, decideFn, controls });
+  const record = epochRecord({
+    questions,
+    controls: passed,
+    blind: BLIND_PASSED,
+  });
+  record.controls.results[1].passed = false;
+  await writeEpochRecord(record, directory);
+  const status = await epochStatus(instrument, directory);
+  assert.equal(status.valid, false);
+  assert.match(status.reason, /controls failed/);
+
+  delete record.controls.results;
+  await writeEpochRecord(record, directory);
+  assert.equal((await epochStatus(instrument, directory)).valid, false);
+});
+
+test("epochStatus requires one result for each control in the named controls file", async (t) => {
+  const directory = await scratch(t);
+  const { decideFn } = stub(sensible);
+  const passed = await runControls({ questions, decideFn, controls });
+  const record = epochRecord({
+    questions,
+    controls: passed,
+    blind: BLIND_PASSED,
+  });
+  record.controls.results = record.controls.results.slice(0, 2);
+  await writeEpochRecord(record, directory);
+  let status = await epochStatus(instrument, directory);
+  assert.equal(status.valid, false);
+  assert.match(status.reason, /2 of the 3 control results c1 expects/);
+
+  record.controls.results = [];
+  await writeEpochRecord(record, directory);
+  assert.equal((await epochStatus(instrument, directory)).valid, false);
+
+  record.controls.version = "../c1";
+  await writeEpochRecord(record, directory);
+  status = await epochStatus(instrument, directory);
+  assert.match(status.reason, /cannot be read/);
 });

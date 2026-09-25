@@ -30,9 +30,11 @@ import {
 import { SCHEMA } from "../scripts/lab/record.mjs";
 import { createArm, seededRandom } from "../scripts/lab/arms.mjs";
 import {
+  batchResult,
   DEFAULTS,
   fakeGodot,
   runBatch,
+  UsageError,
   watchdogLimit,
 } from "../scripts/lab/harness.mjs";
 import { SCENARIOS } from "../scripts/lab/fake-godot.mjs";
@@ -76,12 +78,24 @@ async function fixture(t) {
   const decideFn = async () => {
     throw new Error("a harness test reached decideFn");
   };
+  // A passing preflight that asks nothing, so a jev batch reaches its trials.
+  const preflight = async ({ start }) => ({
+    exit: 0,
+    controls: {
+      passed: true,
+      calls: 0,
+      resolved_models: ["jev-stub"],
+      controls: [],
+    },
+    started: await start(),
+  });
   // Normal trials never come near this floor; only the stall case lowers it.
   return (options) =>
     runBatch({
       watchdogFloorMs: 10_000,
       runs,
       decideFn,
+      preflight,
       verdictCache: path.join(temporary, "cache"),
       ...options,
     });
@@ -582,4 +596,78 @@ test("the harness refuses an unknown arm, scenario shape or cap", async (t) => {
     run({ scenario: "Downhill Run", arm: "random" }),
     /scenario/,
   );
+});
+
+// --- JL-18b: abort causes, argument errors and the preflight from the CLI ----
+
+test("batchResult maps model_mismatch to invalid and an unknown abort cause to fail", () => {
+  const aborted = (cause) => ({ outcome: "aborted", abort: { cause } });
+  assert.equal(batchResult([aborted("model_mismatch")]), "invalid");
+  assert.equal(batchResult([aborted("call_cap")]), "inconclusive");
+  for (const cause of ["mystery", "toString", "__proto__", undefined]) {
+    assert.equal(batchResult([aborted(cause)]), "fail", String(cause));
+  }
+  assert.equal(
+    batchResult([{ outcome: "complete", abort: null }, aborted("mystery")]),
+    "fail",
+  );
+});
+
+test("runBatch's argument errors are UsageErrors", async (t) => {
+  const run = await fixture(t);
+  for (const options of [
+    { scenario: "downhill-run", arm: "oracle" },
+    { scenario: "downhill-run", arm: "random", trials: 0 },
+    { scenario: "pillar-weave", arm: "scripted", replay: true },
+  ]) {
+    await assert.rejects(run(options), UsageError, JSON.stringify(options));
+  }
+});
+
+const harnessScript = path.join(root, "scripts/lab/harness.mjs");
+// fetch throws, so a Jev call fails at once instead of leaving the machine.
+const failingFetch = `data:text/javascript,${encodeURIComponent(
+  'globalThis.fetch = async () => { throw new Error("no network in tests"); };',
+)}`;
+function harnessCli(...args) {
+  return spawnSync(
+    process.execPath,
+    ["--import", failingFetch, harnessScript, ...args],
+    {
+      encoding: "utf8",
+      env: { ...process.env, TYPESAFE_API_KEY: "test-key-never-sent" },
+    },
+  );
+}
+
+test("the harness CLI exits 2, not 1, on a runBatch argument error", async (t) => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-cli-"));
+  t.after(() => rm(temporary, { recursive: true, force: true }));
+  const runs = path.join(temporary, "runs");
+  const replay = harnessCli("pillar-weave", "--replay", "--root", runs);
+  assert.equal(replay.status, 2, replay.stderr);
+  assert.match(replay.stderr, /replay needs the jev arm/);
+  const trials = harnessCli("pillar-weave", "-n", "0", "--root", runs);
+  assert.equal(trials.status, 2, trials.stderr);
+  assert.match(trials.stderr, /trials/);
+  assert.equal(existsSync(runs), false);
+});
+
+test("a jev batch from the CLI whose preflight fails exits 6 before any trial", async (t) => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-cli-"));
+  t.after(() => rm(temporary, { recursive: true, force: true }));
+  const runs = path.join(temporary, "runs");
+  const result = harnessCli(
+    "pillar-weave",
+    "--arm",
+    "jev",
+    "--root",
+    runs,
+    "--cache",
+    path.join(temporary, "cache"),
+  );
+  assert.equal(result.status, 6, result.stdout + result.stderr);
+  assert.match(result.stdout, /preflight/i);
+  assert.match(result.stdout, /no network in tests/);
+  assert.equal(existsSync(runs), false, "no run record, so no trial ran");
 });

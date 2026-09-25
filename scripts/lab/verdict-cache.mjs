@@ -48,3 +48,23 @@ export function openVerdictCache(directory = VERDICT_CACHE_ROOT) {
     },
   };
 }
+
+// The key names the model alias, but the entry stores the model that answered.
+// In a live batch the preflight's resolved model is the anchor: a hit from any
+// other model (or none recorded) reads as a miss, so the arm asks again, and
+// anchor.mismatches counts it for the run record. A replay is not wrapped; the
+// harness checks its verdicts against each other instead.
+export function anchoredCache(cache, anchor) {
+  return {
+    directory: cache.directory,
+    put: (key, entry) => cache.put(key, entry),
+    async get(key) {
+      const entry = await cache.get(key);
+      if (entry === null || (entry.verdict?.model ?? null) === anchor.model) {
+        return entry;
+      }
+      anchor.mismatches += 1;
+      return null;
+    },
+  };
+}

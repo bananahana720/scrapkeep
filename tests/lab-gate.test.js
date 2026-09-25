@@ -24,6 +24,7 @@ import {
 import {
   BLIND_NOT_RUN,
   epochRecord,
+  loadControls,
   writeEpochRecord,
 } from "../tools/jev-player/preflight.mjs";
 
@@ -398,7 +399,12 @@ async function writeEpoch(
     controls_version: "c1",
     controls_sha: "c".repeat(64),
     passed: controls,
-    controls: [],
+    controls: loadControls().controls.map((control) => ({
+      id: control.id,
+      passed: controls,
+      reason: "",
+      runs: [],
+    })),
   };
   return writeEpochRecord(
     epochRecord({ questions, controls: result, blind }),

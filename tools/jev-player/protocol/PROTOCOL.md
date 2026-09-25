@@ -118,13 +118,15 @@ Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `ab
 | No new Godot file within `max(30 s, 20 × median step)` after Node's last intent | Node watchdog | SIGKILL | none | `stall` |
 | Godot exits with no `done.json` or `error.json` | Node | nothing to read | any | `crash` |
 | Godot writes `done.json` or `error.json` but does not exit within the watchdog limit | Node watchdog | SIGKILL | none | `stall` |
-| `hello.json` or a state file fails its validator | Node | `abort.json`, reason `arm_error`, with a message naming the file; stop reading | any | `invalid` |
-| The arm fails: it throws, answers an intent that fails `validateIntent()`, or reaches the batch call cap | Node | `abort.json`, reason `arm_error` | 0 | `aborted` |
+| `hello.json` or a state file fails its validator, or `hello.json` names another scenario | Node | `abort.json`, reason `arm_error`, with a message naming the file; stop reading | any | `invalid` |
+| The arm fails: it throws, answers an intent that fails `validateIntent()`, reaches the batch call cap, or answers from a model other than the batch's anchor | Node | `abort.json`, reason `arm_error`, or `replay_miss` when `--replay` finds no cached verdict | 0 | `aborted` |
 | `validateTrial()` fails on the finished directory | Node | nothing | any | `invalid` |
 
 A **step** is the wall time from Node renaming `intent-N` into place to the next Godot file appearing. The median is nearest-rank, and the limit is 30 s until one step has completed (`watchdogMs()`). The watchdog also runs from spawn to `hello.json`, from `hello.json` to the first state, and from Godot's last file (`done.json` or `error.json`) to its exit.
 
-Node writes `abort.json` on an invalid Godot file so that Godot finishes at once instead of blocking for an intent that will never come. v1's abort reasons are closed, and `arm_error` is the nearest: Node, not the engine, cannot go on. The trial is still recorded as `invalid`. A trial that was killed by the watchdog is `stall` and one with no final file is `crash`, even when its files also fail `validateTrial()`. Otherwise a failing `validateTrial()` makes the outcome `invalid`.
+Node writes `abort.json` on an invalid Godot file so that Godot finishes at once instead of blocking for an intent that will never come. v1's abort reasons are closed, and `arm_error` is the nearest: Node, not the engine, cannot go on. The trial is still recorded as `invalid`.
+
+Outcomes are decided in this order, as the harness does. A trial killed by the watchdog is `stall`. Otherwise a file Node rejected (`hello.json` or a state) makes it `invalid`, even when Godot then exits with no final file: a Node-side rejection outranks `crash`. Otherwise `done.json` or `error.json` names the outcome, and a trial with neither is `crash`. `stall` and `crash` stand even when the files also fail `validateTrial()`; any other outcome becomes `invalid` when `validateTrial()` fails.
 
 ## Arms and `forced`
 

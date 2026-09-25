@@ -5,10 +5,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
+  cpSync,
   existsSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -354,4 +356,33 @@ test("the verdict-cache key is sha256 of canonical JSON over protocol, instrumen
   const other = { ...instrument, questions_sha: "b".repeat(64) };
   assert.notEqual(verdictKey(other, jev), verdictKey(instrument, jev));
   assert.throws(() => verdictKey({ ...instrument, model: undefined }, jev));
+});
+
+test("a state file whose content is JSON null is reported, never thrown on", (t) => {
+  const directory = mkdtempSync(path.join(tmpdir(), "jev-null-state-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  for (const [trial, seq] of [
+    ["trial-complete", 0],
+    ["trial-complete", 1],
+    ["trial-timeout", 0],
+  ]) {
+    const copy = path.join(directory, `${trial}-${seq}`);
+    cpSync(path.join(fixtures, trial), copy, { recursive: true });
+    writeFileSync(path.join(copy, fileName("state", seq)), "null\n");
+    const files = {};
+    for (const name of readdirSync(copy)) {
+      files[name] = readFileSync(path.join(copy, name), "utf8");
+    }
+    let errors;
+    assert.doesNotThrow(
+      () => {
+        errors = validateTrial(files);
+      },
+      `${trial} with ${fileName("state", seq)} null`,
+    );
+    assert.ok(
+      errors.some((error) => error.path.startsWith(fileName("state", seq))),
+      `${trial}: ${JSON.stringify(errors)}`,
+    );
+  }
 });
