@@ -485,7 +485,7 @@ function trendChart(metric, series, segments) {
     parts.push(
       `<rect class="band" x="${L}" y="${top.toFixed(1)}" width="${W - L - R}" height="${(bottom - top).toFixed(1)}" fill="${hex}" fill-opacity="${band.opacity}"/>`,
       `<line x1="${L}" y1="${edge.toFixed(1)}" x2="${W - R}" y2="${edge.toFixed(1)}" stroke="${hex}" stroke-opacity="0.7" stroke-dasharray="4 3"/>`,
-      `<text class="band-label" x="${W - R - 3}" y="${(Math.min(top, bottom - 2) + Math.min(9, bottom - top)).toFixed(1)}" text-anchor="end" fill="${ink}">${gate}</text>`,
+      `<text class="band-label" x="${W - R - 3}" y="${(Math.abs(edge - bottom) < 0.5 ? bottom - 3 : top + 9).toFixed(1)}" text-anchor="end" style="fill: ${ink}">${gate}</text>`,
     );
   }
   parts.push(
