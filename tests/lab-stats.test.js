@@ -575,3 +575,143 @@ test("the gate labels approximated rates and reports a pin rate outside 0..1", a
     /compare first_pass_review: the candidate's rate 90 is not a proportion in 0\.\.1, inconclusive/,
   );
 });
+
+// JL-16 review N1: an epoch is the canonical instrument plus the model Jev
+// answered as, so a changed confidence floor or gate version breaks the
+// trend and refuses a pin comparison, as gate.mjs refuses it.
+test("an epoch keys on every instrument field plus the answered model", async (t) => {
+  const full = (floor, gateVersion = 1) => ({
+    instrument: {
+      questions_sha: Q1,
+      model: "jev-latest",
+      confidence_floor: floor,
+      gate_version: gateVersion,
+    },
+    jev: { model: "jev-1" },
+  });
+  const a = epochOf(record("a", { provenance: full(0.6) }));
+  assert.equal(a.model, "jev-1", "the answered model outranks the alias");
+  assert.equal(a.questions_sha, Q1);
+  assert.notEqual(
+    epochKey(a),
+    epochKey(epochOf(record("b", { provenance: full(0.7) }))),
+    "a different confidence floor is a different epoch",
+  );
+  assert.notEqual(
+    epochKey(a),
+    epochKey(epochOf(record("c", { provenance: full(0.6, 2) }))),
+    "a different gate version is a different epoch",
+  );
+  const reordered = {
+    instrument: {
+      gate_version: 1,
+      confidence_floor: 0.6,
+      model: "jev-latest",
+      questions_sha: Q1,
+    },
+    jev: { model: "jev-1" },
+  };
+  assert.equal(
+    epochKey(a),
+    epochKey(epochOf(record("d", { provenance: reordered }))),
+    "key order does not make a new epoch",
+  );
+
+  const { runs, artifacts, write, pin, stats } = await fixture(t);
+  await write(record("now", { seq: 0, provenance: full(0.7) }));
+  await pin("base", record("p", { provenance: full(0.6) }));
+  const model = await loadModel({ root: runs });
+  const refused = compareToPin(
+    latestReading(model, "suite_wall_s"),
+    await loadPins(artifacts),
+  );
+  assert.equal(refused.kind, "epoch");
+  assert.throws(
+    () =>
+      aggregate([
+        { value: 1, n: 1, epoch: epochKey(a) },
+        {
+          value: 1,
+          n: 1,
+          epoch: epochKey(epochOf(record("e", { provenance: full(0.7) }))),
+        },
+      ]),
+    (error) =>
+      error instanceof MixedEpochError && /instrument/.test(error.message),
+  );
+  const out = stats("--layer", "stability").out;
+  assert.match(out, /confidence_floor 0\.7/);
+  assert.match(out, /gate_version 1/);
+});
+
+// JL-16 review N2: interleaved series in different epochs break no trend.
+test("trend breaks are counted per series, not across interleaved series", async (t) => {
+  const { runs, write, stats } = await fixture(t);
+  const wall = (value) => ({ suite_wall_s: { value, n: 20, ci: null } });
+  for (const seq of [0, 2, 4])
+    await write(record(`suite-${seq}`, { seq, kpis: wall(10 + seq) }));
+  for (const seq of [1, 3])
+    await write(
+      record(`jev-${seq}`, {
+        seq,
+        type: "batch",
+        label: "downhill-run-jev",
+        provenance: instrument(Q1),
+      }),
+    );
+  await write(
+    record("jev-5", {
+      seq: 5,
+      type: "batch",
+      label: "downhill-run-jev",
+      provenance: instrument(Q2),
+    }),
+  );
+  const model = await loadModel({ root: runs });
+  assert.deepEqual(
+    model.boundaries.map(({ series, seq }) => [series, seq]),
+    [["batch/downhill-run-jev", 5]],
+  );
+  const out = stats("--layer", "stability").out;
+  const breaks = out.split("\n").filter((line) => /trend break/.test(line));
+  assert.deepEqual(breaks, [
+    "trend break in batch/downhill-run-jev at seq 5 (jev-5)",
+  ]);
+});
+
+// JL-16 review N3: a stray file where a pin directory belongs is skipped.
+test("loadPins skips a stray file under pins/ instead of crashing", async (t) => {
+  const { artifacts, pin, stats, write } = await fixture(t);
+  await write(record("now"));
+  await pin("base", record("p"));
+  const pins = path.join(artifacts, "jev-lab-2026-09-25", "pins");
+  await writeFile(path.join(pins, "notes.txt"), "a stray file\n");
+  await mkdir(path.join(pins, "odd", "run.json"), { recursive: true });
+  assert.deepEqual(
+    (await loadPins(artifacts)).map((one) => one.name),
+    ["base"],
+  );
+  const result = stats("--layer", "stability");
+  assert.equal(result.code, 0, result.err);
+});
+
+// JL-16 review N4: a pin that exists is never reported as "no pin".
+test("a reading with no value next to an existing pin says so, not no pin", async (t) => {
+  const { runs, artifacts, write, pin, stats } = await fixture(t);
+  await write(
+    record("now", { kpis: { suite_wall_s: { value: null, n: 0, ci: null } } }),
+  );
+  await pin("base", record("p"));
+  const model = await loadModel({ root: runs });
+  const comparison = compareToPin(
+    latestReading(model, "suite_wall_s"),
+    await loadPins(artifacts),
+  );
+  assert.equal(comparison.kind, "no-value");
+  assert.equal(comparison.pin.name, "base");
+  const wall = stats("--layer", "stability")
+    .out.split("\n")
+    .find((line) => line.includes(" suite_wall_s "));
+  assert.match(wall, /no value to compare with pin base/);
+  assert.doesNotMatch(wall, /no pin/);
+});
