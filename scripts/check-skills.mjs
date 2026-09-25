@@ -1,6 +1,6 @@
 import { access, lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const scriptRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -10,9 +10,13 @@ const scriptRoot = path.resolve(
 const limits =
   "Existence and shape checks only, not correctness: a rename that keeps the " +
   "old path alive as a stub is not caught, and a lesson whose evidence file " +
-  "exists but no longer supports it is a review job, not this check's job.";
+  "exists but no longer supports it is a review job, not this check's job. " +
+  "CLI-verb and path checks read scripts/play.mjs and skill files statically " +
+  "(regex over source text), not by executing or importing them. Gitignore " +
+  "matching is a best-effort subset (directory and bare-name patterns, simple " +
+  "'*' globs), not full gitignore semantics.";
 
-// DESIGN.md section 4b item 8, applied only under this directory.
+// DESIGN.md section 4b item 8, applied to the whole directory tree (N7).
 const PORTABLE_SKILL_DIR = "reactive-model-loop";
 const FORBIDDEN_PORTABLE_TOKENS = [
   "scrapkeep",
@@ -32,19 +36,20 @@ const FORBIDDEN_PORTABLE_TOKENS = [
   "npm run",
   "Andrew",
 ];
-// The origin map lives here, when the project skill exists on this checkout.
+// The origin map lives here, and SKL- ids are scoped here, when the project
+// skill exists on this checkout.
 const LAB_SKILL_DIR = "scrapkeep-lab";
 
-const FRONTMATTER_DESCRIPTION_BLOCKLIST = new Set([
-  "The",
-  "A",
-  "An",
-  "This",
-  "That",
-  "It",
-  "Its",
-  "Skill",
-  "Description",
+// N1: an allowlist (not a blocklist) of imperative openers a frontmatter
+// description may start with, "Use" always included.
+const FRONTMATTER_VERB_ALLOWLIST = new Set([
+  "Use", "Plan", "Execute", "Verify", "Run", "Design", "Build", "Check",
+  "Review", "Add", "Create", "Update", "Fix", "Write", "Read", "Implement",
+  "Extend", "Gate", "Port", "Manage", "Test", "Debug", "Configure", "Set",
+  "Generate", "Validate", "Analyze", "Diagnose", "Extract", "Parse",
+  "Compare", "Cut", "Start", "Load", "Resolve", "Discuss", "Prepare",
+  "Explain", "Keep", "Ask", "Find", "List", "Open", "Close", "Record",
+  "Report",
 ]);
 
 function parseArguments(argv) {
@@ -72,6 +77,12 @@ async function exists(file) {
   } catch {
     return false;
   }
+}
+
+// CRLF normalised at the point of read so every regex and line count downstream
+// (including frontmatter parsing, N1) sees only "\n".
+async function readNormalized(file) {
+  return (await readFile(file, "utf8")).replace(/\r\n/g, "\n");
 }
 
 class Findings {
@@ -110,6 +121,11 @@ function lineAt(content, index) {
   return line;
 }
 
+function skillDirOf(relativeFile) {
+  const match = /^\.agents\/skills\/([^/]+)\//.exec(relativeFile);
+  return match ? ".agents/skills/" + match[1] : null;
+}
+
 // --- Skill discovery -------------------------------------------------------
 
 async function listSkillDirs(root) {
@@ -129,7 +145,7 @@ async function loadSkillFiles(root, name) {
   if (await exists(path.join(root, skillFile))) {
     files.push({
       relative: skillFile,
-      content: await readFile(path.join(root, skillFile), "utf8"),
+      content: await readNormalized(path.join(root, skillFile)),
     });
   }
   const referencesDir = path.join(dir, "references");
@@ -142,14 +158,75 @@ async function loadSkillFiles(root, name) {
         ".agents/skills/" + name + "/references/" + entry.name;
       files.push({
         relative,
-        content: await readFile(path.join(root, relative), "utf8"),
+        content: await readNormalized(path.join(root, relative)),
       });
     }
   }
   return files;
 }
 
+// Every file under a directory, recursively, root-relative posix paths.
+async function walkFiles(root, dir) {
+  const results = [];
+  const absolute = path.join(root, dir);
+  if (!(await exists(absolute))) return results;
+  for (const entry of await readdir(absolute, { withFileTypes: true })) {
+    const relative = path.posix.join(dir, entry.name);
+    if (entry.isDirectory()) results.push(...(await walkFiles(root, relative)));
+    else if (entry.isFile()) results.push(relative);
+  }
+  return results;
+}
+
 // --- Check 1: frontmatter + Check 9: size -----------------------------------
+
+// N1: single-quoted, double-quoted, bare, folded (>) and literal (|) YAML
+// scalars. Good enough for a two-field (name, description) frontmatter block,
+// not a YAML parser.
+function parseFrontmatterFields(block) {
+  const lines = block.split("\n");
+  const fields = {};
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const kv = /^([A-Za-z_]+):[ \t]?(.*)$/.exec(line);
+    if (!kv) continue;
+    const key = kv[1];
+    let value = kv[2];
+    const blockScalar = /^([>|])[+-]?\s*$/.exec(value.trim());
+    if (blockScalar) {
+      const style = blockScalar[1];
+      const baseIndent = (/^\s*/.exec(line) ?? [""])[0].length;
+      const collected = [];
+      let j = i + 1;
+      while (j < lines.length) {
+        const next = lines[j];
+        if (next.trim() === "") {
+          collected.push("");
+          j++;
+          continue;
+        }
+        const indent = (/^\s*/.exec(next) ?? [""])[0].length;
+        if (indent <= baseIndent) break;
+        collected.push(next.trim());
+        j++;
+      }
+      value =
+        style === "|"
+          ? collected.join("\n").trim()
+          : collected.join(" ").replace(/\s+/g, " ").trim();
+      i = j - 1;
+    } else {
+      value = value.trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
+        (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
+      )
+        value = value.slice(1, -1);
+    }
+    fields[key] = value;
+  }
+  return fields;
+}
 
 function checkFrontmatterAndSize(findings, skillName, file) {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(file.content);
@@ -162,11 +239,7 @@ function checkFrontmatterAndSize(findings, skillName, file) {
     );
     return;
   }
-  const fields = {};
-  for (const line of match[1].split("\n")) {
-    const kv = /^([A-Za-z_]+):\s*(.*)$/.exec(line);
-    if (kv) fields[kv[1]] = kv[2].trim();
-  }
+  const fields = parseFrontmatterFields(match[1]);
   if (fields.name !== skillName)
     findings.fail(
       "frontmatter",
@@ -177,11 +250,10 @@ function checkFrontmatterAndSize(findings, skillName, file) {
         " does not match directory name " +
         JSON.stringify(skillName),
     );
-  const rawDescription = fields.description;
-  if (!rawDescription) {
+  const description = fields.description;
+  if (!description) {
     findings.fail("frontmatter", file.relative, 1, "missing description");
   } else {
-    const description = rawDescription.replace(/^"|"$/g, "");
     if (description.length > 1024)
       findings.fail(
         "frontmatter",
@@ -190,15 +262,12 @@ function checkFrontmatterAndSize(findings, skillName, file) {
         "description is " + description.length + " chars, over the 1024 limit",
       );
     const firstWord = /^[A-Za-z']+/.exec(description)?.[0] ?? "";
-    const looksLikeVerb =
-      /^[A-Z][a-z']*$/.test(firstWord) &&
-      !FRONTMATTER_DESCRIPTION_BLOCKLIST.has(firstWord);
-    if (!looksLikeVerb)
+    if (!FRONTMATTER_VERB_ALLOWLIST.has(firstWord))
       findings.fail(
         "frontmatter",
         file.relative,
         1,
-        "description does not start with a verb or \"Use\": " +
+        "description does not start with \"Use\" or an allowlisted verb: " +
           JSON.stringify(description.slice(0, 40)),
       );
   }
@@ -274,31 +343,95 @@ const PATH_SUFFIX = /\.(mjs|gd|md|json)$/;
 const PATH_PREFIX = /^[a-z0-9_.-]+\//;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const LINE_SUFFIX = /:\d+(-\d+)?$/;
+const ANCHOR_SUFFIX = /#[^#]*$/; // N8
 
 function looksLikePath(token) {
   return PATH_PREFIX.test(token) || PATH_SUFFIX.test(token);
 }
 
-async function checkPaths(findings, root, file) {
+// N3: a best-effort subset of gitignore matching: directory patterns
+// ("dir/"), path patterns ("a/b"), bare names at any depth ("node_modules"),
+// and a single-level '*' glob within a pattern. Negation ("!...") is not
+// re-included; this only ever turns a failure into a softer warning.
+function parseGitignore(content) {
+  return content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#") && !line.startsWith("!"));
+}
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isGitignored(patterns, candidate) {
+  const segments = candidate.split("/");
+  for (const raw of patterns) {
+    let pattern = raw.endsWith("/") ? raw.slice(0, -1) : raw;
+    pattern = pattern.replace(/^\//, "");
+    const hasSlash = pattern.includes("/");
+    const toRegExp = (text) =>
+      new RegExp("^" + text.split("*").map(escapeRegExp).join("[^/]*") + "$");
+    if (hasSlash) {
+      if (candidate === pattern || candidate.startsWith(pattern + "/")) return true;
+      if (pattern.includes("*")) {
+        const re = new RegExp(
+          "^" + pattern.split("*").map(escapeRegExp).join(".*") + "(/|$)",
+        );
+        if (re.test(candidate)) return true;
+      }
+    } else if (pattern.includes("*")) {
+      const re = toRegExp(pattern);
+      if (segments.some((segment) => re.test(segment))) return true;
+    } else if (segments.includes(pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// B4: every whitespace-separated word in a backtick span is checked on its
+// own, so a real path inside a longer command ("node scripts/x.mjs") is
+// caught; only a word carrying "<", "*" or a URL scheme is skipped outright.
+// B5/N8: a path that fails root-relative resolution is retried relative to
+// the citing skill's own directory (covers a bare "SKILL.md" self-reference,
+// or "references/x.md" cited from the skill's own SKILL.md), and an
+// "#anchor" suffix is stripped alongside ":line".
+async function checkPaths(findings, root, file, gitignorePatterns) {
   const lines = fenceBlankedLines(file.content);
+  const skillDir = skillDirOf(file.relative);
   for (const [index, line] of lines.entries()) {
     for (const match of line.matchAll(/`([^`]+)`/g)) {
       const raw = match[1];
-      if (/\s/.test(raw)) continue; // a command or sentence, not a bare path
-      if (raw.includes("<")) continue; // placeholder token
-      if (raw.includes("*")) continue; // glob token
-      if (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) continue; // quoted schema string
-      if (SCHEME.test(raw)) continue; // URL or other scheme
-      const stripped = raw.replace(LINE_SUFFIX, "");
-      if (stripped.startsWith("/") || stripped.startsWith("~/")) continue; // outside repo
-      if (!looksLikePath(stripped)) continue;
-      if (!(await exists(path.join(root, stripped))))
+      for (const word of raw.split(/\s+/).filter(Boolean)) {
+        if (word.includes("<")) continue;
+        if (word.includes("*")) continue;
+        if (SCHEME.test(word)) continue;
+        const stripped = word.replace(ANCHOR_SUFFIX, "").replace(LINE_SUFFIX, "");
+        if (stripped === "") continue;
+        if (stripped.startsWith("/") || stripped.startsWith("~/")) continue;
+        if (!looksLikePath(stripped)) continue;
+        if (await exists(path.join(root, stripped))) continue;
+        if (skillDir !== null && (await exists(path.join(root, skillDir, stripped))))
+          continue;
+        if (isGitignored(gitignorePatterns, stripped)) {
+          findings.warn(
+            "paths",
+            file.relative,
+            index + 1,
+            "path is under a gitignored directory, not checkable in a fresh " +
+              "clone: " +
+              stripped,
+          );
+          continue;
+        }
         findings.fail(
           "paths",
           file.relative,
           index + 1,
           "path does not exist: " + stripped,
         );
+      }
     }
   }
 }
@@ -331,57 +464,151 @@ function checkNpmScripts(findings, file, scripts) {
   }
 }
 
-// --- Check 5: CLI verbs --------------------------------------------------------
+// --- Check 5: CLI verbs, read statically (B2, never imported: N4) -----------
 
-async function checkVerbs(findings, root) {
+function extractQuotedArray(source, varName) {
+  const declaration = new RegExp(
+    "(?:const|let|var)\\s+" + varName + "\\s*=\\s*\\[([\\s\\S]*?)\\]",
+  ).exec(source);
+  if (!declaration) return null;
+  return [...declaration[1].matchAll(/["'`]([^"'`]+)["'`]/g)].map((m) => m[1]);
+}
+
+function extractObjectKeys(source, varName) {
+  const declaration = new RegExp(
+    "(?:const|let|var)\\s+" + varName + "\\s*=\\s*\\{",
+  ).exec(source);
+  if (!declaration) return null;
+  let depth = 1;
+  let i = declaration.index + declaration[0].length;
+  const bodyStart = i;
+  while (i < source.length && depth > 0) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}") depth--;
+    i++;
+  }
+  const body = source.slice(bodyStart, i - 1);
+  const keys = new Set();
+  for (const m of body.matchAll(
+    /(?:^|[{,\n])\s*(?:"([^"]+)"|'([^']+)'|([A-Za-z_$][\w$]*))\s*:/g,
+  ))
+    keys.add(m[1] ?? m[2] ?? m[3]);
+  return [...keys];
+}
+
+// The `verb === "lab"` style literal comparisons inside labRoute, found
+// generically rather than by hard-coding "lab", so a future case is picked
+// up without editing this script.
+function extractLiteralVerbCases(source) {
+  return [...source.matchAll(/\bverb\s*===\s*["'`]([^"'`]+)["'`]/g)].map(
+    (m) => m[1],
+  );
+}
+
+async function checkVerbsStatic(findings, root, allFiles) {
   const file = "scripts/play.mjs";
   const absolute = path.join(root, file);
   if (!(await exists(absolute))) return;
-  let module_;
-  try {
-    module_ = await import(pathToFileURL(absolute).href);
-  } catch (error) {
+  const source = await readNormalized(absolute);
+
+  const verbsArray = extractQuotedArray(source, "verbs");
+  const labVerbKeys = extractObjectKeys(source, "LAB_VERBS");
+  const labSubverbKeys = extractObjectKeys(source, "LAB_SUBVERBS");
+  const literalCases = extractLiteralVerbCases(source);
+
+  const haveTop = verbsArray !== null || labVerbKeys !== null || literalCases.length > 0;
+  const haveSub = labSubverbKeys !== null;
+  if (!haveTop && !haveSub) {
     findings.warn(
       "verbs",
       file,
       0,
-      "could not import scripts/play.mjs for verb validation: " +
-        (error?.message ?? String(error)),
+      "could not statically find verbs, LAB_VERBS or LAB_SUBVERBS in " +
+        "scripts/play.mjs; CLI verb citations are not validated",
     );
     return;
   }
-  const exported = ["verbs", "LAB_VERBS", "LAB_SUBVERBS"].filter((name) =>
-    Object.hasOwn(module_, name),
-  );
-  if (exported.length === 0) {
-    const raw = await readFile(absolute, "utf8");
-    const usageStrings = [...raw.matchAll(/Usage:[^\n]*/g)].map((m) => m[0]);
+  if (!haveTop)
     findings.warn(
       "verbs",
       file,
       0,
-      "verb list not exported (verbs, LAB_VERBS, LAB_SUBVERBS); CLI verbs " +
-        "cited in skills are not validated against it" +
-        (usageStrings.length
-          ? "; grepped usage strings: " + usageStrings.join(" | ")
-          : ""),
+      "could not statically find the top-level verb list (verbs, LAB_VERBS) " +
+        "in scripts/play.mjs; top-level scrapkeep <verb> citations are not " +
+        "validated",
     );
+  if (!haveSub)
+    findings.warn(
+      "verbs",
+      file,
+      0,
+      "could not statically find LAB_SUBVERBS in scripts/play.mjs; " +
+        "scrapkeep lab <sub> citations are not validated",
+    );
+
+  const topSet = new Set([...(verbsArray ?? []), ...(labVerbKeys ?? []), ...literalCases]);
+  const subSet = new Set(labSubverbKeys ?? []);
+
+  for (const skillFile of allFiles) {
+    if (haveSub)
+      for (const match of skillFile.content.matchAll(
+        /\bscrapkeep\s+lab\s+([A-Za-z][\w|-]*)/g,
+      )) {
+        const line = lineAt(skillFile.content, match.index);
+        for (const sub of match[1].split("|"))
+          if (!subSet.has(sub))
+            findings.fail(
+              "verbs",
+              skillFile.relative,
+              line,
+              "scrapkeep lab " +
+                sub +
+                ": not a lab sub-verb in scripts/play.mjs (LAB_SUBVERBS)",
+            );
+      }
+    if (haveTop)
+      for (const match of skillFile.content.matchAll(
+        /\bscrapkeep\s+([A-Za-z][\w|-]*)/g,
+      )) {
+        const line = lineAt(skillFile.content, match.index);
+        for (const verb of match[1].split("|"))
+          if (!topSet.has(verb))
+            findings.fail(
+              "verbs",
+              skillFile.relative,
+              line,
+              "scrapkeep " + verb + ": not a verb in scripts/play.mjs (verbs/LAB_VERBS)",
+            );
+      }
   }
 }
 
 // --- Check 6: EV / JL / Q ids --------------------------------------------------
 
+// N2: EV ids also resolve against an archived events file, matched by name
+// alone (docs/project/tracking/EVENTS-*.md), reusing the same row regex
+// check-docs.mjs and tests/lab-dash.test.js:537 use for TRACKING.md itself.
 async function loadTrackingEventIds(root) {
   const file = path.join(root, "TRACKING.md");
   if (!(await exists(file))) return null;
-  const content = await readFile(file, "utf8");
-  return new Set([...content.matchAll(/^\| (EV-\d{4}) \|/gm)].map((m) => m[1]));
+  const ids = new Set(
+    [...(await readNormalized(file)).matchAll(/^\| (EV-\d{4}) \|/gm)].map((m) => m[1]),
+  );
+  const archiveDir = path.join(root, "docs/project/tracking");
+  if (await exists(archiveDir)) {
+    for (const entry of await readdir(archiveDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !/^EVENTS-.*\.md$/.test(entry.name)) continue;
+      const content = await readNormalized(path.join(archiveDir, entry.name));
+      for (const m of content.matchAll(/^\| (EV-\d{4}) \|/gm)) ids.add(m[1]);
+    }
+  }
+  return ids;
 }
 
 async function loadBacklogAnchors(root) {
   const file = path.join(root, "BACKLOG.md");
   if (!(await exists(file))) return null;
-  const content = await readFile(file, "utf8");
+  const content = await readNormalized(file);
   return new Set(
     [...content.matchAll(/<a\s+(?:id|name)="([^"]+)"/g)].map((m) =>
       m[1].toLowerCase(),
@@ -390,38 +617,35 @@ async function loadBacklogAnchors(root) {
 }
 
 function checkIds(findings, file, eventIds, backlogAnchors) {
-  if (eventIds !== null)
-    for (const match of file.content.matchAll(/\bEV-\d{4}\b/g)) {
-      const id = match[0];
-      if (!eventIds.has(id))
-        findings.fail(
-          "ids",
-          file.relative,
-          lineAt(file.content, match.index),
-          id + " is not a TRACKING.md event row",
-        );
-    }
-  if (backlogAnchors !== null) {
-    for (const match of file.content.matchAll(/\bJL-\d+[a-z]?\b/g)) {
-      const id = match[0];
-      if (!backlogAnchors.has(id.toLowerCase()))
-        findings.fail(
-          "ids",
-          file.relative,
-          lineAt(file.content, match.index),
-          id + " has no <a id> anchor in BACKLOG.md",
-        );
-    }
-    for (const match of file.content.matchAll(/\bQ-[EP]\d{2}\b/g)) {
-      const id = match[0];
-      if (!backlogAnchors.has(id.toLowerCase()))
-        findings.fail(
-          "ids",
-          file.relative,
-          lineAt(file.content, match.index),
-          id + " has no <a id> anchor in BACKLOG.md",
-        );
-    }
+  for (const match of file.content.matchAll(/\bEV-\d{4}\b/g)) {
+    const id = match[0];
+    if (!eventIds.has(id))
+      findings.fail(
+        "ids",
+        file.relative,
+        lineAt(file.content, match.index),
+        id + " is not a TRACKING.md (or archived) event row",
+      );
+  }
+  for (const match of file.content.matchAll(/\bJL-\d+[a-z]?\b/g)) {
+    const id = match[0];
+    if (!backlogAnchors.has(id.toLowerCase()))
+      findings.fail(
+        "ids",
+        file.relative,
+        lineAt(file.content, match.index),
+        id + " has no <a id> anchor in BACKLOG.md",
+      );
+  }
+  for (const match of file.content.matchAll(/\bQ-[EP]\d{2}\b/g)) {
+    const id = match[0];
+    if (!backlogAnchors.has(id.toLowerCase()))
+      findings.fail(
+        "ids",
+        file.relative,
+        lineAt(file.content, match.index),
+        id + " has no <a id> anchor in BACKLOG.md",
+      );
   }
 }
 
@@ -429,28 +653,38 @@ function checkIds(findings, file, eventIds, backlogAnchors) {
 
 const LESSON_STATUSES = new Set(["established", "provisional", "retracted"]);
 
+// B3: a loose match on "- **id**" that fails the strict header shape is a
+// named "malformed lesson header" finding rather than silently swallowed
+// into the previous lesson's body.
 function parseLessons(content) {
   const lines = content.split("\n");
   const start = lines.findIndex((line) => line.trim() === "## Lessons");
-  if (start === -1) return [];
+  if (start === -1) return { lessons: [], sectionFound: false, malformed: [] };
   let end = start + 1;
   while (end < lines.length && !/^##\s/.test(lines[end])) end++;
   const lessons = [];
+  const malformed = [];
   let current = null;
   for (let index = start + 1; index < end; index++) {
     const line = lines[index];
-    const header = /^- \*\*((?:RML|SKL)-\d+)\*\*\s*(?:·|\|)\s*status:\s*(\S+)/.exec(
-      line,
-    );
-    if (header) {
-      current = {
-        id: header[1],
-        status: header[2],
-        evidence: "",
-        overturned: "",
-        line: index + 1,
-      };
-      lessons.push(current);
+    const loose = /^- \*\*([^*]+)\*\*/.exec(line);
+    if (loose) {
+      const header = /^- \*\*((?:RML|SKL)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(
+        line,
+      );
+      if (header) {
+        current = {
+          id: header[1],
+          status: header[2],
+          evidence: "",
+          overturned: "",
+          line: index + 1,
+        };
+        lessons.push(current);
+      } else {
+        malformed.push({ line: index + 1, text: line.trim() });
+        current = null;
+      }
       continue;
     }
     if (!current) continue;
@@ -459,7 +693,7 @@ function parseLessons(content) {
     const overturned = /^\s*Overturned by:\s*(.*)$/.exec(line);
     if (overturned) current.overturned = overturned[1].trim();
   }
-  return lessons;
+  return { lessons, sectionFound: true, malformed };
 }
 
 function parseOriginMapIds(content) {
@@ -476,11 +710,67 @@ function parseOriginMapIds(content) {
   return ids;
 }
 
-function checkLessonLedgers(findings, ledgerFiles, skillDirs, root) {
+// B1: the newest Changelog row's date must not be earlier than any retracted
+// lesson's Overturned-by date (parsed as the first \d{4}-\d{2}-\d{2} in that
+// field). Returns null when the section is missing entirely.
+function parseChangelogDates(content) {
+  const lines = content.split("\n");
+  const start = lines.findIndex((line) => line.trim() === "## Changelog");
+  if (start === -1) return null;
+  let end = start + 1;
+  while (end < lines.length && !/^##\s/.test(lines[end])) end++;
+  const dates = [];
+  for (let index = start + 1; index < end; index++) {
+    const row = lines[index];
+    if (!row.startsWith("|") || /^\|\s*-{3}/.test(row)) continue;
+    const cell = row.split("|")[1]?.trim() ?? "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cell)) dates.push(cell);
+  }
+  return dates;
+}
+
+function checkChangelog(findings, file, lessons) {
+  const dates = parseChangelogDates(file.content);
+  if (dates === null) {
+    findings.fail("changelog", file.relative, 0, 'no "## Changelog" section');
+    return;
+  }
+  const newest = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+  for (const lesson of lessons) {
+    if (lesson.status !== "retracted") continue;
+    const match = /\d{4}-\d{2}-\d{2}/.exec(lesson.overturned);
+    if (!match) continue;
+    const overturnedDate = match[0];
+    if (newest === null || overturnedDate > newest)
+      findings.fail(
+        "changelog",
+        file.relative,
+        lesson.line,
+        lesson.id +
+          ": Overturned by date " +
+          overturnedDate +
+          " is after the newest Changelog row (" +
+          (newest ?? "none") +
+          ")",
+      );
+  }
+}
+
+function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
   const global = new Map(); // id -> {file, line}
   const allLessons = [];
   for (const file of ledgerFiles) {
-    const lessons = parseLessons(file.content);
+    const { lessons, sectionFound, malformed } = parseLessons(file.content);
+    if (!sectionFound)
+      findings.fail("lessons", file.relative, 0, 'no "## Lessons" section');
+    for (const bad of malformed)
+      findings.fail(
+        "lessons",
+        file.relative,
+        bad.line,
+        "malformed lesson header: " + JSON.stringify(bad.text.slice(0, 80)),
+      );
+    checkChangelog(findings, file, lessons);
     for (const lesson of lessons) {
       allLessons.push({ ...lesson, file: file.relative });
       const previous = global.get(lesson.id);
@@ -498,6 +788,28 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs, root) {
             ")",
         );
       else global.set(lesson.id, { file: file.relative, line: lesson.line });
+
+      // B3: RML- only inside the portable skill, SKL- only inside the lab skill.
+      if (
+        lesson.id.startsWith("RML-") &&
+        !file.relative.startsWith(".agents/skills/" + PORTABLE_SKILL_DIR + "/")
+      )
+        findings.fail(
+          "lessons",
+          file.relative,
+          lesson.line,
+          lesson.id + ": RML- ids belong only in " + PORTABLE_SKILL_DIR,
+        );
+      if (
+        lesson.id.startsWith("SKL-") &&
+        !file.relative.startsWith(".agents/skills/" + LAB_SKILL_DIR + "/")
+      )
+        findings.fail(
+          "lessons",
+          file.relative,
+          lesson.line,
+          lesson.id + ": SKL- ids belong only in " + LAB_SKILL_DIR,
+        );
 
       if (!LESSON_STATUSES.has(lesson.status))
         findings.fail(
@@ -564,24 +876,26 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs, root) {
   return global;
 }
 
+// B3: recognises multi-id citations like "(SKL-15, SKL-32)".
 function checkLessonCitations(findings, file, lessonIds) {
-  for (const match of file.content.matchAll(/\((RML|SKL)-\d+\)/g)) {
-    const id = match[0].slice(1, -1);
-    if (!lessonIds.has(id))
-      findings.fail(
-        "lessons",
-        file.relative,
-        lineAt(file.content, match.index),
-        "cited lesson " + id + " is not in any ledger",
-      );
+  for (const match of file.content.matchAll(
+    /\(((?:RML|SKL)-\d+(?:,\s*(?:RML|SKL)-\d+)*)\)/g,
+  )) {
+    const line = lineAt(file.content, match.index);
+    for (const id of match[1].split(",").map((entry) => entry.trim()))
+      if (!lessonIds.has(id))
+        findings.fail(
+          "lessons",
+          file.relative,
+          line,
+          "cited lesson " + id + " is not in any ledger",
+        );
   }
 }
 
-// --- Check 8: portability ------------------------------------------------------
+// --- Check 8: portability (N7: every file under the portable skill) --------
 
 function checkPortability(findings, file) {
-  if (!file.relative.startsWith(".agents/skills/" + PORTABLE_SKILL_DIR + "/"))
-    return;
   for (const token of FORBIDDEN_PORTABLE_TOKENS) {
     let cursor = 0;
     while (true) {
@@ -595,6 +909,20 @@ function checkPortability(findings, file) {
       );
       cursor = index + token.length;
     }
+  }
+}
+
+async function checkPortabilityFull(findings, root, skillDirs) {
+  if (!skillDirs.includes(PORTABLE_SKILL_DIR)) return;
+  const files = await walkFiles(root, ".agents/skills/" + PORTABLE_SKILL_DIR);
+  for (const relative of files.sort()) {
+    let content;
+    try {
+      content = await readNormalized(path.join(root, relative));
+    } catch {
+      continue; // unreadable/binary; existence-only scope, skip
+    }
+    checkPortability(findings, { relative, content });
   }
 }
 
@@ -628,14 +956,27 @@ async function main() {
     return;
   }
 
-  const findings = new Findings();
-  const skillDirs = await listSkillDirs(options.root);
+  // N6: TRACKING.md and BACKLOG.md are required inputs (DESIGN.md's own
+  // input list), not optional ones this check degrades gracefully without.
   const eventIds = await loadTrackingEventIds(options.root);
   const backlogAnchors = await loadBacklogAnchors(options.root);
-  if (eventIds === null)
-    findings.fail("ids", "TRACKING.md", 0, "TRACKING.md is missing; EV ids cannot be checked");
-  if (backlogAnchors === null)
-    findings.fail("ids", "BACKLOG.md", 0, "BACKLOG.md is missing; card ids cannot be checked");
+  if (eventIds === null) {
+    console.error("TRACKING.md is missing at " + options.root);
+    process.exitCode = 2;
+    return;
+  }
+  if (backlogAnchors === null) {
+    console.error("BACKLOG.md is missing at " + options.root);
+    process.exitCode = 2;
+    return;
+  }
+
+  const gitignorePatterns = (await exists(path.join(options.root, ".gitignore")))
+    ? parseGitignore(await readNormalized(path.join(options.root, ".gitignore")))
+    : [];
+
+  const findings = new Findings();
+  const skillDirs = await listSkillDirs(options.root);
 
   const allFilesBySkill = new Map();
   for (const skillName of skillDirs)
@@ -665,16 +1006,16 @@ async function main() {
   }
 
   for (const file of allFiles) {
-    await checkPaths(findings, options.root, file);
+    await checkPaths(findings, options.root, file, gitignorePatterns);
     checkNpmScripts(findings, file, scripts);
     checkIds(findings, file, eventIds, backlogAnchors);
-    checkPortability(findings, file);
   }
+  await checkPortabilityFull(findings, options.root, skillDirs);
 
-  const lessonIds = checkLessonLedgers(findings, ledgerFiles, skillDirs, options.root);
+  const lessonIds = checkLessonLedgers(findings, ledgerFiles, skillDirs);
   for (const file of allFiles) checkLessonCitations(findings, file, lessonIds);
 
-  await checkVerbs(findings, options.root);
+  await checkVerbsStatic(findings, options.root, allFiles);
 
   const failures = findings.list.filter((finding) => finding.level === "failure");
   if (options.json) {
