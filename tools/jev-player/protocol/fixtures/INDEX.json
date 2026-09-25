@@ -1,0 +1,340 @@
+{
+  "protocol": "scrapkeep-jev/1",
+  "note": "Canonical protocol v1 fixtures. Each entry names a file, its message type and whether a v1 validator must accept it; an invalid entry names the path its fault is reported at. An intent with a context is judged against that state file. Each trial directory is also judged as a whole. JL-09 copies this directory byte-for-byte into sketches/ball-lab/src/jev/fixtures/.",
+  "fixtures": [
+    {
+      "file": "trial-complete/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-complete/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-complete/intent-000000.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-complete/state-000000.json",
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-complete/state-000001.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-complete/intent-000001.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-complete/state-000001.json",
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-complete/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-complete/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-complete"
+    },
+    {
+      "file": "trial-timeout/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-timeout"
+    },
+    {
+      "file": "trial-timeout/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-timeout"
+    },
+    {
+      "file": "trial-timeout/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-timeout"
+    },
+    {
+      "file": "trial-timeout/error.json",
+      "type": "error",
+      "valid": true,
+      "note": "part of trial-timeout"
+    },
+    {
+      "file": "trial-aborted/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-aborted"
+    },
+    {
+      "file": "trial-aborted/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-aborted"
+    },
+    {
+      "file": "trial-aborted/abort.json",
+      "type": "abort",
+      "valid": true,
+      "note": "part of trial-aborted"
+    },
+    {
+      "file": "trial-aborted/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-aborted"
+    },
+    {
+      "file": "trial-aborted/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-aborted"
+    },
+    {
+      "file": "trial-late-intent/hello.json",
+      "type": "hello",
+      "valid": true,
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "trial-late-intent/state-000000.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "trial-late-intent/intent-000000.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-late-intent/state-000000.json",
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "trial-late-intent/state-000001.json",
+      "type": "state",
+      "valid": true,
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "trial-late-intent/intent-000001.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-late-intent/state-000001.json",
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "trial-late-intent/events.ndjson",
+      "type": "events",
+      "valid": true,
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "trial-late-intent/done.json",
+      "type": "done",
+      "valid": true,
+      "note": "part of trial-late-intent"
+    },
+    {
+      "file": "valid/state-evade.json",
+      "type": "state",
+      "valid": true,
+      "note": "Airborne with two threats; push_objective is not offered. sim may carry extra keys."
+    },
+    {
+      "file": "valid/intent-floor.json",
+      "type": "intent",
+      "valid": true,
+      "context": "valid/state-evade.json",
+      "note": "Below the confidence floor the jev arm holds push_objective even when it was not offered."
+    },
+    {
+      "file": "valid/intent-cache.json",
+      "type": "intent",
+      "valid": true,
+      "context": "valid/state-evade.json",
+      "note": "A verdict-cache hit, as --replay produces."
+    },
+    {
+      "file": "valid/intent-random.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-complete/state-000000.json",
+      "note": "The random arm chooses among the options left after the gate."
+    },
+    {
+      "file": "valid/intent-scripted.json",
+      "type": "intent",
+      "valid": true,
+      "context": "trial-complete/state-000000.json",
+      "note": "The scripted arm names the rule that fired."
+    },
+    {
+      "file": "valid/error-intent-invalid.json",
+      "type": "error",
+      "valid": true,
+      "note": "Godot rejects an intent it cannot apply and exits 4."
+    },
+    {
+      "file": "invalid/hello-missing-seed.json",
+      "type": "hello",
+      "valid": false,
+      "path": "seed",
+      "note": "hello.json must name its seed."
+    },
+    {
+      "file": "invalid/hello-hold-too-long.json",
+      "type": "hello",
+      "valid": false,
+      "path": "hold_ticks",
+      "note": "The intent would apply at or after the next snapshot."
+    },
+    {
+      "file": "invalid/state-off-grid.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.state.self.speed_ms",
+      "note": "Speeds are quantised to 0.1 m/s, as in the corpus."
+    },
+    {
+      "file": "invalid/state-unknown-field.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.state.self.position",
+      "note": "The jev block is closed; raw positions belong in sim."
+    },
+    {
+      "file": "invalid/state-no-options.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.options",
+      "note": "A snapshot must offer at least one option."
+    },
+    {
+      "file": "invalid/intent-jev-no-questions-sha.json",
+      "type": "intent",
+      "valid": false,
+      "path": "meta.questions_sha",
+      "note": "The jev arm must name the question set it asked."
+    },
+    {
+      "file": "invalid/intent-not-offered.json",
+      "type": "intent",
+      "valid": false,
+      "path": "intent",
+      "context": "trial-complete/state-000000.json",
+      "note": "evade_hazard was not offered."
+    },
+    {
+      "file": "invalid/intent-gated-out.json",
+      "type": "intent",
+      "valid": false,
+      "path": "intent",
+      "context": "trial-complete/state-000000.json",
+      "note": "hit_kicker needs 26 m/s; the gate removed it."
+    },
+    {
+      "file": "invalid/intent-forced-with-choices.json",
+      "type": "intent",
+      "valid": false,
+      "path": "source",
+      "context": "trial-complete/state-000000.json",
+      "note": "Two options survive the gate, so nothing is forced."
+    },
+    {
+      "file": "invalid/intent-single-not-forced.json",
+      "type": "intent",
+      "valid": false,
+      "path": "source",
+      "context": "trial-complete/state-000001.json",
+      "note": "One option survives the gate, so the jev arm must not call the API."
+    },
+    {
+      "file": "invalid/intent-wrong-source-for-arm.json",
+      "type": "intent",
+      "valid": false,
+      "path": "source",
+      "note": "The random arm cannot report a live call."
+    },
+    {
+      "file": "invalid/error-unknown-code.json",
+      "type": "error",
+      "valid": false,
+      "path": "code",
+      "note": "A crash writes nothing; Node infers it from the missing done.json."
+    },
+    {
+      "file": "invalid/abort-unknown-reason.json",
+      "type": "abort",
+      "valid": false,
+      "path": "reason",
+      "note": "Abort reasons are a closed list."
+    },
+    {
+      "file": "invalid/done-short-trace-hash.json",
+      "type": "done",
+      "valid": false,
+      "path": "trace_hash",
+      "note": "trace_hash is a full sha256."
+    },
+    {
+      "file": "invalid/events-unknown-kind.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[1].kind",
+      "note": "Event kinds are a closed list."
+    },
+    {
+      "file": "invalid/events-wall-clock.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[0].wall_ms",
+      "note": "A wall-clock field would change trace_hash under responder delays."
+    },
+    {
+      "file": "invalid/events-tick-backwards.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[2].tick",
+      "note": "Ticks never decrease."
+    }
+  ],
+  "trials": [
+    {
+      "dir": "trial-complete",
+      "valid": true,
+      "outcome": "complete",
+      "exit": 0,
+      "note": "Two snapshots on the D = 90 schedule; intent 0 applied at tick 26, intent 1 (forced: the gate leaves one option) at 116."
+    },
+    {
+      "dir": "trial-timeout",
+      "valid": true,
+      "outcome": "error:intent_timeout",
+      "exit": 5,
+      "note": "No intent arrived; Godot wrote error.json at the blocking tick and exited 5."
+    },
+    {
+      "dir": "trial-aborted",
+      "valid": true,
+      "outcome": "aborted",
+      "exit": 0,
+      "note": "Godot saw abort.json while blocking, finalised events and wrote done.json with reason aborted."
+    },
+    {
+      "dir": "trial-late-intent",
+      "valid": false,
+      "path": "events.ndjson:events[19].tick",
+      "note": "Intent 1 applied at 117 instead of 90 + 26 = 116."
+    }
+  ]
+}
