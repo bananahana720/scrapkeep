@@ -250,7 +250,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-01](BACKLOG.md#jl-01) | 1 | 4 | done | none | JL-01-A1 | EV-0489 |
 | [JL-02](BACKLOG.md#jl-02) | 1 | 4 | done | none | JL-02-A1 | EV-0491 |
 | [JL-03](BACKLOG.md#jl-03) | 1 | 4 | done | none | JL-03-A1 | EV-0493 |
-| [JL-04](BACKLOG.md#jl-04) | 1 | 5 | in_progress | none | none | EV-0490 |
+| [JL-04](BACKLOG.md#jl-04) | 1 | 8 | in_progress | none | none | EV-0496 |
 | [JL-05](BACKLOG.md#jl-05) | 1 | 2 | in_progress | none | none | EV-0495 |
 | [JL-06](BACKLOG.md#jl-06) | 1 | 2 | in_progress | none | none | EV-0495 |
 | [JL-07](BACKLOG.md#jl-07) | 1 | 2 | in_progress | none | none | EV-0495 |
@@ -766,6 +766,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0493 | 2026-09-25T17:40:00+00:00 | Independent reviewer / review; coordinator / integration, incident | JL-03 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt), held blind to the JL-04 corpus, returned PASS+NOTES on 4a0fed3 with no blocking finding: q1 reproduces the base prompt byte for byte and key order, behaviour under q1 is unchanged, and every EV-0485 retraction is made in the README. The report is retained at [artifacts/jev-lab-2026-09-25/reviews/JL-03.md](artifacts/jev-lab-2026-09-25/reviews/JL-03.md). The coordinator merged `wt/JL-03` at 6718104 and reran on the integrated tree: `npm test` 280/0 and `npm run verify` six stages pass. Its N7 schema question was answered at EV-0488 (JL-03's `loadBlind` loads JL-04's cases with 0 faults). JL-03 moves review to done, record revision 3 to 4; lease JL-03-L1 closes. **Incident:** while checking the merged tree the coordinator ran `node tools/jev-player/score.mjs --help`; `score.mjs` has no argument handling, so `main()` scored the 16 authored cases against live Jev (16 calls, 17:39:13Z; report at `artifacts/local/jev-player/corpus-score.json` in the coordinator worktree, gate exit 3 because no blind corpus is present). It is not evidence: the authored set does not gate and q1 is retracted-leading. Its 41/41 is recorded only so nobody later reads it as a result. Carried forward: `score.mjs` needs a `--help`/`--dry-run` guard before any live call (JL-14); `decision.model` must be copied into score records, because `instrumentIdentity().model` is the alias `jev-latest` (JL-14); `GATE_VERSION` is manual and does not cover `INTENTS` fallback wording (bump it when that changes); edit-plus-re-pin of a non-q1 set is caught only by review until JL-18 adds a per-set snapshot; the retracted control figures survive in the pinned q1 rationale and the `corpus.json` note (README to name both in a later card). The JL-04-A1 attempt record is closed to match EV-0490. |
 | EV-0494 | 2026-09-25T17:40:16+00:00 | Coordinator / definition import, readiness, correction | JL-05, JL-06, JL-07, JL-08; hash tokens in the section files | BACKLOG gains the Wave 2 cards JL-05 (protocol v1, document and fixtures), JL-06 (`play.mjs` run records, measured timing, the shot fix, and the run-record hardening from the JL-01 review), JL-07 (human verdict index with backfill) and JL-08 (program-layer collector), each at revision 1, appended after the existing text so no earlier BACKLOG line moves. Wave 1 findings were folded in: JL-06 carries A5, A8, A9, A16, A19, the JL-01 review notes and the `python3` prerequisite; JL-08 reports token fields separately and never sums them, and must detect the EV-0486 to EV-0491 time skew from a fixture. Each moves absent to ready: dependencies JL-01, JL-02 and JL-03 are done, authorization EV-0484, no blocking question. The BACKLOG hash is re-pointed through PD-01 to PD-03 and the cascade (four passes, 64-hex tokens only); `check:drift` 349/0. |
 | EV-0495 | 2026-09-25T17:41:01+00:00 | Coordinator / wave close checkpoint, assignment, lease | JL-05, JL-06, JL-07, JL-08 | Wave 1 checkpoint (JL-04-A2 still in re-review): first-pass review 3 of 4 (75%); model substitution 0 and untracked commits 0 per the delegate ledger; token fields over 10 delegate rows, kept separate: input 7,420, cache read 58,455,112, cache creation 6,194,578, output 526,104; three escaped defects, all coordinator-side (EV-0487, EV-0492, EV-0493). Changes for Wave 2: event times from `date -u` only, `check:docs` and `check:drift` gate every board commit, no CLI entry point is run to probe it, and packets name the known traps. Retro at `artifacts/local/runs/program/wave-1.md`. Wave 2 dispatched: each card moves ready to in_progress, record revision 1 to 2, with attempt JL-0N-A1 and lease JL-0N-L1 over the files in its attempt record. Worktrees `/home/andrew/Projects/scrapkeep-wt-JL-05` to `-JL-08` at base d1c4a00, verified, each with the `node_modules` link. Writers: JL-05 and JL-08 on scrapkeep-writer (Opus 5.5), JL-06 and JL-07 on scrapkeep-writer-low (Sonnet 5), all high. Planned review: Fable 5.1 for JL-05; Opus 5.5 routine review for JL-06, JL-07 and JL-08. Active writers: four. |
+| EV-0496 | 2026-09-25T17:42:58+00:00 | Independent reviewer / review; coordinator / changes requested, assignment | JL-04 | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt), held blind to the prompt side, returned **FAIL** on 0927a31. The DoD items are met and every note was checked against its source lines, but A2 did not fully meet EV-0490's revision criterion: in five cases the dodge option's text names the telegraph ("marked spot"), so a text-only rule scores 5 of 5 without reading state, and the writer's neutrality scan had no pattern for it. The report is retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md). JL-04 moves in_progress to review to changes_requested to in_progress, record revision 5 to 8, as attempt JL-04-A3 under lease JL-04-L3 (L2 closed), resuming the same labeller. Requested: movement-only wording in the five cases; neutral wording on two losing options that state their own success; rule-bearing phrases moved from accepted options into state; cache prices and the regen fact moved into state; a `retreat_regen` case only if the sources support it; the lease record corrected; neutrality-scan patterns for telegraph and target words, with A2 as the negative control; and a new receipt, a text-only baseline that picks options from option text alone, which should score near chance. |
 
 ## Preparation checkpoint
 
@@ -1633,15 +1634,15 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 
 ## JL-04-A2 Jev Lab attempt
 
-- Assignee: the same scrapkeep-writer instance as JL-04-A1 (Opus 5.5 high), resumed so the labeller's isolated context is kept; card revision 1; attempt JL-04-A2; exclusive lease JL-04-L2 open (JL-04-L1 closed).
+- Assignee: the same scrapkeep-writer instance as JL-04-A1 (Opus 5.5 high), resumed so the labeller's isolated context is kept; card revision 1; attempt JL-04-A2; exclusive lease JL-04-L2 closed at the changes request (EV-0496).
 - Owned files: `tools/jev-player/corpus-blind.json`; `tools/jev-player/corpus-blind.PROVENANCE.md`; `artifacts/local/tasks/JL-04/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-04` on `wt/JL-04`, continuing from the A1 candidate.
 - Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`; A1 candidate `450ac1397f11d2ed288070a8950d1cbad9c0a947`.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:30:14+00:00; changes requested from the A1 review, resumed.
+- Candidate identity: `0927a3105ff7909fc8604ad0f72872097cbfeab3`. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:42:58+00:00; re-review FAIL, changes requested; superseded by JL-04-A3 (EV-0496).
 - Blockers: none.
 - Evidence: A1 review retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A1.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A1.md).
-- Review: planned re-review by a fresh scrapkeep-reviewer-medium (Opus 5.5), bound by the same blindness rules.
+- Review: fresh scrapkeep-reviewer-medium (claude-opus-5-5 per host prompt), **FAIL** on 0927a31; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md).
 
 ## JL-05-A1 Jev Lab attempt
 
@@ -1690,4 +1691,16 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-08/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-04-A3 Jev Lab attempt
+
+- Assignee: the same scrapkeep-writer instance as JL-04-A1 and A2 (Opus 5.5 high), resumed to keep the labeller's isolated context; card revision 1; attempt JL-04-A3; exclusive lease JL-04-L3 open.
+- Owned files: `tools/jev-player/corpus-blind.json`; `tools/jev-player/corpus-blind.PROVENANCE.md`; `artifacts/local/tasks/JL-04/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-04` on `wt/JL-04`, continuing from the A2 candidate 0927a31.
+- Base identity: `581f5f8d34c960e5feebbb913490e9165541263a`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:42:58+00:00; changes requested from the A2 re-review, resumed.
+- Blockers: none.
+- Evidence: A2 re-review retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md).
+- Review: planned fresh scrapkeep-reviewer-medium (Opus 5.5) under the blindness rules, plus the text-only baseline receipt.
 
