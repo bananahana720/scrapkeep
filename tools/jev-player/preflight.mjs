@@ -274,7 +274,8 @@ export function blindResult(report, instrument) {
     reason: report.gate.reason,
     cases: summary?.cases ?? 0,
     weighted: summary?.weighted ?? null,
-    severe_misses: summary?.severeMisses?.length ?? 0,
+    severe_misses:
+      summary?.severeMissCount ?? summary?.severeMisses?.length ?? 0,
     diagnostic: diagnosticResult(report.blind?.diagnostic),
   };
 }
@@ -286,7 +287,7 @@ function diagnosticResult(diagnostic) {
     cases: diagnostic.cases,
     weighted: diagnostic.weighted,
     plain_pass: diagnostic.plainPass,
-    severe_misses: diagnostic.severeMisses,
+    severe_misses: diagnostic.severeMissCount,
   };
 }
 
@@ -378,8 +379,13 @@ export async function readEpoch(instrument, dir = EPOCHS_ROOT) {
 }
 
 // Validity is recomputed, never read from the stored `valid` flag: the
-// controls count as passed only when every stored per-control result passed.
-export async function epochStatus(instrument, dir = EPOCHS_ROOT) {
+// controls count as passed only when every stored per-control result passed
+// and there is one result for each control in the controls file it names.
+export async function epochStatus(
+  instrument,
+  dir = EPOCHS_ROOT,
+  controlsDir = CONTROLS_DIR,
+) {
   if (instrument === null || typeof instrument !== "object")
     return { valid: false, reason: "the run carries no instrument" };
   const record = await readEpoch(instrument, dir);
@@ -395,6 +401,25 @@ export async function epochStatus(instrument, dir = EPOCHS_ROOT) {
     !results.every((result) => result?.passed === true)
   )
     return { valid: false, reason: "its controls failed" };
+  const version = record.controls.version;
+  let expected = null;
+  if (typeof version === "string" && /^[a-z0-9][a-z0-9-]*$/.test(version)) {
+    try {
+      expected = loadControls(version, controlsDir).controls.length;
+    } catch {
+      expected = null;
+    }
+  }
+  if (expected === null)
+    return {
+      valid: false,
+      reason: `its controls file ${version} cannot be read`,
+    };
+  if (results.length !== expected)
+    return {
+      valid: false,
+      reason: `it holds ${results.length} of the ${expected} control results ${version} expects`,
+    };
   if (record.blind?.passed !== true)
     return {
       valid: false,

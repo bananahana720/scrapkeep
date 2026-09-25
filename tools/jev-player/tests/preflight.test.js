@@ -377,12 +377,24 @@ test("blindResult keeps only the aggregate of a score report", () => {
           possible: 40,
           weighted: 0.75,
           plainPass: 8,
-          severeMisses: 1,
+          severeMissCount: 1,
         },
       },
     },
     instrument,
   );
+  const aggregated = blindResult(
+    {
+      ...report,
+      blind: {
+        gating: true,
+        summary: { cases: 24, weighted: 0.91, severeMissCount: 2 },
+        diagnostic: null,
+      },
+    },
+    instrument,
+  );
+  assert.equal(aggregated.severe_misses, 2);
   assert.deepEqual(withDiagnostic.diagnostic, {
     cases: 11,
     weighted: 0.75,
@@ -617,4 +629,29 @@ test("epochStatus derives the controls from each stored result, not the stored f
   delete record.controls.results;
   await writeEpochRecord(record, directory);
   assert.equal((await epochStatus(instrument, directory)).valid, false);
+});
+
+test("epochStatus requires one result for each control in the named controls file", async (t) => {
+  const directory = await scratch(t);
+  const { decideFn } = stub(sensible);
+  const passed = await runControls({ questions, decideFn, controls });
+  const record = epochRecord({
+    questions,
+    controls: passed,
+    blind: BLIND_PASSED,
+  });
+  record.controls.results = record.controls.results.slice(0, 2);
+  await writeEpochRecord(record, directory);
+  let status = await epochStatus(instrument, directory);
+  assert.equal(status.valid, false);
+  assert.match(status.reason, /2 of the 3 control results c1 expects/);
+
+  record.controls.results = [];
+  await writeEpochRecord(record, directory);
+  assert.equal((await epochStatus(instrument, directory)).valid, false);
+
+  record.controls.version = "../c1";
+  await writeEpochRecord(record, directory);
+  status = await epochStatus(instrument, directory);
+  assert.match(status.reason, /cannot be read/);
 });

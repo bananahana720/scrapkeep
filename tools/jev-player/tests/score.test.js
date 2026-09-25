@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -15,6 +16,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import {
+  aggregateSummary,
   buildReport,
   DIAGNOSTIC_FILE,
   gateVerdict,
@@ -24,6 +26,7 @@ import {
   parseArgs,
   REPORT_FILE,
   scoreCase,
+  scoreCorpora,
   subscore,
   summarize,
   validateCases,
@@ -175,7 +178,10 @@ test("the report keeps authored and blind apart and marks only blind as gating",
   assert.equal(report.authored.gating, false);
   assert.equal(report.blind.gating, true);
   assert.equal(report.authored.results.length, 1);
-  assert.equal(report.blind.results.length, 20);
+  assert.equal(report.blind.results, undefined, "blind keeps aggregates only");
+  assert.equal(report.blind.summary.cases, 20);
+  assert.equal(report.blind.summary.severeMissCount, 0);
+  assert.equal(report.blind.summary.severeMisses, undefined);
   assert.equal(report.gate.exit, 0);
   assert.equal(report.earned, undefined);
   assert.deepEqual(report.instrument, { questions_sha: "x" });
@@ -287,7 +293,7 @@ test("the state-diagnostic subscore aggregates the listed cases only, weighted a
     possible: 11,
     weighted: 4 / 11,
     plainPass: 2,
-    severeMisses: 1,
+    severeMissCount: 1,
   });
   assert.equal(subscore(records, []).weighted, null);
 });
@@ -353,4 +359,75 @@ test("--dry-run shows the subscore's case count and never an id", () => {
     (id) => result.stdout.includes(id) || result.stderr.includes(id),
   ).length;
   assert.equal(leaked, 0, "the dry run printed a state-diagnostic id");
+});
+
+// --- JL-18b: the blind section holds aggregates only --------------------------
+
+test("aggregateSummary turns every id list into its count", () => {
+  const summary = summarize([
+    ...passing(2),
+    missed("m1", "severe"),
+    scoreCase(kicker, decision({ ...floored, rawIntent: "hit_kicker" })),
+  ]);
+  const reduced = aggregateSummary(summary);
+  assert.equal(reduced.severeMissCount, 1);
+  assert.equal(reduced.modelMissCount, 1);
+  assert.equal(reduced.floorMissCount, 1);
+  assert.equal(reduced.floorRescueCount, 0);
+  for (const field of [
+    "severeMisses",
+    "modelMisses",
+    "floorMisses",
+    "floorRescues",
+  ])
+    assert.equal(reduced[field], undefined, field);
+  assert.deepEqual(reduced.byBlock, summary.byBlock);
+  assert.doesNotMatch(JSON.stringify(reduced), /"m1"|"b0"|"b1"/);
+});
+
+test("the live path with a stub decider never prints or writes a blind case id", async (t) => {
+  const directory = mkdtempSync(path.join(tmpdir(), "scrapkeep-score-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const source = loadAuthored();
+  const authored = source.slice(0, 2);
+  const blind = source.slice(2, 10).map((testCase, index) => ({
+    ...testCase,
+    id: `zq-blind-fixture-${index}`,
+    severity: index === 0 ? "severe" : testCase.severity,
+    note: `zq-blind-note-${index}`,
+  }));
+  const diagnostic = blind.slice(0, 3).map((testCase) => testCase.id);
+  let call = 0;
+  const decideFn = async (state, options) => {
+    call += 1;
+    const pick = call % 2 === 0 ? options[0].id : options.at(-1).id;
+    return decision({ intent: pick, rawIntent: pick, model: "jev-stub" });
+  };
+  const lines = [];
+  const reportFile = path.join(directory, "corpus-score.json");
+  const report = await scoreCorpora({
+    questions: { version: "stub" },
+    instrument: { questions_sha: "x" },
+    decideFn,
+    authored,
+    blind,
+    diagnostic,
+    reportFile,
+    print: (line) => lines.push(line),
+  });
+  assert.equal(call, authored.length + blind.length);
+  const printed = lines.join("\n");
+  const written = readFileSync(reportFile, "utf8");
+  const leaked = blind.filter(
+    (testCase) =>
+      printed.includes(testCase.id) || written.includes(testCase.id),
+  ).length;
+  assert.equal(leaked, 0, "a blind case id reached stdout or the report file");
+  assert.doesNotMatch(printed + written, /zq-blind/);
+  for (const testCase of authored) assert.ok(printed.includes(testCase.id));
+  assert.equal(report.blind.summary.cases, blind.length);
+  assert.equal(report.blind.diagnostic.cases, 3);
+  assert.match(printed, /State-diagnostic subscore weighted/);
+  assert.match(printed, /By block: /);
+  assert.deepEqual(JSON.parse(written).blind, report.blind);
 });

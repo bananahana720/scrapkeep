@@ -277,7 +277,7 @@ export function subscore(records, ids) {
     possible,
     weighted: possible === 0 ? null : earned / possible,
     plainPass: picked.filter((record) => record.passed).length,
-    severeMisses: picked.filter(
+    severeMissCount: picked.filter(
       (record) => !record.passed && record.severity === "severe",
     ).length,
   };
@@ -303,6 +303,24 @@ export function gateVerdict(blindSummary) {
   return { exit: 0, reason: "Blind corpus passes." };
 }
 
+// The blind summary without a case id: each id list becomes its count. Block
+// names are corpus sections, not cases, so the per-block counts stay.
+export function aggregateSummary(summary) {
+  const { severeMisses, modelMisses, floorMisses, floorRescues, ...rest } =
+    summary;
+  return {
+    ...rest,
+    severeMissCount: severeMisses.length,
+    modelMissCount: modelMisses.length,
+    floorMissCount: floorMisses.length,
+    floorRescueCount: floorRescues.length,
+  };
+}
+
+// The authored section keeps every scored case. The blind section keeps
+// aggregates only (plan section 1: blind results reach a question-set author
+// as numbers), so neither the report file nor the console ever holds a blind
+// case id. The gate is judged on the full blind summary before it is reduced.
 export function buildReport({
   authored,
   blind,
@@ -310,72 +328,116 @@ export function buildReport({
   when,
   diagnostic = null,
 }) {
-  const section = (records, gating) => ({
-    gating,
-    summary: summarize(records),
-    results: records,
-  });
-  const blindSection =
-    blind === null
-      ? null
-      : {
-          ...section(blind, true),
-          diagnostic: diagnostic === null ? null : subscore(blind, diagnostic),
-        };
+  const blindSummary = blind === null ? null : summarize(blind);
   return {
     when,
     instrument,
-    authored: section(authored, false),
-    blind: blindSection,
-    gate: gateVerdict(blindSection === null ? null : blindSection.summary),
+    authored: {
+      gating: false,
+      summary: summarize(authored),
+      results: authored,
+    },
+    blind:
+      blind === null
+        ? null
+        : {
+            gating: true,
+            summary: aggregateSummary(blindSummary),
+            diagnostic:
+              diagnostic === null ? null : subscore(blind, diagnostic),
+          },
+    gate: gateVerdict(blindSummary),
   };
 }
 
-function printSection(name, section) {
+function printSection(name, section, print = console.log) {
   const label = section.gating ? "gating" : "not gating";
-  console.log(`\n${name} corpus (${label})`);
-  for (const r of section.results) {
+  print(`\n${name} corpus (${label})`);
+  for (const r of section.results ?? []) {
     const mark = r.passed ? "PASS" : "FAIL";
     const raw = r.lowConfidence ? ` raw=${r.rawIntent}` : "";
-    console.log(
+    print(
       `${mark} ${r.id.padEnd(30)} got=${r.got.padEnd(16)} conf=${r.confidence.toFixed(2)} ${r.outcome}${raw}`,
     );
     if (r.gatedOut.length > 0) {
-      console.log(`     gated out in code: ${r.gatedOut.join(", ")}`);
+      print(`     gated out in code: ${r.gatedOut.join(", ")}`);
     }
     if (!r.passed) {
-      console.log(`     expected one of: ${r.expected.join(", ")}`);
+      print(`     expected one of: ${r.expected.join(", ")}`);
     }
   }
   const s = section.summary;
-  console.log(
+  const count = (list, total) => total ?? list.length;
+  print(
     `Severity-weighted ${s.earned}/${s.possible} (${(s.weighted * 100).toFixed(1)}%), plain ${s.plainPass}/${s.cases}`,
   );
-  console.log(
-    `Severe misses ${s.severeMisses.length}; model misses ${s.modelMisses.length}; floor misses ${s.floorMisses.length}; floor rescues ${s.floorRescues.length}`,
+  print(
+    `Severe misses ${count(s.severeMisses, s.severeMissCount)}; model misses ${count(s.modelMisses, s.modelMissCount)}; floor misses ${count(s.floorMisses, s.floorMissCount)}; floor rescues ${count(s.floorRescues, s.floorRescueCount)}`,
   );
-  console.log(
+  print(
+    `By block: ${Object.entries(s.byBlock)
+      .map(([block, tally]) => `${block} ${tally.pass}/${tally.total}`)
+      .join(", ")}`,
+  );
+  print(
     `Latency median ${s.latencyMedianMs} ms, max ${s.latencyMaxMs} ms; mean ${s.meanInputTokens} input tokens`,
   );
   const d = section.diagnostic;
   if (d !== undefined && d !== null) {
     const percent =
       d.weighted === null ? "n/a" : `${(d.weighted * 100).toFixed(1)}%`;
-    console.log(
-      `State-diagnostic subscore weighted ${d.earned}/${d.possible} (${percent}), plain ${d.plainPass}/${d.cases}; severe misses ${d.severeMisses}; ${d.cases} of ${d.listed} listed cases scored`,
+    print(
+      `State-diagnostic subscore weighted ${d.earned}/${d.possible} (${percent}), plain ${d.plainPass}/${d.cases}; severe misses ${d.severeMissCount}; ${d.cases} of ${d.listed} listed cases scored`,
     );
   }
 }
 
-async function scoreAll(cases, questions) {
+async function scoreAll(cases, questions, decideFn) {
   return Promise.all(
     cases.map(async (testCase) =>
       scoreCase(
         testCase,
-        await decide(testCase.state, testCase.options, { questions }),
+        await decideFn(testCase.state, testCase.options, { questions }),
       ),
     ),
   );
+}
+
+// The live path behind the CLI, with the decider, corpora, report file and
+// printer injectable so a test can run it offline. The diagnostic list loads
+// before any call, so a malformed list costs nothing.
+export async function scoreCorpora({
+  questions,
+  instrument,
+  decideFn = decide,
+  authored = loadAuthored(),
+  blind = loadBlind(),
+  diagnostic = blind === null ? null : loadDiagnostic(),
+  reportFile = REPORT_FILE,
+  print = console.log,
+  when = new Date().toISOString(),
+}) {
+  const report = buildReport({
+    when,
+    instrument,
+    authored: await scoreAll(authored, questions, decideFn),
+    blind: blind === null ? null : await scoreAll(blind, questions, decideFn),
+    diagnostic,
+  });
+  printSection("Authored", report.authored, print);
+  if (report.blind === null) {
+    print("\nBlind corpus: absent.");
+  } else {
+    printSection("Blind", report.blind, print);
+  }
+  print(`\nGate: ${report.gate.reason} (exit ${report.gate.exit})`);
+  mkdirSync(path.dirname(reportFile), { recursive: true });
+  writeFileSync(reportFile, JSON.stringify(report, null, 2));
+  print(`Report: ${reportFile}`);
+  print(
+    "Corpus agreement only. It says nothing about whether the game is fun.",
+  );
+  return report;
 }
 
 function dryRun(questions) {
@@ -445,30 +507,7 @@ async function main(argv) {
   if (options.dryRun) {
     process.exit(dryRun(questions));
   }
-  const blindCases = loadBlind();
-  const diagnostic = blindCases === null ? null : loadDiagnostic();
-  const report = buildReport({
-    when: new Date().toISOString(),
-    instrument,
-    authored: await scoreAll(loadAuthored(), questions),
-    blind: blindCases === null ? null : await scoreAll(blindCases, questions),
-    diagnostic,
-  });
-
-  printSection("Authored", report.authored);
-  if (report.blind === null) {
-    console.log("\nBlind corpus: absent.");
-  } else {
-    printSection("Blind", report.blind);
-  }
-  console.log(`\nGate: ${report.gate.reason} (exit ${report.gate.exit})`);
-
-  mkdirSync(path.dirname(REPORT_FILE), { recursive: true });
-  writeFileSync(REPORT_FILE, JSON.stringify(report, null, 2));
-  console.log(`Report: ${REPORT_FILE}`);
-  console.log(
-    "Corpus agreement only. It says nothing about whether the game is fun.",
-  );
+  const report = await scoreCorpora({ questions, instrument });
   process.exit(report.gate.exit);
 }
 
