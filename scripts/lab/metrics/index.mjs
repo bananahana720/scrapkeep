@@ -1,4 +1,5 @@
 import ballLab from "./ball-lab.mjs";
+import cableBench, { measure as cableBenchMeasure } from "./cable-bench.mjs";
 import core from "./core.mjs";
 import tdd from "./tdd.mjs";
 import program from "./program.mjs";
@@ -73,7 +74,29 @@ export function mergeLayers(...layers) {
 
 export const METRICS = mergeLayers(ballLab, core, tdd, program, human);
 
-const REGISTRY = new Map(METRICS.map((metric) => [metric.id, metric]));
+// Stage layers outside the plan's table, keyed by sketch name (JL-26). A batch
+// on that sketch records against METRICS plus the stage's own metrics, and the
+// stage's measure() turns its scenario results into values.
+export const STAGES = Object.freeze({
+  "cable-bench": Object.freeze({
+    metrics: mergeLayers(cableBench),
+    measure: cableBenchMeasure,
+  }),
+});
+
+const ALL = [
+  METRICS,
+  ...Object.values(STAGES).map((stage) => stage.metrics),
+].flat();
+// Refuses a stage id that collides with the plan's or another stage's.
+mergeLayers(ALL);
+
+export function registryFor(sketch) {
+  if (!Object.hasOwn(STAGES, sketch)) return METRICS;
+  return Object.freeze([...METRICS, ...STAGES[sketch].metrics]);
+}
+
+const REGISTRY = new Map(ALL.map((metric) => [metric.id, metric]));
 
 export function getMetric(id) {
   const metric = REGISTRY.get(id);
