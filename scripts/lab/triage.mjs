@@ -123,8 +123,14 @@ function environmentSecrets(env = process.env) {
 
 const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const SECRET_NAME = "[A-Za-z0-9_]*(?:api[_-]?key|token|secret|passw(?:or)?d|passphrase|credential)[A-Za-z0-9_]*";
+// input_tokens: 6716243 is a count, not a credential.
+const isCount = (name) => /tokens$/i.test(name);
+
 const TOKEN_PATTERNS = [
-  [/\b(Bearer|Basic|Token)\s+[A-Za-z0-9._~+/=-]{8,}/g, "$1 <redacted>"],
+  [/\b(Bearer)\s+[A-Za-z0-9._~+/=-]{8,}/gi, "$1 <redacted>"],
+  [/\b(authorization\s*[:=]\s*(?:basic|token|digest))\s+[A-Za-z0-9._~+/=-]{8,}/gi, "$1 <redacted>"],
+  [/\b(Basic|Token)\s+[A-Za-z0-9._~+/=-]{8,}/g, "$1 <redacted>"],
   [/\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}/g, "<redacted>"],
   [/\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/g, "<redacted>"],
   [/\b(?:ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{20,}/g, "<redacted>"],
@@ -132,11 +138,15 @@ const TOKEN_PATTERNS = [
   [/\bAKIA[0-9A-Z]{16}\b/g, "<redacted>"],
   [/\bAIza[0-9A-Za-z_-]{35}\b/g, "<redacted>"],
   [/\b[a-z]{2,8}_(?:live|test|prod)_[A-Za-z0-9]{12,}/g, "<redacted>"],
+  // Quoted values, JSON or not: "password": "two words", 'secret': 'x'.
   [
-    /\b([A-Za-z0-9_]*(?:api[_-]?key|token|secret|passw(?:or)?d|passphrase|credential)[A-Za-z0-9_]*)(\s*[:=]\s*)(['"]?)([^\s'"]{6,})\3/gi,
-    // input_tokens: 6716243 is a count, not a credential.
-    (whole, name, separator, quote) =>
-      /tokens$/i.test(name) ? whole : `${name}${separator}${quote}<redacted>${quote}`,
+    new RegExp(`(["']?)\\b(${SECRET_NAME})\\1(\\s*[:=]\\s*)(["'])((?:(?!\\4)[^\\n])+)\\4`, "gi"),
+    (whole, nameQuote, name, separator, quote) =>
+      isCount(name) ? whole : `${nameQuote}${name}${nameQuote}${separator}${quote}<redacted>${quote}`,
+  ],
+  [
+    new RegExp(`\\b(${SECRET_NAME})(\\s*[:=]\\s*)([^\\s'"<]{6,})`, "gi"),
+    (whole, name, separator) => (isCount(name) ? whole : `${name}${separator}<redacted>`),
   ],
   [
     /\b((?:one[- ]time|verification|security|login|confirmation|2fa|mfa|otp)(?:\s+(?:code|pin|passcode))?\s*(?:is|:|=)?\s*)\d{4,8}\b/gi,
@@ -146,7 +156,10 @@ const TOKEN_PATTERNS = [
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g, "<email>"],
 ];
 
-const HOME_PATH = /(\/home\/[^/\s'"`]+|\/Users\/[^/\s'"`]+|\/root)(\/[^\s'"`)\]]*)?/g;
+// A path stops at a list separator, so /x:/home/y is two paths, and each is
+// judged on its own.
+const HOME_PATH =
+  /(\/home\/[^/\s'"`:;,]+|\/Users\/[^/\s'"`:;,]+|\/root(?=[/\s'"`:;,)\]]|$))(\/[^\s'"`)\]:;,]*)?/g;
 
 // Worktrees of this project live beside the main checkout as <name>-wt-<id>
 // or inside it under .claude/worktrees/<id>; all of them read as <repo>.
@@ -314,13 +327,14 @@ export async function triage(
     timeoutMs = TIMEOUT_MS,
     repoRoot = repositoryRoot,
     model = MODEL,
+    secrets: extraSecrets = [],
   } = {},
 ) {
   let resolvedKey = null;
   if (call === undefined) {
     resolvedKey = key === undefined ? apiKey() : key;
   }
-  const secrets = [...environmentSecrets(), ...(resolvedKey ? [resolvedKey] : [])];
+  const secrets = [...environmentSecrets(), ...extraSecrets, ...(resolvedKey ? [resolvedKey] : [])];
   let state;
   try {
     state = buildState(input ?? {}, { repoRoot, secrets });
@@ -442,10 +456,14 @@ export function scoreCases(cases, verdicts, weights) {
     } else {
       misses.push({ id: item.id, want: item.cause, got: verdict.cause, rerun_safe: verdict.rerun_safe });
     }
-    if (item.cause === "real_regression" && (FLAKE_LIKE.has(verdict.cause) || verdict.rerun_safe === true)) {
+    // A case that may be a regression is severe to call a flake, whichever
+    // cause its label settled on.
+    if (item.accept.includes("real_regression") && (FLAKE_LIKE.has(verdict.cause) || verdict.rerun_safe === true)) {
       severe.push(item.id);
     }
-    if (item.control === true && verdict.cause !== "real_regression") {
+    // A fallback also says real_regression; during an outage that must not
+    // read as the control passing.
+    if (item.control === true && (verdict.cause !== "real_regression" || verdict.source !== "jev")) {
       controlsFailed.push(item.id);
     }
   }
@@ -475,10 +493,17 @@ function sumUsage(verdicts) {
   return totals;
 }
 
-async function scoreFiles(files, { out, maxCalls, cacheDir, logFile }) {
+// How each set was made, carried into every score line and score.json.
+export const SCORE_LABELS = {
+  authored: "authored (question wording changed after one authored probe; not gated)",
+  blind: "blind to Jev output, labelled by the prompt author; burned for future wording changes",
+};
+
+export async function scoreFiles(
+  files,
+  { out, maxCalls, cacheDir, logFile, key = apiKey(), live = key === null ? null : jevCaller(key) },
+) {
   let calls = 0;
-  const key = apiKey();
-  const live = key === null ? null : jevCaller(key);
   const capped = async (request) => {
     if (live === null) throw new Error("no TypeSafe key");
     if (calls >= maxCalls) {
@@ -496,14 +521,17 @@ async function scoreFiles(files, { out, maxCalls, cacheDir, logFile }) {
     for (const item of corpus.cases) {
       verdicts[item.id] = await triage(
         { check: item.check, log: item.log, diff: item.diff },
-        { call: capped, cacheDir, logFile },
+        { call: capped, cacheDir, logFile, secrets: key ? [key] : [] },
       );
       const v = verdicts[item.id];
       console.log(`${path.basename(file)} ${item.id}: ${v.cause} rerun_safe=${v.rerun_safe} ${v.source}${v.cached ? " cached" : ""} (want ${item.accept.join("|")})`);
     }
     const all = Object.values(verdicts);
+    const role = corpus.role ?? (corpus.labelled_before_any_jev_call === true ? "blind" : "authored");
     report.corpora[path.basename(file)] = {
       file,
+      role,
+      label: SCORE_LABELS[role],
       summary: scoreCases(corpus.cases, verdicts, corpus.weights),
       models: [...new Set(all.map((v) => v.model).filter(Boolean))],
       usage_totals: sumUsage(all),
@@ -541,9 +569,9 @@ export async function main(argv = process.argv.slice(2)) {
       cacheDir: values.cache,
       logFile: values["calls-log"],
     });
-    for (const [name, { summary, models, usage_totals }] of Object.entries(report.corpora)) {
+    for (const [name, { label, summary, models, usage_totals }] of Object.entries(report.corpora)) {
       console.log(
-        `${name}: weighted ${summary.earned}/${summary.possible} (${(summary.weighted * 100).toFixed(1)}%), cause ${(summary.cause_agreement * 100).toFixed(1)}%, severe misses ${summary.severe_misses.length}, control ${summary.control.passed ? "pass" : "fail"}, fallbacks ${summary.fallbacks}, models ${models.join(",")}, usage ${JSON.stringify(usage_totals)}`,
+        `${name} [${label}]: weighted ${summary.earned}/${summary.possible} (${(summary.weighted * 100).toFixed(1)}%), cause ${(summary.cause_agreement * 100).toFixed(1)}%, severe misses ${summary.severe_misses.length}, control ${summary.control.passed ? "pass" : "fail"}, fallbacks ${summary.fallbacks}, models ${models.join(",")}, usage ${JSON.stringify(usage_totals)}`,
       );
     }
     console.log(`calls ${report.calls}; report ${target}`);

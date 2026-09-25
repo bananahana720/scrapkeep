@@ -5,7 +5,8 @@
     "moderate": 2,
     "minor": 1
   },
-  "severity_rule": "A case whose cause is real_regression is severe (weight 5): calling it timing_flake or infra, or calling it safe to rerun, is a severe miss because the flake story would hide a broken build. Every other case is moderate (weight 2): a flake called a regression costs an investigation, a wrong fix owner costs a detour. Minor (weight 1) is reserved for taste-only disagreements and is unused so far. A case passes when the cause is in accept and, where rerun_safe is not null, the rerun verdict matches.",
+  "role": "authored",
+  "severity_rule": "A case whose accept list includes real_regression is severe (weight 5), whatever its labelled cause: calling it timing_flake or infra, or calling it safe to rerun, is a severe miss because the flake story would hide a broken build. Revised at JL-19 review: the rule first keyed on the labelled cause alone, which left crash-godot-abort-after-edit (cause engine_crash, accept engine_crash or real_regression) moderate; it is now severe, and past scores were recomputed from the cached verdicts. Every other case is moderate (weight 2): a flake called a regression costs an investigation, a wrong fix owner costs a detour. Minor (weight 1) is reserved for taste-only disagreements and is unused so far. A case passes when the cause is in accept and, where rerun_safe is not null, the rerun verdict matches.",
   "cases": [
     {
       "control": false,
@@ -243,7 +244,7 @@
         "real_regression"
       ],
       "rerun_safe": false,
-      "severity": "moderate",
+      "severity": "severe",
       "note": "The engine aborted, and the diff frees a node inside a physics callback, which plausibly caused it. Either reading is defensible; a flake call is not.",
       "check": "sketches/ball-lab/tests/mode_check.gd",
       "log": "FAIL ball-lab mode_check.gd exit=null\nGodot Engine v4.5.1.stable.arch_linux - https://godotengine.org\n\nERROR: Condition \"!is_inside_tree()\" is true. Returning: Transform3D()\n   at: get_global_transform (scene/3d/node_3d.cpp:361)\nFATAL: Index p_index = 2 is out of bounds (size() = 2).\n   at: get (./core/templates/cowdata.h:205)\n================================================================\nhandle_crash: Program crashed with signal 6\nEngine version: Godot Engine v4.5.1.stable.arch_linux\nDumping the backtrace. Please include this when reporting the bug to the project developer.\n[1] /usr/lib/libc.so.6(+0x3e710) [0x7f3a1c23e710] (??:0)\n[2] /usr/bin/godot(+0x4c1a2f3) [0x55d0e8c1a2f3] (??:0)\n[3] /usr/bin/godot(+0x2b01c77) [0x55d0e6b01c77] (??:0)\n[4] /usr/bin/godot(+0x1f4e2a0) [0x55d0e5f4e2a0] (??:0)\n-- END OF BACKTRACE --\n================================================================\n",

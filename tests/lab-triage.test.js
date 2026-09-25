@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   CAUSES,
   FLAKE_LIKE,
+  SCORE_LABELS,
   buildQuestions,
   buildState,
   cacheKey,
@@ -16,6 +18,7 @@ import {
   rerunAdvisory,
   ruleVerdict,
   scoreCases,
+  scoreFiles,
   triage,
 } from "../scripts/lab/triage.mjs";
 import { aggregateOutcomes, flakeRate } from "../scripts/play.mjs";
@@ -102,6 +105,84 @@ test("redaction strips keys, tokens, bearer headers, one-time codes and emails",
     assert.ok(!out.includes(leaked), `leaked ${leaked}`);
   }
   assert.match(out, /Authorization: Bearer <redacted>/);
+});
+
+test("redaction ignores the case of a bearer header", () => {
+  const opaque = "opaque" + "Value0123456789";
+  const out = redact(`authorization: bearer ${opaque}\nAUTHORIZATION: BEARER ${opaque}`, {
+    secrets: [],
+  });
+  assert.ok(!out.includes(opaque), out);
+});
+
+test("redaction strips JSON-quoted and single-quoted secrets", () => {
+  const values = ["k3y-value-one", "pw with spaces", "tok-abc", "s3cr3t-single", "x"];
+  const text = [
+    `{"api_key": "${values[0]}", "password": "${values[1]}", "token":"${values[2]}"}`,
+    `{'secret': '${values[3]}'}`,
+    `{"password": "${values[4]}"}`,
+  ].join("\n");
+  const out = redact(text, { secrets: [] });
+  for (const value of values) {
+    assert.ok(!out.includes(`"${value}"`) && !out.includes(`'${value}'`), `leaked ${value}: ${out}`);
+  }
+  assert.match(out, /"api_key": "<redacted>"/);
+  const counts = `{"input_tokens": 400, "output_tokens": 79}`;
+  assert.equal(redact(counts, { secrets: [] }), counts);
+});
+
+test("redaction strips every home path in a string, including one after a colon", () => {
+  const repoRoot = "/home/someone/Projects/scrapkeep-wt-JL-19";
+  const out = redact(
+    "PATH=/home/someone/Projects/scrapkeep/x:/home/someone/.npm:/home/someone/bin;/Users/other/lib,/root/.cache",
+    { repoRoot, secrets: [] },
+  );
+  assert.ok(!out.includes("/home/someone"), out);
+  assert.ok(!out.includes("/Users/other"), out);
+  assert.ok(!out.includes("/root"), out);
+  assert.match(out, /^PATH=<repo>\/x:<home-path>:<home-path>;<home-path>,<home-path>$/);
+});
+
+test("score mode redacts the resolved TypeSafe key even with an injected caller", async () => {
+  const s = await scratch();
+  // A shape no pattern recognises, so only the literal-secret list can catch it.
+  const key = "Zq8Vw3Lm9" + "Rt2Yp6Kd4ScoreModeKey";
+  const corpus = path.join(s.dir, "corpus.json");
+  await writeFile(
+    corpus,
+    JSON.stringify({
+      weights: { severe: 5, moderate: 2, minor: 1 },
+      severity_rule: "regression",
+      cases: [
+        {
+          id: "echoed-key",
+          cause: "infra",
+          accept: ["infra"],
+          rerun_safe: null,
+          severity: "moderate",
+          check: "c",
+          log: `request failed; the client echoed ${key} in its debug line`,
+          diff: "",
+        },
+      ],
+    }),
+  );
+  const seen = [];
+  const { report } = await scoreFiles([corpus], {
+    out: path.join(s.dir, "out"),
+    maxCalls: 1,
+    cacheDir: s.cacheDir,
+    logFile: s.logFile,
+    key,
+    live: async (request) => {
+      seen.push(JSON.stringify(request));
+      return jevReply("infra", 0.9);
+    },
+  });
+  assert.equal(seen.length, 1);
+  assert.ok(!seen[0].includes(key), "the resolved key never reaches the call");
+  assert.equal(report.calls, 1);
+  await s.done();
 });
 
 test("redaction keeps token counts, exit codes and test durations", () => {
@@ -364,11 +445,12 @@ test("the authored corpus is labelled, weighted and redacted, with a control", a
     assert.ok(typeof item.provenance === "string", item.id);
     assert.equal(redact(item.log), item.log, `${item.id} log is pre-redacted`);
     assert.equal(redact(item.diff), item.diff, `${item.id} diff is pre-redacted`);
-    if (item.cause === "real_regression") {
-      assert.equal(item.severity, "severe", `${item.id} regression is severe`);
+    if (item.accept.includes("real_regression")) {
+      assert.equal(item.severity, "severe", `${item.id} may be a regression, so it is severe`);
       assert.equal(item.rerun_safe, false, item.id);
     }
   }
+  assert.match(corpus.severity_rule, /accept/);
   const controls = corpus.cases.filter((item) => item.control === true);
   assert.ok(controls.length >= 1);
   for (const control of controls) {
@@ -407,7 +489,64 @@ test("scoring weights misses and names a regression called a flake as severe", (
   assert.equal(summary.fallbacks, 0);
 });
 
-test("nothing on the gate path imports triage", async () => {
+test("a flake answer on a case that may be a regression is severe whatever its labelled cause", () => {
+  const weights = { severe: 5, moderate: 2, minor: 1 };
+  const cases = [
+    { id: "a1", cause: "engine_crash", accept: ["engine_crash", "real_regression"], rerun_safe: false, severity: "severe" },
+    { id: "a2", cause: "engine_crash", accept: ["engine_crash", "real_regression"], rerun_safe: false, severity: "severe" },
+    { id: "a3", cause: "engine_crash", accept: ["engine_crash", "infra"], rerun_safe: null, severity: "moderate" },
+  ];
+  const verdicts = {
+    a1: { cause: "infra", rerun_safe: false, source: "jev" },
+    a2: { cause: "engine_crash", rerun_safe: true, source: "jev" },
+    a3: { cause: "timing_flake", rerun_safe: true, source: "jev" },
+  };
+  assert.deepEqual(scoreCases(cases, verdicts, weights).severe_misses, ["a1", "a2"]);
+});
+
+test("a control passes only when Jev itself answered it", () => {
+  const weights = { severe: 5, moderate: 2, minor: 1 };
+  const control = { id: "c1", cause: "real_regression", accept: ["real_regression"], rerun_safe: false, severity: "severe", control: true };
+  const outage = scoreCases([control], { c1: ruleVerdict("Jev unavailable") }, weights);
+  assert.deepEqual(outage.control, { passed: false, failed: ["c1"] });
+  const cached = scoreCases([control], { c1: { cause: "real_regression", rerun_safe: false, source: "jev", cached: true } }, weights);
+  assert.deepEqual(cached.control, { passed: true, failed: [] });
+});
+
+test("score labels name how each set was made", () => {
+  assert.equal(
+    SCORE_LABELS.authored,
+    "authored (question wording changed after one authored probe; not gated)",
+  );
+  assert.equal(
+    SCORE_LABELS.blind,
+    "blind to Jev output, labelled by the prompt author; burned for future wording changes",
+  );
+});
+
+// Follows static and dynamic relative import specifiers within the repo.
+async function reachable(entry) {
+  const seen = new Set();
+  const pending = [path.join(root, entry)];
+  const specifier =
+    /(?:\bimport|\bexport)\s[^;]*?\bfrom\s*["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)|\bimport\s+["']([^"']+)["']/g;
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const text = await readFile(file, "utf8");
+    for (const match of text.matchAll(specifier)) {
+      const target = match[1] ?? match[2] ?? match[3];
+      if (!target.startsWith(".")) continue;
+      const resolved = path.resolve(path.dirname(file), target);
+      if (resolved.startsWith(root) && existsSync(resolved)) pending.push(resolved);
+    }
+  }
+  return seen;
+}
+
+test("no import chain from the gate path reaches triage", async () => {
+  const triageFile = path.join(root, "scripts/lab/triage.mjs");
   const gatePath = [
     "scripts/verify.mjs",
     "scripts/play.mjs",
@@ -415,10 +554,13 @@ test("nothing on the gate path imports triage", async () => {
     "scripts/lab/record.mjs",
     "scripts/lab/harness.mjs",
   ];
-  for (const file of gatePath) {
-    const text = await readFile(path.join(root, file), "utf8");
-    assert.ok(!text.includes("triage"), `${file} must not depend on triage`);
+  for (const entry of gatePath) {
+    const files = await reachable(entry);
+    assert.ok(!files.has(triageFile), `${entry} reaches triage.mjs`);
   }
-  const lab = await readdir(path.join(root, "scripts/lab"));
-  assert.ok(lab.includes("triage.mjs"));
+  const fromPlay = await reachable("scripts/play.mjs");
+  assert.ok(fromPlay.has(path.join(root, "scripts/lab/record.mjs")), "the walk follows imports");
+  assert.ok(fromPlay.has(path.join(root, "scripts/lab/metrics/core.mjs")), "the walk goes transitive");
+  const fromTest = await reachable("tests/lab-triage.test.js");
+  assert.ok(fromTest.has(triageFile), "the walk would see triage if it were imported");
 });
