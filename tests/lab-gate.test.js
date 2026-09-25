@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { STATUS } from "../scripts/lab/metrics/status.mjs";
 import { METRICS } from "../scripts/lab/metrics/index.mjs";
 import { SCHEMA, createRun } from "../scripts/lab/record.mjs";
+import { sourceName } from "../scripts/lab/gate.mjs";
 import {
   instrumentIdentity,
   loadQuestionSet,
@@ -517,6 +518,7 @@ test("a pin copy leaves out sources.json, run-owner.json and per-trial directori
     "verdicts.ndjson",
   ]);
   const meta = JSON.parse(await readFile(path.join(pin, "pin.json")));
+  assert.equal(meta.source, run.id, "a run outside the repository goes by id");
   assert.deepEqual(meta.omitted.sort(), [
     "run-owner.json",
     "sources.json",
@@ -633,7 +635,11 @@ test("a rigid batch is not held to trace equality and needs n >= 20 on each side
   const passed = gate(flipped, "--against", "rigid");
   assert.equal(passed.code, 0, passed.out + passed.err);
   assert.match(passed.out, /trace equality not gated: rigid physics/);
-  assert.match(passed.out, /nondeterminism floor 0.05/);
+  assert.match(
+    passed.out,
+    /n ≥ 20 on each side \(20 and 20 trials\); no rate compared until JL-28; nondeterminism floor 0.05 applies to the unreachable check/,
+  );
+  assert.doesNotMatch(passed.out, /distributions over/);
 
   const thin = await write(
     batch("thin", { mode: "rigid", trials: 10, success: 7 }),
@@ -700,4 +706,83 @@ test("a scenario the pin reached and the candidate never reached is a regression
   const exempt = gate(none, "--against", "bench");
   assert.equal(exempt.code, 0, exempt.out + exempt.err);
   assert.match(exempt.out, /unreachable_scenarios not counted for bench-climb/);
+});
+
+// --- JL-25 review F3 and F7: pin.json subject and source ----------------------
+
+test("pin.json names its source run repository-relative, never by machine path", () => {
+  const inside = path.join(root, "artifacts/local/runs/20260925T000000Z-x");
+  assert.equal(
+    sourceName(inside, "20260925T000000Z-x"),
+    "artifacts/local/runs/20260925T000000Z-x",
+  );
+  assert.equal(sourceName(path.join(os.tmpdir(), "runs/r1"), "r1"), "r1");
+});
+
+test("--pin --subject-commit/--subject-path records the tree the run measured", async (t) => {
+  const { artifacts, write, gate } = await fixture(t);
+  const run = record("exported-tree");
+  await write(run);
+  const git = (...args) =>
+    spawnSync("git", args, { cwd: root, encoding: "utf8" }).stdout.trim();
+  const commit = git("rev-parse", "HEAD");
+  const result = gate(
+    "--pin",
+    run.id,
+    "--as",
+    "exported",
+    "--subject-commit",
+    "HEAD",
+    "--subject-path",
+    "scripts/lab",
+  );
+  assert.equal(result.code, 0, result.out + result.err);
+  const [day] = await pinDirectories(artifacts);
+  const meta = JSON.parse(
+    await readFile(path.join(artifacts, day, "pins/exported/pin.json")),
+  );
+  assert.deepEqual(meta.subject, {
+    commit,
+    path: "scripts/lab",
+    tree_oid: git("rev-parse", `${commit}:scripts/lab`),
+    method: "git archive export",
+  });
+
+  const plain = gate("--pin", run.id, "--as", "plain");
+  assert.equal(plain.code, 0, plain.out + plain.err);
+  const bare = JSON.parse(
+    await readFile(path.join(artifacts, day, "pins/plain/pin.json")),
+  );
+  assert.equal(bare.subject, undefined);
+
+  const refused = {
+    "commit without path": ["--subject-commit", "HEAD"],
+    "path without commit": ["--subject-path", "scripts/lab"],
+    "unknown commit": [
+      "--subject-commit",
+      "0".repeat(40),
+      "--subject-path",
+      "scripts/lab",
+    ],
+    "path not in the commit": [
+      "--subject-commit",
+      "HEAD",
+      "--subject-path",
+      "no/such/dir",
+    ],
+  };
+  for (const [name, flags] of Object.entries(refused)) {
+    const attempt = gate("--pin", run.id, "--as", `x-${name.length}`, ...flags);
+    assert.equal(attempt.code, 2, `${name}: ${attempt.out}${attempt.err}`);
+  }
+  const gating = gate(
+    run.id,
+    "--against",
+    "plain",
+    "--subject-commit",
+    "HEAD",
+    "--subject-path",
+    "scripts/lab",
+  );
+  assert.equal(gating.code, 2, "subject flags need --pin");
 });

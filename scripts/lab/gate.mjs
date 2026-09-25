@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -38,8 +39,9 @@ export const ANCHOR = "andrew-anchor";
 
 // Revision 2 (EV-0546, JL-21 review F2): rigid (Jolt) runs flip about 1 trial
 // in 20 on the same seed, so only kinematic records are held to exact trace
-// equality; rigid records gate on distributions over at least RIGID_MIN_N
-// trials, and a change no larger than the floor is not read as a regression.
+// equality. Rigid records need at least RIGID_MIN_N trials on each side, and
+// a lost scenario the pin reached no more often than the floor is not read as
+// a regression. No batch rate is compared yet; JL-28 owns that metric.
 export const RIGID_FLOOR = 0.05;
 export const RIGID_MIN_N = 20;
 
@@ -65,7 +67,7 @@ export const PIN_OMITS = Object.freeze([
 const LIKE_FOR_LIKE = ["scenario", "arm", "snapshot_every", "hold_ticks"];
 
 const USAGE = `Usage:
-  node scripts/lab/gate.mjs --pin <run_id> --as <name> [--runs dir] [--artifacts dir] [--epochs dir]
+  node scripts/lab/gate.mjs --pin <run_id> --as <name> [--subject-commit rev --subject-path path] [--runs dir] [--artifacts dir] [--epochs dir]
   node scripts/lab/gate.mjs <run_id|run dir> --against <pin name|pin dir> [--runs dir] [--artifacts dir] [--epochs dir]
 Exit codes: 0 pass, 1 a metric past its fail limit or a conclusive regression, 2 usage, 3 inconclusive, 4 instrument invalid.`;
 
@@ -399,7 +401,7 @@ function againstBatch(candidate, pin, name, tty) {
       after >= RIGID_MIN_N && before >= RIGID_MIN_N
         ? outcome(
             EXIT.pass,
-            `distributions over ${after} and ${before} trials; nondeterminism floor ${RIGID_FLOOR} (1 trial in 20), tolerance ${TOLERANCE}`,
+            `n ≥ ${RIGID_MIN_N} on each side (${after} and ${before} trials); no rate compared until JL-28; nondeterminism floor ${RIGID_FLOOR} applies to the unreachable check`,
           )
         : outcome(
             EXIT.inconclusive,
@@ -470,9 +472,48 @@ async function pinName(directory) {
 // A run that carries an instrument identity is pinnable only when that
 // epoch's record shows passed controls and a passed blind corpus (plan § 4).
 // A run without one (no jev arm) has no epoch to prove.
+// When a record measured a tree other than its provenance head (andrew-anchor
+// is a suite on a git-archive export of dc94b2c), pin.json names that tree:
+// the full commit, the path and the path's git tree OID.
+export function subjectOf(commit, subjectPath, repository = repositoryRoot) {
+  const git = (...args) =>
+    spawnSync("git", args, { cwd: repository, encoding: "utf8" });
+  const resolved = git(
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `${commit}^{commit}`,
+  );
+  if (resolved.status !== 0)
+    throw new UsageError(`subject commit ${commit} is not a commit`);
+  const full = resolved.stdout.trim();
+  const tree = git(
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `${full}:${subjectPath}`,
+  );
+  if (tree.status !== 0)
+    throw new UsageError(`subject path ${subjectPath} is not in ${full}`);
+  return {
+    commit: full,
+    path: subjectPath,
+    tree_oid: tree.stdout.trim(),
+    method: "git archive export",
+  };
+}
+
+// pin.json names its source run by a repository-relative path, or by the run
+// id when the run lies outside the repository, never a machine path.
+export function sourceName(source, id) {
+  const relative = path.relative(repositoryRoot, source);
+  return relative.startsWith("..") || path.isAbsolute(relative) ? id : relative;
+}
+
 async function pinRun({
   reference,
   name,
+  subject,
   runs,
   artifacts,
   epochs,
@@ -481,6 +522,8 @@ async function pinRun({
   err,
 }) {
   if (!slug.test(name)) throw new UsageError(`pin name ${name} is not a slug`);
+  const subjectBlock =
+    subject === null ? null : subjectOf(subject.commit, subject.path);
   const source = await resolveRun(reference, runs);
   const record = await readRun(source);
   const instrument = record?.provenance?.instrument ?? null;
@@ -523,9 +566,10 @@ async function pinRun({
       {
         name,
         run_id: record.id,
-        source,
+        source: sourceName(source, record.id),
         pinned_at: new Date().toISOString(),
         omitted,
+        ...(subjectBlock === null ? {} : { subject: subjectBlock }),
       },
       null,
       2,
@@ -601,6 +645,8 @@ export async function main(
         options: {
           pin: { type: "string" },
           as: { type: "string" },
+          "subject-commit": { type: "string" },
+          "subject-path": { type: "string" },
           against: { type: "string" },
           runs: { type: "string" },
           artifacts: { type: "string" },
@@ -622,6 +668,18 @@ export async function main(
       err,
     };
     const pinning = values.pin !== undefined || values.as !== undefined;
+    const [subjectCommit, subjectPath] = [
+      values["subject-commit"],
+      values["subject-path"],
+    ];
+    if ((subjectCommit === undefined) !== (subjectPath === undefined))
+      throw new UsageError("--subject-commit and --subject-path go together");
+    if (subjectCommit !== undefined && !pinning)
+      throw new UsageError("--subject-commit and --subject-path need --pin");
+    const subject =
+      subjectCommit === undefined
+        ? null
+        : { commit: subjectCommit, path: subjectPath };
     if (
       pinning &&
       values.pin &&
@@ -633,6 +691,7 @@ export async function main(
         ...common,
         reference: values.pin,
         name: values.as,
+        subject,
       });
     if (!pinning && values.against && positionals.length === 1)
       return await gateRun({
