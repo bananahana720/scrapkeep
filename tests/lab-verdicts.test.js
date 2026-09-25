@@ -33,6 +33,23 @@ test("the real verdicts file validates against the real log", async () => {
   assert.equal(ok, true);
 });
 
+// Counts PLAYTEST-LOG's numbered "## N." entry headings and checks the real
+// verdicts file carries exactly one line per number, so a future entry
+// cannot be silently skipped the way JL-07-A1 nearly skipped entry 2.
+test("the real file has exactly one line per PLAYTEST-LOG entry", async () => {
+  const logText = await readFile(REAL_LOG, "utf8");
+  const headingEntries = [...logText.matchAll(/^##\s+(\d+)\./gm)]
+    .map((match) => Number(match[1]))
+    .sort((a, b) => a - b);
+
+  const ndjsonText = await readFile(REAL_FILE, "utf8");
+  const lines = ndjsonText.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  const fileEntries = lines.map((line) => JSON.parse(line).entry).sort((a, b) => a - b);
+
+  assert.ok(headingEntries.length > 0, "expected at least one numbered entry heading in the log");
+  assert.deepEqual(fileEntries, headingEntries);
+});
+
 test("a tampered quote fails validation", async (t) => {
   const { temporary, log } = await fixtureLog(t);
   const tampered = JSON.stringify({
@@ -106,12 +123,16 @@ test("tags must be an array", async (t) => {
 
 test("a valid line for entry 2's heading and build resolves independently of entry 1", async (t) => {
   const { temporary, log } = await fixtureLog(t);
+  // The whole quoted span of line 43's Verdict bullet, first opening quote
+  // through the final closing quote before the trailing period, including
+  // the "Also:" joiner and the inner quote marks — the coordinator's
+  // resolution of JL-07-A1's escalation.
   const line = JSON.stringify({
     entry: 2,
     build_sha: "dc94b2c42b58b1a48944573d22f44a0e0413f196",
     anchor: "docs/playtests/PLAYTEST-LOG.md#2-ball-lab-first-human-play",
     quote:
-      "rigid body felt best, and I didn't do any fine tuning, I was already lost in the game having a blast",
+      '"DUDE this feels so amazing and fun in the movement and traversal. wow im really happy with this - its already so fun to move and explore around. I would want augments or abilities that can class or item or whatever driven to make it even more fun like a grapple hook or maneuverability in the air or other things. well done." Also: "rigid body felt best, and I didn\'t do any fine tuning, I was already lost in the game having a blast"',
     tags: [],
   });
   const file = await fixtureFile(temporary, line);
