@@ -8,10 +8,12 @@ extends RefCounted
 # `enemy_struck` signal, which is how knocks and their enemy are seen. Nothing here
 # reads the wall clock or a random number: `tick` is counted by the owner.
 #
-# Knocked enemies (JL-21 review, F1, carried): an enemy this trial has struck is left
-# out of the threats and the targets from then on, for every arm alike. Spillway's
-# chasers survive a hit and keep chasing, so this hides a live enemy; it is the lab's
-# rule, not the game's.
+# Stage threat rule 2 (coordinator ruling, EV-0550; JL-27-A2): an enemy leaves the
+# threats and the targets only when the game has taken it out of play, which in
+# Spillway is death (take_damage frees the node). A knocked chaser survives and keeps
+# hitting, so it stays; the same holds for every arm. The A1 rule (JL-21 review, F1)
+# dropped any enemy struck this trial. `knocked` still records every struck enemy,
+# for the knock counts and the diagnostics in `sim`.
 #
 # Usage: `var view := JevState.new(stage, run)`, `view.attach()`, then `view.advance()`
 # once per physics tick and `view.snapshot()` whenever a state is due.
@@ -25,6 +27,8 @@ const Projectile := preload("res://src/projectile.gd")
 const Geo := preload("res://src/jev/geo.gd")
 
 const STAGE_NAME := "spillway-drop"
+# The instrument epoch the scenario line and every A2 record carry.
+const THREAT_RULE := "stage-threat-rule 2"
 const THREAT_RANGE := 60.0
 const MAX_THREATS := 3
 const STOMP_STRENGTH := 0.6
@@ -149,8 +153,10 @@ func enemies() -> Array:
 	return out
 
 
+# The enemies still in play, which under stage threat rule 2 is every live one,
+# knocked or not: the threats, the offers and the agent's targets all read this.
 func live_targets() -> Array:
-	return enemies().filter(func(enemy): return not knocked.has(enemy.get_instance_id()))
+	return enemies()
 
 
 func shells() -> Array:
@@ -221,9 +227,9 @@ func sim_block() -> Dictionary:
 		"enemies": enemies().size(),
 		"knocked": knocked_count(),
 		"knocks": {"stomp": knock_count("stomp"), "ram": knock_count("ram")},
-		# Diagnostics for the knocked rule: how close the nearest enemy of either kind
-		# is, since a knocked chaser still hits. -1 when there is none.
-		"nearest_live_m": _nearest(live_targets(), at),
+		# Diagnostics for comparing the threat rules: the nearest enemy never struck
+		# and the nearest struck one this trial. -1 when there is none.
+		"nearest_unknocked_m": _nearest(enemies().filter(func(e): return not knocked.has(e.get_instance_id())), at),
 		"nearest_knocked_m": _nearest(enemies().filter(func(e): return knocked.has(e.get_instance_id())), at),
 	}
 
@@ -250,7 +256,7 @@ func _self_block() -> Dictionary:
 
 
 # The flood first when it is listed, then the nearest enemies and shells within 60 m,
-# nearest first, three in all. Knocked enemies are left out.
+# nearest first, three in all. An enemy leaves only when the game removes it.
 func threats() -> Array:
 	var out := []
 	var flood := flood_threat()

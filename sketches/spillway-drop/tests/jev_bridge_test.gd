@@ -133,6 +133,26 @@ func _end_current() -> void:
 			if int(event["tick"]) != int(event["seq"]) * D + K:
 				on_time = false
 	_check(on_time and intents == trial.applied and intents >= 3, "%s: all %d intents applied at seq x %d + %d" % [label, intents, D, K])
+	# The scenario line carries the choice counts the stage metrics need (JL-27-A2):
+	# the harness's measure() sees only this line, not the state files.
+	var multi := 0
+	var offered := 0
+	var kept := 0
+	for seq in trial.snapshots:
+		var state = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("state-%06d.json" % seq)))
+		var ids := JevIO.offered_options(state["jev"])
+		offered += state["jev"]["options"].size()
+		kept += ids.size()
+		if ids.size() >= 2:
+			multi += 1
+	var line: Dictionary = trial.scenario_result()
+	var total := func(table): return table.values().reduce(func(a, b): return a + b, 0)
+	_check(line.get("snapshots", -1) == trial.snapshots and line.get("multi", -1) == multi
+		and total.call(line.get("offered", {})) == offered and total.call(line.get("kept", {})) == kept,
+		"%s: the scenario line counts %d snapshots, %d with a choice, %d offers, %d kept (got %s)" % [
+			label, trial.snapshots, multi, offered, kept,
+			[line.get("snapshots"), line.get("multi"), line.get("offered"), line.get("kept")]])
+	_check(line.get("threat_rule", "") == "stage-threat-rule 2", "%s: the scenario line names the threat rule epoch" % label)
 	var done = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("done.json")))
 	_hashes.append(done["trace_hash"] if done != null else "")
 	trial.close()

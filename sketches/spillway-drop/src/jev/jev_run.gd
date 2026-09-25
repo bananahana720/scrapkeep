@@ -111,6 +111,13 @@ class Trial:
 	var blocked := 0
 	# Applied intents by id, for the scenario result.
 	var held_counts := {}
+	# Choice counts for the stage metrics (scripts/lab/metrics/spillway.mjs), which see
+	# only the scenario line: snapshots offering two or more options after the gate
+	# (jev_io.gd offered_options, decide.mjs's gate), and every option offered and kept
+	# by id.
+	var multi := 0
+	var offered_counts := {}
+	var kept_counts := {}
 
 	var _held = null
 	var _pending := {}
@@ -215,6 +222,7 @@ class Trial:
 				return true
 			_pending = state
 			snapshots += 1
+			_count_choice(state["jev"])
 		if not _pending.is_empty() and t == int(_pending["tick"]) + int(settings["hold_ticks"]):
 			if not _apply():
 				return true
@@ -263,6 +271,15 @@ class Trial:
 		held_counts[id] = int(held_counts.get(id, 0)) + 1
 		return true
 
+	func _count_choice(jev: Dictionary) -> void:
+		var kept: Array = JevIO.offered_options(jev)
+		if kept.size() >= 2:
+			multi += 1
+		for option in jev["options"]:
+			offered_counts[option["id"]] = int(offered_counts.get(option["id"], 0)) + 1
+		for id in kept:
+			kept_counts[id] = int(kept_counts.get(id, 0)) + 1
+
 	func _goal(id: String) -> Dictionary:
 		if id == "push_objective" or id == "hit_kicker":
 			return {"point": run.objective(view)["point"]}
@@ -306,6 +323,11 @@ class Trial:
 		return {
 			"id": run.scenario["label"],
 			"result": run.result(),
+			"threat_rule": JevState.THREAT_RULE,
+			"snapshots": snapshots,
+			"multi": multi,
+			"offered": offered_counts,
+			"kept": kept_counts,
 			"success_tick": run.success_tick,
 			"limit_ticks": progress["limit_ticks"],
 			"tick": view_tick(),

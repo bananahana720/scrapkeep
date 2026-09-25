@@ -3,8 +3,8 @@ extends SceneTree
 # JL-27: the Jev Lab port's read side on Spillway Drop. `seed_override` reseeds the
 # stage and leaves the default stage alone; the layout helpers put the refuges above
 # the full flood and the routes where the terrain has them; the state export offers the
-# route and flood choices, leaves knocked enemies out for every arm, and validates
-# against protocol v1. No gameplay is judged here.
+# route and flood choices, keeps an enemy a threat until the game removes it (stage
+# threat rule 2), and validates against protocol v1. No gameplay is judged here.
 
 const Stage := preload("res://src/stage.gd")
 const Terrain := preload("res://src/terrain.gd")
@@ -196,7 +196,9 @@ func _state_checks() -> void:
 	var errors := JevIO.validate_state(message)
 	_check(errors.is_empty(), "the snapshot validates against protocol v1 %s" % [errors])
 
-	# A chaser in reach is a threat and a target until this trial knocks it.
+	# Stage threat rule 2 (EV-0550): a chaser in reach is a threat and a target until
+	# the game takes it out of play. A knocked chaser survives and keeps hitting, so it
+	# stays; a dead one is removed and leaves.
 	var at: Vector3 = stage.player.ball_position()
 	var chaser = stage.spawn_enemy(Director.CHASER)
 	chaser.global_position = at + Vector3(6.0, 0.5, 0.0)
@@ -206,9 +208,17 @@ func _state_checks() -> void:
 	stage.player.enemy_struck.emit(chaser, true, 6.0)
 	view.advance()
 	jev = view.jev_block()
-	_check(not _kinds(jev).has("chaser") and not _ids(jev).has("stomp_target"),
-		"once knocked this trial the chaser leaves the threats and the targets")
+	_check(chaser.hp > 0.0 and _kinds(jev).has("chaser") and _ids(jev).has("stomp_target"),
+		"a knocked chaser that survives (hp %.1f) stays a threat and a target" % chaser.hp)
 	_check(view.knock_count("stomp") == 1 and view.knocked_count() == 1, "the knock is counted once, as a stomp")
+	chaser.take_damage(chaser.hp + 1.0)
+	view.advance()
+	jev = view.jev_block()
+	_check(not _kinds(jev).has("chaser") and not _ids(jev).has("stomp_target"),
+		"a dead chaser, removed by the game, leaves the threats and the targets")
+	var state_script: Script = JevState
+	_check(state_script.get_script_constant_map().get("THREAT_RULE", "") == "stage-threat-rule 2",
+		"the state names its threat rule epoch")
 
 	# The flood: listed with its clock, aimed at the ball only where the full flood reaches.
 	stage.flood.cycle.phase = FloodCycle.WARNING

@@ -9,8 +9,8 @@ extends "res://src/intent.gd".Source
 # Usage: `var agent := JevAgent.new(stage, view)`, `agent.install()`, then
 # `agent.hold(id, goal)` whenever an intent is applied. `goal` is {"point": Vector3}
 # for push_objective and hit_kicker; the others find their target each tick. `view` is
-# the trial's JevState, read for the knocked set and the flood, so the agent never
-# targets an enemy the state no longer shows.
+# the trial's JevState, read for the enemies still in play and the flood, so the agent
+# targets exactly what the state shows.
 #
 # Intents:
 #   push_objective  the guaranteed ground route (geo.gd ground_route): the bypass ramp
@@ -18,7 +18,7 @@ extends "res://src/intent.gd".Source
 #   hit_kicker      commit to the chute toward the objective's shelf (geo.gd
 #                   chute_route), boosting whenever aligned, up or down it.
 #   sweep_scrap     the nearest scrap piece, re-picked every tick.
-#   stomp_target, ram_target  ball-lab's, on the nearest unknocked enemy.
+#   stomp_target, ram_target  ball-lab's, on the nearest enemy in play.
 #   evade_hazard    out of the flood's reach by geo.gd refuge_route when the flood
 #                   targets the ball, else ball-lab's break-off from the nearest threat.
 #   retreat_regen   away from every enemy within range, still rolling at cruise.
@@ -392,7 +392,7 @@ func _retreat(out) -> Vector3:
 	return carrot
 
 
-# The nearest unknocked enemy within EVADE_RANGE; for evade, closing ones first.
+# The nearest enemy in play within EVADE_RANGE; for evade, closing ones first.
 func _enemy():
 	var best = null
 	var best_d := EVADE_RANGE
