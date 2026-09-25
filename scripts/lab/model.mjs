@@ -7,25 +7,43 @@ const pinDay = /^jev-lab-\d{4}-\d{2}-\d{2}$/;
 
 export class MixedEpochError extends Error {}
 
-// Plan § 1 "Instrument epoch": each distinct question sha, and each model,
-// is its own instrument. The model Jev actually answered as outranks the one
-// the instrument block intended.
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .toSorted()
+      .map((key) => [key, canonical(value[key])]),
+  );
+}
+
+// Plan § 1 "Instrument epoch": an epoch is the whole instrument identity
+// (question sha, model, confidence floor, gate version), as gate.mjs and
+// preflight compare it, with the model Jev actually answered as in place of
+// the alias the instrument intended.
 export function epochOf(record) {
   const provenance = record?.provenance ?? {};
-  return {
-    questions_sha: provenance.instrument?.questions_sha ?? null,
-    model: provenance.jev?.model ?? provenance.instrument?.model ?? null,
-  };
+  const instrument = provenance.instrument ?? {};
+  return canonical({
+    ...instrument,
+    questions_sha: instrument.questions_sha ?? null,
+    model: provenance.jev?.model ?? instrument.model ?? null,
+  });
 }
 
-export function epochKey({ questions_sha, model }) {
-  return JSON.stringify([questions_sha, model]);
+export function epochKey(epoch) {
+  return JSON.stringify(canonical(epoch));
 }
 
-export function describeEpoch({ questions_sha, model }) {
-  if (questions_sha === null && model === null) return "no instrument";
+export function describeEpoch(epoch) {
+  const { questions_sha, model, ...rest } = epoch;
+  const others = Object.keys(rest);
+  if (questions_sha === null && model === null && others.length === 0)
+    return "no instrument";
   const sha = questions_sha === null ? "none" : questions_sha.slice(0, 12);
-  return `questions ${sha}, model ${model ?? "none"}`;
+  const parts = [`questions ${sha}`, `model ${model ?? "none"}`];
+  for (const key of others) parts.push(`${key} ${JSON.stringify(rest[key])}`);
+  return parts.join(", ");
 }
 
 export const seriesOf = (record) => `${record.type}/${record.label}`;
@@ -136,7 +154,7 @@ export async function loadModel({ root = RUNS_ROOT } = {}) {
   const trends = new Map();
   const epochs = [];
   const boundaries = [];
-  let previous = null;
+  const previous = new Map();
   for (const record of records) {
     latest.set(seriesOf(record), record);
     const conflict = modelConflict(record);
@@ -147,6 +165,7 @@ export async function loadModel({ root = RUNS_ROOT } = {}) {
     if (known === undefined) {
       known = {
         key,
+        identity: epoch,
         ...epoch,
         first_seq: record.seq,
         last_seq: record.seq,
@@ -156,14 +175,16 @@ export async function loadModel({ root = RUNS_ROOT } = {}) {
     }
     known.last_seq = record.seq;
     known.runs += 1;
-    if (previous !== null && previous !== key)
+    const series = seriesOf(record);
+    if (previous.has(series) && previous.get(series) !== key)
       boundaries.push({
+        series,
         seq: record.seq,
         id: record.id,
-        from: previous,
+        from: previous.get(series),
         to: key,
       });
-    previous = key;
+    previous.set(series, key);
     for (const bucket of [record.kpis, record.kris])
       for (const [id, measure] of Object.entries(bucket ?? {}))
         addPoint(trends, record, id, measure);
@@ -172,17 +193,19 @@ export async function loadModel({ root = RUNS_ROOT } = {}) {
 }
 
 // Pools readings from one epoch as an n-weighted mean. Readings from two
-// question sets or two models measure different instruments, so pooling them
+// epochs measure different instruments, so pooling them
 // is refused rather than averaged.
 export function aggregate(points) {
   const keys = [...new Set(points.map((point) => point.epoch))];
   if (keys.length > 1) {
     const epochs = keys.map((key) => JSON.parse(key));
-    const shas = new Set(epochs.map(([sha]) => sha));
+    const differs = (pick) =>
+      new Set(epochs.map((epoch) => JSON.stringify(pick(epoch)))).size > 1;
     const parts = [];
-    if (shas.size > 1) parts.push("question shas");
-    if (new Set(epochs.map(([, model]) => model)).size > 1)
-      parts.push("models");
+    if (differs((epoch) => epoch.questions_sha)) parts.push("question shas");
+    if (differs((epoch) => epoch.model)) parts.push("models");
+    if (differs(({ questions_sha, model, ...rest }) => rest))
+      parts.push("instrument settings");
     throw new MixedEpochError(
       `refusing to aggregate across mixed ${parts.join(" and ")}: ${keys.join(", ")}`,
     );
@@ -219,7 +242,8 @@ async function readJson(file) {
   try {
     return JSON.parse(await readFile(file, "utf8"));
   } catch (error) {
-    if (error instanceof SyntaxError || error.code === "ENOENT") return null;
+    if (error instanceof SyntaxError) return null;
+    if (["ENOENT", "ENOTDIR", "EISDIR"].includes(error.code)) return null;
     throw error;
   }
 }
@@ -266,7 +290,7 @@ export function compareToPin(reading, pins) {
   if (pin === undefined) return { kind: "none" };
   if (epochKey(epochOf(pin.record)) !== epochKey(reading.epoch))
     return { kind: "epoch", pin };
-  if (!Number.isFinite(reading.measure.value)) return { kind: "none" };
+  if (!Number.isFinite(reading.measure.value)) return { kind: "no-value", pin };
   const before = measureOf(pin.record, reading.id).value;
   return { kind: "change", pin, change: reading.measure.value - before };
 }

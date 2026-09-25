@@ -32,13 +32,14 @@ function signed(value) {
   return value > 0 && text !== "0" ? `+${text}` : text;
 }
 
-function changeText(comparison) {
-  if (comparison.kind === "epoch")
-    return `pin ${comparison.pin.name} is in another epoch, not compared`;
-  if (comparison.kind === "change")
-    return `change ${signed(comparison.change)} from pin ${comparison.pin.name}`;
-  return "no pin";
-}
+const CHANGE_TEXT = {
+  epoch: ({ pin }) => `pin ${pin.name} is in another epoch, not compared`,
+  change: ({ pin, change }) => `change ${signed(change)} from pin ${pin.name}`,
+  "no-value": ({ pin }) => `no value to compare with pin ${pin.name}`,
+  none: () => "no pin",
+};
+
+const changeText = (comparison) => CHANGE_TEXT[comparison.kind](comparison);
 
 function metricLine(metric, model, pins, tty) {
   const reading = latestReading(model, metric.id);
@@ -66,11 +67,13 @@ function header(model) {
         ? `seq ${epoch.first_seq}`
         : `seq ${epoch.first_seq} to ${epoch.last_seq}`;
     lines.push(
-      `epoch ${position + 1} of ${model.epochs.length}: ${describeEpoch(epoch)}, ${span}, ${epoch.runs} runs`,
+      `epoch ${position + 1} of ${model.epochs.length}: ${describeEpoch(epoch.identity)}, ${span}, ${epoch.runs} runs`,
     );
   }
   for (const boundary of model.boundaries)
-    lines.push(`trend break at seq ${boundary.seq} (${boundary.id})`);
+    lines.push(
+      `trend break in ${boundary.series} at seq ${boundary.seq} (${boundary.id})`,
+    );
   for (const problem of model.problems) lines.push(`problem: ${problem}`);
   return lines;
 }
