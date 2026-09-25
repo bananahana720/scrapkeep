@@ -6074,11 +6074,11 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 
 ### JL-29: Program close
 
-**Card revision:** 1 · **Owner:** Coordinator · **Size:** S · **Lane:** Jev Lab
+**Card revision:** 2 · **Owner:** Coordinator · **Size:** S · **Lane:** Jev Lab
 
 **Source and inputs:** Every JL card and event; the plan's § "Verification"
 
-**Dependencies:** [JL-22](#jl-22), [JL-23](#jl-23), [JL-24](#jl-24), [JL-28](#jl-28). **Blocking questions:** None.
+**Dependencies:** [JL-22](#jl-22), [JL-23](#jl-23), [JL-24](#jl-24), [JL-28](#jl-28), [JL-30](#jl-30), [JL-31](#jl-31). **Blocking questions:** None.
 
 **Files touched:** `CONTRIBUTING.md`; `tools/jev-player/README.md`; `.agents/skills/scrapkeep-verify/SKILL.md` (a Jev Lab method row); `artifacts/jev-lab-2026-09-25/RETRO.md`; TRACKING (coordinator only).
 
@@ -6117,4 +6117,58 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 **Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; the retained batches; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** No gameplay file (`enemy.gd`, `field.gd`, `ball_rules.gd` and the rest stay unchanged); no ladder tuning; no Jev call.
+
+<a id="jl-30"></a>
+
+### JL-30: A skill suite for the lab and for reactive model decisions
+
+**Card revision:** 1 · **Owner:** Coordinator · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Andrew's request (EV-0552): codify what this program learned about Jev, reactive model decision-making and headless game development, as skills agents can use, edit and extend as mechanics change, so the knowledge stays current instead of becoming debt
+- The program record: TRACKING EV-0483 to the latest event, `artifacts/jev-lab-2026-09-25/` (plan, audit, reviews, experiments, live evidence), BACKLOG JL-00 to JL-31, the JL-18c pre-registration and results; this session's transcript as a secondary source
+- The existing project skills under `.agents/skills/` (`plan-session`, `scrapkeep-task`, `scrapkeep-verify`) and their `.claude/skills` links
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** new skill folders under `.agents/skills/` with matching `.claude/skills` links; small cross-links from the existing three skills; `artifacts/jev-lab-2026-09-25/skills/` (the lesson inventory and the design); `artifacts/local/tasks/JL-30/`.
+
+**Definition of done:**
+
+1. A lesson inventory, each lesson citing the event, review or result it came from, grouped into: model-as-decider instruments (controls, blind corpora, pre-registration, framing and position effects, caching, redaction, fallbacks, cost fields), the headless game lab (protocol, determinism per physics mode, scenarios, arms, gates, pins, per-stage rules), and coordination (reviews, receipts, board gates, the coordinator's own recorded mistakes).
+2. A reviewed design: which skills, each one's trigger, boundary and owner; which parts are Scrapkeep-specific and which are portable to any reactive model-in-the-loop system; and an update procedure (when a mechanic, protocol, instrument or result changes, which skill section changes and who checks it) with a mechanical check that flags a skill citing a file, command or event that no longer exists.
+3. The skills are written and each is exercised: a fresh agent given only the skill completes one representative task per skill (for example, add a scenario, run a pre-registered control, add a stage lab), and the result is reviewed.
+4. The portable skill contains nothing Scrapkeep-specific and is ready to promote; promotion outside the repository waits for Andrew.
+
+**Verification and evidence:** `npm run check:docs`; `npm run check:drift`; the new staleness check; the exercise transcripts and their review; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Documentation and configuration inside the repository only; no game feature; no change to user-level configuration.
+
+<a id="jl-31"></a>
+
+### JL-31: Watch the lab play
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Andrew's request (EV-0552): a view of the game while a model or an arm plays it, to validate and give feedback visually
+- `sketches/ball-lab/src/jev/` (runner, state, steering, telemetry), `scripts/lab/{harness,godot-launch,arms}.mjs`, `tools/jev-player/decide.mjs`, `scripts/play.mjs`, the Neon Noir palette through `scripts/lab/metrics/status.mjs`
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/` (a watch overlay and runner flag, no gameplay file); `scripts/lab/{watch,godot-launch,harness}.mjs`; `scripts/play.mjs` (the `lab watch` route); a replay page generator under `scripts/lab/`; tests; `artifacts/local/tasks/JL-31/`.
+
+**Definition of done:**
+
+1. `scrapkeep lab watch <scenario> --arm jev|scripted|random [--mode kinematic|rigid]` opens a visible Godot window running a real trial through the harness, with an overlay showing, at each decision: the options on offer, the arm's probabilities (for Jev) as bars, the chosen intent, the decision latency, the arm and scenario, and a trail of the ball's recent path. Colour and glyphs come from the shared palette.
+2. `--arm jev` in watch mode runs even when the instrument's epoch has not passed its controls, but only in watch mode, labelled on screen and in the record "demo, not evidence", and the record is refused by the gate; preflight still runs and its result is shown. A per-session call cap applies.
+3. A hotkey marks the current moment with an optional typed note; each mark saves the exact state snapshot, the options, the probabilities and the note to a feedback file that a later labelled corpus can use.
+4. A generated replay page plays any retained trial (events and intents) as a top-down view at selectable speed, with the decisions on a timeline; no network and no script from outside the page.
+5. The headless path, the protocol and the determinism tests are unchanged.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run sketch:smoke`; a screenshot of the watch window taken on workspace 10 and closed after; the replay page rendered headless; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No gameplay change; watch-mode Jev runs are never evidence; no window opens on Andrew's workspace during verification.
 
