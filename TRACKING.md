@@ -261,16 +261,16 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-10](BACKLOG.md#jl-10) | 1 | 4 | done | none | JL-10-A1 | EV-0509 |
 | [JL-11](BACKLOG.md#jl-11) | 1 | 5 | done | none | JL-11-A1 | EV-0514 |
 | [JL-12](BACKLOG.md#jl-12) | 1 | 5 | done | none | JL-12-A1 | EV-0511 |
-| [JL-13](BACKLOG.md#jl-13) | 1 | 4 | review | none | none | EV-0531 |
+| [JL-13](BACKLOG.md#jl-13) | 1 | 5 | done | none | JL-13-A1 | EV-0534 |
 | [JL-14](BACKLOG.md#jl-14) | 1 | 5 | done | none | JL-14-A1 | EV-0523 |
 | [JL-15](BACKLOG.md#jl-15) | 1 | 5 | done | none | JL-15-A1 | EV-0520 |
 | [JL-16](BACKLOG.md#jl-16) | 1 | 5 | done | none | JL-16-A1 | EV-0519 |
-| [JL-17](BACKLOG.md#jl-17) | 1 | 2 | queued | JL-13 | none | EV-0523 |
+| [JL-17](BACKLOG.md#jl-17) | 1 | 3 | ready | none | none | EV-0534 |
 | [JL-18](BACKLOG.md#jl-18) | 2 | 6 | done | none | JL-18-A1 | EV-0529 |
 | [JL-18b](BACKLOG.md#jl-18b) | 1 | 4 | review | none | none | EV-0533 |
 | [JL-18c](BACKLOG.md#jl-18c) | 1 | 2 | in_progress | none | none | EV-0530 |
-| [JL-19](BACKLOG.md#jl-19) | 1 | 6 | in_progress | none | none | EV-0532 |
-| [JL-20](BACKLOG.md#jl-20) | 1 | 4 | review | none | none | EV-0531 |
+| [JL-19](BACKLOG.md#jl-19) | 1 | 7 | done | none | JL-19-A1 | EV-0534 |
+| [JL-20](BACKLOG.md#jl-20) | 1 | 5 | done | none | JL-20-A1 | EV-0534 |
 
 ## Question state index
 
@@ -820,6 +820,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0531 | 2026-09-25T19:32:03+00:00 | Worker handoff / coordinator review admission; worker checkpoint | JL-13, JL-20, JL-18b | **JL-13** handed off 2bdfc1c: the steering agent reaches every intent's target in both physics modes within budget (push 533 and 712 ticks, kicker 363 and 357, stomp 108 and 120, ram 192 and 184, evade 151 and 250, stuck recovery 115 and 124), `seek` inverts `ball_rules.gd:48` to 0.000005°, telemetry writes only closed event kinds and collapses knocks per dummy with a 30-tick gap, and `hit_kicker` aims at the computed lip. It reports four gameplay findings for the sketch owner: in rigid mode a stomp landed centred on a dummy is never credited, because `enemy_touched` reads post-bounce velocity (the test keeps this as a named known limit); rigid mode's grounded flag drops while rolling on flat ground, which cuts drive to air control (cause inferred: the ground probe rotates with the body); the service ramp's top is a 1.7 m step; a kinematic snag at one placement. `sketch:smoke` 8/8 in 39 s, `npm test` 378/0, verify passes. In routine review. **JL-20** handed off 27c15dd: vocabulary and hand labels committed before any call; Jev reproduced all 14 hand labels (7 tags by 2 verdicts) with 4 calls on `jev-1.13.0`; batched per-tag Nouls asked forward and in reverse differed by at most 0.010, against 0.09 to 0.35 position movement on Choice questions (EV-0526), which bears on JL-18c's design (e) and was passed to its writer as context; `npm test` 454/0, verify passes. Queued for routine review behind two active reviewers. **JL-18b** checkpoint faa8425: the control-count clause is met after the lease was widened to the gate-test fixture, and the blind section of `score.mjs` now prints and writes aggregates only, with a test that fails if a blind id leaks; released for DoD 6 (merge the coordinator head, default the harness to q2 and c2, score the blind corpus live under q2, cap 40). |
 | EV-0532 | 2026-09-25T19:35:20+00:00 | Independent reviewer / review; coordinator / ruling, changes requested | JL-19 | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on a4acc2e (report at [artifacts/jev-lab-2026-09-25/reviews/JL-19.md](artifacts/jev-lab-2026-09-25/reviews/JL-19.md)). The coordinator verified the frozen blind-set hash (ab77b9e5, unchanged) and that the committed `QUESTIONS_SHA` equals the scored run's (bb6f4ae4). **Ruling:** plan § 1's blind-corpus rules govern the gated decision corpus; for this advisory tool the § 5 blind set is accepted as blind to Jev output only. **Qualification of EV-0529:** the 91.5% blind score is blind to Jev but labelled by the prompt's author, and the set is now burned for future wording changes; the 89.7% authored score is contaminated because the rerun Noul was reworded after one authored probe result (a correction toward the plan's "safe to rerun?", but result-triggered). **Changes requested before admission:** close four redaction gaps (lowercase `bearer`, JSON-quoted secrets, a second home path after a colon, the resolved key in score mode), because log text leaves the machine; a control counts only when Jev answered it; a case accepting `real_regression` makes a flake or rerun-safe answer severe, recomputed from the cache with zero calls; the gate-isolation test follows imports transitively; the report labels both qualifications. JL-19 moves review to changes_requested to in_progress, record revision 4 to 6, resuming the same writer within lease JL-19-L1. |
 | EV-0533 | 2026-09-25T19:36:32+00:00 | Worker handoff / coordinator review admission; finding | JL-18b | JL-18b handed off 64af118: every jev batch runs preflight first and anchors on its resolved model; a cache hit from another resolved model is re-asked in a live batch and aborts `model_mismatch` (invalid) in a replay or mixed batch; the epoch record stores `resolved_models`, is not overwritten by an all-error run and requires one passing result per control in its controls file (lease widened to the gate-test fixture); `score.mjs` prints and writes blind aggregates only, with a leak test; PROTOCOL.md names `replay_miss` and the corrected precedence; `validateTrial` no longer throws on a JSON `null` state; the harness defaults jev batches to q2 and c2. `npm test` 474/0, verify passes. **Live blind score under q2** (31 calls, `jev-1.13.0`, `input_tokens` 24,239, `output_tokens` 2,251, cache fields absent): 27 of 31 plain, 42 of 46 severity-weighted (0.913), 0 severe misses; by block dominance 5/5, combat 3/6, economy 4/4, objective 7/7, safety 4/4, traversal 2/2, ordinary 2/3; the state-diagnostic subset 9 of 11 plain (0.846 weighted), against a best text-only rule of 71% overall at EV-0498. No blind or diagnostic id appears in any output (checked by script and by the coordinator's grep). The q2 epoch record now carries this blind result and stays invalid because the c2 controls failed. **Finding:** under the same instrument Jev passes every blind dominance case yet fails the free-cache control, so the control failure is specific, not general; this contrast was passed to JL-18c's writer as aggregates. Live evidence retained at `artifacts/jev-lab-2026-09-25/live/JL-18b/`. Queued for Fable review behind two active reviewers. |
+| EV-0534 | 2026-09-25T19:40:20+00:00 | Independent reviewers / review; coordinator / integration, verification, readiness | JL-13, JL-19, JL-20, JL-17 | **JL-13.** A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on 2bdfc1c ([report](artifacts/jev-lab-2026-09-25/reviews/JL-13.md)). Budgets are regression guards derived from observed ticks, not reach criteria; the rigid-stomp known limit still requires the agent to land on the dummy's head. It corrects the kinematic-snag finding: the test placed the ball inside the shallow kicker's footprint, so the ram trial's ticks include about 90 ticks of unsticking; the real residue is that the tilted boxes' raised ends leave wedge gaps narrower than the ball, and a pinned kinematic ball reports rising speed and a cruise tier while not moving. It confirms the rigid centred stomp and rigid grounded flicker findings (the latter also flickers jump, brake and drive) and puts the service-ramp step at about 1.6 m. Carried: move the ram placement and re-derive its budget (JL-21); `JevState` and scenario progress still count raw shockwaves, so JL-17 and JL-21 count knocks from Telemetry. Merged at 69dceb6. **JL-20.** PASS+NOTES on 27c15dd ([report](artifacts/jev-lab-2026-09-25/reviews/JL-20.md)); the coordinator confirmed `verdict-tags.json` unchanged after its freeze commit 2180cd3. **Qualification of EV-0531:** the 14 of 14 agreement is on easy cases (Nouls at 0.02 to 0.10 or 0.97 to 0.99) with a vocabulary that echoes words from the two quotes, so it is close to lexical matching, not calibration; and by the card's design the tagger can only confirm hand labels, so it cannot tag future entries without hand labels. Merged at 17033cf. **JL-19.** The writer closed the review's items at af81d7d: four redaction gaps, a control that counts only a Jev answer, severity keyed on accepting `real_regression`, a transitive gate-isolation test and labelled scores. The coordinator probed `redact` directly: a lowercase bearer header, JSON-quoted secrets, out-of-repo home paths after a colon, an email and a GitHub token are all replaced and a token count is kept. Scores recomputed from the cache with zero calls: authored 73 of 81 (90.1%), blind 65 of 71 (91.5%), 0 severe misses, both controls answered by Jev. Merged at 6e55451. **Integrated tree:** `sketch:smoke` pass, `npm test` 486/0, `npm run verify` six stages pass, `node scripts/lab/verdicts.mjs` pass. All three move to done; leases close. JL-17 (dependencies JL-13 and JL-14 done) moves queued to ready. |
 
 ## Preparation checkpoint
 
@@ -1871,8 +1872,8 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `sketches/ball-lab/src/jev/{jev_agent,telemetry}.gd`; `sketches/ball-lab/tests/jev_agent_test.gd`; `artifacts/local/tasks/JL-13/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-13` on `wt/JL-13`, created by `scripts/new-worktree.sh`.
 - Base identity: `9ebdf69747f1d3fccd74618df372a87538c93c01`.
-- Candidate identity: `2bdfc1c5c597ceb93cc1cb0a14f9aee95101bb23`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T18:56:09+00:00; dispatched.
+- Candidate identity: `2bdfc1c5c597ceb93cc1cb0a14f9aee95101bb23`. Integrated identity: `69dceb6` (merge into `wt/JL-coord`).
+- Latest checkpoint: 2026-09-25T19:40:20+00:00; review PASS+NOTES, admitted serially (EV-0534).
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-13/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
@@ -1919,8 +1920,8 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `scripts/lab/{triage.mjs,triage-corpus.json}`; `tests/lab-triage.test.js`; `artifacts/local/tasks/JL-19/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-19` on `wt/JL-19`, created by `scripts/new-worktree.sh`.
 - Base identity: `1c20a2c1cafb0ea612925c49860e552f945beeca`.
-- Candidate identity: `a4acc2ef01c2d1940dbb63ad20be417033c0b97d`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T19:12:43+00:00; dispatched.
+- Candidate identity: `af81d7d456cb9f75bd44e34d5801dd8ccd2d5727` (a4acc2e plus the review fixes). Integrated identity: `6e55451` (merge into `wt/JL-coord`).
+- Latest checkpoint: 2026-09-25T19:40:20+00:00; review PASS+NOTES, admitted serially (EV-0534).
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-19/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
@@ -1931,8 +1932,8 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `scripts/lab/{verdict-tags.mjs,verdict-tags.json}`; `docs/playtests/verdicts.ndjson` (`tags` only); `tests/lab-verdict-tags.test.js`; `artifacts/local/tasks/JL-20/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-20` on `wt/JL-20`, created by `scripts/new-worktree.sh`.
 - Base identity: `4a5328d46263439b5663863803f091e310e6ad53`.
-- Candidate identity: `27c15dd3f1e216960c5de51726370822b687c56e`. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T19:24:28+00:00; dispatched.
+- Candidate identity: `27c15dd3f1e216960c5de51726370822b687c56e`. Integrated identity: `17033cf` (merge into `wt/JL-coord`).
+- Latest checkpoint: 2026-09-25T19:40:20+00:00; review PASS+NOTES, admitted serially (EV-0534).
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-20/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
