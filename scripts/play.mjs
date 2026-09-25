@@ -12,6 +12,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   watch as watchFs,
   writeFileSync,
 } from "node:fs";
@@ -22,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { binary, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
 import { createRun } from "./lab/record.mjs";
 import { METRICS } from "./lab/metrics/index.mjs";
+import { wilson } from "./lab/stats.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
@@ -169,9 +171,11 @@ export function resolve(entries, name) {
   return { ambiguous: [] };
 }
 
-// Each check is a separate Godot boot costing about 7.7 s, nearly all of it
-// startup, so wall clock is set by how many run at once rather than by the work.
-// The checks share no state, so they fan out freely.
+// Each check is a separate Godot boot, most of it startup rather than the
+// check itself, so wall clock is set by how many run at once rather than by
+// the work; a retained `--jobs=1` run of sketches/ball-lab measured about
+// 3.5 s per check (CONTRIBUTING's `play` / `scrapkeep` row has the run id
+// and command). The checks share no state, so they fan out freely.
 function runHeadless(label, args) {
   return new Promise((resolve) => {
     const child = spawn(binary, args);
@@ -292,7 +296,9 @@ export function jobLimit(words) {
 
 export function repeatCount(words) {
   const flag = words.find((word) => word.startsWith("--repeat="));
-  if (flag === undefined) return 1;
+  if (flag === undefined) {
+    return 1;
+  }
   return Math.max(1, Number.parseInt(flag.slice(9), 10) || 1);
 }
 
@@ -313,7 +319,9 @@ export function aggregateOutcomes(repeatResults) {
   const byLabel = new Map();
   for (const results of repeatResults) {
     for (const { label, ok } of results) {
-      if (!byLabel.has(label)) byLabel.set(label, []);
+      if (!byLabel.has(label)) {
+        byLabel.set(label, []);
+      }
       byLabel.get(label).push(ok ? "pass" : "fail");
     }
   }
@@ -323,16 +331,21 @@ export function aggregateOutcomes(repeatResults) {
 // The fraction of checks whose outcome disagreed across the repeats it ran
 // on; a rerun never turns a failure into a pass (metrics/core.mjs), so any
 // disagreement at all counts as flake, not just fail-then-pass in that order.
+// n stays the number of distinct checks, not the number of repeats, so a
+// Wilson interval on it is a real proportion estimate (N1).
 export function flakeRate(byLabel) {
   let disagreeing = 0;
   for (const outcomes of byLabel.values()) {
-    if (new Set(outcomes).size > 1) disagreeing += 1;
+    if (new Set(outcomes).size > 1) {
+      disagreeing += 1;
+    }
   }
-  return {
-    value: byLabel.size === 0 ? null : disagreeing / byLabel.size,
-    n: byLabel.size,
-    ci: null,
-  };
+  const n = byLabel.size;
+  if (n === 0) {
+    return { value: null, n: 0, ci: null };
+  }
+  const { lower, upper } = wilson(disagreeing, n);
+  return { value: disagreeing / n, n, ci: [lower, upper] };
 }
 
 // Pure aggregation from N repeats of runSuite's results into the measures a
@@ -355,8 +368,61 @@ export function buildTestMeasures({ repeatResults, repeatSeconds, repeatOks }) {
   const checks = [...aggregateOutcomes(repeatResults)].map(
     ([label, outcomes]) => ({ label, outcomes }),
   );
-  const flake = repeats > 1 ? flakeRate(aggregateOutcomes(repeatResults)) : null;
+  const flake =
+    repeats > 1 ? flakeRate(aggregateOutcomes(repeatResults)) : null;
   return { measures, checks, flake, totalSeconds };
+}
+
+// createRun() runs before the repeat loop, not after: a run's provenance
+// (started_at, id, head/dirty, the start source digest) has to be sampled
+// before the suite work, or JL-01's mid-run source-change guard can never
+// fire, because "start" would already include whatever the suite changed.
+// An orphaned run directory from a crash between createRun() and finish() is
+// harmless; buildIndex already skips a directory with no run.json.
+export async function runTestSuite({
+  targets,
+  limit,
+  repeats,
+  label,
+  runOnce = () => runSuite(targets, limit),
+  createRunOptions = {},
+}) {
+  const { config: initialConfig, ...restOptions } = createRunOptions;
+  const config = { ...(initialConfig ?? {}) };
+  const run = await createRun({
+    type: "suite",
+    label,
+    registry: METRICS,
+    config,
+    ...restOptions,
+  });
+  const repeatResults = [];
+  const repeatSeconds = [];
+  const repeatOks = [];
+  for (let i = 0; i < repeats; i++) {
+    const started = Date.now();
+    const { ok, results } = await runOnce();
+    repeatSeconds.push((Date.now() - started) / 1000);
+    repeatResults.push(results);
+    repeatOks.push(ok);
+  }
+  const overallOk = repeatOks.every(Boolean);
+  const { measures, checks, flake, totalSeconds } = buildTestMeasures({
+    repeatResults,
+    repeatSeconds,
+    repeatOks,
+  });
+  // A median needs the individual repeat times, not just their mean (N2).
+  config.checks = checks;
+  config.repeat_seconds = repeatSeconds;
+  run.kpi("suite_wall_s", measures.suite_wall_s);
+  run.kri("suite_pass", measures.suite_pass);
+  run.kri("engine_crash", measures.engine_crash);
+  if (flake !== null) {
+    run.kri("flake_rate", flake);
+  }
+  const record = await run.finish({ result: overallOk ? "pass" : "fail" });
+  return { record, overallOk, totalSeconds };
 }
 
 // Resolves an executable by name against PATH without shelling out, so it is
@@ -377,14 +443,51 @@ export function findOnPath(name, env = process.env) {
 
 // Default output lives under artifacts/local/shots/, never /tmp (audit A8).
 // A relative name is joined there; an absolute path is honoured as given so
-// an explicit destination still works.
+// an explicit destination still works, unless it is under /tmp, which is
+// refused outright rather than silently allowed back in through an argument.
 export function shotOutputPath(repoRoot, entry, requested) {
   const shotsDir = path.join(repoRoot, "artifacts", "local", "shots");
   if (requested !== undefined && path.isAbsolute(requested)) {
+    if (requested === "/tmp" || requested.startsWith("/tmp/")) {
+      throw new Error(
+        `shot output "${requested}" may not be under /tmp (audit A8)`,
+      );
+    }
     return { shotsDir, out: requested };
   }
   const name = requested || `${entry.sketch}-spawn.png`;
   return { shotsDir, out: path.join(shotsDir, name) };
+}
+
+// claude-open (audit-fixed shot routing) only dispatches the launch through
+// hyprctl and returns before the spawned Godot process writes anything, so a
+// zero exit there proves the dispatch succeeded, not that the shot landed.
+// Polling for the output file itself is the only way to know it's done; the
+// headless fallback gets the same wait for the same reason (B2).
+export async function waitUntil(
+  check,
+  {
+    timeoutMs = 30_000,
+    intervalMs = 250,
+    now = Date.now,
+    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  } = {},
+) {
+  const deadline = now() + timeoutMs;
+  for (;;) {
+    if (await check()) {
+      return true;
+    }
+    if (now() >= deadline) {
+      return false;
+    }
+    await sleep(intervalMs);
+  }
+}
+
+export async function waitForShot(out, options = {}) {
+  const { exists = existsSync, ...rest } = options;
+  return waitUntil(() => exists(out), rest);
 }
 
 // A sketch's own sources and tests are the only inputs to its checks, so a
@@ -557,21 +660,24 @@ async function main(argv) {
     const limit = jobLimit(words);
     if (command === "test") {
       const repeats = repeatCount(words);
-      const repeatResults = [];
-      const repeatSeconds = [];
-      const repeatOks = [];
-      for (let i = 0; i < repeats; i++) {
-        const started = Date.now();
-        const { ok, results } = await runSuite(targets, limit);
-        repeatSeconds.push((Date.now() - started) / 1000);
-        repeatResults.push(results);
-        repeatOks.push(ok);
-      }
-      const overallOk = repeatOks.every(Boolean);
-      const { measures, checks, flake, totalSeconds } = buildTestMeasures({
-        repeatResults,
-        repeatSeconds,
-        repeatOks,
+      const sketches = targets.map((entry) => ({
+        id: entry.id,
+        tree: entry.tree,
+        head: entry.head,
+      }));
+      const { record, overallOk, totalSeconds } = await runTestSuite({
+        targets,
+        limit,
+        repeats,
+        label: slugLabel(targetName ?? "all"),
+        createRunOptions: {
+          config: {
+            target: targetName ?? "all",
+            jobs: limit,
+            repeat: repeats,
+            sketches,
+          },
+        },
       });
       const verdict = overallOk ? green("pass") : red("fail");
       const repeatNote = repeats > 1 ? `, ${repeats} repeats` : "";
@@ -579,23 +685,6 @@ async function main(argv) {
         `\nsketch tests ${verdict} in ${totalSeconds.toFixed(1)}s across ${targets.length} sketch(es), ${limit} at a time${repeatNote}.`,
       );
       console.log(dim("Headless boot and tests only; feel needs your play."));
-
-      const run = await createRun({
-        type: "suite",
-        label: slugLabel(targetName ?? "all"),
-        registry: METRICS,
-        config: {
-          target: targetName ?? "all",
-          jobs: limit,
-          repeat: repeats,
-          checks,
-        },
-      });
-      run.kpi("suite_wall_s", measures.suite_wall_s);
-      run.kri("suite_pass", measures.suite_pass);
-      run.kri("engine_crash", measures.engine_crash);
-      if (flake !== null) run.kri("flake_rate", flake);
-      const record = await run.finish({ result: overallOk ? "pass" : "fail" });
       console.log(dim(`  run record: ${record.id}`));
 
       process.exit(overallOk ? 0 : 1);
@@ -610,8 +699,19 @@ async function main(argv) {
       console.error(`${entry.id} has no tools/shot.gd.`);
       process.exit(2);
     } else {
-      const { shotsDir, out } = shotOutputPath(root, entry, words[2]);
+      let paths;
+      try {
+        paths = shotOutputPath(root, entry, words[2]);
+      } catch (error) {
+        console.error(error.message);
+        process.exit(2);
+        return;
+      }
+      const { shotsDir, out } = paths;
       mkdirSync(shotsDir, { recursive: true });
+      // A leftover file from a previous attempt would make a failed shot
+      // look saved, since the wait below only checks that the path exists.
+      rmSync(out, { force: true });
       const scriptArgs = [
         "--path",
         entry.directory,
@@ -640,10 +740,18 @@ async function main(argv) {
           stdio: "inherit",
         });
       }
-      if (result.status === 0) {
+      if (result.status !== 0) {
+        process.exit(result.status === null ? 1 : result.status);
+        return;
+      }
+      // claude-open dispatches and returns before Godot writes the file, so
+      // the exit code above only proves the launch was dispatched (B2).
+      const saved = await waitForShot(out);
+      if (saved) {
         console.log(`${green("saved")} ${out}`);
       } else {
-        process.exit(result.status === null ? 1 : result.status);
+        console.error(`shot.gd did not write ${out} within the timeout.`);
+        process.exit(1);
       }
     }
   }

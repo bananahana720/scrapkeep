@@ -129,21 +129,40 @@ function timestamp(now) {
     .replace(/[-:]/g, "");
 }
 
-// Tolerant of a corrupted or hand-edited index: blank lines are dropped and
-// each remaining one is parsed on its own, so one bad line cannot hide seq
-// collisions on every other line.
-function parseIndexLines(text) {
-  return text
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line));
+// Blank lines are dropped. A process killed mid-append can leave the final
+// line truncated (a partial JSON object with no closing brace and no
+// trailing newline); that one line is dropped rather than treated as a fatal
+// parse error, and the caller can rewrite the index without it. A bad line
+// anywhere else is real corruption and still throws, so it isn't silently
+// swallowed the way a truncated tail is.
+function readIndexEntries(text) {
+  const rawLines = text.split("\n").filter((line) => line.trim() !== "");
+  const entries = [];
+  const keptRaw = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    let entry;
+    try {
+      entry = JSON.parse(rawLines[i]);
+    } catch (error) {
+      if (i === rawLines.length - 1) {
+        break;
+      }
+      throw error;
+    }
+    entries.push(entry);
+    keptRaw.push(rawLines[i]);
+  }
+  const repairedText = keptRaw.length === 0 ? "" : keptRaw.join("\n") + "\n";
+  return { entries, repairedText };
 }
 
 // A line count is wrong the moment a line is missing or duplicated; the next
 // seq is one past the highest one actually on disk.
-function nextSeq(lines) {
-  if (lines.length === 0) return 0;
-  return Math.max(...lines.map((line) => line.seq)) + 1;
+function nextSeq(entries) {
+  if (entries.length === 0) {
+    return 0;
+  }
+  return Math.max(...entries.map((entry) => entry.seq)) + 1;
 }
 
 function indexLine(record) {
@@ -199,7 +218,9 @@ async function buildIndex(root) {
   try {
     listing = await readdir(root, { withFileTypes: true });
   } catch (error) {
-    if (error.code === "ENOENT") return "";
+    if (error.code === "ENOENT") {
+      return "";
+    }
     throw error;
   }
   for (const entry of listing) {
@@ -260,8 +281,9 @@ export async function createRun({
     throw new Error(`run type "${type}" is not a slug`);
   if (!slug.test(label ?? ""))
     throw new Error(`run label "${label}" is not a slug`);
-  if (!uuidPattern.test(uuid))
+  if (!uuidPattern.test(uuid)) {
     throw new Error(`uuid "${uuid}" must match ${uuidPattern}`);
+  }
   const known = metricIds(registry);
   const provenance = {
     head: git(repository, "rev-parse", "HEAD").trim(),
@@ -300,6 +322,12 @@ export async function createRun({
   const findings = [];
   const limits = [];
   let finished = false;
+  // finished is set only after the locked write succeeds, so a failed
+  // finish() can be retried; inProgress is set synchronously, before any
+  // await, so a second finish() called while the first is still running is
+  // refused up front instead of racing it into a duplicate write and a
+  // doubled mismatch limit line.
+  let inProgress = false;
 
   function measure(bucket, metricId, value) {
     if (!known.has(metricId))
@@ -340,74 +368,88 @@ export async function createRun({
       for (const field of tokenFields) jev[field] += usage[field] ?? 0;
     },
     async finish({ result }) {
-      if (finished) throw new Error(`run ${id} is already finished`);
-      if (!RESULTS.includes(result))
-        throw new Error(
-          `result "${result}" is not one of ${RESULTS.join(", ")}`,
-        );
-      const end = await sourceHashes(repository, sources);
-      const changed = changedFiles(start.files, end.files);
-      // Per-file hashes are bulky (thousands of entries under DEFAULT_SOURCES)
-      // and buildIndex/rebuildIndex never need them, so they live beside
-      // run.json rather than inside it; the digests and changed list stay.
-      provenance.sources = {
-        paths: sources,
-        start: start.digest,
-        end: end.digest,
-        matched: start.digest === end.digest,
-        changed,
-      };
-      if (!provenance.sources.matched) {
-        limits.push(
-          `${changed.length} source files changed during the run, so the recorded result "${result}" was replaced with "inconclusive".`,
-        );
-        result = "inconclusive";
+      if (finished) {
+        throw new Error(`run ${id} is already finished`);
       }
-      await mkdir(root, { recursive: true });
-      const record = await withIndexLock(root, async () => {
-        let existing = await readIndex(root);
-        if (existing === null) {
-          existing = await buildIndex(root);
-          await replaceIndex(root, existing);
+      if (inProgress) {
+        throw new Error(`run ${id}'s finish() is already running`);
+      }
+      inProgress = true;
+      try {
+        if (!RESULTS.includes(result)) {
+          throw new Error(
+            `result "${result}" is not one of ${RESULTS.join(", ")}`,
+          );
         }
-        const seq = nextSeq(parseIndexLines(existing));
-        const built = {
-          schema: SCHEMA,
-          id,
-          type,
-          label,
-          result,
-          seq,
-          started_at: now.toISOString(),
-          finished_at: new Date().toISOString(),
-          provenance,
-          config,
-          kpis,
-          kris,
-          findings,
-          limits,
+        const end = await sourceHashes(repository, sources);
+        const changed = changedFiles(start.files, end.files);
+        // Per-file hashes are bulky (thousands of entries under
+        // DEFAULT_SOURCES) and buildIndex/rebuildIndex never need them, so
+        // they live beside run.json rather than inside it; the digests and
+        // changed list stay.
+        provenance.sources = {
+          paths: sources,
+          start: start.digest,
+          end: end.digest,
+          matched: start.digest === end.digest,
+          changed,
         };
-        await writeFile(
-          path.join(directory, "run.json"),
-          JSON.stringify(built, null, 2) + "\n",
-        );
-        await writeFile(
-          path.join(directory, "sources.json"),
-          JSON.stringify({ start: start.files, end: end.files }, null, 2) +
-            "\n",
-        );
-        // A missing trailing newline would glue this append onto the last
-        // line, so it is repaired on disk before the append lands.
-        if (existing.length > 0 && !existing.endsWith("\n")) {
-          await replaceIndex(root, existing + "\n");
+        if (!provenance.sources.matched) {
+          limits.push(
+            `${changed.length} source files changed during the run, so the recorded result "${result}" was replaced with "inconclusive".`,
+          );
+          result = "inconclusive";
         }
-        await writeFile(path.join(root, "index.ndjson"), indexLine(built), {
-          flag: "a",
+        await mkdir(root, { recursive: true });
+        const record = await withIndexLock(root, async () => {
+          let existing = await readIndex(root);
+          if (existing === null) {
+            existing = await buildIndex(root);
+            await replaceIndex(root, existing);
+          }
+          const { entries, repairedText } = readIndexEntries(existing);
+          const seq = nextSeq(entries);
+          const built = {
+            schema: SCHEMA,
+            id,
+            type,
+            label,
+            result,
+            seq,
+            started_at: now.toISOString(),
+            finished_at: new Date().toISOString(),
+            provenance,
+            config,
+            kpis,
+            kris,
+            findings,
+            limits,
+          };
+          await writeFile(
+            path.join(directory, "run.json"),
+            JSON.stringify(built, null, 2) + "\n",
+          );
+          await writeFile(
+            path.join(directory, "sources.json"),
+            JSON.stringify({ start: start.files, end: end.files }, null, 2) +
+              "\n",
+          );
+          // A missing trailing newline or a truncated last line (readIndexEntries)
+          // would either glue this append onto the last line or leave a
+          // parse error on disk, so the index is repaired before the append.
+          if (repairedText !== existing) {
+            await replaceIndex(root, repairedText);
+          }
+          await writeFile(path.join(root, "index.ndjson"), indexLine(built), {
+            flag: "a",
+          });
+          return built;
         });
-        return built;
-      });
-      finished = true;
-      return record;
+        finished = true;
+        return record;
+      } finally {
+        inProgress = false;
+      }
     },
   };
 }

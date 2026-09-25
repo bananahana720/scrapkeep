@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -13,9 +14,13 @@ import {
   jobLimit,
   repeatCount,
   resolve,
+  runTestSuite,
   shotOutputPath,
   slugLabel,
+  waitForShot,
+  waitUntil,
 } from "../scripts/play.mjs";
+import { wilson } from "../scripts/lab/stats.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -37,7 +42,10 @@ test("repeatCount reads --repeat= and defaults to a single run", () => {
 test("slugLabel makes a record.mjs-safe slug from arbitrary text", () => {
   assert.equal(slugLabel("ball-lab"), "ball-lab");
   assert.equal(slugLabel("Cable Bench!!"), "cable-bench");
-  assert.equal(slugLabel("spillway-drop/spillway-drop"), "spillway-drop-spillway-drop");
+  assert.equal(
+    slugLabel("spillway-drop/spillway-drop"),
+    "spillway-drop-spillway-drop",
+  );
   assert.equal(slugLabel(""), "run");
   assert.equal(slugLabel("---"), "run");
 });
@@ -64,14 +72,24 @@ test("flakeRate counts a check disagreeing with itself, not just fail-then-pass 
     ["a", ["pass", "pass", "pass"]],
     ["b", ["fail", "fail"]],
   ]);
-  assert.deepEqual(flakeRate(agree), { value: 0, n: 2, ci: null });
+  const agreeCi = wilson(0, 2);
+  assert.deepEqual(flakeRate(agree), {
+    value: 0,
+    n: 2,
+    ci: [agreeCi.lower, agreeCi.upper],
+  });
 
   const disagree = new Map([
     ["a", ["pass", "pass"]],
     ["b", ["pass", "fail"]],
     ["c", ["fail", "pass", "pass"]],
   ]);
-  assert.deepEqual(flakeRate(disagree), { value: 2 / 3, n: 3, ci: null });
+  const disagreeCi = wilson(2, 3);
+  assert.deepEqual(flakeRate(disagree), {
+    value: 2 / 3,
+    n: 3,
+    ci: [disagreeCi.lower, disagreeCi.upper],
+  });
 
   assert.deepEqual(flakeRate(new Map()), { value: null, n: 0, ci: null });
 });
@@ -115,10 +133,15 @@ test("buildTestMeasures reports flake_rate and counts crashes across repeats", (
     repeatSeconds: [10, 14],
     repeatOks: [true, false],
   });
+  const flakeCi = wilson(1, 2);
   assert.deepEqual(measures.suite_wall_s, { value: 12, n: 2, ci: null });
   assert.deepEqual(measures.suite_pass, { value: 1, n: 2, ci: null });
   assert.deepEqual(measures.engine_crash, { value: 1, n: 4, ci: null });
-  assert.deepEqual(flake, { value: 0.5, n: 2, ci: null });
+  assert.deepEqual(flake, {
+    value: 0.5,
+    n: 2,
+    ci: [flakeCi.lower, flakeCi.upper],
+  });
 });
 
 test("findOnPath resolves an executable from an injected PATH and returns null when absent", async (t) => {
@@ -128,10 +151,7 @@ test("findOnPath resolves an executable from an injected PATH and returns null w
   await writeFile(executable, "#!/bin/sh\nexit 0\n");
   await chmod(executable, 0o755);
 
-  assert.equal(
-    findOnPath("claude-open", { PATH: temporary }),
-    executable,
-  );
+  assert.equal(findOnPath("claude-open", { PATH: temporary }), executable);
   assert.equal(findOnPath("claude-open", { PATH: "/does/not/exist" }), null);
   assert.equal(findOnPath("claude-open", {}), null);
 
@@ -154,18 +174,32 @@ test("findOnPath resolves an executable from an injected PATH and returns null w
 test("shotOutputPath defaults under artifacts/local/shots/, never /tmp (audit A8)", () => {
   const entry = { sketch: "ball-lab" };
   const noArg = shotOutputPath(root, entry, undefined);
-  assert.equal(
-    noArg.shotsDir,
-    path.join(root, "artifacts", "local", "shots"),
-  );
+  assert.equal(noArg.shotsDir, path.join(root, "artifacts", "local", "shots"));
   assert.equal(noArg.out, path.join(noArg.shotsDir, "ball-lab-spawn.png"));
   assert.ok(!noArg.out.startsWith("/tmp"));
 
   const named = shotOutputPath(root, entry, "custom.png");
   assert.equal(named.out, path.join(named.shotsDir, "custom.png"));
 
-  const absolute = shotOutputPath(root, entry, "/tmp/explicit.png");
-  assert.equal(absolute.out, "/tmp/explicit.png");
+  const absolute = shotOutputPath(
+    root,
+    entry,
+    "/home/andrew/shots/explicit.png",
+  );
+  assert.equal(absolute.out, "/home/andrew/shots/explicit.png");
+});
+
+test("shotOutputPath refuses an explicit output path under /tmp (N6)", () => {
+  const entry = { sketch: "ball-lab" };
+  assert.throws(
+    () => shotOutputPath(root, entry, "/tmp/explicit.png"),
+    /\/tmp/,
+  );
+  assert.throws(() => shotOutputPath(root, entry, "/tmp"), /\/tmp/);
+  assert.throws(
+    () => shotOutputPath(root, entry, "/tmp/nested/dir/explicit.png"),
+    /\/tmp/,
+  );
 });
 
 test("resolve still prefers an exact id, then a primary among prefix or substring hits", () => {
@@ -177,4 +211,191 @@ test("resolve still prefers an exact id, then a primary among prefix or substrin
   assert.equal(resolve(entries, "ball-lab").entry.id, "ball-lab");
   assert.equal(resolve(entries, "spill").entry.id, "spillway-drop");
   assert.deepEqual(resolve(entries, "nope"), { ambiguous: [] });
+});
+
+test("waitUntil resolves true as soon as check() reports done, without waiting out the timeout", async () => {
+  let calls = 0;
+  let clock = 0;
+  const ok = await waitUntil(
+    () => {
+      calls += 1;
+      return calls >= 3;
+    },
+    {
+      timeoutMs: 10_000,
+      intervalMs: 5,
+      now: () => (clock += 1),
+      sleep: async () => {},
+    },
+  );
+  assert.equal(ok, true);
+  assert.equal(calls, 3);
+});
+
+test("waitUntil returns false once the deadline passes and check() never succeeds", async () => {
+  let calls = 0;
+  let clock = 0;
+  const ok = await waitUntil(
+    () => {
+      calls += 1;
+      return false;
+    },
+    {
+      timeoutMs: 10,
+      intervalMs: 5,
+      now: () => (clock += 4),
+      sleep: async () => {},
+    },
+  );
+  assert.equal(ok, false);
+  assert.ok(calls >= 1);
+});
+
+test("waitForShot polls an injected exists() check rather than trusting an exit code (B2)", async () => {
+  let checks = 0;
+  let clock = 0;
+  const ok = await waitForShot("/fake/out.png", {
+    exists: () => {
+      checks += 1;
+      return checks >= 2;
+    },
+    timeoutMs: 10_000,
+    intervalMs: 5,
+    now: () => (clock += 1),
+    sleep: async () => {},
+  });
+  assert.equal(ok, true);
+  assert.equal(checks, 2);
+});
+
+test("waitForShot times out when the file never appears, e.g. claude-open dispatched and returned early", async () => {
+  let clock = 0;
+  const ok = await waitForShot("/fake/out.png", {
+    exists: () => false,
+    timeoutMs: 10,
+    intervalMs: 5,
+    now: () => (clock += 4),
+    sleep: async () => {},
+  });
+  assert.equal(ok, false);
+});
+
+// B1: createRun() has to run before the suite loop, or its start-of-run
+// source digest already includes whatever the suite changed, and JL-01's
+// mid-run source-change guard can never fire. A fake runOnce() that edits a
+// tracked file on its first call stands in for the suite without Godot.
+function git(repository, ...args) {
+  const result = spawnSync(
+    "git",
+    [
+      "-c",
+      "user.name=Lab Test",
+      "-c",
+      "user.email=lab@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      ...args,
+    ],
+    { cwd: repository, encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  return result.stdout.trim();
+}
+
+async function repoFixture(t) {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-play-"));
+  t.after(() => rm(temporary, { recursive: true, force: true }));
+  const repository = path.join(temporary, "repository");
+  const runsRoot = path.join(temporary, "runs");
+  await mkdir(path.join(repository, "src"), { recursive: true });
+  git(repository, "init", "-q", "-b", "lab");
+  await writeFile(path.join(repository, "src/a.txt"), "before\n");
+  git(repository, "add", ".");
+  git(repository, "commit", "-q", "-m", "fixture");
+  return { repository, runsRoot };
+}
+
+test("runTestSuite calls createRun before the loop, so a source edit during the run is caught (B1)", async (t) => {
+  const { repository, runsRoot } = await repoFixture(t);
+  const before = Date.now();
+
+  let calls = 0;
+  let editedAt = null;
+  const runOnce = async () => {
+    calls += 1;
+    if (calls === 1) {
+      // The "suite work": if createRun() ran after this instead of before,
+      // its start digest would already include this edit and the mismatch
+      // could never be detected.
+      await writeFile(path.join(repository, "src/a.txt"), "during\n");
+      editedAt = Date.now();
+    }
+    return {
+      ok: true,
+      results: [{ label: "check", ok: true, crashed: false }],
+    };
+  };
+
+  const { record, overallOk, totalSeconds } = await runTestSuite({
+    targets: [],
+    limit: 1,
+    repeats: 1,
+    label: "fixture",
+    runOnce,
+    createRunOptions: {
+      repository,
+      root: runsRoot,
+      sources: ["src"],
+    },
+  });
+  const after = Date.now();
+
+  assert.equal(overallOk, true);
+  assert.equal(typeof totalSeconds, "number");
+  // started_at falls inside the call window and, decisively, no later than
+  // the edit the "suite work" made after createRun() had already run.
+  assert.ok(Date.parse(record.started_at) >= before);
+  assert.ok(Date.parse(record.started_at) <= after);
+  assert.ok(Date.parse(record.started_at) <= editedAt);
+  assert.equal(record.result, "inconclusive");
+  assert.equal(record.provenance.sources.matched, false);
+  assert.deepEqual(record.provenance.sources.changed, ["src/a.txt"]);
+});
+
+test("runTestSuite writes suite_wall_s/suite_pass/engine_crash and per-check outcomes in config (DoD 1)", async (t) => {
+  const { repository, runsRoot } = await repoFixture(t);
+  const runOnce = async () => ({
+    ok: true,
+    results: [
+      { label: "fixture import", ok: true, crashed: false },
+      { label: "fixture boot", ok: true, crashed: false },
+    ],
+  });
+
+  const { record } = await runTestSuite({
+    targets: [],
+    limit: 1,
+    repeats: 2,
+    label: "fixture",
+    runOnce,
+    createRunOptions: {
+      repository,
+      root: runsRoot,
+      sources: ["src"],
+      config: { target: "fixture", jobs: 1, repeat: 2 },
+    },
+  });
+
+  assert.equal(record.result, "pass");
+  assert.equal(record.kris.suite_pass.value, 0);
+  assert.equal(record.kris.suite_pass.n, 2);
+  assert.equal(record.kris.engine_crash.value, 0);
+  assert.equal(record.kris.engine_crash.n, 4);
+  assert.equal(record.kpis.suite_wall_s.n, 2);
+  assert.equal(record.kris.flake_rate.value, 0);
+  assert.deepEqual(record.config.repeat_seconds.length, 2);
+  assert.deepEqual(record.config.checks.map((c) => c.label).sort(), [
+    "fixture boot",
+    "fixture import",
+  ]);
 });

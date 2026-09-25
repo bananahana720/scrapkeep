@@ -310,12 +310,17 @@ test("seq is max(seq)+1 of the parsed index, and a missing trailing newline is r
   // dropped, as a killed writer or a manual edit could leave it.
   const corrupted = JSON.stringify({ ...JSON.parse(original), seq: 5 });
   await writeFile(index, corrupted);
-  const record = await (await start({ label: "two" })).finish({
+  const record = await (
+    await start({ label: "two" })
+  ).finish({
     result: "pass",
   });
   assert.equal(record.seq, 6);
   const repaired = await readFile(index, "utf8");
-  const lines = repaired.trimEnd().split("\n").map((one) => JSON.parse(one));
+  const lines = repaired
+    .trimEnd()
+    .split("\n")
+    .map((one) => JSON.parse(one));
   assert.deepEqual(
     lines.map((one) => one.seq),
     [5, 6],
@@ -337,6 +342,61 @@ test("finished is set only after the locked write succeeds", async (t) => {
   const record = await run.finish({ result: "pass" });
   assert.equal(record.result, "pass");
   await assert.rejects(run.finish({ result: "pass" }), /finished/);
+});
+
+test("a truncated final index line is dropped and repaired, not treated as a parse error", async (t) => {
+  const { runs, start } = await fixture(t);
+  const index = path.join(runs, "index.ndjson");
+  await (await start({ label: "one" })).finish({ result: "pass" });
+  await (await start({ label: "two" })).finish({ result: "pass" });
+  const original = await readFile(index, "utf8");
+  const lines = original.trimEnd().split("\n");
+  assert.equal(lines.length, 2);
+  // Simulate a process killed mid-write of the second entry: its line is cut
+  // off partway through valid JSON, with no trailing newline. This is not a
+  // complete-but-stale line (that case is covered above); it cannot parse.
+  const truncated = `${lines[0]}\n${lines[1].slice(0, -6)}`;
+  await writeFile(index, truncated);
+
+  const record = await (
+    await start({ label: "three" })
+  ).finish({
+    result: "pass",
+  });
+  assert.equal(record.seq, 1);
+  const repaired = await readFile(index, "utf8");
+  const repairedLines = repaired.trimEnd().split("\n");
+  assert.equal(repairedLines[0], lines[0]);
+  assert.deepEqual(
+    repairedLines.map((one) => JSON.parse(one).seq),
+    [0, 1],
+  );
+  assert.ok(repaired.endsWith("\n"));
+});
+
+test("finish() refuses a concurrent second call instead of racing it into a duplicate write", async (t) => {
+  const { repository, start } = await fixture(t);
+  const run = await start();
+  // A source change during the run forces the mismatch limit line, so a
+  // double execution would double it if the guard did not hold.
+  await writeFile(path.join(repository, "src/new.txt"), "changed\n");
+
+  const [first, second] = await Promise.allSettled([
+    run.finish({ result: "pass" }),
+    run.finish({ result: "pass" }),
+  ]);
+  const ok = [first, second].find((one) => one.status === "fulfilled");
+  const bad = [first, second].find((one) => one.status === "rejected");
+  assert.ok(ok, "exactly one concurrent call should succeed");
+  assert.ok(bad, "exactly one concurrent call should be rejected");
+  assert.match(bad.reason.message, /already (running|finished)/);
+  assert.equal(ok.value.result, "inconclusive");
+  assert.equal(
+    ok.value.limits.filter((line) => line.includes("source files changed"))
+      .length,
+    1,
+  );
+  await assert.rejects(run.finish({ result: "pass" }), /already finished/);
 });
 
 test("rebuildIndex on a missing runs root returns an empty index", async (t) => {
