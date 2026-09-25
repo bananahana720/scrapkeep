@@ -1,6 +1,6 @@
 // JL-11: the trial harness and its arms, run against fake-godot.mjs. No real
-// Godot process and no Jev call: the jev arm is a stub that throws, so a trial
-// that reaches it aborts instead of spending anything.
+// Godot process and no Jev call: every batch gets a decideFn that throws and a
+// verdict cache under mkdtemp. tests/lab-jev-arm.test.js covers the jev arm.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -73,8 +73,40 @@ async function fixture(t) {
     repository,
     sources: ["src"],
   };
+  const decideFn = async () => {
+    throw new Error("a harness test reached decideFn");
+  };
   // Normal trials never come near this floor; only the stall case lowers it.
-  return (options) => runBatch({ watchdogFloorMs: 10_000, runs, ...options });
+  return (options) =>
+    runBatch({
+      watchdogFloorMs: 10_000,
+      runs,
+      decideFn,
+      verdictCache: path.join(temporary, "cache"),
+      ...options,
+    });
+}
+
+// A launcher that writes its own files, for endings the fake cannot produce.
+function scripted(body) {
+  const script = `
+    import { renameSync, writeFileSync } from "node:fs";
+    import path from "node:path";
+    const io = process.argv[1];
+    const put = (name, value) => {
+      const file = path.join(io, name);
+      writeFileSync(file + ".tmp", typeof value === "string" ? value : JSON.stringify(value));
+      renameSync(file + ".tmp", file);
+    };
+    put("hello.json", { protocol: "scrapkeep-jev/1", sketch: "stub", scenario: "downhill-run",
+      seed: 0, physics_mode: "kinematic", godot: "stub", tick_hz: 90, snapshot_every: 90,
+      hold_ticks: 26, intent_timeout_s: 30 });
+    ${body}
+  `;
+  return ({ io }) => ({
+    command: process.execPath,
+    args: ["--input-type=module", "-e", script, io],
+  });
 }
 
 async function readTrial(io) {
@@ -195,21 +227,14 @@ test("the scripted arm is a deterministic rule ladder over the offered options",
   assert.equal(push.intent, "sweep_scrap");
 });
 
-test("the jev arm is a stub that throws and never calls out", async () => {
+test("only decideFn reaches the network: no lab file calls fetch or decide directly", async () => {
   const arm = createArm("jev");
   assert.match(arm.forcedMeta().questions_sha, /^[0-9a-f]{64}$/);
-  await assert.rejects(
-    arm.choose({
-      seq: 0,
-      state: openState,
-      offered: options("push_objective", "ram_target"),
-    }),
-    /JL-14/,
-  );
   for (const file of [
     "scripts/lab/arms.mjs",
     "scripts/lab/harness.mjs",
     "scripts/lab/fake-godot.mjs",
+    "scripts/lab/verdict-cache.mjs",
   ]) {
     const text = await readFile(path.join(root, file), "utf8");
     assert.doesNotMatch(text, /\bfetch\s*\(|\bdecide\s*\(/, file);
@@ -306,7 +331,7 @@ test("a single offered option is answered forced without calling the arm", async
   const run = await fixture(t);
   // run-to-pad offers only push_objective; kicker-gap offers the kicker alone,
   // and below its speed the gate leaves only the push_objective fallback. The
-  // jev stub would throw if asked.
+  // fixture's decideFn would throw if asked.
   for (const scenario of ["run-to-pad", "kicker-gap"]) {
     const { trials, directory } = await run({
       scenario,
@@ -324,22 +349,6 @@ test("a single offered option is answered forced without calling the arm", async
       assert.match(intent.meta.questions_sha, /^[0-9a-f]{64}$/);
     }
   }
-});
-
-test("the jev stub aborts a trial with arm_error once a real choice is needed", async (t) => {
-  const run = await fixture(t);
-  const { trials, directory, record } = await run({
-    scenario: "pillar-weave",
-    arm: "jev",
-    trials: 1,
-  });
-  const [trial] = trials;
-  assert.equal(trial.outcome, "aborted");
-  assert.equal(trial.abort.reason, "arm_error");
-  const files = await readTrial(path.join(directory, trial.io));
-  assert.equal(JSON.parse(files["abort.json"]).reason, "arm_error");
-  assert.equal(JSON.parse(files["done.json"]).reason, "aborted");
-  assert.equal(record.kris.trial_abort_rate.value, 1);
 });
 
 // --- DoD 2: stall, crash, invalid --------------------------------------------
@@ -365,7 +374,7 @@ test("a stalled fake is killed by the watchdog and recorded as stall", async (t)
 
 test("an exit with no done.json is a crash", async (t) => {
   const run = await fixture(t);
-  const { trials, directory } = await run({
+  const { trials, directory, record } = await run({
     scenario: "downhill-run",
     arm: "random",
     launch: fakeGodot({ crashAt: 2 }),
@@ -375,6 +384,54 @@ test("an exit with no done.json is a crash", async (t) => {
   assert.notEqual(trial.exit.code, 0);
   assert.equal(existsSync(path.join(directory, trial.io, "done.json")), false);
   assert.equal(trial.events_tmp_only, true);
+  assert.deepEqual(record.kris.engine_crash, { value: 1, n: 1, ci: null });
+  assert.equal(record.result, "fail");
+});
+
+test("every batch reports engine_crash, zero when nothing crashed", async (t) => {
+  const run = await fixture(t);
+  const { record } = await run({ scenario: "run-to-pad", arm: "random" });
+  assert.deepEqual(record.kris.engine_crash, { value: 0, n: 1, ci: null });
+});
+
+// JL-11 review N1: a cap later in the batch must not hide an earlier crash.
+test("a crash outranks the call cap: the batch fails and engine_crash counts it", async (t) => {
+  const run = await fixture(t);
+  const crashFirst = (context) =>
+    (context.trial === 0 ? fakeGodot({ crashAt: 2 }) : fakeGodot())(context);
+  const { record, trials } = await run({
+    scenario: "downhill-run",
+    arm: "scripted",
+    trials: 3,
+    callCap: 1,
+    launch: crashFirst,
+  });
+  assert.deepEqual(
+    trials.map((trial) => trial.outcome),
+    ["crash", "aborted"],
+  );
+  assert.equal(trials[1].abort.cause, "call_cap");
+  assert.equal(record.config.capped, true);
+  assert.equal(record.kris.engine_crash.value, 1);
+  assert.equal(record.result, "fail");
+});
+
+test("stall and engine errors also outrank the cap", async (t) => {
+  const run = await fixture(t);
+  for (const flags of [{ errorAt: 2 }, { stallAt: 2 }]) {
+    const first = (context) =>
+      (context.trial === 0 ? fakeGodot(flags) : fakeGodot())(context);
+    const { record, trials } = await run({
+      scenario: "downhill-run",
+      arm: "scripted",
+      trials: 3,
+      callCap: 1,
+      launch: first,
+      watchdogFloorMs: 1500,
+    });
+    assert.equal(trials[1].abort.cause, "call_cap", JSON.stringify(flags));
+    assert.equal(record.result, "fail", JSON.stringify(flags));
+  }
 });
 
 test("an invalid state from Godot writes abort arm_error and records invalid", async (t) => {
@@ -387,6 +444,7 @@ test("an invalid state from Godot writes abort arm_error and records invalid", a
   const [trial] = trials;
   assert.equal(trial.outcome, "invalid");
   assert.equal(trial.abort.reason, "arm_error");
+  assert.equal(trial.abort.cause, "node_invalid");
   assert.match(trial.abort.message, /state-000001\.json/);
   const files = await readTrial(path.join(directory, trial.io));
   assert.equal(JSON.parse(files["abort.json"]).reason, "arm_error");
@@ -425,10 +483,53 @@ test("the per-batch call cap stops the batch before the arm is called past it", 
   assert.equal(trials[0].outcome, "aborted");
   assert.equal(trials[0].arm_calls, 2);
   assert.equal(trials[0].abort.reason, "arm_error");
+  assert.equal(trials[0].abort.cause, "call_cap");
   assert.match(trials[0].abort.message, /call cap/);
   assert.equal(record.config.capped, true);
   assert.equal(record.config.arm_calls, 2);
   assert.ok(record.limits.some((line) => /call cap/.test(line)));
+  assert.equal(record.result, "inconclusive");
+});
+
+// --- JL-11 review N4: a malformed done.json or error.json -------------------------
+
+test("a done.json or error.json that is not JSON records invalid and the batch still writes its record", async (t) => {
+  const run = await fixture(t);
+  for (const [name, text] of [
+    ["done.json", "{not json"],
+    ["done.json", "null"],
+    ["error.json", "{not json"],
+    ["error.json", "null"],
+  ]) {
+    const { record, trials, directory } = await run({
+      scenario: "downhill-run",
+      arm: "scripted",
+      launch: scripted(
+        `put("events.ndjson", ""); put(${JSON.stringify(name)}, ${JSON.stringify(text)});`,
+      ),
+    });
+    assert.equal(trials[0].outcome, "invalid", `${name} ${text}`);
+    assert.equal(record.result, "invalid");
+    assert.ok(existsSync(path.join(directory, "run.json")));
+  }
+});
+
+// --- JL-11 review N6: trial seeds -----------------------------------------------
+
+test("trial seeds are seed x 1000 + trial, so neighbouring batch seeds share none", async (t) => {
+  const run = await fixture(t);
+  const seedsOf = async (seed) =>
+    (
+      await run({ scenario: "run-to-pad", arm: "random", trials: 3, seed })
+    ).trials.map((trial) => trial.seed);
+  const one = await seedsOf(1);
+  const two = await seedsOf(2);
+  assert.deepEqual(one, [1000, 1001, 1002]);
+  assert.deepEqual(two, [2000, 2001, 2002]);
+  await assert.rejects(
+    run({ scenario: "run-to-pad", arm: "random", trials: 1001 }),
+    /trials/,
+  );
 });
 
 // Any process can stand in for Godot through `launch`. This one writes files
