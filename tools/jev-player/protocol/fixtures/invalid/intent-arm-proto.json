@@ -1,0 +1,8 @@
+{
+  "protocol": "scrapkeep-jev/1",
+  "seq": 0,
+  "intent": "push_objective",
+  "arm": "__proto__",
+  "source": "seeded",
+  "meta": {}
+}

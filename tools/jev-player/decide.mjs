@@ -117,7 +117,11 @@ export function gateOptions(state, options) {
   const kept = [];
   const dropped = [];
   for (const option of options) {
-    const rule = PRECONDITION[option.id];
+    // Own string keys only: "constructor" or ["ram_target"] has no rule.
+    const rule =
+      typeof option.id === "string" && Object.hasOwn(PRECONDITION, option.id)
+        ? PRECONDITION[option.id]
+        : undefined;
     if (rule === undefined || rule(state, option) === true) {
       kept.push(option);
     } else {

@@ -12,6 +12,9 @@ const PROTOCOL := "scrapkeep-jev/1"
 const EVENTS_FILE := "events.ndjson"
 const GRID_SLACK := 1e-9
 const MAX_THREATS := 3
+# decide.mjs GATE_VERSION, which _passes_gate ports. Bump both together;
+# tests/jev-fixtures.test.js checks they match.
+const GATE_VERSION := 1
 
 const INTENTS := [
 	"push_objective",
@@ -36,8 +39,9 @@ const SPEED_TIERS := ["walk", "cruise", "fast", "blazing"]
 const ANOMALIES := ["nan", "tunnel", "out_of_bounds", "overspeed"]
 
 # A field's kind is a name checked by _kind_error, an Array of allowed strings,
-# or null for a field whose contents are checked elsewhere. "int" is exact;
-# "whole" and "tenth" are the jev block's grid checks with GRID_SLACK.
+# or null for a field whose contents are checked elsewhere. "int" is exact,
+# including the jev block's whole numbers; "tenth" is the jev block's 0.1 grid
+# check with GRID_SLACK.
 const HELLO := {
 	"protocol": "protocol",
 	"sketch": "string",
@@ -87,16 +91,16 @@ const JEV_STATE := {"self": null, "stage": null, "threats": null, "objective": n
 const JEV_STATE_OPTIONAL := {"scrap": null, "buffs": null}
 const SELF := {"speed_ms": "tenth", "speed_tier": "tier", "grounded": "boolean"}
 const SELF_OPTIONAL := {
-	"hp": "whole",
+	"hp": "int",
 	"air_jump_available": "boolean",
 	"location": "string",
 	"over": "string",
 }
-const STAGE := {"name": "string", "time_s": "whole", "tier": "whole"}
+const STAGE := {"name": "string", "time_s": "int", "tier": "int"}
 const THREAT := {"kind": "string"}
 const THREAT_OPTIONAL := {
-	"distance_m": "whole",
-	"damage": "whole",
+	"distance_m": "int",
+	"damage": "int",
 	"closing": "boolean",
 	"impact_in_s": "tenth",
 	"arc_lands_in_s": "tenth",
@@ -108,9 +112,9 @@ const THREAT_OPTIONAL := {
 	"effect": "string",
 	"lands_on": "string",
 }
-const OBJECTIVE := {"kind": "string", "distance_m": "whole"}
+const OBJECTIVE := {"kind": "string", "distance_m": "int"}
 const OBJECTIVE_OPTIONAL := {"inside_ring": "boolean", "charge_started": "boolean"}
-const SCRAP := {"held": "whole"}
+const SCRAP := {"held": "int"}
 const OPTION := {"id": "intent_id", "why": "string"}
 const OPTION_OPTIONAL := {"requires_speed_ms": "tenth"}
 
@@ -537,8 +541,6 @@ static func _kind_error(kind: Variant, value: Variant) -> String:
 			return "" if value is bool else "must be a boolean"
 		"int":
 			return "" if _is_int(value) and value >= 0 else "must be a whole number >= 0"
-		"whole":
-			return "" if _on_grid(value, 1.0) and value >= 0 else "must be a whole number >= 0"
 		"any_int":
 			return "" if _is_int(value) else "must be a whole number"
 		"tenth":

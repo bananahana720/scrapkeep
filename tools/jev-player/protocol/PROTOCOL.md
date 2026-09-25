@@ -8,6 +8,8 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 - **Tmp-then-rename.** The writer writes `<name>.tmp` in the same directory, flushes it and renames it to `<name>`. Readers ignore `*.tmp`. Node uses `writeAtomic()`.
 - **Versioned.** Every JSON file has `"protocol": "scrapkeep-jev/1"`.
 - **Closed.** An unknown field is invalid, except inside `sim` (state) and `meta` (intent).
+- **Non-empty strings.** Every string field this document defines is non-empty, including each `buffs` entry and each option's `why`. Values inside `sim` and `meta` are unchecked, except `meta.questions_sha`.
+- **Own names only.** A closed set of names (event kinds, arms, intent ids, gate rules) matches only its own string entries. `constructor`, `__proto__`, `toString` and an array such as `["takeoff"]` are not members; a validator reports them as errors and never throws on them.
 - **No wall clock in Godot files.** Godot's files hold ticks, never times of day or elapsed milliseconds. That keeps `trace_hash` identical when Node answers slowly.
 - **Numbering.** `NNNNNN` is the snapshot's `seq`, zero-padded to six digits and starting at `000000`. `intent-NNNNNN.json` answers `state-NNNNNN.json`.
 - **Closed directory.** `<io>` holds only the file names in the table below. Node ignores any file whose name ends in `.tmp`; `validateTrial()` rejects any other name.
@@ -115,9 +117,14 @@ Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `ab
 | Any other failure Godot catches | Godot | `error.json`, code `internal` | 1 | `error:internal` |
 | No new Godot file within `max(30 s, 20 × median step)` after Node's last intent | Node watchdog | SIGKILL | none | `stall` |
 | Godot exits with no `done.json` or `error.json` | Node | nothing to read | any | `crash` |
-| A file fails its validator, or `validateTrial()` fails | Node | stop reading | any | `invalid` |
+| Godot writes `done.json` or `error.json` but does not exit within the watchdog limit | Node watchdog | SIGKILL | none | `stall` |
+| `hello.json` or a state file fails its validator | Node | `abort.json`, reason `arm_error`, with a message naming the file; stop reading | any | `invalid` |
+| The arm fails: it throws, answers an intent that fails `validateIntent()`, or reaches the batch call cap | Node | `abort.json`, reason `arm_error` | 0 | `aborted` |
+| `validateTrial()` fails on the finished directory | Node | nothing | any | `invalid` |
 
-A **step** is the wall time from Node renaming `intent-N` into place to the next Godot file appearing. The median is nearest-rank, and the limit is 30 s until one step has completed (`watchdogMs()`). The watchdog also runs from spawn to `hello.json` and from `hello.json` to the first state.
+A **step** is the wall time from Node renaming `intent-N` into place to the next Godot file appearing. The median is nearest-rank, and the limit is 30 s until one step has completed (`watchdogMs()`). The watchdog also runs from spawn to `hello.json`, from `hello.json` to the first state, and from Godot's last file (`done.json` or `error.json`) to its exit.
+
+Node writes `abort.json` on an invalid Godot file so that Godot finishes at once instead of blocking for an intent that will never come. v1's abort reasons are closed, and `arm_error` is the nearest: Node, not the engine, cannot go on. The trial is still recorded as `invalid`. A trial that was killed by the watchdog is `stall` and one with no final file is `crash`, even when its files also fail `validateTrial()`. Otherwise a failing `validateTrial()` makes the outcome `invalid`.
 
 ## Arms and `forced`
 
@@ -127,9 +134,22 @@ A **step** is the wall time from Node renaming `intent-N` into place to the next
 | `scripted` | `rule`, `forced` | The baseline rule ladder |
 | `jev` | `live`, `cache`, `forced` | The candidate. `cache` is a verdict-cache hit, as every `--replay` answer is. |
 
-- **Offered options** are the state's `jev.options` after `decide.mjs`'s precondition gate. If the gate removes everything, `push_objective` alone is offered (`offeredOptions()`).
+- **Offered options** are the state's `jev.options` after the precondition gate (below). If the gate removes everything, `push_objective` alone is offered (`offeredOptions()`).
 - **Forced.** When exactly one option is offered, every arm answers it with `source: "forced"` and makes no API call. `forced` with more than one offered option is invalid.
 - The intent must be an offered option. One exception: the `jev` arm may answer `push_objective` when it was not offered, because below the confidence floor `decide.mjs` holds `push_objective`.
+
+## Precondition gate
+
+`PRECONDITION` in `decide.mjs` removes each option the engine cannot execute before any arm sees it, and `jev_io.gd` ports the same rules. `self` and `objective` are the state's `jev.state.self` and `jev.state.objective`:
+
+| Option id | Kept when |
+| --- | --- |
+| `stomp_target` | `self.grounded` is `true`, or `self.air_jump_available` is `true` |
+| `ram_target` | `self.speed_tier` is `fast` or `blazing` |
+| `hit_kicker` | The option has no `requires_speed_ms`, or `self.speed_ms` ≥ `requires_speed_ms` |
+| `start_exit` | `objective` is absent, or `objective.inside_ring` is not `false` |
+
+Any other id has no rule and is kept. Rules are found by own name only, so an invalid id such as `constructor` or `["ram_target"]` also has no rule; the state that carries it already fails its validator. `GATE_VERSION` is 1. A change to these rules or to the all-gated fallback bumps it in `decide.mjs`, in `jev_io.gd` and here, together; `tests/jev-fixtures.test.js` checks that all three agree. The version is part of the verdict-cache key.
 
 ## Verdict-cache key
 
@@ -151,7 +171,7 @@ Every whole-number field and every steps-of-0.1 field in this block is ≥ 0; th
 | `state.scrap.held`, `state.buffs` | whole number; list of strings |
 | `options` | At least one, unique ids from `INTENTS`, each `{id, why}` plus optional `requires_speed_ms` (steps of 0.1) |
 
-Every case in `corpus.json` passes this schema. A "steps of 0.1" (or whole-number) check allows up to `1e-9` of floating-point slack around the grid line; it is not a second, coarser grid.
+Every case in `corpus.json` passes this schema. A whole-number field is an exact integer on both sides, with no slack: `1.0000000001` is invalid. A "steps of 0.1" check allows up to `1e-9` of floating-point slack around the grid line, because tenths are not exact in binary; it is not a second, coarser grid.
 
 ## Determinism
 

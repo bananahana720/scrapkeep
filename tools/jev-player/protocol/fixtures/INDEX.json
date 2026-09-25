@@ -591,6 +591,196 @@
       "type": "error",
       "valid": true,
       "note": "part of trial-timeout-tick-mismatch"
+    },
+    {
+      "file": "invalid/events-kind-constructor.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[0].kind",
+      "note": "\"constructor\" is not an event kind, although a plain lookup finds Object.prototype.constructor."
+    },
+    {
+      "file": "invalid/events-kind-proto.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[0].kind",
+      "note": "\"__proto__\" is not an event kind, although a plain lookup finds Object.prototype itself."
+    },
+    {
+      "file": "invalid/events-kind-tostring.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[0].kind",
+      "note": "\"toString\" is not an event kind, although a plain lookup finds Object.prototype.toString."
+    },
+    {
+      "file": "invalid/events-kind-array.ndjson",
+      "type": "events",
+      "valid": false,
+      "path": "events[0].kind",
+      "note": "An array is not a kind, although [\"takeoff\"] converts to the key \"takeoff\"."
+    },
+    {
+      "file": "invalid/intent-arm-constructor.json",
+      "type": "intent",
+      "valid": false,
+      "path": "arm",
+      "note": "\"constructor\" is not an arm; it is reported at arm, not thrown while looking up its sources."
+    },
+    {
+      "file": "invalid/intent-arm-proto.json",
+      "type": "intent",
+      "valid": false,
+      "path": "arm",
+      "note": "\"__proto__\" is not an arm; it is reported at arm, not thrown while looking up its sources."
+    },
+    {
+      "file": "invalid/intent-arm-tostring.json",
+      "type": "intent",
+      "valid": false,
+      "path": "arm",
+      "note": "\"toString\" is not an arm; it is reported at arm, not thrown while looking up its sources."
+    },
+    {
+      "file": "invalid/intent-arm-array.json",
+      "type": "intent",
+      "valid": false,
+      "path": "arm",
+      "note": "An array arm is reported at arm only; [\"random\"] must not select the random arm's sources."
+    },
+    {
+      "file": "invalid/state-option-id-constructor.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.options[1].id",
+      "note": "\"constructor\" is not an intent id, although a plain lookup finds it on Object.prototype."
+    },
+    {
+      "file": "invalid/intent-option-id-constructor.json",
+      "type": "intent",
+      "valid": false,
+      "path": "intent",
+      "context": "invalid/state-option-id-constructor.json",
+      "note": "The gate has no rule for \"constructor\" and keeps it, so two options stay offered and only the intent id is at fault."
+    },
+    {
+      "file": "invalid/state-option-id-proto.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.options[1].id",
+      "note": "\"__proto__\" is not an intent id, although a plain lookup finds it on Object.prototype."
+    },
+    {
+      "file": "invalid/intent-option-id-proto.json",
+      "type": "intent",
+      "valid": false,
+      "path": "intent",
+      "context": "invalid/state-option-id-proto.json",
+      "note": "The gate has no rule for \"__proto__\" and keeps it, so two options stay offered and only the intent id is at fault."
+    },
+    {
+      "file": "invalid/state-option-id-tostring.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.options[1].id",
+      "note": "\"toString\" is not an intent id, although a plain lookup finds it on Object.prototype."
+    },
+    {
+      "file": "invalid/intent-option-id-tostring.json",
+      "type": "intent",
+      "valid": false,
+      "path": "intent",
+      "context": "invalid/state-option-id-tostring.json",
+      "note": "The gate has no rule for \"toString\" and keeps it, so two options stay offered and only the intent id is at fault."
+    },
+    {
+      "file": "invalid/state-option-id-array.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.options[1].id",
+      "note": "An array id is not an intent id, although it converts to the key \"ram_target\"."
+    },
+    {
+      "file": "invalid/intent-option-id-array.json",
+      "type": "intent",
+      "valid": false,
+      "path": "intent",
+      "context": "invalid/state-option-id-array.json",
+      "note": "The gate has no rule for an array id and keeps it, so two options stay offered; ram_target itself was not offered."
+    },
+    {
+      "file": "invalid/state-whole-not-exact.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.state.stage.time_s",
+      "note": "A whole-number field is an exact integer; the 1e-9 slack applies only to the 0.1 grid."
+    },
+    {
+      "file": "invalid/state-empty-string.json",
+      "type": "state",
+      "valid": false,
+      "path": "jev.state.objective.kind",
+      "note": "Every string field the protocol defines is non-empty."
+    },
+    {
+      "file": "valid/state-gate-stomp-dropped.json",
+      "type": "state",
+      "valid": true,
+      "note": "Airborne with the air jump spent, the gate drops stomp_target."
+    },
+    {
+      "file": "valid/intent-gate-stomp-dropped.json",
+      "type": "intent",
+      "valid": true,
+      "context": "valid/state-gate-stomp-dropped.json",
+      "note": "Airborne with the air jump spent, the gate drops stomp_target; evade_hazard alone is offered, so it is forced."
+    },
+    {
+      "file": "valid/state-gate-ram-dropped.json",
+      "type": "state",
+      "valid": true,
+      "note": "Below the fast tier, the gate drops ram_target."
+    },
+    {
+      "file": "valid/intent-gate-ram-dropped.json",
+      "type": "intent",
+      "valid": true,
+      "context": "valid/state-gate-ram-dropped.json",
+      "note": "Below the fast tier, the gate drops ram_target; sweep_scrap alone is offered, so it is forced."
+    },
+    {
+      "file": "valid/state-gate-start-exit-dropped.json",
+      "type": "state",
+      "valid": true,
+      "note": "Outside the ring (inside_ring false), the gate drops start_exit."
+    },
+    {
+      "file": "valid/intent-gate-start-exit-dropped.json",
+      "type": "intent",
+      "valid": true,
+      "context": "valid/state-gate-start-exit-dropped.json",
+      "note": "Outside the ring (inside_ring false), the gate drops start_exit; push_objective alone is offered, so it is forced."
+    },
+    {
+      "file": "valid/state-gate-kept.json",
+      "type": "state",
+      "valid": true,
+      "note": "At exactly 26 m/s the gate keeps hit_kicker (speed >= requires_speed_ms), and inside the ring it keeps start_exit."
+    },
+    {
+      "file": "valid/intent-gate-kicker-kept.json",
+      "type": "intent",
+      "valid": true,
+      "context": "valid/state-gate-kept.json",
+      "note": "hit_kicker survives the gate at speed equal to requires_speed_ms, so the random arm may choose it."
+    },
+    {
+      "file": "invalid/intent-gate-kept-forced.json",
+      "type": "intent",
+      "valid": false,
+      "path": "source",
+      "context": "valid/state-gate-kept.json",
+      "note": "Both hit_kicker and start_exit survive the gate, so nothing is forced."
     }
   ],
   "trials": [
