@@ -415,9 +415,11 @@ func _rebuild_ribbon() -> void:
 		var a: Vector3 = trail[i - 1]["pos"] + lift
 		var b: Vector3 = trail[i]["pos"] + lift
 		var along := b - a
-		if along.length() < 0.01:
+		# A segment that mostly rises or falls (a bounce on a dummy) is left out:
+		# drawn at any width it stands up as a column under the ball.
+		if Vector2(along.x, along.z).length() < absf(along.y) or along.length() < 0.01:
 			continue
-		# Width faces the camera, so a climb or a bounce draws a line, never a
+		# Width faces the camera, so a slope or a jump arc draws a line, never a
 		# sheet; with no camera (a headless test) it lies flat.
 		var facing := Vector3.UP
 		if camera != null:
