@@ -332,11 +332,10 @@ export function buildReport({
   return {
     when,
     instrument,
-    authored: {
-      gating: false,
-      summary: summarize(authored),
-      results: authored,
-    },
+    authored:
+      authored === null
+        ? null
+        : { gating: false, summary: summarize(authored), results: authored },
     blind:
       blind === null
         ? null
@@ -404,7 +403,8 @@ async function scoreAll(cases, questions, decideFn) {
 }
 
 // The live path behind the CLI, with the decider, corpora, report file and
-// printer injectable so a test can run it offline. The diagnostic list loads
+// printer injectable so a test can run it offline; authored null scores the
+// blind corpus alone. The diagnostic list loads
 // before any call, so a malformed list costs nothing.
 export async function scoreCorpora({
   questions,
@@ -420,11 +420,16 @@ export async function scoreCorpora({
   const report = buildReport({
     when,
     instrument,
-    authored: await scoreAll(authored, questions, decideFn),
+    authored:
+      authored === null ? null : await scoreAll(authored, questions, decideFn),
     blind: blind === null ? null : await scoreAll(blind, questions, decideFn),
     diagnostic,
   });
-  printSection("Authored", report.authored, print);
+  if (report.authored === null) {
+    print("\nAuthored corpus: not scored in this run.");
+  } else {
+    printSection("Authored", report.authored, print);
+  }
   if (report.blind === null) {
     print("\nBlind corpus: absent.");
   } else {

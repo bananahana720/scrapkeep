@@ -99,6 +99,13 @@ export const DEFAULTS = Object.freeze({
 
 export const TRIAL_SEED_STRIDE = 1000;
 
+// What a jev batch asks with unless told otherwise: the neutral wording and its
+// controls (JL-18). decide.mjs keeps its own default for its other callers.
+export const JEV_DEFAULTS = Object.freeze({
+  questions: "q2-neutral",
+  controls: "c2",
+});
+
 // What each Node-side abort cause says about the batch. An API failure or the
 // call cap says nothing about the game, so it can only leave the batch
 // inconclusive; a broken arm or answer, or a replay that cannot reproduce, is
@@ -528,14 +535,14 @@ export async function runBatch({
   let preflightResult = null;
   let preflightSummary = null;
   if (armName === "jev") {
-    const questions = loadQuestionSet();
+    const questions = loadQuestionSet(JEV_DEFAULTS.questions);
     armInstrument = instrument ?? instrumentIdentity(questions);
     let cache = openVerdictCache(verdictCache);
     if (!replay) {
       const checked = await preflight({
         questions,
         decideFn: decideFn ?? decide,
-        controls: controls ?? loadControls(),
+        controls: controls ?? loadControls(JEV_DEFAULTS.controls),
         start: async () => true,
       });
       preflightResult = checked.controls;

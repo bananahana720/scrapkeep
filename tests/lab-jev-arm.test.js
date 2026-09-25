@@ -24,7 +24,7 @@ import {
 } from "../tools/jev-player/decide.mjs";
 import { verdictKey } from "../tools/jev-player/protocol/protocol.mjs";
 import { createArm } from "../scripts/lab/arms.mjs";
-import { runBatch } from "../scripts/lab/harness.mjs";
+import { JEV_DEFAULTS, runBatch } from "../scripts/lab/harness.mjs";
 import {
   anchoredCache,
   openVerdictCache,
@@ -374,7 +374,9 @@ test("a jev batch calls once per non-forced snapshot and records model and the f
   assert.equal(record.kris.api_error_rate.n, 2);
 
   const files = await trialFiles(directory, trials[0]);
-  const instrument = instrumentIdentity();
+  const instrument = instrumentIdentity(
+    loadQuestionSet(JEV_DEFAULTS.questions),
+  );
   const keys = [];
   for (const seq of [2, 3]) {
     const name = String(seq).padStart(6, "0");
@@ -622,4 +624,23 @@ test("a replay whose cached verdicts come from two models aborts model_mismatch 
   assert.equal(replay.trials[0].abort.cause, "model_mismatch");
   assert.equal(replay.record.provenance.jev.cache_hits, 3);
   assert.equal(replay.record.result, "invalid");
+});
+
+test("a jev batch defaults to the q2-neutral question set and the c2 controls", async (t) => {
+  const { run } = await fixture(t);
+  const preflight = stubPreflight();
+  const decideFn = stubDecide();
+  const { record } = await run({
+    scenario: "pillar-weave",
+    decideFn,
+    preflight,
+  });
+  const q2 = loadQuestionSet("q2-neutral");
+  assert.deepEqual(JEV_DEFAULTS, { questions: "q2-neutral", controls: "c2" });
+  assert.equal(preflight.calls[0].questions.version, "q2-neutral");
+  assert.equal(preflight.calls[0].controls.version, "c2");
+  assert.deepEqual(record.provenance.instrument, instrumentIdentity(q2));
+  assert.ok(decideFn.calls.length > 0);
+  for (const call of decideFn.calls)
+    assert.equal(call.settings.questions.version, "q2-neutral");
 });

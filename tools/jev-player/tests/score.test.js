@@ -431,3 +431,32 @@ test("the live path with a stub decider never prints or writes a blind case id",
   assert.match(printed, /By block: /);
   assert.deepEqual(JSON.parse(written).blind, report.blind);
 });
+
+test("the live path can score the blind corpus alone", async (t) => {
+  const directory = mkdtempSync(path.join(tmpdir(), "scrapkeep-score-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const blind = loadAuthored()
+    .slice(0, 3)
+    .map((testCase, index) => ({ ...testCase, id: `zq-only-${index}` }));
+  let calls = 0;
+  const lines = [];
+  const report = await scoreCorpora({
+    questions: { version: "stub" },
+    instrument: {},
+    decideFn: async () => {
+      calls += 1;
+      return decision({});
+    },
+    authored: null,
+    blind,
+    diagnostic: null,
+    reportFile: path.join(directory, "report.json"),
+    print: (line) => lines.push(line),
+  });
+  assert.equal(calls, 3);
+  assert.equal(report.authored, null);
+  assert.equal(report.blind.summary.cases, 3);
+  assert.equal(report.blind.diagnostic, null);
+  assert.match(lines.join("\n"), /Authored corpus: not scored/);
+  assert.doesNotMatch(lines.join("\n"), /zq-only/);
+});
