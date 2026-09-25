@@ -256,9 +256,9 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-07](BACKLOG.md#jl-07) | 1 | 5 | done | none | JL-07-A1 | EV-0500 |
 | [JL-08](BACKLOG.md#jl-08) | 1 | 4 | done | none | JL-08-A1 | EV-0498 |
 | [JL-05b](BACKLOG.md#jl-05b) | 1 | 4 | done | none | JL-05b-A1 | EV-0506 |
-| [JL-09](BACKLOG.md#jl-09) | 1 | 2 | ready | none | none | EV-0506 |
+| [JL-09](BACKLOG.md#jl-09) | 1 | 3 | in_progress | none | none | EV-0507 |
 | [JL-10](BACKLOG.md#jl-10) | 1 | 3 | review | none | none | EV-0505 |
-| [JL-11](BACKLOG.md#jl-11) | 1 | 2 | ready | none | none | EV-0506 |
+| [JL-11](BACKLOG.md#jl-11) | 1 | 3 | in_progress | none | none | EV-0507 |
 | [JL-12](BACKLOG.md#jl-12) | 1 | 4 | review | none | none | EV-0505 |
 
 ## Question state index
@@ -782,6 +782,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0504 | 2026-09-25T18:26:01+00:00 | Worker handoff / coordinator review admission | JL-05b, JL-12 | JL-05b handed off 15b1be2 (PROTOCOL.md now states every rule `protocol.mjs` enforces; intent-before-trace enforced with fixtures; a state with no answering intent rejected; eight trial-level invalid fixtures; exact-path fixture tests; revert-and-rerun proves the two new invariants are exercised; `npm test` 318/0, verify passes) and is in Fable review. JL-12 handed off 7b58356 (gate with pinning and exit codes 0 to 4 tested through the real CLI; `invalid` stays invalid on a source mismatch with `reported_result` kept; an `untiered` status, Neon Noir blue, for every non-sentinel metric without thresholds, which the gate ignores; the `lever_effect` epoch rule; `event_time_skew` warn above 0.25 h, so EV-0492's 0.58 h now warns; `npm test` 335/0, verify passes) and waits for Fable, one review at a time. JL-12 and JL-06-A2 both edit `scripts/lab/record.mjs`, a known overlap: JL-12's change is one hunk in the source-mismatch branch, to be merged serially. Coordinator rulings to apply at JL-12's admission: the `andrew-anchor` pin is exempt from the 7-day staleness rule because it records Andrew's played build; a threshold for `control_separation` (plan exit 4) is carried to JL-15; plan § 4's `event_time_skew` cell is superseded by the code. Both move in_progress to review, record revision 2 to 3. |
 | EV-0505 | 2026-09-25T18:32:08+00:00 | Independent reviewer / review; coordinator / integration; worker handoff | JL-06, JL-10, JL-12 | **JL-06.** A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on d566188: B1 to B3 are closed (records start before the suite, with spans matching wall time; the shot prints saved only once the file exists; CONTRIBUTING's numbers match the cited records: 17.3 s at jobs 1 and 9.7 s at jobs 4 for ball-lab, a 20-repeat soak with 0 failed repeats, 0 crashes and 0 flaky checks over n = 5). Report at [artifacts/jev-lab-2026-09-25/reviews/JL-06-A2.md](artifacts/jev-lab-2026-09-25/reviews/JL-06-A2.md). Merged at 346063a; integrated `npm test` 341/0, `npm run verify` six stages pass, `npm run sketch:smoke` pass. JL-06 moves review to done, record revision 5 to 7; lease JL-06-L2 closes. Carried forward: NB2 (a retried `finish()` repeats the mismatch limit line) goes to JL-12's merge resolution, which rewrites that branch; NB1 (the headless shot has no process timeout) and NB3 (a relative or `//tmp` path can still resolve into `/tmp`) go to the next card that edits `play.mjs` (JL-16 or JL-23); NB6 (the DoD 2 records were produced by uncommitted A2 code at head 2797ce7, dirty) is recorded as a limit on those numbers. **JL-10** handed off 8ff1dcd: the state exporter reads only, and positions and velocities over 900 ticks are bit-identical with it on or off in both physics modes (rigid Jolt included), with a 1 mm/s nudge control caught at the next tick; 22 dumped states validate against `protocol.mjs`; seven scenarios defined. It found that the game emits knocks raw (one kinematic ram emitted 45 shockwaves; a rigid stomp registers as a ram), so JL-13 and JL-21 must merge emissions into hits before the stomp/ram KPI means anything. In routine review. **JL-12** is merging `wt/JL-coord` into its branch to resolve the `record.mjs` overlap and fix NB2 before its Fable review. **Wave 2 closes** with JL-05 to JL-08 done. The agent map gains seven rows. |
 | EV-0506 | 2026-09-25T18:33:19+00:00 | Independent reviewer / review; coordinator / integration, readiness | JL-05b, JL-09, JL-11 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on 15b1be2: a validator built from PROTOCOL.md plus fixtures agrees with `protocol.mjs` on every fixture, all nine new trial fixtures and both events fixtures fail for exactly their indexed reason, and no message shape changed. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-05b.md](artifacts/jev-lab-2026-09-25/reviews/JL-05b.md). Because JL-09's Godot writer reads PROTOCOL.md and may not edit it, the writer added the three rules the review found only in code (≥ 0 on every whole and tenth jev field, a non-empty `abort.message`, the named rule that a snapshot after seq 0 needs the previous intent, and Node ignoring `*.tmp`) at d8fcf63, PROTOCOL.md only, which the coordinator checked by diff. The revert-and-rerun receipt the review could not find now exists: the two new tests fail against base `protocol.mjs`. Merged at f473132; integrated `npm test` 341/0, `npm run verify` six stages pass. JL-05b moves review to done, record revision 3 to 4; lease JL-05b-L1 closes. JL-09 (dependency JL-05b) and JL-11 (JL-05b, JL-06) move queued to ready, record revision 1 to 2. Carried forward: the equal-tick intent-before-trace rule is live only in schedules like JL-21's k = 0 sweep. |
+| EV-0507 | 2026-09-25T18:33:36+00:00 | Coordinator / assignment, lease | JL-09, JL-11 | Wave 3 second batch dispatched: JL-09 and JL-11 move ready to in_progress, record revision 2 to 3, with attempt and lease A1/L1 over the files in their attempt records. Worktrees at base cd06534 (EV-0506), verified, with the `node_modules` link. Both writers on scrapkeep-writer (Opus 5.5 high), following the EV-0501 retro signal for Godot and process-running tooling. Active writers: three (JL-09, JL-11, and JL-12's merge resolution); JL-10 is in review. |
 
 ## Preparation checkpoint
 
@@ -1766,4 +1767,28 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: writer receipts under `artifacts/local/tasks/JL-12/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-09-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-09-A1; exclusive lease JL-09-L1 open.
+- Owned files: `sketches/ball-lab/src/jev/jev_io.gd`; `sketches/ball-lab/src/jev/fixtures/`; `sketches/ball-lab/tests/jev_io_test.gd`; `tests/jev-fixtures.test.js`; `artifacts/local/tasks/JL-09/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-09` on `wt/JL-09`, created by `scripts/new-worktree.sh`.
+- Base identity: `cd0653451f1e32f6feb4be87dc15068f5aa69197`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:33:36+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-09/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-11-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-11-A1; exclusive lease JL-11-L1 open.
+- Owned files: `scripts/lab/{harness,arms,fake-godot}.mjs`; `tools/jev-player/decide.mjs` (export only); `tools/jev-player/protocol/protocol.mjs` (import only); `tests/lab-harness.test.js`; `artifacts/local/tasks/JL-11/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-11` on `wt/JL-11`, created by `scripts/new-worktree.sh`.
+- Base identity: `cd0653451f1e32f6feb4be87dc15068f5aa69197`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:33:36+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-11/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
 
