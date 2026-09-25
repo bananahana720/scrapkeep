@@ -22,11 +22,18 @@ extends SceneTree
 #
 # Trial holds the whole contract so tests/jev_bridge_test.gd can run it on a lab of
 # its own; this SceneTree only parses the arguments and owns the process.
+#
+# Watch mode (JL-31, `scrapkeep lab watch`): with --watch=<dir> the runner also adds
+# watch_overlay.gd, which draws each decision from <dir>'s side files, and on the end
+# holds the last frame for a few seconds before quitting. --marks=<file>,
+# --shots=<tick,...> and --mark-at=<tick> go to the overlay. Without --watch nothing
+# here changes: the overlay is never loaded and the trial is the same.
 
 const Lab := preload("res://src/lab.gd")
 
 var _trial
 var _lab
+var _overlay
 var _frames := 0
 var _counting := false
 
@@ -42,6 +49,10 @@ func _initialize() -> void:
 	_lab.test_mode = true
 	root.add_child(_lab)
 	_trial = Trial.new(_lab, settings)
+	if settings.has("watch"):
+		_overlay = load("res://src/jev/watch_overlay.gd").new()
+		root.add_child(_overlay)
+		_overlay.setup(_trial, settings)
 
 
 func _physics_process(_delta: float) -> bool:
@@ -70,6 +81,14 @@ func _end() -> void:
 		print("jev_run: scenario %s" % JSON.stringify(_trial.scenario_result()))
 	print("jev_run: %s; %d frames, %d ticks" % [_trial.summary(), _frames, _trial.view_tick()])
 	_trial.close()
+	if _overlay != null:
+		_overlay.finish()
+		_lab.process_mode = Node.PROCESS_MODE_DISABLED
+		var code: int = _trial.exit_code
+		create_timer(_overlay.LINGER_S).timeout.connect(func() -> void:
+			_lab.queue_free()
+			quit(code))
+		return
 	_lab.queue_free()
 	quit(_trial.exit_code)
 
@@ -132,7 +151,8 @@ class Trial:
 	# `--key=value` user arguments. A malformed one leaves `usage` set.
 	static func parse_args(args: PackedStringArray) -> Dictionary:
 		var out := {}
-		var numbers := ["seed", "snapshot-every", "hold-ticks", "intent-timeout-s", "max-ticks", "time-limit-s"]
+		var numbers := ["seed", "snapshot-every", "hold-ticks", "intent-timeout-s", "max-ticks", "time-limit-s",
+			"mark-at"]
 		for arg in args:
 			var at := arg.find("=")
 			if not arg.begins_with("--") or at < 0:
@@ -145,7 +165,7 @@ class Trial:
 					out["usage"] = "--%s must be a whole number, got %s" % [key, value]
 					continue
 				out[key.replace("-", "_")] = value.to_int()
-			elif key in ["io", "scenario", "mode"]:
+			elif key in ["io", "scenario", "mode", "watch", "marks", "shots"]:
 				out[key] = value
 			else:
 				out["usage"] = "unknown option --%s" % key

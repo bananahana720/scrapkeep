@@ -775,7 +775,9 @@ function showList(entries, all) {
     dim("\n  play <name> | test [name] | shot <name> [out.png] | list"),
   );
   console.log(
-    dim("  stats [--layer <layer>] | gate <run> --against <pin> | lab run"),
+    dim(
+      "  stats [--layer <layer>] | gate <run> --against <pin> | lab run | lab watch <scenario>",
+    ),
   );
   console.log(dim("  Names match on any unambiguous prefix: play mobility"));
   console.log(
@@ -820,6 +822,7 @@ const LAB_SUBVERBS = {
   run: "harness.mjs",
   program: "program.mjs",
   verdicts: "verdicts.mjs",
+  watch: "watch.mjs",
 };
 
 // The lab verbs need no Godot and no sketch catalogue, so they are routed
@@ -835,7 +838,7 @@ export function labRoute(words, { exists = existsSync } = {}) {
     if (!Object.hasOwn(LAB_SUBVERBS, sub)) {
       return {
         exit: EXIT.usage,
-        error: `Usage: scrapkeep lab run|program|verdicts [args]${sub === undefined ? "" : ` (not "${sub}")`}`,
+        error: `Usage: scrapkeep lab run|program|verdicts|watch [args]${sub === undefined ? "" : ` (not "${sub}")`}`,
       };
     }
     file = LAB_SUBVERBS[sub];

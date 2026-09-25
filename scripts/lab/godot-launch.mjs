@@ -35,10 +35,28 @@ export const SKETCH = path.resolve(here, "../../sketches/ball-lab");
 export const RUNNER = "res://src/jev/jev_run.gd";
 export const MODES = Object.freeze(["kinematic", "rigid"]);
 
+// Where a watched trial's side files go (JL-31): beside trials/, never inside
+// a trial's io directory, which validateTrial() closes to protocol files.
+// `io` is <run>/trials/<NNN>; marks for the whole run share one JSONL file.
+export function watchPaths(io, marksRoot) {
+  const run = path.dirname(path.dirname(io));
+  const runId = path.basename(run);
+  const trial = path.basename(io);
+  return {
+    run,
+    runId,
+    trial,
+    dir: path.join(run, "watch", trial),
+    marks: path.join(marksRoot, `${runId}.jsonl`),
+  };
+}
+
 // `maxTicks` ends every trial early (0 runs to the scenario's own end);
 // `intentTimeoutS` replaces the protocol's 30 s block limit; `env` is added to
 // the harness's environment for each Godot process; `sketch` is the Godot
-// project directory.
+// project directory. `watch` ({marks, shots?, markAt?}) opens a visible window
+// at real time with the runner's overlay instead of running headless; without
+// it the arguments are the headless runner's, unchanged.
 export function godotLaunch({
   mode = "kinematic",
   godot = GODOT_BINARY,
@@ -46,6 +64,7 @@ export function godotLaunch({
   intentTimeoutS,
   env = {},
   sketch = SKETCH,
+  watch = null,
 } = {}) {
   if (!MODES.includes(mode)) {
     throw new Error(
@@ -59,12 +78,22 @@ export function godotLaunch({
     throw new Error(`no project.godot in the sketch directory ${sketch}`);
   }
   const name = path.basename(sketch);
+  const engine =
+    watch === null ? ["--headless", "--fixed-fps", String(TIMING.tick_hz)] : [];
+  const watchArgs = (io) => {
+    if (watch === null) return [];
+    const paths = watchPaths(io, watch.marks);
+    return [
+      `--watch=${paths.dir}`,
+      `--marks=${paths.marks}`,
+      ...(watch.shots?.length > 0 ? [`--shots=${watch.shots.join(",")}`] : []),
+      ...(watch.markAt === undefined ? [] : [`--mark-at=${watch.markAt}`]),
+    ];
+  };
   const launch = ({ io, scenario, seed, snapshotEvery, holdTicks }) => ({
     command: godot,
     args: [
-      "--headless",
-      "--fixed-fps",
-      String(TIMING.tick_hz),
+      ...engine,
       "--path",
       sketch,
       "--script",
@@ -80,11 +109,12 @@ export function godotLaunch({
       ...(intentTimeoutS === undefined
         ? []
         : [`--intent-timeout-s=${intentTimeoutS}`]),
+      ...watchArgs(io),
     ],
     env,
   });
   launch.label = [
-    "godot-headless",
+    watch === null ? "godot-headless" : "godot-watch",
     path.basename(godot),
     mode,
     ...(maxTicks > 0 ? [`max-ticks ${maxTicks}`] : []),
