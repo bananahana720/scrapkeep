@@ -5582,3 +5582,107 @@ Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-0
 **Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** No preflight controls (JL-15) or epoch creation; no dashboard.
+
+<a id="jl-13"></a>
+
+### JL-13: Godot steering agent and telemetry
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 2 "Input seam", "Steering at 90 Hz" and "Telemetry"; `sketches/ball-lab/src/{intent,ball_rules,player_ball,field}.gd`; `src/jev/{jev_state,scenarios,jev_io}.gd` (JL-09, JL-10)
+- Contract items from the JL-10 review (EV-0509): the first snapshot comes at least one physics tick after `Scenarios.place()`; raw `shockwave` emissions collapse into one hit per enemy and contact stretch before any stomp or ram count
+
+**Dependencies:** [JL-09](#jl-09), [JL-10](#jl-10). **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/jev_agent.gd`; `sketches/ball-lab/src/jev/telemetry.gd`; `sketches/ball-lab/tests/jev_agent_test.gd`; `artifacts/local/tasks/JL-13/`.
+
+**Definition of done:**
+
+1. `jev_agent.gd` extends `Intent.Source`, installs as `player.source` the way `tests/mode_check.gd` does, and turns the held intent into stick input at 90 Hz through one shared `seek(point)` (`move = (d·B.x, −d·B.z)`, the inverse of `ball_rules.gd:48`) with brake on overshoot, aligned boost, jump edges and unstick; it implements `push_objective`, `hit_kicker`, `stomp_target`, `ram_target` and `evade_hazard`.
+2. Headless tests show each intent reaching its target on a fixed placement in both physics modes within a stated tick budget, and `seek` inverting `ball_rules.gd:48` to within 1°.
+3. `telemetry.gd` writes `events.ndjson` lines in the protocol's closed event kinds and a 10 Hz trace: tier changes, takeoffs and landings, collapsed knocks, stuck begin and end, and anomalies (NaN, tunnelling below `Field.height − 0.5`, out of bounds, speed over 80 m/s).
+4. No gameplay file changes; `npm run sketch:smoke` passes.
+
+**Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No runner process or protocol loop (JL-17), no Jev call.
+
+<a id="jl-14"></a>
+
+### JL-14: Verdict cache, the jev arm and replay
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 2 "Arms" (verdict cache key, replay); `scripts/lab/{harness,arms}.mjs` (JL-11); `tools/jev-player/{decide.mjs,score.mjs}`; `protocol.mjs` `verdictKey()`
+- Carried notes: EV-0489 (confirm the real Jev `usage` field names; only `input_tokens` is confirmed), EV-0493 (`score.mjs` needs a `--help`/`--dry-run` guard before any live call; copy `decision.model` into score records)
+
+**Dependencies:** [JL-11](#jl-11). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/harness.mjs`; `scripts/lab/arms.mjs`; `scripts/lab/verdict-cache.mjs`; `tools/jev-player/score.mjs`; `tools/jev-player/decide.mjs` (return usage and resolved model unchanged in shape); `tests/lab-jev-arm.test.js`; `tools/jev-player/tests/score.test.js`; `artifacts/local/tasks/JL-14/`.
+
+**Definition of done:**
+
+1. The jev arm calls `decide()` once per non-forced snapshot, caches each verdict under `verdictKey()`, records the resolved model and the four token fields separately, and respects the per-batch call cap; `--replay` makes zero network calls and treats a cache miss as an error.
+2. Tests use an injected `decideFn`; no test makes a live call.
+3. `score.mjs` parses its arguments before doing anything: `--help` prints usage and exits 0 with no call; `--dry-run` loads and validates the corpora and question set with no call; each score record carries `decision.model`.
+4. One live smoke of the jev arm on the fake Godot, capped at 5 calls, confirms the real `usage` field names and the resolved model; the record is retained and the finding is written to the card's receipts.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the capped live smoke; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No preflight (JL-15), no question-set change, no real Godot.
+
+<a id="jl-15"></a>
+
+### JL-15: Preflight controls
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 1 "Preflight controls" and "Instrument epoch"; `tools/jev-player/{decide.mjs,questions/}`; `scripts/lab/{gate,metrics/status}.mjs` (JL-12's epoch rule)
+- Carried: `control_separation` needs a threshold before the gate can use exit 4 for it (EV-0504)
+
+**Dependencies:** [JL-03](#jl-03), [JL-12](#jl-12). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/preflight.mjs`; `tools/jev-player/controls/c1.json`; `tools/jev-player/tests/preflight.test.js`; `scripts/lab/metrics/core.mjs` (the `control_separation` threshold only); `artifacts/local/tasks/JL-15/`.
+
+**Definition of done:**
+
+1. `preflight.mjs` exports `runControls({questions, decideFn})` for the free-cache, lethal-option and wording-swap controls in `controls/c1.json`, each run with the options in both orders, never reading a cache, and returns pass or fail per control with its probabilities; a failure makes the caller exit 6 before any Godot process starts.
+2. An epoch record (questions sha, model, floor, gate version, control results, blind-corpus result) is written when both controls and the blind corpus pass; JL-12's gate reads it for `lever_effect` and for pinning.
+3. `control_separation` gets a warn and fail threshold in the registry, with the rationale in a comment.
+4. Tests use an injected `decideFn`; one live run against q1 is retained and reported as-is (q1 is retracted-leading, so a failure is an expected, recordable result).
+
+**Verification and evidence:** `npm test`; `npm run verify`; the live control run; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No new question set (JL-18); thresholds in `c1.json` are provisional.
+
+<a id="jl-16"></a>
+
+### JL-16: `scrapkeep stats` and lab verb routing
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Output" (`scrapkeep stats`); `scripts/lab/{record,gate,metrics/*}.mjs`; `scripts/play.mjs`
+- Carried from the JL-06 review (EV-0505): NB1 (the headless shot has no process timeout), NB3 (a relative or `//tmp` path can resolve into `/tmp`)
+
+**Dependencies:** [JL-06](#jl-06), [JL-12](#jl-12). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/model.mjs`; `scripts/lab/stats-cli.mjs`; `scripts/play.mjs`; `tests/lab-stats.test.js`; `tests/play.test.js`; `artifacts/local/tasks/JL-16/`.
+
+**Definition of done:**
+
+1. `scripts/lab/model.mjs` loads the run index into one in-memory model (latest record per type and label, trends per metric, epoch boundaries) and refuses to aggregate across mixed question shas or models.
+2. `scrapkeep stats [--layer <layer>]` prints one line per metric: glyph, value, n, change from the latest pin and the registry's `says` line, rendered only through `status.mjs`.
+3. `play.mjs` routes `lab`, `stats` and `gate` verbs to their scripts.
+4. NB1: the headless shot spawn has a process timeout; NB3: the output path is resolved and refused when it lands under `/tmp` or `os.tmpdir()`.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No dashboard (JL-22), no new metric.
