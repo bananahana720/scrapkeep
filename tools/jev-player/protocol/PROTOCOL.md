@@ -10,6 +10,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 - **Closed.** An unknown field is invalid, except inside `sim` (state) and `meta` (intent).
 - **No wall clock in Godot files.** Godot's files hold ticks, never times of day or elapsed milliseconds. That keeps `trace_hash` identical when Node answers slowly.
 - **Numbering.** `NNNNNN` is the snapshot's `seq`, zero-padded to six digits and starting at `000000`. `intent-NNNNNN.json` answers `state-NNNNNN.json`.
+- **Closed directory.** `<io>` holds only the file names in the table below. Node ignores any file whose name ends in `.tmp`; `validateTrial()` rejects any other name.
 
 ## Files
 
@@ -29,7 +30,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 | --- | --- |
 | `sketch`, `scenario`, `physics_mode`, `godot` | Non-empty strings. `physics_mode` is the ball-lab mode (`kinematic` or `rigid`). `godot` is the engine version. |
 | `seed` | Integer. The effective seed, after any `seed_override`. |
-| `tick_hz`, `snapshot_every`, `hold_ticks`, `intent_timeout_s` | The schedule in force. v1 is 90, 90, 26 and 30. `hold_ticks` must be below `snapshot_every`. |
+| `tick_hz`, `snapshot_every`, `hold_ticks`, `intent_timeout_s` | The schedule in force. v1 is 90, 90, 26 and 30. `tick_hz`, `snapshot_every` and `intent_timeout_s` must each be greater than 0; `hold_ticks` must be below `snapshot_every`. |
 
 ### `state-NNNNNN.json`
 
@@ -39,7 +40,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 | `tick` | `seq × snapshot_every` |
 | `held` | The intent in force at this tick; `null` before the first intent applies |
 | `jev` | `{state, options}`, pre-quantised to the corpus schema (below). This is exactly what an arm sees and what the verdict-cache key covers. |
-| `sim` | Godot's own view: `pos` and `vel` as three finite numbers each. Extra keys are allowed. Never shown to Jev, never in the cache key. |
+| `sim` | Godot's own view: `pos` and `vel` as three finite numbers each. Extra keys are allowed and unchecked. Never shown to Jev, never hashed: not part of `trace_hash` (which covers `events.ndjson` only) and not part of the verdict-cache key. |
 
 ### `intent-NNNNNN.json`
 
@@ -56,7 +57,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 | Field | Rule |
 | --- | --- |
 | `reason` | `interrupted`, `arm_error` (for example a Jev API failure) or `replay_miss` (`--replay` found no cached verdict) |
-| `message` | Optional string |
+| `message` | Optional; when present, a non-empty string |
 
 ### `error.json`
 
@@ -78,7 +79,7 @@ One Godot trial and the Node harness talk only through files in one `<io>` direc
 
 ### `events.ndjson`
 
-One JSON object per line, each `{tick, kind, ...}`, ticks never decreasing. Each kind has a closed set of fields:
+One JSON object per line, LF-terminated, with a trailing newline after the last line; an empty file (no lines at all) is valid. Each line is `{tick, kind, ...}`, ticks never decreasing. Each kind has a closed set of fields:
 
 | `kind` | Extra fields | When |
 | --- | --- | --- |
@@ -90,7 +91,7 @@ One JSON object per line, each `{tick, kind, ...}`, ticks never decreasing. Each
 | `stuck_begin`, `stuck_end` | none | Stuck detection |
 | `anomaly` | `what`: `nan`, `tunnel`, `out_of_bounds` or `overspeed` | NaN, `y < Field.height − 0.5`, out of bounds, or speed above 80 m/s |
 
-At an equal tick, an `intent` line comes before the `trace` line.
+At an equal tick, an `intent` line comes before the `trace` line; `validateEvents()` enforces this.
 
 ## Tick schedule
 
@@ -101,7 +102,7 @@ Godot runs with `--fixed-fps 90`, so frames and physics ticks are 1:1. With D = 
 3. At tick t + k it needs `intent-seq`. If the intent is not there, Godot blocks inside `_physics_process` (polling with `OS.delay_msec`), not with `tree.paused`. While blocking it also watches for `abort.json`.
 4. When the intent arrives, Godot validates it, applies it at tick t + k exactly, and appends an `intent` event with that tick. The intent is held until the next one applies at t + D + k.
 
-Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `abort.json` at every snapshot and while blocking.
+Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `abort.json` at every snapshot and while blocking. A snapshot after seq 0 requires the previous intent file: `validateTrial()` rejects `state-seq` (seq > 0) when `intent-(seq-1)` is missing.
 
 ## Timeouts and exit codes
 
@@ -112,7 +113,7 @@ Because k < D, `state-(seq+1).held` is always `intent-seq`. Godot checks for `ab
 | No intent 30 s after blocking | Godot | `error.json`, code `intent_timeout` | 5 | `error:intent_timeout` |
 | Intent fails validation | Godot | `error.json`, code `intent_invalid` | 4 | `error:intent_invalid` |
 | Any other failure Godot catches | Godot | `error.json`, code `internal` | 1 | `error:internal` |
-| No new Godot file within `max(30 s, 20 × median step)` | Node watchdog | SIGKILL | none | `stall` |
+| No new Godot file within `max(30 s, 20 × median step)` after Node's last intent | Node watchdog | SIGKILL | none | `stall` |
 | Godot exits with no `done.json` or `error.json` | Node | nothing to read | any | `crash` |
 | A file fails its validator, or `validateTrial()` fails | Node | stop reading | any | `invalid` |
 
@@ -132,9 +133,11 @@ A **step** is the wall time from Node renaming `intent-N` into place to the next
 
 ## Verdict-cache key
 
-`verdictKey(instrument, jev)` is the SHA-256 of `canonicalJson({protocol, questions_sha, model, confidence_floor, gate_version, state, options})`. `instrument` is `instrumentIdentity()` from `decide.mjs`. `state` and `options` are the `jev` block exactly as Godot wrote it, before the gate, because `gate_version` already covers gate changes. Canonical JSON sorts object keys at every depth, keeps array order and has no whitespace. The cache itself belongs to JL-14.
+`verdictKey(instrument, jev)` is the SHA-256 of `canonicalJson({protocol, questions_sha, model, confidence_floor, gate_version, state, options})`. `instrument` is `instrumentIdentity()` from `decide.mjs`. `state` and `options` are the `jev` block exactly as Godot wrote it, before the gate, because `gate_version` already covers gate changes. Canonical JSON sorts object keys at every depth, keeps array order and has no whitespace. Node computes the key; Godot never computes or checks it. The cache itself belongs to JL-14.
 
 ## The `jev` block (corpus schema)
+
+Every whole-number field and every steps-of-0.1 field in this block is ≥ 0; there is no signed field in the `jev` block.
 
 | Path | Type and quantisation |
 | --- | --- |
@@ -142,13 +145,13 @@ A **step** is the wall time from Node renaming `intent-N` into place to the next
 | `state.self.speed_tier` (required) | `walk`, `cruise`, `fast` or `blazing` |
 | `state.self.grounded` (required) | boolean |
 | `state.self.hp`, `air_jump_available`, `location`, `over` | whole number ≥ 0, boolean, string, string |
-| `state.stage.name`, `time_s`, `tier` (all required) | string, whole seconds, whole number |
+| `state.stage.name`, `time_s`, `tier` (all required) | string, whole seconds (`floor(tick / tick_hz)`, the elapsed time since the trial began), whole number |
 | `state.threats` (required) | 0 to 3 entries, each with `kind` (string) and optionally `distance_m` and `damage` (whole numbers); `impact_in_s`, `arc_lands_in_s` and `water_rises_in_s` (steps of 0.1); `closing`, `on_current_line`, `targets_current_position`, `telegraphing` and `below` (booleans); `effect` and `lands_on` (strings) |
 | `state.objective.kind`, `distance_m` (required) | string, whole metres; optionally `inside_ring` and `charge_started` (booleans) |
 | `state.scrap.held`, `state.buffs` | whole number; list of strings |
 | `options` | At least one, unique ids from `INTENTS`, each `{id, why}` plus optional `requires_speed_ms` (steps of 0.1) |
 
-Every case in `corpus.json` passes this schema.
+Every case in `corpus.json` passes this schema. A "steps of 0.1" (or whole-number) check allows up to `1e-9` of floating-point slack around the grid line; it is not a second, coarser grid.
 
 ## Determinism
 
