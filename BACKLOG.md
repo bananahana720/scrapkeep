@@ -5449,3 +5449,136 @@ Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-0
 **Verification and evidence:** `npm test`; `npm run verify`; a live run on the coordinator branch retained under `artifacts/local/runs/`; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** Read-only over the ledger, TRACKING and git; writes only its run record.
+
+<a id="jl-05b"></a>
+
+### JL-05b: Protocol v1 document and fixture patch before the Godot port
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- The JL-05 review, `artifacts/jev-lab-2026-09-25/reviews/JL-05.md` notes 3, 5, 6, 7, 8 and 10 (EV-0499)
+- `tools/jev-player/protocol/{PROTOCOL.md,protocol.mjs,fixtures/}`
+
+**Dependencies:** [JL-05](#jl-05). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/protocol/PROTOCOL.md`; `tools/jev-player/protocol/protocol.mjs`; `tools/jev-player/protocol/fixtures/`; `tools/jev-player/tests/protocol.test.js`; `artifacts/local/tasks/JL-05b/`.
+
+**Definition of done:**
+
+1. PROTOCOL.md states every rule `protocol.mjs` enforces: the grid tolerance, LF line endings and the trailing newline of `events.ndjson` (an empty file is valid), positive `tick_hz`, `snapshot_every` and `intent_timeout_s`, the closed set of file names in `<io>`, that `sim` is unchecked and never hashed, that `stage.time_s` is `floor(tick / tick_hz)`, that the verdict key is computed by Node only, and that the watchdog starts after Node's last intent.
+2. The intent-before-trace order at an equal tick is either enforced by `validateEvents` with a fixture, or stated as a Godot write-order rule that is not validated; `validateTrial` rejects a state `seq > 0` with no intent for `seq - 1`.
+3. Trial-level invalid fixtures exist and fail for exactly their stated reason: wrong protocol string, intent for an unsnapshotted seq, non-contiguous snapshots, `done.snapshots` mismatch, `trace_hash` mismatch, done beside error, aborted without `abort.json`, `intent_timeout` tick mismatch.
+4. Fixture tests assert the exact error path list (`deepEqual`), not `some`.
+5. No change to message shapes: the protocol string stays `scrapkeep-jev/1`.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No Godot code, no harness, no new message field.
+
+<a id="jl-09"></a>
+
+### JL-09: Godot protocol I/O for the ball lab
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- `tools/jev-player/protocol/PROTOCOL.md` and fixtures after JL-05b; plan § 2 "Protocol v1" and "Runner"
+- `sketches/ball-lab/src/intent.gd` (`Intent.Source`), `tests/mode_check.gd:10-24`
+
+**Dependencies:** [JL-05b](#jl-05b). **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/jev_io.gd`; `sketches/ball-lab/src/jev/fixtures/` (byte-identical copy); `sketches/ball-lab/tests/jev_io_test.gd`; `tests/jev-fixtures.test.js` (the drift test); `artifacts/local/tasks/JL-09/`.
+
+**Definition of done:**
+
+1. `jev_io.gd` writes `hello`, `state-NNNNNN`, `error` and `done` files tmp-then-rename, appends `events.ndjson.tmp` and renames it before `done` or `error`, and reads and validates `intent-NNNNNN` and `abort` files by the rules PROTOCOL.md states.
+2. `jev_io_test.gd` (headless) accepts every valid fixture and rejects every invalid one with the same field path the Node validator reports.
+3. `tests/jev-fixtures.test.js` fails when the sketch copy of the fixtures differs byte for byte from `tools/jev-player/protocol/fixtures/`.
+4. No gameplay file changes; `npm run sketch:smoke` passes.
+
+**Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No state synthesis (JL-10), no runner or steering (JL-13, JL-17).
+
+<a id="jl-10"></a>
+
+### JL-10: Read-only state synthesis and ball-lab scenarios
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 2 "Ball-lab state is synthesised read-only" and "Determinism"; plan § 3 scenario list
+- `sketches/ball-lab/src/{lab,player_ball,field,ball_state,ball_rules,enemy,speed_tier}.gd`; the `shockwave` signal on `player_ball.gd`
+
+**Dependencies:** [JL-05](#jl-05). **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/jev_state.gd`; `sketches/ball-lab/src/jev/scenarios.gd`; `sketches/ball-lab/tests/jev_state_test.gd`; `artifacts/local/tasks/JL-10/`.
+
+**Definition of done:**
+
+1. `jev_state.gd` builds the `jev` block (quantised to the protocol grid) and the `sim` block from a running lab: the nearest three enemies within 60 m, `air_jump_available`, the speed tier and knocks detected by a second listener on `shockwave` (0.6 stomp, 1.0 ram). It reads only; it never writes to gameplay nodes.
+2. With the exporter installed and a fixed scripted input sequence, positions and velocities over 900 physics ticks are identical to the same run without it, for both physics modes; the test fails on any difference.
+3. `scenarios.gd` defines `downhill-run`, `run-to-pad`, `bench-climb`, `kicker-gap` (a speed parameter from 14 to 28 m/s), `dummy-knock`, `pillar-weave` and `soak`, each with spawn, objective and time limit taken from `field.gd` coordinates, and a success predicate.
+4. `npm run sketch:smoke` passes; no gameplay file changes.
+
+**Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No protocol I/O (JL-09), no steering (JL-13).
+
+<a id="jl-11"></a>
+
+### JL-11: Harness and arms against a fake Godot
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 2 "Arms", "Timing"; PROTOCOL.md after JL-05b; `scripts/lab/record.mjs`; JL-05 review notes 2 and 9 (EV-0499)
+- `tools/jev-player/decide.mjs` (the gate and its `push_objective` fallback)
+
+**Dependencies:** [JL-05b](#jl-05b), [JL-06](#jl-06). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/harness.mjs`; `scripts/lab/arms.mjs`; `scripts/lab/fake-godot.mjs`; `tools/jev-player/decide.mjs` (export the fallback as `offeredOptions`; no behaviour change); `tools/jev-player/protocol/protocol.mjs` (import it instead of re-implementing); `tests/lab-harness.test.js`; `artifacts/local/tasks/JL-11/`.
+
+**Definition of done:**
+
+1. `harness.mjs` runs N trials of a scenario for the `random` (seeded) and `scripted` arms against `fake-godot.mjs`, one `<io>` directory per trial, validates every file with `validateTrial`, and writes one `scrapkeep-run/1` record per batch with per-trial outcomes and `trial_abort_rate`.
+2. The Node watchdog (`max(30 s, 20 × median step)`) classifies a stalled fake as `stall` and kills it; an exit with no `done.json` is `crash`; a Node-side invalid state writes `abort` with a documented reason.
+3. A single offered option is answered `forced` with no arm call. The `jev` arm is a stub that throws (JL-14 builds it); no live Jev call.
+4. `decide.mjs` exports the fallback and `protocol.mjs` imports it; `tests/gate.test.js` stays byte-identical and passes.
+5. A per-batch call cap exists in the harness config for the future jev arm (the runaway guard named at EV-0484).
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No real Godot process (JL-17), no jev arm (JL-14), no gate (JL-12).
+
+<a id="jl-12"></a>
+
+### JL-12: Gate, pinning and threshold repairs
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Gate"; `scripts/lab/{record,stats}.mjs`, `scripts/lab/metrics/`
+- Carried notes: EV-0489 (source mismatch downgrades `invalid`), EV-0491 (threshold-less KRIs render green only; `lever_effect` epoch rule; gate names no status), EV-0498 (1 h `event_time_skew` warn missed a 0.58 h skew)
+
+**Dependencies:** [JL-01](#jl-01), [JL-02](#jl-02). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/gate.mjs`; `scripts/lab/record.mjs` (sticky `invalid`); `scripts/lab/metrics/{status,core,program,ball-lab}.mjs`; `tests/lab-gate.test.js`; `tests/lab-metrics.test.js`; `artifacts/local/tasks/JL-12/`.
+
+**Definition of done:**
+
+1. `gate.mjs --pin <run_id> --as <name>` copies a run to `artifacts/jev-lab-YYYY-MM-DD/pins/<name>/` and refuses an unpinnable run; `gate.mjs <candidate> --against <pin>` compares by Wilson (rates) and Newcombe (differences) at tolerance 0.10, treats a straddling interval as inconclusive, and exits 0 pass, 1 red KRI or conclusive regression, 2 usage, 3 inconclusive (too few samples, stale baseline, dirty tree), 4 instrument invalid.
+2. A source mismatch keeps `invalid` and records the original result in a structured field.
+3. The nine KRIs without plan thresholds render as a distinct tracked-without-threshold state, never as a pass colour, and the gate ignores them; `lever_effect` is insufficient until its epoch has passed controls; `event_time_skew` warns above 0.25 h and fails above 1 h.
+4. The gate branches only on `STATUS` entries' `gate` and `exit` fields and names no status word.
+5. Tests cover every exit code with fixture records.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No preflight controls (JL-15) or epoch creation; no dashboard.
