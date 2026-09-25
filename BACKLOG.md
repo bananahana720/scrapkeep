@@ -5843,3 +5843,30 @@ Revision 2 (EV-0524) splits the original card so the prompt author never meets t
 **Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** Tags describe Andrew's words; they never stand in for his verdict.
+
+<a id="jl-18c"></a>
+
+### JL-18c: Pre-registered Jev-as-player redesign experiment
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+
+Andrew's decision at EV-0527: one redesign, fixed before any call; if it still fails, Jev-as-player is parked for this program.
+
+**Source and inputs:**
+
+- The JL-18 review § 6 (`artifacts/jev-lab-2026-09-25/reviews/JL-18.md`), EV-0516, EV-0520, EV-0526 and EV-0527; `tools/jev-player/{decide.mjs,preflight.mjs,questions/q2-neutral.json,controls/c2.json}`
+- Findings to separate: residual option framing, position bias in Choice answers, and a genuine prior toward the objective-directed option over a free dominant one
+
+**Dependencies:** [JL-18](#jl-18). **Blocking questions:** None.
+
+**Files touched:** `artifacts/jev-lab-2026-09-25/experiments/jl18c/PREREGISTRATION.md`; `tools/jev-player/experiments/jl18c/` (experiment script, states and per-option question text); `tools/jev-player/tests/jl18c.test.js`; `artifacts/local/tasks/JL-18c/`. No change to `decide.mjs`, the harness or any pinned question set; adopting a passing design into the arm is a later card.
+
+**Definition of done:**
+
+1. **Phase A, before any call:** `PREREGISTRATION.md` fixes the designs, the exact prompts, the pass rules and the call budget, and is reviewed by Fable before Phase B starts. Designs, from the JL-18 review: every threshold control in all six option permutations with three repeats, reporting per-position P and spread while keeping the every-order pass rule; per-option comprehension Nouls asked without a Choice; a third free-cache state whose push option does not name the exit or charge, plus a two-option variant; a dominance probe outside caches (a free full heal at low health with no threats); per-option yes/no preference Nouls with order averaging; one intent-only cell. The 0.6 and 0.2 lines stay.
+2. **Phase B:** the pre-registered calls run once under a stated cap, every cell is reported as it falls, and nothing in the pre-registration changes after the first call.
+3. A verdict against the pre-registered rule: pass (a design that clears every control in every order becomes a candidate for a follow-up card), or fail (Jev-as-player is parked for this program, per EV-0527), with the evidence separating framing, position and preference stated.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the Phase A review; the retained Phase B results; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** An experiment, not an instrument change.

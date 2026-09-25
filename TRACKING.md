@@ -266,9 +266,10 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-15](BACKLOG.md#jl-15) | 1 | 5 | done | none | JL-15-A1 | EV-0520 |
 | [JL-16](BACKLOG.md#jl-16) | 1 | 5 | done | none | JL-16-A1 | EV-0519 |
 | [JL-17](BACKLOG.md#jl-17) | 1 | 2 | queued | JL-13 | none | EV-0523 |
-| [JL-18](BACKLOG.md#jl-18) | 2 | 5 | review | none | none | EV-0526 |
+| [JL-18](BACKLOG.md#jl-18) | 2 | 6 | done | none | JL-18-A1 | EV-0529 |
 | [JL-18b](BACKLOG.md#jl-18b) | 1 | 2 | in_progress | none | none | EV-0525 |
-| [JL-19](BACKLOG.md#jl-19) | 1 | 3 | in_progress | none | none | EV-0525 |
+| [JL-18c](BACKLOG.md#jl-18c) | 1 | 1 | ready | none | none | EV-0529 |
+| [JL-19](BACKLOG.md#jl-19) | 1 | 4 | review | none | none | EV-0529 |
 | [JL-20](BACKLOG.md#jl-20) | 1 | 3 | in_progress | none | none | EV-0528 |
 
 ## Question state index
@@ -814,6 +815,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0526 | 2026-09-25T19:23:45+00:00 | Worker handoff / coordinator review admission; coordinator / finding | JL-18 | JL-18 (revision 2) handed off 6cff2cb: `q2-neutral.json` states mechanics only and is pinned with a per-set snapshot; `c2.json` puts every decision-bearing fact in the option text of both wording-swap arms, adds the swap on the free-cache state, length-matches options and adds a max-shift line of 0.15 set before any c2 call from c1's observed noise; `npm test` 450/0, verify passes. The coordinator audited the author's tool log (72 calls): no forbidden file was read; one directory listing showed the blind corpus's file names only, disclosed by the writer. **Live preflight of q2 with c2** (12 calls, `jev-1.13.0`, `input_tokens` 9518, `output_tokens` 952, cache fields absent and recorded null), exit 6: free-cache fails (P(take) 0.38 given order, 0.52 reversed, against 0.6, for a cache that costs nothing with 60 scrap held and a buff that lasts the run); lethal-option passes (P(ram) 0.02 both orders); wording-swap passes (same choice both wordings, max shift 0.28); wording-swap-free passes (same choice, max shift 0.17). Nothing was tuned after the result. **Finding:** with the information confound removed, the wording swap no longer flips, so the c1 flip at EV-0516 was mostly missing facts; but two question sets and two control sets now both fail the free-cache dominance control, option order moves P(take) by 0.14 to 0.35, and identical requests vary by 0.03 to 0.06. The epoch for q2 is invalid, so the jev arm stays blocked by design (preflight exit 6), and JL-18b's live blind score cannot run under a valid epoch. The instrument question goes to Andrew. Live output retained at `artifacts/jev-lab-2026-09-25/live/JL-18/`. In Fable review. |
 | EV-0527 | 2026-09-25T19:24:12+00:00 | Andrew / decision | Jev Lab program (jev arm) | Asked how to treat Jev-as-player after EV-0526, Andrew chose "Redesign, then test": one new card whose design and pass criteria are fixed before any live call (per-option yes/no questions instead of one Choice, probabilities averaged over both option orders, and a third free-cache state); if it still fails, Jev-as-player is parked for this program. Meanwhile Jev keeps its test-loop roles (triage, tagging, test ordering, coverage gaps) and the scripted and random arms carry the mechanics metrics. The rejected alternative, further prompt fixes until free-cache passes, would repeat audit finding A1. The redesign card is written after JL-18's Fable review, which was asked how to separate framing, position bias and genuine preference without tuning to pass. |
 | EV-0528 | 2026-09-25T19:24:28+00:00 | Coordinator / assignment, lease | JL-20 | JL-20 moves ready to in_progress, record revision 2 to 3, attempt JL-20-A1 and lease JL-20-L1, on scrapkeep-writer (Opus 5.5 high; Jev use is a judgement card), worktree at base 4a5328d with the `node_modules` link. Live Jev calls capped at 20, authorized under EV-0484. Active writers: four (JL-13, JL-18b, JL-19, JL-20). |
+| EV-0529 | 2026-09-25T19:30:32+00:00 | Independent reviewer / review; coordinator / integration, definition import; worker handoff | JL-18, JL-18c, JL-19; hash tokens in the section files | **JL-18.** A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt), held blind, returned PASS+NOTES on 6cff2cb: q2 is mechanics only and matches the sketch READMEs; c2 puts the enumerated facts in the option text of both swap arms; the live table, 12 calls, token counts and exit 6 match the retained files. The coordinator confirmed the worktree clean and `controls/c2.json` hashing to the recorded 4d1035aa; the only commit (19:20:37Z) precedes the live run (19:20:45Z). Report at [artifacts/jev-lab-2026-09-25/reviews/JL-18.md](artifacts/jev-lab-2026-09-25/reviews/JL-18.md). Merged at bf62bb0; integrated `npm test` 450/0, verify passes. JL-18 moves review to done, record revision 5 to 6. **Recorded per the review:** the two wording-swap controls passed only under the pre-registered one-sided rule (same choice passes at any shift); under a symmetric 0.15 line both would have failed (shifts 0.28 and 0.17), so their pass is a property of the rule, not of the instrument; and the 0.15 line's noise basis was thin, because this run's same-wording order movement was 0.09 to 0.35. **Interpretation (the review's, labelled inference from 14 readings):** averaged over both orders P(take) is about 0.45 under q2 and 0.47 under q1, so removing position does not rescue free-cache; most likely Jev holds a prior of about 0.5 toward the objective-directed option that a free permanent buff does not overturn, with position tipping the rest (six of six pairs move toward the last-listed option by 0.09 to 0.35 against 0.03 to 0.06 noise). **JL-18c imported** (card revision 1, ready): the pre-registered redesign Andrew chose at EV-0527, in two phases so the design and pass rules are reviewed by Fable before any call. **JL-19** handed off a4acc2e: Jev failure triage scored 91.5% weighted on a 22-case blind set and 89.7% on 27 authored cases, 0 severe misses, both `assert(false)` controls returned `real_regression`, 0 fallbacks, 51 calls on `jev-1.13.0`; the rerun Noul wording was changed after one probe call on an authored case and before any blind scoring, which is under review. Jev performs well in the test-loop role and fails the dominance control as a player, consistent with EV-0527. |
 
 ## Preparation checkpoint
 
@@ -1885,15 +1887,15 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 
 ## JL-18-A1 Jev Lab attempt
 
-- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 2; attempt JL-18-A1; exclusive lease JL-18-L1 open.
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 2; attempt JL-18-A1; exclusive lease JL-18-L1 closed, writer stopped.
 - Owned files: as JL-18 revision 2 lists.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-18` on `wt/JL-18`, created by `scripts/new-worktree.sh`.
 - Base identity: `1c20a2c1cafb0ea612925c49860e552f945beeca`.
-- Candidate identity: `6cff2cbae16b4b0aa21c3dc20ec16c2849066a5b`. Integrated identity: null.
+- Candidate identity: `6cff2cbae16b4b0aa21c3dc20ec16c2849066a5b`. Integrated identity: `bf62bb0` (merge into `wt/JL-coord`).
 - Latest checkpoint: 2026-09-25T19:23:45+00:00; handoff received, in review (EV-0526).
 - Blockers: none.
 - Evidence: live preflight retained at `artifacts/jev-lab-2026-09-25/live/JL-18/`; writer receipts under `artifacts/local/tasks/JL-18/` in the worktree.
-- Review: not_run; planned scrapkeep-reviewer (Fable 5.1), held to the same blindness.
+- Review: fresh scrapkeep-reviewer (claude-fable-5-1 per host prompt, held blind), **PASS+NOTES** on 6cff2cb; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-18.md). Integrated: `npm test` 450/0, `npm run verify` six stages pass.
 
 ## JL-18b-A1 Jev Lab attempt
 
@@ -1913,7 +1915,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `scripts/lab/{triage.mjs,triage-corpus.json}`; `tests/lab-triage.test.js`; `artifacts/local/tasks/JL-19/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-19` on `wt/JL-19`, created by `scripts/new-worktree.sh`.
 - Base identity: `1c20a2c1cafb0ea612925c49860e552f945beeca`.
-- Candidate identity: null. Integrated identity: null.
+- Candidate identity: `a4acc2ef01c2d1940dbb63ad20be417033c0b97d`. Integrated identity: null.
 - Latest checkpoint: 2026-09-25T19:12:43+00:00; dispatched.
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-19/` in the worktree.
