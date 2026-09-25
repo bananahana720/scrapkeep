@@ -723,11 +723,21 @@ async function checkSkillsStage(docs) {
   // nothing to check, and package.json is not otherwise required here.
   if (!(await exists(script))) return 0;
   if (!(await exists(path.join(docs.root, ".agents/skills")))) return 0;
+  const timeoutMs = 30_000;
   const result = spawnSync(
     process.execPath,
     [script, "--root", docs.root, "--json"],
-    { encoding: "utf8" },
+    { encoding: "utf8", timeout: timeoutMs },
   );
+  if (result.error?.code === "ETIMEDOUT") {
+    docs.fail(
+      "skills",
+      "scripts/check-skills.mjs",
+      0,
+      "did not finish within " + timeoutMs / 1000 + "s and was killed",
+    );
+    return 0;
+  }
   if (result.status === null) {
     docs.fail(
       "skills",

@@ -16,7 +16,6 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 5. Remote path, never checked: `https://example.com/scripts/nope.mjs`.
 6. Quoted schema string, never checked: `"scrapkeep-run/1"`.
 7. Real path with a line suffix, resolved after stripping: `scripts/play.mjs:1`.
-8. A command sentence, not a bare path, never checked: `node scripts/does-not-exist.mjs`.
 
 ```markdown
 Fenced example, never scanned: scripts/does-not-exist-either.mjs
