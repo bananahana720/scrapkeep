@@ -5713,3 +5713,105 @@ Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-0
 **Verification and evidence:** `npm test`; `npm run verify`; `npm run sketch:smoke`; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** No behaviour change for valid input; no new message field.
+
+<a id="jl-17"></a>
+
+### JL-17: The Godot runner and the bridge test
+
+**Card revision:** 1 · **Owner:** Gameplay tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 2 "Runner", "Protocol v1", "Timing" and "Determinism"; `sketches/ball-lab/src/jev/{jev_io,jev_state,jev_agent,telemetry,scenarios}.gd`; `scripts/lab/{harness,arms}.mjs` (the `launch` seam)
+- Carried from the JL-11 review (EV-0514): N3 (process-group cleanup and `abort{interrupted}` on the harness's own SIGINT or SIGTERM) and N5 (the launch seam has no D, k or env, and records do not store D and k)
+
+**Dependencies:** [JL-13](#jl-13), [JL-14](#jl-14). **Blocking questions:** None.
+
+**Files touched:** `sketches/ball-lab/src/jev/jev_run.gd`; `sketches/ball-lab/tests/jev_bridge_test.gd`; `scripts/lab/harness.mjs`; `scripts/lab/godot-launch.mjs`; `tests/lab-bridge.test.js`; `artifacts/local/tasks/JL-17/`. Scoped exception to the no-mixing rule: the runner and the harness seam must change together.
+
+**Definition of done:**
+
+1. `jev_run.gd` extends `SceneTree`, lives outside `tests/`, runs one trial of a named scenario headless at `--fixed-fps 90` (ticks equal frames), snapshots every D ticks, keeps flying the held intent for k ticks, then blocks inside `_physics_process` until the intent arrives and applies it at exactly t + k; timeouts and exit codes follow PROTOCOL.md.
+2. `godot-launch.mjs` supplies the harness `launch` for real Godot with `--headless`, `--fixed-fps 90`, the scenario, seed, D, k and output directory, spawned in its own process group; the harness kills the group on stall and writes `abort{interrupted}` on its own SIGINT or SIGTERM; D and k are stored in the batch record.
+3. The bridge test runs the scripted arm with random responder delays and shows every intent applied at exactly t + k and `trace_hash` identical across delay patterns, for each physics mode; if rigid mode diverges it is reported as stochastic, not hidden.
+4. One real batch per arm (random, scripted, jev capped at 10 calls) on `downhill-run` completes and is retained.
+
+**Verification and evidence:** `npm run sketch:smoke`; `npm test`; `npm run verify`; the retained batches; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No calibration (JL-21), no new question set (JL-18).
+
+<a id="jl-18"></a>
+
+### JL-18: Neutral question set q2, c2 controls, and preflight in every jev batch
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 1; `tools/jev-player/{decide.mjs,questions/,preflight.mjs,controls/c1.json}`; `scripts/lab/harness.mjs`
+- Carried: the JL-15 review (EV-0520) on equalising facts across the wording-swap arms, a max-shift line, the swap on the free-cache state, length-matched options, storing `resolved_models`, not overwriting a passed epoch with an all-error run, and deriving validity from per-control results; the JL-14 alias risk (EV-0521); the JL-04 review (EV-0498) on one compass verb, case 10's flood entry and a state-diagnostic subscore
+
+**Dependencies:** [JL-14](#jl-14), [JL-15](#jl-15). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/questions/{q2-neutral.json,INDEX.json}`; `tools/jev-player/controls/c2.json`; `tools/jev-player/preflight.mjs`; `tools/jev-player/score.mjs` (the state-diagnostic subscore); `scripts/lab/harness.mjs` (preflight before any jev batch); `scripts/lab/verdict-cache.mjs` (resolved-model check on a hit); `tools/jev-player/tests/`; `tests/lab-jev-arm.test.js`; `artifacts/local/tasks/JL-18/`.
+
+**Definition of done:**
+
+1. `q2-neutral.json` states mechanics only, with no valuation, and is pinned; its author reads no blind case and no review that names blind cases (the burn rule).
+2. `c2.json` puts every decision-bearing fact in the option text for both wording-swap arms, adds the free-cache swap and a max-shift line, and length-matches options.
+3. Every jev batch runs preflight first and refuses with exit 6 on failure; the epoch record stores `resolved_models`, is not overwritten by an all-error run, and derives validity from per-control results.
+4. A verdict-cache hit whose stored resolved model differs from the batch's is treated as a miss and recorded.
+5. Live: q2 with c2 is run, and the blind corpus is scored under q2 with the state-diagnostic subscore; results are reported as they fall, and the epoch record is filled.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the live preflight and blind score, retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Blind cases stay unseen by the q2 author; only aggregates reach them.
+
+<a id="jl-19"></a>
+
+### JL-19: Jev failure triage in the test loop
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 5 (JL-19 row: Choice {timing_flake, real_regression, engine_crash, test_bug, infra} plus a safe-to-rerun Noul; control: an injected `assert(false)` must come back `real_regression`); the TypeSafe typesafe-ai skill for the call shape
+- The intermittent `npm test` failures at EV-0497 as real cases
+
+**Dependencies:** [JL-06](#jl-06), [JL-14](#jl-14). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/triage.mjs`; `scripts/lab/triage-corpus.json`; `tests/lab-triage.test.js`; `artifacts/local/tasks/JL-19/`.
+
+**Definition of done:**
+
+1. `triage.mjs` classifies a failed check from its log and diff with one typed Jev call, redacting secrets first, caching verdicts, and falling back to a deterministic rule when Jev is unavailable; nothing on the gate path waits on it.
+2. A labelled corpus of real and edge cases plus a blind adversarial set is scored with severity weights, where a regression called a flake is severe; the control case must return `real_regression`.
+3. A rerun counts toward `flake_rate` and never turns a red result green.
+
+**Verification and evidence:** `npm test`; `npm run verify`; the corpus score retained; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Advisory only; the gate never depends on it.
+
+<a id="jl-20"></a>
+
+### JL-20: Verdict tagging
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 5 (JL-20 row: a Noul per tag; control: PLAYTEST-LOG entries 1 and 2 hand-labelled); `docs/playtests/verdicts.ndjson` and `scripts/lab/verdicts.mjs` (JL-07)
+
+**Dependencies:** [JL-07](#jl-07), [JL-14](#jl-14). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/verdict-tags.mjs`; `scripts/lab/verdict-tags.json` (the tag vocabulary and hand labels); `docs/playtests/verdicts.ndjson` (`tags` only); `tests/lab-verdict-tags.test.js`; `artifacts/local/tasks/JL-20/`.
+
+**Definition of done:**
+
+1. A fixed tag vocabulary (for example movement feel, level shape, exploration, abilities, physics mode) with hand labels for entries 1 and 2 written before any Jev call.
+2. `verdict-tags.mjs` scores each tag with one typed Jev Noul per verdict, cached, and fills `tags` only when the hand labels are reproduced; disagreements are reported, not overwritten.
+3. The quotes stay verbatim and `node scripts/lab/verdicts.mjs` still passes.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Tags describe Andrew's words; they never stand in for his verdict.
