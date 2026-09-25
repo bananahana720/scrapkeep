@@ -178,7 +178,7 @@ Token figures on the board that came from the delegate ledger before EV-0498 are
 
 ## RML origin map
 
-Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids the JL-30a review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
+Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids its review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
 
 | RML id | SKL id or citation |
 | --- | --- |
