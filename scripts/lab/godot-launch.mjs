@@ -6,9 +6,14 @@
 //   node scripts/lab/godot-launch.mjs <scenario> [--arm scripted|random|jev]
 //     [-n trials] [--seed N] [--mode kinematic|rigid] [--snapshot-every D]
 //     [--hold-ticks k] [--max-ticks N] [--call-cap N] [--root runs-dir]
-//     [--cache verdict-dir] [--replay]
+//     [--cache verdict-dir] [--replay] [--sketch sketch-dir]
 //
-// The binary is the one sketch-smoke.mjs pins, or GODOT_BIN.
+// The binary is the one sketch-smoke.mjs pins, or GODOT_BIN. `--sketch` points
+// the runner at another sketch's project directory, such as a lab worktree's
+// sketches/spillway-drop (JL-27); that sketch must carry its own
+// src/jev/jev_run.gd, and its repository's head, branch and dirty flag are
+// stamped into the record's provenance.versions.sketch.
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +40,7 @@ export function godotLaunch({
   maxTicks = 0,
   intentTimeoutS,
   env = {},
+  sketch = SKETCH,
 } = {}) {
   if (!MODES.includes(mode)) {
     throw new Error(
@@ -51,7 +57,7 @@ export function godotLaunch({
       "--fixed-fps",
       String(TIMING.tick_hz),
       "--path",
-      SKETCH,
+      sketch,
       "--script",
       RUNNER,
       "--",
@@ -71,10 +77,33 @@ export function godotLaunch({
   launch.label = [
     "godot-headless",
     path.basename(godot),
+    ...(sketch === SKETCH ? [] : [path.basename(sketch)]),
     mode,
     ...(maxTicks > 0 ? [`max-ticks ${maxTicks}`] : []),
   ].join(" ");
   return launch;
+}
+
+// The sketch's own repository, which is not this checkout when --sketch names a
+// lab worktree, so the record's head and dirty flag alone would not cover it.
+export function sketchProvenance(directory) {
+  const git = (...args) => {
+    const result = spawnSync("git", ["-C", directory, ...args], {
+      encoding: "utf8",
+    });
+    if (result.status !== 0) {
+      throw new Error(
+        `git ${args[0]} failed in ${directory}: ${(result.stderr || "").trim()}`,
+      );
+    }
+    return result.stdout.trim();
+  };
+  return {
+    path: directory,
+    head: git("rev-parse", "HEAD"),
+    branch: git("branch", "--show-current") || null,
+    dirty: git("status", "--porcelain") !== "",
+  };
 }
 
 function parse(argv) {
@@ -93,11 +122,12 @@ function parse(argv) {
       root: { type: "string" },
       cache: { type: "string" },
       replay: { type: "boolean", default: false },
+      sketch: { type: "string" },
     },
   });
   if (positionals.length !== 1) {
     throw new Error(
-      "usage: godot-launch.mjs <scenario> [--arm scripted|random|jev] [-n N] [--seed N] [--mode kinematic|rigid] [--snapshot-every D] [--hold-ticks k] [--max-ticks N] [--call-cap N] [--root DIR] [--cache DIR] [--replay]",
+      "usage: godot-launch.mjs <scenario> [--arm scripted|random|jev] [-n N] [--seed N] [--mode kinematic|rigid] [--snapshot-every D] [--hold-ticks k] [--max-ticks N] [--call-cap N] [--root DIR] [--cache DIR] [--replay] [--sketch DIR]",
     );
   }
   const whole = (name) => {
@@ -121,6 +151,7 @@ function parse(argv) {
     root: values.root === undefined ? undefined : path.resolve(values.root),
     cache: values.cache === undefined ? undefined : path.resolve(values.cache),
     replay: values.replay,
+    sketch: values.sketch === undefined ? SKETCH : path.resolve(values.sketch),
   };
 }
 
@@ -129,7 +160,11 @@ async function main(argv) {
   let launch;
   try {
     options = parse(argv);
-    launch = godotLaunch({ mode: options.mode, maxTicks: options.maxTicks });
+    launch = godotLaunch({
+      mode: options.mode,
+      maxTicks: options.maxTicks,
+      sketch: options.sketch,
+    });
   } catch (error) {
     console.error(error.message);
     return EXIT.usage;
@@ -140,6 +175,20 @@ async function main(argv) {
   }
   const defined = (entries) =>
     Object.fromEntries(entries.filter(([, value]) => value !== undefined));
+  const runs = options.root === undefined ? {} : { root: options.root };
+  if (options.sketch !== SKETCH) {
+    let stamp;
+    try {
+      stamp = sketchProvenance(options.sketch);
+    } catch (error) {
+      console.error(error.message);
+      return EXIT.usage;
+    }
+    runs.versions = { sketch: stamp };
+    console.log(
+      `sketch: ${stamp.path} at ${stamp.head} on ${stamp.branch}, dirty ${stamp.dirty}`,
+    );
+  }
   let batch;
   try {
     batch = await runBatch({
@@ -155,7 +204,7 @@ async function main(argv) {
         ["replay", options.replay],
         ["verdictCache", options.cache],
       ]),
-      runs: options.root === undefined ? {} : { root: options.root },
+      runs,
     });
   } catch (error) {
     if (!(error instanceof UsageError)) throw error;
