@@ -42,9 +42,14 @@ const CACHE_COST_STEP := 12
 const SECRET_COST := 20
 const MESSAGE_SECONDS := 5.0
 const FALL_RESCUE := 14.0
+const DEFAULT_SEED := 20260922
 
 # The headless tests drive the same scene with no input source, HUD or screens.
 var test_mode := false
+# Set before the stage enters the tree to reseed the scrap layout, the director and
+# every other stage roll (the Jev Lab runner's trial seed). -1 keeps DEFAULT_SEED, the
+# stage as it was played.
+var seed_override := -1
 
 var tuning
 var terrain
@@ -68,11 +73,12 @@ var _message_timer := 0.0
 
 func _ready() -> void:
 	_register_actions()
-	_rng.seed = 20260922
+	var stage_seed: int = seed_override if seed_override >= 0 else DEFAULT_SEED
+	_rng.seed = stage_seed
 	tuning = Tuning.new()
 	run = RunState.new()
 	run.phase_changed.connect(_on_phase_changed)
-	director = Director.new()
+	director = Director.new(stage_seed)
 
 	terrain = Terrain.new()
 	terrain.build(self)
