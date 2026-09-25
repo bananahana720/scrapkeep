@@ -89,6 +89,69 @@ test("q1 builds exactly the questions the pre-versioning code sent (prompt snaps
   );
 });
 
+// One built-prompt snapshot per pinned set, so a new set cannot land without one.
+const SNAPSHOTS = {
+  "q1-original": "q1-built.json",
+  "q2-neutral": "q2-built.json",
+};
+
+test("every pinned question set has a built-prompt snapshot", () => {
+  assert.deepEqual(Object.keys(SNAPSHOTS).sort(), Object.keys(index).sort());
+});
+
+test("q2 builds exactly its pinned prompt (prompt snapshot)", () => {
+  const snapshot = readFileSync(
+    path.join(here, "fixtures", SNAPSHOTS["q2-neutral"]),
+    "utf8",
+  );
+  const built = buildQuestions(allOptions, loadQuestionSet("q2-neutral"));
+  assert.equal(JSON.stringify(built, null, 2) + "\n", snapshot);
+});
+
+test("q2-neutral is a pinned candidate with every field and the q1 question types", () => {
+  const q2 = loadQuestionSet("q2-neutral");
+  assert.equal(q2.version, "q2-neutral");
+  assert.equal(q2.status, "candidate");
+  for (const field of ["intent", "danger", "greedy", "rationale"]) {
+    assert.ok(q2[field] !== undefined, `q2 lacks ${field}`);
+  }
+  assert.equal(q2.sha, index["q2-neutral"].sha256);
+  assert.equal(q2.intent.type, "choice");
+  assert.equal(q2.danger.type, "score");
+  assert.equal(q2.danger.criteria.length, 3);
+  assert.equal(q2.greedy.type, "noul");
+  for (const field of ["intent", "danger", "greedy"]) {
+    assert.equal(typeof q2.rationale[field], "string");
+  }
+});
+
+// A lexical guard only: it catches the known valuation phrases and their
+// relatives, not every way a sentence can lead.
+test("q2-neutral's asked text states rules without valuing any option", () => {
+  const q2 = loadQuestionSet("q2-neutral");
+  const asked = JSON.stringify([q2.intent, q2.danger, q2.greedy]).toLowerCase();
+  for (const phrase of [
+    "worth",
+    "costs you",
+    "bought nothing",
+    "never free",
+    "best",
+    "better",
+    "should",
+    "waste",
+    "cheap",
+    "expensive",
+    "valu",
+    "optimi",
+    "free to",
+    "matters",
+    "makes combat possible",
+    "cost more",
+  ]) {
+    assert.ok(!asked.includes(phrase), `q2 asks with "${phrase}"`);
+  }
+});
+
 test("instrumentIdentity names the question sha, model, floor and gate version", () => {
   const identity = instrumentIdentity();
   assert.deepEqual(Object.keys(identity).sort(), [
