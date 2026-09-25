@@ -787,6 +787,52 @@ test(
   },
 );
 
+// JL-21b (JL-21 review, F1): a dummy knocked in this trial is no longer a
+// threat. sim.knocked and sim.threat_ids name the dummies (lab indices), so a
+// knocked dummy that was a threat must be absent from every later state.
+test(
+  "bridge, kinematic: a knocked dummy leaves the threats of every later state",
+  { skip: noGodot, timeout: 120_000 },
+  async (t) => {
+    const { temporary } = await fixture(t);
+    const result = await drive(t, {
+      mode: "kinematic",
+      ...CONTACT,
+      io: path.join(temporary, "knocked"),
+    });
+    assert.equal(result.code, 0, result.stdout);
+    assert.deepEqual(validateTrial(result.files), []);
+    const states = Object.keys(result.files)
+      .filter((name) => /^state-\d+\.json$/.test(name))
+      .sort()
+      .map((name) => JSON.parse(result.files[name]));
+    const wasThreat = new Set();
+    const leftAfterThreat = new Set();
+    let everKnocked = [];
+    for (const state of states) {
+      const { threat_ids: ids, knocked } = state.sim;
+      assert.ok(Array.isArray(ids) && Array.isArray(knocked), `seq ${state.seq} sim`);
+      assert.equal(ids.length, state.jev.state.threats.length, `seq ${state.seq}`);
+      for (const dummy of everKnocked) {
+        assert.ok(knocked.includes(dummy), `seq ${state.seq}: dummy ${dummy} stays knocked`);
+      }
+      for (const dummy of knocked) {
+        assert.ok(!ids.includes(dummy), `seq ${state.seq}: knocked dummy ${dummy} is still a threat`);
+        if (wasThreat.has(dummy)) leftAfterThreat.add(dummy);
+      }
+      for (const dummy of ids) wasThreat.add(dummy);
+      everKnocked = knocked;
+    }
+    assert.ok(
+      leftAfterThreat.size >= 1,
+      `some dummy was a threat, was knocked, and left the threats (knocked ${JSON.stringify(everKnocked)} over ${states.length} states)`,
+    );
+    t.diagnostic(
+      `knocked ${JSON.stringify(everKnocked)}; left the threats after being one: ${JSON.stringify([...leftAfterThreat])}`,
+    );
+  },
+);
+
 test(
   "bridge: the harness drives real Godot through godotLaunch to the same trace",
   { skip: noGodot, timeout: 120_000 },
