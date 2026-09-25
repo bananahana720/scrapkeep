@@ -5344,3 +5344,108 @@ Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-0
 **Verification and evidence:** JSON parses against the packet schema; the coordinator's tool-log check; `npm run check:scope -- <base> <candidate>` and every command it prints.
 
 **Boundary:** No scoring, no Jev calls, no prompt wording. Blind results reach the prompt author only as aggregates.
+
+<a id="jl-05"></a>
+
+### JL-05: Godot–Node protocol v1, its document and fixtures
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 2 "Protocol v1", "Timing" and "Arms"; TADR-005 (no sockets)
+- `tools/jev-player/corpus.json` state and option shape (the `jev` block is pre-quantised to it); JL-01's `scrapkeep-run/1` for the run-level fields the harness will later write
+
+**Dependencies:** [JL-01](#jl-01), [JL-03](#jl-03). **Blocking questions:** None.
+
+**Files touched:** `tools/jev-player/protocol/PROTOCOL.md`; `tools/jev-player/protocol/protocol.mjs`; `tools/jev-player/protocol/fixtures/`; `tools/jev-player/tests/protocol.test.js`; `artifacts/local/tasks/JL-05/`.
+
+**Definition of done:**
+
+1. `PROTOCOL.md` specifies, for one `<io>` directory per trial: every file (`hello.json`, `state-NNNNNN.json`, `intent-NNNNNN.json`, `error.json`, `abort.json`, `done.json`, `events.ndjson`), its single writer, tmp-then-rename writes, the tick schedule (snapshot every D ticks, hold the previous intent for k ticks, block until the intent arrives), the timeouts and exit codes (Godot 30 s → `error{intent_timeout}`, exit 5; Node watchdog `max(30 s, 20 × median step)` → `stall`; no `done.json` → `crash`) and the `forced` single-option rule.
+2. `protocol.mjs` exports a validator per message type and `writeAtomic()`; an `intent` for the jev arm without `meta.questions_sha` is invalid.
+3. Canonical fixtures cover every message type with at least one valid and one invalid example each; the validators accept every valid fixture and reject every invalid one.
+4. No Godot code (JL-09 copies the fixtures into the sketch), no harness (JL-11), no live Jev call.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Protocol and fixtures only.
+
+<a id="jl-06"></a>
+
+### JL-06: `play.mjs` writes run records, measured timing, the shot fix and run-record hardening
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- `scripts/play.mjs`; `scripts/lab/record.mjs` (JL-01) and `scripts/lab/metrics/` (JL-02)
+- Audit A5 (computed timings), A8 (shot window and `/tmp`), A9 (unexplained flake), A16 (CONTRIBUTING lacks `watch`, `--jobs`, `jev:score`), A19 (untracked `~/.local/bin/scrapkeep`)
+- JL-01 review notes (EV-0489) and JL-02's `python3` test dependency (EV-0491)
+
+**Dependencies:** [JL-01](#jl-01), [JL-02](#jl-02). **Blocking questions:** None.
+
+**Files touched:** `scripts/play.mjs`; `scripts/lab/record.mjs`; `scripts/bin/scrapkeep` (new, the tracked wrapper); `tests/play.test.js`; `tests/lab-record.test.js`; `CONTRIBUTING.md` (the sketch and lab rows only); `artifacts/local/tasks/JL-06/`.
+
+**Definition of done:**
+
+1. `scrapkeep test` writes one `scrapkeep-run/1` record of type `suite` with `suite_pass`, `suite_wall_s`, `engine_crash` and per-test outcomes; `--repeat N` runs the suite N times in one record and reports `flake_rate` as the fraction of tests whose outcome disagrees across repeats.
+2. A 20-run soak and a serial-versus-concurrent timing run are executed and retained under `artifacts/local/runs/`; the numbers in CONTRIBUTING come from those records, with the command that produced them.
+3. `scrapkeep shot` writes to `artifacts/local/shots/` and opens its window through `claude-open` on workspace 10 when present, headless otherwise; it never writes to `/tmp`.
+4. `record.mjs`: `seq` is `max(seq) + 1` of parsed index lines and a missing trailing newline is repaired before appending; `finished` is set only after the locked write; an injected `uuid` must match `/^[0-9a-f]{8,}$/`; `rebuildIndex()` on a missing root returns an empty index; per-file source hashes move to `sources.json` beside `run.json`, and `run.json` keeps the digests and the `changed` list.
+5. The `scrapkeep` wrapper is tracked at `scripts/bin/scrapkeep`; CONTRIBUTING documents `watch`, `--jobs`, `--repeat`, `jev:score` and the `python3` test prerequisite.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run sketch:smoke`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No Godot or sketch change; no Jev call; no gate logic.
+
+<a id="jl-07"></a>
+
+### JL-07: Human verdict index with backfill
+
+**Card revision:** 1 · **Owner:** Verification · **Size:** S · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 "Human verdict index"; `docs/playtests/PLAYTEST-LOG.md` entries 1 and 2
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `docs/playtests/verdicts.ndjson`; `scripts/lab/verdicts.mjs`; `tests/lab-verdicts.test.js`; `artifacts/local/tasks/JL-07/`.
+
+**Definition of done:**
+
+1. One NDJSON line per PLAYTEST-LOG entry: `{entry, build_sha, anchor, quote, tags}`, where `quote` is Andrew's verdict copied verbatim, `anchor` links the log entry and `tags` is an empty array (JL-20 fills it).
+2. `verdicts.mjs` validates the file and fails when a `quote` is not found verbatim in PLAYTEST-LOG or a `build_sha` is not a commit.
+3. PLAYTEST-LOG stays the prose source and is unchanged.
+
+**Verification and evidence:** `npm test`; `npm run verify`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** No tagging, no Jev call, no new verdicts.
+
+<a id="jl-08"></a>
+
+### JL-08: Program-layer collector
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Jev Lab
+
+**Source and inputs:**
+
+- Plan § 4 program-layer row and "Self-feedback after every wave"
+- `~/.claude/state/delegates.tsv` (actual model, pinned effort, token fields, verdict per delegate); TRACKING events; `git log`
+- EV-0492, the event-time correction this collector must be able to detect
+
+**Dependencies:** [JL-01](#jl-01), [JL-02](#jl-02). **Blocking questions:** None.
+
+**Files touched:** `scripts/lab/program.mjs`; `artifacts/jev-lab-2026-09-25/agent-map.tsv` (new, coordinator-maintained map from delegate id to card and role); `tests/lab-program.test.js`; `artifacts/local/tasks/JL-08/`.
+
+**Definition of done:**
+
+1. `node scripts/lab/program.mjs` writes a `scrapkeep-run/1` record of type `program` with `first_pass_review`, `cycle_time_h`, `tokens_per_card`, `rework_per_card`, `blocked_cards`, `model_substitution`, `untracked_commits` and `event_time_skew`.
+2. `tokens_per_card` reports `input_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens` and `output_tokens` as separate fields, deduplicated by delegate id; they are never summed into one "input" figure.
+3. `model_substitution` counts delegates whose actual model differs from the pin their agent definition or map row names; `untracked_commits` counts commits on the program branch after EV-0484 that no event names by SHA; `event_time_skew` is the largest gap in hours between an event's stated time and the UTC commit time of the commit that added its row (`git blame` on TRACKING).
+4. Tests use fixture TSV, fixture TRACKING rows and a throwaway git repo; one fixture reproduces the EV-0486 to EV-0491 skew and must measure it.
+
+**Verification and evidence:** `npm test`; `npm run verify`; a live run on the coordinator branch retained under `artifacts/local/runs/`; `npm run check:scope -- <base> <candidate>` and every command it prints.
+
+**Boundary:** Read-only over the ledger, TRACKING and git; writes only its run record.
