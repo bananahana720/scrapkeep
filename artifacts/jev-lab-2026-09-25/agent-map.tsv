@@ -1,0 +1,11 @@
+agent_id	card	attempt	role	pinned_model
+a6e99197d3d08fc29	JL-00	A1	reviewer	claude-fable-5-1
+af86a79697c6dc621	JL-01	A1	writer	claude-opus-5-5
+a4249c4ee99c644a5	JL-02	A1	writer	claude-opus-5-5
+af15a3ddfa829be3a	JL-03	A1	writer	claude-opus-5-5
+ad31cf2d8ea1f7fb0	JL-04	A1,A2	writer	claude-opus-5-5
+a25f50b754173a17a	JL-01	A1	reviewer	claude-fable-5-1
+aaadc2cdda5cc3407	JL-04	A1	reviewer	claude-opus-5-5
+a9237dccf7407924a	JL-02	A1	reviewer	claude-fable-5-1
+a85515daa2dbd4705	JL-03	A1	reviewer	claude-fable-5-1
+acce91e203bbd890d	JL-04	A2	reviewer	claude-opus-5-5
