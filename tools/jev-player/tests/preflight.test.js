@@ -28,6 +28,8 @@ import {
 const questions = loadQuestionSet();
 const controls = loadControls();
 const instrument = instrumentIdentity(questions);
+const q2 = loadQuestionSet("q2-neutral");
+const c2 = loadControls("c2");
 
 // A decideFn built from a policy: policy(state, options, questions) returns
 // {choice, probabilities}. Every call is logged so a test can check what was
@@ -219,6 +221,174 @@ test("wording-swap asks under both wordings and fails when the choice moves", as
   assert.deepEqual(neutral.danger, questions.danger);
   assert.deepEqual(neutral.greedy, questions.greedy);
   assert.equal(neutral.intent.type, questions.intent.type);
+});
+
+const lengthRatio = (options) => {
+  const lengths = options.map((option) => option.why.length);
+  return Math.max(...lengths) / Math.min(...lengths);
+};
+
+test("c2 keeps the plan's lines, adds the free-cache swap and a max-shift line, and length-matches options", () => {
+  assert.equal(c2.version, "c2");
+  assert.match(c2.sha, /^[0-9a-f]{64}$/);
+  assert.deepEqual(
+    c2.controls.map((one) => one.id),
+    ["free-cache", "lethal-option", "wording-swap", "wording-swap-free"],
+  );
+  const [free, lethal, swap, swapFree] = c2.controls;
+  assert.equal(free.kind, "min-probability");
+  assert.equal(free.probe, "take_cache");
+  assert.equal(free.min, 0.6);
+  assert.ok(
+    free.state.scrap.held > 0,
+    "held > 0 so cost 0 cannot read as unaffordable",
+  );
+  assert.match(
+    free.options.find((one) => one.id === "take_cache").why,
+    /0 scrap/,
+  );
+  assert.equal(lethal.kind, "max-probability");
+  assert.equal(lethal.probe, "ram_target");
+  assert.equal(lethal.max, 0.2);
+  assert.equal(lethal.state.self.hp, 8);
+  assert.match(
+    lethal.options.find((one) => one.id === "ram_target").why,
+    /25 damage/,
+  );
+  assert.deepEqual(gateOptions(lethal.state, lethal.options).dropped, []);
+  for (const same of [swap, swapFree]) {
+    assert.equal(same.kind, "same-choice");
+    assert.equal(typeof same.max_shift, "number");
+    assert.ok(same.max_shift > 0 && same.max_shift < 1);
+  }
+  assert.deepEqual(swapFree.state, free.state);
+  assert.deepEqual(swapFree.options, free.options);
+  for (const control of c2.controls)
+    assert.ok(
+      lengthRatio(control.options) <= 1.25,
+      `${control.id} options differ in length by ${lengthRatio(control.options).toFixed(2)}x`,
+    );
+  assert.equal(c2.neutral_intent, controls.neutral_intent);
+});
+
+test("c2's swap options carry every decision-bearing fact, so the arms differ only in framing", () => {
+  for (const same of c2.controls.filter((one) => one.kind === "same-choice")) {
+    const take = same.options.find((one) => one.id === "take_cache").why;
+    const all = same.options.map((one) => one.why).join(" ");
+    assert.match(take, /\d+ scrap/, `${same.id}: the cache's price`);
+    assert.match(take, /\d+ s\b|no stop/, `${same.id}: the stopping time`);
+    assert.match(take, /rest of the run/, `${same.id}: buff permanence`);
+    assert.match(all, /spent only on caches/, `${same.id}: scrap's sole use`);
+    assert.match(all, /tier/, `${same.id}: the tier clock`);
+    assert.match(all, /clears the stage/, `${same.id}: what the exit does`);
+  }
+});
+
+test("c2 asks twelve live calls and passes for a sensible player under q2", async () => {
+  const { decideFn, calls } = stub(sensible);
+  const result = await runControls({
+    questions: q2,
+    decideFn,
+    controls: c2,
+  });
+  assert.equal(result.passed, true);
+  assert.equal(calls.length, 12);
+  assert.equal(result.controls_version, "c2");
+  assert.equal(result.questions_version, "q2-neutral");
+  for (const id of ["wording-swap", "wording-swap-free"]) {
+    const swap = byId(result, id);
+    assert.equal(swap.runs.length, 4);
+    assert.deepEqual(swap.shift, {
+      line: 0.15,
+      max: 0,
+      by_order: [
+        { order: "given", option: "take_cache", delta: 0 },
+        { order: "reversed", option: "take_cache", delta: 0 },
+      ],
+    });
+  }
+});
+
+// Answers any cache state from a fixed table per wording and the rest sensibly.
+function perWording(current, neutral) {
+  return stub((state, options, asked) => {
+    if (!options.some((one) => one.id === "take_cache"))
+      return sensible(state, options);
+    const table =
+      asked.intent.instructions === c2.neutral_intent ? neutral : current;
+    const probabilities = Object.fromEntries(
+      options.map((one) => [one.id, table[one.id]]),
+    );
+    const choice = options
+      .map((one) => one.id)
+      .reduce((top, id) => (probabilities[id] > probabilities[top] ? id : top));
+    return { choice, probabilities };
+  });
+}
+
+test("under c2 a near-tie flip inside the max-shift line is not a wording effect", async () => {
+  const { decideFn } = perWording(
+    { take_cache: 0.45, push_objective: 0.4, sweep_scrap: 0.15 },
+    { take_cache: 0.4, push_objective: 0.45, sweep_scrap: 0.15 },
+  );
+  const result = await runControls({ questions: q2, decideFn, controls: c2 });
+  for (const id of ["wording-swap", "wording-swap-free"]) {
+    const swap = byId(result, id);
+    assert.equal(swap.passed, true, swap.reason);
+    assert.equal(swap.shift.max, 0.05);
+    assert.match(swap.reason, /within the max-shift line 0\.15/);
+  }
+});
+
+test("under c2 a flip whose shift exceeds the line fails, naming the shift", async () => {
+  const { decideFn } = perWording(
+    { take_cache: 0.7, push_objective: 0.2, sweep_scrap: 0.1 },
+    { take_cache: 0.25, push_objective: 0.65, sweep_scrap: 0.1 },
+  );
+  const result = await runControls({ questions: q2, decideFn, controls: c2 });
+  const swap = byId(result, "wording-swap");
+  assert.equal(swap.passed, false);
+  assert.equal(swap.shift.max, 0.45);
+  assert.match(
+    swap.reason,
+    /take_cache under the current wording, push_objective under the neutral one/,
+  );
+  assert.match(swap.reason, /moved 0\.45 > 0\.15/);
+  assert.equal(result.passed, false);
+});
+
+test("under c2 the same choice passes and records a shift above the line", async () => {
+  const { decideFn } = perWording(
+    { take_cache: 0.9, push_objective: 0.05, sweep_scrap: 0.05 },
+    { take_cache: 0.5, push_objective: 0.3, sweep_scrap: 0.2 },
+  );
+  const result = await runControls({ questions: q2, decideFn, controls: c2 });
+  const swap = byId(result, "wording-swap-free");
+  assert.equal(swap.passed, true, swap.reason);
+  assert.equal(swap.shift.max, 0.4);
+});
+
+test("a flip with no measurable shift fails, and c1 without a line fails any flip", async () => {
+  const { decideFn } = stub((state, options, asked) => {
+    const neutral = asked.intent.instructions === c2.neutral_intent;
+    const choice = neutral ? "push_objective" : "take_cache";
+    return { choice, probabilities: {} };
+  });
+  const result = await runControls({ questions: q2, decideFn, controls: c2 });
+  assert.equal(byId(result, "wording-swap").passed, false);
+  assert.match(
+    byId(result, "wording-swap").reason,
+    /no shift could be measured/,
+  );
+
+  const { decideFn: nearTie } = perWording(
+    { take_cache: 0.45, push_objective: 0.4, sweep_scrap: 0.15 },
+    { take_cache: 0.4, push_objective: 0.45, sweep_scrap: 0.15 },
+  );
+  const old = await runControls({ questions, decideFn: nearTie, controls });
+  const swap = byId(old, "wording-swap");
+  assert.equal(swap.passed, false);
+  assert.equal(swap.shift, undefined);
 });
 
 test("a probe the gate drops or the answer omits fails its control", async () => {

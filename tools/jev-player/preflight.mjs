@@ -158,9 +158,32 @@ async function thresholdControl(control, questions, decideFn) {
   );
 }
 
+// The largest |P(current) - P(neutral)| over the listed options, taken in the
+// control's listed order so a tie names the same option in both orders; null
+// when either answer lacks a probability for one of them.
+function shiftBetween(ids, current, neutral) {
+  let largest = null;
+  for (const id of ids) {
+    const a = current.probabilities?.[id];
+    const b = neutral.probabilities?.[id];
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    const delta = Number(Math.abs(a - b).toFixed(4));
+    if (largest === null || delta > largest.delta)
+      largest = { option: id, delta };
+  }
+  return largest;
+}
+
+// Without max_shift any change of choice fails the order (c1). With it, a
+// change fails only when the shift exceeds the line, so a near tie does not
+// read as a wording effect; the shift is recorded either way.
 async function wordingControl(control, questions, neutral, decideFn) {
   const runs = [];
   const misses = [];
+  const notes = [];
+  const shifts = [];
+  const line = control.max_shift;
+  const ids = control.options.map((option) => option.id);
   for (const [order, arrange] of ORDERS) {
     const pair = {};
     for (const [wording, asked] of [
@@ -179,24 +202,50 @@ async function wordingControl(control, questions, neutral, decideFn) {
       runs.push(run);
     }
     const failed = [pair.current, pair.neutral].find((run) => run.error);
-    if (failed !== undefined)
+    if (failed !== undefined) {
       misses.push(
         `the call failed under the ${failed.wording} wording in the ${order} order: ${failed.error}`,
       );
-    else if (pair.current.choice !== pair.neutral.choice)
-      misses.push(
-        `${pair.current.choice} under the current wording, ${pair.neutral.choice} under the neutral one, in the ${order} order`,
+      continue;
+    }
+    const shift =
+      line === undefined ? null : shiftBetween(ids, pair.current, pair.neutral);
+    if (shift !== null) shifts.push({ order, ...shift });
+    if (pair.current.choice === pair.neutral.choice) continue;
+    const flip = `${pair.current.choice} under the current wording, ${pair.neutral.choice} under the neutral one, in the ${order} order`;
+    if (line === undefined) misses.push(flip);
+    else if (shift === null) misses.push(`${flip}; no shift could be measured`);
+    else if (shift.delta > line)
+      misses.push(`${flip}; P(${shift.option}) moved ${shift.delta} > ${line}`);
+    else
+      notes.push(
+        `${flip}, a shift of ${shift.delta} within the max-shift line ${line}`,
       );
   }
-  return summary(control, runs, misses);
+  const result = summary(control, runs, misses, notes);
+  if (line === undefined) return result;
+  return {
+    ...result,
+    shift: {
+      line,
+      max:
+        shifts.length === 0
+          ? null
+          : Math.max(...shifts.map((shift) => shift.delta)),
+      by_order: shifts,
+    },
+  };
 }
 
-function summary(control, runs, misses) {
+function summary(control, runs, misses, notes = []) {
   return {
     id: control.id,
     kind: control.kind,
     passed: misses.length === 0,
-    reason: misses.length === 0 ? "passed in both orders" : misses.join("; "),
+    reason:
+      misses.length === 0
+        ? ["passed in both orders", ...notes].join("; ")
+        : misses.join("; "),
     runs,
   };
 }
@@ -414,8 +463,12 @@ async function main(argv) {
           `${run.wording ? `${run.wording}/` : ""}${run.order} ${run.choice}${run.p === undefined || run.p === null ? "" : ` p=${run.p}`}`,
       )
       .join(", ");
+    const shift =
+      control.shift === undefined
+        ? ""
+        : `; max shift ${control.shift.max} (line ${control.shift.line})`;
     process.stdout.write(
-      `${control.passed ? "pass" : "fail"} ${control.id}: ${readings}; ${control.reason}\n`,
+      `${control.passed ? "pass" : "fail"} ${control.id}: ${readings}${shift}; ${control.reason}\n`,
     );
   }
   process.stdout.write(
