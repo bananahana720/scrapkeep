@@ -1,0 +1,5 @@
+{
+  "protocol": "scrapkeep-jev/1",
+  "reason": "interrupted",
+  "message": "harness received SIGINT"
+}
