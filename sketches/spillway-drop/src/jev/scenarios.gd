@@ -26,6 +26,9 @@ const FloodCycle := preload("res://src/flood_cycle.gd")
 const Geo := preload("res://src/jev/geo.gd")
 
 const IDS := ["mid-climb", "flood-hatch"]
+# The instrument epoch every scenario line carries (EV-0555): stage threat rule 2
+# (jev_state.gd THREAT_RULE) with trials that end at death, as Cable Bench's do.
+const EPOCH := "stage-threat-rule 2 + end-on-death"
 const JITTER_M := 6.0
 const HATCH_RADIUS := 4.0
 
@@ -178,14 +181,25 @@ class Run:
 	func succeeded() -> bool:
 		return scenario["success"].call(progress)
 
-	# "success" once the predicate held within the limit, "timeout" past the limit,
-	# otherwise "running". A death is a timeout: the predicate needs the ball alive, and
-	# dead_tick says when it stopped being.
+	# "success" once the predicate held within the limit; "timeout" past the limit or
+	# once the ball is dead, since a dead run cannot succeed (EV-0555; Cable Bench's
+	# scenarios.gd result()); otherwise "running". The runner ends the trial as soon as
+	# this is not "running", so nothing is offered to a dead ball. `end()` tells the two
+	# timeouts apart, keeping the harness's closed result list.
 	func result() -> String:
 		if success_tick >= 0:
 			return "success"
-		if progress["tick"] > progress["limit_ticks"]:
+		if progress["dead_tick"] >= 0 or progress["tick"] > progress["limit_ticks"]:
 			return "timeout"
+		return "running"
+
+	func end() -> String:
+		if success_tick >= 0:
+			return "success"
+		if progress["dead_tick"] >= 0:
+			return "scrapped"
+		if progress["tick"] > progress["limit_ticks"]:
+			return "limit"
 		return "running"
 
 	func _check_anomalies(at_tick: int, at: Vector3, v: Vector3) -> void:

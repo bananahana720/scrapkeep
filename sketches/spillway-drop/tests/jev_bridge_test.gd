@@ -4,7 +4,9 @@ extends SceneTree
 # runs on a stage of its own and a responder answers every snapshot with the first
 # offered option. Every intent must apply at exactly state.tick + k, the events must
 # validate, hello must report the effective seed, and two kinematic runs of the same
-# seed must write the same trace_hash. The two trials run one after the other, because
+# seed must write the same trace_hash. A third run is killed at tick KILL_AT (EV-0555,
+# end on death): the trial must end at the tick it sees the death, write done.json
+# there, and write no state after it. The two trials run one after the other, because
 # the stage counts enemies across the whole scene tree. The real process and the
 # harness are exercised by the batches under artifacts/local/tasks/JL-27/.
 
@@ -16,6 +18,7 @@ const D := 90
 const K := 26
 const MAX_TICKS := 4 * D
 const SEED := 3
+const KILL_AT := 100
 
 
 class Responder:
@@ -54,7 +57,7 @@ class Responder:
 
 
 var _out := ""
-var _runs := ["first", "second"]
+var _runs := ["first", "second", "dying"]
 var _current := {}
 var _hashes := []
 var _failures := 0
@@ -108,6 +111,8 @@ func _physics_process(_delta: float) -> bool:
 		if not trial.begin():
 			_end_current()
 		return false
+	if _current["label"] == "dying" and trial.view_tick() == KILL_AT and _current["stage"].run.alive():
+		_current["stage"].run.damage(1.0e6)
 	if trial.tick():
 		_end_current()
 	return false
@@ -132,7 +137,8 @@ func _end_current() -> void:
 			intents += 1
 			if int(event["tick"]) != int(event["seq"]) * D + K:
 				on_time = false
-	_check(on_time and intents == trial.applied and intents >= 3, "%s: all %d intents applied at seq x %d + %d" % [label, intents, D, K])
+	var least := 1 if label == "dying" else 3
+	_check(on_time and intents == trial.applied and intents >= least, "%s: all %d intents applied at seq x %d + %d" % [label, intents, D, K])
 	# The scenario line carries the choice counts the stage metrics need (JL-27-A2):
 	# the harness's measure() sees only this line, not the state files.
 	var multi := 0
@@ -154,7 +160,20 @@ func _end_current() -> void:
 			[line.get("snapshots"), line.get("multi"), line.get("offered"), line.get("kept")]])
 	_check(line.get("threat_rule", "") == "stage-threat-rule 2", "%s: the scenario line names the threat rule epoch" % label)
 	var done = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("done.json")))
-	_hashes.append(done["trace_hash"] if done != null else "")
+	if label == "dying":
+		var dead_tick: int = line.get("dead_tick", -1)
+		var last_state := int(KILL_AT / D)
+		_check(dead_tick == KILL_AT + 1 and done != null and int(done["tick"]) == dead_tick,
+			"dying: the trial ends at the tick it sees the death (dead_tick %d, done.json tick %s)" % [
+				dead_tick, done["tick"] if done != null else "none"])
+		_check(trial.snapshots == last_state + 1
+			and not FileAccess.file_exists(dir.path_join("state-%06d.json" % (last_state + 1))),
+			"dying: no state after the death (%d snapshots, last at tick %d)" % [trial.snapshots, last_state * D])
+		_check(line.get("result", "") == "timeout" and line.get("end", "") == "scrapped",
+			"dying: the scenario line says timeout, ended scrapped (got %s, %s)" % [line.get("result"), line.get("end")])
+		_check(line.get("epoch", "") == "stage-threat-rule 2 + end-on-death", "dying: the scenario line names the epoch")
+	else:
+		_hashes.append(done["trace_hash"] if done != null else "")
 	trial.close()
 	_current["viewport"].queue_free()
 	_current = {}

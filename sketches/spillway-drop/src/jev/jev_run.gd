@@ -14,8 +14,8 @@ extends SceneTree
 # seed; hello.json reports that seed. `--fixed-fps 90` makes one frame one physics tick.
 # Every D ticks it writes a state; it keeps flying the held intent for k ticks, then
 # blocks inside _physics_process (OS.delay_msec, never tree.paused) until the intent
-# arrives, and applies it at exactly t + k. It ends when the scenario succeeds or times
-# out, or at --max-ticks. Exit codes: 0 done, 1 internal, 4 intent_invalid,
+# arrives, and applies it at exactly t + k. It ends when the scenario succeeds, times
+# out or the ball dies (EV-0555), or at --max-ticks. Exit codes: 0 done, 1 internal, 4 intent_invalid,
 # 5 intent_timeout. The last stdout lines are the scenario's own result as
 # `jev_run: scenario {json}`, which harness.mjs records, and a summary.
 
@@ -323,6 +323,8 @@ class Trial:
 		return {
 			"id": run.scenario["label"],
 			"result": run.result(),
+			"end": run.end(),
+			"epoch": Scenarios.EPOCH,
 			"threat_rule": JevState.THREAT_RULE,
 			"snapshots": snapshots,
 			"multi": multi,

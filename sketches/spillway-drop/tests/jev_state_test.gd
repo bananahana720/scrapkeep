@@ -63,7 +63,7 @@ var _failures := 0
 
 
 func _initialize() -> void:
-	for key in ["default", "same", "seven", "eight", "probe"]:
+	for key in ["default", "same", "zero", "seven", "eight", "probe"]:
 		var viewport := SubViewport.new()
 		viewport.own_world_3d = true
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -73,6 +73,8 @@ func _initialize() -> void:
 		match key:
 			"same":
 				stage.seed_override = Stage.DEFAULT_SEED
+			"zero":
+				stage.seed_override = 0
 			"seven":
 				stage.seed_override = 7
 			"eight":
@@ -121,6 +123,11 @@ func _seed_checks() -> void:
 		if a.advance(0.5, 0) != b.advance(0.5, 0):
 			same_orders = false
 	_check(same_orders and seven.director._rng.seed == 7, "the director is seeded from seed_override")
+	# Seed 0 is a seed of its own, not the default (JL-27 review, F5): the runner's
+	# default --seed is 0, and only -1 means the stage as played.
+	var zero = _stages["zero"]
+	_check(zero.director._rng.seed == 0 and zero.scrap.item_position(0) != d.scrap.item_position(0),
+		"seed_override 0 seeds the stage with 0, distinct from the default %d" % Stage.DEFAULT_SEED)
 
 
 func _geo_checks() -> void:
