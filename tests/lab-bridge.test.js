@@ -907,7 +907,8 @@ test(
 );
 
 // JL-21b: run-to-pad's limit is per physics mode (scenarios.gd MODE_LIMITS_S),
-// chosen when jev_run.gd places the ball; --time-limit-s still wins.
+// chosen when jev_run.gd places the ball; --time-limit-s always wins, even one
+// equal to the initial limit (JL-21b-A2).
 test(
   "bridge: the runner takes the scenario's limit for its physics mode, and an override still wins",
   { skip: noGodot, timeout: 60_000 },
@@ -928,6 +929,7 @@ test(
     assert.equal(await limitTicks("kinematic"), 248 * TIMING.tick_hz);
     assert.equal(await limitTicks("rigid"), 45 * TIMING.tick_hz);
     assert.equal(await limitTicks("kinematic", 135), 135 * TIMING.tick_hz);
+    assert.equal(await limitTicks("kinematic", 45), 45 * TIMING.tick_hz);
   },
 );
 

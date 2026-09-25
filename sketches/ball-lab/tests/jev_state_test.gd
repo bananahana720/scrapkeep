@@ -12,7 +12,9 @@ extends SceneTree
 #
 # Knocked threats (JL-21b): per mode, a lab stomps dummy 0 at tick 0 with two
 # exporters attached, one with a Scenarios.Run and one without. With the Run, a dummy
-# knocked this trial leaves the threats; without it, the threats are unchanged.
+# knocked this trial leaves the threats; without it, the threats are unchanged. The
+# first tick a knocked dummy is the nearest, jev_run.gd's goal for stomp and ram must
+# send the agent to the nearest reported threat instead (JL-21b-A2).
 #
 # Set JEV_STATE_DUMP=<dir> to write the exporter's states (every 90 ticks) as protocol
 # state files for protocol.mjs to validate.
@@ -23,6 +25,8 @@ const SpeedTier := preload("res://src/speed_tier.gd")
 const Field := preload("res://src/field.gd")
 const JevState := preload("res://src/jev/jev_state.gd")
 const Scenarios := preload("res://src/jev/scenarios.gd")
+const JevRun := preload("res://src/jev/jev_run.gd")
+const JevAgent := preload("res://src/jev/jev_agent.gd")
 
 const TICKS := 900
 const PLACE_TICKS := 45
@@ -214,6 +218,26 @@ func _step_knocked(run: Dictionary) -> void:
 		run["ticks"] += 1
 	if live_ids != all_ids:
 		run["differed"] += 1
+	if not run.has("targets") and not live_ids.is_empty() and knocked.has(all_ids[0]):
+		run["targets"] = _executor_targets(lab, view)
+		run["targets"]["nearest"] = all_ids[0]
+		run["targets"]["reported"] = live_ids[0]
+
+
+# What the agent would act on for stomp and ram, given jev_run.gd's goal for a state
+# taken now. Read-only: the agent is not installed as the ball's source.
+func _executor_targets(lab, view) -> Dictionary:
+	var trial = JevRun.Trial.new(lab, {})
+	trial.view = view
+	trial.run = view.run
+	trial._pending = view.snapshot()
+	var out := {"tick": view.tick}
+	for id in ["stomp_target", "ram_target"]:
+		var agent := JevAgent.new(lab)
+		agent.hold(id, trial._goal(id))
+		agent._at = lab.player.ball_position()
+		out[id] = lab.enemies.find(agent._enemy())
+	return out
 
 
 func _sample(lab) -> PackedFloat64Array:
@@ -447,6 +471,13 @@ func _finish() -> void:
 		_report("knocked threats", ok, "%s: dummies %s knocked; on %d of %d ticks a knocked dummy was among the nearest three, %d ticks wrong%s"
 			% [PlayerBall.MODE_NAMES[run["mode"]], str(knocked), run["differed"], view.tick, run["ticks"],
 			(" (" + " | ".join(run["errors"]) + ")") if not run["errors"].is_empty() else ""])
+		var targets: Dictionary = run.get("targets", {})
+		var aimed: bool = not targets.is_empty() and targets["stomp_target"] == targets["reported"] \
+			and targets["ram_target"] == targets["reported"] and targets["reported"] != targets["nearest"]
+		_report("executor target", aimed, "%s: %s" % [PlayerBall.MODE_NAMES[run["mode"]],
+			("tick %d, knocked dummy %d nearest, reported threat %d; stomp acts on %d, ram on %d" % [targets["tick"],
+			targets["nearest"], targets["reported"], targets["stomp_target"], targets["ram_target"]])
+			if not targets.is_empty() else "no tick with a knocked dummy nearest"])
 		view.detach()
 		run["bare"].detach()
 		run["holder"]["viewport"].free()

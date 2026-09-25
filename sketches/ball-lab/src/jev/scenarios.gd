@@ -134,7 +134,6 @@ static func _scenario(id: String, spawn: Vector3, velocity: Vector3, kind: Strin
 		"velocity": velocity,
 		"objective": {"kind": kind, "point": point, "radius": radius},
 		"time_limit_s": limit_s,
-		"initial_limit_s": limit_s,
 		"arm": "",
 		"params": {},
 		"dynamic_objective": false,
@@ -153,14 +152,12 @@ static func _jittered(scenario: Dictionary) -> Dictionary:
 # `seed` >= 0 applies the scenario's jitter; tests place at the nominal spawn.
 #
 # place() also sets the limit for the lab's physics mode: jev_run.gd calls it after
-# set_mode() and before building the Run. Its --time-limit-s is written earlier, so a
-# limit other than the initial one is that override and is kept; an override equal to
-# the initial limit cannot be told apart and gets the mode's limit.
+# set_mode() and before building the Run, and applies --time-limit-s after it.
 static func place(lab, scenario: Dictionary, seed := -1) -> void:
 	# jev_agent_test.gd places bare {spawn, velocity} dictionaries: no id, no limit.
 	var by_mode: Dictionary = MODE_LIMITS_S.get(scenario.get("id", ""), {})
 	var mode: String = lab.player.mode_name()
-	if by_mode.has(mode) and scenario["time_limit_s"] == scenario["initial_limit_s"]:
+	if by_mode.has(mode):
 		scenario["time_limit_s"] = by_mode[mode]
 	lab.player.reset_to(spawn_for(scenario, seed))
 	if scenario["velocity"] != Vector3.ZERO:
