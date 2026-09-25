@@ -1,14 +1,21 @@
-// The harness's `launch` for real Godot (JL-17): one headless ball-lab process
-// per trial, running sketches/ball-lab/src/jev/jev_run.gd at --fixed-fps 90 so
-// one frame is one physics tick. The harness spawns it in its own process
-// group and kills the group on stall.
+// The harness's `launch` for real Godot (JL-17): one headless process per
+// trial, running the sketch's src/jev/jev_run.gd at --fixed-fps 90 so one
+// frame is one physics tick. The harness spawns it in its own process group
+// and kills the group on stall.
 //
 //   node scripts/lab/godot-launch.mjs <scenario> [--arm scripted|random|jev]
 //     [-n trials] [--seed N] [--mode kinematic|rigid] [--snapshot-every D]
 //     [--hold-ticks k] [--max-ticks N] [--call-cap N] [--root runs-dir]
-//     [--cache verdict-dir] [--replay]
+//     [--cache verdict-dir] [--replay] [--sketch dir]
+//
+// The sketch is sketches/ball-lab unless --sketch names another Godot project
+// with the same runner, such as a lab branch's sketches/cable-bench in its own
+// worktree (JL-26). A sketch with a stage layer in metrics/index.mjs STAGES
+// records that layer too, and a sketch outside this repository has its own
+// repository's head and dirty flag stamped into the record's versions.
 //
 // The binary is the one sketch-smoke.mjs pins, or GODOT_BIN.
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,9 +24,11 @@ import { parseArgs } from "node:util";
 import { TIMING } from "../../tools/jev-player/protocol/protocol.mjs";
 import { binary } from "../sketch-smoke.mjs";
 import { runBatch, UsageError } from "./harness.mjs";
+import { STAGES, registryFor } from "./metrics/index.mjs";
 import { EXIT } from "./metrics/status.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const hereRoot = path.resolve(here, "../..");
 
 export const GODOT_BINARY = binary;
 export const SKETCH = path.resolve(here, "../../sketches/ball-lab");
@@ -28,13 +37,15 @@ export const MODES = Object.freeze(["kinematic", "rigid"]);
 
 // `maxTicks` ends every trial early (0 runs to the scenario's own end);
 // `intentTimeoutS` replaces the protocol's 30 s block limit; `env` is added to
-// the harness's environment for each Godot process.
+// the harness's environment for each Godot process; `sketch` is the Godot
+// project directory.
 export function godotLaunch({
   mode = "kinematic",
   godot = GODOT_BINARY,
   maxTicks = 0,
   intentTimeoutS,
   env = {},
+  sketch = SKETCH,
 } = {}) {
   if (!MODES.includes(mode)) {
     throw new Error(
@@ -44,6 +55,10 @@ export function godotLaunch({
   if (!Number.isInteger(maxTicks) || maxTicks < 0) {
     throw new Error(`maxTicks must be a whole number >= 0, got ${maxTicks}`);
   }
+  if (!existsSync(path.join(sketch, "project.godot"))) {
+    throw new Error(`no project.godot in the sketch directory ${sketch}`);
+  }
+  const name = path.basename(sketch);
   const launch = ({ io, scenario, seed, snapshotEvery, holdTicks }) => ({
     command: godot,
     args: [
@@ -51,7 +66,7 @@ export function godotLaunch({
       "--fixed-fps",
       String(TIMING.tick_hz),
       "--path",
-      SKETCH,
+      sketch,
       "--script",
       RUNNER,
       "--",
@@ -73,8 +88,35 @@ export function godotLaunch({
     path.basename(godot),
     mode,
     ...(maxTicks > 0 ? [`max-ticks ${maxTicks}`] : []),
+    ...(sketch === SKETCH ? [] : [`sketch ${name}`]),
   ].join(" ");
+  launch.sketch = { name, path: sketch };
   return launch;
+}
+
+// runBatch's registry and measure for a sketch with a stage layer; {} for any
+// other, which leaves the harness's defaults.
+export function stageFor(sketch) {
+  const name = path.basename(sketch);
+  if (!Object.hasOwn(STAGES, name)) return {};
+  return { registry: registryFor(name), measure: STAGES[name].measure };
+}
+
+// The sketch's own repository head and dirty flag, for a sketch that lives in
+// another worktree than this one; {} for a sketch inside this repository.
+export function sketchVersions(sketch) {
+  const git = (...args) =>
+    spawnSync("git", ["-C", sketch, ...args], { encoding: "utf8" });
+  const top = git("rev-parse", "--show-toplevel");
+  const here = path.resolve(hereRoot);
+  if (top.status !== 0 || path.resolve(top.stdout.trim()) === here) return {};
+  return {
+    sketch_repository: top.stdout.trim(),
+    sketch_head: git("rev-parse", "HEAD").stdout.trim(),
+    sketch_branch: git("branch", "--show-current").stdout.trim(),
+    sketch_dirty:
+      git("status", "--porcelain").stdout.trim() === "" ? "false" : "true",
+  };
 }
 
 function parse(argv) {
@@ -93,11 +135,12 @@ function parse(argv) {
       root: { type: "string" },
       cache: { type: "string" },
       replay: { type: "boolean", default: false },
+      sketch: { type: "string" },
     },
   });
   if (positionals.length !== 1) {
     throw new Error(
-      "usage: godot-launch.mjs <scenario> [--arm scripted|random|jev] [-n N] [--seed N] [--mode kinematic|rigid] [--snapshot-every D] [--hold-ticks k] [--max-ticks N] [--call-cap N] [--root DIR] [--cache DIR] [--replay]",
+      "usage: godot-launch.mjs <scenario> [--arm scripted|random|jev] [-n N] [--seed N] [--mode kinematic|rigid] [--snapshot-every D] [--hold-ticks k] [--max-ticks N] [--call-cap N] [--root DIR] [--cache DIR] [--replay] [--sketch DIR]",
     );
   }
   const whole = (name) => {
@@ -121,6 +164,7 @@ function parse(argv) {
     root: values.root === undefined ? undefined : path.resolve(values.root),
     cache: values.cache === undefined ? undefined : path.resolve(values.cache),
     replay: values.replay,
+    sketch: values.sketch === undefined ? SKETCH : path.resolve(values.sketch),
   };
 }
 
@@ -129,7 +173,11 @@ async function main(argv) {
   let launch;
   try {
     options = parse(argv);
-    launch = godotLaunch({ mode: options.mode, maxTicks: options.maxTicks });
+    launch = godotLaunch({
+      mode: options.mode,
+      maxTicks: options.maxTicks,
+      sketch: options.sketch,
+    });
   } catch (error) {
     console.error(error.message);
     return EXIT.usage;
@@ -155,7 +203,11 @@ async function main(argv) {
         ["replay", options.replay],
         ["verdictCache", options.cache],
       ]),
-      runs: options.root === undefined ? {} : { root: options.root },
+      ...stageFor(options.sketch),
+      runs: {
+        ...(options.root === undefined ? {} : { root: options.root }),
+        versions: sketchVersions(options.sketch),
+      },
     });
   } catch (error) {
     if (!(error instanceof UsageError)) throw error;

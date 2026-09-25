@@ -600,6 +600,11 @@ export async function runBatch({
   snapshotEvery = DEFAULTS.snapshotEvery,
   holdTicks = DEFAULTS.holdTicks,
   signals = SIGNALS,
+  // A stage sketch's registry and measure (metrics/index.mjs STAGES, JL-26):
+  // the record accepts the stage's metric ids, and measure(run, results)
+  // records them from the parsed scenario results.
+  registry = METRICS,
+  measure = null,
 } = {}) {
   if (!Object.hasOwn(ARMS, armName ?? "")) {
     throw new UsageError(
@@ -729,7 +734,7 @@ export async function runBatch({
   const run = await createRun({
     type: "batch",
     label: `${scenarioLabel(scenario)}-${armName}`,
-    registry: METRICS,
+    registry,
     config,
     instrument: armInstrument,
     ...runs,
@@ -834,6 +839,7 @@ export async function runBatch({
       });
     }
   }
+  if (measure !== null) measure(run, judged);
   if (armName === "jev") {
     const apiErrors = config.trials.filter(
       (entry) => entry.abort?.cause === "api_error",
