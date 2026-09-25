@@ -85,7 +85,7 @@ export default [
     layer: "program",
     kind: "kri",
     sentinel: false,
-    thresholds: { worse: "higher", warn: 1, fail: 24 },
+    thresholds: { worse: "higher", warn: 0.25, fail: 1 },
     min_n: 1,
     says: "Hours between an event and its record.",
   },

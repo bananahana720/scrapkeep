@@ -1,7 +1,23 @@
 // The only file under scripts/lab/ that may name a status or a colour.
-// Hex values are the green, yellow, red and dark_foreground keys of
+// Hex values are the green, yellow, red, dark_foreground and blue keys of
 // ~/.config/omarchy/themes/neon-noir/colors.toml. Exit codes follow the gate
 // table in plan § 4.
+
+export const EXIT = Object.freeze({
+  pass: 0,
+  fail: 1,
+  usage: 2,
+  inconclusive: 3,
+  invalid: 4,
+});
+
+const SEVERITY = [EXIT.invalid, EXIT.fail, EXIT.inconclusive];
+
+// An invalid instrument voids every other reading, and a definite failure
+// outranks a missing answer.
+export function worstExit(codes) {
+  return SEVERITY.find((code) => codes.includes(code)) ?? EXIT.pass;
+}
 
 function entry(word, hex, glyph, gate, exit) {
   const rgb = [1, 3, 5]
@@ -17,12 +33,25 @@ function entry(word, hex, glyph, gate, exit) {
   });
 }
 
+// untiered is a metric the plan tracks without thresholds: shown, never
+// judged, so the gate ignores it.
 export const STATUS = Object.freeze({
-  green: entry("green", "#7fd9a0", "●", "pass", 0),
-  amber: entry("amber", "#ffd166", "▲", "warn", 0),
-  red: entry("red", "#ef476f", "■", "fail", 1),
-  insufficient: entry("insufficient", "#5e7a82", "○", "inconclusive", 3),
+  green: entry("green", "#7fd9a0", "●", "pass", EXIT.pass),
+  amber: entry("amber", "#ffd166", "▲", "warn", EXIT.pass),
+  red: entry("red", "#ef476f", "■", "fail", EXIT.fail),
+  insufficient: entry(
+    "insufficient",
+    "#5e7a82",
+    "○",
+    "inconclusive",
+    EXIT.inconclusive,
+  ),
+  untiered: entry("untiered", "#4fa3d9", "◇", "ignore", EXIT.pass),
 });
+
+// Metrics that mean nothing until their epoch has passed its controls. The
+// registry shape has no field for this, so the rule lives beside evaluate.
+const EPOCH_BOUND = new Set(["lever_effect"]);
 
 function occurrences(value) {
   return typeof value === "boolean" ? Number(value) : value;
@@ -32,9 +61,13 @@ function crosses(thresholds, value, limit) {
   return thresholds.worse === "higher" ? value > limit : value < limit;
 }
 
+// min_n rule for the registry: 1 for a sentinel or a single reading, 5 for a
+// per-card or per-minute measure, 20 for rates and percentiles.
 // A sentinel's value counts occurrences of the bad event; one occurrence
 // decides even when n is below min_n.
-export function evaluate(metric, { value, n }) {
+export function evaluate(metric, { value, n }, { epochValid = false } = {}) {
+  if (EPOCH_BOUND.has(metric.id) && !epochValid) return STATUS.insufficient;
+  if (!metric.sentinel && metric.thresholds === null) return STATUS.untiered;
   const measured = metric.sentinel ? occurrences(value) : value;
   if (typeof measured !== "number" || !Number.isFinite(measured))
     return STATUS.insufficient;
