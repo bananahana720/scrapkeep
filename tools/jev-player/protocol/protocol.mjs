@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { open, rename, rm } from "node:fs/promises";
 
-import { gateOptions, INTENTS } from "../decide.mjs";
+import { INTENTS, offeredOptions } from "../decide.mjs";
 
 export const PROTOCOL = "scrapkeep-jev/1";
 
@@ -241,12 +241,8 @@ function checkJev(errors, jev) {
 
 // The options an arm may choose from: decide.mjs's precondition gate, with the
 // same fallback when everything is gated out. `forced` is judged on this list.
-export function offeredOptions(jev) {
-  const { kept } = gateOptions(jev.state, jev.options);
-  return kept.length > 0
-    ? kept
-    : [{ id: "push_objective", why: INTENTS.push_objective }];
-}
+// decide.mjs owns it, so the validator and decide() cannot drift apart.
+export { offeredOptions };
 
 // --- one validator per message type ----------------------------------------
 

@@ -127,6 +127,16 @@ export function gateOptions(state, options) {
   return { kept, dropped };
 }
 
+// What an arm may choose from: the gate's survivors, or push_objective alone
+// when the gate removes everything, because it is always executable. Takes a
+// state file's jev block; protocol.mjs judges `forced` on this same list.
+export function offeredOptions({ state, options }) {
+  const { kept } = gateOptions(state, options);
+  return kept.length > 0
+    ? kept
+    : [{ id: "push_objective", why: INTENTS.push_objective }];
+}
+
 // The wording and its rationale live in questions/<version>.json. Only the
 // intent's criteria come from the offered options.
 export function buildQuestions(options, questions = loadQuestionSet()) {
@@ -165,12 +175,9 @@ export async function decide(
   if (options.length === 0) {
     throw new Error("decide() needs at least one available option.");
   }
-  const { kept, dropped } = gateOptions(state, options);
+  const { dropped } = gateOptions(state, options);
   // push_objective is always executable, so a fully gated set still has a move.
-  const offered =
-    kept.length > 0
-      ? kept
-      : [{ id: "push_objective", why: INTENTS.push_objective }];
+  const offered = offeredOptions({ state, options });
   const started = Date.now();
   const response = await fetch(ENDPOINT, {
     method: "POST",
