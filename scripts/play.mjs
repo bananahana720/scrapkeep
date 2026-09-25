@@ -289,13 +289,7 @@ export async function testEntry(
     used = await order;
     names = applyOrder(names, used.order);
   }
-  const seconds = {};
-  const jobs = names.map((name) => async () => {
-    const begun = Date.now();
-    const result = await byName.get(name)();
-    seconds[name] = (Date.now() - begun) / 1000;
-    return result;
-  });
+  const jobs = names.map((name) => byName.get(name));
   let ok = true;
   let firstFail;
   const onDone = stream
@@ -313,7 +307,7 @@ export async function testEntry(
     }
     results.push(result);
   }
-  return { ok, results, seconds, first_fail_s: firstFail, order: used };
+  return { ok, results, first_fail_s: firstFail, order: used };
 }
 
 async function runSuite(targets, limit) {
@@ -625,7 +619,7 @@ export async function requestOrder(
   entry,
   names,
   saved,
-  { run = runChild, timeoutMs = 12_000, seconds = {} } = {},
+  { run = runChild, timeoutMs = 12_000 } = {},
 ) {
   const args = [testOrderScript, "order", "--dir", entry.directory];
   for (const name of names) {
@@ -633,11 +627,6 @@ export async function requestOrder(
   }
   if (saved !== undefined) {
     args.push("--changed", saved);
-  }
-  for (const name of names) {
-    if (Number.isFinite(seconds[name])) {
-      args.push("--seconds", `${name}=${seconds[name]}`);
-    }
   }
   try {
     const { status, stdout } = await run(args, timeoutMs);
@@ -659,6 +648,15 @@ export async function requestOrder(
   }
 }
 
+// Asking Jev costs a call and can change nothing when every check starts at
+// once, so the order is requested only for a save whose checks outnumber jobs.
+export function orderFor(entry, names, saved, limit, { request = requestOrder } = {}) {
+  if (saved === undefined || names.length <= limit) {
+    return undefined;
+  }
+  return request(entry, names, saved);
+}
+
 async function watch(targets, limit) {
   const roots = targets.map((entry) => entry.directory);
   console.log(bold("\n  watching " + targets.map((e) => e.id).join(", ")));
@@ -671,9 +669,6 @@ async function watch(targets, limit) {
 
   let running = false;
   let queued = null;
-  // Each check's last measured seconds, per sketch: near-tied Jev scores run
-  // the shorter check first.
-  const lastSeconds = new Map();
 
   async function fire(entry, reason, saved) {
     if (running) {
@@ -684,27 +679,16 @@ async function watch(targets, limit) {
     const started = Date.now();
     console.log(`\n${cyan("→")} ${bold(entry.id)} ${dim(reason)}`);
     // The first run has no save to judge, so it keeps the current order.
-    let order;
-    if (saved !== undefined) {
-      const names = [
-        "boot",
-        ...testScripts(entry.directory).map((s) => s.replace("res://tests/", "")),
-      ];
-      order = requestOrder(entry, names, saved, {
-        seconds: lastSeconds.get(entry.id) ?? {},
-      });
-    }
+    const names = [
+      "boot",
+      ...testScripts(entry.directory).map((s) => s.replace("res://tests/", "")),
+    ];
+    const order = orderFor(entry, names, saved, limit);
     const result = await testEntry(entry, limit, {
       order,
       stream: true,
       started,
     });
-    if (result.seconds !== undefined) {
-      lastSeconds.set(entry.id, {
-        ...lastSeconds.get(entry.id),
-        ...result.seconds,
-      });
-    }
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
     if (result.ok) {
       console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);

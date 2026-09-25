@@ -13,6 +13,7 @@ import {
   flakeRate,
   jobLimit,
   labRoute,
+  orderFor,
   orderingNote,
   requestOrder,
   testEntry,
@@ -636,7 +637,6 @@ test("watch streams each check as it finishes and prints one RED line at the fir
   assert.ok(events.includes("end fake boot"), "no check is killed early");
   assert.equal(result.results.length, 4);
   assert.ok(result.first_fail_s >= 0 && result.first_fail_s < 1);
-  assert.deepEqual(Object.keys(result.seconds).sort(), ["a_test.gd", "b_test.gd", "boot"]);
   await sketch.done();
 });
 
@@ -695,18 +695,28 @@ test("the ordering note says when order can change nothing", () => {
   );
 });
 
-test("watch passes each check's last measured seconds to the order child", async () => {
-  let seen = null;
-  await requestOrder({ directory: "/x" }, ["boot", "a.gd"], "src/a.gd", {
-    seconds: { boot: 2.5, "a.gd": 0.4 },
-    run: async (args) => {
-      seen = args;
-      return { status: 1, stdout: "" };
-    },
-  });
-  const pairs = [];
-  seen.forEach((arg, i) => {
-    if (arg === "--seconds") pairs.push(seen[i + 1]);
-  });
-  assert.deepEqual(pairs, ["boot=2.5", "a.gd=0.4"]);
+test("watch asks for no order when every check starts at once", async () => {
+  let asked = 0;
+  const request = async () => {
+    asked += 1;
+    return { order: [], source: "jev" };
+  };
+  const names = ["boot", "a.gd", "b.gd", "c.gd"];
+  assert.equal(orderFor({ directory: "/x" }, names, "src/a.gd", 8, { request }), undefined);
+  assert.equal(orderFor({ directory: "/x" }, names, "src/a.gd", 4, { request }), undefined);
+  assert.equal(asked, 0, "no child, no call, no cache write");
+});
+
+test("watch asks for an order when checks outnumber jobs, and never on the first run", async () => {
+  const seen = [];
+  const request = async (entry, names, saved) => {
+    seen.push({ names, saved });
+    return { order: names, source: "current", reason: "stub" };
+  };
+  const names = ["boot", "a.gd", "b.gd", "c.gd"];
+  const order = orderFor({ directory: "/x" }, names, "src/a.gd", 2, { request });
+  assert.deepEqual((await order).order, names);
+  assert.deepEqual(seen, [{ names, saved: "src/a.gd" }]);
+  assert.equal(orderFor({ directory: "/x" }, names, undefined, 2, { request }), undefined);
+  assert.equal(seen.length, 1);
 });
