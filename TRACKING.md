@@ -261,16 +261,16 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-10](BACKLOG.md#jl-10) | 1 | 4 | done | none | JL-10-A1 | EV-0509 |
 | [JL-11](BACKLOG.md#jl-11) | 1 | 5 | done | none | JL-11-A1 | EV-0514 |
 | [JL-12](BACKLOG.md#jl-12) | 1 | 5 | done | none | JL-12-A1 | EV-0511 |
-| [JL-13](BACKLOG.md#jl-13) | 1 | 3 | in_progress | none | none | EV-0518 |
+| [JL-13](BACKLOG.md#jl-13) | 1 | 4 | review | none | none | EV-0531 |
 | [JL-14](BACKLOG.md#jl-14) | 1 | 5 | done | none | JL-14-A1 | EV-0523 |
 | [JL-15](BACKLOG.md#jl-15) | 1 | 5 | done | none | JL-15-A1 | EV-0520 |
 | [JL-16](BACKLOG.md#jl-16) | 1 | 5 | done | none | JL-16-A1 | EV-0519 |
 | [JL-17](BACKLOG.md#jl-17) | 1 | 2 | queued | JL-13 | none | EV-0523 |
 | [JL-18](BACKLOG.md#jl-18) | 2 | 6 | done | none | JL-18-A1 | EV-0529 |
-| [JL-18b](BACKLOG.md#jl-18b) | 1 | 2 | in_progress | none | none | EV-0525 |
+| [JL-18b](BACKLOG.md#jl-18b) | 1 | 3 | in_progress | none | none | EV-0531 |
 | [JL-18c](BACKLOG.md#jl-18c) | 1 | 2 | in_progress | none | none | EV-0530 |
 | [JL-19](BACKLOG.md#jl-19) | 1 | 4 | review | none | none | EV-0529 |
-| [JL-20](BACKLOG.md#jl-20) | 1 | 3 | in_progress | none | none | EV-0528 |
+| [JL-20](BACKLOG.md#jl-20) | 1 | 4 | review | none | none | EV-0531 |
 
 ## Question state index
 
@@ -817,6 +817,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0528 | 2026-09-25T19:24:28+00:00 | Coordinator / assignment, lease | JL-20 | JL-20 moves ready to in_progress, record revision 2 to 3, attempt JL-20-A1 and lease JL-20-L1, on scrapkeep-writer (Opus 5.5 high; Jev use is a judgement card), worktree at base 4a5328d with the `node_modules` link. Live Jev calls capped at 20, authorized under EV-0484. Active writers: four (JL-13, JL-18b, JL-19, JL-20). |
 | EV-0529 | 2026-09-25T19:30:32+00:00 | Independent reviewer / review; coordinator / integration, definition import; worker handoff | JL-18, JL-18c, JL-19; hash tokens in the section files | **JL-18.** A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt), held blind, returned PASS+NOTES on 6cff2cb: q2 is mechanics only and matches the sketch READMEs; c2 puts the enumerated facts in the option text of both swap arms; the live table, 12 calls, token counts and exit 6 match the retained files. The coordinator confirmed the worktree clean and `controls/c2.json` hashing to the recorded 4d1035aa; the only commit (19:20:37Z) precedes the live run (19:20:45Z). Report at [artifacts/jev-lab-2026-09-25/reviews/JL-18.md](artifacts/jev-lab-2026-09-25/reviews/JL-18.md). Merged at bf62bb0; integrated `npm test` 450/0, verify passes. JL-18 moves review to done, record revision 5 to 6. **Recorded per the review:** the two wording-swap controls passed only under the pre-registered one-sided rule (same choice passes at any shift); under a symmetric 0.15 line both would have failed (shifts 0.28 and 0.17), so their pass is a property of the rule, not of the instrument; and the 0.15 line's noise basis was thin, because this run's same-wording order movement was 0.09 to 0.35. **Interpretation (the review's, labelled inference from 14 readings):** averaged over both orders P(take) is about 0.45 under q2 and 0.47 under q1, so removing position does not rescue free-cache; most likely Jev holds a prior of about 0.5 toward the objective-directed option that a free permanent buff does not overturn, with position tipping the rest (six of six pairs move toward the last-listed option by 0.09 to 0.35 against 0.03 to 0.06 noise). **JL-18c imported** (card revision 1, ready): the pre-registered redesign Andrew chose at EV-0527, in two phases so the design and pass rules are reviewed by Fable before any call. **JL-19** handed off a4acc2e: Jev failure triage scored 91.5% weighted on a 22-case blind set and 89.7% on 27 authored cases, 0 severe misses, both `assert(false)` controls returned `real_regression`, 0 fallbacks, 51 calls on `jev-1.13.0`; the rerun Noul wording was changed after one probe call on an authored case and before any blind scoring, which is under review. Jev performs well in the test-loop role and fails the dominance control as a player, consistent with EV-0527. |
 | EV-0530 | 2026-09-25T19:30:47+00:00 | Coordinator / assignment, lease | JL-18c | JL-18c moves ready to in_progress, record revision 1 to 2, attempt JL-18c-A1 and lease JL-18c-L1, on scrapkeep-writer (Opus 5.5 high), worktree at base 4072cba with the `node_modules` link. Phase A only: the pre-registration and experiment code, committed and reviewed by Fable before any live call; Phase B is released by the coordinator after that review. The writer is a question author and is held to the blind-corpus burn rule. Active writers: four (JL-13, JL-18b, JL-20, JL-18c). |
+| EV-0531 | 2026-09-25T19:32:03+00:00 | Worker handoff / coordinator review admission; worker checkpoint | JL-13, JL-20, JL-18b | **JL-13** handed off 2bdfc1c: the steering agent reaches every intent's target in both physics modes within budget (push 533 and 712 ticks, kicker 363 and 357, stomp 108 and 120, ram 192 and 184, evade 151 and 250, stuck recovery 115 and 124), `seek` inverts `ball_rules.gd:48` to 0.000005°, telemetry writes only closed event kinds and collapses knocks per dummy with a 30-tick gap, and `hit_kicker` aims at the computed lip. It reports four gameplay findings for the sketch owner: in rigid mode a stomp landed centred on a dummy is never credited, because `enemy_touched` reads post-bounce velocity (the test keeps this as a named known limit); rigid mode's grounded flag drops while rolling on flat ground, which cuts drive to air control (cause inferred: the ground probe rotates with the body); the service ramp's top is a 1.7 m step; a kinematic snag at one placement. `sketch:smoke` 8/8 in 39 s, `npm test` 378/0, verify passes. In routine review. **JL-20** handed off 27c15dd: vocabulary and hand labels committed before any call; Jev reproduced all 14 hand labels (7 tags by 2 verdicts) with 4 calls on `jev-1.13.0`; batched per-tag Nouls asked forward and in reverse differed by at most 0.010, against 0.09 to 0.35 position movement on Choice questions (EV-0526), which bears on JL-18c's design (e) and was passed to its writer as context; `npm test` 454/0, verify passes. Queued for routine review behind two active reviewers. **JL-18b** checkpoint faa8425: the control-count clause is met after the lease was widened to the gate-test fixture, and the blind section of `score.mjs` now prints and writes aggregates only, with a test that fails if a blind id leaks; released for DoD 6 (merge the coordinator head, default the harness to q2 and c2, score the blind corpus live under q2, cap 40). |
 
 ## Preparation checkpoint
 
@@ -1868,7 +1869,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `sketches/ball-lab/src/jev/{jev_agent,telemetry}.gd`; `sketches/ball-lab/tests/jev_agent_test.gd`; `artifacts/local/tasks/JL-13/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-13` on `wt/JL-13`, created by `scripts/new-worktree.sh`.
 - Base identity: `9ebdf69747f1d3fccd74618df372a87538c93c01`.
-- Candidate identity: null. Integrated identity: null.
+- Candidate identity: `2bdfc1c5c597ceb93cc1cb0a14f9aee95101bb23`. Integrated identity: null.
 - Latest checkpoint: 2026-09-25T18:56:09+00:00; dispatched.
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-13/` in the worktree.
@@ -1928,7 +1929,7 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `scripts/lab/{verdict-tags.mjs,verdict-tags.json}`; `docs/playtests/verdicts.ndjson` (`tags` only); `tests/lab-verdict-tags.test.js`; `artifacts/local/tasks/JL-20/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-20` on `wt/JL-20`, created by `scripts/new-worktree.sh`.
 - Base identity: `4a5328d46263439b5663863803f091e310e6ad53`.
-- Candidate identity: null. Integrated identity: null.
+- Candidate identity: `27c15dd3f1e216960c5de51726370822b687c56e`. Integrated identity: null.
 - Latest checkpoint: 2026-09-25T19:24:28+00:00; dispatched.
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-20/` in the worktree.
