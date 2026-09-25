@@ -14,7 +14,6 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 
 - [Proposed first sprint](#proposed-first-sprint)
 - [Task catalogue](#task-catalogue) and individual cards, including the [asset production cards](#asset-production-cards-16-september-2026)
-- [Jev Lab cards](#jev-lab-cards-25-september-2026)
 - [Open questions](#open-questions)
 - [Source dispositions and inventory](docs/project/SOURCE-DISPOSITIONS.md)
 
