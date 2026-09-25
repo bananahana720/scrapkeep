@@ -271,10 +271,10 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-18c](BACKLOG.md#jl-18c) | 1 | 7 | done | none | JL-18c-A1 | EV-0541 |
 | [JL-19](BACKLOG.md#jl-19) | 1 | 7 | done | none | JL-19-A1 | EV-0534 |
 | [JL-20](BACKLOG.md#jl-20) | 1 | 5 | done | none | JL-20-A1 | EV-0534 |
-| [JL-21](BACKLOG.md#jl-21) | 1 | 1 | ready | none | none | EV-0542 |
-| [JL-22](BACKLOG.md#jl-22) | 1 | 1 | ready | none | none | EV-0542 |
-| [JL-23](BACKLOG.md#jl-23) | 1 | 1 | ready | none | none | EV-0542 |
-| [JL-24](BACKLOG.md#jl-24) | 1 | 1 | ready | none | none | EV-0542 |
+| [JL-21](BACKLOG.md#jl-21) | 1 | 2 | in_progress | none | none | EV-0543 |
+| [JL-22](BACKLOG.md#jl-22) | 1 | 2 | in_progress | none | none | EV-0543 |
+| [JL-23](BACKLOG.md#jl-23) | 1 | 2 | in_progress | none | none | EV-0543 |
+| [JL-24](BACKLOG.md#jl-24) | 1 | 2 | in_progress | none | none | EV-0543 |
 | [JL-25](BACKLOG.md#jl-25) | 1 | 1 | queued | JL-21 | none | EV-0542 |
 | [JL-26](BACKLOG.md#jl-26) | 1 | 1 | queued | JL-21 | none | EV-0542 |
 | [JL-27](BACKLOG.md#jl-27) | 1 | 1 | queued | JL-21 | none | EV-0542 |
@@ -838,6 +838,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0540 | 2026-09-25T19:59:45+00:00 | Worker handoff / coordinator review admission; finding | JL-18c; Jev Lab program (jev arm) | **Phase B ran once** from a clean worktree at ea3c3ab (provenance before and after: same HEAD, empty status, same pre-registration sha 5cf49287): 216 calls, 0 failed, `jev-1.13.0` only, `input_tokens` 187,398, `output_tokens` 17,470, cache fields absent. **Verdict under the pre-registered rule: park.** Choice method: free-cache fails every one of six orders (per-order means 0.38 to 0.56, overall 0.478) while lethal-option passes all six (mean 0.02). Preference-Noul method: free-cache fails every order on the margin (Noul(take) 0.68 to 0.71 clears 0.6, but its lead over the best other option is 0.10 to 0.14, under 0.2) while lethal-option passes all six. **Explanation rows as pre-registered:** reading did not fire (all 33 comprehension items on the correct side in four states); framing fired (removing the objective from state and replacing the exit-naming push option with a neutral one lifts P(take) from 0.478 to 0.781, and that cell passes every order); scope fired (a free full heal is taken, 0.697, every order, so the discount is specific to caches or their buffs); position fired for Choice cells and for no preference-Noul cell; sibling, random reward (+0.0995 against a 0.1 line) and priming did not fire; preference did not fire. Plain reading: Jev reads the options correctly and overweights an option that names the level's goal. **Per EV-0527, Jev-as-player is parked for this program;** the scripted and random arms carry the mechanics metrics and Jev keeps its test-loop roles. Leads recorded, not results: the goal-framing effect, and preference Nouls removing position bias. Results at `artifacts/jev-lab-2026-09-25/experiments/jl18c/RESULTS.md` on the candidate; live output retained at `artifacts/jev-lab-2026-09-25/live/JL-18c/`. In Fable results review. |
 | EV-0541 | 2026-09-25T20:06:00+00:00 | Independent reviewer / results review; coordinator / integration | JL-18c | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on the Phase B results ([report](artifacts/jev-lab-2026-09-25/reviews/JL-18c-results.md)): provenance, the four input shas and 216 error-free calls on one model check out; every verdict figure reproduces from the raw call log; each explanation row fires or not by its pre-registered rule, and the "sufficient to explain" wording is pre-registered; the same request body across repeats rules out tuning. **Qualifications carried into RESULTS.md at 0fb2533 (text only):** under the preference-Noul method `take_cache` was the top-rated option in all 18 free-cache calls and failed only on the pre-registered 0.2 margin (per-order gaps 0.10 to 0.14), so the park for that method rests on that margin; "specific to caches" holds for the Choice method only, because under Nouls the free heal fails on the same margin shape against the objective-naming option (about 0.60); the passing no-objective states are not real game states, so they are a lead about prompt construction, not evidence the arm works. **Leads for a future program, not results:** decompose which carrier of the objective (state field, option id, option text) drives the 0.30 lift; test whether the objective-named option's Noul of about 0.57 to 0.60 is a constant baseline. Merged at 38a920a; integrated `npm test` 531/0, `npm run verify` six stages pass. JL-18c moves review to done, record revision 6 to 7; lease JL-18c-L1 closes. Jev-as-player remains parked for this program (EV-0527, EV-0540). |
 | EV-0542 | 2026-09-25T20:25:11+00:00 | Independent reviewer / review; coordinator / integration; Andrew / decision; coordinator / definition import, readiness | JL-17, JL-21 to JL-29; hash tokens in the section files | **JL-17.** A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on 19f3604 ([report](artifacts/jev-lab-2026-09-25/reviews/JL-17.md)): the runner blocks inside `_physics_process` and applies every intent at exactly seq × 90 + 26 in both physics modes; `trace_hash` is identical across three responder-delay patterns in real processes; Godot runs in its own process group with signal handling that still writes the record; JL-18b's preflight-first path is intact after the merge. The jev batch was refused with exit 6 after 12 preflight calls (free-cache 0.41 and 0.54 against 0.6, replicating EV-0526 independently), with no Godot process and no record. Random and scripted batches on `downhill-run` completed 5 of 5 each, but every snapshot there offers only `push_objective`, so the arms cannot be told apart on it. Merged at 6cebcb9; integrated `sketch:smoke` pass, `npm test` 548/0 with 0 skipped, `npm run verify` six stages pass. JL-17 moves to done; lease JL-17-L1 closes. **Andrew's decision:** asked how to finish after the Jev-as-player park, Andrew chose the trimmed plan. **Definition import:** BACKLOG gains the re-scoped JL-21 to JL-29 at revision 1, appended so no earlier line moves: JL-21 (scenario calibration with real choices; carries JL-10 N3, JL-13 N1 and N5, JL-17 N1, N2, N3 and N5), JL-22 (the dashboard; carries JL-16 N1 to N4), JL-23 (Jev test ordering) and JL-24 (Jev coverage gap), JL-25 (gate qualification on scripted and suite records; carries EV-0504, EV-0511, EV-0523, EV-0536), JL-26 and JL-27 (the stage lab branches, random and scripted arms), JL-28 (a pre-registered scripted-versus-random comparison across the three sketches and the gameplay findings list for Andrew) and JL-29 (close and merge to `main`; pushing waits for Andrew). JL-21 to JL-24 are ready; the rest are queued on their dependencies. Hash tokens re-pointed. |
+| EV-0543 | 2026-09-25T20:25:28+00:00 | Coordinator / assignment, lease | JL-21, JL-22, JL-23, JL-24 | The first wave of the trimmed plan is dispatched: each moves ready to in_progress with attempt and lease A1/L1, all on scrapkeep-writer (Opus 5.5 high), worktrees at base d8e67d0 with the `node_modules` link. Known overlap: JL-22 and JL-23 both edit `scripts/play.mjs` (the `dash` verb and the `watch` ordering hook); they merge serially, the later one merging the coordinator head before its review. JL-23 and JL-24 make capped live Jev calls for their labelled sets (40 each), authorized under EV-0484. Active writers: four. |
 
 ## Preparation checkpoint
 
@@ -1978,3 +1979,51 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-17/` in the worktree.
 - Review: fresh scrapkeep-reviewer (claude-fable-5-1 per host prompt), **PASS+NOTES** on 19f3604; [verbatim report](artifacts/jev-lab-2026-09-25/reviews/JL-17.md). Integrated: `sketch:smoke` pass, `npm test` 548/0 with 0 skipped, `npm run verify` six stages pass.
+
+## JL-21-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-21-A1; exclusive lease JL-21-L1 open.
+- Owned files: as the JL-21 card lists, including the scoped runner-and-record exception.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-21` on `wt/JL-21`, created by `scripts/new-worktree.sh`.
+- Base identity: `d8e67d08d0c63584c62d929508cf02422ceb0361`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T20:25:28+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-21/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-22-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-22-A1; exclusive lease JL-22-L1 open.
+- Owned files: `scripts/lab/{dash,model}.mjs`; `scripts/play.mjs` (the dash verb); `tests/lab-{dash,stats}.test.js`; `artifacts/local/tasks/JL-22/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-22` on `wt/JL-22`, created by `scripts/new-worktree.sh`.
+- Base identity: `d8e67d08d0c63584c62d929508cf02422ceb0361`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T20:25:28+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-22/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-23-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-23-A1; exclusive lease JL-23-L1 open.
+- Owned files: `scripts/lab/test-order.mjs`; `scripts/play.mjs` (the watch ordering hook only); `tests/lab-test-order.test.js`; `artifacts/local/tasks/JL-23/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-23` on `wt/JL-23`, created by `scripts/new-worktree.sh`.
+- Base identity: `d8e67d08d0c63584c62d929508cf02422ceb0361`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T20:25:28+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-23/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-24-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-24-A1; exclusive lease JL-24-L1 open.
+- Owned files: `scripts/lab/coverage-gap.mjs`; `tests/lab-coverage-gap.test.js`; `artifacts/local/tasks/JL-24/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-24` on `wt/JL-24`, created by `scripts/new-worktree.sh`.
+- Base identity: `d8e67d08d0c63584c62d929508cf02422ceb0361`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T20:25:28+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-24/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
