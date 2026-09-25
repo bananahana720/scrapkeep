@@ -206,7 +206,7 @@ function runHeadless(label, args) {
   });
 }
 
-async function inPool(jobs, limit) {
+async function inPool(jobs, limit, onDone) {
   const results = [];
   let next = 0;
   const width = Math.max(1, Math.min(limit, jobs.length));
@@ -215,6 +215,12 @@ async function inPool(jobs, limit) {
       while (next < jobs.length) {
         const index = next++;
         results[index] = await jobs[index]();
+        try {
+          onDone?.(results[index]);
+        } catch {
+          // A broken reporter must not stop the pool; the checks still
+          // running would outlive watch as orphaned Godot processes.
+        }
       }
     }),
   );
@@ -249,31 +255,68 @@ function reportCheck(result) {
 // Import must land before anything else opens the project, so it runs alone.
 // The result list always carries every check that actually ran, so a caller
 // building a run record never has to guess which ones were skipped.
-async function testEntry(entry, limit) {
+// `order`, when given, resolves to a proposed run order for the checks after
+// import; anything but a permutation of them leaves the current order.
+// `stream` is watch's: each check is reported the moment it finishes and the
+// first failure prints one RED line timed from `started`, while the rest keep
+// running. Without it (`scrapkeep test`) every check is reported in list order
+// once the pool is done, as before.
+export async function testEntry(
+  entry,
+  limit,
+  {
+    order,
+    stream = false,
+    started = Date.now(),
+    run = runHeadless,
+    report = reportCheck,
+    log = console.log,
+  } = {},
+) {
   const base = ["--headless", "--path", entry.directory];
-  const importResult = await runHeadless(`${entry.id} import`, [
-    ...base,
-    "--import",
-  ]);
+  const importResult = await run(`${entry.id} import`, [...base, "--import"]);
   const results = [importResult];
-  if (!reportCheck(importResult)) {
+  if (!report(importResult)) {
     return { ok: false, results };
   }
-  const jobs = [
-    () => runHeadless(`${entry.id} boot`, [...base, "--quit-after", "300"]),
-  ];
+  const byName = new Map([
+    ["boot", () => run(`${entry.id} boot`, [...base, "--quit-after", "300"])],
+  ]);
   for (const script of testScripts(entry.directory)) {
     const name = script.replace("res://tests/", "");
-    jobs.push(() =>
-      runHeadless(`${entry.id} ${name}`, [...base, "--script", script]),
+    byName.set(name, () =>
+      run(`${entry.id} ${name}`, [...base, "--script", script]),
     );
   }
+  let names = [...byName.keys()];
+  let used;
+  if (order !== undefined) {
+    used = await order;
+    names = applyOrder(names, used.order);
+  }
+  const jobs = names.map((name) => byName.get(name));
   let ok = true;
-  for (const result of await inPool(jobs, limit)) {
-    ok = reportCheck(result) && ok;
+  let firstFail;
+  const onDone = stream
+    ? (result) => {
+        ok = result.ok && ok;
+        const firstHere = !result.ok && firstFail === undefined;
+        if (firstHere) {
+          firstFail = (Date.now() - started) / 1000;
+        }
+        report(result);
+        if (firstHere) {
+          log(`${red("  RED")} ${result.label} after ${firstFail.toFixed(1)} s`);
+        }
+      }
+    : undefined;
+  for (const result of await inPool(jobs, limit, onDone)) {
+    if (!stream) {
+      ok = report(result) && ok;
+    }
     results.push(result);
   }
-  return { ok, results };
+  return { ok, results, first_fail_s: firstFail, order: used };
 }
 
 async function runSuite(targets, limit) {
@@ -533,34 +576,148 @@ export async function waitForShot(out, options = {}) {
 // .import files during an import pass; watching those would retrigger forever.
 const ignored = /(\.uid|\.import|\.godot\/|~$)/;
 
+// The only order watch will run is a permutation of its checks, so no answer
+// can drop, add or repeat one.
+export function applyOrder(names, proposed) {
+  if (!Array.isArray(proposed) || proposed.length !== names.length) {
+    return names;
+  }
+  const offered = new Set(proposed);
+  if (
+    offered.size !== names.length ||
+    !names.every((name) => offered.has(name))
+  ) {
+    return names;
+  }
+  return proposed;
+}
+
+function runChild(args, timeoutMs) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, args, {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let stdout = "";
+    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    child.stdout.on("data", (chunk) => (stdout += chunk));
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve({ status: null, stdout });
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status, stdout });
+    });
+  });
+}
+
+// JL-23: Jev's run order comes from scripts/lab/test-order.mjs in a child
+// process, not an import, so no module on the gate path loads it. It runs
+// alongside the import pass, and any failure means the current order.
+const testOrderScript = path.join(root, "scripts", "lab", "test-order.mjs");
+
+// Stated where the user sees it, once per session (JL-23 review B1).
+export function orderingNote(checks, jobs) {
+  if (checks <= jobs) {
+    return `ordering: ${checks} checks, ${jobs} at a time; every check starts at once, so the order changes nothing here (it matters only when checks outnumber jobs)`;
+  }
+  return `ordering: ${checks} checks, ${jobs} at a time; the order decides which checks run first`;
+}
+
+export async function requestOrder(
+  entry,
+  names,
+  saved,
+  { run = runChild, timeoutMs = 12_000 } = {},
+) {
+  const args = [testOrderScript, "order", "--dir", entry.directory];
+  for (const name of names) {
+    args.push("--check", name);
+  }
+  if (saved !== undefined) {
+    args.push("--changed", saved);
+  }
+  try {
+    const { status, stdout } = await run(args, timeoutMs);
+    if (status !== 0) {
+      return { order: names, source: "current", reason: `exit ${status}` };
+    }
+    const reply = JSON.parse(stdout.trim().split("\n").at(-1));
+    const order = applyOrder(names, reply.order);
+    if (order === names || reply.source !== "jev") {
+      return {
+        order: names,
+        source: "current",
+        reason: reply.reason ?? "not a permutation",
+      };
+    }
+    return { order, source: "jev", gap: reply.order_gap?.max };
+  } catch (error) {
+    return { order: names, source: "current", reason: error.name };
+  }
+}
+
+// Asking Jev costs a call and can change nothing when every check starts at
+// once, so the order is requested only for a save whose checks outnumber jobs.
+export function orderFor(entry, names, saved, limit, { request = requestOrder } = {}) {
+  if (saved === undefined || names.length <= limit) {
+    return undefined;
+  }
+  return request(entry, names, saved);
+}
+
 async function watch(targets, limit) {
   const roots = targets.map((entry) => entry.directory);
   console.log(bold("\n  watching " + targets.map((e) => e.id).join(", ")));
-  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop.\n"));
+  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop."));
+  for (const entry of targets) {
+    const checks = 1 + testScripts(entry.directory).length;
+    console.log(dim(`  ${entry.id} ${orderingNote(checks, limit)}`));
+  }
+  console.log("");
 
   let running = false;
   let queued = null;
 
-  async function fire(entry, reason) {
+  async function fire(entry, reason, saved) {
     if (running) {
-      queued = entry;
+      queued = { entry, saved };
       return;
     }
     running = true;
     const started = Date.now();
     console.log(`\n${cyan("→")} ${bold(entry.id)} ${dim(reason)}`);
-    const { ok } = await testEntry(entry, limit);
+    // The first run has no save to judge, so it keeps the current order.
+    const names = [
+      "boot",
+      ...testScripts(entry.directory).map((s) => s.replace("res://tests/", "")),
+    ];
+    const order = orderFor(entry, names, saved, limit);
+    const result = await testEntry(entry, limit, {
+      order,
+      stream: true,
+      started,
+    });
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    if (ok) {
+    if (result.ok) {
       console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);
     } else {
       console.log(`${red("  RED")} ${entry.id} ${dim(seconds + "s")}`);
+    }
+    // A failed import never waited for the order, and neither does this.
+    const used = result.order;
+    if (used !== undefined) {
+      const note =
+        used.source === "jev"
+          ? `jev, forward/reverse gap ${used.gap?.toFixed(2)}`
+          : `current (${used.reason})`;
+      console.log(dim(`  order: ${note}`));
     }
     running = false;
     if (queued !== null) {
       const next = queued;
       queued = null;
-      await fire(next, "queued while running");
+      await fire(next.entry, "queued while running", next.saved);
     }
   }
 
@@ -571,7 +728,7 @@ async function watch(targets, limit) {
         return;
       }
       clearTimeout(debounce);
-      debounce = setTimeout(() => fire(entry, "changed " + file), 180);
+      debounce = setTimeout(() => fire(entry, "changed " + file, file), 180);
     });
   }
   // Nothing has changed yet, so show the current colour before waiting.

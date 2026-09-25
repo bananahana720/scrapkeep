@@ -6049,12 +6049,13 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 
 ### JL-28: Arm comparison across the three sketches
 
-**Card revision:** 2 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
+**Card revision:** 3 · **Owner:** Verification · **Size:** M · **Lane:** Jev Lab
 
 **Source and inputs:**
 
 - JL-21, JL-21b, JL-26, JL-27 records; the registry; the gameplay findings recorded at EV-0531 and EV-0534
 - Revision 2 (EV-0546, JL-21 review): pre-register the scenario's own success predicate as the sole primary metric and progress metrics (gates, knocks) as exploratory; both physics modes; seeds 1000 to 1019 paired by spawn jitter; state that n = 20 resolves only differences of about 0.3; state the direction expected from JL-21 (random above scripted) as the hypothesis; require a multi-option share of at least 0.5 per scenario as a validity check; name JL-21b's knocked-threat rule as the instrument epoch
+- Revision 3 (EV-0550): trial seeds 2000 to 2019 (batch seed 2), because the lab cards already ran 1000 to 1019; the instrument epoch is the per-stage threat rule (ball-lab drops a knocked dummy; Cable Bench and Spillway Drop drop only a dead or removed foe); for the scripted kinematic ball-lab pins, re-cut after JL-21b before any gate comparison
 
 **Dependencies:** [JL-21b](#jl-21b), [JL-25](#jl-25), [JL-26](#jl-26), [JL-27](#jl-27). **Blocking questions:** None.
 
