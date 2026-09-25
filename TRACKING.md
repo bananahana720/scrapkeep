@@ -269,7 +269,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-18](BACKLOG.md#jl-18) | 2 | 5 | review | none | none | EV-0526 |
 | [JL-18b](BACKLOG.md#jl-18b) | 1 | 2 | in_progress | none | none | EV-0525 |
 | [JL-19](BACKLOG.md#jl-19) | 1 | 3 | in_progress | none | none | EV-0525 |
-| [JL-20](BACKLOG.md#jl-20) | 1 | 2 | ready | none | none | EV-0523 |
+| [JL-20](BACKLOG.md#jl-20) | 1 | 3 | in_progress | none | none | EV-0528 |
 
 ## Question state index
 
@@ -813,6 +813,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0525 | 2026-09-25T19:12:43+00:00 | Coordinator / assignment, lease | JL-18, JL-18b, JL-19 | JL-18 (revision 2), JL-18b and JL-19 move ready to in_progress with attempt and lease A1/L1, all on scrapkeep-writer (Opus 5.5 high), worktrees at base 1c20a2c with the `node_modules` link. JL-18's writer is the q2 author: its packet forbids `corpus-blind.json`, its PROVENANCE, `blind-diagnostic.json`, every review that names blind cases, and TRACKING (which names blind cases in EV-0490 and EV-0496). JL-18b does its DoD 1 to 5 now and waits for JL-18's merge for the live blind score. Live Jev calls authorized under EV-0484: JL-18's q2 preflight capped at 30, JL-19's corpus scoring capped at 80. Active writers: four (JL-13, JL-18, JL-18b, JL-19); JL-20 waits for a slot. |
 | EV-0526 | 2026-09-25T19:23:45+00:00 | Worker handoff / coordinator review admission; coordinator / finding | JL-18 | JL-18 (revision 2) handed off 6cff2cb: `q2-neutral.json` states mechanics only and is pinned with a per-set snapshot; `c2.json` puts every decision-bearing fact in the option text of both wording-swap arms, adds the swap on the free-cache state, length-matches options and adds a max-shift line of 0.15 set before any c2 call from c1's observed noise; `npm test` 450/0, verify passes. The coordinator audited the author's tool log (72 calls): no forbidden file was read; one directory listing showed the blind corpus's file names only, disclosed by the writer. **Live preflight of q2 with c2** (12 calls, `jev-1.13.0`, `input_tokens` 9518, `output_tokens` 952, cache fields absent and recorded null), exit 6: free-cache fails (P(take) 0.38 given order, 0.52 reversed, against 0.6, for a cache that costs nothing with 60 scrap held and a buff that lasts the run); lethal-option passes (P(ram) 0.02 both orders); wording-swap passes (same choice both wordings, max shift 0.28); wording-swap-free passes (same choice, max shift 0.17). Nothing was tuned after the result. **Finding:** with the information confound removed, the wording swap no longer flips, so the c1 flip at EV-0516 was mostly missing facts; but two question sets and two control sets now both fail the free-cache dominance control, option order moves P(take) by 0.14 to 0.35, and identical requests vary by 0.03 to 0.06. The epoch for q2 is invalid, so the jev arm stays blocked by design (preflight exit 6), and JL-18b's live blind score cannot run under a valid epoch. The instrument question goes to Andrew. Live output retained at `artifacts/jev-lab-2026-09-25/live/JL-18/`. In Fable review. |
 | EV-0527 | 2026-09-25T19:24:12+00:00 | Andrew / decision | Jev Lab program (jev arm) | Asked how to treat Jev-as-player after EV-0526, Andrew chose "Redesign, then test": one new card whose design and pass criteria are fixed before any live call (per-option yes/no questions instead of one Choice, probabilities averaged over both option orders, and a third free-cache state); if it still fails, Jev-as-player is parked for this program. Meanwhile Jev keeps its test-loop roles (triage, tagging, test ordering, coverage gaps) and the scripted and random arms carry the mechanics metrics. The rejected alternative, further prompt fixes until free-cache passes, would repeat audit finding A1. The redesign card is written after JL-18's Fable review, which was asked how to separate framing, position bias and genuine preference without tuning to pass. |
+| EV-0528 | 2026-09-25T19:24:28+00:00 | Coordinator / assignment, lease | JL-20 | JL-20 moves ready to in_progress, record revision 2 to 3, attempt JL-20-A1 and lease JL-20-L1, on scrapkeep-writer (Opus 5.5 high; Jev use is a judgement card), worktree at base 4a5328d with the `node_modules` link. Live Jev calls capped at 20, authorized under EV-0484. Active writers: four (JL-13, JL-18b, JL-19, JL-20). |
 
 ## Preparation checkpoint
 
@@ -1916,5 +1917,17 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Latest checkpoint: 2026-09-25T19:12:43+00:00; dispatched.
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-19/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-20-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-20-A1; exclusive lease JL-20-L1 open.
+- Owned files: `scripts/lab/{verdict-tags.mjs,verdict-tags.json}`; `docs/playtests/verdicts.ndjson` (`tags` only); `tests/lab-verdict-tags.test.js`; `artifacts/local/tasks/JL-20/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-20` on `wt/JL-20`, created by `scripts/new-worktree.sh`.
+- Base identity: `4a5328d46263439b5663863803f091e310e6ad53`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T19:24:28+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-20/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
 
