@@ -8,16 +8,59 @@
 //
 // The split that makes this work at all: Jev picks an *intent* that holds for
 // a second or more, and deterministic steering code executes it at the
-// simulation's 90 Hz. A round trip measured 223 ms, so frame-level control is
-// not on the table and is not wanted; the game keeps flying the last intent
-// while the next decision is in flight.
+// simulation's 90 Hz. The last retained corpus run had a median round trip of
+// 294 ms, so frame-level control is not on the table and is not wanted; the
+// game keeps flying the last intent while the next decision is in flight.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ENDPOINT = "https://api.typesafe.ai/v1/systemone";
 const MODEL = "jev-latest";
-// Tuned against the corpus, not guessed: every case the corpus labels confidently
-// lands well above this, and the one flat distribution falls below it.
+// Provisional. It rests on one case (kicker-has-speed, confidence 0.02 in the
+// retained run); the next lowest confidence was 0.25. Calibration from live
+// intent churn is JL-21.
 export const CONFIDENCE_FLOOR = 0.05;
+// Bump when PRECONDITION or the all-gated fallback changes what Jev is offered.
+export const GATE_VERSION = 1;
+
+export const QUESTIONS_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "questions",
+);
+export const DEFAULT_QUESTION_SET = "q1-original";
+
+// Published question files are immutable: new wording is a new file with a new
+// pin in INDEX.json. A file whose bytes no longer match its pin refuses to
+// load, so every result names the exact wording that produced it.
+export function loadQuestionSet(
+  version = DEFAULT_QUESTION_SET,
+  dir = QUESTIONS_DIR,
+) {
+  const index = JSON.parse(readFileSync(path.join(dir, "INDEX.json"), "utf8"));
+  const entry = index[version];
+  if (entry === undefined) {
+    throw new Error(`Question set ${version} is not pinned in INDEX.json.`);
+  }
+  const bytes = readFileSync(path.join(dir, entry.file));
+  const sha = createHash("sha256").update(bytes).digest("hex");
+  if (sha !== entry.sha256) {
+    throw new Error(
+      `${entry.file} sha256 ${sha} does not match its pin ${entry.sha256}.`,
+    );
+  }
+  return { ...JSON.parse(bytes), sha };
+}
+
+export function instrumentIdentity(questions = loadQuestionSet()) {
+  return {
+    questions_sha: questions.sha,
+    model: MODEL,
+    confidence_floor: CONFIDENCE_FLOOR,
+    gate_version: GATE_VERSION,
+  };
+}
 
 export function apiKey() {
   if (process.env.TYPESAFE_API_KEY) {
@@ -84,46 +127,38 @@ export function gateOptions(state, options) {
   return { kept, dropped };
 }
 
-export function buildQuestions(options) {
+// The wording and its rationale live in questions/<version>.json. Only the
+// intent's criteria come from the offered options.
+export function buildQuestions(options, questions = loadQuestionSet()) {
   const criteria = {};
   for (const option of options) {
     criteria[option.id] = option.why;
   }
   return {
-    // One narrow judgement: given what is reachable right now, what next?
-    intent: {
-      type: "choice",
-      // Mechanics only. An earlier version of this instruction said that scrubbing
-      // speed "costs you" and that time spent is "never free", which is a valuation,
-      // not a rule. A negative control caught it: with that wording the model
-      // declined a cache priced at zero scrap, 0.18 against 0.81. The sweep built on
-      // it was measuring the prompt. State what the game does and let the judgement
-      // be the judgement.
-      instructions:
-        "You are playing a rolling scrap mech in a roguelite stage. The mechanics: you damage enemies only by landing on them from above, or by ramming while above the fast speed tier, so speed is what makes combat possible. A difficulty tier rises on a fixed timer and raises enemy health, spawn rate and cache prices. Caches cost scrap and grant permanent stacking buffs that last the rest of the run. Scrap has no use other than buying caches, so scrap still held at the end of the run bought nothing. Choose the single best intent to hold for the next second or two.",
-      criteria,
-    },
-    // Asked in the same request, so it costs one round trip rather than two.
-    danger: {
-      type: "score",
-      instructions:
-        "How much immediate danger is the player in right now, given health and the listed threats?",
-      criteria: [
-        "Safe: free to optimise purely for speed and loot",
-        "Pressured: threats must be accounted for in the next move",
-        "Critical: about to take a hit that matters, or low enough that another hit ends the run",
-      ],
-    },
-    // Separate from the intent so policy can veto greed without re-asking.
-    greedy: {
-      type: "noul",
-      instructions:
-        "Would taking more loot or another cache right now cost more, in rising difficulty and risk, than the value it adds to this run?",
-    },
+    intent: { ...questions.intent, criteria },
+    danger: { ...questions.danger },
+    greedy: { ...questions.greedy },
   };
 }
 
-export async function decide(state, options, { key = apiKey(), signal } = {}) {
+// A Choice confidence near zero means a flat distribution. Acting on the top of
+// it makes the player jitter between intents on consecutive ticks, so below the
+// floor the player holds the one intent that is always executable. The raw
+// choice is kept so a scorer can tell a floor-induced miss from a model miss.
+export function applyFloor(answer, floor = CONFIDENCE_FLOOR) {
+  const confident = answer.confidence >= floor;
+  return {
+    intent: confident ? answer.choice : "push_objective",
+    lowConfidence: !confident,
+    rawIntent: answer.choice,
+  };
+}
+
+export async function decide(
+  state,
+  options,
+  { key = apiKey(), signal, questions = loadQuestionSet() } = {},
+) {
   if (key === null) {
     throw new Error("No TypeSafe API key; set TYPESAFE_API_KEY.");
   }
@@ -146,7 +181,7 @@ export async function decide(state, options, { key = apiKey(), signal } = {}) {
     body: JSON.stringify({
       model: MODEL,
       state,
-      questions: buildQuestions(offered),
+      questions: buildQuestions(offered, questions),
     }),
     signal,
   });
@@ -155,19 +190,15 @@ export async function decide(state, options, { key = apiKey(), signal } = {}) {
     throw new Error(`Jev ${response.status}: ${body.slice(0, 300)}`);
   }
   const data = await response.json();
-  // A Choice confidence near zero means the distribution is flat: the model has
-  // no opinion, and acting on the top of a coin flip makes the player jitter
-  // between intents on consecutive ticks. The corpus has a live example
-  // (kicker-has-speed, confidence 0.01), so below the floor the player holds the
-  // one intent that is always executable instead of committing to a guess.
-  const confident = data.answers.intent.confidence >= CONFIDENCE_FLOOR;
+  const { intent, lowConfidence, rawIntent } = applyFloor(data.answers.intent);
   return {
     gatedOut: dropped,
-    intent: confident ? data.answers.intent.choice : "push_objective",
-    lowConfidence: !confident,
-    rawIntent: data.answers.intent.choice,
+    intent,
+    lowConfidence,
+    rawIntent,
     confidence: data.answers.intent.confidence,
     probabilities: data.answers.intent.probabilities,
+    // Recorded for analysis only; no decision reads danger or greedy.
     danger: data.answers.danger.score,
     greedy: data.answers.greedy.noul,
     latencyMs: Date.now() - started,
