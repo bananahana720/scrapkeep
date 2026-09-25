@@ -394,13 +394,17 @@ export async function createRun({
           matched: start.digest === end.digest,
           changed,
         };
-        // A changed source can only lower confidence, so invalid stays invalid.
+        // A changed source can only lower confidence, so invalid stays
+        // invalid. The limit line belongs to this attempt only, so a retry
+        // after a failed write does not record it twice.
+        let recordedLimits = limits;
         if (!provenance.sources.matched) {
           provenance.sources.reported_result = result;
           if (result !== "invalid") result = "inconclusive";
-          limits.push(
+          recordedLimits = [
+            ...limits,
             `${changed.length} source files changed during the run, so the reported result "${provenance.sources.reported_result}" is recorded as "${result}".`,
-          );
+          ];
         }
         await mkdir(root, { recursive: true });
         const record = await withIndexLock(root, async () => {
@@ -425,7 +429,7 @@ export async function createRun({
             kpis,
             kris,
             findings,
-            limits,
+            limits: recordedLimits,
           };
           await writeFile(
             path.join(directory, "run.json"),

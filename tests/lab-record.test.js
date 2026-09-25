@@ -344,6 +344,32 @@ test("finished is set only after the locked write succeeds", async (t) => {
   await assert.rejects(run.finish({ result: "pass" }), /finished/);
 });
 
+test("a retry after a failed write records the source-mismatch limit once", async (t) => {
+  const { repository, start } = await fixture(t);
+  const run = await start();
+  run.limit("caller limit");
+  await appendFile(path.join(repository, "src/tuning.txt"), "speed = 5\n");
+  await chmod(run.directory, 0o500);
+  try {
+    await assert.rejects(run.finish({ result: "pass" }), /EACCES|EPERM/);
+  } finally {
+    await chmod(run.directory, 0o700);
+  }
+  const record = await run.finish({ result: "pass" });
+  assert.equal(record.result, "inconclusive");
+  assert.equal(record.provenance.sources.reported_result, "pass");
+  assert.equal(record.limits.length, 2, record.limits.join("\n"));
+  assert.equal(record.limits[0], "caller limit");
+  assert.match(
+    record.limits[1],
+    /1 source files changed.*"pass".*"inconclusive"/,
+  );
+  const onDisk = JSON.parse(
+    await readFile(path.join(run.directory, "run.json"), "utf8"),
+  );
+  assert.deepEqual(onDisk.limits, record.limits);
+});
+
 test("a truncated final index line is dropped and repaired, not treated as a parse error", async (t) => {
   const { runs, start } = await fixture(t);
   const index = path.join(runs, "index.ndjson");
