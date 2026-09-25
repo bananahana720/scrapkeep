@@ -10,7 +10,7 @@ The pattern comes from one lab's 216-call pre-registered run: six designs, every
 
 1. Write the pre-registration from the template below.
 2. Build the states, questions, design file and runner.
-3. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need.
+3. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need. Record the result in the template's stub dry-run slot.
 4. Compute the SHA-256 of every input file and write the hashes into the pre-registration.
 5. Make the runner refuse to start its live mode unless every hash matches.
 6. Get an independent reviewer's approval of the pre-registration. Record who approved it and when.
@@ -65,6 +65,12 @@ Pass rule: <per cell; every order must pass on its own>
 | Reading | Fires when | Consequence |
 | --- | --- | --- |
 
+## Stub dry-run result
+Date: <UTC time>   Stub: <what the stub returns and why>
+Coverage: <cells, orders and repeats run, out of the planned total>
+Records written: <yes or no; which fields the readings need were present>
+Problems found and fixed before pinning: <list, or none>
+
 ## Pinned inputs
 | File | SHA-256 |
 | --- | --- |
@@ -85,15 +91,15 @@ A crash counts as blocked. No reruns. No rows added to Readings after the run.
 
 ## Tag every claim
 
-Tag each number in the report (RML-27):
+Tag each number in the report verified, unverified-computed or retracted (V/U/R) (RML-27):
 
 | Tag | Meaning |
 | --- | --- |
 | V | Verified: measured, with the retained artifact cited. |
-| U | Unverified: computed or estimated, however consistent it looks. |
+| U | Unverified-computed: computed or estimated, however consistent it looks. |
 | R | Retracted: kept in place, with the correction that replaced it. |
 
-A computed number presented as a measurement is the failure to watch for. In one program an audit retagged arithmetic figures, such as eight times a per-boot estimate, as unverified. Two later reviews failed timing reports whose seconds were simulated or stamped after the operation ran.
+A computed number presented as a measurement is the failure to watch for. In one program an audit retagged arithmetic figures, such as eight times a per-boot estimate, as unverified-computed. Two later reviews failed timing reports whose seconds were simulated or stamped after the operation ran.
 
 ## Retract by appending
 
@@ -103,7 +109,9 @@ Never edit a published claim (RML-26). Append a correction that names the wrong 
 
 Record the tree state as well as the commit (RML-41). A commit on a dirty tree does not say which code ran.
 
-When the system has a deterministic mode, use it as a cheap proof. Re-run one batch at the clean commit and compare trace hashes. In one lab a clean-commit re-run matched the dirty-tree batch hash for hash, 20 of 20, without repeating the full batch set.
+When the system has a deterministic mode, a hash re-run can serve as a cheap proof (RML-46). Re-run one batch at the clean commit and compare trace hashes. In one lab a clean-commit re-run matched the dirty-tree batch hash for hash, 20 of 20, without repeating the full batch set. That is one instance.
+
+A matching hash proves something only if the hash can move. Before relying on hash equality, run a sensitivity control (RML-45). Perturb one answer, or the snapshot and apply schedule, and confirm that the trace hash changes while every event before the perturbation stays byte-identical. In one lab such a test showed the hash was neither always equal nor blind to order.
 
 ## Route review by the kind of claim
 

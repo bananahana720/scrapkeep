@@ -46,7 +46,7 @@ An edit made after seeing output voids the result it touched (RML-21). That hold
 A comparison against a broken baseline measures the baseline (RML-22).
 
 - Give a scripted baseline memory and a stop condition. In one lab a scripted rule ladder kept attacking a threat the world never removed and scored 0 of 20, below random.
-- Fix the world-state export, not the baseline's rule, when the defect is in what the world reports. Apply the fix to every arm alike.
+- When the defect is in what the world reports, fix the world-state export, not the baseline's rule, and apply the fix to every arm alike. Hide a threat from the exported state only when the mechanic actually removes it: dead, freed or otherwise out of play. A foe that survives a hit stays a threat, and the export rule is an instrument decision made per mechanic before the first batch (RML-44). In one lab a hide-after-hit rule, reused where foes survive a hit, confounded two of three scenarios in one port.
 - Public reports agree that scripted baselines matter: one public project's model tied a hand-coded heuristic, and one public article says a scripted bot would beat the model at its game. Both are unaudited.
 
 Compare arms on paired trials (RML-23). Give trial *i* the same seeded start on every arm. Without pairing, a deterministic arm's twenty trials are one trial repeated twenty times.

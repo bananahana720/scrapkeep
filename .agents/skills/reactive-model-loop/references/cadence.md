@@ -12,8 +12,8 @@ A running system has to decide what happens while the model call is in flight. T
 
 | Property | Blocking lockstep | Realtime hold-last-intent |
 | --- | --- | --- |
-| Reproducibility | Exact in a deterministic mode. The trace depends on state and answers, not on latency. | None. The trace depends on when each answer lands. |
-| Replay from cache | Exact. Replay makes zero calls and reproduces the trace. | Not meaningful, because timing is part of the input. |
+| Reproducibility | Exact in a deterministic mode. The trace depends on state and answers, not on latency. | Not shown. The trace depends on when each answer lands. Recording the tick at which each answer arrived might make it reproducible; that is unmeasured. |
+| Replay from cache | Exact. Replay makes zero calls and reproduces the trace. | Unmeasured. Replay would need the recorded arrival tick of every answer as part of its input. |
 | Feel | The world stalls for each round trip. | Continuous. Public projects report about 8 to 10 decisions per second (unaudited). |
 | Stale answers | None. Each intent applies at a fixed tick. | Answers can arrive stale. A validity and staleness gate must drop them. |
 | Call volume | One call per snapshot. | Calls per second times run length, with a concurrency cap. |
@@ -21,9 +21,13 @@ A running system has to decide what happens while the model call is in flight. T
 
 The rule that follows is a design choice. Evidence runs block. Demos may stream, and every streamed run carries the label "demo, not evidence" wherever it is shown or recorded.
 
-In one lab, blocking lockstep in its deterministic mode gave 360 of 360 identical trace hashes across three repeat sweeps (RML-43). In the same lab's stochastic physics mode, about 1 trial in 20 diverged and could flip the outcome. Blocking buys reproducibility only where the world itself is deterministic.
+In one lab, blocking lockstep in its deterministic mode gave 360 of 360 identical trace hashes across three repeat sweeps, writer-reported repeat counts (RML-43). In the same lab's stochastic physics mode, about 1 trial in 20 diverged and could flip the outcome. Blocking buys reproducibility only where the world itself is deterministic. A matching hash counts only after a sensitivity control shows it moves when one answer or the schedule changes (RML-45).
 
 The realtime side was never measured in that lab. Its properties above come from public projects and are unaudited.
+
+## Systems that cannot pause
+
+Some systems cannot wait for a decision: a live service, a device, a shared multiplayer world. Evidence for them comes from a simulator, or from a replay of recorded state, run in blocking mode against the same instrument. Treat live runs as field observations: useful for finding cases and checking feel, never a substitute for the blocking evidence run. This is a design choice.
 
 ## Build blocking lockstep
 

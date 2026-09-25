@@ -14,7 +14,7 @@ A reactive decider is a model call on the hot path of a running system: an agent
 - Ask the model for coarse intent: which target, which queue, fight or retreat. Deterministic code turns intent into actions and owns safety, preconditions and execution. (RML-01)
 - Keep the model call off every gate and verify path. Test that isolation through transitive imports, not only direct ones. (RML-03)
 - A precondition gate reads present state. When an option becomes valid only through future action, such as a run-up or a draining queue, gate on whether that future is reachable. (RML-02)
-- Split each decision into the smallest set of orthogonal questions. For each multi-option choice, ask whether independent per-option yes/no ratings fit better; they remove order effects but need a margin rule fixed in advance. (RML-17)
+- Split each decision into the smallest set of orthogonal questions. For each multi-option choice, ask whether independent per-option yes/no ratings fit better. In one lab, per-option ratings showed no order effect, but they need a margin rule fixed in advance. (RML-17)
 - Compute arithmetic, counts and dates in code and pass the result. Keep irrelevant state out of the prompt. (RML-09)
 
 Details are in [instrument](references/instrument.md).
@@ -26,6 +26,7 @@ The instrument is everything that shapes an answer: question and option text, op
 - Hash every input that changes behaviour into the identity. A hand-bumped version constant falls behind the code it versions. (RML-04)
 - Record the resolved model the provider reports, never the alias you requested. An alias can move under a passed epoch. (RML-05)
 - A new epoch is untrusted until it re-passes the controls and the blind corpus. (design choice)
+- Decide per mechanic, before the first batch, which entities stay in the exported state: dead, removed, or hit but still alive. Changing that rule starts a new epoch. (RML-44)
 - A confidence floor keeps the pre-floor answer and a flag, so "declined" and "overridden" stay distinguishable. Calibrate it on more than one case. (RML-06)
 - Wording that states a valuation, or a goal named next to the option under test, pulls the answer toward it. Read a headline from such an instrument as the prompt read back. (RML-07, RML-08)
 
@@ -59,7 +60,8 @@ Details are in [corpus](references/corpus.md).
 - Run once. A crash counts as blocked. Log any plan change before the run, with who asked and why. (RML-24)
 - Fix the readings table in advance. Report which rows fired, add none, and label everything else exploratory. (RML-25)
 - Retract by appending a correction that names the old and the new value. Never edit the earlier claim. (RML-26)
-- Record the tree state as well as the commit. In a deterministic mode, a re-run at the clean commit with matching trace hashes shows the evidence came from the merged code. (RML-41)
+- Record the tree state as well as the commit, because a commit on a dirty tree does not say which code ran. (RML-41)
+- In a deterministic mode, a re-run at the clean commit with matching trace hashes can show which code ran, once a sensitivity control shows the hash moves when one answer or the schedule changes. (RML-46, RML-45)
 
 The template and procedure are in [pre-registration](references/preregistration.md).
 
@@ -81,21 +83,22 @@ Details are in [runtime](references/runtime.md).
 - A field the provider did not report is `null`, never 0. (RML-36)
 - Dedupe by request id before summing usage from transcripts or logs. (RML-38)
 - Every latency figure cites the retained run it came from. (RML-39)
-- A spend cap persisted across restarts is the strongest cost control seen in public projects. (RML-40)
+- A spend cap persisted across restarts is the strongest cost control seen in public projects (unaudited). (RML-40)
 
 Details are in [runtime](references/runtime.md#cost-and-latency).
 
 ## 8. Cadence: blocking vs realtime
 
-- Evidence runs block: the system waits for each decision on a fixed schedule, so traces reproduce and replay is exact. (RML-43)
+- Evidence runs block: the system waits for each decision on a fixed schedule, so traces reproduce and replay is exact. (RML-43, RML-45)
 - Demos may stream and hold the last intent while the next call is in flight. Label every streamed run "demo, not evidence". (design choice)
-- Neither mode is the better design. Pick by what the run must prove. (design choice)
+- A system that cannot pause gets its evidence from a simulator or a recorded-state replay run in blocking mode. Its live runs are field observations. (design choice)
+- Neither mode is the better design. Recording the tick at which each streamed answer arrived might make realtime runs replayable; that is unmeasured. (design choice)
 
 The tradeoff is in [cadence](references/cadence.md).
 
 ## 9. Reporting
 
-- Tag every number measured, computed or simulated, and cite the retained artifact for each measured one. (RML-27)
+- Tag every number verified, unverified-computed or retracted (V/U/R), and cite the retained artifact for each verified one. (RML-27)
 - State what you deliberately did not read, as well as what you read. (design choice)
 - Name the model and effort from runtime evidence. A model's description of itself is not evidence. (design choice)
 - Send recomputation from raw artifacts and instrument-validity questions to the strongest review tier. (RML-42)

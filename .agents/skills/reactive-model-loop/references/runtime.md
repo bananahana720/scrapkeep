@@ -24,7 +24,7 @@ Replay proves that a run can be reproduced from its cache (RML-28).
 
 - Replay makes zero model calls. A cache miss during replay is an error, never a silent live call.
 - A replay that finds two resolved models in one cache is void.
-- A cache entry with no resolved model is a mismatch, not a wildcard. In one lab an entry with a null model left the replay anchor null, so any later verdict passed both checks.
+- A cache entry with no resolved model is a mismatch, not a wildcard. In one lab a review found this as a latent code-path risk, not an observed event: an entry with no model, such as a hand-edited or older one, would leave the replay anchor null, and then any later verdict would pass both checks.
 
 ## Redaction
 

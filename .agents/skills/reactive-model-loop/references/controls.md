@@ -55,7 +55,7 @@ In one lab, one phrasing gave the tested option 0.74 and 0.69, and a neutral phr
 
 ## Per-option ratings need their own rule
 
-Per-option yes/no ratings remove most order effects, and they answer a different question (RML-17). They ask "is this option acceptable", so two good options can both score high.
+In one lab, per-option yes/no ratings showed no order effect, and they answer a different question (RML-17). They ask "is this option acceptable", so two good options can both score high.
 
 In one pre-registered run, per-option ratings had order ranges of 0.007 to 0.018. They rated the dominant option top in 18 of 18 calls, yet cleared the pre-registered 0.2 margin over the best alternative in 0 of 6 orders. The gap was 0.10 to 0.14, because a competing option rated about 0.57 on its own. The margin rule, not the model's ranking, decided that cell. Pick the rule (margin, rank or both) before the run and say why.
 

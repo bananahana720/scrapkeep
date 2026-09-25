@@ -17,7 +17,7 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-02** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding
   A precondition gate that checks present state for an option reachable only through future action is a category error, not a tuning problem.
-  Evidence: in one lab an option needed a speed reached only after a run-up, but the gate checked current speed. The option survived the gate in 7 of 40 trials on one arm and 0 of 40 on another, and one scenario went 0 of 20 for every arm. Later ports gated on reachability instead.
+  Evidence: in one lab an option needed a speed reached only after a run-up, but the gate checked current speed. The option survived the gate for 7 intents across 40 trials on one arm and none across 40 on another, and one scenario went 0 of 20 for every arm. Later ports gated on reachability instead.
   Overturned by: —
 
 - **RML-03** · status: established · since: 2026-09-25 · origin: one program, two independent reviews
@@ -32,7 +32,7 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-05** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding and its fix; a public project survey
   Pin the resolved model, not the requested alias, into any identity that bounds what was tested.
-  Evidence: an epoch key used a floating alias, so a passed epoch could cover a model that never ran the controls. A later change stored resolved models. Four of six public projects inspected pin a bare alias (unaudited).
+  Evidence: an epoch key used a floating alias, so a passed epoch could cover a model that never ran the controls. A later change stored resolved models. At least three of six public projects inspected pin a bare alias; the survey's own counts disagree (public projects, unaudited).
   Overturned by: —
 
 - **RML-06** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding
@@ -91,7 +91,7 @@ Origins are descriptions, not locations. A host project that uses this skill kee
   Overturned by: —
 
 - **RML-17** · status: provisional · since: 2026-09-25 · origin: one lab, 216-call pre-registered run
-  Per-option yes/no ratings remove order effects but answer "is this acceptable", so their margin or rank rule, fixed in advance, decides the verdict.
+  Per-option yes/no ratings showed no order effect in one lab, but they answer "is this acceptable", so their margin or rank rule, fixed in advance, decides the verdict.
   Evidence: per-option ratings had order ranges of 0.007 to 0.018 and rated the dominant option top in 18 of 18 calls, yet cleared the pre-registered 0.2 margin over the best alternative in 0 of 6 orders (gap 0.10 to 0.14), because a competing option rated about 0.57 on its own.
   Overturned by: —
 
@@ -117,7 +117,7 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-22** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding; public projects
   Check the baseline policy before comparing against it. A scripted baseline needs memory and a stop condition.
-  Evidence: a scripted rule ladder kept attacking a threat the world never removed and scored 0 of 20, below random. The fix hid a neutralised threat from the exported state for every arm alike. Public reports: one project's model tied a hand-coded heuristic, and one article says a scripted bot would beat the model (both unaudited).
+  Evidence: a scripted rule ladder kept attacking a threat the world never removed and scored 0 of 20, below random. The fix hid a threat from the exported state, for every arm alike, once the world had taken it out of play. That fix is right only where the mechanic actually removes the threat; where foes survive a hit, hiding after a hit confounded results (RML-44). Public reports: one project's model tied a hand-coded heuristic, and one article says a scripted bot would beat the model (both unaudited).
   Overturned by: —
 
 - **RML-23** · status: provisional · since: 2026-09-25 · origin: one lab, one review item
@@ -141,13 +141,13 @@ Origins are descriptions, not locations. A host project that uses this skill kee
   Overturned by: —
 
 - **RML-27** · status: established · since: 2026-09-25 · origin: one program, an audit and two later reviews
-  Tag every claim measured, computed or retracted. A computed number presented as measured recurs.
-  Evidence: an audit retagged arithmetic figures as unverified. Two later reviews failed timing reports whose seconds were simulated or stamped after the operation ran.
+  Tag every claim verified, unverified-computed or retracted (V/U/R). A computed number presented as verified recurs.
+  Evidence: an audit retagged arithmetic figures as unverified-computed. Two later reviews failed timing reports whose seconds were simulated or stamped after the operation ran.
   Overturned by: —
 
 - **RML-28** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding
   Replay makes zero calls, a miss is an error, and an absent resolved-model field is a mismatch.
-  Evidence: a cache entry with a null resolved model left the replay anchor null, so any later verdict passed both replay checks.
+  Evidence: a review found a latent code-path risk, not an observed event. A cache entry with no resolved model, for example a hand-edited or older entry, would leave the replay anchor null, and then any later verdict would pass both replay checks.
   Overturned by: —
 
 - **RML-29** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding confirmed by a direct probe
@@ -211,8 +211,8 @@ Origins are descriptions, not locations. A host project that uses this skill kee
   Overturned by: —
 
 - **RML-41** · status: established · since: 2026-09-25 · origin: one program, two reviews
-  Record tree state as well as the commit. In a deterministic mode, a clean-commit re-run with matching trace hashes proves which code produced the evidence.
-  Evidence: one review conditioned admission on a clean-commit re-run, which matched the dirty-tree batch hash for hash, 20 of 20. Another required the tree state at run time to be retained.
+  Record tree state as well as the commit, because a commit on a dirty tree does not say which code ran.
+  Evidence: two reviews each flagged live or batch evidence produced on a dirty tree. One conditioned admission on a clean-commit re-run. The other required the tree state at run time to be retained. The re-run method itself is RML-46, and hash equality needs RML-45.
   Overturned by: —
 
 - **RML-42** · status: provisional · since: 2026-09-25 · origin: one program's review record
@@ -222,7 +222,22 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-43** · status: provisional · since: 2026-09-25 · origin: one lab, three repeat sweeps
   Blocking lockstep in a deterministic mode gives exactly reproducible traces, so evidence runs block.
-  Evidence: 360 of 360 repeat trials had identical trace hashes across three sweeps. The same lab's stochastic physics mode diverged in about 1 trial in 20 and could flip the outcome. The realtime alternative was not measured.
+  Evidence: 360 of 360 repeat trials (writer-reported repeat counts) had identical trace hashes across three sweeps. The same lab's stochastic physics mode diverged in about 1 trial in 20 and could flip the outcome. The realtime alternative was not measured. Hash equality counts only with the sensitivity control in RML-45.
+  Overturned by: —
+
+- **RML-44** · status: provisional · since: 2026-09-25 · origin: one lab, a state-export rule reused across mechanics
+  Which entities stay in the exported state (dead, removed, hit but still alive) is an instrument decision made per mechanic before the first batch. Changing it starts a new epoch.
+  Evidence: a hide-after-hit rule written for a game whose foes could not die was reused where foes survive a hit. A hit foe vanished from state while still alive and dangerous, which confounded two of three scenarios in one port. A later ruling kept a hit but living foe in state.
+  Overturned by: —
+
+- **RML-45** · status: provisional · since: 2026-09-25 · origin: one lab, one determinism test
+  A trace-hash equality claim needs a sensitivity control: perturb one answer or the schedule, and the hash must change while every earlier event stays identical.
+  Evidence: a determinism test perturbed one intent answer, and separately the apply schedule, and confirmed the hash changed while events before the perturbation stayed byte-identical. It showed the hash was neither always equal nor blind to order.
+  Overturned by: —
+
+- **RML-46** · status: provisional · since: 2026-09-25 · origin: one lab, one instance
+  In a deterministic mode, a clean-commit re-run whose trace hashes match the dirty-tree run shows which code produced the evidence, without repeating the full batch set.
+  Evidence: one clean-commit re-run matched the dirty-tree batch hash for hash, 20 of 20. This is a single instance, and it relies on RML-45.
   Overturned by: —
 
 ## Changelog
@@ -232,3 +247,4 @@ Append-only. One row per change. Change types: new lesson, second confirmation, 
 | Date | Change type | Ids touched | Evidence or commit | Reviewer |
 | --- | --- | --- | --- | --- |
 | 2026-09-25 | new lesson | RML-01 to RML-43 | Initial ledger, written from three lesson inventories of one lab program and one public prior-art survey | pending independent review |
+| 2026-09-25 | new lesson; review revision | RML-44 to RML-46 added; RML-02, RML-05, RML-22, RML-27, RML-28, RML-41, RML-43 revised | Review of the initial ledger: RML-41 split into RML-41 and RML-46, RML-28 restated as a latent risk, public-project counts and labels corrected | reviewer-medium (Opus 5.5), PASS+NOTES |
