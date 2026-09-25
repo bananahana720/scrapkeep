@@ -1,0 +1,10 @@
+{
+  "protocol": "scrapkeep-jev/1",
+  "seq": 0,
+  "intent": "stomp_target",
+  "arm": "random",
+  "source": "seeded",
+  "meta": {
+    "seed": 7
+  }
+}
