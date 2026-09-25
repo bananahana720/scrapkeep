@@ -251,10 +251,10 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-02](BACKLOG.md#jl-02) | 1 | 4 | done | none | JL-02-A1 | EV-0491 |
 | [JL-03](BACKLOG.md#jl-03) | 1 | 4 | done | none | JL-03-A1 | EV-0493 |
 | [JL-04](BACKLOG.md#jl-04) | 1 | 8 | in_progress | none | none | EV-0496 |
-| [JL-05](BACKLOG.md#jl-05) | 1 | 2 | in_progress | none | none | EV-0495 |
+| [JL-05](BACKLOG.md#jl-05) | 1 | 3 | review | none | none | EV-0497 |
 | [JL-06](BACKLOG.md#jl-06) | 1 | 2 | in_progress | none | none | EV-0495 |
 | [JL-07](BACKLOG.md#jl-07) | 1 | 2 | in_progress | none | none | EV-0495 |
-| [JL-08](BACKLOG.md#jl-08) | 1 | 2 | in_progress | none | none | EV-0495 |
+| [JL-08](BACKLOG.md#jl-08) | 1 | 3 | review | none | none | EV-0497 |
 
 ## Question state index
 
@@ -767,6 +767,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0494 | 2026-09-25T17:40:16+00:00 | Coordinator / definition import, readiness, correction | JL-05, JL-06, JL-07, JL-08; hash tokens in the section files | BACKLOG gains the Wave 2 cards JL-05 (protocol v1, document and fixtures), JL-06 (`play.mjs` run records, measured timing, the shot fix, and the run-record hardening from the JL-01 review), JL-07 (human verdict index with backfill) and JL-08 (program-layer collector), each at revision 1, appended after the existing text so no earlier BACKLOG line moves. Wave 1 findings were folded in: JL-06 carries A5, A8, A9, A16, A19, the JL-01 review notes and the `python3` prerequisite; JL-08 reports token fields separately and never sums them, and must detect the EV-0486 to EV-0491 time skew from a fixture. Each moves absent to ready: dependencies JL-01, JL-02 and JL-03 are done, authorization EV-0484, no blocking question. The BACKLOG hash is re-pointed through PD-01 to PD-03 and the cascade (four passes, 64-hex tokens only); `check:drift` 349/0. |
 | EV-0495 | 2026-09-25T17:41:01+00:00 | Coordinator / wave close checkpoint, assignment, lease | JL-05, JL-06, JL-07, JL-08 | Wave 1 checkpoint (JL-04-A2 still in re-review): first-pass review 3 of 4 (75%); model substitution 0 and untracked commits 0 per the delegate ledger; token fields over 10 delegate rows, kept separate: input 7,420, cache read 58,455,112, cache creation 6,194,578, output 526,104; three escaped defects, all coordinator-side (EV-0487, EV-0492, EV-0493). Changes for Wave 2: event times from `date -u` only, `check:docs` and `check:drift` gate every board commit, no CLI entry point is run to probe it, and packets name the known traps. Retro at `artifacts/local/runs/program/wave-1.md`. Wave 2 dispatched: each card moves ready to in_progress, record revision 1 to 2, with attempt JL-0N-A1 and lease JL-0N-L1 over the files in its attempt record. Worktrees `/home/andrew/Projects/scrapkeep-wt-JL-05` to `-JL-08` at base d1c4a00, verified, each with the `node_modules` link. Writers: JL-05 and JL-08 on scrapkeep-writer (Opus 5.5), JL-06 and JL-07 on scrapkeep-writer-low (Sonnet 5), all high. Planned review: Fable 5.1 for JL-05; Opus 5.5 routine review for JL-06, JL-07 and JL-08. Active writers: four. |
 | EV-0496 | 2026-09-25T17:42:58+00:00 | Independent reviewer / review; coordinator / changes requested, assignment | JL-04 | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt), held blind to the prompt side, returned **FAIL** on 0927a31. The DoD items are met and every note was checked against its source lines, but A2 did not fully meet EV-0490's revision criterion: in five cases the dodge option's text names the telegraph ("marked spot"), so a text-only rule scores 5 of 5 without reading state, and the writer's neutrality scan had no pattern for it. The report is retained at [artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md](artifacts/jev-lab-2026-09-25/reviews/JL-04-A2.md). JL-04 moves in_progress to review to changes_requested to in_progress, record revision 5 to 8, as attempt JL-04-A3 under lease JL-04-L3 (L2 closed), resuming the same labeller. Requested: movement-only wording in the five cases; neutral wording on two losing options that state their own success; rule-bearing phrases moved from accepted options into state; cache prices and the regen fact moved into state; a `retreat_regen` case only if the sources support it; the lease record corrected; neutrality-scan patterns for telegraph and target words, with A2 as the negative control; and a new receipt, a text-only baseline that picks options from option text alone, which should score near chance. |
+| EV-0497 | 2026-09-25T17:54:08+00:00 | Worker handoff / coordinator review admission; coordinator / observation | JL-05, JL-08, JL-04, JL-07 | JL-05 handed off 51d13b5 (protocol `scrapkeep-jev/1`: PROTOCOL.md, validators and `writeAtomic()`, 46 fixtures indexed with valid and invalid examples per message type plus four whole-trial directories; `npm test` 295/0, verify six stages pass, 11 of 11 mutations killed; the writer's contract calls are listed in its report for the reviewer). JL-08 handed off ecf21c7 (program collector; `npm test` 289/0, verify passes; on the live board it resolves each event row to the commit that added it, reproduces EV-0492's commit times and measures `event_time_skew` 0.5831 h; token fields kept separate in `config.breakdown` because `record.mjs` keeps only value, n and ci per measure; `untracked_commits` 1 is ecf21c7 itself, named here). Both move in_progress to review, record revision 2 to 3. JL-08 is in routine review on Opus 5.5; JL-05 waits for Fable because two reviewers are active (the program limit). JL-04-A3 handed off 489d00c (31 cases; text-only baseline 19 of 31, 61%, against 48% chance, down from 76% on A2; option order shuffled; the labeller's tool log again shows only permitted reads) and is in re-review. JL-07 returned bb024da with entry 2 withheld as ambiguous (two quoted passages in one verdict bullet); the coordinator ruled that `quote` is the whole quoted span of the bullet, verbatim, and resumed the writer. Observations: while JL-07-A2's labeller was resumed, five writers were active for a short overlap, one over the program limit of four; `tests/sprint-close.test.js` and `tests/check-docs.test.js` failed intermittently under concurrent worktree runs and `/tmp` pressure (JL-07 logs), a first `flake_rate` data point for JL-06's soak; `/tmp` swung between about 3 and 25 GB during JL-06's headless Godot soak. |
 
 ## Preparation checkpoint
 
@@ -1650,10 +1651,10 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `tools/jev-player/protocol/{PROTOCOL.md,protocol.mjs,fixtures/}`; `tools/jev-player/tests/protocol.test.js`; `artifacts/local/tasks/JL-05/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-05` on `wt/JL-05`, created by `scripts/new-worktree.sh`.
 - Base identity: `d1c4a00afdd1043efb4009207dc254eb42e13025`.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:41:01+00:00; dispatched.
+- Candidate identity: `51d13b5ed5b355e828fabb5b33ebc953a976fc75`. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:54:08+00:00; handoff received, in review (EV-0497).
 - Blockers: none.
-- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-05/` in the worktree.
+- Evidence: writer receipts under `artifacts/local/tasks/JL-05/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
 
 ## JL-06-A1 Jev Lab attempt
@@ -1686,10 +1687,10 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: `scripts/lab/program.mjs`; `artifacts/jev-lab-2026-09-25/agent-map.tsv`; `tests/lab-program.test.js`; `artifacts/local/tasks/JL-08/`.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-08` on `wt/JL-08`, created by `scripts/new-worktree.sh`.
 - Base identity: `d1c4a00afdd1043efb4009207dc254eb42e13025`.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-25T17:41:01+00:00; dispatched.
+- Candidate identity: `ecf21c7c221e36cbe3a57481178587bde4c83364`. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T17:54:08+00:00; handoff received, in review (EV-0497).
 - Blockers: none.
-- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-08/` in the worktree.
+- Evidence: writer receipts under `artifacts/local/tasks/JL-08/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
 
 ## JL-04-A3 Jev Lab attempt
