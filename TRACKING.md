@@ -256,12 +256,12 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-07](BACKLOG.md#jl-07) | 1 | 5 | done | none | JL-07-A1 | EV-0500 |
 | [JL-08](BACKLOG.md#jl-08) | 1 | 4 | done | none | JL-08-A1 | EV-0498 |
 | [JL-05b](BACKLOG.md#jl-05b) | 1 | 4 | done | none | JL-05b-A1 | EV-0506 |
-| [JL-05c](BACKLOG.md#jl-05c) | 1 | 1 | ready | none | none | EV-0517 |
+| [JL-05c](BACKLOG.md#jl-05c) | 1 | 2 | in_progress | none | none | EV-0518 |
 | [JL-09](BACKLOG.md#jl-09) | 1 | 5 | done | none | JL-09-A1 | EV-0517 |
 | [JL-10](BACKLOG.md#jl-10) | 1 | 4 | done | none | JL-10-A1 | EV-0509 |
 | [JL-11](BACKLOG.md#jl-11) | 1 | 5 | done | none | JL-11-A1 | EV-0514 |
 | [JL-12](BACKLOG.md#jl-12) | 1 | 5 | done | none | JL-12-A1 | EV-0511 |
-| [JL-13](BACKLOG.md#jl-13) | 1 | 2 | ready | none | none | EV-0517 |
+| [JL-13](BACKLOG.md#jl-13) | 1 | 3 | in_progress | none | none | EV-0518 |
 | [JL-14](BACKLOG.md#jl-14) | 1 | 3 | in_progress | none | none | EV-0515 |
 | [JL-15](BACKLOG.md#jl-15) | 1 | 4 | review | none | none | EV-0516 |
 | [JL-16](BACKLOG.md#jl-16) | 1 | 4 | review | none | none | EV-0516 |
@@ -798,6 +798,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0515 | 2026-09-25T18:51:02+00:00 | Coordinator / assignment, lease | JL-14 | JL-14 moves ready to in_progress, record revision 2 to 3, attempt JL-14-A1 and lease JL-14-L1, on scrapkeep-writer (Opus 5.5 high), worktree at base 8b618e7 with the `node_modules` link. The lease adds `tests/lab-harness.test.js` for the JL-11 notes carried at EV-0514 (N1, N2, N4, N6). The card's capped five-call live smoke is authorized under EV-0484. Review moves to Fable because the jev arm and its verdict cache are the instrument. Active writers: three (JL-14, JL-15, JL-16). |
 | EV-0516 | 2026-09-25T18:53:33+00:00 | Worker handoff / coordinator review admission; coordinator / lease change | JL-15, JL-16 | **JL-15** handed off at 62e83f9 (c078854, 7f5f44f, 62e83f9): `runControls` runs the c1 controls in both option orders with no cache, and a failure returns exit 6 before any batch starts; an epoch record is written per instrument and the gate recomputes validity from controls plus blind result; `lever_effect` reads under a valid epoch; `--pin` refuses an instrumented run without a passed epoch (exit 4); `control_separation` warns below 0.2 and fails below 0.1, provisional. The coordinator widened the lease to `tests/lab-metrics.test.js` for the two assertions the threshold change forced. **First live control run against q1** (8 calls, resolved model `jev-1.13.0`, `input_tokens` 5804 and `output_tokens` 634; the API returned no cache-token fields at all, so they are recorded null, not zero): free-cache fails in both orders (P(take) 0.45 and 0.48 against 0.6 for a cache that costs nothing); lethal-option passes in both orders (P(ram) 0.10 and 0.09); wording-swap fails in both orders (the same state takes the cache at 0.74 and 0.69 under q1's wording and pushes the objective at 0.71 and 0.69 under the neutral wording). Exit 6; the epoch is recorded invalid. The wording flip is live evidence for audit finding A1, with the writer's caveat that c1's neutral text also omits mechanics q1 states, so JL-18's q2 is the real test. `npm test` 375/0, verify passes. **JL-16** handed off acddad2: `scrapkeep stats` with epoch-aware trends and every registry metric shown, lab verbs routed before the Godot check, NB1 and NB3 fixed, and the gate's rate-line label; `npm test` 379/0, verify passes. JL-15 and JL-16 both edit `scripts/lab/gate.mjs` in separate hunks; a dry-run merge of the two branches is clean. JL-16 is in routine review; JL-15 waits for Fable because two reviewers are active. Carried: map a failing `control_separation` to exit 4 (plan), a durable epoch location with pins copying the epoch record (JL-18, JL-25), `stats` passing `epochValid` once epochs exist. |
 | EV-0517 | 2026-09-25T18:55:47+00:00 | Independent reviewer / review; coordinator / integration, definition import, readiness | JL-09, JL-13, JL-05c; hash tokens in the section files | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on d0ed914: 11 fixture pairs byte-identical by content; 13 invalid fixtures traced through `jev_io.gd` each fail at the indexed path; the Godot gate port matches `decide.mjs` rule by rule on valid input; Godot's 17-digit number text cannot change `trace_hash` agreement or the verdict key. It confirmed the writer's Node findings: event-kind and arm lookups reach the prototype (`constructor`, `__proto__`, `toString`), the same pattern latent in `decide.mjs`'s `PRECONDITION` lookup, Node's exact whole numbers against PROTOCOL.md's 1e-9 slack, the gate rules unstated in PROTOCOL.md with no drift guard, and non-empty strings unstated. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-09.md](artifacts/jev-lab-2026-09-25/reviews/JL-09.md). Merged at db853a9; integrated `sketch:smoke` pass, `npm test` 378/0, `npm run verify` six stages pass. JL-09 moves review to done, record revision 4 to 5; lease JL-09-L1 closes. The "Andrew plays the sketch" step does not apply (no gameplay change). BACKLOG gains JL-05c (protocol validator defects and the rules left only in code, with a scoped exception to the no-mixing rule because the drift test forces the sketch fixture copy to change with the canonical fixtures), appended so no earlier line moves; hash tokens re-pointed. JL-05c and JL-13 (dependencies JL-09 and JL-10 done) move to ready. |
+| EV-0518 | 2026-09-25T18:56:09+00:00 | Coordinator / assignment, lease | JL-13, JL-05c | JL-13 and JL-05c move ready to in_progress with attempt and lease A1/L1, both on scrapkeep-writer (Opus 5.5 high), worktrees at base 9ebdf69 with the `node_modules` link. Known overlap: JL-05c and JL-14 both edit `tools/jev-player/decide.mjs` (JL-05c the `PRECONDITION` lookup, JL-14 the returned usage and model); they will be merged serially and the later branch merges the coordinator head before its review. Active writers: three (JL-13, JL-14, JL-05c). |
 
 ## Preparation checkpoint
 
@@ -1842,4 +1843,28 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-14/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer (Fable 5.1), because the jev arm and its cache are the instrument.
+
+## JL-13-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-13-A1; exclusive lease JL-13-L1 open.
+- Owned files: `sketches/ball-lab/src/jev/{jev_agent,telemetry}.gd`; `sketches/ball-lab/tests/jev_agent_test.gd`; `artifacts/local/tasks/JL-13/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-13` on `wt/JL-13`, created by `scripts/new-worktree.sh`.
+- Base identity: `9ebdf69747f1d3fccd74618df372a87538c93c01`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:56:09+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-13/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-05c-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-05c-A1; exclusive lease JL-05c-L1 open.
+- Owned files: as the JL-05c card lists, including the scoped `sketches/ball-lab/src/jev/{fixtures/,jev_io.gd}` exception.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-05c` on `wt/JL-05c`, created by `scripts/new-worktree.sh`.
+- Base identity: `9ebdf69747f1d3fccd74618df372a87538c93c01`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:56:09+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-05c/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
 
