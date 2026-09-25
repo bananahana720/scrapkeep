@@ -1,5 +1,5 @@
 {
-  "note": "JL-04 blind corpus, attempt JL-04-A2 (revision of A1). Labelled from the stage READMEs, tuning.gd files, ball-lab README and BIBLE.md only; no prompt, authored corpus or Jev output was seen. Option `why` lines state only what the action does; decisive facts are in `state`. A case the prompt author sees is burned and moves to the authored set.",
+  "note": "JL-04 blind corpus, attempt JL-04-A3 (revision of A2). Labelled from the stage READMEs, tuning.gd files, ball-lab README and BIBLE.md only; no prompt, authored corpus or Jev output was seen. Option `why` lines are bare actions; decisive facts are in `state`; option order is a seeded shuffle. A case the prompt author sees is burned and moves to the authored set.",
   "cases": [
     {
       "id": "blind-cb-dom-cableway-lethal",
@@ -42,16 +42,16 @@
       },
       "options": [
         {
-          "id": "evade_hazard",
-          "why": "Roll off the lamp disc."
-        },
-        {
           "id": "sweep_scrap",
-          "why": "Collect the scrap on the lamp disc."
+          "why": "Collect the scrap on this stretch of siding."
         },
         {
           "id": "retreat_regen",
-          "why": "Stop on the lamp disc and wait for regeneration."
+          "why": "Stop and wait here."
+        },
+        {
+          "id": "evade_hazard",
+          "why": "Roll east."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -100,12 +100,12 @@
       },
       "options": [
         {
-          "id": "sweep_scrap",
-          "why": "Roll on down the trough over the scrap ahead."
+          "id": "retreat_regen",
+          "why": "Stop and wait here."
         },
         {
-          "id": "retreat_regen",
-          "why": "Stop in place and wait for regeneration."
+          "id": "sweep_scrap",
+          "why": "Roll on down the trough."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -201,7 +201,7 @@
           "speed_ms": 3,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "mid shelf bench",
+          "location": "mid shelf bench, bench-edge scrap line beside the cache",
           "over": "open cache, price 25 scrap"
         },
         "scrap": {
@@ -216,7 +216,7 @@
         },
         {
           "id": "sweep_scrap",
-          "why": "Roll along the bench-edge scrap line beside the cache."
+          "why": "Roll along the bench edge."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -265,12 +265,12 @@
       },
       "options": [
         {
-          "id": "sweep_scrap",
-          "why": "Roll on down the chute over the scrap ahead."
+          "id": "retreat_regen",
+          "why": "Stop and wait here."
         },
         {
-          "id": "retreat_regen",
-          "why": "Brake to a stop and wait for regeneration."
+          "id": "sweep_scrap",
+          "why": "Roll on down the chute."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -295,7 +295,7 @@
       "accept": [
         "stomp_target"
       ],
-      "note": "cable-bench README L71-72: 'Land on a foe from above for a stomp (26 damage, and you get your air jump back)'; the air jump is spent and the chaser is directly below.",
+      "note": "cable-bench README L71-72: 'Land on a foe from above for a stomp (26 damage, and you get your air jump back)'; state shows the ball airborne, the air jump spent and the chaser below.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -322,12 +322,12 @@
       },
       "options": [
         {
-          "id": "stomp_target",
-          "why": "Steer the landing onto the chaser."
+          "id": "evade_hazard",
+          "why": "Steer west."
         },
         {
-          "id": "evade_hazard",
-          "why": "Steer the landing away from the chaser."
+          "id": "stomp_target",
+          "why": "Steer toward the chaser."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -379,16 +379,16 @@
       },
       "options": [
         {
+          "id": "stomp_target",
+          "why": "Jump toward the chaser."
+        },
+        {
           "id": "ram_target",
           "why": "Hold the line into the chaser."
         },
         {
-          "id": "stomp_target",
-          "why": "Jump now to land on the chaser."
-        },
-        {
           "id": "evade_hazard",
-          "why": "Steer out of the trough around the chaser."
+          "why": "Steer north."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -444,12 +444,12 @@
           "why": "Roll into the chaser."
         },
         {
-          "id": "stomp_target",
-          "why": "Jump to land on the chaser."
+          "id": "evade_hazard",
+          "why": "Roll west."
         },
         {
-          "id": "evade_hazard",
-          "why": "Turn away from the chaser."
+          "id": "stomp_target",
+          "why": "Jump toward the chaser."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -474,7 +474,7 @@
       "accept": [
         "stomp_target"
       ],
-      "note": "spillway-drop README L76-77: landing on an enemy from above damages it and 'also gives your air jump back'; the air jump is spent and the chaser is below.",
+      "note": "spillway-drop README L76-77: landing on an enemy from above damages it and 'also gives your air jump back'; state shows the ball airborne, the air jump spent and the chaser below.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -502,11 +502,11 @@
       "options": [
         {
           "id": "stomp_target",
-          "why": "Steer the landing onto the chaser."
+          "why": "Steer toward the chaser."
         },
         {
           "id": "evade_hazard",
-          "why": "Steer the landing away from the chaser."
+          "why": "Steer east."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -565,12 +565,12 @@
           "why": "Drive straight at the lobber."
         },
         {
-          "id": "evade_hazard",
-          "why": "Swerve off the marked landing spot."
+          "id": "retreat_regen",
+          "why": "Stop and wait here."
         },
         {
-          "id": "retreat_regen",
-          "why": "Brake and hold position for regeneration."
+          "id": "evade_hazard",
+          "why": "Swerve south."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -625,16 +625,16 @@
       },
       "options": [
         {
-          "id": "ram_target",
-          "why": "Roll into the lobber."
-        },
-        {
           "id": "stomp_target",
-          "why": "Jump to land on the lobber."
+          "why": "Jump toward the lobber."
         },
         {
           "id": "evade_hazard",
-          "why": "Roll off the marked landing spot."
+          "why": "Roll east."
+        },
+        {
+          "id": "ram_target",
+          "why": "Roll into the lobber."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -717,7 +717,7 @@
       "accept": [
         "take_cache"
       ],
-      "note": "cable-bench README L55-57: the horseshoe cache 'is the cheapest reach on the mountain if you find it early'; the ball is 15 m from its gap and 70 held covers the tier-2 cost from L65 (about 59).",
+      "note": "cable-bench README L55-57: the horseshoe cache 'is the cheapest reach on the mountain if you find it early'; the ball is 15 m from its gap and 70 held covers the tier-2 price from L65 (about 59).",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -731,7 +731,7 @@
           "speed_tier": "cruise",
           "air_jump_available": true,
           "location": "bench 2 west, near (-150, 30)",
-          "over": "open ground 15 m from the horseshoe gap"
+          "over": "open ground 15 m from the horseshoe gap; the cache inside is priced about 59 scrap"
         },
         "objective": {
           "kind": "reach_exit",
@@ -745,16 +745,16 @@
       },
       "options": [
         {
-          "id": "take_cache",
-          "why": "Roll through the horseshoe gap and open the cache inside."
+          "id": "push_objective",
+          "why": "Head for the next switchback road."
         },
         {
           "id": "sweep_scrap",
           "why": "Continue east along the bench-2 siding."
         },
         {
-          "id": "push_objective",
-          "why": "Head for the next switchback road."
+          "id": "take_cache",
+          "why": "Roll through the horseshoe gap and open the cache inside."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -792,7 +792,7 @@
           "speed_ms": 1,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "mid shelf bench",
+          "location": "mid shelf bench, bench-edge scrap line beside the cache",
           "over": "open cache, price 25 scrap"
         },
         "scrap": {
@@ -802,12 +802,12 @@
       },
       "options": [
         {
-          "id": "take_cache",
-          "why": "Press E to open this cache."
+          "id": "sweep_scrap",
+          "why": "Roll along the bench edge."
         },
         {
-          "id": "sweep_scrap",
-          "why": "Roll past along the bench-edge scrap line."
+          "id": "take_cache",
+          "why": "Press E to open this cache."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -903,7 +903,7 @@
           "speed_ms": 8,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "forge apron; nearest ground cache 120 m downhill",
+          "location": "forge apron; ground cache 120 m downhill",
           "over": "verdigris ring"
         },
         "objective": {
@@ -924,12 +924,12 @@
       },
       "options": [
         {
-          "id": "push_objective",
-          "why": "Roll into the rig."
+          "id": "take_cache",
+          "why": "Drive downhill to the ground cache."
         },
         {
-          "id": "take_cache",
-          "why": "Drive to the ground cache downhill."
+          "id": "push_objective",
+          "why": "Roll into the rig."
         },
         {
           "id": "sweep_scrap",
@@ -971,11 +971,11 @@
           "speed_ms": 10,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "forge apron; nearest cache 80 m away, outside the ring",
-          "over": "verdigris ring"
+          "location": "forge apron; cache east of the apron, 80 m away, outside the ring, price 99 scrap",
+          "over": "verdigris ring, radius 30 m"
         },
         "objective": {
-          "kind": "exit_charge, 20 of 60 s banked",
+          "kind": "exit_charge running, 20 of 60 s banked",
           "distance_m": 12,
           "inside_ring": true
         },
@@ -992,12 +992,12 @@
       },
       "options": [
         {
-          "id": "push_objective",
-          "why": "Stay inside the ring while the charge runs."
+          "id": "take_cache",
+          "why": "Drive to the cache east of the apron."
         },
         {
-          "id": "take_cache",
-          "why": "Leave the ring for the nearest cache."
+          "id": "push_objective",
+          "why": "Keep circling near the rig."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1035,7 +1035,7 @@
           "speed_ms": 1,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "forge apron; nearest cache 60 m away",
+          "location": "forge apron; cache west of the apron, 60 m away, price 99 scrap",
           "over": "exit rig"
         },
         "objective": {
@@ -1050,16 +1050,16 @@
       },
       "options": [
         {
-          "id": "start_exit",
-          "why": "Press E at the rig to start the charge."
-        },
-        {
           "id": "sweep_scrap",
-          "why": "Drive back down to the bench-4 siding for scrap."
+          "why": "Drive back down to the bench-4 siding."
         },
         {
           "id": "take_cache",
-          "why": "Drive to the nearest cache."
+          "why": "Drive to the cache west of the apron."
+        },
+        {
+          "id": "start_exit",
+          "why": "Press E at the rig."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1097,11 +1097,11 @@
           "speed_ms": 9,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "top shelf by pump house; nearest chute scrap line 60 m away, outside the zone",
+          "location": "top shelf by pump house; scrap line in the east chute (x 54), 60 m away, outside the zone",
           "over": "exit zone, radius 30 m"
         },
         "objective": {
-          "kind": "exit_charge, 25 of 60 s banked",
+          "kind": "exit_charge running, 25 of 60 s banked",
           "distance_m": 10,
           "inside_ring": true
         },
@@ -1118,12 +1118,12 @@
       },
       "options": [
         {
-          "id": "push_objective",
-          "why": "Stay inside the exit zone while the charge runs."
+          "id": "sweep_scrap",
+          "why": "Drive to the scrap line in the east chute."
         },
         {
-          "id": "sweep_scrap",
-          "why": "Leave for the scrap line on the nearest chute."
+          "id": "push_objective",
+          "why": "Keep circling near the pump house."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1187,7 +1187,127 @@
         },
         {
           "id": "sweep_scrap",
-          "why": "Drop into the west sluice for its scrap."
+          "why": "Drop into the west sluice."
+        }
+      ],
+      "labeller": "scrapkeep-writer JL-04-A1",
+      "date": "2026-09-25",
+      "inputs_seen": [
+        "artifacts/local/tasks/JL-04/schema.md",
+        "/home/andrew/Projects/scrapkeep-worktrees/cable-bench/sketches/cable-bench/README.md",
+        "/home/andrew/Projects/scrapkeep-worktrees/cable-bench/sketches/cable-bench/src/tuning.gd",
+        "/home/andrew/Projects/scrapkeep-worktrees/spillway-drop/sketches/spillway-drop/README.md",
+        "/home/andrew/Projects/scrapkeep-worktrees/spillway-drop/sketches/spillway-drop/src/tuning.gd",
+        "sketches/ball-lab/README.md",
+        "sketches/ball-lab/src/tuning.gd",
+        "BIBLE.md",
+        "BACKLOG.md#JL-04 (lines 5326-5348)"
+      ],
+      "prompt_epoch": "none-seen"
+    },
+    {
+      "id": "blind-cb-obj-wait-in-ring-low-hp",
+      "block": "objective",
+      "severity": "moderate",
+      "accept": [
+        "retreat_regen"
+      ],
+      "note": "cable-bench README L74-75: 'You must stay inside the ring; leaving stalls the charge but never the tier clock'; L73 regen runs 'five seconds after you were last hit'. The other options leave the ring.",
+      "state": {
+        "stage": {
+          "name": "cable-bench",
+          "tier": 3,
+          "time_s": 125
+        },
+        "self": {
+          "hp": 25,
+          "grounded": true,
+          "speed_ms": 0,
+          "speed_tier": "walk",
+          "air_jump_available": true,
+          "location": "forge apron; last hit 7 s ago; cache east of the apron, 80 m away, outside the ring, price 99 scrap; bench-4 siding outside the ring",
+          "over": "verdigris ring, radius 30 m, 26 m from its edge"
+        },
+        "objective": {
+          "kind": "exit_charge running, 35 of 60 s banked",
+          "distance_m": 4,
+          "inside_ring": true
+        },
+        "scrap": {
+          "held": 110
+        },
+        "threats": []
+      },
+      "options": [
+        {
+          "id": "take_cache",
+          "why": "Drive to the cache east of the apron."
+        },
+        {
+          "id": "sweep_scrap",
+          "why": "Drive back down to the bench-4 siding."
+        },
+        {
+          "id": "retreat_regen",
+          "why": "Stop and wait here."
+        }
+      ],
+      "labeller": "scrapkeep-writer JL-04-A1",
+      "date": "2026-09-25",
+      "inputs_seen": [
+        "artifacts/local/tasks/JL-04/schema.md",
+        "/home/andrew/Projects/scrapkeep-worktrees/cable-bench/sketches/cable-bench/README.md",
+        "/home/andrew/Projects/scrapkeep-worktrees/cable-bench/sketches/cable-bench/src/tuning.gd",
+        "/home/andrew/Projects/scrapkeep-worktrees/spillway-drop/sketches/spillway-drop/README.md",
+        "/home/andrew/Projects/scrapkeep-worktrees/spillway-drop/sketches/spillway-drop/src/tuning.gd",
+        "sketches/ball-lab/README.md",
+        "sketches/ball-lab/src/tuning.gd",
+        "BIBLE.md",
+        "BACKLOG.md#JL-04 (lines 5326-5348)"
+      ],
+      "prompt_epoch": "none-seen"
+    },
+    {
+      "id": "blind-sd-obj-wait-in-zone-low-hp",
+      "block": "objective",
+      "severity": "moderate",
+      "accept": [
+        "retreat_regen"
+      ],
+      "note": "spillway-drop README L79-80: the charge needs the ball 'within 30 m of it', and L126-127 'time out of the zone banks nothing'; L78 'slow regen five seconds after the last hit'. The other option leaves the zone.",
+      "state": {
+        "stage": {
+          "name": "spillway-drop",
+          "tier": 3,
+          "time_s": 115
+        },
+        "self": {
+          "hp": 30,
+          "grounded": true,
+          "speed_ms": 0,
+          "speed_tier": "walk",
+          "air_jump_available": true,
+          "location": "top shelf by pump house; last hit 6 s ago; west sluice mouth 70 m away, outside the zone",
+          "over": "exit zone, radius 30 m, 25 m from its edge"
+        },
+        "objective": {
+          "kind": "exit_charge running, 30 of 60 s banked",
+          "distance_m": 5,
+          "inside_ring": true
+        },
+        "scrap": {
+          "held": 40
+        },
+        "threats": []
+      },
+      "options": [
+        {
+          "id": "retreat_regen",
+          "why": "Stop and wait here."
+        },
+        {
+          "id": "sweep_scrap",
+          "why": "Drop into the west sluice."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1212,7 +1332,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "cable-bench README L69-70: lobbers 'lob telegraphed arcs at where you are, to punish fighting on the spot'; L73 regen starts 'five seconds after you were last hit'.",
+      "note": "cable-bench README L69-70: lobbers 'lob telegraphed arcs at where you are, to punish fighting on the spot'; L73 regen starts 'five seconds after you were last hit', so a hit in 1.0 s restarts that wait.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1225,7 +1345,7 @@
           "speed_ms": 0,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "bench 2 road",
+          "location": "bench 2 road; last hit 4 s ago",
           "over": "road"
         },
         "threats": [
@@ -1240,12 +1360,12 @@
       },
       "options": [
         {
-          "id": "evade_hazard",
-          "why": "Roll off the marked landing spot."
+          "id": "retreat_regen",
+          "why": "Stop and wait here."
         },
         {
-          "id": "retreat_regen",
-          "why": "Hold position for regeneration."
+          "id": "evade_hazard",
+          "why": "Roll north."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1270,7 +1390,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "cable-bench README L74-75: 'You must stay inside the ring; leaving stalls the charge', so a move within the ring keeps charging; L69-70 lobbers lob arcs 'at where you are'.",
+      "note": "cable-bench README L74-75: 'You must stay inside the ring; leaving stalls the charge'; state puts the ball 27 m inside the 30 m ring's edge. L69-70 lobbers lob arcs 'at where you are'.",
       "state": {
         "stage": {
           "name": "cable-bench",
@@ -1287,7 +1407,7 @@
           "over": "verdigris ring, radius 30 m, 27 m from its edge"
         },
         "objective": {
-          "kind": "exit_charge",
+          "kind": "exit_charge running",
           "distance_m": 3,
           "inside_ring": true
         },
@@ -1304,11 +1424,11 @@
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll to another point inside the ring, off the marked spot."
+          "why": "Roll north."
         },
         {
           "id": "push_objective",
-          "why": "Hold position beside the rig while the charge runs."
+          "why": "Hold position beside the rig."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1346,7 +1466,7 @@
           "speed_ms": 5,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "lower basin, near its middle",
+          "location": "lower basin, near its middle; basin scrap lies at the middle",
           "over": "basin floor"
         },
         "scrap": {
@@ -1363,11 +1483,11 @@
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll uphill toward the basin rim."
+          "why": "Roll toward the basin rim."
         },
         {
           "id": "sweep_scrap",
-          "why": "Roll toward the basin middle for its scrap."
+          "why": "Roll toward the basin middle."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1392,7 +1512,7 @@
       "accept": [
         "evade_hazard"
       ],
-      "note": "spillway-drop README L79-80: the charge needs the ball 'within 30 m of it', so a move within the zone keeps charging; L74-75 lobbers fire arcs 'so standing still is expensive'.",
+      "note": "spillway-drop README L79-80: the charge needs the ball 'within 30 m of it'; state puts the ball 26 m inside the zone's edge. L74-75 lobbers fire arcs 'so standing still is expensive'.",
       "state": {
         "stage": {
           "name": "spillway-drop",
@@ -1409,7 +1529,7 @@
           "over": "exit zone, radius 30 m, 26 m from its edge"
         },
         "objective": {
-          "kind": "exit_charge",
+          "kind": "exit_charge running",
           "distance_m": 4,
           "inside_ring": true
         },
@@ -1426,11 +1546,11 @@
       "options": [
         {
           "id": "evade_hazard",
-          "why": "Roll to another point inside the exit zone, off the marked spot."
+          "why": "Roll south."
         },
         {
           "id": "push_objective",
-          "why": "Hold position beside the terminal while the charge runs."
+          "why": "Hold position beside the terminal."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1468,7 +1588,7 @@
           "speed_ms": 9,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "bench 1 siding",
+          "location": "bench 1 siding, siding scrap past the kicker",
           "over": "rail trough before the east ledge kicker"
         },
         "scrap": {
@@ -1479,12 +1599,12 @@
       "options": [
         {
           "id": "hit_kicker",
-          "why": "Take the east ledge kicker up to the ledge cache.",
+          "why": "Take the east ledge kicker.",
           "requires_speed_ms": 26
         },
         {
           "id": "sweep_scrap",
-          "why": "Stay in the trough past the kicker over the siding scrap."
+          "why": "Stay in the trough past the kicker."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1522,7 +1642,7 @@
           "speed_ms": 27,
           "speed_tier": "blazing",
           "air_jump_available": true,
-          "location": "bench 1 siding",
+          "location": "bench 1 siding, siding scrap past the kicker; ledge cache priced 25 scrap",
           "over": "rail trough before the east ledge kicker"
         },
         "scrap": {
@@ -1533,12 +1653,12 @@
       "options": [
         {
           "id": "hit_kicker",
-          "why": "Take the east ledge kicker up to the ledge cache.",
+          "why": "Take the east ledge kicker.",
           "requires_speed_ms": 26
         },
         {
           "id": "sweep_scrap",
-          "why": "Stay in the trough past the kicker over the siding scrap."
+          "why": "Stay in the trough past the kicker."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1577,7 +1697,7 @@
           "speed_ms": 6,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "spawn, south plain",
+          "location": "spawn, south plain; siding scrap to the west",
           "over": "bench 0 siding"
         },
         "objective": {
@@ -1594,7 +1714,7 @@
       "options": [
         {
           "id": "sweep_scrap",
-          "why": "Drive west along the bench-0 siding over its scrap."
+          "why": "Drive west along the bench-0 siding."
         },
         {
           "id": "push_objective",
@@ -1602,11 +1722,11 @@
         },
         {
           "id": "retreat_regen",
-          "why": "Wait at the spawn for regeneration."
+          "why": "Stop and wait here."
         },
         {
           "id": "evade_hazard",
-          "why": "Steer off the siding line."
+          "why": "Steer north."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1644,7 +1764,7 @@
           "speed_ms": 2,
           "speed_tier": "walk",
           "air_jump_available": true,
-          "location": "top shelf, west sluice mouth",
+          "location": "top shelf, west sluice mouth; scrap along the chute floor",
           "over": "chute floor"
         },
         "scrap": {
@@ -1655,16 +1775,16 @@
       },
       "options": [
         {
+          "id": "evade_hazard",
+          "why": "Steer east."
+        },
+        {
           "id": "sweep_scrap",
-          "why": "Roll down the west sluice over its scrap."
+          "why": "Roll down the west sluice."
         },
         {
           "id": "retreat_regen",
-          "why": "Brake at the sluice mouth and wait for regeneration."
-        },
-        {
-          "id": "evade_hazard",
-          "why": "Steer out of the sluice."
+          "why": "Stop and wait here."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
@@ -1702,7 +1822,7 @@
           "speed_ms": 14,
           "speed_tier": "cruise",
           "air_jump_available": true,
-          "location": "mid shelf, 15 m",
+          "location": "mid shelf, 15 m; bench-edge scrap line ahead",
           "over": "concrete bench"
         },
         "scrap": {
@@ -1718,12 +1838,12 @@
       },
       "options": [
         {
-          "id": "sweep_scrap",
-          "why": "Continue along the bench-edge scrap line on the mid shelf."
-        },
-        {
           "id": "evade_hazard",
           "why": "Climb the bypass ramp to the top shelf."
+        },
+        {
+          "id": "sweep_scrap",
+          "why": "Continue along the bench edge."
         }
       ],
       "labeller": "scrapkeep-writer JL-04-A1",
