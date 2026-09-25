@@ -157,7 +157,8 @@ static func _jittered(scenario: Dictionary) -> Dictionary:
 # limit other than the initial one is that override and is kept; an override equal to
 # the initial limit cannot be told apart and gets the mode's limit.
 static func place(lab, scenario: Dictionary, seed := -1) -> void:
-	var by_mode: Dictionary = MODE_LIMITS_S.get(scenario["id"], {})
+	# jev_agent_test.gd places bare {spawn, velocity} dictionaries: no id, no limit.
+	var by_mode: Dictionary = MODE_LIMITS_S.get(scenario.get("id", ""), {})
 	var mode: String = lab.player.mode_name()
 	if by_mode.has(mode) and scenario["time_limit_s"] == scenario["initial_limit_s"]:
 		scenario["time_limit_s"] = by_mode[mode]
