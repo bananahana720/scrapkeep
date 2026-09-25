@@ -644,3 +644,71 @@ test("a jev batch defaults to the q2-neutral question set and the c2 controls", 
   for (const call of decideFn.calls)
     assert.equal(call.settings.questions.version, "q2-neutral");
 });
+
+// --- JL-25: replay anchor with a null model (EV-0536), replay call cap (EV-0523)
+
+test("a replay whose first cached verdict has no recorded model aborts model_mismatch", async (t) => {
+  const { run, cache } = await fixture(t);
+  const first = await run({ scenario: "pillar-weave", decideFn: stubDecide() });
+  const files = await trialFiles(first.directory, first.trials[0]);
+  const [earliest] = Object.keys(files)
+    .filter((name) => name.startsWith("intent-"))
+    .sort()
+    .map((name) => JSON.parse(files[name]))
+    .filter((intent) => intent.source === "live");
+  await restamp(cache, earliest.meta.verdict_key, null);
+  const decideFn = noCall();
+  const replay = await run({
+    scenario: "pillar-weave",
+    decideFn,
+    replay: true,
+  });
+  assert.equal(decideFn.calls.length, 0);
+  assert.equal(replay.trials[0].abort.cause, "model_mismatch");
+  assert.match(replay.trials[0].abort.message, /no recorded model/);
+  assert.equal(replay.record.result, "invalid");
+});
+
+test("a replay's call cap defaults from its source run; an explicit cap wins", async (t) => {
+  const { run, runs, temporary } = await fixture(t);
+  const first = await run({
+    scenario: "pillar-weave",
+    callCap: 7,
+    decideFn: stubDecide(),
+  });
+  assert.equal(first.record.config.call_cap, 7);
+
+  const replay = await run({
+    scenario: "pillar-weave",
+    decideFn: noCall(),
+    replay: true,
+  });
+  assert.equal(replay.record.result, "pass");
+  assert.equal(replay.record.config.call_cap, 7);
+  assert.equal(replay.record.config.replay_of, first.id);
+  assert.ok(
+    replay.record.limits.some((line) =>
+      line.includes(`call cap of its source run ${first.id}`),
+    ),
+  );
+
+  const explicit = await run({
+    scenario: "pillar-weave",
+    decideFn: noCall(),
+    replay: true,
+    callCap: 50,
+  });
+  assert.equal(explicit.record.config.call_cap, 50);
+
+  const orphan = await run({
+    scenario: "pillar-weave",
+    decideFn: noCall(),
+    replay: true,
+    runs: { ...runs, root: path.join(temporary, "elsewhere") },
+  });
+  assert.equal(orphan.record.config.call_cap, 1000);
+  assert.equal(orphan.record.config.replay_of, null);
+  assert.ok(
+    orphan.record.limits.some((line) => /No live source run/.test(line)),
+  );
+});
