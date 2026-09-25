@@ -99,7 +99,7 @@
         },
         {
           "id": "take_cache",
-          "why": "You are already rolling over it; opening costs about one second of stopping. A cache sits 14 m away costing 141 scrap; you hold 150"
+          "why": "A cache sits 14 m away costing 141 scrap; you hold 150"
         }
       ]
     },
@@ -282,7 +282,7 @@
         },
         {
           "id": "take_cache",
-          "why": "You are already rolling over it; opening costs about one second of stopping. The east ledge cache above costs 63 scrap of the 120 held"
+          "why": "The east ledge cache above costs 63 scrap of the 120 held"
         }
       ]
     },
@@ -517,7 +517,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "You are already rolling over it; opening costs about one second of stopping. The maintenance hatch secret is uncovered 8 m away and costs only 20 scrap"
+          "why": "The maintenance hatch secret is uncovered 8 m away and costs only 20 scrap"
         },
         {
           "id": "push_objective",
@@ -624,7 +624,7 @@
       "options": [
         {
           "id": "take_cache",
-          "why": "You are already rolling over it; opening costs about one second of stopping. A cache 5 m ahead costs 25 scrap of the 200 held, the cheapest reach on the mountain"
+          "why": "A cache 5 m ahead costs 25 scrap of the 200 held, the cheapest reach on the mountain"
         },
         {
           "id": "evade_hazard",

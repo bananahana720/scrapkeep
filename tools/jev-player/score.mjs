@@ -1,118 +1,213 @@
-// Scores the decision layer against the labeled corpus before it is allowed to
-// drive anything. A miss is weighted by what it costs in a run: losing the run
-// is not the same as losing tempo, so a flat accuracy number would hide the
-// only failures that matter.
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+// Scores the decision layer against labeled corpora. A miss is weighted by what
+// it costs in a run: losing the run is not the same as losing tempo, so a flat
+// accuracy number would hide the only failures that matter.
+//
+// The authored corpus (corpus.json) was written by the prompt's author, so it is
+// reported but never gates. Only the blind corpus (corpus-blind.json, JL-04)
+// gates, and the two are never merged.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { decide } from "./decide.mjs";
+import { decide, instrumentIdentity, loadQuestionSet } from "./decide.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const WEIGHT = { severe: 5, moderate: 2, minor: 1 };
+const BLIND_MIN_CASES = 20;
+const GATE_WEIGHTED_MIN = 0.8;
 
-export function loadCorpus(file = path.join(here, "corpus.json")) {
+export function loadAuthored(file = path.join(here, "corpus.json")) {
   const data = JSON.parse(readFileSync(file, "utf8"));
   return [...data.cases, ...data.adversarial];
 }
 
-async function scoreCase(testCase) {
-  const result = await decide(testCase.state, testCase.options);
-  const passed = testCase.accept.includes(result.intent);
+export function loadBlind(file = path.join(here, "corpus-blind.json")) {
+  if (!existsSync(file)) {
+    return null;
+  }
+  return JSON.parse(readFileSync(file, "utf8")).cases;
+}
+
+// outcome separates what the model chose from what the confidence floor did to
+// it: a floor-miss is a raw choice the labels accept that the floor replaced,
+// and a floor-rescue is a pass only because the floor replaced a wrong choice.
+export function scoreCase(testCase, decision) {
+  const passed = testCase.accept.includes(decision.intent);
+  const rawPassed = testCase.accept.includes(decision.rawIntent);
+  let outcome;
+  if (passed) {
+    outcome = decision.lowConfidence && !rawPassed ? "floor-rescue" : "pass";
+  } else {
+    outcome = decision.lowConfidence && rawPassed ? "floor-miss" : "model-miss";
+  }
   return {
     id: testCase.id,
     block: testCase.block,
     severity: testCase.severity,
     expected: testCase.accept,
-    got: result.intent,
+    got: decision.intent,
+    rawIntent: decision.rawIntent,
+    lowConfidence: decision.lowConfidence,
     passed,
-    confidence: result.confidence,
-    danger: result.danger,
-    greedy: result.greedy,
-    latencyMs: result.latencyMs,
-    gatedOut: result.gatedOut,
-    inputTokens: result.usage.input_tokens,
+    outcome,
+    confidence: decision.confidence,
+    danger: decision.danger,
+    greedy: decision.greedy,
+    latencyMs: decision.latencyMs,
+    gatedOut: decision.gatedOut,
+    inputTokens: decision.usage.input_tokens,
     note: testCase.note,
   };
 }
 
-async function main() {
-  const corpus = loadCorpus();
-  console.log(`Scoring ${corpus.length} decision points against Jev.\n`);
-  // The cases are independent, so they go out together rather than in a queue.
-  const results = await Promise.all(corpus.map(scoreCase));
-
+export function summarize(records) {
   let earned = 0;
   let possible = 0;
-  const byBlock = new Map();
-  for (const result of results) {
-    const weight = WEIGHT[result.severity];
+  const byBlock = {};
+  for (const record of records) {
+    const weight = WEIGHT[record.severity];
     possible += weight;
-    if (result.passed) {
+    if (record.passed) {
       earned += weight;
     }
-    const block = byBlock.get(result.block) || { pass: 0, total: 0 };
+    const block = byBlock[record.block] || { pass: 0, total: 0 };
     block.total += 1;
-    if (result.passed) {
+    if (record.passed) {
       block.pass += 1;
     }
-    byBlock.set(result.block, block);
+    byBlock[record.block] = block;
+  }
+  const ids = (outcome) =>
+    records.filter((r) => r.outcome === outcome).map((r) => r.id);
+  const latencies = records.map((r) => r.latencyMs).sort((a, b) => a - b);
+  const tokens = records.reduce((sum, r) => sum + r.inputTokens, 0);
+  return {
+    cases: records.length,
+    earned,
+    possible,
+    weighted: possible === 0 ? 0 : earned / possible,
+    plainPass: records.filter((r) => r.passed).length,
+    severeMisses: records
+      .filter((r) => !r.passed && r.severity === "severe")
+      .map((r) => r.id),
+    modelMisses: ids("model-miss"),
+    floorMisses: ids("floor-miss"),
+    floorRescues: ids("floor-rescue"),
+    lowConfidence: records.filter((r) => r.lowConfidence).length,
+    byBlock,
+    latencyMedianMs: latencies[Math.floor(latencies.length / 2)],
+    latencyMaxMs: latencies[latencies.length - 1],
+    meanInputTokens: Math.round(tokens / Math.max(records.length, 1)),
+  };
+}
 
-    const mark = result.passed ? "PASS" : "FAIL";
-    const line = `${mark} ${result.id.padEnd(30)} got=${result.got.padEnd(16)} conf=${result.confidence.toFixed(2)} danger=${result.danger.toFixed(2)} greed=${result.greedy.toFixed(2)}`;
-    console.log(line);
-    if (result.gatedOut.length > 0) {
-      console.log(`     gated out in code: ${result.gatedOut.join(", ")}`);
+// Exit codes follow the lab gate: 0 pass, 1 fail, 3 inconclusive.
+export function gateVerdict(blindSummary) {
+  if (blindSummary === null) {
+    return { exit: 3, reason: "No blind corpus, so nothing gates." };
+  }
+  if (blindSummary.cases < BLIND_MIN_CASES) {
+    return {
+      exit: 3,
+      reason: `Blind corpus has ${blindSummary.cases} cases; the gate needs ${BLIND_MIN_CASES}.`,
+    };
+  }
+  if (blindSummary.severeMisses.length > 0) {
+    return { exit: 1, reason: "Severe miss on the blind corpus." };
+  }
+  if (blindSummary.weighted < GATE_WEIGHTED_MIN) {
+    return { exit: 1, reason: "Blind weighted score below 0.8." };
+  }
+  return { exit: 0, reason: "Blind corpus passes." };
+}
+
+export function buildReport({ authored, blind, instrument, when }) {
+  const section = (records, gating) => ({
+    gating,
+    summary: summarize(records),
+    results: records,
+  });
+  const blindSection = blind === null ? null : section(blind, true);
+  return {
+    when,
+    instrument,
+    authored: section(authored, false),
+    blind: blindSection,
+    gate: gateVerdict(blindSection === null ? null : blindSection.summary),
+  };
+}
+
+function printSection(name, section) {
+  const label = section.gating ? "gating" : "not gating";
+  console.log(`\n${name} corpus (${label})`);
+  for (const r of section.results) {
+    const mark = r.passed ? "PASS" : "FAIL";
+    const raw = r.lowConfidence ? ` raw=${r.rawIntent}` : "";
+    console.log(
+      `${mark} ${r.id.padEnd(30)} got=${r.got.padEnd(16)} conf=${r.confidence.toFixed(2)} ${r.outcome}${raw}`,
+    );
+    if (r.gatedOut.length > 0) {
+      console.log(`     gated out in code: ${r.gatedOut.join(", ")}`);
     }
-    if (!result.passed) {
-      console.log(`     expected one of: ${result.expected.join(", ")}`);
-      console.log(`     ${result.note}`);
+    if (!r.passed) {
+      console.log(`     expected one of: ${r.expected.join(", ")}`);
     }
   }
-
-  const severeMisses = results.filter(
-    (r) => !r.passed && r.severity === "severe",
+  const s = section.summary;
+  console.log(
+    `Severity-weighted ${s.earned}/${s.possible} (${(s.weighted * 100).toFixed(1)}%), plain ${s.plainPass}/${s.cases}`,
   );
-  const latencies = results.map((r) => r.latencyMs).sort((a, b) => a - b);
-  const tokens = results.reduce((sum, r) => sum + r.inputTokens, 0);
+  console.log(
+    `Severe misses ${s.severeMisses.length}; model misses ${s.modelMisses.length}; floor misses ${s.floorMisses.length}; floor rescues ${s.floorRescues.length}`,
+  );
+  console.log(
+    `Latency median ${s.latencyMedianMs} ms, max ${s.latencyMaxMs} ms; mean ${s.meanInputTokens} input tokens`,
+  );
+}
 
-  console.log("\nBy block:");
-  for (const [block, stat] of byBlock) {
-    console.log(`  ${block.padEnd(14)} ${stat.pass}/${stat.total}`);
+async function scoreAll(cases, questions) {
+  return Promise.all(
+    cases.map(async (testCase) =>
+      scoreCase(
+        testCase,
+        await decide(testCase.state, testCase.options, { questions }),
+      ),
+    ),
+  );
+}
+
+async function main() {
+  const questions = loadQuestionSet();
+  const instrument = instrumentIdentity(questions);
+  console.log(
+    `Question set ${questions.version} (${questions.status}), sha ${instrument.questions_sha.slice(0, 12)}`,
+  );
+  const blindCases = loadBlind();
+  const report = buildReport({
+    when: new Date().toISOString(),
+    instrument,
+    authored: await scoreAll(loadAuthored(), questions),
+    blind: blindCases === null ? null : await scoreAll(blindCases, questions),
+  });
+
+  printSection("Authored", report.authored);
+  if (report.blind === null) {
+    console.log("\nBlind corpus: absent.");
+  } else {
+    printSection("Blind", report.blind);
   }
-  console.log(
-    `\nSeverity-weighted score: ${earned}/${possible} (${((earned / possible) * 100).toFixed(1)}%)`,
-  );
-  console.log(
-    `Plain accuracy: ${results.filter((r) => r.passed).length}/${results.length}`,
-  );
-  console.log(`Severe misses: ${severeMisses.length}`);
-  console.log(
-    `Latency median ${latencies[Math.floor(latencies.length / 2)]} ms, max ${latencies[latencies.length - 1]} ms`,
-  );
-  console.log(
-    `Input tokens total ${tokens}, mean ${Math.round(tokens / results.length)} per decision`,
-  );
+  console.log(`\nGate: ${report.gate.reason} (exit ${report.gate.exit})`);
 
   const out = path.join(root, "artifacts", "local", "jev-player");
   mkdirSync(out, { recursive: true });
-  const report = path.join(out, "corpus-score.json");
-  writeFileSync(
-    report,
-    JSON.stringify(
-      { when: new Date().toISOString(), earned, possible, results },
-      null,
-      2,
-    ),
-  );
-  console.log(`\nReport: ${report}`);
+  const file = path.join(out, "corpus-score.json");
+  writeFileSync(file, JSON.stringify(report, null, 2));
+  console.log(`Report: ${file}`);
   console.log(
-    "Corpus agreement only. It says the decider picks defensible intents on these states; it says nothing about whether the game is fun.",
+    "Corpus agreement only. It says nothing about whether the game is fun.",
   );
-  // A severe miss means the player can lose a run to a decision the corpus
-  // already labelled, so it gates regardless of the weighted total.
-  process.exit(severeMisses.length === 0 && earned / possible >= 0.8 ? 0 : 1);
+  process.exit(report.gate.exit);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
