@@ -33,6 +33,10 @@ const SCRAP_COUNT := 84
 
 # The headless tests drive the same scene with no input source, HUD or screens.
 var test_mode := false
+# A Jev Lab trial sets this before the stage enters the tree, so one trial seed fixes
+# every stage random stream: cache buffs, the scrap scatter and drops, and the
+# director. -1 keeps the hand-picked seeds below.
+var seed_override := -1
 
 var tuning
 var run
@@ -53,7 +57,7 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_register_actions()
-	_rng.seed = 90210
+	_rng.seed = _seed_for(90210)
 	tuning = Tuning.new()
 	run = RunState.new()
 
@@ -88,7 +92,7 @@ func _ready() -> void:
 	scrap_field = ScrapField.new()
 	scrap_field.name = "ScrapField"
 	add_child(scrap_field)
-	scrap_field.setup(run, player, 4711)
+	scrap_field.setup(run, player, _seed_for(4711))
 	scrap_field.scatter(SCRAP_COUNT)
 
 	for spot in Layout.cache_spots():
@@ -106,7 +110,7 @@ func _ready() -> void:
 	director = Director.new()
 	director.name = "Director"
 	add_child(director)
-	director.setup(run, player, camera.cam, 1337)
+	director.setup(run, player, camera.cam, _seed_for(1337))
 	director.spawned.connect(_on_spawned)
 
 	run.phase_changed.connect(_on_phase_changed)
@@ -129,6 +133,14 @@ func _physics_process(delta: float) -> void:
 	run.tick(delta, forge.in_zone(ball))
 	if run.phase == RunState.Phase.READY and forge.at_exit(ball):
 		run.take_exit()
+
+
+# Each stream keeps its own default seed as an offset, so the three streams stay
+# independent under one trial seed.
+func _seed_for(default_seed: int) -> int:
+	if seed_override < 0:
+		return default_seed
+	return seed_override * 1000003 + default_seed
 
 
 func interact() -> String:
