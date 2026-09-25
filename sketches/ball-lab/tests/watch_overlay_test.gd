@@ -244,6 +244,18 @@ func _finish() -> void:
 		_report("marks", first["live"] is Dictionary and first["live"].has("jev") and first["live"].has("sim"),
 			"the mark keeps the live jev and sim blocks at its tick")
 		_report("marks", marks[1]["note"] == "left open when the trial ends", "an open mark is saved when the trial ends")
+		var raw := FileAccess.get_file_as_string(_out.path_join("watched/marks/test-run.jsonl")).split("\n")[0]
+		var top := JSON.stringify({"seq": 1, "trial": 0, "tick": MARK_TICK})
+		_report("marks", raw.contains('"seq":1,') and (raw.contains('"trial":0,') or raw.ends_with('"trial":0}'))
+			and raw.contains('"tick":%d,' % MARK_TICK) and top == '{"seq":1,"tick":%d,"trial":0}' % MARK_TICK,
+			"seq, trial and tick are written as integers")
+		_report("marks", int(first["state_tick"]) == D and int(first["hold_ticks"]) == K and first["applied"] == true
+			and int(first["tick"]) >= int(first["state_tick"]) + K,
+			"state_tick %s and hold %s say which decision drives the ball at the mark (applied %s)" % [
+				first.get("state_tick"), first.get("hold_ticks"), first.get("applied")])
+		_report("marks", Overlay.repo_relative(ProjectSettings.globalize_path("res://").path_join("../../artifacts/x.png").simplify_path())
+			== "artifacts/x.png" and Overlay.repo_relative("/elsewhere/x.png") == "/elsewhere/x.png",
+			"paths inside the repository are stored relative to it")
 		_report("marks", first["schema"] == "scrapkeep-watch-mark/1" and first["screenshot"] == null,
 			"schema scrapkeep-watch-mark/1; no screenshot without a renderer")
 

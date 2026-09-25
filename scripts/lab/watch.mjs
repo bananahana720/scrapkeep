@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { decide } from "../../tools/jev-player/decide.mjs";
+import { loadControls } from "../../tools/jev-player/preflight.mjs";
 import { TIMING } from "../../tools/jev-player/protocol/protocol.mjs";
 import {
   GODOT_BINARY,
@@ -37,12 +38,21 @@ import {
   stageFor,
   watchPaths,
 } from "./godot-launch.mjs";
-import { runBatch, UsageError } from "./harness.mjs";
+import { JEV_DEFAULTS, runBatch, UsageError } from "./harness.mjs";
 import { EXIT, INTENT, PAGE, SOURCE, WATCH } from "./metrics/status.mjs";
 import { writeReplay } from "./replay.mjs";
 import { openVerdictCache } from "./verdict-cache.mjs";
 
-const local = path.resolve(import.meta.dirname, "../../artifacts/local");
+const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+const local = path.join(repositoryRoot, "artifacts/local");
+
+// Records name paths inside the repository relative to it.
+export function repoRelative(file) {
+  const relative = path.relative(repositoryRoot, file);
+  return relative.startsWith("..") || path.isAbsolute(relative)
+    ? file
+    : relative;
+}
 
 export const WATCH_DEFAULTS = Object.freeze({
   callCap: 60,
@@ -58,6 +68,17 @@ const TOKEN_FIELDS = [
   "cache_read_input_tokens",
   "cache_creation_input_tokens",
 ];
+
+// preflight.mjs asks each threshold control in two orders and each wording
+// control in two orders under two wordings.
+export function plannedPreflightCalls(
+  controls = loadControls(JEV_DEFAULTS.controls),
+) {
+  return controls.controls.reduce(
+    (sum, control) => sum + (control.kind === "same-choice" ? 4 : 2),
+    0,
+  );
+}
 
 export function palette() {
   return {
@@ -160,6 +181,12 @@ export async function runWatch({
       `the session call cap must be a whole number >= 1, got ${callCap}`,
     );
   }
+  const planned = arm === "jev" ? plannedPreflightCalls() : 0;
+  if (callCap < planned) {
+    throw new UsageError(
+      `--call-cap ${callCap} is below the ${planned} live calls the preflight makes before any decision; use at least ${planned}`,
+    );
+  }
   const counters = {
     live: 0,
     cached: 0,
@@ -167,7 +194,11 @@ export async function runWatch({
     tokens: Object.fromEntries(TOKEN_FIELDS.map((field) => [field, 0])),
   };
   let last = null;
+  // The last line of defence: no call passes the session cap, whoever asks.
   const counted = async (...args) => {
+    if (counters.live >= callCap) {
+      throw new Error(`the session cap of ${callCap} live Jev calls is spent`);
+    }
     counters.live += 1;
     const verdict = await decideFn(...args);
     for (const field of TOKEN_FIELDS)
@@ -211,7 +242,7 @@ export async function runWatch({
           tick_hz: TIMING.tick_hz,
           snapshot_every: spec.snapshotEvery,
           hold_ticks: spec.holdTicks,
-          marks: paths.marks,
+          marks: repoRelative(paths.marks),
           palette: palette(),
         },
         null,

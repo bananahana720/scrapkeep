@@ -31,6 +31,8 @@ import {
 import { buildReplay, REPLAY_CSP_BASE } from "../scripts/lab/replay.mjs";
 import {
   decisionLine,
+  plannedPreflightCalls,
+  repoRelative,
   runWatch,
   WATCH_DEFAULTS,
 } from "../scripts/lab/watch.mjs";
@@ -568,9 +570,183 @@ test("the palette names every intent and every arm source a decision can carry",
     for (const [x, y] of look.shape)
       assert.ok(Math.abs(x) <= 1 && Math.abs(y) <= 1, id);
   }
-  const hexes = Object.values(INTENT).map((look) => look.hex);
-  assert.equal(new Set(hexes).size, hexes.length, "one hue per intent");
-  for (const status of [STATUS.green, STATUS.amber, STATUS.red])
-    assert.ok(!hexes.includes(status.hex), `${status.word} stays a status`);
-  assert.ok(!hexes.includes(PAGE.accent), "accent stays with marks");
+});
+
+// OKLab (Ottosson 2020): Euclidean distance there tracks perceived difference.
+function oklab(hex) {
+  const [r, g, b] = [1, 3, 5]
+    .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+    .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+const distance = (a, b) => {
+  const [x, y] = [oklab(a), oklab(b)];
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+};
+
+test("an intent colour means only that intent: far from every status, page and source colour and from each other", () => {
+  const reserved = new Map();
+  for (const [key, status] of Object.entries(STATUS)) {
+    reserved.set(status.hex, `STATUS.${key}`);
+    reserved.set(status.ink, `STATUS.${key}.ink`);
+  }
+  for (const [key, hex] of Object.entries(PAGE))
+    reserved.set(hex, `PAGE.${key}`);
+  for (const [key, source] of Object.entries(SOURCE))
+    reserved.set(source.hex, `SOURCE.${key}`);
+  const intents = Object.entries(INTENT);
+  for (const [id, look] of intents) {
+    for (const [hex, name] of reserved)
+      assert.ok(
+        distance(look.hex, hex) >= 0.12,
+        `${id} ${look.hex} is ${distance(look.hex, hex).toFixed(3)} from ${name} ${hex}`,
+      );
+    for (const [other, peer] of intents)
+      if (other !== id)
+        assert.ok(
+          distance(look.hex, peer.hex) >= 0.1,
+          `${id} and ${other} are ${distance(look.hex, peer.hex).toFixed(3)} apart`,
+        );
+  }
+  assert.ok(
+    distance("#4fa3d9", STATUS.untiered.hex) < 0.12,
+    "the rule catches the old push blue",
+  );
+  assert.ok(
+    distance("#ffe29a", STATUS.amber.hex) < 0.12,
+    "and the old evade yellow",
+  );
+});
+
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5]
+    .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const contrast = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].toSorted((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+test("every text colour on the replay page reads at 4.5:1 on each surface it can sit on", async (t) => {
+  const { watch } = await fixture(t);
+  const { batch } = await watch({ scenario: "pillar-weave", arm: "scripted" });
+  const { html } = await buildReplay(batch.directory);
+  const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+  const texts = new Set();
+  for (const rule of css.split("}")) {
+    if (rule.trim().startsWith(".label")) continue;
+    for (const found of rule.matchAll(/(?:^|[\s;{])color: (#[0-9a-f]{6})/g))
+      texts.add(found[1]);
+  }
+  for (const found of html.matchAll(/<text [^>]*fill="(#[0-9a-f]{6})"/g))
+    texts.add(found[1]);
+  assert.ok(texts.size >= 3, [...texts].join(" "));
+  for (const hex of texts)
+    for (const surface of [PAGE.background, PAGE.panel, PAGE.deep])
+      assert.ok(
+        contrast(hex, surface) >= 4.5,
+        `${hex} on ${surface}: ${contrast(hex, surface).toFixed(2)}`,
+      );
+  for (const label of [WATCH.demo, WATCH.watch])
+    assert.ok(
+      contrast(PAGE.deep, label.hex) >= 4.5,
+      `label text on ${label.hex}`,
+    );
+});
+
+test("a --call-cap below the preflight's calls is refused before any call", async (t) => {
+  const { watch } = await fixture(t);
+  assert.equal(
+    plannedPreflightCalls(),
+    12,
+    "c2: two threshold and two wording controls",
+  );
+  const decideFn = stubDecide();
+  await assert.rejects(
+    watch({
+      scenario: "pillar-weave",
+      arm: "jev",
+      callCap: 11,
+      decideFn,
+      preflight: stubPreflight(),
+    }),
+    /--call-cap 11 is below the 12 live calls the preflight makes/,
+  );
+  assert.equal(decideFn.calls.length, 0);
+  const scripted = await watch({
+    scenario: "pillar-weave",
+    arm: "scripted",
+    callCap: 1,
+  });
+  assert.equal(scripted.batch.record.result, "pass", "the cap only binds Jev");
+});
+
+test("the gate refuses a pin that is a watch record, even one copied into place by hand", async (t) => {
+  const { watch, runs, temporary } = await fixture(t);
+  const demo = await watch({
+    scenario: "pillar-weave",
+    arm: "jev",
+    decideFn: stubDecide(),
+    preflight: stubPreflight(),
+  });
+  const candidate = await runBatch({
+    scenario: "pillar-weave",
+    arm: "jev",
+    launch: fakeGodot(),
+    runs,
+    verdictCache: path.join(temporary, "cache-evidence"),
+    decideFn: stubDecide(),
+    preflight: stubPreflight(),
+    watchdogFloorMs: 10_000,
+  });
+  const artifacts = path.join(temporary, "artifacts");
+  const pin = path.join(
+    artifacts,
+    `jev-lab-${new Date().toISOString().slice(0, 10)}`,
+    "pins",
+    "copied-demo",
+  );
+  await mkdir(pin, { recursive: true });
+  await writeFile(
+    path.join(pin, "run.json"),
+    await readFile(path.join(demo.batch.directory, "run.json")),
+  );
+  const result = spawnSync(
+    process.execPath,
+    [
+      gateScript,
+      candidate.record.id,
+      "--against",
+      "copied-demo",
+      "--runs",
+      runs.root,
+      "--artifacts",
+      artifacts,
+      "--epochs",
+      path.join(temporary, "epochs"),
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(result.status, 4, result.stdout + result.stderr);
+  assert.match(
+    result.stdout,
+    /pin copied-demo is a watch-mode record, demo, not evidence/,
+  );
+});
+
+test("session.json names the marks file relative to the repository when it is inside it", () => {
+  assert.equal(
+    repoRelative(path.join(root, "artifacts/local/watch-marks/r.jsonl")),
+    "artifacts/local/watch-marks/r.jsonl",
+  );
+  assert.equal(repoRelative("/elsewhere/r.jsonl"), "/elsewhere/r.jsonl");
 });

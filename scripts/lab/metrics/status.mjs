@@ -1,7 +1,8 @@
 // The only file under scripts/lab/ that may name a status or a colour.
 // Hex values are the green, yellow, red, dark_foreground and blue keys of
-// ~/.config/omarchy/themes/neon-noir/colors.toml. Exit codes follow the gate
-// table in plan § 4.
+// ~/.config/omarchy/themes/neon-noir/colors.toml, except INTENT's, which are
+// picked in the hues the theme leaves free (see INTENT). Exit codes follow the
+// gate table in plan § 4.
 
 export const EXIT = Object.freeze({
   pass: 0,
@@ -72,16 +73,20 @@ export const PAGE = Object.freeze({
 });
 
 // What each intent looks like wherever a decision is drawn: the watch overlay
-// in Godot, the replay page and the terminal. Hues are colors.toml's blue,
-// cyan, magenta and bright keys; green, yellow and red stay with the statuses
-// and accent with Andrew's marks. The two attacks on a dummy share magenta.
-// `shape` is a closed polygon in a unit box, y down, drawn at any size.
+// in Godot, the replay page and the terminal. Colour carries one meaning, so
+// no intent may sit near a STATUS, PAGE or SOURCE colour: the theme's blue,
+// cyan, green, yellow, orange and red all mean something already. The hues
+// are the ones those leave free, lime and the indigo-to-magenta arc, picked in
+// OKLCH so each is at least 0.12 from every reserved colour and 0.10 from
+// every other intent in OKLab (tests/lab-watch.test.js checks both). The two
+// attacks on a dummy share magenta at two lightnesses. `shape` is the second
+// channel: a closed polygon in a unit box, y down, drawn at any size.
 function intent(word, hex, glyph, shape) {
   return Object.freeze({ word, hex, glyph, shape: Object.freeze(shape) });
 }
 
 export const INTENT = Object.freeze({
-  push_objective: intent("push", "#4fa3d9", "→", [
+  push_objective: intent("push", "#7a7af5", "→", [
     [-1, -0.35],
     [0.15, -0.35],
     [0.15, -0.85],
@@ -90,23 +95,23 @@ export const INTENT = Object.freeze({
     [0.15, 0.35],
     [-1, 0.35],
   ]),
-  hit_kicker: intent("kicker", "#2ee6d6", "◢", [
+  hit_kicker: intent("kicker", "#bae500", "◢", [
     [-1, 0.75],
     [1, 0.75],
     [1, -0.95],
   ]),
-  stomp_target: intent("stomp", "#f08cbd", "▼", [
+  stomp_target: intent("stomp", "#fb96df", "▼", [
     [-0.95, -0.75],
     [0.95, -0.75],
     [0, 0.95],
   ]),
-  ram_target: intent("ram", "#e0569b", "◆", [
+  ram_target: intent("ram", "#c827a8", "◆", [
     [0, -1],
     [1, 0],
     [0, 1],
     [-1, 0],
   ]),
-  evade_hazard: intent("evade", "#ffe29a", "ϟ", [
+  evade_hazard: intent("evade", "#b6a3ff", "ϟ", [
     [-0.25, -1],
     [0.65, -1],
     [0.15, -0.15],
@@ -115,7 +120,7 @@ export const INTENT = Object.freeze({
     [-0.05, 0.1],
     [-0.65, 0.1],
   ]),
-  sweep_scrap: intent("sweep", "#a8f0c4", "◠", [
+  sweep_scrap: intent("sweep", "#78b23d", "◠", [
     [-1, 0.4],
     [-0.6, -0.5],
     [0, -0.8],
@@ -125,13 +130,13 @@ export const INTENT = Object.freeze({
     [0, -0.2],
     [-0.5, 0.4],
   ]),
-  take_cache: intent("cache", "#8cc6ee", "■", [
+  take_cache: intent("cache", "#ffb3b8", "■", [
     [-0.8, -0.8],
     [0.8, -0.8],
     [0.8, 0.8],
     [-0.8, 0.8],
   ]),
-  retreat_regen: intent("retreat", "#8ff5ec", "←", [
+  retreat_regen: intent("retreat", "#235bc8", "←", [
     [1, -0.35],
     [-0.15, -0.35],
     [-0.15, -0.85],
@@ -140,7 +145,7 @@ export const INTENT = Object.freeze({
     [-0.15, 0.35],
     [1, 0.35],
   ]),
-  start_exit: intent("exit", "#ff7a96", "◎", [
+  start_exit: intent("exit", "#53760e", "◎", [
     [0, -1],
     [0.7, -0.7],
     [1, 0],

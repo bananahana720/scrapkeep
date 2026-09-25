@@ -37,6 +37,7 @@ const MAP_SPAN := 80.0
 const PANEL_ALPHA := 0.86
 const MARGIN := 16.0
 const SIDE_W := 440.0
+const PREFLIGHT_LINES := 4
 
 var trial
 var settings := {}
@@ -80,6 +81,8 @@ func setup(trial_ref, settings_ref: Dictionary) -> void:
 	var parsed = JSON.parse_string(text) if text != "" else null
 	session = parsed if parsed is Dictionary else {}
 	marks_file = str(settings.get("marks", session.get("marks", "")))
+	if marks_file != "" and marks_file.is_relative_path():
+		marks_file = ProjectSettings.globalize_path("res://").path_join("../..").path_join(marks_file).simplify_path()
 	_read_palette(session.get("palette", {}))
 	for part in str(settings.get("shots", "")).split(",", false):
 		if part.is_valid_int():
@@ -272,12 +275,14 @@ func begin_mark(note := "") -> void:
 	if not pending.is_empty():
 		commit_mark(_note.text)
 	var decision := latest()
-	var seq = decision.get("seq", null)
+	var seq = int(decision["seq"]) if decision.get("seq") != null else null
+	var state_tick = int(decision["tick"]) if decision.get("tick") != null else null
+	var hold := int(session.get("hold_ticks", trial.settings.get("hold_ticks", 0)))
 	pending = {
 		"schema": MARK_SCHEMA,
 		"marked_at": Time.get_datetime_string_from_system(true),
 		"run_id": session.get("run_id", null),
-		"trial": session.get("trial", null),
+		"trial": int(session["trial"]) if session.get("trial") != null else null,
 		"scenario": trial.settings.get("scenario", null),
 		"arm": session.get("arm", null),
 		"mode": trial.settings.get("mode", null),
@@ -287,6 +292,12 @@ func begin_mark(note := "") -> void:
 		"tick": trial.view.tick,
 		"held": trial.agent.intent_id if trial.agent != null else "",
 		"seq": seq,
+		# The decision this mark links to was made on the state at state_tick; it
+		# drives the ball from state_tick + hold_ticks. A mark on a snapshot tick
+		# before that still shows the previous intent in `held`.
+		"state_tick": state_tick,
+		"hold_ticks": hold,
+		"applied": state_tick != null and int(trial.view.tick) >= state_tick + hold,
 		"kind": decision.get("kind", null),
 		"chosen": decision.get("intent", null),
 		"options": decision.get("offered", []),
@@ -352,7 +363,14 @@ func _mark_shot() -> Variant:
 	if marks_file == "":
 		return null
 	var name := "%s-mark-%02d.png" % [marks_file.get_file().get_basename(), marks_written + 1]
-	return shot_to(marks_file.get_base_dir().path_join(name))
+	var saved = shot_to(marks_file.get_base_dir().path_join(name))
+	return repo_relative(saved) if saved != null else null
+
+
+# Paths in marks are relative to the repository when they lie inside it.
+static func repo_relative(path: String) -> String:
+	var root := ProjectSettings.globalize_path("res://").path_join("../..").simplify_path()
+	return path.trim_prefix(root + "/") if path.begins_with(root + "/") else path
 
 
 # The last rendered frame as a PNG; null when there is no renderer (headless).
@@ -392,13 +410,22 @@ func _rebuild_ribbon() -> void:
 	var colors := PackedColorArray()
 	var n := trail.size()
 	var lift := Vector3(0.0, -Tuning.RADIUS + 0.08, 0.0)
+	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
 	for i in range(1, n):
 		var a: Vector3 = trail[i - 1]["pos"] + lift
 		var b: Vector3 = trail[i]["pos"] + lift
-		var flat := Vector3(b.x - a.x, 0.0, b.z - a.z)
-		if flat.length() < 0.01:
+		var along := b - a
+		if along.length() < 0.01:
 			continue
-		var side := flat.normalized().cross(Vector3.UP) * RIBBON_HALF
+		# Width faces the camera, so a climb or a bounce draws a line, never a
+		# sheet; with no camera (a headless test) it lies flat.
+		var facing := Vector3.UP
+		if camera != null:
+			facing = (camera.global_position - (a + b) * 0.5).normalized()
+		var side := along.cross(facing)
+		if side.length() < 0.001:
+			continue
+		side = side.normalized() * RIBBON_HALF
 		var color: Color = intent_look(trail[i]["intent"])["color"]
 		color.a = lerpf(0.08, 0.9, float(i) / float(n))
 		for v in [a + side, a - side, b + side, a - side, b - side, b + side]:
@@ -420,6 +447,30 @@ func _place_note() -> void:
 		var size := _canvas.size
 		_note.position = Vector2((size.x - 560.0) * 0.5, size.y - 176.0)
 		_note.size = Vector2(560, 38)
+
+
+# Words laid into lines no wider than `width` at `size`; a word longer than the
+# line is split by characters.
+func wrap_text(text: String, width: float, size: int) -> Array:
+	var lines := []
+	var line := ""
+	for word in text.split(" ", false):
+		var candidate := word if line == "" else line + " " + word
+		if _font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= width:
+			line = candidate
+			continue
+		if line != "":
+			lines.append(line)
+		line = word
+		while _font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width and line.length() > 1:
+			var cut := line.length() - 1
+			while cut > 1 and _font.get_string_size(line.substr(0, cut), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
+				cut -= 1
+			lines.append(line.substr(0, cut))
+			line = line.substr(cut)
+	if line != "":
+		lines.append(line)
+	return lines
 
 
 func _panel(rect: Rect2) -> void:
@@ -474,9 +525,10 @@ func _draw_overlay() -> void:
 		var accent: Color = _watch.get("mark", {}).get("color", page("accent"))
 		_text(Vector2(size.x * 0.5 - 260.0, 150), _flash, 18, accent, 520.0, HORIZONTAL_ALIGNMENT_CENTER)
 	if show_help:
-		_text(Vector2(size.x - SIDE_W - MARGIN, size.y - 14.0),
+		_panel(Rect2(size.x - SIDE_W - MARGIN, size.y - 36.0, SIDE_W, 30))
+		_text(Vector2(size.x - SIDE_W - MARGIN, size.y - 15.0),
 			"M mark · T state sent · S speed %s · H hide · Ctrl-C in terminal stops" % SPEEDS[speed]["word"],
-			13, page("soft"), SIDE_W, HORIZONTAL_ALIGNMENT_RIGHT)
+			13, page("soft"), SIDE_W - 12.0, HORIZONTAL_ALIGNMENT_RIGHT)
 	if not ended.is_empty():
 		_draw_end(size)
 
@@ -517,20 +569,25 @@ func _draw_banner(size: Vector2) -> void:
 	var status: Dictionary = _status.get("pass" if passed else "fail", {})
 	var verdict := "preflight %s %s · %d live calls" % [preflight.get("controls_version", "?"),
 		"passed" if passed else "did not pass", int(preflight.get("calls", 0))]
-	var lines: Array = [verdict]
+	# Between the header and the decision panel, so it covers neither; failing
+	# controls wrap onto as many lines as they need, up to PREFLIGHT_LINES.
+	var left := MARGIN * 2.0 + 520.0
+	var box_w := size.x - SIDE_W - MARGIN * 2.0 - left
+	var lines: Array = []
 	if not passed:
 		for entry in preflight.get("lines", []):
 			if str(entry).contains("did not pass"):
-				lines.append(str(entry))
-	# Between the header and the decision panel, so it covers neither.
-	var left := MARGIN * 2.0 + 520.0
-	var box_w := size.x - SIDE_W - MARGIN * 2.0 - left
-	var box := Rect2(left, MARGIN + 44.0, box_w, 14.0 + 22.0 * mini(lines.size(), 3))
+				lines.append_array(wrap_text(str(entry), box_w - 44.0, 14))
+	var shown := mini(lines.size(), PREFLIGHT_LINES)
+	var box := Rect2(left, MARGIN + 44.0, box_w, 36.0 + 20.0 * shown)
 	_panel(box)
 	_glyph(str(status.get("glyph", "")), box.position + Vector2(18, 18), 7.0, status.get("color", page("soft")))
-	_text(box.position + Vector2(34, 24), lines[0], 17, status.get("color", page("soft")), box_w - 44.0)
-	for i in range(1, mini(lines.size(), 3)):
-		_text(box.position + Vector2(34, 24 + 22.0 * i), lines[i], 14, page("soft"), box_w - 44.0)
+	_text(box.position + Vector2(34, 24), verdict, 17, status.get("color", page("soft")), box_w - 44.0)
+	for i in shown:
+		var line: String = lines[i]
+		if i == shown - 1 and lines.size() > shown:
+			line += " …"
+		_text(box.position + Vector2(34, 46 + 20.0 * i), line, 14, page("soft"), box_w - 44.0)
 
 
 # The current decision: options on offer with their bars, the chosen one outlined,
@@ -603,11 +660,11 @@ func _draw_decision(area: Rect2) -> float:
 func _decision_note(decision: Dictionary) -> String:
 	match str(decision.get("kind", "")):
 		"live", "cache":
-			return "Jev confidence %.2f%s" % [float(decision.get("confidence", 0.0)),
-				" · from the watch cache" if decision.get("kind") == "cache" else ""]
+			return "chosen %s · Jev confidence %.2f (how sure it is overall)%s" % [_top_probability(decision),
+				float(decision.get("confidence", 0.0)), " · cached" if decision.get("kind") == "cache" else ""]
 		"fallback":
-			return "Jev leaned %s at confidence %.2f; held push_objective" % [decision.get("raw_intent", "?"),
-				float(decision.get("confidence", 0.0))]
+			return "Jev leaned %s at confidence %.2f, under its floor; held %s" % [decision.get("raw_intent", "?"),
+				float(decision.get("confidence", 0.0)), decision.get("intent", "?")]
 		"forced":
 			return "one option on offer, so no arm was asked"
 		"rule":

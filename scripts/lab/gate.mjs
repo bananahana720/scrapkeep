@@ -629,6 +629,13 @@ async function gateRun({
     found.push(
       outcome(EXIT.invalid, `pin ${against} is not a ${SCHEMA} record`),
     );
+  else if (pin.config?.watch !== undefined)
+    found.push(
+      outcome(
+        EXIT.invalid,
+        `pin ${against} is a watch-mode record, ${pin.config.watch?.label ?? "not evidence"}`,
+      ),
+    );
   else if (bothValid)
     found.push(
       ...againstPin(candidate, pin, against, {

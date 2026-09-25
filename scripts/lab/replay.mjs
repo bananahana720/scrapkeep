@@ -303,7 +303,7 @@ function timelineSvg(data) {
   const seconds = [];
   for (let s = 0; s * data.tick_hz <= end; s += 5) {
     seconds.push(
-      `<text x="${x(s * data.tick_hz)}" y="62" fill="${PAGE.muted}" font-size="10" text-anchor="middle">${s}s</text>`,
+      `<text x="${x(s * data.tick_hz)}" y="62" fill="${PAGE.soft}" font-size="10" text-anchor="middle">${s}s</text>`,
     );
   }
   return `<svg id="timeline" viewBox="-12 0 1024 66" preserveAspectRatio="none" role="img" aria-label="Decisions over time">
@@ -476,7 +476,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid ${PAGE.accent}; 
 .fill { display: block; height: 100%; background: var(--c); }
 .value { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
 ul.legend { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; color: ${PAGE.soft}; font-size: 13px; }
-footer { color: ${PAGE.muted}; font-size: 12px; margin-top: 14px; }`;
+footer { color: ${PAGE.soft}; font-size: 12px; margin-top: 14px; }`;
 }
 
 export function renderReplay(data) {
