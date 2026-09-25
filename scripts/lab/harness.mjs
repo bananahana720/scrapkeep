@@ -41,6 +41,13 @@
 // means for the batch and feeds api_error_rate. trial_abort_rate counts every
 // trial whose outcome is not `complete`; engine_crash counts `crash` trials.
 //
+// The scenario's own judgement (success, timeout, or running when --max-ticks
+// cut it short) is not in done.json, which PROTOCOL.md closes. jev_run.gd
+// prints it as one stdout line, `jev_run: scenario {json}`; each trial keeps
+// it as scenario_result (null when the launch printed none), config sums it as
+// scenario_results, and the batch records unreachable_scenarios and
+// stomp_ram_split from it.
+//
 // Trial i of a batch with seed s runs with seed s * 1000 + i, so batches whose
 // seeds differ share no trial seed; a batch is therefore capped at 1000 trials.
 //
@@ -167,7 +174,27 @@ export function batchResult(trials) {
 }
 
 const slug = /^[a-z0-9][a-z0-9-]*$/;
+// A scenario id, optionally with scenarios.gd's `@<speed>` parameter.
+const scenarioId = /^[a-z0-9][a-z0-9-]*(@\d+(\.\d+)?)?$/;
+const scenarioLabel = (scenario) =>
+  scenario.replace("@", "-at-").replace(".", "p");
 const MAX_ERRORS = 50;
+const SCENARIO_LINE = /^jev_run: scenario (\{.*\})$/gm;
+const SCENARIO_RESULTS = ["success", "timeout", "running"];
+// Enough stdout to hold the scenario line and the summary after it.
+const STDOUT_TAIL = 16_000;
+
+// The last scenario line in `stdout`, or null.
+export function scenarioResult(stdout) {
+  const found = [...stdout.matchAll(SCENARIO_LINE)].at(-1);
+  if (found === undefined) return null;
+  try {
+    const parsed = JSON.parse(found[1]);
+    return SCENARIO_RESULTS.includes(parsed?.result) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 // PROTOCOL.md's limit, max(floor, 20 x nearest-rank median step), with the
 // floor injectable so tests need not wait 30 s. watchdogMs() owns the formula
@@ -272,6 +299,7 @@ async function runTrial({
     watchdog_ms: null,
     waiting_for: null,
     events_tmp_only: false,
+    scenario_result: null,
     errors: [],
   };
   const { command, args, env, cwd } = launch({
@@ -285,10 +313,15 @@ async function runTrial({
   // detached: the child leads a new process group, so killGroup() reaches
   // whatever it starts.
   const child = spawn(command, args, {
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ["ignore", "pipe", "pipe"],
     detached: true,
     env: { ...process.env, ...env },
     ...(cwd === undefined ? {} : { cwd }),
+  });
+  let stdout = "";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout = (stdout + chunk).slice(-STDOUT_TAIL);
   });
   let stderr = "";
   child.stderr.setEncoding("utf8");
@@ -543,6 +576,7 @@ async function runTrial({
   if (errors.length > 0 && !["stall", "crash"].includes(entry.outcome)) {
     entry.outcome = "invalid";
   }
+  entry.scenario_result = scenarioResult(stdout);
   if (stderr.trim() !== "") entry.stderr = stderr.trim();
   return entry;
 }
@@ -572,7 +606,7 @@ export async function runBatch({
       `unknown arm "${armName}"; one of ${Object.keys(ARMS).join(", ")}`,
     );
   }
-  if (!slug.test(scenario ?? "")) {
+  if (!scenarioId.test(scenario ?? "")) {
     throw new UsageError(`scenario "${scenario}" is not a slug`);
   }
   if (!Number.isInteger(trials) || trials < 1 || trials > TRIAL_SEED_STRIDE) {
@@ -694,7 +728,7 @@ export async function runBatch({
   };
   const run = await createRun({
     type: "batch",
-    label: `${scenario}-${armName}`,
+    label: `${scenarioLabel(scenario)}-${armName}`,
     registry: METRICS,
     config,
     instrument: armInstrument,
@@ -770,6 +804,36 @@ export async function runBatch({
     n,
     ci: null,
   });
+  const judged = config.trials
+    .map((entry) => entry.scenario_result)
+    .filter((result) => result !== null);
+  config.scenario_results = {
+    ...Object.fromEntries(
+      SCENARIO_RESULTS.map((result) => [
+        result,
+        judged.filter((one) => one.result === result).length,
+      ]),
+    ),
+    unreported: n - judged.length,
+  };
+  if (judged.length > 0) {
+    run.kri("unreachable_scenarios", {
+      value: config.scenario_results.success === 0 ? 1 : 0,
+      n: 1,
+      ci: null,
+    });
+    const count = (kind) =>
+      judged.reduce((sum, one) => sum + (one.knocks?.[kind] ?? 0), 0);
+    const hits = count("stomp") + count("ram");
+    if (hits > 0) {
+      // Knocks within one trial are not independent draws, so no interval.
+      run.kpi("stomp_ram_split", {
+        value: count("stomp") / hits,
+        n: hits,
+        ci: null,
+      });
+    }
+  }
   if (armName === "jev") {
     const apiErrors = config.trials.filter(
       (entry) => entry.abort?.cause === "api_error",

@@ -14,6 +14,8 @@ extends RefCounted
 const Field := preload("res://src/field.gd")
 const SpeedTier := preload("res://src/speed_tier.gd")
 const Tuning := preload("res://src/tuning.gd")
+const JevAgent := preload("res://src/jev/jev_agent.gd")
+const Telemetry := preload("res://src/jev/telemetry.gd")
 
 const STAGE_NAME := "ball-lab"
 # The sketch has no threat escalation, so the stage stays at the lowest corpus tier.
@@ -26,23 +28,29 @@ const STOMP_STRENGTH := 0.6
 const RAM_STRENGTH := 1.0
 # How far above a dummy the ball must be for the dummy to count as `below`.
 const BELOW_MARGIN := 2.0
-# Offer ranges. Provisional: JL-21 calibrates them from scripted runs.
+# Offer ranges. Provisional: JL-21 calibrated only the kicker's lip speed below.
 const STOMP_RANGE := 30.0
 const RAM_RANGE := 40.0
 const EVADE_RANGE := 10.0
 const KICKER_RANGE := 60.0
-# The steep kicker's origin in field.gd _build_props; the lip it launches from.
-const KICKER_AT := Vector2(30.0, 45.0)
+# The slowest speed at the steep kicker's lip that lands on the bench with no input
+# and no air jump, in both physics modes: kicker-gap@v swept 14-28 m/s (JL-21,
+# artifacts/local/tasks/JL-21/runs/lip-probe*). Kinematic cleared from 16.6 m/s and
+# fell short at 16.3; rigid cleared from 17.2 and fell short at 16.9.
+const KICKER_LIP_SPEED := 17.2
 
 var lab
 var run
 var tick := 0
 var tick_hz := 90
 # Every shockwave seen since attach: {tick, strength, kind, enemy}. `enemy` is the
-# index into lab.enemies of the dummy the wave was emitted on, or -1.
+# index into lab.enemies of the dummy the wave was emitted on, or -1. These are raw
+# waves; knock_count() counts contact stretches.
 var knocks: Array = []
 
 var _attached := false
+var _stretches: Array = []
+var _collapsed_waves := 0
 
 
 func _init(lab_ref, run_ref = null) -> void:
@@ -120,12 +128,33 @@ func time_s() -> int:
 	return int(floor(float(tick) / float(tick_hz)))
 
 
+# Knocks of `kind` as contact stretches, the count events.ndjson and the run summary
+# report (EV-0509; JL-13 review, N5).
 func knock_count(kind: String) -> int:
-	var n := 0
-	for knock in knocks:
-		if knock["kind"] == kind:
-			n += 1
-	return n
+	if _collapsed_waves != knocks.size():
+		_stretches = collapse(knocks)
+		_collapsed_waves = knocks.size()
+	return _stretches.filter(func(knock): return knock["kind"] == kind).size()
+
+
+# Telemetry.drain_knocks's rule: waves on one dummy are one stretch while each follows
+# the previous wave on that dummy within KNOCK_GAP_TICKS. jev_agent_test.gd checks
+# that the two agree.
+static func collapse(waves: Array) -> Array:
+	var out := []
+	var last := {}
+	var open := {}
+	for wave in waves:
+		var enemy: int = wave["enemy"]
+		var tick: int = wave["tick"]
+		var joins: bool = last.has(enemy) and tick - int(last[enemy]) <= Telemetry.KNOCK_GAP_TICKS
+		last[enemy] = tick
+		if joins:
+			out[open[enemy]]["waves"] += 1
+			continue
+		open[enemy] = out.size()
+		out.append({"tick": tick, "enemy": enemy, "kind": wave["kind"], "waves": 1})
+	return out
 
 
 # --- the protocol blocks -----------------------------------------------------------
@@ -215,13 +244,13 @@ func options(state: Dictionary) -> Array:
 	var out := [{"id": "push_objective", "why": "Roll the fastest line to the %s %d m away" % [
 		state["objective"]["kind"].replace("_", " "), state["objective"]["distance_m"]]}]
 	var at := position()
-	if Vector2(at.x, at.z).distance_to(KICKER_AT) <= KICKER_RANGE and location(at) != "bench":
+	var lip := kicker_lip()
+	var to_lip := Vector2(at.x, at.z).distance_to(Vector2(lip.x, lip.z))
+	if to_lip <= KICKER_RANGE and location(at) != "bench":
 		out.append({
 			"id": "hit_kicker",
-			"why": "Take the steep kicker %d m away across the gap onto the bench" % whole(Vector2(at.x, at.z).distance_to(KICKER_AT)),
-			# Provisional: the README says the kicker clears the gap at roughly fast-tier
-			# speed. JL-21 calibrates the real number.
-			"requires_speed_ms": tenth(lab.tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST]),
+			"why": "Take the steep kicker %d m away across the gap onto the bench" % whole(to_lip),
+			"requires_speed_ms": KICKER_LIP_SPEED,
 		})
 	var threats_seen: Array = state["threats"]
 	if not threats_seen.is_empty():
@@ -235,6 +264,16 @@ func options(state: Dictionary) -> Array:
 				out.append({"id": "evade_hazard", "why": "Break off from the chaser closing %d m away" % threat["distance_m"]})
 				break
 	return out
+
+
+# The steep kicker's lip, the top far edge it launches from: jev_agent.gd's frame,
+# which jev_agent_test.gd checks against the built box (JL-10 review, N3).
+static func kicker_lip() -> Vector3:
+	return JevAgent.kicker_frame()["lip"]
+
+
+static func kicker_half_width() -> float:
+	return JevAgent.KICKER_SIZE.x * 0.5
 
 
 # A coarse place name from field.gd's layout, for Jev's `location`.

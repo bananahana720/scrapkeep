@@ -1,11 +1,19 @@
 extends RefCounted
 
 # Ball-lab UAT scenarios (plan section 3). Each is a spawn, an objective, a time limit
-# and a success predicate, all placed with field.gd's coordinates. Time limits are the
-# initial values; JL-21 recalibrates them to max(initial, 2x scripted p90).
+# and a success predicate, all placed with field.gd's coordinates. The time limits are
+# the initial values. JL-21 applied max(initial, 2x scripted p90) over 20 scripted trials
+# per mode and kept every one: downhill-run and kicker-gap finish well inside theirs,
+# and on the four choice scenarios the scripted arm's p90 lies past three times the
+# limit in at least one mode, so there is no p90 to double.
 #
 # `Run` tracks one trial's progress from a read-only view (jev_state.gd) and judges
 # it; `place()` is the harness's one gameplay write, putting the ball at the spawn.
+#
+# Spawn jitter (JL-21). A scenario with `jitter_m` > 0 places the ball at a point drawn
+# from the trial seed, uniform in a disc of that radius round the nominal spawn. Trial i
+# gets the same point on every arm, so arms compare on paired starts, and a
+# deterministic arm's trials are no longer replicates of one run.
 
 const Field := preload("res://src/field.gd")
 const Tuning := preload("res://src/tuning.gd")
@@ -15,6 +23,10 @@ const IDS := ["downhill-run", "run-to-pad", "bench-climb", "kicker-gap", "dummy-
 const KICKER_SPEED_MIN := 14.0
 const KICKER_SPEED_MAX := 28.0
 const KICKER_SPEED_DEFAULT := 21.0
+# kicker-gap starts this far down the ramp from the lip, so the lip speed is close to
+# the scenario's speed; Run records the exact one.
+const KICKER_RUNWAY := 1.0
+const JITTER_M := 3.0
 
 # field.gd builds these props from inline literals in _build_props, so they are
 # repeated here; jev_state_test.gd checks them against the built lab.
@@ -52,15 +64,15 @@ static func make(id: String) -> Dictionary:
 				"run_bottom", Field.drop_point(Field.RUN_X, Field.RUN_BOT_Z, Tuning.RADIUS), 12.0, 20.0,
 				func(p: Dictionary) -> bool: return p["reached"])
 		"run-to-pad":
-			return _scenario(id, Field.drop_point(Field.RUN_X, -100.0, 2.5), Vector3.ZERO,
+			return _jittered(_scenario(id, Field.drop_point(Field.RUN_X, -100.0, 2.5), Vector3.ZERO,
 				"pad", Field.drop_point(Field.PAD_CENTER.x, Field.PAD_CENTER.y, Tuning.RADIUS), 10.0, 45.0,
-				func(p: Dictionary) -> bool: return p["reached"])
+				func(p: Dictionary) -> bool: return p["reached"]))
 		"bench-climb":
 			# Flat ground south of the pad, between the steep kicker's foot (x 30) and the
 			# service ramp's (x 50), so both routes are open.
-			return _scenario(id, Field.drop_point(40.0, 32.0), Vector3.ZERO,
+			return _jittered(_scenario(id, Field.drop_point(40.0, 32.0), Vector3.ZERO,
 				"bench", Geo.bench_point(), 0.0, 30.0,
-				func(p: Dictionary) -> bool: return p["on_bench"])
+				func(p: Dictionary) -> bool: return p["on_bench"]))
 		"kicker-gap":
 			return kicker_gap(KICKER_SPEED_DEFAULT)
 		"dummy-knock":
@@ -68,13 +80,13 @@ static func make(id: String) -> Dictionary:
 				"dummy", Vector3.ZERO, 0.0, 60.0,
 				func(p: Dictionary) -> bool: return p["knocked"].size() >= 3)
 			knock["dynamic_objective"] = true
-			return knock
+			return _jittered(knock)
 		"pillar-weave":
 			var weave := _scenario(id, Field.drop_point(-8.0, 44.0), Vector3.ZERO,
 				"gate", Geo.gate_mid(0), 0.0, 40.0,
 				func(p: Dictionary) -> bool: return p["gates"] >= WEAVE.size() - 1)
 			weave["dynamic_objective"] = true
-			return weave
+			return _jittered(weave)
 		"soak":
 			# KRIs only: survive the whole limit on the random arm with no anomaly.
 			var soak := _scenario(id, Field.drop_point(Field.RUN_X, -100.0, 2.5), Vector3.ZERO,
@@ -85,13 +97,21 @@ static func make(id: String) -> Dictionary:
 	return {}
 
 
-# A straight run at the steep kicker at `speed` m/s along +z, the direction it faces.
-# The spawn is on the flat 9 m short of the kicker's foot; further south the banked
-# ring's outer lip launches the ball before it reaches the kicker.
+# The ball leaves the steep kicker's lip at about `speed` m/s: it starts on the ramp
+# KICKER_RUNWAY short of the lip, moving up the ramp. So `speed` is the lip speed that
+# requires_speed_ms is calibrated against (JL-21). From the flat short of the foot even
+# 28 m/s leaves the lip below 11 m/s, so the ramp, not `speed`, would decide the run.
 static func kicker_gap(speed: float) -> Dictionary:
 	if speed < KICKER_SPEED_MIN or speed > KICKER_SPEED_MAX:
 		return {}
-	var scenario := _scenario("kicker-gap", Field.drop_point(STEEP_KICKER.x, 28.0, 1.2), Vector3(0.0, 0.0, speed),
+	# jev_agent.gd preloads this file, so its kicker frame is loaded at run time.
+	var frame: Dictionary = load("res://src/jev/jev_agent.gd").kicker_frame()
+	var up_ramp: Vector3 = (frame["lip"] - frame["heel"]).normalized()
+	var normal := up_ramp.cross(Vector3.RIGHT).normalized()
+	if normal.y < 0.0:
+		normal = -normal
+	var spawn: Vector3 = frame["lip"] - up_ramp * KICKER_RUNWAY + normal * (Tuning.RADIUS + 0.05)
+	var scenario := _scenario("kicker-gap", spawn, up_ramp * speed,
 		"bench", Geo.bench_point(), 0.0, 8.0,
 		func(p: Dictionary) -> bool: return p["on_bench"])
 	scenario["label"] = "kicker-gap@%s" % String.num(speed)
@@ -111,16 +131,36 @@ static func _scenario(id: String, spawn: Vector3, velocity: Vector3, kind: Strin
 		"arm": "",
 		"params": {},
 		"dynamic_objective": false,
+		"jitter_m": 0.0,
 		"success": success,
 	}
 
 
+static func _jittered(scenario: Dictionary) -> Dictionary:
+	scenario["jitter_m"] = JITTER_M
+	return scenario
+
+
 # Puts the ball at the scenario's spawn with its start velocity. This is harness
 # setup, the only gameplay write in the Jev lab files; jev_state.gd never writes.
-static func place(lab, scenario: Dictionary) -> void:
-	lab.player.reset_to(scenario["spawn"])
+# `seed` >= 0 applies the scenario's jitter; tests place at the nominal spawn.
+static func place(lab, scenario: Dictionary, seed := -1) -> void:
+	lab.player.reset_to(spawn_for(scenario, seed))
 	if scenario["velocity"] != Vector3.ZERO:
 		lab.player.active_body().set_velocity_now(scenario["velocity"])
+
+
+static func spawn_for(scenario: Dictionary, seed := -1) -> Vector3:
+	var spawn: Vector3 = scenario["spawn"]
+	var radius: float = scenario.get("jitter_m", 0.0)
+	if seed < 0 or radius <= 0.0:
+		return spawn
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var angle := rng.randf() * TAU
+	var r := radius * sqrt(rng.randf())
+	var clearance := spawn.y - Field.height(spawn.x, spawn.z)
+	return Field.drop_point(spawn.x + r * cos(angle), spawn.z + r * sin(angle), clearance)
 
 
 # Field geometry the scenarios and Run share. An inner class, because GDScript
@@ -176,6 +216,7 @@ class Run:
 	var success_tick := -1
 
 	var _last_flat = null
+	var _last_at = null
 	var _open_anomalies := {}
 
 	func _init(scenario_ref: Dictionary, hz := 90) -> void:
@@ -186,6 +227,7 @@ class Run:
 			"limit_ticks": limit_ticks(),
 			"reached": false,
 			"on_bench": false,
+			"bench_tick": -1,
 			"route": "",
 			"used_service_ramp": false,
 			"gates": 0,
@@ -193,6 +235,7 @@ class Run:
 			"stomps": 0,
 			"rams": 0,
 			"anomalies": [],
+			"lip": [],
 		}
 
 	func limit_ticks() -> int:
@@ -220,7 +263,9 @@ class Run:
 			progress["used_service_ramp"] = true
 		if not progress["on_bench"] and Geo.on_bench(at, is_grounded):
 			progress["on_bench"] = true
+			progress["bench_tick"] = view.tick
 			progress["route"] = "service_ramp" if progress["used_service_ramp"] else "kicker"
+		_check_lip(view, at, v)
 		var flat := Vector2(at.x, at.z)
 		if _last_flat != null and progress["gates"] < WEAVE.size() - 1:
 			var ends := Geo.gate_ends(progress["gates"])
@@ -248,6 +293,15 @@ class Run:
 		if progress["tick"] > progress["limit_ticks"]:
 			return "timeout"
 		return "running"
+
+	# Every pass over the steep kicker's lip going +z, with the speed there: what
+	# requires_speed_ms is calibrated against. A ball rolling under the lip is not a pass.
+	func _check_lip(view, at: Vector3, v: Vector3) -> void:
+		var lip: Vector3 = view.kicker_lip()
+		var crossed: bool = _last_at != null and _last_at.z < lip.z and at.z >= lip.z
+		if crossed and absf(at.x - lip.x) <= view.kicker_half_width() and at.y >= lip.y - 0.5 and v.is_finite():
+			progress["lip"].append({"tick": view.tick, "speed": round(v.length() * 10.0) / 10.0})
+		_last_at = at
 
 	func _check_anomalies(at_tick: int, at: Vector3, v: Vector3) -> void:
 		var now := {}
