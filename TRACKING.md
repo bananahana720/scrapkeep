@@ -262,8 +262,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-12](BACKLOG.md#jl-12) | 1 | 5 | done | none | JL-12-A1 | EV-0511 |
 | [JL-13](BACKLOG.md#jl-13) | 1 | 1 | queued | JL-09 | none | EV-0510 |
 | [JL-14](BACKLOG.md#jl-14) | 1 | 1 | queued | JL-11 | none | EV-0510 |
-| [JL-15](BACKLOG.md#jl-15) | 1 | 2 | ready | none | none | EV-0511 |
-| [JL-16](BACKLOG.md#jl-16) | 1 | 2 | ready | none | none | EV-0511 |
+| [JL-15](BACKLOG.md#jl-15) | 1 | 3 | in_progress | none | none | EV-0512 |
+| [JL-16](BACKLOG.md#jl-16) | 1 | 3 | in_progress | none | none | EV-0512 |
 
 ## Question state index
 
@@ -791,6 +791,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0509 | 2026-09-25T18:36:40+00:00 | Independent reviewer / review; coordinator / integration | JL-10 | A fresh scrapkeep-reviewer-medium (claude-opus-5-5 per the host prompt) returned PASS+NOTES on 8ff1dcd: the exporter writes nothing to gameplay nodes; the identity test is valid (no autoload, static, shared group query or gameplay RNG could mask a difference; the exact comparison and a nudge first seen at tick 451 in both modes); nothing from the wall clock or randomness reaches the `jev` block. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-10.md](artifacts/jev-lab-2026-09-25/reviews/JL-10.md). Merged at 5f95c81; integrated `npm run sketch:smoke` pass, `npm test` 341/0, `npm run verify` six stages pass. JL-10 moves review to done, record revision 3 to 4; lease JL-10-L1 closes. The "Andrew plays the sketch" step `check:scope` printed is not applicable: no gameplay changed, and instrumentation is heavy-lane. Carried forward as JL-13 contract items: take the first snapshot at least one physics tick after `Scenarios.place()` (state-000000 is otherwise stale: speed tier and the rigid teleport lag); collapse raw `shockwave` emissions into one hit per enemy and contact stretch before any stomp/ram count, because one kinematic ram emitted 45 waves and a rigid stomp registered as a ram (both are gameplay findings for the sketch's owner, not exporter defects); `KICKER_AT` measures to the ramp centre, not its lip (about 8 m short), which JL-21 recalibrates. |
 | EV-0510 | 2026-09-25T18:37:29+00:00 | Coordinator / definition import | JL-13, JL-14, JL-15, JL-16; hash tokens in the section files | BACKLOG gains the Wave 4 cards at revision 1, appended so no earlier line moves, each carrying the review notes routed to it: JL-13 (Godot steering agent and telemetry; the stale first snapshot and knock-collapse contract items from EV-0509), JL-14 (verdict cache, the jev arm and replay; `score.mjs` argument guard and `decision.model` from EV-0493; the real Jev `usage` field names confirmed by a capped five-call live smoke), JL-15 (preflight controls with an injected `decideFn`, the epoch record JL-12's gate reads, and a `control_separation` threshold from EV-0504; one live control run against q1 reported as-is) and JL-16 (`scrapkeep stats`, lab verb routing, and JL-06's NB1 and NB3 from EV-0505). All four are queued on unfinished dependencies: JL-13 on JL-09 (JL-10 is done), JL-14 on JL-11, JL-15 and JL-16 on JL-12. Hash tokens re-pointed (four passes). |
 | EV-0511 | 2026-09-25T18:39:41+00:00 | Independent reviewer / review; coordinator / integration, readiness | JL-12, JL-15, JL-16 | A fresh scrapkeep-reviewer (claude-fable-5-1 per the host prompt) returned PASS+NOTES on fa1156b: every exit code 0 to 4 is reachable for its intended reason and tested through the real CLI; Newcombe is signed so positive is improvement; `untiered` metrics are printed but do not drive the exit; the `record.mjs` resolution keeps JL-06's structure with JL-12's block inside the mismatch branch, and the NB2 retry test fails without its fix. Report at [artifacts/jev-lab-2026-09-25/reviews/JL-12.md](artifacts/jev-lab-2026-09-25/reviews/JL-12.md). The coordinator confirmed the range from 346063a to fa1156b touches only the six leased files plus `tests/lab-record.test.js`, where the writer added the NB2 test (accepted). The branch commits ab94bcf (the merge of the coordinator head into `wt/JL-12`) and fa1156b (the NB2 fix) and the merge ff46943 are named here. Integrated `npm test` 359/0, `npm run verify` six stages pass; the collector now rates the 0.58 h historical skew as a warning under the tightened threshold. JL-12 moves review to done, record revision 4 to 5; lease JL-12-L1 closes. JL-15 and JL-16 move queued to ready. Carried forward: to JL-15, wire `epochValid` into the gate (today `lever_effect` always reads insufficient, exit 3; the epoch rule is insufficient for an unproven reading and exit 4 for a changed instrument), and make pinning require an epoch that passed controls and the blind corpus (today a run type that omits those metrics pins cleanly); to JL-16, label the rate line for `corpus_blind_weighted` and `dead_tier` as approximated n trials, and report a pin rate outside 0 to 1 as inconclusive rather than skipping it; to JL-25, the `andrew-anchor` staleness exemption (EV-0504), excluding `sources.json` and `run-owner.json` from pin copies, and a test of the uncaught-error exit 4. |
+| EV-0512 | 2026-09-25T18:40:03+00:00 | Coordinator / assignment, lease | JL-15, JL-16 | JL-15 and JL-16 move ready to in_progress, record revision 2 to 3, attempt and lease A1/L1, both on scrapkeep-writer (Opus 5.5 high), worktrees at base 9f2a779 with the `node_modules` link. Both cards' leases widen to `scripts/lab/gate.mjs` for the EV-0511 carried notes, split so they do not overlap: JL-15 owns the epoch wiring and pin precondition (and `tests/lab-gate.test.js`), JL-16 only the rate-line labels; the coordinator merges JL-15 first and JL-16 merges the coordinator head before its review if they conflict. JL-15 makes the program's first deliberate live Jev calls (the control run against q1), authorized under EV-0484. Active writers: four (JL-09, JL-11, JL-15, JL-16). |
 
 ## Preparation checkpoint
 
@@ -1798,5 +1799,29 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Latest checkpoint: 2026-09-25T18:33:36+00:00; dispatched.
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-11/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
+
+## JL-15-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-15-A1; exclusive lease JL-15-L1 open.
+- Owned files: `tools/jev-player/{preflight.mjs,controls/c1.json}`; `tools/jev-player/tests/preflight.test.js`; `scripts/lab/metrics/core.mjs` (`control_separation` threshold); `scripts/lab/gate.mjs` (epoch wiring and the pin precondition, per EV-0511); `tests/lab-gate.test.js`; `artifacts/local/tasks/JL-15/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-15` on `wt/JL-15`, created by `scripts/new-worktree.sh`.
+- Base identity: `9f2a779df449d961ee288e1dda9c39c87c5afa4f`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:40:03+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-15/` in the worktree.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1).
+
+## JL-16-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer, Opus 5.5 at high; card revision 1; attempt JL-16-A1; exclusive lease JL-16-L1 open.
+- Owned files: `scripts/lab/{model,stats-cli}.mjs`; `scripts/play.mjs`; `scripts/lab/gate.mjs` (rate-line labels only, per EV-0511); `tests/lab-stats.test.js`; `tests/play.test.js`; `artifacts/local/tasks/JL-16/`.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-16` on `wt/JL-16`, created by `scripts/new-worktree.sh`.
+- Base identity: `9f2a779df449d961ee288e1dda9c39c87c5afa4f`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-25T18:40:03+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-16/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer-medium (Opus 5.5).
 
