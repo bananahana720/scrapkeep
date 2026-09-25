@@ -36,12 +36,13 @@ const SERVICE_RAMP_HALF := Vector2(4.5, 19.0)
 const WEAVE := [0, 1, 2, 3, 4]
 
 # JL-21b: max(initial, 2x scripted p90) per scenario and physics mode, 20 scripted
-# trials each, p90 read at 3x the limit where it was censored at the limit. Only these
-# gave a number. downhill-run and kicker-gap finish well inside theirs; the other
-# choice-scenario modes stay censored at 3x (inconclusive) and keep the initial limit.
+# trials each, p90 read at 3x the limit where it was censored at the limit, after
+# stomp and ram stopped targeting knocked dummies (A2). Only run-to-pad kinematic rises
+# (p90 30.2 s). dummy-knock kinematic (p90 5.5 s), downhill-run and kicker-gap finish
+# well inside theirs; the other choice-scenario modes stay censored at 3x
+# (inconclusive) and keep the initial limit.
 const MODE_LIMITS_S := {
-	"run-to-pad": {"kinematic": 248.0},
-	"dummy-knock": {"kinematic": 272.0},
+	"run-to-pad": {"kinematic": 61.0},
 }
 
 # Anomalies, as PROTOCOL.md's events table defines them.

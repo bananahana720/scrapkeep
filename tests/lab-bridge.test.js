@@ -926,7 +926,7 @@ test(
       assert.equal(trials[0].outcome, "complete", JSON.stringify(trials[0]));
       return trials[0].scenario_result.limit_ticks;
     };
-    assert.equal(await limitTicks("kinematic"), 248 * TIMING.tick_hz);
+    assert.equal(await limitTicks("kinematic"), 61 * TIMING.tick_hz);
     assert.equal(await limitTicks("rigid"), 45 * TIMING.tick_hz);
     assert.equal(await limitTicks("kinematic", 135), 135 * TIMING.tick_hz);
     assert.equal(await limitTicks("kinematic", 45), 45 * TIMING.tick_hz);
