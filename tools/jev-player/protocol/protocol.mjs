@@ -604,7 +604,7 @@ export function validateTrial(files) {
     }
     const expected =
       seq === 0 ? null : (parsedIntents[seq - 1]?.intent ?? null);
-    if (state !== undefined && state.held !== expected) {
+    if (state !== undefined && state !== null && state.held !== expected) {
       errors.push({
         path: `${fileName("state", seq)}:held`,
         message: `must be ${JSON.stringify(expected)}, the intent in force at this tick`,
@@ -643,7 +643,12 @@ export function validateTrial(files) {
         message: "must match the intent file it applies",
       });
     }
-    if (state !== undefined && event.tick !== state.tick + hold) {
+    // A state that parsed to null has its own error; there is no tick to check.
+    if (
+      state !== undefined &&
+      state !== null &&
+      event.tick !== state.tick + hold
+    ) {
       errors.push({
         path: `events.ndjson:events[${i}].tick`,
         message: `must be ${state.tick + hold}, hold_ticks after snapshot ${event.seq}`,
@@ -698,7 +703,7 @@ export function validateTrial(files) {
           path: "error.json:seq",
           message: "must name an existing snapshot",
         });
-      } else if (error.tick !== state.tick + hold) {
+      } else if (state !== null && error.tick !== state.tick + hold) {
         errors.push({
           path: "error.json:tick",
           message: `must be ${state.tick + hold}, where Godot blocked`,

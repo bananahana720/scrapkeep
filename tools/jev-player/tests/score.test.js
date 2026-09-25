@@ -3,19 +3,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import {
   buildReport,
+  DIAGNOSTIC_FILE,
   gateVerdict,
   loadAuthored,
   loadBlind,
+  loadDiagnostic,
   parseArgs,
   REPORT_FILE,
   scoreCase,
+  subscore,
   summarize,
   validateCases,
 } from "../score.mjs";
@@ -258,4 +267,90 @@ test("validateCases names each fault by index and field, never by value", () => 
     assert.doesNotMatch(fault.message, /catastrophic|teleport/);
     assert.ok(!fault.message.includes(good[0].id));
   }
+});
+
+// --- JL-18b: the state-diagnostic subscore ------------------------------------
+
+const missed = (id, severity = "moderate") =>
+  scoreCase(
+    { ...kicker, id, severity },
+    decision({ intent: "sweep_scrap", rawIntent: "sweep_scrap" }),
+  );
+
+test("the state-diagnostic subscore aggregates the listed cases only, weighted and plain", () => {
+  const records = [...passing(3), missed("d1", "severe"), missed("d2")];
+  const result = subscore(records, ["b0", "b1", "d1", "d2", "gone"]);
+  assert.deepEqual(result, {
+    cases: 4,
+    listed: 5,
+    earned: 4,
+    possible: 11,
+    weighted: 4 / 11,
+    plainPass: 2,
+    severeMisses: 1,
+  });
+  assert.equal(subscore(records, []).weighted, null);
+});
+
+test("the blind section carries the subscore beside its total, with no case id in it", () => {
+  const blind = [...passing(20), missed("d1", "severe")];
+  const report = buildReport({
+    authored: passing(1),
+    blind,
+    instrument: {},
+    diagnostic: ["b3", "d1"],
+  });
+  assert.equal(report.blind.summary.cases, 21);
+  assert.equal(report.blind.diagnostic.cases, 2);
+  assert.equal(report.blind.diagnostic.plainPass, 1);
+  assert.doesNotMatch(JSON.stringify(report.blind.diagnostic), /"b3"|"d1"/);
+  assert.equal(report.authored.diagnostic, undefined);
+  assert.equal(
+    buildReport({ authored: passing(1), blind, instrument: {} }).blind
+      .diagnostic,
+    null,
+  );
+});
+
+test("loadDiagnostic reads the case-id list, returns null when absent and refuses a malformed one", (t) => {
+  const ids = loadDiagnostic();
+  assert.ok(Array.isArray(ids) && ids.length > 0);
+  assert.ok(ids.every((id) => typeof id === "string" && id !== ""));
+  assert.equal(
+    DIAGNOSTIC_FILE,
+    path.resolve(
+      path.dirname(scorePath),
+      "../../artifacts/jev-lab-2026-09-25/blind-diagnostic.json",
+    ),
+  );
+  const directory = mkdtempSync(path.join(tmpdir(), "scrapkeep-diagnostic-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  assert.equal(loadDiagnostic(path.join(directory, "absent.json")), null);
+  for (const [name, body] of [
+    ["not-a-list", { case_ids: "x" }],
+    ["empty-id", { case_ids: [""] }],
+    ["repeated", { case_ids: ["a", "a"] }],
+  ]) {
+    const file = path.join(directory, `${name}.json`);
+    writeFileSync(file, JSON.stringify(body));
+    assert.throws(() => loadDiagnostic(file), /case_ids/, name);
+  }
+});
+
+test("--dry-run shows the subscore's case count and never an id", () => {
+  const result = cli("--dry-run");
+  assert.equal(result.status, 0, result.stderr);
+  const ids = loadDiagnostic();
+  const blind = new Set((loadBlind() ?? []).map((testCase) => testCase.id));
+  const found = ids.filter((id) => blind.has(id)).length;
+  assert.match(
+    result.stdout,
+    new RegExp(
+      `State-diagnostic subscore: ${ids.length} cases listed, ${found} in the blind corpus`,
+    ),
+  );
+  const leaked = ids.filter(
+    (id) => result.stdout.includes(id) || result.stderr.includes(id),
+  ).length;
+  assert.equal(leaked, 0, "the dry run printed a state-diagnostic id");
 });

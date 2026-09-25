@@ -17,6 +17,15 @@
 //     refused by the per-batch call cap also aborts with `arm_error`; Godot
 //     then writes done.json {reason: aborted} and the outcome is `aborted`.
 //     A replaying jev arm with no cached verdict aborts with `replay_miss`.
+//   - A jev verdict from a model other than the batch's anchor aborts with
+//     cause `model_mismatch`, which voids the batch: the instrument changed
+//     under it. The trial ends `aborted` and the batch stops there.
+// A live jev batch runs preflight.mjs's controls first, through the batch's
+// own decideFn. A failed preflight returns exit 6 before any run record or
+// Godot process exists. The preflight's one resolved model anchors the batch:
+// a cached verdict from another model is a miss, asked again live and counted
+// in config.model_mismatches. A replay makes no call, so it runs no preflight
+// and is anchored on its first verdict's model instead.
 // abort.json carries only the protocol reason. The trial entry in the run
 // record adds abort.cause (ABORT_EFFECT's keys), which decides what the abort
 // means for the batch and feeds api_error_rate. trial_abort_rate counts every
@@ -38,9 +47,15 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import {
+  decide,
   instrumentIdentity,
   loadQuestionSet,
 } from "../../tools/jev-player/decide.mjs";
+import {
+  beforeJevBatch,
+  loadControls,
+  PREFLIGHT_EXIT,
+} from "../../tools/jev-player/preflight.mjs";
 import {
   ARMS,
   fileName,
@@ -60,7 +75,11 @@ import { METRICS } from "./metrics/index.mjs";
 import { EXIT } from "./metrics/status.mjs";
 import { createRun } from "./record.mjs";
 import { wilson } from "./stats.mjs";
-import { openVerdictCache, VERDICT_CACHE_ROOT } from "./verdict-cache.mjs";
+import {
+  anchoredCache,
+  openVerdictCache,
+  VERDICT_CACHE_ROOT,
+} from "./verdict-cache.mjs";
 
 export const FAKE_GODOT = fileURLToPath(
   new URL("./fake-godot.mjs", import.meta.url),
@@ -83,9 +102,11 @@ export const TRIAL_SEED_STRIDE = 1000;
 // What each Node-side abort cause says about the batch. An API failure or the
 // call cap says nothing about the game, so it can only leave the batch
 // inconclusive; a broken arm or answer, or a replay that cannot reproduce, is
-// a failure of the run itself.
+// a failure of the run itself. A verdict from another model means the
+// instrument moved, so it voids the batch. A cause not listed here fails.
 const ABORT_EFFECT = {
   node_invalid: "invalid",
+  model_mismatch: "invalid",
   arm_throw: "fail",
   intent_invalid: "fail",
   replay_miss: "fail",
@@ -101,8 +122,19 @@ const RESULT_ORDER = ["invalid", "fail", "inconclusive", "pass"];
 function trialEffect({ outcome, abort }) {
   if (outcome === "complete") return "pass";
   if (outcome === "invalid") return "invalid";
-  if (outcome === "aborted" && abort !== null) return ABORT_EFFECT[abort.cause];
+  if (
+    outcome === "aborted" &&
+    abort !== null &&
+    Object.hasOwn(ABORT_EFFECT, abort.cause ?? "")
+  ) {
+    return ABORT_EFFECT[abort.cause];
+  }
   return "fail";
+}
+
+// runBatch's argument errors; the CLI exits EXIT.usage on these alone.
+export class UsageError extends Error {
+  name = "UsageError";
 }
 
 export function batchResult(trials) {
@@ -194,6 +226,7 @@ async function runTrial({
   pollMs,
   budget,
   run,
+  anchor,
 }) {
   await mkdir(io, { recursive: true });
   const entry = {
@@ -322,7 +355,19 @@ async function runTrial({
               offered,
               jev: state.jev,
             });
-            if (choice.jev !== undefined) run.jev(choice.jev);
+            if (choice.jev !== undefined) {
+              const model = choice.jev.model ?? null;
+              const expected = anchor.model ?? run.provenance.jev.model;
+              if (expected !== null && model !== expected) {
+                abort = {
+                  reason: "arm_error",
+                  cause: "model_mismatch",
+                  message: `${armName} arm: a ${choice.source} verdict came from ${model}, but the batch is anchored on ${expected}`,
+                };
+                break;
+              }
+              run.jev(choice.jev);
+            }
           } catch (error) {
             abort = {
               reason: "arm_error",
@@ -447,41 +492,90 @@ export async function runBatch({
   decideFn,
   verdictCache = VERDICT_CACHE_ROOT,
   replay = false,
+  preflight = beforeJevBatch,
+  controls,
 } = {}) {
   if (!Object.hasOwn(ARMS, armName ?? "")) {
-    throw new Error(
+    throw new UsageError(
       `unknown arm "${armName}"; one of ${Object.keys(ARMS).join(", ")}`,
     );
   }
   if (!slug.test(scenario ?? "")) {
-    throw new Error(`scenario "${scenario}" is not a slug`);
+    throw new UsageError(`scenario "${scenario}" is not a slug`);
   }
   if (!Number.isInteger(trials) || trials < 1 || trials > TRIAL_SEED_STRIDE) {
-    throw new Error(
+    throw new UsageError(
       `trials must be a whole number from 1 to ${TRIAL_SEED_STRIDE}, got ${trials}`,
     );
   }
   if (!Number.isInteger(callCap) || callCap < 1) {
-    throw new Error(`the call cap must be a whole number >= 1, got ${callCap}`);
+    throw new UsageError(
+      `the call cap must be a whole number >= 1, got ${callCap}`,
+    );
   }
   if (!Number.isSafeInteger(seed * TRIAL_SEED_STRIDE + trials)) {
-    throw new Error(`seed must be a whole number, got ${seed}`);
+    throw new UsageError(`seed must be a whole number, got ${seed}`);
   }
   if (!(watchdogFloorMs > 0)) {
-    throw new Error(`watchdogFloorMs must be > 0, got ${watchdogFloorMs}`);
+    throw new UsageError(`watchdogFloorMs must be > 0, got ${watchdogFloorMs}`);
   }
   if (replay && armName !== "jev") {
-    throw new Error(`replay needs the jev arm, not ${armName}`);
+    throw new UsageError(`replay needs the jev arm, not ${armName}`);
   }
   let armOptions = {};
   let armInstrument = null;
+  const anchor = { model: null, mismatches: 0 };
+  let preflightResult = null;
+  let preflightSummary = null;
   if (armName === "jev") {
     const questions = loadQuestionSet();
     armInstrument = instrument ?? instrumentIdentity(questions);
+    let cache = openVerdictCache(verdictCache);
+    if (!replay) {
+      const checked = await preflight({
+        questions,
+        decideFn: decideFn ?? decide,
+        controls: controls ?? loadControls(),
+        start: async () => true,
+      });
+      preflightResult = checked.controls;
+      const models = preflightResult.resolved_models ?? [];
+      preflightSummary = {
+        passed: checked.exit === 0 && checked.started === true,
+        controls_version: preflightResult.controls_version ?? null,
+        controls_sha: preflightResult.controls_sha ?? null,
+        calls: preflightResult.calls ?? null,
+        resolved_models: models,
+      };
+      let reason = null;
+      if (!preflightSummary.passed) {
+        const failed = (preflightResult.controls ?? [])
+          .filter((control) => !control.passed)
+          .map((control) => `${control.id}: ${control.reason}`);
+        reason = `the preflight failed: ${failed.join("; ") || "no control passed"}`;
+      } else if (models.length !== 1 || typeof models[0] !== "string") {
+        const count =
+          models.length === 1 ? "1 model" : `${models.length} models`;
+        reason = `the preflight resolved ${count} (${models.join(", ")}), so the batch has no single model to anchor on`;
+      }
+      if (reason !== null) {
+        return {
+          exit: PREFLIGHT_EXIT,
+          reason,
+          preflight: preflightResult,
+          record: null,
+          trials: [],
+          directory: null,
+          id: null,
+        };
+      }
+      anchor.model = models[0];
+      cache = anchoredCache(cache, anchor);
+    }
     armOptions = {
       questions,
       instrument: armInstrument,
-      cache: openVerdictCache(verdictCache),
+      cache,
       replay,
       ...(decideFn === undefined ? {} : { decideFn }),
     };
@@ -498,7 +592,13 @@ export async function runBatch({
     watchdog_floor_ms: watchdogFloorMs,
     launcher: launch.label ?? "custom",
     ...(armName === "jev"
-      ? { replay, verdict_cache: armOptions.cache.directory }
+      ? {
+          replay,
+          verdict_cache: armOptions.cache.directory,
+          preflight: preflightSummary,
+          anchor_model: anchor.model,
+          model_mismatches: 0,
+        }
       : {}),
     arm_calls: 0,
     capped: false,
@@ -534,13 +634,18 @@ export async function runBatch({
       pollMs,
       budget,
       run,
+      anchor,
     });
     entry.io = path.relative(run.directory, io);
     config.trials.push(entry);
-    if (budget.capped) break;
+    if (budget.capped || entry.abort?.cause === "model_mismatch") break;
   }
   config.arm_calls = budget.used;
   config.capped = budget.capped;
+  if (armName === "jev") {
+    config.anchor_model = anchor.model ?? run.provenance.jev.model;
+    config.model_mismatches = anchor.mismatches;
+  }
 
   const n = config.trials.length;
   const ended = config.trials.filter(
@@ -579,7 +684,23 @@ export async function runBatch({
     }
     if (replay) {
       run.limit(
-        `Replay: every verdict came from ${config.verdict_cache}; no Jev call was made.`,
+        `Replay: every verdict came from ${config.verdict_cache}; no Jev call was made, so no preflight ran and the batch is anchored on its first verdict's model.`,
+      );
+    } else {
+      run.limit(
+        `Preflight: controls ${preflightSummary.controls_version} passed in ${preflightSummary.calls} live calls; the batch is anchored on ${anchor.model}.`,
+      );
+    }
+    if (anchor.mismatches > 0) {
+      run.limit(
+        `${anchor.mismatches} cached verdicts came from another model than the anchor ${anchor.model}; each was asked again live.`,
+      );
+    }
+    if (
+      config.trials.some((entry) => entry.abort?.cause === "model_mismatch")
+    ) {
+      run.limit(
+        "A verdict came from another model than the batch's anchor, so the instrument changed mid-batch; the batch stopped there and is void.",
       );
     }
   }
@@ -596,6 +717,9 @@ export async function runBatch({
   }
   const record = await run.finish({ result: batchResult(config.trials) });
   return {
+    exit: EXIT[record.result],
+    reason: null,
+    preflight: preflightResult,
     record,
     trials: config.trials,
     directory: run.directory,
@@ -680,17 +804,35 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     replay = false,
     launchFlags,
   } = options;
-  const { record, trials: done } = await runBatch({
-    scenario,
-    arm,
-    trials,
-    seed,
-    callCap,
-    launch: fakeGodot(launchFlags),
-    runs: root === undefined ? {} : { root },
-    replay,
-    ...(cache === undefined ? {} : { verdictCache: cache }),
-  });
+  let batch;
+  try {
+    batch = await runBatch({
+      scenario,
+      arm,
+      trials,
+      seed,
+      callCap,
+      launch: fakeGodot(launchFlags),
+      runs: root === undefined ? {} : { root },
+      replay,
+      ...(cache === undefined ? {} : { verdictCache: cache }),
+    });
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    console.error(error.message);
+    process.exit(EXIT.usage);
+  }
+  if (batch.record === null) {
+    console.log(`preflight refused the batch: ${batch.reason}`);
+    console.log("No trial ran and no run record was written.");
+    process.exit(batch.exit);
+  }
+  const { record, trials: done } = batch;
+  if (batch.preflight !== null) {
+    console.log(
+      `preflight: ${batch.preflight.calls} live calls; anchored on ${record.config.anchor_model}`,
+    );
+  }
   for (const entry of done) {
     const note =
       entry.abort === null
@@ -707,7 +849,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (arm === "jev") {
     const { model, calls, cache_hits: hits } = record.provenance.jev;
     console.log(
-      `jev: ${calls} live calls, ${hits} cache hits, model ${model}${replay ? ", replay" : ""}`,
+      `jev: ${calls} live calls, ${hits} cache hits, model ${model}, ${record.config.model_mismatches} stale hits asked again${replay ? ", replay" : ""}`,
     );
   }
   console.log(`run record: ${record.id}`);

@@ -31,6 +31,16 @@ export const REPORT_FILE = path.join(
   "corpus-score.json",
 );
 
+// The blind cases a text-only picker with game priors cannot answer, chosen by
+// the coordinator. The subscore over them is reported as counts only; the ids
+// never reach the output.
+export const DIAGNOSTIC_FILE = path.join(
+  root,
+  "artifacts",
+  "jev-lab-2026-09-25",
+  "blind-diagnostic.json",
+);
+
 export const USAGE = `usage: node tools/jev-player/score.mjs [--dry-run | --help]
   (no flag)   score both corpora against live Jev, one call per case, and
               write ${path.relative(root, REPORT_FILE)}
@@ -156,6 +166,23 @@ export function loadBlind(file = path.join(here, "corpus-blind.json")) {
   return JSON.parse(readFileSync(file, "utf8")).cases;
 }
 
+export function loadDiagnostic(file = DIAGNOSTIC_FILE) {
+  if (!existsSync(file)) {
+    return null;
+  }
+  const ids = JSON.parse(readFileSync(file, "utf8")).case_ids;
+  if (
+    !Array.isArray(ids) ||
+    !ids.every((id) => typeof id === "string" && id !== "") ||
+    new Set(ids).size !== ids.length
+  ) {
+    throw new Error(
+      `${path.relative(root, file)}: case_ids must be a list of distinct non-empty strings`,
+    );
+  }
+  return ids;
+}
+
 // outcome separates what the model chose from what the confidence floor did to
 // it: a floor-miss is a raw choice the labels accept that the floor replaced,
 // and a floor-rescue is a pass only because the floor replaced a wrong choice.
@@ -230,6 +257,32 @@ export function summarize(records) {
   };
 }
 
+// The blind score over the listed cases alone, as numbers: `cases` is how many
+// listed ids were scored, `listed` how many the file names.
+export function subscore(records, ids) {
+  const listed = new Set(ids);
+  const picked = records.filter((record) => listed.has(record.id));
+  let earned = 0;
+  let possible = 0;
+  for (const record of picked) {
+    possible += WEIGHT[record.severity];
+    if (record.passed) {
+      earned += WEIGHT[record.severity];
+    }
+  }
+  return {
+    cases: picked.length,
+    listed: listed.size,
+    earned,
+    possible,
+    weighted: possible === 0 ? null : earned / possible,
+    plainPass: picked.filter((record) => record.passed).length,
+    severeMisses: picked.filter(
+      (record) => !record.passed && record.severity === "severe",
+    ).length,
+  };
+}
+
 // Exit codes follow the lab gate: 0 pass, 1 fail, 3 inconclusive.
 export function gateVerdict(blindSummary) {
   if (blindSummary === null) {
@@ -250,13 +303,25 @@ export function gateVerdict(blindSummary) {
   return { exit: 0, reason: "Blind corpus passes." };
 }
 
-export function buildReport({ authored, blind, instrument, when }) {
+export function buildReport({
+  authored,
+  blind,
+  instrument,
+  when,
+  diagnostic = null,
+}) {
   const section = (records, gating) => ({
     gating,
     summary: summarize(records),
     results: records,
   });
-  const blindSection = blind === null ? null : section(blind, true);
+  const blindSection =
+    blind === null
+      ? null
+      : {
+          ...section(blind, true),
+          diagnostic: diagnostic === null ? null : subscore(blind, diagnostic),
+        };
   return {
     when,
     instrument,
@@ -292,6 +357,14 @@ function printSection(name, section) {
   console.log(
     `Latency median ${s.latencyMedianMs} ms, max ${s.latencyMaxMs} ms; mean ${s.meanInputTokens} input tokens`,
   );
+  const d = section.diagnostic;
+  if (d !== undefined && d !== null) {
+    const percent =
+      d.weighted === null ? "n/a" : `${(d.weighted * 100).toFixed(1)}%`;
+    console.log(
+      `State-diagnostic subscore weighted ${d.earned}/${d.possible} (${percent}), plain ${d.plainPass}/${d.cases}; severe misses ${d.severeMisses}; ${d.cases} of ${d.listed} listed cases scored`,
+    );
+  }
 }
 
 async function scoreAll(cases, questions) {
@@ -325,6 +398,27 @@ function dryRun(questions) {
       ? "Blind corpus: absent."
       : `Blind corpus: ${blind.length} cases, ${count("blind")} faults`,
   );
+  let diagnostic = null;
+  try {
+    diagnostic = loadDiagnostic();
+  } catch (error) {
+    faults.push({ path: "diagnostic", message: error.message });
+  }
+  if (diagnostic === null) {
+    console.log("State-diagnostic subscore: no case list.");
+  } else {
+    const scored = new Set((blind ?? []).map((testCase) => testCase.id));
+    const found = diagnostic.filter((id) => scored.has(id)).length;
+    console.log(
+      `State-diagnostic subscore: ${diagnostic.length} cases listed, ${found} in the blind corpus`,
+    );
+    if (found < diagnostic.length) {
+      faults.push({
+        path: "diagnostic",
+        message: `${diagnostic.length - found} listed cases are not in the blind corpus`,
+      });
+    }
+  }
   for (const fault of faults) console.log(`  ${fault.path} ${fault.message}`);
   console.log("Dry run: no Jev call was made and no report was written.");
   return faults.length === 0 ? 0 : 1;
@@ -352,11 +446,13 @@ async function main(argv) {
     process.exit(dryRun(questions));
   }
   const blindCases = loadBlind();
+  const diagnostic = blindCases === null ? null : loadDiagnostic();
   const report = buildReport({
     when: new Date().toISOString(),
     instrument,
     authored: await scoreAll(loadAuthored(), questions),
     blind: blindCases === null ? null : await scoreAll(blindCases, questions),
+    diagnostic,
   });
 
   printSection("Authored", report.authored);
