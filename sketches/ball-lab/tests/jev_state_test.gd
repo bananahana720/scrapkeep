@@ -304,6 +304,15 @@ func _check_placements() -> void:
 		_report("place", ok, "%s: spawn %s, after %d ticks at (%.1f, %.1f, %.1f), %.2f m above the field, %s, objective %s %d m"
 			% [scenario["label"], _fmt(scenario["spawn"]), PLACE_TICKS, at.x, at.y, at.z, clearance, tracker.result(),
 			snap["jev"]["state"]["objective"]["kind"], snap["jev"]["state"]["objective"]["distance_m"]])
+		var spots: Array = scenario["dummies"]
+		var in_scene: int = lab.get_children().filter(func(child): return child.is_in_group("enemy")).size()
+		var expect: int = spots.size() if not spots.is_empty() else lab.field.enemy_spawns.size()
+		var dummies_ok: bool = lab.enemies.size() == expect and in_scene == expect
+		for i in spots.size():
+			var flat := Vector2(lab.enemies[i].global_position.x, lab.enemies[i].global_position.z)
+			dummies_ok = dummies_ok and flat.distance_to(spots[i]) <= 2.5
+		_report("dummies", dummies_ok, "%s: %d dummies in the lab and %d in the scene, %d expected" % [scenario["label"],
+			lab.enemies.size(), in_scene, expect])
 		run["view"].detach()
 		run["holder"]["viewport"].queue_free()
 
@@ -389,7 +398,7 @@ func _finish() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-# DoD 3: seven scenarios, each with spawn, objective, limit and a working predicate.
+# DoD 3: eight scenarios, each with spawn, objective, limit and a working predicate.
 func _check_scenarios() -> void:
 	var scenarios := Scenarios.all()
 	var ids := []
@@ -402,7 +411,7 @@ func _check_scenarios() -> void:
 			and scenario["success"] is Callable and scenario["success"].is_valid()
 		_report("scenario", ok, "%s: spawn %s, objective %s, limit %.0f s" % [scenario["label"], _fmt(spawn),
 			scenario["objective"]["kind"], scenario["time_limit_s"]])
-	_report("ids", ids == Scenarios.IDS and ids.size() == 7, "scenario ids %s" % ", ".join(ids))
+	_report("ids", ids == Scenarios.IDS and ids.size() == 8, "scenario ids %s" % ", ".join(ids))
 
 	var cases := {
 		"downhill-run": [{"reached": true}],
@@ -411,6 +420,7 @@ func _check_scenarios() -> void:
 		"kicker-gap": [{"on_bench": true}],
 		"dummy-knock": [{"knocked": [0, 1, 2]}, {"knocked": [0, 4]}],
 		"pillar-weave": [{"gates": 4}, {"gates": 3}],
+		"pillar-sprint": [{"reached": true}, {"gates": 4}],
 		"soak": [{"tick": 10800}, {"tick": 10800, "anomalies": [{"tick": 5, "what": "tunnel"}]}],
 	}
 	for scenario in scenarios:
@@ -451,7 +461,7 @@ func _check_scenarios() -> void:
 			jitter_ok = jitter_ok and at.is_finite() and off <= radius + 0.001 and at == Scenarios.spawn_for(scenario, trial_seed)
 			moved += 1 if off > 0.01 else 0
 		jitter_ok = jitter_ok and moved == 200
-	_report("jitter", jitter_ok and jittered == 4, "%d scenarios jitter their spawn by seed within %.0f m; the rest ignore the seed" % [jittered, Scenarios.JITTER_M])
+	_report("jitter", jitter_ok and jittered == 5, "%d scenarios jitter their spawn by seed within %.0f m; the rest ignore the seed" % [jittered, Scenarios.JITTER_M])
 
 	var crossing := Scenarios.Geo.crosses(Vector2(0, -1), Vector2(0, 1), Vector2(-1, 0), Vector2(1, 0)) \
 		and not Scenarios.Geo.crosses(Vector2(0, 1), Vector2(0, 2), Vector2(-1, 0), Vector2(1, 0))

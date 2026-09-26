@@ -18,7 +18,8 @@ extends RefCounted
 const Field := preload("res://src/field.gd")
 const Tuning := preload("res://src/tuning.gd")
 
-const IDS := ["downhill-run", "run-to-pad", "bench-climb", "kicker-gap", "dummy-knock", "pillar-weave", "soak"]
+const IDS := ["downhill-run", "run-to-pad", "bench-climb", "kicker-gap", "dummy-knock", "pillar-weave",
+	"pillar-sprint", "soak"]
 
 const KICKER_SPEED_MIN := 14.0
 const KICKER_SPEED_MAX := 28.0
@@ -37,6 +38,13 @@ const SERVICE_RAMP := Vector3(50.0, 4.6, 76.0)
 const SERVICE_RAMP_HALF := Vector2(4.5, 19.0)
 # The weave runs through the zigzag row A-B-C-D-E: one gate between each neighbour.
 const WEAVE := [0, 1, 2, 3, 4]
+# pillar-sprint runs from south of the steep kicker, past pillar E, to open ground 58 m
+# beyond it. Its line clears every pillar by 8.7 m, more than pillar, ball and jitter
+# radii together. Only these two dummies stand in its lab, each 16-18 m off the line,
+# so stomp and ram are offered on the way without a dummy blocking the line.
+const SPRINT_START := Vector2(40.0, 30.0)
+const SPRINT_END := Vector2(106.0, 40.0)
+const SPRINT_DUMMIES := [Vector2(67.0, 52.0), Vector2(92.0, 22.0)]
 
 # Anomalies, as PROTOCOL.md's events table defines them.
 const OVERSPEED := 80.0
@@ -87,6 +95,13 @@ static func make(id: String) -> Dictionary:
 				func(p: Dictionary) -> bool: return p["gates"] >= WEAVE.size() - 1)
 			weave["dynamic_objective"] = true
 			return _jittered(weave)
+		"pillar-sprint":
+			# The 30 s limit is initial, not calibrated.
+			var sprint := _scenario(id, Field.drop_point(SPRINT_START.x, SPRINT_START.y), Vector3.ZERO,
+				"waypoint", Field.drop_point(SPRINT_END.x, SPRINT_END.y, Tuning.RADIUS), 8.0, 30.0,
+				func(p: Dictionary) -> bool: return p["reached"])
+			sprint["dummies"] = SPRINT_DUMMIES
+			return _jittered(sprint)
 		"soak":
 			# KRIs only: survive the whole limit on the random arm with no anomaly.
 			var soak := _scenario(id, Field.drop_point(Field.RUN_X, -100.0, 2.5), Vector3.ZERO,
@@ -132,6 +147,8 @@ static func _scenario(id: String, spawn: Vector3, velocity: Vector3, kind: Strin
 		"params": {},
 		"dynamic_objective": false,
 		"jitter_m": 0.0,
+		# Empty keeps the lab's own dummies; otherwise the dummies' xz spots.
+		"dummies": [],
 		"success": success,
 	}
 
@@ -141,13 +158,23 @@ static func _jittered(scenario: Dictionary) -> Dictionary:
 	return scenario
 
 
-# Puts the ball at the scenario's spawn with its start velocity. This is harness
-# setup, the only gameplay write in the Jev lab files; jev_state.gd never writes.
-# `seed` >= 0 applies the scenario's jitter; tests place at the nominal spawn.
+# Puts the ball at the scenario's spawn with its start velocity, and a scenario that
+# names its dummies keeps only those, at its spots, removing the rest before the first
+# tick. This is harness setup, the only gameplay write in the Jev lab files;
+# jev_state.gd never writes. `seed` >= 0 applies the scenario's jitter; tests place at
+# the nominal spawn.
 static func place(lab, scenario: Dictionary, seed := -1) -> void:
 	lab.player.reset_to(spawn_for(scenario, seed))
 	if scenario["velocity"] != Vector3.ZERO:
 		lab.player.active_body().set_velocity_now(scenario["velocity"])
+	var spots: Array = scenario.get("dummies", [])
+	if spots.is_empty():
+		return
+	for i in range(lab.enemies.size() - 1, spots.size() - 1, -1):
+		lab.enemies[i].queue_free()
+	lab.enemies.resize(spots.size())
+	for i in spots.size():
+		lab.enemies[i].global_position = Field.drop_point(spots[i].x, spots[i].y) + Vector3.UP * 1.0
 
 
 static func spawn_for(scenario: Dictionary, seed := -1) -> Vector3:
