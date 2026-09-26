@@ -4,7 +4,7 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 ## Waiting for play
 
-Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). None has been played. Each lives on its own branch and worktree and merges to `main` only after Andrew plays it.
+Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played the mobility kit (entry 3) and Spillway Drop (entry 4); Cable Bench is in play. The merge waits for all three verdicts.
 
 | Sketch | Branch and head | Question it answers |
 | --- | --- | --- |
@@ -35,6 +35,29 @@ wrapper at a different checkout. The long form still works:
 If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/scrapkeep-worktrees/<name> proto/<name>`.
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
+
+## 4. Spillway Drop, first human play
+
+- **Date.** 26 September 2026, Phoenix time. Dictated, transcribed as spoken.
+- **Build.** `sketches/spillway-drop/` on `proto/spillway-drop` at `af89c89`, launched with `scrapkeep spillway`. Unchanged since the EV-0482 gate.
+- **Verdict.** "Spillway is great. I love random events or uh, environmental changing events. And I like how they can like ebb and flow or happen in different areas or can be unique to the map. These are like mechanics that are more than just gimmicks." Also: "they're exciting when you have uh, events happening with maybe also a mini boss that's just spawned or uh, is over in a a randomly spawned location uh, when you you know discover something" and "it just makes the world alive you know and chaotic I love I love the chaos and then having the ability for the player to weave in and out of the chaos, whether that's environmental or enemy or weather or special event." And: "I like how the player can use them to their advantage as well. Like, let's say if there's water, then a person can freeze it and, and, and have that mechanic or If there's I don't know lava then you could use water to to to make platforms for yourself if you had a character or the ability or an item to do that".
+- **Decided by play.** Environmental events (the basin flood) stay as a core stage mechanic, not a gimmick.
+- **Direction named.** Events that ebb and flow, vary by area and are unique to each map, layered with enemy spawns such as a miniboss at a random location and weather or special events. The player weaves through the chaos and turns it to advantage: abilities and items interact with the event's material (freeze water into a surface, cool lava into platforms).
+- **Not answered.** The sketch's own question, whether shelves, chutes and the bypass make route choice, and the shelf heights and chute pitch. Bot finding S1 (stomps cost HP) was not commented on.
+- **Next action.** Card the event layer: an event director that composes stage events with enemy spawns, and an ability-meets-material interaction on the flood as the first test. Ask the route-choice question at the next Spillway play.
+
+## 3. Mobility kit, first human play
+
+- **Date.** 26 September 2026, Phoenix time. Dictated, transcribed as spoken.
+- **Build.** `sketches/ball-lab/` on `proto/mobility-kit` at `1d11db6`, launched with `scrapkeep mobility`. Unchanged since the EV-0482 gate.
+- **Verdict.** "the gameplay feels great. I still like the rigidity physics because the kinematics is just really shaky in terms of my screen." Grapple and reel: "the grapple's great. The reel isn't as good in terms of that I It's not intuitive in terms of the way it reels. I think it kicks in the reel after leaving the ground or I guess approaching the grapple hook". Mag-cling: "The mag cling was confusing" and "a cling could be like For to think about it from the perspective of the world, it could be like someone sticking in a pylon into the wall so they can mount themselves. And it could be a form of like mounting your ball onto a surface to like start shooting or doing abilities or getting a breather from being surrounded." Glide, momentum and slam: "The gliding is really fun. The speed and momentum is really fun. The slam is really fun. I would want the slam to um, anchor the character for a second. So to have a little bit more weight to the slam and not have the ability to just slam onto the ground, but then just continue rolling off uh, like normal."
+- **Decided by play.** Rigid physics confirmed again; kinematic mode reads as screen shake. Keep grapple, glide and slam. Rework the reel and mag-cling.
+- **Requests.**
+  - Reel: make it read and respond predictably; today it seems to engage only once the ball leaves the ground or nears the hook.
+  - Mag-cling becomes a **pylon mount**: grapple to a surface, drive a pylon in and mount the ball there, as a firing or ability platform and a breather when surrounded.
+  - Slam: anchor the ball for a beat on landing, for weight, without stunning the player afterwards.
+- **Not answered.** Air dash, and whether boost and air dash sharing one 1.1 s cooldown starves the dash. Class versus item for each augment.
+- **Next action.** Sketch the slam anchor and a reel rework on the mobility kit, and prototype the pylon mount as the replacement for mag-cling.
 
 ## 2. Ball lab, first human play
 
