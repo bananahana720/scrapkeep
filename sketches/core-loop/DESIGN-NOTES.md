@@ -37,17 +37,56 @@ Open question for review: the flood's drag in the basin slows a ball that stays 
 3. **Fabricators are hoops you roll through.** They stand across the scrap lines, away from the beacon and the spawn: 2, 3 and 4 hoops in stages 1 to 3. There is no collider. Roll through with enough scrap and the hoop spends it and grants the part. Short of scrap, nothing happens, and the hoop reads "need N scrap (have M)". After a sale the hoop restocks with a new part 2.5 s later. The build test measured 19.34 m/s before a paid pass and 19.86 m/s after, and 18.79 then 18.54 m/s through an unpaid one. Serves 1 ("fabricators are drive-through").
 4. **Price depends only on the part's tier and how many parts you hold.** It is 10 scrap times 1, 1.6 or 2.6 by tier, times 1.15 for each part held. A retry restores the part list, so it restores prices too. Serves quick restart (2) and fast without debt (7).
 5. **A gate says what it gives while you approach.** It shows the part name large, its effect in one line, and "* completes Storm Lattice *" when taking it would complete a synergy. Rarity shows twice: in the arch's colour and in the topper's shape (a bar for common, a diamond for rare, a star for epic). The offer records carry `name`, `text`, `rarity`, `tier` and `synergy` for presentation. Serves form mirrors function and 1 ("reward choices are gates you roll through").
-6. **Offers climb in tier across the run.** The test measured a mean offered tier of 1.25, 1.59 and 1.97 in stages 1 to 3. When the run is one part short of a synergy, half the time one offer slot shows that part. Serves 4 (Isaac-style "one more piece").
-7. **The scaling curve runs from modest to absurd on purpose.** Tier 1 gives +10 to 15%, tier 2 +25% and tier 3 +50%. Copies multiply, and pattern levels add. The build sheet's output estimate puts one Hot Rivets at 1.12x a bare weapon and a ten-part late build at about 324x. That number is a model for shaping the curve. What is actually drawn and how hard it hits is combat's (A), under the visual caps. Serves 4 ("the ability to scale insanely").
-8. **Synergies are derived, never held.** Storm Lattice (Cross Split and Chain Arc) makes every split bolt chain, adds a chain level and +25% damage, and puts a gyroscope cage of arc rings on the ball. Thermal Shock (Frost Vane and Arc Coil) makes the slam's arc shatter nearby ice into a shard nova at double damage, then refreezes the water around you. It puts a frosted coil ring on the ball. A retry that drops a part drops its synergy. Serves 4 and form mirrors function.
+6. **Offers climb in tier across the run.** (Superseded by 23: tier now follows bonus cores, not the stage.) The test measured a mean offered tier of 1.25, 1.59 and 1.97 in stages 1 to 3. When the run is one part short of a synergy, half the time one offer slot shows that part. Serves 4 (Isaac-style "one more piece").
+7. **The scaling curve runs from modest to absurd on purpose.** Tier 1 gives +10 to 15%, tier 2 +25% and tier 3 +50%. Copies multiply, and pattern levels add. The build sheet's output estimate puts one Hot Rivets at 1.12x a bare weapon and a ten-part late build at about 324x. With punch added in phase 1, the same builds measure 1.44x and about 1,444x. That number is a model for shaping the curve. What is actually drawn and how hard it hits is combat's (A), under the visual caps. Serves 4 ("the ability to scale insanely").
+8. **Synergies are derived, never held.** (Superseded in part by 17 and 18: synergies are now tag pairs, and Storm Lattice lost its +25%.) Storm Lattice (Cross Split and Chain Arc) makes every split bolt chain, adds a chain level and +25% damage, and puts a gyroscope cage of arc rings on the ball. Thermal Shock (Frost Vane and Arc Coil) makes the slam's arc shatter nearby ice into a shard nova at double damage, then refreezes the water around you. It puts a frosted coil ring on the ball. A retry that drops a part drops its synergy. Serves 4 and form mirrors function.
 9. **Frost on water makes real ground.** Ice is a StaticBody3D on the world layer, so the ball, the grapple and the camera all treat it as terrain. It has the same grip as the ground, so there is no handling penalty (BIBLE line 481). It lasts 9 s and blinks for its last 1.5 s, so losing the ground is never a surprise. The test rolled a ball over 3 m of water: with no ice it sank to the ground, and on ice it stayed at the surface and kept 12.4 m/s. Serves 1 ("nothing ... in a way they didn't see coming") and TADR-009.
 10. **Ice never forms inside the ball.** Where the ball already sits below the new surface, the slab forms just under it. The test measured 0.000 m of displacement. Serves 1: creating a surface never pops or blocks the ball.
 11. **Frost on ice does nothing.** The table has no frost x ice row, so slabs never stack and land about one radius apart in an overlapping road. Serves TADR-009 (default-deny).
 12. **Electrified water hurts enemies only.** The arc is the player's own weapon, so it never costs the player HP or momentum. Serves 8 ("feel like a badass") and 1.
 13. **Dash and slam elements resolve in build's own physics step.** The `dashed` and `slammed` handlers only queue them. The frost trail lasts 0.7 s after a Frost Vane dash, with a visible frost puff every third tick, even over dry ground, so the part always shows it is working. Serves TADR-008 (a signal applies nothing) and form mirrors function.
 14. **A won event pays out in the same frame.** The milestone handler grants the part at once, so the milestone stinger and "New part" land as one beat. This is the one place build mutates inside a handler. Serves 3 ("win great rewards like key milestone rewards").
-15. **Events award named milestone parts.** Surge Run awards Rime Heart: you rode the flood, now you freeze it. Hold the Relay awards Tempest Core. Any other event awards the first milestone part the run does not hold yet. Gates and fabricators never offer milestone parts, and class mods (Pylon Capacitor, Runner Overclock) are offered only to their class. Serves 3 and 5.
+15. **Events award named milestone parts.** Surge Run awards Rime Heart: you rode the flood, now you freeze it. Hold the Relay awards Tempest Core. Any other event awards the first milestone part the run does not hold yet. Fabricators and vaults never offer milestone parts, and a gate offers them only when overcharged by two or more bonus cores (23). Class mods (Pylon Capacitor, Runner Overclock) are offered only to their class. Serves 3 and 5.
 16. **Build owns the tuning mods.** Weapon numbers travel as tuning mods (`weapon_damage`, `weapon_rate`, `weapon_range`, `turret_damage`), so combat reads them with `tuning.mod(key)` and needs no spine change. Pattern levels, transformers and the element table are behind the build API; [src/build/SEAMS.md](src/build/SEAMS.md) lists every id. Serves 7.
+
+17. **Tags make synergies legible.** Every part carries one or two of nine tags: frost, arc, kinetic, split, spiral, chain, anchor, speed and mass. A named synergy is a tag pair. It goes live when two different held parts carry its two tags, so "something that splits" is a clue a player can act on. Serves Andrew's synergy request ("coherent sense for the player to be willing to experiment") and 4.
+18. **Eight named synergies, each a behaviour, never a bare number.**
+    - Storm Lattice (chain + split): split bolts chain.
+    - Thermal Shock (frost + arc): the slam's arc shatters ice at double damage, then refreezes.
+    - Lightning Rod (arc + mass): each pickup sparks an arc at the nearest enemy.
+    - Tesla Pylon (anchor + arc): arcs leap to two enemies while mounted or hooked.
+    - Wrecking Ball (speed + kinetic): rams send out a shockwave.
+    - Shrapnel Bloom (split + kinetic): kills burst into shrapnel.
+    - Glacier Hull (mass + frost): hard landings crack out a frost ring.
+    - Pinwheel (spiral + speed): at fast speed and above, a blade ring cuts the enemies you pass.
+
+    Storm Lattice lost its +25% damage. Serves 4 ("a synergy changes behaviour, never just a percentage").
+19. **Every synergy effect is capped.**
+    - Shrapnel: 6 bursts a second, 3 targets each.
+    - Lightning Rod: 6 zaps a second.
+    - Tesla Pylon: 2 targets every 0.5 s.
+    - Pinwheel: up to 4 targets, each cut at most once per 0.3 s.
+    - Zap lines on screen: at most 12.
+    - Rings: one per live synergy, 8 at most, each at its own tilt and in its first tag's colour.
+
+    The behaviour test sent 20 kills in one tick and measured 6 shrapnel strikes. Serves 4 (visual clarity is the balance rule).
+20. **Hint cards set goals.** An undiscovered card names one ingredient and gives a clue from the other's tag: "Chain Arc + something that splits." Offers carry a star line:
+    - "* completes Storm Lattice *" when taking the part brings a synergy live;
+    - "* ingredient: ??? *" when it is a card's named ingredient;
+    - "* ingredient: Storm Lattice *" once that synergy is discovered.
+
+    Serves Andrew's "goal setting and creating some excitement" and 1 (you choose by reading a gate at speed).
+21. **A synergy is discovered once per run.** Its first activation is the discovery. A retry that drops it and a later reactivation do not repeat it. From phase 2 the lasting record and the scrap burst belong to the codex registry. Serves 2 and 3.
+22. **Accidental finds come from the systems, unnamed.** Each element-table row and the spiral + chain tag rule has a plain description, logged the first time it fires in a run. Every slam carries kinetic, so slamming your own ice shatters it: the spec's "frost followed by kinetic". Serves Andrew's "accidental ones" and TADR-009.
+23. **Rarity follows source.**
+    - Gates: common or uncommon at 0 bonus cores, uncommon or rare at 1, rare or rare-plus at 2 or more. At 2 or more, a gate may offer a milestone part.
+    - Fabricators: uncommon.
+    - Vaults: rare.
+    - Won events: rare-plus.
+
+    Only common parts may be plain percentages, and every gate pair holds a part that raises punch or transforms a pattern. The measured mean offered tier is 1.43, 2.38 and 3.00 at 0, 1 and 2 cores. Serves the demo's one demand (punch against plating) and 4.
+24. **Labels state the demand.** An offer reads "{name}: {verb}. Punch +{n}", so what a part does for the plating check is on the arch. Serves form mirrors function.
+25. **The capped behaviours start full.** Their per-second budgets refill at each stage entry, so the first shrapnel burst of a stage is never swallowed; the behaviour test caught that bug. Serves 8 ("feel like a badass" from the first kill).
 
 Open for integration: in live play, frost and arc find water only once world answers `ctx.terrain.material_at(point)` or registers a water provider (SEAMS.md). Until then the element table works in the tests, and in play the dash shows only its frost puffs.
 

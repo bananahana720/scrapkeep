@@ -19,6 +19,8 @@ Parts scale weapon numbers through tuning mods, as they scale movement. Read the
 | `weapon_range` | multiplier on weapon range |
 | `turret_damage` | extra multiplier on weapon damage while mounted (Pylon Capacitor) |
 
+Parts also add flat per-hit weapon damage ("punch"), before the multipliers. Read it with `build.punch_bonus() -> float`. Gun punch is `(base per-hit + punch_bonus()) * tuning.mod("weapon_damage")`.
+
 Build owns every tuning mod: it calls `tuning.clear_mods()` and reapplies the whole build on each recompute. A module that sets its own mods loses them at the next recompute.
 
 ## Weapon-pattern transformers (combat implements these)
@@ -30,8 +32,10 @@ Pattern levels stack. Each copy of the part adds a level, and milestones and syn
 | `cross_split` | Cross Split | shots split into a cross; more arms or splits per level |
 | `spiral_wave` | Spiral Wave, Tempest Core (+2) | shots spiral outward in a wave; more bolts per level |
 | `chain_arc` | Chain Arc, Tempest Core (+1), Storm Lattice (+1) | a hit chains to a nearby enemy; one more jump per level |
-| `storm_lattice` (transformer) | synergy: Cross Split + Chain Arc | every split bolt chains once |
-| `thermal_shock` (transformer) | synergy: Frost Vane + Arc Coil | handled inside build; combat may ignore it |
+| `storm_lattice` (transformer) | named synergy: chain + split tags | every split bolt chains once |
+| `linked_spiral` (transformer) | unnamed rule: spiral + chain tags | the spiral's chain arcs link into a ring |
+
+Build runs every other synergy transformer itself: `thermal_shock`, `lightning_rod`, `tesla_pylon`, `wrecking_ball`, `shrapnel_bloom`, `glacier_hull` and `pinwheel`. Combat may ignore them. Their strikes go through `ctx.spawner.strike` with kind `arc` or `slam`.
 
 Read them with `build.pattern_level(id) -> int`, `build.patterns() -> Dictionary` and `build.has_transformer(id) -> bool`. Without the build reference, `ctx.run.parts.count("cross_split")` (and the same for `spiral_wave` and `chain_arc`) gives the base level. The part ids equal the pattern ids, but that fallback misses milestone and synergy levels.
 
@@ -42,13 +46,14 @@ Read them with `build.pattern_level(id) -> int`, `build.patterns() -> Dictionary
 - `build.resolve(element_id, material_id) -> Dictionary` is the pure table row, with nothing applied.
 - `build.register_material(material_id, provider: Callable)`: `provider(point: Vector3) -> Dictionary` returns `{"surface_y": float}` when the point is over that material, else `{}`.
 
-Elements are `frost` and `arc`. Materials are `water` and `ice` (ice is created by frost on water). The rows are:
+Elements are `frost`, `arc` and `kinetic`. Every slam carries kinetic. Materials are `water` and `ice` (ice is created by frost on water). The rows are:
 
 | Pair | Behaviour |
 | --- | --- |
 | frost x water | an ice slab: a StaticBody3D on physics layer 1, radius 3.6 m, lasting 9 s, blinking for its last 1.5 s |
 | arc x water | electrified water for 3 s: an enemy standing in it takes an 8-damage `arc` strike every 0.25 s |
 | arc x ice | shatter: nearby ice bursts and strikes enemies within 6.5 m for 26 (x2 with Thermal Shock) |
+| kinetic x ice | shatter: a slam on ice bursts it and strikes enemies within 5 m for 20 |
 
 Any other pair does nothing.
 
@@ -60,9 +65,37 @@ A stage event that brings an element uses the same table through `build.apply_el
 
 ## Offer records (presentation and HUD may read)
 
-`reward_offered(offers)` records keep the contract keys `part_id`, `at`, `facing` and `width`. They add `name`, `text`, `rarity` (`common`, `rare`, `epic`), `tier` (1 to 3) and `synergy` (the name of the synergy this gate would complete, or `""`).
+`reward_offered(offers)` records keep the contract keys `part_id`, `at`, `facing` and `width`. They add:
 
-`build.part_info(part_id)` returns `{id, name, text, rarity, tier, family}` for a toast, a sound or a card.
+- `name`, `headline` ("{name}: {verb}. Punch +{n}"), `verb`, `punch` and `text`
+- `rarity` (`common`, `uncommon`, `rare`, `rare_plus`) and `tier` (1 to 3)
+- `synergy`: the name of the named synergy this gate would complete, or `""`
+- `mark`: the label's star line: `* completes X *`, `* ingredient: ??? *`, `* ingredient: X *` once discovered, or `""`
+
+`build.part_info(part_id)` returns `{id, name, verb, text, punch, tags, rarity, tier, family}` for a toast, a sound or a card.
+
+## Rarity by source
+
+| Source | Rarities |
+| --- | --- |
+| Gate, 0 bonus cores | common or uncommon |
+| Gate, 1 bonus core | uncommon or rare |
+| Gate, 2 or more | rare or rare-plus |
+| Fabricator | uncommon |
+| Vault (`enemy_killed` kind `vault`) | one rare part, `add_part(id, "vault")` |
+| Won event (`milestone_won`) | rare-plus |
+
+The gate reads `ctx.run.bonus_cores` when the spine provides it, and 0 until then.
+
+## Codex (category `build`)
+
+Build declares one hint card per named synergy: `build.codex_declarations()` returns `{id, category: "build", name, hint, clue, text, shown, tags}`. The hint reads, for example, "Chain Arc + something that splits". When `ctx.codex` exists:
+
+- build calls `declare(card)` for each card at setup;
+- on a synergy's first activation in a run, build calls `mark_discovered(id, at, ["player"])`;
+- on an unnamed interaction's first firing in a run, build calls `mark_found(text, "build", ["player"])`.
+
+`build.discovered()` and `build.found()` hold the run's own view.
 
 ## Milestone parts (world triggers, build grants)
 
@@ -74,4 +107,4 @@ A stage event that brings an element uses the same table through `build.apply_el
 | `hold_the_relay` | Tempest Core: spiral +2, chain +1, fire rate +30% |
 | any other | the first of Scrap Gravity, Tempest Core, Rime Heart not yet held |
 
-Gates and fabricators never offer milestone parts.
+Fabricators and vaults never offer milestone parts. Only a gate overcharged by two or more bonus cores can.
