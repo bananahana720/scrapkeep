@@ -27,6 +27,8 @@ const BALL_CLEARANCE := 0.06
 const SHARDS_PER_SLAB := 8
 const SHARD_SECONDS := 0.45
 const PUFF_SECONDS := 0.4
+const MAX_ZAPS := 12
+const ZAP_SECONDS := 0.12
 
 var ctx
 # Multiplies shatter damage; build sets it from the sheet (Thermal Shock doubles it).
@@ -37,6 +39,7 @@ var _slabs: Array[Dictionary] = []
 var _zones: Array[Dictionary] = []
 var _shards: Array[Dictionary] = []
 var _puffs: Array[Dictionary] = []
+var _zaps: Array[Dictionary] = []
 var _shard_mesh: BoxMesh
 var _puff_mesh: SphereMesh
 var _shard_material: StandardMaterial3D
@@ -78,7 +81,7 @@ func clear() -> void:
 		if is_instance_valid(zone["node"]):
 			zone["node"].queue_free()
 	_zones.clear()
-	for list in [_shards, _puffs]:
+	for list in [_shards, _puffs, _zaps]:
 		for fx in list:
 			if is_instance_valid(fx["node"]):
 				fx["node"].queue_free()
@@ -131,6 +134,7 @@ func apply(element_id: String, at: Vector3, source := "") -> Dictionary:
 		"element": element_id,
 		"material": hit["material"],
 		"behaviour": row["behaviour"],
+		"key": Elements.key(element_id, hit["material"]),
 		"at": Vector3(at.x, hit["surface_y"], at.z),
 		"source": source,
 	}
@@ -254,6 +258,11 @@ func _remove_slab(index: int, burst: bool) -> void:
 		slab["body"].queue_free()
 
 
+# A shard burst anywhere, for shrapnel and shatter.
+func shard_burst(at: Vector3) -> void:
+	_burst(at)
+
+
 func _burst(at: Vector3) -> void:
 	for n in SHARDS_PER_SLAB:
 		var angle := TAU * float(n) / SHARDS_PER_SLAB
@@ -277,6 +286,28 @@ func puff(at: Vector3) -> void:
 	add_child(node)
 	node.global_position = at
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "grow": 1.0})
+
+
+# A jagged arc from one point to another, for synergy zaps. Capped, so a storm of them
+# never hides the field (principle 4).
+func zap_line(from: Vector3, to: Vector3) -> void:
+	if _zaps.size() >= MAX_ZAPS:
+		return
+	var node := MeshInstance3D.new()
+	var line := ImmediateMesh.new()
+	line.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
+	var steps := 5
+	for i in steps + 1:
+		var t := float(i) / steps
+		var jitter := Vector3.ZERO
+		if i > 0 and i < steps:
+			jitter = Vector3(sin(i * 12.9 + _flicker * 40.0), cos(i * 7.3), sin(i * 3.1)) * 0.6
+		line.surface_add_vertex(from.lerp(to, t) + jitter)
+	line.surface_end()
+	node.mesh = line
+	node.material_override = Palette.unshaded(Palette.ARC)
+	add_child(node)
+	_zaps.append({"node": node, "left": ZAP_SECONDS})
 
 
 # A flat ring that bursts out to radius: the arc coil's discharge, sized to its reach.
@@ -344,7 +375,7 @@ func _process(delta: float) -> void:
 		var node: MeshInstance3D = zone["node"]
 		if is_instance_valid(node):
 			node.visible = fmod(_flicker * 20.0, 1.0) > 0.25
-	for list in [_shards, _puffs]:
+	for list in [_shards, _puffs, _zaps]:
 		var i: int = list.size() - 1
 		while i >= 0:
 			var fx: Dictionary = list[i]
@@ -358,7 +389,7 @@ func _process(delta: float) -> void:
 				if fx.has("velocity"):
 					node.global_position += fx["velocity"] * delta
 					fx["velocity"] += Vector3.DOWN * 30.0 * delta
-				else:
+				elif fx.has("grow"):
 					var t: float = 1.0 - fx["left"] / PUFF_SECONDS
 					var grow: float = fx.get("grow", 1.0)
 					if grow > 1.0:

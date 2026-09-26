@@ -10,10 +10,12 @@ const Synergies := preload("res://src/build/synergies.gd")
 # choosing never costs speed. If you roll past both, they are put ahead of you again
 # rather than waiting behind you.
 #
-# Each gate says what it gives while you approach, in the order you need it: the part
-# name big, its effect in one line, and, when it would complete a synergy, a star line
-# naming it. Rarity shows twice: the arch's colour and the topper's shape (a bar for
-# common, a diamond for rare, a star for epic), so colour never carries it alone.
+# Each gate says what it gives while you approach, in the order you need it:
+# "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
+# complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
+# ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
+# (a bar for common, a diamond for uncommon, a star for rare, a tall star for
+# rare-plus), so colour never carries it alone.
 
 signal chosen(part_id: String)
 
@@ -25,6 +27,8 @@ const MISSED_BEYOND := 20.0
 const LOST_BEYOND := 110.0
 
 var offers: Array = []
+# Build's offer_mark(part_id) -> String; the star line under an offer, or "".
+var mark_for: Callable
 
 var _terrain
 var _ids: Array = []
@@ -100,25 +104,29 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 		var at: Vector3 = _terrain.drop_point(spot.x, spot.z, 0.0)
 		var part_id: String = _ids[i]
 		var d: Resource = Parts.def(part_id)
-		var synergy := Synergies.completed_by(part_id, _held)
+		var completes := Parts.completed_by(part_id, _held)
 		offers.append({
 			"part_id": part_id, "at": at, "facing": facing, "width": WIDTH,
 			"name": Parts.display_name(part_id),
+			"headline": Parts.headline(part_id),
+			"verb": d.verb if d != null else "",
+			"punch": d.punch if d != null else 0.0,
 			"text": d.text if d != null else "",
 			"rarity": d.rarity if d != null else "common",
 			"tier": d.tier if d != null else 1,
-			"synergy": Synergies.ROWS[synergy]["name"] if synergy != "" else "",
+			"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
+			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
 		})
 		_gates.append(_build_gate(at, facing, offers[-1]))
 
 
 static func rarity_color(rarity: String) -> Color:
 	match rarity:
-		"rare":
+		"uncommon":
 			return Palette.ARC
-		"epic":
+		"rare":
 			return Palette.AMBER
-		"milestone":
+		"rare_plus":
 			return Palette.HAZARD
 	return Palette.SANDSTONE
 
@@ -150,9 +158,9 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
 	gate.add_child(topper)
 	var label := Label3D.new()
-	var lines := "%s\n%s" % [offer["name"], offer["text"]]
-	if offer["synergy"] != "":
-		lines += "\n* completes %s *" % offer["synergy"]
+	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
+	if offer["mark"] != "":
+		lines += "\n" + offer["mark"]
 	label.text = lines
 	label.font_size = 80
 	label.pixel_size = 0.02
@@ -167,16 +175,16 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
 	match rarity:
-		"rare":
+		"uncommon":
 			var gem := SphereMesh.new()
 			gem.radius = 0.8
 			gem.height = 2.0
 			gem.radial_segments = 4
 			gem.rings = 2
 			node.mesh = gem
-		"epic", "milestone":
+		"rare", "rare_plus":
 			var star := PrismMesh.new()
-			star.size = Vector3(1.8, 1.8, 0.4)
+			star.size = Vector3(1.8, 2.8 if rarity == "rare_plus" else 1.8, 0.4)
 			node.mesh = star
 		_:
 			var slab := BoxMesh.new()

@@ -10,6 +10,9 @@ const Synergies := preload("res://src/build/synergies.gd")
 # transformers and element triggers are read from this sheet through the build API.
 
 const BASE_MAX_HP := 100.0
+# The class weapon's base per-hit damage before parts, for the output estimate only;
+# combat owns the real number.
+const BASE_HIT := 14.0
 
 var parts: Array = []
 var mods := {}
@@ -23,6 +26,10 @@ var kill_scrap := 1.0
 var max_hp_bonus := 0.0
 var dials := {}
 var synergies: Array = []
+# Unnamed tag rules live right now (Synergies.TAG_RULES).
+var rules: Array = []
+# Flat per-hit weapon damage from parts, before the weapon multipliers.
+var punch := 0.0
 
 
 static func from_parts(held: Array) -> RefCounted:
@@ -37,9 +44,16 @@ static func from_parts(held: Array) -> RefCounted:
 		sheet.magnet *= d.magnet
 		sheet.kill_scrap *= d.kill_scrap
 		sheet.max_hp_bonus += d.max_hp_bonus
-	sheet.synergies = Synergies.active(held)
+		sheet.punch += d.punch
+	var sets := Parts.tag_sets(held)
+	sheet.synergies = Synergies.active(sets)
+	sheet.rules = Synergies.active_rules(sets)
+	var rows: Array = []
 	for key in sheet.synergies:
-		var row: Dictionary = Synergies.ROWS[key]
+		rows.append(Synergies.ROWS[key])
+	for key in sheet.rules:
+		rows.append(Synergies.TAG_RULES[key])
+	for row in rows:
 		sheet._fold(row.get("mods", {}), row.get("patterns", {}), row.get("elements", {}))
 		for t in row.get("transformers", []):
 			if not t in sheet.transformers:
@@ -57,8 +71,10 @@ func _fold(part_mods: Dictionary, part_patterns: Dictionary, part_elements: Dict
 		patterns[pattern] = patterns.get(pattern, 0) + part_patterns[pattern]
 	for action in part_elements:
 		var list: Array = triggers.get(action, [])
-		if not part_elements[action] in list:
-			list.append(part_elements[action])
+		var given = part_elements[action]
+		for element in (given if given is Array else [given]):
+			if not element in list:
+				list.append(element)
 		triggers[action] = list
 
 
@@ -97,4 +113,5 @@ func power() -> float:
 		* (1.0 + 0.5 * pattern_level("chain_arc"))
 	if "storm_lattice" in transformers:
 		shots *= 1.5
-	return mod("weapon_damage") * mod("weapon_rate") * shots
+	var hit := (BASE_HIT + punch) / BASE_HIT
+	return hit * mod("weapon_damage") * mod("weapon_rate") * shots

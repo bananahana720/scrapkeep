@@ -1,71 +1,145 @@
 extends RefCounted
 
-# Named combos (TADR-008 data). A synergy is live while every part it needs is held;
-# it is never a part of its own, so a retry that restores the part list restores the
-# synergy with it. Each one has a visible effect the player can point at:
+# Named synergies and the unnamed tag rules (DEMO-SPEC "Synergies"). Every part
+# carries one or two tags, and a named synergy is a tag pair: it is live while two
+# different held parts carry its two tags. So combinations make sense before you try
+# them: "Chain Arc + something that splits" is a clue a player can act on.
 #
-#   Storm Lattice: Cross Split + Chain Arc. Every split bolt chains (combat reads the
-#     storm_lattice transformer), chain gets a level, damage +25%, and the ball grows a
-#     spinning lattice halo.
-#   Thermal Shock: Frost Vane + Arc Coil. The slam's arc shatters any ice near it into a
-#     shard nova at double damage, then the slam refreezes the water around you. The
-#     ball grows a frosted coil ring.
+# Each synergy changes behaviour, never just a number. Its effects are transformer ids
+# (build or combat act on them), pattern levels, element triggers and dials, folded in
+# by build_sheet.gd. A synergy is derived from the part list, never held, so a retry
+# that restores the list restores the synergies.
+#
+# This file works on tag sets only (one tag list per held part), so it never needs
+# the catalogue; parts.gd bridges part ids to tags. declarations() is the hint-card
+# data for the codex registry (category "build").
 
+const CATEGORY := "build"
+
+# The clue a hint card shows for its hidden ingredient, by that ingredient's tag.
+const CLUES := {
+	"frost": "something cold",
+	"arc": "something that sparks",
+	"kinetic": "something that hits hard",
+	"split": "something that splits",
+	"spiral": "something that spirals",
+	"chain": "something that chains",
+	"anchor": "something that anchors",
+	"speed": "something fast",
+	"mass": "something heavy",
+}
+
+# tags[0] is the shown ingredient's tag and tags[1] the hidden one; "shown" is the
+# part the undiscovered card names.
 const ROWS := {
 	"storm_lattice": {
-		"name": "Storm Lattice",
-		"needs": ["cross_split", "chain_arc"],
-		"text": "split bolts chain; chain +1, damage +25%",
-		"transformers": ["storm_lattice"],
-		"patterns": {"chain_arc": 1},
-		"mods": {"weapon_damage": 1.25},
+		"name": "Storm Lattice", "tags": ["chain", "split"], "shown": "chain_arc",
+		"text": "Split bolts chain: every fragment of a cross jumps to a neighbour.",
+		"transformers": ["storm_lattice"], "patterns": {"chain_arc": 1},
 	},
 	"thermal_shock": {
-		"name": "Thermal Shock",
-		"needs": ["frost_vane", "arc_coil"],
-		"text": "slam shatters ice into a shard nova, then refreezes",
-		"transformers": ["thermal_shock"],
-		# Appended after the parts' own slam element, so the arc shatters first and the
-		# frost lays fresh ice after it.
-		"elements": {"slam": "frost"},
-		"dials": {"shatter_damage": 2.0},
+		"name": "Thermal Shock", "tags": ["frost", "arc"], "shown": "frost_vane",
+		"text": "Slams release a thermal shock: the arc shatters nearby ice into a shard nova at double damage, then fresh ice freezes around you.",
+		"transformers": ["thermal_shock"], "elements": {"slam": ["arc", "frost"]}, "dials": {"shatter_damage": 2.0},
+	},
+	"lightning_rod": {
+		"name": "Lightning Rod", "tags": ["arc", "mass"], "shown": "arc_coil",
+		"text": "Every piece of scrap you pick up sparks an arc at the nearest enemy.",
+		"transformers": ["lightning_rod"],
+	},
+	"tesla_pylon": {
+		"name": "Tesla Pylon", "tags": ["anchor", "arc"], "shown": "long_spool",
+		"text": "While mounted or hooked, arcs leap from you to the two nearest enemies twice a second.",
+		"transformers": ["tesla_pylon"],
+	},
+	"wrecking_ball": {
+		"name": "Wrecking Ball", "tags": ["speed", "kinetic"], "shown": "tread_plating",
+		"text": "Rams send out a shockwave that hits everything around the target.",
+		"transformers": ["wrecking_ball"],
+	},
+	"shrapnel_bloom": {
+		"name": "Shrapnel Bloom", "tags": ["split", "kinetic"], "shown": "cross_split",
+		"text": "Kills burst into shrapnel that hits up to three enemies nearby.",
+		"transformers": ["shrapnel_bloom"],
+	},
+	"glacier_hull": {
+		"name": "Glacier Hull", "tags": ["mass", "frost"], "shown": "rivet_plating",
+		"text": "Hard landings crack out a frost ring: it hits enemies near you and freezes water.",
+		"transformers": ["glacier_hull"],
+	},
+	"pinwheel": {
+		"name": "Pinwheel", "tags": ["spiral", "speed"], "shown": "spiral_wave",
+		"text": "At fast speed and above you spin a blade ring that cuts the enemies you pass.",
+		"transformers": ["pinwheel"],
+	},
+}
+
+# Unnamed tag rules: combinations the systems resolve without a card. The first time
+# one fires, build logs it to the codex's Found list with this plain description.
+const TAG_RULES := {
+	"linked_spiral": {
+		"tags": ["spiral", "chain"], "transformers": ["linked_spiral"], "fires_on": "shot",
+		"found": "A spiral carrying chain links its arcs into a ring.",
 	},
 }
 
 
-static func active(held: Array) -> Array:
+# True while two different held parts carry the pair's two tags.
+static func pair_live(tag_sets: Array, pair: Array) -> bool:
+	for i in tag_sets.size():
+		if not pair[0] in tag_sets[i]:
+			continue
+		for j in tag_sets.size():
+			if j != i and pair[1] in tag_sets[j]:
+				return true
+	return false
+
+
+static func active(tag_sets: Array) -> Array:
 	var live: Array = []
 	for key in ROWS:
-		var complete := true
-		for need in ROWS[key]["needs"]:
-			if not need in held:
-				complete = false
-				break
-		if complete:
+		if pair_live(tag_sets, ROWS[key]["tags"]):
 			live.append(key)
 	return live
 
 
-# The part in pool that would complete a synergy the run is one part short of.
-static func completing_part(held: Array, pool: Array) -> String:
-	for key in ROWS:
-		var missing: Array = []
-		for need in ROWS[key]["needs"]:
-			if not need in held:
-				missing.append(need)
-		if missing.size() == 1 and missing[0] in pool:
-			return missing[0]
-	return ""
+static func active_rules(tag_sets: Array) -> Array:
+	var live: Array = []
+	for key in TAG_RULES:
+		if pair_live(tag_sets, TAG_RULES[key]["tags"]):
+			live.append(key)
+	return live
 
 
-# The synergy this part would complete if taken now, for the gate's hint line.
-static func completed_by(part_id: String, held: Array) -> String:
-	for key in ROWS:
-		var needs: Array = ROWS[key]["needs"]
-		if not part_id in needs or key in active(held):
-			continue
-		var after: Array = held.duplicate()
-		after.append(part_id)
-		if key in active(after):
+# The named synergy that adding a part with these tags would bring live, or "".
+static func completed_by(tag_sets: Array, candidate_tags: Array) -> String:
+	var before := active(tag_sets)
+	var after: Array = tag_sets.duplicate()
+	after.append(candidate_tags)
+	for key in active(after):
+		if not key in before:
 			return key
 	return ""
+
+
+static func clue(synergy_id: String) -> String:
+	return CLUES.get(ROWS[synergy_id]["tags"][1], "something")
+
+
+# Codex hint cards, one per named synergy: {id, category, name, hint, clue, text,
+# shown, tags}. name_of turns a part id into its display name.
+static func declarations(name_of: Callable) -> Array:
+	var cards: Array = []
+	for key in ROWS:
+		var row: Dictionary = ROWS[key]
+		cards.append({
+			"id": key,
+			"category": CATEGORY,
+			"name": row["name"],
+			"hint": "%s + %s" % [name_of.call(row["shown"]), clue(key)],
+			"clue": clue(key),
+			"text": row["text"],
+			"shown": row["shown"],
+			"tags": row["tags"],
+		})
+	return cards

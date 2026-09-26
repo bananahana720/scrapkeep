@@ -2,7 +2,6 @@ extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
 const Palette := preload("res://src/core/palette.gd")
-const Synergies := preload("res://src/build/synergies.gd")
 
 # Drive-through fabricators: hoops standing across the scrap lines. Each shows the part
 # it makes and its price while you approach; roll through the hoop with enough scrap
@@ -30,6 +29,8 @@ var _rng: RandomNumberGenerator
 var _class_id := ""
 var _stage := 1
 var _fabs: Array[Dictionary] = []
+# Build's offer_mark(part_id) -> String; the star line under an offer, or "".
+var mark_for: Callable
 
 
 static func price(part_id: String, parts_held: int) -> int:
@@ -105,7 +106,7 @@ func _add(at: Vector3, facing: Vector3, held: Array, part_id := "") -> Dictionar
 func _roll(held: Array) -> String:
 	if _rng == null:
 		_rng = RandomNumberGenerator.new()
-	var picks: Array = Parts.roll(_rng, _stage, _class_id, held, 1)
+	var picks: Array = Parts.roll(_rng, Parts.SOURCE_RARITIES["fabricator"], _class_id, held, 1)
 	return picks[0] if not picks.is_empty() else "hot_rivets"
 
 
@@ -195,11 +196,11 @@ func _refresh_glyph(fab: Dictionary) -> void:
 
 static func _rarity_color(rarity: String) -> Color:
 	match rarity:
-		"rare":
+		"uncommon":
 			return Palette.ARC
-		"epic":
+		"rare":
 			return Palette.AMBER
-		"milestone":
+		"rare_plus":
 			return Palette.HAZARD
 	return Palette.SANDSTONE
 
@@ -213,11 +214,11 @@ func _refresh_label(fab: Dictionary, scrap: int, held: Array) -> void:
 		text = "FABRICATING..."
 	else:
 		var d: Resource = Parts.def(part_id)
-		text = "%s\n%s\n%s" % [Parts.display_name(part_id), d.text if d != null else "",
+		text = "%s\n%s\n%s" % [Parts.headline(part_id), d.text if d != null else "",
 			"ROLL THROUGH: %d scrap" % cost if ready else "need %d scrap (have %d)" % [cost, scrap]]
-		var completes := Synergies.completed_by(part_id, held)
-		if completes != "":
-			text += "\n* completes %s *" % Synergies.ROWS[completes]["name"]
+		var mark: String = mark_for.call(part_id) if mark_for.is_valid() else ""
+		if mark != "":
+			text += "\n" + mark
 	if text == fab["text"]:
 		return
 	fab["text"] = text

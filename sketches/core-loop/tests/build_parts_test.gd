@@ -140,15 +140,16 @@ func _check_pools() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	var leaks: Array = []
-	var pylon := Parts.offer_pool("pylon_engineer")
-	var runner := Parts.offer_pool("runner_gunner")
+	var every: Array = ["common", "uncommon", "rare", "rare_plus"]
+	var pylon := Parts.offer_pool("pylon_engineer", every)
+	var runner := Parts.offer_pool("runner_gunner", every)
 	for i in 400:
-		for part_id in Parts.roll(rng, 1 + i % 3, "pylon_engineer", [], 2):
+		for part_id in Parts.roll(rng, Parts.gate_rarities(i % 2), "pylon_engineer", [], 2):
 			if Parts.def(part_id).milestone_only or part_id == "runner_overclock":
 				leaks.append(part_id)
 	_report("offer pools", leaks.is_empty() and "pylon_capacitor" in pylon and not "runner_overclock" in pylon
 			and "runner_overclock" in runner and not "pylon_capacitor" in runner,
-		"800 pylon offers leaked %d milestone or runner parts; class mods only in their own pool" % leaks.size())
+		"800 pylon offers at 0 and 1 bonus cores leaked %d milestone or runner parts; class mods only in their own pool" % leaks.size())
 
 
 func _check_milestones() -> void:
@@ -163,22 +164,22 @@ func _check_milestones() -> void:
 
 
 # Growth: one early part is modest, a late build multiplies into an absurd one, and
-# offers climb in tier from stage 1 to stage 3.
+# gate offers climb in tier with bonus cores.
 func _check_trajectory() -> void:
 	var early: float = BuildSheet.from_parts(["hot_rivets"]).power()
 	var late: float = BuildSheet.from_parts(LATE_BUILD).power()
-	_report("growth curve", early <= 1.3 and late >= 25.0,
+	_report("growth curve", early <= 1.5 and late >= 25.0,
 		"estimated weapon output: one Hot Rivets x%.2f; a ten-part late build x%.1f" % [early, late])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11
 	var mean := {}
-	for stage in [1, 2, 3]:
+	for cores in [0, 1, 2]:
 		var total := 0.0
 		for i in 300:
-			total += Parts.def(Parts.roll(rng, stage, "runner_gunner", [], 1)[0]).tier
-		mean[stage] = total / 300.0
-	_report("offers climb", mean[1] < mean[2] and mean[2] < mean[3],
-		"mean offered tier by stage: %.2f, %.2f, %.2f" % [mean[1], mean[2], mean[3]])
+			total += Parts.def(Parts.roll(rng, Parts.gate_rarities(cores), "runner_gunner", [], 1)[0]).tier
+		mean[cores] = total / 300.0
+	_report("offers climb", mean[0] < mean[1] and mean[1] <= mean[2],
+		"mean offered tier at 0, 1 and 2 bonus cores: %.2f, %.2f, %.2f" % [mean[0], mean[1], mean[2]])
 
 
 func _check_table() -> void:

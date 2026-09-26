@@ -4,14 +4,24 @@ extends Resource
 # how many copies are held, and build_sheet.gd folds every held copy into one derived
 # sheet. A new value is a row edit in parts.gd; a new kind of effect is a code change.
 
-# Rarity is shown twice, as a colour and as a shape on the gate or fabricator topper,
-# so colour never carries it alone.
-const RARITIES := ["common", "rare", "epic", "milestone"]
+# Rarity is set by where a part comes from (DEMO-SPEC): gates offer common and
+# uncommon (higher with bonus cores), fabricators uncommon, vaults rare, won events
+# rare_plus. It is shown twice, as a colour and as a topper shape, so colour never
+# carries it alone.
+const RARITIES := ["common", "uncommon", "rare", "rare_plus"]
+# The tag vocabulary. Every part carries one or two; named synergies are tag pairs, so
+# a combination makes sense before you try it.
+const TAGS := ["frost", "arc", "kinetic", "split", "spiral", "chain", "anchor", "speed", "mass"]
 
 @export var id := ""
 @export var display_name := ""
 # One line a player can read at speed from 30 m away.
 @export var text := ""
+# What the part makes you do, as a short action ("Split shots into a cross").
+@export var verb := ""
+# Flat per-hit weapon damage it adds, before the weapon multipliers; may be 0.
+@export var punch := 0.0
+@export var tags: Array = []
 @export var rarity := "common"
 # 1 modest, 2 strong, 3 run-defining. Later stages weight offers toward higher tiers.
 @export var tier := 1
@@ -20,7 +30,8 @@ const RARITIES := ["common", "rare", "epic", "milestone"]
 @export var family := "stat"
 # Only this class is offered the part; "" means any class.
 @export var class_id := ""
-# Only a won event grants it (milestone_won); gates and fabricators never offer it.
+# A won event grants it (milestone_won). Only a gate overcharged by two or more bonus
+# cores may also offer it; fabricators and vaults never do.
 @export var milestone_only := false
 # Multipliers per knob, applied through tuning.set_mod. Keys are Tuning.SPECS keys for
 # movement, or the weapon keys in SEAMS.md (weapon_damage, weapon_rate, ...), which
@@ -43,6 +54,9 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.id = row_id
 	def.display_name = row.get("name", row_id)
 	def.text = row.get("text", "")
+	def.verb = row.get("verb", "")
+	def.punch = row.get("punch", 0.0)
+	def.tags = row.get("tags", [])
 	def.rarity = row.get("rarity", "common")
 	def.tier = row.get("tier", 1)
 	def.family = row.get("family", "stat")
@@ -56,3 +70,15 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.kill_scrap = row.get("kill_scrap", 1.0)
 	def.max_hp_bonus = row.get("max_hp_bonus", 0.0)
 	return def
+
+
+# True when the part only scales numbers: no punch, pattern, element or behaviour. Only
+# a common part may be this plain (DEMO-SPEC catalogue rule).
+func percentage_only() -> bool:
+	return punch <= 0.0 and patterns.is_empty() and elements.is_empty() and magnet == 1.0 and kill_scrap == 1.0 \
+		and max_hp_bonus == 0.0
+
+
+# A gate pair must hold at least one part that raises punch or transforms a pattern.
+func hits_harder() -> bool:
+	return punch > 0.0 or not patterns.is_empty()

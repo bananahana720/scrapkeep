@@ -11,7 +11,8 @@ extends RefCounted
 #                   take arc hits on a fixed beat.
 #   shatter         created ice bursts into a shard nova that strikes enemies near it.
 
-const ELEMENTS := ["frost", "arc"]
+# kinetic is what every slam carries, whatever parts you hold.
+const ELEMENTS := ["frost", "arc", "kinetic"]
 const MATERIALS := ["water", "ice"]
 
 const SURFACES := {
@@ -19,10 +20,17 @@ const SURFACES := {
 	"ice": {"material": "ice", "radius": 3.6, "thickness": 0.9, "seconds": 9.0, "fade": 1.5},
 }
 
+# found is the plain description the codex's Found list gets the first time the row
+# fires in a run (DEMO-SPEC: accidental synergies are unnamed).
 const ROWS := {
-	"frost:water": {"behaviour": "create_surface", "surface": "ice"},
-	"arc:water": {"behaviour": "electrify", "radius": 8.0, "seconds": 3.0, "interval": 0.25, "damage": 8.0},
-	"arc:ice": {"behaviour": "shatter", "radius": 6.5, "damage": 26.0},
+	"frost:water": {"behaviour": "create_surface", "surface": "ice",
+		"found": "Frost on water freezes into a road you can drive."},
+	"arc:water": {"behaviour": "electrify", "radius": 8.0, "seconds": 3.0, "interval": 0.25, "damage": 8.0,
+		"found": "Arc on water electrifies it: anything standing in it gets shocked."},
+	"arc:ice": {"behaviour": "shatter", "radius": 6.5, "damage": 26.0,
+		"found": "Arc cracks ice into a burst of shards."},
+	"kinetic:ice": {"behaviour": "shatter", "radius": 5.0, "damage": 20.0,
+		"found": "Frost, then a heavy hit: slamming ice shatters it into shrapnel."},
 }
 
 

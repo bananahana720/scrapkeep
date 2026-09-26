@@ -2,6 +2,7 @@ extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # Scrap becomes your build, on the ball. Held scrap shows as chunks stuck to the
 # surface, and each part as a piece of hardware whose shape says its family and whose
@@ -21,11 +22,17 @@ const POP_RATE := 12.0
 
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
-	"rare": Palette.ARC,
-	"epic": Palette.AMBER,
-	"milestone": Palette.HAZARD,
+	"uncommon": Palette.ARC,
+	"rare": Palette.AMBER,
+	"rare_plus": Palette.HAZARD,
 }
 const ICE := Color("c8f0ff")
+# One colour per tag, so a synergy's ring says what it is made of.
+const TAG_COLORS := {
+	"frost": ICE, "arc": Palette.ARC, "kinetic": Palette.COPPER, "split": Palette.SAND,
+	"spiral": Palette.AMBER, "chain": Palette.ARC, "anchor": Palette.VERDIGRIS,
+	"speed": Palette.AMBER, "mass": Palette.RUST,
+}
 
 var _chunks: Array[MeshInstance3D] = []
 var _pieces: Array[Node3D] = []
@@ -67,7 +74,7 @@ func show_build(scrap: int, parts: Array, synergies: Array) -> void:
 		_add_chunk(_chunks.size())
 	if parts != _shown_parts:
 		_rebuild_pieces(parts)
-	for key in ["storm_lattice", "thermal_shock"]:
+	for key in Synergies.ROWS:
 		var halo: Node3D = _halos.get(key)
 		if halo == null:
 			halo = _build_halo(key)
@@ -207,24 +214,30 @@ func _ball(parent: Node3D, radius: float, at: Vector3, mat: Material) -> void:
 	parent.add_child(node)
 
 
-# Storm Lattice is a gyroscope cage of arc rings; Thermal Shock is a frosted coil
-# with an arc glow. Both roll with the ball, so the synergy is on screen all run.
+# One ring per live synergy, each at its own tilt and radius and coloured by its
+# first tag, so up to eight stay separable. Storm Lattice is a gyroscope cage and
+# Thermal Shock a thick frosted coil. They roll with the ball, so a synergy is on
+# screen all run (the "ring added to the ball" on discovery).
 func _build_halo(synergy_id: String) -> Node3D:
 	var halo := Node3D.new()
 	halo.name = "Halo_" + synergy_id
-	var rings: Array = []
-	var mat: StandardMaterial3D
+	var index: int = Synergies.ROWS.keys().find(synergy_id)
+	var tag: String = Synergies.ROWS[synergy_id]["tags"][0]
+	var mat := Palette.unshaded(TAG_COLORS.get(tag, Palette.SAND))
+	var rings: Array = [Vector3(0.35 * index, 0.9 * index, 0.25)]
+	var inner := 1.3 + 0.05 * index
+	var outer := inner + 0.07
 	if synergy_id == "storm_lattice":
-		mat = Palette.unshaded(Palette.ARC)
 		rings = [Vector3.ZERO, Vector3(PI * 0.5, 0.0, 0.0), Vector3(0.0, 0.0, PI * 0.5)]
-	else:
+	elif synergy_id == "thermal_shock":
 		mat = Palette.solid(ICE, 2.0)
-		rings = [Vector3(0.0, 0.0, 0.35)]
+		inner = 1.1
+		outer = 1.28
 	for rot in rings:
 		var ring := MeshInstance3D.new()
 		var torus := TorusMesh.new()
-		torus.inner_radius = 1.38 if synergy_id == "storm_lattice" else 1.1
-		torus.outer_radius = 1.46 if synergy_id == "storm_lattice" else 1.28
+		torus.inner_radius = inner
+		torus.outer_radius = outer
 		ring.mesh = torus
 		ring.material_override = mat
 		ring.rotation = rot
