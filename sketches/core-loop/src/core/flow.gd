@@ -190,8 +190,11 @@ func _on_reward_chosen(_part_id: String) -> void:
 		_set_state(LAUNCH)
 
 
+# World may launch from inside its own reward_chosen handler, before flow has heard
+# reward_chosen, so a launch during GATES counts as the gate being taken too.
 func _on_launched(_velocity: Vector3) -> void:
-	if state == LAUNCH:
+	if state == GATES or state == LAUNCH:
+		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
 

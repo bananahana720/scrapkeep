@@ -1,0 +1,187 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
+
+# A scripted full run through the real flow: title, class, then for each stage the
+# beacon, a reward gate and the launch, ending on the summary. The ball is placed at
+# the beacon and aimed at a gate rather than steered across the map, and ctx.calm
+# keeps enemies and the flood out, so the speed checks measure the seams alone.
+
+const BEACON_SECONDS := 0.6
+const APPROACH := 16.0
+const APPROACH_SPEED := 20.0
+const TOLERANCE := 0.15
+const SETTLE_TICKS := 9
+const TICK_LIMIT := 90 * 90
+
+var _game
+var _source := Intent.Scripted.new()
+var _failures := 0
+var _ticks := 0
+var _started := false
+var _done := false
+
+var _states: Array[String] = []
+var _entered: Array[int] = []
+var _cleared: Array[int] = []
+var _ended := false
+var _phase := "boot"
+var _offer := {}
+var _gate := {}
+var _launch := {}
+var _gates: Array[Dictionary] = []
+var _launches: Array[Dictionary] = []
+var _wait := 0
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+
+
+func _physics_process(_delta: float) -> bool:
+	if _done:
+		return true
+	if not _started:
+		if _game.flow == null:
+			return false
+		_start()
+		return false
+	_ticks += 1
+	if _ticks > TICK_LIMIT:
+		_report("timeout", false, "run stalled in flow state %s, phase %s" % [_game.flow.state_name(), _phase])
+		return _finish()
+	_step()
+	return false
+
+
+func _start() -> void:
+	_started = true
+	var events = _game.events
+	events.flow_changed.connect(func(s: String): _states.append(s))
+	events.stage_entered.connect(_on_stage_entered)
+	events.stage_cleared.connect(func(stage: int): _cleared.append(stage))
+	events.run_ended.connect(func(_won: bool): _ended = true)
+	events.reward_offered.connect(_on_offered)
+	events.reward_chosen.connect(_on_chosen)
+	_game.ctx.calm = true
+	_game.flow.beacon_seconds_override = BEACON_SECONDS
+	_game.player.source = _source
+	_states.append(_game.flow.state_name())
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+
+
+func _planar() -> float:
+	return _game.player.planar_velocity().length()
+
+
+func _step() -> void:
+	var flow = _game.flow
+	match _phase:
+		"to_beacon":
+			_wait += 1
+			if _wait == 2:
+				var at: Vector3 = flow.beacon.global_position + Vector3.UP * 1.5
+				_game.player.reset_to(at)
+				_game.player.body().global_position = at
+		"approach":
+			var rel: Vector3 = _game.player.ball_position() - _offer["at"]
+			var along: float = rel.dot(_offer["facing"])
+			if along < -1.5:
+				_gate["before"] = _planar()
+		"after_gate":
+			_wait += 1
+			if _wait == SETTLE_TICKS:
+				_gate["after"] = _planar()
+				_gates.append(_gate)
+				_phase = "flight"
+		"entered":
+			_wait += 1
+			if _wait == SETTLE_TICKS:
+				_launch["after"] = _planar()
+				_launches.append(_launch)
+				_launch = {}
+				_phase = "to_beacon"
+				_wait = 0
+		"flight":
+			if _ended:
+				_phase = "summary"
+		"summary":
+			_finish()
+
+
+func _on_stage_entered(stage: int, _retry: bool) -> void:
+	_entered.append(stage)
+	_source.hold = {}
+	if stage > 1:
+		_launch["stage"] = stage
+		_launch["before"] = _planar()
+		_phase = "entered"
+		_wait = 0
+	else:
+		_phase = "to_beacon"
+		_wait = 0
+
+
+func _on_offered(offers: Array) -> void:
+	if _phase == "approach":
+		return
+	_offer = offers[0]
+	var facing: Vector3 = _offer["facing"]
+	var start: Vector3 = _offer["at"] - facing * APPROACH
+	var at: Vector3 = _game.ctx.terrain.drop_point(start.x, start.z, 1.05)
+	_game.player.reset_to(at, facing * APPROACH_SPEED)
+	_game.player.body().global_position = at
+	_game.camera.snap(facing)
+	_source.hold = {"move": Vector2(0.0, 1.0)}
+	_gate = {"stage": _game.run.stage, "part": _offer["part_id"], "before": APPROACH_SPEED}
+	_phase = "approach"
+
+
+func _on_chosen(part_id: String) -> void:
+	_gate["chosen"] = part_id
+	_phase = "after_gate"
+	_wait = 0
+
+
+func _report(label: String, ok: bool, detail: String) -> void:
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+static func _kept(before: float, after: float) -> bool:
+	return before > 0.1 and absf(after - before) / before <= TOLERANCE
+
+
+func _finish() -> bool:
+	_done = true
+	var wanted := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary"]
+	var missing: Array[String] = []
+	for s in wanted:
+		if not s in _states:
+			missing.append(s)
+	_report("flow states", missing.is_empty() and _states[0] == "title" and _states[-1] == "summary",
+		"reached %s in order %s; missing %s" % [wanted, " > ".join(_states), missing])
+	_report("stages", _entered == [1, 2, 3] and _cleared == [1, 2, 3] and _ended,
+		"entered %s, cleared %s, run_ended %s" % [_entered, _cleared, _ended])
+	_report("summary", _game.flow.state_name() == "summary" and _game.run.parts.size() == StageDefs.COUNT,
+		"flow ends in %s with %d gate parts %s" % [_game.flow.state_name(), _game.run.parts.size(), _game.run.parts])
+	for g in _gates:
+		_report("gate momentum stage %d" % g["stage"], g.has("after") and _kept(g["before"], g["after"]),
+			"rolled through the %s gate at %.2f m/s horizontal, %.2f m/s after (within %d%%)"
+				% [g.get("chosen", "?"), g["before"], g.get("after", -1.0), int(TOLERANCE * 100.0)])
+	_report("gates taken", _gates.size() == StageDefs.COUNT, "%d of %d gates taken" % [_gates.size(), StageDefs.COUNT])
+	for l in _launches:
+		_report("launch momentum into stage %d" % l["stage"], _kept(l["before"], l["after"]),
+			"left at %.2f m/s horizontal, %.2f m/s after entering (within %d%%)"
+				% [l["before"], l["after"], int(TOLERANCE * 100.0)])
+	_report("launches", _launches.size() == StageDefs.COUNT - 1, "%d stage-to-stage launches measured" % _launches.size())
+	print("spine_run_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	_game.free()
+	quit(0 if _failures == 0 else 1)
+	return true
