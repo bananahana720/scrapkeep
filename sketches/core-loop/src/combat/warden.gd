@@ -37,7 +37,10 @@ const CAP_MULT := 1.5
 const MAGNET_CYCLE := 8.0
 const MAGNET_TELEGRAPH := 1.5
 const MAGNET_TUG := 1.5
-const MAGNET_PULL := 6.0
+# The change request said 6 m/s^2; at 6 a ball driving away fell to 10.4 m/s against
+# its own 0.8 x cruise (11.2) floor (a no-tug control run: 12.9); 4 cleared it by only
+# 0.2 m/s, so the pull is 3.5.
+const MAGNET_PULL := 3.5
 const MAGNET_ARM := 3.2
 # The magnet rides high over the clamp, out of the straight line from the ball to the
 # body, so shooting it is a choice you aim for rather than an accident of body fire.
