@@ -42,7 +42,8 @@ Author: <name or role>   Approver: <independent reviewer>
 | <outcome> | <what happens next> |
 
 ## Instrument
-Resolved model: <as the provider reports it>
+Resolved model: <as the provider reports it, or a hash of the decider artifact when none is reported (RML-47)>
+Sequence state: <none shown by a fresh-process and extra-call test, or described; if present, no cache (RML-51)>
 Question-set hash: <sha256>
 Thresholds and gate version: <values>
 
@@ -54,12 +55,17 @@ Thresholds and gate version: <values>
 <Every permutation of the options; <n> repeats per order; <total> calls.>
 
 ## Controls in the run
-<Dominance, lethal, wording swap, and any others; their pass conditions.>
+<Dominance, lethal, wording swap with its sensitivity arm, and any others; their pass conditions.>
 
 ## Lines and definitions
-Noise line: <formula, computed from this run>
+Noise line: <multiple of the pooled within-order SD, computed from this run>
+Floor, if any: <value and the consequence it stands for; the report names whether floor or measured noise decided each cell (RML-48)>
+Dominance margin rule: <separate from the shift rule (RML-48)>
 Margin rule: <for per-option ratings, if used>
-Pass rule: <per cell; every order must pass on its own>
+Lethal line: <value; whether the decider samples or takes the top option; the loss it stands for (RML-53)>
+Live answers per order: <minimum; an order below it is inconclusive (RML-49)>
+Fallback budget: <largest accepted fallback rate and why; reported as its own finding (RML-49)>
+Pass rule: <per cell, on live-model answers; every order must pass on its own>
 
 ## Readings
 | Reading | Fires when | Consequence |
@@ -112,6 +118,8 @@ Record the tree state as well as the commit (RML-41). A commit on a dirty tree d
 When the system has a deterministic mode, a hash re-run can serve as a cheap proof (RML-46). Re-run one batch at the clean commit and compare trace hashes. In one lab a clean-commit re-run matched the dirty-tree batch hash for hash, 20 of 20, without repeating the full batch set. That is one instance.
 
 A matching hash proves something only if the hash can move. Before relying on hash equality, run a sensitivity control (RML-45). Perturb one answer, or the snapshot and apply schedule, and confirm that the trace hash changes while every event before the perturbation stays byte-identical. In one lab such a test showed the hash was neither always equal nor blind to order.
+
+Place the perturbation after a shared prefix of several events, not at the first one (RML-52). The check has two halves: the hash moves, and the prefix before the perturbation is unchanged. A perturbation at the first event leaves no prefix, so the second half passes vacuously. Compare the prefix event by event, and name the index where the traces first differ; it should be the perturbed event. In one exercise the perturbation was an extra call before the first decision, so only the "hash moves" half was tested.
 
 ## Route review by the kind of claim
 

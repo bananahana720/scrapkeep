@@ -1,6 +1,6 @@
 ---
 name: plan-session
-description: Plan the next Scrapkeep scope or discuss its unresolved decisions. Use for "plan session", "what should we decide", or planning the next Scrapkeep session.
+description: Plan the next Scrapkeep scope or discuss its unresolved decisions. Use for "plan session", "what should we decide", planning the next Scrapkeep session, or planning what the lab should work on next, including whether to start a new instrument epoch; lab planning starts here and pulls in scrapkeep-lab.
 ---
 
 # Plan a Scrapkeep session

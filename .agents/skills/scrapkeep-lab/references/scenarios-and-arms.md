@@ -6,13 +6,30 @@ A scenario is a spawn, an objective, a time limit and a success predicate. An ar
 
 1. Add the id to `IDS` in `sketches/ball-lab/src/jev/scenarios.gd` and a `make()` branch with spawn, objective, time limit and predicate, using the coordinates in `sketches/ball-lab/src/field.gd`. Label a new limit as initial, not calibrated.
 2. If the scenario offers choices, wrap it in `_jittered()` so trial i starts at the same seeded point on every arm (SKL-16).
-3. Add canned snapshots for the id to `scripts/lab/fake-godot.mjs` if Node tests or `scrapkeep lab run` should exercise it.
-4. Add a test under `sketches/ball-lab/tests/` and run `npm run sketch:smoke` and `npm test`.
-5. Run the arms through real Godot from your own frozen worktree (SKL-23), for example `node scripts/lab/godot-launch.mjs <scenario> --arm scripted -n 20 --seed 1 --mode kinematic`, then the random arm, then both in rigid mode. The scripted and random arms never call Jev. The call cap must be a whole number of at least 1 (`scripts/lab/harness.mjs:672-675`), so `--call-cap 0` is a usage error; when no Jev call is authorized, do not run the jev arm.
-6. Check the share of snapshots that offer two or more options. A scenario where every snapshot offers only `push_objective` forces every answer and cannot separate arms (SKL-30).
-7. Report success counts with Wilson intervals and differences with Newcombe intervals. Label every metric chosen after seeing the data as post hoc, in the result file itself, not only in the script (`artifacts/jev-lab-2026-09-25/reviews/JL-21.md:17`).
+3. Decide the dummies. Every ball-lab scenario gets the same six dummies: `sketches/ball-lab/src/field.gd:84-87` lists their spots and `sketches/ball-lab/src/lab.gd:51-56` spawns one at each, whatever the scenario. `Scenarios.place()` (`sketches/ball-lab/src/jev/scenarios.gd:157-165`) moves only the ball. No per-scenario dummy hook exists today (SKL-33). A card whose scenario needs a different set must add one, for example an optional `dummies` key that `place()` reads, with the default keeping all six so existing scenarios' traces do not change. It must also add a state-test check that each scenario places the dummies it names.
+4. Update the state test's hardcoded counts (SKL-34). `sketches/ball-lab/tests/jev_state_test.gd` fails for any new id until three places change: the id count `ids.size() == 7` at line 506, the per-id `cases` table of predicate pass and fail states at lines 508-516, and the jitter count `jittered == 4` at line 555 (only if the new scenario jitters).
+5. Add the id to the fake Godot only if a Node test or `scrapkeep lab run` will drive the scenario through it. The fake throws on an id it does not know (`scripts/lab/fake-godot.mjs:190-193`). The real launcher needs no Node-side registration: it passes `--scenario=<id>` to Godot (`scripts/lab/godot-launch.mjs:103`), and Godot resolves the id from `IDS`. If you do add a fake entry, note that the fake `soak` stream cycles through every other entry in `base` (`scripts/lab/fake-godot.mjs:143-148`), so the new entry changes `soak` and anything that depends on its sequence (SKL-35).
+6. Run the sketch test headless, then `npm run sketch:smoke` and `npm test`.
+7. Run the arms through real Godot from your own frozen worktree (SKL-23), for example `node scripts/lab/godot-launch.mjs <scenario> --arm scripted -n 20 --seed 3 --mode kinematic`, then the random arm, then both in rigid mode. Pick the seed by the rule under "Seeds" below. The scripted and random arms never call Jev. The call cap must be a whole number of at least 1 (`scripts/lab/harness.mjs:698-701`), so `--call-cap 0` is a usage error; when no Jev call is authorized, do not run the jev arm.
+8. Report the multi-option share, defined below. A scenario where every snapshot offers only `push_objective` forces every answer and cannot separate arms (SKL-30).
+9. Report success counts with Wilson intervals and differences with Newcombe intervals. With n = 5 a difference is exploratory.
+10. Label every metric chosen after seeing the data as post hoc in the result file itself, not only in the script that computed it (`artifacts/jev-lab-2026-09-25/reviews/JL-21.md:17`). In a TSV that is a header or label row; in JSON, a field; in Markdown, the heading. When the card has a retained evidence directory, the file lives there. When it has none, as in an exercise or an exploratory batch, keep the file with the task receipts under `artifacts/local/tasks/<task-id>/` and repeat the label in the handoff, because that directory is gitignored and disposable (design choice).
 
-Do not use a later comparison's pre-registered trial seeds for exploratory batches. JL-28 moved to seeds 2000 to 2019 because the lab cards had already run 1000 to 1019 (SKL-29).
+## Seeds
+
+Trial i of a batch with seed s runs with trial seed s × 1000 + i (`scripts/lab/harness.mjs:51-52`, `TRIAL_SEED_STRIDE` at `:122`, applied at `:870`; each record's config stores it as `trial_seed_stride` at `:814`). A batch is therefore capped at 1000 trials, and batches with different seeds share no trial seed.
+
+| Batch seed | Trial seeds | Use |
+| --- | --- | --- |
+| 1 | 1000 onward | The lab cards' batches so far. It is also the default when `--seed` is omitted (`scripts/lab/harness.mjs:112`), so an unseeded batch lands on this range. |
+| 2 | 2000 to 2019 | Reserved for JL-28's pre-registered comparison (SKL-29, EV-0550). Never use it for anything else. |
+| 3 or higher | 3000 onward | Exploratory batches, exercises and new-scenario trials. Name the seed in the handoff so a later pre-registration can avoid it. |
+
+Ask the coordinator for a reservation before pre-registering a new comparison, and do not reuse a seed another comparison has reserved (SKL-29).
+
+## Multi-option share
+
+The multi-option share of a batch is the fraction of snapshots, after the precondition gate, that offered two or more options: the sum of `arm_calls` over the sum of `snapshots` across its trials (design choice). The gate runs first: `offeredOptions()` in `tools/jev-player/decide.mjs:137-142` drops options whose preconditions fail and falls back to `push_objective` when none survive. The harness then counts a snapshot with one offered option as `forced` and every other snapshot as an arm call (`scripts/lab/harness.mjs:425-447`). The launcher prints `snapshots`, `arm calls` and `forced` for every trial (`scripts/lab/godot-launch.mjs:272`), so the share can be read from its output. A batch stopped by its call cap has one more snapshot than arm calls plus forced answers in its last trial; say so if it happens.
 
 ## Calibrate a scenario
 
@@ -32,7 +49,15 @@ The exported threat list decides what every arm sees, so its rule is part of the
 
 Stage-threat-rule 2 is a coordinator ruling (EV-0550). It changed the rule for stages whose foes survive a hit; the JL-26 and JL-27 writers had applied the JL-21b rule as instructed, and their A2 attempts re-ran under the ruling (EV-0553). For a new stage, answer the middle column from the stage's own source before the first batch, and ask the coordinator for a ruling if the answer is mixed.
 
-The JL-21b rule is not merged on this branch: `sketches/ball-lab/src/jev/jev_state.gd` still exports knocked dummies until JL-21b is admitted. Its first attempt found the state rule alone incomplete, because `_goal()` in `sketches/ball-lab/src/jev/jev_run.gd` gives stomp and ram no target and the executor attacks the nearest dummy, knocked or not; the second attempt changes the executor (SKL-31, EV-0556).
+### Ball-lab since JL-21b
+
+JL-21b is merged (EV-0564). On this base a dummy knocked in the trial leaves the exported state (`sketches/ball-lab/src/jev/jev_state.gd:220-224`, filtered at `:244-250`), and stomp and ram act on the threat the state reported, falling back to the nearest live threat if that one was knocked before the intent applied (`sketches/ball-lab/src/jev/jev_run.gd:300-313`; SKL-31). The scripted ladder no longer loops on stomp: `dummy-knock` kinematic scripted stomp stretches fell from 63.6 to 3.3 per trial (EV-0563). One re-stomp within a single hold is still possible and is a known property of this epoch (`artifacts/jev-lab-2026-09-25/reviews/JL-21b.md:16`).
+
+What follows for reading results:
+
+- A batch from before this epoch that shows scripted below random on a scenario with dummies records the stomp loop. Read it as an instrument artefact, not as a scenario defect or a policy result (SKL-14).
+- Scripted is not guaranteed above random under the new epoch. After the fix only `pillar-weave` kinematic and `run-to-pad` rigid separate the arms, with random above scripted (EV-0563, EV-0564). A new dummy scenario should be expected to separate weakly or not at all until its batches show otherwise.
+- JL-21b-A3 is still open (EV-0564): the rigid `pillar-weave` and `bench-climb` batches have no post-fix data, and the two scripted `dummy-knock` pins are not yet re-cut. Until they are, a fresh scripted `dummy-knock` batch reads as trace divergence against the kinematic pin, and the stale rigid pin can still pass (SKL-22).
 
 Whether a trial ends at death is the same kind of per-stage instrument choice. Ball-lab's dummies deal no damage (`artifacts/jev-lab-2026-09-25/reviews/JL-21.md:11`); Cable Bench and Spillway Drop end the trial at death (SKL-32).
 

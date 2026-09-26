@@ -10,13 +10,23 @@ Key each cached verdict on a SHA-256 over canonical JSON (sorted keys, no whites
 | --- | --- |
 | protocol version | a wire-format change changes what the model saw |
 | question-set hash | any wording change is a new instrument |
-| resolved model | an alias can move; see [instrument](instrument.md#identify-the-instrument) |
+| resolved model | an alias can move; a decider with no reported model uses a hash of its artifact (RML-47); see [instrument](instrument.md#identify-the-instrument) |
 | confidence floor and thresholds | they change the final answer |
 | gate version | gate rules change the option set |
 | state | the input |
 | options | the offered menu, in order |
 
 Compute the key in one place. Other components pass the fields and never rebuild the key.
+
+### Cache only an answer that is a function of its key
+
+A cache assumes the same key always gives the same answer, up to the noise the controls measured (RML-51). A decider with hidden sequence state breaks that: a seeded random stream shared across calls, a conversation history, a counter, a rate limiter that changes behaviour. Its answer depends on how many calls came before, so a cache freezes one draw and replay reproduces the cache, not the decider.
+
+1. Test for hidden state before caching. Run the same inputs in a fresh process, then again after one extra call first. If the extra call changes later answers, the decider has sequence state.
+2. If it does, say so in the instrument record, and do not cache. Either remove the state (reseed per call from the key, or clear history per decision), or treat every call as live and record the call index with each answer.
+3. Note that the repeats in such a run are draws from one stream, not independent samples. Say so wherever the run's noise line is reported.
+
+In one exercise a "random" decider was deterministic per process: a fresh-process re-run gave a byte-identical trace, and one extra warm-up call changed the trace hash. Each answer depended on its position in the call sequence, not only on its inputs.
 
 ## Replay
 
@@ -41,9 +51,12 @@ Test redaction against adversarial formats, not only the usual secret shapes. In
 
 Every failure path returns the same conservative default (RML-30): no key, HTTP error, timeout, malformed reply, an answer outside the menu. Pick the default whose error is cheapest. For a triage router that is usually "real regression", never "safe to rerun".
 
+Code owns the default, and names it by identity, never by position in the offered list (RML-54). A fallback such as "the first option" returns whatever the current order puts first. When options are shuffled or reordered, and every-order controls do exactly that, a positional fallback eventually picks the most dangerous option on the menu. Test that the fallback returns the same named option in every order, and that it never returns an option the lethal control marks fatal. In one exercise all 15 of 15 fallbacks returned the first option offered. The fatal option was first in two of six orders, so a fallback on either would have chosen it. That conclusion came from the decider code plus the 15 observations, not from a measured case.
+
 - Never cache a fallback.
 - Label a fallback as not from the model wherever it appears: records, logs, dashboards. One public project labels fallback answers on screen and marks an offline mode as a simulated policy, not the model. That observation is unaudited.
 - A control must assert its answers came from the live decider. See [controls](controls.md#make-controls-executable).
+- Give the fallback rate its own pre-registered budget and its own finding, apart from the model's preference (RML-49). See [controls](controls.md#keep-the-fallback-rate-apart-from-the-models-preference).
 
 ## Call caps
 

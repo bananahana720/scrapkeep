@@ -22,6 +22,8 @@
 | 3 | Inconclusive: too few samples, a stale baseline, a dirty tree, or a blind set under 20 | "not decided", with the reason |
 | 4 | Instrument invalid: a failed control, an invalid record, or a new epoch that has not re-passed | "no reading"; nothing else in the run counts |
 
+Exit 2 for a batch that is not like for like is thrown before either record is validated (`scripts/lab/gate.mjs:604-627`): the type and batch-mismatch checks run first, and `assessRun()` comes after them. A batch gated against a mismatched pin therefore gets no validation at all, not a partial one. Gate it against a matching pin, or check the record some other way, before calling it valid (SKL-36).
+
 `scripts/play.mjs` maps a lab script that did not finish to exit 4, so a crash never reads as a red KRI. Other exits can come from the launcher: a live jev batch whose preflight fails exits 6 before any record exists (SKL-28).
 
 Known limits of the current gate:
@@ -37,7 +39,7 @@ Known limits of the current gate:
 - Pin only a record whose instrument epoch has passed its controls and blind corpus. Scripted and random records carry no instrument identity (SKL-22).
 - A pin for a build outside the harness worktree, such as `andrew-anchor` for the build Andrew played (dc94b2c), takes `--subject-commit <rev> --subject-path <path>` so the pin names the subject's commit, path and tree hash (SKL-20).
 - `andrew-anchor` never goes stale. It records a human verdict, not machine evidence that ages.
-- Pins in this program: `andrew-anchor`, `ball-lab-suite`, `ball-lab-scripted-dummy-knock-kinematic` and `ball-lab-scripted-dummy-knock-rigid`. The two scripted `dummy-knock` pins are re-cut when JL-21b is admitted, because its state change will read as trace divergence (SKL-22, EV-0551).
+- Pins in this program: `andrew-anchor`, `ball-lab-suite`, `ball-lab-scripted-dummy-knock-kinematic` and `ball-lab-scripted-dummy-knock-rigid`. JL-21b is merged (EV-0564), but the two scripted `dummy-knock` pins are not yet re-cut; JL-21b-A3 re-cuts both under a 2026-09-26 folder with a `subject` block. Until then a fresh scripted `dummy-knock` batch reads as trace divergence against the kinematic pin, and the stale rigid pin can pass the gate (exit 0) without flagging the epoch change (SKL-22, EV-0551, EV-0564).
 - A rigid pin with 0 successes gives the reachability check nothing to compare (`artifacts/jev-lab-2026-09-25/reviews/JL-25.md:11`); prefer a rigid pin scenario that the arm sometimes completes (design choice).
 
 ## Instrument epochs
