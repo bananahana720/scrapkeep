@@ -360,7 +360,7 @@ func wire_optional() -> void:
 		_begin_boss("boss_arena_entered", "brindle"), true)
 	var phase_args := _argc(events, "boss_phase_changed")
 	if phase_args >= 1:
-		_listen(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1))
+		_listen(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1) if phase_args > 1 else _on_boss_phase_with)
 	else:
 		_listen(events, "boss_phase_changed", _on_boss_phase, true)
 	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
@@ -376,7 +376,8 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 		for info in events.get_signal_list():
 			if info["name"] == signal_name:
 				argc = (info["args"] as Array).size()
-		target = callable.unbind(argc)
+		if argc > 0:
+			target = callable.unbind(argc)
 	for connection in events.get_signal_connection_list(signal_name):
 		if connection["callable"].get_object() == callable.get_object() and connection["callable"].get_method() == callable.get_method():
 			return true

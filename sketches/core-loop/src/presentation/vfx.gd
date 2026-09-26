@@ -103,7 +103,7 @@ func wire_optional() -> void:
 		for info in events.get_signal_list():
 			if info["name"] == "interaction_found":
 				argc = (info["args"] as Array).size()
-		events.connect("interaction_found", _on_found.unbind(argc))
+		events.connect("interaction_found", _on_found.unbind(argc) if argc > 0 else _on_found)
 
 
 static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
