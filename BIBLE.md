@@ -2,7 +2,7 @@
 
 **Approved product reference · 6 September 2026**
 
-Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work.
+Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the [playtest log](docs/playtests/PLAYTEST-LOG.md), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands.
 
 Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The [cohesion report](COHESION_REPORT.md) records image and text review; the [decisions list](BIBLE_DECISIONS.md) collects the choices still belonging to Andrew.
 
@@ -13,11 +13,11 @@ Start with the three pillars, then read the section relevant to your work. Use t
 | Established direction | Andrew's accepted game requirements or approved Art Direction. Preserve these unless he changes them. |
 | Creative proposal | Developed fiction, names, character directions, region content or presentation ideas offered for selection. Detailed writing and finished art do not make them approved production scope. |
 | Open detail | A consequential rule or content choice the planning sources do not settle. The decisions list names it. |
-| Prototype example | Behavior or terminology from a bounded existing proof. It illustrates a relationship without defining the full game's final rules. |
+| Prototype example | Behavior or terminology from a bounded existing proof. It illustrates a relationship without defining the full game's final rules. Text marked "superseded prototype evidence" comes from the orchard proof Andrew played and set aside on 22 September 2026 (playtest entry 1); it stays readable as history and no longer guides direction. |
 
 The five regions are a candidate catalogue. A successful run visits four worlds; neither this catalogue nor its map chooses a fixed start, order or finale. The five highlighted animal characters are visual candidates. Their species, names and A/B/C designs remain choices, and an animal-only cast is not locked.
 
-The weapon and three skills are the established weapon, main hero skill, mobility and ultimate slots. Electromagnetic collection and internal recycling explain how salvage becomes growth and mechanical advancement. They do not silently replace gameplay milestones with a new priced economy or required loss of body mass.
+The weapon and three skills are the four established slots: weapon, main hero skill, mobility and ultimate. Electromagnetic collection and internal recycling explain how salvage becomes growth and mechanical advancement. They do not silently replace gameplay milestones with a new priced economy or required loss of body mass.
 
 This is a design reference. The game code and its existing verification records remain the source for what runs today. The original yard and orchard entries stay separate. No gameplay implementation, engine migration, deployment or new audio recording accompanies this edition.
 
@@ -41,7 +41,7 @@ This is a design reference. The game code and its existing verification records 
 
 SCRAPKEEP is a solo-first, close-third-person action roguelite about piloting an improvised electromagnetic mech through a greasy, inhabited steam-cyberpunk Southwest. Roll into trouble, aim through it, collect the wreckage and build something outrageous inside the machine you are driving. The mech's irregular mass records the run in dented tanks, welded repairs and recovered tools. A protected cockpit keeps the pilot recognizable through that growth.
 
-The target is a standalone PC/controller game. A successful run crosses four worlds in 60–75 minutes, through compact procedural encounter levels and a boss in each world. Transitions offer two random next-world destinations. The catalogue, starting world, route order and final-boss placement remain open. The browser prototypes test parts of the experience; they do not establish the full run or choose the production engine.
+The target is a standalone PC/controller game. A successful run crosses four worlds through open stages, each a bounded 3D space on momentum terrain that the player enters, roams for loot, secrets and threats, and leaves through an exit, with a boss in each world. The 60–75 minute length is a target to be measured in open-stage play. Transitions offer two random next-world destinations. The catalogue, starting world, route order and final-boss placement remain open. The browser prototypes test parts of the experience; they do not establish the full run or choose the production engine.
 
 Combat power is rebuilt each run. Permanent discoveries and unlocks broaden future options. The four build slots are weapon, main hero skill, mobility and ultimate, with themed loot, quick autonomous devices and one main assembled companion adding combinations around them. The game must earn interest through its own movement, decisions and replay value.
 
@@ -118,7 +118,7 @@ The five area candidates give the world distinct kinds of work. Yard Commons sit
 
 These places exchange skills and components without becoming interchangeable. A river mechanic spots water wear that a basin scavenger might overlook. A mountain shop knows how to move a heavy load along a narrow ledge. An orchard repairer values a mechanism that can repeat a delicate action all season. Themed discoveries should carry that work into a player's build through their construction and behavior.
 
-The accepted run visits four worlds in 60–75 minutes, with two random destination choices at transitions. Five comparison pages do not choose the catalogue size, starting world, route order or finale. Every region must introduce its local conflict clearly even when it appears first.
+The accepted run visits four worlds, with two random destination choices at transitions; its 60–75 minute length is a target to be measured in open-stage play. Five comparison pages do not choose the catalogue size, starting world, route order or finale. Every region must introduce its local conflict clearly even when it appears first.
 
 ![An inhabited scrapyard settlement in cactus foothills](docs/bible/images/W02-v1.png)
 
@@ -166,7 +166,7 @@ Source context: [Publisher discovery](docs/DISCOVERY.md), [character development
 
 ### Reading the catalogue
 
-These five area pages compare possible worlds for SCRAPKEEP. They are a creative review catalogue, not a selected launch roster. A successful run visits four worlds through compact procedural encounter levels, with a world boss and two random destination offers when another world remains. The number of available worlds, repeat policy, starting world and final-boss placement remain open. No page here claims a compulsory place in that sequence.
+These five area pages compare possible worlds for SCRAPKEEP. They are a creative review catalogue, not a selected launch roster. A successful run visits four worlds through open stages, with a world boss and two random destination offers when another world remains. The number of available worlds, repeat policy, starting world and final-boss placement remain open. No page here claims a compulsory place in that sequence.
 
 The overview is a conceptual catalogue map, explicitly **not a fixed route or geographic survey**. Its separated landform samples express differences in terrain, work and atmosphere. Their positions carry no travel distance, adjacency or astronomical meaning. Read the individual key art for natural scale and the prose for proposed play.
 
@@ -188,7 +188,7 @@ Yard Commons makes salvage feel social. Residents know which broken machines can
 
 Its physical vocabulary starts with irregular rocky washes, sloping gravel fans and firm raised workshop aprons. Saguaros belong on suitable hillsides, with cholla-like scrub and green-trunk branching trees providing different silhouettes. Buildings follow stable ground above the wash. Reused curbs and short retaining walls can offer readable banking and rebound opportunities; ramps connect broad aprons. Tall scrap racks stay outside the camera's useful view of an approaching threat.
 
-A level might begin beside a working repair bay, pass through a collector's sorting court and open into a contested depot apron. Magnetic handlers and clamp mechanisms supply attacks derived from recognizable jobs. A loose load can make a battle consequence visible, provided its fall is announced and leaves a reachable ground route. The old compulsory tutorial-yard interpretation is not carried forward. Any first visit supplies the local lesson the player needs.
+An open stage might spread a working repair bay, a collector's sorting court and a contested depot apron across the foothills for the player to roam in any order. Magnetic handlers and clamp mechanisms supply attacks derived from recognizable jobs. A loose load can make a battle consequence visible, provided its fall is announced and leaves a reachable ground route. The old compulsory tutorial-yard interpretation is not carried forward. Any first visit supplies the local lesson the player needs.
 
 Discoveries draw on insulated collector parts, rugged couplings and compact service tools. Proposed effects could alter collection behavior or how a device withstands pressure; their identities and balance need later design. Residents' possessions and working gardens are not indiscriminate salvage. **Joyful physical mastery** asks whether the wash-to-apron transitions invite useful movement. **A world worth crossing** asks whether an unlabelled view still reads as a Sonoran working settlement. **Scrap becomes your build** ties its recovered service tools to visibly changed hardware.
 
@@ -204,9 +204,9 @@ Spillway Works turns a route into a negotiation with water and height. Huge sand
 
 The mood is cool relief under enormous warm stone. Sun catches the far canyon rim while shaded machinery drips beside the player. Mineral stains record water levels, fresh seals show maintenance, and a mended rail suggests people still cross the service paths. Keep foliage visibly green; petrol enamel belongs to the pumps, not to every leaf and patch of river.
 
-Terrain vocabulary includes river shelves, settling basins, channel bends, gate aprons and higher dry service routes. Water currents are a proposed traversal variable, with direction made visible through surface motion and debris. Their effect on handling remains undecided. A reliable dry route gives the player a legible alternative. Suspended paths contribute depth and local history; they do not authorize mandatory tightrope travel for a growing ball.
+Terrain vocabulary includes river shelves, settling basins, channel bends, gate aprons and higher dry service routes. Water currents are a proposed traversal variable, with direction made visible through surface motion and debris. As stage events they are a candidate event layer, settled by play, and the Spillway basin flood Andrew kept in playtest entry 4 is that layer's first test. Their effect on handling remains undecided. A reliable dry route gives the player a legible alternative. Suspended paths contribute depth and local history; they do not authorize mandatory tightrope travel for a growing ball.
 
-Encounters can contest a pump intake, interrupt a moving screen rake or turn around a basin whose water level changes. Such a change must announce the new ground and reachable exits before it becomes dangerous. Restoring useful water infrastructure is more interesting than flooding the settlement for spectacle. An optional branch might expose a maintenance chamber or reveal equipment beneath a lowered basin.
+Encounters can contest a pump intake, interrupt a moving screen rake or turn around a basin whose water level changes. Such a change must announce the new ground and reachable exits before it becomes dangerous. Floods, drains and currents are stage events that rise and recede, core stage mechanics the player reads, weaves through and turns to advantage rather than spectacle (playtest entry 4). An optional branch might expose a maintenance chamber or reveal equipment beneath a lowered basin.
 
 The reward vocabulary comes from sealed housings, flow-control vanes and magnetic debris-sorting assemblies. Proposed items might redirect a deployed effect or help a companion operate through pressure, but exact effects are open. **Joyful physical mastery** tests whether the channel offers informed movement choices. **Scrap becomes your build** ties recovered pump hardware to a useful mechanism. **A world worth crossing** is the difference between a canyon people inhabit and an industrial corridor painted red.
 
@@ -222,7 +222,7 @@ The Iron Orchard gives the player's force something delicate to move around. Tre
 
 Fruit trees belong in managed rows, with upland scrub and sparse pinyon-like forms on the distant shoulders. Keep this planting distinct from Spillway's continuous river ribbon and Foundry Crown's dark mountain forest. Terraces, service ramps, irrigation edges and greenhouse courts supply its terrain language. Softer soil and swept aprons could support different handling, but no grip values are selected. Their surfaces should communicate that difference before a movement rule depends on it.
 
-Snipcart, Spreadleg and the Pruner arm already give the prototype identifiable orchard mechanisms. Their jobs create different threats through inward jaws, outward feet and a large committed cutting stroke. The implemented arm is a bounded encounter element. A complete Grand Pruner boss, a sequence of generated orchard levels and terrain-changing boss consequences remain proposals.
+(Superseded prototype evidence, 22 Sep 2026; see TADR-010.) Snipcart, Spreadleg and the Pruner arm already give the prototype identifiable orchard mechanisms. Their jobs create different threats through inward jaws, outward feet and a large committed cutting stroke. The implemented arm is a bounded encounter element. A complete Grand Pruner boss, a sequence of generated orchard levels and terrain-changing boss consequences remain proposals.
 
 A region could alternate intimate nursery workspaces with exposed machine aprons. A defense encounter might protect access to a seedhouse; an optional service branch could lead behind a greenhouse to a repaired mechanism and a discovery. A defeated large arm might settle onto visible supports and form a usable bank. That consequence needs a clear landing and a preserved outer route, not a decorative collapse across the exit.
 
@@ -258,9 +258,9 @@ Pale Basin gives the journey an enormous pause in scale. White dunes roll toward
 
 The mood is quiet, strange and sunstruck. Hard light and cool shadows carve dune shoulders. The ground is pale mineral sand, not snow; open sky, granular ripples and sparse dry margin plants must carry that distinction. Low grass tufts and yucca-like forms belong on stable edges. The dune interior should remain largely bare. No repeated saguaro library or transplanted mountain forest belongs here.
 
-Terrain vocabulary includes smooth shoulders, shallow troughs, exposed service pads and hard-packed maintenance strips. A crest should reveal an encounter before committing the player to its danger. Firm routes can weave among softer surfaces, but automatic sliding, traction penalties and weather-driven route changes remain unchosen mechanics. Distinctive buried ribs and a service mast give direction without filling the open space with arrows or debris.
+Terrain vocabulary includes smooth shoulders, shallow troughs, exposed service pads and hard-packed maintenance strips. A crest should reveal an encounter before committing the player to its danger. Firm routes can weave among softer surfaces, but automatic sliding and traction penalties remain unchosen mechanics. Weather-driven route changes are a candidate event layer, settled by play, with the Spillway flood as the layer's first test. Distinctive buried ribs and a service mast give direction without filling the open space with arrows or debris.
 
-An encounter might begin as a salvage inspection, then reveal the working portion of a larger buried mechanism. Sand-moving maintenance tools offer sweeps and scoops with visible mechanical preparation. A boss-scale excavation could uncover more of a machine and change the arena's internal contours while preserving a dependable route. Discovery can be patient and local: a maintained hatch, unusual wear or a wind-cleared seam invites investigation without inventing a scanner requirement.
+An encounter might begin as a salvage inspection, then reveal the working portion of a larger buried mechanism. Sand-moving maintenance tools offer sweeps and scoops with visible mechanical preparation. A boss-scale excavation could uncover more of a machine and change the stage's internal contours while preserving a dependable route. Discovery can be patient and local: a maintained hatch, unusual wear or a wind-cleared seam invites investigation without inventing a scanner requirement.
 
 Reward vocabulary comes from abrasion guards, intake screens, wind-driven linkages and exposed collector parts. Their proposed build roles involve shaping collection or adapting a device's behavior; none are required counters for entering the region. **Joyful physical mastery** tests the visibility beyond a crest. **Scrap becomes your build** gives excavated hardware a working purpose. **A world worth crossing** asks whether vast pale land and stubborn maintenance hold interest between fights.
 
@@ -272,7 +272,7 @@ The pilot gives a growing pile of machinery a face. The machine explains how tha
 
 These five pages are creative proposals for comparison, not a selected launch roster. An animal-only cast remains open. Sable, Kest and Tarn develop the newly requested civilization examples; Fuse and Rivet adapt earlier character work. Each A/B/C sheet holds the pilot identity constant and changes construction. None is a progression sequence or a chosen winner.
 
-Every candidate retains an irregular rolling salvage body, electromagnetic collection and internal fabrication. The weapon and special mobility work at run entry; the main hero skill and ultimate unlock through play during world one. The kit sketches below describe a starting fantasy and directions for visible change. 
+Every candidate retains an irregular rolling salvage body, electromagnetic collection and internal fabrication. The weapon and special mobility work at run entry; the main hero skill and ultimate unlock through play during world one. The kit sketches below describe a starting fantasy and directions for visible change. The movement abilities Andrew played in the mobility-kit sketch already have candidate homes in these mobility rows (playtest entry 3; TADR-008): the grapple he kept in Sable's grapple, the glide in Kest's brief lift, the slam, with the anchor beat he asked for, in Tarn's planted claw pull, the air dash in Fuse's vent-assisted burst, and the pylon mount he requested in place of mag-cling in Rivet's braced reposition or Sable's planted anchor hardware. These are candidates, not assignments. Whether each is a tree root, a node or an item stays open under Q-P11, since transformative items may also replace movement, and whether the pylon mount is a mobility action or a deployed device stays open under Q-P15. 
 
 ### 4.1 Sable, fox from the Switchback Enclaves
 
@@ -290,7 +290,7 @@ Sable's personal arc concerns accepting visible responsibility. At first, a perf
 | --- | --- |
 | Weapon | An aimed hook-driver strikes exposed mechanisms. Upgrades change jaw shape, cable handling and the physical follow-through of a successful shot. |
 | Main hero skill | A quick winch anchor provides autonomous pulls against nearby threats. Active aim redirects its next useful pull; acoustic damping gives a proposed stealth opening without making enemies inexplicably blind. |
-| Mobility | A grapple converts approach speed into a swing, rebound or sharp change of line. Folding guides and stronger spools visibly explain later capabilities. |
+| Mobility | A grapple converts approach speed into a swing, rebound or sharp change of line. Folding guides and stronger spools visibly explain later capabilities. The rope is physical: it should collide with and wrap around what it passes, so a grapple thrown across the direction of travel swings the ball around its anchor like a ride (requested in playtest entry 3). A reach indicator shows before commitment whether the grapple can connect, as an honest placement preview under "A committed attack means what it shows". The reel rework and the wrapping mechanism remain open. |
 | Ultimate | Useful grapples and displacements earn a committed slingshot surge. Deployable anchor hardware loads, then releases a player-chosen path through a fight. |
 
 A emphasizes a low center of mass and tightly packed quiet machinery. B exposes the pulley path and makes traversal equipment unmistakable at distance. C frames the rolling scrap with a padded horseshoe; its anchors should fold clear during ordinary rolling. Sable's equipment can grow without hiding the eyes or turning stealth into a featureless black shell. The unresolved choice is which construction makes swinging mass feel most convincing while preserving sightlines.
@@ -429,7 +429,7 @@ The four paired studies suggest how a Fuse-like emitter family could change thro
 
 The same principle extends to the other candidates. New cable guides can change Sable's release, a revised cradle can change Kest's firing geometry, a new linkage can change Tarn's claw arc, and an optical assembly can change Rivet's beam route. The player should see the reason for the new behavior before needing to read a stat panel.
 
-Each of the four character slots has its own binary tree: one root, then two upgrade nodes, then four, then eight possible endpoints. A run follows one route per slot, without crosspathing. Combat, encounters, objectives, events and area milestones advance those routes. Normal successful play should reach all four endpoints by the final boss. Recycling gives that advancement a physical construction language. It does not introduce an elapsed-time gate, a required collection threshold, an external crafting station or mandatory sacrifice of accumulated mass. Costs, supply and milestone allocation still need design together.
+Each of the four character slots has its own binary tree: one root, then two upgrade nodes, then four, then eight possible endpoints. A run follows one route per slot, without crosspathing. Combat, encounters, objectives, events and area milestones advance those routes. Normal successful play should reach all four endpoints by the final boss, a pacing target to be measured in open-stage play. Recycling gives that advancement a physical construction language. It does not introduce an elapsed-time gate (time may scale threat, never progression; TADR-010), a required collection threshold, an external crafting station or mandatory sacrifice of accumulated mass. Costs, supply and milestone allocation still need design together.
 
 ### 5.3 Finds that belong to their area
 
@@ -449,7 +449,7 @@ Regional equipment can suit several characters. A foundry part need not be reser
 
 Attunement means that an item works with a particular character, another item, or both. Compatibility needs a readable explanation. A linkage might require a physical contact event; a repeated discharge requires an eligible attack to repeat. Shared modifiers can affect compatible player, device and companion actions, but a common color or connector does not prove universal eligibility.
 
-The orchard lightning prototype gives a bounded example. Ground Loop adds lightning chains to body impacts, including rams and landing rebounds. Echo repeats eligible player, conductor and companion attacks once; it cannot repeat an echo. Shear Linkages strengthen body rams and the first equips the existing priming companion. Brace parts improve burst recovery. These are current prototype behaviors, not the future game's complete item system, recipes or class assignments.
+(Superseded prototype evidence, 22 Sep 2026; see TADR-010.) The orchard lightning prototype gives a bounded example. Ground Loop adds lightning chains to body impacts, including rams and landing rebounds. Echo repeats eligible player, conductor and companion attacks once; it cannot repeat an echo. Shear Linkages strengthen body rams and the first equips the existing priming companion. Brace parts improve burst recovery. These are current prototype behaviors, not the future game's complete item system, recipes or class assignments.
 
 The future build can include transformative items that replace movement or attacks, and one main companion assembled through run loot. Its support can prime enemies, buff the pilot or intervene in a clutch moment. Exact component slots and chassis rules remain open. Equipment silhouettes should expose the active modification so a rescue, repeat or changed attack feels caused by the machine the player assembled.
 
@@ -470,19 +470,19 @@ Source basis: [publisher discovery](docs/DISCOVERY.md), [runtime blueprint](docs
 
 ### The complete loop
 
-SCRAPKEEP asks the player to drive a machine, read a fight and build an increasingly personal answer to it. Enter a compact level, move and aim through its threats, collect recoverable metal, earn progression and inspect discoveries. Between fights, reconfigure acquired equipment. Clear the level, choose an onward exit and carry the build into the next encounter. A world boss tests that build before the next world choice changes the surroundings and available discoveries.
+SCRAPKEEP asks the player to drive a machine, read a fight and build an increasingly personal answer to it. Enter an open stage, roam it, move and aim through its threats and events, collect recoverable metal, earn progression and inspect discoveries. Between fights, reconfigure acquired equipment. Leave through the stage's exit, choose an onward exit and carry the build into the next stage. A world boss tests that build before the next world choice changes the surroundings and available discoveries.
 
-The intended successful run lasts 60–75 minutes and crosses four worlds. Combat power is rebuilt each run; discoveries expand future options. This is the target design. The current orchard proves a bounded lightning encounter with movement, committed attacks, three waves, equipment changes and a dashboard. It does not implement the complete run, four progression trees, world routing, fixed secret recipes or the new checkpoint lifecycle.
+The intended successful run lasts 60–75 minutes, a target to be measured in open-stage play, and crosses four worlds. Combat power is rebuilt each run; discoveries expand future options. This is the target design. (Superseded prototype evidence, 22 Sep 2026; see TADR-010.) The current orchard proves a bounded lightning encounter with movement, committed attacks, three waves, equipment changes and a dashboard. It does not implement the complete run, four progression trees, world routing, fixed secret recipes or the new checkpoint lifecycle.
 
 These systems answer the three pillars together. Joyful physical mastery makes each fight worth playing. Scrap becomes your build connects the wreckage to working changes. A world worth crossing makes route choices and discoveries matter beyond a change of backdrop.
 
 ### Movement, camera and active aim
 
-Ordinary movement is always available. The starting weapon and special mobility give the player a useful combat rhythm before any rare drop. Rolling, jumping, rebounds and impacts belong to the core experience. Growth should add physical presence while preserving ordinary route clearance and the pleasure of steering. Mandatory handling penalties or spending body mass to perform routine actions are not accepted rules.
+Ordinary movement is always available. The starting weapon and special mobility give the player a useful combat rhythm before any rare drop. Rolling, jumping, rebounds and impacts belong to the core experience. Growth should add physical presence while preserving ordinary route clearance and the pleasure of steering. Mandatory handling penalties or spending body mass to perform routine actions are not accepted rules. A commitment beat is not a handling penalty: a short hold the player starts by acting, such as the slam anchor or the pylon mount (playtest entry 3), is declared by its ability, shown at commitment, ends at a fixed boundary and then returns full control with no stun, slow or recovery debt (TADR-008).
 
-Close third person keeps the mech prominent and the action ahead visible. Camera-relative movement and active aim let the player approach one threat while targeting another. Focused aiming helps line up a deliberate shot without turning every encounter into stationary shooting. Mouse control is demonstrated in the orchard; standalone PC and controller remain the production target, with physical controller feel still requiring play evidence.
+Close third person keeps the mech prominent and the action ahead visible. Camera-relative movement and active aim let the player approach one threat while targeting another. Focused aiming helps line up a deliberate shot without turning every encounter into stationary shooting. Mouse control is demonstrated in the orchard; standalone PC and controller remain the production target, with physical controller feel still requiring play evidence. Control stays skill-based, with quality-of-life help where momentum makes aim hard: the player must be able to see whether a grapple is in reach before committing it, under the honest-preview rule below (playtest entry 3). How much momentum-aware aim assistance that implies remains open (Q-P21, Q-P30).
 
-The orchard implements double jump, descending enemy rebounds and height-aware attacks. A successful rebound restores an air jump in that prototype. Side contact bumps; deliberate rams still damage. These interactions establish useful movement evidence, but their exact tuning is not a universal specification for every future character. Optional transformative items may replace movement or attacks, provided the player can still understand reachable routes and consequences.
+The orchard implements double jump, descending enemy rebounds and height-aware attacks. A successful rebound restores an air jump in that prototype. Side contact bumps; deliberate rams still damage. These interactions establish useful movement evidence, but their exact tuning is not a universal specification for every future character. (Those orchard sentences are superseded prototype evidence, 22 Sep 2026; the rigid-ball sketches Andrew played in playtest entries 2 and 3 are the current movement evidence, see TADR-006.) Optional transformative items may replace movement or attacks, provided the player can still understand reachable routes and consequences.
 
 The movement loop is positional: read an opening, roll or jump into it, land a chosen action, then use momentum or a rebound to reach the next opening. Level design must test that loop at ordinary maximum growth. A passage that fits the starter but traps a normally developed mech breaks the collection fantasy.
 
@@ -490,7 +490,7 @@ The movement loop is positional: read an opening, roll or jump into it, land a c
 
 An attack needs readable preparation, a committed danger shape, an achievable response and visible recovery or vulnerability. The working tool explains the threat. A cutting arm threatens its swept path; a beam threatens its actual line; a ground effect threatens its resolved area. Height matters. Jumping a low attack can work, while a taller mechanism can still catch the player.
 
-Simulation resolves attack geometry once. Collision, previews, effects and damage use that result. A camera can see around an obstruction while the weapon cannot fire through it; weapon-origin geometry remains authoritative. The reticle expresses aim, and a placement preview must honestly show a blocked or invalid action. Decoration never grants a hit that the resolved geometry does not support.
+Simulation resolves attack geometry once. Collision, previews, effects and damage use that result. A camera can see around an obstruction while the weapon cannot fire through it; weapon-origin geometry remains authoritative. The reticle expresses aim, and a placement preview must honestly show a blocked or invalid action. Decoration never grants a hit that the resolved geometry does not support. The same rule governs elements meeting materials: when an element meets a material, such as frost on flood water, the interaction resolves once against the material the committed geometry touched, from one element-and-material table that abilities and stage events share, and any surface it creates, such as ice to stand on, is shared geometry that collision, rendering and damage all read (playtest entry 4; TADR-009). The element pool, the materials each region holds, lava, and every pair that enters production remain open (Q-P13, Q-P24).
 
 For the player, the loop is preview, choose, commit and observe. For the enemy, it is prepare, commit, execute and recover. Dense fights combine these loops without burying the next useful response. Camera shake, dust and sparks can celebrate impact after they preserve the tool, danger area and escape.
 
@@ -510,19 +510,19 @@ Scrap collection connects combat to construction. Collector coils attract loose 
 
 Show both accumulation and fabrication. A broader silhouette records material gathered. A new emitter, linkage, winch or moving assembly explains a mechanical change. If every upgrade only adds random plates, the player loses the relationship between a choice and its behavior. Protected cockpit, recognizable working equipment and practical route clearance survive the increasing clutter.
 
-The loop is fight, attract, gather, process and construct. Progression still follows gameplay accomplishments and milestones. Material recycling expresses how those upgrades are made; it does not authorize replacement collection thresholds, mandatory mass sacrifice, invented prices or permanent-stat grinding. Exact costs and the supply needed to meet milestones remain open.
+The loop is fight, attract, gather, process and construct. Progression still follows gameplay accomplishments and milestones. Material recycling expresses how those upgrades are made; it does not authorize replacement collection thresholds, mandatory mass sacrifice, invented prices or permanent-stat grinding. Exact costs and the supply needed to meet milestones remain open. Cache and scrap prices are an open economy question too, not a sketch default: the rising cache prices of the Cable Bench sketch are not adopted (playtest entry 5).
 
-This distinction matters at the opening and closing of a run. A player should see the machine becoming capable through play, and normal successful play should complete its selected paths by the final boss. Future economy design must support that promise without asking the player to wait or farm an unapproved resource schedule.
+This distinction matters at the opening and closing of a run. A player should see the machine becoming capable through play, and normal successful play should complete its selected paths by the final boss, a pacing target to be measured in open-stage play. Future economy design must support that promise without asking the player to wait or farm an unapproved resource schedule.
 
 ### Encounters, waves and enemies
 
-Compact levels can mix waves, exploration, events and occasional minibosses. Each world has a boss. An ordinary level does not need one. Waves create local pressure and release; levels create completed accomplishments and onward choices; worlds establish a larger landscape, machinery culture and boss test.
+Open stages mix exploration, stage events, enemy spawns, discoveries and occasional minibosses, composed by one event director (TADR-010). Each world has a boss. An ordinary stage does not need one. Stage events such as floods, drains, currents, weather and special events are scoped to areas of a stage, can be unique to one map, announce themselves, then rise and recede; enemy spawns, including a miniboss arriving at a varied location, layer over them, and a wave is one kind of spawn event, not the stage's grammar. Events ebb and flow to create local pressure and release, so the world feels alive and chaotic and the player weaves in and out of that chaos and turns it to advantage (playtest entry 4); stages create completed accomplishments and onward choices; worlds establish a larger landscape, machinery culture and boss test. Which events, weather and terrain consequences each region carries, and their frequency, overlap and intensity, remain open (Q-P24, Q-P38).
 
-Enemies pressure movement and setup through understandable machinery. Snipcart and Spreadleg are identifiable orchard mechanism examples. The implemented Pruner arm supplies evidence for a large articulated threat; it is not a completed proposed Grand Pruner boss. Their exact counts and timing belong to the tested encounter. A future region must earn its own enemy mix against its terrain and player tools.
+Enemies pressure movement and setup through understandable machinery. (Superseded prototype evidence, 22 Sep 2026; see TADR-010.) Snipcart and Spreadleg are identifiable orchard mechanism examples. The implemented Pruner arm supplies evidence for a large articulated threat; it is not a completed proposed Grand Pruner boss. Their exact counts and timing belong to the tested encounter. A future region must earn its own enemy mix against its terrain and player tools.
 
 As a creative encounter proposal, a machine approaching an exposed device could begin a visible dismantling action, giving the player time to interrupt or reposition. Another could protect a frontal approach and invite a flank. These examples ask for spatial decisions without establishing a new named roster or approved AI behavior.
 
-Arrivals should be legible, overlapping commitments should leave usable responses, and recovery should invite action. More enemies can make a developed build feel powerful, but an unreadable crowd is weak evidence of challenge. The orchard's dense three-wave arrangement and simultaneous worker commitments are bounded proof, not a universal population cap or full-run balance result.
+Arrivals should be legible, overlapping commitments should leave usable responses, and recovery should invite action. More enemies can make a developed build feel powerful, but an unreadable crowd is weak evidence of challenge. Overlapping stage events and spawns follow the same rule: layered chaos never relaxes readability. (Superseded prototype evidence, 22 Sep 2026; see TADR-010.) The orchard's dense three-wave arrangement and simultaneous worker commitments are bounded proof, not a universal population cap or full-run balance result.
 
 ### Four slots and milestone progression
 
@@ -532,16 +532,16 @@ Every character has four character-specific binary trees. Each starts at one roo
 | --- | --- | --- |
 | Weapon | Available at run start | Establishes the repeatable aimed action and how the character applies pressure. |
 | Main hero skill | Unlocks through play during world one | Deepens the character's distinctive combat interaction. |
-| Mobility | Special mobility available at run start | Changes positioning and traversal around always-available ordinary movement. |
+| Mobility | Special mobility available at run start | Changes positioning and traversal around always-available ordinary movement. The movement abilities played in playtest entry 3 are candidates for this slot (see Characters); class versus item stays open. |
 | Ultimate | Unlocks through play during world one | Converts useful class-specific contributions into a major payoff. |
 
-Combat, encounters, events, objectives and area milestones advance access and deeper upgrades. A normal successful route reaches an endpoint in every tree by the final boss. Exact node effects, costs and milestone allocation remain open; binary branching and the eight-endpoint shape are settled. Elapsed time is not the progression gate.
+Combat, encounters, events, objectives and area milestones advance access and deeper upgrades. A normal successful route reaches an endpoint in every tree by the final boss, a pacing target to be measured in open-stage play. Exact node effects, costs and milestone allocation remain open; binary branching and the eight-endpoint shape are settled. Elapsed time is not the progression gate. Stage time may scale threat, such as spawn pressure or event intensity, but never opens an exit, advances a tree, prices an upgrade or cache, or otherwise gates progression (TADR-010). Whether a stage uses a threat clock at all stays open until a stage explains its economy (playtest entry 5).
 
 The choice loop is understand a route, select its next step, construct the change and use it. Significant upgrades should alter visible hardware or effects along with behavior. A player comparing two branches needs to understand the action each develops, not decode a list of unexplained percentages.
 
-Changing a selected branch requires a special respec opportunity, such as a room or event. Finding one creates a consequential chance to redirect a build after discoveries. It does not make branch changes freely available in every pause menu. Scope, frequency, refund behavior and presentation of these opportunities still need design. No respec price is assigned here.
+Changing a selected branch requires a special respec opportunity, such as a stage discovery or event. Finding one creates a consequential chance to redirect a build after discoveries. It does not make branch changes freely available in every pause menu. Scope, frequency, refund behavior and presentation of these opportunities still need design. No respec price is assigned here.
 
-The prototype currently has a primary attack, two combat abilities, mobility and ultimate. That input arrangement must be mapped deliberately into the future four-tree design. A deployment action does not automatically create a fifth progression slot.
+(Superseded prototype evidence, 22 Sep 2026; see TADR-008.) The prototype currently has a primary attack, two combat abilities, mobility and ultimate. That input arrangement must be mapped deliberately into the future four-tree design. A deployment action does not automatically create a fifth progression slot.
 
 ### Inventory, equipment and transformations
 
@@ -551,7 +551,7 @@ The loop is inspect a discovery, compare its effects, equip or retain it, then t
 
 Optional transformations can replace attacks or movement. Shared modifiers can affect compatible player, device and companion actions. Compatibility needs explicit content rules; every effect does not automatically apply to every source. Reconfiguration should rebuild the effective result from current selections, so removed equipment stops contributing and repeated swaps do not accumulate accidental bonuses.
 
-Ground Loop and Echo demonstrate interactions in the orchard. Its Echo repeats eligible attacks once under the prototype's defined timing and strength, without recursive repeats. Those named examples show why combining equipment is attractive. They do not define all future stacking rules or final loot recipes.
+(Superseded prototype evidence, 22 Sep 2026; see TADR-010.) Ground Loop and Echo demonstrate interactions in the orchard. Its Echo repeats eligible attacks once under the prototype's defined timing and strength, without recursive repeats. Those named examples show why combining equipment is attractive. They do not define all future stacking rules or final loot recipes.
 
 ### Themed loot, attunement and fixed secrets
 
@@ -575,7 +575,7 @@ The orchard's priming companion demonstrates one contribution and supports inter
 
 ### Runs, regions, exits and saves
 
-A world is a run-region in this Bible. A compact encounter level is one part of that region. Four worlds define a successful run's length, while the five illustrated area candidates form a comparison catalogue. No starting world, fixed order, repeat policy or final destination is selected by that catalogue.
+A world is a run-region in this Bible. An open stage is one part of that region; where this Bible says "level" for a part of a world, read "stage" (TADR-010). Four worlds define a successful run's length, while the five illustrated area candidates form a comparison catalogue. No starting world, fixed order, repeat policy or final destination is selected by that catalogue.
 
 After clearing a level, the player chooses an onward exit. At a transition to another world, the game offers two randomly selected eligible destinations. That is a world choice, independent of the number or format of item rewards. Exact levels per world and procedural technique remain open. Seeded authored encounter assembly and procedural terrain assembly are still candidate approaches.
 
@@ -593,7 +593,7 @@ The combat HUD answers immediate questions: health, remaining standard revival, 
 
 *U01. Combat HUD mockup, creative proposal. The four labeled cells are Weapon, Hero Skill, Mobility and Ultimate. The corrected mockup uses one AVAILABLE revival indicator, an assembled mechanical companion and a strongly irregular rolling scrap core. Layout and anonymous hardware remain proposals.*
 
-The dashboard gives more space to the character, equipment, companion, map and settings. Its states must distinguish locked slot, unavailable upgrade, permitted equipment swap and special tree respec. The comparison below proposes those distinctions. Its map expresses a four-world journey and two destination options without selecting a canonical route.
+The dashboard gives more space to the character, equipment, companion, map and settings. Its states must distinguish locked slot, unavailable upgrade, permitted equipment swap and special tree respec. The comparison below proposes those distinctions. Its map expresses a four-world journey and two destination options without selecting a canonical route. Between the HUD and the dashboard sits a proposed third state, a hold-to-view overlay: while the player holds a control it shows the current objective, what collected scrap does for the build and, during playtests, notes, and it can grow into the dashboard. A pause lets the player get their bearings (playtest entry 5). The overlay follows the AD-08 interface rules; its control, layout and contents remain open (Q-P30).
 
 ![Three dashboard states separate equipment swaps, special tree respec and next-world selection.](docs/bible/images/U02-v3.png)
 
@@ -603,7 +603,7 @@ Readable workshop instrumentation uses solid dark backing, clear labels and rest
 
 ### Architecture and implementation handoff
 
-The orchard keeps authoritative combat in `src/orchard/simulation.js`, rendering in `scene.js`, procedural models in `models.js`, and input/UI orchestration in `main.js`. Damage and telegraphs share committed geometry. Both `/` and `/orchard.html` remain available. The current locked Three.js/Vite stack supports the prototypes. The [accepted engineering ADRs](adr/README.md) define the separate production direction without changing what these proofs currently implement.
+The orchard keeps authoritative combat in `src/orchard/simulation.js`, rendering in `scene.js`, procedural models in `models.js`, and input/UI orchestration in `main.js` (this file map is superseded prototype evidence, 22 Sep 2026, and describes the browser proof only). Damage and telegraphs share committed geometry. Both `/` and `/orchard.html` remain available. The current locked Three.js/Vite stack supports the prototypes. The [accepted engineering ADRs](adr/README.md) define the separate production direction without changing what these proofs currently implement.
 
 Future content definitions describe possible characters, trees, items, encounters and recipes. Encounter simulation owns immediate actions and outcomes. Run state carries selections, inventory, route choices, companion, revival and checkpoint status. Permanent progression stores discoveries and unlocked options. Rendering consumes those decisions; it must not reroll loot, miscasts or route offers.
 
@@ -752,7 +752,7 @@ Build an original instrumental score around a dry, physical rhythm section: mute
 
 Use shared musical material in several arrangements. Exploration leaves space between phrases. Rising pressure adds rhythmic subdivision and bass movement; sustained combat brings fuller percussion and a stronger melodic answer. A powerful build earns an additional energetic layer, not an indefinitely rising master volume. Boss phases can reorganize the rhythm; attack cues remain immediate.
 
-Resolve arrangement changes at phrase boundaries when play allows. Danger must never wait for a beat. After a clear, release the busiest layers and let the region's actual ambience return before the next reward flourish. Avoid a restart sting whenever one leftover enemy appears. Judge transition timing in play.
+Resolve arrangement changes at phrase boundaries when play allows. Danger must never wait for a beat. After a clear, release the busiest layers and let the region's actual ambience return before the next reward flourish. Avoid a restart sting whenever one leftover enemy appears. Judge transition timing in play. Stage events borrow these pressure layers as they rise and recede, a short stinger can announce an event before it becomes dangerous, and weather carries its own ambience layer in each region.
 
 Regional variations do not select a run route:
 
@@ -897,7 +897,7 @@ These definitions record how this Bible uses a reference. They grant no permissi
 | Respec | A branch change permitted through a special opportunity. Ordinary between-fight equipment reconfiguration is separate. |
 | Scrap becomes your build | Pillar connecting electromagnetic accumulation and internal fabrication to visibly changed working equipment and earned combinations. |
 | Standard revival | The run's single recovery from lethal defeat. A later death ends the run; companion rescue does not silently replenish it. |
-| World | Run-region containing compact encounter levels and a boss. Four worlds form a successful run; five catalogue candidates do not select its route. |
+| World | Run-region containing open stages and a boss. Four worlds form a successful run; five catalogue candidates do not select its route. A stage is one bounded 3D space on momentum terrain, entered, roamed and left through an exit; it replaces the earlier compact encounter level. |
 
 Definitions follow the corresponding sections above. Prototype aliases are reconciled against the [lightning play guide](docs/LIGHTNING-PLAYGUIDE.md) and [character planning](docs/CHARACTER-BIBLE.md); external reference boundaries follow the approved Art Direction and Appendix B.
 
@@ -960,7 +960,7 @@ During the image review, Andrew explicitly requested nodes that fork into two up
 | [Decision register](docs/project/DECISION-REGISTER.md) | Accepted notebook rulings and unresolved lifecycle/content details. Old palette questions are superseded for this Bible by the approved revision. |
 | [Character planning](docs/CHARACTER-BIBLE.md) | Earlier candidate characters, the chaos novice, supporting relationships and Furnace Fleet fiction. This is a proposal source, not a final roster. |
 | [World and environment kits](docs/WORLD-ENVIRONMENTS.md) | Occupational machinery and candidate regions adapted into the Southwest setting. The former fixed campaign ladder is not adopted. |
-| [Level design](docs/LEVEL-DESIGN.md) | Compact encounter structure, route readability and terrain ideas. Historical dimensions and worked stages remain examples. |
+| [Level design](docs/LEVEL-DESIGN.md) | Route readability and terrain ideas. Its compact encounter structure is superseded by open stages (TADR-010). Historical dimensions and worked stages remain examples. |
 | [Runtime blueprint](docs/RUNTIME-BLUEPRINT.md) | Content, encounter, run and permanent-profile responsibilities; system invariants and unresolved implementation details. |
 | [Requirements](docs/project/REQUIREMENTS.md) | Distinguishes accepted future direction from the implemented proofs. |
 | [Selected orchard study](docs/CONCEPT-STUDY-03.md) | Shared enemy-family mechanisms and the separation between promising concept art and resolved motion/geometry. |
