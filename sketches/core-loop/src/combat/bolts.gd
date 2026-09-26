@@ -23,8 +23,11 @@ const ALPHA_CROWDED := 0.4
 const CROWD_START := 16
 const WAVE_RAMP := 6.0
 
-# Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3).
+# Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3, part: String);
+# part is a weak point id from enemy.weak_points(), or "" for the body.
 var on_hit: Callable
+# Called as on_shell.call(bolt: Dictionary, shell: Node3D) when a bolt reaches a shell in flight.
+var on_shell: Callable
 # Called as on_stop.call(point: Vector3, color: Color) when a bolt hits the world.
 var on_stop: Callable
 var peak_live := 0
@@ -93,7 +96,7 @@ func fire(bolt: Dictionary) -> void:
 	peak_live = maxi(peak_live, _bolts.size())
 
 
-func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> void:
+func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:
 	var survivors: Array = []
 	for bolt in _bolts:
 		var from: Vector3 = bolt["shown"]
@@ -108,9 +111,13 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> voi
 				end = wall["position"]
 				blocked = true
 		var target := _first_enemy(from, end, bolt["radius"], enemies)
+		var shell := _first_shell(from, end, bolt["radius"], shells)
+		if not shell.is_empty() and (target.is_empty() or shell["along"] < target["along"]):
+			if on_shell.is_valid() and on_shell.call(bolt, shell["shell"]):
+				continue
 		if not target.is_empty():
 			if on_hit.is_valid():
-				on_hit.call(bolt, target["enemy"], target["point"])
+				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
 			continue
 		if blocked:
 			if on_stop.is_valid():
@@ -136,7 +143,8 @@ func _position(bolt: Dictionary) -> Vector3:
 
 
 # The first enemy the segment passes within reach of, measured against each enemy's
-# upright capsule (its axis, widened by its radius and the bolt's).
+# weak-point spheres first and then its upright capsule (its axis, widened by its
+# radius and the bolt's). A weak point wins a tie with the body it sits on.
 func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array) -> Dictionary:
 	var best := {}
 	var best_along := INF
@@ -144,6 +152,14 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or enemy.is_dead():
 			continue
+		for weak in enemy.weak_points():
+			var at: Vector3 = weak["at"]
+			var near := Geometry3D.get_closest_point_to_segment(at, from, to)
+			if near.distance_to(at) <= weak["radius"] + bolt_radius:
+				var weak_along := from.distance_to(near) - 0.01
+				if weak_along < best_along:
+					best_along = weak_along
+					best = {"enemy": enemy, "point": near, "part": weak["id"], "along": weak_along}
 		var centre: Vector3 = enemy.global_position
 		var inner: float = maxf(0.0, enemy.half_height - enemy.radius)
 		var reach: float = enemy.radius + bolt_radius
@@ -156,7 +172,23 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array
 		var along := from.distance_to(points[0])
 		if along < best_along:
 			best_along = along
-			best = {"enemy": enemy, "point": points[0]}
+			best = {"enemy": enemy, "point": points[0], "part": "", "along": along}
+	return best
+
+
+func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array) -> Dictionary:
+	var best := {}
+	var best_along := INF
+	for shell in shells:
+		if not is_instance_valid(shell) or shell.returned:
+			continue
+		var at: Vector3 = shell.global_position
+		var near := Geometry3D.get_closest_point_to_segment(at, from, to)
+		if near.distance_to(at) <= shell.HIT_RADIUS + bolt_radius:
+			var along := from.distance_to(near)
+			if along < best_along:
+				best_along = along
+				best = {"shell": shell, "along": along}
 	return best
 
 

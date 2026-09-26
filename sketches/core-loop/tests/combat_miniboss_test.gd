@@ -5,8 +5,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 
 # The miniboss an event spawns through ctx.spawner.spawn_enemy("miniboss", at): it
-# spawns, commits a slam ring on the ball and lands it, opens a weak window that
-# takes far more damage than its armour, commits a charge lane that misses a ball
+# spawns, commits a slam ring on the ball and lands it, opens a weak window where its
+# plating drops to 0 (a small punch lands in full instead of chipping 20%), commits a charge lane that misses a ball
 # moved off the lane (damage reads only the telegraph's geometry), and dies to the
 # runner's laser with its scrap. The ball is held in place, so every hit is the
 # boss's committed geometry and not the ball's momentum.
@@ -14,7 +14,7 @@ const Miniboss := preload("res://src/combat/miniboss.gd")
 const AHEAD := 14.0
 const PROBE := 10.0
 const STEP_LIMIT := 5.0
-const KILL_LIMIT := 20.0
+const KILL_LIMIT := 40.0
 
 var _game
 var _source := Intent.Scripted.new()
@@ -72,9 +72,9 @@ func _physics_process(delta: float) -> bool:
 				var before: float = _boss.hp
 				_game.ctx.spawner.strike(_boss, "runner", PROBE)
 				_armour_drop = before - _boss.hp
-				_report("weak_window", _weak_drop > _armour_drop * 5.0,
-					"a %.0f hit took %.1f hp in the weak window and %.1f through armour (x%.1f vs x%.2f)"
-						% [PROBE, _weak_drop, _armour_drop, Miniboss.WEAK_SCALE, Miniboss.ARMOUR_SCALE])
+				_report("weak_window", is_equal_approx(_weak_drop, PROBE) and is_equal_approx(_armour_drop, PROBE * 0.2),
+					"a %.0f-punch hit took %.1f hp in the weak window (plating 0) and %.1f through plating %.0f (20%% chip)"
+						% [PROBE, _weak_drop, _armour_drop, _boss.plating])
 				_next("await_charge")
 		"await_charge":
 			if boss_state == "charge_brace":

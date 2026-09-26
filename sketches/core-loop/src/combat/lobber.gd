@@ -22,8 +22,8 @@ var _muzzle: MeshInstance3D
 var _muzzle_material: StandardMaterial3D
 
 
-func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float) -> void:
-	_setup_common(target_ref, terrain_ref, root_ref, live_ref)
+func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
+	_setup_common(target_ref, terrain_ref, root_ref, live_ref, spec_ref)
 	kind = "lobber"
 	_set_health(HP * threat)
 	scrap_value = SCRAP

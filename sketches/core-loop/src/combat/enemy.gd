@@ -3,10 +3,16 @@ extends CharacterBody3D
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 
-# What every enemy shares: health, weight, knockback, the flash, death and its
-# telegraph. The spine's ball calls knock() and flash() on contact (CONTRACTS.md), so
-# collisions have weight whatever combat does with the damage; weight divides every
-# shove, so a miniboss barely rocks where a chaser flies.
+# What every enemy shares: health, plating, weight, knockback, the flash, the plating
+# tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
+# (CONTRACTS.md), so collisions have weight whatever combat does with the damage;
+# weight divides every shove, so a miniboss barely rocks where a chaser flies.
+#
+# Plating (DEMO-SPEC Rules): combat's strike() asks plating_for(kind, part) and
+# hit_mult(kind, part). A hit whose punch reaches the plating lands in full; below it
+# the hit chips 20%. Weak points are parts: an enemy may list them in weak_points()
+# (spheres a bolt can hit) or name one from a contact in contact_part(). The base enemy
+# has none and one plating for everything.
 #
 # An enemy never damages the player directly. It emits hit_player(amount, shove) only
 # after its committed telegraph's contains() says the ball was inside, and the spawner
@@ -15,6 +21,10 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
+# Plating reads: amber when your punch beats it, slate when it does not.
+const AMBER := Palette.AMBER
+const SLATE := Color("5d6b78")
+const TINT_ENERGY := 0.9
 
 signal hit_player(amount: float, shove: Vector3)
 signal died(at: Vector3, scrap_value: int)
@@ -24,12 +34,16 @@ var target
 var terrain
 var world_root: Node3D
 var live := Callable()
+var spec := {}
 var hp := 40.0
 var max_hp := 40.0
+var plating := 0.0
 var scrap_value := 3
 var weight := 1.0
 var radius := 1.0
 var half_height := 1.5
+# "", "amber" or "slate", set by combat every physics tick from punch_now().
+var tint_state := ""
 
 var _knock := Vector3.ZERO
 var _flash := 0.0
@@ -37,14 +51,17 @@ var _dead := false
 var _material: StandardMaterial3D
 var _base_color := Palette.RUST
 var _telegraph: Node3D
+# Extra materials a plated enemy recolours with its tint (armour plates, shells).
+var _tint_materials: Array = []
 
 
 # Subclasses call this first from their own setup, then build their body.
-func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable) -> void:
+func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_ref := {}) -> void:
 	target = target_ref
 	terrain = terrain_ref
 	world_root = root_ref
 	live = live_ref
+	spec = spec_ref
 	add_to_group("enemy")
 	collision_layer = 0
 	collision_mask = 0
@@ -75,21 +92,65 @@ func is_dead() -> bool:
 	return _dead
 
 
-# The multiplier on every hit taken. The miniboss uses it for its armour and weak window.
+# --- Plating --------------------------------------------------------------------------
+
+# The plating right now, before any weak point. The miniboss drops it to 0 in its weak
+# window; the Warden drops it to 0 while its magnet is shot.
+func plating_now() -> float:
+	return plating
+
+
+# The plating one hit meets. `part` is "" for the body or a weak point id.
+func plating_for(_kind: String, _part: String) -> float:
+	return plating_now()
+
+
+# The damage multiplier on a hit that beat the plating (a Warden vent cap takes 1.5).
+func hit_mult(_kind: String, _part: String) -> float:
+	return 1.0
+
+
+# Weak points a bolt can hit: [{id, at: Vector3, radius}]. Checked before the body.
+func weak_points() -> Array:
+	return []
+
+
+# The weak point a ball contact (stomp, ram, slam) lands on, or "".
+func contact_part(_ball: Vector3, _kind: String) -> String:
+	return ""
+
+
+# Called by strike() after the hit is resolved and before the damage, so an enemy can
+# react to what hit it (the Warden's magnet). `result` is combat's resolve record.
+func on_struck(_kind: String, _part: String, _result: Dictionary) -> void:
+	pass
+
+
+func set_tint(state: String) -> void:
+	if state == tint_state:
+		return
+	tint_state = state
+	var color := AMBER if state == "amber" else SLATE
+	for mat in _tint_materials:
+		(mat as StandardMaterial3D).albedo_color = color
+	if _flash <= 0.0:
+		_apply_rest_look()
+
+
+# Kept for callers from the first cut; plating replaced the multipliers.
 func damage_scale() -> float:
 	return 1.0
 
 
-# Resolves one hit. Returns the damage actually dealt.
+# Resolves one hit's damage, already decided by strike(). Returns the damage dealt.
 func take_damage(amount: float) -> float:
 	if _dead:
 		return 0.0
-	var dealt := amount * damage_scale()
-	hp -= dealt
+	hp -= amount
 	flash()
 	if hp <= 0.0:
 		_die()
-	return dealt
+	return amount
 
 
 func telegraph() -> Node3D:
@@ -181,9 +242,22 @@ func _update_flash(delta: float) -> void:
 		_material.emission_enabled = true
 		_material.emission = Palette.AMBER
 		_material.emission_energy_multiplier = _flash * 2.0
-	elif _material.emission_enabled:
+		if _flash <= 0.0:
+			_apply_rest_look()
+
+
+# The resting look: the base colour, with the plating tint glowing through on a plated
+# enemy so the read survives any lighting.
+func _apply_rest_look() -> void:
+	if _material == null:
+		return
+	_material.albedo_color = _base_color
+	if tint_state == "":
 		_material.emission_enabled = false
-		_material.albedo_color = _base_color
+		return
+	_material.emission_enabled = true
+	_material.emission = AMBER if tint_state == "amber" else SLATE
+	_material.emission_energy_multiplier = TINT_ENERGY
 
 
 func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) -> MeshInstance3D:
@@ -203,3 +277,12 @@ func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) ->
 	mesh.material_override = _material
 	add_child(mesh)
 	return mesh
+
+
+# A tinted material for a plating mesh, registered so set_tint recolours it.
+func _plate_material() -> StandardMaterial3D:
+	var mat := Palette.solid(SLATE)
+	mat.metallic = 0.6
+	mat.roughness = 0.4
+	_tint_materials.append(mat)
+	return mat

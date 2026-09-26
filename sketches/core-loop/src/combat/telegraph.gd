@@ -32,12 +32,15 @@ var width := 0.0
 var reach_up := 3.5
 var terrain
 var progress := 0.0
+# HAZARD for every enemy threat. A ring the player owns (a batted shell) draws in AMBER.
+var color := Palette.HAZARD
 
 var _fill: Node3D
 
 
-static func ring(parent: Node, terrain_ref, at: Vector3, ring_radius: float, reach := 3.5) -> Node3D:
+static func ring(parent: Node, terrain_ref, at: Vector3, ring_radius: float, reach := 3.5, tint := Palette.HAZARD) -> Node3D:
 	var node: Node3D = load("res://src/combat/telegraph.gd").new()
+	node.color = tint
 	node.shape = Shape.RING
 	node.terrain = terrain_ref
 	node.radius = ring_radius
@@ -129,7 +132,7 @@ func _build() -> void:
 		fill.size = Vector3(width * 0.9, 0.06, length)
 		var inner := MeshInstance3D.new()
 		inner.mesh = fill
-		inner.material_override = material(FILL_ALPHA)
+		inner.material_override = material(FILL_ALPHA, color)
 		inner.position = Vector3(0.0, 0.0, -length * 0.5)
 		inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		holder.add_child(inner)
@@ -140,15 +143,15 @@ func _build() -> void:
 func _mesh(mesh: Mesh, alpha: float, offset: Vector3) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
-	instance.material_override = material(alpha)
+	instance.material_override = material(alpha, color)
 	instance.position = offset
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(instance)
 	return instance
 
 
-static func material(alpha: float) -> StandardMaterial3D:
-	var mat := Palette.unshaded(Color(Palette.HAZARD, alpha))
+static func material(alpha: float, tint := Palette.HAZARD) -> StandardMaterial3D:
+	var mat := Palette.unshaded(Color(tint, alpha))
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.no_depth_test = true
 	mat.render_priority = PRIORITY

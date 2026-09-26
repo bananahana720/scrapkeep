@@ -10,14 +10,18 @@ extends "res://src/combat/enemy.gd"
 # - Charge: a long lane is committed toward you; it braces, then charges down it.
 #   Only the lane hurts, and only where its body is.
 # - Weak window: after each attack it is stuck and vented. The armour plates swing
-#   open, the core swells and glows, and a halo spins over it. Hits land at WEAK_SCALE.
-#   Outside the window the armour takes ARMOUR_SCALE of every hit, so the fight's
-#   rhythm is: read the telegraph, dodge on the move, punish the window.
+#   open, the core swells and glows, and a halo spins over it. Its plating drops to 0,
+#   so every hit lands in full. Outside the window its plating is 1.25 times the stage
+#   Warden's (spec "plating", set by the spawner), so a small punch only chips 20%: the
+#   same grammar as every plated target. The fight's rhythm is: read the telegraph,
+#   dodge on the move, punish the window.
 #
 # Weight: WEIGHT divides every shove, so rams rock it and slams nudge it; it cannot be
 # knocked during a leap or a charge.
 
-const HP := 900.0
+const HP := 600.0
+# Used only when the spawner passes no plating (1.25 x a stage-1 Warden's 30).
+const DEFAULT_PLATING := 38.0
 const SCRAP := 24
 const WEIGHT := 5.0
 const RADIUS := 2.3
@@ -37,8 +41,6 @@ const CHARGE_TIME := 0.9
 const CHARGE_DAMAGE := 20.0
 const CHARGE_SHOVE := 10.0
 const WEAK_SECONDS := 2.4
-const WEAK_SCALE := 2.2
-const ARMOUR_SCALE := 0.35
 
 enum State { STALK, SLAM_CROUCH, SLAM_LEAP, CHARGE_BRACE, CHARGE, WEAK }
 
@@ -58,10 +60,11 @@ var _plates: Array = []
 var _halo: MeshInstance3D
 
 
-func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float) -> void:
-	_setup_common(target_ref, terrain_ref, root_ref, live_ref)
+func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
+	_setup_common(target_ref, terrain_ref, root_ref, live_ref, spec_ref)
 	kind = "miniboss"
 	_set_health(HP * threat)
+	plating = spec.get("plating", DEFAULT_PLATING)
 	scrap_value = SCRAP
 	weight = WEIGHT
 	radius = RADIUS
@@ -78,8 +81,8 @@ func is_weak() -> bool:
 	return state == State.WEAK
 
 
-func damage_scale() -> float:
-	return WEAK_SCALE if state == State.WEAK else ARMOUR_SCALE
+func plating_now() -> float:
+	return 0.0 if state == State.WEAK else plating
 
 
 func knock(direction: Vector3, force: float) -> void:
@@ -201,7 +204,7 @@ func _build_armour() -> void:
 	_core.material_override = _core_material
 	_core.position = Vector3(0.0, 0.6, -RADIUS * 0.75)
 	add_child(_core)
-	var plate_material := Palette.solid(Palette.CHARCOAL)
+	var plate_material := _plate_material()
 	for side in [-1.0, 1.0]:
 		var plate := MeshInstance3D.new()
 		var box := BoxMesh.new()

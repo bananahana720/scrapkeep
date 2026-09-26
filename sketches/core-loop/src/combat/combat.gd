@@ -3,6 +3,10 @@ extends Node
 const Chaser := preload("res://src/combat/chaser.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
+const Warden := preload("res://src/combat/warden.gd")
+const Vault := preload("res://src/combat/vault.gd")
+const CodexEntries := preload("res://src/combat/codex_entries.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
@@ -25,10 +29,32 @@ const Palette := preload("res://src/core/palette.gd")
 #    the engineer. Planting a pylon as the engineer fires the discharge for free,
 #    powered by the banked speed (the turret's opening burst).
 # 4. Bolts step; a bolt that reaches an enemy is resolved once through strike().
+# 5. Every plated enemy is tinted amber if punch_now() beats its plating, slate if not.
+#
+# Plating (DEMO-SPEC Rules) lives in one function, resolve(): punch for a ball contact
+# is (base + force * k) * heft, punch for a weapon hit is its damage after parts; punch
+# at or above the target's plating lands in full, below it chips CHIP. strike(), the
+# tint, punch_now(), plating_of() and would_crush() all read that one function.
 
 const MUZZLE := 1.25
 const AIM_SLACK := 14.0
-const KINDS := ["chaser", "lobber", "miniboss"]
+const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
+const CONTACT_KINDS := ["stomp", "ram", "slam"]
+const CHIP := 0.2
+# Used only when stage_def() has no warden fields yet (the old spine): the spec's values.
+const WARDEN_FALLBACK := [
+	{"warden_plating": 30.0, "warden_hp": 400.0, "warden_lesson": "plate"},
+	{"warden_plating": 60.0, "warden_hp": 700.0, "warden_lesson": "caps"},
+	{"warden_plating": 95.0, "warden_hp": 1000.0, "warden_lesson": "magnet"},
+]
+const VAULT_TOP_PLATING := 120.0
+const MINIBOSS_PLATING_SCALE := 1.25
+const SHELL_RETURN_DAMAGE := 40.0
+const BAT_REACH := 2.4
+const PARTING_WINDOW := 1.0
+const PULSE_STOMP_WINDOW := 1.5
+const CRUSH_WINDOW := 1.0
+const CRUSH_CHAIN := 3
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -44,12 +70,20 @@ var volleys := 0
 # The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
 var last_burst := {}
+# A test knob: a heft to use instead of ctx.run.heft(). Negative means off.
+var heft_override := -1.0
+# Codex ids discovered this run, in order, with where (also sent to ctx.codex).
+var discovered := {}
+var discovery_log: Array = []
 
 var _patterns := {}
 var _part_map := {}
 var _cooldown := 0.0
 var _special_cooldown := 0.0
 var _overdrive := 0.0
+var _since_slingshot := INF
+var _crushes: Array = []
+var _clock := 0.0
 
 
 func setup(ctx_ref) -> void:
@@ -63,18 +97,26 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(bolts)
 	bolts.setup()
 	bolts.on_hit = _on_bolt_hit
+	bolts.on_shell = func(_bolt: Dictionary, shell: Node3D) -> bool: return _bat(shell)
 	bolts.on_stop = func(at: Vector3, color: Color): effects.spark(at, color)
 	ctx.events.stage_entered.connect(_on_stage_entered)
-	ctx.events.run_started.connect(func(_class_id: String): _rebuild_patterns())
+	ctx.events.run_started.connect(func(_class_id: String):
+		discovered = {}
+		_rebuild_patterns())
+	ctx.events.dismounted.connect(func(v: Vector3):
+		if v.length() > 0.1:
+			_since_slingshot = 0.0)
 	ctx.events.part_gained.connect(func(_part: String, _source: String): _rebuild_patterns())
 	ctx.events.mounted.connect(_on_mounted)
 	_rebuild_patterns()
+	_declare_codex()
 
 
 # --- Spawner API (CONTRACTS.md) -----------------------------------------------------
 
-# kind is "chaser", "lobber" or "miniboss". An unknown kind spawns a chaser, with a
-# warning, so a typo in an event table never leaves a stage empty.
+# kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
+# chaser, with a warning, so a typo in an event table never leaves a stage empty. The
+# Warden and the vault sit on the ground under `at`; the others are placed at `at`.
 func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 	var enemy: Node3D
 	match kind:
@@ -82,6 +124,10 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Lobber.new()
 		"miniboss":
 			enemy = Miniboss.new()
+		"warden":
+			enemy = Warden.new()
+		"vault":
+			enemy = Vault.new()
 		"chaser":
 			enemy = Chaser.new()
 		_:
@@ -90,28 +136,98 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
 	enemy.global_position = at
-	enemy.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), _threat())
+	enemy.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int): ctx.run.record_kill(kind, where, scrap))
 	if enemy.has_signal("fired"):
-		enemy.fired.connect(_on_lobber_fired)
+		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	return enemy
 
 
-# A hit the spine or a weapon made, resolved into damage exactly once. The bus fact
-# goes out before the damage so a kill never publishes a freed node.
-func strike(enemy: Node3D, kind: String, force: float) -> void:
+# A hit the spine or a weapon made, resolved into damage exactly once. The bus facts go
+# out before the damage so a kill never publishes a freed node: enemy_struck always,
+# then strike_deflected when the punch fell short of the plating. `part` names a weak
+# point ("" for the body; a ball contact finds its own through contact_part()).
+func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 		return
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
+	var result := resolve(enemy, kind, force, part)
+	_detect_before(enemy, kind, result)
 	ctx.events.enemy_struck.emit(enemy, kind, force)
-	var amount := force
+	if not result["full"] and ctx.events.has_signal("strike_deflected"):
+		ctx.events.emit_signal("strike_deflected", enemy, kind, result["punch"], result["plating"])
+	if enemy.has_method("on_struck"):
+		enemy.on_struck(kind, result["part"], result)
+	enemy.take_damage(result["dealt"])
+	_detect_after(enemy, kind, result)
+
+
+# The one plating rule. Returns {punch, plating, full, dealt, part}.
+func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionary:
+	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
+		part = enemy.contact_part(ctx.player.ball_position(), kind)
+	var punch := punch_of(kind, force)
+	var plating: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
+	var full := punch >= plating
+	var mult: float = enemy.hit_mult(kind, part) if full and enemy.has_method("hit_mult") else 1.0
+	var dealt := punch * mult if full else punch * CHIP
+	return {"punch": punch, "plating": plating, "full": full, "dealt": dealt, "part": part}
+
+
+# Punch for a hit of this kind and force: a ball contact scales with heft, a weapon hit
+# is its damage.
+func punch_of(kind: String, force: float) -> float:
 	if STRIKE_DAMAGE.has(kind):
 		var row: Array = STRIKE_DAMAGE[kind]
-		amount = row[0] + force * row[1]
-	enemy.take_damage(amount)
+		return (row[0] + force * row[1]) * heft()
+	return force
+
+
+func heft() -> float:
+	if heft_override >= 0.0:
+		return heft_override
+	if ctx != null and ctx.run != null and ctx.run.has_method("heft"):
+		return ctx.run.heft()
+	return 1.0
+
+
+# The best punch you have right now: a ram at your planar speed (from CRUISE up), or one
+# hit of the weapon in your hands. The HUD's "Punch 48 / plating 60" reads this.
+func punch_now() -> float:
+	var ram := 0.0
+	if ctx.player.speed_tier() >= SpeedTier.CRUISE:
+		ram = punch_of("ram", ctx.player.planar_velocity().length())
+	var weapon := active_weapon()
+	var shot: float = _patterns[weapon].damage if _patterns.has(weapon) else 0.0
+	return maxf(ram, shot)
+
+
+func plating_of(enemy: Node3D) -> float:
+	if not is_instance_valid(enemy) or not enemy.has_method("plating_now"):
+		return 0.0
+	return enemy.plating_now()
+
+
+# hp / max_hp, 1.0 for an invalid enemy (as the spec says), 0.0 for a dead one.
+func integrity_of(enemy: Node3D) -> float:
+	if not is_instance_valid(enemy):
+		return 1.0
+	if (enemy.has_method("is_dead") and enemy.is_dead()) or float(enemy.get("max_hp")) <= 0.0:
+		return 0.0
+	return clampf(float(enemy.get("hp")) / float(enemy.get("max_hp")), 0.0, 1.0)
+
+
+# True when this contact would kill an unplated target outright: the spine's crush
+# pass-through asks before it decides to skip the knock. A plated break-through is
+# not a crush.
+func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
+	if not is_instance_valid(enemy) or enemy.is_dead():
+		return false
+	var result := resolve(enemy, kind, force)
+	return result["plating"] <= 0.0 and result["dealt"] >= enemy.hp
 
 
 # --- Pattern API for parts (README.md) ----------------------------------------------
@@ -179,6 +295,8 @@ func _physics_process(delta: float) -> void:
 	ctx.camera.shoulder_target = 1.0 if playing and ctx.player.kit.mounted else 0.0
 	if not playing or ctx.run.class_def == null:
 		return
+	_clock += delta
+	_since_slingshot += delta
 	_cooldown -= delta
 	_special_cooldown = maxf(0.0, _special_cooldown - delta)
 	_overdrive = maxf(0.0, _overdrive - delta)
@@ -191,7 +309,37 @@ func _physics_process(delta: float) -> void:
 		_cooldown = maxf(_cooldown, 0.0)
 	if intent.special_pressed and _special_cooldown <= 0.0:
 		_special()
-	bolts.step(delta, ctx.root.get_world_3d().direct_space_state, get_tree().get_nodes_in_group("enemy"))
+	var shells := get_tree().get_nodes_in_group("enemy_shot")
+	bolts.step(delta, ctx.root.get_world_3d().direct_space_state, get_tree().get_nodes_in_group("enemy"), shells)
+	_bat_by_ball(shells)
+	_tint()
+
+
+# Plated targets glow amber when your punch beats their plating right now, slate when
+# it does not. Same function as the strike, re-read every physics tick.
+func _tint() -> void:
+	var punch := punch_now()
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
+			continue
+		enemy.set_tint("amber" if punch >= enemy.plating_now() else "slate")
+
+
+# A rolling ball at CRUISE or faster that reaches a shell in flight bats it home.
+func _bat_by_ball(shells: Array) -> void:
+	if ctx.player.speed_tier() < SpeedTier.CRUISE:
+		return
+	var ball: Vector3 = ctx.player.ball_position()
+	for shell in shells:
+		if is_instance_valid(shell) and not shell.returned and shell.global_position.distance_to(ball) <= BAT_REACH:
+			_bat(shell)
+
+
+func _bat(shell: Node3D) -> bool:
+	if not is_instance_valid(shell) or not shell.bat():
+		return false
+	effects.spark(shell.global_position, Palette.AMBER)
+	return true
 
 
 func _rate(weapon: String) -> float:
@@ -229,21 +377,21 @@ func _fire(weapon: String) -> void:
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
-func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3) -> void:
+func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -> void:
 	effects.spark(point, bolt["color"])
 	var from: Vector3 = enemy.global_position
-	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"])
+	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"], 0.25, part)
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
 
 
 # One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
-func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, lift := 0.25) -> void:
+func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, lift := 0.25, part := "") -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * lift, knock)
 	enemy.flash()
-	strike(enemy, kind, damage)
+	strike(enemy, kind, damage, part)
 
 
 # The arc jumps from the struck enemy to the nearest one it has not touched, losing
@@ -358,16 +506,113 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 		ctx.player.add_external_accel(shove * Engine.physics_ticks_per_second)
 
 
-func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float) -> void:
+func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
-	shell.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight)
+	shell.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
+	shell.returned_landed.connect(_on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
+
+
+# A batted shell's blast hits every enemy its amber ring contains.
+func _on_shell_returned(shell: Node3D) -> void:
+	var ring: Node3D = shell.ring
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead() or not is_instance_valid(ring) or not ring.contains(enemy.global_position - Vector3.UP * enemy.half_height):
+			continue
+		var owned: bool = enemy == shell.lobber
+		strike(enemy, "shell", SHELL_RETURN_DAMAGE)
+		if owned and enemy.is_dead():
+			_discover("shell_return", enemy.global_position)
 
 
 func _threat() -> float:
 	return ctx.flow.stage_def()["threat"]
+
+
+# The stage's Warden numbers: stage_def() fields when the spine has them, else the
+# spec's per-stage values.
+func warden_spec(stage: int) -> Dictionary:
+	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else {}
+	var fallback: Dictionary = WARDEN_FALLBACK[clampi(stage, 1, 3) - 1]
+	return {
+		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
+		"hp": float(def.get("warden_hp", fallback["warden_hp"])),
+		"lesson": String(def.get("warden_lesson", fallback["warden_lesson"])),
+	}
+
+
+func _spec_for(kind: String) -> Dictionary:
+	var stage: int = ctx.flow.stage()
+	match kind:
+		"warden":
+			var w := warden_spec(stage)
+			w["stage"] = stage
+			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
+			return w
+		"miniboss":
+			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
+		"vault":
+			var next_plating: float = VAULT_TOP_PLATING if stage >= 3 else warden_spec(stage + 1)["plating"]
+			return {"stage": stage, "plating": next_plating, "hp": 400.0 * stage}
+	return {}
+
+
+# --- Codex (category "enemy") -------------------------------------------------------
+
+func codex_entries() -> Array:
+	return CodexEntries.all()
+
+
+func _codex():
+	return ctx.get("codex") if ctx != null else null
+
+
+func _declare_codex() -> void:
+	var codex = _codex()
+	if codex == null or not codex.has_method("declare"):
+		return
+	for entry in CodexEntries.all():
+		codex.declare(entry)
+
+
+# Once per run per id here; the codex itself owns what persists across runs.
+func _discover(id: String, at: Vector3) -> void:
+	if discovered.has(id):
+		return
+	discovered[id] = at
+	discovery_log.append(id)
+	var codex = _codex()
+	if codex != null and codex.has_method("mark_discovered"):
+		codex.mark_discovered(id, at)
+
+
+# Tricks that read the target's state before the hit lands.
+func _detect_before(enemy: Node3D, kind: String, result: Dictionary) -> void:
+	var target_kind = enemy.get("kind")
+	if kind == "ram" and target_kind == "chaser" and enemy.state_name() == "windup":
+		_discover("counter_ram", enemy.global_position)
+	if kind == "stomp" and result["part"] == "cap" and target_kind == "warden" \
+			and enemy.seconds_since_pulse() <= PULSE_STOMP_WINDOW:
+		_discover("pulse_stomp", enemy.global_position)
+
+
+# Tricks that read the outcome.
+func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
+	if not enemy.has_method("is_dead") or not enemy.is_dead():
+		return
+	var at: Vector3 = enemy.global_position
+	if kind == "ram" and result["plating"] <= 0.0:
+		_crushes.append(_clock)
+		while not _crushes.is_empty() and _clock - _crushes[0] > CRUSH_WINDOW:
+			_crushes.pop_front()
+		if _crushes.size() >= CRUSH_CHAIN:
+			_discover("crush_chain", at)
+	if kind in ["runner", "arc", "turret"] and _since_slingshot <= PARTING_WINDOW:
+		_discover("parting_shot", at)
+	if enemy.get("kind") == "warden" and enemy.unplated_by_magnet():
+		_discover("magnet_break", at)
 
 
 # --- Stage reset --------------------------------------------------------------------
@@ -387,6 +632,8 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	volleys = 0
 	last_shot = {}
 	last_burst = {}
+	_crushes.clear()
+	_since_slingshot = INF
 	_rebuild_patterns()
 
 
