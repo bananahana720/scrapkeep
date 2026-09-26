@@ -8,7 +8,7 @@ Status values:
 - `provisional`: one run or one review supports it. Promote it only when a second independent run or review cites it.
 - `retracted`: a later result overturned it. Keep the text, fill `Overturned by`, and edit the citing rule line in the same commit.
 
-Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-lab-2026-09-25/reviews/<card>.md:<line>`, and other files by repository path and line. Every line was opened and checked on 2026-09-25: SKL-01 to SKL-30 at base `0d02138`, and SKL-31, SKL-32 and the revised origin-map rows after merging the coordinator branch at a1f2eda. SKL-33 to SKL-36 and the re-pointed SKL-16 and SKL-31 lines were checked on 2026-09-26 at base 64bd9cf, after JL-21b's merge; SKL-31's promotion and the SKL-33 and SKL-34 line numbers were re-checked after merging JL-21b-A3 (82d2a96).
+Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-lab-2026-09-25/reviews/<card>.md:<line>`, and other files by repository path and line. Every line was opened and checked on 2026-09-25: SKL-01 to SKL-30 at base `0d02138`, and SKL-31, SKL-32 and the revised origin-map rows after merging the coordinator branch at a1f2eda. SKL-33 to SKL-36 and the re-pointed SKL-16 and SKL-31 lines were checked on 2026-09-26 at base 64bd9cf, after JL-21b's merge; SKL-31's promotion and the SKL-33 and SKL-34 line numbers were re-checked after merging the coordinator branch at d450bd8, which contains JL-21b-A3 (82d2a96).
 
 ## Lessons
 
@@ -198,7 +198,7 @@ Token figures on the board that came from the delegate ledger before EV-0498 are
 
 ## RML origin map
 
-Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46; JL-30 writer d, attempt A1, appended RML-47 to RML-55 from the DoD 3 portable exercise, and their rows were opened and confirmed at base 64bd9cf; attempt A2 appended RML-56 to RML-62 from the blind exercise 1b and confirmed those rows after merging the coordinator head 82d2a96. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids its review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
+Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46; JL-30 writer d, attempt A1, appended RML-47 to RML-55 from the DoD 3 portable exercise, and their rows were opened and confirmed at base 64bd9cf; attempt A2 appended RML-56 to RML-62 from the blind exercise 1b and confirmed those rows after merging the coordinator branch at d450bd8, which contains the JL-21b-A3 merge 82d2a96. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids its review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
 
 | RML id | SKL id or citation |
 | --- | --- |
