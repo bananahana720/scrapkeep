@@ -28,6 +28,19 @@ var state := TITLE
 var classes: Array[Resource] = []
 # Tests shorten the beacon; anything below zero means use the stage's own seconds.
 var beacon_seconds_override := -1.0
+# The Warden seals every stage in play. ctx.calm leaves stages unsealed so momentum
+# tests measure the seams alone; force_warden seals them anyway for the gate tests.
+var force_warden := false
+var sealed := false
+var warden: Node3D = null
+# Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
+# boss_plating to the hull's plating. The death screen then shows the boss gap line and
+# offers T, which replays stage 3 from the start the run kept.
+var boss_active := false
+var boss_plating := 120.0
+# warden_engaged fires once per stage attempt: on the first sealed ring entry or the
+# first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
+var _engaged := false
 
 var _launched := false
 var _flight := 0.0
@@ -41,6 +54,8 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx.events.player_died.connect(_on_player_died)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.launched.connect(_on_launched)
+	ctx.events.enemy_killed.connect(_on_enemy_killed)
+	ctx.events.enemy_struck.connect(_on_enemy_struck)
 
 
 func state_name() -> String:
@@ -101,7 +116,7 @@ func _begin_run(chosen: Resource) -> void:
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
-	ctx.run.stage = index
+	ctx.run.enter_stage(index)
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
@@ -133,6 +148,42 @@ func retry_stage() -> void:
 	_set_state(STAGE)
 
 
+# Replays a stage from the first start the run kept for it, as the boss death screen's
+# T does for stage 3. One synchronous call, like a retry.
+func replay_stage(index: int) -> bool:
+	if not ctx.run.use_stage_start(index):
+		return false
+	boss_active = false
+	retry_stage()
+	return true
+
+
+# The treasure burst for a first discovery in a run: scrap at the spot, which feeds
+# heft, so exploring feeds growth (DEMO-SPEC). The codex calls it once per entry per run.
+const BURST_PER_STAGE := 20
+
+
+func discovery_burst(at: Vector3) -> void:
+	ctx.run.add_scrap(BURST_PER_STAGE * ctx.run.stage, at)
+
+
+func can_replay_final_stage() -> bool:
+	return boss_active and ctx.run.has_stage_start(StageDefs.COUNT)
+
+
+# What the death screen says about the fight that killed you: your punch against the
+# plating that stood in the way, and your heft. Empty when no plated lock was live.
+func gap_line() -> String:
+	var plating := -1.0
+	if boss_active:
+		plating = boss_plating
+	elif sealed and is_instance_valid(warden):
+		plating = warden_plating()
+	if plating < 0.0:
+		return ""
+	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
+
+
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)
@@ -146,6 +197,41 @@ func _place_beacon() -> void:
 	var def := stage_def()
 	var seconds: float = beacon_seconds_override if beacon_seconds_override >= 0.0 else def["beacon_seconds"]
 	beacon.place(ctx.terrain.beacon_point(ctx.run.stage), seconds, def["beacon_radius"])
+	if is_instance_valid(warden):
+		warden.queue_free()
+	_engaged = false
+	sealed = (not ctx.calm) or force_warden
+	warden = _spawn_warden() if sealed else null
+	# No Warden to break (a spawner without the kind): the stage stays on the
+	# presence path rather than locking the exit.
+	if warden == null:
+		sealed = false
+
+
+func _spawn_warden() -> Node3D:
+	if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return null
+	var spawned = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(ctx.run.stage))
+	return spawned if spawned is Node3D else null
+
+
+# Spawner reads, each with the fallback the contract names for a spawner without it.
+func warden_integrity() -> float:
+	if not is_instance_valid(warden) or not ctx.spawner.has_method("integrity_of"):
+		return 1.0
+	return ctx.spawner.integrity_of(warden)
+
+
+func punch_now() -> float:
+	if ctx.spawner == null or not ctx.spawner.has_method("punch_now"):
+		return 0.0
+	return ctx.spawner.punch_now()
+
+
+func warden_plating() -> float:
+	if is_instance_valid(warden) and ctx.spawner.has_method("plating_of"):
+		return ctx.spawner.plating_of(warden)
+	return stage_def()["warden_plating"]
 
 
 func physics_step(delta: float) -> void:
@@ -155,7 +241,13 @@ func physics_step(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	match state:
 		STAGE, BEACON:
-			var done: bool = beacon.advance(delta, ball)
+			if sealed and not is_instance_valid(warden):
+				sealed = false
+			var done: bool = beacon.advance(delta, ball, sealed)
+			if sealed:
+				beacon.show_progress(beacon.duration * (1.0 - warden_integrity()))
+				if beacon.phase != Beacon.IDLE:
+					_engage()
 			if state == STAGE and beacon.phase != Beacon.IDLE:
 				_set_state(BEACON)
 			var percent := int(beacon.fraction() * 100.0)
@@ -199,6 +291,31 @@ func _on_launched(_velocity: Vector3) -> void:
 		_flight = 0.0
 
 
+# Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done
+# and nothing asks you to roll back to the ring.
+func _on_enemy_killed(kind: String, _at: Vector3, _scrap_value: int) -> void:
+	if kind != "warden" or not sealed or not (state == STAGE or state == BEACON):
+		return
+	sealed = false
+	warden = null
+	beacon.open()
+	ctx.events.beacon_unsealed.emit(ctx.run.stage)
+	_set_state(GATES)
+	ctx.events.beacon_charge_changed.emit(1.0)
+
+
+func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:
+	if sealed and enemy == warden:
+		_engage()
+
+
+func _engage() -> void:
+	if _engaged:
+		return
+	_engaged = true
+	ctx.events.warden_engaged.emit(ctx.run.stage)
+
+
 func _on_player_died() -> void:
 	if not in_play():
 		return
@@ -218,13 +335,21 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 func objective_text() -> String:
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_beacon: float = Vector2(ball.x - beacon.global_position.x, ball.z - beacon.global_position.z).length()
+	var percent := int(beacon.fraction() * 100.0)
+	var fight := {
+		"distance": int(to_beacon),
+		"percent": percent,
+		"punch": int(punch_now()),
+		"plating": int(warden_plating()),
+		"hint": stage_def()["warden_hint"],
+	}
 	match state:
-		STAGE:
-			return EventKinds.objective("stage_entered", {"distance": int(to_beacon)})
-		BEACON:
-			var text := EventKinds.objective("beacon_charge_changed", {"percent": int(beacon.fraction() * 100.0)})
+		STAGE, BEACON:
+			if sealed:
+				return EventKinds.objective("stage_entered" if state == STAGE else "beacon_charge_changed", fight)
+			var text := EventKinds.objective("beacon_unsealed", fight)
 			if not beacon.in_ring(ball):
-				text += "  Outside the ring: %d m back." % int(to_beacon - beacon.radius)
+				text += "  The ring is %d m away." % int(maxf(0.0, to_beacon - beacon.radius))
 			return text
 		GATES:
 			return EventKinds.objective("reward_offered")

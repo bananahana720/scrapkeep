@@ -18,6 +18,10 @@ const AimStyle := preload("res://src/movement/aim_style.gd")
 const STOMP := "stomp"
 const RAM := "ram"
 const SLAM := "slam"
+# The bow sensor reaches this far past the shell, so a crush is decided before contact.
+const BOW_REACH := 1.0
+# How long a crushed enemy is ignored by the ball's collider while it dies.
+const CRUSH_PASS := 0.3
 
 signal shockwave(position: Vector3, strength: float)
 # A physical contact the ball made, for combat to turn into damage. Local, not the bus:
@@ -34,6 +38,9 @@ var drive_basis := Basis.IDENTITY
 var spawn_point := Vector3.ZERO
 # Presentation turns this off when it draws its own squash and stretch.
 var builtin_squash := true
+# Asks combat whether a contact would kill outright: (enemy, kind, force) -> bool.
+# game.gd wires it to ctx.spawner.would_crush once combat is set up.
+var crush_check := Callable()
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -50,6 +57,8 @@ var _aim_marks := {}
 var _roll := Basis.IDENTITY
 var _frozen := false
 var _was_hooked := false
+var _bow: Area3D
+var _crushing := {}
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -102,6 +111,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_roll_mount.name = "RollMount"
 	_mesh.add_child(_roll_mount)
 
+	_build_bow()
 	_build_augment_visuals()
 	_rigid.set_active(true)
 	reset_to(spawn_point)
@@ -242,6 +252,49 @@ static func _align_up(normal: Vector3) -> Basis:
 	return Basis(right, up, right.cross(up))
 
 
+# The Katamari moment: fodder the ball now outweighs is rolled straight through. The
+# sensor sees it a metre early, combat confirms the hit would kill, and the collider
+# ignores that enemy while it dies, so the pass costs no speed, knock or hit-stop.
+func _build_bow() -> void:
+	_bow = Area3D.new()
+	_bow.name = "Bow"
+	_bow.collision_layer = 0
+	_bow.collision_mask = 0
+	_bow.set_collision_mask_value(3, true)
+	_bow.monitorable = false
+	var shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS + BOW_REACH
+	shape.shape = sphere
+	_bow.add_child(shape)
+	_rigid.add_child(_bow)
+	_bow.body_entered.connect(_on_bow_entered)
+
+
+func _on_bow_entered(body: Node3D) -> void:
+	if _frozen or not body.is_in_group("enemy") or state.tier < SpeedTier.CRUISE or not crush_check.is_valid():
+		return
+	var id := body.get_instance_id()
+	if _crushing.has(id):
+		return
+	var speed := planar_velocity().length()
+	if not crush_check.call(body, RAM, speed):
+		return
+	_crushing[id] = true
+	_rigid.add_collision_exception_with(body)
+	struck.emit(body, RAM, speed)
+	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
+
+
+# Bound by id: the crushed enemy is usually freed by now, and a freed exception
+# leaves the physics server with it.
+func _end_crush(id: int) -> void:
+	_crushing.erase(id)
+	var body := instance_from_id(id)
+	if is_instance_valid(body) and body is PhysicsBody3D:
+		_rigid.remove_collision_exception_with(body)
+
+
 func _build_augment_visuals() -> void:
 	_rope = MeshInstance3D.new()
 	_rope.mesh = ImmediateMesh.new()
@@ -372,6 +425,8 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> vo
 
 
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
+	if _crushing.has(enemy.get_instance_id()):
+		return
 	var velocity: Vector3 = state.velocity
 	var away := enemy.global_position - ball_position()
 	away.y = 0.0
@@ -386,7 +441,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0)
 		shockwave.emit(enemy.global_position, 0.6)
 		struck.emit(enemy, STOMP, absf(velocity.y))
-	elif state.tier >= SpeedTier.FAST:
+	elif state.tier >= SpeedTier.CRUISE:
 		enemy.knock(away + Vector3.UP * 0.35, 18.0)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)

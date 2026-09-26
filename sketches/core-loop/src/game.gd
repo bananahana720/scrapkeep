@@ -5,6 +5,8 @@ const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const Codex := preload("res://src/core/codex.gd")
+const RunLog := preload("res://src/core/run_log.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
@@ -63,6 +65,11 @@ var screens
 var notes
 var panel
 var keyboard
+var codex
+var run_log
+# Where the codex and the run log write: user:// in play, a per-process folder the
+# tests clean up when the game leaves the tree.
+var storage_dir := "user://"
 
 var _pause_toggled := false
 var _notes_held := false
@@ -106,6 +113,16 @@ func _ready() -> void:
 	flow.name = "Flow"
 	add_child(flow)
 	ctx.flow = flow
+	if test_mode:
+		storage_dir = "user://test-%d" % OS.get_process_id()
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+	codex = Codex.new()
+	add_child(codex)
+	codex.setup(events, run, flow, storage_dir)
+	ctx.codex = codex
+	run_log = RunLog.new()
+	add_child(run_log)
+	run_log.setup(events, run, player, codex, storage_dir)
 
 	world = _module(World)
 	combat = _module(Combat)
@@ -114,6 +131,9 @@ func _ready() -> void:
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
 	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
+	# Read ctx.spawner at call time, so a test double or a late swap is honoured.
+	player.crush_check = func(enemy: Node3D, kind: String, force: float) -> bool:
+		return ctx.spawner != null and ctx.spawner.has_method("would_crush") and ctx.spawner.would_crush(enemy, kind, force)
 
 	flow.setup(ctx, beacon)
 	events.flow_changed.connect(_on_flow_changed)
@@ -153,6 +173,17 @@ func _module(script: GDScript) -> Node:
 	add_child(module)
 	module.setup(ctx)
 	return module
+
+
+func _exit_tree() -> void:
+	if not test_mode:
+		return
+	var dir := DirAccess.open(storage_dir)
+	if dir == null:
+		return
+	for file in dir.get_files():
+		dir.remove(file)
+	DirAccess.remove_absolute(storage_dir)
 
 
 func _physics_process(delta: float) -> void:
@@ -371,6 +402,9 @@ func _screen_key(key: int) -> bool:
 				return true
 			if key == KEY_C:
 				flow.open_class_select()
+				return true
+			if key == KEY_T and flow.can_replay_final_stage():
+				flow.replay_stage(3)
 				return true
 		"summary":
 			if key == KEY_SPACE or key == KEY_ENTER:

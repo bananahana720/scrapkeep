@@ -107,6 +107,11 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	var delta := body_state.step
 	gravity_scale = tuning.f("gravity") / 9.8
 	state.velocity = body_state.linear_velocity
+	var origin := body_state.transform.origin
+	if tuning.on("legacy_spin_probe"):
+		_probe.global_transform = body_state.transform
+	else:
+		_probe.global_transform = Transform3D(Basis.IDENTITY, origin)
 	Rules.probe_ground(_probe, state)
 
 	var wish := Vector3.ZERO
