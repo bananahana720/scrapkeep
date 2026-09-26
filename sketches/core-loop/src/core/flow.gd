@@ -212,7 +212,7 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.height(ball.x, ball.z) - RESCUE_DEPTH:
 		return
 	var v: Vector3 = ctx.player.state.velocity
-	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z) * 0.5)
+	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
 
 
 func objective_text() -> String:
