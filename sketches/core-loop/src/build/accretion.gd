@@ -1,0 +1,244 @@
+extends Node3D
+
+const Parts := preload("res://src/build/parts.gd")
+const Palette := preload("res://src/core/palette.gd")
+
+# Scrap becomes your build, on the ball. Held scrap shows as chunks stuck to the
+# surface, and each part as a piece of hardware whose shape says its family and whose
+# colour says its rarity. Spending scrap at a fabricator takes chunks off and bolts a
+# part on, so the purchase reads on the ball itself. This node lives under the ball's
+# roll_node(), so everything rolls with the surface. It is drawn from run.scrap and
+# run.parts every time, so a retry redraws the restored build exactly.
+#
+# Visual budget: at most MAX_CHUNKS chunks and MAX_PIECES pieces, and nothing sticks
+# out more than 0.7 m, so the build never hides the ball's line or a threat.
+
+const MAX_CHUNKS := 36
+const MAX_PIECES := 24
+const CHUNK_PER_ROOT_SCRAP := 2.2
+const POP_SCALE := 1.9
+const POP_RATE := 12.0
+
+const RARITY_COLORS := {
+	"common": Palette.COPPER,
+	"rare": Palette.ARC,
+	"epic": Palette.AMBER,
+	"milestone": Palette.HAZARD,
+}
+const ICE := Color("c8f0ff")
+
+var _chunks: Array[MeshInstance3D] = []
+var _pieces: Array[Node3D] = []
+var _shown_parts: Array = []
+var _halos := {}
+var _chunk_mesh: BoxMesh
+var _chunk_material: StandardMaterial3D
+
+
+func setup() -> void:
+	name = "Accretion"
+	_chunk_mesh = BoxMesh.new()
+	_chunk_mesh.size = Vector3(0.42, 0.3, 0.5)
+	_chunk_material = Palette.solid(Palette.ARC.lerp(Palette.RUST, 0.45), 0.5)
+
+
+static func chunks_for(scrap: int) -> int:
+	return mini(MAX_CHUNKS, int(sqrt(maxf(0.0, float(scrap))) * CHUNK_PER_ROOT_SCRAP))
+
+
+func chunk_count() -> int:
+	return _chunks.size()
+
+
+func piece_count() -> int:
+	return _pieces.size()
+
+
+func halo_visible(synergy_id: String) -> bool:
+	return _halos.has(synergy_id) and (_halos[synergy_id] as Node3D).visible
+
+
+# Idempotent: draws exactly this scrap total, part list and synergy set.
+func show_build(scrap: int, parts: Array, synergies: Array) -> void:
+	var want := chunks_for(scrap)
+	while _chunks.size() > want:
+		_chunks.pop_back().queue_free()
+	while _chunks.size() < want:
+		_add_chunk(_chunks.size())
+	if parts != _shown_parts:
+		_rebuild_pieces(parts)
+	for key in ["storm_lattice", "thermal_shock"]:
+		var halo: Node3D = _halos.get(key)
+		if halo == null:
+			halo = _build_halo(key)
+			_halos[key] = halo
+		halo.visible = key in synergies
+
+
+# A point on the unit sphere, spread evenly by index (golden-angle spiral), so the same
+# index always lands in the same spot.
+static func _slot(index: int, count: int, phase := 0.0) -> Vector3:
+	var y := 1.0 - (float(index) + 0.5) / float(count) * 2.0
+	var r := sqrt(maxf(0.0, 1.0 - y * y))
+	var angle := float(index) * 2.39996 + phase
+	return Vector3(cos(angle) * r, y, sin(angle) * r)
+
+
+func _add_chunk(index: int) -> void:
+	var chunk := MeshInstance3D.new()
+	chunk.mesh = _chunk_mesh
+	chunk.material_override = _chunk_material
+	var dir := _slot(index, MAX_CHUNKS)
+	chunk.position = dir * 1.02
+	chunk.basis = _facing(dir) * Basis(Vector3.UP, float(index) * 1.3)
+	chunk.scale = Vector3.ONE * POP_SCALE
+	add_child(chunk)
+	_chunks.append(chunk)
+
+
+func _rebuild_pieces(parts: Array) -> void:
+	for piece in _pieces:
+		piece.queue_free()
+	_pieces.clear()
+	_shown_parts = parts.duplicate()
+	var shown := mini(parts.size(), MAX_PIECES)
+	for i in shown:
+		var part_id: String = parts[i]
+		var piece := _piece(part_id)
+		var dir := _slot(i, MAX_PIECES, 1.1)
+		piece.position = dir * 1.0
+		piece.basis = _facing(dir)
+		# The newest piece pops like a chunk does.
+		if i == shown - 1:
+			piece.scale = Vector3.ONE * POP_SCALE
+		add_child(piece)
+		_pieces.append(piece)
+
+
+# A basis whose +Y points out of the ball along dir.
+static func _facing(dir: Vector3) -> Basis:
+	var up := dir.normalized()
+	var side := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
+	side = (side - up * side.dot(up)).normalized()
+	return Basis(side, up, side.cross(up))
+
+
+func _piece(part_id: String) -> Node3D:
+	var d: Resource = Parts.def(part_id)
+	var family: String = d.family if d != null else "stat"
+	var rarity: String = d.rarity if d != null else "common"
+	var color: Color = RARITY_COLORS.get(rarity, Palette.COPPER)
+	var mat := Palette.solid(color, 1.4 if rarity != "common" else 0.4)
+	var root := Node3D.new()
+	root.name = "Part_" + part_id
+	match part_id:
+		"cross_split":
+			for yaw in [0.0, PI * 0.5]:
+				_box(root, Vector3(0.9, 0.12, 0.16), Vector3(0.0, 0.2, 0.0), mat, yaw)
+		"spiral_wave":
+			var coil := MeshInstance3D.new()
+			var torus := TorusMesh.new()
+			torus.inner_radius = 0.18
+			torus.outer_radius = 0.34
+			coil.mesh = torus
+			coil.material_override = mat
+			coil.position = Vector3(0.0, 0.25, 0.0)
+			coil.rotation = Vector3(0.4, 0.0, 0.0)
+			root.add_child(coil)
+		"chain_arc":
+			_rod(root, 0.55, mat)
+			_ball(root, 0.16, Vector3(0.0, 0.62, 0.0), mat)
+		_:
+			match family:
+				"weapon":
+					_rod(root, 0.5, mat)
+				"mobility":
+					_box(root, Vector3(0.1, 0.55, 0.6), Vector3(0.0, 0.25, 0.0), mat, 0.0)
+				"class":
+					_rod(root, 0.35, mat, 0.16)
+					_ball(root, 0.12, Vector3(0.0, 0.42, 0.0), Palette.solid(color, 3.0))
+				"milestone":
+					var star := MeshInstance3D.new()
+					var gem := SphereMesh.new()
+					gem.radius = 0.32
+					gem.height = 0.8
+					gem.radial_segments = 4
+					gem.rings = 2
+					star.mesh = gem
+					star.material_override = Palette.solid(color, 3.0)
+					star.position = Vector3(0.0, 0.35, 0.0)
+					root.add_child(star)
+				_:
+					_box(root, Vector3(0.6, 0.12, 0.6), Vector3(0.0, 0.05, 0.0), mat, 0.0)
+	return root
+
+
+func _box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, yaw: float) -> void:
+	var node := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	node.mesh = box
+	node.material_override = mat
+	node.position = at
+	node.rotation = Vector3(0.0, yaw, 0.0)
+	parent.add_child(node)
+
+
+func _rod(parent: Node3D, length: float, mat: Material, radius := 0.08) -> void:
+	var node := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius
+	cyl.bottom_radius = radius * 1.3
+	cyl.height = length
+	node.mesh = cyl
+	node.material_override = mat
+	node.position = Vector3(0.0, length * 0.5, 0.0)
+	parent.add_child(node)
+
+
+func _ball(parent: Node3D, radius: float, at: Vector3, mat: Material) -> void:
+	var node := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = radius
+	sphere.height = radius * 2.0
+	node.mesh = sphere
+	node.material_override = mat
+	node.position = at
+	parent.add_child(node)
+
+
+# Storm Lattice is a gyroscope cage of arc rings; Thermal Shock is a frosted coil
+# with an arc glow. Both roll with the ball, so the synergy is on screen all run.
+func _build_halo(synergy_id: String) -> Node3D:
+	var halo := Node3D.new()
+	halo.name = "Halo_" + synergy_id
+	var rings: Array = []
+	var mat: StandardMaterial3D
+	if synergy_id == "storm_lattice":
+		mat = Palette.unshaded(Palette.ARC)
+		rings = [Vector3.ZERO, Vector3(PI * 0.5, 0.0, 0.0), Vector3(0.0, 0.0, PI * 0.5)]
+	else:
+		mat = Palette.solid(ICE, 2.0)
+		rings = [Vector3(0.0, 0.0, 0.35)]
+	for rot in rings:
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 1.38 if synergy_id == "storm_lattice" else 1.1
+		torus.outer_radius = 1.46 if synergy_id == "storm_lattice" else 1.28
+		ring.mesh = torus
+		ring.material_override = mat
+		ring.rotation = rot
+		halo.add_child(ring)
+	halo.visible = false
+	add_child(halo)
+	return halo
+
+
+func _process(delta: float) -> void:
+	var settle := minf(1.0, POP_RATE * delta)
+	for chunk in _chunks:
+		if chunk.scale.x > 1.001:
+			chunk.scale = chunk.scale.lerp(Vector3.ONE, settle)
+	for piece in _pieces:
+		if piece.scale.x > 1.001:
+			piece.scale = piece.scale.lerp(Vector3.ONE, settle)

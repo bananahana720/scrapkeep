@@ -2,16 +2,24 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Scrap laid along the terrain's scrap lines, pulled in by a short magnet and taken on
-# contact, so collecting never asks you to slow down.
+# Scrap laid along the terrain's scrap lines. The magnet reaches further the faster you
+# roll, and a piece it catches homes in faster than the ball can outrun it, so taking
+# scrap never asks you to slow down or turn back (momentum is sacred). A caught piece
+# stays caught until it lands on the ball.
 
-const MAGNET := 6.0
-const COLLECT := 1.8
-const PULL := 26.0
+const MAGNET := 7.0
+# Extra magnet reach per m/s of ball speed: at 30 m/s the reach is about 16 m.
+const MAGNET_PER_SPEED := 0.3
+const COLLECT := 2.0
+const HOME_SPEED := 16.0
+const HOME_OVER_BALL := 1.4
 const SPACING := 8.0
 const MAX_PER_LINE := 14
 
+var magnet_scale := 1.0
+
 var _items: Array[MeshInstance3D] = []
+var _caught := {}
 var _material: StandardMaterial3D
 var _mesh: BoxMesh
 var _spin := 0.0
@@ -40,6 +48,7 @@ func clear() -> void:
 	for item in _items:
 		item.queue_free()
 	_items.clear()
+	_caught.clear()
 
 
 func count() -> int:
@@ -51,23 +60,32 @@ func drop(at: Vector3, amount: int, rng: RandomNumberGenerator) -> void:
 		_add(at + Vector3(rng.randf_range(-2.0, 2.0), 1.2, rng.randf_range(-2.0, 2.0)))
 
 
+func magnet_reach(ball_speed: float) -> float:
+	return (MAGNET + MAGNET_PER_SPEED * ball_speed) * magnet_scale
+
+
 # Returns where each piece was taken this tick; the run state owns the total.
-func step(ball: Vector3, delta: float) -> Array[Vector3]:
+func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 	_spin += delta * 2.4
 	var taken: Array[Vector3] = []
+	var reach := magnet_reach(ball_speed)
+	var home := HOME_SPEED + ball_speed * HOME_OVER_BALL
 	var i := _items.size() - 1
 	while i >= 0:
 		var item := _items[i]
 		var offset := ball - item.global_position
 		var distance := offset.length()
-		if distance <= COLLECT:
+		if distance <= COLLECT or (_caught.has(item) and distance <= home * delta):
 			taken.append(item.global_position)
 			_items.remove_at(i)
+			_caught.erase(item)
 			item.queue_free()
 		else:
-			if distance < MAGNET:
-				var pull := PULL * (1.0 - distance / MAGNET)
-				item.global_position += offset / distance * pull * delta
+			if distance < reach:
+				_caught[item] = true
+			if _caught.has(item):
+				item.global_position += offset / distance * home * delta
+				item.scale = Vector3.ONE * clampf(distance / reach, 0.45, 1.0)
 			item.rotation = Vector3(_spin * 0.7, _spin, 0.0)
 		i -= 1
 	return taken
