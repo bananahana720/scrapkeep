@@ -47,6 +47,7 @@ const CONTROLS := [
 	{"keys": "- / =", "does": "music volume down / up", "hint": "-/= music"},
 	{"keys": "[ / ]", "does": "effects volume down / up", "hint": "[/] effects"},
 	{"keys": "M", "does": "mute or unmute", "hint": "M mute"},
+	{"keys": "F6", "does": "boss tempo: 129, or 172 while held", "hint": "F6 boss tempo"},
 	{"keys": "P", "does": "pause / resume", "hint": "P pause"},
 	{"keys": "R (hold)", "does": "retry the stage from its start", "hint": "hold R retry"},
 	{"keys": "F1", "does": "tuning panel (frees the mouse)", "hint": "F1 tuning"},

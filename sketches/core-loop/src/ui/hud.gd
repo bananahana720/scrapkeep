@@ -14,6 +14,9 @@ const FieldNotes := preload("res://src/ui/field_notes.gd")
 # so a toast reads the same as the row presentation and audio use.
 
 const TOAST_SECONDS := 2.6
+# Facts whose on-screen moment presentation owns (a banner with its own fanfare), so
+# the HUD adds no toast of its own. The event_kinds wording still names them.
+const PRESENTATION_OWNED := ["synergy_discovered"]
 const TOAST_LINES := 3
 # Facts whose wording needs a field from the signal, by argument position.
 const FIELD_ARGS := {
@@ -26,6 +29,7 @@ const FIELD_ARGS := {
 	"event_ended": ["event", 0],
 	"milestone_won": ["event", 0],
 	"heft_class_changed": ["class", 0],
+	"heft_class_dropped": ["class", 0],
 	"synergy_discovered": ["name", 0],
 }
 
@@ -95,6 +99,9 @@ func setup(game_ref) -> void:
 	reticle.setup(game.player, game.camera.cam)
 
 	_connect_toasts(game.events)
+	# The phase name is the signal's second argument, so it gets its own handler.
+	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
+		toast(EventKinds.hud("boss_phase_changed", {"name": phase_name}), EventKinds.color("boss_phase_changed")))
 
 
 func _connect_toasts(events) -> void:
@@ -102,6 +109,8 @@ func _connect_toasts(events) -> void:
 		if EventKinds.priority(kind) < EventKinds.TOAST_PRIORITY or EventKinds.row(kind).get("hud", "") == "":
 			continue
 		var argc: int = _arg_count(events, kind)
+		if kind == "boss_phase_changed" or kind in PRESENTATION_OWNED:
+			continue
 		if FIELD_ARGS.has(kind):
 			events.connect(kind, _drop_args(_on_field_fact.bind(kind), argc - 1))
 		else:
@@ -123,7 +132,7 @@ static func _arg_count(events, kind: String) -> int:
 func _on_field_fact(value, kind: String) -> void:
 	var field: String = FIELD_ARGS[kind][0]
 	var shown = value
-	if kind == "heft_class_changed":
+	if kind == "heft_class_changed" or kind == "heft_class_dropped":
 		shown = RunState.roman(int(value))
 	elif kind == "synergy_discovered" and game.codex != null:
 		shown = game.codex.name_of(value)

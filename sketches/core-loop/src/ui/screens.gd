@@ -61,10 +61,13 @@ func _on_flow_changed(state: String) -> void:
 		"dead":
 			var class_text: String = game.run.class_def.display_name if game.run.class_def != null else ""
 			var gap: String = game.flow.gap_line()
-			var keys := "R   retry stage %d from its start\nN   new run as %s\nC   choose a class" % [game.run.stage, class_text]
+			var retry := "R   retry the arena from its entry" if game.flow.in_arena else "R   retry stage %d from its start" % game.run.stage
+			var keys := "%s\nN   new run as %s\nC   choose a class" % [retry, class_text]
 			if game.flow.can_replay_final_stage():
 				keys += "\nT   replay stage %d from its start" % StageDefs.COUNT
 			_show("SCRAPPED", EventKinds.color("player_died"), (gap + "\n\n" if gap != "" else "") + keys)
+		"victory":
+			_show("BRINDLE ROUTED", EventKinds.color("boss_defeated"), "The Requisition is scrap.")
 		"summary":
 			_show("RUN COMPLETE", EventKinds.color("run_ended"), _summary_text() + "\n\nN   run again as the same class\nSpace   choose a class")
 		_:

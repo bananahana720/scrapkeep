@@ -225,6 +225,7 @@ func _physics_process(delta: float) -> void:
 	if _was_hooked and not kit.hooked:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
+	_recheck_bow()
 
 
 func _process(_delta: float) -> void:
@@ -272,6 +273,19 @@ func _build_bow() -> void:
 
 
 func _on_bow_entered(body: Node3D) -> void:
+	_try_crush(body)
+
+
+# Rechecked every tick for whatever is inside the bow, so an enemy the ball grows or
+# speeds into outweighing mid-overlap is still rolled up.
+func _recheck_bow() -> void:
+	if _bow == null or _frozen or state.tier < SpeedTier.CRUISE:
+		return
+	for body in _bow.get_overlapping_bodies():
+		_try_crush(body)
+
+
+func _try_crush(body: Node3D) -> void:
 	if _frozen or not body.is_in_group("enemy") or state.tier < SpeedTier.CRUISE or not crush_check.is_valid():
 		return
 	var id := body.get_instance_id()
@@ -445,4 +459,5 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		enemy.knock(away + Vector3.UP * 0.35, 18.0)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
-		struck.emit(enemy, RAM, velocity.length())
+		# Planar speed, the same measure punch_now and the crush check use (one query).
+		struck.emit(enemy, RAM, planar_velocity().length())
