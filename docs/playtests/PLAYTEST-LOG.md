@@ -4,7 +4,7 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 ## Waiting for play
 
-Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played the mobility kit (entry 3) and Spillway Drop (entry 4); Cable Bench is in play. The merge waits for all three verdicts.
+Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges are next.
 
 | Sketch | Branch and head | Question it answers |
 | --- | --- | --- |
@@ -36,6 +36,19 @@ If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
 
+## 5. Cable Bench, first human play
+
+- **Date.** 26 September 2026, Phoenix time. Dictated, transcribed as spoken.
+- **Build.** `sketches/cable-bench/` on `proto/cable-bench` at `29dcbcf`, launched with `scrapkeep cable`. Unchanged since the EV-0482 gate.
+- **Verdict.** "I think Scrap Cable was the weakest experience just because I don't know what the heck was going on. I, I saw that I was collecting scraps and difficulty was increasing, but I had no buffs and the cable mechanic was just weird and the map just felt awkward to play and I don't know what the heck I was doing really." Also: "I feel like there should be ways to clearly communicate. I guess what I'm supposed to be doing in the game, maybe UI would be beneficial to help and um, a way to pause so I can also like kind of get a bearing of what I'm supposed to be doing." And: "like hold, press to hold, like hold down to press and view, like maybe some notes for myself, but then that will also be, that could also be something for video game play reasons."
+- **Decided by play.** Cable Bench is the weakest of the three sketches. Its question (does the tier clock make "one more cache" a decision) went unanswered because the player could not tell what the stage wanted or what caches gave.
+- **Requests.**
+  - Every sketch says what the player is doing: an objective and what scrap buys, on screen.
+  - A pause.
+  - A hold-to-view overlay (Tab was suggested; Tab is the physics toggle today) that shows playtest notes now and can grow into the in-game dashboard.
+  - Several ways to power up the character, from the Bible's build design.
+- **Next action.** Park Cable Bench's layout. Add pause and a hold-to-view objective overlay to the sketches before the next play, and re-ask the tier-clock question only once a stage explains its economy.
+
 ## 4. Spillway Drop, first human play
 
 - **Date.** 26 September 2026, Phoenix time. Dictated, transcribed as spoken.
@@ -56,8 +69,11 @@ After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.
   - Reel: make it read and respond predictably; today it seems to engage only once the ball leaves the ground or nears the hook.
   - Mag-cling becomes a **pylon mount**: grapple to a surface, drive a pylon in and mount the ball there, as a firing or ability platform and a breather when surrounded.
   - Slam: anchor the ball for a beat on landing, for weight, without stunning the player afterwards.
-- **Not answered.** Air dash, and whether boost and air dash sharing one 1.1 s cooldown starves the dash. Class versus item for each augment.
-- **Next action.** Sketch the slam anchor and a reel rework on the mobility kit, and prototype the pylon mount as the replacement for mag-cling.
+- **Added after the Cable Bench play, same session.** "the air air dash was, was really fun too. I did really like that. And, um, I would, I, I do like the ability to to move and then uh, redirect my camera." On skill and control: "I would want it to be skill based. This video game, but I would want to have some considerations for quality of life or momentum based, like considerations where it might be hard for the player to like aim appropriately. control appropriately which is why I like the rigid versus the kinematic physics because it was just shaking so much where I felt like I couldn't really aim my grapple hook too well or see if it was in reach to connect to a wall". On the rope: "the grapple cable doesn't have any physical object permanence or properties so I guess it looks awkward when it's cutting through other objects" and a wish for the rope to wrap around what it passes, "moving in one direction, grappling perpendicular to your direction of movement and then kind of like spinning like a uh, like a ride".
+- **Also decided.** Keep the air dash. Skill-based control with momentum-aware aim assistance: the player must be able to see whether the grapple is in reach.
+- **Also requested.** A grapple reach indicator; a rope that collides and wraps around geometry, so a perpendicular grapple swings the ball around it like a ride.
+- **Not answered.** Whether boost and air dash sharing one 1.1 s cooldown starves the dash. Class versus item for each augment.
+- **Next action.** Sketch the slam anchor, a winch reel (the current reel only shortens the rope's maximum length, so it does nothing while the rope is slack) and a grapple reach indicator on the mobility kit, and prototype the pylon mount as the replacement for mag-cling. Rope wrapping is a separate, larger sketch.
 
 ## 2. Ball lab, first human play
 
