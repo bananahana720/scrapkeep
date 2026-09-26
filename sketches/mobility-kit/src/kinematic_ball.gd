@@ -41,6 +41,7 @@ func set_velocity_now(new_velocity: Vector3) -> void:
 
 func teleport(to: Vector3, new_velocity: Vector3) -> void:
 	global_position = to
+	reset_physics_interpolation()
 	state.velocity = new_velocity
 
 

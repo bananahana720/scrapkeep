@@ -5,7 +5,7 @@ var jump_pressed := false
 var jump_held := false
 var boost_pressed := false
 var brake_held := false
-var cling_held := false
+var mount_pressed := false
 var reel_held := false
 
 
@@ -15,7 +15,7 @@ func clear() -> void:
 	jump_held = false
 	boost_pressed = false
 	brake_held = false
-	cling_held = false
+	mount_pressed = false
 	reel_held = false
 
 
@@ -41,5 +41,5 @@ class Keyboard:
 		out.jump_held = Input.is_action_pressed("lab_jump")
 		out.boost_pressed = Input.is_action_just_pressed("lab_boost")
 		out.brake_held = Input.is_action_pressed("lab_brake")
-		out.cling_held = Input.is_action_pressed("lab_cling")
+		out.mount_pressed = Input.is_action_just_pressed("lab_mount")
 		out.reel_held = Input.is_action_pressed("lab_reel")

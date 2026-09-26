@@ -24,10 +24,20 @@ func setup(tuning_ref) -> void:
 	title.add_theme_font_size_override("font_size", 18)
 	box.add_child(title)
 
+	# Two columns: the v2 knobs took the table past what one column fits in 900 px.
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 1)
+	box.add_child(grid)
+
 	for spec in Tuning.SPECS:
+		var cell := VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 0)
+		grid.add_child(cell)
 		var label := Label.new()
 		label.add_theme_font_size_override("font_size", 14)
-		box.add_child(label)
+		cell.add_child(label)
 		var slider := HSlider.new()
 		slider.min_value = spec["min"]
 		slider.max_value = spec["max"]
@@ -36,7 +46,7 @@ func setup(tuning_ref) -> void:
 		slider.focus_mode = Control.FOCUS_NONE
 		slider.custom_minimum_size = Vector2(300.0, 14.0)
 		slider.value_changed.connect(_on_changed.bind(spec["key"]))
-		box.add_child(slider)
+		cell.add_child(slider)
 		_rows[spec["key"]] = {"label": label, "slider": slider, "spec": spec}
 
 	var reset := Button.new()
@@ -64,4 +74,7 @@ func _on_reset() -> void:
 func _refresh() -> void:
 	for key in _rows:
 		var spec: Dictionary = _rows[key]["spec"]
-		_rows[key]["label"].text = "%s: %.2f" % [spec["label"], tuning.f(key)]
+		if spec.get("toggle", false):
+			_rows[key]["label"].text = "%s: %s" % [spec["label"], "on" if tuning.on(key) else "off"]
+		else:
+			_rows[key]["label"].text = "%s: %.2f" % [spec["label"], tuning.f(key)]
