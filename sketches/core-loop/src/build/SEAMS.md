@@ -8,6 +8,8 @@ The build entry node is `ctx.build`, set in build's `setup`. `ctx.build_module()
 
 Build is set up after world and combat, so take the reference lazily, for example on `stage_entered` or the first time you need it.
 
+On `stage_content_cleared` build clears the scrap field, the fabricators, open gates and element-made surfaces; pickups, fabricators, gates, kill drops and vault payouts run only while `ctx.flow.in_stage()`, while synergies and elements keep running in the arena.
+
 ## Weapon numbers (combat reads these, no build call needed)
 
 Parts scale weapon numbers through tuning mods, as they scale movement. Read them with `ctx.tuning.mod(key)`, which returns 1.0 when nothing is held. Do not use `tuning.f(key)`: these keys are not tuning sliders.

@@ -60,6 +60,19 @@ func rebuild(director_ref) -> void:
 	_apply_fog(0.0)
 
 
+# Nothing of the stage's events stays drawn: beams, arrival rings, the vault pillar,
+# the dust wall and the squall's haze.
+func clear() -> void:
+	director = null
+	for entry in _offer_nodes:
+		entry["root"].queue_free()
+	_offer_nodes.clear()
+	show_arrivals([])
+	set_vault(Vector3.ZERO, false)
+	_dust_wall.visible = false
+	_apply_fog(0.0)
+
+
 func _build_offer(offer: Dictionary) -> Dictionary:
 	var model = offer["model"]
 	var root := Node3D.new()

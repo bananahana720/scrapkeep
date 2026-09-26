@@ -131,6 +131,7 @@ func setup(ctx_ref) -> void:
 	ctx.build = self
 	ctx.set_meta("build", self)
 	ctx.events.stage_entered.connect(_on_stage_entered)
+	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.part_gained.connect(func(_id: String, _source: String): recompute())
@@ -342,14 +343,29 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	recompute()
 
 
+# The arena is not a stage (DESIGN-NOTES spine call 34): the scrap field, the
+# fabricators, any open gates and every surface an element made on the stage go now,
+# with the stage's waiting event cores. The build itself, its synergies and its
+# elements keep working in the fight.
+func _on_stage_content_cleared(_reason: String) -> void:
+	scrap.clear()
+	fabricators.clear()
+	gates.close()
+	field.clear()
+	_trail = 0.0
+	_pending_event_cores.clear()
+
+
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
+	if has_transformer("shrapnel_bloom"):
+		_kills.append(at)
+	if not ctx.flow.in_stage():
+		return
 	var amount := int(round(scrap_value * sheet.kill_scrap))
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, ctx.rng)
 	else:
 		scrap.drop(at, amount, ctx.rng)
-	if has_transformer("shrapnel_bloom"):
-		_kills.append(at)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
 		var picks: Array = Parts.roll(ctx.rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
@@ -455,16 +471,17 @@ func _physics_process(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var speed: float = ctx.player.planar_velocity().length()
 	scrap.heft = ctx.run.heft()
-	_step_event_cores()
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
-	for at in scrap.step(ball, speed, delta):
-		ctx.run.add_scrap(1, at)
-		if has_transformer("lightning_rod"):
-			_lightning_rod(ball)
-	_step_fabricators(ball, delta)
-	if gates.step(ball, _heading()):
-		ctx.events.reward_offered.emit(gates.offers)
+	if ctx.flow.in_stage():
+		_step_event_cores()
+		for at in scrap.step(ball, speed, delta):
+			ctx.run.add_scrap(1, at)
+			if has_transformer("lightning_rod"):
+				_lightning_rod(ball)
+		_step_fabricators(ball, delta)
+		if gates.step(ball, _heading()):
+			ctx.events.reward_offered.emit(gates.offers)
 	_step_elements(ball, delta)
 	_step_synergies(ball, delta)
 	field.step(delta)

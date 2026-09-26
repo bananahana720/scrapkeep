@@ -40,6 +40,7 @@ const MUZZLE := 1.25
 const AIM_SLACK := 14.0
 const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
+const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
 # Used only when stage_def() has no warden fields yet (the old spine): the spec's values.
 const WARDEN_FALLBACK := [
@@ -103,6 +104,7 @@ func setup(ctx_ref) -> void:
 	bolts.on_shell = func(_bolt: Dictionary, shell: Node3D) -> bool: return _bat(shell)
 	bolts.on_stop = func(at: Vector3, color: Color): effects.spark(at, color)
 	ctx.events.stage_entered.connect(_on_stage_entered)
+	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_started.connect(func(_class_id: String):
 		discovered = {}
 		_rebuild_patterns())
@@ -636,11 +638,7 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # A stage entry or retry starts the fight clean, and recomputes every pattern from the
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
-	for group in ["enemy", "enemy_shot", "telegraph"]:
-		for node in get_tree().get_nodes_in_group(group):
-			node.queue_free()
-	bolts.clear()
-	effects.clear()
+	_clear_fight()
 	ctx.camera.shoulder_target = 0.0
 	_cooldown = 0.0
 	_special_cooldown = 0.0
@@ -651,6 +649,28 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_crushes.clear()
 	_since_slingshot = INF
 	_rebuild_patterns()
+
+
+# The arena is not a stage (DESIGN-NOTES spine call 34). Flow publishes this before the
+# boss module's enter_arena, on entry and on every arena retry, so nothing of Brindle's
+# exists yet and every enemy, shell and telegraph standing now came from the stage or
+# from the attempt being retried. The class kit is player-side and keeps working.
+func _on_stage_content_cleared(_reason: String) -> void:
+	_clear_fight()
+	_crushes.clear()
+
+
+# Every enemy, shell and telegraph leaves its group, stops acting and stops colliding
+# now, and is freed at the end of the frame, so a count or a hit test straight after
+# the clear already sees an empty field.
+func _clear_fight() -> void:
+	for group in FIGHT_GROUPS:
+		for node in get_tree().get_nodes_in_group(group):
+			node.remove_from_group(group)
+			node.process_mode = Node.PROCESS_MODE_DISABLED
+			node.queue_free()
+	bolts.clear()
+	effects.clear()
 
 
 func _rebuild_patterns() -> void:

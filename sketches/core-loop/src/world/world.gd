@@ -63,6 +63,7 @@ func setup(ctx_ref) -> void:
 	launch.setup()
 	director = Director.new(ctx.rng.randi())
 	ctx.events.stage_entered.connect(_on_stage_entered)
+	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.slammed.connect(_on_slammed)
@@ -108,6 +109,28 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_mark_landing(stage, retry)
 
 
+# The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
+# director, the flood and the launch rail stop, and every stage map is parked until
+# the next stage_entered rebuilds the stage. Flow publishes this on arena entry and on
+# every arena retry.
+func _on_stage_content_cleared(_reason: String) -> void:
+	if events != null:
+		_publish(events.end_all())
+	events = null
+	flood.cycle = null
+	flood.configure({}, 0.0, Vector3.ZERO)
+	launch.stop()
+	launch.clear_landing()
+	director.arrivals.clear()
+	view.clear()
+	vault = null
+	_vault_pending = false
+	terrain.park_all()
+	if _pressure > 0.0:
+		ctx.events.pressure_changed.emit(0.0)
+	_pressure = -1.0
+
+
 func _mark_landing(stage: int, retry: bool) -> void:
 	launch.clear_landing()
 	launch.gravity = ctx.tuning.f("gravity")
@@ -127,7 +150,7 @@ func _mark_landing(stage: int, retry: bool) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if ctx == null or events == null or not ctx.flow.in_play():
+	if ctx == null or events == null or not ctx.flow.in_stage():
 		return
 	var player = ctx.player
 	if _vault_pending:
@@ -201,17 +224,17 @@ func _watch_ground(delta: float, ball: Vector3) -> void:
 
 
 func _on_enemy_killed(_kind: String, at: Vector3, _scrap: int) -> void:
-	if ctx.flow.in_play():
+	if ctx.flow.in_stage():
 		_discover(codex_world.note("kill", {"at": at, "in_water": flood.submersion(at) > 0.0}))
 
 
 func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
-	if ctx.flow.in_play():
+	if ctx.flow.in_stage():
 		_discover(codex_world.note("slam", {"at": at}))
 
 
 func _on_jumped(_air: bool) -> void:
-	if not ctx.flow.in_play() or events == null or events.squall == null:
+	if not ctx.flow.in_stage() or events == null or events.squall == null:
 		return
 	var squall = events.squall
 	var v: Vector3 = ctx.player.state.velocity
@@ -222,7 +245,8 @@ func _on_jumped(_air: bool) -> void:
 
 
 func _on_element_resolved(_element: String, material: String, behaviour: String, at: Vector3) -> void:
-	_discover(codex_world.note("element", {"material": material, "behaviour": behaviour, "at": at}))
+	if ctx.flow.in_stage():
+		_discover(codex_world.note("element", {"material": material, "behaviour": behaviour, "at": at}))
 
 
 # The codex publishes synergy_discovered and grants the burst; the world only reports.
