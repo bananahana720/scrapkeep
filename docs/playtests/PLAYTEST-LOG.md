@@ -6,7 +6,7 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges followed (TRACKING EV-0578).
 
-**Now waiting: mobility kit v2** on `proto/mobility-kit-v2` at `f118321`, launched with `scrapkeep mobility-kit-v2`. It answers entry 3's requests: an angle-blended slam (plant on flat ground, launch downhill on slopes), a winch reel that hauls even on slack rope, a magnetic grapple reach indicator with three states, a pylon mount replacing mag-cling with a placeholder zap (left mouse while mounted), hold Tab for field notes (pauses), P to pause, physics mode on F2, F3 to toggle physics interpolation (a candidate cause of the kinematic "shaky" look), F4 to dump the tuning played to a file, and a split-cooldown toggle for boost and air dash in the F1 panel. The coordinator's gate passed: `check:scope` reports `sketch`, clean tree, `sketch:smoke` 33 of 33.
+**Played: mobility kit v2** (entry 6) on `proto/mobility-kit-v2` at `f118321`, merged to `main` after play (TRACKING EV-0587). Next up for play: the core-loop prototype, built this round.
 
 | Sketch | Branch and head | Question it answers |
 | --- | --- | --- |
@@ -37,6 +37,24 @@ wrapper at a different checkout. The long form still works:
 If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/scrapkeep-worktrees/<name> proto/<name>`.
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
+
+## 6. Mobility kit v2, first human play, and design principles
+
+- **Date.** 26 September 2026, Phoenix time. Dictated, transcribed as spoken. Claude desktop crashed while the game was paused, which closed Godot with it; the feedback was given afterwards.
+- **Build.** `sketches/mobility-kit/` on `proto/mobility-kit-v2` at `f118321`, launched with `scrapkeep mobility-kit-v2` after the launcher fix at `551c578`. The first launch before that fix opened the unchanged ball-lab and is not evidence for v2.
+- **Verdict.** "I still really like the rigid physics versus the kinematics. I don't know. It just it feels too squishy. The kinematics one. The rigid one just feels good. It feels like my objects have weight." On the kit: "as notes for the mobility test, it operated great. It was interesting the way the the pylon thing worked. It needed to have the camera maybe kind of like. shift over um or if you can want to consider a snap to a more shoulder view because i couldn't really see anything like if i was supposed to be shooting i don't know if i was shooting or if i was like placing turrets or like yeah electrical uh pylons or something i don't know what the mecha the, the mechanics uh did and i would want some maybe sound feedback". And: "I like the gliding. I like the movement. Yeah. I think the movement is just more, um, arcadey in the rigid, I guess, maybe, and maybe that's what I'm looking for. I like that. Arcadey feel. I wouldn't want it to be too realistic. And yeah, I want it to be fun."
+- **Decided by play.** Rigid physics again, now named for its arcade weight. Keep the mobility kit. The pylon needs a shoulder view and a legible purpose; every action needs sound feedback.
+- **Direction and principles, same session, in Andrew's words.**
+  - Momentum: "I think the whole point of this game is like like Katamari Damacy is just building momentum and rolling and, and growing" and "I wouldn't want to impact that momentum unless it's the player's performance in something like either like making a mistake or you know going going crazy or yeah hitting hitting objects collisions things should have weight things should have um, uh, should things shouldn't inhibit the player in un, unforeseen ways."
+  - Restart: "if you were to fail, then you can kind of like uh, have easy access to just restart from uh, a specific either checkpoint or, you know, uh, home screen or selection screen, whatever, or yeah, just restart a run".
+  - Layers: "maps could have events that could uh, occur that the player can participate in and win great rewards like key milestone rewards. Uh, on top of like maybe it overlapping with a boss mechanic".
+  - Growth: "there has to be some sort of like growth and and trajectory and yeah, the ability to scale insanely like in any other roguelike", with Binding of Isaac and Gunfire Reborn as references.
+  - Classes: "a pylon you stick to a pylon and then you act like a placeable turret and use the ter terrain to help you or another one could be just a guy who runs and guns", with items that make the runner "shoot in a cross or shoot in a spiral of bullets", "obviously with balance, you know, visually and not to overwhelm the player."
+  - Music: "a just a fun, Uh, intense, like experience with music that uh, is at a high BPM and is like super like I don't know jazzy in terms of uh, like create creative like melodies but maybe more uh, like EDM".
+  - Harmonizing: "things that seem like anti-patterns can be actually molded when certain aspects are broken down and and considered and harmonized together. So momentum-based versus like sticking to a wall and being a pylon, those can still be things", with actions "snappy or fluid" in animation, "to make yourself feel like a like a badass."
+  - Process: "I would love to have some more gameplay mechanics, systems, and layers applied", "try to bridge and build extra nodes to bridge gaps", and "have a coordinated. agent team where, you know, we can paralyze where we can and have reviewers uh, review where it makes sense."
+- **Choices made by AskUserQuestion.** Arc caster weapon with the pylon as an arc turret; three stages then a summary; synthesized SFX plus adaptive music; hand him the playable at the end.
+- **Next action.** Build the core-loop prototype under these principles (TRACKING EV-0587); carry the principles into a heavy-lane Bible amendment.
 
 ## 5. Cable Bench, first human play
 
