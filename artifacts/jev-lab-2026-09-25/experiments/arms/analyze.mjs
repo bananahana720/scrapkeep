@@ -43,7 +43,8 @@ export function newcombeUnpaired(k1, n1, k2, n2) {
   };
 }
 
-// Newcombe (1998b) method 10: score interval for p1 - p2 on paired data.
+// Newcombe (1998b, Stat Med 17:2635, p. 2640) method 10: score interval for
+// p1 - p2 on paired data, phi's numerator max(ad - bc - n/2, 0) when ad > bc.
 // a both succeed, b only arm 1, c only arm 2, d neither.
 export function newcombePaired(a, b, c, d) {
   const n = a + b + c + d;
@@ -52,7 +53,9 @@ export function newcombePaired(a, b, c, d) {
   const [l1, u1] = wilson(a + b, n);
   const [l2, u2] = wilson(a + c, n);
   const margins = (a + b) * (c + d) * (a + c) * (b + d);
-  const phi = margins === 0 ? 0 : (a * d - b * c) / Math.sqrt(margins);
+  const cross = a * d - b * c;
+  const numerator = cross > 0 ? Math.max(cross - n / 2, 0) : cross;
+  const phi = margins === 0 ? 0 : numerator / Math.sqrt(margins);
   const diff = p1 - p2;
   const lowerTerm = (p1 - l1) ** 2 - 2 * phi * (p1 - l1) * (u2 - p2) + (u2 - p2) ** 2;
   const upperTerm = (u1 - p1) ** 2 - 2 * phi * (u1 - p1) * (p2 - l2) + (p2 - l2) ** 2;
@@ -303,7 +306,7 @@ export function analyseCell(cell, batches, design, options) {
   out.mcnemar = paired ? mcnemar(favoured, other) : null;
   out.multi_share = { scripted: share(S), random: share(R) };
   out.multi_share_valid = out.multi_share.scripted.value >= design.multi_share_min && out.multi_share.random.value >= design.multi_share_min;
-  if (!paired) out.problems.push("trials do not pair by seed; Newcombe unpaired only");
+  if (!paired) out.problems.push("trials do not pair by seed; unpaired Newcombe over the shared seeds only");
   if (!out.multi_share_valid && out.status === "ok") out.status = "invalid";
   out.exploratory = {
     scripted: exploratory(batches.scripted.dir, S),
@@ -326,8 +329,25 @@ export function decide(cells, design) {
     const wrong = d !== undefined && (c.direction === "random>scripted" ? d < 0 : d > 0);
     c.reversal_flag = Boolean(wrong && c.mcnemar !== null && c.mcnemar.two_sided < design.alpha);
   });
-  const blockedBatches = cells.filter((c) => c.status === "blocked").length;
-  return { run_blocked: blockedBatches * 3 >= cells.length, blocked_cells: blockedBatches };
+  const blocked = cells.filter(
+    (c) => c.status === "blocked" || c.status === "invalid" || (c.class === "confirmatory" && c.mcnemar === null),
+  ).length;
+  return { run_blocked: blocked * 3 >= cells.length, blocked_cells: blocked };
+}
+
+// A precondition that failed after the run blocks every cell of its sketch
+// (sketch null: every cell).
+export function applyAfter(cells, after) {
+  if (after === null) return ["provenance-after.json missing: the runner did not finish"];
+  const failed = (after.preconditions ?? []).filter((p) => !p.ok);
+  for (const p of failed) {
+    for (const c of cells) {
+      if (p.sketch !== null && p.sketch !== c.sketch) continue;
+      c.status = "blocked";
+      c.problems.push(`after the run: ${p.name} (${p.detail})`);
+    }
+  }
+  return failed.map((p) => `after the run: ${p.name}`);
 }
 
 // Records from directories of run folders, grouped by sketch, scenario, mode, arm.
@@ -356,7 +376,10 @@ export function analyse(design, groups, options) {
     }
     return analyseCell(cell, batches, design, options);
   });
+  const after = options.live ? applyAfter(cells, options.after ?? null) : [];
   const summary = decide(cells, design);
+  if (options.live && (options.after ?? null) === null) summary.run_blocked = true;
+  summary.after = after;
   return { cells, summary };
 }
 
@@ -380,11 +403,11 @@ export function render(result, { title, planning = null }) {
       `| ${c.id} | ${c.class} | ${c.direction ?? "-"} | ${c.status}${c.problems.length ? ` (${c.problems.join("; ")})` : ""} | ${c.success.scripted.k}/${c.success.scripted.n} | ${c.success.random.k}/${c.success.random.n} | ${t.both}/${t.random_only}/${t.scripted_only}/${t.neither} | ${ci(c.random_minus_scripted.paired)} | ${ci(c.random_minus_scripted.unpaired)} | ${tested && c.mcnemar ? f3(c.mcnemar.one_sided) : "-"} | ${c.mcnemar ? f3(c.mcnemar.two_sided) : "-"}${tested ? "" : " (exploratory)"} | ${tested ? f3(c.holm_p) : "-"} | ${tested ? c.verdict + (c.reversal_flag ? "; reversal flag" : "") : "not tested"} | ${f2(c.multi_share.scripted.value)} / ${f2(c.multi_share.random.value)} |`,
     );
   }
-  lines.push("", `Blocked cells: ${result.summary.blocked_cells}. Run blocked: ${result.summary.run_blocked}.`, "");
+  lines.push("", `Blocked or invalid cells: ${result.summary.blocked_cells}. Run blocked: ${result.summary.run_blocked}.${result.summary.after.length ? ` ${result.summary.after.join("; ")}.` : ""}`, "");
   if (planning !== null) {
-    lines.push("## Planning: power at n = 40 from the prior discordance (unverified-computed)", "");
-    lines.push("| Cell | Direction | Prior favoured / against pairs of 20 | Power at α/5 | Power at α |", "| --- | --- | --- | --- | --- |");
-    for (const p of planning) lines.push(`| ${p.id} | ${p.direction} | ${p.favoured}/${p.other} | ${f2(p.power_bonferroni)} | ${f2(p.power_alpha)} |`);
+    lines.push("## Planning: power at the planned n from the prior discordance (unverified-computed)", "");
+    lines.push("| Cell | Direction | Planned n | Prior favoured / against pairs of 20 | Power at α/5 | Power at α |", "| --- | --- | --- | --- | --- | --- |");
+    for (const p of planning) lines.push(`| ${p.id} | ${p.direction} | ${p.n} | ${p.favoured}/${p.other} | ${f2(p.power_bonferroni)} | ${f2(p.power_alpha)} |`);
     lines.push("");
   }
   lines.push("## Exploratory measures (not pre-registered as tests)", "");
@@ -416,6 +439,7 @@ export function planning(result, design) {
       return {
         id: c.id,
         direction: c.direction,
+        n: cell.n,
         favoured,
         other,
         power_bonferroni: pairedPower(pf, po, cell.n, design.alpha / k),
@@ -454,6 +478,18 @@ export function selfTest() {
   const indU = newcombeUnpaired(8, 20, 10, 20);
   close(ind.lower, indU.lower, 1e-12, "phi 0 reduces paired to unpaired (lower)", failures);
   close(ind.upper, indU.upper, 1e-12, "phi 0 reduces paired to unpaired (upper)", failures);
+  const m10 = newcombePaired(1, 10, 0, 9);
+  close(m10.lower, u1.lower, 1e-12, "method 10 (1,10,0,9): ad - bc = 9 <= n/2 gives phi 0, paired equals unpaired (lower)", failures);
+  close(m10.upper, u1.upper, 1e-12, "method 10 (1,10,0,9): paired equals unpaired (upper)", failures);
+  const cells = [
+    { class: "confirmatory", status: "ok", mcnemar: null, sketch: "ball-lab", problems: [] },
+    { class: "floor", status: "invalid", mcnemar: { one_sided: 1, two_sided: 1 }, sketch: "cable-bench", problems: [] },
+    { class: "floor", status: "ok", mcnemar: { one_sided: 1, two_sided: 1 }, sketch: "cable-bench", problems: [] },
+  ];
+  const counted = decide(cells, { alpha: 0.05 }).blocked_cells;
+  if (counted !== 2) failures.push(`run-block count includes not-paired confirmatory and invalid cells: ${counted} vs 2`);
+  applyAfter(cells, { preconditions: [{ name: "cable-bench head", ok: false, detail: "x", sketch: "cable-bench" }] });
+  if (cells[2].status !== "blocked" || cells[0].status !== "ok") failures.push("a failed after-run precondition blocks only its sketch's cells");
   close(binomUpperHalf(8, 8), 1 / 256, 1e-15, "P(X>=8|8)", failures);
   close(binomUpperHalf(9, 10), 11 / 1024, 1e-15, "P(X>=9|10)", failures);
   close(binomUpperHalf(0, 5), 1, 0, "P(X>=0)", failures);
@@ -513,7 +549,9 @@ function main(argv) {
       const dir = path.resolve(path.dirname(manifest), b.run_dir);
       groups.set(`${cell.sketch}|${cell.scenario}|${cell.mode}|${b.arm}`, { dir, record: readRecord(dir), exit: b.exit });
     }
-    result = analyse(design, groups, { live: true, head: values.head });
+    const afterFile = path.join(path.dirname(manifest), "provenance-after.json");
+    const after = existsSync(afterFile) ? JSON.parse(readFileSync(afterFile, "utf8")) : null;
+    result = analyse(design, groups, { live: true, head: values.head, after });
     title = "JL-28 results as they fell (batch seed 2)";
   } else {
     console.error("usage: analyze.mjs --self-test | --prior [--out dir] | --manifest file --head sha [--out dir]");

@@ -57,7 +57,7 @@
   "cells": [
     {
       "id": "cb-bench-one-kinematic",
-      "sketch": "cable-bench", "scenario": "bench-one", "mode": "kinematic", "n": 40, "limit_s": 90,
+      "sketch": "cable-bench", "scenario": "bench-one", "mode": "kinematic", "n": 80, "limit_s": 90,
       "class": "confirmatory", "direction": "scripted>random",
       "prior": "JL-26-A2 lab 7d5adda: scripted 12/20, random 8/20, R-S -0.20 [-0.46, 0.10]; A1 12 vs 10",
       "est_s_per_20": { "scripted": 189, "random": 223 }
@@ -95,7 +95,7 @@
     },
     {
       "id": "sd-mid-climb-kinematic",
-      "sketch": "spillway-drop", "scenario": "mid-climb", "mode": "kinematic", "n": 40, "limit_s": 60,
+      "sketch": "spillway-drop", "scenario": "mid-climb", "mode": "kinematic", "n": 80, "limit_s": 60,
       "class": "confirmatory", "direction": "scripted>random",
       "prior": "JL-27-A3 lab 45446ff: scripted 8/20, random 3/20 (A2 the same; A1 6 vs 6 under threat rule 1)",
       "est_s_per_20": { "scripted": 78, "random": 78 }

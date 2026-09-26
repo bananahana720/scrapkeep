@@ -42,11 +42,11 @@ Arms share the jittered start and the stage's random streams per trial seed in a
 - Cable Bench: `jev_run.gd:35-36` sets `stage.seed_override` to the trial seed; `jev_run.gd:170-172` seeds and places with it; `scenarios.gd:11-14`, `:87-93` jitter by trial seed.
 - Spillway Drop: `jev_run.gd:39` sets `stage.seed_override` from the trial seed; `jev_run.gd:178-180` seeds and places; `scenarios.gd:17-18`, `:78-84` jitter by trial seed.
 
-`analyze.mjs` also checks pairing in the records: a cell is paired only when both arms hold the same set of trial seeds. A cell that does not pair gets no McNemar test and reports the unpaired Newcombe interval only; a confirmatory cell in that state counts as BLOCKED.
+`analyze.mjs` also checks pairing in the records: a cell is paired only when both arms hold the same set of trial seeds. A cell that does not pair gets no McNemar test and reports the unpaired Newcombe interval over the shared seeds only; a confirmatory cell in that state counts as BLOCKED.
 
 ## Seeds
 
-Batch seed 2: trial seeds 2000 to 2039 on the five confirmatory cells (n = 40) and 2000 to 2019 on the rest (n = 20). The card's revision 3 names 2000 to 2019; the confirmatory cells extend batch seed 2 to 40 trials rather than adding batch seed 4, so each confirmatory cell's first 20 pairs are the card's seeds. A grep of all 3730 `run.json` records under `/home/andrew/Projects/scrapkeep*` in this session found batch seeds 1, 3, 5, 7, 11 and 12 and no record with batch seed 2 or a trial seed from 2000 to 2099 (receipt `artifacts/local/tasks/JL-28/phase-a/seed-scan.txt`).
+Batch seed 2: trial seeds 2000 to 2079 on `cb-bench-one-kinematic` and `sd-mid-climb-kinematic` (n = 80), 2000 to 2039 on the other three confirmatory cells (n = 40), and 2000 to 2019 on the rest (n = 20). The card's revision 3 names 2000 to 2019; the confirmatory cells extend batch seed 2 rather than adding batch seed 4, so each confirmatory cell's first 20 pairs are the card's seeds. The two n = 80 cells follow the coordinator's ruling on the Fable review (review a0578b45, B1), which raised them because their planning power at n = 40 was 0.23 to 0.64. A grep of all 3730 `run.json` records under `/home/andrew/Projects/scrapkeep*` in this session found batch seeds 1, 3, 5, 7, 11 and 12 and no record with batch seed 2 or a trial seed from 2000 to 2099 (receipt `artifacts/local/tasks/JL-28/phase-a/seed-scan.txt`).
 
 The canary uses seed 1 on purpose: it replays the pinned batch. It is not counted.
 
@@ -57,16 +57,16 @@ Eighteen cells: every scenario that offers the arms a choice, in both physics mo
 **Classification rule, applied to the prior batches before writing this file.** Prior means the batches at the same epoch as above, seed 1, n = 20 per arm: ball-lab JL-21b-A2 at `bec6560` (the code merged at `7ba2d0d`) and JL-21b-A3 at `6864bf7` for bench-climb and pillar-weave rigid; Cable Bench JL-26-A2 at lab `7d5adda`; Spillway JL-27-A3 at lab `45446ff`.
 
 - **Floor:** both arms at 0 or 1 success in 20, with the other arm at most 1. **Ceiling:** both arms at 19 or 20. Reported, not tested.
-- **Confirmatory:** neither floor nor ceiling, prior |R − S| ≥ 0.20, and prior multi-option share ≥ 0.5 in both arms. The direction is the sign of the prior difference. 0.20 is used because a paired interval at n = 40 has a half-width of about 0.2 at mid rates (below), so a smaller prior effect has little chance of resolving.
+- **Confirmatory:** neither floor nor ceiling, prior |R − S| ≥ 0.20, and prior multi-option share ≥ 0.5 in both arms. The direction is the sign of the prior difference. 0.20 is used because a paired interval at n = 40 has a half-width of about 0.2 at mid rates (below), so a smaller prior effect has little chance of resolving. The line was set with the Cable Bench priors (−0.20) in view, and cells selected for a large prior effect give optimistic planning power, because a selected prior estimate tends to overstate the true effect (the winner's curse).
 - **Exploratory:** everything else. Reported with its interval and a two-sided exact McNemar p labelled exploratory; not in the multiplicity family.
 
 | Cell | Class | Direction | n | Prior (seed 1) | Why |
 | --- | --- | --- | --- | --- | --- |
 | bl-pillar-weave-kinematic | confirmatory | random > scripted | 40 | S 1/20, R 11/20; R − S 0.50 [0.22, 0.70] | Separates at n = 20 (JL-21b review). |
 | bl-run-to-pad-rigid | confirmatory | random > scripted | 40 | S 9/20, R 17/20; 0.40 [0.10, 0.62] | Separates at n = 20 (JL-21b review). |
-| cb-bench-one-kinematic | confirmatory | scripted > random | 40 | S 12/20, R 8/20; −0.20 [−0.46, 0.10] | Meets the 0.20 line; JL-26 review N2 notes it runs against JL-21's direction. |
+| cb-bench-one-kinematic | confirmatory | scripted > random | 80 | S 12/20, R 8/20; −0.20 [−0.46, 0.10] | Meets the 0.20 line; JL-26 review N2 notes it runs against JL-21's direction. |
 | cb-bench-one-rigid | confirmatory | scripted > random | 40 | S 4/20, R 0/20; −0.20 [−0.42, 0.00] | Meets the line; all 4 discordant prior pairs favour scripted. |
-| sd-mid-climb-kinematic | confirmatory | scripted > random | 40 | S 8/20, R 3/20 | Meets the line. Under threat rule 1 it was 6 vs 6; rule 2 moved it (JL-27 review F2), so this cell also tests whether that shift holds on fresh seeds. |
+| sd-mid-climb-kinematic | confirmatory | scripted > random | 80 | S 8/20, R 3/20 | Meets the line. Under threat rule 1 it was 6 vs 6; rule 2 moved it (JL-27 review F2), so this cell also tests whether that shift holds on fresh seeds. |
 | sd-flood-hatch-kinematic | exploratory | (prior scripted > random) | 20 | S 5/20, R 2/20 | Prior difference 0.15 is under the line. |
 | bl-pillar-weave-rigid | exploratory | (prior random > scripted) | 20 | S 3/20, R 4/20 | 0.05, under the line. |
 | bl-dummy-knock-rigid | exploratory | (prior random > scripted) | 20 | S 1/20, R 4/20 | 0.15, under the line; rigid knocks barely register (JL-21b review). |
@@ -95,8 +95,8 @@ For each cell, with pairs by trial seed: `both`, `random only`, `scripted only`,
 - **Multiplicity.** Holm step-down over the five confirmatory cells at family-wise α = 0.05. A cell that is BLOCKED or INVALID enters the family with p = 1, so the family size stays five.
 - **Verdict per confirmatory cell.** SUPPORTED when its Holm-adjusted p ≤ 0.05; otherwise NOT SUPPORTED. BLOCKED and INVALID as defined below.
 - **Reversal flag.** A confirmatory cell whose paired difference has the opposite sign to its direction and whose two-sided exact McNemar p < 0.05 is flagged "reversal". The flag is descriptive, not a test.
-- **Intervals, every cell.** 95% Newcombe interval for R − S on paired data (Newcombe 1998b, method 10, `analyze.mjs` `newcombePaired`), and the unpaired Newcombe hybrid score interval (method 10 of the 1998a paper) for comparison with the earlier lab tables. Wilson 95% per arm.
-- **Resolution.** At n = 20 the unpaired half-width is about 0.26 to 0.28 at mid rates, so only differences of about 0.3 resolve; at n = 40 it is about 0.19 to 0.20, and pairing narrows it further when outcomes correlate within a pair (unverified-computed with `analyze.mjs`). With no discordant pair against the direction, the one-sided exact test needs at least 5 favoured pairs to reach 0.05 and 7 to reach 0.01.
+- **Intervals, every cell.** 95% Newcombe interval for R − S on paired data (Newcombe 1998, Stat Med 17:2635, method 10, p. 2640: method 8 with φ's numerator replaced by max(ad − bc − n/2, 0) when ad > bc; `analyze.mjs` `newcombePaired`), and the unpaired Newcombe hybrid score interval (method 10 of the 1998a paper) for comparison with the earlier lab tables. Wilson 95% per arm.
+- **Resolution.** At n = 20 the unpaired half-width is about 0.26 to 0.28 at mid rates, so only differences of about 0.3 resolve; at n = 40 it is about 0.19 to 0.20, at n = 80 about 0.14 to 0.15, and pairing narrows it further when outcomes correlate within a pair (unverified-computed with `analyze.mjs`). With no discordant pair against the direction, the one-sided exact test needs at least 5 favoured pairs to reach 0.05 and 7 to reach 0.01.
 
 ## Validity checks
 
@@ -129,17 +129,17 @@ Reported per cell and arm, labelled "exploratory; not a test", with no decision 
 
 ## Planning power (unverified-computed)
 
-From the prior discordant-pair rates at n = 20, the chance the one-sided exact test rejects at n = 40 (`analyze.mjs` `pairedPower`), at α/5 (Holm's first step) and at α (its last):
+From the prior discordant-pair rates at n = 20, the chance the one-sided exact test rejects at each cell's planned n (`analyze.mjs --prior`, `pairedPower`), at α/5 (Holm's first step) and at α (its last). Holm's α/5 is the worst case for every cell here, so the true power lies between the two columns.
 
-| Cell | Prior favoured / against pairs | Power at α/5 | Power at α |
-| --- | --- | --- | --- |
-| bl-pillar-weave-kinematic | 10 / 0 | 1.00 | 1.00 |
-| bl-run-to-pad-rigid | 11 / 3 | 0.75 | 0.92 |
-| cb-bench-one-rigid | 4 / 0 | 0.71 | 0.92 |
-| sd-mid-climb-kinematic | 8 / 3 | 0.36 | 0.64 |
-| cb-bench-one-kinematic | 7 / 3 | 0.23 | 0.49 |
+| Cell | Planned n | Prior favoured / against pairs | Power at α/5 | Power at α |
+| --- | --- | --- | --- | --- |
+| bl-pillar-weave-kinematic | 40 | 10 / 0 | 1.00 | 1.00 |
+| bl-run-to-pad-rigid | 40 | 11 / 3 | 0.75 | 0.92 |
+| sd-mid-climb-kinematic | 80 | 8 / 3 | 0.74 | 0.91 |
+| cb-bench-one-rigid | 40 | 4 / 0 | 0.71 | 0.92 |
+| cb-bench-one-kinematic | 80 | 7 / 3 | 0.53 | 0.79 |
 
-These treat the prior rates as true, which they are not. They say that a NOT SUPPORTED on the last two cells is weak evidence either way.
+These treat the prior rates as true, which they are not; the winner's curse above makes them optimistic. A NOT SUPPORTED on `cb-bench-one-kinematic` in particular is weak evidence either way.
 
 ## Analysis dry run result
 
@@ -149,27 +149,28 @@ The pre-registration procedure's stub dry run becomes, for a run without a decid
 - **Where the prior records live:** Cable Bench and Spillway in this repository under `artifacts/jev-lab-2026-09-25/live/`; ball-lab in the JL-21b writer worktrees `../scrapkeep-wt-JL-21b` and `../scrapkeep-wt-JL-21b-int`, which the repository does not retain.
 - **Coverage:** 18 of 18 cells found, both arms, every cell paired by seed, 0 pairs dropped, 0 cells blocked.
 - **Fields the readings need were present:** `config.trials[].seed`, `outcome`, `snapshots`, `arm_calls`, `scenario_result.result`, `success_tick`, `anomalies`, `knocks`, `end` or `dead_tick`, Spillway `epoch`, `provenance.dirty`, `sources.matched`, `versions.sketch_head`, `sketch_dirty`, `jev.calls`.
-- **Cross-checks against earlier numbers:** pillar-weave kinematic unpaired 0.50 [0.22, 0.70] and scripted share 0.61; run-to-pad rigid 0.40 [0.10, 0.62]; bench-one −0.20 [−0.46, 0.10] and −0.20 [−0.42, 0.00]; pillar-weave gates 2.10 against 3.20. All match the JL-21b review and the JL-26 table.
-- **Self-test:** `node analyze.mjs --self-test` passes (Wilson and Newcombe against five published intervals from the reviews and lab tables; exact tails; McNemar; Holm; the paired interval reduces to the unpaired one when the within-pair correlation is 0 and narrows when it is positive).
+- **Cross-checks against earlier numbers:** pillar-weave kinematic unpaired 0.50 [0.22, 0.70], and paired the same, because its table (1, 10, 0, 9) has ad − bc = 9 ≤ n/2 so method 10's φ is 0; scripted share 0.61; run-to-pad rigid 0.40 [0.10, 0.62]; bench-one −0.20 [−0.46, 0.10] and −0.20 [−0.42, 0.00]; pillar-weave gates 2.10 against 3.20. All match the JL-21b review and the JL-26 table.
+- **Self-test:** `node analyze.mjs --self-test` passes (Wilson and Newcombe against five published intervals from the reviews and lab tables; exact tails; McNemar; Holm; the paired interval reduces to the unpaired one when the within-pair correlation is 0, including method 10's anchor (1, 10, 0, 9) at about [0.22, 0.70], and narrows when it is positive; the run-block count includes not-paired confirmatory and INVALID cells; a failed after-run precondition blocks only its sketch's cells).
 - **Gaps found:** the retained stage records keep `run.json` only, so stuck and dead-tier measures read "no events" for them. Phase B keeps its trial directories locally, so this does not affect the run. No other problem found; nothing changed in the pinned files after the dry run except the hashes recorded here.
 
 ## Run-once, blocked and stop rules
 
 - `run.mjs --live` creates `artifacts/local/tasks/JL-28/live/STARTED.json` with exclusive create before anything runs and refuses if it exists. Removing it is a new coordinator decision, recorded in the change record.
-- Batches run once, four at a time in the plan order, each with its own runs root. No batch is re-run, resumed or replaced.
+- Batches run once, four at a time in the plan order, each with its own runs root. No batch is re-run, resumed or replaced. The no-rerun rule covers batches only: re-running the pinned `analyze.mjs` on the retained records is permitted and must reproduce the same results.
 - A crash of the runner mid-run is BLOCKED. The records already written are reported as they fell; there is no rerun into the same seeds.
 - An infrastructure failure (launcher exit other than 0, a trial that did not complete, a changed source, a dirty sketch) blocks the affected cell under V2 to V4.
-- The run as a whole is BLOCKED, with no verdict on any cell, when one third or more of the 18 cells are blocked.
+- The run as a whole is BLOCKED, with no verdict on any cell, when one third or more of the 18 cells are blocked. The count includes every cell with status BLOCKED, every INVALID cell and every confirmatory cell that does not pair; `analyze.mjs` `decide` counts exactly these.
+- A precondition that fails when re-checked after the run (`provenance-after.json`) blocks every cell of the sketch it names, or every cell when it names none (harness worktree, Godot binary, canary pin). `analyze.mjs` applies this itself; a missing `provenance-after.json` makes the run BLOCKED.
 - No row is added to Readings after the run.
 
 ## Phase B procedure
 
 1. The coordinator confirms this commit is the reviewed one, the worktree is clean, and `node artifacts/jev-lab-2026-09-25/experiments/arms/run.mjs --dry-run` shows every pin matching and every precondition ok.
 2. Run once from this worktree: `node artifacts/jev-lab-2026-09-25/experiments/arms/run.mjs --live`. It writes `provenance-before.json`, the canary and its gate log, one log pair per batch, `batches.ndjson`, `provenance-after.json` (with the preconditions re-checked) and `analysis/results.{json,md}` under `artifacts/local/tasks/JL-28/live/<start>/`.
-3. Retain stdout, stderr and the exit code. Confirm `proto/cable-bench` 29dcbcf and `proto/spillway-drop` af89c89 after the run.
+3. Retain stdout, stderr and the exit code. Confirm `proto/cable-bench` 29dcbcf and `proto/spillway-drop` af89c89 after the run; `provenance-after.json` holds the same checks and the analysis has already applied them. The runner exits nonzero if the analysis child exits nonzero or dies by a signal.
 4. Write `RESULTS.md` beside this file: each reading that fired with its numbers, each cell as it fell, the exploratory table labelled as such, V/U/R tags on every number, and "automated; not a feel verdict" in its first lines. Then `FINDINGS.md` per DoD 2 below.
 
-**Estimated wall time** (unverified-computed from the prior batches' `started_at` and `finished_at`; the Cable Bench and Spillway prior batches ran 8 to 12 at a time, so their times are upper bounds): 36 batches and 920 trials, about 79 min in sequence, about 20 min four at a time, plus about 15 s for the canary. `--dry-run` prints the same figures.
+**Estimated wall time** (unverified-computed from the prior batches' `started_at` and `finished_at`; the Cable Bench and Spillway prior batches ran 8 to 12 at a time, so their times are upper bounds): 36 batches and 1080 trials, about 98 min in sequence, about 25 min four at a time (the two n = 80 Cable Bench batches, about 13 and 15 min each, set the floor), plus about 15 s for the canary. `provenance-before.json` and `provenance-after.json` record the load average, CPU count and concurrency. `--dry-run` prints the same figures.
 
 ## DoD 2: the gameplay findings list for Andrew
 
@@ -177,7 +178,7 @@ The pre-registration procedure's stub dry run becomes, for a run without a decid
 
 - A short "try first" list at the top: the three to five findings that most change a play session, each one line.
 - Then one section per sketch (ball-lab, Cable Bench, Spillway Drop), findings ordered by how much each would change play.
-- Each finding has five lines. **Claim:** one sentence. **Try:** what Andrew does, in which mode. **Look for:** what he should see if it holds. **Evidence:** the source, labelled observed, inference or unretained, with its epoch. **JL-28:** the Phase B number that bears on it, or "not re-measured".
+- Each finding has five lines. **Claim:** one sentence. **Try:** what Andrew does, starting with the launch command (`scrapkeep play ball-lab`, `scrapkeep play cable-bench` or `scrapkeep play spillway-drop`) and the mode (Tab switches kinematic and rigid in all three; Cable Bench and Spillway start in rigid). **Look for:** what he should see if it holds. **Evidence:** the source, labelled observed, inference or unretained, with its epoch. **JL-28:** the Phase B number that bears on it, or "not re-measured".
 - A last section, "Phase B observations, not pre-registered", for anything new the run shows.
 - Every section opens with "automated; not a feel verdict".
 
@@ -220,16 +221,15 @@ The pre-registration procedure's stub dry run becomes, for a run without a decid
 - One ladder (`scripts/lab/arms.mjs`) runs on every sketch and sees only what each stage's state offers; nothing here compares sketches with each other.
 - Classification and direction come from one prior batch per cell at n = 20. A cell can be misclassified; the exploratory cells still report intervals, so a missed effect stays visible.
 - Cable Bench records carry no epoch field; its epoch is its lab head.
-- The paired interval is my implementation of Newcombe's method 10 from the paper's formulas. Its self-tests are structural (it reduces to the unpaired interval when the within-pair correlation is 0); I did not check it against the paper's worked example in this session.
 - Planning power and wall time are computed, not measured.
 
 ## Pinned inputs
 
 `run.mjs --live` refuses to start unless every line below matches the file bytes in `artifacts/jev-lab-2026-09-25/experiments/arms/`.
 
-- `design.json` sha256 `b64f814a50861facfd13e8d555f31785ef428df8a965438dd881b74d9bfffde4`
-- `analyze.mjs` sha256 `f387c137e26baff35746a76d525a701d0ba59b1b92ff55be8632ce405f34058c`
-- `run.mjs` sha256 `b361e8290e891837e50c1683f80fde8f65397b5e197d1e4e3bb13854f1863d18`
+- `design.json` sha256 `60875474fbf779d3d549b1df1c37367718ec6ccd9185d096ba66e07193873fdb`
+- `analyze.mjs` sha256 `57ecb8aeb621486287fd2e0a4e63e8f8df7f92990e076effb382b960115d5502`
+- `run.mjs` sha256 `b678aa2b381a88c40519607ff120c201816d4d8d73e8bb19624682422496d696`
 
 ## Change record
 

@@ -7,6 +7,7 @@
 //                            then runs once: canary, batches, analysis
 import { spawn, spawnSync } from "node:child_process";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -90,23 +91,24 @@ export function makespan(batches, workers) {
 
 export function preconditions() {
   const checks = [];
-  const add = (name, ok, detail) => checks.push({ name, ok, detail });
+  // `sketch` names the cells a failure blocks; null blocks every cell.
+  const add = (name, ok, detail, sketch = null) => checks.push({ name, ok, detail, sketch });
   const status = git(REPO, "status", "--porcelain");
   add("harness worktree clean", status === "", status === "" ? "clean" : status);
   const tree = git(REPO, "rev-parse", "HEAD:sketches/ball-lab");
-  add("ball-lab tree equals the pin subject", tree === design.sketches["ball-lab"].tree_oid, tree);
+  add("ball-lab tree equals the pin subject", tree === design.sketches["ball-lab"].tree_oid, tree, "ball-lab");
   for (const [name, s] of Object.entries(design.sketches)) {
     if (s.repository === "self") continue;
     const repo = path.resolve(REPO, s.repository);
     const head = git(repo, "rev-parse", "HEAD");
-    add(`${name} head`, head === s.head, head);
+    add(`${name} head`, head === s.head, head, name);
     const branch = git(repo, "branch", "--show-current");
-    add(`${name} branch`, branch === s.branch, branch);
+    add(`${name} branch`, branch === s.branch, branch, name);
     const dirty = git(repo, "status", "--porcelain");
-    add(`${name} worktree clean`, dirty === "", dirty === "" ? "clean" : dirty);
+    add(`${name} worktree clean`, dirty === "", dirty === "" ? "clean" : dirty, name);
     const proto = git(repo, "rev-parse", s.proto_ref);
-    add(`${s.proto_ref} unchanged`, proto === s.proto_head, proto);
-    add(`${name} project`, existsSync(path.join(sketchDir(name), "project.godot")), sketchDir(name));
+    add(`${s.proto_ref} unchanged`, proto === s.proto_head, proto, name);
+    add(`${name} project`, existsSync(path.join(sketchDir(name), "project.godot")), sketchDir(name), name);
   }
   add("godot binary", existsSync(GODOT), GODOT);
   add("canary pin", existsSync(path.join(REPO, design.canary.pin, "pin.json")), design.canary.pin);
@@ -134,6 +136,9 @@ export function provenance() {
     stages,
     node: process.version,
     godot: GODOT,
+    loadavg: os.loadavg(),
+    cpus: os.cpus().length,
+    concurrency: design.concurrency,
   };
 }
 
@@ -237,7 +242,7 @@ async function live() {
   writeFileSync(path.join(out, "logs", "99-analysis.stderr.txt"), analysis.stderr);
   console.log(analysis.stdout);
   console.log(`output: ${out}`);
-  return analysis.status;
+  return analysis.status === null ? 1 : analysis.status;
 }
 
 async function main(argv) {
