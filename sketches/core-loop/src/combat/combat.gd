@@ -162,8 +162,7 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	if not result["full"]:
 		deflections += 1
-		if ctx.events.has_signal("strike_deflected"):
-			ctx.events.emit_signal("strike_deflected", enemy, kind, result["punch"], result["plating"])
+		ctx.events.strike_deflected.emit(enemy, kind, result["punch"], result["plating"])
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	enemy.take_damage(result["dealt"])
@@ -206,8 +205,17 @@ func punch_now() -> float:
 	if ctx.player.speed_tier() >= SpeedTier.CRUISE:
 		ram = punch_of("ram", ctx.player.planar_velocity().length())
 	var weapon := active_weapon()
-	var shot: float = _patterns[weapon].damage if _patterns.has(weapon) else 0.0
+	var shot: float = _patterns[weapon].damage * _damage_mod(weapon) if _patterns.has(weapon) else 0.0
 	return maxf(ram, shot)
+
+
+# Build owns tuning mods (CONTRACTS). Combat reads its weapon keys live, at the moment
+# of use, so it never depends on which module heard part_gained first.
+func _damage_mod(weapon: String) -> float:
+	var scale: float = ctx.tuning.mod("weapon_damage")
+	if weapon == Weapons.PYLON_TURRET:
+		scale *= ctx.tuning.mod("turret_damage")
+	return scale
 
 
 func plating_of(enemy: Node3D) -> float:
@@ -288,7 +296,8 @@ func active_weapon() -> String:
 # The discharge a given speed would fire right now, with the current parts.
 func discharge_preview(speed: float) -> Dictionary:
 	var p: Resource = _patterns[Weapons.PYLON_TURRET]
-	return Weapons.burst(speed, p.burst_scale, p.damage / Weapons.BASE[Weapons.PYLON_TURRET]["damage"])
+	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.BASE[Weapons.PYLON_TURRET]["damage"]
+	return Weapons.burst(speed, p.burst_scale, scale)
 
 
 # --- The tick -----------------------------------------------------------------------
@@ -348,7 +357,7 @@ func _bat(shell: Node3D) -> bool:
 
 
 func _rate(weapon: String) -> float:
-	var rate: float = _patterns[weapon].rate
+	var rate: float = minf(_patterns[weapon].rate * ctx.tuning.mod("weapon_rate"), Pattern.MAX_RATE)
 	if _overdrive > 0.0:
 		rate *= Weapons.OVERDRIVE_RATE
 	return rate
@@ -358,7 +367,9 @@ func _fire(weapon: String) -> void:
 	var p: Resource = _patterns[weapon]
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
-	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, p.range_m + AIM_SLACK)
+	var reach: float = p.range_m * ctx.tuning.mod("weapon_range")
+	var damage: float = p.damage * _damage_mod(weapon)
+	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
 	var point: Vector3 = aim["point"]
 	var forward := point - ball
 	if forward.length() < MUZZLE * 1.5:
@@ -370,8 +381,8 @@ func _fire(weapon: String) -> void:
 	var layout: Array = p.layout(forward, volleys)
 	for entry in layout:
 		bolts.fire({
-			"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": p.range_m,
-			"damage": p.damage, "kind": kind, "weapon_id": weapon, "radius": p.bolt_radius,
+			"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
+			"damage": damage, "kind": kind, "weapon_id": weapon, "radius": p.bolt_radius,
 			"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
 			"chain_falloff": p.chain_falloff, "color": color,
 			"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
@@ -488,7 +499,7 @@ func _discharge(at: Vector3, speed: float, kind: String) -> void:
 
 func _overdrive_blast(at: Vector3) -> void:
 	var p: Resource = _patterns[Weapons.RAPID_LASER]
-	var damage: float = Weapons.OVERDRIVE_DAMAGE * p.damage / Weapons.BASE[Weapons.RAPID_LASER]["damage"]
+	var damage: float = Weapons.OVERDRIVE_DAMAGE * p.damage * _damage_mod(Weapons.RAPID_LASER) / Weapons.BASE[Weapons.RAPID_LASER]["damage"]
 	var hit := 0
 	for enemy in _nearest_list(at, Weapons.OVERDRIVE_RADIUS, 64):
 		_hit(enemy, "runner", damage, enemy.global_position - at, Weapons.OVERDRIVE_KNOCK, 0.5)
@@ -590,7 +601,7 @@ func _discover(id: String, at: Vector3) -> void:
 	discovery_log.append(id)
 	var codex = _codex()
 	if codex != null and codex.has_method("mark_discovered"):
-		codex.mark_discovered(id, at)
+		codex.mark_discovered(id, at, ["player"])
 
 
 # Tricks that read the target's state before the hit lands.

@@ -44,6 +44,8 @@ var radius := 1.0
 var half_height := 1.5
 # "", "amber" or "slate", set by combat every physics tick from punch_now().
 var tint_state := ""
+# How many shoves this enemy has taken, for tests and anything that reads weight.
+var knocks := 0
 
 var _knock := Vector3.ZERO
 var _flash := 0.0
@@ -78,6 +80,7 @@ func _set_health(value: float) -> void:
 func knock(direction: Vector3, force: float) -> void:
 	if _dead or direction.length_squared() < 0.0001:
 		return
+	knocks += 1
 	var push := direction.normalized() * force / weight
 	if push.length() > Vector3(_knock.x, 0.0, _knock.z).length():
 		_knock = Vector3(push.x, _knock.y, push.z)

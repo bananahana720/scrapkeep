@@ -18,7 +18,9 @@ const REST := 0.8
 const DAMAGE := 9.0
 const SHOVE := 6.0
 const INTERRUPT := 10.0
-const HP := 40.0
+# 60, so a heft-1 ram at 20 m/s (punch 40) bounces off and from heft 1.5 it crushes:
+# the spec's Katamari threshold, where fodder that used to bounce you gets rolled up.
+const HP := 60.0
 const SCRAP := 3
 
 enum State { CHASE, WINDUP, LUNGE, RECOVER }
