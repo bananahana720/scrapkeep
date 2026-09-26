@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-lab
-description: "Run, extend, gate or port Scrapkeep's headless Godot lab: add a scenario or arm, run a batch through the harness, cut or compare a pin, read a gate exit, start an instrument epoch, or bring the lab to a new stage. Use for lab, harness, scenario, arm, pin, gate or epoch work; verification rows stay in scrapkeep-verify and admission in scrapkeep-task."
+description: "Run, extend or port Scrapkeep's headless Godot lab and produce its evidence: add a scenario or arm, run a batch through the harness, cut or compare a pin, run the lab gate on a batch and read its exit, cut an approved instrument epoch, or bring the lab to a new stage. Use for hands-on lab, harness, scenario, arm, pin, lab-gate or epoch work. Deciding what the lab should work on next, including whether to start an epoch, starts in plan-session, which pulls this skill in; verification checklists for a diff stay in scrapkeep-verify and admission in scrapkeep-task."
 ---
 
 # Run and extend the Scrapkeep lab
@@ -17,7 +17,7 @@ This skill produces lab evidence and says what it means. `reactive-model-loop` o
 - CLI (`scripts/play.mjs`): `scrapkeep lab run|program|verdicts|watch`, `scrapkeep gate <run> --against <pin>`, `scrapkeep stats`, `scrapkeep dash`. `scrapkeep lab run` is `scripts/lab/harness.mjs`, which drives the fake Godot in `scripts/lab/fake-godot.mjs`. Real batches run through `node scripts/lab/godot-launch.mjs <scenario> [--arm scripted|random|jev] [-n trials] [--seed N] [--mode kinematic|rigid] [--call-cap N] [--sketch dir]`.
 - Watch view: `npm run play -- lab watch <scenario> --arm <arm>` (`scripts/lab/watch.mjs`) plays one trial in a visible Godot window with the decision overlay. It is a demo, never evidence: the gate refuses its record, a failed jev preflight does not stop it, and every live call counts against `--call-cap` (60 by default). Stage labs run through `--sketch` have no overlay yet. `scrapkeep watch` without `lab` is the sketch test watcher (EV-0562; design choice).
 - `scrapkeep` is the wrapper `scripts/bin/scrapkeep` for `node scripts/play.mjs`. It runs the checkout named by `SCRAPKEEP_ROOT`, default the main checkout, so from a worktree run `node scripts/play.mjs` or set `SCRAPKEEP_ROOT` (SKL-23).
-- Current state: pins under `artifacts/jev-lab-2026-09-25/pins/`; epoch records under `EPOCHS_ROOT` in `tools/jev-player/preflight.mjs` (`artifacts/local/epochs/<key>.json`, disposable); rulings and card state in the latest TRACKING event rows for the card. A question-text author reads none of TRACKING and gets rulings from the packet (SKL-26).
+- Current state: pins under `artifacts/jev-lab-2026-09-25/pins/` and `artifacts/jev-lab-2026-09-26/pins/`, a name resolving to its newest day; epoch records under `EPOCHS_ROOT` in `tools/jev-player/preflight.mjs` (`artifacts/local/epochs/<key>.json`, disposable); rulings and card state in the latest TRACKING event rows for the card. A question-text author reads none of TRACKING and gets rulings from the packet (SKL-26).
 - Evidence: retained under `artifacts/jev-lab-2026-09-25/live/`, `artifacts/jev-lab-2026-09-25/pins/`, `artifacts/jev-lab-2026-09-25/reviews/` and `artifacts/jev-lab-2026-09-25/experiments/`; disposable runs under `artifacts/local/runs/<run-id>/` and task receipts under `artifacts/local/tasks/<task-id>/`.
 
 ## 2. Protocol
@@ -47,11 +47,13 @@ Read [references/scenarios-and-arms.md](references/scenarios-and-arms.md) to add
 
 - A hand-written baseline needs a termination condition, or it scores below random; fix it in the shared state, not in one arm (SKL-14).
 - Decide the threat-export rule per stage before the first batch. Stage-threat-rule 2 (EV-0550) is a coordinator ruling: a threat leaves the state only when the game has taken it out of play (SKL-15).
-- The stomp and ram executor must act on the threat the state reports, or a state rule is only half applied (SKL-31).
+- The stomp and ram executor must act on the threat the state reports, or a state rule is only half applied; ball-lab does since JL-21b's merge (SKL-31, EV-0564).
 - Decide per stage whether a trial ends at death before the first batch; post-death snapshots pollute per-snapshot measures (SKL-32).
 - Jitter spawns from the trial seed so arms share paired starts (SKL-16).
-- Report the multi-option share; an all-forced scenario cannot separate arms (SKL-30).
-- Keep a later comparison's pre-registered seeds out of exploratory batches (SKL-29).
+- A new ball-lab scenario gets the fixed six dummies unless its card adds a hook, and it must update the state test's hardcoded counts (SKL-33, SKL-34).
+- Add a fake-Godot entry only for tests that drive the scenario through the fake; it changes the fake `soak` stream (SKL-35).
+- Report the multi-option share, arm calls over snapshots after the precondition gate; an all-forced scenario cannot separate arms (SKL-30).
+- Trial seed = batch seed × 1000 + i. Batch seed 1 is the lab cards' range and the default, 2 is reserved for JL-28, and exploratory batches use 3 or higher (SKL-29).
 - Check that a calibration input is uncensored before trusting a derived limit (SKL-17).
 - Gate an option on reachable geometry, not on present state for a future target (SKL-18).
 - Calibrate physics constants with physics-only probes, apart from arm trials (SKL-19).
@@ -62,7 +64,7 @@ Read [references/scenarios-and-arms.md](references/scenarios-and-arms.md) to add
 Read [references/records-gates-pins.md](references/records-gates-pins.md) before cutting a pin or reporting a gate exit (design choice).
 
 - Each batch writes one `"scrapkeep-run/1"` record in its own directory, claimed through `artifacts/local/runs/<run-id>/run-owner.json` with exclusive create (design choice).
-- The gate exits 0 pass, 1 differs or red, 2 usage, 3 inconclusive, 4 instrument invalid (design choice).
+- The gate exits 0 pass, 1 differs or red, 2 usage, 3 inconclusive, 4 instrument invalid (design choice). A not-like-for-like exit 2 comes before any record validation, so it validates nothing (SKL-36).
 - Report a kinematic exit 1 as "behaviour differs from the pin", never as "worse" (SKL-11).
 - A pin for a build outside the harness worktree needs `--subject-commit` and `--subject-path` (SKL-20).
 - The `dirty` flag covers declared Node source paths only; record the sketch's own state separately (SKL-21).
@@ -88,6 +90,7 @@ Follow [references/port-a-stage.md](references/port-a-stage.md). Copy `sketches/
 
 | Change | Update | Reviewer |
 | --- | --- | --- |
+| New scenario | the scenarios reference if the procedure, dummies, test counts or seeds change; §4 only for a new rule; pins untouched unless an existing scenario's trace changes | `scrapkeep-reviewer-medium` |
 | New mechanic in a stage | §4 and the scenarios reference; a new epoch per §5 if the model's options change | `scrapkeep-reviewer-medium`; `scrapkeep-reviewer` if the epoch changes |
 | New stage | the port reference gains a row; §1 gains its paths | `scrapkeep-reviewer-medium` |
 | Protocol change | the protocol reference, fixtures and both validators | `scrapkeep-reviewer` |

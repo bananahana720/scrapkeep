@@ -42,6 +42,8 @@ A manual version constant is not enough by itself. In one lab a review found a h
 
 Record the resolved model, never the alias (RML-05). An alias such as "latest" can move to a new model under a passed epoch, so the epoch then covers a model that never ran the controls. At least three of six public projects inspected pin a bare alias; the survey's own counts disagree (public projects, unaudited).
 
+A decider with no provider-reported model, such as a local script, a rules engine or a model file run in-process, still needs a resolved identity (RML-47). Pin it to a content hash of the decider artifact, for example `local:<artifact name>@sha256:<hash of the file or bundle>`, and include every file that shapes the answer, such as weights and configuration. Treat a missing identity as an error: the cache key refuses to build on a null model. In one exercise a stub decider reported no model; its identity was the SHA-256 of its source file, and the key threw on a null model.
+
 An epoch is one identity. Changing any input starts a new epoch, and the new epoch is untrusted until it re-passes the [controls](controls.md) and the [blind corpus](corpus.md). This is a design choice.
 
 ## Keep the raw answer behind a confidence floor
@@ -50,6 +52,7 @@ A floor replaces a low-confidence answer with a default. Without the raw answer,
 
 - Store the pre-floor choice, its confidence, and a flag that the floor fired.
 - Calibrate the floor on more than one case. In one lab a floor of 0.05 was tuned on a single sub-floor case (0.02, next-lowest 0.25).
+- Before adding a floor, test that confidence tracks the probability of the chosen option (RML-55). Pre-register the test and its line, for example a correlation below which confidence counts as uninformative. A confidence that does not track the choice cannot support a floor; the floor would fire at random. In one exercise confidence always fell between 0.60 and 0.80, and its correlation with the chosen option's probability was 0.068 over 225 model answers.
 - Public projects use similar floors that fall back to named deterministic code. That observation is unaudited.
 
 ## Watch for framing

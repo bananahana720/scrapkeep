@@ -72,7 +72,7 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-13** · status: provisional · since: 2026-09-25 · origin: one lab, a line from one run exceeded by the next
   Derive the noise line from the run being judged. A line copied from an earlier run is provisional.
-  Evidence: a 0.15 maximum-shift line came from one pair of one wording's order noise. The next run's same-wording order movement ranged from 0.09 to 0.35. One pre-registration then used `max(0.1, 3 × pooled within-order SD)`, which is itself untested beyond that run.
+  Evidence: a 0.15 maximum-shift line came from one pair of one wording's order noise. The next run's same-wording order movement ranged from 0.09 to 0.35. One pre-registration then derived its line in-run from the pooled within-order standard deviation, with a fixed floor under it. A later exercise that copied that floor had the floor, not measured noise, decide a cell (RML-48), so no floor value is carried forward here.
   Overturned by: —
 
 - **RML-14** · status: provisional · since: 2026-09-25 · origin: one lab, one review finding
@@ -240,6 +240,91 @@ Origins are descriptions, not locations. A host project that uses this skill kee
   Evidence: one clean-commit re-run matched the dirty-tree batch hash for hash, 20 of 20. This is a single instance, and it relies on RML-45.
   Overturned by: —
 
+- **RML-47** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  A decider with no provider-reported model gets its resolved identity from a content hash of the decider artifact, and a null identity is an error.
+  Evidence: the stub reported no model. Its identity was written as a local name plus the SHA-256 of its source file, and the cache key threw on a null model. The skill had no rule for this case; the exercise's own report named the gap.
+  Overturned by: —
+
+- **RML-48** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  A dominance control needs its own margin rule. A fixed floor under the noise line makes a margin test stricter and a shift test more lenient, so report the measured line and the floor and say which decided.
+  Evidence: the dominant option won 30 of 30 model answers with a smallest margin of 0.058. The pooled within-order standard deviation was 0.008, so the margin was about 7.5 pooled standard deviations, but a floor copied from an example line failed four of six orders. Under the measured term alone the cell passes on model answers.
+  Overturned by: —
+
+- **RML-49** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  Separate a pipeline's fallback rate from the model's preference. Control verdicts use live-model answers only, and the fallback rate gets its own pre-registered budget and its own finding. This does not overturn RML-11: a fallback still never counts toward a pass.
+  Evidence: 15 of 240 answers (6.25%) were fallbacks, 6 of them inside controls. The wording-swap control failed only because 4 answers in one arm were fallbacks, and it passed on model answers alone. At a 5% fallback rate a 30-call control that fails on any non-model answer fails with probability about 0.79 (computed, unverified).
+  Overturned by: —
+
+- **RML-50** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects; a second, blind exercise against a sealed key
+  A wording-swap control must include a sensitivity arm that varies one label word across arms with the facts fixed, and must show whether wording can move the answer before a "same choice" result counts. The same holds for any input a control holds fixed.
+  Evidence: in the first exercise the decider read only numeric fields and option position, never label text or state (read from its code, consistent with two probes). It passed the wording swap on model answers. State had no effect (28 of 28 at both battery levels), and a risk of 0.001 was treated like a certain loss. In the blind exercise a planted trigger word added weight to any label containing it; the swap shifted only 0.007, most likely because both paraphrases kept the word, and the fired reading was misread as a position artefact.
+  Overturned by: —
+
+- **RML-51** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  A cache assumes the answer is a function of its key. If the decider has hidden sequence state, say so and do not cache.
+  Evidence: a fresh-process re-run gave a byte-identical trace, and one extra warm-up call changed the trace hash. Each answer depended on how many calls came before it, so a cache would have frozen one draw of a seeded stream.
+  Overturned by: —
+
+- **RML-52** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  Place the RML-45 perturbation after a shared prefix, so "every earlier event stays identical" is tested and not vacuous.
+  Evidence: the perturbation was an extra call before the first decision. The hash moved, but there was no prefix to compare, so only half of the sensitivity check ran.
+  Overturned by: —
+
+- **RML-53** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  Set the lethal control's probability line from the consequence of one loss and from how the decider turns probabilities into choices, and pre-register the reasoning.
+  Evidence: a line of 0.10 was chosen with no stated rationale. The fatal option was chosen 0 of 28 times while its probability ranged from 0.13 to 0.31, so the cell failed in six of six orders without saying whether that was a hazard.
+  Overturned by: —
+
+- **RML-54** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  A fallback that picks a fixed list position is dangerous under reordering. Code owns the safe default and names it by identity, not by list order. This strengthens RML-30.
+  Evidence: all 15 of 15 fallbacks returned the first option offered. The fatal option was first in two of six orders, so a fallback on either would have chosen it. That conclusion rests on the decider code and the 15 observations, not a measured case.
+  Overturned by: —
+
+- **RML-55** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
+  Confidence that does not track the chosen option's probability cannot support a floor. Test the correlation before adding one.
+  Evidence: confidence always fell between 0.60 and 0.80, and its correlation with the chosen option's probability was 0.068 over 225 model answers, under the pre-registered 0.2 line for "uninformative".
+  Overturned by: —
+
+- **RML-56** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  When a decider returns both a choice and probabilities, count and investigate every choice that is not the highest-probability option. Do not assume sampling unless the provider documents it.
+  Evidence: 2 of 210 choices were not the top option, and the report read them as sampling. The sealed key showed a planted misreport: about 4% of calls returned a fixed-position option as the choice while the probabilities favoured another.
+  Overturned by: —
+
+- **RML-57** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  A source field the decider sets on itself is not proof of a live answer. Prefer an out-of-band signal (request ids, latency, provider logs) and say which one the check used. This refines RML-11.
+  Evidence: all 210 answers carried `source: "model"`, including the planted misreports. The report noted that the field is self-set and cannot be checked, and that sub-millisecond latency pointed to a local call, not a remote model.
+  Overturned by: —
+
+- **RML-58** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  For a decider that reads numeric fields, a numbers-against-labels cell (dominant numbers under a misleading label) belongs in the standard control set.
+  Evidence: the exercise added such a cell on its own initiative. It showed the decider followed the numbers over the label in every order where position did not interfere (four of six), and the report asked for the cell to be standard.
+  Overturned by: —
+
+- **RML-59** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  When the reply shape is unknown, make one uncounted schema probe before pinning, and log it in the change record before any counted call.
+  Evidence: the decider's source was off limits, so the exercise made one uncounted probe and logged it before any counted call. The skill gave no step for it.
+  Overturned by: —
+
+- **RML-60** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  Keep the change record in its own append-only file outside the pinned set, so post-run notes do not make the pinned hash stale.
+  Evidence: the change record lived inside the pinned pre-registration file, and an exploratory entry appended after the run made the pinned hash stale.
+  Overturned by: —
+
+- **RML-61** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  Judge a single-choice control on probabilities (with a margin) or on choices, not a mix, and say which.
+  Evidence: the pass rule required both a count of choices and a fixed margin. Four orders failed on margins of 0.089 to 0.099 against an arbitrary 0.10 while the target was chosen each time, so the verdict did not say which basis failed. A fixed floor again set the noise line (pooled SD 0.012), as in RML-48.
+  Overturned by: —
+
+- **RML-62** · status: provisional · since: 2026-09-26 · origin: two exercises in a row (the stub decider and the blind exercise)
+  When no independent reviewer can be assigned, take a solo path: record the missing approval as a limit, cap the claimed evidence level, and have the parent review before the result counts.
+  Evidence: in both exercises the worker could not spawn a reviewer and the plan ran unapproved. Each disclosed it, and the blind exercise asked the parent to review; the skill named no route for that case.
+  Overturned by: —
+
+- **RML-63** · status: provisional · since: 2026-09-26 · origin: two exercises (the stub decider and the blind exercise), and the blind exercise's recommendation
+  Once a position effect is found, fix it in code or in the instrument, never by silent reordering. Code-owned dominance checks come before the model call. Per-option ratings are the next option. Rotating the order and aggregating across orders is an instrument change that starts a new epoch and must re-pass the controls.
+  Evidence: both exercises found a position effect (a last-position boost; a first-position penalty in which the dominant option was chosen 0 of 60 times when listed first). The blind report named the missing fix as a skill gap and proposed code-owned dominance and treating reordering as an instrument change. No fix was tested.
+  Overturned by: —
+
 ## Changelog
 
 Append-only. One row per change. Change types: new lesson, second confirmation, lesson overturned, new model version or alias move, instrument or question-set change.
@@ -248,3 +333,6 @@ Append-only. One row per change. Change types: new lesson, second confirmation, 
 | --- | --- | --- | --- | --- |
 | 2026-09-25 | new lesson | RML-01 to RML-43 | Initial ledger, written from three lesson inventories of one lab program and one public prior-art survey | pending independent review |
 | 2026-09-25 | new lesson; review revision | RML-44 to RML-46 added; RML-02, RML-05, RML-22, RML-27, RML-28, RML-41, RML-43 revised | Review of the initial ledger: RML-41 split into RML-41 and RML-46, RML-28 restated as a latent risk, public-project counts and labels corrected | reviewer-medium (Opus 5.5), PASS+NOTES |
+| 2026-09-26 | New lesson (not overturning) | RML-47 to RML-55 added; RML-13 evidence revised to drop the example floor value | A portable-skill exercise on a stub decider (240-call pre-registered run) and its grading, which found that a copied example floor decided a cell | pending |
+| 2026-09-26 | New lesson (not overturning) | RML-56 to RML-62 added; RML-50 revised to require a one-word sensitivity arm, with the blind exercise's evidence added | A blind exercise on an opaque decider graded against a sealed key: one planted defect found, one misread as sampling, one missed | pending |
+| 2026-09-26 | New lesson (not overturning) | RML-63 added; RML-48 evidence sentence corrected (margin about 7.5 pooled SDs); RML-61 count corrected to four orders; wording-control rule aligned (text-blind means not applicable) | Review of the previous row's candidate, notes N1 to N5 | pending |

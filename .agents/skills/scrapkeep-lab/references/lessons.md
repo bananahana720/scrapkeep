@@ -8,7 +8,7 @@ Status values:
 - `provisional`: one run or one review supports it. Promote it only when a second independent run or review cites it.
 - `retracted`: a later result overturned it. Keep the text, fill `Overturned by`, and edit the citing rule line in the same commit.
 
-Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-lab-2026-09-25/reviews/<card>.md:<line>`, and other files by repository path and line. Every line was opened and checked on 2026-09-25: SKL-01 to SKL-30 at base `0d02138`, and SKL-31, SKL-32 and the revised origin-map rows after merging the coordinator branch at a1f2eda.
+Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-lab-2026-09-25/reviews/<card>.md:<line>`, and other files by repository path and line. Every line was opened and checked on 2026-09-25: SKL-01 to SKL-30 at base `0d02138`, and SKL-31, SKL-32 and the revised origin-map rows after merging the coordinator branch at a1f2eda. SKL-33 to SKL-36 and the re-pointed SKL-16 and SKL-31 lines were checked on 2026-09-26 at base 64bd9cf, after JL-21b's merge; SKL-31's promotion and the SKL-33 and SKL-34 line numbers were re-checked after merging the coordinator branch at d450bd8, which contains JL-21b-A3 (82d2a96).
 
 ## Lessons
 
@@ -89,7 +89,7 @@ Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-l
 
 - **SKL-16** · status: provisional · since: 2026-09-25 · origin: JL-21 calibration
   A choice scenario jitters the spawn from the trial seed, and trial i gets the same point on every arm. Without it a deterministic arm's 20 trials are one trial repeated.
-  Evidence: `sketches/ball-lab/src/jev/scenarios.gd:13-16`; `artifacts/jev-lab-2026-09-25/reviews/JL-21.md:41`.
+  Evidence: `sketches/ball-lab/src/jev/scenarios.gd:10-13` (lines 13-16 before JL-21b's merge moved the header); `artifacts/jev-lab-2026-09-25/reviews/JL-21.md:41`.
   Overturned by: —
 
 - **SKL-17** · status: provisional · since: 2026-09-25 · origin: JL-21 calibration
@@ -162,14 +162,34 @@ Evidence names TRACKING events (`EV-nnnn`), retained reviews as `artifacts/jev-l
   Evidence: `artifacts/jev-lab-2026-09-25/reviews/JL-17.md:13` (N3); EV-0542; EV-0546 (JL-21 raised the share to 0.71 to 1.00 on four scenarios).
   Overturned by: —
 
-- **SKL-31** · status: provisional · since: 2026-09-25 · origin: JL-21b-A1 handoff
-  The executor must act on the threat the exported state reports. A state rule that hides a threat is incomplete while the executor picks its own target. On ball-lab, `_goal()` passes no target for stomp or ram, so the executor stomped the nearest dummy, knocked or not, and scripted trials still averaged 36 to 64 stomp stretches after the state fix.
-  Evidence: EV-0556 (the finding and the JL-21b-A2 lease widening); `sketches/ball-lab/src/jev/jev_run.gd:280-283` (`_goal()` returns a target only for `push_objective`).
+- **SKL-31** · status: established · since: 2026-09-25 · origin: JL-21b-A1 handoff; JL-21b Fable review
+  The executor must act on the threat the exported state reports. A state rule that hides a threat is incomplete while the executor picks its own target. Before JL-21b-A2, ball-lab's `_goal()` passed no target for stomp or ram, so the executor stomped the nearest dummy, knocked or not, and scripted trials still averaged 36 to 64 stomp stretches after the state fix.
+  Evidence: EV-0556 (the finding and the JL-21b-A2 lease widening; before A2, `_goal()` returned a target only for `push_objective`). The fix is merged (EV-0564): `sketches/ball-lab/src/jev/jev_run.gd:300-313` now targets the threat the state reported. The independent Fable review confirmed the fix, red then green, with no path to a knocked target at apply time (`artifacts/jev-lab-2026-09-25/reviews/JL-21b.md:29`); scripted `dummy-knock` kinematic stomp stretches fell from 63.6 to 3.3 (EV-0563); A3 added a mutation-red test for the fallback branch (EV-0566).
   Overturned by: —
 
 - **SKL-32** · status: provisional · since: 2026-09-25 · origin: JL-27 review, coordinator ruling
   Decide per stage whether a trial ends at death before the first batch, and record the choice as the stage's instrument epoch. A Spillway Drop trial kept running after death, so roughly half to two thirds of rigid snapshots came after it and every per-snapshot measure pooled them; the success predicate was unaffected. The ruling ends a Spillway trial at death, as Cable Bench's does.
   Evidence: `artifacts/jev-lab-2026-09-25/reviews/JL-27.md:17` (F1); EV-0555 (ruling, new epoch, JL-27-A3).
+  Overturned by: —
+
+- **SKL-33** · status: provisional · since: 2026-09-26 · origin: JL-30 DoD 3 exercise 2 (new ball-lab scenario)
+  Every ball-lab scenario gets the same six dummies, whatever it is. No per-scenario dummy hook exists, so a scenario that needs a different set must add one, defaulting to all six so existing traces do not change.
+  Evidence: `sketches/ball-lab/src/field.gd:84-87` (the six spots); `sketches/ball-lab/src/lab.gd:51-56` (one dummy spawned per spot); `sketches/ball-lab/src/jev/scenarios.gd:159-167` (`place()` moves only the ball); `artifacts/jev-lab-2026-09-25/skills/exercises/2-lab-scenario.md:22`, `:86` (the exercise had to add a hook).
+  Overturned by: —
+
+- **SKL-34** · status: provisional · since: 2026-09-26 · origin: JL-30 DoD 3 exercise 2
+  The ball-lab state test hardcodes the scenario count, the jittered count and a per-id predicate table, so a new scenario id fails it until all three are edited.
+  Evidence: `sketches/ball-lab/tests/jev_state_test.gd:559` (`ids.size() == 7`), `:561-569` (`cases`), `:608` (`jittered == 4`); `artifacts/jev-lab-2026-09-25/skills/exercises/2-lab-scenario.md:87`.
+  Overturned by: —
+
+- **SKL-35** · status: provisional · since: 2026-09-26 · origin: JL-30 DoD 3 exercise 2
+  The fake Godot's `soak` stream cycles through every other scripted scenario, so adding a fake scenario changes `soak`. A fake entry is needed only when Node tests or `scrapkeep lab run` drive the scenario; the real launcher needs no Node-side registration.
+  Evidence: `scripts/lab/fake-godot.mjs:143-148` (the cycle), `:190-193` (an unknown id throws); `scripts/lab/godot-launch.mjs:103` (the id passes straight to Godot); `artifacts/jev-lab-2026-09-25/skills/exercises/2-lab-scenario.md:27`, `:88` (real batches ran with no fake entry).
+  Overturned by: —
+
+- **SKL-36** · status: provisional · since: 2026-09-26 · origin: JL-30 DoD 3 exercise 2 and its grading
+  The gate's like-for-like refusal exits 2 before either record is validated, so a batch gated against a mismatched pin gets no validation at all.
+  Evidence: `scripts/lab/gate.mjs:604-627` (type and batch-mismatch checks throw `UsageError` before `assessRun()`); `artifacts/jev-lab-2026-09-25/skills/exercises/2-lab-scenario.md:43-45` (exit 2 on a scenario mismatch).
   Overturned by: —
 
 ## External caveat
@@ -178,7 +198,7 @@ Token figures on the board that came from the delegate ledger before EV-0498 are
 
 ## RML origin map
 
-Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids its review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
+Each row maps one lesson in the `reactive-model-loop` ledger to where it came from in this repository. The ids are those of the merged ledger (the JL-30 portable-skill writer at 2b77c41, merged into the coordinator branch as a1f2eda), which has RML-01 to RML-46; JL-30 writer d, attempt A1, appended RML-47 to RML-55 from the DoD 3 portable exercise, and their rows were opened and confirmed at base 64bd9cf; attempt A2 appended RML-56 to RML-62 from the blind exercise 1b and confirmed those rows after merging the coordinator branch at d450bd8, which contains the JL-21b-A3 merge 82d2a96. If that ledger renumbers or revises an id, this table changes in the same commit. Every citation below was opened and confirmed on this branch after that merge; the rows for the ids its review revised (RML-02, 05, 22, 27, 28, 41 and 43) were re-read against the revised lesson text. A citation marked "unconfirmed" was named by the inventory but not found at the stated place.
 
 | RML id | SKL id or citation |
 | --- | --- |
@@ -228,6 +248,23 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | RML-44 | SKL-15; EV-0550; `artifacts/jev-lab-2026-09-25/reviews/JL-26.md:18-23` |
 | RML-45 | SKL-12; `artifacts/jev-lab-2026-09-25/reviews/JL-21.md:34` |
 | RML-46 | SKL-13; EV-0546 |
+| RML-47 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:117-118` (identity from the decider file's hash; the key throws on null), `:139` (gap 1) |
+| RML-48 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:66-69` (margin 0.0584, SD 0.0078, the floor decided), `:140` (gap 2) |
+| RML-49 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:76-77` (the wording swap failed only on fallbacks), `:81-83` (15 of 240 fallbacks), `:141` (gap 3, about 0.79 computed) |
+| RML-50 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:88`, `:90` (state and risk size had no effect), `:98` (the decider never reads label text), `:142` (gap 4); `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:10` (planted trigger word missed, swap shift 0.007), `:21` (the sealed key's trigger word) |
+| RML-51 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:94-97` (deterministic per process; one warm-up call moved the hash), `:143` (gap 5) |
+| RML-52 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:96` (the perturbation), `:144` (gap 6) |
+| RML-53 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:72` (never chosen, probability 0.128 to 0.310), `:145` (gap 7) |
+| RML-54 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:83-84` (15 of 15 fallbacks chose the first option; storm first in two orders), `:129` |
+| RML-55 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:86` (r = 0.068 over 225 model answers) |
+| RML-56 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:11` (symptom found, cause misread), `:22` (the sealed key's 4% misreport), `:90` (2 of 210 non-argmax choices read as sampling) |
+| RML-57 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:74` (210 of 210 `source: "model"`), `:94` (self-set field; sub-millisecond latency), `:139` (gap 7) |
+| RML-58 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:41` (cell X), `:63` (X 4 of 6, failing only with the dominant option first), `:141` (gap 9) |
+| RML-59 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:49` (one uncounted probe, logged first), `:135` (gap 3) |
+| RML-60 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:136` (gap 4, the pinned hash went stale) |
+| RML-61 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:43` (the mixed pass rule), `:65` (the 0.10 floor set the noise line), `:137-138` (gaps 5 and 6) |
+| RML-62 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:146` (gap 8); `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:48` (no reviewer; parent review asked), `:134` (gap 2) |
+| RML-63 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:68` (last-position boost); `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:70` (first position chosen 0 of 60), `:98-99` (code-owned dominance; ordering fixes change the instrument), `:140` (gap 8, no fix named) |
 
 ## Changelog
 
@@ -238,3 +275,6 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | 2026-09-25 | New lesson (not overturning) | SKL-31, SKL-32 | EV-0555, EV-0556, `artifacts/jev-lab-2026-09-25/reviews/JL-27.md:17`; JL-30 writer b, attempt A2 | pending |
 | 2026-09-25 | New lesson (not overturning); closest type for the origin map, which adds no lesson | RML-44 to RML-46 mapped; RML-02, 05, 22, 27, 28, 41 and 43 re-read against the revised ledger, RML-05, 22, 41 and 43 re-pointed; RML-04 and RML-06 line numbers corrected | merged `reactive-model-loop` at a1f2eda; writer b review B1 and N1 | pending |
 | 2026-09-25 | New lesson (not overturning); correction of the change type above | none | The "Origin map" row above uses a type outside the section 4a list; its closest type is "New lesson (not overturning)". Row kept as written, since this log is append-only (writer b review N5) | pending |
+| 2026-09-26 | New lesson (not overturning) | SKL-33 to SKL-36 added; SKL-16 and SKL-31 evidence re-pointed after JL-21b's merge (EV-0564); RML-47 to RML-55 mapped | JL-30 DoD 3 exercises 1 and 2 (`artifacts/jev-lab-2026-09-25/skills/exercises/`) and the coordinator's grading addendum; JL-30 writer d, attempt A1 | pending |
+| 2026-09-26 | New lesson (not overturning); closest type for a promotion and an origin-map update, which add no lesson | SKL-31 promoted to established (second, independent source); SKL-33 and SKL-34 line numbers re-pointed after the JL-21b-A3 merge; RML-56 to RML-62 mapped and RML-50's row extended | `artifacts/jev-lab-2026-09-25/reviews/JL-21b.md:29`, EV-0563, EV-0566; `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md`; JL-30 writer d, attempt A2 | pending |
+| 2026-09-26 | New lesson (not overturning); closest type for an origin-map update and a port-table correction, which add no SKL lesson | RML-63 mapped; the port reference's Spillway Drop row brought up to JL-27's close (EV-0559, lab head 45446ff) and the Cable Bench row given its lab head 7d5adda (EV-0553) | review of JL-30 writer d's candidate, B1 and N5; JL-30 writer d, attempt A3 | pending |

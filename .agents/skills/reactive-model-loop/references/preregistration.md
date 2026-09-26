@@ -8,13 +8,14 @@ The pattern comes from one lab's 216-call pre-registered run: six designs, every
 
 ### Phase A: prepare without live calls
 
-1. Write the pre-registration from the template below.
-2. Build the states, questions, design file and runner.
-3. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need. Record the result in the template's stub dry-run slot.
-4. Compute the SHA-256 of every input file and write the hashes into the pre-registration.
-5. Make the runner refuse to start its live mode unless every hash matches.
-6. Get an independent reviewer's approval of the pre-registration. Record who approved it and when.
-7. Log any change to the plan in the change record, with who asked and why, before the first live call.
+1. Write the pre-registration from the template below. Start the change record as its own append-only file, outside the set of pinned inputs (RML-60). A change record kept inside the pinned file makes its hash stale the first time a note is appended after the run. In one blind exercise an exploratory entry appended after the run did exactly that.
+2. If the reply shape is unknown, make one schema probe before pinning (RML-59). Send a single uncounted call, record its request and reply, and log it in the change record before any counted call. Say in the report that it happened and that it counts toward no reading. In one blind exercise the decider's source was off limits, so one uncounted probe, logged before any counted call, established the reply shape.
+3. Build the states, questions, design file and runner.
+4. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need. Record the result in the template's stub dry-run slot.
+5. Compute the SHA-256 of every input file and write the hashes into the pre-registration.
+6. Make the runner refuse to start its live mode unless every hash matches.
+7. Get an independent reviewer's approval of the pre-registration. Record who approved it and when. When no independent reviewer can be assigned, take the solo path (RML-62): record the missing approval as a limit in the change record and the report, cap the evidence level you claim below the level an approved run would earn, run as planned, and treat the result as not counting until the parent or another reviewer reviews the plan and the result. Two exercises in a row ran without a reviewer because the worker could not spawn one.
+8. Log any change to the plan in the change record, with who asked and why, before the first live call.
 
 ### Phase B: run once
 
@@ -42,7 +43,8 @@ Author: <name or role>   Approver: <independent reviewer>
 | <outcome> | <what happens next> |
 
 ## Instrument
-Resolved model: <as the provider reports it>
+Resolved model: <as the provider reports it, or a hash of the decider artifact when none is reported (RML-47)>
+Sequence state: <none shown by a fresh-process and extra-call test, or described; if present, no cache (RML-51)>
 Question-set hash: <sha256>
 Thresholds and gate version: <values>
 
@@ -54,12 +56,17 @@ Thresholds and gate version: <values>
 <Every permutation of the options; <n> repeats per order; <total> calls.>
 
 ## Controls in the run
-<Dominance, lethal, wording swap, and any others; their pass conditions.>
+<Dominance, lethal, wording swap with its sensitivity arm, and any others; their pass conditions.>
 
 ## Lines and definitions
-Noise line: <formula, computed from this run>
+Noise line: <multiple of the pooled within-order SD, computed from this run>
+Floor, if any: <value and the consequence it stands for; the report names whether floor or measured noise decided each cell (RML-48)>
+Dominance margin rule: <separate from the shift rule (RML-48)>
 Margin rule: <for per-option ratings, if used>
-Pass rule: <per cell; every order must pass on its own>
+Lethal line: <value; whether the decider samples or takes the top option; the loss it stands for (RML-53)>
+Live answers per order: <minimum; an order below it is inconclusive (RML-49)>
+Fallback budget: <largest accepted fallback rate and why; reported as its own finding (RML-49)>
+Pass rule: <per cell, on live-model answers; every order must pass on its own>
 
 ## Readings
 | Reading | Fires when | Consequence |
@@ -82,8 +89,10 @@ Cap: <n calls>   Expected: <n calls>   Counted before send, failures included.
 Before and after: commit, tree state, changed paths, pre-registration hash.
 
 ## Change record
-| UTC time | Change | Requested by | Reason | Before any live call? |
-| --- | --- | --- | --- | --- |
+Kept in its own append-only file, outside the pinned inputs: <path> (RML-60).
+Its columns: UTC time | Change | Requested by | Reason | Before any live call?
+Schema probe: <none, or the probe's time, request and reply; uncounted (RML-59)>
+Reviewer: <approver, or "none available: solo path, parent review owed" (RML-62)>
 
 ## Stop rules
 A crash counts as blocked. No reruns. No rows added to Readings after the run.
@@ -112,6 +121,8 @@ Record the tree state as well as the commit (RML-41). A commit on a dirty tree d
 When the system has a deterministic mode, a hash re-run can serve as a cheap proof (RML-46). Re-run one batch at the clean commit and compare trace hashes. In one lab a clean-commit re-run matched the dirty-tree batch hash for hash, 20 of 20, without repeating the full batch set. That is one instance.
 
 A matching hash proves something only if the hash can move. Before relying on hash equality, run a sensitivity control (RML-45). Perturb one answer, or the snapshot and apply schedule, and confirm that the trace hash changes while every event before the perturbation stays byte-identical. In one lab such a test showed the hash was neither always equal nor blind to order.
+
+Place the perturbation after a shared prefix of several events, not at the first one (RML-52). The check has two halves: the hash moves, and the prefix before the perturbation is unchanged. A perturbation at the first event leaves no prefix, so the second half passes vacuously. Compare the prefix event by event, and name the index where the traces first differ; it should be the perturbed event. In one exercise the perturbation was an extra call before the first decision, so only the "hash moves" half was tested.
 
 ## Route review by the kind of claim
 

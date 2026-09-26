@@ -6,8 +6,8 @@ A stage lab runs a light-play-lane sketch through the same harness, protocol and
 
 | Stage | Lab branch and proto base | Node side | Threat rule | Notes |
 | --- | --- | --- | --- | --- |
-| Cable Bench | lab/cable-bench from proto/cable-bench at 29dcbcf | `STAGES` entry and `scripts/lab/metrics/cable-bench.mjs`, merged at 42fd4ce | Stage-threat-rule 2; a trial ends at death | `forge-charge` and `stage-run` 0 of 80 under both threat rules; contact damage and attack choice suspected (inference, EV-0553) |
-| Spillway Drop | lab/spillway-drop from proto/spillway-drop at af89c89 | reuses Cable Bench's launcher and harness hook | Stage-threat-rule 2; a trial ends at death, a new epoch (EV-0555) | A1 and A2 passed review, then the end-at-death ruling sent it to JL-27-A3, in progress at EV-0556; needs its own geometry helper; deaths dominate every arm (EV-0550) |
+| Cable Bench | lab/cable-bench (lab head 7d5adda, EV-0553) from proto/cable-bench at 29dcbcf | `STAGES` entry and `scripts/lab/metrics/cable-bench.mjs`, merged at 42fd4ce | Stage-threat-rule 2; a trial ends at death | `forge-charge` and `stage-run` 0 of 80 under both threat rules; contact damage and attack choice suspected (inference, EV-0553) |
+| Spillway Drop | lab/spillway-drop (lab head 45446ff, EV-0559) from proto/spillway-drop at af89c89 | reuses Cable Bench's launcher and harness hook | Epoch "stage-threat-rule 2 + end-on-death" on every A3 record (EV-0555, EV-0559) | JL-27 done at EV-0559: A3 has 0 anomalies in 160 trials and 80 of 80 rigid repeat pairs; needs its own geometry helper; deaths dominate every arm (EV-0550) |
 
 Add a row when a stage is ported.
 
@@ -29,8 +29,20 @@ Add a row when a stage is ported.
 9. **Provenance.** The run record hashes only the Node repository; the sketch's head and dirty flag are stamped once at launch (SKL-21). Keep the lab branch's own diff and check logs as receipts, because `check:scope` runs on the Node diff only (`artifacts/jev-lab-2026-09-25/reviews/JL-26.md:48`).
 10. **Findings.** Label every gameplay finding "automated; not a feel verdict", and label causal readings as inference. The reviewer checks findings against retained evidence, so keep the finding text in a file under the task's evidence directory.
 
+## Foes with HP, and bosses
+
+No ported stage has these yet. Settle each point before the first batch.
+
+- **Per-threat HP is not in the protocol.** A threat entry carries `kind`, distance, damage, timing fields and flags, and no `hp` (`tools/jev-player/protocol/PROTOCOL.md:171`). Adding an `hp` field or a boss flag is a new field, so it is a new protocol string, never an edit to v1 (`tools/jev-player/protocol/PROTOCOL.md:188`; SKL-01). That means the protocol change procedure in [protocol.md](protocol.md), both validators and the fixtures, and a new epoch for every arm (SKL-15, SKL-28). First decide whether any arm needs HP to choose. If none does, keep v1 and record HP in the stage's telemetry and metrics only.
+- **Threat rule.** A foe with HP fits stage-threat-rule 2: it stays a threat until it is dead or freed (EV-0550).
+- **Boss phases need their own ruling.** Stage-threat-rule 2 does not say what happens while a boss is invulnerable or changing phase. Ask the coordinator whether the boss leaves the list for that window, stays, or stays with a flag (a flag is a protocol change, as above). Ask too whether killing the boss ends the trial early, the same kind of choice as ending at death (SKL-32).
+- **Target policy.** Stomp and ram act on the threat the state reports (SKL-31). With several foes and a boss, get a ruling on which one the state reports first: nearest, weakest or the boss. The ordering is part of the state rule, so a change to it is a new epoch.
+- **Player HP.** If the stage has player HP, decide whether `retreat_regen` is offered. The scripted ladder has a `low-health` rung that picks it (`scripts/lab/arms.mjs:78-79`), so the answer changes what scripted does.
+- **Boss scenario.** Give the boss scenario its own success predicate and an initial limit labelled not calibrated.
+
 ## What to ask the coordinator for
 
 - A threat-rule ruling when the stage's foes do not fit step 1 cleanly, and an end-of-trial ruling when step 2 is unclear.
+- For foes with HP or a boss, the rulings listed under "Foes with HP, and bosses", before the first batch.
 - The seeds reserved for any pre-registered comparison.
 - The lease scope for the Node-side files (`scripts/lab/metrics/index.mjs`, the stage metrics file and any shared launcher change), which another card may also hold.
