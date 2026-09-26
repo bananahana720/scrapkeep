@@ -10,6 +10,12 @@ extends SceneTree
 # A against B measures the mode's own reproducibility first. A fourth lab, the
 # control, gets one deliberate 1 mm/s nudge and must be reported as different.
 #
+# Knocked threats (JL-21b): per mode, a lab stomps dummy 0 at tick 0 with two
+# exporters attached, one with a Scenarios.Run and one without. With the Run, a dummy
+# knocked this trial leaves the threats; without it, the threats are unchanged. The
+# first tick a knocked dummy is the nearest, jev_run.gd's goal for stomp and ram must
+# send the agent to the nearest reported threat instead (JL-21b-A2).
+#
 # Set JEV_STATE_DUMP=<dir> to write the exporter's states (every 90 ticks) as protocol
 # state files for protocol.mjs to validate.
 
@@ -19,6 +25,8 @@ const SpeedTier := preload("res://src/speed_tier.gd")
 const Field := preload("res://src/field.gd")
 const JevState := preload("res://src/jev/jev_state.gd")
 const Scenarios := preload("res://src/jev/scenarios.gd")
+const JevRun := preload("res://src/jev/jev_run.gd")
+const JevAgent := preload("res://src/jev/jev_agent.gd")
 
 const TICKS := 900
 const PLACE_TICKS := 45
@@ -50,6 +58,7 @@ class ScriptedSource:
 
 
 var _identity := []
+var _knocked := []
 var _placed := []
 var _tick := -1
 var _failures := 0
@@ -63,6 +72,7 @@ func _initialize() -> void:
 	for mode in MODES:
 		for variant in VARIANTS:
 			_identity.append({"mode": mode, "variant": variant, "holder": _new_lab(), "trace": []})
+		_knocked.append({"mode": mode, "holder": _new_lab(), "ticks": 0, "errors": [], "differed": 0})
 	var placements := Scenarios.all()
 	placements.append(Scenarios.make("kicker-gap@14"))
 	placements.append(Scenarios.make("kicker-gap@28"))
@@ -90,7 +100,7 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 func _physics_process(_delta: float) -> bool:
 	if _tick < 0:
-		for run in _identity + _placed:
+		for run in _identity + _placed + _knocked:
 			if run["holder"]["lab"].player == null:
 				return false
 		_start()
@@ -99,6 +109,8 @@ func _physics_process(_delta: float) -> bool:
 	_tick += 1
 	for run in _identity:
 		_step_identity(run)
+	for run in _knocked:
+		_step_knocked(run)
 	if _tick <= PLACE_TICKS:
 		for run in _placed:
 			run["view"].advance()
@@ -129,6 +141,17 @@ func _start() -> void:
 			lab.player.shockwave.connect(func(at: Vector3, strength: float) -> void:
 				run["heard"].append({"tick": view.tick, "strength": strength, "at": at}))
 			_dump_state(run, 0)
+	for run in _knocked:
+		var lab = run["holder"]["lab"]
+		lab.player.source = ScriptedSource.new()
+		lab.player.set_mode(run["mode"])
+		lab.player.reset_to(lab.enemies[0].global_position + Vector3.UP * 4.0)
+		lab.player.active_body().set_velocity_now(Vector3.DOWN * 14.0)
+		var tracker := Scenarios.Run.new(Scenarios.make("dummy-knock"), Engine.physics_ticks_per_second)
+		run["view"] = JevState.new(lab, tracker)
+		run["bare"] = JevState.new(lab)
+		run["view"].attach()
+		run["bare"].attach()
 	for run in _placed:
 		var lab = run["holder"]["lab"]
 		Scenarios.place(lab, run["scenario"])
@@ -154,6 +177,67 @@ func _step_identity(run: Dictionary) -> void:
 		if _tick % SNAPSHOT_EVERY == 0:
 			_dump_state(run, _tick)
 	_script(run, lab)
+
+
+# Each tick, both exporters against the lab read directly: the nearest three dummies
+# within 60 m, and with the Run the same leaving out every dummy a raw shockwave was
+# emitted on (read from `knocks`, not from the contact stretches under test).
+func _step_knocked(run: Dictionary) -> void:
+	var lab = run["holder"]["lab"]
+	var view = run["view"]
+	var bare = run["bare"]
+	view.advance()
+	bare.advance()
+	var knocked := {}
+	for wave in view.knocks:
+		if wave["enemy"] >= 0:
+			knocked[wave["enemy"]] = true
+	var at: Vector3 = lab.player.ball_position()
+	var near := []
+	for i in lab.enemies.size():
+		var d: float = lab.enemies[i].global_position.distance_to(at)
+		if d <= 60.0:
+			near.append({"index": i, "d": d})
+	near.sort_custom(func(a, b): return a["d"] < b["d"] or (a["d"] == b["d"] and a["index"] < b["index"]))
+	var all_ids := near.slice(0, 3).map(func(e): return e["index"])
+	var live_ids := near.filter(func(e): return not knocked.has(e["index"])).slice(0, 3).map(func(e): return e["index"])
+	var metres := func(ids: Array) -> Array: return ids.map(func(i): return int(round(lab.enemies[i].global_position.distance_to(at))))
+	var got: Array = view.threats().map(func(t): return t["distance_m"])
+	var got_bare: Array = bare.threats().map(func(t): return t["distance_m"])
+	var sim: Dictionary = view.snapshot()["sim"]
+	var problems := []
+	if got != metres.call(live_ids):
+		problems.append("with Run %s, expected %s" % [str(got), str(metres.call(live_ids))])
+	if sim.get("threat_ids") != live_ids:
+		problems.append("sim.threat_ids %s, expected %s" % [str(sim.get("threat_ids")), str(live_ids)])
+	if got_bare != metres.call(all_ids):
+		problems.append("without Run %s, expected %s" % [str(got_bare), str(metres.call(all_ids))])
+	if not problems.is_empty() and run["errors"].size() < 3:
+		run["errors"].append("tick %d: %s" % [view.tick, "; ".join(problems)])
+	if not problems.is_empty():
+		run["ticks"] += 1
+	if live_ids != all_ids:
+		run["differed"] += 1
+	if not run.has("targets") and not live_ids.is_empty() and knocked.has(all_ids[0]):
+		run["targets"] = _executor_targets(lab, view)
+		run["targets"]["nearest"] = all_ids[0]
+		run["targets"]["reported"] = live_ids[0]
+
+
+# What the agent would act on for stomp and ram, given jev_run.gd's goal for a state
+# taken now. Read-only: the agent is not installed as the ball's source.
+func _executor_targets(lab, view) -> Dictionary:
+	var trial = JevRun.Trial.new(lab, {})
+	trial.view = view
+	trial.run = view.run
+	trial._pending = view.snapshot()
+	var out := {"tick": view.tick}
+	for id in ["stomp_target", "ram_target"]:
+		var agent := JevAgent.new(lab)
+		agent.hold(id, trial._goal(id))
+		agent._at = lab.player.ball_position()
+		out[id] = lab.enemies.find(agent._enemy())
+	return out
 
 
 func _sample(lab) -> PackedFloat64Array:
@@ -380,6 +464,23 @@ func _finish() -> void:
 		stomps += view.knock_count("stomp")
 		rams += view.knock_count("ram")
 		view.detach()
+	for run in _knocked:
+		var view = run["view"]
+		var knocked: Array = view.knocked_enemies() if view.has_method("knocked_enemies") else []
+		var ok: bool = run["ticks"] == 0 and knocked.has(0) and run["differed"] > 0
+		_report("knocked threats", ok, "%s: dummies %s knocked; on %d of %d ticks a knocked dummy was among the nearest three, %d ticks wrong%s"
+			% [PlayerBall.MODE_NAMES[run["mode"]], str(knocked), run["differed"], view.tick, run["ticks"],
+			(" (" + " | ".join(run["errors"]) + ")") if not run["errors"].is_empty() else ""])
+		var targets: Dictionary = run.get("targets", {})
+		var aimed: bool = not targets.is_empty() and targets["stomp_target"] == targets["reported"] \
+			and targets["ram_target"] == targets["reported"] and targets["reported"] != targets["nearest"]
+		_report("executor target", aimed, "%s: %s" % [PlayerBall.MODE_NAMES[run["mode"]],
+			("tick %d, knocked dummy %d nearest, reported threat %d; stomp acts on %d, ram on %d" % [targets["tick"],
+			targets["nearest"], targets["reported"], targets["stomp_target"], targets["ram_target"]])
+			if not targets.is_empty() else "no tick with a knocked dummy nearest"])
+		view.detach()
+		run["bare"].detach()
+		run["holder"]["viewport"].free()
 	_report("knock kinds", stomps >= 1 and rams >= 1, "%d stomps (0.6) and %d rams (1.0) across both modes" % [stomps, rams])
 	_report("snapshots", _check_errors == 0, "%d snapshots checked against direct reads, %d with a problem" % [_snapshots, _check_errors])
 	_check_scenarios()

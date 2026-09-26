@@ -131,10 +131,24 @@ func time_s() -> int:
 # Knocks of `kind` as contact stretches, the count events.ndjson and the run summary
 # report (EV-0509; JL-13 review, N5).
 func knock_count(kind: String) -> int:
+	return _contact_stretches().filter(func(knock): return knock["kind"] == kind).size()
+
+
+# The dummies knocked since attach, one trial's worth in jev_run.gd: the enemy index
+# of every contact stretch, in the order first knocked.
+func knocked_enemies() -> Array:
+	var out := []
+	for stretch in _contact_stretches():
+		if stretch["enemy"] >= 0 and not out.has(stretch["enemy"]):
+			out.append(stretch["enemy"])
+	return out
+
+
+func _contact_stretches() -> Array:
 	if _collapsed_waves != knocks.size():
 		_stretches = collapse(knocks)
 		_collapsed_waves = knocks.size()
-	return _stretches.filter(func(knock): return knock["kind"] == kind).size()
+	return _stretches
 
 
 # Telemetry.drain_knocks's rule: waves on one dummy are one stretch while each follows
@@ -186,6 +200,9 @@ func sim_block() -> Dictionary:
 		"air_actions": int(lab.player.state.air_actions),
 		"tier": SpeedTier.label(lab.player.state.tier),
 		"knocks": {"stomp": knock_count("stomp"), "ram": knock_count("ram"), "other": knock_count("other")},
+		# Which dummies the threats are, and which are knocked: unhashed, for tests.
+		"threat_ids": threat_indices(),
+		"knocked": knocked_enemies(),
 	}
 
 
@@ -200,29 +217,42 @@ func _self_block() -> Dictionary:
 	}
 
 
-# The nearest three dummies within 60 m, nearest first; ties keep lab order.
+# The nearest three dummies within 60 m, nearest first; ties keep lab order. With a
+# Run attached, a dummy knocked this trial (a contact stretch on it, knock_count()'s
+# rule) is left out for every arm: in the game a hit enemy is gone, while enemy.gd's
+# dummy gets up and chases, which kept the scripted ladder stomping it (JL-21 review,
+# F1). Without a Run nothing is left out.
 func threats() -> Array:
 	var at := position()
 	var v := velocity()
-	var found := []
-	for i in lab.enemies.size():
-		var d: float = lab.enemies[i].global_position.distance_to(at)
-		if d <= THREAT_RANGE:
-			found.append({"index": i, "d": d})
-	found.sort_custom(func(a, b): return a["d"] < b["d"] or (a["d"] == b["d"] and a["index"] < b["index"]))
 	var out := []
-	for entry in found.slice(0, MAX_THREATS):
-		var enemy = lab.enemies[entry["index"]]
+	for i in threat_indices():
+		var enemy = lab.enemies[i]
 		var offset: Vector3 = enemy.global_position - at
 		var relative: Vector3 = enemy.velocity - v
 		out.append({
 			"kind": THREAT_KIND,
-			"distance_m": whole(entry["d"]),
+			"distance_m": whole(enemy.global_position.distance_to(at)),
 			# The gap is shrinking when the relative velocity points back along it.
 			"closing": offset.dot(relative) < 0.0,
 			"below": at.y - enemy.global_position.y > BELOW_MARGIN,
 		})
 	return out
+
+
+# Lab indices of the dummies threats() reports, in its order.
+func threat_indices() -> Array:
+	var at := position()
+	var knocked := knocked_enemies() if run != null else []
+	var found := []
+	for i in lab.enemies.size():
+		if knocked.has(i):
+			continue
+		var d: float = lab.enemies[i].global_position.distance_to(at)
+		if d <= THREAT_RANGE:
+			found.append({"index": i, "d": d})
+	found.sort_custom(func(a, b): return a["d"] < b["d"] or (a["d"] == b["d"] and a["index"] < b["index"]))
+	return found.slice(0, MAX_THREATS).map(func(entry): return entry["index"])
 
 
 func objective() -> Dictionary:

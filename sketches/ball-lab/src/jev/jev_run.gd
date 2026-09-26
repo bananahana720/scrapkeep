@@ -194,11 +194,12 @@ class Trial:
 				or settings["time_limit_s"] < 0:
 			return _stop("internal", null, 0, "bad schedule D=%d k=%d timeout %d s limit %d s" % [every, hold,
 				settings["intent_timeout_s"], settings["time_limit_s"]])
-		if settings["time_limit_s"] > 0:
-			scenario["time_limit_s"] = float(settings["time_limit_s"])
 		seed(settings["seed"])
 		lab.player.set_mode(mode)
 		Scenarios.place(lab, scenario, settings["seed"])
+		# After place(), which sets the mode's limit, so an override always wins.
+		if settings["time_limit_s"] > 0:
+			scenario["time_limit_s"] = float(settings["time_limit_s"])
 		agent = JevAgent.new(lab)
 		agent.install()
 		run = Scenarios.Run.new(scenario, Engine.physics_ticks_per_second)
@@ -296,10 +297,20 @@ class Trial:
 		applied += 1
 		return true
 
-	# The objective's point for a push; the agent picks the nearest dummy for the rest.
+	# The objective's point for a push. Stomp and ram act on the threat the state
+	# offered them for, its nearest (jev_state.gd options()), so never on a knocked
+	# dummy; if that one was knocked before the intent applied, on the nearest threat
+	# now, and on none (-1) if there is none. Evade keeps the agent's own pick.
 	func _goal(id: String) -> Dictionary:
 		if id == "push_objective":
 			return {"point": run.objective(view)["point"]}
+		if id == "stomp_target" or id == "ram_target":
+			var reported: Array = _pending["sim"]["threat_ids"]
+			var target: int = reported[0] if not reported.is_empty() else -1
+			if target < 0 or view.knocked_enemies().has(target):
+				var now: Array = view.threat_indices()
+				target = now[0] if not now.is_empty() else -1
+			return {"enemy": target}
 		return {}
 
 	func _abort_seen() -> bool:
