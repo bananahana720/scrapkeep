@@ -644,7 +644,7 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if enemy == null or enemy != scooter or not scooter_landed():
 		return
 	if kind in Rules.CONTACT_KINDS:
-		_defeat(kind, scooter.global_position)
+		_defeat("stomp" if kind == "stomp" or _from_above(scooter) else kind, scooter.global_position)
 	else:
 		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
 
@@ -802,7 +802,7 @@ func plating_for(target, kind: String, part: String) -> float:
 	match target.role:
 		"hull":
 			if part.begins_with("cap_"):
-				return 0.0 if kind in Rules.CAP_KINDS else Rules.HULL_PLATING
+				return plating_for(_cap(part), kind, "")
 			if stunned():
 				return 0.0
 			if charging():
@@ -811,25 +811,50 @@ func plating_for(target, kind: String, part: String) -> float:
 		"magnet":
 			return Rules.HULL_PLATING if kind in Rules.CONTACT_KINDS else 0.0
 		"cap":
-			return Rules.HULL_PLATING if kind != "" and not kind in Rules.CAP_KINDS else 0.0
+			return Rules.HULL_PLATING if kind != "" and not _landing(target, kind) else 0.0
 	return 0.0
 
 
 func hit_mult(target, kind: String, part: String) -> float:
-	if (target.role == "cap" or part.begins_with("cap_")) and kind in Rules.CAP_KINDS:
+	if part.begins_with("cap_"):
+		return hit_mult(_cap(part), kind, "")
+	if target.role == "cap" and _landing(target, kind):
 		return Rules.CAP_MULT
 	return 1.0
 
 
+# A stomp or slam, or a contact the ball made coming down on top of the piece. The
+# spine reads the ball's velocity after the landing bounce, so a landing at speed
+# reaches combat as a ram; where the ball sits settles what it was.
+func _landing(target, kind: String) -> bool:
+	return kind in Rules.CAP_KINDS or (kind == "ram" and _from_above(target))
+
+
+func _from_above(target) -> bool:
+	return ctx.player.ball_position().y - target.global_position.y >= Rules.ABOVE and _over(target)
+
+
 # A stomp or slam on the deck lands on the vent cap it is over, as the Warden's caps do.
-func contact_part(target, ball: Vector3, kind: String) -> String:
-	if target.role != "hull" or phase != 2 or not kind in Rules.CAP_KINDS:
+func contact_part(target, _ball: Vector3, kind: String) -> String:
+	if target.role != "hull" or phase != 2:
 		return ""
 	for cap in ship.caps:
-		var at: Vector3 = cap.global_position
-		if Vector2(ball.x - at.x, ball.z - at.z).length() <= Rules.CAP_REACH:
+		if _landing(cap, kind) and _over(cap):
 			return cap.point_id
 	return ""
+
+
+func _over(target) -> bool:
+	var ball: Vector3 = ctx.player.ball_position()
+	var at: Vector3 = target.global_position
+	return Vector2(ball.x - at.x, ball.z - at.z).length() <= Rules.CAP_REACH
+
+
+func _cap(part: String):
+	for cap in ship.caps:
+		if cap.point_id == part:
+			return cap
+	return ship.caps[0]
 
 
 # The clash: a ram into the charging bow that meets plating 150 stops the charge.

@@ -84,6 +84,10 @@ func _run_checks() -> void:
 	_report("arena entry", flow.state_name() == "boss" and _log.slice(0, 2) == ["arena_entered", "phase_1"] and _phases[0]["name"] == "Requisition"
 			and flow.boss_active and flow.boss_plating == 120.0 and _boss.phase == 1 and _boss.arena != null,
 		"stage 3's end entered %s; published %s; boss_active %s, boss_plating %.0f" % [flow.state_name(), str(_log), flow.boss_active, flow.boss_plating])
+	var kept: Vector3 = _game.run.snapshot_value("entry_position")
+	var placed: Vector3 = _boss.arena.entry_point()
+	_report("entry pose recorded", kept.distance_to(placed) < 0.01 and _game.player.ball_position().distance_to(placed) < 0.01,
+		"flow's arena-entry checkpoint holds %s, the arena's entry point %s (the ball is placed at once, not by a pending teleport)" % [kept, placed])
 	var entries: Array = _game.codex.entries(CodexEntries.CATEGORY).filter(func(e): return e["id"].begins_with("brindle_"))
 	_report("codex entries", entries.size() == 4 and entries.all(func(e): return e["hint"] != "" and e["clue"] != "" and e["category"] == "enemy"),
 		"%d brindle entries declared in the enemy category: %s" % [entries.size(), str(entries.map(func(e): return e["id"]))])

@@ -22,6 +22,8 @@ const CAP_MULT := 1.5
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
 const CAP_KINDS := ["stomp", "slam"]
 const CAP_REACH := 2.6
+# A ball whose centre is this far above a piece's centre came down on top of it.
+const ABOVE := 1.2
 
 # Phase 1: two magnetic cranes sweep sectors from their pivots.
 const CRANE_PERIOD := 3.4
