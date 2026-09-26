@@ -1,6 +1,6 @@
 # Accepted engineering direction
 
-**Five accepted architecture decisions. 6 September 2026.**
+**Accepted architecture decisions: TADR-001 to TADR-005 on 6 September 2026; the Direction foundation adds more from 26 September 2026 (TRACKING EV-0579).**
 
 Andrew approved [BIBLE.md](../BIBLE.md) as the source of truth for what the game is. These decisions define the engineering direction for that game. They do not approve implementation, resolve product details left open in the Bible, or replace the working browser proofs.
 
@@ -13,6 +13,7 @@ Andrew approved [BIBLE.md](../BIBLE.md) as the source of truth for what the game
 | [TADR-003. Content pipeline](TADR-003-content-pipeline.md) | Typed text Resource definitions, separate scene/presentation assembly, stable domain IDs and validated versioned catalogues. | Native authoring with strict separation of shared definitions from mutable run state. |
 | [TADR-004. Persistence](TADR-004-persistence.md) | Versioned JSON aggregate containing profile, checkpoint and current run lifecycle, committed as one generation. | Revival use and terminal outcomes become durable independently of spatial checkpoint timing. |
 | [TADR-005. Networking scope](TADR-005-networking-scope.md) | Offline single-player. No local or online multiplayer infrastructure. | A complete local run, with future connected/co-op features requiring new product and ownership decisions. |
+| [TADR-010. Open stages and the event director](TADR-010-open-stages-and-event-director.md) | The open stage is the run's level unit; one event director inside Encounter composes stage events, spawns (waves are one type) and discoveries; stage time may scale threat, never gate progression. Added 26 September 2026 (DF-03, TRACKING EV-0584). | Supersedes the compact-level and wave readings of TH-06, TH-11 and TH-14 (see [the sections index](../docs/tech/sections/README.md)); the director gets a third encounter-scoped, non-durable random stream. |
 
 All five statuses are **Accepted engineering direction** under Andrew's instruction to preserve the settled architecture. Each ADR contains context, options, a decision, consequences, at least two explicitly rejected alternatives and later qualification needs. TADR IDs distinguish this production proposal from [existing prototype ADRs](../docs/adr/README.md). The existing implementation remains governed by its current contracts until an explicit migration/consolidation decision.
 
