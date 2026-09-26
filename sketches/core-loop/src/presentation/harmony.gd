@@ -20,6 +20,12 @@ const HOME := 62
 const DORIAN := [0, 2, 3, 5, 7, 9, 10]
 const AEOLIAN := [0, 2, 3, 5, 7, 8, 10]
 const HARMONIC := [0, 2, 3, 5, 7, 8, 11]
+const PHRYGIAN := [0, 1, 3, 5, 7, 8, 10]
+const MAJOR := [0, 2, 4, 5, 7, 9, 11]
+# The boss tempo: a half-note triplet at 172 becomes the quarter at 129. One boss
+# beat is exactly 4/3 of a band beat, 20512 samples, and three of them fill a band bar.
+const BOSS_STEP := 5128
+const BOSS_BEAT := BOSS_STEP * STEPS_PER_BEAT
 # Rewards climb this ladder: D minor pentatonic, D F G A C. Every rung sits inside
 # every chord of the loop, so a pickup combo never clashes with the band.
 const PENTATONIC := [0, 3, 5, 7, 10]
@@ -37,6 +43,70 @@ const PROGRESSION := [
 	{"name": "Em7b5", "root": 40, "voicing": [55, 58, 62, 64], "tones": [64, 67, 70, 62], "scale": AEOLIAN},
 	{"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
 ]
+# Sluice: a funk vamp with the same jazz colour, the A7#9 as its sting.
+const SLUICE := [
+	{"name": "Dm9", "root": 38, "voicing": [53, 57, 60, 64], "tones": [62, 65, 69, 72, 64], "scale": DORIAN},
+	{"name": "Dm9", "root": 38, "voicing": [57, 60, 64, 65], "tones": [62, 65, 69, 72, 64], "scale": DORIAN},
+	{"name": "G13", "root": 43, "voicing": [53, 57, 59, 64], "tones": [67, 71, 65, 64, 69], "scale": DORIAN},
+	{"name": "G13", "root": 43, "voicing": [53, 59, 64, 65], "tones": [67, 71, 65, 64, 69], "scale": DORIAN},
+	{"name": "Bbmaj9", "root": 34, "voicing": [57, 60, 62, 65], "tones": [58, 62, 65, 69, 60], "scale": AEOLIAN},
+	{"name": "A7#9", "root": 45, "voicing": [55, 61, 64, 72], "tones": [61, 64, 67, 72, 69], "scale": HARMONIC},
+	{"name": "Dm9", "root": 38, "voicing": [53, 57, 60, 64], "tones": [62, 65, 69, 72, 64], "scale": DORIAN},
+	{"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
+]
+# Weir: the halfpipe. The chords climb step by step to the A7sus at the top, then roll
+# back down the same way.
+const WEIR := [
+	{"name": "Dm11", "root": 38, "voicing": [53, 55, 60, 64], "tones": [62, 65, 69, 72, 67], "scale": DORIAN},
+	{"name": "Em7", "root": 40, "voicing": [55, 59, 62, 67], "tones": [64, 67, 71, 62], "scale": DORIAN},
+	{"name": "Fmaj9", "root": 41, "voicing": [52, 55, 57, 60], "tones": [65, 69, 72, 64, 67], "scale": DORIAN},
+	{"name": "G13", "root": 43, "voicing": [53, 57, 59, 64], "tones": [67, 71, 65, 64, 69], "scale": DORIAN},
+	{"name": "A7sus4", "root": 45, "voicing": [55, 57, 62, 64], "tones": [69, 74, 76, 67], "scale": DORIAN},
+	{"name": "G13", "root": 43, "voicing": [53, 57, 59, 64], "tones": [67, 71, 65, 64, 69], "scale": DORIAN},
+	{"name": "Fmaj9", "root": 41, "voicing": [52, 55, 57, 60], "tones": [65, 69, 72, 64, 67], "scale": DORIAN},
+	{"name": "Em7b5", "root": 40, "voicing": [55, 58, 62, 64], "tones": [64, 67, 70, 62], "scale": AEOLIAN},
+]
+# Brindle: dramatic. D minor, the Neapolitan Eb and the A7b9, twice round.
+const BRINDLE := [
+	{"name": "Dm(add9)", "root": 38, "voicing": [53, 57, 62, 64], "tones": [62, 65, 69, 64], "scale": HARMONIC},
+	{"name": "Bbmaj7#11", "root": 34, "voicing": [57, 62, 64, 69], "tones": [58, 62, 65, 69, 64], "scale": AEOLIAN},
+	{"name": "Ebmaj9", "root": 39, "voicing": [55, 58, 62, 65], "tones": [63, 67, 70, 74, 65], "scale": PHRYGIAN},
+	{"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
+	{"name": "Dm(add9)", "root": 38, "voicing": [57, 62, 64, 65], "tones": [62, 65, 69, 64], "scale": HARMONIC},
+	{"name": "Bbmaj7#11", "root": 34, "voicing": [57, 62, 64, 69], "tones": [58, 62, 65, 69, 64], "scale": AEOLIAN},
+	{"name": "Ebmaj9", "root": 39, "voicing": [55, 58, 62, 65], "tones": [63, 67, 70, 74, 65], "scale": PHRYGIAN},
+	{"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
+]
+# The victory: Bb, C, the V, then home in D major, held.
+const VICTORY := [
+	{"name": "Bbmaj9", "root": 34, "voicing": [57, 60, 62, 65], "tones": [58, 62, 65, 69, 60], "scale": AEOLIAN},
+	{"name": "C13", "root": 36, "voicing": [52, 57, 58, 62], "tones": [60, 64, 67, 70, 69], "scale": [0, 2, 4, 5, 7, 9, 10]},
+	{"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
+	{"name": "Dmaj9", "root": 38, "voicing": [54, 57, 61, 64], "tones": [62, 66, 69, 73, 64], "scale": MAJOR},
+]
+# The miniboss darkens its level: each bright chord gets its minor twin.
+const MINOR_OF := {
+	"G13": {"name": "Gm9", "root": 43, "voicing": [53, 57, 58, 62], "tones": [67, 70, 74, 65, 69], "scale": AEOLIAN},
+	"Cmaj9": {"name": "Cm9", "root": 36, "voicing": [51, 55, 58, 62], "tones": [60, 63, 67, 70, 62], "scale": PHRYGIAN},
+	"Fmaj9": {"name": "Fm9", "root": 41, "voicing": [51, 55, 56, 60], "tones": [65, 68, 72, 63, 67], "scale": PHRYGIAN},
+	"Em7": {"name": "Em7b5", "root": 40, "voicing": [55, 58, 62, 64], "tones": [64, 67, 70, 62], "scale": AEOLIAN},
+	"A7sus4": {"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
+	"Bbmaj9": {"name": "Bb7#11", "root": 34, "voicing": [56, 60, 62, 64], "tones": [58, 62, 65, 68, 64], "scale": AEOLIAN},
+}
+const THEMES := ["spillway", "sluice", "weir"]
+
+
+static func level_progression(theme: int) -> Array:
+	return [PROGRESSION, SLUICE, WEIR][clampi(theme, 0, 2)]
+
+
+static func minor_progression(theme: int) -> Array:
+	var dark := []
+	for chord in level_progression(theme):
+		dark.append(MINOR_OF.get(chord["name"], chord))
+	return dark
+
+
 # The stage-clear cadence: the V chord, then D major (a Picardy lift), held like the
 # end-of-cycle chime on a rice cooker.
 const CADENCE := [

@@ -67,7 +67,7 @@ static func sound_ids() -> Array:
 		var id: String = FALLBACK[kind]["sound"]
 		if not id in ids:
 			ids.append(id)
-	for id in ["ice_form", "zap_hum", "shatter"]:
+	for id in ["ice_form", "zap_hum", "shatter", "class_down"]:
 		if not id in ids:
 			ids.append(id)
 	return ids

@@ -64,6 +64,7 @@ var _beacon_rung := -1
 var _gates_announced := false
 var _heft_class := 1
 var _unseal_ms := -100000
+var _boss_phase := 1
 var _flow_queue: Array = []
 var _overlay: Label
 var _overlay_until := 0
@@ -71,6 +72,7 @@ var _virtual_usec := 0
 
 static var _bake_task := -1
 static var _baked := false
+static var _rest_task := -1
 
 
 func setup(ctx_ref) -> void:
@@ -137,6 +139,9 @@ func _exit_tree() -> void:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
 		_baked = true
+	if _rest_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_rest_task)
+		_rest_task = -1
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
 		if child is AudioStreamPlayer:
@@ -151,6 +156,10 @@ func _on_ready() -> void:
 	if sound_ready:
 		return
 	sound_ready = true
+	# The other themes and the bosses bake behind stage 1. Headless runs render them
+	# on demand instead, so a test never waits on the worker at quit.
+	if _rest_task < 0 and live_output:
+		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, false, "presentation band bake")
 	_virtual_usec = Time.get_ticks_usec()
 	if not live_output:
 		return
@@ -279,8 +288,8 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 
 
 # Plays a cue on the next beat through the band. lane queues it behind flow stingers.
-func on_beat(kind: String, db := 0.0, lane := false, repeats := 1) -> int:
-	var sound: String = Rows.sound(kind)
+func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_override := "") -> int:
+	var sound: String = sound_override if sound_override != "" else Rows.sound(kind)
 	if not sound_ready or sound == "":
 		cue_log.append([kind, sound, "skip", -1, 1.0])
 		return -1
@@ -317,7 +326,7 @@ func _connect_all(events) -> void:
 	events.grapple_released.connect(func(): play("grapple_released"))
 	events.mounted.connect(func(_at: Vector3, banked: float): play("mounted", 0.0, Harmony.ratio(minf(banked / 4.0, 7.0))))
 	events.dismounted.connect(_on_dismounted)
-	events.enemy_spawned.connect(func(_enemy: Node3D, kind: String): play("enemy_spawned", 3.0 if kind == "miniboss" else 0.0, Harmony.ratio(-5.0) if kind == "miniboss" else 1.0))
+	events.enemy_spawned.connect(_on_enemy_spawned)
 	events.enemy_struck.connect(_on_struck)
 	events.shot_fired.connect(_on_shot)
 	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
@@ -345,6 +354,16 @@ func wire_optional() -> void:
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
 	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
 		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
+	_listen(events, "warden_engaged", func(_stage: int): _begin_boss("warden_engaged", "warden"))
+	_listen(events, "boss_arena_entered", func():
+		_boss_phase = 1
+		_begin_boss("boss_arena_entered", "brindle"), true)
+	var phase_args := _argc(events, "boss_phase_changed")
+	if phase_args >= 1:
+		_listen(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1))
+	else:
+		_listen(events, "boss_phase_changed", _on_boss_phase, true)
+	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
 
 
 # Connects once. loose drops whatever arguments the signal carries.
@@ -398,7 +417,52 @@ func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:
 	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(_scrap_combo)))
 
 
+func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
+	var boss := kind == "miniboss"
+	play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
+	if boss and sound_ready:
+		engine.begin_miniboss()
+
+
+# The boss music begins on the next bar, after the metric modulation when it pivots,
+# and the row's cue marks the moment it begins.
+func _begin_boss(kind: String, music: String) -> void:
+	if not sound_ready:
+		return
+	var at := engine.begin_boss(music)
+	if at < 0:
+		return
+	var sound := Rows.sound(kind)
+	if sound != "":
+		engine.schedule_stinger_at(sound, at)
+	cue_log.append([kind, sound, "bar", at, 1.0])
+
+
+# boss_phase_changed(phase, name) in wave 4; with no phase argument, count up.
+func _on_boss_phase() -> void:
+	_boss_phase += 1
+	engine.set_brindle_phase(_boss_phase)
+
+
+func _on_boss_phase_with(phase) -> void:
+	_boss_phase = int(phase)
+	engine.set_brindle_phase(_boss_phase)
+
+
+static func _argc(events: Object, signal_name: String) -> int:
+	for info in events.get_signal_list():
+		if info["name"] == signal_name:
+			return (info["args"] as Array).size()
+	return -1
+
+
+func _on_boss_defeated() -> void:
+	engine.victory()
+
+
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
+	if _kind == "miniboss" and engine.track == "miniboss":
+		engine.end_boss()
 	var now := Time.get_ticks_msec()
 	_kill_combo = mini(_kill_combo + 1, 7) if now - _kill_last < KILL_COMBO_WINDOW_MS else 0
 	_kill_last = now
@@ -443,10 +507,13 @@ func _on_offered(_offers: Array) -> void:
 	_flow_queue.append(["gates"])
 
 
-# A new heft class climbs its three notes on the next beat; losing one is scrap_rip's job.
+# Up a class climbs on the next beat; down a class (a crane theft) falls back softly.
+# Direction comes from the last class heard until the spine publishes its own.
 func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class > _heft_class:
 		on_beat("heft_class_changed")
+	elif heft_class < _heft_class:
+		on_beat("heft_class_changed", 0.0, false, 1, "class_down")
 	_heft_class = heft_class
 
 
@@ -485,7 +552,7 @@ func _flush_flow() -> void:
 				engine.cancel_pending()
 				var start := on_beat("run_started", 0.0, true)
 				if start >= 0:
-					engine.schedule_restart(start, MusicEngine.PLAY)
+					engine.schedule_restart(start, MusicEngine.PLAY, 0)
 			"stage":
 				var stage: int = item[1]
 				var retry: bool = item[2]
@@ -495,7 +562,7 @@ func _flush_flow() -> void:
 					engine.cancel_pending()
 				var start := on_beat("stage_entered", 0.0, true, clampi(stage, 1, 4))
 				if start >= 0:
-					engine.schedule_restart(start, MusicEngine.PLAY)
+					engine.schedule_restart(start, MusicEngine.PLAY, clampi(stage - 1, 0, 2))
 			"clear":
 				if "end" in kinds:
 					continue
@@ -517,7 +584,10 @@ func _flush_flow() -> void:
 				engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
 			"unseal":
 				_unseal_ms = Time.get_ticks_msec()
-				on_beat("beacon_unsealed", 0.0, true)
+				var start := on_beat("beacon_unsealed", 0.0, true)
+				# The Warden's track drops on the same beat as the unseal stinger.
+				if start >= 0 and engine.track == "warden":
+					engine.drop_at(start)
 			"gates":
 				# The unseal stinger already says the gates are open.
 				if "unseal" in kinds or Time.get_ticks_msec() - _unseal_ms < 2500:
@@ -547,6 +617,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			muted = not muted
 			_apply_volumes()
 			_show_mixer()
+		KEY_F6:
+			engine.boss_pivot = not engine.boss_pivot
+			_show_text("Boss tempo: %s (F6)" % ("129 by metric modulation" if engine.boss_pivot else "four on the floor held at 172"))
 		_:
 			return
 	get_viewport().set_input_as_handled()
@@ -583,6 +656,14 @@ func _make_overlay() -> void:
 	_overlay.position = Vector2(-360.0, -60.0)
 	_overlay.visible = false
 	layer.add_child(_overlay)
+
+
+func _show_text(text: String) -> void:
+	if _overlay == null:
+		return
+	_overlay.text = text
+	_overlay.visible = true
+	_overlay_until = Time.get_ticks_msec() + 2200
 
 
 func _show_mixer() -> void:

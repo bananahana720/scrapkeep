@@ -127,8 +127,13 @@ func _on_unsealed(stage: int) -> void:
 
 # A new heft class ripples out from the ball along the ground.
 func _on_heft_class(heft_class: int, _heft: float) -> void:
-	if heft_class <= _heft_class:
+	if heft_class < _heft_class:
+		# A class lost: the ring falls inward in the torn-scrap colour.
 		_heft_class = heft_class
+		var down: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
+		glyph("scrap_lost", player.ball_position() - down * 0.9, 5.0, 1.0, 0.4, down, "ring")
+		return
+	if heft_class == _heft_class:
 		return
 	_heft_class = heft_class
 	var normal: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP

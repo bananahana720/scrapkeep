@@ -26,6 +26,7 @@ const STINGER_BEATS := {
 	"music_pressure": 1,
 	"stinger_unseal": 4,
 	"class_up": 2,
+	"class_down": 2,
 	"threat_up": 1,
 	"synergy_fanfare": 4,
 	"warden_theme_in": 4,
@@ -45,7 +46,7 @@ const TRIM_DB := {
 	"music_pressure": -9.0,
 	"stinger_unseal": -1.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
 	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "element_resolved": -8.0,
-	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -3.0,
+	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -3.0, "class_down": -6.0,
 }
 
 static var _samples := {}
@@ -66,6 +67,19 @@ static func samples(id: String) -> PackedFloat32Array:
 	return _samples[id]
 
 
+# A grid stinger baked on another tempo's grid, for the boss tempo. Cues that are not
+# written on the grid are the same at any tempo.
+static func samples_at(id: String, step: int) -> PackedFloat32Array:
+	if step == Harmony.STEP or not STINGER_BEATS.has(id):
+		return samples(id)
+	var key := "%s@%d" % [id, step]
+	if not _samples.has(key):
+		Synth.score_step = step
+		_samples[key] = Synth.normalize(_bake(id), 0.9)
+		Synth.score_step = Harmony.STEP
+	return _samples[key]
+
+
 static func stream(id: String) -> AudioStreamWAV:
 	if not _streams.has(id):
 		_streams[id] = Synth.to_wav(samples(id))
@@ -75,6 +89,8 @@ static func stream(id: String) -> AudioStreamWAV:
 static func bake_all(ids: Array) -> void:
 	for id in ids:
 		stream(id)
+	for id in STINGER_BEATS:
+		samples_at(id, Harmony.BOSS_STEP)
 
 
 static func _bake(id: String) -> PackedFloat32Array:
@@ -158,6 +174,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _unseal()
 		"class_up":
 			return Synth.render_score(_score_class_up(), 0.9)
+		"class_down":
+			return _mix([[Synth.render_score(_score_class_down(), 0.7), 0, 1.0], [_noise(0.18, 3500.0, 1500.0, 14.0), Synth.seconds(0.05), 0.25]])
 		"clank":
 			return _clank()
 		"scrap_rip":
@@ -226,6 +244,12 @@ static func _score_class_up() -> Array:
 	return [[0, 0, 2, "kick", 0.7], [0, 69, 2, "mallet", 0.8], [0, 69, 2, "bell", 0.35], [2, 74, 2, "mallet", 0.85],
 		[2, 74, 2, "bell", 0.4], [4, 81, 4, "mallet", 0.9], [4, 81, 4, "bell", 0.5], [4, 38, 4, "sub", 0.6],
 		[4, 0, 2, "open_hat", 0.4]]
+
+
+# A heft class lost to a crane: the climb played back down, A F D, lighter and softer.
+# It lands on home, not below it, because the spill trail pays the mass back.
+static func _score_class_down() -> Array:
+	return [[0, 81, 2, "mallet", 0.7], [2, 77, 2, "mallet", 0.65], [4, 74, 3, "mallet", 0.7], [4, 74, 3, "bell", 0.25]]
 
 
 # The discovery: a bebop run up the Dorian scale with a chromatic lean on C#, landing
@@ -403,9 +427,10 @@ static func _hum() -> PackedFloat32Array:
 # Two falling minor-third "WAH"s, one beat each: low, minor, impossible to miss.
 static func _klaxon() -> PackedFloat32Array:
 	var parts := []
+	var beat := Synth.score_step * Harmony.STEPS_PER_BEAT
 	for pulse in 2:
-		parts.append([_tone(Harmony.BEAT * 1.9 / RATE, Harmony.hz(53), Harmony.hz(50), "square_dark", 1.2), Harmony.BEAT * 2 * pulse, 1.0])
-		parts.append([_tone(Harmony.BEAT * 1.9 / RATE, Harmony.hz(41), Harmony.hz(38), "saw_dark", 1.2), Harmony.BEAT * 2 * pulse, 0.6])
+		parts.append([_tone(beat * 1.9 / RATE, Harmony.hz(53), Harmony.hz(50), "square_dark", 1.2), beat * 2 * pulse, 1.0])
+		parts.append([_tone(beat * 1.9 / RATE, Harmony.hz(41), Harmony.hz(38), "saw_dark", 1.2), beat * 2 * pulse, 0.6])
 	return _mix(parts, true)
 
 
@@ -491,7 +516,7 @@ static func _shatter() -> PackedFloat32Array:
 
 # A one-beat reverse swell that ends exactly on the next downbeat.
 static func _riser() -> PackedFloat32Array:
-	var n := Harmony.BEAT
+	var n := Synth.score_step * Harmony.STEPS_PER_BEAT
 	var noise := _noise(float(n) / RATE, 400.0, 5000.0, 0.0, 0.001)
 	for i in n:
 		var x := float(i) / n
