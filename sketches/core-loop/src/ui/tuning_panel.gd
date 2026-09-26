@@ -42,7 +42,7 @@ func setup(tuning_ref) -> void:
 		slider.min_value = spec["min"]
 		slider.max_value = spec["max"]
 		slider.step = spec["step"]
-		slider.value = tuning.f(spec["key"])
+		slider.value = tuning.base(spec["key"])
 		slider.focus_mode = Control.FOCUS_NONE
 		slider.custom_minimum_size = Vector2(300.0, 14.0)
 		slider.value_changed.connect(_on_changed.bind(spec["key"]))
@@ -67,7 +67,7 @@ func _on_changed(value: float, key: String) -> void:
 func _on_reset() -> void:
 	tuning.reset()
 	for key in _rows:
-		_rows[key]["slider"].set_value_no_signal(tuning.f(key))
+		_rows[key]["slider"].set_value_no_signal(tuning.base(key))
 	_refresh()
 
 
@@ -77,4 +77,4 @@ func _refresh() -> void:
 		if spec.get("toggle", false):
 			_rows[key]["label"].text = "%s: %s" % [spec["label"], "on" if tuning.on(key) else "off"]
 		else:
-			_rows[key]["label"].text = "%s: %.2f" % [spec["label"], tuning.f(key)]
+			_rows[key]["label"].text = "%s: %.2f" % [spec["label"], tuning.base(key)]

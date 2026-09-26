@@ -1,0 +1,403 @@
+extends Node3D
+
+const GameEvents := preload("res://src/core/game_events.gd")
+const RunState := preload("res://src/core/run_state.gd")
+const Context := preload("res://src/core/context.gd")
+const Flow := preload("res://src/core/flow.gd")
+const Beacon := preload("res://src/core/beacon.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+const PlayerBall := preload("res://src/movement/player_ball.gd")
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const Hud := preload("res://src/ui/hud.gd")
+const Screens := preload("res://src/ui/screens.gd")
+const FieldNotes := preload("res://src/ui/field_notes.gd")
+const TuningPanel := preload("res://src/ui/tuning_panel.gd")
+const World := preload("res://src/world/world.gd")
+const Combat := preload("res://src/combat/combat.gd")
+const Build := preload("res://src/build/build.gd")
+const Presentation := preload("res://src/presentation/presentation.gd")
+
+# The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
+# one context to the four modules in a fixed order, then owns input, pause, hit-stop
+# and the tuning dump. Modules never reach past the context; see CONTRACTS.md.
+
+const REEL_NOTCH := 1.2
+const RESTART_HOLD := 0.5
+const HIT_STOP_MAX := 0.06
+const HIT_STOP_SCALE := 0.05
+const SEED := 20260926
+
+const ACTIONS := {
+	"cl_forward": [KEY_W, KEY_UP],
+	"cl_back": [KEY_S, KEY_DOWN],
+	"cl_left": [KEY_A, KEY_LEFT],
+	"cl_right": [KEY_D, KEY_RIGHT],
+	"cl_jump": [KEY_SPACE],
+	"cl_boost": [KEY_SHIFT],
+	"cl_brake": [KEY_CTRL],
+	"cl_mount": [KEY_E],
+	"cl_reel": [KEY_Q],
+	"cl_special": [KEY_F],
+}
+const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT}
+
+# The headless tests drive the same scene with a scripted source and no mouse capture.
+var test_mode := false
+
+var events
+var run
+var tuning
+var player
+var camera
+var flow
+var beacon
+var ctx
+var world
+var combat
+var build
+var presentation
+var hud
+var screens
+var notes
+var panel
+var keyboard
+
+var _pause_toggled := false
+var _notes_held := false
+var _restart_held := 0.0
+var _hit_stopped := false
+
+
+func _ready() -> void:
+	_register_actions()
+	events = GameEvents.new()
+	events.name = "GameEvents"
+	add_child(events)
+	run = RunState.new(events)
+	tuning = Tuning.new()
+
+	player = PlayerBall.new()
+	player.name = "Player"
+	add_child(player)
+	player.setup(tuning, events, Vector3(0.0, 60.0, 0.0))
+	player.shockwave.connect(_on_shockwave)
+
+	camera = ChaseCamera.new()
+	camera.name = "ChaseCamera"
+	add_child(camera)
+	camera.setup(player, tuning)
+
+	beacon = Beacon.new()
+	beacon.name = "Beacon"
+	add_child(beacon)
+	beacon.setup()
+
+	ctx = Context.new(hit_stop)
+	ctx.events = events
+	ctx.run = run
+	ctx.tuning = tuning
+	ctx.player = player
+	ctx.camera = camera
+	ctx.root = self
+	ctx.rng.seed = SEED
+	flow = Flow.new()
+	flow.name = "Flow"
+	add_child(flow)
+	ctx.flow = flow
+
+	world = _module(World)
+	combat = _module(Combat)
+	build = _module(Build)
+	presentation = _module(Presentation)
+	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
+	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
+	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
+
+	flow.setup(ctx, beacon)
+	events.flow_changed.connect(_on_flow_changed)
+
+	hud = Hud.new()
+	hud.name = "Hud"
+	add_child(hud)
+	hud.setup(self)
+	screens = Screens.new()
+	screens.name = "Screens"
+	add_child(screens)
+	screens.setup(self)
+	notes = FieldNotes.new()
+	notes.name = "FieldNotes"
+	add_child(notes)
+	notes.setup(self)
+	panel = TuningPanel.new()
+	panel.name = "TuningPanel"
+	add_child(panel)
+	panel.setup(tuning)
+
+	if not test_mode:
+		keyboard = Intent.Keyboard.new()
+		keyboard.enabled = false
+		player.source = keyboard
+	# The first stage's ground is where the title parks the ball.
+	player.reset_to(ctx.terrain.spawn_point(1))
+	player.body().global_position = ctx.terrain.spawn_point(1)
+	camera.snap(ctx.terrain.entry_heading(1))
+	flow.show_title()
+
+
+# The fixed order: world first (it sets ctx.terrain), then combat (ctx.spawner), then
+# build and presentation, which only read.
+func _module(script: GDScript) -> Node:
+	var module: Node = script.new()
+	add_child(module)
+	module.setup(ctx)
+	return module
+
+
+func _physics_process(delta: float) -> void:
+	player.drive_basis = camera.yaw_basis()
+	flow.physics_step(delta)
+	if flow.in_play():
+		aim_along(camera.cam.global_position, -camera.cam.global_basis.z)
+
+
+func _process(delta: float) -> void:
+	if test_mode or not flow.in_play():
+		_restart_held = 0.0
+		return
+	if Input.is_physical_key_pressed(KEY_R):
+		_restart_held += delta
+		if _restart_held >= RESTART_HOLD:
+			_restart_held = 0.0
+			flow.retry_stage()
+	else:
+		_restart_held = 0.0
+
+
+func restart_hold_fraction() -> float:
+	return clampf(_restart_held / RESTART_HOLD, 0.0, 1.0)
+
+
+# The single answer to "what would the grapple hit right now". The reticle, the world
+# marker and fire_grapple() all read the record this stores.
+func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
+	player.kit.aim = Augments.grapple_target(get_world_3d().direct_space_state, from, forward,
+		player.ball_position(), player.grapple_range(), tuning.f("grapple_assist_deg"))
+	return player.kit.aim
+
+
+func fire_grapple() -> bool:
+	var aim: Dictionary = player.kit.aim
+	if aim["state"] == Augments.AIM_NONE:
+		return false
+	player.grapple_to(aim["point"], aim["normal"])
+	return true
+
+
+func hit_stop(seconds: float) -> void:
+	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
+		return
+	_hit_stopped = true
+	Engine.time_scale = HIT_STOP_SCALE
+	var timer := get_tree().create_timer(minf(seconds, HIT_STOP_MAX), true, false, true)
+	timer.timeout.connect(_end_hit_stop)
+
+
+func _end_hit_stop() -> void:
+	Engine.time_scale = 1.0
+	_hit_stopped = false
+
+
+func toggle_interpolation() -> bool:
+	get_tree().physics_interpolation = not get_tree().physics_interpolation
+	reset_physics_interpolation()
+	return get_tree().physics_interpolation
+
+
+func interpolating() -> bool:
+	return get_tree().physics_interpolation
+
+
+# The panel keeps nothing between runs, so F4 records exactly what was being played.
+func dump_tuning() -> String:
+	var values := {}
+	var mods := {}
+	for spec in Tuning.SPECS:
+		values[spec["key"]] = tuning.base(spec["key"])
+		mods[spec["key"]] = tuning.mod(spec["key"])
+	var record := {
+		"sketch": "core-loop",
+		"saved_unix": Time.get_unix_time_from_system(),
+		"class": run.class_id(),
+		"stage": run.stage,
+		"parts": run.parts,
+		"physics_interpolation": interpolating(),
+		"tuning": values,
+		"part_mods": mods,
+		"boost_cooldown_scale": tuning.boost_cooldown_scale,
+	}
+	var path := "user://tuning-%d.json" % int(Time.get_unix_time_from_system())
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_warning("tuning dump failed: %s" % error_string(FileAccess.get_open_error()))
+		return ""
+	file.store_string(JSON.stringify(record, "  "))
+	file.close()
+	var shown := ProjectSettings.globalize_path(path)
+	print("tuning saved to ", shown)
+	return shown
+
+
+# Tab holds the notes open and P toggles; either one pauses the tree.
+func toggle_pause() -> void:
+	_pause_toggled = not _pause_toggled
+	_apply_pause()
+
+
+func hold_notes(held: bool) -> void:
+	_notes_held = held
+	_apply_pause()
+
+
+func pause_toggled() -> bool:
+	return _pause_toggled
+
+
+func notes_held() -> bool:
+	return _notes_held
+
+
+func _apply_pause() -> void:
+	get_tree().paused = _pause_toggled or _notes_held
+
+
+func _on_flow_changed(_state: String) -> void:
+	var playing: bool = flow.in_play()
+	if keyboard != null:
+		keyboard.enabled = playing
+	_capture_mouse(playing)
+
+
+func _register_actions() -> void:
+	for action in ACTIONS:
+		_fresh_action(action)
+		for key in ACTIONS[action]:
+			var event := InputEventKey.new()
+			event.physical_keycode = key
+			InputMap.action_add_event(action, event)
+	for action in MOUSE_ACTIONS:
+		_fresh_action(action)
+		var button := InputEventMouseButton.new()
+		button.button_index = MOUSE_ACTIONS[action]
+		InputMap.action_add_event(action, button)
+
+
+static func _fresh_action(action: String) -> void:
+	if InputMap.has_action(action):
+		InputMap.erase_action(action)
+	InputMap.add_action(action, 0.2)
+
+
+func _windowed() -> bool:
+	return DisplayServer.get_name() != "headless"
+
+
+func _capture_mouse(capture: bool) -> void:
+	if test_mode or not _windowed():
+		return
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture else Input.MOUSE_MODE_VISIBLE
+
+
+func _mouse_captured() -> bool:
+	return _windowed() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+
+
+func _input(event: InputEvent) -> void:
+	if test_mode:
+		return
+	if event is InputEventMouseMotion and _mouse_captured():
+		camera.look(event.relative)
+		return
+	if event is InputEventMouseButton:
+		if not _mouse_captured():
+			if event.pressed and flow.in_play() and not panel.visible:
+				_capture_mouse(true)
+			return
+		_mouse_button(event)
+		return
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if _screen_key(event.physical_keycode):
+		get_viewport().set_input_as_handled()
+		return
+	match event.physical_keycode:
+		KEY_F3:
+			toggle_interpolation()
+			get_viewport().set_input_as_handled()
+		KEY_F4:
+			var saved := dump_tuning()
+			hud.toast("tuning saved: %s" % saved if saved != "" else "tuning dump failed (see console)")
+			get_viewport().set_input_as_handled()
+		KEY_F1:
+			panel.visible = not panel.visible
+			_capture_mouse(not panel.visible and flow.in_play())
+			get_viewport().set_input_as_handled()
+		KEY_ESCAPE:
+			if _mouse_captured():
+				_capture_mouse(false)
+			else:
+				get_tree().quit()
+			get_viewport().set_input_as_handled()
+
+
+# One key per choice on every screen outside play.
+func _screen_key(key: int) -> bool:
+	match flow.state_name():
+		"title":
+			if key == KEY_SPACE or key == KEY_ENTER:
+				flow.press_start()
+				return true
+		"class_select":
+			if key == KEY_1 or key == KEY_2:
+				flow.choose_class(key - KEY_1)
+				return true
+		"dead":
+			if key == KEY_R:
+				flow.retry_stage()
+				return true
+			if key == KEY_N:
+				flow.new_run()
+				return true
+			if key == KEY_C:
+				flow.open_class_select()
+				return true
+		"summary":
+			if key == KEY_SPACE or key == KEY_ENTER:
+				flow.press_start()
+				return true
+			if key == KEY_N:
+				flow.new_run()
+				return true
+	return false
+
+
+func _mouse_button(event: InputEventMouseButton) -> void:
+	if not flow.in_play():
+		return
+	match event.button_index:
+		MOUSE_BUTTON_RIGHT:
+			if event.pressed:
+				fire_grapple()
+			else:
+				player.release_grapple()
+		MOUSE_BUTTON_WHEEL_UP:
+			if event.pressed:
+				player.reel_step(REEL_NOTCH)
+		MOUSE_BUTTON_WHEEL_DOWN:
+			if event.pressed:
+				player.reel_step(-REEL_NOTCH)
+
+
+func _on_shockwave(_at: Vector3, strength: float) -> void:
+	camera.shake(strength)

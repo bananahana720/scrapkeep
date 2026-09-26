@@ -16,8 +16,9 @@ var tuning: Tuning
 var player: PlayerBall
 var camera: ChaseCamera
 # The flow state machine (src/core/flow.gd), read-only for modules: in_play(),
-# state_name(), stage(), stage_def().
-var flow: RefCounted
+# state_name(), stage(), stage_def(). A node, so it and the context do not hold
+# each other in a reference cycle.
+var flow: Node
 # The stage geometry, owned by world (writer D) and set by world.setup(ctx). The spine
 # reads it only through the terrain API in CONTRACTS.md.
 var terrain: RefCounted

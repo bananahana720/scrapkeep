@@ -1,4 +1,4 @@
-extends RefCounted
+extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -60,8 +60,15 @@ func stage_def() -> Dictionary:
 
 
 func show_title() -> void:
-	_set_state(TITLE)
 	ctx.player.set_frozen(true)
+	state = TITLE
+	ctx.events.flow_changed.emit(NAMES[TITLE])
+
+
+func open_class_select() -> void:
+	if not in_play():
+		ctx.player.set_frozen(true)
+		_set_state(CLASS_SELECT)
 
 
 # Space or Enter on the title, or on the summary, goes to class select.

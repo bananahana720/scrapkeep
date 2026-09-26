@@ -120,7 +120,7 @@ func _on_reward_chosen(_part_id: String) -> void:
 	var flat := Vector3(v.x, 0.0, v.z)
 	var floor_speed: float = ctx.tuning.f("cruise")
 	if flat.length() < floor_speed:
-		var heading := flat.normalized() if flat.length() > 0.5 else -ctx.camera.yaw_basis().z
+		var heading: Vector3 = flat.normalized() if flat.length() > 0.5 else -ctx.camera.yaw_basis().z
 		flat = heading * floor_speed
 	var launch := flat + Vector3.UP * LAUNCH_UP
 	player.set_velocity_now(launch)
