@@ -280,7 +280,7 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-26](BACKLOG.md#jl-26) | 1 | 1 | done | none | none | EV-0553 |
 | [JL-27](BACKLOG.md#jl-27) | 1 | 1 | done | none | none | EV-0559 |
 | [JL-28](BACKLOG.md#jl-28) | 3 | 1 | in_progress | none | none | EV-0572 |
-| [JL-29](BACKLOG.md#jl-29) | 2 | 1 | queued | JL-28, JL-30, JL-31 | none | EV-0552 |
+| [JL-29](BACKLOG.md#jl-29) | 2 | 1 | in_progress | JL-28 | none | EV-0574 |
 | [JL-30](BACKLOG.md#jl-30) | 1 | 1 | done | none | none | EV-0569 |
 | [JL-31](BACKLOG.md#jl-31) | 1 | 1 | done | none | none | EV-0571 |
 
@@ -872,6 +872,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0571 | 2026-09-26T01:10:44+00:00 | Andrew / acceptance: Andrew ran the JL-31 watch view (`npm run play -- lab watch dummy-knock --arm scripted`) and reported it works ("super cool"). This is human acceptance that the view runs and is watchable, not a feel judgement on the sketches; no specific gameplay feedback was given yet. |
 | EV-0572 | 2026-09-26T01:15:05+00:00 | JL-28 Phase A approved for a single Phase B live run. Scoped re-review (Fable 5.1, a0578b45) approved f7b7e61/eb9eeca and required one change: INVALID cells do not count toward the one-third run-block (the writer's objection upheld; unpaired confirmatory cells still count). Writer applied it at d5142a0. Coordinator verified the diff and computed sha256 at d5142a0: design.json 60875474…3fdb, analyze.mjs 4e68f9dc…f7f8, run.mjs b678aa2b…d696, all equal to the pins; PREREGISTRATION.md 4c191ba60683ee3cefa437169fbcf931bee3b6552b73028c0713897f3cc58800 (N5: compare with provenance-before.preregistration_sha256). Tree clean, no live/ directory, no STARTED.json. Approved commit: d5142a0 on wt/JL-28. Phase B released to writer a72b7f32: `run.mjs --live` from /home/andrew/Projects/scrapkeep-wt-JL-28, run once. |
 | EV-0573 | 2026-09-26T01:16:38+00:00 | Andrew / request (post-close, not yet a card): after running the watch view he asked for (1) an endless mode that keeps a scenario going past its success line (dummy-knock ends at 3 knocked); (2) settable goals for level and game completion; (3) a dynamic decision tree of results, AlphaGo-like, that collapses to the decisions taken. Coordinator landing: kinematic lockstep is deterministic, so a branch = replay the action prefix then force option i (replay.mjs already replays prefixes). Proposed order after JL-29 merges (the ball-lab tree is pinned by the JL-28 run until then): (a) `--endless` / `--goal <predicate>` on the watch view; (b) a branch probe at multi-option snapshots, depth-limited, cheap scripted/random rollouts (no Jev in the loop), with the acceptance test that every branch reproduces the parent trace hash up to the fork; (c) an HTML tree view over the records, nodes coloured by outcome, collapsing to the taken path; (d) a per-snapshot choice-spread measure (share of options that still succeed), tested against the JL-28 all-forced and INVALID cells. Plus per-event sounds on the watch view (offered earlier). Needs cards before any work. |
+| EV-0574 | 2026-09-26T01:20:52+00:00 | Andrew / direction: finish the program this session, game dev next session. Coordinator: JL-28 Phase B running (canary passed, 2 of 36 batches at 01:19Z). JL-29 started early on its JL-28-independent parts: docs (DoD 1) and a RETRO draft with the JL-28 section left open, writer in wt/JL-29 off 1202045. main has not moved since the program branched (main..wt/JL-coord 230, reverse 0), so the merge is a fast-forward; main is 15 commits ahead of origin, pushing waits for Andrew. |
 
 ## Preparation checkpoint
 
@@ -2180,3 +2181,15 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-28/` in the worktree.
 - Review: not_run; planned scrapkeep-reviewer (Fable 5.1): pre-registration, then results.
+
+## JL-29-A1 Jev Lab attempt
+
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 2; attempt JL-29-A1; exclusive lease JL-29-L1 open.
+- Owned files: CONTRIBUTING.md; tools/jev-player/README.md; .agents/skills/scrapkeep-verify/SKILL.md; artifacts/jev-lab-2026-09-25/RETRO.md.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-JL-29` on `wt/JL-29`, created by `scripts/new-worktree.sh`.
+- Base identity: `wt/JL-29 at 1202045 (worktree /home/andrew/Projects/scrapkeep-wt-JL-29)`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-26T01:20:52+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/JL-29/` in the worktree.
+- Review: not_run; planned Fable integrated read of the whole branch.
