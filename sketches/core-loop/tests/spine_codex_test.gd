@@ -65,6 +65,15 @@ func _checks() -> void:
 	_report("completion", is_equal_approx(codex.completion("build"), 1.0) and codex.completion("world") == 0.0 and codex.entries("build")[0]["known"],
 		"build %.0f%%, world %.0f%%" % [codex.completion("build") * 100.0, codex.completion("world") * 100.0])
 
+	var notes = _game.notes
+	var cards: int = notes.render_page("build")
+	var world_cards: int = notes.render_page("world")
+	notes.show_page(1)
+	var tabs: String = notes._title.text
+	_report("codex page", notes.pages() == ["notes", "build", "world", "enemy", "found"] and cards == 1 and world_cards == 1
+			and tabs.contains("[ Build 100% ]") and tabs.contains("World 0%"),
+		"pages %s; build shows %d card, world %d; tab row \"%s\"" % [notes.pages(), cards, world_cards, tabs.get_slice("  ·  ", 1)])
+
 	var new_text: bool = codex.mark_found("frost then a ram shatters", "enemy")
 	var old_text: bool = codex.mark_found("frost then a ram shatters", "enemy")
 	_report("found", new_text and not old_text and _found_facts == 1 and codex.found() == ["frost then a ram shatters"] and codex.found_category("frost then a ram shatters") == "enemy",
