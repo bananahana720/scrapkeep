@@ -40,7 +40,9 @@ const WEAVE := [0, 1, 2, 3, 4]
 # stomp and ram stopped targeting knocked dummies (A2). Only run-to-pad kinematic rises
 # (p90 30.2 s). dummy-knock kinematic (p90 5.5 s), downhill-run and kicker-gap finish
 # well inside theirs; the other choice-scenario modes stay censored at 3x
-# (inconclusive) and keep the initial limit.
+# (inconclusive) and keep the initial limit. Evidence: A2 at bec6560 for the groups it
+# re-ran; A3 on the merged head (7ba2d0d) for bench-climb and pillar-weave rigid and
+# for downhill-run and kicker-gap in both modes.
 const MODE_LIMITS_S := {
 	"run-to-pad": {"kinematic": 61.0},
 }
