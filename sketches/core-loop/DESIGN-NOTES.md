@@ -6,7 +6,7 @@ Each writer appends only inside its own section, so the four module branches mer
 
 ## Spine (wave 1)
 
-1. **The beacon charges as you roll into its ring.** No key starts it, and you never have to stop. Circling inside the ring charges it. Leaving pauses the charge and keeps what you have. Serves momentum is sacred (1).
+1. **Superseded by call 20 (the Warden gate, DEMO-SPEC).** This was: the beacon charges as you roll into its ring, with no key and no stop; leaving pauses the charge. It now applies only on the unsealed path (calm tests, or a stage whose spawner has no Warden). Serves momentum is sacred (1).
 2. **Reward gates are arches with no collider.** They stand 38 m ahead on the ball's line of travel, 18 m apart. Rolling through one takes its part. If you roll past both, the stub puts them ahead of you again instead of waiting behind you. Serves 1 ("reward choices are gates you roll through, not a menu"). The run test measures speed through a gate: 20.93 m/s in, 21.11 m/s after.
 3. **The launch keeps horizontal speed exactly.** Flow turns that speed onto the next stage's entry heading and keeps the vertical part. The world stub adds 20 m/s of lift and never launches slower than cruise, because raising a slow ball is a gift, not a cost. Serves 1 ("the stage exit is a launch into the next stage"). The run test measured 20.99 m/s before the launch and 20.98 m/s after.
 4. **The next stage is entered from 14 m above its spawn,** so a launch lands rather than pops in. Serves 1 and the snappy, fluid half of 8.
