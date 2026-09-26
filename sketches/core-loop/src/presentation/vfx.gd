@@ -92,6 +92,7 @@ func wire_optional() -> void:
 	var events = ctx.events
 	_listen(events, "beacon_unsealed", _on_unsealed)
 	_listen(events, "heft_class_changed", _on_heft_class)
+	_listen(events, "heft_class_dropped", _on_heft_class)
 	_listen(events, "scrap_lost", _on_scrap_lost)
 	_listen(events, "strike_deflected", _on_deflected)
 	_listen(events, "core_gained", _on_core)

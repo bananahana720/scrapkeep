@@ -30,6 +30,10 @@ const STINGER_BEATS := {
 	"threat_up": 1,
 	"synergy_fanfare": 4,
 	"warden_theme_in": 4,
+	"boss_arena_in": 4,
+	"boss_phase": 2,
+	"stinger_boss_defeated": 8,
+	"build_riser": 8,
 }
 
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
@@ -47,6 +51,9 @@ const TRIM_DB := {
 	"stinger_unseal": -3.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
 	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "element_resolved": -8.0,
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
+	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
+	"stinger_boss_defeated": -1.0,
+	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 }
 
 static var _samples := {}
@@ -193,12 +200,31 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(Synth.note("bell", 81), 0.3), 0, 0.7], [_noise(0.25, 2000.0, 5000.0, 14.0, 0.01), 0, 0.5]])
 		"warden_theme_in":
 			return _warden_in()
+		"womp":
+			return _womp()
+		"build_riser":
+			return _build_riser()
 		"ice_form":
 			return _ice()
 		"zap_hum":
 			return _zap_hum()
 		"shatter":
 			return _shatter()
+		"stage_fade":
+			return _stage_fade()
+		"boss_arena_in":
+			return _brindle_in()
+		"boss_phase":
+			return Synth.render_score([[0, 0, 2, "boom", 1.0], [0, 0, 2, "anvil", 0.9], [0, 50, 6, "brass", 0.5],
+				[0, 53, 6, "brass", 0.5], [0, 57, 6, "brass", 0.5], [0, 63, 6, "brass", 0.5], [4, 0, 1, "anvil", 0.7],
+				[6, 0, 1, "anvil", 0.8], [6, 62, 2, "brass", 0.6], [6, 74, 2, "brass", 0.45]], 0.6)
+		"boss_telegraph":
+			return _boss_telegraph()
+		"boss_weak_hit":
+			return _mix([[_fm(0.28, Harmony.hz(79), 3.5, 3.0, 13.0), 0, 0.9], [_tone(0.1, 180.0, 90.0, "sine", 30.0), 0, 0.6],
+				[_noise(0.03, 4500.0, 2500.0, 120.0), 0, 0.4]])
+		"stinger_boss_defeated":
+			return _boss_defeated()
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, Harmony.hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -243,7 +269,7 @@ static func _score_milestone() -> Array:
 static func _score_class_up() -> Array:
 	return [[0, 0, 2, "kick", 0.7], [0, 69, 2, "mallet", 0.8], [0, 69, 2, "bell", 0.35], [2, 74, 2, "mallet", 0.85],
 		[2, 74, 2, "bell", 0.4], [4, 81, 4, "mallet", 0.9], [4, 81, 4, "bell", 0.5], [4, 38, 4, "sub", 0.6],
-		[4, 0, 2, "open_hat", 0.4]]
+		[4, 0, 2, "open_hat", 0.4], [4, 38, 2, "growl", 0.55]]
 
 
 # A heft class lost to a crane: the climb played back down, A F D, lighter and softer.
@@ -481,6 +507,30 @@ static func _warden_in() -> PackedFloat32Array:
 	return _mix([[band, 0, 1.0], [_fm(0.9, Harmony.hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
 
 
+# The slam womp: a sub that drops out of the floor with a wub on top, instant.
+static func _womp() -> PackedFloat32Array:
+	var n := Synth.seconds(0.62)
+	var buf := Synth.buffer(n)
+	var phase := 0.0
+	for i in n:
+		var t := i * Synth.INV_RATE
+		phase += TAU * (34.0 + 52.0 * exp(-t * 9.0)) * Synth.INV_RATE
+		buf[i] = tanh(2.0 * sin(phase)) * minf(1.0, t * 400.0) * exp(-t * 3.2)
+	return _mix([[buf, 0, 1.0], [_cut(Synth.growl(38, "wub", Synth.seconds(0.3)), 0.3), 0, 0.45]], true)
+
+
+# Two bars of rising noise and pitch, the build's riser (on the grid it is baked for).
+static func _build_riser() -> PackedFloat32Array:
+	var n := Synth.score_step * Harmony.STEPS_PER_BAR * 2
+	var noise := _noise(float(n) / RATE, 300.0, 6000.0, 0.0, 0.001)
+	var phase := 0.0
+	for i in n:
+		var x := float(i) / n
+		phase += TAU * lerpf(110.0, 880.0, x * x) * Synth.INV_RATE
+		noise[i] = (noise[i] * 0.8 + sin(phase) * 0.35) * x * x
+	return Synth.normalize(noise, 0.9)
+
+
 static func _ice() -> PackedFloat32Array:
 	var parts: Array = [[_noise(0.3, 6000.0, 6000.0, 12.0, 0.002), 0, 0.35]]
 	var notes := [86, 93, 88, 98, 91]
@@ -512,6 +562,50 @@ static func _shatter() -> PackedFloat32Array:
 	for i in 9:
 		parts.append([_fm(0.18, rng.randf_range(2200.0, 6000.0), 2.3, 1.0, 26.0), Synth.seconds(rng.randf_range(0.0, 0.12)), 0.35])
 	return _mix(parts)
+
+
+# Admiral Brindle's arrival: two anvil strikes and a brass fanfare that climbs D, F,
+# A and lands on the flat second, Eb, the Phrygian colour of his whole arena.
+static func _brindle_in() -> PackedFloat32Array:
+	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 2, "anvil", 1.0], [0, 38, 16, "sub", 0.6], [2, 0, 2, "anvil", 0.8],
+		[4, 62, 2, "brass", 0.6], [6, 65, 2, "brass", 0.6], [8, 69, 2, "brass", 0.65], [8, 0, 2, "kick", 0.9],
+		[10, 75, 6, "brass", 0.7], [10, 51, 6, "brass", 0.4], [10, 55, 6, "brass", 0.4], [10, 58, 6, "brass", 0.4],
+		[10, 0, 16, "crash", 0.5], [12, 0, 1, "snare", 0.6], [13, 0, 1, "snare", 0.7], [14, 0, 1, "snare", 0.85],
+		[15, 0, 1, "snare", 1.0]]
+	return Synth.render_score(score, 0.9)
+
+
+# The stage's ambience drawn out before the arena: a soft breath of air that falls
+# and fades, with a low D under it. Quiet on purpose; the arena music is the event.
+static func _stage_fade() -> PackedFloat32Array:
+	var air := _noise(0.7, 2600.0, 400.0, 0.0, 0.08)
+	var n := air.size()
+	for i in n:
+		var x := float(i) / n
+		air[i] *= (1.0 - x) * (1.0 - x)
+	return _mix([[air, 0, 1.0], [_tone(0.6, Harmony.hz(50), Harmony.hz(50), "sine", 4.0), 0, 0.35]], false, 0.6)
+
+
+# A wind-up: two low minor-second pulses (D, Eb) with a rising noise, over in 0.4 s so
+# it never masks the hit it warns about.
+static func _boss_telegraph() -> PackedFloat32Array:
+	return _mix([[_tone(0.12, Harmony.hz(50), Harmony.hz(50), "square_dark", 10.0), 0, 0.9],
+		[_tone(0.18, Harmony.hz(51), Harmony.hz(52), "square_dark", 8.0), Synth.seconds(0.13), 1.0],
+		[_noise(0.35, 600.0, 3000.0, 3.0, 0.2), 0, 0.35]], true)
+
+
+# Brindle routed: the brass fanfare in D major, a bell run to the top, and the
+# rice-cooker resolution on high D over a held D major chord.
+static func _boss_defeated() -> PackedFloat32Array:
+	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 16, "crash", 0.7], [0, 62, 2, "brass", 0.6], [2, 66, 2, "brass", 0.6],
+		[4, 69, 2, "brass", 0.65], [6, 74, 2, "brass", 0.7], [8, 0, 2, "kick", 1.0], [8, 78, 4, "brass", 0.7],
+		[12, 76, 2, "brass", 0.6], [14, 73, 2, "brass", 0.65], [16, 0, 2, "kick", 1.0], [16, 0, 16, "crash", 0.6],
+		[16, 74, 16, "brass", 0.75], [16, 86, 16, "bell", 0.5], [16, 50, 16, "keys", 0.4], [16, 54, 16, "keys", 0.4],
+		[16, 57, 16, "keys", 0.4], [16, 62, 16, "keys", 0.4], [16, 38, 16, "sub", 0.7]]
+	for i in 8:
+		score.append([8 + i, 0, 1, "hat", 0.4])
+		score.append([8 + i, [74, 78, 81, 86, 90, 93, 98, 93][i], 1, "bell", 0.3])
+	return Synth.render_score(score, 1.6)
 
 
 # A one-beat reverse swell that ends exactly on the next downbeat.

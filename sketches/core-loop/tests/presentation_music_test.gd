@@ -39,12 +39,13 @@ func _gains() -> void:
 		previous = gains
 	var calm := MusicEngine.layer_gains(0.0)
 	var full := MusicEngine.layer_gains(1.0)
-	var space: bool = calm[MusicEngine.SNARE] == 0.0 and calm[MusicEngine.REESE] == 0.0 and calm[MusicEngine.LEAD] == 0.0 and calm[MusicEngine.ARP] == 0.0
+	# The bass figure never leaves (Andrew, round 2); the rest of the top waits.
+	var space: bool = calm[MusicEngine.SNARE] == 0.0 and calm[MusicEngine.REESE] > 0.0 and calm[MusicEngine.LEAD] == 0.0 and calm[MusicEngine.ARP] == 0.0
 	var all_in := true
 	for g in full:
 		all_in = all_in and g >= 0.99
 	_check("gains monotonic", monotonic and totals[50] > totals[0], "8 layers over 51 pressure steps; summed gain %.2f at calm, %.2f at full" % [totals[0], totals[50]])
-	_check("calm leaves space", space and all_in, "at pressure 0 snare, reese, lead and arp are silent; at 1 every layer is in")
+	_check("calm leaves space", space and all_in, "at pressure 0 snare, lead and arp are silent and the bass figure stays; at 1 every layer is in")
 
 	# The live gains follow a pressure rise without ever stepping back.
 	var engine := _playing(0.0)

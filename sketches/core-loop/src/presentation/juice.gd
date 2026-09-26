@@ -91,6 +91,10 @@ func wire_optional() -> void:
 		events.connect("beacon_unsealed", _on_unsealed)
 	if events.has_signal("heft_class_changed") and not events.is_connected("heft_class_changed", _on_heft_class):
 		events.connect("heft_class_changed", _on_heft_class)
+	if events.has_signal("heft_class_dropped") and not events.is_connected("heft_class_dropped", _on_heft_class):
+		events.connect("heft_class_dropped", _on_heft_class)
+	if events.has_signal("boss_weak_point_hit") and not events.is_connected("boss_weak_point_hit", _on_weak_point):
+		events.connect("boss_weak_point_hit", _on_weak_point)
 
 
 func _reset() -> void:
@@ -254,6 +258,11 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 		_shell_velocity += 1.2
 		hook_log.append(["class_up", "heft_class_changed"])
 	_heft_class = heft_class
+
+
+# A weak point cracked: a small kick, no freeze (hit-stop stays for plated breaks).
+func _on_weak_point(_point_id: String) -> void:
+	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
 
 
 func shell_target() -> float:
