@@ -1,0 +1,178 @@
+extends Node3D
+
+# Every live player projectile, as data, drawn with one MultiMesh. Combat fires bolts
+# in here and steps them once per physics tick; a hit is reported back through
+# `on_hit`, which resolves it once through the spawner's strike (TADR-008).
+#
+# The visual-clarity rules (principle 4) live here:
+# - At most MAX_LIVE bolts exist. A new bolt past the cap retires the oldest, which is
+#   the one furthest out and least likely to matter, so held fire never stalls.
+# - The more bolts are live, the fainter each one draws (crowd_alpha), so a stacked
+#   spiral-and-cross build thickens into a haze, never a wall.
+# - Bolts draw at PRIORITY, below every enemy telegraph (Telegraph.PRIORITY), and never
+#   in HAZARD, the colour telegraphs own.
+
+const MAX_LIVE := 64
+const PRIORITY := 0
+const WORLD_MASK := 1
+const WIDTH := 0.16
+const STREAK_SECONDS := 0.018
+const MIN_STREAK := 0.8
+const ALPHA_FULL := 0.9
+const ALPHA_CROWDED := 0.4
+const CROWD_START := 16
+const WAVE_RAMP := 6.0
+
+# Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3).
+var on_hit: Callable
+# Called as on_stop.call(point: Vector3, color: Color) when a bolt hits the world.
+var on_stop: Callable
+var peak_live := 0
+var retired := 0
+var fired := 0
+
+var _bolts: Array = []
+var _multimesh: MultiMesh
+
+
+func setup() -> void:
+	name = "Bolts"
+	_multimesh = MultiMesh.new()
+	_multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	_multimesh.use_colors = true
+	_multimesh.instance_count = MAX_LIVE
+	_multimesh.visible_instance_count = 0
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE
+	_multimesh.mesh = box
+	var view := MultiMeshInstance3D.new()
+	view.multimesh = _multimesh
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.render_priority = PRIORITY
+	view.material_override = mat
+	# The pool is drawn in world space from the bolt records; it never moves itself.
+	view.top_level = true
+	add_child(view)
+
+
+static func crowd_alpha(live_count: int) -> float:
+	if live_count <= CROWD_START:
+		return ALPHA_FULL
+	var t := clampf(float(live_count - CROWD_START) / float(MAX_LIVE - CROWD_START), 0.0, 1.0)
+	return lerpf(ALPHA_FULL, ALPHA_CROWDED, t)
+
+
+func live() -> int:
+	return _bolts.size()
+
+
+func clear() -> void:
+	_bolts.clear()
+	_multimesh.visible_instance_count = 0
+
+
+# bolt needs: origin, dir, speed, max_dist, damage, kind, weapon_id, radius, knock,
+# chain_jumps, chain_range, chain_falloff, color, wave_amp, wave_hz, phase.
+func fire(bolt: Dictionary) -> void:
+	if _bolts.size() >= MAX_LIVE:
+		_bolts.pop_front()
+		retired += 1
+	var dir: Vector3 = bolt["dir"]
+	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	bolt["right"] = dir.cross(up_hint).normalized()
+	bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
+	bolt["travelled"] = 0.0
+	bolt["age"] = 0.0
+	bolt["shown"] = bolt["origin"]
+	_bolts.append(bolt)
+	fired += 1
+	peak_live = maxi(peak_live, _bolts.size())
+
+
+func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> void:
+	var survivors: Array = []
+	for bolt in _bolts:
+		var from: Vector3 = bolt["shown"]
+		bolt["age"] += delta
+		bolt["travelled"] = minf(bolt["travelled"] + bolt["speed"] * delta, bolt["max_dist"])
+		var to := _position(bolt)
+		var end := to
+		var blocked := false
+		if from.distance_squared_to(to) > 0.000001:
+			var wall := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, WORLD_MASK))
+			if not wall.is_empty():
+				end = wall["position"]
+				blocked = true
+		var target := _first_enemy(from, end, bolt["radius"], enemies)
+		if not target.is_empty():
+			if on_hit.is_valid():
+				on_hit.call(bolt, target["enemy"], target["point"])
+			continue
+		if blocked:
+			if on_stop.is_valid():
+				on_stop.call(end, bolt["color"])
+			continue
+		if bolt["travelled"] >= bolt["max_dist"]:
+			continue
+		bolt["shown"] = to
+		survivors.append(bolt)
+	_bolts = survivors
+
+
+# Where the bolt is now: along its line, plus the corkscrew for a waving bolt. The
+# corkscrew ramps in over the first metres so every bolt leaves the muzzle on its line.
+func _position(bolt: Dictionary) -> Vector3:
+	var along: Vector3 = bolt["origin"] + (bolt["dir"] as Vector3) * bolt["travelled"]
+	var amp: float = bolt["wave_amp"]
+	if amp <= 0.0:
+		return along
+	var ramp := clampf(bolt["travelled"] / WAVE_RAMP, 0.0, 1.0)
+	var angle: float = TAU * bolt["wave_hz"] * bolt["age"] + bolt["phase"]
+	return along + ((bolt["right"] as Vector3) * cos(angle) + (bolt["up"] as Vector3) * sin(angle)) * amp * ramp
+
+
+# The first enemy the segment passes within reach of, measured against each enemy's
+# upright capsule (its axis, widened by its radius and the bolt's).
+func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array) -> Dictionary:
+	var best := {}
+	var best_along := INF
+	var span := from.distance_to(to)
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or enemy.is_dead():
+			continue
+		var centre: Vector3 = enemy.global_position
+		var inner: float = maxf(0.0, enemy.half_height - enemy.radius)
+		var reach: float = enemy.radius + bolt_radius
+		if centre.distance_to(from) > span + reach + inner + 0.5:
+			continue
+		var points := Geometry3D.get_closest_points_between_segments(from, to,
+			centre - Vector3.UP * inner, centre + Vector3.UP * inner)
+		if points[0].distance_to(points[1]) > reach:
+			continue
+		var along := from.distance_to(points[0])
+		if along < best_along:
+			best_along = along
+			best = {"enemy": enemy, "point": points[0]}
+	return best
+
+
+func _process(_delta: float) -> void:
+	var count := _bolts.size()
+	_multimesh.visible_instance_count = count
+	if count == 0:
+		return
+	var alpha := crowd_alpha(count)
+	for i in count:
+		var bolt: Dictionary = _bolts[i]
+		var dir: Vector3 = bolt["dir"]
+		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"]))
+		var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(WIDTH, WIDTH, streak))
+		var head: Vector3 = bolt["shown"]
+		_multimesh.set_instance_transform(i, Transform3D(basis, head - dir * streak * 0.5))
+		var tint: Color = bolt["color"]
+		_multimesh.set_instance_color(i, Color(tint, alpha))

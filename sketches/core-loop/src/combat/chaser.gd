@@ -1,111 +1,134 @@
-extends CharacterBody3D
+extends "res://src/combat/enemy.gd"
 
-const Palette := preload("res://src/core/palette.gd")
+# The chaser runs you down and lunges. The lunge is committed: at wind-up it lays a
+# lane on the ground from where it stands toward where you are, and only that lane
+# can hurt you, only while it is lunging down it. Roll off the lane, jump it, or hit
+# the chaser hard enough during the wind-up to break it (a knock at INTERRUPT or more
+# cancels the lunge and its lane together). Touching a chaser that is not lunging
+# costs nothing but the bump.
 
-const SPEED := 4.6
-const GRAVITY := 26.0
-const TOUCH_COOLDOWN := 0.85
+const SPEED := 4.8
+const LUNGE_RANGE := 10.0
+const WINDUP := 0.6
+const LUNGE_TIME := 0.34
+const LUNGE_LENGTH := 11.0
+const LUNGE_WIDTH := 2.8
+const RECOVER := 0.9
+const REST := 0.8
+const DAMAGE := 9.0
+const SHOVE := 6.0
+const INTERRUPT := 10.0
+const HP := 40.0
+const SCRAP := 3
 
-signal hit_player(amount: float)
-signal died(at: Vector3, scrap_value: int)
+enum State { CHASE, WINDUP, LUNGE, RECOVER }
 
-var target
-var hp := 40.0
-var max_hp := 40.0
-var scrap_value := 3
-var contact_damage := 9.0
-var miniboss := false
+var state := State.CHASE
+var lunges := 0
 
-var _radius := 1.0
-var _knock := Vector3.ZERO
-var _flash := 0.0
-var _touch := 0.0
-var _material: StandardMaterial3D
-var _base_color := Palette.RUST
-
-
-func setup(target_ref, health: float, body_scale: float, damage: float, scrap: int) -> void:
-	target = target_ref
-	hp = health
-	max_hp = health
-	contact_damage = damage
-	scrap_value = scrap
-	miniboss = body_scale > 1.6
-	_radius = body_scale
-	add_to_group("enemy")
-	collision_layer = 0
-	collision_mask = 0
-	set_collision_layer_value(3, true)
-	set_collision_mask_value(1, true)
-	floor_max_angle = deg_to_rad(60.0)
-
-	var shape := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
-	capsule.radius = _radius
-	capsule.height = _radius * 3.0
-	shape.shape = capsule
-	add_child(shape)
-
-	_base_color = Palette.COPPER if miniboss else Palette.RUST
-	_material = Palette.solid(_base_color, 0.35 if miniboss else 0.0)
-	var mesh := MeshInstance3D.new()
-	var capsule_mesh := CapsuleMesh.new()
-	capsule_mesh.radius = _radius
-	capsule_mesh.height = _radius * 3.0
-	mesh.mesh = capsule_mesh
-	mesh.material_override = _material
-	add_child(mesh)
+var _clock := 0.0
+var _rest := 0.0
+var _landed := false
+var _mesh: MeshInstance3D
 
 
-func knock(direction: Vector3, force: float) -> void:
-	_knock = direction.normalized() * force / (2.2 if miniboss else 1.0)
-	_knock.y = maxf(_knock.y, force * 0.2)
+func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float) -> void:
+	_setup_common(target_ref, terrain_ref, root_ref, live_ref)
+	kind = "chaser"
+	_set_health(HP * threat)
+	scrap_value = SCRAP
+	weight = 1.0
+	radius = 1.0
+	half_height = 1.5
+	_mesh = _add_capsule(radius, half_height * 2.0, Palette.RUST)
 
 
-func flash() -> void:
-	_flash = 1.0
-
-
-func take_damage(amount: float) -> void:
-	hp -= amount
-	flash()
-	if hp <= 0.0:
-		died.emit(global_position, scrap_value)
-		queue_free()
+func state_name() -> String:
+	return ["chase", "windup", "lunge", "recover"][state]
 
 
 func _physics_process(delta: float) -> void:
-	_touch = maxf(0.0, _touch - delta)
-	var chase := Vector3.ZERO
-	if target != null:
-		var to_target: Vector3 = target.ball_position() - global_position
-		var reach: float = _radius + 1.6
-		if Vector3(to_target.x, 0.0, to_target.z).length() < reach and absf(to_target.y) < reach * 2.0:
-			if _touch <= 0.0:
-				_touch = TOUCH_COOLDOWN
-				hit_player.emit(contact_damage)
-		to_target.y = 0.0
-		if to_target.length() > _radius + 1.4:
-			chase = to_target.normalized() * SPEED
+	_update_flash(delta)
+	if not _in_play() or target == null:
+		_move(delta, Vector3.ZERO)
+		return
+	_clock += delta
+	_rest = maxf(0.0, _rest - delta)
+	var to_ball := _flat_to_ball()
+	match state:
+		State.CHASE:
+			var desired := Vector3.ZERO
+			if to_ball.length() > radius + 1.4:
+				desired = to_ball.normalized() * SPEED
+			_move(delta, desired)
+			if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
+				_begin_windup(to_ball)
+		State.WINDUP:
+			_move(delta, Vector3.ZERO)
+			var lane := telegraph()
+			if lane != null:
+				lane.set_progress(_clock / WINDUP)
+			if _knocked_speed() >= INTERRUPT or lane == null:
+				_end_attack(State.RECOVER)
+			elif _clock >= WINDUP:
+				state = State.LUNGE
+				_clock = 0.0
+		State.LUNGE:
+			var lane := telegraph()
+			if lane == null:
+				_end_attack(State.RECOVER)
+				return
+			_move(delta, lane.dir * LUNGE_LENGTH / LUNGE_TIME)
+			_check_hit(lane)
+			var along: float = (global_position - lane.center).dot(lane.dir)
+			if _clock >= LUNGE_TIME or along >= lane.length:
+				_end_attack(State.RECOVER)
+		State.RECOVER:
+			_move(delta, Vector3.ZERO)
+			if _clock >= RECOVER:
+				state = State.CHASE
+				_clock = 0.0
+	_pose()
 
-	var horizontal := Vector3(_knock.x, 0.0, _knock.z)
-	if horizontal.length() < 1.0:
-		horizontal = chase
-	velocity.x = horizontal.x
-	velocity.z = horizontal.z
-	velocity.y = _knock.y if _knock.y > 0.0 else velocity.y
-	velocity.y -= GRAVITY * delta
-	move_and_slide()
-	if is_on_floor() and velocity.y < 0.0:
-		velocity.y = 0.0
-	_knock = _knock.move_toward(Vector3.ZERO, 16.0 * delta)
 
-	if _flash > 0.0:
-		_flash = maxf(0.0, _flash - delta * 2.0)
-		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), _flash)
-		_material.emission_enabled = true
-		_material.emission = Palette.AMBER
-		_material.emission_energy_multiplier = _flash * 2.0
-	elif _material.emission_enabled and not miniboss:
-		_material.emission_enabled = false
-		_material.albedo_color = _base_color
+func _begin_windup(to_ball: Vector3) -> void:
+	state = State.WINDUP
+	_clock = 0.0
+	_landed = false
+	_commit_lane(global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH)
+
+
+# The ball is hit when it is inside the committed lane and the chaser's body has
+# reached it. Both halves read the same lane the player was shown.
+func _check_hit(lane: Node3D) -> void:
+	if _landed:
+		return
+	var ball := _ball()
+	var flat := Vector3(ball.x - global_position.x, 0.0, ball.z - global_position.z)
+	if flat.length() > radius + 1.4 or not lane.contains(ball):
+		return
+	_landed = true
+	hit_player.emit(DAMAGE, lane.dir * SHOVE + Vector3.UP * 2.0)
+
+
+func _end_attack(next: int) -> void:
+	if state == State.LUNGE:
+		lunges += 1
+	state = next
+	_clock = 0.0
+	_rest = REST
+	_clear_telegraph()
+
+
+# The wind-up crouches and swells: a body read to match the ground read.
+func _pose() -> void:
+	if _mesh == null:
+		return
+	match state:
+		State.WINDUP:
+			var t := clampf(_clock / WINDUP, 0.0, 1.0)
+			_mesh.scale = Vector3(1.0 + 0.2 * t, 1.0 - 0.25 * t, 1.0 + 0.2 * t)
+		State.LUNGE:
+			_mesh.scale = Vector3(0.85, 1.15, 0.85)
+		_:
+			_mesh.scale = Vector3.ONE
