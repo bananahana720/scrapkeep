@@ -11,14 +11,6 @@ const SPECS := [
 	{"key": "restitution", "label": "Restitution", "min": 0.0, "max": 0.95, "step": 0.01, "value": 0.35},
 	{"key": "rolling_resistance", "label": "Rolling resist", "min": 0.0, "max": 3.0, "step": 0.05, "value": 0.30},
 	{"key": "rigid_torque", "label": "Rigid torque", "min": 10.0, "max": 600.0, "step": 10.0, "value": 220.0},
-	{"key": "dash_impulse", "label": "Dash impulse", "min": 4.0, "max": 40.0, "step": 0.5, "value": 16.0},
-	{"key": "glide_gravity", "label": "Glide gravity", "min": 0.05, "max": 1.0, "step": 0.01, "value": 0.30},
-	{"key": "glide_lift", "label": "Glide lift", "min": 0.0, "max": 4.0, "step": 0.05, "value": 1.30},
-	{"key": "rope_range", "label": "Rope range", "min": 10.0, "max": 60.0, "step": 1.0, "value": 45.0},
-	{"key": "rope_spring", "label": "Rope spring", "min": 1.0, "max": 30.0, "step": 0.5, "value": 12.0},
-	{"key": "reel_speed", "label": "Reel speed", "min": 2.0, "max": 30.0, "step": 0.5, "value": 12.0},
-	{"key": "slam_speed", "label": "Slam speed", "min": 10.0, "max": 80.0, "step": 1.0, "value": 42.0},
-	{"key": "cling_strength", "label": "Cling strength", "min": 0.0, "max": 1.0, "step": 0.01, "value": 0.82},
 ]
 
 const BRAKE_RESISTANCE := 4.0

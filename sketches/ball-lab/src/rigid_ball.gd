@@ -2,16 +2,13 @@ extends RigidBody3D
 
 const Tuning := preload("res://src/tuning.gd")
 const Rules := preload("res://src/ball_rules.gd")
-const Augments := preload("res://src/augments.gd")
 
 signal enemy_touched(enemy: Node3D, normal: Vector3)
-signal slammed(at: Vector3, speed: float)
 
 var tuning
 var state
 var drive_basis := Basis.IDENTITY
 var intent
-var kit
 
 var _probe: ShapeCast3D
 var _pending_position = null
@@ -109,17 +106,9 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		drag = Vector3.ZERO
 	body_state.apply_central_impulse(drag * mass)
 
-	# The augments run before jump and boost so a cling jump or a fitted air dash can
-	# claim the same key without the base rule firing as well.
-	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
-	if kit != null and kit.slam_landed > 0.0:
-		slammed.emit(body_state.transform.origin, kit.slam_landed)
-		kit.slam_landed = 0.0
-
-	if not Augments.claims_boost(kit, state):
-		var boost := Rules.boost(state, tuning, intent, wish, -drive_basis.z)
-		if boost != Vector3.ZERO:
-			body_state.apply_central_impulse(boost * mass)
+	var boost := Rules.boost(state, tuning, intent, wish, -drive_basis.z)
+	if boost != Vector3.ZERO:
+		body_state.apply_central_impulse(boost * mass)
 
 	var jump := Rules.jump(state, tuning)
 	if jump != Vector3.ZERO:

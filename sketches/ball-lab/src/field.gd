@@ -15,19 +15,9 @@ const BENCH_CENTER := Vector2(30.0, 76.0)
 const BENCH_TOP := 9.5
 const BENCH_HALF := Vector2(13.0, 12.0)
 
-const POST_HEIGHT := 26.0
-const POST_SUNK := 3.0
-const WALL_SIZE := Vector3(36.0, 34.0, 2.5)
-const WALL_X := 78.0
-const WALL_Z := [34.0, 46.0]
-
 var spawn := Vector3.ZERO
 var downhill_start := Vector3.ZERO
 var enemy_spawns: Array[Vector3] = []
-# Grapple targets the headless test can aim at, and the two magnet walls' stand-off
-# points, so a test does not have to guess where the geometry ended up.
-var grapple_anchors: Array[Vector3] = []
-var cling_spots: Array[Vector3] = []
 
 
 # The whole terrain is one continuous height field: features are blended into the
@@ -190,78 +180,6 @@ func _build_props(parent: Node3D) -> void:
 	for spot in [Vector2(2.0, 40.0), Vector2(14.0, 48.0), Vector2(26.0, 38.0),
 			Vector2(38.0, 50.0), Vector2(48.0, 40.0), Vector2(10.0, 62.0), Vector2(56.0, 66.0)]:
 		_add_pillar(parent, Vector3(spot.x, 0.0, spot.y), pillar_mat)
-
-	_build_grapple_rig(parent)
-	_build_magnet_walls(parent)
-
-
-func _build_grapple_rig(parent: Node3D) -> void:
-	var post_mat := LabMaterials.solid(Color(0.46, 0.42, 0.38))
-	var cap_mat := LabMaterials.solid(Color(1.0, 0.72, 0.30), 1.4)
-	# Four flank the halfpipe, two the bench gap, four the open pad and the turn.
-	for spot in [Vector2(-84.0, 12.0), Vector2(-40.0, 12.0), Vector2(-84.0, 44.0), Vector2(-40.0, 44.0),
-			Vector2(16.0, 58.0), Vector2(44.0, 58.0), Vector2(56.0, 20.0), Vector2(-20.0, 14.0),
-			Vector2(46.0, 10.0), Vector2(4.0, 86.0)]:
-		_add_post(parent, spot, post_mat, cap_mat)
-	# One arch over the halfpipe, one over the kicker that aims at the bench gap.
-	_add_arch(parent, Vector2(-84.0, 28.0), Vector2(-40.0, 28.0), post_mat, cap_mat)
-	_add_arch(parent, Vector2(16.0, 46.0), Vector2(44.0, 46.0), post_mat, cap_mat)
-
-
-func _add_post(parent: Node3D, spot: Vector2, post_mat: Material, cap_mat: Material) -> Vector3:
-	var base := height(spot.x, spot.y) - POST_SUNK
-	var body := StaticBody3D.new()
-	body.position = Vector3(spot.x, base + POST_HEIGHT * 0.5, spot.y)
-	var mesh := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.7
-	cyl.bottom_radius = 1.1
-	cyl.height = POST_HEIGHT
-	mesh.mesh = cyl
-	mesh.material_override = post_mat
-	var shape := CollisionShape3D.new()
-	var cyl_shape := CylinderShape3D.new()
-	cyl_shape.radius = 0.9
-	cyl_shape.height = POST_HEIGHT
-	shape.shape = cyl_shape
-	body.add_child(shape)
-	body.add_child(mesh)
-	var cap := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 1.1
-	torus.outer_radius = 1.6
-	cap.mesh = torus
-	cap.material_override = cap_mat
-	cap.position = Vector3(0.0, POST_HEIGHT * 0.5, 0.0)
-	body.add_child(cap)
-	parent.add_child(body)
-	var top := Vector3(spot.x, base + POST_HEIGHT, spot.y)
-	grapple_anchors.append(top)
-	return top
-
-
-func _add_arch(parent: Node3D, a: Vector2, b: Vector2, post_mat: Material, cap_mat: Material) -> void:
-	var left := _add_post(parent, a, post_mat, cap_mat)
-	var right := _add_post(parent, b, post_mat, cap_mat)
-	var beam_y := minf(left.y, right.y) - 1.0
-	var span := Vector2(b.x - a.x, b.y - a.y)
-	var centre := Vector3((a.x + b.x) * 0.5, beam_y, (a.y + b.y) * 0.5)
-	var length := span.length() + 2.0
-	var xform := Transform3D(Basis(Vector3.UP, atan2(span.x, span.y) - PI * 0.5), centre)
-	_add_box(parent, Vector3(length, 1.4, 2.0), xform, post_mat)
-	grapple_anchors.append(centre)
-
-
-func _build_magnet_walls(parent: Node3D) -> void:
-	var wall_mat := LabMaterials.striped(Color(0.42, 0.34, 0.58), Color(0.22, 0.18, 0.32))
-	for entry in WALL_Z:
-		var z: float = entry
-		var base: float = maxf(height(WALL_X - WALL_SIZE.x * 0.5, z), height(WALL_X + WALL_SIZE.x * 0.5, z)) - 8.0
-		var centre := Vector3(WALL_X, base + WALL_SIZE.y * 0.5, z)
-		_add_box(parent, WALL_SIZE, Transform3D(Basis.IDENTITY, centre), wall_mat)
-		# 1.2 m off the face, inside the corridor, and high enough to ride down.
-		var offset: float = (WALL_SIZE.z * 0.5 + 1.0 + 1.2) * (1.0 if z < WALL_Z[1] else -1.0)
-		cling_spots.append(Vector3(WALL_X, base + 26.0, z + offset))
 
 
 func _tilt(origin: Vector3, axis: Vector3, degrees: float) -> Transform3D:
