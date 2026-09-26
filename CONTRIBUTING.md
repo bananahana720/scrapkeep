@@ -65,6 +65,20 @@ Set `CHROMIUM_PATH` for a non-default browser path and `GAME_URL` for the baseli
 
 No browser session, human enjoyment, or performance benchmark is implied by `npm run verify`.
 
+## Jev Lab
+
+The Jev Lab plays the light-lane sketches headless with seeded `random` and `scripted` arms, records each batch as a `scrapkeep-run/1` record, gates a batch against a pin, and shows every lab, program and human metric on a local dashboard. Automated play is not a feel verdict; only Andrew's play settles feel. The [lab skill](.agents/skills/scrapkeep-lab/SKILL.md) owns how to run and extend it, the [reactive-model-loop skill](.agents/skills/reactive-model-loop/SKILL.md) owns the method for any Jev decider, and the [Jev player README](tools/jev-player/README.md#jev-lab-tools-and-their-measured-limits) gives each tool's measured limits with the event that measured it. The program's results are in the [Jev Lab retro](artifacts/jev-lab-2026-09-25/RETRO.md).
+
+```sh
+node scripts/lab/godot-launch.mjs <scenario> --arm scripted -n 20  # one headless batch on real Godot
+npm run play -- gate <run_id> --against <pin>                      # 0 pass, 1 differs or red, 2 usage, 3 inconclusive, 4 instrument invalid
+npm run play -- stats --layer program                              # one line per metric
+npm run play -- dash                                               # writes artifacts/local/dash/index.html
+npm run play -- lab watch <scenario> --arm scripted|random|jev     # one visible trial; a demo, never evidence
+```
+
+In the watch view, M marks a moment with a note, T shows the state text, S steps the speed through 1×, ½× and ¼×, and H shows the keys. `--arm jev` makes live Jev calls, 60 by default including the preflight. Jev's four advisory test-loop tools (failure triage, verdict tagging, coverage gap, test ordering) are listed with their scores and caveats in the [Jev player README](tools/jev-player/README.md#jev-test-loop-tools). Test ordering runs inside `npm run play -- watch`. The others are run by hand: triage and coverage gap call Jev whenever a key is found, and verdict tagging only with `--live`. Jev-as-player is parked, so the jev arm refuses evidence batches (preflight exit 6). None of these is a `verify` stage, and nothing on the gate path calls Jev.
+
 ## Editing conventions
 
 Use native JavaScript ES modules, two-space indentation, double quotes, semicolons, and the installed Prettier on files you change. Avoid repository-wide formatting while fixing one issue. Keep functions and data near their actual callers; introduce shared code when both entries need the same behavior, not merely similar names.
