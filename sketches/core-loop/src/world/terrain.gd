@@ -1,127 +1,113 @@
 extends RefCounted
 
-# Owned by writer D (world). The spine reads only the terrain API block below.
-
 const Palette := preload("res://src/core/palette.gd")
+const Spillway := preload("res://src/world/map_spillway.gd")
+const Sluice := preload("res://src/world/map_sluice.gd")
+const Weir := preload("res://src/world/map_weir.gd")
 
-# The whole stage is one continuous height field. Shelves, chute channels and the
-# bypass deck are blended into each other by weight rather than stitched from
-# separate meshes, so a rolling sphere never catches a seam and every contact
-# normal means something.
+# Owned by writer D (world). The spine reads only the terrain API block below.
+#
+# Each stage is its own map. All three are built once at setup, so a stage change is
+# a node swap inside the stage_entered handler and never a hitch in the launch. Height
+# queries read the built grid and interpolate the same two triangles per cell the
+# collider uses, so what the spine, combat and build ask about the ground is exactly
+# the ground the ball rolls on.
 
 const HALF := 200.0
 const STEP := 2.0
+const CELLS := int(2.0 * HALF / STEP)
+const SIDE := CELLS + 1
+# A face steeper than this (the normal's y below it) takes the pylon tint: the ball's
+# pylon bites a face that leans less than 60 degrees off vertical (augments.gd).
+const PYLON_FACE := 0.866
 
-const TOP_H := 30.0
-const MID_H := 15.0
-const BASIN_H := 0.0
+var maps: Array = []
+var stage := 1
+# The flood the world runs, so material_at can say "water" where it is.
+var flood
+var environment: Environment
 
-const RISER_TOP := Vector2(-57.0, -47.0)
-const RISER_MID := Vector2(41.0, 51.0)
-
-const BASIN_CENTRE := Vector2(0.0, 110.0)
-const BASIN_BOWL := 3.5
-const BASIN_RADIUS := 95.0
-const FLOOD_DEPTH := 7.0
-
-const CHUTE_R := 13.0
-const CHUTE_OUTER := 24.0
-const CHUTE_BOWL := 17.0
-const CHUTE_SINK := 3.0
-
-const CHUTES := [
-	{"x": -62.0, "z0": -78.0, "z1": -24.0, "h0": TOP_H, "h1": MID_H},
-	{"x": 54.0, "z0": -78.0, "z1": -24.0, "h0": TOP_H, "h1": MID_H},
-	{"x": -18.0, "z0": 20.0, "z1": 76.0, "h0": MID_H, "h1": BASIN_H},
-	{"x": 96.0, "z0": 20.0, "z1": 76.0, "h0": MID_H, "h1": BASIN_H},
-]
-
-const BYPASS_X := 140.0
-const BYPASS_FLAT := 9.0
-const BYPASS_OUTER := 22.0
-
-const SPAWN := Vector2(-62.0, -96.0)
-const PUMP_HOUSE := Vector2(34.0, -148.0)
-const HATCH := Vector2(0.0, 110.0)
-const BYPASS_FOOT := Vector2(140.0, 116.0)
-const BYPASS_TOP := Vector2(140.0, -96.0)
-
-# Where each stage starts, which way it faces and where its beacon stands. One map for
-# now, read three ways: the top shelf down its chute to the mid shelf, the mid shelf
-# down into the flooding basin, and the bypass deck the whole way to the basin floor.
-const STAGE_LAYOUT := [
-	{"spawn": Vector2(-62.0, -96.0), "heading": Vector3(0.0, 0.0, 1.0), "beacon": Vector2(-30.0, 2.0)},
-	{"spawn": Vector2(-18.0, 4.0), "heading": Vector3(0.0, 0.0, 1.0), "beacon": Vector2(-50.0, 118.0)},
-	{"spawn": Vector2(140.0, -96.0), "heading": Vector3(0.0, 0.0, 1.0), "beacon": Vector2(20.0, 112.0)},
-]
-
-const CACHE_SPOTS := [
-	Vector2(58.0, -126.0), Vector2(-96.0, -6.0), Vector2(104.0, 6.0),
-	Vector2(-100.0, 94.0), Vector2(108.0, 136.0),
-]
-
-const SCRAP_LINES := [
-	[Vector2(-62.0, -82.0), Vector2(-62.0, -10.0)],
-	[Vector2(54.0, -82.0), Vector2(54.0, -10.0)],
-	[Vector2(-18.0, 16.0), Vector2(-18.0, 90.0)],
-	[Vector2(96.0, 16.0), Vector2(96.0, 90.0)],
-	[Vector2(140.0, 110.0), Vector2(140.0, -92.0)],
-	[Vector2(-56.0, -104.0), Vector2(30.0, -142.0)],
-	[Vector2(-88.0, -4.0), Vector2(86.0, 2.0)],
-	[Vector2(-96.0, 88.0), Vector2(-20.0, 140.0)],
-	[Vector2(30.0, 142.0), Vector2(100.0, 120.0)],
-]
+var _roots: Array[Node3D] = []
+var _heights: Array[PackedFloat32Array] = []
+var _parent: Node3D
 
 
-# [height, chute weight, bypass weight]: the build needs the weights for tinting,
-# so one sample answers both questions instead of recomputing them side by side.
-static func sample(x: float, z: float) -> Array:
-	var h := _shelf(z) + _bowl(x, z)
-	var by := _bypass(x, z)
-	h = lerpf(h, by[0], by[1])
-	var ch := _chutes(x, z)
-	h = lerpf(h, ch[0], ch[1])
-	h += _ripple(x, z) * (1.0 - maxf(by[1], ch[1]))
-	return [h + _walls(x, z), ch[1], by[1]]
+func _init() -> void:
+	maps = [Spillway.new(), Sluice.new(), Weir.new()]
 
 
-static func ground(x: float, z: float) -> float:
-	return sample(x, z)[0]
+func map() -> RefCounted:
+	return maps[stage - 1]
 
 
-static func ground_point(x: float, z: float, clearance := 1.8) -> Vector3:
-	return Vector3(x, ground(x, z) + clearance, z)
+func map_for(index: int) -> RefCounted:
+	return maps[_index(index)]
 
 
-static func at(spot: Vector2, clearance := 1.8) -> Vector3:
-	return ground_point(spot.x, spot.y, clearance)
+func build(parent: Node3D) -> void:
+	_parent = parent
+	_build_sky(parent)
+	for m in maps:
+		var holder := Node3D.new()
+		holder.name = "Stage%d" % (_roots.size() + 1)
+		var heights := _build_ground(holder, m)
+		m.build_props(holder, _ground_at.bind(heights))
+		_roots.append(holder)
+		_heights.append(heights)
+	parent.add_child(_roots[0])
+
+
+# Swap the active stage's geometry in. Synchronous, so the flow's spawn and beacon
+# queries straight after stage_entered read the new stage.
+func use(index: int) -> void:
+	var next := _index(index) + 1
+	if next == stage and _roots[next - 1].is_inside_tree():
+		return
+	for root in _roots:
+		if root.is_inside_tree():
+			_parent.remove_child(root)
+	stage = next
+	_parent.add_child(_roots[stage - 1])
+
+
+# The stages not in the tree are orphans the world frees on its way out.
+func release() -> void:
+	for root in _roots:
+		if is_instance_valid(root) and not root.is_inside_tree():
+			root.free()
+	_roots.clear()
+
+
+func geometry_root(index: int) -> Node3D:
+	return _roots[_index(index)]
 
 
 # The terrain API the spine and the other modules read through ctx.terrain (see
-# CONTRACTS.md). Instance methods, so a stage variant can answer differently.
+# CONTRACTS.md).
 func height(x: float, z: float) -> float:
-	return ground(x, z)
+	return _grid_height(_heights[stage - 1], x, z)
 
 
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
-	return ground_point(x, z, clearance)
+	return Vector3(x, height(x, z) + clearance, z)
 
 
-func spawn_point(stage: int) -> Vector3:
-	return at(STAGE_LAYOUT[clampi(stage, 1, STAGE_LAYOUT.size()) - 1]["spawn"], 2.0)
+func spawn_point(index: int) -> Vector3:
+	var s: Vector2 = map_for(index).spawn
+	return Vector3(s.x, _grid_height(_heights[_index(index)], s.x, s.y) + 2.0, s.y)
 
 
-func entry_heading(stage: int) -> Vector3:
-	var heading: Vector3 = STAGE_LAYOUT[clampi(stage, 1, STAGE_LAYOUT.size()) - 1]["heading"]
-	return heading.normalized()
+func entry_heading(index: int) -> Vector3:
+	return (map_for(index).heading as Vector3).normalized()
 
 
-func beacon_point(stage: int) -> Vector3:
-	return at(STAGE_LAYOUT[clampi(stage, 1, STAGE_LAYOUT.size()) - 1]["beacon"], 0.0)
+func beacon_point(index: int) -> Vector3:
+	var b: Vector2 = map_for(index).beacon
+	return Vector3(b.x, _grid_height(_heights[_index(index)], b.x, b.y), b.y)
 
 
-func scrap_lines(_stage: int) -> Array:
-	return SCRAP_LINES
+func scrap_lines(index: int) -> Array:
+	return map_for(index).scrap_lines
 
 
 func contains(point: Vector3) -> bool:
@@ -129,142 +115,87 @@ func contains(point: Vector3) -> bool:
 
 
 func rescue_point(near: Vector3) -> Vector3:
-	return ground_point(clampf(near.x, -105.0, 152.0), clampf(near.z, -178.0, 178.0), 3.0)
+	var r: Rect2 = map().play_rect
+	return drop_point(clampf(near.x, r.position.x, r.end.x), clampf(near.z, r.position.y, r.end.y), 3.0)
 
 
-static func in_basin(point: Vector3) -> bool:
-	return Vector2(point.x, point.z).distance_to(BASIN_CENTRE) < BASIN_RADIUS
+# For the element and material table (TADR-009, owned by build): what the ball or a
+# shot touches at this point. The flood's water wins over the ground under it.
+func material_at(point: Vector3) -> String:
+	if flood != null and flood.submersion(point) > 0.0:
+		return "water"
+	return map().material_at(point.x, point.z)
 
 
-static func _shelf(z: float) -> float:
-	var h := lerpf(TOP_H, MID_H, smoothstep(RISER_TOP.x, RISER_TOP.y, z))
-	return lerpf(h, BASIN_H, smoothstep(RISER_MID.x, RISER_MID.y, z))
+func _index(index: int) -> int:
+	return clampi(index, 1, maps.size()) - 1
 
 
-static func _bowl(x: float, z: float) -> float:
-	var d := Vector2(x, z).distance_to(BASIN_CENTRE)
-	return -BASIN_BOWL * (1.0 - smoothstep(25.0, 85.0, d)) * smoothstep(52.0, 70.0, z)
+static func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
+	var gx := clampf((x + HALF) / STEP, 0.0, CELLS - 0.001)
+	var gz := clampf((z + HALF) / STEP, 0.0, CELLS - 0.001)
+	var i := int(gx)
+	var j := int(gz)
+	var fx := gx - i
+	var fz := gz - j
+	var a := heights[j * SIDE + i]
+	var b := heights[j * SIDE + i + 1]
+	var c := heights[(j + 1) * SIDE + i]
+	var d := heights[(j + 1) * SIDE + i + 1]
+	if fx + fz <= 1.0:
+		return a + (b - a) * fx + (c - a) * fz
+	return d + (c - d) * (1.0 - fx) + (b - d) * (1.0 - fz)
 
 
-static func _ripple(x: float, z: float) -> float:
-	return 0.85 * sin(x * 0.055) * cos(z * 0.047) + 0.45 * sin((x + z) * 0.031)
+static func _ground_at(x: float, z: float, clearance: float, heights: PackedFloat32Array) -> Vector3:
+	return Vector3(x, _grid_height(heights, x, z) + clearance, z)
 
 
-static func _walls(x: float, z: float) -> float:
-	var rim := 55.0 * smoothstep(162.0, 199.0, maxf(absf(x), absf(z)))
-	var canyon := 78.0 * (1.0 - smoothstep(-158.0, -116.0, x))
-	return maxf(rim, canyon)
-
-
-# The deck is flat on every shelf and inclined only across the risers, so the
-# bypass never floats above the ground it is supposed to connect.
-static func bypass_deck(z: float) -> float:
-	if z >= 105.0:
-		return BASIN_H
-	if z >= 35.0:
-		return lerpf(MID_H, BASIN_H, (z - 35.0) / 70.0)
-	if z >= -15.0:
-		return MID_H
-	if z >= -85.0:
-		return lerpf(MID_H, TOP_H, (-15.0 - z) / 70.0)
-	return TOP_H
-
-
-static func _bypass(x: float, z: float) -> Array:
-	var adx := absf(x - BYPASS_X)
-	if adx > BYPASS_OUTER:
-		return [0.0, 0.0]
-	var w := 1.0 - smoothstep(BYPASS_FLAT + 5.0, BYPASS_OUTER, adx)
-	w *= 1.0 - smoothstep(150.0, 178.0, z)
-	w *= smoothstep(-162.0, -130.0, z)
-	if w <= 0.0:
-		return [0.0, 0.0]
-	var lip := 0.0
-	if adx > BYPASS_FLAT:
-		lip = minf((adx - BYPASS_FLAT) * 1.3, 6.0)
-	return [bypass_deck(z) + lip, w]
-
-
-static func _chutes(x: float, z: float) -> Array:
-	var best := [0.0, 0.0]
-	for c in CHUTES:
-		var r := _chute(c, x, z)
-		if r[1] > best[1]:
-			best = r
-	return best
-
-
-static func _chute(c: Dictionary, x: float, z: float) -> Array:
-	var adx: float = absf(x - c["x"])
-	if adx > CHUTE_OUTER:
-		return [0.0, 0.0]
-	var w: float = 1.0 - smoothstep(CHUTE_R + 4.0, CHUTE_OUTER, adx)
-	w *= smoothstep(c["z0"] - 16.0, c["z0"] - 2.0, z)
-	w *= 1.0 - smoothstep(c["z1"] + 2.0, c["z1"] + 16.0, z)
-	if w <= 0.0:
-		return [0.0, 0.0]
-	var t: float = clampf(inverse_lerp(c["z0"], c["z1"], z), 0.0, 1.0)
-	# Mostly linear: a smoothstepped floor is flat at both ends, and a fast lane
-	# that does not pitch over until its middle never gets the ball moving.
-	var deck: float = lerpf(c["h0"], c["h1"], lerpf(t, smoothstep(0.0, 1.0, t), 0.3)) - CHUTE_SINK
-	var arc: float = minf(adx, CHUTE_R)
-	var cross: float = CHUTE_BOWL - sqrt(CHUTE_BOWL * CHUTE_BOWL - arc * arc)
-	if adx > CHUTE_R:
-		cross += (adx - CHUTE_R) * 1.1
-	return [deck + cross, w]
-
-
-func build(parent: Node3D) -> void:
-	_build_ground(parent)
-	_build_props(parent)
-	_build_sky(parent)
-
-
-func _build_ground(parent: Node3D) -> void:
-	var cells := int(round(2.0 * HALF / STEP))
-	var side := cells + 1
+func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var heights := PackedFloat32Array()
-	heights.resize(side * side)
+	heights.resize(SIDE * SIDE)
 	var verts := PackedVector3Array()
 	var colors := PackedColorArray()
 	var uvs := PackedVector2Array()
-	verts.resize(side * side)
-	colors.resize(side * side)
-	uvs.resize(side * side)
+	verts.resize(SIDE * SIDE)
+	colors.resize(SIDE * SIDE)
+	uvs.resize(SIDE * SIDE)
 
-	for j in side:
+	for j in SIDE:
 		var z := -HALF + j * STEP
-		for i in side:
+		for i in SIDE:
 			var x := -HALF + i * STEP
-			var s := sample(x, z)
-			var idx := j * side + i
+			var s: Array = m.sample(x, z)
+			var idx := j * SIDE + i
 			heights[idx] = s[0]
 			verts[idx] = Vector3(x, s[0], z)
 			uvs[idx] = Vector2(x, z) * 0.1
-			var tint: Color = Palette.SAND.lerp(Palette.SANDSTONE, 0.35)
-			tint = tint.lerp(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.45), s[1] * 0.9)
-			tint = tint.lerp(Palette.SANDSTONE.lerp(Palette.RUST, 0.3), s[2] * 0.85)
-			colors[idx] = tint
+			colors[idx] = s[1]
 
+	var pylon_tint := Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.25)
 	var normals := PackedVector3Array()
-	normals.resize(side * side)
-	for j in side:
-		for i in side:
-			var idx := j * side + i
+	normals.resize(SIDE * SIDE)
+	for j in SIDE:
+		for i in SIDE:
+			var idx := j * SIDE + i
 			var left: float = heights[idx - (1 if i > 0 else 0)]
-			var right: float = heights[idx + (1 if i < side - 1 else 0)]
-			var back: float = heights[idx - (side if j > 0 else 0)]
-			var front: float = heights[idx + (side if j < side - 1 else 0)]
-			normals[idx] = Vector3(left - right, 2.0 * STEP, back - front).normalized()
+			var right: float = heights[idx + (1 if i < SIDE - 1 else 0)]
+			var back: float = heights[idx - (SIDE if j > 0 else 0)]
+			var front: float = heights[idx + (SIDE if j < SIDE - 1 else 0)]
+			var n := Vector3(left - right, 2.0 * STEP, back - front).normalized()
+			normals[idx] = n
+			# Form mirrors function: any face a pylon can bite reads as concrete.
+			if n.y < PYLON_FACE:
+				colors[idx] = colors[idx].lerp(pylon_tint, clampf((PYLON_FACE - n.y) * 6.0, 0.0, 0.8))
 
 	var indices := PackedInt32Array()
-	indices.resize(cells * cells * 6)
+	indices.resize(CELLS * CELLS * 6)
 	var w := 0
-	for j in cells:
-		for i in cells:
-			var a := j * side + i
+	for j in CELLS:
+		for i in CELLS:
+			var a := j * SIDE + i
 			var b := a + 1
-			var c := a + side
+			var c := a + SIDE
 			var d := c + 1
 			# Clockwise from above is Godot's front-face winding, and a trimesh
 			# collider only collides on its front faces.
@@ -296,66 +227,7 @@ func _build_ground(parent: Node3D) -> void:
 	body.add_child(shape)
 	body.add_child(view)
 	parent.add_child(body)
-
-
-func _build_props(parent: Node3D) -> void:
-	var concrete := Palette.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
-	var copper := Palette.solid(Palette.COPPER)
-	var rust := Palette.solid(Palette.RUST)
-
-	var house := at(PUMP_HOUSE, 0.0)
-	_box(parent, Vector3(22.0, 11.0, 15.0), house + Vector3.UP * 5.0, concrete)
-	_box(parent, Vector3(24.0, 1.2, 17.0), house + Vector3.UP * 11.2, Palette.solid(Palette.VERDIGRIS))
-	for dx in [-7.0, 7.0]:
-		_cylinder(parent, 1.9, 9.0, house + Vector3(dx, 16.0, -4.0), copper)
-
-	# Kerbs flank each chute mouth so the fast lane reads as an entrance, not a dip.
-	for c in CHUTES:
-		var mouth_z: float = c["z0"] - 3.0
-		for side in [-1.0, 1.0]:
-			var kx: float = c["x"] + side * (CHUTE_R + 3.0)
-			_box(parent, Vector3(2.0, 2.4, 16.0), ground_point(kx, mouth_z, 0.4), rust)
-
-	# Two mid-shelf benches: low lips to carry a scrap line and launch off.
-	_box(parent, Vector3(26.0, 3.0, 9.0), at(Vector2(-58.0, -4.0), 0.6), concrete)
-	_box(parent, Vector3(26.0, 3.0, 9.0), at(Vector2(66.0, 2.0), 0.6), concrete)
-
-
-func _box(parent: Node3D, size: Vector3, origin: Vector3, mat: Material) -> void:
-	var body := StaticBody3D.new()
-	body.position = origin
-	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	mesh.mesh = box
-	mesh.material_override = mat
-	var shape := CollisionShape3D.new()
-	var box_shape := BoxShape3D.new()
-	box_shape.size = size
-	shape.shape = box_shape
-	body.add_child(shape)
-	body.add_child(mesh)
-	parent.add_child(body)
-
-
-func _cylinder(parent: Node3D, radius: float, height_m: float, origin: Vector3, mat: Material) -> void:
-	var body := StaticBody3D.new()
-	body.position = origin
-	var mesh := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = radius
-	cyl.bottom_radius = radius
-	cyl.height = height_m
-	mesh.mesh = cyl
-	mesh.material_override = mat
-	var shape := CollisionShape3D.new()
-	var cyl_shape := CylinderShape3D.new()
-	cyl_shape.radius = radius
-	cyl_shape.height = height_m
-	shape.shape = cyl_shape
-	body.add_child(shape)
-	body.add_child(mesh)
-	parent.add_child(body)
+	return heights
 
 
 func _build_sky(parent: Node3D) -> void:
@@ -366,16 +238,16 @@ func _build_sky(parent: Node3D) -> void:
 	sky_material.ground_horizon_color = Palette.SANDSTONE
 	var sky := Sky.new()
 	sky.sky_material = sky_material
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.75
-	env.fog_enabled = true
-	env.fog_density = 0.0009
-	env.fog_light_color = Palette.SAND.lerp(Palette.VERDIGRIS, 0.35)
+	environment = Environment.new()
+	environment.background_mode = Environment.BG_SKY
+	environment.sky = sky
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	environment.ambient_light_energy = 0.75
+	environment.fog_enabled = true
+	environment.fog_density = 0.0009
+	environment.fog_light_color = Palette.SAND.lerp(Palette.VERDIGRIS, 0.35)
 	var world_env := WorldEnvironment.new()
-	world_env.environment = env
+	world_env.environment = environment
 	parent.add_child(world_env)
 
 	var sun := DirectionalLight3D.new()
