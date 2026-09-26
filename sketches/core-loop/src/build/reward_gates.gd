@@ -2,10 +2,20 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Parts := preload("res://src/build/parts.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
-# Two gates placed ahead of the ball along its line; rolling through one takes its
-# part. There is no collider and no menu, so choosing never costs speed. If you roll
-# past both, they are put ahead of you again rather than waiting behind you.
+# The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
+# its line; rolling through one takes its part. There is no collider and no menu, so
+# choosing never costs speed. If you roll past both, they are put ahead of you again
+# rather than waiting behind you.
+#
+# Each gate says what it gives while you approach, in the order you need it:
+# "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
+# complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
+# ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
+# (a bar for common, a diamond for uncommon, a star for rare, a tall star for
+# rare-plus), so colour never carries it alone.
 
 signal chosen(part_id: String)
 
@@ -15,13 +25,27 @@ const WIDTH := 8.0
 const HEIGHT := 7.0
 const MISSED_BEYOND := 20.0
 const LOST_BEYOND := 110.0
+# Gates go downhill of the ball, never up a bank (momentum is sacred): candidate
+# headings are tried nearest the ball's own line first, at these distances and
+# spreads, and the first whose gate spots and approach lines stay at or below the
+# ground under the ball (within CLIMB_TOLERANCE) wins. If none does, the candidate that
+# climbs least is used.
+const TURN_STEPS := [0.0, 20.0, -20.0, 40.0, -40.0, 60.0, -60.0, 90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
+const DISTANCES := [AHEAD, 30.0, 24.0, 18.0]
+const SPREADS := [SPREAD, 6.0]
+const CLIMB_TOLERANCE := 0.75
+const PATH_SAMPLES := 6
 
 var offers: Array = []
+# Build's offer_mark(part_id) -> String; the star line under an offer, or "".
+var mark_for: Callable
 
 var _terrain
 var _ids: Array = []
+var _held: Array = []
 var _last_side := {}
 var _gates: Array[Node3D] = []
+var _spin := 0.0
 
 
 func setup(terrain) -> void:
@@ -29,10 +53,11 @@ func setup(terrain) -> void:
 	visible = false
 
 
-# Returns the published offers: part_id, at (ground centre), facing (the way through),
-# width. Presentation and tests read the same records the crossing test uses.
-func open(part_ids: Array, ball: Vector3, heading: Vector3) -> Array:
+# Returns the published offers: part_id, at (ground centre), facing (the way through)
+# and width, plus name, text, rarity, tier and synergy for anything that draws them.
+func open(part_ids: Array, ball: Vector3, heading: Vector3, held: Array = []) -> Array:
 	_ids = part_ids
+	_held = held.duplicate()
 	_place(ball, heading)
 	visible = true
 	return offers
@@ -81,22 +106,81 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	_gates.clear()
 	offers = []
 	_last_side = {}
-	var facing := Vector3(heading.x, 0.0, heading.z).normalized()
-	var side := facing.cross(Vector3.UP).normalized()
+	var plan := choose_placement(ball, heading)
+	var facing: Vector3 = plan["facing"]
 	for i in _ids.size():
-		var offset := (float(i) - (_ids.size() - 1) * 0.5) * 2.0 * SPREAD
-		var spot := ball + facing * AHEAD + side * offset
+		var at: Vector3 = plan["spots"][i]
+		var part_id: String = _ids[i]
+		var d: Resource = Parts.def(part_id)
+		var completes := Parts.completed_by(part_id, _held)
+		offers.append({
+			"part_id": part_id, "at": at, "facing": facing, "width": WIDTH,
+			"name": Parts.display_name(part_id),
+			"headline": Parts.headline(part_id),
+			"verb": d.verb if d != null else "",
+			"punch": d.punch if d != null else 0.0,
+			"text": d.text if d != null else "",
+			"rarity": d.rarity if d != null else "common",
+			"tier": d.tier if d != null else 1,
+			"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
+			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
+		})
+		_gates.append(_build_gate(at, facing, offers[-1]))
+
+
+# The gate spots for count gates: {facing, spots, climb}. Climb is the most any gate
+# spot or approach sample rises above the ground under the ball.
+func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
+	var count := maxi(1, _ids.size())
+	var ground: float = _terrain.height(ball.x, ball.z)
+	var base := Vector3(heading.x, 0.0, heading.z).normalized()
+	if base.length() < 0.5:
+		base = Vector3.FORWARD
+	var best := {}
+	for turn in TURN_STEPS:
+		var facing := base.rotated(Vector3.UP, deg_to_rad(turn))
+		for distance in DISTANCES:
+			for spread in SPREADS:
+				var plan := _candidate(ball, ground, facing, distance, spread, count)
+				if plan["climb"] <= CLIMB_TOLERANCE:
+					return plan
+				if best.is_empty() or plan["climb"] < best["climb"]:
+					best = plan
+	return best
+
+
+func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int) -> Dictionary:
+	var side := facing.cross(Vector3.UP).normalized()
+	var spots: Array[Vector3] = []
+	var climb := -INF
+	for i in count:
+		var offset := (float(i) - (count - 1) * 0.5) * 2.0 * spread
+		var spot := ball + facing * distance + side * offset
 		var at: Vector3 = _terrain.drop_point(spot.x, spot.z, 0.0)
-		offers.append({"part_id": _ids[i], "at": at, "facing": facing, "width": WIDTH})
-		_gates.append(_build_gate(at, facing, _ids[i]))
+		spots.append(at)
+		for k in PATH_SAMPLES + 1:
+			var p := ball.lerp(spot, float(k) / PATH_SAMPLES)
+			climb = maxf(climb, _terrain.height(p.x, p.z) - ground)
+	return {"facing": facing, "spots": spots, "climb": climb, "distance": distance}
 
 
-func _build_gate(at: Vector3, facing: Vector3, part_id: String) -> Node3D:
+static func rarity_color(rarity: String) -> Color:
+	match rarity:
+		"uncommon":
+			return Palette.ARC
+		"rare":
+			return Palette.AMBER
+		"rare_plus":
+			return Palette.HAZARD
+	return Palette.SANDSTONE
+
+
+func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	var gate := Node3D.new()
 	add_child(gate)
 	gate.global_position = at
 	gate.global_basis = Basis.looking_at(facing, Vector3.UP)
-	var tint := EventKinds.color("reward_offered")
+	var tint := rarity_color(offer["rarity"])
 	var mat := Palette.solid(tint, 1.4)
 	for x in [-WIDTH * 0.5, WIDTH * 0.5]:
 		var post := MeshInstance3D.new()
@@ -113,13 +197,52 @@ func _build_gate(at: Vector3, facing: Vector3, part_id: String) -> Node3D:
 	bar.material_override = mat
 	bar.position = Vector3(0.0, HEIGHT, 0.0)
 	gate.add_child(bar)
+	var topper := _topper(offer["rarity"], Palette.solid(tint, 2.6))
+	topper.name = "Topper"
+	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
+	gate.add_child(topper)
 	var label := Label3D.new()
-	label.text = part_id.replace("_", " ").capitalize()
-	label.font_size = 96
+	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
+	if offer["mark"] != "":
+		lines += "\n" + offer["mark"]
+	label.text = lines
+	label.font_size = 80
 	label.pixel_size = 0.02
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.modulate = tint
-	label.outline_size = 12
-	label.position = Vector3(0.0, HEIGHT + 1.6, 0.0)
+	label.modulate = tint.lerp(Color.WHITE, 0.25)
+	label.outline_size = 14
+	label.position = Vector3(0.0, HEIGHT + 3.4, 0.0)
 	gate.add_child(label)
 	return gate
+
+
+static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	match rarity:
+		"uncommon":
+			var gem := SphereMesh.new()
+			gem.radius = 0.8
+			gem.height = 2.0
+			gem.radial_segments = 4
+			gem.rings = 2
+			node.mesh = gem
+		"rare", "rare_plus":
+			var star := PrismMesh.new()
+			star.size = Vector3(1.8, 2.8 if rarity == "rare_plus" else 1.8, 0.4)
+			node.mesh = star
+		_:
+			var slab := BoxMesh.new()
+			slab.size = Vector3(1.6, 0.4, 0.4)
+			node.mesh = slab
+	node.material_override = mat
+	return node
+
+
+func _process(delta: float) -> void:
+	if offers.is_empty():
+		return
+	_spin += delta * 1.8
+	for gate in _gates:
+		var topper := gate.get_node_or_null("Topper") as Node3D
+		if topper != null:
+			topper.rotation = Vector3(0.0, _spin, 0.0)
