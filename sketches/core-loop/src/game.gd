@@ -115,6 +115,9 @@ func _ready() -> void:
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
 	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
+	# Read ctx.spawner at call time, so a test double or a late swap is honoured.
+	player.crush_check = func(enemy: Node3D, kind: String, force: float) -> bool:
+		return ctx.spawner != null and ctx.spawner.has_method("would_crush") and ctx.spawner.would_crush(enemy, kind, force)
 
 	flow.setup(ctx, beacon)
 	events.flow_changed.connect(_on_flow_changed)
