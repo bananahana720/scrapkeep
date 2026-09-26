@@ -30,6 +30,9 @@ const SPECS := [
 	{"key": "slingshot_keep", "label": "Slingshot keep", "min": 0.0, "max": 1.5, "step": 0.05, "value": 0.85},
 	{"key": "slingshot_boost", "label": "Slingshot boost", "min": 0.0, "max": 20.0, "step": 0.5, "value": 6.0},
 	{"key": "split_dash_cooldown", "label": "Split dash cooldown", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
+	# v2's ground probe turned with the ball, so "grounded" flickered with the spin.
+	# Off is the fix; on brings the v2 feel back for a side-by-side comparison.
+	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
 ]
 
 const BRAKE_RESISTANCE := 4.0

@@ -3,9 +3,10 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# The stage exit. Charging starts the moment the ball rolls into the ring, with no key
-# to press and no need to stop: circling inside the ring charges it, leaving pauses it.
-# One state and one number, so a test can step it without a clock.
+# The stage exit. Sealed, a Warden clamps it: the charge shown is how much of the Warden
+# is broken, and sitting in the ring adds nothing. Unsealed, charging starts the moment
+# the ball rolls into the ring, with no key and no need to stop: circling inside charges
+# it, leaving pauses it. One state and one number, so a test can step it without a clock.
 
 enum { IDLE, CHARGING, READY }
 
@@ -74,19 +75,33 @@ func fraction() -> float:
 	return clampf(progress / maxf(0.01, duration), 0.0, 1.0)
 
 
-# Returns true on the tick the charge completes.
-func advance(delta: float, ball: Vector3) -> bool:
+# Returns true on the tick the charge completes. Sealed, ring entry still marks the
+# beacon engaged but only breaking the Warden moves the charge.
+func advance(delta: float, ball: Vector3, sealed := false) -> bool:
 	if phase == READY:
 		return false
 	if not in_ring(ball):
 		return false
 	phase = CHARGING
+	if sealed:
+		return false
 	progress = minf(duration, progress + delta)
 	_refresh()
 	if progress >= duration:
 		phase = READY
 		return true
 	return false
+
+
+# Sealed charge follows the Warden's damage, set by flow every tick.
+func show_progress(value: float) -> void:
+	progress = clampf(value, 0.0, duration)
+	_refresh()
+
+
+func open() -> void:
+	phase = READY
+	show_progress(duration)
 
 
 func _refresh() -> void:

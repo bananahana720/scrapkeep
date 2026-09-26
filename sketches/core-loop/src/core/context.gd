@@ -25,6 +25,12 @@ var terrain: RefCounted
 # The combat module (writer A) behind the spawner API: spawn_enemy(kind, at) and
 # strike(enemy, kind, force). Set by combat.setup(ctx).
 var spawner: Node
+# The build module (writer B), set by build.setup(ctx). Read it through has_method;
+# builds from before this field existed use ctx.get_meta("build"), which build() also
+# reads.
+var build: Node
+# The persistent codex (src/core/codex.gd): declare entries, mark discoveries.
+var codex: Node
 # The node modules add their world children to.
 var root: Node3D
 # One seeded stream per run for anything a module randomizes.
@@ -38,6 +44,12 @@ var _hit_stop: Callable
 
 func _init(hit_stop_impl := Callable()) -> void:
 	_hit_stop = hit_stop_impl
+
+
+func build_module() -> Node:
+	if build != null:
+		return build
+	return get_meta("build") if has_meta("build") else null
 
 
 func aim_origin() -> Vector3:
