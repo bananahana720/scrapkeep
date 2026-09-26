@@ -33,7 +33,7 @@ var reach_up := 3.5
 var terrain
 var progress := 0.0
 
-var _fill: MeshInstance3D
+var _fill: Node3D
 
 
 static func ring(parent: Node, terrain_ref, at: Vector3, ring_radius: float, reach := 3.5) -> Node3D:

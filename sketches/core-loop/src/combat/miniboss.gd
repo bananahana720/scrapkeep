@@ -17,7 +17,7 @@ extends "res://src/combat/enemy.gd"
 # Weight: WEIGHT divides every shove, so rams rock it and slams nudge it; it cannot be
 # knocked during a leap or a charge.
 
-const HP := 320.0
+const HP := 900.0
 const SCRAP := 24
 const WEIGHT := 5.0
 const RADIUS := 2.3
@@ -37,7 +37,7 @@ const CHARGE_TIME := 0.9
 const CHARGE_DAMAGE := 20.0
 const CHARGE_SHOVE := 10.0
 const WEAK_SECONDS := 2.4
-const WEAK_SCALE := 2.5
+const WEAK_SCALE := 2.2
 const ARMOUR_SCALE := 0.35
 
 enum State { STALK, SLAM_CROUCH, SLAM_LEAP, CHARGE_BRACE, CHARGE, WEAK }
