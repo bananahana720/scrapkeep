@@ -9,7 +9,6 @@ const DT := 1.0 / 90.0
 const OUTSIDE := ExitCharge.RADIUS + 20.0
 
 var _stage
-var _started := false
 var _placed := false
 
 
@@ -19,18 +18,19 @@ func _initialize() -> void:
 	root.add_child(_stage)
 
 
-func _process(_delta: float) -> bool:
-	if not _started:
+# Driven by physics ticks, not idle frames. The rigid ball's reset only queues a
+# transform that lands on the next physics tick, and how many ticks fall between
+# two idle frames depends on wall-clock time: on a loaded machine the ball could
+# still read at the spawn, 104 m away.
+func _physics_process(_delta: float) -> bool:
+	if not _placed:
 		if _stage.player == null:
 			return false
-		_started = true
+		_placed = true
 		_stage.director.paused = true
 		# Inside the 30 m charge zone but clear of the gate ring, so the run does
 		# not end the instant the charge completes.
 		_stage.player.reset_to(Terrain.at(Terrain.PUMP_HOUSE + Vector2(0.0, 30.0), 2.0))
-		return false
-	if not _placed:
-		_placed = true
 		return false
 
 	var terminal = _stage.exit_terminal
