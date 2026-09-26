@@ -41,6 +41,16 @@ func _initialize() -> void:
 		var cat: Dictionary = EventKinds.CODEX_CATEGORIES[id]
 		categories_ok = categories_ok and cat.get("color") is Color and String(cat.get("label", "")) != "" \
 			and cat.get("shape", "") in EventKinds.SHAPES
+	var contracts := FileAccess.get_file_as_string("res://CONTRACTS.md")
+	var rules := [
+		"A foreseen, telegraphed cost from the player's own performance is allowed; an unforeseen stop is not.",
+		"Every new mechanic names in its DESIGN-NOTES line the stage demand it serves (Warden, event, vault, boss phase) and the principle it strains; a mechanic that serves none is parked, not built.",
+		"Heft never changes RigidBody mass, radius, torque or air control.",
+	]
+	var missing_rules: Array[String] = []
+	for rule in rules:
+		if not contracts.contains(rule):
+			missing_rules.append(rule.left(40))
 	var toasts_without_words: Array[String] = []
 	for kind in names:
 		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "":
@@ -51,6 +61,7 @@ func _initialize() -> void:
 		["row shape", malformed.is_empty(), "%d rows missing a field or out of range %s" % [malformed.size(), malformed]],
 		["orphans", orphans.is_empty(), "%d rows naming no signal %s" % [orphans.size(), orphans]],
 		["critical wording", toasts_without_words.is_empty(), "%d priority-3 kinds with no HUD or objective wording %s" % [toasts_without_words.size(), toasts_without_words]],
+		["contract rules", missing_rules.is_empty(), "%d of %d required rules missing from CONTRACTS.md %s" % [missing_rules.size(), rules.size(), missing_rules]],
 		["no optional", optional.is_empty(), "%d objectives use the word optional %s" % [optional.size(), optional]],
 		["codex categories", categories_ok and EventKinds.CODEX_CATEGORIES.size() == 5, "%d codex categories, each with a colour, label and shape" % EventKinds.CODEX_CATEGORIES.size()],
 	]
