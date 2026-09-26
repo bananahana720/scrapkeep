@@ -27,6 +27,11 @@ var _found_category := {}
 var _run_seen := {}
 var _run_found := {}
 var _run_discoveries: Array[String] = []
+# What this stage attempt discovered. A retry rewinds the run to the stage start,
+# burst scrap included, so it rewinds these too and they can fire and pay again.
+var _attempt_seen: Array[String] = []
+var _attempt_found: Array[String] = []
+var _warned := {}
 
 
 func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
@@ -37,6 +42,7 @@ func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
 	storage_dir = dir
 	_load()
 	events.run_started.connect(_on_run_started)
+	events.stage_entered.connect(_on_stage_entered)
 
 
 # Idempotent: a second declare of the same id updates its words, never duplicates it.
@@ -44,9 +50,10 @@ func declare(entry: Dictionary) -> void:
 	var id := String(entry.get("id", ""))
 	if id == "":
 		return
-	var category := String(entry.get("category", "build"))
+	var category := String(entry.get("category", ""))
 	if not category in CATEGORIES:
-		category = "build"
+		_warn_once("category:" + id, "codex: %s declares unknown category \"%s\"; not registered" % [id, category])
+		return
 	if not _entries.has(id):
 		_order.append(id)
 	_entries[id] = {
@@ -86,7 +93,7 @@ func name_of(id: String) -> String:
 
 
 func category_of(id: String) -> String:
-	return _entries[id]["category"] if _entries.has(id) else "build"
+	return _entries[id]["category"] if _entries.has(id) else ""
 
 
 func entries(category := "") -> Array:
@@ -120,10 +127,13 @@ func mark_discovered(id: String, at := Vector3.ZERO, participants: Array = ["pla
 	if first_time:
 		_discovered[id] = true
 		_save()
+	if not _entries.has(id):
+		_warn_once("undeclared:" + id, "codex: %s was discovered but never declared" % id)
 	if _run_seen.has(id):
 		return first_time
 	_run_seen[id] = true
 	_run_discoveries.append(id)
+	_attempt_seen.append(id)
 	var category := category_of(id)
 	_log({"kind": "discovered", "category": category, "id": id, "participants": participants})
 	events.synergy_discovered.emit(id, category, first_time)
@@ -143,6 +153,7 @@ func mark_found(text: String, category := "world", participants: Array = ["playe
 	if _run_found.has(text):
 		return first_time
 	_run_found[text] = true
+	_attempt_found.append(text)
 	_log({"kind": "found", "category": category, "text": text, "participants": participants})
 	events.interaction_found.emit(text)
 	return first_time
@@ -152,6 +163,26 @@ func _on_run_started(_class_id: String) -> void:
 	_run_seen = {}
 	_run_found = {}
 	_run_discoveries = []
+	_attempt_seen = []
+	_attempt_found = []
+
+
+func _on_stage_entered(_stage: int, retry: bool) -> void:
+	if retry:
+		for id in _attempt_seen:
+			_run_seen.erase(id)
+			_run_discoveries.erase(id)
+		for text in _attempt_found:
+			_run_found.erase(text)
+	_attempt_seen = []
+	_attempt_found = []
+
+
+func _warn_once(key: String, message: String) -> void:
+	if _warned.has(key):
+		return
+	_warned[key] = true
+	push_warning(message)
 
 
 func _log(fields: Dictionary) -> void:

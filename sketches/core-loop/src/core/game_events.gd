@@ -24,6 +24,7 @@ signal player_died
 signal enemy_killed(kind: String, at: Vector3, scrap_value: int)
 signal milestone_won(event_id: String)
 signal heft_class_changed(heft_class: int, heft: float)
+signal heft_class_dropped(heft_class: int, heft: float)
 signal scrap_lost(amount: int, at: Vector3, total: int, cause: String)
 signal core_gained(source: String, at: Vector3, count: int)
 

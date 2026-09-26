@@ -133,7 +133,10 @@ func _ready() -> void:
 	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
 	# Read ctx.spawner at call time, so a test double or a late swap is honoured.
 	player.crush_check = func(enemy: Node3D, kind: String, force: float) -> bool:
-		return ctx.spawner != null and ctx.spawner.has_method("would_crush") and ctx.spawner.would_crush(enemy, kind, force)
+		if ctx.spawner == null or not ctx.spawner.has_method("would_crush"):
+			flow.warn_once("would_crush", "game: spawner has no would_crush(); crush pass-through is off")
+			return false
+		return ctx.spawner.would_crush(enemy, kind, force)
 
 	flow.setup(ctx, beacon)
 	events.flow_changed.connect(_on_flow_changed)

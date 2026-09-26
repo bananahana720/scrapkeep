@@ -41,6 +41,14 @@ var boss_plating := 120.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
 var _engaged := false
+# Where this stage's Warden stands; it is immobile, so a warden kill reported far from
+# here belongs to some other warden and does not unseal this beacon.
+var _warden_at := Vector3.ZERO
+# While sealed the shown charge stops short of full, so 1.0 is published only by the
+# unseal itself and a module that opens gates on 1.0 cannot run ahead of the kill.
+const SEALED_CAP := 0.99
+const WARDEN_MATCH := 6.0
+var _warned := {}
 
 var _launched := false
 var _flight := 0.0
@@ -202,6 +210,7 @@ func _place_beacon() -> void:
 	_engaged = false
 	sealed = (not ctx.calm) or force_warden
 	warden = _spawn_warden() if sealed else null
+	_warden_at = warden.global_position if warden != null else Vector3.ZERO
 	# No Warden to break (a spawner without the kind): the stage stays on the
 	# presence path rather than locking the exit.
 	if warden == null:
@@ -216,14 +225,19 @@ func _spawn_warden() -> Node3D:
 
 
 # Spawner reads, each with the fallback the contract names for a spawner without it.
+# A fallback that fires says so once, so a missing seam shows up in the log.
 func warden_integrity() -> float:
-	if not is_instance_valid(warden) or not ctx.spawner.has_method("integrity_of"):
+	if not is_instance_valid(warden):
+		return 1.0
+	if not ctx.spawner.has_method("integrity_of"):
+		warn_once("integrity_of", "flow: spawner has no integrity_of(); the Warden charge reads 0")
 		return 1.0
 	return ctx.spawner.integrity_of(warden)
 
 
 func punch_now() -> float:
 	if ctx.spawner == null or not ctx.spawner.has_method("punch_now"):
+		warn_once("punch_now", "flow: spawner has no punch_now(); punch reads 0")
 		return 0.0
 	return ctx.spawner.punch_now()
 
@@ -231,7 +245,16 @@ func punch_now() -> float:
 func warden_plating() -> float:
 	if is_instance_valid(warden) and ctx.spawner.has_method("plating_of"):
 		return ctx.spawner.plating_of(warden)
+	if is_instance_valid(warden):
+		warn_once("plating_of", "flow: spawner has no plating_of(); showing the stage's warden_plating")
 	return stage_def()["warden_plating"]
+
+
+func warn_once(key: String, message: String) -> void:
+	if _warned.has(key):
+		return
+	_warned[key] = true
+	push_warning(message)
 
 
 func physics_step(delta: float) -> void:
@@ -242,10 +265,11 @@ func physics_step(delta: float) -> void:
 	match state:
 		STAGE, BEACON:
 			if sealed and not is_instance_valid(warden):
-				sealed = false
+				_warden_vanished()
+				return
 			var done: bool = beacon.advance(delta, ball, sealed)
 			if sealed:
-				beacon.show_progress(beacon.duration * (1.0 - warden_integrity()))
+				beacon.show_progress(beacon.duration * minf(SEALED_CAP, 1.0 - warden_integrity()))
 				if beacon.phase != Beacon.IDLE:
 					_engage()
 			if state == STAGE and beacon.phase != Beacon.IDLE:
@@ -293,9 +317,31 @@ func _on_launched(_velocity: Vector3) -> void:
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done
 # and nothing asks you to roll back to the ring.
-func _on_enemy_killed(kind: String, _at: Vector3, _scrap_value: int) -> void:
+func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
 	if kind != "warden" or not sealed or not (state == STAGE or state == BEACON):
 		return
+	if not _is_this_warden(at):
+		return
+	_unseal()
+
+
+# The kill is this stage's Warden when the spawner reads it as broken, or, for a
+# spawner that cannot say, when it died where this Warden stands.
+func _is_this_warden(at: Vector3) -> bool:
+	if is_instance_valid(warden) and ctx.spawner.has_method("integrity_of"):
+		return ctx.spawner.integrity_of(warden) <= 0.0
+	return at.distance_to(_warden_at) <= WARDEN_MATCH
+
+
+# A Warden that left the tree with no kill recorded is a seam fault, not the player's:
+# the stage opens the same way a break does, and the run log keeps a note of it.
+func _warden_vanished() -> void:
+	warn_once("warden_vanished", "flow: the Warden left without a recorded kill; unsealing stage %d" % ctx.run.stage)
+	ctx.run.note_anomaly("warden_vanished")
+	_unseal()
+
+
+func _unseal() -> void:
 	sealed = false
 	warden = null
 	beacon.open()

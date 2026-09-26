@@ -105,5 +105,6 @@ func _write(outcome: String) -> void:
 		stages.append(_stages[index])
 	line["stages"] = stages
 	line["codex"] = codex.discovered_this_run() if codex != null else []
+	line["anomalies"] = run.anomalies.duplicate(true)
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1

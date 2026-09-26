@@ -26,6 +26,7 @@ const FIELD_ARGS := {
 	"event_ended": ["event", 0],
 	"milestone_won": ["event", 0],
 	"heft_class_changed": ["class", 0],
+	"heft_class_dropped": ["class", 0],
 	"synergy_discovered": ["name", 0],
 }
 
@@ -123,7 +124,7 @@ static func _arg_count(events, kind: String) -> int:
 func _on_field_fact(value, kind: String) -> void:
 	var field: String = FIELD_ARGS[kind][0]
 	var shown = value
-	if kind == "heft_class_changed":
+	if kind == "heft_class_changed" or kind == "heft_class_dropped":
 		shown = RunState.roman(int(value))
 	elif kind == "synergy_discovered" and game.codex != null:
 		shown = game.codex.name_of(value)
