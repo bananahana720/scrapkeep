@@ -9,9 +9,9 @@ const Hud := preload("res://src/hud.gd")
 const TuningPanel := preload("res://src/tuning_panel.gd")
 const Intent := preload("res://src/intent.gd")
 const Augments := preload("res://src/augments.gd")
+const FieldNotes := preload("res://src/field_notes.gd")
 
 const REEL_NOTCH := 1.2
-const AIM_CAST := 90.0
 const AUGMENT_KEYS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5]
 
 const ACTIONS := {
@@ -22,7 +22,7 @@ const ACTIONS := {
 	"lab_jump": [KEY_SPACE],
 	"lab_boost": [KEY_SHIFT],
 	"lab_brake": [KEY_CTRL],
-	"lab_cling": [KEY_E],
+	"lab_mount": [KEY_E],
 	"lab_reel": [KEY_Q],
 }
 
@@ -35,7 +35,11 @@ var player
 var camera
 var hud
 var panel
+var notes
 var enemies: Array[Node3D] = []
+
+var _pause_toggled := false
+var _notes_held := false
 
 
 func _ready() -> void:
@@ -67,10 +71,14 @@ func _ready() -> void:
 	player.source = Intent.Keyboard.new()
 	hud = Hud.new()
 	add_child(hud)
-	hud.setup(player, tuning)
+	hud.setup(player, tuning, camera.cam)
 	panel = TuningPanel.new()
 	add_child(panel)
 	panel.setup(tuning)
+	notes = FieldNotes.new()
+	notes.name = "FieldNotes"
+	add_child(notes)
+	notes.setup(self)
 	_capture_mouse(true)
 
 
@@ -78,24 +86,84 @@ func _physics_process(_delta: float) -> void:
 	player.drive_basis = camera.yaw_basis()
 	if test_mode:
 		return
-	player.kit.aim_point = _aim_hit()
+	aim_along(camera.cam.global_position, -camera.cam.global_basis.z)
 
 
-# Fires along the crosshair, but the range that matters is the rope's, measured from
-# the ball rather than from the camera behind it.
-func _aim_hit():
+# The single answer to "what would the grapple hit right now". The reticle, the world
+# marker and fire_grapple() all read the record this stores.
+func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	if not player.kit.on(Augments.GRAPPLE):
-		return null
-	var from: Vector3 = camera.cam.global_position
-	var to: Vector3 = from - camera.cam.global_transform.basis.z * AIM_CAST
-	var hit := get_world_3d().direct_space_state.intersect_ray(
-		PhysicsRayQueryParameters3D.create(from, to, 1))
-	if hit.is_empty():
-		return null
-	var point: Vector3 = hit["position"]
-	if point.distance_to(player.ball_position()) > player.grapple_range():
-		return null
-	return point
+		player.kit.aim = Augments.no_aim()
+	else:
+		player.kit.aim = Augments.grapple_target(get_world_3d().direct_space_state, from, forward,
+			player.ball_position(), player.grapple_range(), tuning.f("grapple_assist_deg"))
+	return player.kit.aim
+
+
+func fire_grapple() -> bool:
+	var aim: Dictionary = player.kit.aim
+	if aim["state"] == Augments.AIM_NONE:
+		return false
+	player.grapple_to(aim["point"], aim["normal"])
+	return true
+
+
+# Off by default so v1's feel stays the baseline; F3 flips it live for comparison.
+func toggle_interpolation() -> bool:
+	get_tree().physics_interpolation = not get_tree().physics_interpolation
+	reset_physics_interpolation()
+	return get_tree().physics_interpolation
+
+
+func interpolating() -> bool:
+	return get_tree().physics_interpolation
+
+
+# The panel keeps nothing between runs, so F4 records exactly what was being played.
+func dump_tuning() -> String:
+	var values := {}
+	for spec in Tuning.SPECS:
+		values[spec["key"]] = tuning.f(spec["key"])
+	var record := {
+		"sketch": "mobility-kit v2",
+		"saved_unix": Time.get_unix_time_from_system(),
+		"physics_mode": player.mode_name(),
+		"physics_interpolation": interpolating(),
+		"tuning": values,
+	}
+	var path := "user://tuning-%d.json" % int(Time.get_unix_time_from_system())
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_warning("tuning dump failed: %s" % error_string(FileAccess.get_open_error()))
+		return ""
+	file.store_string(JSON.stringify(record, "  "))
+	file.close()
+	var shown := ProjectSettings.globalize_path(path)
+	print("tuning saved to ", shown)
+	return shown
+
+
+# Tab holds the notes open and P toggles; either one pauses the tree.
+func toggle_pause() -> void:
+	_pause_toggled = not _pause_toggled
+	_apply_pause()
+
+
+func hold_notes(held: bool) -> void:
+	_notes_held = held
+	_apply_pause()
+
+
+func pause_toggled() -> bool:
+	return _pause_toggled
+
+
+func notes_held() -> bool:
+	return _notes_held
+
+
+func _apply_pause() -> void:
+	get_tree().paused = _pause_toggled or _notes_held
 
 
 func _register_actions() -> void:
@@ -144,8 +212,15 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	match event.physical_keycode:
-		KEY_TAB:
+		KEY_F2:
 			player.toggle_mode()
+			get_viewport().set_input_as_handled()
+		KEY_F3:
+			toggle_interpolation()
+			get_viewport().set_input_as_handled()
+		KEY_F4:
+			var saved := dump_tuning()
+			hud.toast("tuning saved: %s" % saved if saved != "" else "tuning dump failed (see console)")
 			get_viewport().set_input_as_handled()
 		KEY_F1:
 			panel.visible = not panel.visible
@@ -167,11 +242,12 @@ func _grapple_button(event: InputEventMouseButton) -> void:
 	match event.button_index:
 		MOUSE_BUTTON_RIGHT:
 			if event.pressed:
-				var target = _aim_hit()
-				if target != null:
-					player.grapple_to(target)
+				fire_grapple()
 			else:
 				player.release_grapple()
+		MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				player.zap(camera.cam.global_position, -camera.cam.global_basis.z)
 		MOUSE_BUTTON_WHEEL_UP:
 			if event.pressed:
 				player.reel_step(REEL_NOTCH)
@@ -195,6 +271,7 @@ func _on_shockwave(at: Vector3, strength: float) -> void:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	ring.material_override = mat
+	ring.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	ring.position = at
 	add_child(ring)
 	var tween := create_tween()

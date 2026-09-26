@@ -16,9 +16,16 @@ const SPECS := [
 	{"key": "glide_lift", "label": "Glide lift", "min": 0.0, "max": 4.0, "step": 0.05, "value": 1.30},
 	{"key": "rope_range", "label": "Rope range", "min": 10.0, "max": 60.0, "step": 1.0, "value": 45.0},
 	{"key": "rope_spring", "label": "Rope spring", "min": 1.0, "max": 30.0, "step": 0.5, "value": 12.0},
-	{"key": "reel_speed", "label": "Reel speed", "min": 2.0, "max": 30.0, "step": 0.5, "value": 12.0},
+	{"key": "grapple_assist_deg", "label": "Grapple assist (deg)", "min": 0.0, "max": 12.0, "step": 0.5, "value": 4.0},
+	# The winch is an acceleration toward the hook that fades out as the haul reaches
+	# its top speed, so holding Q draws you in rather than snapping you there.
+	{"key": "reel_force", "label": "Winch pull", "min": 5.0, "max": 120.0, "step": 1.0, "value": 45.0},
+	{"key": "reel_speed", "label": "Winch top speed", "min": 2.0, "max": 40.0, "step": 0.5, "value": 16.0},
 	{"key": "slam_speed", "label": "Slam speed", "min": 10.0, "max": 80.0, "step": 1.0, "value": 42.0},
-	{"key": "cling_strength", "label": "Cling strength", "min": 0.0, "max": 1.0, "step": 0.01, "value": 0.82},
+	{"key": "slam_anchor_max", "label": "Slam anchor (s)", "min": 0.0, "max": 1.0, "step": 0.02, "value": 0.30},
+	{"key": "slam_flat_exp", "label": "Slam flatness exp", "min": 0.5, "max": 12.0, "step": 0.5, "value": 4.0},
+	{"key": "slam_downhill", "label": "Slam downhill", "min": 0.0, "max": 1.5, "step": 0.05, "value": 0.50},
+	{"key": "split_dash_cooldown", "label": "Split dash cooldown", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
 ]
 
 const BRAKE_RESISTANCE := 4.0
@@ -57,6 +64,10 @@ func nudge(key: String, direction: float) -> void:
 		if spec["key"] == key:
 			set_value(key, _values[key] + spec["step"] * direction * 4.0)
 			return
+
+
+func on(key: String) -> bool:
+	return _values[key] >= 0.5
 
 
 func reset() -> void:

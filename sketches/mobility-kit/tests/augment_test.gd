@@ -8,12 +8,13 @@ const Field := preload("res://src/field.gd")
 # Open sky well above the field, so a probe measures the augment and nothing else.
 const SKY := Vector3(0.0, 150.0, 0.0)
 const FALL_SECONDS := 1.2
-const CLING_SECONDS := 1.0
 const SWING_SECONDS := 3.0
 const ROPE_TOLERANCE := 1.0
 const DASH_SETTLE := 0.25
 const DASH_WINDOW := 0.25
-const SLAM_SETTLE := 0.45
+const SLAM_WINDOW := 1.2
+const KNOCK_WINDOW := 0.35
+const PAD_SPOT := Vector2(20.0, 56.0)
 
 
 class ScriptedSource:
@@ -26,7 +27,7 @@ class ScriptedSource:
 		out.clear()
 		out.jump_held = hold.get("jump_held", false)
 		out.brake_held = hold.get("brake_held", false)
-		out.cling_held = hold.get("cling_held", false)
+		out.mount_pressed = hold.get("mount_pressed", false)
 		out.reel_held = hold.get("reel_held", false)
 		out.boost_pressed = boost
 		boost = false
@@ -46,6 +47,8 @@ var _swing_peak := 0.0
 var _enemy: Node3D
 var _enemy_from := 0.0
 var _slam_at := Vector3.ZERO
+var _slam_clock := -1.0
+var _enemy_after := -1.0
 
 
 func _initialize() -> void:
@@ -57,14 +60,11 @@ func _initialize() -> void:
 		{"enter": _enter_glide, "seconds": FALL_SECONDS, "exit": _record.bind("glide")},
 		{"enter": _enter_slam, "seconds": FALL_SECONDS, "exit": _record.bind("slam")},
 		{"enter": _enter_all_off, "seconds": FALL_SECONDS, "exit": _record.bind("all_off")},
-		{"enter": _enter_wall_fall, "seconds": CLING_SECONDS, "exit": _record.bind("wall_fall")},
-		{"enter": _enter_cling, "seconds": CLING_SECONDS, "exit": _record.bind("cling")},
 		{"enter": _enter_dash_ready, "seconds": DASH_SETTLE, "exit": _fire_dash},
 		{"enter": _noop, "seconds": DASH_WINDOW, "exit": _record.bind("dash")},
 		{"enter": _enter_swing_spot, "seconds": 0.2, "exit": _attach_rope},
 		{"enter": _noop, "seconds": SWING_SECONDS, "exit": _record.bind("swing")},
-		{"enter": _enter_slam_on_dummy, "seconds": SLAM_SETTLE, "exit": _mark_slam_impact},
-		{"enter": _noop, "seconds": 0.35, "exit": _record.bind("knockback")},
+		{"enter": _enter_slam_on_dummy, "seconds": SLAM_WINDOW, "exit": _noop},
 	]
 
 
@@ -73,6 +73,7 @@ func _process(delta: float) -> bool:
 		if _lab.player == null:
 			return false
 		_started = true
+		_lab.player.shockwave.connect(_on_shockwave)
 		_lab.player.source = _source
 		_lab.player.set_mode(PlayerBall.RIGID)
 	if _index >= _steps.size():
@@ -85,6 +86,10 @@ func _process(delta: float) -> bool:
 		return false
 	_clock += delta
 	_watch()
+	if _slam_clock >= 0.0 and _enemy_after < 0.0:
+		_slam_clock += delta
+		if _slam_clock >= KNOCK_WINDOW:
+			_enemy_after = _enemy.global_position.distance_to(_slam_at)
 	if _clock < float(step["seconds"]):
 		return false
 	(step["exit"] as Callable).call()
@@ -145,16 +150,8 @@ func _enter_slam() -> void:
 
 
 func _enter_all_off() -> void:
-	_drop_at(SKY, [], {"jump_held": true, "brake_held": true, "cling_held": true})
+	_drop_at(SKY, [], {"jump_held": true, "brake_held": true, "mount_pressed": true, "reel_held": true})
 	_lab.player.state.air_actions = 0
-
-
-func _enter_wall_fall() -> void:
-	_drop_at(_lab.field.cling_spots[0], [], {"cling_held": true})
-
-
-func _enter_cling() -> void:
-	_drop_at(_lab.field.cling_spots[0], [Augments.CLING], {"cling_held": true})
 
 
 func _enter_dash_ready() -> void:
@@ -179,16 +176,24 @@ func _attach_rope() -> void:
 	_swing_peak = 0.0
 
 
+# The shockwave scales with how flat the landing is, so the dummy is set on the flat pad
+# rather than wherever its chase left it, which may be a hillside.
 func _enter_slam_on_dummy() -> void:
 	_enemy = _lab.enemies[0]
-	var spot: Vector3 = _enemy.global_position
+	var spot := Field.drop_point(PAD_SPOT.x, PAD_SPOT.y, 1.6)
+	_enemy.global_position = spot
 	_slam_at = Field.drop_point(spot.x + 5.0, spot.z, 16.0)
 	_drop_at(_slam_at, [Augments.SLAM], {"brake_held": true})
 
 
-func _mark_slam_impact() -> void:
-	_slam_at = _lab.player.ball_position()
-	_enemy_from = _enemy.global_position.distance_to(_slam_at)
+# The plant holds the ball where it landed, so the landing moment is the only honest
+# zero for the push; a fixed delay after the drop lands before or after it by chance.
+func _on_shockwave(at: Vector3, _strength: float) -> void:
+	if _enemy == null or _slam_clock >= 0.0:
+		return
+	_slam_at = at
+	_enemy_from = _enemy.global_position.distance_to(at)
+	_slam_clock = 0.0
 
 
 # A post you cannot hit with a ray is a post the grapple cannot catch, so the rig is
@@ -216,7 +221,7 @@ func _finish() -> bool:
 	var dash_needs: float = _lab.tuning.f("dash_impulse") * 0.6
 	var rope: float = kit.rope
 	var swing: float = _swing_peak
-	var knock: float = _enemy.global_position.distance_to(_slam_at) - _enemy_from
+	var knock: float = _enemy_after - _enemy_from if _enemy_after >= 0.0 else 0.0
 
 	_report("grapple", _rope_overshoot < ROPE_TOLERANCE and swing > 12.0,
 		"over %.0fs on a %.1f m rope the ball stayed within %.2f m of it (needs < %.1f) and a swing from rest peaked at %.1f m/s (needs > 12.0)"
@@ -233,9 +238,6 @@ func _finish() -> bool:
 	_report("shockwave", knock > 1.0,
 		"dummy %.2f m from the slam point was pushed %.2f m further out (needs > 1.0)"
 			% [_enemy_from, knock])
-	_report("cling", _measured["cling"]["fall"] < _measured["wall_fall"]["fall"],
-		"fall speed beside the wall after %.1fs: %.2f m/s clinging vs %.2f m/s free"
-			% [CLING_SECONDS, _measured["cling"]["fall"], _measured["wall_fall"]["fall"]])
 	# The two falls can be sampled up to two physics ticks apart (26 m/s^2 / 90 Hz
 	# = 0.29 m/s each); a leaking augment moves the fall by 10 m/s or more.
 	_report("augments off", absf(_measured["all_off"]["fall"] - _measured["free_fall"]["fall"]) < 1.0,

@@ -40,7 +40,10 @@ func setup(target_ref, tuning_ref) -> void:
 	cam.far = 700.0
 	cam.current = true
 	mount.add_child(cam)
-	global_position = target.ball_position()
+	global_position = target.shown_position()
+	# The camera is placed per frame from the ball's shown (interpolated) position, so
+	# the renderer must not interpolate it a second time.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 
 
 func look(relative: Vector2) -> void:
@@ -65,7 +68,7 @@ func _process(delta: float) -> void:
 	# Speed pulls the camera back and widens the lens; the lag tightens so the ball
 	# does not slide off screen once it is quick.
 	var follow := 1.0 - exp(-lerpf(6.0, 15.0, fraction) * delta)
-	global_position = global_position.lerp(target.ball_position() + Vector3.UP * 0.8, follow)
+	global_position = global_position.lerp(target.shown_position() + Vector3.UP * 0.8, follow)
 	var ease := 1.0 - exp(-4.0 * delta)
 	arm.spring_length = lerpf(arm.spring_length, lerpf(7.5, 10.5, fraction), ease)
 	cam.fov = lerpf(cam.fov, lerpf(65.0, 82.0, fraction), ease)

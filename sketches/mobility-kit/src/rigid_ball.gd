@@ -5,7 +5,8 @@ const Rules := preload("res://src/ball_rules.gd")
 const Augments := preload("res://src/augments.gd")
 
 signal enemy_touched(enemy: Node3D, normal: Vector3)
-signal slammed(at: Vector3, speed: float)
+signal slammed(at: Vector3, speed: float, flatness: float)
+signal pylon_planted(at: Vector3)
 
 var tuning
 var state
@@ -18,6 +19,7 @@ var _pending_position = null
 var _pending_velocity = null
 var _active := false
 var _last_fall_speed := 0.0
+var _settle_interpolation := 0
 
 
 func setup(tuning_ref, state_ref) -> void:
@@ -73,10 +75,19 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 		global_position = to
 
 
+# A teleport must not be drawn as a streak from the old spot. The node only receives the
+# new transform after this callback, so the reset is repeated on the following ticks.
+func _physics_process(_delta: float) -> void:
+	if _settle_interpolation > 0:
+		_settle_interpolation -= 1
+		reset_physics_interpolation()
+
+
 func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	if _pending_position != null:
 		body_state.transform = Transform3D(body_state.transform.basis, _pending_position)
 		_pending_position = null
+		_settle_interpolation = 2
 	if _pending_velocity != null:
 		body_state.linear_velocity = _pending_velocity
 		var axis := Rules.roll_axis(_pending_velocity, Vector3.UP)
@@ -90,31 +101,41 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	state.velocity = body_state.linear_velocity
 	Rules.probe_ground(_probe, state)
 
-	var wish := Rules.wish_direction(intent, drive_basis, state)
-	if wish != Vector3.ZERO:
-		var head := Rules.drive_head(state, tuning, wish) * Rules.drive_scale(state, tuning, intent)
-		# Torque is the honest way to drive a sphere; a small central force keeps it
-		# from feeling like the ball is fighting its own contact patch.
-		body_state.apply_torque(Vector3.UP.cross(wish) * tuning.f("rigid_torque") * head)
-		body_state.apply_central_force(wish * tuning.f("drive_accel") * 0.3 * mass * head)
+	var wish := Vector3.ZERO
+	if not Augments.holding(kit):
+		wish = Rules.wish_direction(intent, drive_basis, state)
+		if wish != Vector3.ZERO:
+			var head := Rules.drive_head(state, tuning, wish) * Rules.drive_scale(state, tuning, intent)
+			# Torque is the honest way to drive a sphere; a small central force keeps it
+			# from feeling like the ball is fighting its own contact patch.
+			body_state.apply_torque(Vector3.UP.cross(wish) * tuning.f("rigid_torque") * head)
+			body_state.apply_central_force(wish * tuning.f("drive_accel") * 0.3 * mass * head)
 
-	if intent.brake_held and state.grounded:
-		body_state.apply_central_force(-state.velocity.normalized() * Tuning.BRAKE_RESISTANCE * mass)
-		body_state.angular_velocity *= 0.92
-	elif state.grounded:
-		body_state.apply_central_force(-state.velocity.normalized() * tuning.f("rolling_resistance") * mass)
+		if intent.brake_held and state.grounded:
+			body_state.apply_central_force(-state.velocity.normalized() * Tuning.BRAKE_RESISTANCE * mass)
+			body_state.angular_velocity *= 0.92
+		elif state.grounded:
+			body_state.apply_central_force(-state.velocity.normalized() * tuning.f("rolling_resistance") * mass)
 
-	var drag := Rules.resistance(state, tuning, intent, delta)
-	if state.grounded:
-		drag = Vector3.ZERO
-	body_state.apply_central_impulse(drag * mass)
+		var drag := Rules.resistance(state, tuning, intent, delta)
+		if state.grounded:
+			drag = Vector3.ZERO
+		body_state.apply_central_impulse(drag * mass)
 
-	# The augments run before jump and boost so a cling jump or a fitted air dash can
+	# The augments run before jump and boost so a pylon jump or a fitted air dash can
 	# claim the same key without the base rule firing as well.
 	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
 	if kit != null and kit.slam_landed > 0.0:
-		slammed.emit(body_state.transform.origin, kit.slam_landed)
+		slammed.emit(body_state.transform.origin, kit.slam_landed, kit.slam_flat)
 		kit.slam_landed = 0.0
+	if kit != null and kit.mount_planted:
+		pylon_planted.emit(kit.mount_point)
+		kit.mount_planted = false
+
+	if Augments.holding(kit):
+		_last_fall_speed = 0.0
+		state.velocity = body_state.linear_velocity
+		return
 
 	if not Augments.claims_boost(kit, state):
 		var boost := Rules.boost(state, tuning, intent, wish, -drive_basis.z)
