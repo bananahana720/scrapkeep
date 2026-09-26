@@ -119,6 +119,7 @@ func start() -> void:
 	events.reward_chosen.connect(func(_id: String): _offers = [])
 	events.player_died.connect(func(): _end("died"))
 	events.run_ended.connect(func(won: bool): _end("won" if won else "lost"))
+	events.warden_engaged.connect(func(_s: int): _note_set("warden_engaged_s", snappedf(game.run.stage_time, 0.01)))
 	events.beacon_unsealed.connect(func(_s: int): _note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01)))
 	events.event_started.connect(func(id: String): _note_add("events_joined", id))
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
@@ -197,7 +198,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
-	_note = {"stage": stage, "warden_broken_s": null, "exit_s": null, "events_joined": [], "cores": [], "parts": [],
+	_note = {"stage": stage, "warden_engaged_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [], "cores": [], "parts": [],
 		"vault_tried": false, "waypoints": 0, "stuck_detours": 0}
 
 
