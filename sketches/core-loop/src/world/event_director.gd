@@ -17,6 +17,7 @@ const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 #   {"kind": "announced", "id", "seconds"}   {"kind": "started", "id"}
 #   {"kind": "ended", "id", "outcome"}       {"kind": "milestone", "id", "at": Vector2}
 #   {"kind": "miniboss", "id", "at": Vector2} {"kind": "scrap", "amount", "at": Vector3}
+#   {"kind": "gate", "id", "at": Vector2}     an event gate was taken
 
 enum { WAITING, ANNOUNCED, ARMED, LIVE, COOLDOWN, DONE }
 enum { SQUALL_CALM, SQUALL_WARNING, SQUALL_LIVE }
@@ -176,8 +177,12 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 				model.begin()
 				facts.append({"kind": "started", "id": offer["id"]})
 		LIVE:
+			var gate_before = model.get("next_gate")
 			var outcome: String = model.step(delta, ball, velocity)
 			facts.append_array(model.take_facts())
+			if gate_before != null and model.next_gate > gate_before:
+				var g: Vector2 = model.gates[gate_before]
+				facts.append({"kind": "gate", "id": offer["id"], "at": g})
 			if model.miniboss_at >= 0.0 and not offer["miniboss_sent"] and model.progress() >= model.miniboss_at:
 				offer["miniboss_sent"] = true
 				facts.append({"kind": "miniboss", "id": offer["id"], "at": _miniboss_spot(model)})

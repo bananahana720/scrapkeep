@@ -6,6 +6,7 @@ const Director := preload("res://src/world/director.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const EventView := preload("res://src/world/event_view.gd")
 const Launch := preload("res://src/world/launch.gd")
+const CodexWorld := preload("res://src/world/codex_world.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -17,6 +18,8 @@ const PRESSURE_STEP := 0.05
 const MINIBOSS_KIND := "miniboss"
 const MINIBOSS_FALLBACK := "chaser"
 const VAULT_KIND := "vault"
+const TAILWIND := 0.7
+const SAIL_WIND := 0.5
 
 var ctx
 var terrain
@@ -29,10 +32,14 @@ var launch
 var last_miniboss_at := Vector3.INF
 # The stage's plated vault while it stands, else null.
 var vault: Node3D
+var codex_world := CodexWorld.new()
+# Every world codex entry fired this session, in order: {"id", "at"}.
+var discoveries: Array = []
 
 var _stage_seed := 0
 var _pressure := -1.0
 var _vault_pending := false
+var _was_grounded := true
 
 
 func setup(ctx_ref) -> void:
@@ -57,6 +64,15 @@ func setup(ctx_ref) -> void:
 	director = Director.new(ctx.rng.randi())
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
+	ctx.events.enemy_killed.connect(_on_enemy_killed)
+	ctx.events.slammed.connect(_on_slammed)
+	ctx.events.jumped.connect(_on_jumped)
+	if ctx.events.has_signal("element_resolved"):
+		ctx.events.connect("element_resolved", _on_element_resolved)
+	var codex = ctx.get("codex")
+	if codex != null and codex.has_method("declare"):
+		for entry in CodexWorld.ENTRIES:
+			codex.declare(entry)
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -90,6 +106,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	# one, so the vault goes in on the first tick of play instead.
 	vault = null
 	_vault_pending = true
+	codex_world = CodexWorld.new()
 	view.set_vault(terrain.vault_point(stage), false)
 	_mark_landing(stage, retry)
 
@@ -129,6 +146,7 @@ func _physics_process(delta: float) -> void:
 	var ball: Vector3 = player.ball_position()
 	var velocity: Vector3 = player.state.velocity
 	_publish(events.advance(delta, ball, velocity))
+	_watch_ground(delta, ball)
 	flood.render()
 	if not ctx.calm:
 		player.add_external_accel(flood.external_accel(ball, velocity) + events.push(ball, velocity))
@@ -154,6 +172,10 @@ func _publish(facts: Array) -> void:
 				ctx.run.add_scrap(fact["amount"], fact["at"])
 			"miniboss":
 				_spawn_miniboss(fact["at"])
+			"gate":
+				var g: Vector2 = fact["at"]
+				_discover(codex_world.note("gate", {"id": fact["id"], "at": terrain.drop_point(g.x, g.y, 1.0),
+					"tier": ctx.player.speed_tier()}))
 
 
 # The miniboss arrives where the director's seeded stream put it, on the ground and
@@ -168,6 +190,51 @@ func _spawn_miniboss(at: Vector2) -> void:
 	var enemy = ctx.spawner.spawn_enemy(MINIBOSS_KIND, last_miniboss_at)
 	if enemy == null:
 		ctx.spawner.spawn_enemy(MINIBOSS_FALLBACK, last_miniboss_at)
+
+
+# The world codex: read what just happened against the ground and the ball, hand it
+# to the detector, and pass anything that fired to the codex.
+func _watch_ground(delta: float, ball: Vector3) -> void:
+	codex_world.advance(delta)
+	var grounded: bool = ctx.player.state.grounded
+	if _was_grounded and not grounded:
+		_discover(codex_world.note("airborne", {"at": ball, "off_kicker": terrain.map().near_kicker_lip(Vector2(ball.x, ball.z))}))
+	elif grounded and flood.in_basin(ball) and flood.surface_y() > terrain.height(ball.x, ball.z):
+		_discover(codex_world.note("grounded", {"at": ball, "over_water": true}))
+	_was_grounded = grounded
+
+
+func _on_enemy_killed(_kind: String, at: Vector3, _scrap: int) -> void:
+	if ctx.flow.in_play():
+		_discover(codex_world.note("kill", {"at": at, "in_water": flood.submersion(at) > 0.0}))
+
+
+func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
+	if ctx.flow.in_play():
+		_discover(codex_world.note("slam", {"at": at}))
+
+
+func _on_jumped(_air: bool) -> void:
+	if not ctx.flow.in_play() or events == null or events.squall == null:
+		return
+	var squall = events.squall
+	var v: Vector3 = ctx.player.state.velocity
+	var flat := Vector2(v.x, v.z)
+	var tailwind: bool = squall.intensity() >= SAIL_WIND and flat.length() >= ctx.tuning.f("cruise") \
+		and flat.normalized().dot(squall.wind) >= TAILWIND
+	_discover(codex_world.note("jump", {"at": ctx.player.ball_position(), "tailwind": tailwind}))
+
+
+func _on_element_resolved(_element: String, material: String, behaviour: String, at: Vector3) -> void:
+	_discover(codex_world.note("element", {"material": material, "behaviour": behaviour, "at": at}))
+
+
+func _discover(fired: Array) -> void:
+	var codex = ctx.get("codex")
+	for entry in fired:
+		discoveries.append(entry)
+		if codex != null and codex.has_method("mark_discovered"):
+			codex.mark_discovered(entry["id"], entry["at"], ["player"])
 
 
 # The plated vault off the fall line. Never in calm, and a combat module without the
