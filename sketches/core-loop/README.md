@@ -4,17 +4,17 @@
 
 This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). The whole run is here: a title, two classes, three stages, a beacon to charge in each one, reward gates to roll through, a launch into the next stage, and a summary. Death shows a one-key retry.
 
-This is the wave 1 spine. Movement is the mobility kit v2 core (rigid physics only), and the stage is the Spillway terrain. Combat, the build, audio and events are minimal stubs until the wave 2 modules replace them. Nothing here is production code, and there are no assets: everything is built in script from primitives.
+Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code, and there are no assets: everything is built in script from primitives.
 
-Play it with `scrapkeep core-loop`. Hold **Tab** in game for the field notes below. [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
+Play it with `scrapkeep core-loop`. Hold **Tab** in game for the field notes below. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
 
 ## The loop
 
 1. **Title.** Press Space.
 2. **Class.** Press 1 for the Pylon engineer or 2 for the Runner-gunner. Both share the whole mobility kit. The names are candidates.
-3. **Stage.** You drop in already rolling. The objective line at the top always says what to do next and how far the beacon is.
-4. **Beacon.** Roll into its ring to charge it and keep moving inside the ring. Leaving pauses the charge.
-5. **Reward gates.** When the beacon is charged, two arches appear ahead of you. Roll through one to take its part.
+3. **Stage.** You drop in already rolling, with the beacon in sight. The objective line at the top always says what to do next: your punch against the Warden's plating, and the stage's hint.
+4. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks. Scrap you roll up adds heft, and heft multiplies your punch. Events and vaults add bonus cores, the pips beside the objective, which raise the gate tiers.
+5. **Reward gates.** Two arches appear ahead of you. Roll through one to take its part.
 6. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
 7. **Summary.** After stage 3 you see stages, scrap, parts, kills, events won and time. N runs again as the same class.
 
@@ -29,13 +29,16 @@ If you are scrapped, press R to retry the stage from its start, N for a new run,
 | Space | jump, double jump, hold falling to glide; slingshots off a pylon |
 | Shift | boost; airborne it is the air dash |
 | Ctrl | brake; airborne it is the slam |
-| left mouse | fire the class weapon (hold) |
-| F | class special |
+| left mouse | fire the class weapon (hold); both classes |
+| F | runner: overdrive blast; engineer: pylon discharge (planting fires it free) |
 | right mouse | fire the grapple at the reticle's target; release to let go |
 | Q (hold) | winch: haul toward the hook |
 | E | plant a pylon on a steep face or a close wall hook; press again to drop off |
 | mouse wheel | down pays rope out, up notches it in |
-| Tab (hold) | field notes; the game pauses while held |
+| Tab (hold) | field notes and the codex; the game pauses while held; Q and E switch pages |
+| - / = | music volume down / up |
+| [ / ] | effects volume down / up |
+| M | mute or unmute |
 | P | pause or resume |
 | R (hold) | retry the stage from its start |
 | F1 | tuning panel (frees the mouse) |
@@ -59,13 +62,15 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 
 ### Testing in this build
 
-- The spine of the core loop: title, class, three stages, beacon, reward gates, launch, summary. Combat, build, audio and events are minimal stubs; the real ones land next.
-- Momentum is sacred. The beacon charges while you roll inside its ring, reward gates are arches you roll through, and the launch keeps your horizontal speed into the next stage.
+- One run: title, class, then three stages. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A summary follows stage 3.
+- Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The objective line shows your punch against the Warden's plating.
+- Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the pips beside the objective, which raise the gate tiers.
 - The pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
 - Death takes one key. R retries the stage from its start with the scrap, health and parts you entered with, and N starts a new run as the same class. Hold R in play to retry the stage.
 
 ### Questions for you
 
+- Was the Warden a goal or a chore? Did growth feel like enough growth?
 - Does the loop read without instructions: where to go, what the beacon wants, what a gate gives?
 - Does the launch into the next stage feel like momentum carried, or like a load screen?
 - Is the shoulder view while mounted enough to see what you are shooting?
@@ -73,9 +78,9 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 
 ### What to try first
 
-1. Pick either class with 1 or 2. You drop in already rolling, so take the chute down to the mid shelf.
-2. Roll into the beacon's ring and keep moving inside it. Leaving pauses the charge.
-3. When it charges, two arches appear ahead of you. Roll through one to take its part.
+1. Pick either class with 1 or 2. You drop in already rolling. The Warden is at the beacon you can see from the drop.
+2. Roll the scrap lines on the way down. Watch Heft climb beside your speed, and your punch climb in the objective line.
+3. Break the Warden; the stage hint says how. The gates open wherever you are. Roll through one to take its part.
 4. Hit a steep face at speed and press E. Fire with left mouse, then press Space to slingshot off.
 5. Get scrapped on purpose, then press R. You are back at the stage start in under a second.
 
@@ -84,7 +89,7 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 | Path | Owner | Holds |
 | --- | --- | --- |
 | `src/game.gd` | spine | the root: builds the spine, sets up the modules in order, input, pause, hit-stop |
-| `src/core/` | spine | the bus, `event_kinds`, run state, classes, stage dials, the flow, the beacon, the context, the palette |
+| `src/core/` | spine | the bus, `event_kinds`, run state and heft, classes, stage dials, the flow and the Warden gate, the beacon, the context, the codex, the run log, the palette |
 | `src/movement/` | spine | the v2 rigid ball, augments, tuning and the chase camera |
 | `src/ui/` | spine | HUD, screens, field notes, tuning panel, reticle |
 | `src/combat/` | writer A | weapons, enemies, damage, the spawner |
@@ -101,5 +106,11 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 - `spine_event_kinds_test.gd` checks that every bus signal has a well-formed `event_kinds` row.
 - `spine_movement_test.gd` covers slam, winch, aim, mount, the momentum bank and the slingshot.
 - `spine_live_test.gd` runs a short fight through the module seams.
+- `spine_heft_test.gd` covers mass, heft, classes, cores, restore, and handling that does not change with heft.
+- `spine_warden_gate_test.gd` checks the Warden seal, charge from damage, the break that opens the gates anywhere, and `warden_engaged`.
+- `spine_objective_test.gd` checks the objective line, the heft label and the core pips.
+- `spine_crush_test.gd` checks the crush pass-through against the ram that bounces.
+- `spine_codex_test.gd` covers the codex registry, the burst, the logs, saving, and the Tab pages.
+- `spine_run_log_test.gd` checks that a run writes one record with three stages, and that a death adds one.
 
 Automated checks say nothing about feel. Andrew's play is the review.

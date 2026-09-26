@@ -8,13 +8,15 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const TITLE := "Scrapkeep: First Run · field notes"
 
 const TESTING := [
-	"The spine of the core loop: title, class, three stages, beacon, reward gates, launch, summary. Combat, build, audio and events are minimal stubs; the real ones land next.",
-	"Momentum is sacred: the beacon charges while you roll inside its ring, reward gates are arches you roll through, and the launch keeps your horizontal speed into the next stage.",
+	"One run: title, class, three stages, each clamped by a Warden at its beacon; break it, roll through a reward gate, launch into the next stage; a summary after stage 3.",
+	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The objective line shows your punch against the Warden's plating.",
+	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the pips beside the objective) that raise the gate tiers.",
 	"The pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
 	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage.",
 ]
 
 const QUESTIONS := [
+	"Was the Warden a goal or a chore? Did growth feel like enough growth?",
 	"Does the loop read without instructions: where to go, what the beacon wants, what a gate gives?",
 	"Does the launch into the next stage feel like momentum carried, or like a load screen?",
 	"Is the shoulder view while mounted enough to see what you are shooting?",
@@ -22,9 +24,9 @@ const QUESTIONS := [
 ]
 
 const TRY_FIRST := [
-	"Pick either class with 1 or 2. You drop in already rolling: take the chute down to the mid shelf.",
-	"Roll into the beacon's ring and keep moving inside it; leaving pauses the charge.",
-	"When it charges, two arches appear ahead of you. Roll through one to take its part.",
+	"Pick either class with 1 or 2. You drop in already rolling; the Warden is at the beacon you can see from the drop.",
+	"Roll the scrap lines on the way down: watch Heft climb beside your speed, and your punch climb in the objective line.",
+	"Break the Warden (the stage hint says how); the gates open wherever you are. Roll through one to take its part.",
 	"Hit a steep face at speed, press E, fire with left mouse, then Space to slingshot off.",
 	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
 ]
@@ -35,13 +37,16 @@ const CONTROLS := [
 	{"keys": "Space", "does": "jump, double jump, hold falling to glide; slingshots off a pylon", "hint": "Space jump/glide"},
 	{"keys": "Shift", "does": "boost; airborne it is the air dash", "hint": "Shift boost/dash"},
 	{"keys": "Ctrl", "does": "brake; airborne it is the slam", "hint": "Ctrl brake/slam"},
-	{"keys": "left mouse", "does": "fire the class weapon (hold)", "hint": "LMB fire"},
-	{"keys": "F", "does": "class special", "hint": "F special"},
+	{"keys": "left mouse", "does": "fire the class weapon (hold); both classes", "hint": "LMB fire"},
+	{"keys": "F", "does": "runner overdrive blast; engineer pylon discharge (planting fires it free)", "hint": "F special"},
 	{"keys": "right mouse", "does": "fire the grapple at the reticle's target; release to let go", "hint": "RMB grapple"},
 	{"keys": "Q (hold)", "does": "winch: haul toward the hook", "hint": "Q winch"},
 	{"keys": "E", "does": "plant a pylon on a steep face or a close wall hook; again to drop off", "hint": "E pylon"},
 	{"keys": "mouse wheel", "does": "down pays rope out, up notches it in", "hint": "wheel rope"},
-	{"keys": "Tab (hold)", "does": "these field notes; the game pauses while held", "hint": "Tab notes"},
+	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "hint": "Tab notes/codex"},
+	{"keys": "- / =", "does": "music volume down / up", "hint": "-/= music"},
+	{"keys": "[ / ]", "does": "effects volume down / up", "hint": "[/] effects"},
+	{"keys": "M", "does": "mute or unmute", "hint": "M mute"},
 	{"keys": "P", "does": "pause / resume", "hint": "P pause"},
 	{"keys": "R (hold)", "does": "retry the stage from its start", "hint": "hold R retry"},
 	{"keys": "F1", "does": "tuning panel (frees the mouse)", "hint": "F1 tuning"},
@@ -58,12 +63,22 @@ const SCREEN_KEYS := [
 	{"keys": "C", "does": "death screen: choose a class"},
 ]
 
-const HINT_BREAK := 9
+const HINT_BREAK := 10
+# A glyph per event_kinds shape, so a codex card wears its category's silhouette.
+const SHAPE_GLYPHS := {
+	"diamond": "◆", "wave": "≈", "burst": "*", "square": "■", "chevron": "›", "star": "★",
+	"ring": "○", "arrow": "»", "bar": "=", "cross": "×", "core": "◆", "none": "",
+}
+const CARD_COLUMNS := 3
 
 var game
 
 var _notes: Control
 var _paused: Label
+var _title: Label
+var _notes_page: Control
+var _codex_page: VBoxContainer
+var _page := 0
 
 
 static func hint_rows() -> String:
@@ -140,12 +155,18 @@ func setup(game_ref) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	_notes.add_child(box)
-	var title := Label.new()
-	title.text = "%s  ·  paused while Tab is held" % TITLE
-	title.add_theme_font_size_override("font_size", 24)
-	box.add_child(title)
+	_title = Label.new()
+	_title.add_theme_font_size_override("font_size", 22)
+	box.add_child(_title)
+
+	_codex_page = VBoxContainer.new()
+	_codex_page.add_theme_constant_override("separation", 12)
+	_codex_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_codex_page.visible = false
+	box.add_child(_codex_page)
 
 	var columns := HBoxContainer.new()
+	_notes_page = columns
 	columns.add_theme_constant_override("separation", 30)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(columns)
@@ -173,6 +194,7 @@ func setup(game_ref) -> void:
 	legend.add_theme_font_size_override("normal_font_size", 15)
 	columns.add_child(legend)
 	_notes.visible = false
+	show_page(0)
 
 	_paused = Label.new()
 	_paused.text = "PAUSED  ·  P to resume  ·  hold Tab for field notes"
@@ -185,12 +207,129 @@ func setup(game_ref) -> void:
 	add_child(_paused)
 
 
+# Notes first, then one page per codex category (reserved ones only once they hold
+# entries), then the Found list.
+func pages() -> Array[String]:
+	var list: Array[String] = ["notes"]
+	for id in EventKinds.CODEX_CATEGORIES:
+		var reserved: bool = EventKinds.CODEX_CATEGORIES[id]["reserved"]
+		if not reserved or (_codex() != null and not _codex().entries(id).is_empty()):
+			list.append(id)
+	list.append("found")
+	return list
+
+
+func _codex():
+	return game.codex if game != null else null
+
+
+func show_page(index: int) -> void:
+	var list := pages()
+	_page = posmod(index, list.size())
+	var page: String = list[_page]
+	_notes_page.visible = page == "notes"
+	_codex_page.visible = page != "notes"
+	_title.text = _tab_row(list, page)
+	if page != "notes":
+		render_page(page)
+
+
+func _tab_row(list: Array[String], current: String) -> String:
+	var tabs := PackedStringArray()
+	for page in list:
+		var label := "Notes"
+		if page == "found":
+			label = "Found %d" % (_codex().found().size() if _codex() != null else 0)
+		elif page != "notes":
+			label = "%s %d%%" % [EventKinds.category(page)["label"], int(_codex().completion(page) * 100.0) if _codex() != null else 0]
+		tabs.append("[ %s ]" % label if page == current else label)
+	return "%s  ·  %s  ·  Q / E switch  ·  paused while Tab is held" % [TITLE, "   ".join(tabs)]
+
+
+# Builds one codex page and returns how many cards or lines it shows.
+func render_page(page: String) -> int:
+	for child in _codex_page.get_children():
+		child.queue_free()
+	var codex = _codex()
+	if codex == null:
+		return 0
+	if page == "found":
+		return _render_found(codex)
+	var style: Dictionary = EventKinds.category(page)
+	var listed: Array = codex.entries(page)
+	var head := Label.new()
+	head.add_theme_font_size_override("font_size", 20)
+	head.add_theme_color_override("font_color", style["color"])
+	head.text = "%s %s  ·  %d of %d found" % [SHAPE_GLYPHS.get(style["shape"], ""), style["label"],
+		listed.filter(func(e): return e["known"]).size(), listed.size()]
+	_codex_page.add_child(head)
+	if listed.is_empty():
+		var none := Label.new()
+		none.text = "Nothing recorded here yet."
+		_codex_page.add_child(none)
+		return 0
+	var grid := GridContainer.new()
+	grid.columns = CARD_COLUMNS
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 14)
+	_codex_page.add_child(grid)
+	for entry in listed:
+		grid.add_child(_card(entry, style))
+	return listed.size()
+
+
+func _card(entry: Dictionary, style: Dictionary) -> Control:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(420.0, 96.0)
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.10, 0.11, 0.14, 0.96)
+	box.border_color = style["color"] if entry["known"] else Color(style["color"], 0.35)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(6)
+	box.set_content_margin_all(12.0)
+	card.add_theme_stylebox_override("panel", box)
+	var text := Label.new()
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 15)
+	var glyph: String = SHAPE_GLYPHS.get(style["shape"], "")
+	if entry["known"]:
+		text.text = "%s %s\n%s" % [glyph, entry["name"], entry["text"]]
+		text.add_theme_color_override("font_color", style["color"])
+	else:
+		text.text = "%s ???\n%s %s" % [glyph, entry["hint"], entry["clue"]]
+		text.add_theme_color_override("font_color", Color(0.75, 0.76, 0.78))
+	card.add_child(text)
+	return card
+
+
+func _render_found(codex) -> int:
+	var list := RichTextLabel.new()
+	list.bbcode_enabled = true
+	list.fit_content = true
+	list.add_theme_font_size_override("normal_font_size", 16)
+	var lines := PackedStringArray(["Found by accident, no name yet"])
+	for text in codex.found():
+		var style: Dictionary = EventKinds.category(codex.found_category(text))
+		lines.append("[color=#%s]%s %s[/color]" % [(style["color"] as Color).to_html(false), SHAPE_GLYPHS.get(style["shape"], ""), text])
+	if codex.found().is_empty():
+		lines.append("Nothing yet. Mix elements, patterns and terrain and see what happens.")
+	list.text = "\n".join(lines)
+	_codex_page.add_child(list)
+	return codex.found().size()
+
+
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or event.echo:
+		return
+	if event.pressed and game != null and game.notes_held() and (event.physical_keycode == KEY_Q or event.physical_keycode == KEY_E):
+		show_page(_page + (1 if event.physical_keycode == KEY_E else -1))
+		get_viewport().set_input_as_handled()
 		return
 	match event.physical_keycode:
 		KEY_TAB:
 			game.hold_notes(event.pressed)
+			if event.pressed:
+				show_page(_page)
 			get_viewport().set_input_as_handled()
 		KEY_P:
 			if event.pressed:
