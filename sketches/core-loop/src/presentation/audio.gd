@@ -33,6 +33,12 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 # Weapon voices per class, so each class sounds like itself (identity, principle 5).
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0}
 const VOLUME_STEP := 0.1
+# Danger sounds pull the bass down so the low end never masks a warning.
+const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death"]
+# A launch whose landing never comes (a fall into the next stage's rail) still drops.
+const LANDING_FALLBACK_MS := 2000
+# Expected launch-to-landing time, for the pace of the build's sweep.
+const LAUNCH_BUILD_SECONDS := 1.6
 
 var ctx
 var engine: MusicEngine
@@ -66,6 +72,13 @@ var _heft_class := 1
 var _unseal_ms := -100000
 var _boss_phase := 1
 var _weak_combo := 0
+# The launch build: armed on launched, handed its stage on stage_entered, dropped on
+# the first landing after it. [touchdown_sample, drop_sample] per landing drop.
+var _launch_armed := false
+var _landing_theme := -1
+var _entered_ms := -1
+var _launch_stage := false
+var drop_log: Array = []
 var _weak_last := -100000
 var _flow_queue: Array = []
 var _overlay: Label
@@ -100,7 +113,11 @@ func setup(ctx_ref) -> void:
 # on the main thread until the bake is done; cues before then are skipped.
 
 static func _sound_ids() -> Array:
-	return Rows.sound_ids()
+	var ids: Array = Rows.sound_ids()
+	for extra in ["womp", "build_riser"]:
+		if not extra in ids:
+			ids.append(extra)
+	return ids
 
 
 static func _bake_everything(ids: Array) -> void:
@@ -232,6 +249,9 @@ func _process(_delta: float) -> void:
 			return
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	_flush_flow()
+	_follow_warden()
+	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
+		_land_drop()
 	_pump()
 	if _overlay != null and _overlay.visible and Time.get_ticks_msec() > _overlay_until:
 		_overlay.visible = false
@@ -286,6 +306,8 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	cue_log.append([kind, sound, "now", engine.clock, pitch])
 	if Rows.priority(kind) >= 2:
 		engine.duck(0.55, 0.35)
+	if sound in DANGER_SOUNDS:
+		engine.duck_bass(0.3, 0.45)
 	return true
 
 
@@ -298,6 +320,8 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 	var start := engine.schedule_stinger(sound, db, lane, repeats)
 	var beats: int = SfxBank.STINGER_BEATS.get(sound, 1)
 	engine.duck(0.6, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
+	if sound in DANGER_SOUNDS:
+		engine.duck_bass(0.3, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
 	cue_log.append([kind, sound, "beat", start, 1.0])
 	return start
 
@@ -322,7 +346,7 @@ func _connect_all(events) -> void:
 	events.jumped.connect(func(air: bool): play("jumped", 0.0, Harmony.ratio(7.0) if air else 1.0))
 	events.boosted.connect(func(_direction: Vector3): play("boosted"))
 	events.dashed.connect(func(_direction: Vector3): play("dashed"))
-	events.landed.connect(func(impact: float): play("landed", lerpf(-12.0, 2.0, clampf(impact / 30.0, 0.0, 1.0)), lerpf(1.1, 0.85, clampf(impact / 30.0, 0.0, 1.0))))
+	events.landed.connect(_on_landed)
 	events.slammed.connect(_on_slammed)
 	events.grapple_fired.connect(func(_anchor: Vector3): play("grapple_fired"))
 	events.grapple_released.connect(func(): play("grapple_released"))
@@ -337,7 +361,7 @@ func _connect_all(events) -> void:
 	events.event_announced.connect(func(_event_id: String, _seconds: float): on_beat("event_announced"))
 	events.event_started.connect(func(_event_id: String): on_beat("event_started"))
 	events.event_ended.connect(func(_event_id: String, outcome: String): on_beat("event_ended", -4.0 if outcome == "lost" else 0.0))
-	events.launched.connect(func(_velocity: Vector3): play("launched"))
+	events.launched.connect(_on_launched)
 	events.pressure_changed.connect(_on_pressure)
 	wire_optional()
 
@@ -360,6 +384,7 @@ func wire_optional() -> void:
 	_listen(events, "warden_engaged", func(_stage: int): _begin_boss("warden_engaged", "warden"))
 	_listen(events, "boss_arena_entered", func():
 		_boss_phase = 1
+		_disarm_launch()
 		_begin_boss("boss_arena_entered", "brindle"), true)
 	var phase_args := _argc(events, "boss_phase_changed")
 	if phase_args >= 1:
@@ -399,6 +424,13 @@ func _on_flow_changed(state: String) -> void:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	engine.set_overcharge(0)
+	if retry:
+		_disarm_launch()
+	elif _launch_armed:
+		# The stage the launch was flying to: its theme arrives with the landing drop.
+		_landing_theme = clampi(stage - 1, 0, 2)
+		_entered_ms = Time.get_ticks_msec()
+		_launch_stage = true
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 	_beacon_rung = -1
@@ -483,10 +515,59 @@ func _on_died() -> void:
 	_flow_queue.append(["dead"])
 
 
-func _on_slammed(_at: Vector3, strength: float, _flatness: float) -> void:
+func _on_slammed(_at: Vector3, strength: float, flatness: float) -> void:
 	if strength < 0.05:
 		return
 	play("slammed", lerpf(-8.0, 0.0, clampf(strength, 0.0, 1.0)), lerpf(1.1, 0.9, clampf(strength - 0.5, 0.0, 1.0)))
+	# The womp is the player's own action, so it sounds this frame, never on a beat.
+	# The flat full plant is the biggest: loudest and a fourth lower.
+	var weight := clampf(strength, 0.0, 1.0) * lerpf(0.5, 1.0, clampf(flatness, 0.0, 1.0))
+	play("slammed", lerpf(-12.0, 0.0, weight), Harmony.ratio(lerpf(0.0, -5.0, weight)), "SFX", "womp")
+
+
+func _on_launched(_velocity: Vector3) -> void:
+	play("launched")
+	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track != "level":
+		return
+	# The launch is the build: the riser, the snare roll and the sweep carry the flight.
+	engine.start_build(LAUNCH_BUILD_SECONDS, true)
+	_launch_armed = true
+	_landing_theme = -1
+	_launch_stage = false
+
+
+func _on_landed(impact: float) -> void:
+	play("landed", lerpf(-12.0, 2.0, clampf(impact / 30.0, 0.0, 1.0)), lerpf(1.1, 0.85, clampf(impact / 30.0, 0.0, 1.0)))
+	if _launch_armed and _landing_theme >= 0:
+		_land_drop()
+
+
+# The landing is the drop: on the next beat, never more than one beat after touchdown,
+# in the new stage's theme.
+func _land_drop() -> void:
+	var touchdown := engine.clock
+	var at := engine.drop_now(4, 0.85, {}, _landing_theme)
+	drop_log.append([touchdown, at])
+	cue_log.append(["landed", "drop", "beat", at, 1.0])
+	_launch_armed = false
+	_landing_theme = -1
+
+
+func _disarm_launch() -> void:
+	if _launch_armed:
+		engine.cancel_build()
+	_launch_armed = false
+	_landing_theme = -1
+	_launch_stage = false
+
+
+# The Warden's last quarter is the build; the spine's integrity query is read-only.
+func _follow_warden() -> void:
+	if engine.track != "warden" or engine.section != "build":
+		return
+	if ctx.flow == null or not ctx.flow.has_method("warden_integrity"):
+		return
+	engine.warden_charge(1.0 - float(ctx.flow.warden_integrity()))
 
 
 func _on_dismounted(velocity: Vector3) -> void:
@@ -578,6 +659,7 @@ func _flush_flow() -> void:
 	for item in burst:
 		match item[0]:
 			"run":
+				_disarm_launch()
 				engine.cancel_pending()
 				var start := on_beat("run_started", 0.0, true)
 				if start >= 0:
@@ -587,6 +669,10 @@ func _flush_flow() -> void:
 				var retry: bool = item[2]
 				if not retry and "run" in kinds:
 					continue
+				if not retry and _launch_stage:
+					# The landing drop announces this stage.
+					_launch_stage = false
+					continue
 				if retry:
 					engine.cancel_pending()
 				var start := on_beat("stage_entered", 0.0, true, clampi(stage, 1, 4))
@@ -594,9 +680,11 @@ func _flush_flow() -> void:
 					engine.schedule_restart(start, MusicEngine.PLAY, clampi(stage - 1, 0, 2))
 			"clear":
 				if "end" in kinds:
+					_disarm_launch()
 					continue
 				var start := on_beat("stage_cleared", 0.0, true)
-				if start >= 0:
+				# Mid-launch the build carries the music; the jingle rings over it.
+				if start >= 0 and not _launch_armed:
 					engine.schedule_cadence(start)
 			"end":
 				if item[1]:
@@ -607,16 +695,21 @@ func _flush_flow() -> void:
 				else:
 					engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
 			"dead":
+				_disarm_launch()
 				engine.cancel_pending()
 				engine.schedule_mode(engine.next_beat(), MusicEngine.DEAD)
 			"idle":
 				engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
 			"unseal":
 				_unseal_ms = Time.get_ticks_msec()
-				var start := on_beat("beacon_unsealed", 0.0, true)
-				# The Warden's track drops on the same beat as the unseal stinger.
-				if start >= 0 and engine.track == "warden":
-					engine.drop_at(start)
+				if engine.track == "warden" and sound_ready:
+					# The heaviest drop of the stage, on the next beat, with the unseal
+					# stinger on the same downbeat.
+					var at := engine.unseal_drop()
+					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at)
+					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
+				else:
+					on_beat("beacon_unsealed", 0.0, true)
 			"gates":
 				# The unseal stinger already says the gates are open.
 				if "unseal" in kinds or Time.get_ticks_msec() - _unseal_ms < 2500:

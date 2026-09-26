@@ -93,6 +93,15 @@ const MINOR_OF := {
 	"A7sus4": {"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC},
 	"Bbmaj9": {"name": "Bb7#11", "root": 34, "voicing": [56, 60, 62, 64], "tones": [58, 62, 65, 68, 64], "scale": AEOLIAN},
 }
+# Brindle's phase 2: D Phrygian, heavy.
+const BRINDLE_PHRYGIAN := [
+	{"name": "Dm(b9)", "root": 38, "voicing": [53, 57, 60, 63], "tones": [62, 65, 69, 63], "scale": PHRYGIAN},
+	{"name": "Ebmaj9", "root": 39, "voicing": [55, 58, 62, 65], "tones": [63, 67, 70, 74, 65], "scale": PHRYGIAN},
+	{"name": "Dm(b9)", "root": 38, "voicing": [57, 60, 63, 65], "tones": [62, 65, 69, 63], "scale": PHRYGIAN},
+	{"name": "Cm9", "root": 36, "voicing": [51, 55, 58, 62], "tones": [60, 63, 67, 70, 62], "scale": PHRYGIAN},
+]
+# The launch build's tune: the rice-cooker climb up the A7, looping while you fly.
+const LAUNCH_TUNE := [69, 73, 76, 81, 79, 76, 73, 76]
 const THEMES := ["spillway", "sluice", "weir"]
 
 

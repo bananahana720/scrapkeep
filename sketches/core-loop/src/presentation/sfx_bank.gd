@@ -33,6 +33,7 @@ const STINGER_BEATS := {
 	"boss_arena_in": 4,
 	"boss_phase": 2,
 	"stinger_boss_defeated": 8,
+	"build_riser": 8,
 }
 
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
@@ -52,6 +53,7 @@ const TRIM_DB := {
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
 	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
+	"womp": -2.0, "build_riser": -8.0,
 }
 
 static var _samples := {}
@@ -198,6 +200,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(Synth.note("bell", 81), 0.3), 0, 0.7], [_noise(0.25, 2000.0, 5000.0, 14.0, 0.01), 0, 0.5]])
 		"warden_theme_in":
 			return _warden_in()
+		"womp":
+			return _womp()
+		"build_riser":
+			return _build_riser()
 		"ice_form":
 			return _ice()
 		"zap_hum":
@@ -261,7 +267,7 @@ static func _score_milestone() -> Array:
 static func _score_class_up() -> Array:
 	return [[0, 0, 2, "kick", 0.7], [0, 69, 2, "mallet", 0.8], [0, 69, 2, "bell", 0.35], [2, 74, 2, "mallet", 0.85],
 		[2, 74, 2, "bell", 0.4], [4, 81, 4, "mallet", 0.9], [4, 81, 4, "bell", 0.5], [4, 38, 4, "sub", 0.6],
-		[4, 0, 2, "open_hat", 0.4]]
+		[4, 0, 2, "open_hat", 0.4], [4, 38, 2, "growl", 0.55]]
 
 
 # A heft class lost to a crane: the climb played back down, A F D, lighter and softer.
@@ -497,6 +503,30 @@ static func _warden_in() -> PackedFloat32Array:
 		[12, 0, 1, "snare", 0.7], [13, 0, 1, "snare", 0.8], [14, 0, 1, "snare", 0.9], [15, 0, 1, "snare", 1.0]]
 	var band := Synth.render_score(score, 0.8)
 	return _mix([[band, 0, 1.0], [_fm(0.9, Harmony.hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
+
+
+# The slam womp: a sub that drops out of the floor with a wub on top, instant.
+static func _womp() -> PackedFloat32Array:
+	var n := Synth.seconds(0.62)
+	var buf := Synth.buffer(n)
+	var phase := 0.0
+	for i in n:
+		var t := i * Synth.INV_RATE
+		phase += TAU * (34.0 + 52.0 * exp(-t * 9.0)) * Synth.INV_RATE
+		buf[i] = tanh(2.0 * sin(phase)) * minf(1.0, t * 400.0) * exp(-t * 3.2)
+	return _mix([[buf, 0, 1.0], [_cut(Synth.growl(38, "wub", Synth.seconds(0.3)), 0.3), 0, 0.45]], true)
+
+
+# Two bars of rising noise and pitch, the build's riser (on the grid it is baked for).
+static func _build_riser() -> PackedFloat32Array:
+	var n := Synth.score_step * Harmony.STEPS_PER_BAR * 2
+	var noise := _noise(float(n) / RATE, 300.0, 6000.0, 0.0, 0.001)
+	var phase := 0.0
+	for i in n:
+		var x := float(i) / n
+		phase += TAU * lerpf(110.0, 880.0, x * x) * Synth.INV_RATE
+		noise[i] = (noise[i] * 0.8 + sin(phase) * 0.35) * x * x
+	return Synth.normalize(noise, 0.9)
 
 
 static func _ice() -> PackedFloat32Array:

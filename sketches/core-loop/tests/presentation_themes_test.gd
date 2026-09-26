@@ -131,19 +131,24 @@ func _cost() -> void:
 	var worst := 0.0
 	var name := ""
 	for spec in [["warden", 0, "drop"], ["brindle", 0, "3"], ["miniboss", 2, ""], ["level", 0, ""]]:
-		var engine := MusicEngine.new()
-		engine.force_track(spec[0], spec[1], spec[2], spec[0] in ["warden", "brindle"])
-		engine.set_pressure(1.0)
-		engine.set_overcharge(2)
-		engine.render(engine.bar_len())
-		var t := Time.get_ticks_usec()
-		for block in 300:
-			engine.render(735)
-		var ms := (Time.get_ticks_usec() - t) / 1000.0 / (300.0 * 735.0 / Harmony.RATE)
-		if ms > worst:
-			worst = ms
-			name = "%s %s" % [spec[0], spec[2]]
-	_check("cpu", worst < 150.0, "densest arrangement %s costs %.0f ms of main-thread time per second of music (%.1f%% of one core)" % [name, worst, worst / 10.0])
+		# A throwaway engine plays eight bars first, so notes rendered on first use (the
+		# game warms them on a worker behind stage 1) do not count as steady cost.
+		for warm in 2:
+			var engine := MusicEngine.new()
+			engine.force_track(spec[0], spec[1], spec[2], spec[0] in ["warden", "brindle"])
+			engine.set_pressure(1.0)
+			engine.set_overcharge(2)
+			engine.render(engine.bar_len() * (8 if warm == 0 else 1))
+			if warm == 0:
+				continue
+			var t := Time.get_ticks_usec()
+			for block in 300:
+				engine.render(735)
+			var ms := (Time.get_ticks_usec() - t) / 1000.0 / (300.0 * 735.0 / Harmony.RATE)
+			if ms > worst:
+				worst = ms
+				name = "%s %s" % [spec[0], spec[2]]
+	_check("cpu", worst < 80.0, "densest arrangement %s costs %.0f ms of main-thread time per second of music (%.1f%% of one core)" % [name, worst, worst / 10.0])
 
 
 func _level(theme: int) -> MusicEngine:
