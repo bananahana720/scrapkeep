@@ -77,6 +77,22 @@ func _process(_delta: float) -> bool:
 			var stage := _cues("stage_entered")
 			var ok: bool = clear.size() == 1 and stage.size() == 1 and int(stage[0][3]) == int(clear[0][3]) + 8 * Harmony.BEAT
 			_check("clear phrase", ok, "the clear jingle, then stage 2's hits exactly two bars later, when the cadence resolves")
+			var engine2: MusicEngine = _audio.engine
+			_audio.cue_log.clear()
+			var boss := Node3D.new()
+			_game.add_child(boss)
+			_game.events.enemy_spawned.emit(boss, "miniboss")
+			var mini_pending := engine2.pending_actions()
+			if _game.events.has_signal("warden_engaged"):
+				_game.events.warden_engaged.emit(2)
+			var warden := _cues("warden_engaged")
+			var bar_ok: bool = warden.size() == 1 and warden[0][2] == "bar" and warden[0][1] == "warden_theme_in"
+			_check("boss triggers", mini_pending > 0 and bar_ok, "a miniboss spawn darkens the level on the next bar; warden_engaged starts the Warden's metric modulation on a bar with its cue")
+			if _game.events.has_signal("heft_class_changed"):
+				_game.events.heft_class_changed.emit(3, 2.5)
+				_game.events.heft_class_changed.emit(2, 1.8)
+			var heft: Array = _cues("heft_class_changed").map(func(c: Array): return c[1])
+			_check("class up and down", heft == ["class_up", "class_down"], "a class gained climbs, a class lost to the crane falls: %s" % [heft])
 			_game.events.player_died.emit()
 			_next(50)
 		3:

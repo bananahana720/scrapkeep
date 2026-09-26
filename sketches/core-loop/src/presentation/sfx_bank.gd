@@ -44,9 +44,9 @@ const TRIM_DB := {
 	"klaxon": -3.0, "stinger_run": -3.0, "stinger_stage": -4.0, "stinger_clear": -2.0,
 	"stinger_run_end": -2.0, "stinger_milestone": -2.0, "gates_open": -4.0,
 	"music_pressure": -9.0,
-	"stinger_unseal": -1.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
+	"stinger_unseal": -3.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
 	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "element_resolved": -8.0,
-	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -3.0, "class_down": -6.0,
+	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
 }
 
 static var _samples := {}
