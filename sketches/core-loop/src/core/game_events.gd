@@ -15,6 +15,7 @@ signal run_ended(won: bool)
 signal beacon_charge_changed(fraction: float)
 signal beacon_unsealed(stage: int)
 signal warden_engaged(stage: int)
+signal stage_content_cleared(reason: String)
 
 # Run state (spine; emitted by run_state.gd's mutators, called by the modules).
 signal scrap_collected(amount: int, at: Vector3, total: int)

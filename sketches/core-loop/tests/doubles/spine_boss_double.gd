@@ -27,6 +27,15 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	ctx.events.boss_phase_changed.emit(1, "Requisition")
 
 
+# The arena's floor and landing spot, which flow's arena rescue reads.
+func floor_y() -> float:
+	return ctx.terrain.height(0.0, 0.0) - 5.0
+
+
+func rescue_point() -> Vector3:
+	return ctx.terrain.drop_point(0.0, 0.0, 3.0)
+
+
 func defeat() -> void:
 	ctx.events.boss_phase_changed.emit(3, "Eject")
 	ctx.events.boss_defeated.emit()
