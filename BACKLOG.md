@@ -6285,3 +6285,25 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 **Verification and evidence:** `npm run check:docs`; `npm run check:drift`; `npm run check:project`; a Fable review of the Bible diff against REVIEW.md and the ADRs.
 
 **Boundary:** No change to settled engine, ADR or art-lock choices; no invented product detail.
+
+<a id="df-05"></a>
+
+### DF-05: Carry Andrew's design principles into the Bible
+
+**Card revision:** 1 · **Owner:** Content · **Size:** S · **Lane:** Direction foundation (follow-up)
+
+**Source and inputs:** `docs/playtests/PLAYTEST-LOG.md` entry 6 (Andrew's principles, verbatim); `BIBLE.md` § 1 Pillars & Fantasy and § 8 Audio & Feel; TADR-006 to TADR-010; the DF-04 review notes ([report](artifacts/direction-foundation-2026-09-26/reviews/DF-04-A1.md)).
+
+**Dependencies:** [DF-04](#df-04). **Blocking questions:** None.
+
+**Files touched:** `BIBLE.md`; stated-hash lines that `check:drift` reports afterwards, each re-pinned only after its cited lines are re-read; `artifacts/local/tasks/DF-05/`.
+
+**Definition of done:**
+
+1. The principles in entry 6 appear in the Bible in Andrew's terms: momentum is sacred (only the player's performance costs momentum; loot, rewards and transitions happen on the move), quick restart, opt-in event layers with milestone rewards, insane scaling bounded by visual clarity, class identities (pylon engineer, runner-gunner as candidates), high-BPM jazzy EDM, and harmonizing apparent contradictions. Nothing beyond his words is added as settled.
+2. Every existing Bible line number is preserved, as in DF-04; the four DF-04 review notes (lines 209, 293, 513, 606) are applied or declined with reason.
+3. `check:drift` ends at 0 mismatches; `check:docs` passes; a Fable review of the diff passes.
+
+**Verification and evidence:** `npm run check:docs`; `npm run check:drift`; independent review.
+
+**Boundary:** Not authorized until Andrew or the coordinator records a scope for it; the core-loop prototype does not wait on it.
