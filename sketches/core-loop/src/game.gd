@@ -63,6 +63,7 @@ var screens
 var notes
 var panel
 var keyboard
+var codex
 
 var _pause_toggled := false
 var _notes_held := false

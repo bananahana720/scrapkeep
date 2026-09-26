@@ -27,6 +27,10 @@ var over := false
 var _snapshot := {}
 
 
+static func roman(n: int) -> String:
+	return ["0", "I", "II", "III", "IV", "V", "VI"][clampi(n, 0, 6)]
+
+
 func _init(events_ref = null) -> void:
 	events = events_ref
 

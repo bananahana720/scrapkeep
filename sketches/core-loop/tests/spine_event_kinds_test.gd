@@ -32,6 +32,15 @@ func _initialize() -> void:
 	for kind in EventKinds.ROWS:
 		if not kind in names:
 			orphans.append(kind)
+	var optional: Array[String] = []
+	for kind in EventKinds.ROWS:
+		if String(EventKinds.ROWS[kind]["objective"]).to_lower().contains("optional"):
+			optional.append(kind)
+	var categories_ok := true
+	for id in EventKinds.CODEX_CATEGORIES:
+		var cat: Dictionary = EventKinds.CODEX_CATEGORIES[id]
+		categories_ok = categories_ok and cat.get("color") is Color and String(cat.get("label", "")) != "" \
+			and cat.get("shape", "") in EventKinds.SHAPES
 	var toasts_without_words: Array[String] = []
 	for kind in names:
 		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "":
@@ -42,6 +51,8 @@ func _initialize() -> void:
 		["row shape", malformed.is_empty(), "%d rows missing a field or out of range %s" % [malformed.size(), malformed]],
 		["orphans", orphans.is_empty(), "%d rows naming no signal %s" % [orphans.size(), orphans]],
 		["critical wording", toasts_without_words.is_empty(), "%d priority-3 kinds with no HUD or objective wording %s" % [toasts_without_words.size(), toasts_without_words]],
+		["no optional", optional.is_empty(), "%d objectives use the word optional %s" % [optional.size(), optional]],
+		["codex categories", categories_ok and EventKinds.CODEX_CATEGORIES.size() == 5, "%d codex categories, each with a colour, label and shape" % EventKinds.CODEX_CATEGORIES.size()],
 	]
 	for check in checks:
 		if not check[1]:

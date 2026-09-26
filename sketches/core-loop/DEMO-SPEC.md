@@ -126,6 +126,33 @@ Andrew's words: "a different layer of treasure hunt where um, it allows the play
 - **Player UI.** The hold-Tab codex page gets category tabs, hint cards and a completion percentage per category. Discovered cards show what was combined and when. The page is designed rather than just listed: each category has its own colour and icon from `event_kinds`.
 - **Developer log.** Every discovery and every found interaction appends one line to `user://codex-log.ndjson`, recording `run_id`, stage, stage time in ticks, category, id, `participants`, the build's part ids and heft. The same data feeds the UI and the log, so the two cannot disagree.
 
+## Design feedback loop (Andrew, 2026-09-26)
+
+Andrew's words: "details and connections that are plotted out and though it could be hard to manage and may lead to like let's say balancing issues ... that could kind of be fed into a sort of feedback loop to make sure things integrate in a well-designed manner ... where the game designs kind of clicks and feels like there's engagement with purpose."
+
+1. **Run log.** At run end or death, the spine appends one record to `user://runs.ndjson`. It holds:
+   - `run_id`, class and the outcome
+   - per stage: ticks to Warden break, heft at exit, parts at exit, bonus cores, deaths (with position), and events joined and won
+   - the codex ids discovered this run
+   - the Brindle phase reached
+
+   The codex log (above) shares the `run_id`.
+2. **Bot runs.** Scripted demo runs in headless mode, driven the way `sketches/ball-lab`'s lab drives its arms, produce logs in bulk before Andrew plays. They cover three policies: a skipper, a completionist and a random driver.
+3. **Balance report.** `tools/balance_report` reads both logs and prints per-stage bands. It flags:
+   - Warden break time outside 10 to 90 s
+   - heft at stage exit outside the curve from `build_power_curve_test`
+   - a synergy found in more than 60% of runs, or in none
+   - a codex entry never discovered
+   - a death cluster at one position
+
+   It writes `artifacts/local/balance-<date>.md`. It reports and never tunes: tuning stays a human-approved edit to `stage_defs`, the heft constants or the catalogue.
+4. **Coherence check.** A test fails the build when:
+   - a part has no tag or verb
+   - a codex entry has no owner, clue or category
+   - an event kind has no sound
+   - a mechanic's DESIGN-NOTES line names no stage demand
+5. **The loop.** Bots run, the report flags, tuning is edited, bots run again, then Andrew plays and his verdict becomes a playtest entry. The report is rerun after every tuning pass.
+
 ## Biases the panel named, and their counters
 
 - **Consensus from a shared brief.** Counter: relationship tests. A run that only sits in the beacon ring cannot clear, and a power-curve test checks the build bands.
