@@ -8,6 +8,11 @@ const Enemy := preload("res://src/enemy.gd")
 const Hud := preload("res://src/hud.gd")
 const TuningPanel := preload("res://src/tuning_panel.gd")
 const Intent := preload("res://src/intent.gd")
+const Augments := preload("res://src/augments.gd")
+
+const REEL_NOTCH := 1.2
+const AIM_CAST := 90.0
+const AUGMENT_KEYS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5]
 
 const ACTIONS := {
 	"lab_forward": [KEY_W, KEY_UP],
@@ -17,6 +22,8 @@ const ACTIONS := {
 	"lab_jump": [KEY_SPACE],
 	"lab_boost": [KEY_SHIFT],
 	"lab_brake": [KEY_CTRL],
+	"lab_cling": [KEY_E],
+	"lab_reel": [KEY_Q],
 }
 
 # The headless test drives the same scene with no input source and no HUD.
@@ -69,6 +76,26 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	player.drive_basis = camera.yaw_basis()
+	if test_mode:
+		return
+	player.kit.aim_point = _aim_hit()
+
+
+# Fires along the crosshair, but the range that matters is the rope's, measured from
+# the ball rather than from the camera behind it.
+func _aim_hit():
+	if not player.kit.on(Augments.GRAPPLE):
+		return null
+	var from: Vector3 = camera.cam.global_position
+	var to: Vector3 = from - camera.cam.global_transform.basis.z * AIM_CAST
+	var hit := get_world_3d().direct_space_state.intersect_ray(
+		PhysicsRayQueryParameters3D.create(from, to, 1))
+	if hit.is_empty():
+		return null
+	var point: Vector3 = hit["position"]
+	if point.distance_to(player.ball_position()) > player.grapple_range():
+		return null
+	return point
 
 
 func _register_actions() -> void:
@@ -102,11 +129,19 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and _mouse_captured():
 		camera.look(event.relative)
 		return
-	if event is InputEventMouseButton and event.pressed and not _mouse_captured():
-		if panel == null or not panel.visible:
-			_capture_mouse(true)
+	if event is InputEventMouseButton:
+		if not _mouse_captured():
+			if event.pressed and (panel == null or not panel.visible):
+				_capture_mouse(true)
+			return
+		_grapple_button(event)
 		return
 	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	var augment := AUGMENT_KEYS.find(event.physical_keycode)
+	if augment >= 0:
+		player.kit.toggle(Augments.SPECS[augment]["key"])
+		get_viewport().set_input_as_handled()
 		return
 	match event.physical_keycode:
 		KEY_TAB:
@@ -126,6 +161,23 @@ func _input(event: InputEvent) -> void:
 			else:
 				get_tree().quit()
 			get_viewport().set_input_as_handled()
+
+
+func _grapple_button(event: InputEventMouseButton) -> void:
+	match event.button_index:
+		MOUSE_BUTTON_RIGHT:
+			if event.pressed:
+				var target = _aim_hit()
+				if target != null:
+					player.grapple_to(target)
+			else:
+				player.release_grapple()
+		MOUSE_BUTTON_WHEEL_UP:
+			if event.pressed:
+				player.reel_step(REEL_NOTCH)
+		MOUSE_BUTTON_WHEEL_DOWN:
+			if event.pressed:
+				player.reel_step(-REEL_NOTCH)
 
 
 func _on_shockwave(at: Vector3, strength: float) -> void:
