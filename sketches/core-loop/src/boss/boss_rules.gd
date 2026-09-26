@@ -85,3 +85,8 @@ const SCOOTER_MIN_SPEED := 5.0
 const SCOOTER_RING := 52.0
 
 const CREST_PART := "admirals_crest"
+# Growth continues in the fight: each phase break spills a ring of scrap pickups from
+# the ship to roll up, and a lobber drone killed in the arena drops its scrap.
+const BREAK_SPILL := 80
+const BREAK_PICKUPS := 16
+const BREAK_RADIUS := 10.0

@@ -63,7 +63,10 @@ func _physics_process(_delta: float) -> bool:
 
 func _on_phase(phase: int, phase_name: String) -> void:
 	_log.append("phase_%d" % phase)
-	_phases.append({"phase": phase, "name": phase_name, "clock": _boss.clock, "live_phase": _boss.phase, "phase_clock": _boss.phase_clock})
+	var spilled := 0
+	for p in _boss.pickups_left():
+		spilled += p["value"]
+	_phases.append({"phase": phase, "name": phase_name, "clock": _boss.clock, "live_phase": _boss.phase, "phase_clock": _boss.phase_clock, "spilled": spilled})
 
 
 func _on_hit(amount: float, source: String) -> void:
@@ -147,6 +150,12 @@ func _quench_checks() -> void:
 	Harness.put_ball(_game, _boss.arena.point_at(vent_angle, mid, 1.0))
 	for _tick in int(4.0 / DT):
 		_boss.advance(DT)
+	var drone_at: Vector3 = _boss.arena.point_at(1.0, 30.0, 1.0)
+	var before_kill: Array = _boss.pickups_left()
+	_game.run.record_kill("lobber", drone_at, 4)
+	var dropped: Array = _boss.pickups_left().filter(func(p): return p["at"].distance_to(drone_at) < 1.0 and p["value"] == 4)
+	_report("drone kill pays", _boss.pickups_left().size() == before_kill.size() + 1 and dropped.size() == 1,
+		"a lobber drone killed in the arena dropped a pickup worth %d where it died" % (dropped[0]["value"] if dropped.size() > 0 else 0))
 	var hits_on_crust := _slag_hits.size()
 	var rode: bool = _game.codex.known(CodexEntries.QUENCH_RIDE)
 	Harness.put_ball(_game, _boss.arena.point_at(PI, mid, 1.0))
@@ -198,6 +207,9 @@ func _fight_to_the_end() -> void:
 	_report("fight lasts 75 s", defeated_at >= MIN_FIGHT and order == [1, 2, 3, 4] and on_tick and _phases[3]["name"] == "chase",
 		"with infinite damage every tick boss_defeated came %.1f s after arena entry; phases %s at %s s, each published on the tick it began: %s"
 			% [defeated_at, str(order), str(_phases.map(func(p): return snappedf(p["clock"], 0.1))), on_tick])
+	var breaks: Array = _phases.slice(1).map(func(p): return p["spilled"])
+	_report("phase breaks pay scrap", breaks.size() == 3 and breaks.all(func(v): return v >= Rules.BREAK_SPILL),
+		"each phase break spilled scrap to roll up around the ship: %s (at least %d each)" % [str(breaks), Rules.BREAK_SPILL])
 	var crest: Node3D = _boss.crest()
 	_report("crest", crest != null and crest.get_parent() == _game.player.roll_node() and _game.run.parts.has(Rules.CREST_PART),
 		"the admiral's crest rides on the ball's roll node (%s) and the run holds %s" % [crest != null and crest.get_parent() == _game.player.roll_node(), Rules.CREST_PART])

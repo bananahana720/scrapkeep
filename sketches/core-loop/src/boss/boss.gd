@@ -79,6 +79,7 @@ func setup(ctx_ref) -> void:
 		_sync_crest())
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
+	ctx.events.enemy_killed.connect(_on_enemy_killed)
 
 
 func state_name() -> String:
@@ -166,7 +167,7 @@ func _physics_process(delta: float) -> void:
 
 
 func advance(delta: float) -> void:
-	if not active():
+	if not active() or not is_instance_valid(arena) or not is_instance_valid(ship):
 		return
 	_delta = maxf(delta, 0.0001)
 	clock += delta
@@ -206,6 +207,8 @@ func _floor_hp() -> float:
 
 func _enter_phase(next: int) -> void:
 	_cancel_hazards()
+	if next > 1:
+		_spill_break()
 	phase = next
 	phase_clock = 0.0
 	ship.show_cranes(next == 1)
@@ -414,6 +417,23 @@ func _step_trail(ball: Vector3) -> void:
 	_pickups = kept
 
 
+# A phase break sheds a ring of scrap around the ship, on the ground, to roll up.
+func _spill_break() -> void:
+	var at: Vector3 = ship.global_position
+	for k in Rules.BREAK_PICKUPS:
+		var p: Vector3 = at + Arena.dir(TAU * k / Rules.BREAK_PICKUPS) * Rules.BREAK_RADIUS
+		var value := Rules.BREAK_SPILL / Rules.BREAK_PICKUPS + (1 if k < Rules.BREAK_SPILL % Rules.BREAK_PICKUPS else 0)
+		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value)
+
+
+# The scrap field is stage content and idles in the arena, so a drone killed here drops
+# its scrap as a pickup where it died.
+func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
+	if state != FIGHT or kind != "lobber" or not is_instance_valid(arena):
+		return
+	_spawn_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value))
+
+
 func pickups_left() -> Array:
 	return _pickups.map(func(p): return {"at": p["at"], "value": p["value"]})
 
@@ -577,6 +597,7 @@ func charging() -> bool:
 
 func _begin_eject() -> void:
 	_cancel_hazards()
+	_spill_break()
 	state = EJECT
 	phase = CHASE_PHASE
 	phase_clock = 0.0
