@@ -2,13 +2,16 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Scrap laid along the terrain's scrap lines. The magnet reaches further the faster you
-# roll, and a piece it catches homes in faster than the ball can outrun it, so taking
-# scrap never asks you to slow down or turn back (momentum is sacred). A caught piece
-# stays caught until it lands on the ball.
+# Scrap laid along the terrain's scrap lines. The magnet grows with heft (6 m times the
+# square root of heft, capped at 18 m) and reaches further again the faster you roll,
+# and a piece it catches homes in faster than the ball can outrun it, so taking scrap
+# never asks you to slow down or turn back (momentum is sacred). A caught piece stays
+# caught until it lands on the ball. Pickups never touch the ball's velocity.
 
-const MAGNET := 7.0
-# Extra magnet reach per m/s of ball speed: at 30 m/s the reach is about 16 m.
+const MAGNET_PER_ROOT_HEFT := 6.0
+const MAGNET_CAP := 18.0
+# Extra magnet reach per m/s of ball speed, on top of the capped heft reach, so a fast
+# ball still catches what it passes.
 const MAGNET_PER_SPEED := 0.3
 const COLLECT := 2.0
 const HOME_SPEED := 16.0
@@ -17,6 +20,8 @@ const SPACING := 8.0
 const MAX_PER_LINE := 14
 
 var magnet_scale := 1.0
+# The run's heft; build sets it every tick.
+var heft := 1.0
 
 var _items: Array[MeshInstance3D] = []
 var _caught := {}
@@ -60,8 +65,26 @@ func drop(at: Vector3, amount: int, rng: RandomNumberGenerator) -> void:
 		_add(at + Vector3(rng.randf_range(-2.0, 2.0), 1.2, rng.randf_range(-2.0, 2.0)))
 
 
+# The heft part of the reach, monotonic in heft and capped at 18 m.
+func heft_reach() -> float:
+	return minf(MAGNET_CAP, MAGNET_PER_ROOT_HEFT * sqrt(maxf(1.0, heft)) * magnet_scale)
+
+
 func magnet_reach(ball_speed: float) -> float:
-	return (MAGNET + MAGNET_PER_SPEED * ball_speed) * magnet_scale
+	return heft_reach() + MAGNET_PER_SPEED * ball_speed
+
+
+# Pull scales by the same factor as the reach.
+func pull_scale() -> float:
+	return heft_reach() / MAGNET_PER_ROOT_HEFT
+
+
+# Scrap scattered along a line, for a Warden's payout thrown toward the gates.
+func drop_line(at: Vector3, heading: Vector3, length: float, amount: int, rng: RandomNumberGenerator) -> void:
+	var flat := Vector3(heading.x, 0.0, heading.z).normalized()
+	for i in amount:
+		var t := (i + 0.5) / float(maxi(1, amount))
+		_add(at + flat * length * t + Vector3(rng.randf_range(-1.5, 1.5), 1.2, rng.randf_range(-1.5, 1.5)))
 
 
 # Returns where each piece was taken this tick; the run state owns the total.
@@ -69,7 +92,7 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 	_spin += delta * 2.4
 	var taken: Array[Vector3] = []
 	var reach := magnet_reach(ball_speed)
-	var home := HOME_SPEED + ball_speed * HOME_OVER_BALL
+	var home := (HOME_SPEED + ball_speed * HOME_OVER_BALL) * pull_scale()
 	var i := _items.size() - 1
 	while i >= 0:
 		var item := _items[i]

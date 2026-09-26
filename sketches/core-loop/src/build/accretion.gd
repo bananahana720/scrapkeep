@@ -4,21 +4,28 @@ const Parts := preload("res://src/build/parts.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
-# Scrap becomes your build, on the ball. Held scrap shows as chunks stuck to the
-# surface, and each part as a piece of hardware whose shape says its family and whose
-# colour says its rarity. Spending scrap at a fabricator takes chunks off and bolts a
-# part on, so the purchase reads on the ball itself. This node lives under the ball's
-# roll_node(), so everything rolls with the surface. It is drawn from run.scrap and
-# run.parts every time, so a retry redraws the restored build exactly.
+# Scrap becomes your build, on the ball. Mass (DEMO-SPEC heft) shows as chunks stuck
+# to the surface, and each part as a piece of hardware whose shape says its family and
+# whose colour says its rarity. Spending compacts scrap into a part: the wallet drops
+# but mass does not, so a fabricator purchase bolts a part on and takes no chunk off.
+# Only a theft (scrap_lost) takes chunks, and they fly off toward the thief. The whole
+# shell grows a step per heft class; the collider never does. This node lives under
+# the ball's roll_node(), so everything rolls with the surface. It is drawn from
+# run.mass, run.parts and the heft class every time, so a retry redraws the restored
+# build exactly.
 #
-# Visual budget: at most MAX_CHUNKS chunks and MAX_PIECES pieces, and nothing sticks
-# out more than 0.7 m, so the build never hides the ball's line or a threat.
+# Visual budget: at most MAX_CHUNKS chunks and MAX_PIECES pieces; at heft class V the
+# hardware stands at most about 1.1 m off the collider, so the build never hides the
+# ball's line or a threat.
 
 const MAX_CHUNKS := 36
 const MAX_PIECES := 24
 const CHUNK_PER_ROOT_SCRAP := 2.2
 const POP_SCALE := 1.9
 const POP_RATE := 12.0
+# The shell's scale per heft class above I, and how long a stolen chunk flies.
+const SHELL_PER_CLASS := 0.07
+const FLING_SECONDS := 0.45
 
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
@@ -40,6 +47,8 @@ var _shown_parts: Array = []
 var _halos := {}
 var _chunk_mesh: BoxMesh
 var _chunk_material: StandardMaterial3D
+var _flung: Array[Dictionary] = []
+var _shell_class := 1
 
 
 func setup() -> void:
@@ -49,8 +58,12 @@ func setup() -> void:
 	_chunk_material = Palette.solid(Palette.ARC.lerp(Palette.RUST, 0.45), 0.5)
 
 
-static func chunks_for(scrap: int) -> int:
-	return mini(MAX_CHUNKS, int(sqrt(maxf(0.0, float(scrap))) * CHUNK_PER_ROOT_SCRAP))
+static func chunks_for(mass: float) -> int:
+	return mini(MAX_CHUNKS, int(sqrt(maxf(0.0, mass)) * CHUNK_PER_ROOT_SCRAP))
+
+
+static func shell_scale(heft_class: int) -> float:
+	return 1.0 + SHELL_PER_CLASS * float(maxi(1, heft_class) - 1)
 
 
 func chunk_count() -> int:
@@ -65,9 +78,15 @@ func halo_visible(synergy_id: String) -> bool:
 	return _halos.has(synergy_id) and (_halos[synergy_id] as Node3D).visible
 
 
-# Idempotent: draws exactly this scrap total, part list and synergy set.
-func show_build(scrap: int, parts: Array, synergies: Array) -> void:
-	var want := chunks_for(scrap)
+func shell_class() -> int:
+	return _shell_class
+
+
+# Idempotent: draws exactly this mass, part list, synergy set and heft class.
+func show_build(mass: float, parts: Array, synergies: Array, heft_class := 1) -> void:
+	_shell_class = heft_class
+	scale = Vector3.ONE * shell_scale(heft_class)
+	var want := chunks_for(mass)
 	while _chunks.size() > want:
 		_chunks.pop_back().queue_free()
 	while _chunks.size() < want:
@@ -80,6 +99,20 @@ func show_build(scrap: int, parts: Array, synergies: Array) -> void:
 			halo = _build_halo(key)
 			_halos[key] = halo
 		halo.visible = key in synergies
+
+
+# A theft: the outermost count chunks leave the ball and fly to at (world space) under
+# fx_parent, then vanish. The caller redraws after, so the counts stay in step.
+func fling(count: int, at: Vector3, fx_parent: Node3D) -> void:
+	for i in mini(count, _chunks.size()):
+		var chunk: MeshInstance3D = _chunks.pop_back()
+		var from := chunk.global_position
+		chunk.reparent(fx_parent)
+		_flung.append({"node": chunk, "from": from, "to": at, "t": 0.0})
+
+
+func flung_count() -> int:
+	return _flung.size()
 
 
 # A point on the unit sphere, spread evenly by index (golden-angle spiral), so the same
@@ -248,6 +281,19 @@ func _build_halo(synergy_id: String) -> Node3D:
 
 
 func _process(delta: float) -> void:
+	var i := _flung.size() - 1
+	while i >= 0:
+		var fx: Dictionary = _flung[i]
+		fx["t"] += delta / FLING_SECONDS
+		var node: Node3D = fx["node"]
+		if fx["t"] >= 1.0 or not is_instance_valid(node):
+			if is_instance_valid(node):
+				node.queue_free()
+			_flung.remove_at(i)
+		else:
+			var t: float = fx["t"]
+			node.global_position = (fx["from"] as Vector3).lerp(fx["to"], t) + Vector3.UP * 4.0 * t * (1.0 - t)
+		i -= 1
 	var settle := minf(1.0, POP_RATE * delta)
 	for chunk in _chunks:
 		if chunk.scale.x > 1.001:
