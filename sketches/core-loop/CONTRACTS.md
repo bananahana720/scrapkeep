@@ -239,7 +239,7 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
   - combat, for the shove of a committed, telegraphed hit;
   - the Warden pulse and the magnet tug.
 
-  A foreseen shove is an allowed performance cost.
+  A foreseen shove is an allowed performance cost. To turn a velocity change into an acceleration, divide it by the physics step actually run (the `delta` your `_physics_process` receives), never by `physics_ticks_per_second`: hit-stop changes `Engine.time_scale`, which would otherwise scale the push.
 - `set_velocity_now(velocity)` sets velocity. Only D's launch uses it. The launch calls it every tick during the flight, as a rail, not once.
 - `crush_check` (a Callable) is wired by `game.gd` to `ctx.spawner.would_crush`. A bow sensor a metre past the shell asks it for each enemy met from the cruise tier up. On yes, the ball ignores that enemy for 0.3 s and reports one `ram` strike, with no knock, shockwave or hit-stop.
 

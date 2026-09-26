@@ -55,12 +55,12 @@ func _checks() -> void:
 	codex.declare({"id": "storm_lattice", "category": "build", "name": "Storm Lattice", "hint": "Chain Arc", "clue": "+ something that splits", "text": "Split bolts chain between targets."})
 	codex.declare({"id": "storm_lattice", "category": "build", "name": "Storm Lattice", "hint": "Chain Arc", "clue": "+ something that splits", "text": "Split bolts chain between targets."})
 	codex.declare({"id": "flood_zap", "category": "world", "name": "Live Wire", "hint": "Flood water", "clue": "+ an arc", "text": "Arc on flood water electrifies it."})
-	codex.declare({"id": "shell_return", "category": "enemy", "name": "Return to Sender"})
+	codex.declare({"id": "test_enemy_trick", "category": "enemy", "name": "Test enemy trick"})
 	codex.declare({"id": "mystery", "category": "dance"})
 	var added := [codex.entries().size() - base_all, codex.entries("build").size() - base_build,
 		codex.entries("world").size() - base_world, codex.entries("enemy").size() - base_enemy]
 	_report("declare", added == [3, 1, 1, 1] and _game.ctx.codex == codex and not codex.entries().any(func(e): return e["id"] == "mystery"),
-		"declaring storm_lattice twice, flood_zap, shell_return and an unknown category added %s (all, build, world, enemy)" % [added])
+		"declaring storm_lattice twice, flood_zap, test_enemy_trick and an unknown category added %s (all, build, world, enemy)" % [added])
 
 	var scrap_before: int = run.scrap
 	var spot := Vector3(3.0, 20.0, 4.0)
