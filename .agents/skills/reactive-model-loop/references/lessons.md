@@ -255,9 +255,9 @@ Origins are descriptions, not locations. A host project that uses this skill kee
   Evidence: 15 of 240 answers (6.25%) were fallbacks, 6 of them inside controls. The wording-swap control failed only because 4 answers in one arm were fallbacks, and it passed on model answers alone. At a 5% fallback rate a 30-call control that fails on any non-model answer fails with probability about 0.79 (computed, unverified).
   Overturned by: —
 
-- **RML-50** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
-  A wording-swap control is vacuous unless a sensitivity arm shows wording can move the answer. The same holds for any input a control holds fixed.
-  Evidence: the decider read only numeric fields and option position, never label text or state (read from its code, consistent with two probes). It passed the wording swap on model answers. State had no effect (28 of 28 at both battery levels), and a risk of 0.001 was treated like a certain loss.
+- **RML-50** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects; a second, blind exercise against a sealed key
+  A wording-swap control must include a sensitivity arm that varies one label word across arms with the facts fixed, and must show whether wording can move the answer before a "same choice" result counts. The same holds for any input a control holds fixed.
+  Evidence: in the first exercise the decider read only numeric fields and option position, never label text or state (read from its code, consistent with two probes). It passed the wording swap on model answers. State had no effect (28 of 28 at both battery levels), and a risk of 0.001 was treated like a certain loss. In the blind exercise a planted trigger word added weight to any label containing it; the swap shifted only 0.007, most likely because both paraphrases kept the word, and the fired reading was misread as a position artefact.
   Overturned by: —
 
 - **RML-51** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
@@ -285,6 +285,41 @@ Origins are descriptions, not locations. A host project that uses this skill kee
   Evidence: confidence always fell between 0.60 and 0.80, and its correlation with the chosen option's probability was 0.068 over 225 model answers, under the pre-registered 0.2 line for "uninformative".
   Overturned by: —
 
+- **RML-56** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  When a decider returns both a choice and probabilities, count and investigate every choice that is not the highest-probability option. Do not assume sampling unless the provider documents it.
+  Evidence: 2 of 210 choices were not the top option, and the report read them as sampling. The sealed key showed a planted misreport: about 4% of calls returned a fixed-position option as the choice while the probabilities favoured another.
+  Overturned by: —
+
+- **RML-57** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  A source field the decider sets on itself is not proof of a live answer. Prefer an out-of-band signal (request ids, latency, provider logs) and say which one the check used. This refines RML-11.
+  Evidence: all 210 answers carried `source: "model"`, including the planted misreports. The report noted that the field is self-set and cannot be checked, and that sub-millisecond latency pointed to a local call, not a remote model.
+  Overturned by: —
+
+- **RML-58** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  For a decider that reads numeric fields, a numbers-against-labels cell (dominant numbers under a misleading label) belongs in the standard control set.
+  Evidence: the exercise added such a cell on its own initiative. It showed the decider followed the numbers over the label in every order where position did not interfere (four of six), and the report asked for the cell to be standard.
+  Overturned by: —
+
+- **RML-59** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  When the reply shape is unknown, make one uncounted schema probe before pinning, and log it in the change record before any counted call.
+  Evidence: the decider's source was off limits, so the exercise made one uncounted probe and logged it before any counted call. The skill gave no step for it.
+  Overturned by: —
+
+- **RML-60** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  Keep the change record in its own append-only file outside the pinned set, so post-run notes do not make the pinned hash stale.
+  Evidence: the change record lived inside the pinned pre-registration file, and an exploratory entry appended after the run made the pinned hash stale.
+  Overturned by: —
+
+- **RML-61** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
+  Judge a single-choice control on probabilities (with a margin) or on choices, not a mix, and say which.
+  Evidence: the pass rule required both a count of choices and a fixed margin. Three orders failed on margins of 0.089 to 0.099 against an arbitrary 0.10 while the target was chosen each time, so the verdict did not say which basis failed. A fixed floor again set the noise line (pooled SD 0.012), as in RML-48.
+  Overturned by: —
+
+- **RML-62** · status: provisional · since: 2026-09-26 · origin: two exercises in a row (the stub decider and the blind exercise)
+  When no independent reviewer can be assigned, take a solo path: record the missing approval as a limit, cap the claimed evidence level, and have the parent review before the result counts.
+  Evidence: in both exercises the worker could not spawn a reviewer and the plan ran unapproved. Each disclosed it, and the blind exercise asked the parent to review; the skill named no route for that case.
+  Overturned by: —
+
 ## Changelog
 
 Append-only. One row per change. Change types: new lesson, second confirmation, lesson overturned, new model version or alias move, instrument or question-set change.
@@ -294,3 +329,4 @@ Append-only. One row per change. Change types: new lesson, second confirmation, 
 | 2026-09-25 | new lesson | RML-01 to RML-43 | Initial ledger, written from three lesson inventories of one lab program and one public prior-art survey | pending independent review |
 | 2026-09-25 | new lesson; review revision | RML-44 to RML-46 added; RML-02, RML-05, RML-22, RML-27, RML-28, RML-41, RML-43 revised | Review of the initial ledger: RML-41 split into RML-41 and RML-46, RML-28 restated as a latent risk, public-project counts and labels corrected | reviewer-medium (Opus 5.5), PASS+NOTES |
 | 2026-09-26 | New lesson (not overturning) | RML-47 to RML-55 added; RML-13 evidence revised to drop the example floor value | A portable-skill exercise on a stub decider (240-call pre-registered run) and its grading, which found that a copied example floor decided a cell | pending |
+| 2026-09-26 | New lesson (not overturning) | RML-56 to RML-62 added; RML-50 revised to require a one-word sensitivity arm, with the blind exercise's evidence added | A blind exercise on an opaque decider graded against a sealed key: one planted defect found, one misread as sampling, one missed | pending |

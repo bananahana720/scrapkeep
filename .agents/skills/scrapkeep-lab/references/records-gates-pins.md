@@ -35,11 +35,12 @@ Known limits of the current gate:
 
 ## Pins
 
-- Cut a pin with `node scripts/lab/gate.mjs --pin <run_id> --as <name>`. The pin copies the run record and any verdict cache to `artifacts/jev-lab-2026-09-25/pins/<name>/` and omits per-trial directories, source hashes and the owner file (`PIN_OMITS`).
+- Cut a pin with `node scripts/lab/gate.mjs --pin <run_id> --as <name>`. The pin copies the run record and any verdict cache to `artifacts/jev-lab-<day>/pins/<name>/` for the current UTC day (`scripts/lab/gate.mjs:554`) and omits per-trial directories, source hashes and the owner file (`PIN_OMITS`).
+- A pin name can exist under several days. `resolvePin()` takes the newest day that holds it (`scripts/lab/gate.mjs:113-133`), so `--against <name>` reads the latest cut, and an older day's copy is history. Pass the older directory's path to gate against it on purpose.
 - Pin only a record whose instrument epoch has passed its controls and blind corpus. Scripted and random records carry no instrument identity (SKL-22).
 - A pin for a build outside the harness worktree, such as `andrew-anchor` for the build Andrew played (dc94b2c), takes `--subject-commit <rev> --subject-path <path>` so the pin names the subject's commit, path and tree hash (SKL-20).
 - `andrew-anchor` never goes stale. It records a human verdict, not machine evidence that ages.
-- Pins in this program: `andrew-anchor`, `ball-lab-suite`, `ball-lab-scripted-dummy-knock-kinematic` and `ball-lab-scripted-dummy-knock-rigid`. JL-21b is merged (EV-0564), but the two scripted `dummy-knock` pins are not yet re-cut; JL-21b-A3 re-cuts both under a 2026-09-26 folder with a `subject` block. Until then a fresh scripted `dummy-knock` batch reads as trace divergence against the kinematic pin, and the stale rigid pin can pass the gate (exit 0) without flagging the epoch change (SKL-22, EV-0551, EV-0564).
+- Pins in this program: `andrew-anchor`, `ball-lab-suite`, `ball-lab-scripted-dummy-knock-kinematic` and `ball-lab-scripted-dummy-knock-rigid`. JL-21b-A3 re-cut both scripted `dummy-knock` pins after the state and executor change, under `artifacts/jev-lab-2026-09-26/pins/`, each with a `subject` block naming 6864bf7, the tree the batches ran on (`artifacts/jev-lab-2026-09-26/pins/ball-lab-scripted-dummy-knock-kinematic/pin.json`; EV-0566). A fresh kinematic batch exits 0 against the new pin (20 of 20 reproduce) and 1 against the 2026-09-25 pin (0 of 20), as SKL-22 predicts (EV-0566). The 2026-09-25 `dummy-knock` pins are history: they record the pre-JL-21b epoch, and the gate no longer resolves those names to them. `andrew-anchor` and `ball-lab-suite` still live only under `artifacts/jev-lab-2026-09-25/pins/`.
 - A rigid pin with 0 successes gives the reachability check nothing to compare (`artifacts/jev-lab-2026-09-25/reviews/JL-25.md:11`); prefer a rigid pin scenario that the arm sometimes completes (design choice).
 
 ## Instrument epochs

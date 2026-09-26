@@ -14,7 +14,7 @@ The pattern comes from one lab's 216-call pre-registered run: six designs, every
 4. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need. Record the result in the template's stub dry-run slot.
 5. Compute the SHA-256 of every input file and write the hashes into the pre-registration.
 6. Make the runner refuse to start its live mode unless every hash matches.
-7. Get an independent reviewer's approval of the pre-registration. Record who approved it and when. When no independent reviewer can be assigned, take the solo path (RML-62): record the missing approval as a limit in the change record and the report, run as planned, and treat the result as not counting until the parent or another reviewer reviews the plan and the result. Two exercises in a row ran without a reviewer because the worker could not spawn one.
+7. Get an independent reviewer's approval of the pre-registration. Record who approved it and when. When no independent reviewer can be assigned, take the solo path (RML-62): record the missing approval as a limit in the change record and the report, cap the evidence level you claim below the level an approved run would earn, run as planned, and treat the result as not counting until the parent or another reviewer reviews the plan and the result. Two exercises in a row ran without a reviewer because the worker could not spawn one.
 8. Log any change to the plan in the change record, with who asked and why, before the first live call.
 
 ### Phase B: run once
