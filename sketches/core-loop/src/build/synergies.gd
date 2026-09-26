@@ -1,17 +1,19 @@
 extends RefCounted
 
 # Named synergies and the unnamed tag rules (DEMO-SPEC "Synergies"). Every part
-# carries one or two tags, and a named synergy is a tag pair: it is live while two
-# different held parts carry its two tags. So combinations make sense before you try
-# them: "Chain Arc + something that splits" is a clue a player can act on.
+# carries one or two tags. A named synergy is its hint card read literally: its shown
+# part plus any other held part carrying its second tag ("Chain Arc + something that
+# splits"). So combinations make sense before you try them, and a mid-sized build lights
+# up a few synergies rather than all of them. Unnamed tag rules are looser on purpose:
+# any two parts with the pair's tags, because they are the accidents.
 #
 # Each synergy changes behaviour, never just a number. Its effects are transformer ids
 # (build or combat act on them), pattern levels, element triggers and dials, folded in
 # by build_sheet.gd. A synergy is derived from the part list, never held, so a retry
 # that restores the list restores the synergies.
 #
-# This file works on tag sets only (one tag list per held part), so it never needs
-# the catalogue; parts.gd bridges part ids to tags. declarations() is the hint-card
+# This file works on part ids and tag sets (one tag list per held part), so it never
+# needs the catalogue; parts.gd bridges part ids to tags. declarations() is the hint-card
 # data for the codex registry (category "build").
 
 const CATEGORY := "build"
@@ -95,10 +97,22 @@ static func pair_live(tag_sets: Array, pair: Array) -> bool:
 	return false
 
 
-static func active(tag_sets: Array) -> Array:
+# True while the shown part is held and a different held part carries the second tag.
+static func named_live(held: Array, tag_sets: Array, synergy_id: String) -> bool:
+	var row: Dictionary = ROWS[synergy_id]
+	var shown_at: int = held.find(row["shown"])
+	if shown_at < 0:
+		return false
+	for j in tag_sets.size():
+		if j != shown_at and row["tags"][1] in tag_sets[j]:
+			return true
+	return false
+
+
+static func active(held: Array, tag_sets: Array) -> Array:
 	var live: Array = []
 	for key in ROWS:
-		if pair_live(tag_sets, ROWS[key]["tags"]):
+		if named_live(held, tag_sets, key):
 			live.append(key)
 	return live
 
@@ -111,12 +125,14 @@ static func active_rules(tag_sets: Array) -> Array:
 	return live
 
 
-# The named synergy that adding a part with these tags would bring live, or "".
-static func completed_by(tag_sets: Array, candidate_tags: Array) -> String:
-	var before := active(tag_sets)
-	var after: Array = tag_sets.duplicate()
-	after.append(candidate_tags)
-	for key in active(after):
+# The named synergy that adding this part would bring live, or "".
+static func completed_by(held: Array, tag_sets: Array, candidate: String, candidate_tags: Array) -> String:
+	var before := active(held, tag_sets)
+	var held_after: Array = held.duplicate()
+	held_after.append(candidate)
+	var sets_after: Array = tag_sets.duplicate()
+	sets_after.append(candidate_tags)
+	for key in active(held_after, sets_after):
 		if not key in before:
 			return key
 	return ""

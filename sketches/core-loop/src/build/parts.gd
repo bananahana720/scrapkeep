@@ -190,21 +190,21 @@ static func tag_sets(held: Array) -> Array:
 
 # The named synergy taking part_id now would complete, or "".
 static func completed_by(part_id: String, held: Array) -> String:
-	return Synergies.completed_by(tag_sets(held), tags_of(part_id))
+	return Synergies.completed_by(held, tag_sets(held), part_id, tags_of(part_id))
 
 
 # The part in pool that would complete a named synergy, or "".
 static func completing_part(held: Array, pool: Array) -> String:
 	var sets := tag_sets(held)
 	for key in pool:
-		if Synergies.completed_by(sets, tags_of(key)) != "":
+		if Synergies.completed_by(held, sets, key, tags_of(key)) != "":
 			return key
 	return ""
 
 
 # The not-yet-live named synergy whose hint card shows part_id as its ingredient, or "".
 static func ingredient_of(part_id: String, held: Array) -> String:
-	var live := Synergies.active(tag_sets(held))
+	var live := Synergies.active(held, tag_sets(held))
 	for key in Synergies.ROWS:
 		if Synergies.ROWS[key]["shown"] == part_id and not key in live:
 			return key

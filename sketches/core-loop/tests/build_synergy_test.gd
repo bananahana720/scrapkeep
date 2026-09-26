@@ -9,7 +9,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 # Named synergies are tag pairs (DEMO-SPEC "Synergies"). Checks: there are about
 # eight, every one is a pair of known tags whose shown ingredient carries the first
 # tag, every one changes behaviour rather than a number, and each goes live exactly
-# when two different held parts carry its two tags. The codex hint cards name one
+# when its shown part is held with another part carrying its second tag; a different
+# part with the first tag does not stand in for the shown one. The codex hint cards name one
 # ingredient and clue the other. The first activation in a run is a discovery, and a
 # retry does not repeat it. Offers carry "* completes X *" and "* ingredient: ??? *",
 # which names the synergy once it is discovered. Every live synergy puts a ring on
@@ -103,12 +104,16 @@ func _check_each_goes_live() -> void:
 		var row: Dictionary = Synergies.ROWS[key]
 		var shown: String = row["shown"]
 		var other := _carrier(row["tags"][1], shown)
-		var alone := Synergies.active(Parts.tag_sets([shown]))
-		var both := Synergies.active(Parts.tag_sets([shown, other]))
-		if key in alone or not key in both or other == "":
-			wrong.append("%s: alone %s, with %s %s" % [key, alone, other, both])
-	_report("each synergy goes live on its pair", wrong.is_empty(),
-		"every named synergy is off with its shown ingredient alone and live once a second part brings the other tag; wrong %s" % [wrong])
+		var alone := Synergies.active([shown], Parts.tag_sets([shown]))
+		var both := Synergies.active([shown, other], Parts.tag_sets([shown, other]))
+		var stand_in := _carrier(row["tags"][0], shown)
+		var without: Array = []
+		if stand_in != "" and stand_in != other:
+			without = Synergies.active([stand_in, other], Parts.tag_sets([stand_in, other]))
+		if key in alone or not key in both or other == "" or key in without:
+			wrong.append("%s: alone %s, with %s %s, %s + %s %s" % [key, alone, other, both, stand_in, other, without])
+	_report("each synergy goes live on its card", wrong.is_empty(),
+		"every named synergy is off with its shown part alone, live once a second part brings the other tag, and off when another part with the first tag stands in; wrong %s" % [wrong])
 
 
 func _check_marks_and_discovery() -> void:

@@ -46,7 +46,7 @@ static func from_parts(held: Array) -> RefCounted:
 		sheet.max_hp_bonus += d.max_hp_bonus
 		sheet.punch += d.punch
 	var sets := Parts.tag_sets(held)
-	sheet.synergies = Synergies.active(sets)
+	sheet.synergies = Synergies.active(held, sets)
 	sheet.rules = Synergies.active_rules(sets)
 	var rows: Array = []
 	for key in sheet.synergies:
