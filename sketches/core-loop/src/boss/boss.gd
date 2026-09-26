@@ -771,10 +771,11 @@ func rescue_point(near = null) -> Vector3:
 	return arena.point_at(angle, Arena.RESCUE_R, 2.0)
 
 
-# The arena's own guard, the same rule flow applies: a fall is the arena's fault, so
-# the ball goes back on the ring riding it, with its horizontal speed kept.
+# Flow rescues a fall below floor_y(). This catches the one it cannot see in time: a
+# ball flying out over the rim, which would take over a second to fall that far. It
+# goes back on the ring riding it, with its horizontal speed kept.
 func _rescue(ball: Vector3) -> void:
-	if arena.contains(ball) and ball.y > floor_y():
+	if arena.contains(ball):
 		return
 	var v: Vector3 = ctx.player.state.velocity
 	var speed := Vector2(v.x, v.z).length()

@@ -99,6 +99,18 @@ func _rescue_check() -> void:
 			break
 	var speed := Harness.planar(_game)
 	var ball: Vector3 = _game.player.ball_position()
+	var drop: Vector3 = _boss.arena.point_at(2.0, 30.0) + Vector3.DOWN * 11.0
+	Harness.put_ball(_game, drop, Arena.tangent(2.0) * THROW_SPEED + Vector3.DOWN * 5.0)
+	var caught := -1.0
+	for i in 90:
+		await physics_frame
+		var now: Vector3 = _game.player.ball_position()
+		if now.y >= _boss.floor_y() and _boss.arena.radius_of(now) >= Arena.FLOOR_R:
+			caught = (i + 1) / 90.0
+			break
+	_report("flow fall rescue", caught >= 0.0 and caught <= 1.0 and (THROW_SPEED - Harness.planar(_game)) / THROW_SPEED <= TOLERANCE,
+		"a ball dropped through the floor was put on the ring by flow through rescue_point() after %.2f s at %.2f m/s horizontal"
+			% [caught, Harness.planar(_game)])
 	_report("fall rescue", back >= 0.0 and back <= 1.0 and (THROW_SPEED - speed) / THROW_SPEED <= TOLERANCE and _boss.arena.radius_of(ball) >= Arena.FLOOR_R,
 		"thrown off the rim at %.1f m/s: back on the banked ring (r %.1f m) after %.2f s at %.2f m/s horizontal"
 			% [THROW_SPEED, _boss.arena.radius_of(ball), back, speed])

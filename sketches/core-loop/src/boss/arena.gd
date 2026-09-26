@@ -121,8 +121,9 @@ func entry_heading() -> Vector3:
 	return tangent(deg_to_rad(ENTRY_ANGLE))
 
 
+# Inside the bowl's footprint, out to just past the rim wall.
 func contains(point: Vector3) -> bool:
-	return radius_of(point) <= BANK_R + WALL_THICK + 4.0 and point.y >= global_position.y - 10.0
+	return radius_of(point) <= BANK_R + WALL_THICK + 4.0
 
 
 # --- Vents and quenching -------------------------------------------------------------
