@@ -284,10 +284,10 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-29](BACKLOG.md#jl-29) | 2 | 1 | done | none | none | EV-0577 |
 | [JL-30](BACKLOG.md#jl-30) | 1 | 1 | done | none | none | EV-0569 |
 | [JL-31](BACKLOG.md#jl-31) | 1 | 1 | done | none | none | EV-0571 |
-| [DF-01](BACKLOG.md#df-01) | 1 | 3 | review | none | none | EV-0582 |
-| [DF-02](BACKLOG.md#df-02) | 1 | 3 | review | none | none | EV-0582 |
-| [DF-03](BACKLOG.md#df-03) | 1 | 4 | in_progress | none | none | EV-0583 |
-| [DF-04](BACKLOG.md#df-04) | 1 | 1 | blocked | dependency: DF-01, DF-02, DF-03 | none | EV-0579 |
+| [DF-01](BACKLOG.md#df-01) | 1 | 4 | done | none | DF-01-A1 | EV-0584 |
+| [DF-02](BACKLOG.md#df-02) | 1 | 4 | done | none | DF-02-A1 | EV-0584 |
+| [DF-03](BACKLOG.md#df-03) | 1 | 5 | done | none | DF-03-A2 | EV-0584 |
+| [DF-04](BACKLOG.md#df-04) | 1 | 2 | ready | none | none | EV-0584 |
 
 ## Question state index
 
@@ -887,6 +887,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0581 | 2026-09-26T18:45:10+00:00 | Worker / handoff; coordinator / verification, repair; reviewer / assignment | DF-03; hash lines in three product and four technical section files | **DF-03-A1** handed back cf9d298 on wt/DF-03 (writer claude-opus-5-5, `CLAUDE_EFFORT=high`): TADR-010 and a per-section superseded note for TH-06, TH-11 and TH-14 in the sections index. Coordinator receipts on cf9d298: check:scope documentation-only (2 paths), check:docs 0 failures, check:project pass. **Repair:** the writer found check:drift failing at the base with 3 product mismatches: the EV-0579 import (433a3f4) appended BACKLOG.md without re-pinning PD-01, PD-02 and PD-03, as prior imports do (57d4306). The coordinator re-pinned and cascaded to a fixed point in two passes over the same seven files as 57d4306, hash lines only (1451057); check:drift 349 hashes, 0 mismatches. DF-03 to review: scrapkeep-reviewer (Fable 5.1 high), receipts supplied, writer brief withheld. |
 | EV-0582 | 2026-09-26T18:47:05+00:00 | Worker / handoff; coordinator / verification; reviewer / assignment | DF-01, DF-02 | **DF-01-A1** handed back 7bbb380 on wt/DF-01 (TADR-006 physics authority and verification, TADR-007 sketch promotion and playtest traceability) and **DF-02-A1** handed back 3c09574 on wt/DF-02 (TADR-008 ability contract, TADR-009 element-material interactions); both writers claude-opus-5-5, `CLAUDE_EFFORT=high`. Coordinator receipts on each: check:scope documentation-only (2 paths), check:docs 0 failures. Both writers saw the base's check:drift mismatches that EV-0581 already repaired. Writer findings carried for later cards, not fixed here: playtest log entry 2 records restitution 0.35 for rigid play, but the rigid ball at dc94b2c hard-coded 0.25 (the slider fed kinematic only); the tuning panel persists nothing; neither sketch enables physics interpolation and the chase camera reads the raw body position, a candidate cause of the jitter Andrew saw (the light-lane writer on proto/mobility-kit-v2 was asked to add an F3 interpolation toggle and an F4 tuning dump); TH-03's preview entry condition may need widening for an always-on reach indicator; HF-03b already uses "DF-01" to "DF-04" as register entry IDs, a name collision with this card family. One scrapkeep-reviewer (Fable 5.1 high) reads DF-01 and DF-02 together with separate verdicts (disjoint write sets); two reviewers active. |
 | EV-0583 | 2026-09-26T18:48:09+00:00 | Independent reviewer / review; coordinator / changes_requested, assignment | DF-03 | scrapkeep-reviewer (Fable 5.1 per its runtime line; no shell, so `CLAUDE_EFFORT` unavailable) returned **FAIL (narrow)** on DF-03-A1 at cf9d298 ([report](artifacts/direction-foundation-2026-09-26/reviews/DF-03-A1.md)). Blocking: the sections-index note says "Remains: every other rule" for TH-14, but GS-02 (line 73), GS-05 (76), GN-10 (166) and GP-08 (261) hard-code the encounter-scoped stream count that TADR-010 raises from two to three, and TADR-010:43 cites GS-02 as support. Notes: a director.gd health-scaling cite, two senses of "exit", and "currents" one word past the card's list. Everything else, including every other line cite, verified. changes_requested; attempt DF-03-A2 goes to the same writer and worktree under lease DF-03-L1 with the findings and without the review's recommended wording. |
+| EV-0584 | 2026-09-26T18:52:40+00:00 | Independent reviewer / review; coordinator / integration, acceptance, readiness | DF-01, DF-02, DF-03, DF-04 | **DF-03-A2** at 0d05446 (follow-on to cf9d298; README TH-14 split now covers the count rows GS-02, GS-05, GN-10, GE-09, GP-04, GP-08 and Seam 3; the notes on director.gd lines, the two senses of "exit" and "currents" applied) re-reviewed by the same scrapkeep-reviewer: **PASS+NOTES** ([report](artifacts/direction-foundation-2026-09-26/reviews/DF-03-A2.md); notes: walk rows GB.10 and GC.8 and the TH-14 paper check also restate the count, for a later TH-14 revision). **DF-01-A1** at 7bbb380 and **DF-02-A1** at 3c09574: one scrapkeep-reviewer read both, **PASS+NOTES** each, no blocking finding ([report](artifacts/direction-foundation-2026-09-26/reviews/DF-01-DF-02-A1.md); notes are cite precision and one unlabelled inference at TADR-006:67). Serial integration on the coordinator branch, each merge followed by its `adr/README.md` index row and check:docs, check:drift and check:project on the result, all passing: DF-03 at 93875e0, DF-01 at 459f38b, DF-02 at 89e0c19 (check:docs 172 files 0 failures; check:drift 349 hashes 0 mismatches). The ADR index header now names the Direction foundation additions. DF-01, DF-02 and DF-03 done; leases DF-01-L1 to DF-03-L1 closed. DF-04 unblocked and ready. Carried to later cards: the TH-02 and TH-15 amendments TADR-006 lists; TADR-007's five proposed tooling cards; TH-03's preview entry condition for an always-on reach indicator; TH-14's director stream row, walk rows and paper check; HF-03a's director fields in `EncounterState`; TH-06's schedule positions. |
 
 ## Preparation checkpoint
 
@@ -2210,36 +2211,36 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 
 ## DF-01-A1 Direction foundation attempt
 
-- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-01-A1; exclusive lease DF-01-L1 open.
-- Owned files: adr/TADR-006-physics-authority-and-verification.md; adr/TADR-007-sketch-promotion-and-playtest-traceability.md; artifacts/local/tasks/DF-01/.
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-01-A1; exclusive lease DF-01-L1 closed; accepted attempt DF-01-A1.
+- Owned files: adr/TADR-006-physics-authority-and-verification.md; adr/TADR-007-sketch-promotion-and-playtest-traceability.md; artifacts/local/tasks/DF-01/.  Active owned files: none.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-01` on `wt/DF-01`, created by `scripts/new-worktree.sh`.
 - Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
-- Candidate identity: `7bbb38087f6dcc7f8b0d48005cd62aaac853d0f3` on wt/DF-01. Integrated identity: null.
-- Latest checkpoint: 2026-09-26T18:47:05+00:00; handoff received (writer claude-opus-5-5, CLAUDE_EFFORT=high); coordinator receipts pass; in review.
+- Candidate identity: `7bbb38087f6dcc7f8b0d48005cd62aaac853d0f3` on wt/DF-01 (DF-01-A1). Integrated identity: `459f38b` on the coordinator branch, fast-forwarded to main.
+- Latest checkpoint: 2026-09-26T18:52:40+00:00; done. Integrated checks on the result: check:docs 0 failures, check:drift 349 hashes 0 mismatches, check:project pass.
 - Blockers: none.
-- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-01/` (check-scope documentation-only 2 paths; check:docs 0 failures).
-- Review: in progress, scrapkeep-reviewer (Fable 5.1 high), paired DF-01/DF-02 read with separate verdicts.
+- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-01/` and `.../integrated/`.
+- Review: PASS+NOTES, [report](artifacts/direction-foundation-2026-09-26/reviews/DF-01-DF-02-A1.md).
 
 ## DF-02-A1 Direction foundation attempt
 
-- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-02-A1; exclusive lease DF-02-L1 open.
-- Owned files: adr/TADR-008-ability-contract.md; adr/TADR-009-element-material-interactions.md; artifacts/local/tasks/DF-02/.
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-02-A1; exclusive lease DF-02-L1 closed; accepted attempt DF-02-A1.
+- Owned files: adr/TADR-008-ability-contract.md; adr/TADR-009-element-material-interactions.md; artifacts/local/tasks/DF-02/.  Active owned files: none.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-02` on `wt/DF-02`, created by `scripts/new-worktree.sh`.
 - Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
-- Candidate identity: `3c0957474f4be5e6c2537b1b087fb18929f73d28` on wt/DF-02. Integrated identity: null.
-- Latest checkpoint: 2026-09-26T18:47:05+00:00; handoff received (writer claude-opus-5-5, CLAUDE_EFFORT=high); coordinator receipts pass; in review.
+- Candidate identity: `3c0957474f4be5e6c2537b1b087fb18929f73d28` on wt/DF-02 (DF-02-A1). Integrated identity: `89e0c19` on the coordinator branch, fast-forwarded to main.
+- Latest checkpoint: 2026-09-26T18:52:40+00:00; done. Integrated checks on the result: check:docs 0 failures, check:drift 349 hashes 0 mismatches, check:project pass.
 - Blockers: none.
-- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-02/` (check-scope documentation-only 2 paths; check:docs 0 failures).
-- Review: in progress, scrapkeep-reviewer (Fable 5.1 high), paired DF-01/DF-02 read with separate verdicts.
+- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-02/` and `.../integrated/`.
+- Review: PASS+NOTES, [report](artifacts/direction-foundation-2026-09-26/reviews/DF-01-DF-02-A1.md).
 
 ## DF-03-A1 Direction foundation attempt
 
-- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-03-A1; exclusive lease DF-03-L1 open.
-- Owned files: adr/TADR-010-open-stages-and-event-director.md; docs/tech/sections/README.md (superseded-direction note only); artifacts/local/tasks/DF-03/.
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-03-A1; exclusive lease DF-03-L1 closed; accepted attempt DF-03-A2.
+- Owned files: adr/TADR-010-open-stages-and-event-director.md; docs/tech/sections/README.md (superseded-direction note only); artifacts/local/tasks/DF-03/.  Active owned files: none.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-03` on `wt/DF-03`, created by `scripts/new-worktree.sh`.
 - Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
-- Candidate identity: `cf9d298d97fd3dc4f775204bd2c3f83afb2dce8a` on wt/DF-03. Integrated identity: null.
-- Latest checkpoint: 2026-09-26T18:48:09+00:00; review FAIL (narrow) on DF-03-A1; changes_requested; attempt DF-03-A2 dispatched to the same writer in the same worktree under lease DF-03-L1.
+- Candidate identity: `0d054460d6550c2cbdb56e3dcb5e30722f2b7c3c` on wt/DF-03 (DF-03-A2). Integrated identity: `93875e0` on the coordinator branch, fast-forwarded to main.
+- Latest checkpoint: 2026-09-26T18:52:40+00:00; done. Integrated checks on the result: check:docs 0 failures, check:drift 349 hashes 0 mismatches, check:project pass.
 - Blockers: none.
-- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-03/` (check-scope documentation-only 2 paths; check:docs 0 failures; check:project pass).
-- Review: DF-03-A1 FAIL, [report](artifacts/direction-foundation-2026-09-26/reviews/DF-03-A1.md): TH-14 GS-02, GS-05, GN-10 and GP-08 hard-code the encounter stream count TADR-010 raises; notes on a director.gd cite, two senses of "exit", and "currents".
+- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-03/` and `.../integrated/`.
+- Review: PASS+NOTES, [report](artifacts/direction-foundation-2026-09-26/reviews/DF-03-A2.md).
