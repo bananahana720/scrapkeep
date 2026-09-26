@@ -376,6 +376,9 @@ func _screen_key(key: int) -> bool:
 			if key == KEY_C:
 				flow.open_class_select()
 				return true
+			if key == KEY_T and flow.can_replay_final_stage():
+				flow.replay_stage(3)
+				return true
 		"summary":
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()

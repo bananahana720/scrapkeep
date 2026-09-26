@@ -60,12 +60,19 @@ func _on_flow_changed(state: String) -> void:
 				_choices.add_child(_class_card(i + 1, classes[i]))
 		"dead":
 			var class_text: String = game.run.class_def.display_name if game.run.class_def != null else ""
-			_show("SCRAPPED", EventKinds.color("player_died"),
-				"R   retry stage %d from its start\nN   new run as %s\nC   choose a class" % [game.run.stage, class_text])
+			var gap: String = game.flow.gap_line()
+			var keys := "R   retry stage %d from its start\nN   new run as %s\nC   choose a class" % [game.run.stage, class_text]
+			if game.flow.can_replay_final_stage():
+				keys += "\nT   replay stage %d from its start" % StageDefs.COUNT
+			_show("SCRAPPED", EventKinds.color("player_died"), (gap + "\n\n" if gap != "" else "") + keys)
 		"summary":
 			_show("RUN COMPLETE", EventKinds.color("run_ended"), _summary_text() + "\n\nN   run again as the same class\nSpace   choose a class")
 		_:
 			visible = false
+
+
+func body_text() -> String:
+	return _body.text
 
 
 func _show(title: String, color: Color, body: String) -> void:

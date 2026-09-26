@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
 # Retry puts the stage-start checkpoint back: scrap, health, parts, position and entry
 # speed, in one call well inside a second. It works from play (the hold-R path) and
@@ -73,6 +74,41 @@ func _retry() -> Dictionary:
 	}
 
 
+# The boss death screen: the gap line names plating, and T replays stage 3 from the
+# start the run kept. Wave 4 adds the boss state; here its seam is set by hand.
+func _final_stage_checks() -> void:
+	var run = _game.run
+	var flow = _game.flow
+	var double := SpawnerDouble.new()
+	_game.add_child(double)
+	double.setup(_game.ctx)
+	_game.ctx.spawner = double
+	flow.force_warden = true
+	flow.enter_stage(3, Vector3(0.0, 0.0, 16.0), false)
+	var start := {"mass": run.mass, "parts": run.parts.duplicate(), "hp": run.hp}
+	run.add_scrap(40, Vector3.ZERO)
+	run.add_part("boost_coil", "test")
+	run.damage(20.0, "test")
+	run.damage(9999.0, "test")
+	var warden_text: String = _game.screens.body_text()
+	flow.retry_stage()
+	flow.boss_active = true
+	run.add_scrap(25, Vector3.ZERO)
+	run.damage(9999.0, "test")
+	var boss_text: String = _game.screens.body_text()
+	var offered: bool = flow.can_replay_final_stage()
+	var begin := Time.get_ticks_usec()
+	var replayed: bool = flow.replay_stage(3)
+	var took := Time.get_ticks_usec() - begin
+	_report("death gap line", warden_text.contains("plating 95") and boss_text.contains("plating 120") and boss_text.contains("T   replay stage 3"),
+		"warden death reads \"%s\"; boss death offers T %s" % [warden_text.get_slice("\n", 0), boss_text.contains("T   replay")])
+	_report("replay stage 3", offered and replayed and flow.state_name() == "stage" and run.stage == 3 and run.mass == start["mass"]
+			and run.parts == start["parts"] and is_equal_approx(run.hp, start["hp"]) and took < SECOND_USEC,
+		"T replayed stage %d in %.1f ms: mass %.0f (start %.0f), parts %s, hp %.0f, flow %s"
+			% [run.stage, took / 1000.0, run.mass, start["mass"], run.parts, run.hp, flow.state_name()])
+	flow.force_warden = false
+
+
 func _run_checks() -> void:
 	var run = _game.run
 	var start := {"scrap": run.scrap, "hp": run.hp, "parts": run.parts.duplicate()}
@@ -105,6 +141,7 @@ func _run_checks() -> void:
 			% [run.stage, run.scrap, run.parts, run.hp, r["gap"]])
 
 	_report("retry count", run.retries == 3, "summary counts %d retries" % run.retries)
+	_final_stage_checks()
 	run.damage(9999.0, "test")
 	_game.flow.new_run()
 	_report("new run", _game.flow.state_name() == "stage" and run.stage == 1 and run.parts.is_empty() and run.scrap == 0

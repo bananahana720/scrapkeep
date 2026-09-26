@@ -33,6 +33,11 @@ var beacon_seconds_override := -1.0
 var force_warden := false
 var sealed := false
 var warden: Node3D = null
+# Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
+# boss_plating to the hull's plating. The death screen then shows the boss gap line and
+# offers T, which replays stage 3 from the start the run kept.
+var boss_active := false
+var boss_plating := 120.0
 
 var _launched := false
 var _flight := 0.0
@@ -137,6 +142,33 @@ func retry_stage() -> void:
 	ctx.camera.yaw = ctx.run.snapshot_value("camera_yaw")
 	_place_beacon()
 	_set_state(STAGE)
+
+
+# Replays a stage from the first start the run kept for it, as the boss death screen's
+# T does for stage 3. One synchronous call, like a retry.
+func replay_stage(index: int) -> bool:
+	if not ctx.run.use_stage_start(index):
+		return false
+	boss_active = false
+	retry_stage()
+	return true
+
+
+func can_replay_final_stage() -> bool:
+	return boss_active and ctx.run.has_stage_start(StageDefs.COUNT)
+
+
+# What the death screen says about the fight that killed you: your punch against the
+# plating that stood in the way, and your heft. Empty when no plated lock was live.
+func gap_line() -> String:
+	var plating := -1.0
+	if boss_active:
+		plating = boss_plating
+	elif sealed and is_instance_valid(warden):
+		plating = warden_plating()
+	if plating < 0.0:
+		return ""
+	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
 
 
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
