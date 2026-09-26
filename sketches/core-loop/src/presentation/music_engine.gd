@@ -738,6 +738,9 @@ func _on_step() -> void:
 	var chord := _chord(bar)
 	if not _drop.is_empty():
 		_trigger_drop(bar, s, chord)
+		# A gate taken mid-drop (right after the unseal) builds over the drop.
+		if building():
+			_build_overlay(s)
 		return
 	if _cadence_bar >= 0:
 		_trigger_dnb(bar, s, chord)

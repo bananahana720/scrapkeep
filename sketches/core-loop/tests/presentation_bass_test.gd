@@ -23,6 +23,7 @@ func _initialize() -> void:
 	MusicEngine.prepare()
 	_bass_everywhere()
 	_wobble_locked()
+	_launch_from_drop()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -90,6 +91,21 @@ func _wobble_locked() -> void:
 			rates[entry[1]] = true
 	_check("wobble on the grid", bad.is_empty() and mixed_bars == 0 and total > 100 and rates.size() == MusicEngine.RATES.size(),
 		"%d LFO cycles over 8 bars each of 3 themes, the Warden drop (129) and Brindle phases 2 (129) and 3 (150): every cycle starts on a beat subdivision of its own rate, one rate per bar, %d rates used %s; off-grid %s" % [total, rates.size(), rates.keys(), bad.slice(0, 5)])
+
+
+# Players take the gate inside the Warden's unseal drop: the launch still builds over
+# the drop and the landing drops into the next stage's theme at 172.
+func _launch_from_drop() -> void:
+	var engine := MusicEngine.new()
+	engine.force_track("warden", 0, "drop", true)
+	engine.render(engine.bar_len() * 2 + 999)
+	engine.start_build(1.6, true)
+	engine.render(engine.beat_len() * 3)
+	var built := engine.building() and engine.in_drop() and engine.build_level() > 0.3
+	var at := engine.drop_now(4, 0.85, {}, 2)
+	engine.render(at - engine.clock + 64)
+	var ok: bool = built and engine.in_drop() and engine.track == "level" and engine.theme == 2 and absf(engine.bpm() - 172.0) < 0.1 and engine.clock - at == 64
+	_check("launch from the unseal drop", ok, "a gate taken mid-drop builds over the drop (level %.2f) and the landing drops into Weir at %.0f BPM" % [engine.build_level(), engine.bpm()])
 
 
 func _process(_delta: float) -> bool:

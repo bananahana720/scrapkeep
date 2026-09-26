@@ -53,7 +53,7 @@ const TRIM_DB := {
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
 	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
-	"womp": -8.0, "build_riser": -4.0,
+	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 }
 
 static var _samples := {}
@@ -210,6 +210,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _zap_hum()
 		"shatter":
 			return _shatter()
+		"stage_fade":
+			return _stage_fade()
 		"boss_arena_in":
 			return _brindle_in()
 		"boss_phase":
@@ -571,6 +573,17 @@ static func _brindle_in() -> PackedFloat32Array:
 		[10, 0, 16, "crash", 0.5], [12, 0, 1, "snare", 0.6], [13, 0, 1, "snare", 0.7], [14, 0, 1, "snare", 0.85],
 		[15, 0, 1, "snare", 1.0]]
 	return Synth.render_score(score, 0.9)
+
+
+# The stage's ambience drawn out before the arena: a soft breath of air that falls
+# and fades, with a low D under it. Quiet on purpose; the arena music is the event.
+static func _stage_fade() -> PackedFloat32Array:
+	var air := _noise(0.7, 2600.0, 400.0, 0.0, 0.08)
+	var n := air.size()
+	for i in n:
+		var x := float(i) / n
+		air[i] *= (1.0 - x) * (1.0 - x)
+	return _mix([[air, 0, 1.0], [_tone(0.6, Harmony.hz(50), Harmony.hz(50), "sine", 4.0), 0, 0.35]], false, 0.6)
 
 
 # A wind-up: two low minor-second pulses (D, Eb) with a rising noise, over in 0.4 s so

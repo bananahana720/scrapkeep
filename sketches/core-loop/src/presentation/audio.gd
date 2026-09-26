@@ -394,6 +394,11 @@ func wire_optional() -> void:
 	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
 	_listen(events, "boss_attack_telegraphed", _on_boss_telegraph)
 	_listen(events, "boss_weak_point_hit", _on_weak_point)
+	# The stage's content leaves before the arena: a soft fade, and any launch build
+	# resolves into the arena music instead of a landing.
+	_listen(events, "stage_content_cleared", func(_reason: String):
+		_disarm_launch()
+		play("stage_content_cleared"))
 
 
 # Connects once. loose drops whatever arguments the signal carries.
@@ -527,7 +532,9 @@ func _on_slammed(_at: Vector3, strength: float, flatness: float) -> void:
 
 func _on_launched(_velocity: Vector3) -> void:
 	play("launched")
-	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track != "level":
+	# From the level, a miniboss or the Warden's drop (players take the gate inside
+	# the unseal drop); never out of Brindle's arena.
+	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == "brindle":
 		return
 	# The launch is the build: the riser, the snare roll and the sweep carry the flight.
 	engine.start_build(LAUNCH_BUILD_SECONDS, true)
