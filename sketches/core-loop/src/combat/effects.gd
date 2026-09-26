@@ -1,0 +1,128 @@
+extends Node3D
+
+# Combat's own short-lived marks: chain arcs, blast rings and impact sparks. They show
+# where a committed hit landed, for a fraction of a second, drawn as thin lines at
+# PRIORITY, below every enemy telegraph (principle 4: our effects never hide a threat).
+# Presentation (writer C) owns the rest of the juice; these are the minimum a greybox
+# needs to read what the weapons did. The jitter uses the global randf on purpose: it
+# is visual only and must not draw from the run's seeded stream.
+
+const PRIORITY := 1
+const ARC_LIFE := 0.16
+const RING_LIFE := 0.24
+const SPARK_LIFE := 0.12
+const ARC_SEGMENTS := 7
+const RING_SEGMENTS := 40
+
+var _arcs: Array = []
+var _rings: Array = []
+var _sparks: Array = []
+var _mesh: ImmediateMesh
+
+
+func setup() -> void:
+	name = "CombatEffects"
+	_mesh = ImmediateMesh.new()
+	var view := MeshInstance3D.new()
+	view.mesh = _mesh
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.render_priority = PRIORITY
+	view.material_override = mat
+	view.top_level = true
+	add_child(view)
+
+
+func arc(from: Vector3, to: Vector3, color: Color) -> void:
+	_arcs.append({"from": from, "to": to, "color": color, "life": ARC_LIFE})
+
+
+func ring(at: Vector3, radius: float, color: Color) -> void:
+	_rings.append({"at": at, "radius": radius, "color": color, "life": RING_LIFE})
+
+
+func spark(at: Vector3, color: Color) -> void:
+	_sparks.append({"at": at, "color": color, "life": SPARK_LIFE})
+
+
+func clear() -> void:
+	_arcs.clear()
+	_rings.clear()
+	_sparks.clear()
+	_mesh.clear_surfaces()
+
+
+func _process(delta: float) -> void:
+	_mesh.clear_surfaces()
+	_arcs = _age(_arcs, delta)
+	_rings = _age(_rings, delta)
+	_sparks = _age(_sparks, delta)
+	if _arcs.is_empty() and _rings.is_empty() and _sparks.is_empty():
+		return
+	_mesh.surface_begin(Mesh.PRIMITIVE_LINES)
+	for entry in _arcs:
+		_draw_arc(entry)
+	for entry in _rings:
+		_draw_ring(entry)
+	for entry in _sparks:
+		_draw_spark(entry)
+	_mesh.surface_end()
+
+
+static func _age(list: Array, delta: float) -> Array:
+	var kept: Array = []
+	for entry in list:
+		entry["life"] -= delta
+		if entry["life"] > 0.0:
+			kept.append(entry)
+	return kept
+
+
+func _line(a: Vector3, b: Vector3, color: Color) -> void:
+	_mesh.surface_set_color(color)
+	_mesh.surface_add_vertex(a)
+	_mesh.surface_set_color(color)
+	_mesh.surface_add_vertex(b)
+
+
+# A jagged bolt of lightning, re-jittered every frame so it crackles while it lasts.
+func _draw_arc(entry: Dictionary) -> void:
+	var from: Vector3 = entry["from"]
+	var to: Vector3 = entry["to"]
+	var color := Color(entry["color"], clampf(entry["life"] / ARC_LIFE, 0.0, 1.0))
+	var span := to - from
+	var jitter := minf(1.2, span.length() * 0.08)
+	var previous := from
+	for i in range(1, ARC_SEGMENTS + 1):
+		var t := float(i) / ARC_SEGMENTS
+		var point := from + span * t
+		if i < ARC_SEGMENTS:
+			point += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * jitter
+		_line(previous, point, color)
+		previous = point
+
+
+# A blast ring that grows to its committed radius as it fades.
+func _draw_ring(entry: Dictionary) -> void:
+	var life := clampf(entry["life"] / RING_LIFE, 0.0, 1.0)
+	var radius: float = entry["radius"] * lerpf(1.0, 0.55, life)
+	var color := Color(entry["color"], 0.7 * life)
+	var at: Vector3 = entry["at"] + Vector3.UP * 0.4
+	var previous := at + Vector3(radius, 0.0, 0.0)
+	for i in range(1, RING_SEGMENTS + 1):
+		var angle := TAU * i / RING_SEGMENTS
+		var point := at + Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+		_line(previous, point, color)
+		previous = point
+
+
+func _draw_spark(entry: Dictionary) -> void:
+	var at: Vector3 = entry["at"]
+	var size := 0.5 * clampf(entry["life"] / SPARK_LIFE, 0.0, 1.0) + 0.15
+	var color := Color(entry["color"], 0.9)
+	_line(at - Vector3.RIGHT * size, at + Vector3.RIGHT * size, color)
+	_line(at - Vector3.UP * size, at + Vector3.UP * size, color)
+	_line(at - Vector3.BACK * size, at + Vector3.BACK * size, color)
