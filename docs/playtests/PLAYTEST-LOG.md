@@ -4,7 +4,9 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 ## Waiting for play
 
-Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges are next.
+Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges followed (TRACKING EV-0578).
+
+**Now waiting: mobility kit v2** on `proto/mobility-kit-v2` at `f118321`, launched with `scrapkeep mobility-kit-v2`. It answers entry 3's requests: an angle-blended slam (plant on flat ground, launch downhill on slopes), a winch reel that hauls even on slack rope, a magnetic grapple reach indicator with three states, a pylon mount replacing mag-cling with a placeholder zap (left mouse while mounted), hold Tab for field notes (pauses), P to pause, physics mode on F2, F3 to toggle physics interpolation (a candidate cause of the kinematic "shaky" look), F4 to dump the tuning played to a file, and a split-cooldown toggle for boost and air dash in the F1 panel. The coordinator's gate passed: `check:scope` reports `sketch`, clean tree, `sketch:smoke` 33 of 33.
 
 | Sketch | Branch and head | Question it answers |
 | --- | --- | --- |
