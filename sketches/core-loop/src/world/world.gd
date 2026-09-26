@@ -67,12 +67,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.slammed.connect(_on_slammed)
 	ctx.events.jumped.connect(_on_jumped)
-	if ctx.events.has_signal("element_resolved"):
-		ctx.events.connect("element_resolved", _on_element_resolved)
-	var codex = ctx.get("codex")
-	if codex != null and codex.has_method("declare"):
-		for entry in CodexWorld.ENTRIES:
-			codex.declare(entry)
+	ctx.events.element_resolved.connect(_on_element_resolved)
+	for entry in CodexWorld.ENTRIES:
+		ctx.codex.declare(entry)
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -165,9 +162,8 @@ func _publish(facts: Array) -> void:
 				bus.event_ended.emit(fact["id"], fact["outcome"])
 			"milestone":
 				ctx.run.record_milestone(fact["id"])
-				if ctx.run.has_method("add_core"):
-					var at: Vector2 = fact["at"]
-					ctx.run.add_core("event", terrain.drop_point(at.x, at.y, 1.0))
+				var at: Vector2 = fact["at"]
+				ctx.run.add_core("event", terrain.drop_point(at.x, at.y, 1.0))
 			"scrap":
 				ctx.run.add_scrap(fact["amount"], fact["at"])
 			"miniboss":
@@ -229,12 +225,11 @@ func _on_element_resolved(_element: String, material: String, behaviour: String,
 	_discover(codex_world.note("element", {"material": material, "behaviour": behaviour, "at": at}))
 
 
+# The codex publishes synergy_discovered and grants the burst; the world only reports.
 func _discover(fired: Array) -> void:
-	var codex = ctx.get("codex")
 	for entry in fired:
 		discoveries.append(entry)
-		if codex != null and codex.has_method("mark_discovered"):
-			codex.mark_discovered(entry["id"], entry["at"], ["player"])
+		ctx.codex.mark_discovered(entry["id"], entry["at"])
 
 
 # The plated vault off the fall line. Never in calm, and a combat module without the
@@ -251,16 +246,14 @@ func _spawn_vault() -> void:
 
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
-	if ctx.run.has_method("heft_class"):
-		director.heft_class = ctx.run.heft_class()
+	director.heft_class = ctx.run.heft_class()
 	var alive := get_tree().get_nodes_in_group("enemy").size()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = -ctx.camera.yaw_basis().z
 	var due: Array = director.advance(delta, alive, Vector2(ball.x, ball.z), Vector2(v.x, v.z), Vector2(forward.x, forward.z))
 	for tier in director.take_threat_rises():
-		if ctx.events.has_signal("threat_rose"):
-			ctx.events.emit_signal("threat_rose", tier)
+		ctx.events.threat_rose.emit(tier)
 	view.show_arrivals(director.arrivals if not ctx.calm else [])
 	for spawn in due:
 		if ctx.calm or ctx.spawner == null:

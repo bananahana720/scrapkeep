@@ -6,8 +6,9 @@ const EventDirector := preload("res://src/world/event_director.gd")
 
 # The event layer wired into the real game. Stage 1: the Scrap Stampede is armed and
 # ignored, and the beacon, gate and launch still take the ball to stage 2. Stage 2:
-# roll into the Surge Run ring and thread its gates; the bus carries the announcement,
-# the start, the win and milestone_won, in that order. Stage 3: hold the relay with a
+# roll into the Surge Run ring and thread its gates at blazing speed; the bus carries
+# the announcement, the start, the win and milestone_won, in that order, the win grants
+# an event core, and the codex records Surge Slingshot. Stage 3: hold the relay with a
 # combat module that has no miniboss; the world asks for one at a seeded spot near the
 # relay, falls back to a chaser there, and nothing breaks.
 
@@ -16,6 +17,7 @@ const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
 const GATE_TICKS := 4
 const HOLD_TICKS := 10
+const BLAZING_SPEED := 32.0
 const TICK_LIMIT := 90 * 70
 
 
@@ -76,6 +78,8 @@ func _start() -> void:
 	ev.event_started.connect(func(id: String): _bus.append(["started", id]))
 	ev.event_ended.connect(func(id: String, outcome: String): _bus.append(["ended", id, outcome]))
 	ev.milestone_won.connect(func(id: String): _bus.append(["milestone", id]))
+	ev.core_gained.connect(func(source: String, _at: Vector3, count: int): _bus.append(["core", source, count]))
+	ev.synergy_discovered.connect(func(id: String, category: String, _first: bool): _bus.append(["codex", id, category]))
 	ev.stage_cleared.connect(func(stage: int): _cleared.append(stage))
 	ev.launched.connect(func(_v: Vector3): _launched = true)
 	ev.reward_offered.connect(_on_offered)
@@ -115,8 +119,12 @@ func _step() -> void:
 			_wait += 1
 			if offer["phase"] == EventDirector.LIVE and _wait % GATE_TICKS == 0:
 				var model = offer["model"]
-				var g: Vector2 = model.gates[mini(model.next_gate, model.gates.size() - 1)]
-				_put(_game.ctx.terrain.drop_point(g.x, g.y, 1.2))
+				var n: int = mini(model.next_gate, model.gates.size() - 1)
+				var g: Vector2 = model.gates[n]
+				var t: Vector2 = model.route.tangent(model.gate_distances[n])
+				var at: Vector3 = _game.ctx.terrain.drop_point(g.x, g.y, 1.2)
+				_game.player.reset_to(at, Vector3(t.x, 0.0, t.y) * BLAZING_SPEED)
+				_game.player.body().global_position = at
 			elif offer["phase"] == EventDirector.DONE or offer["phase"] == EventDirector.COOLDOWN:
 				_check_surge()
 				_begin_relay()
@@ -189,6 +197,13 @@ func _check_surge() -> void:
 	_report("surge run won live", order == ["announced", "started", "ended won", "milestone"] and not milestone.is_empty()
 			and "surge_run" in _game.run.events_won,
 		"surge_run on the bus: %s; run.events_won %s" % [" > ".join(order), _game.run.events_won])
+	var cores := _bus.filter(func(e): return e[0] == "core" and e[1] == "event")
+	_report("event core", cores.size() == 1 and _game.run.bonus_cores == 1,
+		"the win granted %d event core(s); run.bonus_cores %d" % [cores.size(), _game.run.bonus_cores])
+	var codex := _bus.filter(func(e): return e[0] == "codex")
+	_report("world codex live", codex == [["codex", "surge_slingshot", "world"]] and "surge_slingshot" in _game.ctx.codex.discovered_this_run()
+			and _game.ctx.codex.entries("world").size() >= 5,
+		"synergy_discovered %s from the codex; %d world entries declared" % [codex, _game.ctx.codex.entries("world").size()])
 
 
 func _begin_relay() -> void:
