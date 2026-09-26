@@ -126,6 +126,27 @@ Andrew's words: "a different layer of treasure hunt where um, it allows the play
 - **Player UI.** The hold-Tab codex page gets category tabs, hint cards and a completion percentage per category. Discovered cards show what was combined and when. The page is designed rather than just listed: each category has its own colour and icon from `event_kinds`.
 - **Developer log.** Every discovery and every found interaction appends one line to `user://codex-log.ndjson`, recording `run_id`, stage, stage time in ticks, category, id, `participants`, the build's part ids and heft. The same data feeds the UI and the log, so the two cannot disagree.
 
+## Music: level themes and boss tiers (Andrew, 2026-09-26)
+
+Andrew's words, after hearing the band preview: "the audio is amazing. I just would want something that's like ... intense, like, climactic and and dramatic uh music for like maybe something catered to the mini bosses something catered to the uh main level bosses and then something catered to the final boss and each of these kind of like obviously take sound influences and patterns that were done from the the level ... themes that are level based so they all have like either both like instrumental and rhythmic and and melodic patterns ... And then the final boss will have his own set of everything ... epic and um, kind of like, like dance floor-esque ... Euro club ... electro dance hall music ... funky and, but it's yeah, it has that jazzy feel. And yeah, it's like thumping."
+
+- **Level themes.** Each stage owns a palette, a groove and a motif. They share one harmonic language, jazzy extended chords.
+  - Spillway: D Dorian, electric piano, and a flowing arpeggio motif. This is the current band.
+  - Sluice: clavinet funk riff, brass stabs, and a mechanical syncopated groove.
+  - Weir: organ, a talkbox-style lead, and a halfpipe call-and-response.
+- **Boss tiers borrow from their level.**
+  - Miniboss: the level motif in an intense variation, with a minor reharmonisation, a denser top and a riser into each attack.
+  - Warden, the level boss: the level theme rebuilt as a thumping four-on-the-floor Euro-club and electro-house arrangement, with funk bass, sidechain pump and filtered jazzy chord stabs. `beacon_unsealed` hits the drop.
+  - Brindle has his own full set: brass fanfare, anvil and industrial percussion, and a dramatic mode.
+    - Phase 1 (the magnet) quotes Weir's motif, phase 2 (the caps) quotes Sluice's, and phase 3 (the charge) quotes Spillway's.
+    - The music replays the run in reverse, because each stage taught one of his phases. The victory resolves home.
+- **Transitions.** Moving from exploration to a boss is a metric modulation: a half-note triplet at 172 becomes the quarter note at 129. The alternative, four-on-the-floor held at 172, is rendered too, so Andrew can pick by ear.
+- **Triggers.**
+  - The miniboss track starts on `enemy_spawned` with kind `miniboss`.
+  - The Warden track starts on `warden_engaged(stage)`, which the spine publishes the first time the ball enters the sealed beacon ring or lands a hit on the Warden.
+  - Brindle's tracks follow `boss_arena_entered` and `boss_phase_changed` (wave 4).
+  - Each boss track returns to the level theme on the kill, through a cadence.
+
 ## Design feedback loop (Andrew, 2026-09-26)
 
 Andrew's words: "details and connections that are plotted out and though it could be hard to manage and may lead to like let's say balancing issues ... that could kind of be fed into a sort of feedback loop to make sure things integrate in a well-designed manner ... where the game designs kind of clicks and feels like there's engagement with purpose."

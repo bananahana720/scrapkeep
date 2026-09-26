@@ -18,6 +18,7 @@ var _double
 var _started := false
 var _failures := 0
 var _unsealed := 0
+var _engaged := 0
 var _charges: Array[float] = []
 
 
@@ -52,6 +53,7 @@ func _physics_process(_delta: float) -> bool:
 	_game.flow.force_warden = true
 	_game.player.source = Intent.Scripted.new()
 	_game.events.beacon_unsealed.connect(func(_s: int): _unsealed += 1)
+	_game.events.warden_engaged.connect(func(_s: int): _engaged += 1)
 	_game.events.beacon_charge_changed.connect(func(f: float): _charges.append(f))
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
@@ -84,6 +86,7 @@ func _run_checks() -> void:
 		"circling inside the ring for %.0f s: state %s throughout %s, charge never above %.3f"
 			% [CIRCLE_SECONDS, flow.state_name(), not left_beacon, worst])
 
+	var engaged_by_ring := _engaged
 	_double.strike(warden, "arc", warden.max_hp * 0.5)
 	flow.physics_step(DT)
 	var half: float = flow.beacon.fraction()
@@ -99,3 +102,5 @@ func _run_checks() -> void:
 	_report("break opens gates", at_once == "gates" and flow.state_name() == "gates" and _unsealed == 1 and _charges[-1] == 1.0 and not flow.sealed,
 		"killing strike %.0f m outside the ring: state %s at once, %s a tick later, beacon_unsealed fired %d time(s), last charge %.2f"
 			% [gap, at_once, flow.state_name(), _unsealed, _charges[-1]])
+	_report("warden engaged once", engaged_by_ring == 1 and _engaged == 1,
+		"warden_engaged fired %d time(s) on ring entry and %d in total after two strikes" % [engaged_by_ring, _engaged])

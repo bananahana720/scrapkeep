@@ -38,6 +38,9 @@ var warden: Node3D = null
 # offers T, which replays stage 3 from the start the run kept.
 var boss_active := false
 var boss_plating := 120.0
+# warden_engaged fires once per stage attempt: on the first sealed ring entry or the
+# first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
+var _engaged := false
 
 var _launched := false
 var _flight := 0.0
@@ -52,6 +55,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.launched.connect(_on_launched)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
+	ctx.events.enemy_struck.connect(_on_enemy_struck)
 
 
 func state_name() -> String:
@@ -154,6 +158,15 @@ func replay_stage(index: int) -> bool:
 	return true
 
 
+# The treasure burst for a first discovery in a run: scrap at the spot, which feeds
+# heft, so exploring feeds growth (DEMO-SPEC). The codex calls it once per entry per run.
+const BURST_PER_STAGE := 20
+
+
+func discovery_burst(at: Vector3) -> void:
+	ctx.run.add_scrap(BURST_PER_STAGE * ctx.run.stage, at)
+
+
 func can_replay_final_stage() -> bool:
 	return boss_active and ctx.run.has_stage_start(StageDefs.COUNT)
 
@@ -186,6 +199,7 @@ func _place_beacon() -> void:
 	beacon.place(ctx.terrain.beacon_point(ctx.run.stage), seconds, def["beacon_radius"])
 	if is_instance_valid(warden):
 		warden.queue_free()
+	_engaged = false
 	sealed = (not ctx.calm) or force_warden
 	warden = _spawn_warden() if sealed else null
 	# No Warden to break (a spawner without the kind): the stage stays on the
@@ -232,6 +246,8 @@ func physics_step(delta: float) -> void:
 			var done: bool = beacon.advance(delta, ball, sealed)
 			if sealed:
 				beacon.show_progress(beacon.duration * (1.0 - warden_integrity()))
+				if beacon.phase != Beacon.IDLE:
+					_engage()
 			if state == STAGE and beacon.phase != Beacon.IDLE:
 				_set_state(BEACON)
 			var percent := int(beacon.fraction() * 100.0)
@@ -286,6 +302,18 @@ func _on_enemy_killed(kind: String, _at: Vector3, _scrap_value: int) -> void:
 	ctx.events.beacon_unsealed.emit(ctx.run.stage)
 	_set_state(GATES)
 	ctx.events.beacon_charge_changed.emit(1.0)
+
+
+func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:
+	if sealed and enemy == warden:
+		_engage()
+
+
+func _engage() -> void:
+	if _engaged:
+		return
+	_engaged = true
+	ctx.events.warden_engaged.emit(ctx.run.stage)
 
 
 func _on_player_died() -> void:

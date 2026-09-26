@@ -5,6 +5,8 @@ const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const Codex := preload("res://src/core/codex.gd")
+const RunLog := preload("res://src/core/run_log.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
@@ -64,6 +66,10 @@ var notes
 var panel
 var keyboard
 var codex
+var run_log
+# Where the codex and the run log write: user:// in play, a per-process folder the
+# tests clean up when the game leaves the tree.
+var storage_dir := "user://"
 
 var _pause_toggled := false
 var _notes_held := false
@@ -107,6 +113,16 @@ func _ready() -> void:
 	flow.name = "Flow"
 	add_child(flow)
 	ctx.flow = flow
+	if test_mode:
+		storage_dir = "user://test-%d" % OS.get_process_id()
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+	codex = Codex.new()
+	add_child(codex)
+	codex.setup(events, run, flow, storage_dir)
+	ctx.codex = codex
+	run_log = RunLog.new()
+	add_child(run_log)
+	run_log.setup(events, run, player, codex, storage_dir)
 
 	world = _module(World)
 	combat = _module(Combat)
@@ -157,6 +173,17 @@ func _module(script: GDScript) -> Node:
 	add_child(module)
 	module.setup(ctx)
 	return module
+
+
+func _exit_tree() -> void:
+	if not test_mode:
+		return
+	var dir := DirAccess.open(storage_dir)
+	if dir == null:
+		return
+	for file in dir.get_files():
+		dir.remove(file)
+	DirAccess.remove_absolute(storage_dir)
 
 
 func _physics_process(delta: float) -> void:
