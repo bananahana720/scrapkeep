@@ -275,13 +275,21 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 func objective_text() -> String:
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_beacon: float = Vector2(ball.x - beacon.global_position.x, ball.z - beacon.global_position.z).length()
+	var percent := int(beacon.fraction() * 100.0)
+	var fight := {
+		"distance": int(to_beacon),
+		"percent": percent,
+		"punch": int(punch_now()),
+		"plating": int(warden_plating()),
+		"hint": stage_def()["warden_hint"],
+	}
 	match state:
-		STAGE:
-			return EventKinds.objective("stage_entered", {"distance": int(to_beacon)})
-		BEACON:
-			var text := EventKinds.objective("beacon_charge_changed", {"percent": int(beacon.fraction() * 100.0)})
+		STAGE, BEACON:
+			if sealed:
+				return EventKinds.objective("stage_entered" if state == STAGE else "beacon_charge_changed", fight)
+			var text := EventKinds.objective("beacon_unsealed", fight)
 			if not beacon.in_ring(ball):
-				text += "  Outside the ring: %d m back." % int(to_beacon - beacon.radius)
+				text += "  The ring is %d m away." % int(maxf(0.0, to_beacon - beacon.radius))
 			return text
 		GATES:
 			return EventKinds.objective("reward_offered")

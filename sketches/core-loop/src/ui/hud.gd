@@ -33,6 +33,7 @@ var game
 var reticle
 
 var _objective: Label
+var _pips: Label
 var _status: Label
 var _speed: Label
 var _hint: Label
@@ -45,12 +46,22 @@ func setup(game_ref) -> void:
 	game = game_ref
 	layer = 1
 
+	# The objective and the core pips share one centred row: the pips are the bonus
+	# cores that overcharge this stage's gates, so they sit beside what the stage wants.
+	var row := HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	row.position = Vector2(-700.0, 16.0)
+	row.custom_minimum_size = Vector2(1400.0, 0.0)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 18)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(row)
 	_objective = _label(26)
-	_objective.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_objective.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_objective.position = Vector2(-600.0, 16.0)
-	_objective.custom_minimum_size = Vector2(1200.0, 0.0)
-	add_child(_objective)
+	row.add_child(_objective)
+	_pips = _label(26)
+	_pips.add_theme_color_override("font_color", EventKinds.color("core_gained"))
+	row.add_child(_pips)
 
 	_status = _label(20)
 	_status.position = Vector2(18.0, 14.0)
@@ -125,6 +136,25 @@ func _on_fact(kind: String) -> void:
 	toast(EventKinds.hud(kind), EventKinds.color(kind))
 
 
+# "Heft II ▸ 40%": the class, and how far toward the next one.
+func heft_text() -> String:
+	var run = game.run
+	var cls: int = run.heft_class()
+	if cls >= RunState.HEFT_CLASS_AT.size():
+		return "Heft %s ▸ max" % RunState.roman(cls)
+	return "Heft %s ▸ %d%%" % [RunState.roman(cls), int(run.heft_progress() * 100.0)]
+
+
+# Two slots, one per gate tier the cores can buy, and a count past that.
+static func core_pips(cores: int) -> String:
+	var shown := ""
+	for i in RunState.CORE_TIER_CAP:
+		shown += "◆" if i < cores else "◇"
+	if cores > RunState.CORE_TIER_CAP:
+		shown += " +%d" % (cores - RunState.CORE_TIER_CAP)
+	return shown
+
+
 func toast(text: String, color := Palette.SAND) -> void:
 	if text == "":
 		return
@@ -163,6 +193,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	_objective.visible = playing
+	_pips.visible = playing
 	_status.visible = playing
 	_speed.visible = playing
 	_hint.visible = playing
@@ -171,6 +202,7 @@ func _process(delta: float) -> void:
 		_restart.text = ""
 		return
 	_objective.text = flow.objective_text()
+	_pips.text = core_pips(game.run.bonus_cores)
 	_objective.add_theme_color_override("font_color", EventKinds.color("beacon_charge_changed") if flow.state_name() == "beacon" else Palette.SAND)
 
 	var run = game.run
@@ -185,7 +217,7 @@ func _process(delta: float) -> void:
 
 	var state = game.player.state
 	var speed: float = state.velocity.length()
-	_speed.text = "%.1f m/s  ·  %s%s%s" % [speed, SpeedTier.label(state.tier),
+	_speed.text = "%.1f m/s  ·  %s  ·  %s%s%s" % [speed, SpeedTier.label(state.tier), heft_text(),
 		"" if state.grounded else "  ·  airborne",
 		"  ·  MOUNTED: fire from the pylon, Space slingshots off" if game.player.kit.mounted else ""]
 	_speed.add_theme_color_override("font_color", SpeedTier.COLORS[state.tier])
