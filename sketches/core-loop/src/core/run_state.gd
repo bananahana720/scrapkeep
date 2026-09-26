@@ -8,6 +8,13 @@ extends RefCounted
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
+# Heft is the growth number (DEMO-SPEC): scrap rolled up becomes mass, parts add more.
+# It scales punch and never touches handling. Classes I to V start at these values.
+const HEFT_PER_MASS := 1.0 / 150.0
+const HEFT_PER_PART := 0.2
+const HEFT_CLASS_AT := [1.0, 1.5, 2.2, 3.2, 4.6]
+# Bonus cores past this many add nothing more to the gate tier.
+const CORE_TIER_CAP := 2
 
 var events
 var class_def: Resource
@@ -15,6 +22,12 @@ var stage := 1
 var max_hp := MAX_HP
 var hp := MAX_HP
 var scrap := 0
+# Mass is separate from the scrap wallet: spending compacts scrap into a part and keeps
+# the mass; only lose_scrap (a crane theft) takes mass away.
+var mass := 0.0
+# Bonus cores from events and vaults this stage; each one overcharges the beacon.
+var bonus_cores := 0
+var run_id := ""
 var parts: Array[String] = []
 var kills := 0
 var events_won: Array[String] = []
@@ -25,6 +38,10 @@ var retries := 0
 var over := false
 
 var _snapshot := {}
+var _heft_class := 1
+# The first stage-start snapshot of each stage in this run, kept for a replay of that
+# stage (the boss death screen's T replays stage 3).
+var _stage_starts := {}
 
 
 static func roman(n: int) -> String:
@@ -41,6 +58,11 @@ func begin(chosen_class: Resource) -> void:
 	max_hp = MAX_HP
 	hp = MAX_HP
 	scrap = 0
+	mass = 0.0
+	bonus_cores = 0
+	_heft_class = 1
+	_stage_starts = {}
+	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), randi() % 1000000]
 	parts.clear()
 	kills = 0
 	events_won.clear()
@@ -74,7 +96,64 @@ func add_scrap(amount: int, at: Vector3) -> void:
 	if amount <= 0 or not alive():
 		return
 	scrap += amount
+	mass += amount
 	events.scrap_collected.emit(amount, at, scrap)
+	_publish_heft_class()
+
+
+# A theft: mass drops by the amount (not below zero) and the wallet by what it holds.
+# Returns the mass actually taken, which a spill trail can pay back through add_scrap.
+func lose_scrap(amount: int, at: Vector3, cause: String) -> int:
+	if amount <= 0:
+		return 0
+	var taken := int(minf(float(amount), mass))
+	mass = maxf(0.0, mass - amount)
+	scrap -= mini(amount, scrap)
+	events.scrap_lost.emit(taken, at, scrap, cause)
+	_publish_heft_class()
+	return taken
+
+
+func heft() -> float:
+	return 1.0 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()
+
+
+func heft_class() -> int:
+	var h := heft()
+	var result := 1
+	for i in HEFT_CLASS_AT.size():
+		if h >= HEFT_CLASS_AT[i]:
+			result = i + 1
+	return result
+
+
+# 0 to 1 across the current class toward the next; 1 at the top class.
+func heft_progress() -> float:
+	var c := heft_class()
+	if c >= HEFT_CLASS_AT.size():
+		return 1.0
+	var low: float = HEFT_CLASS_AT[c - 1]
+	var high: float = HEFT_CLASS_AT[c]
+	return clampf((heft() - low) / (high - low), 0.0, 1.0)
+
+
+func _publish_heft_class() -> void:
+	var c := heft_class()
+	if c == _heft_class:
+		return
+	_heft_class = c
+	events.heft_class_changed.emit(c, heft())
+
+
+# Events and vaults grant bonus cores; each one overcharges this stage's beacon.
+func add_core(source: String, at: Vector3) -> void:
+	bonus_cores += 1
+	events.core_gained.emit(source, at, bonus_cores)
+
+
+# The gate tier bonus the cores buy: 0, 1 or 2 (two or more cores).
+func gate_tier_bonus() -> int:
+	return mini(bonus_cores, CORE_TIER_CAP)
 
 
 # Build spends scrap at fabricators; a failed spend changes nothing.
@@ -88,6 +167,7 @@ func spend_scrap(amount: int) -> bool:
 func add_part(part_id: String, source: String) -> void:
 	parts.append(part_id)
 	events.part_gained.emit(part_id, source)
+	_publish_heft_class()
 
 
 func part_count(part_id: String) -> int:
@@ -127,6 +207,12 @@ func record_milestone(event_id: String) -> void:
 	events.milestone_won.emit(event_id)
 
 
+# Flow calls this as a stage begins (not on a retry): cores are stage-scoped.
+func enter_stage(index: int) -> void:
+	stage = index
+	bonus_cores = 0
+
+
 # The stage-start checkpoint: everything a retry puts back, including where and how
 # fast the ball entered, so a retry drops you in with the launch's speed.
 func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: float) -> void:
@@ -136,6 +222,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"max_hp": max_hp,
 		"hp": hp,
 		"scrap": scrap,
+		"mass": mass,
+		"bonus_cores": bonus_cores,
 		"parts": parts.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
@@ -143,6 +231,20 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"entry_velocity": entry_velocity,
 		"camera_yaw": camera_yaw,
 	}
+	if not _stage_starts.has(stage):
+		_stage_starts[stage] = _snapshot.duplicate(true)
+
+
+func has_stage_start(index: int) -> bool:
+	return _stage_starts.has(index)
+
+
+# Makes a kept stage start the live checkpoint, so the next restore() replays it.
+func use_stage_start(index: int) -> bool:
+	if not _stage_starts.has(index):
+		return false
+	_snapshot = (_stage_starts[index] as Dictionary).duplicate(true)
+	return true
 
 
 func has_snapshot() -> bool:
@@ -158,6 +260,8 @@ func restore() -> void:
 	max_hp = _snapshot["max_hp"]
 	hp = _snapshot["hp"]
 	scrap = _snapshot["scrap"]
+	mass = _snapshot["mass"]
+	bonus_cores = _snapshot["bonus_cores"]
 	parts.assign(_snapshot["parts"])
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
@@ -165,6 +269,8 @@ func restore() -> void:
 	since_damage = 99.0
 	retries += 1
 	over = false
+	# A restore is a rewind, not growth: the class follows silently, with no stinger.
+	_heft_class = heft_class()
 
 
 func summary() -> Dictionary:
@@ -172,6 +278,8 @@ func summary() -> Dictionary:
 		"class": class_def.display_name if class_def != null else "",
 		"stages": stage,
 		"scrap": scrap,
+		"mass": mass,
+		"heft": heft(),
 		"parts": parts.duplicate(),
 		"kills": kills,
 		"events_won": events_won.size(),

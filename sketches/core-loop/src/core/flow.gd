@@ -101,7 +101,7 @@ func _begin_run(chosen: Resource) -> void:
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
-	ctx.run.stage = index
+	ctx.run.enter_stage(index)
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
