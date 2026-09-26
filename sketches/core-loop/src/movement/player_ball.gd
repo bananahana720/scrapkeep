@@ -63,7 +63,12 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.setup(tuning, state)
 	_rigid.intent = intent
 	_rigid.kit = kit
-	_rigid.global_position = spawn_point
+	# Seed the body before its first physics step: a pending teleport arrives too late
+	# on the very first tick. Outside the tree only the local position can be set.
+	if _rigid.is_inside_tree():
+		_rigid.global_position = spawn_point
+	else:
+		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
 	_rigid.slammed.connect(_on_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
