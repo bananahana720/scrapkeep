@@ -39,6 +39,13 @@ async function realRecords() {
     .map((line) => JSON.parse(line));
 }
 
+// The tagging-behaviour tests need a hand label per record. New playtest
+// entries arrive unlabelled, and "an entry with no hand label is never filled"
+// covers those separately.
+async function labelledRecords(vocab) {
+  return (await realRecords()).filter((record) => vocab.hand_labels.entries[String(record.entry)]);
+}
+
 async function scratch(t) {
   const dir = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-verdict-tags-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
@@ -150,7 +157,7 @@ test("the request carries the redacted quote, never the raw one", () => {
 
 test("entries that reproduce their hand labels get tags; a disagreement leaves tags empty and is reported", async (t) => {
   const vocab = deepFreeze(loadVocab(VOCAB_FILE));
-  const records = await realRecords();
+  const records = await labelledRecords(vocab);
   const table = tableFromLabels(records, vocab, { 2: ["pacing"] });
   const jev = fakeJev(table);
   const cache = openVerdictCache(path.join(await scratch(t), "cache"));
@@ -201,7 +208,7 @@ test("forward and reverse are averaged and their gap is reported per tag", async
 
 test("a second run is served from the cache and makes no calls", async (t) => {
   const vocab = loadVocab(VOCAB_FILE);
-  const records = await realRecords();
+  const records = await labelledRecords(vocab);
   const cache = openVerdictCache(path.join(await scratch(t), "cache"));
   const first = fakeJev(tableFromLabels(records, vocab));
   await tagVerdicts({ records, vocab, call: first.call, cache });
@@ -216,7 +223,7 @@ test("a second run is served from the cache and makes no calls", async (t) => {
 
 test("the call cap stops live calls and the capped entry falls back untouched", async (t) => {
   const vocab = loadVocab(VOCAB_FILE);
-  const records = await realRecords();
+  const records = await labelledRecords(vocab);
   const jev = fakeJev(tableFromLabels(records, vocab));
   const cache = openVerdictCache(path.join(await scratch(t), "cache"));
 
@@ -230,7 +237,7 @@ test("the call cap stops live calls and the capped entry falls back untouched", 
 
 test("a Jev failure or no caller falls back: tags untouched, reason given", async (t) => {
   const vocab = loadVocab(VOCAB_FILE);
-  const records = await realRecords();
+  const records = await labelledRecords(vocab);
   const cache = openVerdictCache(path.join(await scratch(t), "cache"));
 
   const failing = async () => {
