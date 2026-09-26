@@ -8,13 +8,14 @@ The pattern comes from one lab's 216-call pre-registered run: six designs, every
 
 ### Phase A: prepare without live calls
 
-1. Write the pre-registration from the template below.
-2. Build the states, questions, design file and runner.
-3. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need. Record the result in the template's stub dry-run slot.
-4. Compute the SHA-256 of every input file and write the hashes into the pre-registration.
-5. Make the runner refuse to start its live mode unless every hash matches.
-6. Get an independent reviewer's approval of the pre-registration. Record who approved it and when.
-7. Log any change to the plan in the change record, with who asked and why, before the first live call.
+1. Write the pre-registration from the template below. Start the change record as its own append-only file, outside the set of pinned inputs (RML-60). A change record kept inside the pinned file makes its hash stale the first time a note is appended after the run. In one blind exercise an exploratory entry appended after the run did exactly that.
+2. If the reply shape is unknown, make one schema probe before pinning (RML-59). Send a single uncounted call, record its request and reply, and log it in the change record before any counted call. Say in the report that it happened and that it counts toward no reading. In one blind exercise the decider's source was off limits, so one uncounted probe, logged before any counted call, established the reply shape.
+3. Build the states, questions, design file and runner.
+4. Dry-run the runner against a stub decider. Check that it covers every cell, order and repeat, and that it writes the records the readings need. Record the result in the template's stub dry-run slot.
+5. Compute the SHA-256 of every input file and write the hashes into the pre-registration.
+6. Make the runner refuse to start its live mode unless every hash matches.
+7. Get an independent reviewer's approval of the pre-registration. Record who approved it and when. When no independent reviewer can be assigned, take the solo path (RML-62): record the missing approval as a limit in the change record and the report, run as planned, and treat the result as not counting until the parent or another reviewer reviews the plan and the result. Two exercises in a row ran without a reviewer because the worker could not spawn one.
+8. Log any change to the plan in the change record, with who asked and why, before the first live call.
 
 ### Phase B: run once
 
@@ -88,8 +89,10 @@ Cap: <n calls>   Expected: <n calls>   Counted before send, failures included.
 Before and after: commit, tree state, changed paths, pre-registration hash.
 
 ## Change record
-| UTC time | Change | Requested by | Reason | Before any live call? |
-| --- | --- | --- | --- | --- |
+Kept in its own append-only file, outside the pinned inputs: <path> (RML-60).
+Its columns: UTC time | Change | Requested by | Reason | Before any live call?
+Schema probe: <none, or the probe's time, request and reply; uncounted (RML-59)>
+Reviewer: <approver, or "none available: solo path, parent review owed" (RML-62)>
 
 ## Stop rules
 A crash counts as blocked. No reruns. No rows added to Readings after the run.

@@ -7,6 +7,27 @@ A control is a state with a known correct answer, run against the live decider u
 - Each control is code that calls the live decider and writes a retained record: state, options, order, answer, probabilities, resolved model and answer source (RML-10). In one lab a control existed only as a sentence in a README. Its cited pass numbers had no artifact behind them and could not be reproduced.
 - Controls never pass through the verdict cache (RML-11).
 - The pass check asserts that every answer came from the live decider (RML-11). A deterministic fallback can match the expected label by construction. In one triage lab, 26 fallback answers produced by a call-cap refusal cascade counted as a passing control in a probe run. The final run had no fallbacks, so its reported number held, but the check was blind to the gap.
+- A source field the decider sets on itself is not proof that an answer is live (RML-57). A defect or a fallback can label itself "model". Prefer an out-of-band signal the decider does not write: a provider request id, the provider's usage log, or latency consistent with a remote call. Report which signal the live-source check used, and call the check self-reported when the field is all there is. In one blind exercise every one of 210 answers said "model", while a planted defect silently returned another option on about 4% of calls under that label.
+
+## Check each choice against its own probabilities
+
+When a decider returns both a choice and probabilities, the choice should be the most probable option unless the provider documents that it samples (RML-56).
+
+1. Count every answer whose choice is not the highest-probability option, per cell and order.
+2. Investigate each one. Do not explain them as sampling unless the provider's documentation says the choice is sampled, and cite that documentation.
+3. Report the count as its own reading. An unexplained mismatch means the reply is internally inconsistent, and the instrument cannot be trusted until the cause is known.
+
+In one blind exercise 2 of 210 choices were not the top option, and the report read them as sampling. The sealed key showed a planted misreport: about 4% of calls returned a fixed-position option as the choice while the probabilities favoured another.
+
+## Judge on probabilities or on choices, not a mix
+
+A single-choice control can be judged on the returned choices ("chosen in every answer") or on the probabilities ("mean probability of the target clears the best alternative by a margin"). Pick one basis per control, pre-register it, and say which (RML-61).
+
+- Judging on choices tests what the system does. It needs the consistency check above, and with a sampled choice a strict count mixes sampling noise with preference.
+- Judging on probabilities tests the preference. It needs a margin rule of its own (RML-48).
+- A rule that needs both, such as "chosen 5 of 5 and margin at least a fixed value", fails for whichever reason comes first and hides which one it was. If both matter, report them as two readings.
+
+In one blind exercise a mixed rule failed three orders on margins of 0.089 to 0.099 against an arbitrary 0.10, in cells where the target was chosen every time.
 
 ## Keep the fallback rate apart from the model's preference
 
@@ -25,7 +46,8 @@ Without the split, a small built-in fallback rate decides the verdict. In one ex
 | --- | --- | --- |
 | Dominance | One option is strictly better and costs nothing. A game example is a free heal pickup at low health with no threat near. | The dominant option wins in every order, by a margin rule of its own (RML-48). |
 | Lethal | One option is certainly fatal or destructive. | That option is refused in every order. Its probability stays under a line set from the consequence before the run (RML-53). |
-| Wording swap | Two paraphrases carry the same facts, plus a sensitivity arm (RML-50). | The choice matches across paraphrases and orders, the shift stays under the noise line, and the sensitivity arm moves the answer. |
+| Wording swap | Two paraphrases carry the same facts, plus a sensitivity arm that varies one label word with the facts fixed (RML-50). | The sensitivity arm moves the answer. Only then do a matching choice across paraphrases and orders and a shift under the noise line count. |
+| Numbers against labels | For a decider that reads numeric fields: the dominant numbers sit under a misleading label, such as "wait" on the option that is strictly best (RML-58). | The option with the dominant numbers wins in every order, so the decider follows the facts, not the wording. |
 | Injected known case | A triage router gets an input whose label is certain, such as a deliberate assertion failure. | The router returns the known label from the live decider. |
 
 The set is a design choice. Add controls for each failure you have seen. Do not remove one because it keeps failing.
@@ -86,7 +108,13 @@ In one lab, one phrasing gave the tested option 0.74 and 0.69, and a neutral phr
 
 ### Show that wording can move the answer
 
-A wording swap passes trivially for a decider that never reads the wording (RML-50). Add a sensitivity arm, in the spirit of the hash sensitivity control (RML-45): change the text of one decision-bearing fact so the right answer changes, and require the answer to move. If it does not move, the swap's pass means "the decider ignores text", not "the decider is robust to phrasing". Report it that way.
+A wording swap passes trivially for a decider that never reads the wording, and it also passes when both arms share the word that moves the answer (RML-50). Add a sensitivity arm, in the spirit of the hash sensitivity control (RML-45):
+
+1. Keep every fact fixed and vary one label word across arms, for example a word that sells the option ("free", "safe", "recommended") present in one arm and absent in the other.
+2. Vary each candidate word on its own, so a word shared by both paraphrase arms is still tested.
+3. Require the sensitivity arm to show whether wording can move the answer before a "same choice" result counts. If no word moves it, the swap's pass means "the decider ignores text", not "the decider is robust to phrasing". If a word moves it, the decider is sensitive to wording, and the paraphrase arms must be checked for that word.
+
+In one blind exercise a planted trigger word added weight to any option whose label contained it. The swap shifted by only 0.007, most likely because both paraphrase arms kept the word (the grader's inference), and the report read the fired reading as a position artefact. A single-word arm would have exposed it.
 
 The same holds for every input a control holds fixed. A control that never varies state or the size of a risk says nothing about whether the decider reads them. Probe each input the decision should depend on. In one exercise the decider passed its wording swap on model answers, but it read only numeric fields and option position. State had no effect (the pad was chosen 28 of 28 at 9% battery and at 97%), and a risk of 0.001 was treated the same as a certain loss.
 
