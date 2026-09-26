@@ -49,6 +49,8 @@ Each call names the stage demand it serves and the principle it strains.
 
 34. **The arena is not a stage.** Flow's `in_stage()` is false in the arena, and `stage_content_cleared` tells stage modules to stand down on arena entry and on every arena retry. The flood cannot push, the director cannot spawn, and stage-3 chasers do not follow the ball into the fight. The arena has its own fall rescue, owned by the boss module. Demand: the boss phase. Serves 1: nothing the player cannot see pushes or blocks them.
 
+35. **Contacts are read from the motion before the bounce.** The rigid ball keeps the last four velocities it handed to the solver, and a contact uses the one closing fastest on the enemy. A drop lands as a stomp with the speed it fell at: 17.62 m/s after 6 m, where the live velocity had already bounced to a ram at 0. A roll rams with the speed it rolled at: 13.30 m/s, not the 3.39 left after the hit. Demand: the Warden's vent caps (stomp and slam), the boss's caps and scooter. Serves 1 ("collisions have weight").
+
 Closed: the flood's drag in the basin is allowed (R-21). It is announced, visible and avoidable, a foreseen cost from where the player chooses to roll.
 
 ## Combat and classes (writer A)
