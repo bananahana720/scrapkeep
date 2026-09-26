@@ -1,0 +1,898 @@
+extends Node
+
+const Rules := preload("res://src/boss/boss_rules.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
+const Target := preload("res://src/boss/boss_target.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const CodexEntries := preload("res://src/boss/codex_entries.gd")
+const Palette := preload("res://src/core/palette.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+
+# Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
+# Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
+# launch; everything from there to boss_defeated happens here. The fight uses the
+# Warden grammar with fixed HP: the hull is plated 120, each weak point opens to one
+# verb, and every attack is a committed hazard that is drawn before it can hit.
+#
+# Phases 1 to 3 end at fixed HP floors, but never before their set piece has played,
+# so the fight lasts at least 75 s however hard the ball hits. Damage past a floor is
+# held there until the set piece ends: a grown ball routs him, it does not skip him.
+
+enum { IDLE, FIGHT, EJECT, DEFEATED }
+const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
+const CHASE_PHASE := 4
+const CHASE_NAME := "chase"
+const RESCUE_DEPTH := 10.0
+# A rescue point keeps at least this far from the Requisition's centre.
+const RESCUE_CLEAR := 14.0
+
+var ctx
+var state := IDLE
+var phase := 0
+var hp := Rules.MAX_HP
+var max_hp := Rules.MAX_HP
+# Seconds since arena entry, and since the current phase began.
+var clock := 0.0
+var phase_clock := 0.0
+var arena
+var ship
+var scooter
+# The committed hazards still drawn or live; tests read them to check every hit.
+var hazards: Array = []
+var stuns := 0
+var clashes := 0
+var catches := 0
+
+var _delta := 1.0 / 90.0
+var _next_attack := 0.0
+var _crane_turn := 0
+var _cranes: Array = [{}, {}]
+var _pickups: Array = []
+var _slag_turn := 0
+var _next_lobber := 0.0
+var _lobbers: Array = []
+var _charge := {}
+var _grace := {}
+var _eject := {}
+var _ship_angle := 0.0
+var _crest: Node3D
+
+
+func setup(ctx_ref) -> void:
+	ctx = ctx_ref
+	name = "Boss"
+	if "boss" in ctx:
+		ctx.boss = self
+	else:
+		ctx.set_meta("boss", self)
+	if ctx.codex != null and ctx.codex.has_method("declare"):
+		for entry in CodexEntries.ENTRIES:
+			var declared: Dictionary = entry.duplicate()
+			declared["category"] = CodexEntries.CATEGORY
+			ctx.codex.declare(declared)
+	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool):
+		exit_arena()
+		_sync_crest())
+	ctx.events.run_started.connect(func(_class_id: String):
+		exit_arena()
+		_sync_crest())
+	ctx.events.flow_changed.connect(_on_flow_changed)
+	ctx.events.enemy_struck.connect(_on_enemy_struck)
+
+
+func state_name() -> String:
+	return STATE_NAMES[state]
+
+
+func active() -> bool:
+	return state == FIGHT or state == EJECT
+
+
+# --- Entry and exit ------------------------------------------------------------------
+
+# Builds the Slag Bowl, puts the ball on it keeping its horizontal speed (raised to
+# cruise if it arrives slower, a gift), and starts phase 1. Calling it again, as the
+# arena retry does, tears the old fight down first.
+func enter_arena(entry_velocity: Vector3) -> void:
+	exit_arena()
+	arena = Arena.new()
+	arena.position = Arena.place(ctx.terrain)
+	ctx.root.add_child(arena)
+	ship = Requisition.new()
+	arena.add_child(ship)
+	ship.build(self)
+	state = FIGHT
+	hp = Rules.MAX_HP
+	max_hp = Rules.MAX_HP
+	clock = 0.0
+	stuns = 0
+	clashes = 0
+	catches = 0
+	_ship_angle = deg_to_rad(Arena.ENTRY_ANGLE) + PI
+	_move_ship_on_circle(0.0)
+	_place_ball(entry_velocity)
+	ctx.flow.boss_active = true
+	ctx.flow.boss_plating = Rules.HULL_PLATING
+	_publish("boss_arena_entered")
+	_enter_phase(1)
+	_update_readout()
+
+
+func _place_ball(entry_velocity: Vector3) -> void:
+	var flat := maxf(Vector2(entry_velocity.x, entry_velocity.z).length(), ctx.tuning.f("cruise"))
+	var heading: Vector3 = arena.entry_heading()
+	var velocity := heading * flat + Vector3.UP * clampf(entry_velocity.y, -8.0, 0.0)
+	var at: Vector3 = arena.entry_point()
+	ctx.player.reset_to(at, velocity)
+	ctx.player.body().global_position = at
+	ctx.camera.snap(heading)
+
+
+# Frees everything the fight built. The ball, the run and the crest are left alone.
+func exit_arena() -> void:
+	for lobber in _lobbers:
+		if is_instance_valid(lobber):
+			lobber.queue_free()
+	_lobbers.clear()
+	if is_instance_valid(arena):
+		arena.get_parent().remove_child(arena)
+		arena.queue_free()
+	arena = null
+	ship = null
+	scooter = null
+	hazards.clear()
+	_pickups.clear()
+	_grace.clear()
+	_cranes = [{}, {}]
+	_charge = {}
+	_eject = {}
+	if state != DEFEATED:
+		state = IDLE
+	phase = 0
+
+
+func _on_flow_changed(flow_state: String) -> void:
+	if flow_state in ["title", "class_select", "summary"]:
+		exit_arena()
+		state = IDLE
+
+
+# --- The tick ------------------------------------------------------------------------
+
+func _physics_process(delta: float) -> void:
+	if active() and ctx.flow.state_name() == "boss":
+		advance(delta)
+
+
+func advance(delta: float) -> void:
+	if not active():
+		return
+	_delta = maxf(delta, 0.0001)
+	clock += delta
+	phase_clock += delta
+	var ball: Vector3 = ctx.player.ball_position()
+	_rescue(ball)
+	arena.step(clock)
+	_step_vents(ball)
+	_step_hazards(delta, ball)
+	_step_trail(ball)
+	if state == FIGHT:
+		match phase:
+			1:
+				_step_cranes(delta, ball)
+			2:
+				_step_furnace(delta)
+			3:
+				_step_charges(delta, ball)
+		_maybe_turn_phase()
+	elif state == EJECT:
+		_step_scooter(delta)
+	_update_readout()
+
+
+func _maybe_turn_phase() -> void:
+	if state != FIGHT or hp > _floor_hp() + 0.001 or phase_clock < Rules.PHASE_MIN_SECONDS[phase - 1]:
+		return
+	if phase < 3:
+		_enter_phase(phase + 1)
+	else:
+		_begin_eject()
+
+
+func _floor_hp() -> float:
+	return Rules.PHASE_FLOORS[phase - 1] * max_hp
+
+
+func _enter_phase(next: int) -> void:
+	_cancel_hazards()
+	phase = next
+	phase_clock = 0.0
+	ship.show_cranes(next == 1)
+	ship.open_caps(next == 2)
+	match next:
+		1:
+			_next_attack = Rules.INTRO_SECONDS
+			_crane_turn = 0
+		2:
+			_next_attack = clock + 2.0
+			_next_lobber = clock + 3.0
+			_slag_turn = 0
+		3:
+			ship.shed_armour()
+			ship.cockpit_open(true)
+			_charge = {"state": "rest", "timer": Rules.CHARGE_REST}
+	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
+
+
+# Test and dev hook: the fight as if the earlier phases had just been won.
+func jump_to_phase(next: int) -> void:
+	if not active():
+		return
+	if next > 1:
+		hp = minf(hp, Rules.PHASE_FLOORS[next - 2] * max_hp)
+	if next > 3:
+		_begin_eject()
+	else:
+		_enter_phase(next)
+
+
+# --- Phase 1: the Requisition and its cranes ------------------------------------------
+
+func _move_ship_on_circle(delta: float) -> void:
+	_ship_angle += Rules.CIRCLE_SPEED / Rules.CIRCLE_RADIUS * delta
+	ship.move_to(arena.point_at(_ship_angle, Rules.CIRCLE_RADIUS), Arena.tangent(_ship_angle))
+
+
+func _step_cranes(delta: float, ball: Vector3) -> void:
+	_move_ship_on_circle(delta)
+	if clock >= _next_attack:
+		_commit_crane(_crane_turn, ball)
+		_crane_turn = 1 - _crane_turn
+		_next_attack = clock + Rules.CRANE_PERIOD
+	for i in 2:
+		_step_crane(i, delta, ball)
+
+
+# The sector is centred on the ground under the crane's pivot and aimed at the ball's
+# bearing when it commits; it does not follow the ball after that.
+func _commit_crane(i: int, ball: Vector3) -> void:
+	var c: Dictionary = _cranes[i]
+	if c.has("hazard") and is_instance_valid(c["hazard"]) and not c["hazard"].is_done():
+		return
+	if c.get("held", 0) > 0:
+		return
+	var pivot: Vector3 = ship.pivot(i)
+	var centre := Vector3(pivot.x, arena.ground(pivot), pivot.z)
+	var to_ball := Vector3(ball.x - centre.x, 0.0, ball.z - centre.z)
+	var bearing: float = atan2(to_ball.z, to_ball.x) if to_ball.length() > 0.5 else arena.angle_of(pivot)
+	var sweep := 1.0 if i == 0 else -1.0
+	var h = _new_hazard()
+	h.commit_sector("crane_%d" % i, centre, Rules.CRANE_BAND, bearing - sweep * Rules.CRANE_SPAN * 0.5,
+		bearing + sweep * Rules.CRANE_SPAN * 0.5, Rules.CRANE_REACH, Rules.CRANE_WARN, Rules.CRANE_SWEEP)
+	_add_hazard(h)
+	_cranes[i] = {"hazard": h, "caught": false, "held": 0, "trail": [], "values": [], "dripped": 0, "drip": 0.0}
+	_publish("boss_attack_telegraphed", ["crane_sweep", h.warn_seconds])
+
+
+func _step_crane(i: int, delta: float, ball: Vector3) -> void:
+	var c: Dictionary = _cranes[i]
+	var at: Vector3 = ship.magnet_rest(i)
+	var glow := 0.0
+	var h = c.get("hazard")
+	if h != null and is_instance_valid(h) and not h.is_done():
+		var head_r: float = (h.r_in + h.r_out) * 0.5
+		if h.state == Hazard.WARN:
+			glow = 0.5 + 0.5 * sin(h.age * TAU * 4.0)
+			at = at.lerp(_head(h, h.a_from, head_r), clampf(h.age / h.warn_seconds, 0.0, 1.0))
+		else:
+			glow = 1.0
+			at = _head(h, lerpf(h.a_from, h.a_to, h.live_fraction()), head_r)
+			if not c["caught"] and h.contains(ball) and _swept(h, ball):
+				_crane_catch(i, ball, at)
+		c["hold_at"] = at
+	elif c.get("held", 0) > 0:
+		at = c["hold_at"]
+	if c.get("held", 0) > 0:
+		c["drip"] -= delta
+		while c["drip"] <= 0.0 and c["held"] > 0:
+			_drip(c)
+			c["drip"] += Rules.DRIP
+	ship.set_magnet(i, at, glow if c.get("held", 0) <= 0 else maxf(glow, 0.6))
+
+
+func _head(h, angle: float, r: float) -> Vector3:
+	var p: Vector3 = h.centre + Arena.dir(angle) * r
+	return Vector3(p.x, h.centre.y + 3.5, p.z)
+
+
+# True when the magnet crossed the ball's bearing this tick: the part of the committed
+# sector the sweep has just passed through.
+func _swept(h, ball: Vector3) -> bool:
+	var span := absf(h.a_to - h.a_from)
+	var margin := 1.0 / maxf(1.0, Vector2(ball.x - h.centre.x, ball.z - h.centre.z).length())
+	var u: float = h.sweep_offset(ball)
+	return u >= span * h.prev_fraction - margin and u <= span * h.live_fraction() + margin
+
+
+func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
+	var c: Dictionary = _cranes[i]
+	c["caught"] = true
+	catches += 1
+	_tug(ball, magnet_at)
+	if ctx.run.mass < 1.0:
+		return
+	var amount := clampi(int(round(ctx.run.mass * Rules.STEAL_SHARE)), Rules.STEAL_MIN, Rules.STEAL_MAX)
+	var taken: int = ctx.run.lose_scrap(amount, ball, "crane")
+	if taken <= 0:
+		return
+	var h = c["hazard"]
+	var r := Vector2(ball.x - h.centre.x, ball.z - h.centre.z).length()
+	var start: float = atan2(ball.z - h.centre.z, ball.x - h.centre.x)
+	var sweep := signf(h.a_to - h.a_from)
+	var trail: Array = []
+	var values: Array = []
+	for k in Rules.TRAIL_PICKUPS:
+		var a := start + sweep * Rules.TRAIL_ARC * float(k) / float(Rules.TRAIL_PICKUPS - 1)
+		var p: Vector3 = h.centre + Arena.dir(a) * r
+		trail.append(Vector3(p.x, arena.ground(p) + 0.9, p.z))
+		values.append(taken / Rules.TRAIL_PICKUPS + (1 if k < taken % Rules.TRAIL_PICKUPS else 0))
+	c["held"] = taken
+	c["trail"] = trail
+	c["values"] = values
+	c["dripped"] = 0
+	c["drip"] = 0.0
+
+
+# Lifts the ball and pulls it a little toward the magnet. It adds to the ball's motion
+# and never cancels it, so a catch costs scrap, not momentum.
+func _tug(ball: Vector3, magnet_at: Vector3) -> void:
+	if ctx.calm:
+		return
+	var pull := Vector3(magnet_at.x - ball.x, 0.0, magnet_at.z - ball.z)
+	pull = pull.normalized() if pull.length() > 0.1 else Vector3.ZERO
+	ctx.player.add_external_accel((Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / _delta)
+
+
+func _drip(c: Dictionary) -> void:
+	var k: int = c["dripped"]
+	if k >= c["trail"].size():
+		c["held"] = 0
+		return
+	_spawn_pickup(c["trail"][k], c["values"][k])
+	c["held"] -= c["values"][k]
+	c["dripped"] = k + 1
+
+
+# A shot on a magnet that still holds scrap drops the rest in one pile under it.
+func _drop_held(i: int) -> void:
+	var c: Dictionary = _cranes[i]
+	var rest := 0
+	for k in range(c["dripped"], c["trail"].size()):
+		rest += c["values"][k]
+	c["dripped"] = c["trail"].size()
+	c["held"] = 0
+	if rest <= 0:
+		return
+	var under: Vector3 = ship.magnets[i].global_position
+	var ground := Vector3(under.x, arena.ground(under) + 0.9, under.z)
+	var piles := 4
+	for k in piles:
+		var value := rest / piles + (1 if k < rest % piles else 0)
+		if value > 0:
+			_spawn_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value)
+	_discover(CodexEntries.CRANE_DROP, ground)
+
+
+func _spawn_pickup(at: Vector3, value: int) -> void:
+	var node := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE * 0.7
+	node.mesh = box
+	node.material_override = Palette.solid(Palette.ARC, 2.0)
+	arena.add_child(node)
+	node.global_position = at
+	node.rotation = Vector3(0.6, clock * 3.0, 0.3)
+	_pickups.append({"node": node, "value": value, "at": at, "age": 0.0})
+
+
+# The spill trail pays stolen mass back through add_scrap, the one way scrap is gained.
+func _step_trail(ball: Vector3) -> void:
+	var kept: Array = []
+	for p in _pickups:
+		p["age"] += _delta
+		var node: Node3D = p["node"]
+		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
+			ctx.run.add_scrap(p["value"], p["at"])
+			node.queue_free()
+			continue
+		if p["age"] >= Rules.PICKUP_LIFE:
+			node.queue_free()
+			continue
+		node.rotate_y(_delta * 2.5)
+		kept.append(p)
+	_pickups = kept
+
+
+func pickups_left() -> Array:
+	return _pickups.map(func(p): return {"at": p["at"], "value": p["value"]})
+
+
+# --- Phase 2: the furnace --------------------------------------------------------------
+
+func _step_furnace(delta: float) -> void:
+	var here: Vector3 = ship.global_position
+	var to_centre := Vector3(arena.global_position.x - here.x, 0.0, arena.global_position.z - here.z)
+	if to_centre.length() > 0.2:
+		var move := minf(to_centre.length(), Rules.CIRCLE_SPEED * delta)
+		var at := here + to_centre.normalized() * move
+		ship.move_to(Vector3(at.x, arena.ground(at), at.z), ship.heading)
+	if clock >= _next_attack:
+		var band: Vector2 = Arena.RING_A if _slag_turn % 2 == 0 else Arena.RING_B
+		var id := "slag_ring_a" if _slag_turn % 2 == 0 else "slag_ring_b"
+		var h = _new_hazard()
+		h.commit_annulus(id, arena.global_position, band, Rules.SLAG_REACH, Rules.SLAG_WARN, Rules.SLAG_LIVE)
+		h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
+		_add_hazard(h)
+		_slag_turn += 1
+		_next_attack = clock + Rules.SLAG_WARN + Rules.SLAG_LIVE + Rules.SLAG_GAP
+		_publish("boss_attack_telegraphed", [id, h.warn_seconds])
+	if clock >= _next_lobber:
+		_next_lobber = clock + Rules.LOBBER_PERIOD
+		_launch_lobber()
+
+
+# Lobber drones roll off the deck. They are combat's lobbers, with combat's telegraphs.
+func _launch_lobber() -> void:
+	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return
+	_lobbers = _lobbers.filter(func(l): return is_instance_valid(l) and not (l.has_method("is_dead") and l.is_dead()))
+	if _lobbers.size() >= Rules.LOBBER_CAP:
+		return
+	var side := 1.0 if _lobbers.size() % 2 == 0 else -1.0
+	var at: Vector3 = ship.to_global(Vector3(side * 6.5, 0.0, 0.0))
+	var lobber = ctx.spawner.spawn_enemy("lobber", Vector3(at.x, arena.ground(at) + 1.0, at.z))
+	if lobber is Node3D:
+		_lobbers.append(lobber)
+
+
+func _step_vents(ball: Vector3) -> void:
+	var vent: int = arena.vent_at(ball)
+	if vent >= 0:
+		arena.quench(vent, clock)
+
+
+func _slag_hit(h, ball: Vector3) -> void:
+	ctx.run.damage(Rules.SLAG_DAMAGE, "brindle_slag")
+	_grace[h.get_instance_id()] = clock + Rules.SLAG_GRACE
+	if ctx.calm:
+		return
+	var r: float = arena.radius_of(ball)
+	var out := Vector3(ball.x - arena.global_position.x, 0.0, ball.z - arena.global_position.z).normalized()
+	var toward := out if r >= (h.r_in + h.r_out) * 0.5 else -out
+	var v: Vector3 = ctx.player.state.velocity
+	var up := maxf(0.0, Rules.SLAG_BOUNCE_UP - v.y)
+	ctx.player.add_external_accel((Vector3.UP * up + toward * Rules.SLAG_BOUNCE_OUT) / _delta)
+
+
+# --- Phase 3: scuttle the flagship ------------------------------------------------------
+
+func _step_charges(delta: float, ball: Vector3) -> void:
+	match _charge.get("state", "rest"):
+		"rest", "recover", "stun":
+			_charge["timer"] -= delta
+			if _charge["timer"] <= 0.0:
+				if _charge["state"] == "rest":
+					_commit_charge(ball)
+				else:
+					_charge = {"state": "rest", "timer": Rules.CHARGE_REST}
+		"brace":
+			if _charge["hazard"].is_live():
+				_charge["state"] = "run"
+		"run":
+			_run_charge(delta, ball)
+
+
+func _commit_charge(ball: Vector3) -> void:
+	var from: Vector3 = ship.global_position
+	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
+	var heading: Vector3 = to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
+	var to_wall := _travel_to_rim(from, heading)
+	var wanted := to_ball.length() + Rules.CHARGE_OVERSHOOT
+	var into_wall := wanted >= to_wall
+	var length := minf(wanted, to_wall)
+	var half := Requisition.HULL.z * 0.5
+	var h = _new_hazard()
+	h.commit_lane("charge", from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
+		Requisition.HULL.y + 0.5, Rules.CHARGE_WARN, length / Rules.CHARGE_SPEED + 0.2)
+	_add_hazard(h)
+	ship.move_to(from, heading)
+	_charge = {"state": "brace", "hazard": h, "from": from, "heading": heading, "length": length,
+		"into_wall": into_wall, "travelled": 0.0}
+	_publish("boss_attack_telegraphed", ["charge_wall" if into_wall else "charge", h.warn_seconds])
+
+
+# How far the ship's centre can travel along `heading` before its nose buries in the
+# bank at CHARGE_STOP_R, which keeps every corner of the hull clear of the rim wall.
+func _travel_to_rim(from: Vector3, heading: Vector3) -> float:
+	var p := Vector2(from.x - arena.global_position.x, from.z - arena.global_position.z)
+	var d := Vector2(heading.x, heading.z)
+	var b := p.dot(d)
+	var c := p.length_squared() - Rules.CHARGE_STOP_R * Rules.CHARGE_STOP_R
+	return maxf(0.0, -b + sqrt(maxf(0.0, b * b - c)))
+
+
+func _run_charge(delta: float, ball: Vector3) -> void:
+	var h = _charge["hazard"]
+	var half := Requisition.HULL.z * 0.5
+	var front_before: float = _charge["travelled"] + half
+	_charge["travelled"] = minf(_charge["length"], _charge["travelled"] + Rules.CHARGE_SPEED * delta)
+	var at: Vector3 = _charge["from"] + _charge["heading"] * _charge["travelled"]
+	ship.move_to(Vector3(at.x, arena.ground(at), at.z), _charge["heading"])
+	var front: float = _charge["travelled"] + half
+	if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
+		var along: float = h.lane_along(ball)
+		if along >= front_before - 1.0 and along <= front + 1.5:
+			_charge_hit(h, ball)
+	if _charge["travelled"] >= _charge["length"]:
+		h.finish()
+		if _charge["into_wall"]:
+			_stun(Rules.WALL_STUN)
+			_discover(CodexEntries.WALL_BAIT, ship.global_position)
+		else:
+			_charge = {"state": "recover", "timer": Rules.CHARGE_RECOVER}
+
+
+# A charge hit shoves the ball sideways out of the lane and up, never along it, so the
+# hull can never carry the ball into the wall.
+func _charge_hit(h, ball: Vector3) -> void:
+	ctx.run.damage(Rules.CHARGE_DAMAGE, "brindle_charge")
+	_grace[h.get_instance_id()] = clock + Rules.CHARGE_GRACE
+	if ctx.calm:
+		return
+	var lateral: float = h.lane_lateral(ball)
+	var away: Vector3 = h.side() * (1.0 if lateral >= 0.0 else -1.0)
+	var v: Vector3 = ctx.player.state.velocity
+	var along: float = v.dot(h.heading)
+	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
+	ctx.player.add_external_accel((away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
+
+
+func _stun(seconds: float) -> void:
+	if _charge.has("hazard") and is_instance_valid(_charge["hazard"]):
+		_charge["hazard"].finish()
+	_charge = {"state": "stun", "timer": seconds}
+	stuns += 1
+
+
+func stunned() -> bool:
+	return state == FIGHT and phase == 3 and _charge.get("state", "") == "stun"
+
+
+func charging() -> bool:
+	return state == FIGHT and phase == 3 and _charge.get("state", "") == "run"
+
+
+# --- The eject and the chase -------------------------------------------------------
+
+func _begin_eject() -> void:
+	_cancel_hazards()
+	state = EJECT
+	phase = CHASE_PHASE
+	phase_clock = 0.0
+	ship.hull.set_solid(true, true)
+	ship.cockpit_open(true)
+	ship.show_cranes(false)
+	ship.open_caps(false)
+	scooter = Target.new()
+	scooter.setup(self, "scooter", "scooter", Vector3(2.0, 1.2, 2.8), Vector2(1.6, 1.0))
+	arena.add_child(scooter)
+	scooter.set_solid(false)
+	var body := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(2.0, 1.0, 2.8)
+	body.mesh = box
+	body.material_override = Palette.solid(Palette.BRASS, 0.8)
+	scooter.add_child(body)
+	var ball: Vector3 = ctx.player.ball_position()
+	var land: float = arena.angle_of(ball) + PI
+	var from: Vector3 = ship.to_global(Vector3(0.0, Requisition.DECK + 1.5, 4.8))
+	scooter.global_position = from
+	_eject = {"t": 0.0, "from": from, "angle": land, "landed": false, "dir": 1.0, "slow_until": -1.0}
+	_publish("boss_phase_changed", [CHASE_PHASE, CHASE_NAME])
+	_publish("boss_attack_telegraphed", ["eject", Rules.EJECT_FLIGHT])
+
+
+func _step_scooter(delta: float) -> void:
+	if not is_instance_valid(scooter):
+		return
+	if not _eject["landed"]:
+		_eject["t"] += delta
+		var f := clampf(_eject["t"] / Rules.EJECT_FLIGHT, 0.0, 1.0)
+		var to: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
+		var at: Vector3 = (_eject["from"] as Vector3).lerp(to, f) + Vector3.UP * 14.0 * 4.0 * f * (1.0 - f)
+		scooter.global_position = at
+		if f >= 1.0:
+			_eject["landed"] = true
+			scooter.set_solid(true)
+			var ball_angle: float = arena.angle_of(ctx.player.ball_position())
+			_eject["dir"] = -signf(angle_difference(_eject["angle"], ball_angle))
+			if _eject["dir"] == 0.0:
+				_eject["dir"] = 1.0
+		return
+	var speed := scooter_speed()
+	_eject["angle"] += _eject["dir"] * speed / Rules.SCOOTER_RING * delta
+	var at: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
+	var ahead: Vector3 = Arena.tangent(_eject["angle"]) * _eject["dir"]
+	scooter.global_transform = Transform3D(Basis.looking_at(ahead, Vector3.UP), at)
+
+
+func scooter_speed() -> float:
+	var speed := Rules.SCOOTER_SPEED
+	if clock < _eject.get("slow_until", -1.0):
+		speed = maxf(Rules.SCOOTER_MIN_SPEED, speed * Rules.SCOOTER_SLOW)
+	return speed
+
+
+func scooter_landed() -> bool:
+	return state == EJECT and _eject.get("landed", false)
+
+
+# The catch is a contact: a ram or a stomp (or a slam) on the landed scooter wins. A
+# shot slows him for a moment, which is how a gunner sets up the catch.
+func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if enemy == null or enemy != scooter or not scooter_landed():
+		return
+	if kind in Rules.CONTACT_KINDS:
+		_defeat(kind, scooter.global_position)
+	else:
+		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
+
+
+func _defeat(kind: String, at: Vector3) -> void:
+	state = DEFEATED
+	hp = 0.0
+	_cancel_hazards()
+	if is_instance_valid(scooter):
+		scooter.set_solid(false)
+		scooter.visible = false
+	_publish("boss_weak_point_hit", ["scooter"])
+	if kind == "stomp":
+		_discover(CodexEntries.SCOOTER_STOMP, at)
+	ctx.run.record_kill("brindle", at, 0)
+	ctx.run.add_part(Rules.CREST_PART, "boss")
+	_sync_crest()
+	ctx.flow.boss_active = false
+	_publish("boss_defeated")
+
+
+# The admiral's crest rides on the ball for as long as the run holds the part.
+func _sync_crest() -> void:
+	var wanted: bool = ctx.run.parts.has(Rules.CREST_PART)
+	if wanted and not is_instance_valid(_crest):
+		_crest = Node3D.new()
+		_crest.name = "AdmiralsCrest"
+		var badge := MeshInstance3D.new()
+		var disc := CylinderMesh.new()
+		disc.top_radius = 0.5
+		disc.bottom_radius = 0.5
+		disc.height = 0.14
+		disc.radial_segments = 5
+		badge.mesh = disc
+		badge.material_override = Palette.solid(Palette.BRASS, 1.2)
+		badge.rotation.x = PI * 0.5
+		_crest.add_child(badge)
+		_crest.position = Vector3(0.0, 0.0, Tuning.RADIUS + 0.02)
+		ctx.player.roll_node().add_child(_crest)
+	elif not wanted and is_instance_valid(_crest):
+		_crest.queue_free()
+		_crest = null
+	if not wanted and state == DEFEATED:
+		state = IDLE
+
+
+func crest() -> Node3D:
+	return _crest if is_instance_valid(_crest) else null
+
+
+# --- Hazards --------------------------------------------------------------------------
+
+func _new_hazard():
+	var h = Hazard.new()
+	h.ground = arena.ground
+	var row := _row("boss_attack_telegraphed")
+	if row.has("color"):
+		h.color = row["color"]
+	return h
+
+
+func _add_hazard(h) -> void:
+	arena.add_child(h)
+	hazards.append(h)
+
+
+func _cancel_hazards() -> void:
+	for h in hazards:
+		if is_instance_valid(h):
+			h.queue_free()
+	hazards.clear()
+	for c in _cranes:
+		if c.has("hazard"):
+			c.erase("hazard")
+
+
+func active_hazards() -> Array:
+	return hazards.filter(func(h): return is_instance_valid(h) and not h.is_done())
+
+
+# Ages every hazard once per tick, runs the slag rings' hits and frees what is done.
+func _step_hazards(delta: float, ball: Vector3) -> void:
+	var kept: Array = []
+	for h in hazards:
+		if not is_instance_valid(h):
+			continue
+		h.step(delta)
+		if h.shape == Hazard.Shape.ANNULUS and h.is_live():
+			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
+				_slag_hit(h, ball)
+			elif _on_crust(h, ball):
+				_discover(CodexEntries.QUENCH_RIDE, ball)
+		if h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5:
+			h.queue_free()
+			continue
+		kept.append(h)
+	hazards = kept
+
+
+func _on_crust(h, ball: Vector3) -> bool:
+	var r: float = arena.radius_of(ball)
+	return r >= h.r_in and r <= h.r_out and ball.y - arena.ground(ball) <= h.reach and arena.is_quenched(ball, clock)
+
+
+# --- The rescue ------------------------------------------------------------------------
+
+# Below this the ball has fallen out of the bowl. Flow asks it in the boss state.
+func floor_y() -> float:
+	return arena.global_position.y - RESCUE_DEPTH if is_instance_valid(arena) else -INF
+
+
+# A safe point on the banked ring at the bearing the ball left from: outside both slag
+# channels by construction, and turned aside until the Requisition is clear of it.
+func rescue_point(near = null) -> Vector3:
+	var from: Vector3 = near if near is Vector3 else ctx.player.ball_position()
+	if not is_instance_valid(arena):
+		return from
+	var angle: float = arena.angle_of(from)
+	for k in 12:
+		var turn := 0.35 * ceilf(k / 2.0) * (1.0 if k % 2 == 0 else -1.0)
+		var at: Vector3 = arena.point_at(angle + turn, Arena.RESCUE_R, 2.0)
+		if not is_instance_valid(ship) or Vector2(at.x - ship.global_position.x, at.z - ship.global_position.z).length() > RESCUE_CLEAR:
+			return at
+	return arena.point_at(angle, Arena.RESCUE_R, 2.0)
+
+
+# The arena's own guard, the same rule flow applies: a fall is the arena's fault, so
+# the ball goes back on the ring riding it, with its horizontal speed kept.
+func _rescue(ball: Vector3) -> void:
+	if arena.contains(ball) and ball.y > floor_y():
+		return
+	var v: Vector3 = ctx.player.state.velocity
+	var speed := Vector2(v.x, v.z).length()
+	var at := rescue_point(ball)
+	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed)
+	ctx.player.body().global_position = at
+
+
+# --- The enemy protocol, answered for every piece (boss_target.gd forwards here) -------
+
+func target_live(target) -> bool:
+	match target.role:
+		"hull":
+			return state == FIGHT
+		"magnet":
+			return state == FIGHT and phase == 1
+		"cap":
+			return state == FIGHT and phase == 2
+		"scooter":
+			return scooter_landed()
+	return false
+
+
+func plating_for(target, kind: String, part: String) -> float:
+	match target.role:
+		"hull":
+			if part.begins_with("cap_"):
+				return 0.0 if kind in Rules.CAP_KINDS else Rules.HULL_PLATING
+			if stunned():
+				return 0.0
+			if charging():
+				return Rules.CLASH_PUNCH
+			return Rules.HULL_PLATING
+		"magnet":
+			return Rules.HULL_PLATING if kind in Rules.CONTACT_KINDS else 0.0
+		"cap":
+			return Rules.HULL_PLATING if kind != "" and not kind in Rules.CAP_KINDS else 0.0
+	return 0.0
+
+
+func hit_mult(target, kind: String, part: String) -> float:
+	if (target.role == "cap" or part.begins_with("cap_")) and kind in Rules.CAP_KINDS:
+		return Rules.CAP_MULT
+	return 1.0
+
+
+# A stomp or slam on the deck lands on the vent cap it is over, as the Warden's caps do.
+func contact_part(target, ball: Vector3, kind: String) -> String:
+	if target.role != "hull" or phase != 2 or not kind in Rules.CAP_KINDS:
+		return ""
+	for cap in ship.caps:
+		var at: Vector3 = cap.global_position
+		if Vector2(ball.x - at.x, ball.z - at.z).length() <= Rules.CAP_REACH:
+			return cap.point_id
+	return ""
+
+
+# The clash: a ram into the charging bow that meets plating 150 stops the charge.
+func on_struck(target, kind: String, _part: String, result: Dictionary) -> void:
+	if target.role == "hull" and kind == "ram" and charging() and bool(result.get("full", false)):
+		clashes += 1
+		_stun(Rules.CLASH_STUN)
+
+
+func take_damage(target, amount: float, full: bool, part: String) -> float:
+	if state != FIGHT or amount <= 0.0 or not target_live(target):
+		return 0.0
+	var before := hp
+	hp = maxf(_floor_hp(), hp - amount)
+	if full:
+		match target.role:
+			"magnet":
+				_publish("boss_weak_point_hit", [target.point_id])
+				var i: int = ship.magnets.find(target)
+				if i >= 0 and _cranes[i].get("held", 0) > 0:
+					_drop_held(i)
+			"cap":
+				_publish("boss_weak_point_hit", [target.point_id])
+			"hull":
+				if part.begins_with("cap_"):
+					_publish("boss_weak_point_hit", [part])
+				elif stunned():
+					_publish("boss_weak_point_hit", ["cockpit"])
+	_maybe_turn_phase()
+	return before - hp
+
+
+# --- Readout, publishing, codex ---------------------------------------------------------
+
+func hull_plating_now() -> float:
+	if not active() or not is_instance_valid(ship):
+		return Rules.HULL_PLATING
+	return plating_for(ship.hull, "", "")
+
+
+func readout_text() -> String:
+	if state == EJECT:
+		return "Brindle is running | ram or stomp his scooter"
+	return "Hull plating %d | your punch %d" % [int(hull_plating_now()), int(ctx.flow.punch_now())]
+
+
+func _update_readout() -> void:
+	if not is_instance_valid(ship):
+		return
+	var beats: bool = ctx.flow.punch_now() >= hull_plating_now()
+	ship.set_readout(readout_text(), Palette.AMBER if beats or state == EJECT else Color("9fb0bf"))
+
+
+func _publish(signal_name: String, args: Array = []) -> void:
+	if ctx.events.has_signal(signal_name):
+		ctx.events.callv("emit_signal", [signal_name] + args)
+
+
+func _row(kind: String) -> Dictionary:
+	var kinds = load("res://src/core/event_kinds.gd")
+	return kinds.ROWS.get(kind, {})
+
+
+func _discover(id: String, at: Vector3) -> void:
+	if ctx.codex != null and ctx.codex.has_method("mark_discovered"):
+		ctx.codex.mark_discovered(id, at)
