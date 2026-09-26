@@ -145,12 +145,12 @@ These treat the prior rates as true, which they are not; the winner's curse abov
 
 The pre-registration procedure's stub dry run becomes, for a run without a decider, the pinned analysis applied to the real prior records.
 
-- **Date:** 2026-09-26, before any counted batch. **Input:** the four `prior_sources` in `design.json` (seed 1, trials 1000 to 1019, the epochs above). **Output:** `artifacts/local/tasks/JL-28/phase-a/prior-dry-run.txt` and `prior/results.json`.
+- **Date:** 2026-09-26, before any counted batch. **Input:** the four `prior_sources` in `design.json` (seed 1, trials 1000 to 1019, the epochs above). **Output:** `artifacts/local/tasks/JL-28/phase-a/prior-dry-run-<head>.txt`, one per pinned head, an unsuffixed copy `prior-dry-run.txt` of the latest, and `prior/results.json` for the latest.
 - **Where the prior records live:** Cable Bench and Spillway in this repository under `artifacts/jev-lab-2026-09-25/live/`; ball-lab in the JL-21b writer worktrees `../scrapkeep-wt-JL-21b` and `../scrapkeep-wt-JL-21b-int`, which the repository does not retain.
 - **Coverage:** 18 of 18 cells found, both arms, every cell paired by seed, 0 pairs dropped, 0 cells blocked.
 - **Fields the readings need were present:** `config.trials[].seed`, `outcome`, `snapshots`, `arm_calls`, `scenario_result.result`, `success_tick`, `anomalies`, `knocks`, `end` or `dead_tick`, Spillway `epoch`, `provenance.dirty`, `sources.matched`, `versions.sketch_head`, `sketch_dirty`, `jev.calls`.
 - **Cross-checks against earlier numbers:** pillar-weave kinematic unpaired 0.50 [0.22, 0.70], and paired the same, because its table (1, 10, 0, 9) has ad − bc = 9 ≤ n/2 so method 10's φ is 0; scripted share 0.61; run-to-pad rigid 0.40 [0.10, 0.62]; bench-one −0.20 [−0.46, 0.10] and −0.20 [−0.42, 0.00]; pillar-weave gates 2.10 against 3.20. All match the JL-21b review and the JL-26 table.
-- **Self-test:** `node analyze.mjs --self-test` passes (Wilson and Newcombe against five published intervals from the reviews and lab tables; exact tails; McNemar; Holm; the paired interval reduces to the unpaired one when the within-pair correlation is 0, including method 10's anchor (1, 10, 0, 9) at about [0.22, 0.70], and narrows when it is positive; the run-block count includes not-paired confirmatory and INVALID cells; a failed after-run precondition blocks only its sketch's cells).
+- **Self-test:** `node analyze.mjs --self-test` passes (Wilson and Newcombe against five published intervals from the reviews and lab tables; exact tails; McNemar; Holm; the paired interval reduces to the unpaired one when the within-pair correlation is 0, including method 10's anchor (1, 10, 0, 9) at about [0.22, 0.70], and narrows when it is positive; the run-block count includes not-paired confirmatory cells and excludes INVALID cells; a failed after-run precondition blocks only its sketch's cells).
 - **Gaps found:** the retained stage records keep `run.json` only, so stuck and dead-tier measures read "no events" for them. Phase B keeps its trial directories locally, so this does not affect the run. No other problem found; nothing changed in the pinned files after the dry run except the hashes recorded here.
 
 ## Run-once, blocked and stop rules
@@ -159,7 +159,7 @@ The pre-registration procedure's stub dry run becomes, for a run without a decid
 - Batches run once, four at a time in the plan order, each with its own runs root. No batch is re-run, resumed or replaced. The no-rerun rule covers batches only: re-running the pinned `analyze.mjs` on the retained records is permitted and must reproduce the same results.
 - A crash of the runner mid-run is BLOCKED. The records already written are reported as they fell; there is no rerun into the same seeds.
 - An infrastructure failure (launcher exit other than 0, a trial that did not complete, a changed source, a dirty sketch) blocks the affected cell under V2 to V4.
-- The run as a whole is BLOCKED, with no verdict on any cell, when one third or more of the 18 cells are blocked. The count includes every cell with status BLOCKED, every INVALID cell and every confirmatory cell that does not pair; `analyze.mjs` `decide` counts exactly these.
+- The run as a whole is BLOCKED, with no verdict on any cell, when one third or more of the 18 cells are blocked. The count includes every cell with status BLOCKED and every confirmatory cell that does not pair. INVALID cells are not counted: V1 is a validity outcome of one cell, not a failure of the run; an INVALID confirmatory cell enters Holm with p = 1 and is reported under All-forced. `analyze.mjs` `decide` counts exactly these.
 - A precondition that fails when re-checked after the run (`provenance-after.json`) blocks every cell of the sketch it names, or every cell when it names none (harness worktree, Godot binary, canary pin). `analyze.mjs` applies this itself; a missing `provenance-after.json` makes the run BLOCKED.
 - No row is added to Readings after the run.
 
@@ -228,7 +228,7 @@ The pre-registration procedure's stub dry run becomes, for a run without a decid
 `run.mjs --live` refuses to start unless every line below matches the file bytes in `artifacts/jev-lab-2026-09-25/experiments/arms/`.
 
 - `design.json` sha256 `60875474fbf779d3d549b1df1c37367718ec6ccd9185d096ba66e07193873fdb`
-- `analyze.mjs` sha256 `57ecb8aeb621486287fd2e0a4e63e8f8df7f92990e076effb382b960115d5502`
+- `analyze.mjs` sha256 `4e68f9dc3fd08b3315906ccc5a29c12e972d6cf2c238a8704d2f9402b134f7f8`
 - `run.mjs` sha256 `b678aa2b381a88c40519607ff120c201816d4d8d73e8bb19624682422496d696`
 
 ## Change record

@@ -329,9 +329,7 @@ export function decide(cells, design) {
     const wrong = d !== undefined && (c.direction === "random>scripted" ? d < 0 : d > 0);
     c.reversal_flag = Boolean(wrong && c.mcnemar !== null && c.mcnemar.two_sided < design.alpha);
   });
-  const blocked = cells.filter(
-    (c) => c.status === "blocked" || c.status === "invalid" || (c.class === "confirmatory" && c.mcnemar === null),
-  ).length;
+  const blocked = cells.filter((c) => c.status === "blocked" || (c.class === "confirmatory" && c.mcnemar === null)).length;
   return { run_blocked: blocked * 3 >= cells.length, blocked_cells: blocked };
 }
 
@@ -403,7 +401,7 @@ export function render(result, { title, planning = null }) {
       `| ${c.id} | ${c.class} | ${c.direction ?? "-"} | ${c.status}${c.problems.length ? ` (${c.problems.join("; ")})` : ""} | ${c.success.scripted.k}/${c.success.scripted.n} | ${c.success.random.k}/${c.success.random.n} | ${t.both}/${t.random_only}/${t.scripted_only}/${t.neither} | ${ci(c.random_minus_scripted.paired)} | ${ci(c.random_minus_scripted.unpaired)} | ${tested && c.mcnemar ? f3(c.mcnemar.one_sided) : "-"} | ${c.mcnemar ? f3(c.mcnemar.two_sided) : "-"}${tested ? "" : " (exploratory)"} | ${tested ? f3(c.holm_p) : "-"} | ${tested ? c.verdict + (c.reversal_flag ? "; reversal flag" : "") : "not tested"} | ${f2(c.multi_share.scripted.value)} / ${f2(c.multi_share.random.value)} |`,
     );
   }
-  lines.push("", `Blocked or invalid cells: ${result.summary.blocked_cells}. Run blocked: ${result.summary.run_blocked}.${result.summary.after.length ? ` ${result.summary.after.join("; ")}.` : ""}`, "");
+  lines.push("", `Blocked cells (unpaired confirmatory included): ${result.summary.blocked_cells}. Run blocked: ${result.summary.run_blocked}.${result.summary.after.length ? ` ${result.summary.after.join("; ")}.` : ""}`, "");
   if (planning !== null) {
     lines.push("## Planning: power at the planned n from the prior discordance (unverified-computed)", "");
     lines.push("| Cell | Direction | Planned n | Prior favoured / against pairs of 20 | Power at α/5 | Power at α |", "| --- | --- | --- | --- | --- | --- |");
@@ -487,7 +485,7 @@ export function selfTest() {
     { class: "floor", status: "ok", mcnemar: { one_sided: 1, two_sided: 1 }, sketch: "cable-bench", problems: [] },
   ];
   const counted = decide(cells, { alpha: 0.05 }).blocked_cells;
-  if (counted !== 2) failures.push(`run-block count includes not-paired confirmatory and invalid cells: ${counted} vs 2`);
+  if (counted !== 1) failures.push(`run-block count includes not-paired confirmatory cells and excludes INVALID cells: ${counted} vs 1`);
   applyAfter(cells, { preconditions: [{ name: "cable-bench head", ok: false, detail: "x", sketch: "cable-bench" }] });
   if (cells[2].status !== "blocked" || cells[0].status !== "ok") failures.push("a failed after-run precondition blocks only its sketch's cells");
   close(binomUpperHalf(8, 8), 1 / 256, 1e-15, "P(X>=8|8)", failures);
