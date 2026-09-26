@@ -1,0 +1,163 @@
+extends Node3D
+
+const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+
+# The stage exit is a cannon shot. Taking a gate fires the ball up a rail: a line of
+# rings drawn along the exact arc it will fly, which it threads for the whole flight,
+# so its velocity is held to that arc and nothing it clips on the way out can cost
+# it speed. The next stage shows where it will come down with a second rail of rings
+# onto a landing hill that turns the fall back into forward speed.
+
+const LIFT := 24.0
+# A ball slower than the floor is pushed up to it along the rail over this long, so the
+# cannon accelerates it rather than snapping its speed (the whole flight is 0.6 s).
+const FLOOR_RAMP := 0.5
+const RINGS := 7
+const RING_RADIUS := 3.2
+# The rail's rings sit this far apart in flight time, inside flow's 0.6 s of flight.
+const RING_FIRST := 0.08
+const RING_STEP := 0.075
+const LANDING_RINGS := 6
+const LANDING_STEP := 0.02
+const LANDING_LIMIT := 4.0
+
+var gravity := 26.0
+# Where the last landing mark says the ball will come down.
+var landing_point := Vector3.INF
+
+var _origin := Vector3.ZERO
+var _velocity := Vector3.ZERO
+var _from := Vector3.ZERO
+var _flying := false
+var _time := 0.0
+var _rings: Array[MeshInstance3D] = []
+var _landing: Array[MeshInstance3D] = []
+var _pad: MeshInstance3D
+var _pad_time := 0.0
+
+
+# Horizontal speed kept exactly, raised to a floor if slow, plus the lift. Pure, so a
+# test can hold the rule to its number without a scene.
+static func launch_velocity(current: Vector3, floor_speed: float, fallback_heading: Vector3) -> Vector3:
+	var flat := Vector3(current.x, 0.0, current.z)
+	if flat.length() < floor_speed:
+		var heading := flat.normalized() if flat.length() > 0.5 else Vector3(fallback_heading.x, 0.0, fallback_heading.z).normalized()
+		flat = heading * floor_speed
+	return flat + Vector3.UP * LIFT
+
+
+static func arc_point(origin: Vector3, velocity: Vector3, g: float, t: float) -> Vector3:
+	return origin + velocity * t + Vector3.DOWN * 0.5 * g * t * t
+
+
+func setup() -> void:
+	var mat := Palette.solid(EventKinds.color("launched"), 2.4)
+	for i in RINGS:
+		_rings.append(_ring(mat, RING_RADIUS))
+	var land_mat := Palette.solid(Palette.AMBER, 1.8)
+	for i in LANDING_RINGS:
+		_landing.append(_ring(land_mat, RING_RADIUS + 0.6))
+	_pad = MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 7.0
+	disc.bottom_radius = 7.0
+	disc.height = 0.2
+	_pad.mesh = disc
+	_pad.material_override = Palette.unshaded(Color(Palette.AMBER.r, Palette.AMBER.g, Palette.AMBER.b, 0.5))
+	_pad.visible = false
+	add_child(_pad)
+
+
+func _ring(mat: Material, radius: float) -> MeshInstance3D:
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - 0.45
+	torus.outer_radius = radius
+	ring.mesh = torus
+	ring.material_override = mat
+	ring.visible = false
+	add_child(ring)
+	return ring
+
+
+# The first velocity the rail sets: the ball's own horizontal speed with the lift.
+static func rail_start(current: Vector3) -> Vector3:
+	return Vector3(current.x, 0.0, current.z) + Vector3.UP * LIFT
+
+
+# velocity is the launch (floor-raised); from is the ball's own start. The rail eases
+# the horizontal part from one to the other over FLOOR_RAMP.
+func fire(origin: Vector3, velocity: Vector3, from := Vector3.INF) -> void:
+	_origin = origin
+	_velocity = velocity
+	_from = velocity if from == Vector3.INF else from
+	_flying = true
+	_time = 0.0
+	for i in RINGS:
+		var t := RING_FIRST + i * RING_STEP
+		_place_ring(_rings[i], arc_point(origin, velocity, gravity, t), velocity + Vector3.DOWN * gravity * t)
+
+
+# The velocity the rail holds the ball to this tick, or null once it lets go.
+func rail(delta: float):
+	if not _flying:
+		return null
+	_time += delta
+	for i in RINGS:
+		if _rings[i].visible and RING_FIRST + i * RING_STEP < _time - 0.05:
+			_rings[i].visible = false
+	var flat := Vector3(_from.x, 0.0, _from.z).lerp(Vector3(_velocity.x, 0.0, _velocity.z), smoothstep(0.0, FLOOR_RAMP, _time))
+	return flat + Vector3.UP * (_velocity.y - gravity * _time)
+
+
+func stop() -> void:
+	_flying = false
+	for ring in _rings:
+		ring.visible = false
+
+
+func flying() -> bool:
+	return _flying
+
+
+# Mark the next stage's landing: rings along the fall from the entry point, and a pad
+# where it meets the ground. height is the new stage's ground query.
+func mark_landing(entry: Vector3, velocity: Vector3, height: Callable) -> Vector3:
+	var t := 0.0
+	var at := entry
+	while t < LANDING_LIMIT:
+		t += LANDING_STEP
+		at = arc_point(entry, velocity, gravity, t)
+		if at.y <= float(height.call(at.x, at.z)) + 1.0:
+			break
+	var flight := t
+	for i in LANDING_RINGS:
+		var s := flight * float(i + 1) / float(LANDING_RINGS + 1)
+		_place_ring(_landing[i], arc_point(entry, velocity, gravity, s), velocity + Vector3.DOWN * gravity * s)
+	_pad.position = Vector3(at.x, float(height.call(at.x, at.z)) + 0.15, at.z)
+	_pad.visible = true
+	_pad_time = flight + 1.5
+	landing_point = at
+	return at
+
+
+func clear_landing() -> void:
+	_pad.visible = false
+	for ring in _landing:
+		ring.visible = false
+
+
+func _process(delta: float) -> void:
+	if _pad.visible:
+		_pad_time -= delta
+		if _pad_time <= 0.0:
+			clear_landing()
+
+
+static func _place_ring(ring: MeshInstance3D, at: Vector3, along: Vector3) -> void:
+	ring.visible = true
+	ring.position = at
+	var dir := along.normalized() if along.length() > 0.1 else Vector3.FORWARD
+	var up := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	ring.basis = Basis.looking_at(dir, up) * Basis(Vector3.RIGHT, PI * 0.5)

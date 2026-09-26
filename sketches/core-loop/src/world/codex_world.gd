@@ -1,0 +1,102 @@
+extends RefCounted
+
+# The world's codex entries (category "world"): terrain and element tricks the player
+# can find, declared as data and detected here. The detector is pure: the world feeds
+# it what just happened, already read against the terrain and the ball, and it answers
+# with the entries that fired. The codex owns saving, the burst and the bus fact.
+#
+# Notes the world sends, with the fields each needs:
+#   "element"  {"behaviour", "material", "at"}   an element resolved on a surface
+#   "kill"     {"at", "in_water"}                  an enemy died
+#   "gate"     {"id", "at", "tier"}                an event gate was taken at a speed tier
+#   "airborne" {"at", "off_kicker"}                the ball left the ground
+#   "slam"     {"at"}                              a slam landed
+#   "jump"     {"at", "tailwind"}                  a jump with the squall at the ball's back
+#   "grounded" {"at", "over_water"}                the ball is rolling on something over the flood
+
+const ENTRIES := [
+	{"id": "live_wire_flood", "category": "world", "name": "Live Wire",
+		"hint": "Water carries a charge, and so do crowds that wade in.",
+		"clue": "Arc + flood water + enemies in it",
+		"text": "Enemies lured into the flood die when you electrify the water under them."},
+	{"id": "surge_slingshot", "category": "world", "name": "Surge Slingshot",
+		"hint": "The surge is a tailwind if you stay ahead of it.",
+		"clue": "Surge Run gate + blazing speed",
+		"text": "Riding the surge front through a gate at blazing speed."},
+	{"id": "sluice_hammer", "category": "world", "name": "Sluice Hammer",
+		"hint": "A kicker throws you high. What comes down hardest?",
+		"clue": "Kicker + slam",
+		"text": "Launching off a kicker and slamming before you land."},
+	{"id": "squall_sail", "category": "world", "name": "Squall Sail",
+		"hint": "The wind never brakes you. It only pushes.",
+		"clue": "Dust squall at your back + a jump",
+		"text": "Jumping with the squall behind you and letting it carry you."},
+	{"id": "ice_bridge", "category": "world", "name": "Ice Bridge",
+		"hint": "The flood can hold you up, briefly, if it is cold enough.",
+		"clue": "Frost + flood water + rolling across",
+		"text": "Freezing the flood and using the ice as a shortcut across it."},
+]
+
+const LIVE_WIRE_SECONDS := 4.0
+const LIVE_WIRE_REACH := 16.0
+const HAMMER_SECONDS := 3.0
+const ICE_SECONDS := 12.0
+const ICE_REACH := 10.0
+const BLAZING := 3
+
+var time := 0.0
+var fired: Array[String] = []
+
+var _electrified: Array = []
+var _frozen: Array = []
+var _kicked_at := -INF
+
+
+func note(kind: String, data: Dictionary) -> Array:
+	var out := []
+	match kind:
+		"element":
+			if data.get("material", "") == "water":
+				if data.get("behaviour", "") == "electrify":
+					_electrified.append([time, data["at"]])
+				elif data.get("behaviour", "") == "create_surface":
+					_frozen.append([time, data["at"]])
+		"kill":
+			if data.get("in_water", false) and _recent(_electrified, LIVE_WIRE_SECONDS, data["at"], LIVE_WIRE_REACH):
+				_fire("live_wire_flood", data["at"], out)
+		"gate":
+			if data.get("id", "") == "surge_run" and int(data.get("tier", 0)) >= BLAZING:
+				_fire("surge_slingshot", data["at"], out)
+		"airborne":
+			if data.get("off_kicker", false):
+				_kicked_at = time
+		"slam":
+			if time - _kicked_at <= HAMMER_SECONDS:
+				_fire("sluice_hammer", data["at"], out)
+				_kicked_at = -INF
+		"jump":
+			if data.get("tailwind", false):
+				_fire("squall_sail", data["at"], out)
+		"grounded":
+			if data.get("over_water", false) and _recent(_frozen, ICE_SECONDS, data["at"], ICE_REACH):
+				_fire("ice_bridge", data["at"], out)
+	return out
+
+
+func advance(delta: float) -> void:
+	time += delta
+
+
+func _recent(marks: Array, seconds: float, at: Vector3, reach: float) -> bool:
+	for m in marks:
+		if time - float(m[0]) <= seconds and Vector2(at.x - m[1].x, at.z - m[1].z).length() <= reach:
+			return true
+	return false
+
+
+# Each entry fires once per stage attempt here; the codex decides what a repeat means.
+func _fire(id: String, at: Vector3, out: Array) -> void:
+	if id in fired:
+		return
+	fired.append(id)
+	out.append({"id": id, "at": at})
