@@ -31,6 +31,9 @@ var spawner: Node
 var build: Node
 # The persistent codex (src/core/codex.gd): declare entries, mark discoveries.
 var codex: Node
+# The boss module (wave 4), set by src/boss/boss.gd's setup when that file exists.
+# Flow calls enter_arena(entry_velocity) on it after stage 3's launch.
+var boss: Node
 # The node modules add their world children to.
 var root: Node3D
 # One seeded stream per run for anything a module randomizes.

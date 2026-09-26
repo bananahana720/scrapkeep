@@ -19,7 +19,7 @@ var _game
 var _source := Intent.Scripted.new()
 var _failures := 0
 var _started := false
-var _counts := {"scrap_lost": 0, "heft_class_changed": 0, "core_gained": 0}
+var _counts := {"scrap_lost": 0, "heft_class_changed": 0, "heft_class_dropped": 0, "core_gained": 0}
 var _drives: Array[int] = []
 var _drive_ticks := -1
 var _settle := 0
@@ -48,6 +48,7 @@ func _physics_process(_delta: float) -> bool:
 		events.scrap_lost.connect(func(_a, _b, _c, _d): _counts["scrap_lost"] += 1)
 		events.heft_class_changed.connect(func(_a, _b): _counts["heft_class_changed"] += 1)
 		events.core_gained.connect(func(_a, _b, _c): _counts["core_gained"] += 1)
+		events.heft_class_dropped.connect(func(_a, _b): _counts["heft_class_dropped"] += 1)
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
 		_mutator_checks()
@@ -93,6 +94,11 @@ func _mutator_checks() -> void:
 	run.add_scrap(10, Vector3.ZERO)
 	_report("class change", class_before == 1 and run.heft_class() == 2 and _counts["heft_class_changed"] == 1,
 		"heft %.3f crossed 1.5: class %d to %d, heft_class_changed fired %d time(s) over the whole sequence" % [run.heft(), class_before, run.heft_class(), _counts["heft_class_changed"]])
+
+	run.lose_scrap(30, Vector3.ZERO, "crane")
+	_report("class drop", run.heft_class() == 1 and _counts["heft_class_dropped"] == 1 and _counts["heft_class_changed"] == 1,
+		"a theft took heft to %.3f: heft_class_dropped fired %d time(s), heft_class_changed still %d" % [run.heft(), _counts["heft_class_dropped"], _counts["heft_class_changed"]])
+	run.add_scrap(30, Vector3.ZERO)
 
 	run.add_core("event", Vector3.ZERO)
 	var one: int = run.gate_tier_bonus()

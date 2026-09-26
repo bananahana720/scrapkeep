@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 
 # A scripted full run through the real flow: title, class, then for each stage the
 # beacon, a reward gate and the launch, ending on the summary. The ball is placed at
@@ -34,6 +35,8 @@ var _launch := {}
 var _gates: Array[Dictionary] = []
 var _launches: Array[Dictionary] = []
 var _wait := 0
+var _boss
+var _arena := {}
 
 
 func _initialize() -> void:
@@ -67,6 +70,10 @@ func _start() -> void:
 	events.run_ended.connect(func(_won: bool): _ended = true)
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(_on_chosen)
+	_boss = BossDouble.new()
+	_game.add_child(_boss)
+	_boss.setup(_game.ctx)
+	events.stage_cleared.connect(func(stage: int): if stage == StageDefs.COUNT: _arena["before"] = _planar())
 	_game.ctx.calm = true
 	_game.flow.beacon_seconds_override = BEACON_SECONDS
 	_game.player.source = _source
@@ -99,6 +106,7 @@ func _step() -> void:
 				_gate["after"] = _planar()
 				_gates.append(_gate)
 				_phase = "flight"
+				_wait = 0
 		"entered":
 			_wait += 1
 			if _wait == SETTLE_TICKS:
@@ -108,6 +116,19 @@ func _step() -> void:
 				_phase = "to_beacon"
 				_wait = 0
 		"flight":
+			if flow.state_name() == "boss" and _boss.entries == 1:
+				_wait += 1
+				if _wait == SETTLE_TICKS:
+					_arena["after"] = _planar()
+					_arena["hp"] = _game.run.hp
+					_game.run.damage(99999.0, "test")
+					_arena["dead_text"] = _game.screens.body_text()
+					_arena["dead_state"] = flow.state_name()
+					flow.retry_stage()
+					_arena["retried_state"] = flow.state_name()
+					_arena["retried_hp"] = _game.run.hp
+					_boss.defeat()
+					_arena["after_defeat"] = flow.state_name()
 			if _ended:
 				_phase = "summary"
 		"summary":
@@ -154,13 +175,15 @@ func _report(label: String, ok: bool, detail: String) -> void:
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
 
 
+# Only a loss counts against momentum: a gain, such as the launch rail easing a slow
+# ball up to cruise, is a gift.
 static func _kept(before: float, after: float) -> bool:
-	return before > 0.1 and absf(after - before) / before <= TOLERANCE
+	return before > 0.1 and (before - after) / before <= TOLERANCE
 
 
 func _finish() -> bool:
 	_done = true
-	var wanted := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary"]
+	var wanted := ["title", "class_select", "stage", "beacon", "gates", "launch", "boss", "dead", "victory", "summary"]
 	var missing: Array[String] = []
 	for s in wanted:
 		if not s in _states:
@@ -181,6 +204,16 @@ func _finish() -> bool:
 			"left at %.2f m/s horizontal, %.2f m/s after entering (within %d%%)"
 				% [l["before"], l["after"], int(TOLERANCE * 100.0)])
 	_report("launches", _launches.size() == StageDefs.COUNT - 1, "%d stage-to-stage launches measured" % _launches.size())
+	var text: String = _arena.get("dead_text", "")
+	_report("arena entry momentum", _kept(_arena.get("before", 0.0), _arena.get("after", 0.0)) and _boss.entry_speeds.size() >= 1,
+		"left stage 3 at %.2f m/s horizontal, %.2f m/s in the arena" % [_arena.get("before", -1.0), _arena.get("after", -1.0)])
+	_report("boss death screen", _arena.get("dead_state", "") == "dead" and text.contains("R   retry the arena") and text.contains("T   replay stage 3")
+			and text.contains("N   new run") and text.contains("plating 120"),
+		"death in the arena reads \"%s\"" % text.replace("\n", " | "))
+	_report("arena retry and victory", _arena.get("retried_state", "") == "boss" and _boss.entries == 2 and _arena.get("retried_hp", 0.0) == _arena.get("hp", -1.0)
+			and _arena.get("after_defeat", "") == "victory",
+		"R put flow back in %s (arena entry %d) at hp %.0f; boss_defeated led to %s, then summary"
+			% [_arena.get("retried_state", "?"), _boss.entries, _arena.get("retried_hp", -1.0), _arena.get("after_defeat", "?")])
 	print("spine_run_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

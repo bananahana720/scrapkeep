@@ -64,9 +64,11 @@ func _physics_process(_delta: float) -> bool:
 	elif _run.has("passed") and not _run.has("after"):
 		_run["after"] = speed
 	_run["last"] = speed
+	if is_instance_valid(enemy):
+		_run["knocks_seen"] = enemy.knocks
 	if _ticks >= WINDOW:
 		_run["alive"] = is_instance_valid(enemy) and not enemy.dead
-		_run["knocks"] = enemy.knocks if is_instance_valid(enemy) else 0
+		_run["knocks"] = _run.get("knocks_seen", -1)
 		_run["kills"] = _kills
 		_runs.append(_run)
 		if _runs.size() == 1:
@@ -102,9 +104,9 @@ func _finish() -> bool:
 	var light: Dictionary = _runs[1]
 	var before: float = heavy.get("before", -1.0)
 	var after: float = heavy.get("after", -1.0)
-	_report("crush keeps speed", before > 0.0 and after >= before * KEEP and heavy["kills"] == 1 and not heavy["alive"],
-		"heft %.1f at %.1f m/s: struck (%s) at %.2f m/s, %.2f m/s on the tick after passing it (needs >= %.0f%%), %d kill(s)"
-			% [heavy["heft"], SPEED, heavy.get("struck_kind", "none"), before, after, KEEP * 100.0, heavy["kills"]])
+	_report("crush keeps speed", before > 0.0 and after >= before * KEEP and heavy["kills"] == 1 and not heavy["alive"] and heavy["knocks"] == 0,
+		"heft %.1f at %.1f m/s: struck (%s) at %.2f m/s, %.2f m/s on the tick after passing it (needs >= %.0f%%), %d kill(s), %d knock(s)"
+			% [heavy["heft"], SPEED, heavy.get("struck_kind", "none"), before, after, KEEP * 100.0, heavy["kills"], heavy["knocks"]])
 	_report("light ram bounces", light["alive"] and light["kills"] == 0 and light["knocks"] >= 1 and light.get("struck_kind", "") == "ram",
 		"heft %.1f, same approach: rammed (%s), knocked %d time(s), chaser alive %s, %d kill(s)"
 			% [light["heft"], light.get("struck_kind", "none"), light["knocks"], light["alive"], light["kills"]])

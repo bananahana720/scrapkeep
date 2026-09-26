@@ -104,3 +104,55 @@ func _run_checks() -> void:
 			% [gap, at_once, flow.state_name(), _unsealed, _charges[-1]])
 	_report("warden engaged once", engaged_by_ring == 1 and _engaged == 1,
 		"warden_engaged fired %d time(s) on ring entry and %d in total after two strikes" % [engaged_by_ring, _engaged])
+	_late_kill_checks(mast)
+	_foreign_kill_checks(mast)
+	_vanish_checks()
+
+
+# B1: a spawner that records the kill late must not see a charge of 1.0 before it does.
+func _late_kill_checks(mast: Vector3) -> void:
+	var flow = _game.flow
+	flow.retry_stage()
+	_put_ball(_game.ctx.terrain.drop_point(mast.x + 5.0, mast.z, 1.0))
+	flow.physics_step(DT)
+	_charges.clear()
+	var unsealed_before := _unsealed
+	_double.delay_deaths = true
+	_double.strike(flow.warden, "arc", 99999.0)
+	var worst := 0.0
+	for i in 5:
+		flow.physics_step(DT)
+		worst = maxf(worst, flow.beacon.fraction())
+	var published: float = _charges.max() if not _charges.is_empty() else 0.0
+	var held: bool = flow.state_name() == "beacon" and published < 1.0 and worst < 1.0 and _unsealed == unsealed_before
+	_double.finish_pending()
+	_double.delay_deaths = false
+	_report("late kill", held and flow.state_name() == "gates" and _unsealed == unsealed_before + 1 and _charges[-1] == 1.0,
+		"HP at 0 with the kill held back 5 ticks: state beacon, charge at most %.2f shown and %.2f published; the kill then opened the gates"
+			% [worst, published])
+
+
+# B2: only this stage's Warden unseals it.
+func _foreign_kill_checks(mast: Vector3) -> void:
+	var flow = _game.flow
+	flow.retry_stage()
+	var unsealed_before := _unsealed
+	var far: Vector3 = _game.ctx.terrain.drop_point(mast.x + 80.0, mast.z + 40.0, 0.0)
+	var stray: Node3D = _double.spawn_enemy("warden", far)
+	_double.strike(stray, "arc", 99999.0)
+	flow.physics_step(DT)
+	_report("foreign warden", flow.sealed and flow.state_name() != "gates" and _unsealed == unsealed_before and is_instance_valid(flow.warden),
+		"another warden killed 89 m away left this stage sealed (%s), state %s" % [flow.sealed, flow.state_name()])
+
+
+# B2: a Warden that leaves without a kill opens the stage the normal way and is logged.
+func _vanish_checks() -> void:
+	var flow = _game.flow
+	var unsealed_before := _unsealed
+	var anomalies_before: int = _game.run.anomalies.size()
+	flow.warden.free()
+	flow.physics_step(DT)
+	var noted: bool = _game.run.anomalies.size() == anomalies_before + 1 and _game.run.anomalies[-1]["kind"] == "warden_vanished"
+	_report("vanished warden", flow.state_name() == "gates" and not flow.sealed and _unsealed == unsealed_before + 1 and noted and _charges[-1] == 1.0,
+		"freed without record_kill: state %s, beacon_unsealed fired %d time(s), run anomaly %s"
+			% [flow.state_name(), _unsealed - unsealed_before, _game.run.anomalies[-1] if noted else "missing"])

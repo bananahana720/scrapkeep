@@ -11,6 +11,8 @@ const AMBER := Color("e5a044")
 const ARC := Color("8bf0d3")
 # Outside the greybox palette on purpose: a klaxon has to read as nothing else on screen.
 const HAZARD := Color("ff5a3c")
+# Admiral Brindle's brass: every boss fact wears it.
+const BRASS := Color("d9b44a")
 
 
 static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> ImageTexture:
