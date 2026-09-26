@@ -27,6 +27,7 @@ const JevState := preload("res://src/jev/jev_state.gd")
 const Scenarios := preload("res://src/jev/scenarios.gd")
 const JevRun := preload("res://src/jev/jev_run.gd")
 const JevAgent := preload("res://src/jev/jev_agent.gd")
+const Intent := preload("res://src/intent.gd")
 
 const TICKS := 900
 const PLACE_TICKS := 45
@@ -55,6 +56,21 @@ class ScriptedSource:
 		out.brake_held = brake
 		jump = false
 		boost = false
+
+
+# The two reads jev_run.gd's _goal() makes of the view at apply time, set by hand so
+# the fallback branch can be driven directly (JL-21b review, F4).
+class FakeView:
+	extends RefCounted
+
+	var knocked := []
+	var now := []
+
+	func knocked_enemies() -> Array:
+		return knocked
+
+	func threat_indices() -> Array:
+		return now
 
 
 var _identity := []
@@ -238,6 +254,42 @@ func _executor_targets(lab, view) -> Dictionary:
 		agent._at = lab.player.ball_position()
 		out[id] = lab.enemies.find(agent._enemy())
 	return out
+
+
+# _goal()'s fallback: the reported threat is knocked by the time the intent applies.
+# Then stomp and ram take the nearest live threat now, or -1 when there is none, and
+# with -1 the agent idles for the hold: no stick, jump or boost.
+func _check_goal_fallback(lab) -> void:
+	var cases := [
+		{"reported": [4], "knocked": [], "now": [2], "want": 4, "why": "reported and live: the reported one"},
+		{"reported": [0], "knocked": [0], "now": [4, 2], "want": 4, "why": "reported knocked before apply: nearest live now"},
+		{"reported": [0], "knocked": [0], "now": [], "want": -1, "why": "reported knocked, no live threat: -1"},
+	]
+	var wrong := []
+	for one in cases:
+		var trial = JevRun.Trial.new(lab, {})
+		var fake := FakeView.new()
+		fake.knocked = one["knocked"]
+		fake.now = one["now"]
+		trial.view = fake
+		trial._pending = {"sim": {"threat_ids": one["reported"]}}
+		for id in ["stomp_target", "ram_target"]:
+			var goal: Dictionary = trial._goal(id)
+			if goal.get("enemy", null) != one["want"]:
+				wrong.append("%s, %s: %s, want enemy %d" % [id, one["why"], JSON.stringify(goal), one["want"]])
+	_report("goal fallback", wrong.is_empty(), "stomp and ram goals for %d cases%s" % [cases.size(),
+		(": " + " | ".join(wrong)) if not wrong.is_empty() else ""])
+	var idle := []
+	for id in ["stomp_target", "ram_target"]:
+		var agent := JevAgent.new(lab)
+		agent.hold(id, {"enemy": -1})
+		var out := Intent.new()
+		agent.poll(out)
+		if agent._enemy() != null or out.move != Vector2.ZERO or out.jump_pressed or out.boost_pressed:
+			idle.append("%s: enemy %s, move %s, jump %s, boost %s" % [id, str(agent._enemy()), str(out.move),
+				str(out.jump_pressed), str(out.boost_pressed)])
+	_report("goal none idles", idle.is_empty(), "with enemy -1 the agent has no target and gives no input%s" % [
+		(": " + " | ".join(idle)) if not idle.is_empty() else ""])
 
 
 func _sample(lab) -> PackedFloat64Array:
@@ -464,6 +516,7 @@ func _finish() -> void:
 		stomps += view.knock_count("stomp")
 		rams += view.knock_count("ram")
 		view.detach()
+	_check_goal_fallback(_knocked[0]["holder"]["lab"])
 	for run in _knocked:
 		var view = run["view"]
 		var knocked: Array = view.knocked_enemies() if view.has_method("knocked_enemies") else []

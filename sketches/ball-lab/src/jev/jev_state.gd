@@ -219,9 +219,11 @@ func _self_block() -> Dictionary:
 
 # The nearest three dummies within 60 m, nearest first; ties keep lab order. With a
 # Run attached, a dummy knocked this trial (a contact stretch on it, knock_count()'s
-# rule) is left out for every arm: in the game a hit enemy is gone, while enemy.gd's
+# rule) is left out for every arm. That is ball-lab's threat rule under
+# stage-threat-rule 2 (EV-0550): a threat leaves the state when the game has taken it
+# out of play, and ball-lab counts a knocked dummy as out of play, while enemy.gd's
 # dummy gets up and chases, which kept the scripted ladder stomping it (JL-21 review,
-# F1). Without a Run nothing is left out.
+# F1). Other stages decide their own rule. Without a Run nothing is left out.
 func threats() -> Array:
 	var at := position()
 	var v := velocity()
