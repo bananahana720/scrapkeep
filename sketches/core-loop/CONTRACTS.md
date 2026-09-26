@@ -1,6 +1,6 @@
 # Core-loop contracts
 
-This file is the seam between the spine and the four wave-2 modules. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
+This file is the seam between the spine and the four wave-2 modules. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules (heft, plating, the Warden, cores); this file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
 
 ## Ownership
 

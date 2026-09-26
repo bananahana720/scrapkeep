@@ -6,7 +6,7 @@ This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep:
 
 This is the wave 1 spine. Movement is the mobility kit v2 core (rigid physics only), and the stage is the Spillway terrain. Combat, the build, audio and events are minimal stubs until the wave 2 modules replace them. Nothing here is production code, and there are no assets: everything is built in script from primitives.
 
-Play it with `scrapkeep core-loop`. Hold **Tab** in game for the field notes below. [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
+Play it with `scrapkeep core-loop`. Hold **Tab** in game for the field notes below. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
 
 ## The loop
 
