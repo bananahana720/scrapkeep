@@ -110,3 +110,126 @@ The rest of the JL-30b lab SKILL.md paths are root-relative and pass (receipt).
 - Check path words inside commands (B4).
 - Get `check:docs` green on the integrated head: add skill-relative resolution and have the coordinator reword plan-session:22-23 (B5).
 - Add a test for each of these.
+
+
+# JL-30c-A2 re-review (Opus 5.5, routine; verbatim)
+
+## JL-30c-A2 re-review: `scripts/check-skills.mjs`
+
+**Verdict: PASS+NOTES.** One condition applies. The candidate head still fails `npm run check:docs` by itself (receipt `A2-check-docs.txt:12-16`, exit 1, `plan-session/SKILL.md:22-23`). A1 split the B5 fix between the writer and the coordinator. The writer's half is present. The coordinator's half, the plan-session rewording, is in JL-30b (`/home/andrew/Projects/scrapkeep-wt-JL-30b/.agents/skills/plan-session/SKILL.md:22-23` now uses absolute `/home/andrew/.config/pstack/models/*.md`). So JL-30c must not be admitted ahead of JL-30b, and `npm run check:docs` must be rerun on the integrated head. If the coordinator expected the JL-30c head to be green on its own, B5 is still open and this becomes FAIL.
+
+**Evidence level:** static source review only. I ran no commands. The head SHA c2ab07da comes only from the receipt `A2-README.txt:1`; I did not check it with git. Every test, verify and check-docs result below is labelled **[receipt]** because it rests on writer or coordinator files under `/home/andrew/Projects/scrapkeep-wt-JL-30c/artifacts/local/tasks/JL-30c/`.
+
+**Runtime:** the system prompt states Opus 5.5 (`claude-opus-5-5`). `CLAUDE_EFFORT` was unavailable to me.
+
+Paths below are under `/home/andrew/Projects/scrapkeep-wt-JL-30c/` unless given in full.
+
+## Blocking findings
+None within the candidate's scope. The integration condition above is the only gate.
+
+## Non-blocking findings
+
+- **F1. A bare filename with `:line` is never existence-checked.** At `scripts/check-skills.mjs:409` the `SCHEME` test (`:344`, `/^[a-z][a-z0-9+.-]*:/i`) runs before the `:line` strip at `:410`. `play.mjs:12`, `SKILL.md:22` and `BACKLOG.md:6140` all match the scheme test and are skipped. `scripts/play.mjs:1` is still checked, because the `/` breaks the match. This lets dead citations through but never produces a false alarm. Fix: strip `LINE_SUFFIX` first, or require `://`.
+- **F2. Free-text regex for top-level verbs.** `:570-571` matches any lowercase `scrapkeep <word>` anywhere in any skill file, prose included and across newlines (`\s`).
+  - False positives it would raise: prose such as "the scrapkeep repository" and paths like `…/Projects/scrapkeep is`. It would also flag `scrapkeep <sketch-name>`, even though a bare sketch name is a valid invocation (`scripts/play.mjs:888-894`).
+  - Current content is clean: a multiline grep of JL-30b's skills finds only three `scrapkeep <verb>` hits (`scrapkeep-lab/SKILL.md:17`, `references/scenarios-and-arms.md:9`, `references/records-gates-pins.md:15`), all valid. JL-coord's skills have none.
+  - Scoping the scan to backtick spans would make it safer.
+- **F3. No warning when `scripts/play.mjs` is absent.** `:511` returns without a warning, which is the same silent pattern B2 was raised against. Mitigation: JL-30b `scrapkeep-lab/SKILL.md:17` cites `scripts/play.mjs`, so a rename would still be caught by the paths check.
+- **F4. Some whitespace-split words give false positives.** Covered in section 3.
+- **F5. A test title does not match its fixture, so one direction of the prefix rule is untested.**
+  - The title at `tests/check-skills.test.js:328` says "an RML- id inside the lab skill's ledger".
+  - The fixture `tests/fixtures/check-skills/wrong-prefix-scope/.agents/skills/reactive-model-loop/references/lessons.md:10` actually puts SKL-99 in the portable ledger, and the test asserts SKL-99.
+  - So the RML-in-lab branch (`scripts/check-skills.mjs:793-802`) has no test.
+- **F6. Frontmatter failure paths are partly untested.** Only a name mismatch and a missing description are tested. No test covers a description over 1024 characters or one that does not start with an allowlisted verb. The allowlist (`:45-53`) is stricter than the contract's "starts with a verb" (DESIGN.md:143), but a miss fails loudly with a named finding. All five real first words (Design, Run, Verify, Execute, Plan) are on the list.
+- **F7. Changelog edge cases pass silently.**
+  - A retracted lesson whose `Overturned by` field has no ISO date is skipped (`:741-742`).
+  - A `## Changelog` section with no date rows passes unless a dated retraction exists.
+- **F8. Packet discrepancy.** The packet says the red-first run was "19 pass / 47 fail". The receipt says 19 pass / 23 fail out of 42 (`A2-red-first.txt:43-46`).
+- **F9. Possible add/add conflict at integration.** JL-30b already contains `/home/andrew/Projects/scrapkeep-wt-JL-30b/scripts/check-skills.mjs`, which carries A2 text ("Gitignore matching…"), and its `package.json:22` has `check:skills`.
+  - If that copy differs from c2ab07d, merging the two branches will conflict.
+  - The receipt `A2-check-skills-JL-30b.txt` does not say which copy of the script produced it.
+  - I did not diff the two files (inference).
+
+## 1. A1 items
+
+| Item | Status | Fix | Proving test |
+| --- | --- | --- | --- |
+| B1 | Closed | `:713-757`, called at `:773`. Missing section fails; newest-row date is compared with the retracted lesson's Overturned-by date | test.js:278, :284 |
+| B2 | Closed | Static parse at `:469-584`. A warning is raised when no list is found (`:521-547`) | :295 (bad top verb and bad sub-verb), :303 (valid verbs, including pipe-separated), :309 (warns and never fails) |
+| B3 | Closed | Missing `## Lessons` fails (`:764-765`); malformed header fails (`:670-688`, `:766-772`); prefix scope in both directions (`:793-812`); multi-id citations (`:880-893`) | :316, :322, :328 (SKL direction only, F5), :338 |
+| B4 | Closed | Each word is checked separately; only words containing `<`, `*` or a scheme are skipped (`:406-409`). The A1 fixture line `node scripts/does-not-exist.mjs` has been removed from `not-flagged` | :347 |
+| B5 | Writer half closed | Skill-relative fallback at `:415-416`. Candidate still red on its own; see the condition at the top | :357 |
+| N1 | Closed | Allowlist, single quotes, `>`/`\|` block scalars, CRLF (`:45-53`, `:84-86`, `:186-229`). The fixture really has CRLF: 21 `\r$` lines | :391, :397 |
+| N2 | Closed | Archived `EVENTS-*.md` rows are read (`:597-604`) | :373 |
+| N3 | Closed | `:356-391`, `:417-427` | :380 |
+| N4 | Closed | No import; source is read with `readNormalized` (`:512`) | Indirect |
+| N5 | Closed | 30 s timeout and ETIMEDOUT handling in `scripts/check-docs.mjs:726-740` | None (fine) |
+| N6 | Closed | `:959-972` | :526, :542 (exit 2 and no JSON) |
+| N7 | Closed | `walkFiles` over the whole portable directory (`:915-927`) | :415 |
+| N8 | Closed | `:346`, `:410` | :366 (base fixture `reactive-model-loop/references/lessons.md:5`) |
+| N9 | Closed | Limits text is a plain string (`:10-17`); the usage string is no longer grepped | — |
+| N10 | Closed | Name mismatch, missing description, over-150 warning, file that is not a symlink, wrong symlink target, invalid status, uncited id, unknown flag exits 2 with null findings, no JSON in default mode (`:169`), and a red-first receipt | test.js:438, :444, :471, :479, :487, :496, :511, :260; red-first in `A2-red-first.txt` |
+
+**[receipt]** All tests pass on A2: `A2-verify.txt:9-10,24` shows "PASS tests", and `scripts/verify.mjs:14` maps that step to `npm test`.
+
+## 2. Static verb parse
+
+- **What each tree yields:**
+  - JL-30c `scripts/play.mjs`:
+    - `LAB_VERBS` at `:814` gives stats, gate and dash.
+    - `LAB_SUBVERBS` at `:819` gives run, program and verdicts.
+    - `verb === "lab"` at `:833`.
+    - `const verbs = [...]` at `:889` gives play, test, watch, shot, list and help.
+  - JL-coord `/home/andrew/Projects/scrapkeep-wt-JL-coord/scripts/play.mjs` has the same lists at `:816`, `:821`, `:836` and `:892`, with `watch: "watch.mjs"` added at `:825`.
+  - All of these match the regexes at `:470-506`, including the multi-line object bodies.
+- **Outcomes, derived by reading, not by running:**
+  - `scrapkeep gate`, `stats` and `dash` pass in both trees.
+  - `scrapkeep lab watch` passes against JL-coord and fails against JL-30c. That is correct, because JL-30c has no `watch`.
+  - `scrapkeep lab nosuch` fails with a `lab sub-verb` finding. The top-level scan passes it on `lab`, so it is not reported twice.
+  - `scrapkeep gate <run>` works because `<` does not match `[A-Za-z]`.
+- **Fragility (non-blocking; each fails loudly or only lets citations through):**
+  - `extractQuotedArray` stops at the first `]`, and quoted text in a comment inside the array would be picked up.
+  - `extractObjectKeys` counts braces without regard to strings, and it would treat nested-object keys as verbs.
+  - `extractLiteralVerbCases` also matches text in comments. For example, the fixture comment `base/scripts/play.mjs:4` contributes `lab`. It misses `"lab" === verb` and `case "lab":`.
+  - Template-literal quotes are accepted.
+  - A renamed or computed list produces loud false failures, not silent passes. The one exception is F3.
+
+## 3. Whitespace split
+
+- **Clean cases:**
+  - `npm run check:docs`: `check:docs` has no slash and no path suffix, so it is not path-checked.
+  - `--call-cap 5000`, `key=value`, `v1.2.3` and `[--arm`: not path-shaped.
+  - The JL-30b `SKILL.md:17` command: only `scripts/lab/godot-launch.mjs` is checked.
+- **False positives (only inside backticks):**
+  - `and/or` and `pass/fail`, because `PATH_PREFIX` (`:343`) matches `and/`.
+  - `out=artifacts/x.json` and `$ROOT/scripts/x.mjs`, which match on the `.json`/`.mjs` suffix.
+  - `1.0/2.0`.
+  - A path with trailing punctuation, such as `scripts/x.mjs,`.
+- **Real skills:** a grep of JL-30b for these shapes found none. **[receipt]** `A2-check-skills-JL-30b.txt:1` shows 5 skills and 0 findings.
+
+## 4. Skill-relative resolution and the gitignore warning
+
+Both are sound.
+
+- **Skill-relative resolution:**
+  - The fallback runs only after the root lookup fails (`:414-416`). It could hide a dead root path only if a file with the same name exists under the citing skill's directory, which is unlikely.
+  - Edge case: `../..` in a cited path can make `path.join` resolve outside the repository.
+- **Gitignore warning:**
+  - It applies only to dead paths that match root `.gitignore` patterns, which cannot be tracked anyway.
+  - A tracked dead path such as `scripts/lab/x.mjs` still fails.
+  - One gap: negation patterns are dropped (`:360`), so a dead `.env.example` would only warn, because of `.gitignore:5-6`.
+  - Existing ignored paths pass silently, so a fresh clone differs from a local worktree only at warning level.
+
+## 5. N6 and check-docs
+
+- **Exit 2:** it prints no JSON. `scripts/check-docs.mjs:750-763` turns that into a named failure: "did not print a JSON findings array (exit 2): TRACKING.md is missing…".
+- **Skip rule:** the stage skips when `.agents/skills` is absent (`:725`). No `tests/fixtures/check-docs` tree has `.agents`: the glob over `tests/fixtures/**/.agents/**` returns only check-skills fixtures. So the check-docs fixture tests are unaffected.
+- **[receipt]** Those tests pass (`A2-verify.txt:10`).
+
+## 6. Tests and style
+
+- **Tests:** 42 cases, hermetic (`mkdtemp` plus `finally rm`). Symlinks are made after the copy (`tests/check-skills.test.js:18-37`). Each failure case asserts the named check plus a message token. The red-first receipt shows 23 new tests failing against A1.
+- **Built-ins only:** the script and the tests import only built-ins (`scripts/check-skills.mjs:1-3`, test.js:1-7).
+- **Style:** it follows check-docs, with a `Findings` class, an `exists` helper and one-line output.
+- **Wiring:** `package.json:15,22` wires `check:skills`, and `test` globs `tests/*.test.js`.
+- **Scope [receipt]:** check:scope classifies the change as tooling and requires only `npm run verify` (`A2-check-scope.txt:6,46-47`).
