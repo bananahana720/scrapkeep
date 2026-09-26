@@ -4,6 +4,24 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
+
+# A spawner with no integrity_of(), so flow has to tell this stage's Warden by where
+# the kill happened (within 6 m of where it stood).
+class BareSpawner:
+	extends Node
+
+	var ctx
+
+	func spawn_enemy(kind: String, at: Vector3) -> Node3D:
+		var enemy := Node3D.new()
+		enemy.set_meta("kind", kind)
+		ctx.root.add_child(enemy)
+		enemy.global_position = at
+		return enemy
+
+	func kill(enemy: Node3D, at: Vector3) -> void:
+		ctx.run.record_kill(enemy.get_meta("kind"), at, 0)
+
 # The Warden is the stage's one MUST. Circling the ring charges nothing while it
 # stands; its damage is the charge the beacon shows; its death opens the gates
 # wherever the ball is. Uses a spawner double, so it tests the spine's side only.
@@ -107,6 +125,7 @@ func _run_checks() -> void:
 	_late_kill_checks(mast)
 	_foreign_kill_checks(mast)
 	_vanish_checks()
+	_bare_spawner_checks()
 
 
 # B1: a spawner that records the kill late must not see a charge of 1.0 before it does.
@@ -143,6 +162,25 @@ func _foreign_kill_checks(mast: Vector3) -> void:
 	flow.physics_step(DT)
 	_report("foreign warden", flow.sealed and flow.state_name() != "gates" and _unsealed == unsealed_before and is_instance_valid(flow.warden),
 		"another warden killed 89 m away left this stage sealed (%s), state %s" % [flow.sealed, flow.state_name()])
+
+
+# N1: without integrity_of, a warden kill 7 m from this stage's Warden is someone else's;
+# one at 3 m is this one.
+func _bare_spawner_checks() -> void:
+	var flow = _game.flow
+	var bare := BareSpawner.new()
+	bare.ctx = _game.ctx
+	_game.add_child(bare)
+	_game.ctx.spawner = bare
+	flow.retry_stage()
+	var warden: Node3D = flow.warden
+	var unsealed_before := _unsealed
+	bare.kill(warden, warden.global_position + Vector3(7.0, 0.0, 0.0))
+	var far_sealed: bool = flow.sealed and flow.state_name() != "gates"
+	bare.kill(warden, warden.global_position + Vector3(3.0, 0.0, 0.0))
+	_report("identity by position", far_sealed and not flow.sealed and flow.state_name() == "gates" and _unsealed == unsealed_before + 1,
+		"no integrity_of(): a kill 7 m away left it sealed (%s); one 3 m away unsealed it (state %s)" % [far_sealed, flow.state_name()])
+	_game.ctx.spawner = _double
 
 
 # B2: a Warden that leaves without a kill opens the stage the normal way and is logged.

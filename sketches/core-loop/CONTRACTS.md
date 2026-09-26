@@ -1,6 +1,6 @@
 # Core-loop contracts
 
-This file is the seam between the spine and the four wave-2 modules. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
+This file is the seam between the spine and the five modules: the four from wave 2 (combat, build, presentation, world) and the wave-4 boss. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
 
 ## Ownership
 
@@ -25,7 +25,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 4. `boss` (`src/boss/boss.gd`), which sets `ctx.boss`. It is set up only when the file exists (`ResourceLoader.exists`), so the run works without it and ends on the summary after stage 3.
 5. `presentation`.
 
-`game.gd` asserts that `ctx.terrain` and `ctx.spawner` are set. The codex (`ctx.codex`) exists before any module is set up, so modules can declare their entries in `setup`. The flow starts after all four are set up. Everything in a module folder may be replaced wholesale, as long as the entry script keeps its path and its obligations below.
+`game.gd` asserts that `ctx.terrain` and `ctx.spawner` are set. The codex (`ctx.codex`) exists before any module is set up, so modules can declare their entries in `setup`. The flow starts after every present module is set up. Everything in a module folder may be replaced wholesale, as long as the entry script keeps its path and its obligations below.
 
 ## Rules every module follows
 
@@ -39,8 +39,13 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 - Heft never changes RigidBody mass, radius, torque or air control. It scales punch, which combat reads; the ball handles the same at every heft (`spine_heft_test.gd`).
 - An enemy records its kill (`run.record_kill`) on the same tick its HP reaches 0, and a crushed or killed enemy drops its collision layer on that tick, so nothing solid lingers where a kill already happened.
 - Honour `ctx.calm`. While it is true, spawn nothing on your own schedule and apply no world pushes. The spine's momentum tests depend on it. The spawner itself does not check `calm`; callers that spawn on their own schedule do.
-- Stay in play. Gameplay work runs only while `ctx.flow.in_play()` is true.
-- Reset on `stage_entered(stage, retry)`. Clear stage content: enemies, gates, events and pickups. Rebuild it for `stage`. After a retry the run state is already restored, so recompute anything derived from `ctx.run.parts`.
+- **Stage content runs only in a stage.** Stage content means the director, the flood cycle and its pushes, stage events, the scrap field, fabricators, vaults and stage enemies. It runs only while `ctx.flow.in_stage()` is true, which covers `stage`, `beacon`, `gates` and `launch`.
+- **Player-side work runs in play.** Player weapons, build synergies and presentation run while `ctx.flow.in_play()` is true, which adds the boss arena.
+- **Stand down on `stage_content_cleared`.** Flow publishes `stage_content_cleared(reason)` on entering the arena and on each arena retry, with the reason `arena`. Each module then clears its stage content at once:
+  - combat clears stage enemies;
+  - world stops its director and flood and parks the stage maps;
+  - build clears pickups and fabricators.
+- Reset on `stage_entered(stage, retry)`. Clear stage content: enemies, gates, events and pickups. Rebuild it for `stage`. After a retry the run state is already restored, so recompute anything derived from `ctx.run.parts`. Flow takes the stage-start checkpoint before it publishes `stage_entered`, so anything a module grants inside that handler is play within the stage, and a retry takes it back.
 - Add world children under `ctx.root`.
 - Build owns all tuning mods. It calls `tuning.clear_mods()` on every recompute and reapplies every part. Keys that are not F1 sliders (`weapon_damage`, `weapon_rate`, `weapon_range`, `turret_damage` and any similar key) are read with `tuning.mod(key)`, never `tuning.f(key)`.
 
@@ -53,7 +58,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `tuning` | `Tuning` | movement knobs; `f(key)`, `base(key)`, `set_mod(key, x)`, `mod(key)`, `clear_mods()`, `boost_cooldown_scale` |
 | `player` | `PlayerBall` | the ball; hooks below |
 | `camera` | `ChaseCamera` | the camera; hooks below |
-| `flow` | flow node | read-only: `in_play()`, `state_name()`, `stage()`, `stage_def()`, `objective_text()`, `sealed`, `warden`, `punch_now()`, `warden_plating()`, `gap_line()` |
+| `flow` | flow node | read-only: `in_play()`, `in_stage()`, `state_name()`, `stage()`, `stage_def()`, `objective_text()`, `sealed`, `warden`, `punch_now()`, `warden_plating()`, `gap_line()` |
 | `terrain` | set by world | the terrain API below |
 | `spawner` | set by combat | the spawner API below |
 | `build` | set by build | the build module; read it through `has_method`. `build_module()` also reads a build that stored itself with `ctx.set_meta("build", self)` |
@@ -119,6 +124,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `beacon_charge_changed` | `fraction: float` | spine flow | beacon charge, 0 to 1; while sealed, the share of the Warden broken; exactly `1.0` once per stage when the gates open |
 | `beacon_unsealed` | `stage: int` | spine flow | the Warden broke; the gates open wherever the ball is |
 | `warden_engaged` | `stage: int` | spine flow | first sealed ring entry or first strike on the Warden, once per stage attempt |
+| `stage_content_cleared` | `reason: String` | spine flow | stage content must stand down now (reason `arena`: entering the boss arena or retrying it); quiet, priority 0 |
 | `scrap_collected` | `amount: int, at: Vector3, total: int` | `run.add_scrap` | scrap taken |
 | `scrap_lost` | `amount: int, at: Vector3, total: int, cause: String` | `run.lose_scrap` | mass taken (a crane theft); total is the wallet |
 | `part_gained` | `part_id: String, source: String` | `run.add_part` | a part was added; source is `gate`, `fabricator`, `vault`, `milestone` or similar |
@@ -259,13 +265,14 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
   - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s, then the summary and `run_ended(true)`.
   - **Death.** A death in `boss` leads to `dead`. There, R (or holding R in play) restores the arena-entry checkpoint and calls `enter_arena` again, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
   - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
+  - **Arena fall rescue (owner: E, the boss module).** The boss module implements `floor_y() -> float` and `rescue_point() -> Vector3`. Every tick in `boss`, flow checks the ball against `floor_y()`. Below it, flow puts the ball at `rescue_point()` keeping its horizontal speed, with no damage, like the stage rescue. If the boss module lacks either method, flow warns once and uses 40 m below the arena-entry checkpoint as the floor and the entry position as the landing.
 - `discovery_burst(at)` grants 20 scrap times the stage at a discovery. The codex calls it, once per entry per run.
 
 ## Codex (`src/core/codex.gd`, `ctx.codex`)
 
 The codex is saved to `user://codex.json` with the keys `discovered` (ids), `found` (descriptions) and `found_categories`. It is the demo's only meta-progression. Storage failures never throw: the codex keeps working in memory and sets `last_error`.
 
-- An entry declared with an unknown category is not registered, and the codex warns once. Discovering an undeclared id also warns once.
+- An entry declared with an unknown category is not registered, and the codex warns once. Discovering an undeclared id also warns once, and the id files under `build` everywhere: the bus fact, the log line and the pages.
 - A retry rewinds the run to the stage start, burst scrap included. The codex rewinds with it: entries first discovered or found during the retried attempt can fire again, and pay their burst again. The saved codex is never rewound.
 
 - `declare({id, category, name, hint, clue, text})` registers an entry at setup, and a repeat declare is harmless. The categories are `build` (owned by B), `world` (owned by D), `enemy` (owned by A), and the reserved `npc` and `coop`.

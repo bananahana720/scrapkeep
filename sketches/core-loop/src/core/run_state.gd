@@ -248,6 +248,18 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		_stage_starts[stage] = _snapshot.duplicate(true)
 
 
+# Flow takes the snapshot before stage_entered and fills in the entry pose once the
+# ball is placed; the kept stage start gets the same pose.
+func set_snapshot_entry(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: float) -> void:
+	for record in [_snapshot, _stage_starts.get(stage, {})]:
+		if record.is_empty() or record["stage"] != stage:
+			continue
+		if record == _snapshot or record["entry_position"] == Vector3.ZERO:
+			record["entry_position"] = entry_position
+			record["entry_velocity"] = entry_velocity
+			record["camera_yaw"] = camera_yaw
+
+
 func has_stage_start(index: int) -> bool:
 	return _stage_starts.has(index)
 

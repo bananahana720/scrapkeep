@@ -92,8 +92,10 @@ func name_of(id: String) -> String:
 	return id.replace("_", " ").capitalize()
 
 
+# An undeclared id (warned at discovery) files under build everywhere: the bus fact,
+# the log line and the pages read the same category.
 func category_of(id: String) -> String:
-	return _entries[id]["category"] if _entries.has(id) else ""
+	return _entries[id]["category"] if _entries.has(id) else "build"
 
 
 func entries(category := "") -> Array:
