@@ -23,8 +23,9 @@ Verification is scoped to the artifact; a passing unrelated suite cannot qualify
 | Browser-proof code | `npm run verify`; add CONTRIBUTING's browser checks for UI, input, camera or render changes. Preserve checks for both entries. |
 | Authorized native proof | Operational Sprint 0 uses `npm run native:smoke` and `node scripts/native-smoke.mjs --export` after S0-09 admission, plus visible local Linux launch and CI at the checked commit. This prepare-stage exception is not production or hardware qualification. |
 | Native game | Read the accepted engineering handoff and task-specific command contract. If it is unavailable, report a blocker; `check:godot` is reserved until that handoff lands. Do not invent Godot commands or substitute browser tests. |
+| Lab tooling or sketch lab code | `npm test`, `npm run sketch:smoke` when a sketch changes, and the gate against the named pin; the exit's meaning and the pin rules are in `scrapkeep-lab`. |
 | Maintained native player | Read `tools/agent-player/README.md` and the task scope. Use the documented controller-free checks and bounded native trials only when authorized. Acquire a fresh lease/desktop identity. |
 
 In Claude Code use supported shell and browser tools. In Codex use the host's available tool APIs and their control restrictions. The same checks and evidence meanings apply in both apps. A missing browser yields a browser-verification gap; successful HTTP serving is not browser behavior.
 
-Distinguish static checks, staged fixtures, ordinary input replay, automated native play, human feedback and hardware/performance measurements. A screenshot or a model's success statement does not establish gameplay outcomes.
+Distinguish static checks, staged fixtures, ordinary input replay, automated native play, human feedback and hardware/performance measurements. A screenshot or a model's success statement does not establish gameplay outcomes. Automated lab play is not a feel verdict.

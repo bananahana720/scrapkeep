@@ -9,7 +9,7 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 
 ## Procedure
 
-1. Read the current authorization and checkpoint in `TRACKING.md`, then the relevant cards in `BACKLOG.md` and the rules in `ORCHESTRATOR.md`. Consult `BIBLE.md` and accepted ADRs for the exact topic only.
+1. Read the current authorization and checkpoint in `TRACKING.md`, then the relevant cards in `BACKLOG.md` and the rules in `ORCHESTRATOR.md`. Consult `BIBLE.md` and accepted ADRs for the exact topic only. For lab or Jev scope, read `.agents/skills/scrapkeep-lab/references/lessons.md` and the current epoch state before proposing work.
 2. Inspect current Git changes and existing evidence without running a build preflight. Missing engineering facts come from inspection first.
 3. Explain the next eligible work and what blocks it. Keep accepted direction settled.
 4. Discuss one material publisher choice at a time with a recommendation and a park option.
@@ -19,6 +19,6 @@ Planning does not dispatch writers or start a sprint. Record decisions in the ex
 
 ## Host adapter
 
-- Claude Code: use `AskUserQuestion` when available for bounded choices. Read `models/claude.md` through the pstack runtime for any separately authorized delegation.
-- Codex: use the actual structured input tool supplied by the host, respecting its mode restrictions. Do not invent `AskUserQuestion` or `Agent` tools. Read `models/codex.md` for separately authorized delegation.
+- Claude Code: use `AskUserQuestion` when available for bounded choices. Read `/home/andrew/.config/pstack/models/claude.md` through the pstack runtime for any separately authorized delegation.
+- Codex: use the actual structured input tool supplied by the host, respecting its mode restrictions. Do not invent `AskUserQuestion` or `Agent` tools. Read `/home/andrew/.config/pstack/models/codex.md` for separately authorized delegation.
 - If no structured question tool exists, ask one concise question in chat.

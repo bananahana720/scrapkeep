@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const scriptRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -712,6 +713,64 @@ async function checkClosureContract(docs) {
   }
 }
 
+// scripts/check-skills.mjs, run as a stage against the same audited root so
+// `npm run check:docs` covers skill staleness too. Its own findings keep
+// their sub-check name in the message; the "skills" check groups them here.
+async function checkSkillsStage(docs) {
+  const script = path.join(scriptRoot, "scripts/check-skills.mjs");
+  // Skip on a checkout with no .agents/skills tree at all (a docs-only
+  // fixture, or a worktree that has not built any skills yet): the stage has
+  // nothing to check, and package.json is not otherwise required here.
+  if (!(await exists(script))) return 0;
+  if (!(await exists(path.join(docs.root, ".agents/skills")))) return 0;
+  const timeoutMs = 30_000;
+  const result = spawnSync(
+    process.execPath,
+    [script, "--root", docs.root, "--json"],
+    { encoding: "utf8", timeout: timeoutMs },
+  );
+  if (result.error?.code === "ETIMEDOUT") {
+    docs.fail(
+      "skills",
+      "scripts/check-skills.mjs",
+      0,
+      "did not finish within " + timeoutMs / 1000 + "s and was killed",
+    );
+    return 0;
+  }
+  if (result.status === null) {
+    docs.fail(
+      "skills",
+      "scripts/check-skills.mjs",
+      0,
+      "did not finish: " + (result.error?.message ?? result.signal),
+    );
+    return 0;
+  }
+  let findings;
+  try {
+    findings = JSON.parse(result.stdout);
+  } catch {
+    docs.fail(
+      "skills",
+      "scripts/check-skills.mjs",
+      0,
+      "did not print a JSON findings array (exit " +
+        result.status +
+        "): " +
+        (result.stderr || result.stdout).slice(0, 200),
+    );
+    return 0;
+  }
+  for (const finding of findings) {
+    const message = "[" + finding.check + "] " + finding.message;
+    if (finding.level === "failure")
+      docs.fail("skills", finding.file, finding.line, message);
+    else docs.info("skills", finding.file, finding.line, message);
+  }
+  return findings.length;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -722,6 +781,7 @@ async function main() {
   const tracking = await checkTracking(docs);
   const sections = await checkSections(docs);
   await checkClosureContract(docs);
+  const skillFindings = await checkSkillsStage(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort())
     manifest[file] = docs.cache.get(file).sha256;
@@ -739,6 +799,7 @@ async function main() {
       archives: tracking.archives,
       states: tracking.states,
       sections,
+      skillFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -776,6 +837,8 @@ async function main() {
       " sections, " +
       tracking.interim.length +
       " interim rows, " +
+      skillFindings +
+      " skill findings, " +
       failures.length +
       " failures. Report: " +
       options.report,
