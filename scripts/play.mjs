@@ -70,13 +70,19 @@ export function worktrees(repoRoot) {
 }
 
 // A worktree's primary sketch is the one named after it (spillway-drop holds
-// spillway-drop), else its only sketch (mobility-kit holds just its ball-lab).
-// Copies of ball-lab carried along for reference stay addressable but never
-// win a bare name match.
-function pickPrimary(directories, treeName) {
+// spillway-drop), else the longest sketch name the tree's name contains
+// (mobility-kit-v2 holds mobility-kit, scrapkeep-lab-cable-bench holds
+// cable-bench), else its only sketch. Copies of ball-lab carried along for
+// reference stay addressable but never win a bare name match.
+export function pickPrimary(directories, treeName) {
   const named = directories.find((dir) => path.basename(dir) === treeName);
+  const contained = directories
+    .filter((dir) => treeName.includes(path.basename(dir)))
+    .sort((a, b) => path.basename(b).length - path.basename(a).length);
   if (named !== undefined) {
     return named;
+  } else if (contained.length > 0) {
+    return contained[0];
   } else if (directories.length === 1) {
     return directories[0];
   } else {

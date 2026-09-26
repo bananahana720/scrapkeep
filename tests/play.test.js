@@ -15,6 +15,7 @@ import {
   labRoute,
   orderFor,
   orderingNote,
+  pickPrimary,
   testEntry,
   repeatCount,
   resolve,
@@ -357,6 +358,24 @@ test("play.mjs routes lab verbs before it looks for Godot", async (t) => {
   const sketch = run("list");
   assert.equal(sketch.status, 2, "a sketch verb still needs Godot");
   assert.match(sketch.stderr, /Godot binary not found/);
+});
+
+test("a worktree's primary sketch is the one its name contains, longest first, before any alphabetical fallback", () => {
+  const sketches = ["ball-lab", "cable-bench", "mobility-kit", "spillway-drop"].map((name) =>
+    path.join("/wt", "sketches", name),
+  );
+  // Andrew's `scrapkeep mobility-kit-v2` opened ball-lab: no sketch is named
+  // exactly after the tree, and the fallback took the first directory.
+  assert.equal(path.basename(pickPrimary(sketches, "mobility-kit-v2")), "mobility-kit");
+  assert.equal(path.basename(pickPrimary(sketches, "scrapkeep-lab-cable-bench")), "cable-bench");
+  assert.equal(path.basename(pickPrimary(sketches, "spillway-drop")), "spillway-drop");
+  assert.equal(
+    path.basename(pickPrimary([...sketches, path.join("/wt", "sketches", "cable")], "cable-bench-v2")),
+    "cable-bench",
+  );
+  // A tree that names no sketch keeps the old rule.
+  assert.equal(path.basename(pickPrimary(sketches, "playtesting-todos-curation")), "ball-lab");
+  assert.equal(path.basename(pickPrimary([sketches[0], sketches[3]], "proto-x")), "spillway-drop");
 });
 
 test("resolve still prefers an exact id, then a primary among prefix or substring hits", () => {
