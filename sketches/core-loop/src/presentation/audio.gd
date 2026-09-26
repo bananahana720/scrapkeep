@@ -36,10 +36,14 @@ const VOLUME_STEP := 0.1
 var ctx
 var engine: MusicEngine
 var sound_ready := false
-# Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample].
+# Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
 var volumes := {"Music": 0.8, "SFX": 1.0, "UI": 1.0}
 var muted := false
+# False on the dummy driver (headless tests, or a machine with no sound device): no
+# players start, and the band runs on a real-time clock so every cue decision and beat
+# still happens. Quitting right after freeing a playing player leaks its playback.
+var live_output := true
 
 var _music_player: AudioStreamPlayer
 var _stinger_player: AudioStreamPlayer
@@ -60,6 +64,7 @@ var _gates_announced := false
 var _flow_queue: Array = []
 var _overlay: Label
 var _overlay_until := 0
+var _virtual_usec := 0
 
 static var _bake_task := -1
 static var _baked := false
@@ -71,6 +76,7 @@ func setup(ctx_ref) -> void:
 	# Music keeps playing, softer, while the tree is paused, and the keys still work.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_make_buses()
+	live_output = AudioServer.get_driver_name() != "Dummy"
 	engine = MusicEngine.new()
 	_music_player = _generator_player("Music", "MusicStream")
 	_stinger_player = _generator_player("SFX", "StingerStream")
@@ -147,6 +153,9 @@ func _on_ready() -> void:
 	if sound_ready:
 		return
 	sound_ready = true
+	_virtual_usec = Time.get_ticks_usec()
+	if not live_output:
+		return
 	_sfx_player.play()
 	_ui_player.play()
 	_sfx = _sfx_player.get_stream_playback() as AudioStreamPlaybackPolyphonic
@@ -222,6 +231,14 @@ func _process(_delta: float) -> void:
 # Renders exactly as many frames as both streams can take, so the band and the
 # stinger lane stay sample-locked.
 func _pump() -> void:
+	if not live_output:
+		# No device: advance the band by the real time that passed, as a speaker would.
+		var now := Time.get_ticks_usec()
+		var owed := int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
+		if owed > 0:
+			_virtual_usec += int(owed * 1000000.0 / Harmony.RATE)
+			engine.render(mini(owed, 8192))
+		return
 	if _music_pb == null or _stinger_pb == null:
 		return
 	var frames := mini(_music_pb.get_frames_available(), _stinger_pb.get_frames_available())
@@ -239,24 +256,25 @@ func _pump() -> void:
 func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX") -> bool:
 	var sound: String = EventKinds.row(kind).get("sound", "")
 	if not sound_ready or sound == "":
-		cue_log.append([kind, sound, "skip", -1])
+		cue_log.append([kind, sound, "skip", -1, pitch])
 		return false
 	var now := Time.get_ticks_msec()
 	if now - int(_last_start.get(sound, -100000)) < int(MIN_GAP_MS.get(sound, 0)):
-		cue_log.append([kind, sound, "skip", -1])
+		cue_log.append([kind, sound, "skip", -1, pitch])
 		return false
 	_last_start[sound] = now
 	var playback := _ui if bus == "UI" else _sfx
-	var live: Array = _voices.get(sound, [])
-	live = live.filter(func(id: int): return playback.is_stream_playing(id))
-	if live.size() >= int(VOICE_LIMIT.get(sound, 3)):
-		playback.stop_stream(live.pop_front())
-	var volume: float = SfxBank.trim_db(sound) + PRIORITY_DB[EventKinds.priority(kind)] + db
-	var id := playback.play_stream(SfxBank.stream(sound), 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
-	if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
-		live.append(id)
-	_voices[sound] = live
-	cue_log.append([kind, sound, "now", engine.clock])
+	if playback != null:
+		var live: Array = _voices.get(sound, [])
+		live = live.filter(func(id: int): return playback.is_stream_playing(id))
+		if live.size() >= int(VOICE_LIMIT.get(sound, 3)):
+			playback.stop_stream(live.pop_front())
+		var volume: float = SfxBank.trim_db(sound) + PRIORITY_DB[EventKinds.priority(kind)] + db
+		var id := playback.play_stream(SfxBank.stream(sound), 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
+		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
+			live.append(id)
+		_voices[sound] = live
+	cue_log.append([kind, sound, "now", engine.clock, pitch])
 	if EventKinds.priority(kind) >= 2:
 		engine.duck(0.55, 0.35)
 	return true
@@ -266,12 +284,12 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX") -> bool:
 func on_beat(kind: String, db := 0.0, lane := false, repeats := 1) -> int:
 	var sound: String = EventKinds.row(kind).get("sound", "")
 	if not sound_ready or sound == "":
-		cue_log.append([kind, sound, "skip", -1])
+		cue_log.append([kind, sound, "skip", -1, 1.0])
 		return -1
 	var start := engine.schedule_stinger(sound, db, lane, repeats)
 	var beats: int = SfxBank.STINGER_BEATS.get(sound, 1)
 	engine.duck(0.6, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
-	cue_log.append([kind, sound, "beat", start])
+	cue_log.append([kind, sound, "beat", start, 1.0])
 	return start
 
 
@@ -388,7 +406,7 @@ func _on_offered(_offers: Array) -> void:
 
 
 func _on_pressure(pressure: float) -> void:
-	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock])
+	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
 	engine.set_pressure(pressure)
 
 
