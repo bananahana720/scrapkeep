@@ -5,16 +5,26 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 
 # Draws the stage's events from the director's models and nothing else, so what you
-# see is the state the rules use. Every participatory event stands a beam over its
-# start ring in the event colour, visible from anywhere on the stage, with its name
-# and "roll in" on a sign; nothing here has a collider, so no event can block a line.
+# see is the state the rules use. A participatory event stands a beam over its start
+# ring in the event colour, visible from anywhere on the stage, with its name and
+# "roll in" on a sign; nothing here has a collider, so no event can block a line.
+# The sky holds at most three pillars: the beacon's (spine), one event's and the
+# vault's. Only the first open offer shows its beam, and a beam fades out as the
+# ball closes within 20 m, so a pillar points the way and never hides the fight.
 
 const BEAM_HEIGHT := 70.0
 const GATE_RADIUS := 6.0
 const FOG_COLOR := Color("c8a878")
+const PILLAR_ALPHA := 0.45
+const PILLAR_FADE := Vector2(4.0, 20.0)
+const ARRIVAL_RADIUS := 3.0
 
 var director
 var terrain
+var player
+
+var _vault_pillar: MeshInstance3D
+var _arrival_rings: Array[MeshInstance3D] = []
 
 var _offer_nodes: Array[Dictionary] = []
 var _dust_wall: MeshInstance3D
@@ -22,8 +32,12 @@ var _base_fog := 0.0009
 var _base_fog_color := Color.WHITE
 
 
-func setup(terrain_ref) -> void:
+func setup(terrain_ref, player_ref = null) -> void:
 	terrain = terrain_ref
+	player = player_ref
+	_vault_pillar = _pillar(Palette.AMBER)
+	_vault_pillar.visible = false
+	add_child(_vault_pillar)
 	if terrain.environment != null:
 		_base_fog = terrain.environment.fog_density
 		_base_fog_color = terrain.environment.fog_light_color
@@ -63,13 +77,7 @@ func _build_offer(offer: Dictionary) -> Dictionary:
 	ring.position = ground + Vector3.UP * 0.3
 	root.add_child(ring)
 
-	var beam := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.5
-	cyl.bottom_radius = 0.9
-	cyl.height = BEAM_HEIGHT
-	beam.mesh = cyl
-	beam.material_override = Palette.unshaded(Color(hazard.r, hazard.g, hazard.b, 0.45))
+	var beam := _pillar(hazard)
 	beam.position = ground + Vector3.UP * BEAM_HEIGHT * 0.5
 	root.add_child(beam)
 
@@ -165,13 +173,69 @@ func _build_hauler(entry: Dictionary) -> void:
 	entry["hauler"] = hauler
 
 
+static func _pillar(color: Color) -> MeshInstance3D:
+	var beam := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.5
+	cyl.bottom_radius = 0.9
+	cyl.height = BEAM_HEIGHT
+	beam.mesh = cyl
+	beam.material_override = Palette.unshaded(Color(color.r, color.g, color.b, PILLAR_ALPHA))
+	beam.add_to_group("sky_pillar")
+	return beam
+
+
+# A ground ring in the enemy colour for every spawn the director has placed but not
+# yet delivered, so nothing arrives that you could not have seen coming.
+func show_arrivals(arrivals: Array) -> void:
+	while _arrival_rings.size() < arrivals.size():
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = ARRIVAL_RADIUS - 0.5
+		torus.outer_radius = ARRIVAL_RADIUS
+		ring.mesh = torus
+		ring.material_override = Palette.solid(EventKinds.color("enemy_spawned"), 2.0)
+		add_child(ring)
+		_arrival_rings.append(ring)
+	for i in _arrival_rings.size():
+		var ring: MeshInstance3D = _arrival_rings[i]
+		ring.visible = i < arrivals.size()
+		if ring.visible:
+			var at: Vector2 = arrivals[i]["at"]
+			var left: float = arrivals[i]["left"]
+			ring.position = _ground(at) + Vector3.UP * 0.3
+			ring.scale = Vector3.ONE * lerpf(0.4, 1.0, clampf(left, 0.0, 1.0))
+
+
+# The vault's pillar stands while its vault does.
+func set_vault(at: Vector3, standing: bool) -> void:
+	_vault_pillar.visible = standing
+	_vault_pillar.position = at + Vector3.UP * BEAM_HEIGHT * 0.5
+
+
 func _process(_delta: float) -> void:
 	if director == null:
 		return
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008)
+	var beam_shown := false
 	for entry in _offer_nodes:
 		_update_offer(entry, pulse)
+		var phase: int = entry["offer"]["phase"]
+		var open := phase == EventDirector.ANNOUNCED or phase == EventDirector.ARMED
+		entry["beam"].visible = open and not beam_shown
+		beam_shown = beam_shown or open
+		_fade(entry["beam"])
+	_fade(_vault_pillar)
 	_update_squall()
+
+
+func _fade(beam: MeshInstance3D) -> void:
+	if not beam.visible or player == null:
+		return
+	var ball: Vector3 = player.ball_position()
+	var d := Vector2(ball.x - beam.global_position.x, ball.z - beam.global_position.z).length()
+	var mat: StandardMaterial3D = beam.material_override
+	mat.albedo_color.a = PILLAR_ALPHA * smoothstep(PILLAR_FADE.x, PILLAR_FADE.y, d)
 
 
 func _update_offer(entry: Dictionary, pulse: float) -> void:
@@ -184,7 +248,6 @@ func _update_offer(entry: Dictionary, pulse: float) -> void:
 		return
 	var armed := phase == EventDirector.ARMED
 	entry["ring_mat"].emission_energy_multiplier = 0.4 + (pulse * 2.4 if armed else 0.0)
-	entry["beam"].visible = phase != EventDirector.LIVE
 	entry["sign"].visible = phase != EventDirector.LIVE
 	var status: Label3D = entry["status"]
 	status.visible = phase == EventDirector.LIVE

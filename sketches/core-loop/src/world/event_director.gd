@@ -15,7 +15,7 @@ const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 #
 # Fact records, in order of occurrence:
 #   {"kind": "announced", "id", "seconds"}   {"kind": "started", "id"}
-#   {"kind": "ended", "id", "outcome"}       {"kind": "milestone", "id"}
+#   {"kind": "ended", "id", "outcome"}       {"kind": "milestone", "id", "at": Vector2}
 #   {"kind": "miniboss", "id", "at": Vector2} {"kind": "scrap", "amount", "at": Vector3}
 
 enum { WAITING, ANNOUNCED, ARMED, LIVE, COOLDOWN, DONE }
@@ -184,7 +184,7 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 			if outcome != "":
 				facts.append({"kind": "ended", "id": offer["id"], "outcome": outcome})
 				if outcome == "won":
-					facts.append({"kind": "milestone", "id": offer["id"]})
+					facts.append({"kind": "milestone", "id": offer["id"], "at": model.ring})
 					offer["phase"] = DONE
 				else:
 					offer["phase"] = COOLDOWN

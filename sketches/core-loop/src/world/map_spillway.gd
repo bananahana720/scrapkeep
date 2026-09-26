@@ -2,10 +2,12 @@ extends "res://src/world/stage_map.gd"
 
 const Features := preload("res://src/world/features.gd")
 
-# Stage 1, the Spillway's top shelf: the wave-1 map, unchanged in shape. Shelves step
-# down through chutes to a flooding basin, with a dry bypass deck on the east side.
+# Stage 1, the Spillway's top shelf: the wave-1 shelves, chutes, flooding basin and
+# dry east bypass, laid on a fall line. You drop onto a deck on the top shelf, roll
+# down the west chute and meet the Warden in a banked bowl at the foot of the riser.
 # Its own event is the Scrap Stampede: a hauler bolts from the pump house, down the
-# east chute and into the basin, and you run it down.
+# east chute and into the basin, and you run it down. The vault sits on a plinth on
+# the top shelf, east of the line.
 
 const TOP_H := 30.0
 const MID_H := 15.0
@@ -30,30 +32,35 @@ const BYPASS_X := 140.0
 const BYPASS_FLAT := 9.0
 const BYPASS_OUTER := 22.0
 const PUMP_HOUSE := Vector2(34.0, -148.0)
+# The fall line: a drop deck on the top shelf, down the west chute, into the beacon
+# bowl at the foot of the riser.
+const SPAWN := Vector2(-62.0, -160.0)
+const BEACON := Vector2(-46.0, -12.0)
+const DECK := {"top": 10.0, "foot": 44.0, "height": 10.0}
+const PLINTH := {"top": 6.0, "foot": 20.0, "height": 3.0}
+const STAMPEDE_RING := Vector2(14.0, -112.0)
 
 
 func _init() -> void:
 	title = "Spillway: the top shelf"
-	spawn = Vector2(-62.0, -96.0)
+	spawn = SPAWN
 	heading = Vector3(0.0, 0.0, 1.0)
-	beacon = Vector2(-30.0, 2.0)
+	beacon = BEACON
+	beacon_floor = MID_H
+	vault = Vector2(-5.0, -130.0)
 	play_rect = Rect2(-105.0, -178.0, 257.0, 356.0)
 	basin = {"centre": BASIN_CENTRE, "radius": 95.0, "depth": 7.0,
 		"plane_size": Vector2(300.0, 130.0), "plane_centre": Vector2(0.0, 120.0)}
+	# Every line runs along the fall line from the drop deck down the west chute.
 	scrap_lines = [
-		[Vector2(-62.0, -82.0), Vector2(-62.0, -10.0)],
-		[Vector2(54.0, -82.0), Vector2(54.0, -10.0)],
-		[Vector2(-18.0, 16.0), Vector2(-18.0, 90.0)],
-		[Vector2(96.0, 16.0), Vector2(96.0, 90.0)],
-		[Vector2(140.0, 110.0), Vector2(140.0, -92.0)],
-		[Vector2(-56.0, -104.0), Vector2(30.0, -142.0)],
-		[Vector2(-88.0, -4.0), Vector2(86.0, 2.0)],
-		[Vector2(-96.0, 88.0), Vector2(-20.0, 140.0)],
-		[Vector2(30.0, 142.0), Vector2(100.0, 120.0)],
+		[Vector2(-60.0, -142.0), Vector2(-57.0, -104.0)],
+		[Vector2(-62.0, -78.0), Vector2(-60.0, -36.0)],
+		[Vector2(-42.0, -122.0), Vector2(-40.0, -84.0)],
+		[Vector2(-72.0, -112.0), Vector2(-70.0, -74.0)],
 	]
 	sites = {
 		"scrap_stampede": {
-			"ring": Vector2(14.0, -112.0),
+			"ring": STAMPEDE_RING,
 			"route": PackedVector2Array([
 				Vector2(24.0, -104.0), Vector2(46.0, -94.0), Vector2(54.0, -80.0), Vector2(54.0, -24.0),
 				Vector2(62.0, -12.0), Vector2(90.0, -12.0), Vector2(96.0, 14.0), Vector2(96.0, 78.0),
@@ -71,10 +78,19 @@ func sample(x: float, z: float) -> Array:
 	var ch := _chutes(x, z)
 	h = lerpf(h, ch[0], ch[1])
 	h += Features.ripple(x, z) * (1.0 - maxf(by[1], ch[1]))
+	var deck := Features.mesa(x, z, SPAWN, DECK["top"], DECK["foot"], DECK["height"])
+	h += deck
+	for spot in [vault, STAMPEDE_RING]:
+		h += Features.mesa(x, z, spot, PLINTH["top"], PLINTH["foot"], PLINTH["height"])
+	h = Features.beacon_bowl(x, z, BEACON, beacon_floor, h)
 	h += maxf(Features.rim(x, z), 78.0 * (1.0 - smoothstep(-158.0, -116.0, x)))
+	var bank := clampf((Vector2(x, z).distance_to(BEACON) - Features.BOWL_FLAT) / 16.0, 0.0, 1.0) \
+		* (1.0 - smoothstep(Features.BOWL_RIM, Features.BOWL_OUT, Vector2(x, z).distance_to(BEACON)))
 	var tint: Color = Palette.SAND.lerp(Palette.SANDSTONE, 0.35)
 	tint = tint.lerp(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.45), ch[1] * 0.9)
 	tint = tint.lerp(Palette.SANDSTONE.lerp(Palette.RUST, 0.3), by[1] * 0.85)
+	tint = tint.lerp(Palette.SANDSTONE.lerp(Palette.AMBER, 0.25), clampf(deck / 4.0, 0.0, 0.7))
+	tint = tint.lerp(Palette.AMBER.lerp(Palette.SANDSTONE, 0.35), bank * 0.8)
 	return [h, tint]
 
 
@@ -168,6 +184,6 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 			var kx: float = c["x"] + side * (CHUTE_R + 3.0)
 			box(parent, Vector3(2.0, 2.4, 16.0), ground.call(kx, mouth_z, 0.4), rust)
 
-	# Two mid-shelf benches: low lips to carry a scrap line and launch off.
-	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(-58.0, -4.0, 0.6), concrete)
+	# Two mid-shelf benches, clear of the beacon bowl: low lips to launch off.
+	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(24.0, 22.0, 0.6), concrete)
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(66.0, 2.0, 0.6), concrete)

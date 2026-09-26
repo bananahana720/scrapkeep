@@ -10,6 +10,9 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # onto a landing hill that turns the fall back into forward speed.
 
 const LIFT := 24.0
+# A ball slower than the floor is pushed up to it along the rail over this long, so the
+# cannon accelerates it rather than snapping its speed (the whole flight is 0.6 s).
+const FLOOR_RAMP := 0.5
 const RINGS := 7
 const RING_RADIUS := 3.2
 # The rail's rings sit this far apart in flight time, inside flow's 0.6 s of flight.
@@ -25,6 +28,7 @@ var landing_point := Vector3.INF
 
 var _origin := Vector3.ZERO
 var _velocity := Vector3.ZERO
+var _from := Vector3.ZERO
 var _flying := false
 var _time := 0.0
 var _rings: Array[MeshInstance3D] = []
@@ -77,9 +81,17 @@ func _ring(mat: Material, radius: float) -> MeshInstance3D:
 	return ring
 
 
-func fire(origin: Vector3, velocity: Vector3) -> void:
+# The first velocity the rail sets: the ball's own horizontal speed with the lift.
+static func rail_start(current: Vector3) -> Vector3:
+	return Vector3(current.x, 0.0, current.z) + Vector3.UP * LIFT
+
+
+# velocity is the launch (floor-raised); from is the ball's own start. The rail eases
+# the horizontal part from one to the other over FLOOR_RAMP.
+func fire(origin: Vector3, velocity: Vector3, from := Vector3.INF) -> void:
 	_origin = origin
 	_velocity = velocity
+	_from = velocity if from == Vector3.INF else from
 	_flying = true
 	_time = 0.0
 	for i in RINGS:
@@ -95,7 +107,8 @@ func rail(delta: float):
 	for i in RINGS:
 		if _rings[i].visible and RING_FIRST + i * RING_STEP < _time - 0.05:
 			_rings[i].visible = false
-	return _velocity + Vector3.DOWN * gravity * _time
+	var flat := Vector3(_from.x, 0.0, _from.z).lerp(Vector3(_velocity.x, 0.0, _velocity.z), smoothstep(0.0, FLOOR_RAMP, _time))
+	return flat + Vector3.UP * (_velocity.y - gravity * _time)
 
 
 func stop() -> void:

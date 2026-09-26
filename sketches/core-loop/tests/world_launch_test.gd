@@ -7,9 +7,10 @@ const Launch := preload("res://src/world/launch.gd")
 # The stage exit through the real flow, twice: roll through a gate, ride the launch
 # rail, enter the next stage from above and land on its hill. The ball's horizontal
 # speed is measured before the gate, all through the flight, at the stage entry, at
-# touchdown and half a second after, and must stay within 15% (a gain on the landing
-# hill is a gift, so after touchdown only a loss counts). The landing pad must mark
-# where the ball actually comes down.
+# touchdown and half a second after. It may lose no more than 15% anywhere; a gain is
+# a gift (the rail pushing a slow ball up to cruise, the landing hill), but the flight
+# never runs faster than the launch it was given. The landing pad must mark where the
+# ball actually comes down.
 
 const BEACON_SECONDS := 0.6
 const APPROACH := 16.0
@@ -165,8 +166,10 @@ func _finish() -> bool:
 	for r in _records:
 		var before: float = r.get("before", -1.0)
 		var stage: int = r.get("stage", -1)
-		_report("launch into stage %d" % stage, _within(before, r.get("launch", -1.0)) and _within(before, r.get("flight_min", -1.0))
-				and _within(before, r.get("flight_max", -1.0)) and _within(before, r.get("entry", -1.0)),
+		var launch: float = r.get("launch", -1.0)
+		var kept: bool = _no_loss(before, r.get("flight_min", -1.0)) and _no_loss(before, r.get("entry", -1.0)) \
+			and r.get("flight_max", INF) <= maxf(before, launch) * 1.001 and _within(launch, r.get("entry", -1.0))
+		_report("launch into stage %d" % stage, kept,
 			"%.2f m/s before the gate, %.2f at launch, %.2f to %.2f through the flight, %.2f entering stage %d"
 				% [before, r.get("launch", -1.0), r.get("flight_min", -1.0), r.get("flight_max", -1.0), r.get("entry", -1.0), stage])
 		_report("landing in stage %d" % stage, _no_loss(before, r.get("touchdown", -1.0)) and _no_loss(before, r.get("roll_on", -1.0)),

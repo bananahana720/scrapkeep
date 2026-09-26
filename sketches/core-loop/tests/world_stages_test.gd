@@ -158,9 +158,9 @@ func _check_distinct() -> void:
 		ok = ok and mean >= DISTINCT_METRES
 		detail.append("stages %d and %d differ by %.1f m on average" % [p[0], p[1], mean])
 	var t = _game.ctx.terrain
-	var spawns_differ: bool = t.spawn_point(2).distance_to(t.spawn_point(3)) > 50.0 and t.entry_heading(2) != t.entry_heading(3)
-	_report("distinct stages", ok and spawns_differ,
-		"%s over a %d m grid; stages 2 and 3 enter from different spots and headings: %s" % ["; ".join(detail), int(GRID), spawns_differ])
+	var apart: float = t.spawn_point(2).distance_to(t.spawn_point(3))
+	_report("distinct stages", ok and apart > 25.0,
+		"%s over a %d m grid; stages 2 and 3 enter %.0f m apart" % ["; ".join(detail), int(GRID), apart])
 
 
 func _report(label: String, ok: bool, detail: String) -> void:

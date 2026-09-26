@@ -23,6 +23,29 @@ var sites := {}
 var unique_events: Array[String] = []
 # Where spawns and rescues stay: the playable floor inside the rim walls.
 var play_rect := Rect2(-150.0, -150.0, 300.0, 300.0)
+# The plated vault's spot: off the fall line, on a plinth, with a downhill way back.
+var vault := Vector2.ZERO
+# The beacon bowl's floor height; the Warden stands on it.
+var beacon_floor := 0.0
+# Spots where the ball leaving the ground counts as a kicker launch (codex): each is
+# {"at": Vector2 lip, "dir": Vector2, "width": float}.
+var kickers: Array = []
+
+
+# How far p is from the fall line, the straight run from the spawn to the beacon.
+func off_line(p: Vector2) -> float:
+	return p.distance_to(Geometry2D.get_closest_point_to_segment(p, spawn, beacon))
+
+
+func near_kicker_lip(p: Vector2) -> bool:
+	for k in kickers:
+		var rel: Vector2 = p - (k["at"] as Vector2)
+		var dir: Vector2 = k["dir"]
+		var u := rel.dot(dir)
+		var v := absf(rel.dot(Vector2(-dir.y, dir.x)))
+		if u > -6.0 and u < 4.0 and v < float(k["width"]) * 0.5 + 1.0:
+			return true
+	return false
 
 
 # [height, tint]. The tint is the ground's own reading of the feature it belongs to.

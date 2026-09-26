@@ -70,6 +70,32 @@ static func halfpipe(x: float, z: float, cx: float, z0: float, z1: float, top: C
 	return float(top.call(zc)) - (depth - rise) * scale
 
 
+# The beacon's bowl: a flat floor for the Warden inside BOWL_FLAT, then a bank that
+# climbs at about 24 degrees out past the 45 m ring to BOWL_RIM, so a missed pass
+# rolls back in. Inside the rim the bowl is the ground; past it the bowl blends back
+# into h by BOWL_OUT. Put the beacon at the foot of the fall line and the uphill side
+# stays a descent.
+const BOWL_FLAT := 28.0
+const BOWL_RIM := 47.0
+const BOWL_OUT := 62.0
+const BOWL_SLOPE := 0.445
+
+
+static func bowl_bank(d: float) -> float:
+	if d <= BOWL_FLAT:
+		return 0.0
+	if d <= BOWL_FLAT + 2.0:
+		return BOWL_SLOPE * pow(d - BOWL_FLAT, 2.0) / 4.0
+	return BOWL_SLOPE * (d - BOWL_FLAT - 1.0)
+
+
+static func beacon_bowl(x: float, z: float, centre: Vector2, floor_h: float, h: float) -> float:
+	var d := Vector2(x, z).distance_to(centre)
+	if d >= BOWL_OUT:
+		return h
+	return lerpf(floor_h + bowl_bank(minf(d, BOWL_RIM)), h, smoothstep(BOWL_RIM, BOWL_OUT, d))
+
+
 # A flat-topped mound with smooth shoulders, to roll up and over.
 static func mesa(x: float, z: float, centre: Vector2, top_radius: float, foot_radius: float, height: float) -> float:
 	var d := Vector2(x, z).distance_to(centre)

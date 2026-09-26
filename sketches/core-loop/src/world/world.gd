@@ -13,10 +13,10 @@ const Launch := preload("res://src/world/launch.gd")
 # rules live in the pure models; this file only wires them to the bus, the run and
 # the ball.
 
-const SPAWN_RING := Vector2(34.0, 56.0)
 const PRESSURE_STEP := 0.05
 const MINIBOSS_KIND := "miniboss"
 const MINIBOSS_FALLBACK := "chaser"
+const VAULT_KIND := "vault"
 
 var ctx
 var terrain
@@ -27,9 +27,12 @@ var view
 var launch
 # Where the last miniboss was asked for, for tests and the field notes.
 var last_miniboss_at := Vector3.INF
+# The stage's plated vault while it stands, else null.
+var vault: Node3D
 
 var _stage_seed := 0
 var _pressure := -1.0
+var _vault_pending := false
 
 
 func setup(ctx_ref) -> void:
@@ -46,7 +49,7 @@ func setup(ctx_ref) -> void:
 	view = EventView.new()
 	view.name = "StageEvents"
 	ctx.root.add_child(view)
-	view.setup(terrain)
+	view.setup(terrain, ctx.player)
 	launch = Launch.new()
 	launch.name = "Launch"
 	ctx.root.add_child(launch)
@@ -70,6 +73,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	director = Director.new(_stage_seed ^ 0x5eed)
 	director.threat = def["threat"]
+	director.play_rect = map.play_rect
 	flood.cycle = events.flood
 	var basin: Dictionary = map.basin
 	if not basin.is_empty():
@@ -82,6 +86,11 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	view.rebuild(events)
 	last_miniboss_at = Vector3.INF
 	_pressure = -1.0
+	# Combat clears the stage's enemies in its own stage_entered handler, after this
+	# one, so the vault goes in on the first tick of play instead.
+	vault = null
+	_vault_pending = true
+	view.set_vault(terrain.vault_point(stage), false)
 	_mark_landing(stage, retry)
 
 
@@ -107,6 +116,12 @@ func _physics_process(delta: float) -> void:
 	if ctx == null or events == null or not ctx.flow.in_play():
 		return
 	var player = ctx.player
+	if _vault_pending:
+		_vault_pending = false
+		_spawn_vault()
+	if vault != null and not is_instance_valid(vault):
+		vault = null
+		view.set_vault(Vector3.ZERO, false)
 	if launch.flying():
 		var rail = launch.rail(delta)
 		if rail != null:
@@ -132,6 +147,9 @@ func _publish(facts: Array) -> void:
 				bus.event_ended.emit(fact["id"], fact["outcome"])
 			"milestone":
 				ctx.run.record_milestone(fact["id"])
+				if ctx.run.has_method("add_core"):
+					var at: Vector2 = fact["at"]
+					ctx.run.add_core("event", terrain.drop_point(at.x, at.y, 1.0))
 			"scrap":
 				ctx.run.add_scrap(fact["amount"], fact["at"])
 			"miniboss":
@@ -152,51 +170,52 @@ func _spawn_miniboss(at: Vector2) -> void:
 		ctx.spawner.spawn_enemy(MINIBOSS_FALLBACK, last_miniboss_at)
 
 
+# The plated vault off the fall line. Never in calm, and a combat module without the
+# kind (a null return) simply leaves the spot empty.
+func _spawn_vault() -> void:
+	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return
+	var at: Vector3 = terrain.vault_point(ctx.flow.stage()) + Vector3.UP * 2.4
+	var node = ctx.spawner.spawn_enemy(VAULT_KIND, at)
+	if node is Node3D:
+		vault = node
+		view.set_vault(at, true)
+
+
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
+	if ctx.run.has_method("heft_class"):
+		director.heft_class = ctx.run.heft_class()
 	var alive := get_tree().get_nodes_in_group("enemy").size()
-	for kind in director.advance(delta, alive):
+	var ball: Vector3 = ctx.player.ball_position()
+	var v: Vector3 = ctx.player.state.velocity
+	var forward: Vector3 = -ctx.camera.yaw_basis().z
+	var due: Array = director.advance(delta, alive, Vector2(ball.x, ball.z), Vector2(v.x, v.z), Vector2(forward.x, forward.z))
+	for tier in director.take_threat_rises():
+		if ctx.events.has_signal("threat_rose"):
+			ctx.events.emit_signal("threat_rose", tier)
+	view.show_arrivals(director.arrivals if not ctx.calm else [])
+	for spawn in due:
 		if ctx.calm or ctx.spawner == null:
 			continue
-		ctx.spawner.spawn_enemy(Director.KIND_NAMES[kind], spawn_point())
+		var at: Vector2 = spawn["at"]
+		ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4))
 	var pressure: float = minf(1.0, director.pressure(alive) + events.pressure_bonus())
 	if absf(pressure - _pressure) >= PRESSURE_STEP:
 		_pressure = pressure
 		ctx.events.pressure_changed.emit(pressure)
 
 
-# Off-screen and near: the ring is scored against where the camera is looking, so an
-# enemy appears beside or behind you rather than popping in ahead.
-func spawn_point() -> Vector3:
-	var ball: Vector3 = ctx.player.ball_position()
-	var forward: Vector3 = -ctx.camera.yaw_basis().z
-	var rect: Rect2 = terrain.map().play_rect
-	var best := ball + Vector3.UP * 2.0
-	var best_score := -99.0
-	for i in 12:
-		var angle: float = ctx.rng.randf() * TAU
-		var dir := Vector3(cos(angle), 0.0, sin(angle))
-		var spot: Vector3 = ball + dir * ctx.rng.randf_range(SPAWN_RING.x, SPAWN_RING.y)
-		var x := clampf(spot.x, rect.position.x, rect.end.x)
-		var z := clampf(spot.z, rect.position.y, rect.end.y)
-		var ground: float = terrain.height(x, z)
-		var score := -dir.dot(forward)
-		if absf(ground - terrain.height(x + 3.0, z)) > 6.0:
-			score -= 3.0
-		if absf(ground - terrain.height(x, z + 3.0)) > 6.0:
-			score -= 3.0
-		if score > best_score:
-			best_score = score
-			best = Vector3(x, ground + 2.4, z)
-	return best
-
-
 # The stage exit: the moment a gate is taken the ball is fired up the launch rail
-# with its horizontal speed kept, never slower than cruise, which is a gift, not a cost.
+# with its horizontal speed kept, and a slow ball is pushed up to cruise along the rail,
+# which is a gift, not a cost.
 func _on_reward_chosen(_part_id: String) -> void:
 	var player = ctx.player
 	launch.gravity = ctx.tuning.f("gravity")
 	var velocity := Launch.launch_velocity(player.state.velocity, ctx.tuning.f("cruise"), -ctx.camera.yaw_basis().z)
-	player.set_velocity_now(velocity)
-	launch.fire(player.ball_position(), velocity)
+	var start := Launch.rail_start(player.state.velocity)
+	if Vector2(start.x, start.z).length() < 0.5:
+		start = velocity
+	player.set_velocity_now(start)
+	launch.fire(player.ball_position(), velocity, start)
 	ctx.events.launched.emit(velocity)

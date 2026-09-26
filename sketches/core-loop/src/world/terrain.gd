@@ -115,12 +115,24 @@ func rescue_point(near: Vector3) -> Vector3:
 	return drop_point(clampf(near.x, r.position.x, r.end.x), clampf(near.z, r.position.y, r.end.y), 3.0)
 
 
-# For the element and material table (TADR-009, owned by build): what the ball or a
-# shot touches at this point. The flood's water wins over the ground under it.
-func material_at(point: Vector3) -> String:
-	if flood != null and flood.submersion(point) > 0.0:
-		return "water"
-	return map().material_at(point.x, point.z)
+# For the element and material table (TADR-009, owned by build): what lies at or
+# under this point, as {"material", "surface_y"}, or {} off the map. Where the flood
+# stands over the ground, the answer is its water at the live surface height, so a
+# frost or arc resolves against the same surface the ball floats on.
+func material_at(point: Vector3) -> Dictionary:
+	if not contains(point):
+		return {}
+	var ground := height(point.x, point.z)
+	if flood != null and flood.in_basin(point):
+		var surface: float = flood.surface_y()
+		if surface > ground:
+			return {"material": "water", "surface_y": surface}
+	return {"material": map().material_at(point.x, point.z), "surface_y": ground}
+
+
+func vault_point(index: int) -> Vector3:
+	var v: Vector2 = map_for(index).vault
+	return Vector3(v.x, _grid_height(_heights[_index(index)], v.x, v.y), v.y)
 
 
 func _index(index: int) -> int:
