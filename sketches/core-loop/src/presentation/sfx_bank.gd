@@ -53,7 +53,7 @@ const TRIM_DB := {
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
 	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
-	"womp": -2.0, "build_riser": -8.0,
+	"womp": -8.0, "build_riser": -4.0,
 }
 
 static var _samples := {}

@@ -56,6 +56,11 @@ const MODE_MASK := [
 	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 ]
 const BASS_LAYERS := [SUB, REESE, WOB]
+# The build's own voices (riser, snare roll, launch tune) skip the high-pass sweep, so
+# the build gets louder while the band thins out under it.
+const DRY := -2
+# The sweep's top: the kick and bass thin out, the snares and riser stay bright.
+const SWEEP_TOP_HZ := 600.0
 
 const RELEASE := 600
 const DUCK_RELEASE := Harmony.BEAT
@@ -187,6 +192,8 @@ var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
 var _sl := PackedFloat32Array()
 var _sr := PackedFloat32Array()
+var _dl := PackedFloat32Array()
+var _dr := PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
 var _stingers_live := false
 
@@ -639,12 +646,16 @@ func render(frames: int) -> void:
 	_right.resize(frames)
 	_sl.resize(frames)
 	_sr.resize(frames)
+	_dl.resize(frames)
+	_dr.resize(frames)
 	_stingers_live = false
 	_mid.fill(0.0)
 	_left.fill(0.0)
 	_right.fill(0.0)
 	_sl.fill(0.0)
 	_sr.fill(0.0)
+	_dl.fill(0.0)
+	_dr.fill(0.0)
 	var done := 0
 	while done < frames:
 		_run_due()
@@ -820,7 +831,7 @@ func _run(action: Dictionary) -> void:
 				_start(growl, mini(growl.size(), bar_len() / 3), -1, LEVELS[REESE] * 1.1, 0.0, false)
 			events_log.append(["hit", clock, action["drums"]])
 		"roll":
-			_start(Synth.drum("snare"), Synth.drum("snare").size(), -1, LEVELS[SNARE] * float(action["gain"]), 0.0, false)
+			_start(Synth.drum("snare"), Synth.drum("snare").size(), DRY, LEVELS[SNARE] * float(action["gain"]), 0.0, false)
 		"wob":
 			var buf := Synth.wob(int(action["midi"]), int(action["period"]), action["vowel"])
 			_start(buf, mini(buf.size(), int(action["len"])), WOB, LEVELS[WOB] * float(action["gain"]), 0.0, false)
@@ -1357,16 +1368,19 @@ func _arp(bar: int, s: int, chord: Dictionary, instrument: String) -> void:
 # the A7 while you fly. The high-pass sweep is in the mix.
 func _build_overlay(s: int) -> void:
 	var level := build_level()
+	# A long build (the Warden's last quarter) climbs riser after riser.
+	if s == 0 and _build_riser == null:
+		_start_riser()
 	var every := 4 if level < 0.34 else (2 if level < 0.67 else 1)
 	if s % every == 0:
-		_run({"type": "roll", "gain": 0.35 + 0.65 * level})
+		_run({"type": "roll", "gain": 0.5 + 0.9 * level})
 		if level >= 0.85:
-			_add_action(clock + step_len / 2, {"type": "roll", "gain": 0.4 + 0.6 * level})
+			_add_action(clock + step_len / 2, {"type": "roll", "gain": 0.6 + 0.8 * level})
 	if _build_tune and s % 2 == 0 and _build_from >= 0:
 		var count := (clock - _build_from) / (step_len * 2)
 		var midi: int = Harmony.LAUNCH_TUNE[count % Harmony.LAUNCH_TUNE.size()] + (12 if count >= Harmony.LAUNCH_TUNE.size() else 0)
 		var buf := Synth.note("mallet", midi + key)
-		_start(buf, mini(buf.size(), 2 * step_len + RELEASE), -1, 0.32, 0.2, false)
+		_start(buf, mini(buf.size(), 2 * step_len + RELEASE), DRY, 0.32, 0.2, false)
 
 
 func build_level() -> float:
@@ -1381,7 +1395,7 @@ func _start_riser() -> void:
 	if _build_riser != null:
 		return
 	var buf := SfxBank.samples_at("build_riser", step_len)
-	_start(buf, buf.size(), -1, db_to_linear(SfxBank.trim_db("build_riser")), 0.0, false)
+	_start(buf, buf.size(), DRY, db_to_linear(SfxBank.trim_db("build_riser")), 0.0, false)
 	_build_riser = _voices[_voices.size() - 1]
 
 
@@ -1493,7 +1507,7 @@ func _mix(offset: int, n: int) -> void:
 		var gl := voice.gl
 		var gr := voice.gr
 		var flat := g0 == g1 and pos + count <= release_at
-		if voice.mono and not voice.to_stinger:
+		if voice.mono and not voice.to_stinger and voice.layer != DRY:
 			if flat:
 				var m := gl * g0
 				for i in count:
@@ -1508,8 +1522,8 @@ func _mix(offset: int, n: int) -> void:
 		else:
 			if voice.to_stinger:
 				_stingers_live = true
-			var left := _sl if voice.to_stinger else _left
-			var right := _sr if voice.to_stinger else _right
+			var left := _sl if voice.to_stinger else (_dl if voice.layer == DRY else _left)
+			var right := _sr if voice.to_stinger else (_dr if voice.layer == DRY else _right)
 			if voice.mono:
 				gr = gl
 			for i in count:
@@ -1540,8 +1554,8 @@ func _mix(offset: int, n: int) -> void:
 	var level := master * pause_gain
 	var sweep := build_level() if (_build_from >= 0 or _build_level >= 0.0) else 0.0
 	if sweep > 0.001:
-		# Two one-pole high-passes per side: 20 Hz rising to about 900 Hz.
-		var cutoff := 20.0 + 880.0 * sweep * sweep
+		# Two one-pole high-passes per side: 20 Hz rising to SWEEP_TOP_HZ.
+		var cutoff := 20.0 + (SWEEP_TOP_HZ - 20.0) * sweep * sweep
 		var a := 1.0 / (1.0 + TAU * cutoff / Harmony.RATE)
 		var h := _hp
 		for i in n:
@@ -1557,14 +1571,14 @@ func _mix(offset: int, n: int) -> void:
 			h[4] = r
 			h[7] = a * (h[7] + h[5] - h[6])
 			h[6] = h[5]
-			_left[offset + i] = h[3] * d
-			_right[offset + i] = h[7] * d
+			_left[offset + i] = (h[3] + _dl[offset + i]) * d
+			_right[offset + i] = (h[7] + _dr[offset + i]) * d
 	else:
 		for i in n:
 			var d := (duck_from + (_duck - duck_from) * i * inv_n) * level * (gate_from + (_gate - gate_from) * i * inv_n)
 			var m := _mid[offset + i]
-			_left[offset + i] = (_left[offset + i] + m) * d
-			_right[offset + i] = (_right[offset + i] + m) * d
+			_left[offset + i] = (_left[offset + i] + m + _dl[offset + i]) * d
+			_right[offset + i] = (_right[offset + i] + m + _dr[offset + i]) * d
 
 
 func _finish(frames: int) -> void:
