@@ -284,9 +284,9 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-29](BACKLOG.md#jl-29) | 2 | 1 | done | none | none | EV-0577 |
 | [JL-30](BACKLOG.md#jl-30) | 1 | 1 | done | none | none | EV-0569 |
 | [JL-31](BACKLOG.md#jl-31) | 1 | 1 | done | none | none | EV-0571 |
-| [DF-01](BACKLOG.md#df-01) | 1 | 1 | ready | none | none | EV-0579 |
-| [DF-02](BACKLOG.md#df-02) | 1 | 1 | ready | none | none | EV-0579 |
-| [DF-03](BACKLOG.md#df-03) | 1 | 1 | ready | none | none | EV-0579 |
+| [DF-01](BACKLOG.md#df-01) | 1 | 2 | in_progress | none | none | EV-0580 |
+| [DF-02](BACKLOG.md#df-02) | 1 | 2 | in_progress | none | none | EV-0580 |
+| [DF-03](BACKLOG.md#df-03) | 1 | 2 | in_progress | none | none | EV-0580 |
 | [DF-04](BACKLOG.md#df-04) | 1 | 1 | blocked | dependency: DF-01, DF-02, DF-03 | none | EV-0579 |
 
 ## Question state index
@@ -883,6 +883,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0577 | 2026-09-26T01:51:11+00:00 | Independent reviewer / integrated read; coordinator / verification, integration, acceptance: JL-29 DoD 3 integrated read of wt/JL-coord at ea2e40f (Fable 5.1, [report](artifacts/jev-lab-2026-09-25/reviews/JL-29.md)) PASS+NOTES, no blocking item: no gameplay-file change (fingerprint comparison), docs consistent on commands, limits, the park, JL-28 verdicts and the pstack mirror, 14 retro numbers spot-checked against sources, leak scan benign (home paths only, test-fixture keys), agent pins match the host map. Coordinator receipts at ea2e40f: `npm run verify` exit 0 (incl. built-http), `npm run sketch:smoke` exit 0. Notes applied in the commit that records this event: AI-WORKFLOW.md:23 Opus 5 → Opus 5.5 (C1), AGENTS.md:6 names the pstack canonical copy (C2), scrapkeep-lab SKILL.md:41 drops "until JL-28" (C3); after them npm test 712/712, check:skills pass. JL-29 done; the Jev Lab program (JL-00 to JL-31) is closed. main fast-forwards to the commit that records this event. Pushing waits for Andrew. Post-close: EV-0573 ideas and EV-0575 follow-ups need cards; FINDINGS.md is the game-dev start list. |
 | EV-0578 | 2026-09-26T18:30:52+00:00 | Andrew / play verdicts, decision; coordinator / light-lane merges, verification | docs/playtests/PLAYTEST-LOG.md entries 3-5, docs/playtests/verdicts.ndjson, sketches/mobility-kit, sketches/spillway-drop, sketches/cable-bench, tests/lab-verdict-tags.test.js, artifacts/bible-harmonization-2026-09-26/REVIEW.md | Andrew played the three EV-0482 sketches: mobility kit (entry 3: rigid confirmed; keep grapple, glide, slam, air dash; rework the reel; mag-cling becomes a pylon mount; slam anchors), Spillway Drop (entry 4: environmental events are core; direction is an event director the player can exploit) and Cable Bench (entry 5: weakest; the goal and economy were unreadable; asks for objective UI, pause and a hold-to-view overlay). Merged proto/spillway-drop and proto/cable-bench (parked as reference, Andrew's choice). Merging proto/mobility-kit into sketches/ball-lab broke `jev_state_test` (the kit moves the lab's pinned props and adds slam knock kinds), so that merge was reverted (e1d21f0) and the kit landed as its own project, sketches/mobility-kit (cf160a2); ball-lab stays byte-identical as the lab instrument. Fixed on the way: `tests/lab-verdict-tags.test.js` assumed every live verdict is hand-labelled, so any new playtest entry broke `npm test` (behaviour tests now use labelled entries; entries 3-5 stay untagged per verdict-tags.mjs), and the kit's 'augments off' check flaked on a two-tick sampling gap (tolerance 0.5 → 1.0 m/s). Receipts at cf160a2: `npm test` 712/712, `sketch:smoke` pass 4 sketches 32 checks, `npm run verify` exit 0, `check:docs` 0 failures, `check:drift` 349 hashes 0 mismatches, `check:project` pass; main fast-forwarded to cf160a2 (local; pushing waits for Andrew). The three proto worktrees were removed after merge; branches kept. A read-only Fable 5.1 review reconciled BIBLE.md against entries 1-5 (REVIEW.md; proposes no edit). **Decision D1, Andrew:** rigid (Jolt) is the game's physics authority and is judged statistically (outcome rates over n ≥ 20); exact-replay tools (trace hashes, the EV-0573 decision tree) run on the kinematic twin, which is kept only as a lab instrument and never ships. Rejected: making Jolt deterministic, and custom deterministic ball physics. Light lane entered for proto/mobility-kit-v2 at cf160a2 (scrapkeep-writer). No card, lease or sprint state changed. |
 | EV-0579 | 2026-09-26T18:35:02+00:00 | Andrew / authorization; coordinator / definition import, readiness | Direction foundation (card family DF); BACKLOG § Direction foundation after the sketch plays; TRACKING program authorization | Andrew asked to solidify the foundational technical aspects now that play has settled direction, leaving the technical choices to the coordinator. Offered a documentation-only round writing D1 (physics authority, decided at EV-0578), D2 (open stages and an event director), D3 (one ability contract), D4 (an element × material table) and D5 (sketch promotion and playtest traceability) as ADRs, he chose the option that also harmonizes the Bible. Imported DF-01 (TADR-006, TADR-007), DF-02 (TADR-008, TADR-009), DF-03 (TADR-010 and superseded notes for TH-06, TH-11, TH-14 in the sections index) and DF-04 (Bible harmonization) at revision 1. Measured before carding: 6 sections pin BIBLE.md's bytes and 34 cite it by line (366 citations), and re-pinning cascades (PD-02 is pinned by 4 sections, TH-12 and PD-01 by 2 each), so DF-04 keeps every Bible line number and re-verifies each cascaded citation; the sections index is pinned by nothing, so DF-03 may annotate it without drift. DF-01 to DF-03 ready with disjoint write sets; DF-04 blocked on them. Writers scrapkeep-writer (Opus 5.5 high); reviews scrapkeep-reviewer (Fable 5.1 high). |
+| EV-0580 | 2026-09-26T18:35:50+00:00 | Coordinator / assignment, lease | DF-01, DF-02, DF-03 | Admission checked: authorization EV-0579 covers documentation-only ADR writing; cards pinned at revision 1; no dependencies; write sets disjoint (TADR-006/007, TADR-008/009, TADR-010 plus the sections index); no live lease overlaps (JL program closed, only the light-lane writer on proto/mobility-kit-v2 under `sketches/mobility-kit/`). Worktrees `/home/andrew/Projects/scrapkeep-wt-DF-01..03` on `wt/DF-01..03` at base 433a3f48c9e07e133b0e737ec3a476349b45f57b from `scripts/new-worktree.sh` (a first run from the session worktree placed them under `.claude/worktrees/`; removed unused and recreated from the main checkout). Attempts DF-01-A1, DF-02-A1, DF-03-A1 and leases DF-0n-L1 opened; scrapkeep-writer on claude-opus-5-5 high each. Three writers plus the light-lane writer is four, at the ceiling. |
 
 ## Preparation checkpoint
 
@@ -2203,3 +2204,39 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Blockers: none.
 - Evidence: none yet; receipts go under `artifacts/local/tasks/JL-29/` in the worktree.
 - Review: not_run; planned Fable integrated read of the whole branch.
+
+## DF-01-A1 Direction foundation attempt
+
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-01-A1; exclusive lease DF-01-L1 open.
+- Owned files: adr/TADR-006-physics-authority-and-verification.md; adr/TADR-007-sketch-promotion-and-playtest-traceability.md; artifacts/local/tasks/DF-01/.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-01` on `wt/DF-01`, created by `scripts/new-worktree.sh`.
+- Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-26T18:35:50+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/DF-01/`.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1 high).
+
+## DF-02-A1 Direction foundation attempt
+
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-02-A1; exclusive lease DF-02-L1 open.
+- Owned files: adr/TADR-008-ability-contract.md; adr/TADR-009-element-material-interactions.md; artifacts/local/tasks/DF-02/.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-02` on `wt/DF-02`, created by `scripts/new-worktree.sh`.
+- Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-26T18:35:50+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/DF-02/`.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1 high).
+
+## DF-03-A1 Direction foundation attempt
+
+- Assignee: scrapkeep-writer on claude-opus-5-5 high; card revision 1; attempt DF-03-A1; exclusive lease DF-03-L1 open.
+- Owned files: adr/TADR-010-open-stages-and-event-director.md; docs/tech/sections/README.md (superseded-direction note only); artifacts/local/tasks/DF-03/.
+- Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-03` on `wt/DF-03`, created by `scripts/new-worktree.sh`.
+- Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
+- Candidate identity: null. Integrated identity: null.
+- Latest checkpoint: 2026-09-26T18:35:50+00:00; dispatched.
+- Blockers: none.
+- Evidence: none yet; receipts go under `artifacts/local/tasks/DF-03/`.
+- Review: not_run; planned scrapkeep-reviewer (Fable 5.1 high).
