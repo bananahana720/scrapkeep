@@ -10,6 +10,7 @@ This file is the seam between the spine and the four wave-2 modules. [DEMO-SPEC.
 | Writer B, build and growth | `src/build/**` | `tests/build_*.gd` |
 | Writer C, audio and feel | `src/presentation/**` | `tests/presentation_*.gd` |
 | Writer D, events and stages | `src/world/**` | `tests/world_*.gd` |
+| Writer E, the boss (wave 4) | `src/boss/**` | `tests/boss_*.gd` |
 | Spine (frozen) | everything else: `project.godot`, `main.tscn`, `.gitignore`, `README.md`, this file, `DEMO-SPEC.md`, `src/game.gd`, `src/core/**`, `src/movement/**`, `src/ui/**`, `tests/spine_*.gd`, `tests/doubles/**` | `tests/spine_*.gd` |
 
 `DESIGN-NOTES.md` has one section per owner. Each writer appends only inside its own section, so the module branches merge without conflicts.
@@ -21,7 +22,8 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 1. `world`, which must set `ctx.terrain`.
 2. `combat`, which must set `ctx.spawner`.
 3. `build`, which sets `ctx.build`.
-4. `presentation`.
+4. `boss` (`src/boss/boss.gd`), which sets `ctx.boss`. It is set up only when the file exists (`ResourceLoader.exists`), so the run works without it and ends on the summary after stage 3.
+5. `presentation`.
 
 `game.gd` asserts that `ctx.terrain` and `ctx.spawner` are set. The codex (`ctx.codex`) exists before any module is set up, so modules can declare their entries in `setup`. The flow starts after all four are set up. Everything in a module folder may be replaced wholesale, as long as the entry script keeps its path and its obligations below.
 
@@ -56,13 +58,14 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `spawner` | set by combat | the spawner API below |
 | `build` | set by build | the build module; read it through `has_method`. `build_module()` also reads a build that stored itself with `ctx.set_meta("build", self)` |
 | `codex` | `Codex` node | the codex registry below |
+| `boss` | set by boss | the boss module; flow calls `enter_arena(entry_velocity)` on it |
 | `root` | `Node3D` | parent for world children |
 | `rng` | `RandomNumberGenerator` | the run's one seeded stream (seed 20260926) |
 | `calm` | `bool` | tests set it; no own-schedule spawns, no world pushes |
 | `aim_origin()`, `aim_forward()` | `Vector3` | the camera's centre ray |
 | `hit_stop(seconds)` | method | a short freeze for weight; capped at 60 ms, never stacks, only in play |
 
-Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates` and `launch`. Wave 4 adds `boss`.
+Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
 
 `stage_def()` returns the current row of `src/core/stage_defs.gd`, with these fields:
 
@@ -151,6 +154,11 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `launched` | `velocity: Vector3` | D | the ball was launched toward the next stage |
 | `pressure_changed` | `pressure: float` | D | director pressure, 0 to 1, for music layers |
 | `threat_rose` | `tier: int` | D | the director's time tier rose (clamped at +2) |
+| `boss_arena_entered` | none | E | the ball is in the arena; the music's Brindle set starts |
+| `boss_phase_changed` | `phase: int, name: String` | E | Brindle's phase (1 to 3) and its display name; the run log keeps the highest |
+| `boss_attack_telegraphed` | `attack_id: String, seconds_until: float` | E | an attack is committed and will land in seconds_until |
+| `boss_weak_point_hit` | `point_id: String` | E | a strike landed on a weak point (a magnet, a cap, the scooter) |
+| `boss_defeated` | none | E | Brindle is beaten; flow enters `victory`, then the summary |
 
 ### The Warden, gate and launch handshake
 
@@ -246,7 +254,11 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 ## Flow seams (`src/core/flow.gd`)
 
 - `force_warden` is a test knob: it seals calm stages.
-- `boss_active` and `boss_plating` are for wave 4. The boss flow sets them when it enters its `boss` state. The death screen then shows the boss gap line and offers T, which calls `replay_stage(3)` and restores the first stage-3 start the run kept.
+- **The boss flow.**
+  - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the fall rescue are not used in the arena.
+  - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s, then the summary and `run_ended(true)`.
+  - **Death.** A death in `boss` leads to `dead`. There, R (or holding R in play) restores the arena-entry checkpoint and calls `enter_arena` again, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
+  - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
 - `discovery_burst(at)` grants 20 scrap times the stage at a discovery. The codex calls it, once per entry per run.
 
 ## Codex (`src/core/codex.gd`, `ctx.codex`)

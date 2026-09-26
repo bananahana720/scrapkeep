@@ -96,6 +96,9 @@ func setup(game_ref) -> void:
 	reticle.setup(game.player, game.camera.cam)
 
 	_connect_toasts(game.events)
+	# The phase name is the signal's second argument, so it gets its own handler.
+	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
+		toast(EventKinds.hud("boss_phase_changed", {"name": phase_name}), EventKinds.color("boss_phase_changed")))
 
 
 func _connect_toasts(events) -> void:
@@ -103,6 +106,8 @@ func _connect_toasts(events) -> void:
 		if EventKinds.priority(kind) < EventKinds.TOAST_PRIORITY or EventKinds.row(kind).get("hud", "") == "":
 			continue
 		var argc: int = _arg_count(events, kind)
+		if kind == "boss_phase_changed":
+			continue
 		if FIELD_ARGS.has(kind):
 			events.connect(kind, _drop_args(_on_field_fact.bind(kind), argc - 1))
 		else:

@@ -10,9 +10,11 @@ const Beacon := preload("res://src/core/beacon.gd")
 # one-key way out. Modules read state; only flow changes it, and every change is
 # published as flow_changed so music and HUD follow the same beat.
 
-enum { TITLE, CLASS_SELECT, STAGE, BEACON, GATES, LAUNCH, SUMMARY, DEAD }
+enum { TITLE, CLASS_SELECT, STAGE, BEACON, GATES, LAUNCH, SUMMARY, DEAD, BOSS, VICTORY }
 
-const NAMES := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary", "dead"]
+const NAMES := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary", "dead", "boss", "victory"]
+# The beat between Brindle's defeat and the summary: the ball keeps rolling.
+const VICTORY_SECONDS := 2.5
 # How long the ball flies after the launch before the next stage takes it; the
 # velocity at that moment is what the next stage receives.
 const LAUNCH_FLIGHT := 0.6
@@ -38,6 +40,10 @@ var warden: Node3D = null
 # offers T, which replays stage 3 from the start the run kept.
 var boss_active := false
 var boss_plating := 120.0
+# True from arena entry until the run leaves the fight, so a death there retries the
+# arena, not stage 3.
+var in_arena := false
+var _victory_left := 0.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
 var _engaged := false
@@ -64,6 +70,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx.events.launched.connect(_on_launched)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
+	ctx.events.boss_defeated.connect(_on_boss_defeated)
 
 
 func state_name() -> String:
@@ -71,7 +78,14 @@ func state_name() -> String:
 
 
 func in_play() -> bool:
-	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH
+	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS
+
+
+# The boss module (ctx.boss, set by src/boss/boss.gd) runs the arena; without one the
+# run ends on the summary after stage 3, as it did before the boss existed.
+func _boss_module() -> Node:
+	var boss: Node = ctx.boss if "boss" in ctx else null
+	return boss if boss != null and boss.has_method("enter_arena") else null
 
 
 func stage() -> int:
@@ -115,6 +129,8 @@ func new_run() -> void:
 
 
 func _begin_run(chosen: Resource) -> void:
+	in_arena = false
+	boss_active = false
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
@@ -142,7 +158,10 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 # Back to the stage-start checkpoint: run state, ball position and entry speed. It is
 # one synchronous call, so it lands well inside a second.
 func retry_stage() -> void:
-	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY:
+	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY:
+		return
+	if in_arena:
+		_retry_arena()
 		return
 	ctx.run.restore()
 	_launched = false
@@ -162,8 +181,28 @@ func replay_stage(index: int) -> bool:
 	if not ctx.run.use_stage_start(index):
 		return false
 	boss_active = false
+	in_arena = false
 	retry_stage()
 	return true
+
+
+# After stage 3's launch the run enters the arena instead of the summary. The boss
+# module places the ball; flow then keeps the arena-entry checkpoint (the stage-3-end
+# snapshot), which R restores on the boss death screen.
+func enter_boss(carried: Vector3) -> void:
+	var boss := _boss_module()
+	in_arena = true
+	_set_state(BOSS)
+	ctx.player.set_frozen(false)
+	boss.enter_arena(carried)
+	ctx.run.snapshot(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
+
+
+func _retry_arena() -> void:
+	ctx.run.restore()
+	ctx.player.set_frozen(false)
+	_set_state(BOSS)
+	_boss_module().enter_arena(ctx.run.snapshot_value("entry_velocity"))
 
 
 # The treasure burst for a first discovery in a run: scrap at the spot, which feeds
@@ -258,6 +297,11 @@ func warn_once(key: String, message: String) -> void:
 
 
 func physics_step(delta: float) -> void:
+	if state == VICTORY:
+		_victory_left -= delta
+		if _victory_left <= 0.0:
+			_end_run_won()
+		return
 	if not in_play():
 		return
 	ctx.run.advance(delta)
@@ -286,6 +330,9 @@ func physics_step(delta: float) -> void:
 				_flight += delta
 				if _flight >= LAUNCH_FLIGHT:
 					_finish_stage()
+		BOSS:
+			# The arena is the boss module's geometry, not the world's terrain.
+			return
 	_rescue_if_fallen(ball)
 
 
@@ -293,12 +340,28 @@ func _finish_stage() -> void:
 	var cleared: int = ctx.run.stage
 	ctx.events.stage_cleared.emit(cleared)
 	if StageDefs.is_last(cleared):
-		ctx.run.over = true
-		ctx.player.set_frozen(true)
-		_set_state(SUMMARY)
-		ctx.events.run_ended.emit(true)
+		if _boss_module() != null:
+			enter_boss(ctx.player.state.velocity)
+			return
+		_end_run_won()
 		return
 	enter_stage(cleared + 1, ctx.player.state.velocity, false)
+
+
+func _on_boss_defeated() -> void:
+	if state != BOSS:
+		return
+	boss_active = false
+	in_arena = false
+	_victory_left = VICTORY_SECONDS
+	_set_state(VICTORY)
+
+
+func _end_run_won() -> void:
+	ctx.run.over = true
+	ctx.player.set_frozen(true)
+	_set_state(SUMMARY)
+	ctx.events.run_ended.emit(true)
 
 
 func _on_reward_chosen(_part_id: String) -> void:
@@ -401,6 +464,8 @@ func objective_text() -> String:
 			return EventKinds.objective("reward_offered")
 		LAUNCH:
 			return EventKinds.objective("launched" if _launched else "reward_chosen")
+		BOSS:
+			return EventKinds.objective("boss_arena_entered", {"punch": int(punch_now()), "plating": int(boss_plating)})
 	return ""
 
 

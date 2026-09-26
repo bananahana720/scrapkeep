@@ -30,6 +30,7 @@ const RESTART_HOLD := 0.5
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
+const BOSS_PATH := "res://src/boss/boss.gd"
 
 const ACTIONS := {
 	"cl_forward": [KEY_W, KEY_UP],
@@ -59,6 +60,7 @@ var ctx
 var world
 var combat
 var build
+var boss
 var presentation
 var hud
 var screens
@@ -127,6 +129,9 @@ func _ready() -> void:
 	world = _module(World)
 	combat = _module(Combat)
 	build = _module(Build)
+	# Wave 4's boss module sets up after build and before presentation when it exists.
+	if ResourceLoader.exists(BOSS_PATH):
+		boss = _module(load(BOSS_PATH))
 	presentation = _module(Presentation)
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")

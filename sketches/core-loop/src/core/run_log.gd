@@ -33,6 +33,7 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.event_ended.connect(_on_event_ended)
 	events.player_died.connect(_on_player_died)
 	events.run_ended.connect(_on_run_ended)
+	events.boss_phase_changed.connect(_on_boss_phase)
 
 
 func _on_run_started(class_id: String) -> void:
@@ -87,6 +88,11 @@ func _on_player_died() -> void:
 	var at: Vector3 = player.ball_position()
 	_stage_list("deaths").append({"x": at.x, "y": at.y, "z": at.z, "ticks": _ticks()})
 	_write("died")
+
+
+func _on_boss_phase(phase: int, _name: String) -> void:
+	var reached = _record.get("brindle_phase_reached")
+	_record["brindle_phase_reached"] = maxi(phase, int(reached)) if reached != null else phase
 
 
 func _on_run_ended(won: bool) -> void:
