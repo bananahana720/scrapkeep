@@ -28,6 +28,7 @@ const STINGER_BEATS := {
 	"class_up": 2,
 	"threat_up": 1,
 	"synergy_fanfare": 4,
+	"warden_theme_in": 4,
 }
 
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
@@ -44,7 +45,7 @@ const TRIM_DB := {
 	"music_pressure": -9.0,
 	"stinger_unseal": -1.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
 	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "element_resolved": -8.0,
-	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0,
+	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -3.0,
 }
 
 static var _samples := {}
@@ -172,6 +173,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(Synth.note("mallet", 77), 0.35), 0, 0.8], [_fm(0.5, Harmony.hz(86), 3.5, 1.2, 6.0, 0.3), Synth.seconds(0.12), 0.7]])
 		"element_resolved":
 			return _mix([[_cut(Synth.note("bell", 81), 0.3), 0, 0.7], [_noise(0.25, 2000.0, 5000.0, 14.0, 0.01), 0, 0.5]])
+		"warden_theme_in":
+			return _warden_in()
 		"ice_form":
 			return _ice()
 		"zap_hum":
@@ -441,6 +444,16 @@ static func _core_socket() -> PackedFloat32Array:
 	return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.12, 140.0, 80.0, "sine", 28.0), 0, 0.8],
 		[Synth.note("bell", 74), Synth.seconds(0.05), 0.7], [Synth.note("bell", 81), Synth.seconds(0.05), 0.6],
 		[_cut(Synth.note("bell", 86), 0.6), Synth.seconds(0.16), 0.45]])
+
+
+# The Warden wakes: a low anvil strike and a Neapolitan brass swell (Eb over D), the
+# sound of the band turning toward the boss groove.
+static func _warden_in() -> PackedFloat32Array:
+	var score := [[0, 0, 2, "kick", 1.0], [0, 38, 16, "sub", 0.7], [0, 51, 12, "brass", 0.45], [0, 55, 12, "brass", 0.45],
+		[0, 58, 12, "brass", 0.45], [4, 0, 2, "kick", 0.8], [8, 0, 2, "kick", 0.9], [12, 0, 2, "kick", 1.0],
+		[12, 0, 1, "snare", 0.7], [13, 0, 1, "snare", 0.8], [14, 0, 1, "snare", 0.9], [15, 0, 1, "snare", 1.0]]
+	var band := Synth.render_score(score, 0.8)
+	return _mix([[band, 0, 1.0], [_fm(0.9, Harmony.hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
 
 
 static func _ice() -> PackedFloat32Array:

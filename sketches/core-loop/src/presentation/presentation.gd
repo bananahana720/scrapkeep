@@ -79,9 +79,10 @@ func _codex_entry(id: String) -> Dictionary:
 	var codex = ctx.get("codex")
 	if codex == null:
 		return {}
-	for method in ["entry", "get_entry"]:
-		if codex.has_method(method):
-			var found = codex.call(method, id)
-			if found is Dictionary:
-				return found
+	if codex.has_method("entries"):
+		for entry in codex.entries():
+			if entry.get("id", "") == id:
+				return entry
+	if codex.has_method("name_of"):
+		return {"name": codex.name_of(id)}
 	return {}

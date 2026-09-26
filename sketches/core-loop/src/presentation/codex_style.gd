@@ -60,8 +60,9 @@ static func icon(id: String) -> ImageTexture:
 	if _icons.has(id):
 		return _icons[id]
 	var entry: Dictionary = CATEGORIES.get(id, CATEGORIES["build"])
-	var shape: String = _spine_table().get(id, {}).get("shape", entry["shape"])
-	var color: Color = entry["color"]
+	var spine: Dictionary = _spine_table().get(id, {})
+	var shape: String = spine.get("shape", entry["shape"])
+	var color: Color = spine.get("color", entry["color"])
 	var image := Image.create_empty(ICON_SIZE, ICON_SIZE, false, Image.FORMAT_RGBA8)
 	var half := ICON_SIZE * 0.5
 	for y in ICON_SIZE:
@@ -93,6 +94,11 @@ static func _distance(shape: String, p: Vector2) -> float:
 			return best
 		"ring":
 			return absf(p.length() - 0.6) - 0.14
+		"square":
+			return maxf(absf(p.x), absf(p.y)) - 0.62
+		"chevron":
+			var arm := absf(p.y + 0.35 - absf(p.x) * 0.9) - 0.16
+			return maxf(arm, absf(p.x) - 0.8)
 		"rings":
 			var a := absf((p - Vector2(-0.28, 0.0)).length() - 0.45) - 0.1
 			var b := absf((p - Vector2(0.28, 0.0)).length() - 0.45) - 0.1

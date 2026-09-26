@@ -231,6 +231,12 @@ func _build_meshes() -> void:
 	cube.size = Vector3.ONE * 0.5
 	_meshes["square"] = cube
 	_meshes["diamond"] = cube
+	var core := SphereMesh.new()
+	core.radius = 0.4
+	core.height = 0.8
+	core.radial_segments = 4
+	core.rings = 2
+	_meshes["core"] = core
 	var bar := BoxMesh.new()
 	bar.size = Vector3(0.12, 0.12, 1.0)
 	_meshes["bar"] = bar
@@ -289,7 +295,7 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["life"] = maxf(0.05, life)
 	slot["from"] = size_from
 	slot["to"] = size_to
-	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square"] else 0.0
+	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square", "core"] else 0.0
 	node.visible = true
 	spawned[kind] = spawned.get(kind, 0) + 1
 	_draw_glyph(slot)

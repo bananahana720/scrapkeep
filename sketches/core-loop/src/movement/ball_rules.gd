@@ -19,6 +19,10 @@ static func make_probe(owner_body: CollisionObject3D) -> ShapeCast3D:
 	probe.set_collision_mask_value(1, true)
 	probe.set_collision_mask_value(3, true)
 	probe.add_exception(owner_body)
+	# The cast must point at the world's down, not the ball's: as a plain child of the
+	# rolling body it turned with the spin and found the ground on only 38% of ticks
+	# rolling on flat ground. The owner places it every step instead.
+	probe.top_level = true
 	return probe
 
 

@@ -13,6 +13,8 @@ signal stage_entered(stage: int, retry: bool)
 signal stage_cleared(stage: int)
 signal run_ended(won: bool)
 signal beacon_charge_changed(fraction: float)
+signal beacon_unsealed(stage: int)
+signal warden_engaged(stage: int)
 
 # Run state (spine; emitted by run_state.gd's mutators, called by the modules).
 signal scrap_collected(amount: int, at: Vector3, total: int)
@@ -21,6 +23,13 @@ signal player_hit(amount: float, source: String)
 signal player_died
 signal enemy_killed(kind: String, at: Vector3, scrap_value: int)
 signal milestone_won(event_id: String)
+signal heft_class_changed(heft_class: int, heft: float)
+signal scrap_lost(amount: int, at: Vector3, total: int, cause: String)
+signal core_gained(source: String, at: Vector3, count: int)
+
+# Codex (spine; emitted by codex.gd's mutators, called by the modules).
+signal synergy_discovered(synergy_id: String, category: String, first_time: bool)
+signal interaction_found(description: String)
 
 # Movement (spine; emitted by player_ball.gd).
 signal jumped(air: bool)
@@ -38,10 +47,12 @@ signal enemy_spawned(enemy: Node3D, kind: String)
 signal enemy_struck(enemy: Node3D, kind: String, force: float)
 signal shot_fired(weapon_id: String, from: Vector3, to: Vector3)
 signal special_used(special_id: String, at: Vector3)
+signal strike_deflected(enemy: Node3D, kind: String, punch: float, plating: float)
 
 # Build (writer B).
 signal reward_offered(offers: Array)
 signal reward_chosen(part_id: String)
+signal element_resolved(element_id: String, material_id: String, behaviour: String, at: Vector3)
 
 # World (writer D).
 signal event_announced(event_id: String, seconds_until: float)
@@ -49,6 +60,7 @@ signal event_started(event_id: String)
 signal event_ended(event_id: String, outcome: String)
 signal launched(velocity: Vector3)
 signal pressure_changed(pressure: float)
+signal threat_rose(tier: int)
 
 
 static func signal_names() -> PackedStringArray:
