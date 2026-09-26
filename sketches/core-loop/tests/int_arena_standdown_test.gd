@@ -299,7 +299,7 @@ func _step_window() -> void:
 	_report("%s no director spawn" % which, _spawned == w["spawned"] and world.director.arrivals.is_empty(),
 		"%d enemy_spawned over 5 s in the arena; %d arrival rings pending" % [_spawned - w["spawned"], world.director.arrivals.size()])
 	_report("%s no pushes" % which, _probe.ticks >= WINDOW - 2 and _probe.worst == 0.0,
-		"largest push handed to the ball over %d arena ticks was %.3f m/s^2, with the ball dunked in the old flood basin %d ticks of every %d and the stage flood clock forced high"
+		"largest push handed to the ball over %d arena ticks was %.3f m/s^2, with the ball held in the old flood basin %d ticks of every %d and the stage flood clock forced high"
 			% [_probe.ticks, _probe.worst, DUNK_TICKS, DUNK_EVERY])
 	var fab_nodes: int = build.fabricators.get_child_count()
 	var scrap_nodes: int = build.scrap.get_child_count()
@@ -335,6 +335,9 @@ func _check_maps(w: Dictionary) -> void:
 		w["maps_solid"] += _in_space(holder)
 	var under: Vector3 = terrain.beacon_point(3)
 	var query := PhysicsRayQueryParameters3D.create(under + Vector3.UP * 60.0, under + Vector3.DOWN * 60.0, 1)
+	# The double's own arena floor is the boss's geometry, not the stage's.
+	if is_instance_valid(_boss.arena_floor):
+		query.exclude = [_boss.arena_floor.get_rid()]
 	var hit: Dictionary = _game.player.body().get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		w["ray_hits"] += 1

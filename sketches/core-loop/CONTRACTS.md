@@ -42,9 +42,11 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 - **Stage content runs only in a stage.** Stage content means the director, the flood cycle and its pushes, stage events, the scrap field, fabricators, vaults and stage enemies. It runs only while `ctx.flow.in_stage()` is true, which covers `stage`, `beacon`, `gates` and `launch`.
 - **Player-side work runs in play.** Player weapons, build synergies and presentation run while `ctx.flow.in_play()` is true, which adds the boss arena.
 - **Stand down on `stage_content_cleared`.** Flow publishes `stage_content_cleared(reason)` on entering the arena and on each arena retry, with the reason `arena`. Each module then clears its stage content at once:
-  - combat clears stage enemies;
-  - world stops its director and flood and parks the stage maps;
+  - combat clears stage enemies, which means every node in the groups `enemy`, `enemy_shot` and `telegraph`. The clear runs before the boss module's `enter_arena` on entry and on each retry, so the boss spawns its own pieces after it;
+  - world stops its director and flood and parks the stage maps. Parking hides the stage maps and disables their collision until the next `stage_entered`;
   - build clears pickups and fabricators.
+
+  Arena kills pay no scrap from the scrap field, because the scrap field is stage content. The boss module grants any arena scrap itself through `run.add_scrap`.
 - Reset on `stage_entered(stage, retry)`. Clear stage content: enemies, gates, events and pickups. Rebuild it for `stage`. After a retry the run state is already restored, so recompute anything derived from `ctx.run.parts`. Flow takes the stage-start checkpoint before it publishes `stage_entered`, so anything a module grants inside that handler is play within the stage, and a retry takes it back.
 - Add world children under `ctx.root`.
 - Build owns all tuning mods. It calls `tuning.clear_mods()` on every recompute and reapplies every part. Keys that are not F1 sliders (`weapon_damage`, `weapon_rate`, `weapon_range`, `turret_damage` and any similar key) are read with `tuning.mod(key)`, never `tuning.f(key)`.
@@ -261,7 +263,7 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 
 - `force_warden` is a test knob: it seals calm stages.
 - **The boss flow.**
-  - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the fall rescue are not used in the arena.
+  - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the stage fall rescue are not used in the arena; the arena rescue (E's `floor_y()` and `rescue_point()`, below) is.
   - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s, then the summary and `run_ended(true)`.
   - **Death.** A death in `boss` leads to `dead`. There, R (or holding R in play) restores the arena-entry checkpoint and calls `enter_arena` again, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
   - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
