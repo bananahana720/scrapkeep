@@ -1,6 +1,7 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
@@ -61,6 +62,8 @@ var _kill_combo := 0
 var _kill_last := -100000
 var _beacon_rung := -1
 var _gates_announced := false
+var _heft_class := 1
+var _unseal_ms := -100000
 var _flow_queue: Array = []
 var _overlay: Label
 var _overlay_until := 0
@@ -93,12 +96,7 @@ func setup(ctx_ref) -> void:
 # on the main thread until the bake is done; cues before then are skipped.
 
 static func _sound_ids() -> Array:
-	var ids := []
-	for kind in EventKinds.ROWS:
-		var id: String = EventKinds.ROWS[kind]["sound"]
-		if not id in ids:
-			ids.append(id)
-	return ids
+	return Rows.sound_ids()
 
 
 static func _bake_everything(ids: Array) -> void:
@@ -253,8 +251,8 @@ func _pump() -> void:
 # --- Playing a cue ------------------------------------------------------------------
 
 # Plays a cue now. Returns false if it was gated by the voice limit or the gap.
-func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX") -> bool:
-	var sound: String = EventKinds.row(kind).get("sound", "")
+func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "") -> bool:
+	var sound: String = sound_override if sound_override != "" else Rows.sound(kind)
 	if not sound_ready or sound == "":
 		cue_log.append([kind, sound, "skip", -1, pitch])
 		return false
@@ -269,20 +267,20 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX") -> bool:
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, 3)):
 			playback.stop_stream(live.pop_front())
-		var volume: float = SfxBank.trim_db(sound) + PRIORITY_DB[EventKinds.priority(kind)] + db
+		var volume: float = SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db
 		var id := playback.play_stream(SfxBank.stream(sound), 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 		_voices[sound] = live
 	cue_log.append([kind, sound, "now", engine.clock, pitch])
-	if EventKinds.priority(kind) >= 2:
+	if Rows.priority(kind) >= 2:
 		engine.duck(0.55, 0.35)
 	return true
 
 
 # Plays a cue on the next beat through the band. lane queues it behind flow stingers.
 func on_beat(kind: String, db := 0.0, lane := false, repeats := 1) -> int:
-	var sound: String = EventKinds.row(kind).get("sound", "")
+	var sound: String = Rows.sound(kind)
 	if not sound_ready or sound == "":
 		cue_log.append([kind, sound, "skip", -1, 1.0])
 		return -1
@@ -296,7 +294,9 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1) -> int:
 # --- Facts --------------------------------------------------------------------------
 
 func _connect_all(events) -> void:
-	events.run_started.connect(func(_class_id: String): _flow_queue.append(["run"]))
+	events.run_started.connect(func(_class_id: String):
+		_heft_class = 1
+		_flow_queue.append(["run"]))
 	events.flow_changed.connect(_on_flow_changed)
 	events.stage_entered.connect(_on_stage_entered)
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
@@ -328,6 +328,41 @@ func _connect_all(events) -> void:
 	events.event_ended.connect(func(_event_id: String, outcome: String): on_beat("event_ended", -4.0 if outcome == "lost" else 0.0))
 	events.launched.connect(func(_velocity: Vector3): play("launched"))
 	events.pressure_changed.connect(_on_pressure)
+	wire_optional()
+
+
+# The demo-spec signals the spine is adding. Each one is connected only if the bus
+# has it, and this can be called again once it does (tests add them locally).
+func wire_optional() -> void:
+	var events = ctx.events
+	_listen(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
+	_listen(events, "heft_class_changed", _on_heft_class)
+	_listen(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
+	_listen(events, "strike_deflected", _on_deflected)
+	_listen(events, "threat_rose", func(tier: int): on_beat("threat_rose", minf(tier, 3) * 1.0))
+	_listen(events, "core_gained", _on_core)
+	_listen(events, "synergy_discovered", _on_synergy)
+	_listen(events, "interaction_found", func(): play("interaction_found"), true)
+	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
+		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
+
+
+# Connects once. loose drops whatever arguments the signal carries.
+static func _listen(events: Object, signal_name: String, callable: Callable, loose := false) -> bool:
+	if not events.has_signal(signal_name):
+		return false
+	var target := callable
+	if loose:
+		var argc := 0
+		for info in events.get_signal_list():
+			if info["name"] == signal_name:
+				argc = (info["args"] as Array).size()
+		target = callable.unbind(argc)
+	for connection in events.get_signal_connection_list(signal_name):
+		if connection["callable"].get_object() == callable.get_object() and connection["callable"].get_method() == callable.get_method():
+			return true
+	events.connect(signal_name, target)
+	return true
 
 
 func _on_flow_changed(state: String) -> void:
@@ -338,6 +373,9 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	engine.set_overcharge(0)
+	if ctx.run.has_method("heft_class"):
+		_heft_class = int(ctx.run.heft_class())
 	_beacon_rung = -1
 	_gates_announced = false
 	_scrap_combo = 0
@@ -405,6 +443,28 @@ func _on_offered(_offers: Array) -> void:
 	_flow_queue.append(["gates"])
 
 
+# A new heft class climbs its three notes on the next beat; losing one is scrap_rip's job.
+func _on_heft_class(heft_class: int, _heft: float) -> void:
+	if heft_class > _heft_class:
+		on_beat("heft_class_changed")
+	_heft_class = heft_class
+
+
+# A bounced hit clanks lower the further you are from breaking through.
+func _on_deflected(_enemy: Node3D, _kind: String, punch: float, plating: float) -> void:
+	var closeness := clampf(punch / maxf(plating, 1.0), 0.0, 1.0)
+	play("strike_deflected", 0.0, Harmony.ratio(lerpf(-7.0, 0.0, closeness)))
+
+
+func _on_core(_source: String, _at: Vector3, count: int) -> void:
+	play("core_gained", 0.0, Harmony.ratio(Harmony.pentatonic_step(maxi(count - 1, 0))))
+	engine.set_overcharge(count)
+
+
+func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
+	on_beat("synergy_discovered", 0.0 if first_time else -6.0)
+
+
 func _on_pressure(pressure: float) -> void:
 	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
 	engine.set_pressure(pressure)
@@ -455,7 +515,13 @@ func _flush_flow() -> void:
 				engine.schedule_mode(engine.next_beat(), MusicEngine.DEAD)
 			"idle":
 				engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
+			"unseal":
+				_unseal_ms = Time.get_ticks_msec()
+				on_beat("beacon_unsealed", 0.0, true)
 			"gates":
+				# The unseal stinger already says the gates are open.
+				if "unseal" in kinds or Time.get_ticks_msec() - _unseal_ms < 2500:
+					continue
 				on_beat("reward_offered", 0.0, true)
 			"milestone":
 				on_beat("milestone_won", 0.0, true)

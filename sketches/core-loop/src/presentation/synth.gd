@@ -222,6 +222,27 @@ static func chord(voicing: Array) -> PackedFloat32Array:
 	return buf
 
 
+# A warm pad: soft sines an octave apart with a slow swell and a gentle shimmer,
+# pitched an octave under the keys voicing so it sits under the band like heat.
+static func pad_chord(voicing: Array) -> PackedFloat32Array:
+	var key := "pad:%s" % str(voicing)
+	if _notes.has(key):
+		return _notes[key]
+	var n := Harmony.BAR
+	var buf := buffer(n)
+	for midi in voicing:
+		var f := Harmony.hz(midi - 12)
+		var phase := 0.0
+		for i in n:
+			var t := i * INV_RATE
+			phase += TAU * f * INV_RATE
+			var swell := minf(1.0, t * 3.0) * (0.9 + 0.1 * sin(TAU * 4.5 * t))
+			buf[i] += (sin(phase) + 0.3 * sin(phase * 2.0) + 0.12 * sin(phase * 3.0)) * swell * 0.25
+	declick(normalize(buf, 0.6), 64, 2000)
+	_notes[key] = buf
+	return buf
+
+
 static func sub(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)

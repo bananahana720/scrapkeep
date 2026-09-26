@@ -1,6 +1,8 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Rows := preload("res://src/presentation/rows.gd")
+const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Augments := preload("res://src/movement/augments.gd")
 
@@ -35,6 +37,9 @@ var _streaks: Array = []
 var _rng := RandomNumberGenerator.new()
 var _clock := 0.0
 var _launch_boost := 0.0
+var _rings := {}
+var _heft_class := 1
+var _found_wired := false
 
 
 func setup(ctx_ref) -> void:
@@ -79,6 +84,127 @@ func setup(ctx_ref) -> void:
 		_launch_boost = 1.2
 		glyph("launched", player.ball_position(), 1.0, 4.0, 0.35, v))
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+	events.run_started.connect(func(_class_id: String): clear_rings())
+	wire_optional()
+
+
+func wire_optional() -> void:
+	var events = ctx.events
+	_listen(events, "beacon_unsealed", _on_unsealed)
+	_listen(events, "heft_class_changed", _on_heft_class)
+	_listen(events, "scrap_lost", _on_scrap_lost)
+	_listen(events, "strike_deflected", _on_deflected)
+	_listen(events, "core_gained", _on_core)
+	_listen(events, "synergy_discovered", _on_synergy)
+	_listen(events, "element_resolved", _on_element)
+	if events.has_signal("interaction_found") and not _found_wired:
+		_found_wired = true
+		var argc := 0
+		for info in events.get_signal_list():
+			if info["name"] == "interaction_found":
+				argc = (info["args"] as Array).size()
+		events.connect("interaction_found", _on_found.unbind(argc))
+
+
+static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
+	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
+		events.connect(signal_name, callable)
+
+
+# --- Demo-spec facts ----------------------------------------------------------------------
+
+# The Warden breaks: a star flash over the beacon and a ring out to its edge.
+func _on_unsealed(stage: int) -> void:
+	var at := player.ball_position() as Vector3
+	var radius := 12.0
+	if ctx.terrain != null:
+		at = ctx.terrain.beacon_point(stage)
+	if ctx.flow != null and ctx.flow.has_method("stage_def"):
+		radius = float(ctx.flow.stage_def().get("beacon_radius", radius))
+	glyph("beacon_unsealed", at + Vector3.UP * 6.0, 1.0, 6.0, 0.6)
+	glyph("beacon_unsealed", at + Vector3.UP * 0.3, 2.0, radius, 0.7, Vector3.UP, "ring")
+
+
+# A new heft class ripples out from the ball along the ground.
+func _on_heft_class(heft_class: int, _heft: float) -> void:
+	if heft_class <= _heft_class:
+		_heft_class = heft_class
+		return
+	_heft_class = heft_class
+	var normal: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
+	var at: Vector3 = player.ball_position() - normal * 0.9
+	glyph("heft_class_changed", at, 1.2, 7.0, 0.5, normal, "ring")
+	glyph("heft_class_changed", at + normal * 0.05, 0.8, 4.5, 0.4, normal, "ring")
+
+
+func _on_scrap_lost(_amount: int, at: Vector3, _total: int, _cause: String) -> void:
+	glyph("scrap_lost", at + Vector3.UP * 0.8, 0.5, 1.4, 0.35)
+
+
+func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float) -> void:
+	if is_instance_valid(enemy) and enemy.is_inside_tree():
+		glyph("strike_deflected", enemy.global_position + Vector3.UP * 0.6, 0.35, 0.7, 0.15)
+
+
+# The core locks in where it was won: a diamond flash and a tight ring.
+func _on_core(_source: String, at: Vector3, _count: int) -> void:
+	glyph("core_gained", at + Vector3.UP * 1.2, 0.5, 1.6, 0.5)
+	glyph("core_gained", at + Vector3.UP * 0.2, 0.6, 3.0, 0.45, Vector3.UP, "ring")
+
+
+# The discovery: a burst in the category's colour, and a ring that stays on the ball
+# for the rest of the run, one per synergy, so your build shows on the ball.
+func _on_synergy(id: String, category: String, _first_time: bool) -> void:
+	var tint := CodexStyle.category_color(category)
+	glyph("synergy_discovered", player.ball_position() + Vector3.UP * 2.4, 0.6, 1.8, 0.7, Vector3.ZERO, "burst", tint)
+	glyph("synergy_discovered", player.ball_position(), 1.0, 5.0, 0.5, Vector3.UP, "ring", tint)
+	add_ring(id, tint)
+
+
+func _on_found() -> void:
+	glyph("interaction_found", player.ball_position() + Vector3.UP * 2.0, 0.3, 0.9, 0.4)
+
+
+func _on_element(_element: String, _material: String, behaviour: String, at: Vector3) -> void:
+	var sound := Rows.element_sound(behaviour)
+	var shape: String = {"ice_form": "diamond", "zap_hum": "burst", "shatter": "star"}.get(sound, "burst")
+	glyph("element_resolved", at + Vector3.UP * 0.5, 0.4, 1.5, 0.3, Vector3.ZERO, shape)
+
+
+const MAX_RINGS := 4
+
+
+func add_ring(id: String, tint: Color) -> void:
+	if _rings.has(id) or _rings.size() >= MAX_RINGS:
+		return
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 1.32 + 0.12 * _rings.size()
+	torus.outer_radius = torus.inner_radius + 0.05
+	torus.rings = 48
+	torus.ring_segments = 4
+	ring.mesh = torus
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(tint.r, tint.g, tint.b, 0.8)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	ring.material_override = mat
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ring.name = "SynergyRing"
+	player.juice_node().add_child(ring)
+	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size()}
+
+
+func ring_count() -> int:
+	return _rings.size()
+
+
+func clear_rings() -> void:
+	for entry in _rings.values():
+		if is_instance_valid(entry["node"]):
+			entry["node"].queue_free()
+	_rings.clear()
 
 
 func clear() -> void:
@@ -87,6 +213,8 @@ func clear() -> void:
 		g["node"].visible = false
 	_trail_points.clear()
 	_streaks.clear()
+	if ctx.run.has_method("heft_class"):
+		_heft_class = int(ctx.run.heft_class())
 
 
 # --- Glyphs ---------------------------------------------------------------------------
@@ -141,11 +269,10 @@ static func _star_mesh(spokes: int, thickness: float, length: float) -> ArrayMes
 
 # Spawns the fact's glyph: its event_kinds shape and colour, growing from size_from to
 # size_to over life seconds while it fades. facing orients rings and bars.
-func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: float, facing := Vector3.ZERO, shape := "") -> void:
+func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: float, facing := Vector3.ZERO, shape := "", color_override := Color(0, 0, 0, 0)) -> void:
 	if root == null or not root.is_inside_tree():
 		return
-	var row := EventKinds.row(kind)
-	var silhouette: String = shape if shape != "" else String(row.get("shape", "none"))
+	var silhouette: String = shape if shape != "" else Rows.shape(kind)
 	var slot: Dictionary = _glyphs[0]
 	for g in _glyphs:
 		if g["t"] >= 1.0:
@@ -157,7 +284,7 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	node.mesh = _meshes.get(silhouette, _meshes["flash"])
 	node.global_position = at
 	slot["basis"] = _facing_basis(silhouette, facing)
-	slot["color"] = EventKinds.color(kind)
+	slot["color"] = color_override if color_override.a > 0.0 else Rows.color(kind)
 	slot["t"] = 0.0
 	slot["life"] = maxf(0.05, life)
 	slot["from"] = size_from
@@ -324,6 +451,10 @@ func _process(delta: float) -> void:
 			g["node"].visible = false
 		else:
 			_draw_glyph(g)
+	for entry in _rings.values():
+		var node: Node3D = entry["node"]
+		if is_instance_valid(node):
+			node.basis = Basis(Vector3.UP, _clock * entry["speed"]) * Basis(Vector3.RIGHT, entry["tilt"])
 	var tier: int = player.speed_tier()
 	if _launch_boost > 0.0:
 		tier = SpeedTier.BLAZING

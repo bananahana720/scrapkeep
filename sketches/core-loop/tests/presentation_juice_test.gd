@@ -3,9 +3,10 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 
 # Juice through the real game: the camera hooks fire for dash, slam and launch; a
-# landing squashes the ball; hit-stop is asked only for big player-caused hits, is
-# 30-50 ms, never above the spine's 60 ms cap, and never stacks or chains, measured on
-# the real Engine.time_scale the spine drives.
+# landing squashes the ball; with no plating data from combat yet, hit-stop falls back
+# to big contact hits, is 30-50 ms, never above the spine's 60 ms cap, and never
+# stacks or chains, measured on the real Engine.time_scale the spine drives. The
+# plated policy has its own test, presentation_hitstop_test.
 
 var _game
 var _juice
@@ -55,7 +56,7 @@ func _process(_delta: float) -> bool:
 			_check("landing squash", _juice.squash_amount() > 0.2 and not _game.player.builtin_squash, "a 20 m/s landing squashes the ball by %.2f" % _juice.squash_amount())
 			_game.events.slammed.emit(_game.player.ball_position(), 1.2, 1.0)
 			_check("slam kick", _logged("kick", "slammed") and _logged("punch_fov", "slammed"), "slammed -> camera kick and a zoom-in punch")
-			_check("slam stop", _sent_for("slammed").size() == 1, "a full slam asks for one hit-stop of %s s" % [_sent_for("slammed")])
+			_check("slam no stop", _sent_for("slammed").is_empty(), "a slam on open ground asks for no hit-stop; only a break-through does")
 			_game.events.launched.emit(Vector3(0.0, 20.0, 20.0))
 			_check("launch punch", _logged("punch_fov", "launched") and _logged("kick", "launched"), "launched -> fov punch and kick")
 			_next(400)
@@ -68,16 +69,16 @@ func _process(_delta: float) -> bool:
 			_game.events.enemy_struck.emit(_enemy, "stomp", 5.0)
 			var sent := _sent().size() - _sent_before
 			_check("no stack", sent == 1, "five big rams in one frame send %d stop; the rest are gated" % sent)
-			_check("small hits free", _juice.hit_stop_log.size() == 1 + 5, "a slow ram, a weapon arc and a soft stomp ask for no stop (%d requests logged)" % _juice.hit_stop_log.size())
+			_check("small hits free", _juice.hit_stop_log.size() == 5, "a slow ram, a weapon arc and a soft stomp ask for no stop (%d requests logged)" % _juice.hit_stop_log.size())
 			_next(100)
 		3:
 			# Inside the spacing window: gated. After it: allowed again.
 			_game.events.enemy_struck.emit(_enemy, "stomp", 20.0)
 			_check("no chain", _sent().size() - _sent_before == 1, "a big stomp 100 ms later is gated so stops never chain")
-			_next(300)
+			_next(450)
 		4:
 			_game.events.enemy_struck.emit(_enemy, "stomp", 20.0)
-			_check("spaced stop", _sent().size() - _sent_before == 2, "the same stomp 400 ms later gets its stop")
+			_check("spaced stop", _sent().size() - _sent_before == 2, "the same stomp 550 ms later gets its stop")
 			_next(200)
 		5:
 			var within := true

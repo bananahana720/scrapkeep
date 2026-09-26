@@ -16,8 +16,8 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 # on a downbeat. Stingers start on the next beat; flow stingers queue behind each
 # other in one lane so they never talk over each other.
 
-enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP }
-const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "reese", "lead", "arp"]
+enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM }
+const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "reese", "lead", "arp", "warm"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
 const CURVES := [
 	[0.85, 0.0, 0.5],
@@ -29,16 +29,18 @@ const CURVES := [
 	[0.0, 0.55, 0.8],
 	[0.0, 0.75, 1.0],
 ]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.3, 0.36, 0.14]
+const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.3, 0.36, 0.14, 0.3]
+# The warm layer is not pressure: it is the overcharge, one step per bonus core.
+const OVERCHARGE_GAIN := [0.0, 0.7, 1.0]
 
 enum { IDLE, PLAY, DEAD }
 const MODE_NAMES := ["idle", "play", "dead"]
 # What each mode lets through, per layer: menus keep the keys and sub, death keeps
 # the keys alone, so the band waits with you instead of stopping.
 const MODE_MASK := [
-	[1.0, 0.7, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0],
-	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 0.7, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 ]
 
 const RELEASE := 600
@@ -67,6 +69,7 @@ var pressure := 0.0
 var applied_pressure := 0.0
 var master := 0.8
 var pause_gain := 1.0
+var overcharge := 0
 var phrase_index := 0
 var out_music := PackedVector2Array()
 var out_stinger := PackedVector2Array()
@@ -111,6 +114,7 @@ static func prepare() -> void:
 		Synth.note("sub", chord["root"])
 		Synth.note("reese", chord["root"] + 12)
 		Synth.chord(chord["voicing"])
+		Synth.pad_chord(chord["voicing"])
 		for midi in chord["voicing"]:
 			Synth.note("bell", midi + 12)
 	for drum in Synth.DRUMS:
@@ -316,8 +320,16 @@ func _on_bar(bar: int) -> void:
 
 func _retarget() -> void:
 	var gains := layer_gains(applied_pressure)
-	for layer in _targets.size():
+	for layer in gains.size():
 		_targets[layer] = gains[layer] * MODE_MASK[mode][layer]
+	_targets[WARM] = OVERCHARGE_GAIN[clampi(overcharge, 0, OVERCHARGE_GAIN.size() - 1)] * MODE_MASK[mode][WARM]
+
+
+# Bonus cores this stage. The warm pad swells in on the next bar and stays until the
+# stage ends, so an overcharged beacon sounds richer the whole way to the gates.
+func set_overcharge(count: int) -> void:
+	overcharge = maxi(count, 0)
+	_retarget()
 
 
 func _chord(bar: int) -> Dictionary:
@@ -338,6 +350,9 @@ func _trigger(bar: int, s: int, chord: Dictionary) -> void:
 		_start(buf, mini(buf.size(), int(stabs[s]) * Harmony.STEP + RELEASE), KEYS, LEVELS[KEYS], 0.0, false)
 	if s == 0:
 		_note("sub", chord["root"], 16, SUB, 1.0, 0.0)
+		if _targets[WARM] > 0.0 or _gains[WARM] > 0.0:
+			var pad := Synth.pad_chord(chord["voicing"])
+			_start(pad, pad.size(), WARM, LEVELS[WARM], 0.0, false)
 	# Hats: eighths, then sixteenths under pressure, with an open hat to lift bar ends.
 	if s % 2 == 0 or applied_pressure >= 0.4:
 		var accent := 1.0 if s % 4 == 2 else (0.55 if s % 2 == 0 else 0.35)

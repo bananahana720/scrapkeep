@@ -7,15 +7,22 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # off the bus and never decides an outcome (TADR-008). Punches are short and the
 # camera never leaves the ball, so juice never hides the next threat.
 
-# Hit-stop: 30-50 ms, only on big hits the player caused, and never back to back.
-# The spine caps a stop at 60 ms and refuses to stack; this gate also spaces them so
-# a chain of rams reads as weight, not as a stutter.
+# Hit-stop: 30-50 ms, only when a hit breaks through plating (plating > 0 and punch at
+# or above it) and when a Warden breaks (beacon_unsealed), at least 0.4 s apart. Never
+# on a crush, a plating-0 kill or a deflected hit: the Katamari roll-up never stalls.
+# The spine caps a stop at 60 ms and refuses to stack.
 const HIT_STOP_MIN := 0.03
 const HIT_STOP_MAX := 0.05
-const HIT_STOP_GAP_MS := 220
-# What counts as a big player-caused hit, by strike kind (force units per CONTRACTS).
+const HIT_STOP_GAP_MS := 400
+const BREAK_STOP := 0.04
+const UNSEAL_STOP := 0.05
+# Fallback until combat publishes plating: big contact hits by strike kind.
 const BIG_HIT := {"ram": 20.0, "stomp": 12.0, "slam": 14.0}
 const HIT_STOP_FOR := {"ram": 0.04, "stomp": 0.035, "slam": 0.045}
+# The shell grows a tenth per heft class above I (visual only; the collider never
+# changes), and springs there with a little overshoot.
+const SHELL_PER_CLASS := 0.1
+const SHELL_RATE := 9.0
 
 # The squash spring: underdamped, so a landing squashes, overshoots into a stretch and
 # settles in about a quarter second. Snappy on the hit, fluid on the way out.
@@ -28,10 +35,14 @@ var player
 var camera
 # [hook, fact] for every camera or time effect fired, for the tests and the notes.
 var hook_log: Array = []
-# [requested_seconds, sent_seconds or 0 when gated] for every hit-stop asked for.
+# [requested_seconds, sent_seconds or 0 when gated, fact, msec] for every hit-stop asked for.
 var hit_stop_log: Array = []
 # Swap for a recorder in tests; defaults to the spine's ctx.hit_stop.
 var hit_stop_sink: Callable
+# Reads an enemy's plating. Defaults to ctx.spawner.plating_of when combat has it;
+# tests inject one. Empty means the fallback thresholds apply.
+var plating_of: Callable
+var shell := 1.0
 
 var _squash := 0.0
 var _squash_velocity := 0.0
@@ -41,6 +52,11 @@ var _plant_t := -1.0
 var _pylon_parts := {}
 var _pylon_transform := Transform3D.IDENTITY
 var _ghosts: Array = []
+var _strikes: Array = []
+var _deflected := {}
+var _resolve_queued := false
+var _shell_velocity := 0.0
+var _heft_class := 1
 
 
 func setup(ctx_ref) -> void:
@@ -61,9 +77,26 @@ func setup(ctx_ref) -> void:
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): _reset())
+	events.run_started.connect(func(_class_id: String): _heft_class = 1)
+	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
+		plating_of = Callable(ctx.spawner, "plating_of")
+	wire_optional()
+
+
+func wire_optional() -> void:
+	var events = ctx.events
+	if events.has_signal("strike_deflected") and not events.is_connected("strike_deflected", _on_deflected):
+		events.connect("strike_deflected", _on_deflected)
+	if events.has_signal("beacon_unsealed") and not events.is_connected("beacon_unsealed", _on_unsealed):
+		events.connect("beacon_unsealed", _on_unsealed)
+	if events.has_signal("heft_class_changed") and not events.is_connected("heft_class_changed", _on_heft_class):
+		events.connect("heft_class_changed", _on_heft_class)
 
 
 func _reset() -> void:
+	# A retry restores mass, so the shell follows the restored class.
+	if ctx.run.has_method("heft_class"):
+		_heft_class = int(ctx.run.heft_class())
 	_squash = 0.0
 	_squash_velocity = 0.0
 	_plant_t = -1.0
@@ -99,8 +132,6 @@ func _on_slammed(_at: Vector3, strength: float, _flatness: float) -> void:
 	_camera("kick", "slammed", Vector3.DOWN, 0.35 + 0.35 * minf(strength, 1.5))
 	# A zoom-in thump: the world leans toward the impact for a beat.
 	_camera("punch_fov", "slammed", Vector3.ZERO, -4.0 * minf(strength, 1.5), 0.25)
-	if strength >= 0.9:
-		request_hit_stop(HIT_STOP_FOR["slam"], "slammed")
 
 
 func _process(delta: float) -> void:
@@ -116,9 +147,15 @@ func _process(delta: float) -> void:
 	var flat: Vector3 = player.planar_velocity()
 	if flat.length() > 1.0:
 		basis = _axis_scale(flat.normalized(), -0.1 * player.speed_fraction()) * basis
-	juice.basis = basis
-	# Keep the contact point planted while squashed, so the ball sits on the ground.
-	juice.position = -_axis * Tuning.RADIUS * clampf(_squash, -0.3, MAX_SQUASH) * 0.9
+	# The shell: an underdamped spring toward the heft class's size.
+	var shell_accel := SHELL_RATE * SHELL_RATE * (shell_target() - shell) - 2.0 * 0.45 * SHELL_RATE * _shell_velocity
+	_shell_velocity += shell_accel * delta
+	shell += _shell_velocity * delta
+	juice.basis = basis.scaled(Vector3.ONE * shell)
+	# Keep the contact point planted while squashed, and a grown shell resting on the
+	# ground rather than sunk into it.
+	var ground: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
+	juice.position = -_axis * Tuning.RADIUS * clampf(_squash, -0.3, MAX_SQUASH) * 0.9 * shell + ground * Tuning.RADIUS * (shell - 1.0)
 	_animate_pylon(delta)
 
 
@@ -162,15 +199,65 @@ func _on_dismounted(velocity: Vector3) -> void:
 	squash(-0.25, velocity)
 
 
+# A strike is judged at the end of the frame, once combat has had its say: a hit on
+# plating that was not deflected in the same frame broke through.
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
-	if not BIG_HIT.has(kind) or force < BIG_HIT[kind]:
-		return
 	var direction := Vector3.FORWARD
 	if is_instance_valid(enemy) and enemy.is_inside_tree():
 		direction = enemy.global_position - player.ball_position()
+	if plating_of.is_valid():
+		var plating := 0.0
+		if is_instance_valid(enemy):
+			plating = float(plating_of.call(enemy))
+		if plating <= 0.0:
+			return
+		_strikes.append({"id": enemy.get_instance_id() if is_instance_valid(enemy) else 0, "direction": direction})
+		if not _resolve_queued:
+			_resolve_queued = true
+			_resolve_strikes.call_deferred()
+		return
+	if not BIG_HIT.has(kind) or force < BIG_HIT[kind]:
+		return
+	_break_through(direction, HIT_STOP_FOR[kind])
+
+
+func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float) -> void:
+	if is_instance_valid(enemy):
+		_deflected[enemy.get_instance_id()] = true
+
+
+func _resolve_strikes() -> void:
+	_resolve_queued = false
+	for strike in _strikes:
+		if not _deflected.has(strike["id"]):
+			_break_through(strike["direction"], BREAK_STOP)
+	_strikes.clear()
+	_deflected.clear()
+
+
+func _break_through(direction: Vector3, seconds: float) -> void:
 	_camera("kick", "enemy_struck", direction, 0.3)
-	camera.shake(0.35, 0.2)
-	request_hit_stop(HIT_STOP_FOR[kind], "enemy_struck")
+	if camera != null:
+		camera.shake(0.35, 0.2)
+	request_hit_stop(seconds, "enemy_struck")
+
+
+func _on_unsealed(_stage: int) -> void:
+	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, 9.0, 0.6)
+	request_hit_stop(UNSEAL_STOP, "beacon_unsealed")
+
+
+# A new heft class: the shell swells to its new size and the ball pops.
+func _on_heft_class(heft_class: int, _heft: float) -> void:
+	if heft_class > _heft_class:
+		squash(0.32, Vector3.UP)
+		_shell_velocity += 1.2
+		hook_log.append(["class_up", "heft_class_changed"])
+	_heft_class = heft_class
+
+
+func shell_target() -> float:
+	return 1.0 + SHELL_PER_CLASS * (_heft_class - 1)
 
 
 func _camera(hook: String, fact: String, direction: Vector3, amount: float, time := 0.3) -> void:
@@ -189,10 +276,10 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := Time.get_ticks_msec()
 	var sent := clampf(seconds, HIT_STOP_MIN, HIT_STOP_MAX)
 	if now - _last_stop_ms < HIT_STOP_GAP_MS or not ctx.flow.in_play():
-		hit_stop_log.append([seconds, 0.0, fact])
+		hit_stop_log.append([seconds, 0.0, fact, now])
 		return
 	_last_stop_ms = now
-	hit_stop_log.append([seconds, sent, fact])
+	hit_stop_log.append([seconds, sent, fact, now])
 	hook_log.append(["hit_stop", fact])
 	if hit_stop_sink.is_valid():
 		hit_stop_sink.call(sent)

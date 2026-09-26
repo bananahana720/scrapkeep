@@ -24,6 +24,10 @@ const STINGER_BEATS := {
 	"gates_open": 4,
 	"klaxon": 4,
 	"music_pressure": 1,
+	"stinger_unseal": 4,
+	"class_up": 2,
+	"threat_up": 1,
+	"synergy_fanfare": 4,
 }
 
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
@@ -38,6 +42,9 @@ const TRIM_DB := {
 	"klaxon": -3.0, "stinger_run": -3.0, "stinger_stage": -4.0, "stinger_clear": -2.0,
 	"stinger_run_end": -2.0, "stinger_milestone": -2.0, "gates_open": -4.0,
 	"music_pressure": -9.0,
+	"stinger_unseal": -1.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
+	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "element_resolved": -8.0,
+	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0,
 }
 
 static var _samples := {}
@@ -146,6 +153,31 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return Synth.render_score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.5], [2, 69, 2, "bell", 0.5],
 				[3, 72, 2, "bell", 0.5], [4, 76, 6, "bell", 0.6], [4, 57, 12, "keys", 0.35], [4, 60, 12, "keys", 0.35],
 				[4, 64, 12, "keys", 0.35], [4, 65, 12, "keys", 0.35], [4, 0, 2, "open_hat", 0.5]], 1.0)
+		"stinger_unseal":
+			return _unseal()
+		"class_up":
+			return Synth.render_score(_score_class_up(), 0.9)
+		"clank":
+			return _clank()
+		"scrap_rip":
+			return _rip()
+		"threat_up":
+			return _mix([[_tone(0.07, Harmony.hz(62), Harmony.hz(62), "square_dark", 18.0), 0, 0.9],
+				[_tone(0.12, Harmony.hz(65), Harmony.hz(67), "square_dark", 14.0), Synth.seconds(0.08), 1.0]], true)
+		"core_socket":
+			return _core_socket()
+		"synergy_fanfare":
+			return Synth.render_score(_score_synergy(), 1.4)
+		"found_chime":
+			return _mix([[_cut(Synth.note("mallet", 77), 0.35), 0, 0.8], [_fm(0.5, Harmony.hz(86), 3.5, 1.2, 6.0, 0.3), Synth.seconds(0.12), 0.7]])
+		"element_resolved":
+			return _mix([[_cut(Synth.note("bell", 81), 0.3), 0, 0.7], [_noise(0.25, 2000.0, 5000.0, 14.0, 0.01), 0, 0.5]])
+		"ice_form":
+			return _ice()
+		"zap_hum":
+			return _zap_hum()
+		"shatter":
+			return _shatter()
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, Harmony.hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -183,6 +215,28 @@ static func _score_milestone() -> Array:
 		rung += 1
 	score.append_array([[8, 0, 2, "kick", 1.0], [8, 0, 16, "crash", 0.6], [8, 53, 8, "keys", 0.4], [8, 57, 8, "keys", 0.4],
 		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.4], [8, 86, 8, "lead", 0.6], [12, 0, 1, "snare", 0.8]])
+	return score
+
+
+# Three notes that climb: A, D, A an octave up. It says "bigger" in the band's key.
+static func _score_class_up() -> Array:
+	return [[0, 0, 2, "kick", 0.7], [0, 69, 2, "mallet", 0.8], [0, 69, 2, "bell", 0.35], [2, 74, 2, "mallet", 0.85],
+		[2, 74, 2, "bell", 0.4], [4, 81, 4, "mallet", 0.9], [4, 81, 4, "bell", 0.5], [4, 38, 4, "sub", 0.6],
+		[4, 0, 2, "open_hat", 0.4]]
+
+
+# The discovery: a bebop run up the Dorian scale with a chromatic lean on C#, landing
+# on high D over the home chord with a crash. The most exciting short cue in the game.
+static func _score_synergy() -> Array:
+	var run := [[0, 69], [1, 72], [2, 74], [3, 76], [4, 77], [5, 81], [6, 84], [7, 85]]
+	var score := []
+	for note in run:
+		score.append([note[0], note[1], 1, "lead", 0.6])
+		score.append([note[0], note[1] + 12, 1, "bell", 0.25])
+	score.append_array([[6, 0, 1, "snare", 0.6], [7, 0, 1, "snare", 0.8], [8, 0, 2, "kick", 1.0], [8, 0, 16, "crash", 0.6],
+		[8, 86, 8, "lead", 0.75], [8, 98, 8, "bell", 0.45], [8, 53, 8, "keys", 0.4], [8, 57, 8, "keys", 0.4],
+		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.4], [8, 38, 8, "sub", 0.6], [12, 81, 2, "bell", 0.35],
+		[13, 86, 3, "bell", 0.35]])
 	return score
 
 
@@ -350,6 +404,76 @@ static func _klaxon() -> PackedFloat32Array:
 		parts.append([_tone(Harmony.BEAT * 1.9 / RATE, Harmony.hz(53), Harmony.hz(50), "square_dark", 1.2), Harmony.BEAT * 2 * pulse, 1.0])
 		parts.append([_tone(Harmony.BEAT * 1.9 / RATE, Harmony.hz(41), Harmony.hz(38), "saw_dark", 1.2), Harmony.BEAT * 2 * pulse, 0.6])
 	return _mix(parts, true)
+
+
+# The Warden breaks: a clamp tearing loose, then the band hits and bells climb out.
+static func _unseal() -> PackedFloat32Array:
+	var score := [[0, 0, 2, "kick", 1.0], [0, 0, 16, "crash", 0.7], [0, 74, 1, "bell", 0.5], [1, 81, 1, "bell", 0.5],
+		[2, 86, 1, "bell", 0.5], [3, 89, 1, "bell", 0.5], [4, 93, 4, "bell", 0.55], [4, 86, 10, "lead", 0.7],
+		[4, 65, 10, "keys", 0.4], [4, 69, 10, "keys", 0.4], [4, 72, 10, "keys", 0.4], [4, 76, 10, "keys", 0.4],
+		[4, 38, 10, "sub", 0.7], [8, 0, 1, "snare", 0.5], [10, 0, 1, "snare", 0.6], [12, 0, 1, "snare", 0.7],
+		[13, 0, 1, "snare", 0.8], [14, 0, 1, "snare", 0.9], [15, 0, 1, "snare", 1.0]]
+	var band := Synth.render_score(score, 1.0)
+	var release := _mix([[_fm(0.5, 150.0, 1.41, 6.0, 7.0, -5.0), 0, 1.0], [_noise(0.35, 3000.0, 300.0, 9.0), 0, 0.8]], true)
+	return _mix([[band, 0, 1.0], [release, 0, 0.6]])
+
+
+# A plated hit that bounced: a bright ringing plate an octave above the punch, with
+# no low body, so it reads as "not through" next to hit_thwack's meaty thud.
+static func _clank() -> PackedFloat32Array:
+	return _mix([[_fm(0.3, Harmony.hz(76), 1.41, 1.6, 11.0), 0, 1.0], [_fm(0.22, Harmony.hz(83), 2.76, 1.2, 16.0), 0, 0.55],
+		[_tone(0.03, 1800.0, 1200.0, "sine", 90.0), 0, 0.3]])
+
+
+# Torn metal: a zipper of teeth sweeping down while a saw sags.
+static func _rip() -> PackedFloat32Array:
+	var n := Synth.seconds(0.45)
+	var teeth := _noise(0.45, 4200.0, 500.0, 3.0, 0.005)
+	for i in n:
+		var t := i * Synth.INV_RATE
+		var rate := lerpf(70.0, 18.0, float(i) / n)
+		teeth[i] *= 0.4 + 0.6 * maxf(0.0, sin(TAU * rate * t))
+	return _mix([[teeth, 0, 1.0], [_tone(0.4, 820.0, 180.0, "saw_dark", 5.0), 0, 0.5]], true)
+
+
+# The lock-in: a click, a thud, and a clean fifth on D that rings out.
+static func _core_socket() -> PackedFloat32Array:
+	return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.12, 140.0, 80.0, "sine", 28.0), 0, 0.8],
+		[Synth.note("bell", 74), Synth.seconds(0.05), 0.7], [Synth.note("bell", 81), Synth.seconds(0.05), 0.6],
+		[_cut(Synth.note("bell", 86), 0.6), Synth.seconds(0.16), 0.45]])
+
+
+static func _ice() -> PackedFloat32Array:
+	var parts: Array = [[_noise(0.3, 6000.0, 6000.0, 12.0, 0.002), 0, 0.35]]
+	var notes := [86, 93, 88, 98, 91]
+	for i in notes.size():
+		parts.append([_fm(0.3, Harmony.hz(notes[i]), 3.5, 1.5, 10.0), Synth.seconds(0.035 * i), 0.5])
+	return _mix(parts)
+
+
+static func _zap_hum() -> PackedFloat32Array:
+	var n := Synth.seconds(0.6)
+	var buf := Synth.buffer(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 404
+	var phase := 0.0
+	var low := 0.0
+	for i in n:
+		var t := i * Synth.INV_RATE
+		phase = fposmod(phase + Harmony.hz(45) * Synth.INV_RATE, 1.0)
+		low += ((2.0 * phase - 1.0) - low) * 0.25
+		var crackle := rng.randf_range(-1.0, 1.0) if rng.randf() < 0.02 else 0.0
+		buf[i] = (low * (0.6 + 0.4 * sin(TAU * 60.0 * t)) + crackle * 0.8) * minf(1.0, t * 80.0) * exp(-t * 4.0)
+	return Synth.declick(buf, 16, 600)
+
+
+static func _shatter() -> PackedFloat32Array:
+	var parts: Array = [[_noise(0.25, 5000.0, 2500.0, 16.0, 0.001), 0, 0.8]]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	for i in 9:
+		parts.append([_fm(0.18, rng.randf_range(2200.0, 6000.0), 2.3, 1.0, 26.0), Synth.seconds(rng.randf_range(0.0, 0.12)), 0.35])
+	return _mix(parts)
 
 
 # A one-beat reverse swell that ends exactly on the next downbeat.
