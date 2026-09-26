@@ -247,7 +247,7 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-48** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
   A dominance control needs its own margin rule. A fixed floor under the noise line makes a margin test stricter and a shift test more lenient, so report the measured line and the floor and say which decided.
-  Evidence: the dominant option won 30 of 30 model answers with a smallest margin of 0.058. The pooled within-order standard deviation was 0.008, about 7.5 standard deviations below the margin, but a floor copied from an example line failed four of six orders. Under the measured term alone the cell passes on model answers.
+  Evidence: the dominant option won 30 of 30 model answers with a smallest margin of 0.058. The pooled within-order standard deviation was 0.008, so the margin was about 7.5 pooled standard deviations, but a floor copied from an example line failed four of six orders. Under the measured term alone the cell passes on model answers.
   Overturned by: —
 
 - **RML-49** · status: provisional · since: 2026-09-26 · origin: one exercise, a 240-call pre-registered run on a stub decider with two planted defects
@@ -312,12 +312,17 @@ Origins are descriptions, not locations. A host project that uses this skill kee
 
 - **RML-61** · status: provisional · since: 2026-09-26 · origin: one blind exercise against a sealed key, a 210-call pre-registered run on an opaque decider with three planted defects
   Judge a single-choice control on probabilities (with a margin) or on choices, not a mix, and say which.
-  Evidence: the pass rule required both a count of choices and a fixed margin. Three orders failed on margins of 0.089 to 0.099 against an arbitrary 0.10 while the target was chosen each time, so the verdict did not say which basis failed. A fixed floor again set the noise line (pooled SD 0.012), as in RML-48.
+  Evidence: the pass rule required both a count of choices and a fixed margin. Four orders failed on margins of 0.089 to 0.099 against an arbitrary 0.10 while the target was chosen each time, so the verdict did not say which basis failed. A fixed floor again set the noise line (pooled SD 0.012), as in RML-48.
   Overturned by: —
 
 - **RML-62** · status: provisional · since: 2026-09-26 · origin: two exercises in a row (the stub decider and the blind exercise)
   When no independent reviewer can be assigned, take a solo path: record the missing approval as a limit, cap the claimed evidence level, and have the parent review before the result counts.
   Evidence: in both exercises the worker could not spawn a reviewer and the plan ran unapproved. Each disclosed it, and the blind exercise asked the parent to review; the skill named no route for that case.
+  Overturned by: —
+
+- **RML-63** · status: provisional · since: 2026-09-26 · origin: two exercises (the stub decider and the blind exercise), and the blind exercise's recommendation
+  Once a position effect is found, fix it in code or in the instrument, never by silent reordering. Code-owned dominance checks come before the model call. Per-option ratings are the next option. Rotating the order and aggregating across orders is an instrument change that starts a new epoch and must re-pass the controls.
+  Evidence: both exercises found a position effect (a last-position boost; a first-position penalty in which the dominant option was chosen 0 of 60 times when listed first). The blind report named the missing fix as a skill gap and proposed code-owned dominance and treating reordering as an instrument change. No fix was tested.
   Overturned by: —
 
 ## Changelog
@@ -330,3 +335,4 @@ Append-only. One row per change. Change types: new lesson, second confirmation, 
 | 2026-09-25 | new lesson; review revision | RML-44 to RML-46 added; RML-02, RML-05, RML-22, RML-27, RML-28, RML-41, RML-43 revised | Review of the initial ledger: RML-41 split into RML-41 and RML-46, RML-28 restated as a latent risk, public-project counts and labels corrected | reviewer-medium (Opus 5.5), PASS+NOTES |
 | 2026-09-26 | New lesson (not overturning) | RML-47 to RML-55 added; RML-13 evidence revised to drop the example floor value | A portable-skill exercise on a stub decider (240-call pre-registered run) and its grading, which found that a copied example floor decided a cell | pending |
 | 2026-09-26 | New lesson (not overturning) | RML-56 to RML-62 added; RML-50 revised to require a one-word sensitivity arm, with the blind exercise's evidence added | A blind exercise on an opaque decider graded against a sealed key: one planted defect found, one misread as sampling, one missed | pending |
+| 2026-09-26 | New lesson (not overturning) | RML-63 added; RML-48 evidence sentence corrected (margin about 7.5 pooled SDs); RML-61 count corrected to four orders; wording-control rule aligned (text-blind means not applicable) | Review of the previous row's candidate, notes N1 to N5 | pending |

@@ -6,8 +6,8 @@ A stage lab runs a light-play-lane sketch through the same harness, protocol and
 
 | Stage | Lab branch and proto base | Node side | Threat rule | Notes |
 | --- | --- | --- | --- | --- |
-| Cable Bench | lab/cable-bench from proto/cable-bench at 29dcbcf | `STAGES` entry and `scripts/lab/metrics/cable-bench.mjs`, merged at 42fd4ce | Stage-threat-rule 2; a trial ends at death | `forge-charge` and `stage-run` 0 of 80 under both threat rules; contact damage and attack choice suspected (inference, EV-0553) |
-| Spillway Drop | lab/spillway-drop from proto/spillway-drop at af89c89 | reuses Cable Bench's launcher and harness hook | Stage-threat-rule 2; a trial ends at death, a new epoch (EV-0555) | A1 and A2 passed review, then the end-at-death ruling sent it to JL-27-A3, in progress at EV-0556; needs its own geometry helper; deaths dominate every arm (EV-0550) |
+| Cable Bench | lab/cable-bench (lab head 7d5adda, EV-0553) from proto/cable-bench at 29dcbcf | `STAGES` entry and `scripts/lab/metrics/cable-bench.mjs`, merged at 42fd4ce | Stage-threat-rule 2; a trial ends at death | `forge-charge` and `stage-run` 0 of 80 under both threat rules; contact damage and attack choice suspected (inference, EV-0553) |
+| Spillway Drop | lab/spillway-drop (lab head 45446ff, EV-0559) from proto/spillway-drop at af89c89 | reuses Cable Bench's launcher and harness hook | Epoch "stage-threat-rule 2 + end-on-death" on every A3 record (EV-0555, EV-0559) | JL-27 done at EV-0559: A3 has 0 anomalies in 160 trials and 80 of 80 rigid repeat pairs; needs its own geometry helper; deaths dominate every arm (EV-0550) |
 
 Add a row when a stage is ported.
 

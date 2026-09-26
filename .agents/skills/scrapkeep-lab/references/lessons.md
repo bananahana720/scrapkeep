@@ -264,6 +264,7 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | RML-60 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:136` (gap 4, the pinned hash went stale) |
 | RML-61 | `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:43` (the mixed pass rule), `:65` (the 0.10 floor set the noise line), `:137-138` (gaps 5 and 6) |
 | RML-62 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:146` (gap 8); `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:48` (no reviewer; parent review asked), `:134` (gap 2) |
+| RML-63 | `artifacts/jev-lab-2026-09-25/skills/exercises/1-portable-drone.md:68` (last-position boost); `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md:70` (first position chosen 0 of 60), `:98-99` (code-owned dominance; ordering fixes change the instrument), `:140` (gap 8, no fix named) |
 
 ## Changelog
 
@@ -276,3 +277,4 @@ Each row maps one lesson in the `reactive-model-loop` ledger to where it came fr
 | 2026-09-25 | New lesson (not overturning); correction of the change type above | none | The "Origin map" row above uses a type outside the section 4a list; its closest type is "New lesson (not overturning)". Row kept as written, since this log is append-only (writer b review N5) | pending |
 | 2026-09-26 | New lesson (not overturning) | SKL-33 to SKL-36 added; SKL-16 and SKL-31 evidence re-pointed after JL-21b's merge (EV-0564); RML-47 to RML-55 mapped | JL-30 DoD 3 exercises 1 and 2 (`artifacts/jev-lab-2026-09-25/skills/exercises/`) and the coordinator's grading addendum; JL-30 writer d, attempt A1 | pending |
 | 2026-09-26 | New lesson (not overturning); closest type for a promotion and an origin-map update, which add no lesson | SKL-31 promoted to established (second, independent source); SKL-33 and SKL-34 line numbers re-pointed after the JL-21b-A3 merge; RML-56 to RML-62 mapped and RML-50's row extended | `artifacts/jev-lab-2026-09-25/reviews/JL-21b.md:29`, EV-0563, EV-0566; `artifacts/jev-lab-2026-09-25/skills/exercises/1b-portable-robot-blind.md`; JL-30 writer d, attempt A2 | pending |
+| 2026-09-26 | New lesson (not overturning); closest type for an origin-map update and a port-table correction, which add no SKL lesson | RML-63 mapped; the port reference's Spillway Drop row brought up to JL-27's close (EV-0559, lab head 45446ff) and the Cable Bench row given its lab head 7d5adda (EV-0553) | review of JL-30 writer d's candidate, B1 and N5; JL-30 writer d, attempt A3 | pending |

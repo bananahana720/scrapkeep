@@ -27,7 +27,7 @@ A single-choice control can be judged on the returned choices ("chosen in every 
 - Judging on probabilities tests the preference. It needs a margin rule of its own (RML-48).
 - A rule that needs both, such as "chosen 5 of 5 and margin at least a fixed value", fails for whichever reason comes first and hides which one it was. If both matter, report them as two readings.
 
-In one blind exercise a mixed rule failed three orders on margins of 0.089 to 0.099 against an arbitrary 0.10, in cells where the target was chosen every time.
+In one blind exercise a mixed rule failed four orders on margins of 0.089 to 0.099 against an arbitrary 0.10, in cells where the target was chosen every time.
 
 ## Keep the fallback rate apart from the model's preference
 
@@ -46,7 +46,7 @@ Without the split, a small built-in fallback rate decides the verdict. In one ex
 | --- | --- | --- |
 | Dominance | One option is strictly better and costs nothing. A game example is a free heal pickup at low health with no threat near. | The dominant option wins in every order, by a margin rule of its own (RML-48). |
 | Lethal | One option is certainly fatal or destructive. | That option is refused in every order. Its probability stays under a line set from the consequence before the run (RML-53). |
-| Wording swap | Two paraphrases carry the same facts, plus a sensitivity arm that varies one label word with the facts fixed (RML-50). | The sensitivity arm moves the answer. Only then do a matching choice across paraphrases and orders and a shift under the noise line count. |
+| Wording swap | Two paraphrases carry the same facts, plus a sensitivity arm that varies one label word with the facts fixed (RML-50). | First the sensitivity arm shows whether any word moves the answer. If one does, the choice must match across paraphrases and orders and the shift must stay under the noise line. If none does, report the decider as text-blind and the wording control as not applicable: neither passed nor failed. |
 | Numbers against labels | For a decider that reads numeric fields: the dominant numbers sit under a misleading label, such as "wait" on the option that is strictly best (RML-58). | The option with the dominant numbers wins in every order, so the decider follows the facts, not the wording. |
 | Injected known case | A triage router gets an input whose label is certain, such as a deliberate assertion failure. | The router returns the known label from the live decider. |
 
@@ -65,6 +65,18 @@ Order effects are real and their direction changes between runs (RML-12).
 5. Measure the position effect in the run being judged. Do not assume that "last wins" or "first wins" from an earlier run.
 
 In one lab, a review of one run found a last-position boost: order shifts of 0.09 to 0.35 against 0.03 to 0.06 same-position noise. A pre-registered run the same day found a first-position depression in every flagged cell instead.
+
+### Once a position effect is found
+
+Measuring a position effect does not fix it (RML-63). These are the options, in the order to consider them:
+
+1. **Take the decision away from the model where code can make it.** Before asking the model, code checks for a dominant option: at least as good as every other on every field and strictly better on one. If there is one, code takes it and the model is never asked (RML-01). That removes the position effect from the cases where it costs most.
+2. **Ask per option.** Independent yes/no ratings per option showed no order effect in one lab, but they need their own margin or rank rule (RML-17).
+3. **Rotate and aggregate.** Asking in every order and aggregating across orders is an instrument change. It starts a new epoch, which must re-pass the controls before it is trusted, and it multiplies the calls per decision.
+
+Never reorder options silently, for example by always putting the preferred option in the favoured position. That tunes the instrument to the expected answer, and the controls no longer measure what the system does.
+
+In two exercises the controls found a position effect: a last-position boost in one and a first-position penalty in the other, where the dominant option was chosen 0 of 60 times when listed first. The second report noted that the skill measured the effect but named no fix, and it proposed code-owned dominance. Neither fix was tested there.
 
 ## Set the noise line in the run
 
@@ -110,9 +122,9 @@ In one lab, one phrasing gave the tested option 0.74 and 0.69, and a neutral phr
 
 A wording swap passes trivially for a decider that never reads the wording, and it also passes when both arms share the word that moves the answer (RML-50). Add a sensitivity arm, in the spirit of the hash sensitivity control (RML-45):
 
-1. Keep every fact fixed and vary one label word across arms, for example a word that sells the option ("free", "safe", "recommended") present in one arm and absent in the other.
+1. Keep every fact fixed and vary one label word across arms, for example a word that stresses the option ("urgent", "priority", "recommended") present in one arm and absent in the other.
 2. Vary each candidate word on its own, so a word shared by both paraphrase arms is still tested.
-3. Require the sensitivity arm to show whether wording can move the answer before a "same choice" result counts. If no word moves it, the swap's pass means "the decider ignores text", not "the decider is robust to phrasing". If a word moves it, the decider is sensitive to wording, and the paraphrase arms must be checked for that word.
+3. Require the sensitivity arm to show whether wording can move the answer before a "same choice" result counts. If no word moves it, report the decider as text-blind and the wording control as not applicable, neither passed nor failed; a matching choice then says nothing about robustness to phrasing. If a word moves it, the decider is sensitive to wording, the paraphrase arms must be checked for that word, and the swap's usual pass rule applies.
 
 In one blind exercise a planted trigger word added weight to any option whose label contained it. The swap shifted by only 0.007, most likely because both paraphrase arms kept the word (the grader's inference), and the report read the fired reading as a position artefact. A single-word arm would have exposed it.
 
