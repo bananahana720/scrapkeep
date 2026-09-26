@@ -35,6 +35,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 - A foreseen, telegraphed cost from the player's own performance is allowed; an unforeseen stop is not.
 - Every new mechanic names in its DESIGN-NOTES line the stage demand it serves (Warden, event, vault, boss phase) and the principle it strains; a mechanic that serves none is parked, not built.
 - Heft never changes RigidBody mass, radius, torque or air control. It scales punch, which combat reads; the ball handles the same at every heft (`spine_heft_test.gd`).
+- An enemy records its kill (`run.record_kill`) on the same tick its HP reaches 0, and a crushed or killed enemy drops its collision layer on that tick, so nothing solid lingers where a kill already happened.
 - Honour `ctx.calm`. While it is true, spawn nothing on your own schedule and apply no world pushes. The spine's momentum tests depend on it. The spawner itself does not check `calm`; callers that spawn on their own schedule do.
 - Stay in play. Gameplay work runs only while `ctx.flow.in_play()` is true.
 - Reset on `stage_entered(stage, retry)`. Clear stage content: enemies, gates, events and pickups. Rebuild it for `stage`. After a retry the run state is already restored, so recompute anything derived from `ctx.run.parts`.
@@ -77,10 +78,10 @@ Every number there is a starting value; tuning edits `stage_defs.gd`, the heft c
 
 | Call | Effect | Publishes |
 | --- | --- | --- |
-| `add_scrap(amount, at)` | adds to the wallet and to mass | `scrap_collected(amount, at, total)`, then `heft_class_changed` if the class moved |
+| `add_scrap(amount, at)` | adds to the wallet and to mass | `scrap_collected(amount, at, total)`, then `heft_class_changed` if the class rose |
 | `spend_scrap(amount) -> bool` | spends from the wallet if affordable; mass is unchanged | nothing (the part it buys publishes `part_gained`) |
-| `lose_scrap(amount, at, cause) -> int` | lowers mass by `amount` (not below 0) and the wallet by what it holds; returns the mass taken | `scrap_lost(taken, at, wallet_total, cause)`, then `heft_class_changed` if the class moved |
-| `add_part(part_id, source)` | appends to `parts` | `part_gained(part_id, source)`, then `heft_class_changed` if the class moved |
+| `lose_scrap(amount, at, cause) -> int` | lowers mass by `amount` (not below 0) and the wallet by what it holds; returns the mass taken | `scrap_lost(taken, at, wallet_total, cause)`, then `heft_class_dropped` if the class fell |
+| `add_part(part_id, source)` | appends to `parts` | `part_gained(part_id, source)`, then `heft_class_changed` if the class rose |
 | `add_core(source, at)` | adds a stage-scoped bonus core | `core_gained(source, at, count)` |
 | `set_max_hp(value)` | new ceiling; a raise heals by the gain | nothing |
 | `heal(amount)` | heals up to the ceiling | nothing |
@@ -118,7 +119,8 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `scrap_collected` | `amount: int, at: Vector3, total: int` | `run.add_scrap` | scrap taken |
 | `scrap_lost` | `amount: int, at: Vector3, total: int, cause: String` | `run.lose_scrap` | mass taken (a crane theft); total is the wallet |
 | `part_gained` | `part_id: String, source: String` | `run.add_part` | a part was added; source is `gate`, `fabricator`, `vault`, `milestone` or similar |
-| `heft_class_changed` | `heft_class: int, heft: float` | run mutators | the heft class moved (not on a restore) |
+| `heft_class_changed` | `heft_class: int, heft: float` | run mutators | the heft class rose (never on a restore); sound `class_up` |
+| `heft_class_dropped` | `heft_class: int, heft: float` | run mutators | the heft class fell after a theft (never on a restore); sound `class_down` |
 | `core_gained` | `source: String, at: Vector3, count: int` | `run.add_core` | a bonus core; count is this stage's total |
 | `player_hit` | `amount: float, source: String` | `run.damage` | the player took damage |
 | `player_died` | none | `run.damage` | HP reached zero |
@@ -152,7 +154,11 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 
 ### The Warden, gate and launch handshake
 
-1. **The Warden seals the beacon.** In play (`not ctx.calm`, or `flow.force_warden` in tests), flow spawns one through `ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(stage))` right after `stage_entered`. Rolling into the ring marks the beacon engaged but adds no charge. Every tick the charge shown is `1 - ctx.spawner.integrity_of(warden)`. When `enemy_killed` arrives with kind `warden`, flow emits `beacon_unsealed(stage)`, enters `gates` and emits `beacon_charge_changed(1.0)`, wherever the ball is. If the spawner returns no Warden, or the stage is calm, the stage stays on the unsealed presence path: circling inside the ring charges it over `beacon_seconds`, then flow enters `gates` and emits `beacon_charge_changed(1.0)`.
+1. **The Warden seals the beacon.**
+   - **Spawning.** In play (`not ctx.calm`, or `flow.force_warden` in tests), flow spawns one through `ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(stage))` right after `stage_entered`.
+   - **Charge.** Rolling into the ring marks the beacon engaged but adds no charge. Every tick the charge shown is `1 - ctx.spawner.integrity_of(warden)`, capped at 0.99, so `1.0` is only ever published by the unseal.
+   - **Unseal.** When `enemy_killed` arrives with kind `warden` and it is this stage's Warden, flow emits `beacon_unsealed(stage)`, enters `gates` and emits `beacon_charge_changed(1.0)`, wherever the ball is. "This stage's Warden" means `integrity_of(warden)` reads 0, or, for a spawner without `integrity_of`, the kill happened within 6 m of where it stood.
+   - **Vanished Warden.** If the Warden leaves the tree with no kill recorded, flow unseals the same way, warns once, and adds a `warden_vanished` anomaly to the run log. If the spawner returns no Warden, or the stage is calm, the stage stays on the unsealed presence path: circling inside the ring charges it over `beacon_seconds`, then flow enters `gates` and emits `beacon_charge_changed(1.0)`.
 2. B opens its gates and emits `reward_offered(offers)`. Each offer is a Dictionary with these keys: `part_id: String`, `at: Vector3` (the gate's ground centre), `facing: Vector3` (the way through, flat and unit length) and `width: float`. B reads `ctx.run.gate_tier_bonus()` when it builds the offers. B emits `reward_offered` again whenever the gates move. `spine_run_test.gd` drives the ball through `offers[0]` using these records.
 3. When the ball rolls through a gate, B calls `run.add_part(id, "gate")`, then emits `reward_chosen(id)`.
 4. D launches the ball and emits `launched(velocity)`. D may launch from inside its own `reward_chosen` handler, before flow has heard `reward_chosen`. Flow accepts a launch in either `gates` or `launch`.
@@ -247,6 +253,9 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 
 The codex is saved to `user://codex.json` with the keys `discovered` (ids), `found` (descriptions) and `found_categories`. It is the demo's only meta-progression. Storage failures never throw: the codex keeps working in memory and sets `last_error`.
 
+- An entry declared with an unknown category is not registered, and the codex warns once. Discovering an undeclared id also warns once.
+- A retry rewinds the run to the stage start, burst scrap included. The codex rewinds with it: entries first discovered or found during the retried attempt can fire again, and pay their burst again. The saved codex is never rewound.
+
 - `declare({id, category, name, hint, clue, text})` registers an entry at setup, and a repeat declare is harmless. The categories are `build` (owned by B), `world` (owned by D), `enemy` (owned by A), and the reserved `npc` and `coop`.
 - `mark_discovered(id, at := Vector3.ZERO, participants := ["player"]) -> bool` is called by the entry's owner every time it fires. The first call in a run publishes `synergy_discovered(id, category, first_time)`, grants the treasure burst at `at` and appends a line to `user://codex-log.ndjson`. It returns whether the saved codex had never seen the entry.
 - `mark_found(text, category := "world", participants := ["player"]) -> bool` does the same for an unnamed interaction, publishing `interaction_found(text)`.
@@ -262,8 +271,9 @@ At every death and at the end of a run, the spine appends one cumulative record 
 - `stages`, one entry per stage with `stage`, `ticks_to_warden_break`, `heft_at_exit`, `part_ids_at_exit`, `bonus_cores`, `deaths` (each `{x, y, z, ticks}`), `events_joined` and `events_won`.
 - `codex`, the ids discovered this run.
 - `brindle_phase_reached`, which stays null until wave 4 sets it.
+- `anomalies`, the seam faults the run met (`{stage, kind, ticks}`, such as `warden_vanished`).
 
-The record comes from bus signals and run state only.
+The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's.
 
 ## Tests
 

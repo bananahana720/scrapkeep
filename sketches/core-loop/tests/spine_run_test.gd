@@ -154,8 +154,10 @@ func _report(label: String, ok: bool, detail: String) -> void:
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
 
 
+# Only a loss counts against momentum: a gain, such as the launch rail easing a slow
+# ball up to cruise, is a gift.
 static func _kept(before: float, after: float) -> bool:
-	return before > 0.1 and absf(after - before) / before <= TOLERANCE
+	return before > 0.1 and (before - after) / before <= TOLERANCE
 
 
 func _finish() -> bool:

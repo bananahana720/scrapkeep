@@ -84,7 +84,7 @@ func _finish() -> bool:
 		complete = complete and row["ticks_to_warden_break"] != null and row["heft_at_exit"] != null and (row["part_ids_at_exit"] as Array).size() == int(row["stage"]) \
 			and int(row["bonus_cores"]) == 1 and (row["deaths"] as Array).is_empty() and row.has("events_joined") and row.has("events_won")
 	_report("one line", ok and lines.size() == 1 and record["outcome"] == "won" and record["run_id"] == _game.run.run_id and record["class"] == "runner_gunner"
-			and record["codex"] == ["storm_lattice"] and record.has("brindle_phase_reached") and record["brindle_phase_reached"] == null,
+			and record["codex"] == ["storm_lattice"] and record.get("anomalies", null) == [] and record.has("brindle_phase_reached") and record["brindle_phase_reached"] == null,
 		"%d line(s) after a won run: outcome %s, class %s, codex %s" % [lines.size(), record.get("outcome", "?") if ok else "?", record.get("class", "?") if ok else "?", record.get("codex", []) if ok else []])
 	_report("three stages", complete,
 		"%d stage record(s); stage 1 %s" % [stages.size(), JSON.stringify(stages[0]) if stages.size() > 0 else "none"])

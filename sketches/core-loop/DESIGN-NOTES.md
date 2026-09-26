@@ -41,7 +41,11 @@ Each call names the stage demand it serves and the principle it strains.
 28. **The run log records only what the bus and the run state say,** one cumulative line per death and per run end, so the balance report reads the same facts the player saw. Demand: the design feedback loop. Serves 7 (fast without debt).
 29. **warden_engaged fires once per stage attempt,** on the first sealed ring entry or the first strike on the Warden, so the music's Warden theme enters on the player's move. Demand: the Warden. Serves 6.
 
-Open question for review: the flood's drag in the basin slows a ball that stays in the water. The flood is announced and visible and the ball can leave it, but the reviewer should decide whether drag near a beacon counts as an unforeseen momentum blocker.
+30. **The sealed charge stops at 99%, and only this stage's Warden unseals it.** A Warden that vanishes without a kill opens the stage the normal way and is logged as an anomaly, rather than falling back to the ring. Demand: the Warden. Serves 1: a seam fault never locks or silently changes the exit.
+31. **A heft drop is its own fact** (`heft_class_dropped`, sound `class_down`), so a theft never plays the class-up stinger. Demand: the boss's crane. Serves form mirrors function.
+32. **A retry rewinds the codex's per-run memory for that attempt,** so a discovery made again after a retry fires and pays again. The retry already took its burst scrap back. Demand: events, vaults and world tricks. Serves 2 and 4.
+
+Closed: the flood's drag in the basin is allowed (R-21). It is announced, visible and avoidable, a foreseen cost from where the player chooses to roll.
 
 ## Combat and classes (writer A)
 
