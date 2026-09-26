@@ -38,7 +38,7 @@ Read [references/determinism.md](references/determinism.md) before reading or ga
 
 - Kinematic runs reproduce exactly; treat a kinematic hash change as a real behaviour change (SKL-08).
 - Rigid runs do not reproduce exactly and a divergence can flip the outcome; never hold a rigid record to trace equality (SKL-09).
-- The rigid gate checks n ≥ 20 on each side and reachability, and compares no rate until JL-28 (SKL-10).
+- The rigid gate checks n ≥ 20 on each side and reachability, and compares no rate; JL-28 left a rigid rate comparison to a separate card (SKL-10).
 - Before trusting a new hash oracle, perturb k or one answer and confirm the hash moves (SKL-12).
 
 ## 4. Scenarios and arms
