@@ -6172,3 +6172,116 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 
 **Boundary:** No gameplay change; watch-mode Jev runs are never evidence; no window opens on Andrew's workspace during verification.
 
+
+## Direction foundation after the sketch plays (26 September 2026)
+
+Andrew authorized this documentation-only round at TRACKING EV-0579 after playing the three EV-0482 sketches (playtest log entries 3 to 5) and deciding D1 (EV-0578). It writes five new engineering decisions as ADRs in the form of TADR-001 to TADR-005, marks the technical sections written for rooms and waves as superseded, then harmonizes the Bible. No game code, no build, no edit to TADR-001 to TADR-005 or to any admitted section body. Wave 1 is DF-01 to DF-03 with disjoint files; DF-04 follows their admission. The coordinator alone edits `adr/README.md`, BACKLOG and TRACKING.
+
+<a id="df-01"></a>
+
+### DF-01: Physics authority, verification basis and sketch promotion
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** Direction foundation
+
+**Source and inputs:**
+
+- TRACKING EV-0578 (decision D1, Andrew) and EV-0579; `docs/decisions.tsv` last row
+- `docs/playtests/PLAYTEST-LOG.md` entries 2 to 5; `docs/playtests/verdicts.ndjson`; `scripts/lab/verdicts.mjs`
+- `.agents/skills/scrapkeep-lab/references/lessons.md` lines 51 to 77 (kinematic exact replay, rigid divergence, the split gate)
+- `adr/TADR-001-engine-language-platforms.md`, `adr/TADR-002-runtime-model.md` (line 40, controlled repeatability), `adr/README.md` (form of an ADR)
+- `ORCHESTRATOR.md` § Light play lane; `docs/tech/sections/TH-02-movement-camera-and-active-aim.md`; `docs/tech/sections/TH-15-physics-query-contract.md`
+- `sketches/mobility-kit/src/tuning.gd`, `sketches/mobility-kit/src/tuning_panel.gd` (tuning as data today)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `adr/TADR-006-physics-authority-and-verification.md`; `adr/TADR-007-sketch-promotion-and-playtest-traceability.md`; `artifacts/local/tasks/DF-01/`.
+
+**Definition of done:**
+
+1. TADR-006 records D1 as accepted engineering direction: rigid Jolt bodies are the game's physics authority; rigid behaviour is judged statistically (outcome rates, n ≥ 20, a stated nondeterminism floor); exact trace and replay equality applies only to a kinematic twin kept as a lab instrument that never ships. It states what TADR-002's "controlled repeatability" means under this decision, names the qualification still owed (fixed physics rate, interpolation, the camera and aim reading interpolated state), and lists the TH-02 and TH-15 passages that need a later amendment without editing them.
+2. TADR-007 records how a sketch mechanic becomes production direction: the promotion criteria (Andrew's verdict keeps it, its sketch checks pass, the Bible and ADRs agree or an amendment is filed), the heavy-lane route into `native/`, and playtest traceability: every verdict names the exact tuning values that were played, with a proposed file shape and where it lives. Proposed tooling is named as future cards, not implemented.
+3. Each ADR has context, at least three options with at least two explicitly rejected and why, a decision, consequences, and later qualification needs, in the form of TADR-001 to TADR-005. Every claim about play or the lab cites a log entry, event or lessons line; inference is labelled.
+
+**Verification and evidence:** `npm run check:docs`; `npm run check:scope -- <base> <candidate>` reports documentation only; independent review against this card, TADR-001 to TADR-005 and the cited sources.
+
+**Boundary:** Documentation only. No edit to existing ADRs, sections, the Bible, tools or sketches.
+
+<a id="df-02"></a>
+
+### DF-02: The ability contract and element-material interactions
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** Direction foundation
+
+**Source and inputs:**
+
+- `docs/playtests/PLAYTEST-LOG.md` entries 3 and 4; TRACKING EV-0578 and EV-0579
+- `artifacts/bible-harmonization-2026-09-26/REVIEW.md` (rows on the mobility slot, element × material, slam anchor, reach indicator)
+- `BIBLE.md` § 5 Weapons & Items (lines 398 to 460), the class tables (lines 275 to 377), § 6 committed attack geometry (lines 481 to 497)
+- `adr/TADR-002-runtime-model.md`, `adr/TADR-003-content-pipeline.md`
+- `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md`, `TH-04-abilities-ultimates-and-combat-rhythm.md`, `TH-07-four-slots-and-milestone-progression.md`, `TH-10-devices-and-one-main-companion.md`
+- `sketches/mobility-kit/src/intent.gd`, `augments.gd`, `augment_kit.gd` (the intent-to-augment pattern the sketch already uses)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `adr/TADR-008-ability-contract.md`; `adr/TADR-009-element-material-interactions.md`; `artifacts/local/tasks/DF-02/`.
+
+**Definition of done:**
+
+1. TADR-008 fixes one ability pipeline: input becomes intent; the simulation resolves the ability once and owns its outcome; presentation, audio and HUD read that committed result. Abilities, augments and item modifiers are typed Resource definitions with stable IDs (TADR-003) bound to the Bible's four slots and class trees as data. Any preview (for example the grapple reach indicator) and its action read one shared query, per TH-03. Self-chosen commitment beats such as a slam anchor or a pylon mount are distinguished from handling penalties.
+2. TADR-009 fixes one element × material interaction table as a typed Resource that both abilities and stage events consult. An interaction resolves once in the simulation, and any new surface it creates (ice from water, rock from lava) is shared geometry that collision, rendering and damage read. Example entries are labelled candidates; no balance numbers, costs or durations are invented.
+3. Each ADR has context, at least three options with at least two rejected, a decision, consequences, qualification needs, and cites the Bible and TH lines it relies on; it names Bible silences as open rather than filling them.
+
+**Verification and evidence:** `npm run check:docs`; `npm run check:scope -- <base> <candidate>`; independent review against this card, the Bible sections cited and TADR-002/003.
+
+**Boundary:** Documentation only. No invented roster, recipes, costs or class assignments; class mappings stay candidates.
+
+<a id="df-03"></a>
+
+### DF-03: Open stages and the event director
+
+**Card revision:** 1 · **Owner:** Runtime · **Size:** M · **Lane:** Direction foundation
+
+**Source and inputs:**
+
+- `docs/playtests/PLAYTEST-LOG.md` entries 1, 4 and 5; TRACKING EV-0479, EV-0480, EV-0578, EV-0579
+- `artifacts/bible-harmonization-2026-09-26/REVIEW.md` (rows on the run unit, encounter grammar, the flood, events, the threat clock)
+- `BIBLE.md` § 3 Maps & Areas (lines 169 to 265), § 6 lines 505 to 525 and 575 to 586
+- `adr/TADR-002-runtime-model.md` (session owner, encounter tick coordinator), `adr/TADR-004-persistence.md`
+- `docs/tech/sections/TH-06-encounters-waves-and-enemies.md`, `TH-11-runs-regions-exits-and-saves.md`, `TH-14-randomness-generation.md`, `docs/tech/sections/README.md`
+- `sketches/spillway-drop/src/` (flood cycle and director), `sketches/cable-bench/src/` (tier clock and director)
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `adr/TADR-010-open-stages-and-event-director.md`; `docs/tech/sections/README.md` (a superseded-direction note only); `artifacts/local/tasks/DF-03/`.
+
+**Definition of done:**
+
+1. TADR-010 makes the open stage the run's level unit and replaces wave-based encounter grammar with an event director that composes stage events (floods, drains, weather, special events), enemy spawns including a miniboss at a varied location, and discoveries; events ebb and flow, vary by area and can be unique to a map; waves become one event type. It states that elapsed time may scale threat but never gates progression, and how the director fits TADR-002's session owner and encounter tick coordinator and TADR-004's commit points. It keeps what still holds: the four worlds, world bosses, two destination offers and the save lifecycle.
+2. `docs/tech/sections/README.md` notes, per section, which parts of TH-06, TH-11 and TH-14 are superseded by TADR-010 and which remain; the section bodies are not edited, so their stated hashes stay valid.
+3. The ADR has context, at least three options with at least two rejected, a decision, consequences and qualification needs, citing the sketches' director and flood code as prototype evidence, not proof.
+
+**Verification and evidence:** `npm run check:docs`; `npm run check:drift` (0 mismatches); `npm run check:scope -- <base> <candidate>`; independent review.
+
+**Boundary:** Documentation only. No generation technique, level count or balance number is chosen.
+
+<a id="df-04"></a>
+
+### DF-04: Harmonize the Bible with the played direction
+
+**Card revision:** 1 · **Owner:** Content · **Size:** M · **Lane:** Direction foundation
+
+**Source and inputs:** `artifacts/bible-harmonization-2026-09-26/REVIEW.md`; the admitted TADR-006 to TADR-010; `docs/playtests/PLAYTEST-LOG.md` entries 1 to 5; `BIBLE.md`; the sections that pin `BIBLE.md`'s bytes (TH-12, TH-18, TH-19, PD-01, PD-02, PD-03) and those that pin them in turn, as `npm run check:drift` reports.
+
+**Dependencies:** [DF-01](#df-01), [DF-02](#df-02), [DF-03](#df-03). **Blocking questions:** None.
+
+**Files touched:** `BIBLE.md`; the hash lines of sections `check:drift` reports as mismatched after the Bible edit, and only after each cited line is re-verified; `artifacts/local/tasks/DF-04/`.
+
+**Definition of done:**
+
+1. Every REVIEW.md finding is applied or explicitly declined with a reason. Edits keep every existing line number: wording is replaced in place, and orchard-era material is marked superseded where it stands rather than moved, because 34 sections cite the Bible by line.
+2. The Bible agrees with TADR-006 to TADR-010 and with the playtest log; the header points to the light play lane's authorization.
+3. Each drift mismatch is resolved by re-verifying the cited lines and updating that stated hash, or reported as a finding when a cited claim no longer holds; `check:drift` ends at 0 mismatches.
+
+**Verification and evidence:** `npm run check:docs`; `npm run check:drift`; `npm run check:project`; a Fable review of the Bible diff against REVIEW.md and the ADRs.
+
+**Boundary:** No change to settled engine, ADR or art-lock choices; no invented product detail.
