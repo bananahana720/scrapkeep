@@ -101,7 +101,7 @@ func setup(game_ref) -> void:
 	_connect_toasts(game.events)
 	# The phase name is the signal's second argument, so it gets its own handler.
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
-		toast(EventKinds.hud("boss_phase_changed", {"name": phase_name}), EventKinds.color("boss_phase_changed")))
+		toast(EventKinds.hud("boss_phase_changed", {"name": phase_name.capitalize()}), EventKinds.color("boss_phase_changed")))
 
 
 func _connect_toasts(events) -> void:

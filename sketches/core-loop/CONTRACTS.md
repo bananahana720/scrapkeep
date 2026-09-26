@@ -161,7 +161,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `pressure_changed` | `pressure: float` | D | director pressure, 0 to 1, for music layers |
 | `threat_rose` | `tier: int` | D | the director's time tier rose (clamped at +2) |
 | `boss_arena_entered` | none | E | the ball is in the arena; the music's Brindle set starts |
-| `boss_phase_changed` | `phase: int, name: String` | E | Brindle's phase (1 to 3) and its display name; the run log keeps the highest |
+| `boss_phase_changed` | `phase: int, name: String` | E | Brindle's phase and its name: 1 to 3 by hull health, then 4, `chase`, for the eject-scooter chase. The HUD toast capitalizes the name. The run log keeps the highest phase |
 | `boss_attack_telegraphed` | `attack_id: String, seconds_until: float` | E | an attack is committed and will land in seconds_until |
 | `boss_weak_point_hit` | `point_id: String` | E | a strike landed on a weak point (a magnet, a cap, the scooter) |
 | `boss_defeated` | none | E | Brindle is beaten; flow enters `victory`, then the summary |
@@ -297,6 +297,7 @@ The record comes from bus signals and run state only. Records are cumulative and
 ## Tests
 
 - Name module tests `tests/combat_*.gd`, `tests/build_*.gd`, `tests/presentation_*.gd` and `tests/world_*.gd`.
+- Drive contacts physically when the test is about contacts. `spine_stomp_test.gd` drops and rolls the real ball onto a target: a contact is classified and sized from the motion the ball had going into it (`player.pre_contact_velocity`), because the live velocity is already the solver's bounce.
 - A test extends `SceneTree`, prints one line per check in the form `[check] detail -> PASS` or `-> FAIL`, then a final `<name>: PASS` line, and quits 0 or 1.
 - Never print a line that starts with `ERROR` or `FAIL`. The smoke runner treats those as failures.
 - Build the game with `Game.new()`, set `test_mode = true`, add it to `root` and wait for `flow` to be set. Test mode writes the codex and run logs to a per-process folder, removed when the game leaves the tree. Drive input with `Intent.Scripted` (`hold` and `press`). Set `ctx.calm` when measuring speed.
