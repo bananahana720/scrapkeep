@@ -38,7 +38,10 @@ const MAGNET_CYCLE := 8.0
 const MAGNET_TELEGRAPH := 1.5
 const MAGNET_TUG := 1.5
 const MAGNET_PULL := 6.0
-const MAGNET_ARM := 3.8
+const MAGNET_ARM := 3.2
+# The magnet rides high over the clamp, out of the straight line from the ball to the
+# body, so shooting it is a choice you aim for rather than an accident of body fire.
+const MAGNET_RISE := 3.6
 const MAGNET_RADIUS := 1.1
 const UNPLATE_SECONDS := 3.0
 const WEAPON_KINDS := ["runner", "arc", "turret"]
@@ -50,6 +53,8 @@ var stage := 1
 var lesson := "plate"
 var reach := DEFAULT_REACH
 var pulses := 0
+# Whether the last pulse's reach ring contained the ball (and so lifted it).
+var last_pulse_lifted := false
 var min_pulse_telegraph := INF
 var magnet_stuns := 0
 var magnet_state := Magnet.IDLE
@@ -142,7 +147,7 @@ func cap_points() -> Array:
 
 
 func magnet_point() -> Vector3:
-	return global_position + _magnet_dir * MAGNET_ARM + Vector3.UP * 1.0
+	return global_position + _magnet_dir * MAGNET_ARM + Vector3.UP * MAGNET_RISE
 
 
 func contact_part(ball: Vector3, hit_kind: String) -> String:
@@ -202,8 +207,9 @@ func _step_pulse(delta: float, inside: bool) -> void:
 func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
-	if ring != null and ring.contains(ball):
-		target.add_external_accel(Vector3.UP * PULSE_LIFT * Engine.physics_ticks_per_second)
+	last_pulse_lifted = ring != null and ring.contains(ball)
+	if last_pulse_lifted:
+		target.add_external_accel(Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
@@ -343,5 +349,5 @@ func _pose(delta: float) -> void:
 		Magnet.TUG:
 			out = 1.0
 			glow = 5.0
-	_arm.position = (_magnet_dir * MAGNET_ARM * out + Vector3.UP * 1.0) if out > 0.0 else Vector3.UP * (HALF_HEIGHT + 0.4)
+	_arm.position = _magnet_dir * MAGNET_ARM * out + Vector3.UP * lerpf(HALF_HEIGHT + 0.4, MAGNET_RISE, out)
 	_magnet_material.emission_energy_multiplier = glow

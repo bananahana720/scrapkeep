@@ -72,6 +72,9 @@ var last_shot := {}
 var last_burst := {}
 # A test knob: a heft to use instead of ctx.run.heft(). Negative means off.
 var heft_override := -1.0
+# Every deflected hit, counted here as well as published, so a test on a spine without
+# strike_deflected still sees them.
+var deflections := 0
 # Codex ids discovered this run, in order, with where (also sent to ctx.codex).
 var discovered := {}
 var discovery_log: Array = []
@@ -157,8 +160,10 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	var result := resolve(enemy, kind, force, part)
 	_detect_before(enemy, kind, result)
 	ctx.events.enemy_struck.emit(enemy, kind, force)
-	if not result["full"] and ctx.events.has_signal("strike_deflected"):
-		ctx.events.emit_signal("strike_deflected", enemy, kind, result["punch"], result["plating"])
+	if not result["full"]:
+		deflections += 1
+		if ctx.events.has_signal("strike_deflected"):
+			ctx.events.emit_signal("strike_deflected", enemy, kind, result["punch"], result["plating"])
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	enemy.take_damage(result["dealt"])
@@ -503,7 +508,7 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 		return
 	ctx.run.damage(amount, source)
 	if shove != Vector3.ZERO and not ctx.calm:
-		ctx.player.add_external_accel(shove * Engine.physics_ticks_per_second)
+		ctx.player.add_external_accel(shove / get_physics_process_delta_time())
 
 
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
