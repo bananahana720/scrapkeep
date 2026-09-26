@@ -19,7 +19,7 @@ var _lamp_material: StandardMaterial3D
 
 
 func setup() -> void:
-	_floor_y = Terrain.height(Terrain.BASIN_CENTRE.x, Terrain.BASIN_CENTRE.y)
+	_floor_y = Terrain.ground(Terrain.BASIN_CENTRE.x, Terrain.BASIN_CENTRE.y)
 
 	_plane = MeshInstance3D.new()
 	var quad := PlaneMesh.new()

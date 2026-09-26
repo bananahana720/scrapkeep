@@ -1,5 +1,7 @@
 extends RefCounted
 
+# Owned by writer D (world). The spine reads only the terrain API block below.
+
 const Palette := preload("res://src/core/palette.gd")
 
 # The whole stage is one continuous height field. Shelves, chute channels and the
@@ -44,6 +46,15 @@ const HATCH := Vector2(0.0, 110.0)
 const BYPASS_FOOT := Vector2(140.0, 116.0)
 const BYPASS_TOP := Vector2(140.0, -96.0)
 
+# Where each stage starts, which way it faces and where its beacon stands. One map for
+# now, read three ways: the top shelf down its chute to the mid shelf, the mid shelf
+# down into the flooding basin, and the bypass deck the whole way to the basin floor.
+const STAGE_LAYOUT := [
+	{"spawn": Vector2(-62.0, -96.0), "heading": Vector3(0.0, 0.0, 1.0), "beacon": Vector2(-30.0, 2.0)},
+	{"spawn": Vector2(-18.0, 4.0), "heading": Vector3(0.0, 0.0, 1.0), "beacon": Vector2(-50.0, 118.0)},
+	{"spawn": Vector2(140.0, -96.0), "heading": Vector3(0.0, 0.0, 1.0), "beacon": Vector2(20.0, 112.0)},
+]
+
 const CACHE_SPOTS := [
 	Vector2(58.0, -126.0), Vector2(-96.0, -6.0), Vector2(104.0, 6.0),
 	Vector2(-100.0, 94.0), Vector2(108.0, 136.0),
@@ -74,21 +85,51 @@ static func sample(x: float, z: float) -> Array:
 	return [h + _walls(x, z), ch[1], by[1]]
 
 
-static func height(x: float, z: float) -> float:
+static func ground(x: float, z: float) -> float:
 	return sample(x, z)[0]
 
 
-static func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
-	return Vector3(x, height(x, z) + clearance, z)
+static func ground_point(x: float, z: float, clearance := 1.8) -> Vector3:
+	return Vector3(x, ground(x, z) + clearance, z)
 
 
 static func at(spot: Vector2, clearance := 1.8) -> Vector3:
-	return drop_point(spot.x, spot.y, clearance)
+	return ground_point(spot.x, spot.y, clearance)
 
 
-static func chute_entry(index: int) -> Vector3:
-	var c: Dictionary = CHUTES[index]
-	return drop_point(c["x"], c["z0"] + 8.0, 2.0)
+# The terrain API the spine and the other modules read through ctx.terrain (see
+# CONTRACTS.md). Instance methods, so a stage variant can answer differently.
+func height(x: float, z: float) -> float:
+	return ground(x, z)
+
+
+func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
+	return ground_point(x, z, clearance)
+
+
+func spawn_point(stage: int) -> Vector3:
+	return at(STAGE_LAYOUT[clampi(stage, 1, STAGE_LAYOUT.size()) - 1]["spawn"], 2.0)
+
+
+func entry_heading(stage: int) -> Vector3:
+	var heading: Vector3 = STAGE_LAYOUT[clampi(stage, 1, STAGE_LAYOUT.size()) - 1]["heading"]
+	return heading.normalized()
+
+
+func beacon_point(stage: int) -> Vector3:
+	return at(STAGE_LAYOUT[clampi(stage, 1, STAGE_LAYOUT.size()) - 1]["beacon"], 0.0)
+
+
+func scrap_lines(_stage: int) -> Array:
+	return SCRAP_LINES
+
+
+func contains(point: Vector3) -> bool:
+	return absf(point.x) < HALF - 1.0 and absf(point.z) < HALF - 1.0
+
+
+func rescue_point(near: Vector3) -> Vector3:
+	return ground_point(clampf(near.x, -105.0, 152.0), clampf(near.z, -178.0, 178.0), 3.0)
 
 
 static func in_basin(point: Vector3) -> bool:
@@ -273,7 +314,7 @@ func _build_props(parent: Node3D) -> void:
 		var mouth_z: float = c["z0"] - 3.0
 		for side in [-1.0, 1.0]:
 			var kx: float = c["x"] + side * (CHUTE_R + 3.0)
-			_box(parent, Vector3(2.0, 2.4, 16.0), drop_point(kx, mouth_z, 0.4), rust)
+			_box(parent, Vector3(2.0, 2.4, 16.0), ground_point(kx, mouth_z, 0.4), rust)
 
 	# Two mid-shelf benches: low lips to carry a scrap line and launch off.
 	_box(parent, Vector3(26.0, 3.0, 9.0), at(Vector2(-58.0, -4.0), 0.6), concrete)

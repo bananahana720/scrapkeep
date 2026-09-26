@@ -14,6 +14,8 @@ const SPIKE_TIERS := 2
 
 var stage_time := 0.0
 var spike := false
+# The stage's threat dial from stage_defs.gd: more enemies alive, arriving sooner.
+var threat := 1.0
 # A traversal test needs the stage without the fight in it.
 var paused := false
 
@@ -34,15 +36,21 @@ func effective_tier() -> int:
 
 
 func cap() -> int:
-	return 6 + effective_tier() * 2
+	return int(round((6 + effective_tier() * 2) * threat))
 
 
 func interval() -> float:
-	return maxf(MIN_INTERVAL, BASE_INTERVAL - effective_tier() * 0.7)
+	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat)
 
 
 func lobber_share() -> float:
 	return clampf(0.15 + effective_tier() * 0.07, 0.0, 0.5)
+
+
+# 0 with nothing alive and nothing coming, 1 at the cap during a beacon spike.
+func pressure(alive_count: int) -> float:
+	var crowd := clampf(float(alive_count) / float(maxi(1, cap())), 0.0, 1.0)
+	return clampf(crowd * 0.7 + (0.3 if spike else 0.0) + minf(0.2, tier() * 0.05), 0.0, 1.0)
 
 
 func advance(delta: float, alive_count: int) -> Array[int]:
