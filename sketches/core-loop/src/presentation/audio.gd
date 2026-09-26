@@ -65,6 +65,8 @@ var _gates_announced := false
 var _heft_class := 1
 var _unseal_ms := -100000
 var _boss_phase := 1
+var _weak_combo := 0
+var _weak_last := -100000
 var _flow_queue: Array = []
 var _overlay: Label
 var _overlay_until := 0
@@ -346,6 +348,7 @@ func wire_optional() -> void:
 	var events = ctx.events
 	_listen(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
 	_listen(events, "heft_class_changed", _on_heft_class)
+	_listen(events, "heft_class_dropped", _on_heft_dropped)
 	_listen(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
 	_listen(events, "strike_deflected", _on_deflected)
 	_listen(events, "threat_rose", func(tier: int): on_beat("threat_rose", minf(tier, 3) * 1.0))
@@ -364,6 +367,8 @@ func wire_optional() -> void:
 	else:
 		_listen(events, "boss_phase_changed", _on_boss_phase, true)
 	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
+	_listen(events, "boss_attack_telegraphed", _on_boss_telegraph)
+	_listen(events, "boss_weak_point_hit", _on_weak_point)
 
 
 # Connects once. loose drops whatever arguments the signal carries.
@@ -442,11 +447,13 @@ func _begin_boss(kind: String, music: String) -> void:
 # boss_phase_changed(phase, name) in wave 4; with no phase argument, count up.
 func _on_boss_phase() -> void:
 	_boss_phase += 1
+	on_beat("boss_phase_changed")
 	engine.set_brindle_phase(_boss_phase)
 
 
 func _on_boss_phase_with(phase) -> void:
 	_boss_phase = int(phase)
+	on_beat("boss_phase_changed")
 	engine.set_brindle_phase(_boss_phase)
 
 
@@ -458,6 +465,7 @@ static func _argc(events: Object, signal_name: String) -> int:
 
 
 func _on_boss_defeated() -> void:
+	on_beat("boss_defeated", 0.0, true)
 	engine.victory()
 
 
@@ -516,6 +524,26 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 	elif heft_class < _heft_class:
 		on_beat("heft_class_changed", 0.0, false, 1, "class_down")
 	_heft_class = heft_class
+
+
+# A class lost has its own signal now: the climb falls back on the next beat.
+func _on_heft_dropped(heft_class: int, _heft: float) -> void:
+	on_beat("heft_class_dropped")
+	_heft_class = heft_class
+
+
+# Danger is never quantized: the telegraph sounds the frame the boss winds up, and
+# the shorter the warning the higher it sits, so a quick swing reads as urgent.
+func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
+	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
+
+
+# Weak-point hits climb the pentatonic like a combo, so a string of them sings.
+func _on_weak_point(_point_id: String) -> void:
+	var now := Time.get_ticks_msec()
+	_weak_combo = mini(_weak_combo + 1, 7) if now - _weak_last < KILL_COMBO_WINDOW_MS else 0
+	_weak_last = now
+	play("boss_weak_point_hit", 0.0, Harmony.ratio(Harmony.pentatonic_step(_weak_combo)))
 
 
 # A bounced hit clanks lower the further you are from breaking through.
