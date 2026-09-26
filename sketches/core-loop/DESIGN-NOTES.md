@@ -47,6 +47,8 @@ Each call names the stage demand it serves and the principle it strains.
 
 33. **The boss is a flow state behind one module seam.** After stage 3's launch the run enters `boss` and calls `enter_arena` with the ball's velocity. The arena-entry checkpoint makes R retry the fight, not the stage. `boss_defeated` gives a 2.5 s victory beat before the summary. Without a boss module the run ends as before. Demand: the boss phase. Serves 1 (the launch carries into the arena) and 2 (R, T and N on one screen).
 
+34. **The arena is not a stage.** Flow's `in_stage()` is false in the arena, and `stage_content_cleared` tells stage modules to stand down on arena entry and on every arena retry. The flood cannot push, the director cannot spawn, and stage-3 chasers do not follow the ball into the fight. The arena has its own fall rescue, owned by the boss module. Demand: the boss phase. Serves 1: nothing the player cannot see pushes or blocks them.
+
 Closed: the flood's drag in the basin is allowed (R-21). It is announced, visible and avoidable, a foreseen cost from where the player chooses to roll.
 
 ## Combat and classes (writer A)

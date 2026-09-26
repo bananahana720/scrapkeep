@@ -81,6 +81,12 @@ func in_play() -> bool:
 	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS
 
 
+# Stage content (director, flood, events, scrap, fabricators, vaults, stage enemies)
+# runs only while this is true; it is false in the arena and after the win.
+func in_stage() -> bool:
+	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH
+
+
 # The boss module (ctx.boss, set by src/boss/boss.gd) runs the arena; without one the
 # run ends on the summary after stage 3, as it did before the boss existed.
 func _boss_module() -> Node:
@@ -144,6 +150,10 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
+	# The checkpoint is taken before stage_entered, so nothing a module grants inside
+	# its handler is folded into the stage start. The entry pose is filled in after,
+	# because world may swap the geometry inside that handler.
+	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
 	ctx.events.stage_entered.emit(index, retry)
 	var heading: Vector3 = ctx.terrain.entry_heading(index)
 	var flat := Vector2(carried.x, carried.z).length()
@@ -151,7 +161,7 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	var at: Vector3 = ctx.terrain.spawn_point(index) + Vector3.UP * ENTRY_LIFT
 	_place_ball(at, velocity, heading)
 	_place_beacon()
-	ctx.run.snapshot(at, velocity, ctx.camera.yaw)
+	ctx.run.set_snapshot_entry(at, velocity, ctx.camera.yaw)
 	_set_state(STAGE)
 
 
@@ -192,17 +202,46 @@ func replay_stage(index: int) -> bool:
 func enter_boss(carried: Vector3) -> void:
 	var boss := _boss_module()
 	in_arena = true
+	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
 	_set_state(BOSS)
+	ctx.events.stage_content_cleared.emit("arena")
 	ctx.player.set_frozen(false)
 	boss.enter_arena(carried)
-	ctx.run.snapshot(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
+	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
 
 func _retry_arena() -> void:
 	ctx.run.restore()
 	ctx.player.set_frozen(false)
 	_set_state(BOSS)
+	ctx.events.stage_content_cleared.emit("arena")
 	_boss_module().enter_arena(ctx.run.snapshot_value("entry_velocity"))
+
+
+# The arena's own fall rescue. The boss module (E) owns the arena, so it names the
+# floor and the landing spot; without them flow uses the arena-entry checkpoint.
+# Like the stage rescue it costs nothing and keeps the horizontal speed.
+const ARENA_FALL := 40.0
+
+
+func _rescue_in_arena(ball: Vector3) -> void:
+	var boss := _boss_module()
+	var floor_y: float
+	var landing: Vector3
+	if boss != null and boss.has_method("floor_y") and boss.has_method("rescue_point"):
+		floor_y = boss.floor_y()
+		if ball.y >= floor_y:
+			return
+		landing = boss.rescue_point()
+	else:
+		var entry: Vector3 = ctx.run.snapshot_value("entry_position")
+		if ball.y >= entry.y - ARENA_FALL:
+			return
+		warn_once("arena_rescue", "flow: boss module has no floor_y()/rescue_point(); rescuing to the arena entry")
+		landing = entry
+	var v: Vector3 = ctx.player.state.velocity
+	ctx.player.reset_to(landing, Vector3(v.x, 0.0, v.z))
+	ctx.player.body().global_position = landing
 
 
 # The treasure burst for a first discovery in a run: scrap at the spot, which feeds
@@ -332,6 +371,7 @@ func physics_step(delta: float) -> void:
 					_finish_stage()
 		BOSS:
 			# The arena is the boss module's geometry, not the world's terrain.
+			_rescue_in_arena(ball)
 			return
 	_rescue_if_fallen(ball)
 

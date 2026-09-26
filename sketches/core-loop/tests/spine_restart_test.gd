@@ -109,6 +109,24 @@ func _final_stage_checks() -> void:
 	flow.force_warden = false
 
 
+# The checkpoint is taken before stage_entered: scrap a module grants inside its handler
+# is play inside the stage, so a retry takes it back.
+func _handler_grant_checks() -> void:
+	var run = _game.run
+	var grant := func(_stage: int, retry: bool):
+		if not retry:
+			run.add_scrap(50, Vector3.ZERO)
+	_game.events.stage_entered.connect(grant)
+	var before: int = run.scrap
+	_game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
+	_game.events.stage_entered.disconnect(grant)
+	var kept: int = run.snapshot_value("scrap")
+	var entry: Vector3 = run.snapshot_value("entry_position")
+	_game.flow.retry_stage()
+	_report("checkpoint before handlers", kept == before and run.scrap == before and entry != Vector3.ZERO,
+		"a 50-scrap grant inside stage_entered: checkpoint holds %d (before %d), retry left %d, entry pose filled %s" % [kept, before, run.scrap, entry != Vector3.ZERO])
+
+
 func _run_checks() -> void:
 	var run = _game.run
 	var start := {"scrap": run.scrap, "hp": run.hp, "parts": run.parts.duplicate()}
@@ -141,6 +159,7 @@ func _run_checks() -> void:
 			% [run.stage, run.scrap, run.parts, run.hp, r["gap"]])
 
 	_report("retry count", run.retries == 3, "summary counts %d retries" % run.retries)
+	_handler_grant_checks()
 	_final_stage_checks()
 	run.damage(9999.0, "test")
 	_game.flow.new_run()
