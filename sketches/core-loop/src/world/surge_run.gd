@@ -63,7 +63,7 @@ func step(delta: float, ball: Vector3, _velocity: Vector3) -> String:
 	return ""
 
 
-# Riding the front: a push along the route, never against the ball's own motion.
+# Riding the front: a push along the route while you are at the wall of water.
 func push(ball: Vector3, velocity: Vector3) -> Vector3:
 	var p: Vector2 = route.project(Vector2(ball.x, ball.z))
 	if p.y > PUSH_WIDTH or p.x < front - PUSH_BEHIND or p.x > front + PUSH_AHEAD:

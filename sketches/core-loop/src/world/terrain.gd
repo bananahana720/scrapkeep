@@ -8,7 +8,7 @@ const Weir := preload("res://src/world/map_weir.gd")
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #
 # Each stage is its own map. All three are built once at setup, so a stage change is
-# a node swap inside the stage_entered handler and never a hitch in the launch. Height
+# a cheap swap inside the stage_entered handler and never a hitch in the launch. Height
 # queries read the built grid and interpolate the same two triangles per cell the
 # collider uses, so what the spine, combat and build ask about the ground is exactly
 # the ground the ball rolls on.
@@ -20,6 +20,7 @@ const SIDE := CELLS + 1
 # A face steeper than this (the normal's y below it) takes the pylon tint: the ball's
 # pylon bites a face that leans less than 60 degrees off vertical (augments.gd).
 const PYLON_FACE := 0.866
+const PARK_DEPTH := 5000.0
 
 var maps: Array = []
 var stage := 1
@@ -54,28 +55,23 @@ func build(parent: Node3D) -> void:
 		m.build_props(holder, _ground_at.bind(heights))
 		_roots.append(holder)
 		_heights.append(heights)
-	parent.add_child(_roots[0])
+		parent.add_child(holder)
+		_park(holder, _roots.size() != stage)
 
 
 # Swap the active stage's geometry in. Synchronous, so the flow's spawn and beacon
-# queries straight after stage_entered read the new stage.
+# queries straight after stage_entered read the new stage. The idle stages stay in the
+# physics world, hidden and parked far below: moving a body is cheap, while adding a
+# trimesh back to the world rebuilds its tree (measured at about 34 ms a swap).
 func use(index: int) -> void:
-	var next := _index(index) + 1
-	if next == stage and _roots[next - 1].is_inside_tree():
-		return
-	for root in _roots:
-		if root.is_inside_tree():
-			_parent.remove_child(root)
-	stage = next
-	_parent.add_child(_roots[stage - 1])
+	stage = _index(index) + 1
+	for i in _roots.size():
+		_park(_roots[i], i != stage - 1)
 
 
-# The stages not in the tree are orphans the world frees on its way out.
-func release() -> void:
-	for root in _roots:
-		if is_instance_valid(root) and not root.is_inside_tree():
-			root.free()
-	_roots.clear()
+static func _park(root: Node3D, parked: bool) -> void:
+	root.visible = not parked
+	root.position = Vector3.DOWN * PARK_DEPTH if parked else Vector3.ZERO
 
 
 func geometry_root(index: int) -> Node3D:

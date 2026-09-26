@@ -12,11 +12,16 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const LIFT := 24.0
 const RINGS := 7
 const RING_RADIUS := 3.2
+# The rail's rings sit this far apart in flight time, inside flow's 0.6 s of flight.
+const RING_FIRST := 0.08
+const RING_STEP := 0.075
 const LANDING_RINGS := 6
 const LANDING_STEP := 0.02
 const LANDING_LIMIT := 4.0
 
 var gravity := 26.0
+# Where the last landing mark says the ball will come down.
+var landing_point := Vector3.INF
 
 var _origin := Vector3.ZERO
 var _velocity := Vector3.ZERO
@@ -78,7 +83,7 @@ func fire(origin: Vector3, velocity: Vector3) -> void:
 	_flying = true
 	_time = 0.0
 	for i in RINGS:
-		var t := 0.12 + i * 0.1
+		var t := RING_FIRST + i * RING_STEP
 		_place_ring(_rings[i], arc_point(origin, velocity, gravity, t), velocity + Vector3.DOWN * gravity * t)
 
 
@@ -88,7 +93,7 @@ func rail(delta: float):
 		return null
 	_time += delta
 	for i in RINGS:
-		if _rings[i].visible and 0.12 + i * 0.1 < _time - 0.05:
+		if _rings[i].visible and RING_FIRST + i * RING_STEP < _time - 0.05:
 			_rings[i].visible = false
 	return _velocity + Vector3.DOWN * gravity * _time
 
@@ -120,6 +125,7 @@ func mark_landing(entry: Vector3, velocity: Vector3, height: Callable) -> Vector
 	_pad.position = Vector3(at.x, float(height.call(at.x, at.z)) + 0.15, at.z)
 	_pad.visible = true
 	_pad_time = flight + 1.5
+	landing_point = at
 	return at
 
 

@@ -200,15 +200,28 @@ func _miniboss_spot(model) -> Vector2:
 	return (zone[0] as Vector2) + Vector2(cos(angle), sin(angle)) * dist
 
 
-# Everything that pushes the ball this tick: the surge's tailwind and the squall.
+# Everything the events push the ball with this tick: the surge's tailwind and the
+# squall's wind. They may steer and help and never brake, so the part of the push
+# that would oppose the ball's motion is dropped here, once, for every event.
 func push(ball: Vector3, velocity: Vector3) -> Vector3:
 	var total := Vector3.ZERO
 	for offer in offers:
 		if offer["phase"] == LIVE:
 			total += offer["model"].push(ball, velocity)
 	if squall != null:
-		total += squall.accel(velocity)
-	return total
+		total += squall.accel()
+	return never_brake(total, velocity)
+
+
+static func never_brake(push_accel: Vector3, velocity: Vector3) -> Vector3:
+	var flat := Vector3(velocity.x, 0.0, velocity.z)
+	if flat.length() < 0.5:
+		return push_accel
+	var along := flat.normalized()
+	var against := push_accel.dot(along)
+	if against < 0.0:
+		push_accel -= along * against
+	return push_accel
 
 
 func spike() -> bool:

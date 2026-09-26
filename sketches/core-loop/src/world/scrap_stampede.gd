@@ -12,7 +12,7 @@ const CATCH_UP := 3.5
 const HIT_COOLDOWN := 1.0
 const KNOCK_AHEAD := 6.0
 const PANIC := 1.08
-const SPEED := 1.1
+const SPEED := 1.0
 const SCRAP_PER_HIT := 8
 const RIDE := 1.4
 

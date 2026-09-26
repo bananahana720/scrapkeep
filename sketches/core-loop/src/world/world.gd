@@ -56,11 +56,6 @@ func setup(ctx_ref) -> void:
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE and terrain != null:
-		terrain.release()
-
-
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	if events != null:
 		_publish(events.end_all())
