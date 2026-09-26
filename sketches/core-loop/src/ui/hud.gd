@@ -14,6 +14,9 @@ const FieldNotes := preload("res://src/ui/field_notes.gd")
 # so a toast reads the same as the row presentation and audio use.
 
 const TOAST_SECONDS := 2.6
+# Facts whose on-screen moment presentation owns (a banner with its own fanfare), so
+# the HUD adds no toast of its own. The event_kinds wording still names them.
+const PRESENTATION_OWNED := ["synergy_discovered"]
 const TOAST_LINES := 3
 # Facts whose wording needs a field from the signal, by argument position.
 const FIELD_ARGS := {
@@ -106,7 +109,7 @@ func _connect_toasts(events) -> void:
 		if EventKinds.priority(kind) < EventKinds.TOAST_PRIORITY or EventKinds.row(kind).get("hud", "") == "":
 			continue
 		var argc: int = _arg_count(events, kind)
-		if kind == "boss_phase_changed":
+		if kind == "boss_phase_changed" or kind in PRESENTATION_OWNED:
 			continue
 		if FIELD_ARGS.has(kind):
 			events.connect(kind, _drop_args(_on_field_fact.bind(kind), argc - 1))
