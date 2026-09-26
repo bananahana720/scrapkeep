@@ -101,6 +101,8 @@ func _on_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 
 func _check_pickups() -> void:
+	_report("fixed ground probe", not _game.tuning.on("legacy_spin_probe"),
+		"speeds measured with the default fixed ground probe (legacy spin probe off)")
 	var worst: float = _collect_changes.max() if not _collect_changes.is_empty() else 1.0
 	_report("pickups keep speed", _collect_changes.size() >= 4 and worst < 0.01,
 		"%d pickups at about %.0f m/s; the worst planar speed change on a pickup tick was %.3f%%"

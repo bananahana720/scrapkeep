@@ -131,6 +131,8 @@ func _finish() -> bool:
 		print("[curve %s] %d parts, mass %.0f, heft %.2f (class %d), %d synergies: ram punch %.1f at cruise (%.1f m/s), %.1f at blazing (%.1f m/s, tier %d); modelled DPS %.0f -> PASS"
 			% [row["name"], row["parts"], row["mass"], row["heft"], row["class"], row["synergies"], row["cruise"],
 				row["cruise_speed"], row["blazing"], row["blazing_speed"], row["blazing_tier"], row["dps"]])
+	_report("fixed ground probe", not _game.tuning.on("legacy_spin_probe"),
+		"speeds measured with the default fixed ground probe (legacy spin probe off)")
 	_report("skipper cruise", sk["cruise"] >= 30.0 and sk["cruise"] < 95.0, "punch %.1f (needs 30 to under 95)" % sk["cruise"])
 	_report("skipper blazing", sk["blazing"] >= 95.0 and sk["blazing_tier"] == SpeedTier.BLAZING,
 		"punch %.1f at tier %d (needs 95+: skill substitutes for growth)" % [sk["blazing"], sk["blazing_tier"]])

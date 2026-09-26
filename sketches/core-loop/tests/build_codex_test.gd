@@ -161,11 +161,11 @@ func _check_cores() -> void:
 
 func _check_gate_tier() -> void:
 	var run = _game.run
-	_game.events.beacon_charge_changed.emit(1.0)
+	_game.events.flow_changed.emit("gates")
 	var high: Array = _offers.map(func(o): return o["rarity"])
 	_build.gates.close()
 	_game.flow.retry_stage()
-	_game.events.beacon_charge_changed.emit(1.0)
+	_game.events.flow_changed.emit("gates")
 	var low: Array = _offers.map(func(o): return o["rarity"])
 	_build.gates.close()
 	_report("gate tier follows cores", high.all(func(r): return r in ["rare", "rare_plus"]) and low.all(func(r): return r in ["common", "uncommon"])

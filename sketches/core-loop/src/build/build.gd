@@ -132,7 +132,7 @@ func setup(ctx_ref) -> void:
 	ctx.set_meta("build", self)
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
-	ctx.events.beacon_charge_changed.connect(_on_beacon_charge)
+	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.part_gained.connect(func(_id: String, _source: String): recompute())
 	ctx.events.scrap_collected.connect(func(_amount: int, _at: Vector3, _total: int): _redraw())
 	ctx.events.milestone_won.connect(_on_milestone_won)
@@ -358,8 +358,11 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		ctx.run.add_core("vault", at)
 
 
-func _on_beacon_charge(fraction: float) -> void:
-	if fraction < 1.0 or gates.is_open():
+# The gates open when flow enters its gates state, never on the charge reading: a
+# sealed beacon's shown charge can reach 1.0 a tick before the Warden's kill is
+# recorded, and gates opened then would be ignored by flow and soft-lock the stage.
+func _on_flow_changed(state: String) -> void:
+	if state != "gates" or gates.is_open():
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
 	var picks: Array = Parts.roll(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES)

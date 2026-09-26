@@ -25,6 +25,16 @@ const WIDTH := 8.0
 const HEIGHT := 7.0
 const MISSED_BEYOND := 20.0
 const LOST_BEYOND := 110.0
+# Gates go downhill of the ball, never up a bank (momentum is sacred): candidate
+# headings are tried nearest the ball's own line first, at these distances and
+# spreads, and the first whose gate spots and approach lines stay at or below the
+# ground under the ball (within CLIMB_TOLERANCE) wins. If none does, the candidate that
+# climbs least is used.
+const TURN_STEPS := [0.0, 20.0, -20.0, 40.0, -40.0, 60.0, -60.0, 90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
+const DISTANCES := [AHEAD, 30.0, 24.0, 18.0]
+const SPREADS := [SPREAD, 6.0]
+const CLIMB_TOLERANCE := 0.75
+const PATH_SAMPLES := 6
 
 var offers: Array = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
@@ -96,12 +106,10 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	_gates.clear()
 	offers = []
 	_last_side = {}
-	var facing := Vector3(heading.x, 0.0, heading.z).normalized()
-	var side := facing.cross(Vector3.UP).normalized()
+	var plan := choose_placement(ball, heading)
+	var facing: Vector3 = plan["facing"]
 	for i in _ids.size():
-		var offset := (float(i) - (_ids.size() - 1) * 0.5) * 2.0 * SPREAD
-		var spot := ball + facing * AHEAD + side * offset
-		var at: Vector3 = _terrain.drop_point(spot.x, spot.z, 0.0)
+		var at: Vector3 = plan["spots"][i]
 		var part_id: String = _ids[i]
 		var d: Resource = Parts.def(part_id)
 		var completes := Parts.completed_by(part_id, _held)
@@ -118,6 +126,42 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
 		})
 		_gates.append(_build_gate(at, facing, offers[-1]))
+
+
+# The gate spots for count gates: {facing, spots, climb}. Climb is the most any gate
+# spot or approach sample rises above the ground under the ball.
+func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
+	var count := maxi(1, _ids.size())
+	var ground: float = _terrain.height(ball.x, ball.z)
+	var base := Vector3(heading.x, 0.0, heading.z).normalized()
+	if base.length() < 0.5:
+		base = Vector3.FORWARD
+	var best := {}
+	for turn in TURN_STEPS:
+		var facing := base.rotated(Vector3.UP, deg_to_rad(turn))
+		for distance in DISTANCES:
+			for spread in SPREADS:
+				var plan := _candidate(ball, ground, facing, distance, spread, count)
+				if plan["climb"] <= CLIMB_TOLERANCE:
+					return plan
+				if best.is_empty() or plan["climb"] < best["climb"]:
+					best = plan
+	return best
+
+
+func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int) -> Dictionary:
+	var side := facing.cross(Vector3.UP).normalized()
+	var spots: Array[Vector3] = []
+	var climb := -INF
+	for i in count:
+		var offset := (float(i) - (count - 1) * 0.5) * 2.0 * spread
+		var spot := ball + facing * distance + side * offset
+		var at: Vector3 = _terrain.drop_point(spot.x, spot.z, 0.0)
+		spots.append(at)
+		for k in PATH_SAMPLES + 1:
+			var p := ball.lerp(spot, float(k) / PATH_SAMPLES)
+			climb = maxf(climb, _terrain.height(p.x, p.z) - ground)
+	return {"facing": facing, "spots": spots, "climb": climb, "distance": distance}
 
 
 static func rarity_color(rarity: String) -> Color:
