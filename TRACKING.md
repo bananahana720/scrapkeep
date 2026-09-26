@@ -284,8 +284,8 @@ Blockers marked dependency refer to the pinned card's exact dependency list in B
 | [JL-29](BACKLOG.md#jl-29) | 2 | 1 | done | none | none | EV-0577 |
 | [JL-30](BACKLOG.md#jl-30) | 1 | 1 | done | none | none | EV-0569 |
 | [JL-31](BACKLOG.md#jl-31) | 1 | 1 | done | none | none | EV-0571 |
-| [DF-01](BACKLOG.md#df-01) | 1 | 2 | in_progress | none | none | EV-0580 |
-| [DF-02](BACKLOG.md#df-02) | 1 | 2 | in_progress | none | none | EV-0580 |
+| [DF-01](BACKLOG.md#df-01) | 1 | 3 | review | none | none | EV-0582 |
+| [DF-02](BACKLOG.md#df-02) | 1 | 3 | review | none | none | EV-0582 |
 | [DF-03](BACKLOG.md#df-03) | 1 | 3 | review | none | none | EV-0581 |
 | [DF-04](BACKLOG.md#df-04) | 1 | 1 | blocked | dependency: DF-01, DF-02, DF-03 | none | EV-0579 |
 
@@ -885,6 +885,7 @@ At preparation handoff every question was open. Q-E07 is now resolved from Andre
 | EV-0579 | 2026-09-26T18:35:02+00:00 | Andrew / authorization; coordinator / definition import, readiness | Direction foundation (card family DF); BACKLOG § Direction foundation after the sketch plays; TRACKING program authorization | Andrew asked to solidify the foundational technical aspects now that play has settled direction, leaving the technical choices to the coordinator. Offered a documentation-only round writing D1 (physics authority, decided at EV-0578), D2 (open stages and an event director), D3 (one ability contract), D4 (an element × material table) and D5 (sketch promotion and playtest traceability) as ADRs, he chose the option that also harmonizes the Bible. Imported DF-01 (TADR-006, TADR-007), DF-02 (TADR-008, TADR-009), DF-03 (TADR-010 and superseded notes for TH-06, TH-11, TH-14 in the sections index) and DF-04 (Bible harmonization) at revision 1. Measured before carding: 6 sections pin BIBLE.md's bytes and 34 cite it by line (366 citations), and re-pinning cascades (PD-02 is pinned by 4 sections, TH-12 and PD-01 by 2 each), so DF-04 keeps every Bible line number and re-verifies each cascaded citation; the sections index is pinned by nothing, so DF-03 may annotate it without drift. DF-01 to DF-03 ready with disjoint write sets; DF-04 blocked on them. Writers scrapkeep-writer (Opus 5.5 high); reviews scrapkeep-reviewer (Fable 5.1 high). |
 | EV-0580 | 2026-09-26T18:35:50+00:00 | Coordinator / assignment, lease | DF-01, DF-02, DF-03 | Admission checked: authorization EV-0579 covers documentation-only ADR writing; cards pinned at revision 1; no dependencies; write sets disjoint (TADR-006/007, TADR-008/009, TADR-010 plus the sections index); no live lease overlaps (JL program closed, only the light-lane writer on proto/mobility-kit-v2 under `sketches/mobility-kit/`). Worktrees `/home/andrew/Projects/scrapkeep-wt-DF-01..03` on `wt/DF-01..03` at base 433a3f48c9e07e133b0e737ec3a476349b45f57b from `scripts/new-worktree.sh` (a first run from the session worktree placed them under `.claude/worktrees/`; removed unused and recreated from the main checkout). Attempts DF-01-A1, DF-02-A1, DF-03-A1 and leases DF-0n-L1 opened; scrapkeep-writer on claude-opus-5-5 high each. Three writers plus the light-lane writer is four, at the ceiling. |
 | EV-0581 | 2026-09-26T18:45:10+00:00 | Worker / handoff; coordinator / verification, repair; reviewer / assignment | DF-03; hash lines in three product and four technical section files | **DF-03-A1** handed back cf9d298 on wt/DF-03 (writer claude-opus-5-5, `CLAUDE_EFFORT=high`): TADR-010 and a per-section superseded note for TH-06, TH-11 and TH-14 in the sections index. Coordinator receipts on cf9d298: check:scope documentation-only (2 paths), check:docs 0 failures, check:project pass. **Repair:** the writer found check:drift failing at the base with 3 product mismatches: the EV-0579 import (433a3f4) appended BACKLOG.md without re-pinning PD-01, PD-02 and PD-03, as prior imports do (57d4306). The coordinator re-pinned and cascaded to a fixed point in two passes over the same seven files as 57d4306, hash lines only (1451057); check:drift 349 hashes, 0 mismatches. DF-03 to review: scrapkeep-reviewer (Fable 5.1 high), receipts supplied, writer brief withheld. |
+| EV-0582 | 2026-09-26T18:47:05+00:00 | Worker / handoff; coordinator / verification; reviewer / assignment | DF-01, DF-02 | **DF-01-A1** handed back 7bbb380 on wt/DF-01 (TADR-006 physics authority and verification, TADR-007 sketch promotion and playtest traceability) and **DF-02-A1** handed back 3c09574 on wt/DF-02 (TADR-008 ability contract, TADR-009 element-material interactions); both writers claude-opus-5-5, `CLAUDE_EFFORT=high`. Coordinator receipts on each: check:scope documentation-only (2 paths), check:docs 0 failures. Both writers saw the base's check:drift mismatches that EV-0581 already repaired. Writer findings carried for later cards, not fixed here: playtest log entry 2 records restitution 0.35 for rigid play, but the rigid ball at dc94b2c hard-coded 0.25 (the slider fed kinematic only); the tuning panel persists nothing; neither sketch enables physics interpolation and the chase camera reads the raw body position, a candidate cause of the jitter Andrew saw (the light-lane writer on proto/mobility-kit-v2 was asked to add an F3 interpolation toggle and an F4 tuning dump); TH-03's preview entry condition may need widening for an always-on reach indicator; HF-03b already uses "DF-01" to "DF-04" as register entry IDs, a name collision with this card family. One scrapkeep-reviewer (Fable 5.1 high) reads DF-01 and DF-02 together with separate verdicts (disjoint write sets); two reviewers active. |
 
 ## Preparation checkpoint
 
@@ -2212,11 +2213,11 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: adr/TADR-006-physics-authority-and-verification.md; adr/TADR-007-sketch-promotion-and-playtest-traceability.md; artifacts/local/tasks/DF-01/.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-01` on `wt/DF-01`, created by `scripts/new-worktree.sh`.
 - Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-26T18:35:50+00:00; dispatched.
+- Candidate identity: `7bbb38087f6dcc7f8b0d48005cd62aaac853d0f3` on wt/DF-01. Integrated identity: null.
+- Latest checkpoint: 2026-09-26T18:47:05+00:00; handoff received (writer claude-opus-5-5, CLAUDE_EFFORT=high); coordinator receipts pass; in review.
 - Blockers: none.
-- Evidence: none yet; receipts go under `artifacts/local/tasks/DF-01/`.
-- Review: not_run; planned scrapkeep-reviewer (Fable 5.1 high).
+- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-01/` (check-scope documentation-only 2 paths; check:docs 0 failures).
+- Review: in progress, scrapkeep-reviewer (Fable 5.1 high), paired DF-01/DF-02 read with separate verdicts.
 
 ## DF-02-A1 Direction foundation attempt
 
@@ -2224,11 +2225,11 @@ Next: the next-sprint proposal in the receipt (objective: apply the HF-10 requir
 - Owned files: adr/TADR-008-ability-contract.md; adr/TADR-009-element-material-interactions.md; artifacts/local/tasks/DF-02/.
 - Worktree: `/home/andrew/Projects/scrapkeep-wt-DF-02` on `wt/DF-02`, created by `scripts/new-worktree.sh`.
 - Base identity: `433a3f48c9e07e133b0e737ec3a476349b45f57b`.
-- Candidate identity: null. Integrated identity: null.
-- Latest checkpoint: 2026-09-26T18:35:50+00:00; dispatched.
+- Candidate identity: `3c0957474f4be5e6c2537b1b087fb18929f73d28` on wt/DF-02. Integrated identity: null.
+- Latest checkpoint: 2026-09-26T18:47:05+00:00; handoff received (writer claude-opus-5-5, CLAUDE_EFFORT=high); coordinator receipts pass; in review.
 - Blockers: none.
-- Evidence: none yet; receipts go under `artifacts/local/tasks/DF-02/`.
-- Review: not_run; planned scrapkeep-reviewer (Fable 5.1 high).
+- Evidence: coordinator receipts in the session worktree `artifacts/local/tasks/DF-02/` (check-scope documentation-only 2 paths; check:docs 0 failures).
+- Review: in progress, scrapkeep-reviewer (Fable 5.1 high), paired DF-01/DF-02 read with separate verdicts.
 
 ## DF-03-A1 Direction foundation attempt
 
