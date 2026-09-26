@@ -10,6 +10,8 @@ const Intent := preload("res://src/movement/intent.gd")
 #    publishes strike_deflected on the bus; a real strike to half health shows 0.5 on
 #    the beacon the next tick; the killing strike, 60 m outside the ring, opens the gates
 #    at once and fires beacon_unsealed once.
+#    enemy_killed(warden) arrives while the Warden is still in the tree, already
+#    colliding with nothing and reading integrity 0: the kill path, not a free.
 # 2. Objective: stage 1 reads plating 30 and the real punch_now(); stage 2 reads 60.
 # 3. Crush: at heft 3 the ball rolls through a real chaser at 20 m/s, keeps 95% of its
 #    speed and kills it once; at heft 1 the same approach rams it, knocks it and it lives.
@@ -35,6 +37,9 @@ var _runs: Array = []
 var _run := {}
 var _ticks := 0
 var _kills := 0
+var _kill_seen := {}
+# Our own reference: flow's handler clears flow.warden before this test's handler runs.
+var _warden_ref: Node3D
 
 
 func _initialize() -> void:
@@ -70,10 +75,25 @@ func _setup() -> void:
 	_game.flow.force_warden = true
 	_game.player.source = _source
 	_game.events.beacon_unsealed.connect(func(_s: int): _unsealed += 1)
+	_game.events.enemy_killed.connect(_on_killed)
 	_game.events.beacon_charge_changed.connect(func(f: float): _charges.append(f))
 	_game.events.strike_deflected.connect(func(_e: Node3D, _k: String, _p: float, _pl: float): _deflected += 1)
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
+
+
+# At the moment enemy_killed arrives for the Warden, the node must still exist (the kill
+# came through the kill path, not a free), collide with nothing, and read integrity 0.
+func _on_killed(kind: String, _at: Vector3, _scrap: int) -> void:
+	if kind != "warden" or _kill_seen.size() > 0:
+		return
+	var warden = _warden_ref
+	var valid := is_instance_valid(warden)
+	_kill_seen = {
+		"valid": valid,
+		"layer": warden.collision_layer if valid else -1,
+		"integrity": _combat.integrity_of(warden) if valid else -1.0,
+	}
 
 
 func _put_ball(at: Vector3) -> void:
@@ -90,6 +110,7 @@ func _gate() -> void:
 			% [warden.plating if real else -1.0, warden.max_hp if real else -1.0, flow.sealed])
 	if not real:
 		return
+	_warden_ref = warden
 	_combat.strike(warden, "runner", 10.0)
 	_report("deflect_on_bus", _deflected == 1, "a 10-punch shot on plating 30 published strike_deflected %d time(s) on the real bus" % _deflected)
 	warden.hp = warden.max_hp
@@ -104,6 +125,9 @@ func _gate() -> void:
 	_combat.strike(warden, "runner", warden.max_hp)
 	var at_once: String = flow.state_name()
 	flow.physics_step(DT)
+	_report("kill_path", _kill_seen.get("valid", false) and _kill_seen.get("layer", -1) == 0 and _kill_seen.get("integrity", -1.0) == 0.0,
+		"enemy_killed(warden) arrived with the Warden still in the tree %s, collision layer %d, integrity %.1f"
+			% [_kill_seen.get("valid", false), _kill_seen.get("layer", -1), _kill_seen.get("integrity", -1.0)])
 	_report("break_opens_gates", at_once == "gates" and flow.state_name() == "gates" and _unsealed == 1 and _charges[-1] == 1.0 and not flow.sealed,
 		"killing strike %.0f m outside the ring: state %s at once, %s a tick later, beacon_unsealed %d time(s)"
 			% [OUTSIDE, at_once, flow.state_name(), _unsealed])

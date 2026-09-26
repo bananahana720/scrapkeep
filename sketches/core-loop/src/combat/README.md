@@ -24,13 +24,13 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 
 | Kind | Health | Plating | Scrap | Weight | Attack |
 | --- | --- | --- | --- | --- | --- |
-| `chaser` | 40 x threat | 0 | 3 | 1 | a 0.6 s wind-up lays a lane 11 m long toward you, then it lunges down it |
+| `chaser` | 60 x threat | 0 | 3 | 1 | a 0.6 s wind-up lays a lane 11 m long toward you, then it lunges down it |
 | `lobber` | 26 x threat | 0 | 4 | 3 | the muzzle glows for 1.3 s, then it commits a 3.6 m landing ring where you will be and the shell lands there 1.9 s later |
 | `miniboss` | 600 x threat | 1.25 x the stage Warden's, rounded; 0 in its weak window | 24 | 5 | alternates a leap slam (a 7 m ring) and a charge (a 30 m lane), with a 2.4 s weak window after each attack |
 | `warden` | `warden_hp` | `warden_plating` | 30 x stage | immobile | every 6 s in reach: a 2 s telegraph, then +10 m/s straight up (and 10 damage inside 6 m); lesson from `warden_lesson` |
 | `vault` | 400 x stage | the next stage's `warden_plating` (120 on stage 3) | 10 x stage | immobile | none |
 
-Warden numbers come from `ctx.flow.stage_def()` (`warden_plating`, `warden_hp`, `warden_lesson`, `beacon_radius` as its reach). While the spine has no warden fields, combat uses the spec's per-stage values: 30/60/95 plating, 400/700/1000 health, `plate`/`caps`/`magnet`. The Warden and the vault sit on the ground under `at`; the others are placed at `at`. An unknown kind spawns a chaser and prints a warning.
+Warden numbers come from `ctx.flow.stage_def()` (`warden_plating`, `warden_hp`, `warden_lesson`, `beacon_radius` as its reach). While the spine has no warden fields, combat uses the spec's per-stage values: 30/60/95 plating, 400/700/1000 health, `plate`/`caps`/`magnet`. The Warden and the vault sit on the ground under `at`; the others are placed at `at`. An unknown kind spawns a chaser and prints a warning. Every enemy records its kill on the tick its health reaches 0: `died` fires, the spawner calls `run.record_kill`, and the body has already stopped colliding, before it leaves the tree at the end of the frame. A stage reset frees what is left without a kill, which is how a retry clears the field.
 
 Warden lessons: `plate` adds nothing. `caps` adds three vent caps on top: a stomp or slam landing within 2.6 m of one meets plating 0 and hits for 1.5 times its punch. `magnet` swings a magnet arm up over the clamp every 8 s, telegraphs 1.5 s, then tugs you toward it at 3.5 m/s² for 1.5 s; a weapon hit on the magnet during the tug drops the Warden's plating to 0 for 3 s. It never pins and never pushes sideways.
 
@@ -75,6 +75,8 @@ The pattern fields are `count`, `spread_deg`, `arms`, `arm_offset_deg`, `rotatio
 
 ## Weapons and specials
 
+Build owns tuning mods (CONTRACTS). Combat reads `tuning.mod("weapon_damage")`, `weapon_rate`, `weapon_range` and, for the turret, `turret_damage` at the moment it fires, on top of the transformer pattern. They scale shots, `punch_now()`, overdrive and the discharge. A part should use a transformer or a mod for a stat, not both.
+
 | Class | Weapon id | Fires | F (special id) |
 | --- | --- | --- | --- |
 | Runner-gunner | `rapid_laser` | 12 a second, 7 damage, a 0.25 m field, laser-true | `overdrive`: a 12 m ring blast (30 damage, a heavy shove), then 3 s of 1.6 times the fire rate; 6 s cooldown |
@@ -87,7 +89,7 @@ Both classes fire while rolling. The runner can plant too, since the kit is shar
 
 ## Codex entries (category `enemy`)
 
-`codex_entries.gd` holds six entries: `shell_return` (a batted shell kills its own lobber), `counter_ram` (ram a chaser mid wind-up), `crush_chain` (three unplated one-hit ram kills in a second), `parting_shot` (a weapon kill within 1 s of a slingshot), `pulse_stomp` (a vent-cap stomp within 1.5 s of a Warden pulse) and `magnet_break` (break the Warden while its magnet has it unplated). Combat calls `ctx.codex.declare(entry)` for each at setup and `ctx.codex.mark_discovered(id, at)` on detection, both only when `ctx.codex` exists. `discovered` and `discovery_log` hold this run's finds. A frozen chaser shattered by a ram waits for build's frost state.
+`codex_entries.gd` holds six entries: `shell_return` (a batted shell kills its own lobber), `counter_ram` (ram a chaser mid wind-up), `crush_chain` (three unplated one-hit ram kills in a second), `parting_shot` (a weapon kill within 1 s of a slingshot), `pulse_stomp` (a vent-cap stomp within 1.5 s of a Warden pulse) and `magnet_break` (break the Warden while its magnet has it unplated). Combat calls `ctx.codex.declare(entry)` for each at setup and `ctx.codex.mark_discovered(id, at, ["player"])` on detection; the codex publishes `synergy_discovered`, never combat. `discovered` and `discovery_log` hold this run's finds. A frozen chaser shattered by a ram waits for build's frost state.
 
 **Batting a shell.** A bolt that reaches a lobber's shell in flight, or a ball at CRUISE or faster that passes within 2.4 m of one, sends it back at its lobber. The return commits a new ring, drawn in amber: it never hurts the player, and its blast strikes every enemy the ring contains with kind `shell` for 40.
 

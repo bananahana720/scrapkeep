@@ -160,8 +160,13 @@ func telegraph() -> Node3D:
 	return _telegraph if is_instance_valid(_telegraph) else null
 
 
+# The kill is recorded on the tick health reaches 0, and the body stops colliding on
+# that same tick, so a crush exception can never end inside a live collider. Any death
+# visual belongs to presentation, reading enemy_killed; this node is gone at frame end.
 func _die() -> void:
 	_dead = true
+	collision_layer = 0
+	collision_mask = 0
 	_clear_telegraph()
 	died.emit(global_position, scrap_value)
 	queue_free()
