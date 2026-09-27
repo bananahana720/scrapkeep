@@ -20,6 +20,13 @@ const AREA_ALPHA := 0.16
 const FILL_ALPHA := 0.34
 const EDGE_ALPHA := 0.9
 const LIFT := 0.2
+# The Spillway ground is an orange-and-sand checker, so HAZARD alone washes into it. Every
+# edge is drawn over a wider dark underlay, and a ring's edge thickens with its radius,
+# so a 30 m Warden ring still reads as a bold line from 60 m.
+const EDGE_MIN := 0.35
+const EDGE_PER_METRE := 0.04
+const UNDERLAY := 0.35
+const UNDERLAY_ALPHA := 0.85
 
 enum Shape { RING, LANE }
 
@@ -107,9 +114,16 @@ func _build() -> void:
 		area.bottom_radius = radius
 		area.height = 0.04
 		_mesh(area, AREA_ALPHA, Vector3.ZERO)
+		var width := maxf(EDGE_MIN, radius * EDGE_PER_METRE)
+		var under := TorusMesh.new()
+		under.inner_radius = maxf(0.05, radius - width - UNDERLAY)
+		under.outer_radius = radius + UNDERLAY
+		under.rings = 96
+		_underlay(under, Vector3.DOWN * 0.05)
 		var edge := TorusMesh.new()
-		edge.inner_radius = maxf(0.05, radius - 0.35)
+		edge.inner_radius = maxf(0.05, radius - width)
 		edge.outer_radius = radius
+		edge.rings = 96
 		_mesh(edge, EDGE_ALPHA, Vector3.ZERO)
 		var fill := CylinderMesh.new()
 		fill.top_radius = 1.0
@@ -122,8 +136,11 @@ func _build() -> void:
 		area.size = Vector3(width, 0.04, length)
 		_mesh(area, AREA_ALPHA, Vector3(0.0, 0.0, -length * 0.5))
 		for side in [-1.0, 1.0]:
+			var under := BoxMesh.new()
+			under.size = Vector3(0.5 + UNDERLAY * 2.0, 0.06, length + UNDERLAY * 2.0)
+			_underlay(under, Vector3(side * width * 0.5, -0.05, -length * 0.5))
 			var rail := BoxMesh.new()
-			rail.size = Vector3(0.3, 0.08, length)
+			rail.size = Vector3(0.5, 0.08, length)
 			_mesh(rail, EDGE_ALPHA, Vector3(side * width * 0.5, 0.0, -length * 0.5))
 		# The fill grows from the attacker's end, so the lane reads as "coming this way".
 		var holder := Node3D.new()
@@ -138,6 +155,18 @@ func _build() -> void:
 		holder.add_child(inner)
 		_fill = holder
 	set_progress(progress)
+
+
+# The dark band under an edge: charcoal, drawn just before the edge itself.
+func _underlay(mesh: Mesh, offset: Vector3) -> void:
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	var mat := material(UNDERLAY_ALPHA, Palette.CHARCOAL)
+	mat.render_priority = PRIORITY - 1
+	instance.material_override = mat
+	instance.position = offset
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
 
 
 func _mesh(mesh: Mesh, alpha: float, offset: Vector3) -> MeshInstance3D:

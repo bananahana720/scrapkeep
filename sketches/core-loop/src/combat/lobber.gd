@@ -54,6 +54,17 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	_muzzle.material_override = _muzzle_material
 	_muzzle.position = Vector3.UP * 2.6
 	add_child(_muzzle)
+	# A mortar tube on top and a lit waist band: the lobber's silhouette says artillery
+	# from a distance, and the band keeps it visible against the ground.
+	var tube := CylinderMesh.new()
+	tube.top_radius = 0.45
+	tube.bottom_radius = 0.6
+	tube.height = 2.6
+	var barrel := _accent(tube, Palette.CHARCOAL, 0.0, Vector3(0.0, 3.6, 0.0))
+	barrel.rotation.x = 0.35
+	var band := BoxMesh.new()
+	band.size = Vector3(2.55, 0.35, 2.55)
+	_accent(band, Palette.VERDIGRIS.lightened(0.55), 2.2, Vector3.UP * 0.9)
 
 
 func muzzle_point() -> Vector3:
@@ -84,5 +95,5 @@ func _physics_process(delta: float) -> void:
 
 
 func _show_charge(charge: float) -> void:
-	_muzzle_material.emission_energy_multiplier = 0.2 + charge * 5.0
+	_muzzle_material.emission_energy_multiplier = 0.8 + charge * 5.0
 	_muzzle.scale = Vector3.ONE * (1.0 + charge * 0.9)
