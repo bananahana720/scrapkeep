@@ -92,6 +92,7 @@ func reset() -> void:
 		_place_barge(b, Vector3.INF)
 	for l in lifts:
 		l["cycle"] = SteamCycle.new(SteamCycle.PERIODIC, l["spec"]["charge"], l["spec"]["offset"])
+		l["cycle"].rise = l["spec"].get("rise_seconds", 0.85)
 		_place_lift(l)
 	for l in launchers:
 		l["cycle"] = SteamCycle.new(SteamCycle.ON_DEMAND, l["spec"]["charge"], 0.0)

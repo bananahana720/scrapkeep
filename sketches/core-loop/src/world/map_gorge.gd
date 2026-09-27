@@ -514,14 +514,19 @@ func _tunnel_roofs(parent: Node3D, mat: Material) -> void:
 		body.basis = Basis.looking_at(along.normalized(), Vector3.UP)
 
 
+# The roofs stand over the halfpipe's level stretch: over its steep drop a level slab
+# left 0.3 m of headroom and pinned the ball (stage_transitions_test).
+const SKYLIGHT_ROOFS := [40.0, 52.0]
+
+
 func _skylight_roof(parent: Node3D, ground: Callable, mat: Material) -> void:
-	for z in [54.0, 70.0]:
+	for z in SKYLIGHT_ROOFS:
 		var at: Vector3 = ground.call(SKYLIGHT_X + SKYLIGHT_DEPTH + 3.0, z, 0.0)
 		var top := at.y - 0.05
 		for side in [-1.0, 1.0]:
 			box(parent, Vector3(SKYLIGHT_DEPTH + 1.0, 1.2, 12.0), Vector3(SKYLIGHT_X + side * (SKYLIGHT_DEPTH * 0.5 + 1.0), top - 0.6, z), mat)
 	var grate := Palette.striped(Palette.CHARCOAL, Palette.SAND)
-	for z in [54.0, 70.0]:
+	for z in SKYLIGHT_ROOFS:
 		var at: Vector3 = ground.call(SKYLIGHT_X + SKYLIGHT_DEPTH + 3.0, z, 0.0)
 		_visual_box(parent, Vector3(2.0, 0.2, 12.0), Vector3(SKYLIGHT_X, at.y - 0.3, z), grate)
 
@@ -529,7 +534,8 @@ func _skylight_roof(parent: Node3D, ground: Callable, mat: Material) -> void:
 func _cable_tower(parent: Node3D, ground: Callable) -> void:
 	var foot: Vector3 = ground.call(48.0, -108.0, -0.5)
 	grapple_post(parent, foot, 32.0)
-	grapple_post(parent, ground.call(104.0, -36.0, -0.5), 12.0)
+	# The lower post stands beside the line's end, never on the line the ball leaves along.
+	grapple_post(parent, ground.call(106.0, -46.0, -0.5), 12.0)
 
 
 func _reactor_vent(parent: Node3D, ground: Callable, enamel: Material, light: Material) -> void:
