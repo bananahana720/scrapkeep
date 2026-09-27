@@ -120,7 +120,13 @@ func step(delta: float):
 
 
 # What the ball leaves with: its banked planar speed along the heading, and the arc's
-# own vertical part, so it lands rather than floats.
+# own fall capped at SET_DOWN, so the rail sets the ball down a moment above its
+# landing instead of throwing it at the ground. A hard vertical touchdown turns planar
+# speed into friction (measured: the bay's pad landed at 57 m/s down and kept 9 of 22
+# m/s), which is a stop the player never chose.
+const SET_DOWN := 10.0
+
+
 func release_velocity() -> Vector3:
-	var vy := velocity_at(minf(time, flight)).y
+	var vy := maxf(velocity_at(minf(time, flight)).y, -SET_DOWN)
 	return heading * release_speed + Vector3.UP * vy

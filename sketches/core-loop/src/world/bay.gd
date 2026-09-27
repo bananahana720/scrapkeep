@@ -38,6 +38,9 @@ const RIM := 4.0
 const LIFT := 46.0
 const BACK := 30.0
 const FLIGHT := 3.0
+# The pad's throw flies longer so it clears the deck's banked rim by about 19 m; at 3 s
+# it grazed the rim top and the rail ran out against it.
+const FLIGHT_OUT := 3.6
 const RIDE_LIFT := 14.0
 const EXIT_LEAD := 10.0
 const ENTRY_SPEED := 9.0
@@ -57,7 +60,8 @@ const TOY_REACH := 2.2
 const TOY_REST := 0.8
 const MARBLE_STEPS := 5
 const MARBLE_STEP_SECONDS := 0.32
-const PINS := [Vector2(8.0, 0.0), Vector2(9.0, -0.8), Vector2(9.0, 0.8), Vector2(10.0, -1.6), Vector2(10.0, 0.0), Vector2(10.0, 1.6)]
+# Racked to the yard's side, off the straight line from the landing to the pad.
+const PINS := [Vector2(7.0, -5.0), Vector2(8.0, -5.8), Vector2(8.0, -4.2), Vector2(9.0, -6.6), Vector2(9.0, -5.0), Vector2(9.0, -3.4)]
 const PIN_RESET := 3.0
 const FALL_OFF := 6.0
 const PARK := Vector3(0.0, -2000.0, 0.0)
@@ -297,8 +301,8 @@ func step(delta: float, ball: Vector3, velocity: Vector3, riding: bool) -> Array
 		lap.reset()
 		var speed := maxf(banked, maxf(planar, cruise))
 		var dist := Vector2(exit_target.x - ball.x, exit_target.z - ball.z).length()
-		var ride = RideRail.arc("bay_pad", ball, exit_target, speed, cruise, FLIGHT, gravity,
-			{"flight_planar": dist / FLIGHT, "release_heading": facing, "min_lift": RIDE_LIFT})
+		var ride = RideRail.arc("bay_pad", ball, exit_target, speed, cruise, FLIGHT_OUT, gravity,
+			{"flight_planar": dist / FLIGHT_OUT, "release_heading": facing, "min_lift": RIDE_LIFT})
 		facts.append({"kind": "ride", "ride": ride})
 		facts.append({"kind": "left", "velocity": facing * speed})
 		return facts

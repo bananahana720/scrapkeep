@@ -114,7 +114,7 @@ func _draw(e: Dictionary, delta: float) -> void:
 	var r: float = e["radius"]
 	var f: float = 1.0 if flashing else model.fill()
 	var tm: TorusMesh = e["torus"]
-	tm.inner_radius = maxf(0.05, r * (1.0 - f))
+	tm.inner_radius = clampf(r * (1.0 - f), 0.05, r - 0.05)
 	(e["fill"] as MeshInstance3D).material_override = Palette.unshaded(Palette.HAZARD) if flashing else _stripe
 	if model.id == "impact":
 		_draw_impact(e, f)
