@@ -493,8 +493,12 @@ func _watch_layer(delta: float, ball: Vector3) -> void:
 	if ctx.player.kit.gliding:
 		_glide_clock = 4.0
 	var grounded: bool = ctx.player.state.grounded
+	if ride != null or launch.flying():
+		_air_clock = 0.0
+		_glide_clock = 0.0
+		return
 	_air_clock = 0.0 if grounded else _air_clock + delta
-	if not grounded or ride != null:
+	if not grounded:
 		if _air_clock > 1.0:
 			_glide_clock = maxf(_glide_clock, 2.0)
 		return
