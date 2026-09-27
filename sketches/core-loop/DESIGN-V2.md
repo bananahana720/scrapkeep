@@ -66,7 +66,8 @@ The contact rule lives in `player_ball._on_enemy_touched`, beside the stomp and 
 
 Every F special, the caster's LMB and the slingshot follow one spec.
 
-- **The indicator.** A sector, line or arc drawn as the committed geometry, in the class colour, never the hazard colour. The indicator is 15 to 20% larger than the damage geometry; that's the forgiveness.
+- **The indicator.** A sector, line or arc drawn as exactly the committed hit geometry (RR-01), in the class colour, never the hazard colour.
+- **Forgiveness is in the hit test, not the drawing.** Enemies whose hull falls within 15 to 20% beyond the drawn edge still count as hit. V1 caught this: the first version drew the indicator larger, which would have made players miss at the edge of what they were shown.
 - **The gauge.** A radial ring around the reticle, filling linearly over `charge_max`, which is 0.6 to 1.4 s depending on the ability.
 - **Release.** The hold fraction scales damage and size from a floor, so a tap still works. At full charge it auto-fires after a 0.5 s grace.
 - **Cancel.** Pressing the special again cancels, with no cooldown spent. Knock or crowd control mid-charge force-cancels the same way. Nothing is ever left stuck in a charging state.
@@ -237,3 +238,13 @@ The codex's world category holds lore fragments found in vaults and secrets. The
 - **The theme.** Salvagers repair and repurpose the tech that ended us. The Fleet digs up what should have stayed buried.
 
 The Bible marks an animal-only cast as open and never makes the exploratory examples canon. This premise goes to the same heavy-lane Bible card as the enemy origin, after v2 play. In this sketch, the class screen and codex may use the species and culture names.
+
+## 11. Andrew's rulings on V1's questions (AskUserQuestion, 2026-09-27)
+
+- **Wardens, one ancient family per stage.**
+  - Stage 1 is a reactor-relic Warden.
+  - Stage 2 is a swarm-remnant hive Warden.
+  - Stage 3 is one of the Mind's hands.
+  - Each fight plays differently, and one run meets all three causes of the collapse. The clamp is a shared base with a family-specific core.
+- **The rarest tier (rare_plus)** is amber with a mint heart and a notched frame. Red is only for things that hurt you.
+- **The ancients' light.** Not violet or purple ("a bit overused"). V1 is measuring alternatives, and Andrew picks next.
