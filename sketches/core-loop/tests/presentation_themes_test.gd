@@ -141,10 +141,14 @@ func _cost() -> void:
 			engine.render(engine.bar_len() * (8 if warm == 0 else 1))
 			if warm == 0:
 				continue
-			var t := Time.get_ticks_usec()
-			for block in 300:
-				engine.render(735)
-			var ms := (Time.get_ticks_usec() - t) / 1000.0 / (300.0 * 735.0 / Harmony.RATE)
+			# The fastest of three timed runs: other processes on the machine can only
+			# add time, so the minimum is the band's own cost.
+			var ms := INF
+			for attempt in 3:
+				var t := Time.get_ticks_usec()
+				for block in 100:
+					engine.render(735)
+				ms = minf(ms, (Time.get_ticks_usec() - t) / 1000.0 / (100.0 * 735.0 / Harmony.RATE))
 			if ms > worst:
 				worst = ms
 				name = "%s %s" % [spec[0], spec[2]]
