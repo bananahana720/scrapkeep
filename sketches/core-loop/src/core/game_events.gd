@@ -93,6 +93,15 @@ signal arc_slammed(at: Vector3, faces: int)
 signal skid_smashed(at: Vector3, hits: int)
 signal demo_slammed(at: Vector3)
 
+# v2 W6 world. Moss's bay and the gorge's contraptions (world publishes all three).
+# bay_entered fires when the ball lands on the workshop barge with the speed the
+# cradle banked; bay_left when the exit pad fires it back out, or it rolls off the
+# deck. world_fact carries every contraption, terrain, layer, ride and toy fact as a
+# kind that keys event_kinds.WORLD_ROWS, so one signal serves the whole family.
+signal bay_entered(banked_speed: float)
+signal bay_left(velocity: Vector3)
+signal world_fact(kind: String, at: Vector3)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

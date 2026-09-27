@@ -102,6 +102,13 @@ const ROWS := {
 	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_root_fifth", "hud": "", "objective": "", "priority": 1},
 	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
 	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
+	# v2 W6 world. The bay banks speed like the pylon mount and the pad slingshots it
+	# back, so entry and exit stand in with the plant and eject cues (SOUND-STORY
+	# section 7, Moss's workshop). world_fact is quiet here: each kind's own row is in
+	# WORLD_ROWS at the end of this file.
+	"bay_entered": {"group": "flow", "color": Palette.SANDSTONE, "shape": "square", "sound": "pylon_plant", "sound_next": "bay_lounge_in", "hud": "Moss's workshop", "objective": "", "priority": 2},
+	"bay_left": {"group": "flow", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "pylon_eject", "sound_next": "bay_slingshot_out", "hud": "", "objective": "", "priority": 1},
+	"world_fact": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 }
 
 # v2 W2 threat grammar
@@ -194,3 +201,49 @@ const LESSON_SHORT := {
 	"caps": "Slam its vent caps",
 	"magnet": "Shoot its magnet while pulled",
 }
+
+# v2 W6 world
+# One row per world_fact kind, in the ROWS schema. `sound` is an existing synth id
+# standing in; `sound_next` names the SOUND-STORY section 3 cue W5 is to bake. Colour
+# follows VISUAL-LANGUAGE section 11: contraptions read by their bone gauge (SAND), a
+# terrain change by the hostile telegraph family (HAZARD) until it lands, the gorge's
+# layers and rides by the world's own sandstone, the landmark by the ancients' blue.
+# Rising and breathy means a ride; falling and pure means incoming: the launchers'
+# charge whistle rises, the impact's falls (SOUND-STORY section 7, W6 must).
+const ANCIENT_LIGHT := Color("3d8bff")
+const WORLD_ROWS := {
+	"lift_fired": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "lift_chuff_clank", "hud": "", "objective": "", "priority": 1},
+	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},
+	"cannon_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "cannon_bang_rail_whoosh", "hud": "", "objective": "", "priority": 1},
+	"trebuchet_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "trebuchet_creak_whoosh", "hud": "", "objective": "", "priority": 1},
+	"geyser_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "geyser_whistle_bang", "hud": "", "objective": "", "priority": 1},
+	"valve_smashed": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "slam_boom", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
+	"route_opened": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "found_chime", "sound_next": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"cave_in_crumble": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
+	"cave_in_swap": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
+	"impact_incoming": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "far_thunk_falling_whistle", "hud": "", "objective": "", "priority": 2},
+	"impact_swap": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "crater_crump_sub_boom", "hud": "", "objective": "", "priority": 2},
+	"crater_ride": {"group": "event", "color": Palette.SANDSTONE, "shape": "ring", "sound": "boost_whoosh", "sound_next": "rail_ride_whoosh", "hud": "", "objective": "", "priority": 1},
+	"layer_undercroft": {"group": "event", "color": Palette.VERDIGRIS, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_reese_sub", "hud": "", "objective": "", "priority": 0},
+	"layer_shelf": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_theme", "hud": "", "objective": "", "priority": 0},
+	"layer_sky": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_bells_arp", "hud": "", "objective": "", "priority": 0},
+	"ride_grapple_line": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "grapple_clink", "sound_next": "ride_cable_clink", "hud": "", "objective": "", "priority": 1},
+	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
+	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},
+	"ride_chute": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rolling_metal", "hud": "", "objective": "", "priority": 1},
+	"landmark_hum": {"group": "event", "color": ANCIENT_LIGHT, "shape": "wave", "sound": "beacon_hum", "sound_next": "landmark_sub_pulse", "hud": "", "objective": "", "priority": 0},
+	"thermal_ride": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "thermal_updraft_swell", "hud": "", "objective": "", "priority": 1},
+	"wall_crumbled": {"group": "event", "color": Palette.SANDSTONE, "shape": "burst", "sound": "shatter", "sound_next": "cracked_wall_crumble", "hud": "", "objective": "", "priority": 1},
+	"reactor_vented": {"group": "event", "color": ANCIENT_LIGHT, "shape": "wave", "sound": "beacon_hum", "sound_next": "reactor_vent_sine_plume", "hud": "", "objective": "", "priority": 1},
+	"bay_bell": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "found_chime", "sound_next": "bay_bell_ring", "hud": "", "objective": "", "priority": 1},
+	"bay_jukebox": {"group": "event", "color": Palette.AMBER, "shape": "wave", "sound": "ui_tick", "sound_next": "lounge_flip", "hud": "", "objective": "", "priority": 1},
+	"bay_marble_note": {"group": "event", "color": Palette.SAND, "shape": "square", "sound": "scrap_tick", "sound_next": "marble_tick_ladder", "hud": "", "objective": "", "priority": 1},
+	"bay_pins": {"group": "event", "color": Palette.SAND, "shape": "burst", "sound": "hit_thwack", "sound_next": "pins_crash", "hud": "", "objective": "", "priority": 1},
+	"lap_started": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "ui_tick", "sound_next": "lap_start_tick", "hud": "", "objective": "", "priority": 1},
+	"lap_checkpoint": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "scrap_tick", "sound_next": "lap_checkpoint_tick", "hud": "", "objective": "", "priority": 1},
+	"lap_finished": {"group": "event", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "lap_done_beeps", "hud": "Lap {seconds} s", "objective": "", "priority": 2},
+}
+
+
+static func world_row(kind: String) -> Dictionary:
+	return WORLD_ROWS.get(kind, {})
