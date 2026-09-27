@@ -159,6 +159,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `event_announced` | `event_id: String, seconds_until: float` | D | a stage event is coming |
 | `event_started` | `event_id: String` | D | it is live |
 | `event_ended` | `event_id: String, outcome: String` | D | outcome is `won`, `lost` or `passed` (for ambient events) |
+| `event_progress` | `event_id: String, fraction: float` | D | a live participatory event's own progress, 0 to 1, from its model (Hold the Relay: share held; Surge Run: gates taken; Scrap Stampede: hits on the hauler); published on its first live tick, then whenever it has moved at least 0.01, and on reaching 1, before its `event_ended`; quiet, priority 0 (presentation drives the event's music from it and plays no cue) |
 | `launched` | `velocity: Vector3` | D | the ball was launched toward the next stage |
 | `pressure_changed` | `pressure: float` | D | director pressure, 0 to 1, for music layers |
 | `threat_rose` | `tier: int` | D | the director's time tier rose (clamped at +2) |

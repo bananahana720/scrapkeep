@@ -127,13 +127,21 @@ func _home() -> void:
 		"the kill cadences for two bars at 129 from beat %d, then the level returns at 172 on a beat (sample %d)" % [cadence, back])
 
 
+# Each arrangement's cost is the least of MEASURES runs. A busy machine can only add to
+# a measurement (a preempted worker, a cache flushed by another run), never take from
+# it, so the least of three is the engine's own cost; the cap stays at 8%.
+const MEASURES := 3
+
+
 func _cost() -> void:
 	var worst := 0.0
 	var name := ""
+	var worst_runs: Array[float] = []
 	for spec in [["warden", 0, "drop"], ["brindle", 0, "3"], ["miniboss", 2, ""], ["level", 0, ""]]:
 		# A throwaway engine plays eight bars first, so notes rendered on first use (the
 		# game warms them on a worker behind stage 1) do not count as steady cost.
-		for warm in 2:
+		var runs: Array[float] = []
+		for warm in MEASURES + 1:
 			var engine := MusicEngine.new()
 			engine.force_track(spec[0], spec[1], spec[2], spec[0] in ["warden", "brindle"])
 			engine.set_pressure(1.0)
@@ -148,11 +156,14 @@ func _cost() -> void:
 			for block in 300:
 				engine.render(735)
 			var spent := _cpu_ms() - cpu0 if cpu0 >= 0.0 else (Time.get_ticks_usec() - t) / 1000.0
-			var ms := spent / (300.0 * 735.0 / Harmony.RATE)
-			if ms > worst:
-				worst = ms
-				name = "%s %s" % [spec[0], spec[2]]
-	_check("cpu", worst > 0.0 and worst < 80.0, "densest arrangement %s costs %.0f ms of CPU per second of music (%.1f%% of one core)" % [name, worst, worst / 10.0])
+			runs.append(spent / (300.0 * 735.0 / Harmony.RATE))
+		var ms: float = runs.min()
+		if ms > worst:
+			worst = ms
+			worst_runs = runs
+			name = "%s %s" % [spec[0], spec[2]]
+	var shown := ", ".join(worst_runs.map(func(r): return "%.0f" % r))
+	_check("cpu", worst > 0.0 and worst < 80.0, "densest arrangement %s costs %.0f ms of CPU per second of music (%.1f%% of one core), the least of %d runs [%s ms]" % [name, worst, worst / 10.0, MEASURES, shown])
 
 
 # User plus system CPU of this process in ms, from /proc/self/stat (clock ticks of

@@ -189,6 +189,8 @@ func _publish(facts: Array) -> void:
 				ctx.run.add_core("event", terrain.drop_point(at.x, at.y, 1.0))
 			"scrap":
 				ctx.run.add_scrap(fact["amount"], fact["at"])
+			"progress":
+				bus.event_progress.emit(fact["id"], fact["fraction"])
 			"miniboss":
 				_spawn_miniboss(fact["at"])
 			"gate":
