@@ -66,7 +66,8 @@ The contact rule lives in `player_ball._on_enemy_touched`, beside the stomp and 
 
 Every F special, the caster's LMB and the slingshot follow one spec.
 
-- **The indicator.** A sector, line or arc drawn as the committed geometry, in the class colour, never the hazard colour. The indicator is 15 to 20% larger than the damage geometry; that's the forgiveness.
+- **The indicator.** A sector, line or arc drawn as exactly the committed hit geometry (RR-01), in the class colour, never the hazard colour.
+- **Forgiveness is in the hit test, not the drawing.** Enemies whose hull falls within 15 to 20% beyond the drawn edge still count as hit. V1 caught this: the first version drew the indicator larger, which would have made players miss at the edge of what they were shown.
 - **The gauge.** A radial ring around the reticle, filling linearly over `charge_max`, which is 0.6 to 1.4 s depending on the ability.
 - **Release.** The hold fraction scales damage and size from a floor, so a tap still works. At full charge it auto-fires after a 0.5 s grace.
 - **Cancel.** Pressing the special again cancels, with no cooldown spent. Knock or crowd control mid-charge force-cancels the same way. Nothing is ever left stuck in a charging state.
@@ -130,3 +131,242 @@ Every F special, the caster's LMB and the slingshot follow one spec.
 
 - The DESIGN-NOTES #39 gate-approach sweep must also cover towers, barges and tunnel roofs.
 - If the ball slides on the barges, the fallback named in I3 applies.
+
+## 9. Contraptions, focal points and events that change the terrain
+
+Andrew added these on 2026-09-27, mid-round, in his words:
+
+- "more steampunk and contraptions like um, steam, like lifts or launchers"
+- "post-apocalyptic like futurism"
+- "maps that are designed around a cluster buildings or a yeah focal point"
+- events that "change the environment and cause like rocks to cave in or something to land and create a crater or um, a building being like you know kind of like destroyed and a portion of it or uh, changed or morphed into something"
+
+The Wave 3 stage and event writers work these in:
+
+- **Contraptions.** Momentum tools you ride, never stops:
+  - steam lifts: an `AnimatableBody3D` piston platform that fires on a cycle you can read
+  - steam launchers: a vent or catapult reusing the rail maths
+  - pressure valves the player smashes to open a route
+  - Each shows its cycle with steam and a gauge you can read at a glance, and has its own sound.
+- **A focal point.** The vertical stage is built around one landmark: a ruined dam-works tower cluster. The undercroft, shelf and sky layers orbit it. It is the orientation anchor from every layer.
+- **Events that change the terrain.** These come from the event director (TADR-010), always announced first (a telegraph plus a stinger on the beat). They change the committed geometry, and the new collider is exactly the drawn change.
+  - **Cave-in.** Rocks seal one route and open another. A crumble telegraph runs 3 s ahead.
+  - **Impact.** Something lands and leaves a crater bowl, a new halfpipe the ball can ride. A projectile-type telegraph marks the landing.
+  - **Structural collapse.** Part of a tower shears off and becomes a ramp or bridge, or sheds a bonus vault.
+  - Rules:
+    - Momentum is sacred: a change never traps the ball inside new geometry.
+    - The spawn-clear check holds the change until the ball is outside the footprint.
+    - Participating (standing your ground, riding the new feature) pays a milestone reward.
+    - Performance: a terrain swap pre-builds the post-change collider and swaps it in, per the ~34 ms trimesh note. It never rebuilds mid-frame.
+
+## 10. Enemy origin, reinforcements and chained crowd control
+
+Andrew added these on 2026-09-27, in his words:
+
+- **Origin.** The enemies are "either uh, awaken ancient beings or an alien race or robots that came from the advent of an apocalypse, which is why it would be post-apocalyptic". Which origin is still open; see the question at the end.
+- **Reinforcements.** The longer you stay, the more "special like reinforcements would come". They carry "fun anti like roly ball like uh, mechanisms":
+  - "magnetic uh like uh traps that will act as like uh pits to slow you down"
+  - a hook that can "hook you to a specific Uh, point and lock you in place"
+  - "electrical fields that will pop up and try to nab you in the air"
+  - "bolas that will try to nab you in the air"
+  - armoured units that "can take an additional hit ... similar to the warden, but in a lesser extent"
+  - units that "reflect you or, or pull you"
+- **Enemy synergies.** "if you're unfortunately coming up to a combination of people, then you'll just get napped and and uh, um, just like skill chained".
+
+**How this fits momentum is sacred.** The principle allows stops the player could foresee and that come from their own performance. So:
+
+1. **Every counter is telegraphed** with W2's threat grammar before it can take hold: a projectile trace for bolas, a lane for the hook line, and an instant AOE fill for a mag pit or air-net field. Each has its own warn sound, and each is dodgeable by reading it.
+2. **Every hold can be broken by the player.**
+   - A smash or jump breaks a mag-pit slow.
+   - Enough speed snaps a hook tether: if you're above the tether's heft rating it breaks, which rewards growth.
+   - A double jump or glide escapes an air net.
+   - Rivet's sprint ignores all of them. That's his identity paying off.
+3. **Chains are real but bounded (tenacity).**
+   - Crowd control can chain across a combination of enemies. Getting "skill chained" is a legitimate punishment for rolling into a bad combination.
+   - After 1.8 s of accumulated hold within 4 s, the ball gets 2.5 s of immunity to crowd control, shown as a broken-bracket flicker in the class colour (VISUAL-LANGUAGE §11).
+   - Breaking free by your own action (smash, jump, speed) gives a small boost refund. Escaping is a momentum moment, not only relief.
+4. **Reinforcement roster.**
+   - Mag trapper: throws a magnetic pit disc (slow, heft-gated).
+   - Hooker: fires a tether lane that pins you to its anchor post.
+   - Netcaster: raises an electric field that grabs airborne balls.
+   - Bola thrower: a slow arcing throw that wraps you mid-air.
+   - Plated brute: a mini-Warden with plating that takes one extra breaking hit.
+   - Deflector: a reflect shield that bounces you back at restitution 0.9.
+   - Winch drone: pulls you toward the pack.
+5. **When they arrive.** The Risk of Rain stay-longer clock gates them. Each difficulty tick past the Warden break adds reinforcement weight. The director (TADR-010) composes packs that deliberately pair a controller with a punisher. For example, a mag trapper plus a bola thrower: the tagged combinations are the enemy synergies.
+6. **The counterplay is learnable.** Each counter also becomes an opportunity:
+   - A rebound off a deflector's shield gives any class the vault kick's ×1.8 (the one vault that is not Sable-only).
+   - A snapped tether slings you forward.
+   - An air net can be baited.
+
+These are the hooks for loot items ("tenacity", "tether snap", "net cutter").
+
+Wave 3 gets a W7 enemies writer (combat enemies plus the director's pack composition). It starts after W2 and W3 merge, since it needs the threat grammar and the contact rules.
+
+**No reskins (Andrew's pet peeve, 2026-09-27).** In his words: "I want creativity with the enemies ... another pet peeve of mine is just having skins of the same enemy that uh, does the same mechanic." The rules:
+
+- Every enemy type owns a mechanic no other type has.
+- A variant counts as a new enemy only if it changes what the player must do.
+- The W7 writer and its reviewer check each roster entry against this. Two entries that differ only in numbers or colour fail.
+
+**Enemy origin, chosen by Andrew through AskUserQuestion on 2026-09-27: the Fleet digs up ancient machines.** The Furnace Fleet's excavations woke pre-apocalypse war machines under the Southwest, and that waking caused the collapse. This gives two factions whose mechanics must differ:
+
+- **Fleet crews** are the reinforcements, with engineered anti-ball gear: the mag trappers, hookers, netcasters, bola throwers, deflectors and winch drones.
+- **Awakened ancients** are the wild threats and the Wardens: strange, ritual and geological.
+
+Brindle and the Bible's antagonist stay. The Bible amendment for the post-apocalyptic layer is a heavy-lane card after v2 play.
+
+**The ancients are us (Andrew, 2026-09-27).** In his words: "the uh, ancient machines were made by humans and um, like we can kind of have a mixture of things of what caused the ancient beings, aka us, to have uh, been lost, like whether it would be nuclear war or drone technology or uh, you know advanced super intelligence um, or a combination of all of those." Each cause becomes one ancient family with a mechanic no other family has (the no-reskins rule):
+
+| Cause | Family | Signature mechanic |
+| --- | --- | --- |
+| Nuclear war | Reactor relics | Terrain-changing hazard zones: fallout craters and meltdown vents. They reuse §9's events. |
+| Drone technology | Swarm remnants | Flocking formations: weak alone, dangerous in formation. Bowling through a formation scatters it. |
+| Superintelligence | The Mind's hands | Adapts to the player's habits. Frequent rebounds make it brace; frequent vaults make it guard the walls. It reads and counters the player's last pattern, bounded and telegraphed. |
+
+The codex's world category holds lore fragments found in vaults and secrets. The true cause, or the mix of causes, stays ambiguous and is pieced together across runs. For the W7 roster in this sketch, one ancient per family is enough, beside the Fleet reinforcements.
+
+**Who the characters are (Andrew, 2026-09-27).** In his words: "since life finds a way that there will be other intelligent beings or I guess it could be like animal, like amorphous, like animus type like characters", "tying into the history of you know, where the characters come from and um, like the history of the the current reigning intelligent species."
+
+- **The premise.** After humans were lost, animals became the reigning intelligent species. They grew up among our buried machines.
+- **It matches the Bible's candidate cast:**
+  - Sable, a fox from the Switchback Enclaves: grapple traversal.
+  - Kest, a bird from the Highdraft Roosts: a hovering mortar.
+  - Rivet, a mole machinist with cyborg instrumentation.
+  - Brindle, a badger commanding the Fleet.
+- **How they became intelligent stays ambiguous.** Evolution, or uplift by something humans left behind (a lab, the Mind, a caretaker drone network). The codex hints at it and never settles it.
+- **The theme.** Salvagers repair and repurpose the tech that ended us. The Fleet digs up what should have stayed buried.
+
+The Bible marks an animal-only cast as open and never makes the exploratory examples canon. This premise goes to the same heavy-lane Bible card as the enemy origin, after v2 play. In this sketch, the class screen and codex may use the species and culture names.
+
+## 11. Andrew's rulings on V1's questions (AskUserQuestion, 2026-09-27)
+
+- **Wardens, one ancient family per stage.**
+  - Stage 1 is a reactor-relic Warden.
+  - Stage 2 is a swarm-remnant hive Warden.
+  - Stage 3 is one of the Mind's hands.
+  - Each fight plays differently, and one run meets all three causes of the collapse. The clamp is a shared base with a family-specific core.
+- **The rarest tier (rare_plus)** is amber with a mint heart and a notched frame. Red is only for things that hurt you.
+- **The ancients' light** is **Cherenkov blue `#3d8bff`**, the glow of a human reactor pool: the light of the age that ended. Andrew chose it by AskUserQuestion after rejecting violet as "a bit overused". It keeps ΔE ≥ 31 against every palette colour under every vision type. Ancient seams are cut as charcoal grooves so they also read on petrol enamel.
+- **Audio rulings (the vision keeper's three questions).** Each confirms SOUND-STORY.md's default.
+  1. Only the reactor relic colours the band: a tritone pedal under the sub while a vent charges. Swarms and the Mind stay effects only.
+  2. Fleet reinforcements borrow Brindle's anvil and brass in the level theme, adding one layer per difficulty tick.
+  3. The Mind's hands quote the player's class motif, inverted with the last note a semitone flat. It's the one sanctioned hostile use of a class motif, and it doubles as their telegraph.
+
+## 12. Moss's workshop: the lull between stages (Andrew, 2026-09-27)
+
+In his words: "I actually want to have a maybe a shopkeeper uh, and maybe some lull in between phases. I do like the calm, you know, before the, sto the storm and the ability to maybe settle. And it could be also a time to like make upgrades as well and have some player decision be made instead of just being all procedural." He also asked for a meme interaction: the "Potion Seller" sketch (Justin Kuritzkes, https://www.youtube.com/watch?v=R_FQU4KzN7A), where the shopkeeper refuses to sell his strongest potions because they are too strong for the traveller.
+
+**Who and where**
+
+- **The keeper is Moss**, the Bible's proposed workshop keeper, who "remembers what each pilot neglects" (BIBLE.md:384).
+- **The workshop is a side bay**, and entering it is the player's choice. It opens off the launch after each Warden break, beside the reward gates. Rolling past it goes straight into the launch.
+
+**Momentum**
+
+- Entering the bay banks the ball's speed, like the pylon mount.
+- The exit launch pad slingshots the banked speed back into the stage launch.
+- The calm costs no momentum. The player chooses it, so nothing stops them unforeseen.
+
+**Calm**
+
+- The music drops to a sax-led lounge arrangement of the current stage theme, in the live key. It's the stage's loved core re-voiced, never replaced (warden spill B grammar).
+- The launch drops back into the full band.
+- The difficulty clock pauses inside, so the calm is real. The par timer keeps running, so speedrunners can skip it at a cost.
+
+**Player decisions (deterministic, not rolled on entry)**
+
+- **A shelf of 3 visible parts** at scrap prices: buy exactly what you want.
+- **One reroll** of the shelf per visit, at a rising price.
+- **Charge upgrades.** Pay to raise one ability's `max_charges` by 1, up to a cap. This is the stockpile path.
+- **Sell a part back** for half its price. This lowers heft, and the wording says so ("lighter, but faster to the next part").
+
+**The Potion Seller nod (a homage, never the sketch's script)**
+
+- Moss keeps one **top-shelf part**, always rare_plus, on a locked hook.
+- He refuses to sell it until the ball's heft class reaches the next band. His refusal lines are original and in character, riffing on "too strong for you, salvager".
+- The lock shows the heft needed as the pressure-dial icon with a notch, so the joke doubles as a growth goal you can read. Come back heavier and he relents with a grudging line.
+- This mechanic is the only place the gag appears. It never blocks progress, since the part is optional.
+
+**Owners**
+
+- W4: the shop economy (shelf, prices, reroll, charge upgrades, the heft lock).
+- W6: the workshop bay geometry and its launch pad.
+- W5: the lounge arrangement and Moss's voice-free sound set (a workbench clank, a shop bell, a grumble when he refuses).
+- W1: the shop UI, with icons first and at most 5 words per line.
+- Vision keeper: Moss's wording.
+
+**The conversation loop (Andrew, 2026-09-27).** In his words: "a conversational loop where the player can initiate and get maybe the flavors of the conversation or of the sketch". He accepted "a different flavor of it" if needed.
+
+- **Copyright.** The sketch's script is its creator's work; being on YouTube doesn't license it. The game copies no lines. It borrows only the comic structure: an escalating ask, a stubborn refusal repeated with rising exasperation, and a dismissal to a weaker seller. Everything is in Moss's own voice. The vision keeper writes the lines, and the integration reviewer checks that no line reproduces the sketch.
+- **How the player starts it.** A key glyph appears by Moss inside the bay. Each press plays one beat.
+- **The beats.** The loop runs 5 to 6 beats: ask, refuse, insist, double down, plead, send off (for example, to "a scrapper who sells lighter parts"). Pressing again restarts the loop with a new variation. There are at least 3 variations per beat, so repeat visits stay fresh.
+- **The pay-off.** Once the ball reaches the heft class the top shelf needs, the loop ends in a grudging relent line and the hook unlocks. The gag and the growth goal are the same thing.
+- **Moss's voice.** Synthesized babble, one syllable blip per letter, pitched in the live key, with each beat rising in pitch as he gets exasperated. No recorded voice.
+- **Fit.** It never blocks the exit, and each line is a speech bubble of at most 12 words, well away from the reticle. Seeing the loop through adds a codex entry ("Too heavy for you").
+
+## 13. Standing rule: when a callback lines up with a mechanic, build it
+
+Andrew, 2026-09-27, after the Moss heft-lock: "that's like a callback with a game mechanic ... If you come into other instances where things align like that, uh, go for it. And take the initiative and just, just build it. And just, yeah, make it a way for me or a player to just discover it naturally or uh, with some digging ... with uh, game design in mind and to have things make sense from a video gameplay."
+
+**The rule for every unit.** When a reference, joke, lore fact or motif lines up with a mechanic, build the alignment without asking. It must pass three tests:
+
+1. **It makes gameplay sense on its own.** A player who misses the reference still gets a fair, readable mechanic.
+2. **It's discovered, not announced.** It's found naturally in play or by digging (the codex, secrets, repeated interaction, an odd combination). It's never a tutorial.
+3. **It serves the principles.** It never costs momentum unforeseen, never hides a threat, and stays inside the visual caps.
+
+Log each one in DESIGN-NOTES as "Callback:", naming the mechanic it rides on, and add it to the unit's vision delta. The vision keeper keeps a running list in SOUND-STORY.md so callbacks never collide.
+
+## 14. Session goal: an early-access demo (Andrew, 2026-09-27)
+
+In his words: "run until we kind of get to a like a early access demo version of the game, and let it have some some visual appeal and coherence, and gameplay appeal and coherence with uh, audio and music orchestration ... fully built ... an early access level version of the game."
+
+**Lane.** This stays the light play lane. It's a Godot sketch under `sketches/core-loop/` and not a production promotion into `native/`, which is a heavy-lane decision. Andrew's play is the acceptance.
+
+**Definition of done.** Every line must hold.
+
+1. **The run.**
+   - Title, character select (3), then three stages, each with a family Warden. Moss's workshop after each break, then Brindle's arena, then victory or death, then the summary.
+   - Settings and pause menus, all usable with the mouse and the keyboard.
+   - One-key restart from anywhere.
+2. **The characters.** Sable, Rivet and Kest play differently. Each has its own movement, a hold-gauge-release special, a smash flavour and a leitmotif.
+3. **Enemies.**
+   - The Fleet reinforcements (at least 5 with unique mechanics).
+   - One ancient per family, plus the three family Wardens and Brindle.
+   - Every counter is telegraphed and breakable. No reskins.
+4. **Growth.**
+   - The procedural item pool (60+ items, 12 triggers).
+   - Moss's shop, with the heft-locked top shelf and the conversation loop.
+   - Stockpiled charges.
+   - Synergies you can discover through the codex.
+5. **World.**
+   - The vertical gorge stage with its focal landmark.
+   - Contraptions (lifts, launchers, valves).
+   - At least 2 terrain-changing events.
+   - The callbacks from §13.
+6. **Readability.**
+   - At most 25 words on screen in a fight.
+   - The icon-first HUD, with the 70 icons in use.
+   - Four threat types you can tell apart by look and sound.
+   - Contextual key glyphs, and first-run callouts that retire.
+7. **Look.**
+   - Blender hero assets in the build: the three shells with a visible pilot, accretion chunks, the reward gate and the Warden clamp with its family kits.
+   - Every surface follows VISUAL-LANGUAGE.md.
+   - Transitions between every screen.
+8. **Audio.**
+   - Every event row has its designed sound (SOUND-STORY.md grammar).
+   - Adaptive stage themes with the leitmotifs woven in, and Brindle's foreshadowing.
+   - The lounge arrangement in the workshop.
+   - No MUSIC-GEMS entry lost.
+9. **Robustness.**
+   - `sketch:smoke` is green.
+   - The bot completes full runs with all three classes.
+   - `item_fuzz` passes 200 seeds, with anomalies triaged in HAPPY-ACCIDENTS.md.
+   - p99 frame time is ≤ 16.7 ms in a dense fight on this machine.
+   - No softlock, no NaN.
+10. **Handoff.**
+    - A Linux export build under `artifacts/local/` alongside the launcher entry.
+    - A one-page "how to play" on the title screen's help button.
+    - Andrew plays it, and his verdict becomes a playtest log entry.
+
+**Checkpoint.** After Wave 3 merges, Andrew gets an **alpha** to play, so he can redirect while polish continues. The later waves take his notes.

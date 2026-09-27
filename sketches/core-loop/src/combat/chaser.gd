@@ -107,7 +107,7 @@ func _begin_windup(to_ball: Vector3) -> void:
 	state = State.WINDUP
 	_clock = 0.0
 	_landed = false
-	_commit_lane(global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH)
+	_commit_lane(Threat.Type.LANE, global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH)
 
 
 # The ball is hit when it is inside the committed lane and the chaser's body has
