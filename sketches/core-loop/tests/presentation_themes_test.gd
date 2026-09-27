@@ -141,18 +141,32 @@ func _cost() -> void:
 			engine.render(engine.bar_len() * (8 if warm == 0 else 1))
 			if warm == 0:
 				continue
-			# The fastest of three timed runs: other processes on the machine can only
-			# add time, so the minimum is the band's own cost.
-			var ms := INF
-			for attempt in 3:
-				var t := Time.get_ticks_usec()
-				for block in 100:
-					engine.render(735)
-				ms = minf(ms, (Time.get_ticks_usec() - t) / 1000.0 / (100.0 * 735.0 / Harmony.RATE))
+			# This process's own CPU time where the OS reports it (Linux /proc), so other
+			# agents' runs on a busy machine do not count; wall time elsewhere.
+			var cpu0 := _cpu_ms()
+			var t := Time.get_ticks_usec()
+			for block in 300:
+				engine.render(735)
+			var spent := _cpu_ms() - cpu0 if cpu0 >= 0.0 else (Time.get_ticks_usec() - t) / 1000.0
+			var ms := spent / (300.0 * 735.0 / Harmony.RATE)
 			if ms > worst:
 				worst = ms
 				name = "%s %s" % [spec[0], spec[2]]
-	_check("cpu", worst < 80.0, "densest arrangement %s costs %.0f ms of main-thread time per second of music (%.1f%% of one core)" % [name, worst, worst / 10.0])
+	_check("cpu", worst > 0.0 and worst < 80.0, "densest arrangement %s costs %.0f ms of CPU per second of music (%.1f%% of one core)" % [name, worst, worst / 10.0])
+
+
+# User plus system CPU of this process in ms, from /proc/self/stat (clock ticks of
+# 10 ms), or -1 where that file does not exist.
+func _cpu_ms() -> float:
+	var f := FileAccess.open("/proc/self/stat", FileAccess.READ)
+	if f == null:
+		return -1.0
+	# procfs reports a size of 0, so read a line rather than the "whole file".
+	var line := f.get_line()
+	var fields := line.substr(line.rfind(")") + 2).split(" ")
+	if fields.size() < 13:
+		return -1.0
+	return (float(fields[11]) + float(fields[12])) * 10.0
 
 
 func _level(theme: int) -> MusicEngine:
