@@ -31,8 +31,8 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 # beat of silence, and their payoff is the full texture plus the bass. A restrained
 # grid-locked wobble is kept only inside the Warden and Brindle drops.
 
-enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER }
-const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter"]
+enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET }
+const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
 # The bass figure (layer 5) has a floor: it never leaves.
 const CURVES := [
@@ -50,12 +50,13 @@ const CURVES := [
 	[0.0, 0.45, 0.65],
 	[0.0, 0.7, 0.9],
 	[0.0, 0.8, 1.0],
+	[1.0, 0.0, 1.0],
 ]
 # The warm and wobble rows are placeholders: _retarget sets them from the overcharge
-# and the drop. The melodic layers, in the order they enter: pad, arp, choir, lead,
-# echo, counter.
+# and the drop; the fleet row is gated by the difficulty ticks instead (set_fleet_ticks).
+# The melodic layers, in the order they enter: pad, arp, choir, lead, echo, counter.
 const MELODIC := [PAD, ARP, CHOIR, LEAD, ECHO, COUNTER]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18]
+const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3]
 # The restrained wobble: only in the Warden's and Brindle's drops, at half level.
 const WOB_DROP_GAIN := 0.5
 # The warm layer is not pressure: it is the overcharge, one step per bonus core.
@@ -66,9 +67,9 @@ const MODE_NAMES := ["idle", "play", "dead"]
 # What each mode lets through, per layer. Menus keep keys, sub, a light hat and the
 # restrained bass riff; death keeps the keys alone, so the band waits with you.
 const MODE_MASK := [
-	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0],
-	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0],
+	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0],
 ]
 const BASS_LAYERS := [SUB, REESE, WOB]
 # The build's own voices (riser, snare roll, launch tune) skip the tone filter.
@@ -139,6 +140,16 @@ const FUNK_CALM := {0: [0, 2], 3: [12, 1], 10: [0, 2], 13: [7, 1]}
 const WEIR_CALM := {0: [0, 4], 6: [7, 2], 8: [12, 4], 14: [10, 2]}
 const HOUSE_BASS := {0: [0, 1], 2: [12, 1], 3: [0, 1], 6: [12, 1], 7: [10, 1], 10: [0, 1], 11: [12, 1], 14: [7, 1]}
 const BRINDLE_BASS := {0: [0, 6], 6: [0, 2], 8: [12, 2], 10: [0, 4], 14: [1, 2]}
+# v2 W5 (SOUND-STORY.md section 2). The class motif seeds the counter-line on one of the
+# four re-voicings, as a layer and never the lead; this is the rotation it takes.
+const CLASS_ROTATION := 2
+const CLASS_COUNTER_GAIN := 2.8
+# Moss's lounge (SOUND-STORY.md section 8): a layer mask over the stage theme. Kick,
+# hats, arp, choir, echo and counter out; brushes, the calm bass on the clean sub, keys
+# on beats 1 and 3, the pad and the sax in, the whole about 7 LU under the full band so
+# Moss's babble sits on top of it. The warm row keeps its overcharge.
+const LOUNGE_GAINS := [0.5, 0.32, 0.0, 0.0, 0.7, 0.45, 0.9, 0.0, -1.0, 0.0, 0.7, 0.0, 0.0, 0.0, 0.0]
+const LOUNGE_FLOOR := 0.15
 
 
 class Voice:
@@ -246,6 +257,15 @@ var _dl := PackedFloat32Array()
 var _dr := PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
 var _stingers_live := false
+# v2 W5 layers, each added on a real game-state threshold and never swapped in:
+# the player's class motif in the counter rotation, the Fleet's reinforcement weight
+# per difficulty tick (0..3), the reactor relic's Ab pedal while a vent charges, and
+# Moss's lounge while the ball is in the bay.
+var class_motif := ""
+var fleet_ticks := 0
+var reactor_pedal := false
+var lounge := false
+var _class_counter: Array = []
 
 
 func _init() -> void:
@@ -644,6 +664,36 @@ func set_heft_lift(steps: int) -> void:
 	_queue({"heft": next})
 
 
+# The player's class motif (a Harmony.MOTIFS id) seeds the counter-line on its
+# rotation: a layer, refitted to the chord it lands on.
+func set_class_motif(id: String) -> void:
+	class_motif = id
+	_class_counter = _make_class_counter()
+
+
+# The difficulty clock's ticks past the Warden break (threat_rose). Each adds a Fleet
+# layer from the next bar line and never swaps one: 1 the anvil on beats 2 and 4, 2 the
+# brass semitone lean answering the lead, 3 the anvil on every beat.
+func set_fleet_ticks(ticks: int) -> int:
+	var at := next_bar()
+	_add_action(at, {"type": "fleet", "ticks": clampi(ticks, 0, 3)})
+	return at
+
+
+# A reactor relic's vent is charging: the sub takes the Ab pedal from the next bar
+# line, under the bass figure, until the vent blows.
+func set_reactor_pedal(on: bool) -> void:
+	reactor_pedal = on
+
+
+# The ball is banked in Moss's bay: the lounge from the next bar line. Leaving is the
+# launch build and the landing drop, which ends the lounge on the beat.
+func set_lounge(on: bool) -> int:
+	var at := next_bar()
+	_add_action(at, {"type": "lounge", "on": on})
+	return at
+
+
 # A death: on the next beat the band breaks (a boom, everything cut), then keys only.
 func death_break() -> int:
 	var at := next_beat()
@@ -850,6 +900,12 @@ func duck_bass(amount: float, hold_seconds: float) -> void:
 	_bass_duck_until = maxi(_bass_duck_until, clock + int(hold_seconds * Harmony.RATE))
 
 
+# Breaking free: the bass comes back from this frame, over a beat.
+func free_bass() -> void:
+	_bass_duck_until = clock
+	_bass_duck_target = 1.0
+
+
 func pending_actions() -> int:
 	return _actions.size()
 
@@ -959,6 +1015,8 @@ func _on_step() -> void:
 	if _gap:
 		return
 	var chord := _chord(bar)
+	if fleet_ticks > 0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
+		_fleet_layer(s, chord)
 	if not _drop.is_empty():
 		_trigger_drop(bar, s, chord)
 		# A gate taken mid-drop (right after the unseal) builds over the drop.
@@ -982,13 +1040,16 @@ func _on_step() -> void:
 		"miniboss" when section == "break":
 			_trigger_break(bar, s, chord)
 		_:
-			match theme:
-				1:
-					_trigger_funk(bar, s, chord)
-				2:
-					_trigger_halfpipe(bar, s, chord)
-				_:
-					_trigger_dnb(bar, s, chord)
+			if _lounge_live():
+				_trigger_lounge(bar, s, chord)
+			else:
+				match theme:
+					1:
+						_trigger_funk(bar, s, chord)
+					2:
+						_trigger_halfpipe(bar, s, chord)
+					_:
+						_trigger_dnb(bar, s, chord)
 	if track == "miniboss" and (s % 2 == 1) and applied_pressure >= 0.5:
 		# The miniboss's denser top: the arpeggio fills every sixteenth.
 		var tones: Array = chord["voicing"]
@@ -1019,6 +1080,7 @@ func _run(action: Dictionary) -> void:
 			_set_grid(Harmony.STEP)
 			track = "level"
 			section = ""
+			lounge = false
 			_set_key(0)
 			_reset_bar()
 			_cadence_bar = -1
@@ -1051,6 +1113,7 @@ func _run(action: Dictionary) -> void:
 				_set_grid(int(action["step"]))
 			track = action["track"]
 			section = action.get("section", "")
+			lounge = false
 			if action.get("play", false):
 				mode = PLAY
 			_set_key(int(action.get("key", 0)))
@@ -1080,6 +1143,14 @@ func _run(action: Dictionary) -> void:
 			events_log.append(["hit", clock, action["drums"]])
 		"echo":
 			_start_note(action["voice"], int(action["midi"]), 1, ECHO, 0.9, float(action["pan"]))
+		"fleet":
+			fleet_ticks = int(action["ticks"])
+			events_log.append(["fleet", clock, fleet_ticks])
+		"lounge":
+			lounge = bool(action["on"])
+			events_log.append(["lounge", clock, lounge])
+			_new_phrase()
+			_retarget()
 		"roll":
 			_start(Synth.drum("snare"), Synth.drum("snare").size(), DRY, LEVELS[SNARE] * float(action["gain"]), 0.0, false)
 		"wob":
@@ -1094,6 +1165,7 @@ func _run(action: Dictionary) -> void:
 			events_log.append(["gap", clock, ""])
 		"drop":
 			_gap = false
+			lounge = false
 			_build_from = -1
 			_build_level = -1.0
 			_build_tune = false
@@ -1157,6 +1229,7 @@ func _new_phrase() -> void:
 	phrase_index += 1
 	_lead = _make_track_lead()
 	_counter = _make_counter(_lead)
+	_class_counter = _make_class_counter()
 
 
 func _on_bar() -> void:
@@ -1255,6 +1328,15 @@ func _retarget() -> void:
 			_pump_depth = 0.65
 		elif track == "brindle":
 			_pump_depth = 0.4
+	if _lounge_live() and mode == PLAY and _drop.is_empty() and _cadence_bar < 0:
+		for layer in LOUNGE_GAINS.size():
+			if layer != WARM:
+				_targets[layer] = LOUNGE_GAINS[layer]
+		_intensity = maxf(LOUNGE_FLOOR, build_level())
+
+
+func _lounge_live() -> bool:
+	return lounge and track == "level"
 
 
 # Bonus cores this stage. The warm pad swells in on the next bar and stays until the
@@ -1327,8 +1409,11 @@ func _make_track_lead() -> Array:
 			var quote := {"1": 2, "2": 1, "3": 0}.get(section, 0) as int
 			return make_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][quote], _progression(), 73)
 		_:
-			_lead_voice = LEAD_VOICE[theme]
 			var progression := _progression()
+			if _lounge_live():
+				_lead_voice = "sax_lounge"
+				return make_lounge_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][theme], progression, [1] if theme == 2 else [0, 1])
+			_lead_voice = LEAD_VOICE[theme]
 			match theme:
 				1:
 					return make_lead(phrase_index, MOTIF_SLUICE, progression, 73)
@@ -1496,7 +1581,7 @@ func _trigger_house(bar: int, s: int, chord: Dictionary) -> void:
 	if HOUSE_BASS.has(s):
 		_bass("fbass", root + int(HOUSE_BASS[s][0]), int(HOUSE_BASS[s][1]), 1.3)
 	if s == 0:
-		_start_note("sub", root, 16, SUB, 0.8, 0.0)
+		_start_sub(root, 0.8)
 	# Under the funk bass, the level's own bass figure (round 3) on the reese, softer.
 	var figure: Dictionary = [DNB_CALM, FUNK_CALM, WEIR_CALM][theme]
 	if figure.has(s):
@@ -1538,7 +1623,7 @@ func _trigger_break(bar: int, s: int, chord: Dictionary) -> void:
 		_hit("hat", HATS, 0.5, 0.25)
 	var root: int = chord["root"]
 	if s == 0:
-		_start_note("sub", root, 16, SUB, 1.0, 0.0)
+		_start_sub(root, 1.0)
 		var stab := Synth.stab_chord(_voicing(chord), false)
 		_start(stab, stab.size(), KEYS, LEVELS[KEYS] * 1.2, 0.0, false)
 		_bass("reese", root + 12, 8, 1.0)
@@ -1671,15 +1756,71 @@ func _trigger_victory(bar: int, s: int, chord: Dictionary) -> void:
 	_play_lead(bar, s)
 
 
+# Moss's lounge: the stage theme re-voiced, same grid, half the feel. Brushes and a
+# ride instead of kick and hats, the snare only on beat 3, the calm bass figure on the
+# clean sub, keys on beats 1 and 3, the pad, and the sax at half speed. Sluice keeps its
+# clav and Weir its organ, quietly.
+func _trigger_lounge(bar: int, s: int, chord: Dictionary) -> void:
+	var voicing := _voicing(chord)
+	if s == 0 or s == 8:
+		_release_layers([KEYS])
+		var keys := Synth.chord(voicing)
+		_start(keys, mini(keys.size(), 7 * step_len + RELEASE), KEYS, LEVELS[KEYS], 0.0, false)
+		if theme == 1:
+			var clav := Synth.note("clav", int(voicing[1]) + 12)
+			_start(clav, mini(clav.size(), step_len + RELEASE), KEYS, LEVELS[KEYS] * 0.35, -0.3, false)
+	if theme == 2 and s == 0:
+		var organ := Synth.organ_chord(voicing)
+		_start(organ, mini(organ.size(), 16 * step_len + RELEASE), KEYS, LEVELS[KEYS] * 0.3, 0.2, false)
+	if s == 0:
+		_start_sub(chord["root"], 1.0)
+	if s % 4 == 0:
+		_hit("brush", SNARE, 0.8 if s % 8 == 0 else 0.5, 0.25)
+	if s in [0, 8, 14]:
+		_hit("ride", SNARE, 0.3 if s == 14 else 0.45, -0.3)
+	if s == 8:
+		_hit("snare", SNARE, 0.3, 0.05)
+	var figure: Dictionary = [DNB_CALM, FUNK_CALM, WEIR_CALM][theme]
+	if figure.has(s):
+		_bass("sub", int(chord["root"]) + 12 + int(figure[s][0]), int(figure[s][1]), 0.9)
+	_melodic(bar, s, chord, "bell")
+
+
+# The Fleet borrows Brindle's anvil and brass, one layer per difficulty tick: the anvil
+# on beats 2 and 4 under the kick, then the brass semitone lean (root, a half step up,
+# root) answering the lead in the second half of the bar, then the anvil on every beat.
+func _fleet_layer(s: int, chord: Dictionary) -> void:
+	if (fleet_ticks >= 3 and s % 4 == 0) or s == 4 or s == 12:
+		_hit("anvil", FLEET, 1.3 if s == 4 or s == 12 else 1.0, -0.3 if s < 8 else 0.3)
+	if fleet_ticks < 2:
+		return
+	var root: int = int(chord["root"]) + 12
+	var lean := {8: [0, 2], 10: [1, 2], 12: [0, 3]}
+	if lean.has(s):
+		_start_note("brass", root + int(lean[s][0]), int(lean[s][1]), FLEET, 1.1, 0.25)
+		_start_note("brass", root + 12 + int(lean[s][0]), int(lean[s][1]), FLEET, 0.45, 0.25)
+
+
 # --- Pieces every arrangement shares ------------------------------------------------------
 
 func _sub_and_pad(s: int, chord: Dictionary) -> void:
 	if s != 0:
 		return
-	_start_note("sub", chord["root"], 16, SUB, 1.0, 0.0)
+	_start_sub(chord["root"], 1.0)
 	if _targets[WARM] > 0.0 or _gains[WARM] > 0.0:
 		var pad := Synth.pad_chord(_voicing(chord))
 		_start(pad, mini(pad.size(), 16 * step_len + RELEASE), WARM, LEVELS[WARM], 0.0, false)
+
+
+# The bar's held sub: the chord root, or while a reactor vent charges the Ab pedal on
+# the tritone (and its octave, quieter) under whatever the bass figure plays.
+func _start_sub(root: int, gain: float) -> void:
+	if not reactor_pedal:
+		_start_note("sub", root, 16, SUB, gain, 0.0)
+		return
+	var cells: Array = Harmony.motif("reactor")["cells"]
+	_start_note("sub", int(cells[0][1]), 16, SUB, gain, 0.0)
+	_start_note("sub", int(cells[1][1]), 16, SUB, gain * 0.3, 0.0)
 
 
 # A bass-figure note: it cuts the previous one, so the riff stays tight.
@@ -1803,11 +1944,18 @@ func _play_counter(phrase_bar: int, s: int) -> void:
 	var at := phrase_bar * Harmony.STEPS_PER_BAR + s
 	var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()]
 	var voice: String = rot["counter"]
-	for event in _counter:
+	var line := _counter
+	var gain := 1.0
+	var seeded := not _class_counter.is_empty() and _rotation % ROTATIONS.size() == CLASS_ROTATION
+	if seeded:
+		line = _class_counter
+		voice = Harmony.motif(class_motif)["band"]
+		gain = CLASS_COUNTER_GAIN
+	for event in line:
 		if event[0] == at:
 			_release_layers([COUNTER])
-			var steps: int = mini(int(event[2]), 2) if voice != "keys" else int(event[2])
-			_start_note(voice, event[1], steps, COUNTER, 1.0, -0.3)
+			var steps: int = int(event[2]) if seeded or voice == "keys" else mini(int(event[2]), 2)
+			_start_note(voice, event[1], steps, COUNTER, gain, -0.3)
 
 
 # The counter-line: the lead's own call, two bars late and a third lower, refitted to
@@ -1826,6 +1974,29 @@ func _make_counter(lead: Array) -> Array:
 			midi += 12
 		out.append([step, midi, event[2]])
 	out.sort_custom(func(a: Array, b: Array): return a[0] < b[0])
+	return out
+
+
+# The class motif on the counter-line: once per two-bar call, ending just before the
+# next call, moved to the chord tone nearest its first note and snapped into that
+# chord's scale, so its shape survives and it never clashes.
+func _make_class_counter() -> Array:
+	var row := Harmony.motif(class_motif)
+	if row.get("family", "") != "class":
+		return []
+	var cells: Array = row["cells"]
+	var last: Array = cells[cells.size() - 1]
+	var span: int = int(last[0]) + int(last[2])
+	var octave: int = row.get("band_octave", 0)
+	var progression := _progression()
+	var out: Array = []
+	for k in 4:
+		var start := 32 * k + 30 - span
+		var chord: Dictionary = progression[(start / 16) % progression.size()]
+		var first: int = int(cells[0][1]) + octave
+		var shift := Harmony.nearest_tone(first, chord["tones"]) - first
+		for cell in cells:
+			out.append([start + int(cell[0]), Harmony.snap(int(cell[1]) + octave + shift, chord["scale"]), int(cell[2])])
 	return out
 
 
@@ -2026,7 +2197,7 @@ func _mix(offset: int, n: int) -> void:
 	_gate = move_toward(_gate, 0.0 if _gap else 1.0, float(n) / 96.0)
 	var level := master * pause_gain
 	# The tone filter follows intensity, and a build closes it and opens it again.
-	var target := lerpf(TONE_CALM_HZ, TONE_OPEN_HZ, smoothstep(0.0, 0.7, _intensity))
+	var target := TONE_CALM_HZ if _lounge_live() else lerpf(TONE_CALM_HZ, TONE_OPEN_HZ, smoothstep(0.0, 0.7, _intensity))
 	if _build_from >= 0 or _build_level >= 0.0:
 		var b := build_level()
 		target = minf(target, lerpf(BUILD_LOW_HZ, TONE_OPEN_HZ, b * b))
@@ -2131,6 +2302,35 @@ static func make_lead(index: int, motif := MOTIF, progression := Harmony.PROGRES
 			ornamented.append([event[0] - 1, event[1] - 1, 1])
 		ornamented.append(event)
 	return ornamented
+
+
+# The lounge phrase: the stage motif at half speed, then its answer (inversion or
+# retrograde), fitted to the same eight bars of chords.
+static func make_lounge_lead(index: int, motif: Array, progression: Array, answers := [0, 1]) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260927 + index * 7919
+	var slow: Array = []
+	for cell in motif:
+		slow.append([int(cell[0]) * 2, int(cell[1]), int(cell[2]) * 2])
+	var notes: Array = _place(slow, 0)
+	notes.append_array(_place(_answer(slow, answers[rng.randi() % answers.size()], 0), 64))
+	var fitted: Array = []
+	for event in notes:
+		var step: int = event[0]
+		if step >= 128:
+			continue
+		var chord: Dictionary = progression[(step / 16) % progression.size()]
+		var midi: int = event[1]
+		midi = Harmony.nearest_tone(midi, chord["tones"]) if step % 4 == 0 else Harmony.snap(midi, chord["scale"])
+		while midi < 62:
+			midi += 12
+		while midi > 81:
+			midi -= 12
+		fitted.append([step, midi, mini(event[2], 128 - step)])
+	if not fitted.is_empty():
+		var last: Array = fitted[fitted.size() - 1]
+		last[1] = Harmony.nearest_tone(last[1], progression[(int(last[0]) / 16) % progression.size()]["tones"])
+	return fitted
 
 
 static func _place(cell: Array, offset: int) -> Array:

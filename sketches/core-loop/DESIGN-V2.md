@@ -370,3 +370,50 @@ In his words: "run until we kind of get to a like a early access demo version of
     - Andrew plays it, and his verdict becomes a playtest log entry.
 
 **Checkpoint.** After Wave 3 merges, Andrew gets an **alpha** to play, so he can redirect while polish continues. The later waves take his notes.
+
+## 15. The ball is the culture (Andrew, 2026-09-27)
+
+These are Andrew's answers to the primer questions, recorded before the remaining ones are asked.
+
+- **Sidegrades.** Counters now, variants after the alpha.
+- **Moss.** Unseen: a voice and hands. His babble stays as demoed. Andrew: "I love the old school babbl ... I love the jazzy vib It kind of feels like a club ... a really fun place just to hang out or afk". He asked for "fun little interactions, mini-games, things you could do to just like fidget or past the time ... or a way to move around and interact with practice movement or an area to like spam abilities".
+- **The kit.** Instead of "full kit or unlock in world one", he wants "more upgrades to it that could be done at checkpoints in between world stages ... a branch of always two ... first decision would be two and then ... four and then eight and then sixteen as the final level ... sixteen variations of maybe key skills ... for mobility, it could be for everything pretty much and I think the enemies should also kind of accommodate for that as well." The shape of the tree is still to confirm. The checkpoints are Moss's workshop visits, and it matches the Bible's "four slot trees".
+
+**Map and world premise.** In his words:
+
+- "map design should cater towards you know being in a bowl [ball] as the primary mode of it of uh, mobility"
+- "a society or a series of societies based off of the characters that um, all cater to just moving fast, being on the go, momentum-based ... hunter-gatherer, like nomadic type of uh, tribes and build up and tear down"
+- "explain why they chose to be in uh, gyroscopic balls"
+- enemies' "defenses uh, to kind of uh, you know circumvent and overcome ... these ball based uh, mechas", which "the ancient ... robotic or alien robotic transhuman type of civilization is able to like develop quickly as you progress"
+- "traps like uh you can throw off your gyroscope inside your ball uh and cause you to kind of like lose um, or be, be uh, disoriented", "get trapped in certain mechanisms", "swatted away or uh, uh, sent off a ramp"
+- "launch off of cannons at a cannonball ... trebuchets", "a sort of like um, racetrack ... like a marble maze like uh like building our society"
+- "it could lend itself into every aspect of the story and world building and characters and everything enemy design or uh attacks"
+
+**How it lands in the design** (for the vision keeper, W6, W7 and V1/V3):
+
+1. **Why balls.** After the collapse the ground itself is hostile: fallout pockets, swarm-infested ruins, and the Mind's traps. A rolling, sealed, gyroscopically stabilized shell is the survival form. The gyros were salvaged from ancient machines (reactor gyros, drone cores), so the tech that ended humanity keeps the animals alive. The codex tells this; nothing states it outright.
+2. **Nomadic momentum tribes.** The Bible's cultures (the Switchback Enclaves, the Highdraft Roosts, the Redjaw Workshops) become rolling nomads. They build camps up and tear them down, and every settlement is architecture for balls:
+   - banked streets, marble-maze ramps and halfpipe plazas
+   - chutes between tiers, and cannons and trebuchets as public transport
+   - Moss's workshop is a pit stop on the marble run
+3. **Maps are built for the ball first.** Bowls, banks, loops, rails, launchers and marble-run structures come first. Flat rooms are the exception. Every stage has at least one piece of ball infrastructure (a marble-run section, a cannon or trebuchet launch, a racetrack loop) as its signature traversal.
+4. **Enemies evolved to beat balls, and they adapt as the clock climbs.**
+   - **Gyro jammers.** A telegraphed field that throws off your gyroscope: steering drifts or wobbles briefly (screen-stable, never nauseating). You break out by moving: jump, smash or boost.
+   - **Swatters.** Paddle arms that bat you away, a knock you can ride.
+   - **Ramp-flippers.** Tiles that tilt to fling you off course, shown before they tilt.
+   - **Catch-traps.** Mechanisms that cup and hold the ball. Breakable, and bounded by tenacity.
+   - These join §10's Fleet gear. Every counter is telegraphed, breakable and bounded by tenacity (1.8 s of hold, then 2.5 s of immunity). Rivet's sprint ignores all of them.
+   - The ancient transhuman side develops new anti-ball counters as difficulty ticks rise: new counters appear with the clock, and the Mind's hands adapt within a run.
+5. **The tree has an answer in the enemies.** As the player's branch choices build up, the director weights reinforcement packs to test that build. Tests are fair and telegraphed; a build is never hard-countered.
+6. **Moss's bay is a hangout.**
+   - A practice yard for movement and for spamming abilities, with no cooldown cost inside it.
+   - A few fidget toys: a marble-run toy, a bell, a jukebox that flips the lounge arrangement, and Moss's babble.
+   - A small optional mini-game, such as a timed marble-run lap with a codex callback.
+   - The difficulty clock stays paused. Leaving is always one roll away.
+
+**The primer gate is passed (the rest of Andrew's AskUserQuestion answers, 2026-09-27).**
+
+- **The upgrade tree** is one binary tree per character. There are four picks: at the start, then at Moss's workshop after stages 1, 2 and 3. Four picks end on one of 16 distinct builds, and nodes can change any key. Enemy packs read the branch and test it fairly.
+- **Mastery unlocks** apply from the next run and open alternate branches in the tree: more options, never more raw power.
+- **The Mind's hands** adapt within a run only for the demo. Memory across runs stays a hook, switched off.
+- **The arena** ends with Brindle routed, then a single Cherenkov flicker across the dug-up housings on the summary.

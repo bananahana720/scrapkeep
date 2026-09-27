@@ -168,8 +168,10 @@ func _check_combat() -> void:
 	for key in want:
 		var node = tags.get(key)
 		got[key] = Threat.Type.keys()[node.type] if node != null and Threat.valid(node.type) else "missing"
-	_report("combat attacks tagged", _same(got, want) and slam_has_flight,
-		"live combat telegraphs carry their audited types %s; the leap slam draws the miniboss's flight: %s" % [got, slam_has_flight])
+	var lift_harmless: bool = tags["warden pulse"] != null and not tags["warden pulse"].is_hostile() and tags["warden core"] != null and tags["warden core"].is_hostile()
+	_report("combat attacks tagged", _same(got, want) and slam_has_flight and lift_harmless,
+		"live combat telegraphs carry their audited types %s; the leap slam draws the miniboss's flight: %s; the Warden's lift ring is a harmless field and its core ring a threat: %s"
+			% [got, slam_has_flight, lift_harmless])
 
 
 func _check_boss() -> void:
@@ -194,9 +196,9 @@ func _check_boss() -> void:
 			for h in live:
 				if not is_instance_valid(h):
 					continue
-				grouped = grouped and h.is_in_group(Threat.GROUP)
+				grouped = grouped and h.is_in_group(Threat.GROUP) == (h.attack_id != "drone_pad")
 				for family in want:
 					if h.attack_id.begins_with(family):
 						got[family] = Threat.Type.keys()[h.type] if Threat.valid(h.type) else "unset"
 	_report("boss attacks tagged", _same(got, want) and grouped,
-		"Brindle's hazards carry their audited types %s, each in group %s: %s" % [got, Threat.GROUP, grouped])
+		"Brindle's hazards carry their audited types %s, each attack in group %s and the amber drone pad out of it: %s" % [got, Threat.GROUP, grouped])

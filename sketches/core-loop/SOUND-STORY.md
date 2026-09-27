@@ -306,6 +306,19 @@ The alignment pass answers each for any unit's vision delta. Every answer must b
 - **must.** The lounge is a layer mask over the stage theme in the live key (§8), never a new track, so no gem is lost in the bay.
 - **could.** The shop bell is the rice cooker's two "done" beeps (callback C9 in `design-v2/STORY-THREADS.md`).
 
+### Meeting of the minds, 2026-09-27: reconciled must-notes for Wave 3
+
+The primer (`design-v2/board/PRIMER.md`) settled these across the four boards. Each is routed to its owner so the Wave 3 packets can quote it.
+
+- **W1 UI (must).** `callout_chime` stays the four first-run teaching callouts' sound: two dry mallet pings, A5 then D6, 70 ms apart, priority 2, retiring with the callout. It is never a pack callout.
+- **W7 enemies (must).** A pack arriving is a new event row `pack_arrived` (event group, HAZARD, the faction's `fac_` icon at the screen edge, priority 2): its sound is the faction motif head, the Fleet stamp for crews and a sine swell on the family's harmony for an ancient. This is also the ancient arrival cue. The plated "now" and "not yet" read as a class-colour rim with an open-crack glyph against closed plates, never a tint; the clank ladder stays the sound. Every Fleet crew figure is an animal. The Mind's quote is its telegraph and learns within a run only (default). C11's scattered drones follow the ball seamless, with one loose unison buzz panned to the ball for 2 s, then silence.
+- **W6 stage with W5 (must).** The gorge's layers by height on the stage theme's core: undercroft adds reese and sub, the shelf is the theme, the sky adds bells and the arp. One ride-family sound per transition, never a class instrument. The landmark's sub pulse on bar 1 of each phrase, panned toward the tower, priority 0 (C18, now Wave 3). The launcher's whistle rises and is steam; the projectile's falls and is pure. `pressure_opened` is the valve's smash womp and long hiss; no `threat_up` in the bay.
+- **W5 audio (must).** `mastery_earned` is the class motif whole on the beat, answered by its resolution an octave up and the rice cooker's two "done" beeps; a release stays on the frame with no answer. The relent's cue is Moss's sigh, a padlock clunk, then the hook's chain rising D to A on mallet; the shop bell means purchases only; the codex entry "Too heavy for you" takes the fragment cue. Break-free plays the current class row's first interval, never Sable's by default. The gauge-charge and charge-pip cues get built. Brindle's core does not colour his music; Pressure does not change the music.
+- **V1 look, then V2 (must).** Add to VISUAL-LANGUAGE §5: a variant notch on `ab_` icons, class-shape milestone pips under `cls_` emblems, an unearned-variant silhouette in dull petrol at 40% value, Pressure's pre-filled `res_difficulty` notches, and a `pack_arrived` edge marker. Kest's satchels are horizontal amber bands. Ancient enamel is capped at dull petrol with charcoal-grooved blue seams. The title's beacon is dark on a fresh profile and lights after the first win.
+- **V3 assets (must).** Shapes from the sheets, never their surface detail; no badger pilot; no human crew.
+- **W3 characters (must, with progression).** The three pilot barks are the three special milestones' codex names (C15 to C17); completing the milestone is the discovery. Sidegrades wait for a dispatch table (Andrew's question 1).
+- **Vision keeper with progression (done here).** One Moss memory table, §8 below, with the progression board's facts added; facts live in `profile.json`, lines here.
+
 ## 8. Moss
 
 Moss keeps the workshop bay that opens off the launch after each Warden break (DESIGN-V2 §12). He is the Bible's proposed keeper who "remembers what each pilot neglects" (BIBLE.md:384); the sketch says "he" as DESIGN-V2 does, and his species stays open (`design-v2/STORY-THREADS.md` §7, question 1). He has no recorded voice. He has babble, a bench and a bell, and he is the only character in the game who talks to you.
@@ -426,6 +439,13 @@ Keyed to run history (`design-v2/STORY-THREADS.md` §6 names the records). One p
 | `class_changed` | New pilot, same ball. Moss remembers the ball. |
 | `skipped_visits >= 3` | Three launches past my door. Bell still works. |
 | `relented_before` | Heavy again. Hook's already yours, don't act surprised. |
-| `neglected` (callback C14) | Died holding scrap. Scrap that could've been plating. Hm. |
+| `neglected` (callback C14, scrap at death) | Died holding scrap. Scrap that could've been plating. Hm. |
+| `refused_before` (the loop's variation index reads it) | Back for the hook? Answer hasn't changed. Ask anyway. |
+| `sold_back` (the family sold most; the shelf leans toward it) | You keep selling plating. Fine. Shelf's got plating. |
+| `neglected_ability` (the ability used least last run, per pilot) | Never touched F last run. It's a key, not decoration. |
+| `fragment_carried` (a world fragment found this run) | Whatever that is, keep it off my bench. |
+| `pressure` (valves on the exit wall; later) | no line: the valves' state is the wording |
+
+This is the one Moss key table (primer reconciliation 4). `PROGRESSION.md` §3 lists the same facts under `moss_*` ids and owns where they persist; the names here are the ones the lines are keyed to.
 
 **Voice rules for any new Moss line.** Twelve words or fewer. He talks about weight, welds, the shelf and the clock, never about the collapse; that is the codex's job, and Moss keeps his opinions. He is grumpy about the hook and kind about the pilot. He never says "too strong for you" as a sentence of its own, never names a potion, a traveller or a wizard, and never dismisses the player to a seller of "weaker" anything; the send-off goes to lighter parts, flimsy carts or the gates.

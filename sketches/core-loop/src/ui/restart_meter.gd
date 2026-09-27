@@ -1,0 +1,38 @@
+extends Control
+
+const Keycap := preload("res://src/ui/keycap.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Palette := preload("res://src/core/palette.gd")
+
+# Hold R to retry: the R keycap and a bar that fills over the hold. No words beyond the
+# key, so a retry reads as the key the hand is already on.
+
+const KEY_H := 24.0
+const BAR := Vector2(180.0, 10.0)
+const GAP := 10.0
+
+var fraction := 0.0
+
+
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	custom_minimum_size = Vector2(Keycap.size_of("key_r", KEY_H).x + GAP + BAR.x, KEY_H)
+	size = custom_minimum_size
+
+
+func set_fraction(value: float) -> void:
+	fraction = value
+	queue_redraw()
+
+
+func drawn_words() -> PackedStringArray:
+	return Keycap.words("key_r") if fraction > 0.0 else PackedStringArray()
+
+
+func _draw() -> void:
+	if fraction <= 0.0:
+		return
+	var cap_w := Keycap.size_of("key_r", KEY_H).x
+	var left := (size.x - custom_minimum_size.x) * 0.5
+	Keycap.draw(self, Vector2(left + cap_w * 0.5, size.y * 0.5), "key_r", Palette.AMBER, KEY_H)
+	UiDraw.bar(self, Rect2(Vector2(left + cap_w + GAP, (size.y - BAR.y) * 0.5), BAR), fraction, Palette.AMBER)

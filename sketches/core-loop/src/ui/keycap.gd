@@ -1,0 +1,63 @@
+extends RefCounted
+
+const Icons := preload("res://src/ui/icons.gd")
+const Palette := preload("res://src/core/palette.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+
+# A drawn key, named by its key glyph id (key_f, key_lmb, key_1). The ability bar, the
+# contextual glyphs, the callouts, the restart meter and the menu buttons all draw keys
+# here, so a key looks the same wherever it asks. A key whose SVG exists draws the SVG;
+# otherwise a keycap is drawn (a charcoal cap with a thicker bottom lip and its label)
+# or, for a mouse button, the placeholder mouse body.
+
+const MOUSE := ["key_lmb", "key_rmb"]
+const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab"}
+const PAD := 7.0
+
+
+static func is_mouse(key: String) -> bool:
+	return key in MOUSE
+
+
+# The letters on the cap: key_f reads F, key_space reads Space.
+static func label(key: String) -> String:
+	return LABELS.get(key, key.trim_prefix("key_").to_upper())
+
+
+static func font_size(height: float) -> int:
+	return int(height * 0.58)
+
+
+static func size_of(key: String, height := 24.0) -> Vector2:
+	if is_mouse(key):
+		return Vector2(height * 0.8, height)
+	var w := UiFonts.width(label(key), font_size(height))
+	return Vector2(maxf(height, w + PAD * 2.0), height)
+
+
+# Draws the key centred on `at` in `color` and returns its rect.
+static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, height := 24.0) -> Rect2:
+	var size := size_of(key, height)
+	var rect := Rect2(at - size * 0.5, size)
+	if is_mouse(key) or Icons.from_file(key):
+		var side := height if is_mouse(key) else size.x
+		canvas.draw_texture_rect(Icons.texture(key), Rect2(at - Vector2(side, height) * 0.5, Vector2(side, height)), false, Icons.tint(key, color))
+		return rect
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(Palette.CHARCOAL, 0.92)
+	box.border_color = color
+	box.set_border_width_all(2)
+	box.border_width_bottom = 4
+	box.set_corner_radius_all(int(height * 0.2))
+	canvas.draw_style_box(box, rect)
+	var fs := font_size(height)
+	var text := label(key)
+	var font := UiFonts.bold()
+	var baseline := at.y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5 - 1.0
+	canvas.draw_string(font, Vector2(at.x - UiFonts.width(text, fs) * 0.5, baseline), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, color)
+	return rect
+
+
+# What a player reads off the key: its label, or nothing for a mouse glyph.
+static func words(key: String) -> PackedStringArray:
+	return PackedStringArray() if is_mouse(key) else PackedStringArray([label(key)])

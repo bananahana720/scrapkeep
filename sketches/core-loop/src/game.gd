@@ -401,7 +401,8 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-# One key per choice on every screen outside play.
+# One key per choice on every screen outside play. The screens' buttons press these
+# same keys, so a click and a key always do the same thing.
 func _screen_key(key: int) -> bool:
 	match flow.state_name():
 		"title":
@@ -409,7 +410,7 @@ func _screen_key(key: int) -> bool:
 				flow.press_start()
 				return true
 		"class_select":
-			if key == KEY_1 or key == KEY_2:
+			if key >= KEY_1 and key < KEY_1 + mini(flow.classes.size(), 9):
 				flow.choose_class(key - KEY_1)
 				return true
 		"dead":

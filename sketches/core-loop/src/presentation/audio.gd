@@ -36,7 +36,8 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0}
 const VOLUME_STEP := 0.1
 # Danger sounds pull the bass down so the low end never masks a warning.
-const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death"]
+const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death",
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
 # A launch whose landing never comes (a fall into the next stage's rail) still drops.
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
@@ -44,7 +45,11 @@ const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
 const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
-	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit"]
+	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
+	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "sable_ready", "rivet_ready", "kest_ready",
+	"sable_break", "rivet_break", "kest_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
+	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "hold_pit", "hold_bola", "hold_tether", "hold_net",
+	"hold_riser", "callout_chime", "shop_bell"]
 # Event progress until the spine publishes event_progress(event_id, fraction): the
 # seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
@@ -135,6 +140,8 @@ func setup(ctx_ref) -> void:
 
 static func _sound_ids() -> Array:
 	var ids: Array = Rows.sound_ids()
+	for kind in EventKinds.THREAT_ROWS:
+		ids.append(EventKinds.THREAT_ROWS[kind]["sound"])
 	for extra in ["womp", "build_riser", "vault_rise", "vault_drop", "synergy_hit"]:
 		if not extra in ids:
 			ids.append(extra)
@@ -174,7 +181,14 @@ func bake_now() -> void:
 	_on_ready()
 
 
+func _enter_tree() -> void:
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
+
+
 func _exit_tree() -> void:
+	if get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
 	if _bake_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
@@ -333,6 +347,41 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	if sound in DANGER_SOUNDS:
 		engine.duck_bass(0.3, 0.45)
 	return true
+
+
+# v2 W2 threat grammar. A committed threat warns on the game frame it is declared, never
+# on the beat (SOUND-STORY.md section 7): its type's row sound, then the owner's voice
+# and the mechanic tag when the threat carries them. Only hostile threats join the
+# "threat" group, so the player's own rings and harmless fields stay silent. The check
+# runs at the end of the frame, after the committing code has set the layers.
+func _on_node_added(node: Node) -> void:
+	if node.has_method("threat_kind"):
+		_warn_threat.call_deferred(node)
+
+
+func _warn_threat(node: Node) -> void:
+	if not is_instance_valid(node) or not node.is_inside_tree() or not node.is_in_group("threat"):
+		return
+	var kind: String = node.threat_kind()
+	var row: Dictionary = EventKinds.THREAT_ROWS.get(kind, {})
+	if row.is_empty():
+		return
+	var db: float = PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node)
+	play(kind, db, 1.0, "SFX", row["sound"])
+	for layer in [node.get("owner_voice"), node.get("mechanic_tag")]:
+		if layer is String and layer != "":
+			play(kind, db, 1.0, "SFX", layer)
+	if int(row["priority"]) >= 2:
+		engine.duck(0.55, 0.35)
+
+
+# Cues here are not positional, so a far threat is only quieter: full within 20 m,
+# 9 dB down from 60 m.
+func _threat_distance_db(node: Node) -> float:
+	if ctx == null or ctx.player == null or not node.has_method("threat_at"):
+		return 0.0
+	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.ball_position())
+	return 9.0 * clampf((gap - 20.0) / 40.0, 0.0, 1.0)
 
 
 # Plays a cue on the next beat through the band. lane queues it behind flow stingers.

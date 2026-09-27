@@ -207,7 +207,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
 		_charging = true
 		_charge_time = 0.0
-		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP)
+		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
 		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 
 
