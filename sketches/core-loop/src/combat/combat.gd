@@ -16,6 +16,10 @@ const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Ground := preload("res://src/combat/ground.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Sticky := preload("res://src/combat/sticky.gd")
+const Sight := preload("res://src/combat/sight.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -27,11 +31,15 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # 2. Held fire throws one volley per weapon interval. The volley is aimed with the
 #    shared aim query (hitscan.gd), laid out by the weapon's Pattern, and published
 #    once as shot_fired(weapon, muzzle, the point the centre bolt is sent to).
-# 3. The special fires on its key: overdrive for the runner, the pylon discharge for
-#    the engineer. Planting a pylon as the engineer fires the discharge for free,
-#    powered by the banked speed (the turret's opening burst).
-# 4. Bolts step; a bolt that reaches an enemy is resolved once through strike().
-# 5. Every plated enemy is tinted amber if punch_now() beats its plating, slate if not.
+# 3. The special is a hold-gauge-release shot (DESIGN-V2 section 4), dispatched by the
+#    class row's special_id through _specials: Sable's detonation gauge, Rivet's
+#    overdrive blast, Kest's detonation line. Hold draws the committed geometry on the
+#    player's indicator; release fires exactly that geometry, with FORGIVENESS allowed
+#    past its edge in the hit test. Planting a pylon as Sable still fires a free
+#    discharge powered by the banked speed (the turret's opening burst).
+# 4. Bolts and sticky charges step; a hit is resolved once through strike().
+# 5. Knocked enemies that fly into others pin them (the bowling-ball contact's pins).
+# 6. Every plated enemy is tinted amber if punch_now() beats its plating, slate if not.
 #
 # Plating (DEMO-SPEC Rules) lives in one function, resolve(): punch for a ball contact
 # is (base + force * k) * heft, punch for a weapon hit is its damage after parts; punch
@@ -109,7 +117,6 @@ var stage_defs = StageDefs
 var _patterns := {}
 var _part_map := {}
 var _cooldown := 0.0
-var _special_cooldown := 0.0
 var _overdrive := 0.0
 var _since_slingshot := INF
 var _crushes: Array = []
@@ -119,6 +126,21 @@ var _pending := {}
 # Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
 # (seconds since its last landed hit)}.
 var _shred := {}
+
+# special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}.
+var _specials := {}
+var sticky
+# The last gauge release: {id, fraction, geometry}, the geometry exactly as drawn.
+var last_committed := {}
+# Kest's dust cloak: seconds left and where it began (what hidden enemies see).
+var cloak_left := 0.0
+var cloak_at := Vector3.ZERO
+var _rocket_left := 0.0
+# Items shorten the rocket jump's self-launch cooldown through this; it floors at 0.4 s.
+var rocket_cooldown_scale := 1.0
+# Pins already paid, "carrier:knock:victim" -> clock, and how many landed this attempt.
+var _pinned := {}
+var pins := 0
 
 
 func setup(ctx_ref) -> void:
@@ -135,6 +157,19 @@ func setup(ctx_ref) -> void:
 	bolts.on_hit = _on_bolt_hit
 	bolts.on_shell = func(_bolt: Dictionary, shell: Node3D) -> bool: return _bat(shell)
 	bolts.on_stop = func(at: Vector3, color: Color): effects.spark(at, color)
+	sticky = Sticky.new()
+	sticky.name = "StickyCharges"
+	ctx.root.add_child(sticky)
+	_specials = {
+		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
+		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
+		"detonation_line": {"geometry": _line_geometry, "fire": _fire_line},
+	}
+	ctx.player.heft_of = heft
+	ctx.events.demo_slammed.connect(_on_demo_slammed)
+	ctx.events.arc_slammed.connect(func(at: Vector3, _faces: int): effects.ring(at, 12.0, ClassDef.SABLE_COLOR))
+	ctx.events.skid_smashed.connect(func(at: Vector3, _hits: int): effects.ring(at, 4.0, ClassDef.RIVET_COLOR))
+	ctx.events.blink_used.connect(_on_blink)
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_started.connect(func(_class_id: String):
@@ -173,7 +208,10 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
 	enemy.global_position = at
-	enemy.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
+	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
+	# and the vault are set pieces and always see the ball.
+	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) else ctx.player
+	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int): ctx.run.record_kill(kind, where, scrap))
 	if enemy.has_signal("fired"):
@@ -232,7 +270,8 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 func punch_of(kind: String, force: float) -> float:
 	if STRIKE_DAMAGE.has(kind):
 		var row: Array = STRIKE_DAMAGE[kind]
-		return (row[0] + force * row[1]) * heft()
+		var sprint: float = Weapons.SPRINT_PUNCH if ctx != null and ctx.player.kit.sprinting else 1.0
+		return (row[0] + force * row[1]) * heft() * sprint
 	return force
 
 
@@ -374,19 +413,26 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	_since_slingshot += delta
 	_cooldown -= delta
-	_special_cooldown = maxf(0.0, _special_cooldown - delta)
 	_overdrive = maxf(0.0, _overdrive - delta)
+	_rocket_left = maxf(0.0, _rocket_left - delta)
+	_tick_cloak(delta)
 	var intent = ctx.player.intent
 	var weapon := active_weapon()
-	if intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
+	if weapon == Weapons.STICKY_CHARGE:
+		_step_sticky_weapon(intent, delta)
+	elif intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
 		_fire(weapon)
 		_cooldown += 1.0 / _rate(weapon)
 	if not intent.fire_held:
 		_cooldown = maxf(_cooldown, 0.0)
-	if intent.special_pressed and _special_cooldown <= 0.0:
-		_special()
+	_step_special(intent, delta)
+	var enemies := get_tree().get_nodes_in_group("enemy")
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
-	bolts.step(delta, ctx.root.get_world_3d().direct_space_state, get_tree().get_nodes_in_group("enemy"), shells)
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	bolts.step(delta, space, enemies, shells)
+	for charge in sticky.step(delta, space, enemies):
+		_detonate(charge)
+	_pin_step(enemies)
 	_bat_by_ball(shells)
 	_decay_shred(delta)
 	_tint()
@@ -560,33 +606,161 @@ func _nearest_list(at: Vector3, reach: float, limit: int) -> Array:
 
 # --- Specials -----------------------------------------------------------------------
 
-func _special() -> void:
-	var def = ctx.run.class_def
-	var at: Vector3 = ctx.player.ball_position()
-	if def.weapon_id == Weapons.ARC_CASTER:
-		var kit = ctx.player.kit
-		var speed: float = kit.mount_banked if kit.mounted else ctx.player.state.velocity.length()
-		_discharge(at, speed, "turret" if kit.mounted else "arc")
-		_special_cooldown = Weapons.DISCHARGE_COOLDOWN
-	else:
-		_overdrive_blast(at)
-		_special_cooldown = Weapons.OVERDRIVE_COOLDOWN
-	ctx.events.special_used.emit(def.special_id, at)
+# The one hold-gauge-release loop for every class's special. A press starts the gauge
+# if a charge is in; a second press or RMB drops it with nothing spent; the key coming
+# up, or a full gauge held past its grace, fires the geometry drawn at that fraction.
+func _step_special(intent, delta: float) -> void:
+	var abilities = ctx.player.abilities
+	var id: String = abilities.id_of(AbilityState.SPECIAL)
+	var gauge = abilities.gauge(AbilityState.SPECIAL)
+	if gauge == null or not _specials.has(id):
+		return
+	var row: Dictionary = _specials[id]
+	if gauge.charging and (intent.special_pressed or intent.cancel_pressed):
+		gauge.cancel()
+		ctx.player.indicator.clear("special")
+		ctx.events.gauge_cancelled.emit(id, "cancel")
+		return
+	if not gauge.charging and intent.special_pressed and abilities.ready(AbilityState.SPECIAL):
+		gauge.begin()
+		ctx.events.gauge_charging.emit(id)
+	if not gauge.charging:
+		ctx.player.indicator.clear("special")
+		return
+	if not gauge.step(delta, intent.special_held):
+		ctx.player.indicator.set_shape("special", row["geometry"].call(gauge.fraction()))
+		return
+	var f: float = gauge.fired_fraction
+	var shape: Dictionary = row["geometry"].call(f)
+	ctx.player.indicator.set_shape("special", shape)
+	ctx.player.indicator.clear("special")
+	abilities.spend(AbilityState.SPECIAL)
+	last_committed = {"id": id, "fraction": f, "geometry": shape}
+	row["fire"].call(f, shape)
+	ctx.events.gauge_released.emit(id, f)
+	ctx.events.special_used.emit(id, ctx.player.ball_position())
+
+
+# Hull within the drawn radius plus the forgiveness counts as inside a ring.
+static func in_ring(centre: Vector3, radius: float, enemy: Node3D) -> bool:
+	var flat := enemy.global_position - centre
+	flat.y = 0.0
+	return flat.length() - _hull(enemy) <= radius * (1.0 + AbilityState.FORGIVENESS)
+
+
+# Hull within the drawn half-width plus the forgiveness, and along the drawn length.
+static func in_line(from: Vector3, to: Vector3, width: float, point: Vector3, hull := 0.0) -> bool:
+	var a := Vector2(from.x, from.z)
+	var b := Vector2(to.x, to.z)
+	var p := Vector2(point.x, point.z)
+	var along := b - a
+	var length := along.length()
+	if length < 0.001:
+		return false
+	var t := (p - a).dot(along / length)
+	var slack := AbilityState.FORGIVENESS
+	if t < -hull or t > length * (1.0 + slack) + hull:
+		return false
+	var side := absf((p - a).cross(along / length))
+	return side - hull <= width * 0.5 * (1.0 + slack)
+
+
+static func _hull(enemy: Node3D) -> float:
+	var r = enemy.get("radius")
+	return float(r) if r != null else 1.0
+
+
+func _ground_under(at: Vector3) -> Vector3:
+	return at + Vector3.DOWN * 0.9
+
+
+func _flat_aim() -> Vector3:
+	var dir: Vector3 = ctx.aim_forward()
+	dir.y = 0.0
+	return dir.normalized() if dir.length_squared() > 0.0001 else Vector3.FORWARD
+
+
+# Sable: the gauge stands in for speed in the discharge curve, and the bank counts if
+# you are mounted and it is bigger.
+func _discharge_speed(f: float) -> float:
+	var speed := f * Weapons.DISCHARGE_FULL_SPEED
+	if ctx.player.kit.mounted:
+		speed = maxf(speed, ctx.player.kit.mount_banked)
+	return speed
+
+
+func _discharge_geometry(f: float) -> Dictionary:
+	var burst := discharge_preview(_discharge_speed(f))
+	return {"kind": "ring", "centre": _ground_under(ctx.player.ball_position()), "radius": burst["radius"],
+		"fill": f, "color": ctx.player.class_color()}
+
+
+func _fire_discharge(f: float, shape: Dictionary) -> void:
+	var kit = ctx.player.kit
+	_discharge(ctx.player.ball_position(), _discharge_speed(f), "turret" if kit.mounted else "arc", shape["centre"])
+
+
+func _overdrive_geometry(f: float) -> Dictionary:
+	return {"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
+		"radius": Weapons.OVERDRIVE_RADIUS * AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL),
+		"fill": f, "color": ctx.player.class_color()}
+
+
+func _fire_overdrive(f: float, shape: Dictionary) -> void:
+	_overdrive_blast(ctx.player.ball_position(), AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL), shape)
+
+
+func _line_geometry(f: float) -> Dictionary:
+	var from := _ground_under(ctx.player.ball_position())
+	var length := AbilityState.Gauge.scaled(f, Weapons.LINE_MIN, Weapons.LINE_MAX)
+	return {"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
+		"color": ctx.player.class_color()}
+
+
+# Kest's detonation line: every live charge in the line goes off early, then the line
+# itself hits, +25% per charge caught up to three. A shot out of the cloak crits.
+func _fire_line(f: float, shape: Dictionary) -> void:
+	var caught := []
+	for charge in sticky.charges.duplicate():
+		if in_line(shape["from"], shape["to"], shape["width"], charge["pos"]):
+			caught.append(sticky.take(charge))
+	var bonus := 1.0 + Weapons.LINE_PER_CHARGE * mini(caught.size(), Weapons.LINE_MAX_CAUGHT)
+	var damage := AbilityState.Gauge.scaled(f, Weapons.LINE_DAMAGE_MIN, Weapons.LINE_DAMAGE_MAX) * bonus \
+		* _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
+	for charge in caught:
+		_detonate(charge)
+	var hit := 0
+	var from: Vector3 = shape["from"]
+	var to: Vector3 = shape["to"]
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position, _hull(enemy)):
+			continue
+		_hit(enemy, "line", damage, to - from, Weapons.OVERDRIVE_KNOCK * 0.5, 0.5)
+		hit += 1
+	effects.arc(from + Vector3.UP * 0.5, to + Vector3.UP * 0.5, ClassDef.KEST_COLOR)
+	_start_cloak()
+	last_burst = {"at": from, "to": to, "damage": damage, "hit": hit, "kind": "line", "caught": caught.size()}
 
 
 # The pylon's opening burst: planting as the engineer discharges the banked speed.
 func _on_mounted(at: Vector3, banked_speed: float) -> void:
 	if ctx.run.class_def == null or not ctx.flow.in_play():
 		return
-	if ctx.run.class_def.weapon_id != Weapons.ARC_CASTER:
+	if ctx.run.class_def.special_id != "detonation_gauge":
 		return
 	_discharge(at, banked_speed, "turret")
 	ctx.events.special_used.emit(ctx.run.class_def.special_id, at)
 
 
-func _discharge(at: Vector3, speed: float, kind: String) -> void:
+# A released gauge passes its drawn centre, and its targets are chosen with the
+# forgiveness; the plant's free burst has no drawing and keeps the plain radius.
+func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null) -> void:
 	var burst := discharge_preview(speed)
-	var targets := _nearest_list(at, burst["radius"], burst["targets"])
+	var targets: Array
+	if drawn_centre == null:
+		targets = _nearest_list(at, burst["radius"], burst["targets"])
+	else:
+		targets = _nearest_in_ring(drawn_centre, burst["radius"], burst["targets"])
 	var color := Weapons.color(Weapons.PYLON_TURRET)
 	for enemy in targets:
 		var to: Vector3 = enemy.global_position
@@ -599,17 +773,217 @@ func _discharge(at: Vector3, speed: float, kind: String) -> void:
 	last_burst["kind"] = kind
 
 
-func _overdrive_blast(at: Vector3) -> void:
+func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
+	var found := []
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not enemy.is_dead() and in_ring(centre, radius, enemy):
+			found.append([enemy.global_position.distance_to(centre), enemy])
+	found.sort_custom(func(a, b): return a[0] < b[0])
+	return found.slice(0, limit).map(func(pair): return pair[1])
+
+
+func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}) -> void:
 	var p: Resource = _patterns[Weapons.RAPID_LASER]
-	var damage: float = Weapons.OVERDRIVE_DAMAGE * p.damage * _damage_mod(Weapons.RAPID_LASER) / Weapons.BASE[Weapons.RAPID_LASER]["damage"]
+	var damage: float = Weapons.OVERDRIVE_DAMAGE * scale * p.damage * _damage_mod(Weapons.RAPID_LASER) / Weapons.BASE[Weapons.RAPID_LASER]["damage"]
+	var radius := Weapons.OVERDRIVE_RADIUS * scale
+	var centre: Vector3 = shape.get("centre", at)
 	var hit := 0
-	for enemy in _nearest_list(at, Weapons.OVERDRIVE_RADIUS, 64):
-		_hit(enemy, "runner", damage, enemy.global_position - at, Weapons.OVERDRIVE_KNOCK, 0.5)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead() or not in_ring(centre, radius, enemy):
+			continue
+		_hit(enemy, "runner", damage, enemy.global_position - at, Weapons.OVERDRIVE_KNOCK * scale, 0.5)
 		hit += 1
 	_overdrive = Weapons.OVERDRIVE_SECONDS * p.special_scale
-	effects.ring(at, Weapons.OVERDRIVE_RADIUS, Weapons.color(Weapons.RAPID_LASER))
-	last_burst = {"at": at, "radius": Weapons.OVERDRIVE_RADIUS, "damage": damage, "hit": hit, "kind": "runner",
+	effects.ring(at, radius, ClassDef.RIVET_COLOR)
+	last_burst = {"at": at, "radius": radius, "damage": damage, "hit": hit, "kind": "runner",
 		"overdrive": _overdrive}
+
+
+# --- Kest: sticky charges, the cloak, the rocket jump ---------------------------------
+
+# LMB is a hold-release throw: hold draws the lobbed arc and its landing ring, release
+# throws to exactly that point. Held, it auto-throws at full reach after the grace and
+# starts again when the next charge is in. A fourth charge sets off the oldest.
+func _step_sticky_weapon(intent, delta: float) -> void:
+	var abilities = ctx.player.abilities
+	var gauge = abilities.gauge(AbilityState.WEAPON)
+	if gauge == null:
+		return
+	if not gauge.charging and (intent.fire_pressed or intent.fire_held) and abilities.ready(AbilityState.WEAPON):
+		gauge.begin()
+	if not gauge.charging:
+		ctx.player.indicator.clear("weapon")
+		ctx.player.indicator.clear("landing")
+		return
+	if not gauge.step(delta, intent.fire_held):
+		_draw_throw(_throw_landing(gauge.fraction()))
+		return
+	var landing := _throw_landing(gauge.fired_fraction)
+	_draw_throw(landing)
+	ctx.player.indicator.clear("weapon")
+	ctx.player.indicator.clear("landing")
+	abilities.spend(AbilityState.WEAPON)
+	_throw_sticky(landing)
+
+
+func _throw_origin() -> Vector3:
+	return ctx.player.ball_position() + _flat_aim() * MUZZLE + Vector3.UP * 0.6
+
+
+# Where a throw at this fraction lands: along the flat aim, on the ground under it.
+func _throw_landing(f: float) -> Vector3:
+	var p: Resource = _patterns[Weapons.STICKY_CHARGE]
+	var reach := AbilityState.Gauge.scaled(f, Weapons.STICKY_THROW_MIN, p.range_m * ctx.tuning.mod("weapon_range"))
+	var flat: Vector3 = ctx.player.ball_position() + _flat_aim() * reach
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(flat + Vector3.UP * 30.0, flat + Vector3.DOWN * 60.0, 1))
+	return hit["position"] if not hit.is_empty() else flat + Vector3.DOWN * 0.9
+
+
+func _draw_throw(landing: Vector3) -> void:
+	var color: Color = ctx.player.class_color()
+	ctx.player.indicator.set_shape("weapon", {"kind": "arc", "points": Sticky.arc_points(_throw_origin(), landing), "color": color})
+	ctx.player.indicator.set_shape("landing", {"kind": "ring", "centre": landing,
+		"radius": _patterns[Weapons.STICKY_CHARGE].bolt_radius, "color": color})
+
+
+func _throw_sticky(landing: Vector3) -> void:
+	var p: Resource = _patterns[Weapons.STICKY_CHARGE]
+	var live: Array = sticky.live()
+	if live.size() >= Weapons.STICKY_MAX_LIVE:
+		_detonate(sticky.take(live[0]))
+	var origin := _throw_origin()
+	var crit := cloak_left > 0.0
+	var damage: float = p.damage * _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
+	var charge: Dictionary = sticky.throw(origin, landing, damage, p.bolt_radius, Weapons.STICKY_FUSE, crit)
+	volleys += 1
+	last_shot = {"weapon_id": Weapons.STICKY_CHARGE, "from": origin, "to": landing, "point": landing,
+		"blocked": false, "bolts": 1, "volley": volleys, "radius": charge["radius"]}
+	ctx.events.shot_fired.emit(Weapons.STICKY_CHARGE, origin, landing)
+
+
+# One charge going off: its blast (the drawn landing radius plus the forgiveness), a
+# rocket jump if Kest holds Space inside it, and the cloak.
+func _detonate(charge: Dictionary) -> void:
+	var at: Vector3 = charge["pos"]
+	var radius: float = charge["radius"]
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead():
+			continue
+		if (enemy.global_position - at).length() - _hull(enemy) > radius * (1.0 + AbilityState.FORGIVENESS):
+			continue
+		_hit(enemy, "sticky", charge["damage"], enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"], 0.4)
+	effects.ring(at, radius, ClassDef.KEST_COLOR)
+	ctx.events.sticky_detonated.emit(at, charge["crit"])
+	_rocket_jump(at)
+	_start_cloak()
+
+
+# Kest's rocket jump: Space held inside your own blast throws you away from it, harder
+# the closer you are. Its own cooldown and the throw cadence bound the chain.
+func _rocket_jump(at: Vector3) -> void:
+	var player = ctx.player
+	if player.kit.movement_id != "smoke_blink" or not player.intent.jump_held or _rocket_left > 0.0:
+		return
+	var away: Vector3 = player.ball_position() - at
+	var reach := away.length()
+	if reach > Weapons.ROCKET_REACH:
+		return
+	var dir := (away.normalized() if reach > 0.01 else Vector3.ZERO) + Vector3.UP
+	dir = dir.normalized()
+	var speed := AbilityState.Gauge.scaled(1.0 - reach / Weapons.ROCKET_REACH, Weapons.ROCKET_MIN, Weapons.ROCKET_MAX)
+	var v: Vector3 = player.state.velocity
+	var gain := maxf(0.0, speed - v.dot(dir))
+	player.add_external_accel(dir * gain / get_physics_process_delta_time())
+	_rocket_left = AbilityState.floored(Weapons.ROCKET_COOLDOWN, rocket_cooldown_scale)
+	ctx.events.rocket_jumped.emit(at, speed)
+
+
+func _on_demo_slammed(at: Vector3) -> void:
+	if not ctx.flow.in_play():
+		return
+	var heading: Vector3 = ctx.player.planar_velocity()
+	var turn := atan2(heading.z, heading.x) if heading.length() > 0.5 else 0.0
+	for i in Weapons.MINI_COUNT:
+		var angle := turn + TAU * float(i) / float(Weapons.MINI_COUNT)
+		var spot := at + Vector3(cos(angle), 0.0, sin(angle)) * Weapons.MINI_SPREAD
+		sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
+			Weapons.MINI_FUSE, Weapons.MINI_ARM)
+
+
+func _on_blink(from: Vector3, _to: Vector3) -> void:
+	effects.ring(from, 2.5, ClassDef.KEST_COLOR)
+	_start_cloak()
+
+
+func _start_cloak() -> void:
+	if ctx.player.kit.movement_id != "smoke_blink":
+		return
+	var fresh := cloak_left <= 0.0
+	cloak_left = Weapons.CLOAK_SECONDS
+	cloak_at = ctx.player.ball_position()
+	if fresh:
+		ctx.events.cloak_started.emit(cloak_left)
+
+
+func _tick_cloak(delta: float) -> void:
+	if cloak_left <= 0.0:
+		return
+	cloak_left -= delta
+	if cloak_left <= 0.0:
+		cloak_left = 0.0
+		ctx.events.cloak_broken.emit("faded")
+
+
+# The first shot out of the cloak crits and ends it; any other shot is plain.
+func _cloak_shot() -> float:
+	if cloak_left <= 0.0:
+		return 1.0
+	cloak_left = 0.0
+	ctx.events.cloak_broken.emit("shot")
+	return Weapons.CLOAK_CRIT
+
+
+# --- Pins ---------------------------------------------------------------------------
+
+# A knocked enemy flying faster than PIN_MIN_SPEED at another within PIN_RADIUS (hull
+# to hull) hits it once per knock, keyed by the carrier's instance and knock count, and
+# hands on PIN_CARRY of its speed, so a chain always runs down below the bar.
+func _pin_step(enemies: Array) -> void:
+	for key in _pinned.keys():
+		if _clock - float(_pinned[key]) > 3.0:
+			_pinned.erase(key)
+	for carrier in enemies:
+		if not _pinnable(carrier) or not carrier.has_method("_knocked_speed"):
+			continue
+		var speed: float = carrier._knocked_speed()
+		if speed <= Weapons.PIN_MIN_SPEED:
+			continue
+		var heading := Vector3(carrier.velocity.x, 0.0, carrier.velocity.z)
+		heading = heading.normalized() if heading.length() > 0.1 else Vector3.ZERO
+		for victim in enemies:
+			if victim == carrier or not _pinnable(victim):
+				continue
+			var to: Vector3 = victim.global_position - carrier.global_position
+			to.y = 0.0
+			if to.length() - _hull(carrier) - _hull(victim) > Weapons.PIN_RADIUS:
+				continue
+			if heading == Vector3.ZERO or to.normalized().dot(heading) < 0.5:
+				continue
+			var key := "%d:%d:%d" % [carrier.get_instance_id(), carrier.knocks, victim.get_instance_id()]
+			if _pinned.has(key):
+				continue
+			_pinned[key] = _clock
+			var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed)
+			pins += 1
+			ctx.events.enemy_pinned.emit(victim, damage)
+			victim.knock(to + Vector3.UP * 0.2, speed * Weapons.PIN_CARRY * float(victim.weight))
+			victim.flash()
+			strike(victim, "pin", damage)
+
+
+static func _pinnable(enemy) -> bool:
+	return is_instance_valid(enemy) and enemy.has_method("knock") and enemy.has_method("is_dead") and not enemy.is_dead()
 
 
 # --- Enemy attacks ------------------------------------------------------------------
@@ -620,8 +994,11 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
 	ctx.run.damage(amount, source)
-	if shove != Vector3.ZERO and not ctx.calm:
-		ctx.player.add_external_accel(shove / get_physics_process_delta_time())
+	if ctx.calm:
+		return
+	# The damage always lands; what the hit may take is the stop, and that goes through
+	# the player's crowd-control door, which Rivet's sprint shuts.
+	ctx.player.crowd_control("knock", shove / get_physics_process_delta_time())
 
 
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
@@ -729,7 +1106,7 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 			_crushes.pop_front()
 		if _crushes.size() >= CRUSH_CHAIN:
 			_discover("crush_chain", at)
-	if kind in ["runner", "arc", "turret"] and _since_slingshot <= PARTING_WINDOW:
+	if kind in ["runner", "arc", "turret", "sticky", "line"] and _since_slingshot <= PARTING_WINDOW:
 		_discover("parting_shot", at)
 	if enemy.get("kind") == "warden" and enemy.unplated_by_magnet():
 		_discover("magnet_break", at)
@@ -762,9 +1139,15 @@ func _start_attempt() -> void:
 	_clear_fight()
 	_crushes.clear()
 	_shred.clear()
+	_pinned.clear()
 	_cooldown = 0.0
-	_special_cooldown = 0.0
 	_overdrive = 0.0
+	_rocket_left = 0.0
+	cloak_left = 0.0
+	last_committed = {}
+	for id in ctx.player.abilities.cancel_gauges():
+		ctx.events.gauge_cancelled.emit(id, "reset")
+	ctx.player.indicator.clear_all()
 
 
 # Every enemy, shell and telegraph leaves its group, stops acting and stops colliding
@@ -777,6 +1160,7 @@ func _clear_fight() -> void:
 			node.process_mode = Node.PROCESS_MODE_DISABLED
 			node.queue_free()
 	bolts.clear()
+	sticky.clear()
 	effects.clear()
 
 
