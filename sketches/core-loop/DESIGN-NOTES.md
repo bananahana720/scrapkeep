@@ -348,6 +348,7 @@ I1 is the module side of spine call 34, the arena stand-down (calls 1 to 5); I2 
     - **How it works now.** Every music measurement sits between two timings of a fixed reference workload: 8 fixed buffers mixed with a gain ramp into a 735-sample block, 1200 times. That is the shape of the engine's own mixing loop, run in the same process. The check is music ms per second of music over the mean reference ms, the least of three paired runs.
     - **Why a ratio holds.** Contention slows both sides of the ratio alike. A heavier arrangement moves only the music side.
     - **Calibration.** Three solo runs gave Brindle's densest arrangement 0.188, 0.180 and 0.180, with the reference at 395 to 410 ms. The cap is 0.21, which puts today's arrangement at 86 to 90% of it. That is the same headroom as 70 ms against the old 80.
+    - **Under load.** With a load average of 17 to 19 from other agents, the absolute cost rose to 82 and 78 ms; the first is over the old cap. The ratio read 0.178 and 0.177, level with the solo runs, and the capped smoke passed.
     - **Regression proof.** In a scratch copy, not committed, every voice the engine started got a twin. The ratio rose to 0.333 (138 ms against 415 ms of reference) and the check failed.
     - **Output.** The absolute ms per second of music still prints as information, next to the old 80 ms line.
     - Demand: the boss phase (Brindle's densest arrangement). Serves honest measurement.
