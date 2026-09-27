@@ -5,6 +5,7 @@ const Juice := preload("res://src/presentation/juice.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -19,12 +20,14 @@ const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 #   vfx            trails, speed lines, flashes, rings and sparkles
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
+#   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
 
 var ctx
 var audio
 var juice
 var vfx
 var banner
+var hero_assets
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -44,6 +47,9 @@ func setup(ctx_ref) -> void:
 	vfx = Vfx.new()
 	add_child(vfx)
 	vfx.setup(ctx)
+	hero_assets = HeroAssets.new()
+	add_child(hero_assets)
+	hero_assets.setup(ctx)
 	var layer := CanvasLayer.new()
 	layer.name = "CodexBannerLayer"
 	layer.layer = 40
