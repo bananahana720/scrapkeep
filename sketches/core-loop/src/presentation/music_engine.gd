@@ -99,6 +99,8 @@ const LEAD_VOICE := ["lead", "brass", "talk"]
 # starts the sinister break, whose build tightens with every hit until the unseal.
 const WARDEN_LIFT_AT := 0.5
 const WARDEN_BUILD_FROM := 0.75
+# One heft class brightens the band this much intensity.
+const HEFT_STEP := 0.12
 # Brindle's key per section, in semitones above D: each phase lifts it.
 const BRINDLE_KEY := {"1": 0, "2": 1, "3": 2, "chase": 2, "victory": 0}
 
@@ -230,6 +232,11 @@ var _transition := {}
 var _lead_octave := 0
 var _warden_lifted := false
 var _warden_broken := false
+# The B-arc on tracks without their own sections (miniboss, events, Brindle's phases,
+# the chase): "" -> "lift" -> "break". Brindle's break plays the sinister half time.
+var escalation := ""
+# Heft class steps above the first: each lifts the band's intensity one step.
+var heft_lift := 0
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -547,9 +554,25 @@ func restart_boss(kind: String) -> int:
 func warden_charge(fraction: float) -> void:
 	if track != "warden" or section == "drop":
 		return
+	escalate(fraction)
+
+
+# B's grammar, for any track (MUSIC-GEMS G11). fraction is how far the fight or event
+# has gone (0..1), read from real game state. Half way lifts the key a half step
+# through a pickup bar on the new key's dominant; three quarters starts the break
+# (sinister half time where the track has one) and a build that tightens with the
+# fraction; the payoff (the drop) is the caller's, on the gameplay moment.
+func escalate(fraction: float, sinister := true) -> void:
+	if not _drop.is_empty() or _cadence_bar >= 0 or mode != PLAY:
+		return
 	if fraction >= WARDEN_LIFT_AT and not _warden_lifted:
 		_warden_lifted = true
-		_queue({"key": key + 1, "section": "lift", "lead_octave": 12}, {"chord": Harmony.DOMINANT, "key": key + 1})
+		var lift := {"key": key + 1, "lead_octave": 12}
+		if track in ["warden", "miniboss"]:
+			lift["section"] = "lift"
+		else:
+			lift["esc"] = "lift"
+		_queue(lift, {"chord": Harmony.DOMINANT, "key": key + 1})
 		events_log.append(["lift_queued", clock, fraction])
 	if fraction < WARDEN_BUILD_FROM:
 		return
@@ -559,12 +582,80 @@ func warden_charge(fraction: float) -> void:
 		for item in _bar_queue:
 			if (item["set"] as Dictionary).has("key"):
 				break_key = int(item["set"]["key"])
-		_queue({"section": "break", "lead_octave": 0, "key": break_key}, {"chord": Harmony.TRITONE, "key": break_key})
+		if sinister:
+			var brk := {"lead_octave": 0, "key": break_key}
+			if track in ["warden", "miniboss"]:
+				brk["section"] = "break"
+			else:
+				brk["esc"] = "break"
+			_queue(brk, {"chord": Harmony.TRITONE, "key": break_key})
 		events_log.append(["break_queued", clock, fraction])
 	if _build_level < 0.0:
 		_start_riser()
-		events_log.append(["build", clock, "warden"])
+		events_log.append(["build", clock, track])
 	_build_level = clampf((fraction - WARDEN_BUILD_FROM) / (1.0 - WARDEN_BUILD_FROM), 0.0, 1.0)
+
+
+# An event's end. A win drops home into the level on the next beat; a pass or a loss
+# settles gracefully: the build fades and the key walks home through a pickup bar.
+func resolve_event(won: bool) -> int:
+	if won:
+		return drop_now(4, 0.85, {}, theme)
+	cancel_build()
+	if key != 0:
+		_queue({"key": 0, "esc": "", "lead_octave": 0}, {"chord": Harmony.DOMINANT, "key": 0})
+	else:
+		_queue({"esc": "", "lead_octave": 0})
+	_reset_escalation(false)
+	return -1
+
+
+# The miniboss dies: the drop home on the next beat, then the cadence into the level.
+func miniboss_drop() -> int:
+	if track != "miniboss":
+		return -1
+	return drop_now(4, 0.9, {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, theme)
+
+
+func _reset_escalation(clear_esc := true) -> void:
+	_warden_lifted = false
+	_warden_broken = false
+	if clear_esc:
+		escalation = ""
+
+
+# Heft classes above the first brighten the band from the next bar: a re-voice and
+# one step more intensity per class; a drop steps it back.
+func set_heft_lift(steps: int) -> void:
+	var next := maxi(steps, 0)
+	if next == heft_lift:
+		return
+	_queue({"heft": next})
+
+
+# A death: on the next beat the band breaks (a boom, everything cut), then keys only.
+func death_break() -> int:
+	var at := next_beat()
+	_add_action(at, {"type": "hit", "drums": ["boom", "crash"]})
+	schedule_mode(at, DEAD)
+	return at
+
+
+# A retry: a snare pickup climbs into the restart. The restart is the beat after next,
+# so there is always at least a beat to fill.
+func retry_restart(next_mode: int, next_theme := -1) -> int:
+	var at := next_beat(clock + beat_len())
+	fill_into(at)
+	schedule_restart(at, next_mode, next_theme)
+	return at
+
+
+func fill_into(at: int) -> void:
+	var from := maxi(next_beat(), at - 8 * step_len)
+	var steps := (at - from) / step_len
+	for i in steps:
+		_add_action(from + i * step_len, {"type": "roll", "gain": 0.4 + 0.6 * float(i + 1) / maxf(steps, 1)})
+	events_log.append(["fill", from, at])
 
 
 # Queues a change for a coming bar line. With a transition, the bar before it is a
@@ -578,11 +669,11 @@ func _queue(change: Dictionary, transition := {}) -> void:
 
 # A drop on the next beat: the play head goes quiet until then, then the drop.
 # next_theme >= 0 restarts the level phrase in that theme (a stage landing).
-func drop_now(bars: int, weight: float, then := {}, next_theme := -1) -> int:
+func drop_now(bars: int, weight: float, then := {}, next_theme := -1, change := {}) -> int:
 	var at := next_beat()
 	if at > clock:
 		_add_action(clock, {"type": "gap"})
-	_add_action(at, {"type": "drop", "bars": bars, "weight": weight, "then": then, "theme": next_theme})
+	_add_action(at, {"type": "drop", "bars": bars, "weight": weight, "then": then, "theme": next_theme, "set": change})
 	return at
 
 
@@ -613,23 +704,42 @@ func end_boss() -> int:
 func brindle_section(name: String) -> int:
 	if track != "brindle":
 		return -1
+	# The payoff lands on the gameplay moment: the phase change (or the catch) drops on
+	# the next beat. The in-phase build (brindle_hp) has already done the building.
 	var change := {"track": "brindle", "section": name, "key": BRINDLE_KEY.get(name, 0)}
-	var ramp := {}
 	var weight := 0.9
-	var build := 1
 	match name:
 		"3":
-			ramp = {"to": PHASE3_STEP}
+			change["step"] = PHASE3_STEP
 		"chase":
-			ramp = {"to": Harmony.STEP}
+			change["step"] = Harmony.STEP
 			weight = 0.95
 		"victory":
-			ramp = {"to": Harmony.STEP} if step_len != Harmony.STEP else {}
+			change["step"] = Harmony.STEP
 			weight = 1.2
-			build = 2
-	if not ramp.is_empty():
-		ramp["beats"] = build * 4
-	return planned_drop(build, 4, weight, change, ramp)
+		_:
+			change["step"] = Harmony.BOSS_STEP if boss_pivot else step_len
+	return drop_now(4, weight, {}, -1, change)
+
+
+# Brindle's HP inside the current phase, as a fraction of the way from the phase's top
+# to its floor, and whether the floor is held for the set piece (with its clock, 0..1).
+# Half way lifts; the held floor is the sinister break tightening with the set piece.
+func brindle_hp(in_phase: float, floor_held := false, piece := 0.0) -> void:
+	if track != "brindle" or not section in ["1", "2", "3"]:
+		return
+	if floor_held:
+		escalate(WARDEN_BUILD_FROM + (1.0 - WARDEN_BUILD_FROM) * clampf(piece, 0.0, 1.0))
+	else:
+		escalate(minf(in_phase, 0.74))
+
+
+# The chase: the heartbeat climbs as the scooter's lead shrinks (closed 0..1). No
+# sinister break: the chase is the run home.
+func chase(closed: float) -> void:
+	if track != "brindle" or section != "chase":
+		return
+	escalate(closed, false)
 
 
 func set_brindle_phase(phase: int) -> int:
@@ -854,7 +964,12 @@ func _on_step() -> void:
 			else:
 				_trigger_house(bar, s, chord)
 		"brindle":
-			_trigger_brindle(bar, s, chord)
+			if escalation == "break":
+				_trigger_break(bar, s, chord)
+			else:
+				_trigger_brindle(bar, s, chord)
+		"miniboss" when section == "break":
+			_trigger_break(bar, s, chord)
 		_:
 			match theme:
 				1:
@@ -881,6 +996,10 @@ func _run(action: Dictionary) -> void:
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
 		"restart":
+			_reset_escalation()
+			_bar_queue.clear()
+			_transition = {}
+			_lead_octave = 0
 			if int(action.get("theme", -1)) >= 0:
 				theme = int(action["theme"])
 				events_log.append(["theme", clock, theme])
@@ -925,6 +1044,7 @@ func _run(action: Dictionary) -> void:
 			_lead_octave = 0
 			_bar_queue.clear()
 			_transition = {}
+			_reset_escalation()
 			_reset_bar()
 			_cadence_bar = -1
 			_pulse_until = -1
@@ -968,6 +1088,7 @@ func _run(action: Dictionary) -> void:
 			_bar_queue.clear()
 			_transition = {}
 			_lead_octave = 0
+			_reset_escalation()
 			var next_theme := int(action.get("theme", -1))
 			if next_theme >= 0:
 				theme = next_theme
@@ -976,6 +1097,8 @@ func _run(action: Dictionary) -> void:
 				_set_grid(Harmony.STEP)
 				events_log.append(["theme", clock, theme])
 			var change: Dictionary = action.get("set", {})
+			if change.has("step"):
+				_set_grid(int(change["step"]))
 			if change.has("track"):
 				track = change["track"]
 				section = change.get("section", section)
@@ -1058,6 +1181,14 @@ func _on_bar() -> void:
 			events_log.append(["section", clock, section])
 		if change.has("lead_octave"):
 			_lead_octave = int(change["lead_octave"])
+		if change.has("esc"):
+			escalation = change["esc"]
+			events_log.append(["esc", clock, escalation])
+		if change.has("heft"):
+			heft_lift = int(change["heft"])
+			events_log.append(["heft", clock, heft_lift])
+			_revoice()
+			_retarget()
 		_new_phrase()
 	# A planned drop counts down its bars and lands on the downbeat.
 	if not _pending_drop.is_empty():
@@ -1082,6 +1213,8 @@ func _floor() -> float:
 	if not _drop.is_empty():
 		return 1.0
 	var key_name := track if not track in ["warden", "brindle"] else "%s:%s" % [track, section]
+	if track == "miniboss":
+		key_name = "miniboss"
 	return PRESSURE_FLOOR.get(key_name, 0.0)
 
 
@@ -1089,6 +1222,8 @@ func _retarget() -> void:
 	var effective := maxf(applied_pressure, _floor()) if mode == PLAY else applied_pressure
 	if mode == PLAY and building():
 		effective = maxf(effective, build_level())
+	if mode == PLAY:
+		effective = minf(1.0, effective + HEFT_STEP * heft_lift)
 	_intensity = effective
 	var gains := layer_gains(effective)
 	for layer in gains.size():
@@ -1119,6 +1254,8 @@ func _progression() -> Array:
 		"miniboss":
 			return Harmony.minor_progression(theme)
 		"brindle":
+			if escalation == "break":
+				return Harmony.SINISTER
 			match section:
 				"victory":
 					return Harmony.VICTORY
@@ -1128,6 +1265,8 @@ func _progression() -> Array:
 		"warden":
 			if section == "break":
 				return Harmony.SINISTER
+	if track == "miniboss" and section == "break":
+		return Harmony.SINISTER
 	return Harmony.level_progression(theme)
 
 
@@ -1558,7 +1697,7 @@ func _play_lead(phrase_bar: int, s: int) -> void:
 			var midi: int = int(event[1]) + _lead_octave
 			while midi > 86:
 				midi -= 12
-			if track == "warden" and section == "break" and at % 4 == 0 and posmod(midi - Harmony.HOME, 12) == 0:
+			if (section == "break" or escalation == "break") and at % 4 == 0 and posmod(midi - Harmony.HOME, 12) == 0:
 				# The flat second leans on the root on strong beats.
 				midi += 1
 			_start_note(_lead_voice, midi, event[2], LEAD, 1.0, 0.1)
