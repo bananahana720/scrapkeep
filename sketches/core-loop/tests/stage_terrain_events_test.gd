@@ -200,7 +200,9 @@ func _check_cave(seal: Node3D, home: Vector3) -> void:
 		"the ball sat in the tunnel under the rubble's footprint; the change held %.2f s with the seal still parked (%s)"
 			% [_cave.held, _parked_while_held])
 	var swap: Dictionary = _game.world.swap_log[0] if not _game.world.swap_log.is_empty() else {}
-	var centre := _mid("w1")
+	# 1.5 m off the mound's axis: its polar mesh leaves a 0.4 m eye at the centre (too
+	# small for the ball), which a ray would slip through.
+	var centre := _mid("w1") + Vector2(1.5, 0.0)
 	var ground: float = _game.ctx.terrain.height(centre.x, centre.y)
 	var hit := _probe(centre)
 	_report("cave-in swapped a finished collider", seal.position.distance_to(home) < 0.01 and plug.position.y < -300.0

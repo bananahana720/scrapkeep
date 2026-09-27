@@ -389,7 +389,7 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	_landmark(parent, ground, enamel, light, copper, rust)
 	_dish(parent, ground, enamel, copper)
 	_bridges(parent, concrete)
-	_tunnel_roofs(parent, concrete)
+	_tunnel_roofs(parent, ground, concrete)
 	_skylight_roof(parent, ground, concrete)
 	_cable_tower(parent, ground)
 	# Kerbs flank the marble run's drop-in and the cannon: the run reads as a structure.
@@ -498,15 +498,29 @@ func _bridges(parent: Node3D, mat: Material) -> void:
 			_visual_box(parent, Vector3(2.4, top - foot, 2.4), Vector3(x, (top + foot) * 0.5, zc), mat)
 
 
-# A slab over each wall tunnel where it runs deep under the shelf, following the
-# shelf's own slope so its top is flush with the ground either side.
-func _tunnel_roofs(parent: Node3D, mat: Material) -> void:
+# A slab over each wall tunnel where it runs deep under the shelf. Each end sits on
+# the shelf-side ground just beyond the tunnel's carve, a touch below it, so a ball
+# rolling across the shelf drops onto the roof instead of meeting its edge; toward the
+# trough the slab's far side is a drop, never a kerb. (It followed flank(z), the shelf's
+# nominal height, and stood up to 2.3 m proud of the real ground beside it: a kerb
+# across a gate approach, found by stage_gate_sweep_test. Following the uncarved
+# gorge() instead dropped the lower end into the trough wall and pinned Rivet inside.)
+const ROOF_SIDE := 8.5
+const ROOF_SINK := 0.3
+
+
+func _tunnel_roofs(parent: Node3D, ground: Callable, mat: Material) -> void:
 	for id in TUNNELS:
 		var ends: Array = TUNNELS[id]
 		var a: Vector2 = (ends[0] as Vector2).lerp(ends[1], 0.28)
 		var b: Vector2 = (ends[0] as Vector2).lerp(ends[1], 0.62)
-		var pa := Vector3(a.x, flank(a.y) - 0.05, a.y)
-		var pb := Vector3(b.x, flank(b.y) - 0.05, b.y)
+		var d := ((ends[1] as Vector2) - (ends[0] as Vector2)).normalized()
+		var side := Vector2(-d.y, d.x) * ROOF_SIDE
+		var top := func(p: Vector2) -> float:
+			return maxf((ground.call(p.x + side.x, p.y + side.y, 0.0) as Vector3).y,
+				(ground.call(p.x - side.x, p.y - side.y, 0.0) as Vector3).y) - ROOF_SINK
+		var pa := Vector3(a.x, top.call(a), a.y)
+		var pb := Vector3(b.x, top.call(b), b.y)
 		var mid := (pa + pb) * 0.5
 		var along := pb - pa
 		var body := box(parent, Vector3(TUNNEL_HALF * 2.0 + 3.0, 1.2, along.length()), mid + Vector3.DOWN * 0.6, mat)

@@ -166,6 +166,9 @@ func _physics_process(delta: float) -> bool:
 			if _entered_speed >= 0.0:
 				_report("the cradle banks the ball's speed", absf(_entered_speed - _before) <= _before * TOLERANCE,
 					"rolled in at %.2f m/s, banked %.2f m/s" % [_before, _entered_speed])
+				var shop = _game.ctx.build_module().shop
+				_report("boarding opens Moss's shop (W4 seam)", shop.inside and shop.clock_paused() and shop.shelf.size() > 0 and not (_game.world.bay_bark as Dictionary).is_empty(),
+					"shop inside %s, clock_paused %s, shelf %d offers, greeting %s" % [shop.inside, shop.clock_paused(), shop.shelf.size(), _game.world.bay_bark.get("id", _game.world.bay_bark)])
 				_report("boarding opens the next upgrade pick", player.tree.allowed == _allowed_before + 1,
 					"tree picks allowed %d before the cradle, %d aboard" % [_allowed_before, player.tree.allowed])
 				_offers_seen = 0
@@ -211,6 +214,7 @@ func _physics_process(delta: float) -> bool:
 					"banked %.2f m/s; back on the ground at %.2f m/s heading %.2f along the gates' facing" % [_entered_speed, planar, heading])
 				_report("the clock runs again after", _game.world.director.stage_time > _clock_at_entry,
 					"difficulty clock %.2f s, was %.2f s at entry" % [_game.world.director.stage_time, _clock_at_entry])
+				_report("leaving closes the shop", not _game.ctx.build_module().shop.inside, "shop inside after the pad: %s" % _game.ctx.build_module().shop.inside)
 				_report("the gates held still", _offers_seen == 0, "reward_offered while aboard: %d" % _offers_seen)
 				_phase = "gate"
 				_clock = 0.0
