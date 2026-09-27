@@ -8,17 +8,24 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # where. Each node builds its descriptor from the same fields its contains() reads, so
 # the drawing and the damage use the same numbers (TH-03 AO-08, TH-16 RR-01).
 #
-# Four types, told apart by shape, fill, motion and sound, never by colour alone. Every
-# enemy threat draws in HAZARD and a player-owned one in AMBER; the tones below only
-# raise value and lower saturation for contrast, so the hue never changes.
-#   INSTANT     a sharp edge; the inside fills evenly over the warning, with no motion,
-#               and flashes solid the moment it lands.
+# Four types, told apart by shape, fill, motion and sound, never by colour alone
+# (VISUAL-LANGUAGE.md sections 3 and 4).
+#   INSTANT     a sharp edge; a striped fill closes in from the edge over the warning,
+#               and a solid flash marks the landing.
 #   WAVE        the whole reach dashed and faint; a bright front at its real position
-#               (speed x elapsed) with chevrons the way it travels, and a curtain as tall
-#               as the height band a jump clears (RR-02).
+#               (speed x elapsed) with chevrons the way it travels, a curtain as tall as
+#               its height band, and 15% stripes over the ground it has swept.
 #   PROJECTILE  a dotted flight trace from the launcher to the landing point, eaten as
 #               the shell flies, and a reticle whose brackets close on the blast edge.
-#   LANE        rails along the strip, and a fill that runs from the source to the end.
+#   LANE        rails along the strip, and a striped fill that runs from the source.
+#
+# The tone says whose it is. HAZARD is hostile: its areas carry 45-degree HAZARD and
+# charcoal stripes, it warns with its type's sound, and a boss's brass `owner` becomes a
+# tick every 30 degrees on the rim. AMBER is the player's own: clean fills, no stripes,
+# no warn sound. Bone (Palette.SAND) is a harmless field: a dashed ring and nothing else.
+# Every line sits on a charcoal keyline, because HAZARD on sandstone is only 1.3:1.
+# Instant, projectile and lane draw their height band (RR-02) as posts and a top rail at
+# `reach`; a wave draws it as a curtain on its front.
 #
 # A descriptor is a Dictionary:
 #   type      Type
@@ -29,7 +36,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   front     WAVE: the front's radius (full circle) or angle offset from a0 (sector); -1
 #             while arming
 #   launch, bump   PROJECTILE: flight_point() from launch to centre
-#   tone, live_tone, pull (a wedge that pulls toward its apex)
+#   tone, live_tone, pull (a wedge that pulls toward its apex), owner (a rim tick colour)
 
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
@@ -42,9 +49,9 @@ const SEGMENTS := 72
 const AREA_ALPHA := 0.1
 const EDGE_ALPHA := 0.95
 const OUTLINE_ALPHA := 0.5
-const FILL_FROM := 0.06
-const FILL_TO := 0.6
-const RUN_ALPHA := 0.42
+const FILL_ALPHA := 0.35
+const SWEPT_ALPHA := 0.15
+const RUN_ALPHA := 0.35
 const LIVE_ALPHA := 0.8
 const FLASH_ALPHA := 0.9
 const FLASH_SECONDS := 0.22
@@ -70,9 +77,26 @@ const DOT_SPACING := 1.6
 const DOT_SIZE := 0.22
 const TRACE_ALPHA := 0.85
 const LANE_STEP := 2.0
+const STRIPE_PITCH := 0.5
+const POST_SPACING := 4.0
+const POST_HALF := 0.06
+const POST_ALPHA := 0.35
+const RAIL_ALPHA := 0.7
+const OWNER_STEP := PI / 6.0
+const OWNER_SPACING := 4.0
 
-const STATIC_LAYERS := ["under", "base", "fill"]
-const MOTION_LAYERS := ["motion_under", "motion"]
+# Layers whose name starts with "stripe" draw the hostile stripe pattern.
+const STATIC_LAYERS := ["under", "stripe", "base", "fill"]
+const MOTION_LAYERS := ["motion_under", "stripe_motion", "motion"]
+
+
+# hostile (HAZARD), owned (the player's, AMBER) or neutral (a harmless bone field).
+static func stance(tone: Color) -> String:
+	if tone == Palette.HAZARD:
+		return "hostile"
+	if tone == Palette.SAND:
+		return "neutral"
+	return "owned"
 
 
 static func valid(type: int) -> bool:
@@ -118,15 +142,13 @@ static func front_angle(d: Dictionary) -> float:
 	return a0 + sweep * clampf(maxf(float(d["front"]), 0.0), 0.0, absf(a1 - a0))
 
 
-# INSTANT alone fills; the fill layer is tinted, not redrawn, as the warning runs.
+# The solid layer shows only while an INSTANT area is live (slag stays molten); the
+# landing flash reuses its geometry.
 static func fill_tint(d: Dictionary) -> Color:
-	if int(d["type"]) != Type.INSTANT:
+	if int(d["type"]) != Type.INSTANT or not d.get("live", false):
 		return Color(0.0, 0.0, 0.0, 0.0)
-	var tone: Color = d["tone"]
-	if d.get("live", false):
-		var live_tone: Color = d.get("live_tone", tone)
-		return Color(live_tone, LIVE_ALPHA)
-	return Color(tone, lerpf(FILL_FROM, FILL_TO, float(d["progress"])))
+	var live_tone: Color = d.get("live_tone", d["tone"])
+	return Color(live_tone, LIVE_ALPHA)
 
 
 # Every mark a descriptor draws, static (drawn once) or motion (redrawn as it runs).
@@ -134,6 +156,14 @@ static func fill_tint(d: Dictionary) -> Color:
 # numbers its role stands for, which the tests compare with contains().
 static func marks(d: Dictionary, motion: bool) -> Array:
 	var out: Array = []
+	if stance(d["tone"]) == "neutral":
+		if not motion:
+			_lined(out, "outline", false, Color(Palette.SAND, EDGE_ALPHA), func(grow: float): return _dashed_outline(d, grow), {})
+		return out
+	if not motion and d.has("owner"):
+		_lined(out, "owner", false, Color(d["owner"], 1.0), func(grow: float): return _owner_ticks(d, grow), {"owner": d["owner"]})
+	if not motion and int(d["type"]) != Type.WAVE:
+		_fence(out, d)
 	match int(d["type"]):
 		Type.INSTANT:
 			_instant(d, motion, out)
@@ -162,13 +192,22 @@ static func roles(d: Dictionary) -> Array:
 # --- The four types ----------------------------------------------------------------
 
 static func _instant(d: Dictionary, motion: bool, out: Array) -> void:
-	if motion:
-		return
 	var tone: Color = d["tone"]
-	out.append(_mark("area", "base", Color(tone, AREA_ALPHA), _footprint(d)))
+	if motion:
+		var p: float = 1.0 if d.get("live", false) else float(d["progress"])
+		if d["form"] == "lane":
+			var half: float = d["half_width"]
+			var tris := _lane_strip(d, -float(d["back"]), float(d["length"]), -half, -half + p * half)
+			tris.append_array(_lane_strip(d, -float(d["back"]), float(d["length"]), half - p * half, half))
+			out.append(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), tris, {"inner": half - p * half}))
+			return
+		var inner := lerpf(float(d["r_out"]), float(d["r_in"]), p)
+		out.append(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _arc(d, inner, d["r_out"], d["a0"], d["a1"]), {"inner": inner}))
+		return
+	out.append(_mark("area", _area_layer(d, false), _area_tone(d, AREA_ALPHA), _footprint(d)))
 	_lined(out, "edge", false, Color(tone, EDGE_ALPHA), func(grow: float): return _edge_tris(d, grow),
 		{"r_in": d.get("r_in", 0.0), "r_out": d.get("r_out", 0.0)})
-	out.append(_mark("fill", "fill", Color.WHITE, _footprint(d)))
+	out.append(_mark("solid", "fill", Color.WHITE, _footprint(d)))
 
 
 static func _wave(d: Dictionary, motion: bool, out: Array) -> void:
@@ -180,6 +219,13 @@ static func _wave(d: Dictionary, motion: bool, out: Array) -> void:
 		_lined(out, "outline", false, Color(tone, OUTLINE_ALPHA), func(grow: float): return _dashed_outline(d, grow), {})
 		return
 	var arming := float(d["front"]) < 0.0
+	if not arming:
+		var swept: PackedVector3Array
+		if is_full(d):
+			swept = _arc(d, d["r_in"], maxf(float(d["r_in"]), float(d["front"]) - WAVE_EDGE), 0.0, TAU)
+		else:
+			swept = _arc(d, d["r_in"], d["r_out"], d["a0"], front_angle(d))
+		out.append(_mark("swept", _area_layer(d, true), _area_tone(d, SWEPT_ALPHA), swept))
 	var hot := Color(bright(tone), lerpf(0.35, 0.8, float(d["progress"])) if arming else 1.0)
 	var reach: float = d["reach"]
 	var c: Vector3 = d["centre"]
@@ -218,7 +264,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 	var c: Vector3 = d["centre"]
 	var r: float = d["r_out"]
 	if not motion:
-		out.append(_mark("area", "base", Color(tone, AREA_ALPHA * 1.4), _footprint(d)))
+		out.append(_mark("area", _area_layer(d, false), _area_tone(d, AREA_ALPHA * 1.4), _footprint(d)))
 		var w := edge_width(d) * 0.6
 		_lined(out, "edge", false, Color(tone, EDGE_ALPHA * 0.8), func(grow: float): return _arc(d, r - w - grow, r + grow, 0.0, TAU),
 			{"r_out": r})
@@ -241,6 +287,12 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 			var at := flight_point(launch, c, bump, s)
 			points.append(at)
 			_dot(tris, at, DOT_SIZE)
+		var keyline := PackedVector3Array()
+		for at in points:
+			_dot(keyline, at, DOT_SIZE + 0.08)
+		var under := _mark("trace_under", "motion_under", Color(Palette.CHARCOAL, UNDERLAY_ALPHA), keyline)
+		under["abs"] = true
+		out.append(under)
 		var trace := _mark("trace", "motion", Color(bright(tone), TRACE_ALPHA), tris, {"points": points})
 		trace["abs"] = true
 		out.append(trace)
@@ -250,16 +302,17 @@ static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 	var tone: Color = d["tone"]
 	var live: bool = d.get("live", false)
 	var p: float = 1.0 if live else float(d["progress"])
-	var run_tone := Color(tone, LIVE_ALPHA if live else RUN_ALPHA)
+	var run_tone := _area_tone(d, LIVE_ALPHA if live else RUN_ALPHA)
+	var run_layer := _area_layer(d, true)
 	if d["form"] == "lane":
 		var back: float = d["back"]
 		var length: float = d["length"]
 		var half: float = d["half_width"]
 		if motion:
 			var end := -back + p * (length + back)
-			out.append(_mark("run", "motion", run_tone, _lane_strip(d, -back, end, -half * 0.9, half * 0.9), {"from": -back, "to": end}))
+			out.append(_mark("run", run_layer, run_tone, _lane_strip(d, -back, end, -half * 0.9, half * 0.9), {"from": -back, "to": end}))
 			return
-		out.append(_mark("area", "base", Color(tone, AREA_ALPHA), _footprint(d)))
+		out.append(_mark("area", _area_layer(d, false), _area_tone(d, AREA_ALPHA), _footprint(d)))
 		_lined(out, "edge", false, Color(tone, EDGE_ALPHA), func(grow: float): return _edge_tris(d, grow),
 			{"half_width": half, "length": length})
 		return
@@ -269,9 +322,9 @@ static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 	var a1: float = d["a1"]
 	if motion:
 		var reach_r := lerpf(r_in, r_out, p)
-		out.append(_mark("run", "motion", run_tone, _arc(d, r_in, reach_r, a0, a1), {"from": r_in, "to": reach_r}))
+		out.append(_mark("run", run_layer, run_tone, _arc(d, r_in, reach_r, a0, a1), {"from": r_in, "to": reach_r}))
 		return
-	out.append(_mark("area", "base", Color(tone, AREA_ALPHA), _footprint(d)))
+	out.append(_mark("area", _area_layer(d, false), _area_tone(d, AREA_ALPHA), _footprint(d)))
 	var c: Vector3 = d["centre"]
 	_lined(out, "edge", false, Color(tone, EDGE_ALPHA), func(grow: float): return _spoke(c, a0, r_in, r_out, RAIL + grow) + _spoke(c, a1, r_in, r_out, RAIL + grow),
 		{"r_out": r_out})
@@ -281,6 +334,106 @@ static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 	var toward := Vector3(cos(mid), 0.0, sin(mid)) * (-1.0 if pull else 1.0)
 	_lined(out, "chevrons", false, Color(tone, EDGE_ALPHA), func(grow: float): return _line_chevrons(c, mid, r_in, r_out, toward, grow),
 		{"pull": pull})
+
+
+# Hostile areas draw on the stripe layers in white, so the stripe texture shows through.
+static func _area_layer(d: Dictionary, motion: bool) -> String:
+	if stance(d["tone"]) == "hostile":
+		return "stripe_motion" if motion else "stripe"
+	return "motion" if motion else "base"
+
+
+static func _area_tone(d: Dictionary, alpha: float) -> Color:
+	return Color(1.0, 1.0, 1.0, alpha) if stance(d["tone"]) == "hostile" else Color(d["tone"], alpha)
+
+
+# RR-02 for the ground types: posts every POST_SPACING metres along the outer boundary
+# and a rail at `reach`, the height a jump must clear.
+static func _fence(out: Array, d: Dictionary) -> void:
+	var reach: float = d["reach"]
+	if reach <= 0.05:
+		return
+	var tone: Color = d["tone"]
+	var lines := _boundary(d)
+	var posts := PackedVector3Array()
+	for line in lines:
+		var run := 0.0
+		for i in line.size():
+			if i > 0:
+				run += (line[i] as Vector3).distance_to(line[i - 1])
+			if i == 0 or run >= POST_SPACING:
+				run = 0.0
+				var at: Vector3 = line[i]
+				_wall(posts, at + Vector3(-POST_HALF, 0.0, 0.0), at + Vector3(POST_HALF, 0.0, 0.0), 0.0, reach)
+				_wall(posts, at + Vector3(0.0, 0.0, -POST_HALF), at + Vector3(0.0, 0.0, POST_HALF), 0.0, reach)
+	out.append(_mark("band", "base", Color(tone, POST_ALPHA), posts, {"height": reach}))
+	_lined(out, "band_top", false, Color(tone, RAIL_ALPHA), func(grow: float): return _rail(lines, reach, BAND_TOP + grow), {"height": reach})
+
+
+static func _rail(lines: Array, h: float, half: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	for line in lines:
+		for i in line.size() - 1:
+			_wall(tris, line[i], line[i + 1], h - half, h + half)
+	return tris
+
+
+# The outer boundary as polylines, broken where a quenched span leaves a gap.
+static func _boundary(d: Dictionary) -> Array:
+	var lines: Array = []
+	if d["form"] == "lane":
+		var half: float = d["half_width"]
+		for side in [-1.0, 1.0]:
+			lines.append([_lane_at(d, -float(d["back"]), side * half), _lane_at(d, float(d["length"]), side * half)])
+		return lines
+	var c: Vector3 = d["centre"]
+	var r: float = d["r_out"]
+	var a0: float = d["a0"]
+	var a1: float = d["a1"]
+	var open: Array = d.get("open", [])
+	var steps := maxi(4, int(ceil(absf(a1 - a0) * r / LANE_STEP)))
+	var line: Array = []
+	if not is_full(d):
+		line.append(_at(c, a0, float(d["r_in"])))
+	for i in steps + 1:
+		var a := lerpf(a0, a1, float(i) / steps)
+		if _is_open(open, a):
+			if line.size() > 1:
+				lines.append(line)
+			line = []
+			continue
+		line.append(_at(c, a, r))
+	if not is_full(d):
+		line.append(_at(c, a1, float(d["r_in"])))
+	if line.size() > 1:
+		lines.append(line)
+	return lines
+
+
+# A boss's mark on its own attack: a brass tick every 30 degrees on the rim, or every
+# OWNER_SPACING metres along a lane's rails (VISUAL-LANGUAGE.md section 4).
+static func _owner_ticks(d: Dictionary, grow: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	if d["form"] == "lane":
+		var half: float = d["half_width"]
+		var along := -float(d["back"])
+		while along <= float(d["length"]):
+			for side in [-1.0, 1.0]:
+				_seg(tris, _lane_at(d, along, side * (half - 0.8)), _lane_at(d, along, side * (half + 0.4)), 0.2 + grow)
+			along += OWNER_SPACING
+		return tris
+	var c: Vector3 = d["centre"]
+	var r: float = d["r_out"]
+	var a0: float = d["a0"]
+	var a1: float = d["a1"]
+	var count := int(floor(absf(a1 - a0) / OWNER_STEP + 0.001))
+	var sweep := signf(a1 - a0) if a1 != a0 else 1.0
+	for i in count + (0 if is_full(d) else 1):
+		var a := a0 + sweep * OWNER_STEP * i
+		if _is_open(d.get("open", []), a):
+			continue
+		_seg(tris, _at(c, a, r - 1.2), _at(c, a, r + 0.4), 0.2 + grow)
+	return tris
 
 
 static func _radial_chevrons(c: Vector3, r: float, grow: float) -> PackedVector3Array:
@@ -512,6 +665,20 @@ class Painter:
 	var lift := 0.2
 	var _layers := {}
 
+	static var _stripes: ImageTexture
+
+	# 45-degree HAZARD and charcoal stripes, one period per texture repeat.
+	static func stripe_texture() -> ImageTexture:
+		if _stripes == null:
+			var size := 32
+			var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+			for y in size:
+				for x in size:
+					image.set_pixel(x, y, Palette.HAZARD if (x + y) % size < size / 2 else Palette.CHARCOAL)
+			image.generate_mipmaps()
+			_stripes = ImageTexture.create_from_image(image)
+		return _stripes
+
 	func paint(all: Array, layers: Array) -> void:
 		var heights := {}
 		for layer in layers:
@@ -568,6 +735,11 @@ class Painter:
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = PRIORITY - 1 if layer.ends_with("under") else PRIORITY
+		if layer.begins_with("stripe"):
+			mat.albedo_texture = stripe_texture()
+			mat.uv1_triplanar = true
+			mat.uv1_world_triplanar = true
+			mat.uv1_scale = Vector3.ONE / (STRIPE_PITCH * sqrt(2.0))
 		instance.material_override = mat
 		add_child(instance)
 		_layers[layer] = instance

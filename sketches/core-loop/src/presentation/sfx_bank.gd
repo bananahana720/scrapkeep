@@ -666,27 +666,38 @@ static func _riser() -> PackedFloat32Array:
 	return Synth.normalize(noise, 0.9)
 
 
-# The four threat warnings (combat/threat_grammar.gd), one per attack type, each short
-# enough to finish well before the hit it warns about.
-# Instant: two dry ticks, a timer running out.
+# The four threat warnings (combat/threat_grammar.gd), one per attack type, in the
+# threat register of SOUND-STORY.md section 3: low, on the sinister degrees of D (Eb,
+# Ab, Bb), never on the reward ladder. Each is a one-shot played on the frame the threat
+# is declared, so it cannot stretch to the attack's own wind-up.
+# Instant: ratchet clicks that speed up, the clock running out, then a clang on Eb.
 static func _threat_tick() -> PackedFloat32Array:
 	var parts := []
-	for i in 2:
-		parts.append([_noise(0.04, 5200.0, 3400.0, 110.0), Synth.seconds(0.09 * i), 0.8])
-		parts.append([_tone(0.05, _hz(74), _hz(74), "square_dark", 70.0), Synth.seconds(0.09 * i), 0.6 + 0.2 * i])
+	var at := 0.0
+	var gap := 0.1
+	for i in 7:
+		parts.append([_noise(0.025, 4200.0, 2800.0, 150.0), Synth.seconds(at), 0.55 + 0.05 * i])
+		parts.append([_tone(0.03, _hz(63), _hz(63), "square_dark", 90.0), Synth.seconds(at), 0.35])
+		at += gap
+		gap *= 0.88
+	parts.append([_fm(0.4, _hz(75), 1.41, 3.0, 9.0), Synth.seconds(at), 1.0])
+	parts.append([_noise(0.06, 5000.0, 3000.0, 60.0), Synth.seconds(at), 0.5])
 	return _mix(parts)
 
 
-# Wave: a whoosh that rises as the front builds, over a climbing growl.
+# Wave: a whoosh that rises through the sinister set, Eb up to Bb, as the front comes on.
 static func _threat_whoosh() -> PackedFloat32Array:
-	return _mix([[_noise(0.5, 300.0, 2800.0, 2.0, 0.3), 0, 1.0], [_tone(0.5, _hz(38), _hz(50), "saw_dark", 3.0), 0, 0.5]])
+	return _mix([[_noise(0.6, 300.0, 2800.0, 1.5, 0.35), 0, 1.0], [_tone(0.6, _hz(51), _hz(58), "saw_dark", 2.0), 0, 0.55]])
 
 
-# Projectile: a falling whistle, the shell coming down.
+# Projectile: a launch thunk, then a whistle falling from Bb to Eb as the shell comes down.
 static func _threat_whistle() -> PackedFloat32Array:
-	return _mix([[_tone(0.6, _hz(91), _hz(79), "sine", 1.5), 0, 1.0], [_noise(0.6, 2200.0, 1300.0, 2.5, 0.05), 0, 0.2]])
+	return _mix([[_tone(0.1, 110.0, 50.0, "sine", 28.0), 0, 1.0], [_noise(0.06, 900.0, 300.0, 40.0), 0, 0.5],
+		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
 
 
-# Lane: a buzzing charge that climbs toward the release.
+# Lane: a charge hum held on Ab, then the tearing buzz of the release.
 static func _threat_hum() -> PackedFloat32Array:
-	return _mix([[_tone(0.5, _hz(38), _hz(45), "saw_dark", 1.0), 0, 0.8], [_tone(0.5, _hz(50), _hz(57), "square_dark", 1.4), 0, 0.6]], true)
+	var tear := Synth.seconds(0.42)
+	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5],
+		[_noise(0.18, 1800.0, 5200.0, 10.0), tear, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), tear, 0.6]], true)

@@ -335,20 +335,23 @@ Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss 
 
 | Type | Draws | Hurts | Row |
 | --- | --- | --- | --- |
-| INSTANT | a sharp edge; an even fill that climbs over the warning; a solid flash on landing | the whole area, at once | `threat_instant`: `ring`, `threat_tick` |
-| WAVE | a faint dashed reach; a bright front at speed x elapsed, chevrons, a curtain as tall as its height band | only the front band, `WAVE_EDGE` (1 m) either side | `threat_wave`: `wave`, `threat_whoosh` |
+| INSTANT | a sharp edge; a striped fill closing in from the edge over the warning; a solid flash on landing | the whole area, at once | `threat_instant`: `ring`, `threat_tick` |
+| WAVE | a faint dashed reach; a bright front at speed x elapsed, chevrons, a curtain as tall as its height band; 15% stripes on the swept ground | only the front band, `WAVE_EDGE` (1 m) either side | `threat_wave`: `wave`, `threat_whoosh` |
 | PROJECTILE | a dotted flight trace to the landing point; a reticle whose brackets close on the blast edge | the blast ring, when the shell lands | `threat_projectile`: `cross`, `threat_whistle` |
-| LANE | rails and a far cap; a fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` |
+| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` |
+
+Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
 
 The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.
 
 - **Ring, lane or wedge.** `Telegraph.ring(parent, ground, type, at, radius, reach := 3.5, tint := HAZARD)`, `Telegraph.lane(parent, ground, type, from, heading, length, width, reach := 3.5)` and `Telegraph.wedge(parent, ground, type, apex, heading, radius, half_angle_deg, reach := 3.5)`. The owner calls `set_progress(0..1)` across the warning. An INSTANT flash fires on reaching 1.
 - **Wave.** `Telegraph.wave(parent, ground, at, radius, speed, warn, reach := 3.5)` is always WAVE. The owner calls `step(delta)` every tick; `front_radius()` is -1 while it arms, and `is_spent()` turns true once the front has passed the reach.
 - **Projectile.** Commit a PROJECTILE ring at the landing point, then call `set_flight(launch, bump)` with `Threat.lob_bump(gravity, flight_seconds)` for a fixed-time lob. The shell must fly `Threat.flight_point(launch, landing, bump, t / flight)`.
-- **From an enemy.** `enemy.gd`'s `_commit_ring(type, at, radius, reach)` and `_commit_lane(type, from, heading, length, width, reach)` keep one telegraph per enemy and return it.
+- **From an enemy.** `enemy.gd`'s `_commit_ring(type, at, radius, reach, tint := HAZARD)` and `_commit_lane(type, from, heading, length, width, reach)` keep one telegraph per enemy and return it.
 - **A boss hazard.** `commit_sector(id, type, ...)`, `commit_annulus(id, type, ...)` and `commit_lane(id, type, ...)`. A WAVE hazard is a sector sweep whose front is `front()`, the same `span x live_fraction()` a sweep test reads.
-- **Sound.** Each type's row is in `EventKinds.THREAT_ROWS` (the `ROWS` schema), with the sound's recipe in `sfx_bank.gd`. Every telegraph and hazard joins the group `threat` (`Threat.GROUP`) and answers `threat_kind()` with its row key. Presentation plays the row's sound when such a node enters the tree; that hook is not built yet.
-- **Colour.** Enemy threats draw in `Palette.HAZARD`, and a threat the player owns in `AMBER`. The grammar only lightens it for the moving pieces. Every layer draws with no depth test at `Threat.PRIORITY` (40), and the charcoal underlays at 39.
+- **Stance.** The tint decides it (`Threat.stance`). `Palette.HAZARD` is hostile: striped areas, a warn sound, and the group `threat`. `AMBER` is the player's own: clean fills and no sound. `Palette.SAND` (bone) is a harmless field that only draws a dashed ring. A boss hazard tinted `BRASS` draws in HAZARD with brass owner ticks.
+- **Sound.** Each type's row is in `EventKinds.THREAT_ROWS` (the `ROWS` schema), with the sound's recipe in `sfx_bank.gd`. Every hostile telegraph and hazard joins the group `threat` (`Threat.GROUP`) and answers `threat_kind()` with its row key. `audio.gd` plays the row's sound at the end of the frame the node enters the tree, never on the beat. It then plays the node's `owner_voice` (the owner's timbre) and `mechanic_tag` when set; set both right after the commit. No unit adds a fifth type sound.
+- **Colour.** Every layer draws with no depth test at `Threat.PRIORITY` (40), and the charcoal keylines at 39. The grammar only lightens the tone for the moving pieces.
 - **Seam.** `hazard.gd` preloads `combat/threat_grammar.gd`. It is the one boss-to-combat preload, kept on purpose so the two systems share one grammar.
 
 ## Classes and abilities (v2 W3)

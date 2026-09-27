@@ -45,8 +45,14 @@ var speed := 0.0
 var launch := Vector3.ZERO
 var bump := 0.0
 var has_flight := false
-# HAZARD for every enemy threat. A ring the player owns (a batted shell) draws in AMBER.
+# HAZARD for every enemy threat. A ring the player owns (a batted shell) draws in AMBER,
+# and a harmless field (the Warden's lift) in bone, Palette.SAND (Threat.stance).
 var color := Palette.HAZARD
+# Sound ids layered over the type's warn sound: the owner's timbre (Fleet or ancient)
+# and a unit's mechanic tag (SOUND-STORY.md section 3). Set them right after commit;
+# presentation reads them at the end of the frame the threat was declared.
+var owner_voice := ""
+var mechanic_tag := ""
 
 var _painter
 var _flashed := false
@@ -181,7 +187,7 @@ func set_flight(from: Vector3, arc_bump: float) -> void:
 func set_progress(value: float) -> void:
 	progress = clampf(value, 0.0, 1.0)
 	_repaint()
-	if type == Threat.Type.INSTANT and progress >= 1.0 and not _flashed and is_inside_tree():
+	if type == Threat.Type.INSTANT and progress >= 1.0 and not _flashed and is_inside_tree() and is_hostile():
 		_flashed = true
 		Threat.flash(get_parent(), descriptor(), center.y, LIFT)
 
@@ -209,13 +215,22 @@ func threat_kind() -> String:
 	return Threat.kind(type)
 
 
+func is_hostile() -> bool:
+	return Threat.stance(color) == "hostile"
+
+
+func threat_at() -> Vector3:
+	return center
+
+
 func painter():
 	return _painter
 
 
 func _build() -> void:
 	add_to_group("telegraph")
-	add_to_group(Threat.GROUP)
+	if is_hostile():
+		add_to_group(Threat.GROUP)
 	global_position = center + Vector3.UP * LIFT
 	if not Threat.valid(type):
 		push_error("telegraph committed without an attack type")
