@@ -73,16 +73,16 @@ Rivet's indicators and a hostile telegraph are the same colour to a protanope. T
 
 ## 3. Shape grammar
 
-| Shape | Means | Examples |
-| --- | --- | --- |
-| Ring | Area around a point | Sable's discharge, beacon charge zone, landing puff |
-| Chevron | Motion and direction | Rivet's sprint, a wave's travel, boost, stage entered |
-| Starburst | Explosive release | Kest's charges, a kill pop, a synergy found |
-| Diamond | Reward or core | Gates, parts, bonus core, fabricator stock |
-| Bracket (four corners) | Target or landing point | Projectile landing reticle, objective frames, lock-on |
-| Dashed line | Future or extent | Charge preview, reach limit, lobbed-arc trace, max gauge |
-| Solid line | Committed or now | The geometry that will resolve this tick |
-| Hazard stripes (45°) | Hostile | Every enemy danger area, threat icons |
+| Shape | Means | Examples | Sound character |
+| --- | --- | --- | --- |
+| Ring | Area around a point | Sable's discharge, beacon charge zone, landing puff | A bright rising arpeggio |
+| Chevron | Motion and direction | Rivet's sprint, a wave's travel, boost, stage entered | A driving hi-hat roll |
+| Starburst | Explosive release | Kest's charges, a kill pop, a synergy found | A low kick-drum thump |
+| Diamond | Reward or core | Gates, parts, bonus core, fabricator stock | A warm bell chime |
+| Bracket (four corners) | Target or landing point | Projectile landing reticle, objective frames, lock-on | A dry ratchet click |
+| Dashed line | Future or extent | Charge preview, reach limit, lobbed-arc trace, max gauge | A soft sustained hum |
+| Solid line | Committed or now | The geometry that will resolve this tick | A sharp transient |
+| Hazard stripes (45°) | Hostile | Every enemy danger area, threat icons | The klaxon family, metal scrape |
 
 **Stroke weights at 1080p.** Committed edge 4 px, dashed extent 2 px (8 px dash, 6 px gap), keyline 4 px charcoal under every world indicator, icon primary stroke 6 px at the 64 px master. In world units, committed edges are 0.12 m and extents 0.06 m.
 
@@ -424,15 +424,15 @@ This section follows DESIGN-V2 §10. There are two factions, and the ancients sp
 
 **Fleet crews.** The tool is the silhouette, so a player reads the mechanic before it acts. A hold on the ball is always a striped HAZARD binding, and breaking it is always a class-colour burst with the boost refund.
 
-| Unit | Silhouette | Hold on the ball | Break-free |
-| --- | --- | --- | --- |
-| Mag trapper | A crew cart with a stack of pit discs on its back | A striped disc under the ball, with filings dragging inward | A smash or jump shatters the disc outward as a ring |
-| Hooker | A harpoon gun on a tall anchor post | A striped tether from the post to the ball | Enough speed snaps the line, and it whips as the ball slings forward |
-| Netcaster | Two masts with a crackling net strung between | A striped net plane across the air lane | The net tears as the ball double-jumps or glides through |
-| Bola thrower | A bola spinning overhead | Striped cords wrapped around the ball | The cords burst outward |
-| Plated brute | Bolted plate layers, visibly one layer more than a regular unit | None | One plate layer pops off per breaking hit |
-| Deflector | A big curved dish shield | None | The rebound flashes a free vault chevron |
-| Winch drone | A rotor with a winch drum slung beneath | A striped cable toward the pack | The cable snaps |
+| Unit | Silhouette | Hold on the ball | Break-free | Sound character |
+| --- | --- | --- | --- | --- |
+| Mag trapper | A crew cart with a stack of pit discs on its back | A striped disc under the ball, with filings dragging inward | A smash or jump shatters the disc outward as a ring | A magnetic drone that drags down in pitch |
+| Hooker | A harpoon gun on a tall anchor post | A striped tether from the post to the ball | Enough speed snaps the line, and it whips as the ball slings forward | A harpoon crack, then a taut-cable creak |
+| Netcaster | Two masts with a crackling net strung between | A striped net plane across the air lane | The net tears as the ball double-jumps or glides through | A crackling electric buzz |
+| Bola thrower | A bola spinning overhead | Striped cords wrapped around the ball | The cords burst outward | A whirling whoop-whoop |
+| Plated brute | Bolted plate layers, visibly one layer more than a regular unit | None | One plate layer pops off per breaking hit | A heavy plate clang |
+| Deflector | A big curved dish shield | None | The rebound flashes a free vault chevron | A springy metallic boing |
+| Winch drone | A rotor with a winch drum slung beneath | A striped cable toward the pack | The cable snaps | A rotor whine over a winch ratchet |
 
 Tenacity immunity (DESIGN-V2 §10) shows as the broken-bracket flicker from Rivet's sprint, because both mean crowd control cannot hold you. It takes the class colour, which is copper for Rivet as DESIGN-V2 specifies.
 
@@ -450,7 +450,7 @@ Ancient light is violet, never mint, because mint belongs to the living salvage 
 
 - **Contraptions** (steam lifts, launchers, pressure valves) belong to the steampunk era. Each has a bone gauge dial whose needle sweeps linearly through its cycle, a steam puff at the fire moment and its own sound. A lift chuffs upward, a launcher whistles then bangs, and a valve squeals then hisses. A smashable valve is a big wheel with a visible crack.
 - **The focal landmark**, the dam-works tower cluster, mixes both eras. Ancient cast towers carry steampunk repairs grown over them. A violet ancient light at the top makes it findable from every layer.
-- **Terrain events** use the §4 grammar and draw exactly the new collider. A cave-in is an instant fill over its 3 s crumble, with dust falling from the roof edge. An impact is a projectile, with brackets closing on the crater. A structural collapse is a lane striped along where the piece will fall.
+- **Terrain events** use the §4 grammar and draw exactly the new collider. A cave-in is an instant fill over its 3 s crumble, with dust falling from the roof edge, and sounds like a rising rock grind. An impact is a projectile, with brackets closing on the crater, and sounds like a falling shriek into a deep boom. A structural collapse is a lane striped along where the piece will fall, and sounds like groaning steel, then a shear.
 
 ## Conflicts resolved
 
