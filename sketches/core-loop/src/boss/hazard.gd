@@ -43,6 +43,11 @@ var color := Palette.HAZARD
 var prev_fraction := 0.0
 
 var _mat: StandardMaterial3D
+var _mesh: MeshInstance3D
+# ANNULUS: which of its drawn segments are open (quenched) right now.
+var _open: Array[bool] = []
+
+const RING_SEGMENTS := 72
 
 
 func commit_sector(id: String, at: Vector3, band: Vector2, from_angle: float, to_angle: float, height: float, warn: float, live: float) -> void:
@@ -96,7 +101,29 @@ func step(delta: float) -> void:
 		state = LIVE
 	if state == LIVE and age >= warn_seconds + live_seconds:
 		state = DONE
+	if shape == Shape.ANNULUS and is_inside_tree() and _open_segments() != _open:
+		_build_mesh()
 	_restyle()
+
+
+# ANNULUS: whether the drawing covers a point. A quenched span is left undrawn, so the
+# crust under it shows through and no telegraph has to be painted over.
+func draws(point: Vector3) -> bool:
+	var r := _flat(point - centre).length()
+	if shape != Shape.ANNULUS or r < r_in or r > r_out:
+		return contains(point)
+	var d := _flat(point - centre)
+	var i := int(floor(wrapf(atan2(d.z, d.x), 0.0, TAU) / TAU * RING_SEGMENTS)) % RING_SEGMENTS
+	return _open.size() != RING_SEGMENTS or not _open[i]
+
+
+func _open_segments() -> Array[bool]:
+	var open: Array[bool] = []
+	var mid := (r_in + r_out) * 0.5
+	for i in RING_SEGMENTS:
+		var a := TAU * (i + 0.5) / RING_SEGMENTS
+		open.append(excluded.is_valid() and excluded.call(centre + Vector3(cos(a), 0.0, sin(a)) * mid))
+	return open
 
 
 func is_live() -> bool:
@@ -202,7 +229,10 @@ func _build_mesh() -> void:
 		Shape.SECTOR:
 			_add_arc(st, a_from, a_to, 16)
 		Shape.ANNULUS:
-			_add_arc(st, 0.0, TAU, 72)
+			_open = _open_segments()
+			for i in RING_SEGMENTS:
+				if not _open[i]:
+					_add_arc(st, TAU * i / RING_SEGMENTS, TAU * (i + 1) / RING_SEGMENTS, 1)
 		Shape.LANE:
 			var steps := maxi(1, int(ceil((length + back) / 2.0)))
 			var s := side() * half_width
@@ -211,15 +241,18 @@ func _build_mesh() -> void:
 				var t1 := -back + (length + back) * float(i + 1) / steps
 				_quad(st, _point(centre + heading * t0 - s), _point(centre + heading * t0 + s),
 					_point(centre + heading * t1 + s), _point(centre + heading * t1 - s))
-	var mesh := MeshInstance3D.new()
-	mesh.mesh = st.commit()
-	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_mat = Palette.unshaded(Color(color.r, color.g, color.b, 0.3))
-	_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_mat.no_depth_test = true
-	_mat.render_priority = 40
-	mesh.material_override = _mat
-	add_child(mesh)
+	if is_instance_valid(_mesh):
+		_mesh.queue_free()
+	_mesh = MeshInstance3D.new()
+	_mesh.mesh = st.commit()
+	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if _mat == null:
+		_mat = Palette.unshaded(Color(color.r, color.g, color.b, 0.3))
+		_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_mat.no_depth_test = true
+		_mat.render_priority = 40
+	_mesh.material_override = _mat
+	add_child(_mesh)
 	_restyle()
 
 

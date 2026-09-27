@@ -22,6 +22,11 @@ const CAP_MULT := 1.5
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
 const CAP_KINDS := ["stomp", "slam"]
 const CAP_REACH := 2.6
+# An open weak point on a piece that cannot die reads this, not 0: every hit lands in
+# full, and combat's crush rule (plating 0) never fires on a body that will not die.
+const OPEN_PLATING := 0.01
+# A contact kind counts on the scooter only with the ball this close to it.
+const SCOOTER_TOUCH := 3.5
 # A ball whose centre is this far above a piece's centre came down on top of it.
 const ABOVE := 1.2
 
@@ -61,6 +66,12 @@ const VENT_COOLDOWN := 10.0
 const VENT_REACH := 2.8
 const LOBBER_PERIOD := 7.0
 const LOBBER_CAP := 3
+# A drone's pad is marked this long before it arrives, off the hull's side away from
+# the ball, and it waits while the ball is closer than DRONE_CLEAR (up to DRONE_WAIT).
+const DRONE_WARN := 1.0
+const DRONE_SIDE := 9.0
+const DRONE_CLEAR := 8.0
+const DRONE_WAIT := 3.0
 
 # Phase 3: telegraphed charges at the ball. A charge that reaches the rim buries the
 # hull's nose in the bank with its centre at CHARGE_STOP_R, which keeps every corner of

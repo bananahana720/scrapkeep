@@ -128,7 +128,7 @@ func _clash_checks() -> void:
 	var still: bool = _boss.stunned()
 	for _tick in int(0.2 / DT) + 1:
 		_boss.advance(DT)
-	_report("clash threshold", plating_charging == 150.0 and held_149 and stunned_151 and plating_stunned == 0.0 and still and not _boss.stunned(),
+	_report("clash threshold", plating_charging == 150.0 and held_149 and stunned_151 and plating_stunned < 1.0 and still and not _boss.stunned(),
 		"charging bow plating %.0f; punch 149 kept the charge (%s), punch 151 stunned it (%s) with plating %.0f, stunned at 1.9 s %s, free at 2.1 s %s"
 			% [plating_charging, held_149, stunned_151, plating_stunned, still, not _boss.stunned()])
 
@@ -197,6 +197,7 @@ func _fight_to_the_end() -> void:
 			if not target.is_dead():
 				_double.strike(target, "arc", 1.0e9)
 		if _boss.scooter_landed():
+			Harness.put_ball(_game, _boss.scooter.global_position + Vector3.UP * 1.8)
 			_double.strike(_boss.scooter, "ram", 20.0)
 		_boss.advance(DT)
 		if _boss.state_name() == "defeated":
