@@ -1,11 +1,14 @@
 extends Control
 
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
+const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
-# name and one line of what it does. It lives in its own region, the top-right column
-# under the objective line: clear of the objective (centre top), the HUD's toast
-# column (centre, 400-1200 px) and the crosshair. It slides in from the right edge,
+# name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
+# the toasts band, beside the HUD's centred toast column on the right, never in the
+# top band (objective, status) or the prompts band; on a screen too narrow for that
+# it drops just under the toasts band into the middle view. It slides in from the
+# right edge,
 # holds, and slides away, about 3 s in all on the real clock, so neither hit-stop nor
 # a paused screen can pin it. Discoveries in quick succession queue and play one at a
 # time. dismiss() clears it at once (presentation calls it on flow changes, arena
@@ -16,7 +19,8 @@ const IN_TIME := 0.22
 const OUT_TIME := 0.3
 const WIDTH := 360.0
 const MARGIN := 18.0
-const REST_Y := 64.0
+# The HUD's toast column width (hud.gd TOAST_WIDTH), which the banner stays beside.
+const TOAST_COLUMN := 800.0
 
 var shown := 0
 var last_title := ""
@@ -37,7 +41,7 @@ func _init() -> void:
 	name = "CodexBanner"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_panel = PanelContainer.new()
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_style = StyleBoxFlat.new()
@@ -145,6 +149,22 @@ func _process(_delta: float) -> void:
 
 
 func _place(slide: float) -> void:
-	var size := _panel.get_combined_minimum_size()
-	_panel.position = Vector2(lerpf(MARGIN, -size.x - MARGIN, slide), REST_Y)
+	_panel.position = Vector2(lerpf(_screen().x + MARGIN, rest_position().x, slide), rest_position().y)
 	_panel.modulate.a = clampf(slide * 1.4, 0.0, 1.0)
+
+
+# Where the banner rests on this screen: the toasts band's right side, or just under
+# the band when the side is too narrow or the banner too tall for it.
+func rest_position() -> Vector2:
+	var screen := _screen()
+	var band := ScreenRegions.rect("toasts", screen)
+	var panel := _panel.get_combined_minimum_size()
+	var x := screen.x - MARGIN - panel.x
+	var beside := x >= (screen.x + TOAST_COLUMN) * 0.5 + MARGIN and panel.y <= band.size.y
+	if beside:
+		return Vector2(x, band.position.y)
+	return Vector2(x, band.end.y + MARGIN)
+
+
+func _screen() -> Vector2:
+	return get_viewport_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)

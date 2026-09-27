@@ -6,8 +6,8 @@ const Game := preload("res://src/game.gd")
 # pinned across the arena, death, victory and the summary). Through the real game on
 # a fake clock: it is gone 4 s after it appears, even with the tree paused; it clears
 # at once on a flow change, arena entry, death and run end; quick discoveries queue
-# and play one at a time; and it sits in its own region, clear of the objective line
-# and the HUD's toast column.
+# and play one at a time; and it follows the UI regions rule: in the toasts band beside
+# the HUD's toast column, never in the top or prompts bands.
 
 var _game
 var _banner
@@ -74,11 +74,16 @@ func _process(_delta: float) -> bool:
 			_step = 4
 		4:
 			var rect: Rect2 = _banner._panel.get_global_rect()
-			var toasts := Rect2(400.0, 60.0, 800.0, 140.0)
-			var objective := Rect2(100.0, 0.0, 1400.0, 56.0)
-			var crosshair := Vector2(800.0, 450.0)
-			var clear: bool = not rect.intersects(toasts) and not rect.intersects(objective) and not rect.has_point(crosshair) and rect.end.x <= 1600.0
-			_check("own region", clear, "the banner at %s stays clear of the objective line, the toast column and the crosshair" % rect)
+			var screen: Vector2 = _banner.get_viewport_rect().size
+			var ScreenRegions = load("res://src/ui/screen_regions.gd")
+			var top: Rect2 = ScreenRegions.rect("top", screen)
+			var prompts: Rect2 = ScreenRegions.rect("prompts", screen)
+			var band: Rect2 = ScreenRegions.rect("toasts", screen)
+			var hud_toasts: Rect2 = _game.hud._toasts.get_global_rect() if _game.get("hud") != null else Rect2()
+			hud_toasts.size.y = band.size.y
+			var crosshair := screen * 0.5
+			var clear: bool = not rect.intersects(top) and not rect.intersects(prompts) and not rect.intersects(hud_toasts) and not rect.has_point(crosshair) and rect.end.x <= screen.x and rect.position.y >= band.position.y
+			_check("own region", clear, "the banner at %s is in the toasts band (%s) beside the HUD toast column (%s), clear of the top band, the prompts and the crosshair" % [rect, band, hud_toasts])
 			print("presentation_banner_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 			quit(0 if _failures == 0 else 1)
 			return true
