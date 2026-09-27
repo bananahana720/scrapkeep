@@ -115,6 +115,8 @@ const TRITONE := {"name": "Ab7#11", "root": 44, "voicing": [54, 56, 60, 62], "to
 # The launch build's tune: the rice-cooker climb up the A7, looping while you fly.
 const LAUNCH_TUNE := [69, 73, 76, 81, 79, 76, 73, 76]
 const THEMES := ["spillway", "sluice", "weir"]
+# Each level's motif, its first four notes: the synergy fanfare quotes the current one.
+const MOTIF_HEADS := [[69, 72, 74, 76], [74, 77, 79, 81], [62, 65, 69, 72]]
 
 
 static func level_progression(theme: int) -> Array:

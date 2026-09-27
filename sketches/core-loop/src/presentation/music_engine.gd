@@ -317,6 +317,17 @@ static func prepare_rest() -> void:
 				Synth.note("fbass", int(chord["root"]) + shift + offset)
 			for offset in [12, 18, 19, 22]:
 				Synth.note("reese", int(chord["root"]) + shift + offset)
+	# Stingers in the lifted keys (a Warden lift, Brindle's phases), and the synergy
+	# fanfare for each level, so a class-up after a lift never bakes on the audio thread.
+	for shift in [0, 1, 2, 3]:
+		for level in 3:
+			SfxBank.samples_at("synergy_fanfare", Harmony.STEP, shift, level)
+			SfxBank.samples_at("synergy_fanfare", Harmony.BOSS_STEP, shift, level)
+		if shift == 0:
+			continue
+		for id in ["class_up", "class_down", "stinger_milestone", "threat_up", "boss_phase"]:
+			SfxBank.samples_at(id, Harmony.STEP, shift)
+			SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
 	# The restrained wobble of Brindle's drops.
 	_prepare_wobble(Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.BRINDLE, [0], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
@@ -991,7 +1002,9 @@ func _on_step() -> void:
 func _run(action: Dictionary) -> void:
 	match action["type"]:
 		"stinger":
-			var buf := SfxBank.samples_at(action["id"], step_len)
+			# Pitched stingers sound in the live key, and a themed one in this level's motif.
+			var music: bool = action.get("music", false)
+			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
@@ -1489,8 +1502,17 @@ func _trigger_house(bar: int, s: int, chord: Dictionary) -> void:
 	if s in [2, 6, 10, 13]:
 		var stab := Synth.stab_chord(_voicing(chord), drop or lifted)
 		_start(stab, mini(stab.size(), step_len + RELEASE), KEYS, LEVELS[KEYS] * 1.1, 0.2 if s % 4 == 2 else -0.2, false)
+	# Each level's own voice on the club, added over it: Sluice's clav on the offbeat
+	# sixteenths, Weir's gospel organ chopped on the ands. Spillway's is the sax lead.
+	var voicing := _voicing(chord)
+	if theme == 1 and s in [3, 7, 11, 15]:
+		var clav := Synth.note("clav", int(voicing[(s / 4) % voicing.size()]) + 12)
+		_start(clav, mini(clav.size(), step_len + RELEASE), KEYS, LEVELS[KEYS] * (1.0 if drop or lifted else 0.7), 0.35, false)
+	if theme == 2 and s in [4, 12]:
+		var organ := Synth.organ_chord(voicing)
+		_start(organ, mini(organ.size(), 2 * step_len + RELEASE), KEYS, LEVELS[KEYS] * (0.8 if drop or lifted else 0.55), -0.25, false)
 	if s == 0 and (_targets[WARM] > 0.0 or _gains[WARM] > 0.0):
-		var pad := Synth.pad_chord(_voicing(chord))
+		var pad := Synth.pad_chord(voicing)
 		_start(pad, mini(pad.size(), 16 * step_len + RELEASE), WARM, LEVELS[WARM], 0.0, false)
 	if drop:
 		_melodic(bar, s, chord, "bell")

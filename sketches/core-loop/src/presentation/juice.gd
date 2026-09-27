@@ -220,6 +220,9 @@ func _on_dismounted(velocity: Vector3) -> void:
 # A strike is judged at the end of the frame, once combat has had its say: a hit on
 # plating that was not deflected in the same frame broke through.
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if kind == "synergy":
+		# A synergy's shockwave is the build's doing, not a landing: no stop, no weak-point read.
+		return
 	var direction := Vector3.FORWARD
 	if is_instance_valid(enemy) and enemy.is_inside_tree():
 		direction = enemy.global_position - player.ball_position()

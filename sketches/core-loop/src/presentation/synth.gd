@@ -19,6 +19,8 @@ static var _notes := {}
 static var _lock := Mutex.new()
 # The grid a score renders on. The bank sets it to bake a stinger at the boss tempo.
 static var score_step := Harmony.STEP
+# Semitones added to every pitched note of a score (live-key stingers).
+static var score_transpose := 0
 # Held sounds are long enough to fill a bar at the slower boss tempo.
 const HOLD := 90000
 
@@ -721,7 +723,7 @@ static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Arra
 		if instrument in DRUMS:
 			add_into(buf, drum(instrument), start, gain)
 			continue
-		var source := note(instrument, int(event[1]))
+		var source := note(instrument, int(event[1]) + score_transpose)
 		var length := mini(source.size(), int(event[2]) * step + seconds(0.25))
 		var release := mini(1200, length)
 		var count := mini(length, buf.size() - start)
