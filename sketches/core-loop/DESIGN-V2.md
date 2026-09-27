@@ -183,7 +183,7 @@ Andrew added these on 2026-09-27, in his words:
    - Rivet's sprint ignores all of them. That's his identity paying off.
 3. **Chains are real but bounded (tenacity).**
    - Crowd control can chain across a combination of enemies. Getting "skill chained" is a legitimate punishment for rolling into a bad combination.
-   - After 1.8 s of accumulated hold within 4 s, the ball gets 2.5 s of immunity to crowd control, shown as a copper shimmer.
+   - After 1.8 s of accumulated hold within 4 s, the ball gets 2.5 s of immunity to crowd control, shown as a broken-bracket flicker in the class colour (VISUAL-LANGUAGE §11).
    - Breaking free by your own action (smash, jump, speed) gives a small boost refund. Escaping is a momentum moment, not only relief.
 4. **Reinforcement roster.**
    - Mag trapper: throws a magnetic pit disc (slow, heft-gated).
@@ -195,7 +195,7 @@ Andrew added these on 2026-09-27, in his words:
    - Winch drone: pulls you toward the pack.
 5. **When they arrive.** The Risk of Rain stay-longer clock gates them. Each difficulty tick past the Warden break adds reinforcement weight. The director (TADR-010) composes packs that deliberately pair a controller with a punisher. For example, a mag trapper plus a bola thrower: the tagged combinations are the enemy synergies.
 6. **The counterplay is learnable.** Each counter also becomes an opportunity:
-   - A rebound off a deflector's shield is a free vault.
+   - A rebound off a deflector's shield gives any class the vault kick's ×1.8 (the one vault that is not Sable-only).
    - A snapped tether slings you forward.
    - An air net can be baited.
 
@@ -247,4 +247,4 @@ The Bible marks an animal-only cast as open and never makes the exploratory exam
   - Stage 3 is one of the Mind's hands.
   - Each fight plays differently, and one run meets all three causes of the collapse. The clamp is a shared base with a family-specific core.
 - **The rarest tier (rare_plus)** is amber with a mint heart and a notched frame. Red is only for things that hurt you.
-- **The ancients' light.** Not violet or purple ("a bit overused"). V1 is measuring alternatives, and Andrew picks next.
+- **The ancients' light** is **Cherenkov blue `#3d8bff`**, the glow of a human reactor pool: the light of the age that ended. Andrew chose it by AskUserQuestion after rejecting violet as "a bit overused". It keeps ΔE ≥ 31 against every palette colour under every vision type. Ancient seams are cut as charcoal grooves so they also read on petrol enamel.
