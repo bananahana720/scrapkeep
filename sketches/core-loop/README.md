@@ -26,15 +26,15 @@ If you are scrapped, press R to retry the stage from its start, N for a new run,
 | --- | --- |
 | W A S D | drive, relative to where the camera looks |
 | mouse | look |
-| Space | jump, double jump, hold falling to glide; slingshots off a pylon |
-| Shift | boost; airborne it is the air dash |
-| Ctrl | brake; airborne it is the slam |
-| left mouse | fire the class weapon (hold); both classes |
-| F | runner: overdrive blast; engineer: pylon discharge (planting fires it free) |
-| right mouse | fire the grapple at the reticle's target; release to let go |
-| Q (hold) | winch: haul toward the hook |
-| E | plant a pylon on a steep face or a close wall hook; press again to drop off |
-| mouse wheel | down pays rope out, up notches it in |
+| Space | jump and double jump, every class. Sable: in the air at a steep face it is the vault kick; mounted, hold and release to slingshot off. Kest: hold falling to glide; hold inside your own blast to rocket jump |
+| Shift | boost, every class |
+| Ctrl | brake; airborne it is the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam |
+| left mouse | the class weapon. Sable's arc caster and Rivet's laser fire while held. Kest holds to aim a sticky charge and releases to throw it |
+| right mouse | the class movement. Sable: the grapple at the reticle's target, release to let go. Rivet: overdrive sprint while held. Kest: smoke blink. During a charge it cancels the charge |
+| F (hold, release) | the class special: hold to fill the gauge, release to fire. Sable's detonation gauge, Rivet's overdrive blast, Kest's detonation line. Planting a pylon still fires Sable's discharge free |
+| Q (hold) | Sable: winch, haul toward the hook |
+| E | Sable: plant a pylon on a steep face or a close wall hook; press again to drop off |
+| mouse wheel | Sable: down pays rope out, up notches it in |
 | Tab (hold) | field notes and the codex; the game pauses while held; Q and E switch pages |
 | - / = | music volume down / up |
 | [ / ] | effects volume down / up |
