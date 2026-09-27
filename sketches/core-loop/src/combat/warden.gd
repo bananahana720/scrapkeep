@@ -207,8 +207,8 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
 		_charging = true
 		_charge_time = 0.0
-		_commit_ring(global_position, reach, LIFT_REACH_UP)
-		_core_ring = Telegraph.ring(world_root, terrain, global_position, CORE_RADIUS)
+		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP)
+		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 
 
 func _pulse() -> void:
@@ -241,7 +241,7 @@ func _step_magnet(delta: float, inside: bool) -> void:
 				_magnet_dir = to.normalized() if to.length() > 0.1 else Vector3.FORWARD
 				magnet_state = Magnet.TELEGRAPH
 				_magnet_time = 0.0
-				_magnet_ring = Telegraph.wedge(world_root, terrain, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
+				_magnet_ring = Telegraph.wedge(world_root, terrain, Threat.Type.LANE, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
 						reach, MAGNET_WEDGE_DEG, LIFT_REACH_UP)
 		Magnet.TELEGRAPH:
 			_magnet_time += delta

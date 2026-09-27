@@ -152,11 +152,12 @@ func _begin_attack(to_ball: Vector3) -> void:
 	if _next_attack == 0:
 		var ball := _ball()
 		_leap_to = Vector3(ball.x, terrain.height(ball.x, ball.z) + HALF_HEIGHT, ball.z)
-		_commit_ring(ball, SLAM_RADIUS, 4.0)
+		_commit_ring(Threat.Type.PROJECTILE, ball, SLAM_RADIUS, 4.0)
+		telegraph().set_flight(global_position + Vector3.DOWN * HALF_HEIGHT, 4.0 * SLAM_HEIGHT)
 		_enter(State.SLAM_CROUCH)
 	else:
 		var heading := to_ball if to_ball.length() > 0.5 else -global_basis.z
-		_commit_lane(global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0)
+		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0)
 		_enter(State.CHARGE_BRACE)
 	_next_attack = 1 - _next_attack
 
