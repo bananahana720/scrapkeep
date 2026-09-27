@@ -39,12 +39,12 @@ const BADGE_HEIGHT := 12.0
 const BADGE_RADIUS := 2.2
 const BADGE_SEGMENTS := 24
 const BADGE_NEAR := 50.0
-const BADGE_MAX_SCALE := 2.4
+const BADGE_MAX_SCALE := 3.2
 const MARKER_SIZE := 1.9
 const MARKER_FADE_FAR := 20.0
 const MARKER_FADE_NEAR := 12.0
 const BADGE_PRIORITY := 30
-const PLUME_HEIGHT := 4.2
+const PLUME_HEIGHT := 6.0
 const TURN_RATE := 3.0
 
 var warden
@@ -150,7 +150,7 @@ func _build_jaws() -> void:
 
 
 func _build_core() -> void:
-	_core_material = _glow(EventKinds.color("beacon_charge_changed"), 3.0)
+	_core_material = _glow(EventKinds.color("beacon_charge_changed"), 1.2)
 	var sphere := SphereMesh.new()
 	sphere.radius = CORE_RADIUS
 	sphere.height = CORE_RADIUS * 2.0
@@ -195,8 +195,8 @@ func _badge_material(color: Color, alpha: float) -> StandardMaterial3D:
 
 
 func _build_caps() -> void:
-	_cap_material = _glow(Palette.AMBER, 3.0)
-	_plume_material = _flat(Palette.AMBER, 0.28)
+	_cap_material = _glow(Palette.AMBER, 2.2)
+	_plume_material = _flat(Palette.AMBER, 0.6)
 	for cap in warden.cap_points():
 		var local: Vector3 = cap - warden.global_position
 		var dome := SphereMesh.new()
@@ -204,11 +204,17 @@ func _build_caps() -> void:
 		dome.height = 1.05
 		dome.is_hemisphere = true
 		_mesh(dome, _cap_material, Vector3(local.x, _ground + DECK_HEIGHT, local.z))
+		# The jaws hide the deck from the ground, so each vent announces itself above
+		# them, against the sky: a heat plume topped by a lit crown ring.
 		var plume := CylinderMesh.new()
-		plume.top_radius = 0.15
-		plume.bottom_radius = 0.75
+		plume.top_radius = 0.45
+		plume.bottom_radius = 0.8
 		plume.height = PLUME_HEIGHT
-		_mesh(plume, _plume_material, Vector3(local.x, _ground + DECK_HEIGHT + 1.0 + PLUME_HEIGHT * 0.5, local.z))
+		_mesh(plume, _plume_material, Vector3(local.x, _ground + DECK_HEIGHT + 0.5 + PLUME_HEIGHT * 0.5, local.z))
+		var crown := TorusMesh.new()
+		crown.inner_radius = 0.45
+		crown.outer_radius = 0.85
+		_mesh(crown, _cap_material, Vector3(local.x, _ground + DECK_HEIGHT + 0.5 + PLUME_HEIGHT, local.z))
 
 
 func _build_magnet() -> void:
@@ -254,9 +260,10 @@ func _turn_jaws(delta: float) -> void:
 
 
 func _update_core() -> void:
-	var energy: float = 3.0 + 5.0 * warden.charge_fraction()
+	# Kept low enough that the core keeps its colour instead of blowing out to white.
+	var energy: float = 1.2 + 2.0 * warden.charge_fraction()
 	if warden.unplated_by_magnet():
-		energy = 1.0 + 6.0 * absf(sin(Time.get_ticks_msec() * 0.02))
+		energy = 0.4 + 2.6 * absf(sin(Time.get_ticks_msec() * 0.02))
 	_core_material.emission_energy_multiplier = energy
 
 
@@ -282,8 +289,8 @@ func _update_badge() -> void:
 func _update_caps(delta: float) -> void:
 	if _cap_material == null:
 		return
-	_cap_material.emission_energy_multiplier = move_toward(_cap_material.emission_energy_multiplier, 3.0, delta * 8.0)
-	_plume_material.albedo_color.a = 0.22 + 0.1 * sin(Time.get_ticks_msec() * 0.006)
+	_cap_material.emission_energy_multiplier = move_toward(_cap_material.emission_energy_multiplier, 2.2, delta * 8.0)
+	_plume_material.albedo_color.a = 0.55 + 0.15 * sin(Time.get_ticks_msec() * 0.006)
 
 
 func _update_magnet() -> void:
@@ -305,4 +312,4 @@ func _update_magnet() -> void:
 	var tugging: bool = warden.state_name() == "tug"
 	_magnet_material.albedo_color = Palette.AMBER if tugging else Palette.SAND
 	_magnet_material.emission = Palette.AMBER if tugging else Palette.SAND
-	_magnet_material.emission_energy_multiplier = 5.0 if tugging else 0.4 + 2.0 * out
+	_magnet_material.emission_energy_multiplier = 2.4 if tugging else 0.4 + 1.2 * out
