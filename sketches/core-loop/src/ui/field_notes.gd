@@ -128,7 +128,7 @@ static func legend_bbcode() -> String:
 		if row["priority"] < EventKinds.TOAST_PRIORITY:
 			continue
 		var words: String = row["hud"] if row["hud"] != "" else kind.replace("_", " ")
-		lines.append("[color=#%s]%s  %s[/color]" % [(row["color"] as Color).to_html(false), row["shape"], words])
+		lines.append("[color=#%s]%s  %s[/color]" % [(row["color"] as Color).to_html(false), SHAPE_GLYPHS.get(row["shape"], ""), words])
 	return "\n".join(lines)
 
 

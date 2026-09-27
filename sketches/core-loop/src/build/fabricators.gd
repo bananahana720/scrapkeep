@@ -2,6 +2,7 @@ extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
 const Palette := preload("res://src/core/palette.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # Drive-through fabricators: hoops standing across the scrap lines. Each shows the part
 # it makes and its price while you approach; roll through the hoop with enough scrap
@@ -24,6 +25,7 @@ const AVOID_BEACON := 55.0
 const AVOID_SPAWN := 25.0
 const SPACING := 40.0
 const ALONG_LINE := 0.55
+const PROMPT_REACH := 45.0
 
 var _rng: RandomNumberGenerator
 var _class_id := ""
@@ -171,12 +173,11 @@ func _build_hoop(fab: Dictionary) -> void:
 	glyph.mesh = gem
 	glyph.position = Vector3(0.0, RING - SINK + 1.2, 0.0)
 	node.add_child(glyph)
-	var label := Label3D.new()
-	label.font_size = 64
-	label.pixel_size = 0.02
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.outline_size = 12
-	label.position = Vector3(0.0, RING * 2.0 - SINK + 2.0, 0.0)
+	# The price is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
+	# shown while you approach, so it never sits over the toasts or the objective.
+	var label := WorldPrompt.new()
+	label.name = "Prompt"
+	label.attach(node, Vector3(0.0, RING * 2.0 - SINK, 0.0), PROMPT_REACH)
 	node.add_child(label)
 	fab["hoop_mat"] = hoop_mat
 	fab["glyph"] = glyph
@@ -222,7 +223,7 @@ func _refresh_label(fab: Dictionary, scrap: int, held: Array) -> void:
 	if text == fab["text"]:
 		return
 	fab["text"] = text
-	var label: Label3D = fab["label"]
+	var label: Label = fab["label"]
 	label.text = text
 	label.modulate = Palette.AMBER if ready else Palette.SAND.darkened(0.25)
 	var mat: StandardMaterial3D = fab["hoop_mat"]

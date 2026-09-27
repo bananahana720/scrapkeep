@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
 # its line; rolling through one takes its part. There is no collider and no menu, so
@@ -35,6 +36,8 @@ const DISTANCES := [AHEAD, 30.0, 24.0, 18.0]
 const SPREADS := [SPREAD, 6.0]
 const CLIMB_TOLERANCE := 0.75
 const PATH_SAMPLES := 6
+# A gate's offer prompt shows while the gate is this close, the whole time it can be chosen.
+const PROMPT_REACH := LOST_BEYOND
 
 var offers: Array = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
@@ -201,17 +204,16 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	topper.name = "Topper"
 	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
 	gate.add_child(topper)
-	var label := Label3D.new()
+	# The offer is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
+	# under the gate's column, so it never climbs into the objective or the toasts.
+	var label := WorldPrompt.new()
+	label.name = "Prompt"
 	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
 	if offer["mark"] != "":
 		lines += "\n" + offer["mark"]
 	label.text = lines
-	label.font_size = 80
-	label.pixel_size = 0.02
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.modulate = tint.lerp(Color.WHITE, 0.25)
-	label.outline_size = 14
-	label.position = Vector3(0.0, HEIGHT + 3.4, 0.0)
+	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
+	label.attach(gate, Vector3(0.0, HEIGHT + 1.2, 0.0), PROMPT_REACH)
 	gate.add_child(label)
 	return gate
 
