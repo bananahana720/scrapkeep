@@ -304,3 +304,15 @@ In his words: "I actually want to have a maybe a shopkeeper uh, and maybe some l
 - **The pay-off.** Once the ball reaches the heft class the top shelf needs, the loop ends in a grudging relent line and the hook unlocks. The gag and the growth goal are the same thing.
 - **Moss's voice.** Synthesized babble, one syllable blip per letter, pitched in the live key, with each beat rising in pitch as he gets exasperated. No recorded voice.
 - **Fit.** It never blocks the exit, and each line is a speech bubble of at most 12 words, well away from the reticle. Seeing the loop through adds a codex entry ("Too heavy for you").
+
+## 13. Standing rule: when a callback lines up with a mechanic, build it
+
+Andrew, 2026-09-27, after the Moss heft-lock: "that's like a callback with a game mechanic ... If you come into other instances where things align like that, uh, go for it. And take the initiative and just, just build it. And just, yeah, make it a way for me or a player to just discover it naturally or uh, with some digging ... with uh, game design in mind and to have things make sense from a video gameplay."
+
+**The rule for every unit.** When a reference, joke, lore fact or motif lines up with a mechanic, build the alignment without asking. It must pass three tests:
+
+1. **It makes gameplay sense on its own.** A player who misses the reference still gets a fair, readable mechanic.
+2. **It's discovered, not announced.** It's found naturally in play or by digging (the codex, secrets, repeated interaction, an odd combination). It's never a tutorial.
+3. **It serves the principles.** It never costs momentum unforeseen, never hides a threat, and stays inside the visual caps.
+
+Log each one in DESIGN-NOTES as "Callback:", naming the mechanic it rides on, and add it to the unit's vision delta. The vision keeper keeps a running list in SOUND-STORY.md so callbacks never collide.
