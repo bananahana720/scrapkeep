@@ -1,11 +1,11 @@
 extends RefCounted
 
 # The HUD's two faces (VISUAL-LANGUAGE.md section 7): Noto Sans Bold for labels and
-# toasts, Noto Sans Mono Bold for numbers so digits do not jitter. They load from the
-# system's Noto folder when it has them; otherwise Godot's default font stands in.
+# toasts, Noto Sans Mono Bold for numbers so digits do not jitter. Both are vendored in
+# assets/fonts/ with their OFL licence; if one is missing, Godot's default font stands in.
 
-const BOLD_PATH := "/usr/share/fonts/noto/NotoSans-Bold.ttf"
-const MONO_PATH := "/usr/share/fonts/noto/NotoSansMono-Bold.ttf"
+const BOLD_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
+const MONO_PATH := "res://assets/fonts/NotoSansMono-Bold.ttf"
 
 static var _bold: Font
 static var _mono: Font
@@ -23,11 +23,15 @@ static func mono() -> Font:
 	return _mono
 
 
+static func vendored() -> bool:
+	return bold() != ThemeDB.fallback_font and mono() != ThemeDB.fallback_font
+
+
 static func _load(path: String) -> Font:
-	if FileAccess.file_exists(path):
-		var font := FontFile.new()
-		if font.load_dynamic_font(path) == OK:
-			return font
+	if ResourceLoader.exists(path):
+		var res = load(path)
+		if res is Font:
+			return res
 	return ThemeDB.fallback_font
 
 

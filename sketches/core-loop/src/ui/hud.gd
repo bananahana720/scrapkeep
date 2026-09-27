@@ -185,9 +185,9 @@ static func toast_kinds() -> Array[String]:
 	return out
 
 
-# A toast's words: the v2 short wording where the row's own is longer than a toast.
+# A toast's words are its row's hud wording.
 static func toast_text(kind: String, fields := {}) -> String:
-	return String(EventKinds.TOAST_SHORT.get(kind, EventKinds.row(kind).get("hud", ""))).format(fields)
+	return EventKinds.hud(kind, fields)
 
 
 func _connect_toasts(events) -> void:
@@ -372,17 +372,17 @@ func objective_reading() -> Dictionary:
 				out["plating"] = flow.warden_plating()
 			else:
 				out["icon"] = "obj_beacon"
-				out["words"] = EventKinds.OBJECTIVE_SHORT["beacon_unsealed"]
+				out["words"] = EventKinds.objective("beacon_unsealed")
 				out["color"] = EventKinds.color("beacon_charge_changed")
 				out["progress"] = game.beacon.fraction()
 		"gates":
 			out["icon"] = "obj_gate"
-			out["words"] = EventKinds.OBJECTIVE_SHORT["reward_offered"]
+			out["words"] = EventKinds.objective("reward_offered")
 			out["color"] = EventKinds.color("reward_offered")
 		"launch":
 			if not launch_card.showing():
 				out["icon"] = "obj_gate"
-				out["words"] = EventKinds.OBJECTIVE_SHORT["launched"]
+				out["words"] = EventKinds.objective("launched")
 				out["color"] = EventKinds.color("launched")
 		"boss":
 			out["icon"] = "fac_fleet"
@@ -497,7 +497,11 @@ func _process(delta: float) -> void:
 	_speed.set_tier(game.player.state.tier)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND
-	ability_bar.update_slots(_slots.slots(game), tint)
+	var shape: String = run.class_def.shape if run.class_def != null else "ring"
+	var slots: Array = _slots.slots(game)
+	ability_bar.update_slots(slots, tint, shape)
+	reticle.gauge = AbilitySlots.gauge_of(slots)
+	reticle.gauge_color = tint
 	if ability_bar.size != _laid_out:
 		layout(size)
 

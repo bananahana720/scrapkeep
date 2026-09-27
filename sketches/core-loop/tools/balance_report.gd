@@ -484,7 +484,7 @@ func _hands_section(runs: Array[Dictionary]) -> void:
 	_lines.append("| Policy | Class | Stages | Telegraphs evaded | Hits taken | Cap hits | Magnet stuns | Plants | Slingshots | Specials | Seconds short of plating |")
 	_lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for policy in POLICIES:
-		for class_id in ["runner_gunner", "pylon_engineer"]:
+		for class_id in ["pylon_engineer", "runner_gunner", "demolitions_caster"]:
 			var sums := {}
 			var stages := 0
 			for run in runs:

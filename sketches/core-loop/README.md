@@ -2,7 +2,7 @@
 
 **Does one run of Scrapkeep, from title through three stages to a summary, keep you rolling the whole way?**
 
-This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). The whole run is here: a title, two classes, three stages, a beacon to charge in each one, reward gates to roll through, a launch into the next stage, and a summary. Death shows a one-key retry.
+This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). The whole run is here: a title, three classes, three stages, a beacon to charge in each one, reward gates to roll through, a launch into the next stage, and a summary. Death shows a one-key retry.
 
 Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code, and there are no assets: everything is built in script from primitives.
 
@@ -10,13 +10,13 @@ Play it with `scrapkeep core-loop`. In play the HUD shows a key only while its a
 
 ## The loop
 
-1. **Title.** Press Space.
-2. **Class.** Press 1 for the Pylon engineer or 2 for the Runner-gunner. Both share the whole mobility kit. The names are candidates.
-3. **Stage.** You drop in already rolling, with the beacon in sight. The objective line at the top always says what to do next: your punch against the Warden's plating, and the stage's hint.
-4. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks. Scrap you roll up adds heft, and heft multiplies your punch. Events and vaults add bonus cores, the pips beside the objective, which raise the gate tiers.
+1. **Title.** Press Space or click Start.
+2. **Class.** Press 1, 2 or 3, or click a card: Sable the pylon engineer, Rivet the runner-gunner, or Kest the demolitions caster. Each has its own movement, special and smash on the same keys.
+3. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next in a few words; close to the Warden it says how to break it. Under it, your punch bar races the Warden's plating.
+4. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks. Scrap you roll up adds heft, and heft multiplies your punch. Events and vaults add bonus cores, the diamonds beside the objective, which raise the gate tiers.
 5. **Reward gates.** Two arches appear ahead of you. Roll through one to take its part.
 6. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
-7. **Summary.** After stage 3 you see stages, scrap, parts, kills, events won and time. N runs again as the same class.
+7. **Summary.** After stage 3 you see time, stages, scrap, parts, kills, events won and retries. N runs again as the same class.
 
 If you are scrapped, press R to retry the stage from its start, N for a new run, or C to choose a class.
 
@@ -67,7 +67,7 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 - One run: title, class, then three stages. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A summary follows stage 3.
 - Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.
 - Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the diamonds beside the objective, which raise the gate tiers.
-- The pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
+- Sable's pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
 - Death takes one key. R retries the stage from its start with the scrap, health and parts you entered with, and N starts a new run as the same class. Hold R in play to retry the stage.
 
 ### Questions for you
@@ -83,7 +83,7 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 1. Pick a class with its number key or a click. You drop in already rolling. The Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.
 2. Roll the scrap lines on the way down. Watch the heft dial's needle climb, and your punch bar grow under the objective.
 3. Break the Warden; close to it, the objective says how. The gates open wherever you are. Roll through one to take its part.
-4. Hit a steep face at speed and press E. Fire with left mouse, then press Space to slingshot off.
+4. As Sable, hit a steep face at speed and press E. Fire with left mouse, then hold and release Space to slingshot off.
 5. Get scrapped on purpose, then press R. You are back at the stage start in under a second.
 
 ## Layout

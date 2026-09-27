@@ -8,15 +8,19 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Callouts := preload("res://src/ui/callouts.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 
 # The v2 W1 contract holds together:
-#   - CONTRACTS.md's Icons section lists exactly the registry's ids, and every id
-#     resolves to a texture (an SVG when one exists, else the placeholder);
+#   - CONTRACTS.md's Icons section lists exactly the registry's ids, every id resolves
+#     to a texture, and every one of the 70 now loads its look-track SVG;
+#   - the two Noto faces load from the sketch with their licence beside them;
 #   - CONTRACTS.md's Ability slots section names every slot field and state;
 #   - every toast the HUD shows fits in 4 words with the longest part and event names,
-#     every objective in 5, every callout in 4, and every UI row is well formed;
+#     every objective it shows in 5 (the rows' own wording, bar the three readout rows
+#     flow keeps for combat's and the arena's tests), every callout in 4, and every UI row
+#     is well formed;
 #   - a world prompt's parsed title is at most 3 words, with the rest as its detail.
 
 var _failures := 0
@@ -57,6 +61,13 @@ func _check_icons() -> void:
 	_report("icon ids", doc != "" and missing.is_empty() and extra.is_empty() and broken.is_empty() and Icons.ids().size() == 70,
 		"%d registry ids, %d in CONTRACTS; not listed %s, listed but unknown %s, no texture %s"
 			% [Icons.ids().size(), listed.size(), missing, extra, broken])
+	var no_file := Icons.ids().filter(func(id): return not Icons.from_file(id))
+	var drawn_keys := ["key_1", "key_2", "key_3", "key_n", "key_c", "key_t"].filter(func(id): return not Icons.from_file(id))
+	_report("svg icons", no_file.is_empty(),
+		"%d of %d ids load their assets/icons SVG; placeholders still drawn for %s; keycaps drawn from their id for %s"
+			% [Icons.ids().size() - no_file.size(), Icons.ids().size(), no_file, drawn_keys])
+	_report("fonts vendored", UiFonts.vendored() and FileAccess.file_exists("res://assets/fonts/OFL.txt"),
+		"Noto Sans Bold and Mono Bold load from res://assets/fonts beside OFL.txt")
 	var fallback: Texture2D = Icons.texture("ab_kest_sticky")
 	_report("icon fallback", fallback != null and fallback.get_width() == Icons.SIZE,
 		"an ability id outside the list still draws its prefix's placeholder")
@@ -89,6 +100,10 @@ func _check_wording() -> void:
 	for key in EventKinds.OBJECTIVE_SHORT:
 		if WordBudget.words_in(EventKinds.OBJECTIVE_SHORT[key]) > Hud.OBJECTIVE_WORDS:
 			long_objectives.append(key)
+	for kind in ["beacon_unsealed", "reward_offered", "reward_chosen", "launched"]:
+		var shown := EventKinds.objective(kind)
+		if WordBudget.words_in(shown) == 0 or WordBudget.words_in(shown) > Hud.OBJECTIVE_WORDS:
+			long_objectives.append(kind)
 	for i in StageDefs.COUNT:
 		var lesson: String = StageDefs.of(i + 1)["warden_lesson"]
 		if WordBudget.words_in(EventKinds.LESSON_SHORT.get(lesson, "")) == 0 or WordBudget.words_in(EventKinds.LESSON_SHORT[lesson]) > Hud.OBJECTIVE_WORDS:

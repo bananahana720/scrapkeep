@@ -9,9 +9,10 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # key glyph under each, charge pips under the key. Each state reads by more than colour:
 # ready is a bright solid frame, cooling is a petrol wedge that uncovers the icon
 # clockwise from twelve over a dimmed icon, active is a doubled frame and a lifted slot,
-# unavailable is a faded icon struck through. A slot whose cooldown ends swells once
-# with a rim flash in the class colour. State colours come from event_kinds' v2 W1 UI
-# rows; the icon's accent is the class colour (VISUAL-LANGUAGE.md section 7).
+# unavailable is a faded icon struck through. A slot whose cooldown ends swells once,
+# with a rim flash and its class shape flaring in the class colour. State colours come
+# from event_kinds' v2 W1 UI rows; the icon's accent is the class colour
+# (VISUAL-LANGUAGE.md section 7).
 
 const SLOT := 56.0
 const GAP := 14.0
@@ -25,6 +26,9 @@ const SWEEP_STEP := TAU / 64.0
 
 var slots: Array = []
 var tint := Color.WHITE
+# The class row's shape (ring, chevron, burst): the ready swell and the charge pips wear
+# it, so the bar speaks in the class's motif.
+var motif := "ring"
 var _pulses := {}
 var _last_state := {}
 
@@ -38,8 +42,9 @@ static func bar_size(count: int) -> Vector2:
 	return Vector2(n * SLOT + (n - 1) * GAP, SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP * 2.0)
 
 
-func update_slots(list: Array, class_tint: Color) -> void:
+func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void:
 	tint = class_tint
+	motif = class_shape if class_shape != "" else "ring"
 	for entry in list:
 		var id: String = entry["id"]
 		if entry["state"] == "ready" and _last_state.get(id, "ready") == "cooling":
@@ -113,6 +118,10 @@ func _draw_slot(entry: Dictionary, rect: Rect2) -> void:
 		draw_style_box(outer, rect.grow(5.0))
 
 	var key_color := tint if state == "active" else Color(Palette.SAND, 0.5 if state == "unavailable" else 0.95)
+	if left > 0.0:
+		var t := 1.0 - left / PULSE_SECONDS
+		var reach := rect.size.x * (0.7 + 0.5 * t)
+		draw_texture_rect(Icons.shape(motif), Rect2(rect.get_center() - Vector2(reach, reach) * 0.5, Vector2(reach, reach)), false, Color(tint, 0.6 * (1.0 - t)))
 	Keycap.draw(self, key_centre, entry["key"], key_color, KEY_H)
 	var max_charges: int = entry["max_charges"]
 	if max_charges > 1:
@@ -120,10 +129,8 @@ func _draw_slot(entry: Dictionary, rect: Rect2) -> void:
 		var y := SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP
 		for c in max_charges:
 			var at := Vector2(key_centre.x + (c - (max_charges - 1) * 0.5) * step, y)
-			if c < int(entry["charges"]):
-				draw_circle(at, PIP, tint)
-			else:
-				draw_arc(at, PIP, 0.0, TAU, 12, Color(tint, 0.6), 1.2)
+			var pip := Rect2(at - Vector2(PIP, PIP) * 1.3, Vector2(PIP, PIP) * 2.6)
+			draw_texture_rect(Icons.shape(motif), pip, false, tint if c < int(entry["charges"]) else Color(tint, 0.25))
 
 
 # The remaining cooldown as a petrol wedge: it covers the part of the slot still to come

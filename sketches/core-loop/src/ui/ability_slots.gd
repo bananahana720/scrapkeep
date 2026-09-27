@@ -1,50 +1,63 @@
 extends RefCounted
 
-const Augments := preload("res://src/movement/augments.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
 # The ability bar's one input (CONTRACTS, Ability slots): an ordered array of slot
-# records in the bar's order: weapon (LMB), class movement (RMB), special (F) and smash
-# (Ctrl), as VISUAL-LANGUAGE.md section 7 lays the bar out. When the combat module
-# publishes ability_slots() the bar reads that; until it does, this adapter builds the
-# same records from today's state (the special's cooldown, dash_ready, glide, the
-# grapple, the mount), so the bar never learns where a fact came from.
+# records in the bar's order, weapon (LMB), movement (RMB), special (F) and smash
+# (Ctrl). The ball's ability state publishes them (player.abilities.slots(), W3). This
+# reads that and names the icon and key the way the Icons contract does: an icon that
+# is not an Icons id becomes ab_<pilot>_<role>, the pilot being the class row's
+# display name, and a key label (LMB, F) becomes its key glyph id (key_lmb, key_f).
 
 const FIELDS := ["id", "icon", "key", "cooldown_frac", "charges", "max_charges", "state"]
 const STATES := ["ready", "cooling", "active", "unavailable"]
-# Today's movement ability per class; a class the table does not name glides.
-const CLASS_MOVEMENT := {"pylon_engineer": "grapple", "runner_gunner": "dash"}
-# The pilot each class id wears (its cls_ emblem and ab_ icons) until the class row
-# carries a pilot field of its own.
-const PILOTS := {"pylon_engineer": "sable", "runner_gunner": "rivet", "demolitions_caster": "kest"}
+const ROLES := {"weapon": "weapon", "movement": "move", "special": "special", "smash": "smash"}
 
-var _special_total := 0.0
 var _warned := false
 
 
 func slots(game) -> Array:
-	var combat = game.combat
-	if combat != null and combat.has_method("ability_slots"):
-		var published: Array = combat.ability_slots()
-		if valid(published):
-			return published
-		if not _warned:
-			_warned = true
-			push_warning("ability_slots: the published slots are malformed; showing the adapter's")
-	return adapt(game)
+	var abilities = game.player.get("abilities") if game.player != null else null
+	if abilities == null or not abilities.has_method("slots"):
+		return []
+	var out := []
+	for record in abilities.slots():
+		out.append(normalized(record, game.run.class_def))
+	if valid(out):
+		return out
+	if not _warned:
+		_warned = true
+		push_warning("ability_slots: the published slots are malformed; the bar stays empty")
+	return []
+
+
+static func normalized(record: Dictionary, def) -> Dictionary:
+	var out := record.duplicate()
+	if not Icons.has(String(out.get("icon", ""))):
+		out["icon"] = "ab_%s_%s" % [pilot_of(def), ROLES.get(out.get("slot", ""), "weapon")]
+	var key := String(out.get("key", ""))
+	if not key.begins_with("key_"):
+		out["key"] = "key_" + key.to_lower()
+	out["gauge"] = float(out.get("gauge", 0.0))
+	return out
+
+
+# The pilot's name in icon ids: sable, rivet, kest.
+static func pilot_of(def) -> String:
+	return String(def.display_name).to_lower() if def != null else ""
 
 
 static func slot(id: String, icon: String, key: String, cooldown_frac: float, charges: int, max_charges: int, state: String) -> Dictionary:
 	return {"id": id, "icon": icon, "key": key, "cooldown_frac": clampf(cooldown_frac, 0.0, 1.0),
-		"charges": charges, "max_charges": max_charges, "state": state}
+		"charges": charges, "max_charges": max_charges, "state": state, "gauge": 0.0}
 
 
-static func pilot_of(def) -> String:
-	if def == null:
-		return ""
-	var own = def.get("pilot")
-	if own is String and own != "":
-		return own
-	return PILOTS.get(def.id, def.id)
+# The charging hold's fill, 0 to 1, for the reticle ring: the fullest gauge on the bar.
+static func gauge_of(list: Array) -> float:
+	var best := 0.0
+	for entry in list:
+		best = maxf(best, float(entry.get("gauge", 0.0)))
+	return best
 
 
 static func valid(list: Array) -> bool:
@@ -67,73 +80,3 @@ static func valid_slot(entry) -> bool:
 		and (frac is float or frac is int) and frac >= 0.0 and frac <= 1.0 \
 		and entry["charges"] is int and entry["max_charges"] is int and entry["max_charges"] >= 1 \
 		and entry["charges"] >= 0 and entry["charges"] <= entry["max_charges"] and entry["state"] in STATES
-
-
-func adapt(game) -> Array:
-	var def = game.run.class_def
-	if def == null:
-		return []
-	var player = game.player
-	var kit = player.kit
-	var state = player.state
-	var pilot := pilot_of(def)
-	return [
-		_weapon(def, pilot, player),
-		_movement(CLASS_MOVEMENT.get(def.id, "glide"), pilot, game.tuning, kit, state),
-		_special(def, pilot, game.combat, kit),
-		_smash(pilot, kit, state),
-	]
-
-
-static func _weapon(def, pilot: String, player) -> Dictionary:
-	var firing: bool = player.intent != null and player.intent.fire_held
-	return slot(def.weapon_id, "ab_%s_weapon" % pilot, "key_lmb", 0.0, 1, 1, "active" if firing else "ready")
-
-
-# The special's cooldown is combat's; its full length is learned from the largest value
-# seen since it last reached zero, so no combat constant leaks into the UI.
-func _special(def, pilot: String, combat, kit) -> Dictionary:
-	var left := 0.0
-	var live := false
-	if combat != null:
-		var cd = combat.get("_special_cooldown")
-		left = float(cd) if cd != null else 0.0
-		var overdrive = combat.get("_overdrive")
-		live = overdrive != null and float(overdrive) > 0.0
-	if left <= 0.0:
-		_special_total = 0.0
-	else:
-		_special_total = maxf(_special_total, left)
-	if def.id == "pylon_engineer":
-		live = kit.mounted
-	var frac := left / _special_total if _special_total > 0.0 else 0.0
-	var shown := "active" if live else ("cooling" if left > 0.0 else "ready")
-	return slot(def.special_id, "ab_%s_special" % pilot, "key_f", frac, 0 if left > 0.0 else 1, 1, shown)
-
-
-static func _movement(id: String, pilot: String, tuning, kit, state) -> Dictionary:
-	var icon := "ab_%s_move" % pilot
-	match id:
-		"grapple":
-			var aim: Dictionary = kit.aim
-			var shown := "active" if kit.hooked else ("ready" if aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE else "unavailable")
-			return slot("grapple", icon, "key_rmb", 0.0, 1, 1, shown)
-		"dash":
-			var split: bool = tuning.on("split_dash_cooldown")
-			var left: float = kit.dash_cooldown if split else state.boost_cooldown
-			var total: float = maxf(0.001, tuning.boost_cooldown())
-			var shown := "ready"
-			if left > 0.0:
-				shown = "cooling"
-			elif not state.grounded and not kit.dash_ready:
-				shown = "unavailable"
-			return slot("dash", icon, "key_shift", left / total, 0 if shown != "ready" else 1, 1, shown)
-	var gliding: bool = kit.gliding
-	var can_glide: bool = not state.grounded and state.air_actions <= 0
-	return slot("glide", "ab_%s_glide" % pilot, "key_space", 0.0, 1, 1, "active" if gliding else ("ready" if can_glide else "unavailable"))
-
-
-# Ctrl slams only in the air; on the ground it brakes, so the slot reads unavailable.
-static func _smash(pilot: String, kit, state) -> Dictionary:
-	var shown := "active" if kit.slamming else ("unavailable" if state.grounded else "ready")
-	return slot("smash", "ab_%s_smash" % pilot, "key_ctrl", 0.0, 1, 1, shown)

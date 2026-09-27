@@ -19,6 +19,7 @@ const BAR_H := 7.0
 const BAR_GAP := 4.0
 const BAR_ICON := 13.0
 const HEADROOM := 1.15
+const PLATE_PAD := 6.0
 
 var icon_id := ""
 var words := ""
@@ -90,6 +91,8 @@ static func pip_slots(core_count: int, cap: int) -> Array[bool]:
 func _draw() -> void:
 	if words == "":
 		return
+	var plate_w := maxf(_row_width(), BAR_W + BAR_ICON + 6.0) + PLATE_PAD * 2.0
+	UiDraw.panel(self, Rect2(Vector2((size.x - plate_w) * 0.5, -PLATE_PAD), Vector2(plate_w, extent().y + PLATE_PAD * 2.0)))
 	var x := (size.x - _row_width()) * 0.5
 	var mid := ICON * 0.5
 	var icon_rect := Rect2(Vector2(x, 0.0), Vector2(ICON, ICON))

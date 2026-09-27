@@ -14,7 +14,7 @@ const TESTING := [
 	"One run: title, class, three stages, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Stage 3's launch drops you into the arena against Admiral Brindle; beat him for the summary.",
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
-	"The pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
+	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
 	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In the arena, R retries the fight from its entry and T replays stage 3.",
 ]
 
@@ -27,10 +27,10 @@ const QUESTIONS := [
 ]
 
 const TRY_FIRST := [
-	"Pick a class with its number key or a click. You drop in already rolling; the Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.",
+	"Pick Sable, Rivet or Kest with a number key or a click. You drop in already rolling; the Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.",
 	"Roll the scrap lines on the way down: watch the heft dial's needle climb, and your punch bar grow under the objective.",
 	"Break the Warden (close to it, the objective says how); the gates open wherever you are. Roll through one to take its part.",
-	"Hit a steep face at speed, press E, fire with left mouse, then Space to slingshot off.",
+	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
 	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
@@ -38,15 +38,15 @@ const TRY_FIRST := [
 const CONTROLS := [
 	{"keys": "W A S D", "does": "drive, relative to where the camera looks"},
 	{"keys": "mouse", "does": "look"},
-	{"keys": "Space", "does": "jump, double jump, hold falling to glide; slingshots off a pylon"},
-	{"keys": "Shift", "does": "boost; airborne it is the air dash"},
-	{"keys": "Ctrl", "does": "brake; airborne it is the slam"},
-	{"keys": "left mouse", "does": "fire the class weapon (hold); both classes"},
-	{"keys": "F", "does": "runner overdrive blast; engineer pylon discharge (planting fires it free)"},
-	{"keys": "right mouse", "does": "fire the grapple at the reticle's target; release to let go"},
-	{"keys": "Q (hold)", "does": "winch: haul toward the hook"},
-	{"keys": "E", "does": "plant a pylon on a steep face or a close wall hook; again to drop off"},
-	{"keys": "mouse wheel", "does": "down pays rope out, up notches it in"},
+	{"keys": "Space", "does": "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump"},
+	{"keys": "Shift", "does": "boost"},
+	{"keys": "Ctrl", "does": "brake; airborne, the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam"},
+	{"keys": "left mouse", "does": "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw"},
+	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free"},
+	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels"},
+	{"keys": "Q (hold)", "does": "Sable: winch toward the hook"},
+	{"keys": "E", "does": "Sable: plant a pylon on a steep face or a close wall hook; again to drop off"},
+	{"keys": "mouse wheel", "does": "Sable: down pays rope out, up notches it in"},
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages"},
 	{"keys": "- / =", "does": "music volume down / up"},
 	{"keys": "[ / ]", "does": "effects volume down / up"},

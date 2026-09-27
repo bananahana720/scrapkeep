@@ -16,6 +16,7 @@ const FONT := 20
 const ROW_GAP := 8.0
 const DIFFICULTY_BAR := Vector2(96.0, 7.0)
 const THREAT_TIERS := 2
+const PLATE_PAD := 6.0
 
 var stage := 1
 var stages := 3
@@ -27,7 +28,7 @@ var threat := 0
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(220.0, PIP + ROW_GAP + ICON + ROW_GAP * 0.5 + DIFFICULTY_BAR.y + 2.0)
+	custom_minimum_size = Vector2(150.0, PIP + ROW_GAP + ICON + ROW_GAP * 0.5 + DIFFICULTY_BAR.y + 2.0)
 	size = custom_minimum_size
 
 
@@ -50,6 +51,7 @@ func drawn_words() -> PackedStringArray:
 
 
 func _draw() -> void:
+	UiDraw.panel(self, Rect2(Vector2(-PLATE_PAD, -PLATE_PAD), Vector2(size.x, size.y) + Vector2(PLATE_PAD, PLATE_PAD) * 2.0))
 	var cleared_color := EventKinds.color("stage_cleared")
 	var current_color := EventKinds.color("stage_entered")
 	var diamond := Icons.shape("diamond")

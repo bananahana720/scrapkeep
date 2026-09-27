@@ -6,11 +6,20 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 
-# A class choice: the class emblem large, its name, one line, and its number key. The
-# card's edge is the class colour; hover and focus thicken it and lift the emblem.
+# A class choice: the pilot's emblem large, the pilot's name, role and species, one
+# fantasy line, and its number key. Everything comes from the class row except the line,
+# which is DESIGN-V2 section 2's fantasy cut to fit a card. The card's edge is the class
+# colour; hover and focus thicken it and lift the emblem.
 
 const KEY_H := 28.0
 const EMBLEM := 112.0
+# DESIGN-V2 section 2's fantasy lines, shortened; a class without one shows its pitch's
+# first sentence.
+const LINES := {
+	"pylon_engineer": "Plant a beachhead, then launch like a cannonball.",
+	"runner_gunner": "An unstoppable sprinter. Crowd control is fuel.",
+	"demolitions_caster": "Vanish in smoke, then drop a line of fire.",
+}
 
 var def: Resource
 var key := ""
@@ -51,17 +60,24 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(_emblem)
 	box.add_child(_text(def.display_name, 30, color))
-	box.add_child(_text(one_line(def.pitch), 18, Palette.SAND))
+	box.add_child(_text(role_line(def), 16, Color(Palette.SAND, 0.75)))
+	box.add_child(_text(line_of(def), 18, Palette.SAND))
 
 
-# The class's pitch cut to its first sentence.
-static func one_line(pitch: String) -> String:
+static func role_line(class_def) -> String:
+	return "%s · %s" % [class_def.role, class_def.species] if class_def.species != "" else String(class_def.role)
+
+
+static func line_of(class_def) -> String:
+	if LINES.has(class_def.id):
+		return LINES[class_def.id]
+	var pitch: String = class_def.pitch
 	var stop := pitch.find(". ")
 	return pitch.left(stop + 1) if stop >= 0 else pitch
 
 
 func words() -> String:
-	return "%s. %s" % [def.display_name, one_line(def.pitch)] if def != null else ""
+	return "%s, %s. %s" % [def.display_name, role_line(def), line_of(def)] if def != null else ""
 
 
 func _text(value: String, font_size: int, color: Color) -> Label:
