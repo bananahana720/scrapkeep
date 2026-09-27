@@ -3,32 +3,41 @@ extends Control
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
-# name and one line of what it does. It drops in from the top edge with an
-# overshoot, holds, and slides away. Anchored high and centred, clear of the
-# crosshair, so it never covers the next threat. Usable anywhere: the HUD, the codex
-# page, or presentation's own layer.
+# name and one line of what it does. It lives in its own region, the top-right column
+# under the objective line: clear of the objective (centre top), the HUD's toast
+# column (centre, 400-1200 px) and the crosshair. It slides in from the right edge,
+# holds, and slides away, about 3 s in all on the real clock, so neither hit-stop nor
+# a paused screen can pin it. Discoveries in quick succession queue and play one at a
+# time. dismiss() clears it at once (presentation calls it on flow changes, arena
+# entry, death and run end).
 
-const HOLD := 2.6
+const HOLD := 2.5
 const IN_TIME := 0.22
 const OUT_TIME := 0.3
+const WIDTH := 360.0
+const MARGIN := 18.0
+const REST_Y := 64.0
 
 var shown := 0
 var last_title := ""
+# The clock in milliseconds; tests swap it for a fake.
+var now_ms: Callable = Callable(Time, "get_ticks_msec")
 
+var _queue: Array = []
+var _started_ms := -1
 var _panel: PanelContainer
 var _icon: TextureRect
 var _kicker: Label
 var _title: Label
 var _body: Label
 var _style: StyleBoxFlat
-var _t := -1.0
-var _rest_y := 64.0
 
 
 func _init() -> void:
 	name = "CodexBanner"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_CENTER_TOP)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_panel = PanelContainer.new()
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_style = StyleBoxFlat.new()
@@ -39,74 +48,103 @@ func _init() -> void:
 	_style.corner_radius_top_right = 6
 	_style.corner_radius_bottom_left = 6
 	_style.corner_radius_bottom_right = 6
-	_style.content_margin_left = 18
-	_style.content_margin_right = 22
+	_style.content_margin_left = 14
+	_style.content_margin_right = 16
 	_style.content_margin_top = 10
 	_style.content_margin_bottom = 12
 	_panel.add_theme_stylebox_override("panel", _style)
+	_panel.custom_minimum_size = Vector2(WIDTH, 0.0)
 	add_child(_panel)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
+	row.add_theme_constant_override("separation", 12)
 	_panel.add_child(row)
 	_icon = TextureRect.new()
-	_icon.custom_minimum_size = Vector2(56, 56)
+	_icon.custom_minimum_size = Vector2(44, 44)
 	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(_icon)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(column)
 	_kicker = Label.new()
-	_kicker.add_theme_font_size_override("font_size", 14)
+	_kicker.add_theme_font_size_override("font_size", 13)
 	column.add_child(_kicker)
 	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 30)
+	_title.add_theme_font_size_override("font_size", 24)
 	column.add_child(_title)
 	_body = Label.new()
-	_body.add_theme_font_size_override("font_size", 17)
+	_body.add_theme_font_size_override("font_size", 15)
+	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.custom_minimum_size = Vector2(WIDTH - 90.0, 0.0)
 	_body.add_theme_color_override("font_color", Color(0.86, 0.84, 0.78))
 	column.add_child(_body)
 	visible = false
 
 
-# kicker: "New synergy", "Synergy", "Found" or similar.
+# kicker: "New synergy", "Synergy", "Found" or similar. While one is showing the next
+# waits its turn.
 func show_discovery(title: String, category: String, detail := "", kicker := "New synergy") -> void:
-	var entry := CodexStyle.category(category)
+	_queue.append([title, category, detail, kicker])
+	if not showing():
+		_next()
+
+
+func showing() -> bool:
+	return _started_ms >= 0
+
+
+func queued() -> int:
+	return _queue.size()
+
+
+# Gone at once. clear_queue also drops the discoveries still waiting.
+func dismiss(clear_queue := true) -> void:
+	_started_ms = -1
+	visible = false
+	if clear_queue:
+		_queue.clear()
+
+
+func _next() -> void:
+	if _queue.is_empty():
+		return
+	var item: Array = _queue.pop_front()
+	var entry := CodexStyle.category(item[1])
 	var color: Color = entry["color"]
 	_icon.texture = entry["icon"]
-	_kicker.text = "%s  ·  %s" % [kicker.to_upper(), String(entry["label"]).to_upper()]
+	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
 	_kicker.add_theme_color_override("font_color", color)
-	_title.text = title
-	_body.text = detail
-	_body.visible = detail != ""
+	_title.text = item[0]
+	_body.text = item[2]
+	_body.visible = item[2] != ""
 	_style.border_color = color
 	shown += 1
-	last_title = title
-	_t = 0.0
+	last_title = item[0]
+	_started_ms = int(now_ms.call())
 	visible = true
 	_place(0.0)
 
 
-func _process(delta: float) -> void:
-	if _t < 0.0:
+func _process(_delta: float) -> void:
+	if _started_ms < 0:
 		return
-	# Real time, so a hit-stop never freezes the banner.
-	_t += delta / maxf(Engine.time_scale, 0.05)
+	var t := (int(now_ms.call()) - _started_ms) / 1000.0
 	var total := IN_TIME + HOLD + OUT_TIME
-	if _t >= total:
-		_t = -1.0
-		visible = false
+	if t >= total:
+		dismiss(false)
+		_next()
 		return
 	var slide := 1.0
-	if _t < IN_TIME:
-		var x := _t / IN_TIME
-		slide = 1.0 + 0.12 * sin(x * PI) if x > 0.6 else x / 0.6
-	elif _t > IN_TIME + HOLD:
-		slide = 1.0 - (_t - IN_TIME - HOLD) / OUT_TIME
+	if t < IN_TIME:
+		var x := t / IN_TIME
+		slide = 1.0 + 0.08 * sin(x * PI) if x > 0.6 else x / 0.6
+	elif t > IN_TIME + HOLD:
+		slide = 1.0 - (t - IN_TIME - HOLD) / OUT_TIME
 	_place(slide)
 
 
 func _place(slide: float) -> void:
 	var size := _panel.get_combined_minimum_size()
-	_panel.position = Vector2(-size.x * 0.5, lerpf(-size.y - 8.0, _rest_y, slide))
+	_panel.position = Vector2(lerpf(MARGIN, -size.x - MARGIN, slide), REST_Y)
 	_panel.modulate.a = clampf(slide * 1.4, 0.0, 1.0)
