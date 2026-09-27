@@ -47,15 +47,25 @@ The eight AD-02 colours carry every role. Three extensions already live in code 
 | HAZARD (extension) | `#ff5a3c` | Hostile danger areas and nothing else | Any reward, any player effect |
 | BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects |
 | ICE (extension) | `#c8f0ff` | The frost element | Anything that is not frost |
-| ANCIENT (proposed extension) | `#a98cf0` | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
+| ANCIENT (pending Andrew) | `#3d8bff` recommended | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
 
-**Why ANCIENT is violet.** Ancient machines need a light no other fact uses. A cold white measured too close to ICE (ΔE 8 to 17 across normal and CVD simulations) and to mint under deuteranopia (ΔE 10). This violet stays at ΔE 22 or more from ICE, mint, bone, HAZARD and petrol in every simulation. It is a palette addition, so it waits on Andrew. Until he rules, the sketch uses it.
+**ANCIENT candidates.** Ancient machines need a light no other fact uses. Andrew rejected violet on 2026-09-27 as overused. Three alternatives were measured with the same method as above: WCAG contrast, and the smallest Machado CIELAB ΔE against all eleven palette colours (the AD-02 eight plus HAZARD, BRASS and ICE) under each vision type.
+
+| Candidate | Hex | Meaning | Contrast on charcoal / sandstone / petrol | Closest collision, normal / deutan / protan / tritan | Redundancy cue it needs |
+| --- | --- | --- | --- | --- | --- |
+| **A. Cherenkov blue** (recommended) | `#3d8bff` | The glow of a human reactor pool, the light of the age that ended | 4.4 / 1.39 / 2.39 | ICE 68 / ICE 67 / ICE 59 / mint 31 | Seams cut as charcoal grooves twice the seam width, so the glow reads by value on petrol enamel. Pure sine hum. |
+| B. Uranium-glass green | `#9dff3c` | The phosphor of old dials and glassware | 11.7 / 1.90 / 6.35 | BRASS 65 / BRASS 20 / BRASS 37 / mint 13 | Would need a pattern on every seam, because it reads as Brindle's brass to deuteranopes and as mint under tritanopia |
+| C. Thin-film sheen plus neutral white | `#ffffff` light on an iridescent enamel | Machined perfection no workshop can reproduce | 14.6 / 2.38 / 7.93 | ICE 17 / mint 14 / ICE 11 / ICE 21 | Rests entirely on the sheen shifting with view angle and on the seam pattern, because white sits near frost and mint |
+
+Rejected violet `#a98cf0` measured ICE 61 / ICE 43 / ICE 49 / bone 22 for reference.
+
+**Recommendation.** Choose A, Cherenkov blue. It is the only candidate whose closest collision stays at ΔE 31 or more in every vision type, it has no hue neighbour in the palette, and its meaning is literal (it is the light of human nuclear tech, which also ties to the reactor relics). Its one weakness is value on petrol enamel (2.39:1), which the charcoal groove fixes. C's sheen can layer on top as a material cue if Andrew wants more strangeness. ANCIENT stays pending until Andrew picks. Until then, the sketch uses A.
 
 **Mint is shared on purpose.** Sable's kit is the collection field turned into a tool, so Sable owns mint and the collectors keep it. Scrap in flight is a square chunk on a path into the intake. Sable's effects are rings. Shape separates them.
 
 **Class colour means "yours".** Any effect the player's own action creates (indicator, trail, hit spark, kill pop, movement cue) takes the class colour from the class row. Rewards, the world and hostiles never do. The rule governs emissive light and effects, not materials. A copper pipe on a steam lift is plumbing, and a painted amber stripe on a valve is a safety marking.
 
-**Rarity ramp.** Common is worn bone, uncommon field mint, rare safety amber, and rare_plus two-tone amber with a mint heart, since I2 names every rare_plus item a Core or Heart. HAZARD leaves the ramp. Each rarity also has a frame (§5), so colour never carries it alone.
+**Rarity ramp.** Common is worn bone, uncommon field mint, rare safety amber, and rare_plus two-tone amber with a mint heart, since I2 names every rare_plus item a Core or Heart (Andrew accepted this on 2026-09-27). HAZARD leaves the ramp. Each rarity also has a frame (§5), so colour never carries it alone.
 
 **Contrast rules.** These ratios were measured with the WCAG formula.
 
@@ -374,7 +384,7 @@ These briefs are for headless Blender work. The style is low-poly, chunky and st
 | `fleet_paint` | Iron oxide |
 | `requisition_tag` | Brass |
 | `ancient_enamel` | Petrol, cast and seamless, with sandstone dust on top faces |
-| `ancient_light` | ANCIENT violet, emissive in thin seams only |
+| `ancient_light` | ANCIENT (pending; A is the default), emissive in thin seams set in charcoal grooves |
 | `rarity` | Set at runtime from the rarity ramp |
 
 | Asset | Silhouette | Tris | Slots | Must read at gameplay distance |
@@ -384,9 +394,15 @@ These briefs are for headless Blender work. The style is low-poly, chunky and st
 | **Class shell, Kest** | The same core in an open truss cage, with two or three amber-striped satchels, a short mortar tube in a recoil cradle and a folded glide vane on top. The dome sits forward and holds a bird pilot bust (crest, goggles, beak). | 3,000 to 5,000, plus a 400 to 800 pilot bust | as above; class_accent on the satchel stripes, fuse tips and mortar mouth | The crest through the glass, the satchels, the mortar mouth and the vane when open |
 | **Accretion chunks** | Small (a bolt plate or bracket), medium (a dented tank end or pipe elbow) and large (a panel section with a weld seam). Each is irregular, with one flat face to sit on the ball. | 60 to 120, 150 to 300, and 400 to 800 | paint, bare_metal, rubber | Its size class by silhouette, and that it is scrap and not a pickup |
 | **Reward gate arch** | Two stout posts and a lintel of salvaged girders with a diamond keystone. The rarity topper sits above, with trigger and element glyph plates beside it. | 1,500 to 2,500 | paint, bare_metal, rarity (lintel trim, keystone), field (keystone core) | The rarity (colour plus topper shape) and a clear opening |
-| **Warden clamp** | An awakened ancient (§11), not Fleet gear. It has two massive cast C-jaws on a seamless pivot housing, closing around the beacon. Its plating is layered cast shells with thin light seams, and the weak point is an exposed core where a shell has cracked away. It has no bolts, welds or brass. | 4,000 to 6,000 | ancient_enamel, ancient_light (seams, core), bare_metal (jaw edges) | The jaws and their closing path, the cracked weak point, and that it is ancient |
+| **Warden clamp base** | An awakened ancient (§11), not Fleet gear. It has two massive cast C-jaws on a seamless pivot housing, closing around the beacon. Its plating is layered cast shells with thin light seams, and the weak point is an exposed core where a shell has cracked away. It has no bolts, welds or brass. One shared base carries a per-stage family kit (below). | 4,000 to 6,000 for the base, plus 800 to 1,500 per family kit | ancient_enamel, ancient_light (seams, core), bare_metal (jaw edges) | The jaws and their closing path, the cracked weak point, and which family it belongs to |
 
-The Warden brief follows DESIGN-V2 §10, which makes Wardens ancients. The ancient family it belongs to is W7's call, and its silhouette should add that family's mark (§11).
+Andrew set one ancient family per stage on 2026-09-27. The clamp base is shared, and each stage's Warden swaps the family kit that sits on the pivot and forms the weak point. The kit carries the family's mechanic, so the three Wardens are not reskins.
+
+| Stage | Family | Kit on the base | Weak point | Sound character |
+| --- | --- | --- | --- | --- |
+| 1 | Reactor relic | A squat dome over the pivot with three vent stacks that swell before they erupt | The reactor core behind a cracked dome shell | A deep hum with a quickening crackle |
+| 2 | Swarm remnant (hive) | A honeycomb hive housing on the pivot that launches and recalls drones in formation | The hive's queen cell, exposed when the swarm is scattered | A unison buzz that locks into a chord |
+| 3 | The Mind's hands | Two extra thin jointed arms above the jaws and a lens cluster that tracks the ball | The lens cluster, which opens when it adapts | A pure sine chime echoing the class motif, slightly wrong |
 
 Growth and cockpit rules apply to all three shells. The cockpit dome counter-rotates to stay upright while the shell rolls, so it stays findable (AD-01, AC-01). The motion treatment is still unset under RP-23. Chunks accrete within the shell's clearance envelope, and growth never implies unbounded scale (RQ-06, AC-17). Each asset's recipe notes its provenance.
 
@@ -446,12 +462,14 @@ Tenacity immunity (DESIGN-V2 §10) shows as the broken-bracket flicker from Rive
 | Swarm remnants (drones) | Many small identical flat triangles. They are the only identical things in the game, on purpose. | Flocking. They snap into a line, ring or arrowhead in unison. | A unison high buzz, where a locked formation is a chord | The formation is the threat. A ball bowling through scatters it, and the chord breaks into single notes. |
 | The Mind's hands (superintelligence) | Tall, thin, many-jointed manipulator arms and a lens cluster that tracks the ball | Still, then exact. The lens always follows you. | A pure sine chime that plays the class motif back, slightly wrong | When it adapts, its lens shows the trigger icon of the habit it counters (for example `trg_on_rebound`) in HAZARD, and it takes its brace or wall-guard pose before the counter takes effect |
 
-Ancient light is violet, never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
+**Wardens.** Each stage's Warden is one family on a shared clamp base (§9): stage 1 a reactor relic, stage 2 a swarm-remnant hive, stage 3 one of the Mind's hands.
+
+Ancient light is the ANCIENT colour (pending, Cherenkov blue by default), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
 
 **The world.**
 
 - **Contraptions** (steam lifts, launchers, pressure valves) belong to the steampunk era. Each has a bone gauge dial whose needle sweeps linearly through its cycle, a steam puff at the fire moment and its own sound. A lift chuffs upward, a launcher whistles then bangs, and a valve squeals then hisses. A smashable valve is a big wheel with a visible crack.
-- **The focal landmark**, the dam-works tower cluster, mixes both eras. Ancient cast towers carry steampunk repairs grown over them. A violet ancient light at the top makes it findable from every layer.
+- **The focal landmark**, the dam-works tower cluster, mixes both eras. Ancient cast towers carry steampunk repairs grown over them. An ANCIENT light at the top makes it findable from every layer.
 - **Terrain events** use the §4 grammar and draw exactly the new collider. A cave-in is an instant fill over its 3 s crumble, with dust falling from the roof edge, and sounds like a rising rock grind. An impact is a projectile, with brackets closing on the crater, and sounds like a falling shriek into a deep boom. A structural collapse is a lane striped along where the piece will fall, and sounds like groaning steel, then a shear.
 
 ## Conflicts resolved
@@ -460,7 +478,8 @@ Ancient light is violet, never mint, because mint belongs to the living salvage 
 - **Mint.** AD-02 gives field mint to the shared collection effect, and DESIGN-V2 gives it to Sable. Both stand. Shape separates them (§2).
 - **Boss colour.** `event_kinds` gives boss telegraphs BRASS, and W2 puts every attack in the HAZARD family. Danger stays HAZARD, and brass marks the owner (§4).
 - **Characters.** Bible §4 describes Rivet as a precise machinist and Kest as a patient mortar pilot, while DESIGN-V2 §2 makes them a sprinter and a demolitions caster. The shells keep the Bible's working landmarks (Rivet's optical rail and cutting lens, Kest's truss, lift hardware and mortar tube), so the kit and the pilot's culture read together.
-- **The Warden.** The V3 plan names a "Warden clamp", and the first draft of this sheet made it Fleet gear. DESIGN-V2 §10 makes Wardens ancients, so the clamp is now cast ancient machinery with no brass tag.
+- **The Warden.** The V3 plan names a "Warden clamp", and the first draft of this sheet made it Fleet gear. DESIGN-V2 §10 makes Wardens ancients, and Andrew set one family per stage (2026-09-27), so the clamp is a shared ancient base with a family kit per stage.
+- **Rare_plus.** Andrew accepted amber with a mint heart and a notched frame (2026-09-27). Red stays for things that hurt you.
 - **Rarity and faction.** Enemy bodies never use the rarity ramp's colours as emissive light, so a glowing enemy cannot read as loot.
 
 ## Deltas from current code
@@ -474,4 +493,4 @@ These are follow-ups for the writers who own each file. This document changes no
 | `core/event_kinds.gd` | `boss_attack_telegraphed` is BRASS | A HAZARD fill with a brass rim tick | W2 |
 | `build/accretion.gd` | Kinetic is copper, the same as Rivet | Kinetic is bone | W4 |
 | `core/class_def.gd` | Colour only | A colour, shape and sound per class row (DESIGN-V2 §2) | W3 |
-| `core/palette.gd` | No ancient light | An `ANCIENT` constant, if Andrew accepts the violet | W7 |
+| `core/palette.gd` | No ancient light | An `ANCIENT` constant once Andrew picks from §2's three candidates | W7 |
