@@ -239,7 +239,8 @@ func _physics_process(delta: float) -> void:
 	if not calm_bay:
 		_publish(events.advance(delta, ball, velocity))
 	if contraptions.has(ctx.flow.stage()):
-		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying()):
+		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
+		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
 	if bay.in_yard(ball):
 		_free_cooldowns()
@@ -416,6 +417,9 @@ func _contraption_fact(fact: Dictionary) -> void:
 		"accel":
 			if not ctx.calm:
 				ctx.player.add_external_accel(fact["accel"])
+		"carry":
+			# The deck's own frame, not a world push, so it holds in calm too.
+			ctx.player.add_external_accel(fact["accel"])
 
 
 func _bay_fact(fact: Dictionary) -> void:

@@ -16,6 +16,7 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 #   {"kind": "fact", "fact": String, "at": Vector3}   a WORLD_ROWS kind
 #   {"kind": "codex", "id": String, "at": Vector3}
 #   {"kind": "accel", "accel": Vector3}           a push to add this tick (a thermal)
+#   {"kind": "carry", "accel": Vector3}           the barge under the ball accelerating
 
 const GAUGE_REACH := 60.0
 const RAM_REACH := 2.8
@@ -28,6 +29,10 @@ const DOOR_SINK := 6.5
 const DOOR_SECONDS := 0.6
 const CABLE_REST := 1.0
 const PUFF_SECONDS := 0.7
+# How hard a ball the player is not steering keeps station on a barge, per second of
+# relative speed: the ball's own rolling resistance and drag act against the world,
+# not the deck, and would otherwise let it creep aft (measured: 6.6 m per crossing).
+const KEEP_STATION := 4.0
 
 var map
 var ground: Callable
@@ -82,6 +87,8 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 func reset() -> void:
 	for b in barges:
 		b["time"] = b["spec"]["offset"]
+		b["last"] = Vector3.INF
+		b["velocity"] = Vector3.ZERO
 		_place_barge(b, Vector3.INF)
 	for l in lifts:
 		l["cycle"] = SteamCycle.new(SteamCycle.PERIODIC, l["spec"]["charge"], l["spec"]["offset"])
@@ -109,11 +116,19 @@ func note_slam(at: Vector3) -> void:
 
 
 # One physics tick. riding is true while world already holds the ball to a rail.
-func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool) -> Array:
+func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, steering := false) -> Array:
 	var facts := []
 	for b in barges:
 		b["time"] += delta
 		_place_barge(b, ball)
+		var at: Vector3 = b["body"].global_position
+		var v: Vector3 = (at - (b["last"] as Vector3)) / delta if b["last"] != Vector3.INF else Vector3.ZERO
+		var a: Vector3 = (v - (b["velocity"] as Vector3)) / delta if b["last"] != Vector3.INF else Vector3.ZERO
+		b["last"] = at
+		b["velocity"] = v
+		if on_barge(b, ball):
+			var keep := Vector3.ZERO if steering else (v - velocity) * KEEP_STATION
+			facts.append({"kind": "carry", "accel": a + keep})
 	for l in lifts:
 		var what: String = l["cycle"].step(delta)
 		_place_lift(l)
@@ -232,7 +247,20 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 		band.position = Vector3(0.0, size.y * 0.5 + 0.02, side * (size.z * 0.5 - 0.25))
 		body.add_child(band)
 	add_child(body)
-	return {"spec": spec, "body": body, "time": 0.0, "tilt": Vector2.ZERO}
+	return {"spec": spec, "body": body, "deck": deck, "time": 0.0, "tilt": Vector2.ZERO, "last": Vector3.INF, "velocity": Vector3.ZERO}
+
+
+# A ball resting on a deck rides it. A rolling sphere on a deck that accelerates lags
+# it by 5/7 of the deck's change of speed and rolls off (measured: 42 m of drift over
+# one crossing), so while the ball rests on a barge it is given the barge's own
+# acceleration, which for a rolling sphere makes it keep station exactly. Once the
+# ball leaves the deck, by rolling or jumping, it is on its own.
+func on_barge(b: Dictionary, ball: Vector3) -> bool:
+	var body: AnimatableBody3D = b["body"]
+	var size: Vector3 = b["spec"]["size"]
+	var local := ball - body.global_position
+	return absf(local.x) <= size.x * 0.5 + 0.5 and absf(local.z) <= size.z * 0.5 + 0.5 \
+		and local.y > size.y * 0.5 and local.y < size.y * 0.5 + 1.8
 
 
 # Where a barge is at time t along its lane: dwell at a, travel, dwell at b, travel back.
@@ -273,7 +301,9 @@ func _place_barge(b: Dictionary, ball: Vector3) -> void:
 	b["tilt"] = (b["tilt"] as Vector2).lerp(target, 0.05)
 	var tilt: Vector2 = b["tilt"]
 	var body: AnimatableBody3D = b["body"]
-	body.transform = Transform3D(Basis.from_euler(Vector3(tilt.x, 0.0, tilt.y)), at)
+	body.transform = Transform3D(Basis.IDENTITY, at)
+	# The lean is drawn, not simulated: a tilted collider would roll the ball off.
+	(b["deck"] as MeshInstance3D).basis = Basis.from_euler(Vector3(tilt.x, 0.0, tilt.y))
 
 
 func barge_position(index: int) -> Vector3:
