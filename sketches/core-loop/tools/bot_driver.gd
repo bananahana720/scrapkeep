@@ -374,9 +374,14 @@ func _in_boss() -> bool:
 	return not boss_note.is_empty() and not boss_note.has("outcome")
 
 
-func _on_player_hit(amount: float, _source: String) -> void:
+func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hp_lost", amount)
 	_count("hits")
+	var into: Dictionary = boss_note if _in_boss() else _note
+	if not into.is_empty():
+		if not into.has("hit_sources"):
+			into["hit_sources"] = {}
+		into["hit_sources"][source_id] = snappedf(float(into["hit_sources"].get(source_id, 0.0)) + amount, 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:

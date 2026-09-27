@@ -150,6 +150,7 @@ func _build() -> bool:
 	_boss_section(runs)
 	_hands_section(runs)
 	_damage_section(runs)
+	_hurt_section(runs)
 	_codex_section(runs, entries)
 	_flag_breaks(runs)
 	_flag_heft(runs, band)
@@ -390,6 +391,34 @@ static func _weak_hits(hits) -> String:
 	for key in hits:
 		parts.append("%s %d" % [key, int(hits[key])])
 	return ", ".join(parts)
+
+
+# What hurt the player: HP lost by source (event_kinds' player_hit source), per policy
+# and stage, summed over runs.
+func _hurt_section(runs: Array[Dictionary]) -> void:
+	_lines.append("## What hurt the player (HP lost by source, summed over runs)")
+	_lines.append("")
+	_lines.append("| Policy | Stage | Sources |")
+	_lines.append("| --- | --- | --- |")
+	for policy in POLICIES:
+		for stage in range(1, StageDefs.COUNT + 2):
+			var sums := {}
+			for run in runs:
+				if run["bot"].get("policy") != policy:
+					continue
+				var by = _note(run, stage).get("hit_sources", {}) if stage <= StageDefs.COUNT else \
+					((run["bot"].get("boss") as Dictionary).get("hit_sources", {}) if run["bot"].get("boss") is Dictionary else {})
+				if not by is Dictionary:
+					continue
+				for key in by:
+					sums[key] = float(sums.get(key, 0.0)) + float(by[key])
+			if sums.is_empty():
+				continue
+			var parts := []
+			for key in sums:
+				parts.append("%s %.0f" % [key, sums[key]])
+			_lines.append("| %s | %s | %s |" % [policy, str(stage) if stage <= StageDefs.COUNT else "Brindle", ", ".join(parts)])
+	_lines.append("")
 
 
 # What broke the Wardens: each strike kind's share of Warden damage, per policy and stage.
