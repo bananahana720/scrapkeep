@@ -598,12 +598,12 @@ func _declare_codex() -> void:
 		codex.declare(entry)
 
 
-# Once per run per id here; the codex itself owns what persists across runs.
+# Every time a trick fires. The codex dedupes per run and per attempt, so a trick first
+# pulled in a retried attempt pays again after the retry (CONTRACTS, Codex).
 func _discover(id: String, at: Vector3) -> void:
-	if discovered.has(id):
-		return
+	if not discovered.has(id):
+		discovery_log.append(id)
 	discovered[id] = at
-	discovery_log.append(id)
 	var codex = _codex()
 	if codex != null and codex.has_method("mark_discovered"):
 		codex.mark_discovered(id, at, ["player"])
