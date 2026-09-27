@@ -107,7 +107,8 @@ func _check_idempotent() -> void:
 func _check_shell() -> void:
 	var run = _game.run
 	var small: float = _build.accretion.scale.x
-	run.add_scrap(300, Vector3.ZERO)
+	# 900 mass is heft 3.0 at 1 + mass/450 (class 3), as 300 was at the old 1/150.
+	run.add_scrap(900, Vector3.ZERO)
 	var big: float = _build.accretion.scale.x
 	var shape: CollisionShape3D = null
 	for child in _game.player.body().get_children():

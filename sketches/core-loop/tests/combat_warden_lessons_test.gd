@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The Warden's per-stage lessons, as data, and the event miniboss's plating.
 # - Stage 2, "caps": a stomp of force 10 at heft 1 (punch 41) lands on a vent cap at
@@ -11,7 +12,7 @@ const Warden := preload("res://src/combat/warden.gd")
 # - Stage 3, "magnet": a real bolt on the magnet during a tug drops plating_of(warden)
 #   to 0 for 3.0 s, within one tick. With drive held away from the Warden, planar
 #   speed stays above 0.8 x cruise through a whole tug.
-# - Stage 2's event miniboss has plating 1.25 x 60 = 75.
+# - Stage 2's event miniboss has plating 1.25 x stage 2's Warden plating (80, so 100).
 # Waits for the Warden's cycles run at WAIT_SCALE; every measurement runs at 1.
 
 const WAIT_SCALE := 3.0
@@ -81,7 +82,7 @@ func _physics_process(delta: float) -> bool:
 				_zero_ticks += 1
 			else:
 				var seconds := _zero_ticks * TICK
-				_report("magnet_stun", _stun_seen and absf(seconds - Warden.UNPLATE_SECONDS) <= TICK + 0.0001 and _combat.plating_of(_warden) == 95.0,
+				_report("magnet_stun", _stun_seen and absf(seconds - Warden.UNPLATE_SECONDS) <= TICK + 0.0001 and _combat.plating_of(_warden) == StageDefs.of(3)["warden_plating"],
 					"a bolt on the magnet mid-tug held plating_of(warden) at 0 for %d ticks = %.3f s (needs 3.0 +- 1 tick), then back to %.0f"
 						% [_zero_ticks, seconds, _combat.plating_of(_warden)])
 				Engine.time_scale = WAIT_SCALE
@@ -177,8 +178,9 @@ func _miniboss() -> void:
 	var ctx = _game.ctx
 	var at: Vector3 = ctx.terrain.spawn_point(2) + Vector3(40.0, 0.0, 0.0)
 	var boss: Node3D = ctx.spawner.spawn_enemy("miniboss", ctx.terrain.drop_point(at.x, at.z, 3.6))
-	_report("miniboss_plating", _combat.plating_of(boss) == 75.0,
-		"stage 2 event miniboss plating_of = %.1f (needs 1.25 x 60 = 75)" % _combat.plating_of(boss))
+	var want: float = 1.25 * StageDefs.of(2)["warden_plating"]
+	_report("miniboss_plating", _combat.plating_of(boss) == want,
+		"stage 2 event miniboss plating_of = %.1f (needs 1.25 x %.0f = %.0f)" % [_combat.plating_of(boss), StageDefs.of(2)["warden_plating"], want])
 	boss.queue_free()
 
 

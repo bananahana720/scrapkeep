@@ -10,7 +10,7 @@ const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
 # Heft is the growth number (DEMO-SPEC): scrap rolled up becomes mass, parts add more.
 # It scales punch and never touches handling. Classes I to V start at these values.
-const HEFT_PER_MASS := 1.0 / 150.0
+const HEFT_PER_MASS := 1.0 / 450.0
 const HEFT_PER_PART := 0.2
 const HEFT_CLASS_AT := [1.0, 1.5, 2.2, 3.2, 4.6]
 # Bonus cores past this many add nothing more to the gate tier.

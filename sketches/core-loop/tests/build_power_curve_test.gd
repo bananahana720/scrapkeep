@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
 # The power curve (DEMO-SPEC, reconciled.json owner B). Four builds are composed through
@@ -134,8 +135,13 @@ func _finish() -> bool:
 	_report("fixed ground probe", not _game.tuning.on("legacy_spin_probe"),
 		"speeds measured with the default fixed ground probe (legacy spin probe off)")
 	_report("skipper cruise", sk["cruise"] >= 30.0 and sk["cruise"] < 95.0, "punch %.1f (needs 30 to under 95)" % sk["cruise"])
-	_report("skipper blazing", sk["blazing"] >= 95.0 and sk["blazing_tier"] == SpeedTier.BLAZING,
-		"punch %.1f at tier %d (needs 95+: skill substitutes for growth)" % [sk["blazing"], sk["blazing_tier"]])
+	# Skill substitutes for growth through stage 2; on stage 3 the skipper needs the
+	# Warden's magnet (the tuning pass's approved band, DESIGN-NOTES L12).
+	var plating_2: float = StageDefs.of(2)["warden_plating"]
+	var plating_3: float = StageDefs.of(3)["warden_plating"]
+	_report("skipper blazing", sk["blazing"] >= plating_2 and sk["blazing"] < plating_3 and sk["blazing_tier"] == SpeedTier.BLAZING,
+		"punch %.1f at tier %d (needs %.0f to under %.0f: skill beats stage 2's plating, stage 3 needs the magnet)"
+			% [sk["blazing"], sk["blazing_tier"], plating_2, plating_3])
 	_report("reference cruise", rf["cruise"] >= 95.0, "punch %.1f (needs 95+)" % rf["cruise"])
 	_report("engaged cruise", en["cruise"] >= 120.0, "punch %.1f (needs 120+)" % en["cruise"])
 	_report("engaged DPS", en["dps"] >= 3.0 * sk["dps"], "modelled %.0f against skipper %.0f (%.1fx, needs 3x)" % [en["dps"], sk["dps"], en["dps"] / sk["dps"]])

@@ -3,14 +3,16 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The Warden, spawned at the beacon through ctx.spawner.spawn_enemy("warden", at).
-# 1. A stage-1 Warden (plating 30) takes a cruise ram at heft 1 in full.
+# 1. A stage-1 Warden (plating 45) takes a blazing ram at heft 1 in full: "Ram it hard".
 # 2. Pulses: the ball circles inside its reach for PULSE_SIM seconds. Every pulse
 #    follows a telegraph of at least 2.0 s, adds lift only (planar speed across the
 #    pulse changes by less than 3%), and the Warden never moves.
 # 3. Break time with base bolts and no parts: warden I within 60 s of continuous
-#    runner fire, warden III within 90 s. The ball is held still and aimed at it.
+#    runner fire. Warden III must NOT break within 90 s of the same fire on its body:
+#    since the tuning pass (plating 140, HP 7000) stage 3 needs its magnet, the lesson. The ball is held still and aimed at it.
 # Long spans run at Engine.time_scale, and every duration is measured in simulated
 # seconds (the sum of physics deltas), so the numbers are game time, not wall time.
 
@@ -76,9 +78,12 @@ func _physics_process(delta: float) -> bool:
 				_stuns = _warden.magnet_stuns
 			var broke: bool = not _kills.is_empty()
 			if broke or _sim > LIMITS[_fire_stage] + 5.0:
-				_report("break_%d" % _fire_stage, broke and _sim <= LIMITS[_fire_stage],
-					"warden %s broke %s %.1f s of continuous base runner fire (limit %.0f s)%s"
-						% ["I" if _fire_stage == 1 else "III", "after" if broke else "not within", _sim, LIMITS[_fire_stage],
+				# Stage 1 must break inside its limit; stage 3 must hold out past it on bare bolts.
+				var ok: bool = (broke and _sim <= LIMITS[_fire_stage]) if _fire_stage == 1 else not broke
+				_report("break_%d" % _fire_stage, ok,
+					"warden %s broke %s %.1f s of continuous base runner fire (%s %.0f s)%s"
+						% ["I" if _fire_stage == 1 else "III", "after" if broke else "not within", _sim,
+							"limit" if _fire_stage == 1 else "must outlast", LIMITS[_fire_stage],
 							"; aimed at the body, magnet stuns %d" % _stuns])
 				if _fire_stage == 1:
 					_start_fire(3)
@@ -104,12 +109,12 @@ func _setup() -> void:
 	_home = _warden.global_position
 
 	_combat.heft_override = 1.0
-	var cruise: float = ctx.tuning.f("cruise")
+	var blazing: float = ctx.tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.BLAZING]
 	var before: float = _warden.hp
 	var deflections: int = _combat.deflections
-	_combat.strike(_warden, "ram", cruise)
-	_report("cruise_ram", before - _warden.hp >= _warden.plating and _combat.deflections == deflections,
-		"a cruise ram (%.1f m/s, punch %.1f) on plating %.0f dealt %.1f in full" % [cruise, _combat.punch_of("ram", cruise), _warden.plating, before - _warden.hp])
+	_combat.strike(_warden, "ram", blazing)
+	_report("blazing_ram", before - _warden.hp >= _warden.plating and _combat.deflections == deflections,
+		"a blazing ram (%.1f m/s, punch %.1f) on plating %.0f dealt %.1f in full" % [blazing, _combat.punch_of("ram", blazing), _warden.plating, before - _warden.hp])
 	_combat.heft_override = -1.0
 	_warden.hp = _warden.max_hp
 

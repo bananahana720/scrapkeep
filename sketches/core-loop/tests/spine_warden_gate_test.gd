@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
@@ -85,7 +86,7 @@ func _physics_process(_delta: float) -> bool:
 func _run_checks() -> void:
 	var flow = _game.flow
 	var warden: Node3D = flow.warden
-	_report("sealed", flow.sealed and is_instance_valid(warden) and warden.kind == "warden" and warden.plating == 30.0,
+	_report("sealed", flow.sealed and is_instance_valid(warden) and warden.kind == "warden" and warden.plating == StageDefs.of(1)["warden_plating"],
 		"stage 1 is sealed by a warden with plating %.0f and hp %.0f" % [warden.plating if warden else -1.0, warden.max_hp if warden else -1.0])
 
 	var mast: Vector3 = flow.beacon.global_position

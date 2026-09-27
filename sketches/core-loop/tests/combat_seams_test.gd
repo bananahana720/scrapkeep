@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The spine's Warden gate, objective line and crush pass-through, run against the real
 # combat spawner instead of the spine's test double (spine_warden_gate_test,
@@ -12,7 +13,8 @@ const Intent := preload("res://src/movement/intent.gd")
 #    at once and fires beacon_unsealed once.
 #    enemy_killed(warden) arrives while the Warden is still in the tree, already
 #    colliding with nothing and reading integrity 0: the kill path, not a free.
-# 2. Objective: stage 1 reads plating 30 and the real punch_now(); stage 2 reads 60.
+# 2. Objective: stage 1 reads its Warden plating (StageDefs) and the real punch_now();
+#    stage 2 reads its own.
 # 3. Crush: at heft 3 the ball rolls through a real chaser at 20 m/s, keeps 95% of its
 #    speed and kills it once; at heft 1 the same approach rams it, knocks it and it lives.
 
@@ -105,14 +107,14 @@ func _gate() -> void:
 	var flow = _game.flow
 	var warden: Node3D = flow.warden
 	var real: bool = is_instance_valid(warden) and warden.get_script() == load("res://src/combat/warden.gd")
-	_report("real_warden", real and flow.sealed and warden.plating == 30.0 and warden.max_hp == 400.0,
+	_report("real_warden", real and flow.sealed and warden.plating == StageDefs.of(1)["warden_plating"] and warden.max_hp == StageDefs.of(1)["warden_hp"],
 		"flow spawned combat's own Warden through the spawner: plating %.0f, hp %.0f, sealed %s"
 			% [warden.plating if real else -1.0, warden.max_hp if real else -1.0, flow.sealed])
 	if not real:
 		return
 	_warden_ref = warden
 	_combat.strike(warden, "runner", 10.0)
-	_report("deflect_on_bus", _deflected == 1, "a 10-punch shot on plating 30 published strike_deflected %d time(s) on the real bus" % _deflected)
+	_report("deflect_on_bus", _deflected == 1, "a 10-punch shot on plating %.0f published strike_deflected %d time(s) on the real bus" % [warden.plating, _deflected])
 	warden.hp = warden.max_hp
 	_combat.strike(warden, "runner", warden.max_hp * 0.5)
 	flow.physics_step(DT)
@@ -137,11 +139,11 @@ func _objective() -> void:
 	_game.flow.enter_stage(1, Vector3(0.0, 0.0, 14.0), false)
 	var one: String = _game.flow.objective_text()
 	var punch := int(_combat.punch_now())
-	_report("objective_1", one.contains("plating 30") and one.contains("Punch %d" % punch) and not one.to_lower().contains("optional"),
+	_report("objective_1", one.contains("plating %d" % int(StageDefs.of(1)["warden_plating"])) and one.contains("Punch %d" % punch) and not one.to_lower().contains("optional"),
 		"\"%s\" (real punch_now %d)" % [one, punch])
 	_game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
 	var two: String = _game.flow.objective_text()
-	_report("objective_2", two.contains("plating 60") and not two.to_lower().contains("optional"), "\"%s\"" % two)
+	_report("objective_2", two.contains("plating %d" % int(StageDefs.of(2)["warden_plating"])) and not two.to_lower().contains("optional"), "\"%s\"" % two)
 
 
 func _start_crush() -> void:

@@ -46,11 +46,11 @@ func _physics_process(_delta: float) -> bool:
 		_scenarios = [
 			["shrapnel bloom", ["cross_split", "hot_rivets"], _set_shrapnel, 3, _check_shrapnel],
 			["shrapnel cap", ["cross_split", "hot_rivets"], _set_shrapnel_flood, 2, _check_shrapnel_cap],
-			["wrecking ball", ["tread_plating", "hot_rivets"], _set_wreck, 3, _check_wreck],
+			["wrecking ball", ["double_feed", "hot_rivets"], _set_wreck, 3, _check_wreck],
 			["lightning rod", ["arc_coil", "rivet_plating"], _set_rod, 6, _check_rod],
-			["tesla pylon", ["long_spool", "arc_coil"], _set_tesla, 50, _check_tesla],
+			["tesla pylon", ["focus_lens", "arc_coil"], _set_tesla, 50, _check_tesla],
 			["pinwheel", ["spiral_wave", "tread_plating"], _set_pinwheel, 12, _check_pinwheel],
-			["glacier hull", ["rivet_plating", "frost_vane"], _set_glacier, 3, _check_glacier],
+			["glacier hull", ["slag_rounds", "frost_vane"], _set_glacier, 3, _check_glacier],
 			["frost then kinetic", [], _set_kinetic, 3, _check_kinetic],
 			["linked spiral", ["spiral_wave", "chain_arc"], _set_spiral, 2, _check_spiral],
 		]
@@ -138,7 +138,7 @@ func _set_wreck() -> void:
 
 func _check_wreck() -> void:
 	_report("wrecking ball", _build.has_transformer("wrecking_ball") and _struck.get("ram", 0) == 1 and _synergy_hits() >= 1,
-		"Tread Plating + Hot Rivets: one ram sent a shockwave that struck %d other enemies" % _synergy_hits())
+		"Double Feed + Hot Rivets: one ram sent a shockwave that struck %d other enemies" % _synergy_hits())
 
 
 func _set_rod() -> void:
@@ -161,7 +161,7 @@ func _check_tesla() -> void:
 	var hooked: bool = _game.player.kit.hooked
 	_game.player.release_grapple()
 	_report("tesla pylon", _build.has_transformer("tesla_pylon") and hooked and _struck.get("arc", 0) >= 2,
-		"Long Spool + Arc Coil, hooked for 0.55 s: arcs leapt to nearby enemies %d times" % _struck.get("arc", 0))
+		"Focus Lens + Arc Coil, hooked for 0.55 s: arcs leapt to nearby enemies %d times" % _struck.get("arc", 0))
 
 
 func _set_pinwheel() -> void:
@@ -181,7 +181,7 @@ func _set_glacier() -> void:
 
 func _check_glacier() -> void:
 	_report("glacier hull", _build.has_transformer("glacier_hull") and _synergy_hits() >= 1,
-		"Rivet Plating + Frost Vane: a 12 m/s landing cracked a frost ring that struck %d enemies" % _synergy_hits())
+		"Slag Rounds + Frost Vane: a 12 m/s landing cracked a frost ring that struck %d enemies" % _synergy_hits())
 
 
 func _water(point: Vector3) -> Dictionary:

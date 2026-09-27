@@ -4,7 +4,7 @@ extends RefCounted
 # is a starting point for play to tune; tuning edits this file and nothing else. HP is
 # fixed: the fight never reads the run's parts or heft (R-10).
 
-const MAX_HP := 2400.0
+const MAX_HP := 14400.0
 # Each phase ends when HP reaches its floor (a share of MAX_HP) and its set piece has
 # played for its minimum time. The third floor is the eject.
 const PHASE_FLOORS := [0.66, 0.33, 0.10]
