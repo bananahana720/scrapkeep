@@ -473,7 +473,7 @@ func _flag_breaks(runs: Array[Dictionary]) -> void:
 				continue
 			if fight < BREAK_BAND.x or fight > BREAK_BAND.y:
 				var entry := float(row["ticks_to_warden_break"]) / Engine.physics_ticks_per_second if row.get("ticks_to_warden_break") != null else -1.0
-				_flags.append("%s fought the stage %d Warden for %.1f s from engagement, outside %d to %d s (%.1f s from entry)."
+				_flags.append("%s fought the stage %d Warden for %.1f s (engaged and committed to break), outside %d to %d s (%.1f s from entry)."
 					% [who, stage, fight, int(BREAK_BAND.x), int(BREAK_BAND.y), entry])
 
 
