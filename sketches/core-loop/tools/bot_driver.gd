@@ -4,6 +4,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
 const Palette := preload("res://src/core/palette.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -180,7 +183,7 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 	game = game_ref
 	policy = policy_name if policy_name in POLICIES else "skipper"
 	seed_value = seed_number
-	class_index = seed_number % 2
+	class_index = seed_number % ClassDef.all().size()
 	rng.seed = hash([policy, seed_number])
 
 
@@ -240,6 +243,17 @@ func class_id() -> String:
 
 func _engineer() -> bool:
 	return class_id() == "pylon_engineer"
+
+
+# Kest's throw is hold-release: the bot lets go of LMB once the throw would reach its
+# aim, as a player watching the landing ring would, instead of always throwing long.
+func _throw_hold(aim) -> bool:
+	var gauge = game.player.abilities.gauge(AbilityState.WEAPON)
+	if gauge == null or not gauge.charging or not _aim_valid(aim):
+		return true
+	var reach: float = _flat(game.player.ball_position(), _aim_point(aim))
+	var want := clampf((reach - Weapons.STICKY_THROW_MIN) / (Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"] - Weapons.STICKY_THROW_MIN), 0.0, 1.0)
+	return gauge.fraction() < want
 
 
 # One physics tick. Returns true when the run is over.
@@ -1133,7 +1147,7 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		heading = _detour
 	elif player.state.grounded:
 		heading = _around_walls(ball, heading)
-	var hold := {"fire_held": true}
+	var hold := {"fire_held": _throw_hold(aim)}
 	var look_at: Vector3 = ball + heading
 	var aiming := _aim_valid(aim)
 	if aiming:
