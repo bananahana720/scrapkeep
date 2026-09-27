@@ -59,6 +59,10 @@ func _physics_process(_delta: float) -> bool:
 		_next_case()
 		return false
 	_ticks += 1
+	# The slam is a fresh Ctrl press in the air: a brake held across a reset stays a
+	# brake (DESIGN-NOTES integration call 16).
+	if _case == "slam" and _ticks == 2:
+		_source.hold = {"brake_held": true}
 	var v: Vector3 = _game.player.state.velocity
 	if _double.strikes.is_empty():
 		_last_down = maxf(0.0, -v.y)
@@ -92,7 +96,6 @@ func _next_case() -> void:
 			start = Vector3(spot.x, top + 1.0 + DROP, spot.y)
 		"slam":
 			start = Vector3(spot.x, top + 1.0 + DROP, spot.y)
-			_source.hold = {"brake_held": true}
 		"ram":
 			start = _game.ctx.terrain.drop_point(spot.x - ROLL_GAP, spot.y, 1.0)
 			velocity = Vector3.RIGHT * ROLL_SPEED

@@ -32,7 +32,6 @@ const FIELD_ARGS := {
 	"reward_chosen": ["part", 0],
 	"event_announced": ["event", 0],
 	"event_started": ["event", 0],
-	"event_ended": ["event", 0],
 	"milestone_won": ["event", 0],
 	"heft_class_changed": ["class", 0],
 	"heft_class_dropped": ["class", 0],
@@ -104,7 +103,15 @@ func setup(game_ref) -> void:
 	# The phase name is the signal's second argument, so it gets its own handler.
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast(EventKinds.hud("boss_phase_changed", {"name": phase_name.capitalize()}), EventKinds.color("boss_phase_changed")))
+	game.events.event_ended.connect(_on_event_ended)
 	layout(_screen_size())
+
+
+# Only a lost event gets a toast, in the colour of a loss: a win already has its
+# milestone toast, and an event that simply passes needs none.
+func _on_event_ended(event_id: String, outcome: String) -> void:
+	if outcome == "lost":
+		toast(EventKinds.hud("event_ended", {"event": event_id.replace("_", " ").capitalize()}), Palette.RUST)
 
 
 func _screen_size() -> Vector2:
@@ -154,7 +161,7 @@ func _connect_toasts(events) -> void:
 		if EventKinds.priority(kind) < EventKinds.TOAST_PRIORITY or EventKinds.row(kind).get("hud", "") == "":
 			continue
 		var argc: int = _arg_count(events, kind)
-		if kind == "boss_phase_changed" or kind in PRESENTATION_OWNED:
+		if kind == "boss_phase_changed" or kind == "event_ended" or kind in PRESENTATION_OWNED:
 			continue
 		if FIELD_ARGS.has(kind):
 			events.connect(kind, _drop_args(_on_field_fact.bind(kind), argc - 1))

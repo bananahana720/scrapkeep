@@ -101,7 +101,7 @@ func _finish_rescue(flow) -> void:
 				% [_rescue.get("at_tick", -1), _rescue.get("speed", -1.0), wanted])
 		_game.run.damage(99999.0, "test")
 		flow.retry_stage()
-		_report("arena retry", _cleared == ["arena", "arena"] and flow.state_name() == "boss" and not flow.in_stage(),
+		_report("arena retry", _cleared == ["arena", "arena_retry"] and flow.state_name() == "boss" and not flow.in_stage(),
 			"R in the arena republished stage_content_cleared %s, state %s" % [_cleared, flow.state_name()])
 		var bare := BareBoss.new()
 		_game.add_child(bare)

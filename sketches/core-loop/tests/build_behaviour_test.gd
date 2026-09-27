@@ -110,9 +110,9 @@ func _set_shrapnel() -> void:
 
 
 func _check_shrapnel() -> void:
-	_report("shrapnel bloom", _build.has_transformer("shrapnel_bloom") and _struck.get("slam", 0) >= 2,
+	_report("shrapnel bloom", _build.has_transformer("shrapnel_bloom") and _synergy_hits() >= 2,
 		"Cross Split + Hot Rivets: one kill between two enemies %.1f m apart burst into shrapnel that struck %d of them"
-			% [_gap, _struck.get("slam", 0)])
+			% [_gap, _synergy_hits()])
 
 
 func _set_shrapnel_flood() -> void:
@@ -125,9 +125,9 @@ func _set_shrapnel_flood() -> void:
 
 func _check_shrapnel_cap() -> void:
 	var cap: int = int(_build.SHRAPNEL_PER_SECOND) * _build.SHRAPNEL_TARGETS
-	_report("shrapnel stays capped", _struck.get("slam", 0) > 0 and _struck.get("slam", 0) <= cap,
+	_report("shrapnel stays capped", _synergy_hits() > 0 and _synergy_hits() <= cap,
 		"20 kills in one tick produced %d shrapnel strikes (cap %d: %d bursts a second x %d targets)"
-			% [_struck.get("slam", 0), cap, int(_build.SHRAPNEL_PER_SECOND), _build.SHRAPNEL_TARGETS])
+			% [_synergy_hits(), cap, int(_build.SHRAPNEL_PER_SECOND), _build.SHRAPNEL_TARGETS])
 
 
 func _set_wreck() -> void:
@@ -137,8 +137,8 @@ func _set_wreck() -> void:
 
 
 func _check_wreck() -> void:
-	_report("wrecking ball", _build.has_transformer("wrecking_ball") and _struck.get("ram", 0) == 1 and _struck.get("slam", 0) >= 1,
-		"Tread Plating + Hot Rivets: one ram sent a shockwave that struck %d other enemies" % _struck.get("slam", 0))
+	_report("wrecking ball", _build.has_transformer("wrecking_ball") and _struck.get("ram", 0) == 1 and _synergy_hits() >= 1,
+		"Tread Plating + Hot Rivets: one ram sent a shockwave that struck %d other enemies" % _synergy_hits())
 
 
 func _set_rod() -> void:
@@ -170,8 +170,8 @@ func _set_pinwheel() -> void:
 
 
 func _check_pinwheel() -> void:
-	_report("pinwheel", _build.has_transformer("pinwheel") and _struck.get("slam", 0) >= 1,
-		"Spiral Wave + Tread Plating at 30 m/s: the blade ring cut %d enemies it passed" % _struck.get("slam", 0))
+	_report("pinwheel", _build.has_transformer("pinwheel") and _synergy_hits() >= 1,
+		"Spiral Wave + Tread Plating at 30 m/s: the blade ring cut %d enemies it passed" % _synergy_hits())
 
 
 func _set_glacier() -> void:
@@ -180,8 +180,8 @@ func _set_glacier() -> void:
 
 
 func _check_glacier() -> void:
-	_report("glacier hull", _build.has_transformer("glacier_hull") and _struck.get("slam", 0) >= 1,
-		"Rivet Plating + Frost Vane: a 12 m/s landing cracked a frost ring that struck %d enemies" % _struck.get("slam", 0))
+	_report("glacier hull", _build.has_transformer("glacier_hull") and _synergy_hits() >= 1,
+		"Rivet Plating + Frost Vane: a 12 m/s landing cracked a frost ring that struck %d enemies" % _synergy_hits())
 
 
 func _water(point: Vector3) -> Dictionary:
@@ -225,3 +225,9 @@ func _finish() -> bool:
 	_game.free()
 	quit(0 if _failures == 0 else 1)
 	return true
+
+
+# Synergy hits under their own strike kind. Any "slam" here would be a synergy borrowing
+# the landing verb (FIXWAVE build [C]), so it counts as -1 and fails the check.
+func _synergy_hits() -> int:
+	return -1 if _struck.has("slam") else _struck.get("synergy", 0)

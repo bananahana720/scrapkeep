@@ -23,6 +23,8 @@ var slam_fall := 0.0
 var slam_velocity := Vector3.ZERO
 var slam_landed := 0.0
 var slam_flat := 0.0
+# True while Ctrl is held from a press that began on the ground (or before a reset).
+var brake_from_ground := false
 
 var plant_time := 0.0
 var plant_total := 0.0
@@ -84,6 +86,8 @@ func clear_runtime() -> void:
 	dash_ready = true
 	dash_cooldown = 0.0
 	slam_landed = 0.0
+	# A brake still held across a reset or retry counts as held from the ground.
+	brake_from_ground = true
 	mount_block = 0.0
 	mount_banked = 0.0
 	dash_fired = Vector3.ZERO
