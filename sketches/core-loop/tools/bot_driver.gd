@@ -86,6 +86,8 @@ const CAP_JUMP := 4.6
 # Beside the body (Warden radius 2.8 + ball 1.0) and the approach point on a cap's line.
 const CAP_INSIDE := 3.3
 const CAP_BESIDE := 3.8
+# Below this share of max HP the caps loop dodges the Warden's pulse instead of riding it.
+const PULSE_HP_SHARE := 0.45
 # Punch the bot knows it can bring: the best punch_now() it has seen, fading this fast,
 # so "short of plating" is judged on a full-speed ram, not on the ball at rest.
 const PUNCH_FADE := 4.0
@@ -648,11 +650,13 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 # The bot rolls up the radial line of the cap nearest it, so it lands beside that cap,
 # jumps when it touches, and slams only while beside the body: a ball resting on top of
 # an enemy never reads grounded, so a slam begun there would not land. Hugging the
-# Warden also takes its pulse for height, so its core ring is welcome.
+# Warden also takes its pulse for height, so its core ring is welcome while HP is
+# above PULSE_HP_SHARE of max.
 func _cap_loop(target: Node3D, delta: float) -> void:
 	var ball: Vector3 = game.player.ball_position()
 	var at: Vector3 = target.global_position
-	_welcome_ring_at = at
+	# The pulse costs 10 HP; a sensible player takes it for height only while healthy.
+	_welcome_ring_at = at if game.run.hp > PULSE_HP_SHARE * game.run.max_hp else Vector3.INF
 	var from_ball := Vector3(ball.x - at.x, 0.0, ball.z - at.z).normalized()
 	var line := from_ball
 	var best := -INF
