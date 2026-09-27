@@ -68,6 +68,8 @@ const RUNUP_SECONDS := 3.2
 const AIM_REACH := 40.0
 const WAYPOINT_REACHED := 9.0
 const WAYPOINT_SECONDS := 14.0
+const GATE_HOP_SECONDS := 6.0
+const GATE_HOP_EVERY := 1.5
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
 const EVENT_LATEST := 150.0
@@ -134,6 +136,8 @@ var boss_note := {}
 
 var _offers: Array = []
 var _gate_pick := -1
+var _gate_time := 0.0
+var _gate_hop := 0.0
 var _stage := 0
 var _fight_phase := "charge"
 var _fight_target: Node3D = null
@@ -262,7 +266,11 @@ func tick(delta: float) -> bool:
 	if not flow.in_play():
 		source.hold = {}
 		return false
-	if (state == "stage" or state == "beacon") and game.run.stage_time > STAGE_LIMIT:
+	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
+	# gate 1 behind a Spillway chute kerb) once ran a process forever, since only the
+	# Warden fight had a limit. stall_state says which state ran out.
+	if flow.in_stage() and game.run.stage_time > STAGE_LIMIT:
+		_note_set("stall_state", state)
 		_end("stalled")
 		return true
 	_boost_clock -= delta
@@ -846,6 +854,8 @@ func _ramp_to_cap(boss, arena, ship, delta: float) -> void:
 func _on_offers(offers: Array) -> void:
 	_offers = offers
 	_gate_pick = _choose_gate(offers)
+	_gate_time = 0.0
+	_gate_hop = 0.0
 
 
 func _choose_gate(offers: Array) -> int:
@@ -883,6 +893,18 @@ func _to_gate(delta: float) -> void:
 	var target := at - facing * 9.0
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
+	# A gate still untaken after GATE_HOP_SECONDS has something on its line (a kerb, a
+	# bench): hop while rolling at it, as a player clears a low lip.
+	_gate_time += delta
+	_gate_hop -= delta
+	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
+		_gate_hop = GATE_HOP_EVERY
+		source.press["jump_pressed"] = true
+	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
+		var ball: Vector3 = game.player.ball_position()
+		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"
+			% [_gate_pick, at.x, at.y, at.z, facing.x, facing.y, facing.z, ball.x, ball.y, ball.z, along, side, rel.y,
+				game.ctx.terrain.height(ball.x, ball.z), target.x, target.y, target.z])
 	_act(target, null, delta)
 
 
