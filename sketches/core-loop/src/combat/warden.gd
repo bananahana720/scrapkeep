@@ -67,6 +67,7 @@ var last_pulse_lifted := false
 var min_pulse_telegraph := INF
 var magnet_stuns := 0
 var magnet_state := Magnet.IDLE
+var shred := 0.0
 
 var _pulse_clock := 0.0
 var _charging := false
@@ -328,3 +329,13 @@ func flat_to_ball() -> Vector3:
 
 func integrity() -> float:
 	return clampf(hp / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0
+
+
+# Combat's shred on this Warden (combat.gd owns the number and pushes it every tick).
+func set_shred(amount: float) -> void:
+	shred = amount
+
+
+# The share of the plating stripped right now, 0 to 1.
+func shred_fraction() -> float:
+	return clampf(shred / plating, 0.0, 1.0) if plating > 0.0 else 0.0

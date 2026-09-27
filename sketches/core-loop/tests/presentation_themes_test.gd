@@ -127,13 +127,33 @@ func _home() -> void:
 		"the kill cadences for two bars at 129 from beat %d, then the level returns at 172 on a beat (sample %d)" % [cadence, back])
 
 
+# The music's cost is judged against a fixed reference workload timed in the same
+# process right before and right after it. Contention from other runs on the machine
+# slows both sides alike, so their ratio holds; a heavier arrangement moves only the
+# music side. Each arrangement's ratio is the least of MEASURES paired runs. The
+# absolute cost per second of music is printed as information, against the old 80 ms.
+const MEASURES := 3
+# Calibrated alone on this machine (DESIGN-NOTES integration call 18): the densest
+# arrangement sits at about 85-90% of it.
+const RATIO_CAP := 0.21
+const ABSOLUTE_NOTE_MS := 80.0
+# The reference: REF_VOICES fixed buffers mixed with a gain ramp into one block, the
+# shape of the engine's own inner mixing loop, REF_BLOCKS times.
+const REF_VOICES := 8
+const REF_BLOCKS := 1200
+const BLOCK := 735
+
+
 func _cost() -> void:
 	var worst := 0.0
 	var name := ""
+	var worst_runs: Array = []
+	var ref := _reference_buffer()
 	for spec in [["warden", 0, "drop"], ["brindle", 0, "3"], ["miniboss", 2, ""], ["level", 0, ""]]:
 		# A throwaway engine plays eight bars first, so notes rendered on first use (the
 		# game warms them on a worker behind stage 1) do not count as steady cost.
-		for warm in 2:
+		var runs: Array = []
+		for warm in MEASURES + 1:
 			var engine := MusicEngine.new()
 			engine.force_track(spec[0], spec[1], spec[2], spec[0] in ["warden", "brindle"])
 			engine.set_pressure(1.0)
@@ -141,18 +161,57 @@ func _cost() -> void:
 			engine.render(engine.bar_len() * (8 if warm == 0 else 1))
 			if warm == 0:
 				continue
-			# This process's own CPU time where the OS reports it (Linux /proc), so other
-			# agents' runs on a busy machine do not count; wall time elsewhere.
-			var cpu0 := _cpu_ms()
-			var t := Time.get_ticks_usec()
-			for block in 300:
-				engine.render(735)
-			var spent := _cpu_ms() - cpu0 if cpu0 >= 0.0 else (Time.get_ticks_usec() - t) / 1000.0
-			var ms := spent / (300.0 * 735.0 / Harmony.RATE)
-			if ms > worst:
-				worst = ms
-				name = "%s %s" % [spec[0], spec[2]]
-	_check("cpu", worst > 0.0 and worst < 80.0, "densest arrangement %s costs %.0f ms of CPU per second of music (%.1f%% of one core)" % [name, worst, worst / 10.0])
+			var before := _reference_ms(ref)
+			var spent := _measure(func():
+				for block in 300:
+					engine.render(BLOCK))
+			var after := _reference_ms(ref)
+			var ms := spent / (300.0 * BLOCK / Harmony.RATE)
+			runs.append({"ms": ms, "ref": (before + after) * 0.5, "ratio": ms / maxf(1.0, (before + after) * 0.5)})
+		var least: Dictionary = runs[0]
+		for r in runs:
+			if r["ratio"] < least["ratio"]:
+				least = r
+		if least["ratio"] > worst:
+			worst = least["ratio"]
+			worst_runs = runs
+			name = "%s %s" % [spec[0], spec[2]]
+	var shown := ", ".join(worst_runs.map(func(r): return "%.0f ms / %.0f ms ref = %.3f" % [r["ms"], r["ref"], r["ratio"]]))
+	var least_ms: float = worst_runs.map(func(r): return r["ms"]).min() if not worst_runs.is_empty() else 0.0
+	_check("cpu", worst > 0.0 and worst < RATIO_CAP,
+		"densest arrangement %s costs %.3f of the reference workload (cap %.3f), the least of %d paired runs [%s]; absolute %.0f ms of CPU per second of music, %.1f%% of one core (information only, was capped at %.0f ms)"
+			% [name, worst, RATIO_CAP, MEASURES, shown, least_ms, least_ms / 10.0, ABSOLUTE_NOTE_MS])
+
+
+# This process's own CPU time for the work, where the OS reports it (Linux /proc), so
+# other agents' runs on a busy machine are not counted; wall time elsewhere.
+func _measure(work: Callable) -> float:
+	var cpu0 := _cpu_ms()
+	var t := Time.get_ticks_usec()
+	work.call()
+	return _cpu_ms() - cpu0 if cpu0 >= 0.0 else (Time.get_ticks_usec() - t) / 1000.0
+
+
+static func _reference_buffer() -> PackedFloat32Array:
+	var src := PackedFloat32Array()
+	src.resize(BLOCK)
+	for i in BLOCK:
+		src[i] = sin(TAU * 220.0 * i / Harmony.RATE) * 0.5
+	return src
+
+
+func _reference_ms(src: PackedFloat32Array) -> float:
+	var dst := PackedFloat32Array()
+	dst.resize(BLOCK)
+	var inv_n := 1.0 / BLOCK
+	return _measure(func():
+		for block in REF_BLOCKS:
+			dst.fill(0.0)
+			for v in REF_VOICES:
+				var g0 := 0.5 + 0.01 * v
+				var g1 := g0 * 0.9
+				for i in BLOCK:
+					dst[i] += src[i] * (g0 + (g1 - g0) * i * inv_n) * 0.7)
 
 
 # User plus system CPU of this process in ms, from /proc/self/stat (clock ticks of

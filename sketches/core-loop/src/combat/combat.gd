@@ -37,6 +37,15 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # is (base + force * k) * heft, punch for a weapon hit is its damage after parts; punch
 # at or above the target's plating lands in full, below it chips CHIP. strike(), the
 # tint, punch_now(), plating_of() and would_crush() all read that one function.
+#
+# Shred (Andrew, 2026-09-27): every landed hit, a chip included, strips SHRED_PER_PUNCH
+# of its punch off that enemy's plating, up to the whole plating. While the hits keep
+# coming the strip bleeds off at SHRED_HOLD_DECAY a second, so held fire settles at a
+# strip in proportion to its damage per second: a skipper's gun barely dents Warden
+# III and an engaged build's strips it bare. SHRED_GRACE after the last hit the plate
+# knits back at SHRED_REST_DECAY. The strip is kept per enemy instance and subtracted
+# from whatever plating_for answers, so Wardens, the miniboss, vaults and Brindle's
+# pieces shed alike, and a weak point already at 0 stays 0.
 
 const MUZZLE := 1.25
 const AIM_SLACK := 14.0
@@ -53,7 +62,8 @@ const WARDEN_FALLBACK := [
 	{"warden_plating": 60.0, "warden_hp": 700.0, "warden_lesson": "caps"},
 	{"warden_plating": 95.0, "warden_hp": 1000.0, "warden_lesson": "magnet"},
 ]
-const VAULT_TOP_PLATING := 120.0
+# The last stage's vault has no next Warden, so it sits this far above its own.
+const VAULT_TOP_SCALE := 1.2
 const MINIBOSS_PLATING_SCALE := 1.25
 const SHELL_RETURN_DAMAGE := 40.0
 const BAT_REACH := 2.4
@@ -61,6 +71,11 @@ const PARTING_WINDOW := 1.0
 const PULSE_STOMP_WINDOW := 1.5
 const CRUSH_WINDOW := 1.0
 const CRUSH_CHAIN := 3
+const SHRED_PER_PUNCH := 0.0184
+const SHRED_HOLD_DECAY := 0.15
+const SHRED_REST_DECAY := 1.0
+const SHRED_GRACE := 0.5
+const SHRED_FLOOR := 0.5
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -101,6 +116,9 @@ var _crushes: Array = []
 var _clock := 0.0
 # The strike whose facts are going out: {id, kind, force, part}, empty otherwise.
 var _pending := {}
+# Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
+# (seconds since its last landed hit)}.
+var _shred := {}
 
 
 func setup(ctx_ref) -> void:
@@ -185,6 +203,7 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	enemy.take_damage(result["dealt"])
+	_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
 
 
@@ -200,7 +219,8 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 	if kind == SYNERGY:
 		part = ""
 	var punch := punch_of(kind, force)
-	var plating: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
+	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
+	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
 	var mult: float = enemy.hit_mult(kind, part) if full and enemy.has_method("hit_mult") else 1.0
 	var dealt := punch * mult if full else punch * CHIP
@@ -249,10 +269,18 @@ func _damage_mod(weapon: String) -> float:
 	return scale
 
 
+# The body plating a hit would meet now, shred taken off.
 func plating_of(enemy: Node3D) -> float:
 	if not is_instance_valid(enemy) or not enemy.has_method("plating_now"):
 		return 0.0
-	return enemy.plating_now()
+	return maxf(0.0, enemy.plating_now() - shred_of(enemy))
+
+
+# How much plating landed hits have stripped off this enemy right now.
+func shred_of(enemy: Node3D) -> float:
+	if not is_instance_valid(enemy):
+		return 0.0
+	return float(_shred.get(enemy.get_instance_id(), {}).get("amount", 0.0))
 
 
 # hp / max_hp, 1.0 for an invalid enemy (as the spec says), 0.0 for a dead one.
@@ -360,6 +388,7 @@ func _physics_process(delta: float) -> void:
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	bolts.step(delta, ctx.root.get_world_3d().direct_space_state, get_tree().get_nodes_in_group("enemy"), shells)
 	_bat_by_ball(shells)
+	_decay_shred(delta)
 	_tint()
 
 
@@ -373,7 +402,43 @@ func _tint() -> void:
 		if not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
 			continue
 		var against: float = ram if enemy.has_method("tint_verb") and enemy.tint_verb() == "ram" else punch
-		enemy.set_tint("amber" if against >= enemy.plating_now() else "slate")
+		enemy.set_tint("amber" if against >= plating_of(enemy) else "slate")
+
+
+func _add_shred(enemy: Node3D, punch: float) -> void:
+	if enemy.has_method("is_dead") and enemy.is_dead():
+		return
+	var id := enemy.get_instance_id()
+	var entry: Dictionary = _shred.get(id, {"amount": 0.0, "cap": 0.0, "idle": 0.0})
+	if enemy.has_method("plating_now"):
+		entry["cap"] = maxf(entry["cap"], enemy.plating_now())
+	entry["amount"] = minf(entry["amount"] + punch * SHRED_PER_PUNCH, entry["cap"])
+	entry["idle"] = 0.0
+	_shred[id] = entry
+	_show_shred(enemy, entry["amount"])
+
+
+func _decay_shred(delta: float) -> void:
+	for id in _shred.keys():
+		var enemy := instance_from_id(id) as Node3D
+		if enemy == null or not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			_shred.erase(id)
+			continue
+		var entry: Dictionary = _shred[id]
+		entry["idle"] += delta
+		var resting: bool = entry["idle"] > SHRED_GRACE
+		entry["amount"] *= exp(-(SHRED_REST_DECAY if resting else SHRED_HOLD_DECAY) * delta)
+		if resting and entry["amount"] < SHRED_FLOOR:
+			_shred.erase(id)
+			_show_shred(enemy, 0.0)
+		else:
+			_show_shred(enemy, entry["amount"])
+
+
+# An enemy that draws its shred (the Warden's glowing seams) is told the amount.
+func _show_shred(enemy: Node3D, amount: float) -> void:
+	if enemy.has_method("set_shred"):
+		enemy.set_shred(amount)
 
 
 # A rolling ball at CRUISE or faster that reaches a shell in flight bats it home.
@@ -608,7 +673,8 @@ func _spec_for(kind: String) -> Dictionary:
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
 		"vault":
-			var next_plating: float = VAULT_TOP_PLATING if stage >= 3 else warden_spec(stage + 1)["plating"]
+			var next_plating: float = roundf(VAULT_TOP_SCALE * warden_spec(stage)["plating"]) if StageDefs.is_last(stage) \
+					else warden_spec(stage + 1)["plating"]
 			return {"stage": stage, "plating": next_plating, "hp": 400.0 * stage}
 	return {}
 
@@ -695,6 +761,7 @@ func _on_stage_content_cleared(_reason: String) -> void:
 func _start_attempt() -> void:
 	_clear_fight()
 	_crushes.clear()
+	_shred.clear()
 	_cooldown = 0.0
 	_special_cooldown = 0.0
 	_overdrive = 0.0

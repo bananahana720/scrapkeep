@@ -159,6 +159,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `event_announced` | `event_id: String, seconds_until: float` | D | a stage event is coming |
 | `event_started` | `event_id: String` | D | it is live |
 | `event_ended` | `event_id: String, outcome: String` | D | outcome is `won`, `lost` or `passed` (for ambient events) |
+| `event_progress` | `event_id: String, fraction: float` | D | a live participatory event's own progress, 0 to 1, from its model (Hold the Relay: share held; Surge Run: gates taken; Scrap Stampede: hits on the hauler); published on its first live tick, then whenever it has moved at least 0.01, and on reaching 1, before its `event_ended`; quiet, priority 0 (presentation drives the event's music from it and plays no cue) |
 | `launched` | `velocity: Vector3` | D | the ball was launched toward the next stage |
 | `pressure_changed` | `pressure: float` | D | director pressure, 0 to 1, for music layers |
 | `threat_rose` | `tier: int` | D | the director's time tier rose (clamped at +2) |
@@ -208,6 +209,7 @@ Per-kind stats, transformer ids and `register_part` are documented in `src/comba
 - `strike(enemy: Node3D, kind: String, force: float)` resolves one hit into damage against plating and emits `enemy_struck`, plus `strike_deflected` below plating. The spine calls it for ball contacts: `stomp` (force is fall speed), `ram` (force is speed, at the cruise tier or above) and `slam` (force is knockback after falloff). Combat's own weapons call it too.
 - `punch_now() -> float` is the punch the player would land now: ram punch at the ball's planar speed from the cruise tier up, or the current weapon's per-hit damage, whichever is larger.
 - `plating_of(enemy) -> float`.
+- `shred_of(enemy) -> float` is how much plating that enemy's landed hits have stripped for now; `plating_of`, `resolve`, `would_crush` and the tint already subtract it, floored at 0.
 - `integrity_of(enemy) -> float` is HP over max HP, or 1.0 for an invalid enemy.
 - `would_crush(enemy, kind, force) -> bool` is true when the enemy has no plating and the hit would kill it.
 

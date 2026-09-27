@@ -74,10 +74,10 @@ func _run_checks() -> void:
 	var bare: float = _boss.max_hp
 	_double.punch_override = 77.0
 	_boss.advance(DT)
-	var readout: String = _boss.readout_text()
-	var shown: String = _boss.ship.readout.text
-	_report("hull readout", readout == "Hull plating 120 | your punch 77" and shown == readout and _game.flow.boss_plating == 120.0 and _game.flow.boss_active,
-		"at arena entry the hull reads \"%s\" (label \"%s\"), flow.boss_plating %.0f" % [readout, shown, _game.flow.boss_plating])
+	var shown: String = _boss.ship.plate.text
+	var objective: String = _boss.objective_text()
+	_report("hull readout", shown == "BRINDLE · plating 120" and objective.contains("Punch 77 / hull plating 120") and _game.flow.boss_plating == 120.0 and _game.flow.boss_active,
+		"at arena entry the plate reads \"%s\" and the objective \"%s\", flow.boss_plating %.0f" % [shown, objective, _game.flow.boss_plating])
 	_double.punch_override = -1.0
 
 	var hull = _boss.ship.hull

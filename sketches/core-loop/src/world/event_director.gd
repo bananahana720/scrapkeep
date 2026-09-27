@@ -18,6 +18,7 @@ const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 #   {"kind": "ended", "id", "outcome"}       {"kind": "milestone", "id", "at": Vector2}
 #   {"kind": "miniboss", "id", "at": Vector2} {"kind": "scrap", "amount", "at": Vector3}
 #   {"kind": "gate", "id", "at": Vector2}     an event gate was taken
+#   {"kind": "progress", "id", "fraction"}    a live event's progress moved (0 to 1)
 
 enum { WAITING, ANNOUNCED, ARMED, LIVE, COOLDOWN, DONE }
 enum { SQUALL_CALM, SQUALL_WARNING, SQUALL_LIVE }
@@ -37,6 +38,8 @@ const FLOOD_DRY := Vector2(45.0, 65.0)
 # A surge run on a stage this threatening brings a miniboss mid-surge.
 const SURGE_MINIBOSS_THREAT := 2.0
 const SURGE_MINIBOSS_AT := 0.5
+# A live event reports its progress when it has moved at least this far.
+const PROGRESS_STEP := 0.01
 
 var rng := RandomNumberGenerator.new()
 var stage_time := 0.0
@@ -174,6 +177,7 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 			if Vector2(ball.x, ball.z).distance_to(model.ring) <= model.ring_radius:
 				offer["phase"] = LIVE
 				offer["miniboss_sent"] = false
+				offer["shown_progress"] = -1.0
 				model.begin()
 				facts.append({"kind": "started", "id": offer["id"]})
 		LIVE:
@@ -183,6 +187,7 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 			if gate_before != null and model.next_gate > gate_before:
 				var g: Vector2 = model.gates[gate_before]
 				facts.append({"kind": "gate", "id": offer["id"], "at": g})
+			_note_progress(offer, facts)
 			if model.miniboss_at >= 0.0 and not offer["miniboss_sent"] and model.progress() >= model.miniboss_at:
 				offer["miniboss_sent"] = true
 				facts.append({"kind": "miniboss", "id": offer["id"], "at": _miniboss_spot(model)})
@@ -194,6 +199,17 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 				else:
 					offer["phase"] = COOLDOWN
 					offer["timer"] = RETRY_COOLDOWN
+
+
+# A live event's own progress (0 to 1, from its model) as a fact whenever it has moved
+# by PROGRESS_STEP since the last one, and always on reaching 1, so the music can
+# follow the event the player is actually playing. The first live tick reports too.
+func _note_progress(offer: Dictionary, facts: Array) -> void:
+	var p: float = clampf(offer["model"].progress(), 0.0, 1.0)
+	var shown: float = offer.get("shown_progress", -1.0)
+	if shown < 0.0 or p - shown >= PROGRESS_STEP or (p >= 1.0 and shown < 1.0):
+		offer["shown_progress"] = p
+		facts.append({"kind": "progress", "id": offer["id"], "fraction": p})
 
 
 # Seeded, so the same stage attempt puts the miniboss in the same place and another
