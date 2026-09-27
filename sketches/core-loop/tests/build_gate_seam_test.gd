@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 
 # The reward gates' seams, over a scripted run of all three stages:
 #   - Build opens the gates on flow's "gates" state, never on the charge reading
@@ -12,7 +13,9 @@ const Intent := preload("res://src/movement/intent.gd")
 #     below the ground under the ball when the gates appear, within 0.75 m.
 #   - Rolling through a gate at 20 m/s loses at most 15% of horizontal speed (a gain
 #     is fine).
-# ctx.calm keeps enemies out, so the speed check measures the gates alone.
+# ctx.calm keeps enemies out, so the speed check measures the gates alone. The spine's
+# boss double stands in for the arena after stage 3, and its defeat() ends the run
+# whether or not the real boss module is present.
 
 const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
@@ -22,6 +25,7 @@ const SETTLE_TICKS := 9
 
 var _game
 var _build
+var _boss
 var _source := Intent.Scripted.new()
 var _failures := 0
 var _ticks := 0
@@ -57,6 +61,9 @@ func _physics_process(_delta: float) -> bool:
 	_wait += 1
 	match _phase:
 		"boot":
+			_boss = BossDouble.new()
+			_game.add_child(_boss)
+			_boss.setup(_game.ctx)
 			_game.ctx.calm = true
 			_game.player.source = _source
 			_game.flow.beacon_seconds_override = 30.0
@@ -90,6 +97,8 @@ func _physics_process(_delta: float) -> bool:
 				_gates.append(_gate)
 				_next("flight")
 		"flight":
+			if _game.flow.state_name() == "boss":
+				_boss.defeat()
 			if _ended:
 				return _finish()
 	return false

@@ -40,9 +40,6 @@ const REFREEZE_RING := 4.0
 # A Warden's scrap is thrown in a line this long along the ball's heading, toward the
 # gates that just opened.
 const WARDEN_LINE := 20.0
-# World (D) may also grant the event's core; build skips its own grant when an event
-# core arrived within this many seconds of the milestone.
-const EVENT_CORE_WINDOW := 0.1
 # Named synergy behaviours. Every one is capped per second so a big build stays
 # readable (principle 4).
 const ROD_REACH := 12.0
@@ -53,6 +50,9 @@ const TESLA_DAMAGE := 12.0
 const TESLA_EVERY := 0.5
 const TESLA_TARGETS := 2
 const WRECK_RADIUS := 6.0
+const SYNERGY_KIND := "synergy"
+# Punch per unit of synergy force, the slam row's 1.2 the synergies used to borrow.
+const SYNERGY_PUNCH := 1.2
 const WRECK_FORCE := 18.0
 const SHRAPNEL_RADIUS := 6.0
 const SHRAPNEL_FORCE := 14.0
@@ -96,10 +96,6 @@ var _live: Array = []
 var _discovered := {}
 var _found := {}
 var _declared := false
-# Milestone core grants waiting a moment for world's own grant, and when world's last
-# event core arrived (in run seconds).
-var _pending_event_cores: Array[Dictionary] = []
-var _last_event_core := -99.0
 
 
 func setup(ctx_ref) -> void:
@@ -131,6 +127,7 @@ func setup(ctx_ref) -> void:
 	ctx.build = self
 	ctx.set_meta("build", self)
 	ctx.events.stage_entered.connect(_on_stage_entered)
+	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.part_gained.connect(func(_id: String, _source: String): recompute())
@@ -143,7 +140,6 @@ func setup(ctx_ref) -> void:
 	ctx.events.shot_fired.connect(_on_shot_fired)
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
-	ctx.events.core_gained.connect(_on_core_gained)
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 
 
@@ -280,9 +276,10 @@ func _declare() -> void:
 			"hint": card["hint"], "clue": card["clue"], "text": card["text"]})
 
 
+# Every new activation goes to the codex, which owns the once-per-attempt rule: after
+# a retry that took the synergy back, reactivating it discovers it again, pays again
+# and keeps it in the run log (CONTRACTS, Codex; DESIGN-NOTES I3).
 func _on_synergy_live(synergy_id: String) -> void:
-	if _discovered.has(synergy_id):
-		return
 	_discovered[synergy_id] = true
 	var codex = _codex()
 	if codex != null:
@@ -291,10 +288,9 @@ func _on_synergy_live(synergy_id: String) -> void:
 		codex.mark_discovered(synergy_id, ctx.player.ball_position(), PARTICIPANTS)
 
 
-# An unnamed interaction, logged once per run under its key.
+# An unnamed interaction, reported every time it fires; the codex logs it once per
+# attempt and lets a retried attempt find it again (CONTRACTS, Codex).
 func _note_found(key: String, text: String) -> void:
-	if _found.has(key):
-		return
 	_found[key] = text
 	var codex = _codex()
 	if codex != null:
@@ -333,7 +329,6 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_kills.clear()
 	_landings.clear()
 	_shots.clear()
-	_pending_event_cores.clear()
 	_pinwheel_cut.clear()
 	_rod_budget = ROD_PER_SECOND
 	_shrapnel_budget = SHRAPNEL_PER_SECOND
@@ -342,14 +337,30 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	recompute()
 
 
+# The arena is not a stage (DESIGN-NOTES spine call 34): the scrap field, the
+# fabricators, any open gates and every surface an element made on the stage go now.
+# The build itself, its synergies and its elements keep working in the fight. An arena
+# retry has just restored the run silently, so the build and the ball's shell are
+# recomputed from the restored parts and mass.
+func _on_stage_content_cleared(_reason: String) -> void:
+	scrap.clear()
+	fabricators.clear()
+	gates.close()
+	field.clear()
+	_trail = 0.0
+	recompute()
+
+
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
+	if has_transformer("shrapnel_bloom"):
+		_kills.append(at)
+	if not ctx.flow.in_stage():
+		return
 	var amount := int(round(scrap_value * sheet.kill_scrap))
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, ctx.rng)
 	else:
 		scrap.drop(at, amount, ctx.rng)
-	if has_transformer("shrapnel_bloom"):
-		_kills.append(at)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
 		var picks: Array = Parts.roll(ctx.rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
@@ -374,30 +385,10 @@ func _on_gate_chosen(part_id: String) -> void:
 	ctx.events.reward_chosen.emit(part_id)
 
 
-# A won event pays out at once, so the stinger and the new part land as one beat. Its
-# bonus core waits a moment: if world grants the event's core itself, build does not
-# grant a second one.
+# A won event pays out its milestone part at once, so the stinger and the new part land
+# as one beat. The event's bonus core is world's to grant (DESIGN-NOTES I1 call 5).
 func _on_milestone_won(event_id: String) -> void:
 	ctx.run.add_part(Parts.milestone_for(event_id, ctx.run.parts), "milestone")
-	_pending_event_cores.append({"at": ctx.player.ball_position(), "since": ctx.run.run_time})
-
-
-func _on_core_gained(source: String, _at: Vector3, _count: int) -> void:
-	if source == "event":
-		_last_event_core = ctx.run.run_time
-
-
-func _step_event_cores() -> void:
-	var now: float = ctx.run.run_time
-	var i := _pending_event_cores.size() - 1
-	while i >= 0:
-		var pending: Dictionary = _pending_event_cores[i]
-		if absf(_last_event_core - pending["since"]) <= EVENT_CORE_WINDOW:
-			_pending_event_cores.remove_at(i)
-		elif now - pending["since"] > EVENT_CORE_WINDOW:
-			_pending_event_cores.remove_at(i)
-			ctx.run.add_core("event", pending["at"])
-		i -= 1
 
 
 # A theft: the chunks the lost mass carried fly off toward where it went.
@@ -455,16 +446,16 @@ func _physics_process(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var speed: float = ctx.player.planar_velocity().length()
 	scrap.heft = ctx.run.heft()
-	_step_event_cores()
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
-	for at in scrap.step(ball, speed, delta):
-		ctx.run.add_scrap(1, at)
-		if has_transformer("lightning_rod"):
-			_lightning_rod(ball)
-	_step_fabricators(ball, delta)
-	if gates.step(ball, _heading()):
-		ctx.events.reward_offered.emit(gates.offers)
+	if ctx.flow.in_stage():
+		for at in scrap.step(ball, speed, delta):
+			ctx.run.add_scrap(1, at)
+			if has_transformer("lightning_rod"):
+				_lightning_rod(ball)
+		_step_fabricators(ball, delta)
+		if gates.step(ball, _heading()):
+			ctx.events.reward_offered.emit(gates.offers)
 	_step_elements(ball, delta)
 	_step_synergies(ball, delta)
 	field.step(delta)
@@ -534,7 +525,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		field.flash_ring(at, WRECK_RADIUS, Palette.AMBER)
 		for enemy in _enemies_near(at, WRECK_RADIUS, 99):
 			if enemy.global_position.distance_to(at) > 0.5:
-				_strike(enemy, "slam", WRECK_FORCE)
+				_synergy_hit(enemy, WRECK_FORCE)
 	_rams.clear()
 	for at in _kills:
 		if _shrapnel_budget < 1.0:
@@ -542,12 +533,12 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		_shrapnel_budget -= 1.0
 		field.shard_burst(at)
 		for enemy in _enemies_near(at, SHRAPNEL_RADIUS, SHRAPNEL_TARGETS):
-			_strike(enemy, "slam", SHRAPNEL_FORCE)
+			_synergy_hit(enemy, SHRAPNEL_FORCE)
 	_kills.clear()
 	for impact in _landings:
 		field.flash_ring(ball + Vector3.DOWN * 0.8, GLACIER_RADIUS, ElementField.ICE)
 		for enemy in _enemies_near(ball, GLACIER_RADIUS, 99):
-			_strike(enemy, "slam", impact * 1.5)
+			_synergy_hit(enemy, impact * 1.5)
 		_frost_ring(ball)
 	_landings.clear()
 	if has_transformer("tesla_pylon") and (ctx.player.kit.mounted or ctx.player.kit.hooked):
@@ -571,7 +562,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		for enemy in _enemies_near(ball, PINWHEEL_RADIUS, PINWHEEL_TARGETS):
 			if not _pinwheel_cut.has(enemy.get_instance_id()):
 				_pinwheel_cut[enemy.get_instance_id()] = PINWHEEL_EVERY
-				_strike(enemy, "slam", PINWHEEL_FORCE)
+				_synergy_hit(enemy, PINWHEEL_FORCE)
 	else:
 		_pinwheel_clock = 0.0
 
@@ -603,3 +594,11 @@ func _enemies_near(at: Vector3, radius: float, count: int) -> Array[Node3D]:
 func _strike(enemy: Node3D, kind: String, force: float) -> void:
 	if ctx.spawner != null and is_instance_valid(enemy):
 		ctx.spawner.strike(enemy, kind, force)
+
+
+# A synergy's shockwave, shrapnel, frost ring or blade is its own strike kind, never a
+# landing: a weak point that takes a slam (a vent cap, the scooter) must not take one
+# the ball never landed. The spawner resolves a kind outside its contact table as the
+# damage given, so build scales it the way the slam row it replaced did.
+func _synergy_hit(enemy: Node3D, force: float) -> void:
+	_strike(enemy, SYNERGY_KIND, force * SYNERGY_PUNCH * ctx.run.heft())

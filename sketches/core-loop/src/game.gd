@@ -27,9 +27,11 @@ const Presentation := preload("res://src/presentation/presentation.gd")
 
 const REEL_NOTCH := 1.2
 const RESTART_HOLD := 0.5
+const SUMMARY_GUARD := 0.75
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
+const BOSS_PATH := "res://src/boss/boss.gd"
 
 const ACTIONS := {
 	"cl_forward": [KEY_W, KEY_UP],
@@ -59,6 +61,7 @@ var ctx
 var world
 var combat
 var build
+var boss
 var presentation
 var hud
 var screens
@@ -74,6 +77,10 @@ var storage_dir := "user://"
 var _pause_toggled := false
 var _notes_held := false
 var _restart_held := 0.0
+var _restart_latched := false
+# Seconds before the summary takes a key: the victory beat ends while the player may
+# still be pressing Space to jump, and the run's only summary must stay readable.
+var summary_guard_left := 0.0
 var _hit_stopped := false
 
 
@@ -82,6 +89,9 @@ func _ready() -> void:
 	events = GameEvents.new()
 	events.name = "GameEvents"
 	add_child(events)
+	events.flow_changed.connect(func(state: String):
+		if state == "summary":
+			summary_guard_left = SUMMARY_GUARD)
 	run = RunState.new(events)
 	tuning = Tuning.new()
 
@@ -127,13 +137,19 @@ func _ready() -> void:
 	world = _module(World)
 	combat = _module(Combat)
 	build = _module(Build)
+	# Wave 4's boss module sets up after build and before presentation when it exists.
+	if ResourceLoader.exists(BOSS_PATH):
+		boss = _module(load(BOSS_PATH))
 	presentation = _module(Presentation)
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
 	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
 	# Read ctx.spawner at call time, so a test double or a late swap is honoured.
 	player.crush_check = func(enemy: Node3D, kind: String, force: float) -> bool:
-		return ctx.spawner != null and ctx.spawner.has_method("would_crush") and ctx.spawner.would_crush(enemy, kind, force)
+		if ctx.spawner == null or not ctx.spawner.has_method("would_crush"):
+			flow.warn_once("would_crush", "game: spawner has no would_crush(); crush pass-through is off")
+			return false
+		return ctx.spawner.would_crush(enemy, kind, force)
 
 	flow.setup(ctx, beacon)
 	events.flow_changed.connect(_on_flow_changed)
@@ -194,16 +210,26 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
-	if test_mode or not flow.in_play():
+	summary_guard_left = maxf(0.0, summary_guard_left - delta)
+	if test_mode:
+		return
+	step_restart_hold(delta, Input.is_physical_key_pressed(KEY_R))
+
+
+# Hold R in play to retry. One retry per press: after any retry, from the hold or from
+# the death screen's R, the hold waits for R to come up before it counts again, so a
+# held R never retries twice.
+func step_restart_hold(delta: float, r_down: bool) -> void:
+	if not r_down:
+		_restart_latched = false
+	if not flow.in_play() or not r_down or _restart_latched:
 		_restart_held = 0.0
 		return
-	if Input.is_physical_key_pressed(KEY_R):
-		_restart_held += delta
-		if _restart_held >= RESTART_HOLD:
-			_restart_held = 0.0
-			flow.retry_stage()
-	else:
+	_restart_held += delta
+	if _restart_held >= RESTART_HOLD:
 		_restart_held = 0.0
+		_restart_latched = true
+		flow.retry_stage()
 
 
 func restart_hold_fraction() -> float:
@@ -395,6 +421,7 @@ func _screen_key(key: int) -> bool:
 				return true
 		"dead":
 			if key == KEY_R:
+				_restart_latched = true
 				flow.retry_stage()
 				return true
 			if key == KEY_N:
@@ -407,6 +434,8 @@ func _screen_key(key: int) -> bool:
 				flow.replay_stage(3)
 				return true
 		"summary":
+			if summary_guard_left > 0.0:
+				return true
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
 				return true

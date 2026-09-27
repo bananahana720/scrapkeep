@@ -1,0 +1,28 @@
+extends RefCounted
+
+# The ground combat's enemies, telegraphs and shells stand on. On a stage it is the
+# world's terrain. In the arena the stage terrain stays parked under the bowl, so when
+# the boss module offers ground_height_at(point) its floor wins: a ring centres on the
+# floor you are rolling on and a lobber aims at it. Everything else here only needs
+# height and drop_point, the two terrain calls combat makes.
+
+var ctx
+
+
+func _init(ctx_ref) -> void:
+	ctx = ctx_ref
+
+
+func height_at(point: Vector3) -> float:
+	var boss = ctx.get("boss")
+	if ctx.flow != null and ctx.flow.in_arena and is_instance_valid(boss) and boss.has_method("ground_height_at"):
+		return boss.ground_height_at(point)
+	return ctx.terrain.height(point.x, point.z)
+
+
+func height(x: float, z: float) -> float:
+	return height_at(Vector3(x, 0.0, z))
+
+
+func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
+	return Vector3(x, height(x, z) + clearance, z)

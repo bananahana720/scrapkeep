@@ -1,6 +1,6 @@
 # Core-loop contracts
 
-This file is the seam between the spine and the four wave-2 modules. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
+This file is the seam between the spine and the five modules: the four from wave 2 (combat, build, presentation, world) and the wave-4 boss. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
 
 ## Ownership
 
@@ -10,6 +10,7 @@ This file is the seam between the spine and the four wave-2 modules. [DEMO-SPEC.
 | Writer B, build and growth | `src/build/**` | `tests/build_*.gd` |
 | Writer C, audio and feel | `src/presentation/**` | `tests/presentation_*.gd` |
 | Writer D, events and stages | `src/world/**` | `tests/world_*.gd` |
+| Writer E, the boss (wave 4) | `src/boss/**` | `tests/boss_*.gd` |
 | Spine (frozen) | everything else: `project.godot`, `main.tscn`, `.gitignore`, `README.md`, this file, `DEMO-SPEC.md`, `src/game.gd`, `src/core/**`, `src/movement/**`, `src/ui/**`, `tests/spine_*.gd`, `tests/doubles/**` | `tests/spine_*.gd` |
 
 `DESIGN-NOTES.md` has one section per owner. Each writer appends only inside its own section, so the module branches merge without conflicts.
@@ -21,9 +22,10 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 1. `world`, which must set `ctx.terrain`.
 2. `combat`, which must set `ctx.spawner`.
 3. `build`, which sets `ctx.build`.
-4. `presentation`.
+4. `boss` (`src/boss/boss.gd`), which sets `ctx.boss`. It is set up only when the file exists (`ResourceLoader.exists`), so the run works without it and ends on the summary after stage 3.
+5. `presentation`.
 
-`game.gd` asserts that `ctx.terrain` and `ctx.spawner` are set. The codex (`ctx.codex`) exists before any module is set up, so modules can declare their entries in `setup`. The flow starts after all four are set up. Everything in a module folder may be replaced wholesale, as long as the entry script keeps its path and its obligations below.
+`game.gd` asserts that `ctx.terrain` and `ctx.spawner` are set. The codex (`ctx.codex`) exists before any module is set up, so modules can declare their entries in `setup`. The flow starts after every present module is set up. Everything in a module folder may be replaced wholesale, as long as the entry script keeps its path and its obligations below.
 
 ## Rules every module follows
 
@@ -35,9 +37,17 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 - A foreseen, telegraphed cost from the player's own performance is allowed; an unforeseen stop is not.
 - Every new mechanic names in its DESIGN-NOTES line the stage demand it serves (Warden, event, vault, boss phase) and the principle it strains; a mechanic that serves none is parked, not built.
 - Heft never changes RigidBody mass, radius, torque or air control. It scales punch, which combat reads; the ball handles the same at every heft (`spine_heft_test.gd`).
+- An enemy records its kill (`run.record_kill`) on the same tick its HP reaches 0, and a crushed or killed enemy drops its collision layer on that tick, so nothing solid lingers where a kill already happened.
 - Honour `ctx.calm`. While it is true, spawn nothing on your own schedule and apply no world pushes. The spine's momentum tests depend on it. The spawner itself does not check `calm`; callers that spawn on their own schedule do.
-- Stay in play. Gameplay work runs only while `ctx.flow.in_play()` is true.
-- Reset on `stage_entered(stage, retry)`. Clear stage content: enemies, gates, events and pickups. Rebuild it for `stage`. After a retry the run state is already restored, so recompute anything derived from `ctx.run.parts`.
+- **Stage content runs only in a stage.** Stage content means the director, the flood cycle and its pushes, stage events, the scrap field, fabricators, vaults and stage enemies. It runs only while `ctx.flow.in_stage()` is true, which covers `stage`, `beacon`, `gates` and `launch`.
+- **Player-side work runs in play.** Player weapons, build synergies and presentation run while `ctx.flow.in_play()` is true, which adds the boss arena.
+- **Stand down on `stage_content_cleared`.** Flow publishes `stage_content_cleared(reason)` on entering the arena, with the reason `arena`, and on each arena retry, with the reason `arena_retry`. Each module then clears its stage content at once, whatever the reason:
+  - combat clears stage enemies, which means every node in the groups `enemy`, `enemy_shot` and `telegraph`. The clear runs before the boss module's `enter_arena` on entry and on each retry, so the boss spawns its own pieces after it;
+  - world stops its director and flood and parks the stage maps. Parking hides the stage maps and disables their collision until the next `stage_entered`;
+  - build clears pickups and fabricators.
+
+  Arena kills pay no scrap from the scrap field, because the scrap field is stage content. The boss module grants any arena scrap itself through `run.add_scrap`.
+- Reset on `stage_entered(stage, retry)`. Clear stage content: enemies, gates, events and pickups. Rebuild it for `stage`. After a retry the run state is already restored, so recompute anything derived from `ctx.run.parts`. Flow takes the stage-start checkpoint before it publishes `stage_entered`, so anything a module grants inside that handler is play within the stage, and a retry takes it back.
 - Add world children under `ctx.root`.
 - Build owns all tuning mods. It calls `tuning.clear_mods()` on every recompute and reapplies every part. Keys that are not F1 sliders (`weapon_damage`, `weapon_rate`, `weapon_range`, `turret_damage` and any similar key) are read with `tuning.mod(key)`, never `tuning.f(key)`.
 
@@ -50,18 +60,19 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `tuning` | `Tuning` | movement knobs; `f(key)`, `base(key)`, `set_mod(key, x)`, `mod(key)`, `clear_mods()`, `boost_cooldown_scale` |
 | `player` | `PlayerBall` | the ball; hooks below |
 | `camera` | `ChaseCamera` | the camera; hooks below |
-| `flow` | flow node | read-only: `in_play()`, `state_name()`, `stage()`, `stage_def()`, `objective_text()`, `sealed`, `warden`, `punch_now()`, `warden_plating()`, `gap_line()` |
+| `flow` | flow node | read-only: `in_play()`, `in_stage()`, `state_name()`, `stage()`, `stage_def()`, `objective_text()`, `sealed`, `warden`, `punch_now()`, `warden_plating()`, `gap_line()` |
 | `terrain` | set by world | the terrain API below |
 | `spawner` | set by combat | the spawner API below |
 | `build` | set by build | the build module; read it through `has_method`. `build_module()` also reads a build that stored itself with `ctx.set_meta("build", self)` |
 | `codex` | `Codex` node | the codex registry below |
+| `boss` | set by boss | the boss module; flow calls `enter_arena(entry_velocity)` on it |
 | `root` | `Node3D` | parent for world children |
 | `rng` | `RandomNumberGenerator` | the run's one seeded stream (seed 20260926) |
 | `calm` | `bool` | tests set it; no own-schedule spawns, no world pushes |
 | `aim_origin()`, `aim_forward()` | `Vector3` | the camera's centre ray |
 | `hit_stop(seconds)` | method | a short freeze for weight; capped at 60 ms, never stacks, only in play |
 
-Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates` and `launch`. Wave 4 adds `boss`.
+Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
 
 `stage_def()` returns the current row of `src/core/stage_defs.gd`, with these fields:
 
@@ -77,10 +88,10 @@ Every number there is a starting value; tuning edits `stage_defs.gd`, the heft c
 
 | Call | Effect | Publishes |
 | --- | --- | --- |
-| `add_scrap(amount, at)` | adds to the wallet and to mass | `scrap_collected(amount, at, total)`, then `heft_class_changed` if the class moved |
+| `add_scrap(amount, at)` | adds to the wallet and to mass | `scrap_collected(amount, at, total)`, then `heft_class_changed` if the class rose |
 | `spend_scrap(amount) -> bool` | spends from the wallet if affordable; mass is unchanged | nothing (the part it buys publishes `part_gained`) |
-| `lose_scrap(amount, at, cause) -> int` | lowers mass by `amount` (not below 0) and the wallet by what it holds; returns the mass taken | `scrap_lost(taken, at, wallet_total, cause)`, then `heft_class_changed` if the class moved |
-| `add_part(part_id, source)` | appends to `parts` | `part_gained(part_id, source)`, then `heft_class_changed` if the class moved |
+| `lose_scrap(amount, at, cause) -> int` | lowers mass by `amount` (not below 0) and the wallet by what it holds; returns the mass taken | `scrap_lost(taken, at, wallet_total, cause)`, then `heft_class_dropped` if the class fell |
+| `add_part(part_id, source)` | appends to `parts` | `part_gained(part_id, source)`, then `heft_class_changed` if the class rose |
 | `add_core(source, at)` | adds a stage-scoped bonus core | `core_gained(source, at, count)` |
 | `set_max_hp(value)` | new ceiling; a raise heals by the gain | nothing |
 | `heal(amount)` | heals up to the ceiling | nothing |
@@ -115,10 +126,12 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `beacon_charge_changed` | `fraction: float` | spine flow | beacon charge, 0 to 1; while sealed, the share of the Warden broken; exactly `1.0` once per stage when the gates open |
 | `beacon_unsealed` | `stage: int` | spine flow | the Warden broke; the gates open wherever the ball is |
 | `warden_engaged` | `stage: int` | spine flow | first sealed ring entry or first strike on the Warden, once per stage attempt |
+| `stage_content_cleared` | `reason: String` | spine flow | stage content must stand down now (reason `arena` on entering the boss arena, `arena_retry` on retrying it); quiet, priority 0 |
 | `scrap_collected` | `amount: int, at: Vector3, total: int` | `run.add_scrap` | scrap taken |
 | `scrap_lost` | `amount: int, at: Vector3, total: int, cause: String` | `run.lose_scrap` | mass taken (a crane theft); total is the wallet |
 | `part_gained` | `part_id: String, source: String` | `run.add_part` | a part was added; source is `gate`, `fabricator`, `vault`, `milestone` or similar |
-| `heft_class_changed` | `heft_class: int, heft: float` | run mutators | the heft class moved (not on a restore) |
+| `heft_class_changed` | `heft_class: int, heft: float` | run mutators | the heft class rose (never on a restore); sound `class_up` |
+| `heft_class_dropped` | `heft_class: int, heft: float` | run mutators | the heft class fell after a theft (never on a restore); sound `class_down` |
 | `core_gained` | `source: String, at: Vector3, count: int` | `run.add_core` | a bonus core; count is this stage's total |
 | `player_hit` | `amount: float, source: String` | `run.damage` | the player took damage |
 | `player_died` | none | `run.damage` | HP reached zero |
@@ -136,7 +149,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `mounted` | `at: Vector3, banked_speed: float` | spine ball | a pylon was planted; banked_speed is the speed it arrived with |
 | `dismounted` | `velocity: Vector3` | spine ball | left the pylon; the velocity is the slingshot, zero for an E drop |
 | `enemy_spawned` | `enemy: Node3D, kind: String` | A | an enemy entered the stage |
-| `enemy_struck` | `enemy: Node3D, kind: String, force: float` | A (from `strike`) | a resolved hit; kind is `stomp`, `ram`, `slam`, `arc`, `turret` or `runner` |
+| `enemy_struck` | `enemy: Node3D, kind: String, force: float` | A (from `strike`) | a resolved hit; kind is `stomp`, `ram`, `slam`, `arc`, `turret`, `runner` or `synergy` (a build synergy's shockwave, shrapnel, frost ring or blade: resolved as the damage given, never a landing, so no weak point that takes a slam takes it) |
 | `strike_deflected` | `enemy: Node3D, kind: String, punch: float, plating: float` | A | a hit below plating chipped for 20% |
 | `shot_fired` | `weapon_id: String, from: Vector3, to: Vector3` | A | a weapon fired; the segment it drew |
 | `special_used` | `special_id: String, at: Vector3` | A | a class special fired |
@@ -149,10 +162,19 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `launched` | `velocity: Vector3` | D | the ball was launched toward the next stage |
 | `pressure_changed` | `pressure: float` | D | director pressure, 0 to 1, for music layers |
 | `threat_rose` | `tier: int` | D | the director's time tier rose (clamped at +2) |
+| `boss_arena_entered` | none | E | the ball is in the arena; the music's Brindle set starts |
+| `boss_phase_changed` | `phase: int, name: String` | E | Brindle's phase and its name: 1 to 3 by hull health, then 4, `chase`, for the eject-scooter chase. The HUD toast capitalizes the name. The run log keeps the highest phase |
+| `boss_attack_telegraphed` | `attack_id: String, seconds_until: float` | E | an attack is committed and will land in seconds_until |
+| `boss_weak_point_hit` | `point_id: String` | E | a strike landed on a weak point (a magnet, a cap, the scooter) |
+| `boss_defeated` | none | E | Brindle is beaten; flow enters `victory`, then the summary |
 
 ### The Warden, gate and launch handshake
 
-1. **The Warden seals the beacon.** In play (`not ctx.calm`, or `flow.force_warden` in tests), flow spawns one through `ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(stage))` right after `stage_entered`. Rolling into the ring marks the beacon engaged but adds no charge. Every tick the charge shown is `1 - ctx.spawner.integrity_of(warden)`. When `enemy_killed` arrives with kind `warden`, flow emits `beacon_unsealed(stage)`, enters `gates` and emits `beacon_charge_changed(1.0)`, wherever the ball is. If the spawner returns no Warden, or the stage is calm, the stage stays on the unsealed presence path: circling inside the ring charges it over `beacon_seconds`, then flow enters `gates` and emits `beacon_charge_changed(1.0)`.
+1. **The Warden seals the beacon.**
+   - **Spawning.** In play (`not ctx.calm`, or `flow.force_warden` in tests), flow spawns one through `ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(stage))` right after `stage_entered`.
+   - **Charge.** Rolling into the ring marks the beacon engaged but adds no charge. Every tick the charge shown is `1 - ctx.spawner.integrity_of(warden)`, capped at 0.99, so `1.0` is only ever published by the unseal.
+   - **Unseal.** When `enemy_killed` arrives with kind `warden` and it is this stage's Warden, flow emits `beacon_unsealed(stage)`, enters `gates` and emits `beacon_charge_changed(1.0)`, wherever the ball is. "This stage's Warden" means `integrity_of(warden)` reads 0, or, for a spawner without `integrity_of`, the kill happened within 6 m of where it stood.
+   - **Vanished Warden.** If the Warden leaves the tree with no kill recorded, flow unseals the same way, warns once, and adds a `warden_vanished` anomaly to the run log. If the spawner returns no Warden, or the stage is calm, the stage stays on the unsealed presence path: circling inside the ring charges it over `beacon_seconds`, then flow enters `gates` and emits `beacon_charge_changed(1.0)`.
 2. B opens its gates and emits `reward_offered(offers)`. Each offer is a Dictionary with these keys: `part_id: String`, `at: Vector3` (the gate's ground centre), `facing: Vector3` (the way through, flat and unit length) and `width: float`. B reads `ctx.run.gate_tier_bonus()` when it builds the offers. B emits `reward_offered` again whenever the gates move. `spine_run_test.gd` drives the ball through `offers[0]` using these records.
 3. When the ball rolls through a gate, B calls `run.add_part(id, "gate")`, then emits `reward_chosen(id)`.
 4. D launches the ball and emits `launched(velocity)`. D may launch from inside its own `reward_chosen` handler, before flow has heard `reward_chosen`. Flow accepts a launch in either `gates` or `launch`.
@@ -228,24 +250,35 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 - `speed_tier() -> int` (0 walk, 1 cruise, 2 fast, 3 blazing), `speed_fraction() -> float`, `shown_position()`, `planar_velocity()`, `ball_position()`.
 - `state` (`BallState`: `velocity`, `grounded`, `contact_normal`, `impact`, `tier`) and `kit` (`AugmentKit`: `mounted`, `mount_banked`, `mount_point`, `mount_normal`, `hooked`, `gliding`, `slamming`) are read-only.
 - `intent` holds this tick's input. Combat reads `fire_pressed`, `fire_held` and `special_pressed`. The spine fills it.
-- `add_external_accel(accel)` adds a push in m/s², accumulated per physics tick and spent once. It does nothing while the ball is planted or mounted. Its users:
+- `add_external_accel(accel)` adds a push in m/s², accumulated per physics tick and spent once. It does nothing while the ball is planted, mounted or frozen, and `set_frozen(true)` and `reset_to` drop any push already handed over, so a killing blow's shove never reaches the retry. Its users:
   - the world, for the flood;
   - combat, for the shove of a committed, telegraphed hit;
   - the Warden pulse and the magnet tug.
 
-  A foreseen shove is an allowed performance cost.
+  A foreseen shove is an allowed performance cost. To turn a velocity change into an acceleration, divide it by the physics step actually run (the `delta` your `_physics_process` receives), never by `physics_ticks_per_second`: hit-stop changes `Engine.time_scale`, which would otherwise scale the push.
 - `set_velocity_now(velocity)` sets velocity. Only D's launch uses it. The launch calls it every tick during the flight, as a rail, not once.
 - `crush_check` (a Callable) is wired by `game.gd` to `ctx.spawner.would_crush`. A bow sensor a metre past the shell asks it for each enemy met from the cruise tier up. On yes, the ball ignores that enemy for 0.3 s and reports one `ram` strike, with no knock, shockwave or hit-stop.
 
 ## Flow seams (`src/core/flow.gd`)
 
 - `force_warden` is a test knob: it seals calm stages.
-- `boss_active` and `boss_plating` are for wave 4. The boss flow sets them when it enters its `boss` state. The death screen then shows the boss gap line and offers T, which calls `replay_stage(3)` and restores the first stage-3 start the run kept.
+- **The boss flow.**
+  - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the stage fall rescue are not used in the arena; the arena rescue (E's `floor_y()` and `rescue_point()`, below) is.
+  - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s, then the summary and `run_ended(true)`.
+  - **Death.** A death in `boss` leads to `dead`. There, R (or holding R in play) restores the arena-entry checkpoint and calls `enter_arena` again, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
+  - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
+  - **Live boss reads (owner: E).** The boss module implements `live_plating() -> float`, the plating of whatever stands in the way right now (150 in a charge, 0 in a stun, the scooter's in the chase), and `objective_text() -> String`, the objective for the current phase ("" to use the standing one). Flow reads both through `boss_plating_now()` for the objective line and the death gap line; the gap line keeps the plating live at the moment of death. Without them flow falls back to `boss_plating` and the standing objective.
+  - **Arena fall rescue (owner: E, the boss module).** The boss module implements `floor_y() -> float` and `rescue_point() -> Vector3`. Every tick in `boss`, flow checks the ball against `floor_y()`. Below it, flow puts the ball at `rescue_point()` keeping its horizontal speed, with no damage, like the stage rescue. If the boss module lacks either method, flow warns once and uses 40 m below the arena-entry checkpoint as the floor and the entry position as the landing.
 - `discovery_burst(at)` grants 20 scrap times the stage at a discovery. The codex calls it, once per entry per run.
 
 ## Codex (`src/core/codex.gd`, `ctx.codex`)
 
 The codex is saved to `user://codex.json` with the keys `discovered` (ids), `found` (descriptions) and `found_categories`. It is the demo's only meta-progression. Storage failures never throw: the codex keeps working in memory and sets `last_error`.
+
+- An entry declared with an unknown category is not registered, and the codex warns once. Discovering an undeclared id also warns once, and the id files under `build` everywhere: the bus fact, the log line and the pages.
+- A retry rewinds the run to the stage start, burst scrap included. The codex rewinds with it: entries first discovered or found during the retried attempt can fire again, and pay their burst again. The saved codex is never rewound.
+- The arena is its own attempt. On `stage_content_cleared("arena")` the codex sets the stage-3 attempt aside; on `"arena_retry"` it rewinds only what the fight discovered. A T replay (`stage_entered` with retry) rewinds both.
+- An owner calls `mark_discovered` every time its entry fires and leaves the once-per-attempt rule to the codex; a local once-per-run guard would keep a rewound entry from firing again and drop it from the run log.
 
 - `declare({id, category, name, hint, clue, text})` registers an entry at setup, and a repeat declare is harmless. The categories are `build` (owned by B), `world` (owned by D), `enemy` (owned by A), and the reserved `npc` and `coop`.
 - `mark_discovered(id, at := Vector3.ZERO, participants := ["player"]) -> bool` is called by the entry's owner every time it fires. The first call in a run publishes `synergy_discovered(id, category, first_time)`, grants the treasure burst at `at` and appends a line to `user://codex-log.ndjson`. It returns whether the saved codex had never seen the entry.
@@ -262,12 +295,32 @@ At every death and at the end of a run, the spine appends one cumulative record 
 - `stages`, one entry per stage with `stage`, `ticks_to_warden_break`, `heft_at_exit`, `part_ids_at_exit`, `bonus_cores`, `deaths` (each `{x, y, z, ticks}`), `events_joined` and `events_won`.
 - `codex`, the ids discovered this run.
 - `brindle_phase_reached`, which stays null until wave 4 sets it.
+- `arena`, present once the arena is entered: `entries` (entry plus each arena retry) and `deaths`, each `{x, y, z, ticks, run_ticks, phase}` with `ticks` on the arena clock, `run_ticks` on the run's and `phase` Brindle's. Arena deaths are never filed under stage 3.
+- `anomalies`, the seam faults the run met (`{stage, kind, ticks}`, such as `warden_vanished`).
 
-The record comes from bus signals and run state only.
+The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's.
+
+## UI regions (`src/ui/screen_regions.gd`)
+
+During play the screen is four horizontal bands, as shares of the visible height, and nothing drawn in one band reaches another:
+
+| Band | Height | Holds |
+| --- | --- | --- |
+| `top` | 0 to 14% | screen titles, the objective line with its core pips, the run status |
+| `toasts` | 15 to 29% | notable facts, at most 2 at once, and the hold-R restart meter |
+| `prompts` | 62 to 84%, 6% side margins | world-attached prompts: reward gates and fabricators |
+| `bottom` | 86 to 100% | the HUD: speed, heft and the key hints |
+
+- The middle between `toasts` and `prompts` is the play view and the reticle.
+- A toast whose words are already showing is not repeated; the showing one stays up for another full beat.
+- A module that labels something in the world uses `src/ui/world_prompt.gd` (a `Label`), sets its text and colour, and calls `attach(anchor, offset, reach)`. It never uses a `Label3D` for words. The HUD places every prompt each frame: nearest first, at most 3, under its anchor's column where there is room, clamped inside `prompts`, never overlapping another prompt.
+- Screens (title, class select, death, summary), the field notes and the tuning panel draw only while flow is out of play or the game is paused, when the HUD bands are hidden.
+- Presentation's discovery banner follows the same rule: it belongs in `toasts` or in the middle view, never in `top` or `prompts`.
 
 ## Tests
 
 - Name module tests `tests/combat_*.gd`, `tests/build_*.gd`, `tests/presentation_*.gd` and `tests/world_*.gd`.
+- Drive contacts physically when the test is about contacts. `spine_stomp_test.gd` drops and rolls the real ball onto a target: a contact is classified and sized from the motion the ball had going into it (`player.pre_contact_velocity`), because the live velocity is already the solver's bounce.
 - A test extends `SceneTree`, prints one line per check in the form `[check] detail -> PASS` or `-> FAIL`, then a final `<name>: PASS` line, and quits 0 or 1.
 - Never print a line that starts with `ERROR` or `FAIL`. The smoke runner treats those as failures.
 - Build the game with `Game.new()`, set `test_mode = true`, add it to `root` and wait for `flow` to be set. Test mode writes the codex and run logs to a per-process folder, removed when the game leaves the tree. Drive input with `Intent.Scripted` (`hold` and `press`). Set `ctx.calm` when measuring speed.

@@ -36,6 +36,8 @@ var stage_time := 0.0
 var since_damage := 99.0
 var retries := 0
 var over := false
+# Seam faults the run log should carry, such as a Warden that vanished unbroken.
+var anomalies: Array[Dictionary] = []
 
 var _snapshot := {}
 var _heft_class := 1
@@ -71,6 +73,7 @@ func begin(chosen_class: Resource) -> void:
 	since_damage = 99.0
 	retries = 0
 	over = false
+	anomalies.clear()
 	_snapshot = {}
 
 
@@ -137,12 +140,18 @@ func heft_progress() -> float:
 	return clampf((heft() - low) / (high - low), 0.0, 1.0)
 
 
+# A rise and a drop are different facts with different sounds, so each has its own
+# signal: heft_class_changed only ever means the class went up.
 func _publish_heft_class() -> void:
 	var c := heft_class()
 	if c == _heft_class:
 		return
+	var rose := c > _heft_class
 	_heft_class = c
-	events.heft_class_changed.emit(c, heft())
+	if rose:
+		events.heft_class_changed.emit(c, heft())
+	else:
+		events.heft_class_dropped.emit(c, heft())
 
 
 # Events and vaults grant bonus cores; each one overcharges this stage's beacon.
@@ -202,6 +211,10 @@ func record_kill(kind: String, at: Vector3, scrap_value: int) -> void:
 	events.enemy_killed.emit(kind, at, scrap_value)
 
 
+func note_anomaly(kind: String) -> void:
+	anomalies.append({"stage": stage, "kind": kind, "ticks": int(round(stage_time * Engine.physics_ticks_per_second))})
+
+
 func record_milestone(event_id: String) -> void:
 	events_won.append(event_id)
 	events.milestone_won.emit(event_id)
@@ -233,6 +246,18 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 	}
 	if not _stage_starts.has(stage):
 		_stage_starts[stage] = _snapshot.duplicate(true)
+
+
+# Flow takes the snapshot before stage_entered and fills in the entry pose once the
+# ball is placed; the kept stage start gets the same pose.
+func set_snapshot_entry(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: float) -> void:
+	for record in [_snapshot, _stage_starts.get(stage, {})]:
+		if record.is_empty() or record["stage"] != stage:
+			continue
+		if record == _snapshot or record["entry_position"] == Vector3.ZERO:
+			record["entry_position"] = entry_position
+			record["entry_velocity"] = entry_velocity
+			record["camera_yaw"] = camera_yaw
 
 
 func has_stage_start(index: int) -> bool:

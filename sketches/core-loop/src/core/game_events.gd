@@ -15,6 +15,7 @@ signal run_ended(won: bool)
 signal beacon_charge_changed(fraction: float)
 signal beacon_unsealed(stage: int)
 signal warden_engaged(stage: int)
+signal stage_content_cleared(reason: String)
 
 # Run state (spine; emitted by run_state.gd's mutators, called by the modules).
 signal scrap_collected(amount: int, at: Vector3, total: int)
@@ -24,6 +25,7 @@ signal player_died
 signal enemy_killed(kind: String, at: Vector3, scrap_value: int)
 signal milestone_won(event_id: String)
 signal heft_class_changed(heft_class: int, heft: float)
+signal heft_class_dropped(heft_class: int, heft: float)
 signal scrap_lost(amount: int, at: Vector3, total: int, cause: String)
 signal core_gained(source: String, at: Vector3, count: int)
 
@@ -61,6 +63,13 @@ signal event_ended(event_id: String, outcome: String)
 signal launched(velocity: Vector3)
 signal pressure_changed(pressure: float)
 signal threat_rose(tier: int)
+
+# Boss (wave 4, writer E's src/boss/).
+signal boss_arena_entered
+signal boss_phase_changed(phase: int, name: String)
+signal boss_attack_telegraphed(attack_id: String, seconds_until: float)
+signal boss_weak_point_hit(point_id: String)
+signal boss_defeated
 
 
 static func signal_names() -> PackedStringArray:

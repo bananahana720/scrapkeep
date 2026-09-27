@@ -16,6 +16,11 @@ const CHASER_HP := 80.0
 
 var ctx
 var strikes: Array[Dictionary] = []
+# A test can hold deaths back to model a spawner that records the kill late; the
+# contract says the kill is recorded on the tick HP reaches 0, and flow must not open
+# the gates early if one does not.
+var delay_deaths := false
+var _pending: Array[Node3D] = []
 
 
 class DoubleEnemy:
@@ -88,8 +93,22 @@ func strike(enemy: Node3D, kind: String, force: float) -> void:
 	enemy.hp -= amount
 	if enemy.hp <= 0.0:
 		enemy.dead = true
-		ctx.run.record_kill(enemy.kind, enemy.global_position, 0)
-		enemy.queue_free()
+		if delay_deaths:
+			_pending.append(enemy)
+		else:
+			_die(enemy)
+
+
+func finish_pending() -> void:
+	for enemy in _pending:
+		if is_instance_valid(enemy):
+			_die(enemy)
+	_pending.clear()
+
+
+func _die(enemy: Node3D) -> void:
+	ctx.run.record_kill(enemy.kind, enemy.global_position, 0)
+	enemy.queue_free()
 
 
 func punch_now() -> float:
@@ -102,7 +121,7 @@ func plating_of(enemy: Node3D) -> float:
 
 
 func integrity_of(enemy: Node3D) -> float:
-	if not is_instance_valid(enemy) or enemy.dead:
+	if not is_instance_valid(enemy):
 		return 1.0
 	return clampf(enemy.hp / enemy.max_hp, 0.0, 1.0)
 

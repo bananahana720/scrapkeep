@@ -39,6 +39,7 @@ If you are scrapped, press R to retry the stage from its start, N for a new run,
 | - / = | music volume down / up |
 | [ / ] | effects volume down / up |
 | M | mute or unmute |
+| F6 | boss tempo: 129, or 172 while held |
 | P | pause or resume |
 | R (hold) | retry the stage from its start |
 | F1 | tuning panel (frees the mouse) |

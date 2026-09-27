@@ -6,13 +6,15 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # built from CONTROLS, and README.md mirrors them by hand. The legend is generated
 # from event_kinds.gd, so it always shows the colours and wording the game uses.
 const TITLE := "Scrapkeep: First Run · field notes"
+# What the run asks of you, in one line: the title screen shows it too.
+const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three stages, then rout Admiral Brindle."
 
 const TESTING := [
-	"One run: title, class, three stages, each clamped by a Warden at its beacon; break it, roll through a reward gate, launch into the next stage; a summary after stage 3.",
+	"One run: title, class, three stages, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Stage 3's launch drops you into the arena against Admiral Brindle; beat him for the summary.",
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The objective line shows your punch against the Warden's plating.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the pips beside the objective) that raise the gate tiers.",
 	"The pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage.",
+	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In the arena, R retries the fight from its entry and T replays stage 3.",
 ]
 
 const QUESTIONS := [
@@ -29,6 +31,7 @@ const TRY_FIRST := [
 	"Break the Warden (the stage hint says how); the gates open wherever you are. Roll through one to take its part.",
 	"Hit a steep face at speed, press E, fire with left mouse, then Space to slingshot off.",
 	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
+	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
 const CONTROLS := [
@@ -47,8 +50,9 @@ const CONTROLS := [
 	{"keys": "- / =", "does": "music volume down / up", "hint": "-/= music"},
 	{"keys": "[ / ]", "does": "effects volume down / up", "hint": "[/] effects"},
 	{"keys": "M", "does": "mute or unmute", "hint": "M mute"},
+	{"keys": "F6", "does": "boss tempo: 129, or 172 while held", "hint": "F6 boss tempo"},
 	{"keys": "P", "does": "pause / resume", "hint": "P pause"},
-	{"keys": "R (hold)", "does": "retry the stage from its start", "hint": "hold R retry"},
+	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "hint": "hold R retry"},
 	{"keys": "F1", "does": "tuning panel (frees the mouse)", "hint": "F1 tuning"},
 	{"keys": "F3", "does": "physics interpolation on/off (off by default)", "hint": "F3 interp"},
 	{"keys": "F4", "does": "save every tuning value to user://tuning-<time>.json", "hint": "F4 save tuning"},
@@ -56,9 +60,10 @@ const CONTROLS := [
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a class"},
+	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
 	{"keys": "1 / 2", "does": "class select: Pylon engineer / Runner-gunner"},
-	{"keys": "R", "does": "death screen: retry the stage"},
+	{"keys": "R", "does": "death screen: retry the stage, or the fight in the arena"},
+	{"keys": "T", "does": "arena death screen: replay stage 3 from its start"},
 	{"keys": "N", "does": "death or summary: new run, same class"},
 	{"keys": "C", "does": "death screen: choose a class"},
 ]
@@ -127,7 +132,7 @@ static func legend_bbcode() -> String:
 		if row["priority"] < EventKinds.TOAST_PRIORITY:
 			continue
 		var words: String = row["hud"] if row["hud"] != "" else kind.replace("_", " ")
-		lines.append("[color=#%s]%s  %s[/color]" % [(row["color"] as Color).to_html(false), row["shape"], words])
+		lines.append("[color=#%s]%s  %s[/color]" % [(row["color"] as Color).to_html(false), SHAPE_GLYPHS.get(row["shape"], ""), words])
 	return "\n".join(lines)
 
 
@@ -296,10 +301,21 @@ func _card(entry: Dictionary, style: Dictionary) -> Control:
 		text.text = "%s %s\n%s" % [glyph, entry["name"], entry["text"]]
 		text.add_theme_color_override("font_color", style["color"])
 	else:
-		text.text = "%s ???\n%s %s" % [glyph, entry["hint"], entry["clue"]]
+		text.text = hint_card_text(glyph, entry["hint"], entry["clue"])
 		text.add_theme_color_override("font_color", Color(0.75, 0.76, 0.78))
 	card.add_child(text)
 	return card
+
+
+# An undiscovered card: the hint sentence, then the clue on its own line. A hint that
+# already names its clue (build's "Chain Arc + something that splits") shows it once.
+static func hint_card_text(glyph: String, hint: String, clue: String) -> String:
+	var lines := PackedStringArray(["%s ???" % glyph])
+	if hint != "":
+		lines.append(hint)
+	if clue != "" and not hint.contains(clue):
+		lines.append("clue: " + clue)
+	return "\n".join(lines)
 
 
 func _render_found(codex) -> int:

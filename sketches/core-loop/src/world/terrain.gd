@@ -67,6 +67,16 @@ func use(index: int) -> void:
 	stage = _index(index) + 1
 	for i in _roots.size():
 		_park(_roots[i], i != stage - 1)
+		_roots[i].process_mode = Node.PROCESS_MODE_INHERIT
+
+
+# The arena is not a stage: every map is hidden and its colliders leave the physics
+# world until the next use(). Putting a trimesh back rebuilds its tree, which an arena
+# entry or a T replay can afford and a launch swap cannot, so only this path does it.
+func park_all() -> void:
+	for root in _roots:
+		_park(root, true)
+		root.process_mode = Node.PROCESS_MODE_DISABLED
 
 
 static func _park(root: Node3D, parked: bool) -> void:

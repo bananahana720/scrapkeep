@@ -22,6 +22,9 @@ const SLAM := "slam"
 const BOW_REACH := 1.0
 # How long a crushed enemy is ignored by the ball's collider while it dies.
 const CRUSH_PASS := 0.3
+# A contact is a stomp when the ball was coming down faster than this onto an enemy
+# below its centre.
+const STOMP_SPEED := 3.0
 
 signal shockwave(position: Vector3, strength: float)
 # A physical contact the ball made, for combat to turn into damage. Local, not the bus:
@@ -165,15 +168,22 @@ func planar_velocity() -> Vector3:
 	return Vector3(state.velocity.x, 0.0, state.velocity.z)
 
 
+# A frozen ball takes no push: a killing blow's shove lands after the death has frozen
+# it, and must not wait for the retry (FIXWAVE spine, the stale shove).
 func add_external_accel(accel: Vector3) -> void:
+	if _frozen:
+		return
 	_rigid.external_accel += accel
 
 
 # Screens freeze the ball so a title or death screen never lets it roll off; unfreezing
 # hands back exactly the velocity given, which is how a launch carries between stages.
+# Freezing drops any push already handed over this tick.
 func set_frozen(frozen: bool) -> void:
 	_frozen = frozen
 	_rigid.set_active(not frozen)
+	if frozen:
+		_rigid.external_accel = Vector3.ZERO
 
 
 func frozen() -> bool:
@@ -185,6 +195,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	kit.clear_runtime()
 	_roll = Basis.IDENTITY
 	_was_hooked = false
+	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
 
@@ -225,6 +236,7 @@ func _physics_process(delta: float) -> void:
 	if _was_hooked and not kit.hooked:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
+	_recheck_bow()
 
 
 func _process(_delta: float) -> void:
@@ -272,6 +284,19 @@ func _build_bow() -> void:
 
 
 func _on_bow_entered(body: Node3D) -> void:
+	_try_crush(body)
+
+
+# Rechecked every tick for whatever is inside the bow, so an enemy the ball grows or
+# speeds into outweighing mid-overlap is still rolled up.
+func _recheck_bow() -> void:
+	if _bow == null or _frozen or state.tier < SpeedTier.CRUISE:
+		return
+	for body in _bow.get_overlapping_bodies():
+		_try_crush(body)
+
+
+func _try_crush(body: Node3D) -> void:
 	if _frozen or not body.is_in_group("enemy") or state.tier < SpeedTier.CRUISE or not crush_check.is_valid():
 		return
 	var id := body.get_instance_id()
@@ -424,25 +449,40 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> vo
 			struck.emit(enemy, kind, force * falloff)
 
 
+# The motion the ball had going into a contact: of the velocities recently handed to the
+# solver, the one closing fastest on the enemy. The live velocity is already the bounce.
+func pre_contact_velocity(toward: Vector3) -> Vector3:
+	var best: Vector3 = state.velocity
+	var closing := -INF
+	for velocity in _rigid.recent_velocities:
+		var c: float = velocity.dot(toward)
+		if c > closing:
+			closing = c
+			best = velocity
+	return best
+
+
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	if _crushing.has(enemy.get_instance_id()):
 		return
-	var velocity: Vector3 = state.velocity
-	var away := enemy.global_position - ball_position()
-	away.y = 0.0
+	var to_enemy := enemy.global_position - ball_position()
+	var before := pre_contact_velocity(to_enemy.normalized() if to_enemy.length() > 0.01 else Vector3.DOWN)
+	var planar := Vector2(before.x, before.z).length()
+	var away := Vector3(to_enemy.x, 0.0, to_enemy.z)
 	away = away.normalized() if away.length() > 0.01 else Vector3.FORWARD
-	if velocity.y < -3.0 and normal.y > 0.3:
+	if before.y < -STOMP_SPEED and normal.y > 0.3:
 		# The one mechanic worth keeping from the orchard: a descending rebound
 		# gives the air jump back, so bouncing is a way to keep a line going.
 		state.air_actions = 1
 		kit.dash_ready = true
-		state.impact = maxf(state.impact, absf(velocity.y))
-		_rigid.set_velocity_now(Vector3(velocity.x, tuning.f("jump_speed") * 0.95, velocity.z))
+		state.impact = maxf(state.impact, -before.y)
+		_rigid.set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0)
 		shockwave.emit(enemy.global_position, 0.6)
-		struck.emit(enemy, STOMP, absf(velocity.y))
-	elif state.tier >= SpeedTier.CRUISE:
+		struck.emit(enemy, STOMP, -before.y)
+	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
 		enemy.knock(away + Vector3.UP * 0.35, 18.0)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
-		struck.emit(enemy, RAM, velocity.length())
+		# Planar speed, the same measure punch_now and the crush check use (one query).
+		struck.emit(enemy, RAM, planar)

@@ -47,12 +47,20 @@ func _physics_process(_delta: float) -> bool:
 func _checks() -> void:
 	var codex = _game.codex
 	var run = _game.run
+	# Modules declare their own entries at setup, so every size check here is a delta.
+	var base_all: int = codex.entries().size()
+	var base_build: int = codex.entries("build").size()
+	var base_world: int = codex.entries("world").size()
+	var base_enemy: int = codex.entries("enemy").size()
 	codex.declare({"id": "storm_lattice", "category": "build", "name": "Storm Lattice", "hint": "Chain Arc", "clue": "+ something that splits", "text": "Split bolts chain between targets."})
 	codex.declare({"id": "storm_lattice", "category": "build", "name": "Storm Lattice", "hint": "Chain Arc", "clue": "+ something that splits", "text": "Split bolts chain between targets."})
 	codex.declare({"id": "flood_zap", "category": "world", "name": "Live Wire", "hint": "Flood water", "clue": "+ an arc", "text": "Arc on flood water electrifies it."})
-	codex.declare({"id": "shell_return", "category": "enemy", "name": "Return to Sender"})
-	_report("declare", codex.entries().size() == 3 and codex.entries("build").size() == 1 and _game.ctx.codex == codex,
-		"3 entries after declaring storm_lattice twice (%d), build page holds %d" % [codex.entries().size(), codex.entries("build").size()])
+	codex.declare({"id": "test_enemy_trick", "category": "enemy", "name": "Test enemy trick"})
+	codex.declare({"id": "mystery", "category": "dance"})
+	var added := [codex.entries().size() - base_all, codex.entries("build").size() - base_build,
+		codex.entries("world").size() - base_world, codex.entries("enemy").size() - base_enemy]
+	_report("declare", added == [3, 1, 1, 1] and _game.ctx.codex == codex and not codex.entries().any(func(e): return e["id"] == "mystery"),
+		"declaring storm_lattice twice, flood_zap, test_enemy_trick and an unknown category added %s (all, build, world, enemy)" % [added])
 
 	var scrap_before: int = run.scrap
 	var spot := Vector3(3.0, 20.0, 4.0)
@@ -62,16 +70,17 @@ func _checks() -> void:
 			and run.scrap - scrap_before == 20 * run.stage and codex.known("storm_lattice"),
 		"first call %s, repeat %s, %d fact(s) %s, burst gave %d scrap on stage %d"
 			% [first, again, _facts.size(), _facts, run.scrap - scrap_before, run.stage])
-	_report("completion", is_equal_approx(codex.completion("build"), 1.0) and codex.completion("world") == 0.0 and codex.entries("build")[0]["known"],
-		"build %.0f%%, world %.0f%%" % [codex.completion("build") * 100.0, codex.completion("world") * 100.0])
+	var lattice: Array = codex.entries("build").filter(func(e): return e["id"] == "storm_lattice")
+	_report("completion", codex.completion("build") > 0.0 and lattice.size() == 1 and lattice[0]["known"] and not codex.entries("world").filter(func(e): return e["id"] == "flood_zap")[0]["known"],
+		"build %.0f%%, world %.0f%%, storm_lattice known" % [codex.completion("build") * 100.0, codex.completion("world") * 100.0])
 
 	var notes = _game.notes
 	var cards: int = notes.render_page("build")
 	var world_cards: int = notes.render_page("world")
 	notes.show_page(1)
 	var tabs: String = notes._title.text
-	_report("codex page", notes.pages() == ["notes", "build", "world", "enemy", "found"] and cards == 1 and world_cards == 1
-			and tabs.contains("[ Build 100% ]") and tabs.contains("World 0%"),
+	_report("codex page", notes.pages() == ["notes", "build", "world", "enemy", "found"] and cards == base_build + 1 and world_cards == base_world + 1
+			and tabs.contains("[ Build %d%% ]" % int(codex.completion("build") * 100.0)),
 		"pages %s; build shows %d card, world %d; tab row \"%s\"" % [notes.pages(), cards, world_cards, tabs.get_slice("  ·  ", 1)])
 
 	var new_text: bool = codex.mark_found("frost then a ram shatters", "enemy")
@@ -92,6 +101,15 @@ func _checks() -> void:
 	_report("saved", reload.known("storm_lattice") and reload.found() == ["frost then a ram shatters"],
 		"a fresh codex on the same folder knows %s and found %s" % [reload.discovered(), reload.found()])
 	reload.free()
+
+	var burst_scrap: int = run.scrap
+	_game.flow.retry_stage()
+	var rewound: int = run.scrap
+	_facts.clear()
+	codex.mark_discovered("storm_lattice", spot)
+	_report("retry rewinds", rewound < burst_scrap and _facts.size() == 1 and run.scrap - rewound == 20 * run.stage,
+		"a retry took the scrap back to %d (from %d) and the rediscovery fired again (%d fact) with a %d scrap burst"
+			% [rewound, burst_scrap, _facts.size(), run.scrap - rewound])
 
 	_game.flow.new_run()
 	_facts.clear()

@@ -22,6 +22,7 @@ const INTERRUPT := 10.0
 # the spec's Katamari threshold, where fodder that used to bounce you gets rolled up.
 const HP := 60.0
 const SCRAP := 3
+const ACCENT := Color("ffb070")
 
 enum State { CHASE, WINDUP, LUNGE, RECOVER }
 
@@ -43,6 +44,15 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	radius = 1.0
 	half_height = 1.5
 	_mesh = _add_capsule(radius, half_height * 2.0, Palette.RUST)
+	# A lit visor and a dorsal fin, so a chaser reads at 60 to 100 m as a hunting shape
+	# with a hot eye, not a rust-coloured pill against rust-coloured ground.
+	var visor := TorusMesh.new()
+	visor.inner_radius = radius * 0.9
+	visor.outer_radius = radius * 1.15
+	_accent(visor, ACCENT, 3.0, Vector3.UP * 0.55, _mesh)
+	var fin := BoxMesh.new()
+	fin.size = Vector3(0.22, 1.5, 1.3)
+	_accent(fin, Palette.CHARCOAL, 0.0, Vector3(0.0, half_height + 0.35, 0.25), _mesh)
 
 
 func state_name() -> String:
