@@ -113,33 +113,57 @@ static func _ndjson(path: String) -> Array:
 
 # --- the report -----------------------------------------------------------------------
 
-func _build() -> bool:
-	var bots := _ndjson(_in.path_join("bots.ndjson"))
-	if bots.is_empty():
-		_lines.append("No bots.ndjson rows in %s." % _in)
-		return false
-	# The run log is cumulative: the last line of a run carries the whole run.
+# One folder's bot lines, each with its run log record (the run log is cumulative: the
+# last line of a run carries the whole run) and its codex discoveries.
+static func _join(dir: String) -> Array[Dictionary]:
 	var spine := {}
-	for record in _ndjson(_in.path_join("runs.ndjson")):
+	for record in _ndjson(dir.path_join("runs.ndjson")):
 		spine[record.get("run_id", "")] = record
 	var discoveries := {}
-	for line in _ndjson(_in.path_join("codex-log.ndjson")):
+	for line in _ndjson(dir.path_join("codex-log.ndjson")):
 		if line.get("kind") == "discovered":
 			var id: String = line.get("run_id", "")
 			if not discoveries.has(id):
 				discoveries[id] = {}
 			discoveries[id][line.get("id", "")] = true
-	var entries = JSON.parse_string(FileAccess.get_file_as_string(_in.path_join("codex-entries.json")))
-	if not entries is Array:
-		entries = []
 	var runs: Array[Dictionary] = []
-	for bot in bots:
+	for bot in _ndjson(dir.path_join("bots.ndjson")):
 		var id: String = bot.get("run_id", "")
 		var found: Dictionary = discoveries.get(id, {}).duplicate()
 		var record: Dictionary = spine.get(id, {})
 		for codex_id in record.get("codex", []):
 			found[codex_id] = true
 		runs.append({"bot": bot, "spine": record, "found": found})
+	return runs
+
+
+# The folders to join: each bot process's own folder when --in holds them, else --in.
+# run_id is a second stamp plus a draw from the seeded stream, so the same seed started
+# in the same second by two processes shares an id; joining inside one process's folder
+# keeps each policy's run log with its own bot line.
+static func _sources(root: String) -> Array:
+	var dirs := []
+	var listing := DirAccess.open(root)
+	if listing != null:
+		for sub in listing.get_directories():
+			if FileAccess.file_exists(root.path_join(sub).path_join("bots.ndjson")):
+				dirs.append(root.path_join(sub))
+	if dirs.is_empty():
+		dirs.append(root)
+	dirs.sort()
+	return dirs
+
+
+func _build() -> bool:
+	var runs: Array[Dictionary] = []
+	for dir in _sources(_in):
+		runs.append_array(_join(dir))
+	if runs.is_empty():
+		_lines.append("No bots.ndjson rows in %s." % _in)
+		return false
+	var entries = JSON.parse_string(FileAccess.get_file_as_string(_in.path_join("codex-entries.json")))
+	if not entries is Array:
+		entries = []
 
 	var band := _heft_band()
 	_header(runs)
