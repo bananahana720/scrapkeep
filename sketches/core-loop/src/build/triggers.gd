@@ -8,10 +8,11 @@ extends RefCounted
 # Every trigger is read at a commitment that already exists (a strike, a kill, a landed
 # smash, a released gauge) and resolved in build's own physics step, never inside the
 # signal handler that reported it (TADR-008). A root commitment opens one pass. While
-# the pass resolves, a consumer may post other kinds, but a kind that has already
-# resolved in this pass may not post itself again, so every chain ends by construction:
-# at most twelve kinds deep. The one sanctioned exception is an explicit chain (Domino
-# Wire), which carries chain_depth and is refused past MAX_CHAIN_DEPTH.
+# the pass resolves, a consumer may post other kinds, but a kind already queued or
+# resolved in this pass is refused, so each kind fires at most once per commitment and
+# every chain ends by construction: at most twelve resolutions. Five kills from one
+# burst are one on_kill in that pass. The one sanctioned exception is an explicit chain
+# (Domino Wire), which carries chain_depth and is refused past MAX_CHAIN_DEPTH.
 
 enum Kind { ON_HIT, ON_KILL, ON_SMASH, ON_REBOUND, ON_VAULT, ON_CHARGE_RELEASE, ON_CLOAK_BREAK, ON_LAND,
 	ON_SPEED_TIER_UP, ON_PICKUP, ON_DAMAGE_TAKEN, TIMED }
@@ -87,7 +88,7 @@ class Commitment:
 
 
 # The pass machinery. post() queues a root outside a pass, or a consequence inside one
-# (refused when its kind already resolved in this pass). run() drains the roots, one
+# (refused when its kind is already queued or resolved in this pass). run() drains the roots, one
 # pass each. The explicit, depth-capped chain (Domino Wire) lives with the pins in
 # item_effects.gd, because a pin is combat's consequence, not a trigger kind.
 class Bus:
@@ -95,6 +96,7 @@ class Bus:
 
 	var pending: Array = []
 	var queue: Array = []
+	# Kinds queued or resolved in the pass now running; cleared when it publishes.
 	var resolving := {}
 	var in_pass := false
 	# Instrumentation the fuzzer and the tests read.
@@ -112,6 +114,7 @@ class Bus:
 		if resolving.has(c.kind):
 			refused += 1
 			return false
+		resolving[c.kind] = true
 		c.index = _count
 		_count += 1
 		queue.append(c)
@@ -131,10 +134,10 @@ class Bus:
 		_pass_counts = {}
 		_count = 1
 		root.index = 0
+		resolving[root.kind] = true
 		queue = [root]
 		while not queue.is_empty():
 			var c: Commitment = queue.pop_front()
-			resolving[c.kind] = true
 			var n: int = _pass_counts.get(c.kind, 0) + 1
 			_pass_counts[c.kind] = n
 			max_same_kind = maxi(max_same_kind, n)
