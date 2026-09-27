@@ -71,6 +71,8 @@ G11 is the standing rule: keep the loved core, escalate on real game-state thres
 5. **Every new pitched cue joins `KEYED_SOUNDS`.** A motif cue, a hold loop or a faction stinger that is not in the live key after a lift is a bug.
 6. **Danger never waits for a beat.** A motif that is a telegraph plays on the game frame. A motif that is an announcement lands on the beat. The class motif on release is the player's own action and plays now.
 
+Andrew ruled on all three of these on 2026-09-27 (DESIGN-V2 §11): only the reactor colours the band, the Fleet borrows Brindle's anvil and brass one layer per difficulty tick, and the Mind's inverted quote is the one sanctioned hostile use of a class motif and doubles as its telegraph. The rules above are settled, not defaults.
+
 Gem by gem: G1 (the band), G2 (the rice cooker), G3 and G4 (the Warden pivot and club), G5 (level palettes), G6 (Brindle's reverse quotes and the victory), G7 (phase shifts), G8 (the bass lines), G9 (the drops), G10 (Pyramids layering) and G11 (the B grammar) are untouched by any rule here. R1 (talking growls) and R2 (wobble) stay out: the Fleet motif is brass and anvil, the reactor drone is a clean sub, and no motif uses a formant or an LFO.
 
 ## 3. Sound grammar
@@ -264,7 +266,7 @@ The alignment pass answers each for any unit's vision delta. Every answer must b
 
 - **must.** `VISUAL-LANGUAGE.md` §11 says the Mind's chime "plays the class motif back, slightly wrong". Define "wrong" once: inverted, last note a semitone flat, on sine (§2 of this file). W7 and W5 read that definition; neither invents its own.
 - **could.** Sable's detonation gauge adds "one arpeggio note per ring". The motif has five notes; draw five rings from 12 to 30 m so the rings and the notes count the same.
-- **could.** The focal landmark's violet light could carry a sound: a sub pulse on bar 1 of each phrase, panned toward the tower and louder as you near it, so the landmark orients by ear from every layer. It is a background layer at priority 0 and never competes with a threat.
+- **could.** The focal landmark's Cherenkov-blue light (`#3d8bff`, DESIGN-V2 §11) could carry a sound: a sub pulse on bar 1 of each phrase, panned toward the tower and louder as you near it, so the landmark orients by ear from every layer. It is a background layer at priority 0 and never competes with a threat.
 
 ### W4 loot
 
@@ -288,12 +290,142 @@ The alignment pass answers each for any unit's vision delta. Every answer must b
 
 - **must.** Two factions, two timbre families, no crossover: Fleet is steam, clank, ratchet, whistle and the klaxon family; ancients are hum, sub drone and sine. Each roster entry's telegraph is a W2 type sound in its faction's timbre plus one mechanic tag no other entry uses (the tables in §3). Two entries that share a tag fail the no-reskins rule by ear the way two silhouettes fail it by eye.
 - **must.** `enemy_spawned` plays `enemy_arrive` (the Fleet's semitone growl) for every kind. Ancients need their own arrival: a sine swell on the family's harmony. Carry the faction in the `kind` string or an enemy-row field so `audio.gd` can pick, and add the ancient arrival cue to `KEYED_SOUNDS`.
-- **must, spec conflict for the coordinator.** DESIGN-V2 §1 makes the vault kick engineer-only, and §10.6 says "a rebound off a deflector's shield is a free vault" without naming a class. Decide one: either the shield applies the ×1.8 vault multiplier to any class (the shield does the work), or it is Sable only. Recommended: any class, since the counterplay is meant to be learnable by everyone; the sound is the rebound snap plus the octave leap, in the class instrument.
+- **applied 2026-09-27.** A deflector rebound gives any class the ×1.8 vault (DESIGN-V2 §10.6 as amended); the sound is the rebound snap plus the octave leap, in the class instrument.
 - **must.** The Mind's adaptation quotes the player once per adaptation and shows the trigger icon before the counter takes effect (DESIGN-V2 §10 says bounded and telegraphed). The quote is the telegraph; the counter never lands without it.
 - **could.** The plated brute's plate pops reuse the existing clank ladder (DESIGN-NOTES item 22), so "how close I was to breaking through" survives on a new enemy without a new cue.
 
 ### Coordinator: DESIGN-V2 wording
 
-- **must.** §10.3 "copper shimmer" to "class-colour shimmer (copper for Rivet)".
-- **must.** §10.6 deflector free vault: name the class rule (above).
+- **applied 2026-09-27.** §10.3's tenacity shimmer is now the class colour, and §10.6's deflector rebound gives any class the ×1.8 vault. Both notes are closed.
 - **could.** §2's Sound row could name the motif ids this file defines, so the class table and the motif table share a vocabulary from the first read.
+
+### W4, W1, W6, W5: Moss's workshop (DESIGN-V2 §12)
+
+- **must.** The 25-word fight budget does not apply inside the bay, but Moss's bubbles are 12 words at most and the shop UI is 5 words per line with icons first. Moss's lines come only from §8 of this file; a unit that needs a line it does not have asks the coordinator (PROTOCOL trigger 3) rather than writing one.
+- **must.** The bay banks speed like the pylon mount and the pad slingshots it back, so entry and exit reuse the mount and slingshot cues (the plant clack and, on exit, the class motif run fast) rather than new sounds. Nothing in the bay sounds like a stop.
+- **must.** The lounge is a layer mask over the stage theme in the live key (§8), never a new track, so no gem is lost in the bay.
+- **could.** The shop bell is the rice cooker's two "done" beeps (callback C9 in `design-v2/STORY-THREADS.md`).
+
+## 8. Moss
+
+Moss keeps the workshop bay that opens off the launch after each Warden break (DESIGN-V2 §12). He is the Bible's proposed keeper who "remembers what each pilot neglects" (BIBLE.md:384); the sketch says "he" as DESIGN-V2 does, and his species stays open (`design-v2/STORY-THREADS.md` §7, question 1). He has no recorded voice. He has babble, a bench and a bell, and he is the only character in the game who talks to you.
+
+The callback index DESIGN-V2 §13 asks this file to keep lives in `design-v2/STORY-THREADS.md` §5, one source for every callback and the mechanic it rides.
+
+### The lounge arrangement
+
+The bay drops the band to a sax-led lounge re-voicing of the current stage theme, in the live key. It is a layer mask over the loved core, never a new track, so every gem keeps playing.
+
+- **Same grid, half the feel.** The tempo and the grid do not change, so the exit drops back on a beat with no pivot. The kick is off, the hats become a brushed ride at low level, and the drums play half time. The felt tempo halves; the clock does not.
+- **The bass stays (G8).** The stage's own calm figure plays on the clean sub, as it does at pressure 0.
+- **The keys thin.** The electric piano plays the stage's voicings on beats 1 and 3 only.
+- **The sax leads (G1, G5).** The existing synth-sax `lead` voice plays the stage motif at half speed with a wider scoop and slower vibrato, and answers itself as it already does. Sluice's clav and Weir's organ stay in their own stage's lounge, quiet.
+- **Pad on, everything busy off.** No arp, echo, counter or choir. The tone filter sits at its calm 2.8 kHz.
+- **Pressure floor 0.15** inside the bay, so the difficulty clock's pause is audible as calm.
+- **In and out.** The lounge enters on the bar after the bay banks the ball. The exit pad fires the existing launch build (`start_build`), so the landing is the full band's drop (G9), and the calm ends the way every calm in this game ends: on the beat, going faster.
+
+### Babble synthesis
+
+Moss's voice is synthesized babble, one blip per letter, in the live key, rising with exasperation. It never uses a formant (R1) or a wobble (R2). It is a bench radio, not a mouth.
+
+| Rule | Value |
+| --- | --- |
+| Blip | A square wave through a 1.2 kHz low-pass, 5 ms attack, short decay |
+| Length | Consonant 40 ms, vowel 80 ms; a word's first letter is 3 dB louder and one scale step up |
+| Punctuation | Comma 120 ms rest; full stop 250 ms; a question mark ends its word a fourth up |
+| Pitch | Each blip is drawn from the beat root's Dorian triad (root, third, fifth), seeded by the line's hash, so a line always babbles the same way |
+| Live key | Every root is transposed by the band's live key, like every keyed cue |
+| Exasperation | Beat n's root climbs the scale (table below) and its blip lengths shorten by 8% per beat |
+| Refusal grumble | A 200 ms dark-saw burst on the beat root under the first word of beats 2, 4 and 6 (W5's "grumble when he refuses") |
+| Bubble | Appears with the first blip, sits away from the reticle, clears 1.2 s after the last blip |
+| Bus and trim | SFX bus at -8 dB; the bay has no threats, so nothing ducks it |
+
+| Beat | Root (D home) | Character |
+| --- | --- | --- |
+| 1 ask | D3 | level, unhurried |
+| 2 refuse | E3 | a grumble under the first word |
+| 3 insist | F3 | blips 8% shorter |
+| 4 double down | G3 | grumble, shorter again |
+| 5 plead | A3 | the peak: highest root, fastest blips |
+| 6 send off | C3 | falls below where it started; grumble; a slow last word |
+| Relent | D3, ending with a fall of a fifth | slower than beat 1, on a warmer filtered-triangle blip: a sigh |
+| Shop barks | D3 | level |
+| Remembers-you lines | D3, filtered triangle | slow and warm |
+
+### The conversation loop
+
+The player presses the key glyph by Moss; each press plays one beat. The pilot's side is a nod and the class motif's first note, never words, so the 12-word budget is Moss's alone. After beat 6 the next press restarts at beat 1 with a new variation; a beat picks a variation the visit has not used, and the class-tagged lines are extra choices for that class. None of these lines is from the Potion Seller sketch. The structure is borrowed (ask, refuse, insist, double down, plead, send off); every word is Moss's.
+
+**Beat 1, the ask (Moss sees you look at the hook)**
+
+- The hook. Everyone looks at the hook. Shelf's the thing for sale.
+- Eyes off the top shelf, salvager. Three fine parts, right there.
+- That one? Not for you. Not for anyone your size.
+- (Sable) Ears up already. No, fox. The hook stays hooked.
+
+**Beat 2, refuse**
+
+- No. It'd shear your axle the first bump you took.
+- Too strong for a ball that light. Ask the dial.
+- Bolt that on and I'm scraping you off the rapids.
+- (Rivet) You'd measure it twice and still be too light.
+
+**Beat 3, insist**
+
+- Still no. The shelf has three answers. Pick one.
+- Asking louder doesn't add weight. Scrap adds weight.
+- I heard you the first time. I said it the first time.
+
+**Beat 4, double down**
+
+- Read the dial. One notch short. Come back heavier.
+- That part needs a heft you haven't rolled up yet.
+- Rules of the bench. Weight before wonders. Always were.
+
+**Beat 5, plead**
+
+- Don't give me the look. I like the look. Still no.
+- Begging's free. The hook isn't. Roll some scrap in.
+- You'd float away with it. Then who buys my parts?
+- (Kest) Crest down, bird. Pleading doesn't count as lift.
+
+**Beat 6, send off**
+
+- Try the scrapper past the rapids. Sells lighter. Sells worse.
+- There's a cart down the shelf road. Flimsy parts, no questions.
+- Go bother the gates. They'll give you anything.
+
+**Restart flavour** (the press after beat 6, before beat 1 replays): Again? Fine. From the top.
+
+**The relent** (the ball reaches the heft class the hook needs; the loop ends here, the hook unlocks, and the codex gets "Too heavy for you"):
+
+- Fine. You're heavy enough. Don't come back lighter.
+- Alternate: Hook's yours. Took you long enough to get fat.
+- Alternate: Alright, salvager. It'll hold now. Probably. Bolt it on.
+
+### Shop barks
+
+| Moment | Line |
+| --- | --- |
+| Buy | Bolted. Mind the weld, it's still warm. |
+| Reroll | New shelf. Same shop. Don't get used to it. |
+| Sell back | Half back. Lighter, but faster to the next part. |
+| Charge upgrade | Second cell's in. Two shots, then wait like everyone. |
+| Can't afford | Scrap first. I don't run tabs for rolling things. |
+| Leaving | Pad's hot. Go on, before the clock notices. |
+
+### Remembers-you lines
+
+Keyed to run history (`design-v2/STORY-THREADS.md` §6 names the records). One plays on entering the bay when its key holds; the first-visit line plays otherwise.
+
+| Key | Line |
+| --- | --- |
+| `first_visit` | Shelf's there. Hook's not for sale. Ask anyway, everyone does. |
+| `died_last_run`, same class | Back again. The Warden keeps your last shell, you know. |
+| `won_last_run` | You finished one. Shelf's the same. Standards aren't. |
+| `class_changed` | New pilot, same ball. Moss remembers the ball. |
+| `skipped_visits >= 3` | Three launches past my door. Bell still works. |
+| `relented_before` | Heavy again. Hook's already yours, don't act surprised. |
+| `neglected` (callback C14) | Died holding scrap. Scrap that could've been plating. Hm. |
+
+**Voice rules for any new Moss line.** Twelve words or fewer. He talks about weight, welds, the shelf and the clock, never about the collapse; that is the codex's job, and Moss keeps his opinions. He is grumpy about the hook and kind about the pilot. He never says "too strong for you" as a sentence of its own, never names a potion, a traveller or a wizard, and never dismisses the player to a seller of "weaker" anything; the send-off goes to lighter parts, flimsy carts or the gates.
