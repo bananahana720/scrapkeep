@@ -183,7 +183,14 @@ static func _slam(kit, state, tuning, intent, body_state, step: float) -> void:
 		kit.slam_velocity = v
 		body_state.linear_velocity = v
 		return
-	if kit.on(SLAM) and intent.brake_held and not state.grounded:
+	# Brake and slam share a key, so only a press that begins in the air slams. A brake
+	# held from the ground stays a brake over a bump until it is released: a slam there
+	# would plant the ball, a stop the player did not ask for.
+	if not intent.brake_held:
+		kit.brake_from_ground = false
+	elif state.grounded:
+		kit.brake_from_ground = true
+	if kit.on(SLAM) and intent.brake_held and not state.grounded and not kit.brake_from_ground:
 		kit.slamming = true
 		kit.slam_fall = maxf(0.0, -v.y)
 		kit.slam_velocity = v

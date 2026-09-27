@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # Draws the stage's events from the director's models and nothing else, so what you
 # see is the state the rules use. A participatory event stands a beam over its start
@@ -18,12 +19,16 @@ const FOG_COLOR := Color("c8a878")
 const PILLAR_ALPHA := 0.45
 const PILLAR_FADE := Vector2(4.0, 20.0)
 const ARRIVAL_RADIUS := 3.0
+const VAULT_PROMPT_REACH := 60.0
 
 var director
 var terrain
 var player
 
 var _vault_pillar: MeshInstance3D
+var _vault_anchor: Node3D
+# The vault's screen prompt (src/ui/world_prompt.gd); its text is empty with no vault.
+var vault_prompt
 var _arrival_rings: Array[MeshInstance3D] = []
 
 var _offer_nodes: Array[Dictionary] = []
@@ -38,6 +43,12 @@ func setup(terrain_ref, player_ref = null) -> void:
 	_vault_pillar = _pillar(Palette.AMBER)
 	_vault_pillar.visible = false
 	add_child(_vault_pillar)
+	_vault_anchor = Node3D.new()
+	add_child(_vault_anchor)
+	vault_prompt = WorldPrompt.new()
+	vault_prompt.add_theme_color_override("font_color", Palette.AMBER)
+	vault_prompt.attach(_vault_anchor, Vector3.ZERO, VAULT_PROMPT_REACH)
+	_vault_anchor.add_child(vault_prompt)
 	if terrain.environment != null:
 		_base_fog = terrain.environment.fog_density
 		_base_fog_color = terrain.environment.fog_light_color
@@ -94,7 +105,7 @@ func _build_offer(offer: Dictionary) -> Dictionary:
 	beam.position = ground + Vector3.UP * BEAM_HEIGHT * 0.5
 	root.add_child(beam)
 
-	var sign := _label(offer["id"].replace("_", " ").capitalize() + "\nroll in: milestone reward", hazard)
+	var sign := _label(offer["id"].replace("_", " ").capitalize() + "\nroll in: milestone part + bonus core", hazard)
 	sign.position = ground + Vector3.UP * 9.0
 	root.add_child(sign)
 
@@ -220,10 +231,18 @@ func show_arrivals(arrivals: Array) -> void:
 			ring.scale = Vector3.ONE * lerpf(0.4, 1.0, clampf(left, 0.0, 1.0))
 
 
-# The vault's pillar stands while its vault does.
-func set_vault(at: Vector3, standing: bool) -> void:
+# The vault's pillar and its prompt stand while its vault does. The prompt says what
+# breaking it pays and the plating that guards it (plating below 0 when unknown).
+func set_vault(at: Vector3, standing: bool, plating := -1.0) -> void:
 	_vault_pillar.visible = standing
 	_vault_pillar.position = at + Vector3.UP * BEAM_HEIGHT * 0.5
+	_vault_anchor.position = at + Vector3.UP * 3.0
+	vault_prompt.text = vault_text(plating) if standing else ""
+
+
+static func vault_text(plating: float) -> String:
+	var guard := " (plating %d)" % int(plating) if plating >= 0.0 else ""
+	return "Vault: rare part + bonus core" + guard
 
 
 func _process(_delta: float) -> void:

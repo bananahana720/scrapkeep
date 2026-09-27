@@ -168,15 +168,22 @@ func planar_velocity() -> Vector3:
 	return Vector3(state.velocity.x, 0.0, state.velocity.z)
 
 
+# A frozen ball takes no push: a killing blow's shove lands after the death has frozen
+# it, and must not wait for the retry (FIXWAVE spine, the stale shove).
 func add_external_accel(accel: Vector3) -> void:
+	if _frozen:
+		return
 	_rigid.external_accel += accel
 
 
 # Screens freeze the ball so a title or death screen never lets it roll off; unfreezing
 # hands back exactly the velocity given, which is how a launch carries between stages.
+# Freezing drops any push already handed over this tick.
 func set_frozen(frozen: bool) -> void:
 	_frozen = frozen
 	_rigid.set_active(not frozen)
+	if frozen:
+		_rigid.external_accel = Vector3.ZERO
 
 
 func frozen() -> bool:
@@ -188,6 +195,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	kit.clear_runtime()
 	_roll = Basis.IDENTITY
 	_was_hooked = false
+	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
 
