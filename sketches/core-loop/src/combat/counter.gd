@@ -66,6 +66,8 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 		holds.released.connect(_on_hold_released)
 	_strafe = 1.0 if (get_instance_id() % 2) == 0 else -1.0
 	_configure(threat)
+	# A unit always closes to where its attack reaches before it circles.
+	keep_far = minf(keep_far, attack_range * 0.9)
 	_rest = first_rest
 	_build_crew()
 	_build_tool()

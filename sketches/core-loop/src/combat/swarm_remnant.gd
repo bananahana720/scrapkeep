@@ -6,19 +6,20 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # One swarm-remnant drone (DESIGN-V2 section 10): a small flat cast triangle, the only
 # identical things in the game on purpose (VISUAL-LANGUAGE section 11). Alone it is
 # weak: low health, light enough to crush, harmless to touch. Its formation (swarm.gd)
-# decides where it flies and when it dives; a hard knock on any drone scatters the
-# whole rack. While the rack is scattered it follows the ball with its blue seam dark
+# decides where it flies and when it dives; a hard knock on any drone of a forming or
+# locked rack scatters the whole rack (a diving drone meeting the ball does not). While the rack is scattered it follows the ball with its blue seam dark
 # (C11), and a follower that reaches another enemy launches into it as a pin carrier.
 
 const HP := 12.0
 const HOVER := 1.4
+const HOVER_HIGH := 3.4
 const CLIMB := 6.0
 const SLOT_GAIN := 5.0
 const MAX_SPEED := 26.0
-const FOLLOW_GAP := 3.0
-const FOLLOW_MIN := 8.0
+const FOLLOW_GAP := 4.5
+const FOLLOW_CLOSE := 2.5
 const DIVE_REACH := 1.6
-const DIVE_DAMAGE := 4.0
+const DIVE_DAMAGE := 8.0
 const DIVE_SHOVE := 3.0
 const SCATTER_FORCE := 5.0
 const PIN_REACH := 2.2
@@ -28,7 +29,6 @@ const SIZE := 0.75
 var swarm
 var fleet
 var index := 0
-var dive_hit := false
 var pins_led := 0
 var _seam: MeshInstance3D
 var _body: MeshInstance3D
@@ -56,7 +56,7 @@ func state_name() -> String:
 
 func knock(direction: Vector3, force: float) -> void:
 	super.knock(direction, force)
-	if swarm != null and force / weight >= SCATTER_FORCE and swarm.state != swarm.State.SCATTERED:
+	if swarm != null and force / weight >= SCATTER_FORCE and swarm.state in [swarm.State.FORMING, swarm.State.LOCKED]:
 		swarm.scatter(global_position)
 
 
@@ -100,21 +100,23 @@ func _physics_process(delta: float) -> void:
 	_hover(delta, desired)
 
 
+# At the ball's heels: its speed, plus FOLLOW_CLOSE a metre of gap still to close.
 func _follow(ball: Vector3, speed: float) -> Vector3:
 	var to := Vector3(ball.x - global_position.x, 0.0, ball.z - global_position.z)
 	if to.length() <= FOLLOW_GAP:
 		return Vector3.ZERO
-	return to.normalized() * clampf(speed + 2.0, FOLLOW_MIN, MAX_SPEED)
+	return to.normalized() * minf(speed + (to.length() - FOLLOW_GAP) * FOLLOW_CLOSE, MAX_SPEED)
 
 
 func _dive_check(ball: Vector3) -> void:
-	if dive_hit:
+	if swarm.stung:
 		return
 	var lane = swarm.lane()
 	if lane == null or not lane.contains(ball) or global_position.distance_to(ball) > DIVE_REACH + radius:
 		return
-	dive_hit = true
+	swarm.stung = true
 	hit_player.emit(DIVE_DAMAGE, lane.dir * DIVE_SHOVE)
+	swarm.end_dive()
 
 
 # A follower that reaches another enemy launches into it, fast enough for combat's pin
@@ -142,7 +144,8 @@ func _hover(delta: float, desired: Vector3) -> void:
 	if horizontal.length() < 1.0:
 		horizontal = desired
 	var ground: float = terrain.height(global_position.x, global_position.z) if terrain != null else 0.0
-	velocity = Vector3(horizontal.x, (ground + HOVER - global_position.y) * CLIMB + maxf(0.0, _knock.y), horizontal.z)
+	var hover := HOVER_HIGH if swarm != null and swarm.flying_high() else HOVER
+	velocity = Vector3(horizontal.x, (ground + hover - global_position.y) * CLIMB + maxf(0.0, _knock.y), horizontal.z)
 	_knock.y = 0.0
 	move_and_slide()
 	_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)

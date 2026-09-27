@@ -12,8 +12,9 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 #   apex toward you: a 1-2-3 of six, or the hive's full 1-2-3-4 of ten.
 # - LOCKED: every drone is in its slot; the lead commits a lane from the rack toward
 #   the ball (W2's lane, the unison buzz snapping into the quartal chord) for LOCK_WARN.
-# - DIVING: the rack flies down its lane at DIVE_SPEED; a drone that reaches a ball
-#   the lane contains stings it once.
+# - DIVING: the rack flies down its lane at DIVE_SPEED; the first drone to reach a
+#   ball the lane contains stings it, once per dive for the whole rack, and the rack
+#   peels off to re-form rather than ploughing through the ball.
 # - SCATTERED: a ball bowling through the rack at speed, or a hard knock on any drone,
 #   breaks it. The drones are knocked outward and for FOLLOW seconds follow the
 #   nearest moving mass, which is the ball: seamless, buzzing, and still hostile. Led
@@ -52,6 +53,8 @@ var t := 0.0
 var scatters := 0
 var dives := 0
 var locks := 0
+# Whether this dive has stung already: a rack is one threat, so it hurts once.
+var stung := false
 var last_scatter_at := Vector3.ZERO
 
 var _frame := -1
@@ -90,6 +93,12 @@ func lead():
 
 func following() -> bool:
 	return state == State.SCATTERED
+
+
+# A rack recovering from a dive, or scattered and following, flies high over the ball,
+# so it never ploughs into it; it comes down to strike height to form up and dive.
+func flying_high() -> bool:
+	return state == State.SCATTERED or (state == State.FORMING and _rest > 0.0)
 
 
 func lane() -> Node3D:
@@ -140,8 +149,7 @@ func step(delta: float, ball: Vector3, ball_speed: float) -> void:
 				state = State.DIVING
 				dives += 1
 				t = 0.0
-				for d in alive():
-					d.dive_hit = false
+				stung = false
 		State.DIVING:
 			var lane := lane()
 			if lane == null or t >= DIVE_TIME:
@@ -169,6 +177,11 @@ func scatter(at: Vector3) -> void:
 		d.set_seamless(true)
 	if fleet != null:
 		fleet.on_swarm_scattered(self, at, live.size())
+
+
+func end_dive() -> void:
+	if state == State.DIVING:
+		_reform()
 
 
 func _reform() -> void:
