@@ -252,3 +252,46 @@ The Bible marks an animal-only cast as open and never makes the exploratory exam
   1. Only the reactor relic colours the band: a tritone pedal under the sub while a vent charges. Swarms and the Mind stay effects only.
   2. Fleet reinforcements borrow Brindle's anvil and brass in the level theme, adding one layer per difficulty tick.
   3. The Mind's hands quote the player's class motif, inverted with the last note a semitone flat. It's the one sanctioned hostile use of a class motif, and it doubles as their telegraph.
+
+## 12. Moss's workshop: the lull between stages (Andrew, 2026-09-27)
+
+In his words: "I actually want to have a maybe a shopkeeper uh, and maybe some lull in between phases. I do like the calm, you know, before the, sto the storm and the ability to maybe settle. And it could be also a time to like make upgrades as well and have some player decision be made instead of just being all procedural." He also asked for a meme interaction: the "Potion Seller" sketch (Justin Kuritzkes, https://www.youtube.com/watch?v=R_FQU4KzN7A), where the shopkeeper refuses to sell his strongest potions because they are too strong for the traveller.
+
+**Who and where**
+
+- **The keeper is Moss**, the Bible's proposed workshop keeper, who "remembers what each pilot neglects" (BIBLE.md:384).
+- **The workshop is a side bay**, and entering it is the player's choice. It opens off the launch after each Warden break, beside the reward gates. Rolling past it goes straight into the launch.
+
+**Momentum**
+
+- Entering the bay banks the ball's speed, like the pylon mount.
+- The exit launch pad slingshots the banked speed back into the stage launch.
+- The calm costs no momentum. The player chooses it, so nothing stops them unforeseen.
+
+**Calm**
+
+- The music drops to a sax-led lounge arrangement of the current stage theme, in the live key. It's the stage's loved core re-voiced, never replaced (warden spill B grammar).
+- The launch drops back into the full band.
+- The difficulty clock pauses inside, so the calm is real. The par timer keeps running, so speedrunners can skip it at a cost.
+
+**Player decisions (deterministic, not rolled on entry)**
+
+- **A shelf of 3 visible parts** at scrap prices: buy exactly what you want.
+- **One reroll** of the shelf per visit, at a rising price.
+- **Charge upgrades.** Pay to raise one ability's `max_charges` by 1, up to a cap. This is the stockpile path.
+- **Sell a part back** for half its price. This lowers heft, and the wording says so ("lighter, but faster to the next part").
+
+**The Potion Seller nod (a homage, never the sketch's script)**
+
+- Moss keeps one **top-shelf part**, always rare_plus, on a locked hook.
+- He refuses to sell it until the ball's heft class reaches the next band. His refusal lines are original and in character, riffing on "too strong for you, salvager".
+- The lock shows the heft needed as the pressure-dial icon with a notch, so the joke doubles as a growth goal you can read. Come back heavier and he relents with a grudging line.
+- This mechanic is the only place the gag appears. It never blocks progress, since the part is optional.
+
+**Owners**
+
+- W4: the shop economy (shelf, prices, reroll, charge upgrades, the heft lock).
+- W6: the workshop bay geometry and its launch pad.
+- W5: the lounge arrangement and Moss's voice-free sound set (a workbench clank, a shop bell, a grumble when he refuses).
+- W1: the shop UI, with icons first and at most 5 words per line.
+- Vision keeper: Moss's wording.
