@@ -4,7 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Build against the real codex and cores (DEMO-SPEC, CONTRACTS):
-#   - the eight build hint cards are declared by the first tick of play;
+#   - the eight build hint cards and the four callback cards are declared by the first
+#     tick of play;
 #   - a named synergy's first activation publishes synergy_discovered once (through the
 #     codex), with the treasure burst, and a retry does not repeat it;
 #   - an element result publishes element_resolved, and its first firing publishes
@@ -98,7 +99,8 @@ func _next() -> void:
 func _check_declared() -> void:
 	var cards: Array = _game.codex.entries("build")
 	var hints: Array = cards.map(func(c): return c["hint"])
-	_report("build cards declared", cards.size() == 8 and _build.codex_declarations().size() == 8 and "Chain Arc + something that splits" in hints,
+	# Eight synergy cards and v2 W4's four callback cards (Strike, Spare, Turkey, Too heavy for you).
+	_report("build cards declared", cards.size() == 12 and _build.codex_declarations().size() == 12 and "Chain Arc + something that splits" in hints,
 		"%d build entries in the codex after the first tick of play, e.g. %s" % [cards.size(), hints.slice(0, 2)])
 
 
