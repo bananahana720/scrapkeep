@@ -237,9 +237,12 @@ func integrity_of(enemy: Node3D) -> float:
 
 # True when this contact would kill an unplated target outright: the spine's crush
 # pass-through asks before it decides to skip the knock. A plated break-through is
-# not a crush.
+# not a crush, and neither is a hit on a target whose crushable() says it cannot die
+# at its current HP (a boss held at a phase floor): the ball would end inside it.
 func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	if not is_instance_valid(enemy) or enemy.is_dead():
+		return false
+	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
 	var result := resolve(enemy, kind, force)
 	return result["plating"] <= 0.0 and result["dealt"] >= enemy.hp
