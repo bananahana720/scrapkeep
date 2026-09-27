@@ -72,6 +72,27 @@ signal boss_attack_telegraphed(attack_id: String, seconds_until: float)
 signal boss_weak_point_hit(point_id: String)
 signal boss_defeated
 
+# v2 W3 characters: the class abilities and the shared bowling-ball contact. Movement
+# (player_ball) emits the contact, vault, sprint, blink, smash-flavour, slingshot-gauge
+# and cc_ignored facts; combat emits pins, the specials' gauges, the cloak, stickies
+# and rocket jumps. ability_id is the slot's ability id, or "slingshot".
+signal enemy_rebounded(enemy: Node3D, speed: float)
+signal enemy_pinned(enemy: Node3D, damage: float)
+signal vault_kicked(at: Vector3, speed: float)
+signal gauge_charging(ability_id: String)
+signal gauge_released(ability_id: String, fraction: float)
+signal gauge_cancelled(ability_id: String, reason: String)
+signal sprint_started(direction: Vector3)
+signal cc_ignored(kind: String)
+signal cloak_started(seconds: float)
+signal cloak_broken(reason: String)
+signal sticky_detonated(at: Vector3, crit: bool)
+signal rocket_jumped(at: Vector3, speed: float)
+signal blink_used(from: Vector3, to: Vector3)
+signal arc_slammed(at: Vector3, faces: int)
+signal skid_smashed(at: Vector3, hits: int)
+signal demo_slammed(at: Vector3)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

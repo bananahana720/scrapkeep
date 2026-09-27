@@ -4,9 +4,12 @@ const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
+const ObjectiveView := preload("res://src/ui/objective_view.gd")
 
 # The objective line names the Warden, the player's punch against its plating and the
-# stage's hint, never the word optional; the HUD shows the heft class and the cores.
+# stage's hint, never the word optional. The HUD shows it in at most five words with
+# the same punch and plating as its two bars, the heft class on its dial, and the cores
+# as diamonds.
 
 var _game
 var _frames := 0
@@ -50,10 +53,20 @@ func _process(_delta: float) -> bool:
 	var hud = _game.hud
 	_report("stage 1 objective", _stage_one.contains("Warden") and _stage_one.contains("plating %d" % int(StageDefs.of(1)["warden_plating"])) and _stage_one.contains("Ram it hard.") and not _stage_one.to_lower().contains("optional"),
 		"\"%s\"" % _stage_one)
-	_report("heft label", hud.heft_text().begins_with("Heft II") and String(hud._speed.text).contains("Heft II"),
-		"after add_scrap(225) the HUD reads \"%s\"" % hud.heft_text())
-	_report("core pips", hud._pips.text == "◆◇" and hud.core_pips(0) == "◇◇" and hud.core_pips(3) == "◆◆ +1",
-		"one bonus core shows \"%s\"; none \"%s\"; three \"%s\"" % [hud._pips.text, hud.core_pips(0), hud.core_pips(3)])
+	var reading: Dictionary = hud.objective_reading()
+	_report("hud objective", reading["words"] == "Break the Warden" and reading["icon"] == "obj_warden"
+			and is_equal_approx(reading["punch"], _game.flow.punch_now()) and is_equal_approx(reading["plating"], _game.flow.warden_plating())
+			and hud._objective.shows_bars() and hud._objective.words == reading["words"],
+		"the HUD shows \"%s\" with punch %.0f against plating %.0f as bars" % [reading["words"], reading["punch"], reading["plating"]])
+	_report("heft label", hud.heft_reading()["numeral"] == "II" and hud._heft.numeral == "II" and hud._heft.drawn_words() == PackedStringArray(["II"]),
+		"after add_scrap(225) the heft dial reads %s" % hud._heft.numeral)
+	var three := ObjectiveView.new()
+	three.set_objective("obj_warden", "Break the Warden", Color.WHITE, -1.0, -1.0, -1.0, 3, 2)
+	var extra: PackedStringArray = three.drawn_words()
+	three.free()
+	_report("core pips", hud._objective.cores == 1 and ObjectiveView.pip_slots(1, 2) == [true, false]
+			and ObjectiveView.pip_slots(0, 2) == [false, false] and extra.has("+1"),
+		"one bonus core fills %s; none %s; three add %s" % [ObjectiveView.pip_slots(1, 2), ObjectiveView.pip_slots(0, 2), extra])
 	_game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
 	var stage_two: String = _game.flow.objective_text()
 	_report("stage 2 objective", stage_two.contains("plating %d" % int(StageDefs.of(2)["warden_plating"])) and stage_two.contains("vent caps") and not stage_two.to_lower().contains("optional"),

@@ -6,6 +6,8 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+# v2 W3 characters: the vault cap the vault cue is pitched against.
+const Augments := preload("res://src/movement/augments.gd")
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -34,7 +36,8 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0}
 const VOLUME_STEP := 0.1
 # Danger sounds pull the bass down so the low end never masks a warning.
-const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death"]
+const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death",
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum"]
 # A launch whose landing never comes (a fall into the next stage's rail) still drops.
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
@@ -47,8 +50,15 @@ const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "fou
 # seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
 
+# v2 W3 characters: the class-ability facts, heard through their event rows.
+const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
+	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
+	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed"]
+
 var ctx
 var engine: MusicEngine
+# v2 W3 characters: which of CHARACTER_KINDS are already connected.
+var _character_wired := {}
 var sound_ready := false
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
@@ -126,6 +136,8 @@ func setup(ctx_ref) -> void:
 
 static func _sound_ids() -> Array:
 	var ids: Array = Rows.sound_ids()
+	for kind in EventKinds.THREAT_ROWS:
+		ids.append(EventKinds.THREAT_ROWS[kind]["sound"])
 	for extra in ["womp", "build_riser", "vault_rise", "vault_drop", "synergy_hit"]:
 		if not extra in ids:
 			ids.append(extra)
@@ -165,7 +177,14 @@ func bake_now() -> void:
 	_on_ready()
 
 
+func _enter_tree() -> void:
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
+
+
 func _exit_tree() -> void:
+	if get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
 	if _bake_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
@@ -326,6 +345,41 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	return true
 
 
+# v2 W2 threat grammar. A committed threat warns on the game frame it is declared, never
+# on the beat (SOUND-STORY.md section 7): its type's row sound, then the owner's voice
+# and the mechanic tag when the threat carries them. Only hostile threats join the
+# "threat" group, so the player's own rings and harmless fields stay silent. The check
+# runs at the end of the frame, after the committing code has set the layers.
+func _on_node_added(node: Node) -> void:
+	if node.has_method("threat_kind"):
+		_warn_threat.call_deferred(node)
+
+
+func _warn_threat(node: Node) -> void:
+	if not is_instance_valid(node) or not node.is_inside_tree() or not node.is_in_group("threat"):
+		return
+	var kind: String = node.threat_kind()
+	var row: Dictionary = EventKinds.THREAT_ROWS.get(kind, {})
+	if row.is_empty():
+		return
+	var db: float = PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node)
+	play(kind, db, 1.0, "SFX", row["sound"])
+	for layer in [node.get("owner_voice"), node.get("mechanic_tag")]:
+		if layer is String and layer != "":
+			play(kind, db, 1.0, "SFX", layer)
+	if int(row["priority"]) >= 2:
+		engine.duck(0.55, 0.35)
+
+
+# Cues here are not positional, so a far threat is only quieter: full within 20 m,
+# 9 dB down from 60 m.
+func _threat_distance_db(node: Node) -> float:
+	if ctx == null or ctx.player == null or not node.has_method("threat_at"):
+		return 0.0
+	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.ball_position())
+	return 9.0 * clampf((gap - 20.0) / 40.0, 0.0, 1.0)
+
+
 # Plays a cue on the next beat through the band. lane queues it behind flow stingers.
 func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_override := "") -> int:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind)
@@ -429,6 +483,21 @@ func wire_optional() -> void:
 			engine.cancel_pending()
 			engine.restart_boss("brindle")
 		play("stage_content_cleared"))
+	# v2 W3 characters: each class-ability fact plays its event row's stand-in sound
+	# until W5 bakes the id named in the row's sound_next.
+	for kind in CHARACTER_KINDS:
+		if events.has_signal(kind) and not _character_wired.has(kind):
+			_character_wired[kind] = true
+			if kind == "vault_kicked":
+				events.connect(kind, _on_vault_kicked)
+			else:
+				events.connect(kind, play.bind(kind).unbind(_argc(events, kind)))
+
+
+# Sable's vault is an octave leap: the top note climbs with exit speed and reaches the
+# octave at the vault cap (SOUND-STORY section 3), so a weak kick falls short of it.
+func _on_vault_kicked(_at: Vector3, speed: float) -> void:
+	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
 
 
 # Connects once. loose drops whatever arguments the signal carries.

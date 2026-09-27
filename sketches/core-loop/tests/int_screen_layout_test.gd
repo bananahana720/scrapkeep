@@ -10,7 +10,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # Integration I2, the screen layout from the first windowed visual QA pass:
 #   - the four bands (top, toasts, prompts, bottom) never overlap at 1600x900 or
 #     1280x720, and every HUD piece sits inside its own band at both sizes;
-#   - three identical toasts show once, and the band holds at most two;
+#   - three identical toasts show once, and the band holds one (v2: the newest wins);
 #   - reward-gate prompts and a prompt whose anchor stands high above the camera are
 #     placed inside the prompts band, apart from one another;
 #   - the field notes legend shows each shape's glyph, not its key word;
@@ -94,25 +94,34 @@ static func _span(r: Rect2) -> String:
 	return "%d-%d" % [int(r.position.y), int(r.end.y)]
 
 
-# Worst case per band: two long toasts and the restart meter, a full status block.
+# Worst case per band: the stage card over the toast row, then a long toast, each with
+# the restart meter under it; the objective with its punch and plating bars and three
+# cores; every bottom gauge beside the full ability bar.
 func _check_pieces() -> void:
 	_hud.toast("Warden broken: gates open")
-	_hud.toast("Bonus core: gates overcharged")
-	_hud._restart.text = "restarting stage 100%"
-	_hud._objective.text = _game.flow.objective_text()
 	_hud._process(0.0)
-	for size in SIZES:
-		_hud.layout(size)
-		var outside := []
-		var pieces: Dictionary = _hud.piece_rects()
-		for region in pieces:
-			var band := ScreenRegions.rect(region, size)
-			for r in pieces[region]:
-				if not band.grow(0.5).encloses(r):
-					outside.append("%s %s in %s" % [region, r, band])
-		_report("hud pieces %dx%d" % [size.x, size.y], outside.is_empty(),
-			"every HUD piece inside its band; outside: %s" % [outside])
-	_hud._restart.text = ""
+	for i in 3:
+		_game.run.add_core("event", Vector3.ZERO)
+	for card in [true, false]:
+		if card:
+			_hud.launch_card.show_card("obj_beacon", "Spillway: the top shelf", Color.WHITE)
+		else:
+			_hud.launch_card.visible = false
+		_hud._process(0.0)
+		_hud._restart.set_fraction(1.0)
+		_hud._restart.visible = true
+		for size in SIZES:
+			_hud.layout(size)
+			var outside := []
+			var pieces: Dictionary = _hud.piece_rects()
+			for region in pieces:
+				var band := ScreenRegions.rect(region, size)
+				for r in pieces[region]:
+					if not band.grow(0.5).encloses(r):
+						outside.append("%s %s in %s" % [region, r, band])
+			_report("hud pieces %dx%d%s" % [size.x, size.y, " with the stage card" if card else ""], outside.is_empty(),
+				"every HUD piece inside its band; outside: %s" % [outside])
+	_hud._restart.set_fraction(0.0)
 	_hud.layout(_hud._screen_size())
 
 
@@ -123,7 +132,7 @@ func _check_toasts() -> void:
 	_hud.toast("Stage 1")
 	_hud.toast("Launch!")
 	var shown: Array = _hud.toast_texts()
-	_report("toast dedupe", once == 1 and shown.size() == ScreenRegions.TOAST_ROWS and shown == ["Stage 1", "Launch!"],
+	_report("toast dedupe", once == 1 and shown.size() == ScreenRegions.TOAST_ROWS and shown == ["Launch!"],
 		"three identical toasts showed %d row; after two more the band shows %s (cap %d)" % [once, shown, ScreenRegions.TOAST_ROWS])
 
 

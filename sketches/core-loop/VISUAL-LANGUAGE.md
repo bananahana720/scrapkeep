@@ -319,7 +319,7 @@ The pilot is a mole machinist. A rectangular visor, blunt nose and nearly hidden
 
 ### Kest: safety amber, starburst, low thumps
 
-The pilot is a bird from the Highdraft Roosts. A swept feather crest, pushed-up goggles and a small hooked beak read through the glass, and the head makes small precise corrections while the shoulders stay still. On the ball, amber-striped satchels hang from an open truss frame, fuse wicks spit small sparks, and a folded glide vane sits on top as Roost lift hardware. The sticky-charge thrower is a short mortar tube in an open recoil cradle, so every lob reads as placed bombardment. The satchels swing with the roll, and with the vane they form the class silhouette.
+The pilot is a bird from the Highdraft Roosts. A swept feather crest, pushed-up goggles and a small hooked beak read through the glass, and the head makes small precise corrections while the shoulders stay still. On the ball, satchels banded in amber hang from an open truss frame, fuse wicks spit small sparks, and a folded glide vane sits on top as Roost lift hardware. The sticky-charge thrower is a short mortar tube in an open recoil cradle, so every lob reads as placed bombardment. The satchels swing with the roll, and with the vane they form the class silhouette. Kest's satchels and gear carry horizontal amber bands only, never 45° diagonals, because diagonal stripes mean hostile (§3). The primer board showed diagonal satchel stripes reading as hazard tape.
 
 | Ability | Wind-up | Release | Aftermath |
 | --- | --- | --- | --- |
@@ -368,7 +368,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 
 ## 9. Hero asset briefs (V3)
 
-These briefs are for headless Blender work. The style is low-poly, chunky and stylised, with flat colour per material slot and no texture detail below what reads at gameplay distance. Poly counts are sketch targets, not production budgets (TH-16 RQ-10, RP-22 unset).
+These briefs are for headless Blender work. The style is low-poly, chunky and stylised, with flat colour per material slot and no texture detail below what reads at gameplay distance. The Qwen renders on the primer board drift photoreal, so V3 models to this chunky low-poly brief and never to the board images. Poly counts are sketch targets, not production budgets (TH-16 RQ-10, RP-22 unset).
 
 **Material slots.** Every asset uses these names so code can map them to palette roles.
 
@@ -383,7 +383,7 @@ These briefs are for headless Blender work. The style is low-poly, chunky and st
 | `pilot` | The pilot's fur, feathers or skin, plus cap, goggles or visor |
 | `fleet_paint` | Iron oxide |
 | `requisition_tag` | Brass |
-| `ancient_enamel` | Petrol, cast and seamless, with sandstone dust on top faces |
+| `ancient_enamel` | Petrol, cast and seamless, with sandstone dust on top faces. Capped at HSV value 45% and saturation 45%, and never emissive. |
 | `ancient_light` | ANCIENT (pending; A is the default), emissive in thin seams set in charcoal grooves |
 | `rarity` | Set at runtime from the rarity ramp |
 
@@ -391,7 +391,7 @@ These briefs are for headless Blender work. The style is low-poly, chunky and st
 | --- | --- | --- | --- | --- |
 | **Class shell, Sable** | A lopsided scrap ball with a pylon-plate collar at the equator, a compact rope spool on one flank and a stubby pylon mast. The cockpit dome on top holds a fox pilot bust (ears and cap). | 3,000 to 5,000, plus a 400 to 800 pilot bust | paint, bare_metal, rubber, class_accent (plate edges, mast tip), field (collar coils), glass, pilot | The pilot's ears through the glass (AC-01) and the rope exit |
 | **Class shell, Rivet** | The same ball core with raked copper fins in a chevron and twin exhaust stacks behind. A straight optical rail runs forward to a cutting lens. The dome holds a mole pilot bust with a visor and instrument cable. | 3,000 to 5,000, plus a 400 to 800 pilot bust | as above; class_accent on the fins, rail lens and visor | The visor through the glass, the fin direction and the rail |
-| **Class shell, Kest** | The same core in an open truss cage, with two or three amber-striped satchels, a short mortar tube in a recoil cradle and a folded glide vane on top. The dome sits forward and holds a bird pilot bust (crest, goggles, beak). | 3,000 to 5,000, plus a 400 to 800 pilot bust | as above; class_accent on the satchel stripes, fuse tips and mortar mouth | The crest through the glass, the satchels, the mortar mouth and the vane when open |
+| **Class shell, Kest** | The same core in an open truss cage, with two or three satchels in horizontal amber bands, a short mortar tube in a recoil cradle and a folded glide vane on top. The dome sits forward and holds a bird pilot bust (crest, goggles, beak). | 3,000 to 5,000, plus a 400 to 800 pilot bust | as above; class_accent on the satchel bands (horizontal only), fuse tips and mortar mouth | The crest through the glass, the satchels, the mortar mouth and the vane when open |
 | **Accretion chunks** | Small (a bolt plate or bracket), medium (a dented tank end or pipe elbow) and large (a panel section with a weld seam). Each is irregular, with one flat face to sit on the ball. | 60 to 120, 150 to 300, and 400 to 800 | paint, bare_metal, rubber | Its size class by silhouette, and that it is scrap and not a pickup |
 | **Reward gate arch** | Two stout posts and a lintel of salvaged girders with a diamond keystone. The rarity topper sits above, with trigger and element glyph plates beside it. | 1,500 to 2,500 | paint, bare_metal, rarity (lintel trim, keystone), field (keystone core) | The rarity (colour plus topper shape) and a clear opening |
 | **Warden clamp base** | An awakened ancient (§11), not Fleet gear. It has two massive cast C-jaws on a seamless pivot housing, closing around the beacon. Its plating is layered cast shells with thin light seams, and the weak point is an exposed core where a shell has cracked away. It has no bolts, welds or brass. One shared base carries a per-stage family kit (below). | 4,000 to 6,000 for the base, plus 800 to 1,500 per family kit | ancient_enamel, ancient_light (seams, core), bare_metal (jaw edges) | The jaws and their closing path, the cracked weak point, and which family it belongs to |
@@ -435,7 +435,7 @@ This section follows DESIGN-V2 §10. There are two factions, and the ancients sp
 | --- | --- | --- |
 | Made by | Animal crews under Brindle, in workshops like the player's | Humans, before the collapse |
 | Material | Bolted, welded, stencilled and numbered standard issue | Cast, seamless and geometric, with no fasteners. Buried, cracked and dusted. |
-| Colour | `fleet_paint` iron oxide, charcoal and one brass requisition tag | `ancient_enamel` petrol, with thin `ancient_light` seams |
+| Colour | `fleet_paint` iron oxide, charcoal and one brass requisition tag | `ancient_enamel` dull petrol under the enamel cap, with thin `ancient_light` seams as the only glow |
 | Motion | Mechanical. Ratchets, winch jerks, steam puffs, visible crew effort. | Uncanny. Perfectly smooth, then perfectly still. |
 | Sound | Clanks, steam hiss, whistles, the klaxon family | Tonal hums, sub drones, pure sine chimes |
 | Silhouette logic | Its anti-ball tool is the biggest shape | Its family's geometry is the whole body |
@@ -463,6 +463,8 @@ Tenacity immunity (DESIGN-V2 §10) shows as the broken-bracket flicker from Rive
 | The Mind's hands (superintelligence) | Tall, thin, many-jointed manipulator arms and a lens cluster that tracks the ball | Still, then exact. The lens always follows you. | A pure sine chime that plays the class motif back, slightly wrong | When it adapts, its lens shows the trigger icon of the habit it counters (for example `trg_on_rebound`) in HAZARD, and it takes its brace or wall-guard pose before the counter takes effect |
 
 **Wardens.** Each stage's Warden is one family on a shared clamp base (§9): stage 1 a reactor relic, stage 2 a swarm-remnant hive, stage 3 one of the Mind's hands.
+
+**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the Cherenkov blue seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
 
 Ancient light is the ANCIENT colour (pending, Cherenkov blue by default), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
 

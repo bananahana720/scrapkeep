@@ -68,7 +68,7 @@ static func wish_direction(intent, drive_basis: Basis, state) -> Vector3:
 static func drive_head(state, tuning, wish: Vector3) -> float:
 	if wish == Vector3.ZERO:
 		return 0.0
-	return clampf(1.0 - state.velocity.dot(wish) / tuning.f("cruise"), 0.0, 1.0)
+	return clampf(1.0 - state.velocity.dot(wish) / (tuning.f("cruise") * state.cruise_boost), 0.0, 1.0)
 
 
 static func drive_scale(state, tuning, intent) -> float:

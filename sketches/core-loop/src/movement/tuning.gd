@@ -11,7 +11,8 @@ const SPECS := [
 	{"key": "restitution", "label": "Restitution", "min": 0.0, "max": 0.95, "step": 0.01, "value": 0.35},
 	{"key": "rolling_resistance", "label": "Rolling resist", "min": 0.0, "max": 3.0, "step": 0.05, "value": 0.30},
 	{"key": "rigid_torque", "label": "Rigid torque", "min": 10.0, "max": 600.0, "step": 10.0, "value": 220.0},
-	{"key": "dash_impulse", "label": "Dash impulse", "min": 4.0, "max": 40.0, "step": 0.5, "value": 16.0},
+	# Kest's blink leaves at least this speed; Dash Vane scales it and the blink's reach.
+	{"key": "dash_impulse", "label": "Blink speed floor", "min": 4.0, "max": 40.0, "step": 0.5, "value": 16.0},
 	{"key": "glide_gravity", "label": "Glide gravity", "min": 0.05, "max": 1.0, "step": 0.01, "value": 0.30},
 	{"key": "glide_lift", "label": "Glide lift", "min": 0.0, "max": 4.0, "step": 0.05, "value": 1.30},
 	{"key": "rope_range", "label": "Rope range", "min": 10.0, "max": 60.0, "step": 1.0, "value": 45.0},
@@ -29,7 +30,6 @@ const SPECS := [
 	# the face: keep is the fraction returned, boost is added on top.
 	{"key": "slingshot_keep", "label": "Slingshot keep", "min": 0.0, "max": 1.5, "step": 0.05, "value": 0.85},
 	{"key": "slingshot_boost", "label": "Slingshot boost", "min": 0.0, "max": 20.0, "step": 0.5, "value": 6.0},
-	{"key": "split_dash_cooldown", "label": "Split dash cooldown", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
 	# v2's ground probe turned with the ball, so "grounded" flickered with the spin.
 	# Off is the fix; on brings the v2 feel back for a side-by-side comparison.
 	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
@@ -52,7 +52,7 @@ var _values := {}
 # Parts scale knobs through mods rather than by moving the sliders, so the F1 panel
 # keeps showing the base value and a recompute from the part list is idempotent.
 var _mods := {}
-# Parts shorten the shared boost and dash cooldown; a constant, not a slider row.
+# Parts shorten the shared boost cooldown; a constant, not a slider row.
 var boost_cooldown_scale := 1.0
 
 

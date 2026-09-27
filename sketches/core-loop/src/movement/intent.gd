@@ -2,6 +2,10 @@ extends RefCounted
 
 # One tick of what the player asked for. Input fills it; nothing else reads a key.
 # Combat reads fire and special from here, so a scripted source drives weapons too.
+# The grammar is the same for every class (DESIGN-V2 section 1): LMB weapon, RMB class
+# movement, F the hold-gauge-release special, Ctrl the smash, Space jump, Shift boost.
+# A held key's release is its own one-tick field. A scripted press with no hold reads
+# as a tap.
 
 var move := Vector2.ZERO
 var jump_pressed := false
@@ -12,7 +16,16 @@ var mount_pressed := false
 var reel_held := false
 var fire_pressed := false
 var fire_held := false
+var fire_released := false
 var special_pressed := false
+var special_held := false
+var special_released := false
+var movement_pressed := false
+var movement_held := false
+var movement_released := false
+# Drops whatever gauge is charging, spending nothing. The player turns an RMB press made
+# during a charge into this (the League convention: right click cancels a cast).
+var cancel_pressed := false
 
 
 func clear() -> void:
@@ -25,7 +38,14 @@ func clear() -> void:
 	reel_held = false
 	fire_pressed = false
 	fire_held = false
+	fire_released = false
 	special_pressed = false
+	special_held = false
+	special_released = false
+	movement_pressed = false
+	movement_held = false
+	movement_released = false
+	cancel_pressed = false
 
 
 # A source lets the headless test drive the same player with no input at all.
@@ -71,4 +91,10 @@ class Keyboard:
 		out.reel_held = Input.is_action_pressed("cl_reel")
 		out.fire_pressed = Input.is_action_just_pressed("cl_fire")
 		out.fire_held = Input.is_action_pressed("cl_fire")
+		out.fire_released = Input.is_action_just_released("cl_fire")
 		out.special_pressed = Input.is_action_just_pressed("cl_special")
+		out.special_held = Input.is_action_pressed("cl_special")
+		out.special_released = Input.is_action_just_released("cl_special")
+		out.movement_pressed = Input.is_action_just_pressed("cl_movement")
+		out.movement_held = Input.is_action_pressed("cl_movement")
+		out.movement_released = Input.is_action_just_released("cl_movement")

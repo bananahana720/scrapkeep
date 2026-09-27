@@ -13,6 +13,7 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 | `bolts.gd` | every live player projectile, the live cap and the crowd fade |
 | `effects.gd` | chain arcs, blast rings and impact sparks |
 | `telegraph.gd` | the committed ring, lane or wedge an enemy attack both draws and damages with |
+| `threat_grammar.gd` | the four attack types (instant, wave, projectile, lane) and how each draws, shared with the boss's hazards; the stance a tint gives (hostile, the player's own, harmless) |
 | `ground.gd` | the ground enemies, telegraphs and shells stand on: the terrain, or the boss floor in the arena |
 | `enemy.gd` | what every enemy shares: health, plating, weak points, weight, knock, flash, tint, death, telegraph |
 | `chaser.gd`, `lobber.gd`, `projectile.gd`, `miniboss.gd` | the enemies and the lobber's shell |
