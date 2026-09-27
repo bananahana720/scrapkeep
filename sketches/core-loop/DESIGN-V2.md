@@ -201,3 +201,11 @@ Andrew added these on 2026-09-27, in his words:
 These are the hooks for loot items ("tenacity", "tether snap", "net cutter").
 
 Wave 3 gets a W7 enemies writer (combat enemies plus the director's pack composition). It starts after W2 and W3 merge, since it needs the threat grammar and the contact rules.
+
+**No reskins (Andrew's pet peeve, 2026-09-27).** In his words: "I want creativity with the enemies ... another pet peeve of mine is just having skins of the same enemy that uh, does the same mechanic." The rules:
+
+- Every enemy type owns a mechanic no other type has.
+- A variant counts as a new enemy only if it changes what the player must do.
+- The W7 writer and its reviewer check each roster entry against this. Two entries that differ only in numbers or colour fail.
+
+The enemy origin (ancient beings, aliens or apocalypse robots, against the Bible's Furnace Fleet) is still open. The greybox keeps the mechanics neutral until Andrew decides.
