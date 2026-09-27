@@ -130,3 +130,30 @@ Every F special, the caster's LMB and the slingshot follow one spec.
 
 - The DESIGN-NOTES #39 gate-approach sweep must also cover towers, barges and tunnel roofs.
 - If the ball slides on the barges, the fallback named in I3 applies.
+
+## 9. Contraptions, focal points and events that change the terrain
+
+Andrew added these on 2026-09-27, mid-round, in his words:
+
+- "more steampunk and contraptions like um, steam, like lifts or launchers"
+- "post-apocalyptic like futurism"
+- "maps that are designed around a cluster buildings or a yeah focal point"
+- events that "change the environment and cause like rocks to cave in or something to land and create a crater or um, a building being like you know kind of like destroyed and a portion of it or uh, changed or morphed into something"
+
+The Wave 3 stage and event writers work these in:
+
+- **Contraptions.** Momentum tools you ride, never stops:
+  - steam lifts: an `AnimatableBody3D` piston platform that fires on a cycle you can read
+  - steam launchers: a vent or catapult reusing the rail maths
+  - pressure valves the player smashes to open a route
+  - Each shows its cycle with steam and a gauge you can read at a glance, and has its own sound.
+- **A focal point.** The vertical stage is built around one landmark: a ruined dam-works tower cluster. The undercroft, shelf and sky layers orbit it. It is the orientation anchor from every layer.
+- **Events that change the terrain.** These come from the event director (TADR-010), always announced first (a telegraph plus a stinger on the beat). They change the committed geometry, and the new collider is exactly the drawn change.
+  - **Cave-in.** Rocks seal one route and open another. A crumble telegraph runs 3 s ahead.
+  - **Impact.** Something lands and leaves a crater bowl, a new halfpipe the ball can ride. A projectile-type telegraph marks the landing.
+  - **Structural collapse.** Part of a tower shears off and becomes a ramp or bridge, or sheds a bonus vault.
+  - Rules:
+    - Momentum is sacred: a change never traps the ball inside new geometry.
+    - The spawn-clear check holds the change until the ball is outside the footprint.
+    - Participating (standing your ground, riding the new feature) pays a milestone reward.
+    - Performance: a terrain swap pre-builds the post-change collider and swaps it in, per the ~34 ms trimesh note. It never rebuilds mid-frame.
