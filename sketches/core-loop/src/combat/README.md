@@ -23,7 +23,7 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 
 `spawn_enemy(kind, at) -> Node3D` adds the enemy under `ctx.root` at `at`, wires its committed hits to `run.damage(amount, kind)` and its death to `run.record_kill(kind, at, scrap)`, then emits `enemy_spawned`. Pass a point with clearance, for example `ctx.terrain.drop_point(x, z, 3.6)` for the miniboss. The spawner does not check `ctx.calm`; a caller that spawns on its own schedule checks it, as the director does.
 
-On `stage_content_cleared` (arena entry and every arena retry, before the boss module's `enter_arena`) combat frees every node in `enemy`, `enemy_shot` and `telegraph`, out of its group at once; a boss module spawns its adds after that call.
+On `stage_content_cleared` (arena entry and every arena retry, before the boss module's `enter_arena`) combat frees every node in `enemy`, `enemy_shot` and `telegraph`, out of its group at once; a boss module spawns its adds after that call. The class kit's fire cooldown, special cooldown and overdrive reset there too, as they do on a stage retry, so a special on cooldown at death is ready in the retried fight.
 
 | Kind | Health | Plating | Scrap | Weight | Attack |
 | --- | --- | --- | --- | --- | --- |

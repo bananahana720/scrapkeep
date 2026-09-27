@@ -669,15 +669,11 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # A stage entry or retry starts the fight clean, and recomputes every pattern from the
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
-	_clear_fight()
+	_start_attempt()
 	ctx.camera.shoulder_target = 0.0
-	_cooldown = 0.0
-	_special_cooldown = 0.0
-	_overdrive = 0.0
 	volleys = 0
 	last_shot = {}
 	last_burst = {}
-	_crushes.clear()
 	_since_slingshot = INF
 	_rebuild_patterns()
 
@@ -685,10 +681,18 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 # The arena is not a stage (DESIGN-NOTES spine call 34). Flow publishes this before the
 # boss module's enter_arena, on entry and on every arena retry, so nothing of Brindle's
 # exists yet and every enemy, shell and telegraph standing now came from the stage or
-# from the attempt being retried. The class kit is player-side and keeps working.
+# from the attempt being retried. The class kit keeps working, and its cooldowns start
+# fresh as they do on a stage retry.
 func _on_stage_content_cleared(_reason: String) -> void:
+	_start_attempt()
+
+
+func _start_attempt() -> void:
 	_clear_fight()
 	_crushes.clear()
+	_cooldown = 0.0
+	_special_cooldown = 0.0
+	_overdrive = 0.0
 
 
 # Every enemy, shell and telegraph leaves its group, stops acting and stops colliding
