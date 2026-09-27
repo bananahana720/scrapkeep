@@ -248,3 +248,7 @@ The Bible marks an animal-only cast as open and never makes the exploratory exam
   - Each fight plays differently, and one run meets all three causes of the collapse. The clamp is a shared base with a family-specific core.
 - **The rarest tier (rare_plus)** is amber with a mint heart and a notched frame. Red is only for things that hurt you.
 - **The ancients' light** is **Cherenkov blue `#3d8bff`**, the glow of a human reactor pool: the light of the age that ended. Andrew chose it by AskUserQuestion after rejecting violet as "a bit overused". It keeps ΔE ≥ 31 against every palette colour under every vision type. Ancient seams are cut as charcoal grooves so they also read on petrol enamel.
+- **Audio rulings (the vision keeper's three questions).** Each confirms SOUND-STORY.md's default.
+  1. Only the reactor relic colours the band: a tritone pedal under the sub while a vent charges. Swarms and the Mind stay effects only.
+  2. Fleet reinforcements borrow Brindle's anvil and brass in the level theme, adding one layer per difficulty tick.
+  3. The Mind's hands quote the player's class motif, inverted with the last note a semitone flat. It's the one sanctioned hostile use of a class motif, and it doubles as their telegraph.
