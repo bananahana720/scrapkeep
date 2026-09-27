@@ -47,8 +47,15 @@ const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "fou
 # seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
 
+# v2 W3 characters: the class-ability facts, heard through their event rows.
+const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
+	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
+	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed"]
+
 var ctx
 var engine: MusicEngine
+# v2 W3 characters: which of CHARACTER_KINDS are already connected.
+var _character_wired := {}
 var sound_ready := false
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
@@ -429,6 +436,12 @@ func wire_optional() -> void:
 			engine.cancel_pending()
 			engine.restart_boss("brindle")
 		play("stage_content_cleared"))
+	# v2 W3 characters: each class-ability fact plays its event row's stand-in sound
+	# until W5 bakes the id named in the row's sound_next.
+	for kind in CHARACTER_KINDS:
+		if events.has_signal(kind) and not _character_wired.has(kind):
+			_character_wired[kind] = true
+			events.connect(kind, play.bind(kind).unbind(_argc(events, kind)))
 
 
 # Connects once. loose drops whatever arguments the signal carries.

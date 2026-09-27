@@ -45,7 +45,8 @@ const ACTIONS := {
 	"cl_reel": [KEY_Q],
 	"cl_special": [KEY_F],
 }
-const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT}
+# RMB is every class's movement ability (Sable's grapple rides it through the intent).
+const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT, "cl_movement": MOUSE_BUTTON_RIGHT}
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false
@@ -237,19 +238,11 @@ func restart_hold_fraction() -> float:
 
 
 # The single answer to "what would the grapple hit right now". The reticle, the world
-# marker and fire_grapple() all read the record this stores.
+# marker and the ball's RMB grapple all read the record this stores.
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Augments.grapple_target(get_world_3d().direct_space_state, from, forward,
 		player.ball_position(), player.grapple_range(), tuning.f("grapple_assist_deg"))
 	return player.kit.aim
-
-
-func fire_grapple() -> bool:
-	var aim: Dictionary = player.kit.aim
-	if aim["state"] == Augments.AIM_NONE:
-		return false
-	player.grapple_to(aim["point"], aim["normal"])
-	return true
 
 
 func hit_stop(seconds: float) -> void:
@@ -449,11 +442,6 @@ func _mouse_button(event: InputEventMouseButton) -> void:
 	if not flow.in_play():
 		return
 	match event.button_index:
-		MOUSE_BUTTON_RIGHT:
-			if event.pressed:
-				fire_grapple()
-			else:
-				player.release_grapple()
 		MOUSE_BUTTON_WHEEL_UP:
 			if event.pressed:
 				player.reel_step(REEL_NOTCH)

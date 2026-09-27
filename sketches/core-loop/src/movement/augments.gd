@@ -2,22 +2,37 @@ extends RefCounted
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 
-# One row per augment. The number keys, the HUD list and the kit's enabled flags all
-# read this table, so a sixth augment is one row here plus its force function below.
+# One row per augment. The HUD list and the kit's enabled flags read this table. A class
+# fits only its own movement augments (KITS, keyed by the class row's movement_id); the
+# smash is everyone's. Jump, double jump and boost are base rules, not augments. The
+# shared air dash is gone: its redirect lives in each class's movement ability.
 const GRAPPLE := "grapple"
-const DASH := "dash"
+const PYLON := "pylon"
+const VAULT := "vault"
+const SPRINT := "sprint"
+const BLINK := "blink"
 const GLIDE := "glide"
 const SLAM := "slam"
-const PYLON := "pylon"
 
 const SPECS := [
 	{"key": GRAPPLE, "label": "Grapple", "hint": "RMB fire/release · hold Q winches · wheel pays out"},
-	{"key": DASH, "label": "Air dash", "hint": "Shift while airborne, refreshed on landing"},
+	{"key": PYLON, "label": "Pylon", "hint": "E near a steep face or a close wall hook; hold Space to slingshot"},
+	{"key": VAULT, "label": "Vault kick", "hint": "Space in the air at a steep face"},
+	{"key": SPRINT, "label": "Overdrive sprint", "hint": "hold RMB; crowd control slides off"},
+	{"key": BLINK, "label": "Smoke blink", "hint": "RMB; 8 m through your own smoke"},
 	{"key": GLIDE, "label": "Glide", "hint": "hold Space falling, after the air jump"},
-	{"key": SLAM, "label": "Slam", "hint": "Ctrl while airborne; plants on flat, launches on slopes"},
-	{"key": PYLON, "label": "Pylon", "hint": "E near a steep face or a close wall hook"},
+	{"key": SLAM, "label": "Smash", "hint": "Ctrl while airborne; plants on flat, launches on slopes"},
 ]
+const KITS := {
+	"grapple": [GRAPPLE, PYLON, VAULT],
+	"overdrive_sprint": [SPRINT],
+	"smoke_blink": [BLINK, GLIDE],
+}
+const SHARED := [SLAM]
+# A kit fitted with no class is the engineer's, the first class row.
+const DEFAULT_MOVEMENT := "grapple"
 
 # What the grapple would catch right now. The HUD reticle, the world marker and the
 # fire action all read the one record grapple_target() returns, so they cannot differ.
@@ -45,17 +60,35 @@ const MOUNT_COOLDOWN := 0.25
 const MOUNT_REPEL_RADIUS := 8.0
 const MOUNT_REPEL_KNOCK := 20.0
 
+# The slingshot is a hold-gauge-release on Space while mounted: a tap is the old eject,
+# a full gauge adds SLINGSHOT_FULL on top.
+const SLINGSHOT_CHARGE := 0.8
+const SLINGSHOT_FULL := 1.3
+# Sable's vault kick: exit = incoming x VAULT_GAIN, never slower than a jump, capped;
+# each face locks for VAULT_FACE_COOLDOWN so two faces cannot ping-pong the speed up.
+const VAULT_GAIN := 1.8
+const VAULT_CAP := 45.0
+const VAULT_FACE_COOLDOWN := 1.5
+# Rivet's sprint raises the drive's cruise target while it runs.
+const SPRINT_CRUISE := 1.25
+# Kest's blink: this far along the aim, stopping short of the world.
+const BLINK_DISTANCE := 8.0
+# Rivet's skid turns the slam's fall into forward speed instead of a plant.
+const SKID_KEEP := 0.6
+
 
 static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	if kit == null:
 		return
 	var step: float = body_state.step
 	kit.tick_timers(step)
-	if _mount(kit, state, tuning, intent, aim, body_state):
+	_sprint(kit, state, intent, body_state, step)
+	if _mount(kit, state, tuning, intent, aim, body_state, step):
 		return
 	if _hold_plant(kit, state, intent, body_state, step):
 		return
-	_dash(kit, state, tuning, intent, aim, body_state)
+	_vault(kit, state, tuning, aim, body_state)
+	_blink(kit, tuning, intent, aim, body_state)
 	_slam(kit, state, tuning, intent, body_state, step)
 	if kit.plant_time > 0.0:
 		return
@@ -69,10 +102,97 @@ static func holding(kit) -> bool:
 	return kit != null and (kit.mounted or kit.plant_time > 0.0)
 
 
-# Airborne Shift belongs to the dash while it is fitted; on the ground Shift is still
-# the boost, and the boost rule must not also fire or the two would stack.
-static func claims_boost(kit, state) -> bool:
-	return kit != null and kit.on(DASH) and not state.grounded
+# The vault kick's exit speed for an incoming speed.
+static func vault_exit(incoming: float, jump_speed: float) -> float:
+	return minf(VAULT_CAP, maxf(jump_speed, incoming * VAULT_GAIN))
+
+
+# A face is its plane: the normal to about 17 degrees and the offset to 3 m, so a long
+# wall is one face wherever you kick it and the two sides of a gap are two faces.
+static func face_key(point: Vector3, normal: Vector3) -> String:
+	var n := normal.normalized()
+	return "%d,%d,%d:%d" % [roundi(n.x / 0.3), roundi(n.y / 0.3), roundi(n.z / 0.3), roundi(n.dot(point) / 3.0)]
+
+
+# Sable's vault kick. In the air at a steep face that is not locked, Space kicks off it
+# along the slingshot's eject line. kit.vault_aim is the aim cone's record, set on every
+# tick a kick is available, so the drawn cone and the kick read one answer.
+static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
+	kit.vault_aim = {}
+	if not kit.on(VAULT) or state.grounded or kit.hooked:
+		return
+	var face := _steepest_face(body_state)
+	if face.is_empty():
+		return
+	var key := face_key(face["point"], face["normal"])
+	if kit.vault_faces.get(key, 0.0) > 0.0:
+		return
+	var incoming: float = body_state.linear_velocity.length()
+	var dir := eject_direction(face["normal"], aim)
+	var speed := vault_exit(incoming, tuning.f("jump_speed"))
+	kit.vault_aim = {"point": face["point"], "normal": face["normal"], "dir": dir, "speed": speed}
+	if state.jump_buffer <= 0.0:
+		return
+	state.jump_buffer = 0.0
+	state.coyote = 0.0
+	body_state.linear_velocity = dir * speed
+	kit.vault_faces[key] = VAULT_FACE_COOLDOWN
+	kit.last_vault_face = key
+	kit.facts.append(["vault_kicked", [face["point"], speed]])
+	kit.facts.append(["dashed", [dir]])
+
+
+# Rivet's overdrive sprint: RMB held spends a charge and runs up to its duration, or
+# until released. While it runs the drive aims past cruise and crowd control slides off
+# (player_ball.crowd_control reads kit.sprinting).
+static func _sprint(kit, state, intent, body_state, step: float) -> void:
+	if not kit.on(SPRINT):
+		kit.sprinting = false
+		state.cruise_boost = 1.0
+		return
+	var slot = kit.abilities.slot(AbilityState.MOVEMENT)
+	if kit.sprinting:
+		kit.sprint_left -= step
+		if kit.sprint_left <= 0.0 or not intent.movement_held:
+			kit.sprinting = false
+	elif intent.movement_pressed and kit.abilities.spend(AbilityState.MOVEMENT):
+		kit.sprinting = true
+		kit.sprint_left = slot.duration
+		var dir := _flat_forward(Basis.IDENTITY, body_state.linear_velocity)
+		kit.facts.append(["sprint_started", [dir]])
+		kit.facts.append(["dashed", [dir]])
+	slot.active = kit.sprinting
+	state.cruise_boost = SPRINT_CRUISE if kit.sprinting else 1.0
+
+
+# Kest's smoke blink: RMB moves the ball BLINK_DISTANCE along the aim, stopping short of
+# the world, and turns its planar speed onto the aim, never slower than the dash
+# impulse. A fall is caught; a climb is kept. Dash Vane reaches further.
+static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
+	if not kit.on(BLINK) or not intent.movement_pressed:
+		return
+	if not kit.abilities.spend(AbilityState.MOVEMENT):
+		return
+	var v: Vector3 = body_state.linear_velocity
+	var dir := _flat_forward(aim, v)
+	var from: Vector3 = body_state.transform.origin
+	var lift := Vector3.UP * 0.3
+	var reach: float = BLINK_DISTANCE * tuning.mod("dash_impulse")
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS * 0.95
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, from + lift)
+	query.motion = dir * reach
+	query.collision_mask = WORLD_MASK
+	var safe: PackedFloat32Array = body_state.get_space_state().cast_motion(query)
+	var travel := reach * (safe[0] if safe.size() > 0 else 1.0)
+	var to := from + lift + dir * travel
+	body_state.transform = Transform3D(body_state.transform.basis, to)
+	var speed := maxf(Vector2(v.x, v.z).length(), tuning.f("dash_impulse"))
+	body_state.linear_velocity = Vector3(dir.x * speed, maxf(v.y, 0.0), dir.z * speed)
+	kit.facts.append(["blink_used", [from, to]])
+	kit.facts.append(["dashed", [dir]])
 
 
 static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO) -> void:
@@ -129,28 +249,6 @@ static func _hook_ray(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vect
 	if hit.is_empty() or (hit["position"] as Vector3).distance_to(ball) > reach:
 		return {}
 	return hit
-
-
-static func _dash(kit, state, tuning, intent, aim: Basis, body_state) -> void:
-	if state.grounded:
-		kit.dash_ready = true
-		return
-	if not kit.on(DASH) or not intent.boost_pressed or not kit.dash_ready:
-		return
-	if tuning.on("split_dash_cooldown"):
-		if kit.dash_cooldown > 0.0:
-			return
-		kit.dash_cooldown = tuning.boost_cooldown()
-	else:
-		# Shift is one charge: a ground boost spends the dash and the dash spends the
-		# boost, so the same key never pays out twice inside one cooldown.
-		if state.boost_cooldown > 0.0:
-			return
-		state.boost_cooldown = tuning.boost_cooldown()
-	kit.dash_ready = false
-	var dir := _flat_forward(aim, body_state.linear_velocity)
-	body_state.linear_velocity += dir * tuning.f("dash_impulse")
-	kit.dash_fired = dir
 
 
 static func _glide(kit, state, tuning, intent, aim: Basis, body_state, step: float) -> void:
@@ -220,6 +318,24 @@ static func _plant(kit, state, tuning, body_state) -> void:
 	kit.slam_landed = kit.slam_fall
 	kit.slam_flat = flat
 	state.impact = maxf(state.impact, kit.slam_fall * flat)
+	if kit.smash_id == "shockwave_skid":
+		_skid(kit, n, hit, into, body_state)
+
+
+# Rivet's shockwave skid: no plant. The fall goes forward along the ground, so a slam
+# costs Rivet no time at all; the push ahead is the ball's (player_ball._on_slammed).
+static func _skid(kit, n: Vector3, hit: Vector3, into: float, body_state) -> void:
+	var along := hit - n * into
+	var forward := Vector3(along.x, 0.0, along.z)
+	if forward.length_squared() < 0.01:
+		forward = Vector3(-body_state.transform.basis.z.x, 0.0, -body_state.transform.basis.z.z)
+	forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
+	forward = (forward - n * forward.dot(n)).normalized()
+	var speed := along.length() + maxf(0.0, -into) * SKID_KEEP
+	kit.plant_time = 0.0
+	kit.plant_total = 0.0
+	kit.plant_exit = forward * speed
+	body_state.linear_velocity = kit.plant_exit
 
 
 # Never a stun: a jump or boost pressed while planted is held and fires the tick the
@@ -250,21 +366,33 @@ static func _hold_plant(kit, state, intent, body_state, step: float) -> bool:
 # The pylon: E near a steep face, or near the wall your hook is in, drives a post into
 # the surface and holds the ball on its end. The plant banks the speed you arrived with;
 # Space slingshots you off along the face with it, E drops you off where you are.
-static func _mount(kit, state, tuning, intent, aim: Basis, body_state) -> bool:
+static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: float) -> bool:
 	if kit.mounted:
+		var gauge = kit.slingshot
 		if not kit.on(PYLON):
 			kit.mounted = false
-			return false
-		if state.jump_buffer > 0.0:
-			state.jump_buffer = 0.0
-			state.coyote = 0.0
-			_dismount(kit, _slingshot(kit, tuning, aim))
-			body_state.linear_velocity = kit.dismount_velocity
+			gauge.cancel()
 			return false
 		if intent.mount_pressed:
+			if gauge.cancel():
+				kit.facts.append(["gauge_cancelled", ["slingshot", "dropped"]])
 			_dismount(kit, Vector3.ZERO)
 			body_state.linear_velocity = Vector3.ZERO
 			return false
+		if intent.cancel_pressed and gauge.cancel():
+			kit.facts.append(["gauge_cancelled", ["slingshot", "cancel"]])
+		if not gauge.charging and state.jump_buffer > 0.0:
+			state.jump_buffer = 0.0
+			state.coyote = 0.0
+			gauge.begin()
+			kit.facts.append(["gauge_charging", ["slingshot"]])
+		if gauge.step(step, intent.jump_held):
+			_dismount(kit, _slingshot(kit, tuning, aim, gauge.fired_fraction))
+			kit.facts.append(["gauge_released", ["slingshot", gauge.fired_fraction]])
+			body_state.linear_velocity = kit.dismount_velocity
+			return false
+		kit.slingshot_aim = {"dir": eject_direction(kit.mount_normal, aim),
+			"speed": _slingshot(kit, tuning, aim, gauge.fraction()).length(), "fill": gauge.fraction()}
 		_pin(body_state, kit.mount_point)
 		return true
 	if not kit.on(PYLON) or not intent.mount_pressed or kit.mount_block > 0.0:
@@ -281,7 +409,7 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state) -> bool:
 	kit.slamming = false
 	kit.plant_time = 0.0
 	kit.gliding = false
-	kit.dash_ready = true
+	kit.sprinting = false
 	state.air_actions = 1
 	_pin(body_state, kit.mount_point)
 	return true
@@ -295,18 +423,23 @@ static func _dismount(kit, velocity: Vector3) -> void:
 
 
 # The eject runs along the face toward where you are looking, tipped off the wall and
-# up, at the banked speed plus a boost; never slower than a plain jump off the face.
-static func _slingshot(kit, tuning, aim: Basis) -> Vector3:
-	var n: Vector3 = kit.mount_normal
+# up, at the banked speed plus a boost; never slower than a plain jump off the face. A
+# tap is exactly that; the gauge adds up to SLINGSHOT_FULL on top.
+static func _slingshot(kit, tuning, aim: Basis, fraction := 0.0) -> Vector3:
+	var speed := maxf(tuning.f("jump_speed"), kit.mount_banked * tuning.f("slingshot_keep") + tuning.f("slingshot_boost"))
+	speed *= AbilityState.Gauge.scaled(fraction, 1.0, SLINGSHOT_FULL)
+	return eject_direction(kit.mount_normal, aim) * speed
+
+
+# The one eject line off a face, shared by the slingshot and the vault kick: along the
+# face toward the look, tipped off the wall and up.
+static func eject_direction(normal: Vector3, aim: Basis) -> Vector3:
+	var n := normal.normalized()
 	var look: Vector3 = -aim.z
 	var along := look - n * look.dot(n)
-	var dir: Vector3
 	if along.length_squared() > 0.01:
-		dir = (along.normalized() * 0.8 + n * 0.6 + Vector3.UP * 0.35).normalized()
-	else:
-		dir = (n + Vector3.UP * 0.65).normalized()
-	var speed := maxf(tuning.f("jump_speed"), kit.mount_banked * tuning.f("slingshot_keep") + tuning.f("slingshot_boost"))
-	return dir * speed
+		return (along.normalized() * 0.8 + n * 0.6 + Vector3.UP * 0.35).normalized()
+	return (n + Vector3.UP * 0.65).normalized()
 
 
 static func _mount_spot(kit, body_state) -> Dictionary:

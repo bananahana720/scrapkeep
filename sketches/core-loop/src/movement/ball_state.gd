@@ -11,6 +11,8 @@ var jump_buffer := 0.0
 var boost_cooldown := 0.0
 var impact := 0.0
 var tier := 0
+# Rivet's sprint raises the drive's cruise target by this factor while it runs.
+var cruise_boost := 1.0
 
 
 func speed() -> float:
@@ -42,3 +44,4 @@ func reset() -> void:
 	boost_cooldown = 0.0
 	impact = 0.0
 	tier = 0
+	cruise_boost = 1.0

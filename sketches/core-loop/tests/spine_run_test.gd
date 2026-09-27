@@ -79,7 +79,16 @@ func _start() -> void:
 	_game.player.source = _source
 	_states.append(_game.flow.state_name())
 	_game.flow.press_start()
-	_game.flow.choose_class(0)
+	_game.flow.choose_class(_class_index())
+
+
+# The class to run as: 0 by default; char_full_run_test passes "--class=N" to cover the
+# others through this same scripted run.
+static func _class_index() -> int:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--class="):
+			return int(arg.trim_prefix("--class="))
+	return 0
 
 
 func _planar() -> float:
@@ -214,7 +223,7 @@ func _finish() -> bool:
 			and _arena.get("after_defeat", "") == "victory",
 		"R put flow back in %s (arena entry %d) at hp %.0f; boss_defeated led to %s, then summary"
 			% [_arena.get("retried_state", "?"), _boss.entries, _arena.get("retried_hp", -1.0), _arena.get("after_defeat", "?")])
-	print("spine_run_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	print("spine_run_test (%s): %s" % [_game.run.class_id(), "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
 	_game.free()
 	quit(0 if _failures == 0 else 1)
 	return true
