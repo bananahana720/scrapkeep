@@ -6,6 +6,7 @@ const PartDef := preload("res://src/build/part_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const CombatCodex := preload("res://src/combat/codex_entries.gd")
 const WorldCodex := preload("res://src/world/codex_world.gd")
+const BossCodex := preload("res://src/boss/codex_entries.gd")
 
 # The coherence check (DEMO-SPEC, "Design feedback loop", step 4). Every piece of the
 # demo must say what it is for, so the loop can reason about it:
@@ -26,12 +27,18 @@ const OWNERS := {
 	"enemy": "A combat (src/combat/codex_entries.gd)",
 	"build": "B build (build.codex_declarations())",
 	"world": "D world (src/world/codex_world.gd)",
+	"boss": "E boss (src/boss/codex_entries.gd), filed under enemy",
 }
 const MODULE_SECTION := "\\(writer ([A-Z])\\)"
 const DEMANDS := ["warden", "event", "vault", "boss"]
-# Unmarked and off-list live lines per module section at base 17a9437 (wave 3b).
-const BASELINE_UNMARKED := {"A": 26, "B": 25, "C": 0, "D": 21, "L": 0}
-const BASELINE_OFF_LIST := {"A": 0, "B": 0, "C": 0, "D": 1, "L": 0}
+# The boss section names its demand by phase ("Demand: phase 2", "the chase", "arena
+# entry"): each is a boss-phase demand in the spec's sense.
+const BOSS_DEMANDS := ["phase", "arena", "brindle", "finale", "chase"]
+# Unmarked and off-list live lines per module section, reset at the merge of
+# proto/core-loop-int 97d46ce (A's review-wave lines and C's audio notes arrived without
+# the marker). Lower these as the backfill lands; never raise them.
+const BASELINE_UNMARKED := {"A": 35, "B": 24, "C": 72, "D": 21, "E": 0, "L": 0}
+const BASELINE_OFF_LIST := {"A": 0, "B": 0, "C": 0, "D": 1, "E": 0, "L": 0}
 const PLAY_TICKS := 6
 
 var _game
@@ -106,6 +113,11 @@ func _check_codex() -> void:
 		declared_by[entry["id"]] = "enemy"
 	for entry in WorldCodex.ENTRIES:
 		declared_by[entry["id"]] = "world"
+	# Brindle's tricks are enemy tricks that E declares (BOSS-BRINDLE.md, wave 4 packet).
+	var boss_ids := {}
+	for entry in BossCodex.ENTRIES:
+		declared_by[entry["id"]] = BossCodex.CATEGORY
+		boss_ids[entry["id"]] = true
 	var build = _game.ctx.build
 	if build != null and build.has_method("codex_declarations"):
 		for entry in build.codex_declarations():
@@ -122,7 +134,8 @@ func _check_codex() -> void:
 		elif not declared_by.has(id):
 			problems.append("declared by no module's data")
 		elif declared_by[id] != category:
-			problems.append("declared by %s but filed under %s" % [OWNERS.get(declared_by[id], "?"), category])
+			var owner: String = OWNERS.get("boss" if boss_ids.has(id) else declared_by[id], "?")
+			problems.append("declared by %s but filed under %s" % [owner, category])
 		if String(entry.get("clue", "")).strip_edges() == "":
 			problems.append("no clue")
 		if not problems.is_empty():
@@ -170,7 +183,7 @@ func _check_notes() -> void:
 				plumbing.append("%d %s" % [item["number"], item["title"]])
 				continue
 			var named := false
-			for word in DEMANDS:
+			for word in DEMANDS + BOSS_DEMANDS:
 				if word in demand:
 					named = true
 			if named:

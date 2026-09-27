@@ -3,7 +3,11 @@ extends Node
 # The design feedback loop's run log (DEMO-SPEC). It listens to the bus and reads the
 # run state and the ball, never a module's internals, and appends one record to
 # runs.ndjson at every death and at the end of a run. A record is cumulative: each
-# line carries the whole run so far, with the codex log's run_id.
+# line carries the whole run so far, with the codex log's run_id. A run left without a
+# death or an end since its last line (a new run started, the game closed, a bot that
+# gave up) gets one more line with outcome "abandoned" and where it was left
+# ("abandoned_in": "stage" or "arena"), so the loop sees runs that never finished. The
+# arena block (I3) is the boss-entry record: it rides in every line after entry.
 
 const LOG_FILE := "runs.ndjson"
 
@@ -18,6 +22,8 @@ var _record := {}
 var _stages := {}
 var _in_arena := false
 var _phase := 0
+# True when the run has moved on since its last line.
+var _dirty := false
 
 
 func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
@@ -29,6 +35,7 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	storage_dir = dir
 	events.run_started.connect(_on_run_started)
 	events.stage_entered.connect(_on_stage_entered)
+	events.warden_engaged.connect(_on_warden_engaged)
 	events.beacon_unsealed.connect(_on_beacon_unsealed)
 	events.stage_cleared.connect(_on_stage_cleared)
 	events.event_started.connect(func(id: String): _stage_list("events_joined").append(id))
@@ -40,6 +47,7 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 
 
 func _on_run_started(class_id: String) -> void:
+	_abandon()
 	_stages = {}
 	_in_arena = false
 	_phase = 0
@@ -50,6 +58,7 @@ func _stage(index: int) -> Dictionary:
 	if not _stages.has(index):
 		_stages[index] = {
 			"stage": index,
+			"ticks_to_warden_engaged": null,
 			"ticks_to_warden_break": null,
 			"heft_at_exit": null,
 			"part_ids_at_exit": null,
@@ -71,7 +80,14 @@ func _ticks() -> int:
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_in_arena = false
+	_dirty = true
 	_stage(stage)
+
+
+# warden_engaged fires once per stage attempt, so a retry's engagement replaces the
+# last one, as a retry's break does.
+func _on_warden_engaged(stage: int) -> void:
+	_stage(stage)["ticks_to_warden_engaged"] = _ticks()
 
 
 func _on_beacon_unsealed(stage: int) -> void:
@@ -108,6 +124,7 @@ func _on_stage_content_cleared(reason: String) -> void:
 	if reason != "arena" and reason != "arena_retry":
 		return
 	_in_arena = true
+	_dirty = true
 	_phase = 0
 	if not _record.has("arena"):
 		_record["arena"] = {"entries": 0, "deaths": []}
@@ -124,6 +141,17 @@ func _on_run_ended(won: bool) -> void:
 	_write("won" if won else "lost")
 
 
+func _abandon() -> void:
+	if _dirty and not _record.is_empty():
+		_record["abandoned_in"] = "arena" if _in_arena else "stage"
+		_write("abandoned")
+		_record.erase("abandoned_in")
+
+
+func _exit_tree() -> void:
+	_abandon()
+
+
 func _write(outcome: String) -> void:
 	if _record.is_empty():
 		return
@@ -137,5 +165,6 @@ func _write(outcome: String) -> void:
 	line["stages"] = stages
 	line["codex"] = codex.discovered_this_run() if codex != null else []
 	line["anomalies"] = run.anomalies.duplicate(true)
+	_dirty = false
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1

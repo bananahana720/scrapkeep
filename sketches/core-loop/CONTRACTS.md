@@ -291,14 +291,14 @@ Each codex log line holds `kind`, `run_id`, `stage`, `stage_ticks`, `category`, 
 
 At every death and at the end of a run, the spine appends one cumulative record to `user://runs.ndjson`. It shares the codex log's `run_id`. The record holds:
 
-- `run_id`, `class` and `outcome` (`won`, `lost` or `died`).
-- `stages`, one entry per stage with `stage`, `ticks_to_warden_break`, `heft_at_exit`, `part_ids_at_exit`, `bonus_cores`, `deaths` (each `{x, y, z, ticks}`), `events_joined` and `events_won`.
+- `run_id`, `class` and `outcome` (`won`, `lost`, `died` or `abandoned`).
+- `stages`, one entry per stage with `stage`, `ticks_to_warden_engaged` (the stage clock at `warden_engaged`), `ticks_to_warden_break`, `heft_at_exit`, `part_ids_at_exit`, `bonus_cores`, `deaths` (each `{x, y, z, ticks}`), `events_joined` and `events_won`.
 - `codex`, the ids discovered this run.
 - `brindle_phase_reached`, which stays null until wave 4 sets it.
 - `arena`, present once the arena is entered: `entries` (entry plus each arena retry) and `deaths`, each `{x, y, z, ticks, run_ticks, phase}` with `ticks` on the arena clock, `run_ticks` on the run's and `phase` Brindle's. Arena deaths are never filed under stage 3.
 - `anomalies`, the seam faults the run met (`{stage, kind, ticks}`, such as `warden_vanished`).
 
-The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's.
+The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's. A run that moved on since its last line and is then left, because a new run starts or the game closes, gets one last line with outcome `abandoned` and `abandoned_in` (`stage` or `arena`); that line and the `arena` block are how a reader sees a run that stopped in the arena or mid-stage.
 
 ## UI regions (`src/ui/screen_regions.gd`)
 
