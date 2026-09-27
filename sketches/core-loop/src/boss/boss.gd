@@ -283,7 +283,7 @@ func _commit_crane(i: int, ball: Vector3) -> void:
 	var bearing: float = atan2(to_ball.z, to_ball.x) if to_ball.length() > 0.5 else arena.angle_of(pivot)
 	var sweep := 1.0 if i == 0 else -1.0
 	var h = _new_hazard()
-	h.commit_sector("crane_%d" % i, centre, Rules.CRANE_BAND, bearing - sweep * Rules.CRANE_SPAN * 0.5,
+	h.commit_sector("crane_%d" % i, Hazard.Threat.Type.WAVE, centre, Rules.CRANE_BAND, bearing - sweep * Rules.CRANE_SPAN * 0.5,
 		bearing + sweep * Rules.CRANE_SPAN * 0.5, Rules.CRANE_REACH, Rules.CRANE_WARN, Rules.CRANE_SWEEP)
 	_add_hazard(h)
 	_cranes[i] = {"hazard": h, "caught": false, "held": 0, "trail": [], "values": [], "dripped": 0, "drip": 0.0}
@@ -366,7 +366,7 @@ func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 		return
 	var pull := Vector3(magnet_at.x - ball.x, 0.0, magnet_at.z - ball.z)
 	pull = pull.normalized() if pull.length() > 0.1 else Vector3.ZERO
-	ctx.player.add_external_accel((Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / _delta)
+	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / _delta, false)
 
 
 func _drip(c: Dictionary) -> void:
@@ -464,7 +464,7 @@ func _step_furnace(delta: float) -> void:
 		var band: Vector2 = Arena.RING_A if _slag_turn % 2 == 0 else Arena.RING_B
 		var id := "slag_ring_a" if _slag_turn % 2 == 0 else "slag_ring_b"
 		var h = _new_hazard()
-		h.commit_annulus(id, arena.global_position, band, Rules.SLAG_REACH, Rules.SLAG_WARN, Rules.SLAG_LIVE)
+		h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, Rules.SLAG_WARN, Rules.SLAG_LIVE)
 		h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
 		_add_hazard(h)
 		_slag_turn += 1
@@ -492,7 +492,7 @@ func _launch_lobber() -> void:
 	var marker = Hazard.new()
 	marker.ground = arena.ground
 	marker.color = Palette.AMBER
-	marker.commit_annulus("drone_pad", at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
+	marker.commit_annulus("drone_pad", Hazard.Threat.Type.INSTANT, at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
 	arena.add_child(marker)
 	_drones.append({"at": at, "marker": marker})
 
@@ -550,7 +550,7 @@ func _slag_hit(h, ball: Vector3) -> void:
 			break
 	var v: Vector3 = ctx.player.state.velocity
 	var up := maxf(0.0, Rules.SLAG_BOUNCE_UP - v.y)
-	ctx.player.add_external_accel((Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT) / _delta)
+	ctx.player.crowd_control("brindle_slag", (Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT) / _delta)
 
 
 # Whether a ball launched from `from` at `launch` flies until it lands without meeting
@@ -610,7 +610,7 @@ func _commit_charge(ball: Vector3) -> void:
 	var length := minf(wanted, to_wall)
 	var half := Requisition.HULL.z * 0.5
 	var h = _new_hazard()
-	h.commit_lane("charge", from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
+	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, Rules.CHARGE_WARN, length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
 	ship.move_to(from, heading)
@@ -662,7 +662,7 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var along: float = v.dot(h.heading)
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
-	ctx.player.add_external_accel((away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
+	ctx.player.crowd_control("brindle_charge", (away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
 	ship.hull.add_collision_exception_with(ctx.player.body())
 	_ghost_until = clock + Rules.CHARGE_GRACE
 

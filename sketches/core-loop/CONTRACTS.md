@@ -328,3 +328,112 @@ During play the screen is four horizontal bands, as shares of the visible height
 - Build the game with `Game.new()`, set `test_mode = true`, add it to `root` and wait for `flow` to be set. Test mode writes the codex and run logs to a per-process folder, removed when the game leaves the tree. Drive input with `Intent.Scripted` (`hold` and `press`). Set `ctx.calm` when measuring speed.
 - `tests/doubles/spine_spawner_double.gd` is a spawner that follows A's plating rule, so spine tests don't depend on combat. The smoke runner reads only `tests/*.gd`, so helpers go in subfolders.
 - `npm run sketch:smoke` runs every sketch's import, a 300-frame boot and every test. All the `spine_*` tests must keep passing with your module installed.
+
+## Ability slots
+
+The HUD's ability bar (`src/ui/ability_bar.gd`) draws one input, an ordered array of slot records. Order is the bar's, left to right: weapon (LMB), movement (RMB), special (F), smash (Ctrl), as `VISUAL-LANGUAGE.md` section 7 lays it out.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `slot` | String | `weapon`, `movement`, `special` or `smash` |
+| `id` | String | the ability id from the class row, such as `grapple` or `overdrive_blast` |
+| `icon` | String | an Icons id (below): `ab_<pilot>_<role>`, the role being `weapon`, `move`, `special` or `smash` |
+| `key` | String | a key glyph id: `key_lmb`, `key_rmb`, `key_f`, `key_ctrl` |
+| `cooldown_frac` | float, 0 to 1 | the share of the recharging charge still to go; 0 when every charge is in |
+| `charges` | int, 0 to `max_charges` | charges stocked now |
+| `max_charges` | int, 1 or more | the stockpile cap; pips show under the key only when it is above 1 |
+| `state` | String | one of `ready`, `cooling`, `active`, `unavailable` |
+| `gauge` | float, 0 to 1 | the fill of a charging hold-gauge-release; the reticle's gauge ring shows the fullest |
+
+- `ready` means pressing the key does the thing now. `cooling` means no charge is in. `active` means the ability is running or its gauge is charging. `unavailable` means the key does nothing useful now.
+- The bar tells the states apart by shape as well as colour. `ready` has a solid frame. `cooling` has a petrol wedge that uncovers the icon clockwise from twelve. `active` has a doubled frame in the class colour and a lifted slot. `unavailable` has a faded icon struck through. A slot going from `cooling` to `ready` swells once, and the swell and the charge pips wear the class row's `shape`.
+- **Publisher (W3).** `player.abilities.slots()` (`src/core/ability_state.gd`). The HUD reads it every frame through `src/ui/ability_slots.gd`, which names icons and keys the Icons way. An `icon` that is not an Icons id becomes `ab_<pilot>_<role>`, the pilot being the class row's `display_name` in lower case. A `key` label such as `LMB` or `F` becomes `key_lmb` or `key_f`. A record that then fails `AbilitySlots.valid_slot` empties the bar and warns once.
+- **Reticle gauge.** While any slot's `gauge` is above 0, a ring round the reticle fills clockwise from twelve, linearly, in the class colour. It closes when the gauge is full.
+- `ui_ability_slots_test.gd` checks all three pilots' records, a charging special and its ring, the release to cooling, the normaliser and the swell.
+
+## Icons
+
+`Icons.texture(id) -> Texture2D` (`src/ui/icons.gd`) loads `res://assets/icons/<id>.svg` when it exists, imported or not. All 70 ids have their SVG now (`ui_contract_test.gd` checks it). Otherwise it returns a 64 px procedural placeholder, white on clear, drawn from a signed-distance glyph. `Icons.tint(id, color)` gives the modulate to draw with: the fact's colour on a placeholder, and only its alpha on an SVG, which carries its own colours (a bone glyph on a charcoal backplate with one accent). An id outside the list still draws a placeholder picked by its prefix, so a new ability shows before its SVG and its contract line land.
+
+The ids are the 70 of `VISUAL-LANGUAGE.md` section 5, which owns each one's meaning and drawing. `ui_contract_test.gd` fails if this list and the registry disagree.
+
+- **Class emblems.** `cls_sable`, `cls_rivet`, `cls_kest`.
+- **Abilities.**
+  - Sable: `ab_sable_weapon`, `ab_sable_move`, `ab_sable_special`, `ab_sable_smash`, `ab_sable_vault`, `ab_sable_mount`.
+  - Rivet: `ab_rivet_weapon`, `ab_rivet_move`, `ab_rivet_special`, `ab_rivet_smash`.
+  - Kest: `ab_kest_weapon`, `ab_kest_move`, `ab_kest_special`, `ab_kest_smash`, `ab_kest_glide`, `ab_kest_cloak`.
+- **Key glyphs.** `key_lmb`, `key_rmb`, `key_f`, `key_ctrl`, `key_space`, `key_shift`, `key_e`, `key_q`, `key_r`, `key_tab`. Any other key is drawn as a keycap from its id: key_1 reads 1, key_n reads N (`src/ui/keycap.gd`). The menus draw their number keys (1 to 3) and the N, C and T keys this way until those keys have SVGs.
+- **Item categories.** `cat_damage`, `cat_mobility`, `cat_defense`, `cat_utility`, `cat_charge`, `cat_transform`.
+- **Elements.** `el_frost`, `el_arc`, `el_kinetic`.
+- **Triggers.** `trg_on_hit`, `trg_on_kill`, `trg_on_smash`, `trg_on_rebound`, `trg_on_vault`, `trg_on_charge_release`, `trg_on_cloak_break`, `trg_on_land`, `trg_on_speed_tier_up`, `trg_on_pickup`, `trg_on_damage_taken`, `trg_timed`.
+- **Threat types.** `thr_instant`, `thr_wave`, `thr_projectile`, `thr_lane`.
+- **Objectives.** `obj_beacon`, `obj_warden`, `obj_gate`, `obj_fabricator`, `obj_vault`, `obj_event`.
+- **Resources.** `res_scrap`, `res_heft`, `res_health`, `res_core`, `res_timer`, `res_difficulty`.
+- **Factions.** `fac_fleet`, `fac_reactor`, `fac_swarm`, `fac_mind`.
+
+The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, not files: `Icons.shape(name)` draws them, and a toast wears its row's shape.
+
+### Where the HUD uses them
+
+- **Top band.**
+  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` over a notched bar that fills with `threat_rose`.
+  - The objective shows its `obj_` icon ringed by the Warden's broken share, at most five words, and the core diamonds. While a lock stands it shows two bars: punch (`cat_damage`) over plating (`cat_defense`, hatched), with a white notch at the plating.
+- **Toast band.** It holds the stage card (`obj_beacon` and the stage name, or `fac_fleet` for Brindle) or one toast, then a first-run callout or the hold-R meter (`key_r`). This supersedes the UI regions table above: one toast at a time (`ScreenRegions.TOAST_ROWS` is 1).
+- **Bottom band.** Left to right: the speed chevrons, health as a tank gauge (`res_health`), the ability bar, the heft dial (`res_heft`) and scrap (`res_scrap`). This replaces the speed line and the key hints.
+- **Play view.**
+  - Contextual key glyphs sit beside the ball or the grapple target: `key_e` with `ab_sable_mount`, `key_rmb` with `ab_sable_move` and `key_space` with `ab_sable_vault`.
+  - Edge markers use `obj_warden`, `obj_beacon` or `obj_gate`.
+- **Menus.** Class cards use `cls_<pilot>`, and every button draws its key's cap.
+- **Type.** Noto Sans Bold for words and Noto Sans Mono Bold for numbers, vendored in `assets/fonts/` with `OFL.txt` and `PROVENANCE.txt` (`src/ui/ui_fonts.gd`).
+
+### World prompt parts
+
+A world prompt (`src/ui/world_prompt.gd`) shows an icon and a title of at most three words at range, and adds its detail lines within 12 m of the ball (`DETAIL_RANGE`).
+
+- **Structured.** An owner calls `prompt.set_parts(title, detail, icon)`:
+  - `title` is at most three words.
+  - `detail` is lines joined by `\n`.
+  - `icon` is an Icons id: `obj_gate` for a reward gate, `obj_fabricator` for a fabricator, `obj_vault` for the vault, or `fac_fleet` for a Brindle readout.
+- **Parsed.** Until the owner calls it, the text it sets is parsed.
+  - The first line is the title. Text after a colon, and words past the third, move to the front of the detail. The remaining lines are the detail.
+  - The icon is `obj_vault` for a title starting "Vault", `obj_fabricator` for "FABRICATING..." or a detail that names a price in scrap, and `obj_gate` otherwise.
+- **Unchanged.** The prompt's `text` stays what the owner wrote, so owners and tests that read it keep working. The HUD places the drawn size (`shown_extent()`) in the prompts band as before.
+
+## Threat grammar
+
+Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss hazard (`src/boss/hazard.gd`) with one attack type from `src/combat/threat_grammar.gd`: `Threat.Type.INSTANT`, `WAVE`, `PROJECTILE` or `LANE`. The type decides how the threat draws and sounds; the committed geometry decides where it hits. Both nodes build `descriptor()` from the fields `contains()` reads, and the grammar draws from that descriptor, so the drawing and the damage cannot disagree.
+
+| Type | Draws | Hurts | Row |
+| --- | --- | --- | --- |
+| INSTANT | a sharp edge; a striped fill closing in from the edge over the warning; a solid flash on landing | the whole area, at once | `threat_instant`: `ring`, `threat_tick` |
+| WAVE | a faint dashed reach; a bright front at speed x elapsed, chevrons, a curtain as tall as its height band; 15% stripes on the swept ground | only the front band, `WAVE_EDGE` (1 m) either side | `threat_wave`: `wave`, `threat_whoosh` |
+| PROJECTILE | a dotted flight trace to the landing point; a reticle whose brackets close on the blast edge | the blast ring, when the shell lands | `threat_projectile`: `cross`, `threat_whistle` |
+| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` |
+
+Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
+
+The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.
+
+- **Ring, lane or wedge.** `Telegraph.ring(parent, ground, type, at, radius, reach := 3.5, tint := HAZARD)`, `Telegraph.lane(parent, ground, type, from, heading, length, width, reach := 3.5)` and `Telegraph.wedge(parent, ground, type, apex, heading, radius, half_angle_deg, reach := 3.5)`. The owner calls `set_progress(0..1)` across the warning. An INSTANT flash fires on reaching 1.
+- **Wave.** `Telegraph.wave(parent, ground, at, radius, speed, warn, reach := 3.5)` is always WAVE. The owner calls `step(delta)` every tick; `front_radius()` is -1 while it arms, and `is_spent()` turns true once the front has passed the reach.
+- **Projectile.** Commit a PROJECTILE ring at the landing point, then call `set_flight(launch, bump)` with `Threat.lob_bump(gravity, flight_seconds)` for a fixed-time lob. The shell must fly `Threat.flight_point(launch, landing, bump, t / flight)`.
+- **From an enemy.** `enemy.gd`'s `_commit_ring(type, at, radius, reach, tint := HAZARD)` and `_commit_lane(type, from, heading, length, width, reach)` keep one telegraph per enemy and return it.
+- **A boss hazard.** `commit_sector(id, type, ...)`, `commit_annulus(id, type, ...)` and `commit_lane(id, type, ...)`. A WAVE hazard is a sector sweep whose front is `front()`, the same `span x live_fraction()` a sweep test reads.
+- **Stance.** The tint decides it (`Threat.stance`). `Palette.HAZARD` is hostile: striped areas, a warn sound, and the group `threat`. `AMBER` is the player's own: clean fills and no sound. `Palette.SAND` (bone) is a harmless field that only draws a dashed ring. A boss hazard tinted `BRASS` draws in HAZARD with brass owner ticks.
+- **Sound.** Each type's row is in `EventKinds.THREAT_ROWS` (the `ROWS` schema), with the sound's recipe in `sfx_bank.gd`. Every hostile telegraph and hazard joins the group `threat` (`Threat.GROUP`) and answers `threat_kind()` with its row key. `audio.gd` plays the row's sound at the end of the frame the node enters the tree, never on the beat. It then plays the node's `owner_voice` (the owner's timbre) and `mechanic_tag` when set; set both right after the commit. No unit adds a fifth type sound.
+- **Colour.** Every layer draws with no depth test at `Threat.PRIORITY` (40), and the charcoal keylines at 39. The grammar only lightens the tone for the moving pieces.
+- **Seam.** `hazard.gd` preloads `combat/threat_grammar.gd`. It is the one boss-to-combat preload, kept on purpose so the two systems share one grammar.
+
+## Classes and abilities (v2 W3)
+
+- **The class row** (`src/core/class_def.gd`) is the one source for a character: `id`, `display_name`, `role`, `species`, `pitch`, the four ability ids (`weapon_id`, `movement_id`, `special_id`, `smash_id`), `color`, `shape` (an event_kinds shape; the indicator's rim ticks), `motif` (the leitmotif id, `sable`, `rivet` or `kest`, whose notes live in W5's motif table in `harmony.gd`), `sound` (a synth id standing in now), `bible_home` and `synergy_hooks`. `ClassDef.all()` is ordered Sable, Rivet, Kest, and flow's class index follows it. `SABLE_COLOR`, `RIVET_COLOR` and `KEST_COLOR` are what class-owned event rows and the indicator read.
+- **The ability state** (`src/core/ability_state.gd`) lives on the ball as `player.abilities` (the kit's). Movement and combat spend from it, and nothing else writes it. Slots are `weapon`, `movement`, `special` and `smash`.
+  - `slots() -> Array` returns W1's ability-slot records in bar order: `{slot, id, icon, key, cooldown_frac, charges, max_charges, state, gauge}`. `state` is `ready`, `cooling`, `active` or `unavailable`. `cooldown_frac` is the share of the recharging charge still to go, 0 when full. `gauge` is the fill of a charging hold, 0 to 1, for the reticle ring.
+  - `set_max_charges(slot, n)` and `set_cooldown_scale(slot, s)` are the item seams. Charges recharge one at a time and stockpile. No scale takes a cooldown under `COOLDOWN_FLOOR` (0.4 s), and `AbilityState.floored(base, scale)` applies the same floor to cooldowns outside the slots, such as combat's `rocket_cooldown_scale`.
+  - `Gauge` is the one hold-gauge-release rule. Only ticks with the key down fill it. Release fires at the fraction reached, a full gauge fires by itself 0.5 s later, and a cancel spends nothing.
+- **The grammar** is the same for every class: LMB weapon, RMB class movement, F hold-gauge-release special, Ctrl smash, Space jump, Shift boost. `Intent` adds `special_held`, `special_released`, `movement_pressed`, `movement_held`, `movement_released`, `fire_released` and `cancel_pressed`. The ball turns an RMB press made during any charge into `cancel_pressed`. Sable's grapple rides RMB through the intent; `game.gd` has no RMB branch.
+- **Skill-shot geometry.** `player.indicator` (`src/movement/indicator.gd`) is player-owned and draws to VISUAL-LANGUAGE §3 and §4: class colour (never `Palette.HAZARD`), a 15% clean fill, a charcoal keyline, rounded caps, the class's rim ticks, a dashed full-charge extent and a fill that breathes on a 0.5 s period at full. `player.yours(record)` adds the colour and ticks. `set_shape(layer, record)` draws exactly the record a release commits, and `last_shape[layer]` keeps the last one drawn. `collapse(layer)` shrinks a cancelled or knocked shape into its origin in 120 ms. A record with `blocked` draws in bone, dashed, with a charcoal cross, and its release fires nothing. Hit tests forgive a hull up to `AbilityState.FORGIVENESS` (18%) past the drawn edge: combat's `in_ring()` and `in_line()` are the rule.
+- **Crowd control.** `player.crowd_control(kind, shove := Vector3.ZERO, interrupts := true) -> bool` is the one door for a stop an enemy imposes. An interrupting one force-cancels every charging gauge (publishing `gauge_cancelled(id, kind)`) and collapses the indicator; a steady pull passes `interrupts = false` so it does not wipe a charge every tick. It applies the shove (an acceleration, as `add_external_accel`) and returns true. While Rivet sprints it does neither, publishes `cc_ignored(kind)` at most every 250 ms per kind and returns false. Damage never goes through it. Its users: combat's committed-hit knock (`knock`), the Warden's pulse (`warden_pulse`) and magnet (`warden_magnet`, steady), and Brindle's tug (`brindle_tug`, steady), slag bounce (`brindle_slag`) and charge shove (`brindle_charge`). Wave 3's crowd control should use it too. The world's flood and event pushes stay on `add_external_accel`: they are terrain, not crowd control.
+- **Contact.** `src/movement/contact.gd` is the bowling-ball rule: `rebounds(weight, heft, sprinting)` and `rebound_velocity(v, normal, jump_speed)`. The ball asks `heft_of` (combat wires it to `combat.heft`) and an enemy's `weight`. A body without `weight` is never a rebound. A rebound refreshes like a stomp through `player.refresh_air()`.
+- **Enemy sight.** Combat hands chasers, lobbers and minibosses a `Sight` proxy as their target (`ball_position()`, `planar_velocity()`, `add_external_accel()`), which answers the cloak's smoke point to enemies beyond `CLOAK_SIGHT` of their reach. An enemy that needs more of the player must add it to the proxy.
+- **Bus facts and their owners.** Movement (`player_ball`) publishes `enemy_rebounded`, `vault_kicked`, `sprint_started`, `blink_used`, `arc_slammed`, `skid_smashed`, `demo_slammed`, `cc_ignored`, `dashed` (the movement burst of any class) and the slingshot's `gauge_*`. Combat publishes `enemy_pinned`, the specials' `gauge_charging`, `gauge_released` and `gauge_cancelled`, `cloak_started`, `cloak_broken`, `sticky_detonated` and `rocket_jumped`. `special_used(special_id, at)` now carries `detonation_gauge`, `overdrive_blast` or `detonation_line`.

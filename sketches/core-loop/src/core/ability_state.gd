@@ -1,0 +1,275 @@
+extends RefCounted
+
+# Every class ability's charges, cooldown and gauge, in the four slots the ability bar
+# shows (DESIGN-V2 sections 4 and 5). Movement and combat both spend from here, and
+# slots() publishes the bar in W1's ability-slot shape, so the HUD, the rules and the
+# tests read one record.
+
+const WEAPON := "weapon"
+const MOVEMENT := "movement"
+const SPECIAL := "special"
+const SMASH := "smash"
+const SLOTS := [WEAPON, MOVEMENT, SPECIAL, SMASH]
+const KEYS := {WEAPON: "LMB", MOVEMENT: "RMB", SPECIAL: "F", SMASH: "Ctrl"}
+
+const READY := "ready"
+const COOLING := "cooling"
+const ACTIVE := "active"
+const UNAVAILABLE := "unavailable"
+
+# No modifier may drive a cooldown below this (DESIGN-V2 section 6, risk 4).
+const COOLDOWN_FLOOR := 0.4
+# A skill shot draws exactly its committed geometry; the hit test forgives a hull this
+# share beyond the drawn edge, so what you see is never bigger than what can hit.
+const FORGIVENESS := 0.18
+
+# One row per ability id; the class row names which id fills each slot. icon is the
+# canonical id in assets/icons (VISUAL-LANGUAGE section 5). cooldown is per charge.
+# charge_max > 0 makes the slot a hold-gauge-release shot. duration is how long an
+# active ability runs on one charge.
+const ABILITIES := {
+	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0},
+	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0},
+	"detonation_gauge": {"icon": "ab_sable_special", "cooldown": 5.0, "charge_max": 1.0},
+	"arc_slam": {"icon": "ab_sable_smash", "cooldown": 0.0},
+	"rapid_laser": {"icon": "ab_rivet_weapon", "cooldown": 0.0},
+	"overdrive_sprint": {"icon": "ab_rivet_move", "cooldown": 5.0, "duration": 2.0},
+	"overdrive_blast": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
+	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0},
+	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6},
+	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0},
+	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
+	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0},
+}
+const ICON_DIR := "res://assets/icons/"
+
+
+# The one hold-gauge-release rule. Hold fills the gauge linearly over charge_max; the
+# key coming up fires at the fraction reached, and a gauge held full fires by itself
+# GRACE seconds later. Cancelling leaves nothing spent and nothing fired.
+class Gauge:
+	extends RefCounted
+
+	const GRACE := 0.5
+
+	var charge_max := 1.0
+	var charging := false
+	var held := 0.0
+	# The fraction the last shot left at, and whether the grace fired it.
+	var fired_fraction := 0.0
+	var auto := false
+
+	func _init(seconds := 1.0) -> void:
+		charge_max = maxf(0.05, seconds)
+
+	func begin() -> void:
+		charging = true
+		held = 0.0
+		auto = false
+
+	func fraction() -> float:
+		return clampf(held / charge_max, 0.0, 1.0) if charging else 0.0
+
+	# One tick of the key. True on the tick the shot goes. Only ticks with the key down
+	# fill the gauge, so a tap fires at exactly the floor.
+	func step(delta: float, key_held: bool) -> bool:
+		if not charging:
+			return false
+		if key_held:
+			held += delta
+			if held < charge_max + GRACE:
+				return false
+		fired_fraction = clampf(held / charge_max, 0.0, 1.0)
+		auto = key_held
+		charging = false
+		held = 0.0
+		return true
+
+	# True when there was a charge to drop.
+	func cancel() -> bool:
+		var was := charging
+		charging = false
+		held = 0.0
+		return was
+
+	# A shot's size from a floor, so a tap still does something.
+	static func scaled(f: float, floor_value: float, full_value: float) -> float:
+		return lerpf(floor_value, full_value, clampf(f, 0.0, 1.0))
+
+
+class Slot:
+	extends RefCounted
+
+	var id := ""
+	var icon := ""
+	var cooldown := 0.0
+	var cooldown_scale := 1.0
+	var duration := 0.0
+	var max_charges := 1
+	var charges := 1
+	# Seconds into the charge now recharging.
+	var recharge := 0.0
+	var active := false
+	var available := true
+	var gauge: Gauge = null
+
+
+var _slots := {}
+
+
+func _init() -> void:
+	for name in SLOTS:
+		_slots[name] = Slot.new()
+
+
+# Fills the four slots from a class row. Charges start full; a stage entry refills them.
+func fit(def) -> void:
+	var ids := {WEAPON: "", MOVEMENT: "", SPECIAL: "", SMASH: ""}
+	if def != null:
+		ids = {WEAPON: def.weapon_id, MOVEMENT: def.movement_id, SPECIAL: def.special_id, SMASH: def.smash_id}
+	for name in SLOTS:
+		var row: Dictionary = ABILITIES.get(ids[name], {})
+		var s := Slot.new()
+		s.id = ids[name]
+		s.icon = row.get("icon", "")
+		s.cooldown = row.get("cooldown", 0.0)
+		s.duration = row.get("duration", 0.0)
+		var charge_max: float = row.get("charge_max", 0.0)
+		if charge_max > 0.0:
+			s.gauge = Gauge.new(charge_max)
+		_slots[name] = s
+
+
+func slot(name: String) -> Slot:
+	return _slots[name]
+
+
+func id_of(name: String) -> String:
+	return (_slots[name] as Slot).id
+
+
+func gauge(name: String) -> Gauge:
+	return (_slots[name] as Slot).gauge
+
+
+static func floored(base: float, scale: float) -> float:
+	if base <= 0.0:
+		return 0.0
+	return maxf(COOLDOWN_FLOOR, base * scale)
+
+
+func cooldown_of(name: String) -> float:
+	var s: Slot = _slots[name]
+	return floored(s.cooldown, s.cooldown_scale)
+
+
+func ready(name: String) -> bool:
+	var s: Slot = _slots[name]
+	return s.available and s.charges > 0
+
+
+func spend(name: String) -> bool:
+	if not ready(name):
+		return false
+	(_slots[name] as Slot).charges -= 1
+	return true
+
+
+# The stomp and rebound refresh: one charge back, never past the cap.
+func grant(name: String, count := 1) -> void:
+	var s: Slot = _slots[name]
+	s.charges = mini(s.max_charges, s.charges + count)
+	if s.charges == s.max_charges:
+		s.recharge = 0.0
+
+
+# Moves the recharging charge along by this many seconds (the skid's refund).
+func refund(name: String, seconds: float) -> void:
+	_recharge(_slots[name], seconds)
+
+
+func refill() -> void:
+	for name in SLOTS:
+		var s: Slot = _slots[name]
+		s.charges = s.max_charges
+		s.recharge = 0.0
+		s.active = false
+		if s.gauge != null:
+			s.gauge.cancel()
+
+
+# Items raise charges; charges above the new cap are dropped, never kept.
+func set_max_charges(name: String, count: int) -> void:
+	var s: Slot = _slots[name]
+	s.max_charges = maxi(1, count)
+	s.charges = mini(s.charges, s.max_charges)
+
+
+func set_cooldown_scale(name: String, scale: float) -> void:
+	(_slots[name] as Slot).cooldown_scale = maxf(0.0, scale)
+
+
+func tick(delta: float) -> void:
+	for name in SLOTS:
+		_recharge(_slots[name], delta)
+
+
+# One charge at a time: time only ever fills the charge now recharging.
+func _recharge(s: Slot, seconds: float) -> void:
+	if s.charges >= s.max_charges:
+		s.recharge = 0.0
+		return
+	var cd := floored(s.cooldown, s.cooldown_scale)
+	if cd <= 0.0:
+		s.charges = s.max_charges
+		s.recharge = 0.0
+		return
+	s.recharge += seconds
+	while s.recharge >= cd and s.charges < s.max_charges:
+		s.recharge -= cd
+		s.charges += 1
+	if s.charges >= s.max_charges:
+		s.recharge = 0.0
+
+
+func charging() -> bool:
+	for name in SLOTS:
+		var g: Gauge = (_slots[name] as Slot).gauge
+		if g != null and g.charging:
+			return true
+	return false
+
+
+# Drops every charging gauge; returns the ability ids that were charging.
+func cancel_gauges() -> Array:
+	var dropped := []
+	for name in SLOTS:
+		var s: Slot = _slots[name]
+		if s.gauge != null and s.gauge.cancel():
+			dropped.append(s.id)
+	return dropped
+
+
+func state_of(name: String) -> String:
+	var s: Slot = _slots[name]
+	if not s.available:
+		return UNAVAILABLE
+	if s.active or (s.gauge != null and s.gauge.charging):
+		return ACTIVE
+	return READY if s.charges > 0 else COOLING
+
+
+# W1's Ability slots contract: one record per slot, in bar order. cooldown_frac is the
+# share of the recharging charge still to go, 0 when every charge is in.
+func slots() -> Array:
+	var out := []
+	for name in SLOTS:
+		var s: Slot = _slots[name]
+		var cd := floored(s.cooldown, s.cooldown_scale)
+		var frac := 0.0
+		if s.charges < s.max_charges and cd > 0.0:
+			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
+		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": KEYS[name], "cooldown_frac": frac,
+			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
+			"gauge": s.gauge.fraction() if s.gauge != null else 0.0})
+	return out

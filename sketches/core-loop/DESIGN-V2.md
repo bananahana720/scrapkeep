@@ -252,3 +252,121 @@ The Bible marks an animal-only cast as open and never makes the exploratory exam
   1. Only the reactor relic colours the band: a tritone pedal under the sub while a vent charges. Swarms and the Mind stay effects only.
   2. Fleet reinforcements borrow Brindle's anvil and brass in the level theme, adding one layer per difficulty tick.
   3. The Mind's hands quote the player's class motif, inverted with the last note a semitone flat. It's the one sanctioned hostile use of a class motif, and it doubles as their telegraph.
+
+## 12. Moss's workshop: the lull between stages (Andrew, 2026-09-27)
+
+In his words: "I actually want to have a maybe a shopkeeper uh, and maybe some lull in between phases. I do like the calm, you know, before the, sto the storm and the ability to maybe settle. And it could be also a time to like make upgrades as well and have some player decision be made instead of just being all procedural." He also asked for a meme interaction: the "Potion Seller" sketch (Justin Kuritzkes, https://www.youtube.com/watch?v=R_FQU4KzN7A), where the shopkeeper refuses to sell his strongest potions because they are too strong for the traveller.
+
+**Who and where**
+
+- **The keeper is Moss**, the Bible's proposed workshop keeper, who "remembers what each pilot neglects" (BIBLE.md:384).
+- **The workshop is a side bay**, and entering it is the player's choice. It opens off the launch after each Warden break, beside the reward gates. Rolling past it goes straight into the launch.
+
+**Momentum**
+
+- Entering the bay banks the ball's speed, like the pylon mount.
+- The exit launch pad slingshots the banked speed back into the stage launch.
+- The calm costs no momentum. The player chooses it, so nothing stops them unforeseen.
+
+**Calm**
+
+- The music drops to a sax-led lounge arrangement of the current stage theme, in the live key. It's the stage's loved core re-voiced, never replaced (warden spill B grammar).
+- The launch drops back into the full band.
+- The difficulty clock pauses inside, so the calm is real. The par timer keeps running, so speedrunners can skip it at a cost.
+
+**Player decisions (deterministic, not rolled on entry)**
+
+- **A shelf of 3 visible parts** at scrap prices: buy exactly what you want.
+- **One reroll** of the shelf per visit, at a rising price.
+- **Charge upgrades.** Pay to raise one ability's `max_charges` by 1, up to a cap. This is the stockpile path.
+- **Sell a part back** for half its price. This lowers heft, and the wording says so ("lighter, but faster to the next part").
+
+**The Potion Seller nod (a homage, never the sketch's script)**
+
+- Moss keeps one **top-shelf part**, always rare_plus, on a locked hook.
+- He refuses to sell it until the ball's heft class reaches the next band. His refusal lines are original and in character, riffing on "too strong for you, salvager".
+- The lock shows the heft needed as the pressure-dial icon with a notch, so the joke doubles as a growth goal you can read. Come back heavier and he relents with a grudging line.
+- This mechanic is the only place the gag appears. It never blocks progress, since the part is optional.
+
+**Owners**
+
+- W4: the shop economy (shelf, prices, reroll, charge upgrades, the heft lock).
+- W6: the workshop bay geometry and its launch pad.
+- W5: the lounge arrangement and Moss's voice-free sound set (a workbench clank, a shop bell, a grumble when he refuses).
+- W1: the shop UI, with icons first and at most 5 words per line.
+- Vision keeper: Moss's wording.
+
+**The conversation loop (Andrew, 2026-09-27).** In his words: "a conversational loop where the player can initiate and get maybe the flavors of the conversation or of the sketch". He accepted "a different flavor of it" if needed.
+
+- **Copyright.** The sketch's script is its creator's work; being on YouTube doesn't license it. The game copies no lines. It borrows only the comic structure: an escalating ask, a stubborn refusal repeated with rising exasperation, and a dismissal to a weaker seller. Everything is in Moss's own voice. The vision keeper writes the lines, and the integration reviewer checks that no line reproduces the sketch.
+- **How the player starts it.** A key glyph appears by Moss inside the bay. Each press plays one beat.
+- **The beats.** The loop runs 5 to 6 beats: ask, refuse, insist, double down, plead, send off (for example, to "a scrapper who sells lighter parts"). Pressing again restarts the loop with a new variation. There are at least 3 variations per beat, so repeat visits stay fresh.
+- **The pay-off.** Once the ball reaches the heft class the top shelf needs, the loop ends in a grudging relent line and the hook unlocks. The gag and the growth goal are the same thing.
+- **Moss's voice.** Synthesized babble, one syllable blip per letter, pitched in the live key, with each beat rising in pitch as he gets exasperated. No recorded voice.
+- **Fit.** It never blocks the exit, and each line is a speech bubble of at most 12 words, well away from the reticle. Seeing the loop through adds a codex entry ("Too heavy for you").
+
+## 13. Standing rule: when a callback lines up with a mechanic, build it
+
+Andrew, 2026-09-27, after the Moss heft-lock: "that's like a callback with a game mechanic ... If you come into other instances where things align like that, uh, go for it. And take the initiative and just, just build it. And just, yeah, make it a way for me or a player to just discover it naturally or uh, with some digging ... with uh, game design in mind and to have things make sense from a video gameplay."
+
+**The rule for every unit.** When a reference, joke, lore fact or motif lines up with a mechanic, build the alignment without asking. It must pass three tests:
+
+1. **It makes gameplay sense on its own.** A player who misses the reference still gets a fair, readable mechanic.
+2. **It's discovered, not announced.** It's found naturally in play or by digging (the codex, secrets, repeated interaction, an odd combination). It's never a tutorial.
+3. **It serves the principles.** It never costs momentum unforeseen, never hides a threat, and stays inside the visual caps.
+
+Log each one in DESIGN-NOTES as "Callback:", naming the mechanic it rides on, and add it to the unit's vision delta. The vision keeper keeps a running list in SOUND-STORY.md so callbacks never collide.
+
+## 14. Session goal: an early-access demo (Andrew, 2026-09-27)
+
+In his words: "run until we kind of get to a like a early access demo version of the game, and let it have some some visual appeal and coherence, and gameplay appeal and coherence with uh, audio and music orchestration ... fully built ... an early access level version of the game."
+
+**Lane.** This stays the light play lane. It's a Godot sketch under `sketches/core-loop/` and not a production promotion into `native/`, which is a heavy-lane decision. Andrew's play is the acceptance.
+
+**Definition of done.** Every line must hold.
+
+1. **The run.**
+   - Title, character select (3), then three stages, each with a family Warden. Moss's workshop after each break, then Brindle's arena, then victory or death, then the summary.
+   - Settings and pause menus, all usable with the mouse and the keyboard.
+   - One-key restart from anywhere.
+2. **The characters.** Sable, Rivet and Kest play differently. Each has its own movement, a hold-gauge-release special, a smash flavour and a leitmotif.
+3. **Enemies.**
+   - The Fleet reinforcements (at least 5 with unique mechanics).
+   - One ancient per family, plus the three family Wardens and Brindle.
+   - Every counter is telegraphed and breakable. No reskins.
+4. **Growth.**
+   - The procedural item pool (60+ items, 12 triggers).
+   - Moss's shop, with the heft-locked top shelf and the conversation loop.
+   - Stockpiled charges.
+   - Synergies you can discover through the codex.
+5. **World.**
+   - The vertical gorge stage with its focal landmark.
+   - Contraptions (lifts, launchers, valves).
+   - At least 2 terrain-changing events.
+   - The callbacks from §13.
+6. **Readability.**
+   - At most 25 words on screen in a fight.
+   - The icon-first HUD, with the 70 icons in use.
+   - Four threat types you can tell apart by look and sound.
+   - Contextual key glyphs, and first-run callouts that retire.
+7. **Look.**
+   - Blender hero assets in the build: the three shells with a visible pilot, accretion chunks, the reward gate and the Warden clamp with its family kits.
+   - Every surface follows VISUAL-LANGUAGE.md.
+   - Transitions between every screen.
+8. **Audio.**
+   - Every event row has its designed sound (SOUND-STORY.md grammar).
+   - Adaptive stage themes with the leitmotifs woven in, and Brindle's foreshadowing.
+   - The lounge arrangement in the workshop.
+   - No MUSIC-GEMS entry lost.
+9. **Robustness.**
+   - `sketch:smoke` is green.
+   - The bot completes full runs with all three classes.
+   - `item_fuzz` passes 200 seeds, with anomalies triaged in HAPPY-ACCIDENTS.md.
+   - p99 frame time is ≤ 16.7 ms in a dense fight on this machine.
+   - No softlock, no NaN.
+10. **Handoff.**
+    - A Linux export build under `artifacts/local/` alongside the launcher entry.
+    - A one-page "how to play" on the title screen's help button.
+    - Andrew plays it, and his verdict becomes a playtest log entry.
+
+**Checkpoint.** After Wave 3 merges, Andrew gets an **alpha** to play, so he can redirect while polish continues. The later waves take his notes.

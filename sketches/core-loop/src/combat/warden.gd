@@ -207,8 +207,8 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
 		_charging = true
 		_charge_time = 0.0
-		_commit_ring(global_position, reach, LIFT_REACH_UP)
-		_core_ring = Telegraph.ring(world_root, terrain, global_position, CORE_RADIUS)
+		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
+		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 
 
 func _pulse() -> void:
@@ -216,7 +216,7 @@ func _pulse() -> void:
 	var ring := telegraph()
 	last_pulse_lifted = ring != null and ring.contains(ball)
 	if last_pulse_lifted:
-		target.add_external_accel(Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
+		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
@@ -241,7 +241,7 @@ func _step_magnet(delta: float, inside: bool) -> void:
 				_magnet_dir = to.normalized() if to.length() > 0.1 else Vector3.FORWARD
 				magnet_state = Magnet.TELEGRAPH
 				_magnet_time = 0.0
-				_magnet_ring = Telegraph.wedge(world_root, terrain, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
+				_magnet_ring = Telegraph.wedge(world_root, terrain, Threat.Type.LANE, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
 						reach, MAGNET_WEDGE_DEG, LIFT_REACH_UP)
 		Magnet.TELEGRAPH:
 			_magnet_time += delta
@@ -256,7 +256,7 @@ func _step_magnet(delta: float, inside: bool) -> void:
 			if is_instance_valid(_magnet_ring) and _magnet_ring.contains(ball):
 				var to := -_flat_to_ball()
 				if to.length() > 0.5:
-					target.add_external_accel(to.normalized() * MAGNET_PULL)
+					target.crowd_control("warden_magnet", to.normalized() * MAGNET_PULL, false)
 			if _magnet_time >= MAGNET_TUG:
 				_end_magnet()
 

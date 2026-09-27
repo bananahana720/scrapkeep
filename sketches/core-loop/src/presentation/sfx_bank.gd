@@ -55,6 +55,7 @@ const TRIM_DB := {
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
+	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
 }
 
 static var _samples := {}
@@ -261,6 +262,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_noise(0.03, 4500.0, 2500.0, 120.0), 0, 0.4]])
 		"stinger_boss_defeated":
 			return _boss_defeated()
+		"threat_tick":
+			return _threat_tick()
+		"threat_whoosh":
+			return _threat_whoosh()
+		"threat_whistle":
+			return _threat_whistle()
+		"threat_hum":
+			return _threat_hum()
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -655,3 +664,40 @@ static func _riser() -> PackedFloat32Array:
 		var x := float(i) / n
 		noise[i] *= x * x * x
 	return Synth.normalize(noise, 0.9)
+
+
+# The four threat warnings (combat/threat_grammar.gd), one per attack type, in the
+# threat register of SOUND-STORY.md section 3: low, on the sinister degrees of D (Eb,
+# Ab, Bb), never on the reward ladder. Each is a one-shot played on the frame the threat
+# is declared, so it cannot stretch to the attack's own wind-up.
+# Instant: ratchet clicks that speed up, the clock running out, then a clang on Eb.
+static func _threat_tick() -> PackedFloat32Array:
+	var parts := []
+	var at := 0.0
+	var gap := 0.1
+	for i in 7:
+		parts.append([_noise(0.025, 4200.0, 2800.0, 150.0), Synth.seconds(at), 0.55 + 0.05 * i])
+		parts.append([_tone(0.03, _hz(63), _hz(63), "square_dark", 90.0), Synth.seconds(at), 0.35])
+		at += gap
+		gap *= 0.88
+	parts.append([_fm(0.4, _hz(75), 1.41, 3.0, 9.0), Synth.seconds(at), 1.0])
+	parts.append([_noise(0.06, 5000.0, 3000.0, 60.0), Synth.seconds(at), 0.5])
+	return _mix(parts)
+
+
+# Wave: a whoosh that rises through the sinister set, Eb up to Bb, as the front comes on.
+static func _threat_whoosh() -> PackedFloat32Array:
+	return _mix([[_noise(0.6, 300.0, 2800.0, 1.5, 0.35), 0, 1.0], [_tone(0.6, _hz(51), _hz(58), "saw_dark", 2.0), 0, 0.55]])
+
+
+# Projectile: a launch thunk, then a whistle falling from Bb to Eb as the shell comes down.
+static func _threat_whistle() -> PackedFloat32Array:
+	return _mix([[_tone(0.1, 110.0, 50.0, "sine", 28.0), 0, 1.0], [_noise(0.06, 900.0, 300.0, 40.0), 0, 0.5],
+		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
+
+
+# Lane: a charge hum held on Ab, then the tearing buzz of the release.
+static func _threat_hum() -> PackedFloat32Array:
+	var tear := Synth.seconds(0.42)
+	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5],
+		[_noise(0.18, 1800.0, 5200.0, 10.0), tear, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), tear, 0.6]], true)

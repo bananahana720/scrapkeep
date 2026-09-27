@@ -2,11 +2,13 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# The lobber's shell. Its landing ring is committed the moment it is fired and drawn
-# for the whole flight, filling as the shell falls. The flight is solved exactly, so
-# the shell lands on the ring's centre at FLIGHT seconds, and the blast hurts only a
-# ball the ring contains at that instant. Killing the lobber does not recall a shell
+# The lobber's shell. Its landing ring is committed the moment it is fired, as a
+# PROJECTILE threat: a reticle whose brackets close as the shell falls, under a dotted
+# trace of the flight. The flight is solved exactly, so the shell flies the drawn trace
+# and lands on the ring's centre at FLIGHT seconds, and the blast hurts only a ball the
+# ring contains at that instant. Killing the lobber does not recall a shell
 # already in the air; what was shown still lands.
 #
 # A shell can be batted: a bolt or a rolling ball that reaches it in flight sends it
@@ -67,7 +69,8 @@ func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Ve
 	mesh.mesh = sphere
 	mesh.material_override = Palette.solid(Palette.HAZARD, 3.0)
 	add_child(mesh)
-	ring = Telegraph.ring(root_ref, terrain_ref, to, BLAST_RADIUS)
+	ring = Telegraph.ring(root_ref, terrain_ref, Threat.Type.PROJECTILE, to, BLAST_RADIUS)
+	ring.set_flight(from, Threat.lob_bump(GRAVITY, seconds))
 
 
 # Sends the shell back at its lobber, or back where it came from if the lobber is gone.
@@ -87,7 +90,8 @@ func bat() -> bool:
 	launch = lob_velocity(origin, landing, flight)
 	if is_instance_valid(ring):
 		ring.queue_free()
-	ring = Telegraph.ring(world_root, terrain, to, BLAST_RADIUS, 3.5, Palette.AMBER)
+	ring = Telegraph.ring(world_root, terrain, Threat.Type.PROJECTILE, to, BLAST_RADIUS, 3.5, Palette.AMBER)
+	ring.set_flight(origin, Threat.lob_bump(GRAVITY, flight))
 	return true
 
 

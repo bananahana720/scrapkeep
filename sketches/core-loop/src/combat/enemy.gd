@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -184,15 +185,15 @@ func _clear_telegraph() -> void:
 	_telegraph = null
 
 
-func _commit_ring(at: Vector3, ring_radius: float, reach := 3.5) -> Node3D:
+func _commit_ring(threat_type: int, at: Vector3, ring_radius: float, reach := 3.5, tint := Palette.HAZARD) -> Node3D:
 	_clear_telegraph()
-	_telegraph = Telegraph.ring(world_root, terrain, at, ring_radius, reach)
+	_telegraph = Telegraph.ring(world_root, terrain, threat_type, at, ring_radius, reach, tint)
 	return _telegraph
 
 
-func _commit_lane(from: Vector3, heading: Vector3, lane_length: float, lane_width: float, reach := 3.5) -> Node3D:
+func _commit_lane(threat_type: int, from: Vector3, heading: Vector3, lane_length: float, lane_width: float, reach := 3.5) -> Node3D:
 	_clear_telegraph()
-	_telegraph = Telegraph.lane(world_root, terrain, from, heading, lane_length, lane_width, reach)
+	_telegraph = Telegraph.lane(world_root, terrain, threat_type, from, heading, lane_length, lane_width, reach)
 	return _telegraph
 
 
