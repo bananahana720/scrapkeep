@@ -12,7 +12,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 #    pulse changes by less than 3%), and the Warden never moves.
 # 3. Break time with base bolts and no parts: warden I within 60 s of continuous
 #    runner fire. Warden III must NOT break within 90 s of the same fire on its body:
-#    since the tuning pass (plating 140, HP 7000) stage 3 needs its magnet, the lesson. The ball is held still and aimed at it.
+#    since the tuning pass (plating 140, HP 7500) stage 3 needs its magnet, the lesson. The ball is held still and aimed at it.
 # Long spans run at Engine.time_scale, and every duration is measured in simulated
 # seconds (the sum of physics deltas), so the numbers are game time, not wall time.
 
