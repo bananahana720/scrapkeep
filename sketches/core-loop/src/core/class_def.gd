@@ -2,40 +2,64 @@ extends Resource
 
 const Palette := preload("res://src/core/palette.gd")
 
-# A class is data (TADR-008): which weapon and special its slots yield. Both classes
-# share the whole mobility base, so a class never changes how the ball moves; combat
-# reads weapon_id and special_id and owns what they do. The names are candidates.
+# A class is data (TADR-008). One row carries every layer's reading of the character:
+# the four ability ids the bar keys on (weapon, movement, special, smash), which combat,
+# movement and the ability state dispatch by, and the colour, shape and sound the HUD,
+# VFX, audio and icons read. Event rows that belong to one class take its colour from
+# the constants below, so a class looks the same in every layer. The names are
+# candidates from the Bible's class vocabulary (DESIGN-V2 section 2). The pilots are
+# animals, the reigning species after humans were lost.
+
+const SABLE_COLOR := Palette.ARC
+const RIVET_COLOR := Palette.COPPER
+const KEST_COLOR := Palette.AMBER
 
 @export var id := ""
 @export var display_name := ""
+@export var role := ""
+@export var species := ""
 @export var pitch := ""
 @export var weapon_id := ""
+@export var movement_id := ""
 @export var special_id := ""
+@export var smash_id := ""
 @export var color := Color.WHITE
+# An event_kinds shape: ring (area), chevron (motion) or burst (explosive).
+@export var shape := ""
+# The synth id the class's cues use today, and the id W5 is to bake for its motif.
+@export var sound := ""
+@export var sound_next := ""
 @export var bible_home := ""
+@export var synergy_hooks: PackedStringArray = []
 
 
-static func make(id_value: String, name_value: String, pitch_value: String, weapon: String,
-		special: String, tint: Color, home: String) -> Resource:
+static func make(row: Dictionary) -> Resource:
 	var def: Resource = load("res://src/core/class_def.gd").new()
-	def.id = id_value
-	def.display_name = name_value
-	def.pitch = pitch_value
-	def.weapon_id = weapon
-	def.special_id = special
-	def.color = tint
-	def.bible_home = home
+	for key in row:
+		def.set(key, row[key])
 	return def
 
 
 static func all() -> Array[Resource]:
 	var list: Array[Resource] = [
-		make("pylon_engineer", "Pylon engineer",
-			"Plant on any steep face and become an arc turret. A faster plant banks a bigger opening burst; Space slingshots you off along the face.",
-			"arc_caster", "pylon_turret", Palette.ARC, "Rivet's beam or Sable's anchor"),
-		make("runner_gunner", "Runner-gunner",
-			"Never stop. Rapid tight laser shots on the move, with an overdrive burst when you are surrounded.",
-			"rapid_laser", "overdrive", Palette.AMBER, "Fuse"),
+		make({"id": "pylon_engineer", "display_name": "Sable", "role": "Pylon engineer", "species": "fox",
+			"pitch": "Plant a beachhead, then launch off it like a cannonball. Grapple, vault off steep faces, mount a pylon and turret.",
+			"weapon_id": "arc_caster", "movement_id": "grapple", "special_id": "detonation_gauge", "smash_id": "arc_slam",
+			"color": SABLE_COLOR, "shape": "ring", "sound": "pylon_plant", "sound_next": "sable_arpeggio",
+			"bible_home": "Sable, displacement and traversal",
+			"synergy_hooks": PackedStringArray(["on_vault_kick", "on_pylon_discharge", "on_mount_planted"])}),
+		make({"id": "runner_gunner", "display_name": "Rivet", "role": "Runner-gunner", "species": "mole machinist",
+			"pitch": "An unstoppable laser sprinter. Hold the sprint through crowd control, then blast the crowd off you.",
+			"weapon_id": "rapid_laser", "movement_id": "overdrive_sprint", "special_id": "overdrive_blast", "smash_id": "shockwave_skid",
+			"color": RIVET_COLOR, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "rivet_hihat_roll",
+			"bible_home": "Rivet, precision and controlled corridors",
+			"synergy_hooks": PackedStringArray(["on_sprint_start", "on_blast_release", "on_cc_ignored"])}),
+		make({"id": "demolitions_caster", "display_name": "Kest", "role": "Demolitions caster", "species": "bird",
+			"pitch": "Vanish in your own smoke, then drop a line of fire where they least expect it.",
+			"weapon_id": "sticky_charge", "movement_id": "smoke_blink", "special_id": "detonation_line", "smash_id": "demo_slam",
+			"color": KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_low_thump",
+			"bible_home": "Fuse, directed casting and local pressure",
+			"synergy_hooks": PackedStringArray(["on_cloak_crit", "on_rocket_jump", "on_chain_detonation"])}),
 	]
 	return list
 

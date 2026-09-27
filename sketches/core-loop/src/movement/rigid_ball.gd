@@ -10,7 +10,8 @@ signal pylon_planted(at: Vector3, banked_speed: float)
 signal pylon_ejected(velocity: Vector3)
 signal jumped(air: bool)
 signal boosted(direction: Vector3)
-signal dashed(direction: Vector3)
+# A fact one of the kit's static rules left: the bus signal's name and its arguments.
+signal kit_fact(kind: String, args: Array)
 signal landed(impact: float)
 
 var tuning
@@ -144,8 +145,8 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 			body_state.apply_central_force(external_accel * mass)
 	external_accel = Vector3.ZERO
 
-	# The augments run before jump and boost so a pylon jump or a fitted air dash can
-	# claim the same key without the base rule firing as well.
+	# The augments run before jump and boost so a pylon jump or a vault kick can claim
+	# the same key without the base rule firing as well.
 	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
 	_publish_kit(body_state)
 
@@ -155,11 +156,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		_remember(state.velocity)
 		return
 
-	if not Augments.claims_boost(kit, state):
-		var boost := Rules.boost(state, tuning, intent, wish, -drive_basis.z)
-		if boost != Vector3.ZERO:
-			body_state.apply_central_impulse(boost * mass)
-			boosted.emit(boost.normalized())
+	var boost := Rules.boost(state, tuning, intent, wish, -drive_basis.z)
+	if boost != Vector3.ZERO:
+		body_state.apply_central_impulse(boost * mass)
+		boosted.emit(boost.normalized())
 
 	var was_grounded: bool = state.grounded or state.coyote > 0.0
 	var jump := Rules.jump(state, tuning)
@@ -196,9 +196,11 @@ func _publish_kit(body_state: PhysicsDirectBodyState3D) -> void:
 	if kit.dismount_fired:
 		pylon_ejected.emit(kit.dismount_velocity)
 		kit.dismount_fired = false
-	if kit.dash_fired != Vector3.ZERO:
-		dashed.emit(kit.dash_fired)
-		kit.dash_fired = Vector3.ZERO
+	if not kit.facts.is_empty():
+		var facts: Array = kit.facts.duplicate()
+		kit.facts.clear()
+		for fact in facts:
+			kit_fact.emit(fact[0], fact[1])
 
 
 func _on_body_entered(body: Node) -> void:

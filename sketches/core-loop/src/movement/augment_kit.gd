@@ -1,10 +1,15 @@
 extends RefCounted
 
 const Augments := preload("res://src/movement/augments.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 
-# Which augments are fitted, and the live state of the ones that have any. Both classes
-# share the whole kit, so every augment is on for the run.
+# Which augments are fitted, and the live state of the ones that have any. A class fits
+# only its own movement kit plus the shared smash (Augments.KITS); a kit with no class is
+# the engineer's. The ability state holds every slot's charges and gauge.
 var enabled := {}
+var movement_id := ""
+var smash_id := ""
+var abilities = AbilityState.new()
 
 var hooked := false
 var anchor := Vector3.ZERO
@@ -12,10 +17,6 @@ var anchor_normal := Vector3.ZERO
 var rope := 0.0
 var aim := Augments.no_aim()
 
-var dash_ready := true
-var dash_cooldown := 0.0
-# Set by the tick that fires a dash and cleared by the ball once it is published.
-var dash_fired := Vector3.ZERO
 var gliding := false
 
 var slamming := false
@@ -44,11 +45,33 @@ var mount_planted := false
 var mount_banked := 0.0
 var dismount_fired := false
 var dismount_velocity := Vector3.ZERO
+var slingshot = AbilityState.Gauge.new(Augments.SLINGSHOT_CHARGE)
+# The slingshot's aim cone while mounted: {dir, speed, fill}.
+var slingshot_aim := {}
+
+# Sable's vault: face key -> seconds it stays locked, the last face kicked, and the aim
+# cone's record while a kick is available ({} when none is).
+var vault_faces := {}
+var last_vault_face := ""
+var vault_aim := {}
+
+var sprinting := false
+var sprint_left := 0.0
+
+# Facts the static rules leave for the ball to publish: [signal name, [args]].
+var facts: Array = []
 
 
 func _init() -> void:
+	fit(Augments.DEFAULT_MOVEMENT, "")
+
+
+func fit(movement: String, smash: String) -> void:
+	movement_id = movement
+	smash_id = smash
+	var keys: Array = Augments.KITS.get(movement, []) + Augments.SHARED
 	for spec in Augments.SPECS:
-		enabled[spec["key"]] = true
+		set_on(spec["key"], spec["key"] in keys)
 
 
 func on(key: String) -> bool:
@@ -68,7 +91,15 @@ func toggle(key: String) -> bool:
 
 func tick_timers(delta: float) -> void:
 	mount_block = maxf(0.0, mount_block - delta)
-	dash_cooldown = maxf(0.0, dash_cooldown - delta)
+	for key in vault_faces.keys():
+		vault_faces[key] -= delta
+		if vault_faces[key] <= 0.0:
+			vault_faces.erase(key)
+
+
+# The stomp and rebound refresh gives Sable back the last face it kicked.
+func refresh_vault() -> void:
+	vault_faces.erase(last_vault_face)
 
 
 # A mode switch or respawn must never leave the ball pinned somewhere it no longer is.
@@ -77,20 +108,23 @@ func release_holds() -> void:
 	mounted = false
 	mount_planted = false
 	dismount_fired = false
+	slingshot.cancel()
 
 
 func clear_runtime() -> void:
 	for spec in Augments.SPECS:
 		_stop(spec["key"])
 	release_holds()
-	dash_ready = true
-	dash_cooldown = 0.0
 	slam_landed = 0.0
 	# A brake still held across a reset or retry counts as held from the ground.
 	brake_from_ground = true
 	mount_block = 0.0
 	mount_banked = 0.0
-	dash_fired = Vector3.ZERO
+	vault_faces.clear()
+	last_vault_face = ""
+	vault_aim = {}
+	slingshot_aim = {}
+	facts.clear()
 
 
 func _stop(key: String) -> void:
@@ -98,8 +132,6 @@ func _stop(key: String) -> void:
 		Augments.GRAPPLE:
 			hooked = false
 			aim = Augments.no_aim()
-		Augments.DASH:
-			dash_ready = true
 		Augments.GLIDE:
 			gliding = false
 		Augments.SLAM:
@@ -108,3 +140,9 @@ func _stop(key: String) -> void:
 			plant_time = 0.0
 		Augments.PYLON:
 			mounted = false
+			slingshot.cancel()
+		Augments.SPRINT:
+			sprinting = false
+			sprint_left = 0.0
+		Augments.VAULT:
+			vault_aim = {}
