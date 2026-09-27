@@ -81,6 +81,18 @@ const ROWS := {
 	"threat_rose": {"group": "event", "color": Palette.RUST, "shape": "chevron", "sound": "threat_up", "hud": "Threat rising", "objective": "", "priority": 2},
 }
 
+# v2 W2 threat grammar
+# One row per enemy attack type (combat/threat_grammar.gd), in the ROWS schema. They sit
+# outside ROWS because ROWS is keyed by bus signal and a threat is a committed telegraph,
+# not a signal. Presentation can give each type its own warning by playing `sound` when
+# a node in the group "threat" enters the tree.
+const THREAT_ROWS := {
+	"threat_instant": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "hud": "", "objective": "", "priority": 2},
+	"threat_wave": {"group": "combat", "color": Palette.HAZARD, "shape": "wave", "sound": "threat_whoosh", "hud": "", "objective": "", "priority": 2},
+	"threat_projectile": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "hud": "", "objective": "", "priority": 2},
+	"threat_lane": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "threat_hum", "hud": "", "objective": "", "priority": 2},
+}
+
 # Codex categories: each has its own colour, glyph shape and label, so the Tab codex
 # pages, a discovery banner and a found-list line all dress a category the same way.
 # npc and coop are reserved: the demo is solo, but the schema already carries them.

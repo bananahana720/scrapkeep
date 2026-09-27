@@ -55,6 +55,7 @@ const TRIM_DB := {
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
+	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
 }
 
 static var _samples := {}
@@ -261,6 +262,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_noise(0.03, 4500.0, 2500.0, 120.0), 0, 0.4]])
 		"stinger_boss_defeated":
 			return _boss_defeated()
+		"threat_tick":
+			return _threat_tick()
+		"threat_whoosh":
+			return _threat_whoosh()
+		"threat_whistle":
+			return _threat_whistle()
+		"threat_hum":
+			return _threat_hum()
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -655,3 +664,29 @@ static func _riser() -> PackedFloat32Array:
 		var x := float(i) / n
 		noise[i] *= x * x * x
 	return Synth.normalize(noise, 0.9)
+
+
+# The four threat warnings (combat/threat_grammar.gd), one per attack type, each short
+# enough to finish well before the hit it warns about.
+# Instant: two dry ticks, a timer running out.
+static func _threat_tick() -> PackedFloat32Array:
+	var parts := []
+	for i in 2:
+		parts.append([_noise(0.04, 5200.0, 3400.0, 110.0), Synth.seconds(0.09 * i), 0.8])
+		parts.append([_tone(0.05, _hz(74), _hz(74), "square_dark", 70.0), Synth.seconds(0.09 * i), 0.6 + 0.2 * i])
+	return _mix(parts)
+
+
+# Wave: a whoosh that rises as the front builds, over a climbing growl.
+static func _threat_whoosh() -> PackedFloat32Array:
+	return _mix([[_noise(0.5, 300.0, 2800.0, 2.0, 0.3), 0, 1.0], [_tone(0.5, _hz(38), _hz(50), "saw_dark", 3.0), 0, 0.5]])
+
+
+# Projectile: a falling whistle, the shell coming down.
+static func _threat_whistle() -> PackedFloat32Array:
+	return _mix([[_tone(0.6, _hz(91), _hz(79), "sine", 1.5), 0, 1.0], [_noise(0.6, 2200.0, 1300.0, 2.5, 0.05), 0, 0.2]])
+
+
+# Lane: a buzzing charge that climbs toward the release.
+static func _threat_hum() -> PackedFloat32Array:
+	return _mix([[_tone(0.5, _hz(38), _hz(45), "saw_dark", 1.0), 0, 0.8], [_tone(0.5, _hz(50), _hz(57), "square_dark", 1.4), 0, 0.6]], true)
