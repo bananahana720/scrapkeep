@@ -12,7 +12,7 @@ var _stage
 var _index := 0
 var _started := false
 var _measuring := false
-var _clock := 0.0
+var _ticks := 0
 var _peak := 0.0
 var _worst_clearance := 0.0
 var _failures := 0
@@ -28,12 +28,14 @@ func _begin() -> void:
 	_stage.director.paused = true
 	_stage.player.reset_to(Terrain.chute_entry(_index))
 	_measuring = false
-	_clock = 0.0
+	_ticks = 0
 	_peak = 0.0
 	_worst_clearance = 0.0
 
 
-func _process(delta: float) -> bool:
+# Counted in physics ticks, not idle-frame seconds: the rigid reset lands on the
+# next tick, and a starved machine fits less simulated time into a wall second.
+func _physics_process(_delta: float) -> bool:
 	if not _started:
 		if _stage.player == null:
 			return false
@@ -41,18 +43,18 @@ func _process(delta: float) -> bool:
 		_begin()
 		return false
 
-	_clock += delta
+	_ticks += 1
 	if not _measuring:
-		if _clock < SETTLE:
+		if _ticks < _to_ticks(SETTLE):
 			return false
 		_measuring = true
-		_clock = 0.0
+		_ticks = 0
 		return false
 
 	var at: Vector3 = _stage.player.ball_position()
 	_peak = maxf(_peak, _stage.player.state.velocity.length())
 	_worst_clearance = maxf(_worst_clearance, at.y - Terrain.height(at.x, at.z))
-	if _clock < MEASURE:
+	if _ticks < _to_ticks(MEASURE):
 		return false
 
 	var fast := _peak > MIN_SPEED
@@ -75,3 +77,7 @@ func _process(delta: float) -> bool:
 	_stage.free()
 	quit(0 if _failures == 0 else 1)
 	return true
+
+
+static func _to_ticks(seconds: float) -> int:
+	return roundi(seconds * Engine.physics_ticks_per_second)
