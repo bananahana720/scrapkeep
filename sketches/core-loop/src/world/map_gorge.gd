@@ -70,7 +70,9 @@ const SKYLIGHT_X := 74.0
 const SKYLIGHT_Z := Vector2(24.0, 96.0)
 const SKYLIGHT_DEPTH := 6.0
 
-const BRIDGES := [Vector2(4.0, 14.0), Vector2(36.0, 46.0)]
+# Both stand low enough in the view from the drop that the Warden in the bowl stays in
+# sight under them (world_warden_flow_test; a bridge at z 4 cut that line).
+const BRIDGES := [Vector2(30.0, 38.0), Vector2(46.0, 54.0)]
 
 const IMPACT := Vector2(112.0, 0.0)
 const CRATER_FLOOR := 3.0
@@ -114,14 +116,18 @@ func _init() -> void:
 		[Vector2(0.0, -150.0), Vector2(0.0, -112.0)],
 		[Vector2(0.0, -80.0), Vector2(0.0, -30.0)],
 		[Vector2(-4.0, -10.0), Vector2(-4.0, 50.0)],
-		[Vector2(-96.0, -118.0), Vector2(-120.0, -84.0)],
-		[Vector2(70.0, -90.0), Vector2(70.0, -50.0)],
+		# Two lures toward the steam lifts, the trough's way up to the shelves; both lie
+		# within 25 m of the fall line, where every fabricator must stand (world_route_test).
+		[Vector2(-8.0, -96.0), Vector2(-22.0, -64.0)],
+		[Vector2(8.0, -40.0), Vector2(22.0, -24.0)],
 	]
 	sites = {
+		# The Surge Run sweeps west across the rim deck, off the fall line, and hands the
+		# ball straight into the marble run's mouth: a side trip that ends on a ride.
 		"surge_run": {
-			"ring": Vector2(0.0, -64.0),
+			"ring": Vector2(-44.0, -164.0),
 			"route": PackedVector2Array([
-				Vector2(0.0, -58.0), Vector2(6.0, -20.0), Vector2(-8.0, 20.0), Vector2(6.0, 52.0), Vector2(0.0, 82.0),
+				Vector2(-50.0, -160.0), Vector2(-66.0, -156.0), Vector2(-82.0, -148.0), Vector2(-92.0, -138.0), Vector2(-94.0, -124.0),
 			]),
 		},
 	}
