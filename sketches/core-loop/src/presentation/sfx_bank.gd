@@ -54,9 +54,16 @@ const TRIM_DB := {
 	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
+	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
 }
 
 static var _samples := {}
+# The live key and level a keyed or themed bake is for (see samples_at).
+static var _shift := 0
+static var _theme := 0
+static var _lock := Mutex.new()
+# Cues whose notes depend on the level (the synergy fanfare quotes its motif).
+const THEMED := ["synergy_fanfare"]
 static var _streams := {}
 
 
@@ -76,15 +83,37 @@ static func samples(id: String) -> PackedFloat32Array:
 
 # A grid stinger baked on another tempo's grid, for the boss tempo. Cues that are not
 # written on the grid are the same at any tempo.
-static func samples_at(id: String, step: int) -> PackedFloat32Array:
-	if step == Harmony.STEP or not STINGER_BEATS.has(id):
+static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedFloat32Array:
+	var themed := id in THEMED
+	if (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not themed or theme == 0):
 		return samples(id)
-	var key := "%s@%d" % [id, step]
+	var key := "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if themed else 0]
+	if _samples.has(key):
+		return _samples[key]
+	# A worker warms keyed variants while the band may ask for one: one bake at a time.
+	_lock.lock()
 	if not _samples.has(key):
-		Synth.score_step = step
+		if STINGER_BEATS.has(id):
+			Synth.score_step = step
+		Synth.score_transpose = shift
+		_shift = shift
+		_theme = theme
 		_samples[key] = Synth.normalize(_bake(id), 0.9)
 		Synth.score_step = Harmony.STEP
+		Synth.score_transpose = 0
+		_shift = 0
+		_theme = 0
+	_lock.unlock()
 	return _samples[key]
+
+
+# Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
+static func _hz(midi: float) -> float:
+	return Harmony.hz(midi + _shift)
+
+
+static func _n(instrument: String, midi: int) -> PackedFloat32Array:
+	return Synth.note(instrument, midi + _shift)
 
 
 static func stream(id: String) -> AudioStreamWAV:
@@ -103,7 +132,7 @@ static func bake_all(ids: Array) -> void:
 static func _bake(id: String) -> PackedFloat32Array:
 	match id:
 		"ui_tick":
-			return _tone(0.03, Harmony.hz(86), Harmony.hz(86), "sine", 120.0)
+			return _tone(0.03, _hz(86), _hz(86), "sine", 120.0)
 		"hop":
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
@@ -115,17 +144,17 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"slam_boom":
 			return _slam()
 		"grapple_clink":
-			return _fm(0.24, Harmony.hz(81), 3.5, 5.0, 16.0)
+			return _fm(0.24, _hz(81), 3.5, 5.0, 16.0)
 		"grapple_release":
-			return _fm(0.15, Harmony.hz(76), 2.0, 1.5, 24.0, -2.0)
+			return _fm(0.15, _hz(76), 2.0, 1.5, 24.0, -2.0)
 		"pylon_plant":
-			return _mix([[_tone(0.16, 130.0, 55.0, "sine", 22.0), 0, 1.0], [_fm(0.3, Harmony.hz(62), 2.76, 4.0, 12.0), 0, 0.6],
+			return _mix([[_tone(0.16, 130.0, 55.0, "sine", 22.0), 0, 1.0], [_fm(0.3, _hz(62), 2.76, 4.0, 12.0), 0, 0.6],
 				[_tone(0.2, 440.0, 880.0, "sine", 8.0), Synth.seconds(0.1), 0.25]])
 		"pylon_eject":
 			return _boing()
 		"enemy_arrive":
-			return _mix([[_tone(0.16, Harmony.hz(40), Harmony.hz(40), "saw_dark", 6.0), 0, 1.0],
-				[_tone(0.2, Harmony.hz(41), Harmony.hz(41), "saw_dark", 6.0), Synth.seconds(0.14), 1.0]])
+			return _mix([[_tone(0.16, _hz(40), _hz(40), "saw_dark", 6.0), 0, 1.0],
+				[_tone(0.2, _hz(41), _hz(41), "saw_dark", 6.0), Synth.seconds(0.14), 1.0]])
 		"hit_thwack":
 			return _mix([[_noise(0.14, 1300.0, 700.0, 30.0), 0, 0.8], [_tone(0.14, 230.0, 85.0, "sine", 26.0), 0, 1.0]], true)
 		"weapon_zap":
@@ -133,29 +162,29 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"special_fire":
 			return _special()
 		"kill_pop":
-			return _mix([[_tone(0.05, 500.0, 1300.0, "sine", 50.0), 0, 0.6], [Synth.note("bell", 81), 0, 0.8]])
+			return _mix([[_tone(0.05, 500.0, 1300.0, "sine", 50.0), 0, 0.6], [_n("bell", 81), 0, 0.8]])
 		"hurt":
-			return _mix([[_tone(0.13, Harmony.hz(53), Harmony.hz(53), "square_dark", 8.0), 0, 1.0],
-				[_tone(0.2, Harmony.hz(50), Harmony.hz(48), "square_dark", 9.0), Synth.seconds(0.11), 1.0],
+			return _mix([[_tone(0.13, _hz(53), _hz(53), "square_dark", 8.0), 0, 1.0],
+				[_tone(0.2, _hz(50), _hz(48), "square_dark", 9.0), Synth.seconds(0.11), 1.0],
 				[_noise(0.1, 900.0, 300.0, 30.0), 0, 0.5]], true)
 		"death":
 			return _death()
 		"scrap_tick":
-			return _mix([[_cut(Synth.note("bell", 74), 0.16), 0, 1.0], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.2]])
+			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.2]])
 		"part_get":
 			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
 		"beacon_hum":
 			return _hum()
 		"gate_through":
-			return _mix([[_noise(0.3, 800.0, 3600.0, 10.0, 0.03), 0, 0.6], [Synth.note("bell", 81), Synth.seconds(0.04), 0.6],
-				[Synth.note("bell", 86), Synth.seconds(0.04), 0.5], [Synth.note("bell", 89), Synth.seconds(0.04), 0.4]])
+			return _mix([[_noise(0.3, 800.0, 3600.0, 10.0, 0.03), 0, 0.6], [_n("bell", 81), Synth.seconds(0.04), 0.6],
+				[_n("bell", 86), Synth.seconds(0.04), 0.5], [_n("bell", 89), Synth.seconds(0.04), 0.4]])
 		"launch_roar":
 			return _mix([[_noise(1.1, 300.0, 4200.0, 2.4, 0.5), 0, 1.0], [_tone(1.0, 90.0, 720.0, "saw_dark", 2.2), 0, 0.5]], true)
 		"klaxon":
 			return _klaxon()
 		"event_start":
-			return _mix([[Synth.kick(), 0, 1.0], [Synth.note("keys", 50), 0, 0.5], [Synth.note("keys", 53), 0, 0.5],
-				[Synth.note("keys", 57), 0, 0.5], [Synth.note("keys", 63), 0, 0.4]], true, 0.8)
+			return _mix([[Synth.kick(), 0, 1.0], [_n("keys", 50), 0, 0.5], [_n("keys", 53), 0, 0.5],
+				[_n("keys", 57), 0, 0.5], [_n("keys", 63), 0, 0.4]], true, 0.8)
 		"event_end":
 			return _arpeggio([69, 65, 62], 0.09, "mallet", 0.7)
 		"music_pressure":
@@ -188,16 +217,16 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"scrap_rip":
 			return _rip()
 		"threat_up":
-			return _mix([[_tone(0.07, Harmony.hz(62), Harmony.hz(62), "square_dark", 18.0), 0, 0.9],
-				[_tone(0.12, Harmony.hz(65), Harmony.hz(67), "square_dark", 14.0), Synth.seconds(0.08), 1.0]], true)
+			return _mix([[_tone(0.07, _hz(62), _hz(62), "square_dark", 18.0), 0, 0.9],
+				[_tone(0.12, _hz(65), _hz(67), "square_dark", 14.0), Synth.seconds(0.08), 1.0]], true)
 		"core_socket":
 			return _core_socket()
 		"synergy_fanfare":
 			return Synth.render_score(_score_synergy(), 1.4)
 		"found_chime":
-			return _mix([[_cut(Synth.note("mallet", 77), 0.35), 0, 0.8], [_fm(0.5, Harmony.hz(86), 3.5, 1.2, 6.0, 0.3), Synth.seconds(0.12), 0.7]])
+			return _mix([[_cut(_n("mallet", 77), 0.35), 0, 0.8], [_fm(0.5, _hz(86), 3.5, 1.2, 6.0, 0.3), Synth.seconds(0.12), 0.7]])
 		"element_resolved":
-			return _mix([[_cut(Synth.note("bell", 81), 0.3), 0, 0.7], [_noise(0.25, 2000.0, 5000.0, 14.0, 0.01), 0, 0.5]])
+			return _mix([[_cut(_n("bell", 81), 0.3), 0, 0.7], [_noise(0.25, 2000.0, 5000.0, 14.0, 0.01), 0, 0.5]])
 		"warden_theme_in":
 			return _warden_in()
 		"womp":
@@ -212,6 +241,13 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _shatter()
 		"stage_fade":
 			return _stage_fade()
+		"vault_rise":
+			return _mix([[_noise(0.32, 600.0, 4200.0, 3.0, 0.2), 0, 0.6], [_tone(0.32, _hz(62), _hz(74), "saw_dark", 4.0), 0, 0.6]])
+		"vault_drop":
+			return Synth.render_score([[0, 0, 2, "kick", 1.0], [0, 0, 8, "crash", 0.6], [0, 38, 8, "sub", 0.8],
+				[0, 62, 4, "bell", 0.5], [0, 66, 4, "bell", 0.45], [0, 69, 4, "bell", 0.45], [2, 74, 6, "bell", 0.55]], 0.6)
+		"synergy_hit":
+			return _mix([[_fm(0.22, _hz(81), 3.5, 1.4, 14.0), 0, 0.8], [_noise(0.06, 5000.0, 3000.0, 60.0), 0, 0.2]])
 		"boss_arena_in":
 			return _brindle_in()
 		"boss_phase":
@@ -221,13 +257,13 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"boss_telegraph":
 			return _boss_telegraph()
 		"boss_weak_hit":
-			return _mix([[_fm(0.28, Harmony.hz(79), 3.5, 3.0, 13.0), 0, 0.9], [_tone(0.1, 180.0, 90.0, "sine", 30.0), 0, 0.6],
+			return _mix([[_fm(0.28, _hz(79), 3.5, 3.0, 13.0), 0, 0.9], [_tone(0.1, 180.0, 90.0, "sine", 30.0), 0, 0.6],
 				[_noise(0.03, 4500.0, 2500.0, 120.0), 0, 0.4]])
 		"stinger_boss_defeated":
 			return _boss_defeated()
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
-	return _tone(0.12, Harmony.hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
+	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
 
 
 # --- Scores ----------------------------------------------------------------------------
@@ -269,7 +305,7 @@ static func _score_milestone() -> Array:
 static func _score_class_up() -> Array:
 	return [[0, 0, 2, "kick", 0.7], [0, 69, 2, "mallet", 0.8], [0, 69, 2, "bell", 0.35], [2, 74, 2, "mallet", 0.85],
 		[2, 74, 2, "bell", 0.4], [4, 81, 4, "mallet", 0.9], [4, 81, 4, "bell", 0.5], [4, 38, 4, "sub", 0.6],
-		[4, 0, 2, "open_hat", 0.4], [4, 38, 2, "growl", 0.55]]
+		[4, 0, 2, "open_hat", 0.4], [4, 38, 2, "fbass", 0.7]]
 
 
 # A heft class lost to a crane: the climb played back down, A F D, lighter and softer.
@@ -281,7 +317,10 @@ static func _score_class_down() -> Array:
 # The discovery: a bebop run up the Dorian scale with a chromatic lean on C#, landing
 # on high D over the home chord with a crash. The most exciting short cue in the game.
 static func _score_synergy() -> Array:
-	var run := [[0, 69], [1, 72], [2, 74], [3, 76], [4, 77], [5, 81], [6, 84], [7, 85]]
+	# The run climbs into the current level's motif, its first four notes an octave up.
+	var head: Array = Harmony.MOTIF_HEADS[clampi(_theme, 0, 2)]
+	var run := [[0, 69], [1, 72], [2, 74], [3, 76], [4, head[0] + 12 if head[0] < 74 else head[0]], [5, head[1] + (12 if head[0] < 74 else 0)],
+		[6, head[2] + (12 if head[0] < 74 else 0)], [7, 85]]
 	var score := []
 	for note in run:
 		score.append([note[0], note[1], 1, "lead", 0.6])
@@ -392,7 +431,7 @@ static func _fm_sweep(length: float, f0: float, f1: float, index: float, decay: 
 static func _arpeggio(notes: Array, gap: float, instrument: String, tail: float) -> PackedFloat32Array:
 	var parts := []
 	for i in notes.size():
-		parts.append([_cut(Synth.note(instrument, notes[i]), tail), Synth.seconds(gap * i), 1.0 - 0.1 * i])
+		parts.append([_cut(_n(instrument, notes[i]), tail), Synth.seconds(gap * i), 1.0 - 0.1 * i])
 	return _mix(parts)
 
 
@@ -424,7 +463,7 @@ static func _special() -> PackedFloat32Array:
 	var parts: Array = [[_fm_sweep(0.35, 2200.0, 300.0, 6.0, 8.0), 0, 0.7]]
 	var rung := 0
 	for i in 6:
-		parts.append([_cut(Synth.note("bell", 74 + Harmony.pentatonic_step(rung)), 0.3), Synth.seconds(0.03 * i), 0.45])
+		parts.append([_cut(_n("bell", 74 + Harmony.pentatonic_step(rung)), 0.3), Synth.seconds(0.03 * i), 0.45])
 		rung += 1
 	return _mix(parts)
 
@@ -433,16 +472,16 @@ static func _death() -> PackedFloat32Array:
 	var parts := []
 	var line := [57, 53, 50]
 	for i in line.size():
-		parts.append([_tone(0.2, Harmony.hz(line[i]), Harmony.hz(line[i]), "square_dark", 5.0), Synth.seconds(0.17 * i), 0.8])
+		parts.append([_tone(0.2, _hz(line[i]), _hz(line[i]), "square_dark", 5.0), Synth.seconds(0.17 * i), 0.8])
 	# The power-down: a low D that sags a fourth as it dies.
-	parts.append([_tone(0.9, Harmony.hz(38), Harmony.hz(31), "saw_dark", 3.0), Synth.seconds(0.51), 1.0])
+	parts.append([_tone(0.9, _hz(38), _hz(31), "saw_dark", 3.0), Synth.seconds(0.51), 1.0])
 	return _mix(parts, true)
 
 
 static func _hum() -> PackedFloat32Array:
 	var n := Synth.seconds(0.32)
 	var buf := Synth.buffer(n)
-	var f := Harmony.hz(62)
+	var f := _hz(62)
 	for i in n:
 		var t := i * Synth.INV_RATE
 		var env := sin(PI * float(i) / n)
@@ -455,8 +494,8 @@ static func _klaxon() -> PackedFloat32Array:
 	var parts := []
 	var beat := Synth.score_step * Harmony.STEPS_PER_BEAT
 	for pulse in 2:
-		parts.append([_tone(beat * 1.9 / RATE, Harmony.hz(53), Harmony.hz(50), "square_dark", 1.2), beat * 2 * pulse, 1.0])
-		parts.append([_tone(beat * 1.9 / RATE, Harmony.hz(41), Harmony.hz(38), "saw_dark", 1.2), beat * 2 * pulse, 0.6])
+		parts.append([_tone(beat * 1.9 / RATE, _hz(53), _hz(50), "square_dark", 1.2), beat * 2 * pulse, 1.0])
+		parts.append([_tone(beat * 1.9 / RATE, _hz(41), _hz(38), "saw_dark", 1.2), beat * 2 * pulse, 0.6])
 	return _mix(parts, true)
 
 
@@ -475,7 +514,7 @@ static func _unseal() -> PackedFloat32Array:
 # A plated hit that bounced: a bright ringing plate an octave above the punch, with
 # no low body, so it reads as "not through" next to hit_thwack's meaty thud.
 static func _clank() -> PackedFloat32Array:
-	return _mix([[_fm(0.3, Harmony.hz(76), 1.41, 1.6, 11.0), 0, 1.0], [_fm(0.22, Harmony.hz(83), 2.76, 1.2, 16.0), 0, 0.55],
+	return _mix([[_fm(0.3, _hz(76), 1.41, 1.6, 11.0), 0, 1.0], [_fm(0.22, _hz(83), 2.76, 1.2, 16.0), 0, 0.55],
 		[_tone(0.03, 1800.0, 1200.0, "sine", 90.0), 0, 0.3]])
 
 
@@ -493,8 +532,8 @@ static func _rip() -> PackedFloat32Array:
 # The lock-in: a click, a thud, and a clean fifth on D that rings out.
 static func _core_socket() -> PackedFloat32Array:
 	return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.12, 140.0, 80.0, "sine", 28.0), 0, 0.8],
-		[Synth.note("bell", 74), Synth.seconds(0.05), 0.7], [Synth.note("bell", 81), Synth.seconds(0.05), 0.6],
-		[_cut(Synth.note("bell", 86), 0.6), Synth.seconds(0.16), 0.45]])
+		[_n("bell", 74), Synth.seconds(0.05), 0.7], [_n("bell", 81), Synth.seconds(0.05), 0.6],
+		[_cut(_n("bell", 86), 0.6), Synth.seconds(0.16), 0.45]])
 
 
 # The Warden wakes: a low anvil strike and a Neapolitan brass swell (Eb over D), the
@@ -504,10 +543,10 @@ static func _warden_in() -> PackedFloat32Array:
 		[0, 58, 12, "brass", 0.45], [4, 0, 2, "kick", 0.8], [8, 0, 2, "kick", 0.9], [12, 0, 2, "kick", 1.0],
 		[12, 0, 1, "snare", 0.7], [13, 0, 1, "snare", 0.8], [14, 0, 1, "snare", 0.9], [15, 0, 1, "snare", 1.0]]
 	var band := Synth.render_score(score, 0.8)
-	return _mix([[band, 0, 1.0], [_fm(0.9, Harmony.hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
+	return _mix([[band, 0, 1.0], [_fm(0.9, _hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
 
 
-# The slam womp: a sub that drops out of the floor with a wub on top, instant.
+# The slam womp: a sub that drops out of the floor with a thump on top, instant.
 static func _womp() -> PackedFloat32Array:
 	var n := Synth.seconds(0.62)
 	var buf := Synth.buffer(n)
@@ -516,7 +555,7 @@ static func _womp() -> PackedFloat32Array:
 		var t := i * Synth.INV_RATE
 		phase += TAU * (34.0 + 52.0 * exp(-t * 9.0)) * Synth.INV_RATE
 		buf[i] = tanh(2.0 * sin(phase)) * minf(1.0, t * 400.0) * exp(-t * 3.2)
-	return _mix([[buf, 0, 1.0], [_cut(Synth.growl(38, "wub", Synth.seconds(0.3)), 0.3), 0, 0.45]], true)
+	return _mix([[buf, 0, 1.0], [_noise(0.08, 900.0, 200.0, 40.0), 0, 0.3]], true)
 
 
 # Two bars of rising noise and pitch, the build's riser (on the grid it is baked for).
@@ -535,7 +574,7 @@ static func _ice() -> PackedFloat32Array:
 	var parts: Array = [[_noise(0.3, 6000.0, 6000.0, 12.0, 0.002), 0, 0.35]]
 	var notes := [86, 93, 88, 98, 91]
 	for i in notes.size():
-		parts.append([_fm(0.3, Harmony.hz(notes[i]), 3.5, 1.5, 10.0), Synth.seconds(0.035 * i), 0.5])
+		parts.append([_fm(0.3, _hz(notes[i]), 3.5, 1.5, 10.0), Synth.seconds(0.035 * i), 0.5])
 	return _mix(parts)
 
 
@@ -548,7 +587,7 @@ static func _zap_hum() -> PackedFloat32Array:
 	var low := 0.0
 	for i in n:
 		var t := i * Synth.INV_RATE
-		phase = fposmod(phase + Harmony.hz(45) * Synth.INV_RATE, 1.0)
+		phase = fposmod(phase + _hz(45) * Synth.INV_RATE, 1.0)
 		low += ((2.0 * phase - 1.0) - low) * 0.25
 		var crackle := rng.randf_range(-1.0, 1.0) if rng.randf() < 0.02 else 0.0
 		buf[i] = (low * (0.6 + 0.4 * sin(TAU * 60.0 * t)) + crackle * 0.8) * minf(1.0, t * 80.0) * exp(-t * 4.0)
@@ -583,14 +622,14 @@ static func _stage_fade() -> PackedFloat32Array:
 	for i in n:
 		var x := float(i) / n
 		air[i] *= (1.0 - x) * (1.0 - x)
-	return _mix([[air, 0, 1.0], [_tone(0.6, Harmony.hz(50), Harmony.hz(50), "sine", 4.0), 0, 0.35]], false, 0.6)
+	return _mix([[air, 0, 1.0], [_tone(0.6, _hz(50), _hz(50), "sine", 4.0), 0, 0.35]], false, 0.6)
 
 
 # A wind-up: two low minor-second pulses (D, Eb) with a rising noise, over in 0.4 s so
 # it never masks the hit it warns about.
 static func _boss_telegraph() -> PackedFloat32Array:
-	return _mix([[_tone(0.12, Harmony.hz(50), Harmony.hz(50), "square_dark", 10.0), 0, 0.9],
-		[_tone(0.18, Harmony.hz(51), Harmony.hz(52), "square_dark", 8.0), Synth.seconds(0.13), 1.0],
+	return _mix([[_tone(0.12, _hz(50), _hz(50), "square_dark", 10.0), 0, 0.9],
+		[_tone(0.18, _hz(51), _hz(52), "square_dark", 8.0), Synth.seconds(0.13), 1.0],
 		[_noise(0.35, 600.0, 3000.0, 3.0, 0.2), 0, 0.35]], true)
 
 

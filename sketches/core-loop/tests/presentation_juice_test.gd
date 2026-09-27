@@ -45,6 +45,7 @@ func _process(_delta: float) -> bool:
 			# the spawner answers plating_of, so it is cleared here; the plated policy has
 			# its own test, presentation_hitstop_test.
 			_juice.plating_of = Callable()
+			_juice.resolve_of = Callable()
 			_game.ctx.calm = true
 			_game.flow.press_start()
 			_game.flow.choose_class(0)

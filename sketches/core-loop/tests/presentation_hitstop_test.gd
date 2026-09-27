@@ -41,6 +41,7 @@ func _process(_delta: float) -> bool:
 				events.add_user_signal(name, args)
 		_game.presentation.wire_optional()
 		_juice.plating_of = func(enemy: Node3D) -> float: return float(enemy.get_meta("plating", 0.0))
+		_juice.resolve_of = Callable()
 		_game.ctx.calm = true
 		_game.flow.press_start()
 		_game.flow.choose_class(0)

@@ -42,6 +42,10 @@ var hit_stop_sink: Callable
 # Reads an enemy's plating. Defaults to ctx.spawner.plating_of when combat has it;
 # tests inject one. Empty means the fallback thresholds apply.
 var plating_of: Callable
+# Resolves a strike the way combat does (ctx.spawner.resolve: the plating the hit
+# actually met, its part included, and whether it broke through). Preferred over
+# plating_of, which reads the enemy's body plating and misses weak points.
+var resolve_of: Callable
 var shell := 1.0
 
 var _squash := 0.0
@@ -77,9 +81,19 @@ func setup(ctx_ref) -> void:
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): _reset())
+	# Arena entry and the arena retry restore state without a stage_entered.
+	for signal_name in ["stage_content_cleared", "boss_arena_entered"]:
+		if events.has_signal(signal_name):
+			var argc := 0
+			for info in events.get_signal_list():
+				if info["name"] == signal_name:
+					argc = (info["args"] as Array).size()
+			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
 	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
 		plating_of = Callable(ctx.spawner, "plating_of")
+	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
+		resolve_of = Callable(ctx.spawner, "resolve")
 	wire_optional()
 
 
@@ -206,9 +220,18 @@ func _on_dismounted(velocity: Vector3) -> void:
 # A strike is judged at the end of the frame, once combat has had its say: a hit on
 # plating that was not deflected in the same frame broke through.
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if kind == "synergy":
+		# A synergy's shockwave is the build's doing, not a landing: no stop, no weak-point read.
+		return
 	var direction := Vector3.FORWARD
 	if is_instance_valid(enemy) and enemy.is_inside_tree():
 		direction = enemy.global_position - player.ball_position()
+	if resolve_of.is_valid() and is_instance_valid(enemy):
+		# enemy_struck goes out before the damage, so this is the hit as combat met it.
+		var result: Dictionary = resolve_of.call(enemy, kind, force)
+		if float(result.get("plating", 0.0)) > 0.0 and bool(result.get("full", false)):
+			_break_through(direction, BREAK_STOP)
+		return
 	if plating_of.is_valid():
 		var plating := 0.0
 		if is_instance_valid(enemy):

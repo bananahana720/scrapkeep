@@ -19,6 +19,8 @@ static var _notes := {}
 static var _lock := Mutex.new()
 # The grid a score renders on. The bank sets it to bake a stinger at the boss tempo.
 static var score_step := Harmony.STEP
+# Semitones added to every pitched note of a score (live-key stingers).
+static var score_transpose := 0
 # Held sounds are long enough to fill a bar at the slower boss tempo.
 const HOLD := 90000
 
@@ -231,10 +233,10 @@ static func note(instrument: String, midi: int) -> PackedFloat32Array:
 			buf = talk(midi, seconds(1.1))
 		"fbass":
 			buf = fbass(midi, seconds(0.5))
-		"growl":
-			buf = growl(midi, "yoi", seconds(0.42))
-		"growl_wub":
-			buf = growl(midi, "wub", seconds(0.42))
+		"choir_ah":
+			buf = choir(midi, "ah", seconds(1.0))
+		"choir_oo":
+			buf = choir(midi, "oo", seconds(1.0))
 		_:
 			buf = keys(midi, Harmony.BAR)
 	_store(key, buf)
@@ -639,40 +641,37 @@ static func wob(midi: int, period: int, vowel := "wub") -> PackedFloat32Array:
 	return buf
 
 
-# A growl: saws and FM grit through two formants gliding between vowels, the
-# "talking" brostep bass. yoi glides o to i; wub glides u to a and back.
-static func growl(midi: int, vowel: String, n: int) -> PackedFloat32Array:
+# A wordless choir: three detuned saws (a small section) through two vocal formants,
+# "ah" (800 and 1150 Hz) or "ooh" (350 and 600 Hz), with a slow breath of attack and a
+# late vibrato. Warm, not bright: it sits between the pad and the lead.
+static func choir(midi: int, vowel: String, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
-	var phase := 0.0
-	var mod := 0.0
+	var p1 := 0.0
+	var p2 := 0.37
+	var p3 := 0.71
 	var l1 := 0.0
 	var b1 := 0.0
 	var l2 := 0.0
 	var b2 := 0.0
+	var f1 := 800.0 if vowel == "ah" else 350.0
+	var f2 := 1150.0 if vowel == "ah" else 600.0
+	var g1 := 2.0 * sin(PI * f1 * INV_RATE)
+	var g2 := 2.0 * sin(PI * f2 * INV_RATE)
 	for i in n:
 		var t := i * INV_RATE
-		var x := float(i) / n
-		mod += TAU * f * 2.0 * INV_RATE
-		phase = fposmod(phase + f * (1.0 + 0.02 * sin(mod)) * INV_RATE, 1.0)
-		var raw := (2.0 * phase - 1.0) + 0.5 * sin(mod * 0.5 + 3.0 * sin(TAU * phase))
-		var f1 := 0.0
-		var f2 := 0.0
-		if vowel == "yoi":
-			f1 = lerpf(450.0, 300.0, x)
-			f2 = lerpf(800.0, 2300.0, smoothstep(0.1, 0.7, x))
-		else:
-			var arc := sin(PI * x)
-			f1 = lerpf(320.0, 750.0, arc)
-			f2 = lerpf(700.0, 1150.0, arc)
-		var g1 := 2.0 * sin(PI * f1 * INV_RATE)
-		var g2 := 2.0 * sin(PI * f2 * INV_RATE)
+		var vib := 1.0 + 0.004 * sin(TAU * 5.2 * t) * minf(1.0, t * 2.5)
+		p1 = fposmod(p1 + f * vib * 1.004 * INV_RATE, 1.0)
+		p2 = fposmod(p2 + f * vib * 0.996 * INV_RATE, 1.0)
+		p3 = fposmod(p3 + f * vib * INV_RATE, 1.0)
+		var raw := (2.0 * p1 - 1.0) + (2.0 * p2 - 1.0) + (2.0 * p3 - 1.0)
 		l1 += g1 * b1
-		b1 += g1 * (raw - l1 - 0.15 * b1)
+		b1 += g1 * (raw - l1 - 0.12 * b1)
 		l2 += g2 * b2
-		b2 += g2 * (raw - l2 - 0.18 * b2)
-		buf[i] = tanh((b1 + 0.8 * b2 + 0.3 * l1) * 1.4) * minf(1.0, t * 300.0) * (1.0 - x * 0.35)
-	return declick(normalize(buf, 0.65), 32, 600)
+		b2 += g2 * (raw - l2 - 0.12 * b2)
+		var env := minf(1.0, t / 0.12) * (1.0 - 0.3 * float(i) / n)
+		buf[i] = (b1 + 0.7 * b2 + 0.15 * l1) * env
+	return declick(normalize(buf, 0.6), 32, 1200)
 
 
 # --- Scores ---------------------------------------------------------------------------
@@ -724,7 +723,7 @@ static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Arra
 		if instrument in DRUMS:
 			add_into(buf, drum(instrument), start, gain)
 			continue
-		var source := note(instrument, int(event[1]))
+		var source := note(instrument, int(event[1]) + score_transpose)
 		var length := mini(source.size(), int(event[2]) * step + seconds(0.25))
 		var release := mini(1200, length)
 		var count := mini(length, buf.size() - start)
