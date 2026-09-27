@@ -1070,7 +1070,7 @@ func objective_text() -> String:
 					if stunned():
 						return "He is stunned with his cockpit open: hit him now." + gap
 					if charging():
-						return "Out-clash the charge with a ram, or get out of its lane. Ram %d / bow plating %d." % [int(live_punch()), int(Rules.CLASH_PUNCH)]
+						return "Out-clash the charge with a ram, or get out of its lane. Ram %d / bow plating %d." % [int(live_punch()), int(hull_plating_now())]
 					return "Bait a charge into the rim wall, or out-clash it at ram punch %d." % int(Rules.CLASH_PUNCH) + gap
 	return ""
 
@@ -1112,7 +1112,7 @@ func ground_height_at(point: Vector3) -> float:
 # answers a ram, so its tint is decided by the ram punch alone.
 func tint_for(target, suggested: String) -> String:
 	if target.role == "hull" and charging():
-		return "amber" if ram_punch_now() >= Rules.CLASH_PUNCH else "slate"
+		return "amber" if ram_punch_now() >= hull_plating_now() else "slate"
 	return suggested
 
 
