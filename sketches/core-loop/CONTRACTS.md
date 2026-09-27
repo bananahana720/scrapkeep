@@ -80,7 +80,7 @@ Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `
 - `threat` (a multiplier) and `event_mix` (event id to weight).
 - `scrap_density` (a multiplier).
 - `beacon_seconds` and `beacon_radius`, used only by the unsealed presence path.
-- `warden_plating` (30, 60, 95), `warden_hp` (400, 700, 1000), `warden_lesson` (`plate`, `caps`, `magnet`) and `warden_hint` (the objective line's last sentence).
+- `warden_plating` (45, 80, 140), `warden_hp` (800, 2200, 7000), `warden_lesson` (`plate`, `caps`, `magnet`) and `warden_hint` (the objective line's last sentence).
 
 Every number there is a starting value; tuning edits `stage_defs.gd`, the heft constants in `run_state.gd` and the part catalogue.
 
@@ -103,7 +103,7 @@ These fields and methods are readable:
 
 - `class_def`, a `ClassDef` resource with `id`, `display_name`, `weapon_id`, `special_id`, `color` and `pitch`.
 - `run_id`, `stage`, `hp`, `max_hp`, `scrap` (the wallet), `mass`, `parts` (an array of part ids, one entry per stack), `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time` and `retries`.
-- `heft()`, which is `1 + mass/150 + 0.2 * parts.size()`.
+- `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()`, currently `1 + mass/450 + 0.2 * parts.size()`.
 - `heft_class()`, which returns 1 to 5 (classes start at heft 1.0, 1.5, 2.2, 3.2 and 4.6), and `heft_progress()`, the share of the way to the next class.
 - `gate_tier_bonus()`, which returns 0, 1 or 2 for 0, 1 or 2+ bonus cores. Build reads it when it builds its offers.
 - `RunState.roman(n)`, a class numeral for display.

@@ -34,13 +34,13 @@ He took the recommended option all four times. The skeptic lens flags this as re
 
 ## Rules
 
-- **Heft.** `heft = 1 + mass/150 + 0.2 * parts`, with classes I to V starting at 1.0, 1.5, 2.2, 3.2 and 4.6.
+- **Heft.** `heft = 1 + mass/450 + 0.2 * parts`, with classes I to V starting at 1.0, 1.5, 2.2, 3.2 and 4.6. The mass divisor was 150 until the wave-3b tuning pass, which moved it to 450 so a skipper leaves stage 3 near heft 3 (DESIGN-NOTES, Feedback loop).
   - Mass is separate from the scrap wallet. `add_scrap` raises both, `spend_scrap` lowers only the wallet, and `lose_scrap` lowers mass.
   - Heft never changes RigidBody mass, radius, torque or air control (TADR-008 line 40).
 - **Plating.** Punch at or above plating deals full damage. Below it, the hit deals 20% and emits `strike_deflected`.
   - Plated targets are tinted amber when your `punch_now()` beats their plating, and slate when it doesn't. The tint reads the same function the strike does.
 - **Warden.** One per stage, immobile, clamped to the beacon mast.
-  - Plating 30 / 60 / 95 and HP 400 / 700 / 1000 for stages 1 to 3.
+  - Plating 45 / 80 / 140 and HP 800 / 2200 / 7000 for stages 1 to 3, from the wave-3b tuning pass (the starting values were 30 / 60 / 95 and 400 / 700 / 1000).
   - Every 6 s it telegraphs for 2 s, then pulses you straight up by 10 m/s. The pulse never pushes you sideways and never pins you.
   - Each stage adds one lesson: stage 1 is plain plating, stage 2 adds vent caps that stomps and slams go through, and stage 3 adds a magnet that you can shoot to drop its plating to 0 for 3 s.
   - Breaking it fires `beacon_unsealed` and opens the gates, wherever the ball is. There is no presence charge while sealed.
