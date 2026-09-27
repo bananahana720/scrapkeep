@@ -165,12 +165,16 @@ func discover(id: String, at: Vector3) -> void:
 
 
 # What the director tests against: the class, each habit's share of lately, and W3's
-# branch tags once the upgrade tree lands (empty until then).
+# upgrade-tree branch tags (upgrade_tree.gd branch_tags(), in pick order).
 func build_read() -> Dictionary:
 	var class_id := ""
 	if ctx.run.class_def != null:
 		class_id = String(ctx.run.class_def.id)
-	return {"class": class_id, "habits": habits.shares(), "branch_tags": []}
+	var tags: Array = []
+	var tree = ctx.player.get("tree")
+	if tree != null and tree.has_method("branch_tags"):
+		tags = Array(tree.branch_tags())
+	return {"class": class_id, "habits": habits.shares(), "branch_tags": tags}
 
 
 func _physics_process(delta: float) -> void:

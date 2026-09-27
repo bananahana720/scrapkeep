@@ -44,16 +44,22 @@ static func arc_points(origin: Vector3, landing: Vector3) -> PackedVector3Array:
 	return points
 
 
-func throw(origin: Vector3, landing: Vector3, damage: float, radius: float, fuse: float, crit: bool) -> Dictionary:
+# reach is how close (hull to charge) an enemy must come to set it off; born is the
+# caller's clock, for charges that grow while they wait; a riding charge (Hitchhiker)
+# sticks to the first enemy it touches and goes off on its fuse.
+func throw(origin: Vector3, landing: Vector3, damage: float, radius: float, fuse: float, crit: bool,
+		reach := CONTACT_REACH, born := 0.0, ride := false) -> Dictionary:
 	var flight := flight_time(origin, landing)
 	return _add({"origin": origin, "velocity": launch_velocity(origin, landing, flight), "t": 0.0,
 		"flight": flight, "pos": origin, "landing": landing, "stuck": false, "fuse": fuse, "arm": 0.0,
-		"damage": damage, "radius": radius, "crit": crit, "mini": false})
+		"damage": damage, "radius": radius, "crit": crit, "mini": false, "reach": reach, "born": born,
+		"ride": ride, "rider": null})
 
 
-func drop(at: Vector3, damage: float, radius: float, fuse: float, arm: float) -> Dictionary:
+func drop(at: Vector3, damage: float, radius: float, fuse: float, arm: float, reach := CONTACT_REACH, born := 0.0) -> Dictionary:
 	return _add({"origin": at, "velocity": Vector3.ZERO, "t": 0.0, "flight": 0.0, "pos": at, "landing": at,
-		"stuck": true, "fuse": fuse, "arm": arm, "damage": damage, "radius": radius, "crit": false, "mini": true})
+		"stuck": true, "fuse": fuse, "arm": arm, "damage": damage, "radius": radius, "crit": false, "mini": true,
+		"reach": reach, "born": born, "ride": false, "rider": null})
 
 
 func live(mini := false) -> Array:
@@ -66,11 +72,21 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Arr
 	for charge in charges:
 		charge["fuse"] -= delta
 		charge["arm"] -= delta
-		if not charge["stuck"]:
+		var rider = charge.get("rider")
+		if rider != null and is_instance_valid(rider) and not rider.is_dead():
+			charge["pos"] = rider.global_position + Vector3.UP * 0.6
+		elif not charge["stuck"]:
 			_fly(charge, delta, space)
 		(charge["node"] as Node3D).global_position = charge["pos"]
-		if charge["fuse"] <= 0.0 or (charge["arm"] <= 0.0 and _touching(charge, enemies)):
+		if charge["fuse"] <= 0.0:
 			gone.append(charge)
+		elif charge["arm"] <= 0.0 and rider == null:
+			var touched = _touching(charge, enemies)
+			if touched != null and charge.get("ride", false):
+				charge["rider"] = touched
+				charge["stuck"] = true
+			elif touched != null:
+				gone.append(charge)
 	for charge in gone:
 		take(charge)
 	return gone
@@ -106,14 +122,16 @@ func _fly(charge: Dictionary, delta: float, space: PhysicsDirectSpaceState3D) ->
 		charge["pos"] = after
 
 
-func _touching(charge: Dictionary, enemies: Array) -> bool:
+# The first live enemy within the charge's reach, or null.
+func _touching(charge: Dictionary, enemies: Array):
+	var reach: float = charge.get("reach", CONTACT_REACH)
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var hull: float = float(enemy.get("radius")) if enemy.get("radius") != null else 1.0
-		if (enemy.global_position - charge["pos"]).length() - hull <= CONTACT_REACH:
-			return true
-	return false
+		if (enemy.global_position - charge["pos"]).length() - hull <= reach:
+			return enemy
+	return null
 
 
 func _add(charge: Dictionary) -> Dictionary:

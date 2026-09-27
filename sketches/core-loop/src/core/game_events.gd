@@ -92,6 +92,10 @@ signal blink_used(from: Vector3, to: Vector3)
 signal arc_slammed(at: Vector3, faces: int)
 signal skid_smashed(at: Vector3, hits: int)
 signal demo_slammed(at: Vector3)
+# The upgrade tree (upgrade_tree.gd, emitted by the player's tree): a pick opened with
+# its two node ids, and a pick taken.
+signal tree_offered(class_id: String, depth: int, choices: Array)
+signal tree_picked(class_id: String, node_id: String, depth: int)
 
 # v2 W7 enemies: the counters' holds and tenacity, pack arrivals, and the ancients'
 # facts. Combat emits every one (src/combat/holds.gd, fleet.gd and the units). kind is

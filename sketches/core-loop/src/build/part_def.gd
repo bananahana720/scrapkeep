@@ -48,6 +48,36 @@ const TAGS := ["frost", "arc", "kinetic", "split", "spiral", "chain", "anchor", 
 @export var kill_scrap := 1.0
 @export var max_hp_bonus := 0.0
 
+# v2 W4 loot (DESIGN-V2 section 7, I2 section 4). trigger is "" (passive) or one of the
+# twelve Triggers.NAMES. proc_coeff multiplies the source's base_proc. stack_rule says
+# how copies add: linear, hyperbolic (1 - 1/(1 + a x), for anything that could reach
+# 100%) or capped (copies past stack_cap add nothing). icon_category is the cat_ family
+# glyph; element is the el_ glyph ("" for none).
+const STACK_RULES := ["linear", "hyperbolic", "capped"]
+const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", "transform"]
+@export var trigger := ""
+@export var proc_coeff := 1.0
+@export var stack_rule := "linear"
+@export var stack_cap := 0.0
+@export var icon_category := ""
+@export var element := ""
+# What the trigger (or, passive, the held part) does: {"do": effect id, ...numbers}.
+# The effect ids are item_effects.gd's closed table.
+@export var effect := {}
+# Ability slot to extra max_charges per copy: weapon, movement, special, smash.
+@export var charges := {}
+# The seam this part needs from another module ("spawner.extend_cloak"); a part whose
+# seam is missing is never offered, so no part is ever dead weight.
+@export var needs := ""
+# Sold only by Moss (a charge cell), never rolled by a gate, fabricator or vault.
+@export var shop_only := false
+
+
+# The cat_ glyph a row gets from its family when it names none (I2: weapon is damage,
+# pattern is transform, stat is defense).
+const ICON_FOR_FAMILY := {"weapon": "damage", "pattern": "transform", "mobility": "mobility", "stat": "defense",
+	"class": "charge", "milestone": "transform", "utility": "utility", "charge": "charge"}
+
 
 static func from_row(row_id: String, row: Dictionary) -> Resource:
 	var def: Resource = load("res://src/build/part_def.gd").new()
@@ -69,6 +99,16 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.magnet = row.get("magnet", 1.0)
 	def.kill_scrap = row.get("kill_scrap", 1.0)
 	def.max_hp_bonus = row.get("max_hp_bonus", 0.0)
+	def.trigger = row.get("trigger", "")
+	def.proc_coeff = row.get("proc", 1.0)
+	def.stack_rule = row.get("stack", "linear")
+	def.stack_cap = row.get("cap", 0.0)
+	def.icon_category = row.get("icon", ICON_FOR_FAMILY.get(def.family, "utility"))
+	def.element = row.get("element", "")
+	def.effect = row.get("effect", {})
+	def.charges = row.get("charges", {})
+	def.needs = row.get("needs", "")
+	def.shop_only = row.get("shop_only", false)
 	return def
 
 
@@ -76,9 +116,30 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 # a common part may be this plain (DEMO-SPEC catalogue rule).
 func percentage_only() -> bool:
 	return punch <= 0.0 and patterns.is_empty() and elements.is_empty() and magnet == 1.0 and kill_scrap == 1.0 \
-		and max_hp_bonus == 0.0
+		and max_hp_bonus == 0.0 and trigger == "" and effect.is_empty() and charges.is_empty()
 
 
 # A gate pair must hold at least one part that raises punch or transforms a pattern.
 func hits_harder() -> bool:
 	return punch > 0.0 or not patterns.is_empty()
+
+
+# Copies of this part to the value its stack rule gives: linear adds per copy,
+# hyperbolic approaches 1 and never reaches it, capped stops at stack_cap.
+func stacked(per_copy: float, copies: int) -> float:
+	return Stacking.value(stack_rule, per_copy, copies, stack_cap)
+
+
+# The three stacking curves as one pure function, so the catalogue, the sheet and the
+# fuzzer all read the same numbers. For linear and capped rows stack_cap counts copies
+# (0 means no ceiling on a linear row); for a hyperbolic row it is the value ceiling,
+# below 1, that the curve may never pass.
+class Stacking:
+	static func value(rule: String, per_copy: float, copies: int, cap: float) -> float:
+		if copies <= 0:
+			return 0.0
+		if rule == "hyperbolic":
+			var v := 1.0 - 1.0 / (1.0 + per_copy * copies)
+			return minf(v, cap) if cap > 0.0 else v
+		var counted := mini(copies, int(cap)) if cap >= 1.0 else copies
+		return per_copy * counted

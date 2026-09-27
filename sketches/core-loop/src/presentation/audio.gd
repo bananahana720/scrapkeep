@@ -57,7 +57,7 @@ const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampe
 # v2 W3 characters: the class-ability facts, heard through their event rows.
 const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
 	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
-	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed"]
+	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked"]
 
 var ctx
 var engine: MusicEngine

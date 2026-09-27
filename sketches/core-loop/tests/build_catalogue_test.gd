@@ -4,6 +4,11 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
+const Items := preload("res://src/build/items.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
+const ItemEffects := preload("res://src/build/item_effects.gd")
+const Triggers := preload("res://src/build/triggers.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
 # The catalogue change request (DEMO-SPEC, reconciled.json, owner B): every row has a
 # verb, a punch value and one or two known tags; only common rows may be
@@ -15,6 +20,14 @@ const PartDef := preload("res://src/build/part_def.gd")
 # and over 50 seeds every stage-2 gate pair for a build with no pattern transformer
 # offers Spiral Wave, Cross Split or Chain Arc, while a build that holds one, or any
 # other stage, gets exactly the pair roll() gives; build opens stage 2's gates that way.
+#
+# v2 W4 loot (I2 section 4) extends it: every row's trigger is one of the twelve kinds
+# or passive, its stack rule is known and its cap fits the rule, every number is
+# finite, every description is at most eight words, every icon category, trigger and
+# element glyph is a real Icons id, every effect id is in item_effects' closed table,
+# the whole 61-item table is in the pool, the class items are offered only to their
+# class, a part waiting on a missing seam is never offered, generated recipes rebuild
+# identically from their id, and the rarity weights hold.
 
 var _game
 var _failures := 0
@@ -49,6 +62,12 @@ func _physics_process(_delta: float) -> bool:
 	_check_sources()
 	_check_vault()
 	_check_label()
+	_check_loot_rows()
+	_check_table_present()
+	_check_class_gating()
+	_check_needs_gate()
+	_check_generator()
+	_check_rarity_weights()
 	print("build_catalogue_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -135,16 +154,166 @@ func _check_label() -> void:
 
 # Parts per tag across the whole catalogue. B4 moved kinetic off Arc Coil and Runner
 # Overclock (8 -> 6 carriers), which brings Wrecking Ball under the 60% discovery cap.
-const TAG_COUNTS := {"frost": 3, "arc": 4, "kinetic": 6, "split": 2, "spiral": 3, "chain": 3, "anchor": 5,
-	"speed": 8, "mass": 7}
+# v2 W4 re-pinned it for the 86-row pool (the first 28, the 58 new rows) plus Moss's
+# four cells; kinetic keeps to its old share (6 of 41 tags, 15%) or below 25%, so
+# Wrecking Ball stays under its cap as the pool grows.
+const TAG_COUNTS := {"frost": 5, "arc": 14, "kinetic": 19, "split": 5, "spiral": 7, "chain": 9, "anchor": 17,
+	"speed": 31, "mass": 33}
+const KINETIC_SHARE_MAX := 0.25
 
 
 func _check_tag_counts() -> void:
 	var counts := {}
+	var total := 0
 	for part_id in Parts.ids():
 		for tag in Parts.tags_of(part_id):
 			counts[tag] = counts.get(tag, 0) + 1
-	_report("tag table", counts == TAG_COUNTS, "parts per tag %s (pinned %s)" % [counts, TAG_COUNTS])
+			total += 1
+	var share: float = counts.get("kinetic", 0) / float(maxi(1, total))
+	_report("tag table", counts == TAG_COUNTS and share <= KINETIC_SHARE_MAX,
+		"parts per tag %s (pinned %s); kinetic share %.0f%% (at most %.0f%%)" % [counts, TAG_COUNTS, share * 100.0, KINETIC_SHARE_MAX * 100.0])
+
+
+# I2 section 4's invariants, row by row.
+func _check_loot_rows() -> void:
+	var bad: Array = []
+	for part_id in Parts.ids():
+		bad.append_array(_row_problems(part_id, Parts.def(part_id)))
+	_report("loot row invariants", bad.is_empty(),
+		"%d rows: trigger in the closed twelve or passive, stack rule and cap fit, numbers finite, text at most 8 words, cat_/trg_/el_ glyphs are Icons ids, effect ids known; problems %s"
+			% [Parts.ids().size(), bad])
+
+
+func _row_problems(part_id: String, d: Resource) -> Array:
+	var out: Array = []
+	if not Triggers.is_trigger(d.trigger):
+		out.append("%s trigger %s" % [part_id, d.trigger])
+	if not d.stack_rule in PartDef.STACK_RULES:
+		out.append("%s stack %s" % [part_id, d.stack_rule])
+	if d.stack_rule == "hyperbolic" and not (d.stack_cap > 0.0 and d.stack_cap < 1.0):
+		out.append("%s hyperbolic cap %s" % [part_id, d.stack_cap])
+	if d.stack_rule == "capped" and d.stack_cap < 1.0:
+		out.append("%s capped cap %s" % [part_id, d.stack_cap])
+	for value in [d.punch, d.magnet, d.kill_scrap, d.proc_coeff, d.stack_cap, d.max_hp_bonus, d.cooldown_scale]:
+		if not is_finite(float(value)):
+			out.append("%s non-finite" % part_id)
+	for key in d.mods:
+		if not is_finite(float(d.mods[key])):
+			out.append("%s mod %s" % [part_id, key])
+	for key in d.effect:
+		if typeof(d.effect[key]) in [TYPE_FLOAT, TYPE_INT] and not is_finite(float(d.effect[key])):
+			out.append("%s effect %s" % [part_id, key])
+	if ItemGen.word_count(d.text) > ItemGen.MAX_WORDS:
+		out.append("%s text '%s'" % [part_id, d.text])
+	if not d.icon_category in PartDef.ICON_CATEGORIES or not ("cat_" + d.icon_category) in Icons.ids():
+		out.append("%s icon %s" % [part_id, d.icon_category])
+	if d.trigger != "" and not Triggers.icon(d.trigger) in Icons.ids():
+		out.append("%s trigger icon" % part_id)
+	if d.element != "" and not ("el_" + d.element) in Icons.ids():
+		out.append("%s element %s" % [part_id, d.element])
+	var effect_id: String = d.effect.get("do", "")
+	if effect_id != "" and not ItemEffects.EFFECTS.has(effect_id):
+		out.append("%s effect %s" % [part_id, effect_id])
+	if d.trigger != "" and effect_id == "":
+		out.append("%s trigger without effect" % part_id)
+	if d.trigger != "" and effect_id in ItemEffects.PASSIVE_EFFECTS:
+		out.append("%s passive effect on a trigger" % part_id)
+	for slot in d.charges:
+		if not slot in ItemEffects.SLOTS:
+			out.append("%s charge slot %s" % [part_id, slot])
+	return out
+
+
+func _check_table_present() -> void:
+	var missing: Array = []
+	for part_id in Items.TABLE:
+		if not Parts.has(part_id):
+			missing.append(part_id)
+	for part_id in Parts.PATTERN_PARTS:
+		if not Parts.has(part_id):
+			missing.append(part_id)
+	var table := Items.TABLE.size() + Parts.PATTERN_PARTS.size()
+	var bowling: int = Items.TABLE.values().filter(func(r): return r.get("bwl", false)).size()
+	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
+	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
+	_report("61-item table in the pool", missing.is_empty() and table == 61 and bowling == 8 and happy == 5 and charge == 8,
+		"%d table items (58 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
+			% [table, Parts.ids().size(), bowling, happy, charge, missing])
+
+
+func _check_class_gating() -> void:
+	var wrong: Array = []
+	var gated := {"glide_vane": Items.KEST, "jet_vent": Items.KEST, "sprint_cell": Items.RIVET, "cloak_flask": Items.KEST,
+		"grapple_coil": Items.SABLE}
+	var classes := [Items.SABLE, Items.RIVET, Items.KEST]
+	for part_id in gated:
+		var rarity: String = Parts.def(part_id).rarity
+		for class_id in classes:
+			var offered: bool = part_id in Parts.offer_pool(class_id, [rarity])
+			if offered != (class_id == gated[part_id]):
+				wrong.append("%s to %s" % [part_id, class_id])
+	var anchor_class: String = Parts.def("anchor_spring").class_id
+	_report("class items offered only to their class", wrong.is_empty() and anchor_class == Items.SABLE,
+		"glide_vane, jet_vent, cloak_flask (Kest), sprint_cell (Rivet), grapple_coil and anchor_spring (Sable); wrong %s" % [wrong])
+
+
+func _check_needs_gate() -> void:
+	var saved: Dictionary = Parts.seams.duplicate()
+	Parts.seams = {}
+	var waiting: Array = Parts.ids().filter(func(id): return Parts.def(id).needs != "")
+	var leaked: Array = []
+	for part_id in waiting:
+		var d: Resource = Parts.def(part_id)
+		var class_id: String = d.class_id if d.class_id != "" else Items.SABLE
+		if part_id in Parts.offer_pool(class_id, [d.rarity]):
+			leaked.append(part_id)
+	Parts.seams = {"spawner.extend_cloak": true}
+	var opened: bool = "feedback_loop" in Parts.offer_pool(Items.KEST, ["rare"])
+	Parts.seams = saved
+	_report("parts waiting on a seam are never offered", leaked.is_empty() and waiting.size() == 5 and opened,
+		"%d parts wait on a seam %s; offered without it %s; feedback_loop offered once spawner.extend_cloak exists: %s"
+			% [waiting.size(), waiting, leaked, opened])
+
+
+func _check_generator() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 61
+	var bad: Array = []
+	var bases := {}
+	var triggers := {}
+	for i in 240:
+		var rarity: String = ItemGen.RARITIES[i % 4]
+		var id := ItemGen.roll_id(rng, rarity)
+		var d: Resource = Parts.def(id)
+		var again: Dictionary = ItemGen.generated_row(id)
+		bases[ItemGen.parse(id)["base"]] = true
+		triggers[d.trigger] = true
+		if d == null or d.rarity != rarity or d.display_name.split(" ").size() != 2 or again["text"] != d.text:
+			bad.append(id)
+			continue
+		bad.append_array(_row_problems(id, d))
+		if rarity != "common" and d.percentage_only():
+			bad.append("%s plain" % id)
+	_report("generator", bad.is_empty() and bases.size() == ItemGen.GENERATED_BASES.size() and triggers.size() == 12,
+		"240 seeded recipes over %d bases and %d triggers: two-word names, rarity kept, same row rebuilt from the id, every invariant; problems %s"
+			% [bases.size(), triggers.size(), bad])
+
+
+func _check_rarity_weights() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 97
+	var counts := {}
+	var n := 20000
+	for i in n:
+		var r := ItemGen.pick_rarity(rng, ItemGen.RARITIES)
+		counts[r] = counts.get(r, 0) + 1
+	var off: Array = []
+	for r in ItemGen.RARITY_WEIGHTS:
+		var want: float = ItemGen.RARITY_WEIGHTS[r] / 100.0
+		var got: float = counts.get(r, 0) / float(n)
+		if absf(got - want) > 0.015:
+			off.append("%s %.3f vs %.2f" % [r, got, want])
+	_report("rarity weights", off.is_empty(), "20000 draws over all four rarities %s against 60/27/10/3; off %s" % [counts, off])
 
 
 func _is_pattern(key: String) -> bool:

@@ -574,6 +574,100 @@ W5's first task is the primer's audio board (the plan's Pacing addendum, TRACKIN
 15. **The board.** `tools/audio_board.gd` drives `render()` between calls on one timeline, as `audio.gd` does. It mixes at `audio.gd`'s bus levels (Music -3, SFX 0, UI -4 dB) with its priority trims and ducks, and reads sounds from the event rows and W2's threat rows. It matches each file to -14 LUFS (BS.1770) under a 1.5 ms look-ahead limiter at -1 dBFS. On file 01 its loudness agreed with ffmpeg's ebur128 (-14.0 LUFS, sample peak -1.04 dBFS). File 08 runs 24 bars (34 s) rather than 30 s, so the motif's second rotation arrives after the lift, in Eb. Demand: the primer gate. Serves 7.
 16. **Not on the board.** The gorge's layers by height (SOUND-STORY W5 must). The ancients' own arrival cue. The gauge-charge and charge-pip cues. W3's other `sound_next` ids. The wiring of these layers to game facts in `audio.gd` (threat_rose to `set_fleet_ticks`, the bay to `set_lounge`, a vent to `set_reactor_pedal`, the class row to `set_class_motif`). Demand: the Wave 3 build. Serves 7.
 
+## v2 W4 loot and the Moss shop economy
+
+W4 answers entry 7's "how could I get more powerful" and "what am I searching for" (DESIGN-V2 sections 5, 7 and 12; I2; PROGRESSION section 1). The numbers are starting values for Andrew's play. The principles are entry 6's (1 momentum, 2 restart, 3 layers, 4 growth, 5 classes, 6 music, 7 harmonizing) and 11 (readability and standardized systems).
+
+1. **One closed trigger vocabulary, read from facts already on the bus.** The twelve kinds live in `triggers.gd`. Every source is a published signal or build's own pickup and speed-tier read, so W4 changed no combat or movement code. Demand: the Warden and events, where the procs land. Serves 11: no hidden second pipeline.
+2. **A kind fires at most once per commitment.** The first guard only refused a kind that was resolving. `item_trigger_test`'s storm case (every consumer posts all twelve kinds) resolved 67 commitments, with one kind 11 times. It ended, but that broke I2's "no trigger fires twice per commitment". The guard now refuses a kind already queued or resolved in the pass. One burst that kills five is one `on_kill` in that pass. Demand: events, where crowds die together. Serves 11 and Andrew's "no unforeseen bugs or hidden glitches".
+3. **Build never feeds itself.** Its strikes (synergies, elements, items) never post `on_hit`, and the `synergy` strike kind has proc 0. That is two guards, because one would be luck. Demand: none. Serves 11.
+4. **A generated item's id is its recipe.** `gen:<base>:<rarity>:<element>:<trigger>` rebuilds the same part everywhere: a retry, the run log, the fuzzer. Nothing about a generated part is hidden state. A quarter of offer slots are generated recipes; the rest are authored rows. Demand: the gates after each Warden. Serves 4 and Andrew's "procedurally generated loot".
+5. **One stack-cap unit per rule.** I2's cap column mixed copies ("3") with values ("40%"). For linear and capped rows the cap counts copies; for hyperbolic rows it is the value ceiling below 1. `PartDef.Stacking.value` is the one function. Demand: none. Serves 11.
+6. **Charges are parts.** Cap Relay, Sprint Cell and the rest raise `AbilityState.max_charges` through `set_max_charges`. So do Moss's cells, which are shop-only parts, so a retry restores them and each adds heft like any bolted part. A slot's ceiling is 4. A raised cap arrives stocked, which is what "Second cell's in" promises. The 0.4 s floor is AbilityState's own. Demand: the Warden and Brindle, where a stockpiled special is the plan. Serves 4 and Andrew's "store charges ... and start stockpiling".
+7. **A part that needs another unit's seam is never offered.** Five rows wait: `fan_spread` and `helix_drill` (combat has no transformer rows for them), `feedback_loop` (no `extend_cloak`), and `anchor_spring` and `vault_battery` (the vault kick is not an AbilityState slot). Each names its seam in `needs`, and `Parts.seams` opens it the moment the module answers. The alternative was a part that does nothing. Demand: none. Serves 11. The seams are in the handback's requested changes.
+8. **I2 adaptations, kept to I2's intent with a build-owned effect.**
+   - `quick_spool` is passive (a timed cooldown cut is just a cooldown cut).
+   - `slipstream` is a speed surge on tier-up plus 15% air control. Turn rate is not a tuning key.
+   - `crush_guard` takes about 10% less damage, hyperbolic to 30%. The would-crush threshold is combat's.
+   - `brace_frame`, `rebound_skin` and `deflect_plate` heal back part of a hit already taken, so none can undo a killing blow.
+   - `ballast_drum` bolts on 40 scrap of mass once, on pickup.
+   - `beacon_lamp` pings the beacon every 6 s and `echo_locator` the nearest vault every 12 s, because world's event positions are not a build seam.
+   - `ring_wave` is a build-drawn pulse on each hit.
+   - `glide_vane` carries 3 punch, like the older class rows, so no uncommon row is plain.
+   - `sprint_cell`, `cloak_flask`, `grapple_coil` and `vault_battery` are class-gated, like `glide_vane`, `anchor_spring` and `jet_vent`, because they do nothing for another class.
+
+   Demand: as each row's trigger. Serves 5 and 11.
+9. **Rarity is weighted, and a stage rarely repeats itself.** Each slot draws its rarity 60/27/10/3 within the source's allowed rarities, then down-weights a part already offered this stage. The pattern guarantee and "every pair hits harder" hold. `build_catalogue_test` checks both over 50 seeds. Demand: the gates. Serves 4.
+10. **Red is only for what hurts you.** Rare-plus gates, fabricator gems and accreted chunks were HAZARD red. They are now amber, and a rare-plus topper has a mint heart (DESIGN-V2 section 11). Demand: the gates. Serves 11.
+11. **A gate reads without words.** Beside the topper it wears three billboarded glyphs from the Icons ids: family (`cat_`), trigger (`trg_`) and element (`el_`). It pulses when it completes a synergy. The prompt passes `set_parts(name, verb and effect and star line, obj_gate)`, so at range it shows only the name. Fabricators do the same with `obj_fabricator`. Demand: the gates and fabricators. Serves 11 and entry 7's "what am I searching for".
+12. **The difficulty clock is data W1 draws, on the director's schedule.** `clock_record()` carries the run clock, the stage's filling bar with its tier and pause flag, and the par ghost. Build may not load world's files, so `build_clock_test` compares the two schedules and fails if they drift. The bar pauses in Moss's bay; world's director still needs to read `clock_paused()` for the spawns to pause too (requested). Demand: every stage. Serves 1 (the calm is real) and 4.
+13. **Par and Scrapless are opt-in and tagged.** `set_modifiers` applies at run start. The tags go on `ctx.run` meta and `run_tags()`; the run log line is a requested spine change. The par ghost reads the best Warden break from `runs.ndjson`, so it needs no new save file. Scrapless takes nothing from gates, vaults or events, but a gate still launches you. Discovery bursts still grant scrap through flow, which is the spine's. Demand: the Warden (the par split) and every gate (Scrapless). Serves 2 (self-challenge without menus mid-run).
+14. **Moss's shop is an economy with verbs, not a scene.** W6's bay calls `enter()` and `leave()`, and W1's shop UI reads records and calls verbs. Every verb answers with a result record carrying Moss's bark, so the UI, the babble and the tests read one answer. Prices are the fabricator's price rule times Fast Hands. The reroll is once per visit, rising 1.5 times per visit. Cells are at most two per slot, and each costs 1.6 times the last. Sell-back returns half the current price and lowers heft by the part's 0.2. Demand: the lull after each Warden. Serves 4 and Andrew's "some player decision be made".
+15. **The heft lock is the growth goal.** The hook's lock is the heft class at entry plus one, drawn with `res_heft`. Buying from the shelf adds heft, so a player can buy their way to the relent inside one visit. Selling back can put them under it again. Demand: the lull. Serves 4.
+16. **The conversation loop is a state machine over SOUND-STORY section 8's lines.** Its states are six beats, then the restart line, then fresh variations. A visit never repeats a variation until it has used them all, and class lines are extra choices. Each beat record carries the babble root and grumble from section 8's table, so W5 reads one source. `shop_lines_test` fails if any line is not in SOUND-STORY word for word, runs past 12 words, or names a potion, a traveller, a wizard or a weaker seller. Demand: the lull. Serves 6 and 7.
+17. **Sell-back without a run mutator.** `run_state` has no `remove_part`. Until the spine adds one, the shop removes the part the way that mutator would. It never sells a pattern part (`welded`), because combat rebuilds patterns only on `part_gained` and would keep firing the sold pattern until the next stage. Demand: the lull. Serves 11 (no hidden glitch). The mutator is requested.
+18. **Shop and item facts are rows, not new signals.** `LOOT_ROWS` in event_kinds' v2 W4 block gives each shop and item fact its colour, shape, stand-in sound and the `sound_next` W5 is to bake. A new bus signal would fail `presentation_sfx_test` ("every signal heard") until presentation connects it, and presentation is not W4's. Entering and leaving the bay reuse the mount and slingshot cues. A refusal is one dry bone-coloured interruption, never rust. Demand: the lull. Serves 6 and 7.
+19. **Callback: Strike, Spare, Turkey.** This is bowling scoring as `build` codex entries (PROGRESSION section 6, callback 2), riding the pin rule and the rebound. A Strike is three enemies a pin chain takes down within 1.2 s. A Spare is an enemy that bounced you, taken down within 2 s. A Turkey is three Strikes within 4 s, Strike Pocket's window. `lanes.gd` scores them and the codex names them only after they happen. Test 1: three down from one knock is a readable feat without the name. Test 2: found in play, named in the codex. Test 3: pins are momentum. Demand: events and the Warden's adds.
+20. **Callback: "Too heavy for you".** Moss's heft lock (DESIGN-V2 section 12, STORY-THREADS C3) rides the heft class. The relent writes the `build` codex entry. The joke and the growth goal are one mechanic. Demand: the lull.
+21. **Callback: Moss notices what you neglect (C14, in-run).** If you leave the bay without buying and then die holding a shelf part's worth of scrap, his next greeting in this run is the `neglected` line. It rides the run's own death and the last visit's prices, with no save file. Test 1: a fair nudge to spend. Test 2: heard only by a player who hoarded and died. Test 3: it never stops anything. Demand: the lull.
+22. **The bowling rows are named for the lane.** Pin Setter, Ten Pin, Gutter Guard, Re-Rack, Strike Pocket and Domino Wire keep I2's names. The effects match the words: a smash opens a pin window, a rebound off a heavy is the gutter bounce, landing near a pin re-racks it. Demand: events. Serves 4.
+23. **The standardization is structural.** `build_catalogue_test` checks I2 section 4's invariants on all 86 authored rows and 240 generated recipes. `item_fuzz_smoke_test` runs 8 seeds x 20 s of the fuzzer in a child process at `--fixed-fps 90` (about 40 s). `tools/item_fuzz.gd` is the 200 x 90 s run; its anomalies go to HAPPY-ACCIDENTS.md for KEEP or KILL. Demand: none. Serves 11 and Andrew's "exploits can be fun too if they're accidental in a fun way".
+
+
+## v2 W3 trees
+
+The upgrade trees Andrew chose at the primer gate (DESIGN-V2 §15). Four picks per run and 16 end builds per pilot. Principles are entry 6's: 1 momentum, 2 restart, 3 layers, 4 growth, 5 classes, 6 music, 7 harmonizing.
+
+1. **Each tree's two halves are the pilot's two identities.** Every build keeps one of them whole.
+   - Sable: Cannonball (boom and bounce) against Beachhead (take point and turret).
+   - Rivet: Gunline (run and gun) against Juggernaut (unstoppable).
+   - Kest: Trapper (set up and burst) against Ghost (hide by moving).
+   - Every tree touches all four keys.
+   - Every depth-4 node changes how a key plays. There are 3 slot swaps (Crater Slam, Point Blank, Sticky Rain), proc chains and new modes such as Air Turret, Nightfall, Perpetual Motion, Sentry Post and Hitchhiker.
+   - Demand: every fight. Serves 5 and 4.
+2. **A node is data; variants plug in by table.**
+   - A node carries ops (swap, knob, proc, pattern, charges, cooldown).
+   - A variant is one `ABILITIES` row, plus one entry in its slot's dispatch table (`_specials`, `_actions`, `_smashes`) when it plays differently.
+   - Movement and combat no longer branch on a literal ability id. This closes the primer board's flag about fourteen places that did.
+   - Demand: mastery's alternate branches later. Serves 7.
+3. **A pick lands on the live kit.**
+   - A swap keeps the slot's stockpile cap and cooldown scale, and a stockpile pick adds one charge on top of items.
+   - The saved WIP re-fitted the whole ability state on every pick, which would have erased a charge upgrade bought at Moss's shelf in the same visit.
+   - Build's charge upgrades must add too (CONTRACTS, Upgrade trees).
+   - Demand: the workshop. Serves 4.
+4. **No build can chain itself.**
+   - Every proc has a gap, floored at 0.4 s.
+   - `UpgradeTree.problems` walks each of the 48 builds' procs, from trigger to the facts its action causes, and fails any loop.
+   - Timed knobs (Anchor Storm, Fortress, Carpet Bomb, the special echo) share the floor.
+   - Across all 48 builds the lowest repeat is 0.40 s (Rampage's and Dust Devil's gaps). DESIGN-V2 §6 risk 4.
+   - Demand: dense fights. Serves 1.
+5. **Balance against the tuned difficulty.** Three nodes were pulled back from the WIP:
+   - Ghost leaves enemies 30% of their sight (the base cloak leaves 60%). The WIP's 0% hid Kest from depth 1, because every detonation refreshes the cloak and she throws every 0.6 s.
+   - Anchor Storm pulses every 1.5 s at a 0.2 discharge: up to 3 targets for 25 each. At 1 s and 0.25 it added up to 112 DPS on top of the caster's 60.
+   - Bounce Battery waits 3 s between refills.
+   - Left for Andrew's play, the sharpest of the rest:
+     - Perpetual Motion makes crowd control slide off whenever Rivet is fast.
+     - Air Turret gives Sable the turret's 99 DPS instead of the caster's 60 while airborne.
+     - The special echo (Twin Discharge, Vortex) repeats a release at 60%.
+   - Demand: every Warden. Serves 1 and 4. Strains the tuned curve until the bot's balance report bands the builds.
+6. **The tree's sound and colour.**
+   - `tree_offered` and `tree_picked` are bone diamonds, because every pilot picks. Amber is Kest's and the rare rarity. The pick UI tints them with the class row.
+   - Their cues for W5 are `motif_fork` (the class motif's first note answered by two notes, one per branch) and `motif_pick` (the chosen note resolving onto the motif head).
+   - The shop bell stays purchases only (primer ruling 3). The WIP's `tree_offer_bell` was renamed for that reason.
+   - This was PROTOCOL trigger 3 (a sound family no source covers), flagged in the hand-back.
+   - Demand: class select and the bay. Serves 6.
+7. **A pick never blocks.**
+   - The start pick opens with the run and each stage clear opens the next.
+   - An untaken pick simply stays open, and the run plays the kit it has.
+   - Taking a skipped pick offers the next depth at once, so a player who skips the start pick loses no depth.
+   - Demand: the drop and the bay. Serves 1 and 2.
+8. **Callback: Octave Kick is a real octave.** It sets the vault gain to exactly 2. Speed doubles, and since the vault cue already pitches by exit speed toward the cap, the kick's top note leaps a true octave (C4 made literal). Test 1: a faster vault is readable alone. Test 2: heard, never announced. Test 3: it is momentum. Demand: Sable's vault chain. Serves 6.
+9. **Bot runs at a fixed 90 fps.**
+   - `tree_play_test` and `tree_bot_test` run their children with `--fixed-fps 90` in parallel. That is the same 90 Hz ticks, without the wall clock.
+   - Kest's `char_bot_test` gave the identical result (6448 ticks to the Warden break) in 18 s instead of 76 s.
+   - The four new tree tests add about 45 s to the smoke.
+   - Demand: none. Serves the loop.
+
 
 ## v2 W7 enemies
 

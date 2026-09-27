@@ -128,6 +128,12 @@ func _build_tilt() -> void:
 	var starved: Array = Director.PACKS.keys().filter(func(id): return int(air.get(id, 0)) < DRAWS / 40)
 	_report("tests the build", tilted_air > plain_air * 1.4, "air packs drawn %d of %d for an air build, %d with no build read" % [tilted_air, DRAWS, plain_air])
 	_report("never a hard counter", starved.is_empty(), "every open pack still drawn for the air build: %s; starved %s" % [air, starved])
+	var tree_air := _draw({"class": "", "habits": {}, "branch_tags": ["air", "air"]})
+	var tree_count := 0
+	for id in air_packs:
+		tree_count += int(tree_air.get(id, 0))
+	_report("reads W3's branch tags", tree_count > plain_air * 1.4,
+		"air packs drawn %d of %d for a tree tagged air twice, %d with no build read" % [tree_count, DRAWS, plain_air])
 
 
 func _draw(build: Dictionary) -> Dictionary:

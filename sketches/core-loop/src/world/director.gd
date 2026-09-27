@@ -24,7 +24,7 @@ extends RefCounted
 #   both its members are unlocked.
 # - The stage's ancient family arrives as its own pack, ANCIENT_SHARE of the packs.
 # - Weighting tests the build: `build` is combat's build_read() (class, habit shares,
-#   W3's branch tags when they exist). Each pack's weight is 1 + BUILD_TILT times how
+#   W3's upgrade-tree branch tags through TAG_AXES). Each pack's weight is 1 + BUILD_TILT times how
 #   strongly the build leans on the axis the pack tests, so the build's own axis comes
 #   up to twice as often and every other unlocked pack still comes: fair, never a hard
 #   counter. With no build read every pack weighs the same.
@@ -60,6 +60,10 @@ const HABIT_AXES := {"ram": ["contact", "speed", "heft"], "rebound": ["contact"]
 	"smash": ["contact"], "vault": ["air"], "weapon": ["weapon"], "special": ["weapon"], "jump": ["air"],
 	"air": ["air"], "boost": ["speed", "steer"], "grapple": ["steer"], "glide": ["air"]}
 const CLASS_AXIS := {"sable": "steer", "rivet": "speed", "kest": "air"}
+# W3's upgrade-tree tags (upgrade_tree.gd TAGS) and the axes each leans on.
+const TAG_AXES := {"air": ["air"], "burst": ["weapon"], "close": ["contact"], "ranged": ["weapon"],
+	"mobility": ["steer", "speed"], "mounted": ["weapon"], "sustain": ["heft"], "cc_immune": ["speed"],
+	"traps": ["contact"], "stealth": ["weapon"]}
 const CLASS_AXIS_SHARE := 0.25
 const TIER_SECONDS := 45.0
 const MAX_TIME_TIERS := 2
@@ -249,7 +253,8 @@ func build_axes() -> Dictionary:
 	if class_axis != "":
 		axes[class_axis] = float(axes.get(class_axis, 0.0)) + CLASS_AXIS_SHARE
 	for tag in build.get("branch_tags", []):
-		axes[String(tag)] = float(axes.get(String(tag), 0.0)) + CLASS_AXIS_SHARE
+		for axis in TAG_AXES.get(String(tag), [String(tag)]):
+			axes[axis] = float(axes.get(axis, 0.0)) + CLASS_AXIS_SHARE
 	var top := 0.0
 	for axis in axes:
 		top = maxf(top, float(axes[axis]))

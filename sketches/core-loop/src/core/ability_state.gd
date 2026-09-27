@@ -23,23 +23,34 @@ const COOLDOWN_FLOOR := 0.4
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
 
-# One row per ability id; the class row names which id fills each slot. icon is the
-# canonical id in assets/icons (VISUAL-LANGUAGE section 5). cooldown is per charge.
-# charge_max > 0 makes the slot a hold-gauge-release shot. duration is how long an
-# active ability runs on one charge.
+# One row per ability id; the class row names which id fills each slot, and an upgrade
+# swaps a slot to a variant row. The rest of the game dispatches on a row's
+# capabilities, never on its id, so a variant is one row here plus, when it plays
+# differently, one entry in the owning dispatch table (combat's _specials, the ball's
+# SMASHES). icon is the canonical id in assets/icons (VISUAL-LANGUAGE section 5).
+# cooldown is per charge. charge_max > 0 makes the slot a hold-gauge-release shot.
+# duration is how long an active ability runs on one charge.
+#   weapon    pattern (the Pattern it fires, default its id), mounted (the weapon it
+#             becomes on a pylon), lob (how many sticky charges one throw scatters)
+#   movement  augments (the movement kit it fits), rocket, cloak (Kest's passives)
+#   special   plant_discharge (planting a pylon fires it free)
+#   smash     flavour (arc, skid or demo landing), spends_special
 const ABILITIES := {
-	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0},
-	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0},
-	"detonation_gauge": {"icon": "ab_sable_special", "cooldown": 5.0, "charge_max": 1.0},
-	"arc_slam": {"icon": "ab_sable_smash", "cooldown": 0.0},
+	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0, "mounted": "pylon_turret"},
+	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0, "augments": ["grapple", "pylon", "vault"]},
+	"detonation_gauge": {"icon": "ab_sable_special", "cooldown": 5.0, "charge_max": 1.0, "plant_discharge": true},
+	"arc_slam": {"icon": "ab_sable_smash", "cooldown": 0.0, "flavour": "arc"},
+	"crater_slam": {"icon": "ab_sable_smash", "cooldown": 0.0, "flavour": "arc", "spends_special": true},
 	"rapid_laser": {"icon": "ab_rivet_weapon", "cooldown": 0.0},
-	"overdrive_sprint": {"icon": "ab_rivet_move", "cooldown": 5.0, "duration": 2.0},
+	"overdrive_sprint": {"icon": "ab_rivet_move", "cooldown": 5.0, "duration": 2.0, "augments": ["sprint"]},
 	"overdrive_blast": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
-	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0},
-	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6},
-	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0},
+	"point_blank": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
+	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0, "flavour": "skid"},
+	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 1},
+	"sticky_rain": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 3, "pattern": "sticky_charge"},
+	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0, "augments": ["blink", "glide"], "rocket": true, "cloak": true},
 	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
-	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0},
+	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0, "flavour": "demo"},
 }
 const ICON_DIR := "res://assets/icons/"
 
@@ -112,6 +123,11 @@ class Slot:
 	var active := false
 	var available := true
 	var gauge: Gauge = null
+	# What the item layer (item_effects.apply_abilities) last added on top: extra charges
+	# and its cooldown multiplier. Upgrade-tree picks add to the same cap and scale, so
+	# items re-apply as a delta and never overwrite a pick.
+	var item_charges := 0
+	var item_scale := 1.0
 
 
 var _slots := {}
@@ -128,16 +144,35 @@ func fit(def) -> void:
 	if def != null:
 		ids = {WEAPON: def.weapon_id, MOVEMENT: def.movement_id, SPECIAL: def.special_id, SMASH: def.smash_id}
 	for name in SLOTS:
-		var row: Dictionary = ABILITIES.get(ids[name], {})
-		var s := Slot.new()
-		s.id = ids[name]
-		s.icon = row.get("icon", "")
-		s.cooldown = row.get("cooldown", 0.0)
-		s.duration = row.get("duration", 0.0)
-		var charge_max: float = row.get("charge_max", 0.0)
-		if charge_max > 0.0:
-			s.gauge = Gauge.new(charge_max)
-		_slots[name] = s
+		_slots[name] = Slot.new()
+		swap(name, ids[name])
+
+
+# Puts ability `id` in a slot, full, with its row's cooldown, duration and gauge. The
+# slot's stockpile cap and cooldown scale stay: items and picks raise the slot, not the
+# ability in it, so an upgrade swap never drops a charge upgrade bought earlier.
+func swap(name: String, id: String) -> void:
+	var row: Dictionary = ABILITIES.get(id, {})
+	var old: Slot = _slots[name]
+	var s := Slot.new()
+	s.max_charges = old.max_charges
+	s.charges = old.max_charges
+	s.cooldown_scale = old.cooldown_scale
+	s.item_charges = old.item_charges
+	s.item_scale = old.item_scale
+	s.id = id
+	s.icon = row.get("icon", "")
+	s.cooldown = row.get("cooldown", 0.0)
+	s.duration = row.get("duration", 0.0)
+	var charge_max: float = row.get("charge_max", 0.0)
+	if charge_max > 0.0:
+		s.gauge = Gauge.new(charge_max)
+	_slots[name] = s
+
+
+# A capability of the ability in a slot (see ABILITIES), or `fallback`.
+func cap(name: String, key: String, fallback = null):
+	return ABILITIES.get((_slots[name] as Slot).id, {}).get(key, fallback)
 
 
 func slot(name: String) -> Slot:
