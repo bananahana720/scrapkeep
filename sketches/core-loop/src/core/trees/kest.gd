@@ -6,8 +6,8 @@ extends RefCounted
 const NODES := [
 	{"id": "k_trapper", "name": "Trapper", "effect": "Charges wait longer; five can be live", "key": "weapon",
 		"icon": "ab_kest_weapon", "tags": ["traps"], "knob": {"sticky_fuse": 2.5, "sticky_max_live": 5}},
-	{"id": "k_ghost", "name": "Ghost", "effect": "Cloaked, no enemy can see you", "key": "movement",
-		"icon": "ab_kest_cloak", "tags": ["stealth"], "knob": {"cloak_sight": 0.0}},
+	{"id": "k_ghost", "name": "Ghost", "effect": "Cloaked, enemies only spot you up close", "key": "movement",
+		"icon": "ab_kest_cloak", "tags": ["stealth"], "knob": {"cloak_sight": 0.3}},
 
 	{"id": "k_tripwire", "name": "Tripwire", "effect": "Charges trigger from two metres away", "key": "weapon",
 		"icon": "ab_kest_weapon", "tags": ["traps"], "knob": {"sticky_reach": 2.0}},
@@ -19,7 +19,7 @@ const NODES := [
 		"icon": "ab_kest_cloak", "tags": ["stealth", "burst"], "knob": {"cloak_keep": true}},
 
 	{"id": "k_minefield", "name": "Minefield", "effect": "Stockpile two sticky throws", "key": "weapon",
-		"icon": "ab_kest_weapon", "tags": ["traps"], "charges": {"weapon": 2}},
+		"icon": "ab_kest_weapon", "tags": ["traps"], "charges": {"weapon": 1}},
 	{"id": "k_heavy_charge", "name": "Heavy Charge", "effect": "Fewer, bigger charges: two live", "key": "weapon",
 		"icon": "ab_kest_weapon", "tags": ["burst"], "knob": {"sticky_max_live": 2},
 		"pattern": {"sticky_charge": {"mul": {"damage": 1.6, "bolt_radius": 1.3}}}},
@@ -28,7 +28,7 @@ const NODES := [
 	{"id": "k_blast_jumper", "name": "Blast Jumper", "effect": "Your own blasts launch you, no Space", "key": "movement",
 		"icon": "ab_kest_glide", "tags": ["air", "mobility"], "knob": {"rocket_auto": true}},
 	{"id": "k_mirage", "name": "Mirage", "effect": "Stockpile two smoke blinks", "key": "movement",
-		"icon": "ab_kest_move", "tags": ["stealth", "mobility"], "charges": {"movement": 2}},
+		"icon": "ab_kest_move", "tags": ["stealth", "mobility"], "charges": {"movement": 1}},
 	{"id": "k_dust_devil", "name": "Dust Devil", "effect": "Blinks drop a charge where you land", "key": "movement",
 		"icon": "ab_kest_move", "tags": ["traps"], "proc": [{"on": "blink_used", "do": "charge", "scale": 1.0, "gap": 0.4}]},
 	{"id": "k_marked", "name": "Marked", "effect": "The line marks targets for bigger blasts", "key": "special",

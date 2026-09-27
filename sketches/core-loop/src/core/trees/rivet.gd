@@ -18,7 +18,7 @@ const NODES := [
 	{"id": "r_ram_fins", "name": "Ram Fins", "effect": "Sprinting, you ram instead of rebound", "key": "movement",
 		"icon": "ab_rivet_move", "tags": ["close"], "knob": {"sprint_no_rebound": true, "sprint_punch": 1.5}},
 	{"id": "r_second_wind", "name": "Second Wind", "effect": "Stockpile two sprint charges", "key": "movement",
-		"icon": "ab_rivet_move", "tags": ["mobility"], "charges": {"movement": 2}},
+		"icon": "ab_rivet_move", "tags": ["mobility"], "charges": {"movement": 1}},
 
 	{"id": "r_crossfire", "name": "Crossfire", "effect": "Bolts split three ways around your aim", "key": "weapon",
 		"icon": "ab_rivet_weapon", "tags": ["ranged"],

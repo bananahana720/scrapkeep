@@ -44,6 +44,9 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #     Warden gets slams beside it (a slam within 2.6 m of a cap meets plating 0) and its
 #     own pulse is taken for the height; a magnet Warden gets the gun on its magnet while
 #     it tugs. With punch at or above plating the bot rams, as a player would.
+#   - Upgrade-tree picks (tree_policy). "" leaves every offer untaken, so older runs
+#     keep the untouched kit; "random" takes one of the two offered on each tree_offered
+#     from its own seeded stream, so the rest of the bot's choices are unchanged.
 #
 # A run ends at stage-3 clear or a boss victory (outcome "won"), death ("died"), a
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
@@ -128,6 +131,10 @@ var rng := RandomNumberGenerator.new()
 var source := Intent.Scripted.new()
 # Set by the runner's --trace: prints the bot's goal and the ball every two seconds.
 var trace := false
+# "" or "random"; set before start(). tree_picks lists the node ids taken, in order.
+var tree_policy := ""
+var tree_picks: Array[String] = []
+var _tree_rng := RandomNumberGenerator.new()
 
 # "", then won, died, stalled, boss or boss_stalled.
 var outcome := ""
@@ -185,6 +192,7 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 	seed_value = seed_number
 	class_index = seed_number % ClassDef.all().size()
 	rng.seed = hash([policy, seed_number])
+	_tree_rng.seed = hash(["tree", seed_number])
 
 
 # Call once the game's flow exists. Reseeding the run's stream makes each seed its own
@@ -228,8 +236,18 @@ func start() -> void:
 	events.scrap_lost.connect(func(amount: int, _at: Vector3, _total: int, cause: String):
 		if cause == "crane":
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
+	if tree_policy == "random":
+		_connect_optional("tree_offered", _on_tree_offered)
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
+
+
+func _on_tree_offered(_class_id: String, _depth: int, choices: Array) -> void:
+	if choices.is_empty():
+		return
+	var choice: String = choices[_tree_rng.randi() % choices.size()]
+	if game.player.tree.pick(choice):
+		tree_picks.append(choice)
 
 
 func _connect_optional(signal_name: String, handler: Callable) -> void:

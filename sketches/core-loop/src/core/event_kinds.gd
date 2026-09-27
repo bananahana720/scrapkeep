@@ -103,10 +103,13 @@ const ROWS := {
 	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
 	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
-	# stages 1-3, and taken. Amber diamonds like a part, since a pick is loot you choose;
-	# the pick UI (W1) and the shop bay (W6) own the words, so no HUD line here.
-	"tree_offered": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "sound_next": "tree_offer_bell", "hud": "", "objective": "", "priority": 1},
-	"tree_picked": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "sound_next": "motif_pick", "hud": "", "objective": "", "priority": 1},
+	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
+	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
+	# with the class row. motif_fork is the class motif's first note answered by two
+	# notes, one per branch; motif_pick resolves the chosen one onto the motif head. The
+	# shop bell stays purchases only. The pick UI (W1) and the bay (W6) own the words.
+	"tree_offered": {"group": "economy", "color": Palette.SAND, "shape": "diamond", "sound": "found_chime", "sound_next": "motif_fork", "hud": "", "objective": "", "priority": 1},
+	"tree_picked": {"group": "economy", "color": Palette.SAND, "shape": "diamond", "sound": "part_get", "sound_next": "motif_pick", "hud": "", "objective": "", "priority": 1},
 }
 
 # v2 W2 threat grammar

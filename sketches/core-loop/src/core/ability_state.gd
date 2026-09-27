@@ -139,13 +139,20 @@ func fit(def) -> void:
 	if def != null:
 		ids = {WEAPON: def.weapon_id, MOVEMENT: def.movement_id, SPECIAL: def.special_id, SMASH: def.smash_id}
 	for name in SLOTS:
+		_slots[name] = Slot.new()
 		swap(name, ids[name])
 
 
-# Puts ability `id` in a slot, full, with its row's cooldown, duration and gauge.
+# Puts ability `id` in a slot, full, with its row's cooldown, duration and gauge. The
+# slot's stockpile cap and cooldown scale stay: items and picks raise the slot, not the
+# ability in it, so an upgrade swap never drops a charge upgrade bought earlier.
 func swap(name: String, id: String) -> void:
 	var row: Dictionary = ABILITIES.get(id, {})
+	var old: Slot = _slots[name]
 	var s := Slot.new()
+	s.max_charges = old.max_charges
+	s.charges = old.max_charges
+	s.cooldown_scale = old.cooldown_scale
 	s.id = id
 	s.icon = row.get("icon", "")
 	s.cooldown = row.get("cooldown", 0.0)

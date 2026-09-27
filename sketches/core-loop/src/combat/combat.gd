@@ -153,6 +153,8 @@ var _cloud := {}
 var _sentry := {}
 var _pulse_left := 0.0
 var _cloak_held := 0.0
+# UpgradeTree.ACTIONS name -> Callable(scale).
+var _actions := {}
 
 
 func setup(ctx_ref) -> void:
@@ -178,6 +180,7 @@ func setup(ctx_ref) -> void:
 		"detonation_line": {"geometry": _line_geometry, "fire": _fire_line},
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 	}
+	_actions = _proc_actions()
 	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
 	var facts := {}
 	for class_id in UpgradeTree.TREES:
@@ -206,6 +209,7 @@ func setup(ctx_ref) -> void:
 		_marks = {}
 		_cloud = {}
 		_sentry = {}
+		_pulse_left = 0.0
 		_rebuild_patterns())
 	ctx.events.dismounted.connect(func(v: Vector3):
 		if v.length() > 0.1:
@@ -1168,7 +1172,7 @@ func cloak_sight() -> float:
 # --- Upgrade procs and timed upgrades --------------------------------------------------
 
 # A proc (upgrade_tree.gd) runs its action when its bus fact fires, at most once per its
-# gap. Actions never cause their own trigger, so no proc chains.
+# gap. No build's actions can lead back to their own trigger (UpgradeTree.problems).
 func _on_proc_fact(kind: String) -> void:
 	if ctx == null or not ctx.flow.in_play() or ctx.run.class_def == null:
 		return
@@ -1179,46 +1183,47 @@ func _on_proc_fact(kind: String) -> void:
 		if _clock < float(_proc_ready.get(key, -INF)):
 			continue
 		_proc_ready[key] = _clock + float(proc["gap"])
-		_run_action(proc["do"], float(proc.get("scale", 1.0)))
+		(_actions[proc["do"]] as Callable).call(float(proc.get("scale", 1.0)))
 
 
-func _run_action(action: String, scale: float) -> void:
-	var player = ctx.player
-	var at: Vector3 = player.ball_position()
-	match action:
-		"discharge":
-			_discharge(at, scale * Weapons.DISCHARGE_FULL_SPEED, "arc")
-		"blast":
-			_overdrive_blast(at, scale, {}, 1.0, 1.0, false)
-		"volley":
-			var weapon := active_weapon()
-			for i in int(scale):
-				if _patterns.has(weapon) and not player.abilities.cap(AbilityState.WEAPON, "lob", 0):
-					_fire(weapon)
-		"charge":
-			var ground := _floor_at(at)
-			var count := int(scale)
-			for i in count:
-				var angle := TAU * float(i) / float(count)
-				var spot := ground + (Vector3(cos(angle), 0.0, sin(angle)) * Weapons.MINI_SPREAD if count > 1 else Vector3.ZERO)
-				sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
-					Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
-		"detonate":
-			_detonate({"pos": _floor_at(at), "radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"] * scale,
-				"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE) * scale,
-				"crit": false, "born": _clock})
-		"grant_special":
-			player.abilities.grant(AbilityState.SPECIAL)
-		"grant_move":
-			player.abilities.grant(AbilityState.MOVEMENT)
-		"refund_special":
-			player.abilities.refund(AbilityState.SPECIAL, scale)
-		"refund_move":
-			player.abilities.refund(AbilityState.MOVEMENT, scale)
-		"overdrive":
-			_boost(scale)
-		"air":
-			player.state.air_actions = 1
+# One callable per UpgradeTree.ACTIONS name, each taking the proc's scale, so a new
+# proc action is one row here and one row there.
+func _proc_actions() -> Dictionary:
+	var abilities = func(): return ctx.player.abilities
+	return {
+		"discharge": func(scale: float): _discharge(ctx.player.ball_position(), scale * Weapons.DISCHARGE_FULL_SPEED, "arc"),
+		"blast": func(scale: float): _overdrive_blast(ctx.player.ball_position(), scale, {}, 1.0, 1.0, false),
+		"volley": _proc_volley,
+		"charge": _proc_charges,
+		"detonate": func(scale: float): _detonate({"pos": _floor_at(ctx.player.ball_position()),
+			"radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"] * scale,
+			"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE) * scale,
+			"crit": false, "born": _clock}),
+		"grant_special": func(_scale: float): abilities.call().grant(AbilityState.SPECIAL),
+		"grant_move": func(_scale: float): abilities.call().grant(AbilityState.MOVEMENT),
+		"refund_special": func(scale: float): abilities.call().refund(AbilityState.SPECIAL, scale),
+		"refund_move": func(scale: float): abilities.call().refund(AbilityState.MOVEMENT, scale),
+		"overdrive": func(scale: float): _boost(scale),
+		"air": func(_scale: float): ctx.player.state.air_actions = 1,
+	}
+
+
+func _proc_volley(scale: float) -> void:
+	var weapon := active_weapon()
+	if not _patterns.has(weapon) or ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
+		return
+	for i in int(scale):
+		_fire(weapon)
+
+
+func _proc_charges(scale: float) -> void:
+	var ground := _floor_at(ctx.player.ball_position())
+	var count := int(scale)
+	for i in count:
+		var angle := TAU * float(i) / float(count)
+		var spot := ground + (Vector3(cos(angle), 0.0, sin(angle)) * Weapons.MINI_SPREAD if count > 1 else Vector3.ZERO)
+		sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
+			Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
 
 
 # Upgrades that run on a clock: Anchor Storm, Fortress, Carpet Bomb, the Sentry Post.
@@ -1228,7 +1233,7 @@ func _tick_upgrades(delta: float) -> void:
 	_pulse_left = maxf(0.0, _pulse_left - delta)
 	if _pulse_left <= 0.0:
 		if kit.hooked and _knob("anchor_pulse") > 0.0:
-			_discharge(kit.anchor, Weapons.DISCHARGE_FULL_SPEED * 0.25, "arc")
+			_discharge(kit.anchor, Weapons.DISCHARGE_FULL_SPEED * 0.2, "arc")
 			_pulse_left = _knob("anchor_pulse")
 		elif kit.mounted and _knob("mount_pulse") > 0.0:
 			_discharge(ctx.player.ball_position(), kit.mount_banked * 0.5, "turret")

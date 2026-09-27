@@ -73,6 +73,9 @@ const VAULT_FACE_COOLDOWN := 1.5
 const SPRINT_CRUISE := 1.25
 # Kest's blink: this far along the aim, stopping short of the world.
 const BLINK_DISTANCE := 8.0
+# Rivet's skid turns the slam's fall into forward speed instead of a plant; Bulldozer
+# raises the share through the skid_keep knob.
+const SKID_KEEP := 0.6
 
 
 static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
@@ -343,7 +346,7 @@ static func _skid(kit, n: Vector3, hit: Vector3, into: float, body_state) -> voi
 		forward = Vector3(-body_state.transform.basis.z.x, 0.0, -body_state.transform.basis.z.z)
 	forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
 	forward = (forward - n * forward.dot(n)).normalized()
-	var speed := along.length() + maxf(0.0, -into) * kit.knob("skid_keep")
+	var speed: float = along.length() + maxf(0.0, -into) * kit.knob("skid_keep")
 	kit.plant_time = 0.0
 	kit.plant_total = 0.0
 	kit.plant_exit = forward * speed

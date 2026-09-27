@@ -125,7 +125,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.boosted.connect(func(dir: Vector3): events.boosted.emit(dir))
 	_rigid.kit_fact.connect(_on_kit_fact)
 	tree.events = events
-	tree.changed.connect(_refit)
+	tree.picked.connect(_on_tree_picked)
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
@@ -260,14 +260,19 @@ func set_velocity_now(velocity: Vector3) -> void:
 func fit_class(def: Resource) -> void:
 	class_def = def
 	tree.reset(def.id if def != null else "")
+	abilities.fit(class_def)
 	_refit()
 
 
-# The class row, then the tree's picks over it: slots (with any swap), the movement kit
-# the movement slot's row names, the smash flavour, and the class colour.
+# A pick lands on the live kit: its slot ops, then the movement kit and smash flavour
+# the (maybe swapped) slots name. Nothing else about the slots is reset.
+func _on_tree_picked(n: Dictionary) -> void:
+	UpgradeTree.apply_pick(abilities, n)
+	_refit()
+
+
+# The movement kit the movement slot's row names, the smash flavour, the class colour.
 func _refit() -> void:
-	abilities.fit(class_def)
-	tree.apply(abilities)
 	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 	else:
@@ -325,13 +330,13 @@ func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> b
 	return true
 
 
-# The stomp and rebound refresh, one rule so they never disagree: one air jump and one
-# charge of the class movement ability (for Sable, the last face it kicked).
 # Crowd control slides off for this long (Unstoppable's boosted window).
 func grant_immunity(seconds: float) -> void:
 	immune_left = maxf(immune_left, seconds)
 
 
+# The stomp and rebound refresh, one rule so they never disagree: one air jump and one
+# charge of the class movement ability (for Sable, the last face it kicked).
 func refresh_air() -> void:
 	state.air_actions = 1
 	abilities.grant(AbilityState.MOVEMENT)
