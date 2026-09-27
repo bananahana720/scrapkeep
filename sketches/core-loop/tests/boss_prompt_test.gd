@@ -60,6 +60,8 @@ func _run() -> void:
 	_double.punch_override = -1.0
 	_report("colour carries the gap", beats == Palette.AMBER and short != Palette.AMBER and _plate().text.contains("plating 120"),
 		"plate \"%s\": amber at punch 130, %s at punch 40 against plating 120" % [_plate().text, short.to_html(false)])
+	_check_shred()
+	await _check_shred_charging()
 	_boss.jump_to_phase(4)
 	while not _boss.scooter_landed():
 		await physics_frame
@@ -72,6 +74,73 @@ func _finish() -> void:
 	print("boss_prompt_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
+
+
+# Combat's own shred strips the hull's plating (README.md, Andrew 2026-09-27), and the
+# plate must read the same number the tint already uses. Strike the real hull through
+# the game's own combat module (not the punch-override double) until shred builds,
+# then check that hull_plating_now() and the plate text both dropped by that shred.
+func _check_shred() -> void:
+	var hull = _boss.ship.hull
+	var real = _game.combat
+	_game.ctx.spawner = real
+	for _i in 8:
+		real.strike(hull, "ram", 40.0)
+	var shred: float = real.shred_of(hull)
+	var want: float = maxf(0.0, 120.0 - shred)
+	var got: float = _boss.hull_plating_now()
+	_boss._update_readout()
+	var text: String = _plate().text
+	_report("plate drops under shred", shred > 0.0 and absf(got - want) < 0.01 and text.contains("plating %d" % int(want)),
+		"after 8 ram strikes shred %.2f: hull_plating_now %.2f (want %.2f), plate \"%s\"" % [shred, got, want, text])
+	_game.ctx.spawner = _double
+
+
+# The bow's 150 while charging must drop under shred exactly as the hull's 120 does,
+# and the plate, the objective's clash line and the ram-only tint must all agree on
+# the same shredded number (Andrew's fix wave, 2026-09-27). Enter phase 3, let
+# Brindle's own charge sequence reach "run" (never force the state directly, since its
+# dict carries a live hazard _run_charge depends on), shred the hull fresh right as it
+# starts, then read a ram punch set directly on the ball's state (no teleport, so the
+# charge lane and its decay clock are undisturbed) that sits strictly between the
+# shredded and the raw plating, the one value that tells the old, unfixed comparison
+# "slate" and the fixed one "amber".
+func _check_shred_charging() -> void:
+	_boss.jump_to_phase(3)
+	var charging_now := false
+	for _i in 400:
+		await physics_frame
+		if _boss.charging():
+			charging_now = true
+			break
+	var hull = _boss.ship.hull
+	var real = _game.combat
+	_game.ctx.spawner = real
+	real.heft_override = 1.0
+	for _i in 8:
+		real.strike(hull, "ram", 40.0)
+	var shred: float = real.shred_of(hull)
+	var want: float = maxf(0.0, 150.0 - shred)
+	var punch := (want + 150.0) * 0.5
+	var force := (punch - 14.0) / 1.3
+	_game.player.state.velocity = Vector3(force, 0.0, 0.0)
+	_game.player.state.tier = 1
+	var got: float = _boss.hull_plating_now()
+	var tint: String = _boss.tint_for(hull, "slate")
+	_boss._update_readout()
+	var plate_text: String = _plate().text
+	var objective: String = _boss.objective_text()
+	var want_int := int(want)
+	_report("charging plate, objective and tint agree under shred",
+		charging_now and absf(got - want) < 0.01 and tint == "amber"
+			and plate_text.contains("bow plating %d" % want_int)
+			and objective.contains("bow plating %d" % want_int),
+		"charging %s, shred %.2f, want %.2f: hull_plating_now %.2f, tint %s, plate \"%s\", objective \"%s\" (test ram punch %.1f)"
+			% [charging_now, shred, want, got, tint, plate_text, objective, punch])
+	_game.player.state.velocity = Vector3.ZERO
+	_game.player.state.tier = 0
+	real.heft_override = -1.0
+	_game.ctx.spawner = _double
 
 
 func _plate():

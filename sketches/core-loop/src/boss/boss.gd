@@ -1023,7 +1023,10 @@ func take_damage(target, amount: float, full: bool, part: String) -> float:
 func hull_plating_now() -> float:
 	if not active() or not is_instance_valid(ship):
 		return Rules.HULL_PLATING
-	return plating_for(ship.hull, "", "")
+	var plating := plating_for(ship.hull, "", "")
+	if ctx.spawner != null and ctx.spawner.has_method("shred_of"):
+		plating = maxf(0.0, plating - ctx.spawner.shred_of(ship.hull))
+	return plating
 
 
 # The name plate's words. The objective line carries the numbers, so the plate names
@@ -1032,7 +1035,7 @@ func readout_text() -> String:
 	if state == EJECT:
 		return "BRINDLE · on the run"
 	if charging():
-		return "BRINDLE · bow plating %d" % int(Rules.CLASH_PUNCH)
+		return "BRINDLE · bow plating %d" % int(hull_plating_now())
 	if stunned():
 		return "BRINDLE · plating 0 · stunned"
 	return "BRINDLE · plating %d" % int(hull_plating_now())
@@ -1067,7 +1070,7 @@ func objective_text() -> String:
 					if stunned():
 						return "He is stunned with his cockpit open: hit him now." + gap
 					if charging():
-						return "Out-clash the charge with a ram, or get out of its lane. Ram %d / bow plating %d." % [int(live_punch()), int(Rules.CLASH_PUNCH)]
+						return "Out-clash the charge with a ram, or get out of its lane. Ram %d / bow plating %d." % [int(live_punch()), int(hull_plating_now())]
 					return "Bait a charge into the rim wall, or out-clash it at ram punch %d." % int(Rules.CLASH_PUNCH) + gap
 	return ""
 
@@ -1109,7 +1112,7 @@ func ground_height_at(point: Vector3) -> float:
 # answers a ram, so its tint is decided by the ram punch alone.
 func tint_for(target, suggested: String) -> String:
 	if target.role == "hull" and charging():
-		return "amber" if ram_punch_now() >= Rules.CLASH_PUNCH else "slate"
+		return "amber" if ram_punch_now() >= hull_plating_now() else "slate"
 	return suggested
 
 
