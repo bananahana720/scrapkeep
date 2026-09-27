@@ -15,6 +15,7 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Ground := preload("res://src/combat/ground.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -43,7 +44,7 @@ const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
 const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
-# Used only when stage_def() has no warden fields yet (the old spine): the spec's values.
+# The spec's values, used only for a warden field a stage def is missing.
 const WARDEN_FALLBACK := [
 	{"warden_plating": 30.0, "warden_hp": 400.0, "warden_lesson": "plate"},
 	{"warden_plating": 60.0, "warden_hp": 700.0, "warden_lesson": "caps"},
@@ -83,6 +84,9 @@ var deflections := 0
 # Codex ids discovered this run, in order, with where (also sent to ctx.codex).
 var discovered := {}
 var discovery_log: Array = []
+# Where warden_spec reads a stage other than the current one. A test may swap in any
+# object with of(stage) -> Dictionary.
+var stage_defs = StageDefs
 
 var _patterns := {}
 var _part_map := {}
@@ -575,10 +579,11 @@ func _threat() -> float:
 	return ctx.flow.stage_def()["threat"]
 
 
-# The stage's Warden numbers: stage_def() fields when the spine has them, else the
-# spec's per-stage values.
+# A stage's Warden numbers: the current stage from flow's stage_def(), any other stage
+# (the vault's next one) from stage_defs.of(stage). A missing field falls back to the
+# spec's per-stage value.
 func warden_spec(stage: int) -> Dictionary:
-	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else {}
+	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else stage_defs.of(stage)
 	var fallback: Dictionary = WARDEN_FALLBACK[clampi(stage, 1, 3) - 1]
 	return {
 		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
