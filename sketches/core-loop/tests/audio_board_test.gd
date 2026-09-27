@@ -7,13 +7,15 @@ const Board := preload("res://tools/audio_board.gd")
 # clips, and was matched to -14 LUFS. Buffers and files, not ears: how the board sounds
 # is Andrew's to judge.
 
+# One folder per process: every worktree shares this project's user:// folder, so two
+# smoke runs at once would otherwise overwrite and read each other's demos.
 const OUT := "user://audio_board_test"
 
 var _failures := 0
 
 
 func _initialize() -> void:
-	var out := ProjectSettings.globalize_path(OUT)
+	var out := ProjectSettings.globalize_path(OUT).path_join(str(OS.get_process_id()))
 	var report := Board.write_all(out)
 	_check("every demo", report.size() == Board.DEMOS.size(), "%d of %d demos written" % [report.size(), Board.DEMOS.size()])
 	for row in report:
