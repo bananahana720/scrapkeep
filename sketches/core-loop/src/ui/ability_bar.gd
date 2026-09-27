@@ -136,7 +136,12 @@ func _draw_slot(entry: Dictionary, rect: Rect2) -> void:
 # The remaining cooldown as a petrol wedge: it covers the part of the slot still to come
 # back, so the icon is uncovered clockwise from twelve, linearly, as the ability returns.
 func _draw_sweep(rect: Rect2, frac: float) -> void:
-	if frac <= 0.0:
+	# A sliver under one degree has no area to triangulate, and a full wedge's first and
+	# last edge points coincide, so both ends are handled without building a polygon.
+	if frac < 1.0 / 360.0:
+		return
+	if frac >= 1.0 - 1.0 / 360.0:
+		draw_rect(rect, Color(Palette.VERDIGRIS, 0.8))
 		return
 	var centre := rect.get_center()
 	var half := rect.size * 0.5
@@ -146,7 +151,9 @@ func _draw_sweep(rect: Rect2, frac: float) -> void:
 	while angle < stop:
 		points.append(_edge(centre, half, angle))
 		angle += SWEEP_STEP
-	points.append(_edge(centre, half, stop))
+	var last := _edge(centre, half, stop)
+	if points[points.size() - 1].distance_to(last) > 0.01:
+		points.append(last)
 	if points.size() >= 3:
 		draw_colored_polygon(points, Color(Palette.VERDIGRIS, 0.8))
 
