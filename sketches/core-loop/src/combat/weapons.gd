@@ -138,3 +138,26 @@ const PIN_CARRY := 0.6
 
 # Rivet's sprint: contact punch is this much higher (the crush bar 20% lower).
 const SPRINT_PUNCH := 1.25
+
+# Upgrade-tree variants (upgrade_tree.gd). Point Blank: the blast at this share of its
+# radius for this much damage. Sticky Rain: each throw's damage and radius shares, split
+# across its charges. Time Bomb: a charge grows this much per second waited, up to the
+# cap. Marked: marked targets take this much more from charges. Dive Bomber: slam charges
+# grow with the landing speed past DIVE_FALL (m/s), up to DIVE_MAX. Phantom's cut width, Smoke Screen's
+# cloud, Nightfall's hold cap, the Sentry Post's reach and fire-rate share, and the
+# boost cap when boosts stack.
+const POINT_BLANK_RADIUS := 0.5
+const POINT_BLANK_DAMAGE := 2.0
+const RAIN_DAMAGE := 1.5
+const RAIN_RADIUS := 0.7
+const GROW_PER_SECOND := 0.35
+const GROW_MAX_SECONDS := 4.0
+const MARK_BONUS := 1.5
+const DIVE_FALL := 12.0
+const DIVE_MAX := 2.0
+const BLINK_CUT_WIDTH := 3.0
+const SMOKE_CLOUD_RADIUS := 4.0
+const CLOAK_HOLD_MAX := 6.0
+const SENTRY_REACH := 30.0
+const SENTRY_RATE := 0.6
+const OVERDRIVE_MAX := 6.0
