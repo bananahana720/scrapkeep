@@ -600,3 +600,25 @@ One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick
 ## Charge and cooldown layers (coordinator, after the W3 merge)
 
 A slot's charge cap and cooldown scale take two layers: upgrade-tree picks change them directly (add to the cap, multiply the scale), and `item_effects.apply_abilities` re-applies the item layer as a delta it records on the slot (`item_charges`, `item_scale`). Nothing may set an absolute cap or scale except `AbilityState` on a new run. `tests/build_charge_layers_test.gd` holds this in both orders, through sell-back and the cap.
+
+## v2 V3 hero assets (`src/presentation/hero_assets.gd`)
+
+`presentation.gd` creates the hook as `presentation.hero_assets` and calls `setup(ctx)`. It edits no gameplay file. It reads only these existing seams.
+
+| Owner | What the hook reads | What it adds |
+| --- | --- | --- |
+| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()` | `HeroCore` under the rolling mesh, `HeroPod` under the juice node; the greybox ball mesh is hidden |
+| `build/accretion.gd` | Each direct `MeshInstance3D` child is a chunk; its slot index is read back from `position` (`_slot(i, MAX_CHUNKS) * 1.02`) | `HeroChunk` under each chunk; the box is hidden |
+| `build/reward_gates.gd` | Each child `Node3D` is a gate; its offer is the `offers` row whose `at` matches its position; `Topper`, `Glyph<i>` sprites, `rarity_color()` | `HeroArch`, `Topper/HeroTopper`, one `HeroPlate<i>` per glyph; posts, bar, topper and heart are hidden |
+
+- **Hidden means hidden.** A placeholder keeps its node, script and transform, with `layers = 0` and shadows off. Anything that animates it (the topper's spin and pulse, the chunk pop and fling, the squash) still drives the hero child.
+- **Slots to colours.** `SLOTS` in the hook is the one table from section 9 slot names to palette roles. glb surfaces are named for their slot. Change a colour there or in `palette.gd`, never in a recipe.
+- **Shell nodes.** Each `shell_<class>.glb` is `Shell<Name>` > `Core`, `Pod` > `Dome` > `Pilot`, plus `RopeExit` (Sable) and `VaneL`/`VaneR` (Kest, hinged about Godot Z). The glbs use Godot axes, +Y up and -Z forward.
+
+**Not wired (for the coordinator after W7 merges).** `warden_clamp_base.glb` is `WardenClampBase` > `Housing`, `Tower` > `KitMount`, `JawL`, `JawR`. The beacon stands at the origin. The jaw origins sit on the vertical hinge axis at x 2.2, so rotating them about Y opens the clamp, and closed is the modelled pose. `warden_kit_{reactor,hive,mind}.glb` roots sit at `KitMount`. Each has a `WeakPoint` node, plus `Vent0..2` (reactor), `Drone0..5` (hive), and `ArmL`, `ArmR` and `Shutter0..5` (mind). Their slots are `ancient_enamel`, `ancient_light`, `bare_metal` and `rubber` (the charcoal grooves). The hook's `paint(node, {})` dresses them with no tint.
+
+**Requested seams (not blocking).**
+
+1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
+2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
+3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
