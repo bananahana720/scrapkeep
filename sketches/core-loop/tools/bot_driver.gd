@@ -592,12 +592,13 @@ func _live_target(id: String, model) -> Vector3:
 
 # --- fighting a plated lock ------------------------------------------------------------
 
+# Combat's plating_of first: it subtracts shred, so a stripped Warden reads as rammable.
 func _plating(target: Node3D) -> float:
-	if target.has_method("plating_now"):
-		return float(target.plating_now())
 	var spawner = game.ctx.spawner
 	if spawner != null and spawner.has_method("plating_of"):
 		return float(spawner.plating_of(target))
+	if target.has_method("plating_now"):
+		return float(target.plating_now())
 	return 0.0
 
 
