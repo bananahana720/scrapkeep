@@ -9,14 +9,15 @@ const Palette := preload("res://src/core/palette.gd")
 # The four attack types draw four different grammars, each from the descriptor its node
 # builds out of the same fields contains() reads. A wave's drawn front is its damage
 # front at every time sampled, and a shell's reticle and flight trace end on the landing
-# point it committed, along the path the shell actually flies.
+# point it committed, along the path the shell actually flies. Hostile areas are
+# striped, the player's own and harmless fields are not, and a boss marks its own.
 
 const DT := 1.0 / 90.0
 const EXPECTED := {
-	Threat.Type.INSTANT: ["area", "edge", "fill"],
+	Threat.Type.INSTANT: ["area", "band", "band_top", "edge", "fill", "solid"],
 	Threat.Type.WAVE: ["band", "band_top", "chevrons", "front", "outline"],
-	Threat.Type.PROJECTILE: ["area", "bracket", "edge", "pip", "trace"],
-	Threat.Type.LANE: ["area", "edge", "run"],
+	Threat.Type.PROJECTILE: ["area", "band", "band_top", "bracket", "edge", "pip", "trace"],
+	Threat.Type.LANE: ["area", "band", "band_top", "edge", "run"],
 }
 
 
@@ -42,6 +43,7 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	_check_grammars()
+	_check_stances()
 	_check_wave()
 	_check_sweep()
 	_check_projectile()
@@ -77,10 +79,12 @@ func _check_grammars() -> void:
 		var roles := Threat.roles(d)
 		var want: Array = EXPECTED[node.type]
 		var row := Threat.row(node.type)
+		var striped: int = node.painter().vertex_count("stripe") + node.painter().vertex_count("stripe_motion")
 		_report("grammar %s" % Threat.kind(node.type), roles == want and not roles in seen and node.is_in_group(Threat.GROUP)
-				and node.painter().vertex_count("base") > 0 and row.get("sound", "") != "",
-			"draws %s (want %s), in group %s, %d base vertices, sound %s, shape %s"
-				% [roles, want, Threat.GROUP, node.painter().vertex_count("base"), row.get("sound", ""), row.get("shape", "")])
+				and node.painter().vertex_count("base") > 0 and node.painter().vertex_count("under") > 0 and (striped > 0 or node.type == Threat.Type.WAVE) and row.get("sound", "") != "",
+			"draws %s (want %s), in group %s, %d base, %d keyline and %d striped vertices (an arming wave has swept nothing yet), sound %s, shape %s"
+				% [roles, want, Threat.GROUP, node.painter().vertex_count("base"), node.painter().vertex_count("under"), striped,
+					row.get("sound", ""), row.get("shape", "")])
 		seen.append(roles)
 	var sounds := {}
 	var shapes := {}
@@ -97,14 +101,18 @@ func _check_grammars() -> void:
 	_report("instant edge", is_equal_approx(edge.get("r_out", -1.0), instant.radius) and inside and not outside,
 		"the edge is drawn at r %.2f and contains() flips there: 5.95 %s, 6.05 %s" % [edge.get("r_out", -1.0), inside, outside])
 	instant.set_progress(0.25)
-	var early := Threat.fill_tint(instant.descriptor()).a
+	var early: float = _mark(instant.descriptor(), "fill").get("inner", -1.0)
 	instant.set_progress(0.75)
-	var late := Threat.fill_tint(instant.descriptor()).a
+	var late: float = _mark(instant.descriptor(), "fill").get("inner", -1.0)
+	var fill_layer: String = _mark(instant.descriptor(), "fill").get("layer", "")
+	var band: float = _mark(instant.descriptor(), "band_top").get("height", -1.0)
 	var before := _world.get_child_count()
 	instant.set_progress(1.0)
 	var flashed := _world.get_child_count() == before + 1
-	_report("instant fill", early < late and flashed and _mark(instant.descriptor(), "front").is_empty(),
-		"the fill has no motion; its alpha rises %.2f -> %.2f over the warning, and the landing leaves a solid flash: %s" % [early, late, flashed])
+	_report("instant fill", is_equal_approx(early, 4.5) and is_equal_approx(late, 1.5) and fill_layer == "stripe_motion" and flashed
+			and is_equal_approx(band, instant.reach_up),
+		"the striped fill closes in from the edge (inner edge %.2f m at a quarter, %.2f m at three quarters of a 6 m ring), the landing leaves a solid flash (%s), and the height rail stands at %.1f m, the reach"
+			% [early, late, flashed, band])
 
 	lane.set_progress(0.5)
 	var ld: Dictionary = lane.descriptor()
@@ -123,6 +131,32 @@ func _check_grammars() -> void:
 	_report("projectile reticle", bracket.get("centre") == shell.center and pip.get("centre") == shell.center and shell.contains(shell.center + Vector3.UP),
 		"brackets and pip centre on %s, the committed landing contains() tests" % [shell.center])
 	for node in nodes:
+		node.free()
+
+
+func _check_stances() -> void:
+	var lift: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, -90.0), 30.0, 8.0, Palette.SAND)
+	var before := _world.get_child_count()
+	lift.set_progress(1.0)
+	var lift_roles := Threat.roles(lift.descriptor())
+	_report("harmless field", lift_roles == ["outline"] and not lift.is_in_group(Threat.GROUP) and _world.get_child_count() == before
+			and lift.contains(Vector3(20.0, 1.0, -90.0)),
+		"a bone ring draws only %s, joins no threat group, leaves no flash, and still answers contains() for its lift" % [lift_roles])
+	var mine: Node3D = Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(30.0, 0.0, -90.0), 3.6, 3.5, Palette.AMBER)
+	var mine_striped: int = mine.painter().vertex_count("stripe") + mine.painter().vertex_count("stripe_motion")
+	_report("player's own", mine_striped == 0 and not mine.is_in_group(Threat.GROUP) and mine.painter().vertex_count("base") > 0,
+		"an amber ring draws clean (%d striped vertices) and joins no threat group" % mine_striped)
+	var h: Node3D = Hazard.new()
+	h.ground = func(_p: Vector3) -> float: return 0.0
+	h.color = Palette.BRASS
+	h.commit_annulus("slag_test", Threat.Type.INSTANT, Vector3(60.0, 0.0, -90.0), Vector2(8.0, 14.0), 1.8, 2.5, 6.0)
+	_world.add_child(h)
+	var hd: Dictionary = h.descriptor()
+	var owner := _mark(hd, "owner")
+	_report("boss owner mark", hd["tone"] == Palette.HAZARD and owner.get("owner") == Palette.BRASS and owner.get("tone") == Color(Palette.BRASS, 1.0)
+			and h.is_in_group(Threat.GROUP) and h.painter().vertex_count("stripe") > 0,
+		"a brass boss hazard draws its danger in HAZARD stripes and marks its owner with brass rim ticks")
+	for node in [lift, mine, h]:
 		node.free()
 
 
@@ -153,12 +187,12 @@ func _check_wave() -> void:
 		var ahead: bool = wave.contains(at + Vector3(f + Threat.WAVE_EDGE + 0.3, 1.0, 0.0))
 		var behind: bool = f > Threat.WAVE_EDGE + 0.3 and wave.contains(at + Vector3(f - Threat.WAVE_EDGE - 0.3, 1.0, 0.0))
 		var above: bool = wave.contains(at + Vector3(f, 3.6, 0.0))
-		var ok := absf(drawn - f) < 0.0001 and absf(f - 8.0 * (clock - 1.0)) < 0.001 and on and not ahead and not behind and not above \
-			and is_equal_approx(band.get("height", -1.0), 3.5)
+		var ok: bool = absf(drawn - f) < 0.0001 and absf(f - 8.0 * (clock - 1.0)) < 0.001 and on and not ahead and not behind and not above \
+			and is_equal_approx(band.get("height", -1.0), 3.5) and _mark(d, "swept").get("layer", "") == "stripe_motion"
 		agree = agree and ok
 		rows.append("t %.2f drawn %.2f damage %.2f" % [clock, drawn, f])
 	_report("wave front", agree,
-		"the drawn front is the damage front, speed x elapsed, with a 3.5 m band a jump clears: %s" % ", ".join(rows))
+		"the drawn front is the damage front, speed x elapsed, with a 3.5 m band a jump clears and stripes on the swept ground: %s" % ", ".join(rows))
 	wave.free()
 
 

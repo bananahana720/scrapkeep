@@ -185,9 +185,9 @@ func _clear_telegraph() -> void:
 	_telegraph = null
 
 
-func _commit_ring(threat_type: int, at: Vector3, ring_radius: float, reach := 3.5) -> Node3D:
+func _commit_ring(threat_type: int, at: Vector3, ring_radius: float, reach := 3.5, tint := Palette.HAZARD) -> Node3D:
 	_clear_telegraph()
-	_telegraph = Telegraph.ring(world_root, terrain, threat_type, at, ring_radius, reach)
+	_telegraph = Telegraph.ring(world_root, terrain, threat_type, at, ring_radius, reach, tint)
 	return _telegraph
 
 

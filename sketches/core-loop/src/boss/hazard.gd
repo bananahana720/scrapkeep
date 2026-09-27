@@ -46,7 +46,15 @@ var reach := 3.0
 var ground := Callable()
 # ANNULUS: (point) -> bool, true where the ring is quenched and safe.
 var excluded := Callable()
+# Brindle's hazards arrive tinted BRASS (the boss_attack_telegraphed row). Danger still
+# draws in HAZARD; the brass becomes the owner's rim tick (VISUAL-LANGUAGE.md section 4).
+# AMBER marks a spot that is not a threat (a drone pad).
 var color := Palette.HAZARD
+# Sound ids layered over the type's warn sound: the owner's timbre (Fleet or ancient)
+# and a unit's mechanic tag (SOUND-STORY.md section 3). Set them right after commit;
+# presentation reads them at the end of the frame the threat was declared.
+var owner_voice := ""
+var mechanic_tag := ""
 # live_fraction() before the latest step, so a sweep can test only what it just crossed.
 var prev_fraction := 0.0
 
@@ -99,7 +107,8 @@ func _times(threat_type: int, warn: float, live: float) -> void:
 
 
 func _ready() -> void:
-	add_to_group(Threat.GROUP)
+	if is_hostile():
+		add_to_group(Threat.GROUP)
 	if not Threat.valid(type):
 		push_error("hazard %s committed without an attack type" % attack_id)
 		return
@@ -240,7 +249,7 @@ static func _flat(v: Vector3) -> Vector3:
 
 # The committed numbers the drawing reads: the same fields contains() reads.
 func descriptor() -> Dictionary:
-	var d := {"type": type, "tone": color, "centre": centre, "reach": reach, "progress": clampf(age / warn_seconds, 0.0, 1.0),
+	var d := {"type": type, "tone": Palette.HAZARD if color == Palette.BRASS else color, "centre": centre, "reach": reach, "progress": clampf(age / warn_seconds, 0.0, 1.0),
 		"live": state == LIVE}
 	match shape:
 		Shape.SECTOR:
@@ -250,6 +259,8 @@ func descriptor() -> Dictionary:
 				"live_tone": color.lerp(MOLTEN, 0.5)})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": heading, "back": back, "length": length, "half_width": half_width})
+	if color == Palette.BRASS:
+		d["owner"] = Palette.BRASS
 	if type == Threat.Type.WAVE:
 		d["front"] = front()
 	return d
@@ -257,6 +268,14 @@ func descriptor() -> Dictionary:
 
 func threat_kind() -> String:
 	return Threat.kind(type)
+
+
+func is_hostile() -> bool:
+	return color == Palette.BRASS or Threat.stance(color) == "hostile"
+
+
+func threat_at() -> Vector3:
+	return centre
 
 
 func painter():
