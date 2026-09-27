@@ -41,7 +41,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # Shred (Andrew, 2026-09-27): every landed hit, a chip included, strips SHRED_PER_PUNCH
 # of its punch off that enemy's plating, up to the whole plating. While the hits keep
 # coming the strip bleeds off at SHRED_HOLD_DECAY a second, so held fire settles at a
-# strip in proportion to its damage per second: a skipper's gun barely dents Warden
+# strip in proportion to its damage per second: the base kit's gun barely dents Warden
 # III and an engaged build's strips it bare. SHRED_GRACE after the last hit the plate
 # knits back at SHRED_REST_DECAY. The strip is kept per enemy instance and subtracted
 # from whatever plating_for answers, so Wardens, the miniboss, vaults and Brindle's
@@ -71,10 +71,10 @@ const PARTING_WINDOW := 1.0
 const PULSE_STOMP_WINDOW := 1.5
 const CRUSH_WINDOW := 1.0
 const CRUSH_CHAIN := 3
-const SHRED_PER_PUNCH := 0.0184
-const SHRED_HOLD_DECAY := 0.15
+const SHRED_PER_PUNCH := 0.017
+const SHRED_HOLD_DECAY := 0.05
 const SHRED_REST_DECAY := 1.0
-const SHRED_GRACE := 0.5
+const SHRED_GRACE := 1.5
 const SHRED_FLOOR := 0.5
 
 # Ball contacts: base damage plus a share of the contact's force.

@@ -80,7 +80,7 @@ Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `
 - `threat` (a multiplier) and `event_mix` (event id to weight).
 - `scrap_density` (a multiplier).
 - `beacon_seconds` and `beacon_radius`, used only by the unsealed presence path.
-- `warden_plating` (45, 80, 140), `warden_hp` (800, 2200, 7000), `warden_lesson` (`plate`, `caps`, `magnet`) and `warden_hint` (the objective line's last sentence).
+- `warden_plating` (45, 80, 140), `warden_hp` (800, 2200, 7500), `warden_lesson` (`plate`, `caps`, `magnet`) and `warden_hint` (the objective line's last sentence).
 
 Every number there is a starting value; tuning edits `stage_defs.gd`, the heft constants in `run_state.gd` and the part catalogue.
 

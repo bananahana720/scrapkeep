@@ -592,12 +592,13 @@ func _live_target(id: String, model) -> Vector3:
 
 # --- fighting a plated lock ------------------------------------------------------------
 
+# Combat's plating_of first: it subtracts shred, so a stripped Warden reads as rammable.
 func _plating(target: Node3D) -> float:
-	if target.has_method("plating_now"):
-		return float(target.plating_now())
 	var spawner = game.ctx.spawner
 	if spawner != null and spawner.has_method("plating_of"):
 		return float(spawner.plating_of(target))
+	if target.has_method("plating_now"):
+		return float(target.plating_now())
 	return 0.0
 
 
@@ -620,6 +621,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	var short: bool = _punch_seen < _plating(target)
 	if short:
 		_note["punch_short_s"] = float(_note.get("punch_short_s", 0.0)) + delta
+	_note_shred(target, delta)
 	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
 	if caps and short:
 		_goal = "caps %s" % target.get("kind")
@@ -627,6 +629,21 @@ func _fight(target: Node3D, delta: float) -> void:
 		return
 	_goal = "fight %s %s%s" % [target.get("kind"), _fight_phase, " short" if short else ""]
 	_ram_laps(target, _aim_node(target, short), delta)
+
+
+# How far the fight stripped the Warden: the peak share of its plating shred away, and
+# the seconds spent with at least half of it gone.
+func _note_shred(target: Node3D, delta: float) -> void:
+	var spawner = game.ctx.spawner
+	if target != game.flow.warden or spawner == null or not spawner.has_method("shred_of"):
+		return
+	var plating: float = float(target.get("plating"))
+	if plating <= 0.0:
+		return
+	var share: float = spawner.shred_of(target) / plating
+	_note["shred_peak"] = snappedf(maxf(float(_note.get("shred_peak", 0.0)), share), 0.01)
+	if share >= 0.5:
+		_note["stripped_half_s"] = snappedf(float(_note.get("stripped_half_s", 0.0)) + delta, 0.01)
 
 
 func _ram_laps(target: Node3D, aim, delta: float) -> void:
