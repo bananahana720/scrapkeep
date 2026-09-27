@@ -265,7 +265,7 @@ func _spawn_vault() -> void:
 	var node = ctx.spawner.spawn_enemy(VAULT_KIND, at)
 	if node is Node3D:
 		vault = node
-		view.set_vault(at, true)
+		view.set_vault(at, true, ctx.spawner.plating_of(node) if ctx.spawner.has_method("plating_of") else -1.0)
 
 
 func _step_director(delta: float) -> void:

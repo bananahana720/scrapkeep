@@ -3,6 +3,7 @@ extends CanvasLayer
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const FieldNotes := preload("res://src/ui/field_notes.gd")
 
 # The four screens outside play: title, class select, death and summary. Each is one
 # glance and one key, so starting and restarting take a second (principle 2).
@@ -52,7 +53,7 @@ func _on_flow_changed(state: String) -> void:
 	match state:
 		"title":
 			_show("SCRAPKEEP: FIRST RUN", Palette.AMBER,
-				"Space to start\n\nThree stages. Charge each beacon, roll through a reward gate, launch into the next.\nIn play, hold Tab for field notes.")
+				"Space to start\n\n" + FieldNotes.OBJECTIVE + "\nIn play, hold Tab for field notes.")
 		"class_select":
 			_show("Choose your class", Palette.SAND, "Both classes share the whole mobility kit.")
 			var classes: Array = game.flow.classes

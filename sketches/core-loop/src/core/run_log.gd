@@ -16,6 +16,8 @@ var records_written := 0
 
 var _record := {}
 var _stages := {}
+var _in_arena := false
+var _phase := 0
 
 
 func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
@@ -34,10 +36,13 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.player_died.connect(_on_player_died)
 	events.run_ended.connect(_on_run_ended)
 	events.boss_phase_changed.connect(_on_boss_phase)
+	events.stage_content_cleared.connect(_on_stage_content_cleared)
 
 
 func _on_run_started(class_id: String) -> void:
 	_stages = {}
+	_in_arena = false
+	_phase = 0
 	_record = {"run_id": run.run_id, "class": class_id, "outcome": "running", "brindle_phase_reached": null}
 
 
@@ -65,6 +70,7 @@ func _ticks() -> int:
 
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
+	_in_arena = false
 	_stage(stage)
 
 
@@ -84,13 +90,32 @@ func _on_event_ended(id: String, outcome: String) -> void:
 		_stage_list("events_won").append(id)
 
 
+# A death in the arena goes in the arena's own record, on the arena's clock and the
+# run's, with Brindle's phase; the stage rows keep only deaths on their own maps.
 func _on_player_died() -> void:
 	var at: Vector3 = player.ball_position()
-	_stage_list("deaths").append({"x": at.x, "y": at.y, "z": at.z, "ticks": _ticks()})
+	var death := {"x": at.x, "y": at.y, "z": at.z, "ticks": _ticks()}
+	if _in_arena:
+		death["run_ticks"] = int(round(run.run_time * Engine.physics_ticks_per_second))
+		death["phase"] = _phase
+		(_record["arena"]["deaths"] as Array).append(death)
+	else:
+		_stage_list("deaths").append(death)
 	_write("died")
 
 
+func _on_stage_content_cleared(reason: String) -> void:
+	if reason != "arena" and reason != "arena_retry":
+		return
+	_in_arena = true
+	_phase = 0
+	if not _record.has("arena"):
+		_record["arena"] = {"entries": 0, "deaths": []}
+	_record["arena"]["entries"] += 1
+
+
 func _on_boss_phase(phase: int, _name: String) -> void:
+	_phase = phase
 	var reached = _record.get("brindle_phase_reached")
 	_record["brindle_phase_reached"] = maxi(phase, int(reached)) if reached != null else phase
 
