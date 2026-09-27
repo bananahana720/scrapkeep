@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Arena := preload("res://src/boss/arena.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The fix wave's rules, tick by tick: pieces that cannot die are never crushable; the
 # rim rescue keeps the ball's direction round the ring; drones arrive on a marked pad
@@ -175,11 +176,13 @@ func _charge_checks() -> void:
 	_double.punch_override = 160.0
 	hull.set_tint("amber")
 	var shown: String = hull.tint_state
-	var readout: String = _boss.readout_text()
+	_boss.advance(DT)
+	var readout: String = _boss.ship.plate.text
+	var plate_colour: Color = _boss.ship.plate.get_theme_color("font_color")
 	var text: String = _boss.objective_text() if _has("objective_text") else ""
 	var plating: float = _boss.live_plating() if _has("live_plating") else -1.0
 	_double.punch_override = -1.0
-	_report("clash preview is ram only", shown == "slate" and readout.contains("ram 0") and plating == Rules.CLASH_PUNCH and text.contains("Ram 0 / bow plating 150"),
+	_report("clash preview is ram only", shown == "slate" and readout.contains("bow plating 150") and plate_colour != Palette.AMBER and plating == Rules.CLASH_PUNCH and text.contains("Ram 0 / bow plating 150"),
 		"charging, with a 160 weapon and a standing ball: tint %s, readout \"%s\", objective \"%s\", live plating %.0f" % [shown, readout, text, plating])
 	_double.strike(hull, "ram", _double.force_for("ram", 151.0))
 	var verb_stunned: String = hull.tint_verb() if hull.has_method("tint_verb") else "?"

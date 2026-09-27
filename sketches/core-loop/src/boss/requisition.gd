@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # The Requisition: a rolling furnace-fortress several times the ball's height, with
 # Brindle's glass cockpit on its stern. This node is its body and its pieces, and it
@@ -15,12 +16,18 @@ const CRANE_PIVOTS := [Vector3(-4.5, 7.5, -2.0), Vector3(4.5, 7.5, 2.0)]
 const MAGNET_REST := 6.0
 const MAGNET_HANG := 4.5
 const CAP_SIZE := Vector3(2.2, 0.8, 2.2)
+# Brindle's name plate shows while the camera is within this of its anchor: the bowl's
+# whole width, so it never drops out mid-fight.
+const PLATE_REACH := 160.0
+const PLATE_LIFT := DECK + 4.0
 
 var hull
 var magnets: Array = []
 var caps: Array = []
 var heading := Vector3.FORWARD
-var readout: Label3D
+# Brindle's name plate: a screen prompt the HUD keeps in the prompts band (CONTRACTS,
+# UI regions), anchored to the ship and, in the chase, to the scooter.
+var plate: WorldPrompt
 
 var _cables: Array = []
 var _magnet_mats: Array = []
@@ -68,13 +75,10 @@ func build(boss) -> void:
 		cable.material_override = Palette.solid(Palette.CHARCOAL)
 		add_child(cable)
 		_cables.append(cable)
-	readout = Label3D.new()
-	readout.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	readout.font_size = 72
-	readout.pixel_size = 0.025
-	readout.outline_size = 18
-	readout.position = Vector3.UP * (DECK + 5.5)
-	add_child(readout)
+	plate = WorldPrompt.new()
+	plate.name = "BrindlePlate"
+	plate.attach(self, Vector3.UP * PLATE_LIFT, PLATE_REACH)
+	add_child(plate)
 
 
 # Places the ship with its bow along `dir`, on whatever ground is under it.
@@ -136,9 +140,12 @@ func cockpit_open(open: bool) -> void:
 	_cockpit.visible = not open
 
 
-func set_readout(text: String, color: Color) -> void:
-	readout.text = text
-	readout.modulate = color
+func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLATE_LIFT) -> void:
+	plate.text = text
+	plate.add_theme_color_override("font_color", color)
+	var to: Node3D = anchor if anchor != null else self
+	if plate.anchor != to:
+		plate.attach(to, Vector3.UP * lift, PLATE_REACH)
 
 
 func _box(parent: Node3D, size: Vector3, mat: Material, at: Vector3) -> MeshInstance3D:
