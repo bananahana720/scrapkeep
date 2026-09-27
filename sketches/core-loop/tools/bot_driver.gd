@@ -2,6 +2,8 @@ extends RefCounted
 
 const Intent := preload("res://src/movement/intent.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
+const TelegraphScript := preload("res://src/combat/telegraph.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -10,10 +12,11 @@ const EventDirector := preload("res://src/world/event_director.gd")
 # log it leaves behind record play, not a test's shortcuts.
 #
 # What it may read is what a player could see: the ball, enemies in the `enemy` group,
-# the gates' offer records, the fabricator hoops, the scrap lines, the vault and the
-# stage events' rings. Those reads go through the game's module nodes; the bot is a
-# harness, not a module, so the CONTRACTS rule against reaching into another module's
-# folder does not bind it, and it writes nothing there.
+# the committed telegraphs combat and the boss draw, the gates' offer records, the scrap
+# lines, the vault, the stage events' rings and the boss's ship. Those reads go through
+# the game's module nodes; the bot is a harness, not a module, so the CONTRACTS rule
+# against reaching into another module's folder does not bind it, and it writes nothing
+# there.
 #
 # Policies (DEMO-SPEC, three drivers):
 #   skipper        beelines at the Warden from the drop, breaks it, takes the first gate.
@@ -22,13 +25,26 @@ const EventDirector := preload("res://src/world/event_director.gd")
 #                  gate that completes a synergy, then the higher tier.
 #   random         a seeded wander biased toward the beacon, which commits to the
 #                  Warden once close or late; random gate choice.
+# All three fight Brindle the same way once a boss module exists (see _boss).
 #
-# Every fight uses one loop: the camera looks at the target (its weak point when one
-# shows), fire is held, and the ball makes ram laps: charge, overshoot, run up, charge
-# again. On a caps Warden it jumps on the approach and slams from above.
+# The hands every policy shares, so a measured cost is the game's and not a blind spot:
+#   - Telegraph reading. A committed ring or lane (combat's telegraph.gd, the boss's
+#     hazards) is seen REACTION seconds after it appears, a human's reaction time. From
+#     then on, if the ball is inside it or will be within PREDICT seconds, the bot steers
+#     to the nearest safe spot that keeps its line. Rings wider than FIELD_RADIUS (the
+#     Warden's magnet reach) are fields, not dodgeable hits, and are ignored.
+#   - Class kits. The pylon engineer plants on a steep face within PLANT_SEARCH of a
+#     fight (the plant fires the opening burst), turrets for TURRET_SECONDS, then
+#     slingshots off toward the target. Both classes fire their special into a crowd or
+#     a close fight: overdrive for the runner, the discharge for the engineer.
+#   - Weak points when punch is short. With punch below the lock's plating, a caps
+#     Warden gets slams beside it (a slam within 2.6 m of a cap meets plating 0) and its
+#     own pulse is taken for the height; a magnet Warden gets the gun on its magnet while
+#     it tugs. With punch at or above plating the bot rams, as a player would.
 #
-# A run ends at stage-3 clear (outcome "won"), death ("died"), a flow state named
-# "boss" (wave 4; "boss") or a stage that runs past STAGE_LIMIT seconds ("stalled").
+# A run ends at stage-3 clear or a boss victory (outcome "won"), death ("died"), a
+# "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
+# limit ("stalled", "boss_stalled").
 
 const POLICIES := ["skipper", "completionist", "random"]
 # Radians of camera yaw per second: a brisk mouse, not a snap.
@@ -36,13 +52,15 @@ const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
 # A stage longer than this is a stall: the bot could not break the Warden.
 const STAGE_LIMIT := 240.0
+const BOSS_LIMIT := 420.0
 const STUCK_SPEED := 2.5
 const STUCK_SECONDS := 2.0
 const DETOUR_SECONDS := 1.4
+# Walls on the way: probe this far along the heading and these turns off it.
+const WALL_REACH := 4.0
+const WALL_TILT := 0.5
+const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
 const BOOST_GAP := 1.6
-# Off the line by more than this (cosine) at more than this speed, brake to carve the turn.
-const DRIFT_LINE := 0.5
-const DRIFT_SPEED := 9.0
 # The ram lap: charge until this close, then run up this far and charge again.
 const CHARGE_CLOSE := 3.8
 const RUNUP := 24.0
@@ -57,6 +75,43 @@ const WANDER_GAP := Vector2(3.0, 6.0)
 const WANDER_SPREAD := 1.0
 const WANDER_COMMIT_DISTANCE := 45.0
 const WANDER_COMMIT_TIME := 45.0
+# Telegraph reading.
+const REACTION := 0.25
+const PREDICT := 0.35
+const FIELD_RADIUS := 20.0
+const ESCAPE_DIRECTIONS := 16
+const ESCAPE_REACH := [5.0, 9.0, 13.0, 18.0]
+# The caps loop: slam from this close to the Warden's centre.
+const CAP_JUMP := 4.6
+# Beside the body (Warden radius 2.8 + ball 1.0) and the approach point on a cap's line.
+const CAP_INSIDE := 3.3
+const CAP_BESIDE := 3.8
+# Punch the bot knows it can bring: the best punch_now() it has seen, fading this fast,
+# so "short of plating" is judged on a full-speed ram, not on the ball at rest.
+const PUNCH_FADE := 4.0
+# Engineer plants.
+const PLANT_SEARCH := 22.0
+const PLANT_RANGE := 45.0
+const PLANT_REACH := 2.6
+const PLANT_TIMEOUT := 5.0
+const PLANT_EVERY := 10.0
+const TURRET_SECONDS := 3.5
+const FACE_TILT := 0.866
+# Specials.
+const CROWD := 2
+const CROWD_RADIUS := 12.0
+const CLOSE_FIGHT := 14.0
+# The boss.
+const BOSS_ORBIT := 32.0
+const BAIT_RADIUS := 47.0
+const RAMP_ANGLES := [0.0, 180.0]
+const RAMP_BOTTOM := 46.0
+const RAMP_PAST := 18.0
+const RAMP_JUMP := 26.0
+const RAMP_WINDOW := 0.5
+const PICKUP_CHASE := 30.0
+const CAP_ABOVE := 1.2
+const CAP_REACH := 2.6
 
 var game
 var policy := "skipper"
@@ -64,12 +119,16 @@ var seed_value := 1
 var class_index := 0
 var rng := RandomNumberGenerator.new()
 var source := Intent.Scripted.new()
+# Set by the runner's --trace: prints the bot's goal and the ball every two seconds.
+var trace := false
 
-# "", then won, died, stalled or boss.
+# "", then won, died, stalled, boss or boss_stalled.
 var outcome := ""
 var ticks := 0
 # One row per stage the bot entered: what it tried, for the sidecar log.
 var stage_notes: Array[Dictionary] = []
+# The Brindle fight, when there was one.
+var boss_note := {}
 
 var _offers: Array = []
 var _gate_pick := -1
@@ -93,9 +152,20 @@ var _wander_heading := Vector3.FORWARD
 var _committed := false
 var _planned := false
 var _note := {}
-# Set by the runner's --trace: prints the bot's goal and the ball every two seconds.
-var trace := false
 var _goal := ""
+# Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
+var _seen := {}
+var _evaded := {}
+# The pulse ring the caps loop takes on purpose, by its centre.
+var _welcome_ring_at := Vector3.INF
+# Engineer plant cycle: idle, seek or mounted.
+var _plant_state := "idle"
+var _plant_clock := 0.0
+var _plant_cool := 0.0
+var _plant_face := Vector3.ZERO
+var _plant_target: Node3D = null
+var _boss_clock := 0.0
+var _punch_seen := 0.0
 
 
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
@@ -119,17 +189,46 @@ func start() -> void:
 	events.reward_chosen.connect(func(_id: String): _offers = [])
 	events.player_died.connect(func(): _end("died"))
 	events.run_ended.connect(func(won: bool): _end("won" if won else "lost"))
-	events.warden_engaged.connect(func(_s: int): _note_set("warden_engaged_s", snappedf(game.run.stage_time, 0.01)))
+	events.warden_engaged.connect(func(_s: int):
+		_note_set("warden_engaged_s", snappedf(game.run.stage_time, 0.01))
+		# The descent's speed is not a ram the fight can repeat; judge from here on.
+		_punch_seen = float(game.flow.punch_now()))
 	events.beacon_unsealed.connect(func(_s: int): _note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01)))
 	events.event_started.connect(func(id: String): _note_add("events_joined", id))
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
 	events.part_gained.connect(func(id: String, source_id: String): _note_add("parts", "%s:%s" % [source_id, id]))
+	events.player_hit.connect(_on_player_hit)
+	events.enemy_struck.connect(_on_enemy_struck)
+	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
+	events.mounted.connect(func(_at: Vector3, _banked: float): _count("plants"))
+	events.dismounted.connect(func(v: Vector3):
+		if v.length() > 0.5:
+			_count("slingshots"))
+	_connect_optional("boss_arena_entered", func(): _on_boss_entered())
+	_connect_optional("boss_phase_changed", func(phase: int, phase_name: String): _on_boss_phase(phase, phase_name))
+	_connect_optional("boss_weak_point_hit", func(point_id: String):
+		if not boss_note.is_empty():
+			var hits: Dictionary = boss_note["weak_point_hits"]
+			hits[point_id] = int(hits.get(point_id, 0)) + 1)
+	_connect_optional("boss_defeated", func(): _boss_set("defeated_s", snappedf(_boss_clock, 0.01)))
+	events.scrap_lost.connect(func(amount: int, _at: Vector3, _total: int, cause: String):
+		if cause == "crane":
+			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
 
 
+func _connect_optional(signal_name: String, handler: Callable) -> void:
+	if game.events.has_signal(signal_name):
+		game.events.connect(signal_name, handler)
+
+
 func class_id() -> String:
 	return game.run.class_id()
+
+
+func _engineer() -> bool:
+	return class_id() == "pylon_engineer"
 
 
 # One physics tick. Returns true when the run is over.
@@ -140,15 +239,19 @@ func tick(delta: float) -> bool:
 	var flow = game.flow
 	var state: String = flow.state_name()
 	match state:
-		"boss":
-			_end("boss")
-			return true
 		"dead":
 			_end("died")
 			return true
 		"summary":
 			_end("won")
 			return true
+		"victory":
+			source.hold = {}
+			return false
+		"boss":
+			if _boss() == null:
+				_end("boss")
+				return true
 	if not flow.in_play():
 		source.hold = {}
 		return false
@@ -156,15 +259,30 @@ func tick(delta: float) -> bool:
 		_end("stalled")
 		return true
 	_boost_clock -= delta
+	_plant_cool -= delta
+	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var b: Vector3 = game.player.ball_position()
-		print("  trace t=%.0f stage %d %s goal=%s ball=(%.0f, %.0f, %.0f) speed=%.1f hp=%.0f heft=%.2f" % [game.run.stage_time,
-			game.run.stage, state, _goal, b.x, b.y, b.z, game.player.planar_velocity().length(), game.run.hp, game.run.heft()])
+		print("  trace t=%.0f stage %d %s goal=%s ball=(%.0f, %.0f, %.0f) speed=%.1f hp=%.0f heft=%.2f punch=%.0f" % [game.run.stage_time,
+			game.run.stage, state, _goal, b.x, b.y, b.z, game.player.planar_velocity().length(), game.run.hp, game.run.heft(), flow.punch_now()])
+	if trace and state == "boss" and ticks % (Engine.physics_ticks_per_second * 2) == 0:
+		var boss = _boss()
+		if boss != null and is_instance_valid(boss.get("arena")) and boss.get("ship") != null:
+			var b: Vector3 = game.player.ball_position()
+			print("    boss phase %s %s hp %.0f; ball r %.1f above arena ground %.1f, grounded %s, body velocity %s" % [boss.phase,
+				boss.state_name(), boss.hp, boss.arena.radius_of(b), b.y - boss.arena.ground(b), game.player.state.grounded,
+				game.player.body().linear_velocity])
 	match state:
 		"stage", "beacon":
 			_roam(delta)
 		"gates":
 			_to_gate(delta)
+		"boss":
+			_boss_clock += delta
+			if _boss_clock > BOSS_LIMIT:
+				_end("boss_stalled")
+				return true
+			_fight_boss(delta)
 		_:
 			source.hold = {}
 	return outcome != ""
@@ -175,10 +293,18 @@ func _end(why: String) -> void:
 		return
 	outcome = why
 	_close_note()
+	if not boss_note.is_empty():
+		boss_note["outcome"] = why
+		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
+		var boss = _boss()
+		if boss != null:
+			boss_note["phase_reached"] = boss.get("phase")
+			boss_note["wall_stuns"] = boss.get("stuns")
+			boss_note["clashes"] = boss.get("clashes")
 	source.hold = {}
 
 
-# --- stage bookkeeping ----------------------------------------------------------------
+# --- bookkeeping -----------------------------------------------------------------------
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_close_note()
@@ -198,8 +324,14 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
-	_note = {"stage": stage, "warden_engaged_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [], "cores": [], "parts": [],
-		"vault_tried": false, "waypoints": 0, "stuck_detours": 0}
+	_seen = {}
+	_evaded = {}
+	_plant_state = "idle"
+	_plant_cool = 0.0
+	_note = {"stage": stage, "warden_engaged_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
+		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
+		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
+		"specials": 0, "punch_short_s": 0.0}
 
 
 func _note_set(key: String, value) -> void:
@@ -212,16 +344,72 @@ func _note_add(key: String, value) -> void:
 		(_note[key] as Array).append(value)
 
 
+func _count(key: String, by: float = 1.0) -> void:
+	var into: Dictionary = boss_note if _in_boss() else _note
+	if into.is_empty():
+		return
+	into[key] = into.get(key, 0) + by
+
+
+func _boss_set(key: String, value) -> void:
+	if not boss_note.is_empty():
+		boss_note[key] = value
+
+
+func _boss_add(key: String, value) -> void:
+	if not boss_note.is_empty():
+		(boss_note[key] as Array).append(value)
+
+
+func _in_boss() -> bool:
+	return not boss_note.is_empty() and not boss_note.has("outcome")
+
+
+func _on_player_hit(amount: float, _source: String) -> void:
+	_count("hp_lost", amount)
+	_count("hits")
+
+
+func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if _note.is_empty() or not (kind == "slam" or kind == "stomp"):
+		return
+	if is_instance_valid(enemy) and enemy == game.flow.warden and enemy.has_method("contact_part") \
+			and enemy.contact_part(game.player.ball_position(), kind) == "cap":
+		_count("cap_hits")
+
+
 func _close_note() -> void:
 	if _note.is_empty():
 		return
 	_note["exit_s"] = snappedf(game.run.stage_time, 0.01)
+	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
+	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	stage_notes.append(_note)
 	_note = {}
 
 
-# The completionist's route, laid once the build has laid out the stage: every scrap
-# line end to end, nearest to the drop first, so its hoops are rolled through too.
+func _on_boss_entered() -> void:
+	_close_note()
+	_boss_clock = 0.0
+	_seen = {}
+	_evaded = {}
+	_plant_state = "idle"
+	_fight_phase = "charge"
+	_fight_target = null
+	boss_note = {"entered_run_s": snappedf(game.run.run_time, 0.01), "entry_heft": snappedf(game.run.heft(), 0.001),
+		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
+		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null}
+
+
+func _on_boss_phase(phase: int, phase_name: String) -> void:
+	_boss_add("phases", {"phase": phase, "name": phase_name, "at_s": snappedf(_boss_clock, 0.01),
+		"heft": snappedf(game.run.heft(), 0.001), "hp": snappedf(game.run.hp, 0.1)})
+
+
+# --- the completionist's route ----------------------------------------------------------
+
+# Laid once the build has laid out the stage: every scrap line end to end, nearest to
+# the drop first, so its hoops are rolled through too.
 func _plan() -> void:
 	_planned = true
 	if policy != "completionist":
@@ -251,12 +439,15 @@ static func _along(line: Array, spawn: Vector3, axis: Vector2) -> float:
 	return (mid - Vector2(spawn.x, spawn.z)).dot(axis)
 
 
-# --- the roam: what to go for now ----------------------------------------------------
+# --- the roam: what to go for now ------------------------------------------------------
 
 func _roam(delta: float) -> void:
 	if not _planned:
 		_plan()
+	_welcome_ring_at = Vector3.INF
 	var warden: Node3D = game.flow.warden if is_instance_valid(game.flow.warden) else null
+	if warden != null:
+		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
 	match policy:
 		"skipper":
 			_fight(warden, delta)
@@ -270,7 +461,7 @@ func _completionist(warden: Node3D, delta: float) -> void:
 	var event := _event_goal(delta)
 	if not event.is_empty():
 		_goal = event["goal"]
-		_drive(event["steer"], event.get("aim", null), delta)
+		_act(event["steer"], event.get("aim", null), delta)
 		return
 	if not _waypoints.is_empty():
 		_waypoint_time += delta
@@ -280,7 +471,7 @@ func _completionist(warden: Node3D, delta: float) -> void:
 			_waypoint_time = 0.0
 		if not _waypoints.is_empty():
 			_goal = "waypoint %d" % _waypoints.size()
-			_drive(_waypoints[0], _nearest_enemy(), delta)
+			_act(_waypoints[0], _nearest_enemy(), delta)
 			return
 	var vault: Node3D = _vault()
 	if vault != null and not _vault_done:
@@ -289,10 +480,8 @@ func _completionist(warden: Node3D, delta: float) -> void:
 		if _vault_time > VAULT_SECONDS:
 			_vault_done = true
 		else:
-			_goal = "vault"
 			_fight(vault, delta)
 			return
-	_goal = "warden"
 	_fight(warden, delta)
 
 
@@ -313,7 +502,7 @@ func _random(warden: Node3D, delta: float) -> void:
 		if rng.randf() < 0.3:
 			source.press["jump_pressed"] = true
 	_goal = "wander"
-	_drive(ball + _wander_heading * 30.0, _nearest_enemy(), delta)
+	_act(ball + _wander_heading * 30.0, _nearest_enemy(), delta)
 
 
 # The stage's participatory event, when the completionist should be on it: its ring
@@ -365,21 +554,45 @@ func _live_target(id: String, model) -> Vector3:
 	return game.ctx.terrain.drop_point(ring.x, ring.y, 1.0)
 
 
-# --- fighting a plated lock: ram laps with the gun held on it -------------------------
+# --- fighting a plated lock ------------------------------------------------------------
 
+func _plating(target: Node3D) -> float:
+	if target.has_method("plating_now"):
+		return float(target.plating_now())
+	var spawner = game.ctx.spawner
+	if spawner != null and spawner.has_method("plating_of"):
+		return float(spawner.plating_of(target))
+	return 0.0
+
+
+# Ram laps with the gun on it when punch reaches the plating; the lock's weak point when
+# it does not.
 func _fight(target: Node3D, delta: float) -> void:
-	_goal = "fight %s %s" % [String(target.get("kind")) if is_instance_valid(target) else "beacon", _fight_phase]
+	_welcome_ring_at = Vector3.INF
 	if target == null or not is_instance_valid(target):
 		# No lock stands (an unsealed stage): roll into the beacon's ring.
-		_drive(game.flow.beacon.global_position, _nearest_enemy(), delta)
+		_goal = "beacon"
+		_act(game.flow.beacon.global_position, _nearest_enemy(), delta)
 		return
 	if target != _fight_target:
 		_fight_target = target
 		_fight_phase = "charge"
+	var short: bool = _punch_seen < _plating(target)
+	if short:
+		_note["punch_short_s"] = float(_note.get("punch_short_s", 0.0)) + delta
+	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
+	if caps and short:
+		_goal = "caps %s" % target.get("kind")
+		_cap_loop(target, delta)
+		return
+	_goal = "fight %s %s%s" % [target.get("kind"), _fight_phase, " short" if short else ""]
+	_ram_laps(target, _aim_node(target, short), delta)
+
+
+func _ram_laps(target: Node3D, aim, delta: float) -> void:
 	var ball: Vector3 = game.player.ball_position()
 	var at: Vector3 = target.global_position
 	var distance := _flat(ball, at)
-	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
 	match _fight_phase:
 		"charge":
 			if distance < CHARGE_CLOSE:
@@ -389,21 +602,187 @@ func _fight(target: Node3D, delta: float) -> void:
 				if away.length() < 0.5:
 					away = Vector3(rng.randf_range(-1.0, 1.0), 0.0, rng.randf_range(-1.0, 1.0))
 				away = away.normalized().rotated(Vector3.UP, rng.randf_range(-0.7, 0.7))
-				_runup_point = game.ctx.terrain.drop_point(at.x + away.x * RUNUP, at.z + away.z * RUNUP, 1.0)
-			elif caps and distance < 9.0 and game.player.state.grounded and game.player.planar_velocity().length() > 8.0:
-				source.press["jump_pressed"] = true
+				_runup_point = _ground_point(at.x + away.x * RUNUP, at.z + away.z * RUNUP)
 		"runup":
 			_runup_time += delta
 			if _flat(ball, _runup_point) < 4.0 or _runup_time > RUNUP_SECONDS:
 				_fight_phase = "charge"
 	var steer: Vector3 = at if _fight_phase == "charge" else _runup_point
-	_drive(steer, target, delta)
-	# Over a caps Warden and falling: slam onto it.
-	if caps and not game.player.state.grounded and distance < 3.0 and game.player.state.velocity.y < 0.0:
+	_act(steer, aim, delta, target)
+
+
+# Slams beside a caps Warden: a slam landing within 2.6 m of a cap meets plating 0.
+# The bot rolls up the radial line of the cap nearest it, so it lands beside that cap,
+# jumps when it touches, and slams only while beside the body: a ball resting on top of
+# an enemy never reads grounded, so a slam begun there would not land. Hugging the
+# Warden also takes its pulse for height, so its core ring is welcome.
+func _cap_loop(target: Node3D, delta: float) -> void:
+	var ball: Vector3 = game.player.ball_position()
+	var at: Vector3 = target.global_position
+	_welcome_ring_at = at
+	var from_ball := Vector3(ball.x - at.x, 0.0, ball.z - at.z).normalized()
+	var line := from_ball
+	var best := -INF
+	for cap in target.cap_points():
+		var dir := Vector3(cap.x - at.x, 0.0, cap.z - at.z).normalized()
+		if dir.dot(from_ball) > best:
+			best = dir.dot(from_ball)
+			line = dir
+	var d := _flat(ball, at)
+	# From outside, come in along the cap's line; beside it, press into the body.
+	var steer: Vector3 = at + line * CAP_BESIDE if d > CAP_JUMP + 2.0 else at
+	_act(steer, target, delta, target)
+	var v: Vector3 = game.player.state.velocity
+	if game.player.state.grounded:
+		if d < CAP_JUMP:
+			source.press["jump_pressed"] = true
+	elif d > CAP_INSIDE and d < CAP_JUMP + 1.0 and v.y < 2.0:
 		source.hold["brake_held"] = true
 
 
-# --- the gates -----------------------------------------------------------------------
+# What to point the gun at: the weak point when punch is short and one shows (the
+# magnet while it tugs), else the body.
+func _aim_node(target: Node3D, short: bool):
+	if short and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
+		return {"at": target.weak_points()[0]["at"]}
+	return target
+
+
+# --- the boss: Brindle's Requisition in the Slag Bowl ----------------------------------
+
+func _boss():
+	var ctx = game.ctx
+	var boss = ctx.get("boss") if "boss" in ctx else null
+	if boss == null and ctx.has_meta("boss"):
+		boss = ctx.get_meta("boss")
+	if boss == null or not is_instance_valid(boss) or not boss.has_method("enter_arena"):
+		return null
+	return boss
+
+
+# Phase 1: guns on the live crane magnets from the orbit, chasing any stolen scrap.
+# Phase 2: up a ramp and slam a vent cap when punch is short of the hull, else ram.
+# Phase 3: bait charges into the rim wall and ram the stunned ship; clash head-on when
+# punch reaches the clash threshold. The chase: run the scooter down.
+func _fight_boss(delta: float) -> void:
+	var boss = _boss()
+	if boss_note.is_empty():
+		_on_boss_entered()
+	var ship = boss.get("ship")
+	var arena = boss.get("arena")
+	if not boss.has_method("active") or not boss.active() or ship == null or not is_instance_valid(arena):
+		_goal = "boss wait"
+		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
+		return
+	var ball: Vector3 = game.player.ball_position()
+	var hull: Node3D = ship.hull
+	var punch: float = _punch_seen
+	var phase: int = int(boss.phase)
+	var scooter = boss.get("scooter")
+	if scooter != null and is_instance_valid(scooter):
+		_goal = "boss scooter"
+		var lead: Vector3 = scooter.global_position
+		_act(lead, scooter, delta, scooter)
+		return
+	var pickup := _nearest_pickup(boss, ball)
+	match phase:
+		1:
+			var magnet := _live_part(boss, ship.magnets, ball)
+			if pickup != Vector3.INF:
+				_goal = "boss pickup"
+				_act(pickup, magnet if magnet != null else hull, delta)
+			elif punch >= _plating(hull):
+				_goal = "boss ram"
+				_ram_laps(hull, magnet if magnet != null else hull, delta)
+			else:
+				_goal = "boss magnets"
+				_act(_orbit_point(arena, ball, BOSS_ORBIT), magnet if magnet != null else hull, delta)
+		2:
+			if punch >= _plating(hull):
+				_goal = "boss ram"
+				_ram_laps(hull, hull, delta)
+			else:
+				_ramp_to_cap(boss, arena, ship, delta)
+		_:
+			if boss.has_method("stunned") and boss.stunned():
+				_goal = "boss stunned"
+				_ram_laps(hull, hull, delta)
+			elif boss.has_method("charging") and boss.charging() and punch >= float(boss.get("clash_punch") if boss.get("clash_punch") != null else 150.0):
+				_goal = "boss clash"
+				_act(hull.global_position, hull, delta, hull, false)
+			else:
+				_goal = "boss bait"
+				_act(arena.point_at(arena.angle_of(ball), BAIT_RADIUS), hull, delta, hull)
+
+
+func _live_part(boss, parts: Array, ball: Vector3) -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for part in parts:
+		if not is_instance_valid(part):
+			continue
+		if boss.has_method("target_live") and not boss.target_live(part):
+			continue
+		var d := ball.distance_to(part.global_position)
+		if d < best_d:
+			best_d = d
+			best = part
+	return best
+
+
+func _nearest_pickup(boss, ball: Vector3) -> Vector3:
+	if not boss.has_method("pickups_left"):
+		return Vector3.INF
+	var best := Vector3.INF
+	var best_d := PICKUP_CHASE
+	for p in boss.pickups_left():
+		var at: Vector3 = p["at"]
+		var d := _flat(ball, at)
+		if d < best_d:
+			best_d = d
+			best = at
+	return best
+
+
+# A point on the circle of radius r, a little ahead of the ball in its travel.
+func _orbit_point(arena, ball: Vector3, r: float) -> Vector3:
+	return arena.point_at(arena.angle_of(ball) + 0.5, r)
+
+
+# Up whichever ramp the ship is passing, a jump off its top, and a slam onto the cap
+# under the ball. Waits at the ramp's foot, guns on the hull, while the ship is away.
+func _ramp_to_cap(boss, arena, ship, delta: float) -> void:
+	var ball: Vector3 = game.player.ball_position()
+	var cap := _live_part(boss, ship.caps, ball)
+	var hull: Node3D = ship.hull
+	if cap != null and not game.player.state.grounded:
+		var over := _flat(ball, cap.global_position) <= CAP_REACH and ball.y - cap.global_position.y >= CAP_ABOVE
+		_goal = "boss cap air"
+		_act(cap.global_position, cap, delta, cap)
+		if over:
+			source.hold["brake_held"] = true
+		return
+	var ship_angle: float = arena.angle_of(hull.global_position)
+	var ramp := 0.0
+	var gap := INF
+	for a in RAMP_ANGLES:
+		var g := absf(wrapf(ship_angle - deg_to_rad(a), -PI, PI))
+		if g < gap:
+			gap = g
+			ramp = deg_to_rad(a)
+	var r: float = arena.radius_of(ball)
+	var on_ramp: bool = absf(wrapf(arena.angle_of(ball) - ramp, -PI, PI)) < 0.2
+	if gap < RAMP_WINDOW and on_ramp and r < RAMP_BOTTOM + 3.0:
+		_goal = "boss ramp climb"
+		_act(arena.point_at(ramp, RAMP_PAST), cap if cap != null else hull, delta, hull)
+		if r < RAMP_JUMP and game.player.state.grounded:
+			source.press["jump_pressed"] = true
+		return
+	_goal = "boss ramp foot"
+	_act(arena.point_at(ramp, RAMP_BOTTOM), hull, delta, hull)
+
+
+# --- the gates -------------------------------------------------------------------------
 
 func _on_offers(offers: Array) -> void:
 	_offers = offers
@@ -445,10 +824,210 @@ func _to_gate(delta: float) -> void:
 	var target := at - facing * 9.0
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
-	_drive(target, null, delta)
+	_act(target, null, delta)
 
 
-# --- the hands: stick, mouse and buttons ---------------------------------------------
+# --- acting: telegraphs first, then the class kit, then the stick --------------------
+
+# steer is where the goal wants to go, aim what to look and shoot at (a Node3D, a
+# {"at": Vector3} point or null), fight the lock this is about (for plants and
+# specials). evade false rolls straight on, as a clash does.
+func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true) -> void:
+	var player = game.player
+	if player.kit.mounted:
+		_turret(aim, delta)
+		return
+	if _plant_state == "mounted":
+		_plant_state = "idle"
+	var threats := _threats() if evade else []
+	if not threats.is_empty():
+		for h in threats:
+			if not _evaded.has(h.get_instance_id()):
+				_evaded[h.get_instance_id()] = true
+				_count("evasions")
+		var escape := _escape(threats, steer)
+		_plant_state = "idle" if _plant_state == "seek" else _plant_state
+		_specials(fight, true)
+		_drive(escape, aim, delta)
+		return
+	if _engineer() and fight != null and is_instance_valid(fight):
+		var planted := _plant(fight, delta)
+		if planted != Vector3.INF:
+			steer = planted
+	_specials(fight, false)
+	_drive(steer, aim, delta)
+
+
+# Every committed telegraph the ball is in, or will be within PREDICT, among those seen
+# for at least REACTION seconds.
+func _threats() -> Array:
+	var ball: Vector3 = game.player.ball_position()
+	var ahead: Vector3 = ball + game.player.state.velocity * PREDICT
+	var out: Array = []
+	var live := {}
+	for h in _hazards():
+		var id: int = h.get_instance_id()
+		live[id] = true
+		if not _seen.has(id):
+			_seen[id] = ticks
+			continue
+		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < REACTION:
+			continue
+		if _welcome_ring_at != Vector3.INF and h.get("center") != null and _flat(h.center, _welcome_ring_at) < 1.0:
+			continue
+		if h.contains(ball) or h.contains(ahead):
+			out.append(h)
+	if _seen.size() > 64:
+		for id in _seen.keys():
+			if not live.has(id):
+				_seen.erase(id)
+	return out
+
+
+# The telegraphs a player can see: combat's rings and lanes under the game root (not
+# the player's own amber ones, not fields wider than FIELD_RADIUS) and the boss's hazards.
+func _hazards() -> Array:
+	var out: Array = []
+	for child in game.get_children():
+		if child.get_script() != TelegraphScript or child.is_queued_for_deletion():
+			continue
+		if child.color == Palette.AMBER:
+			continue
+		if child.shape == TelegraphScript.Shape.RING and child.radius > FIELD_RADIUS:
+			continue
+		out.append(child)
+	var boss = _boss() if game.flow.state_name() == "boss" else null
+	if boss != null and boss.has_method("active_hazards"):
+		for h in boss.active_hazards():
+			if is_instance_valid(h) and h.has_method("contains"):
+				out.append(h)
+	return out
+
+
+# The nearest spot outside every threat, preferring the ball's line and the goal.
+func _escape(threats: Array, steer: Vector3) -> Vector3:
+	var ball: Vector3 = game.player.ball_position()
+	var v: Vector3 = game.player.planar_velocity()
+	var line := Vector3(v.x, 0.0, v.z).normalized() if v.length() > 1.0 else Vector3.ZERO
+	var goal := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z).normalized()
+	for reach in ESCAPE_REACH:
+		var best := Vector3.INF
+		var best_score := -INF
+		for i in ESCAPE_DIRECTIONS:
+			var angle := TAU * i / ESCAPE_DIRECTIONS
+			var dir := Vector3(sin(angle), 0.0, cos(angle))
+			var at := _ground_point(ball.x + dir.x * reach, ball.z + dir.z * reach)
+			var safe := true
+			for h in threats:
+				if h.contains(at):
+					safe = false
+					break
+			if not safe:
+				continue
+			var score := dir.dot(line) + 0.7 * dir.dot(goal)
+			if score > best_score:
+				best_score = score
+				best = ball + dir * (reach + 6.0)
+		if best != Vector3.INF:
+			return best
+	# Nowhere safe in reach: keep the line and jump, which clears a low ring's edge.
+	source.press["jump_pressed"] = true
+	return ball + (line if line != Vector3.ZERO else goal) * 12.0
+
+
+func _ground_point(x: float, z: float) -> Vector3:
+	var boss = _boss() if game.flow.state_name() == "boss" else null
+	if boss != null and is_instance_valid(boss.get("arena")) and boss.arena.has_method("ground"):
+		var p := Vector3(x, 0.0, z)
+		return Vector3(x, boss.arena.ground(p) + 1.0, z)
+	return game.ctx.terrain.drop_point(x, z, 1.0)
+
+
+# The engineer's plant cycle. Returns the face to roll to while seeking, else INF.
+func _plant(fight: Node3D, delta: float) -> Vector3:
+	var ball: Vector3 = game.player.ball_position()
+	match _plant_state:
+		"idle":
+			if _plant_cool > 0.0 or ball.distance_to(fight.global_position) > PLANT_RANGE:
+				return Vector3.INF
+			var face := _find_face(fight)
+			if face == Vector3.INF:
+				_plant_cool = 2.0
+				return Vector3.INF
+			_plant_face = face
+			_plant_target = fight
+			_plant_state = "seek"
+			_plant_clock = 0.0
+			return face
+		"seek":
+			_plant_clock += delta
+			if _plant_clock > PLANT_TIMEOUT:
+				_plant_state = "idle"
+				_plant_cool = PLANT_EVERY
+				return Vector3.INF
+			if ball.distance_to(_plant_face) < PLANT_REACH:
+				source.press["mount_pressed"] = true
+			return _plant_face
+	return Vector3.INF
+
+
+# Mounted: turret on the aim, then slingshot off toward it.
+func _turret(aim, delta: float) -> void:
+	if _plant_state != "mounted":
+		_plant_state = "mounted"
+		_plant_clock = 0.0
+	_plant_clock += delta
+	var ball: Vector3 = game.player.ball_position()
+	var look_at: Vector3 = _aim_point(aim) if _aim_valid(aim) else ball + game.camera.yaw_basis() * Vector3.FORWARD
+	_look(ball, look_at, _aim_valid(aim), delta)
+	source.hold = {"fire_held": true}
+	var threatened := false
+	for h in _threats():
+		threatened = true
+	if _plant_clock > TURRET_SECONDS or threatened or not _aim_valid(aim):
+		source.press["jump_pressed"] = true
+		_plant_state = "idle"
+		_plant_cool = PLANT_EVERY
+
+
+# A steep face (a pylon can bite: |normal.y| < FACE_TILT) within PLANT_SEARCH, the one
+# closest to the ball's side of the fight.
+func _find_face(fight: Node3D) -> Vector3:
+	var space = game.get_world_3d().direct_space_state
+	var ball: Vector3 = game.player.ball_position()
+	var to_fight := Vector3(fight.global_position.x - ball.x, 0.0, fight.global_position.z - ball.z).normalized()
+	var best := Vector3.INF
+	var best_score := INF
+	for i in 16:
+		var angle := TAU * i / 16.0
+		var dir := Vector3(sin(angle), 0.0, cos(angle))
+		var from := ball + Vector3.UP * 0.3
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * PLANT_SEARCH, 1))
+		if hit.is_empty():
+			continue
+		var n: Vector3 = hit["normal"]
+		if absf(n.y) >= FACE_TILT:
+			continue
+		var score: float = ball.distance_to(hit["position"]) - 6.0 * dir.dot(to_fight)
+		if score < best_score:
+			best_score = score
+			best = hit["position"]
+	return best
+
+
+func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
+	var ball: Vector3 = game.player.ball_position()
+	var near := 0
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if node is Node3D and is_instance_valid(node) and ball.distance_to(node.global_position) < CROWD_RADIUS:
+			if not (node.has_method("is_dead") and node.is_dead()):
+				near += 1
+	var close: bool = fight != null and is_instance_valid(fight) and ball.distance_to(fight.global_position) < CLOSE_FIGHT
+	if near >= CROWD or close or (pressed_by_threat and near >= 1):
+		source.press["special_pressed"] = true
+
+
+# --- the hands: stick, mouse and buttons -----------------------------------------------
 
 # Rolls toward steer and looks at aim (or along the way when there is nothing to aim
 # at). The stick is set in the camera's frame, as a person's WASD is.
@@ -466,17 +1045,18 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var to := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z).normalized()
 		_detour = to.rotated(Vector3.UP, PI * 0.5 * (1.0 if rng.randf() < 0.5 else -1.0))
 		source.press["jump_pressed"] = true
-		_note["stuck_detours"] = int(_note.get("stuck_detours", 0)) + 1
+		_count("stuck_detours")
 	var heading := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
 	if _detour_time > 0.0:
 		_detour_time -= delta
 		heading = _detour
+	elif player.state.grounded:
+		heading = _around_walls(ball, heading)
 	var hold := {"fire_held": true}
 	var look_at: Vector3 = ball + heading
-	var aiming := false
-	if aim != null and is_instance_valid(aim):
+	var aiming := _aim_valid(aim)
+	if aiming:
 		look_at = _aim_point(aim)
-		aiming = true
 	_look(ball, look_at, aiming, delta)
 	var yaw: float = game.camera.yaw
 	var forward := Vector3(-sin(yaw), 0.0, -cos(yaw))
@@ -491,13 +1071,30 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var want := dir if change.length() < 0.5 else change.normalized()
 		hold["move"] = Vector2(want.dot(right), want.dot(forward)).normalized()
 		var lined: float = v.normalized().dot(dir) if v.length() > 0.5 else 1.0
-		# The brake tightens a turn on the ground (BRAKE_TURN_BOOST); off-line and quick, carve.
-		if player.state.grounded and v.length() > DRIFT_SPEED and lined < DRIFT_LINE:
-			hold["brake_held"] = true
+		# No brake-carving: brake is also the slam key, and a carve held over a bump
+		# becomes a slam that plants the ball (seen on the Slag Bowl's bank).
 		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded:
 			_boost_clock = BOOST_GAP
 			source.press["boost_pressed"] = true
 	source.hold = hold
+
+
+# A wall (a face steeper than WALL_TILT) within WALL_REACH on the way is rolled around:
+# the heading turns to the nearest free bearing, as a player steers round a post.
+func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
+	if heading.length() < 0.3:
+		return heading
+	var space = game.get_world_3d().direct_space_state
+	var dir := heading.normalized()
+	var from := ball + Vector3.UP * 0.2
+	for turn in WALL_TURNS:
+		var probe := dir.rotated(Vector3.UP, turn)
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + probe * WALL_REACH, 1))
+		if hit.is_empty() or absf((hit["normal"] as Vector3).y) >= WALL_TILT:
+			if turn != 0.0:
+				_count("wall_turns", 1.0 / Engine.physics_ticks_per_second)
+			return probe * heading.length()
+	return heading
 
 
 func _look(ball: Vector3, point: Vector3, pitch_to: bool, delta: float) -> void:
@@ -516,11 +1113,16 @@ func _look(ball: Vector3, point: Vector3, pitch_to: bool, delta: float) -> void:
 	cam.look(Vector2(-dyaw / SENSITIVITY, -dpitch / SENSITIVITY))
 
 
-func _aim_point(target: Node3D) -> Vector3:
-	if target.has_method("weak_points"):
-		var points: Array = target.weak_points()
-		if not points.is_empty():
-			return points[0]["at"]
+static func _aim_valid(aim) -> bool:
+	if aim is Dictionary:
+		return aim.has("at")
+	return aim != null and is_instance_valid(aim)
+
+
+func _aim_point(aim) -> Vector3:
+	if aim is Dictionary:
+		return aim["at"]
+	var target: Node3D = aim
 	return target.global_position + Vector3.UP * 1.2
 
 
@@ -558,4 +1160,6 @@ func record(wall_seconds: float) -> Dictionary:
 		"outcome": outcome, "stage_reached": game.run.stage, "ticks": ticks,
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
+		"boss": boss_note if not boss_note.is_empty() else null,
+		"reaction_s": REACTION,
 	}
