@@ -45,6 +45,16 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 		band.material_override = band_mat
 		band.position = Vector3.UP * y
 		add_child(band)
+	# A lamp on a post: a cache you can spot from 100 m and roll off the line for.
+	var post := CylinderMesh.new()
+	post.top_radius = 0.12
+	post.bottom_radius = 0.16
+	post.height = 1.8
+	_accent(post, Palette.CHARCOAL, 0.0, Vector3.UP * (HALF_HEIGHT + 0.9))
+	var lamp := SphereMesh.new()
+	lamp.radius = 0.6
+	lamp.height = 1.2
+	_accent(lamp, Palette.SAND, 3.0, Vector3.UP * (HALF_HEIGHT + 2.0))
 
 
 func knock(_direction: Vector3, _force: float) -> void:

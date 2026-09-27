@@ -25,6 +25,8 @@ const FLOOR_RESCUE := 30.0
 const AMBER := Palette.AMBER
 const SLATE := Color("5d6b78")
 const TINT_ENERGY := 0.9
+const PLATE_GLOW_AMBER := 1.8
+const PLATE_GLOW_SLATE := 0.45
 
 signal hit_player(amount: float, shove: Vector3)
 signal died(at: Vector3, scrap_value: int)
@@ -135,7 +137,7 @@ func set_tint(state: String) -> void:
 	tint_state = state
 	var color := AMBER if state == "amber" else SLATE
 	for mat in _tint_materials:
-		(mat as StandardMaterial3D).albedo_color = color
+		_paint_plate(mat as StandardMaterial3D, color, state == "amber")
 	if _flash <= 0.0:
 		_apply_rest_look()
 
@@ -287,10 +289,31 @@ func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) ->
 	return mesh
 
 
+# A visual-only accent: a lit mesh that grows an enemy's silhouette or marks it from
+# 60 to 100 m. It never collides; the enemy's collider is unchanged.
+func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3D = self) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = Palette.solid(color, energy)
+	instance.position = at
+	parent.add_child(instance)
+	return instance
+
+
 # A tinted material for a plating mesh, registered so set_tint recolours it.
 func _plate_material() -> StandardMaterial3D:
 	var mat := Palette.solid(SLATE)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
+	_paint_plate(mat, SLATE, false)
 	_tint_materials.append(mat)
 	return mat
+
+
+# Plating carries its read in light, not just paint, so it survives distance and shade:
+# amber burns bright (your punch breaks through), slate glows dull (not yet).
+static func _paint_plate(mat: StandardMaterial3D, color: Color, beatable: bool) -> void:
+	mat.albedo_color = color
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = PLATE_GLOW_AMBER if beatable else PLATE_GLOW_SLATE

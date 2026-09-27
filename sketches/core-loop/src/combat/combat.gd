@@ -14,6 +14,8 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Ground := preload("res://src/combat/ground.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -40,9 +42,12 @@ const MUZZLE := 1.25
 const AIM_SLACK := 14.0
 const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
+# A build synergy's strike: its force is the punch (build scales it by heft), and it
+# always meets body plating, since it is never a landing on a weak point.
+const SYNERGY := "synergy"
 const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
-# Used only when stage_def() has no warden fields yet (the old spine): the spec's values.
+# The spec's values, used only for a warden field a stage def is missing.
 const WARDEN_FALLBACK := [
 	{"warden_plating": 30.0, "warden_hp": 400.0, "warden_lesson": "plate"},
 	{"warden_plating": 60.0, "warden_hp": 700.0, "warden_lesson": "caps"},
@@ -67,6 +72,9 @@ const STRIKE_DAMAGE := {
 var ctx
 var bolts
 var effects
+# The ground enemies, telegraphs and shells stand on (ground.gd): the terrain, or the
+# boss floor in the arena.
+var ground
 var volleys := 0
 # The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
@@ -79,6 +87,9 @@ var deflections := 0
 # Codex ids discovered this run, in order, with where (also sent to ctx.codex).
 var discovered := {}
 var discovery_log: Array = []
+# Where warden_spec reads a stage other than the current one. A test may swap in any
+# object with of(stage) -> Dictionary.
+var stage_defs = StageDefs
 
 var _patterns := {}
 var _part_map := {}
@@ -88,12 +99,15 @@ var _overdrive := 0.0
 var _since_slingshot := INF
 var _crushes: Array = []
 var _clock := 0.0
+# The strike whose facts are going out: {id, kind, force, part}, empty otherwise.
+var _pending := {}
 
 
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Combat"
 	ctx.spawner = self
+	ground = Ground.new(ctx)
 	effects = Effects.new()
 	ctx.root.add_child(effects)
 	effects.setup()
@@ -141,7 +155,7 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
 	enemy.global_position = at
-	enemy.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
+	enemy.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int): ctx.run.record_kill(kind, where, scrap))
 	if enemy.has_signal("fired"):
@@ -161,20 +175,30 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 		return
 	var result := resolve(enemy, kind, force, part)
 	_detect_before(enemy, kind, result)
+	var outer := _pending
+	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	if not result["full"]:
 		deflections += 1
 		ctx.events.strike_deflected.emit(enemy, kind, result["punch"], result["plating"])
+	_pending = outer
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	enemy.take_damage(result["dealt"])
 	_detect_after(enemy, kind, result)
 
 
-# The one plating rule. Returns {punch, plating, full, dealt, part}.
+# The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
+# enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
+# answers with the strike's own part, so the handler sees the plating the hit meets.
 func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionary:
+	if part == "" and not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
+			and _pending["kind"] == kind and _pending["force"] == force:
+		part = _pending["part"]
 	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
+	if kind == SYNERGY:
+		part = ""
 	var punch := punch_of(kind, force)
 	var plating: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var full := punch >= plating
@@ -203,12 +227,17 @@ func heft() -> float:
 # The best punch you have right now: a ram at your planar speed (from CRUISE up), or one
 # hit of the weapon in your hands. The HUD's "Punch 48 / plating 60" reads this.
 func punch_now() -> float:
-	var ram := 0.0
-	if ctx.player.speed_tier() >= SpeedTier.CRUISE:
-		ram = punch_of("ram", ctx.player.planar_velocity().length())
 	var weapon := active_weapon()
 	var shot: float = _patterns[weapon].damage * _damage_mod(weapon) if _patterns.has(weapon) else 0.0
-	return maxf(ram, shot)
+	return maxf(ram_punch_now(), shot)
+
+
+# A ram at your planar speed, from CRUISE up; 0 below it. No weapon term: for a target
+# only a ram can beat (a clash), this is the whole punch.
+func ram_punch_now() -> float:
+	if ctx.player.speed_tier() < SpeedTier.CRUISE:
+		return 0.0
+	return punch_of("ram", ctx.player.planar_velocity().length())
 
 
 # Build owns tuning mods (CONTRACTS). Combat reads its weapon keys live, at the moment
@@ -237,9 +266,12 @@ func integrity_of(enemy: Node3D) -> float:
 
 # True when this contact would kill an unplated target outright: the spine's crush
 # pass-through asks before it decides to skip the knock. A plated break-through is
-# not a crush.
+# not a crush, and neither is a hit on a target whose crushable() says it cannot die
+# at its current HP (a boss held at a phase floor): the ball would end inside it.
 func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	if not is_instance_valid(enemy) or enemy.is_dead():
+		return false
+	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
 	var result := resolve(enemy, kind, force)
 	return result["plating"] <= 0.0 and result["dealt"] >= enemy.hp
@@ -332,13 +364,16 @@ func _physics_process(delta: float) -> void:
 
 
 # Plated targets glow amber when your punch beats their plating right now, slate when
-# it does not. Same function as the strike, re-read every physics tick.
+# it does not. Same function as the strike, re-read every physics tick. A target whose
+# tint_verb() is "ram" is compared with the ram alone, since only a ram counts there.
 func _tint() -> void:
 	var punch := punch_now()
+	var ram := ram_punch_now()
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
 			continue
-		enemy.set_tint("amber" if punch >= enemy.plating_now() else "slate")
+		var against: float = ram if enemy.has_method("tint_verb") and enemy.tint_verb() == "ram" else punch
+		enemy.set_tint("amber" if against >= enemy.plating_now() else "slate")
 
 
 # A rolling ball at CRUISE or faster that reaches a shell in flight bats it home.
@@ -527,7 +562,7 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
-	shell.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
+	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(_on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
@@ -549,10 +584,11 @@ func _threat() -> float:
 	return ctx.flow.stage_def()["threat"]
 
 
-# The stage's Warden numbers: stage_def() fields when the spine has them, else the
-# spec's per-stage values.
+# A stage's Warden numbers: the current stage from flow's stage_def(), any other stage
+# (the vault's next one) from stage_defs.of(stage). A missing field falls back to the
+# spec's per-stage value.
 func warden_spec(stage: int) -> Dictionary:
-	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else {}
+	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else stage_defs.of(stage)
 	var fallback: Dictionary = WARDEN_FALLBACK[clampi(stage, 1, 3) - 1]
 	return {
 		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
@@ -595,12 +631,12 @@ func _declare_codex() -> void:
 		codex.declare(entry)
 
 
-# Once per run per id here; the codex itself owns what persists across runs.
+# Every time a trick fires. The codex dedupes per run and per attempt, so a trick first
+# pulled in a retried attempt pays again after the retry (CONTRACTS, Codex).
 func _discover(id: String, at: Vector3) -> void:
-	if discovered.has(id):
-		return
+	if not discovered.has(id):
+		discovery_log.append(id)
 	discovered[id] = at
-	discovery_log.append(id)
 	var codex = _codex()
 	if codex != null and codex.has_method("mark_discovered"):
 		codex.mark_discovered(id, at, ["player"])
@@ -638,15 +674,11 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # A stage entry or retry starts the fight clean, and recomputes every pattern from the
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
-	_clear_fight()
+	_start_attempt()
 	ctx.camera.shoulder_target = 0.0
-	_cooldown = 0.0
-	_special_cooldown = 0.0
-	_overdrive = 0.0
 	volleys = 0
 	last_shot = {}
 	last_burst = {}
-	_crushes.clear()
 	_since_slingshot = INF
 	_rebuild_patterns()
 
@@ -654,10 +686,18 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 # The arena is not a stage (DESIGN-NOTES spine call 34). Flow publishes this before the
 # boss module's enter_arena, on entry and on every arena retry, so nothing of Brindle's
 # exists yet and every enemy, shell and telegraph standing now came from the stage or
-# from the attempt being retried. The class kit is player-side and keeps working.
+# from the attempt being retried. The class kit keeps working, and its cooldowns start
+# fresh as they do on a stage retry.
 func _on_stage_content_cleared(_reason: String) -> void:
+	_start_attempt()
+
+
+func _start_attempt() -> void:
 	_clear_fight()
 	_crushes.clear()
+	_cooldown = 0.0
+	_special_cooldown = 0.0
+	_overdrive = 0.0
 
 
 # Every enemy, shell and telegraph leaves its group, stops acting and stops colliding

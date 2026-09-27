@@ -1,5 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
+const WardenLook := preload("res://src/combat/warden_look.gd")
+
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
 # sideways. Its whole kit is:
@@ -15,10 +17,11 @@ extends "res://src/combat/enemy.gd"
 #   - "plate": nothing more.
 #   - "caps": three vent caps on top. A stomp or slam that lands on one meets plating 0
 #     and hits for CAP_MULT times its punch.
-#   - "magnet": every MAGNET_CYCLE it swings a magnet arm toward you, telegraphs for
-#     MAGNET_TELEGRAPH, then tugs you toward it at MAGNET_PULL m/s^2 for MAGNET_TUG.
-#     A weapon hit on the magnet during the tug drops the Warden's plating to 0 for
-#     UNPLATE_SECONDS and ends the tug.
+#   - "magnet": every MAGNET_CYCLE it swings a magnet arm toward you and lays a wedge
+#     from the arm toward the ball for MAGNET_TELEGRAPH, then tugs a ball the wedge
+#     contains toward it at MAGNET_PULL m/s^2 for MAGNET_TUG. The magnet is a weak
+#     point only in the tug: a weapon hit on it then drops the Warden's plating to 0
+#     for UNPLATE_SECONDS and ends the tug. An earlier shot meets the body.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -46,6 +49,9 @@ const MAGNET_ARM := 3.2
 # body, so shooting it is a choice you aim for rather than an accident of body fire.
 const MAGNET_RISE := 3.6
 const MAGNET_RADIUS := 1.1
+# The pull telegraphs as a wedge from the arm toward the ball, this wide either side, so
+# it never reads as the pulse ring; the tug pulls only a ball the wedge contains.
+const MAGNET_WEDGE_DEG := 35.0
 const UNPLATE_SECONDS := 3.0
 const WEAPON_KINDS := ["runner", "arc", "turret"]
 const CONTACT_KINDS := ["stomp", "slam"]
@@ -72,11 +78,8 @@ var _magnet_time := 0.0
 var _magnet_dir := Vector3.FORWARD
 var _magnet_ring: Node3D
 var _unplated := 0.0
-var _caps: Array = []
 var _cap_material: StandardMaterial3D
-var _arm: Node3D
-var _magnet_material: StandardMaterial3D
-var _core_material: StandardMaterial3D
+var _look: Node3D
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -134,7 +137,7 @@ func hit_mult(hit_kind: String, part: String) -> float:
 
 func weak_points() -> Array:
 	var points := []
-	if lesson == "magnet" and magnet_state != Magnet.IDLE:
+	if lesson == "magnet" and magnet_state == Magnet.TUG:
 		points.append({"id": "magnet", "at": magnet_point(), "radius": MAGNET_RADIUS})
 	return points
 
@@ -237,7 +240,8 @@ func _step_magnet(delta: float, inside: bool) -> void:
 				_magnet_dir = to.normalized() if to.length() > 0.1 else Vector3.FORWARD
 				magnet_state = Magnet.TELEGRAPH
 				_magnet_time = 0.0
-				_magnet_ring = Telegraph.ring(world_root, terrain, global_position, reach, LIFT_REACH_UP)
+				_magnet_ring = Telegraph.wedge(world_root, terrain, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
+						reach, MAGNET_WEDGE_DEG, LIFT_REACH_UP)
 		Magnet.TELEGRAPH:
 			_magnet_time += delta
 			if is_instance_valid(_magnet_ring):
@@ -279,78 +283,48 @@ func _build_body() -> void:
 	cylinder.height = HALF_HEIGHT * 2.0
 	shape.shape = cylinder
 	add_child(shape)
+	# Everything seen is in warden_look.gd and collides with nothing; this node keeps the
+	# collider above and every number the fight uses.
+	_look = WardenLook.new()
+	add_child(_look)
+	_look.build(self, HALF_HEIGHT)
 	_base_color = Palette.CHARCOAL
-	_material = Palette.solid(_base_color)
-	var body := MeshInstance3D.new()
-	var inner := CylinderMesh.new()
-	inner.top_radius = RADIUS * 0.8
-	inner.bottom_radius = RADIUS * 0.9
-	inner.height = HALF_HEIGHT * 2.0
-	body.mesh = inner
-	body.material_override = _material
-	add_child(body)
-	# The clamp's plating: four jaws around the mast, tinted amber or slate.
-	var plate_mat := _plate_material()
-	for i in 4:
-		var jaw := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(RADIUS * 1.1, HALF_HEIGHT * 1.8, 0.7)
-		jaw.mesh = box
-		jaw.material_override = plate_mat
-		var angle := TAU * i / 4.0 + PI * 0.25
-		jaw.position = Vector3(cos(angle), 0.0, sin(angle)) * (RADIUS - 0.2)
-		jaw.rotation.y = -angle + PI * 0.5
-		add_child(jaw)
-	_core_material = Palette.solid(Palette.ARC, 1.5)
-	var core := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = RADIUS * 0.85
-	torus.outer_radius = RADIUS * 1.05
-	core.mesh = torus
-	core.material_override = _core_material
-	core.position = Vector3.UP * (HALF_HEIGHT - 0.3)
-	add_child(core)
-	if lesson == "caps":
-		_cap_material = Palette.solid(Palette.SAND, 1.5)
-		for cap in cap_points():
-			var mesh := MeshInstance3D.new()
-			var disc := CylinderMesh.new()
-			disc.top_radius = CAP_RADIUS
-			disc.bottom_radius = CAP_RADIUS * 1.2
-			disc.height = 0.6
-			mesh.mesh = disc
-			mesh.material_override = _cap_material
-			mesh.position = cap - global_position
-			add_child(mesh)
-			_caps.append(mesh)
-	if lesson == "magnet":
-		_magnet_material = Palette.solid(Palette.SAND, 0.3)
-		_arm = MeshInstance3D.new()
-		var head := SphereMesh.new()
-		head.radius = MAGNET_RADIUS
-		head.height = MAGNET_RADIUS * 2.0
-		(_arm as MeshInstance3D).mesh = head
-		(_arm as MeshInstance3D).material_override = _magnet_material
-		add_child(_arm)
+	_material = _look.body_material
+	_cap_material = _look.cap_material()
 
 
-# The magnet swings out and glows through its telegraph and burns bright during the
-# tug, the moment a shot on it counts; the core ring dims while the plating is off.
-func _pose(delta: float) -> void:
-	if _cap_material != null:
-		_cap_material.emission_energy_multiplier = move_toward(_cap_material.emission_energy_multiplier, 1.5, delta * 8.0)
-	if _core_material != null:
-		_core_material.emission_energy_multiplier = 0.3 if _unplated > 0.0 else 1.5
-	if _arm == null:
-		return
-	var out := 0.0
-	var glow := 0.3
+func _pose(_delta: float) -> void:
+	pass
+
+
+func _process(delta: float) -> void:
+	if _look != null:
+		_look.update(delta)
+
+
+# --- Read by the look --------------------------------------------------------------
+
+func charge_fraction() -> float:
+	return clampf(_charge_time / PULSE_TELEGRAPH, 0.0, 1.0) if _charging else 0.0
+
+
+# 0 when the magnet is stowed, rising to 1 through its telegraph, 1 through the tug.
+func magnet_out() -> float:
 	match magnet_state:
 		Magnet.TELEGRAPH:
-			out = clampf(_magnet_time / MAGNET_TELEGRAPH, 0.0, 1.0)
-			glow = 1.0 + 2.0 * out
+			return clampf(_magnet_time / MAGNET_TELEGRAPH, 0.0, 1.0)
 		Magnet.TUG:
-			out = 1.0
-			glow = 5.0
-	_arm.position = _magnet_dir * MAGNET_ARM * out + Vector3.UP * lerpf(HALF_HEIGHT + 0.4, MAGNET_RISE, out)
-	_magnet_material.emission_energy_multiplier = glow
+			return 1.0
+	return 0.0
+
+
+func magnet_dir() -> Vector3:
+	return _magnet_dir
+
+
+func flat_to_ball() -> Vector3:
+	return _flat_to_ball() if target != null else Vector3.ZERO
+
+
+func integrity() -> float:
+	return clampf(hp / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0

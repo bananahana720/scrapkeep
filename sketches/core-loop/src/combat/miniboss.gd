@@ -223,6 +223,14 @@ func _build_armour() -> void:
 	_halo.position = Vector3.UP * (HALF_HEIGHT + 1.4)
 	_halo.visible = false
 	add_child(_halo)
+	# A lit crown of spikes: the silhouette says "boss" from 100 m before its size does.
+	for i in 5:
+		var angle := TAU * i / 5.0
+		var spike := CylinderMesh.new()
+		spike.top_radius = 0.0
+		spike.bottom_radius = 0.4
+		spike.height = 1.6
+		_accent(spike, Palette.COPPER, 1.8, Vector3(cos(angle) * 1.3, HALF_HEIGHT + 0.5, sin(angle) * 1.3))
 
 
 # The weak window reads three ways at once: the plates swing open (shape), the core
@@ -239,7 +247,7 @@ func _pose(delta: float) -> void:
 		plate.rotation.y = lerpf(plate.rotation.y, side * 0.9 * open, 1.0 - exp(-14.0 * delta))
 	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
 	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 0.8)
-	_core_material.emission_energy_multiplier = 4.0 if weak else 0.4
+	_core_material.emission_energy_multiplier = 4.0 if weak else 1.2
 	_halo.visible = weak
 	if weak:
 		_halo.rotate_y(delta * 5.0)
