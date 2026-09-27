@@ -159,14 +159,21 @@ func apply_abilities(player) -> void:
 		player.set_vault_cooldown_scale(vault_cooldown_scale)
 	if player.has_method("set_vault_charges"):
 		player.set_vault_charges(1 + vault_charges)
+	# The item layer is a delta on the slot: a tree pick's extra charge or faster cooldown
+	# stays under whatever the items add.
 	for slot in SLOTS:
 		var s = abilities.slot(slot)
-		var want: int = clampi(1 + int(charges.get(slot, 0)), 1, MAX_CHARGES)
+		var base: int = s.max_charges - s.item_charges
+		var want: int = clampi(base + int(charges.get(slot, 0)), 1, MAX_CHARGES)
 		var before: int = s.max_charges
 		abilities.set_max_charges(slot, want)
+		s.item_charges = want - base
 		if want > before:
 			abilities.grant(slot, want - before)
-		abilities.set_cooldown_scale(slot, cooldown_scale.get(slot, 1.0))
+		var scale: float = cooldown_scale.get(slot, 1.0)
+		var base_scale: float = s.cooldown_scale / s.item_scale if s.item_scale > 0.0 else 1.0
+		abilities.set_cooldown_scale(slot, base_scale * scale)
+		s.item_scale = scale
 
 
 # Extra health from scrap_armor for this much mass.

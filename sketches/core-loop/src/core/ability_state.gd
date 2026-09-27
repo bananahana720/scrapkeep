@@ -123,6 +123,11 @@ class Slot:
 	var active := false
 	var available := true
 	var gauge: Gauge = null
+	# What the item layer (item_effects.apply_abilities) last added on top: extra charges
+	# and its cooldown multiplier. Upgrade-tree picks add to the same cap and scale, so
+	# items re-apply as a delta and never overwrite a pick.
+	var item_charges := 0
+	var item_scale := 1.0
 
 
 var _slots := {}
@@ -153,6 +158,8 @@ func swap(name: String, id: String) -> void:
 	s.max_charges = old.max_charges
 	s.charges = old.max_charges
 	s.cooldown_scale = old.cooldown_scale
+	s.item_charges = old.item_charges
+	s.item_scale = old.item_scale
 	s.id = id
 	s.icon = row.get("icon", "")
 	s.cooldown = row.get("cooldown", 0.0)

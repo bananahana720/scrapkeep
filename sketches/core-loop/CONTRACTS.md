@@ -596,3 +596,7 @@ One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick
   - Knobs are read at the point of use through `tree.knob(name)`: `kit.knob()` in movement, `_knob()` in combat.
 - **Mastery (later).** Alternate branches from mastery unlocks would be extra node lists offered in place of a pair. The demo ships none.
 - **Tests.** `tree_data_test`, `tree_apply_test`, `tree_play_test` and `tree_bot_test`. The play and bot tests run children at a fixed 90 fps through `tests/trees/child_runs.gd`, which gives the same ticks as real time, in parallel.
+
+## Charge and cooldown layers (coordinator, after the W3 merge)
+
+A slot's charge cap and cooldown scale take two layers: upgrade-tree picks change them directly (add to the cap, multiply the scale), and `item_effects.apply_abilities` re-applies the item layer as a delta it records on the slot (`item_charges`, `item_scale`). Nothing may set an absolute cap or scale except `AbilityState` on a new run. `tests/build_charge_layers_test.gd` holds this in both orders, through sell-back and the cap.
