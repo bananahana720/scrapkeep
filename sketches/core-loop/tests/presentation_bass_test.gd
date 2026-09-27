@@ -73,37 +73,34 @@ func _wubs_reined_in() -> void:
 		if engine.layer_starts[MusicEngine.WOB] > 0 or engine.layer_target(MusicEngine.WOB) > 0.0:
 			loud.append("%s %s" % [spec[0], Harmony.THEMES[spec[1]]])
 	_check("wubs reined in", loud.is_empty(), "no wobble or growl voice starts in the three level themes or the miniboss at full pressure over 8 bars; offenders %s" % [loud])
-	# The Warden's and Brindle's drops keep a restrained wobble: half level, slow rates,
-	# every cycle on the grid.
+	# The Warden's drop is round 2's club again, with no wobble; Brindle's drops keep
+	# a restrained one: half level, slow rates, every cycle on the grid.
+	var warden := MusicEngine.new()
+	warden.force_track("warden", 0, "drop", true)
+	warden.render(warden.bar_len() * 4)
+	var warden_clean := warden.layer_starts[MusicEngine.WOB] == 0
+	var engine := MusicEngine.new()
+	engine.force_track("brindle", 0, "1", true)
+	engine.set_brindle_phase(2)
+	while not engine.in_drop():
+		engine.render(engine.step_len)
+	engine.wob_log.clear()
+	engine.render(engine.bar_len() * 4)
+	var level := engine.layer_target(MusicEngine.WOB)
 	var bad: Array = []
-	var total := 0
 	var rates := {}
-	var level := 0.0
-	for kind in ["warden", "brindle"]:
-		var engine := MusicEngine.new()
-		if kind == "warden":
-			engine.force_track("warden", 0, "drop", true)
-		else:
-			engine.force_track("brindle", 0, "1", true)
-			engine.set_brindle_phase(2)
-			while not engine.in_drop():
-				engine.render(engine.step_len)
-		engine.wob_log.clear()
-		engine.render(engine.bar_len() * 4)
-		level = maxf(level, engine.layer_target(MusicEngine.WOB))
-		for entry in engine.wob_log:
-			total += 1
-			var count: int = MusicEngine.RATES[entry[1]]
-			var beat: int = int(entry[5]) * Harmony.STEPS_PER_BEAT
-			var pos := posmod(int(entry[0]) - int(entry[4]), beat)
-			var on_grid := false
-			for k in count:
-				on_grid = on_grid or pos == int(round(float(k) * beat / count))
-			if not on_grid or not entry[1] in MusicEngine.DROP_RATES:
-				bad.append("%s %d" % [kind, entry[0]])
-			rates[entry[1]] = true
-	_check("drop wobble restrained", total > 20 and bad.is_empty() and level <= MusicEngine.WOB_DROP_GAIN + 0.001,
-		"%d wobble cycles in the Warden and Brindle drops, at level %.2f (cap %.2f), rates %s, all on the grid; off %s" % [total, level, MusicEngine.WOB_DROP_GAIN, rates.keys(), bad.slice(0, 4)])
+	for entry in engine.wob_log:
+		var count: int = MusicEngine.RATES[entry[1]]
+		var beat: int = int(entry[5]) * Harmony.STEPS_PER_BEAT
+		var pos := posmod(int(entry[0]) - int(entry[4]), beat)
+		var on_grid := false
+		for k in count:
+			on_grid = on_grid or pos == int(round(float(k) * beat / count))
+		if not on_grid or not entry[1] in MusicEngine.DROP_RATES:
+			bad.append(entry[0])
+		rates[entry[1]] = true
+	_check("drop wobble restrained", warden_clean and engine.wob_log.size() > 8 and bad.is_empty() and level <= MusicEngine.WOB_DROP_GAIN + 0.001,
+		"the Warden drop has no wobble (%s); Brindle's drop has %d cycles at level %.2f (cap %.2f), rates %s, all on the grid; off %s" % [warden_clean, engine.wob_log.size(), level, MusicEngine.WOB_DROP_GAIN, rates.keys(), bad.slice(0, 4)])
 
 
 # Pyramids-style layering: each pressure step adds melodic layers, never removes one.

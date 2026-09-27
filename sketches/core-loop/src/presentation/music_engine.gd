@@ -92,10 +92,12 @@ const PUMP_ATTACK := 400
 const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER]
 # Brindle's phases add layers: phase 1 at 0.8 (pad, arp, choir, lead, half the echo),
 # phase 2 brings the echo and half the counter, phase 3 everything.
-const PRESSURE_FLOOR := {"level": 0.0, "miniboss": 0.8, "warden:build": 0.55, "warden:drop": 1.0,
+const PRESSURE_FLOOR := {"level": 0.0, "miniboss": 0.8, "warden:build": 0.55, "warden:lift": 0.7, "warden:break": 0.85, "warden:drop": 1.0,
 	"brindle:1": 0.8, "brindle:2": 0.9, "brindle:3": 1.0, "brindle:chase": 1.0, "brindle:victory": 1.0}
 const LEAD_VOICE := ["lead", "brass", "talk"]
-# The Warden's build starts when it is three quarters broken.
+# The Warden's escalation: half broken lifts the key a half step, three quarters
+# starts the sinister break, whose build tightens with every hit until the unseal.
+const WARDEN_LIFT_AT := 0.5
 const WARDEN_BUILD_FROM := 0.75
 # Brindle's key per section, in semitones above D: each phase lifts it.
 const BRINDLE_KEY := {"1": 0, "2": 1, "3": 2, "chase": 2, "victory": 0}
@@ -179,6 +181,8 @@ var events_log: Array = []
 var wob_log: Array = []
 # Notes started per layer, so a test can tell a rhythmic figure from a held note.
 var layer_starts := PackedInt32Array()
+# Bass-figure notes per instrument (reese, fbass), so a test can name the bass line.
+var bass_log := {}
 # Tests solo layers to measure them alone.
 var solo: Array = []
 
@@ -221,6 +225,11 @@ var _lp_on := false
 var _intensity := 0.0
 var _rotation := 0
 var _counter: Array = []
+var _bar_queue: Array = []
+var _transition := {}
+var _lead_octave := 0
+var _warden_lifted := false
+var _warden_broken := false
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -288,7 +297,20 @@ static func prepare_rest() -> void:
 		Synth.note("bell", midi)
 		Synth.note("mallet", midi)
 		Synth.note("clav", midi)
-	# The restrained wobble of the Warden's and Brindle's drops.
+	# The Warden's escalation: the lift a half step up, the sinister break and pivots.
+	var lifted: Array = Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
+	_prepare_chords(lifted, ["lead", "brass", "talk"], 1)
+	_prepare_chords(Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE], [], 0)
+	for shift in [0, 1]:
+		for chord in lifted:
+			var voicing := _shift(chord["voicing"], shift)
+			Synth.stab_chord(voicing, false)
+			Synth.stab_chord(voicing, true)
+			for offset in [0, 7, 10, 12]:
+				Synth.note("fbass", int(chord["root"]) + shift + offset)
+			for offset in [12, 18, 19, 22]:
+				Synth.note("reese", int(chord["root"]) + shift + offset)
+	# The restrained wobble of Brindle's drops.
 	_prepare_wobble(Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.BRINDLE, [0], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE, [2], [PHASE3_STEP], ["wub"])
@@ -492,6 +514,8 @@ func begin_boss(kind: String) -> int:
 	if track == kind:
 		return -1
 	var first := "build" if kind == "warden" else "1"
+	_warden_lifted = false
+	_warden_broken = false
 	var at := next_bar()
 	if boss_pivot and step_len != Harmony.BOSS_STEP:
 		var span := bar_len()
@@ -509,14 +533,35 @@ func begin_boss(kind: String) -> int:
 # How broken the Warden is (0..1). The last quarter is the build: the snare roll
 # tightens, the riser climbs and the high-pass opens with every hit.
 func warden_charge(fraction: float) -> void:
-	if track != "warden" or section != "build":
+	if track != "warden" or section == "drop":
 		return
+	if fraction >= WARDEN_LIFT_AT and not _warden_lifted:
+		_warden_lifted = true
+		_queue({"key": key + 1, "section": "lift", "lead_octave": 12}, {"chord": Harmony.DOMINANT, "key": key + 1})
+		events_log.append(["lift_queued", clock, fraction])
 	if fraction < WARDEN_BUILD_FROM:
 		return
+	if not _warden_broken:
+		_warden_broken = true
+		var break_key := key + (0 if _warden_lifted else 1)
+		for item in _bar_queue:
+			if (item["set"] as Dictionary).has("key"):
+				break_key = int(item["set"]["key"])
+		_queue({"section": "break", "lead_octave": 0, "key": break_key}, {"chord": Harmony.TRITONE, "key": break_key})
+		events_log.append(["break_queued", clock, fraction])
 	if _build_level < 0.0:
 		_start_riser()
 		events_log.append(["build", clock, "warden"])
 	_build_level = clampf((fraction - WARDEN_BUILD_FROM) / (1.0 - WARDEN_BUILD_FROM), 0.0, 1.0)
+
+
+# Queues a change for a coming bar line. With a transition, the bar before it is a
+# pickup: a snare fill and a pivot chord in the new key, so a key change is never a cut.
+func _queue(change: Dictionary, transition := {}) -> void:
+	var wait := 2 if not transition.is_empty() else 1
+	for item in _bar_queue:
+		wait = maxi(wait, int(item["in"]) + (2 if not transition.is_empty() else 1))
+	_bar_queue.append({"in": wait, "set": change, "transition": transition})
 
 
 # A drop on the next beat: the play head goes quiet until then, then the drop.
@@ -652,6 +697,8 @@ func cancel_pending() -> void:
 	_pulse_from = -1
 	_pulse_until = -1
 	_drop = {}
+	_bar_queue.clear()
+	_transition = {}
 	cancel_build()
 	for voice in _voices:
 		if voice.layer < 0:
@@ -790,7 +837,10 @@ func _on_step() -> void:
 		return
 	match track:
 		"warden":
-			_trigger_house(bar, s, chord)
+			if section == "break":
+				_trigger_break(bar, s, chord)
+			else:
+				_trigger_house(bar, s, chord)
 		"brindle":
 			_trigger_brindle(bar, s, chord)
 		_:
@@ -805,6 +855,8 @@ func _on_step() -> void:
 		# The miniboss's denser top: the arpeggio fills every sixteenth.
 		var tones: Array = chord["voicing"]
 		_start_note("bell", tones[(s + bar) % tones.size()] + 24, 1, ARP, 0.6, -0.4 if s % 4 == 1 else 0.4)
+	if not _transition.is_empty():
+		_fill(s)
 	if building():
 		_build_overlay(s)
 
@@ -856,6 +908,9 @@ func _run(action: Dictionary) -> void:
 			track = action["track"]
 			section = action.get("section", "")
 			_set_key(int(action.get("key", 0)))
+			_lead_octave = 0
+			_bar_queue.clear()
+			_transition = {}
 			_reset_bar()
 			_cadence_bar = -1
 			_pulse_until = -1
@@ -896,6 +951,9 @@ func _run(action: Dictionary) -> void:
 			_build_level = -1.0
 			_build_tune = false
 			_pending_drop = {}
+			_bar_queue.clear()
+			_transition = {}
+			_lead_octave = 0
 			var next_theme := int(action.get("theme", -1))
 			if next_theme >= 0:
 				theme = next_theme
@@ -966,6 +1024,27 @@ func _on_bar() -> void:
 	elif track == "brindle" and section == "victory" and _drop.is_empty() and bar >= Harmony.VICTORY.size():
 		_run({"type": "track", "track": "level", "section": "", "step": Harmony.STEP})
 		mode = IDLE
+	# Bar-queued changes: a pickup bar, then the change on the next bar line.
+	_transition = {}
+	var applied: Array = []
+	for item in _bar_queue:
+		item["in"] = int(item["in"]) - 1
+		if int(item["in"]) <= 0:
+			applied.append(item)
+		elif int(item["in"]) == 1 and not (item["transition"] as Dictionary).is_empty():
+			_transition = item["transition"]
+			events_log.append(["transition", clock, item["set"]])
+	for item in applied:
+		_bar_queue.erase(item)
+		var change: Dictionary = item["set"]
+		if change.has("key"):
+			_set_key(int(change["key"]))
+		if change.has("section"):
+			section = change["section"]
+			events_log.append(["section", clock, section])
+		if change.has("lead_octave"):
+			_lead_octave = int(change["lead_octave"])
+		_new_phrase()
 	# A planned drop counts down its bars and lands on the downbeat.
 	if not _pending_drop.is_empty():
 		_pending_drop["bars"] = int(_pending_drop["bars"]) - 1
@@ -1004,10 +1083,11 @@ func _retarget() -> void:
 	if track == "warden" and section == "drop":
 		warm = maxf(warm, 0.8)
 	_targets[WARM] = warm * MODE_MASK[mode][WARM]
-	_targets[WOB] = WOB_DROP_GAIN * MODE_MASK[mode][WOB] if not _drop.is_empty() and track in ["warden", "brindle"] else 0.0
+	_targets[WOB] = WOB_DROP_GAIN * MODE_MASK[mode][WOB] if not _drop.is_empty() and track == "brindle" else 0.0
+	# The sidechain pump is the club: the Warden's build, lift and drop, Brindle's set.
 	_pump_depth = 0.0
-	if mode == PLAY and _cadence_bar < 0 and _drop.is_empty():
-		if track == "warden":
+	if mode == PLAY and _cadence_bar < 0:
+		if track == "warden" and section != "break":
 			_pump_depth = 0.65
 		elif track == "brindle":
 			_pump_depth = 0.4
@@ -1031,12 +1111,21 @@ func _progression() -> Array:
 				"2":
 					return Harmony.BRINDLE_PHRYGIAN
 			return Harmony.BRINDLE
+		"warden":
+			if section == "break":
+				return Harmony.SINISTER
 	return Harmony.level_progression(theme)
 
 
 func _chord(bar: int) -> Dictionary:
 	if _cadence_bar >= 0:
 		return Harmony.CADENCE[mini(bar, Harmony.CADENCE.size() - 1)]
+	if not _transition.is_empty():
+		return _transition["chord"]
+	# A launch build sits on the dominant, A7b9, and the landing drop resolves it to
+	# D: the rice-cooker cadence, carried by the flight.
+	if _build_tune and _build_from >= 0:
+		return Harmony.CADENCE[0]
 	var progression := _progression()
 	if track == "brindle" and section == "victory" and _drop.is_empty():
 		return progression[mini(bar, progression.size() - 1)]
@@ -1049,7 +1138,14 @@ func _next_chord(bar: int) -> Dictionary:
 
 
 func _voicing(chord: Dictionary) -> Array:
-	return _shift(chord["voicing"], key)
+	return _shift(chord["voicing"], _chord_key())
+
+
+# The pickup bar's pivot chord already sounds in the key it leads to.
+func _chord_key() -> int:
+	if not _transition.is_empty():
+		return int(_transition.get("key", key))
+	return key
 
 
 func _make_track_lead() -> Array:
@@ -1205,38 +1301,89 @@ func _trigger_halfpipe(bar: int, s: int, chord: Dictionary) -> void:
 # The Warden: the level rebuilt as club music. Four on the floor, funk bass, filtered
 # stabs, a pump under every kick; the build waits for the drop.
 func _trigger_house(bar: int, s: int, chord: Dictionary) -> void:
+	# Round 2's club, as Andrew heard it: four on the floor, claps, open hats, the funk
+	# octave bass, a sidechain pump, and filtered jazzy stabs, dark in the build and
+	# bright in the drop. The lift (half broken) adds a snare to the clap, the lead an
+	# octave up and the arp; the drop adds a crash every four bars and the full layers.
+	var drop := section == "drop"
+	var lifted := section == "lift"
 	var phrase_bar := bar % Harmony.PHRASE_BARS
 	if s % 4 == 0:
 		_hit("kick", KICK, 1.0, 0.0)
 	if s == 4 or s == 12:
 		_hit("clap", SNARE, 1.0, 0.1)
-	if phrase_bar % 4 == 3 and s >= 8:
+		if drop or lifted:
+			_hit("snare", SNARE, 0.5, -0.1)
+	if not drop and phrase_bar % 4 == 3 and s >= 8:
 		_hit("snare", SNARE, 0.3 + 0.08 * (s - 8), 0.0)
 	if s % 4 == 2:
 		_hit("open_hat", HATS, 0.8, 0.25)
 	elif s % 2 == 1:
 		_hit("hat", HATS, 0.35, -0.25)
+	if drop and s == 0 and phrase_bar % 4 == 0:
+		_hit("crash", HATS, 1.0, -0.2)
+	if drop and s == 0 and bar == 0:
+		_hit("boom", KICK, 1.0, 0.0)
 	var root: int = chord["root"]
 	if HOUSE_BASS.has(s):
 		_bass("fbass", root + int(HOUSE_BASS[s][0]), int(HOUSE_BASS[s][1]), 1.3)
 	if s == 0:
 		_start_note("sub", root, 16, SUB, 0.8, 0.0)
+	# Under the funk bass, the level's own bass figure (round 3) on the reese, softer.
+	var figure: Dictionary = [DNB_CALM, FUNK_CALM, WEIR_CALM][theme]
+	if figure.has(s):
+		_start_note("reese", root + 12 + int(figure[s][0]), int(figure[s][1]), SUB, 0.45, 0.0)
 	if s in [2, 6, 10, 13]:
-		var stab := Synth.stab_chord(_voicing(chord), false)
+		var stab := Synth.stab_chord(_voicing(chord), drop or lifted)
 		_start(stab, mini(stab.size(), step_len + RELEASE), KEYS, LEVELS[KEYS] * 1.1, 0.2 if s % 4 == 2 else -0.2, false)
 	if s == 0 and (_targets[WARM] > 0.0 or _gains[WARM] > 0.0):
 		var pad := Synth.pad_chord(_voicing(chord))
 		_start(pad, mini(pad.size(), 16 * step_len + RELEASE), WARM, LEVELS[WARM], 0.0, false)
-	_melodic(bar, s, chord, "bell")
+	if drop:
+		_melodic(bar, s, chord, "bell")
+	elif lifted:
+		_play_lead(phrase_bar, s)
+		_arp(bar, s, chord, "bell")
+
+
+# The Warden at three quarters broken: half time, the bass walking the tritone, the
+# melody leaning on the flat second, dark stabs; the build tightens with every hit.
+func _trigger_break(bar: int, s: int, chord: Dictionary) -> void:
+	var phrase_bar := bar % Harmony.PHRASE_BARS
+	if s == 0 or (s == 10 and bar % 2 == 1):
+		_hit("kick", KICK, 1.0, 0.0)
+	if s == 0 and bar % 4 == 0:
+		_hit("boom", KICK, 0.8, 0.0)
+	if s == 8:
+		_hit("snare", SNARE, 1.0, 0.0)
+		_hit("clap", SNARE, 0.8, 0.1)
+	if s % 4 == 2:
+		_hit("hat", HATS, 0.5, 0.25)
+	var root: int = chord["root"]
+	if s == 0:
+		_start_note("sub", root, 16, SUB, 1.0, 0.0)
+		var stab := Synth.stab_chord(_voicing(chord), false)
+		_start(stab, stab.size(), KEYS, LEVELS[KEYS] * 1.2, 0.0, false)
+		_bass("reese", root + 12, 8, 1.0)
+	elif s == 8:
+		_bass("reese", root + 12 + 6, 6, 0.9)
+	elif s == 14:
+		_bass("fbass", root + 12, 2, 1.0)
+	_play_lead(phrase_bar, s)
+	_choir(bar, s, chord)
 
 
 # A drop's payoff is the full layered texture plus the bass. A landing drops back
-# into the stage's own theme with every layer in and a crash; the Warden and Brindle
-# drop into half time with a restrained wobble under the full texture.
+# into the stage's own theme with every layer in and a crash; the Warden drops into
+# round 2's bright club drop; Brindle's drops are the same funk club with his anvils
+# and a restrained wobble.
 func _trigger_drop(bar: int, s: int, chord: Dictionary) -> void:
 	var weight: float = _drop["weight"]
 	var root: int = chord["root"]
-	if not track in ["warden", "brindle"]:
+	if track == "warden":
+		_trigger_house(bar, s, chord)
+		return
+	if track != "brindle":
 		if s == 0 and (bar == 0 or bar % 4 == 0):
 			_hit("crash", HATS, 1.0, -0.2)
 		if s == 0 and bar == 0:
@@ -1249,31 +1396,29 @@ func _trigger_drop(bar: int, s: int, chord: Dictionary) -> void:
 			_:
 				_trigger_dnb(bar, s, chord)
 		return
-	if s == 0:
+	if s % 4 == 0:
 		_hit("kick", KICK, 1.0, 0.0)
-		if bar == 0 or bar % 4 == 0 or weight >= 1.1:
-			_hit("crash", HATS, 1.0, -0.2)
-		if bar == 0:
-			_hit("boom", KICK, 1.0, 0.0)
-		_start_note("sub", root, 16, SUB, 1.1, 0.0)
-		_bass("reese", root + 12, 16, 0.55)
+	if s == 0 and (bar % 4 == 0 or weight >= 1.1):
+		_hit("crash", HATS, 1.0, -0.2)
+	if s == 0 and bar == 0:
+		_hit("boom", KICK, 1.0, 0.0)
+	if s == 4 or s == 12:
+		_hit("clap", SNARE, 1.0, 0.1)
+		_hit("snare", SNARE, 0.5, -0.1)
+	if s == 6 or s == 14:
+		_hit("anvil", SNARE, 0.7, -0.35 if s == 6 else 0.35)
+	if s % 4 == 2:
+		_hit("open_hat", HATS, 0.8, 0.25)
+	elif s % 2 == 1:
+		_hit("hat", HATS, 0.35, -0.25)
+	if HOUSE_BASS.has(s):
+		_bass("fbass", root + int(HOUSE_BASS[s][0]), int(HOUSE_BASS[s][1]), 1.3)
+	if s == 0:
+		_start_note("sub", root, 16, SUB, 1.0, 0.0)
+	if s in [2, 6, 10, 13]:
 		var stab := Synth.stab_chord(_voicing(chord), true)
-		_start(stab, stab.size(), KEYS, LEVELS[KEYS] * 1.1, 0.0, false)
-	if s == 10 and (weight >= 1.0 or bar % 2 == 1):
-		_hit("kick", KICK, 0.9, 0.0)
-	if s == 3 and bar % 2 == 1:
-		_hit("kick", KICK, 0.7, 0.0)
-	if s == 8:
-		_hit("snare", SNARE, 1.0, 0.0)
-		_hit("clap", SNARE, 0.9, 0.1)
-	if s % 2 == 0:
-		_hit("hat", HATS, 0.55 if s % 4 == 2 else 0.35, 0.25)
-	if s == 14:
-		_hit("open_hat", HATS, 0.6, 0.25)
-	if s == 10 and weight >= 1.0:
-		var stab := Synth.stab_chord(_voicing(chord), true)
-		_start(stab, mini(stab.size(), 2 * step_len + RELEASE), KEYS, LEVELS[KEYS] * 0.9, 0.2, false)
-	_wobble(bar, s, chord, DROP_RATES, "wub", 0, 1.0)
+		_start(stab, mini(stab.size(), step_len + RELEASE), KEYS, LEVELS[KEYS] * 1.1, 0.2 if s % 4 == 2 else -0.2, false)
+	_wobble(bar, s, chord, DROP_RATES, "wub", 8, 1.0)
 	_melodic(bar, s, chord, "bell")
 
 
@@ -1362,6 +1507,7 @@ func _sub_and_pad(s: int, chord: Dictionary) -> void:
 
 # A bass-figure note: it cuts the previous one, so the riff stays tight.
 func _bass(instrument: String, midi: int, steps: int, gain: float) -> void:
+	bass_log[instrument] = int(bass_log.get(instrument, 0)) + 1
 	_release_layers([REESE])
 	_start_note(instrument, midi, steps, REESE, gain, 0.0)
 
@@ -1380,7 +1526,7 @@ func _wobble(bar: int, s: int, chord: Dictionary, rates: Array, vowel: String, f
 	var count: int = RATES[rate]
 	var beat := beat_len()
 	var root: int = chord["root"]
-	var midi := root + key
+	var midi := root + _chord_key()
 	for k in count:
 		var at := clock + int(round(float(k) * beat / count))
 		var next := clock + int(round(float(k + 1) * beat / count))
@@ -1395,7 +1541,13 @@ func _play_lead(phrase_bar: int, s: int) -> void:
 	for event in _lead:
 		if event[0] == at:
 			_release_layers([LEAD])
-			_start_note(_lead_voice, event[1], event[2], LEAD, 1.0, 0.1)
+			var midi: int = int(event[1]) + _lead_octave
+			while midi > 86:
+				midi -= 12
+			if track == "warden" and section == "break" and at % 4 == 0 and posmod(midi - Harmony.HOME, 12) == 0:
+				# The flat second leans on the root on strong beats.
+				midi += 1
+			_start_note(_lead_voice, midi, event[2], LEAD, 1.0, 0.1)
 			# The chopped echo: each lead note comes back a dotted eighth later, cut
 			# short and pitched up, on the rotation's voice.
 			if _on(ECHO):
@@ -1415,6 +1567,14 @@ func _arp(bar: int, s: int, chord: Dictionary, instrument: String) -> void:
 		var pattern: Array = ARP_SHAPES[int(rot["arp"])]
 		var midi: int = tones[int(pattern[(s / 2 + bar % Harmony.PHRASE_BARS) % pattern.size()]) % tones.size()] + int(rot["arp_oct"])
 		_start_note(instrument, midi, 2, ARP, 0.8, 0.45 if s % 4 == 0 else -0.45)
+
+
+# The pickup bar before a key change: a snare run that climbs into the change.
+func _fill(s: int) -> void:
+	if s >= 8:
+		_hit("snare", SNARE, 0.35 + 0.08 * (s - 8), 0.0)
+	if s == 12:
+		_hit("open_hat", HATS, 0.7, 0.2)
 
 
 # The layered top every arrangement shares: the pad, the choir, the lead with its
@@ -1537,7 +1697,7 @@ func _start_riser() -> void:
 
 # Pitched notes follow the key.
 func _start_note(instrument: String, midi: int, steps: int, layer: int, gain: float, pan: float) -> void:
-	var buf := Synth.note(instrument, midi + key)
+	var buf := Synth.note(instrument, midi + _chord_key())
 	_start(buf, mini(buf.size(), steps * step_len + RELEASE), layer, gain * LEVELS[layer], pan, false)
 
 
