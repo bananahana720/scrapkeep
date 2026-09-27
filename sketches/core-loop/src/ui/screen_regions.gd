@@ -2,13 +2,15 @@ extends RefCounted
 
 # The one screen-layout rule (CONTRACTS, UI regions). Four horizontal bands, as shares
 # of the visible height, that never overlap:
-#   top      screen titles, the objective line with its core pips, the run status
-#   toasts   notable facts, at most TOAST_ROWS at once, and the hold-R restart meter
+#   top      screen titles, the objective with its core pips, the run status
+#   toasts   the stage card or one toast (TOAST_ROWS), then a first-run callout or the
+#            hold-R restart meter
 #   prompts  world-attached prompts: reward gates and fabricators, placed under their
 #            anchor and clamped inside this band
-#   bottom   the HUD: speed, heft and the key hints
+#   bottom   the HUD: speed, health, the ability bar, heft and scrap
 # The middle of the screen between toasts and prompts is left to the play view and
-# the reticle. Everything that draws text during play asks this file for its band.
+# the reticle, with the contextual key glyphs beside the ball or target and the edge
+# markers at its rim. Everything that draws text during play asks this file for its band.
 
 const BANDS := {
 	"top": Vector2(0.0, 0.14),
@@ -18,7 +20,7 @@ const BANDS := {
 }
 const ORDER := ["top", "toasts", "prompts", "bottom"]
 const SIDE_MARGIN := 0.06
-const TOAST_ROWS := 2
+const TOAST_ROWS := 1
 const MAX_PROMPTS := 3
 const PROMPT_WIDTH := 360.0
 const PROMPT_GAP := 12.0

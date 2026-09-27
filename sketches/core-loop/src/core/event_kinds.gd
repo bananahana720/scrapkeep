@@ -121,3 +121,46 @@ static func objective(kind: String, fields := {}) -> String:
 
 static func category(id: String) -> Dictionary:
 	return CODEX_CATEGORIES.get(id, CODEX_CATEGORIES["build"])
+
+
+# v2 W1 UI
+# Facts the HUD shows that no bus signal carries: ability slot states, key glyphs, the
+# run clock and the first-run callouts. Same fields as ROWS, so colour, shape, sound and
+# wording still come from one place; they live apart from ROWS because ROWS holds one
+# row per bus signal. Sounds are ids for presentation to bake. A slot's state reads by
+# shape first (frame weight, wedge, doubled frame, strike); active wears the class
+# colour, since class colour means yours.
+const UI_ROWS := {
+	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "ability_ready", "hud": "", "objective": "", "priority": 1},
+	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"ability_active": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"ability_unavailable": {"group": "combat", "color": Palette.SANDSTONE, "shape": "cross", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"key_glyph": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
+	"run_timer": {"group": "flow", "color": Palette.SAND, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"callout_scrap": {"group": "economy", "color": Palette.ARC, "shape": "square", "sound": "callout_chime", "hud": "Scrap = heft", "objective": "", "priority": 2},
+	"callout_warden": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "callout_chime", "hud": "Break it", "objective": "", "priority": 2},
+	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
+	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab}: notes", "objective": "", "priority": 2},
+}
+# A toast is at most four words beside its row's shape icon. Where a row's own wording
+# is longer, or restates what the icon says, the HUD shows this instead.
+const TOAST_SHORT := {
+	"milestone_won": "{event} won",
+	"event_ended": "{event} lost",
+	"scrap_lost": "Chase your scrap",
+	"part_gained": "+ {part}",
+}
+# The objective in at most five words, keyed by the row whose objective it shortens.
+const OBJECTIVE_SHORT := {
+	"stage_entered": "Break the Warden",
+	"beacon_unsealed": "Charge the beacon",
+	"reward_offered": "Roll through a gate",
+	"launched": "Hold your line",
+	"boss_arena_entered": "Break Brindle's Requisition",
+}
+# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near.
+const LESSON_SHORT := {
+	"plate": "Ram it hard",
+	"caps": "Slam its vent caps",
+	"magnet": "Shoot its magnet while pulled",
+}

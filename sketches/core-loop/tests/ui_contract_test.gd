@@ -1,0 +1,123 @@
+extends SceneTree
+
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const AbilitySlots := preload("res://src/ui/ability_slots.gd")
+const WordBudget := preload("res://src/ui/word_budget.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const Hud := preload("res://src/ui/hud.gd")
+const Callouts := preload("res://src/ui/callouts.gd")
+const Parts := preload("res://src/build/parts.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
+
+# The v2 W1 contract holds together:
+#   - CONTRACTS.md's Icons section lists exactly the registry's ids, and every id
+#     resolves to a texture (an SVG when one exists, else the placeholder);
+#   - CONTRACTS.md's Ability slots section names every slot field and state;
+#   - every toast the HUD shows fits in 4 words with the longest part and event names,
+#     every objective in 5, every callout in 4, and every UI row is well formed;
+#   - a world prompt's parsed title is at most 3 words, with the rest as its detail.
+
+var _failures := 0
+
+
+func _initialize() -> void:
+	_check_icons()
+	_check_slots_doc()
+	_check_wording()
+	_check_prompt_parse()
+	print("ui_contract_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)
+
+
+func _report(label: String, ok: bool, detail: String) -> void:
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+static func _section(doc: String, heading: String) -> String:
+	var start := doc.find("\n## " + heading + "\n")
+	if start < 0:
+		return ""
+	var end := doc.find("\n## ", start + 4)
+	return doc.substr(start, (end if end > 0 else doc.length()) - start)
+
+
+func _check_icons() -> void:
+	var doc := _section(FileAccess.get_file_as_string("res://CONTRACTS.md"), "Icons")
+	var listed := {}
+	var regex := RegEx.create_from_string("`((cls|ab|key|cat|el|trg|thr|obj|res|fac)_[a-z0-9_]+)`")
+	for m in regex.search_all(doc):
+		listed[m.get_string(1)] = true
+	var missing := Icons.ids().filter(func(id): return not listed.has(id))
+	var extra := listed.keys().filter(func(id): return not Icons.has(id))
+	var broken := Icons.ids().filter(func(id): return not Icons.texture(id) is Texture2D or Icons.texture(id).get_width() <= 0)
+	_report("icon ids", doc != "" and missing.is_empty() and extra.is_empty() and broken.is_empty() and Icons.ids().size() == 70,
+		"%d registry ids, %d in CONTRACTS; not listed %s, listed but unknown %s, no texture %s"
+			% [Icons.ids().size(), listed.size(), missing, extra, broken])
+	var fallback: Texture2D = Icons.texture("ab_kest_sticky")
+	_report("icon fallback", fallback != null and fallback.get_width() == Icons.SIZE,
+		"an ability id outside the list still draws its prefix's placeholder")
+
+
+func _check_slots_doc() -> void:
+	var doc := _section(FileAccess.get_file_as_string("res://CONTRACTS.md"), "Ability slots")
+	var missing := (AbilitySlots.FIELDS + AbilitySlots.STATES).filter(func(w): return not doc.contains("`%s`" % w))
+	_report("slot contract", doc != "" and missing.is_empty(), "CONTRACTS names every slot field and state; missing %s" % [missing])
+
+
+func _check_wording() -> void:
+	var longest_part := ""
+	for id in Parts.ids():
+		var shown := String(Parts.display_name(id))
+		if WordBudget.words_in(shown) > WordBudget.words_in(longest_part):
+			longest_part = shown
+	var longest_event := ""
+	for id in EventDirector.PARTICIPATORY:
+		var shown := String(id).replace("_", " ").capitalize()
+		if WordBudget.words_in(shown) > WordBudget.words_in(longest_event):
+			longest_event = shown
+	var fields := {"stage": 3, "part": longest_part, "event": longest_event, "class": "IV", "name": "Brindle"}
+	var long_toasts := []
+	for kind in Hud.toast_kinds():
+		var text: String = Hud.toast_text(kind, fields)
+		if WordBudget.words_in(text) > Hud.TOAST_WORDS or text == "":
+			long_toasts.append("%s \"%s\"" % [kind, text])
+	var long_objectives := []
+	for key in EventKinds.OBJECTIVE_SHORT:
+		if WordBudget.words_in(EventKinds.OBJECTIVE_SHORT[key]) > Hud.OBJECTIVE_WORDS:
+			long_objectives.append(key)
+	for i in StageDefs.COUNT:
+		var lesson: String = StageDefs.of(i + 1)["warden_lesson"]
+		if WordBudget.words_in(EventKinds.LESSON_SHORT.get(lesson, "")) == 0 or WordBudget.words_in(EventKinds.LESSON_SHORT[lesson]) > Hud.OBJECTIVE_WORDS:
+			long_objectives.append(lesson)
+	var bad_rows := []
+	for kind in EventKinds.UI_ROWS:
+		var row: Dictionary = EventKinds.UI_ROWS[kind]
+		var ok: bool = row.get("color") is Color and row.get("shape", "") in EventKinds.SHAPES and String(row.get("sound", "")) != "" \
+			and row.get("group", "") in EventKinds.GROUPS
+		for field in EventKinds.FIELDS:
+			ok = ok and row.has(field)
+		if kind.begins_with("callout_"):
+			var read := Callouts.plain(row["hud"])
+			ok = ok and WordBudget.words_in(read) > 0 and WordBudget.words_in(read) <= 4
+		if not ok:
+			bad_rows.append(kind)
+	_report("wording", long_toasts.is_empty() and long_objectives.is_empty() and bad_rows.is_empty() and Hud.toast_kinds().size() >= 10,
+		"%d toast kinds with part \"%s\" and event \"%s\"; over 4 words %s; objectives over 5 %s; malformed UI rows %s"
+			% [Hud.toast_kinds().size(), longest_part, longest_event, long_toasts, long_objectives, bad_rows])
+
+
+func _check_prompt_parse() -> void:
+	var gate: Dictionary = WorldPrompt.parse("Chain Arc (rare)\nArcs jump to two more foes\nCompletes Tesla Pylon")
+	var vault: Dictionary = WorldPrompt.parse("Vault: rare part + bonus core (plating 95)")
+	var long: Dictionary = WorldPrompt.parse("Roll through the hoop for a part")
+	var ok: bool = gate["title"] == "Chain Arc (rare)" and gate["detail"] == "Arcs jump to two more foes\nCompletes Tesla Pylon" \
+		and vault["title"] == "Vault" and vault["detail"] == "rare part + bonus core (plating 95)" \
+		and long["title"] == "Roll through the" and long["detail"] == "hoop for a part"
+	var fab: Dictionary = WorldPrompt.parse("Chain Arc\nArcs jump\nROLL THROUGH: 40 scrap")
+	ok = ok and gate["icon"] == "obj_gate" and vault["icon"] == "obj_vault" and fab["icon"] == "obj_fabricator" \
+		and Callouts.plain(EventKinds.UI_ROWS["callout_notes"]["hud"]) == "Hold Tab: notes"
+	_report("prompt parse", ok, "gate %s; vault %s; long first line %s; fabricator icon %s" % [gate, vault, long, fab["icon"]])

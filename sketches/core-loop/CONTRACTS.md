@@ -328,3 +328,70 @@ During play the screen is four horizontal bands, as shares of the visible height
 - Build the game with `Game.new()`, set `test_mode = true`, add it to `root` and wait for `flow` to be set. Test mode writes the codex and run logs to a per-process folder, removed when the game leaves the tree. Drive input with `Intent.Scripted` (`hold` and `press`). Set `ctx.calm` when measuring speed.
 - `tests/doubles/spine_spawner_double.gd` is a spawner that follows A's plating rule, so spine tests don't depend on combat. The smoke runner reads only `tests/*.gd`, so helpers go in subfolders.
 - `npm run sketch:smoke` runs every sketch's import, a 300-frame boot and every test. All the `spine_*` tests must keep passing with your module installed.
+
+## Ability slots
+
+The HUD's ability bar (`src/ui/ability_bar.gd`) draws one input, an ordered array of slot records. Order is the bar's, left to right: weapon (LMB), class movement (RMB), special (F), smash (Ctrl), as `VISUAL-LANGUAGE.md` section 7 lays it out. A class may publish fewer or more slots; the bar draws what it gets.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | String | the ability, as combat names it: `weapon_id`, `special_id`, `grapple`, `dash`, `glide`, `smash` or a new id |
+| `icon` | String | an Icons id (below), `ab_<pilot>_<role>` for a class ability |
+| `key` | String | a key glyph id: `key_lmb`, `key_rmb`, `key_f`, `key_ctrl`, `key_space`, `key_shift` and the rest of the `key_` list |
+| `cooldown_frac` | float, 0 to 1 | the share of the cooldown still to run; 0 when none is running |
+| `charges` | int, 0 to `max_charges` | charges stocked now |
+| `max_charges` | int, 1 or more | the stockpile cap; pips show under the key only when it is above 1 |
+| `state` | String | one of `ready`, `cooling`, `active`, `unavailable` |
+
+- `ready` means pressing the key does the thing now. `cooling` means a cooldown is running (`cooldown_frac` above 0). `active` means the ability is running or held (fire held, overdrive burning, hook attached, mounted, gliding, slamming). `unavailable` means the key does nothing useful now, such as smash on the ground, where Ctrl brakes.
+- The bar tells the states apart by shape as well as colour. `ready` has a solid frame. `cooling` has a petrol wedge that uncovers the icon clockwise from twelve. `active` has a doubled frame in the class colour and a lifted slot. `unavailable` has a faded icon struck through. A slot going from `cooling` to `ready` swells once.
+- **Publisher (W3).** The combat module implements `ability_slots() -> Array` returning these records. The HUD reads it every frame through `has_method`. A malformed array (any record failing `AbilitySlots.valid_slot`) warns once and falls back to the adapter.
+- **Adapter, until then (`src/ui/ability_slots.gd`).** It builds the records from today's state: `class_def.weapon_id`, fire held, combat's special cooldown and overdrive, the grapple aim and hook, `dash_ready` and the boost cooldown, glide, and the slam. The class's movement slot is `grapple` for the engineer, `dash` for the runner, and `glide` for any class the table does not name. The pilot for the icon ids comes from `class_def.pilot` when the class row has one, else from the adapter's table (`pylon_engineer` is `sable`, `runner_gunner` is `rivet`, `demolitions_caster` is `kest`).
+- `ui_ability_slots_test.gd` checks the adapter's records for both classes, the publisher path and the ready swell.
+
+## Icons
+
+`Icons.texture(id) -> Texture2D` (`src/ui/icons.gd`) loads `res://assets/icons/<id>.svg` when it exists, imported or not. Otherwise it returns a 64 px procedural placeholder, white on clear, drawn from a signed-distance glyph. `Icons.tint(id, color)` gives the modulate to draw with: the fact's colour on a placeholder, and only its alpha on an SVG, which carries its own colours (a bone glyph on a charcoal backplate with one accent). An id outside the list still draws a placeholder picked by its prefix, so a new ability shows before its SVG and its contract line land.
+
+The ids are the 70 of `VISUAL-LANGUAGE.md` section 5, which owns each one's meaning and drawing. `ui_contract_test.gd` fails if this list and the registry disagree.
+
+- **Class emblems.** `cls_sable`, `cls_rivet`, `cls_kest`.
+- **Abilities.**
+  - Sable: `ab_sable_weapon`, `ab_sable_move`, `ab_sable_special`, `ab_sable_smash`, `ab_sable_vault`, `ab_sable_mount`.
+  - Rivet: `ab_rivet_weapon`, `ab_rivet_move`, `ab_rivet_special`, `ab_rivet_smash`.
+  - Kest: `ab_kest_weapon`, `ab_kest_move`, `ab_kest_special`, `ab_kest_smash`, `ab_kest_glide`, `ab_kest_cloak`.
+- **Key glyphs.** `key_lmb`, `key_rmb`, `key_f`, `key_ctrl`, `key_space`, `key_shift`, `key_e`, `key_q`, `key_r`, `key_tab`. Any other key is drawn as a keycap from its id: key_1 reads 1, key_n reads N (`src/ui/keycap.gd`).
+- **Item categories.** `cat_damage`, `cat_mobility`, `cat_defense`, `cat_utility`, `cat_charge`, `cat_transform`.
+- **Elements.** `el_frost`, `el_arc`, `el_kinetic`.
+- **Triggers.** `trg_on_hit`, `trg_on_kill`, `trg_on_smash`, `trg_on_rebound`, `trg_on_vault`, `trg_on_charge_release`, `trg_on_cloak_break`, `trg_on_land`, `trg_on_speed_tier_up`, `trg_on_pickup`, `trg_on_damage_taken`, `trg_timed`.
+- **Threat types.** `thr_instant`, `thr_wave`, `thr_projectile`, `thr_lane`.
+- **Objectives.** `obj_beacon`, `obj_warden`, `obj_gate`, `obj_fabricator`, `obj_vault`, `obj_event`.
+- **Resources.** `res_scrap`, `res_heft`, `res_health`, `res_core`, `res_timer`, `res_difficulty`.
+- **Factions.** `fac_fleet`, `fac_reactor`, `fac_swarm`, `fac_mind`.
+
+The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, not files: `Icons.shape(name)` draws them, and a toast wears its row's shape.
+
+### Where the HUD uses them
+
+- **Top band.**
+  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` over a notched bar that fills with `threat_rose`.
+  - The objective shows its `obj_` icon ringed by the Warden's broken share, at most five words, and the core diamonds. While a lock stands it shows two bars: punch (`cat_damage`) over plating (`cat_defense`, hatched), with a white notch at the plating.
+- **Toast band.** It holds the stage card (`obj_beacon` and the stage name, or `fac_fleet` for Brindle) or one toast, then a first-run callout or the hold-R meter (`key_r`). This supersedes the UI regions table above: one toast at a time (`ScreenRegions.TOAST_ROWS` is 1).
+- **Bottom band.** Left to right: the speed chevrons, health as a tank gauge (`res_health`), the ability bar, the heft dial (`res_heft`) and scrap (`res_scrap`). This replaces the speed line and the key hints.
+- **Play view.**
+  - Contextual key glyphs sit beside the ball or the grapple target: `key_e` with `ab_sable_mount`, `key_rmb` with `ab_sable_move` and `key_space` with `ab_sable_vault`.
+  - Edge markers use `obj_warden`, `obj_beacon` or `obj_gate`.
+- **Menus.** Class cards use `cls_<pilot>`, and every button draws its key's cap.
+
+### World prompt parts
+
+A world prompt (`src/ui/world_prompt.gd`) shows an icon and a title of at most three words at range, and adds its detail lines within 12 m of the ball (`DETAIL_RANGE`).
+
+- **Structured.** An owner calls `prompt.set_parts(title, detail, icon)`:
+  - `title` is at most three words.
+  - `detail` is lines joined by `\n`.
+  - `icon` is an Icons id: `obj_gate` for a reward gate, `obj_fabricator` for a fabricator, `obj_vault` for the vault, or `fac_fleet` for a Brindle readout.
+- **Parsed.** Until the owner calls it, the text it sets is parsed.
+  - The first line is the title. Text after a colon, and words past the third, move to the front of the detail. The remaining lines are the detail.
+  - The icon is `obj_vault` for a title starting "Vault", `obj_fabricator` for "FABRICATING..." or a detail that names a price in scrap, and `obj_gate` otherwise.
+- **Unchanged.** The prompt's `text` stays what the owner wrote, so owners and tests that read it keep working. The HUD places the drawn size (`shown_extent()`) in the prompts band as before.

@@ -412,3 +412,60 @@ Admiral Brindle and the Requisition in the Slag Bowl (`src/boss/`). Every number
 16. **Pass 8 retuned shred against the bands.** The bots now read plating through `combat.plating_of`, so they see shred and ram a stripped Warden. Five 48-run loops moved `combat.gd`'s shred rates from A4's 0.0184 per punch, 0.15 hold decay and 0.5 s grace to 0.017, 0.05 and 1.5 s. Warden III HP went from 7000 to 7500 and Brindle's `MAX_HP` from 14400 to 22000. The longer grace keeps a strip through a ram lap. The lower hold decay lets more builds reach a full strip, and `combat_shred_test` still holds: the engaged build strips Warden III in 4.9 s, the base kit peaks at 18. The completionist now breaks Warden III in a median 21.5 s, 9 of 15 runs in its 10 to 25 s band, against 46.6 s and 3 of 14 at pass 7. Wrecking Ball fell to 43% after B4 took kinetic off two parts. Thermal Shock sat at 8 to 14% in every pass-8 loop, around the 10% floor. The tables are in `artifacts/local/balance-p8-before.md` and `balance-p8e-final.md`. Demand: the Warden and the boss phase. Serves 4 (a grown ball visibly routs the lock).
 17. **Shred splits the skipper into groups; it does not merge it.** A fight is short once the build strips the Warden past its own bolt damage, and long if it never does. At pass 8's final rates, 7 of 15 skippers stripped Warden III and broke it in 22 to 54 s. Three got it about 60% stripped and took 103 to 110 s. Five never passed 50% and took 159 to 203 s. None landed in the 50 to 90 s band, which sits between the groups. The peak strips of skipper and completionist builds overlap, so no shred rate separates the two policies; each loop moved skippers from one group to another. At 0.05 hold decay, 13 of 16 skippers stripped (median 37 s). At 0.08, only 5 of 15 did (median 112 s). The skipper's Warden III band needs Andrew's call: a band that accepts the fast group, or shred that scales with the gap between punch and plating rather than punch alone (A's code). Brindle shows the same split: six of the seven stripping skippers won at the set-piece floor (81 to 95 s), and six of the other seven that finished took 115 to 394 s. Demand: the Warden and the boss phase. Serves 4 (growth should be a curve, not a switch).
 18. **The report read the wrong run log for four seeds in every 16-seed loop.** `run_id` is a second stamp plus a draw from the seeded stream, so seeds 1, 5, 9 and 13 started together by the three policy processes shared ids, and the report's merged join kept the skipper's line. The completionist and random rows for those seeds showed the skipper's Warden times, exit heft and codex. The report now joins inside each process folder. Pass 7's completionist Warden III reads 46.6 s median, not 39.8. Separately, the random bot's seed-5 process hung in stage 1 in three straight loops, at the same point (just after its second codex find, stage tick 14161), yet ran clean alone. A shared `user://` written by twelve processes at once is one guess, not a finding. Demand: none (the loop's own plumbing). Serves 7 (fast without debt).
+
+## v2 W1 (UI readability)
+
+Andrew's entry-7 verdict was "so much words and I can't really tell what to press". Every call below serves principle 11 (readability): say at a glance what to press, what hurts and how to grow, with icons over words and information timed to its moment. Each line also names any other principle it serves. The look follows `VISUAL-LANGUAGE.md` sections 5 and 7 on `proto/core-loop-v2` where that was cheap.
+
+1. **The budget is measured, not estimated.** `src/ui/word_budget.gd` counts every shown Label, Button and RichTextLabel, every control's `drawn_words()`, and Label3Ds in view. A word is any token with a letter or a digit, keycap labels included. That is stricter than the visual language's letters-only count. `ui_word_budget_test` stages a real stage-1 fight: the runner, gun held, three chasers close, a part and a threat just landed. On base 2792144 it counted 92 HUD words. The always-on key hints alone were 45 of them. Here it counts 13. Demand: the Warden (the fight the words crowded).
+2. **Keys show only when they work.** The always-on hint line is gone; Tab's field notes keep the full list. Each key is drawn where its action is:
+   - A keycap sits beside the ball or the grapple target while the action is available: E beside a mountable face, right mouse beside a grapple target, Space while mounted.
+   - A glyph retires for good after 3 successful uses on this profile (`ui-profile.json`).
+   - The ability bar keeps each ability's key under its slot.
+
+   Demand: the Warden and the boss phase, where the kit is used. Serves 1: nothing stops the player to read.
+3. **Status became instruments.**
+   - Health is a tank gauge with quarter ticks. Its edge turns iron oxide and pulses at 1 Hz under 25%.
+   - Heft is a pressure dial. Its needle swings to the class plus progress, and it flashes on a rise or a theft.
+   - Scrap sits right beside the dial, because scrap is heft (form mirrors function).
+   - The top left holds the stage pips, the Fleet's tag for the arena, and the run clock in mono digits with the difficulty as a notched bar under it. Andrew plays against the clock.
+
+   Demand: the Warden (heft against plating). Serves 4: growth reads at a glance.
+4. **The objective is an icon and at most five words, and it changes with distance.**
+   - Far from the Warden it reads "Break the Warden". Within 40 m it becomes that stage's lesson ("Ram it hard", "Slam its vent caps", "Shoot its magnet while pulled").
+   - Punch against plating is two bars: punch over hatched plating, with a white notch at the plating on both. Winning reads as the punch bar passing the notch, and its tip turns mint.
+   - A ring round the icon fills with the share of the Warden broken.
+   - The wording lives in event_kinds' `OBJECTIVE_SHORT` and `LESSON_SHORT`, so flow's long objective line is unchanged for the tests that read it.
+
+   Demand: the Warden and the boss phase. Serves 10: the demand is punch against plating.
+5. **One toast at a time, at most four words, beside its row's shape.** The newest replaces the one showing. It enters in 0.12 s, holds 2.4 s for a critical fact or 1.6 s for a notable one, and leaves in 0.2 s.
+   - **What toasts.** Only critical (priority 3) rows toast, plus the facts the player acts on: a part gained outside a gate ("+ Boost Coil"), scrap torn loose ("Chase your scrap") and a lost event ("Surge Run lost").
+   - **What moved elsewhere.** "Threat rising" is now the difficulty bar. A heft drop flashes the dial. "The Warden wakes" became a callout and the lesson objective. The stage, launch and arena facts belong to the stage card.
+   - **Conflict.** The visual language allows two toasts; the W1 packet says one. This build keeps one; it is flagged for the coordinator.
+
+   Demand: event (its loss) and the Warden. Serves 3: an opt-in event that is lost still says so.
+6. **The stage card rides the launch.** Taking a gate launches you. The next stage's beacon icon and name fade in over the flight and out after the drop. Brindle's arena shows the Fleet's tag and "Admiral Brindle". A toast that lands meanwhile waits for the card to clear. The card takes no input and pauses nothing. Demand: the boss phase and every stage entry. Serves 1: a launch is momentum carried, with no load screen.
+7. **The ability bar speaks by shape before colour.**
+   - It follows the visual language's order: weapon (LMB), class movement (RMB), special (F), smash (Ctrl).
+   - `ready` has a solid bone frame. `cooling` has a petrol wedge uncovering a dimmed icon clockwise from twelve. `active` has a doubled frame in the class colour and a lifted slot. `unavailable` is faded and struck through.
+   - Only a cooldown ending makes a slot swell (1.12 over 180 ms, with a class-colour rim). Leaving the ground or finding a grapple target does not, so the swell always means "it's back".
+   - Demand: the Warden and the boss phase. Serves 7: timing a cooldown is snappy when you can see it return.
+8. **The slot array is a contract; today's state is an adapter.** CONTRACTS "Ability slots" defines the records, and combat will publish `ability_slots()` (W3). Until then `ability_slots.gd` builds them from today's state:
+   - It reads the special's cooldown by name and learns its full length from the largest value seen, so no combat constant leaks into the UI.
+   - A malformed published array warns once and falls back.
+   - The pilot comes from `class_def.pilot` when it exists, else a table: engineer is Sable, runner is Rivet.
+
+   Demand: none (the seam W3 builds on). Serves 11: standardized systems, no hidden bugs.
+9. **Icons are the visual language's 70 ids.** `Icons.texture(id)` loads the look track's SVG when it lands, else a signed-distance placeholder in the fact's own colour. `Icons.tint` keeps an SVG's own colours. The event_kinds shapes are drawn, never files, so a toast wears its row's silhouette. Colours for UI-only facts (slot states, the key glyph, the clock, callouts) are `UI_ROWS` in event_kinds' v2 W1 block. They sit beside ROWS because ROWS must hold one row per bus signal. Demand: none (the look track's seam). Serves 11.
+10. **Edge markers point, and say nothing.** When the Warden, the beacon or an open gate is off screen, a chevron sits at the rim of the play view with the target's objective icon behind it, in that target's event colour. It never enters the top, toast or bottom bands. It grows from 13 to 30 px as the target nears from 180 m to 25 m. Demand: the Warden and the gates. Serves 1: you steer while rolling, not after stopping to look.
+11. **Four first-run callouts, each once per profile.** They are "Scrap = heft" with the scrap and heft icons on the first scrap, "Break it" when the Warden first wakes, "Roll through" when the gates open, and "Hold Tab: notes" after 60 s, with Tab drawn as its keycap in place. Each lasts 2.5 s in the toast band, never over the reticle, and gives way to the hold-R meter. Demand: the Warden and the gates. Serves 9: the gating spine taught at the moment it matters.
+12. **World prompts get shorter at range.** At range a prompt shows an icon and a title of at most three words (gate, fabricator or vault). Within 12 m of the ball it adds the detail lines. Owners' multi-line text is parsed until they pass `set_parts()`, and the Label keeps the owner's text, so their code and tests are untouched. Demand: vault and event (their prompts). Serves 1: prices and offers read while rolling past.
+13. **Menus take the mouse, and a click is a key press.**
+    - Every button presses its key through `game._screen_key`, so a click and a key can never disagree. Keys still act at once (principle 2).
+    - Hover brightens a button's edge to bone, focus thickens it, and a press edges it amber.
+    - The death screen ignores clicks for its first 0.5 s, so a fire button still mashed as the ball dies cannot pick "New run". The summary's key guard covers clicks too.
+    - Class cards show the class emblem, name and the pitch's first sentence. They lay out for N classes (the width fits three), and keys 1 to N pick them.
+    - Demand: none (menus). Serves 2: quick to restart, and never by accident.
+14. **Transitions fade; they never wait.** Screens fade in over 0.3 s (cubic ease-out, content rising 14 px) and out over 0.25 s (ease-in). Play starts at once under the fading veil. No tween holds input, the tree or the ball. Demand: none. Serves 1.
+15. **Type.** The HUD uses Noto Sans Bold for words and Noto Sans Mono Bold for numbers. Both load from `/usr/share/fonts/noto/` when present, else Godot's default font. They are not vendored, because `assets/` is outside W1's lease. Demand: none. Serves 11.
+16. **The reticle carries no words.** "In reach 34 m" is gone. The reticle's shape and colour already say it, and the right-mouse glyph beside the target says what to press. Demand: the Warden (grapple targets on it). Serves 1.
