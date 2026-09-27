@@ -17,7 +17,7 @@ const DEFS := [
 		"warden_plating": 45.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_hint": "Ram it hard."},
 	{"stage": 2, "name": "The Sluice", "threat": 1.5,
 		"event_mix": {"flood": 1.0, "dust_squall": 0.6, "surge_run": 0.8}, "scrap_density": 1.2, "beacon_seconds": 30.0, "beacon_radius": 30.0,
-		"warden_plating": 80.0, "warden_hp": 3000.0, "warden_lesson": "caps", "warden_hint": "Slam its vent caps."},
+		"warden_plating": 80.0, "warden_hp": 2200.0, "warden_lesson": "caps", "warden_hint": "Slam its vent caps."},
 	{"stage": 3, "name": "The Weir", "threat": 2.1,
 		"event_mix": {"flood": 1.0, "dust_squall": 1.0, "surge_run": 1.0, "hold_the_relay": 1.0}, "scrap_density": 1.4, "beacon_seconds": 35.0, "beacon_radius": 28.0,
 		"warden_plating": 140.0, "warden_hp": 7000.0, "warden_lesson": "magnet", "warden_hint": "In its ring, shoot the magnet while it pulls you."},
