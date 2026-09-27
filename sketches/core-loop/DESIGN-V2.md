@@ -224,3 +224,16 @@ Brindle and the Bible's antagonist stay. The Bible amendment for the post-apocal
 | Superintelligence | The Mind's hands | Adapts to the player's habits. Frequent rebounds make it brace; frequent vaults make it guard the walls. It reads and counters the player's last pattern, bounded and telegraphed. |
 
 The codex's world category holds lore fragments found in vaults and secrets. The true cause, or the mix of causes, stays ambiguous and is pieced together across runs. For the W7 roster in this sketch, one ancient per family is enough, beside the Fleet reinforcements.
+
+**Who the characters are (Andrew, 2026-09-27).** In his words: "since life finds a way that there will be other intelligent beings or I guess it could be like animal, like amorphous, like animus type like characters", "tying into the history of you know, where the characters come from and um, like the history of the the current reigning intelligent species."
+
+- **The premise.** After humans were lost, animals became the reigning intelligent species. They grew up among our buried machines.
+- **It matches the Bible's candidate cast:**
+  - Sable, a fox from the Switchback Enclaves: grapple traversal.
+  - Kest, a bird from the Highdraft Roosts: a hovering mortar.
+  - Rivet, a mole machinist with cyborg instrumentation.
+  - Brindle, a badger commanding the Fleet.
+- **How they became intelligent stays ambiguous.** Evolution, or uplift by something humans left behind (a lab, the Mind, a caretaker drone network). The codex hints at it and never settles it.
+- **The theme.** Salvagers repair and repurpose the tech that ended us. The Fleet digs up what should have stayed buried.
+
+The Bible marks an animal-only cast as open and never makes the exploratory examples canon. This premise goes to the same heavy-lane Bible card as the enemy origin, after v2 play. In this sketch, the class screen and codex may use the species and culture names.
