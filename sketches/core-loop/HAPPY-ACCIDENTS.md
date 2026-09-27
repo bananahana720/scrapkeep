@@ -23,4 +23,14 @@ These five are bounded on purpose. They are fun because they are rare and capped
 
 ## Fuzz anomalies for KEEP or KILL
 
-Pending the 200-seed run.
+**The run.** 200 seeds (1 to 200) of `tools/item_fuzz.gd` on `proto/core-loop-v2-loot` at 32dff63, 90 s each at `--fixed-fps 90`, in four slices. Receipts are under `artifacts/local/fuzz-{1-50,51-100,101-150,151-200}/` (`run.log`, `fuzz.ndjson`, `anomalies.md`).
+- **Result.** 7 anomalies in 200 builds, and no softlocks, crashes or non-finite values. The only engine error was the ability bar's degenerate sweep polygon, which is already fixed on `proto/core-loop-v2` (f5fb32b).
+- **Coverage.** 10 of 12 trigger kinds fired naturally in play. `on_smash` and `on_vault` never did, because the fuzz bot doesn't smash or vault. Those two triggers ran only by injection, so their parts are covered by the bus but not by play. This is a gap in the bot, not in the items.
+
+Andrew rules on each line at the alpha play. The recommendation is the coordinator's default until then.
+
+| # | Seeds | Class | What escaped | Common parts | Recommendation |
+| --- | --- | --- | --- | --- | --- |
+| A1 | 17, 29, 62, 149, 155 | Kest | Top speed of 60.3 to 70.4 m/s, against a 60 m/s ceiling (the highest any part names) | Every one has Jet Vent (cloak break fires a 14 m/s dash) with Scrap Gravity. Most also have Sunforged Core or Tempest Core. | **KEEP.** A cloak-break dash on top of a fast roll is the Ghost fantasy: vanish, then burst out faster than anything should go. It only overshoots by 1 to 17%. If it's kept, name it (a candidate is "Afterburn") and show it in the codex as a found synergy. |
+| A2 | 187 | Rivet | Top speed of 85.9 m/s, 43% over the ceiling | Momentum Thief (chip hits add 5%, "never past 40 m/s"), Tumbler Bearing, Tempest Core, and Spiral Wave twice | **KEEP with a check.** Momentum Thief's own bound holds: it stops adding at 40 m/s. Something else carried the ball from there to 86 m/s, most likely landings chained with air jumps. At 86 m/s the ball covers about 0.95 m per physics tick. Before keeping it, verify that thin walls and gates still catch a ball that fast. If they don't, **KILL** the speed that causes tunnelling, not the combo. |
+| A3 | 165 | Sable | Frame p99 at 16.9 ms, against a 16.7 ms budget | Two Frost Vanes, Shock Liner and Static Burr (many field effects at once) | **Not an item call.** The fuzz ran on a machine shared with three builds and a smoke run, so a 0.2 ms overshoot is within noise. The perf-lab pass in Wave 4 re-measures this build alone. |
