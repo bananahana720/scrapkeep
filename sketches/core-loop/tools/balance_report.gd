@@ -49,7 +49,8 @@ const TARGETS := [
 	{"what": "Skipper Warden III fight", "policy": "skipper", "stage": 3, "metric": "fight", "band": Vector2(50.0, 90.0)},
 	{"what": "Skipper stage-3 exit heft", "policy": "skipper", "stage": 3, "metric": "heft", "band": Vector2(2.5, 3.5)},
 	{"what": "Completionist Warden III fight", "policy": "completionist", "stage": 3, "metric": "fight", "band": Vector2(10.0, 25.0)},
-	{"what": "Completionist stage-3 exit heft (at or under the band top)", "policy": "completionist", "stage": 3, "metric": "heft", "band": Vector2(0.0, -1.0)},
+	# The band top of the power-curve table at the approved heft constants (1/150 a mass), held fixed.
+	{"what": "Completionist stage-3 exit heft (at or under 9.07)", "policy": "completionist", "stage": 3, "metric": "heft", "band": Vector2(0.0, 9.07)},
 	{"what": "Skipper HP lost, stage 1 (% of max)", "policy": "skipper", "stage": 1, "metric": "hp", "band": Vector2(20.0, 60.0)},
 	{"what": "Skipper HP lost, stage 2 (% of max)", "policy": "skipper", "stage": 2, "metric": "hp", "band": Vector2(20.0, 60.0)},
 	{"what": "Skipper HP lost, stage 3 (% of max)", "policy": "skipper", "stage": 3, "metric": "hp", "band": Vector2(20.0, 60.0)},
