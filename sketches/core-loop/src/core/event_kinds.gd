@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # One row per GameEvents signal, keyed by the signal's name. Form mirrors function: the
 # HUD toast, the objective line, the VFX shape and colour, the synthesized sound and
@@ -79,6 +80,25 @@ const ROWS := {
 	"boss_weak_point_hit": {"group": "combat", "color": Palette.BRASS, "shape": "burst", "sound": "boss_weak_hit", "hud": "", "objective": "", "priority": 1},
 	"boss_defeated": {"group": "flow", "color": Palette.BRASS, "shape": "star", "sound": "stinger_boss_defeated", "hud": "Brindle routed", "objective": "", "priority": 3},
 	"threat_rose": {"group": "event", "color": Palette.RUST, "shape": "chevron", "sound": "threat_up", "hud": "Threat rising", "objective": "", "priority": 2},
+	# v2 W3 characters. A class's own facts wear its colour and shape from class_def.gd;
+	# shared facts (contact, gauge) wear neutral ones. `sound` is an existing synth id
+	# standing in; `sound_next` names the id W5 is to bake for it.
+	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "clank", "sound_next": "rebound_clank", "hud": "", "objective": "", "priority": 1},
+	"enemy_pinned": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "hit_thwack", "sound_next": "pin_smack", "hud": "", "objective": "", "priority": 1},
+	"vault_kicked": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "pylon_eject", "sound_next": "sable_vault_arpeggio", "hud": "", "objective": "", "priority": 1},
+	"gauge_charging": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "ui_tick", "sound_next": "gauge_rise", "hud": "", "objective": "", "priority": 1},
+	"gauge_released": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "special_fire", "sound_next": "release_thump", "hud": "", "objective": "", "priority": 1},
+	"gauge_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "cross", "sound": "womp", "sound_next": "gauge_fizzle", "hud": "", "objective": "", "priority": 1},
+	"sprint_started": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "rivet_hihat_roll", "hud": "", "objective": "", "priority": 1},
+	"cc_ignored": {"group": "combat", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "clank", "sound_next": "rivet_shrug", "hud": "", "objective": "", "priority": 1},
+	"cloak_started": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "stage_fade", "sound_next": "kest_dust_puff", "hud": "", "objective": "", "priority": 1},
+	"cloak_broken": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "shatter", "sound_next": "kest_crit_snap", "hud": "", "objective": "", "priority": 1},
+	"sticky_detonated": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_low_thump", "hud": "", "objective": "", "priority": 1},
+	"rocket_jumped": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "boost_whoosh", "sound_next": "kest_rocket_whoosh", "hud": "", "objective": "", "priority": 1},
+	"blink_used": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "dash_whoosh", "sound_next": "kest_smoke_blink", "hud": "", "objective": "", "priority": 1},
+	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_arc_slam", "hud": "", "objective": "", "priority": 1},
+	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_skid_screech", "hud": "", "objective": "", "priority": 1},
+	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_demo_scatter", "hud": "", "objective": "", "priority": 1},
 }
 
 # Codex categories: each has its own colour, glyph shape and label, so the Tab codex
