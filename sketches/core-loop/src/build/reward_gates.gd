@@ -1,0 +1,315 @@
+extends Node3D
+
+const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Parts := preload("res://src/build/parts.gd")
+const Synergies := preload("res://src/build/synergies.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+
+# The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
+# its line; rolling through one takes its part. There is no collider and no menu, so
+# choosing never costs speed. If you roll past both, they are put ahead of you again
+# rather than waiting behind you.
+#
+# Each gate says what it gives while you approach, in the order you need it:
+# "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
+# complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
+# ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
+# (a bar for common, a diamond for uncommon, a star for rare, a tall star for
+# rare-plus), so colour never carries it alone.
+
+signal chosen(part_id: String)
+
+const AHEAD := 38.0
+const SPREAD := 9.0
+const WIDTH := 8.0
+const HEIGHT := 7.0
+const MISSED_BEYOND := 20.0
+const LOST_BEYOND := 110.0
+# Gates go downhill of the ball, never up a bank (momentum is sacred): candidate
+# headings are tried nearest the ball's own line first, at these distances and
+# spreads, and the first whose gate spots and approach lines stay at or below the
+# ground under the ball (within CLIMB_TOLERANCE) wins. If none does, the candidate that
+# climbs least is used.
+const TURN_STEPS := [0.0, 20.0, -20.0, 40.0, -40.0, 60.0, -60.0, 90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
+const DISTANCES := [AHEAD, 30.0, 24.0, 18.0]
+const SPREADS := [SPREAD, 6.0]
+const CLIMB_TOLERANCE := 0.75
+const PATH_SAMPLES := 6
+# A candidate is also rejected when a static prop (a kerb, a bench, anything built by a
+# map's build_props, or an element hazard like ice) stands across its approach or its
+# roll-out: an unforeseen stop is exactly what momentum is sacred forbids. The probe is
+# a ball-sized sphere swept on the physics layer terrain and props share (layer 1); the
+# terrain's own "Ground" body is excluded by RID so only real obstacles count. A
+# blocked candidate is penalised, never returned outright, unless every candidate is
+# blocked, in which case the least-blocked one is used and a warning is pushed once.
+const PROBE_RADIUS := 1.0
+const RUN_OUT := 6.0
+const BLOCK_PENALTY := 1000.0
+# A gate's offer prompt shows while the gate is this close, the whole time it can be chosen.
+const PROMPT_REACH := LOST_BEYOND
+
+var offers: Array = []
+# Build's offer_mark(part_id) -> String; the star line under an offer, or "".
+var mark_for: Callable
+
+var _terrain
+var _ids: Array = []
+var _held: Array = []
+var _last_side := {}
+var _gates: Array[Node3D] = []
+var _spin := 0.0
+var _warned_blocked := false
+
+
+func setup(terrain) -> void:
+	_terrain = terrain
+	visible = false
+
+
+# Returns the published offers: part_id, at (ground centre), facing (the way through)
+# and width, plus name, text, rarity, tier and synergy for anything that draws them.
+func open(part_ids: Array, ball: Vector3, heading: Vector3, held: Array = []) -> Array:
+	_ids = part_ids
+	_held = held.duplicate()
+	_place(ball, heading)
+	visible = true
+	return offers
+
+
+func close() -> void:
+	visible = false
+	offers = []
+	for gate in _gates:
+		gate.queue_free()
+	_gates.clear()
+
+
+func is_open() -> bool:
+	return not offers.is_empty()
+
+
+# Returns true when the gates moved, so the owner can publish the new offers.
+func step(ball: Vector3, heading: Vector3) -> bool:
+	if offers.is_empty():
+		return false
+	var passed_all := true
+	for i in offers.size():
+		var offer: Dictionary = offers[i]
+		var rel: Vector3 = ball - offer["at"]
+		var along: float = rel.dot(offer["facing"])
+		var side: float = (rel - (offer["facing"] as Vector3) * along).length()
+		var was: float = _last_side.get(i, along)
+		_last_side[i] = along
+		if was < 0.0 and along >= 0.0 and side <= WIDTH * 0.5 + 1.0 and absf(rel.y) < HEIGHT + 4.0:
+			var id: String = offer["part_id"]
+			close()
+			chosen.emit(id)
+			return false
+		if along < MISSED_BEYOND and rel.length() < LOST_BEYOND:
+			passed_all = false
+	if passed_all:
+		_place(ball, heading)
+		return true
+	return false
+
+
+func _place(ball: Vector3, heading: Vector3) -> void:
+	for gate in _gates:
+		gate.queue_free()
+	_gates.clear()
+	offers = []
+	_last_side = {}
+	var plan := choose_placement(ball, heading)
+	var facing: Vector3 = plan["facing"]
+	for i in _ids.size():
+		var at: Vector3 = plan["spots"][i]
+		var part_id: String = _ids[i]
+		var d: Resource = Parts.def(part_id)
+		var completes := Parts.completed_by(part_id, _held)
+		offers.append({
+			"part_id": part_id, "at": at, "facing": facing, "width": WIDTH,
+			"name": Parts.display_name(part_id),
+			"headline": Parts.headline(part_id),
+			"verb": d.verb if d != null else "",
+			"punch": d.punch if d != null else 0.0,
+			"text": d.text if d != null else "",
+			"rarity": d.rarity if d != null else "common",
+			"tier": d.tier if d != null else 1,
+			"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
+			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
+		})
+		_gates.append(_build_gate(at, facing, offers[-1]))
+
+
+# The gate spots for count gates: {facing, spots, climb}. Climb is the most any gate
+# spot or approach sample rises above the ground under the ball.
+func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
+	var count := maxi(1, _ids.size())
+	var ground: float = _terrain.height(ball.x, ball.z)
+	var base := Vector3(heading.x, 0.0, heading.z).normalized()
+	if base.length() < 0.5:
+		base = Vector3.FORWARD
+	var best := {}
+	var exclude := _prop_probe_exclude()
+	for turn in TURN_STEPS:
+		var facing := base.rotated(Vector3.UP, deg_to_rad(turn))
+		for distance in DISTANCES:
+			for spread in SPREADS:
+				var plan := _candidate(ball, ground, facing, distance, spread, count, exclude)
+				if plan["climb"] <= CLIMB_TOLERANCE and not plan["blocked"]:
+					return plan
+				if best.is_empty() or plan["climb"] < best["climb"]:
+					best = plan
+	if best.get("blocked", false) and not _warned_blocked:
+		_warned_blocked = true
+		push_warning("reward_gates: every gate candidate is blocked by a static prop; using the least-blocked spot")
+	return best
+
+
+func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int, exclude: Array) -> Dictionary:
+	var side := facing.cross(Vector3.UP).normalized()
+	var spots: Array[Vector3] = []
+	var climb := -INF
+	var blocked := false
+	for i in count:
+		var offset := (float(i) - (count - 1) * 0.5) * 2.0 * spread
+		var spot := ball + facing * distance + side * offset
+		var at: Vector3 = _terrain.drop_point(spot.x, spot.z, 0.0)
+		spots.append(at)
+		for k in PATH_SAMPLES + 1:
+			var p := ball.lerp(spot, float(k) / PATH_SAMPLES)
+			climb = maxf(climb, _terrain.height(p.x, p.z) - ground)
+		if _segment_blocked(ball, spot, exclude) or _segment_blocked(spot, spot + facing * RUN_OUT, exclude):
+			blocked = true
+	var result := {"facing": facing, "spots": spots, "climb": climb, "distance": distance, "blocked": blocked}
+	if blocked:
+		result["climb"] += BLOCK_PENALTY
+	return result
+
+
+# The RID of the active stage's terrain body, so the shape probe below can tell "a
+# static prop is in the way" from "the ground itself is under the sphere". Both are
+# StaticBody3D on the same physics layer (map_spillway.gd's box()/cylinder() helpers
+# never set a layer of their own), and the terrain's own body is the only one always
+# named "Ground" (terrain.gd _build_ground). No RID means no exclusion, never a query
+# that silently forbids every candidate.
+func _prop_probe_exclude() -> Array:
+	if _terrain == null or not _terrain.has_method("geometry_root"):
+		return []
+	var holder: Node3D = _terrain.geometry_root(_terrain.stage)
+	if holder == null:
+		return []
+	var ground := holder.get_node_or_null("Ground")
+	return [ground.get_rid()] if ground != null else []
+
+
+# A ball-sized sphere swept from `from` to `to`, both raised to the terrain height at
+# that x/z plus PROBE_RADIUS so the sweep sits where the ball actually rolls. Anything
+# on layer 1 other than the excluded terrain body blocks: a kerb, a bench, an ice slab.
+# Runs only once in the tree, since choose_placement always runs from open()/step()
+# after build.gd has parented this node (build.gd setup()); off the tree there is no
+# physics space to ask, so nothing is reported blocked rather than failing the plan.
+func _segment_blocked(from_xz: Vector3, to_xz: Vector3, exclude: Array) -> bool:
+	if not is_inside_tree():
+		return false
+	var world := get_world_3d()
+	if world == null:
+		return false
+	var space := world.direct_space_state
+	if space == null:
+		return false
+	var from := Vector3(from_xz.x, _terrain.height(from_xz.x, from_xz.z) + PROBE_RADIUS, from_xz.z)
+	var to := Vector3(to_xz.x, _terrain.height(to_xz.x, to_xz.z) + PROBE_RADIUS, to_xz.z)
+	var sphere := SphereShape3D.new()
+	sphere.radius = PROBE_RADIUS
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.collision_mask = 1
+	query.exclude = exclude
+	query.transform = Transform3D(Basis.IDENTITY, from)
+	query.motion = to - from
+	return space.cast_motion(query)[1] < 1.0
+
+
+static func rarity_color(rarity: String) -> Color:
+	match rarity:
+		"uncommon":
+			return Palette.ARC
+		"rare":
+			return Palette.AMBER
+		"rare_plus":
+			return Palette.HAZARD
+	return Palette.SANDSTONE
+
+
+func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
+	var gate := Node3D.new()
+	add_child(gate)
+	gate.global_position = at
+	gate.global_basis = Basis.looking_at(facing, Vector3.UP)
+	var tint := rarity_color(offer["rarity"])
+	var mat := Palette.solid(tint, 1.4)
+	for x in [-WIDTH * 0.5, WIDTH * 0.5]:
+		var post := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.5, HEIGHT, 0.5)
+		post.mesh = box
+		post.material_override = mat
+		post.position = Vector3(x, HEIGHT * 0.5, 0.0)
+		gate.add_child(post)
+	var bar := MeshInstance3D.new()
+	var bar_box := BoxMesh.new()
+	bar_box.size = Vector3(WIDTH + 0.5, 0.5, 0.5)
+	bar.mesh = bar_box
+	bar.material_override = mat
+	bar.position = Vector3(0.0, HEIGHT, 0.0)
+	gate.add_child(bar)
+	var topper := _topper(offer["rarity"], Palette.solid(tint, 2.6))
+	topper.name = "Topper"
+	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
+	gate.add_child(topper)
+	# The offer is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
+	# under the gate's column, so it never climbs into the objective or the toasts.
+	var label := WorldPrompt.new()
+	label.name = "Prompt"
+	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
+	if offer["mark"] != "":
+		lines += "\n" + offer["mark"]
+	label.text = lines
+	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
+	label.attach(gate, Vector3(0.0, HEIGHT + 1.2, 0.0), PROMPT_REACH)
+	gate.add_child(label)
+	return gate
+
+
+static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	match rarity:
+		"uncommon":
+			var gem := SphereMesh.new()
+			gem.radius = 0.8
+			gem.height = 2.0
+			gem.radial_segments = 4
+			gem.rings = 2
+			node.mesh = gem
+		"rare", "rare_plus":
+			var star := PrismMesh.new()
+			star.size = Vector3(1.8, 2.8 if rarity == "rare_plus" else 1.8, 0.4)
+			node.mesh = star
+		_:
+			var slab := BoxMesh.new()
+			slab.size = Vector3(1.6, 0.4, 0.4)
+			node.mesh = slab
+	node.material_override = mat
+	return node
+
+
+func _process(delta: float) -> void:
+	if offers.is_empty():
+		return
+	_spin += delta * 1.8
+	for gate in _gates:
+		var topper := gate.get_node_or_null("Topper") as Node3D
+		if topper != null:
+			topper.rotation = Vector3(0.0, _spin, 0.0)

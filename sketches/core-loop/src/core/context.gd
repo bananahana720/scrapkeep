@@ -1,0 +1,70 @@
+extends RefCounted
+
+const GameEvents := preload("res://src/core/game_events.gd")
+const RunState := preload("res://src/core/run_state.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+const PlayerBall := preload("res://src/movement/player_ball.gd")
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+
+# Everything a module may touch, handed to each module's setup(ctx). Modules talk to
+# the spine and to each other only through these refs and the GameEvents bus; none
+# reaches into another module's folder. CONTRACTS.md is the reading guide.
+
+var events: GameEvents
+var run: RunState
+var tuning: Tuning
+var player: PlayerBall
+var camera: ChaseCamera
+# The flow state machine (src/core/flow.gd), read-only for modules: in_play(),
+# state_name(), stage(), stage_def(). A node, so it and the context do not hold
+# each other in a reference cycle.
+var flow: Node
+# The stage geometry, owned by world (writer D) and set by world.setup(ctx). The spine
+# reads it only through the terrain API in CONTRACTS.md.
+var terrain: RefCounted
+# The combat module (writer A) behind the spawner API: spawn_enemy(kind, at) and
+# strike(enemy, kind, force). Set by combat.setup(ctx).
+var spawner: Node
+# The build module (writer B), set by build.setup(ctx). Read it through has_method;
+# builds from before this field existed use ctx.get_meta("build"), which build() also
+# reads.
+var build: Node
+# The persistent codex (src/core/codex.gd): declare entries, mark discoveries.
+var codex: Node
+# The boss module (wave 4), set by src/boss/boss.gd's setup when that file exists.
+# Flow calls enter_arena(entry_velocity) on it after stage 3's launch.
+var boss: Node
+# The node modules add their world children to.
+var root: Node3D
+# One seeded stream per run for anything a module randomizes.
+var rng := RandomNumberGenerator.new()
+# Set by the spine tests that measure momentum: while true, modules spawn no enemies
+# and apply no world pushes, so a speed check measures the ball and the seams alone.
+var calm := false
+
+var _hit_stop: Callable
+
+
+func _init(hit_stop_impl := Callable()) -> void:
+	_hit_stop = hit_stop_impl
+
+
+func build_module() -> Node:
+	if build != null:
+		return build
+	return get_meta("build") if has_meta("build") else null
+
+
+func aim_origin() -> Vector3:
+	return camera.aim_origin()
+
+
+func aim_forward() -> Vector3:
+	return camera.aim_forward()
+
+
+# A short freeze on a big player-caused hit, for weight. The spine caps it at 60 ms
+# and never stacks two, so juice can never become an obstruction.
+func hit_stop(seconds: float) -> void:
+	if _hit_stop.is_valid():
+		_hit_stop.call(seconds)
