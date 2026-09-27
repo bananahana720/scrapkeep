@@ -203,12 +203,17 @@ func heft() -> float:
 # The best punch you have right now: a ram at your planar speed (from CRUISE up), or one
 # hit of the weapon in your hands. The HUD's "Punch 48 / plating 60" reads this.
 func punch_now() -> float:
-	var ram := 0.0
-	if ctx.player.speed_tier() >= SpeedTier.CRUISE:
-		ram = punch_of("ram", ctx.player.planar_velocity().length())
 	var weapon := active_weapon()
 	var shot: float = _patterns[weapon].damage * _damage_mod(weapon) if _patterns.has(weapon) else 0.0
-	return maxf(ram, shot)
+	return maxf(ram_punch_now(), shot)
+
+
+# A ram at your planar speed, from CRUISE up; 0 below it. No weapon term: for a target
+# only a ram can beat (a clash), this is the whole punch.
+func ram_punch_now() -> float:
+	if ctx.player.speed_tier() < SpeedTier.CRUISE:
+		return 0.0
+	return punch_of("ram", ctx.player.planar_velocity().length())
 
 
 # Build owns tuning mods (CONTRACTS). Combat reads its weapon keys live, at the moment
@@ -335,13 +340,16 @@ func _physics_process(delta: float) -> void:
 
 
 # Plated targets glow amber when your punch beats their plating right now, slate when
-# it does not. Same function as the strike, re-read every physics tick.
+# it does not. Same function as the strike, re-read every physics tick. A target whose
+# tint_verb() is "ram" is compared with the ram alone, since only a ram counts there.
 func _tint() -> void:
 	var punch := punch_now()
+	var ram := ram_punch_now()
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
 			continue
-		enemy.set_tint("amber" if punch >= enemy.plating_now() else "slate")
+		var against: float = ram if enemy.has_method("tint_verb") and enemy.tint_verb() == "ram" else punch
+		enemy.set_tint("amber" if against >= enemy.plating_now() else "slate")
 
 
 # A rolling ball at CRUISE or faster that reaches a shell in flight bats it home.
