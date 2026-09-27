@@ -39,6 +39,7 @@ func _physics_process(delta: float) -> bool:
 			_setup()
 			_data()
 			_instant_tricks()
+			_w7_tricks()
 			_start_shell()
 			_step = 1
 		1:
@@ -97,6 +98,48 @@ func _instant_tricks() -> void:
 	_game.events.dismounted.emit(Vector3(12.0, 4.0, 0.0))
 	_combat.strike(_chaser(-8.0, 5.0), "runner", 10.0)
 	_report("parting_shot", _combat.discovered.has("parting_shot"), "a laser kill right after a slingshot dismount")
+
+
+# v2 W7: each counter's opportunity, found through the unit's own code path.
+func _w7_tricks() -> void:
+	var ctx = _game.ctx
+	var fleet = _combat.fleet
+	var base: Vector3 = ctx.terrain.spawn_point(1) + Vector3(20.0, 0.0, 40.0)
+	var hooker: Node3D = ctx.spawner.spawn_enemy("hooker", ctx.terrain.drop_point(base.x, base.z, 1.6))
+	hooker._catch(0.0, Vector3.ZERO, hooker.anchor())
+	fleet.holds.snap(hooker, "speed")
+	_report("tether_snap", _combat.discovered.has("tether_snap"), "a tether held, then snapped by speed")
+
+	var dish: Node3D = ctx.spawner.spawn_enemy("deflector", ctx.terrain.drop_point(base.x + 8.0, base.z, 1.6))
+	dish.phase = dish.Phase.LIVE
+	dish._go_live()
+	dish.rebounds = 1
+	dish._rebound_v = Vector3(-9.0, 0.0, 0.0)
+	dish._window = 0.3
+	_game.events.jumped.emit(false)
+	_report("shield_vault", _combat.discovered.has("shield_vault") and dish.vaults == 1,
+		"a jump in a deflector's rebound window vaulted at %.1f m/s" % dish.last_vault_speed)
+
+	var at: Vector3 = base + Vector3(-12.0, 0.0, 0.0)
+	var lead: Node3D = ctx.spawner.spawn_enemy("swarm_remnant", ctx.terrain.drop_point(at.x, at.z, 1.4))
+	var victim: Node3D = ctx.spawner.spawn_enemy("chaser", ctx.terrain.drop_point(at.x + 2.5, at.z, 1.6))
+	lead.swarm.state = lead.swarm.State.SCATTERED
+	lead._lead_into_pin()
+	_combat._pin_step(_game.get_tree().get_nodes_in_group("enemy"))
+	_report("awaiting_operator", _combat.discovered.has("awaiting_operator"),
+		"a scattered drone led into a chaser pinned it (%d pins)" % _combat.pins)
+
+	var hand: Node3D = ctx.spawner.spawn_enemy("mind_hand", ctx.terrain.drop_point(base.x, base.z - 10.0, 1.8))
+	fleet.habits.add("ram", 5.0)
+	hand._commit(Vector3(0.0, 0.0, 5.0))
+	_report("what_it_learned", _combat.discovered.has("what_it_learned") and fleet.mind_memory.size() == 1,
+		"a Mind's hand read the ram habit and quoted it: %s" % [fleet.mind_memory])
+	for node in [hooker, dish, victim, hand]:
+		if is_instance_valid(node):
+			node.queue_free()
+	for drone in lead.swarm.drones:
+		if is_instance_valid(drone):
+			drone.queue_free()
 
 
 func _start_shell() -> void:

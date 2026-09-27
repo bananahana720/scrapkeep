@@ -1,6 +1,9 @@
 extends "res://src/combat/enemy.gd"
 
 const WardenLook := preload("res://src/combat/warden_look.gd")
+const WardenKit := preload("res://src/combat/warden_kit.gd")
+const Roster := preload("res://src/combat/roster.gd")
+const Habits := preload("res://src/combat/habits.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -22,6 +25,20 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 #     contains toward it at MAGNET_PULL m/s^2 for MAGNET_TUG. The magnet is a weak
 #     point only in the tug: a weapon hit on it then drops the Warden's plating to 0
 #     for UNPLATE_SECONDS and ends the tug. An earlier shot meets the body.
+#
+# v2 W7 enemies: the clamp is a shared ancient base with one family kit per stage
+# (DESIGN-V2 section 11), on top of the lesson. The body's plating, the 20% chip, the
+# gate and breaking it anywhere are untouched; each kit adds a weak point with plating
+# 0 that opens only when the family's own mechanic is answered:
+#   - reactor (stage 1): the pulse is the reactor venting. The pulse charge publishes
+#     vent_charging, the pulse vent_erupted, and the core stands open for CORE_WINDOW.
+#   - swarm (stage 2): the hive keeps a guard rack of drones between itself and you.
+#     Bowl through the rack and it scatters: the queen cell opens for QUEEN_WINDOW. A
+#     guard that dies out is rebuilt after GUARD_RESPAWN.
+#   - mind (stage 3): every ADAPT_CYCLE in reach it reads your most-used habit, quotes
+#     your class motif back wrong (mind_adapted) and shows the habit's trigger icon on
+#     its lens for ADAPT_WARN, then braces for BRACE: hits of that verb meet BRACE_MULT
+#     times its plating, and its lens stands open. Within a run only.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -54,6 +71,16 @@ const MAGNET_RADIUS := 1.1
 const MAGNET_WEDGE_DEG := 35.0
 const UNPLATE_SECONDS := 3.0
 const WEAPON_KINDS := ["runner", "arc", "turret"]
+const CORE_WINDOW := 2.5
+const QUEEN_WINDOW := 4.0
+const GUARD_RESPAWN := 10.0
+const GUARD_OFFSET := 9.0
+const ADAPT_CYCLE := 10.0
+const ADAPT_WARN := 1.2
+const BRACE := 5.0
+const BRACE_MULT := 1.4
+const FAMILY_POINT_RADIUS := 1.3
+const FAMILY_REACH := 3.2
 const CONTACT_KINDS := ["stomp", "slam"]
 
 enum Magnet { IDLE, TELEGRAPH, TUG }
@@ -68,6 +95,12 @@ var min_pulse_telegraph := INF
 var magnet_stuns := 0
 var magnet_state := Magnet.IDLE
 var shred := 0.0
+var family := Roster.REACTOR
+var fleet
+var guard
+var family_opens := 0
+var adapt_habit := ""
+var braced_kinds: Array = []
 
 var _pulse_clock := 0.0
 var _charging := false
@@ -81,6 +114,12 @@ var _magnet_ring: Node3D
 var _unplated := 0.0
 var _cap_material: StandardMaterial3D
 var _look: Node3D
+var _kit: Node3D
+var _open_left := 0.0
+var _guard_wait := 0.0
+var _adapt_clock := 0.0
+var _adapt_time := 0.0
+var _brace_left := 0.0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -89,6 +128,9 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	stage = spec.get("stage", 1)
 	lesson = spec.get("lesson", "plate")
 	reach = spec.get("reach", DEFAULT_REACH)
+	family = spec.get("family", Roster.warden_family(stage))
+	faction = family
+	fleet = spec.get("fleet")
 	plating = spec.get("plating", 30.0)
 	_set_health(spec.get("hp", 400.0))
 	scrap_value = 30 * stage
@@ -127,6 +169,10 @@ func seconds_since_pulse() -> float:
 func plating_for(hit_kind: String, part: String) -> float:
 	if part == "cap" and hit_kind in CONTACT_KINDS:
 		return 0.0
+	if part == family_point() and family_open():
+		return 0.0
+	if braced() and hit_kind in braced_kinds:
+		return plating_now() * BRACE_MULT
 	if part == "magnet" and hit_kind in WEAPON_KINDS and magnet_state == Magnet.TUG:
 		return 0.0
 	return plating_now()
@@ -140,7 +186,102 @@ func weak_points() -> Array:
 	var points := []
 	if lesson == "magnet" and magnet_state == Magnet.TUG:
 		points.append({"id": "magnet", "at": magnet_point(), "radius": MAGNET_RADIUS})
+	if family_open():
+		points.append({"id": family_point(), "at": family_point_at(), "radius": FAMILY_POINT_RADIUS})
 	return points
+
+
+# --- The family kit (v2 W7) ---------------------------------------------------------
+
+# The kit's weak point: the reactor's core, the hive's queen cell, the Mind's lens.
+func family_point() -> String:
+	return {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}.get(family, "core")
+
+
+func family_point_at() -> Vector3:
+	return global_position + (_kit.point_offset() if _kit != null else Vector3.UP * 4.0)
+
+
+func family_open() -> bool:
+	return _open_left > 0.0 or braced()
+
+
+func braced() -> bool:
+	return _brace_left > 0.0
+
+
+func adapting() -> bool:
+	return adapt_habit != "" and _brace_left <= 0.0
+
+
+func on_guard_scattered(swarm, _at: Vector3) -> void:
+	if swarm == guard and family == Roster.SWARM:
+		_open(QUEEN_WINDOW)
+
+
+func _open(seconds: float) -> void:
+	_open_left = seconds
+	family_opens += 1
+	if fleet != null:
+		fleet.events().weak_point_opened.emit(family_point(), family_point_at(), seconds)
+
+
+func _step_family(delta: float, inside: bool) -> void:
+	_open_left = maxf(0.0, _open_left - delta)
+	match family:
+		Roster.SWARM:
+			_step_guard(delta)
+		Roster.MIND:
+			_step_mind(delta, inside)
+
+
+func _step_guard(delta: float) -> void:
+	if fleet == null:
+		return
+	if guard != null and not guard.alive().is_empty():
+		return
+	_guard_wait -= delta
+	if _guard_wait > 0.0:
+		return
+	_guard_wait = GUARD_RESPAWN
+	var out := flat_to_ball()
+	var at := global_position + (out.normalized() if out.length() > 0.1 else Vector3.FORWARD) * GUARD_OFFSET
+	guard = fleet.spawn_guard(global_position, terrain.drop_point(at.x, at.z, 1.4))
+
+
+func _step_mind(delta: float, inside: bool) -> void:
+	if fleet == null:
+		return
+	if _brace_left > 0.0:
+		_brace_left -= delta
+		if _brace_left <= 0.0:
+			adapt_habit = ""
+			braced_kinds = []
+			_kit.show_icon("")
+		return
+	if adapt_habit != "":
+		_adapt_time += delta
+		if _adapt_time >= ADAPT_WARN:
+			_brace_left = BRACE
+			if fleet != null:
+				fleet.events().weak_point_opened.emit("lens", family_point_at(), BRACE)
+			family_opens += 1
+		return
+	if not inside:
+		return
+	_adapt_clock += delta
+	if _adapt_clock < ADAPT_CYCLE:
+		return
+	var habit: String = fleet.habits.top()
+	if habit == "":
+		return
+	_adapt_clock = 0.0
+	_adapt_time = 0.0
+	adapt_habit = habit
+	var brace: Dictionary = Habits.BRACES[habit]
+	braced_kinds = brace["kinds"]
+	_kit.show_icon(String(brace["icon"]))
+	fleet.mind_adapt(habit, String(brace["icon"]), family_point_at())
 
 
 func cap_points() -> Array:
@@ -158,6 +299,9 @@ func magnet_point() -> Vector3:
 
 
 func contact_part(ball: Vector3, hit_kind: String) -> String:
+	if family_open() and family != Roster.MIND and hit_kind in CONTACT_KINDS \
+			and Vector2(ball.x - global_position.x, ball.z - global_position.z).length() <= FAMILY_REACH:
+		return family_point()
 	if lesson != "caps" or not hit_kind in CONTACT_KINDS:
 		return ""
 	for cap in cap_points():
@@ -183,6 +327,7 @@ func _physics_process(delta: float) -> void:
 	_since_pulse += delta
 	_unplated = maxf(0.0, _unplated - delta)
 	var inside := _flat_to_ball().length() <= reach
+	_step_family(delta, inside)
 	_step_pulse(delta, inside)
 	if lesson == "magnet":
 		_step_magnet(delta, inside)
@@ -209,6 +354,9 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_charge_time = 0.0
 		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
 		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
+		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
+		if family == Roster.REACTOR and fleet != null:
+			fleet.events().vent_charging.emit(global_position, PULSE_TELEGRAPH)
 
 
 func _pulse() -> void:
@@ -220,6 +368,10 @@ func _pulse() -> void:
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
+	if family == Roster.REACTOR:
+		if fleet != null:
+			fleet.events().vent_erupted.emit(global_position)
+		_open(CORE_WINDOW)
 	min_pulse_telegraph = minf(min_pulse_telegraph, _charge_time)
 	_since_pulse = 0.0
 	_charging = false
@@ -289,6 +441,9 @@ func _build_body() -> void:
 	_look = WardenLook.new()
 	add_child(_look)
 	_look.build(self, HALF_HEIGHT)
+	_kit = WardenKit.new()
+	add_child(_kit)
+	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
 	_cap_material = _look.cap_material()
@@ -301,6 +456,8 @@ func _pose(_delta: float) -> void:
 func _process(delta: float) -> void:
 	if _look != null:
 		_look.update(delta)
+	if _kit != null:
+		_kit.update(delta)
 
 
 # --- Read by the look --------------------------------------------------------------
