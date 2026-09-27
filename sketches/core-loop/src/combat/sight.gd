@@ -3,9 +3,10 @@ extends RefCounted
 const Weapons := preload("res://src/combat/weapons.gd")
 
 # What one enemy sees of the player. Enemies read their target only through
-# ball_position(), planar_velocity() and add_external_accel(), so this stands in for
-# the player. While Kest's dust cloak is up, an enemy farther than CLOAK_SIGHT of its
-# acquisition range sees only the smoke where the cloak began, and fights that.
+# ball_position(), planar_velocity(), add_external_accel() and crowd_control(), so this
+# stands in for the player. While Kest's dust cloak is up, an enemy farther than
+# CLOAK_SIGHT of its acquisition range sees only the smoke where the cloak began, and
+# fights that.
 
 const REACH := {"chaser": 40.0, "lobber": 75.0, "miniboss": 40.0}
 const DEFAULT_REACH := 40.0
@@ -42,3 +43,7 @@ func planar_velocity() -> Vector3:
 
 func add_external_accel(accel: Vector3) -> void:
 	player.add_external_accel(accel)
+
+
+func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> bool:
+	return player.crowd_control(kind, shove, interrupts)

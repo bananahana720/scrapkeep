@@ -23,23 +23,25 @@ const COOLDOWN_FLOOR := 0.4
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
 
-# One row per ability id; the class row names which id fills each slot. cooldown is per
-# charge. charge_max > 0 makes the slot a hold-gauge-release shot. duration is how long
-# an active ability runs on one charge.
+# One row per ability id; the class row names which id fills each slot. icon is the
+# canonical id in assets/icons (VISUAL-LANGUAGE section 5). cooldown is per charge.
+# charge_max > 0 makes the slot a hold-gauge-release shot. duration is how long an
+# active ability runs on one charge.
 const ABILITIES := {
-	"arc_caster": {"icon": "arc_bolt", "cooldown": 0.0},
-	"rapid_laser": {"icon": "laser_bolt", "cooldown": 0.0},
-	"sticky_charge": {"icon": "sticky_bomb", "cooldown": 0.6, "charge_max": 0.6},
-	"grapple": {"icon": "grapple_hook", "cooldown": 0.0},
-	"overdrive_sprint": {"icon": "sprint_chevrons", "cooldown": 5.0, "duration": 2.0},
-	"smoke_blink": {"icon": "smoke_blink", "cooldown": 4.0},
-	"detonation_gauge": {"icon": "arc_ring", "cooldown": 5.0, "charge_max": 1.0},
-	"overdrive_blast": {"icon": "blast_chevron", "cooldown": 6.0, "charge_max": 1.0},
-	"detonation_line": {"icon": "fuse_line", "cooldown": 6.0, "charge_max": 0.8},
-	"arc_slam": {"icon": "slam_ring", "cooldown": 0.0},
-	"shockwave_skid": {"icon": "slam_chevron", "cooldown": 0.0},
-	"demo_slam": {"icon": "slam_burst", "cooldown": 0.0},
+	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0},
+	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0},
+	"detonation_gauge": {"icon": "ab_sable_special", "cooldown": 5.0, "charge_max": 1.0},
+	"arc_slam": {"icon": "ab_sable_smash", "cooldown": 0.0},
+	"rapid_laser": {"icon": "ab_rivet_weapon", "cooldown": 0.0},
+	"overdrive_sprint": {"icon": "ab_rivet_move", "cooldown": 5.0, "duration": 2.0},
+	"overdrive_blast": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
+	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0},
+	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6},
+	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0},
+	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
+	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0},
 }
+const ICON_DIR := "res://assets/icons/"
 
 
 # The one hold-gauge-release rule. Hold fills the gauge linearly over charge_max; the

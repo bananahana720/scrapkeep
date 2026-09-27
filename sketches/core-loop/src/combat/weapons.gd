@@ -70,7 +70,7 @@ static func color(weapon_id: String) -> Color:
 	if weapon_id == STICKY_CHARGE:
 		return ClassDef.KEST_COLOR
 	if weapon_id == RAPID_LASER:
-		return Palette.AMBER
+		return ClassDef.RIVET_COLOR
 	if weapon_id == PYLON_TURRET:
 		return Palette.ARC.lightened(0.25)
 	return Palette.ARC

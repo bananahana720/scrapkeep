@@ -366,7 +366,7 @@ func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 		return
 	var pull := Vector3(magnet_at.x - ball.x, 0.0, magnet_at.z - ball.z)
 	pull = pull.normalized() if pull.length() > 0.1 else Vector3.ZERO
-	ctx.player.add_external_accel((Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / _delta)
+	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / _delta, false)
 
 
 func _drip(c: Dictionary) -> void:
@@ -550,7 +550,7 @@ func _slag_hit(h, ball: Vector3) -> void:
 			break
 	var v: Vector3 = ctx.player.state.velocity
 	var up := maxf(0.0, Rules.SLAG_BOUNCE_UP - v.y)
-	ctx.player.add_external_accel((Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT) / _delta)
+	ctx.player.crowd_control("brindle_slag", (Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT) / _delta)
 
 
 # Whether a ball launched from `from` at `launch` flies until it lands without meeting
@@ -662,7 +662,7 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var along: float = v.dot(h.heading)
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
-	ctx.player.add_external_accel((away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
+	ctx.player.crowd_control("brindle_charge", (away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
 	ship.hull.add_collision_exception_with(ctx.player.body())
 	_ghost_until = clock + Rules.CHARGE_GRACE
 
