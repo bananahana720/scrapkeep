@@ -410,3 +410,10 @@ These are Andrew's answers to the primer questions, recorded before the remainin
    - A few fidget toys: a marble-run toy, a bell, a jukebox that flips the lounge arrangement, and Moss's babble.
    - A small optional mini-game, such as a timed marble-run lap with a codex callback.
    - The difficulty clock stays paused. Leaving is always one roll away.
+
+**The primer gate is passed (the rest of Andrew's AskUserQuestion answers, 2026-09-27).**
+
+- **The upgrade tree** is one binary tree per character. There are four picks: at the start, then at Moss's workshop after stages 1, 2 and 3. Four picks end on one of 16 distinct builds, and nodes can change any key. Enemy packs read the branch and test it fairly.
+- **Mastery unlocks** apply from the next run and open alternate branches in the tree: more options, never more raw power.
+- **The Mind's hands** adapt within a run only for the demo. Memory across runs stays a hook, switched off.
+- **The arena** ends with Brindle routed, then a single Cherenkov flicker across the dug-up housings on the summary.
