@@ -224,6 +224,36 @@ Round 2, phase 1c (Andrew: "the bass should be kind of like looped throughout ..
 48. **Cost.** Measured warm, the densest arrangement is 5.9% of one core (Brindle phase 3 at full pressure), and the miniboss is 5.6-6.5% depending on load. The test holds the band under 8%. Notes are warmed on a worker, and a note heard before its warm-up renders on demand the first time. Serves 2.
 49. **Arena entry fades the stage.** `stage_content_cleared` plays a soft falling breath of air with a low D under it, 12 dB down, and cancels any launch build. Brindle's arrival is the event, not the fade. Serves form mirrors function (priority decides prominence).
 
+Round 3, phase 1d (Andrew: "I love the gusto, but ... rein back the wubs. I think the underlying bass is great ... really well layered and complementary ... like Frank Ocean, Pyramids ... the melodies ... textured, laid on top of each other, thrown in and layered and remixed as the song progresses"). The style is distilled, not copied: no melody, progression or lyric from the song. Items 50 to 57 amend 39 and 40 (the wobble and growls leave the level themes), 41 and 43 (builds layer and open a low-pass instead of high-passing the band), 44 (Brindle's phases add layers, not wobble) and 46 (the class-up stab is the slap bass).
+
+50. **The wubs are reined in.** No wobble and no talking growl in any level theme or the miniboss, at any pressure. The bass figures of item 38 stay exactly as they were. The figure's level rises 0.36 to 0.42 so it sits forward where the wobble was. Measured: zero wobble voices over 8 bars at full pressure in all three themes and the miniboss. Serves Andrew's "tailor back on the wubs" and "the underlying bass is great".
+51. **The texture is additive.** Six melodic layers enter one by one as pressure rises, each staying once in:
+    - a warm pad (from 0.1);
+    - an arpeggiator shimmer (0.3);
+    - a wordless formant choir on "ah" and "ooh" (0.45);
+    - the lead (0.55);
+    - a chopped echo of the lead, each note back a dotted eighth later, cut short and pitched up (0.7);
+    - a counter-line (0.8).
+
+    Measured, melodic layers sounding at pressure 0, 0.2 to 1: 0, 1, 2, 4, 5, 6 in every theme. Serves Andrew's "laid on top of each other" and 6.
+52. **Lines interlock and recombine.** The counter-line is the lead's own call, two bars late and a third lower, refitted to the chord it lands on, so the counter calls while the lead answers. In its "answer" rotation the choir sings the lead's note from two bars back, snapped to the current chord: one line's fragment answering another. Everything stays in D with the per-level harmony. Serves "thrown in and layered and remixed".
+53. **The texture evolves every four bars.** Every four bars the lines trade voices:
+    - the echo moves between bell, mallet and clav, and its interval between an octave, a fifth and an octave-and-a-fifth up;
+    - the counter-line moves between electric piano, chopped "ooh" choir and bell;
+    - the choir moves between guide tones and answers, and between "ah" and "ooh";
+    - the arpeggiator changes shape and octave.
+
+    Measured: 18 re-voicings over 24 bars of each theme at full pressure, at least one in every 8-bar cycle, and none repeating the one before. Serves "remixed as the song progresses" without new drops.
+54. **The tone opens with intensity.** A gentle low-pass over the band (never touching the bass, which sits far below it) is darker when calm (2.8 kHz) and fully open from pressure 0.7. Calm reads as filtered keys; full pressure is bright. Serves the Pyramids-style slow reveal and 4 (the calm state is clear, not busy).
+55. **Builds come from layering and the filter.** A build raises the band's intensity to its build level, so layers stack in as it rises. It closes the low-pass to 700 Hz and opens it back up into the drop. The riser and snare roll stay, but they are no longer the whole build, and the bass stays full through it. Measured: the Warden's build now holds rms 0.107 to 0.116, where the 1c high-pass build fell to 0.043. Serves Andrew's "builds from layering and filter opening".
+56. **Drops pay off with the full texture plus the bass.**
+    - A landing drop re-enters the stage's own theme with every layer in, a crash and a boom.
+    - The Warden and Brindle drops go to half time with the full texture on top, a clean sub and reese, and a restrained wobble: half level (0.5), slow rates only (1/4, 1/8, 1/8 triplet), still locked to the grid.
+    - The victory is the biggest.
+
+    Measured: 62 wobble cycles in the Warden and Brindle drops, all on the grid, at level 0.5. Serves "the drops' energy, just less wub".
+57. **Brindle's phases add layers.** Phase 1 sits at intensity 0.8 (pad, arp, choir, lead, half the echo), phase 2 at 0.9 (echo, half the counter) and phase 3 at 1.0 (everything), with the key lifts of item 44 unchanged. Cost, measured warm: the densest point is Brindle phase 3 at 7.2% of one core, and the levels run at 5.7-6.2%; the test cap stays at 8%. Serves BOSS-BRINDLE's "adds a layer" and 2.
+
 ## Events and stages (writer D)
 
 1. **Three stages, each its own map, built once at setup.** Stage 1 keeps the wave-1 Spillway shape. Stage 2, the Sluice, and stage 3, the Weir, are new. The idle stages stay in the physics world, hidden and parked 5 km down, because re-adding a trimesh cost about 34 ms a swap and parking costs microseconds. The whole game is ready in about 1 s (measured 0.92 to 1.15 s headless). Serves 1 (no hitch in the launch).
