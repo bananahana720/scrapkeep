@@ -214,3 +214,13 @@ Wave 3 gets a W7 enemies writer (combat enemies plus the director's pack composi
 - **Awakened ancients** are the wild threats and the Wardens: strange, ritual and geological.
 
 Brindle and the Bible's antagonist stay. The Bible amendment for the post-apocalyptic layer is a heavy-lane card after v2 play.
+
+**The ancients are us (Andrew, 2026-09-27).** In his words: "the uh, ancient machines were made by humans and um, like we can kind of have a mixture of things of what caused the ancient beings, aka us, to have uh, been lost, like whether it would be nuclear war or drone technology or uh, you know advanced super intelligence um, or a combination of all of those." Each cause becomes one ancient family with a mechanic no other family has (the no-reskins rule):
+
+| Cause | Family | Signature mechanic |
+| --- | --- | --- |
+| Nuclear war | Reactor relics | Terrain-changing hazard zones: fallout craters and meltdown vents. They reuse §9's events. |
+| Drone technology | Swarm remnants | Flocking formations: weak alone, dangerous in formation. Bowling through a formation scatters it. |
+| Superintelligence | The Mind's hands | Adapts to the player's habits. Frequent rebounds make it brace; frequent vaults make it guard the walls. It reads and counters the player's last pattern, bounded and telegraphed. |
+
+The codex's world category holds lore fragments found in vaults and secrets. The true cause, or the mix of causes, stays ambiguous and is pieced together across runs. For the W7 roster in this sketch, one ancient per family is enough, beside the Fleet reinforcements.
