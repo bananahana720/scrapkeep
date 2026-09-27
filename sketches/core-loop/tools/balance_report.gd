@@ -58,6 +58,7 @@ const TARGETS := [
 	{"what": "Brindle, completionist rout", "policy": "completionist", "stage": 0, "metric": "boss", "band": Vector2(75.0, 150.0)},
 ]
 const SYNERGY_TARGET := Vector2(0.1, 0.6)
+const DAMAGE_KINDS := ["ram", "stomp", "slam", "runner", "arc", "turret", "synergy", "shell"]
 const HAND_KEYS := ["evasions", "hits", "cap_hits", "magnet_stuns", "plants", "slingshots", "specials", "punch_short_s"]
 
 var _in := ""
@@ -148,6 +149,7 @@ func _build() -> bool:
 		_stage_section(runs, stage, band)
 	_boss_section(runs)
 	_hands_section(runs)
+	_damage_section(runs)
 	_codex_section(runs, entries)
 	_flag_breaks(runs)
 	_flag_heft(runs, band)
@@ -388,6 +390,38 @@ static func _weak_hits(hits) -> String:
 	for key in hits:
 		parts.append("%s %d" % [key, int(hits[key])])
 	return ", ".join(parts)
+
+
+# What broke the Wardens: each strike kind's share of Warden damage, per policy and stage.
+func _damage_section(runs: Array[Dictionary]) -> void:
+	_lines.append("## What broke the Wardens (share of Warden damage by strike kind)")
+	_lines.append("")
+	_lines.append("`runner` is the runner-gunner's laser, `arc` the engineer's caster, `turret` the mounted turret; `synergy` is build's synergy strikes.")
+	_lines.append("")
+	_lines.append("| Policy | Stage | " + " | ".join(DAMAGE_KINDS) + " | other |")
+	_lines.append("| --- | --- | " + " | ".join(DAMAGE_KINDS.map(func(_k): return "---")) + " | --- |")
+	for policy in POLICIES:
+		for stage in range(1, StageDefs.COUNT + 1):
+			var sums := {}
+			var total := 0.0
+			for run in runs:
+				if run["bot"].get("policy") != policy:
+					continue
+				var by = _note(run, stage).get("warden_damage", {})
+				if not by is Dictionary:
+					continue
+				for kind in by:
+					sums[kind] = float(sums.get(kind, 0.0)) + float(by[kind])
+					total += float(by[kind])
+			if total <= 0.0:
+				continue
+			var cells := []
+			var named := 0.0
+			for kind in DAMAGE_KINDS:
+				cells.append("%d%%" % int(round(100.0 * float(sums.get(kind, 0.0)) / total)))
+				named += float(sums.get(kind, 0.0))
+			_lines.append("| %s | %d | %s | %d%% |" % [policy, stage, " | ".join(cells), int(round(100.0 * (total - named) / total))])
+	_lines.append("")
 
 
 # How much each policy used the hands the bot has: per stage entered, mean counts.

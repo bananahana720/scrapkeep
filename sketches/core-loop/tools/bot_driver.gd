@@ -166,6 +166,8 @@ var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
 var _punch_seen := 0.0
+var _warden_hp_at := -1.0
+var _warden_kinds := {}
 
 
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
@@ -193,7 +195,10 @@ func start() -> void:
 		_note_set("warden_engaged_s", snappedf(game.run.stage_time, 0.01))
 		# The descent's speed is not a ram the fight can repeat; judge from here on.
 		_punch_seen = float(game.flow.punch_now()))
-	events.beacon_unsealed.connect(func(_s: int): _note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01)))
+	events.beacon_unsealed.connect(func(_s: int):
+		_note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01))
+		if _warden_hp_at >= 0.0:
+			_settle_warden_damage(0.0))
 	events.event_started.connect(func(id: String): _note_add("events_joined", id))
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
 	events.part_gained.connect(func(id: String, source_id: String): _note_add("parts", "%s:%s" % [source_id, id]))
@@ -328,6 +333,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_evaded = {}
 	_plant_state = "idle"
 	_plant_cool = 0.0
+	_warden_hp_at = -1.0
+	_warden_kinds = {}
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
@@ -371,11 +378,31 @@ func _on_player_hit(amount: float, _source: String) -> void:
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
-	if _note.is_empty() or not (kind == "slam" or kind == "stomp"):
+	if _note.is_empty():
+		return
+	# Which strikes break the Warden: the HP it had at each strike is settled against
+	# the HP it has on the next tick (or zero at its break), by the kinds that struck.
+	if is_instance_valid(enemy) and enemy == game.flow.warden:
+		if _warden_hp_at < 0.0:
+			_warden_hp_at = float(enemy.get("hp"))
+		_warden_kinds[kind] = true
+	if not (kind == "slam" or kind == "stomp"):
 		return
 	if is_instance_valid(enemy) and enemy == game.flow.warden and enemy.has_method("contact_part") \
 			and enemy.contact_part(game.player.ball_position(), kind) == "cap":
 		_count("cap_hits")
+
+
+func _settle_warden_damage(hp_now: float) -> void:
+	var dealt := maxf(0.0, _warden_hp_at - hp_now)
+	if dealt > 0.0 and not _note.is_empty() and not _warden_kinds.is_empty():
+		if not _note.has("warden_damage"):
+			_note["warden_damage"] = {}
+		var by: Dictionary = _note["warden_damage"]
+		for kind in _warden_kinds:
+			by[kind] = snappedf(float(by.get(kind, 0.0)) + dealt / _warden_kinds.size(), 0.1)
+	_warden_hp_at = -1.0
+	_warden_kinds = {}
 
 
 func _close_note() -> void:
@@ -446,6 +473,8 @@ func _roam(delta: float) -> void:
 		_plan()
 	_welcome_ring_at = Vector3.INF
 	var warden: Node3D = game.flow.warden if is_instance_valid(game.flow.warden) else null
+	if warden != null and _warden_hp_at >= 0.0:
+		_settle_warden_damage(float(warden.get("hp")))
 	if warden != null:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
 	match policy:
