@@ -89,7 +89,7 @@ func _physics_process(delta: float) -> void:
 	_show_charge(0.0)
 	var lead: Vector3 = target.planar_velocity() * FLIGHT * LEAD
 	var aim: Vector3 = _ball() + lead
-	var landing := Vector3(aim.x, terrain.height(aim.x, aim.z), aim.z)
+	var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 	shots += 1
 	fired.emit(muzzle_point(), landing, FLIGHT)
 

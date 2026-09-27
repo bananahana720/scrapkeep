@@ -14,6 +14,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Ground := preload("res://src/combat/ground.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -67,6 +68,9 @@ const STRIKE_DAMAGE := {
 var ctx
 var bolts
 var effects
+# The ground enemies, telegraphs and shells stand on (ground.gd): the terrain, or the
+# boss floor in the arena.
+var ground
 var volleys := 0
 # The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
@@ -96,6 +100,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Combat"
 	ctx.spawner = self
+	ground = Ground.new(ctx)
 	effects = Effects.new()
 	ctx.root.add_child(effects)
 	effects.setup()
@@ -143,7 +148,7 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
 	enemy.global_position = at
-	enemy.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
+	enemy.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int): ctx.run.record_kill(kind, where, scrap))
 	if enemy.has_signal("fired"):
@@ -548,7 +553,7 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
-	shell.setup(ctx.player, ctx.terrain, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
+	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(_on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))

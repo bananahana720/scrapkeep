@@ -13,6 +13,7 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 | `bolts.gd` | every live player projectile, the live cap and the crowd fade |
 | `effects.gd` | chain arcs, blast rings and impact sparks |
 | `telegraph.gd` | the committed ring or lane an enemy attack both draws and damages with |
+| `ground.gd` | the ground enemies, telegraphs and shells stand on: the terrain, or the boss floor in the arena |
 | `enemy.gd` | what every enemy shares: health, plating, weak points, weight, knock, flash, tint, death, telegraph |
 | `chaser.gd`, `lobber.gd`, `projectile.gd`, `miniboss.gd` | the enemies and the lobber's shell |
 | `warden.gd`, `vault.gd` | the stage's Warden (pulse, vent caps, magnet) and the plated cache |
@@ -112,5 +113,7 @@ Every weapon reads one aim query (`hitscan.gd`). The camera's centre ray, which 
 ## Enemy attacks and the committed telegraph
 
 An enemy damages the player only through its committed telegraph. The Warden's pulse and tug are the same: the reach ring they show is the ring they test. The attack lays a ring or a lane once, at commit, and later asks that same node's `contains(ball)`. Touching an enemy that is not attacking costs nothing but the bump. Rings and lanes reach 3.5 to 4 m above the ground under the ball, so a jump or a glide clears them. A hit taken shoves the ball 5 to 10 m/s along the attack through `ctx.player.add_external_accel`. Every push divides by the physics step actually run, so `Engine.time_scale` does not change its size.
+
+**The ground in the arena.** Enemies, telegraphs and shells read the ground through `ground.gd`, not `ctx.terrain` directly. On a stage that is the terrain. When `ctx.flow.in_arena` is true and `ctx.boss` implements `ground_height_at(point: Vector3) -> float`, the boss floor answers instead, because the stage terrain stays parked under the bowl. A ring then centres on the floor you roll on, `contains()` measures height above that floor, and a drone lobber aims its landing at it.
 
 Telegraphs draw in `HAZARD` with no depth test at render priority 40. Player bolts draw at 0 and combat's effects at 1. **For presentation (writer C):** keep juice below priority 40 and out of `HAZARD`, so no effect of ours ever paints over the next threat.

@@ -52,7 +52,7 @@ static func ring(parent: Node, terrain_ref, at: Vector3, ring_radius: float, rea
 	node.terrain = terrain_ref
 	node.radius = ring_radius
 	node.reach_up = reach
-	node.center = Vector3(at.x, terrain_ref.height(at.x, at.z), at.z)
+	node.center = Vector3(at.x, ground_under(terrain_ref, at), at.z)
 	parent.add_child(node)
 	node._build()
 	return node
@@ -68,16 +68,24 @@ static func lane(parent: Node, terrain_ref, from: Vector3, heading: Vector3, lan
 	node.length = lane_length
 	node.width = lane_width
 	node.reach_up = reach
-	node.center = Vector3(from.x, terrain_ref.height(from.x, from.z), from.z)
+	node.center = Vector3(from.x, ground_under(terrain_ref, from), from.z)
 	parent.add_child(node)
 	node._build()
 	return node
 
 
+# The ground under a point. Combat's ground (ground.gd) answers at the point itself, so
+# in the arena a telegraph stands on the boss floor; a plain terrain answers by x and z.
+static func ground_under(terrain_ref, point: Vector3) -> float:
+	if terrain_ref.has_method("height_at"):
+		return terrain_ref.height_at(point)
+	return terrain_ref.height(point.x, point.z)
+
+
 # The hit test every attack uses. The height is measured from the ground under the
 # point, so a ring on a slope still means what it shows.
 func contains(point: Vector3) -> bool:
-	var ground: float = terrain.height(point.x, point.z) if terrain != null else center.y
+	var ground: float = ground_under(terrain, point) if terrain != null else center.y
 	var above := point.y - ground
 	if above > reach_up or above < -2.0:
 		return false
