@@ -110,12 +110,17 @@ func _check_discovery() -> void:
 	var burst: int = run.scrap - scrap_before
 	var facts_first: Array = _facts.duplicate()
 	_game.flow.retry_stage()
+	var scrap_retry: int = run.scrap
 	run.add_part("cross_split", "test")
 	run.add_part("chain_arc", "test")
+	var burst_again: int = run.scrap - scrap_retry
+	# The retry took the synergy back with its burst, so the codex lets it fire and pay
+	# again, and the run log keeps it (CONTRACTS, Codex).
 	_report("synergy discovered through the codex", facts_first.size() == 1 and facts_first[0][0] == "storm_lattice"
-			and facts_first[0][1] == "build" and _facts.size() == 1 and burst == 20 * run.stage and _game.codex.known("storm_lattice"),
-		"Cross Split + Chain Arc published %s with a %d-scrap burst; after a retry and the same hand, %d fact(s) in total"
-			% [facts_first, burst, _facts.size()])
+			and facts_first[0][1] == "build" and burst == 20 * run.stage and _game.codex.known("storm_lattice")
+			and _facts.size() == 2 and burst_again == burst and "storm_lattice" in _game.codex.discovered_this_run(),
+		"Cross Split + Chain Arc published %s with a %d-scrap burst; after a retry and the same hand, %d fact(s) in total, a %d-scrap burst again, in the run's codex list %s"
+			% [facts_first, burst, _facts.size(), burst_again, "storm_lattice" in _game.codex.discovered_this_run()])
 	_game.flow.retry_stage()
 
 

@@ -50,6 +50,9 @@ const TESLA_DAMAGE := 12.0
 const TESLA_EVERY := 0.5
 const TESLA_TARGETS := 2
 const WRECK_RADIUS := 6.0
+const SYNERGY_KIND := "synergy"
+# Punch per unit of synergy force, the slam row's 1.2 the synergies used to borrow.
+const SYNERGY_PUNCH := 1.2
 const WRECK_FORCE := 18.0
 const SHRAPNEL_RADIUS := 6.0
 const SHRAPNEL_FORCE := 14.0
@@ -273,9 +276,10 @@ func _declare() -> void:
 			"hint": card["hint"], "clue": card["clue"], "text": card["text"]})
 
 
+# Every new activation goes to the codex, which owns the once-per-attempt rule: after
+# a retry that took the synergy back, reactivating it discovers it again, pays again
+# and keeps it in the run log (CONTRACTS, Codex; DESIGN-NOTES I3).
 func _on_synergy_live(synergy_id: String) -> void:
-	if _discovered.has(synergy_id):
-		return
 	_discovered[synergy_id] = true
 	var codex = _codex()
 	if codex != null:
@@ -284,10 +288,9 @@ func _on_synergy_live(synergy_id: String) -> void:
 		codex.mark_discovered(synergy_id, ctx.player.ball_position(), PARTICIPANTS)
 
 
-# An unnamed interaction, logged once per run under its key.
+# An unnamed interaction, reported every time it fires; the codex logs it once per
+# attempt and lets a retried attempt find it again (CONTRACTS, Codex).
 func _note_found(key: String, text: String) -> void:
-	if _found.has(key):
-		return
 	_found[key] = text
 	var codex = _codex()
 	if codex != null:
@@ -336,13 +339,16 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 
 # The arena is not a stage (DESIGN-NOTES spine call 34): the scrap field, the
 # fabricators, any open gates and every surface an element made on the stage go now.
-# The build itself, its synergies and its elements keep working in the fight.
+# The build itself, its synergies and its elements keep working in the fight. An arena
+# retry has just restored the run silently, so the build and the ball's shell are
+# recomputed from the restored parts and mass.
 func _on_stage_content_cleared(_reason: String) -> void:
 	scrap.clear()
 	fabricators.clear()
 	gates.close()
 	field.clear()
 	_trail = 0.0
+	recompute()
 
 
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
@@ -519,7 +525,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		field.flash_ring(at, WRECK_RADIUS, Palette.AMBER)
 		for enemy in _enemies_near(at, WRECK_RADIUS, 99):
 			if enemy.global_position.distance_to(at) > 0.5:
-				_strike(enemy, "slam", WRECK_FORCE)
+				_synergy_hit(enemy, WRECK_FORCE)
 	_rams.clear()
 	for at in _kills:
 		if _shrapnel_budget < 1.0:
@@ -527,12 +533,12 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		_shrapnel_budget -= 1.0
 		field.shard_burst(at)
 		for enemy in _enemies_near(at, SHRAPNEL_RADIUS, SHRAPNEL_TARGETS):
-			_strike(enemy, "slam", SHRAPNEL_FORCE)
+			_synergy_hit(enemy, SHRAPNEL_FORCE)
 	_kills.clear()
 	for impact in _landings:
 		field.flash_ring(ball + Vector3.DOWN * 0.8, GLACIER_RADIUS, ElementField.ICE)
 		for enemy in _enemies_near(ball, GLACIER_RADIUS, 99):
-			_strike(enemy, "slam", impact * 1.5)
+			_synergy_hit(enemy, impact * 1.5)
 		_frost_ring(ball)
 	_landings.clear()
 	if has_transformer("tesla_pylon") and (ctx.player.kit.mounted or ctx.player.kit.hooked):
@@ -556,7 +562,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		for enemy in _enemies_near(ball, PINWHEEL_RADIUS, PINWHEEL_TARGETS):
 			if not _pinwheel_cut.has(enemy.get_instance_id()):
 				_pinwheel_cut[enemy.get_instance_id()] = PINWHEEL_EVERY
-				_strike(enemy, "slam", PINWHEEL_FORCE)
+				_synergy_hit(enemy, PINWHEEL_FORCE)
 	else:
 		_pinwheel_clock = 0.0
 
@@ -588,3 +594,11 @@ func _enemies_near(at: Vector3, radius: float, count: int) -> Array[Node3D]:
 func _strike(enemy: Node3D, kind: String, force: float) -> void:
 	if ctx.spawner != null and is_instance_valid(enemy):
 		ctx.spawner.strike(enemy, kind, force)
+
+
+# A synergy's shockwave, shrapnel, frost ring or blade is its own strike kind, never a
+# landing: a weak point that takes a slam (a vent cap, the scooter) must not take one
+# the ball never landed. The spawner resolves a kind outside its contact table as the
+# damage given, so build scales it the way the slam row it replaced did.
+func _synergy_hit(enemy: Node3D, force: float) -> void:
+	_strike(enemy, SYNERGY_KIND, force * SYNERGY_PUNCH * ctx.run.heft())

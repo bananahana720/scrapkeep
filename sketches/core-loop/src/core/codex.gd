@@ -31,6 +31,9 @@ var _run_discoveries: Array[String] = []
 # burst scrap included, so it rewinds these too and they can fire and pay again.
 var _attempt_seen: Array[String] = []
 var _attempt_found: Array[String] = []
+# Stage 3's attempt, set aside when the arena begins its own.
+var _stage_seen_before_arena: Array[String] = []
+var _stage_found_before_arena: Array[String] = []
 var _warned := {}
 
 
@@ -43,6 +46,7 @@ func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
 	_load()
 	events.run_started.connect(_on_run_started)
 	events.stage_entered.connect(_on_stage_entered)
+	events.stage_content_cleared.connect(_on_stage_content_cleared)
 
 
 # Idempotent: a second declare of the same id updates its words, never duplicates it.
@@ -167,17 +171,41 @@ func _on_run_started(_class_id: String) -> void:
 	_run_discoveries = []
 	_attempt_seen = []
 	_attempt_found = []
+	_stage_seen_before_arena = []
+	_stage_found_before_arena = []
 
 
+# A stage retry (R, or T replaying stage 3 from its start) rewinds everything since
+# the stage began, the arena attempt included.
 func _on_stage_entered(_stage: int, retry: bool) -> void:
 	if retry:
-		for id in _attempt_seen:
-			_run_seen.erase(id)
-			_run_discoveries.erase(id)
-		for text in _attempt_found:
-			_run_found.erase(text)
+		_rewind(_attempt_seen + _stage_seen_before_arena, _attempt_found + _stage_found_before_arena)
 	_attempt_seen = []
 	_attempt_found = []
+	_stage_seen_before_arena = []
+	_stage_found_before_arena = []
+
+
+# The arena is its own attempt. Entering it sets the stage-3 attempt aside, so an arena
+# retry rewinds only what the fight discovered; a T replay still rewinds both.
+func _on_stage_content_cleared(reason: String) -> void:
+	if reason == "arena":
+		_stage_seen_before_arena.append_array(_attempt_seen)
+		_stage_found_before_arena.append_array(_attempt_found)
+	elif reason == "arena_retry":
+		_rewind(_attempt_seen, _attempt_found)
+	else:
+		return
+	_attempt_seen = []
+	_attempt_found = []
+
+
+func _rewind(seen: Array, found: Array) -> void:
+	for id in seen:
+		_run_seen.erase(id)
+		_run_discoveries.erase(id)
+	for text in found:
+		_run_found.erase(text)
 
 
 func _warn_once(key: String, message: String) -> void:

@@ -288,7 +288,7 @@ func _step_window() -> void:
 	var clear: Dictionary = _clears[-1] if not _clears.is_empty() else {}
 	var world = _world()
 	var build = _build()
-	_report("%s cleared" % which, _clears.size() == (1 if which == "entry" else 2) and clear.get("reason", "") == "arena"
+	_report("%s cleared" % which, _clears.size() == (1 if which == "entry" else 2) and clear.get("reason", "") == ("arena" if which == "entry" else "arena_retry")
 			and clear.get("enemy", -1) == 0 and clear.get("enemy_shot", -1) == 0 and clear.get("telegraph", -1) == 0,
 		"stage_content_cleared(%s) #%d left %d enemy, %d enemy_shot and %d telegraph nodes before the boss entered%s"
 			% [clear.get("reason", "?"), _clears.size(), clear.get("enemy", -1), clear.get("enemy_shot", -1), clear.get("telegraph", -1),

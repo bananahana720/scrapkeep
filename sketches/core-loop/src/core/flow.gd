@@ -43,6 +43,8 @@ var boss_plating := 120.0
 # True from arena entry until the run leaves the fight, so a death there retries the
 # arena, not stage 3.
 var in_arena := false
+# The plating that stood in the way when the ball died in the arena, for the gap line.
+var _death_plating := -1.0
 var _victory_left := 0.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
@@ -210,12 +212,33 @@ func enter_boss(carried: Vector3) -> void:
 	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
 
+# The retry's reason is its own, so anything that keeps per-attempt memory (the codex,
+# the music) can tell a fresh arena from a retried one.
 func _retry_arena() -> void:
 	ctx.run.restore()
 	ctx.player.set_frozen(false)
 	_set_state(BOSS)
-	ctx.events.stage_content_cleared.emit("arena")
+	ctx.events.stage_content_cleared.emit("arena_retry")
 	_boss_module().enter_arena(ctx.run.snapshot_value("entry_velocity"))
+
+
+# The boss's live read of the fight (CONTRACTS, Flow seams): the plating that stands in
+# the way right now and the objective for the current phase. A boss module without
+# them falls back to the entry plating and the standing arena objective.
+func boss_plating_now() -> float:
+	var boss := _boss_module()
+	if boss != null and boss.has_method("live_plating"):
+		return float(boss.live_plating())
+	return boss_plating
+
+
+func _boss_objective() -> String:
+	var boss := _boss_module()
+	if boss != null and boss.has_method("objective_text"):
+		var text := String(boss.objective_text())
+		if text != "":
+			return text
+	return EventKinds.objective("boss_arena_entered", {"punch": int(punch_now()), "plating": int(boss_plating_now())})
 
 
 # The arena's own fall rescue. The boss module (E) owns the arena, so it names the
@@ -262,7 +285,7 @@ func can_replay_final_stage() -> bool:
 func gap_line() -> String:
 	var plating := -1.0
 	if boss_active:
-		plating = boss_plating
+		plating = _death_plating if state == DEAD and _death_plating >= 0.0 else boss_plating_now()
 	elif sealed and is_instance_valid(warden):
 		plating = warden_plating()
 	if plating < 0.0:
@@ -468,6 +491,7 @@ func _engage() -> void:
 func _on_player_died() -> void:
 	if not in_play():
 		return
+	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	ctx.player.set_frozen(true)
 	_set_state(DEAD)
 
@@ -505,7 +529,7 @@ func objective_text() -> String:
 		LAUNCH:
 			return EventKinds.objective("launched" if _launched else "reward_chosen")
 		BOSS:
-			return EventKinds.objective("boss_arena_entered", {"punch": int(punch_now()), "plating": int(boss_plating)})
+			return _boss_objective()
 	return ""
 
 
