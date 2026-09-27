@@ -14,9 +14,9 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 #   godot --headless --path sketches/core-loop --script res://tools/balance_report.gd \
 #     -- --in=<dir> --label=<label> [--out-dir=<dir>]
 #
-# The Warden fight is timed from warden_engaged to the break: from the run log's
-# ticks_to_warden_engaged when the spine records it, else from the bot's own note of
-# the same signal. Time from stage entry is shown beside it.
+# The Warden fight is timed to the break from the later of warden_engaged (the run log's
+# ticks_to_warden_engaged when the spine records it, else the bot's note) and the bot's
+# own commitment to the Warden. Time from stage entry is shown beside it.
 #
 # Flags:
 #   - a Warden fight outside 10 to 90 s, or a Warden never broken (a stalled run);
@@ -202,16 +202,30 @@ static func _note(run: Dictionary, stage: int) -> Dictionary:
 	return {}
 
 
-# Seconds from warden_engaged to the break: the run log's ticks when it has them, else
-# the bot's note. -1 when unknown.
+# Seconds of Warden fight: from the later of warden_engaged and the bot's commitment to
+# the Warden (warden_fight_s) to the break. Engagement comes from the run log's
+# ticks_to_warden_engaged when the spine records it, else from the bot's note. The later
+# start keeps a completionist's or a wanderer's detours out of the fight: either can
+# wake the Warden rolling past its ring long before it turns to fight. -1 when unknown.
 static func _fight_seconds(run: Dictionary, stage: int) -> float:
 	var row := _stage_row(run, stage)
-	if row.get("ticks_to_warden_engaged") != null and row.get("ticks_to_warden_break") != null:
-		return (float(row["ticks_to_warden_break"]) - float(row["ticks_to_warden_engaged"])) / Engine.physics_ticks_per_second
 	var note := _note(run, stage)
-	if note.get("warden_engaged_s") != null and note.get("warden_broken_s") != null:
-		return float(note["warden_broken_s"]) - float(note["warden_engaged_s"])
-	return -1.0
+	var broken := -1.0
+	var engaged := -1.0
+	if row.get("ticks_to_warden_break") != null:
+		broken = float(row["ticks_to_warden_break"]) / Engine.physics_ticks_per_second
+	elif note.get("warden_broken_s") != null:
+		broken = float(note["warden_broken_s"])
+	if row.get("ticks_to_warden_engaged") != null:
+		engaged = float(row["ticks_to_warden_engaged"]) / Engine.physics_ticks_per_second
+	elif note.get("warden_engaged_s") != null:
+		engaged = float(note["warden_engaged_s"])
+	if broken < 0.0 or engaged < 0.0:
+		return -1.0
+	var start := engaged
+	if note.get("warden_fight_s") != null:
+		start = maxf(start, float(note["warden_fight_s"]))
+	return maxf(0.0, broken - start)
 
 
 static func _hp_percent(run: Dictionary, stage: int) -> float:
@@ -288,7 +302,7 @@ func _stage_section(runs: Array[Dictionary], stage: int, band: Dictionary) -> vo
 	_lines.append("")
 	_lines.append("Heft band at exit, from the power-curve table: %.2f to %.2f. Bands read min / median / max." % [limits.x, limits.y])
 	_lines.append("")
-	_lines.append("| Policy | Entered | Warden fight s (engaged to break) | Break s from entry | Heft at exit | Parts at exit | Bonus cores | HP lost % of max | Deaths | Events started (ambient too) | Events won |")
+	_lines.append("| Policy | Entered | Warden fight s (engaged and committed, to break) | Break s from entry | Heft at exit | Parts at exit | Bonus cores | HP lost % of max | Deaths | Events started (ambient too) | Events won |")
 	_lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for policy in POLICIES + ["all"]:
 		var breaks: Array = []

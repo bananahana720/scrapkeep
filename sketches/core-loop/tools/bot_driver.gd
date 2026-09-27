@@ -328,7 +328,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_evaded = {}
 	_plant_state = "idle"
 	_plant_cool = 0.0
-	_note = {"stage": stage, "warden_engaged_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
+	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
 		"specials": 0, "punch_short_s": 0.0}
@@ -577,6 +577,10 @@ func _fight(target: Node3D, delta: float) -> void:
 	if target != _fight_target:
 		_fight_target = target
 		_fight_phase = "charge"
+	# The bot's own commitment to the Warden: a completionist or a wanderer can wake it
+	# (warden_engaged) on the way past long before it turns to fight.
+	if target == game.flow.warden and _note.get("warden_fight_s") == null:
+		_note["warden_fight_s"] = snappedf(game.run.stage_time, 0.01)
 	var short: bool = _punch_seen < _plating(target)
 	if short:
 		_note["punch_short_s"] = float(_note.get("punch_short_s", 0.0)) + delta
