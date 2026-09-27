@@ -31,6 +31,8 @@ class Marker:
 	var plating := 0.0
 	var radius := 1.0
 	var half_height := 1.0
+	# The ground combat's lobbers aim at, as combat's enemy.gd has it.
+	var terrain
 
 	func is_dead() -> bool:
 		return false

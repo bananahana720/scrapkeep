@@ -59,6 +59,8 @@ func _run() -> void:
 	await _rescue_check()
 	await _slag_check()
 	await _charge_check()
+	await _mid_lane_check()
+	await _ramp_bounce_check()
 	await _scooter_check("ram")
 	await _scooter_check("stomp")
 	print("boss_momentum_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
@@ -217,3 +219,67 @@ func _scooter_check(kind: String) -> void:
 		"a %s caught Brindle's scooter %.2f s after the ball was placed; the spine reported %s; %s"
 			% ["ram at cruise %.0f m/s" % cruise if kind == "ram" else "landing on top at its pace", won_at, str(_struck),
 				"codex Boarding Party %s" % _game.codex.known(CodexEntries.SCOOTER_STOMP) if kind == "stomp" else "caught by the ram"])
+
+
+# A ball resting mid-floor in a charge lane is shoved sideways; the hull's bow must not
+# carry it down the lane.
+func _mid_lane_check() -> void:
+	_game.ctx.calm = false
+	_game.flow.retry_stage()
+	_boss.jump_to_phase(3)
+	var ship: Vector3 = _boss.ship.global_position
+	var toward: Vector3 = (_boss.arena.global_position - ship)
+	toward = Vector3(toward.x, 0.0, toward.z).normalized()
+	var spot: Vector3 = ship + toward * 16.0
+	spot = Vector3(spot.x, _boss.arena.ground(spot) + 1.0, spot.z)
+	_hits.clear()
+	var lane = null
+	var hit_tick := -1
+	var carried := 0.0
+	for i in int(6.0 * 90):
+		if lane == null:
+			Harness.put_ball(_game, spot)
+		await physics_frame
+		if lane == null and _boss._charge.has("hazard"):
+			lane = _boss._charge["hazard"]
+		if hit_tick < 0 and _hits.any(func(h): return h["source"] == "brindle_charge"):
+			hit_tick = i
+		if hit_tick >= 0:
+			carried = maxf(carried, _game.player.state.velocity.dot(lane.heading))
+			if i - hit_tick >= int(0.8 * 90):
+				break
+	var ball: Vector3 = _game.player.ball_position()
+	var off: float = absf(lane.lane_lateral(ball)) if lane != null else -1.0
+	_report("charge shoves, never carries", hit_tick >= 0 and carried < 8.0 and off > lane.half_width,
+		"a ball resting mid-lane was hit and moved at most %.1f m/s along the lane (the hull runs %.0f), and sat %.1f m off the lane centre 0.8 s later"
+			% [carried, Rules.CHARGE_SPEED, off])
+	_game.run.heal(1000.0)
+
+
+# A slag bounce at a deck ramp's bearing must not end against the ramp's end face.
+func _ramp_bounce_check() -> void:
+	_game.flow.retry_stage()
+	_boss.jump_to_phase(2)
+	var bearing := deg_to_rad(Arena.RAMP_ANGLES[0])
+	var spot: Vector3 = _boss.arena.point_at(bearing, 20.0, 1.0)
+	_hits.clear()
+	var hit_tick := -1
+	var slowest := INF
+	var reached := 0.0
+	for i in int(9.0 * 90):
+		if hit_tick < 0:
+			Harness.put_ball(_game, spot)
+		await physics_frame
+		if hit_tick < 0 and _hits.any(func(h): return h["source"] == "brindle_slag"):
+			hit_tick = i
+		if hit_tick >= 0:
+			var ball: Vector3 = _game.player.ball_position()
+			reached = maxf(reached, _boss.arena.radius_of(ball))
+			if i - hit_tick >= 10 and i - hit_tick <= int(1.0 * 90):
+				slowest = minf(slowest, _game.player.state.velocity.length())
+			if i - hit_tick >= int(1.3 * 90):
+				break
+	var face := Arena.RAMP_TO - 1.2
+	_report("slag bounce clears the ramp", hit_tick >= 0 and (reached < face or slowest > 4.0),
+		"a slag hit at the ramp bearing, 20 m out: the ball reached r %.1f (ramp face at %.0f) and never slowed below %.1f m/s in flight" % [reached, Arena.RAMP_TO, slowest])
+	_game.run.heal(1000.0)

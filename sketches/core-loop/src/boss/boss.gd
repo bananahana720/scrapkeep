@@ -57,6 +57,11 @@ var _grace := {}
 var _eject := {}
 var _ship_angle := 0.0
 var _crest: Node3D
+# Drone pads marked before the drone arrives: [{at, marker, age}].
+var _drones: Array = []
+# While set, the hull ignores the ball: a charge hit's shove must clear the lane before
+# the bow can touch it again.
+var _ghost_until := -1.0
 
 
 func setup(ctx_ref) -> void:
@@ -148,6 +153,8 @@ func exit_arena() -> void:
 	_cranes = [{}, {}]
 	_charge = {}
 	_eject = {}
+	_drones.clear()
+	_ghost_until = -1.0
 	if state != DEFEATED:
 		state = IDLE
 	phase = 0
@@ -178,6 +185,7 @@ func advance(delta: float) -> void:
 	_step_vents(ball)
 	_step_hazards(delta, ball)
 	_step_trail(ball)
+	_step_drones(delta)
 	if state == FIGHT:
 		match phase:
 			1:
@@ -189,6 +197,8 @@ func advance(delta: float) -> void:
 		_maybe_turn_phase()
 	elif state == EJECT:
 		_step_scooter(delta)
+	_step_ghost()
+	ctx.flow.boss_plating = live_plating()
 	_update_readout()
 
 
@@ -429,7 +439,7 @@ func _spill_break() -> void:
 # The scrap field is stage content and idles in the arena, so a drone killed here drops
 # its scrap as a pickup where it died.
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
-	if state != FIGHT or kind != "lobber" or not is_instance_valid(arena):
+	if not active() or kind != "lobber" or not is_instance_valid(arena):
 		return
 	_spawn_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value))
 
@@ -443,7 +453,8 @@ func pickups_left() -> Array:
 func _step_furnace(delta: float) -> void:
 	var here: Vector3 = ship.global_position
 	var to_centre := Vector3(arena.global_position.x - here.x, 0.0, arena.global_position.z - here.z)
-	if to_centre.length() > 0.2:
+	var parked := to_centre.length() <= 0.2
+	if not parked:
 		var move := minf(to_centre.length(), Rules.CIRCLE_SPEED * delta)
 		var at := here + to_centre.normalized() * move
 		ship.move_to(Vector3(at.x, arena.ground(at), at.z), ship.heading)
@@ -457,23 +468,62 @@ func _step_furnace(delta: float) -> void:
 		_slag_turn += 1
 		_next_attack = clock + Rules.SLAG_WARN + Rules.SLAG_LIVE + Rules.SLAG_GAP
 		_publish("boss_attack_telegraphed", [id, h.warn_seconds])
-	if clock >= _next_lobber:
+	# Drones wait for the ship to park, so a pad is never swept by the hull.
+	if parked and clock >= _next_lobber:
 		_next_lobber = clock + Rules.LOBBER_PERIOD
 		_launch_lobber()
 
 
-# Lobber drones roll off the deck. They are combat's lobbers, with combat's telegraphs.
+# Lobber drones drop off the deck onto a pad marked DRONE_WARN ahead, off the hull's side
+# away from the ball. They are combat's lobbers with combat's telegraphs; their ground
+# is the bowl's, so their shells land on the arena floor, not the parked stage below.
 func _launch_lobber() -> void:
 	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 		return
 	_lobbers = _lobbers.filter(func(l): return is_instance_valid(l) and not (l.has_method("is_dead") and l.is_dead()))
-	if _lobbers.size() >= Rules.LOBBER_CAP:
+	if _lobbers.size() + _drones.size() >= Rules.LOBBER_CAP:
 		return
-	var side := 1.0 if _lobbers.size() % 2 == 0 else -1.0
-	var at: Vector3 = ship.to_global(Vector3(side * 6.5, 0.0, 0.0))
-	var lobber = ctx.spawner.spawn_enemy("lobber", Vector3(at.x, arena.ground(at) + 1.0, at.z))
-	if lobber is Node3D:
-		_lobbers.append(lobber)
+	var ball_side: float = ship.to_local(ctx.player.ball_position()).x
+	var side := -1.0 if ball_side >= 0.0 else 1.0
+	var at: Vector3 = ship.to_global(Vector3(side * Rules.DRONE_SIDE, 0.0, 0.0))
+	at = Vector3(at.x, arena.ground(at), at.z)
+	var marker = Hazard.new()
+	marker.ground = arena.ground
+	marker.color = Palette.AMBER
+	marker.commit_annulus("drone_pad", at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
+	arena.add_child(marker)
+	_drones.append({"at": at, "marker": marker})
+
+
+func pending_drones() -> Array:
+	return _drones.map(func(d): return d["at"])
+
+
+func _step_drones(delta: float) -> void:
+	var kept: Array = []
+	var ball: Vector3 = ctx.player.ball_position()
+	for d in _drones:
+		var marker = d["marker"]
+		marker.step(delta)
+		var at: Vector3 = d["at"]
+		var ready: bool = marker.age >= Rules.DRONE_WARN
+		var clear: bool = ball.distance_to(at + Vector3.UP) >= Rules.DRONE_CLEAR
+		if ready and clear and state == FIGHT:
+			_drop_drone(at)
+		elif marker.age < Rules.DRONE_WARN + Rules.DRONE_WAIT and state == FIGHT:
+			kept.append(d)
+			continue
+		marker.queue_free()
+	_drones = kept
+
+
+func _drop_drone(at: Vector3) -> void:
+	var lobber = ctx.spawner.spawn_enemy("lobber", at + Vector3.UP)
+	if not lobber is Node3D:
+		return
+	if "terrain" in lobber:
+		lobber.terrain = arena.ground_query()
+	_lobbers.append(lobber)
 
 
 func _step_vents(ball: Vector3) -> void:
@@ -490,9 +540,44 @@ func _slag_hit(h, ball: Vector3) -> void:
 	var r: float = arena.radius_of(ball)
 	var out := Vector3(ball.x - arena.global_position.x, 0.0, ball.z - arena.global_position.z).normalized()
 	var toward := out if r >= (h.r_in + h.r_out) * 0.5 else -out
+	var across: Vector3 = Vector3.UP.cross(out)
+	var way := toward
+	for candidate in [toward, -toward, across, -across]:
+		if _clear_arc(ball, candidate * Rules.SLAG_BOUNCE_OUT + Vector3.UP * Rules.SLAG_BOUNCE_UP):
+			way = candidate
+			break
 	var v: Vector3 = ctx.player.state.velocity
 	var up := maxf(0.0, Rules.SLAG_BOUNCE_UP - v.y)
-	ctx.player.add_external_accel((Vector3.UP * up + toward * Rules.SLAG_BOUNCE_OUT) / _delta)
+	ctx.player.add_external_accel((Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT) / _delta)
+
+
+# Whether a ball launched from `from` at `launch` flies until it lands without meeting
+# anything solid (a ramp's end face, a mast, the hull): a bounce the game chooses must
+# not end in a stop the player never chose.
+func _clear_arc(from: Vector3, launch: Vector3) -> bool:
+	var space: PhysicsDirectSpaceState3D = arena.get_world_3d().direct_space_state
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS * 0.95
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.collision_mask = 1 | 4
+	query.exclude = [ctx.player.body().get_rid()]
+	var g: float = ctx.tuning.f("gravity")
+	var at := from
+	for k in range(1, 16):
+		var t := k * 0.08
+		var next := from + Vector3(launch.x, 0.0, launch.z) * t + Vector3.UP * (launch.y * t - 0.5 * g * t * t)
+		var lands: bool = t > 0.3 and next.y <= arena.ground(next) + Tuning.RADIUS
+		if lands:
+			next.y = arena.ground(next) + Tuning.RADIUS + 0.1
+		query.transform = Transform3D(Basis.IDENTITY, at)
+		query.motion = next - at
+		if space.cast_motion(query)[1] < 1.0:
+			return false
+		if lands:
+			return true
+		at = next
+	return true
 
 
 # --- Phase 3: scuttle the flagship ------------------------------------------------------
@@ -576,6 +661,21 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var along: float = v.dot(h.heading)
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
 	ctx.player.add_external_accel((away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
+	ship.hull.add_collision_exception_with(ctx.player.body())
+	_ghost_until = clock + Rules.CHARGE_GRACE
+
+
+# The hull takes the ball back only once the grace is over and the ball is clear of it,
+# so the exception never ends with the ball inside the hull.
+func _step_ghost() -> void:
+	if _ghost_until < 0.0 or clock < _ghost_until:
+		return
+	var local: Vector3 = ship.hull.to_local(ctx.player.ball_position())
+	var half := Requisition.HULL * 0.5 + Vector3.ONE * (Tuning.RADIUS + 0.3)
+	if absf(local.x) < half.x and absf(local.y) < half.y and absf(local.z) < half.z:
+		return
+	ship.hull.remove_collision_exception_with(ctx.player.body())
+	_ghost_until = -1.0
 
 
 func _stun(seconds: float) -> void:
@@ -659,12 +759,13 @@ func scooter_landed() -> bool:
 	return state == EJECT and _eject.get("landed", false)
 
 
-# The catch is a contact: a ram or a stomp (or a slam) on the landed scooter wins. A
-# shot slows him for a moment, which is how a gunner sets up the catch.
+# The catch is a contact: a ram, a stomp or a slam with the ball on the landed scooter
+# wins. Anything else, a shot or a strike from afar that borrows a contact kind, slows
+# him for a moment, which is how a gunner sets up the catch.
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if enemy == null or enemy != scooter or not scooter_landed():
 		return
-	if kind in Rules.CONTACT_KINDS:
+	if kind in Rules.CONTACT_KINDS and ctx.player.ball_position().distance_to(scooter.global_position) <= Rules.SCOOTER_TOUCH:
 		_defeat("stomp" if kind == "stomp" or _from_above(scooter) else kind, scooter.global_position)
 	else:
 		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
@@ -794,14 +895,16 @@ func rescue_point(near = null) -> Vector3:
 
 # Flow rescues a fall below floor_y(). This catches the one it cannot see in time: a
 # ball flying out over the rim, which would take over a second to fall that far. It
-# goes back on the ring riding it, with its horizontal speed kept.
+# goes back on the ring riding it the way it was going round, with its horizontal speed
+# kept.
 func _rescue(ball: Vector3) -> void:
 	if arena.contains(ball):
 		return
 	var v: Vector3 = ctx.player.state.velocity
 	var speed := Vector2(v.x, v.z).length()
+	var turning := signf(v.dot(Arena.tangent(arena.angle_of(ball))))
 	var at := rescue_point(ball)
-	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed)
+	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed * (turning if turning != 0.0 else 1.0))
 	ctx.player.body().global_position = at
 
 
@@ -826,14 +929,16 @@ func plating_for(target, kind: String, part: String) -> float:
 			if part.begins_with("cap_"):
 				return plating_for(_cap(part), kind, "")
 			if stunned():
-				return 0.0
+				return Rules.OPEN_PLATING
 			if charging():
 				return Rules.CLASH_PUNCH
 			return Rules.HULL_PLATING
 		"magnet":
 			return Rules.HULL_PLATING if kind in Rules.CONTACT_KINDS else 0.0
 		"cap":
-			return Rules.HULL_PLATING if kind != "" and not _landing(target, kind) else 0.0
+			if kind == "":
+				return 0.0
+			return Rules.OPEN_PLATING if _landing(target, kind) else Rules.HULL_PLATING
 	return 0.0
 
 
@@ -845,11 +950,13 @@ func hit_mult(target, kind: String, part: String) -> float:
 	return 1.0
 
 
-# A stomp or slam, or a contact the ball made coming down on top of the piece. The
-# spine reads the ball's velocity after the landing bounce, so a landing at speed
-# reaches combat as a ram; where the ball sits settles what it was.
+# A stomp or slam with the ball on the piece, or a ram the ball made coming down on top
+# of it. The ball's position settles it, so a strike that only borrows the "slam" kind
+# (build's synergies) cannot open a cap from the floor.
 func _landing(target, kind: String) -> bool:
-	return kind in Rules.CAP_KINDS or (kind == "ram" and _from_above(target))
+	if kind in Rules.CAP_KINDS:
+		return _over(target) and ctx.player.ball_position().y >= target.global_position.y - 0.5
+	return kind == "ram" and _from_above(target)
 
 
 func _from_above(target) -> bool:
@@ -920,14 +1027,79 @@ func hull_plating_now() -> float:
 func readout_text() -> String:
 	if state == EJECT:
 		return "Brindle is running | ram or stomp his scooter"
-	return "Hull plating %d | your punch %d" % [int(hull_plating_now()), int(ctx.flow.punch_now())]
+	if charging():
+		return "Bow plating %d | your ram %d" % [int(Rules.CLASH_PUNCH), int(live_punch())]
+	return "Hull plating %d | your punch %d" % [int(hull_plating_now()), int(live_punch())]
 
 
 func _update_readout() -> void:
 	if not is_instance_valid(ship):
 		return
-	var beats: bool = ctx.flow.punch_now() >= hull_plating_now()
+	var beats: bool = live_punch() >= hull_plating_now()
 	ship.set_readout(readout_text(), Palette.AMBER if beats or state == EJECT else Color("9fb0bf"))
+
+
+# --- Live state for the HUD (flow's objective and gap lines read these) --------------
+
+# What the player should do right now, in the objective line's voice.
+func objective_text() -> String:
+	match state:
+		EJECT:
+			return "Catch the Admiral's scooter: ram it or land on it."
+		DEFEATED:
+			return "Brindle is routed."
+		FIGHT:
+			match phase:
+				1:
+					return "Shoot the crane magnets. Roll the spill trail to take your scrap back."
+				2:
+					return "Slam the vent caps from a mast or ramp. Quench slag at the rim vents."
+				3:
+					if stunned():
+						return "He is stunned with his cockpit open: hit him now."
+					return "Bait a charge into the rim wall, or out-clash it at ram punch %d." % int(Rules.CLASH_PUNCH)
+	return ""
+
+
+# The plating of what the player should hit now: the hull's live plating in the fight
+# (120, 150 on a charging bow, 0 while stunned) and the scooter's 0 in the chase.
+func live_plating() -> float:
+	if state == EJECT or state == DEFEATED:
+		return 0.0
+	return hull_plating_now()
+
+
+# The punch that counts against live_plating(): only a ram can clash with the bow.
+func live_punch() -> float:
+	return ram_punch_now() if charging() else ctx.flow.punch_now()
+
+
+# Combat's ram-only punch when it has one, else the ram punch built from its punch_of.
+func ram_punch_now() -> float:
+	var spawner = ctx.spawner
+	if spawner != null and spawner.has_method("ram_punch_now"):
+		return spawner.ram_punch_now()
+	if spawner == null or not spawner.has_method("punch_of") or ctx.player.speed_tier() < 1:
+		return 0.0
+	return spawner.punch_of("ram", ctx.player.planar_velocity().length())
+
+
+# The arena-ground seam: the bowl's floor under a point, which combat's telegraphs and
+# lobber aim use while flow.in_arena. Outside a fight it falls back to the terrain.
+func ground_height_at(point: Vector3) -> float:
+	if is_instance_valid(arena):
+		return arena.ground(point)
+	if ctx.terrain != null and ctx.terrain.has_method("height"):
+		return ctx.terrain.height(point.x, point.z)
+	return point.y
+
+
+# Combat tints plated pieces by punch_now() against their plating. A charging bow only
+# answers a ram, so its tint is decided by the ram punch alone.
+func tint_for(target, suggested: String) -> String:
+	if target.role == "hull" and charging():
+		return "amber" if ram_punch_now() >= Rules.CLASH_PUNCH else "slate"
+	return suggested
 
 
 func _publish(signal_name: String, args: Array = []) -> void:

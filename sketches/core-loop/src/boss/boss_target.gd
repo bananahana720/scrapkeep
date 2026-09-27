@@ -73,6 +73,18 @@ func is_dead() -> bool:
 	return boss == null or not boss.target_live(self)
 
 
+# The crush seam: no piece of Brindle is ever crushed. His HP is held at phase floors,
+# so a crush exception on him would end with the ball inside a body that never died.
+func crushable() -> bool:
+	return false
+
+
+# The clash-preview seam: while the hull charges, only a ram can clash with its bow,
+# so combat compares its plating against ram_punch_now() instead of punch_now().
+func tint_verb() -> String:
+	return "ram" if boss != null and role == "hull" and boss.charging() else ""
+
+
 func knock(_direction: Vector3, _force: float) -> void:
 	pass
 
@@ -120,6 +132,8 @@ func take_damage(amount: float) -> float:
 
 
 func set_tint(state: String) -> void:
+	if boss != null:
+		state = boss.tint_for(self, state)
 	if state == tint_state:
 		return
 	tint_state = state

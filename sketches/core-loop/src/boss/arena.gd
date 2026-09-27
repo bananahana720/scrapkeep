@@ -126,6 +126,31 @@ func contains(point: Vector3) -> bool:
 	return radius_of(point) <= BANK_R + WALL_THICK + 4.0
 
 
+# The terrain API's ground queries, answered by the bowl. Combat's drones read their
+# ground from the terrain they were given; in the arena that has to be this, not the
+# parked stage map 30 m below.
+class Ground:
+	extends RefCounted
+
+	var bowl
+
+	func _init(bowl_ref) -> void:
+		bowl = bowl_ref
+
+	func height(x: float, z: float) -> float:
+		return bowl.ground(Vector3(x, 0.0, z))
+
+	func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
+		return Vector3(x, height(x, z) + clearance, z)
+
+	func contains(point: Vector3) -> bool:
+		return bowl.contains(point)
+
+
+func ground_query() -> RefCounted:
+	return Ground.new(self)
+
+
 # --- Vents and quenching -------------------------------------------------------------
 
 func vent_at(point: Vector3) -> int:
@@ -175,7 +200,8 @@ func _show_crust(vent: int, on: bool) -> void:
 		_add_band(st, band, mid - VENT_SPAN, mid + VENT_SPAN, 10, 0.12)
 	var mat := Palette.unshaded(Color(0.42, 0.4, 0.38, 0.95))
 	mat.no_depth_test = true
-	mat.render_priority = 41
+	# Under every telegraph (40): the live slag leaves the quenched span undrawn instead.
+	mat.render_priority = 39
 	_crusts[vent] = _mesh_node(st, mat, "Crust_%d" % vent)
 
 
