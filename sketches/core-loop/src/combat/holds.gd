@@ -191,6 +191,12 @@ func _release_id(id: int, reason: String) -> void:
 	released.emit(id, hold["kind"], reason)
 
 
+# The refund alone, for an escape that is not a hold's release (the deflector vault).
+func gift_refund() -> void:
+	breaks_by_player += 1
+	player.abilities.refund(AbilityState.MOVEMENT, BREAK_REFUND)
+
+
 # The boost refund: a forward kick along the way the ball is rolling, and part of the
 # class movement ability's recharge back. A gift, so it goes past the CC door.
 func _refund(kick: float) -> void:

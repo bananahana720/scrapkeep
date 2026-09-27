@@ -20,6 +20,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Sight := preload("res://src/combat/sight.gd")
+# v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
+const Fleet := preload("res://src/combat/fleet.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -93,6 +95,7 @@ const STRIKE_DAMAGE := {
 }
 
 var ctx
+var fleet
 var bolts
 var effects
 # The ground enemies, telegraphs and shells stand on (ground.gd): the terrain, or the
@@ -148,6 +151,9 @@ func setup(ctx_ref) -> void:
 	name = "Combat"
 	ctx.spawner = self
 	ground = Ground.new(ctx)
+	fleet = Fleet.new()
+	add_child(fleet)
+	fleet.setup(ctx, self)
 	effects = Effects.new()
 	ctx.root.add_child(effects)
 	effects.setup()
@@ -202,6 +208,8 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Vault.new()
 		"chaser":
 			enemy = Chaser.new()
+		_ when fleet.makes(kind):
+			enemy = fleet.make(kind)
 		_:
 			push_warning("spawn_enemy: unknown kind '%s', spawning a chaser" % kind)
 			kind = "chaser"
@@ -210,14 +218,20 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 	enemy.global_position = at
 	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
 	# and the vault are set pieces and always see the ball.
-	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) else ctx.player
-	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), _spec_for(kind))
+	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
+	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), fleet.dress(kind, _spec_for(kind)))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int): ctx.run.record_kill(kind, where, scrap))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	ctx.events.enemy_spawned.emit(enemy, kind)
+	fleet.on_spawned(enemy, kind)
 	return enemy
+
+
+# What the director weights reinforcement packs against (fleet.gd build_read).
+func build_read() -> Dictionary:
+	return fleet.build_read()
 
 
 # A hit the spine or a weapon made, resolved into damage exactly once. The bus facts go

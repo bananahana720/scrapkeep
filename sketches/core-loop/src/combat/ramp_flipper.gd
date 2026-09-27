@@ -1,0 +1,101 @@
+extends "res://src/combat/counter.gd"
+
+# The ramp-flipper (DESIGN-V2 section 15.4): a crew figure hauling a hinged floor plate.
+# It drops the plate where the ball will roll and the warning is an instant ring over
+# it; the plate is drawn tilting up over the warning, so the fling is shown before it
+# happens. Live, a grounded ball on the plate is flung up and off its line, sideways,
+# for TILT seconds. Jump while it tilts and you ride it as a ramp instead: the fling
+# turns into lift along your own line, with the break refund.
+
+const PLATE_RADIUS := 3.6
+const LEAD := 0.9
+const TILT := 0.35
+const FLING_UP := 30.0
+const FLING_SIDE := 22.0
+const RIDE_UP := 9.0
+const HP := 45.0
+
+var flings := 0
+var rides := 0
+var _plate: MeshInstance3D
+var _side := Vector3.RIGHT
+
+
+func _configure(threat: float) -> void:
+	_set_health(HP * threat)
+	scrap_value = 4
+	weight = 1.2
+	warn_seconds = 1.0
+	live_seconds = TILT + 0.05
+	rest_seconds = 3.0
+	attack_range = 26.0
+
+
+func _build_tool() -> void:
+	_plate = MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(PLATE_RADIUS * 1.6, 0.18, PLATE_RADIUS * 1.6)
+	_plate.mesh = box
+	_plate.material_override = Palette.striped(Palette.CHARCOAL, Palette.HAZARD)
+	_plate.position = Vector3(0.0, CREW_HALF + 0.4, -0.4)
+	_plate.scale = Vector3.ONE * 0.4
+	add_child(_plate)
+
+
+func _commit(_to_ball: Vector3) -> Node3D:
+	var aim: Vector3 = _ball() + target.planar_velocity() * LEAD
+	var heading: Vector3 = target.planar_velocity()
+	_side = heading.cross(Vector3.UP).normalized() if heading.length() > 1.0 else Vector3.RIGHT
+	if _strafe < 0.0:
+		_side = -_side
+	var ring := _commit_ring(Threat.Type.INSTANT, aim, PLATE_RADIUS, 2.0)
+	_plate.top_level = true
+	_plate.scale = Vector3.ONE
+	_plate.global_position = ring.center + Vector3.UP * 0.1
+	return ring
+
+
+func _go_live() -> void:
+	var ring := telegraph()
+	var player = _player()
+	if ring == null or not ring.contains(_real_ball()) or not player.state.grounded:
+		broken_by = "missed"
+		return
+	if _catch(TILT):
+		flings += 1
+
+
+func _live(_delta: float) -> bool:
+	if not _holding():
+		return false
+	_pull(Vector3.UP * FLING_UP + _side * FLING_SIDE)
+	return true
+
+
+func _on_broken(method: String) -> void:
+	if method != "jump":
+		return
+	rides += 1
+	var step := get_physics_process_delta_time()
+	if step > 0.0:
+		_player().add_external_accel(Vector3.UP * RIDE_UP / step)
+
+
+func _on_end() -> void:
+	if _plate != null:
+		_plate.top_level = false
+		_plate.position = Vector3(0.0, CREW_HALF + 0.4, -0.4)
+		_plate.rotation = Vector3.ZERO
+		_plate.scale = Vector3.ONE * 0.4
+
+
+func _pose() -> void:
+	if _plate == null or not _plate.top_level:
+		return
+	var tilt := 0.0
+	if phase == Phase.WARN:
+		tilt = 0.25 * clampf(_t / warn_seconds, 0.0, 1.0)
+	elif phase == Phase.LIVE:
+		tilt = 0.6
+	_plate.rotation = Vector3(0.0, 0.0, 0.0)
+	_plate.rotate(_side.cross(Vector3.UP).normalized() if _side.length() > 0.1 else Vector3.FORWARD, tilt)

@@ -11,6 +11,8 @@ const Roster := preload("res://src/combat/roster.gd")
 # - Live is the unit's own mechanic (a subclass's _live). A hold goes through the holds
 #   node, which owns the crowd-control door, tenacity and breaking free.
 # - A hard hit in the warning (a knock at INTERRUPT) breaks the attack, as a chaser's.
+# - A hold the player breaks by their own action ends the live phase for good: the pit
+#   shatters, the net tears, the cable snaps. It never re-catches on the next tick.
 #
 # Subclasses set the dials in _configure(), build the tool in _build_tool(), commit the
 # telegraph in _commit() and run the mechanic in _live(delta) -> bool (false ends it).
@@ -24,6 +26,7 @@ const HEAD_RADIUS := 0.38
 const TAG_SIZE := Vector3(0.36, 0.24, 0.06)
 
 var holds
+var fleet
 var row := {}
 var phase := Phase.ROAM
 # Telegraphs committed and holds started, for tests and the balance read.
@@ -31,6 +34,10 @@ var warned := 0
 var caught := 0
 # The last warning's committed seconds, for the telegraph-before-hold check.
 var last_warn := 0.0
+# Set when the player broke this unit's hold; the live phase ends on the next tick.
+var broken_by := ""
+# Holds started in this live phase; a one-shot tool (a cup, a net) catches once.
+var caught_live := 0
 
 var walk_speed := 3.8
 var keep_near := 9.0
@@ -54,6 +61,9 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	row = Roster.row(kind)
 	faction = Roster.faction_of(kind)
 	holds = spec.get("holds")
+	fleet = spec.get("fleet")
+	if holds != null:
+		holds.released.connect(_on_hold_released)
 	_strafe = 1.0 if (get_instance_id() % 2) == 0 else -1.0
 	_configure(threat)
 	_rest = first_rest
@@ -85,6 +95,10 @@ func _commit(_to_ball: Vector3) -> Node3D:
 
 func _go_live() -> void:
 	pass
+
+
+func _warn_progress() -> float:
+	return _t / warn_seconds
 
 
 func _live(_delta: float) -> bool:
@@ -130,17 +144,18 @@ func _physics_process(delta: float) -> void:
 			_move(delta, Vector3.ZERO)
 			var tele := telegraph()
 			if tele != null:
-				tele.set_progress(_t / warn_seconds)
+				tele.set_progress(_warn_progress())
 			if tele == null or (interruptible and _knocked_speed() >= INTERRUPT):
 				_end()
 			elif _t >= warn_seconds:
 				last_warn = _t
 				phase = Phase.LIVE
 				_t = 0.0
+				caught_live = 0
 				_go_live()
 		Phase.LIVE:
 			_move(delta, _live_motion(to_ball))
-			if not _live(delta) or _t >= live_seconds:
+			if broken_by != "" or not _live(delta) or _t >= live_seconds:
 				_end()
 	_pose()
 
@@ -160,6 +175,7 @@ func _warn(to_ball: Vector3) -> void:
 		return
 	_voice(tele)
 	warned += 1
+	broken_by = ""
 	phase = Phase.WARN
 	_t = 0.0
 
@@ -167,8 +183,29 @@ func _warn(to_ball: Vector3) -> void:
 # The Fleet's voice and this unit's mechanic tag over the type's warn sound (SOUND-STORY
 # section 3): the type says what kind of danger, the voice who, the tag which unit.
 func _voice(tele: Node3D) -> void:
-	tele.owner_voice = String(Roster.faction(faction)["voice"])
-	tele.mechanic_tag = String(row.get("tag", ""))
+	var motif := _motif()
+	tele.owner_voice = Roster.voiced(String(Roster.faction(faction)["voice"]), motif)
+	tele.mechanic_tag = Roster.voiced(String(row.get("tag", "")), motif)
+
+
+func _motif() -> String:
+	var player = _player()
+	if player == null or player.class_def == null:
+		return ""
+	return String(player.class_def.motif)
+
+
+# The player broke this unit's hold by their own action. The unit's tool is spent for
+# this attack; a subclass may answer (the ramp's ride, the tether's sling).
+func _on_hold_released(source_id: int, _kind: String, reason: String) -> void:
+	if source_id != get_instance_id() or not reason in holds.PLAYER_BREAKS:
+		return
+	broken_by = reason
+	_on_broken(reason)
+
+
+func _on_broken(_method: String) -> void:
+	pass
 
 
 func _end() -> void:
@@ -190,6 +227,7 @@ func _catch(max_seconds := 0.0, shove := Vector3.ZERO, anchor = null) -> bool:
 	var ok: bool = holds.catch(self, String(row["mechanic"]), row["breaks"], max_seconds, shove, anchor)
 	if ok and fresh:
 		caught += 1
+		caught_live += 1
 	return ok
 
 
@@ -219,6 +257,21 @@ func _exit_tree() -> void:
 	if holds != null and is_instance_valid(holds) and holds.held(self):
 		holds.release(self, "source_gone")
 	super._exit_tree()
+
+
+# --- The ancients' cast body ---------------------------------------------------------
+
+# An ancient's material (VISUAL-LANGUAGE section 11): dull petrol enamel under the cap,
+# no fasteners, and Cherenkov-blue seams as the only light.
+func _enamel() -> StandardMaterial3D:
+	var mat := Palette.solid(Roster.ANCIENT_ENAMEL)
+	mat.metallic = 0.2
+	mat.roughness = 0.35
+	return mat
+
+
+func _seam(size: Vector3, at: Vector3, parent: Node3D = self) -> MeshInstance3D:
+	return _box(size, Roster.ANCIENT_LIGHT, at, 2.2, parent)
 
 
 # --- The crew -------------------------------------------------------------------------
