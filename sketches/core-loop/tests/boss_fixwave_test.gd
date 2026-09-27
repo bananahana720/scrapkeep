@@ -53,6 +53,7 @@ func _physics_process(_delta: float) -> bool:
 	_charge_checks()
 	_ground_checks()
 	_chase_checks()
+	_retry_checks()
 	print("boss_fixwave_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -74,7 +75,7 @@ func _advance(seconds: float, ball = null) -> void:
 func _live_objective_checks(expected_phase: int) -> void:
 	var text: String = _boss.objective_text() if _has("objective_text") else ""
 	var plating: float = _boss.live_plating() if _has("live_plating") else -1.0
-	_report("objective phase %d" % expected_phase, text.contains("crane magnets") and plating == Rules.HULL_PLATING and _game.flow.boss_plating == Rules.HULL_PLATING,
+	_report("objective phase %d" % expected_phase, text.contains("crane magnets") and text.contains("plating 120") and plating == Rules.HULL_PLATING and _game.flow.boss_plating == Rules.HULL_PLATING,
 		"objective \"%s\", live plating %.0f, flow.boss_plating %.0f" % [text, plating, _game.flow.boss_plating])
 
 
@@ -153,6 +154,11 @@ func _furnace_checks() -> void:
 	before = _boss.hp
 	_double.strike(cap, "slam", 40.0)
 	var on_top: float = before - _boss.hp
+	before = _boss.hp
+	_double.strike(cap, "synergy", 48.0)
+	var synergy_on_top: float = before - _boss.hp
+	_report("synergy is not a landing", is_equal_approx(synergy_on_top, 48.0 * 0.2),
+		"a synergy strike of 48 on a cap with the ball on top chipped %.1f against the hull's plating" % synergy_on_top)
 	_report("landing needs the ball on top", is_equal_approx(from_floor, 40.0 * 1.2 * _game.run.heft() * 0.2) and is_equal_approx(on_top, 40.0 * 1.2 * _game.run.heft() * Rules.CAP_MULT),
 		"a slam-kind strike on a cap with the ball on the floor beside the hull chipped %.1f; with the ball on the cap it took %.1f" % [from_floor, on_top])
 
@@ -173,7 +179,7 @@ func _charge_checks() -> void:
 	var text: String = _boss.objective_text() if _has("objective_text") else ""
 	var plating: float = _boss.live_plating() if _has("live_plating") else -1.0
 	_double.punch_override = -1.0
-	_report("clash preview is ram only", shown == "slate" and readout.contains("ram 0") and plating == Rules.CLASH_PUNCH and text.contains("rim wall"),
+	_report("clash preview is ram only", shown == "slate" and readout.contains("ram 0") and plating == Rules.CLASH_PUNCH and text.contains("Ram 0 / bow plating 150"),
 		"charging, with a 160 weapon and a standing ball: tint %s, readout \"%s\", objective \"%s\", live plating %.0f" % [shown, readout, text, plating])
 	_double.strike(hull, "ram", _double.force_for("ram", 151.0))
 	var verb_stunned: String = hull.tint_verb() if hull.has_method("tint_verb") else "?"
@@ -217,6 +223,26 @@ func _chase_checks() -> void:
 	_double.strike(scooter, "slam", 10.0)
 	var after_far: String = _boss.state_name()
 	Harness.put_ball(_game, scooter.global_position + Vector3.UP * 1.8)
+	_double.strike(scooter, "synergy", 10.0)
+	var after_synergy: String = _boss.state_name()
+	_report("synergy is not a catch", after_synergy == "eject", "a synergy strike with the ball on the scooter left the boss %s" % after_synergy)
 	_double.strike(scooter, "slam", 10.0)
 	_report("catch needs contact", after_far == "eject" and _boss.state_name() == "defeated",
 		"a slam-kind strike with the ball 7 m away left the boss %s; with the ball on the scooter it was %s" % [after_far, _boss.state_name()])
+
+
+# R on the boss death screen publishes stage_content_cleared("arena_retry") and enters
+# again: the fight must start fresh, with nothing carried from the attempt that died.
+func _retry_checks() -> void:
+	var reasons: Array = []
+	_game.events.stage_content_cleared.connect(func(reason: String): reasons.append(reason))
+	Harness.enter(_game, Vector3(18.0, 0.0, 0.0))
+	_boss.jump_to_phase(2)
+	_advance(12.0)
+	var busy: bool = not _boss.active_hazards().is_empty() or not _boss.pickups_left().is_empty()
+	_game.run.damage(99999.0, "test")
+	_game.flow.retry_stage()
+	_report("arena retry is fresh", reasons.slice(-1) == ["arena_retry"] and busy and _boss.phase == 1 and _boss.hp == Rules.MAX_HP
+			and _boss.active_hazards().is_empty() and _boss.pickups_left().is_empty() and _boss.pending_drones().is_empty() and _boss.clock == 0.0,
+		"after %s the fight restarted at phase %d, hp %.0f, with %d hazards, %d pickups and %d drone pads left over (the dead attempt had some: %s)"
+			% [str(reasons.slice(-1)), _boss.phase, _boss.hp, _boss.active_hazards().size(), _boss.pickups_left().size(), _boss.pending_drones().size(), busy])

@@ -1041,7 +1041,8 @@ func _update_readout() -> void:
 
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
 
-# What the player should do right now, in the objective line's voice.
+# What the player should do right now, in the objective line's voice. Flow shows it as
+# the whole objective line, so fight states end with punch against the live plating.
 func objective_text() -> String:
 	match state:
 		EJECT:
@@ -1049,15 +1050,18 @@ func objective_text() -> String:
 		DEFEATED:
 			return "Brindle is routed."
 		FIGHT:
+			var gap := " Punch %d / hull plating %d." % [int(live_punch()), int(live_plating())]
 			match phase:
 				1:
-					return "Shoot the crane magnets. Roll the spill trail to take your scrap back."
+					return "Shoot the crane magnets holding your scrap." + gap
 				2:
-					return "Slam the vent caps from a mast or ramp. Quench slag at the rim vents."
+					return "Slam the vent caps from a mast or ramp." + gap
 				3:
 					if stunned():
-						return "He is stunned with his cockpit open: hit him now."
-					return "Bait a charge into the rim wall, or out-clash it at ram punch %d." % int(Rules.CLASH_PUNCH)
+						return "He is stunned with his cockpit open: hit him now." + gap
+					if charging():
+						return "Out-clash the charge with a ram, or get out of its lane. Ram %d / bow plating %d." % [int(live_punch()), int(Rules.CLASH_PUNCH)]
+					return "Bait a charge into the rim wall, or out-clash it at ram punch %d." % int(Rules.CLASH_PUNCH) + gap
 	return ""
 
 
