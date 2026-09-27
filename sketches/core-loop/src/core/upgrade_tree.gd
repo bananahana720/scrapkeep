@@ -263,6 +263,9 @@ func pick(node_id: String) -> bool:
 	_resolve()
 	picked.emit(node(class_id, node_id))
 	events_emit("tree_picked", [class_id, node_id, depth])
+	# A skipped pick leaves one open: the next depth is offered as soon as this one lands.
+	if pending():
+		events_emit("tree_offered", [class_id, depth + 1, offered(class_id, depth + 1).map(func(n): return n["id"])])
 	return true
 
 

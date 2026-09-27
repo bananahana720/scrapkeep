@@ -3,6 +3,7 @@ extends SceneTree
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
 
 # The three upgrade trees as data, with no game running: 30 sound nodes each (ids,
 # names of at most 3 words, effects of at most 8, a key, an existing ab_ icon, known ops,
@@ -137,3 +138,14 @@ func _guards() -> void:
 	_report("pick guards", closed and wrong and other_class and took and one_only and read_only and left_child and cleared,
 		"refused before a checkpoint %s, off-offer %s, other class offers nothing %s, took the offer %s, one per checkpoint %s, tags read-only %s, depth 2 offers only the pick's children %s, reset clears %s"
 			% [closed, wrong, other_class, took, one_only, read_only, left_child, cleared])
+	var bus = GameEvents.new()
+	var offers := []
+	bus.tree_offered.connect(func(_c: String, depth: int, ids: Array): offers.append([depth, ids]))
+	var late := UpgradeTree.new(bus)
+	late.reset("demolitions_caster")
+	late.open_checkpoint()
+	late.open_checkpoint()
+	var caught_up: bool = late.pick("k_ghost") and late.pending() and late.pick("k_ambush") and not late.pending()
+	_report("skipped pick", caught_up and offers == [[1, ["k_trapper", "k_ghost"]], [1, ["k_trapper", "k_ghost"]], [2, ["k_smoke_trail", "k_ambush"]]],
+		"start pick skipped, then two open at the first workshop: offers %s, both taken %s" % [offers, caught_up])
+	bus.free()

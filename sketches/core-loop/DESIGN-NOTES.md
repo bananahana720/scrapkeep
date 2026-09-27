@@ -573,3 +573,58 @@ W5's first task is the primer's audio board (the plan's Pacing addendum, TRACKIN
 14. **The swarm and the Mind.** The locked buzz sounds for 62% of each sixteenth. Scattering detunes each note and smears the gate. The Mind's quote is an octave up on the pure sine chime. Each of its notes rings two sixteenths longer than the class's, with the 3-cent bend over 1.8 s. Demand: the stage 2 and 3 Wardens. Serves 6.
 15. **The board.** `tools/audio_board.gd` drives `render()` between calls on one timeline, as `audio.gd` does. It mixes at `audio.gd`'s bus levels (Music -3, SFX 0, UI -4 dB) with its priority trims and ducks, and reads sounds from the event rows and W2's threat rows. It matches each file to -14 LUFS (BS.1770) under a 1.5 ms look-ahead limiter at -1 dBFS. On file 01 its loudness agreed with ffmpeg's ebur128 (-14.0 LUFS, sample peak -1.04 dBFS). File 08 runs 24 bars (34 s) rather than 30 s, so the motif's second rotation arrives after the lift, in Eb. Demand: the primer gate. Serves 7.
 16. **Not on the board.** The gorge's layers by height (SOUND-STORY W5 must). The ancients' own arrival cue. The gauge-charge and charge-pip cues. W3's other `sound_next` ids. The wiring of these layers to game facts in `audio.gd` (threat_rose to `set_fleet_ticks`, the bay to `set_lounge`, a vent to `set_reactor_pedal`, the class row to `set_class_motif`). Demand: the Wave 3 build. Serves 7.
+
+
+## v2 W3 trees
+
+The upgrade trees Andrew chose at the primer gate (DESIGN-V2 §15). Four picks per run and 16 end builds per pilot. Principles are entry 6's: 1 momentum, 2 restart, 3 layers, 4 growth, 5 classes, 6 music, 7 harmonizing.
+
+1. **Each tree's two halves are the pilot's two identities.** Every build keeps one of them whole.
+   - Sable: Cannonball (boom and bounce) against Beachhead (take point and turret).
+   - Rivet: Gunline (run and gun) against Juggernaut (unstoppable).
+   - Kest: Trapper (set up and burst) against Ghost (hide by moving).
+   - Every tree touches all four keys.
+   - Every depth-4 node changes how a key plays. There are 3 slot swaps (Crater Slam, Point Blank, Sticky Rain), proc chains and new modes such as Air Turret, Nightfall, Perpetual Motion, Sentry Post and Hitchhiker.
+   - Demand: every fight. Serves 5 and 4.
+2. **A node is data; variants plug in by table.**
+   - A node carries ops (swap, knob, proc, pattern, charges, cooldown).
+   - A variant is one `ABILITIES` row, plus one entry in its slot's dispatch table (`_specials`, `_actions`, `_smashes`) when it plays differently.
+   - Movement and combat no longer branch on a literal ability id. This closes the primer board's flag about fourteen places that did.
+   - Demand: mastery's alternate branches later. Serves 7.
+3. **A pick lands on the live kit.**
+   - A swap keeps the slot's stockpile cap and cooldown scale, and a stockpile pick adds one charge on top of items.
+   - The saved WIP re-fitted the whole ability state on every pick, which would have erased a charge upgrade bought at Moss's shelf in the same visit.
+   - Build's charge upgrades must add too (CONTRACTS, Upgrade trees).
+   - Demand: the workshop. Serves 4.
+4. **No build can chain itself.**
+   - Every proc has a gap, floored at 0.4 s.
+   - `UpgradeTree.problems` walks each of the 48 builds' procs, from trigger to the facts its action causes, and fails any loop.
+   - Timed knobs (Anchor Storm, Fortress, Carpet Bomb, the special echo) share the floor.
+   - Across all 48 builds the lowest repeat is 0.40 s (Rampage's and Dust Devil's gaps). DESIGN-V2 §6 risk 4.
+   - Demand: dense fights. Serves 1.
+5. **Balance against the tuned difficulty.** Three nodes were pulled back from the WIP:
+   - Ghost leaves enemies 30% of their sight (the base cloak leaves 60%). The WIP's 0% hid Kest from depth 1, because every detonation refreshes the cloak and she throws every 0.6 s.
+   - Anchor Storm pulses every 1.5 s at a 0.2 discharge: up to 3 targets for 25 each. At 1 s and 0.25 it added up to 112 DPS on top of the caster's 60.
+   - Bounce Battery waits 3 s between refills.
+   - Left for Andrew's play, the sharpest of the rest:
+     - Perpetual Motion makes crowd control slide off whenever Rivet is fast.
+     - Air Turret gives Sable the turret's 99 DPS instead of the caster's 60 while airborne.
+     - The special echo (Twin Discharge, Vortex) repeats a release at 60%.
+   - Demand: every Warden. Serves 1 and 4. Strains the tuned curve until the bot's balance report bands the builds.
+6. **The tree's sound and colour.**
+   - `tree_offered` and `tree_picked` are bone diamonds, because every pilot picks. Amber is Kest's and the rare rarity. The pick UI tints them with the class row.
+   - Their cues for W5 are `motif_fork` (the class motif's first note answered by two notes, one per branch) and `motif_pick` (the chosen note resolving onto the motif head).
+   - The shop bell stays purchases only (primer ruling 3). The WIP's `tree_offer_bell` was renamed for that reason.
+   - This was PROTOCOL trigger 3 (a sound family no source covers), flagged in the hand-back.
+   - Demand: class select and the bay. Serves 6.
+7. **A pick never blocks.**
+   - The start pick opens with the run and each stage clear opens the next.
+   - An untaken pick simply stays open, and the run plays the kit it has.
+   - Taking a skipped pick offers the next depth at once, so a player who skips the start pick loses no depth.
+   - Demand: the drop and the bay. Serves 1 and 2.
+8. **Callback: Octave Kick is a real octave.** It sets the vault gain to exactly 2. Speed doubles, and since the vault cue already pitches by exit speed toward the cap, the kick's top note leaps a true octave (C4 made literal). Test 1: a faster vault is readable alone. Test 2: heard, never announced. Test 3: it is momentum. Demand: Sable's vault chain. Serves 6.
+9. **Bot runs at a fixed 90 fps.**
+   - `tree_play_test` and `tree_bot_test` run their children with `--fixed-fps 90` in parallel. That is the same 90 Hz ticks, without the wall clock.
+   - Kest's `char_bot_test` gave the identical result (6448 ticks to the Warden break) in 18 s instead of 76 s.
+   - The four new tree tests add about 45 s to the smoke.
+   - Demand: none. Serves the loop.

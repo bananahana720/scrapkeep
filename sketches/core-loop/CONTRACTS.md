@@ -437,3 +437,48 @@ The type is a required argument everywhere; no factory defaults it, and a node c
 - **Contact.** `src/movement/contact.gd` is the bowling-ball rule: `rebounds(weight, heft, sprinting)` and `rebound_velocity(v, normal, jump_speed)`. The ball asks `heft_of` (combat wires it to `combat.heft`) and an enemy's `weight`. A body without `weight` is never a rebound. A rebound refreshes like a stomp through `player.refresh_air()`.
 - **Enemy sight.** Combat hands chasers, lobbers and minibosses a `Sight` proxy as their target (`ball_position()`, `planar_velocity()`, `add_external_accel()`), which answers the cloak's smoke point to enemies beyond `CLOAK_SIGHT` of their reach. An enemy that needs more of the player must add it to the proxy.
 - **Bus facts and their owners.** Movement (`player_ball`) publishes `enemy_rebounded`, `vault_kicked`, `sprint_started`, `blink_used`, `arc_slammed`, `skid_smashed`, `demo_slammed`, `cc_ignored`, `dashed` (the movement burst of any class) and the slingshot's `gauge_*`. Combat publishes `enemy_pinned`, the specials' `gauge_charging`, `gauge_released` and `gauge_cancelled`, `cloak_started`, `cloak_broken`, `sticky_detonated` and `rocket_jumped`. `special_used(special_id, at)` now carries `detonation_gauge`, `overdrive_blast` or `detonation_line`.
+
+### Upgrade trees (v2 W3)
+
+One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick at class select, then one at Moss's workshop after each of stages 1, 2 and 3. Each tree has 2, 4, 8 and 16 nodes by depth, 30 in all, and 16 end builds. A pick lasts the run, and a new run starts with the untouched kit.
+
+- **Where.** The run's picks are `player.tree` (`src/core/upgrade_tree.gd`, also `player.kit.tree`). The data is `src/core/trees/sable.gd`, `rivet.gd` and `kest.gd`, in heap order: node `i`'s children are `2i + 2` and `2i + 3`.
+- **Node record.** Every field below is a string unless noted.
+  - `id`.
+  - `name`: at most 3 words.
+  - `effect`: at most 8 words.
+  - `key`: `weapon`, `movement`, `special` or `smash`.
+  - `icon`: an `ab_` id.
+  - `tags`: an Array from `UpgradeTree.TAGS`.
+  - One or more ops: `swap`, `knob`, `proc`, `pattern`, `charges` or `cooldown`. The header of `upgrade_tree.gd` says what each op does.
+  - `UpgradeTree.problems(class_id)` is the validator. `tree_data_test` fails on any sentence it returns.
+- **Picking.**
+  - `offered(class_id, depth) -> Array` returns the two node records a pick chooses between. At depth 1 that is the root pair; after that it is the children of the pick one depth up. It returns `[]` for a depth not reached yet or for another class.
+  - `pick(node_id) -> bool` takes an offered node. It refuses anything that was not offered and anything past the picks opened so far.
+  - `pending()` is true while a pick is open.
+  - `path()` returns the ids picked so far.
+  - `open_checkpoint()` opens the next pick. The ball calls it on `run_started` (depth 1) and on `stage_cleared(1..3)`. When W6's bay takes over the visit, the bay calls it instead, and the one-line `stage_cleared` hook in `player_ball.setup` goes, so a visit never opens two picks.
+  - A skipped pick stays open. Taking it then offers the next depth at once.
+- **The start pick (W1).** The pair is known before the run exists: `UpgradeTree.nodes(class_id).slice(0, 2)`. Class select shows it, calls `flow.choose_class(i)`, and then calls `player.tree.pick(id)`. The depth-1 offer is already open when `choose_class` returns.
+- **Bus.**
+  - `tree_offered(class_id: String, depth: int, choices: Array)` carries the two node ids.
+  - `tree_picked(class_id: String, node_id: String, depth: int)` fires after the pick's effects are live.
+  - Both have event rows: economy, bone, diamond, with `sound_next` set to `motif_fork` and `motif_pick` for W5. Neither has HUD words; the pick UI owns the wording.
+  - `special_used` can now also carry `point_blank`.
+- **Icons.**
+  - `UpgradeTree.icon_of(class_id, node_id)` returns `{id, notch}`: the node's `ab_` glyph plus one variant notch per depth. The notch is the one VISUAL-LANGUAGE §5 asks V2 to draw (primer ruling 12).
+  - No new ids are required. V2 may later give the three slot swaps their own glyphs; proposed ids are `ab_sable_crater`, `ab_rivet_point_blank` and `ab_kest_rain`. Until then they wear their slot's glyph and notch.
+- **The director (W7).** `player.tree.branch_tags() -> PackedStringArray` is read-only and returns a copy. It lists the build's leanings in pick order. The vocabulary is `air`, `burst`, `close`, `ranged`, `mobility`, `mounted`, `sustain`, `cc_immune`, `traps` and `stealth`. Weight packs so they test the build; never hard-counter it.
+- **Items and the shop (build).**
+  - A pick changes the live ability state on its own. `AbilityState.swap` keeps the slot's `max_charges` and `cooldown_scale`, because items and picks raise the slot, not the ability in it.
+  - A tree `charges` op adds to the current cap.
+  - **Build's charge upgrades must also add** (`set_max_charges(slot, abilities.slot(slot).max_charges + 1)`) and never set an absolute count, or they erase a pick.
+- **Variants plug in by table, never by branch.**
+  - A variant is one `AbilityState.ABILITIES` row. The rest of the game reads that row's capabilities: `pattern`, `mounted`, `lob`, `augments`, `rocket`, `cloak`, `plant_discharge`, `flavour` and `spends_special`.
+  - A variant that plays differently adds one entry to the table its slot dispatches on:
+    - combat's `_specials`, keyed by the special slot's id;
+    - combat's `_actions`, keyed by proc action;
+    - the ball's `_smashes`, keyed by the smash flavour.
+  - Knobs are read at the point of use through `tree.knob(name)`: `kit.knob()` in movement, `_knob()` in combat.
+- **Mastery (later).** Alternate branches from mastery unlocks would be extra node lists offered in place of a pair. The demo ships none.
+- **Tests.** `tree_data_test`, `tree_apply_test`, `tree_play_test` and `tree_bot_test`. The play and bot tests run children at a fixed 90 fps through `tests/trees/child_runs.gd`, which gives the same ticks as real time, in parallel.
