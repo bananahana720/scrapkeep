@@ -71,15 +71,17 @@ const CATALOGUE := {
 	"frost_vane": {"name": "Frost Vane", "verb": "Dash trails frost", "text": "air dash freezes water into road",
 		"rarity": "uncommon", "tier": 2, "family": "mobility", "tags": ["frost", "speed"],
 		"elements": {"dash": "frost"}, "mods": {"dash_impulse": 1.1}},
+	# Arc Coil and Runner Overclock carry one tag: kinetic was not their identity, and on
+	# them it put Wrecking Ball over the 60% discovery cap (balance loop, B4).
 	"arc_coil": {"name": "Arc Coil", "verb": "Slam discharges an arc", "text": "slams burst arc at everything near",
-		"rarity": "uncommon", "tier": 2, "family": "mobility", "tags": ["arc", "kinetic"],
+		"rarity": "uncommon", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"elements": {"slam": "arc"}},
 	# Class mods: offered only to their class.
 	"pylon_capacitor": {"name": "Pylon Capacitor", "verb": "Bank a bigger plant", "text": "+8 punch, slingshot +50% boost",
 		"rarity": "uncommon", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
 		"punch": 8.0, "mods": {"slingshot_boost": 1.5, "slingshot_keep": 1.1, "turret_damage": 1.4}},
 	"runner_overclock": {"name": "Runner Overclock", "verb": "Overclock the gun on the run", "text": "+4 punch, +35% fire rate",
-		"rarity": "uncommon", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed", "kinetic"],
+		"rarity": "uncommon", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed"],
 		"punch": 4.0, "mods": {"weapon_rate": 1.35}, "cooldown_scale": 0.8},
 
 	# Rare: vaults, and gates with one bonus core.
@@ -132,6 +134,13 @@ const MILESTONE_ORDER := ["scrap_gravity", "tempest_core", "rime_heart"]
 # How often an offer slot is spent on the part that completes a synergy, when one is
 # a single part away. Isaac's "one more piece" pull, kept off a sure thing.
 const SYNERGY_BAIT := 0.5
+
+# The pattern guarantee (balance loop, B4): a run that reaches stage 2's gates holding no
+# pattern transformer is offered one of these in that pair. Bots without a pattern took
+# 117 to 204 s on Warden III against 19 to 81 s with one, a split HP tuning cannot close.
+# The other gate stays a free choice.
+const PATTERN_PARTS := ["spiral_wave", "cross_split", "chain_arc"]
+const PATTERN_GUARANTEE_STAGE := 2
 
 static var _defs := {}
 
@@ -263,4 +272,33 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		var harder: Array = pool.filter(func(key): return def(key).hits_harder())
 		if not harder.is_empty():
 			picks[picks.size() - 1] = harder[rng.randi_range(0, harder.size() - 1)]
+	return picks
+
+
+# True when a held part transforms a weapon pattern (the three pattern parts, Tempest Core).
+static func holds_pattern(held: Array) -> bool:
+	return held.any(func(key): return def(key) != null and not def(key).patterns.is_empty())
+
+
+# A reward gate pair: roll(), then the pattern guarantee. On stage 2, when nothing held
+# transforms a pattern and neither offer is a pattern part, the last slot becomes one.
+# That slot is never the synergy bait (always first), and a pattern part hits harder, so
+# the pair keeps both rules. The pattern part comes from the gate's own rarities when one
+# fits; at two or more bonus cores (rare and rare-plus) none does, and only that slot
+# drops to uncommon. Any other stage, or a build that already holds a pattern, gets
+# exactly what roll() gives for the same seed.
+static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
+		stage: int) -> Array:
+	var picks: Array = roll(rng, rarities, class_id, held, count)
+	if stage != PATTERN_GUARANTEE_STAGE or count < 1 or holds_pattern(held) \
+			or picks.any(func(key): return key in PATTERN_PARTS):
+		return picks
+	var eligible: Array = PATTERN_PARTS.filter(func(key): return def(key).rarity in rarities)
+	if eligible.is_empty():
+		eligible = PATTERN_PARTS.duplicate()
+	var pattern: String = eligible[rng.randi_range(0, eligible.size() - 1)]
+	if picks.size() < count:
+		picks.append(pattern)
+	else:
+		picks[picks.size() - 1] = pattern
 	return picks
