@@ -686,3 +686,11 @@ Recipes live in `tools/blender/` (one per asset, shared slots and helpers in `co
 12. **Glass is clear white, never ICE.** Section 2 reserves ICE for frost, so the cockpit glass is untinted and Kest's goggle lenses are pale bone.
 
 Known limits: at full growth (36 chunks, heft class III) the chunks cover most of Kest's truss cage, and the satchels, mortar and vane carry the class. The previews are Blender EEVEE renders with Godot-like materials, not captures of the running game. Feel and in-motion readability wait on Andrew's play.
+
+### Warden readability pass (coordinator follow-up after the V3 merge)
+
+The first Warden read at 30 m as stacked rings round a pole. These calls replace call 11 above.
+
+13. **The jaws are crab claws.** Each C-jaw is a tall cast palm that tapers along its sweep to a hooked tip. Its inner face carries seven bare-metal teeth toward the beacon, and a crest of six bare-metal spikes runs along its top edge. From the side the jaw reads as a toothed pincer, not a wall. From the top it reads as two claws round the beacon. The rest pose is open by 0.45 rad a side, so the gap shows, and rotation 0 closes the tips round the beacon. The pivot tower sits at x 2.8 on the plinth rim, and the plinth is a single flared cast foot (1.9 m, inside the 2.8 m collider below 2 m). Serves readability and section 9's "the jaws and their closing path".
+14. **The weak point is the brightest, most distinct shape.** Each family's `WeakPoint` is a large ancient_light core that stands proud of a cracked-away opening. A charcoal cavity sits behind it, and bone-bright broken shards point into it, so it reads by value and shape against the dull petrol. It faces outward and up, away from the beacon. Only the core, the thin seams and the drone and lens centres emit. Serves readability and "the cracked weak point".
+15. **The kit owns the silhouette top.** Kits grow from 1.35 to 1.9 times their modelled size. The reactor is a round dome with three fat vent stacks spread 120 degrees apart. The hive is a honeycomb mass of outward-facing hex cells with eight drones on a tilted orbit ring. The Mind's hands are two long jointed arms reaching over the jaws, with a lens cluster and six shutter petals. The family is the first thing the eye names, above the jaws. Serves section 11's "its family's geometry is the whole body" and no reskins.

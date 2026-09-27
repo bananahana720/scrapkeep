@@ -23,6 +23,13 @@ const WARDEN_BASE_TRIS := Vector2i(4000, 6000)
 const WARDEN_KIT_TRIS := Vector2i(800, 1500)
 const ANCIENT_SLOTS := ["ancient_enamel", "ancient_light", "bare_metal", "rubber"]
 const ENAMEL_CAP := 0.45
+# The Warden's jaws export open by this much about Y (JawL negative); 0 is closed.
+const JAW_OPEN := 0.45
+const KIT_MOTION := {
+	"reactor": ["Vent0", "Vent1", "Vent2"],
+	"hive": ["Drone0", "Drone1", "Drone2", "Drone3", "Drone4", "Drone5", "Drone6", "Drone7"],
+	"mind": ["ArmL", "ArmR", "Shutter0", "Shutter1", "Shutter2", "Shutter3", "Shutter4", "Shutter5"],
+}
 
 
 class StubState:
@@ -224,12 +231,25 @@ func _check_models() -> void:
 	var named := ["Housing", "Tower", "KitMount", "JawL", "JawR"].filter(func(n): return warden.find_child(n, true, false) == null)
 	_report("warden nodes", named.is_empty(), "Housing, Tower > KitMount, JawL, JawR (missing %s)" % [named])
 	_check_enamel("warden base", warden)
+	var jaw_l := warden.find_child("JawL", true, false) as Node3D
+	var jaw_r := warden.find_child("JawR", true, false) as Node3D
+	_report("warden open pose", jaw_l != null and jaw_r != null and absf(jaw_l.rotation.y + JAW_OPEN) < 0.01
+		and absf(jaw_r.rotation.y - JAW_OPEN) < 0.01,
+		"jaws export open at -/+%.2f rad about Y; 0 is closed" % JAW_OPEN)
 	warden.free()
 	for fam in ["reactor", "hive", "mind"]:
 		var kit: Node = (load(MODELS + "warden_kit_%s.glb" % fam) as PackedScene).instantiate()
 		_slots_ok("kit " + fam, kit, ANCIENT_SLOTS)
 		_band("kit " + fam, tri_sum(meshes(kit)), WARDEN_KIT_TRIS)
-		_report("kit " + fam + " weak point", kit.find_child("WeakPoint", true, false) != null, "WeakPoint node")
+		var weak := kit.find_child("WeakPoint", true, false)
+		var weak_slots := []
+		if weak is MeshInstance3D:
+			for i in weak.mesh.get_surface_count():
+				weak_slots.append(HeroAssets.slot_of(weak.mesh, i))
+		_report("kit " + fam + " weak point", "ancient_light" in weak_slots and "bare_metal" in weak_slots,
+			"WeakPoint: a lit core framed by bare-metal shards %s" % [weak_slots])
+		var missing: Array = KIT_MOTION[fam].filter(func(n): return kit.find_child(n, true, false) == null)
+		_report("kit " + fam + " motion nodes", missing.is_empty(), "motion nodes present (missing %s)" % [missing])
 		_check_enamel("kit " + fam, kit)
 		kit.free()
 

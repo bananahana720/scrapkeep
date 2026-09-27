@@ -622,3 +622,10 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
 2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
 3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
+
+### Warden models after the readability pass (supersedes the "Not wired" paragraph above)
+
+- **Node names.** `warden_clamp_base.glb` is `WardenClampBase` > `Housing`, `Tower` > `KitMount`, `JawL`, `JawR`. The beacon stands at the origin. The hinge axis is vertical at x 2.8 (Godot), and `KitMount` sits at (2.8, 7.4, 0).
+- **Jaw poses.** `JawL` exports at `rotation.y = -0.45` and `JawR` at `+0.45`: open, the gap showing. Rotation 0 on both is closed, with the tips meeting round the beacon at the front (-X). To animate the clamp, lerp `rotation.y` between the exported value (open) and 0 (closed). Keep it inside that range, because past 0 the jaws interpenetrate.
+- **Kits.** Each `warden_kit_{reactor,hive,mind}.glb` root goes at `KitMount` with its +X facing away from the beacon. `WeakPoint` is one node per kit: the lit core, its charcoal cavity and its bare-metal shards. Flash or scale it as a unit. Motion nodes: `Vent0..2` (reactor), `Drone0..7` (hive, on a tilted orbit ring, radius 4.1 m after scale) and `ArmL`, `ArmR` and `Shutter0..5` (mind).
+- **Pinned by `hero_assets_test`.** The open pose (plus or minus 0.45 rad), the motion nodes, and a `WeakPoint` carrying both ancient_light and bare_metal.
