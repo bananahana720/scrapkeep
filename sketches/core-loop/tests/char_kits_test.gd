@@ -9,6 +9,7 @@ const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const Indicator := preload("res://src/movement/indicator.gd")
 
 # The v2 W3 rules as data and pure functions (DESIGN-V2 sections 1 to 6): three class
 # rows that every layer reads, class-gated movement kits with no shared air dash, the
@@ -17,7 +18,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # its face lock, and the skill-shot forgiveness living in the hit test.
 
 const FIELDS := ["id", "display_name", "role", "species", "weapon_id", "movement_id", "special_id", "smash_id",
-	"color", "shape", "sound", "sound_next", "bible_home"]
+	"color", "shape", "motif", "sound", "bible_home"]
 const SLOT_FIELDS := ["id", "icon", "key", "cooldown_frac", "charges", "max_charges", "state"]
 
 var _failures := 0
@@ -32,6 +33,7 @@ func _initialize() -> void:
 	_gauge()
 	_contact()
 	_vault()
+	_look()
 
 
 # The hit test reads positions in the tree, so it runs on the first frame.
@@ -60,11 +62,20 @@ func _rows() -> void:
 		complete = complete and AbilityState.ABILITIES.has(def.weapon_id) and AbilityState.ABILITIES.has(def.movement_id) \
 			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id)
 		colours[def.color.to_html()] = true
-	_report("three rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster"] and complete and colours.size() == 3,
-		"classes %s, every field set, shapes from the event vocabulary, three colours, none HAZARD" % [ids])
+	var motifs := rows.map(func(d): return d.motif)
+	_report("three rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster"] and complete and colours.size() == 3 \
+			and motifs == ["sable", "rivet", "kest"],
+		"classes %s, every field set, shapes from the event vocabulary, three colours, none HAZARD, motif ids %s" % [ids, motifs])
 	var one_source := EventKinds.color("vault_kicked") == ClassDef.SABLE_COLOR \
 		and EventKinds.color("sprint_started") == ClassDef.RIVET_COLOR and EventKinds.color("sticky_detonated") == ClassDef.KEST_COLOR
-	_report("one colour source", one_source, "class-owned event rows read the class_def colour constants")
+	_report("one colour source", one_source and Weapons.color(Weapons.RAPID_LASER) == ClassDef.RIVET_COLOR \
+			and Weapons.color(Weapons.STICKY_CHARGE) == ClassDef.KEST_COLOR,
+		"class-owned event rows read the class_def colour constants; Rivet's bolts are copper, Kest's charges amber")
+	var gauge_sound: String = EventKinds.row("gauge_released")["sound"]
+	var plant_sound: String = EventKinds.row("mounted")["sound"]
+	_report("two Sable discharges", gauge_sound != plant_sound and gauge_sound != EventKinds.row("special_used")["sound"],
+		"the gauge release rides gauge_released (%s) and the free plant discharge rides mounted (%s), both over special_used (%s)"
+			% [gauge_sound, plant_sound, EventKinds.row("special_used")["sound"]])
 
 
 func _kits() -> void:
@@ -95,6 +106,13 @@ func _slots() -> void:
 		for field in SLOT_FIELDS:
 			shaped = shaped and (s as Dictionary).has(field)
 	var keys := slots.map(func(s): return s["key"])
+	var missing := []
+	for id in AbilityState.ABILITIES:
+		var icon: String = AbilityState.ABILITIES[id]["icon"]
+		if not icon.begins_with("ab_") or not FileAccess.file_exists(AbilityState.ICON_DIR + icon + ".svg"):
+			missing.append(icon)
+	_report("canonical icons", missing.is_empty() and slots[0]["icon"] == "ab_rivet_weapon",
+		"every ability's icon is an ab_ id with a file in assets/icons; missing %s" % [missing])
 	state.spend(AbilityState.MOVEMENT)
 	var cooling: String = state.slots()[1]["state"]
 	state.tick(2.5)
@@ -211,3 +229,22 @@ func _forgiveness() -> void:
 		"a hull 10%% past a drawn 12 m ring or 2.5 m lane is hit, 30%% past is not (allowance %.0f%%)" % [AbilityState.FORGIVENESS * 100.0])
 	edge.free()
 	outside.free()
+
+
+func _look() -> void:
+	var ring := {"kind": "ring", "centre": Vector3.ZERO, "radius": 12.0, "color": ClassDef.RIVET_COLOR, "ticks": "chevron", "fill": 0.4}
+	var style := Indicator.style(ring, 0.0)
+	var clean: bool = style["fill"] == Color(ClassDef.RIVET_COLOR, Indicator.FILL_ALPHA) and style["edge"] == ClassDef.RIVET_COLOR \
+		and not style["dashed"] and not style["cross"]
+	var full := ring.duplicate()
+	full["fill"] = 1.0
+	var alphas := []
+	for i in 5:
+		alphas.append(snappedf((Indicator.style(full, i * Indicator.BREATHE / 4.0)["fill"] as Color).a, 0.001))
+	var breathes: bool = alphas[0] == alphas[4] and alphas[1] != alphas[0] and alphas[1] != alphas[3]
+	var blocked := ring.duplicate()
+	blocked["blocked"] = true
+	var b := Indicator.style(blocked, 0.0)
+	_report("indicator look", clean and breathes and b["edge"] == Palette.SAND and b["dashed"] and b["cross"] and Indicator.COLLAPSE == 0.12,
+		"yours: class colour edge, %.0f%% clean fill, solid; at full the fill breathes on a %.1f s period %s; blocked: bone, dashed, charcoal cross; collapse %.2f s"
+			% [Indicator.FILL_ALPHA * 100.0, Indicator.BREATHE, alphas, Indicator.COLLAPSE])

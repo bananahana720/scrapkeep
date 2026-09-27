@@ -89,6 +89,7 @@ func _boot() -> void:
 		[_edge_start, 2, _check_edge],
 		[_cc_start, 27, _cc_hit],
 		[_noop, 20, _check_cc],
+		[_pull_start, 10, _check_pull],
 		[_sprint_start, 10, _sprint_hit],
 		[_noop, 3, _sprint_release],
 		[_noop, 190, _sprint_plain_hit],
@@ -98,6 +99,7 @@ func _boot() -> void:
 		[_noop, 180, _check_rocket, _blast_at_feet],
 		[_sticky_start, 6, _check_sticky_live, _tap_fire],
 		[_noop, 130, _check_sticky_fuse],
+		[_void_start, 2, _check_void],
 		[_line_start, 2, _check_line],
 		[_line_cap_start, 2, _check_line_cap],
 		[_cloak_start, 3, _cloak_blink],
@@ -214,21 +216,43 @@ func _cc_hit() -> void:
 	var gauge = _player.abilities.gauge(AbilityState.SPECIAL)
 	_record["was"] = gauge.fraction()
 	_game.ctx.calm = false
+	_record["drawn"] = _player.indicator.shapes.has("special")
 	_combat._on_player_hit(4.0, Vector3(3.0, 0.0, 0.0), "test")
 	_game.ctx.calm = true
 	_record["after"] = gauge.fraction()
+	_record["collapsing"] = _player.indicator.collapsing("special")
 
 
 func _check_cc() -> void:
 	_source.hold = {}
 	var gauge = _player.abilities.gauge(AbilityState.SPECIAL)
 	var cancelled: Array = _facts["gauge_cancelled"].slice(_record["cancelled"])
+	_report("knock collapses", _record["drawn"] and _record["collapsing"] and not _player.indicator.collapsing("special"),
+		"the drawn line starts collapsing on the knock and is gone %d ms later (collapse %d ms)" % [int(20.0 / 0.09), 120])
 	_report("knock cancels", _record["was"] > 0.2 and _record["after"] == 0.0 and not gauge.charging \
 			and _player.abilities.ready(AbilityState.SPECIAL) and _combat.last_committed.is_empty() \
 			and _facts["gauge_released"].size() == _record["released"] and _facts["special_used"].size() == _record["used"] \
 			and cancelled.size() == 1 and cancelled[0] == ["detonation_line", "knock"] and not _player.indicator.shapes.has("special"),
 		"Kest's line at %.2f of its gauge, then a knock: gauge %.2f, charge still in, nothing released or used, cancelled %s, still F held stays idle"
 			% [_record["was"], _record["after"], cancelled])
+
+
+# --- a steady pull is crowd control, but it does not wipe a charge -------------------
+
+func _pull_start() -> void:
+	_as_class("pylon_engineer")
+	_source.press = {"special_pressed": true}
+	_source.hold = {"special_held": true}
+
+
+func _check_pull() -> void:
+	var landed: bool = _player.crowd_control("warden_magnet", Vector3(20.0, 0.0, 0.0), false)
+	var charging: bool = _player.abilities.gauge(AbilityState.SPECIAL).charging
+	var knocked: bool = _player.crowd_control("warden_pulse", Vector3.UP * 30.0)
+	var dropped: bool = not _player.abilities.gauge(AbilityState.SPECIAL).charging
+	_source.hold = {}
+	_report("pull keeps the charge", landed and charging and knocked and dropped,
+		"the Warden magnet's tug lands and Sable's gauge keeps charging; the Warden pulse's lift drops it")
 
 
 # --- Rivet's sprint: the knock slides off, the damage lands --------------------------
@@ -248,6 +272,8 @@ func _sprint_hit() -> void:
 	_game.ctx.calm = true
 	_record["sprint_dmg"] = _record["hp"] - _game.run.hp
 	_record["sprinting"] = _player.kit.sprinting
+	_record["pulse_ignored"] = not _player.crowd_control("warden_pulse", Vector3.UP * 30.0) \
+		and not _player.crowd_control("brindle_charge", Vector3(30.0, 0.0, 0.0))
 
 
 func _sprint_release() -> void:
@@ -267,8 +293,9 @@ func _sprint_plain_hit() -> void:
 func _check_sprint() -> void:
 	var plain_drift := absf(_player.state.velocity.x - (_record["v2"] as Vector3).x)
 	_report("sprint is no tank", _record["sprinting"] and _record["sprint_dmg"] > 0.0 and is_equal_approx(_record["sprint_dmg"], _record["plain_dmg"]) \
-			and _record["sprint_drift"] < 0.5 and plain_drift > 5.0 and _facts["cc_ignored"].size() == _record["ignored"] + 1,
-		"a 10-damage hit with a 40 m/s shove: sprinting took %.1f damage and drifted %.2f m/s; after the sprint the same hit took %.1f and drifted %.1f m/s"
+			and _record["sprint_drift"] < 0.5 and plain_drift > 5.0 and _record["pulse_ignored"] \
+			and _facts["cc_ignored"].size() == _record["ignored"] + 3,
+		"a 10-damage hit with a 40 m/s shove: sprinting took %.1f damage and drifted %.2f m/s (the Warden pulse and Brindle's charge shove ignored too); after the sprint the same hit took %.1f and drifted %.1f m/s"
 			% [_record["sprint_dmg"], _record["sprint_drift"], _record["plain_dmg"], plain_drift])
 
 
@@ -348,6 +375,25 @@ func _check_sticky_fuse() -> void:
 
 func _tap_fire() -> void:
 	_source.press = {"fire_pressed": true}
+
+
+# A throw over the void has nowhere to stick: it draws blocked and throws nothing.
+func _void_start() -> void:
+	_as_class("demolitions_caster")
+	var far := Vector3(6000.0, 40.0, 6000.0)
+	_player.reset_to(far)
+	_player.body().global_position = far
+	_record = {"cancelled": _facts["gauge_cancelled"].size(), "volleys": _combat.volleys}
+	_source.press = {"fire_pressed": true}
+
+
+func _check_void() -> void:
+	var cancelled: Array = _facts["gauge_cancelled"].slice(_record["cancelled"])
+	var drawn: Dictionary = _player.indicator.last_shape.get("landing", {})
+	_report("blocked throw", drawn.get("blocked", false) and cancelled.size() == 1 and cancelled[0] == [Weapons.STICKY_CHARGE, "blocked"] \
+			and _combat.volleys == _record["volleys"] and _player.abilities.ready(AbilityState.WEAPON),
+		"a tapped throw over the void drew blocked (%s), threw nothing, kept its charge and said %s"
+			% [drawn.get("blocked", false), cancelled])
 
 
 # --- the detonation line -----------------------------------------------------------------

@@ -618,7 +618,7 @@ func _step_special(intent, delta: float) -> void:
 	var row: Dictionary = _specials[id]
 	if gauge.charging and (intent.special_pressed or intent.cancel_pressed):
 		gauge.cancel()
-		ctx.player.indicator.clear("special")
+		ctx.player.indicator.collapse("special")
 		ctx.events.gauge_cancelled.emit(id, "cancel")
 		return
 	if not gauge.charging and intent.special_pressed and abilities.ready(AbilityState.SPECIAL):
@@ -691,8 +691,8 @@ func _discharge_speed(f: float) -> float:
 
 func _discharge_geometry(f: float) -> Dictionary:
 	var burst := discharge_preview(_discharge_speed(f))
-	return {"kind": "ring", "centre": _ground_under(ctx.player.ball_position()), "radius": burst["radius"],
-		"fill": f, "color": ctx.player.class_color()}
+	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()), "radius": burst["radius"],
+		"full_radius": discharge_preview(_discharge_speed(1.0))["radius"], "fill": f})
 
 
 func _fire_discharge(f: float, shape: Dictionary) -> void:
@@ -701,9 +701,9 @@ func _fire_discharge(f: float, shape: Dictionary) -> void:
 
 
 func _overdrive_geometry(f: float) -> Dictionary:
-	return {"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
+	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
 		"radius": Weapons.OVERDRIVE_RADIUS * AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL),
-		"fill": f, "color": ctx.player.class_color()}
+		"full_radius": Weapons.OVERDRIVE_RADIUS * Weapons.OVERDRIVE_FULL, "fill": f})
 
 
 func _fire_overdrive(f: float, shape: Dictionary) -> void:
@@ -713,8 +713,8 @@ func _fire_overdrive(f: float, shape: Dictionary) -> void:
 func _line_geometry(f: float) -> Dictionary:
 	var from := _ground_under(ctx.player.ball_position())
 	var length := AbilityState.Gauge.scaled(f, Weapons.LINE_MIN, Weapons.LINE_MAX)
-	return {"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
-		"color": ctx.player.class_color()}
+	return ctx.player.yours({"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
+		"full_to": from + _flat_aim() * Weapons.LINE_MAX, "fill": f})
 
 
 # Kest's detonation line: every live charge in the line goes off early, then the line
@@ -820,10 +820,15 @@ func _step_sticky_weapon(intent, delta: float) -> void:
 		return
 	var landing := _throw_landing(gauge.fired_fraction)
 	_draw_throw(landing)
+	if landing["blocked"]:
+		ctx.player.indicator.collapse("weapon")
+		ctx.player.indicator.collapse("landing")
+		ctx.events.gauge_cancelled.emit(Weapons.STICKY_CHARGE, "blocked")
+		return
 	ctx.player.indicator.clear("weapon")
 	ctx.player.indicator.clear("landing")
 	abilities.spend(AbilityState.WEAPON)
-	_throw_sticky(landing)
+	_throw_sticky(landing["point"])
 
 
 func _throw_origin() -> Vector3:
@@ -831,20 +836,26 @@ func _throw_origin() -> Vector3:
 
 
 # Where a throw at this fraction lands: along the flat aim, on the ground under it.
-func _throw_landing(f: float) -> Vector3:
+# Over a void there is no ground to stick to, so the aim is blocked (RR-03): it draws
+# in bone with a cross and a release throws nothing and spends nothing.
+func _throw_landing(f: float) -> Dictionary:
 	var p: Resource = _patterns[Weapons.STICKY_CHARGE]
 	var reach := AbilityState.Gauge.scaled(f, Weapons.STICKY_THROW_MIN, p.range_m * ctx.tuning.mod("weapon_range"))
 	var flat: Vector3 = ctx.player.ball_position() + _flat_aim() * reach
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(flat + Vector3.UP * 30.0, flat + Vector3.DOWN * 60.0, 1))
-	return hit["position"] if not hit.is_empty() else flat + Vector3.DOWN * 0.9
+	if hit.is_empty():
+		return {"point": flat + Vector3.DOWN * 0.9, "blocked": true}
+	return {"point": hit["position"], "blocked": false}
 
 
-func _draw_throw(landing: Vector3) -> void:
-	var color: Color = ctx.player.class_color()
-	ctx.player.indicator.set_shape("weapon", {"kind": "arc", "points": Sticky.arc_points(_throw_origin(), landing), "color": color})
-	ctx.player.indicator.set_shape("landing", {"kind": "ring", "centre": landing,
-		"radius": _patterns[Weapons.STICKY_CHARGE].bolt_radius, "color": color})
+func _draw_throw(landing: Dictionary) -> void:
+	var at: Vector3 = landing["point"]
+	var blocked: bool = landing["blocked"]
+	ctx.player.indicator.set_shape("weapon", ctx.player.yours({"kind": "arc",
+		"points": Sticky.arc_points(_throw_origin(), at), "blocked": blocked}))
+	ctx.player.indicator.set_shape("landing", ctx.player.yours({"kind": "ring", "centre": at,
+		"radius": _patterns[Weapons.STICKY_CHARGE].bolt_radius, "blocked": blocked}))
 
 
 func _throw_sticky(landing: Vector3) -> void:

@@ -6,6 +6,8 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+# v2 W3 characters: the vault cap the vault cue is pitched against.
+const Augments := preload("res://src/movement/augments.gd")
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -486,7 +488,16 @@ func wire_optional() -> void:
 	for kind in CHARACTER_KINDS:
 		if events.has_signal(kind) and not _character_wired.has(kind):
 			_character_wired[kind] = true
-			events.connect(kind, play.bind(kind).unbind(_argc(events, kind)))
+			if kind == "vault_kicked":
+				events.connect(kind, _on_vault_kicked)
+			else:
+				events.connect(kind, play.bind(kind).unbind(_argc(events, kind)))
+
+
+# Sable's vault is an octave leap: the top note climbs with exit speed and reaches the
+# octave at the vault cap (SOUND-STORY section 3), so a weak kick falls short of it.
+func _on_vault_kicked(_at: Vector3, speed: float) -> void:
+	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
 
 
 # Connects once. loose drops whatever arguments the signal carries.

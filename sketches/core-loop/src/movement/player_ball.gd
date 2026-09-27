@@ -29,6 +29,8 @@ const CRUSH_PASS := 0.3
 # A contact is a stomp when the ball was coming down faster than this onto an enemy
 # below its centre.
 const STOMP_SPEED := 3.0
+# A held pull the sprint ignores says so at most this often, not every tick.
+const CC_IGNORED_GAP_MS := 250
 # The arc slam tags steep faces this close for this long, for a vault.
 const FACE_TAG_REACH := 12.0
 const FACE_TAG_SECONDS := 2.0
@@ -68,6 +70,7 @@ var crush_check := Callable()
 var heft_of := Callable()
 # The arc slam's tagged faces: [{point, left}].
 var face_tags: Array = []
+var _cc_ignored_at := {}
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -79,7 +82,9 @@ var _mesh: MeshInstance3D
 var _roll_mount: Node3D
 var _rope: MeshInstance3D
 var _wings: Node3D
+var _wings_material: StandardMaterial3D
 var _pylon: Node3D
+var _plate: MeshInstance3D
 var _aim_marks := {}
 var _roll := Basis.IDENTITY
 var _frozen := false
@@ -111,7 +116,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.pylon_ejected.connect(func(v: Vector3): events.dismounted.emit(v))
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
 	_rigid.boosted.connect(func(dir: Vector3): events.boosted.emit(dir))
-	_rigid.kit_fact.connect(func(kind: String, args: Array): events.callv("emit_signal", [kind] + args))
+	_rigid.kit_fact.connect(_on_kit_fact)
 	events.run_started.connect(func(class_id: String): fit_class(ClassDef.by_id(class_id)))
 	events.stage_entered.connect(func(_stage: int, _retry: bool): abilities.refill())
 	events.stage_content_cleared.connect(func(_reason: String): abilities.refill())
@@ -240,32 +245,58 @@ func fit_class(def: Resource) -> void:
 	if def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 		abilities.fit(null)
+		_paint_effects()
 		return
 	kit.fit(def.movement_id, def.smash_id)
 	abilities.fit(def)
+	_paint_effects()
+
+
+# Everything the player's own action lights (rope, pylon plate, glide vane) glows in the
+# class colour: class colour means yours (VISUAL-LANGUAGE section 2).
+func _paint_effects() -> void:
+	var color := class_color()
+	_rope.material_override = Palette.unshaded(color)
+	_wings_material.albedo_color = Color(color, 0.75)
+	_plate.material_override = Palette.solid(color, 1.2)
 
 
 func class_color() -> Color:
 	return class_def.color if class_def != null else ClassDef.SABLE_COLOR
 
 
+# A skill-shot record dressed as yours: the class colour and the class's rim ticks.
+func yours(shape: Dictionary) -> Dictionary:
+	shape["color"] = class_color()
+	shape["ticks"] = class_def.shape if class_def != null else "ring"
+	return shape
+
+
 func heft() -> float:
 	return float(heft_of.call()) if heft_of.is_valid() else 1.0
 
 
-# The one door for crowd control: a knock, and later wave 3's pits, tethers and nets.
-# Rivet's sprint ignores all of it and says so (true means it landed). A landed hit
-# force-cancels every charging gauge with nothing spent; the shove is applied here.
-func crowd_control(kind: String, shove := Vector3.ZERO) -> bool:
+# The one door for crowd control: a knock, the Warden's pulse and magnet, Brindle's
+# shoves, and wave 3's pits, tethers and nets. Rivet's sprint ignores all of it and
+# says so (true means it landed). An interrupting hit force-cancels every charging
+# gauge with nothing spent and collapses the indicator; a steady pull (a magnet's tug)
+# is still a stop the sprint ignores, but it does not wipe a charge every tick. The
+# shove, an acceleration like add_external_accel's, is applied here.
+func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> bool:
 	if _frozen:
 		return false
 	if kit.sprinting:
-		events.cc_ignored.emit(kind)
+		var now := Time.get_ticks_msec()
+		if now - int(_cc_ignored_at.get(kind, -100000)) >= CC_IGNORED_GAP_MS:
+			_cc_ignored_at[kind] = now
+			events.cc_ignored.emit(kind)
 		return false
-	for id in abilities.cancel_gauges():
-		events.gauge_cancelled.emit(id, kind)
-	if kit.slingshot.cancel():
-		events.gauge_cancelled.emit("slingshot", kind)
+	if interrupts:
+		for id in abilities.cancel_gauges():
+			events.gauge_cancelled.emit(id, kind)
+		if kit.slingshot.cancel():
+			events.gauge_cancelled.emit("slingshot", kind)
+		indicator.collapse_all()
 	if shove != Vector3.ZERO:
 		add_external_accel(shove)
 	return true
@@ -431,12 +462,13 @@ func _end_crush(id: int) -> void:
 func _build_augment_visuals() -> void:
 	_rope = MeshInstance3D.new()
 	_rope.mesh = ImmediateMesh.new()
-	_rope.material_override = Palette.unshaded(Color(1.0, 0.72, 0.30))
+	_rope.material_override = Palette.unshaded(class_color())
 	_rope.visible = false
 	add_child(_rope)
 
 	_wings = Node3D.new()
-	var wing_material := Palette.unshaded(Color(0.55, 0.85, 1.0, 0.75))
+	var wing_material := Palette.unshaded(Color(class_color(), 0.75))
+	_wings_material = wing_material
 	for side in [-1.0, 1.0]:
 		var fin := MeshInstance3D.new()
 		var box := BoxMesh.new()
@@ -467,7 +499,8 @@ func _build_augment_visuals() -> void:
 	disc.bottom_radius = 0.7
 	disc.height = 0.12
 	plate.mesh = disc
-	plate.material_override = Palette.solid(Color(1.0, 0.72, 0.30), 1.2)
+	plate.material_override = Palette.solid(class_color(), 1.2)
+	_plate = plate
 	_pylon.add_child(plate)
 	_pylon.visible = false
 	add_child(_pylon)
@@ -585,22 +618,28 @@ func _skid_push(at: Vector3, strength: float) -> int:
 
 # The vault and slingshot aim cones and the arc slam's face tags, in the class colour.
 func _update_aim_cones(at: Vector3) -> void:
-	var color := class_color()
 	if not kit.vault_aim.is_empty():
-		indicator.set_shape("vault", {"kind": "cone", "apex": at, "dir": kit.vault_aim["dir"],
-			"length": AIM_CONE_LENGTH, "half_angle": AIM_CONE_HALF, "color": color})
+		indicator.set_shape("vault", yours({"kind": "cone", "apex": at, "dir": kit.vault_aim["dir"],
+			"length": AIM_CONE_LENGTH, "half_angle": AIM_CONE_HALF}))
 	else:
 		indicator.clear("vault")
 	if kit.mounted and not kit.slingshot_aim.is_empty():
 		var fill: float = kit.slingshot_aim["fill"]
-		indicator.set_shape("slingshot", {"kind": "cone", "apex": at, "dir": kit.slingshot_aim["dir"],
-			"length": AIM_CONE_LENGTH * (1.0 + fill), "half_angle": AIM_CONE_HALF, "color": color})
+		indicator.set_shape("slingshot", yours({"kind": "cone", "apex": at, "dir": kit.slingshot_aim["dir"],
+			"length": AIM_CONE_LENGTH * (1.0 + fill), "half_angle": AIM_CONE_HALF, "fill": fill}))
 	else:
 		indicator.clear("slingshot")
 	if face_tags.is_empty():
 		indicator.clear("faces")
 	else:
-		indicator.set_shape("faces", {"kind": "marks", "points": face_tags.map(func(tag): return tag["point"]), "color": color})
+		indicator.set_shape("faces", yours({"kind": "marks", "points": face_tags.map(func(tag): return tag["point"])}))
+
+
+# A kit rule's fact goes on the bus; a dropped slingshot charge also collapses its cone.
+func _on_kit_fact(kind: String, args: Array) -> void:
+	if kind == "gauge_cancelled":
+		indicator.collapse("slingshot")
+	events.callv("emit_signal", [kind] + args)
 
 
 func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:

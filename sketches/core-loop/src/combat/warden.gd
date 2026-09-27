@@ -216,7 +216,7 @@ func _pulse() -> void:
 	var ring := telegraph()
 	last_pulse_lifted = ring != null and ring.contains(ball)
 	if last_pulse_lifted:
-		target.add_external_accel(Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
+		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
@@ -256,7 +256,7 @@ func _step_magnet(delta: float, inside: bool) -> void:
 			if is_instance_valid(_magnet_ring) and _magnet_ring.contains(ball):
 				var to := -_flat_to_ball()
 				if to.length() > 0.5:
-					target.add_external_accel(to.normalized() * MAGNET_PULL)
+					target.crowd_control("warden_magnet", to.normalized() * MAGNET_PULL, false)
 			if _magnet_time >= MAGNET_TUG:
 				_end_magnet()
 
