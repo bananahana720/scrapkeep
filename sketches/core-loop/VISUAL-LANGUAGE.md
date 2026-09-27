@@ -170,7 +170,7 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 
 No `CONTRACTS.md` Icons section existed when this was written. It was checked in `core-loop-v2-ui` at base 2792144. W1 should adopt these ids.
 
-### Icon list (70)
+### Icon list (79)
 
 **Class emblems and abilities (19).**
 
@@ -190,26 +190,32 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `ab_rivet_special` | Overdrive blast (F) | Six chevrons around a centre dot, pointing outward |
 | `ab_rivet_smash` | Shockwave skid (Ctrl) | A ball on a ground line, a forward wedge ahead, two skid dashes behind |
 | `ab_kest_weapon` | Sticky charges (LMB) | A round charge with a four-point fuse spark, on a dotted lobbed arc |
-| `ab_kest_move` | Smoke blink (RMB) | A dotted puff at left, a dashed line, a ball at right |
+| `ab_kest_move` | Smoke blink (RMB) | Two ball positions with a dashed gap: a puff-wrapped outline behind, a solid ball ahead |
 | `ab_kest_special` | Detonation line (F) | A straight line with three small starbursts along it |
 | `ab_kest_smash` | Demo slam (Ctrl) | A down chevron over a ground line, three small starbursts splayed along it |
 | `ab_kest_glide` | Glide and rocket jump (Space) | A ball under a shallow wing arc, a small starburst beneath it |
 | `ab_kest_cloak` | Dust cloak (passive) | A ball half hidden by a dotted cloud outline, one spark at its edge |
 
-**Key glyphs (10).** Each is a bone keycap with a charcoal letter, or a mouse body.
+**Key glyphs (16).** Each is a bone keycap with a charcoal letter, or a mouse body.
 
 | id | Meaning | Drawing |
 | --- | --- | --- |
-| `key_lmb` | Weapon | A mouse body with the left button filled |
-| `key_rmb` | Movement | A mouse body with the right button filled |
+| `key_lmb` | Weapon | A mouse body, the left button a solid bone fill, a clear divider |
+| `key_rmb` | Movement | A mouse body, the right button a solid bone fill, a clear divider |
 | `key_f` | Special | Keycap "F" |
-| `key_ctrl` | Smash | A wide keycap "Ctrl" |
+| `key_ctrl` | Smash | A wide keycap "CT" |
 | `key_space` | Jump, vault, glide | A long flat keycap with an empty face |
 | `key_shift` | Boost | A wide keycap with an outlined up arrow |
 | `key_e` | Mount | Keycap "E" |
 | `key_q` | Winch | Keycap "Q" |
 | `key_r` | Hold to restart | Keycap "R" with a circular arrow |
 | `key_tab` | Hold for field notes | A wide keycap with an arrow into a bar |
+| `key_1` | Menu choice 1 | Keycap "1" |
+| `key_2` | Menu choice 2 | Keycap "2" |
+| `key_3` | Menu choice 3 | Keycap "3" |
+| `key_n` | New run | Keycap "N" |
+| `key_c` | Choose class | Keycap "C" |
+| `key_t` | Replay stage | Keycap "T" |
 
 **Item categories (6).** Each sits on a hex-nut backplate.
 
@@ -256,7 +262,7 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `thr_projectile` | Projectile | A dotted arc ending in four closing brackets |
 | `thr_lane` | Lane or beam | A long bar half filled from its left end, a source dot at left |
 
-**Objectives (6).** Each is framed by four corner brackets.
+**Objectives (8).** Each is framed by four corner brackets.
 
 | id | Meaning | Drawing |
 | --- | --- | --- |
@@ -266,6 +272,8 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `obj_fabricator` | Drive-through fabricator | An upright hoop with a hex nut inside |
 | `obj_vault` | Plated vault | A squat box with a heavy band and four rivets |
 | `obj_event` | World event | A klaxon lamp with two sound arcs |
+| `obj_launch` | Launch | A launch rail or upward chevron over a ring, amber reward accent |
+| `obj_stage` | Stage marker | A canyon silhouette in a bracket frame |
 
 **Resources (6).** Bare glyphs.
 
@@ -278,7 +286,7 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `res_timer` | Run clock | A clock face with two hands |
 | `res_difficulty` | Difficulty | A bar with rising sawtooth notches |
 
-**Factions (4).** Each sits on a pentagon badge, for the codex enemy pages and pack warnings.
+**Factions (5).** Each sits on a pentagon badge, for the codex enemy pages and pack warnings.
 
 | id | Meaning | Drawing |
 | --- | --- | --- |
@@ -286,6 +294,7 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `fac_reactor` | Reactor relics | A low dome over three thick vent bars |
 | `fac_swarm` | Swarm remnants | Five small triangles in an arrowhead |
 | `fac_mind` | The Mind's hands | A round lens held by a two-joint arm |
+| `fac_brindle` | Admiral Brindle (Fleet boss) | Brindle's requisition mark, brass accent, for the boss objective |
 
 Ids avoid collisions by prefix. `obj_vault` is the plated cache, `ab_sable_vault` the kick and `trg_on_vault` the trigger.
 
