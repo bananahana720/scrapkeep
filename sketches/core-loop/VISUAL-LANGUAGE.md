@@ -12,6 +12,8 @@ This is the style sheet for the v2 greybox as it grows into its real look (TRACK
 | A threat type's fill, motion and sound | `src/combat/threat_grammar.gd` (W2) |
 | An icon | `assets/icons/<id>.svg`, keyed by the ids in §5 |
 
+`SOUND-STORY.md` is the sibling source for story and audio. Each motif here names its intended sound character in one phrase, and that file owns the sound itself.
+
 ## 1. Essence
 
 After humans were lost, animals became the reigning intelligent species, and they grew up repairing the machines that ended us. Everything the player owns was salvaged, bolted on and repaired by a visible pilot, and it hums with the same mint field that pulls scrap home. Everything hostile is either Furnace Fleet gear in requisition paint or an ancient human war machine the Fleet dug up, and both mark their danger with hazard stripes.
