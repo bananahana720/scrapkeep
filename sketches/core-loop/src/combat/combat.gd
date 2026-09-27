@@ -42,6 +42,9 @@ const MUZZLE := 1.25
 const AIM_SLACK := 14.0
 const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
+# A build synergy's strike: its force is the punch (build scales it by heft), and it
+# always meets body plating, since it is never a landing on a weak point.
+const SYNERGY := "synergy"
 const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
 # The spec's values, used only for a warden field a stage def is missing.
@@ -194,6 +197,8 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 		part = _pending["part"]
 	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
+	if kind == SYNERGY:
+		part = ""
 	var punch := punch_of(kind, force)
 	var plating: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var full := punch >= plating

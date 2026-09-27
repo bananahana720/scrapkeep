@@ -23,7 +23,7 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 
 `spawn_enemy(kind, at) -> Node3D` adds the enemy under `ctx.root` at `at`, wires its committed hits to `run.damage(amount, kind)` and its death to `run.record_kill(kind, at, scrap)`, then emits `enemy_spawned`. Pass a point with clearance, for example `ctx.terrain.drop_point(x, z, 3.6)` for the miniboss. The spawner does not check `ctx.calm`; a caller that spawns on its own schedule checks it, as the director does.
 
-On `stage_content_cleared` (arena entry and every arena retry, before the boss module's `enter_arena`) combat frees every node in `enemy`, `enemy_shot` and `telegraph`, out of its group at once; a boss module spawns its adds after that call. The class kit's fire cooldown, special cooldown and overdrive reset there too, as they do on a stage retry, so a special on cooldown at death is ready in the retried fight.
+On `stage_content_cleared` (reason `arena` on arena entry, `arena_retry` on every arena retry, handled alike, before the boss module's `enter_arena`) combat frees every node in `enemy`, `enemy_shot` and `telegraph`, out of its group at once; a boss module spawns its adds after that call. The class kit's fire cooldown, special cooldown and overdrive reset there too, as they do on a stage retry, so a special on cooldown at death is ready in the retried fight.
 
 | Kind | Health | Plating | Scrap | Weight | Attack |
 | --- | --- | --- | --- | --- | --- |
@@ -39,7 +39,7 @@ Warden lessons: `plate` adds nothing. `caps` adds three vent caps on top: a stom
 
 Every enemy is in group `enemy`, on physics layer 3, and implements `knock(direction, force)` and `flash()`. Modules may also read `kind`, `hp`, `max_hp`, `is_dead()` and `telegraph()` (the live ring or lane, or null). The miniboss adds `state_name()` (`stalk`, `slam_crouch`, `slam_leap`, `charge_brace`, `charge`, `weak`), `is_weak()`, `attacks` and `weak_windows`. An event that is won by killing the miniboss listens for `enemy_killed` with kind `miniboss`.
 
-`strike(enemy, kind, force, part = "")` resolves one hit. The spine's contacts pass `stomp`, `ram` and `slam`; combat's weapons pass `runner`, `arc` and `turret`; a batted shell's blast passes `shell`. `part` names a weak point (the Brindle boss can pass its own); a ball contact finds its weak point itself. `enemy_struck` goes out first, then `strike_deflected` when the punch fell short, then the damage.
+`strike(enemy, kind, force, part = "")` resolves one hit. The spine's contacts pass `stomp`, `ram` and `slam`; combat's weapons pass `runner`, `arc` and `turret`; a batted shell's blast passes `shell`; build's synergy shockwaves, shrapnel, frost rings and blades pass `synergy`, whose punch is the force given (build scales it by heft) and which always meets body plating: `resolve` drops any part it names, since a synergy is never a landing. `part` names a weak point (the Brindle boss can pass its own); a ball contact finds its weak point itself. `enemy_struck` goes out first, then `strike_deflected` when the punch fell short, then the damage.
 
 ## The plating rule
 
