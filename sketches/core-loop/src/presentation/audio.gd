@@ -398,6 +398,13 @@ func wire_optional() -> void:
 	# resolves into the arena music instead of a landing.
 	_listen(events, "stage_content_cleared", func(_reason: String):
 		_disarm_launch()
+		# The stage's bonus cores stay with the stage; a restore may have moved heft.
+		engine.set_overcharge(0)
+		if ctx.run.has_method("heft_class"):
+			_heft_class = int(ctx.run.heft_class())
+		if sound_ready and engine.mode != MusicEngine.PLAY and engine.track == "brindle":
+			engine.cancel_pending()
+			engine.restart_boss("brindle")
 		play("stage_content_cleared"))
 
 
@@ -425,6 +432,9 @@ func _on_flow_changed(state: String) -> void:
 		play("flow_changed", 0.0, 1.0, "UI")
 	if state == "title" or state == "class_select":
 		_flow_queue.append(["idle"])
+	# Back in the arena (entry or retry) the band plays, whatever a death left it in.
+	if state == "boss" and sound_ready and engine.mode != MusicEngine.PLAY:
+		engine.schedule_mode(engine.next_beat(), MusicEngine.PLAY)
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -471,6 +481,13 @@ func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
 # and the row's cue marks the moment it begins.
 func _begin_boss(kind: String, music: String) -> void:
 	if not sound_ready:
+		return
+	if engine.track == music or engine.mode != MusicEngine.PLAY:
+		# A retry into the fight: the band left DEAD (or never left the boss track), so
+		# it restarts the boss music in play mode on the next beat, not the keys alone.
+		engine.cancel_pending()
+		var again := engine.restart_boss(music)
+		cue_log.append([kind, "restart", "beat", again, 1.0])
 		return
 	var at := engine.begin_boss(music)
 	if at < 0:

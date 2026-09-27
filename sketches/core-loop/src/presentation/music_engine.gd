@@ -530,6 +530,18 @@ func begin_boss(kind: String) -> int:
 	return at
 
 
+# Back into a boss fight after a death (the arena retry): the boss track restarts
+# from its first section, home key and play mode on the next beat, at the boss tempo
+# without the pivot (the level is not playing to pivot from).
+func restart_boss(kind: String) -> int:
+	var at := next_beat()
+	_warden_lifted = false
+	_warden_broken = false
+	_add_action(at, {"type": "track", "track": kind, "section": "build" if kind == "warden" else "1", "key": 0,
+		"step": Harmony.BOSS_STEP if boss_pivot else Harmony.STEP, "play": true})
+	return at
+
+
 # How broken the Warden is (0..1). The last quarter is the build: the snare roll
 # tightens, the riser climbs and the high-pass opens with every hit.
 func warden_charge(fraction: float) -> void:
@@ -907,6 +919,8 @@ func _run(action: Dictionary) -> void:
 				_set_grid(int(action["step"]))
 			track = action["track"]
 			section = action.get("section", "")
+			if action.get("play", false):
+				mode = PLAY
 			_set_key(int(action.get("key", 0)))
 			_lead_octave = 0
 			_bar_queue.clear()
