@@ -36,11 +36,15 @@ func _initialize() -> void:
 	var quote: Array = Harmony.mind_quote("sable").map(func(c: Array): return c[1])
 	_check("the Mind quotes wrong", quote == [62, 59, 55, 52, 47], "Sable inverted, last note a semitone flat: %s (D B G E B)" % [quote])
 
+	# A class row names its leitmotif (`motif`); its ready and break cues are built from it.
 	var unbaked: Array = []
 	for def in ClassDef.all():
-		if not SfxBank.has_recipe(def.sound_next) or Synth.peak(SfxBank.samples(def.sound_next)) < 0.1:
-			unbaked.append(def.sound_next)
-	_check("class rows bake", unbaked.is_empty(), "every class row's sound_next id has its own recipe; failing %s" % [unbaked])
+		if Harmony.motif(def.motif).is_empty():
+			unbaked.append(def.motif)
+		for cue in [def.motif + "_ready", def.motif + "_break"]:
+			if not SfxBank.has_recipe(cue) or Synth.peak(SfxBank.samples(cue)) < 0.1:
+				unbaked.append(cue)
+	_check("class rows bake", unbaked.is_empty(), "every class row's motif resolves and its ready and break cues bake; failing %s" % [unbaked])
 
 	var silent: Array = []
 	var unkeyed: Array = []
