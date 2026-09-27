@@ -88,6 +88,8 @@ var _overdrive := 0.0
 var _since_slingshot := INF
 var _crushes: Array = []
 var _clock := 0.0
+# The strike whose facts are going out: {id, kind, force, part}, empty otherwise.
+var _pending := {}
 
 
 func setup(ctx_ref) -> void:
@@ -161,18 +163,26 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 		return
 	var result := resolve(enemy, kind, force, part)
 	_detect_before(enemy, kind, result)
+	var outer := _pending
+	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	if not result["full"]:
 		deflections += 1
 		ctx.events.strike_deflected.emit(enemy, kind, result["punch"], result["plating"])
+	_pending = outer
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	enemy.take_damage(result["dealt"])
 	_detect_after(enemy, kind, result)
 
 
-# The one plating rule. Returns {punch, plating, full, dealt, part}.
+# The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
+# enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
+# answers with the strike's own part, so the handler sees the plating the hit meets.
 func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionary:
+	if part == "" and not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
+			and _pending["kind"] == kind and _pending["force"] == force:
+		part = _pending["part"]
 	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
 	var punch := punch_of(kind, force)
