@@ -26,6 +26,8 @@ const CHASE_NAME := "chase"
 const RESCUE_DEPTH := 10.0
 # A rescue point keeps at least this far from the Requisition's centre.
 const RESCUE_CLEAR := 14.0
+# The plate's colour when your punch is short of the live plating: combat's slate.
+const PLATE_SHORT := Color("9fb0bf")
 
 var ctx
 var state := IDLE
@@ -1024,19 +1026,24 @@ func hull_plating_now() -> float:
 	return plating_for(ship.hull, "", "")
 
 
+# The name plate's words. The objective line carries the numbers, so the plate names
+# who and the plating; its colour says whether your punch beats that plating.
 func readout_text() -> String:
 	if state == EJECT:
-		return "Brindle is running | ram or stomp his scooter"
+		return "BRINDLE · on the run"
 	if charging():
-		return "Bow plating %d | your ram %d" % [int(Rules.CLASH_PUNCH), int(live_punch())]
-	return "Hull plating %d | your punch %d" % [int(hull_plating_now()), int(live_punch())]
+		return "BRINDLE · bow plating %d" % int(Rules.CLASH_PUNCH)
+	if stunned():
+		return "BRINDLE · plating 0 · stunned"
+	return "BRINDLE · plating %d" % int(hull_plating_now())
 
 
 func _update_readout() -> void:
 	if not is_instance_valid(ship):
 		return
-	var beats: bool = live_punch() >= hull_plating_now()
-	ship.set_readout(readout_text(), Palette.AMBER if beats or state == EJECT else Color("9fb0bf"))
+	var beats: bool = state == EJECT or live_punch() >= live_plating()
+	var anchor: Node3D = scooter if state == EJECT and is_instance_valid(scooter) else null
+	ship.set_readout(readout_text(), Palette.AMBER if beats else PLATE_SHORT, anchor, 2.5 if anchor != null else Requisition.PLATE_LIFT)
 
 
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
