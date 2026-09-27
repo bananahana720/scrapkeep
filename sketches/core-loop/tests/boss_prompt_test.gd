@@ -60,6 +60,7 @@ func _run() -> void:
 	_double.punch_override = -1.0
 	_report("colour carries the gap", beats == Palette.AMBER and short != Palette.AMBER and _plate().text.contains("plating 120"),
 		"plate \"%s\": amber at punch 130, %s at punch 40 against plating 120" % [_plate().text, short.to_html(false)])
+	_check_shred()
 	_boss.jump_to_phase(4)
 	while not _boss.scooter_landed():
 		await physics_frame
@@ -72,6 +73,26 @@ func _finish() -> void:
 	print("boss_prompt_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
+
+
+# Combat's own shred strips the hull's plating (README.md, Andrew 2026-09-27), and the
+# plate must read the same number the tint already uses. Strike the real hull through
+# the game's own combat module (not the punch-override double) until shred builds,
+# then check that hull_plating_now() and the plate text both dropped by that shred.
+func _check_shred() -> void:
+	var hull = _boss.ship.hull
+	var real = _game.combat
+	_game.ctx.spawner = real
+	for _i in 8:
+		real.strike(hull, "ram", 40.0)
+	var shred: float = real.shred_of(hull)
+	var want: float = maxf(0.0, 120.0 - shred)
+	var got: float = _boss.hull_plating_now()
+	_boss._update_readout()
+	var text: String = _plate().text
+	_report("plate drops under shred", shred > 0.0 and absf(got - want) < 0.01 and text.contains("plating %d" % int(want)),
+		"after 8 ram strikes shred %.2f: hull_plating_now %.2f (want %.2f), plate \"%s\"" % [shred, got, want, text])
+	_game.ctx.spawner = _double
 
 
 func _plate():
