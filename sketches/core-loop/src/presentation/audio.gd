@@ -680,7 +680,7 @@ func _follow_brindle() -> void:
 	if boss == null or not is_instance_valid(boss):
 		return
 	var rules := _boss_rules(boss)
-	var phase := int(boss.get("phase"))
+	var phase := int(_num(boss, "phase", 0.0))
 	if engine.section == "chase":
 		var scooter = boss.get("scooter")
 		if scooter is Node3D and is_instance_valid(scooter) and boss.has_method("scooter_landed") and boss.scooter_landed():
@@ -693,12 +693,18 @@ func _follow_brindle() -> void:
 		return
 	var floors: Array = rules["PHASE_FLOORS"]
 	var mins: Array = rules["PHASE_MIN_SECONDS"]
-	var hp := float(boss.get("hp")) / maxf(float(boss.get("max_hp")), 1.0)
+	var hp := _num(boss, "hp", 1.0) / maxf(_num(boss, "max_hp", 1.0), 1.0)
 	var top := 1.0 if phase == 1 else float(floors[phase - 2])
 	var floor_hp := float(floors[phase - 1])
 	var in_phase := clampf((top - hp) / maxf(top - floor_hp, 0.01), 0.0, 1.0)
 	var held := hp <= floor_hp + 0.001
-	engine.brindle_hp(in_phase, held, float(boss.get("phase_clock")) / maxf(float(mins[phase - 1]), 1.0))
+	engine.brindle_hp(in_phase, held, _num(boss, "phase_clock", 0.0) / maxf(float(mins[phase - 1]), 1.0))
+
+
+# A number the boss module exposes, or the default when it (or a test double) has none.
+static func _num(object: Object, property: String, fallback: float) -> float:
+	var value = object.get(property)
+	return float(value) if value is int or value is float else fallback
 
 
 static func _boss_rules(boss: Object) -> Dictionary:
