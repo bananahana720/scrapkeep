@@ -1,0 +1,1227 @@
+#!/usr/bin/env python3
+"""Generate the V2 icon set from VISUAL-LANGUAGE.md section 5.
+
+Dependency-free. Writes one standalone 64x64 SVG per id to
+sketches/core-loop/assets/icons/<id>.svg and an index README next to them.
+
+Run: python3 sketches/core-loop/tools/icons/generate_icons.py
+"""
+import math
+import os
+
+# --- Palette (VISUAL-LANGUAGE.md section 2) ---------------------------------
+CHARCOAL = "#242a28"
+BONE = "#d2c5a5"
+MINT = "#8bf0d3"
+AMBER = "#e5a044"
+COPPER = "#b77843"
+IRON_OXIDE = "#9b513a"
+PETROL = "#365754"
+HAZARD = "#ff5a3c"
+BRASS = "#d9b44a"
+ICE = "#c8f0ff"
+ANCIENT = "#3d8bff"  # Cherenkov blue, decided 2026-09-27
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ICON_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "assets", "icons"))
+README_PATH = os.path.join(ICON_DIR, "README.md")
+
+PRIMARY = 6
+DETAIL = 4
+
+
+def n(x):
+    """Trim floats to at most 2 decimals for compact, readable SVG source."""
+    r = round(x, 2)
+    return int(r) if r == int(r) else r
+
+
+# --- Geometry helpers ---------------------------------------------------------
+def polygon_points(cx, cy, r, count, start_deg=-90, inner_r=None):
+    pts = []
+    for i in range(count * (2 if inner_r else 1)):
+        ang = math.radians(start_deg + i * (360 / (count * (2 if inner_r else 1))))
+        rad = r if (not inner_r or i % 2 == 0) else inner_r
+        pts.append((cx + rad * math.cos(ang), cy + rad * math.sin(ang)))
+    return " ".join(f"{n(x)},{n(y)}" for x, y in pts)
+
+
+def chevron(cx, cy, w, h, stroke=BONE, width=PRIMARY, cap="round"):
+    x0, y0 = cx - w / 2, cy - h / 2
+    x1, y1 = cx + w / 2, cy
+    x2, y2 = cx - w / 2, cy + h / 2
+    return (
+        f'<polyline points="{n(x0)},{n(y0)} {n(x1)},{n(y1)} {n(x2)},{n(y2)}" '
+        f'fill="none" stroke="{stroke}" stroke-width="{width}" '
+        f'stroke-linecap="{cap}" stroke-linejoin="round"/>'
+    )
+
+
+def ring(cx, cy, r, stroke=BONE, width=PRIMARY, dash=None):
+    d = f' stroke-dasharray="{dash}"' if dash else ""
+    return f'<circle cx="{n(cx)}" cy="{n(cy)}" r="{n(r)}" fill="none" stroke="{stroke}" stroke-width="{width}"{d}/>'
+
+
+def dot(cx, cy, r, fill=BONE):
+    return f'<circle cx="{n(cx)}" cy="{n(cy)}" r="{n(r)}" fill="{fill}"/>'
+
+
+def line(x1, y1, x2, y2, stroke=BONE, width=DETAIL, dash=None, cap="round"):
+    d = f' stroke-dasharray="{dash}"' if dash else ""
+    return (
+        f'<line x1="{n(x1)}" y1="{n(y1)}" x2="{n(x2)}" y2="{n(y2)}" '
+        f'stroke="{stroke}" stroke-width="{width}" stroke-linecap="{cap}"{d}/>'
+    )
+
+
+def path(d, stroke=BONE, width=DETAIL, fill="none", cap="round", join="round", dash=None):
+    dd = f' stroke-dasharray="{dash}"' if dash else ""
+    return (
+        f'<path d="{d}" fill="{fill}" stroke="{stroke}" stroke-width="{width}" '
+        f'stroke-linecap="{cap}" stroke-linejoin="{join}"{dd}/>'
+    )
+
+
+def rect(x, y, w, h, fill=BONE, rx=0, stroke=None, width=0):
+    s = f' stroke="{stroke}" stroke-width="{width}"' if stroke else ""
+    return f'<rect x="{n(x)}" y="{n(y)}" width="{n(w)}" height="{n(h)}" rx="{n(rx)}" fill="{fill}"{s}/>'
+
+
+def cloud(cx, cy, r=9, stroke=BONE, width=DETAIL, dash="2 3"):
+    """Three overlapping dashed circles reading as a puff or dust cloud silhouette."""
+    els = []
+    for dx, dy, rr in ((-r * 0.5, r * 0.15, r * 0.65), (r * 0.45, r * 0.05, r * 0.7), (0, -r * 0.35, r * 0.55)):
+        els.append(
+            f'<circle cx="{n(cx + dx)}" cy="{n(cy + dy)}" r="{n(rr)}" fill="none" '
+            f'stroke="{stroke}" stroke-width="{width}" stroke-dasharray="{dash}"/>'
+        )
+    return els
+
+
+def star(cx, cy, points, r_out, r_in, fill=AMBER, start_deg=-90):
+    pts = polygon_points(cx, cy, r_out, points, start_deg=start_deg, inner_r=r_in)
+    return f'<polygon points="{pts}" fill="{fill}"/>'
+
+
+def poly(cx, cy, r, count, fill=CHARCOAL, stroke=None, width=0, start_deg=-90):
+    pts = polygon_points(cx, cy, r, count, start_deg=start_deg)
+    s = f' stroke="{stroke}" stroke-width="{width}"' if stroke else ""
+    return f'<polygon points="{pts}" fill="{fill}"{s}/>'
+
+
+def text(cx, cy, s, size, fill=CHARCOAL, weight=700):
+    return (
+        f'<text x="{n(cx)}" y="{n(cy)}" font-family="sans-serif" '
+        f'font-weight="{weight}" font-size="{size}" fill="{fill}" '
+        f'text-anchor="middle" dominant-baseline="central">{s}</text>'
+    )
+
+
+# --- Category backplates (VISUAL-LANGUAGE.md section 5, "Category backplates") --
+STRIPE_DEF = (
+    '<pattern id="{pid}" width="7" height="7" patternUnits="userSpaceOnUse" '
+    'patternTransform="rotate(45)">'
+    f'<rect width="7" height="7" fill="{CHARCOAL}"/><rect width="3.5" height="7" fill="{HAZARD}"/>'
+    "</pattern>"
+)
+
+
+def plate_circle():
+    return [f'<circle cx="32" cy="32" r="28" fill="{CHARCOAL}"/>']
+
+
+def plate_rounded_square(rx=8):
+    return [rect(4, 4, 56, 56, fill=CHARCOAL, rx=rx)]
+
+
+def plate_square():
+    return [rect(4, 4, 56, 56, fill=CHARCOAL)]
+
+
+def plate_hex():
+    return [poly(32, 32, 28, 6, fill=CHARCOAL, start_deg=0)]
+
+
+def plate_tag():
+    return [
+        rect(8, 12, 48, 40, fill=CHARCOAL, rx=8),
+        ring(17, 32, 5, stroke=BONE, width=3),
+    ]
+
+
+def plate_pentagon():
+    return [poly(32, 32, 28, 5, fill=CHARCOAL, start_deg=-90)]
+
+
+TRIANGLE_PTS = "32,4 61,58 3,58"
+
+
+def plate_triangle(pid):
+    return [
+        f'<polygon points="{TRIANGLE_PTS}" fill="{CHARCOAL}" stroke="{HAZARD}" stroke-width="4" stroke-linejoin="miter"/>',
+        f'<clipPath id="{pid}-clip"><rect x="3" y="46" width="58" height="12"/></clipPath>',
+        f'<polygon points="{TRIANGLE_PTS}" fill="url(#{pid})" clip-path="url(#{pid}-clip)"/>',
+    ]
+
+
+def plate_brackets():
+    # Sits on top of a solid square backplate (obj_ = square base + corner brackets).
+    return [
+        rect(4, 4, 56, 56, fill=CHARCOAL),
+        path("M6 16 V6 H16 M48 6 H58 V16 M58 48 V58 H48 M16 58 H6 V48", stroke=BONE, width=4),
+    ]
+
+
+def plate_keycap(wide=False, letters_gap=False):
+    x, w = (6, 52) if wide else (10, 44)
+    return [
+        rect(x, 8, w, 40, fill=BONE, rx=6, stroke=CHARCOAL, width=2),
+        rect(x, 40, w, 10, fill=BONE, rx=3, stroke=CHARCOAL, width=2),
+    ]
+
+
+def plate_mouse():
+    return [
+        rect(20, 8, 24, 44, fill=BONE, rx=12, stroke=CHARCOAL, width=2),
+        line(32, 8, 32, 24, stroke=CHARCOAL, width=3),
+    ]
+
+
+def plate_none():
+    return []
+
+
+# --- Icon registry -----------------------------------------------------------
+# Each entry: id -> (meaning, drawing description, backplate fn or None, glyph fn)
+ICONS = {}
+
+
+def register(icon_id, meaning, drawing, backplate, glyph_fn):
+    ICONS[icon_id] = {
+        "meaning": meaning,
+        "drawing": drawing,
+        "backplate": backplate,
+        "glyph": glyph_fn,
+    }
+
+
+# ---- Class emblems and abilities (19) ---------------------------------------
+def g_cls_sable():
+    return [
+        ring(32, 34, 14, stroke=MINT, width=PRIMARY),
+        f'<rect x="10" y="12" width="14" height="8" rx="2" fill="{BONE}" transform="rotate(-30 17 16)"/>',
+        f'<rect x="40" y="12" width="14" height="8" rx="2" fill="{BONE}" transform="rotate(30 47 16)"/>',
+    ]
+
+
+register(
+    "cls_sable", "Sable", "A ring with two bolted pylon plates at 10 and 2 o'clock",
+    plate_circle, g_cls_sable,
+)
+
+
+def g_cls_rivet():
+    return [
+        f'<polyline points="28,16 46,32 28,48" fill="none" stroke="{COPPER}" '
+        f'stroke-width="{PRIMARY}" stroke-linecap="round" stroke-linejoin="round"/>',
+        line(22, 20, 14, 26, stroke=BONE),
+        line(22, 32, 12, 32, stroke=BONE),
+        line(22, 44, 14, 38, stroke=BONE),
+    ]
+
+
+register(
+    "cls_rivet", "Rivet", "A forward chevron with three raked fins behind it",
+    plate_circle, g_cls_rivet,
+)
+
+
+def g_cls_kest():
+    return [
+        star(32, 32, 8, 18, 8, fill=AMBER),
+        path("M44.7 19.3 C 50 14, 54 16, 52 10", stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "cls_kest", "Kest", "An eight-point starburst with a fuse wick curling off one point",
+    plate_circle, g_cls_kest,
+)
+
+
+def g_ab_sable_weapon():
+    return [
+        rect(12, 28, 10, 8, fill=BONE, rx=2),
+        path("M22 32 L34 24 L38 36 L48 30", stroke=MINT, width=DETAIL, cap="round", join="round"),
+        ring(50, 28, 5, stroke=MINT, width=DETAIL),
+    ]
+
+
+register(
+    "ab_sable_weapon", "Arc caster (LMB)",
+    "A stubby pylon prong at left, a zigzag arc leaping right to a small ring",
+    plate_rounded_square, g_ab_sable_weapon,
+)
+
+
+def g_ab_sable_move():
+    return [
+        path("M46 16 L52 12 L54 20 L46 22 Z", fill=BONE),
+        path("M46 20 C 40 26, 34 32, 26 40", stroke=MINT, width=DETAIL),
+        ring(20, 46, 7, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_sable_move", "Grapple and winch (RMB)",
+    "A hook jaw top-right, a rope curving down to a spool circle bottom-left",
+    plate_rounded_square, g_ab_sable_move,
+)
+
+
+def g_ab_sable_special():
+    return [
+        ring(32, 32, 10, stroke=BONE, width=DETAIL),
+        ring(32, 32, 16, stroke=BONE, width=DETAIL),
+        ring(32, 32, 22, stroke=MINT, width=DETAIL, dash="4 4"),
+        line(32, 12, 32, 22, stroke=BONE, width=PRIMARY),
+    ]
+
+
+register(
+    "ab_sable_special", "Detonation gauge (F)",
+    "Three concentric rings, the outer one dashed, crossed by a short bolt",
+    plate_rounded_square, g_ab_sable_special,
+)
+
+
+def g_ab_sable_smash():
+    return [
+        chevron(32, 22, 16, 12, stroke=BONE),
+        line(16, 46, 48, 46, stroke=BONE, width=PRIMARY),
+        ring(32, 46, 10, stroke=MINT, width=DETAIL),
+        line(20, 38, 20, 44, stroke=BONE, width=DETAIL),
+        line(44, 38, 44, 44, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_sable_smash", "Arc slam (Ctrl)",
+    "A down chevron meeting a ground line, a ring spreading, two short upright ticks",
+    plate_rounded_square, g_ab_sable_smash,
+)
+
+
+def g_ab_sable_vault():
+    return [
+        rect(12, 14, 6, 36, fill=BONE),
+        dot(24, 48, 5, fill=BONE),
+        path("M27 45 L48 20", stroke=MINT, width=PRIMARY),
+        path("M48 20 L40 22 M48 20 L46 28", stroke=MINT, width=DETAIL),
+    ]
+
+
+register(
+    "ab_sable_vault", "Vault kick (Space at a face)",
+    "A vertical wall bar at left, a ball leaving it along a sharp 60 degree arrow",
+    plate_rounded_square, g_ab_sable_vault,
+)
+
+
+def g_ab_sable_mount():
+    return [
+        rect(38, 12, 6, 38, fill=BONE),
+        path("M20 20 L38 30 L20 40 Z", fill=MINT),
+        ring(41, 18, 5, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_sable_mount", "Mount pylon (E)",
+    "A pylon spike driven into a wall bar, a small ring at its head",
+    plate_rounded_square, g_ab_sable_mount,
+)
+
+
+def g_ab_rivet_weapon():
+    return [
+        line(14, 26, 22, 26, stroke=BONE, width=DETAIL),
+        line(14, 32, 24, 32, stroke=BONE, width=DETAIL),
+        line(14, 38, 22, 38, stroke=BONE, width=DETAIL),
+        f'<polyline points="30,20 48,32 30,44" fill="none" stroke="{COPPER}" '
+        f'stroke-width="{PRIMARY}" stroke-linecap="round" stroke-linejoin="round"/>',
+    ]
+
+
+register(
+    "ab_rivet_weapon", "Rapid laser (LMB)",
+    "Three short parallel dashes ending in one chevron point",
+    plate_rounded_square, g_ab_rivet_weapon,
+)
+
+
+def g_ab_rivet_move():
+    return [
+        f'<polygon points="14,32 26,20 26,44" fill="{COPPER}"/>',
+        f'<polygon points="26,32 38,20 38,44" fill="{COPPER}"/>',
+        path("M44 18 V28 M44 28 L52 28 M52 18 V28", stroke=BONE, width=DETAIL),
+        path("M44 36 V46 M44 46 L52 46 M52 36 V46", stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_rivet_move", "Overdrive sprint (RMB)",
+    "A double chevron punching through a broken bracket",
+    plate_rounded_square, g_ab_rivet_move,
+)
+
+
+def g_ab_rivet_special():
+    pts = []
+    for i in range(6):
+        ang = math.radians(i * 60)
+        x1, y1 = 32 + 8 * math.cos(ang), 32 + 8 * math.sin(ang)
+        x2, y2 = 32 + 22 * math.cos(ang), 32 + 22 * math.sin(ang)
+        pts.append(line(x1, y1, x2, y2, stroke=COPPER, width=PRIMARY))
+    return pts + [dot(32, 32, 4, fill=BONE)]
+
+
+register(
+    "ab_rivet_special", "Overdrive blast (F)",
+    "Six chevrons around a centre dot, pointing outward",
+    plate_rounded_square, g_ab_rivet_special,
+)
+
+
+def g_ab_rivet_smash():
+    return [
+        dot(22, 40, 6, fill=BONE),
+        line(14, 46, 50, 46, stroke=BONE, width=PRIMARY),
+        chevron(42, 32, 16, 14, stroke=COPPER),
+        line(16, 40, 22, 44, stroke=BONE, width=DETAIL),
+        line(16, 34, 24, 40, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_rivet_smash", "Shockwave skid (Ctrl)",
+    "A ball on a ground line, a forward wedge ahead, two skid dashes behind",
+    plate_rounded_square, g_ab_rivet_smash,
+)
+
+
+def g_ab_kest_weapon():
+    return [
+        path("M14 46 Q 30 16 50 26", stroke=BONE, width=DETAIL, dash="3 4"),
+        dot(50, 26, 7, fill=AMBER),
+        star(50, 18, 4, 5, 2, fill=BONE, start_deg=0),
+    ]
+
+
+register(
+    "ab_kest_weapon", "Sticky charges (LMB)",
+    "A round charge with a four-point fuse spark, on a dotted lobbed arc",
+    plate_rounded_square, g_ab_kest_weapon,
+)
+
+
+def g_ab_kest_move():
+    return cloud(17, 20, r=8) + [
+        line(23, 25, 42, 40, stroke=BONE, width=DETAIL, dash="4 4"),
+        dot(48, 45, 6, fill=AMBER),
+    ]
+
+
+register(
+    "ab_kest_move", "Smoke blink (RMB)",
+    "A dotted puff at left, a dashed line, a ball at right",
+    plate_rounded_square, g_ab_kest_move,
+)
+
+
+def g_ab_kest_special():
+    els = [line(14, 32, 50, 32, stroke=BONE, width=PRIMARY)]
+    for cx in (22, 32, 42):
+        els.append(star(cx, 32, 6, 6, 3, fill=AMBER))
+    return els
+
+
+register(
+    "ab_kest_special", "Detonation line (F)",
+    "A straight line with three small starbursts along it",
+    plate_rounded_square, g_ab_kest_special,
+)
+
+
+def g_ab_kest_smash():
+    els = [chevron(32, 20, 16, 12, stroke=BONE), line(14, 46, 50, 46, stroke=BONE, width=PRIMARY)]
+    for cx in (20, 32, 44):
+        els.append(star(cx, 38, 6, 5, 2, fill=AMBER))
+    return els
+
+
+register(
+    "ab_kest_smash", "Demo slam (Ctrl)",
+    "A down chevron over a ground line, three small starbursts splayed along it",
+    plate_rounded_square, g_ab_kest_smash,
+)
+
+
+def g_ab_kest_glide():
+    return [
+        dot(32, 40, 7, fill=BONE),
+        path("M14 32 Q 32 18 50 32", stroke=AMBER, width=DETAIL),
+        star(32, 50, 5, 5, 2, fill=AMBER),
+    ]
+
+
+register(
+    "ab_kest_glide", "Glide and rocket jump (Space)",
+    "A ball under a shallow wing arc, a small starburst beneath it",
+    plate_rounded_square, g_ab_kest_glide,
+)
+
+
+def g_ab_kest_cloak():
+    return [dot(27, 37, 10, fill=BONE)] + cloud(38, 26, r=10) + [
+        line(46, 16, 50, 12, stroke=AMBER, width=3),
+        line(50, 16, 46, 12, stroke=AMBER, width=3),
+    ]
+
+
+register(
+    "ab_kest_cloak", "Dust cloak (passive)",
+    "A ball half hidden by a dotted cloud outline, one spark at its edge",
+    plate_rounded_square, g_ab_kest_cloak,
+)
+
+# ---- Key glyphs (10) ---------------------------------------------------------
+
+
+def g_key_lmb():
+    return [
+        rect(20, 8, 24, 44, fill=BONE, rx=12, stroke=CHARCOAL, width=2),
+        line(32, 8, 32, 24, stroke=CHARCOAL, width=3),
+        rect(21, 9, 10, 15, fill=CHARCOAL, rx=6),
+    ]
+
+
+register(
+    "key_lmb", "Weapon", "A mouse body with the left button filled",
+    plate_none, g_key_lmb,
+)
+
+
+def g_key_rmb():
+    return [
+        rect(20, 8, 24, 44, fill=BONE, rx=12, stroke=CHARCOAL, width=2),
+        line(32, 8, 32, 24, stroke=CHARCOAL, width=3),
+        rect(33, 9, 10, 15, fill=CHARCOAL, rx=6),
+    ]
+
+
+register(
+    "key_rmb", "Movement", "A mouse body with the right button filled",
+    plate_none, g_key_rmb,
+)
+
+
+def g_key_f():
+    return [text(32, 30, "F", 26)]
+
+
+register("key_f", "Special", 'Keycap "F"', lambda: plate_keycap(), g_key_f)
+
+
+def g_key_ctrl():
+    return [text(32, 30, "Ctrl", 15)]
+
+
+register("key_ctrl", "Smash", 'A wide keycap "Ctrl"', lambda: plate_keycap(wide=True), g_key_ctrl)
+
+
+def g_key_space():
+    return [rect(16, 26, 32, 8, fill=CHARCOAL, rx=3)]
+
+
+register(
+    "key_space", "Jump, vault, glide",
+    "A long flat keycap with an empty face",
+    lambda: plate_keycap(wide=True), g_key_space,
+)
+
+
+def g_key_shift():
+    return [path("M32 16 L42 28 L36 28 L36 38 L28 38 L28 28 L22 28 Z", stroke=CHARCOAL, width=3, fill="none")]
+
+
+register(
+    "key_shift", "Boost",
+    "A wide keycap with an outlined up arrow",
+    lambda: plate_keycap(wide=True), g_key_shift,
+)
+
+
+def g_key_e():
+    return [text(32, 30, "E", 26)]
+
+
+register("key_e", "Mount", 'Keycap "E"', lambda: plate_keycap(), g_key_e)
+
+
+def g_key_q():
+    return [text(32, 30, "Q", 26)]
+
+
+register("key_q", "Winch", 'Keycap "Q"', lambda: plate_keycap(), g_key_q)
+
+
+def g_key_r():
+    return [
+        text(23, 24, "R", 18),
+        path("M46 34 A 7.5 7.5 0 1 1 41 28.3", stroke=CHARCOAL, width=3),
+        f'<polygon points="41,24.5 41,30 46.5,28.5" fill="{CHARCOAL}"/>',
+    ]
+
+
+register(
+    "key_r", "Hold to restart",
+    'Keycap "R" with a circular arrow',
+    lambda: plate_keycap(), g_key_r,
+)
+
+
+def g_key_tab():
+    return [
+        line(16, 32, 40, 32, stroke=CHARCOAL, width=3),
+        path("M36 26 L44 32 L36 38 Z", fill=CHARCOAL),
+        rect(44, 24, 4, 16, fill=CHARCOAL),
+    ]
+
+
+register(
+    "key_tab", "Hold for field notes",
+    "A wide keycap with an arrow into a bar",
+    lambda: plate_keycap(wide=True), g_key_tab,
+)
+
+# ---- Item categories (6) ------------------------------------------------------
+
+
+def g_cat_damage():
+    return [path("M32 12 L40 34 L32 52 L24 34 Z", fill=BONE)]
+
+
+register("cat_damage", "Weapon damage", "A single sharp claw tooth, point up", plate_hex, g_cat_damage)
+
+
+def g_cat_mobility():
+    return [chevron(32, 24, 18, 12, stroke=BONE), chevron(32, 40, 18, 12, stroke=BONE)]
+
+
+register(
+    "cat_mobility", "Movement", "Two stacked chevrons, pointing right", plate_hex, g_cat_mobility,
+)
+
+
+def g_cat_defense():
+    return [
+        rect(16, 20, 32, 24, fill=BONE, rx=6),
+        dot(22, 26, 2, fill=CHARCOAL), dot(42, 26, 2, fill=CHARCOAL),
+        dot(22, 38, 2, fill=CHARCOAL), dot(42, 38, 2, fill=CHARCOAL),
+    ]
+
+
+register(
+    "cat_defense", "Plating and resistance",
+    "A thick rounded plate with four rivets", plate_hex, g_cat_defense,
+)
+
+
+def g_cat_utility():
+    return [
+        path("M18 46 L34 30", stroke=BONE, width=PRIMARY),
+        path("M34 30 L34 22 L42 14 L46 18 L38 26 L46 26 L38 34 Z", fill=BONE),
+    ]
+
+
+register(
+    "cat_utility", "Non-combat effects", "An open-ended wrench, diagonal", plate_hex, g_cat_utility,
+)
+
+
+def g_cat_charge():
+    return [
+        rect(22, 16, 20, 34, fill="none", stroke=BONE, width=PRIMARY, rx=4),
+        rect(28, 11, 8, 5, fill=BONE),
+        rect(27, 22, 10, 5, fill=MINT),
+        rect(27, 30, 10, 5, fill=MINT),
+        rect(27, 38, 10, 5, fill=MINT),
+    ]
+
+
+register(
+    "cat_charge", "Extra charges", "A cell with three stacked pips", plate_hex, g_cat_charge,
+)
+
+
+def g_cat_transform():
+    return [
+        rect(12, 26, 12, 12, fill=BONE),
+        f'<circle cx="46" cy="32" r="7" fill="none" stroke="{BONE}" stroke-width="{PRIMARY}"/>',
+        path("M26 26 Q 34 14 42 24", stroke=BONE, width=DETAIL),
+        path("M42 24 L38 22 M42 24 L40 29", stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "cat_transform", "Pattern transformers",
+    "A square at left and a circle at right, joined by a curved arrow",
+    plate_hex, g_cat_transform,
+)
+
+# ---- Elements (3) --------------------------------------------------------------
+
+
+def g_el_frost():
+    els = []
+    for i in range(6):
+        ang = math.radians(i * 60)
+        x2, y2 = 32 + 18 * math.cos(ang), 32 + 18 * math.sin(ang)
+        els.append(line(32, 32, x2, y2, stroke=ICE, width=DETAIL))
+        bx, by = 32 + 11 * math.cos(ang), 32 + 11 * math.sin(ang)
+        pa = ang + math.radians(35)
+        pb = ang - math.radians(35)
+        els.append(line(bx, by, bx + 5 * math.cos(pa), by + 5 * math.sin(pa), stroke=ICE, width=3))
+        els.append(line(bx, by, bx + 5 * math.cos(pb), by + 5 * math.sin(pb), stroke=ICE, width=3))
+    return els
+
+
+register(
+    "el_frost", "Frost (ICE)", "A six-arm snowflake with short barbs", plate_circle, g_el_frost,
+)
+
+
+def g_el_arc():
+    return [
+        path("M26 14 L34 28 L26 30 L38 50", stroke=MINT, width=PRIMARY, join="round"),
+        dot(26, 14, 3, fill=BONE), dot(38, 50, 3, fill=BONE),
+    ]
+
+
+register(
+    "el_arc", "Arc (mint)", "A zigzag bolt between two small nodes", plate_circle, g_el_arc,
+)
+
+
+def g_el_kinetic():
+    return [
+        dot(30, 28, 11, fill=BONE),
+        line(44, 40, 50, 46, stroke=BONE, width=DETAIL),
+        line(46, 34, 53, 37, stroke=BONE, width=DETAIL),
+        line(46, 44, 53, 44, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "el_kinetic", "Kinetic (bone)",
+    "A heavy ball with three impact lines at one side", plate_circle, g_el_kinetic,
+)
+
+# ---- Triggers (12) --------------------------------------------------------------
+
+
+def g_trg_on_hit():
+    return [
+        path("M12 18 V10 H20 M44 10 H52 V18 M52 42 V50 H44 M20 50 H12 V42", stroke=BONE, width=DETAIL),
+        dot(32, 30, 4, fill=AMBER),
+    ]
+
+
+register(
+    "trg_on_hit", "On hit", "A four-bracket reticle with a centre dot", plate_tag, g_trg_on_hit,
+)
+
+
+def g_trg_on_kill():
+    return [
+        path("M12 18 V10 H20 M44 10 H52 V18 M52 42 V50 H44 M20 50 H12 V42", stroke=BONE, width=DETAIL),
+        line(26, 24, 38, 36, stroke=BONE, width=PRIMARY),
+        line(38, 24, 26, 36, stroke=BONE, width=PRIMARY),
+    ]
+
+
+register(
+    "trg_on_kill", "On kill", "A four-bracket reticle with an X", plate_tag, g_trg_on_kill,
+)
+
+
+def g_trg_on_smash():
+    return [chevron(32, 20, 14, 12, stroke=BONE), line(20, 38, 48, 38, stroke=BONE, width=PRIMARY)]
+
+
+register(
+    "trg_on_smash", "On smash", "A down chevron striking a ground line", plate_tag, g_trg_on_smash,
+)
+
+
+def g_trg_on_rebound():
+    return [
+        path("M20 16 L34 38 L50 20", stroke=BONE, width=DETAIL),
+        dot(20, 16, 3, fill=BONE),
+    ]
+
+
+register(
+    "trg_on_rebound", "On rebound", "A ball tracing a V off a slanted line", plate_tag, g_trg_on_rebound,
+)
+
+
+def g_trg_on_vault():
+    return [
+        rect(20, 14, 5, 26, fill=BONE),
+        path("M25 28 L48 16", stroke=BONE, width=DETAIL),
+        path("M48 16 L41 17 M48 16 L45 22", stroke=BONE, width=3),
+    ]
+
+
+register(
+    "trg_on_vault", "On vault kick", "A wall bar with a sharp exit arrow", plate_tag, g_trg_on_vault,
+)
+
+
+def g_trg_on_charge_release():
+    return [
+        f'<path d="M 32 16 A 16 16 0 1 1 17.5 24" fill="none" stroke="{BONE}" stroke-width="{DETAIL}"/>',
+        path("M17.5 24 L12 18 M17.5 24 L23 22", stroke=BONE, width=3),
+    ]
+
+
+register(
+    "trg_on_charge_release", "On charge release",
+    "A three-quarter gauge ring with an arrow leaving its gap", plate_tag, g_trg_on_charge_release,
+)
+
+
+def g_trg_on_cloak_break():
+    return cloud(32, 30, r=11) + [
+        line(23, 21, 41, 39, stroke=AMBER, width=PRIMARY),
+    ]
+
+
+register(
+    "trg_on_cloak_break", "On cloak break",
+    "A dotted cloud split by a spark", plate_tag, g_trg_on_cloak_break,
+)
+
+
+def g_trg_on_land():
+    return [
+        dot(32, 22, 8, fill=BONE),
+        line(16, 38, 48, 38, stroke=BONE, width=PRIMARY),
+        path("M20 38 Q 24 32 28 38", stroke=BONE, width=3),
+        path("M36 38 Q 40 32 44 38", stroke=BONE, width=3),
+    ]
+
+
+register(
+    "trg_on_land", "On land",
+    "A ball above a ground line, two small puff arcs", plate_tag, g_trg_on_land,
+)
+
+
+def g_trg_on_speed_tier_up():
+    return [
+        f'<path d="M16 38 A 16 16 0 0 1 48 38" fill="none" stroke="{BONE}" stroke-width="{DETAIL}"/>',
+        line(32, 38, 42, 24, stroke=BONE, width=3),
+        chevron(32, 16, 8, 6, stroke=BONE, width=3),
+    ]
+
+
+register(
+    "trg_on_speed_tier_up", "On speed tier up",
+    "A speedometer arc, the needle past a tick, a small up chevron", plate_tag, g_trg_on_speed_tier_up,
+)
+
+
+def g_trg_on_pickup():
+    return [
+        path("M20 14 V26 A 12 12 0 0 0 44 26 V14", stroke=BONE, width=PRIMARY, fill="none"),
+        rect(29, 34, 6, 6, fill=MINT),
+        line(24, 32, 29, 36, stroke=BONE, width=3, dash="2 2"),
+        line(40, 32, 35, 36, stroke=BONE, width=3, dash="2 2"),
+    ]
+
+
+register(
+    "trg_on_pickup", "On pickup",
+    "A U-magnet with a scrap square and two pull lines", plate_tag, g_trg_on_pickup,
+)
+
+
+def g_trg_on_damage_taken():
+    return [
+        rect(20, 16, 24, 32, fill="none", stroke=BONE, width=PRIMARY, rx=3),
+        path("M28 16 L32 28 L27 30 L36 48", stroke=IRON_OXIDE, width=3),
+    ]
+
+
+register(
+    "trg_on_damage_taken", "On damage taken",
+    "A plate with a jagged crack", plate_tag, g_trg_on_damage_taken,
+)
+
+
+def g_trg_timed():
+    return [
+        ring(32, 32, 14, stroke=BONE, width=DETAIL),
+        line(32, 32, 32, 21, stroke=BONE, width=3),
+        line(32, 32, 40, 32, stroke=BONE, width=3),
+        path("M42 20 A 6 6 0 1 1 40 16", stroke=BONE, width=2.5),
+    ]
+
+
+register(
+    "trg_timed", "Timed",
+    "A clock face with one hand and a small repeat arrow", plate_tag, g_trg_timed,
+)
+
+# ---- Threat types (4) -----------------------------------------------------------
+
+
+def g_thr_instant():
+    els = [dot(32, 40, 11, fill=CHARCOAL)]
+    for i in range(8):
+        ang = math.radians(i * 45)
+        x1, y1 = 32 + 11 * math.cos(ang), 40 + 11 * math.sin(ang)
+        x2, y2 = 32 + 15 * math.cos(ang), 40 + 15 * math.sin(ang)
+        els.append(line(x1, y1, x2, y2, stroke=HAZARD, width=3))
+    els.append(ring(32, 40, 11, stroke=HAZARD, width=3))
+    return els
+
+
+register(
+    "thr_instant", "Instant AOE", "A solid disc with a spiked rim",
+    lambda: plate_triangle("thr-instant-stripes"), g_thr_instant,
+)
+
+
+def g_thr_wave():
+    return [
+        path("M20 44 Q 32 28 44 44", stroke=HAZARD, width=5),
+        chevron(32, 24, 8, 6, stroke=BONE, width=3),
+        chevron(20, 34, 8, 6, stroke=BONE, width=3),
+        chevron(44, 34, 8, 6, stroke=BONE, width=3),
+    ]
+
+
+register(
+    "thr_wave", "Travelling wave", "One arc front with three chevrons pointing outward",
+    lambda: plate_triangle("thr-wave-stripes"), g_thr_wave,
+)
+
+
+def g_thr_projectile():
+    return [
+        path("M14 46 Q 24 24 34 30", stroke=BONE, width=3, dash="3 4"),
+        path("M40 38 V30 H48 V38 M38 44 H50 M40 38 L38 44 M48 38 L50 44", stroke=HAZARD, width=3),
+    ]
+
+
+register(
+    "thr_projectile", "Projectile", "A dotted arc ending in four closing brackets",
+    lambda: plate_triangle("thr-proj-stripes"), g_thr_projectile,
+)
+
+
+def g_thr_lane():
+    return [
+        dot(14, 40, 4, fill=BONE),
+        rect(18, 36, 34, 8, fill="none", stroke=HAZARD, width=3),
+        rect(18, 36, 17, 8, fill=HAZARD),
+    ]
+
+
+register(
+    "thr_lane", "Lane or beam", "A long bar half filled from its left end, a source dot at left",
+    lambda: plate_triangle("thr-lane-stripes"), g_thr_lane,
+)
+
+# ---- Objectives (6) ----------------------------------------------------------
+
+
+def g_obj_beacon():
+    return [
+        line(32, 18, 32, 50, stroke=BONE, width=PRIMARY),
+        f'<path d="M24 24 A 10 10 0 0 1 40 24" fill="none" stroke="{MINT}" stroke-width="{DETAIL}"/>',
+        f'<path d="M20 30 A 16 16 0 0 1 44 30" fill="none" stroke="{MINT}" stroke-width="3" opacity="0.7"/>',
+    ]
+
+
+register(
+    "obj_beacon", "Beacon", "A mast with two ring waves at its top", plate_brackets, g_obj_beacon,
+)
+
+
+def g_obj_warden():
+    return [
+        path("M22 18 Q 12 32 22 46", stroke=BONE, width=PRIMARY),
+        path("M42 18 Q 52 32 42 46", stroke=BONE, width=PRIMARY),
+        line(22, 24, 30, 24, stroke=HAZARD, width=3),
+        line(22, 32, 30, 32, stroke=HAZARD, width=3),
+        line(22, 40, 30, 40, stroke=HAZARD, width=3),
+    ]
+
+
+register(
+    "obj_warden", "The Warden", "A C-clamp jaw with three teeth, closing", plate_brackets, g_obj_warden,
+)
+
+
+def g_obj_gate():
+    return [
+        rect(18, 24, 7, 26, fill=BONE),
+        rect(39, 24, 7, 26, fill=BONE),
+        rect(15, 20, 34, 6, fill=BONE),
+        poly(32, 18, 8, 4, fill=AMBER, start_deg=-90),
+    ]
+
+
+register(
+    "obj_gate", "Reward gate", "A square arch with a diamond keystone", plate_brackets, g_obj_gate,
+)
+
+
+def g_obj_fabricator():
+    return [
+        f'<circle cx="32" cy="32" r="16" fill="none" stroke="{BONE}" stroke-width="{PRIMARY}"/>',
+        poly(32, 32, 8, 6, fill=CHARCOAL, stroke=BONE, width=3, start_deg=0),
+    ]
+
+
+register(
+    "obj_fabricator", "Drive-through fabricator",
+    "An upright hoop with a hex nut inside", plate_brackets, g_obj_fabricator,
+)
+
+
+def g_obj_vault():
+    return [
+        rect(16, 26, 32, 22, fill="none", stroke=BONE, width=PRIMARY, rx=3),
+        rect(16, 32, 32, 6, fill=AMBER),
+        dot(22, 35, 2, fill=CHARCOAL), dot(42, 35, 2, fill=CHARCOAL),
+        dot(22, 29, 2, fill=CHARCOAL), dot(42, 29, 2, fill=CHARCOAL),
+    ]
+
+
+register(
+    "obj_vault", "Plated vault", "A squat box with a heavy band and four rivets", plate_brackets, g_obj_vault,
+)
+
+
+def g_obj_event():
+    return [
+        path("M24 40 L24 28 A 8 8 0 0 1 40 28 L40 40 Z", fill=BONE),
+        rect(22, 40, 20, 5, fill=BONE),
+        path("M44 22 Q 50 26 44 30", stroke=AMBER, width=3),
+        path("M48 18 Q 56 26 48 34", stroke=AMBER, width=3),
+    ]
+
+
+register(
+    "obj_event", "World event", "A klaxon lamp with two sound arcs", plate_brackets, g_obj_event,
+)
+
+# ---- Resources (6) -------------------------------------------------------------
+
+
+def g_res_scrap():
+    return [
+        poly(32, 32, 18, 4, fill=BONE, start_deg=20),
+        ring(32, 32, 3.5, stroke=CHARCOAL, width=2.5),
+    ]
+
+
+register(
+    "res_scrap", "Scrap", "An irregular four-facet chunk with a bolt hole", plate_none, g_res_scrap,
+)
+
+
+def g_res_heft():
+    return [
+        dot(32, 20, 9, fill=BONE),
+        rect(14, 34, 36, 6, fill=BONE, rx=2),
+        rect(17, 42, 30, 6, fill=BONE, rx=2),
+        rect(20, 50, 24, 6, fill=BONE, rx=2),
+    ]
+
+
+register(
+    "res_heft", "Heft class", "A ball resting on three stacked plates", plate_none, g_res_heft,
+)
+
+
+def g_res_health():
+    return [
+        f'<path d="M18 30 A 14 14 0 0 1 46 30 L46 34 A 14 12 0 0 1 32 50 A 14 12 0 0 1 18 34 Z" '
+        f'fill="none" stroke="{BONE}" stroke-width="{PRIMARY}"/>',
+        line(32, 24, 32, 36, stroke=BONE, width=4),
+        line(26, 30, 38, 30, stroke=BONE, width=4),
+    ]
+
+
+register(
+    "res_health", "Health", "The cockpit dome with a plus on its glass", plate_none, g_res_health,
+)
+
+
+def g_res_core():
+    return [poly(32, 32, 18, 4, fill=BONE, start_deg=0), dot(32, 32, 4, fill=MINT)]
+
+
+register(
+    "res_core", "Bonus core", "A diamond with a mint dot at its heart", plate_none, g_res_core,
+)
+
+
+def g_res_timer():
+    return [
+        ring(32, 32, 18, stroke=BONE, width=PRIMARY),
+        line(32, 32, 32, 18, stroke=BONE, width=3),
+        line(32, 32, 42, 32, stroke=BONE, width=3),
+    ]
+
+
+register(
+    "res_timer", "Run clock", "A clock face with two hands", plate_none, g_res_timer,
+)
+
+
+def g_res_difficulty():
+    els = [line(12, 46, 52, 46, stroke=BONE, width=3)]
+    heights = [6, 12, 18, 26]
+    xs = [16, 27, 38, 48]
+    for x, h in zip(xs, heights):
+        els.append(rect(x, 46 - h, 8, h, fill=BONE))
+    return els
+
+
+register(
+    "res_difficulty", "Difficulty", "A bar with rising sawtooth notches", plate_none, g_res_difficulty,
+)
+
+# ---- Factions (4) ---------------------------------------------------------------
+
+
+def g_fac_fleet():
+    return [
+        rect(16, 22, 32, 20, fill=BRASS, rx=2),
+        line(24, 22, 24, 42, stroke=CHARCOAL, width=2, dash="3 3"),
+        ring(38, 32, 3, stroke=CHARCOAL, width=2.5),
+    ]
+
+
+register(
+    "fac_fleet", "Furnace Fleet crews",
+    "A brass requisition tag with a stencilled notch and one bolt hole", plate_pentagon, g_fac_fleet,
+)
+
+
+def g_fac_reactor():
+    return [
+        f'<path d="M16 40 A 16 16 0 0 1 48 40 Z" fill="{BONE}"/>',
+        rect(20, 40, 5, 12, fill=ANCIENT),
+        rect(29.5, 40, 5, 12, fill=ANCIENT),
+        rect(39, 40, 5, 12, fill=ANCIENT),
+    ]
+
+
+register(
+    "fac_reactor", "Reactor relics",
+    "A low dome over three thick vent bars", plate_pentagon, g_fac_reactor,
+)
+
+
+def g_fac_swarm():
+    pts = [(32, 14), (22, 26), (42, 26), (14, 40), (32, 40), (50, 40)]
+    els = []
+    for cx, cy in pts:
+        els.append(f'<polygon points="{cx-6},{cy+6} {cx},{cy-6} {cx+6},{cy+6}" fill="{BONE}"/>')
+    els.append(dot(32, 14, 2, fill=ANCIENT))
+    return els
+
+
+register(
+    "fac_swarm", "Swarm remnants", "Five small triangles in an arrowhead", plate_pentagon, g_fac_swarm,
+)
+
+
+def g_fac_mind():
+    return [
+        f'<circle cx="32" cy="30" r="10" fill="none" stroke="{BONE}" stroke-width="{PRIMARY}"/>',
+        dot(32, 30, 3, fill=ANCIENT),
+        path("M20 24 Q 12 20 14 12", stroke=BONE, width=3),
+        path("M44 24 Q 52 20 50 12", stroke=BONE, width=3),
+    ]
+
+
+register(
+    "fac_mind", "The Mind's hands", "A round lens held by a two-joint arm", plate_pentagon, g_fac_mind,
+)
+
+
+# --- Compose and write --------------------------------------------------------
+def compose(icon_id):
+    spec = ICONS[icon_id]
+    backplate_els = spec["backplate"]()
+    glyph_els = spec["glyph"]()
+    defs = []
+    body = []
+    for el in backplate_els:
+        if el.startswith("<pattern") or el.startswith("<clipPath"):
+            defs.append(el)
+        else:
+            body.append(el)
+    defs_block = f"<defs>{''.join(defs)}</defs>" if defs else ""
+    body_block = "".join(body) + "".join(glyph_els)
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+        f"{defs_block}{body_block}</svg>\n"
+    )
+
+
+def write_readme(ids):
+    lines = [
+        "# Core-loop V2 icons",
+        "",
+        "Generated by `sketches/core-loop/tools/icons/generate_icons.py` from the "
+        "70-id list in `VISUAL-LANGUAGE.md` section 5. Regenerate after any script "
+        "edit; do not hand-edit the SVGs.",
+        "",
+        "| id | file | meaning |",
+        "| --- | --- | --- |",
+    ]
+    for icon_id in ids:
+        meaning = ICONS[icon_id]["meaning"]
+        lines.append(f"| `{icon_id}` | `{icon_id}.svg` | {meaning} |")
+    lines.append("")
+    with open(README_PATH, "w") as f:
+        f.write("\n".join(lines))
+
+
+def main():
+    os.makedirs(ICON_DIR, exist_ok=True)
+    written = []
+    for icon_id in ICONS:
+        svg = compose(icon_id)
+        out_path = os.path.join(ICON_DIR, f"{icon_id}.svg")
+        with open(out_path, "w") as f:
+            f.write(svg)
+        written.append(icon_id)
+    write_readme(written)
+    print(f"Wrote {len(written)} icons and README.md to {ICON_DIR}")
+    return written
+
+
+if __name__ == "__main__":
+    main()
