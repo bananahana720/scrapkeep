@@ -296,6 +296,23 @@ At every death and at the end of a run, the spine appends one cumulative record 
 
 The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's.
 
+## UI regions (`src/ui/screen_regions.gd`)
+
+During play the screen is four horizontal bands, as shares of the visible height, and nothing drawn in one band reaches another:
+
+| Band | Height | Holds |
+| --- | --- | --- |
+| `top` | 0 to 14% | screen titles, the objective line with its core pips, the run status |
+| `toasts` | 15 to 29% | notable facts, at most 2 at once, and the hold-R restart meter |
+| `prompts` | 62 to 84%, 6% side margins | world-attached prompts: reward gates and fabricators |
+| `bottom` | 86 to 100% | the HUD: speed, heft and the key hints |
+
+- The middle between `toasts` and `prompts` is the play view and the reticle.
+- A toast whose words are already showing is not repeated; the showing one stays up for another full beat.
+- A module that labels something in the world uses `src/ui/world_prompt.gd` (a `Label`), sets its text and colour, and calls `attach(anchor, offset, reach)`. It never uses a `Label3D` for words. The HUD places every prompt each frame: nearest first, at most 3, under its anchor's column where there is room, clamped inside `prompts`, never overlapping another prompt.
+- Screens (title, class select, death, summary), the field notes and the tuning panel draw only while flow is out of play or the game is paused, when the HUD bands are hidden.
+- Presentation's discovery banner follows the same rule: it belongs in `toasts` or in the middle view, never in `top` or `prompts`.
+
 ## Tests
 
 - Name module tests `tests/combat_*.gd`, `tests/build_*.gd`, `tests/presentation_*.gd` and `tests/world_*.gd`.
