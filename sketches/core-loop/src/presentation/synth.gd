@@ -237,6 +237,18 @@ static func note(instrument: String, midi: int) -> PackedFloat32Array:
 			buf = choir(midi, "ah", seconds(1.0))
 		"choir_oo":
 			buf = choir(midi, "oo", seconds(1.0))
+		"sax_lounge":
+			buf = lead(midi, Harmony.BEAT * 6, 0.06, 4.3, 0.0075, 0.22)
+		"tom":
+			buf = tom(midi, seconds(0.8))
+		"sub808":
+			buf = sub808(midi, seconds(1.3))
+		"buzz":
+			buf = buzz(midi, seconds(2.0), 0.0)
+		"buzz_loose":
+			buf = buzz(midi, seconds(2.0), 0.35)
+		"chime":
+			buf = chime(midi, seconds(2.6))
 		_:
 			buf = keys(midi, Harmony.BAR)
 	_store(key, buf)
@@ -332,8 +344,9 @@ static func keys(midi: int, n: int) -> PackedFloat32Array:
 
 
 # The lead is a synth saxophone, for Andrew: a scoop into the pitch, reedy self-FM
-# that brightens with the breath, delayed vibrato and a little air.
-static func lead(midi: int, n: int) -> PackedFloat32Array:
+# that brightens with the breath, delayed vibrato and a little air. Moss's lounge plays
+# the same horn with a wider scoop and a slower, later vibrato (sax_lounge).
+static func lead(midi: int, n: int, scoop_depth := 0.03, vib_rate := 5.6, vib_depth := 0.0055, vib_delay := 0.16) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var rng := _rng(midi)
@@ -343,9 +356,9 @@ static func lead(midi: int, n: int) -> PackedFloat32Array:
 	for i in n:
 		var t := i * INV_RATE
 		var vibrato := 0.0
-		if t > 0.16:
-			vibrato = 0.0055 * sin(TAU * 5.6 * (t - 0.16)) * minf(1.0, (t - 0.16) * 5.0)
-		var scoop := -0.03 * exp(-t * 28.0)
+		if t > vib_delay:
+			vibrato = vib_depth * sin(TAU * vib_rate * (t - vib_delay)) * minf(1.0, (t - vib_delay) * 5.0)
+		var scoop := -scoop_depth * exp(-t * 28.0)
 		var freq := f * (1.0 + vibrato + scoop)
 		phase += TAU * freq * INV_RATE
 		reed += TAU * freq * 3.0 * INV_RATE
@@ -594,6 +607,79 @@ static func boom() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.95), 8, 800)
 
 
+# --- The leitmotif voices (SOUND-STORY.md section 2) ------------------------------------
+
+# Kest's tuned floor tom: a skin that settles onto its pitch, a second mode a little
+# over a fifth up, and a felt strike, so a thump sits in key.
+static func tom(midi: int, n: int) -> PackedFloat32Array:
+	var buf := buffer(n)
+	var f := Harmony.hz(midi)
+	var rng := _rng(41)
+	var phase := 0.0
+	var mode2 := 0.0
+	var low := 0.0
+	for i in n:
+		var t := i * INV_RATE
+		var bend := 1.0 + 0.35 * exp(-t * 40.0)
+		phase += TAU * f * bend * INV_RATE
+		mode2 += TAU * f * 1.59 * bend * INV_RATE
+		low += (rng.randf_range(-1.0, 1.0) - low) * 0.15
+		var body := sin(phase) * exp(-t * 5.5) + 0.3 * sin(mode2) * exp(-t * 11.0)
+		buf[i] = (tanh(1.4 * body) + low * exp(-t * 70.0) * 0.6) * minf(1.0, t * 1200.0)
+	return declick(normalize(buf, 0.8), 8, 1200)
+
+
+# Kest's 808: a sine that drops an octave onto its note and holds, lightly driven.
+static func sub808(midi: int, n: int) -> PackedFloat32Array:
+	var buf := buffer(n)
+	var f := Harmony.hz(midi)
+	var phase := 0.0
+	for i in n:
+		var t := i * INV_RATE
+		phase += TAU * f * (1.0 + exp(-t * 28.0)) * INV_RATE
+		buf[i] = tanh(1.6 * sin(phase)) * minf(1.0, t * 600.0) * exp(-t * 2.2)
+	return declick(normalize(buf, 0.85), 16, 1500)
+
+
+# The swarm: a thin high sawtooth with its low end cut, gated in sixteenths on the band
+# grid. loose > 0 detunes and smears the gate, the formation breaking apart.
+static func buzz(midi: int, n: int, loose: float) -> PackedFloat32Array:
+	var buf := buffer(n)
+	var rng := _rng(midi * 7 + int(loose * 100.0))
+	var f := Harmony.hz(midi) * Harmony.ratio(rng.randf_range(-0.4, 0.4) * loose)
+	var phase := 0.0
+	var prev_x := 0.0
+	var prev_y := 0.0
+	var drift := 0.0
+	for i in n:
+		var t := i * INV_RATE
+		drift += (rng.randf_range(-1.0, 1.0) - drift) * 0.0005
+		phase = fposmod(phase + f * (1.0 + drift * loose * 0.2) * INV_RATE, 1.0)
+		var x := 2.0 * phase - 1.0
+		prev_y = 0.9 * (prev_y + x - prev_x)
+		prev_x = x
+		var in_step := float(posmod(i, Harmony.STEP)) / Harmony.STEP
+		var gate := 1.0 if in_step < lerpf(0.62, 0.9, loose) else 0.15
+		buf[i] = prev_y * gate * minf(1.0, t * 300.0)
+	var smooth := 0.0
+	for i in n:
+		smooth += (buf[i] - smooth) * 0.35
+		buf[i] = smooth
+	return declick(normalize(buf, 0.5), 32, 800)
+
+
+# The Mind: a pure sine with a long tail that bends 3 cents flat as it rings.
+static func chime(midi: int, n: int) -> PackedFloat32Array:
+	var buf := buffer(n)
+	var f := Harmony.hz(midi)
+	var phase := 0.0
+	for i in n:
+		var t := i * INV_RATE
+		phase += TAU * f * (1.0 - 0.00173 * minf(1.0, t / 1.8)) * INV_RATE
+		buf[i] = sin(phase) * minf(1.0, t * 200.0) * exp(-t * 1.15)
+	return declick(normalize(buf, 0.6), 16, 3000)
+
+
 # --- The 2011 bass rack -----------------------------------------------------------------
 
 # One LFO cycle of a wobble: detuned saws and a square sub-octave through a resonant
@@ -701,13 +787,58 @@ static func drum(instrument: String) -> PackedFloat32Array:
 			buf = clap()
 		"boom":
 			buf = boom()
+		"brush":
+			buf = brush()
+		"geiger":
+			buf = geiger()
+		"choke":
+			buf = choke()
 		_:
 			buf = crash()
 	_store(key, buf)
 	return buf
 
 
-const DRUMS := ["kick", "snare", "hat", "open_hat", "ride", "crash", "anvil", "clap", "boom"]
+const DRUMS := ["kick", "snare", "hat", "open_hat", "ride", "crash", "anvil", "clap", "boom", "brush", "geiger", "choke"]
+
+
+# A brush swept across the ride: soft noise that swells in, the lounge's hat.
+static func brush() -> PackedFloat32Array:
+	var n := seconds(0.22)
+	var buf := buffer(n)
+	var rng := _rng(51)
+	var low := 0.0
+	var band := 0.0
+	var g := 2.0 * sin(PI * 4200.0 * INV_RATE)
+	for i in n:
+		var t := i * INV_RATE
+		low += g * band
+		band += g * (rng.randf_range(-1.0, 1.0) - low - 0.8 * band)
+		buf[i] = band * minf(1.0, t / 0.03) * exp(-t * 14.0)
+	return declick(normalize(buf, 0.7), 32, 600)
+
+
+# One Geiger click: a dry snap with a faint sub knock, a reactor relic counting.
+static func geiger() -> PackedFloat32Array:
+	var n := seconds(0.03)
+	var buf := buffer(n)
+	var rng := _rng(52)
+	for i in n:
+		var t := i * INV_RATE
+		buf[i] = rng.randf_range(-1.0, 1.0) * exp(-t * 900.0) + sin(TAU * 90.0 * t) * exp(-t * 120.0) * 0.4
+	return declick(normalize(buf, 0.7), 2, 200)
+
+
+# A cymbal grabbed by the hand: the crash's strike cut dead in 80 ms. Crowd control
+# that could not hold you (Rivet's ignored hit, tenacity).
+static func choke() -> PackedFloat32Array:
+	var buf := crash().slice(0, seconds(0.11))
+	var n := buf.size()
+	for i in n:
+		var t := i * INV_RATE
+		if t > 0.06:
+			buf[i] *= exp(-(t - 0.06) * 90.0)
+	return declick(normalize(buf, 0.7), 4, 64)
 
 
 static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Array:

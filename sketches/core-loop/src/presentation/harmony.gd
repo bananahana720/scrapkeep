@@ -118,6 +118,50 @@ const THEMES := ["spillway", "sluice", "weir"]
 # Each level's motif, its first four notes: the synergy fanfare quotes the current one.
 const MOTIF_HEADS := [[69, 72, 74, 76], [74, 77, 79, 81], [62, 65, 69, 72]]
 
+# The leitmotifs (SOUND-STORY.md section 2), one row per id, so a class row's motif and
+# an enemy row's family resolve through one lookup. cells are [step, midi, steps] on the
+# band grid in D; voice is the cue's instrument; band is the voice a class motif takes
+# when it seeds the counter-line, band_octave its register there. Rivet's roll is the
+# closed-hat roll under the hammered note; Kest's boom doubles the last thump on the
+# 808; the Fleet's stamps are the anvil hits; the swarm's chord is its lock; the Mind
+# has no cells of its own and quotes the class motif (mind_quote).
+const MOTIFS := {
+	"sable": {"family": "class", "cells": [[0, 62, 1], [1, 65, 1], [2, 69, 1], [3, 72, 1], [4, 76, 2]], "voice": "mallet", "band": "bell", "band_octave": 12},
+	"rivet": {"family": "class", "cells": [[0, 69, 1], [1, 69, 1], [2, 69, 1], [4, 74, 2]], "voice": "clav", "band": "clav", "band_octave": 12, "roll": true},
+	"kest": {"family": "class", "cells": [[0, 62, 2], [2, 57, 2], [4, 53, 2], [6, 50, 4]], "voice": "tom", "band": "tom", "band_octave": 12, "boom": true},
+	"fleet": {"family": "fleet", "cells": [[0, 50, 2], [4, 50, 2], [6, 51, 2], [8, 50, 4]], "voice": "brass", "stamps": [0, 4]},
+	"reactor": {"family": "ancient", "cells": [[0, 44, 16], [0, 56, 16]], "voice": "sub"},
+	"swarm": {"family": "ancient", "cells": [[0, 79, 16]], "chord": [74, 79, 84, 89], "voice": "buzz"},
+	"mind": {"family": "ancient", "cells": [], "voice": "chime"},
+}
+const CLASS_MOTIFS := ["sable", "rivet", "kest"]
+
+
+static func motif(id: String) -> Dictionary:
+	return MOTIFS.get(id, {})
+
+
+static func motif_notes(id: String) -> Array:
+	var notes: Array = []
+	for cell in motif(id).get("cells", []):
+		notes.append(int(cell[1]))
+	return notes
+
+
+# The Mind's hand quotes a class motif back: every interval flipped around the first
+# note, the last note a semitone flat, over the class motif's own rhythm. Sable's
+# D F A C E comes back D B G E B.
+static func mind_quote(class_id: String) -> Array:
+	var cells: Array = motif(class_id).get("cells", [])
+	if cells.is_empty():
+		return []
+	var pivot: int = cells[0][1]
+	var quote: Array = []
+	for cell in cells:
+		quote.append([cell[0], 2 * pivot - int(cell[1]), cell[2]])
+	quote[quote.size() - 1][1] -= 1
+	return quote
+
 
 static func level_progression(theme: int) -> Array:
 	return [PROGRESSION, SLUICE, WEIR][clampi(theme, 0, 2)]

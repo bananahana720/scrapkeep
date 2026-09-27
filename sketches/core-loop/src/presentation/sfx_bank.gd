@@ -56,7 +56,20 @@ const TRIM_DB := {
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
+	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
+	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0,
+	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0,
+	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0,
+	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
+	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0,
+	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
+	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 }
+# Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
+# loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
+const BABBLE_ROOTS := [50, 52, 53, 55, 57, 48]
+const BABBLE_LEVEL := 0
+const BABBLE_RELENT := -1
 
 static var _samples := {}
 # The live key and level a keyed or themed bake is for (see samples_at).
@@ -270,6 +283,44 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _threat_whistle()
 		"threat_hum":
 			return _threat_hum()
+		"sable_arpeggio":
+			return _sable_release()
+		"rivet_hihat_roll":
+			return _rivet_release()
+		"kest_low_thump":
+			return _kest_release()
+		"sable_ready", "rivet_ready", "kest_ready":
+			return _ready_pulse(id.get_slice("_", 0))
+		"sable_break", "rivet_break", "kest_break":
+			return _break_free(id.get_slice("_", 0))
+		"fleet_motif":
+			return _fleet_motif()
+		"reactor_tick":
+			return Synth.drum("geiger")
+		"reactor_erupt":
+			return _reactor_erupt()
+		"swarm_buzz":
+			return _cut(_n("buzz", 79), 0.6)
+		"swarm_lock":
+			return _swarm_lock()
+		"swarm_scatter":
+			return _swarm_scatter()
+		"mind_sable", "mind_rivet", "mind_kest":
+			return _mind_quote(id.get_slice("_", 1))
+		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
+			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
+		"tenacity_choke":
+			return Synth.drum("choke")
+		"callout_chime":
+			return _mix([[_cut(_n("mallet", 81), 0.08), 0, 0.8], [_cut(_n("mallet", 86), 0.14), Synth.seconds(0.07), 0.9],
+				[_noise(0.01, 6000.0, 6000.0, 400.0), 0, 0.25]])
+		"shop_bell":
+			return _shop_bell()
+		"bench_clank":
+			return _mix([[_fm(0.35, 196.0, 1.41, 4.0, 9.0), 0, 0.8], [_tone(0.12, 120.0, 60.0, "sine", 30.0), 0, 0.9],
+				[_noise(0.05, 2500.0, 900.0, 60.0), 0, 0.6], [_fm(0.25, 523.0, 2.76, 2.0, 14.0), Synth.seconds(0.06), 0.35]], true)
+		"babble":
+			return babble("Hm. Hm, hm.", BABBLE_LEVEL)
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -701,3 +752,287 @@ static func _threat_hum() -> PackedFloat32Array:
 	var tear := Synth.seconds(0.42)
 	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5],
 		[_noise(0.18, 1800.0, 5200.0, 10.0), tear, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), tear, 0.6]], true)
+
+
+# --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
+# Every class and faction cue reads its notes from Harmony.MOTIFS, so the class row,
+# the band's counter-line and these cues can never disagree about the tune.
+
+# A motif's cells as score events on an instrument, from a step, an octave up or down.
+static func _motif_score(id: String, at: int, instrument: String, gain: float, octave := 0) -> Array:
+	var score: Array = []
+	for cell in Harmony.motif(id).get("cells", []):
+		score.append([at + int(cell[0]), int(cell[1]) + octave, int(cell[2]), instrument, gain])
+	return score
+
+
+# Sable's release: the arpeggio reeled up in sixteenths, then the ninth resolving onto
+# a bright chord of bells.
+static func _sable_release() -> PackedFloat32Array:
+	var score := _motif_score("sable", 0, "mallet", 0.8)
+	score.append_array(_motif_score("sable", 0, "bell", 0.3, 12))
+	for midi in [65, 69, 72, 76]:
+		score.append([6, midi + 12, 6, "bell", 0.3])
+	score.append_array([[6, 53, 6, "keys", 0.3], [6, 57, 6, "keys", 0.3], [6, 60, 6, "keys", 0.3], [6, 64, 6, "keys", 0.3],
+		[6, 88, 6, "bell", 0.25], [6, 0, 2, "open_hat", 0.35]])
+	return Synth.render_score(score, 0.9)
+
+
+# Rivet's release: the hammered note over a closed-hat roll that doubles its rate, the
+# fourth landing on the beat with an open-hat crash.
+static func _rivet_release() -> PackedFloat32Array:
+	var step := Synth.score_step
+	var score := _motif_score("rivet", 0, "clav", 0.8)
+	score.append_array(_motif_score("rivet", 0, "clav", 0.35, 12))
+	score.append_array([[4, 0, 8, "crash", 0.45], [4, 0, 2, "open_hat", 0.7], [4, 0, 2, "kick", 0.6]])
+	var parts: Array = [[Synth.render_score(score, 0.8), 0, 1.0]]
+	var hits := [0.0, 1.0, 2.0, 2.5, 3.0, 3.25, 3.5, 3.75]
+	for i in hits.size():
+		parts.append([Synth.drum("hat"), int(hits[i] * step), 0.45 + 0.07 * i])
+	return _mix(parts)
+
+
+# Kest's release: tick, tick, tick, boom. The triad falls on the tuned tom in eighths
+# and the last thump is doubled on the 808.
+static func _kest_release() -> PackedFloat32Array:
+	var score := _motif_score("kest", 0, "tom", 0.85)
+	var cells: Array = Harmony.motif("kest")["cells"]
+	var last: Array = cells[cells.size() - 1]
+	score.append([int(last[0]), int(last[1]) - 12, 8, "sub808", 0.9])
+	score.append([int(last[0]), 0, 2, "kick", 0.5])
+	return Synth.render_score(score, 1.0)
+
+
+# The ready pulse: the motif's first note on the class instrument, 120 ms, an octave up
+# so it reads over the band ("F is back").
+static func _ready_pulse(id: String) -> PackedFloat32Array:
+	var first: int = int(Harmony.motif(id)["cells"][0][1])
+	match id:
+		"rivet":
+			return _mix([[Synth.drum("hat"), 0, 0.8], [_cut(_n("clav", first + 12), 0.08), 0, 0.7]])
+		"kest":
+			return _mix([[_cut(_n("tom", first), 0.14), 0, 1.0]])
+	return _mix([[_cut(_n("mallet", first + 12), 0.12), 0, 1.0], [_cut(_n("bell", first + 24), 0.12), 0, 0.3]])
+
+
+# Breaking free: a bright burst in the class colour, then the class's first interval
+# an octave up (Rivet's is the fourth its sprint arrives on).
+static func _break_free(id: String) -> PackedFloat32Array:
+	var cells: Array = Harmony.motif(id)["cells"]
+	var a: int = int(cells[0][1]) + 12
+	var b: int = int(cells[cells.size() - 1][1] if id == "rivet" else cells[1][1]) + 12
+	var voice: String = Harmony.motif(id)["voice"]
+	var gap := Synth.score_step
+	return _mix([[_noise(0.18, 5200.0, 2600.0, 14.0, 0.001), 0, 0.55], [_cut(_n(voice, a), 0.2), 0, 0.85],
+		[_cut(_n(voice, b), 0.35), gap, 0.9], [_cut(_n("bell", b + 12), 0.4), gap, 0.3]])
+
+
+# The Fleet: stamp, stamp, decree. Two anvil hits on the beat, the brass lean D Eb D on
+# the offbeat. Every Fleet unit is a small Brindle.
+static func _fleet_motif() -> PackedFloat32Array:
+	var score := _motif_score("fleet", 0, "brass", 0.6)
+	score.append_array(_motif_score("fleet", 0, "brass", 0.35, 12))
+	for stamp in Harmony.motif("fleet")["stamps"]:
+		score.append([int(stamp), 0, 2, "anvil", 0.9])
+		score.append([int(stamp), 0, 2, "kick", 0.55])
+	return Synth.render_score(score, 0.9)
+
+
+# A reactor vent blowing: a boom, a steam roar falling away, and the Ab pedal dropping
+# out of the floor.
+static func _reactor_erupt() -> PackedFloat32Array:
+	var pedal: int = int(Harmony.motif("reactor")["cells"][0][1])
+	return _mix([[Synth.drum("boom"), 0, 1.0], [_noise(1.1, 3800.0, 350.0, 2.6, 0.004), 0, 0.8],
+		[_n("sub808", pedal), 0, 0.8], [Synth.drum("crash"), 0, 0.35]], true)
+
+
+# The swarm locks: the unison buzz snaps into stacked fourths and holds.
+static func _swarm_lock() -> PackedFloat32Array:
+	var row := Harmony.motif("swarm")
+	var unison: int = int(row["cells"][0][1])
+	var snap := Synth.seconds(0.3)
+	var parts: Array = [[_cut(_n("buzz", unison), 0.32), 0, 1.0], [_noise(0.02, 5000.0, 5000.0, 300.0), snap, 0.5]]
+	for midi in row["chord"]:
+		parts.append([_cut(_n("buzz", int(midi)), 1.5), snap, 0.6])
+	return _mix(parts)
+
+
+# Scattered: the chord falls apart into single detuned notes, then silence.
+static func _swarm_scatter() -> PackedFloat32Array:
+	var chord: Array = Harmony.motif("swarm")["chord"]
+	var parts: Array = []
+	for i in chord.size():
+		parts.append([_cut(_n("buzz_loose", int(chord[i])), 0.5 - 0.08 * i), Synth.seconds(0.11 * i), 0.8 - 0.12 * i])
+	return _mix(parts)
+
+
+# The Mind's hand quotes your class motif back, inverted and one note wrong, on a pure
+# sine that rings long.
+static func _mind_quote(class_id: String) -> PackedFloat32Array:
+	var score: Array = []
+	for cell in Harmony.mind_quote(class_id):
+		score.append([int(cell[0]), int(cell[1]) + 12, int(cell[2]) + 2, "chime", 0.7])
+	return Synth.render_score(score, 2.4)
+
+
+# A hold loop, n samples long. The four holds of SOUND-STORY.md section 3 sit on the
+# sinister degrees around home, so a chain of them assembles D, Bb, Eb and Ab. strain
+# (0..1) raises the tether's pitch as the ball pulls against it. The riser is the one
+# sound that means "this is about to be over".
+static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
+	var buf := Synth.buffer(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = kind.hash()
+	var phase := 0.0
+	var low := 0.0
+	var band := 0.0
+	var tone := 0.0
+	var grain := 0.0
+	var next_grain := 0
+	match kind:
+		"pit":
+			var f := _hz(50)
+			for i in n:
+				var t := i * Synth.INV_RATE
+				var grind := 0.5 + 0.5 * sin(TAU * 2.5 * t)
+				if i >= next_grain:
+					grain = rng.randf_range(0.4, 1.0)
+					next_grain = i + int(Synth.seconds(lerpf(0.03, 0.008, grind) * rng.randf_range(0.6, 1.4)))
+				grain *= 0.992
+				var x := rng.randf_range(-1.0, 1.0) * grain
+				var g := 2.0 * sin(PI * 3600.0 * Synth.INV_RATE)
+				low += g * band
+				band += g * (x - low - 0.7 * band)
+				phase = fposmod(phase + f * Synth.INV_RATE, 1.0)
+				tone += ((2.0 * phase - 1.0) - tone) * 0.06
+				buf[i] = band * 0.5 + tone * 1.4 * (0.7 + 0.3 * grind)
+		"bola":
+			var f := _hz(46)
+			for i in n:
+				var t := i * Synth.INV_RATE
+				var whip := fposmod(t, 0.16) / 0.16
+				var x := rng.randf_range(-1.0, 1.0)
+				var cutoff := lerpf(900.0, 3400.0, whip)
+				var g := 2.0 * sin(PI * cutoff * Synth.INV_RATE)
+				low += g * band
+				band += g * (x - low - 0.6 * band)
+				phase = fposmod(phase + f * Synth.INV_RATE, 1.0)
+				tone += ((1.0 if phase < 0.5 else -1.0) - tone) * 0.1
+				buf[i] = band * exp(-whip * 6.0) * 0.6 + tone * (0.55 + 0.45 * signf(sin(TAU * 14.0 * t)))
+		"tether":
+			for i in n:
+				var t := i * Synth.INV_RATE
+				var f := _hz(51.0 + 2.0 * strain * float(i) / n) * (1.0 + 0.004 * sin(TAU * 7.0 * t))
+				phase = fposmod(phase + f * Synth.INV_RATE, 1.0)
+				var x := 2.0 * phase - 1.0
+				var g := 2.0 * sin(PI * f * 3.0 * Synth.INV_RATE)
+				low += g * band
+				band += g * (x - low - 0.25 * band)
+				var creak := rng.randf_range(-1.0, 1.0) * 0.08 if rng.randf() < 0.004 else 0.0
+				buf[i] = band + creak
+		"net":
+			var f := _hz(44)
+			for i in n:
+				var t := i * Synth.INV_RATE
+				phase = fposmod(phase + f * Synth.INV_RATE, 1.0)
+				tone += ((2.0 * phase - 1.0) - tone) * 0.25
+				var crackle := rng.randf_range(-1.0, 1.0) if rng.randf() < 0.02 else 0.0
+				buf[i] = tone * (0.6 + 0.4 * sin(TAU * 60.0 * t)) + crackle * 0.6
+		"riser":
+			var p2 := 0.0
+			for i in n:
+				var x := float(i) / n
+				var f := _hz(lerpf(56.0, 74.0, x * x))
+				phase += TAU * f * Synth.INV_RATE
+				p2 += TAU * f * 1.5 * Synth.INV_RATE
+				var shimmer := 0.75 + 0.25 * sin(TAU * lerpf(4.0, 16.0, x) * i * Synth.INV_RATE)
+				buf[i] = (sin(phase) + 0.5 * sin(p2)) * shimmer * (0.2 + 0.8 * x)
+	for i in mini(n, 400):
+		buf[i] *= float(i) / 400.0
+	return Synth.declick(Synth.normalize(buf, 0.9), 64, 600)
+
+
+# The shop bell: a counter bell, then the rice cooker's two "done" beeps on high D.
+static func _shop_bell() -> PackedFloat32Array:
+	return _mix([[_fm(0.6, _hz(93), 3.5, 2.0, 5.0), 0, 0.6], [_cut(_n("beep", 86), 0.12), Synth.seconds(0.16), 0.9],
+		[_cut(_n("mallet", 86), 0.12), Synth.seconds(0.16), 0.5], [_cut(_n("beep", 86), 0.2), Synth.seconds(0.34), 0.9],
+		[_cut(_n("mallet", 86), 0.2), Synth.seconds(0.34), 0.5]])
+
+
+# --- Moss's babble (SOUND-STORY.md section 8) --------------------------------------------
+# One blip per letter, a square through a 1.2 kHz low-pass, drawn from the beat root's
+# Dorian triad and seeded by the line, so a line always babbles the same way. beat is
+# 1 to 6 for the conversation loop, BABBLE_LEVEL for barks, BABBLE_RELENT for the sigh.
+
+static func babble(text: String, beat: int, shift := 0) -> PackedFloat32Array:
+	var relent := beat == BABBLE_RELENT
+	var root: int = BABBLE_ROOTS[beat - 1] if beat >= 1 and beat <= 6 else 50
+	var triad := [root, Harmony.scale_shift(root, 2, Harmony.DORIAN), Harmony.scale_shift(root, 4, Harmony.DORIAN)]
+	var speed := pow(0.92, maxi(beat - 1, 0)) * (1.25 if relent else 1.0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = text.hash()
+	var words := text.split(" ", false)
+	var blips: Array = []
+	var at := 0.0
+	for w in words.size():
+		var word: String = words[w]
+		var letters: Array = []
+		for c in word:
+			if c.to_lower() != c.to_upper():
+				letters.append(c.to_lower())
+		var slow := 1.6 if beat == 6 and w == words.size() - 1 else 1.0
+		for l in letters.size():
+			var vowel: bool = letters[l] in ["a", "e", "i", "o", "u"]
+			var length := (0.08 if vowel else 0.04) * speed * slow
+			var midi: int = triad[rng.randi() % 3]
+			var gain := 1.0
+			if l == 0:
+				midi = Harmony.scale_shift(midi, 1, Harmony.DORIAN)
+				gain = db_to_linear(3.0)
+			if l == letters.size() - 1 and word.ends_with("?"):
+				midi += 5
+			blips.append([at, midi, length, gain, 0.0, false])
+			at += length
+		if w == 0 and beat in [2, 4, 6]:
+			blips.append([0.0, root - 12, 0.2, 0.9, 0.0, true])
+		if word.ends_with(","):
+			at += 0.12
+		elif word.ends_with(".") or word.ends_with("?") or word.ends_with("!"):
+			at += 0.25
+		else:
+			at += 0.03 * speed
+	if relent and not blips.is_empty():
+		var last: Array = blips[blips.size() - 1]
+		last[2] = 0.32
+		last[4] = -7.0
+		at = maxf(at, float(last[0]) + 0.32)
+	var buf := Synth.buffer(Synth.seconds(at + 0.3))
+	for blip in blips:
+		var piece := _grumble(int(blip[1]) + shift) if blip[5] else _blip(int(blip[1]) + shift, float(blip[2]), relent, float(blip[4]))
+		Synth.add_into(buf, piece, Synth.seconds(float(blip[0])), float(blip[3]))
+	return Synth.declick(Synth.normalize(buf, 0.9), 16, 600)
+
+
+# One babble blip. glide bends it down that many semitones across its length (the
+# relent's closing fifth). warm swaps the square for a softer triangle.
+static func _blip(midi: int, length: float, warm: bool, glide: float) -> PackedFloat32Array:
+	var n := Synth.seconds(length)
+	var buf := Synth.buffer(n)
+	var phase := 0.0
+	var low := 0.0
+	var band := 0.0
+	var g := 2.0 * sin(PI * (800.0 if warm else 1200.0) * Synth.INV_RATE)
+	for i in n:
+		var t := i * Synth.INV_RATE
+		var x := float(i) / n
+		phase = fposmod(phase + Harmony.hz(midi + glide * x) * Synth.INV_RATE, 1.0)
+		var wave := (1.0 - 4.0 * absf(phase - 0.5)) if warm else (1.0 if phase < 0.5 else -1.0)
+		low += g * band
+		band += g * (wave - low - 0.9 * band)
+		buf[i] = low * minf(1.0, t / 0.005) * (1.0 - 0.6 * x)
+	return Synth.declick(buf, 8, 96)
+
+
+# The refusal grumble: a dark saw burst on the beat root, under the first word.
+static func _grumble(midi: int) -> PackedFloat32Array:
+	return _tone(0.2, Harmony.hz(midi), Harmony.hz(midi - 1), "saw_dark", 6.0)
