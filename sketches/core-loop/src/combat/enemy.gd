@@ -22,17 +22,27 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
-# Plating reads: amber when your punch beats it, slate when it does not.
+# The plating dress (primer ruling 6, 2026-09-27): "breaks now" is a rim in the class
+# colour with an open-crack glyph; "not yet" is closed plates with no rim, and the
+# clank ladder already says how close you were. Amber belongs to Kest and the rare
+# rarity and slate vanishes on ancient petrol, so neither reads plating any more. The
+# tint_state names ("amber" for now, "slate" for not yet) stay as the state's names.
 const AMBER := Palette.AMBER
 const SLATE := Color("5d6b78")
+const PLATE_CLOSED := Color("3b403d")
 const TINT_ENERGY := 0.9
 const PLATE_GLOW_AMBER := 1.8
-const PLATE_GLOW_SLATE := 0.45
+const PLATE_GLOW_SLATE := 0.0
+# The class colour "now" is drawn in: combat sets it when a run starts.
+static var rim_color := Palette.ARC
 
 signal hit_player(amount: float, shove: Vector3)
 signal died(at: Vector3, scrap_value: int)
 
 var kind := "chaser"
+# The faction whose timbre and arrival cue this enemy carries (roster.gd): "fleet", or
+# an ancient family, "reactor", "swarm" or "mind".
+var faction := "fleet"
 var target
 var terrain
 var world_root: Node3D
@@ -58,6 +68,8 @@ var _base_color := Palette.RUST
 var _telegraph: Node3D
 # Extra materials a plated enemy recolours with its tint (armour plates, shells).
 var _tint_materials: Array = []
+# Open-crack glyphs a plated enemy shows only while your punch breaks it now.
+var _cracks: Array = []
 
 
 # Subclasses call this first from their own setup, then build their body.
@@ -136,9 +148,12 @@ func set_tint(state: String) -> void:
 	if state == tint_state:
 		return
 	tint_state = state
-	var color := AMBER if state == "amber" else SLATE
+	var now := state == "amber"
 	for mat in _tint_materials:
-		_paint_plate(mat as StandardMaterial3D, color, state == "amber")
+		_paint_plate(mat as StandardMaterial3D, rim_color if now else PLATE_CLOSED, now)
+	for crack in _cracks:
+		if is_instance_valid(crack):
+			crack.visible = now
 	if _flash <= 0.0:
 		_apply_rest_look()
 
@@ -266,8 +281,8 @@ func _apply_rest_look() -> void:
 	if tint_state == "":
 		_material.emission_enabled = false
 		return
-	_material.emission_enabled = true
-	_material.emission = AMBER if tint_state == "amber" else SLATE
+	_material.emission_enabled = tint_state == "amber"
+	_material.emission = rim_color
 	_material.emission_energy_multiplier = TINT_ENERGY
 
 
@@ -303,18 +318,39 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 
 # A tinted material for a plating mesh, registered so set_tint recolours it.
 func _plate_material() -> StandardMaterial3D:
-	var mat := Palette.solid(SLATE)
+	var mat := Palette.solid(PLATE_CLOSED)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
-	_paint_plate(mat, SLATE, false)
+	_paint_plate(mat, PLATE_CLOSED, false)
 	_tint_materials.append(mat)
 	return mat
 
 
 # Plating carries its read in light, not just paint, so it survives distance and shade:
-# amber burns bright (your punch breaks through), slate glows dull (not yet).
+# the class-colour rim burns (your punch breaks through now); closed plates stay dark.
 static func _paint_plate(mat: StandardMaterial3D, color: Color, beatable: bool) -> void:
-	mat.albedo_color = color
-	mat.emission_enabled = true
+	mat.albedo_color = color.darkened(0.35) if beatable else color
+	mat.emission_enabled = beatable
 	mat.emission = color
 	mat.emission_energy_multiplier = PLATE_GLOW_AMBER if beatable else PLATE_GLOW_SLATE
+
+
+# An open-crack glyph on a plate: a lit zigzag in the class colour, shown only while
+# the plate breaks now. Visual only; parented to the plate so it moves with it.
+func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
+	var glyph := Node3D.new()
+	glyph.position = at
+	var mat := Palette.unshaded(rim_color)
+	for i in 3:
+		var stroke := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.09, size * 0.45, 0.06)
+		stroke.mesh = box
+		stroke.material_override = mat
+		stroke.position = Vector3((i - 1) * size * 0.18, (1 - i) * size * 0.28, 0.0)
+		stroke.rotation.z = 0.6 if i % 2 == 0 else -0.6
+		glyph.add_child(stroke)
+	glyph.visible = tint_state == "amber"
+	parent.add_child(glyph)
+	_cracks.append(glyph)
+	return glyph
