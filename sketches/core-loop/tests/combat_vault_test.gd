@@ -6,10 +6,11 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The vault: a static plated cache. It never moves and never attacks (no player_hit in
 # HOLD seconds with the ball parked beside it and rammed into it), its plating is the
-# next stage's Warden plating (StageDefs: 80 on stage 1, 140 on stage 2) and
-# combat's VAULT_TOP_PLATING (120) on stage 3. Hits land in full only when punch
-# reaches the plating (probed just under and just over it at heft 1), and breaking it publishes
-# enemy_killed with kind "vault".
+# next stage's Warden plating (StageDefs: 80 on stage 1, 140 on stage 2) and combat's
+# VAULT_TOP_SCALE (1.2) times its own Warden's on stage 3 (168). Hits land in full only
+# when punch reaches the plating (probed just under and just over it at heft 1, against
+# the live plating, since each probe's shred lowers it for the next), and breaking it
+# publishes enemy_killed with kind "vault".
 
 const HOLD := 10.0
 const SCALE := 3.0
@@ -88,24 +89,25 @@ func _setup() -> void:
 func _plating_rule() -> void:
 	var plating: float = _combat.plating_of(_vault)
 	var checks := []
-	# [kind, force, expect full]
+	# [kind, force offset from the live threshold, expect full]
 	# Forces just under and just over the plating at heft 1: runner punch is its force,
 	# ram (14 + 1.3 v) and stomp (30 + 1.1 v).
-	var ram_at: float = (plating - 14.0) / 1.3
-	var stomp_at: float = (plating - 30.0) / 1.1
-	for row in [["runner", plating - 10.0, false], ["runner", plating, true], ["ram", ram_at - 5.0, false], ["ram", ram_at + 1.0, true],
-			["stomp", stomp_at - 5.0, false], ["stomp", stomp_at + 1.0, true]]:
+	for row in [["runner", -10.0, false], ["runner", 0.0, true], ["ram", -5.0, false], ["ram", 1.0, true],
+			["stomp", -5.0, false], ["stomp", 1.0, true]]:
+		var live: float = _combat.plating_of(_vault)
+		var at: float = {"runner": live, "ram": (live - 14.0) / 1.3, "stomp": (live - 30.0) / 1.1}[row[0]]
+		var force: float = at + row[1]
 		var before: float = _vault.hp
 		var deflections: int = _combat.deflections
-		var punch: float = _combat.punch_of(row[0], row[1])
-		_combat.strike(_vault, row[0], row[1])
+		var punch: float = _combat.punch_of(row[0], force)
+		_combat.strike(_vault, row[0], force)
 		var dealt: float = before - _vault.hp
 		var full: bool = _combat.deflections == deflections
 		var expected: float = punch if row[2] else punch * 0.2
-		checks.append("%s %.0f: punch %.1f -> %.1f %s" % [row[0], row[1], punch, dealt, "full" if full else "chip"])
+		checks.append("%s %.0f against %.1f: punch %.1f -> %.1f %s" % [row[0], force, live, punch, dealt, "full" if full else "chip"])
 		if full != row[2] or not is_equal_approx(dealt, expected):
 			_failures += 1
-			print("[plating_rule] %s %.0f dealt %.2f, expected %.2f -> FAIL" % [row[0], row[1], dealt, expected])
+			print("[plating_rule] %s %.0f dealt %.2f, expected %.2f -> FAIL" % [row[0], force, dealt, expected])
 	_report("plating_rule", plating == StageDefs.of(2)["warden_plating"], "stage 1 vault plating %.0f; %s" % [plating, "; ".join(checks)])
 	while not _vault.is_dead():
 		_combat.strike(_vault, "runner", 400.0)
@@ -121,9 +123,10 @@ func _plating_by_stage() -> void:
 		var vault: Node3D = ctx.spawner.spawn_enemy("vault", at)
 		seen.append([_combat.plating_of(vault), vault.max_hp])
 	var want_2: float = StageDefs.of(3)["warden_plating"]
-	_report("by_stage", seen == [[want_2, 800.0], [120.0, 1200.0]],
-		"stage 2 vault plating %.0f / hp %.0f, stage 3 plating %.0f / hp %.0f (needs %.0f/800 and 120/1200)"
-			% [seen[0][0], seen[0][1], seen[1][0], seen[1][1], want_2])
+	var want_3: float = roundf(_combat.VAULT_TOP_SCALE * StageDefs.of(3)["warden_plating"])
+	_report("by_stage", seen == [[want_2, 800.0], [want_3, 1200.0]] and want_3 > StageDefs.of(3)["warden_plating"],
+		"stage 2 vault plating %.0f / hp %.0f, stage 3 plating %.0f / hp %.0f (needs %.0f/800 and %.0f/1200, above Warden III's %.0f)"
+			% [seen[0][0], seen[0][1], seen[1][0], seen[1][1], want_2, want_3, StageDefs.of(3)["warden_plating"]])
 
 
 func _finish() -> bool:

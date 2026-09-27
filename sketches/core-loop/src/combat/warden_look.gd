@@ -18,6 +18,9 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   the row the objective line reads once the fight starts, so the line and the world
 #   agree. The badge keeps a readable size out to the drop; the diamond fades out
 #   inside 20 m, where the Warden itself fills the view.
+# - Shred shows as glowing seams cracked across the jaw plates: none below SEAM_SHOW of
+#   the plating stripped, then more of them and brighter as the strip deepens, in the
+#   amber the plates turn once your punch beats what is left.
 # - Stage 2's vent caps are three glowing domes on the deck with heat plumes rising
 #   above the jaws; stage 3's magnet is a lit arm and head that burn amber while the
 #   tug is on, the moment a shot on them counts.
@@ -46,6 +49,19 @@ const MARKER_FADE_NEAR := 12.0
 const BADGE_PRIORITY := 30
 const PLUME_HEIGHT := 6.0
 const TURN_RATE := 3.0
+const SEAM_SHOW := 0.25
+# Each seam is a zigzag of strokes across a jaw's outer face: [x, y, tilt] in the
+# plate's frame, the plate's centre at 0. A seam lights once the strip passes its
+# threshold, from SEAM_SHOW to fully stripped.
+const SEAM_STROKES := [
+	[[-0.5, 1.4, 0.7], [0.1, 0.9, -0.5], [0.55, 0.3, 0.6]],
+	[[0.6, -0.4, -0.8], [0.0, -1.0, 0.4], [-0.55, -1.6, -0.6]],
+	[[-0.7, 0.2, 0.2], [-0.2, -0.1, -1.0], [0.4, 1.9, 0.9]],
+]
+const SEAM_WIDTH := 0.1
+const SEAM_LENGTH := 0.9
+const SEAM_GLOW_MIN := 1.4
+const SEAM_GLOW_MAX := 4.5
 
 var warden
 var body_material: StandardMaterial3D
@@ -64,6 +80,9 @@ var _plume_material: StandardMaterial3D
 var _arm: MeshInstance3D
 var _head: Node3D
 var _magnet_material: StandardMaterial3D
+var _seam_material: StandardMaterial3D
+# Per seam level, the stroke nodes on every jaw.
+var _seams: Array = []
 
 
 func build(owner_warden, half_height: float) -> void:
@@ -143,10 +162,27 @@ func _build_jaws() -> void:
 		var jaw := _mesh(plate, plate_material, Vector3(JAW_RADIUS, _ground + JAW_BOTTOM + JAW_SIZE.y * 0.5, 0.0), pivot)
 		# Width runs round the mast, thickness out from it; the top leans outward.
 		jaw.rotation = Vector3(JAW_TILT, PI * 0.5, 0.0)
+		_build_seams(jaw)
 		# A heavy lip on top of each jaw, reaching inward like a clamp's teeth.
 		var lip := BoxMesh.new()
 		lip.size = Vector3(1.4, 0.6, JAW_SIZE.x + 0.3)
 		_mesh(lip, body_material, Vector3(JAW_RADIUS - 0.2, _ground + JAW_BOTTOM + JAW_SIZE.y + 0.1, 0.0), pivot)
+
+
+# The plate's +z is its outer face; strokes sit just proud of it, so they never clip.
+func _build_seams(jaw: Node3D) -> void:
+	if _seam_material == null:
+		_seam_material = _glow(Palette.AMBER, SEAM_GLOW_MIN)
+		for i in SEAM_STROKES.size():
+			_seams.append([])
+	for level in SEAM_STROKES.size():
+		for stroke in SEAM_STROKES[level]:
+			var box := BoxMesh.new()
+			box.size = Vector3(SEAM_WIDTH, SEAM_LENGTH, 0.05)
+			var seam := _mesh(box, _seam_material, Vector3(stroke[0], stroke[1], JAW_SIZE.z * 0.5 + 0.03), jaw)
+			seam.rotation.z = stroke[2]
+			seam.visible = false
+			_seams[level].append(seam)
 
 
 func _build_core() -> void:
@@ -248,6 +284,7 @@ func update(delta: float) -> void:
 	_update_badge()
 	_update_caps(delta)
 	_update_magnet()
+	_update_seams()
 
 
 func _turn_jaws(delta: float) -> void:
@@ -313,3 +350,13 @@ func _update_magnet() -> void:
 	_magnet_material.albedo_color = Palette.AMBER if tugging else Palette.SAND
 	_magnet_material.emission = Palette.AMBER if tugging else Palette.SAND
 	_magnet_material.emission_energy_multiplier = 2.4 if tugging else 0.4 + 1.2 * out
+
+
+func _update_seams() -> void:
+	var strip: float = warden.shred_fraction()
+	var depth := clampf((strip - SEAM_SHOW) / (1.0 - SEAM_SHOW), 0.0, 1.0)
+	for level in _seams.size():
+		var lit: bool = strip > SEAM_SHOW and depth >= float(level) / _seams.size()
+		for seam in _seams[level]:
+			(seam as MeshInstance3D).visible = lit
+	_seam_material.emission_energy_multiplier = lerpf(SEAM_GLOW_MIN, SEAM_GLOW_MAX, depth)
