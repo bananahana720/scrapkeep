@@ -50,12 +50,12 @@ const ROWS := {
 		"transformers": ["lightning_rod"],
 	},
 	"tesla_pylon": {
-		"name": "Tesla Pylon", "tags": ["anchor", "arc"], "shown": "long_spool",
+		"name": "Tesla Pylon", "tags": ["anchor", "arc"], "shown": "focus_lens",
 		"text": "While mounted or hooked, arcs leap from you to the two nearest enemies twice a second.",
 		"transformers": ["tesla_pylon"],
 	},
 	"wrecking_ball": {
-		"name": "Wrecking Ball", "tags": ["speed", "kinetic"], "shown": "tread_plating",
+		"name": "Wrecking Ball", "tags": ["speed", "kinetic"], "shown": "double_feed",
 		"text": "Rams send out a shockwave that hits everything around the target.",
 		"transformers": ["wrecking_ball"],
 	},
@@ -65,7 +65,7 @@ const ROWS := {
 		"transformers": ["shrapnel_bloom"],
 	},
 	"glacier_hull": {
-		"name": "Glacier Hull", "tags": ["mass", "frost"], "shown": "rivet_plating",
+		"name": "Glacier Hull", "tags": ["mass", "frost"], "shown": "slag_rounds",
 		"text": "Hard landings crack out a frost ring: it hits enemies near you and freezes water.",
 		"transformers": ["glacier_hull"],
 	},
