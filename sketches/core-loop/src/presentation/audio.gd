@@ -39,6 +39,13 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "thr
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
+# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
+const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
+	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit"]
+# Event progress until the spine publishes event_progress(event_id, fraction): the
+# seconds each participatory event usually takes (REQUEST in the hand-back).
+const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
 
 var ctx
 var engine: MusicEngine
@@ -79,6 +86,11 @@ var _landing_theme := -1
 var _entered_ms := -1
 var _launch_stage := false
 var drop_log: Array = []
+var _miniboss: Node3D
+var _event_id := ""
+var _event_started_ms := -1
+var _event_progress_live := false
+var _chase_lead0 := -1.0
 var _weak_last := -100000
 var _flow_queue: Array = []
 var _overlay: Label
@@ -114,7 +126,7 @@ func setup(ctx_ref) -> void:
 
 static func _sound_ids() -> Array:
 	var ids: Array = Rows.sound_ids()
-	for extra in ["womp", "build_riser"]:
+	for extra in ["womp", "build_riser", "vault_rise", "vault_drop", "synergy_hit"]:
 		if not extra in ids:
 			ids.append(extra)
 	return ids
@@ -250,6 +262,7 @@ func _process(_delta: float) -> void:
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	_flush_flow()
 	_follow_warden()
+	_follow_escalation()
 	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
 	_pump()
@@ -292,6 +305,8 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 		cue_log.append([kind, sound, "skip", -1, pitch])
 		return false
 	_last_start[sound] = now
+	if sound in KEYED_SOUNDS:
+		pitch *= Harmony.ratio(engine.key)
 	var playback := _ui if bus == "UI" else _sfx
 	if playback != null:
 		var live: Array = _voices.get(sound, [])
@@ -359,8 +374,8 @@ func _connect_all(events) -> void:
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(func(_part: String): play("reward_chosen"))
 	events.event_announced.connect(func(_event_id: String, _seconds: float): on_beat("event_announced"))
-	events.event_started.connect(func(_event_id: String): on_beat("event_started"))
-	events.event_ended.connect(func(_event_id: String, outcome: String): on_beat("event_ended", -4.0 if outcome == "lost" else 0.0))
+	events.event_started.connect(_on_event_started)
+	events.event_ended.connect(_on_event_ended)
 	events.launched.connect(_on_launched)
 	events.pressure_changed.connect(_on_pressure)
 	wire_optional()
@@ -394,10 +409,25 @@ func wire_optional() -> void:
 	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
 	_listen(events, "boss_attack_telegraphed", _on_boss_telegraph)
 	_listen(events, "boss_weak_point_hit", _on_weak_point)
+	_listen(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
 	# resolves into the arena music instead of a landing.
-	_listen(events, "stage_content_cleared", func(_reason: String):
+	_listen(events, "stage_content_cleared", func(reason: String):
 		_disarm_launch()
+		_event_id = ""
+		_chase_lead0 = -1.0
+		if reason == "arena_retry" and sound_ready:
+			# R in the arena: Brindle's music from phase 1, out of DEAD mode, with a pickup.
+			engine.cancel_pending()
+			engine.fill_into(engine.restart_boss("brindle"))
+		# The stage's bonus cores stay with the stage; a restore may have moved heft.
+		engine.set_overcharge(0)
+		if ctx.run.has_method("heft_class"):
+			_heft_class = int(ctx.run.heft_class())
+			engine.set_heft_lift(_heft_class - 1)
+		if reason != "arena_retry" and sound_ready and engine.mode != MusicEngine.PLAY and engine.track == "brindle":
+			engine.cancel_pending()
+			engine.restart_boss("brindle")
 		play("stage_content_cleared"))
 
 
@@ -420,11 +450,47 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 	return true
 
 
+func _on_event_started(event_id: String) -> void:
+	on_beat("event_started")
+	if event_id in EVENT_SECONDS:
+		_event_id = event_id
+		_event_started_ms = Time.get_ticks_msec()
+
+
+# A win drops back into the level with the milestone stinger on the drop beat; a pass
+# or a loss settles home gracefully, with no punishing sting.
+func _on_event_ended(event_id: String, outcome: String) -> void:
+	var participatory := event_id == _event_id
+	_event_id = ""
+	if not participatory or not sound_ready:
+		on_beat("event_ended", -6.0 if outcome != "won" else 0.0)
+		return
+	if outcome == "won":
+		var at := engine.resolve_event(true)
+		if at >= 0:
+			engine.schedule_stinger_at(Rows.sound("milestone_won"), at)
+			cue_log.append(["event_ended", Rows.sound("milestone_won"), "beat", at, 1.0])
+	else:
+		engine.resolve_event(false)
+		cue_log.append(["event_ended", "settle", "bar", engine.next_bar(), 1.0])
+
+
+# The spine's event_progress(event_id, fraction), once it lands, replaces the timer.
+func _on_event_progress(event_id: String, fraction: float) -> void:
+	if event_id != _event_id or not sound_ready:
+		return
+	_event_progress_live = true
+	engine.escalate(clampf(fraction, 0.0, 1.0), false)
+
+
 func _on_flow_changed(state: String) -> void:
 	if state in MENU_STATES:
 		play("flow_changed", 0.0, 1.0, "UI")
 	if state == "title" or state == "class_select":
 		_flow_queue.append(["idle"])
+	# Back in the arena (entry or retry) the band plays, whatever a death left it in.
+	if state == "boss" and sound_ready and engine.mode != MusicEngine.PLAY:
+		engine.schedule_mode(engine.next_beat(), MusicEngine.PLAY)
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -438,6 +504,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_launch_stage = true
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
+		engine.set_heft_lift(_heft_class - 1)
 	_beacon_rung = -1
 	_gates_announced = false
 	_scrap_combo = 0
@@ -463,6 +530,8 @@ func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:
 func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
 	var boss := kind == "miniboss"
 	play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
+	if boss:
+		_miniboss = _enemy
 	if boss and sound_ready:
 		engine.begin_miniboss()
 
@@ -471,6 +540,13 @@ func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
 # and the row's cue marks the moment it begins.
 func _begin_boss(kind: String, music: String) -> void:
 	if not sound_ready:
+		return
+	if engine.track == music or engine.mode != MusicEngine.PLAY:
+		# A retry into the fight: the band left DEAD (or never left the boss track), so
+		# it restarts the boss music in play mode on the next beat, not the keys alone.
+		engine.cancel_pending()
+		var again := engine.restart_boss(music)
+		cue_log.append([kind, "restart", "beat", again, 1.0])
 		return
 	var at := engine.begin_boss(music)
 	if at < 0:
@@ -508,7 +584,12 @@ func _on_boss_defeated() -> void:
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	if _kind == "miniboss" and engine.track == "miniboss":
-		engine.end_boss()
+		# The payoff on the kill: the drop home on the next beat, then the cadence.
+		engine.miniboss_drop()
+		_miniboss = null
+	if _kind == "vault":
+		# A small drop, on the moment the vault breaks.
+		play("enemy_killed", 2.0, 1.0, "SFX", "vault_drop")
 	var now := Time.get_ticks_msec()
 	_kill_combo = mini(_kill_combo + 1, 7) if now - _kill_last < KILL_COMBO_WINDOW_MS else 0
 	_kill_last = now
@@ -570,11 +651,73 @@ func _disarm_launch() -> void:
 
 # The Warden's last quarter is the build; the spine's integrity query is read-only.
 func _follow_warden() -> void:
-	if engine.track != "warden" or engine.section != "build":
+	if engine.track != "warden" or engine.section == "drop":
 		return
 	if ctx.flow == null or not ctx.flow.has_method("warden_integrity"):
 		return
 	engine.warden_charge(1.0 - float(ctx.flow.warden_integrity()))
+
+
+# The B-arc for the miniboss, the live event, Brindle's phases and the chase, each on
+# its own real state (guarded reads; nothing here decides an outcome).
+func _follow_escalation() -> void:
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return
+	match engine.track:
+		"miniboss":
+			if is_instance_valid(_miniboss) and ctx.spawner != null and ctx.spawner.has_method("integrity_of"):
+				engine.escalate(1.0 - float(ctx.spawner.integrity_of(_miniboss)))
+		"brindle":
+			_follow_brindle()
+		"level":
+			if _event_id != "" and not _event_progress_live:
+				var seconds: float = EVENT_SECONDS.get(_event_id, 20.0)
+				engine.escalate(clampf((Time.get_ticks_msec() - _event_started_ms) / 1000.0 / seconds, 0.0, 1.0), false)
+
+
+func _follow_brindle() -> void:
+	var boss = ctx.get("boss")
+	if boss == null or not is_instance_valid(boss):
+		return
+	var rules := _boss_rules(boss)
+	var phase := int(_num(boss, "phase", 0.0))
+	if engine.section == "chase":
+		var scooter = boss.get("scooter")
+		if scooter is Node3D and is_instance_valid(scooter) and boss.has_method("scooter_landed") and boss.scooter_landed():
+			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.ball_position())
+			if _chase_lead0 < 0.0:
+				_chase_lead0 = maxf(lead, 1.0)
+			engine.chase(clampf(1.0 - lead / _chase_lead0, 0.0, 1.0))
+		return
+	if rules.is_empty() or phase < 1 or phase > 3:
+		return
+	var floors: Array = rules["PHASE_FLOORS"]
+	var mins: Array = rules["PHASE_MIN_SECONDS"]
+	var hp := _num(boss, "hp", 1.0) / maxf(_num(boss, "max_hp", 1.0), 1.0)
+	var top := 1.0 if phase == 1 else float(floors[phase - 2])
+	var floor_hp := float(floors[phase - 1])
+	var in_phase := clampf((top - hp) / maxf(top - floor_hp, 0.01), 0.0, 1.0)
+	var held := hp <= floor_hp + 0.001
+	engine.brindle_hp(in_phase, held, _num(boss, "phase_clock", 0.0) / maxf(float(mins[phase - 1]), 1.0))
+
+
+# A number the boss module exposes, or the default when it (or a test double) has none.
+static func _num(object: Object, property: String, fallback: float) -> float:
+	var value = object.get(property)
+	return float(value) if value is int or value is float else fallback
+
+
+static func _boss_rules(boss: Object) -> Dictionary:
+	var script = boss.get_script()
+	if script == null:
+		return {}
+	var rules = (script as Script).get_script_constant_map().get("Rules")
+	if not rules is Script:
+		return {}
+	var map: Dictionary = (rules as Script).get_script_constant_map()
+	if not map.has("PHASE_FLOORS") or not map.has("PHASE_MIN_SECONDS"):
+		return {}
+	return map
 
 
 func _on_dismounted(velocity: Vector3) -> void:
@@ -585,10 +728,32 @@ func _on_dismounted(velocity: Vector3) -> void:
 	play("dismounted", 0.0, Harmony.ratio(clampf(velocity.length() / 5.0, 0.0, 7.0)))
 
 
-func _on_struck(_enemy: Node3D, kind: String, force: float) -> void:
+func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if kind == "synergy":
+		# A synergy's shockwave: its own light chime, never the slam family.
+		play("enemy_struck", -8.0, Harmony.ratio(Harmony.pentatonic_step(randi() % 5)), "SFX", "synergy_hit")
+		return
+	if is_instance_valid(enemy) and enemy.get("kind") == "vault":
+		# The vault's riser climbs as its integrity falls.
+		play("enemy_struck", -2.0, Harmony.ratio(lerpf(0.0, 9.0, 1.0 - _integrity(enemy))), "SFX", "vault_rise")
+		return
 	var contact := kind in ["stomp", "ram", "slam"]
 	var db := lerpf(-6.0, 1.0, clampf(force / 30.0, 0.0, 1.0)) if contact else -5.0
-	play("enemy_struck", db, 1.0 if contact else 1.15)
+	play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+
+
+# Hits on the Warden climb the pentatonic as its integrity falls; the unseal resolves
+# them home. 1.0 for anything else.
+func _warden_ladder(enemy: Node3D) -> float:
+	if ctx.flow == null or not is_instance_valid(enemy) or ctx.flow.get("warden") != enemy:
+		return 1.0
+	return Harmony.ratio(Harmony.pentatonic_step(int((1.0 - _integrity(enemy)) * 6.0)))
+
+
+func _integrity(enemy: Node3D) -> float:
+	if ctx.spawner != null and ctx.spawner.has_method("integrity_of"):
+		return float(ctx.spawner.integrity_of(enemy))
+	return 1.0
 
 
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:
@@ -607,6 +772,7 @@ func _on_offered(_offers: Array) -> void:
 # Up a class climbs on the next beat; down a class (a crane theft) falls back softly.
 # Direction comes from the last class heard until the spine publishes its own.
 func _on_heft_class(heft_class: int, _heft: float) -> void:
+	engine.set_heft_lift(heft_class - 1)
 	if heft_class > _heft_class:
 		on_beat("heft_class_changed")
 	elif heft_class < _heft_class:
@@ -617,6 +783,7 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 # A class lost has its own signal now: the climb falls back on the next beat.
 func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 	on_beat("heft_class_dropped")
+	engine.set_heft_lift(heft_class - 1)
 	_heft_class = heft_class
 
 
@@ -637,7 +804,7 @@ func _on_weak_point(_point_id: String) -> void:
 # A bounced hit clanks lower the further you are from breaking through.
 func _on_deflected(_enemy: Node3D, _kind: String, punch: float, plating: float) -> void:
 	var closeness := clampf(punch / maxf(plating, 1.0), 0.0, 1.0)
-	play("strike_deflected", 0.0, Harmony.ratio(lerpf(-7.0, 0.0, closeness)))
+	play("strike_deflected", 0.0, Harmony.ratio(lerpf(-7.0, 0.0, closeness)) * _warden_ladder(_enemy))
 
 
 func _on_core(_source: String, _at: Vector3, count: int) -> void:
@@ -681,7 +848,12 @@ func _flush_flow() -> void:
 					_launch_stage = false
 					continue
 				if retry:
+					# A pickup fill back into the groove, then the stage hit on its beat.
 					engine.cancel_pending()
+					var back := engine.retry_restart(MusicEngine.PLAY, clampi(stage - 1, 0, 2))
+					engine.schedule_stinger_at(Rows.sound("stage_entered"), back)
+					cue_log.append(["stage_entered", Rows.sound("stage_entered"), "beat", back, 1.0])
+					continue
 				var start := on_beat("stage_entered", 0.0, true, clampi(stage, 1, 4))
 				if start >= 0:
 					engine.schedule_restart(start, MusicEngine.PLAY, clampi(stage - 1, 0, 2))
@@ -704,7 +876,7 @@ func _flush_flow() -> void:
 			"dead":
 				_disarm_launch()
 				engine.cancel_pending()
-				engine.schedule_mode(engine.next_beat(), MusicEngine.DEAD)
+				engine.death_break()
 			"idle":
 				engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
 			"unseal":

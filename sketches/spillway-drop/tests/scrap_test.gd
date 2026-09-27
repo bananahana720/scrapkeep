@@ -11,7 +11,7 @@ var _started := false
 var _placed := 0
 var _scrap_before := 0
 var _count_before := 0
-var _clock := 0.0
+var _ticks := 0
 
 
 func _initialize() -> void:
@@ -20,7 +20,9 @@ func _initialize() -> void:
 	root.add_child(_stage)
 
 
-func _process(delta: float) -> bool:
+# Counted in physics ticks, not idle-frame seconds: the rigid reset lands on the
+# next tick, and a starved machine fits less simulated time into a wall second.
+func _physics_process(_delta: float) -> bool:
 	if not _started:
 		if _stage.player == null:
 			return false
@@ -33,8 +35,8 @@ func _process(delta: float) -> bool:
 		_stage.player.reset_to(_stage.scrap.item_position(0) + Vector3.UP * 0.2)
 		return false
 
-	_clock += delta
-	if _clock < SETTLE:
+	_ticks += 1
+	if _ticks < _to_ticks(SETTLE):
 		return false
 
 	var collected: int = _stage.run.scrap - _scrap_before
@@ -54,3 +56,7 @@ func _process(delta: float) -> bool:
 	_stage.free()
 	quit(0 if ok else 1)
 	return true
+
+
+static func _to_ticks(seconds: float) -> int:
+	return roundi(seconds * Engine.physics_ticks_per_second)

@@ -100,9 +100,23 @@ const BRINDLE_PHRYGIAN := [
 	{"name": "Dm(b9)", "root": 38, "voicing": [57, 60, 63, 65], "tones": [62, 65, 69, 63], "scale": PHRYGIAN},
 	{"name": "Cm9", "root": 36, "voicing": [51, 55, 58, 62], "tones": [60, 63, 67, 70, 62], "scale": PHRYGIAN},
 ]
+# The Warden's sinister break: D Phrygian against its tritone, Ab. The bass walks the
+# tritone; the melody leans on the flat second.
+const LOCRIAN := [0, 1, 3, 5, 6, 8, 10]
+const SINISTER := [
+	{"name": "Dm(b9)", "root": 38, "voicing": [53, 57, 60, 63], "tones": [62, 65, 69, 63], "scale": PHRYGIAN},
+	{"name": "Ab7#11", "root": 44, "voicing": [54, 56, 60, 62], "tones": [68, 72, 63, 66, 62], "scale": LOCRIAN},
+	{"name": "Dm(b9)", "root": 38, "voicing": [57, 60, 63, 65], "tones": [62, 65, 69, 63], "scale": PHRYGIAN},
+	{"name": "Ebmaj7", "root": 39, "voicing": [55, 58, 62, 63], "tones": [63, 67, 70, 74], "scale": PHRYGIAN},
+]
+# The pivots a key change passes through: the new key's own V, and the tritone.
+const DOMINANT := {"name": "A7b9", "root": 45, "voicing": [55, 58, 61, 64], "tones": [61, 64, 67, 70, 69], "scale": HARMONIC}
+const TRITONE := {"name": "Ab7#11", "root": 44, "voicing": [54, 56, 60, 62], "tones": [68, 72, 63, 66, 62], "scale": LOCRIAN}
 # The launch build's tune: the rice-cooker climb up the A7, looping while you fly.
 const LAUNCH_TUNE := [69, 73, 76, 81, 79, 76, 73, 76]
 const THEMES := ["spillway", "sluice", "weir"]
+# Each level's motif, its first four notes: the synergy fanfare quotes the current one.
+const MOTIF_HEADS := [[69, 72, 74, 76], [74, 77, 79, 81], [62, 65, 69, 72]]
 
 
 static func level_progression(theme: int) -> Array:

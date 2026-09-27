@@ -4,11 +4,12 @@ const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 
-# Phase 1c, the bass (Andrew, round 2): a rhythmic bass figure in every theme at every
-# pressure; a wobble whose LFO is locked to the beat grid at every tempo; the launch
-# builds and the landing drops within one beat of touchdown; a slam's womp sounds on
-# the same audio frame as the slam; danger ducks the bass. Engine state and cue
-# decisions on the dummy driver, not speakers.
+# The bass and the layers (Andrew, rounds 2 and 3): a rhythmic bass figure in every
+# theme at every pressure; no wubs in the level themes, a restrained grid-locked
+# wobble only in the Warden's and Brindle's drops; melodic layers that stack with
+# pressure and re-voice every cycle; the launch builds and the landing drops within
+# one beat of touchdown; a slam's womp sounds on the same audio frame as the slam;
+# danger ducks the bass. Engine state and cue decisions on the dummy driver.
 
 const PRESSURES := [0.0, 0.25, 0.5, 0.75, 1.0]
 
@@ -22,7 +23,9 @@ var _wait_until := 0
 func _initialize() -> void:
 	MusicEngine.prepare()
 	_bass_everywhere()
-	_wobble_locked()
+	_wubs_reined_in()
+	_layers_rise()
+	_revoiced()
 	_launch_from_drop()
 	_game = Game.new()
 	_game.test_mode = true
@@ -55,42 +58,107 @@ func _bass_everywhere() -> void:
 		print("  %s" % line)
 
 
-func _wobble_locked() -> void:
-	var specs := [["level", 0, ""], ["level", 1, ""], ["level", 2, ""], ["warden", 0, "drop"], ["brindle", 0, "2"], ["brindle", 0, "3"]]
-	var bad: Array = []
-	var total := 0
-	var rates := {}
-	var mixed_bars := 0
-	for spec in specs:
+func _wubs_reined_in() -> void:
+	# No wobble voice (the growls were wobble voices too) in any level theme or the
+	# miniboss, even at full pressure over eight bars.
+	var loud: Array = []
+	for spec in [["level", 0], ["level", 1], ["level", 2], ["miniboss", 0], ["miniboss", 2]]:
 		var engine := MusicEngine.new()
-		if spec[0] == "level":
-			engine.schedule_restart(0, MusicEngine.PLAY, spec[1])
-			engine.set_pressure(1.0)
+		engine.schedule_restart(0, MusicEngine.PLAY, spec[1])
+		engine.set_pressure(1.0)
+		engine.render(1)
+		if spec[0] == "miniboss":
+			engine.begin_miniboss()
+		engine.render(Harmony.BAR * 9)
+		if engine.layer_starts[MusicEngine.WOB] > 0 or engine.layer_target(MusicEngine.WOB) > 0.0:
+			loud.append("%s %s" % [spec[0], Harmony.THEMES[spec[1]]])
+	_check("wubs reined in", loud.is_empty(), "no wobble or growl voice starts in the three level themes or the miniboss at full pressure over 8 bars; offenders %s" % [loud])
+	# The Warden's drop is round 2's club again, with no wobble; Brindle's drops keep
+	# a restrained one: half level, slow rates, every cycle on the grid.
+	var warden := MusicEngine.new()
+	warden.force_track("warden", 0, "drop", true)
+	warden.render(warden.bar_len() * 4)
+	var warden_clean := warden.layer_starts[MusicEngine.WOB] == 0
+	var engine := MusicEngine.new()
+	engine.force_track("brindle", 0, "1", true)
+	engine.set_brindle_phase(2)
+	while not engine.in_drop():
+		engine.render(engine.step_len)
+	engine.wob_log.clear()
+	engine.render(engine.bar_len() * 4)
+	var level := engine.layer_target(MusicEngine.WOB)
+	var bad: Array = []
+	var rates := {}
+	for entry in engine.wob_log:
+		var count: int = MusicEngine.RATES[entry[1]]
+		var beat: int = int(entry[5]) * Harmony.STEPS_PER_BEAT
+		var pos := posmod(int(entry[0]) - int(entry[4]), beat)
+		var on_grid := false
+		for k in count:
+			on_grid = on_grid or pos == int(round(float(k) * beat / count))
+		if not on_grid or not entry[1] in MusicEngine.DROP_RATES:
+			bad.append(entry[0])
+		rates[entry[1]] = true
+	_check("drop wobble restrained", warden_clean and engine.wob_log.size() > 8 and bad.is_empty() and level <= MusicEngine.WOB_DROP_GAIN + 0.001,
+		"the Warden drop has no wobble (%s); Brindle's drop has %d cycles at level %.2f (cap %.2f), rates %s, all on the grid; off %s" % [warden_clean, engine.wob_log.size(), level, MusicEngine.WOB_DROP_GAIN, rates.keys(), bad.slice(0, 4)])
+
+
+# Pyramids-style layering: each pressure step adds melodic layers, never removes one.
+func _layers_rise() -> void:
+	var failing: Array = []
+	var lines: Array = []
+	var static_ok := true
+	var last_static := -1
+	for i in 11:
+		var n := MusicEngine.melodic_layers(i / 10.0)
+		static_ok = static_ok and n >= last_static
+		last_static = n
+	for theme in 3:
+		var counts: Array = []
+		for i in 6:
+			var p := i / 5.0
+			var engine := MusicEngine.new()
+			engine.schedule_restart(0, MusicEngine.PLAY, theme)
+			engine.set_pressure(p)
 			engine.render(1)
 			engine.render(Harmony.BAR)
-		else:
-			engine.force_track(spec[0], spec[1], spec[2], true)
-		engine.wob_log.clear()
-		engine.render(engine.bar_len() * 8)
-		var bars := {}
-		for entry in engine.wob_log:
-			total += 1
-			var at: int = entry[0]
-			var count: int = MusicEngine.RATES[entry[1]]
-			var beat: int = int(entry[5]) * Harmony.STEPS_PER_BEAT
-			var pos := posmod(at - int(entry[4]), beat)
-			var on_grid := false
-			for k in count:
-				on_grid = on_grid or pos == int(round(float(k) * beat / count))
-			if not on_grid or int(entry[2]) != beat / count:
-				bad.append("%s:%s %d" % [spec[0], spec[2], at])
-			var bar_key := "%d:%d" % [entry[6], entry[7]]
-			if bars.has(bar_key) and bars[bar_key] != entry[1]:
-				mixed_bars += 1
-			bars[bar_key] = entry[1]
-			rates[entry[1]] = true
-	_check("wobble on the grid", bad.is_empty() and mixed_bars == 0 and total > 100 and rates.size() == MusicEngine.RATES.size(),
-		"%d LFO cycles over 8 bars each of 3 themes, the Warden drop (129) and Brindle phases 2 (129) and 3 (150): every cycle starts on a beat subdivision of its own rate, one rate per bar, %d rates used %s; off-grid %s" % [total, rates.size(), rates.keys(), bad.slice(0, 5)])
+			var before := engine.layer_starts.duplicate()
+			engine.render(Harmony.BAR * 4)
+			var sounding := 0
+			for layer in MusicEngine.MELODIC:
+				if engine.layer_starts[layer] > before[layer] and engine.layer_gain(layer) > 0.05:
+					sounding += 1
+			counts.append(sounding)
+		lines.append("%s %s" % [Harmony.THEMES[theme], counts])
+		var mono := true
+		for i in range(1, counts.size()):
+			mono = mono and counts[i] >= counts[i - 1]
+		if not mono or counts[0] > 0 or counts[counts.size() - 1] < MusicEngine.MELODIC.size():
+			failing.append(Harmony.THEMES[theme])
+	_check("layers rise with pressure", static_ok and failing.is_empty(), "melodic layers sounding over 4 bars at pressure 0, 0.2 .. 1: %s (0 at calm, all %d at full, never fewer as pressure rises)" % [", ".join(lines), MusicEngine.MELODIC.size()])
+
+
+# The texture evolves: at full pressure every 8-bar cycle re-voices the lines.
+func _revoiced() -> void:
+	var failing: Array = []
+	var seen := 0
+	for theme in 3:
+		var engine := MusicEngine.new()
+		engine.schedule_restart(0, MusicEngine.PLAY, theme)
+		engine.set_pressure(1.0)
+		engine.render(1)
+		engine.events_log.clear()
+		engine.render(Harmony.BAR * 24)
+		var revoices: Array = engine.events_log.filter(func(e: Array): return e[0] == "revoice")
+		seen += revoices.size()
+		for cycle in 3:
+			var inside := revoices.filter(func(e: Array): return int(e[1]) >= cycle * Harmony.BAR * 8 and int(e[1]) < (cycle + 1) * Harmony.BAR * 8)
+			if inside.is_empty():
+				failing.append("%s cycle %d" % [Harmony.THEMES[theme], cycle])
+		for i in range(1, revoices.size()):
+			if revoices[i][2] == revoices[i - 1][2]:
+				failing.append("%s repeat at %d" % [Harmony.THEMES[theme], revoices[i][1]])
+	_check("re-voiced every cycle", failing.is_empty(), "%d re-voicings over 24 bars of each theme at full pressure; every 8-bar cycle has at least one and none repeats the one before; failing %s" % [seen, failing])
 
 
 # Players take the gate inside the Warden's unseal drop: the launch still builds over

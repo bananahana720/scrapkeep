@@ -60,6 +60,7 @@ signal element_resolved(element_id: String, material_id: String, behaviour: Stri
 signal event_announced(event_id: String, seconds_until: float)
 signal event_started(event_id: String)
 signal event_ended(event_id: String, outcome: String)
+signal event_progress(event_id: String, fraction: float)
 signal launched(velocity: Vector3)
 signal pressure_changed(pressure: float)
 signal threat_rose(tier: int)

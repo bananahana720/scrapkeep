@@ -6,6 +6,9 @@ const PlayerBall := preload("res://src/player_ball.gd")
 
 const BUDGET := 75.0
 const TARGET_HEIGHT := Terrain.TOP_H - 2.0
+# The spawn sits above TARGET_HEIGHT, so a read taken before the reset lands would
+# pass without climbing anything. The first read must be at the ramp foot.
+const START_TOLERANCE := 1.0
 
 
 # The slow ground route has to be walkable with nothing but the drive input, or
@@ -20,8 +23,9 @@ class Forward:
 
 var _stage
 var _started := false
-var _clock := 0.0
+var _ticks := 0
 var _best := -99.0
+var _start_offset := -1.0
 
 
 func _initialize() -> void:
@@ -30,7 +34,9 @@ func _initialize() -> void:
 	root.add_child(_stage)
 
 
-func _process(delta: float) -> bool:
+# Counted in physics ticks, not idle-frame seconds: the rigid reset lands on the
+# next tick, and a starved machine fits less simulated time into a wall second.
+func _physics_process(_delta: float) -> bool:
 	if not _started:
 		if _stage.player == null:
 			return false
@@ -43,17 +49,33 @@ func _process(delta: float) -> bool:
 		_stage.camera.yaw = 0.0
 		return false
 
-	_clock += delta
+	_ticks += 1
 	var at: Vector3 = _stage.player.ball_position()
+	if _ticks == 1:
+		_start_offset = at.distance_to(Terrain.at(Terrain.BYPASS_FOOT, 2.0))
 	_best = maxf(_best, at.y)
-	if at.y < TARGET_HEIGHT and _clock < BUDGET:
+	if at.y < TARGET_HEIGHT and _ticks < _to_ticks(BUDGET):
 		return false
 
+	var seconds := float(_ticks) / Engine.physics_ticks_per_second
+	var at_foot := _start_offset < START_TOLERANCE
 	var made_it := _best >= TARGET_HEIGHT
+	print("bypass: first read %.2f m from the ramp foot (needs < %.1f) -> %s"
+		% [_start_offset, START_TOLERANCE, "PASS" if at_foot else "FAIL"])
 	print("bypass: highest point %.2f m after %.1f s of driving forward in rigid mode (needs >= %.1f) -> %s"
-		% [_best, _clock, TARGET_HEIGHT, "PASS" if made_it else "FAIL"])
+		% [_best, seconds, TARGET_HEIGHT, "PASS" if made_it else "FAIL"])
 	print("bypass: ended at (%.1f, %.1f, %.1f), budget %.0f s" % [at.x, at.y, at.z, BUDGET])
-	print("bypass_test: %s" % ("PASS" if made_it else "FAILED to reach the top shelf"))
+	var ok := at_foot and made_it
+	var verdict := "PASS"
+	if not at_foot:
+		verdict = "FAILED to start at the ramp foot"
+	elif not made_it:
+		verdict = "FAILED to reach the top shelf"
+	print("bypass_test: %s" % verdict)
 	_stage.free()
-	quit(0 if made_it else 1)
+	quit(0 if ok else 1)
 	return true
+
+
+static func _to_ticks(seconds: float) -> int:
+	return roundi(seconds * Engine.physics_ticks_per_second)

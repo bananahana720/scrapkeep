@@ -84,6 +84,8 @@ func setup(ctx_ref) -> void:
 		_launch_boost = 1.2
 		glyph("launched", player.ball_position(), 1.0, 4.0, 0.35, v))
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+	if events.has_signal("stage_content_cleared"):
+		events.stage_content_cleared.connect(func(_reason: String): clear())
 	events.run_started.connect(func(_class_id: String): clear_rings())
 	wire_optional()
 

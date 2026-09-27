@@ -118,7 +118,9 @@ Each test prints PASS/FAIL lines and exits non-zero on failure.
   passes 10 m/s within three seconds while staying within 6 m of the surface. Without the
   clearance assertion a ball that tunnelled through the floor would pass by free-falling.
 - `bypass_test` puts the ball at the ramp foot in rigid mode, holds forward, and asserts
-  it reaches the top shelf. This is the one that proves the slow route exists.
+  it reaches the top shelf. This is the one that proves the slow route exists. It also
+  asserts its first read is at the foot: the spawn sits above the target, so a read taken
+  before the rigid reset lands would otherwise pass without climbing.
 - `director_test` steps 60 simulated seconds of scheduling in a loop and asserts enemies
   spawn, the tier rises and the live cap holds.
 - `scrap_test` asserts the placed count is in range and that rolling through a pickup
@@ -127,6 +129,9 @@ Each test prints PASS/FAIL lines and exits non-zero on failure.
   that holding the zone completes it.
 - `flood_test` steps a whole 90 second cycle and asserts every phase is reached, the
   water rises and drains, the hatch is uncovered, and a submerged ball is dragged.
+
+The chute, bypass, scrap and exit tests run from `_physics_process` and count physics
+ticks. A rigid reset lands on the next tick, and an idle frame can arrive before it does.
 
 `tools/` is windowed-only and is never run by `npm run sketch:smoke`.
 
