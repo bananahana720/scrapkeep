@@ -157,3 +157,47 @@ The Wave 3 stage and event writers work these in:
     - The spawn-clear check holds the change until the ball is outside the footprint.
     - Participating (standing your ground, riding the new feature) pays a milestone reward.
     - Performance: a terrain swap pre-builds the post-change collider and swaps it in, per the ~34 ms trimesh note. It never rebuilds mid-frame.
+
+## 10. Enemy origin, reinforcements and chained crowd control
+
+Andrew added these on 2026-09-27, in his words:
+
+- **Origin.** The enemies are "either uh, awaken ancient beings or an alien race or robots that came from the advent of an apocalypse, which is why it would be post-apocalyptic". Which origin is still open; see the question at the end.
+- **Reinforcements.** The longer you stay, the more "special like reinforcements would come". They carry "fun anti like roly ball like uh, mechanisms":
+  - "magnetic uh like uh traps that will act as like uh pits to slow you down"
+  - a hook that can "hook you to a specific Uh, point and lock you in place"
+  - "electrical fields that will pop up and try to nab you in the air"
+  - "bolas that will try to nab you in the air"
+  - armoured units that "can take an additional hit ... similar to the warden, but in a lesser extent"
+  - units that "reflect you or, or pull you"
+- **Enemy synergies.** "if you're unfortunately coming up to a combination of people, then you'll just get napped and and uh, um, just like skill chained".
+
+**How this fits momentum is sacred.** The principle allows stops the player could foresee and that come from their own performance. So:
+
+1. **Every counter is telegraphed** with W2's threat grammar before it can take hold: a projectile trace for bolas, a lane for the hook line, and an instant AOE fill for a mag pit or air-net field. Each has its own warn sound, and each is dodgeable by reading it.
+2. **Every hold can be broken by the player.**
+   - A smash or jump breaks a mag-pit slow.
+   - Enough speed snaps a hook tether: if you're above the tether's heft rating it breaks, which rewards growth.
+   - A double jump or glide escapes an air net.
+   - Rivet's sprint ignores all of them. That's his identity paying off.
+3. **Chains are real but bounded (tenacity).**
+   - Crowd control can chain across a combination of enemies. Getting "skill chained" is a legitimate punishment for rolling into a bad combination.
+   - After 1.8 s of accumulated hold within 4 s, the ball gets 2.5 s of immunity to crowd control, shown as a copper shimmer.
+   - Breaking free by your own action (smash, jump, speed) gives a small boost refund. Escaping is a momentum moment, not only relief.
+4. **Reinforcement roster.**
+   - Mag trapper: throws a magnetic pit disc (slow, heft-gated).
+   - Hooker: fires a tether lane that pins you to its anchor post.
+   - Netcaster: raises an electric field that grabs airborne balls.
+   - Bola thrower: a slow arcing throw that wraps you mid-air.
+   - Plated brute: a mini-Warden with plating that takes one extra breaking hit.
+   - Deflector: a reflect shield that bounces you back at restitution 0.9.
+   - Winch drone: pulls you toward the pack.
+5. **When they arrive.** The Risk of Rain stay-longer clock gates them. Each difficulty tick past the Warden break adds reinforcement weight. The director (TADR-010) composes packs that deliberately pair a controller with a punisher. For example, a mag trapper plus a bola thrower: the tagged combinations are the enemy synergies.
+6. **The counterplay is learnable.** Each counter also becomes an opportunity:
+   - A rebound off a deflector's shield is a free vault.
+   - A snapped tether slings you forward.
+   - An air net can be baited.
+
+These are the hooks for loot items ("tenacity", "tether snap", "net cutter").
+
+Wave 3 gets a W7 enemies writer (combat enemies plus the director's pack composition). It starts after W2 and W3 merge, since it needs the threat grammar and the contact rules.
