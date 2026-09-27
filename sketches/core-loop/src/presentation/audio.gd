@@ -58,6 +58,10 @@ const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampe
 const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
 	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
 	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked"]
+# v2 W7 enemies: holds, tenacity, packs and the ancients' tells. Each plays its event
+# row's sound through the same wiring as the character facts.
+const ENEMY_KINDS := ["hold_started", "hold_broken", "hold_ended", "tenacity_gained", "pack_arrived",
+	"shield_vaulted", "vent_charging", "vent_erupted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
 
 var ctx
 var engine: MusicEngine
@@ -489,7 +493,7 @@ func wire_optional() -> void:
 		play("stage_content_cleared"))
 	# v2 W3 characters: each class-ability fact plays its event row's stand-in sound
 	# until W5 bakes the id named in the row's sound_next.
-	for kind in CHARACTER_KINDS:
+	for kind in CHARACTER_KINDS + ENEMY_KINDS:
 		if events.has_signal(kind) and not _character_wired.has(kind):
 			_character_wired[kind] = true
 			if kind == "vault_kicked":
