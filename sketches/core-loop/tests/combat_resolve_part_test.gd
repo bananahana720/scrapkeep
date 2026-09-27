@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # Presentation gates hit-stop on ctx.spawner.resolve(enemy, kind, force), called from
 # its enemy_struck handler before the damage lands. That query must return the plating
@@ -52,7 +53,7 @@ func _physics_process(_delta: float) -> bool:
 	var body: Dictionary = _seen[1] if _seen.size() > 1 else {"plating": -1.0, "full": false}
 	_report("cap", cap["plating"] == 0.0 and cap["full"],
 		"a stomp that named the vent cap (ball %.0f m from it): resolve in enemy_struck reads plating %.0f, full %s" % [ball_to_cap, cap["plating"], cap["full"]])
-	_report("body", body["plating"] == 60.0 and not body["full"],
+	_report("body", body["plating"] == StageDefs.of(2)["warden_plating"] and not body["full"],
 		"a body stomp on Warden II: resolve in enemy_struck reads plating %.0f, full %s" % [body["plating"], body["full"]])
 	var ok := _failures == 0
 	print("combat_resolve_part_test: %s" % ("PASS" if ok else "FAIL"))

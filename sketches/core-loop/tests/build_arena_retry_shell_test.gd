@@ -46,10 +46,11 @@ func _physics_process(_delta: float) -> bool:
 	flow.press_start()
 	flow.choose_class(0)
 	flow.enter_stage(3, Vector3(0.0, 0.0, 16.0), false)
-	run.add_scrap(160, _game.player.ball_position())
+	# 480 mass is class 2 at 1 + mass/450; losing 450 drops it to class 1.
+	run.add_scrap(480, _game.player.ball_position())
 	flow.enter_boss(Vector3(15.0, 0.0, 0.0))
 	var entry_class: int = run.heft_class()
-	run.lose_scrap(150, _game.player.ball_position(), "crane")
+	run.lose_scrap(450, _game.player.ball_position(), "crane")
 	var robbed_class: int = shell.shell_class()
 	run.damage(1.0e9, "test")
 	flow.retry_stage()
