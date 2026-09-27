@@ -12,7 +12,7 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 | `hitscan.gd` | the shared aim query every weapon reads |
 | `bolts.gd` | every live player projectile, the live cap and the crowd fade |
 | `effects.gd` | chain arcs, blast rings and impact sparks |
-| `telegraph.gd` | the committed ring or lane an enemy attack both draws and damages with |
+| `telegraph.gd` | the committed ring, lane or wedge an enemy attack both draws and damages with |
 | `ground.gd` | the ground enemies, telegraphs and shells stand on: the terrain, or the boss floor in the arena |
 | `enemy.gd` | what every enemy shares: health, plating, weak points, weight, knock, flash, tint, death, telegraph |
 | `chaser.gd`, `lobber.gd`, `projectile.gd`, `miniboss.gd` | the enemies and the lobber's shell |
@@ -35,7 +35,7 @@ On `stage_content_cleared` (arena entry and every arena retry, before the boss m
 
 Warden numbers come from `ctx.flow.stage_def()` (`warden_plating`, `warden_hp`, `warden_lesson`, `beacon_radius` as its reach). The vault reads the next stage from `StageDefs.of(stage + 1)`, so a tuning edit to `stage_defs.gd` moves it too. Only a field a def is missing falls back to the spec's per-stage values: 30/60/95 plating, 400/700/1000 health, `plate`/`caps`/`magnet`. The Warden and the vault sit on the ground under `at`; the others are placed at `at`. An unknown kind spawns a chaser and prints a warning. Every enemy records its kill on the tick its health reaches 0: `died` fires, the spawner calls `run.record_kill`, and the body has already stopped colliding, before it leaves the tree at the end of the frame. A stage reset frees what is left without a kill, which is how a retry clears the field.
 
-Warden lessons: `plate` adds nothing. `caps` adds three vent caps on top: a stomp or slam landing within 2.6 m of one meets plating 0 and hits for 1.5 times its punch. `magnet` swings a magnet arm up over the clamp every 8 s, telegraphs 1.5 s, then tugs you toward it at 3.5 m/s² for 1.5 s; a weapon hit on the magnet during the tug drops the Warden's plating to 0 for 3 s. It never pins and never pushes sideways.
+Warden lessons: `plate` adds nothing. `caps` adds three vent caps on top: a stomp or slam landing within 2.6 m of one meets plating 0 and hits for 1.5 times its punch. `magnet` swings a magnet arm up over the clamp every 8 s and lays a wedge from the arm toward you (35 degrees either side, a dashed rim, chevrons pointing home) for 1.5 s, then tugs a ball the wedge contains toward it at 3.5 m/s² for 1.5 s. The magnet is a weak point only in the tug: a weapon hit on it then drops the Warden's plating to 0 for 3 s, and a shot during the telegraph meets the body. It never pins and never pushes sideways.
 
 Every enemy is in group `enemy`, on physics layer 3, and implements `knock(direction, force)` and `flash()`. Modules may also read `kind`, `hp`, `max_hp`, `is_dead()` and `telegraph()` (the live ring or lane, or null). The miniboss adds `state_name()` (`stalk`, `slam_crouch`, `slam_leap`, `charge_brace`, `charge`, `weak`), `is_weak()`, `attacks` and `weak_windows`. An event that is won by killing the miniboss listens for `enemy_killed` with kind `miniboss`.
 
@@ -112,7 +112,7 @@ Every weapon reads one aim query (`hitscan.gd`). The camera's centre ray, which 
 
 ## Enemy attacks and the committed telegraph
 
-An enemy damages the player only through its committed telegraph. The Warden's pulse and tug are the same: the reach ring they show is the ring they test. The attack lays a ring or a lane once, at commit, and later asks that same node's `contains(ball)`. Touching an enemy that is not attacking costs nothing but the bump. Rings and lanes reach 3.5 to 4 m above the ground under the ball, so a jump or a glide clears them. A hit taken shoves the ball 5 to 10 m/s along the attack through `ctx.player.add_external_accel`. Every push divides by the physics step actually run, so `Engine.time_scale` does not change its size.
+An enemy damages the player only through its committed telegraph. The Warden's pulse and tug are the same: the pulse tests the reach ring it shows and the tug the wedge it shows. The attack lays a ring, a lane or a wedge once, at commit, and later asks that same node's `contains(ball)`. Touching an enemy that is not attacking costs nothing but the bump. Rings and lanes reach 3.5 to 4 m above the ground under the ball, so a jump or a glide clears them. A hit taken shoves the ball 5 to 10 m/s along the attack through `ctx.player.add_external_accel`. Every push divides by the physics step actually run, so `Engine.time_scale` does not change its size.
 
 **The ground in the arena.** Enemies, telegraphs and shells read the ground through `ground.gd`, not `ctx.terrain` directly. On a stage that is the terrain. When `ctx.flow.in_arena` is true and `ctx.boss` implements `ground_height_at(point: Vector3) -> float`, the boss floor answers instead, because the stage terrain stays parked under the bowl. A ring then centres on the floor you roll on, `contains()` measures height above that floor, and a drone lobber aims its landing at it.
 

@@ -29,6 +29,7 @@ var _zero_ticks := 0
 var _stun_seen := false
 var _min_planar := INF
 var _tug_ticks := 0
+var _pulled_ticks := 0
 var _tug_min := INF
 var _control_ticks := 0
 var _away := Vector3.ZERO
@@ -96,6 +97,9 @@ func _physics_process(delta: float) -> bool:
 			flat.y = 0.0
 			if _warden.state_name() == "tug":
 				_tug_ticks += 1
+				var zone: Node3D = _warden.get("_magnet_ring")
+				if is_instance_valid(zone) and zone.contains(_game.player.ball_position()):
+					_pulled_ticks += 1
 				if flat.length() <= _warden.reach:
 					_min_planar = minf(_min_planar, _game.player.planar_velocity().length())
 				return false
@@ -115,9 +119,9 @@ func _physics_process(delta: float) -> bool:
 			if _control_ticks < _tug_ticks:
 				return false
 			var cruise: float = _game.ctx.tuning.f("cruise")
-			_report("tug_escape", _tug_ticks > 60 and _tug_min > 0.8 * cruise,
-				"driving away through a %.2f s tug, planar speed never fell below %.2f m/s (needs > %.2f, 0.8 x cruise); the same run with no tug bottomed at %.2f m/s"
-					% [_tug_ticks * TICK, _tug_min, 0.8 * cruise, _min_planar])
+			_report("tug_escape", _tug_ticks > 60 and _pulled_ticks > 60 and _tug_min > 0.8 * cruise,
+				"driving away through a %.2f s tug, %d ticks inside the pull wedge, planar speed never fell below %.2f m/s (needs > %.2f, 0.8 x cruise); the same run with no tug bottomed at %.2f m/s"
+					% [_tug_ticks * TICK, _pulled_ticks, _tug_min, 0.8 * cruise, _min_planar])
 			return _finish()
 	return false
 
@@ -187,21 +191,23 @@ func _start_magnet() -> void:
 	_phase = "await_tug"
 
 
-# Rolls the ball away from the Warden at cruise, downhill where the ground allows, with
-# drive held away from it for the whole tug.
+# Rolls the ball away from the Warden at cruise, down the pull wedge (within 15 degrees
+# of the magnet's line, downhill where the ground allows), with drive held away from it
+# for the whole tug.
 func _start_run_away() -> void:
 	var ctx = _game.ctx
 	var centre: Vector3 = _warden.global_position
-	var best := 0.0
+	var line: Vector3 = _warden.magnet_dir()
+	var best := line
 	var lowest := INF
-	for i in 16:
-		var angle := TAU * i / 16.0
-		var probe: Vector3 = centre + Vector3(cos(angle), 0.0, sin(angle)) * 24.0
+	for i in 7:
+		var heading: Vector3 = line.rotated(Vector3.UP, deg_to_rad(-15.0 + 5.0 * i))
+		var probe: Vector3 = centre + heading * 24.0
 		var h: float = ctx.terrain.height(probe.x, probe.z)
 		if h < lowest:
 			lowest = h
-			best = angle
-	_away = Vector3(cos(best), 0.0, sin(best))
+			best = heading
+	_away = best
 	var start: Vector3 = centre + _away * 8.0
 	start.y = ctx.terrain.height(start.x, start.z) + 1.05
 	var cruise: float = ctx.tuning.f("cruise")

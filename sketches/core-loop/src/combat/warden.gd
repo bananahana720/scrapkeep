@@ -17,10 +17,11 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 #   - "plate": nothing more.
 #   - "caps": three vent caps on top. A stomp or slam that lands on one meets plating 0
 #     and hits for CAP_MULT times its punch.
-#   - "magnet": every MAGNET_CYCLE it swings a magnet arm toward you, telegraphs for
-#     MAGNET_TELEGRAPH, then tugs you toward it at MAGNET_PULL m/s^2 for MAGNET_TUG.
-#     A weapon hit on the magnet during the tug drops the Warden's plating to 0 for
-#     UNPLATE_SECONDS and ends the tug.
+#   - "magnet": every MAGNET_CYCLE it swings a magnet arm toward you and lays a wedge
+#     from the arm toward the ball for MAGNET_TELEGRAPH, then tugs a ball the wedge
+#     contains toward it at MAGNET_PULL m/s^2 for MAGNET_TUG. The magnet is a weak
+#     point only in the tug: a weapon hit on it then drops the Warden's plating to 0
+#     for UNPLATE_SECONDS and ends the tug. An earlier shot meets the body.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -48,6 +49,9 @@ const MAGNET_ARM := 3.2
 # body, so shooting it is a choice you aim for rather than an accident of body fire.
 const MAGNET_RISE := 3.6
 const MAGNET_RADIUS := 1.1
+# The pull telegraphs as a wedge from the arm toward the ball, this wide either side, so
+# it never reads as the pulse ring; the tug pulls only a ball the wedge contains.
+const MAGNET_WEDGE_DEG := 35.0
 const UNPLATE_SECONDS := 3.0
 const WEAPON_KINDS := ["runner", "arc", "turret"]
 const CONTACT_KINDS := ["stomp", "slam"]
@@ -133,7 +137,7 @@ func hit_mult(hit_kind: String, part: String) -> float:
 
 func weak_points() -> Array:
 	var points := []
-	if lesson == "magnet" and magnet_state != Magnet.IDLE:
+	if lesson == "magnet" and magnet_state == Magnet.TUG:
 		points.append({"id": "magnet", "at": magnet_point(), "radius": MAGNET_RADIUS})
 	return points
 
@@ -236,7 +240,8 @@ func _step_magnet(delta: float, inside: bool) -> void:
 				_magnet_dir = to.normalized() if to.length() > 0.1 else Vector3.FORWARD
 				magnet_state = Magnet.TELEGRAPH
 				_magnet_time = 0.0
-				_magnet_ring = Telegraph.ring(world_root, terrain, global_position, reach, LIFT_REACH_UP)
+				_magnet_ring = Telegraph.wedge(world_root, terrain, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
+						reach, MAGNET_WEDGE_DEG, LIFT_REACH_UP)
 		Magnet.TELEGRAPH:
 			_magnet_time += delta
 			if is_instance_valid(_magnet_ring):
