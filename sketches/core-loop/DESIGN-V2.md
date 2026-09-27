@@ -295,3 +295,12 @@ In his words: "I actually want to have a maybe a shopkeeper uh, and maybe some l
 - W5: the lounge arrangement and Moss's voice-free sound set (a workbench clank, a shop bell, a grumble when he refuses).
 - W1: the shop UI, with icons first and at most 5 words per line.
 - Vision keeper: Moss's wording.
+
+**The conversation loop (Andrew, 2026-09-27).** In his words: "a conversational loop where the player can initiate and get maybe the flavors of the conversation or of the sketch". He accepted "a different flavor of it" if needed.
+
+- **Copyright.** The sketch's script is its creator's work; being on YouTube doesn't license it. The game copies no lines. It borrows only the comic structure: an escalating ask, a stubborn refusal repeated with rising exasperation, and a dismissal to a weaker seller. Everything is in Moss's own voice. The vision keeper writes the lines, and the integration reviewer checks that no line reproduces the sketch.
+- **How the player starts it.** A key glyph appears by Moss inside the bay. Each press plays one beat.
+- **The beats.** The loop runs 5 to 6 beats: ask, refuse, insist, double down, plead, send off (for example, to "a scrapper who sells lighter parts"). Pressing again restarts the loop with a new variation. There are at least 3 variations per beat, so repeat visits stay fresh.
+- **The pay-off.** Once the ball reaches the heft class the top shelf needs, the loop ends in a grudging relent line and the hook unlocks. The gag and the growth goal are the same thing.
+- **Moss's voice.** Synthesized babble, one syllable blip per letter, pitched in the live key, with each beat rising in pitch as he gets exasperated. No recorded voice.
+- **Fit.** It never blocks the exit, and each line is a speech bubble of at most 12 words, well away from the reticle. Seeing the loop through adds a codex entry ("Too heavy for you").
