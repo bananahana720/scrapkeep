@@ -208,4 +208,9 @@ Wave 3 gets a W7 enemies writer (combat enemies plus the director's pack composi
 - A variant counts as a new enemy only if it changes what the player must do.
 - The W7 writer and its reviewer check each roster entry against this. Two entries that differ only in numbers or colour fail.
 
-The enemy origin (ancient beings, aliens or apocalypse robots, against the Bible's Furnace Fleet) is still open. The greybox keeps the mechanics neutral until Andrew decides.
+**Enemy origin, chosen by Andrew through AskUserQuestion on 2026-09-27: the Fleet digs up ancient machines.** The Furnace Fleet's excavations woke pre-apocalypse war machines under the Southwest, and that waking caused the collapse. This gives two factions whose mechanics must differ:
+
+- **Fleet crews** are the reinforcements, with engineered anti-ball gear: the mag trappers, hookers, netcasters, bola throwers, deflectors and winch drones.
+- **Awakened ancients** are the wild threats and the Wardens: strange, ritual and geological.
+
+Brindle and the Bible's antagonist stay. The Bible amendment for the post-apocalyptic layer is a heavy-lane card after v2 play.
