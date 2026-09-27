@@ -5,6 +5,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
 # The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
 # its line; rolling through one takes its part. There is no collider and no menu, so
@@ -15,8 +16,14 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 # "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
 # complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
 # ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
-# (a bar for common, a diamond for uncommon, a star for rare, a tall star for
-# rare-plus), so colour never carries it alone.
+# (a bar for common, a diamond for uncommon, a star for rare, a tall star with a mint
+# heart for rare-plus), so colour never carries it alone. Red is only for what hurts
+# you (DESIGN-V2 section 11), so rare-plus is amber with the mint heart.
+#
+# v2 W4: a gate also reads without words, as its family glyph (cat_), trigger glyph
+# (trg_) and element glyph (el_) beside the topper, the same ids the shop and the
+# cards use; a gate whose part completes a synergy pulses. The prompt passes its parts
+# through set_parts(title, detail, "obj_gate").
 
 signal chosen(part_id: String)
 
@@ -138,6 +145,10 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 			"tier": d.tier if d != null else 1,
 			"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
 			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
+			"family": d.family if d != null else "stat",
+			"icon": "cat_" + d.icon_category if d != null and d.icon_category != "" else "",
+			"trigger_icon": "trg_" + d.trigger if d != null and d.trigger != "" else "",
+			"element_icon": "el_" + d.element if d != null and d.element != "" else "",
 		})
 		_gates.append(_build_gate(at, facing, offers[-1]))
 
@@ -239,8 +250,28 @@ static func rarity_color(rarity: String) -> Color:
 		"rare":
 			return Palette.AMBER
 		"rare_plus":
-			return Palette.HAZARD
+			return Palette.AMBER
 	return Palette.SANDSTONE
+
+
+# The glyphs a gate wears, left to right: family, trigger, element.
+static func glyph_ids(offer: Dictionary) -> Array:
+	return [offer.get("icon", ""), offer.get("trigger_icon", ""), offer.get("element_icon", "")] \
+		.filter(func(id): return id != "")
+
+
+# The prompt's structured parts: the name (at most three words) at range, and within
+# reach the verb with its punch, the effect line and the star line.
+static func prompt_parts(offer: Dictionary) -> Dictionary:
+	var words: PackedStringArray = String(offer.get("name", "")).split(" ", false)
+	var title := " ".join(words.slice(0, WorldPrompt.TITLE_WORDS))
+	var first := String(offer.get("verb", ""))
+	if offer.get("punch", 0.0) > 0.0:
+		first += ". Punch +%d" % int(offer["punch"])
+	var lines := PackedStringArray([first, offer.get("text", "")])
+	if offer.get("mark", "") != "":
+		lines.append(offer["mark"])
+	return {"title": title, "detail": "\n".join(lines), "icon": "obj_gate"}
 
 
 func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
@@ -269,6 +300,25 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	topper.name = "Topper"
 	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
 	gate.add_child(topper)
+	if offer["rarity"] == "rare_plus":
+		var heart := MeshInstance3D.new()
+		var core := SphereMesh.new()
+		core.radius = 0.45
+		core.height = 0.9
+		heart.mesh = core
+		heart.material_override = Palette.solid(Palette.ARC, 3.0)
+		topper.add_child(heart)
+	var ids := glyph_ids(offer)
+	for i in ids.size():
+		var glyph := Sprite3D.new()
+		glyph.name = "Glyph%d" % i
+		glyph.texture = Icons.texture(ids[i])
+		glyph.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		glyph.pixel_size = 0.018
+		glyph.modulate = Icons.tint(ids[i], tint.lerp(Color.WHITE, 0.4))
+		glyph.position = Vector3((float(i) - (ids.size() - 1) * 0.5) * 1.5, HEIGHT + 2.9, 0.0)
+		gate.add_child(glyph)
+	gate.set_meta("pulse", offer["synergy"] != "")
 	# The offer is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
 	# under the gate's column, so it never climbs into the objective or the toasts.
 	var label := WorldPrompt.new()
@@ -277,6 +327,8 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	if offer["mark"] != "":
 		lines += "\n" + offer["mark"]
 	label.text = lines
+	var parts := prompt_parts(offer)
+	label.set_parts(parts["title"], parts["detail"], parts["icon"])
 	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
 	label.attach(gate, Vector3(0.0, HEIGHT + 1.2, 0.0), PROMPT_REACH)
 	gate.add_child(label)
@@ -313,3 +365,5 @@ func _process(delta: float) -> void:
 		var topper := gate.get_node_or_null("Topper") as Node3D
 		if topper != null:
 			topper.rotation = Vector3(0.0, _spin, 0.0)
+			var pulse: float = 1.0 + 0.18 * sin(_spin * 3.0) if gate.get_meta("pulse", false) else 1.0
+			topper.scale = Vector3.ONE * pulse

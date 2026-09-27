@@ -437,3 +437,117 @@ The type is a required argument everywhere; no factory defaults it, and a node c
 - **Contact.** `src/movement/contact.gd` is the bowling-ball rule: `rebounds(weight, heft, sprinting)` and `rebound_velocity(v, normal, jump_speed)`. The ball asks `heft_of` (combat wires it to `combat.heft`) and an enemy's `weight`. A body without `weight` is never a rebound. A rebound refreshes like a stomp through `player.refresh_air()`.
 - **Enemy sight.** Combat hands chasers, lobbers and minibosses a `Sight` proxy as their target (`ball_position()`, `planar_velocity()`, `add_external_accel()`), which answers the cloak's smoke point to enemies beyond `CLOAK_SIGHT` of their reach. An enemy that needs more of the player must add it to the proxy.
 - **Bus facts and their owners.** Movement (`player_ball`) publishes `enemy_rebounded`, `vault_kicked`, `sprint_started`, `blink_used`, `arc_slammed`, `skid_smashed`, `demo_slammed`, `cc_ignored`, `dashed` (the movement burst of any class) and the slingshot's `gauge_*`. Combat publishes `enemy_pinned`, the specials' `gauge_charging`, `gauge_released` and `gauge_cancelled`, `cloak_started`, `cloak_broken`, `sticky_detonated` and `rocket_jumped`. `special_used(special_id, at)` now carries `detonation_gauge`, `overdrive_blast` or `detonation_line`.
+
+## Loot and shop (v2 W4)
+
+Build owns the items, their triggers, the run and difficulty clocks, and Moss's shop economy (DESIGN-V2 sections 5, 7 and 12). Everything below is reached through `ctx.build`.
+
+### Triggers (`src/build/triggers.gd`)
+
+- **The vocabulary is closed at twelve kinds:** `on_hit`, `on_kill`, `on_smash`, `on_rebound`, `on_vault`, `on_charge_release`, `on_cloak_break`, `on_land`, `on_speed_tier_up`, `on_pickup`, `on_damage_taken` and `timed`. A thirteenth kind is a code change. Each kind's glyph is `trg_<kind>`.
+- **Every kind reads a fact that is already published.** No other module emits anything new.
+
+  | Kind | Read from |
+  | --- | --- |
+  | `on_hit` | `enemy_struck` |
+  | `on_kill` | `enemy_killed` |
+  | `on_smash` | `slammed`, `arc_slammed`, `skid_smashed` and `demo_slammed`, at most one per tick |
+  | `on_rebound` | `enemy_rebounded` |
+  | `on_vault` | `vault_kicked` |
+  | `on_charge_release` | `gauge_released` (the amount is the fraction) |
+  | `on_cloak_break` | `cloak_broken` |
+  | `on_land` | `landed` (the amount is the impact) |
+  | `on_damage_taken` | `player_hit` |
+  | `on_pickup` | build's own scrap pickup |
+  | `on_speed_tier_up` | build's own read of `player.speed_tier()` |
+  | `timed` | the item's own clock |
+
+- **The handlers only queue.** The passes resolve in build's physics step (TADR-008).
+- **Proc coefficients.** A discrete action has a base proc of 1.0. `on_hit` and `on_kill` read the strike kind: `ram`, `stomp`, `slam` and `shell` 1.0; `arc` 0.6; `turret` and `pin` 0.5; `runner` 0.4; `synergy` 0. Build's own strikes never post `on_hit`. An item's `proc_coeff` multiplies the base.
+- **The guard.** A root commitment opens a pass and takes one draw from build's loot stream. That stream is reseeded at each stage entry and is never `ctx.rng`. Inside the pass a kind already queued or resolved is refused, so each kind fires at most once per commitment and every pass ends within twelve resolutions. Domino Wire's explicit chain is capped at `MAX_CHAIN_DEPTH` 1.
+
+### Part fields (`src/build/part_def.gd`)
+
+- **New fields:** `trigger`, `proc_coeff`, `stack_rule` (`linear`, `hyperbolic` or `capped`), `stack_cap`, `icon_category` (the `cat_` family), `element` (the `el_` glyph), `effect` (`{"do": id, ...}` from `item_effects.gd`'s closed `EFFECTS`), `charges` (slot to extra `max_charges`), `needs` and `shop_only`.
+- **Stack caps.** For linear and capped rows, `stack_cap` counts copies. For hyperbolic rows it is a value ceiling below 1. `PartDef.Stacking.value` is the one rule.
+- **The seam gate.** A part whose `needs` seam is missing is never offered. Build fills `Parts.seams` at run start.
+
+### The pool
+
+- **Rows.** `Parts.rows()` holds the 28 first catalogue rows, the 58 new rows of `items.gd` and Moss's four shop-only cells. The first two together are I2's 61-item table plus 25 older rows.
+- **Generated items.** A generated item's id is its recipe: `gen:<base>:<rarity>:<element|none>:<trigger>`. `Parts.def(id)` rebuilds it, so a generated part stacks, survives a retry and reads in the run log like any other.
+- **Rolls.** `Parts.roll` draws each slot's rarity by the weights 60/27/10/3. A slot is a generated recipe 25% of the time. It down-weights parts already offered this stage (`offered`).
+- **Class items.** `glide_vane`, `jet_vent` and `cloak_flask` go only to Kest. `sprint_cell` goes only to Rivet. `grapple_coil`, `anchor_spring` and `vault_battery` go only to Sable.
+
+### Build API additions
+
+| Call | Returns |
+| --- | --- |
+| `enemies_near(at, radius, count)` | the nearest enemies |
+| `item_hit(enemy, damage, element := "")` | strikes as `synergy`, after the weapon multiplier, and applies the element where it lands |
+| `item_procs()` | item id to procs this run |
+| `trigger_stats()` | `{passes, fired, refused, max_same_kind, leaked}` |
+| `has_perk(id)` | `lens` (hint marks name the synergy) or `par` (the par ghost) |
+| `set_modifiers({"scrapless": bool, "par": bool})` | the class screen calls it before `choose_class`; it applies at `run_started` |
+| `run_tags()`, `scrapless()` | the run's modifier tags; also on `ctx.run.get_meta("run_tags")` |
+| `clock_record()` | the clock record below |
+| `clock_paused()` | true while the ball is in Moss's bay |
+| `shop` | the shop economy below |
+
+**Scrapless.** No scrap pickup and no kill scrap. Gates, vaults and won events add no part. A gate still publishes `reward_chosen`, so the launch handshake holds.
+
+**Gate offer records** add `family`, `icon` (`cat_*`), `trigger_icon` (`trg_*` or `""`) and `element_icon` (`el_*` or `""`). A gate draws the three glyphs beside its topper and pulses when it completes a synergy. Gates and fabricators pass `set_parts(title, detail, icon)` with `obj_gate` and `obj_fabricator`.
+
+### The clock record (W1 draws it)
+
+`clock_record()` returns:
+
+```
+{run_seconds, stage_seconds, timer_icon: "res_timer",
+ difficulty: {fraction 0..1, tier 0..2, tiers 2, paused, icon: "res_difficulty"},
+ par: {on, best (seconds or null), split (stage seconds - best, frozen at the Warden break), broken},
+ tags}
+```
+
+- The difficulty schedule is the director's (45 s a tier, two tiers). `build_clock_test` fails if they drift.
+- The bar pauses while `clock_paused()`. The par timer does not.
+- `par.best` is the best `ticks_to_warden_break` for this stage in `runs.ndjson`.
+
+### Moss's shop (`ctx.build.shop`, W6 and W1)
+
+The shop is an economy with no geometry.
+
+- **Result record.** Every verb returns `{ok, reason, part_id, price, scrap, bark?}`. `reason` is one of `ok`, `cant_afford`, `sold_out`, `locked`, `capped`, `no_reroll`, `welded`, `not_held` or `closed`. `bark` is `{line_id, text, root}`.
+- **Line ids** are `moss.<beat>.<n>`, `moss.<beat>.<class>`, `moss.restart`, `moss.relent.<n>`, `moss.bark.<moment>` and `moss.remember.<key>`. The text is SOUND-STORY section 8's, word for word; `shop_lines_test` checks it.
+
+| Call (caller) | Does |
+| --- | --- |
+| `enter()` (W6, the ball enters the bay) | stocks the shelf and the hook, pauses the difficulty clock, returns the greeting line |
+| `leave()` (W6, the exit pad) | returns the leaving bark and restarts the clock |
+| `shelf_offers()` (W1) | three `{index, part_id, name, price, sold, rarity, text, icon, trigger_icon, element_icon, affordable}` |
+| `buy(index)` | spends scrap and adds the part with source `shop` |
+| `reroll_price()`, `reroll()` | one reroll per visit: 12 scrap, times 1.5 for each visit after the first |
+| `charge_offers()`, `buy_charge(slot)` | `{slot, part_id, price, cells, cap, max_charges, icon, can}` for each slot that recharges; a cell is a shop-only part, at most 2 per slot, and the slot's ceiling is 4 charges |
+| `sell_offers()`, `sell_quote(part_id)`, `sell(part_id)` | half the part's current price back; heft drops with the part |
+| `top_shelf()`, `buy_top()` | `{part_id, name, price, locked, needs_class, heft_class, lock_icon: "res_heft", sold, relented}`; locked until the heft class at entry plus one |
+| `talk()` (the key glyph by Moss) | `{beat 0..5 or 6 restart or -1 relent, beat_id, line_id, text, root, grumble, exasperation, relent, restart, loops}` |
+| `greeting_line()`, `history`, `note_death(scrap)` | the remembers-you line; `history` takes PROGRESSION's keys (`died_last_run`, `won_last_run`, `class_changed`, `skipped_visits`); `relented_before` and `neglected` come from the codex and this run |
+
+- **The loop.** Six beats, then the restart line, then fresh variations. A visit never repeats a variation until they are all used. Class lines are extra choices for that class.
+- **The relent.** Once the heft class reaches the lock, the next press relents, the hook unlocks and the codex discovers `too_heavy_for_you`.
+
+### event_kinds (`LOOT_ROWS`)
+
+These rows are for shop and item facts that are not bus signals: `shop_entered`, `shop_left`, `shop_bought`, `shop_charge`, `shop_rerolled`, `shop_sold`, `shop_refused`, `moss_beat`, `moss_relent`, `item_proc` and `par_split`. Each `sound_next` names the cue W5 is to bake.
+
+### Codex (category `build`)
+
+`codex_declarations()` now also returns `strike`, `spare`, `turkey` (the bowling score, `src/build/lanes.gd`) and `too_heavy_for_you`.
+
+### Requested shared-file changes (W4 handback)
+
+1. **`run_state.gd`.** Add `remove_part(part_id, reason)`, which removes one copy and publishes a `part_lost(part_id, reason)` fact that combat rebuilds on, then `heft_class_dropped` if the class fell. Add `refund_scrap(amount)` for the wallet only. Until then the shop removes the part itself and never sells a pattern part (`welded`).
+2. **`run_log.gd`.** Add `line["tags"] = run.get_meta("run_tags", [])` in `_write`.
+3. **World's director.** Skip advancing `stage_time` while `ctx.build.clock_paused()`.
+4. **Combat.** Add `pattern.gd` transformer rows `fan_spread` and `helix_drill`, and `extend_cloak(seconds)`.
+5. **Movement.** Add `player.set_vault_cooldown_scale(s)` and `player.set_vault_charges(n)`. Five parts wait on these seams and are not offered until they exist.

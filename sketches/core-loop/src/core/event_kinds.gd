@@ -194,3 +194,28 @@ const LESSON_SHORT := {
 	"caps": "Slam its vent caps",
 	"magnet": "Shoot its magnet while pulled",
 }
+
+
+# v2 W4 loot
+# Facts from Moss's shop and the item triggers that are not bus signals: build publishes
+# them in its shop results and item_procs(), and W1, W5 and W6 read their look and sound
+# here, in the ROWS schema. They sit outside ROWS for the same reason as UI_ROWS: ROWS is
+# one row per bus signal, and a new signal would need presentation wiring this unit does
+# not own. `sound` is an existing synth id standing in; `sound_next` names the cue W5 is
+# to bake (DESIGN-V2 section 12: a workbench clank, a shop bell, a grumble when he
+# refuses). Entering and leaving the bay reuse the mount and slingshot cues (SOUND-STORY
+# section 7), because the bay banks speed like a pylon. A refusal is one dry
+# interruption, never a damage alarm, so it is bone, not rust.
+const LOOT_ROWS := {
+	"shop_entered": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
+	"shop_left": {"group": "economy", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
+	"shop_bought": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
+	"shop_charge": {"group": "economy", "color": Palette.ARC, "shape": "core", "sound": "core_socket", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
+	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_refused": {"group": "economy", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "moss_grumble", "hud": "", "objective": "", "priority": 1},
+	"moss_beat": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "moss_babble", "hud": "", "objective": "", "priority": 1},
+	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
+	"item_proc": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "sound_next": "trigger_tick", "hud": "", "objective": "", "priority": 0},
+	"par_split": {"group": "flow", "color": Palette.SAND, "shape": "bar", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+}

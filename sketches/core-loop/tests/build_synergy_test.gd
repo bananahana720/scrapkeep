@@ -83,19 +83,27 @@ func _check_table() -> void:
 		"%d named synergies, each a pair of known tags with a behaviour and no bare percentage; problems %s" % [n, bad])
 
 
+# The synergy hint cards, plus v2 W4's callback cards (Strike, Spare, Turkey and Moss's
+# "Too heavy for you"), which have no shown ingredient.
 func _check_cards() -> void:
-	var cards: Array = _build.codex_declarations()
+	var all: Array = _build.codex_declarations()
+	var cards: Array = all.filter(func(c): return c.has("shown"))
+	var callbacks: Array = all.filter(func(c): return not c.has("shown"))
 	var bad: Array = []
-	for card in cards:
+	for card in all:
 		for field in ["id", "category", "name", "hint", "clue", "text"]:
 			if String(card.get(field, "")) == "":
 				bad.append("%s missing %s" % [card.get("id", "?"), field])
-		if card["category"] != "build" or not String(card["hint"]).begins_with(Parts.display_name(card["shown"])) \
+		if card["category"] != "build":
+			bad.append("%s category %s" % [card["id"], card["category"]])
+	for card in cards:
+		if not String(card["hint"]).begins_with(Parts.display_name(card["shown"])) \
 				or not String(card["hint"]).ends_with(card["clue"]):
 			bad.append("%s hint '%s'" % [card["id"], card["hint"]])
 	var storm: Dictionary = cards.filter(func(c): return c["id"] == "storm_lattice")[0]
-	_report("codex hint cards", bad.is_empty() and cards.size() == Synergies.ROWS.size(),
-		"%d build cards, each with category, name, hint, clue and text; e.g. '%s'; problems %s" % [cards.size(), storm["hint"], bad])
+	_report("codex hint cards", bad.is_empty() and cards.size() == Synergies.ROWS.size() and callbacks.size() == 4,
+		"%d synergy cards and %d callback cards, each with category, name, hint, clue and text; e.g. '%s'; problems %s"
+			% [cards.size(), callbacks.size(), storm["hint"], bad])
 
 
 func _check_each_goes_live() -> void:

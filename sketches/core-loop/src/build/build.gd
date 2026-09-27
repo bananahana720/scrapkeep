@@ -10,6 +10,11 @@ const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Triggers := preload("res://src/build/triggers.gd")
+const ItemEffects := preload("res://src/build/item_effects.gd")
+const RunClock := preload("res://src/build/run_clock.gd")
+const Shop := preload("res://src/build/shop.gd")
+const Lanes := preload("res://src/build/lanes.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -73,6 +78,28 @@ var fabricators
 var field
 var accretion
 var sheet
+# v2 W4 loot: the trigger bus, what held items do, and the loot's own seeded stream
+# (reseeded each stage entry, so a retry replays the same procs and never draws from
+# the run's shared ctx.rng).
+var bus
+var effects
+# The run and difficulty clocks W1 draws, Moss's shop economy, and the bowling score.
+var clock
+var shop
+var lanes
+# The challenge modifiers the class screen chose for the next run (RunClock.MODIFIERS).
+var _next_modifiers := {}
+# Parts offered at this stage's gates, id to count, so a stage rarely repeats one.
+var _offered := {}
+var loot_rng := RandomNumberGenerator.new()
+const LOOT_SEED := 20260927
+# Build's own strikes (synergies, elements, items) never post on_hit: the first guard
+# against build feeding itself. Triggers.STRIKE_PROC["synergy"] = 0 is the second.
+var _own_strikes := 0
+var _last_strike_kind := ""
+var _last_smash_frame := -1
+var _speed_tier := 0
+var _mass_hp := 0.0
 
 var _trail := 0.0
 var _trail_ticks := 0
@@ -124,14 +151,19 @@ func setup(ctx_ref) -> void:
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
+	bus = Triggers.Bus.new()
+	effects = ItemEffects.new(self)
+	clock = RunClock.new()
+	shop = Shop.new(ctx, self)
+	lanes = Lanes.new()
 	ctx.build = self
 	ctx.set_meta("build", self)
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.flow_changed.connect(_on_flow_changed)
-	ctx.events.part_gained.connect(func(_id: String, _source: String): recompute())
-	ctx.events.scrap_collected.connect(func(_amount: int, _at: Vector3, _total: int): _redraw())
+	ctx.events.part_gained.connect(_on_part_gained)
+	ctx.events.scrap_collected.connect(_on_scrap_collected)
 	ctx.events.milestone_won.connect(_on_milestone_won)
 	ctx.events.dashed.connect(_on_dashed)
 	ctx.events.slammed.connect(_on_slammed)
@@ -141,6 +173,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
+	_connect_triggers()
+	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
+	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.scrap))
 
 
 # ---- Build API (for combat, presentation and world; see SEAMS.md) ----
@@ -185,7 +220,10 @@ func part_info(part_id: String) -> Dictionary:
 # Codex hint cards for the build category: {id, category, name, hint, clue, text,
 # shown, tags}. Declared to ctx.codex at setup when the registry exists.
 func codex_declarations() -> Array:
-	return Synergies.declarations(func(part_id: String) -> String: return Parts.display_name(part_id))
+	var cards: Array = Synergies.declarations(func(part_id: String) -> String: return Parts.display_name(part_id))
+	for entry in Lanes.ENTRIES:
+		cards.append(entry.duplicate())
+	return cards
 
 
 func discovered() -> Array:
@@ -232,8 +270,156 @@ func offer_mark(part_id: String) -> String:
 		return "* completes %s *" % Synergies.ROWS[completes]["name"]
 	var ingredient := Parts.ingredient_of(part_id, held)
 	if ingredient != "":
-		return "* ingredient: %s *" % (Synergies.ROWS[ingredient]["name"] if is_known(ingredient) else "???")
+		var named: bool = is_known(ingredient) or has_perk("lens")
+		return "* ingredient: %s *" % (Synergies.ROWS[ingredient]["name"] if named else "???")
 	return ""
+
+
+# ---- Loot API (v2 W4; CONTRACTS "Loot and shop") ----
+
+# The nearest enemies within radius of at, nearest first, at most count.
+func enemies_near(at: Vector3, radius: float, count: int) -> Array[Node3D]:
+	return _enemies_near(at, radius, count)
+
+
+# An item's own hit: damage after the weapon multiplier, as a synergy strike that never
+# procs another item, with its element applied where it lands.
+func item_hit(enemy: Node3D, damage: float, element := "") -> void:
+	if not is_instance_valid(enemy) or damage <= 0.0:
+		return
+	_own_strikes += 1
+	var at := enemy.global_position
+	_strike(enemy, SYNERGY_KIND, damage * sheet.mod("weapon_damage"))
+	if element != "":
+		field.apply(element, at, "item")
+	_own_strikes -= 1
+
+
+# A part's live effect numbers for a card or the fuzzer: {id, trigger, procs}.
+func item_procs() -> Dictionary:
+	return effects.procs.duplicate()
+
+
+func trigger_stats() -> Dictionary:
+	return {"passes": bus.passes, "fired": bus.fired.duplicate(), "refused": bus.refused,
+		"max_same_kind": bus.max_same_kind, "leaked": bus.leaked()}
+
+
+func has_perk(perk: String) -> bool:
+	return effects.perks.has(perk)
+
+
+# The class screen's opt-in challenge modifiers for the next run: {"scrapless": bool,
+# "par": bool}. They take effect at run_started and are tagged in the run record.
+func set_modifiers(chosen: Dictionary) -> void:
+	_next_modifiers = chosen.duplicate()
+
+
+func run_tags() -> Array:
+	return clock.tags()
+
+
+func scrapless() -> bool:
+	return clock.on(RunClock.SCRAPLESS)
+
+
+# W1's run clock and difficulty bar record (CONTRACTS "Loot and shop").
+func clock_record() -> Dictionary:
+	return clock.record(has_perk("par"))
+
+
+# True while the ball is in Moss's bay: the director's difficulty clock should hold.
+func clock_paused() -> bool:
+	return shop.clock_paused()
+
+
+# Which other modules' seams are live now; a part that needs a missing one is never
+# offered (Parts.seams).
+func _refresh_seams() -> void:
+	var spawner = ctx.spawner
+	var patterns: PackedStringArray = spawner.transformer_ids() if spawner != null and spawner.has_method("transformer_ids") else PackedStringArray()
+	Parts.seams = {
+		"spawner.extend_cloak": spawner != null and spawner.has_method("extend_cloak"),
+		"spawner.fan_spread": "fan_spread" in patterns,
+		"spawner.helix_drill": "helix_drill" in patterns,
+		"player.set_vault_cooldown_scale": ctx.player.has_method("set_vault_cooldown_scale"),
+		"player.set_vault_charges": ctx.player.has_method("set_vault_charges"),
+	}
+
+
+func _post(kind: int, source: String, proc: float, at: Vector3, enemy: Node3D = null, amount := 0.0) -> void:
+	if proc <= 0.0 or not ctx.flow.in_play():
+		return
+	bus.post(Triggers.Commitment.new(kind, source, proc, at, enemy, amount))
+
+
+# Every trigger source is a fact already on the bus (or build's own pickup and speed
+# tier), so no other module's code changes to feed the vocabulary. The handlers only
+# queue; the passes resolve in _step_loot.
+func _connect_triggers() -> void:
+	var events = ctx.events
+	events.enemy_struck.connect(_on_struck_trigger)
+	events.enemy_killed.connect(func(_kind: String, at: Vector3, _scrap: int):
+		_post(Triggers.Kind.ON_KILL, _last_strike_kind, Triggers.strike_proc(_last_strike_kind), at))
+	for smash in ["slammed", "arc_slammed", "skid_smashed", "demo_slammed"]:
+		if events.has_signal(smash):
+			events.connect(smash, _on_smash_trigger.unbind(_argc(events, smash)))
+	if events.has_signal("enemy_rebounded"):
+		events.enemy_rebounded.connect(func(enemy: Node3D, speed: float):
+			_post(Triggers.Kind.ON_REBOUND, "rebound", Triggers.DISCRETE_PROC, ctx.player.ball_position(), enemy, speed))
+	if events.has_signal("vault_kicked"):
+		events.vault_kicked.connect(func(at: Vector3, speed: float):
+			_post(Triggers.Kind.ON_VAULT, "vault", Triggers.DISCRETE_PROC, at, null, speed))
+	if events.has_signal("gauge_released"):
+		events.gauge_released.connect(func(ability_id: String, fraction: float):
+			_post(Triggers.Kind.ON_CHARGE_RELEASE, ability_id, Triggers.DISCRETE_PROC, ctx.player.ball_position(), null, fraction))
+	if events.has_signal("cloak_broken"):
+		events.cloak_broken.connect(func(reason: String):
+			_post(Triggers.Kind.ON_CLOAK_BREAK, reason, Triggers.DISCRETE_PROC, ctx.player.ball_position()))
+	events.landed.connect(func(impact: float):
+		_post(Triggers.Kind.ON_LAND, "land", Triggers.DISCRETE_PROC, ctx.player.ball_position(), null, impact))
+	events.player_hit.connect(func(amount: float, source: String):
+		_post(Triggers.Kind.ON_DAMAGE_TAKEN, source, Triggers.DISCRETE_PROC, ctx.player.ball_position(), null, amount))
+	if events.has_signal("enemy_pinned"):
+		events.enemy_pinned.connect(func(victim: Node3D, damage: float):
+			effects.note_pin(victim, damage)
+			lanes.note_pin(victim))
+	if events.has_signal("enemy_rebounded"):
+		events.enemy_rebounded.connect(func(enemy: Node3D, _speed: float): lanes.note_rebound(enemy))
+
+
+func _on_struck_trigger(enemy: Node3D, kind: String, force: float) -> void:
+	if _own_strikes > 0:
+		return
+	_last_strike_kind = kind
+	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) else ctx.player.ball_position()
+	_post(Triggers.Kind.ON_HIT, kind, Triggers.strike_proc(kind), at, enemy, force)
+
+
+# One smash per physics frame, whichever flavour reported it.
+func _on_smash_trigger() -> void:
+	var frame := Engine.get_physics_frames()
+	if frame == _last_smash_frame:
+		return
+	_last_smash_frame = frame
+	_post(Triggers.Kind.ON_SMASH, "smash", Triggers.DISCRETE_PROC, ctx.player.ball_position(), null, 1.0)
+
+
+static func _argc(events: Object, signal_name: String) -> int:
+	for info in events.get_signal_list():
+		if info["name"] == signal_name:
+			return (info["args"] as Array).size()
+	return 0
+
+
+# The speed tier rising is build's own commitment point, read once per step.
+func _step_loot(delta: float) -> void:
+	var tier: int = ctx.player.speed_tier()
+	if tier > _speed_tier:
+		_post(Triggers.Kind.ON_SPEED_TIER_UP, "speed", Triggers.DISCRETE_PROC, ctx.player.ball_position(), null, tier)
+	_speed_tier = tier
+	effects.tick(delta, bus)
+	bus.run(effects.resolve, loot_rng)
 
 
 # ---- Derivation ----
@@ -244,7 +430,11 @@ func offer_mark(part_id: String) -> String:
 # the first time this run is a discovery.
 func recompute() -> void:
 	sheet = BuildSheet.from_parts(ctx.run.parts)
+	effects.refresh(ctx.run.parts)
+	_mass_hp = effects.mass_health(ctx.run.mass)
+	sheet.max_hp_bonus += _mass_hp
 	sheet.apply(ctx.tuning, ctx.run)
+	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
 	for synergy_id in sheet.synergies:
@@ -313,10 +503,37 @@ func _class_id() -> String:
 
 
 
+func _on_part_gained(part_id: String, _source: String) -> void:
+	recompute()
+	var d: Resource = Parts.def(part_id)
+	if d != null and d.effect.get("do", "") == "ballast":
+		ctx.run.add_scrap(int(d.effect.get("mass", 0)), ctx.player.ball_position())
+
+
+# Scrap Armor reads mass, so a pickup can raise the health ceiling; nothing else in the
+# build changes with mass.
+func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
+	var mass_hp: float = effects.mass_health(ctx.run.mass)
+	if mass_hp != _mass_hp:
+		sheet.max_hp_bonus += mass_hp - _mass_hp
+		_mass_hp = mass_hp
+		ctx.run.set_max_hp(BuildSheet.BASE_MAX_HP + sheet.max_hp_bonus)
+	_redraw()
+
+
 func _on_run_started(_class_id_value: String) -> void:
 	_live = []
 	_discovered.clear()
 	_found.clear()
+	_refresh_seams()
+	bus.clear()
+	effects.reset_run()
+	clock.begin_run(_next_modifiers)
+	if ctx.codex != null:
+		clock.load_best(ctx.codex.storage_dir.path_join("runs.ndjson"), Engine.physics_ticks_per_second)
+	ctx.run.set_meta("run_tags", clock.tags())
+	shop.reset_run()
+	lanes.reset()
 	recompute()
 
 
@@ -332,6 +549,13 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_pinwheel_cut.clear()
 	_rod_budget = ROD_PER_SECOND
 	_shrapnel_budget = SHRAPNEL_PER_SECOND
+	bus.clear()
+	effects.reset_stage()
+	clock.enter_stage(stage)
+	lanes.reset()
+	_offered = {}
+	loot_rng.seed = LOOT_SEED + stage * 7919 + ctx.run.retries
+	_speed_tier = ctx.player.speed_tier()
 	scrap.lay_out(ctx.terrain, ctx.terrain.scrap_lines(stage), ctx.flow.stage_def()["scrap_density"], ctx.rng)
 	fabricators.lay_out(ctx.terrain, stage, _class_id(), ctx.rng, ctx.run.parts)
 	recompute()
@@ -356,7 +580,7 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		_kills.append(at)
 	if not ctx.flow.in_stage():
 		return
-	var amount := int(round(scrap_value * sheet.kill_scrap))
+	var amount := int(round(scrap_value * sheet.kill_scrap)) if not scrapless() else 0
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, ctx.rng)
 	else:
@@ -364,7 +588,7 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
 		var picks: Array = Parts.roll(ctx.rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
-		if not picks.is_empty():
+		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
 		ctx.run.add_core("vault", at)
 
@@ -377,19 +601,25 @@ func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
-	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage())
+	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
+	for part_id in picks:
+		_offered[part_id] = _offered.get(part_id, 0) + 1
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
+# Scrapless still rolls through a gate to launch (the handshake needs reward_chosen);
+# it just takes nothing.
 func _on_gate_chosen(part_id: String) -> void:
-	ctx.run.add_part(part_id, "gate")
+	if not scrapless():
+		ctx.run.add_part(part_id, "gate")
 	ctx.events.reward_chosen.emit(part_id)
 
 
 # A won event pays out its milestone part at once, so the stinger and the new part land
 # as one beat. The event's bonus core is world's to grant (DESIGN-NOTES I1 call 5).
 func _on_milestone_won(event_id: String) -> void:
-	ctx.run.add_part(Parts.milestone_for(event_id, ctx.run.parts), "milestone")
+	if not scrapless():
+		ctx.run.add_part(Parts.milestone_for(event_id, ctx.run.parts), "milestone")
 
 
 # A theft: the chunks the lost mass carried fly off toward where it went.
@@ -449,17 +679,28 @@ func _physics_process(delta: float) -> void:
 	scrap.heft = ctx.run.heft()
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
+	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()
+	clock.paused = shop.clock_paused()
+	clock.advance(delta, ctx.run.run_time, ctx.flow.in_stage())
+	_own_strikes += 1
 	if ctx.flow.in_stage():
-		for at in scrap.step(ball, speed, delta):
-			ctx.run.add_scrap(1, at)
-			if has_transformer("lightning_rod"):
-				_lightning_rod(ball)
-		_step_fabricators(ball, delta)
+		if not scrapless():
+			for at in scrap.step(ball, speed, delta):
+				ctx.run.add_scrap(1, at)
+				_post(Triggers.Kind.ON_PICKUP, "scrap", Triggers.DISCRETE_PROC, at)
+				if has_transformer("lightning_rod"):
+					_lightning_rod(ball)
+			_step_fabricators(ball, delta)
 		if gates.step(ball, _heading()):
 			ctx.events.reward_offered.emit(gates.offers)
 	_step_elements(ball, delta)
 	_step_synergies(ball, delta)
 	field.step(delta)
+	_step_loot(delta)
+	_own_strikes -= 1
+	for score in lanes.step(delta):
+		if ctx.codex != null:
+			ctx.codex.mark_discovered(score[0], score[1], PARTICIPANTS)
 
 
 func _step_fabricators(ball: Vector3, delta: float) -> void:
