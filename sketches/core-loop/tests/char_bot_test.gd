@@ -37,6 +37,16 @@ func _seed() -> int:
 	return SEED
 
 
+# Subclasses set the driver up before it starts (tree_bot_run picks a random branch)
+# and add their own checks before the verdict.
+func _configure(_driver_ref) -> void:
+	pass
+
+
+func _extra_checks() -> void:
+	pass
+
+
 func _report(label: String, ok: bool, detail: String) -> void:
 	if not ok:
 		_failures += 1
@@ -49,6 +59,7 @@ func _physics_process(delta: float) -> bool:
 	if _driver == null:
 		_driver = BotDriver.new(_game, "skipper", _seed())
 		_game.events.stage_cleared.connect(func(stage: int): _cleared.append(stage))
+		_configure(_driver)
 		_driver.start()
 		return false
 	_ticks += 1
@@ -94,6 +105,7 @@ func _finish(reached: bool) -> bool:
 	var death_logged: bool = stages.size() == 2 and int(second.get("stage", 0)) == 2 and second.get("deaths") is Array \
 		and (second["deaths"] as Array).size() == 1
 	_report("death carried", death_logged, "%d stage record(s); stage 2 deaths %s" % [stages.size(), second.get("deaths", "none")])
+	_extra_checks()
 	print("char_bot_test (seed %d): %s" % [_seed(), "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
 	_game.free()
 	quit(0 if _failures == 0 else 1)

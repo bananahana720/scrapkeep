@@ -35,9 +35,15 @@ var punch := 0.0
 static func from_parts(held: Array) -> RefCounted:
 	var sheet: RefCounted = load("res://src/build/build_sheet.gd").new()
 	sheet.parts = held.duplicate()
+	var counted := {}
 	for part_id in held:
 		var d: Resource = Parts.def(part_id)
 		if d == null:
+			continue
+		# A linear or capped row stops adding at stack_cap copies (v2 W4 loot); the
+		# catalogue's first rows carry no cap, so their copies all count as before.
+		counted[part_id] = counted.get(part_id, 0) + 1
+		if d.stack_rule != "hyperbolic" and d.stack_cap >= 1.0 and counted[part_id] > int(d.stack_cap):
 			continue
 		sheet._fold(d.mods, d.patterns, d.elements)
 		sheet.cooldown_scale *= d.cooldown_scale

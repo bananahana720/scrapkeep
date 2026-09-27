@@ -102,6 +102,14 @@ const ROWS := {
 	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_root_fifth", "hud": "", "objective": "", "priority": 1},
 	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
 	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
+	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
+	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
+	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
+	# with the class row. motif_fork is the class motif's first note answered by two
+	# notes, one per branch; motif_pick resolves the chosen one onto the motif head. The
+	# shop bell stays purchases only. The pick UI (W1) and the bay (W6) own the words.
+	"tree_offered": {"group": "economy", "color": Palette.SAND, "shape": "diamond", "sound": "found_chime", "sound_next": "motif_fork", "hud": "", "objective": "", "priority": 1},
+	"tree_picked": {"group": "economy", "color": Palette.SAND, "shape": "diamond", "sound": "part_get", "sound_next": "motif_pick", "hud": "", "objective": "", "priority": 1},
 	# v2 W6 world. The bay banks speed like the pylon mount and the pad slingshots it
 	# back, so entry and exit stand in with the plant and eject cues (SOUND-STORY
 	# section 7, Moss's workshop). world_fact is quiet here: each kind's own row is in
@@ -201,6 +209,32 @@ const LESSON_SHORT := {
 	"caps": "Slam its vent caps",
 	"magnet": "Shoot its magnet while pulled",
 }
+
+
+# v2 W4 loot
+# Facts from Moss's shop and the item triggers that are not bus signals: build publishes
+# them in its shop results and item_procs(), and W1, W5 and W6 read their look and sound
+# here, in the ROWS schema. They sit outside ROWS for the same reason as UI_ROWS: ROWS is
+# one row per bus signal, and a new signal would need presentation wiring this unit does
+# not own. `sound` is an existing synth id standing in; `sound_next` names the cue W5 is
+# to bake (DESIGN-V2 section 12: a workbench clank, a shop bell, a grumble when he
+# refuses). Entering and leaving the bay reuse the mount and slingshot cues (SOUND-STORY
+# section 7), because the bay banks speed like a pylon. A refusal is one dry
+# interruption, never a damage alarm, so it is bone, not rust.
+const LOOT_ROWS := {
+	"shop_entered": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
+	"shop_left": {"group": "economy", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
+	"shop_bought": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
+	"shop_charge": {"group": "economy", "color": Palette.ARC, "shape": "core", "sound": "core_socket", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
+	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_refused": {"group": "economy", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "moss_grumble", "hud": "", "objective": "", "priority": 1},
+	"moss_beat": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "moss_babble", "hud": "", "objective": "", "priority": 1},
+	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
+	"item_proc": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "sound_next": "trigger_tick", "hud": "", "objective": "", "priority": 0},
+	"par_split": {"group": "flow", "color": Palette.SAND, "shape": "bar", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+}
+
 
 # v2 W6 world
 # One row per world_fact kind, in the ROWS schema. `sound` is an existing synth id

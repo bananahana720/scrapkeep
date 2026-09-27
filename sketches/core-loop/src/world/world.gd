@@ -11,6 +11,7 @@ const Contraptions := preload("res://src/world/contraptions.gd")
 const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
 const Bay := preload("res://src/world/bay.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -58,6 +59,8 @@ var _skylight_clock := 0.0
 var _glide_clock := 0.0
 var _air_clock := 0.0
 var _bay_calm := false
+# Stages whose between-stage upgrade pick has been opened this run.
+var _picks_opened := {}
 var _pressure := -1.0
 var _vault_pending := false
 var _was_grounded := true
@@ -93,6 +96,8 @@ func setup(ctx_ref) -> void:
 	ctx.events.element_resolved.connect(_on_element_resolved)
 	ctx.events.reward_offered.connect(_on_reward_offered)
 	ctx.events.flow_changed.connect(_on_flow_changed)
+	ctx.events.run_started.connect(func(_class_id: String): _picks_opened.clear())
+	ctx.events.stage_cleared.connect(_open_pick)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
 
@@ -429,6 +434,7 @@ func _bay_fact(fact: Dictionary) -> void:
 			if shop != null:
 				bay_bark = shop.enter()
 			ctx.events.bay_entered.emit(fact["banked"])
+			_open_pick(ctx.flow.stage())
 		"left":
 			if shop != null:
 				bay_bark = shop.leave()
@@ -529,3 +535,13 @@ func _on_reward_offered(offers: Array) -> void:
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" and not bay.inside:
 		bay.undock()
+
+
+# The workshop visit after each stage opens the upgrade tree's next pick (W3), once per
+# stage per run: on boarding the bay, or at the stage's clear if the bay was skipped,
+# so no pick is lost and a retried visit never opens a second one.
+func _open_pick(stage: int) -> void:
+	if stage >= UpgradeTree.DEPTHS or _picks_opened.has(stage) or not "tree" in ctx.player or ctx.player.tree == null:
+		return
+	_picks_opened[stage] = true
+	ctx.player.tree.open_checkpoint()

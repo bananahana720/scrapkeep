@@ -92,11 +92,14 @@ signal blink_used(from: Vector3, to: Vector3)
 signal arc_slammed(at: Vector3, faces: int)
 signal skid_smashed(at: Vector3, hits: int)
 signal demo_slammed(at: Vector3)
+# The upgrade tree (upgrade_tree.gd, emitted by the player's tree): a pick opened with
+# its two node ids, and a pick taken.
+signal tree_offered(class_id: String, depth: int, choices: Array)
+signal tree_picked(class_id: String, node_id: String, depth: int)
 
 # v2 W6 world. Moss's bay and the gorge's contraptions (world publishes all three).
-# bay_entered fires when the ball lands on the workshop barge with the speed the
-# cradle banked; bay_left when the exit pad fires it back out, or it rolls off the
-# deck. world_fact carries every contraption, terrain, layer, ride and toy fact as a
+# bay_entered fires when the cradle catches the ball and banks its speed; bay_left
+# when the exit pad fires it back out, or it rolls off the deck. world_fact carries every contraption, terrain, layer, ride and toy fact as a
 # kind that keys event_kinds.WORLD_ROWS, so one signal serves the whole family.
 signal bay_entered(banked_speed: float)
 signal bay_left(velocity: Vector3)

@@ -14,6 +14,7 @@ const Contact := preload("res://src/movement/contact.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
 # movement and publishes each movement fact on the bus; what a collision does to an
@@ -53,6 +54,8 @@ var events
 var state := BallState.new()
 var kit := AugmentKit.new()
 var abilities = kit.abilities
+# The run's upgrade picks (upgrade_tree.gd): offered at class select and each workshop.
+var tree = kit.tree
 # The class this ball is fitted as; null before a run (the kit is then the engineer's).
 var class_def: Resource
 # The skill-shot geometry, player-owned and drawn in the class colour.
@@ -71,6 +74,10 @@ var heft_of := Callable()
 # The arc slam's tagged faces: [{point, left}].
 var face_tags: Array = []
 var _cc_ignored_at := {}
+# Seconds of crowd-control immunity granted from outside the sprint (Unstoppable).
+var immune_left := 0.0
+# The landing each smash flavour adds to the shared slam.
+var _smashes := {}
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -117,7 +124,14 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
 	_rigid.boosted.connect(func(dir: Vector3): events.boosted.emit(dir))
 	_rigid.kit_fact.connect(_on_kit_fact)
-	events.run_started.connect(func(class_id: String): fit_class(ClassDef.by_id(class_id)))
+	tree.events = events
+	tree.picked.connect(_on_tree_picked)
+	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
+	events.run_started.connect(func(class_id: String):
+		fit_class(ClassDef.by_id(class_id))
+		tree.open_checkpoint())
+	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
+	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
 	events.stage_entered.connect(func(_stage: int, _retry: bool): abilities.refill())
 	events.stage_content_cleared.connect(func(_reason: String): abilities.refill())
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
@@ -242,13 +256,24 @@ func set_velocity_now(velocity: Vector3) -> void:
 # jump, boost and the smash; only the class's own movement augments are on.
 func fit_class(def: Resource) -> void:
 	class_def = def
-	if def == null:
+	tree.reset(def.id if def != null else "")
+	abilities.fit(class_def)
+	_refit()
+
+
+# A pick lands on the live kit: its slot ops, then the movement kit and smash flavour
+# the (maybe swapped) slots name. Nothing else about the slots is reset.
+func _on_tree_picked(n: Dictionary) -> void:
+	UpgradeTree.apply_pick(abilities, n)
+	_refit()
+
+
+# The movement kit the movement slot's row names, the smash flavour, the class colour.
+func _refit() -> void:
+	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
-		abilities.fit(null)
-		_paint_effects()
-		return
-	kit.fit(def.movement_id, def.smash_id)
-	abilities.fit(def)
+	else:
+		kit.fit(abilities.id_of(AbilityState.MOVEMENT), abilities.id_of(AbilityState.SMASH))
 	_paint_effects()
 
 
@@ -285,7 +310,7 @@ func heft() -> float:
 func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> bool:
 	if _frozen:
 		return false
-	if kit.sprinting:
+	if kit.sprinting or immune_left > 0.0 or (kit.mounted and tree.knob("mount_cc_immune")):
 		var now := Time.get_ticks_msec()
 		if now - int(_cc_ignored_at.get(kind, -100000)) >= CC_IGNORED_GAP_MS:
 			_cc_ignored_at[kind] = now
@@ -300,6 +325,11 @@ func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> b
 	if shove != Vector3.ZERO:
 		add_external_accel(shove)
 	return true
+
+
+# Crowd control slides off for this long (Unstoppable's boosted window).
+func grant_immunity(seconds: float) -> void:
+	immune_left = maxf(immune_left, seconds)
 
 
 # The stomp and rebound refresh, one rule so they never disagree: one air jump and one
@@ -337,6 +367,9 @@ func _physics_process(delta: float) -> void:
 	source.poll(intent)
 	_read_grammar()
 	abilities.tick(delta)
+	immune_left = maxf(0.0, immune_left - delta)
+	if kit.mounted and tree.knob("mounted_recharge") > 1.0:
+		abilities.refund(AbilityState.SPECIAL, delta * (tree.knob("mounted_recharge") - 1.0))
 	state.tick_timers(delta)
 	if intent.jump_pressed:
 		state.jump_buffer = Tuning.JUMP_BUFFER
@@ -374,7 +407,22 @@ func _read_grammar() -> void:
 	if intent.movement_pressed and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
 		grapple_to(kit.aim["point"], kit.aim["normal"])
 	elif intent.movement_released:
+		_fling()
 		release_grapple()
+	# Rope Anchor: winching up to the wall plants the pylon there.
+	if tree.knob("winch_mount") and kit.hooked and intent.reel_held and not kit.mounted \
+			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
+		intent.mount_pressed = true
+
+
+# Coil Hook: letting go of the rope throws you on along your swing.
+func _fling() -> void:
+	var fling: float = tree.knob("grapple_fling")
+	if not kit.hooked or fling <= 0.0:
+		return
+	var v: Vector3 = state.velocity
+	var dir := v.normalized() if v.length() > 0.5 else -drive_basis.z
+	set_velocity_now(v + dir * fling)
 
 
 func _process(_delta: float) -> void:
@@ -445,6 +493,8 @@ func _try_crush(body: Node3D) -> void:
 	if not crush_check.call(body, RAM, speed):
 		return
 	_crushing[id] = true
+	if kit.sprinting:
+		kit.sprint_left += tree.knob("crush_refund")
 	_rigid.add_collision_exception_with(body)
 	struck.emit(body, RAM, speed)
 	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
@@ -567,13 +617,20 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
 		_push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
-	match kit.smash_id:
-		"arc_slam":
-			events.arc_slammed.emit(at, _tag_faces(at))
-		"shockwave_skid":
-			events.skid_smashed.emit(at, _skid_push(at, clampf(speed / 30.0, 0.4, 1.6)))
-		"demo_slam":
-			events.demo_slammed.emit(at)
+	if _smashes.has(kit.smash_flavour):
+		_smashes[kit.smash_flavour].call(at, speed)
+
+
+func _smash_arc(at: Vector3, _speed: float) -> void:
+	events.arc_slammed.emit(at, _tag_faces(at))
+
+
+func _smash_skid(at: Vector3, speed: float) -> void:
+	events.skid_smashed.emit(at, _skid_push(at, clampf(speed / 30.0, 0.4, 1.6)))
+
+
+func _smash_demo(at: Vector3, _speed: float) -> void:
+	events.demo_slammed.emit(at)
 
 
 # Sable's arc slam marks every steep face within FACE_TAG_REACH for a vault.
@@ -608,7 +665,7 @@ func _skid_push(at: Vector3, strength: float) -> int:
 		if to.length() > SKID_REACH or (to.length() > 1.5 and to.normalized().dot(ahead) < SKID_CONE):
 			continue
 		var falloff := 1.0 - to.length() / SKID_REACH
-		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff)
+		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
 		enemy.flash()
 		struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
 		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
@@ -639,13 +696,15 @@ func _update_aim_cones(at: Vector3) -> void:
 func _on_kit_fact(kind: String, args: Array) -> void:
 	if kind == "gauge_cancelled":
 		indicator.collapse("slingshot")
+	if kind == "vault_kicked" and tree.knob("vault_tags"):
+		_tag_faces(ball_position())
 	events.callv("emit_signal", [kind] + args)
 
 
 func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	events.mounted.emit(at, banked_speed)
 	shockwave.emit(at, 0.7)
-	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK, "")
+	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
 func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> void:
@@ -707,6 +766,8 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 # keeps the plain ram.
 func _rebounds_off(enemy: Node3D) -> bool:
 	var weight = enemy.get("weight")
+	if kit.sprinting and tree.knob("sprint_no_rebound"):
+		return false
 	return weight != null and Contact.rebounds(float(weight), heft(), kit.sprinting)
 
 

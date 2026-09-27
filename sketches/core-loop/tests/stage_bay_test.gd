@@ -35,6 +35,8 @@ var _event_clock_at_entry := -1.0
 var _before := 0.0
 var _left_velocity := Vector3.ZERO
 var _chosen := ""
+var _cleared: Array = []
+var _allowed_before := -1
 
 
 func _initialize() -> void:
@@ -135,6 +137,7 @@ func _physics_process(delta: float) -> bool:
 			bus.world_fact.connect(func(kind: String, _at: Vector3): _events.append(kind))
 			bus.reward_offered.connect(func(_o: Array): _offers_seen += 1)
 			bus.reward_chosen.connect(func(id: String): _chosen = id)
+			bus.stage_cleared.connect(func(stage: int): _cleared.append(stage))
 			_game.flow.beacon_seconds_override = 0.3
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
@@ -151,6 +154,7 @@ func _physics_process(delta: float) -> bool:
 			if _game.flow.state_name() == "gates" and _bay().docked:
 				_report("the bay docks on the gates", true, "docked at %s over gates at %s; cradle at %s"
 					% [_bay()._barge.global_position, _game.ctx.build.gates.offers[0]["at"], _bay().cradle_at])
+				_allowed_before = player.tree.allowed
 				_run_at_cradle()
 				_phase = "to_cradle"
 				_clock = 0.0
@@ -162,6 +166,8 @@ func _physics_process(delta: float) -> bool:
 			if _entered_speed >= 0.0:
 				_report("the cradle banks the ball's speed", absf(_entered_speed - _before) <= _before * TOLERANCE,
 					"rolled in at %.2f m/s, banked %.2f m/s" % [_before, _entered_speed])
+				_report("boarding opens the next upgrade pick", player.tree.allowed == _allowed_before + 1,
+					"tree picks allowed %d before the cradle, %d aboard" % [_allowed_before, player.tree.allowed])
 				_offers_seen = 0
 				_phase = "aboard"
 				_clock = 0.0
@@ -215,8 +221,25 @@ func _physics_process(delta: float) -> bool:
 			if _chosen != "" or _clock > 3.0:
 				_report("rolls through a gate into the launch", _chosen != "",
 					"reward_chosen %s; flow %s" % [_chosen, _game.flow.state_name()])
+				_check_picks()
 				return _finish()
 	return false
+
+
+# One pick per between-stage visit: the stage's clear after a boarded bay opens none,
+# and a skipped bay's stage opens its pick once at the clear.
+func _check_picks() -> void:
+	var tree = _game.player.tree
+	var after_visit: int = tree.allowed
+	_game.world._open_pick(2)
+	var again: int = tree.allowed
+	_game.world._open_pick(3)
+	var skipped: int = tree.allowed
+	_game.world._open_pick(3)
+	_report("one pick per visit, and a skipped bay still opens one", after_visit == _allowed_before + 1 and again == after_visit
+		and skipped == after_visit + 1 and tree.allowed == skipped,
+		"allowed %d after the visit (stage_cleared heard %s), %d on a second stage-2 open, %d for a skipped stage-3 bay, %d on its repeat"
+			% [after_visit, _cleared, again, skipped, tree.allowed])
 
 
 func _run_at_cradle() -> void:

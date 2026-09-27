@@ -30,7 +30,9 @@ func sees() -> bool:
 	var enemy = _enemy.get_ref()
 	if enemy == null:
 		return true
-	return enemy.global_position.distance_to(player.ball_position()) <= reach * Weapons.CLOAK_SIGHT
+	# Ghost takes the share to nothing, so no enemy sees through the cloak.
+	var share: float = combat.cloak_sight() if combat.has_method("cloak_sight") else Weapons.CLOAK_SIGHT
+	return enemy.global_position.distance_to(player.ball_position()) <= reach * share
 
 
 func ball_position() -> Vector3:
