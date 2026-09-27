@@ -36,6 +36,16 @@ const DISTANCES := [AHEAD, 30.0, 24.0, 18.0]
 const SPREADS := [SPREAD, 6.0]
 const CLIMB_TOLERANCE := 0.75
 const PATH_SAMPLES := 6
+# A candidate is also rejected when a static prop (a kerb, a bench, anything built by a
+# map's build_props, or an element hazard like ice) stands across its approach or its
+# roll-out: an unforeseen stop is exactly what momentum is sacred forbids. The probe is
+# a ball-sized sphere swept on the physics layer terrain and props share (layer 1); the
+# terrain's own "Ground" body is excluded by RID so only real obstacles count. A
+# blocked candidate is penalised, never returned outright, unless every candidate is
+# blocked, in which case the least-blocked one is used and a warning is pushed once.
+const PROBE_RADIUS := 1.0
+const RUN_OUT := 6.0
+const BLOCK_PENALTY := 1000.0
 # A gate's offer prompt shows while the gate is this close, the whole time it can be chosen.
 const PROMPT_REACH := LOST_BEYOND
 
@@ -49,6 +59,7 @@ var _held: Array = []
 var _last_side := {}
 var _gates: Array[Node3D] = []
 var _spin := 0.0
+var _warned_blocked := false
 
 
 func setup(terrain) -> void:
@@ -140,22 +151,27 @@ func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 	if base.length() < 0.5:
 		base = Vector3.FORWARD
 	var best := {}
+	var exclude := _prop_probe_exclude()
 	for turn in TURN_STEPS:
 		var facing := base.rotated(Vector3.UP, deg_to_rad(turn))
 		for distance in DISTANCES:
 			for spread in SPREADS:
-				var plan := _candidate(ball, ground, facing, distance, spread, count)
-				if plan["climb"] <= CLIMB_TOLERANCE:
+				var plan := _candidate(ball, ground, facing, distance, spread, count, exclude)
+				if plan["climb"] <= CLIMB_TOLERANCE and not plan["blocked"]:
 					return plan
 				if best.is_empty() or plan["climb"] < best["climb"]:
 					best = plan
+	if best.get("blocked", false) and not _warned_blocked:
+		_warned_blocked = true
+		push_warning("reward_gates: every gate candidate is blocked by a static prop; using the least-blocked spot")
 	return best
 
 
-func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int) -> Dictionary:
+func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int, exclude: Array) -> Dictionary:
 	var side := facing.cross(Vector3.UP).normalized()
 	var spots: Array[Vector3] = []
 	var climb := -INF
+	var blocked := false
 	for i in count:
 		var offset := (float(i) - (count - 1) * 0.5) * 2.0 * spread
 		var spot := ball + facing * distance + side * offset
@@ -164,7 +180,56 @@ func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, 
 		for k in PATH_SAMPLES + 1:
 			var p := ball.lerp(spot, float(k) / PATH_SAMPLES)
 			climb = maxf(climb, _terrain.height(p.x, p.z) - ground)
-	return {"facing": facing, "spots": spots, "climb": climb, "distance": distance}
+		if _segment_blocked(ball, spot, exclude) or _segment_blocked(spot, spot + facing * RUN_OUT, exclude):
+			blocked = true
+	var result := {"facing": facing, "spots": spots, "climb": climb, "distance": distance, "blocked": blocked}
+	if blocked:
+		result["climb"] += BLOCK_PENALTY
+	return result
+
+
+# The RID of the active stage's terrain body, so the shape probe below can tell "a
+# static prop is in the way" from "the ground itself is under the sphere". Both are
+# StaticBody3D on the same physics layer (map_spillway.gd's box()/cylinder() helpers
+# never set a layer of their own), and the terrain's own body is the only one always
+# named "Ground" (terrain.gd _build_ground). No RID means no exclusion, never a query
+# that silently forbids every candidate.
+func _prop_probe_exclude() -> Array:
+	if _terrain == null or not _terrain.has_method("geometry_root"):
+		return []
+	var holder: Node3D = _terrain.geometry_root(_terrain.stage)
+	if holder == null:
+		return []
+	var ground := holder.get_node_or_null("Ground")
+	return [ground.get_rid()] if ground != null else []
+
+
+# A ball-sized sphere swept from `from` to `to`, both raised to the terrain height at
+# that x/z plus PROBE_RADIUS so the sweep sits where the ball actually rolls. Anything
+# on layer 1 other than the excluded terrain body blocks: a kerb, a bench, an ice slab.
+# Runs only once in the tree, since choose_placement always runs from open()/step()
+# after build.gd has parented this node (build.gd setup()); off the tree there is no
+# physics space to ask, so nothing is reported blocked rather than failing the plan.
+func _segment_blocked(from_xz: Vector3, to_xz: Vector3, exclude: Array) -> bool:
+	if not is_inside_tree():
+		return false
+	var world := get_world_3d()
+	if world == null:
+		return false
+	var space := world.direct_space_state
+	if space == null:
+		return false
+	var from := Vector3(from_xz.x, _terrain.height(from_xz.x, from_xz.z) + PROBE_RADIUS, from_xz.z)
+	var to := Vector3(to_xz.x, _terrain.height(to_xz.x, to_xz.z) + PROBE_RADIUS, to_xz.z)
+	var sphere := SphereShape3D.new()
+	sphere.radius = PROBE_RADIUS
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.collision_mask = 1
+	query.exclude = exclude
+	query.transform = Transform3D(Basis.IDENTITY, from)
+	query.motion = to - from
+	return space.cast_motion(query)[1] < 1.0
 
 
 static func rarity_color(rarity: String) -> Color:
