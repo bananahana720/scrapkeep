@@ -1104,9 +1104,11 @@ func _run(action: Dictionary) -> void:
 			_reset_escalation()
 			var next_theme := int(action.get("theme", -1))
 			if next_theme >= 0:
+				# A drop into the level is home: D, whatever the fight lifted it to.
 				theme = next_theme
 				track = "level"
 				section = ""
+				_set_key(0)
 				_set_grid(Harmony.STEP)
 				events_log.append(["theme", clock, theme])
 			var change: Dictionary = action.get("set", {})

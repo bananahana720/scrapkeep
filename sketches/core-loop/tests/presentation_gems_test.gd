@@ -23,6 +23,7 @@ func _initialize() -> void:
 	_g8_bass_lines()
 	_g10_layers()
 	_r1_r2_no_wubs()
+	_g11_reference()
 	print("presentation_gems_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -176,6 +177,15 @@ func _r1_r2_no_wubs() -> void:
 	for method in (Synth as GDScript).get_script_method_list():
 		growl = growl or String(method["name"]).contains("growl")
 	_check("R1 R2 no wubs", loud.is_empty() and not growl, "no wobble voice in any level theme at full pressure over 8 bars, and no growl voice left in the synth; offenders %s" % [loud])
+
+
+func _g11_reference() -> void:
+	var ledger := FileAccess.get_file_as_string("res://src/presentation/MUSIC-GEMS.md")
+	var files := ["res://src/presentation/music_engine.gd", "res://src/presentation/audio.gd", "res://tests/presentation_escalation_test.gd"]
+	var present := files.all(func(f: String): return FileAccess.file_exists(f))
+	var engine := MusicEngine.new()
+	var api: bool = ["escalate", "warden_charge", "miniboss_drop", "resolve_event", "brindle_hp", "chase", "set_heft_lift"].all(func(m: String): return engine.has_method(m))
+	_check("G11 Warden Spillway B is the reference", ledger.contains("| G11 |") and present and api, "the ledger names B's grammar as the reference; its one escalation API and its test exist")
 
 
 func _check(label: String, ok: bool, detail: String) -> void:
