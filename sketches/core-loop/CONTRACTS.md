@@ -209,6 +209,7 @@ Per-kind stats, transformer ids and `register_part` are documented in `src/comba
 - `strike(enemy: Node3D, kind: String, force: float)` resolves one hit into damage against plating and emits `enemy_struck`, plus `strike_deflected` below plating. The spine calls it for ball contacts: `stomp` (force is fall speed), `ram` (force is speed, at the cruise tier or above) and `slam` (force is knockback after falloff). Combat's own weapons call it too.
 - `punch_now() -> float` is the punch the player would land now: ram punch at the ball's planar speed from the cruise tier up, or the current weapon's per-hit damage, whichever is larger.
 - `plating_of(enemy) -> float`.
+- `shred_of(enemy) -> float` is how much plating that enemy's landed hits have stripped for now; `plating_of`, `resolve`, `would_crush` and the tint already subtract it, floored at 0.
 - `integrity_of(enemy) -> float` is HP over max HP, or 1.0 for an invalid enemy.
 - `would_crush(enemy, kind, force) -> bool` is true when the enemy has no plating and the hit would kill it.
 
