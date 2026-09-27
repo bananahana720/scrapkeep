@@ -372,11 +372,12 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 # The gates open when flow enters its gates state, never on the charge reading: a
 # sealed beacon's shown charge can reach 1.0 a tick before the Warden's kill is
 # recorded, and gates opened then would be ignored by flow and soft-lock the stage.
+# Stage 2's pair carries the pattern guarantee (Parts.roll_gate).
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
-	var picks: Array = Parts.roll(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES)
+	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage())
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
