@@ -10,7 +10,8 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const DRIVE_FROM := Vector2(-110.0, -120.0)
 const AHEAD := 14.0
 const SPEED := 20.0
-const HEAVY_MASS := 300
+# Heft 3.0 at 1 + mass/450 (300 was, at the old 1/150).
+const HEAVY_MASS := 900
 const KEEP := 0.95
 const WINDOW := 150
 

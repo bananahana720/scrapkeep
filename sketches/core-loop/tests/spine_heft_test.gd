@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const RunState := preload("res://src/core/run_state.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Heft is the growth number and it never touches handling. The mutators move mass and
@@ -78,10 +79,11 @@ func _physics_process(_delta: float) -> bool:
 func _mutator_checks() -> void:
 	var run = _game.run
 	run.add_scrap(60, Vector3.ZERO)
-	_report("add scrap", is_equal_approx(run.mass, 60.0) and is_equal_approx(run.heft(), 1.4) and run.scrap == 60,
-		"add_scrap(60): mass %.1f, heft %.3f (needs 1.4), wallet %d" % [run.mass, run.heft(), run.scrap])
+	var want_heft: float = 1.0 + 60.0 * RunState.HEFT_PER_MASS
+	_report("add scrap", is_equal_approx(run.mass, 60.0) and is_equal_approx(run.heft(), want_heft) and run.scrap == 60,
+		"add_scrap(60): mass %.1f, heft %.3f (needs %.3f), wallet %d" % [run.mass, run.heft(), want_heft, run.scrap])
 	var spent: bool = run.spend_scrap(30)
-	_report("spend keeps mass", spent and is_equal_approx(run.mass, 60.0) and is_equal_approx(run.heft(), 1.4) and run.scrap == 30,
+	_report("spend keeps mass", spent and is_equal_approx(run.mass, 60.0) and is_equal_approx(run.heft(), want_heft) and run.scrap == 30,
 		"spend_scrap(30): mass %.1f, heft %.3f, wallet %d" % [run.mass, run.heft(), run.scrap])
 	var took: int = run.lose_scrap(20, Vector3.ZERO, "crane")
 	_report("lose scrap", is_equal_approx(run.mass, 40.0) and run.scrap == 10 and took == 20 and _counts["scrap_lost"] == 1,
@@ -91,7 +93,8 @@ func _mutator_checks() -> void:
 	_report("part heft", is_equal_approx(run.heft() - before, 0.2),
 		"add_part raised heft from %.3f to %.3f" % [before, run.heft()])
 	var class_before: int = run.heft_class()
-	run.add_scrap(10, Vector3.ZERO)
+	# Mass 40 plus a part is heft 1.29 at 1 + mass/450; 100 more crosses 1.5 (10 did at 1/150).
+	run.add_scrap(100, Vector3.ZERO)
 	_report("class change", class_before == 1 and run.heft_class() == 2 and _counts["heft_class_changed"] == 1,
 		"heft %.3f crossed 1.5: class %d to %d, heft_class_changed fired %d time(s) over the whole sequence" % [run.heft(), class_before, run.heft_class(), _counts["heft_class_changed"]])
 
