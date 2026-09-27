@@ -316,3 +316,57 @@ Andrew, 2026-09-27, after the Moss heft-lock: "that's like a callback with a gam
 3. **It serves the principles.** It never costs momentum unforeseen, never hides a threat, and stays inside the visual caps.
 
 Log each one in DESIGN-NOTES as "Callback:", naming the mechanic it rides on, and add it to the unit's vision delta. The vision keeper keeps a running list in SOUND-STORY.md so callbacks never collide.
+
+## 14. Session goal: an early-access demo (Andrew, 2026-09-27)
+
+In his words: "run until we kind of get to a like a early access demo version of the game, and let it have some some visual appeal and coherence, and gameplay appeal and coherence with uh, audio and music orchestration ... fully built ... an early access level version of the game."
+
+**Lane.** This stays the light play lane. It's a Godot sketch under `sketches/core-loop/` and not a production promotion into `native/`, which is a heavy-lane decision. Andrew's play is the acceptance.
+
+**Definition of done.** Every line must hold.
+
+1. **The run.**
+   - Title, character select (3), then three stages, each with a family Warden. Moss's workshop after each break, then Brindle's arena, then victory or death, then the summary.
+   - Settings and pause menus, all usable with the mouse and the keyboard.
+   - One-key restart from anywhere.
+2. **The characters.** Sable, Rivet and Kest play differently. Each has its own movement, a hold-gauge-release special, a smash flavour and a leitmotif.
+3. **Enemies.**
+   - The Fleet reinforcements (at least 5 with unique mechanics).
+   - One ancient per family, plus the three family Wardens and Brindle.
+   - Every counter is telegraphed and breakable. No reskins.
+4. **Growth.**
+   - The procedural item pool (60+ items, 12 triggers).
+   - Moss's shop, with the heft-locked top shelf and the conversation loop.
+   - Stockpiled charges.
+   - Synergies you can discover through the codex.
+5. **World.**
+   - The vertical gorge stage with its focal landmark.
+   - Contraptions (lifts, launchers, valves).
+   - At least 2 terrain-changing events.
+   - The callbacks from §13.
+6. **Readability.**
+   - At most 25 words on screen in a fight.
+   - The icon-first HUD, with the 70 icons in use.
+   - Four threat types you can tell apart by look and sound.
+   - Contextual key glyphs, and first-run callouts that retire.
+7. **Look.**
+   - Blender hero assets in the build: the three shells with a visible pilot, accretion chunks, the reward gate and the Warden clamp with its family kits.
+   - Every surface follows VISUAL-LANGUAGE.md.
+   - Transitions between every screen.
+8. **Audio.**
+   - Every event row has its designed sound (SOUND-STORY.md grammar).
+   - Adaptive stage themes with the leitmotifs woven in, and Brindle's foreshadowing.
+   - The lounge arrangement in the workshop.
+   - No MUSIC-GEMS entry lost.
+9. **Robustness.**
+   - `sketch:smoke` is green.
+   - The bot completes full runs with all three classes.
+   - `item_fuzz` passes 200 seeds, with anomalies triaged in HAPPY-ACCIDENTS.md.
+   - p99 frame time is ≤ 16.7 ms in a dense fight on this machine.
+   - No softlock, no NaN.
+10. **Handoff.**
+    - A Linux export build under `artifacts/local/` alongside the launcher entry.
+    - A one-page "how to play" on the title screen's help button.
+    - Andrew plays it, and his verdict becomes a playtest log entry.
+
+**Checkpoint.** After Wave 3 merges, Andrew gets an **alpha** to play, so he can redirect while polish continues. The later waves take his notes.
