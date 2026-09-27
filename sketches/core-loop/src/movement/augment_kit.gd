@@ -2,14 +2,21 @@ extends RefCounted
 
 const Augments := preload("res://src/movement/augments.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # Which augments are fitted, and the live state of the ones that have any. A class fits
-# only its own movement kit plus the shared smash (Augments.KITS); a kit with no class is
-# the engineer's. The ability state holds every slot's charges and gauge.
+# only its movement ability's kit (its row's `augments`) plus the shared smash; a kit with
+# no class is the engineer's. The ability state holds every slot's charges and gauge, and
+# the tree the run's upgrade picks, whose knobs the movement rules read.
 var enabled := {}
 var movement_id := ""
 var smash_id := ""
+# The smash row's landing flavour: arc, skid or demo.
+var smash_flavour := ""
 var abilities = AbilityState.new()
+var tree = UpgradeTree.new()
+# Set by combat while Kest's dust cloak is up.
+var cloaked := false
 
 var hooked := false
 var anchor := Vector3.ZERO
@@ -69,9 +76,14 @@ func _init() -> void:
 func fit(movement: String, smash: String) -> void:
 	movement_id = movement
 	smash_id = smash
-	var keys: Array = Augments.KITS.get(movement, []) + Augments.SHARED
+	smash_flavour = AbilityState.ABILITIES.get(smash, {}).get("flavour", "")
+	var keys: Array = AbilityState.ABILITIES.get(movement, {}).get("augments", []) + Augments.SHARED
 	for spec in Augments.SPECS:
 		set_on(spec["key"], spec["key"] in keys)
+
+
+func knob(name: String):
+	return tree.knob(name)
 
 
 func on(key: String) -> bool:
@@ -144,5 +156,6 @@ func _stop(key: String) -> void:
 		Augments.SPRINT:
 			sprinting = false
 			sprint_left = 0.0
+			abilities.slot(AbilityState.MOVEMENT).active = false
 		Augments.VAULT:
 			vault_aim = {}

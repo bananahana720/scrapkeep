@@ -88,7 +88,7 @@ func _kits() -> void:
 		for spec in Augments.SPECS:
 			if kit.on(spec["key"]):
 				on.append(spec["key"])
-		var want: Array = Augments.KITS[def.movement_id] + Augments.SHARED
+		var want: Array = AbilityState.ABILITIES[def.movement_id]["augments"] + Augments.SHARED
 		on.sort()
 		want.sort()
 		ok = ok and on == want
