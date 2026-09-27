@@ -3,12 +3,15 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
+const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 
 # The full run through the real flow with the Warden gate on, on the world's three
 # maps: each stage's Warden stands on its bowl's floor, in sight from the entry drop;
 # rolling into the bowl spikes the director and threat_rose announces it; breaking the
 # Warden unseals the beacon, a gate launches the ball, and the run ends on the summary.
-# Uses the spine's spawner double, so it tests the world's side of the seam only.
+# Uses the spine's spawner double, so it tests the world's side of the seam only, and
+# the spine's boss double, whose defeat() ends the arena whether or not the real boss
+# module is present.
 
 const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
@@ -20,6 +23,7 @@ const RAM := 400.0
 
 var _game
 var _double
+var _boss
 var _source := Intent.Scripted.new()
 var _failures := 0
 var _ticks := 0
@@ -64,6 +68,9 @@ func _start() -> void:
 	_game.add_child(_double)
 	_double.setup(_game.ctx)
 	_game.ctx.spawner = _double
+	_boss = BossDouble.new()
+	_game.add_child(_boss)
+	_boss.setup(_game.ctx)
 	_game.ctx.calm = true
 	_game.flow.force_warden = true
 	var ev = _game.events
@@ -87,6 +94,8 @@ func _put(at: Vector3) -> void:
 
 func _step() -> void:
 	var flow = _game.flow
+	if flow.state_name() == "boss":
+		_boss.defeat()
 	match _phase:
 		"entered":
 			_wait += 1

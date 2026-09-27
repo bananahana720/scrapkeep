@@ -21,6 +21,11 @@ var kit
 # Pushes from the world (the flood's drag and current), an acceleration in m/s^2. The
 # owner adds to it every physics tick and the ball spends and clears it once per step.
 var external_accel := Vector3.ZERO
+# The velocity handed to the solver on each of the last few ticks, newest last. A
+# contact report arrives after the solver has already bounced the ball, so a contact
+# is sized from these, not from the velocity it now has.
+const VELOCITY_HISTORY := 4
+var recent_velocities: Array[Vector3] = []
 
 var _probe: ShapeCast3D
 var _pending_position = null
@@ -147,6 +152,7 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	if Augments.holding(kit):
 		_last_fall_speed = 0.0
 		state.velocity = body_state.linear_velocity
+		_remember(state.velocity)
 		return
 
 	if not Augments.claims_boost(kit, state):
@@ -167,6 +173,13 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		landed.emit(_last_fall_speed)
 	_last_fall_speed = falling
 	state.velocity = body_state.linear_velocity
+	_remember(state.velocity)
+
+
+func _remember(velocity: Vector3) -> void:
+	recent_velocities.append(velocity)
+	if recent_velocities.size() > VELOCITY_HISTORY:
+		recent_velocities.pop_front()
 
 
 # The augments are static rules with no signals of their own; they leave a flag on the

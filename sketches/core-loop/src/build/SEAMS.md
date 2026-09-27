@@ -118,7 +118,7 @@ Every element-table result publishes `element_resolved(element_id, material_id, 
 - A Warden's scrap (`enemy_killed` kind `warden`) drops in a 20 m line along the ball's heading.
 - Gate tier reads `run.gate_tier_bonus()`.
 - A vault kill calls `run.add_core("vault", at)` after its rare part.
-- A won event calls `run.add_core("event", ball)` about 0.1 s later, unless world's own `core_gained` with source `event` arrived within 0.1 s of the win. If world always grants the event core, the build grant can be removed.
+- A won event's bonus core is world's grant (`run.add_core("event", at)` at the event's ring); build grants only the milestone part.
 
 ## Milestone parts (world triggers, build grants)
 

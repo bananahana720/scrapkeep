@@ -9,8 +9,8 @@ const Intent := preload("res://src/movement/intent.gd")
 #     codex), with the treasure burst, and a retry does not repeat it;
 #   - an element result publishes element_resolved, and its first firing publishes
 #     interaction_found once (through the codex);
-#   - a vault kill adds a rare part and a vault core; a won event adds an event core,
-#     unless world already granted one;
+#   - a vault kill adds a rare part and a vault core; a won event adds its milestone
+#     part here and exactly one event core, which world grants;
 #   - gate offers follow run.gate_tier_bonus().
 
 var _game
@@ -75,10 +75,14 @@ func _physics_process(_delta: float) -> bool:
 			_next()
 		1:
 			if _wait == 30:
+				_second_win()
+				_next()
+		2:
+			if _wait == 30:
 				_check_cores()
 				_check_gate_tier()
 				_next()
-		2:
+		3:
 			print("build_codex_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 			_game.free()
 			quit(0 if _failures == 0 else 1)
@@ -137,26 +141,40 @@ func _start_cores() -> void:
 	run.record_kill("vault", _game.player.ball_position() + Vector3(5.0, 0.0, 0.0), 0)
 	_state["vault_parts"] = run.parts.size() - _state["parts_before"]
 	_state["vault_cores"] = run.bonus_cores
-	run.record_milestone("surge_run")
+	_state["won_before"] = run.events_won.size()
+	_state["first_parts"] = run.parts.size()
+	_win_through_world("surge_run")
 	_state["cores_at_win"] = run.bonus_cores
+	_state["first_part"] = run.parts.size() - _state["first_parts"]
+
+
+# A won event through world's own publication, the path a live event takes: world
+# records the milestone and grants the event's core at its ring in the same call.
+func _win_through_world(event_id: String) -> void:
+	var ball: Vector3 = _game.player.ball_position()
+	_game.get_node("World")._publish([{"kind": "milestone", "id": event_id, "at": Vector2(ball.x, ball.z)}])
+
+
+# 30 ticks is well past the 0.1 s build once waited before granting a second core.
+func _second_win() -> void:
+	_state["cores_before_second"] = _game.run.bonus_cores
+	_win_through_world("hold_the_relay")
+	_state["cores_at_second"] = _game.run.bonus_cores
 
 
 func _check_cores() -> void:
 	var run = _game.run
-	var after_solo: int = run.bonus_cores
-	# World grants the event core itself, in the same moment as the win.
-	run.add_core("event", _game.player.ball_position())
-	run.record_milestone("hold_the_relay")
-	_state["world_core"] = run.bonus_cores
-	for i in 20:
-		_build._step_event_cores()
+	var event_cores: Array = _cores.filter(func(c): return c[0] == "event")
+	var wins: int = run.events_won.size() - _state["won_before"]
 	_report("vault core and part", _state["vault_parts"] == 1 and _state["vault_cores"] == 1 and _cores[0] == ["vault", 1],
 		"a vault kill added %d part and bonus core %d (%s)" % [_state["vault_parts"], _state["vault_cores"], _cores[0]])
-	_report("event core", _state["cores_at_win"] == 1 and after_solo == 2 and _cores.size() >= 2 and _cores[1] == ["event", 2],
-		"a won event with no world grant: %d core right at the win, %d a moment later (%s)"
-			% [_state["cores_at_win"], after_solo, _cores.slice(0, 2)])
-	_report("no double event core", run.bonus_cores == 3 and _state["world_core"] == 3,
-		"when world granted the event core itself, build added none: bonus cores %d" % run.bonus_cores)
+	_report("event core from world", _state["cores_at_win"] == 2 and _state["first_part"] == 1 and _cores.size() >= 2 and _cores[1] == ["event", 2],
+		"a won event: bonus core %d right at the win from world's grant %s, and build added %d milestone part"
+			% [_state["cores_at_win"], _cores.slice(1, 2), _state["first_part"]])
+	_report("one core per event win", wins == 2 and event_cores.size() == 2 and _state["cores_before_second"] == 2
+			and _state["cores_at_second"] == 3 and run.bonus_cores == 3,
+		"%d wins published %d event cores; bonus cores %d 30 ticks after the first win, %d at the second, %d 30 ticks later"
+			% [wins, event_cores.size(), _state["cores_before_second"], _state["cores_at_second"], run.bonus_cores])
 
 
 func _check_gate_tier() -> void:

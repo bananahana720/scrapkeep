@@ -40,9 +40,6 @@ const REFREEZE_RING := 4.0
 # A Warden's scrap is thrown in a line this long along the ball's heading, toward the
 # gates that just opened.
 const WARDEN_LINE := 20.0
-# World (D) may also grant the event's core; build skips its own grant when an event
-# core arrived within this many seconds of the milestone.
-const EVENT_CORE_WINDOW := 0.1
 # Named synergy behaviours. Every one is capped per second so a big build stays
 # readable (principle 4).
 const ROD_REACH := 12.0
@@ -96,10 +93,6 @@ var _live: Array = []
 var _discovered := {}
 var _found := {}
 var _declared := false
-# Milestone core grants waiting a moment for world's own grant, and when world's last
-# event core arrived (in run seconds).
-var _pending_event_cores: Array[Dictionary] = []
-var _last_event_core := -99.0
 
 
 func setup(ctx_ref) -> void:
@@ -144,7 +137,6 @@ func setup(ctx_ref) -> void:
 	ctx.events.shot_fired.connect(_on_shot_fired)
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
-	ctx.events.core_gained.connect(_on_core_gained)
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 
 
@@ -334,7 +326,6 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_kills.clear()
 	_landings.clear()
 	_shots.clear()
-	_pending_event_cores.clear()
 	_pinwheel_cut.clear()
 	_rod_budget = ROD_PER_SECOND
 	_shrapnel_budget = SHRAPNEL_PER_SECOND
@@ -344,16 +335,14 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34): the scrap field, the
-# fabricators, any open gates and every surface an element made on the stage go now,
-# with the stage's waiting event cores. The build itself, its synergies and its
-# elements keep working in the fight.
+# fabricators, any open gates and every surface an element made on the stage go now.
+# The build itself, its synergies and its elements keep working in the fight.
 func _on_stage_content_cleared(_reason: String) -> void:
 	scrap.clear()
 	fabricators.clear()
 	gates.close()
 	field.clear()
 	_trail = 0.0
-	_pending_event_cores.clear()
 
 
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
@@ -390,30 +379,10 @@ func _on_gate_chosen(part_id: String) -> void:
 	ctx.events.reward_chosen.emit(part_id)
 
 
-# A won event pays out at once, so the stinger and the new part land as one beat. Its
-# bonus core waits a moment: if world grants the event's core itself, build does not
-# grant a second one.
+# A won event pays out its milestone part at once, so the stinger and the new part land
+# as one beat. The event's bonus core is world's to grant (DESIGN-NOTES I1 call 5).
 func _on_milestone_won(event_id: String) -> void:
 	ctx.run.add_part(Parts.milestone_for(event_id, ctx.run.parts), "milestone")
-	_pending_event_cores.append({"at": ctx.player.ball_position(), "since": ctx.run.run_time})
-
-
-func _on_core_gained(source: String, _at: Vector3, _count: int) -> void:
-	if source == "event":
-		_last_event_core = ctx.run.run_time
-
-
-func _step_event_cores() -> void:
-	var now: float = ctx.run.run_time
-	var i := _pending_event_cores.size() - 1
-	while i >= 0:
-		var pending: Dictionary = _pending_event_cores[i]
-		if absf(_last_event_core - pending["since"]) <= EVENT_CORE_WINDOW:
-			_pending_event_cores.remove_at(i)
-		elif now - pending["since"] > EVENT_CORE_WINDOW:
-			_pending_event_cores.remove_at(i)
-			ctx.run.add_core("event", pending["at"])
-		i -= 1
 
 
 # A theft: the chunks the lost mass carried fly off toward where it went.
@@ -474,7 +443,6 @@ func _physics_process(delta: float) -> void:
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
 	if ctx.flow.in_stage():
-		_step_event_cores()
 		for at in scrap.step(ball, speed, delta):
 			ctx.run.add_scrap(1, at)
 			if has_transformer("lightning_rod"):
