@@ -44,7 +44,7 @@ func _gains() -> void:
 	var all_in := true
 	for g in full:
 		all_in = all_in and g >= 0.99
-	_check("gains monotonic", monotonic and totals[50] > totals[0], "8 layers over 51 pressure steps; summed gain %.2f at calm, %.2f at full" % [totals[0], totals[50]])
+	_check("gains monotonic", monotonic and totals[50] > totals[0], "%d layers over 51 pressure steps; summed gain %.2f at calm, %.2f at full" % [MusicEngine.CURVES.size(), totals[0], totals[50]])
 	_check("calm leaves space", space and all_in, "at pressure 0 snare, lead and arp are silent and the bass figure stays; at 1 every layer is in")
 
 	# The live gains follow a pressure rise without ever stepping back.
