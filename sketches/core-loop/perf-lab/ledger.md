@@ -140,7 +140,7 @@ Enemy AI is second, at -2.4 ms p50 in s3 (physics p50 3.37 to 1.10 ms). The musi
 
 Headless has a spike source that native does not. Headless proc p99 is 20 to 25 ms whenever audio is on (s2 baseline 24.8, s3 no-music 24.5) and 1.2 to 1.4 ms with `--no-audio`. Native proc p99 is 3.2 ms. The spikes survive `--no-music`, so they come from the audio director or the SFX side, not the band's mixing. `audio.gd` renders the other themes on demand in headless instead of on a worker, which is a likely source (`ASSERTED (unverified)`).
 
-Learned: the CPU bound is almost entirely per-frame telegraph mesh rebuilding. Without it, s3 is 0.96 ms p50, 5.7 ms p99 and 5.5 ms est60 headless, inside the budget before render submission. Four of the nine assumptions were broken by the measurement setup itself (A1 to A5), and STRESS-CAPTURE-1's numbers carry A2, A3 and A4.
+Learned: the CPU bound is almost entirely per-frame telegraph mesh rebuilding. Without it, s3 is 0.96 ms p50, 5.7 ms p99 and 5.5 ms est60 headless, inside the budget before render submission. Five of the nine assumptions were broken by the measurement setup itself (A1 to A5), and STRESS-CAPTURE-1's numbers carry A2, A3 and A4.
 
 ## H1  telegraph repaint is the binding CPU cost
 
