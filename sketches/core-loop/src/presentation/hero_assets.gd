@@ -153,11 +153,36 @@ void fragment() {
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
 	if slot in ["paint", "pilot", "bare_metal", "ancient_enamel", "fleet_paint"]:
-		mat.albedo_texture = Palette.painted_texture(128)
-		mat.uv1_triplanar = true
-		mat.uv1_scale = Vector3.ONE * 2.0
-	if slot in ["paint", "ancient_enamel", "fleet_paint"]:
-		Palette.enamel_wear(mat)
+		# Look pass 3: broad painted material groups. Plate for hulls and Warden armor,
+		# the worn variant for old fleet repairs, riveted gyro metal for bare metal.
+		var map := ""
+		var metres := 1.5
+		match slot:
+			"paint", "ancient_enamel":
+				map = "rusted-salvaged-plate"
+			"fleet_paint":
+				map = "rusted-salvaged-plate-worn"
+			"bare_metal":
+				map = "riveted-gyro-metal"
+				metres = 0.8
+		if map != "":
+			mat.albedo_texture = Palette.look_texture(map, slot != "ancient_enamel")
+			mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+			mat.uv1_triplanar = true
+			mat.uv1_scale = Vector3.ONE / metres
+			# Plate maps average darker than the old neutral value noise; lift them once here
+			# instead of tinting twice.
+			if slot == "paint":
+				mat.albedo_color = Color(1.5, 1.5, 1.5, mat.albedo_color.a)
+			if slot == "ancient_enamel":
+				# Warden armour takes the teal-and-rust plate colours directly.
+				mat.vertex_color_use_as_albedo = false
+				mat.albedo_color = Color(1.5, 1.5, 1.5)
+		else:
+			mat.albedo_texture = Palette.painted_texture(128)
+			mat.uv1_triplanar = true
+			mat.uv1_scale = Vector3.ONE * 2.0
+	# The plate maps carry their own wear; the old detail-mask oxide would double it.
 	if spec.has("alpha"):
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.metallic_specular = 0.65
@@ -928,10 +953,20 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
 void fragment() {
 	float edge = max(0.0, 1.0 - length((UV - vec2(0.5)) * 2.0));
 	ALBEDO = vec3(0.75, 0.34, 0.09);
-	ALPHA = edge * edge * 0.18;
+	ALPHA = edge * edge * 0.26;
 }
 """
 		glow.shader = shader
 		_materials["bay_lamplight"] = glow
 	pool.material_override = _materials["bay_lamplight"]
 	barge.add_child(pool)
+	# One tightly bounded shadowless amber light under the roof (LIGHTING-TARGETS, Moss).
+	var lamp := OmniLight3D.new()
+	lamp.name = "WorkshopWarmFill"
+	lamp.light_color = Color("ffc982")
+	lamp.light_energy = 1.4
+	lamp.omni_range = 5.0
+	lamp.omni_attenuation = 1.8
+	lamp.shadow_enabled = false
+	lamp.position = Vector3(-12.6, 2.6, 0.0)
+	barge.add_child(lamp)

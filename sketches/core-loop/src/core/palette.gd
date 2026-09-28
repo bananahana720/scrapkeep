@@ -57,12 +57,46 @@ static func painted_texture(size := 256, ground := false) -> ImageTexture:
 	return texture
 
 
+# Look pass 3 albedo maps live in assets/textures as small webp files and load once at
+# runtime with mipmaps, like the generated maps above; nothing goes through the importer.
+static var _look_textures := {}
+
+# neutral: keeps the map's value pattern but mutes its hue and lifts its mean to about
+# 0.85, for surfaces whose colour already comes from vertex colours (no double tint).
+static func look_texture(id: String, neutral := false) -> ImageTexture:
+	var key := id + (":neutral" if neutral else "")
+	if _look_textures.has(key):
+		return _look_textures[key]
+	var image := Image.load_from_file("res://assets/textures/%s.webp" % id)
+	if image == null:
+		push_warning("palette: missing look texture " + id)
+		return painted_texture(128)
+	if neutral:
+		image.convert(Image.FORMAT_RGB8)
+		var probe := image.duplicate() as Image
+		probe.resize(1, 1, Image.INTERPOLATE_BILINEAR)
+		var mean := probe.get_pixel(0, 0).get_luminance()
+		var gain := 0.85 / maxf(mean, 0.05)
+		for y in image.get_height():
+			for x in image.get_width():
+				var c := image.get_pixel(x, y)
+				var l := c.get_luminance()
+				var grey := Color(l, l, l).lerp(c, 0.35)
+				image.set_pixel(x, y, Color(minf(grey.r * gain, 1.0), minf(grey.g * gain, 1.0), minf(grey.b * gain, 1.0)))
+	image.generate_mipmaps()
+	var texture := ImageTexture.create_from_image(image)
+	_look_textures[key] = texture
+	return texture
+
+
 static var _ground: ShaderMaterial
 
 static func ground_material() -> ShaderMaterial:
 	if _ground == null:
 		_ground = ShaderMaterial.new()
 		_ground.shader = preload("res://src/presentation/sandstone.gdshader")
+		_ground.set_shader_parameter("strata_map", look_texture("sandstone-strata"))
+		_ground.set_shader_parameter("floor_map", look_texture("packed-sand-floor"))
 	return _ground
 
 
@@ -131,22 +165,23 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 			for x in 1024:
 				var angle := float(x) / 1024.0 * TAU
 				var direction := Vector3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
-				var color := Color("b5cadb").lerp(Color("447cba"), clampf(elevation * 1.25, 0.0, 1.0))
+				var color := Color("ddcba8").lerp(Color("527fa6"), clampf(elevation * 1.6, 0.0, 1.0))
 				var ridge := 0.035 + 0.065 * noise.get_noise_2d(cos(angle) * 4.0, sin(angle) * 4.0)
 				var far_ridge := ridge + 0.045 + 0.035 * noise.get_noise_2d(cos(angle) * 11.0, sin(angle) * 11.0)
 				if elevation < far_ridge:
-					color = Color("8aacc5")
+					color = Color("a5b3b4")
 				if elevation < ridge:
-					color = Color("66869f")
+					color = Color("8c9ea6")
 				if elevation > 0.12:
 					var cloud := noise.get_noise_3d(direction.x * 7.0, direction.y * 16.0, direction.z * 7.0)
-					var coverage := smoothstep(0.1, 0.4, cloud) * smoothstep(0.12, 0.28, elevation)
-					color = color.lerp(Color("f5eedc"), coverage * 0.88)
+					var coverage := smoothstep(0.22, 0.5, cloud) * smoothstep(0.14, 0.34, elevation)
+					color = color.lerp(Color("ebe1cb"), coverage * 0.8)
 				image.set_pixel(x, y, color)
 		image.generate_mipmaps()
 		_sky_texture = ImageTexture.create_from_image(image)
 	var material := PanoramaSkyMaterial.new()
 	material.panorama = _sky_texture
+	material.energy_multiplier = 1.0
 	return material
 
 

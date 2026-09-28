@@ -189,9 +189,10 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	material.albedo_color = tint
 	material.roughness = 1.0
 	material.vertex_color_use_as_albedo = true
-	material.albedo_texture = Palette.painted_texture(128)
+	material.albedo_texture = Palette.look_texture("sandstone-strata")
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	material.uv1_triplanar = true
-	material.uv1_scale = Vector3.ONE * 0.08
+	material.uv1_scale = Vector3.ONE / 6.0
 	var source := mesh.surface_get_arrays(0)
 	var source_vertices: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
 	var source_normals: PackedVector3Array = source[Mesh.ARRAY_NORMAL]

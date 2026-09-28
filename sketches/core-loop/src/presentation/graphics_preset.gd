@@ -2,12 +2,12 @@ extends RefCounted
 
 # Settings are applied on bind or an explicit preset change, never polled each frame.
 const PRESETS := {
-	"high": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 2,
+	"high": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
 		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.42, "sun": 2.0, "fog": 0.00065, "sun_rotation": Vector3(-42.0, -48.0, 0.0)},
+		"ambient": 0.45, "sun": 1.75, "fog": 0.0004, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.16},
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
-		"ambient": 0.42, "sun": 2.0, "fog": 0.00065, "sun_rotation": Vector3(-42.0, -48.0, 0.0)},
+		"ambient": 0.45, "sun": 1.75, "fog": 0.0004, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.16},
 }
 static var current := "high"
 static var _worlds: Array = []
@@ -48,28 +48,45 @@ static func _apply_world(world: Dictionary) -> void:
 	var sun: DirectionalLight3D = world.sun.get_ref()
 	var viewport: Viewport = world.viewport.get_ref()
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("a4bace")
+	env.ambient_light_color = Color("a7bbd0")
 	env.ambient_light_sky_contribution = 0.25
 	env.ambient_light_energy = spec.ambient
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.05
-	env.tonemap_white = 6.0
+	# Look pass 3: AgX with a fixed exposure; auto exposure and SDFGI/SSIL/SSR stay off.
+	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.tonemap_exposure = 1.1
+	env.tonemap_agx_white = 16.29
+	env.tonemap_agx_contrast = 1.25
 	env.ssao_enabled = spec.ssao
-	env.ssao_radius = 1.4
-	env.ssao_intensity = 1.35
-	env.ssao_power = 1.35
-	env.ssao_light_affect = 0.12
+	env.ssao_radius = 0.45
+	env.ssao_intensity = 1.15
+	env.ssao_power = 1.25
+	env.ssao_detail = 0.35
+	env.ssao_sharpness = 0.85
+	env.ssao_light_affect = 0.05
+	env.ssao_ao_channel_affect = 0.0
+	RenderingServer.environment_set_ssao_quality(spec.ssao_quality, true, 0.5, 2.0, 50.0, 300.0)
+	env.adjustment_enabled = true
+	env.adjustment_saturation = 1.2
+	env.sdfgi_enabled = false
+	env.ssil_enabled = false
+	env.ssr_enabled = false
 	env.glow_enabled = spec.glow
 	env.glow_intensity = 0.18
 	env.glow_hdr_threshold = 1.5
 	env.fog_enabled = true
 	env.fog_density = spec.fog
-	env.fog_light_color = Color("819faf")
-	env.fog_sky_affect = 0.08
-	env.fog_aerial_perspective = 0.25
+	env.fog_light_color = Color("a7bcc6")
+	env.fog_light_energy = 0.75
+	env.fog_sky_affect = 0.15
+	env.fog_aerial_perspective = 0.0
+	env.fog_sun_scatter = 0.05
 	env.volumetric_fog_enabled = false
 	sun.rotation_degrees = spec.sun_rotation
-	sun.light_color = Color("ffdfb5")
+	sun.light_color = Color("ffe0ac")
+	sun.directional_shadow_split_1 = 0.18
+	sun.light_angular_distance = 1.5
+	sun.shadow_blur = 1.0
+	_apply_fill(sun, spec)
 	sun.light_energy = spec.sun
 	sun.directional_shadow_max_distance = spec.shadow_distance
 	sun.directional_shadow_mode = spec.shadow_mode
@@ -78,3 +95,21 @@ static func _apply_world(world: Dictionary) -> void:
 	if viewport != null:
 		viewport.msaa_3d = spec.msaa
 		viewport.mesh_lod_threshold = spec.lod_threshold
+
+
+# One shadowless cool directional fill opposite the sun (LIGHTING-TARGETS: elevation 50,
+# azimuth 298). It is a sibling of the world sun, so the sun stays the only shadow caster.
+static func _apply_fill(sun: DirectionalLight3D, spec: Dictionary) -> void:
+	var parent := sun.get_parent()
+	if parent == null:
+		return
+	var fill := parent.get_node_or_null("SkyFill") as DirectionalLight3D
+	if fill == null:
+		fill = DirectionalLight3D.new()
+		fill.name = "SkyFill"
+		fill.shadow_enabled = false
+		fill.rotation_degrees = Vector3(-50.0, 298.0, 0.0)
+		fill.light_color = Color("afc9df")
+		fill.light_specular = 0.0
+		parent.add_child(fill)
+	fill.light_energy = spec.fill

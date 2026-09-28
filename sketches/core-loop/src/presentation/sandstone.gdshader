@@ -1,6 +1,10 @@
 shader_type spatial;
 render_mode diffuse_burley;
 uniform bool cliff_only = false;
+uniform sampler2D strata_map : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D floor_map : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float strata_metres = 6.0;
+uniform float floor_metres = 5.0;
 varying vec3 world_at;
 varying vec3 world_normal;
 float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -27,7 +31,8 @@ void fragment() {
  float track = sin(p.z*0.065+p.x*0.026)*9.0;
  float ruts = pow(0.5+0.5*sin((p.x+track)*4.2),18.0);
  float worn = smoothstep(0.40,0.68,grain(vec3(p.x*0.026,0.0,p.z*0.009)));
- vec3 sand = COLOR.rgb * vec3(0.93,0.84,0.69) * (0.90+texture_grain*0.12-worn*ruts*0.10);
+ vec3 floor_tex = texture(floor_map, p.xz / floor_metres).rgb;
+ vec3 sand = floor_tex * (COLOR.rgb / vec3(0.82,0.77,0.65)) * (0.97+texture_grain*0.05-worn*ruts*0.08);
  float damp = smoothstep(200.0,214.0,p.z)*(1.0-smoothstep(29.0,39.0,p.y));
  ALBEDO = mix(sand,rock,strata) * (1.0-damp*0.26);
  ROUGHNESS = 0.94;
