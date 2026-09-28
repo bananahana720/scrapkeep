@@ -56,3 +56,7 @@ Supported geometry includes indexed and non-indexed TRIANGLES, unsigned scalar i
 ## Verification
 
 Run `node --test tests/asset-inspect.test.js`. The fixtures contain actual binary position/index storage, including three million indexed triangles, and exercise cap boundaries, explicit alternatives, repeated instances, malformed buffers and graphs, unsupported geometry and input-preserving output aliases. The tooling-only repository checks are `npm test`, `npm run check:docs`, `npm run check:project` and `npm run check:drift`; no browser or game build is needed for this command.
+
+## Reusable mesh kit
+
+The [static fur and accessory kit](../tools/asset-kit/README.md) generates chunky fur, goggles and collars on two neutral head fixtures, with editable Blender sources, static GLBs, detailed/reduced fixture budgets and a contact sheet. Its memory-capped recipe uses this inspector on each actual export; engine import and human acceptance remain separate.
