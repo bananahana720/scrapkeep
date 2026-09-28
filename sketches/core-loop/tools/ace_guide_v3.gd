@@ -13,6 +13,11 @@ const AudioBoard := preload("res://tools/audio_board.gd")
 # gain to -14 LUFS, and engine.json records the grid and each solo's level.
 #
 #   godot --headless --path sketches/core-loop --script res://tools/ace_guide_v3.gd -- --out=/abs/dir
+#
+# --guides writes ACE-Step cover guides instead: guide-full (every layer), guide-drums-bass
+# (hats, kick, snare, sub, bass) and guide-drums, plus the engine's kick, bass and keys solos,
+# all BARS + 1 bars long (the extra bar is the cover's loop tail) at the full guide's shared
+# gain. --pressure=<p> sets the pressure (default PRESSURE).
 
 const THEME := 0
 const PRESSURE := 0.9
@@ -32,18 +37,18 @@ static func above() -> Array:
 	return layers
 
 
-static func render(solo: Array) -> Dictionary:
+static func render(solo: Array, pressure := PRESSURE, bars := BARS) -> Dictionary:
 	var engine := MusicEngine.new()
 	engine._rng.seed = SEED
 	engine.schedule_restart(0, MusicEngine.PLAY, THEME)
-	engine.set_pressure(PRESSURE)
+	engine.set_pressure(pressure)
 	engine.solo = solo
 	var take := AudioBoard.Take.new()
 	var bar := engine.bar_len()
 	var start := PREROLL_BARS * bar
-	var total := start + BARS * bar
-	take.left.resize(BARS * bar)
-	take.right.resize(BARS * bar)
+	var total := start + bars * bar
+	take.left.resize(bars * bar)
+	take.right.resize(bars * bar)
 	var gains := {}
 	var clock := 0
 	while clock < total:
@@ -75,13 +80,60 @@ static func names(layers: Array) -> Array:
 	return layers.map(func(layer): return MusicEngine.LAYER_NAMES[layer])
 
 
+func guides(out: String, pressure: float) -> int:
+	var bars := BARS + 1
+	var full := render([], pressure, bars)
+	var mix: AudioBoard.Take = full["take"]
+	var stats := AudioBoard.master(mix)
+	var parts := {"guide-full": mix}
+	var solos := {"guide-full": {"layers": names(range(MusicEngine.LAYER_NAMES.size())), "lufs_after": stats["lufs"],
+		"peak_db": stats["peak_db"], "limit_db": stats["limit_db"]}}
+	var bass := [MusicEngine.SUB, MusicEngine.REESE]
+	for part in [["guide-drums-bass", DRUMS + bass], ["guide-drums", DRUMS], ["engine-kick", [MusicEngine.KICK]],
+			["engine-bass", bass], ["engine-keys", [MusicEngine.KEYS]]]:
+		var take: AudioBoard.Take = render(part[1], pressure, bars)["take"]
+		var limit := scaled(take, stats["gain_db"])
+		parts[part[0]] = take
+		solos[part[0]] = {"layers": names(part[1]), "lufs_after": AudioBoard.loudness(take.left, take.right),
+			"peak_db": linear_to_db(AudioBoard.peak(take.left, take.right)), "limit_db": limit}
+	var failed := 0
+	for name in parts:
+		if AudioBoard.to_wav(parts[name]).save_to_wav(out.path_join(name + ".wav")) != OK:
+			failed += 1
+			push_error("could not write %s.wav" % name)
+	var info := {
+		"theme": "spillway", "theme_index": full["theme"], "pressure": pressure, "seed": SEED,
+		"preroll_bars": PREROLL_BARS, "bars": BARS, "rendered_bars": bars, "bpm": full["bpm"],
+		"sample_rate": full["rate"], "samples_per_bar": full["bar"], "samples_per_beat": full["bar"] / 4,
+		"total_frames": mix.left.size(), "layer_gains": full["gains"], "mix_master": stats, "solos": solos,
+	}
+	var file := FileAccess.open(out.path_join("guide.json"), FileAccess.WRITE)
+	if file == null:
+		return failed + 1
+	file.store_string(JSON.stringify(info, " "))
+	file.close()
+	print(JSON.stringify(info, " "))
+	return failed
+
+
 func _initialize() -> void:
 	var out := ProjectSettings.globalize_path("res://").path_join(DEFAULT_OUT).simplify_path()
+	var guide_mode := false
+	var pressure := PRESSURE
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
+		elif arg == "--guides":
+			guide_mode = true
+		elif arg.begins_with("--pressure="):
+			pressure = float(arg.trim_prefix("--pressure="))
 	DirAccess.make_dir_recursive_absolute(out)
 	var started := Time.get_ticks_msec()
+	if guide_mode:
+		var bad := guides(out, pressure)
+		print("ace_guide_v3 guides: %s to %s in %.1f s" % ["done" if bad == 0 else "FAIL (%d)" % bad, out, (Time.get_ticks_msec() - started) / 1000.0])
+		quit(0 if bad == 0 else 1)
+		return
 	var full := render([])
 	var mix: AudioBoard.Take = full["take"]
 	var peak_before := linear_to_db(AudioBoard.peak(mix.left, mix.right))

@@ -1,0 +1,411 @@
+"""Generation-side groove lock: ACE-Step covers of the engine's own guides, screened and finished.
+
+The engine composes (ace_guide_v3.gd --guides), ACE-Step performs and produces the whole
+track, bass included. Screens reject; they never pick a winner. Andrew's blind listen decides.
+
+    PY=/home/andrew/Projects/music-video/.venv/bin/python
+    $PY bed_lock.py prep <guides dir> <run dir>          # ACE inputs + job files (pilot, sweep)
+    (ACE-Step jobs and Demucs run through gpu_job.sh, one at a time)
+    $PY bed_lock.py controls <guides dir> <run dir>      # calibration numbers for the screens
+    $PY bed_lock.py screen <guides dir> <run dir>        # every take, every screen -> screen.{json,md}
+    $PY bed_lock.py finish <guides dir> <run dir> <take> [<take> ...]
+    $PY bed_lock.py pack <run dir> <pack dir> <take> [<take> ...]
+
+Screens, fixed before the sweep was screened (the bass-kick threshold was set from the
+controls subcommand's engine and v1 numbers, recorded in THRESHOLDS below):
+  kick   engine-kick events (per sixteenth) against the take's Demucs drums, un-retimed, after
+         one global trim from audition.drift(): median |onset error| <= 12 ms and a kick within
+         +-43 ms (half a sixteenth) of every one of the 16 downbeats.
+  tempo  audition.drift() Theil-Sen slope over 16 bars: |total drift| <= 12 ms.
+  lock   the take's own bass (Demucs bass, < 300 Hz onsets) against its own kick: the strongest
+         5 bass onsets a bar sit within a median 12 ms of the kick's sixteenth grid, and the median
+         per-bar bass-to-kick envelope lag is within +-12 ms. (The first design, per-bar Pearson r
+         of 16-slot onset patterns, scored the engine's own locked bass and kick at -0.06: it
+         measures pattern similarity, not lock, so it is reported and never gates.)
+  key    the existing audition.key() check's D Dorian energy within 0.05 of the engine guide's
+         own, and audition.follows_chords(): the take tracks the guide's chords better than the
+         guide's own next-bar baseline. (KS alone reads the engine's own rootless-voiced D Dorian
+         guide as E minor, so "reads D minor" would reject the engine itself.)
+  density  arrange_restraint.spectral_rows significant bands: mean over bars <= B's mean and
+         the 90th-percentile bar <= B's busiest bar (B = the v1 hybrid Andrew loved; v1's own raw
+         bed has one bar above B's max, so a single-bar max would reject B's own bed).
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import librosa
+import numpy as np
+import soundfile as sf
+from scipy.signal import butter, sosfiltfilt
+
+from audition import HOP, SR, XFADE, bands, db, drift, follows_chords, key, kick_envelope, load, lufs, seam, segment, shape, wrap
+from arrange_restraint import spectral_rows
+
+ROOT = Path(__file__).resolve().parents[4]
+B_MIX = ROOT / 'artifacts/local/v3-audio/hybrid/hybrid-spillway-16bar.wav'
+B_OPUS = B_MIX.with_suffix('.opus')
+V1 = Path('/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-feel-3/artifacts/local/ace-audition')
+BARS = 16
+GUIDES = {'a': 'guide-drums', 'b': 'guide-drums-bass', 'c': 'guide-full'}
+STRENGTHS = (0.8, 0.85, 0.9)
+SEEDS = (172, 7, 42, 1001)
+PILOT = [(g, s, 172) for g in 'abc' for s in (0.8, 0.9)]
+CAPTION = ('Sparse jazzy EDM instrumental at 172 BPM in D minor, Dorian, modal. A tight, produced drum kit: '
+           'punchy kick, crisp snare, shuffled ghost-note hats, locked to a rolling reese bass with a clean sub. '
+           'Warm Rhodes electric piano chords with jazzy ninths, played sparingly. Lean, minimal and restrained, '
+           'polished studio production. Instrumental, no vocals, no pads, no strings, no extra synths.')
+THRESHOLDS = dict(kick_median_ms=12.0, downbeat_window_ms=43.0, tempo_total_ms=12.0,
+                  lock_dev_ms=12.0, lock_lag_ms=12.0, dorian_margin=.05)
+
+
+def name(guide, strength, seed):
+    return f'{guide}-{round(strength * 100):03d}-s{seed}'
+
+
+def prep(guides, run):
+    inputs, jobs = run / 'inputs', run / 'jobs'
+    inputs.mkdir(parents=True, exist_ok=True)
+    jobs.mkdir(parents=True, exist_ok=True)
+    levels = {}
+    for g, stem in GUIDES.items():
+        y = load(guides / f'{stem}.wav')
+        # Gain only, no limiting: the transients are what the cover must lock to.
+        gain = min(-14 - lufs(y), -1 - db(np.abs(y).max()))
+        sf.write(inputs / f'{stem}.wav', y * 10 ** (gain / 20), SR, subtype='PCM_16')
+        levels[g] = dict(stem=stem, gain_db=round(gain, 2), lufs=round(lufs(y) + gain, 2))
+    info = json.loads((guides / 'guide.json').read_text())
+
+    def job(g, s, seed):
+        return dict(name=name(g, s, seed), model='acestep-v15-xl-turbo', seeds=[seed],
+                    params=dict(task_type='cover', audio_cover_strength=s, thinking=False,
+                                src_audio=f'path:../inputs/{GUIDES[g]}.wav', caption=CAPTION,
+                                inference_steps=8, shift=3.0))
+    defaults = dict(lyrics='[Instrumental]', instrumental=True, bpm=172, keyscale='D minor',
+                    timesignature='4', vocal_language='en',
+                    duration=round(info['total_frames'] / SR, 3))
+    every = [(g, s, seed) for g in 'abc' for s in STRENGTHS for seed in SEEDS]
+    for label, cells in [('pilot', PILOT), ('sweep', [c for c in every if c not in PILOT])]:
+        spec = dict(out_dir='../takes', defaults=defaults, jobs=[job(*c) for c in cells])
+        (jobs / f'{label}.json').write_text(json.dumps(spec, indent=1))
+    (run / 'prep.json').write_text(json.dumps(dict(levels=levels, caption=CAPTION, seeds=SEEDS,
+                                                   strengths=STRENGTHS, guides=GUIDES), indent=1))
+    print(json.dumps(levels, indent=1))
+
+
+
+def grid(guides):
+    info = json.loads((guides / 'guide.json').read_text())
+    bar = info['samples_per_bar']
+    return bar, bar * BARS, bar // 16
+
+
+def low_envelope(y, cutoff=300):
+    mono = sosfiltfilt(butter(4, cutoff, 'low', fs=SR, output='sos'), y.mean(axis=1))
+    return librosa.onset.onset_strength(y=mono.astype(np.float32), sr=SR, hop_length=HOP, n_fft=1024)
+
+
+def strong_peaks(env, lo, hi, floor, sep):
+    """Onsets: frames at or above floor that are the maximum within +-sep frames."""
+    lo, hi = max(lo, sep), min(hi, len(env) - sep)
+    return [i for i in range(lo, hi) if env[i] >= floor and env[i] == env[i - sep:i + sep + 1].max()]
+
+
+def local_peaks(env, lo, hi, floor):
+    lo, hi = max(lo, 1), min(hi, len(env) - 1)
+    return [i for i in range(lo, hi) if env[i] >= floor and env[i] >= env[i - 1] and env[i] > env[i + 1]]
+
+
+def engine_events(kick, bar, step):
+    """Engine kick hits on the sixteenth grid (energy rise, as retime_slice.timing) and each hit's envelope peak."""
+    env = kick_envelope(kick)
+    events = []
+    for b in range(BARS):
+        for s in range(16):
+            p = b * bar + s * step
+            before = np.sqrt(np.mean(segment(kick, p - round(.010 * SR), round(.010 * SR)) ** 2))
+            attack = np.sqrt(np.mean(kick[p:p + round(.015 * SR)] ** 2))
+            if db(attack) - db(before) > 3 and attack > np.abs(kick).max() * .05:
+                lo, hi = max(p - round(.005 * SR), 0) // HOP, (p + round(.040 * SR)) // HOP
+                events.append((b, s, lo + int(np.argmax(env[lo:hi]))))
+    return events, env
+
+
+def slots(env, bar, step, start, latency):
+    """16 values per bar: the envelope's peak within +-20 ms of each sixteenth (plus the engine's onset latency)."""
+    w = round(.020 * SR / HOP)
+    out = np.zeros((BARS, 16))
+    for b in range(BARS):
+        for s in range(16):
+            c = round((start + b * bar + s * step) / HOP) + latency
+            out[b, s] = env[max(c - w, 0):c + w + 1].max()
+    return out
+
+
+def screen_take(mix, drums, bass, ref, bar, step, n):
+    kick, events, kenv = ref['kick'], ref['events'], ref['kenv']
+    lag = drift(kick, drums, bar, BARS)
+    off_ms = float(np.median(lag['lag_ms_per_bar']))
+    off = round(off_ms / 1000 * SR)
+    c = kick_envelope(drums)
+    floor = .3 * np.quantile(c, .995)
+    reach = round(THRESHOLDS['downbeat_window_ms'] / 1000 * SR / HOP)
+    errors, missing_down, missing, used = [], [], [], []
+    for b, s, t in events:
+        centre = t + round(off / HOP)
+        found = local_peaks(c, centre - reach, centre + reach + 1, floor)
+        if found:
+            best = max(found, key=lambda i: c[i])
+            used.append(best)
+            errors.append((best - centre) * HOP / SR * 1000)
+        elif s == 0:
+            missing_down.append(b + 1)
+        else:
+            missing.append(f'{b + 1}.{s}')
+    latency = int(round(np.median([t - round((b * bar + s * step) / HOP) for b, s, t in events])))
+    lo, hi = max(off, 0) // HOP, (off + n) // HOP
+    sep = round(.030 * SR / HOP)
+    kick_floor = .4 * float(np.median(c[used])) if used else floor
+    all_kicks = strong_peaks(c, lo, hi, kick_floor, sep)
+    extra = [i for i in all_kicks if min((abs(i - u) for u in used), default=1e9) > 3]
+    benv = low_envelope(bass)
+    # Calibrated on the controls only (engine bass: 5 reese notes a bar): the strongest 5 onsets a bar,
+    # 60 ms apart, above half the 99th percentile. Engine median |dev| ~1 ms; v1's bed ~24 ms.
+    cand = strong_peaks(benv, lo, hi, .5 * float(np.quantile(benv[lo:hi], .99)), round(.060 * SR / HOP))
+    bass_on = sorted(cand, key=lambda i: -benv[i])[:5 * BARS]
+
+    def grid_dev(frames):
+        d = [((i - latency) * HOP - off) % step for i in frames]
+        return [min(v, step - v) / SR * 1000 for v in d]
+    kdev, bdev = grid_dev(all_kicks), grid_dev(bass_on)
+    lock_lag, lock_r = [], []
+    reach60 = round(.060 * SR / HOP)
+    for b in range(BARS):
+        a0, a1 = max(round((off + b * bar) / HOP), 0), round((off + (b + 1) * bar) / HOP)
+        ref_k = c[a0:a1] - c[a0:a1].mean()
+        best, best_lag = -np.inf, 0
+        for L in range(-reach60, reach60 + 1):
+            if a0 + L < 0 or a1 + L > len(benv):
+                continue
+            seg = benv[a0 + L:a1 + L] - benv[a0 + L:a1 + L].mean()
+            r = float(np.dot(ref_k, seg) / max(np.linalg.norm(ref_k) * np.linalg.norm(seg), 1e-12))
+            if r > best:
+                best, best_lag = r, L
+        lock_lag.append(best_lag * HOP / SR * 1000)
+        lock_r.append(best)
+    body = segment(mix, off, n)
+    k = key(body)[1]
+    chords = follows_chords(ref['full'], body, bar, BARS)
+    tuning = float(librosa.estimate_tuning(y=body.mean(axis=1).astype(np.float32), sr=SR)) * 100
+    dens = [row['density_mean'] for row in spectral_rows(body, bar)]
+    tempo = librosa.beat.beat_track(y=body.mean(axis=1).astype(np.float32), sr=SR, start_bpm=172, units='time')[0]
+    return dict(trim_ms=round(off_ms, 2), trim_samples=off, drift_lag_ms_per_bar=lag['lag_ms_per_bar'],
+                kick_median_abs_ms=round(float(np.median(np.abs(errors))), 2) if errors else None,
+                kick_errors_ms=[round(e, 1) for e in errors], kick_events=len(events), kick_found=len(errors),
+                missing_downbeats=missing_down, missing_other=missing,
+                kick_grid_dev_median_ms=round(float(np.median(kdev)), 2) if kdev else None,
+                extra_kicks_per_bar=round(len(extra) / BARS, 2),
+                tempo_total_drift_ms=round(lag['slope_ms_per_bar'] * BARS, 2),
+                librosa_bpm=round(float(np.atleast_1d(tempo)[0]), 2),
+                bass_onsets=len(bass_on), bass_grid_dev_median_ms=round(float(np.median(bdev)), 2) if bdev else None,
+                lock_lag_median_ms=round(float(np.median(lock_lag)), 2),
+                lock_r_median=round(float(np.median(lock_r)), 3), lock_r_per_bar=[round(v, 3) for v in lock_r],
+                key=k['ks_key'], key_r=k['ks_r'], dorian_d_energy=k['dorian_d_energy'],
+                top_pitch_classes=k['top_pitch_classes'], follows_chords=chords, tuning_cents=round(tuning, 1),
+                density_per_bar=dens, density_mean=round(float(np.mean(dens)), 3),
+                density_p90=round(float(np.quantile(dens, .9)), 3), density_max=round(float(np.max(dens)), 3),
+                lufs_raw=round(lufs(mix), 2))
+
+
+def verdict(row, ref, b_density):
+    t = THRESHOLDS
+    fails = []
+    if row['kick_median_abs_ms'] is None or row['kick_median_abs_ms'] > t['kick_median_ms']:
+        fails.append('kick')
+    if row['missing_downbeats']:
+        fails.append('downbeat')
+    if abs(row['tempo_total_drift_ms']) > t['tempo_total_ms']:
+        fails.append('tempo')
+    if (row['bass_grid_dev_median_ms'] is None or row['bass_grid_dev_median_ms'] > t['lock_dev_ms']
+            or abs(row['lock_lag_median_ms']) > t['lock_lag_ms']):
+        fails.append('lock')
+    ch = row['follows_chords']
+    if (row['dorian_d_energy'] < ref['dorian'] - t['dorian_margin']
+            or ch['cover_vs_guide_mean'] <= ch['guide_vs_next_bar_mean']):
+        fails.append('key')
+    if row['density_mean'] > b_density['mean'] or row['density_p90'] > b_density['max']:
+        fails.append('density')
+    return fails
+
+
+def reference(guides, bar, step):
+    kick = load(guides / 'engine-kick.wav')
+    events, kenv = engine_events(kick, bar, step)
+    full = load(guides / 'guide-full.wav')[:bar * BARS]
+    return dict(kick=kick, events=events, kenv=kenv, full=full, dorian=key(full)[1]['dorian_d_energy'])
+
+
+def b_density(bar):
+    dens = [row['density_mean'] for row in spectral_rows(load(B_MIX), bar)]
+    return dict(mean=round(float(np.mean(dens)), 3), max=round(float(np.max(dens)), 3), per_bar=dens)
+
+
+def controls(guides, run):
+    """The screens' instruments on known inputs: the engine against itself, and v1's cover (B's bed)."""
+    bar, n, step = grid(guides)
+    ref = reference(guides, bar, step)
+    rows = {}
+    drums = load(guides / 'guide-drums.wav')
+    rows['engine (guide drums vs engine kick; bass = engine sub+reese)'] = screen_take(
+        load(guides / 'guide-full.wav'), drums, load(guides / 'engine-bass.wav'), ref, bar, step, n)
+    rows['v1 cover (B bed, raw, Demucs stems)'] = screen_take(
+        load(V1 / 'cover-spillway-raw.wav'), load(V1 / 'cover-spillway-raw.drums.wav'),
+        load(V1 / 'cover-spillway-raw.bass.wav'), ref, bar, step, n)
+    rows['B delivered mix density'] = b_density(bar)
+    (run / 'controls.json').write_text(json.dumps(rows, indent=1))
+    for k, v in rows.items():
+        print(k, json.dumps({f: v.get(f) for f in ('trim_ms', 'kick_median_abs_ms', 'kick_found', 'kick_events',
+              'missing_downbeats', 'kick_grid_dev_median_ms', 'extra_kicks_per_bar', 'tempo_total_drift_ms',
+              'bass_onsets', 'bass_grid_dev_median_ms', 'lock_lag_median_ms', 'lock_r_median', 'key', 'dorian_d_energy',
+              'follows_chords', 'tuning_cents', 'density_mean', 'density_p90', 'density_max', 'mean', 'max')}))
+    print('engine dorian_d_energy', ref['dorian'], 'verdicts', {k: verdict(v, ref, rows['B delivered mix density'])
+                                                               for k, v in rows.items() if 'kick_events' in v})
+
+
+def takes(run):
+    out = {}
+    for manifest in sorted((run / 'takes').glob('manifest*.json')):
+        for entry in json.loads(manifest.read_text()):
+            for audio in entry.get('audios', []):
+                out[entry['name']] = Path(audio['path'])
+    return out
+
+
+def vocals(run):
+    """Demucs' vocals RMS per take, from the separation logs (an instrumental that grew a voice)."""
+    found, current = {}, None
+    for log in sorted((run / 'logs').glob('demucs*.log')):
+        for line in log.read_text().splitlines():
+            if ': separated in' in line:
+                current = line.split(':')[0]
+            elif line.strip().startswith('vocals:') and current:
+                found[current] = float(line.split()[1])
+    return found
+
+
+def screen(guides, run):
+    bar, n, step = grid(guides)
+    ref = reference(guides, bar, step)
+    dens_b = b_density(bar)
+    voc = vocals(run)
+    rows = []
+    import hashlib
+    for label, path in sorted(takes(run).items()):
+        stems = {s: path.with_suffix(f'.{s}.wav') for s in ('drums', 'bass', 'other')}
+        if not all(p.exists() for p in stems.values()):
+            print('no stems yet:', label)
+            continue
+        g, s, seed = label.split('-')
+        row = dict(take=label, guide=g, strength=int(s) / 100, seed=int(seed[1:]), path=str(path),
+                   sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                   **screen_take(load(path), load(stems['drums']), load(stems['bass']), ref, bar, step, n))
+        row['vocals_rms_db'] = voc.get(str(path))
+        row['fails'] = verdict(row, ref, dens_b)
+        rows.append(row)
+        print(label, row['fails'] or 'PASS', row['kick_median_abs_ms'], row['missing_downbeats'],
+              row['tempo_total_drift_ms'], row['lock_r_median'], row['lock_lag_median_ms'], row['key'],
+              row['density_mean'], flush=True)
+    dup = {}
+    for row in rows:
+        dup.setdefault(row['sha256'], []).append(row['take'])
+    passed = [r for r in rows if not r['fails']]
+    # Top two, fixed before screening: tightest kick median, then smallest bass-to-kick lag; if both
+    # come from one guide and another guide has a passer, its best replaces the second.
+    passed.sort(key=lambda r: (r['kick_median_abs_ms'], abs(r['lock_lag_median_ms'])))
+    top = passed[:2]
+    if len(top) == 2 and top[0]['guide'] == top[1]['guide']:
+        other = [r for r in passed if r['guide'] != top[0]['guide']]
+        if other:
+            top[1] = other[0]
+    report = dict(thresholds=THRESHOLDS, b_density=dens_b, rows=rows, identical_audio=[v for v in dup.values() if len(v) > 1],
+                  passed=[r['take'] for r in passed], finish=[r['take'] for r in top])
+    (run / 'screen.json').write_text(json.dumps(report, indent=1))
+    head = ('| take | guide | str | seed | trim ms | kick med ms | kicks found | missing downbeats | kick grid dev ms | '
+            'extra kicks/bar | tempo drift ms | lock r | lock lag ms | key | tuning c | density mean/max | vocals dB | result |')
+    lines = [head, '|' + '---|' * (head.count('|') - 1)]
+    for r in rows:
+        lines.append(f"| {r['take']} | {r['guide']} | {r['strength']} | {r['seed']} | {r['trim_ms']} | "
+                     f"{r['kick_median_abs_ms']} | {r['kick_found']}/{r['kick_events']} | {r['missing_downbeats'] or '-'} | "
+                     f"{r['kick_grid_dev_median_ms']} | {r['extra_kicks_per_bar']} | {r['tempo_total_drift_ms']} | "
+                     f"{r['lock_r_median']} | {r['lock_lag_median_ms']} | {r['key']} | {r['tuning_cents']} | "
+                     f"{r['density_mean']}/{r['density_max']} | {r['vocals_rms_db']} | {' '.join(r['fails']) or 'PASS'} |")
+    lines.append(f"\nB density mean/max {dens_b['mean']}/{dens_b['max']}. Identical audio: {report['identical_audio']}. "
+                 f"Passed: {report['passed']}. Finish: {report['finish']}.")
+    (run / 'screen.md').write_text('\n'.join(lines) + '\n')
+    print('\n'.join(lines[-1:]))
+
+
+def finish(guides, run, names):
+    from retime_slice import master
+    bar, n, step = grid(guides)
+    report = json.loads((run / 'screen.json').read_text())
+    rows = {r['take']: r for r in report['rows']}
+    out = {}
+    for label in names:
+        row, path = rows[label], Path(rows[label]['path'])
+        dest = run / 'finished' / label
+        dest.mkdir(parents=True, exist_ok=True)
+        off = row['trim_samples']
+        if off < 0:
+            raise SystemExit(f'{label}: negative trim {off}; the loop would start in padding')
+        loops = {}
+        for stem, y in [('mix', load(path)), *[(s, load(path.with_suffix(f'.{s}.wav'))) for s in ('drums', 'bass', 'other')]]:
+            loops[stem] = wrap(segment(y, off, n), segment(y, off + n, XFADE))
+        mastered, loud = master(loops['mix'], dest / f'{label}.wav')
+        gain = 10 ** (loud['gain_db'] / 20)
+        stem_rows = {}
+        for s in ('drums', 'bass', 'other'):
+            target = dest / f'{label}.{s}.loop.wav'
+            sf.write(target, loops[s] * gain, SR, subtype='PCM_24')
+            stem_rows[s] = dict(path=str(target), lufs=round(lufs(loops[s] * gain), 2), seam=seam(loops[s] * gain))
+        sf.write(dest / 'loop-test.wav', np.tile(mastered, (3, 1)), SR, subtype='PCM_16')
+        out[label] = dict(source=str(path), trim_samples=off, frames=len(mastered), seconds=round(len(mastered) / SR, 4),
+                          master=loud, seam=seam(mastered), bands=bands(mastered), **shape(mastered, bar),
+                          stems=stem_rows, stem_gain_db=loud['gain_db'],
+                          note='stems carry the master gain without its limiter, for later vertical layering')
+        print(label, json.dumps(dict(master=loud, seam=out[label]['seam']), indent=1), flush=True)
+    (run / 'finished' / 'finish.json').write_text(json.dumps(out, indent=1))
+
+
+def pack(run, dest, names):
+    import hashlib
+    import random
+    import shutil
+    items = [(label, run / 'finished' / label / f'{label}.opus') for label in names] + [('B (v1 hybrid)', B_OPUS)]
+    random.SystemRandom().shuffle(items)
+    dest.mkdir(parents=True, exist_ok=True)
+    key_lines, manifest = [], {}
+    for i, (label, src) in enumerate(items, 1):
+        target = dest / f'X{i}.opus'
+        shutil.copyfile(src, target)
+        key_lines.append(f'X{i}={label}')
+        manifest[target.name] = dict(sha256=hashlib.sha256(target.read_bytes()).hexdigest(), source=str(src))
+    (dest / '.key-do-not-peek').write_text('\n'.join(key_lines) + '\n')
+    (run / 'pack-manifest.json').write_text(json.dumps(dict(dest=str(dest), files=manifest), indent=1))
+    print('packed', len(items), 'files to', dest)
+
+if __name__ == '__main__':
+    cmd, args = sys.argv[1], [Path(a) for a in sys.argv[2:]]
+    if cmd == 'prep':
+        prep(*args)
+    elif cmd == 'controls':
+        controls(*args)
+    elif cmd == 'screen':
+        screen(*args)
+    elif cmd == 'finish':
+        finish(args[0], args[1], [str(a) for a in args[2:]])
+    elif cmd == 'pack':
+        pack(args[0], args[1], [str(a) for a in args[2:]])
+    else:
+        sys.exit(__doc__)
