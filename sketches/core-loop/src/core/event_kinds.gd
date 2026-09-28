@@ -139,6 +139,13 @@ const ROWS := {
 	# clear when it landed. Amber, because it is your own move, on the chevron of motion
 	# past; a rising whoosh that ends on a bright fifth, never the danger family.
 	"near_miss": {"group": "combat", "color": Palette.AMBER, "shape": "chevron", "sound": "near_whoosh", "hud": "", "objective": "", "priority": 1},
+	# v3 interact. Each fact is heard and drawn in its family's register and colour
+	# (world/interactables.gd FAMILIES); these rows are the schema's stand-ins. No toast:
+	# the device, its dial and the core facts carry the result, inside the word budget.
+	"interact_armed": {"group": "event", "color": Palette.AMBER, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
+	"interact_fired": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"ambush_ended": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "event_end", "hud": "", "objective": "", "priority": 2},
+	"bet_resolved": {"group": "economy", "color": Palette.COPPER, "shape": "star", "sound": "clank", "hud": "", "objective": "", "priority": 2},
 }
 
 # v3 W11 juice

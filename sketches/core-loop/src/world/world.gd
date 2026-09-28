@@ -10,6 +10,7 @@ const CodexWorld := preload("res://src/world/codex_world.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
 const Bay := preload("res://src/world/bay.gd")
+const Interact := preload("res://src/world/interact.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
@@ -47,6 +48,8 @@ var contraptions := {}
 var terrain_view
 var bay
 var ride
+# v3: the interact key's system and the stage's interactables (interact.gd).
+var interact
 # What Moss said last (the shop's result record), for the shop UI.
 var bay_bark := {}
 # The height band the ball last settled in, and each terrain swap's cost.
@@ -86,6 +89,10 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(launch)
 	launch.setup()
 	_setup_gorge()
+	interact = Interact.new()
+	ctx.root.add_child(interact)
+	interact.setup(ctx)
+	ctx.player.interact_claim = interact.claims
 	director = Director.new(ctx.rng.randi())
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)

@@ -6,6 +6,8 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const EdgeFlash := preload("res://src/presentation/edge_flash.gd")
+const Interactables := preload("res://src/world/interactables.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -137,6 +139,10 @@ func wire_optional() -> void:
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "element_resolved", _on_element)
+	_listen(events, "interact_armed", _on_interact_armed)
+	_listen(events, "interact_fired", _on_interact_fired)
+	_listen(events, "ambush_ended", _on_ambush_ended)
+	_listen(events, "bet_resolved", _on_bet_resolved)
 	if events.has_signal("interaction_found") and not _found_wired:
 		_found_wired = true
 		var argc := 0
@@ -144,6 +150,26 @@ func wire_optional() -> void:
 			if info["name"] == "interaction_found":
 				argc = (info["args"] as Array).size()
 		events.connect("interaction_found", _on_found.unbind(argc) if argc > 0 else _on_found)
+
+
+# An interactable's consent and act, in its family's shape and colour; a result as a
+# star for a win and a cross for a loss.
+func _on_interact_armed(family: String, _id: String, at: Vector3) -> void:
+	var row := Interactables.row(family)
+	glyph("interact_armed", at + Vector3.UP * 2.0, 0.4, 1.2, 0.3, Vector3.ZERO, String(row["shape"]), row["color"])
+
+
+func _on_interact_fired(family: String, _id: String, at: Vector3) -> void:
+	var row := Interactables.row(family)
+	glyph("interact_fired", at + Vector3.UP * 2.0, 0.6, 2.4, 0.45, Vector3.ZERO, String(row["shape"]), row["color"])
+
+
+func _on_ambush_ended(_id: String, won: bool, at: Vector3) -> void:
+	glyph("ambush_ended", at + Vector3.UP * 3.0, 0.6, 2.2 if won else 1.2, 0.5, Vector3.ZERO, "star" if won else "cross", Interactables.color("fight"))
+
+
+func _on_bet_resolved(_id: String, won: bool, _stake: int, at: Vector3) -> void:
+	glyph("bet_resolved", at + Vector3.UP * 5.0, 0.6, 2.6 if won else 1.0, 0.5, Vector3.ZERO, "star" if won else "cross", Palette.ARC if won else Palette.RUST)
 
 
 static func _listen(events: Object, signal_name: String, callable: Callable) -> void:

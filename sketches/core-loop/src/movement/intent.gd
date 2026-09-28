@@ -13,6 +13,11 @@ var jump_held := false
 var boost_pressed := false
 var brake_held := false
 var mount_pressed := false
+# E is interact everywhere (LOOP-REDESIGN section 9). mount_held is E held; the player
+# turns a press an interactable claims into interact_pressed, so mount_pressed is left
+# only for Sable's pylon.
+var mount_held := false
+var interact_pressed := false
 var reel_held := false
 var fire_pressed := false
 var fire_held := false
@@ -35,6 +40,8 @@ func clear() -> void:
 	boost_pressed = false
 	brake_held = false
 	mount_pressed = false
+	mount_held = false
+	interact_pressed = false
 	reel_held = false
 	fire_pressed = false
 	fire_held = false
@@ -88,6 +95,7 @@ class Keyboard:
 		out.boost_pressed = Input.is_action_just_pressed("cl_boost")
 		out.brake_held = Input.is_action_pressed("cl_brake")
 		out.mount_pressed = Input.is_action_just_pressed("cl_mount")
+		out.mount_held = Input.is_action_pressed("cl_mount")
 		out.reel_held = Input.is_action_pressed("cl_reel")
 		out.fire_pressed = Input.is_action_just_pressed("cl_fire")
 		out.fire_held = Input.is_action_pressed("cl_fire")

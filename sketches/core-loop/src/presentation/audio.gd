@@ -13,6 +13,7 @@ const Augments := preload("res://src/movement/augments.gd")
 # tells an ancient from the Fleet.
 const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -528,6 +529,16 @@ func wire_optional() -> void:
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
+	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
+	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
+	_listen(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
+		play("interact_armed", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "arm"), cue_context())))
+	_listen(events, "interact_fired", func(family: String, _id: String, _at: Vector3):
+		play("interact_fired", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "fire"), cue_context())))
+	_listen(events, "ambush_ended", func(_id: String, won: bool, _at: Vector3):
+		play("ambush_ended", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("fight", "won" if won else "lost"), cue_context())))
+	_listen(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
+		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen(events, "synergy_discovered", _on_synergy)

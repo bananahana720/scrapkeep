@@ -501,6 +501,10 @@ func _process(delta: float) -> void:
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
 	reticle.gauge = AbilitySlots.gauge_of(slots)
+	# An interactable's hold-to-arm fills the same class ring (LOOP-REDESIGN section 9).
+	var interact = game.world.get("interact") if game.world != null else null
+	if interact != null:
+		reticle.gauge = maxf(reticle.gauge, interact.hold_fraction())
 	reticle.gauge_color = tint
 	if ability_bar.size != _laid_out:
 		layout(size)

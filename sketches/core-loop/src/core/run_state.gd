@@ -160,6 +160,14 @@ func add_core(source: String, at: Vector3) -> void:
 	events.core_gained.emit(source, at, bonus_cores)
 
 
+# A lost risk bet burns this stage's cores (world/bet_crate.gd); its bet_resolved fact
+# reports the loss. Returns how many burned.
+func burn_cores() -> int:
+	var burned := bonus_cores
+	bonus_cores = 0
+	return burned
+
+
 # The gate tier bonus the cores buy: 0, 1 or 2 (two or more cores).
 func gate_tier_bonus() -> int:
 	return mini(bonus_cores, CORE_TIER_CAP)
