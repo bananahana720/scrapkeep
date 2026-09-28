@@ -33,6 +33,9 @@ const Features := preload("res://src/world/features.gd")
 #   lapper         the v3 loop's skilled player (LOOP-REDESIGN section 4): tight laps on
 #                  the fast drop line, no loot, a drop on every window it can time, the
 #                  gun on the open core. With no loop live it fights like the skipper.
+#   lapper_blind   the same laps without reading the schedule: it never stops at the
+#                  line's start, so every descent is a fast arrival on whatever the
+#                  core is doing, and its misses measure the recovery.
 # All of them fight Brindle the same way once a boss module exists (see _boss). In the
 # drop mode the skipper is the section 4 camper: it beelines, holds fire and rams laps
 # on the bowl floor, which is exactly what drop mode must not reward.
@@ -59,7 +62,7 @@ const Features := preload("res://src/world/features.gd")
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
 # limit ("stalled", "boss_stalled").
 
-const POLICIES := ["skipper", "completionist", "random", "lapper"]
+const POLICIES := ["skipper", "completionist", "random", "lapper", "lapper_blind"]
 # The lapper: reach a line's start within LAP_REACHED, then leave when the Warden's
 # published schedule says the core stands open LAP_SLACK either side of its arrival. The
 # descent starts as a guess of LAP_DESCENT seconds and learns from every arrival within
@@ -437,14 +440,14 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_drop_rec = null
 	if LoopMode.mode(game.tuning) != "v2":
 		_note.merge(LoopMode.tag(game.tuning))
-		_note.merge({"drop_speeds": [], "drop_speed_ratios": [], "laps": 0, "near_misses": 0, "safe_dodges": 0, "miss_recovery_s": [], "turnaround_s": [], "bowl_ticks": 0, "stage_ticks": 0})
+		_note.merge({"drop_speeds": [], "drop_speed_ratios": [], "descents": [], "laps": 0, "near_misses": 0, "safe_dodges": 0, "miss_recovery_s": [], "turnaround_s": [], "bowl_ticks": 0, "stage_ticks": 0})
 
 
 # A landed drop (warden_drop.gd): its arrival speed now, the ball's speed a moment later.
 func _on_drop_landed(_at: Vector3, speed: float, _left: int, _segments: int) -> void:
 	_note_add("drop_speeds", snappedf(speed, 0.1))
 	_drop_probe = {"speed_in": speed, "wait": LAP_SPEED_AFTER}
-	if policy == "lapper" and _lap_phase == "descend":
+	if policy.begins_with("lapper") and _lap_phase == "descend":
 		_lap_end("land")
 		_count("laps")
 		if not _note.has("lands"):
@@ -623,7 +626,7 @@ func _roam(delta: float) -> void:
 			_fight(warden, delta)
 		"completionist":
 			_completionist(warden, delta)
-		"lapper":
+		"lapper", "lapper_blind":
 			_lapper(warden, delta)
 			var phase := _goal.split(" ")[1] if _goal.begins_with("lap ") else _goal
 			if not _note.has("lap_seconds"):
@@ -693,7 +696,8 @@ func _lapper(warden: Node3D, delta: float) -> void:
 		_lap_phase = "wait"
 	if _lap_phase == "wait":
 		_goal = "lap wait"
-		if game.player.planar_velocity().length() < LAP_BRAKED and _lap_ready(warden):
+		var blind := policy == "lapper_blind"
+		if blind or (game.player.planar_velocity().length() < LAP_BRAKED and _lap_ready(warden)):
 			_lap_phase = "descend"
 			_lap_go = game.run.stage_time
 			_lap_step = 0
@@ -768,6 +772,7 @@ func _lap_ready(warden: Node3D) -> bool:
 func _lap_end(kind: String) -> void:
 	_lap_ended_at = game.run.stage_time
 	_lap_ended_kind = kind
+	_note_add("descents", kind)
 
 
 # The gun on the open core (it holds the door under `hold`), the whole Warden while it
@@ -1142,7 +1147,7 @@ func _choose_gate(offers: Array) -> int:
 	if offers.is_empty():
 		return -1
 	match policy:
-		"skipper", "lapper":
+		"skipper", "lapper", "lapper_blind":
 			return 0
 		"completionist":
 			var best := 0
