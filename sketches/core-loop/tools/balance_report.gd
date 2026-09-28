@@ -175,6 +175,7 @@ func _build() -> bool:
 	_hands_section(runs)
 	_damage_section(runs)
 	_hurt_section(runs)
+	_delivered_damage_section(runs)
 	_codex_section(runs, entries)
 	_flag_breaks(runs)
 	_flag_heft(runs, band)
@@ -443,6 +444,108 @@ func _hurt_section(runs: Array[Dictionary]) -> void:
 				parts.append("%s %.0f" % [key, sums[key]])
 			_lines.append("| %s | %s | %s |" % [policy, str(stage) if stage <= StageDefs.COUNT else "Brindle", ", ".join(parts)])
 	_lines.append("")
+
+
+# M0's delivered-damage baseline (design-v3/STRATEGY-SPINE.md §7 row M0, §8 row 1): the
+# run log's own ledger (runs.ndjson "delivered_damage"), read as-is and never re-derived
+# here, so the report and the spine's own per-run record can never disagree.
+func _delivered_damage_section(runs: Array[Dictionary]) -> void:
+	_lines.append("## Delivered damage (M0 baseline)")
+	_lines.append("")
+	var by_source := {}
+	var by_action := {}
+	var by_target := {}
+	var by_range := {"near": 0.0, "mid": 0.0, "far": 0.0}
+	var retirements := {}
+	var total := 0.0
+	var overkill := 0.0
+	var hits := 0
+	var zero_damage_runs := 0
+	var run_count := 0
+	var drop_stages := {}
+	var unmeasured_breaks := {}
+	var slam_stages := {}
+	for run in runs:
+		var record: Dictionary = run["spine"]
+		if not record.has("delivered_damage"):
+			continue
+		var d: Dictionary = record["delivered_damage"]
+		run_count += 1
+		total += float(d.get("total", 0.0))
+		overkill += float(d.get("overkill", 0.0))
+		hits += int(d.get("hits", 0))
+		if float(d.get("total", 0.0)) <= 0.0:
+			zero_damage_runs += 1
+		for key in (d.get("by_source", {}) as Dictionary):
+			by_source[key] = float(by_source.get(key, 0.0)) + float(d["by_source"][key])
+		for key in (d.get("by_action", {}) as Dictionary):
+			by_action[key] = float(by_action.get(key, 0.0)) + float(d["by_action"][key])
+		for key in (d.get("by_target_class", {}) as Dictionary):
+			by_target[key] = float(by_target.get(key, 0.0)) + float(d["by_target_class"][key])
+		for key in (d.get("by_range", {}) as Dictionary):
+			by_range[key] = float(by_range.get(key, 0.0)) + float(d["by_range"][key])
+		for key in (d.get("retirements", {}) as Dictionary):
+			retirements[key] = int(retirements.get(key, 0)) + int(d["retirements"][key])
+		# The run's tag is its starting mode; a stage broken after a flip out of drop mode
+		# reads null (unmeasured), so it is counted as such, never cast to 0.
+		if String(record.get("loop_mode", "")) == "drop":
+			for stage in (d.get("drops_to_break", {}) as Dictionary):
+				if d["drops_to_break"][stage] == null:
+					unmeasured_breaks[stage] = int(unmeasured_breaks.get(stage, 0)) + 1
+					continue
+				var list: Array = drop_stages.get(stage, [])
+				list.append(int(d["drops_to_break"][stage]))
+				drop_stages[stage] = list
+		for stage in (d.get("warden_slam_hits", {}) as Dictionary):
+			var hit_list: Array = slam_stages.get(stage, [])
+			hit_list.append(int(d["warden_slam_hits"][stage]))
+			slam_stages[stage] = hit_list
+	if run_count == 0:
+		_lines.append("No delivered_damage records in these runs (older run_log, before M0).")
+		_lines.append("")
+		return
+	_lines.append("%d run(s), %d zero-damage run(s), %d hit(s), %.0f HP delivered, %.0f HP overkill clamped." \
+		% [run_count, zero_damage_runs, hits, total, overkill])
+	_lines.append("")
+	_lines.append("| Source | HP |")
+	_lines.append("| --- | --- |")
+	for key in by_source:
+		_lines.append("| %s | %.0f |" % [key, by_source[key]])
+	_lines.append("")
+	_lines.append("| Action | HP |")
+	_lines.append("| --- | --- |")
+	for key in by_action:
+		_lines.append("| %s | %.0f |" % [key, by_action[key]])
+	_lines.append("")
+	_lines.append("| Target class | HP | Retirements |")
+	_lines.append("| --- | --- | --- |")
+	for key in by_target:
+		_lines.append("| %s | %.0f | %d |" % [key, by_target[key], int(retirements.get(key, 0))])
+	_lines.append("")
+	_lines.append("| Range | HP |")
+	_lines.append("| --- | --- |")
+	for key in ["near", "mid", "far"]:
+		_lines.append("| %s | %.0f |" % [key, by_range[key]])
+	_lines.append("")
+	if not drop_stages.is_empty() or not unmeasured_breaks.is_empty():
+		_lines.append("Drops to break (loop_mode=drop, mean per broken stage; one per landed drop, warden_drop_landed):")
+		for stage in drop_stages:
+			_lines.append("- stage %s: %.1f (%d break(s))" % [stage, _mean(drop_stages[stage]), drop_stages[stage].size()])
+		for stage in unmeasured_breaks:
+			_lines.append("- stage %s: %d break(s) unmeasured (the mode left drop before the break)" % [stage, unmeasured_breaks[stage]])
+		_lines.append("")
+	if not slam_stages.is_empty():
+		_lines.append("Warden stomp and slam hits to break (hits, not drops; any loop_mode, mean per broken stage):")
+		for stage in slam_stages:
+			_lines.append("- stage %s: %.1f (%d break(s))" % [stage, _mean(slam_stages[stage]), slam_stages[stage].size()])
+		_lines.append("")
+
+
+static func _mean(list: Array) -> float:
+	var total := 0.0
+	for v in list:
+		total += float(v)
+	return total / maxf(1.0, float(list.size()))
 
 
 # What broke the Wardens: each strike kind's share of Warden damage, per policy and stage.

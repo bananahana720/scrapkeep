@@ -163,15 +163,18 @@ func damage_scale() -> float:
 	return 1.0
 
 
-# Resolves one hit's damage, already decided by strike(). Returns the damage dealt.
+# Resolves one hit's damage, already decided by strike(). Returns the HP actually
+# removed, clamped to what was left (M0's delivered-damage ledger reads this, not the
+# raw amount, so overkill is clamped at the one place hp actually changes).
 func take_damage(amount: float) -> float:
 	if _dead:
 		return 0.0
+	var removed := minf(amount, hp)
 	hp -= amount
 	flash()
 	if hp <= 0.0:
 		_die()
-	return amount
+	return removed
 
 
 func telegraph() -> Node3D:

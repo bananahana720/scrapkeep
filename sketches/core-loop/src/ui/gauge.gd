@@ -35,6 +35,9 @@ func _init(icon := "", width_of_bar := 0.0, quarter_ticks := false) -> void:
 
 
 func set_reading(value: float, tint: Color, text := "", warning := false, warning_color := Color.WHITE) -> void:
+	# Called every frame by the HUD: shape and redraw only when a shown value changed.
+	if value == fraction and tint == color and text == label and warning == warn and warning_color == warn_color:
+		return
 	fraction = value
 	color = tint
 	label = text
@@ -42,6 +45,7 @@ func set_reading(value: float, tint: Color, text := "", warning := false, warnin
 	warn_color = warning_color
 	custom_minimum_size = extent()
 	size = custom_minimum_size
+	queue_redraw()
 
 
 func extent() -> Vector2:

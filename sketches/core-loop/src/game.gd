@@ -9,6 +9,7 @@ const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -263,7 +264,7 @@ func hit_stop(seconds: float) -> void:
 	# HIT_STOP_BUDGET of stops in any HIT_STOP_WINDOW_MS, so a chain of drops, kills and
 	# slams never piles up into a stall. v2 keeps its per-stop cap alone.
 	if LoopMode.mode(tuning) != "v2":
-		var now := Time.get_ticks_msec()
+		var now := SimClock.msec()
 		_stop_log = _stop_log.filter(func(entry: Array) -> bool: return now - int(entry[0]) < HIT_STOP_WINDOW_MS)
 		var spent := 0.0
 		for entry in _stop_log:
@@ -338,6 +339,15 @@ func hold_notes(held: bool) -> void:
 
 func pause_toggled() -> bool:
 	return _pause_toggled
+
+
+# The ACE music's held breath, raw to hard to gentle: the title's B and the pause row.
+func cycle_breath() -> String:
+	var style := LoopMode.cycle(tuning, LoopMode.BREATH_KEY)
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null and audio.has_method("set_breath"):
+		audio.set_breath(style)
+	return style
 
 
 func notes_held() -> bool:
@@ -440,6 +450,10 @@ func _screen_key(key: int) -> bool:
 				return true
 			if key == KEY_L or key == KEY_G:
 				LoopMode.cycle(tuning, LoopMode.LOOP_KEY if key == KEY_L else LoopMode.GUN_KEY)
+				screens.refresh_lab_row()
+				return true
+			if key == KEY_B and tuning.option(LoopMode.MUSIC_KEY) == "ace":
+				cycle_breath()
 				screens.refresh_lab_row()
 				return true
 		"class_select":

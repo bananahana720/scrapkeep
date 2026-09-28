@@ -2,6 +2,7 @@ extends Node
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 
@@ -427,12 +428,10 @@ func _flush_kills() -> void:
 	if _kills.is_empty():
 		return
 	var row := EventKinds.juice("enemy_killed")
-	var color := EventKinds.color("enemy_killed")
 	if vfx != null:
-		for i in mini(_kills.size(), MAX_BURSTS):
-			vfx.burst("pop", _kills[i] + Vector3.UP * 0.8, color, int(row["pop"]))
-			vfx.burst("debris", _kills[i] + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(row["debris"]))
-	var now := Time.get_ticks_msec()
+		for at in _kills:
+			vfx.kill_pop(at)
+	var now := SimClock.msec()
 	var before := _multi_size if now - _multi_last <= int(row["multi_ms"]) else 0
 	_multi_size = before + _kills.size()
 	_multi_last = now
@@ -492,8 +491,8 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
 	if vfx != null:
 		var travel: Vector3 = player.planar_velocity()
-		vfx.glyph("near_miss", at + Vector3.UP * 1.8, 0.6, 1.4, 0.35, travel if travel.length() > 0.5 else Vector3.ZERO)
-		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring")
+		vfx.glyph("near_miss", at + Vector3.UP * 1.8, 0.6, 1.4, 0.35, travel if travel.length() > 0.5 else Vector3.ZERO, "", Color(0, 0, 0, 0), "P2")
+		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring", Color(0, 0, 0, 0), "P2")
 
 
 # A hit taken: the screen edge toward the source flashes, a short shake.
@@ -604,7 +603,7 @@ func _camera(hook: String, fact: String, direction: Vector3, amount: float, time
 # the spacing and the short and long budgets, and
 # scaled by the viewer's Hit-stop setting; a stop over the budget is trimmed to fit.
 func request_hit_stop(seconds: float, fact: String) -> void:
-	var now := Time.get_ticks_msec()
+	var now := SimClock.msec()
 	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
 	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
 	var spent := 0.0

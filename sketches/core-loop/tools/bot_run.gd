@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -26,8 +27,11 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 #                        report can name entries no run discovered.
 # A run ends at stage-3 clear, death, a "boss" flow state or a stalled stage; a stalled
 # or boss run has no spine record (the run log writes only at death and run end), so
-# its bots.ndjson line is the only trace. Each seed seeds the global RNG and the run's
-# stream, so a seed replays the same run on the same machine and build.
+# its bots.ndjson line is the only trace. Each seed seeds the global RNG, the run's
+# stream and the bot's own streams (bot_driver.gd), and the runner switches the hit-stop
+# gates to physics ticks (src/core/sim_clock.gd), so a seed replays the same run on the
+# same machine and build, CPU load included. With the wall-clock gates, CPU load changed
+# which hit-stops fired and so the physics: seed 1 drifted between runs.
 
 var _settings := {}
 var _seeds: Array[int] = []
@@ -40,6 +44,7 @@ var _results: Array[Dictionary] = []
 
 
 func _initialize() -> void:
+	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
 	if not _settings.has("out"):
 		printerr("bot_run: usage: -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4]")

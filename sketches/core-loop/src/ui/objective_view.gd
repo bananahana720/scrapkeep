@@ -48,9 +48,10 @@ func set_segments(total: int, left: int) -> void:
 	if total > 0 and segments == total and left < segments_left:
 		_pop = POP_SECONDS
 		_popped = left
+	var changed := total != segments or left != segments_left
 	segments = total
 	segments_left = left
-	if total > 0:
+	if changed and total > 0:
 		queue_redraw()
 
 
@@ -78,6 +79,10 @@ func _draw_segments(centre: Vector2, radius: float) -> void:
 
 func set_objective(icon: String, text: String, tint: Color, broken := -1.0, punch_now := -1.0, plating_now := -1.0,
 		core_count := 0, cap := 2) -> void:
+	# Called every frame by the HUD: shape and redraw only when a shown value changed.
+	if icon == icon_id and text == words and tint == color and broken == progress and punch_now == punch \
+			and plating_now == plating and core_count == cores and cap == core_cap:
+		return
 	icon_id = icon
 	words = text
 	color = tint

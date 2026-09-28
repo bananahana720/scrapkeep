@@ -10,6 +10,7 @@ const CodexWorld := preload("res://src/world/codex_world.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
 const Bay := preload("res://src/world/bay.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 const Interact := preload("res://src/world/interact.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -158,6 +159,8 @@ func _setup_gorge() -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once.
+	Threat.Painter.warm_up(ctx.root)
 	if events != null:
 		_publish(events.end_all())
 	launch.stop()
@@ -244,10 +247,12 @@ func _step_course(delta: float, ball: Vector3) -> void:
 # A drop lip aims at the mast by geometry (LOOP-REDESIGN section 1, risk 3): a ball
 # leaving a live lip heading within DROP_AIM_CONE of the mast keeps its speed and has its
 # arc turned onto the Warden's top, the flatter of the two arcs that reach it. A ball
-# too slow for any arc to reach keeps its own and falls short.
+# too slow for any arc to reach keeps its own and falls short. The aim belongs to drop
+# mode's impact rule, not to the lips' geometry: laps mode keeps the lips live but lets a
+# lip throw the ball on its own arc, so the lap course over the west chute reaches the lift.
 func _aim_drop(ball: Vector3) -> bool:
 	var m = terrain.map()
-	if not m.loop_live:
+	if not m.loop_live or not LoopMode.is_drop(ctx.tuning):
 		return false
 	var line: Dictionary = m.drop_line_at(Vector2(ball.x, ball.z), true)
 	if line.is_empty():

@@ -31,6 +31,8 @@ var tint := Color.WHITE
 var motif := "ring"
 var _pulses := {}
 var _last_state := {}
+var _shown: Array = []
+var _was_pulsing := false
 
 
 func _init() -> void:
@@ -43,8 +45,10 @@ static func bar_size(count: int) -> Vector2:
 
 
 func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void:
+	var shape := class_shape if class_shape != "" else "ring"
+	var changed := class_tint != tint or shape != motif or list != _shown
 	tint = class_tint
-	motif = class_shape if class_shape != "" else "ring"
+	motif = shape
 	var swelled := false
 	for entry in list:
 		var id: String = entry["id"]
@@ -55,8 +59,13 @@ func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void
 	if swelled:
 		_ring_ready()
 	slots = list
-	custom_minimum_size = bar_size(list.size())
-	size = custom_minimum_size
+	if changed:
+		# A deep copy: the reading is compared next frame, and a source that mutates its
+		# entries in place must still look different.
+		_shown = list.duplicate(true)
+		custom_minimum_size = bar_size(list.size())
+		size = custom_minimum_size
+		queue_redraw()
 
 
 # The swell's sound: ability_ready's row resolves to the class's ready pulse, the
@@ -80,7 +89,10 @@ func _process(delta: float) -> void:
 		_pulses[id] = maxf(0.0, _pulses[id] - delta)
 		if _pulses[id] <= 0.0:
 			_pulses.erase(id)
-	queue_redraw()
+	# Only the swell animates on its own; slot readings redraw in update_slots.
+	if not _pulses.is_empty() or _was_pulsing:
+		queue_redraw()
+	_was_pulsing = not _pulses.is_empty()
 
 
 func drawn_words() -> PackedStringArray:

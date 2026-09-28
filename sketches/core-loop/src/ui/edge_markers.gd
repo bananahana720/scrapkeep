@@ -18,6 +18,7 @@ const FAR := 180.0
 
 var game
 var gate_points: Array[Vector3] = []
+var _shown: Array[Dictionary] = []
 
 
 func setup(game_ref) -> void:
@@ -102,13 +103,16 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 
 
 func _process(_delta: float) -> void:
-	queue_redraw()
+	if game == null:
+		return
+	var now := markers(get_viewport_rect().size)
+	if now != _shown:
+		_shown = now
+		queue_redraw()
 
 
 func _draw() -> void:
-	if game == null:
-		return
-	for marker in markers(get_viewport_rect().size):
+	for marker in _shown:
 		var at: Vector2 = marker["at"]
 		var dir: Vector2 = marker["dir"]
 		var s: float = marker["size"]

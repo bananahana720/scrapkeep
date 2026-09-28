@@ -4,7 +4,12 @@ Andrew, 2026-09-28: "shoot for the stars ... in a reasonable manner ... take thi
 
 ## The end in mind: definition of done
 
-A build passes when every row holds on the same commit. The rows measure structure and polish; Andrew's play is the verdict.
+**The milestone is the end of world one** (Andrew, 2026-09-28): stages 1 to 3, their three Wardens, and Brindle, the world boss. Scope is locked there. Every system is fleshed out in full detail to the depth a player can reach by Brindle, and no deeper:
+- The kit tree gets only the tiers reachable in world one, fully detailed for all three pilots. The 8- and 16-way end variations stay unbuilt.
+- The same applies to evolutions, hot-wired parts, discovery cards, interactables and enemy reads: world one's set is complete and polished, with nothing stubbed for later worlds.
+- Assets and animation can keep being tweaked in place after this.
+
+When every row holds, we stop, reassess, re-baseline, and set direction for what follows. A build passes when every row holds on the same commit. The rows measure structure and polish; Andrew's play is the verdict.
 
 | # | Area | Done means | Measured by |
 | --- | --- | --- | --- |
@@ -30,7 +35,7 @@ A build passes when every row holds on the same commit. The rows measure structu
 | P2 Meeting of minds | The three lead designs are reconciled against the chosen spine into one build plan, conflicts resolved, then shown to Andrew on one page. | Andrew's go |
 | P3 Build | The spine goes to stages 2 and 3; then snowball systems, the audio revamp, the feel and HUD grammar, the full interactable set, and Codex's appearance for new props. Serial where seams collide. | Every DoD row except 10 and 12 green |
 | P4 Harden and polish | Bots at 16 seeds, fuzz, native performance, captures, an alignment review, the fun-gate check, and a polish pass on the largest gaps. | Every row green |
-| P5 Andrew plays the final draft | Playtest entry 10 and beyond, iterating on his verdict. | His verdict |
+| P5 Andrew plays the final draft | Playtest entry 10 and beyond, iterating on his verdict, through world one to Brindle. | His verdict, then a re-baseline and the direction for after world one |
 
 ## Subtract to add (Andrew, 2026-09-28)
 
@@ -43,7 +48,7 @@ Andrew: "consider subtracting to add ... refine and slim down ... start trimming
 3. **Build the minimum high-impact set first.** The spine, the Warden's reads, juice, the core interactables, a handful of evolutions (not 16), drop gates, the HUD fix, and the audio bed if its spike passes.
    - Deferred to a post-draft backlog unless the sitting says otherwise: meta progression, Tally, rule parts, cursed caches, blessed Wardens, the seed field, and the extra evolutions.
 4. **Delete losers in code.** After the lab verdict, the unchosen loop mode, the v2 fallback paths and any system the spine makes redundant are removed, not left switchable.
-5. **Fewer threads.** At most 5 Claude agents at once. Codex (Astra) takes consolidation, reviews and design so the Claude limit goes to building. One integration branch for v3.
+5. **Sustainable threads.** Revised 2026-09-28 for throughput on Sonnet 5.5: at most 8 Claude delegates at once (5 writers, 3 verifiers or gates), per ORCHESTRATOR's review lane. Sonnet builds, a Sonnet verifier returns receipts, Opus gates, and Fable joins for consequential seams. Codex (Astra) takes consolidation, reviews and design. One integration branch for v3; the coordinator merges serially.
 6. **Worktree hygiene.** Merged or finished worktrees are archived (`artifacts/local` moved to `/home/andrew/Projects/scrapkeep/artifacts/local/core-loop-worktrees/`), then removed; branches are kept. 21 were removed on 2026-09-28.
 
 ## HUD look: scrapped together, clean to read (Andrew, 2026-09-28)
@@ -59,14 +64,14 @@ Andrew: the HUD should be "kind of like a um, hack together heads up display jus
 
 | Wave | What | Status |
 | --- | --- | --- |
-| **A. Lab** | L1 drop, L2 laps, L3 interact, W11 juice, W12 cards and Tab, W13 ceremony. Merge into `proto/core-loop-v3`, run the fun gate (the camper fails), then Andrew's sitting. | Building |
+| **A. Lab** | L1 drop, L2 laps, L3 interact, W11 juice, W12 cards and Tab, W13 ceremony. Merge into `proto/core-loop-v3`, run the fun gate (the camper fails), then Andrew's sitting. | Merged at ac0311e (192 smoke PASS, three verifiers PASS, fun gate held: the camper deals 0 in drop mode). Andrew's sitting next |
 | **B. Consolidate** | The lab verdict plus a one-page `DESIGN-V3.md`: fold in LOOP, SYSTEMS, STRATEGY-SPINE, AUDIO-V3, FEEL and STAGES; archive the rest; delete the losing loop mode and the v2 fallbacks. | After A |
 | **C. Spine on all stages** | STAGES-2-3 build units (shared returns, gorge, weir, bot evidence); the Warden reads for the hive and mind families. | After B |
 | **D. Systems core** | The strategy spine's minimal set (rarity ladder, 3 primes, 4 reactions, 2 persistent actors, channel mapping), drop gates, and 4 evolutions. | After B, parallel with C |
 | **E. Feel and HUD** | F1 density governor, F2 HUD v3 in the scrapped-together look, F3 camera; synergy toasts become a glyph plus a name; visual accretion is capped. | After A, parallel with C and D |
-| **F. Music and sound** | AU1 engine (window, pivot, pins), AU2 bank, AU3 wiring, AU4 measures. **ACE-Step beds: yes.** Andrew chose the hybrid in the blind A/B (2026-09-28) and asked for tighter production (the middle bars were choppy). Beds are made per stage, retimed per slice, glued and ducked under the engine kick. **Arrangement by area and flow:** each area and state (shelf, drop line, bowl, open window, bay, return) has its own percussion set and harmony layer, and melodies pop in and out on game events so every switch-up is understandable. | AU1 and the bed-tightening pass now; AU2 and AU3 after A |
-| **G. World and environment** | Codex track: Style A scenery on all three stages around the loop geometry; Warden family looks; interactable props (the 27k-triangle plan); lore surfaced by callbacks and the codex. | After C geometry lands |
-| **H. Performance and handoff** | CPU-side perf-lab (dense fights are CPU-bound, per STRESS-CAPTURE-1), native 1080p p99 of 16.7 ms or less, settings, Linux export, Andrew's early-access play. | Last |
+| **F. Music and sound** | **Full ACE-Step** (Andrew, blind pack 2, 2026-09-28: all three full-ACE takes beat the hybrid, which he'd liked, and the ten-layer and two-layer hybrids had failed). The synth engine composes guides, and ACE-Step performs and produces them, so drums and bass always come from one performance. **Dynamics are the runtime's job:** the Warden's held breath takes the drums and bass stems out and thins the rest, and the drop brings every stem back on the next beat. ACE ignores a guide's dynamics (Slice 0 round 1: 18 of 18 takes). The runtime sequencer PoC (`proto/core-loop-v3-seq` 43453ab) mixes stems sample-accurately, makes the landing audible at a 67 ms mean (the old engine took 183 ms), and has zero skips at a 3072-frame queue. Sound effects stay synth and keyed (AU2 bank merged). **Arrangement by area and flow:** each area and state (shelf, drop line, bowl, open window, bay, return) has its own percussion set and harmony layer, and melodies pop in and out on game events, so every switch-up is understandable. Restraint: density is earned by the game, not the default. | Slice 0 round 2 (blind pack 3) now; the sequencer rewrite and AU3 wiring after Andrew's pack-3 verdict |
+| **G. World and environment** | Codex track: Style A scenery on all three stages around the loop geometry; Warden family looks; interactable props (the 27k-triangle plan); lore surfaced by callbacks and the codex; pilot reactions (below). | Look pass 1 committed in the visual clone (3fa27b4): GPU p99 1.7 ms, fidelity 28 to 76 of 100, and the gap is geometry. Look pass 2 (strata, water, instanced props, the Warden form, the bay) and the image-to-3D trial (`proto/core-loop-v3-img3d`) are running |
+| **H. Performance and handoff** | CPU perf-lab, native 1080p p99 of 16.7 ms or less, settings, Linux export, Andrew's early-access play. The binding constraint is found (`perf-lab/ledger.md` on `proto/core-loop-v3-perf`, 288eb21): telegraphs rebuild their mesh every frame (about 0.35 ms each). Fixes run in order: E1 static telegraph geometry with a shader-driven fill (about 10 ms), E2 one enemy snapshot per tick (about 1 ms), E3 HUD redraw on change (about 0.5 ms). E1 follows F1a because both edit `threat_grammar.gd`. | Now, alongside E |
 
 ## Look and performance target (Andrew, 2026-09-28)
 
@@ -95,6 +100,98 @@ Andrew wants "fun uh, discovery sort of like treasure find ceremony when you fin
 - **The payoff is felt.** The first time the new part fires, it flashes once with its own cue, so the reward connects to the change in play.
 - Built as W13, `proto/core-loop-v3-ceremony`, on W11's juice. It maps to done-rows 3 (growth) and 5 (feel).
 
+## Pilot reactions (Andrew, 2026-09-28)
+
+Andrew: "the pilot should react to the player's actions, achievements, or failures". The pilots are characters, built up as we go.
+
+- **One reaction table** (`src/presentation/pilot_reactions.gd`) maps each event to a clip, a priority and a cooldown, with per-class overrides.
+  - A higher priority interrupts a lower one, and cooldowns stop spam.
+  - Missed-drop and evolution rows wait for their events.
+- **Clips are made with the keyframe pipeline** (mesh, rig, imagegen keyframes in three views, then Blender posing), on the shared 25-bone pilot rig:
+  - `drop_land`: exists, about 2.2 s.
+  - `big_cheer`: Warden break and stage clear.
+  - `wince`: a hit.
+  - `slump`: death.
+  - `phew`: a near miss.
+- **Rules:**
+  - Poses read from the rear chase camera: bigger, side-on, breaking the hull's outline.
+  - Length follows what the motion must communicate, and only impacts are fast.
+  - Reactions are cosmetic and never touch the ball.
+  - The bar is "good enough, not overly complex".
+- The table and wiring are WIP 0a07aaf on `codex/pilot-reactions` in the visual clone, and the four clips landed at b6a595e. New clips follow the split below: Codex draws the keyframes, Sonnet agents pose and export them in Blender.
+
+## Feedback and discovery (Andrew, 2026-09-28)
+
+Andrew wants feedback solid enough for an alpha in a game about timing, dodging and reading 3D space from different perspectives. These are standing principles on top of everything else.
+
+- **Attacks read through the attacker first.** Every attack, whether enemy, Warden or the player's own, is announced by its body and its sound: a wind-up pose, a charge glow, an audible inhale or ratchet, then the strike and the recovery. The floor marking becomes **support, not the message**: a thin, translucent red haze or projection line that traces where the hit lands. RR-01 still holds: the haze draws from the same committed geometry that deals the damage. This extends principle 15 (wind-ups mapped onto the telegraph, strike and recovery keys) to every attacker. E1's static geometry with a shader-driven fill makes the thinner haze a shader change rather than a rebuild.
+- **First discovery explains itself; repeats just pop.** The first time a player finds a synergy, item, interactable or reaction, a picture card shows what it does: a short looping animation of the thing working, plus a name and at most a few words. It follows the ceremony's calm gate. It pauses only when the area is calm; mid-fight it lands in place as a glyph and the card waits for the next calm moment. Any input skips it, and velocity is kept. After that, triggers are a quick glyph-plus-name pop (wave E's toast). This reconciles FEEL-READABILITY §5 ("learn by experimenting, the codex names it after the fact"): the player still discovers by doing, and the card celebrates and explains what they just did rather than instructing in advance.
+- **Progression gets a ceremony.** Unlocking an area or a pilot, and completing a branch of the upgrade tree, get their own celebration tier on W13's ceremony, with its own cue in the spill-B grammar.
+- **The codex is browsable from the home menu.** Each entry has a short description, its known synergies and its interactions, and fills in as the player discovers them.
+- **Double-edged items.** Parts with tremendous upside and a real downside, which can make or ruin a run, including a forced skip when you need something else, and mutated starting seeds. The working name is **hot-wired parts** (salvage culture, not "cursed"). These are the existing cursed caches, rule parts and seed-field ideas, now wanted by Andrew.
+- **Alpha scope: introductory level** (Andrew, 2026-09-28). The alpha is the start of the game, world one up to its boss, so everything is built for what a first-time player meets there.
+  - **In the alpha:**
+    - Attack reads through the attacker, for world one's enemies and its Warden.
+    - First-discovery picture cards, for world one's synergies, items, interactables and reactions.
+    - Two or three hot-wired parts in wave D, pitched as a first taste: the upside is obvious, the downside is readable and survivable, and the forced-skip tension appears once.
+  - **After the alpha, as principles until then:** progression ceremonies for unlocks and tree branches, the home-menu codex (the in-run Tab codex stays), more hot-wired parts, and mutated starting seeds.
+
+## Scrap is size, and every system earns its place (Andrew, 2026-09-28)
+
+**The finding.** Scrap drove almost no decisions. Every pickup silently raised two numbers, the wallet and mass (`run_state.gd:98-104`). Spending the wallet kept mass, so it cost nothing felt (`:25-26`, `:177-181`). Free picks arrive at about 2.5 to 3 a minute (`SYSTEMS-CHAOS.md:416`), so buying was rarely a real choice. Andrew: "what's the point of me accumulating this currency?"
+
+**The ruling.**
+- **Scrap is your size:** the Katamari number that already drives punch against plating, the magnet and the heft class.
+- **The wallet as a second number goes.**
+- **Scrap also gets a benefit that is easy to understand and fits the theme.** The lead candidate is **durability**: scrap is armour plating on the ball, a hit knocks scrap loose as a spill you can roll back up (Sonic's rings, in scrap), and a big ball is a tough ball. Playing clean keeps you big, and greed and recovery become decisions.
+- **Durability is temporary health, and rolling wears it** (Andrew, 2026-09-28, which settles the lead candidate). Scrap is a temporary health layer over the hull. Hits knock it loose as a spill you can roll back up, and friction slowly wears it down as you roll ("your ball will wear, so rolling can be a way to slowly take it down, kind of like a temporary health boost"). This engages proactive, aggressive play: keep collecting to stay big, tough and punchy. The harmonization, so rolling never feels like punishment: wear strips only the scrap layer, never the hull, and it is slow at a cruise. How wear scales with speed, skids and wall scrapes is for the design run to tune, and a play test settles it.
+  - **Class thresholds need hysteresis.** Wear drains size continuously, so a class drops only a margin below its threshold. Otherwise the transformation flickers at a boundary.
+- **One pilot, several ways to play** (Andrew, 2026-09-28). A scrap-hungry juggernaut suits Sable, but no pilot is locked to one fantasy. Sable can also play as a ninja platformer, or as a massive cannonball, the Indiana Jones boulder launching off walls at speed. World one's kit-tree tiers should give each pilot at least two distinct play identities, each fun on its own. That's the expression dimension of the audit.
+- **Mass is stored momentum; each pilot cashes it in their own verb** (Andrew, 2026-09-28, extended from his Sable idea).
+  - **Handling stays size-neutral by default,** which keeps the 2026-09-26 spine rule and readability.
+  - **Each pilot's kit tree turns mass into their signature move:**
+    - Sable's slingshot, vault and wall rebounds return more speed the bigger she is, until she's a rolling boulder beam off the walls.
+    - Rivet's sprint and ground smash hit harder with weight.
+    - Kest's payloads blast bigger.
+    
+    The Rivet and Kest lines are extensions for the design run to test.
+  - **Bulk penalties are opt-in only,** on hot-wired parts (for example, heavy plating: more durability, less air control). Each pilot's line can cancel or flip one; Sable's grapple and vault line cancels the mobility ones.
+  - **The general pattern for capstones and hot-wired parts is inversion:** a skill that turns a state's cost into its upside. The audit should find where else that pattern applies. Wear feeding a spark trail is one candidate.
+- **Cogs are the currency, and their job is agency against RNG** (Andrew, 2026-09-28, who delegated the design to the coordinator: "I can let you be proactive and you can take the wheels on that"). The design:
+  - **Two resources, two jobs, never confused.** Scrap is what you wear: size, durability and momentum. Cogs are what you spend: choice. They differ in every layer. Scrap chunks stick to the hull with a crunch, and cogs clink into a counter with a bright pitched tick that rises in a quick run as you vacuum a stream. The existing shop cog glyph (`shop_tile.gd:139`) is the icon.
+  - **Satisfying in volume.** Kills, crates and breakables burst cogs in small, numerous pieces. The magnet vacuums them from a small radius, and **the magnet grows with heft**, so being big also means hoovering more; parts can widen it further. Collection is always on the move.
+  - **Loot is common and never wasted.** Buff parts drop often. Any part you don't want, or a pick you skip, recycles into cogs on the spot. That softens the forced-skip tension of hot-wired parts, and a hot-wired part recycles for a lot of cogs, so "take the money" is a real gamble.
+  - **Where cogs buy agency.** All of it is on the move or in calm:
+    - **Staples.** Moss's shelf always stocks a small, known set per world, so a build can be planned around them.
+    - **Fabricator hoops.** Roll through to buy at full speed.
+    - **Reroll** a pick.
+    - **Hold** a pick for later.
+    - **Steer.** Pay to bias the next pick toward a tag.
+  - **Pseudo-random with a floor.** Item pools are seeded per world. Each tag's weight rises every pick it misses, until it appears (bad-luck protection), so a run can't be starved of what a build needs.
+  - **What it serves.** Strategy (staples and steering), risk (spend now or save, recycle or keep), gambling (rerolls and the hot-wired payout), performance (clean, fast play hoovers more), mastery (known staples enable planned routes), expression (steering toward an identity) and feel (the vacuum stream).
+  - **In code, it's mostly a split.** `run_state.gd` already separates the wallet (`scrap`) from `mass`. The wallet becomes `cogs`, and pickups split into scrap pieces (mass only) and cog drops (wallet only), in place of `add_scrap` raising both (`:98-104`).
+    - Blast radius: `run_state.gd`, `build/scrap_field.gd`, `build/fabricators.gd`, `build/shop.gd`, `ui/shop_tile.gd`, the HUD wallet readout, the items with scrap effects (`build/items.gd:65,183,196`, `build/parts.gd:116`), each enemy's `scrap_value`, the summary stats, and codex text. Warden theft keeps taking mass.
+    - It builds in wave D, after the purpose audit and the lab sitting, since the free-pick cadence depends on the loop.
+- **Thresholds transform the ball** (Andrew: "if you collect a certain amount of scrap, you transform in a certain way ... your sprite gets bigger, or details morph and get layered on magically"). Each heft class (I to V, `HEFT_CLASS_AT` in `run_state.gd:15`, announced by `heft_class_changed`) becomes a visible transformation moment. The shell grows, new salvaged details layer onto the hull, and there's a short ceremony beat with its own cue. This is on the W13 ceremony and calm-gated like the rest. The spine rule holds: growth shows in the shell, while the collider and handling stay the same. Losing a class (a theft, or a durability hit) visibly sheds a layer, so the ball's look is always an honest read of its size. The art follows the asset split: Codex draws each class's silhouette and detail sheet, and Sonnet builds them.
+- **Open for the design run:**
+  - the wear curve (cruise, speed, skids, wall scrapes) and the class hysteresis margin;
+  - the cog prices, drop rates and the steering cost, tuned against the chosen loop's free-pick cadence;
+  - whether a voluntary melt of weight into a part in Moss's calm bay earns its place.
+
+**The purpose audit landed** (`research/PURPOSE-AUDIT-1.md`, Codex, 2026-09-28).
+- **Recommendation: Option A, recoverable plating over the hull.** Scrap absorbs damage before the hull, and a hit spills 75% as at most six recoverable clusters ahead of the ball's line. Wear is slow and quiet. There is one damage order (mitigation, then scrap, then hull). Recovered scrap never retriggers pickup bonuses. The hidden 0.2 heft per part goes (`run_state.gd:120-121`), so size comes from scrap alone.
+- **Its biggest risk is a downward spiral.** One hit cuts protection, punch, contact advantage and magnet reach at once, and wear drains the same pool. Any build of Option A must tune against that.
+- **Crowded areas to resolve in `DESIGN-V3.md`:**
+  - build growth, with seven sources all saying "your build changed";
+  - time pressure, where five systems could turn exploration into debt;
+  - reward currencies. The audit argues for no wallet, which predates the cog ruling. Scrap, cores and cogs must justify three resources, or cogs absorb the cores' role.
+  - celebration, where everything wants the same attention;
+  - defence, which needs one damage order.
+- **Thin areas:** skill-based recovery, comparable personal bests, deliberate build correction (Moss's job), and one good small wager.
+- **The next step is a flag-gated durability prototype on a fixed three-minute route with three variants:** hull only, armour without wear, and armour with wear. Andrew plays it and judges recovery against chore, and whether wear changes routes.
+
+**The purpose audit.** Every world-one system is scored on the dimensions it serves: strategy, risk, gambling, performance and skill, personal-best mastery, expression, discovery, spectacle and feel, pacing, momentum cost and readability cost. For each system, it names the decision it hands the player. A system that serves no dimension, or duplicates another, is merged or cut; one that serves several is protected. The audit feeds `DESIGN-V3.md` in wave B, and loop-dependent verdicts wait for the lab sitting.
+
 ## Tool stack (checked 2026-09-28; research R3)
 
 - **Keep:**
@@ -104,13 +201,26 @@ Andrew wants "fun uh, discovery sort of like treasure find ceremony when you fin
   - Phantom Camera for F3 (the camera).
   - Debug Draw 3D, for drop-line and hit-predicate tuning.
   - A local run-telemetry writer. `run_log` already exists; extend it with death or hit positions for heatmaps before trying Talo.
-  - TRELLIS.2 (MIT) plus Blender cleanup for Codex's prop pipeline, Hunyuan3D only after its licence is read.
+  - Image-to-3D. The tools and results are in `proto/core-loop-v3-img3d` 829e549, `tools/img3d/TRIAL.md`.
+    - **TRELLIS v1 (MIT) works:** 6 to 11 s per mesh on the 4080, cleaned to budget in Blender.
+      - Props come out clean.
+      - The Warden matches the concept from the front but is one fused mesh, so it's useful only as per-part sculpt detail on the jointed Blender kit.
+      - The cliff reads as stacked masonry, not eroded sandstone, so it's promising but not proven. It needs a scored in-engine test and a lip-fold fix before any kit use.
+    - **TRELLIS.2** is blocked: its DINOv3 encoder is gated (a manual Hugging Face approval for Andrew) and it wants 24 GB.
+    - **Hunyuan3D** has territorial limits in its licence, so skip it.
+    - **Reference images must be commercially clean.** Qwen-Image-2.1 is non-commercial, so use Codex imagegen references for anything that ships.
 - **Skip for now:** engine changes, paid pipelines, hosted analytics, and a save addon (the run is short and the settings store works).
 - **Design references:** MDA to name what each system is for, Swink's *Game Feel* for momentum, and a five-question playtest sheet after each sitting (the core loop in one sentence, the best moment, the worst frustration, "again?", and ratings for difficulty, pacing and clarity).
 
 ## Rules that keep it reasonable
 
-- Small waves, with results read before the next wave. The coordinator alone merges. The Codex track owns appearance.
+- Small waves, with results read before the next wave. The coordinator alone merges.
+- **Risk tolerance, measured only where it changes a decision** (Andrew, 2026-09-28). The Sonnet lane is a risk-based bet. It is fine while nothing game-breaking ships and tech debt stays manageable. The coordinator fills one row of `tools/coordinator/lane-ledger.tsv` per merged unit, from what the lane already produces. Each measure has a trigger:
+  1. **Escapes.** A merged unit that turns v3 smoke red, hangs a bot, or breaks something Andrew hits in play. The tolerance is none of the game-breaking kind. One escape pauses new units until its root cause is known, and the units after it get a Fable seam review.
+  2. **Gate overturns.** The verifier passed the unit and the Opus gate failed it. If more than 1 in 5 of the last units are overturned, verification moves back to Opus.
+  3. **Open debt.** The debt the gate names in PASS+NOTES that isn't fixed before merge. If more than 5 notes are open, or the count grows two waves in a row, a subtract pass runs before new units.
+  4. **Speed and spend.** The build-to-merge hours against today's Opus units (M0, ACE, E1), and the Opus-plus-Fable share of delegate spend from `~/.claude/hooks/bin/delegate-spend.sh` against the 90% measured on 2026-09-21. If Sonnet units aren't faster or cheaper after about 5 merges, the trial isn't buying anything, and that's reported to Andrew.
+- **Assets and animation: Codex designs, Sonnet builds** (Andrew, 2026-09-28). Codex owns art direction and makes the clear keyframes, three-view reference sheets, painted textures and the visual layout of how each mesh is built and moves. Sonnet agents implement them as Blender CLI recipes, meshes, rigs, poses and Godot wiring. The guardrail is rendered evidence: rear chase-camera stills and recipe checks go through the Opus gate, and Andrew judges the look.
 - Nothing is called ready on tests alone. The fun gate (the camper fails, the map matters, the windows are legible) comes before Andrew's play.
 - Andrew's design principles and rulings stand: momentum is sacred, quick restart, opt-in layers, readable caps, no reskins, spill-B music, gems never lost.
 - Each lead's design names its measures. A system without a measure isn't done.

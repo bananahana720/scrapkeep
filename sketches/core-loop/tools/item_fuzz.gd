@@ -9,6 +9,7 @@ const Triggers := preload("res://src/build/triggers.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # The item fuzzer (I2 section 4, DESIGN-V2 section 7: a tool, not a test). Each seed
 # drafts a random legal build of 6 to 14 parts through the same Parts.roll and
@@ -81,6 +82,7 @@ var _last_usec := 0
 
 
 func _initialize() -> void:
+	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
 	_out = _settings.get("out", "user://item-fuzz")
 	_seconds = float(_settings.get("seconds", "90"))

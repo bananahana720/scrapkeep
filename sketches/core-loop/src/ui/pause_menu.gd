@@ -7,6 +7,7 @@ const VolumeRow := preload("res://src/ui/volume_row.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Screens := preload("res://src/ui/screens.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
 # opens it in play and closes it again. Each row is a ChoiceButton with its key's cap,
@@ -20,6 +21,8 @@ const Screens := preload("res://src/ui/screens.gd")
 # audio.set_volume() and are kept per viewer in settings.json (settings_store.gd). The
 # comfort rows (v3 W11) step the same way: Screen shake scales every camera shake, kick
 # and punch, Hit-stop every freeze, through juice.set_comfort(), saved beside the volumes.
+# With --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
+# gentle, and the open sounding now changes with it, so it can be judged mid-fight.
 
 const LAYER := 6
 const FADE_IN := 0.16
@@ -34,6 +37,7 @@ const ROWS := [
 	{"id": "shake", "comfort": "shake", "glyph": "shake", "words": "Screen shake"},
 	{"id": "hitstop", "comfort": "hitstop", "glyph": "hitstop", "words": "Hit-stop"},
 	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
+	{"id": "breath", "key": "key_b", "words": "Breath: hard"},
 	{"id": "quit", "key": "key_q", "words": "Quit"},
 ]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
@@ -156,6 +160,7 @@ func open() -> void:
 	game._capture_mouse(false)
 	_sync_levels()
 	_show_ceremony()
+	_show_breath()
 	_set_live(true)
 	_fade(true)
 	_rows["resume"].grab_focus()
@@ -199,6 +204,11 @@ func press(id: String) -> void:
 			get_tree().quit()
 		"ceremony":
 			_toggle_ceremony()
+		"breath":
+			if _rows["breath"].visible:
+				game.cycle_breath()
+				_show_breath()
+				_rows["breath"].grab_focus()
 		_:
 			_rows[id].grab_focus()
 
@@ -212,6 +222,12 @@ func _toggle_ceremony() -> void:
 		store.set_comfort(ceremony.SETTING, 0.0 if ceremony.short else 1.0)
 	_show_ceremony()
 	_rows["ceremony"].grab_focus()
+
+
+func _show_breath() -> void:
+	var row: Control = _rows["breath"]
+	row.visible = game.tuning.option(LoopMode.MUSIC_KEY) == "ace"
+	row.text = "Breath: %s" % game.tuning.option(LoopMode.BREATH_KEY)
 
 
 func _show_ceremony() -> void:
@@ -279,6 +295,9 @@ func _menu_key(event: InputEvent) -> bool:
 			KEY_C:
 				press("ceremony")
 				return true
+			KEY_B:
+				press("breath")
+				return true
 			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
 				_accept()
 				return true
@@ -303,6 +322,8 @@ func _menu_key(event: InputEvent) -> bool:
 func _move(direction: int) -> void:
 	var index := _order.find(focused_id())
 	index = 0 if index < 0 else posmod(index + direction, _order.size())
+	while not _rows[_order[index]].visible:
+		index = posmod(index + direction, _order.size())
 	_rows[_order[index]].grab_focus()
 
 

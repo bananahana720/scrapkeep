@@ -288,6 +288,11 @@ var fleet_ticks := 0
 var reactor_pedal := false
 var lounge := false
 var _class_counter: Array = []
+# One band at a time: while the ACE sequencer plays, the band starts no notes and mixes
+# nothing, and stingers land on the ACE beat in its key (grid is the sequencer, which
+# answers next_beat() and key_at() in this engine's transport samples).
+var band_muted := false
+var grid: Object = null
 
 
 func _init() -> void:
@@ -509,6 +514,8 @@ func _next_multiple(steps_per: int, from := -1) -> int:
 # The next beat at or after the play head (or a later sample). A stinger asked for
 # mid-beat waits for the beat; one asked for exactly on an unplayed beat starts on it.
 func next_beat(from := -1) -> int:
+	if grid != null:
+		return grid.next_beat(from)
 	return _next_multiple(Harmony.STEPS_PER_BEAT, from)
 
 
@@ -1192,7 +1199,8 @@ func _run(action: Dictionary) -> void:
 		"stinger":
 			# Pitched stingers sound in the live key, and a themed one in this level's motif.
 			var music: bool = action.get("music", false)
-			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else key, theme)
+			var live_key: int = key if grid == null else grid.key_at(clock)
+			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else live_key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
@@ -2243,6 +2251,8 @@ func _hit(instrument: String, layer: int, gain: float, pan: float) -> void:
 
 
 func _start(buf: PackedFloat32Array, length: int, layer: int, gain: float, pan: float, to_stinger: bool) -> Voice:
+	if band_muted and not to_stinger:
+		return null
 	var band_count := 0
 	if not to_stinger:
 		var oldest: Voice
@@ -2395,6 +2405,8 @@ func _mix(offset: int, n: int) -> void:
 		_voices.erase(voice)
 		if voice == _build_riser:
 			_build_riser = null
+	if band_muted:
+		return
 	# The duck envelope, the silence gate and the build's high-pass, per sub-block.
 	if clock >= _duck_until:
 		_duck_target = 1.0
@@ -2442,14 +2454,17 @@ func _mix(offset: int, n: int) -> void:
 
 
 func _finish(frames: int) -> void:
-	for i in frames:
-		var l := _left[i]
-		var r := _right[i]
-		if l > 0.75 or l < -0.75:
-			l = _soft(l)
-		if r > 0.75 or r < -0.75:
-			r = _soft(r)
-		out_music[i] = Vector2(l, r)
+	if band_muted:
+		out_music.fill(Vector2.ZERO)
+	else:
+		for i in frames:
+			var l := _left[i]
+			var r := _right[i]
+			if l > 0.75 or l < -0.75:
+				l = _soft(l)
+			if r > 0.75 or r < -0.75:
+				r = _soft(r)
+			out_music[i] = Vector2(l, r)
 	if _stingers_live:
 		for i in frames:
 			out_stinger[i] = Vector2(_soft(_sl[i]), _soft(_sr[i]))
