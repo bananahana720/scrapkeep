@@ -252,6 +252,14 @@ The Bible marks an animal-only cast as open and never makes the exploratory exam
   1. Only the reactor relic colours the band: a tritone pedal under the sub while a vent charges. Swarms and the Mind stay effects only.
   2. Fleet reinforcements borrow Brindle's anvil and brass in the level theme, adding one layer per difficulty tick.
   3. The Mind's hands quote the player's class motif, inverted with the last note a semitone flat. It's the one sanctioned hostile use of a class motif, and it doubles as their telegraph.
+- **Render treatment: Style A, painted workshop miniature** (Andrew, in the Codex visual-development track, 2026-09-27: "I really like style A"). Broad painted wear, rounded cast machinery and soft material transitions. The choice covers the rendering treatment only. Geometry, danger marking, the Warden's form and the ring and growth proposals still answer to this spec and VISUAL-LANGUAGE. The package lives in the Codex clone under `design-v2/visual-development/` (ATLAS, ITERATION, REVIEW).
+- **Kest's movement is not a seam.** RMB is `smoke_blink` (the class movement in `class_def.gd`), and Space held while falling is glide (§2). Both ship. An image must not trade one for the other.
+- **The fourth pilot, Tally, is an unlock** (Andrew, 2026-09-27): a quirky, glitchy, friendly ancient robot for comic relief, who transmogs to match the parts and tree picks it holds. The demo keeps Tally as a presence (a dormant housing on Moss's shelf, one codex fragment, the summary flicker). The playable class, its transmog rule and its story-beat unlock are post-alpha, and need a design pass first. Detail and constraints: `design-v2/HERO-SPHERE.md` §5 and §11 on the herodesign branch.
+- **Who owns what between the two tracks** (from the Codex hand-off note, 2026-09-27):
+  - The Codex Style A playable pass owns the sphere hull, the seated pilot, gyro motion, materials and lighting. Its first scene uses the existing Spillway stage.
+  - This branch owns gameplay, UI, audio, the stages and integration.
+  - The parked V3 shell animator (`proto/core-loop-v2-assets` 29333e8) and the hero and Warden proposals (herodesign 56a1970, bossdesign 30977c3) are inputs to that pass, not merges.
+  - Pinball-style layered routes (the Codex `LAYERED-SPILLWAY.md` study) are a concept study only. A playable map experiment needs its own authorization. Its acceptance questions (every class completes the loop without upgrades, both alternatives visible before commitment, a missed upper line yields a useful lower one, elevation-true warnings, dense p99 ≤ 16.7 ms at 1080p) are also the review lens for the Cable Reach gorge.
 
 ## 12. Moss's workshop: the lull between stages (Andrew, 2026-09-27)
 
