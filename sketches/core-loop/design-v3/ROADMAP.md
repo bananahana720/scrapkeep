@@ -46,6 +46,28 @@ Andrew: "consider subtracting to add ... refine and slim down ... start trimming
 5. **Fewer threads.** At most 5 Claude agents at once. Codex (Astra) takes consolidation, reviews and design so the Claude limit goes to building. One integration branch for v3.
 6. **Worktree hygiene.** Merged or finished worktrees are archived (`artifacts/local` moved to `/home/andrew/Projects/scrapkeep/artifacts/local/core-loop-worktrees/`), then removed; branches are kept. 21 were removed on 2026-09-28.
 
+## HUD look: scrapped together, clean to read (Andrew, 2026-09-28)
+
+Andrew: the HUD should be "kind of like a um, hack together heads up display just in terms of art style ... that rough and uh, hacked together MacGyver type of feel and look. But still, obviously, be clean ... visually but also gameplay-wise, uh, functional." The interface is made by the same post-apocalyptic ball culture that scraps everything else together.
+
+- **The rule: roughness lives on the frame, never on the information.** Panels read as salvaged plates, with rivets, an uneven bevel, and tape or a clamp at the joins. Labels are stamped or stencilled tags, and keycaps can look scavenged from mismatched sets.
+- **Icons, numbers, key letters and threat glyphs stay crisp.** Wear and grime are low-contrast value shifts, never a new hue. The class colour stays the one "yours" accent, and red and HAZARD stripes stay hostile only.
+- **One procedural helper** (`src/ui/scrap_frame.gd`: plate, rivets, tape, stamp tag), started by W12 on the class card and Tab pages. The HUD v3 build wave (FEEL-READABILITY F2) adopts it. The Codex track may supply painted Style A reference sheets for it.
+- **Measure:** the word budget, glyph legibility at 1080p, and the density-governor stills are unchanged by the frame. A fight still reads at a glance.
+
+## Tool stack (checked 2026-09-28; research R3)
+
+- **Keep:**
+  - Godot 4.7.2. Upgrade to 4.8 only once it's stable and a lab verdict has landed.
+  - Our headless tests and bots, GDScript synth, and Blender CLI recipes.
+- **Trial when a wave needs it:**
+  - Phantom Camera for F3 (the camera).
+  - Debug Draw 3D, for drop-line and hit-predicate tuning.
+  - A local run-telemetry writer. `run_log` already exists; extend it with death or hit positions for heatmaps before trying Talo.
+  - TRELLIS.2 (MIT) plus Blender cleanup for Codex's prop pipeline, Hunyuan3D only after its licence is read.
+- **Skip for now:** engine changes, paid pipelines, hosted analytics, and a save addon (the run is short and the settings store works).
+- **Design references:** MDA to name what each system is for, Swink's *Game Feel* for momentum, and a five-question playtest sheet after each sitting (the core loop in one sentence, the best moment, the worst frustration, "again?", and ratings for difficulty, pacing and clarity).
+
 ## Rules that keep it reasonable
 
 - Small waves, with results read before the next wave. The coordinator alone merges. The Codex track owns appearance.
