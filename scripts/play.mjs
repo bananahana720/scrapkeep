@@ -917,7 +917,9 @@ async function main(argv) {
   } else if (command === "play") {
     const entry = requireEntry(entries, name);
     console.log(`${cyan("▶")} ${bold(entry.id)} ${dim(entry.directory)}`);
-    console.log(dim("  Esc frees the mouse, Esc again quits.\n"));
+    // Each sketch owns its own keys (core-loop's Esc opens a pause menu), so
+    // the launcher states only what holds for every sketch.
+    console.log(dim("  Controls are in the game; closing its window quits.\n"));
     const result = spawnSync(binary, ["--path", entry.directory, ...extra], {
       stdio: "inherit",
     });
