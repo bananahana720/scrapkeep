@@ -527,6 +527,7 @@ func wire_optional() -> void:
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
+	_wire_laps(events)
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
@@ -593,6 +594,22 @@ static func motif_of(class_id: String) -> String:
 # octave at the vault cap (SOUND-STORY section 3), so a weak kick falls short of it.
 func _on_vault_kicked(_at: Vector3, speed: float) -> void:
 	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
+
+
+# v3 fun lab, laps mode (LOOP-REDESIGN section 7, the lap notch). A checkpoint pops at
+# once, one reward-ladder rung higher per ring; the ring that closes a lap pops on the
+# beat instead, with the beacon's notch, so they land with the director's threat_rose
+# stinger, which world publishes the same tick. The bell and a plating strip are flow
+# moments, so on the beat too.
+func _wire_laps(events) -> void:
+	_listen(events, "lap_bell_rung", func(_at: Vector3): on_beat("lap_bell_rung"))
+	_listen(events, "lap_ring_passed", func(index: int, count: int, _at: Vector3):
+		if index == count - 1:
+			on_beat("lap_ring_passed")
+		else:
+			play("lap_ring_passed", 0.0, Harmony.ratio(Harmony.pentatonic_step(index))))
+	_listen(events, "lap_completed", func(_lap: int, _required: int, _seconds: float): on_beat("lap_completed"))
+	_listen(events, "warden_stripped", func(_plating: float, _at: Vector3): on_beat("warden_stripped"))
 
 
 # Connects once. loose drops whatever arguments the signal carries.

@@ -100,6 +100,10 @@ func wire_optional() -> void:
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "element_resolved", _on_element)
+	_listen(events, "lap_bell_rung", _on_lap_bell)
+	_listen(events, "lap_ring_passed", _on_lap_ring)
+	_listen(events, "lap_completed", _on_lap_notch)
+	_listen(events, "warden_stripped", _on_warden_stripped)
 	if events.has_signal("interaction_found") and not _found_wired:
 		_found_wired = true
 		var argc := 0
@@ -126,6 +130,27 @@ func _on_unsealed(stage: int) -> void:
 		radius = float(ctx.flow.stage_def().get("beacon_radius", radius))
 	glyph("beacon_unsealed", at + Vector3.UP * 6.0, 1.0, 6.0, 0.6)
 	glyph("beacon_unsealed", at + Vector3.UP * 0.3, 2.0, radius, 0.7, Vector3.UP, "ring")
+
+
+# v3 fun lab, laps mode. The bell: a ring out across the Warden's reach, like the break's.
+func _on_lap_bell(at: Vector3) -> void:
+	glyph("lap_bell_rung", at + Vector3.UP * 0.3, 2.0, 30.0, 0.8, Vector3.UP, "ring")
+
+
+# A checkpoint: a burst where the ball went through the ring.
+func _on_lap_ring(_index: int, _count: int, at: Vector3) -> void:
+	glyph("lap_ring_passed", at + Vector3.UP * 5.0, 1.0, 5.0, 0.3)
+
+
+# The notch: a flash on the beacon's mast, up where its collars stand.
+func _on_lap_notch(_lap: int, _required: int, _seconds: float) -> void:
+	if ctx.terrain != null and ctx.flow != null:
+		glyph("lap_completed", ctx.terrain.beacon_point(ctx.flow.stage()) + Vector3.UP * 12.0, 2.0, 7.0, 0.5, Vector3.ZERO, "star")
+
+
+# Plating off a Warden: a copper burst on its body.
+func _on_warden_stripped(_plating: float, at: Vector3) -> void:
+	glyph("warden_stripped", at + Vector3.UP * 2.0, 1.5, 6.0, 0.5)
 
 
 # A new heft class ripples out from the ball along the ground.

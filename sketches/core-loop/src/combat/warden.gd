@@ -83,8 +83,8 @@ const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
 const CONTACT_KINDS := ["stomp", "slam"]
 # What a hit on a sleeping Warden meets: no punch reaches it, so nothing lands, and
-# take_damage refuses the chip. plating_now() stays the real plating, so combat's shred
-# cap and the HUD never read the sleep value.
+# take_damage refuses the chip. plating_now() reads 0 while asleep, so combat's shred
+# (capped at it) never builds on a Warden nothing can hurt and it wakes whole.
 const DORMANT_PLATING := 999.0
 
 enum Magnet { IDLE, TELEGRAPH, TUG }
@@ -191,7 +191,7 @@ func set_tint(state: String) -> void:
 
 
 func plating_now() -> float:
-	return 0.0 if _unplated > 0.0 else plating
+	return 0.0 if dormant or _unplated > 0.0 else plating
 
 
 func unplated_by_magnet() -> bool:

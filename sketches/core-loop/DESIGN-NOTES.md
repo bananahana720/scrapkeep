@@ -799,3 +799,39 @@ The vision keeper's alignment pass found W5's cues baked in `sfx_bank.gd` while 
 10. **Baked up front.** The startup bake now covers every recipe in the bank, so a resolved cue never bakes mid-fight on the main thread. Serves 1.
 
 `audio_cue_resolution_test` checks, from the cue log, that each class hears its own release, ready pulse, break-free and Mind quote (and the quote once), each hold kind its loop, the shop bell and the bench clank, no ancient growl and each faction's arrival, a non-silent cached babble, and the callout chime.
+
+## v3 L2 laps mode
+
+Option C of `design-v3/LOOP-REDESIGN.md` on stage 1, behind `--loop=laps` (or the title's L row, or the F1 panel then hold R). Base is L1's lab switch at 3c219ab. Demands served: the Warden (why stay) and the stage (the map as a course). Principles strained: momentum, at the landing turn, and the speedrun test, since the laps are a fixed tax.
+
+1. **The bell and the course.** `src/world/lap_course.gd` is a pure model. It reads L1's loop fields and lays five checkpoint rings, which are the surge run's gate ring (`event_view.gd gate_ring`, now shared). The rings sit at the approach to the return lift in the bowl, 8 m past the lift's landing on the ride's own heading, the fast drop line's start, its first bend, and its kicker lip. A `route.gd` loop through them sets which way each ring faces. Rolling into the Warden's ring rings the bell and lights the course. The rings are taken in order and are roll-through: a 9 m reach, any speed, no stop. The rings and the beacon's three notch collars stand from the first frame, dim bone before the bell, so both read from the drop deck. Serves the stage.
+2. **The gate.** Flow reads `LoopMode.runs_laps` once at stage entry and puts the Warden to sleep. `warden.gd` holds only the dormant gate and the strip. Asleep, it neither pulses nor opens, every hit meets 999 plating, and `take_damage` refuses the chip. `plating_now()` reads 0 while asleep, so combat's shred never builds on it and it wakes whole. It wakes on the third lap (`warden_engaged`, the v2 theme cue). Each lap past the third takes a third of the stage's plating off: 45, then 30, 15 and 0. Awake, it is the v2 Warden. Section 2's readable windows come from L1's drop-branch `warden.gd` after the merge; this gate sits in front of that code, so the laps fight gets those windows without any laps code of its own. Serves the Warden.
+3. **The clock per lap.** `director.gd` gains `laps` and `step_lap()`. Each lap is one reinforcement step (a `PAST_BREAK_STEP` of pack share) and one announced rise. Every rise now reads the level (ticks plus laps), so a later clock tick never announces a lower number than a lap did. In v2, `laps` stays 0 and nothing changes.
+4. **Facts.** There are four new bus signals with rows: `lap_bell_rung`, `lap_ring_passed`, `lap_completed` and `warden_stripped`. Audio and VFX each hear them in small separate listeners. Checkpoint pops climb the reward ladder one rung per ring. The ring that closes a lap, the beacon's notch and the director's `threat_rose` stinger all land on the same next beat; the test checks that each lap and its rise publish on the same tick. The objective reads `Ring the Warden's bell`, then `Lap the course: 1/3` on the HUD. The long line is "Lap the lit course: 1 of 3. The Warden wakes at 3."
+5. **Bots.** The skipper is the camper: it rings the bell and rams the sleeping Warden. A new `lapper` policy laps (`laps_wanted`, default 3), then fights. The completionist laps once its loot is done. Writer L1 is adding a lapper for the drop lines, so the two need merging. `bot_run.gd` gains `--stages=N`.
+
+**Measured.** Method: `tools/bot_run.gd --fixed-fps 90 --loop=laps --stages=1`, seeds 1 to 3 (one per class), on the final code. Runs are in `artifacts/local/l2-laps/final/` (git-ignored). These are bot runs, not play.
+
+| Policy | Class | Bell (s) | Lap times (s) | Warden wakes (s) | Warden breaks (s) |
+| --- | --- | --- | --- | --- | --- |
+| camper (skipper) | runner_gunner | 5.0 | none | never, stalled at 240 | never |
+| camper (skipper) | demolitions_caster | 5.0 | none | never, stalled at 240 | never |
+| camper (skipper) | pylon_engineer | 5.0 | none | never, stalled at 240 | never |
+| lapper | runner_gunner | 5.0 | 11.1, 12.3, 12.5 | 40.9 | 65.8 |
+| lapper | demolitions_caster | 5.0 | 11.1, 14.7, 12.6 | 43.4 | 88.8 |
+| lapper | pylon_engineer | 5.0 | 11.1, 12.5, 11.7 | 40.4 | 80.2 |
+| completionist | runner_gunner | 35.3 | 37.1*, 12.2, 13.1 | 97.7 | 123.8 |
+| completionist | demolitions_caster | 33.8 | 61.1*, 12.8, 12.0 | 119.7 | 159.8 |
+| completionist | pylon_engineer | 31.2 | 45.2*, 12.3, 12.3 | 101.0 | 131.9 |
+
+\* The first lap runs from the bell and includes the completionist's vault and event.
+
+**Reads.**
+
+- A lap takes 11 to 15 s for every class. That is half the 25 to 40 s the spec budgets. The three-lap tax is 35 to 38 s, and the classes do not separate on the course.
+- The camper cannot win, and the completionist wakes it 2.4 to 2.8 times later than the lapper. The spec's own risk holds, though: the laps are a fixed tax the skilled player cannot shorten.
+- The lift's landing throws the ball north at 30 m/s, and the course then turns about 90 degrees west toward the chute. That turn is where the lap loses its speed: in the traced lapper run the ball fell to 15 to 18 m/s there. It is L1's return geometry, and it is worth a look before the sitting.
+- Ringing the bell puts flow in its beacon state, so v2's beacon spike (+2 tiers) is on for the whole of the lapping. That is faithful to Risk of Rain's charge zone and to v2, but it is a knob to question.
+- Reading taken: the spec says both that extra laps "before waking" strip plating and that the Warden "wakes at full charge". Here it wakes on lap 3, and any later lap still strips. The course runs through the bowl, so it could not stay asleep for a fourth lap anyway. You fight it or leave it to lap again.
+
+`tests/loop_laps_test.gd` covers the camper, the lift's banked speed, the wake, the strip, ring order, the director per lap and v2 untouched.

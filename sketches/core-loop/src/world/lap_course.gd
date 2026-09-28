@@ -23,8 +23,9 @@ const RING_CEILING := 16.0
 # The first ring stands this far short of the lift's mouth, on the way in from the mast,
 # so it frames the lift instead of standing in its piston.
 const LIFT_APPROACH := 9.0
-# The second ring stands this far past the lift's landing, so the ball lands and rolls
-# through it rather than dropping onto its rim.
+# The second ring stands this far past the lift's landing on the ride's own heading
+# (ride_rail.gd lets go along the arc with the banked speed returned), so the ball lands
+# and rolls straight through it on that speed rather than dropping onto its rim.
 const LANDING_ROLL := 8.0
 
 var route
@@ -48,9 +49,10 @@ func _init(map, beacon: Vector3, radius: float, height: Callable) -> void:
 	var line: Dictionary = map.drop_lines[0]
 	var mast := Vector2(beacon.x, beacon.z)
 	var lift: Vector2 = map.return_at
+	var landing: Vector2 = map.return_to
 	var points: Array[Vector2] = [
 		lift + (mast - lift).normalized() * LIFT_APPROACH,
-		(map.return_to as Vector2).move_toward(line["start"], LANDING_ROLL),
+		landing + (landing - lift).normalized() * LANDING_ROLL,
 		line["start"],
 		(line["via"] as Array)[0],
 		line["at"],
