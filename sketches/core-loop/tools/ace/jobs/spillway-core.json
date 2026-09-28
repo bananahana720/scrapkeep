@@ -1,0 +1,27 @@
+{
+ "out_dir": "../../../../../artifacts/local/ace-audition/cover",
+ "defaults": {
+  "lyrics": "[Instrumental]",
+  "instrumental": true,
+  "bpm": 172,
+  "keyscale": "D minor",
+  "timesignature": "4",
+  "vocal_language": "en",
+  "duration": 22.326
+ },
+ "jobs": [
+  {
+   "name": "spillway-core-70",
+   "model": "acestep-v15-xl-turbo",
+   "seeds": [172],
+   "params": {
+    "task_type": "cover",
+    "audio_cover_strength": 0.7,
+    "src_audio": "path:../../../../../artifacts/local/ace-audition/guide-spillway-16bar.wav",
+    "caption": "Jazzy liquid drum and bass at 172 BPM in D Dorian. Warm Rhodes electric piano playing extended ninth and thirteenth chords, a rolling reese bass with a clean sub under it, crisp breakbeat drums with shuffled ghost-note hats and a tight snare, a soft pad and a light arpeggio shimmer. Polished studio production, wide and clean. Instrumental, no vocals.",
+    "inference_steps": 8,
+    "shift": 3.0
+   }
+  }
+ ]
+}
