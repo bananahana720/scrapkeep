@@ -103,7 +103,7 @@ func setup(game_ref) -> void:
 	pick.later.connect(close_pick)
 	game.events.tree_offered.connect(func(_c: String, _d: int, _choices: Array): _offer_later())
 	game.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _offer_later())
-	game.events.bay_entered.connect(func(_banked: float): _speak_world_bark())
+	game.events.bay_entered.connect(func(_banked: float): _speak_world_bark("shop_entered"))
 	game.events.bay_left.connect(func(_v: Vector3): _on_bay_left())
 	game.events.stage_entered.connect(func(_i: int, retry: bool):
 		if retry:
@@ -280,17 +280,18 @@ func _on_acted(fact: String, record: Dictionary) -> void:
 	_cue(fact)
 
 
-func _speak_world_bark() -> void:
+# The bay's greeting on the catch and the send-off on the pad (world.bay_bark).
+func _speak_world_bark(fact: String) -> void:
 	_counter_ready = true
 	var line: Dictionary = game.world.bay_bark if game.world != null and "bay_bark" in game.world else {}
 	if armed and not line.is_empty():
-		bubble.bark(line, "shop_entered")
+		bubble.bark(line, fact)
 		_place_bubble()
 
 
 func _on_bay_left() -> void:
 	close_counter()
-	_speak_world_bark()
+	_speak_world_bark("shop_left")
 
 
 func _place_bubble() -> void:
