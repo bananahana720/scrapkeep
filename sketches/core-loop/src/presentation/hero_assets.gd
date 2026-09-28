@@ -1,6 +1,11 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
+const WardenLook := preload("res://src/combat/warden_look.gd")
+const WardenKit := preload("res://src/combat/warden_kit.gd")
+const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
+const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
+
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 
@@ -61,6 +66,7 @@ var _materials := {}
 var _scenes := {}
 var _meshes := {}
 var _players := {}
+var _wardens := {}
 var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
 
@@ -70,6 +76,9 @@ func setup(ctx_ref) -> void:
 	name = "HeroAssets"
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_node("WardenLook"):
+			_dress_warden.call_deferred(enemy)
 
 
 func _enter_tree() -> void:
@@ -78,6 +87,9 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	for rec in _wardens.values():
+		_restore_warden(rec)
+	_wardens.clear()
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
 
@@ -86,7 +98,9 @@ func _on_node_added(node: Node) -> void:
 	var parent := node.get_parent()
 	if parent == null:
 		return
-	if node is MeshInstance3D and parent.get_script() == Accretion:
+	if node.get_script() == WardenLook or node.get_script() == WardenKit:
+		_dress_warden.call_deferred(parent)
+	elif node is MeshInstance3D and parent.get_script() == Accretion:
 		dress_chunk(node)
 	elif node is Node3D and parent.get_script() == RewardGates:
 		_dress_gate.call_deferred(node)
@@ -247,6 +261,13 @@ func _process(delta: float) -> void:
 		_fit(rec)
 		_steer_pod(rec, player, delta)
 	_tuck_chunks()
+	for key in _wardens.keys():
+		var rec: Dictionary = _wardens[key]
+		if not is_instance_valid(rec.warden) or not rec.warden.is_inside_tree():
+			_restore_warden(rec)
+			_wardens.erase(key)
+		else:
+			_update_warden(rec)
 
 
 func _steer_pod(rec: Dictionary, player, delta: float) -> void:
@@ -360,3 +381,198 @@ func _dress_gate(gate: Node3D) -> void:
 			plate.position = (child as Sprite3D).position + Vector3(0.0, 0.0, -0.14)
 			gate.add_child(plate)
 			paint(plate, tints)
+
+
+# --- Warden clamp and family kit ----------------------------------------------------
+
+func warden_of(warden: Node) -> Dictionary:
+	return _wardens.get(warden.get_instance_id(), {})
+
+
+func _warden_scene(path: String) -> Node3D:
+	if not ResourceLoader.exists(path):
+		return null
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return null
+	var imported := packed.instantiate() as Node3D
+	if imported.get_child_count() != 1 or not imported.get_child(0) is Node3D:
+		imported.free()
+		return null
+	var authored := imported.get_child(0) as Node3D
+	imported.remove_child(authored)
+	authored.transform = imported.transform * authored.transform
+	imported.free()
+	return authored
+
+
+func _dress_warden(warden) -> void:
+	if not is_instance_valid(warden) or not warden.is_inside_tree() or _wardens.has(warden.get_instance_id()):
+		return
+	if warden._look == null or warden._kit == null or not WARDEN_KITS.has(warden.family):
+		return
+	var base := _warden_scene(WARDEN_BASE)
+	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WARDEN_KITS[warden.family])
+	if base == null or kit == null:
+		if base != null: base.free()
+		if kit != null: kit.free()
+		_warn_once("warden", "hero_assets: Warden assets unavailable; keeping functional placeholders")
+		return
+	var tower := base.get_node_or_null("Tower") as MeshInstance3D
+	var mount := base.get_node_or_null("Tower/KitMount") as Node3D
+	var weak := kit.get_node_or_null("WeakPoint") as Node3D
+	if tower == null or mount == null or weak == null or not base.has_node("JawL") or not base.has_node("JawR"):
+		base.free()
+		kit.free()
+		_warn_once("warden_nodes", "hero_assets: incomplete Warden asset hierarchy; keeping placeholders")
+		return
+	base.name = "HeroWarden"
+	base.position.y = -warden.HALF_HEIGHT
+	# Authored seam corners reach 2.826 m; keep the housing inside the 2.8 m collider.
+	base.get_node("Housing").scale = Vector3(0.99, 1.0, 0.99)
+	kit.name = "HeroKit"
+	var target: Vector3 = warden._kit.point_offset() + Vector3.UP * warden.HALF_HEIGHT
+	kit.position = target - weak.position
+	var old_mount: Vector3 = tower.position + mount.position
+	_adapt_warden_tower(tower, kit.position - old_mount, old_mount.y)
+	mount.position = kit.position - tower.position
+	base.add_child(kit)
+	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
+		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": []}
+	_paint_warden(base, rec)
+	if warden.family == "mind":
+		var lens := Node3D.new()
+		lens.name = "HeroLens"
+		lens.position = weak.position
+		kit.add_child(lens)
+		for child in kit.get_children():
+			if child == weak or String(child.name).begins_with("Shutter"):
+				var at: Vector3 = child.position - lens.position
+				kit.remove_child(child)
+				lens.add_child(child)
+				child.position = at
+				if child != weak:
+					rec.shutters.append({"node": child, "rest": at})
+		rec.lens = lens
+	warden.add_child(base)
+	for child in warden._look.get_children():
+		if child is MeshInstance3D and child.material_override == warden._look.body_material and child != warden._look._arm:
+			_hide_warden_mesh(child, rec)
+	_hide_warden_tree(warden._look._jaws, rec)
+	_hide_warden_tree(warden._kit, rec)
+	for side in [-1.0, 1.0]:
+		var jaw: Node3D = base.get_node("JawL" if side < 0 else "JawR")
+		var angle: float = side * 1.3
+		var normal := Vector3(cos(angle), 0, sin(angle))
+		var panel := Node3D.new()
+		panel.position = normal * 3.77 + Vector3.UP * 3.9 - jaw.position
+		panel.basis = Basis.looking_at(-normal)
+		jaw.add_child(panel)
+		for level in warden._look._seams.size():
+			var row: Array = warden._look._seams[level]
+			for i in 3:
+				var old := row[i] as MeshInstance3D
+				var seam := MeshInstance3D.new()
+				seam.mesh = old.mesh
+				seam.material_override = old.material_override
+				seam.transform = old.transform
+				seam.position *= 0.65
+				seam.position.z = 0.04
+				seam.scale *= 0.65
+				panel.add_child(seam)
+				rec.seams.append({"node": seam, "source": old})
+		# Existing enemy helper owns the class-colour open-crack grammar and tint list.
+		var crack: Node3D = warden._add_crack(panel, Vector3(0, 0, 0.08), 0.8)
+		rec.cracks.append(crack)
+	_wardens[warden.get_instance_id()] = rec
+	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
+	_update_warden(rec)
+
+
+func _adapt_warden_tower(tower: MeshInstance3D, shift: Vector3, top: float) -> void:
+	var adapted := ArrayMesh.new()
+	for surface in tower.mesh.get_surface_count():
+		var arrays := tower.mesh.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		for i in vertices.size():
+			var y := vertices[i].y + tower.position.y
+			if y > 2.2:
+				vertices[i] += shift * ((y - 2.2) / (top - 2.2))
+				var shear := Basis(Vector3.RIGHT, Vector3.UP + shift / (top - 2.2), Vector3.BACK)
+				normals[i] = (shear.inverse().transposed() * normals[i]).normalized()
+		arrays[Mesh.ARRAY_VERTEX] = vertices
+		arrays[Mesh.ARRAY_NORMAL] = normals
+		adapted.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		adapted.surface_set_material(surface, tower.mesh.surface_get_material(surface))
+	tower.mesh = adapted
+
+
+func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
+	kit = kit or root.name == "HeroKit"
+	if root is MeshInstance3D:
+		for i in root.mesh.get_surface_count():
+			var slot := slot_of(root.mesh, i)
+			var key := slot
+			if slot == "ancient_light" and not kit:
+				key += "_jaw" if String(root.name).begins_with("Jaw") else "_base"
+			if not rec.materials.has(key):
+				rec.materials[key] = material(slot).duplicate()
+			root.set_surface_override_material(i, rec.materials[key])
+	for child in root.get_children():
+		_paint_warden(child, rec, kit)
+
+
+func _hide_warden_mesh(mesh: MeshInstance3D, rec: Dictionary) -> void:
+	rec.hidden.append({"mesh": mesh, "layers": mesh.layers, "shadow": mesh.cast_shadow})
+	hide_placeholder(mesh)
+
+
+func _hide_warden_tree(node: Node, rec: Dictionary) -> void:
+	if node is MeshInstance3D:
+		_hide_warden_mesh(node, rec)
+	for child in node.get_children():
+		_hide_warden_tree(child, rec)
+
+
+func _update_warden(rec: Dictionary) -> void:
+	var warden = rec.warden
+	rec.base.rotation.y = warden._look._jaws.rotation.y
+	rec.weak.scale = warden._kit._open_node.scale
+	if rec.lens != null:
+		rec.lens.global_basis = warden._kit._lens.global_basis * Basis(Vector3.UP, PI * 0.5)
+		for shutter in rec.shutters:
+			shutter.node.position = shutter.rest * (1.5 if warden.family_open() else 1.0)
+	rec.materials.ancient_light_base.emission_energy_multiplier = warden._look._core_material.emission_energy_multiplier
+	var light: StandardMaterial3D = rec.materials.ancient_light
+	light.emission_energy_multiplier = warden._kit._seam_material.emission_energy_multiplier
+	var enamel: StandardMaterial3D = rec.materials.ancient_enamel
+	enamel.albedo_color = Color.WHITE.lerp(warden._look.body_material.albedo_color, warden._flash)
+	enamel.emission_enabled = warden._flash > 0.0
+	enamel.emission = warden._look.body_material.emission
+	enamel.emission_energy_multiplier = warden._look.body_material.emission_energy_multiplier
+	var rim: StandardMaterial3D = rec.materials.ancient_light_jaw
+	var plate: StandardMaterial3D = warden._look.plate_material
+	rim.emission = plate.emission if warden.tint_state == "amber" else ANCIENT
+	rim.albedo_color = rim.emission
+	rim.emission_energy_multiplier = plate.emission_energy_multiplier if warden.tint_state == "amber" else 0.8
+	for seam in rec.seams:
+		seam.node.visible = seam.source.visible
+
+
+func _forget_warden(id: int) -> void:
+	if _wardens.has(id):
+		_restore_warden(_wardens[id])
+		_wardens.erase(id)
+
+
+func _restore_warden(rec: Dictionary) -> void:
+	for item in rec.hidden:
+		if is_instance_valid(item.mesh):
+			item.mesh.layers = item.layers
+			item.mesh.cast_shadow = item.shadow
+	if is_instance_valid(rec.warden):
+		for crack in rec.cracks:
+			rec.warden._cracks.erase(crack)
+	if is_instance_valid(rec.base):
+		rec.base.queue_free()
