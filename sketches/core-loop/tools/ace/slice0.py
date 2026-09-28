@@ -8,6 +8,7 @@ scripted Spillway state timeline, blind-packed. Screens reject; Andrew's blind l
     $PY bed_lock.py screen <slice>/guides/<parent> <slice>/run/<parent>
     $PY slice0.py timeline <slice>             # the scripted state timeline -> timeline.json
     $PY slice0.py assemble <slice>             # one master per surviving direction, plus the planted weak take
+    $PY slice0.py assemble <slice> --diagnostic   # not blind, not survivors: each direction's best-ranked takes
     $PY slice0.py pack <slice> <pack dir>      # Y1.. in random order, key in .key-do-not-peek
 
 A candidate is a direction whose calm and Warden parents both survived their screens; it is
@@ -180,7 +181,20 @@ def planted(reports):
     return picks
 
 
-def assemble(slice_dir):
+def diagnostic_picks(reports):
+    """Not survivors: per direction and parent, the sweep take with the fewest screen failures, then the tightest kick."""
+    chosen = {}
+    for d in DIRECTIONS:
+        pair = {}
+        for p in PARENTS:
+            pool = [r for r in reports[p]['rows'] if r['guide'] == f'{p}-{d}']
+            pool.sort(key=lambda r: (len(r['fails']), r['kick_median_abs_ms'] or 1e9))
+            pair[p] = pool[0]
+        chosen[d] = pair
+    return chosen
+
+
+def assemble(slice_dir, diagnostic=False):
     plan = timeline(slice_dir)
     reports = screened(slice_dir)
     rows = {p: {r['take']: r for r in reports[p]['rows']} for p in PARENTS}
@@ -193,14 +207,20 @@ def assemble(slice_dir):
             for dw in DIRECTIONS:
                 if dc != dw and dc in survivors['calm'] and dw in survivors['warden'] and len(chosen) < 6:
                     chosen[f'{dc}+{dw}'] = {'calm': survivors['calm'][dc], 'warden': survivors['warden'][dw]}
-    weak = planted(reports)
-    if weak:
-        chosen['planted-weak'] = weak
+    root = 'assembled'
+    if diagnostic:
+        chosen, root = diagnostic_picks(reports), 'diagnostic'
+    elif not chosen:
+        raise SystemExit('no surviving candidate: nothing to blind-pack (see screen.md per parent)')
     else:
-        print('no failed take to plant')
+        weak = planted(reports)
+        if weak:
+            chosen['planted-weak'] = weak
+        else:
+            print('no failed take to plant')
     done = {}
     for label, pair in chosen.items():
-        dest = slice_dir / 'assembled' / label
+        dest = slice_dir / root / label
         dest.mkdir(parents=True, exist_ok=True)
         sources = {p: (load(Path(r['path'])), r['trim_samples']) for p, r in pair.items()}
         mastered, loud = master(build(plan, sources), dest / f'{label}.wav')
@@ -209,7 +229,7 @@ def assemble(slice_dir):
                            wav=str(dest / f'{label}.wav'), seconds=round(len(mastered) / SR, 2), master=loud)
         print(label, {p: r['take'] for p, r in pair.items()}, done[label]['seconds'], 's', loud['lufs_after'], 'LUFS',
               loud['true_peak_dbtp'], 'dBTP', flush=True)
-    (slice_dir / 'assembled' / 'assemble.json').write_text(json.dumps(done, indent=1))
+    (slice_dir / root / 'assemble.json').write_text(json.dumps(done, indent=1))
 
 
 def pack(slice_dir, dest):
@@ -235,7 +255,7 @@ if __name__ == '__main__':
     elif cmd == 'timeline':
         timeline(*args)
     elif cmd == 'assemble':
-        assemble(*args)
+        assemble(args[0], diagnostic='--diagnostic' in sys.argv)
     elif cmd == 'pack':
         pack(*args)
     else:
