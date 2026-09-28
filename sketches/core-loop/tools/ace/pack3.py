@@ -430,7 +430,7 @@ def build(plan, sources):
     return out[:total]
 
 
-def curves(plan):
+def curves(plan, edge=EDGE):
     """Per-stem gain and low-pass wet curves from STATE_PROFILE, with EDGE-long linear ramps ending on each edge."""
     total = plan['total_frames']
     gain = {s: np.ones(total) for s in STEMS}
@@ -451,17 +451,17 @@ def curves(plan):
         for arr in [*gain.values(), wet]:
             before, after = arr[e - 1], arr[e]
             if before != after:
-                arr[e - EDGE:e] = np.linspace(before, after, EDGE + 1)[:-1]
+                arr[e - edge:e] = np.linspace(before, after, edge + 1)[:-1]
                 changed = True
         if changed:
             moved.append(e)
     return gain, wet, moved
 
 
-def mix_stems(stems, plan, automate=True):
+def mix_stems(stems, plan, automate=True, edge=EDGE):
     if not automate:
         return sum(stems.values())
-    gain, wet, _ = curves(plan)
+    gain, wet, _ = curves(plan, edge)
     other = stems['other'] * (1 - wet[:, None]) + sosfilt(LOWPASS, stems['other'], axis=0) * wet[:, None]
     return stems['drums'] * gain['drums'][:, None] + stems['bass'] * gain['bass'][:, None] + other * gain['other'][:, None]
 
@@ -495,12 +495,25 @@ def arc(y, plan):
 
 
 def clicks(y, plan):
-    """The largest sample step within 20 ms of each stem-gain edge or join, against the mix's own 99.9th-percentile step."""
-    steps = np.abs(np.diff(y, axis=0)).max(axis=1)
-    body = np.quantile(steps, .999)
-    reach = round(0.020 * SR)
-    worst = max(steps[max(s['out_start'] - reach, 0):s['out_start'] + reach].max() for s in plan['states'][1:])
-    return round(db(worst) - db(body), 1)
+    """A click is a one-sample jump: |step| against the median |step| over the 1.5 ms around it.
+    The worst such ratio within 12 ms of each state edge (ramps and joins) is compared with the
+    same ratio at every other bar line, where only the music sets it."""
+    d = np.abs(np.diff(y, axis=0)).max(axis=1)
+    reach, ctx = round(0.012 * SR), 32
+
+    def spike(at):
+        lo, hi = max(at - reach, ctx), min(at + reach, len(d) - ctx)
+        win = np.lib.stride_tricks.sliding_window_view(d[lo - ctx:hi + ctx], 2 * ctx + 1)
+        return float((d[lo:hi] / (np.median(win, axis=1) + 1e-9)).max())
+    edges = [s['out_start'] for s in plan['states'][1:]]
+    lines = []
+    for s in plan['states']:
+        first, last = (int(v) for v in s['bars'].split('-'))
+        bar = s['frames'] // (last - first + 1)
+        lines += [s['out_start'] + k * bar for k in range(1, last - first + 1)]
+    edge, music = max(spike(a) for a in edges), [spike(a) for a in lines]
+    return dict(edge_worst_spike=round(edge, 1), bar_line_max_spike=round(max(music), 1),
+                bar_line_p95_spike=round(float(np.quantile(music, .95)), 1), passes=bool(edge <= max(music)))
 
 
 def automation(plan, dest):
@@ -551,7 +564,8 @@ def assemble(slice_dir):
                            vocals=pick[p]['vocals_rms_db'], reported=pick[p]['reported']) for p in PARENTS},
             calm_rule=pick['calm_rule'], warden_rule=pick['warden_rule'],
             drop_downbeat_kick=25 not in pick['warden']['missing_downbeats'],
-            arc=measured, arc_negative_raw=raw, edge_step_over_p999_db=clicks(mastered, plan),
+            arc=measured, arc_negative_raw=raw, edge_clicks=clicks(mastered, plan),
+            edge_clicks_negative_instant=clicks(mix_stems(stems, plan, edge=1), plan),
             wav=str(dest / f"{label.replace(' ', '-')}.wav"), seconds=round(len(mastered) / SR, 2), master=loud)
         print(label, {p: pick[p]['take'] for p in PARENTS}, 'arc', measured['worst_open_kick_db'], measured['worst_drop_rise_db'],
               'raw', raw['worst_open_kick_db'], raw['worst_drop_rise_db'], loud['lufs_after'], loud['true_peak_dbtp'], flush=True)
