@@ -16,6 +16,7 @@ const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const TuningPanel := preload("res://src/ui/tuning_panel.gd")
+const Workshop := preload("res://src/ui/workshop.gd")
 const World := preload("res://src/world/world.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
@@ -68,6 +69,7 @@ var hud
 var screens
 var notes
 var panel
+var workshop
 var keyboard
 var codex
 var run_log
@@ -77,6 +79,10 @@ var storage_dir := "user://"
 
 var _pause_toggled := false
 var _notes_held := false
+# A workshop screen (the upgrade pick, Moss's counter) holds the mouse and the ball's
+# keys while it is open; the pick also pauses the tree (workshop.gd).
+var _menu_held := false
+var _menu_paused := false
 var _restart_held := 0.0
 var _restart_latched := false
 # Seconds before the summary takes a key: the victory beat ends while the player may
@@ -171,6 +177,10 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
+	workshop = Workshop.new()
+	workshop.name = "Workshop"
+	add_child(workshop)
+	workshop.setup(self)
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -318,12 +328,25 @@ func notes_held() -> bool:
 	return _notes_held
 
 
+func hold_menu(held: bool, pause := false) -> void:
+	_menu_held = held
+	_menu_paused = held and pause
+	_apply_pause()
+	if keyboard != null:
+		keyboard.enabled = flow.in_play() and not held
+	_capture_mouse(flow.in_play() and not held)
+
+
+func menu_held() -> bool:
+	return _menu_held
+
+
 func _apply_pause() -> void:
-	get_tree().paused = _pause_toggled or _notes_held
+	get_tree().paused = _pause_toggled or _notes_held or _menu_paused
 
 
 func _on_flow_changed(_state: String) -> void:
-	var playing: bool = flow.in_play()
+	var playing: bool = flow.in_play() and not _menu_held
 	if keyboard != null:
 		keyboard.enabled = playing
 	_capture_mouse(playing)
@@ -371,7 +394,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		if not _mouse_captured():
-			if event.pressed and flow.in_play() and not panel.visible:
+			if event.pressed and flow.in_play() and not panel.visible and not _menu_held:
 				_capture_mouse(true)
 			return
 		_mouse_button(event)
@@ -391,7 +414,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		KEY_F1:
 			panel.visible = not panel.visible
-			_capture_mouse(not panel.visible and flow.in_play())
+			_capture_mouse(not panel.visible and flow.in_play() and not _menu_held)
 			get_viewport().set_input_as_handled()
 		KEY_ESCAPE:
 			if _mouse_captured():

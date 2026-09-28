@@ -1,0 +1,118 @@
+extends Button
+
+const Palette := preload("res://src/core/palette.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ClassCard := preload("res://src/ui/class_card.gd")
+
+# One side of an upgrade pick. The middle is the ability bar's own slot: the node's ab_
+# glyph on a rounded square with one notch per depth along its top edge and the key it
+# changes under it, so the card reads as "this slot, changed". Under that, the node's
+# name and its effect line. The number key that takes it sits top left, as on the class
+# cards. The edge wears the class colour; hover and focus thicken it and lift the slot.
+
+const KEY_H := 28.0
+const SLOT := 88.0
+const SLOT_KEY_H := 24.0
+const NOTCH := 9.0
+const WIDTH := 340.0
+const HEIGHT := 300.0
+
+var node := {}
+var key := ""
+var depth := 1
+var color := Palette.SAND
+var _name: Label
+var _effect: Label
+var _lift := 0.0
+
+
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1) -> void:
+	node = node_row
+	key = key_id
+	color = class_color
+	depth = node_depth
+	focus_mode = Control.FOCUS_ALL
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	custom_minimum_size = Vector2(WIDTH, HEIGHT)
+	pivot_offset = custom_minimum_size * 0.5
+	add_theme_stylebox_override("normal", ClassCard._plate(Color(color, 0.7), 2))
+	add_theme_stylebox_override("hover", ClassCard._plate(color, 4))
+	add_theme_stylebox_override("pressed", ClassCard._plate(Palette.AMBER, 4))
+	add_theme_stylebox_override("focus", ClassCard._plate(Color.WHITE, 3, false))
+	add_theme_stylebox_override("disabled", ClassCard._plate(Color(color, 0.3), 2))
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.offset_top = 24.0 + SLOT + SLOT_KEY_H + 26.0
+	box.offset_left = 20.0
+	box.offset_right = -20.0
+	box.offset_bottom = -14.0
+	box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	box.add_theme_constant_override("separation", 6)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(box)
+	_name = _text(String(node.get("name", "")), 26, color)
+	box.add_child(_name)
+	_effect = _text(String(node.get("effect", "")), 18, Palette.SAND)
+	box.add_child(_effect)
+	mouse_entered.connect(func():
+		if not disabled:
+			grab_focus())
+
+
+# The slot key the node changes, as a key glyph id: weapon is key_lmb, smash key_ctrl.
+static func slot_key(node_row: Dictionary) -> String:
+	return "key_" + String(AbilityState.KEYS.get(node_row.get("key", ""), "")).to_lower()
+
+
+func node_id() -> String:
+	return String(node.get("id", ""))
+
+
+func drawn_words() -> PackedStringArray:
+	var out := Keycap.words(key)
+	out.append_array(Keycap.words(slot_key(node)))
+	return out
+
+
+func _text(value: String, font_size: int, tint: Color) -> Label:
+	var label := Label.new()
+	label.text = value
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_override("font", UiFonts.bold())
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", tint)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+
+func _process(delta: float) -> void:
+	var up := 1.0 if (is_hovered() or has_focus()) and not disabled else 0.0
+	_lift = move_toward(_lift, up, delta * 8.0)
+	queue_redraw()
+
+
+func _draw() -> void:
+	var bright := Color.WHITE if is_hovered() and not disabled else Palette.SAND
+	Keycap.draw(self, Vector2(20.0 + Keycap.size_of(key, KEY_H).x * 0.5, 18.0 + KEY_H * 0.5), key, bright, KEY_H)
+	var centre := Vector2(size.x * 0.5, 24.0 + SLOT * 0.5 - 6.0 * _lift)
+	var rect := Rect2(centre - Vector2(SLOT, SLOT) * 0.5, Vector2(SLOT, SLOT))
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(Palette.CHARCOAL, 0.95)
+	plate.border_color = color if _lift > 0.5 else Palette.SAND
+	plate.set_border_width_all(3)
+	plate.set_corner_radius_all(12)
+	draw_style_box(plate, rect)
+	var icon_id := String(node.get("icon", ""))
+	var inset := rect.grow(-12.0)
+	draw_texture_rect(Icons.texture(icon_id), inset, false, Icons.tint(icon_id, color))
+	# The variant notch, one per depth along the slot's top edge (UpgradeTree.icon_of).
+	for i in depth:
+		var x := rect.position.x + rect.size.x * 0.5 + (float(i) - (depth - 1) * 0.5) * (NOTCH + 4.0)
+		draw_rect(Rect2(x - NOTCH * 0.5, rect.position.y - 5.0, NOTCH, 8.0), Palette.CHARCOAL)
+		draw_rect(Rect2(x - NOTCH * 0.5 + 1.5, rect.position.y - 3.5, NOTCH - 3.0, 5.0), color)
+	var sk := slot_key(node)
+	Keycap.draw(self, Vector2(centre.x, rect.end.y + 8.0 + SLOT_KEY_H * 0.5), sk, bright, SLOT_KEY_H)
