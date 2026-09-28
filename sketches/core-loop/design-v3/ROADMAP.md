@@ -178,6 +178,18 @@ Andrew wants feedback solid enough for an alpha in a game about timing, dodging 
   - the cog prices, drop rates and the steering cost, tuned against the chosen loop's free-pick cadence;
   - whether a voluntary melt of weight into a part in Moss's calm bay earns its place.
 
+**The purpose audit landed** (`research/PURPOSE-AUDIT-1.md`, Codex, 2026-09-28).
+- **Recommendation: Option A, recoverable plating over the hull.** Scrap absorbs damage before the hull, and a hit spills 75% as at most six recoverable clusters ahead of the ball's line. Wear is slow and quiet. There is one damage order (mitigation, then scrap, then hull). Recovered scrap never retriggers pickup bonuses. The hidden 0.2 heft per part goes (`run_state.gd:120-121`), so size comes from scrap alone.
+- **Its biggest risk is a downward spiral.** One hit cuts protection, punch, contact advantage and magnet reach at once, and wear drains the same pool. Any build of Option A must tune against that.
+- **Crowded areas to resolve in `DESIGN-V3.md`:**
+  - build growth, with seven sources all saying "your build changed";
+  - time pressure, where five systems could turn exploration into debt;
+  - reward currencies. The audit argues for no wallet, which predates the cog ruling. Scrap, cores and cogs must justify three resources, or cogs absorb the cores' role.
+  - celebration, where everything wants the same attention;
+  - defence, which needs one damage order.
+- **Thin areas:** skill-based recovery, comparable personal bests, deliberate build correction (Moss's job), and one good small wager.
+- **The next step is a flag-gated durability prototype on a fixed three-minute route with three variants:** hull only, armour without wear, and armour with wear. Andrew plays it and judges recovery against chore, and whether wear changes routes.
+
 **The purpose audit.** Every world-one system is scored on the dimensions it serves: strategy, risk, gambling, performance and skill, personal-best mastery, expression, discovery, spectacle and feel, pacing, momentum cost and readability cost. For each system, it names the decision it hands the player. A system that serves no dimension, or duplicates another, is merged or cut; one that serves several is protected. The audit feeds `DESIGN-V3.md` in wave B, and loop-dependent verdicts wait for the lab sitting.
 
 ## Tool stack (checked 2026-09-28; research R3)
