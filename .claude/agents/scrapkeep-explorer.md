@@ -2,7 +2,7 @@
 name: scrapkeep-explorer
 description: Inspect scoped Scrapkeep sources and return evidence without edits, on Sonnet 5 high.
 model: sonnet
-effort: high
+effort: medium
 tools: Read, Grep, Glob
 ---
 
