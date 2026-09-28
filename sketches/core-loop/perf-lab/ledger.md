@@ -145,3 +145,38 @@ Learned: the CPU bound is almost entirely per-frame telegraph mesh rebuilding. W
 ## H1  telegraph repaint is the binding CPU cost
 
 If rebuilding each telegraph's ArrayMesh every frame (with a terrain height lookup per vertex) is binding, then drawing the static geometry once and driving progress through a material parameter or a scaled child cuts native s3 frame p50 by at least 8 ms with identical committed geometry and `contains()` results. Wrong if the cut is under 3 ms. Next experiment: E1, against this E0.
+
+## Synthesis 2026-09-28, after E0 and five subsystem reads
+
+### 1. Binding constraint
+
+Telegraph mesh repaint. `--no-telegraph-draw` takes headless s3 from 17.08 to 0.96 ms p50 and 43.5 to 5.7 ms p99. The harness column, 32 synthetic telegraphs all repainting, is 11.15 ms headless and 12.15 ms native: 0.35 ms per telegraph per frame. Every `set_progress()` runs `_repaint()` then `Threat.marks()` then `Painter.paint()`, which rebuilds one ArrayMesh per motion layer with a terrain lookup per vertex (`src/combat/telegraph.gd:187`, `:246-250`; `src/combat/threat_grammar.gd:682-722`).
+
+The combat and threats readers both named this path, but their 0.5 to 4 ms estimates were 3 to 10 times low because they assumed 6 to 15 telegraphs warn at once. The bench drives all 32 (`tools/perf_bench.gd:372`), so E0 is the ceiling; in play the count is however many enemies are in WARN. The audio reader's "low single-digit ms" for music measured 0.7 ms proc p50. The UI reader's WordBudget confound is real for `stress_capture.gd:495` but `perf_bench.gd` never calls it, so it retires STRESS-CAPTURE-1 rather than correcting E0. The world_physics reader's negative result holds: enemy AI (-2.4 ms, phys 3.37 to 1.10) is the only other per-tick scaler. Where readers and E0 disagree, E0 wins: the telegraph ablation clears the 3.66 ms noise band four times over, and every reader number is code-shape inference.
+
+### 2. Physics floor (inference anchored on E0)
+
+Native est60 minus harness is 7.6 ms with today's code; headless s3 without repaint is 5.47 est60 and 5.7 p99 with everything else on. A sensible floor: 27 enemy ticks at 20 us times 1.5 ticks (0.8 ms), Jolt step (0.6), 32 progress uniforms (0.2), 64 bolt raycasts (0.5), HUD and VFX (0.8), submission of about 650 draws (1.5 to 2), engine (0.5): about 5 ms p50 and 7 to 8 ms p99 native. Prize: about 14 ms p50, about 23 ms p99.
+
+### 3. Hypotheses (native s3, ranked by gain over cost plus blast radius)
+
+- **H1 telegraph repaint.** Paint the footprint once; drive INSTANT and LANE fill through a shader uniform (inner radius or half-width, `threat_grammar.gd:203-212`); rebuild WAVE marks only when the front moves a quantum. Cuts about 10 ms p50, 15 ms p99; wrong if under 3. Look holds only if the shader draws the same inner-radius ramp; stills decide. Not moot.
+- **H2 enemy group scans.** One valid-checked enemy snapshot per tick in `combat.gd` (11 `get_nodes_in_group("enemy")` calls, `:497` to `:1525`) shared with bolts, near_miss, swarm_remnant, winch_drone and `world.gd:428`. Cuts 0.8 to 1.5 ms p50 (ceiling 2.3); wrong if under 0.4. Gameplay unchanged.
+- **H3 music engine on the main thread.** 0.7 ms proc p50 plus the 20 to 25 ms headless proc p99 spike. **Moot**: ACE removes it. No experiment; re-baseline after the pivot.
+- **H4 HUD shaping every frame** (`hud.gd:494-504`, gauge and objective `extent()`, unconditional `queue_redraw()` in ability_bar, key_glyphs, edge_markers). Value-changed gating cuts 0.3 to 0.6 ms (ceiling 1.0); wrong if under 0.2. Look unchanged.
+- **H5 draw count.** About 230 painter mesh instances (6 per telegraph) and 1,611 draws at p99; merge static layers after H1. Cuts 0.5 to 1 ms render CPU; wrong if under 0.3.
+- **H6 repaint throttle to 20 Hz.** Fallback if H1 slips: about 8 ms, but the fill edge steps 5% per update. **Changes the look**; forbidden unless a side-by-side holds.
+- **H7 SFX `play()` filter allocation** (`audio.gd:391-402`). No-audio against no-music differs by 0.6 ms headless p50, inside noise. Parked until H1 and H2 land. Not moot.
+- VFX and trails: inside noise, no hypothesis.
+
+### 4. Experiment order
+
+1. E1, H1: `src/combat/threat_grammar.gd` (Painter, `_instant`, `_lane`, `_wave`) and `src/combat/telegraph.gd` (`_repaint`, `set_progress`). Guardrails: `contains()` tests, `npm run sketch:smoke`, stills at progress 0.25, 0.5 and 0.95 per shape, bench s2 and s3 headless plus native s3, 3 repeats each.
+2. E2, H2: `src/combat/combat.gd`, `bolts.gd`, `near_miss.gd`, `swarm_remnant.gd`, `winch_drone.gd`, `src/world/world.gd`.
+3. E3, H4: `src/ui/hud.gd`, `gauge.gd`, `objective_view.gd`, `ability_bar.gd`, `key_glyphs.gd`, `edge_markers.gd`.
+4. E4, H5, only if E1 leaves draws p99 above about 1,000.
+5. Re-run the baseline once ACE music lands.
+
+### 5. Reachability
+
+Reachable at p50, marginal at p99. After H1, H2 and H4, native est60 is about 6 ms p50 (19.7 minus 12, 1 and 0.5) and p99 about 9 to 12 ms, left in physics ticks (2 to 3), render submission (about 2), draw spikes and machine noise (E0 ran at load 5 to 17). The deciding measurement is native s3 p99 on a quiet box after E1. A 6-core Zen 2 at roughly 0.7 times this single-thread speed lands near 9 to 13 ms, so the 10 ms dev-box p99 is the right gate.
