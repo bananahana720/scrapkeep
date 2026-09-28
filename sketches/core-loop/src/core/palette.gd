@@ -58,19 +58,28 @@ static func painted_texture(size := 256, ground := false) -> ImageTexture:
 
 
 # Look pass 3 albedo maps live in assets/textures as small webp files and load once at
-# runtime with mipmaps, like the generated maps above; nothing goes through the importer.
+# as imported resources (the committed .import files turn mipmaps on), so exports carry them.
 static var _look_textures := {}
 
 # neutral: keeps the map's value pattern but mutes its hue and lifts its mean to about
 # 0.85, for surfaces whose colour already comes from vertex colours (no double tint).
-static func look_texture(id: String, neutral := false) -> ImageTexture:
+static func look_texture(id: String, neutral := false) -> Texture2D:
 	var key := id + (":neutral" if neutral else "")
 	if _look_textures.has(key):
 		return _look_textures[key]
-	var image := Image.load_from_file("res://assets/textures/%s.webp" % id)
-	if image == null:
+	var source := load("res://assets/textures/%s.webp" % id) as Texture2D
+	if source == null:
 		push_warning("palette: missing look texture " + id)
 		return painted_texture(128)
+	if not neutral:
+		_look_textures[key] = source
+		return source
+	var image := source.get_image()
+	if image == null:
+		push_warning("palette: unreadable look texture " + id)
+		return painted_texture(128)
+	if image.is_compressed():
+		image.decompress()
 	if neutral:
 		image.convert(Image.FORMAT_RGB8)
 		var probe := image.duplicate() as Image
