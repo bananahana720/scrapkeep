@@ -6,7 +6,7 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges followed (TRACKING EV-0578).
 
-**Played: the core-loop demo** (entry 7) on `proto/core-loop-rc` at `525a46f`, merged to `main` after play (TRACKING EV-0588). Earlier: mobility kit v2 (entry 6, EV-0587). Next up for play: core-loop v2 on `proto/core-loop-v2`, built this round.
+**Played: the core-loop demo** (entry 7) on `proto/core-loop-rc` at `525a46f`, merged to `main` after play (TRACKING EV-0588). Earlier: mobility kit v2 (entry 6, EV-0587). **Next up for play: core-loop v2 alpha** on `proto/core-loop-v2` at `19fc173`, launched with `scrapkeep core-loop-v2`. It answers entry 7 (readability, iconography, what to press, transitions, mouse on menus, telegraph types, how to get stronger, soul). It adds three pilots, the upgrade trees, Moss's bay and shop, stage 2's Cable Reach gorge, W7's enemies and family Wardens, the music layers, pause and help, and the Codex Style A visual pass. Checks: `sketch:smoke` 171 green at 06be395 plus the keycap fix's UI tests, and rendered stills of three bot runs at 1920x1080 in that worktree's `artifacts/local/alpha-capture/`. Its verdict becomes entry 8.
 
 | Sketch | Branch and head | Question it answers |
 | --- | --- | --- |
