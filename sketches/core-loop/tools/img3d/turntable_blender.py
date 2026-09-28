@@ -3,8 +3,13 @@
 blender -b --factory-startup --python turntable_blender.py -- --in model.glb --out-dir DIR --name warden
 Writes DIR/<name>_tt_0..7.png (900x900) and DIR/<name>_chase.png (1920x1080, camera 12 m away,
 60 degree vertical FOV, 1.8 m eye height, on a sandstone ground plane).
+With --backface-check it instead writes DIR/<name>_bf_0..7.png, where any camera ray that lands on
+a back face is flat magenta, and prints BACKFACE_JSON with the magenta share of object pixels.
+Cycles ignores the material's backface-culling flag, so this shows where a single-sided
+material would open a hole in the engine.
 """
 import argparse
+import json
 import math
 import sys
 
@@ -21,7 +26,36 @@ def parse():
     p.add_argument("--chase-distance", type=float, default=12.0)
     p.add_argument("--chase-height", type=float, default=1.8)
     p.add_argument("--fov", type=float, default=60.0)
+    p.add_argument("--backface-check", action="store_true")
     return p.parse_args(sys.argv[sys.argv.index("--") + 1:])
+
+
+def tint_backfaces(meshes):
+    for mat in {slot.material for o in meshes for slot in o.material_slots if slot.material}:
+        nodes, links = mat.node_tree.nodes, mat.node_tree.links
+        output = next(n for n in nodes if n.type == "OUTPUT_MATERIAL")
+        surface = output.inputs["Surface"].links[0].from_socket
+        geometry = nodes.new("ShaderNodeNewGeometry")
+        magenta = nodes.new("ShaderNodeEmission")
+        magenta.inputs["Color"].default_value = (1.0, 0.0, 1.0, 1.0)
+        mix = nodes.new("ShaderNodeMixShader")
+        links.new(geometry.outputs["Backfacing"], mix.inputs["Fac"])
+        links.new(surface, mix.inputs[1])
+        links.new(magenta.outputs["Emission"], mix.inputs[2])
+        links.new(mix.outputs["Shader"], output.inputs["Surface"])
+
+
+def magenta_share(path):
+    image = bpy.data.images.load(path)
+    px = image.pixels[:]
+    covered = magenta = 0
+    for i in range(0, len(px), 4):
+        if px[i + 3] > 0.5:
+            covered += 1
+            if px[i] > 0.9 and px[i + 1] < 0.1 and px[i + 2] > 0.9:
+                magenta += 1
+    bpy.data.images.remove(image)
+    return covered, magenta
 
 
 def look_at(cam, target):
@@ -65,6 +99,27 @@ def main():
     scene.render.resolution_y = 900
     cam.data.lens = 50
     distance = radius / math.tan(cam.data.angle / 2) * 1.1
+
+    if a.backface_check:
+        tint_backfaces(meshes)
+        scene.cycles.samples = 1
+        scene.cycles.use_denoising = False
+        scene.cycles.pixel_filter_type = "BOX"
+        scene.cycles.filter_width = 0.01
+        scene.render.film_transparent = True
+        views = []
+        for i in range(8):
+            yaw = math.radians(i * 45 - 30)
+            cam.location = centre + Vector((math.sin(yaw), -math.cos(yaw), 0.45)).normalized() * distance
+            look_at(cam, centre)
+            scene.render.filepath = f"{a.out_dir}/{a.name}_bf_{i}.png"
+            bpy.ops.render.render(write_still=True)
+            covered, magenta = magenta_share(scene.render.filepath)
+            views.append({"view": i, "object_px": covered, "backface_px": magenta})
+        worst = max(v["backface_px"] / max(v["object_px"], 1) for v in views)
+        print("BACKFACE_JSON " + json.dumps({"name": a.name, "worst_view_share": round(worst, 5), "views": views}))
+        return
+
     for i in range(8):
         yaw = math.radians(i * 45 - 30)
         cam.location = centre + Vector((math.sin(yaw), -math.cos(yaw), 0.45)).normalized() * distance

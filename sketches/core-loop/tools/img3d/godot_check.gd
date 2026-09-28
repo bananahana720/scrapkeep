@@ -19,11 +19,11 @@ func _init() -> void:
 			failures += 1
 			continue
 		var root := packed.instantiate()
-		var counts := {"meshes": 0, "surfaces": 0, "triangles": 0}
+		var counts := {"meshes": 0, "surfaces": 0, "triangles": 0, "cull": []}
 		_count(root, counts)
 		var aabb := _aabb(root, Transform3D.IDENTITY)
-		print("IMG3D_CHECK OK %s meshes=%d surfaces=%d triangles=%d size=%s base_y=%.3f" % [
-			path, counts.meshes, counts.surfaces, counts.triangles, aabb.size, aabb.position.y])
+		print("IMG3D_CHECK OK %s meshes=%d surfaces=%d triangles=%d size=%s base_y=%.3f cull=%s" % [
+			path, counts.meshes, counts.surfaces, counts.triangles, aabb.size, aabb.position.y, counts.cull])
 		root.free()
 	quit(1 if failures > 0 else 0)
 
@@ -34,6 +34,8 @@ func _count(node: Node, counts: Dictionary) -> void:
 		var mesh: Mesh = node.mesh
 		counts.surfaces += mesh.get_surface_count()
 		for s in mesh.get_surface_count():
+			var material := mesh.surface_get_material(s) as BaseMaterial3D
+			counts.cull.append("none" if material == null else ["back", "front", "disabled"][material.cull_mode])
 			var arrays := mesh.surface_get_arrays(s)
 			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 			if indices.is_empty():

@@ -5,7 +5,8 @@ blender -b --factory-startup --python clean_blender.py -- \
 
 Scales to real size, drops small loose fragments, optionally cuts flat ends on a tile axis,
 decimates to the triangle budget, bakes vertex colour to a texture (CPU Cycles, no GPU),
-smooths by angle, puts the origin at the base centre and exports a GLB. Prints one JSON line.
+rescales so --size is the final extent after trimming, smooths by angle, puts the origin at the
+base centre and exports a single-sided GLB. Prints one JSON line, including inward_faces.
 """
 import argparse
 import json
@@ -23,7 +24,7 @@ def args_after_dashes():
     parser.add_argument("--in", dest="src", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--budget", type=int, required=True)
-    parser.add_argument("--size", type=float, required=True, help="metres along --size-axis")
+    parser.add_argument("--size", type=float, required=True, help="final metres along --size-axis")
     parser.add_argument("--size-axis", default="z", choices=AXES)
     parser.add_argument("--tile-axis", choices=AXES)
     parser.add_argument("--tile-trim", type=float, default=0.04, help="fraction cut from each tile end")
@@ -212,7 +213,75 @@ def bake_texture(hi, lo, size, name):
     links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.8
     bsdf.inputs["Metallic"].default_value = 0.0
+    mat.use_backface_culling = True
     image.pack()
+
+
+def _same_direction(edge):
+    """True when both faces walk the shared edge the same way, which means one of them is flipped."""
+    a, b = edge.verts
+    directions = []
+    for face in edge.link_faces:
+        loop = next(l for l in face.loops if l.edge == edge)
+        directions.append(loop.vert == a)
+    return directions[0] == directions[1]
+
+
+def winding_report(obj):
+    """Per connected island, count faces whose normal points into that island's own solid
+    (a ray along the normal crosses the island an odd number of times), plus open boundary edges.
+    Islands are tested alone so overlapping parts do not flip each other's parity."""
+    from mathutils.bvhtree import BVHTree
+
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.faces.ensure_lookup_table()
+    bm.normal_update()
+    seen = set()
+    islands = []
+    for face in bm.faces:
+        if face.index in seen:
+            continue
+        stack = [face]
+        seen.add(face.index)
+        island = []
+        while stack:
+            f = stack.pop()
+            island.append(f)
+            for edge in f.edges:
+                for other in edge.link_faces:
+                    if other.index not in seen:
+                        seen.add(other.index)
+                        stack.append(other)
+        islands.append(island)
+
+    eps = 1e-4
+    per_island = []
+    for island in islands:
+        verts = list({v for f in island for v in f.verts})
+        slot = {v: i for i, v in enumerate(verts)}
+        tree = BVHTree.FromPolygons([v.co.copy() for v in verts], [[slot[v] for v in f.verts] for f in island])
+        inward = 0
+        for f in island:
+            origin = f.calc_center_median() + f.normal * eps
+            crossings = 0
+            for _ in range(64):
+                hit = tree.ray_cast(origin, f.normal)[0]
+                if hit is None:
+                    break
+                crossings += 1
+                origin = hit + f.normal * eps
+            inward += crossings % 2
+        edges = {e for f in island for e in f.edges}
+        open_edges = sum(1 for e in edges if len(e.link_faces) == 1)
+        nonmanifold = sum(1 for e in edges if len(e.link_faces) > 2)
+        flipped_pairs = sum(1 for e in edges if len(e.link_faces) == 2 and _same_direction(e))
+        per_island.append({
+            "faces": len(island), "inward": inward, "open_edges": open_edges,
+            "nonmanifold_edges": nonmanifold, "inconsistent_edges": flipped_pairs,
+        })
+    bm.free()
+    return per_island
 
 
 def main():
@@ -261,6 +330,13 @@ def main():
 
     bake_texture(hi, lo, a.tex, "trial_img3d")
 
+    lo_b, hi_b = bounds(lo)
+    prescale_dims = hi_b - lo_b
+    final_scale = a.size / prescale_dims[AXES[a.size_axis]]
+    lo.data.transform(Matrix.Scale(final_scale, 4))
+    lo.data.update()
+    winding = winding_report(lo)
+
     select_only(lo)
     bpy.ops.export_scene.gltf(
         filepath=a.out, export_format="GLB", use_selection=True, export_apply=True,
@@ -279,6 +355,12 @@ def main():
         "vertex_colour_baked": has_colour,
         "texture": a.tex,
         "dimensions_m": [round(v, 3) for v in (hi_b - lo_b)],
+        "prescale_dimensions_m": [round(v, 3) for v in prescale_dims],
+        "final_scale": round(final_scale, 4),
+        "inward_faces": sum(i["inward"] for i in winding),
+        "open_edges": sum(i["open_edges"] for i in winding),
+        "inconsistent_edges": sum(i["inconsistent_edges"] for i in winding),
+        "winding_islands": winding,
         "base_z": round(lo_b.z, 4),
     }))
 
