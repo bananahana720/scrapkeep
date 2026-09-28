@@ -32,6 +32,8 @@ var distance_travelled := 0.0
 var previous_position := Vector3.ZERO
 var boss_phase_counts := {}
 var capture_stage := 1
+var with_warden := false
+var warden_frames := 0
 
 
 func _initialize() -> void:
@@ -48,6 +50,7 @@ func _initialize() -> void:
 	samples = clampi(int(settings.get("samples", "1800")), 60, 18000)
 	mode = settings.get("mode", "dense")
 	capture_stage = clampi(int(settings.get("stage", "1")), 1, 3)
+	with_warden = settings.get("with-warden", "false") == "true"
 	if mode not in ["pilots", "traversal", "dense", "boss", "warden"]:
 		quit(2)
 		return
@@ -102,11 +105,14 @@ func _physics_process(delta: float) -> bool:
 	physics_seconds += delta
 	if ticks == 1:
 		game.ctx.calm = mode != "boss"
-		game.flow.force_warden = mode == "warden"
+		game.flow.force_warden = mode == "warden" or with_warden
 		game.flow.press_start()
 		game.flow.choose_class(clampi(int(settings.get("class", "0")), 0, 2))
 		if capture_stage != 1:
 			game.flow.enter_stage(capture_stage, Vector3.ZERO, false)
+		if with_warden and is_instance_valid(game.flow.warden):
+			game.flow.warden.max_hp = 999999.0
+			game.flow.warden.hp = 999999.0
 		game.run.set_max_hp(999999.0)
 		game.player.source = source
 		game.events.shot_fired.connect(func(_id, _from, _to): shots += 1)
@@ -219,6 +225,9 @@ func _frame_drawn() -> void:
 	if last_usec > 0:
 		timings.append(float(now - last_usec) / 1000.0)
 		counts.append(get_nodes_in_group("enemy").size())
+		if with_warden and is_instance_valid(game.flow.warden) and game.flow.warden.hp > 0.0 \
+				and game.flow.warden.find_child("HeroWarden", true, false) != null:
+			warden_frames += 1
 	else:
 		measurement_start = now
 		measured_physics_start = physics_seconds
@@ -274,8 +283,10 @@ func _finish() -> void:
 	var grown: bool = growth_actual.get("heft_class", 1) > 1 and growth_actual.get("chunks", 0) > 0 and growth_actual.get("shell_scale", 1.0) > 1.0
 	var growth_ok: bool = int(settings.get("growth", "0")) == 0 or grown
 	var encounter_ok: bool = (mode == "dense" and not counts.is_empty() and counts.min() >= 30) or (mode == "traversal" and distance_travelled > 100.0) or (mode == "boss" and boss_attacks > 0 and hazard_peak > 0)
-	var qualified: bool = hardware and resolution_ok and encounter_ok and growth_ok and seconds >= 120.0 and duration >= 120.0 and not metadata.get("timed_out", false)
+	var warden_ok: bool = not with_warden or (not timings.is_empty() and warden_frames == timings.size())
+	var qualified: bool = hardware and resolution_ok and encounter_ok and growth_ok and warden_ok and seconds >= 120.0 and duration >= 120.0 and not metadata.get("timed_out", false)
 	metadata.merge({"frame_intervals_ms": timings, "enemy_counts": counts, "physics_ticks": ticks,
+		"with_warden": with_warden, "warden_frames": warden_frames, "warden_criteria_met": warden_ok,
 		"final_monitors": _monitor_snapshot(), "grown_build_verified": grown, "growth_criteria_met": growth_ok,
 		"scene_physics_seconds": physics_seconds, "measured_physics_seconds": physics_seconds - measured_physics_start,
 		"measurement_wall_seconds": duration, "requested_seconds": seconds,
@@ -286,7 +297,7 @@ func _finish() -> void:
 		"rendered_frames": frames, "requested_samples": samples, "warmup_frames": warmup, "p99_ms": p99, "hardware_candidate": hardware,
 		"scenario_criteria_met": encounter_ok, "eligible_scenario_sample": qualified, "eligible_dense_sample": qualified and mode == "dense", "target_ms": 16.7,
 		"target_met": qualified and p99 <= 16.7,
-		"limits": "Staged seeded scenario; inflated player HP; calm mode except boss. Dense replenishes 48 enemies on existing beacon bowl. Traversal uses scripted circular input. Boss enters real phase 3 via dev hook; no prior run progression. Timing includes CPU, GPU pacing, OS scheduling and presentation. Human acceptance and representative full-run performance remain open."})
+		"limits": "Staged seeded scenario; inflated player HP; calm mode except boss. Dense replenishes 48 enemies on existing beacon bowl. Traversal uses scripted circular input. Boss enters real phase 3 via dev hook; no prior run progression. Optional with-warden inflates stage-Warden HP and requires its hero model alive throughout measurement. Timing includes CPU, GPU pacing, OS scheduling and presentation. Human acceptance and representative full-run performance remain open."})
 	var file := FileAccess.open(out.path_join("capture.json"), FileAccess.WRITE)
 	if file == null:
 		printerr("capture.json could not be written")
