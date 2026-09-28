@@ -871,3 +871,84 @@ Option C of `design-v3/LOOP-REDESIGN.md` on stage 1, behind `--loop=laps` (or th
 - Visible from the drop: before the bell, the five rings and three collars stand, and the terrain blocks no sight line from the stage's drop point to any ring's top or to the top collar; the farthest is 176 m. That is a height-field sight line, not a render. Fog, the camera's heading and whether dim bone reads against the sand still need Andrew's eye.
 
 `tests/loop_laps_test.gd` covers the camper, the course standing before the bell with clear sight lines from the drop, the lift's banked speed, the wake, the strip, ring order, the director per lap and v2 untouched.
+## v3 F1a density governor
+
+`design-v3/FEEL-READABILITY.md` §1.1-1.2, §1.3.1, §8, §9 unit F1a. Base `c35af26` on
+`proto/core-loop-v3-f1a`. Serves 5 (Feel) and 6 (Readability): the frame may fill, but
+what fills it is governed, and P0 to P3 (the ball, hostile committed geometry, the three
+reads and the exits, player committed targeting geometry) never are.
+
+1. **The scalar and its bands live in one new file**, `src/presentation/density.gd`:
+   `raw()` is the exact §1.2 formula (0.35 threats/6 + 0.35 fx/40 + 0.3 enemies/12,
+   clamped); `Governor` smooths it with a 0.25 s rise and 0.6 s fall (a linear ramp over
+   that clock, not exponential decay, so it reaches the target in exactly that time); the
+   three-row band table gives `alpha_cap`/`size_cap`/`lifetime_cap`/`ambient_fraction`/
+   `coalesce_window`, plus `alpha_factor`/`size_factor`/`lifetime_factor` normalised so
+   density 0 multiplies by 1.0 (today's look, unchanged when the governor is idle). The
+   typed ledger (`LEDGER`) and the one shed order (`SHED_ORDER`, `active_shed`) are here
+   too, so any later unit reads the same numbers instead of a second counter. `GOVERNED`
+   and `is_shed_exempt` record §1.1's priority table: P0-P3 always exempt, P4 thins only
+   past 0.8 (F4's content, untouched here), P6 unions past four (below), P5/P7 governed
+   continuously.
+2. **No shared runtime instance exists yet.** `game.gd`/`context.gd` are outside this
+   unit's write set, so there is nowhere on `ctx` to hang one `Governor` every module
+   reads. `vfx.gd` and `bolts.gd` each keep their own `Governor` and sample the live scene
+   themselves each frame (nodes in the `enemy` group and `Threat.GROUP`, in the active
+   camera's frustum via `Density.in_view`/`count_in_view`), plus their own idea of
+   "effects alive". Both read the identical formula and bands, so they track together in
+   practice, but a coordinator wave that adds a `ctx.density` slot and feeds one instance
+   through both would remove the duplication. Flag for F3b, which is due to expose
+   density/shed step on the tuning panel next.
+3. **vfx.gd: P5 gets the caps, P4 does not.** `glyph()` applies size/lifetime/alpha caps
+   only to a named P5 set (`P5_KINDS`: `enemy_struck`, `shot_fired`, `slammed`,
+   `synergy_discovered`, matching §1.1's P5 row: hit sparks, slam rings' afterglow,
+   synergy shockwaves), leaving every reward/discovery glyph (`part_gained`,
+   `core_gained`, `beacon_unsealed`, interactables, bets, the synergy ring, and so on)
+   exactly as it drew before, since those are P4 and owned by F4a/F4b. `burst()` (every
+   pool: spark, pop, debris, dust, fountain, all P5) now scales alpha/size/lifetime by
+   density and takes an optional `size_scale` for the coalesced-kill starburst. Trail and
+   speed lines take the alpha cap too; the trail's own most-recent 0.12 s (`TRAIL_FULL_
+   SECONDS`) stays at full alpha regardless of density, since direction is a read, never
+   candy.
+4. **Kill bursts coalesce**, replacing the flat per-kill flash's supporting burst.
+   `enemy_killed` now routes through `_on_killed` -> `_kill_burst`, which either fires an
+   immediate "pop" burst (density's coalesce window is 0 below 0.4, so "one starburst
+   each" holds) or folds a kill into the pending burst when it lands within the band's
+   time and distance window, flushing on the next kill outside the window, a colour
+   change, or the per-frame `_maybe_flush_kill_burst` timeout. The flush scales the
+   burst's `size_scale` by 1.0 + `scale_per_extra` × (kills − 1), capped at `scale_cap`
+   (2.5), matching §1.2's table. No new bus signal: this is presentation-only, reading
+   the existing `enemy_killed` fact.
+5. **bolts.gd stays visual-only.** `_process` (the draw step) multiplies its existing
+   `crowd_alpha` by `Density.alpha_factor` and scales bolt width/streak length by
+   `Density.size_factor`; `step()` (collision, damage, `on_hit`) is untouched, and
+   `presentation_density_test.gd`'s parity check calls `_first_enemy` directly at density
+   0.0 and 1.0 and asserts an identical hit (enemy, part, point, along) with only the
+   drawn alpha differing.
+6. **threat_grammar.gd: the union past four (§1.3.1).** New pure functions
+   (`overlap_clusters`, `union_fill_marks_for`, `suppressed_roles`, `roles_after_union`)
+   cluster hostile descriptors by footprint overlap and, past four members in a cluster,
+   return one shared `fill_union` mark plus the roles (`area`, `fill`, `swept`, `run`)
+   each member should stop drawing on its own. They are pure over the descriptor list a
+   caller supplies (never mutate one), so `contains()` and every damage-relevant field
+   stay untouched; `threat_grammar_test.gd` checks this both ways (5 overlapping fills
+   union, 4 do not) and confirms `contains()` before and after. Wiring this into the live
+   per-node `Painter` pipeline needs `telegraph.gd`/`hazard.gd` (aggregating the actual
+   in-view set across separately-owned Painter instances), both outside this unit's
+   write set; that wiring is the coordinator's or a later F1b/F6 pass.
+7. **What is deferred or approximate, for the reviewer.** The chain counter's per-kill
+   pop (§1.1's "chain bursts") is not capped here; it lives partly in this file's pip
+   ring, which reads as more instrumentation (P2/P3-adjacent) than candy, and F2a owns
+   the actual chain counter box. P4's "thin past 0.8" is not implemented anywhere in this
+   unit, on purpose (F4a/F4b's content). `ambient_fraction` has no P7 emitter to drive
+   yet (no ambient dust/steam/heat-shimmer exists in this sketch); it is exposed for
+   whichever unit adds one.
+
+**Checks.** `presentation_density_test.gd`: the governor rises and falls on its own
+clock (rise faster than fall), P0-P3 report exempt while P4-P7 do not, `SHED_ORDER` is
+exact and `active_shed` is always an ordered, non-decreasing prefix of it from 0 at
+density 0.4 to all five steps at 1.0, and bolts.gd's hit resolution is identical at
+density 0.0 and 1.0 while its drawn alpha differs. `threat_grammar_test.gd` gained the
+union checks in point 6. Both are headless schema/control-flow checks, per §6: they
+cannot say whether the coalesced starburst or the union reads right in motion; that is
+the dense moving-footage gate in §6.4, downstream of this unit.

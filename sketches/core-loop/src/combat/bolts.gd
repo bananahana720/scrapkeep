@@ -11,6 +11,15 @@ extends Node3D
 #   spiral-and-cross build thickens into a haze, never a wall.
 # - Bolts draw at PRIORITY, below every enemy telegraph (Telegraph.PRIORITY), and never
 #   in HAZARD, the colour telegraphs own.
+#
+# v3 F1a adds the density governor (FEEL-READABILITY.md §1.2) on top of crowd_alpha:
+# past a dense fight, bolts fade and thin a little further and their streaks shorten.
+# This module samples density itself (threats/enemies in view, its own live count), and
+# every cap below touches only `_process`'s draw, never `step`'s collision math: a bolt
+# still travels, hits and reports exactly the same regardless of density.
+
+const Density := preload("res://src/presentation/density.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 const MAX_LIVE := 64
 const PRIORITY := 0
@@ -33,9 +42,13 @@ var on_stop: Callable
 var peak_live := 0
 var retired := 0
 var fired := 0
+# v3 F1a: the density governor, sampled from the live scene each frame (§1.2). Read by
+# _process only; step()'s hit-detection math never looks at it.
+var density := 0.0
 
 var _bolts: Array = []
 var _multimesh: MultiMesh
+var _density_gov := Density.Governor.new()
 
 
 func setup() -> void:
@@ -192,19 +205,34 @@ func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array)
 	return best
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_density(delta)
 	var count := _bolts.size()
 	_multimesh.visible_instance_count = count
 	if count == 0:
 		return
-	var alpha := crowd_alpha(count)
+	var alpha := crowd_alpha(count) * Density.alpha_factor(density)
+	var size_scale := Density.size_factor(density)
 	for i in count:
 		var bolt: Dictionary = _bolts[i]
 		var dir: Vector3 = bolt["dir"]
-		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"]))
+		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * size_scale
+		var width := WIDTH * size_scale
 		var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
-		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(WIDTH, WIDTH, streak))
+		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(width, width, streak))
 		var head: Vector3 = bolt["shown"]
 		_multimesh.set_instance_transform(i, Transform3D(basis, head - dir * streak * 0.5))
 		var tint: Color = bolt["color"]
 		_multimesh.set_instance_color(i, Color(tint, alpha))
+
+
+# Threats and enemies in the active camera's view, plus this pool's own live count, feed
+# the same formula every module reads (density.gd). Draw-only; never consulted by step().
+func _update_density(delta: float) -> void:
+	var camera3d: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() and get_viewport() != null else null
+	var threats := 0
+	var enemies := 0
+	if is_inside_tree():
+		threats = Density.count_in_view(camera3d, get_tree().get_nodes_in_group(Threat.GROUP))
+		enemies = Density.count_in_view(camera3d, get_tree().get_nodes_in_group("enemy"))
+	density = _density_gov.update(delta, threats, live(), enemies)

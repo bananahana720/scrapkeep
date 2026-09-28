@@ -47,6 +47,7 @@ func _process(_delta: float) -> bool:
 	_check_wave()
 	_check_sweep()
 	_check_projectile()
+	_check_union()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -132,6 +133,43 @@ func _check_grammars() -> void:
 		"brackets and pip centre on %s, the committed landing contains() tests" % [shell.center])
 	for node in nodes:
 		node.free()
+
+
+# v3 F1a §1.3.1: past four overlapping hostile fills, they union into one shared mark
+# and each member keeps only its edge/front/bracket/rail; contains() (the damage test)
+# never changes, since the union functions are pure over descriptors and never touch a
+# threat node.
+func _check_union() -> void:
+	var at := Vector3(200.0, 0.0, 0.0)
+	var five: Array = []
+	for i in 5:
+		five.append(Telegraph.ring(_world, _ground, Threat.Type.INSTANT, at, 6.0))
+	var descs: Array = five.map(func(n): return n.descriptor())
+	var before_contains: bool = five[0].contains(at)
+	var union_marks := Threat.union_fill_marks_for(descs)
+	var suppressed := Threat.suppressed_roles(descs)
+	var after_contains: bool = five[0].contains(at)
+	var kept: Array = Threat.roles_after_union(descs, 0)
+	var expect_kept := ["band", "band_top", "edge", "solid"]
+	_report("five overlapping fills union", union_marks.size() == 1 and union_marks[0]["role"] == "fill_union"
+			and union_marks[0].get("members", 0) == 5 and suppressed.size() == 5 and kept == expect_kept
+			and before_contains and after_contains,
+		"5 overlapping INSTANT hostile fills at %s produce %d union mark(s) covering %s member(s); each keeps only %s; contains() reads %s before and %s after"
+			% [at, union_marks.size(), union_marks[0].get("members", -1) if not union_marks.is_empty() else -1, kept, before_contains, after_contains])
+	for n in five:
+		n.free()
+
+	var four: Array = []
+	for i in 4:
+		four.append(Telegraph.ring(_world, _ground, Threat.Type.INSTANT, at, 6.0))
+	var four_descs: Array = four.map(func(n): return n.descriptor())
+	var no_union := Threat.union_fill_marks_for(four_descs)
+	var no_suppression := Threat.suppressed_roles(four_descs)
+	_report("four overlapping fills do not union", no_union.is_empty() and no_suppression.is_empty(),
+		"the union rule is 'past four', so 4 overlapping fills draw as before: %d union marks, %d suppressed members"
+			% [no_union.size(), no_suppression.size()])
+	for n in four:
+		n.free()
 
 
 func _check_stances() -> void:

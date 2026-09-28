@@ -189,6 +189,125 @@ static func roles(d: Dictionary) -> Array:
 	return out
 
 
+# --- Hostile fills at scale: union past four overlapping (§1.3.1, F1a) -----------------
+# RR-06 already says overlapping fills add no brightness (_area_tone flattens a hostile
+# fill to white so the stripe texture, not additive alpha, carries it). This extends
+# that: past four overlapping hostile fills in view, they draw as one shared union at
+# FILL_ALPHA and each member keeps only its edge, front, bracket and rail marks. These
+# functions are pure over a list of descriptors (never mutate one), so a caller viewing
+# the current frame's hostile threats can ask what to union and what to hide, while
+# every descriptor's own fields, and so contains(), are untouched.
+
+# Roles a unioned member no longer draws for itself; the shared union mark stands in.
+const SUPPRESSED_BY_UNION := ["area", "fill", "swept", "run"]
+
+
+static func _centre_of(d: Dictionary) -> Vector3:
+	if d["form"] == "lane":
+		var back: float = d["back"]
+		var length: float = d["length"]
+		return (d["centre"] as Vector3) + (d["dir"] as Vector3) * (length - back) * 0.5
+	return d["centre"]
+
+
+static func _extent_of(d: Dictionary) -> float:
+	if d["form"] == "lane":
+		return maxf(float(d["length"]) + float(d["back"]), float(d["half_width"])) * 0.5 + 1.0
+	return float(d["r_out"])
+
+
+static func _bounds_overlap(a: Dictionary, b: Dictionary) -> bool:
+	return _centre_of(a).distance_to(_centre_of(b)) <= _extent_of(a) + _extent_of(b)
+
+
+static func _find(parent: Array, x: int) -> int:
+	var at := x
+	while parent[at] != at:
+		at = parent[at]
+	return at
+
+
+# Clusters descriptors whose footprints touch (union-find over pairwise overlap).
+# Returns an Array of Array[int], each the indices (into `descriptors`) of one cluster.
+static func overlap_clusters(descriptors: Array) -> Array:
+	var n := descriptors.size()
+	var parent: Array = []
+	for i in n:
+		parent.append(i)
+	for i in n:
+		for j in range(i + 1, n):
+			if _bounds_overlap(descriptors[i], descriptors[j]):
+				var ri := _find(parent, i)
+				var rj := _find(parent, j)
+				if ri != rj:
+					parent[ri] = rj
+	var groups := {}
+	for i in n:
+		var r := _find(parent, i)
+		if not groups.has(r):
+			groups[r] = []
+		groups[r].append(i)
+	return groups.values()
+
+
+static func _hostile_indices(descriptors: Array) -> Array:
+	var out: Array = []
+	for i in descriptors.size():
+		if stance(descriptors[i]["tone"]) == "hostile":
+			out.append(i)
+	return out
+
+
+# One shared "fill_union" mark per cluster of more than four overlapping hostile fills,
+# covering their combined footprint at FILL_ALPHA in white (the stripe texture carries
+# the hostile read, same as a single fill). Empty when no cluster exceeds four.
+static func union_fill_marks_for(descriptors: Array) -> Array:
+	var out: Array = []
+	var hostile_idx := _hostile_indices(descriptors)
+	var hostile_descs: Array = []
+	for i in hostile_idx:
+		hostile_descs.append(descriptors[i])
+	for group in overlap_clusters(hostile_descs):
+		if group.size() > cap_hostile_union():
+			var tris := PackedVector3Array()
+			for gi in group:
+				tris.append_array(_footprint(hostile_descs[gi]))
+			out.append(_mark("fill_union", "stripe", Color(1.0, 1.0, 1.0, FILL_ALPHA), tris, {"members": group.size()}))
+	return out
+
+
+static func cap_hostile_union() -> int:
+	return 4
+
+
+# index into `descriptors` -> the roles that member should stop drawing because the
+# shared union mark (above) replaces them. Edge, front, bracket, rail and owner marks
+# are never in this list.
+static func suppressed_roles(descriptors: Array) -> Dictionary:
+	var out := {}
+	var hostile_idx := _hostile_indices(descriptors)
+	var hostile_descs: Array = []
+	for i in hostile_idx:
+		hostile_descs.append(descriptors[i])
+	for group in overlap_clusters(hostile_descs):
+		if group.size() > cap_hostile_union():
+			for gi in group:
+				out[hostile_idx[gi]] = SUPPRESSED_BY_UNION.duplicate()
+	return out
+
+
+# roles(d) with any union-suppressed role removed, for a descriptor at `index` in the
+# same-frame `descriptors` list this member belongs to.
+static func roles_after_union(descriptors: Array, index: int) -> Array:
+	var d: Dictionary = descriptors[index]
+	var all := roles(d)
+	var suppressed: Dictionary = suppressed_roles(descriptors)
+	if not suppressed.has(index):
+		return all
+	var drop: Array = suppressed[index]
+	return all.filter(func(r): return not r in drop)
+
+
 # --- The four types ----------------------------------------------------------------
 
 static func _instant(d: Dictionary, motion: bool, out: Array) -> void:

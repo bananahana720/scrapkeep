@@ -8,6 +8,8 @@ const Augments := preload("res://src/movement/augments.gd")
 const EdgeFlash := preload("res://src/presentation/edge_flash.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Density := preload("res://src/presentation/density.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -41,6 +43,14 @@ const BURSTS := {
 const PIPS := 8
 const PIP_RADIUS := 0.9
 const PIP_HEIGHT := 2.5
+# v3 F1a: the P5 kinds this module's glyph() draws (FEEL-READABILITY.md §1.1's P5 row:
+# hit sparks, kill pops, slam rings' afterglow, synergy shockwaves). Every other kind
+# glyph() draws is a one-off reward or discovery reveal (P4), owned by a later unit and
+# left ungoverned here. A dictionary stands in for a set.
+const P5_KINDS := {"enemy_struck": true, "shot_fired": true, "slammed": true, "synergy_discovered": true}
+# The trail's own first TRAIL_FULL_SECONDS stay at full alpha regardless of density: the
+# ball's direction is a read, never candy (§1.2).
+const TRAIL_FULL_SECONDS := 0.12
 
 var ctx
 var player
@@ -71,6 +81,13 @@ var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
 var edge: Control
+# v3 F1a: the density governor (FEEL-READABILITY.md §1.2). Sampled here each frame from
+# threats/enemies in view and this module's own effects alive, so every P5 burst, trail
+# and speed line reads one number without another file wiring it in.
+var _density_gov := Density.Governor.new()
+var _density := 0.0
+# One coalesced kill starburst in flight: {"at", "time", "count", "color"}, or empty.
+var _pending_kill := {}
 
 
 func setup(ctx_ref) -> void:
@@ -115,7 +132,7 @@ func setup(ctx_ref) -> void:
 	events.grapple_fired.connect(func(anchor: Vector3): glyph("grapple_fired", anchor, 0.25, 0.7, 0.25))
 	events.shot_fired.connect(_on_shot)
 	events.enemy_struck.connect(_on_struck)
-	events.enemy_killed.connect(func(_kind: String, at: Vector3, _value: int): glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6, 1.8, 0.3))
+	events.enemy_killed.connect(_on_killed)
 	events.scrap_collected.connect(_on_scrap)
 	events.part_gained.connect(func(_id: String, _source: String): glyph("part_gained", player.ball_position() + Vector3.UP * 2.2, 0.4, 1.1, 0.5))
 	events.milestone_won.connect(func(_id: String): glyph("milestone_won", player.ball_position() + Vector3.UP * 2.5, 0.5, 1.6, 0.7))
@@ -313,6 +330,7 @@ func clear() -> void:
 	_chain = 0
 	_trail_points.clear()
 	_streaks.clear()
+	_pending_kill = {}
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 
@@ -378,6 +396,15 @@ static func _star_mesh(spokes: int, thickness: float, length: float) -> ArrayMes
 func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: float, facing := Vector3.ZERO, shape := "", color_override := Color(0, 0, 0, 0)) -> void:
 	if root == null or not root.is_inside_tree():
 		return
+	# v3 F1a: P5 kinds (hit sparks, slam afterglow, synergy shockwaves) read the density
+	# governor's size/lifetime/alpha caps; every other kind here is a P4 reward reveal,
+	# out of this unit's write set, and stays exactly as it drew before.
+	var governed: bool = P5_KINDS.has(kind)
+	if governed:
+		var size_scale := Density.size_factor(_density)
+		size_from *= size_scale
+		size_to *= size_scale
+		life *= Density.lifetime_factor(_density)
 	var silhouette: String = shape if shape != "" else Rows.shape(kind)
 	var slot: Dictionary = _glyphs[0]
 	for g in _glyphs:
@@ -390,7 +417,10 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	node.mesh = _meshes.get(silhouette, _meshes["flash"])
 	node.global_position = at
 	slot["basis"] = _facing_basis(silhouette, facing)
-	slot["color"] = color_override if color_override.a > 0.0 else Rows.color(kind)
+	var tint: Color = color_override if color_override.a > 0.0 else Rows.color(kind)
+	if governed:
+		tint = Color(tint.r, tint.g, tint.b, tint.a * Density.alpha_factor(_density))
+	slot["color"] = tint
 	slot["t"] = 0.0
 	slot["life"] = maxf(0.05, life)
 	slot["from"] = size_from
@@ -475,6 +505,83 @@ func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4, clampf(0.8 + force * 0.03, 0.8, 1.6), 0.14)
 
 
+# The kill flash stays as it was; the density-aware starburst (coalesced at high density,
+# §1.2) is the "one bigger shape, not many" §1.5 asks for on a chain.
+func _on_killed(_kind: String, at: Vector3, _value: int) -> void:
+	glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6, 1.8, 0.3)
+	_kill_burst(at, Rows.color("enemy_killed"))
+
+
+# --- v3 F1a: kill-burst coalescing (§1.2) -------------------------------------------------
+
+# Below density 0.4 every kill gets its own starburst. Past that, kills within the
+# band's window (time and distance) share one burst, scaled by the extra kill count and
+# capped, so a chain reads as one bigger shape rather than a stack of small ones.
+func _kill_burst(at: Vector3, color: Color) -> void:
+	var win := Density.coalesce_window(_density)
+	var window_s: float = float(win["ms"]) / 1000.0
+	if window_s <= 0.0:
+		_flush_kill_burst()
+		burst("pop", at, color, int(BURSTS["pop"]["max"]))
+		return
+	var window_m: float = float(win["metres"])
+	if not _pending_kill.is_empty() and _clock - float(_pending_kill["time"]) <= window_s \
+			and at.distance_to(_pending_kill["at"]) <= window_m:
+		_pending_kill["count"] = int(_pending_kill["count"]) + 1
+		_pending_kill["at"] = at
+		_pending_kill["time"] = _clock
+		_pending_kill["color"] = color
+		return
+	_flush_kill_burst()
+	_pending_kill = {"at": at, "time": _clock, "count": 1, "color": color}
+
+
+func _flush_kill_burst() -> void:
+	if _pending_kill.is_empty():
+		return
+	var win := Density.coalesce_window(_density)
+	var extra: int = maxi(0, int(_pending_kill["count"]) - 1)
+	var scale: float = clampf(1.0 + float(win["scale_per_extra"]) * extra, 1.0, float(win["scale_cap"]))
+	burst("pop", _pending_kill["at"], _pending_kill["color"], int(BURSTS["pop"]["max"]), scale)
+	_pending_kill = {}
+
+
+func _maybe_flush_kill_burst() -> void:
+	if _pending_kill.is_empty():
+		return
+	var window_s: float = float(Density.coalesce_window(_density)["ms"]) / 1000.0
+	if _clock - float(_pending_kill["time"]) > maxf(window_s, 0.001):
+		_flush_kill_burst()
+
+
+# --- v3 F1a: the density governor itself -------------------------------------------------
+
+func density() -> float:
+	return _density
+
+
+func _effects_alive() -> int:
+	var count := 0
+	for g in _glyphs:
+		if g["t"] < 1.0:
+			count += 1
+	for kind in _bursts:
+		for p in _bursts[kind]:
+			if p.emitting:
+				count += 1
+	return count
+
+
+func _update_density(delta: float) -> void:
+	var camera3d: Camera3D = camera.cam if camera != null else null
+	var threats := 0
+	var enemies := 0
+	if is_inside_tree():
+		threats = Density.count_in_view(camera3d, get_tree().get_nodes_in_group(Threat.GROUP))
+		enemies = Density.count_in_view(camera3d, get_tree().get_nodes_in_group("enemy"))
+	_density = _density_gov.update(delta, threats, _effects_alive(), enemies)
+
+
 # --- Scrap sparkles ------------------------------------------------------------------------
 
 func _make_sparkle() -> CPUParticles3D:
@@ -549,6 +656,8 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	_launch_boost = maxf(0.0, _launch_boost - delta)
+	_update_density(delta)
+	_maybe_flush_kill_burst()
 	for g in _glyphs:
 		if g["t"] >= 1.0:
 			continue
@@ -584,6 +693,7 @@ func _draw_trail(tier: int) -> void:
 	var color: Color = SpeedTier.COLORS[tier]
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	var count := _trail_points.size()
+	var alpha_factor := Density.alpha_factor(_density)
 	for i in count:
 		var p: Vector3 = _trail_points[i][0]
 		var along: Vector3 = _trail_points[maxi(i - 1, 0)][0] - _trail_points[mini(i + 1, count - 1)][0]
@@ -591,6 +701,11 @@ func _draw_trail(tier: int) -> void:
 			along = Vector3.FORWARD
 		var side := along.cross(eye - p).normalized() * width * (1.0 - float(i) / count)
 		var fade := (1.0 - float(i) / count) * 0.55
+		# The trail's own first TRAIL_FULL_SECONDS ignore the governor: direction is a
+		# read, never candy (§1.2).
+		var age: float = _clock - float(_trail_points[i][1])
+		if age >= TRAIL_FULL_SECONDS:
+			fade *= alpha_factor
 		mesh.surface_set_color(Color(color.r, color.g, color.b, fade))
 		mesh.surface_add_vertex(p + side)
 		mesh.surface_set_color(Color(color.r, color.g, color.b, fade))
@@ -622,6 +737,8 @@ func _draw_lines(tier: int, delta: float) -> void:
 	while _streaks.size() > wanted:
 		_streaks.pop_back()
 	var color: Color = SpeedTier.COLORS[tier]
+	# Speed lines are P5 (§1.1): density caps their alpha the same way as trail and burst.
+	var head_alpha := 0.5 * Density.alpha_factor(_density)
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	for streak in _streaks:
 		# Each streak slides back past the ball and wraps to the front of the sleeve.
@@ -632,7 +749,7 @@ func _draw_lines(tier: int, delta: float) -> void:
 		var ring: Vector3 = (right * cos(streak["angle"]) + up * sin(streak["angle"])) * streak["radius"]
 		var head: Vector3 = at + ring + dir * streak["offset"]
 		var tail: Vector3 = head - dir * streak["length"] * (0.6 + 0.2 * tier)
-		mesh.surface_set_color(Color(color.r, color.g, color.b, 0.5))
+		mesh.surface_set_color(Color(color.r, color.g, color.b, head_alpha))
 		mesh.surface_add_vertex(head)
 		mesh.surface_set_color(Color(color.r, color.g, color.b, 0.0))
 		mesh.surface_add_vertex(tail)
@@ -691,8 +808,11 @@ func _build_bursts() -> void:
 		_burst_next[kind] = 0
 
 
-# One pooled burst: the oldest emitter of its kind restarts here in this colour.
-func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
+# One pooled burst: the oldest emitter of its kind restarts here in this colour. Every
+# burst kind is P5 (§1.1: hit sparks, kill pops, slam/blast debris and dust), so density
+# caps its alpha, size and lifetime (§1.2); size_scale layers the coalesced-kill scale
+# (up to 2.5x, §1.2) on top of that cap.
+func burst(kind: String, at: Vector3, color: Color, count: int, size_scale := 1.0) -> void:
 	if not _bursts.has(kind) or count <= 0 or root == null or not root.is_inside_tree():
 		return
 	var pool: Array = _bursts[kind]
@@ -701,8 +821,12 @@ func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 	var amount := mini(count, int(BURSTS[kind]["max"]))
 	if p.amount != amount:
 		p.amount = amount
+	var scale := Density.size_factor(_density) * size_scale
+	p.scale_amount_min = 0.6 * scale
+	p.scale_amount_max = 1.2 * scale
+	p.lifetime = float(BURSTS[kind]["life"]) * Density.lifetime_factor(_density)
 	p.global_position = at
-	p.color = color
+	p.color = Color(color.r, color.g, color.b, color.a * Density.alpha_factor(_density))
 	p.restart()
 	p.emitting = true
 	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1
