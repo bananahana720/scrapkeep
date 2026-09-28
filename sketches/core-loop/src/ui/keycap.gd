@@ -6,9 +6,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # A drawn key, named by its key glyph id (key_f, key_lmb, key_1). The ability bar, the
 # contextual glyphs, the callouts, the restart meter and the menu buttons all draw keys
-# here, so a key looks the same wherever it asks. A key whose SVG exists draws the SVG;
-# otherwise a keycap is drawn (a charcoal cap with a thicker bottom lip and its label)
-# or, for a mouse button, the placeholder mouse body.
+# here, so a key looks the same wherever it asks. A mouse button draws its SVG; every
+# other key is a drawn keycap (a charcoal cap with a thicker bottom lip and its label).
 
 const MOUSE := ["key_lmb", "key_rmb"]
 const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab"}
@@ -17,6 +16,10 @@ const PAD := 7.0
 
 static func is_mouse(key: String) -> bool:
 	return key in MOUSE
+
+
+static func from_svg(key: String) -> bool:
+	return is_mouse(key)
 
 
 # The letters on the cap: key_f reads F, key_space reads Space.
@@ -39,8 +42,11 @@ static func size_of(key: String, height := 24.0) -> Vector2:
 static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, height := 24.0) -> Rect2:
 	var size := size_of(key, height)
 	var rect := Rect2(at - size * 0.5, size)
-	if is_mouse(key) or Icons.from_file(key):
-		var side := height if is_mouse(key) else size.x
+	# Only the mouse glyphs draw from their SVG. Every key SVG spells its letter with
+	# <text>, which Godot's SVG import drops, so a key drawn from its file came out as a
+	# blank cap (seen in the alpha captures on F, 1, 2, N, Q and Tab).
+	if from_svg(key):
+		var side := height
 		canvas.draw_texture_rect(Icons.texture(key), Rect2(at - Vector2(side, height) * 0.5, Vector2(side, height)), false, Icons.tint(key, color))
 		return rect
 	var box := StyleBoxFlat.new()
