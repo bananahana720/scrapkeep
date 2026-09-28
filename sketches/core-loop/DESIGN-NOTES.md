@@ -732,3 +732,17 @@ W7 builds DESIGN-V2 sections 10, 11 and 15's enemies (TRACKING EV-0588, light pl
 17. **pack_arrived.** The director times a pack's members on one ring, so combat reads every reinforcement spawned in one frame as one pack and publishes `pack_arrived(faction, at, kinds)` once per faction. `EventKinds.faction_icon(faction)` is the edge marker's badge. Demand: the Warden run. Serves 3 and 6.
 18. **The plating dress.** "Breaks now" is a class-colour rim with an open-crack glyph, "not yet" closed dark plates, and the clank ladder is unchanged (primer ruling 6). `fleet.gd` sets the rim colour from the run's class row every tick. Demand: the Warden, the brute and the vault. Serves 5.
 19. **Eleven bus facts, not yet heard.** `hold_started`, `hold_broken`, `hold_ended`, `tenacity_gained`, `pack_arrived`, `shield_vaulted`, `vent_charging`, `vent_erupted`, `swarm_scattered`, `mind_adapted` and `weak_point_opened` each have an event row with a baked stand-in. `presentation_sfx_test` requires presentation to listen to every signal, and `src/presentation` is outside W7's files, so the hand-back requests the audio.gd block W3 wrote for its own facts. Demand: none.
+
+
+## v2 W5b music layers
+
+`music_engine.gd` already had four layer setters nobody called: `set_fleet_ticks`, `set_reactor_pedal`, `set_class_motif` and `set_lounge`. `audio.gd` now wires them to the bus, per DESIGN-V2 section 11's audio rulings and SOUND-STORY section 8.
+
+1. **`threat_rose(tier)` raises the Fleet layer.** The existing `on_beat("threat_rose", ...)` stinger now also calls `set_fleet_ticks(tier)`, so the anvil and brass add one layer per difficulty tick instead of only stinging once. Serves 6.
+2. **The reactor relic is the only ancient that colours the band.** `vent_charging` and `vent_erupted` moved out of the generic `ENEMY_KINDS` bind (which only played their stand-in cue) into their own listener, so each also sets the tritone pedal on and off. Only the reactor's vent touches `reactor_pedal`; swarms and the Mind stay effects-only, as ruled. Serves 6.
+3. **`run_started(class_id)` seeds the counter-line.** The direct connect used `_class_id` for nothing but a flow-queue phrase; it now calls `set_class_motif(class_id)` too. Serves 6.
+4. **Moss's lounge follows the bay.** `bay_entered` and `bay_left` had no listener at all; each now calls `set_lounge` and plays its row's stand-in cue (`pylon_plant` / `pylon_eject`), so the sax-led re-voicing masks the stage theme while the ball is banked and drops away when it leaves. Serves 6.
+5. **A pedal never sticks.** `fleet_ticks` and `reactor_pedal` reset at `run_started` and at every `stage_entered` (alongside the existing beacon and combo resets), and `run_ended` also clears the pedal directly, so a run or stage change can never carry a stale layer into the next one. Serves 2 and 6.
+6. **`presentation_sfx_test`'s merge seam.** W6's `world_fact(kind, at)` and W7's `bay_entered`/`bay_left` had no presentation listener at all, so the base commit's "every signal heard" check named all three unheard. `bay_entered`/`bay_left` are covered by item 4 above; `world_fact` now plays `EventKinds.WORLD_ROWS[kind]`'s sound, or stays quiet when the kind has no row (the same empty-override skip `play()` already does elsewhere). Demand: none, closes the seam.
+
+No `music_engine.gd` setter needed a fix; the four already did what SOUND-STORY.md describes.

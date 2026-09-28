@@ -59,9 +59,11 @@ const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "ga
 	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
 	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked"]
 # v2 W7 enemies: holds, tenacity, packs and the ancients' tells. Each plays its event
-# row's sound through the same wiring as the character facts.
+# row's sound through the same wiring as the character facts. vent_charging and
+# vent_erupted also drive the reactor pedal (v2 W5b), so they get their own listener
+# below instead of the generic bind.
 const ENEMY_KINDS := ["hold_started", "hold_broken", "hold_ended", "tenacity_gained", "pack_arrived",
-	"shield_vaulted", "vent_charging", "vent_erupted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
+	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
 
 var ctx
 var engine: MusicEngine
@@ -406,13 +408,17 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 # --- Facts --------------------------------------------------------------------------
 
 func _connect_all(events) -> void:
-	events.run_started.connect(func(_class_id: String):
+	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
+		engine.set_class_motif(class_id)
+		engine.set_fleet_ticks(0)
 		_flow_queue.append(["run"]))
 	events.flow_changed.connect(_on_flow_changed)
 	events.stage_entered.connect(_on_stage_entered)
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
-	events.run_ended.connect(func(won: bool): _flow_queue.append(["end", won]))
+	events.run_ended.connect(func(won: bool):
+		engine.set_reactor_pedal(false)
+		_flow_queue.append(["end", won]))
 	events.beacon_charge_changed.connect(_on_beacon)
 	events.scrap_collected.connect(_on_scrap)
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
@@ -452,7 +458,29 @@ func wire_optional() -> void:
 	_listen(events, "heft_class_dropped", _on_heft_dropped)
 	_listen(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
 	_listen(events, "strike_deflected", _on_deflected)
-	_listen(events, "threat_rose", func(tier: int): on_beat("threat_rose", minf(tier, 3) * 1.0))
+	_listen(events, "threat_rose", func(tier: int):
+		on_beat("threat_rose", minf(tier, 3) * 1.0)
+		engine.set_fleet_ticks(tier))
+	# The reactor relic is the only ancient that colours the band: a tritone pedal
+	# under the sub while its vent charges (DESIGN-V2 section 11 audio rulings).
+	_listen(events, "vent_charging", func(_at: Vector3, _seconds: float):
+		play("vent_charging")
+		engine.set_reactor_pedal(true))
+	_listen(events, "vent_erupted", func(_at: Vector3):
+		play("vent_erupted")
+		engine.set_reactor_pedal(false))
+	# Moss's lounge is a layer mask over the stage theme, entered and left with the
+	# bay (SOUND-STORY.md section 8).
+	_listen(events, "bay_entered", func(_banked_speed: float):
+		play("bay_entered")
+		engine.set_lounge(true))
+	_listen(events, "bay_left", func(_velocity: Vector3):
+		play("bay_left")
+		engine.set_lounge(false))
+	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
+	# no row plays nothing, since play() already skips an empty sound override.
+	_listen(events, "world_fact", func(kind: String, _at: Vector3):
+		play("world_fact", 0.0, 1.0, "SFX", String(EventKinds.world_row(kind).get("sound", ""))))
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
@@ -585,6 +613,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_beacon_rung = -1
 	_gates_announced = false
 	_scrap_combo = 0
+	# Each stage starts its own difficulty clock and never carries a vent pedal over.
+	engine.set_fleet_ticks(0)
+	engine.set_reactor_pedal(false)
 	_flow_queue.append(["stage", stage, retry])
 
 
