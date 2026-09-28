@@ -66,6 +66,9 @@ const TRIM_DB := {
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
 	"near_whoosh": -6.0, "crit_ping": -7.0, "kest_kick_thump": 0.0,
+	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
+	# and the burst's resolve.
+	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -334,6 +337,24 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_noise(0.05, 2500.0, 900.0, 60.0), 0, 0.6], [_fm(0.25, 523.0, 2.76, 2.0, 14.0), Synth.seconds(0.06), 0.35]], true)
 		"babble":
 			return babble("Hm. Hm, hm.", BABBLE_LEVEL)
+		"rarity_tick":
+			# A common find: one mallet tick on D with a glassy top. Pitched up the reward
+			# ladder by rarity, like every rarity cue.
+			return _mix([[_cut(_n("mallet", 74), 0.14), 0, 0.9], [_noise(0.015, 7000.0, 5000.0, 250.0), 0, 0.3]])
+		"rarity_bell":
+			# A rare flare: bells climbing D, A, D with a shimmer on the last, rung higher the
+			# rarer the part. The payoff rings the same bell, so the change sounds like the find.
+			return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.7], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.06), 0.8],
+				[_cut(_n("bell", 86), 0.5), Synth.seconds(0.12), 1.0], [_fm(0.5, _hz(98), 3.5, 1.0, 7.0), Synth.seconds(0.12), 0.25]])
+		"reveal_clank":
+			# The reveal card: a salvaged plate dropped on the bench, then its stamp rings a fifth.
+			return _mix([[_fm(0.25, 196.0, 1.41, 3.0, 14.0), 0, 0.6], [_tone(0.1, 140.0, 70.0, "sine", 30.0), 0, 0.8],
+				[_noise(0.04, 3000.0, 1200.0, 70.0), 0, 0.4], [_cut(_n("mallet", 81), 0.2), Synth.seconds(0.07), 0.8],
+				[_cut(_n("bell", 86), 0.45), Synth.seconds(0.15), 0.9]])
+		"ceremony_build":
+			return _ceremony_build()
+		"ceremony_resolve":
+			return Synth.render_score(_score_ceremony_resolve(), 1.2)
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -403,6 +424,37 @@ static func _score_synergy() -> Array:
 		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.4], [8, 38, 8, "sub", 0.6], [12, 81, 2, "bell", 0.35],
 		[13, 86, 3, "bell", 0.35]])
 	return score
+
+
+# The crate shakes for sixteen steps (about 1.4 s, the ceremony row's build_s): toms
+# closing in, hats then a snare roll into the burst, and bells climbing the D minor
+# pentatonic a rung every two steps, over a breath of air that swells to the lid.
+static func _ceremony_build() -> PackedFloat32Array:
+	var score := []
+	for t in [[0, 45], [4, 47], [8, 50], [10, 52], [12, 53], [13, 55], [14, 57], [15, 60]]:
+		score.append([t[0], t[1], 1, "tom", 0.55 + 0.017 * t[0]])
+	for s in range(8, 12):
+		score.append([s, 0, 1, "hat", 0.25])
+	for s in range(12, 16):
+		score.append([s, 0, 1, "snare", 0.3 + 0.12 * (s - 12)])
+	var climb := [62, 65, 67, 69, 72, 74, 77, 79]
+	for i in climb.size():
+		score.append([i * 2, climb[i], 2, "bell", 0.28 + 0.04 * i])
+	var n := Synth.score_step * 16
+	var air := _noise(float(n) / RATE, 400.0, 5200.0, 0.0, 0.001)
+	for i in n:
+		var x := float(i) / n
+		air[i] *= x * x
+	return _mix([[Synth.render_score(score, 0.05), 0, 1.0], [air, 0, 0.3]])
+
+
+# The lid bursts on a D chord with a kick and a crash, then a little tune walks A, B, C up
+# to the home D: a rice cooker's end-of-cycle song, resolved.
+static func _score_ceremony_resolve() -> Array:
+	return [[0, 0, 2, "kick", 1.0], [0, 0, 12, "crash", 0.6], [0, 38, 10, "sub", 0.7],
+		[0, 62, 10, "keys", 0.4], [0, 69, 10, "keys", 0.4], [0, 74, 10, "keys", 0.4], [0, 77, 10, "keys", 0.4],
+		[0, 86, 2, "bell", 0.5], [2, 81, 1, "mallet", 0.7], [3, 83, 1, "mallet", 0.7], [4, 84, 1, "mallet", 0.75],
+		[5, 86, 6, "bell", 0.8], [5, 74, 6, "lead", 0.45], [5, 98, 6, "bell", 0.25]]
 
 
 # --- Recipe helpers --------------------------------------------------------------------
