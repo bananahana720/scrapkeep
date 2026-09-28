@@ -27,3 +27,9 @@ The gorge material count falls from 227 to 173 with 374 meshes and 57 colliders 
 This candidate is ready for coordinator review of these bounded fixes and Andrew's playtest. It is not a declaration that the complete visual plan or Style A fidelity is finished. See [integrated evidence](INTEGRATED-VERIFICATION.md) and [remaining fidelity work](FIDELITY-GAPS.md).
 
 The next 120-second run is gated by a fresh GPU-idle preflight before desktop startup and immediately before capture launch. Three samples must each be at most 5% utilization, with no non-desktop GPU processes; failed or unavailable telemetry blocks the run.
+
+## Incoming v3 lab coordination
+
+Further stage-1 scenery placement is held pending the merged base containing `proto/core-loop-v3-lab` and `proto/core-loop-v3-interact`. Reserved locations are the Warden bowl rim/top-shelf lift route, both chute mouths and kicker trajectories toward the mast, the east-line altar, the cracked wall/cache behind the vault plinth, and the crate near Moss's cradle. Existing scenery stays outside the x/z ±200 terrain square; final route and sightline clearance needs the merged geometry. No v3 branch has been merged into this candidate.
+
+The lab's Warden dome open/closed states and reactor crater await a later appearance pass against their published contracts. The lab leaves the hero, Warden look, palette and terrain sky/material seams untouched. Canonical records remain coordinator-owned.
