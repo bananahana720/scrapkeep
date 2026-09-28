@@ -65,6 +65,10 @@ Set `CHROMIUM_PATH` for a non-default browser path and `GAME_URL` for the baseli
 
 No browser session, human enjoyment, or performance benchmark is implied by `npm run verify`.
 
+## Asset inspection
+
+Use the [asset inspector](docs/ASSET-TOOLING.md) before admitting an exported GLB or assembling parts from a model collection. It reads local files, counts actual exported geometry and checks an explicitly selected budget. Inventory is not approval. A budget pass does not prove engine import, visual quality or rendered performance. The tool does not change meshes or replace the sketch's Godot asset tests.
+
 ## Jev Lab
 
 The Jev Lab plays the light-lane sketches headless with seeded `random` and `scripted` arms, records each batch as a `scrapkeep-run/1` record, gates a batch against a pin, and shows every lab, program and human metric on a local dashboard. Automated play is not a feel verdict; only Andrew's play settles feel. The [lab skill](.agents/skills/scrapkeep-lab/SKILL.md) owns how to run and extend it, the [reactive-model-loop skill](.agents/skills/reactive-model-loop/SKILL.md) owns the method for any Jev decider, and the [Jev player README](tools/jev-player/README.md#jev-lab-tools-and-their-measured-limits) gives each tool's measured limits with the event that measured it. The program's results are in the [Jev Lab retro](artifacts/jev-lab-2026-09-25/RETRO.md).

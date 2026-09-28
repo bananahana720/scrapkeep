@@ -30,7 +30,8 @@
     "jev:score": "node tools/jev-player/score.mjs",
     "probe:balance": "node tests/balance.mjs",
     "playtest:agent": "node scripts/agent-playtest.mjs",
-    "test:agent": "node scripts/agent-playtest.mjs --self-test"
+    "test:agent": "node scripts/agent-playtest.mjs --self-test",
+    "asset:inspect": "node scripts/asset-inspect.mjs"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "^5.3.0",

@@ -6307,3 +6307,27 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 **Verification and evidence:** `npm run check:docs`; `npm run check:drift`; independent review.
 
 **Boundary:** Not authorized until Andrew or the coordinator records a scope for it; the core-loop prototype does not wait on it.
+
+<a id="at-01"></a>
+
+### AT-01: Inspect exported assets against explicit delivery budgets
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Asset tooling
+
+**Source and inputs:** Andrew's 27 September 2026 tooling investment request and subsequent instruction to proceed; [asset provenance](docs/project/ASSETS.md); [TADR-001](adr/TADR-001-engine-language-platforms.md); the GLB container, accessors, meshes and scene graph in the [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html). The paused V3 worktree supplies read-only exported fixtures, identified by hashes in the execution evidence; it is not a code dependency.
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `scripts/asset-inspect.mjs`; `scripts/asset-profiles.mjs`; `tests/asset-inspect.test.js`; `docs/ASSET-TOOLING.md`; `package.json` scripts entries only; `artifacts/local/tasks/AT-01/`. Coordinator-only changes to BACKLOG, TRACKING, CONTRIBUTING and dependency hash lines are recorded separately.
+
+**Definition of done:**
+
+1. A dependency-free, read-only CLI inspects GLB files and emits terminal or versioned JSON reports with source hashes, file-wide unique mesh counts, selected scene/assembly instance counts, primitive/material counts and explicit animation/skin/texture information and limits. Engine import, visual acceptance, GPU memory and performance remain unmeasured.
+2. A named generic 30,000-triangle ceiling and explicit user budget support delivery checks. Inventory without a budget is never approval. The cap applies to a selected assembly at one chosen LOD, not all library variants. Numeric node IDs and manifests make selection reproducible; overlap, invalid references and ambiguous selection fail clearly. Numeric checks use no model call.
+3. Validate actual binary ranges and index values, not only accessor counts. Test oversized geometry, repeated instances, unused variants, alternate LOD selection, multiple primitives, non-indexed triangles, malformed accessors, invalid scene graphs and unsupported compression/geometry extensions. At-cap passes; above-cap fails. Invalid/unsupported files never pass.
+4. Manifest inputs are local and relative to the manifest; no remote fetching. Distinguish static geometry bounds from animated/skinned bounds; unmeasured values are explicit. Source files remain unchanged; report output cannot overwrite inputs, including through aliases.
+5. A saved batch over nine hashed V3 exports agrees with independent file totals and explains collection-versus-assembly counts. Document inventory, cap, assembly and exit-code examples. Existing game code and the paused sprint remain untouched.
+
+**Verification and evidence:** `node --test tests/asset-inspect.test.js`; `npm test`; `npm run check:scope -- <base> <candidate> --no-build`; `npm run check:docs`; `npm run check:project`; `npm run check:drift`; independent review; read-only CLI runs on the V3 exports. No browser or game build for this CLI-only scope.
+
+**Boundary:** No mesh mutation, decimation, Blender job, engine import, dependency, native change, asset design acceptance, engine migration or paused-sprint integration. The later clothing/fur library is separate.
