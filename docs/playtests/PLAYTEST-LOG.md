@@ -6,7 +6,7 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges followed (TRACKING EV-0578).
 
-**Played: the core-loop demo** (entry 7) on `proto/core-loop-rc` at `525a46f`, merged to `main` after play (TRACKING EV-0588). Earlier: mobility kit v2 (entry 6, EV-0587). **Next up for play: core-loop v2 alpha** on `proto/core-loop-v2` at `19fc173`, launched with `scrapkeep core-loop-v2`. It answers entry 7 (readability, iconography, what to press, transitions, mouse on menus, telegraph types, how to get stronger, soul). It adds three pilots, the upgrade trees, Moss's bay and shop, stage 2's Cable Reach gorge, W7's enemies and family Wardens, the music layers, pause and help, and the Codex Style A visual pass. Checks: `sketch:smoke` 171 green at 06be395 plus the keycap fix's UI tests, and rendered stills of three bot runs at 1920x1080 in that worktree's `artifacts/local/alpha-capture/`. Its verdict becomes entry 8.
+**Played: the core-loop demo** (entry 7) on `proto/core-loop-rc` at `525a46f`, merged to `main` after play (TRACKING EV-0588). Earlier: mobility kit v2 (entry 6, EV-0587). **Played 28 September 2026 (entry 8): not alpha; a loop redesign round follows.** It was the core-loop v2 alpha candidate on `proto/core-loop-v2` at `19fc173`, launched with `scrapkeep core-loop-v2`. It answers entry 7 (readability, iconography, what to press, transitions, mouse on menus, telegraph types, how to get stronger, soul). It adds three pilots, the upgrade trees, Moss's bay and shop, stage 2's Cable Reach gorge, W7's enemies and family Wardens, the music layers, pause and help, and the Codex Style A visual pass. Checks: `sketch:smoke` 171 green at 06be395 plus the keycap fix's UI tests, and rendered stills of three bot runs at 1920x1080 in that worktree's `artifacts/local/alpha-capture/`. Its verdict becomes entry 8.
 
 | Sketch | Branch and head | Question it answers |
 | --- | --- | --- |
@@ -37,6 +37,33 @@ wrapper at a different checkout. The long form still works:
 If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/scrapkeep-worktrees/<name> proto/<name>`.
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
+
+## 8. Core-loop v2 alpha candidate, first human play
+
+- **Date.** 28 September 2026. Dictated in the Claude desktop app after about 10 minutes of play.
+- **Build.** `sketches/core-loop/` on `proto/core-loop-v2` at `19fc173`, launched with `scrapkeep core-loop-v2`. The run log (`user://runs.ndjson`) shows two runs.
+  - **Runner-gunner (run 1790573499-910844): won the whole demo** with 0 deaths, 0 events won and 0 bonus cores.
+    - Wardens broke at about 100, 108 and 117 s of stage time.
+    - Exit heft was 1.34, 3.16 and 5.34.
+    - Stage 2's gates gave Spiral Wave twice.
+    - Brindle reached phase 4 and was routed.
+  - **Demolitions caster (run 1790574209-662493):** abandoned in stage 1.
+- **Verdict.** "the gameplay isn't very engaging. In terms of that, I could just go to the boss." On the Warden: "the boss mechanics don't make much sense to me in terms of the UI. And in terms of when and where I should be, to attack it". On the map: "the map doesn't really require me to engage with it. So I kind of don't see the point of staying in a map", and "the map itself kind of just funnels me it feels like towards a certain direction". On the look and interface: "The character design is better but still I guess sort of awkward the UI is very sparse and tightly knit". On class select: "I also don't know what I'm selecting the character what's their offering, there should be, I guess, some sort of like character card that succinctly and like visually engages you to want to play that character." On field notes: "the tab key overwhelms me with like a whole essay of text that I can't even parse through." Overall: "the gameplay loop isn't just isn't fun necessarily", "It just seems like um, a half-baked attempt", and "there should be another I guess set of waves or round of work that needs to be done to get this I guess even close to alpha."
+- **Corroborating evidence the round already held.** The balance bots showed the same thing before play. The skipper beelines at the Warden and cleared every stage with no deaths, and the completionist broke Warden III only 1.6 to 2.9 times faster (DESIGN-NOTES, Feedback loop notes 7, 12, 13 and 17). Eight tuning passes moved the numbers but not the structure. The vision keeper's alignment pass judged coherence, not fun. The coordinator called the build alpha-ready on tests and stills, which cannot measure engagement.
+- **Decided by play.** It is not alpha. The loop's structure fails, not its polish:
+  - the Warden is the only must, and nothing in the map is needed to beat it;
+  - the Warden's attack windows aren't legible;
+  - the map funnels rather than invites;
+  - class select doesn't sell a class;
+  - the Tab notes are an essay.
+
+  Keep: the v2 readability gains, the three pilots, and the sphere direction ("better").
+- **Next action.** A core-loop redesign round, following the natural progression (sketch, storyboard, agents converge, back to Andrew, then build). Its questions:
+  - what makes staying in the map necessary and rewarding;
+  - how a Warden says when and where to hit it;
+  - what a non-funnel stage looks like;
+  - a class card that sells a pilot;
+  - field notes as a picture, not an essay.
 
 ## 7. Core-loop demo, first human play
 
