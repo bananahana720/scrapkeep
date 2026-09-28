@@ -31,6 +31,7 @@ var measured_physics_start := 0.0
 var distance_travelled := 0.0
 var previous_position := Vector3.ZERO
 var boss_phase_counts := {}
+var capture_stage := 1
 
 
 func _initialize() -> void:
@@ -46,6 +47,7 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(out)
 	samples = clampi(int(settings.get("samples", "1800")), 60, 18000)
 	mode = settings.get("mode", "dense")
+	capture_stage = clampi(int(settings.get("stage", "1")), 1, 3)
 	if mode not in ["pilots", "traversal", "dense", "boss"]:
 		quit(2)
 		return
@@ -102,6 +104,8 @@ func _physics_process(delta: float) -> bool:
 		game.ctx.calm = mode != "boss"
 		game.flow.press_start()
 		game.flow.choose_class(clampi(int(settings.get("class", "0")), 0, 2))
+		if capture_stage != 1:
+			game.flow.enter_stage(capture_stage, Vector3.ZERO, false)
 		game.run.set_max_hp(999999.0)
 		game.player.source = source
 		game.events.shot_fired.connect(func(_id, _from, _to): shots += 1)
@@ -114,9 +118,13 @@ func _physics_process(delta: float) -> bool:
 			game.boss.jump_to_phase(3)
 			metadata["boss_setup"] = "real flow.enter_boss, dev jump_to_phase(3); real spawner and hazards"
 		else:
-			var bowl: Vector3 = game.ctx.terrain.beacon_point(1) + Vector3(10, 0, 8)
+			var bowl: Vector3 = game.ctx.terrain.beacon_point(capture_stage) + Vector3(10, 0, 8)
+			if mode == "traversal":
+				bowl = game.ctx.terrain.spawn_point(capture_stage)
 			game.player.reset_to(game.ctx.terrain.drop_point(bowl.x, bowl.z, 1.2))
 			metadata["stage_position"] = [bowl.x, bowl.y, bowl.z]
+		metadata["stage"] = capture_stage
+		metadata["stage_geometry"] = _stage_geometry_counts()
 		if mode == "pilots":
 			source.hold = {"brake_held": true}
 			inspection_camera = Camera3D.new()
@@ -179,6 +187,9 @@ func _frame_drawn() -> void:
 		var capture := root.get_texture().get_image()
 		metadata["screenshot_dimensions"] = [capture.get_width(), capture.get_height()]
 		metadata["screenshot_tick"] = ticks
+		var camera := root.get_camera_3d()
+		metadata["camera_transform"] = str(camera.global_transform) if camera != null else "unavailable"
+		metadata["camera_fov"] = camera.fov if camera != null else 0.0
 		metadata["screenshot_monitors"] = _monitor_snapshot()
 		metadata["growth_actual"] = {"mass": game.run.mass, "heft_class": game.run.heft_class(), "chunks": game.build.accretion.chunk_count(), "shell_scale": game.build.accretion.scale.x}
 		metadata["screenshot_shots_fired"] = shots
@@ -199,6 +210,29 @@ func _frame_drawn() -> void:
 	last_usec = now
 	if (seconds > 0.0 and float(now - measurement_start) / 1000000.0 >= seconds) or (seconds == 0.0 and timings.size() >= samples):
 		_finish()
+
+
+func _stage_geometry_counts() -> Dictionary:
+	var roots: Array = [game.ctx.terrain.geometry_root(capture_stage)]
+	if capture_stage == 2:
+		roots.append_array([game.world.contraptions[2], game.world.terrain_view, game.world.bay])
+	var result := {"bodies": 0, "shapes": 0, "meshes": 0, "materials": 0, "lights": 0}
+	var materials := {}
+	for node in roots:
+		if node == null:
+			continue
+		result.bodies += node.find_children("*", "CollisionObject3D", true, false).size()
+		result.shapes += node.find_children("*", "CollisionShape3D", true, false).size()
+		result.lights += node.find_children("*", "Light3D", true, false).size()
+		for mesh in node.find_children("*", "GeometryInstance3D", true, false):
+			result.meshes += 1
+			var material: Material = mesh.material_override
+			if material == null and mesh is MeshInstance3D and mesh.mesh != null and mesh.mesh.get_surface_count() > 0:
+				material = mesh.mesh.surface_get_material(0)
+			if material != null:
+				materials[material.get_instance_id()] = true
+	result.materials = materials.size()
+	return result
 
 
 func _monitor_snapshot() -> Dictionary:
