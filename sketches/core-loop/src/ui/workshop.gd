@@ -6,6 +6,7 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
 # The workshop's screens, the calm between fights: the upgrade pick, Moss's counter and
 # Moss's voice. This layer decides when each opens and what a choice does; the three
@@ -302,7 +303,7 @@ func say_next() -> Dictionary:
 		return record
 	bubble.beat(record)
 	_place_bubble()
-	_cue("moss_relent" if record.get("relent", false) else "moss_beat", _root_pitch(String(record.get("root", "D3"))))
+	_babble("moss_relent" if record.get("relent", false) else "moss_beat", String(record.get("text", "")), babble_beat(record))
 	if record.get("relent", false) and counter.is_open():
 		counter.refresh()
 	return record
@@ -312,6 +313,7 @@ func _on_acted(fact: String, record: Dictionary) -> void:
 	if record.has("bark"):
 		bubble.bark(record["bark"], fact)
 		_place_bubble()
+		_babble(fact, String(record["bark"].get("text", "")), SfxBank.BABBLE_LEVEL)
 	_cue(fact)
 
 
@@ -322,6 +324,7 @@ func _speak_world_bark(fact: String) -> void:
 	if armed and not line.is_empty():
 		bubble.bark(line, fact)
 		_place_bubble()
+		_babble(fact, String(line.get("text", "")), SfxBank.BABBLE_LEVEL)
 
 
 func _on_bay_left() -> void:
@@ -333,24 +336,36 @@ func _place_bubble() -> void:
 	bubble.position = Vector2(0.0, screen_size().y * BUBBLE_Y)
 
 
-# A LOOT_ROWS fact heard through the audio director's own play(), with the row's stand-in
-# sound, until W5 bakes the row's sound_next. A beat's babble root lifts the pitch, so
-# Moss rises as he loses patience (SOUND-STORY section 8).
-func _cue(fact: String, pitch := 1.0) -> void:
-	var row: Dictionary = EventKinds.LOOT_ROWS.get(fact, {})
-	var presentation = game.presentation
+# A LOOT_ROWS fact heard through the audio director's own play(), which resolves the
+# row: its baked sound_next (the shop bell, the bench clank), else its stand-in.
+func _cue(fact: String) -> void:
+	var audio = _audio()
+	if EventKinds.LOOT_ROWS.has(fact) and audio != null:
+		audio.play(fact, 0.0, 1.0, "UI")
+
+
+# Moss's line spoken as babble in the live key (SOUND-STORY section 8).
+func _babble(fact: String, text: String, beat: int) -> void:
+	var audio = _audio()
+	if audio != null and audio.has_method("speak"):
+		audio.speak(fact, text, beat)
+
+
+func _audio():
+	var presentation = game.presentation if game != null else null
 	var audio = presentation.get("audio") if presentation != null else null
-	if row.is_empty() or audio == null or not audio.has_method("play"):
-		return
-	audio.play(fact, 0.0, pitch, "UI", String(row["sound"]))
+	return audio if audio != null and audio.has_method("play") else null
 
 
-static func _root_pitch(root: String) -> float:
-	var names := {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
-	if root.length() < 2 or not names.has(root.left(1)):
-		return 1.0
-	var semis: int = names[root.left(1)] + 12 * int(root.right(1)) - (2 + 12 * 3)
-	return pow(2.0, semis / 12.0)
+# A talk record's babble beat: 1 to 6 up the conversation loop, so Moss's root climbs
+# and his blips shorten as he loses patience; the relent is the sigh; the restart line
+# is level, like a bark.
+static func babble_beat(record: Dictionary) -> int:
+	if record.get("relent", false):
+		return SfxBank.BABBLE_RELENT
+	if record.get("restart", false):
+		return SfxBank.BABBLE_LEVEL
+	return int(record.get("beat", 0)) + 1
 
 
 # ---- Per frame ----

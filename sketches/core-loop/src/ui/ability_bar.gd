@@ -45,14 +45,30 @@ static func bar_size(count: int) -> Vector2:
 func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void:
 	tint = class_tint
 	motif = class_shape if class_shape != "" else "ring"
+	var swelled := false
 	for entry in list:
 		var id: String = entry["id"]
 		if entry["state"] == "ready" and _last_state.get(id, "ready") == "cooling":
 			_pulses[id] = PULSE_SECONDS
+			swelled = true
 		_last_state[id] = entry["state"]
+	if swelled:
+		_ring_ready()
 	slots = list
 	custom_minimum_size = bar_size(list.size())
 	size = custom_minimum_size
+
+
+# The swell's sound: ability_ready's row resolves to the class's ready pulse, the
+# motif's first note, so the bar is where the class tune is first heard. The bar sits
+# in the HUD, whose game reaches the audio director.
+func _ring_ready() -> void:
+	var hud := get_parent()
+	var game = hud.get("game") if hud != null else null
+	var presentation = game.get("presentation") if game != null else null
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null and audio.has_method("play"):
+		audio.play("ability_ready", 0.0, 1.0, "UI")
 
 
 func pulse_left(id: String) -> float:
