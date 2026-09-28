@@ -4,8 +4,9 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
-# One mixer bus as a menu row, on the same charcoal plate as a ChoiceButton: a drawn
-# glyph where a choice has its key (a beamed note for music, a speaker for effects),
+# One mixer bus or comfort level as a menu row, on the same charcoal plate as a
+# ChoiceButton: a drawn glyph where a choice has its key (a beamed note for music, a
+# speaker for effects, a jittered frame for screen shake, a frozen burst for hit-stop),
 # one word, then a down arrow, ten level segments and an up arrow. A click on an arrow
 # steps a tenth, a click or drag on the segments sets the level there, the wheel steps,
 # and the pause menu steps the focused row with left and right. It changes nothing
@@ -174,3 +175,13 @@ func _draw_glyph(c: Vector2, color: Color) -> void:
 				c + Vector2(2.0, 10.0), c + Vector2(-5.0, 4.0)]), color)
 			draw_arc(c + Vector2(2.0, 0.0), 6.0, -0.9, 0.9, 8, color, 2.0)
 			draw_arc(c + Vector2(2.0, 0.0), 11.0, -0.9, 0.9, 10, color, 2.0)
+		"shake":
+			draw_rect(Rect2(c + Vector2(-8.0, -7.0), Vector2(16.0, 14.0)), color, false, 2.5)
+			for side in [-1.0, 1.0]:
+				draw_line(c + Vector2(side * 12.0, -5.0), c + Vector2(side * 12.0, 5.0), color, 2.0)
+				draw_line(c + Vector2(side * 15.5, -3.0), c + Vector2(side * 15.5, 3.0), color, 2.0)
+		"hitstop":
+			for i in 4:
+				var a := PI * 0.25 + PI * 0.5 * i
+				draw_line(c + Vector2(cos(a), sin(a)) * 5.0, c + Vector2(cos(a), sin(a)) * 12.0, color, 2.5)
+			draw_rect(Rect2(c + Vector2(-3.5, -3.5), Vector2(7.0, 7.0)), color)

@@ -49,6 +49,8 @@ const FACE_RAYS := 8
 const SLAM_RAMP := 4.0
 const SLAM_RADIUS := 9.0
 const SLAM_KNOCK := 26.0
+# A ram at cruise or faster: a heavy push, heavier than any gun and level with a blast.
+const RAM_KNOCK := 24.0
 const PLANT_SPIN_DAMP := 0.5
 
 const MOUNT_OFFSET := 2.2

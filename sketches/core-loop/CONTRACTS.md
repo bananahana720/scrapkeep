@@ -239,6 +239,7 @@ Flow calls `spawn_point`, `entry_heading` and `beacon_point` right after `stage_
 - `punch_fov(amount_degrees, time)` adds field of view that bleeds away over `time`, capped at 20 degrees.
 - `kick(direction: Vector3, amount)` knocks the camera along a world direction, and it springs back.
 - `shake(amount, time = 0.4)` shakes the camera; the strongest shake wins.
+- `motion_scale: float` (0 to 1) is the viewer's Screen shake comfort. Juice sets it; the camera multiplies every punch, kick and shake by it, its own landing shake included.
 - `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules.
 
 Juice follows the player's actions and must never hide the next threat. Keep punches and shakes short.
@@ -666,3 +667,12 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Settings.** `settings_store.gd` reads and writes `settings.json` in `game.storage_dir` as `{"volumes": {bus: level}}`. The per-process folder in test mode keeps tests off the player's file.
 - **Help.** `screens.toggle_help()` and `help_open()`; `button_for("help")` and `button_for("back")`. The page (`help_page.gd`) lists the `FieldNotes.CONTROLS` rows that carry `caps` (key glyph ids) and `short` (one or two words).
 - **Tests.** `ui_pause_menu_test`.
+- **Comfort rows (v3 W11).** `shake` (Screen shake) and `hitstop` (Hit-stop) sit under `effects`, drawn by `volume_row.gd`. A step calls `presentation.juice.set_comfort(id, level)` and `store.set_comfort(id, level)`; `settings.json` gains `"comfort": {id: level}`, applied at launch like the volumes. Tested by `presentation_comfort_test`.
+
+## Juice v3 (v3 W11)
+
+- **Rows.** `EventKinds.JUICE` holds how hard each fact lands, keyed by its `ROWS` kind: hit-stop bands, particle counts, camera shake, kick and punch, streak windows, the ball's pulse and the per-weapon shot feel. `EventKinds.STOP_GAP_MS`, `STOP_BUDGET_MS` and `STOP_PER_EXTRA_HIT_MS` bound the stops. Presentation reads them; nothing else.
+- **`near_miss(kind, at)`.** Combat's watch (`src/combat/near_miss.gd`, `ctx.spawner.near_miss`) publishes it. It reads every node in the `threat` group through its own `contains()` and `descriptor()` (`live` or `progress >= 1` means landed). It fires when the ball was inside during the warning and is outside when the threat lands, or leaves within `grace_ms` without a `player_hit`. It never changes an outcome.
+- **Read-only combat hooks.** `ctx.spawner.last_player_hit` is `{from, shove, source, frame}` for the last hit the ball took (presentation's edge flash). `ctx.spawner.sticky.stuck(at)` is the charge manager's own signal for a thrown charge biting in.
+- **Knockback by class.** `knock` in `Weapons.BASE` is a gun's shove (3 to 6 m/s); a bomb's is its row's `knock` (26) and `BURST_KNOCK`, `LINE_KNOCK`, `OVERDRIVE_KNOCK` (24 to 34); a ram's is `Augments.RAM_KNOCK` (24). The enemy's `weight` divides every shove. Tested by `combat_knockback_test`.
+- **Momentum.** Every feedback kick is camera and shell only. Hit-stop is `Engine.time_scale` through the spine. The ball's velocity changes only where the design already does it (the rocket jump). Tested by `presentation_hitstop_test` and `combat_knockback_test`.

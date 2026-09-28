@@ -64,6 +64,8 @@ const TRIM_DB := {
 	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0,
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
+	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
+	"near_whoosh": -6.0, "crit_ping": -7.0, "kest_kick_thump": 0.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -277,6 +279,17 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _boss_defeated()
 		"threat_tick":
 			return _threat_tick()
+		"near_whoosh":
+			# Air rushing past, then a bell on A, the fifth over the home D: danger went by.
+			return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.9], [_noise(0.16, 4200.0, 1500.0, 14.0), Synth.seconds(0.1), 0.5],
+				[_cut(_n("bell", 81), 0.35), Synth.seconds(0.09), 0.7]])
+		"kest_kick_thump":
+			# The bomb: a kick and Kest's tom landing on D, the motif's last note, a bright
+			# crack on top and a sub that falls away under it.
+			return _mix([[Synth.kick(), 0, 1.0], [_n("tom", 50), 0, 0.85], [_noise(0.06, 5600.0, 2000.0, 60.0), 0, 0.75],
+				[_noise(0.35, 900.0, 200.0, 9.0), Synth.seconds(0.02), 0.35], [_tone(0.55, 72.0, 33.0, "sine", 5.5), 0, 0.9]], true)
+		"crit_ping":
+			return _mix([[_fm(0.2, _hz(86), 3.0, 2.2, 20.0), 0, 0.9], [_noise(0.02, 7000.0, 5000.0, 200.0), 0, 0.45]])
 		"threat_whoosh":
 			return _threat_whoosh()
 		"threat_whistle":

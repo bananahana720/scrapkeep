@@ -19,6 +19,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
+const NearMiss := preload("res://src/combat/near_miss.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
@@ -152,6 +153,10 @@ var _proc_ready := {}
 var _echo := {}
 var _echoing := false
 var _marks := {}
+# The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
+# presentation's edge flash. Both read only.
+var near_miss
+var last_player_hit := {}
 var _cloud := {}
 var _sentry := {}
 var _pulse_left := 0.0
@@ -180,6 +185,9 @@ func setup(ctx_ref) -> void:
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
+	near_miss = NearMiss.new()
+	add_child(near_miss)
+	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
 		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
@@ -856,7 +864,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 		# Marked: the line tags what it hits, and charges hit tagged targets harder.
 		if _knob("line_marks") > 0.0:
 			_marks[enemy.get_instance_id()] = _clock + _knob("line_marks")
-		_hit(enemy, "line", damage, to - from, Weapons.OVERDRIVE_KNOCK * 0.5, 0.5)
+		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, 0.5)
 		hit += 1
 	# Fuse Line: charges left along the line.
 	var along: int = _knob("line_charges")
@@ -1351,6 +1359,7 @@ static func _pinnable(enemy) -> bool:
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
+	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
 	ctx.run.damage(amount, source)
 	if ctx.calm:
 		return

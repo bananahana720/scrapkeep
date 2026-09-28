@@ -122,6 +122,11 @@ signal swarm_scattered(at: Vector3, drones: int)
 signal mind_adapted(habit: String, icon: String)
 signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
 
+# v3 W11 juice. Combat's near-miss watch (src/combat/near_miss.gd): the ball was inside
+# a committed threat while it warned and outside it when it landed, or left within the
+# grace unhurt. kind is the threat's type kind (threat_instant, threat_lane, ...).
+signal near_miss(kind: String, at: Vector3)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

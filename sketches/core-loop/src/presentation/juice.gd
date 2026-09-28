@@ -1,28 +1,35 @@
 extends Node
 
 const Tuning := preload("res://src/movement/tuning.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Parts := preload("res://src/build/parts.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 
-# Feel: squash and stretch, camera punches and kicks, hit-stop and the pylon's plant
-# and eject. Every effect answers something the player did, reads the committed fact
-# off the bus and never decides an outcome (TADR-008). Punches are short and the
-# camera never leaves the ball, so juice never hides the next threat.
+# Feel: squash and stretch, camera punches and kicks, hit-stop, the pylon's plant and
+# eject, and (v3 W11) how a hit, a kill, a pickup, a dodge and a hit taken land. Every
+# effect answers something that happened, reads the committed fact off the bus and never
+# decides an outcome (TADR-008). How hard each fact lands is its EventKinds.JUICE row.
+# Punches are short and the camera never leaves the ball, so juice never hides the next
+# threat; kicks and squashes are camera and shell only, never the ball's velocity.
 
-# Hit-stop: 30-50 ms, only when a hit breaks through plating (plating > 0 and punch at
-# or above it) and when a Warden breaks (beacon_unsealed), at least 0.4 s apart. Never
-# on a crush, a plating-0 kill or a deflected hit: the Katamari roll-up never stalls.
-# The spine caps a stop at 60 ms and refuses to stack.
-const HIT_STOP_MIN := 0.03
-const HIT_STOP_MAX := 0.05
-const HIT_STOP_GAP_MS := 400
-const BREAK_STOP := 0.04
-const UNSEAL_STOP := 0.05
-# Fallback until combat publishes plating: big contact hits by strike kind.
-const BIG_HIT := {"ram": 20.0, "stomp": 12.0, "slam": 14.0}
-const HIT_STOP_FOR := {"ram": 0.04, "stomp": 0.035, "slam": 0.045}
+# Hit-stop (v3 W11): every landed hit stops for its damage band (the enemy_struck row:
+# base + per damage point, clamped), crits and weak points multiply, a ram, stomp or
+# slam adds. The hits of one frame coalesce into one stop, stops start STOP_GAP_MS
+# apart and spend at most STOP_BUDGET_MS a second, so rapid fire and a Katamari
+# roll-up tick instead of stutter. A deflected hit clanks and never stops. The spine
+# caps a stop at 60 ms and refuses to stack; Engine.time_scale never touches velocity.
+const SPINE_CAP_MS := 60.0
+const STOP_FLOOR_MS := 4.0
+const STOP_TRIM_FLOOR_MS := 8.0
+const CONTACT_KINDS := ["ram", "stomp", "slam"]
+# Bursts per frame, so a blast through a crowd costs a handful of emitters, not one each.
+const MAX_BURSTS := 6
 # The shell grows a tenth per heft class above I (visual only; the collider never
 # changes), and springs there with a little overshoot.
 const SHELL_PER_CLASS := 0.1
 const SHELL_RATE := 9.0
+# A pickup kicks the shell's spring outward this fast per unit of pulse: a heft gain.
+const PULSE_SPEED := 9.0
 
 # The squash spring: underdamped, so a landing squashes, overshoots into a stretch and
 # settles in about a quarter second. Snappy on the hit, fluid on the way out.
@@ -33,34 +40,45 @@ const MAX_SQUASH := 0.45
 var ctx
 var player
 var camera
+# Siblings presentation hands over: audio for the crit ping, the multi-kill beat and the
+# throw; vfx for the bursts, the chain pips and the edge flash. Either may be null.
+var audio
+var vfx
 # [hook, fact] for every camera or time effect fired, for the tests and the notes.
 var hook_log: Array = []
 # [requested_seconds, sent_seconds or 0 when gated, fact, msec] for every hit-stop asked for.
 var hit_stop_log: Array = []
 # Swap for a recorder in tests; defaults to the spine's ctx.hit_stop.
 var hit_stop_sink: Callable
-# Reads an enemy's plating. Defaults to ctx.spawner.plating_of when combat has it;
-# tests inject one. Empty means the fallback thresholds apply.
-var plating_of: Callable
-# Resolves a strike the way combat does (ctx.spawner.resolve: the plating the hit
-# actually met, its part included, and whether it broke through). Preferred over
-# plating_of, which reads the enemy's body plating and misses weak points.
+# Resolves a strike the way combat does (ctx.spawner.resolve: dealt, punch, the plating
+# the hit met, its part, whether it broke through). Without it a hit lands for its force.
 var resolve_of: Callable
+# The body plating of an enemy (ctx.spawner.plating_of), so a part softer than the body
+# reads as a weak point.
+var plating_of: Callable
 var shell := 1.0
+# The viewer's comfort, from the pause menu: 1 is full, 0 is none.
+var stop_scale := 1.0
+var shake_scale := 1.0
+# Multi-kill groups this run: [size, msec] each time a group reached 2, 4 or 8.
+var multi_log: Array = []
 
 var _squash := 0.0
 var _squash_velocity := 0.0
 var _axis := Vector3.UP
-var _last_stop_ms := -100000
 var _plant_t := -1.0
 var _pylon_parts := {}
 var _pylon_transform := Transform3D.IDENTITY
 var _ghosts: Array = []
-var _strikes: Array = []
-var _deflected := {}
-var _resolve_queued := false
 var _shell_velocity := 0.0
 var _heft_class := 1
+var _stops: Array = []
+var _hits: Array = []
+var _kills: Array = []
+var _blasts: Array = []
+var _flush_queued := false
+var _multi_size := 0
+var _multi_last := -100000
 
 
 func setup(ctx_ref) -> void:
@@ -80,6 +98,10 @@ func setup(ctx_ref) -> void:
 	events.mounted.connect(_on_mounted)
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_struck.connect(_on_enemy_struck)
+	events.enemy_killed.connect(_on_killed)
+	events.scrap_collected.connect(_on_scrap)
+	events.player_hit.connect(_on_player_hit)
+	events.shot_fired.connect(_on_shot)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): _reset())
 	# Arena entry and the arena retry restore state without a stage_entered.
 	for signal_name in ["stage_content_cleared", "boss_arena_entered"]:
@@ -90,25 +112,34 @@ func setup(ctx_ref) -> void:
 					argc = (info["args"] as Array).size()
 			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
-	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
-		plating_of = Callable(ctx.spawner, "plating_of")
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
 		resolve_of = Callable(ctx.spawner, "resolve")
+	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
+		plating_of = Callable(ctx.spawner, "plating_of")
+	var charges = ctx.spawner.get("sticky") if ctx.spawner != null else null
+	if charges != null and charges.has_signal("stuck"):
+		charges.stuck.connect(_on_stuck)
 	wire_optional()
 
 
 func wire_optional() -> void:
 	var events = ctx.events
-	if events.has_signal("strike_deflected") and not events.is_connected("strike_deflected", _on_deflected):
-		events.connect("strike_deflected", _on_deflected)
-	if events.has_signal("beacon_unsealed") and not events.is_connected("beacon_unsealed", _on_unsealed):
-		events.connect("beacon_unsealed", _on_unsealed)
-	if events.has_signal("heft_class_changed") and not events.is_connected("heft_class_changed", _on_heft_class):
-		events.connect("heft_class_changed", _on_heft_class)
-	if events.has_signal("heft_class_dropped") and not events.is_connected("heft_class_dropped", _on_heft_class):
-		events.connect("heft_class_dropped", _on_heft_class)
-	if events.has_signal("boss_weak_point_hit") and not events.is_connected("boss_weak_point_hit", _on_weak_point):
-		events.connect("boss_weak_point_hit", _on_weak_point)
+	_listen(events, "beacon_unsealed", _on_unsealed)
+	_listen(events, "heft_class_changed", _on_heft_class)
+	_listen(events, "heft_class_dropped", _on_heft_class)
+	_listen(events, "boss_weak_point_hit", _on_weak_point)
+	_listen(events, "enemy_rebounded", _on_rebounded)
+	_listen(events, "near_miss", _on_near_miss)
+	_listen(events, "scrap_lost", _on_scrap_lost)
+	_listen(events, "sticky_detonated", _on_detonated)
+	_listen(events, "rocket_jumped", _on_rocket_jumped)
+	_listen(events, "part_gained", _on_part)
+	_listen(events, "core_gained", _on_core)
+
+
+static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
+	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
+		events.connect(signal_name, callable)
 
 
 func _reset() -> void:
@@ -118,10 +149,31 @@ func _reset() -> void:
 	_squash = 0.0
 	_squash_velocity = 0.0
 	_plant_t = -1.0
+	_hits.clear()
+	_kills.clear()
+	_blasts.clear()
+	_multi_size = 0
 	for ghost in _ghosts:
 		if is_instance_valid(ghost["node"]):
 			ghost["node"].queue_free()
 	_ghosts.clear()
+
+
+# The pause menu's comfort rows: "shake" scales every camera punch, kick and shake (the
+# camera applies it), "hitstop" every stop and the dodge tick.
+func set_comfort(id: String, level: float) -> void:
+	level = clampf(level, 0.0, 1.0)
+	match id:
+		"shake":
+			shake_scale = level
+			if camera != null:
+				camera.motion_scale = level
+		"hitstop":
+			stop_scale = level
+
+
+func comfort(id: String) -> float:
+	return shake_scale if id == "shake" else stop_scale
 
 
 # --- Squash and stretch -------------------------------------------------------------
@@ -131,6 +183,11 @@ func squash(amount: float, axis: Vector3) -> void:
 	_squash_velocity = 0.0
 	if axis.length_squared() > 0.01:
 		_axis = axis.normalized()
+
+
+# A pop of the shell's spring: positive swells (heft gained), negative shrinks (lost).
+func pulse(amount: float) -> void:
+	_shell_velocity += amount * PULSE_SPEED
 
 
 func _on_landed(impact: float) -> void:
@@ -175,6 +232,8 @@ func _process(delta: float) -> void:
 	var ground: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
 	juice.position = -_axis * Tuning.RADIUS * clampf(_squash, -0.3, MAX_SQUASH) * 0.9 * shell + ground * Tuning.RADIUS * (shell - 1.0)
 	_animate_pylon(delta)
+	if vfx != null and audio != null:
+		vfx.set_chain(audio.kill_streak.length if audio.kill_streak.live(Time.get_ticks_msec()) else 0, audio.kill_streak.rung)
 
 
 # Squashes by amount along axis and bulges the other two to keep the volume.
@@ -217,61 +276,295 @@ func _on_dismounted(velocity: Vector3) -> void:
 	squash(-0.25, velocity)
 
 
-# A strike is judged at the end of the frame, once combat has had its say: a hit on
-# plating that was not deflected in the same frame broke through.
+# --- Hits ---------------------------------------------------------------------------
+# A strike is collected for the end of the frame, where every hit of the frame lands as
+# one stop, one shake and a handful of bursts.
+
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	if kind == "synergy":
 		# A synergy's shockwave is the build's doing, not a landing: no stop, no weak-point read.
 		return
-	var direction := Vector3.FORWARD
-	if is_instance_valid(enemy) and enemy.is_inside_tree():
-		direction = enemy.global_position - player.ball_position()
+	var result := {"dealt": force, "punch": force, "full": true, "part": "", "plating": 0.0}
 	if resolve_of.is_valid() and is_instance_valid(enemy):
 		# enemy_struck goes out before the damage, so this is the hit as combat met it.
-		var result: Dictionary = resolve_of.call(enemy, kind, force)
-		if float(result.get("plating", 0.0)) > 0.0 and bool(result.get("full", false)):
-			_break_through(direction, BREAK_STOP)
+		result = resolve_of.call(enemy, kind, force)
+	if not bool(result.get("full", true)):
 		return
-	if plating_of.is_valid():
-		var plating := 0.0
-		if is_instance_valid(enemy):
-			plating = float(plating_of.call(enemy))
-		if plating <= 0.0:
-			return
-		_strikes.append({"id": enemy.get_instance_id() if is_instance_valid(enemy) else 0, "direction": direction})
-		if not _resolve_queued:
-			_resolve_queued = true
-			_resolve_strikes.call_deferred()
+	var at: Vector3 = player.ball_position()
+	if is_instance_valid(enemy) and enemy.is_inside_tree():
+		at = enemy.global_position
+	var dealt := float(result.get("dealt", force))
+	var weak := String(result.get("part", "")) != "" and plating_of.is_valid() and is_instance_valid(enemy) \
+		and float(result.get("plating", 0.0)) < float(plating_of.call(enemy))
+	var crit := weak or dealt > float(result.get("punch", dealt)) * 1.01
+	_hits.append({"at": at + Vector3.UP * 0.6, "damage": dealt, "crit": crit, "heavy": kind in CONTACT_KINDS, "kind": kind})
+	_queue_flush()
+
+
+# The stop a hit asks for, in ms, before the frame coalesces and the gate spaces it.
+static func stop_ms_for(damage: float, crit := false, heavy := false) -> float:
+	var row := EventKinds.juice("enemy_struck")
+	var ms := clampf(float(row["stop_ms"]) + float(row["stop_per_damage"]) * maxf(damage, 0.0), float(row["stop_min_ms"]), float(row["stop_cap_ms"]))
+	if crit:
+		ms *= float(row["crit"]["stop_mult"])
+	if heavy:
+		ms += float(row["heavy"]["stop_add_ms"])
+	return minf(ms, SPINE_CAP_MS)
+
+
+func _queue_flush() -> void:
+	if not _flush_queued:
+		_flush_queued = true
+		flush.call_deferred()
+
+
+# Lands everything the frame collected. Deferred, so the streaks audio bumped this frame
+# are current and every hit of one blast is in; tests call it directly.
+func flush() -> void:
+	_flush_queued = false
+	# A blast's punch grows with the enemies it caught this frame.
+	var caught := _hits.filter(func(h: Dictionary): return h["kind"] == "sticky").size()
+	var b_row := EventKinds.juice("sticky_detonated")
+	# A cloaked charge is a crit (sticky_detonated says so), though its damage was
+	# multiplied before combat resolved it.
+	if _blasts.any(func(b: Array): return b[1]):
+		for hit in _hits:
+			if hit["kind"] == "sticky":
+				hit["crit"] = true
+	for blast in _blasts:
+		_camera("punch_fov", "sticky_detonated", Vector3.ZERO,
+			minf(float(b_row["punch_fov"]) + float(b_row["punch_per_enemy"]) * caught, float(b_row["punch_cap"])), 0.3)
+	_blasts.clear()
+	_flush_hits()
+	_flush_kills()
+
+
+func _flush_hits() -> void:
+	if _hits.is_empty():
 		return
-	if not BIG_HIT.has(kind) or force < BIG_HIT[kind]:
-		return
-	_break_through(direction, HIT_STOP_FOR[kind])
-
-
-func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float) -> void:
-	if is_instance_valid(enemy):
-		_deflected[enemy.get_instance_id()] = true
-
-
-func _resolve_strikes() -> void:
-	_resolve_queued = false
-	for strike in _strikes:
-		if not _deflected.has(strike["id"]):
-			_break_through(strike["direction"], BREAK_STOP)
-	_strikes.clear()
-	_deflected.clear()
-
-
-func _break_through(direction: Vector3, seconds: float) -> void:
-	_camera("kick", "enemy_struck", direction, 0.3)
+	var row := EventKinds.juice("enemy_struck")
+	var color := EventKinds.color("enemy_struck")
+	var stop := 0.0
+	var shake := float(row["shake"])
+	var heavy := false
+	var crit := false
+	var contact := Vector3.ZERO
+	for i in _hits.size():
+		var hit: Dictionary = _hits[i]
+		stop = maxf(stop, stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]))
+		crit = crit or hit["crit"]
+		if hit["heavy"]:
+			heavy = true
+			contact = hit["at"]
+		if vfx != null and i < MAX_BURSTS:
+			if hit["crit"]:
+				vfx.burst("spark", hit["at"], row["crit"]["color"], int(row["crit"]["sparks"]))
+			else:
+				vfx.burst("spark", hit["at"], color, int(row["sparks"]))
+	stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
+	if crit:
+		shake = maxf(shake, float(row["crit"]["shake"]))
+		if audio != null:
+			audio.play("enemy_struck", 0.0, 1.0, "SFX", String(row["crit"]["sound"]))
+	if heavy:
+		_thump(contact, float(row["heavy"]["kick"]), int(row["heavy"]["dust"]), "enemy_struck")
+		shake = maxf(shake, float(row["heavy"]["shake"]))
 	if camera != null:
-		camera.shake(0.35, 0.2)
-	request_hit_stop(seconds, "enemy_struck")
+		camera.shake(shake, 0.2)
+	_hits.clear()
+	request_hit_stop(stop / 1000.0, "enemy_struck")
+
+
+# The ram's weight: the camera kicked along the ball's travel, dust at the contact and
+# the shell squashed into the hit. Camera and shell only; the ball keeps its speed.
+func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
+	var travel: Vector3 = player.planar_velocity()
+	var along: Vector3 = travel.normalized() if travel.length() > 0.5 else (at - player.ball_position()).normalized()
+	_camera("kick", fact, along, kick)
+	squash(0.28, along)
+	if vfx != null:
+		vfx.burst("dust", at - Vector3.UP * 0.5, EventKinds.color("landed"), dust)
+
+
+# The bowling-ball rebound: the heavy thump, whatever the strike did.
+func _on_rebounded(enemy: Node3D, _speed: float) -> void:
+	var row := EventKinds.juice("enemy_rebounded")
+	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) and enemy.is_inside_tree() else player.ball_position()
+	_thump(at, float(row["kick"]), int(row["dust"]), "enemy_rebounded")
+	if camera != null:
+		camera.shake(float(row["shake"]), 0.2)
+
+
+# A weak point cracked: a crit's stop and a small kick.
+func _on_weak_point(_point_id: String) -> void:
+	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
+	request_hit_stop(stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
 
 
 func _on_unsealed(_stage: int) -> void:
-	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, 9.0, 0.6)
-	request_hit_stop(UNSEAL_STOP, "beacon_unsealed")
+	var row := EventKinds.juice("beacon_unsealed")
+	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, float(row["punch_fov"]), 0.6)
+	request_hit_stop(float(row["stop_ms"]) / 1000.0, "beacon_unsealed")
+
+
+# --- Kills --------------------------------------------------------------------------
+
+func _on_killed(_kind: String, at: Vector3, _value: int) -> void:
+	_kills.append(at)
+	_queue_flush()
+
+
+func _flush_kills() -> void:
+	if _kills.is_empty():
+		return
+	var row := EventKinds.juice("enemy_killed")
+	var color := EventKinds.color("enemy_killed")
+	if vfx != null:
+		for i in mini(_kills.size(), MAX_BURSTS):
+			vfx.burst("pop", _kills[i] + Vector3.UP * 0.8, color, int(row["pop"]))
+			vfx.burst("debris", _kills[i] + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(row["debris"]))
+	var now := Time.get_ticks_msec()
+	var before := _multi_size if now - _multi_last <= int(row["multi_ms"]) else 0
+	_multi_size = before + _kills.size()
+	_multi_last = now
+	_kills.clear()
+	# One ram or blast that takes several: an extra beat at 2, 4 and 8.
+	for mark in [2, 4, 8]:
+		if before < mark and _multi_size >= mark:
+			multi_log.append([mark, now])
+			request_hit_stop(float(row["multi_stop_ms"]) / 1000.0, "multi_kill")
+			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
+			if audio != null:
+				audio.play("enemy_killed", 2.0, pow(2.0, 1.0 + float(mark) / 8.0), "SFX", "kill_pop")
+			if vfx != null:
+				vfx.glyph("enemy_killed", player.ball_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
+
+
+# --- Pickups ------------------------------------------------------------------------
+
+# Each piece swells the shell a little, more as the streak climbs.
+func _on_scrap(_amount: int, _at: Vector3, _total: int) -> void:
+	var row := EventKinds.juice("scrap_collected")
+	var rung: int = audio.scrap_streak.rung if audio != null else 0
+	pulse(minf(float(row["pulse"]) * (1.0 + 0.2 * rung), float(row["pulse_cap"])))
+
+
+func _on_scrap_lost(_amount: int, _at: Vector3, _total: int, _cause: String) -> void:
+	pulse(float(EventKinds.juice("scrap_lost")["pulse"]))
+	squash(0.3, Vector3.UP)
+
+
+# A part: a fountain in its element's colour (else its rarity's) off the ball, so what it
+# will do flares before you read its name.
+func _on_part(part_id: String, _source: String) -> void:
+	if vfx == null:
+		return
+	var row := EventKinds.juice("part_gained")
+	var def: Resource = Parts.def(part_id)
+	var tint := EventKinds.color("part_gained")
+	if def != null:
+		tint = RewardGates.rarity_color(String(def.rarity))
+		tint = row["element"].get(String(def.element), tint)
+	vfx.burst("fountain", player.ball_position() + Vector3.UP * 0.8, tint, int(row["fountain"]))
+	pulse(0.12)
+
+
+func _on_core(_source: String, at: Vector3, _count: int) -> void:
+	if vfx != null:
+		vfx.burst("fountain", at + Vector3.UP * 0.6, EventKinds.color("core_gained"), int(EventKinds.juice("core_gained")["fountain"]))
+
+
+# --- Dodges and hits taken ------------------------------------------------------------
+
+# The dodge: a short slow-mo tick, a zoom-in and the chevron over the ball.
+func _on_near_miss(_kind: String, at: Vector3) -> void:
+	var row := EventKinds.juice("near_miss")
+	request_hit_stop(float(row["stop_ms"]) / 1000.0, "near_miss")
+	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
+	if vfx != null:
+		var travel: Vector3 = player.planar_velocity()
+		vfx.glyph("near_miss", at + Vector3.UP * 1.8, 0.6, 1.4, 0.35, travel if travel.length() > 0.5 else Vector3.ZERO)
+		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring")
+
+
+# A hit taken: the screen edge toward the source flashes, a short shake.
+func _on_player_hit(amount: float, _source: String) -> void:
+	var row := EventKinds.juice("player_hit")
+	if camera != null:
+		camera.shake(float(row["shake"]) * clampf(0.5 + amount / 20.0, 0.5, 1.2), float(row["shake_s"]))
+	hook_log.append(["edge_flash", "player_hit"])
+	if vfx == null:
+		return
+	var from = null
+	var last: Dictionary = ctx.spawner.get("last_player_hit") if ctx.spawner != null and ctx.spawner.get("last_player_hit") != null else {}
+	if not last.is_empty() and Engine.get_physics_frames() - int(last.get("frame", -100)) <= 2:
+		from = last["from"]
+	vfx.edge_flash(_screen_direction(from), row["color"], float(row["edge_alpha"]) * clampf(0.6 + amount / 25.0, 0.6, 1.0), float(row["edge_s"]))
+
+
+# Where a world point sits from the screen's centre, as a unit 2D direction (x right, y
+# down); zero when unknown, which flashes every edge.
+func _screen_direction(from) -> Vector2:
+	if from == null or camera == null or camera.cam == null:
+		return Vector2.ZERO
+	var local: Vector3 = camera.cam.global_basis.inverse() * ((from as Vector3) - camera.cam.global_position)
+	var flat := Vector2(local.x, -local.y if local.z < 0.0 else local.z)
+	return flat.normalized() if flat.length() > 0.01 else Vector2.ZERO
+
+
+# --- Your own shots, throws and blasts ------------------------------------------------
+
+func _on_shot(weapon_id: String, from: Vector3, to: Vector3) -> void:
+	var row := EventKinds.juice("shot_fired")
+	var feel: Dictionary = row["weapons"].get(weapon_id, {})
+	var aim := (to - from)
+	if aim.length() < 0.01:
+		return
+	aim = aim.normalized()
+	if float(feel.get("kick", 0.0)) > 0.0:
+		_camera("kick", "shot_fired", -aim, float(feel["kick"]))
+	# Recoil never cuts a bigger squash short, so rapid fire cannot flatten a landing.
+	if float(feel.get("recoil", 0.0)) > absf(_squash):
+		squash(float(feel["recoil"]), aim)
+	if weapon_id == "sticky_charge" and audio != null:
+		var throw: Dictionary = row["throw"]
+		audio.play("shot_fired", float(throw["db"]), float(throw["pitch"]), "SFX", String(throw["sound"]))
+
+
+func _on_stuck(at: Vector3) -> void:
+	var stick: Dictionary = EventKinds.juice("shot_fired")["stick"]
+	if audio != null:
+		audio.play("shot_fired", -2.0, float(stick["pitch"]), "SFX", String(stick["sound"]))
+	if vfx != null:
+		vfx.burst("spark", at, EventKinds.color("sticky_detonated"), int(stick["sparks"]))
+
+
+func _on_detonated(at: Vector3, crit: bool) -> void:
+	var row := EventKinds.juice("sticky_detonated")
+	var color := EventKinds.color("sticky_detonated")
+	_blasts.append([at, crit])
+	_queue_flush()
+	if camera != null:
+		camera.shake(float(row["shake"]), 0.25)
+	if vfx != null:
+		vfx.glyph("sticky_detonated", at + Vector3.UP * 0.8, 1.0, 4.0, 0.18, Vector3.ZERO, "flash")
+		vfx.glyph("sticky_detonated", at + Vector3.UP * 0.2, 1.0, 9.0, 0.4, Vector3.UP, "ring")
+		vfx.burst("debris", at + Vector3.UP * 0.4, color, int(row["debris"]))
+		vfx.burst("dust", at, EventKinds.color("landed"), int(row["dust"]))
+	# A blast beside you rocks the camera and the shell away from it; the ball's velocity
+	# is the rocket jump's business alone.
+	var away: Vector3 = player.ball_position() - at
+	if away.length() < float(row["near_m"]):
+		var dir := away.normalized() if away.length() > 0.1 else Vector3.UP
+		_camera("kick", "sticky_detonated", dir, float(row["near_kick"]))
+		squash(0.3, dir)
+
+
+func _on_rocket_jumped(_at: Vector3, _speed: float) -> void:
+	var row := EventKinds.juice("rocket_jumped")
+	_camera("kick", "rocket_jumped", Vector3.DOWN, float(row["kick"]))
+	_camera("punch_fov", "rocket_jumped", Vector3.UP, float(row["punch_fov"]), 0.5)
+	squash(-float(row["squash"]), Vector3.UP)
 
 
 # A new heft class: the shell swells to its new size and the ball pops.
@@ -281,11 +574,6 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 		_shell_velocity += 1.2
 		hook_log.append(["class_up", "heft_class_changed"])
 	_heft_class = heft_class
-
-
-# A weak point cracked: a small kick, no freeze (hit-stop stays for plated breaks).
-func _on_weak_point(_point_id: String) -> void:
-	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
 
 
 func shell_target() -> float:
@@ -303,18 +591,31 @@ func _camera(hook: String, fact: String, direction: Vector3, amount: float, time
 			camera.kick(direction, amount)
 
 
-# The one way presentation asks for a freeze.
+# The one way presentation asks for a freeze. Gated by the spacing and the budget, and
+# scaled by the viewer's Hit-stop setting; a stop over the budget is trimmed to fit.
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := Time.get_ticks_msec()
-	var sent := clampf(seconds, HIT_STOP_MIN, HIT_STOP_MAX)
-	if now - _last_stop_ms < HIT_STOP_GAP_MS or not ctx.flow.in_play():
+	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
+	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
+	var spent := 0.0
+	for stop in _stops:
+		spent += float(stop[1])
+	var sent := minf(wanted, EventKinds.STOP_BUDGET_MS - spent)
+	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) >= EventKinds.STOP_GAP_MS
+	var in_play: bool = ctx.flow == null or ctx.flow.in_play()
+	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
 		hit_stop_log.append([seconds, 0.0, fact, now])
 		return
-	_last_stop_ms = now
-	hit_stop_log.append([seconds, sent, fact, now])
+	_stops.append([now, sent])
+	hit_stop_log.append([seconds, sent / 1000.0, fact, now])
 	hook_log.append(["hit_stop", fact])
 	if hit_stop_sink.is_valid():
-		hit_stop_sink.call(sent)
+		hit_stop_sink.call(sent / 1000.0)
+
+
+# Forgets the stops already spent, for a test that measures from a clean slate.
+func reset_stops() -> void:
+	_stops.clear()
 
 
 # --- The pylon ------------------------------------------------------------------------

@@ -20,17 +20,20 @@ const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE]
 # Arc caster: slower electromagnetic bolts with a fat field and a one-jump chain, so
 # the engineer lands hits on the move without a magnet that would lie about the aim.
 # Pylon turret: the planted form of the caster, faster and chaining further.
+# knock is the shove a hit gives, in m/s before the enemy's weight divides it: a gun
+# nudges (3 to 6), a bomb or blast throws (24 to 34, with BURST_, LINE_ and
+# OVERDRIVE_KNOCK), and a ram pushes as hard (Augments.RAM_KNOCK).
 const BASE := {
 	RAPID_LASER: {"damage": 7.0, "rate": 12.0, "range_m": 85.0, "speed": 190.0, "bolt_radius": 0.25,
-		"knock": 4.0},
+		"knock": 3.0},
 	ARC_CASTER: {"damage": 12.0, "rate": 5.0, "range_m": 70.0, "speed": 110.0, "bolt_radius": 0.55,
-		"knock": 7.0, "chain_jumps": 1, "chain_range": 9.0, "chain_falloff": 0.7},
+		"knock": 5.0, "chain_jumps": 1, "chain_range": 9.0, "chain_falloff": 0.7},
 	PYLON_TURRET: {"damage": 11.0, "rate": 9.0, "range_m": 95.0, "speed": 150.0, "bolt_radius": 0.5,
-		"knock": 9.0, "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75},
+		"knock": 6.0, "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75},
 	# Kest's sticky charge: damage is the charge's, bolt_radius its blast, range_m the
 	# longest throw; the throw cadence is the weapon slot's cooldown, not the rate.
 	STICKY_CHARGE: {"damage": 16.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
-		"knock": 10.0},
+		"knock": 26.0},
 }
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky"}
@@ -59,7 +62,9 @@ const BURST_RADIUS_PER_SPEED := 0.45
 const BURST_MAX_RADIUS := 30.0
 const BURST_DAMAGE := 14.0
 const BURST_DAMAGE_PER_SPEED := 1.4
-const BURST_KNOCK := 16.0
+const BURST_KNOCK := 24.0
+# Kest's detonation line: a bomb's shove along the line, radial from each charge.
+const LINE_KNOCK := 28.0
 
 
 static func base(weapon_id: String) -> Resource:

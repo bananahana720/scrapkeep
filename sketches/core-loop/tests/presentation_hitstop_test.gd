@@ -1,23 +1,30 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Juice := preload("res://src/presentation/juice.gd")
 
-# The hit-stop policy from the demo spec, through the real game. A stop is asked only
-# when a hit breaks through plating (plating > 0, not deflected) and when a Warden
-# breaks, at least 0.4 s apart. Ten crush kills in a second ask for none; five plated
-# break-throughs in a second get at most three; a deflected hit gets none whichever
-# order combat publishes it in. Plating is read the way combat will expose it
-# (ctx.spawner.plating_of); until combat has it, the test supplies it.
+# The v3 W11 hit-stop policy, through the real game. Every landed hit stops for its
+# damage band (base + per damage point, clamped), a crit or weak point stops longer and
+# a ram longer still, and nothing passes the spine's 60 ms cap. A deflected hit never
+# stops. The hits of one frame coalesce into one stop; rapid fire is spaced at least
+# STOP_GAP_MS apart and spends at most STOP_BUDGET_MS a second (a trimmed stop allowed).
+# A real stop on the spine's Engine.time_scale leaves the rolling ball's velocity as it was.
 
 var _game
 var _juice
 var _failures := 0
 var _t0 := 0
 var _plan: Array = []
-var _fodder: Array = []
-var _plated: Node3D
+var _target: Node3D
 var _marks := {}
 var _done := false
+var _velocity_before := Vector3.ZERO
+var _stop_seen := false
+var _velocity_after := Vector3.ZERO
+var _speed_checked := false
+var _dealt := 10.0
+var _full := true
 
 
 func _initialize() -> void:
@@ -32,80 +39,134 @@ func _process(_delta: float) -> bool:
 	var events = _game.events
 	if _juice == null:
 		_juice = _game.presentation.juice
-		for name in ["strike_deflected", "beacon_unsealed"]:
-			if not events.has_signal(name):
-				var args := [{"name": "stage", "type": TYPE_INT}]
-				if name == "strike_deflected":
-					args = [{"name": "enemy", "type": TYPE_OBJECT}, {"name": "kind", "type": TYPE_STRING},
-						{"name": "punch", "type": TYPE_FLOAT}, {"name": "plating", "type": TYPE_FLOAT}]
-				events.add_user_signal(name, args)
-		_game.presentation.wire_optional()
-		_juice.plating_of = func(enemy: Node3D) -> float: return float(enemy.get_meta("plating", 0.0))
-		_juice.resolve_of = Callable()
+		_juice.resolve_of = func(_enemy: Node3D, _kind: String, _force: float) -> Dictionary:
+			return {"dealt": _dealt, "punch": _dealt, "full": _full, "part": "", "plating": 0.0}
 		_game.ctx.calm = true
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
-		for i in 10:
-			var chaser := Node3D.new()
-			chaser.set_meta("plating", 0.0)
-			_game.add_child(chaser)
-			_fodder.append(chaser)
-		_plated = Node3D.new()
-		_plated.set_meta("plating", 30.0)
-		_game.add_child(_plated)
+		_target = Node3D.new()
+		_game.add_child(_target)
 		_t0 = Time.get_ticks_msec()
-		# Ten crushes, 100 ms apart: a fodder strike and its kill in the same frame.
-		for i in 10:
-			_plan.append([100 + i * 100, func():
-				events.enemy_struck.emit(_fodder[i], "ram", 26.0)
-				events.enemy_killed.emit("chaser", Vector3.ZERO, 1)])
-		_plan.append([1150, func(): _marks["crush"] = _sent().size()])
-		# A deflected hit, in both publication orders.
-		_plan.append([1700, func():
-			events.emit_signal("strike_deflected", _plated, "ram", 20.0, 30.0)
-			events.enemy_struck.emit(_plated, "ram", 20.0)])
-		_plan.append([2200, func():
-			events.enemy_struck.emit(_plated, "stomp", 9.0)
-			events.emit_signal("strike_deflected", _plated, "stomp", 9.0, 30.0)])
-		_plan.append([2700, func(): _marks["deflect"] = _sent().size()])
-		# Five break-throughs in one second.
-		for i in 5:
-			_plan.append([3000 + i * 200, func(): events.enemy_struck.emit(_plated, "ram", 40.0)])
-		_plan.append([4050, func(): _marks["plated"] = _sent().size()])
-		_plan.append([4700, func(): events.emit_signal("beacon_unsealed", 1)])
-		_plan.append([4800, func(): _marks["unseal"] = _sent().size()])
+		_check_bands()
+		_plan.append([100, func():
+			_juice.reset_stops()
+			_dealt = 10.0
+			events.enemy_struck.emit(_target, "arc", 1.0)
+			_juice.flush()
+			_marks["low"] = _last_sent()])
+		_plan.append([300, func():
+			_juice.reset_stops()
+			_dealt = 80.0
+			events.enemy_struck.emit(_target, "arc", 1.0)
+			_juice.flush()
+			_marks["high"] = _last_sent()])
+		_plan.append([500, func():
+			_juice.reset_stops()
+			_dealt = 80.0
+			events.enemy_struck.emit(_target, "ram", 1.0)
+			_juice.flush()
+			_marks["ram"] = _last_sent()])
+		_plan.append([700, func():
+			_juice.reset_stops()
+			_full = false
+			var before: int = _sent().size()
+			events.enemy_struck.emit(_target, "ram", 1.0)
+			_juice.flush()
+			_marks["deflect"] = _sent().size() - before
+			_full = true])
+		_plan.append([900, func():
+			_juice.reset_stops()
+			_dealt = 20.0
+			var before: int = _sent().size()
+			for i in 5:
+				events.enemy_struck.emit(_target, "arc", 1.0)
+			_juice.flush()
+			_marks["frame"] = [_sent().size() - before, _last_sent()]])
+		# Rapid fire: a hit every 33 ms for a second.
+		_plan.append([1100, func():
+			_juice.reset_stops()
+			_marks["rapid_from"] = _juice.hit_stop_log.size()])
+		for i in 30:
+			_plan.append([1110 + i * 33, func():
+				_dealt = 30.0
+				events.enemy_struck.emit(_target, "runner", 1.0)
+				_juice.flush()])
+		_plan.append([2150, func(): _marks["rapid"] = _juice.hit_stop_log.slice(_marks["rapid_from"]).filter(func(e: Array): return e[1] > 0.0)])
+		# A real stop on the rolling ball.
+		_plan.append([2400, func():
+			_juice.reset_stops()
+			_game.player._rigid.set_velocity_now(Vector3(0.0, 0.0, -18.0))])
+		_plan.append([2450, func():
+			_velocity_before = _game.player._rigid.linear_velocity
+			_juice.request_hit_stop(0.06, "test")])
 		return false
+	if _velocity_before != Vector3.ZERO and not _speed_checked:
+		if Engine.time_scale < 1.0:
+			_stop_seen = true
+		elif _stop_seen:
+			_velocity_after = _game.player._rigid.linear_velocity
+			_speed_checked = true
 	var elapsed := Time.get_ticks_msec() - _t0
 	while not _plan.is_empty() and elapsed >= _plan[0][0]:
 		var item: Array = _plan.pop_front()
 		(item[1] as Callable).call()
-	if not _plan.is_empty() or _done:
+	if not _plan.is_empty() or _done or not _speed_checked:
 		return false
 	_done = true
-	_check("crushes free", _marks["crush"] == 0, "10 crush kills in 1 s send %d hit-stops" % _marks["crush"])
-	_check("deflects free", _marks["deflect"] == 0, "a deflected ram and a deflected stomp, in either publication order, send %d" % _marks["deflect"])
-	var plated: int = _marks["plated"] - _marks["deflect"]
-	_check("break-throughs spaced", plated >= 2 and plated <= 3, "5 plated break-throughs in 1 s send %d (at most 3)" % plated)
-	_check("unseal stops", _marks["unseal"] - _marks["plated"] == 1, "beacon_unsealed sends one stop of its own")
+	_check("damage scales", _marks["high"] > _marks["low"] and _marks["ram"] > _marks["high"],
+		"a 10-damage hit stops %.0f ms, an 80-damage hit %.0f ms, an 80-damage ram %.0f ms" % [_marks["low"] * 1000.0, _marks["high"] * 1000.0, _marks["ram"] * 1000.0])
+	_check("deflects free", _marks["deflect"] == 0, "a deflected ram sends %d stops" % _marks["deflect"])
+	var one: Array = _marks["frame"]
+	var expected := (Juice.stop_ms_for(20.0) + 4.0 * EventKinds.STOP_PER_EXTRA_HIT_MS) / 1000.0
+	_check("one frame, one stop", one[0] == 1 and absf(one[1] - expected) < 0.0005,
+		"five hits in one frame send %d stop of %.0f ms (the band plus %.0f ms per extra hit)" % [one[0], one[1] * 1000.0, EventKinds.STOP_PER_EXTRA_HIT_MS])
+	var rapid: Array = _marks["rapid"]
+	var total := 0.0
 	var gaps_ok := true
-	var sent := _sent()
-	var gaps: Array = []
-	for i in range(1, sent.size()):
-		var gap: int = sent[i][3] - sent[i - 1][3]
-		gaps.append(gap)
-		gaps_ok = gaps_ok and gap >= 400
+	for i in rapid.size():
+		total += rapid[i][1] * 1000.0
+		if i > 0:
+			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] >= EventKinds.STOP_GAP_MS
+	_check("rapid fire capped", rapid.size() >= 2 and total <= EventKinds.STOP_BUDGET_MS + 0.5 and gaps_ok,
+		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), gaps >= %d ms %s" % [rapid.size(), total, EventKinds.STOP_BUDGET_MS, EventKinds.STOP_GAP_MS, gaps_ok])
+	var flat_before := Vector2(_velocity_before.x, _velocity_before.z)
+	var drift := (Vector2(_velocity_after.x, _velocity_after.z) - flat_before).length()
+	_check("momentum kept", _stop_seen and drift < 0.05 and flat_before.length() > 10.0,
+		"a real 60 ms stop: velocity %s before, %s after; planar drift %.4f m/s (gravity alone moves y)" % [_velocity_before, _velocity_after, drift])
 	var lengths_ok := true
-	for entry in sent:
-		lengths_ok = lengths_ok and entry[1] >= 0.03 and entry[1] <= 0.05
-	_check("0.4 s apart", gaps_ok and lengths_ok, "gaps between stops %s ms; every stop 30-50 ms" % [gaps])
+	for entry in _sent():
+		lengths_ok = lengths_ok and entry[1] <= Game.HIT_STOP_MAX + 0.0001
+	_check("under the cap", lengths_ok, "every sent stop is at or under the spine's %.0f ms" % (Game.HIT_STOP_MAX * 1000.0))
 	print("presentation_hitstop_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
 	return true
 
 
+# The bands themselves: monotonic in damage, a crit and a ram above a plain hit, all capped.
+func _check_bands() -> void:
+	var bands: Array = []
+	var ok := true
+	var previous := 0.0
+	for damage in [0.0, 5.0, 10.0, 20.0, 40.0, 60.0, 80.0, 150.0]:
+		var ms := Juice.stop_ms_for(damage)
+		ok = ok and ms >= previous and ms <= 60.0
+		previous = ms
+		bands.append("%d:%.0f" % [damage, ms])
+	var crit := Juice.stop_ms_for(20.0, true)
+	var heavy := Juice.stop_ms_for(20.0, false, true)
+	var both := Juice.stop_ms_for(150.0, true, true)
+	_check("bands", ok and crit > Juice.stop_ms_for(20.0) and heavy > Juice.stop_ms_for(20.0) and both <= 60.0,
+		"damage:ms %s; at 20 damage a crit %.0f ms, a ram %.0f ms; a 150-damage crit ram %.0f ms" % [" ".join(bands), crit, heavy, both])
+
+
 func _sent() -> Array:
 	return _juice.hit_stop_log.filter(func(entry: Array): return entry[1] > 0.0)
+
+
+func _last_sent() -> float:
+	var sent := _sent()
+	return sent.back()[1] if not sent.is_empty() else 0.0
 
 
 func _check(label: String, ok: bool, detail: String) -> void:

@@ -135,7 +135,57 @@ const ROWS := {
 	"bay_entered": {"group": "flow", "color": Palette.SANDSTONE, "shape": "square", "sound": "pylon_plant", "sound_next": "bay_lounge_in", "hud": "Moss's workshop", "objective": "", "priority": 2},
 	"bay_left": {"group": "flow", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "pylon_eject", "sound_next": "bay_slingshot_out", "hud": "", "objective": "", "priority": 1},
 	"world_fact": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 W11 juice. A dodge: the ball stood in a committed threat while it warned and was
+	# clear when it landed. Amber, because it is your own move, on the chevron of motion
+	# past; a rising whoosh that ends on a bright fifth, never the danger family.
+	"near_miss": {"group": "combat", "color": Palette.AMBER, "shape": "chevron", "sound": "near_whoosh", "hud": "", "objective": "", "priority": 1},
 }
+
+# v3 W11 juice
+# How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
+# particles and streak window sit beside its colour, shape and sound. Milliseconds for
+# times, particles per burst for counts. presentation (juice.gd, vfx.gd, audio.gd) reads
+# these; the pause menu's Screen shake and Hit-stop rows scale every shake, kick, punch
+# and stop here.
+#   stop_ms, stop_per_damage, stop_min_ms, stop_cap_ms   hit-stop: base + per damage point,
+#       clamped; crit multiplies, heavy (a ram, stomp or slam) adds
+#   sparks, dust, pop, debris, fountain   particles in the burst
+#   shake, kick, punch_fov   camera: shake amplitude, kick metres along travel, fov degrees
+#   chain_ms, chain_cap   a streak: the window that keeps it alive and its top rung
+#   pulse   the ball's squash for the fact (negative shrinks: a heft loss)
+const JUICE := {
+	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8, "shake": 0.1,
+		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "shake": 0.3, "dust": 12}},
+	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
+	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
+	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
+	"part_gained": {"fountain": 18, "element": {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}},
+	"core_gained": {"fountain": 24},
+	# Your own shots and throws: a camera kick against the aim and a recoil squash on the
+	# ball, per weapon; both are camera and shell only, never the ball's velocity.
+	"shot_fired": {"weapons": {"rapid_laser": {"kick": 0.05, "recoil": 0.04}, "arc_caster": {"kick": 0.12, "recoil": 0.08},
+			"pylon_turret": {"kick": 0.08, "recoil": 0.0}, "sticky_charge": {"kick": 0.16, "recoil": 0.12}},
+		"throw": {"sound": "dash_whoosh", "pitch": 1.5, "db": -4.0}, "stick": {"sound": "grapple_clink", "pitch": 0.7, "sparks": 8}},
+	# Kest's bomb: a flash, a shockwave ring and debris; the punch grows with each enemy the
+	# blast catches. Inside near_m of the ball it kicks the camera and squashes the shell.
+	"sticky_detonated": {"punch_fov": 3.0, "punch_per_enemy": 1.5, "punch_cap": 10.0, "debris": 12, "dust": 14, "shake": 0.35,
+		"near_m": 6.0, "near_kick": 0.6},
+	"rocket_jumped": {"kick": 0.8, "punch_fov": 8.0, "squash": 0.35},
+	"near_miss": {"stop_ms": 45.0, "punch_fov": -5.0, "grace_ms": 250},
+	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "shake": 0.5, "shake_s": 0.25, "color": Palette.HAZARD},
+	"scrap_lost": {"pulse": -0.22},
+	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+}
+# Rapid fire never stutters: stops start at least STOP_GAP_MS apart and add up to at most
+# STOP_BUDGET_MS in any second; the hits of one frame coalesce into one stop.
+const STOP_GAP_MS := 90
+const STOP_BUDGET_MS := 100.0
+const STOP_PER_EXTRA_HIT_MS := 2.0
+
+
+static func juice(kind: String) -> Dictionary:
+	return JUICE.get(kind, {})
 
 # v2 W2 threat grammar
 # One row per enemy attack type (combat/threat_grammar.gd), in the ROWS schema. They sit

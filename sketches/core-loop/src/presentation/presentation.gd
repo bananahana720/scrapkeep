@@ -16,8 +16,10 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 #   sfx_bank       one synthesized sound per event_kinds sound id
 #   synth          the instrument rack both of them play
 #   harmony        tempo, key and scales, the one musical source
-#   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon
-#   vfx            trails, speed lines, flashes, rings and sparkles
+#   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon, and
+#                  how hits, kills, pickups, dodges and hits taken land (v3 W11)
+#   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
+#   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
@@ -47,6 +49,8 @@ func setup(ctx_ref) -> void:
 	vfx = Vfx.new()
 	add_child(vfx)
 	vfx.setup(ctx)
+	juice.audio = audio
+	juice.vfx = vfx
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)

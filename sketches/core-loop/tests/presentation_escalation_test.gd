@@ -183,7 +183,7 @@ func _process(_delta: float) -> bool:
 			var home_pitch: float = _pitch("scrap_tick")
 			engine._set_key(1)
 			_audio._last_start.clear()
-			_audio._scrap_last = -100000
+			_audio.scrap_streak.reset()
 			_game.events.scrap_collected.emit(1, Vector3.ZERO, 2)
 			var lifted_pitch: float = _pitch("scrap_tick")
 			var ratio := lifted_pitch / maxf(home_pitch, 0.0001)

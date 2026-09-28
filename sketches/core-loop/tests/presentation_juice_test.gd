@@ -3,10 +3,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 
 # Juice through the real game: the camera hooks fire for dash, slam and launch; a
-# landing squashes the ball; with no plating data from combat yet, hit-stop falls back
-# to big contact hits, is 30-50 ms, never above the spine's 60 ms cap, and never
-# stacks or chains, measured on the real Engine.time_scale the spine drives. The
-# plated policy has its own test, presentation_hitstop_test.
+# landing squashes the ball; the hits of one frame send one stop, never above the
+# spine's 60 ms cap, measured on the real Engine.time_scale the spine drives. The
+# damage bands, spacing and budget have their own test, presentation_hitstop_test.
 
 var _game
 var _juice
@@ -41,9 +40,7 @@ func _process(_delta: float) -> bool:
 	match _step:
 		0:
 			_juice = _game.presentation.juice
-			# This test drives the fallback thresholds (no plating data). With real combat
-			# the spawner answers plating_of, so it is cleared here; the plated policy has
-			# its own test, presentation_hitstop_test.
+			# Without combat's resolver a hit lands for its force.
 			_juice.plating_of = Callable()
 			_juice.resolve_of = Callable()
 			_game.ctx.calm = true
@@ -72,26 +69,19 @@ func _process(_delta: float) -> bool:
 			_game.events.enemy_struck.emit(_enemy, "ram", 10.0)
 			_game.events.enemy_struck.emit(_enemy, "arc", 99.0)
 			_game.events.enemy_struck.emit(_enemy, "stomp", 5.0)
+			var logged_before: int = _juice.hit_stop_log.size()
+			_juice.flush()
 			var sent := _sent().size() - _sent_before
-			_check("no stack", sent == 1, "five big rams in one frame send %d stop; the rest are gated" % sent)
-			_check("small hits free", _juice.hit_stop_log.size() == 5, "a slow ram, a weapon arc and a soft stomp ask for no stop (%d requests logged)" % _juice.hit_stop_log.size())
-			_next(100)
-		3:
-			# Inside the spacing window: gated. After it: allowed again.
-			_game.events.enemy_struck.emit(_enemy, "stomp", 20.0)
-			_check("no chain", _sent().size() - _sent_before == 1, "a big stomp 100 ms later is gated so stops never chain")
-			_next(450)
-		4:
-			_game.events.enemy_struck.emit(_enemy, "stomp", 20.0)
-			_check("spaced stop", _sent().size() - _sent_before == 2, "the same stomp 550 ms later gets its stop")
+			_check("no stack", sent == 1 and _juice.hit_stop_log.size() - logged_before == 1,
+				"eight hits in one frame ask once and send %d stop" % sent)
 			_next(200)
-		5:
+		3:
 			var within := true
 			var values: Array = []
 			for entry in _sent():
-				within = within and entry[1] >= 0.03 and entry[1] <= 0.05 and entry[1] <= Game.HIT_STOP_MAX
+				within = within and entry[1] > 0.0 and entry[1] <= Game.HIT_STOP_MAX
 				values.append(entry[1])
-			_check("stop length", within, "every sent stop is 30-50 ms, under the spine's %.0f ms cap: %s" % [Game.HIT_STOP_MAX * 1000.0, values])
+			_check("stop length", within, "every sent stop is under the spine's %.0f ms cap: %s" % [Game.HIT_STOP_MAX * 1000.0, values])
 			_check("real freeze", _stop_seen_ms > 0.0 and _stop_seen_ms < 60.0 + 40.0 and Engine.time_scale == 1.0,
 				"longest observed Engine.time_scale dip %.0f ms (cap 60 ms plus frame granularity), time scale back to 1" % _stop_seen_ms)
 			print("presentation_juice_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

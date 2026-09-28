@@ -6,6 +6,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const Streak := preload("res://src/presentation/streak.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
 const Augments := preload("res://src/movement/augments.gd")
 # v2 W9: the class row names the motif every class cue resolves through, and the roster
@@ -35,8 +36,8 @@ const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_p
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
-# Pickups inside this window climb the pentatonic ladder; a gap resets to home.
-const COMBO_WINDOW_MS := 700
+# Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
+# their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
 const MENU_STATES := ["title", "class_select", "summary", "dead"]
 # Weapon voices per class, so each class sounds like itself (identity, principle 5).
@@ -100,10 +101,10 @@ var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
 var _voices := {}
 var _last_start := {}
-var _scrap_combo := 0
-var _scrap_last := -100000
-var _kill_combo := 0
-var _kill_last := -100000
+# The pickup streak and the kill chain. Audio bumps them as it plays each rung; juice
+# reads the same records at the end of the frame to draw the chain and the pulse.
+var scrap_streak := Streak.for_kind("scrap_collected")
+var kill_streak := Streak.for_kind("enemy_killed")
 var _beacon_rung := -1
 var _gates_announced := false
 var _heft_class := 1
@@ -528,6 +529,7 @@ func wire_optional() -> void:
 	_listen(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
 	_listen(events, "core_gained", _on_core)
+	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
 	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
@@ -671,7 +673,8 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		engine.set_heft_lift(_heft_class - 1)
 	_beacon_rung = -1
 	_gates_announced = false
-	_scrap_combo = 0
+	scrap_streak.reset()
+	kill_streak.reset()
 	# Each stage starts its own difficulty clock and never carries a vent pedal over.
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
@@ -688,10 +691,8 @@ func _on_beacon(fraction: float) -> void:
 
 
 func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:
-	var now := Time.get_ticks_msec()
-	_scrap_combo = mini(_scrap_combo + 1, 9) if now - _scrap_last < COMBO_WINDOW_MS else 0
-	_scrap_last = now
-	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(_scrap_combo)))
+	var rung: int = scrap_streak.bump(Time.get_ticks_msec())
+	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
 
 # The growl is the Fleet's voice: an ancient (a relic, a drone, a hand, a Warden) never
@@ -760,10 +761,8 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	if _kind == "vault":
 		# A small drop, on the moment the vault breaks.
 		play("enemy_killed", 2.0, 1.0, "SFX", "vault_drop")
-	var now := Time.get_ticks_msec()
-	_kill_combo = mini(_kill_combo + 1, 7) if now - _kill_last < KILL_COMBO_WINDOW_MS else 0
-	_kill_last = now
-	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(_kill_combo)))
+	var rung: int = kill_streak.bump(Time.get_ticks_msec())
+	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
 
 func _on_died() -> void:
