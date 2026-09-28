@@ -8,6 +8,12 @@ const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
 
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
+const PILOTS := {
+	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
+	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
+	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
+}
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
 # models from tools/blender/ as nodes enter the tree, without editing the gameplay
@@ -67,11 +73,14 @@ var _wardens := {}
 var _mast := {}
 var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
+var _reaction_clock := 0.0
+var _reaction_connections: Array = []
 
 
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "HeroAssets"
+	_connect_pilot_events()
 	_prewarm_warden_strokes()
 	_dress_bay.call_deferred()
 	if ctx != null and ctx.player != null:
@@ -87,6 +96,10 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	for connection in _reaction_connections:
+		if is_instance_valid(connection.bus) and connection.bus.is_connected(connection.event, connection.callback):
+			connection.bus.disconnect(connection.event, connection.callback)
+	_reaction_connections.clear()
 	for rec in _wardens.values():
 		_restore_warden(rec)
 	_wardens.clear()
@@ -252,9 +265,11 @@ func _fit(rec: Dictionary) -> void:
 	rec["class"] = id
 	rec["core"] = core
 	rec["pod"] = pod
+	_fit_pilot(rec)
 
 
 func _process(delta: float) -> void:
+	_reaction_clock += delta
 	for key in _players.keys():
 		var rec: Dictionary = _players[key]
 		var player = rec["player"]
@@ -295,6 +310,108 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 # The shell the player wears, for tests and tools: {class, core, pod} or {}.
 func shell_of(player: Node) -> Dictionary:
 	return _players.get(player.get_instance_id(), {})
+
+
+# --- cosmetic pilot reactions ------------------------------------------------------
+
+func _fit_pilot(rec: Dictionary) -> void:
+	var pilot := _scene(PILOTS[rec["class"]])
+	pilot.name = "AnimatedPilot"
+	var pod: Node3D = rec.pod
+	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D
+	if placeholder != null:
+		hide_placeholder(placeholder)
+	pod.add_child(pilot)
+	paint(pilot, {"class": rec.player.class_color()})
+	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	rec["animator"] = animator
+	rec["pilot"] = pilot
+	rec["reaction"] = ""
+	rec["priority"] = -1
+	rec["cooldowns"] = {}
+	if animator != null:
+		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
+		_seat_pilot(rec)
+
+
+func _connect_pilot_events() -> void:
+	if ctx == null or ctx.events == null or not _reaction_connections.is_empty():
+		return
+	for info in ctx.events.get_signal_list():
+		var event := String(info.name)
+		if not PilotReactions.ROWS.has(event) or PilotReactions.ROWS[event].get("pending", false):
+			continue
+		var handlers := [_pilot_event_0, _pilot_event_1, _pilot_event_2, _pilot_event_3, _pilot_event_4]
+		var callback: Callable = handlers[info.args.size()].bind(event)
+		ctx.events.connect(event, callback)
+		_reaction_connections.append({"bus": ctx.events, "event": event, "callback": callback})
+
+
+func _pilot_event_0(event: String) -> void:
+	_on_pilot_event(event, [])
+
+
+func _pilot_event_1(a, event: String) -> void:
+	_on_pilot_event(event, [a])
+
+
+func _pilot_event_2(a, b, event: String) -> void:
+	_on_pilot_event(event, [a, b])
+
+
+func _pilot_event_3(a, b, c, event: String) -> void:
+	_on_pilot_event(event, [a, b, c])
+
+
+func _pilot_event_4(a, b, c, d, event: String) -> void:
+	_on_pilot_event(event, [a, b, c, d])
+
+
+func _on_pilot_event(event: String, args: Array) -> void:
+	for rec in _players.values():
+		if is_instance_valid(rec.player):
+			react(rec.player, event, args)
+
+
+# Returns acceptance for tests and capture tools. Never writes to the player.
+func react(player: Node, event: String, args: Array = []) -> bool:
+	if not PilotReactions.ROWS.has(event):
+		return false
+	var row: Dictionary = PilotReactions.ROWS[event]
+	if row.get("pending", false):
+		return false
+	if row.has("near_arg") and (args.size() <= row.near_arg or args[row.near_arg] != true):
+		return false
+	var rec := shell_of(player)
+	if rec.is_empty() or not is_instance_valid(rec.get("animator")):
+		return false
+	var clip := PilotReactions.clip_for(row, rec["class"])
+	var animator: AnimationPlayer = rec.animator
+	if not animator.has_animation(clip) or _reaction_clock < float(rec.cooldowns.get(clip, 0.0)):
+		return false
+	if rec.reaction != "" and int(row.priority) <= int(rec.priority):
+		return false
+	rec.reaction = clip
+	rec.priority = row.priority
+	rec.cooldowns[clip] = _reaction_clock + float(row.cooldown)
+	# No blend on impact: the authored recoil must be visible in its first frames.
+	animator.play(clip, 0.0)
+	animator.advance(0.0)
+	return true
+
+
+func _pilot_finished(_clip: StringName, player_id: int, animator: AnimationPlayer) -> void:
+	var rec: Dictionary = _players.get(player_id, {})
+	if not rec.is_empty() and rec.animator == animator:
+		_seat_pilot(rec)
+
+
+func _seat_pilot(rec: Dictionary) -> void:
+	rec.animator.stop()
+	for skeleton in rec.pilot.find_children("*", "Skeleton3D", true, false):
+		skeleton.reset_bone_poses()
+	rec.reaction = ""
+	rec.priority = -1
 
 
 # --- accretion chunks --------------------------------------------------------------
