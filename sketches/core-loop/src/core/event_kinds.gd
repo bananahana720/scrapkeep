@@ -198,8 +198,8 @@ static func category(id: String) -> Dictionary:
 # row per bus signal. Sounds are ids for presentation to bake. A slot's state reads by
 # shape first (frame weight, wedge, doubled frame, strike); active wears the class
 # colour, since class colour means yours. "class_motif" is not a synth id: it names the
-# class row's own sound (sound_next, else sound), so the ready swell and a charge pip
-# filling play the class's tune (SOUND-STORY section 7, W1).
+# class row's ready pulse (<motif>_ready, resolved in rows.gd), so the ready swell plays
+# the class's tune (SOUND-STORY section 7, W1).
 const UI_ROWS := {
 	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "class_motif", "hud": "", "objective": "", "priority": 1},
 	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -256,8 +256,8 @@ const LOOT_ROWS := {
 	"shop_left": {"group": "economy", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
 	"shop_bought": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
 	"shop_charge": {"group": "economy", "color": Palette.ARC, "shape": "core", "sound": "core_socket", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
-	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
-	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "bench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "bench_clank", "hud": "", "objective": "", "priority": 1},
 	"shop_refused": {"group": "economy", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "moss_grumble", "hud": "", "objective": "", "priority": 1},
 	"moss_beat": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "moss_babble", "hud": "", "objective": "", "priority": 1},
 	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
