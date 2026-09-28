@@ -42,7 +42,7 @@ func _process(_delta: float) -> bool:
 	_wait += 1
 	match _phase:
 		"boot":
-			_ws = _game.workshop
+			_ws = _game.get_node("Workshop")
 			_ws.armed = true
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
@@ -54,10 +54,10 @@ func _process(_delta: float) -> bool:
 				var tree = _game.player.tree
 				_offered = tree.offered(tree.class_id, 1).map(func(n): return n["id"])
 				var cards: Array = _ws.pick.cards()
-				_report("start pick opens", _ws.pick.is_open() and cards.size() == 2 and paused and _game.menu_held()
+				_report("start pick opens", _ws.pick.is_open() and cards.size() == 2 and paused and _game.get_meta("menu_held", false)
 						and cards.map(func(c): return c.node_id()) == _offered,
 					"open %s, cards %s for offered %s, tree paused %s, menu held %s"
-						% [_ws.pick.is_open(), cards.map(func(c): return c.node_id()), _offered, paused, _game.menu_held()])
+						% [_ws.pick.is_open(), cards.map(func(c): return c.node_id()), _offered, paused, _game.get_meta("menu_held", false)])
 				var seen: Dictionary = WordBudget.count(_ws)
 				print("  pick words: " + " | ".join(seen["items"].map(func(i): return "%s %d \"%s\"" % [i["node"], i["words"], i["text"]])))
 				_report("pick word budget", seen["hud"] <= CALM_BUDGET and seen["hud"] > 0, "%d words on the pick screen (budget %d)" % [seen["hud"], CALM_BUDGET])
@@ -65,9 +65,9 @@ func _process(_delta: float) -> bool:
 				var lit: bool = cards[1].has_focus()
 				Push.click(root, cards[1])
 				var path: Array = tree.path()
-				_report("mouse pick", lit and path == [_offered[1]] and not _ws.pick.is_open() and not paused and not _game.menu_held(),
+				_report("mouse pick", lit and path == [_offered[1]] and not _ws.pick.is_open() and not paused and not _game.get_meta("menu_held", false),
 					"hover focused the second card %s; after the click the path is %s, open %s, paused %s, held %s"
-						% [lit, path, _ws.pick.is_open(), paused, _game.menu_held()])
+						% [lit, path, _ws.pick.is_open(), paused, _game.get_meta("menu_held", false)])
 				_game.player.tree.open_checkpoint()
 				_next("keys")
 		"keys":
@@ -98,10 +98,10 @@ func _process(_delta: float) -> bool:
 			if _wait == 2:
 				var opened: bool = _ws.pick.is_open()
 				Push.key(root, KEY_ESCAPE)
-				_report("esc mid drop-in", opened and not _ws.pick.is_open() and not paused and not _game.menu_held()
+				_report("esc mid drop-in", opened and not _ws.pick.is_open() and not paused and not _game.get_meta("menu_held", false)
 						and _game.player.tree.pending(),
 					"open before %s; after Esc open %s, paused %s, held %s, pick still pending %s"
-						% [opened, _ws.pick.is_open(), paused, _game.menu_held(), _game.player.tree.pending()])
+						% [opened, _ws.pick.is_open(), paused, _game.get_meta("menu_held", false), _game.player.tree.pending()])
 				_next("settled_closed")
 		"settled_closed":
 			if _wait == 60:

@@ -21,10 +21,13 @@ const MossBubble := preload("res://src/ui/moss_bubble.gd")
 #   Moss's bubble speaks his greeting on the catch, his bark on every verb, a beat on
 #   each talk press, and his send-off on the pad.
 #
-# While a screen is open the game holds the mouse and the ball's keys (game.hold_menu),
-# and every choice takes the mouse, the keys and a pad alike. The layer processes while
-# the tree is paused. armed is off in test mode, so the bots and the older tests run
-# the game exactly as before; the workshop tests switch it on.
+# While a screen is open this layer holds the player: the ball's keyboard source is
+# off, the mouse is free, and the game's "menu_held" meta tells game.gd not to recapture
+# the mouse on a click (its one-line hook). The pick also holds the tree paused. Each is
+# re-asserted every frame and after every flow change, since game.gd sets them too.
+# Every choice takes the mouse, the keys and a pad alike. The layer processes while the
+# tree is paused. armed is off in test mode, so the bots and the older tests run the
+# game exactly as before; the workshop tests switch it on.
 
 const LAYER := 4
 const PULL_UP := 4.0
@@ -80,6 +83,16 @@ class TalkButton extends Button:
 		draw_colored_polygon(PackedVector2Array([at + Vector2(4.0, 15.0), at + Vector2(-2.0, 22.0), at + Vector2(11.0, 15.0)]), tint)
 
 
+func _init() -> void:
+	name = "Workshop"
+
+
+# game.gd adds this layer as its child; it sets itself up from its parent.
+func _ready() -> void:
+	if game == null:
+		setup(get_parent())
+
+
 func setup(game_ref) -> void:
 	game = game_ref
 	armed = not game.test_mode
@@ -110,7 +123,9 @@ func setup(game_ref) -> void:
 			close_all())
 	game.events.flow_changed.connect(func(_s: String):
 		if not game.flow.in_play():
-			close_all())
+			close_all()
+		elif _held:
+			_enforce_hold())
 
 
 func shop():
@@ -246,14 +261,34 @@ func _near_moss() -> bool:
 	return terrain != null and terrain.has_method("near_moss") and terrain.near_moss(game.player.ball_position())
 
 
+func held() -> bool:
+	return _held
+
+
 func _apply_hold() -> void:
-	var held: bool = pick.is_open() or counter.is_open()
+	var held_now: bool = pick.is_open() or counter.is_open()
 	var pause: bool = pick.is_open()
-	if held == _held and pause == _paused:
+	if held_now == _held and pause == _paused:
 		return
-	_held = held
+	_held = held_now
 	_paused = pause
-	game.hold_menu(held, pause)
+	game.set_meta("menu_held", held_now)
+	get_tree().paused = pause or game.pause_toggled() or game.notes_held()
+	if held_now:
+		_enforce_hold()
+		return
+	if game.keyboard != null:
+		game.keyboard.enabled = game.flow.in_play()
+	game._capture_mouse(game.flow.in_play())
+
+
+func _enforce_hold() -> void:
+	if game.keyboard != null:
+		game.keyboard.enabled = false
+	if game._mouse_captured():
+		game._capture_mouse(false)
+	if _paused and not get_tree().paused:
+		get_tree().paused = true
 
 
 # ---- Moss's voice ----
@@ -321,6 +356,8 @@ static func _root_pitch(root: String) -> float:
 # ---- Per frame ----
 
 func _process(_delta: float) -> void:
+	if _held:
+		_enforce_hold()
 	var s = shop()
 	var inside: bool = armed and s != null and s.inside and game.flow.in_play()
 	var near := inside and _near_moss()
@@ -371,6 +408,8 @@ func _pick_key(event: InputEvent) -> bool:
 				return true
 			KEY_D:
 				pick.step_focus(1)
+				return true
+			KEY_TAB, KEY_P:
 				return true
 	if event.is_action_pressed("ui_cancel"):
 		close_pick()

@@ -49,7 +49,7 @@ func _process(delta: float) -> bool:
 	var player = _game.player
 	match _phase:
 		"boot":
-			_ws = _game.workshop
+			_ws = _game.get_node("Workshop")
 			_game.ctx.calm = true
 			player.source = Intent.Scripted.new()
 			_game.events.bay_entered.connect(func(_b: float): _caught = true)
@@ -78,8 +78,8 @@ func _process(delta: float) -> bool:
 		"catch":
 			if _caught and _clock > 0.2 and _ws.pick.is_open():
 				var greeting: String = _game.world.bay_bark.get("text", "")
-				_report("the catch opens the pick", paused and _game.menu_held() and _ws.pick.depth == 2,
-					"pick open at depth %d, paused %s, held %s" % [_ws.pick.depth, paused, _game.menu_held()])
+				_report("the catch opens the pick", paused and _game.get_meta("menu_held", false) and _ws.pick.depth == 2,
+					"pick open at depth %d, paused %s, held %s" % [_ws.pick.depth, paused, _game.get_meta("menu_held", false)])
 				_report("Moss greets behind it", greeting != "" and _ws.bubble.text == greeting and _ws.bubble.visible,
 					"bubble \"%s\" for the bark \"%s\"" % [_ws.bubble.text, greeting])
 				Push.key(root, KEY_1)
@@ -96,8 +96,8 @@ func _process(delta: float) -> bool:
 				return _finish("never landed aboard; ball at %s" % [player.ball_position()])
 		"pull_up":
 			if _ws.counter.is_open():
-				_report("pulling up opens the counter", player.frozen() and _game.menu_held() and _ws.talk.visible and not paused,
-					"in reach %s; ball parked %s, held %s, talk key %s" % [_game.ctx.terrain.near_moss(player.ball_position()), player.frozen(), _game.menu_held(), _ws.talk.visible])
+				_report("pulling up opens the counter", player.frozen() and _game.get_meta("menu_held", false) and _ws.talk.visible and not paused,
+					"in reach %s; ball parked %s, held %s, talk key %s" % [_game.ctx.terrain.near_moss(player.ball_position()), player.frozen(), _game.get_meta("menu_held", false), _ws.talk.visible])
 				Push.key(root, KEY_T)
 				_report("T gets a beat", _ws.bubble.mood == "beat" and _game.build.shop.LINES.values().has(_ws.bubble.text),
 					"bubble %s \"%s\"" % [_ws.bubble.mood, _ws.bubble.text])
@@ -108,8 +108,8 @@ func _process(delta: float) -> bool:
 				return _finish("counter never opened; near %s, speed %.2f" % [_game.ctx.terrain.near_moss(player.ball_position()), player.state.velocity.length()])
 		"stay_closed":
 			if _clock > 0.6:
-				_report("it waits for the ball to roll away", not _ws.counter.is_open() and not player.frozen() and not _game.menu_held(),
-					"counter open %s, ball parked %s, held %s" % [_ws.counter.is_open(), player.frozen(), _game.menu_held()])
+				_report("it waits for the ball to roll away", not _ws.counter.is_open() and not player.frozen() and not _game.get_meta("menu_held", false),
+					"counter open %s, ball parked %s, held %s" % [_ws.counter.is_open(), player.frozen(), _game.get_meta("menu_held", false)])
 				return _finish("")
 	return false
 
