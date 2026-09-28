@@ -40,7 +40,7 @@ func _initialize() -> void:
 	var t := Tuning.new()
 	_check("flag defaults", not t.armor() and not t.wear_on() and t.base("route_seed") == 0.0 and t.base("start_mass") == 0.0,
 		"scrap_mode %s, wear %s" % [t.option("scrap_mode"), t.option("wear")])
-	var applied := t.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--seed=7", "--start-mass=200", "--scrap=bogus"]))
+	var applied := t.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--route-seed=7", "--start-mass=200", "--scrap=bogus"]))
 	_check("flag parse", t.armor() and t.wear_on() and t.base("route_seed") == 7.0 and t.base("start_mass") == 200.0 and applied.size() == 4,
 		"applied %s; an unknown value is refused" % [applied])
 	var off := Tuning.new()
@@ -78,6 +78,25 @@ func _unit_checks() -> void:
 	mit.mitigation = 0.5
 	mit.damage(12.0, "t")
 	_check("mitigation first", mit.mass == 40.0 and mit.hp == 100.0, "12 at 50%% reduction on 100 scrap: mass %.0f, hp %.0f" % [mit.mass, mit.hp])
+	# A brace window joins the passive reduction before the scrap layer, per source.
+	var brace := _run(true)
+	brace.grant_start_mass(100.0)
+	brace.mitigation = 0.5
+	brace.brace_hook = func(source: String) -> float: return 0.5 if source == "spike" else 0.0
+	brace.damage(16.0, "spike")
+	var other := _run(true)
+	other.grant_start_mass(100.0)
+	other.brace_hook = brace.brace_hook
+	other.damage(16.0, "saw")
+	_check("brace before scrap", brace.mass == 60.0 and brace.hp == 100.0 and other.mass == 0.0,
+		"16 at 50%% passive + 50%% brace: mass %.0f (want 60); other source: mass %.0f (want 0)" % [brace.mass, other.mass])
+	# The spiral is observable: drops are counted apart from rises, and heft is logged per hit.
+	var spiral := _run(true)
+	spiral.grant_start_mass(400.0)
+	spiral.damage(40.0, "t")
+	_check("spiral metrics", spiral.metrics["class_drops"] >= 1 and spiral.metrics["heft_at_hits"].size() == 1
+			and spiral.metrics["min_heft"] > 0.0 and spiral.metrics["min_heft"] == spiral.heft(),
+		"drops %d, heft at hits %s, min heft %.2f" % [spiral.metrics["class_drops"], spiral.metrics["heft_at_hits"], spiral.metrics["min_heft"]])
 	# Hull regeneration never regenerates scrap; wear and hits never touch the hull.
 	var regen := _run(true, true)
 	regen.grant_start_mass(100.0)
@@ -186,7 +205,7 @@ func _physics_process(_delta: float) -> bool:
 		"boot":
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
-			_game.tuning.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--seed=7", "--start-mass=300"]))
+			_game.tuning.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--route-seed=7", "--start-mass=300"]))
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
 			_phase = "armor"
@@ -256,6 +275,7 @@ func _armor_game_checks() -> void:
 	_check("hit spills", build.scrap.recovery_count() >= 1 and build.scrap.recovery_count() <= 6 and run.mass < spill_from
 			and build.scrap.recovery_value() == int(round((spill_from - run.mass) * 0.75)) and run.hp == 100.0,
 		"mass %.0f -> %.0f, %d clusters worth %d, hull %.0f" % [spill_from, run.mass, build.scrap.recovery_count(), build.scrap.recovery_value(), run.hp])
+	# Mass lost to the hit above must not lower the hull ceiling at the next recompute.
 	_check("hud armour readout", _game.hud._armor.visible and _game.hud._armor_flash > 0.0 and _game.hud._armor.label.is_valid_int(),
 		"armour gauge visible %s, flash %.2f, label %s" % [_game.hud._armor.visible, _game.hud._armor_flash, _game.hud._armor.label])
 	# Wear runs only in grounded stage play: not in flight, not paused.
@@ -289,6 +309,16 @@ func _armor_game_checks() -> void:
 			and run._wear_accum == snap["wear_accum"] and build.scrap.recovery_count() == 0 and run.metrics["hit_loss"] == hit_loss_before,
 		"mass %.0f/%.0f, hp %.0f/%.0f, class %d/%d, wear %.2f/%.2f, live spills %d, metrics kept"
 			% [run.mass, snap["mass"], run.hp, snap["hp"], run._heft_class, snap["heft_class"], run._wear_accum, snap["wear_accum"], build.scrap.recovery_count()])
+	# With Scrap Armor held, the ceiling ratchets up with mass but never falls with it.
+	run.add_part("scrap_armor", "test")
+	var max_held: float = run.max_hp
+	run.mass = 2000.0
+	build.recompute()
+	var max_high: float = run.max_hp
+	run.mass = 0.0
+	build.recompute()
+	_check("hull ceiling holds", max_high > max_held and run.max_hp == max_high,
+		"Scrap Armor max hp %.0f -> %.0f at 2000 mass -> %.0f at 0 mass" % [max_held, max_high, run.max_hp])
 	var heft_from_scrap: bool = is_equal_approx(run.heft(), 1.0 + run.mass / 450.0)
 	run.add_part("boost_coil", "test")
 	_check("armour heft is scrap alone", heft_from_scrap and is_equal_approx(run.heft(), 1.0 + run.mass / 450.0),

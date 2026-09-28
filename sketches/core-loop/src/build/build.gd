@@ -435,7 +435,12 @@ func recompute() -> void:
 	_sync_scrap_flags()
 	sheet = BuildSheet.from_parts(ctx.run.parts)
 	effects.refresh(ctx.run.parts)
-	_mass_hp = effects.mass_health(ctx.run.mass)
+	var mass_hp: float = effects.mass_health(ctx.run.mass)
+	# Armour mode: mass lost to hits or wear never lowers the hull ceiling, so the
+	# Scrap Armor bonus only ratchets up (same rule as _on_scrap_collected).
+	if ctx.run.armor_mode:
+		mass_hp = maxf(mass_hp, _mass_hp)
+	_mass_hp = mass_hp
 	sheet.max_hp_bonus += _mass_hp
 	sheet.apply(ctx.tuning, ctx.run)
 	effects.apply_abilities(ctx.player)
@@ -531,6 +536,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 func _on_run_started(_class_id_value: String) -> void:
 	_live = []
+	_mass_hp = 0.0
 	_discovered.clear()
 	_found.clear()
 	_refresh_seams()
@@ -688,7 +694,7 @@ func _sync_scrap_flags() -> void:
 	ctx.run.wear_on = ctx.tuning.wear_on()
 
 
-# The fixed route: --seed reseeds the run's streams, --start-mass opens with that mass.
+# The fixed route: --route-seed reseeds the run's streams, --start-mass opens with that mass.
 # Flow takes the stage checkpoint after run_started, so a retry restores it.
 func _apply_route() -> void:
 	if ctx.tuning == null:
@@ -718,6 +724,7 @@ func _step_armor(ball: Vector3, delta: float) -> void:
 	for value in scrap.expired_values:
 		run.note_spill_expired(value)
 	run.mitigation = effects.damage_reduction
+	run.brace_hook = effects.brace_share_for
 	var grounded: bool = ctx.player.state.grounded and ctx.flow.state in [ctx.flow.STAGE, ctx.flow.BEACON, ctx.flow.GATES]
 	var planar: Vector3 = ctx.player.planar_velocity()
 	run.wear_step(delta, planar.length(), ctx.tuning.f("cruise"), grounded and not get_tree().paused and not shop.clock_paused())

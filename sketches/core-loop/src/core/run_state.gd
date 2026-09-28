@@ -59,6 +59,9 @@ var wear_on := false
 # The share of a hit the passive damage reduction removes first (build sets it each
 # tick in armour mode, where the reduction runs before the scrap).
 var mitigation := 0.0
+# Optional Callable(source) -> share: the brace window's extra reduction for a hit's
+# source. It joins the passive reduction before the scrap layer (the damage order).
+var brace_hook := Callable()
 # Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
@@ -148,7 +151,7 @@ func lose_scrap(amount: int, at: Vector3, cause: String) -> int:
 
 func reset_metrics() -> void:
 	metrics = {"fresh": 0.0, "hit_loss": 0.0, "wear_loss": 0.0, "recovered": 0.0, "destroyed": 0.0,
-		"expired": 0.0, "hull_damage": 0.0, "class_changes": 0, "reverse_seconds": 0.0}
+		"expired": 0.0, "hull_damage": 0.0, "class_changes": 0, "class_drops": 0, "min_heft": -1.0, "heft_at_hits": [], "reverse_seconds": 0.0}
 
 
 # Heft in armour mode comes from scrap alone; the base formula is untouched otherwise.
@@ -206,6 +209,8 @@ func _publish_heft_class() -> void:
 	var rose := c > _heft_class
 	_heft_class = c
 	metrics["class_changes"] += 1
+	if not rose:
+		metrics["class_drops"] += 1
 	if rose:
 		events.heft_class_changed.emit(c, heft())
 	else:
@@ -279,7 +284,11 @@ func damage(amount: float, source: String) -> void:
 
 
 func _damage_armored(amount: float, source: String) -> void:
-	var left := amount * (1.0 - clampf(mitigation, 0.0, 1.0))
+	var share := clampf(mitigation, 0.0, 1.0)
+	if brace_hook.is_valid():
+		var brace: float = clampf(float(brace_hook.call(source)), 0.0, 1.0)
+		share = 1.0 - (1.0 - share) * (1.0 - brace)
+	var left := amount * (1.0 - share)
 	if left <= 0.0:
 		return
 	var absorbed := minf(left, mass / SCRAP_PER_HP)
@@ -292,6 +301,10 @@ func _damage_armored(amount: float, source: String) -> void:
 		metrics["hit_loss"] += removed
 		metrics["destroyed"] += removed - spill
 		_publish_heft_class()
+		# The spiral is observable: heft after each hit, and the lowest heft reached.
+		metrics["min_heft"] = heft() if metrics["min_heft"] < 0.0 else minf(metrics["min_heft"], heft())
+		if metrics["heft_at_hits"].size() < 200:
+			metrics["heft_at_hits"].append(snappedf(heft(), 0.01))
 		armor_hit.emit(removed, spill, source)
 	if overflow > 0.0:
 		hp = maxf(0.0, hp - overflow)

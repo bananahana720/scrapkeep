@@ -398,13 +398,23 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 
 # Blunts damage taken: the passive reduction, then a brace window. Both heal back part
 # of a hit already applied, so they never undo a killing blow.
+# The brace window's share for a hit from `source`; run.damage folds it in before the
+# scrap layer in armour mode.
+func brace_share_for(source: String) -> float:
+	if _clock < _brace_until and (_brace_source == "" or source == _brace_source):
+		return _brace_share
+	return 0.0
+
+
 func _soften(c) -> void:
 	var ctx = build.ctx
 	if not ctx.run.alive():
 		return
-	# Armour mode runs the passive reduction first, inside run.damage (the damage order),
-	# so it must not heal the same share back a second time here.
-	var share: float = 0.0 if ctx.run.armor_mode else damage_reduction
+	# Armour mode runs the passive reduction and the brace inside run.damage (the damage
+	# order), before the scrap, so nothing is healed back here.
+	if ctx.run.armor_mode:
+		return
+	var share: float = damage_reduction
 	if _clock < _brace_until and (_brace_source == "" or c.source == _brace_source):
 		share = 1.0 - (1.0 - share) * (1.0 - _brace_share)
 	if share > 0.0:

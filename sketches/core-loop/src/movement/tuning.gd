@@ -37,7 +37,7 @@ const SPECS := [
 	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
 	# The durability prototype (DESIGN-NOTES, "Scrap as armour"): `--scrap=armor` makes mass a
 	# temporary health layer over the hull, `--wear=on` lets rolling friction wear it. Both
-	# default off, and off is the base game. `--seed=<n>` reseeds the run's streams and
+	# default off, and off is the base game. `--route-seed=<n>` reseeds the run's streams and
 	# `--start-mass=<n>` opens the run with that mass, so the three variants share a route.
 	{"key": "scrap_mode", "label": "Scrap mode", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "armor"]},
 	{"key": "wear", "label": "Scrap wear", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
@@ -73,10 +73,10 @@ func _init() -> void:
 
 
 # The durability prototype's flags, read from the engine and user args the way
-# loop_mode.gd reads --loop: `--scrap=armor --wear=on --seed=7 --start-mass=200`.
+# loop_mode.gd reads --loop: `--scrap=armor --wear=on --route-seed=7 --start-mass=200`.
 # Returns the flags it applied.
 const OPTION_FLAGS := {"scrap": "scrap_mode", "wear": "wear"}
-const NUMBER_FLAGS := {"seed": "route_seed", "start-mass": "start_mass"}
+const NUMBER_FLAGS := {"route-seed": "route_seed", "start-mass": "start_mass"}
 
 
 func apply_args(args: PackedStringArray) -> Dictionary:
