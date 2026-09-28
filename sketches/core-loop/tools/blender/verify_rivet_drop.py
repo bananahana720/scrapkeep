@@ -40,7 +40,7 @@ def main():
     length=struct.unpack_from('<I',blob,12)[0]
     doc=json.loads(blob[20:20+length])
     assert [a['name'] for a in doc['animations']]==['drop_land']
-    assert len(doc['skins'])==1 and len(doc['skins'][0]['joints'])==20
+    assert len(doc['skins'])==1 and len(doc['skins'][0]['joints'])==25
     tris=sum(doc['accessors'][p['indices']]['count']//3 for m in doc['meshes'] for p in m['primitives'])
     assert tris==4248
     for mesh in doc['meshes']:
@@ -71,7 +71,7 @@ def main():
     worst=max(e['hausdorff_distance'] for e in errors)
     receipt={'glb_sha256':hashlib.sha256(blob).hexdigest(),'glb_bytes':len(blob),
              'animation':'drop_land','start_seconds':start,'end_seconds':end,
-             'skins':1,'joints':20,'triangles':tris,'channels':len(doc['animations'][0]['channels']),
+             'skins':1,'joints':25,'triangles':tris,'channels':len(doc['animations'][0]['channels']),
              'reimport_meshes':len(imported),'pose_geometry_errors':errors,
              'max_pose_error':worst,'tolerance':.0001,'pass':worst<.0001}
     (OUT/'glb-verification.json').write_text(json.dumps(receipt,indent=2)+'\n')
