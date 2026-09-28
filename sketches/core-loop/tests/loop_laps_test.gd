@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const EventView := preload("res://src/world/event_view.gd")
 
 # The v3 fun lab's laps mode on stage 1 (LOOP-REDESIGN section 1 C, section 7): the
 # bell, the course and the Warden's sleep. The camper (the skipper bot) rings the bell
@@ -84,6 +85,39 @@ func _ring(i: int) -> Vector2:
 	return Vector2(r.x, r.z)
 
 
+# Before the bell, from the stage's drop point (flow's entry: the spawn plus ENTRY_LIFT):
+# the five rings and the three collars stand, visible and dim, and the terrain blocks
+# no sight line to a ring's top or to the top collar. A sight line, not a render: fog,
+# the camera's heading and the rings' contrast still need Andrew's eye.
+func _check_course_stands() -> void:
+	var eye: Vector3 = _game.ctx.terrain.spawn_point(1) + Vector3.UP * _game.flow.ENTRY_LIFT
+	var rings: Array = _game.world.course_view.get_children().filter(func(n): return n is MeshInstance3D and n.visible)
+	var collars: Array = _game.beacon._notches.filter(func(n): return n.visible)
+	var targets: Array[Vector3] = []
+	for ring in rings:
+		targets.append(ring.global_position + Vector3.UP * EventView.GATE_RADIUS)
+	if not collars.is_empty():
+		targets.append(collars[-1].global_position)
+	var blocked: Array[int] = []
+	var farthest := 0.0
+	for i in targets.size():
+		farthest = maxf(farthest, eye.distance_to(targets[i]))
+		if not _sight_clear(eye, targets[i]):
+			blocked.append(i)
+	_check("course stands before the bell", rings.size() == 5 and collars.size() == 3 and not _game.world.course.bell_rung
+		and _game.beacon.notches_lit() == 0 and blocked.is_empty(),
+		"%d rings and %d collars standing, bell %s; sight lines from the drop blocked %s, farthest %.0f m"
+		% [rings.size(), collars.size(), _game.world.course.bell_rung, blocked, farthest])
+
+
+func _sight_clear(from: Vector3, to: Vector3) -> bool:
+	for step in range(1, 64):
+		var p := from.lerp(to, step / 64.0)
+		if _game.ctx.terrain.height(p.x, p.z) > p.y:
+			return false
+	return true
+
+
 func _reset_counts() -> void:
 	_seen = {}
 	_rises.clear()
@@ -133,6 +167,7 @@ func _physics_process(_delta: float) -> bool:
 					and flow.lap_objective(true) == "Ring the Warden's bell" and _game.beacon.notches_lit() == 0,
 					"a hard ram on the sleeping Warden: hp %.0f -> %.0f, shred %.1f; objective '%s'"
 					% [hp, w.hp, _game.ctx.spawner.shred_of(w), flow.lap_objective(true)])
+				_check_course_stands()
 				var mast: Vector3 = _game.ctx.terrain.beacon_point(1)
 				_place(Vector2(mast.x + 12.0, mast.z))
 			if _wait < int(1.5 * tps):
