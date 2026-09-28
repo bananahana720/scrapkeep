@@ -198,6 +198,13 @@
       "sha256": "88cf49653ea7c4c344c95e0e9170567bd62db555357e43d11661c341dcddae70",
       "provider": "built-in imagegen",
       "status": "corrected concept reference"
+    },
+    {
+      "image": "images/19-runtime-material-target.png",
+      "source": "/home/andrew/.codex/generated_images/01a0e573-1ef4-7012-b126-a44152e43072/exec-400d3421-8fb7-449c-aaed-ff1ebd569a6f.png",
+      "sha256": "8ec1b01e2e5369b27545fce0a97b0f4c5019ffca4c2d0a012769249809fefc57",
+      "provider": "built-in imagegen",
+      "status": "material paintover proposal; not a pixel-matched runtime result"
     }
   ],
   "selected_style": "A: painted workshop miniature",

@@ -1,6 +1,6 @@
 # Concept coverage and remaining evidence
 
-Style A is owner-selected. Eighteen category sheets provide broad first-pass coverage of all eight areas in the original inventory. References below are concepts, not runtime screenshots. No row is declared fully accepted through a montage. The gallery carries the current image-specific critique.
+Style A is owner-selected. Nineteen category sheets provide broad first-pass coverage of all eight areas in the original inventory. References below are concepts, not runtime screenshots. No row is declared fully accepted through a montage. The gallery carries the current image-specific critique.
 
 | Inventory subjects | Sheets | What exists | Still required |
 | --- | --- | --- | --- |

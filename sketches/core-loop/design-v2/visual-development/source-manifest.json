@@ -103,7 +103,7 @@
   ],
   "coordinator_refresh": {
     "captured_utc": "2026-09-28T02:24:51.830398+00:00",
-    "integration_base_pending": true,
+    "integration_base_pending": false,
     "sources": [
       {
         "commit": "56a1970279b66dd89587338a271b917cbe279502",
@@ -135,5 +135,27 @@
       }
     ],
     "animation_beats_only_commit": "29333e88f930314817c2c7b938159a05ad92c177"
+  },
+  "refreshed_integration": {
+    "commit": "6a6ef840a14b286a8cdb3e6f70ef3804003dd0ab",
+    "owner_message": "Refreshed base supplied directly by Andrew; W8 remains UI-only and does not move our seams.",
+    "visual_candidate": "ba7da85b5df564e1f84cc050f0782a07eebd7ac0",
+    "canonical_integration": false
+  },
+  "alignment_followup": {
+    "source_commit": "ba7da85b5df564e1f84cc050f0782a07eebd7ac0",
+    "ancient": "Palette.ANCIENT #3d8bff added and consumed by hero_assets; coordinator retains five literal replacements in roster, map_gorge, contraptions and event_kinds twice.",
+    "movement_cues": "Bone aim reach, mint magnetic assist, warm-white top speed tier; shared tables, no UI files changed",
+    "material_resources": {
+      "before": 227,
+      "after": 173,
+      "unchanged": {
+        "meshes": 374,
+        "colliders": 57,
+        "lights": 1
+      }
+    },
+    "limits": "Resource counts from stage_gorge_perf_test; not GPU frame-time evidence.",
+    "warden": "Four existing GLBs wired; fitted ribbons and brood cells; reversible split mast support exposes fixed targets; hive hatch opens with existing state. Native images are visual inspections, not final FPS qualification."
   }
 }

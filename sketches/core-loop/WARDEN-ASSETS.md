@@ -48,3 +48,7 @@ The hero hook dresses only the beacon belonging to `ctx.flow.warden`. The origin
 The focused test computes exact closest distance to each solid oriented beam box and a conservative vertical distance for both frusta, covering faces and interiors as well as vertices. All three families measured at least 1.440000057 m from the fixed weak-point center, exceeding its 1.3 m sphere. It also checks taper endpoints, material identity, duplicate attachment, extra-Warden isolation, death, stage replacement, hook teardown and attachment of a replacement hook to an already active Warden. Teardown removes the support immediately and restores the exact original render state. Deferred Warden callbacks now reject a hook that has left the tree.
 
 This establishes geometric clearance and lifecycle behavior only. The two narrow rails can still cross a kit silhouette from some angles; native orbit/readability and actual render performance remain the parent's acceptance work. No target, collider, charge, placement, family or combat rule changed.
+
+### Queen hatch state
+
+Native front inspection after the mast correction revealed that the hive GLB's opaque rubber cap still hid the queen during its open window. The hook now splits that existing surface into a bottom-hinged child. Its closed transform reconstructs the authored pose; `family_open()` rotates it outward 90 degrees. The core and target node stay fixed, and each Warden owns its own split meshes. Focused open/close and second-Warden isolation checks pass at `ba7da85`.
