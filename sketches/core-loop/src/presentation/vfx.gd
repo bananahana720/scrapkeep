@@ -81,13 +81,22 @@ var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
 var edge: Control
-# v3 F1a: the density governor (FEEL-READABILITY.md §1.2). Sampled here each frame from
-# threats/enemies in view and this module's own effects alive, so every P5 burst, trail
-# and speed line reads one number without another file wiring it in.
-var _density_gov := Density.Governor.new()
+# v3 F1a: density (FEEL-READABILITY.md §1.2) is one shared scalar (density.gd's static
+# Governor, contributed to every frame by this module and bolts.gd), not a private one,
+# so the two modules never disagree on what "dense" means (finding 2/9).
 var _density := 0.0
-# One coalesced kill starburst in flight: {"at", "time", "count", "color"}, or empty.
-var _pending_kill := {}
+# One coalesced "pop" burst in flight: {"at", "time", "count", "color", "particles",
+# "size_scale"}, or empty. Every caller of burst("pop", ...) -- currently only juice.gd's
+# own per-kill bursts -- routes through this, so a kill chain shares one starburst
+# instead of stacking one per kill (finding 1/8).
+var _pending_pop := {}
+# Recent burst() timestamps by kind, trimmed to the last 5 s, for tests and the notes
+# (kill_pops_per_250ms, §1.2).
+var _burst_log := {}
+# The shared union mark (threat_grammar.gd §1.3.1, finding 4): this module samples density
+# every frame with tree access already, so it also refreshes and draws the one union layer
+# every telegraph/hazard Painter otherwise has no shared place to draw.
+var _union_painter
 
 
 func setup(ctx_ref) -> void:
@@ -100,6 +109,8 @@ func setup(ctx_ref) -> void:
 	root.name = "PresentationFx"
 	ctx.root.add_child(root)
 	_build_meshes()
+	_union_painter = Threat.Painter.new()
+	root.add_child(_union_painter)
 	for i in POOL:
 		var glyph := MeshInstance3D.new()
 		var mat := StandardMaterial3D.new()
@@ -330,7 +341,7 @@ func clear() -> void:
 	_chain = 0
 	_trail_points.clear()
 	_streaks.clear()
-	_pending_kill = {}
+	_pending_pop = {}
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 
@@ -400,19 +411,21 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	# governor's size/lifetime/alpha caps; every other kind here is a P4 reward reveal,
 	# out of this unit's write set, and stays exactly as it drew before.
 	var governed: bool = P5_KINDS.has(kind)
+	if governed and _governed_glyph_count() >= Density.cap("p5_glyphs"):
+		# §8: refuse the spawn instead of evicting a P2/P3 shape sharing the pool
+		# (finding 3/10 -- p5_glyphs reserves 8 of the 48 slots for those).
+		spawned["p5_glyph_refused"] = spawned.get("p5_glyph_refused", 0) + 1
+		return
+	if kind == "enemy_struck" and _kind_alive_count(kind) >= Density.cap("hit_sparks"):
+		spawned["hit_spark_refused"] = spawned.get("hit_spark_refused", 0) + 1
+		return
 	if governed:
 		var size_scale := Density.size_factor(_density)
 		size_from *= size_scale
 		size_to *= size_scale
 		life *= Density.lifetime_factor(_density)
 	var silhouette: String = shape if shape != "" else Rows.shape(kind)
-	var slot: Dictionary = _glyphs[0]
-	for g in _glyphs:
-		if g["t"] >= 1.0:
-			slot = g
-			break
-		if g["t"] > slot["t"]:
-			slot = g
+	var slot: Dictionary = _find_slot(governed)
 	var node: MeshInstance3D = slot["node"]
 	node.mesh = _meshes.get(silhouette, _meshes["flash"])
 	node.global_position = at
@@ -426,9 +439,73 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["from"] = size_from
 	slot["to"] = size_to
 	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square", "core"] else 0.0
+	slot["governed"] = governed
+	slot["kind"] = kind
 	node.visible = true
 	spawned[kind] = spawned.get(kind, 0) + 1
 	_draw_glyph(slot)
+
+
+# §8: p5_glyphs reserves POOL - cap("p5_glyphs") slots (8 of 48) for P2/P3 shapes sharing
+# the pool, so a flood of P5 glyphs (hit sparks, kill flashes) can never evict one: a
+# governed request only ever evicts another governed slot's oldest. An ungoverned request
+# may still take any slot, exactly as before this unit (finding 3/10).
+func _find_slot(governed: bool) -> Dictionary:
+	for g in _glyphs:
+		if g["t"] >= 1.0:
+			return g
+	var best: Dictionary = {}
+	for g in _glyphs:
+		if governed and not g.get("governed", false):
+			continue
+		if best.is_empty() or g["t"] > best["t"]:
+			best = g
+	return best if not best.is_empty() else _glyphs[0]
+
+
+func _governed_glyph_count() -> int:
+	var count := 0
+	for g in _glyphs:
+		if g["t"] < 1.0 and g.get("governed", false):
+			count += 1
+	return count
+
+
+func _kind_alive_count(k: String) -> int:
+	var count := 0
+	for g in _glyphs:
+		if g["t"] < 1.0 and g.get("kind", "") == k:
+			count += 1
+	return count
+
+
+# --- v3 F1a test/notes instrumentation --------------------------------------------------
+
+func governed_glyph_count() -> int:
+	return _governed_glyph_count()
+
+
+func kind_alive_count(k: String) -> int:
+	return _kind_alive_count(k)
+
+
+func burst_count_within(kind: String, ms: float) -> int:
+	var log: Array = _burst_log.get(kind, [])
+	var cutoff := _clock - ms / 1000.0
+	var count := 0
+	for t in log:
+		if t >= cutoff:
+			count += 1
+	return count
+
+
+func _log_burst(kind: String) -> void:
+	var log: Array = _burst_log.get(kind, [])
+	log.append(_clock)
+	var cutoff := _clock - 5.0
+	while log.size() > 0 and log[0] < cutoff:
+		log.pop_front()
+	_burst_log[kind] = log
 
 
 func _facing_basis(silhouette: String, facing: Vector3) -> Basis:
@@ -505,53 +582,14 @@ func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4, clampf(0.8 + force * 0.03, 0.8, 1.6), 0.14)
 
 
-# The kill flash stays as it was; the density-aware starburst (coalesced at high density,
-# §1.2) is the "one bigger shape, not many" §1.5 asks for on a chain.
+# The kill flash stays as it was. juice.gd (out of this unit's write set) already bursts
+# one "pop" per kill on the enemy_killed signal (juice.gd:423-424); this listener used to
+# burst a second, independent starburst on top of that, double-counting every kill and
+# breaking the "one bigger shape, not many" budget (finding 1/8). It no longer does:
+# burst()'s own pop-coalescing (below) is what turns juice's per-kill calls into one
+# scaled starburst at high density.
 func _on_killed(_kind: String, at: Vector3, _value: int) -> void:
 	glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6, 1.8, 0.3)
-	_kill_burst(at, Rows.color("enemy_killed"))
-
-
-# --- v3 F1a: kill-burst coalescing (§1.2) -------------------------------------------------
-
-# Below density 0.4 every kill gets its own starburst. Past that, kills within the
-# band's window (time and distance) share one burst, scaled by the extra kill count and
-# capped, so a chain reads as one bigger shape rather than a stack of small ones.
-func _kill_burst(at: Vector3, color: Color) -> void:
-	var win := Density.coalesce_window(_density)
-	var window_s: float = float(win["ms"]) / 1000.0
-	if window_s <= 0.0:
-		_flush_kill_burst()
-		burst("pop", at, color, int(BURSTS["pop"]["max"]))
-		return
-	var window_m: float = float(win["metres"])
-	if not _pending_kill.is_empty() and _clock - float(_pending_kill["time"]) <= window_s \
-			and at.distance_to(_pending_kill["at"]) <= window_m:
-		_pending_kill["count"] = int(_pending_kill["count"]) + 1
-		_pending_kill["at"] = at
-		_pending_kill["time"] = _clock
-		_pending_kill["color"] = color
-		return
-	_flush_kill_burst()
-	_pending_kill = {"at": at, "time": _clock, "count": 1, "color": color}
-
-
-func _flush_kill_burst() -> void:
-	if _pending_kill.is_empty():
-		return
-	var win := Density.coalesce_window(_density)
-	var extra: int = maxi(0, int(_pending_kill["count"]) - 1)
-	var scale: float = clampf(1.0 + float(win["scale_per_extra"]) * extra, 1.0, float(win["scale_cap"]))
-	burst("pop", _pending_kill["at"], _pending_kill["color"], int(BURSTS["pop"]["max"]), scale)
-	_pending_kill = {}
-
-
-func _maybe_flush_kill_burst() -> void:
-	if _pending_kill.is_empty():
-		return
-	var window_s: float = float(Density.coalesce_window(_density)["ms"]) / 1000.0
-	if _clock - float(_pending_kill["time"]) > maxf(window_s, 0.001):
-		_flush_kill_burst()
 
 
 # --- v3 F1a: the density governor itself -------------------------------------------------
@@ -573,13 +611,23 @@ func _effects_alive() -> int:
 
 
 func _update_density(delta: float) -> void:
-	var camera3d: Camera3D = camera.cam if camera != null else null
+	# The same camera fetch bolts.gd uses (finding 2/9), not `camera.cam`, so both modules
+	# agree on what "in view" means for threats and enemies.
+	var camera3d: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() and get_viewport() != null else null
 	var threats := 0
 	var enemies := 0
+	var threat_nodes: Array = []
 	if is_inside_tree():
-		threats = Density.count_in_view(camera3d, get_tree().get_nodes_in_group(Threat.GROUP))
+		threat_nodes = get_tree().get_nodes_in_group(Threat.GROUP)
+		threats = Density.count_in_view(camera3d, threat_nodes)
 		enemies = Density.count_in_view(camera3d, get_tree().get_nodes_in_group("enemy"))
-	_density = _density_gov.update(delta, threats, _effects_alive(), enemies)
+	_density = Density.contribute(delta, threats, _effects_alive(), enemies)
+	var in_view_fn := Callable()
+	if camera3d != null:
+		in_view_fn = func(p: Vector3): return Density.in_view(camera3d, p)
+	Threat.refresh_union(threat_nodes, in_view_fn)
+	if _union_painter != null:
+		_union_painter.paint(Threat.union_marks_now(), Threat.STATIC_LAYERS)
 
 
 # --- Scrap sparkles ------------------------------------------------------------------------
@@ -657,7 +705,7 @@ func _process(delta: float) -> void:
 	_clock += delta
 	_launch_boost = maxf(0.0, _launch_boost - delta)
 	_update_density(delta)
-	_maybe_flush_kill_burst()
+	_maybe_flush_pending_pop()
 	for g in _glyphs:
 		if g["t"] >= 1.0:
 			continue
@@ -809,27 +857,94 @@ func _build_bursts() -> void:
 
 
 # One pooled burst: the oldest emitter of its kind restarts here in this colour. Every
-# burst kind is P5 (§1.1: hit sparks, kill pops, slam/blast debris and dust), so density
-# caps its alpha, size and lifetime (§1.2); size_scale layers the coalesced-kill scale
-# (up to 2.5x, §1.2) on top of that cap.
+# burst kind except "fountain" is P5 (§1.1: hit sparks, kill pops, slam/blast debris and
+# dust), so density caps its alpha, size and lifetime (§1.2); size_scale layers the
+# coalesced-kill scale (up to 2.5x, §1.2) on top of that cap. "pop" additionally
+# coalesces here (finding 1/8): juice.gd's own per-kill vfx.burst("pop", ...) calls are
+# the only source of pop bursts, so merging them here, not in a second listener, is what
+# turns a kill chain into one scaled starburst instead of one per kill. "fountain" is a
+# P4 reward reveal (a part or a core gained), out of this unit's write set in spirit even
+# though it shares this pool: the continuous per-frame caps never touch it (finding 11);
+# only the "pin_trails_and_fountains" shed step shortens its lifetime, in its turn (§8).
 func burst(kind: String, at: Vector3, color: Color, count: int, size_scale := 1.0) -> void:
 	if not _bursts.has(kind) or count <= 0 or root == null or not root.is_inside_tree():
 		return
+	if kind == "pop":
+		_queue_pop(at, color, count, size_scale)
+		return
+	_emit_burst(kind, at, color, count, size_scale)
+
+
+const FOUNTAIN_SHED_LIFETIME_SCALE := 0.6
+
+
+func _emit_burst(kind: String, at: Vector3, color: Color, count: int, size_scale := 1.0) -> void:
 	var pool: Array = _bursts[kind]
 	var p: CPUParticles3D = pool[_burst_next[kind]]
 	_burst_next[kind] = (_burst_next[kind] + 1) % pool.size()
 	var amount := mini(count, int(BURSTS[kind]["max"]))
 	if p.amount != amount:
 		p.amount = amount
-	var scale := Density.size_factor(_density) * size_scale
-	p.scale_amount_min = 0.6 * scale
-	p.scale_amount_max = 1.2 * scale
-	p.lifetime = float(BURSTS[kind]["life"]) * Density.lifetime_factor(_density)
+	if kind == "fountain":
+		var shedding := "pin_trails_and_fountains" in Density.active_shed(_density)
+		p.scale_amount_min = 0.6 * size_scale
+		p.scale_amount_max = 1.2 * size_scale
+		p.lifetime = float(BURSTS[kind]["life"]) * (FOUNTAIN_SHED_LIFETIME_SCALE if shedding else 1.0)
+		p.color = color
+	else:
+		var scale := Density.size_factor(_density) * size_scale
+		p.scale_amount_min = 0.6 * scale
+		p.scale_amount_max = 1.2 * scale
+		p.lifetime = float(BURSTS[kind]["life"]) * Density.lifetime_factor(_density)
+		p.color = Color(color.r, color.g, color.b, color.a * Density.alpha_factor(_density))
 	p.global_position = at
-	p.color = Color(color.r, color.g, color.b, color.a * Density.alpha_factor(_density))
 	p.restart()
 	p.emitting = true
 	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1
+	_log_burst(kind)
+
+
+# Below density 0.4 every call gets its own starburst immediately, as before this unit.
+# Past that, calls within the band's window (time and distance) share one burst, scaled
+# by the extra-call count and capped, so a kill chain reads as one bigger shape rather
+# than a stack of small ones (§1.5).
+func _queue_pop(at: Vector3, color: Color, count: int, size_scale: float) -> void:
+	var win := Density.coalesce_window(_density)
+	var window_s: float = float(win["ms"]) / 1000.0
+	if window_s <= 0.0:
+		_flush_pending_pop()
+		_emit_burst("pop", at, color, count, size_scale)
+		return
+	var window_m: float = float(win["metres"])
+	if not _pending_pop.is_empty() and _clock - float(_pending_pop["time"]) <= window_s \
+			and at.distance_to(_pending_pop["at"]) <= window_m:
+		_pending_pop["count"] = int(_pending_pop["count"]) + 1
+		_pending_pop["at"] = at
+		_pending_pop["time"] = _clock
+		_pending_pop["color"] = color
+		_pending_pop["particles"] = maxi(int(_pending_pop["particles"]), count)
+		return
+	_flush_pending_pop()
+	_pending_pop = {"at": at, "time": _clock, "count": 1, "color": color, "particles": count, "size_scale": size_scale}
+
+
+func _flush_pending_pop() -> void:
+	if _pending_pop.is_empty():
+		return
+	var win := Density.coalesce_window(_density)
+	var extra: int = maxi(0, int(_pending_pop["count"]) - 1)
+	var scale: float = clampf(1.0 + float(win["scale_per_extra"]) * extra, 1.0, float(win["scale_cap"]))
+	_emit_burst("pop", _pending_pop["at"], _pending_pop["color"], int(_pending_pop["particles"]),
+		scale * float(_pending_pop["size_scale"]))
+	_pending_pop = {}
+
+
+func _maybe_flush_pending_pop() -> void:
+	if _pending_pop.is_empty():
+		return
+	var window_s: float = float(Density.coalesce_window(_density)["ms"]) / 1000.0
+	if _clock - float(_pending_pop["time"]) > maxf(window_s, 0.001):
+		_flush_pending_pop()
 
 
 # The most particles the bursts can hold alive at once, for the notes.

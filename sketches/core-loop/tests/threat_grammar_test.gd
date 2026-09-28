@@ -171,6 +171,40 @@ func _check_union() -> void:
 	for n in four:
 		n.free()
 
+	# v3 F1a fix round 1, finding 5a: a hostile threat with no fill/area/swept/run role
+	# yet (a WAVE still arming) never counts toward "more than four overlapping fills",
+	# even five of them stacked on the same point.
+	var arming: Array = []
+	for i in 5:
+		arming.append(Telegraph.wave(_world, _ground, at, 20.0, 8.0, 1.0))
+	var arming_descs: Array = arming.map(func(n): return n.descriptor())
+	var arming_roles: Array = Threat.roles(arming_descs[0])
+	var no_fill_role := true
+	for role in ["area", "fill", "swept", "run"]:
+		if role in arming_roles:
+			no_fill_role = false
+	var arming_union := Threat.union_fill_marks_for(arming_descs)
+	_report("arming waves have no fill role to union", no_fill_role and arming_union.is_empty(),
+		"5 stacked arming WAVEs draw %s (no fill/area/swept/run role yet), so they union %d mark(s)"
+			% [arming_roles, arming_union.size()])
+	for n in arming:
+		n.free()
+
+	# Finding 5b: a chain of fills that each only overlap their immediate neighbour (no
+	# point sits under more than two) must not union just because the chain is one
+	# connected blob; only a group that all pairwise overlap does.
+	var chain: Array = []
+	for i in 5:
+		chain.append(Telegraph.ring(_world, _ground, Threat.Type.INSTANT, at + Vector3(10.0 * i, 0.0, 0.0), 6.0))
+	var chain_descs: Array = chain.map(func(n): return n.descriptor())
+	var chain_union := Threat.union_fill_marks_for(chain_descs)
+	var chain_suppressed := Threat.suppressed_roles(chain_descs)
+	_report("a chain of pairwise overlaps does not union", chain_union.is_empty() and chain_suppressed.is_empty(),
+		"5 rings 10 m apart (radius 6 m: each touches only its neighbour) produce %d union mark(s), %d suppressed members"
+			% [chain_union.size(), chain_suppressed.size()])
+	for n in chain:
+		n.free()
+
 
 func _check_stances() -> void:
 	var lift: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, -90.0), 30.0, 8.0, Palette.SAND)

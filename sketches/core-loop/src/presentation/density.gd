@@ -207,3 +207,36 @@ class Governor:
 		var rate: float = 1.0 / maxf(0.0001, seconds)
 		value = move_toward(value, target, rate * delta)
 		return value
+
+
+# --- One shared scalar per frame (§1.2, §8, finding 2/9) -------------------------------
+# vfx.gd and bolts.gd each sample the live scene themselves (nothing upstream of this
+# unit's write set threads one shared instance through ctx), but they must land on the
+# same number, not two independent governors reading different fx counts off different
+# cameras. This is that single instance: whichever module calls contribute() first each
+# frame resets the per-frame totals, then every module's own fx count adds in, and every
+# caller reads back the same Governor.value. Two calls in the same frame do advance the
+# smoothing twice that tick (a small, bounded rounding difference against a single-owner
+# design); see DESIGN-NOTES "v3 F1a fix round 1" for why that trade is accepted here.
+static var _shared_frame := -1
+static var _shared_threats := 0
+static var _shared_enemies := 0
+static var _shared_fx := 0
+static var _shared_gov := Governor.new()
+
+
+static func contribute(delta: float, threats_in_view: int, fx_alive: int, enemies_in_view: int) -> float:
+	var frame := Engine.get_process_frames()
+	if frame != _shared_frame:
+		_shared_frame = frame
+		_shared_threats = 0
+		_shared_enemies = 0
+		_shared_fx = 0
+	_shared_threats = maxi(_shared_threats, threats_in_view)
+	_shared_enemies = maxi(_shared_enemies, enemies_in_view)
+	_shared_fx += fx_alive
+	return _shared_gov.update(delta, _shared_threats, _shared_fx, _shared_enemies)
+
+
+static func shared_density() -> float:
+	return _shared_gov.value

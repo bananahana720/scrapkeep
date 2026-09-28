@@ -12,11 +12,15 @@ extends Node3D
 # - Bolts draw at PRIORITY, below every enemy telegraph (Telegraph.PRIORITY), and never
 #   in HAZARD, the colour telegraphs own.
 #
-# v3 F1a adds the density governor (FEEL-READABILITY.md §1.2) on top of crowd_alpha:
-# past a dense fight, bolts fade and thin a little further and their streaks shorten.
-# This module samples density itself (threats/enemies in view, its own live count), and
-# every cap below touches only `_process`'s draw, never `step`'s collision math: a bolt
-# still travels, hits and reports exactly the same regardless of density.
+# v3 F1a adds the density governor (FEEL-READABILITY.md §1.2, §8) on top of crowd_alpha:
+# once the "bolt_tails" shed step is active, each bolt's tail streak shortens. Density
+# never touches a bolt's head width or alpha (§8: "a damaging bolt retains its head and
+# trajectory; only its tail thins"), so crowd_alpha (pre-F1a, principle 4) is the only
+# thing that ever fades a bolt. This module contributes to the one shared density scalar
+# every module reads (density.gd's Governor, sampled once per frame from whichever of
+# vfx.gd/bolts.gd asks first), and every cap below touches only `_process`'s draw, never
+# `step`'s collision math: a bolt still travels, hits and reports exactly the same
+# regardless of density.
 
 const Density := preload("res://src/presentation/density.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -31,6 +35,8 @@ const ALPHA_FULL := 0.9
 const ALPHA_CROWDED := 0.4
 const CROWD_START := 16
 const WAVE_RAMP := 6.0
+# §8: once "bolt_tails" is an active shed step, only the tail streak shortens.
+const SHED_STREAK_SCALE := 0.5
 
 # Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3, part: String);
 # part is a weak point id from enemy.weak_points(), or "" for the body.
@@ -48,7 +54,6 @@ var density := 0.0
 
 var _bolts: Array = []
 var _multimesh: MultiMesh
-var _density_gov := Density.Governor.new()
 
 
 func setup() -> void:
@@ -211,23 +216,33 @@ func _process(delta: float) -> void:
 	_multimesh.visible_instance_count = count
 	if count == 0:
 		return
-	var alpha := crowd_alpha(count) * Density.alpha_factor(density)
-	var size_scale := Density.size_factor(density)
+	var shedding := "bolt_tails" in Density.active_shed(density)
+	var alpha := crowd_alpha(count)
 	for i in count:
-		var bolt: Dictionary = _bolts[i]
-		var dir: Vector3 = bolt["dir"]
-		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * size_scale
-		var width := WIDTH * size_scale
-		var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
-		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(width, width, streak))
-		var head: Vector3 = bolt["shown"]
-		_multimesh.set_instance_transform(i, Transform3D(basis, head - dir * streak * 0.5))
-		var tint: Color = bolt["color"]
+		var visual := _bolt_visual(_bolts[i], shedding)
+		_multimesh.set_instance_transform(i, visual["transform"])
+		var tint: Color = _bolts[i]["color"]
 		_multimesh.set_instance_color(i, Color(tint, alpha))
 
 
-# Threats and enemies in the active camera's view, plus this pool's own live count, feed
-# the same formula every module reads (density.gd). Draw-only; never consulted by step().
+# The per-bolt draw transform, pure so a test can call it with a forced `shedding` flag
+# without running _process/_update_density. §8: density never touches width or alpha (the
+# head), only whether the tail streak is shortened once "bolt_tails" is an active shed step.
+func _bolt_visual(bolt: Dictionary, shedding: bool) -> Dictionary:
+	var dir: Vector3 = bolt["dir"]
+	var full_streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"]))
+	var streak := full_streak * (SHED_STREAK_SCALE if shedding else 1.0)
+	var width := WIDTH
+	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(width, width, streak))
+	var head: Vector3 = bolt["shown"]
+	return {"transform": Transform3D(basis, head - dir * streak * 0.5), "streak": streak, "width": width}
+
+
+# Threats and enemies in the active camera's view, plus this pool's own live count,
+# contribute to the one shared scalar every module reads (density.gd's Governor). Both
+# this file and vfx.gd fetch the camera the same way (the viewport's active Camera3D), so
+# they agree on what "in view" means (finding 2/9). Draw-only; never consulted by step().
 func _update_density(delta: float) -> void:
 	var camera3d: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() and get_viewport() != null else null
 	var threats := 0
@@ -235,4 +250,4 @@ func _update_density(delta: float) -> void:
 	if is_inside_tree():
 		threats = Density.count_in_view(camera3d, get_tree().get_nodes_in_group(Threat.GROUP))
 		enemies = Density.count_in_view(camera3d, get_tree().get_nodes_in_group("enemy"))
-	density = _density_gov.update(delta, threats, live(), enemies)
+	density = Density.contribute(delta, threats, live(), enemies)

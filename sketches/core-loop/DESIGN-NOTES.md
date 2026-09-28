@@ -952,3 +952,134 @@ density 0.0 and 1.0 while its drawn alpha differs. `threat_grammar_test.gd` gain
 union checks in point 6. Both are headless schema/control-flow checks, per §6: they
 cannot say whether the coalesced starburst or the union reads right in motion; that is
 the dense moving-footage gate in §6.4, downstream of this unit.
+
+## v3 F1a fix round 1 (two Opus reviews, blocker/major)
+
+Base `c4cf2d3` on `proto/core-loop-v3-f1a`. Every finding from the round-1 review was
+either fixed or, where genuinely out of this unit's write set, explicitly deferred and
+recorded below rather than left silent.
+
+1. **Kill pops were double-counted (findings 1, 8).** `vfx.gd`'s own `_on_killed` used to
+   fire a second, independent "pop" starburst (`_kill_burst`) on top of juice.gd's
+   existing per-kill `vfx.burst("pop", ...)` calls (`juice.gd:423-424`, up to `MAX_BURSTS`
+   6 per flush) — every kill got two starbursts, quiet or dense. The fix moves the
+   coalescing *into* `burst()` itself: a call with `kind == "pop"` now queues through
+   `_queue_pop`/`_flush_pending_pop`, so juice.gd's own calls (the only source of pop
+   bursts now) merge within the band's window instead of a second listener adding to
+   them. `_on_killed` only draws the flash glyph. `presentation_chain_test.gd`'s "kill
+   bursts" check, which used to pass at roughly 2x and mask this, now reports exactly 9
+   pops for 9 kills (density stays at 0 in that synthetic scene, so every call flushes
+   immediately, one per kill, matching the 0.0-0.4 band's "one starburst each"). The new
+   `presentation_density_test.gd` load scenario additionally confirms the coalesced
+   burst still fires (does not silently vanish) once its gap closes.
+2. **Two independent density scalars (findings 2, 9).** `vfx.gd` and `bolts.gd` used to
+   each keep a private `Governor` fed by their own fx counts and their own camera
+   (`camera.cam` vs `get_viewport().get_camera_3d()`), so the same scene could land in
+   different bands per module. `density.gd` now holds one shared static scalar:
+   `Density.contribute(delta, threats, fx, enemies)` resets a per-`Engine.get_process_
+   frames()` accumulator, adds this caller's fx count in, and drives one shared
+   `Governor`; both modules call it every frame and read back the same `value`, and both
+   now fetch the camera the same way (`get_viewport().get_camera_3d()`). Trade accepted:
+   if both modules' `_process` land in the same engine frame, the shared `Governor.
+   update()` runs twice that tick (once per contributor), so the smoothing advances by
+   up to 2x its designed rate for that one frame only — a small, self-correcting rounding
+   difference against a proper single-owner design, not a drift that accumulates, and the
+   reviewers' own suggested fix ("no `game.gd`/`context.gd` edit") implies the same
+   accepted trade. A true single-owner tick would need a shared instance threaded through
+   `ctx`, still outside this unit's write set (see point 2 of the original entry, still
+   open, now flagged to F3b again).
+3. **None of §1.2's per-frame budgets were enforced (findings 3, 10).** `Density.cap()`
+   had no caller anywhere. `vfx.gd`'s `glyph()` now refuses a governed (P5) spawn once
+   `governed_glyph_count() >= Density.cap("p5_glyphs")` (40) rather than evicting a slot,
+   and refuses an `enemy_struck` spawn once `kind_alive_count("enemy_struck") >=
+   Density.cap("hit_sparks")` (12); both log a `..._refused` count in `spawned` for the
+   notes. Slot selection (`_find_slot`) now respects the same reservation live: a
+   governed request only evicts another governed slot's oldest, so it can never take one
+   of the 8 slots (48 pool − 40 cap) a P2/P3 shape (e.g. `near_miss`) is holding. The new
+   density-test load scenario floods both caps and asserts the reserved shape survives.
+   `kill_pops_per_250ms` (3) is enforced by point 1's coalescing (a coalescing window
+   below 250 ms can emit at most 2-3 flushes in any 250 ms span); the load scenario logs
+   `burst_count_within("pop", 250.0)` as evidence rather than asserting a second,
+   redundant cap. `speed_lines_tier3` (20) and `bolts` (64) already matched the ledger
+   exactly and needed no change.
+4. **The hostile-fill union was never wired live (finding 4).** `union_fill_marks_for`/
+   `suppressed_roles`/`roles_after_union` had no caller outside tests. `telegraph.gd` and
+   `hazard.gd` (out of this unit's write set) already call `Threat.marks(d, motion)` to
+   get what their own `Painter` draws every frame, so `marks()` (in this file) now
+   filters out any role the current frame's union suppresses for that descriptor, via a
+   small live cache (`refresh_union`/`active_suppressed_roles`, keyed on the descriptor's
+   own stable geometry, never its progress/front/live fields, so the same committed
+   threat maps to the same key every frame). `vfx.gd` already samples the scene with tree
+   access every frame for its own density contribution, so it also calls `Threat.
+   refresh_union(threat_nodes, in_view_fn)` there and owns one dedicated `Threat.Painter`
+   (`_union_painter`) that draws `Threat.union_marks_now()` — the one shared union layer
+   the reviewer's own suggestion pointed at. Caveat, and it is a real one: `telegraph.gd`
+   only repaints `STATIC_LAYERS` once, at commit, so a member's `area` role (a
+   `STATIC_LAYERS` mark) keeps whatever suppression existed when it committed, not this
+   frame's; only its `MOTION_LAYERS` roles (`fill`/`swept`/`run` — the ones actually
+   replaced by the union's fill) react live every frame. `hazard.gd` repaints
+   `STATIC_LAYERS` on every reshape, so its `area` role does react there. That gap is the
+   calling files' own repaint schedule, not something reachable from this unit's write
+   set; flagging it explicitly rather than claiming full live parity.
+5. **The union's own math was wrong on three counts (finding 5).** (a) `_hostile_indices`
+   now only counts a hostile descriptor that currently draws a fill/area/swept/run role
+   (checked via `roles(d)`, which stays on the unfiltered `_raw_marks` so this decision
+   never reads its own suppression output) — an arming WAVE with no such role yet no
+   longer counts toward "more than four overlapping fills". (b) Clustering switched from
+   connected-component union-find to maximal cliques (`maximal_overlap_cliques`,
+   Bron-Kerbosch, no pivot — small n per frame so the exponential worst case never
+   matters here): a chain of fills that only touch their immediate neighbour no longer
+   unions just because the chain is one connected blob; only a group that all pairwise
+   overlap counts. (c) The union mark's geometry is now rasterized onto a shared
+   `UNION_GRID_STEP` (2 m) grid and emits one quad per covered cell (`_union_footprint`),
+   so members that overlap each other never draw over each other inside the union's own
+   mesh and it reads as one flat `FILL_ALPHA`, not alpha stacked wherever two footprints
+   cross. `threat_grammar_test.gd` gained checks for (a) and (b) directly (arming waves
+   union nothing; a 10 m-apart chain of 6 m rings, each touching only its neighbour,
+   unions nothing) on top of the existing 4-and-5-identical-ring cases.
+   **Left open, on purpose (d):** the rasterized union uses each member's *static*
+   footprint (`r_in..r_out`/lane extent), not an INSTANT member's own progress-shrunk
+   closing-in fill. A real fix needs either a proper 2D polygon-boolean union (tracking
+   each member's live inner bound) or an explicit product call on whether the union
+   should show the closing warning at all while unioned. That is a design decision, not
+   a bounded engineering fix, and the reviewer's own finding framed it as one ("decide
+   explicitly whether INSTANT progress stays visible"); recording it here as the open
+   item rather than guessing.
+6. **The density test didn't cover §6.1's own acceptance line (finding 6).**
+   `presentation_density_test.gd` now drives the real `Game` harness (not a hand-fed
+   target): 24 fixture enemies (six packs' worth) and 8 mixed hostile telegraphs placed
+   near the ball genuinely raise `threats_in_view`/`enemies_in_view`, then 30 kills and a
+   60-event hit-spark flood land inside a ~180 ms window. It asserts the real budgets
+   (P5 glyphs ≤ 40, hit sparks ≤ 12 *and* the cap actually engaged, kill pops ≤ 3 / 250 ms
+   once density reaches a coalescing band), that a P2/P3-style glyph (`near_miss`)
+   survives the flood, and that density falls back (recovery hysteresis) once the
+   fixtures are freed. A new `_bolt_visual` pure helper (bolts.gd, point 7 below) is
+   exercised directly with a forced shed flag, so the bolt-tail test runs the actual
+   render-path function rather than re-deriving its formula.
+7. **Bolt tails were capped continuously; only the tail may shed (findings 7, 9).**
+   `bolts.gd`'s `_process` used to multiply the *whole* bolt's width and alpha by
+   `Density.size_factor`/`alpha_factor` continuously — contradicting §8's "a damaging
+   bolt retains its head and trajectory; only its tail thins" and leaving `SHED_ORDER`'s
+   `active_shed`/`shed_step` uncalled (`active_shed`/`shed_step` had no caller anywhere,
+   as the review noted). The per-bolt draw is now `_bolt_visual(bolt, shedding)`, a pure
+   function `_process` calls with `shedding := "bolt_tails" in Density.active_shed
+   (density)`: width and alpha are density-independent (only `crowd_alpha`, the
+   pre-F1a crowding rule, ever fades a bolt); only the streak length halves
+   (`SHED_STREAK_SCALE`) once the shed step is active, a binary gate matching the shed
+   order's own step function, not a continuous multiplier.
+8. **P4 fountains were governed continuously (finding 11).** `burst()`'s "fountain" kind
+   (a part or core reveal, `juice.gd`'s `_on_part`/`_on_core`) used to get the same
+   continuous alpha/size/lifetime scaling as every P5 pool, contradicting both §1.1's "P4
+   thinned only past density 0.8" and the file's own claim that "every P4 reward reveal
+   is left untouched". `_emit_burst` now exempts `"fountain"` from the continuous caps
+   entirely; only once `"pin_trails_and_fountains"` is an active shed step does its
+   lifetime shorten (`FOUNTAIN_SHED_LIFETIME_SCALE`, 0.6), matching that shed step's own
+   name and §8's "pin trails and scrap fountains shorten" wording — size and alpha stay
+   untouched at every density, same as every other P4 reveal in this file.
+
+**Checks, fix round 1.** `threat_grammar_test.gd` gained two cases (point 5). `presentation_
+density_test.gd` gained the real load scenario (point 6) and a bolt-tail-shed check
+(point 7), on top of every existing check, all still passing. `presentation_chain_test.gd`'s
+existing "kill bursts" check now reports the true, undoubled pop count. Full
+`npm run sketch:smoke` rerun at the tip of this fix round; see the coordinator's own
+report for its result rather than duplicating it here.
