@@ -72,7 +72,7 @@ Andrew: the HUD should be "kind of like a um, hack together heads up display jus
 
 Andrew: "keep iterating on it until it reaches maybe 80 to 90% of like the concept art at a playable frame rate at 60 FPS ... at 1080 ... at least 60 FPS on my setup as well ... I wouldn't want this game to be something that a mid-tier card or PC would be having a hard time to play."
 
-- **Look:** Style A at 80 to 90 percent of the concept art (Codex's storyboards and key art in `design-v2/visual-development/` and `design-v3/storyboards/`), judged by Andrew side by side with in-game captures.
+- **Look:** Style A at 80 to 90 percent of the concept art (Codex's storyboards and key art in `design-v2/visual-development/` and `design-v3/storyboards/`), judged by Andrew side by side with in-game captures. The target is **look and feel only**: lighting, materials, palette, mood, silhouettes and atmosphere. UI, layouts, HUD elements or gameplay details drawn into the concept images are not specs (Andrew, 2026-09-28). UI follows its own rulings (the scrapped-together HUD, the word budgets).
 - **Machines:**
   - Dev box: a Ryzen 9 5950X and an RTX 4080.
   - Mid-tier reference: a 6-core Zen 2 or Zen 3 class CPU and an RTX 3060-class card, at 1080p and 60 FPS.
