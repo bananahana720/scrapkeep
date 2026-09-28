@@ -46,6 +46,9 @@ var cables: Array[Dictionary] = []
 var valves: Array[Dictionary] = []
 var walls: Array[Dictionary] = []
 var thermals: Array[Dictionary] = []
+# False while a map's contraptions wait for a loop mode (the Spillway's return lift in
+# v2): world neither steps nor shows them.
+var live := true
 
 var _puffs: Array[Dictionary] = []
 var _slams: Array[Vector3] = []
@@ -408,6 +411,27 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			band.position = barrel.position
 			band.basis = barrel.basis
 			root.add_child(band)
+		"steam_lift":
+			# The v3 loop's return (map_spillway.gd): the gorge lift's striped plate and
+			# copper piston, as a launcher that throws the ball back to the shelf.
+			var plate := MeshInstance3D.new()
+			var pm := CylinderMesh.new()
+			pm.top_radius = float(spec["radius"]) - 0.8
+			pm.bottom_radius = float(spec["radius"]) - 0.8
+			pm.height = 0.3
+			plate.mesh = pm
+			plate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+			plate.position = mouth + Vector3.DOWN * 0.85
+			root.add_child(plate)
+			arm = MeshInstance3D.new()
+			var sm := CylinderMesh.new()
+			sm.top_radius = 1.2
+			sm.bottom_radius = 1.2
+			sm.height = 6.0
+			arm.mesh = sm
+			arm.material_override = _copper_mat
+			arm.position = mouth - aim * (float(spec["radius"]) + 1.5) + Vector3.UP * 2.0
+			root.add_child(arm)
 		"trebuchet":
 			for side in [-1.0, 1.0]:
 				var post := MeshInstance3D.new()
@@ -449,7 +473,7 @@ func _launcher_pose(l: Dictionary) -> void:
 		"trebuchet":
 			var aim: Vector3 = l["aim"]
 			arm.basis = Basis.looking_at(aim.rotated(aim.cross(Vector3.UP).normalized(), lerpf(-0.9, 0.7, g)), Vector3.UP)
-		"geyser":
+		"geyser", "steam_lift":
 			arm.scale = Vector3(1.0, lerpf(0.2, 1.3, g), 1.0)
 
 

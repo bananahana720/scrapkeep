@@ -10,6 +10,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -111,6 +112,9 @@ func _on_flow_changed(state: String) -> void:
 			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 			_action("start", "key_space", "Start")
 			_action("help", "key_h", "Help")
+			_action("loop", "key_l", "")
+			_action("gun", "key_g", "")
+			refresh_lab_row()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
@@ -153,6 +157,17 @@ func toggle_help() -> void:
 
 func help_open() -> bool:
 	return _help.visible
+
+
+# The fun lab's switch on the title (LOOP-REDESIGN section 7): L cycles the loop mode,
+# G the gun's role; each button names what the next run plays.
+func refresh_lab_row() -> void:
+	var loop := button_for("loop")
+	var gun := button_for("gun")
+	if loop != null:
+		loop.text = "Loop: %s" % LoopMode.mode(game.tuning)
+	if gun != null:
+		gun.text = "Gun: %s" % LoopMode.gun_role(game.tuning)
 
 
 func _input(event: InputEvent) -> void:

@@ -12,6 +12,7 @@ const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
 const Bay := preload("res://src/world/bay.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -113,6 +114,9 @@ func _setup_gorge() -> void:
 		terrain.geometry_root(i + 1).add_child(c)
 		c.setup(m, terrain.ground_callable(i + 1), cruise, g)
 		contraptions[i + 1] = c
+		if m.get("contraptions_need_loop") == true:
+			c.live = false
+			c.visible = false
 	terrain_view = TerrainEventView.new()
 	terrain_view.name = "TerrainEvents"
 	ctx.root.add_child(terrain_view)
@@ -137,6 +141,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 			m.apply_swap(id, false)
 	if contraptions.has(stage):
 		contraptions[stage].reset()
+	_apply_loop(stage)
 	layer = ""
 	# A retry replays the same stage: same event plan, same miniboss spots. A new
 	# entry draws a fresh plan from the run's stream.
@@ -168,6 +173,22 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	codex_world = CodexWorld.new()
 	view.set_vault(terrain.vault_point(stage), false)
 	_mark_landing(stage, retry)
+
+
+# The v3 fun lab (loop_mode.gd): a loop mode swaps the map's drop lips in, with their
+# overlay heights, and wakes its return contraption; v2 leaves both parked, so the
+# control plays the v2 stage untouched. Read at every stage entry, so a flip in the
+# panel lands on the next hold-R retry.
+func _apply_loop(stage: int) -> void:
+	var m = terrain.map()
+	var on: bool = LoopMode.uses_loop(ctx.tuning) and not m.drop_lines.is_empty()
+	m.loop_live = on
+	if on and "swaps" in m and m.swaps.has(m.LOOP_SWAP):
+		m.apply_swap(m.LOOP_SWAP, true)
+		terrain.overlays.append(m.LOOP_SWAP + "_after")
+	if contraptions.has(stage) and m.get("contraptions_need_loop") == true:
+		contraptions[stage].live = on
+		contraptions[stage].visible = on
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
@@ -243,7 +264,7 @@ func _physics_process(delta: float) -> void:
 			ctx.events.pressure_changed.emit(0.0)
 	if not calm_bay:
 		_publish(events.advance(delta, ball, velocity))
-	if contraptions.has(ctx.flow.stage()):
+	if contraptions.has(ctx.flow.stage()) and contraptions[ctx.flow.stage()].live:
 		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)

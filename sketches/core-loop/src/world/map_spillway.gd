@@ -1,6 +1,7 @@
 extends "res://src/world/stage_map.gd"
 
 const Features := preload("res://src/world/features.gd")
+const LocalMesh := preload("res://src/world/local_mesh.gd")
 
 # Stage 1, the Spillway's top shelf: the wave-1 shelves, chutes, flooding basin and
 # dry east bypass, laid on a fall line. You drop onto a deck on the top shelf, roll
@@ -40,6 +41,25 @@ const DECK := {"top": 10.0, "foot": 44.0, "height": 10.0}
 const PLINTH := {"top": 6.0, "foot": 20.0, "height": 3.0}
 const STAMPEDE_RING := Vector2(14.0, -112.0)
 
+# The v3 loop (LOOP-REDESIGN section 3, stage 1), live only in a loop mode (loop_mode.gd).
+# Two drop lines come down off the top shelf into the Warden's bowl from the north, each
+# ending in an amber kicker lip on the bowl floor aimed at the mast: the west chute
+# (fast) and the long line past the stampede ring down the riser (long, a higher lip).
+# The return is a steam lift on the bowl's south bank that throws the ball back over the
+# Warden to the top shelf's east landing beside the vault plinth. Gravity is 26 m/s^2,
+# so a lip can only reach the mast from close in: the lips stand on the bowl floor and
+# the shelf's height is what brings the speed.
+const LIP_REACH := 19.0
+const RETURN_AT := Vector2(-46.0, 22.0)
+const RETURN_TO := Vector2(-24.0, -104.0)
+const RETURN_FLOOR := 30.0
+const LOOP_LINES := [
+	{"id": "west_chute", "kind": "fast", "start": Vector2(-62.0, -92.0), "via": [Vector2(-62.0, -66.0), Vector2(-57.0, -46.0)],
+		"width": 9.0, "length": 10.0, "lip": 2.5},
+	{"id": "east_riser", "kind": "long", "start": Vector2(10.0, -100.0), "via": [Vector2(-4.0, -72.0), Vector2(-22.0, -48.0)],
+		"width": 9.0, "length": 11.0, "lip": 3.2},
+]
+
 
 func _init() -> void:
 	title = "Spillway: the top shelf"
@@ -69,6 +89,45 @@ func _init() -> void:
 		},
 	}
 	unique_events = ["scrap_stampede"]
+	_loop_specs()
+
+
+# Contraption specs (contraptions.gd), live only in a loop mode.
+var contraptions: Array = []
+var contraptions_need_loop := true
+# The loop's lips as pre-built colliders, parked until a loop mode is on.
+var swaps := {}
+
+
+func _loop_specs() -> void:
+	var mast := BEACON
+	for spec in LOOP_LINES:
+		var line: Dictionary = spec.duplicate(true)
+		var from: Vector2 = (spec["via"] as Array)[-1]
+		var dir := (mast - from).normalized()
+		line["dir"] = dir
+		line["at"] = mast - dir * LIP_REACH
+		line["target"] = mast
+		drop_lines.append(line)
+	return_at = RETURN_AT
+	return_to = RETURN_TO
+	loop = PackedVector2Array([RETURN_TO, drop_lines[0]["start"]] + drop_lines[0]["via"] + [drop_lines[0]["at"], mast, RETURN_AT, RETURN_TO])
+	contraptions = [
+		{"kind": "launcher", "id": "return_lift", "style": "steam_lift", "at": RETURN_AT, "radius": 5.0,
+			"target": Vector3(RETURN_TO.x, sample(RETURN_TO.x, RETURN_TO.y)[0] + 1.0, RETURN_TO.y), "floor": RETURN_FLOOR,
+			"min_flight": 0.5, "charge": 1.2},
+	]
+
+
+func apply_swap(id: String, changed: bool) -> void:
+	move_swap(swaps, id, changed)
+
+
+func overlay_height(id: String, x: float, z: float, ground: float) -> float:
+	if id != LOOP_SWAP + "_after":
+		return -INF
+	var lip := drop_lip_height(x, z)
+	return ground + lip if lip > 0.0 else -INF
 
 
 func sample(x: float, z: float) -> Array:
@@ -187,3 +246,39 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	# Two mid-shelf benches, clear of the beacon bowl: low lips to launch off.
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(24.0, 22.0, 0.6), concrete)
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(66.0, 2.0, 0.6), concrete)
+	_build_lips(parent, ground)
+
+
+# Each drop line's lip as one trimesh over the ground (local_mesh.gd), amber where it
+# rises (writer D's movement colour, never HAZARD), parked until a loop mode swaps it in.
+func _build_lips(parent: Node3D, ground: Callable) -> void:
+	var lips: Array = []
+	for line in drop_lines:
+		var at: Vector2 = line["at"]
+		var dir: Vector2 = line["dir"]
+		var side := Vector2(-dir.y, dir.x)
+		var half_w: float = float(line["width"]) * 0.5 + 4.0
+		var box_min := Vector2.INF
+		var box_max := -Vector2.INF
+		for u in [-float(line["length"]), 5.0]:
+			for w in [-half_w, half_w]:
+				var corner: Vector2 = at + dir * u + side * w
+				box_min = Vector2(minf(box_min.x, corner.x), minf(box_min.y, corner.y))
+				box_max = Vector2(maxf(box_max.x, corner.x), maxf(box_max.y, corner.y))
+		var centre := (box_min + box_max) * 0.5
+		var holder := Node3D.new()
+		holder.name = "DropLip_" + String(line["id"])
+		holder.position = Vector3(centre.x, 0.0, centre.y)
+		parent.add_child(holder)
+		var rise := func(u: float, v: float) -> float:
+			return Features.kicker(centre.x + u, centre.y + v, at, dir, line["length"], line["width"], line["lip"])
+		var height := func(u: float, v: float) -> float:
+			return (ground.call(centre.x + u, centre.y + v, 0.0) as Vector3).y + rise.call(u, v) + 0.03
+		var tint := func(u: float, v: float) -> Color:
+			var floor_tint: Color = sample(centre.x + u, centre.y + v)[1]
+			return floor_tint.lerp(Palette.AMBER, clampf(rise.call(u, v) * 2.0, 0.0, 1.0))
+		LocalMesh.grid(holder, "Lip", box_max - box_min, 1.0, height, tint)
+		holder.set_meta("home", holder.position)
+		lips.append(holder)
+	swaps = {LOOP_SWAP: {"before": [], "after": lips}}
+	apply_swap(LOOP_SWAP, false)

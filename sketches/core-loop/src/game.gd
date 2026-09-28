@@ -8,6 +8,7 @@ const Beacon := preload("res://src/core/beacon.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -95,6 +96,7 @@ func _ready() -> void:
 			summary_guard_left = SUMMARY_GUARD)
 	run = RunState.new(events)
 	tuning = Tuning.new()
+	LoopMode.apply_cmdline(tuning)
 
 	player = PlayerBall.new()
 	player.name = "Player"
@@ -414,6 +416,10 @@ func _screen_key(key: int) -> bool:
 				return true
 			if key == KEY_H:
 				screens.toggle_help()
+				return true
+			if key == KEY_L or key == KEY_G:
+				LoopMode.cycle(tuning, LoopMode.LOOP_KEY if key == KEY_L else LoopMode.GUN_KEY)
+				screens.refresh_lab_row()
 				return true
 		"class_select":
 			if key >= KEY_1 and key < KEY_1 + mini(flow.classes.size(), 9):
