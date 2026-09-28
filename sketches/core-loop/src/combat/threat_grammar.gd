@@ -99,9 +99,12 @@ const CURTAIN_STEPS := 48
 # P6 fill classes: the stencil value a class writes and tests, so overlapping fills of
 # one class draw once (E1-DENSITY.md section 2), and a sorting offset that runs each class
 # as one contiguous batch under every line at the same priority. A class writes over
-# another's value, so the batches must not interleave for the union to hold.
-const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4}
-const FILL_SORT := {"area": -3000.0, "fill": -2000.0, "swept": -1000.0}
+# another's value, so the batches must not interleave for the union to hold. A LANE's run
+# is its own class, batched after the INSTANT fills: a running lane is live damage, and
+# unioned with a pending fill its brighter band vanished wherever the fill drew first
+# (E1 fix round, mixed overlap still). Lanes still union with lanes.
+const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4, "run": 8}
+const FILL_SORT := {"area": -3000.0, "fill": -2000.0, "run": -1500.0, "swept": -1000.0}
 
 
 # hostile (HAZARD), owned (the player's, AMBER) or neutral (a harmless bone field).
@@ -207,10 +210,14 @@ static func roles(d: Dictionary) -> Array:
 # A combat telegraph builds its motion marks once, at full extent, each vertex tagged with
 # how it follows the frame; drive(d) then hands the frame's numbers to the shader. The
 # numbers are the same expressions marks(d, true) draws, so both paths draw one shape. A
-# sector wave (a boss hazard's) stays on marks().
+# sector wave (a boss hazard's) stays on marks(), and so does a wave that is not hostile:
+# its swept ground would share the "motion" layer with its front, and drive() gives a
+# layer one clip, so the swept clip would overwrite the front's (E1 fix round, finding 5b).
 
 static func can_drive(d: Dictionary) -> bool:
-	return int(d["type"]) != Type.WAVE or is_full(d)
+	if int(d["type"]) != Type.WAVE:
+		return true
+	return is_full(d) and _area_layer(d, true) != "motion"
 
 
 static func driven_marks(d: Dictionary) -> Array:
@@ -893,10 +900,11 @@ class Painter:
 	static var _stripes: ImageTexture
 	static var _materials := {}
 
-	# One shared material per (stencil class, stripes, priority), so every driven
-	# telegraph draws with the same few materials.
-	static func mark_material(fill_class: String, stripes: bool, priority: int) -> ShaderMaterial:
-		var key := "%s/%s/%d" % [fill_class, stripes, priority]
+	# One shared material per (stencil class, stripes, priority, governed), so every driven
+	# telegraph draws with the same few materials. governed comes from the layer's roles
+	# (layer_governed), not from the stencil class.
+	static func mark_material(fill_class: String, stripes: bool, priority: int, governed: bool) -> ShaderMaterial:
+		var key := "%s/%s/%d/%s" % [fill_class, stripes, priority, governed]
 		if _materials.has(key):
 			return _materials[key]
 		var code := "shader_type spatial;\n"
@@ -910,8 +918,7 @@ class Painter:
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
 		mat.render_priority = priority
-		var role_class: String = Density.CLASS_OF_ROLE.get(fill_class, "P1")
-		mat.set_shader_parameter("governed", 0.0 if Density.is_shed_exempt(role_class) else 1.0)
+		mat.set_shader_parameter("governed", 1.0 if governed else 0.0)
 		if stripes:
 			mat.set_shader_parameter("texture_albedo", stripe_texture())
 			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
@@ -955,7 +962,26 @@ class Painter:
 				if custom:
 					_append_custom(c0, m.get("c0"), m["tris"].size())
 					_append_custom(c1, m.get("c1"), m["tris"].size())
-			_set_layer(layer, verts, colors, c0, c1)
+			_set_layer(layer, verts, colors, c0, c1, custom and layer_governed(all, layer))
+
+	# Whether the density governor fades a driven layer: every role on it is a governed
+	# class in Density.CLASS_OF_ROLE (P6 fills). P6 is hostile ground, so only the stripe
+	# layers qualify; an owned or neutral fill on "motion" stays as it drew before E1. A
+	# layer that mixes a governed role with an exempt one stays exempt and reports it,
+	# since fading it would fade a P1 line.
+	static func layer_governed(all: Array, layer: String) -> bool:
+		var governed := 0
+		var exempt := 0
+		for m in all:
+			if m["layer"] != layer:
+				continue
+			if Density.is_shed_exempt(Density.class_of_role(m["role"])):
+				exempt += 1
+			else:
+				governed += 1
+		if governed > 0 and exempt > 0:
+			push_error("Painter: layer %s mixes governed and exempt roles; left ungoverned" % layer)
+		return governed > 0 and exempt == 0 and layer.begins_with("stripe")
 
 	# The frame's numbers for each driven layer (Threat.drive); only changed values reach
 	# the renderer.
@@ -992,8 +1018,10 @@ class Painter:
 		return (_layers[layer].mesh as ArrayMesh).surface_get_array_len(0)
 
 	func _set_layer(layer: String, verts: PackedVector3Array, colors: PackedColorArray,
-			c0 := PackedFloat32Array(), c1 := PackedFloat32Array()) -> void:
+			c0 := PackedFloat32Array(), c1 := PackedFloat32Array(), governed := false) -> void:
 		var instance := _layer(layer)
+		if _is_driven(layer):
+			instance.material_override = mark_material(_fill_class(layer), layer.begins_with("stripe"), _priority(layer), governed)
 		if verts.is_empty():
 			instance.mesh = null
 			return
@@ -1011,6 +1039,15 @@ class Painter:
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 		instance.mesh = mesh
 
+	# The stencil class a driven layer's fills union in, "" for a line layer.
+	func _fill_class(layer: String) -> String:
+		if not layer.begins_with("stripe"):
+			return ""
+		return "area" if layer == "stripe" else motion_class
+
+	static func _priority(layer: String) -> int:
+		return PRIORITY - 1 if layer.ends_with("under") else PRIORITY
+
 	func _layer(layer: String) -> MeshInstance3D:
 		if _layers.has(layer):
 			return _layers[layer]
@@ -1018,10 +1055,8 @@ class Painter:
 		instance.top_level = true
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if _is_driven(layer):
-			var stripes := layer.begins_with("stripe")
-			var fill_class := ("area" if layer == "stripe" else motion_class) if stripes else ""
-			instance.material_override = mark_material(fill_class, stripes, PRIORITY - 1 if layer.ends_with("under") else PRIORITY)
-			instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
+			instance.material_override = mark_material(_fill_class(layer), layer.begins_with("stripe"), _priority(layer), false)
+			instance.sorting_offset = FILL_SORT.get(_fill_class(layer), 0.0)
 			instance.extra_cull_margin = 4.0
 			instance.set_instance_shader_parameter("centre", centre)
 			instance.set_instance_shader_parameter("heading", heading)

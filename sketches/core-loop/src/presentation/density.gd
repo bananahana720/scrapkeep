@@ -7,7 +7,9 @@ extends RefCounted
 #
 # One Governor is live at a time (live()). Vfx steps it once per frame and publishes the
 # P6 fill scale as the global shader value threat_fill_scale; every other reader, bolts
-# included, reads that same instance.
+# included, reads that same instance. What is in view is counted SAMPLE_HZ times a second,
+# not every frame: counting walks the threat and enemy groups, and the governor's own
+# RISE_SECONDS smoothing is longer than the sample gap (E1 fix round, finding 5a).
 
 const THREAT_WEIGHT := 0.35
 const THREAT_SCALE := 6.0
@@ -17,6 +19,7 @@ const ENEMY_WEIGHT := 0.3
 const ENEMY_SCALE := 12.0
 const RISE_SECONDS := 0.25
 const FALL_SECONDS := 0.6
+const SAMPLE_HZ := 10.0
 
 # Past this density only the edges read: governed fills fade from 1.0 to FILL_FLOOR at 1.0.
 const FILL_FROM := 0.4
@@ -75,6 +78,11 @@ static func raw(threats_in_view: int, fx_alive: int, enemies_in_view: int) -> fl
 
 static func is_shed_exempt(priority_class: String) -> bool:
 	return not priority_class in GOVERNED_CLASSES
+
+
+# A keyline underlay ("edge_under") has its line's class.
+static func class_of_role(role: String) -> String:
+	return CLASS_OF_ROLE.get(role.trim_suffix("_under"), "P1")
 
 
 static func class_of_kind(kind: String) -> String:

@@ -46,6 +46,7 @@ func _process(_delta: float) -> bool:
 	_check_raw_control()
 	_check_juice_path()
 	_check_exemption()
+	_check_pop_record()
 	_check_shed()
 	Density.live().reset()
 	print("presentation_density_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
@@ -142,6 +143,9 @@ func _check_exemption() -> void:
 	var at: Vector3 = _game.player.ball_position() + Vector3(0.0, 1.0, -4.0)
 	var quiet := {}
 	var loud := {}
+	# A wave and an INSTANT ring, built and stepped the same way at density 0 and 1.0: the
+	# instance uniforms on their line layers (front, chevrons, curtain and their keylines)
+	# must match value for value, and only the fill layers carry the governed flag.
 	for density in [0.0, 1.0]:
 		Density.live().force(density)
 		var drawn := {}
@@ -150,24 +154,52 @@ func _check_exemption() -> void:
 			drawn[kind] = [slot["alpha"], slot["from"], slot["to"], slot["life"]]
 		_vfx._govern(0.0)
 		drawn["fill_scale"] = _vfx._fill_scale
+		var wave: Node3D = Telegraph.wave(_game.ctx.root, _game.ctx.terrain, at + Vector3(0.0, 0.0, -20.0), 10.0, 6.0, 0.5)
+		wave.step(1.0)
+		var ring: Node3D = Telegraph.ring(_game.ctx.root, _game.ctx.terrain, Threat.Type.INSTANT, at + Vector3(20.0, 0.0, -20.0), 6.0)
+		ring.set_progress(0.5)
+		var uniforms: Array = []
+		for layer in ["motion", "motion_under"]:
+			var instance: GeometryInstance3D = wave.painter()._layers[layer]
+			uniforms.append([layer, instance.get_instance_shader_parameter("clip"), instance.get_instance_shader_parameter("alpha_scale"),
+				float(instance.material_override.get_shader_parameter("governed"))])
+		for pair in [[wave, "stripe_motion"], [ring, "stripe_motion"], [ring, "stripe"]]:
+			var instance: GeometryInstance3D = pair[0].painter()._layers[pair[1]]
+			uniforms.append([pair[1], float(instance.material_override.get_shader_parameter("governed"))])
+		drawn["uniforms"] = uniforms
+		wave.free()
+		ring.free()
 		if density == 0.0:
 			quiet = drawn
 		else:
 			loud = drawn
-	var tele: Node3D = Telegraph.wave(_game.ctx.root, _game.ctx.terrain, at + Vector3(0.0, 0.0, -20.0), 10.0, 6.0, 0.5)
-	tele.step(1.0)
-	var layers: Dictionary = tele.painter()._layers
-	var lines_free := true
-	for layer in ["motion", "motion_under"]:
-		lines_free = lines_free and float(layers[layer].material_override.get_shader_parameter("governed")) == 0.0
-	var fills_governed: bool = float(layers["stripe_motion"].material_override.get_shader_parameter("governed")) == 1.0 \
-		and float(layers["stripe"].material_override.get_shader_parameter("governed")) == 1.0 if layers.has("stripe") else true
-	var drive_same := Threat.drive(tele.descriptor()) == Threat.drive(tele.descriptor())
-	tele.free()
+	var set_values := true
+	for row in loud["uniforms"].slice(0, 2):
+		set_values = set_values and row[1] is Vector4 and row[2] != null and row[3] == 0.0
+	var fills_governed := true
+	for row in loud["uniforms"].slice(2):
+		fills_governed = fills_governed and row[1] == 1.0
+	var lines_same: bool = quiet["uniforms"] == loud["uniforms"]
 	_check("P0 to P3 exempt", quiet["near_miss"] == loud["near_miss"] and quiet["enemy_struck"] != loud["enemy_struck"]
-			and lines_free and fills_governed and drive_same and quiet["fill_scale"] == 1.0 and is_equal_approx(loud["fill_scale"], Density.FILL_FLOOR),
-		"at density 1.0 a P2 near-miss glyph draws %s as at 0, a P5 hit glyph goes from %s to %s; telegraph lines are ungoverned, fills scale %.2f -> %.2f"
-			% [loud["near_miss"], quiet["enemy_struck"], loud["enemy_struck"], quiet["fill_scale"], loud["fill_scale"]])
+			and set_values and lines_same and fills_governed and quiet["fill_scale"] == 1.0 and is_equal_approx(loud["fill_scale"], Density.FILL_FLOOR),
+		"at density 1.0 a P2 near-miss glyph draws %s as at 0, a P5 hit glyph goes from %s to %s; a wave's line layers carry %s at density 1.0, the same as at 0: %s; fills governed: %s, scale %.2f -> %.2f"
+			% [loud["near_miss"], quiet["enemy_struck"], loud["enemy_struck"], loud["uniforms"].slice(0, 2), lines_same, loud["uniforms"].slice(2), quiet["fill_scale"], loud["fill_scale"]])
+
+
+# The gate's record of emitted pops is for the tests: it keeps at most EMITTED_KEEP and
+# clear() empties it, so a long run does not grow it.
+func _check_pop_record() -> void:
+	var pops = _vfx.pops
+	pops.clear()
+	var clock := 100.0
+	for i in 200:
+		pops.add(clock, Vector3(i * 50.0, 0.0, 0.0), 0.0)
+		pops.ready(clock, 0.0)
+		clock += Density.KILL_POP_WINDOW
+	var kept: int = pops.emitted.size()
+	pops.clear()
+	_check("pop record bounded", kept == pops.EMITTED_KEEP and pops.emitted.is_empty(),
+		"200 spaced pops leave %d records (cap %d); clear() leaves %d" % [kept, pops.EMITTED_KEEP, pops.emitted.size()])
 
 
 func _check_shed() -> void:

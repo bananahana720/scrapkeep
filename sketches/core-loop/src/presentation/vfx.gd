@@ -78,6 +78,9 @@ var trails := true
 # Every kill's starburst, pop and debris pass through this gate (kill_pop).
 var pops := PopGate.new()
 var _fill_scale := 1.0
+# What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
+var _density_target := 0.0
+var _density_wait := 0.0
 
 
 # At most Density.KILL_POPS_PER_WINDOW kill pops in any KILL_POP_WINDOW seconds
@@ -91,7 +94,8 @@ class PopGate:
 	var ring := PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
 	var oldest := 0
 	var pending: Array = []
-	# Every emitted pop: [clock, kills, scale], for the tests.
+	# The last EMITTED_KEEP pops: [clock, kills, scale], for the tests.
+	const EMITTED_KEEP := 64
 	var emitted: Array = []
 
 	func add(clock: float, at: Vector3, reach: float) -> void:
@@ -119,11 +123,14 @@ class PopGate:
 			cluster["at"] = cluster["sum"] / cluster["n"]
 			cluster["scale"] = Density.pop_scale(cluster["n"])
 			emitted.append([clock, cluster["n"], cluster["scale"]])
+			if emitted.size() > EMITTED_KEEP:
+				emitted.pop_front()
 			out.append(cluster)
 		return out
 
 	func clear() -> void:
 		pending.clear()
+		emitted.clear()
 		ring = PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
 		oldest = 0
 
@@ -369,6 +376,8 @@ func clear() -> void:
 	_streaks.clear()
 	pops.clear()
 	Density.live().reset()
+	_density_target = 0.0
+	_density_wait = 0.0
 	_publish_fill_scale(1.0)
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
@@ -797,17 +806,26 @@ func _emit_pops() -> void:
 
 
 # One density per frame from what is in view (FEEL-READABILITY.md §1.2); the P6 fill
-# scale reaches every governed fill as one global shader value.
+# scale reaches every governed fill as one global shader value. The group walks run
+# Density.SAMPLE_HZ times a second; between samples the governor eases toward the last
+# count, so a frame costs one update and at most one server call.
 func _govern(delta: float) -> void:
+	_density_wait -= delta
+	if _density_wait <= 0.0:
+		_density_wait = 1.0 / Density.SAMPLE_HZ
+		_density_target = _count_density()
+	_publish_fill_scale(Density.fill_scale(Density.live().update(delta, _density_target)))
+
+
+func _count_density() -> float:
 	var cam: Camera3D = camera.cam if camera != null and camera.get("cam") is Camera3D else null
 	var alive := 0
 	for g in _glyphs:
 		if g["t"] < 1.0:
 			alive += 1
 	var tree := get_tree()
-	var target := Density.raw(Density.count_in_view(cam, tree.get_nodes_in_group(Threat.GROUP)), alive,
+	return Density.raw(Density.count_in_view(cam, tree.get_nodes_in_group(Threat.GROUP)), alive,
 		Density.count_in_view(cam, tree.get_nodes_in_group("enemy")))
-	_publish_fill_scale(Density.fill_scale(Density.live().update(delta, target)))
 
 
 func _publish_fill_scale(value: float) -> void:

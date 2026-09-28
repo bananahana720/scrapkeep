@@ -5,6 +5,7 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Density := preload("res://src/presentation/density.gd")
 
 # The four attack types draw four different grammars, each from the descriptor its node
 # builds out of the same fields contains() reads. A wave's drawn front is its damage
@@ -48,6 +49,7 @@ func _process(_delta: float) -> bool:
 	_check_sweep()
 	_check_projectile()
 	_check_driven()
+	_check_drive_layers()
 	_check_no_rebuild()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
@@ -315,6 +317,57 @@ func _check_driven() -> void:
 			% ["; ".join(rows), float(live["to"])])
 	for node in [ring, slam, lane, pull, shell, wave]:
 		node.free()
+
+
+# E1 fix round (finding 5b): drive() gives each layer one clip. A wave that is not
+# hostile keeps its swept ground on "motion" with its front, so the swept clip would
+# overwrite the front's; such a wave must stay on marks(). The control shows the
+# overwrite is real, so the guard is load-bearing.
+func _check_drive_layers() -> void:
+	var node: Node3D = Telegraph.wave(_world, _ground, Vector3(0.0, 0.0, 250.0), 10.0, 6.0, 0.5)
+	node.age = node.warn_seconds + 0.5 * node.radius / node.speed
+	node.set_progress(node.age / node.warn_seconds)
+	var hostile: Dictionary = node.descriptor()
+	var rows: Array = []
+	var ok: bool = Threat.can_drive(hostile) and float(Threat.drive(hostile)["motion"]["clip"].x) > 0.0
+	rows.append("hostile wave drives %s, front clip from %.2f" % [Threat.can_drive(hostile), float(Threat.drive(hostile)["motion"]["clip"].x)])
+	for tone in [Palette.AMBER, Palette.SAND]:
+		var d := hostile.duplicate()
+		d["tone"] = tone
+		var clip: Vector4 = Threat.drive(d)["motion"]["clip"]
+		var overwritten: bool = clip.x <= -Threat.FAR
+		ok = ok and not Threat.can_drive(d) and (overwritten or Threat.stance(tone) == "neutral")
+		rows.append("%s wave drives %s (its motion clip from %.0f would be the swept one: %s)" % [Threat.stance(tone), Threat.can_drive(d), clip.x, overwritten])
+	var all_roles := {}
+	for type in EXPECTED:
+		for m in Threat.driven_marks(_descriptor_for(type)):
+			all_roles[m["role"]] = true
+	var unclassed: Array = []
+	for role in all_roles:
+		if not Density.CLASS_OF_ROLE.has(String(role).trim_suffix("_under")):
+			unclassed.append(role)
+	ok = ok and unclassed.is_empty() and not all_roles.is_empty()
+	rows.append("every driven role has a class in Density.CLASS_OF_ROLE (%d roles, missing %s)" % [all_roles.size(), unclassed])
+	node.free()
+	_report("drive layers", ok, "; ".join(rows))
+
+
+func _descriptor_for(type: int) -> Dictionary:
+	var node: Node3D
+	match type:
+		Threat.Type.INSTANT:
+			node = Telegraph.ring(_world, _ground, type, Vector3(0.0, 0.0, 260.0), 6.0)
+		Threat.Type.LANE:
+			node = Telegraph.lane(_world, _ground, type, Vector3(0.0, 0.0, 260.0), Vector3.FORWARD, 11.0, 3.0)
+		Threat.Type.PROJECTILE:
+			node = Telegraph.ring(_world, _ground, type, Vector3(0.0, 0.0, 260.0), 3.5)
+			node.set_flight(Vector3(12.0, 1.5, 248.0), 6.0)
+		_:
+			node = Telegraph.wave(_world, _ground, Vector3(0.0, 0.0, 260.0), 10.0, 6.0, 0.5)
+	node.set_progress(0.5)
+	var d: Dictionary = node.descriptor()
+	node.free()
+	return d
 
 
 func _drive(node: Node3D, layer: String) -> Dictionary:
