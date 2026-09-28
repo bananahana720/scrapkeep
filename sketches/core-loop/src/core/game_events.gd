@@ -122,6 +122,16 @@ signal swarm_scattered(at: Vector3, drones: int)
 signal mind_adapted(habit: String, icon: String)
 signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
 
+# v3 fun lab, laps mode (loop_mode.gd, world's lap_course.gd). World publishes the
+# course: the bell as the ball first rolls into the Warden's ring, each checkpoint ring
+# passed (index 0 to count - 1, in order), and each lap closed with its time. Flow
+# publishes warden_stripped when a lap past the required ones takes plating off the
+# Warden; plating is what is left.
+signal lap_bell_rung(at: Vector3)
+signal lap_ring_passed(index: int, count: int, at: Vector3)
+signal lap_completed(lap: int, required: int, seconds: float)
+signal warden_stripped(plating: float, at: Vector3)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

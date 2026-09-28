@@ -6,8 +6,8 @@ extends RefCounted
 # reads them from here:
 #   loop_mode  v2    the control: the v2 Warden fight, no return, no drop lips
 #              drop  Option A: only a drop on the open weak point lands
-#              laps  Option C (reserved for writer L2): the loop's return and lips are
-#                    live; the Warden keeps the v2 rules until laps lands its own
+#              laps  Option C: the loop's return and lips are live; the Warden sleeps
+#                    until the course is lapped (runs_laps), then fights by v2 rules
 #   gun_role   hold  weapon hits on the open weak point hold the window and deal a
 #                    small share
 #              full  weapon hits inside the window deal full damage; drops are burst
@@ -36,6 +36,16 @@ static func is_drop(tuning) -> bool:
 # The modes that run the stage loop: the return lift and the drop lines' kicker lips.
 static func uses_loop(tuning) -> bool:
 	return mode(tuning) in ["drop", "laps"]
+
+
+# Option C, "the Bell and the Laps", on a map with a loop: world runs the lap course
+# (lap_course.gd) and flow keeps the Warden asleep until LAPS_REQUIRED laps are in. The
+# one laps branch both modules read, so they never disagree on a stage without a loop.
+const LAPS_REQUIRED := 3
+
+
+static func runs_laps(tuning, map) -> bool:
+	return mode(tuning) == "laps" and map != null and not map.drop_lines.is_empty()
 
 
 # `--loop=drop --gun=full`, from the user args (after Godot's `--`) or the engine args

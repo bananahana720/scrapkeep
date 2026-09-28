@@ -13,6 +13,8 @@ const Bay := preload("res://src/world/bay.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const LapCourse := preload("res://src/world/lap_course.gd")
+const LapCourseView := preload("res://src/world/lap_course_view.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -54,6 +56,10 @@ var bay_bark := {}
 var layer := ""
 var swap_log: Array[Dictionary] = []
 
+# The laps mode's course on this stage (lap_course.gd), else null, and its rings.
+var course
+var course_view
+
 var _stage_seed := 0
 var _chute_clock := 0.0
 var _skylight_clock := 0.0
@@ -86,6 +92,9 @@ func setup(ctx_ref) -> void:
 	launch.name = "Launch"
 	ctx.root.add_child(launch)
 	launch.setup()
+	course_view = LapCourseView.new()
+	course_view.name = "LapCourse"
+	ctx.root.add_child(course_view)
 	_setup_gorge()
 	director = Director.new(ctx.rng.randi())
 	ctx.events.stage_entered.connect(_on_stage_entered)
@@ -189,6 +198,26 @@ func _apply_loop(stage: int) -> void:
 	if contraptions.has(stage) and m.get("contraptions_need_loop") == true:
 		contraptions[stage].live = on
 		contraptions[stage].visible = on
+	course = LapCourse.new(m, terrain.beacon_point(stage), ctx.flow.stage_def()["beacon_radius"], Callable(terrain, "height")) \
+		if LoopMode.runs_laps(ctx.tuning, m) else null
+	course_view.show_course(course, func(x: float, z: float) -> Vector3: return terrain.drop_point(x, z, 0.0))
+
+
+# Laps mode: the course steps while the Warden holds the beacon, asleep or awake, since
+# a lap past the required ones still strips it. Each lap steps the director once; its
+# rise is published with the clock's in _step_director this same tick.
+func _step_course(delta: float, ball: Vector3) -> void:
+	var bus = ctx.events
+	for fact in course.step(delta, ball):
+		match fact["kind"]:
+			"bell":
+				bus.lap_bell_rung.emit(fact["at"])
+			"ring":
+				course_view.pop(fact["index"])
+				bus.lap_ring_passed.emit(fact["index"], fact["count"], fact["at"])
+			"lap":
+				director.step_lap()
+				bus.lap_completed.emit(fact["lap"], fact["required"], fact["seconds"])
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
@@ -209,6 +238,8 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	terrain_view.clear()
 	director.arrivals.clear()
 	view.clear()
+	course = null
+	course_view.clear()
 	vault = null
 	_vault_pending = false
 	terrain.park_all()
@@ -268,6 +299,8 @@ func _physics_process(delta: float) -> void:
 		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
+	if course != null and ctx.flow.sealed:
+		_step_course(delta, ball)
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)

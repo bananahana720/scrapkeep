@@ -135,7 +135,20 @@ const ROWS := {
 	"bay_entered": {"group": "flow", "color": Palette.SANDSTONE, "shape": "square", "sound": "pylon_plant", "sound_next": "bay_lounge_in", "hud": "Moss's workshop", "objective": "", "priority": 2},
 	"bay_left": {"group": "flow", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "pylon_eject", "sound_next": "bay_slingshot_out", "hud": "", "objective": "", "priority": 1},
 	"world_fact": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 fun lab, laps mode (LOOP-REDESIGN section 1 C and section 7's lap notch). The
+	# bell and the notch are the beacon's own family (arc); a checkpoint is roll-through
+	# movement, so amber, and its pop climbs the reward ladder ring by ring; stripped
+	# plating falls off in the plates' copper. `sound` stands in; `sound_next` names the
+	# cue to bake. The lap's notch and the ring that closes it land on the beat with the
+	# director's threat_rose stinger (audio.gd).
+	"lap_bell_rung": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "shop_bell", "sound_next": "course_bell_toll", "hud": "The course lights up", "objective": "Lap the lit course: {lap} of {required}. The Warden wakes at {required}.", "priority": 3},
+	"lap_ring_passed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "found_chime", "sound_next": "checkpoint_pop", "hud": "", "objective": "", "priority": 1},
+	"lap_completed": {"group": "flow", "color": Palette.ARC, "shape": "bar", "sound": "core_socket", "sound_next": "beacon_notch_chime", "hud": "", "objective": "", "priority": 2},
+	"warden_stripped": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "shatter", "sound_next": "plate_shear_clang", "hud": "Warden plating stripped", "objective": "", "priority": 3},
 }
+
+# The laps mode's objective before the bell: the lap_bell_rung row carries it after.
+const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then lap the course: {lap} of {required}."
 
 # v2 W2 threat grammar
 # One row per enemy attack type (combat/threat_grammar.gd), in the ROWS schema. They sit
@@ -220,6 +233,9 @@ const OBJECTIVE_SHORT := {
 	"stage_entered": "Break the Warden",
 	"beacon_charge_changed": "Break the Warden",
 	"boss_arena_entered": "Break Brindle's Requisition",
+	# Laps mode while the Warden sleeps: before the bell, then counting laps.
+	"lap_bell": "Ring the Warden's bell",
+	"lap_bell_rung": "Lap the course: {lap}/{required}",
 }
 # Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
 # worded for the stage's family: stage 1's reactor opens its core as it vents, stage

@@ -128,17 +128,7 @@ func _build_offer(offer: Dictionary) -> Dictionary:
 func _build_surge(entry: Dictionary, model) -> void:
 	var gates: Array = []
 	for i in model.gates.size():
-		var g := MeshInstance3D.new()
-		var torus := TorusMesh.new()
-		torus.inner_radius = GATE_RADIUS - 0.5
-		torus.outer_radius = GATE_RADIUS
-		g.mesh = torus
-		g.material_override = Palette.solid(Palette.SAND, 0.6)
-		var at: Vector2 = model.gates[i]
-		var t: Vector2 = model.route.tangent(model.gate_distances[i])
-		g.position = _ground(at) + Vector3.UP * (GATE_RADIUS - 1.0)
-		# The torus lies in its local XZ plane; stand it up facing along the route.
-		g.basis = Basis.looking_at(Vector3(t.x, 0.0, t.y), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
+		var g := gate_ring(_ground(model.gates[i]), model.route.tangent(model.gate_distances[i]))
 		g.visible = false
 		entry["root"].add_child(g)
 		gates.append(g)
@@ -195,6 +185,21 @@ func _build_hauler(entry: Dictionary) -> void:
 	hauler.visible = false
 	entry["root"].add_child(hauler)
 	entry["hauler"] = hauler
+
+
+# The surge run's gate ring, standing on the ground at `ground`, facing along `along`.
+# The laps course's checkpoints are the same ring (lap_course_view.gd).
+static func gate_ring(ground: Vector3, along: Vector2) -> MeshInstance3D:
+	var g := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = GATE_RADIUS - 0.5
+	torus.outer_radius = GATE_RADIUS
+	g.mesh = torus
+	g.material_override = Palette.solid(Palette.SAND, 0.6)
+	g.position = ground + Vector3.UP * (GATE_RADIUS - 1.0)
+	# The torus lies in its local XZ plane; stand it up facing along the route.
+	g.basis = Basis.looking_at(Vector3(along.x, 0.0, along.y), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
+	return g
 
 
 static func _pillar(color: Color) -> MeshInstance3D:
