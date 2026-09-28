@@ -55,6 +55,19 @@ Andrew: the HUD should be "kind of like a um, hack together heads up display jus
 - **One procedural helper** (`src/ui/scrap_frame.gd`: plate, rivets, tape, stamp tag), started by W12 on the class card and Tab pages. The HUD v3 build wave (FEEL-READABILITY F2) adopts it. The Codex track may supply painted Style A reference sheets for it.
 - **Measure:** the word budget, glyph legibility at 1080p, and the density-governor stills are unchanged by the frame. A fight still reads at a glance.
 
+## Treasure-find ceremony (Andrew, 2026-09-28)
+
+Andrew wants "fun uh, discovery sort of like treasure find ceremony when you find an item". He wants anticipation that builds, then a reveal that pays off when the item "changes the the way they play or makes them feel empowered". The ceremony pauses only "if it's I guess warranted if ... the area has calmed down after a boss fight".
+
+- **Four tiers, scaled by rarity and context:**
+  1. Common: in the flow.
+  2. Rare: a flare plus a rising bell.
+  3. Rare-plus, a first find or a completed synergy: a reveal card, and the partner glyph lights to tease the build.
+  4. Ceremony (Warden break, the cage, caches, evolutions): a shaking and cracking crate with a drum and bell build, a burst, and the resolving chord.
+- **The pause is calm-gated.** A ceremony queues until the area is safe, velocity is preserved, any input skips, and a "full / short" setting is available.
+- **The payoff is felt.** The first time the new part fires, it flashes once with its own cue, so the reward connects to the change in play.
+- Built as W13, `proto/core-loop-v3-ceremony`, on W11's juice. It maps to done-rows 3 (growth) and 5 (feel).
+
 ## Tool stack (checked 2026-09-28; research R3)
 
 - **Keep:**
