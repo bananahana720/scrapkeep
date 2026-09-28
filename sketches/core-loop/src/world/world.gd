@@ -32,6 +32,11 @@ const SAIL_WIND := 0.5
 const DROP_AIM_CONE := 30.0
 const DROP_AIM_RISE := 4.5
 const DROP_AIM_SHORT := 1.0
+# A ball already in the air as it crosses a live lip's run-up (it hopped the chute's
+# foot on the way down) is caught by the lip too, while it skims within DROP_AIM_SKIM of
+# the ramp: once per flight, so the aimed arc is never re-aimed. Measured before this:
+# a hopping ball struck the ramp's face, lost a third of its speed and fell short.
+const DROP_AIM_SKIM := 3.5
 
 var ctx
 var terrain
@@ -61,6 +66,7 @@ var layer := ""
 var swap_log: Array[Dictionary] = []
 # Launches a drop lip turned onto the mast this session.
 var drop_aims := 0
+var _lip_aimed := false
 
 var _stage_seed := 0
 var _chute_clock := 0.0
@@ -203,26 +209,27 @@ func _apply_loop(stage: int) -> void:
 # leaving a live lip heading within DROP_AIM_CONE of the mast keeps its speed and has its
 # arc turned onto the Warden's top, the flatter of the two arcs that reach it. A ball
 # too slow for any arc to reach keeps its own and falls short.
-func _aim_drop(ball: Vector3) -> void:
+func _aim_drop(ball: Vector3) -> bool:
 	var m = terrain.map()
 	if not m.loop_live:
-		return
-	var line: Dictionary = m.drop_line_at(Vector2(ball.x, ball.z))
+		return false
+	var line: Dictionary = m.drop_line_at(Vector2(ball.x, ball.z), true)
 	if line.is_empty():
-		return
+		return false
 	var v: Vector3 = ctx.player.state.velocity
 	var target: Vector2 = line["target"]
 	var flat := Vector2(target.x - ball.x, target.y - ball.z)
 	var heading := Vector2(v.x, v.z)
 	if heading.length() < 1.0 or heading.normalized().dot(flat.normalized()) < cos(deg_to_rad(DROP_AIM_CONE)):
-		return
+		return false
 	var rise: float = terrain.height(target.x, target.y) + DROP_AIM_RISE - ball.y
 	var aimed = m.aim_arc(v.length(), maxf(1.0, flat.length() - DROP_AIM_SHORT), rise, ctx.tuning.f("gravity"))
 	if aimed == null:
-		return
+		return false
 	var along := flat.normalized()
 	ctx.player.set_velocity_now(Vector3(along.x * aimed.x, aimed.y, along.y * aimed.x))
 	drop_aims += 1
+	return true
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
@@ -362,8 +369,11 @@ func _spawn_miniboss(at: Vector2) -> void:
 func _watch_ground(delta: float, ball: Vector3) -> void:
 	codex_world.advance(delta)
 	var grounded: bool = ctx.player.state.grounded
+	if grounded:
+		_lip_aimed = false
+	elif not _lip_aimed and (_was_grounded or ball.y - terrain.height(ball.x, ball.z) <= DROP_AIM_SKIM):
+		_lip_aimed = _aim_drop(ball)
 	if _was_grounded and not grounded:
-		_aim_drop(ball)
 		_discover(codex_world.note("airborne", {"at": ball, "off_kicker": terrain.map().near_kicker_lip(Vector2(ball.x, ball.z))}))
 	elif grounded and flood.in_basin(ball) and flood.surface_y() > terrain.height(ball.x, ball.z):
 		_discover(codex_world.note("grounded", {"at": ball, "over_water": true}))

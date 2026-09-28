@@ -74,13 +74,15 @@ func drop_lip_height(x: float, z: float) -> float:
 	return h
 
 
-# The drop line whose lip p is at or just past, else {}.
-func drop_line_at(p: Vector2) -> Dictionary:
+# The drop line whose lip p is at or just past, else {}. whole_ramp widens the reach
+# back over the lip's whole run-up, where a hopping ball crosses it in the air.
+func drop_line_at(p: Vector2, whole_ramp := false) -> Dictionary:
 	for line in drop_lines:
 		var rel: Vector2 = p - (line["at"] as Vector2)
 		var dir: Vector2 = line["dir"]
 		var u := rel.dot(dir)
-		if u > -3.0 and u < 6.0 and absf(rel.dot(Vector2(-dir.y, dir.x))) < float(line["width"]) * 0.5 + 1.5:
+		var back: float = float(line["length"]) if whole_ramp else 3.0
+		if u > -back and u < 6.0 and absf(rel.dot(Vector2(-dir.y, dir.x))) < float(line["width"]) * 0.5 + 1.5:
 			return line
 	return {}
 

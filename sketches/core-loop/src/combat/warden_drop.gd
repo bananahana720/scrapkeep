@@ -30,8 +30,11 @@ const Palette := preload("res://src/core/palette.gd")
 # A drop deals a segment (max HP / drops) times heft times arrival speed over
 # DROP_REF_SPEED. The gun's role is the lab toggle:
 #   hold  the drop is the hammer and closes the window; a weapon hit on the open weak
-#         point deals GUN_SHARE of its punch and holds the window HOLD_PER_HIT longer,
-#         up to HOLD_CAP a window
+#         point holds the window HOLD_PER_HIT longer, up to HOLD_CAP a window, and banks
+#         GUN_SHARE of its punch, which lands with that window's drop and is lost if the
+#         window closes without one. So a gun alone never moves the badge (section 1,
+#         "holding fire only extends windows nobody is dropping through"), and holding
+#         the door still pays when the drop comes.
 #   full  the drop is a burst (FULL_DROP_SHARE of it) that staggers the Warden: the
 #         core stands open STAGGER_SECONDS (plus the cores' bonus) and every weapon hit
 #         on the Warden deals its full punch. Only a stagger lets the gun land, so a
@@ -95,7 +98,10 @@ var misses := 0
 var window_total := 0.0
 var held := 0.0
 var staggered := false
-var damage := {"drop": 0.0, "gun": 0.0, "outside": 0.0, "stagger_gun": 0.0}
+var damage := {"drop": 0.0, "gun": 0.0, "outside": 0.0, "stagger_gun": 0.0, "banked_lost": 0.0}
+# The hold role's gun share banked this window, and every ball contact judged.
+var banked := 0.0
+var contacts := 0
 var last_drop := {}
 # The last ball contact the rule judged, with its verdict; the bots' miss notes read it.
 var last_contact := {}
@@ -108,6 +114,7 @@ var _clock := 0.0
 var _last_outside := -INF
 var _rearm := 0.0
 var _dropped := false
+var _excepted := false
 
 
 func _init(warden_ref, spec: Dictionary) -> void:
@@ -154,6 +161,7 @@ func opened(seconds: float) -> float:
 	staggered = false
 	window_total = seconds + CORE_BONUS * _cores()
 	held = 0.0
+	_forfeit()
 	windows += 1
 	_dropped = false
 	return window_total
@@ -189,13 +197,15 @@ func rule(kind: String, part: String, punch: float, heft: float) -> Dictionary:
 		var arrival := _arrival()
 		var verdict := _verdict(arrival)
 		out["speed"] = arrival["speed"]
+		contacts += 1
 		last_contact = {"kind": kind, "verdict": verdict, "open": warden.family_open(), "on_core": arrival["on_core"],
 			"descending": arrival["descending"], "from_line": arrival["from_line"], "speed": snappedf(arrival["speed"], 0.1),
 			"height": snappedf(arrival["height"], 0.01)}
 		if verdict == "drop":
 			out["drop"] = true
 			out["full"] = true
-			out["dealt"] = segment_hp * heft * arrival["speed"] / DROP_REF_SPEED * (FULL_DROP_SHARE if gun_role == "full" else 1.0)
+			out["banked"] = banked
+			out["dealt"] = segment_hp * heft * arrival["speed"] / DROP_REF_SPEED * (FULL_DROP_SHARE if gun_role == "full" else 1.0) + banked
 		elif verdict == "miss":
 			out["miss"] = true
 		return out
@@ -205,7 +215,7 @@ func rule(kind: String, part: String, punch: float, heft: float) -> Dictionary:
 			out["dealt"] = punch
 	elif warden.family_open() and part == warden.family_point():
 		out["full"] = true
-		out["dealt"] = punch * GUN_SHARE
+		out["banks"] = punch * GUN_SHARE
 		out["hold"] = true
 	return out
 
@@ -239,7 +249,10 @@ func on_struck(kind: String, result: Dictionary) -> void:
 	if not warden.family_open() and dealt > 0.0:
 		damage["outside"] += dealt
 	if result.get("drop", false):
-		damage["drop"] += dealt
+		var share: float = result.get("banked", 0.0)
+		damage["drop"] += dealt - share
+		damage["gun"] += share
+		banked = 0.0
 		_land(result)
 	elif result.get("miss", false):
 		_miss()
@@ -247,6 +260,7 @@ func on_struck(kind: String, result: Dictionary) -> void:
 		damage["gun"] += dealt
 		if staggered:
 			damage["stagger_gun"] += dealt
+		banked += float(result.get("banks", 0.0))
 		if result.get("hold", false) and held < HOLD_CAP:
 			var add := minf(HOLD_PER_HIT, HOLD_CAP - held)
 			held += add
@@ -292,10 +306,11 @@ func _throw(speed_in: float, to: Vector3) -> Vector3:
 	player.set_velocity_now(out)
 	player.refresh_air()
 	# The ball is still touching the core; one more contact would let the stomp bounce
-	# put the arrival's heading back, so the core lets it pass for REBOUND_CLEAR.
-	var body: PhysicsBody3D = player.body()
-	if not body.get_collision_exceptions().has(warden):
-		body.add_collision_exception_with(warden)
+	# put the arrival's heading back, so the core lets it pass for REBOUND_CLEAR. The
+	# ball's exception list can hold freed enemies (a crush's pass), so it is not read.
+	if not _excepted:
+		player.body().add_collision_exception_with(warden)
+		_excepted = true
 	_clear_left = REBOUND_CLEAR
 	return out
 
@@ -330,6 +345,7 @@ func step(delta: float, was_open: bool) -> void:
 	if was_open and warden._open_left <= 0.0:
 		_recover = RECOVER
 		staggered = false
+		_forfeit()
 	if _clear_left > 0.0:
 		_clear_left -= delta
 		if _clear_left <= 0.0:
@@ -349,6 +365,11 @@ func step(delta: float, was_open: bool) -> void:
 			c["hit"] = true
 			warden.hit_player.emit(CRATER_DAMAGE, Vector3.ZERO)
 	_publish()
+
+
+func _forfeit() -> void:
+	damage["banked_lost"] += banked
+	banked = 0.0
 
 
 func current_state() -> String:
@@ -372,11 +393,14 @@ func _publish() -> void:
 
 
 func _restore_contact() -> void:
+	if not _excepted:
+		return
+	_excepted = false
 	var player = warden.target
 	if player == null or not is_instance_valid(player):
 		return
 	var body: PhysicsBody3D = player.body()
-	if is_instance_valid(body) and body.get_collision_exceptions().has(warden):
+	if is_instance_valid(body):
 		body.remove_collision_exception_with(warden)
 
 
