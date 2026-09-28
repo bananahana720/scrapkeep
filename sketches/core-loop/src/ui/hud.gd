@@ -362,7 +362,14 @@ func objective_reading() -> Dictionary:
 	var out := {"icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "punch": -1.0, "plating": -1.0}
 	match flow.state_name():
 		"stage", "beacon":
-			if flow.sealed:
+			if flow.sealed and flow.lap_dormant():
+				# Laps mode: nothing lands on a sleeping Warden, so no punch bars; the
+				# beacon's charge is the laps.
+				out["icon"] = "obj_beacon"
+				out["words"] = flow.lap_objective(true)
+				out["color"] = EventKinds.color("lap_completed")
+				out["progress"] = game.beacon.fraction()
+			elif flow.sealed:
 				var engaged: bool = is_instance_valid(flow.warden) and game.player.ball_position().distance_to(flow.warden.global_position) < 40.0
 				out["icon"] = "obj_warden"
 				out["words"] = EventKinds.LESSON_SHORT.get(flow.stage_def()["warden_lesson"], "") if engaged else EventKinds.OBJECTIVE_SHORT["stage_entered"]

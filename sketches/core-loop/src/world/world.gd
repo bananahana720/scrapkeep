@@ -13,6 +13,9 @@ const Bay := preload("res://src/world/bay.gd")
 const Interact := preload("res://src/world/interact.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const LapCourse := preload("res://src/world/lap_course.gd")
+const LapCourseView := preload("res://src/world/lap_course_view.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -56,6 +59,10 @@ var bay_bark := {}
 var layer := ""
 var swap_log: Array[Dictionary] = []
 
+# The laps mode's course on this stage (lap_course.gd), else null, and its rings.
+var course
+var course_view
+
 var _stage_seed := 0
 var _chute_clock := 0.0
 var _skylight_clock := 0.0
@@ -88,6 +95,9 @@ func setup(ctx_ref) -> void:
 	launch.name = "Launch"
 	ctx.root.add_child(launch)
 	launch.setup()
+	course_view = LapCourseView.new()
+	course_view.name = "LapCourse"
+	ctx.root.add_child(course_view)
 	_setup_gorge()
 	interact = Interact.new()
 	ctx.root.add_child(interact)
@@ -120,6 +130,9 @@ func _setup_gorge() -> void:
 		terrain.geometry_root(i + 1).add_child(c)
 		c.setup(m, terrain.ground_callable(i + 1), cruise, g)
 		contraptions[i + 1] = c
+		if m.get("contraptions_need_loop") == true:
+			c.live = false
+			c.visible = false
 	terrain_view = TerrainEventView.new()
 	terrain_view.name = "TerrainEvents"
 	ctx.root.add_child(terrain_view)
@@ -144,6 +157,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 			m.apply_swap(id, false)
 	if contraptions.has(stage):
 		contraptions[stage].reset()
+	_apply_loop(stage)
 	layer = ""
 	# A retry replays the same stage: same event plan, same miniboss spots. A new
 	# entry draws a fresh plan from the run's stream.
@@ -177,6 +191,42 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_mark_landing(stage, retry)
 
 
+# The v3 fun lab (loop_mode.gd): a loop mode swaps the map's drop lips in, with their
+# overlay heights, and wakes its return contraption; v2 leaves both parked, so the
+# control plays the v2 stage untouched. Read at every stage entry, so a flip in the
+# panel lands on the next hold-R retry.
+func _apply_loop(stage: int) -> void:
+	var m = terrain.map()
+	var on: bool = LoopMode.uses_loop(ctx.tuning) and not m.drop_lines.is_empty()
+	m.loop_live = on
+	if on and "swaps" in m and m.swaps.has(m.LOOP_SWAP):
+		m.apply_swap(m.LOOP_SWAP, true)
+		terrain.overlays.append(m.LOOP_SWAP + "_after")
+	if contraptions.has(stage) and m.get("contraptions_need_loop") == true:
+		contraptions[stage].live = on
+		contraptions[stage].visible = on
+	course = LapCourse.new(m, terrain.beacon_point(stage), ctx.flow.stage_def()["beacon_radius"], Callable(terrain, "height")) \
+		if LoopMode.runs_laps(ctx.tuning, m) else null
+	course_view.show_course(course, func(x: float, z: float) -> Vector3: return terrain.drop_point(x, z, 0.0))
+
+
+# Laps mode: the course steps while the Warden holds the beacon, asleep or awake, since
+# a lap past the required ones still strips it. Each lap steps the director once; its
+# rise is published with the clock's in _step_director this same tick.
+func _step_course(delta: float, ball: Vector3) -> void:
+	var bus = ctx.events
+	for fact in course.step(delta, ball):
+		match fact["kind"]:
+			"bell":
+				bus.lap_bell_rung.emit(fact["at"])
+			"ring":
+				course_view.pop(fact["index"])
+				bus.lap_ring_passed.emit(fact["index"], fact["count"], fact["at"])
+			"lap":
+				director.step_lap()
+				bus.lap_completed.emit(fact["lap"], fact["required"], fact["seconds"])
+
+
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
 # director, the flood and the launch rail stop, and every stage map is parked until
 # the next stage_entered rebuilds the stage. Flow publishes this on arena entry and on
@@ -195,6 +245,8 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	terrain_view.clear()
 	director.arrivals.clear()
 	view.clear()
+	course = null
+	course_view.clear()
 	vault = null
 	_vault_pending = false
 	terrain.park_all()
@@ -250,10 +302,12 @@ func _physics_process(delta: float) -> void:
 			ctx.events.pressure_changed.emit(0.0)
 	if not calm_bay:
 		_publish(events.advance(delta, ball, velocity))
-	if contraptions.has(ctx.flow.stage()):
+	if contraptions.has(ctx.flow.stage()) and contraptions[ctx.flow.stage()].live:
 		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
+	if course != null and ctx.flow.sealed:
+		_step_course(delta, ball)
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)

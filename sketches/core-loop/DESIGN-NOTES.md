@@ -835,3 +835,39 @@ L3 builds stage 1 of `design-v3/LOOP-REDESIGN.md` section 9: one key for travel,
 11. **Costs never shrink the ball.** Each family row names its `cost`: none, cores, or wallet scrap. Allies charge scrap through `run.spend_scrap()`, which keeps mass, so paying for a drone never lowers heft (standing principle 10; Codex review finding 10, which caught section 9's "lowers heft" wording). A future "call the Warden" must keep a real cost when the clock is already at its cap. Travel devices give back banked speed through `RideRail`, never a fixed 85%. Demand: allies and the return. Serves 4 and 1.
 
 **Checks, and what they do not cover.** `world_interact_test`, `world_ambush_test`, `world_cache_test` and `world_bet_test` are headless automated play in the real game on stage 1. They cannot say whether a 0.35 s hold feels right at speed, or whether the dial reads from the bank. That is Andrew's sitting. Presentation is stand-in cues and glyphs only; juice is W11's. Next sitting: the allies, which need the drone's brain; the challenge post and the Warden call (fights); the cursed cache and the timed trial (bets).
+## v3 L2 laps mode
+
+Option C of `design-v3/LOOP-REDESIGN.md` on stage 1, behind `--loop=laps` (or the title's L row, or the F1 panel then hold R). Base is L1's lab switch at 3c219ab. Demands served: the Warden (why stay) and the stage (the map as a course). Principles strained: momentum, at the landing turn, and the speedrun test, since the laps are a fixed tax.
+
+1. **The bell and the course.** `src/world/lap_course.gd` is a pure model. It reads L1's loop fields and lays five checkpoint rings, which are the surge run's gate ring (`event_view.gd gate_ring`, now shared). The rings sit at the approach to the return lift in the bowl, 8 m past the lift's landing on the ride's own heading, the fast drop line's start, its first bend, and its kicker lip. A `route.gd` loop through them sets which way each ring faces. Rolling into the Warden's ring rings the bell and lights the course. The rings are taken in order and are roll-through: a 9 m reach, any speed, no stop. The rings and the beacon's three notch collars stand from the first frame, dim bone before the bell, so both read from the drop deck. Serves the stage.
+2. **The gate.** Flow reads `LoopMode.runs_laps` once at stage entry and puts the Warden to sleep. `warden.gd` holds only the dormant gate and the strip. Asleep, it neither pulses nor opens, every hit meets 999 plating, and `take_damage` refuses the chip. `plating_now()` reads 0 while asleep, so combat's shred never builds on it and it wakes whole. It wakes on the third lap (`warden_engaged`, the v2 theme cue). Each lap past the third takes a third of the stage's plating off: 45, then 30, 15 and 0. Awake, it is the v2 Warden. Section 2's readable windows come from L1's drop-branch `warden.gd` after the merge; this gate sits in front of that code, so the laps fight gets those windows without any laps code of its own. Serves the Warden.
+3. **The clock per lap.** `director.gd` gains `laps` and `step_lap()`. Each lap is one reinforcement step (a `PAST_BREAK_STEP` of pack share) and one announced rise. Every rise now reads the level (ticks plus laps), so a later clock tick never announces a lower number than a lap did. In v2, `laps` stays 0 and nothing changes.
+4. **Facts.** There are four new bus signals with rows: `lap_bell_rung`, `lap_ring_passed`, `lap_completed` and `warden_stripped`. Audio and VFX each hear them in small separate listeners. Checkpoint pops climb the reward ladder one rung per ring. The ring that closes a lap, the beacon's notch and the director's `threat_rose` stinger all land on the same next beat; the test checks that each lap and its rise publish on the same tick. The objective reads `Ring the Warden's bell`, then `Lap the course: 1/3` on the HUD. The long line is "Lap the lit course: 1 of 3. The Warden wakes at 3."
+5. **Bots.** The skipper is the camper: it rings the bell and rams the sleeping Warden. A new `lapper` policy laps (`laps_wanted`, default 3), then fights. The completionist laps once its loot is done. Writer L1 is adding a lapper for the drop lines, so the two need merging. `bot_run.gd` gains `--stages=N`.
+
+**Measured.** Method: `godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=<dir> --policy=<p> --seeds=1,2,3 --loop=laps --stages=1`, one seed per class, on commit 7844508. Runs are in `artifacts/local/l2-laps/head-7844508/` (git-ignored). These are bot runs, not play. A rerun reproduced the bell, lap and wake times; the break times moved by up to 5 s against the earlier pass, so read them as plus or minus 5 s.
+
+| Policy | Class | Bell (s) | Lap times (s) | Warden wakes (s) | Warden breaks (s) |
+| --- | --- | --- | --- | --- | --- |
+| camper (skipper) | runner_gunner | 5.0 | none | never, stalled at 240 | never |
+| camper (skipper) | demolitions_caster | 5.0 | none | never, stalled at 240 | never |
+| camper (skipper) | pylon_engineer | 5.0 | none | never, stalled at 240 | never |
+| lapper | runner_gunner | 5.0 | 11.1, 12.3, 12.5 | 40.9 | 66.5 |
+| lapper | demolitions_caster | 5.0 | 11.1, 14.7, 12.6 | 43.4 | 94.1 |
+| lapper | pylon_engineer | 5.0 | 11.1, 12.5, 11.7 | 40.4 | 79.8 |
+| completionist | runner_gunner | 35.3 | 37.1*, 12.2, 13.1 | 97.7 | 117.7 |
+| completionist | demolitions_caster | 33.8 | 60.8*, 12.1, 12.5 | 119.2 | 153.5 |
+| completionist | pylon_engineer | 31.2 | 45.2*, 12.5, 12.0 | 100.9 | 134.3 |
+
+\* The first lap runs from the bell and includes the completionist's vault and event.
+
+**Reads.**
+
+- A lap takes 11 to 15 s for every class. That is half the 25 to 40 s the spec budgets. The three-lap tax is 35 to 38 s, and the classes do not separate on the course.
+- The camper cannot win, and the completionist wakes it 2.4 to 2.7 times later than the lapper. The lapper breaks it at 66 to 94 s, inside section 4's 60 to 120 s band. The spec's own risk holds, though: the laps are a fixed tax the skilled player cannot shorten.
+- The lift's landing throws the ball north at 30 m/s, and the course then turns about 90 degrees west toward the chute. That turn is where the lap loses its speed: in the traced lapper run the ball fell to 15 to 18 m/s there. It is L1's return geometry, and it is worth a look before the sitting.
+- Ringing the bell puts flow in its beacon state, so v2's beacon spike (+2 tiers) is on for the whole of the lapping. That is faithful to Risk of Rain's charge zone and to v2, but it is a knob to question.
+- Reading taken: the spec says both that extra laps "before waking" strip plating and that the Warden "wakes at full charge". Here it wakes on lap 3, and any later lap still strips. The course runs through the bowl, so it could not stay asleep for a fourth lap anyway. You fight it or leave it to lap again.
+- Visible from the drop: before the bell, the five rings and three collars stand, and the terrain blocks no sight line from the stage's drop point to any ring's top or to the top collar; the farthest is 176 m. That is a height-field sight line, not a render. Fog, the camera's heading and whether dim bone reads against the sand still need Andrew's eye.
+
+`tests/loop_laps_test.gd` covers the camper, the course standing before the bell with clear sight lines from the drop, the lift's banked speed, the wake, the strip, ring order, the director per lap and v2 untouched.

@@ -10,6 +10,7 @@ extends Node
 # arena block (I3) is the boss-entry record: it rides in every line after entry.
 
 const LOG_FILE := "runs.ndjson"
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 var events
 var run
@@ -52,6 +53,14 @@ func _on_run_started(class_id: String) -> void:
 	_in_arena = false
 	_phase = 0
 	_record = {"run_id": run.run_id, "class": class_id, "outcome": "running", "brindle_phase_reached": null}
+	_record.merge(_lab_tag())
+
+
+# The fun lab's mode and gun role (loop_mode.gd), on the run and on each stage entry, so
+# a report splits runs by mode even when the panel flipped it mid-run.
+func _lab_tag() -> Dictionary:
+	var tuning = player.get("tuning") if player != null else null
+	return LoopMode.tag(tuning) if tuning != null else {}
 
 
 func _stage(index: int) -> Dictionary:
@@ -81,7 +90,7 @@ func _ticks() -> int:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_in_arena = false
 	_dirty = true
-	_stage(stage)
+	_stage(stage).merge(_lab_tag(), true)
 
 
 # warden_engaged fires once per stage attempt, so a retry's engagement replaces the

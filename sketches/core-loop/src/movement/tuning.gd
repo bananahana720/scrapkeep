@@ -33,6 +33,9 @@ const SPECS := [
 	# v2's ground probe turned with the ball, so "grounded" flickered with the spin.
 	# Off is the fix; on brings the v2 feel back for a side-by-side comparison.
 	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
+	# The v3 fun lab's switch (src/core/loop_mode.gd): an option row stores its index.
+	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
+	{"key": "gun_role", "label": "Gun role", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["hold", "full"]},
 ]
 
 const BRAKE_RESISTANCE := 4.0
@@ -94,6 +97,26 @@ func set_value(key: String, value: float) -> void:
 
 func on(key: String) -> bool:
 	return _values[key] >= 0.5
+
+
+func options_of(key: String) -> Array:
+	for spec in SPECS:
+		if spec["key"] == key:
+			return spec.get("options", [])
+	return []
+
+
+func option(key: String) -> String:
+	var options := options_of(key)
+	return String(options[clampi(roundi(_values[key]), 0, options.size() - 1)]) if not options.is_empty() else ""
+
+
+func set_option(key: String, name: String) -> bool:
+	var index := options_of(key).find(name)
+	if index < 0:
+		return false
+	set_value(key, float(index))
+	return true
 
 
 func reset() -> void:

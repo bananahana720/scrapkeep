@@ -136,6 +136,15 @@ signal interact_armed(family: String, device_id: String, at: Vector3)
 signal interact_fired(family: String, device_id: String, at: Vector3)
 signal ambush_ended(device_id: String, won: bool, at: Vector3)
 signal bet_resolved(device_id: String, won: bool, stake: int, at: Vector3)
+# v3 fun lab, laps mode (loop_mode.gd, world's lap_course.gd). World publishes the
+# course: the bell as the ball first rolls into the Warden's ring, each checkpoint ring
+# passed (index 0 to count - 1, in order), and each lap closed with its time. Flow
+# publishes warden_stripped when a lap past the required ones takes plating off the
+# Warden; plating is what is left.
+signal lap_bell_rung(at: Vector3)
+signal lap_ring_passed(index: int, count: int, at: Vector3)
+signal lap_completed(lap: int, required: int, seconds: float)
+signal warden_stripped(plating: float, at: Vector3)
 
 
 static func signal_names() -> PackedStringArray:

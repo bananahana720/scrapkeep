@@ -28,7 +28,13 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #                  gate that completes a synergy, then the higher tier.
 #   random         a seeded wander biased toward the beacon, which commits to the
 #                  Warden once close or late; random gate choice.
-# All three fight Brindle the same way once a boss module exists (see _boss).
+#   lapper         v3 fun lab, laps mode: rings the bell and laps the course ring by
+#                  ring (laps_wanted, default the course's required), no loot, then
+#                  fights. With no course it plays as the skipper. Writer L1's drop
+#                  branch adds its own lapper for the drop lines; merge the two.
+# In laps mode the skipper is the camper: it rings the bell and rams the sleeping Warden
+# without lapping, and the completionist laps once its loot is done.
+# All of them fight Brindle the same way once a boss module exists (see _boss).
 #
 # The hands every policy shares, so a measured cost is the game's and not a blind spot:
 #   - Telegraph reading. A committed ring or lane (combat's telegraph.gd, the boss's
@@ -52,7 +58,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
 # limit ("stalled", "boss_stalled").
 
-const POLICIES := ["skipper", "completionist", "random"]
+const POLICIES := ["skipper", "completionist", "random", "lapper"]
 # Radians of camera yaw per second: a brisk mouse, not a snap.
 const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
@@ -120,6 +126,8 @@ const RAMP_PAST := 18.0
 const RAMP_JUMP := 26.0
 const RAMP_WINDOW := 0.5
 const PICKUP_CHASE := 30.0
+# Laps mode: within this of the return lift, with the shelf's ring next, roll for its mouth.
+const LIFT_SEEK := 60.0
 const CAP_ABOVE := 1.2
 const CAP_REACH := 2.6
 
@@ -135,6 +143,8 @@ var trace := false
 var tree_policy := ""
 var tree_picks: Array[String] = []
 var _tree_rng := RandomNumberGenerator.new()
+# Laps mode: how many laps the lapper runs before it fights; 0 means the course's own.
+var laps_wanted := 0
 
 # "", then won, died, stalled, boss or boss_stalled.
 var outcome := ""
@@ -217,6 +227,10 @@ func start() -> void:
 		if _warden_hp_at >= 0.0:
 			_settle_warden_damage(0.0))
 	events.event_started.connect(func(id: String): _note_add("events_joined", id))
+	events.lap_bell_rung.connect(func(_at: Vector3): _note_set("bell_s", snappedf(game.run.stage_time, 0.01)))
+	events.lap_completed.connect(func(lap: int, _required: int, seconds: float):
+		_note_set("laps", lap)
+		_note_add("lap_times", snappedf(seconds, 0.01)))
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
 	events.part_gained.connect(func(id: String, source_id: String): _note_add("parts", "%s:%s" % [source_id, id]))
 	events.player_hit.connect(_on_player_hit)
@@ -380,7 +394,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
-		"specials": 0, "punch_short_s": 0.0}
+		"specials": 0, "punch_short_s": 0.0, "bell_s": null, "laps": 0, "lap_times": []}
 
 
 func _note_set(key: String, value) -> void:
@@ -529,6 +543,8 @@ func _roam(delta: float) -> void:
 			_fight(warden, delta)
 		"completionist":
 			_completionist(warden, delta)
+		"lapper":
+			_lap_or_fight(warden, delta)
 		_:
 			_random(warden, delta)
 
@@ -558,7 +574,27 @@ func _completionist(warden: Node3D, delta: float) -> void:
 		else:
 			_fight(vault, delta)
 			return
-	_fight(warden, delta)
+	_lap_or_fight(warden, delta)
+
+
+# Laps mode: the bell, then the course's next ring, until the laps wanted are in; then
+# the fight. With no course (any other mode, or a later stage) it is the fight.
+func _lap_or_fight(warden: Node3D, delta: float) -> void:
+	var course = game.world.course if game.world != null else null
+	var wanted: int = laps_wanted if laps_wanted > 0 else (course.required if course != null else 0)
+	if course == null or not game.flow.sealed or course.laps >= wanted:
+		_fight(warden, delta)
+		return
+	var ring: Vector3 = course.target()
+	_goal = "lap %d ring %d" % [course.laps + 1, course.next_ring] if course.bell_rung else "bell"
+	# The ring after the lift's approach is on the shelf: ride the lift to it, as a
+	# player rolls on through the approach ring into the lift's mouth.
+	var lift: Vector2 = game.ctx.terrain.map().return_at
+	var ball: Vector3 = game.player.ball_position()
+	if course.bell_rung and course.next_ring == 1 and Vector2(ball.x, ball.z).distance_to(lift) < LIFT_SEEK:
+		ring = Vector3(lift.x, 0.0, lift.y)
+		_goal = "lap %d lift" % (course.laps + 1)
+	_act(game.ctx.terrain.drop_point(ring.x, ring.z, 1.0), _nearest_enemy(), delta)
 
 
 func _random(warden: Node3D, delta: float) -> void:
@@ -894,7 +930,7 @@ func _choose_gate(offers: Array) -> int:
 	if offers.is_empty():
 		return -1
 	match policy:
-		"skipper":
+		"skipper", "lapper":
 			return 0
 		"completionist":
 			var best := 0
