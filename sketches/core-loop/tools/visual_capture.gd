@@ -39,7 +39,7 @@ func _initialize() -> void:
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
 	if DisplayServer.get_name() == "headless" or not settings.has("out"):
-		printerr("visual_capture requires a rendered display and -- --out=<absolute directory> [--class=0|1|2] [--mode=traversal|dense|boss|pilots] [--samples=1800|--seconds=120] [--growth=600] [--azimuth=35]")
+		printerr("visual_capture requires a rendered display and -- --out=<absolute directory> [--class=0|1|2] [--mode=traversal|dense|boss|pilots|warden] [--samples=1800|--seconds=120] [--growth=600] [--azimuth=35]")
 		quit(2)
 		return
 	started_usec = Time.get_ticks_usec()
@@ -48,7 +48,7 @@ func _initialize() -> void:
 	samples = clampi(int(settings.get("samples", "1800")), 60, 18000)
 	mode = settings.get("mode", "dense")
 	capture_stage = clampi(int(settings.get("stage", "1")), 1, 3)
-	if mode not in ["pilots", "traversal", "dense", "boss"]:
+	if mode not in ["pilots", "traversal", "dense", "boss", "warden"]:
 		quit(2)
 		return
 	seconds = clampf(float(settings.get("seconds", "0")), 0.0, 120.0)
@@ -102,6 +102,7 @@ func _physics_process(delta: float) -> bool:
 	physics_seconds += delta
 	if ticks == 1:
 		game.ctx.calm = mode != "boss"
+		game.flow.force_warden = mode == "warden"
 		game.flow.press_start()
 		game.flow.choose_class(clampi(int(settings.get("class", "0")), 0, 2))
 		if capture_stage != 1:
@@ -125,7 +126,7 @@ func _physics_process(delta: float) -> bool:
 			metadata["stage_position"] = [bowl.x, bowl.y, bowl.z]
 		metadata["stage"] = capture_stage
 		metadata["stage_geometry"] = _stage_geometry_counts()
-		if mode == "pilots":
+		if mode in ["pilots", "warden"]:
 			source.hold = {"brake_held": true}
 			inspection_camera = Camera3D.new()
 			game.add_child(inspection_camera)
@@ -133,6 +134,11 @@ func _physics_process(delta: float) -> bool:
 			inspection_camera.current = true
 			game.hud.visible = false
 		return false
+	if mode == "warden" and is_instance_valid(game.flow.warden):
+		game.player.body().freeze = true
+		# Inspection uses the existing open-state seam, with no gameplay rule changes.
+		if settings.get("warden-open", "false") == "true":
+			game.flow.warden._open_left = 1.0
 	var position: Vector3 = game.player.ball_position()
 	if ticks > 2:
 		distance_travelled += position.distance_to(previous_position)
@@ -165,6 +171,12 @@ func _physics_process(delta: float) -> bool:
 
 
 func _place_inspection_camera() -> void:
+	if mode == "warden":
+		var warden = game.flow.warden
+		if is_instance_valid(warden):
+			inspection_camera.global_position = warden.global_position + Vector3(18, 10, 18)
+			inspection_camera.look_at(warden.global_position + Vector3(0, 4, 0))
+		return
 	var fitted: Dictionary = game.presentation.hero_assets.shell_of(game.player)
 	var pod := fitted.get("pod") as Node3D
 	if pod == null:
@@ -187,6 +199,9 @@ func _frame_drawn() -> void:
 		var capture := root.get_texture().get_image()
 		metadata["screenshot_dimensions"] = [capture.get_width(), capture.get_height()]
 		metadata["screenshot_tick"] = ticks
+		if mode == "warden" and is_instance_valid(game.flow.warden):
+			var warden = game.flow.warden
+			metadata["warden_inspection"] = {"family": warden.family, "open": warden.family_open(), "weak_point": str(warden.family_point_at()), "hero_attached": warden.find_child("HeroWarden", true, false) != null, "limits": "Close inspection camera; optionally held open through existing state field. Not a gameplay or performance qualification."}
 		var camera := root.get_camera_3d()
 		metadata["camera_transform"] = str(camera.global_transform) if camera != null else "unavailable"
 		metadata["camera_fov"] = camera.fov if camera != null else 0.0

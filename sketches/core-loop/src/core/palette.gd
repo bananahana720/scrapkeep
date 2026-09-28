@@ -9,6 +9,8 @@ const CHARCOAL := Color("242a28")
 const VERDIGRIS := Color("365754")
 const AMBER := Color("e5a044")
 const ARC := Color("8bf0d3")
+# Cherenkov seams belong to awakened ancient machines.
+const ANCIENT := Color("3d8bff")
 # Outside the greybox palette on purpose: a klaxon has to read as nothing else on screen.
 const HAZARD := Color("ff5a3c")
 # Admiral Brindle's brass: every boss fact wears it.
