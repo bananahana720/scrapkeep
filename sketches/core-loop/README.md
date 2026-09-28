@@ -33,7 +33,7 @@ If you are scrapped, press R to retry the stage from its start, N for a new run,
 | right mouse | the class movement. Sable: the grapple at the reticle's target, release to let go. Rivet: overdrive sprint while held. Kest: smoke blink. During a charge it cancels the charge |
 | F (hold, release) | the class special: hold to fill the gauge, release to fire. Sable's detonation gauge, Rivet's overdrive blast, Kest's detonation line. Planting a pylon still fires Sable's discharge free |
 | Q (hold) | Sable: winch, haul toward the hook |
-| E | interact with what you face within 6 m: hold it for anything with a cost or a bet (the ring round the reticle fills), press it for a cache; inside an amber lane it arms the ride, which fires as you cross the mouth. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; press again to drop off |
+| E | interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet (the ring round the reticle fills), press it for a cache; inside an amber lane it arms the ride, which fires as you cross the mouth. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; press again to drop off |
 | mouse wheel | Sable: down pays rope out, up notches it in |
 | Tab (hold) | field notes and the codex; the game pauses while held; Q and E switch pages |
 | - / = | music volume down / up |
