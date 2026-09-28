@@ -157,10 +157,25 @@ Andrew wants feedback solid enough for an alpha in a game about timing, dodging 
     The Rivet and Kest lines are extensions for the design run to test.
   - **Bulk penalties are opt-in only,** on hot-wired parts (for example, heavy plating: more durability, less air control). Each pilot's line can cancel or flip one; Sable's grapple and vault line cancels the mobility ones.
   - **The general pattern for capstones and hot-wired parts is inversion:** a skill that turns a state's cost into its upside. The audit should find where else that pattern applies. Wear feeding a spark trail is one candidate.
+- **Cogs are the currency, and their job is agency against RNG** (Andrew, 2026-09-28, who delegated the design to the coordinator: "I can let you be proactive and you can take the wheels on that"). The design:
+  - **Two resources, two jobs, never confused.** Scrap is what you wear: size, durability and momentum. Cogs are what you spend: choice. They differ in every layer. Scrap chunks stick to the hull with a crunch, and cogs clink into a counter with a bright pitched tick that rises in a quick run as you vacuum a stream. The existing shop cog glyph (`shop_tile.gd:139`) is the icon.
+  - **Satisfying in volume.** Kills, crates and breakables burst cogs in small, numerous pieces. The magnet vacuums them from a small radius, and **the magnet grows with heft**, so being big also means hoovering more; parts can widen it further. Collection is always on the move.
+  - **Loot is common and never wasted.** Buff parts drop often. Any part you don't want, or a pick you skip, recycles into cogs on the spot. That softens the forced-skip tension of hot-wired parts, and a hot-wired part recycles for a lot of cogs, so "take the money" is a real gamble.
+  - **Where cogs buy agency.** All of it is on the move or in calm:
+    - **Staples.** Moss's shelf always stocks a small, known set per world, so a build can be planned around them.
+    - **Fabricator hoops.** Roll through to buy at full speed.
+    - **Reroll** a pick.
+    - **Hold** a pick for later.
+    - **Steer.** Pay to bias the next pick toward a tag.
+  - **Pseudo-random with a floor.** Item pools are seeded per world. Each tag's weight rises every pick it misses, until it appears (bad-luck protection), so a run can't be starved of what a build needs.
+  - **What it serves.** Strategy (staples and steering), risk (spend now or save, recycle or keep), gambling (rerolls and the hot-wired payout), performance (clean, fast play hoovers more), mastery (known staples enable planned routes), expression (steering toward an identity) and feel (the vacuum stream).
+  - **In code, it's mostly a split.** `run_state.gd` already separates the wallet (`scrap`) from `mass`. The wallet becomes `cogs`, and pickups split into scrap pieces (mass only) and cog drops (wallet only), in place of `add_scrap` raising both (`:98-104`).
+    - Blast radius: `run_state.gd`, `build/scrap_field.gd`, `build/fabricators.gd`, `build/shop.gd`, `ui/shop_tile.gd`, the HUD wallet readout, the items with scrap effects (`build/items.gd:65,183,196`, `build/parts.gd:116`), each enemy's `scrap_value`, the summary stats, and codex text. Warden theft keeps taking mass.
+    - It builds in wave D, after the purpose audit and the lab sitting, since the free-pick cadence depends on the loop.
 - **Thresholds transform the ball** (Andrew: "if you collect a certain amount of scrap, you transform in a certain way ... your sprite gets bigger, or details morph and get layered on magically"). Each heft class (I to V, `HEFT_CLASS_AT` in `run_state.gd:15`, announced by `heft_class_changed`) becomes a visible transformation moment. The shell grows, new salvaged details layer onto the hull, and there's a short ceremony beat with its own cue. This is on the W13 ceremony and calm-gated like the rest. The spine rule holds: growth shows in the shell, while the collider and handling stay the same. Losing a class (a theft, or a durability hit) visibly sheds a layer, so the ball's look is always an honest read of its size. The art follows the asset split: Codex draws each class's silhouette and detail sheet, and Sonnet builds them.
 - **Open for the design run:**
   - the wear curve (cruise, speed, skids, wall scrapes) and the class hysteresis margin;
-  - where fabricators and Moss's shop get their price once there's no wallet (weight, parts or cores);
+  - the cog prices, drop rates and the steering cost, tuned against the chosen loop's free-pick cadence;
   - whether a voluntary melt of weight into a part in Moss's calm bay earns its place.
 
 **The purpose audit.** Every world-one system is scored on the dimensions it serves: strategy, risk, gambling, performance and skill, personal-best mastery, expression, discovery, spectacle and feel, pacing, momentum cost and readability cost. For each system, it names the decision it hands the player. A system that serves no dimension, or duplicates another, is merged or cut; one that serves several is protected. The audit feeds `DESIGN-V3.md` in wave B, and loop-dependent verdicts wait for the lab sitting.
