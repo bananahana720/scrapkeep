@@ -57,6 +57,8 @@ On the screens outside play, every choice is also a button: click it, or press t
 | T | arena death screen: replay stage 3 from its start |
 | N | death or summary: new run as the same class |
 | C | death screen: choose a class |
+| 1 or 2, A/D then Enter, or click | upgrade pick (run start, Moss's bay, or stage clear if you skipped the bay); Esc is "Later" and keeps the pick waiting |
+| roll up slowly to Moss's counter | opens the shop: click a plate or move focus with the keys; T talks to Moss |
 
 ## Field notes
 
