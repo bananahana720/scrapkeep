@@ -40,18 +40,18 @@ If you are scrapped, press R to retry the stage from its start, N for a new run,
 | [ / ] | effects volume down / up |
 | M | mute or unmute |
 | F6 | boss tempo: 129, or 172 while held |
-| P | pause or resume |
+| P, Esc or pad Start | pause menu: resume, restart run, field notes, music and effects volume, quit; mouse or keys. Closed while an upgrade pick or Moss's counter is open |
 | R (hold) | retry the stage from its start |
 | F1 | tuning panel (frees the mouse) |
 | F3 | physics interpolation on or off (off by default) |
 | F4 | save every tuning value to `user://tuning-<time>.json` |
-| Esc | free the mouse; press again to quit |
 
 On the screens outside play, every choice is also a button: click it, or press the key on its cap.
 
 | Keys | Does |
 | --- | --- |
 | Space | title: start; summary: choose a class |
+| H | title: the how-to-play page; H or Esc closes it |
 | 1, 2, ... | class select: one number per class card, left to right |
 | R | death screen: retry the stage, or the fight in the arena |
 | T | arena death screen: replay stage 3 from its start |
