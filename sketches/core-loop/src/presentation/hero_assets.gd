@@ -53,7 +53,7 @@ const SLOTS := {
 	"pilot": {"color": Color.WHITE, "vertex": true, "rough": 0.9},
 	"fleet_paint": {"color": Palette.RUST, "rough": 0.8},
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
-	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.55},
+	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.72},
 	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
 }
@@ -73,6 +73,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "HeroAssets"
 	_prewarm_warden_strokes()
+	_dress_bay.call_deferred()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -138,10 +139,12 @@ void fragment() {
 	mat.vertex_color_use_as_albedo = spec.get("vertex", false)
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
-	if slot in ["paint", "pilot", "bare_metal"]:
+	if slot in ["paint", "pilot", "bare_metal", "ancient_enamel", "fleet_paint"]:
 		mat.albedo_texture = Palette.painted_texture(128)
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE * 2.0
+	if slot in ["paint", "ancient_enamel", "fleet_paint"]:
+		Palette.enamel_wear(mat)
 	if spec.has("alpha"):
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.metallic_specular = 0.65
@@ -628,7 +631,7 @@ func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
 			if slot == "ancient_light" and not kit:
 				key += "_jaw" if String(root.name).begins_with("Jaw") else "_base"
 			if not rec.materials.has(key):
-				rec.materials[key] = material(slot).duplicate()
+				rec.materials[key] = material(slot).duplicate() if slot in ["ancient_light", "ancient_enamel"] else material(slot)
 			root.set_surface_override_material(i, rec.materials[key])
 	for child in root.get_children():
 		_paint_warden(child, rec, kit)
@@ -768,3 +771,50 @@ func _restore_mast() -> void:
 		_mast.root.get_parent().remove_child(_mast.root)
 		_mast.root.queue_free()
 	_mast.clear()
+
+
+func _dress_bay() -> void:
+	if ctx == null or not is_inside_tree():
+		return
+	var bay: Node = ctx.root.find_child("MossBay", true, false)
+	if bay == null:
+		return
+	var cabin: Node = bay.find_child("MossCabin", true, false)
+	var barge: Node = bay.find_child("Barge", true, false)
+	if cabin == null or barge == null or barge.has_node("HeroWorkshop"):
+		return
+	var workshop := _scene("res://assets/models/moss_workshop.glb")
+	workshop.name = "HeroWorkshop"
+	paint(workshop, {"class": Palette.AMBER})
+	barge.add_child(workshop)
+	for child in cabin.get_children():
+		if child is MeshInstance3D:
+			hide_placeholder(child)
+	# The old shutter and shelf occupy the same cabin front; keep their gameplay owner.
+	for child in barge.get_children():
+		if child is MeshInstance3D and child.mesh is BoxMesh and child.position.x < -13.0 and child.position.y < 6.0:
+			hide_placeholder(child)
+
+	var pool := MeshInstance3D.new()
+	pool.name = "BakedLamplight"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(4.0, 7.0)
+	pool.mesh = quad
+	pool.rotation.x = -PI * 0.5
+	pool.position = Vector3(-12.8, 0.06, 0)
+	pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if not _materials.has("bay_lamplight"):
+		var glow := ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
+void fragment() {
+	float edge = max(0.0, 1.0 - length((UV - vec2(0.5)) * 2.0));
+	ALBEDO = vec3(0.75, 0.34, 0.09);
+	ALPHA = edge * edge * 0.18;
+}
+"""
+		glow.shader = shader
+		_materials["bay_lamplight"] = glow
+	pool.material_override = _materials["bay_lamplight"]
+	barge.add_child(pool)

@@ -294,11 +294,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 
 
 func _build_sky(parent: Node3D) -> void:
-	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.24, 0.43, 0.62)
-	sky_material.sky_horizon_color = Palette.SAND.lerp(Color.WHITE, 0.55)
-	sky_material.ground_bottom_color = Palette.CHARCOAL
-	sky_material.ground_horizon_color = Palette.SANDSTONE
+	var sky_material := Palette.workshop_sky()
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	environment = Environment.new()
@@ -320,3 +316,4 @@ func _build_sky(parent: Node3D) -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 260.0
 	parent.add_child(sun)
+	preload("res://src/presentation/graphics_preset.gd").bind(environment, sun, parent.get_viewport())

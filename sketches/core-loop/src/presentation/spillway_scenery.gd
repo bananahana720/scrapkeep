@@ -1,5 +1,8 @@
 extends RefCounted
 
+const Palette := preload("res://src/core/palette.gd")
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+
 # All instances sit beyond the terrain footprint. The stage root owns visibility.
 static func build(stage_root: Node3D) -> Node3D:
 	var scenery := Node3D.new()
@@ -12,6 +15,8 @@ static func build(stage_root: Node3D) -> Node3D:
 	var rocks: Array[Transform3D] = []
 	var trunks: Array[Transform3D] = []
 	var leaves: Array[Transform3D] = []
+	var banners: Array[Transform3D] = []
+	var masonry: Array[Transform3D] = []
 
 	# A downstream retaining wall with three valve towers above the existing rim.
 	_place(stone, Vector3(0, 70, 247), Vector3(270, 100, 22))
@@ -28,6 +33,17 @@ static func build(stage_root: Node3D) -> Node3D:
 		for dx in [-7.0, 0.0, 7.0]:
 			_place(recess, Vector3(x + dx, 143, 230.5), Vector3(3, 12, 1))
 		_place(metal, Vector3(x, 94, 224), Vector3(3, 40, 3))
+
+	# Shallow block faces and lintels give the retaining wall scale in three batches.
+	for row in 18:
+		for col in 18:
+			var x := -126.0 + col * 14.0 + (3.0 if row % 2 else 0.0)
+			_place(masonry, Vector3(x, 29.0 + row * 5.0, 235.0), Vector3(13.5, 4.6, 0.45))
+	for x in [-90.0, 0.0, 90.0]:
+		_place(banners, Vector3(x + 12, 106, 228), Vector3(7, 26, 0.25))
+		_place(metal, Vector3(x + 12, 120, 228), Vector3(11, 0.7, 1.0))
+		for floor_index in 3:
+			_place(trim, Vector3(x, 132 + floor_index * 10, 229), Vector3(28, 1.0, 2.0))
 
 	# Layered shoulders: broad rooted slabs, smaller offset crowns, no route dressing.
 	for side in [-1.0, 1.0]:
@@ -72,6 +88,8 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "SandstoneShoulders", rock, rocks, Color("b37d50"))
 	_batch(scenery, "CottonwoodTrunks", trunk, trunks, Color("766744"))
 	_batch(scenery, "CottonwoodCrowns", canopy, leaves, Color("728249"))
+	_batch(scenery, "BlockFaces", box, masonry, Color("bda078"))
+	_batch(scenery, "ValvePennants", box, banners, Color("9b513a"))
 	return scenery
 
 
@@ -83,18 +101,26 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	var material := StandardMaterial3D.new()
 	material.albedo_color = tint
 	material.roughness = 1.0
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = Palette.painted_texture(128)
+	material.uv1_triplanar = true
+	material.uv1_scale = Vector3.ONE * 0.08
 	var source := mesh.surface_get_arrays(0)
 	var source_vertices: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
 	var source_normals: PackedVector3Array = source[Mesh.ARRAY_NORMAL]
 	var source_indices: PackedInt32Array = source[Mesh.ARRAY_INDEX]
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
 	for placement in placements:
 		var offset := vertices.size()
+		var variation := 0.91 + 0.09 * sin(placement.origin.x * 4.7 + placement.origin.z * 2.3 + placement.origin.y)
 		var normal_basis := placement.basis.inverse().transposed()
 		for i in source_vertices.size():
 			vertices.append(placement * source_vertices[i])
+			var shade := variation * (0.84 + 0.16 * clampf(source_vertices[i].y + 0.5, 0.0, 1.0))
+			colors.append(Color(shade, shade, shade))
 			normals.append((normal_basis * source_normals[i]).normalized())
 		for index in source_indices:
 			indices.append(offset + index)
@@ -102,12 +128,15 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = indices
-	var combined := ArrayMesh.new()
-	combined.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var view := MeshInstance3D.new()
 	view.name = label
-	view.mesh = combined
+	var importer := ImporterMesh.new()
+	importer.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	importer.generate_lods(60.0, 0.0, [])
+	view.mesh = importer.get_mesh()
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(view)
+	GraphicsPreset.register_scenery(view)
