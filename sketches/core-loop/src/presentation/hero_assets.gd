@@ -461,7 +461,8 @@ func _dress_warden(warden) -> void:
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
 	for side in [-1.0, 1.0]:
-		var jaw: Node3D = base.get_node("JawL" if side < 0 else "JawR")
+		var jaw: MeshInstance3D = base.get_node("JawL" if side < 0 else "JawR")
+		var faces := jaw.mesh.get_faces()
 		var angle: float = side * 1.3
 		var normal := Vector3(cos(angle), 0, sin(angle))
 		var panel := Node3D.new()
@@ -476,17 +477,82 @@ func _dress_warden(warden) -> void:
 				seam.mesh = old.mesh
 				seam.material_override = old.material_override
 				seam.transform = old.transform
-				seam.position *= 0.65
+				seam.position *= 0.4
 				seam.position.z = 0.04
-				seam.scale *= 0.65
+				seam.scale *= 0.5
 				panel.add_child(seam)
+				_fit_warden_stroke(seam, jaw, faces)
 				rec.seams.append({"node": seam, "source": old})
 		# Existing enemy helper owns the class-colour open-crack grammar and tint list.
 		var crack: Node3D = warden._add_crack(panel, Vector3(0, 0, 0.08), 0.8)
+		for stroke in crack.get_children():
+			_fit_warden_stroke(stroke, jaw, faces)
 		rec.cracks.append(crack)
 	_wardens[warden.get_instance_id()] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
+
+
+# Keep each stroke's readable length, but wrap a narrow ribbon around the cast jaw.
+# Projection runs once during attachment; animation still reads the original cue.
+func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: PackedVector3Array) -> void:
+	var box := stroke.mesh as BoxMesh
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var to_jaw := Transform3D.IDENTITY
+	var ancestor: Node3D = stroke
+	while ancestor != jaw:
+		to_jaw = ancestor.transform * to_jaw
+		ancestor = ancestor.get_parent() as Node3D
+	var key := "warden_stroke:%s:%s:%s" % [jaw.name, box.size, to_jaw]
+	stroke.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
+	if _meshes.has(key):
+		stroke.mesh = _meshes[key]
+		return
+	var from_jaw := to_jaw.affine_inverse()
+	var low := INF
+	var high := -INF
+	for x in [-0.5, 0.5]:
+		for y in [-0.5, 0.5]:
+			var height: float = (to_jaw * Vector3(box.size.x * x, box.size.y * y, 0)).y
+			low = minf(low, height)
+			high = maxf(high, height)
+	var candidates := PackedVector3Array()
+	for i in range(0, faces.size(), 3):
+		if maxf(faces[i].y, maxf(faces[i + 1].y, faces[i + 2].y)) >= low and minf(faces[i].y, minf(faces[i + 1].y, faces[i + 2].y)) <= high:
+			candidates.append_array(PackedVector3Array([faces[i], faces[i + 1], faces[i + 2]]))
+	for row in 17:
+		for side in [-0.5, 0.5]:
+			var point := to_jaw * Vector3(box.size.x * side, box.size.y * (float(row) / 16.0 - 0.5), 0)
+			var radial := Vector3(point.x + jaw.position.x, 0, point.z + jaw.position.z).normalized()
+			var start := radial * 8.0 + Vector3.UP * point.y - Vector3(jaw.position.x, 0, jaw.position.z)
+			var nearest := INF
+			var contact := Vector3.ZERO
+			for triangle in range(0, candidates.size(), 3):
+				var hit = Geometry3D.ray_intersects_triangle(start, -radial, candidates[triangle], candidates[triangle + 1], candidates[triangle + 2])
+				if hit != null:
+					var distance: float = start.distance_squared_to(hit)
+					if distance < nearest:
+						nearest = distance
+						contact = hit
+			if nearest == INF:
+				_warn_once("warden_stroke", "hero_assets: Warden stroke missed jaw surface at %s" % point)
+				return
+			vertices.append(from_jaw * (contact + radial * 0.008))
+			normals.append((to_jaw.basis.transposed() * radial).normalized())
+		if row > 0:
+			var n := row * 2
+			indices.append_array(PackedInt32Array([n - 2, n, n - 1, n - 1, n, n + 1]))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var ribbon := ArrayMesh.new()
+	ribbon.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	_meshes[key] = ribbon
+	stroke.mesh = ribbon
 
 
 func _adapt_warden_tower(tower: MeshInstance3D, shift: Vector3, top: float) -> void:

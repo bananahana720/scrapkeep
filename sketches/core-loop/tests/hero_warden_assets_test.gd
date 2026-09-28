@@ -75,6 +75,7 @@ func check_family() -> void:
 		hook._update_warden(rec)
 		check("world weak point " + str(angle), rec.weak.global_position.distance_to(warden.family_point_at()) < 0.0001)
 	check_geometry(rec.base, rec.base)
+	check_stroke_surfaces(rec)
 	var authored: Node3D = hook._warden_scene(hook.WARDEN_BASE)
 	check("jaw meshes and hinges unchanged", authored.get_node("JawL").mesh == rec.base.get_node("JawL").mesh and authored.get_node("JawR").transform == rec.base.get_node("JawR").transform)
 	var tower: MeshInstance3D = rec.base.get_node("Tower")
@@ -107,9 +108,12 @@ func check_family() -> void:
 	game.add_child(other)
 	other.position = warden.position + Vector3(20, 0, 0)
 	other.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, {"family": warden.family, "stage": warden.stage, "lesson": warden.lesson})
+	var fit_started := Time.get_ticks_usec()
 	hook._dress_warden(other)
+	print("WARDEN_ATTACH_CPU_MS ", warden.family, " ", float(Time.get_ticks_usec() - fit_started) / 1000.0)
 	var second: Dictionary = hook.warden_of(other)
 	check("independent materials", rec.materials.ancient_light != second.materials.ancient_light and rec.materials.ancient_enamel != second.materials.ancient_enamel and rec.materials.ancient_light_jaw != second.materials.ancient_light_jaw)
+	check("immutable ribbons cached with private animated materials", rec.seams[0].node.mesh == second.seams[0].node.mesh and rec.seams[0].node.material_override != second.seams[0].node.material_override)
 	check("independent tower mesh", rec.base.get_node("Tower").mesh != second.base.get_node("Tower").mesh)
 	warden._open_left = 2.0
 	warden._brace_left = 2.0
@@ -161,3 +165,43 @@ func check_geometry(node: Node3D, base: Node3D) -> void:
 	for child in node.get_children():
 		if child is Node3D:
 			check_geometry(child, base)
+
+
+func check_stroke_surfaces(rec: Dictionary) -> void:
+	var worst := 0.0
+	var samples := 0
+	var fitted := true
+	for seam in rec.seams:
+		var stroke: MeshInstance3D = seam.node
+		var jaw := stroke.get_parent().get_parent() as MeshInstance3D
+		var faces := jaw.mesh.get_faces()
+		var arrays := stroke.mesh.surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		fitted = fitted and vertices.size() == 34
+		if vertices.size() != 34:
+			continue
+		var to_jaw := jaw.global_transform.affine_inverse() * stroke.global_transform
+		var probes := PackedVector3Array()
+		# Both endpoints and centre of every cross-section, including stroke centre.
+		for row in 17:
+			probes.append(to_jaw * vertices[row * 2])
+			probes.append(to_jaw * vertices[row * 2 + 1])
+			probes.append(to_jaw * ((vertices[row * 2] + vertices[row * 2 + 1]) * 0.5))
+		# Interior triangle samples catch a chord bridging across a tapered surface.
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		for i in range(0, indices.size(), 3):
+			probes.append(to_jaw * ((vertices[indices[i]] + vertices[indices[i + 1]] + vertices[indices[i + 2]]) / 3.0))
+		for point in probes:
+			var radial := Vector3(point.x + jaw.position.x, 0, point.z + jaw.position.z).normalized()
+			var origin := Vector3(-jaw.position.x, point.y, -jaw.position.z) + radial * 10.0
+			var surface_distance := INF
+			for i in range(0, faces.size(), 3):
+				var hit = Geometry3D.ray_intersects_triangle(origin, -radial, faces[i], faces[i + 1], faces[i + 2])
+				if hit != null:
+					surface_distance = minf(surface_distance, origin.distance_to(hit))
+			var clearance := surface_distance - origin.distance_to(point)
+			fitted = fitted and is_finite(clearance) and clearance >= -0.03 and clearance <= 0.03
+			worst = maxf(worst, absf(clearance))
+			samples += 1
+	print("STROKE_GEOMETRY ", rec.warden.family, " samples=", samples, " maximum_absolute_clearance=", worst)
+	check("shred centres endpoints and triangle interiors fit actual jaws", fitted and samples == 18 * 83)
