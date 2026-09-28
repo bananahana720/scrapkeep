@@ -861,6 +861,8 @@ Option C of `design-v3/LOOP-REDESIGN.md` on stage 1, behind `--loop=laps` (or th
 
 \* The first lap runs from the bell and includes the completionist's vault and event.
 
+The lapper was re-measured at integration head ac0311e, after the L1 merge and the lip-aim fix, with the same method (seeds 1 to 3, runs in `artifacts/local/fix1-laps/`). The Warden breaks at 67.6 s (runner_gunner), 76.9 s (demolitions_caster) and 73.4 s (pylon_engineer). The last two are faster than the table above, so read the table as the pre-merge figures.
+
 **Reads.**
 
 - A lap takes 11 to 15 s for every class. That is half the 25 to 40 s the spec budgets. The three-lap tax is 35 to 38 s, and the classes do not separate on the course.
