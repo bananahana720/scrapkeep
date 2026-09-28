@@ -1,7 +1,7 @@
 ---
 name: scrapkeep-verifier
-description: Run an exact Scrapkeep candidate's checks on Sonnet 5.5 medium and return command receipts, without edits or board writes. Use before the Opus gate (scrapkeep-reviewer-medium) so the gate judges from receipts instead of rerunning.
-model: sonnet
+description: Run an exact Scrapkeep candidate's checks on Opus 5.5 medium and return command receipts, without edits or board writes. Use before the Opus gate (scrapkeep-reviewer-medium) so the gate judges from receipts instead of rerunning.
+model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash
 ---
