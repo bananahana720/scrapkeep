@@ -263,6 +263,27 @@ Andrew wants a love project in the family of Isaac, Gunfire Reborn, Risk of Rain
 
 **In B and C.** The same cadence and evolutions work in both; the difference is where the picks stand (on feeds, on laps). Neither spine changes the snowball; only the Drop Loop makes the snowball show in the fight, because the drop's damage reads heft and the window reads cores.
 
+### Anticipation: "I want to see what this becomes"
+
+Andrew, clarifying that his notes are direction, not specs: "juicy feedback ... eye candy ... where I'm wanting to know what's gonna happen next with these upgrades that I'm about to get ... a little bit more creativity and discovery." So anticipation is a design goal, and discovery means learning by experimenting, not reading. The rule for every option: **every reward is previewed before it is earned, and every preview is a shape you can already see, never a line of text.**
+
+| Tease | What the player sees before they have it | Owner today | Discovery, not reading |
+| --- | --- | --- | --- |
+| **A part hints at its evolution** | A part at cap grows a dark socket on its accretion chunk in the shape of its pair's family glyph; the socket glows when its pair is offered at a gate ("* completes *" already pulses). The evolution's name is never shown until it happens. | `accretion.gd`, `reward_gates.gd` pulse (exists), `hero_assets.gd` chunk slots | The socket's shape is the only clue; the codex names the pair after the first evolution |
+| **A half-built rig on the ball** | The tree's next pick is a bare bracket on the pod (a mast stub, a fin hinge, a satchel strap) from the moment the pick opens at the bay's catch; the pick fills it. Sixteen ends, so the rig reads which branch you are on. | `upgrade_tree.gd`, `hero_assets.gd` `class_accent` slot (Codex visual track) | The bracket says where, not what |
+| **A locked thing you can see before you can afford it** | Moss's top-shelf hook (exists, heft-locked). Add: the dormant ally drone on its housing on the loop, seam dark, with the scrap cost as a pressure dial; the rigged cache's odds dial; the timed door's par over the gate. All in view from the loop before the first lap ends. | `shop.gd` (exists), §9 interactables | The dial is the ask; trying is how you learn what it does |
+| **The Warden's break reward, previewed before the fight** | On the beacon mast, above the jaws, the break reward hangs in a cage from the first sight at the entry drop: the gate toppers' rarity frames (V3 item 10) and, when an evolution is armed, the evolved part's silhouette rotating in the cage. Cores add frames to the cage as you socket them. Breaking the Warden drops the cage. | `flow.gd` (`beacon_unsealed`), `reward_gates.gd` tier from `bonus_cores`, `beacon.gd` mast | You see the rare frame appear when the second core sockets; nobody tells you the rule |
+| **The next drop line's payoff** | From the east landing, the long line's event beam and the vault's plinth are in view (§3 sightlines); a line with a challenge post shows its part's family glyph on the post. | `map_spillway.gd` props, §9 prompt grammar at 30 m | Hades' door preview, in the ground |
+| **The window's next length** | The core's beam shows the window's length as its height; a socketed core visibly adds a band. | `warden.gd`, `warden_look.gd` | You watch the beam grow |
+
+**Per option.**
+
+- **A. Drop Loop.** The cage on the mast is the strongest tease the game can have, because the whole loop runs under it: every lap you pass beneath the thing you are earning, and every core you socket adds a frame to it. The drop count on the badge is the same tease inverted: each segment is one lap closer. The ball's half-built rig and the evolution sockets ride the loop with you and are seen at the bank before every drop.
+- **B. Cut the Feeds.** The three lit plates are the tease: each feed's prize (the plate going dark, and a preview of what the fight becomes) is visible from the bowl. Weaker: the reward is "a shorter fight", which previews as less, not more.
+- **C. Bell and Laps.** The beacon's notches count laps toward the wake, and each lap's checkpoint ring could hold the next pick's family glyph. Weaker: the tease is a bar filling, not a shape becoming.
+
+**Fun-lab minimum.** The cage on the mast with the tier frames (a copy of the gate topper meshes, no Blender), the evolution socket on one capped part, and the ally drone's housing with its dial. Three teases, all reused geometry, so the sitting can judge whether "what's next" pulls.
+
 ## 9. The interact key and the map's interactables
 
 Andrew asked for "the same universal interaction key" for consenting to travel, starting a fight, treasure hunting and switching on temporary allies, and said what he loves is discovering how to use the environment, finding treasure, and taking risks that "can really hit or miss depending on either luck or skill". Interactables are where the map's value lives; the spine says why you are on the loop, the interactables say what you find there.
