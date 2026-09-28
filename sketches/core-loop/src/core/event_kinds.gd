@@ -102,6 +102,24 @@ const ROWS := {
 	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_root_fifth", "hud": "", "objective": "", "priority": 1},
 	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
 	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
+	# v2 W7 enemies. Danger is HAZARD; a break, tenacity and the shield vault are yours,
+	# so they wear bone here and the class colour where they draw (holds.gd). A hold's
+	# loop and a pack's motif depend on who holds or arrives: `sound` is the stand-in and
+	# `sound_next` names the SOUND-STORY section 3 cue, resolved through roster.gd's row
+	# (`hold`) or faction (`arrival`). pack_arrived's `icon` is the Fleet's edge-marker
+	# badge; an ancient pack shows its family's fac_ icon from the roster. Cherenkov
+	# blue (3d8bff) is the ancients' light, so a weak point opening is its seam.
+	"hold_started": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "hold_pit", "sound_next": "hold_by_kind", "hud": "", "objective": "", "priority": 1},
+	"hold_broken": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "shatter", "sound_next": "class_break", "hud": "", "objective": "", "priority": 1},
+	"hold_ended": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"tenacity_gained": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "tenacity_choke", "hud": "", "objective": "", "priority": 1},
+	"pack_arrived": {"group": "event", "color": Palette.HAZARD, "shape": "diamond", "sound": "fleet_motif", "sound_next": "faction_arrival", "icon": "fac_fleet", "hud": "", "objective": "", "priority": 2},
+	"shield_vaulted": {"group": "movement", "color": Palette.SAND, "shape": "chevron", "sound": "pylon_eject", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
+	"vent_charging": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "reactor_tick", "hud": "", "objective": "", "priority": 1},
+	"vent_erupted": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "reactor_erupt", "hud": "", "objective": "", "priority": 2},
+	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
+	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
+	"weak_point_opened": {"group": "combat", "color": Color("3d8bff"), "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -209,6 +227,16 @@ const LESSON_SHORT := {
 	"caps": "Slam its vent caps",
 	"magnet": "Shoot its magnet while pulled",
 }
+
+
+# v2 W7 enemies
+# Each faction's fac_ icon, so the pack_arrived edge marker and any faction badge read
+# one table: the Fleet's requisition tag, or the ancient family's own mark.
+const FACTION_ICONS := {"fleet": "fac_fleet", "reactor": "fac_reactor", "swarm": "fac_swarm", "mind": "fac_mind"}
+
+
+static func faction_icon(faction: String) -> String:
+	return FACTION_ICONS.get(faction, "fac_fleet")
 
 
 # v2 W4 loot

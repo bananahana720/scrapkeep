@@ -611,3 +611,37 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Upgrade picks**: world opens `player.tree.open_checkpoint()` on the catch, or at `stage_cleared` for a skipped bay, once per stage per run (`world._open_pick`). player_ball keeps only the `run_started` pick.
 - **Yard**: inside the yard lines world refills each slot's current charges with `abilities.grant(slot, max_charges)`. It never writes a cap or a cooldown scale (Charge and cooldown layers).
 - **Carry in calm**: the barge carry fact is applied even when `ctx.calm` is set; the thermal's lift is a world push and applies only when not calm.
+
+## v2 V3 hero assets (`src/presentation/hero_assets.gd`)
+
+`presentation.gd` creates the hook as `presentation.hero_assets` and calls `setup(ctx)`. It edits no gameplay file. It reads only these existing seams.
+
+| Owner | What the hook reads | What it adds |
+| --- | --- | --- |
+| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()` | `HeroCore` under the rolling mesh, `HeroPod` under the juice node; the greybox ball mesh is hidden |
+| `build/accretion.gd` | Each direct `MeshInstance3D` child is a chunk; its slot index is read back from `position` (`_slot(i, MAX_CHUNKS) * 1.02`) | `HeroChunk` under each chunk; the box is hidden |
+| `build/reward_gates.gd` | Each child `Node3D` is a gate; its offer is the `offers` row whose `at` matches its position; `Topper`, `Glyph<i>` sprites, `rarity_color()` | `HeroArch`, `Topper/HeroTopper`, one `HeroPlate<i>` per glyph; posts, bar, topper and heart are hidden |
+
+- **Hidden means hidden.** A placeholder keeps its node, script and transform, with `layers = 0` and shadows off. Anything that animates it (the topper's spin and pulse, the chunk pop and fling, the squash) still drives the hero child.
+- **Slots to colours.** `SLOTS` in the hook is the one table from section 9 slot names to palette roles. glb surfaces are named for their slot. Change a colour there or in `palette.gd`, never in a recipe.
+- **Shell nodes.** Each `shell_<class>.glb` is `Shell<Name>` > `Core`, `Pod` > `Dome` > `Pilot`, plus `RopeExit` (Sable) and `VaneL`/`VaneR` (Kest, hinged about Godot Z). The glbs use Godot axes, +Y up and -Z forward.
+
+**Not wired (for the coordinator after W7 merges).** `warden_clamp_base.glb` is `WardenClampBase` > `Housing`, `Tower` > `KitMount`, `JawL`, `JawR`. The beacon stands at the origin. The jaw origins sit on the vertical hinge axis at x 2.2, so rotating them about Y opens the clamp, and closed is the modelled pose. `warden_kit_{reactor,hive,mind}.glb` roots sit at `KitMount`. Each has a `WeakPoint` node, plus `Vent0..2` (reactor), `Drone0..5` (hive), and `ArmL`, `ArmR` and `Shutter0..5` (mind). Their slots are `ancient_enamel`, `ancient_light`, `bare_metal` and `rubber` (the charcoal grooves). The hook's `paint(node, {})` dresses them with no tint.
+
+**Requested seams (not blocking).**
+
+1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
+2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
+3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
+
+## Enemies v2
+
+- **The roster** (`src/combat/roster.gd`) is the one source for an enemy: `faction`, `role`, `mechanic`, `telegraph`, `holds`, `breaks`, `tag` (and `tag_next`), `hold`, `tests` and `line`, per kind. `Roster.COUNTERS` is the Fleet unlock order and `Roster.ANCIENTS` the three families. `Roster.voiced(id, motif)` turns `mind_quote` into `mind_<motif>`.
+- **Spawner kinds.** `spawn_enemy` also takes `mag_trapper`, `hooker`, `netcaster`, `bola_thrower`, `plated_brute`, `deflector`, `winch_drone`, `gyro_jammer`, `swatter`, `ramp_flipper`, `catch_trap`, `reactor_relic`, `swarm_remnant` and `mind_hand`. One `swarm_remnant` spawn brings its whole rack of six. Every one is in group `enemy`, carries `kind` and `faction`, and sees the player through `Sight`.
+- **`combat.fleet`** (`src/combat/fleet.gd`) owns `holds`, `habits`, `mind_memory` and the swarms. `build_read()` on the spawner returns `{class, habits: {habit: share}, branch_tags}` for the director.
+- **Holds** (`src/combat/holds.gd`, `fleet.holds`). A unit never touches the ball; it calls `catch(source, kind, breaks, max_seconds, shove, anchor)`, then `pull(source, accel)` each tick, and `release(source, reason)`. Both go through `player.crowd_control`, so Rivet's sprint refuses them. Tenacity: 1.8 s summed over a sliding 4 s releases every hold with the reason `tenacity` and makes `catch` refuse for 2.5 s. A player break is one of `jump`, `boost`, `smash`, `glide`, `speed`; it kicks the ball forward and refunds 0.6 s of the movement slot. `released(source_id, kind, reason)` is the node's own signal.
+- **Bus facts and their owner.** Combat publishes `hold_started(kind, at)`, `hold_broken(kind, method)`, `hold_ended(kind, reason)`, `tenacity_gained(seconds)`, `pack_arrived(faction, at, kinds)`, `shield_vaulted(at, speed)`, `vent_charging(at, seconds)`, `vent_erupted(at)`, `swarm_scattered(at, drones)`, `mind_adapted(habit, icon)` and `weak_point_opened(point_id, at, seconds)`. `kind` in the hold facts is the unit's mechanic; `faction` is `fleet`, `reactor`, `swarm` or `mind`, and `EventKinds.faction_icon(faction)` is its `fac_` icon.
+- **Packs.** The director times a pack's members on one arrival ring, so every reinforcement spawned in one physics frame is one pack; combat publishes `pack_arrived` once per faction in it. A lone chaser or lobber is not a pack.
+- **The director's inputs** (`src/world/director.gd`). World may set `director.stage` (1 to 3; 0 reads it from the threat dial) and `director.build` (the spawner's `build_read()`); both default safely, so the director works before world sets them. `KIND_NAMES` holds every spawnable reinforcement; `packs` records each pack composed.
+- **Warden family kits.** The stage Warden has `family` (`Roster.warden_family(stage)`), `family_point()` (`core`, `queen` or `lens`), `family_open()` and `braced()`. An open family point meets plating 0 through `plating_for(kind, part)`, is listed in `weak_points()`, and takes contacts near the top through `contact_part`. The lessons are unchanged.
+- **The plating dress.** `set_tint("amber")` now means "breaks now": a class-colour rim (`Enemy.rim_color`, which fleet sets from the run's class row) and the open-crack glyphs; `"slate"` means closed dark plates. The state names are kept for their callers.

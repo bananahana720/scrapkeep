@@ -25,6 +25,21 @@ const AUDIT := {
 	"res://src/combat/warden.gd": ["INSTANT", "INSTANT", "LANE"],
 	"res://src/combat/projectile.gd": ["PROJECTILE", "PROJECTILE"],
 	"res://src/boss/boss.gd": ["WAVE", "INSTANT", "INSTANT", "LANE"],
+	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
+	"res://src/combat/mag_trapper.gd": ["INSTANT"],
+	"res://src/combat/netcaster.gd": ["INSTANT"],
+	"res://src/combat/plated_brute.gd": ["INSTANT"],
+	"res://src/combat/gyro_jammer.gd": ["INSTANT"],
+	"res://src/combat/swatter.gd": ["INSTANT"],
+	"res://src/combat/ramp_flipper.gd": ["INSTANT"],
+	"res://src/combat/catch_trap.gd": ["INSTANT"],
+	"res://src/combat/reactor_relic.gd": ["INSTANT"],
+	"res://src/combat/hooker.gd": ["LANE"],
+	"res://src/combat/deflector.gd": ["LANE"],
+	"res://src/combat/winch_drone.gd": ["LANE"],
+	"res://src/combat/swarm_remnant.gd": ["LANE"],
+	"res://src/combat/mind_hand.gd": ["LANE"],
+	"res://src/combat/bola_thrower.gd": ["PROJECTILE"],
 }
 const FACTORIES := {
 	"res://src/combat/telegraph.gd": ["ring", "lane", "wedge"],
