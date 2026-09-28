@@ -177,6 +177,27 @@
       "provider": "built-in imagegen",
       "status": "candidate concept; see gallery and coverage for limits",
       "inspection": "Parent inspected native imagegen output; independent Astra original-sheet review applies only to 01-05 originals"
+    },
+    {
+      "image": "images/17-tally-presence.png",
+      "source": "/home/andrew/.codex/generated_images/01a0e573-1ef4-7012-b126-a44152e43072/exec-ac183bcf-ef63-4a7a-9b45-4f01c099f264.png",
+      "sha256": "e582458710e7613fa92b59d8d10f540fd9ad261cf705b3aef760eb6dfa211bcf",
+      "provider": "built-in imagegen",
+      "status": "candidate demo presence concept"
+    },
+    {
+      "image": "images/18-kest-mobility.png",
+      "source": "/home/andrew/.codex/generated_images/01a0e573-1ef4-7012-b126-a44152e43072/exec-6c8011ab-dbd4-4090-8202-df94067a845a.png",
+      "sha256": "eaf5043d9e4a198705268ba216185b776fb73596cfa06b2b3d40fb7373b62806",
+      "provider": "built-in imagegen",
+      "status": "historical first attempt; cyan player light corrected"
+    },
+    {
+      "image": "images/18-kest-mobility-v2.png",
+      "source": "/home/andrew/.codex/generated_images/01a0e573-1ef4-7012-b126-a44152e43072/exec-b49d1ba9-8793-4c8e-bfb6-addd9efb68ba.png",
+      "sha256": "88cf49653ea7c4c344c95e0e9170567bd62db555357e43d11661c341dcddae70",
+      "provider": "built-in imagegen",
+      "status": "corrected concept reference"
     }
   ],
   "selected_style": "A: painted workshop miniature",

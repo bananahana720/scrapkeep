@@ -36,7 +36,7 @@ Sources are pinned in [source-manifest.json](source-manifest.json). Bible region
 | H01 | Shared sphere and gyro | Front, side, rear, chase and cutaway; enclosure, pilot, cradle, working intake and ring clearance | Owner quote in HERO-SPHERE opening |
 | H02 | Sable | Fox silhouette, mint ring language, grapple/winch/pylon hardware; idle and action views | class_def.gd; DESIGN-V2 §2 |
 | H03 | Rivet | Mole silhouette, copper chevrons, laser and unstoppable sprint hardware | class_def.gd; DESIGN-V2 §2 |
-| H04 | Kest | Bird silhouette, amber starbursts, explosive mechanisms and action states; movement seam stays explicit | class_def.gd; DESIGN-V2 §2 |
+| H04 | Kest | Bird silhouette, amber starbursts, explosive mechanisms and action states; right-click smoke blink and Space-held falling glide both shown | class_def.gd; DESIGN-V2 §2 |
 | H05 | Growth and fabrication | Low/high build comparison plus attraction → intake → processing → functional change | AD-05; owner sphere request; growth proposal unselected |
 | H06 | Player motion sheet | Idle, rolling, turn, airborne, boost, smash, hit, gyro jam and recovery; camera stays comfortable | DESIGN-V2 §15; HERO-SPHERE proposal |
 | H07 | Alternate roster concepts | Tarn, Fuse and other Bible candidates; friendly ancient/transmog request with unselected identity details labeled | Bible §4; paused-session owner request |

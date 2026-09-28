@@ -1,0 +1,186 @@
+[
+  {
+    "name": "sable",
+    "image": "runtime/sable.png",
+    "image_sha256": "3ba3f5739e6214005a3da5b7882403df44c0afcce57b0223eb423a29c42586d2",
+    "capture_json": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-sable-03/capture.json",
+    "capture_sha256": "dfca3e1379001eb71722617b494ce96a60f73d4eb3eb8bdd699fc72eb61c42ec",
+    "git_head": "ae635e3eb9f9e2ffd6f4ac10eefd3c2974bd363e",
+    "adapter": "NVIDIA GeForce RTX 4080",
+    "final_render_size": [
+      1920.0,
+      1080.0
+    ],
+    "resolution_verified": true,
+    "growth_actual": {
+      "chunks": 0,
+      "heft_class": 1,
+      "mass": 0.0,
+      "shell_scale": 1.0
+    },
+    "grown_build_verified": false,
+    "settings": {
+      "azimuth": "0.0",
+      "class": "0",
+      "growth": "0",
+      "mode": "pilots",
+      "out": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-sable-03",
+      "samples": "60",
+      "seconds": "0"
+    },
+    "screenshot_monitors": {
+      "buffer_memory_bytes": 39518020.0,
+      "draw_calls": 40.0,
+      "static_memory_bytes": 258944645.0,
+      "texture_memory_bytes": 246667264.0,
+      "video_memory_bytes": 302510880.0,
+      "visible_primitives": 459742.0
+    },
+    "final_monitors": {
+      "buffer_memory_bytes": 39518020.0,
+      "draw_calls": 40.0,
+      "static_memory_bytes": 255399437.0,
+      "texture_memory_bytes": 246667264.0,
+      "video_memory_bytes": 302510880.0,
+      "visible_primitives": 459742.0
+    }
+  },
+  {
+    "name": "rivet",
+    "image": "runtime/rivet.png",
+    "image_sha256": "311eb196cb3a1ef760683e8dce664a6c31b368c8748d23fb20d341bd9dea9522",
+    "capture_json": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-rivet-03/capture.json",
+    "capture_sha256": "421e91e68bb465d64580924fc2ac592f4fcf49dd0db49e7fe649bc867146fddd",
+    "git_head": "ae635e3eb9f9e2ffd6f4ac10eefd3c2974bd363e",
+    "adapter": "NVIDIA GeForce RTX 4080",
+    "final_render_size": [
+      1920.0,
+      1080.0
+    ],
+    "resolution_verified": true,
+    "growth_actual": {
+      "chunks": 0,
+      "heft_class": 1,
+      "mass": 0.0,
+      "shell_scale": 1.0
+    },
+    "grown_build_verified": false,
+    "settings": {
+      "azimuth": "35.0",
+      "class": "1",
+      "growth": "0",
+      "mode": "pilots",
+      "out": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-rivet-03",
+      "samples": "60",
+      "seconds": "0"
+    },
+    "screenshot_monitors": {
+      "buffer_memory_bytes": 39945604.0,
+      "draw_calls": 53.0,
+      "static_memory_bytes": 259269925.0,
+      "texture_memory_bytes": 246667264.0,
+      "video_memory_bytes": 302938928.0,
+      "visible_primitives": 492950.0
+    },
+    "final_monitors": {
+      "buffer_memory_bytes": 39945604.0,
+      "draw_calls": 53.0,
+      "static_memory_bytes": 256102825.0,
+      "texture_memory_bytes": 246667264.0,
+      "video_memory_bytes": 302938928.0,
+      "visible_primitives": 492950.0
+    }
+  },
+  {
+    "name": "kest",
+    "image": "runtime/kest.png",
+    "image_sha256": "2b52f24dcbbe711146b3e0ac5855c6b55c399cf32b1cf38d190c21c29bf2af35",
+    "capture_json": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-kest-03/capture.json",
+    "capture_sha256": "f7382c725510409fb82eb0e391abff08db4cb315429c83ed0ac060a67eaf7eda",
+    "git_head": "ae635e3eb9f9e2ffd6f4ac10eefd3c2974bd363e",
+    "adapter": "NVIDIA GeForce RTX 4080",
+    "final_render_size": [
+      1920.0,
+      1080.0
+    ],
+    "resolution_verified": true,
+    "growth_actual": {
+      "chunks": 0,
+      "heft_class": 1,
+      "mass": 0.0,
+      "shell_scale": 1.0
+    },
+    "grown_build_verified": false,
+    "settings": {
+      "azimuth": "35.0",
+      "class": "2",
+      "growth": "0",
+      "mode": "pilots",
+      "out": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-kest-03",
+      "samples": "60",
+      "seconds": "0"
+    },
+    "screenshot_monitors": {
+      "buffer_memory_bytes": 39956812.0,
+      "draw_calls": 71.0,
+      "static_memory_bytes": 259504449.0,
+      "texture_memory_bytes": 246667264.0,
+      "video_memory_bytes": 302950128.0,
+      "visible_primitives": 493574.0
+    },
+    "final_monitors": {
+      "buffer_memory_bytes": 39956812.0,
+      "draw_calls": 71.0,
+      "static_memory_bytes": 256345557.0,
+      "texture_memory_bytes": 246667264.0,
+      "video_memory_bytes": 302950128.0,
+      "visible_primitives": 493574.0
+    }
+  },
+  {
+    "name": "sable-grown",
+    "image": "runtime/sable-grown.png",
+    "image_sha256": "31fa2f5bbec6065b1e6b4cd8836dd0c78bbb4735428f8572d0bb2425358a8220",
+    "capture_json": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-sable-heavy-03/capture.json",
+    "capture_sha256": "3ed3eb06aa0e77af15d30633867bdd73fdb66937ad50b69c6cd7c47f82ceae97",
+    "git_head": "ae635e3eb9f9e2ffd6f4ac10eefd3c2974bd363e",
+    "adapter": "NVIDIA GeForce RTX 4080",
+    "final_render_size": [
+      1920.0,
+      1080.0
+    ],
+    "resolution_verified": true,
+    "growth_actual": {
+      "chunks": 36,
+      "heft_class": 3,
+      "mass": 600.0,
+      "shell_scale": 1.13999998569489
+    },
+    "grown_build_verified": true,
+    "settings": {
+      "azimuth": "35.0",
+      "class": "0",
+      "growth": "600",
+      "mode": "pilots",
+      "out": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/native/pilot-sable-heavy-03",
+      "samples": "60",
+      "seconds": "0"
+    },
+    "screenshot_monitors": {
+      "buffer_memory_bytes": 39718952.0,
+      "draw_calls": 146.0,
+      "static_memory_bytes": 259968033.0,
+      "texture_memory_bytes": 246716416.0,
+      "video_memory_bytes": 302761312.0,
+      "visible_primitives": 526302.0
+    },
+    "final_monitors": {
+      "buffer_memory_bytes": 39718952.0,
+      "draw_calls": 146.0,
+      "static_memory_bytes": 257170533.0,
+      "texture_memory_bytes": 246716416.0,
+      "video_memory_bytes": 302761312.0,
+      "visible_primitives": 526302.0
+    }
+  }
+]

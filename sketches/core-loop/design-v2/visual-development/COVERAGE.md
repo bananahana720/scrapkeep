@@ -1,6 +1,6 @@
 # Concept coverage and remaining evidence
 
-Style A is owner-selected. Sixteen category sheets provide broad first-pass coverage of all eight areas in the original inventory. References below are concepts, not runtime screenshots. No row is declared fully accepted through a montage. The gallery carries the current image-specific critique.
+Style A is owner-selected. Eighteen category sheets provide broad first-pass coverage of all eight areas in the original inventory. References below are concepts, not runtime screenshots. No row is declared fully accepted through a montage. The gallery carries the current image-specific critique.
 
 | Inventory subjects | Sheets | What exists | Still required |
 | --- | --- | --- | --- |
@@ -16,10 +16,10 @@ Style A is owner-selected. Sixteen category sheets provide broad first-pass cove
 | C05 cultural construction | 02, 03 | Pilot/tool traditions and environment motifs | Structural differences stronger than banners |
 | C06 domestic objects | 02, 11 | Secured objects, bench, plants, fidgets | Interaction scale and placement in engine |
 | H01 sphere/gyro | 03, 08, 13 | Clear enclosure, orientation views, proposed collar and motion | Independent ring/ground clearance and workable tool interfaces |
-| H02–H04 current pilots | 03, 08 | Fox/mole/bird, seats and class kit identity | Sculpt quality, class action sequences and native motion |
+| H02–H04 current pilots | 03, 08, 18 | Fox/mole/bird, seats and class kit identity | Sculpt quality, class action sequences and native motion; correct cloak placement and verify both Kest smoke blink and falling glide |
 | H05 growth/fabrication | 08 | Attraction→intake→fabrication→part and light/heavy comparison | Preserve existing growth/theft; exact heavy-build visibility and mechanical proof |
 | H06 motion | 13 | Rest, roll, bank, land, action, drift and recovery storyboard | Airborne/boost/smash/hit clips; correct directed ring image to actual radial special |
-| H07 alternate roster | Initial source inventory only | Candidate references remain documented | Deferred until an explicit candidate treatment is needed; no launch roster expansion inferred |
+| H07 alternate roster | 17; committed HERO-SPHERE and coordinator ruling | Tally identity and three demo-presence beats; proposed housing study | Reduce wear and distinguish ancient cast form; playable class, unlock and transmog rules are post-alpha |
 | H08 game-distance clarity | A, 09; native prototype | Chase-scale intention and initial native close view | All classes at actual chase distance, heavy growth and effects |
 | E01 faction construction | 04–07 | Fleet bolted repair vs cast ancient families | Native material/shape comparison |
 | E02 core enemies | 04 | Chaser, lobber and vented miniboss mechanisms | Complete warn/attack/recovery sequences |

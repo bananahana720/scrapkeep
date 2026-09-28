@@ -100,5 +100,40 @@
       "status": "untracked proposal with quoted owner direction",
       "snapshot": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/sources/13-WARDEN-DESIGN.md"
     }
-  ]
+  ],
+  "coordinator_refresh": {
+    "captured_utc": "2026-09-28T02:24:51.830398+00:00",
+    "integration_base_pending": true,
+    "sources": [
+      {
+        "commit": "56a1970279b66dd89587338a271b917cbe279502",
+        "path": "sketches/core-loop/design-v2/HERO-SPHERE.md",
+        "sha256": "1e5e6bd36a6fa365aec63fa4ade954d059f0c341b3edf4afb130c4e37f9cb2d6",
+        "snapshot": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/sources/coordinator-2026-09-27/HERO-SPHERE.md",
+        "authority": "Coordinator-provided committed design input; no sibling merge"
+      },
+      {
+        "commit": "30977c3e5580fa4d61a17ded6aaaec52994f3aaf",
+        "path": "sketches/core-loop/design-v2/WARDEN-DESIGN.md",
+        "sha256": "16c5196339d6240ba3e2d23ad68a4375fa412e0636ef01fa5dcb77347772ee22",
+        "snapshot": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/sources/coordinator-2026-09-27/WARDEN-DESIGN.md",
+        "authority": "Coordinator-provided committed design input; no sibling merge"
+      },
+      {
+        "commit": "30977c3e5580fa4d61a17ded6aaaec52994f3aaf",
+        "path": "sketches/core-loop/design-v2/ENEMY-LOOKS.md",
+        "sha256": "80e1209397b06497ea1ea32dd9221f5fdb151f11e892f3d791c73d960ac8d354",
+        "snapshot": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/sources/coordinator-2026-09-27/ENEMY-LOOKS.md",
+        "authority": "Coordinator-provided committed design input; no sibling merge"
+      },
+      {
+        "commit": "5cf151433563639aa1bc8710f69c34453fa5a165",
+        "path": "sketches/core-loop/DESIGN-V2.md",
+        "sha256": "26ce7fc72c305e2716a2f5f2c310fc486f84ee95f93ccc1844125287cdef7b23",
+        "snapshot": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/sources/coordinator-2026-09-27/DESIGN-V2.md",
+        "authority": "Coordinator-provided committed design input; no sibling merge"
+      }
+    ],
+    "animation_beats_only_commit": "29333e88f930314817c2c7b938159a05ad92c177"
+  }
 }
