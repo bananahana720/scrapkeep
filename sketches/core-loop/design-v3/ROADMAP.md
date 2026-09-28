@@ -32,6 +32,20 @@ A build passes when every row holds on the same commit. The rows measure structu
 | P4 Harden and polish | Bots at 16 seeds, fuzz, native performance, captures, an alignment review, the fun-gate check, and a polish pass on the largest gaps. | Every row green |
 | P5 Andrew plays the final draft | Playtest entry 10 and beyond, iterating on his verdict. | His verdict |
 
+## Subtract to add (Andrew, 2026-09-28)
+
+Andrew: "consider subtracting to add ... refine and slim down ... start trimming and slimming down and start shifting where we have to shift in terms of direction and approach". From here on:
+
+1. **The design phase closes** when the in-flight design work lands: the Audio lead, the Codex Feel takeover, the Codex stages spec and the Codex systems review. No new design documents after that; only build notes.
+2. **One design source.** A consolidation pass writes `DESIGN-V3.md`, the single canonical spec (target 400 lines or fewer), from the lab verdict plus LOOP-REDESIGN, SYSTEMS-CHAOS, AUDIO-V3, FEEL-READABILITY and STAGES-2-3-LOOPS.
+   - Those files, the v2 ideation (`design-v2/I1` to `I3`, PROTOCOL, the primer boards) and DEMO-SPEC move to an `archive/` folder with a one-line pointer.
+   - DESIGN-NOTES splits: the v1 and v2 notes go to an archive file, and v3 starts fresh.
+3. **Build the minimum high-impact set first.** The spine, the Warden's reads, juice, the core interactables, a handful of evolutions (not 16), drop gates, the HUD fix, and the audio bed if its spike passes.
+   - Deferred to a post-draft backlog unless the sitting says otherwise: meta progression, Tally, rule parts, cursed caches, blessed Wardens, the seed field, and the extra evolutions.
+4. **Delete losers in code.** After the lab verdict, the unchosen loop mode, the v2 fallback paths and any system the spine makes redundant are removed, not left switchable.
+5. **Fewer threads.** At most 5 Claude agents at once. Codex (Astra) takes consolidation, reviews and design so the Claude limit goes to building. One integration branch for v3.
+6. **Worktree hygiene.** Merged or finished worktrees are archived (`artifacts/local` moved to `/home/andrew/Projects/scrapkeep/artifacts/local/core-loop-worktrees/`), then removed; branches are kept. 21 were removed on 2026-09-28.
+
 ## Rules that keep it reasonable
 
 - Small waves, with results read before the next wave. The coordinator alone merges. The Codex track owns appearance.
