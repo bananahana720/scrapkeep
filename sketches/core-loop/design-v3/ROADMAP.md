@@ -124,7 +124,14 @@ Andrew: "the pilot should react to the player's actions, achievements, or failur
   - Phantom Camera for F3 (the camera).
   - Debug Draw 3D, for drop-line and hit-predicate tuning.
   - A local run-telemetry writer. `run_log` already exists; extend it with death or hit positions for heatmaps before trying Talo.
-  - TRELLIS.2 (MIT) plus Blender cleanup for Codex's prop pipeline, Hunyuan3D only after its licence is read.
+  - Image-to-3D. The tools and results are in `proto/core-loop-v3-img3d` 829e549, `tools/img3d/TRIAL.md`.
+    - **TRELLIS v1 (MIT) works:** 6 to 11 s per mesh on the 4080, cleaned to budget in Blender.
+      - Props come out clean.
+      - The Warden matches the concept from the front but is one fused mesh, so it's useful only as per-part sculpt detail on the jointed Blender kit.
+      - The cliff reads as stacked masonry, not eroded sandstone, so it's promising but not proven. It needs a scored in-engine test and a lip-fold fix before any kit use.
+    - **TRELLIS.2** is blocked: its DINOv3 encoder is gated (a manual Hugging Face approval for Andrew) and it wants 24 GB.
+    - **Hunyuan3D** has territorial limits in its licence, so skip it.
+    - **Reference images must be commercially clean.** Qwen-Image-2.1 is non-commercial, so use Codex imagegen references for anything that ships.
 - **Skip for now:** engine changes, paid pipelines, hosted analytics, and a save addon (the run is short and the settings store works).
 - **Design references:** MDA to name what each system is for, Swink's *Game Feel* for momentum, and a five-question playtest sheet after each sitting (the core loop in one sentence, the best moment, the worst frustration, "again?", and ratings for difficulty, pacing and clarity).
 
