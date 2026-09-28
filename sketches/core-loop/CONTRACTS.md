@@ -676,3 +676,11 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Read-only combat hooks.** `ctx.spawner.last_player_hit` is `{from, shove, source, frame}` for the last hit the ball took (presentation's edge flash). `ctx.spawner.sticky.stuck(at)` is the charge manager's own signal for a thrown charge biting in.
 - **Knockback by class.** `knock` in `Weapons.BASE` is a gun's shove (3 to 6 m/s); a bomb's is its row's `knock` (26) and `BURST_KNOCK`, `LINE_KNOCK`, `OVERDRIVE_KNOCK` (24 to 34); a ram's is `Augments.RAM_KNOCK` (24). The enemy's `weight` divides every shove. Tested by `combat_knockback_test`.
 - **Momentum.** Every feedback kick is camera and shell only. Hit-stop is `Engine.time_scale` through the spine. The ball's velocity changes only where the design already does it (the rocket jump). Tested by `presentation_hitstop_test` and `combat_knockback_test`.
+
+## Reward ceremony v3 (v3 W13)
+
+- **Rows.** `EventKinds.LOOT_ROWS` holds `reward_common`, `reward_rare`, `reward_reveal`, `reward_ceremony` and `reward_payoff`, each with its tier, colour, sound, pause rule (`never` or `calm`) and timings. `REWARD_TIER_BY_RARITY` is the ladder from a part's rarity to its tier, `CEREMONY_SOURCES` lists the `part_gained` sources that are always a ceremony, and `REWARD_RUNGS` sets each rarity's bell on the reward ladder.
+- **One rarity read.** `RewardCeremony.rarity_of(part_id)` reads the part row's `rarity`, and `tier_of(part_id, context)` maps it. No other code picks a tier per part id.
+- **Sources.** A module that grants a ceremonial find calls `run.add_part(id, source)` with a source from `CEREMONY_SOURCES` (`cache`, `cage`, `warden` and `evolution` are reserved for sources not yet on this base). Nothing else is needed.
+- **Reads, never decides.** The ceremony reads `part_gained`, the payoff facts and `build.item_procs()`. It pauses the tree only when calm, sets `menu_held` while it holds, and hands back the ball's exact velocity. `presentation.ceremony.pause_armed` is off in test mode.
+- **Audio.** `audio.stop(sound)` cuts every SFX voice of a sound (a skipped build). Tested by `presentation_ceremony_test`.

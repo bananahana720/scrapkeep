@@ -25,6 +25,7 @@ const MARGIN := 18.0
 const TOAST_COLUMN := 800.0
 const CEREMONY_SCALE := 1.25
 const CRATE := Vector2(220.0, 130.0)
+const CRATE_SCALE := 1.4
 const RAYS := 14
 const BITS := 32
 
@@ -327,7 +328,9 @@ func _draw_crate(centre: Vector2, t: float, p: float, landed: float, alpha: floa
 	var w := 30.0 + 55.0 * p
 	var shake := Vector2(sin(t * w), cos(t * w * 1.37)) * amp
 	var origin := centre + shake + Vector2(0.0, -_screen().y * 0.35 * (1.0 - _ease(landed)))
-	draw_set_transform(origin, sin(t * w * 0.8) * 0.06 * p, Vector2.ONE)
+	for ring in 4:
+		draw_circle(centre, (150.0 + 70.0 * ring) * (0.6 + 0.6 * p), Color(yours, (0.16 - 0.035 * ring) * p * alpha))
+	draw_set_transform(origin, sin(t * w * 0.8) * 0.06 * p, Vector2.ONE * CRATE_SCALE)
 	var body := Rect2(-CRATE * 0.5, CRATE)
 	draw_rect(body.grow(4.0), _faded(Color(Palette.CHARCOAL, 0.8), alpha))
 	draw_rect(body, _faded(Palette.COPPER.darkened(0.4), alpha))
@@ -378,8 +381,8 @@ func _draw_burst(centre: Vector2, bt: float, fade: float) -> void:
 	if bt < 0.3:
 		_draw_crate(centre, 0.0, 1.0, 1.0, 1.0 - bt / 0.3)
 	if bt < 0.7:
-		var lid_at := centre + Vector2(140.0 * bt, -95.0 - 620.0 * bt + 900.0 * bt * bt)
-		draw_set_transform(lid_at, 3.0 * bt, Vector2.ONE)
+		var lid_at := centre + Vector2(140.0 * bt, -95.0 * CRATE_SCALE - 620.0 * bt + 900.0 * bt * bt)
+		draw_set_transform(lid_at, 3.0 * bt, Vector2.ONE * CRATE_SCALE)
 		var lid := Rect2(Vector2(-CRATE.x * 0.5 - 8.0, -12.0), Vector2(CRATE.x + 16.0, 24.0))
 		draw_rect(lid, Color(Palette.COPPER.darkened(0.15), 1.0 - bt / 0.7))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -432,7 +435,6 @@ func _draw_flash(flash: Dictionary) -> void:
 	var x := clampf(_seconds(flash["start_ms"]) / float(flash["life_s"]), 0.0, 1.0)
 	var at: Vector2 = flash["at"]
 	var yours: Color = flash["class_color"]
-	draw_arc(at, 26.0 + 70.0 * _ease(x), 0.0, TAU, 32, Color(yours, 1.0 - x), 4.0 * (1.0 - x) + 1.0, true)
-	var side := 40.0 * (1.0 + 0.8 * _ease(x))
-	var icon := String(flash["icon"])
-	draw_texture_rect(Icons.texture(icon), Rect2(at - Vector2(side, side) * 0.5, Vector2(side, side)), false, _faded(Icons.tint(icon, flash["tint"]), 1.0 - x * x))
+	draw_arc(at, 30.0 + 80.0 * _ease(x), 0.0, TAU, 32, Color(yours, 1.0 - x), 5.0 * (1.0 - x) + 1.0, true)
+	var pop := 1.0 + 0.35 * sin(minf(x / 0.35, 1.0) * PI)
+	_socket(at, 24.0 * pop, String(flash["icon"]), flash["tint"], 1.0 - x * x)

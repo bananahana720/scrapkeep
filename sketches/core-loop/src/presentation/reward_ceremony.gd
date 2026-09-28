@@ -603,7 +603,7 @@ func _pay(armed: Dictionary, fact: String) -> void:
 	var tint := RewardGates.rarity_color(armed["rarity"])
 	var ball: Vector3 = ctx.player.ball_position()
 	if vfx != null:
-		vfx.glyph("reward_payoff", ball + Vector3.UP * 2.2, 0.6, 2.4, float(row["flash_s"]), Vector3.ZERO, "diamond", tint)
+		vfx.glyph("reward_payoff", ball + Vector3.UP * 0.3, 1.0, 3.5, float(row["flash_s"]), Vector3.ZERO, "ring", _class_color())
 	var cam = ctx.camera.cam if ctx.camera != null else null
 	var at := Vector2(800.0, 450.0)
 	if cam != null and cam.is_inside_tree() and not cam.is_position_behind(ball):
