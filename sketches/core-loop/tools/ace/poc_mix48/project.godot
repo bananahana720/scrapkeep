@@ -1,0 +1,11 @@
+; Child project for tests/presentation_sequencer_test.gd: the same POC sequencer and
+; fixtures under a 48 kHz mixer. Godot has no command-line override for the mix rate.
+config_version=5
+
+[application]
+
+config/name="poc-mix48"
+
+[audio]
+
+driver/mix_rate=48000

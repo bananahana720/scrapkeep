@@ -1,0 +1,67 @@
+{
+ "rate": 44100,
+ "beat_samples": 15384,
+ "bar_samples": 61536,
+ "files": [
+  {
+   "id": "stem_drums",
+   "file_id": 0,
+   "sample_count": 984576,
+   "bars": 16,
+   "key_offset": 0,
+   "first_bar_id": 0,
+   "loop": true,
+   "loop_offset": 0,
+   "entry": 0,
+   "exit": 984576
+  },
+  {
+   "id": "stem_bass",
+   "file_id": 1,
+   "sample_count": 984576,
+   "bars": 16,
+   "key_offset": 0,
+   "first_bar_id": 0,
+   "loop": true,
+   "loop_offset": 0,
+   "entry": 0,
+   "exit": 984576
+  },
+  {
+   "id": "stem_other",
+   "file_id": 2,
+   "sample_count": 984576,
+   "bars": 16,
+   "key_offset": 0,
+   "first_bar_id": 0,
+   "loop": true,
+   "loop_offset": 0,
+   "entry": 0,
+   "exit": 984576
+  },
+  {
+   "id": "landing",
+   "file_id": 3,
+   "sample_count": 247168,
+   "bars": 4,
+   "key_offset": 0,
+   "first_bar_id": 16,
+   "loop": false,
+   "loop_offset": 0,
+   "entry": 0,
+   "exit": 246144
+  },
+  {
+   "id": "lift",
+   "file_id": 4,
+   "sample_count": 62560,
+   "bars": 1,
+   "key_offset": 1,
+   "first_bar_id": 20,
+   "loop": false,
+   "loop_offset": 0,
+   "entry": 0,
+   "exit": 61536
+  }
+ ]
+}
