@@ -18,8 +18,17 @@ const Palette := preload("res://src/core/palette.gd")
 # verb       the prompt's first word. A device adds its own terms, PROMPT_WORDS in all.
 # arm, fire  the sound register: `sound` is a baked stand-in, `sound_next` the cue W5 is
 #            to bake (SOUND-STORY registers). won and lost voice an outcome.
+# cost       what a device of the family may charge: "none", "cores" (this stage's bonus
+#            cores) or "scrap" (wallet scrap through run.spend_scrap(), which keeps mass,
+#            so paying never shrinks heft; only a telegraphed theft does).
 
+# E locks the nearest ready device inside FACING_DEG of the look and within LOCK_REACH,
+# so a ball at 40 m/s has about 0.45 s between the lock and the device. The lock holds
+# until the device is RELEASE_REACH away, so a hold may finish after the ball has passed.
+# A lock beyond REACH yields to a steep face Sable could mount; within REACH it wins.
 const REACH := 6.0
+const LOCK_REACH := 18.0
+const RELEASE_REACH := 24.0
 const FACING_DEG := 60.0
 const GLYPH_REACH := 30.0
 const HOLD_SECONDS := 0.35
@@ -29,25 +38,25 @@ const KEY := "key_e"
 
 const FAMILIES := {
 	"travel": {"icon": "obj_launch", "shape": "arrow", "color": Palette.AMBER, "accent": Palette.SAND,
-		"consent": "roll", "verb": "Ride",
+		"cost": "none", "consent": "roll", "verb": "Ride",
 		"arm": {"sound": "ui_tick", "sound_next": "gauge_tick"},
 		"fire": {"sound": "launch_roar", "sound_next": "launch_arpeggio"}},
 	"fight": {"icon": "thr_instant", "shape": "cross", "color": Palette.HAZARD, "accent": Palette.COPPER,
-		"consent": "hold", "verb": "Fight",
+		"cost": "none", "consent": "hold", "verb": "Fight",
 		"arm": {"sound": "clank", "sound_next": "brass_anvil"},
 		"fire": {"sound": "build_riser", "sound_next": "miniboss_riser"},
 		"won": {"sound": "found_chime", "sound_next": "ambush_cleared"},
 		"lost": {"sound": "event_end"}},
 	"secret": {"icon": "obj_vault", "shape": "diamond", "color": Palette.VERDIGRIS, "accent": Palette.CHARCOAL,
-		"consent": "press", "verb": "Open",
+		"cost": "none", "consent": "press", "verb": "Open",
 		"arm": {"sound": "found_chime"},
 		"fire": {"sound": "vault_rise", "sound_next": "codex_discovery_burst"}},
 	"ally": {"icon": "cat_defense", "shape": "ring", "color": Palette.ANCIENT, "accent": Palette.ARC,
-		"consent": "hold", "verb": "Wake",
+		"cost": "scrap", "consent": "hold", "verb": "Wake",
 		"arm": {"sound": "zap_hum", "sound_next": "cherenkov_flicker"},
 		"fire": {"sound": "beacon_hum", "sound_next": "class_motif_sine"}},
 	"bet": {"icon": "trg_timed", "shape": "star", "color": Palette.COPPER, "accent": Palette.HAZARD,
-		"consent": "hold", "verb": "Double",
+		"cost": "cores", "consent": "hold", "verb": "Double",
 		"arm": {"sound": "rivet_hihat_roll", "sound_next": "drum_roll"},
 		"fire": {"sound": "bench_clank", "sound_next": "slot_clunk"},
 		"won": {"sound": "synergy_hit", "sound_next": "crit_crack"},

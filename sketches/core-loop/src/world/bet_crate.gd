@@ -3,10 +3,14 @@ extends "res://src/world/device.gd"
 # A double-or-nothing crate, the risk-bet family (LOOP-REDESIGN section 9): a copper
 # crate with a HAZARD stripe and an odds dial on a post, half mint (heads) and half rust
 # (tails). Hold E to stake every bonus core you carry this stage: heads doubles them,
-# tails burns them. The result lands as three beats: the drum roll while the needle
+# tails burns them. The stake is on the prompt from the moment E locks the crate, before
+# the hold starts. The result lands as three beats: the drum roll while the needle
 # spins (interact_armed), the clunk as it stops on its half (interact_fired), then the
-# crack of a win or the dry refusal of a loss (bet_resolved) as the cores move. Luck
-# comes from the interact system's seeded stream, so a replay rolls the same.
+# crack of a win or the dry refusal of a loss (bet_resolved) as the cores move.
+#
+# One committed wager per crate per stage: once it lands the crate is spent. Its luck is
+# the interact system's stream for this crate, run and stage, which a stage restart
+# replays, so restarting to bet again lands the same way and fishing pays nothing.
 # With no core to stake it is not ready: the dial shows, the keycap does not.
 
 const ODDS := 0.5
@@ -18,8 +22,6 @@ var stake := 0
 var outcome := false
 var rolling := false
 var last := {}
-# The luck draw this roll used ({"draw", "tick"}), so its result can be replayed.
-var luck := {}
 var _clock := 0.0
 var _needle: Node3D
 var _landed := false
@@ -51,7 +53,7 @@ func reach_point() -> Vector3:
 
 
 func ready_now() -> bool:
-	return not rolling and ctx.run.bonus_cores >= 1
+	return not spent and not rolling and ctx.run.bonus_cores >= 1
 
 
 func gauge() -> float:
@@ -65,8 +67,7 @@ func terms() -> String:
 
 func fire() -> bool:
 	stake = ctx.run.bonus_cores
-	outcome = system.luck().randf() < ODDS
-	luck = system.last_luck.duplicate()
+	outcome = system.luck(id).randf() < ODDS
 	rolling = true
 	_landed = false
 	_clock = 0.0
@@ -97,5 +98,6 @@ func _resolve() -> void:
 			ctx.run.add_core("bet", at)
 	else:
 		ctx.run.burn_cores()
-	last = {"won": outcome, "stake": stake, "cores": ctx.run.bonus_cores, "luck": luck}
+	spent = true
+	last = {"won": outcome, "stake": stake, "cores": ctx.run.bonus_cores}
 	ctx.events.bet_resolved.emit(id, outcome, stake, at)

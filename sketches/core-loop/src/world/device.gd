@@ -76,19 +76,32 @@ func tick(_delta: float) -> void:
 	pass
 
 
-# Within REACH and inside FACING_DEG of where the camera looks; a travel device is in
-# reach anywhere in its lane instead.
-func in_reach(ball: Vector3, forward: Vector3) -> bool:
+# E can lock it: within LOCK_REACH and inside FACING_DEG of where the camera looks. A
+# travel device locks anywhere in its lane instead.
+func acquirable(ball: Vector3, forward: Vector3) -> bool:
 	if roll != null:
 		return roll.in_lane(ball)
 	var to := reach_point() - ball
-	if to.length() > Interactables.REACH:
+	if to.length() > Interactables.LOCK_REACH:
 		return false
 	var flat := Vector2(to.x, to.z)
 	var look := Vector2(forward.x, forward.z)
 	if flat.length() < 1.5 or look.length() < 0.01:
 		return true
 	return absf(rad_to_deg(flat.angle_to(look))) <= Interactables.FACING_DEG
+
+
+# A lock, once made, holds while this is true, facing or not: the ball may pass the
+# device mid-hold. A travel lock holds while the ball is in the lane.
+func holds_lock(ball: Vector3) -> bool:
+	if roll != null:
+		return roll.in_lane(ball)
+	return ball.distance_to(reach_point()) <= Interactables.RELEASE_REACH
+
+
+# Close enough to win E over a steep face Sable could mount.
+func near(ball: Vector3) -> bool:
+	return roll != null or ball.distance_to(reach_point()) <= Interactables.REACH
 
 
 func show_prompt(targeted: bool) -> void:

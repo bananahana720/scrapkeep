@@ -5,7 +5,12 @@ extends "res://src/world/device.gd"
 # the ball crosses the mouth, at any speed. What firing does belongs to the owner: it
 # passes on_fire(ball, velocity), which starts its own ride (writer L1's lift throws the
 # ball to the shelf). Interact.travel() builds and registers one.
+#
+# A ride banks the speed the ball crossed with and gives it back, never less: pass
+# `banked` as RideRail.arc()'s planar_in, whose release returns the ball's own planar
+# speed or the ride's floor, whichever is higher (ride_rail.gd).
 
+var banked := 0.0
 var on_fire := Callable()
 var ready_check := Callable()
 var destination := "the shelf"
@@ -52,6 +57,8 @@ func terms() -> String:
 
 
 func fire() -> bool:
+	var v: Vector3 = ctx.player.state.velocity
+	banked = Vector2(v.x, v.z).length()
 	if on_fire.is_valid():
-		on_fire.call(ctx.player.ball_position(), ctx.player.state.velocity)
+		on_fire.call(ctx.player.ball_position(), v)
 	return true

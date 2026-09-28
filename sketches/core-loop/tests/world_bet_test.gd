@@ -7,16 +7,17 @@ const Interact := preload("res://src/world/interact.gd")
 
 # The double-or-nothing crate on stage 1's bowl bank (LOOP-REDESIGN section 9), in the
 # running game as Rivet in calm. With no core it is not ready: the dial shows, the
-# keycap does not, and a held E does nothing. With two cores a held E stakes them: the
-# drum roll (armed), the clunk (fired) and the crack or refusal (bet_resolved) land in
-# that order, and the cores end doubled (heads) or burned (tails; it bets again until one
-# lands). The outcome is a pure function of the run's seed, the stage, its retries, the
-# draw and the stage tick: the same inputs replay the same way, the in-game bet matches
-# its replay, and both outcomes come up across seeds and across ticks of one seed.
+# keycap does not, and a held E does nothing. Locked with two cores, the prompt names
+# the stake before the hold. A held E stakes them: the drum roll (armed), the clunk
+# (fired) and the crack or refusal (bet_resolved) land in that order, the cores end
+# doubled or burned, and the crate is spent: a second hold does nothing. A stage
+# restart replays the same roll, so restarting cannot re-roll it. Luck is a pure
+# function of the run seed, run id, stage and crate: the same inputs land the same way,
+# and across run ids both outcomes come up; the burn and the doubling are each played in
+# the game on a run id chosen to land them.
 
 const RIVET := 1
-const SEEDS := [20260926, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-const TAILS_TRIES := 8
+const RUN_IDS := ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
 
 var _game
 var _source := Intent.Scripted.new()
@@ -27,8 +28,7 @@ var _ticks := 0
 var _entered := false
 var _crate
 var _order: Array = []
-var _seed := 0
-var _tries := 0
+var _first := {}
 
 
 func _initialize() -> void:
@@ -84,11 +84,18 @@ func _begin() -> void:
 		[_noop, 30, _find_crate],
 		[_approach, 8, _hold_e],
 		[_noop, 45, _check_not_ready],
-		[_stake_two, 4, _hold_e],
+		[_stake_two, 4, _check_disclosed],
+		[_noop, 1, _hold_e],
 		[_noop, 170, _check_bet],
-		[_noop, 4, _hold_e],
-		[_noop, 170, _until_tails],
-		[_noop, 1, _check_seeds],
+		[_noop, 1, _hold_e],
+		[_noop, 60, _check_spent],
+		[_restart, 4, _hold_e],
+		[_noop, 170, _check_restart],
+		[_restart_tails, 4, _hold_e],
+		[_noop, 170, _check_tails],
+		[_restart_heads, 4, _hold_e],
+		[_noop, 170, _check_heads],
+		[_noop, 1, _check_luck],
 	]
 
 
@@ -128,54 +135,103 @@ func _check_not_ready() -> void:
 func _stake_two() -> void:
 	_game.run.add_core("test", _crate.global_position)
 	_game.run.add_core("test", _crate.global_position)
-	_seed = _game.ctx.rng.seed
 	_order.clear()
+
+
+func _check_disclosed() -> void:
+	var prompt = _crate.prompt
+	var words: String = prompt.parts()["title"]
+	_report("the stake shows before the hold", prompt.keycap == "key_e" and words.contains("2 cores") and _order.is_empty(),
+		"locked with 2 cores, before any E: keycap \"%s\", prompt \"%s\"" % [prompt.keycap, words])
 
 
 func _check_bet() -> void:
 	_source.hold = {}
 	var result: Dictionary = _crate.last
-	var want := 4 if result.get("won", false) else 0
-	var ordered: bool = _order.size() == 3 and _order[0] == "armed" and _order[1] == "fired" and _order[2] == ("won" if result.get("won", false) else "lost")
+	var won: bool = result.get("won", false)
+	var want := 4 if won else 0
+	var ordered: bool = _order == ["armed", "fired", "won" if won else "lost"]
 	_report("drum roll, clunk, then the result", ordered and result.get("stake", 0) == 2 and _game.run.bonus_cores == want,
 		"staked 2 cores: beats %s, cores now %d (want %d)" % [_order, _game.run.bonus_cores, want])
-	var luck: Dictionary = result.get("luck", {})
-	_report("replay matches", not luck.is_empty() and _replay(_seed, luck) == bool(result.get("won", false)),
-		"seed %d draw %d at tick %d replays as %s; the game rolled %s" % [_seed, luck.get("draw", -1), luck.get("tick", -1), _replay(_seed, luck), result.get("won", false)])
+	_report("replay matches", _replay(_game.run.run_id, _crate.id) == won,
+		"run %s, stage 1, %s replays as %s; the game rolled %s" % [_game.run.run_id, _crate.id, _replay(_game.run.run_id, _crate.id), won])
+	_first = result.duplicate()
+	_order.clear()
+	if _game.run.bonus_cores == 0:
+		_game.run.add_core("test", _crate.global_position)
 
 
-# Bets again until one lands tails (bounded), so the burn is seen in the game too.
-func _until_tails() -> void:
+func _check_spent() -> void:
 	_source.hold = {}
-	var result: Dictionary = _crate.last
-	_tries += 1
-	if result.get("won", false) and _tries < TAILS_TRIES:
-		_order.clear()
-		_index -= 2
-		return
-	_report("tails burns them", not result.get("won", true) and _order.slice(-3) == ["armed", "fired", "lost"] and _game.run.bonus_cores == 0,
-		"bet %d staked %d cores: beats %s, cores now %d" % [_tries + 1, result.get("stake", 0), _order.slice(-3), _game.run.bonus_cores])
+	_report("one wager per crate", _order.is_empty() and _crate.spent and not _crate.rolling,
+		"a second hold after the bet landed: beats %s, spent %s" % [_order, _crate.spent])
 
 
-# What a recorded roll replays as: the run seed, stage 1, no retries, its draw and tick.
-func _replay(run_seed: int, luck: Dictionary) -> bool:
+# R: back to the stage start. The crate is fresh, the cores are the stage start's (none),
+# so the test hands back two and bets again.
+func _restart() -> void:
+	_source.hold = {}
+	_game.flow.retry_stage()
+	_crate = null
+	_find_crate()
+	_approach()
+	_game.run.add_core("test", _crate.global_position)
+	_game.run.add_core("test", _crate.global_position)
+	_order.clear()
+
+
+func _check_restart() -> void:
+	_source.hold = {}
+	var again: bool = _crate.last.get("won", not _first.get("won", false))
+	_report("a restart cannot re-roll", _crate.spent and again == bool(_first.get("won", false)) and _game.run.retries == 1,
+		"after retry %d the same bet lands %s again (first %s)" % [_game.run.retries, again, _first.get("won", false)])
+
+
+# The burn and the doubling in the game: a run id whose crate lands that way, then a
+# restart.
+func _restart_tails() -> void:
+	_rig(false)
+
+
+func _restart_heads() -> void:
+	_rig(true)
+
+
+func _rig(heads: bool) -> void:
+	for run_id in RUN_IDS:
+		if _replay(run_id, "rim_crate") == heads:
+			_game.run.run_id = run_id
+			break
+	_restart()
+
+
+func _check_heads() -> void:
+	_source.hold = {}
+	_report("heads doubles them", _order == ["armed", "fired", "won"] and _crate.last.get("stake", 0) == 2 and _game.run.bonus_cores == 4,
+		"run %s staked %d cores: beats %s, cores now %d" % [_game.run.run_id, _crate.last.get("stake", 0), _order, _game.run.bonus_cores])
+
+
+func _check_tails() -> void:
+	_source.hold = {}
+	_report("tails burns them", _order == ["armed", "fired", "lost"] and _crate.last.get("stake", 0) == 2 and _game.run.bonus_cores == 0,
+		"run %s staked %d cores: beats %s, cores now %d" % [_game.run.run_id, _crate.last.get("stake", 0), _order, _game.run.bonus_cores])
+
+
+# What a crate's one roll is for a run seed, run id, stage 1 and crate id.
+func _replay(run_id: String, crate_id: String) -> bool:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = Interact.luck_seed(run_seed, 1, 0, int(luck.get("draw", 0)), int(luck.get("tick", 0)))
+	rng.seed = Interact.luck_seed(_game.ctx.rng.seed, run_id, 1, crate_id)
 	return rng.randf() < BetCrate.ODDS
 
 
-func _check_seeds() -> void:
+func _check_luck() -> void:
 	var same := true
-	var by_seed := 0
-	var by_tick := 0
+	var heads := 0
 	var rolls := PackedStringArray()
-	for i in SEEDS.size():
-		var at_seed := _replay(SEEDS[i], {"draw": 0, "tick": 600})
-		var at_tick := _replay(_seed, {"draw": 0, "tick": 600 + i})
-		same = same and at_seed == _replay(SEEDS[i], {"draw": 0, "tick": 600})
-		by_seed += 1 if at_seed else 0
-		by_tick += 1 if at_tick else 0
-		rolls.append("%s%s" % ["H" if at_seed else "T", "H" if at_tick else "T"])
-	_report("deterministic per seed", same, "each of %d seeds replayed twice lands the same way (seed, tick): %s" % [SEEDS.size(), " ".join(rolls)])
-	_report("both outcomes reachable", by_seed > 0 and by_seed < SEEDS.size() and by_tick > 0 and by_tick < SEEDS.size(),
-		"heads on %d of %d seeds, and on %d of %d consecutive ticks of this run's seed" % [by_seed, SEEDS.size(), by_tick, SEEDS.size()])
+	for run_id in RUN_IDS:
+		var first := _replay(run_id, "rim_crate")
+		same = same and first == _replay(run_id, "rim_crate")
+		heads += 1 if first else 0
+		rolls.append("%s:%s" % [run_id, "H" if first else "T"])
+	_report("deterministic per run", same, "each of %d run ids replayed twice lands the same way: %s" % [RUN_IDS.size(), " ".join(rolls)])
+	_report("both outcomes reachable", heads > 0 and heads < RUN_IDS.size(), "%d heads and %d tails across %d runs" % [heads, RUN_IDS.size() - heads, RUN_IDS.size()])

@@ -156,7 +156,7 @@ func fire() -> bool:
 	state = PICKING
 	_lid.position += Vector3(0.0, 0.6, -0.4)
 	_lid.rotation.x = -0.9
-	offers = Parts.roll(system.luck(), PICK_RARITIES, ctx.run.class_id(), ctx.run.parts, PICKS)
+	offers = Parts.roll(system.luck(id), PICK_RARITIES, ctx.run.class_id(), ctx.run.parts, PICKS)
 	var ball: Vector3 = ctx.player.ball_position()
 	_inside.clear()
 	for i in _pedestals.size():

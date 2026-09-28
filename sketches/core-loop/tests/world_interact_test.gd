@@ -6,26 +6,34 @@ const Interactables := preload("res://src/world/interactables.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
 # The interact key (LOOP-REDESIGN section 9) in the running game, as Sable on stage 1 in
-# calm: E takes an interactable in reach over a steep face, and mounts at a bare face;
-# a tap never arms a hold and a held E arms it after HOLD_SECONDS; a roll-through lane
-# fires at 30 m/s as the ball crosses its mouth without slowing it, and a ball that
-# crosses wide of the mouth fires nothing and loses nothing. Every stage-1 prompt shows
-# at most PROMPT_WORDS words.
+# calm. E takes an interactable in reach over a steep face and mounts at a bare face;
+# a lock farther than the reach yields to the face; a move already under way (the hook
+# in) keeps E. A tap never arms a hold and a held E arms it after HOLD_SECONDS. A lock
+# made at 40 m/s finishes its hold after the ball has passed the device, at speed. A
+# roll-through lane fires at 30 m/s as the ball crosses its mouth without slowing it,
+# and a ball that crosses wide of the mouth fires nothing and loses nothing. Every
+# stage-1 prompt shows at most PROMPT_WORDS words.
 
 
 class Probe:
 	extends "res://src/world/device.gd"
 
 	var fired_at := -1
+	var fired_ball := Vector3.ZERO
+	var fired_speed := 0.0
 
 	func fire() -> bool:
 		fired_at = Engine.get_physics_frames()
+		fired_ball = ctx.player.ball_position()
+		fired_speed = ctx.player.planar_velocity().length()
 		return true
 
 
 const SABLE := 0
 const LANE_START := Vector2(-20.0, -100.0)
 const LANE_SPEED := 30.0
+const PASS_SPEED := 40.0
+const PASS_AHEAD := 10.0
 
 var _game
 var _source := Intent.Scripted.new()
@@ -87,10 +95,16 @@ func _begin() -> void:
 		_game.events.connect(kind, func(family: String, device_id: String, _at: Vector3): _facts[kind].append([family, device_id]))
 	_steps = [
 		[_noop, 30, _noop],
-		[_face_with_probe, 20, _press_e],
+		[_face_with_probe.bind(3.0), 20, _press_e],
 		[_noop, 6, _check_probe_wins],
 		[_bare_face, 20, _press_e],
 		[_noop, 12, _check_mounts],
+		[_face_with_probe.bind(12.0), 20, _press_e],
+		[_noop, 12, _check_far_yields],
+		[_hooked_at_face, 3, _press_e],
+		[_noop, 12, _check_hook_kept],
+		[_pass_at_speed, 2, _hold_e],
+		[_noop, 60, _check_pass],
 		[_hold_probe, 20, _tap_e],
 		[_noop, 40, _check_tap],
 		[_noop, 2, _hold_e],
@@ -143,11 +157,14 @@ func _hold_e() -> void:
 	_source.hold["mount_held"] = true
 
 
-# A steep wall right beside the ball (the pylon's face) and a probe 3 m ahead.
-func _face_with_probe() -> void:
+# A steep wall right beside the ball (the pylon's face) and a probe `ahead` metres on.
+func _face_with_probe(ahead: float) -> void:
+	_clear_probe()
 	var ball := _ground(-62.0, -160.0)
 	_place(ball)
 	var side := _forward().cross(Vector3.UP)
+	if _wall != null:
+		_wall.queue_free()
 	_wall = StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -157,7 +174,16 @@ func _face_with_probe() -> void:
 	_game.add_child(_wall)
 	_wall.global_position = ball + side * 2.3
 	_wall.look_at(_wall.global_position + _forward(), Vector3.UP)
-	_probe = _add_probe("secret", ball + _forward() * 3.0)
+	_probe = _add_probe("secret", ball + _forward() * ahead)
+
+
+func _clear_probe() -> void:
+	if _probe != null and is_instance_valid(_probe):
+		_interact().devices.erase(_probe)
+		_probe.queue_free()
+	_probe = null
+	if _game.player.kit.mounted:
+		_source.press["mount_pressed"] = true
 
 
 func _add_probe(family: String, at: Vector3):
@@ -177,9 +203,7 @@ func _check_probe_wins() -> void:
 
 
 func _bare_face() -> void:
-	_interact().devices.erase(_probe)
-	_probe.queue_free()
-	_probe = null
+	_clear_probe()
 	var ball := _ground(-62.0, -160.0)
 	_place(ball)
 
@@ -190,8 +214,55 @@ func _check_mounts() -> void:
 	_source.press["mount_pressed"] = true
 
 
+func _check_far_yields() -> void:
+	var kit = _game.player.kit
+	_report("a far lock yields to a face", _probe.fired_at < 0 and kit.mounted and _interact().target == _probe,
+		"probe locked 12 m ahead, a face beside the ball: E mounted %s, probe fired %s" % [kit.mounted, _probe.fired_at > 0])
+	_source.press["mount_pressed"] = true
+
+
+# The hook in the wall beside the ball, a probe 3 m ahead: the grapple is under way.
+func _hooked_at_face() -> void:
+	_face_with_probe(3.0)
+	var ball: Vector3 = _game.player.ball_position()
+	var side := _forward().cross(Vector3.UP)
+	_game.player.grapple_to(ball + side * 1.8, -side)
+
+
+func _check_hook_kept() -> void:
+	var kit = _game.player.kit
+	_report("a started move keeps E", _probe.fired_at < 0 and kit.mounted,
+		"hooked into the face with a probe in reach: E mounted %s, probe fired %s" % [kit.mounted, _probe.fired_at > 0])
+	_game.player.release_grapple()
+	_source.press["mount_pressed"] = true
+
+
+# 40 m/s along the lane's line, a hold probe PASS_AHEAD metres on and 3 m to the side:
+# E held from the lock, the ball passes the probe before the hold is done.
+func _pass_at_speed() -> void:
+	_clear_probe()
+	if _wall != null:
+		_wall.queue_free()
+		_wall = null
+	var heading := Vector3(1.0, 0.0, 0.0)
+	_game.camera.snap(heading)
+	var start := _ground(LANE_START.x, LANE_START.y)
+	_place(start, heading * PASS_SPEED)
+	var at := _ground(LANE_START.x + PASS_AHEAD, LANE_START.y + 3.0)
+	_probe = _add_probe("fight", at)
+	_facts["interact_armed"].clear()
+
+
+func _check_pass() -> void:
+	_source.hold = {}
+	var passed: float = _probe.fired_ball.x - _probe.reach_point().x
+	_report("a lock at speed completes", _probe.fired_at > 0 and passed > 0.0 and _probe.fired_speed >= PASS_SPEED * 0.8,
+		"locked %.0f m ahead at %.0f m/s, E held: fired %s with the ball %.1f m past the probe at %.1f m/s"
+			% [PASS_AHEAD, PASS_SPEED, _probe.fired_at > 0, passed, _probe.fired_speed])
+
+
 func _hold_probe() -> void:
-	_wall.queue_free()
+	_clear_probe()
 	var ball := _ground(-62.0, -160.0)
 	_place(ball)
 	_facts["interact_armed"].clear()

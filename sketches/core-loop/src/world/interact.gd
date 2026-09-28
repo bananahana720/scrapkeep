@@ -27,14 +27,12 @@ const DEVICES := {
 
 var ctx
 var devices: Array = []
-# The device E reaches this tick, or null.
+# The device E reaches this tick, or null, and the lock it keeps (see find_target).
 var target = null
+var lock = null
 var _hold := {}
 var _last_ball := Vector3.INF
 var _owned: Array = []
-var _draws := 0
-# The last luck() draw's index and stage tick, so a result can be replayed.
-var last_luck := {}
 
 
 func setup(ctx_ref) -> void:
@@ -68,9 +66,9 @@ func clear() -> void:
 	devices = devices.filter(func(d): return is_instance_valid(d) and not d in _owned)
 	_owned.clear()
 	target = null
+	lock = null
 	_hold = {}
 	_last_ball = Vector3.INF
-	_draws = 0
 
 
 # A device built by someone else joins the E routing for as long as it lives. The lift
@@ -106,27 +104,36 @@ func _forward() -> Vector3:
 	return -ctx.player.drive_basis.z
 
 
-# The device E would reach now: the nearest ready one in reach.
+# The device E would reach now. While a hold runs it is the held device, as long as its
+# lock holds. Otherwise the nearest ready device it can lock, and failing that the last
+# lock while it holds, so a device the ball has just passed keeps E.
 func find_target():
 	if ctx == null or not ctx.flow.in_stage():
 		return null
 	var ball: Vector3 = ctx.player.ball_position()
+	if not _hold.is_empty():
+		var held = _hold["device"]
+		return held if live(held) and held.holds_lock(ball) else null
 	var forward := _forward()
 	var best = null
 	var best_d := INF
 	for device in devices:
-		if not live(device) or not device.ready_now() or not device.in_reach(ball, forward):
+		if not live(device) or not device.ready_now() or not device.acquirable(ball, forward):
 			continue
 		var d: float = ball.distance_to(device.reach_point())
 		if d < best_d:
 			best = device
 			best_d = d
+	if best == null and live(lock) and lock.ready_now() and lock.holds_lock(ball):
+		best = lock
 	return best
 
 
-# The player's question before E mounts: does an interactable take this press?
-func claims() -> bool:
-	return find_target() != null
+# The player's question before E mounts: does an interactable take this press? A lock
+# beyond REACH yields when Sable has a face to mount (face_in_reach).
+func claims(face_in_reach := false) -> bool:
+	var device = find_target()
+	return device != null and (not face_in_reach or device.near(ctx.player.ball_position()))
 
 
 # The class ring round the reticle while a hold arms, 0 to 1.
@@ -138,11 +145,13 @@ func _physics_process(delta: float) -> void:
 	if ctx == null or not ctx.flow.in_stage():
 		_hold = {}
 		target = null
+		lock = null
 		_last_ball = Vector3.INF
 		return
 	var ball: Vector3 = ctx.player.ball_position()
 	var intent = ctx.player.intent
 	target = find_target()
+	lock = target
 	if intent.interact_pressed and target != null:
 		_consent(target)
 	_step_hold(delta, intent.mount_held)
@@ -200,22 +209,17 @@ func fired(device) -> void:
 	ctx.events.interact_fired.emit(device.family, device.id, device.reach_point())
 
 
-# A fresh stream for one draw of luck this stage (a bet, a cache's picks). Its seed is
-# the run's seed, the stage, its retry count, the draw's index and the stage tick it
-# is drawn on (luck_seed). The same run and inputs replay the same luck; the run's seed
-# is one constant (game.gd SEED), so the tick is what keeps luck from being a fixed
-# sequence a player could learn; and the run's shared stream is left alone.
-func luck() -> RandomNumberGenerator:
+# The one stream of luck a device draws from this stage (a bet, a cache's picks). Its
+# seed is the run's seed, the run's id, the stage and the device (luck_seed). A stage
+# restart replays the same luck, so restarting never re-rolls a result; another run
+# (another run_id; game.gd's SEED is one constant) rolls differently; the run log keeps
+# run_id, so a replay that restores it matches. ctx.rng is never touched, so a draw
+# cannot shift the gates' rolls.
+func luck(device_id: String) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
-	last_luck = {"draw": _draws, "tick": tick()}
-	rng.seed = luck_seed(ctx.rng.seed, ctx.run.stage, ctx.run.retries, _draws, last_luck["tick"])
-	_draws += 1
+	rng.seed = luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, device_id)
 	return rng
 
 
-func tick() -> int:
-	return int(round(ctx.run.stage_time * Engine.physics_ticks_per_second))
-
-
-static func luck_seed(run_seed: int, stage: int, retries: int, draw: int, at_tick: int) -> int:
-	return hash([run_seed, stage, retries, draw, at_tick])
+static func luck_seed(run_seed: int, run_id: String, stage: int, device_id: String) -> int:
+	return hash([run_seed, run_id, stage, device_id])
