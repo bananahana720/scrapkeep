@@ -7,6 +7,8 @@ extends "res://src/combat/counter.gd"
 # enemies near it, or the drone itself when it flies alone) at PULL for up to WINCH
 # seconds. A jump, a boost or a smash snaps the cable; so does killing the drone.
 
+const Bolts := preload("res://src/combat/bolts.gd")
+
 const HOVER := 5.5
 const CLIMB := 4.0
 const LANE_LENGTH := 20.0
@@ -71,7 +73,7 @@ func _live(_delta: float) -> bool:
 func pack_centre() -> Vector3:
 	var sum := Vector3.ZERO
 	var count := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy == self or not is_instance_valid(enemy) or enemy.is_dead():
 			continue
 		if enemy.global_position.distance_to(global_position) <= PACK_REACH:

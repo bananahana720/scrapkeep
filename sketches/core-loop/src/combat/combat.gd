@@ -331,6 +331,9 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			kind = "chaser"
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
+	# Joining the group can leave its size unchanged (a fixture that dropped one and spawned
+	# another), so the shared enemy list is thrown away here rather than trusted.
+	Bolts.forget_enemies()
 	enemy.global_position = at
 	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
 	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
@@ -751,7 +754,7 @@ func _physics_process(delta: float) -> void:
 	if not intent.fire_held:
 		_cooldown = maxf(_cooldown, 0.0)
 	_step_special(intent, delta)
-	var enemies := get_tree().get_nodes_in_group("enemy")
+	var enemies := Bolts.enemy_snapshot(get_tree())
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
@@ -769,7 +772,7 @@ func _physics_process(delta: float) -> void:
 func _tint() -> void:
 	var punch := punch_now()
 	var ram := ram_punch_now()
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
 			continue
 		var against: float = ram if enemy.has_method("tint_verb") and enemy.tint_verb() == "ram" else punch
@@ -914,7 +917,7 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
 func _nearest(at: Vector3, reach: float, exclude: Array) -> Node3D:
 	var best: Node3D = null
 	var best_distance := reach
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy in exclude or enemy.is_dead():
 			continue
 		var distance: float = enemy.global_position.distance_to(at)
@@ -926,7 +929,7 @@ func _nearest(at: Vector3, reach: float, exclude: Array) -> Node3D:
 
 func _nearest_list(at: Vector3, reach: float, limit: int) -> Array:
 	var found := []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy.is_dead():
 			continue
 		var distance: float = enemy.global_position.distance_to(at)
@@ -1126,7 +1129,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 	var hit := 0
 	var from: Vector3 = shape["from"]
 	var to: Vector3 = shape["to"]
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position, _hull(enemy)):
 			continue
 		# Marked: the line tags what it hits, and charges hit tagged targets harder.
@@ -1194,7 +1197,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 
 func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
 	var found := []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if not enemy.is_dead() and in_ring(centre, radius, enemy):
 			found.append([enemy.global_position.distance_to(centre), enemy])
 	found.sort_custom(func(a, b): return a[0] < b[0])
@@ -1211,7 +1214,7 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 	var centre: Vector3 = shape.get("centre", at)
 	var pull: bool = _knob("blast_pull") and not _echoing
 	var hit := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
 		var away: Vector3 = enemy.global_position - at
@@ -1333,7 +1336,7 @@ func _detonate(charge: Dictionary) -> void:
 	var damage: float = charge["damage"]
 	if _knob("sticky_grow"):
 		damage *= 1.0 + Weapons.GROW_PER_SECOND * minf(Weapons.GROW_MAX_SECONDS, _clock - float(charge.get("born", _clock)))
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy.is_dead():
 			continue
 		if (enemy.global_position - at).length() - _hull(enemy) > radius * (1.0 + AbilityState.FORGIVENESS):
@@ -1404,7 +1407,7 @@ func _on_blink(from: Vector3, to: Vector3) -> void:
 	effects.ring(from, 2.5, ClassDef.KEST_COLOR)
 	_start_cloak()
 	if _knob("blink_cut"):
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in Bolts.enemy_snapshot(get_tree()):
 			if not enemy.is_dead() and in_line(from, to, Weapons.BLINK_CUT_WIDTH, enemy.global_position, _hull(enemy)):
 				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, 8.0, 0.3, "", "item_proc")
 	if _knob("smoke_cloud") > 0.0:
@@ -1683,7 +1686,7 @@ func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: 
 # A batted shell's blast hits every enemy its amber ring contains.
 func _on_shell_returned(shell: Node3D) -> void:
 	var ring: Node3D = shell.ring
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in Bolts.enemy_snapshot(get_tree()):
 		if enemy.is_dead() or not is_instance_valid(ring) or not ring.contains(enemy.global_position - Vector3.UP * enemy.half_height):
 			continue
 		var owned: bool = enemy == shell.lobber

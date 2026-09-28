@@ -472,7 +472,7 @@ func _spawn_vault() -> void:
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
-	var alive := get_tree().get_nodes_in_group("enemy").size()
+	var alive := get_tree().get_node_count_in_group("enemy")
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = -ctx.camera.yaw_basis().z

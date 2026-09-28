@@ -37,6 +37,39 @@ var fired := 0
 var _bolts: Array = []
 var _multimesh: MultiMesh
 
+# The shared enemy list (perf-lab H2): one valid-checked scan of the "enemy" group per
+# physics tick, handed to every combat, winch and swarm caller instead of a scan each.
+# A caller still checks is_dead(), which flips mid-tick. The cache also rebuilds when
+# the group's size changes, so an enemy spawned or freed mid-tick shows up (or drops
+# out) exactly as a fresh scan would. `snapshot_builds` counts the scans, for the test.
+static var snapshot_builds := 0
+static var _snapshot: Array = []
+static var _snapshot_tick := -1
+static var _snapshot_count := -1
+
+
+static func enemy_snapshot(tree: SceneTree) -> Array:
+	var tick := Engine.get_physics_frames()
+	var count := tree.get_node_count_in_group("enemy")
+	if tick == _snapshot_tick and count == _snapshot_count:
+		return _snapshot
+	var fresh: Array = []
+	for enemy in tree.get_nodes_in_group("enemy"):
+		if is_instance_valid(enemy):
+			fresh.append(enemy)
+	_snapshot = fresh
+	_snapshot_tick = tick
+	_snapshot_count = count
+	snapshot_builds += 1
+	return _snapshot
+
+
+# Combat's spawn calls this: a spawn can swap one group member for another with the
+# size unchanged (a fixture drops one enemy and spawns the next), which the size check
+# alone would miss.
+static func forget_enemies() -> void:
+	_snapshot_tick = -1
+
 
 func setup() -> void:
 	name = "Bolts"
