@@ -4,7 +4,12 @@ Andrew, 2026-09-28: "shoot for the stars ... in a reasonable manner ... take thi
 
 ## The end in mind: definition of done
 
-A build passes when every row holds on the same commit. The rows measure structure and polish; Andrew's play is the verdict.
+**The milestone is the end of world one** (Andrew, 2026-09-28): stages 1 to 3, their three Wardens, and Brindle, the world boss. Scope is locked there. Every system is fleshed out in full detail to the depth a player can reach by Brindle, and no deeper:
+- The kit tree gets only the tiers reachable in world one, fully detailed for all three pilots. The 8- and 16-way end variations stay unbuilt.
+- The same applies to evolutions, hot-wired parts, discovery cards, interactables and enemy reads: world one's set is complete and polished, with nothing stubbed for later worlds.
+- Assets and animation can keep being tweaked in place after this.
+
+When every row holds, we stop, reassess, re-baseline, and set direction for what follows. A build passes when every row holds on the same commit. The rows measure structure and polish; Andrew's play is the verdict.
 
 | # | Area | Done means | Measured by |
 | --- | --- | --- | --- |
@@ -30,7 +35,7 @@ A build passes when every row holds on the same commit. The rows measure structu
 | P2 Meeting of minds | The three lead designs are reconciled against the chosen spine into one build plan, conflicts resolved, then shown to Andrew on one page. | Andrew's go |
 | P3 Build | The spine goes to stages 2 and 3; then snowball systems, the audio revamp, the feel and HUD grammar, the full interactable set, and Codex's appearance for new props. Serial where seams collide. | Every DoD row except 10 and 12 green |
 | P4 Harden and polish | Bots at 16 seeds, fuzz, native performance, captures, an alignment review, the fun-gate check, and a polish pass on the largest gaps. | Every row green |
-| P5 Andrew plays the final draft | Playtest entry 10 and beyond, iterating on his verdict. | His verdict |
+| P5 Andrew plays the final draft | Playtest entry 10 and beyond, iterating on his verdict, through world one to Brindle. | His verdict, then a re-baseline and the direction for after world one |
 
 ## Subtract to add (Andrew, 2026-09-28)
 
