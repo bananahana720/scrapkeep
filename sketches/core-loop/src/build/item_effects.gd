@@ -68,6 +68,7 @@ var _ward_used := false
 var _brace_until := 0.0
 var _brace_share := 0.0
 var _brace_source := ""
+var _hit_seq := 0
 var _drone_until := 0.0
 var _drone_magnet := 1.0
 var _domino_marks := {}
@@ -361,6 +362,9 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			build.item_hit(near[0], c.amount * power, "arc")
 			return true
 		"heal_back":
+			# Armour mode resolves the glance inside run.damage (deflect_for).
+			if ctx.run.armor_mode:
+				return false
 			ctx.run.heal(c.amount * fx.get("share", 1.0))
 			return true
 		"brace":
@@ -371,6 +375,9 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			_brace_source = c.enemy.get("kind") if c.kind == Triggers.Kind.ON_REBOUND and is_instance_valid(c.enemy) else ""
 			return true
 		"floor_hp":
+			# Armour mode holds the floor inside run.damage (ward_floor_for).
+			if ctx.run.armor_mode:
+				return false
 			var floor_hp: float = ctx.run.max_hp * fx.get("floor", 0.2)
 			if _ward_used or not ctx.run.alive() or ctx.run.hp >= floor_hp:
 				return false
@@ -404,6 +411,40 @@ func brace_share_for(source: String) -> float:
 	if _clock < _brace_until and (_brace_source == "" or source == _brace_source):
 		return _brace_share
 	return 0.0
+
+
+# Deflect plates in armour mode: run.damage asks whether this hit glances off, before the
+# scrap layer. The roll is deterministic from the clock and a hit count, and a glance
+# counts as the item's proc.
+func deflect_for(_source: String) -> bool:
+	_hit_seq += 1
+	for entry in by_kind.get(Triggers.Kind.ON_DAMAGE_TAKEN, []):
+		var d: Resource = entry["def"]
+		if d.effect.get("do", "") != "heal_back" or _clock < _ready_at.get(entry["id"], -1.0):
+			continue
+		var roll := fposmod(_clock * 7.31 + float(_hit_seq) * Triggers.SPREAD, 1.0)
+		if roll < stacked(d, "chance", entry["copies"]) * d.proc_coeff:
+			_count(entry["id"])
+			return true
+	return false
+
+
+# A ward in armour mode: given the hull a hit would leave, the hull to hold instead. It
+# works once a stage and only when the hit would take the hull under the floor.
+func ward_floor_for(hp_after: float) -> float:
+	if _ward_used:
+		return hp_after
+	for entry in by_kind.get(Triggers.Kind.ON_DAMAGE_TAKEN, []):
+		var fx: Dictionary = entry["def"].effect
+		if fx.get("do", "") != "floor_hp":
+			continue
+		var floor_hp: float = build.ctx.run.max_hp * fx.get("floor", 0.2)
+		if hp_after >= floor_hp:
+			return hp_after
+		_ward_used = true
+		_count(entry["id"])
+		return floor_hp
+	return hp_after
 
 
 func _soften(c) -> void:

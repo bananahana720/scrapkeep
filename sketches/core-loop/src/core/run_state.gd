@@ -62,6 +62,10 @@ var mitigation := 0.0
 # Optional Callable(source) -> share: the brace window's extra reduction for a hit's
 # source. It joins the passive reduction before the scrap layer (the damage order).
 var brace_hook := Callable()
+# Deflect plates: returns true when this hit glances off. A ward: given the hull left after
+# overflow, returns the hull to hold instead. Both run inside the one damage order.
+var deflect_hook := Callable()
+var ward_hook := Callable()
 # Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
@@ -151,7 +155,7 @@ func lose_scrap(amount: int, at: Vector3, cause: String) -> int:
 
 func reset_metrics() -> void:
 	metrics = {"fresh": 0.0, "hit_loss": 0.0, "wear_loss": 0.0, "recovered": 0.0, "destroyed": 0.0,
-		"expired": 0.0, "hull_damage": 0.0, "class_changes": 0, "class_drops": 0, "min_heft": -1.0, "heft_at_hits": [], "reverse_seconds": 0.0}
+		"expired": 0.0, "hull_damage": 0.0, "class_changes": 0, "class_drops": 0, "min_heft": -1.0, "heft_at_hits": [], "reverse_seconds": 0.0, "arena_destroyed": 0.0}
 
 
 # Heft in armour mode comes from scrap alone; the base formula is untouched otherwise.
@@ -288,13 +292,17 @@ func _damage_armored(amount: float, source: String) -> void:
 	if brace_hook.is_valid():
 		var brace: float = clampf(float(brace_hook.call(source)), 0.0, 1.0)
 		share = 1.0 - (1.0 - share) * (1.0 - brace)
-	var left := amount * (1.0 - share)
+	# A glancing plate turns the hit aside before the scrap sees it, but the hit still
+	# happened: every listener hears it (items, near-miss, the hurt sound and flash).
+	var deflected: bool = deflect_hook.is_valid() and bool(deflect_hook.call(source))
+	var left := 0.0 if deflected else amount * (1.0 - share)
+	since_damage = 0.0
 	if left <= 0.0:
+		events.player_hit.emit(amount, source)
 		return
 	var absorbed := minf(left, mass / SCRAP_PER_HP)
 	var removed := absorbed * SCRAP_PER_HP
 	var overflow := left - absorbed
-	since_damage = 0.0
 	if removed > 0.0:
 		mass = maxf(0.0, mass - removed)
 		var spill := int(round(removed * SPILL_SHARE))
@@ -307,11 +315,15 @@ func _damage_armored(amount: float, source: String) -> void:
 			metrics["heft_at_hits"].append(snappedf(heft(), 0.01))
 		armor_hit.emit(removed, spill, source)
 	if overflow > 0.0:
-		hp = maxf(0.0, hp - overflow)
-		metrics["hull_damage"] += overflow
-		events.player_hit.emit(overflow, source)
-		if hp <= 0.0:
-			events.player_died.emit()
+		var after := maxf(0.0, hp - overflow)
+		# A ward holds the hull at its floor, once, inside the same order.
+		if ward_hook.is_valid():
+			after = maxf(after, float(ward_hook.call(after)))
+		metrics["hull_damage"] += hp - after
+		hp = after
+	events.player_hit.emit(amount, source)
+	if hp <= 0.0:
+		events.player_died.emit()
 
 
 # Spilled scrap picked back up: mass returns, but it is not a fresh pickup, so no

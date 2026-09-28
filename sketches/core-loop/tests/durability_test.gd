@@ -60,18 +60,47 @@ func _unit_checks() -> void:
 	var hits := []
 	run.events.player_hit.connect(func(a: float, _s: String): hits.append(a))
 	run.damage(12.0, "t")
-	_check("damage order", run.mass == 0.0 and is_equal_approx(run.hp, 98.0) and hits == [2.0],
-		"12 on 100 scrap: mass %.0f, hp %.1f, hull hit %s" % [run.mass, run.hp, hits])
+	_check("damage order", run.mass == 0.0 and is_equal_approx(run.hp, 98.0) and hits == [12.0] and is_equal_approx(run.metrics["hull_damage"], 2.0),
+		"12 on 100 scrap: mass %.0f, hp %.1f, hit event %s (the whole hit), hull damage %.0f" % [run.mass, run.hp, hits, run.metrics["hull_damage"]])
 	_check("75/25 split", spills == [[100.0, 75]] and is_equal_approx(run.metrics["destroyed"], 25.0) and is_equal_approx(run.metrics["hit_loss"], 100.0),
 		"spill %s, destroyed %.0f" % [spills, run.metrics["destroyed"]])
-	# A hit the scrap fully absorbs never reaches the hull or player_hit.
+	# A hit the scrap fully absorbs never touches the hull, but it is still a hit: player_hit
+	# fires with the hit's size, so items, near-miss, the sound and the flash all hear it.
 	var soft := _run(true)
 	soft.grant_start_mass(100.0)
 	var soft_hits := []
 	soft.events.player_hit.connect(func(a: float, _s: String): soft_hits.append(a))
 	soft.damage(4.0, "t")
-	_check("absorbed hit", soft.mass == 60.0 and soft.hp == 100.0 and soft_hits.is_empty() and soft.metrics["hull_damage"] == 0.0,
-		"4 on 100 scrap: mass %.0f, hp %.0f, hull hits %d" % [soft.mass, soft.hp, soft_hits.size()])
+	_check("absorbed hit", soft.mass == 60.0 and soft.hp == 100.0 and soft_hits == [4.0] and soft.metrics["hull_damage"] == 0.0,
+		"4 on 100 scrap: mass %.0f, hp %.0f, hit events %s, hull damage %.0f" % [soft.mass, soft.hp, soft_hits, soft.metrics["hull_damage"]])
+	# A deflect plate glances a hit off inside the order: scrap untouched, the hit still heard.
+	var glance := _run(true)
+	glance.grant_start_mass(100.0)
+	glance.deflect_hook = func(_source: String) -> bool: return true
+	var glance_hits := []
+	glance.events.player_hit.connect(func(a: float, _s: String): glance_hits.append(a))
+	glance.damage(12.0, "t")
+	var no_glance := _run(true)
+	no_glance.grant_start_mass(100.0)
+	no_glance.deflect_hook = func(_source: String) -> bool: return false
+	no_glance.damage(12.0, "t")
+	_check("deflect before scrap", glance.mass == 100.0 and glance.hp == 100.0 and glance_hits == [12.0]
+			and no_glance.mass == 0.0 and glance.metrics["hit_loss"] == 0.0,
+		"glanced 12: mass %.0f (want 100), hit events %s; no glance: mass %.0f (want 0)" % [glance.mass, glance_hits, no_glance.mass])
+	# A ward holds the hull at its floor once, in the same order (a lethal hit does not kill).
+	var ward := _run(true)
+	ward.hp = 30.0
+	var ward_used := [false]
+	ward.ward_hook = func(after: float) -> float:
+		if ward_used[0] or after >= 20.0:
+			return after
+		ward_used[0] = true
+		return 20.0
+	ward.damage(50.0, "t")
+	var held: float = ward.hp
+	ward.damage(50.0, "t")
+	_check("ward inside the order", held == 20.0 and not ward.alive(),
+		"lethal hit held hull at %.0f, the second hit (ward spent) leaves hp %.0f" % [held, ward.hp])
 	# Mitigation runs first: half of 12 is 6, all of it absorbed by 100 scrap.
 	var mit := _run(true)
 	mit.grant_start_mass(100.0)
@@ -330,6 +359,77 @@ func _armor_game_checks() -> void:
 	var parsed = JSON.parse_string(line) if line != "" else null
 	_check("run log metrics", parsed != null and parsed.has("durability") and parsed["durability"].has("wear_loss") and parsed["durability"].has("reverse_seconds"),
 		"durability keys %s" % [parsed["durability"].keys() if parsed != null and parsed.has("durability") else "missing"])
+	_item_and_arena_checks()
+
+
+func _item_and_arena_checks() -> void:
+	var run = _game.run
+	var build = _game.build
+	var flow = _game.flow
+	var ball: Vector3 = _game.player.ball_position()
+	run.grant_start_mass(500.0)
+	run.hp = run.max_hp
+	# An armour-only hit fires the hit event and posts ON_DAMAGE_TAKEN to the items; the
+	# hull is untouched.
+	var heard := []
+	_game.events.player_hit.connect(func(a: float, _s: String): heard.append(a))
+	build.bus.pending.clear()
+	var hull_before: float = run.hp
+	var hull_metric: float = run.metrics["hull_damage"]
+	run.damage(3.0, "test")
+	var posted := false
+	for c in build.bus.pending:
+		if c.kind == build.Triggers.Kind.ON_DAMAGE_TAKEN:
+			posted = true
+	_check("armour-only hit is a hit", heard == [3.0] and posted and run.hp == hull_before and run.metrics["hull_damage"] == hull_metric,
+		"3 on 500 scrap: player_hit %s, ON_DAMAGE_TAKEN posted %s, hull %.0f -> %.0f" % [heard, posted, hull_before, run.hp])
+	build.bus.pending.clear()
+	# The real deflect item resolves inside run.damage: some hits glance and cost no scrap.
+	run.add_part("deflect_plate", "test")
+	run.add_part("deflect_plate", "test")
+	run.add_part("deflect_plate", "test")
+	build.recompute()
+	var glanced := 0
+	var mass_free := true
+	for i in 200:
+		var before: float = run.mass
+		run.damage(1.0, "test")
+		if run.mass == before:
+			glanced += 1
+		else:
+			run.mass = before
+	_check("deflect item in the order", glanced >= 1 and glanced < 200 and build.effects.procs.get("deflect_plate", 0) == glanced,
+		"200 hits of 1 with three plates: %d glanced (proc count %s), scrap untouched on each" % [glanced, build.effects.procs.get("deflect_plate", 0)])
+	# The real ward holds the hull once inside run.damage, and the item's own after-the-fact
+	# resolve does not stack a second heal.
+	run.add_part("warden_ward", "test")
+	build.recompute()
+	run.mass = 0.0
+	run.hp = 30.0
+	run.damage(50.0, "test")
+	var ward_hp: float = run.hp
+	_check("ward item in the order", is_equal_approx(ward_hp, run.max_hp * 0.2) and run.alive(),
+		"lethal hit at 30 hull, ward held it at %.1f (floor %.1f)" % [ward_hp, run.max_hp * 0.2])
+	# The boss arena has no scrap field: a hit there drops no cluster that could never be
+	# collected; the spill is destroyed and logged.
+	run.parts.erase("deflect_plate")
+	run.parts.erase("deflect_plate")
+	run.parts.erase("deflect_plate")
+	build.recompute()
+	run.hp = run.max_hp
+	run.grant_start_mass(200.0)
+	var saved_state: int = flow.state
+	flow.state = flow.BOSS
+	build.scrap.clear()
+	var destroyed_before: float = run.metrics["destroyed"]
+	var arena_before: float = run.metrics["arena_destroyed"]
+	var mass_pre: float = run.mass
+	run.damage(10.0, "brindle_charge")
+	var lost: float = mass_pre - run.mass
+	flow.state = saved_state
+	_check("no uncollectable spill in the arena", lost > 0.0 and build.scrap.recovery_count() == 0
+			and is_equal_approx(run.metrics["destroyed"] - destroyed_before, lost) and is_equal_approx(run.metrics["arena_destroyed"] - arena_before, round(lost * 0.75)),
+		"arena hit took %.0f scrap: %d clusters left, destroyed +%.0f, arena spill destroyed +%.0f" % [lost, build.scrap.recovery_count(), run.metrics["destroyed"] - destroyed_before, run.metrics["arena_destroyed"] - arena_before])
 
 
 func _off_game_checks() -> void:
