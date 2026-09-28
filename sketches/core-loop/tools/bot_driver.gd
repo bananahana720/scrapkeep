@@ -60,16 +60,16 @@ const Features := preload("res://src/world/features.gd")
 # limit ("stalled", "boss_stalled").
 
 const POLICIES := ["skipper", "completionist", "random", "lapper"]
-# The lapper: reach a line's start within LAP_REACHED, then leave when its descent would
-# arrive LAP_LEAD seconds after the next clang, give or take LAP_SLACK (a ball arriving
-# on the clang is thrown by the pulse). The descent starts as a guess of LAP_DESCENT
-# seconds and learns from every arrival within LAP_ARRIVED of the mast, landed or not; a
-# descent that has not landed LAP_GIVE_UP seconds after leaving the start is a miss, and
-# the ball goes to the return.
+# The lapper: reach a line's start within LAP_REACHED, then leave when the Warden's
+# published schedule says the core stands open LAP_SLACK either side of its arrival. The
+# descent starts as a guess of LAP_DESCENT seconds and learns from every arrival within
+# LAP_ARRIVED of the mast, landed or not; a miss (the core throws it back) or a descent
+# not landed LAP_GIVE_UP after leaving the start sends the ball to the return.
 const LAP_REACHED := 7.0
 const LAP_WAYPOINT := 8.0
-const LAP_LEAD := 1.2
 const LAP_SLACK := 0.35
+# It leaves the start from nearly still, so one lap's descent predicts the next.
+const LAP_BRAKED := 4.0
 const LAP_ARRIVED := 5.0
 const LAP_DESCENT := 3.6
 const LAP_GIVE_UP := 9.0
@@ -219,6 +219,9 @@ const LAP_SPEED_AFTER := 0.25
 var _drop_rec = null
 var _min_telegraph = null
 var _lap_aims := 0
+var _lap_misses_at := 0
+var _lap_ended_at := -1.0
+var _lap_ended_kind := ""
 var _lap_arrived := false
 var _lap_lip := {}
 var _lap_contact := {}
@@ -256,7 +259,7 @@ func start() -> void:
 			_settle_warden_damage(0.0))
 	events.event_started.connect(func(id: String): _note_add("events_joined", id))
 	_connect_optional("warden_drop_landed", _on_drop_landed)
-	_connect_optional("warden_near_miss", func(_at: Vector3): _count("near_misses"))
+	_connect_optional("warden_pulse_dodged", func(_at: Vector3, near: bool): _count("near_misses" if near else "safe_dodges"))
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
 	events.part_gained.connect(func(id: String, source_id: String): _note_add("parts", "%s:%s" % [source_id, id]))
 	events.player_hit.connect(_on_player_hit)
@@ -429,11 +432,12 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 		"specials": 0, "punch_short_s": 0.0}
 	_lap_phase = "climb"
 	_lap_step = 0
+	_lap_ended_at = -1.0
 	_drop_probe = {}
 	_drop_rec = null
 	if LoopMode.mode(game.tuning) != "v2":
 		_note.merge(LoopMode.tag(game.tuning))
-		_note.merge({"drop_speeds": [], "drop_speed_ratios": [], "laps": 0, "near_misses": 0, "bowl_ticks": 0, "stage_ticks": 0})
+		_note.merge({"drop_speeds": [], "drop_speed_ratios": [], "laps": 0, "near_misses": 0, "safe_dodges": 0, "miss_recovery_s": [], "turnaround_s": [], "bowl_ticks": 0, "stage_ticks": 0})
 
 
 # A landed drop (warden_drop.gd): its arrival speed now, the ball's speed a moment later.
@@ -441,7 +445,7 @@ func _on_drop_landed(_at: Vector3, speed: float, _left: int, _segments: int) -> 
 	_note_add("drop_speeds", snappedf(speed, 0.1))
 	_drop_probe = {"speed_in": speed, "wait": LAP_SPEED_AFTER}
 	if policy == "lapper" and _lap_phase == "descend":
-		pass
+		_lap_end("land")
 		_count("laps")
 		if not _note.has("lands"):
 			_note["lands"] = []
@@ -455,7 +459,8 @@ func _note_drop() -> void:
 		return
 	var d: Dictionary = _drop_rec.damage
 	var total: float = d["drop"] + d["gun"]
-	_note["drop"] = {"windows": _drop_rec.windows, "drops_landed": _drop_rec.drops_landed,
+	_note["drop"] = {"windows": _drop_rec.windows, "drops_landed": _drop_rec.drops_landed, "staggers": _drop_rec.staggers,
+		"core_misses": _drop_rec.misses, "gun_role": _drop_rec.gun_role, "damage_stagger_gun": snappedf(d["stagger_gun"], 0.1),
 		"damage_drop": snappedf(d["drop"], 0.1), "damage_gun": snappedf(d["gun"], 0.1), "damage_outside": snappedf(d["outside"], 0.1),
 		"drop_share": snappedf(d["drop"] / total, 0.001) if total > 0.0 else null,
 		"min_telegraph_s": snappedf(float(_drop_rec.warden.min_pulse_telegraph), 0.01) if is_instance_valid(_drop_rec.warden) else _min_telegraph,
@@ -650,10 +655,13 @@ func _lapper(warden: Node3D, delta: float) -> void:
 	var in_bowl: bool = _flat(ball, mast) < LAP_BOWL
 	match _lap_phase:
 		"descend":
-			if game.run.stage_time - _lap_go > LAP_GIVE_UP:
+			var drop_rec = warden.get("drop")
+			var missed: bool = drop_rec != null and int(drop_rec.misses) > _lap_misses_at
+			if missed or game.run.stage_time - _lap_go > LAP_GIVE_UP:
 				_lap_phase = "return"
 				_count("lap_misses")
 				_note_miss(warden)
+				_lap_end("miss")
 			else:
 				_watch_lip(warden)
 				_lap_descend(line, mast, aim, delta)
@@ -665,6 +673,16 @@ func _lapper(warden: Node3D, delta: float) -> void:
 		if not in_bowl and _flat(ball, mast) > LAP_BOWL + 10.0:
 			_lap_phase = "climb"
 		else:
+			# No boost on the way back: a boost taken on the core's top scales the throw
+			# past the lift (measured: x1.38, over the rim into the basin).
+			_boost_clock = BOOST_GAP
+			var drop_rec = warden.get("drop")
+			if drop_rec != null and drop_rec.staggered:
+				_goal = "lap gun"
+				_act(ball + game.player.planar_velocity() * 0.2, warden, delta, null, false)
+				if game.player.state.grounded:
+					source.hold["brake_held"] = true
+				return
 			_goal = "lap return"
 			var mouth: Vector2 = map.return_at
 			_act(game.ctx.terrain.drop_point(mouth.x, mouth.y, 1.0), aim, delta, null, false)
@@ -675,7 +693,7 @@ func _lapper(warden: Node3D, delta: float) -> void:
 		_lap_phase = "wait"
 	if _lap_phase == "wait":
 		_goal = "lap wait"
-		if _lap_ready(warden):
+		if game.player.planar_velocity().length() < LAP_BRAKED and _lap_ready(warden):
 			_lap_phase = "descend"
 			_lap_go = game.run.stage_time
 			_lap_step = 0
@@ -684,6 +702,10 @@ func _lapper(warden: Node3D, delta: float) -> void:
 			_lap_arrived = false
 			var drop = warden.get("drop")
 			_lap_contact = drop.last_contact if drop != null else {}
+			_lap_misses_at = int(drop.misses) if drop != null else 0
+			if _lap_ended_at >= 0.0:
+				_note_add("miss_recovery_s" if _lap_ended_kind == "miss" else "turnaround_s", snappedf(game.run.stage_time - _lap_ended_at, 0.01))
+				_lap_ended_at = -1.0
 			_lap_descend(line, mast, aim, delta)
 			return
 		_act(at, aim, delta, null, false)
@@ -734,26 +756,26 @@ func _lap_descend(line: Dictionary, mast: Vector3, aim, delta: float) -> void:
 	_act(game.ctx.terrain.drop_point(target.x, target.y, 1.0), aim, delta, null, false)
 
 
-# Leave the line's start when the learned descent would land LAP_LEAD into the next
-# window, or now if the window standing will outlast the descent.
+# Leave the line's start when the Warden's published schedule (the dial over it) says
+# the core will stand open for LAP_SLACK either side of the learned arrival.
 func _lap_ready(warden: Node3D) -> bool:
 	var drop = warden.get("drop")
 	if drop == null:
 		return true
-	var left: float = drop.window_left()
-	if left > _lap_descent + 0.3:
-		return true
-	var to_pulse: float
-	if warden.charge_fraction() > 0.0:
-		to_pulse = (1.0 - warden.charge_fraction()) * float(warden.get("_charge_len"))
-	else:
-		to_pulse = maxf(0.0, drop.cycle_seconds(warden.PULSE_CYCLE) - warden.seconds_since_pulse())
-	var land: float = to_pulse + LAP_LEAD
-	return absf(land - _lap_descent) <= LAP_SLACK
+	return drop.open_at(_lap_descent - LAP_SLACK) and drop.open_at(_lap_descent + LAP_SLACK)
 
 
-# The gun on the open core (it holds the door under `hold`), else nothing in particular.
+func _lap_end(kind: String) -> void:
+	_lap_ended_at = game.run.stage_time
+	_lap_ended_kind = kind
+
+
+# The gun on the open core (it holds the door under `hold`), the whole Warden while it
+# reels under `full`, else nothing in particular.
 func _lap_aim(warden: Node3D):
+	var drop = warden.get("drop")
+	if drop != null and drop.staggered:
+		return warden
 	if warden.has_method("weak_points") and not (warden.weak_points() as Array).is_empty():
 		return {"at": warden.weak_points()[0]["at"]}
 	return _nearest_enemy()

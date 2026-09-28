@@ -217,23 +217,12 @@ func _aim_drop(ball: Vector3) -> void:
 	if heading.length() < 1.0 or heading.normalized().dot(flat.normalized()) < cos(deg_to_rad(DROP_AIM_CONE)):
 		return
 	var rise: float = terrain.height(target.x, target.y) + DROP_AIM_RISE - ball.y
-	var aimed = aim_arc(v.length(), maxf(1.0, flat.length() - DROP_AIM_SHORT), rise, ctx.tuning.f("gravity"))
+	var aimed = m.aim_arc(v.length(), maxf(1.0, flat.length() - DROP_AIM_SHORT), rise, ctx.tuning.f("gravity"))
 	if aimed == null:
 		return
 	var along := flat.normalized()
 	ctx.player.set_velocity_now(Vector3(along.x * aimed.x, aimed.y, along.y * aimed.x))
 	drop_aims += 1
-
-
-# The flatter arc at this speed that covers distance d and rises by dy: (planar, up), or
-# null when no arc at this speed reaches.
-static func aim_arc(speed: float, d: float, dy: float, g: float):
-	var s2 := speed * speed
-	var disc := s2 * s2 - g * (g * d * d + 2.0 * dy * s2)
-	if disc < 0.0:
-		return null
-	var angle := atan((s2 - sqrt(disc)) / (g * d))
-	return Vector2(cos(angle), sin(angle)) * speed
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the

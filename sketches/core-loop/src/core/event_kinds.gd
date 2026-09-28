@@ -122,12 +122,14 @@ const ROWS := {
 	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
 	# v3 fun lab, the drop mode (LOOP-REDESIGN sections 2 and 7). The Warden's states are
 	# music-only; the held door ticks on the ready pulse; a landed drop is a reward (the
-	# ladder climbs a rung per segment lost, drop_juice.gd); the near-miss is a rising
-	# whip in the class colour. `sound` stands in, `sound_next` names the cue to bake.
+	# ladder climbs a rung per segment lost, drop_juice.gd). A dodge wears bone and an
+	# arrow, never the class colour and the core that mean "open": a near-miss is the
+	# rising whip, a safe resolution a quiet tick (drop_juice.gd picks by `near`).
+	# `sound` stands in, `sound_next` names the cue to bake.
 	"warden_state_changed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"warden_window_held": {"group": "combat", "color": Palette.ANCIENT, "shape": "ring", "sound": "scrap_tick", "sound_next": "held_door_tick", "hud": "", "objective": "", "priority": 1},
 	"warden_drop_landed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "boss_weak_hit", "sound_next": "drop_segment_pop", "hud": "", "objective": "", "priority": 2},
-	"warden_near_miss": {"group": "movement", "color": Palette.SAND, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "near_miss_whip", "hud": "", "objective": "", "priority": 1},
+	"warden_pulse_dodged": {"group": "movement", "color": Palette.SAND, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "near_miss_whip_or_safe_tick", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -239,14 +241,16 @@ const LESSON_SHORT := {
 }
 # The drop mode's objective line (LOOP-REDESIGN section 2, under 25 words), for flow's
 # readout and the HUD alike.
+# Keyed by gun role. The badge's chunks say how much is left; the words promise no count
+# (review finding 6: speed, heft and the gun make "drops left" untrue).
 const DROP_OBJECTIVE := {
-	"many": "Drop on the Warden from a chute. {drops} drops left.",
-	"last": "Drop on the Warden from a chute. Last drop.",
+	"hold": "Drop on the Warden from a chute.",
+	"full": "Drop on the Warden, then gun it while it reels.",
 }
 
 
-static func drop_objective(drops_left: int) -> String:
-	return DROP_OBJECTIVE["last" if drops_left <= 1 else "many"].format({"drops": drops_left})
+static func drop_objective(gun_role: String) -> String:
+	return DROP_OBJECTIVE.get(gun_role, DROP_OBJECTIVE["hold"])
 
 
 # v2 W7 enemies

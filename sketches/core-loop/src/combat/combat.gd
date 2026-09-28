@@ -24,6 +24,7 @@ const Sight := preload("res://src/combat/sight.gd")
 const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -1418,6 +1419,10 @@ func _loop_spec(stage: int) -> Dictionary:
 		"gravity": ctx.tuning.f("gravity")}
 	if lines and map.return_at != Vector2.INF:
 		out["rebound_to"] = ctx.terrain.drop_point(map.return_at.x, map.return_at.y, 1.0)
+		# Under `full` a drop throws the ball up the bank a quarter-turn from the return, so
+		# the stagger is gunned from the bank before the ride.
+		var side: Vector2 = (map.return_at - map.beacon).normalized().rotated(-PI * 0.5) * WardenDrop.STAGGER_PERCH
+		out["perch_to"] = ctx.terrain.drop_point(map.beacon.x + side.x, map.beacon.y + side.y, 1.0)
 	return out
 
 

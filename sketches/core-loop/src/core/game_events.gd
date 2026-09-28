@@ -128,7 +128,7 @@ signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
 signal warden_state_changed(state: String, at: Vector3)
 signal warden_window_held(at: Vector3, seconds_left: float)
 signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
-signal warden_near_miss(at: Vector3)
+signal warden_pulse_dodged(at: Vector3, near: bool)
 
 
 static func signal_names() -> PackedStringArray:

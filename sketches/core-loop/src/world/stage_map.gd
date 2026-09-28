@@ -85,6 +85,17 @@ func drop_line_at(p: Vector2) -> Dictionary:
 	return {}
 
 
+# The flatter arc at this speed that covers distance d and rises by dy: (planar, up), or
+# null when no arc at this speed reaches.
+static func aim_arc(speed: float, d: float, dy: float, g: float):
+	var s2 := speed * speed
+	var disc := s2 * s2 - g * (g * d * d + 2.0 * dy * s2)
+	if disc < 0.0:
+		return null
+	var angle := atan((s2 - sqrt(disc)) / (g * d))
+	return Vector2(cos(angle), sin(angle)) * speed
+
+
 # Puts a pre-built terrain change in or out by moving its finished bodies (the gorge's
 # swap, map_gorge.gd apply_swap): swaps is id -> {"before": [Node3D], "after": [Node3D]},
 # each node carrying its "home" meta.

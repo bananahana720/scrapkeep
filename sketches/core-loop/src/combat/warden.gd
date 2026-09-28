@@ -125,7 +125,10 @@ var loop_mode := "v2"
 var drop = null
 # Whether the ball stood inside the core ring at any point of the current charge.
 var _core_touched := false
+var _core_last_in := 0.0
 var near_misses := 0
+var safe_dodges := 0
+const NEAR_MISS := 0.3
 var _charge_len := PULSE_TELEGRAPH
 
 
@@ -385,6 +388,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 			_core_ring.set_progress(_charge_time / _charge_len)
 			if loop_mode != "v2" and _core_ring.contains(_ball()):
 				_core_touched = true
+				_core_last_in = _charge_time
 		if _charge_time >= _charge_len:
 			_pulse()
 		return
@@ -407,16 +411,29 @@ func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
 	last_pulse_lifted = ring != null and ring.contains(ball)
-	# The near-miss (LOOP-REDESIGN section 2, "I dodged it"): inside the drawn core ring
-	# during its telegraph, outside it at the clang. A loop-mode read only.
+	# "I dodged it" (LOOP-REDESIGN section 2, review finding 6), a loop-mode read only:
+	# inside the drawn core ring during its telegraph and outside it at the clang is a
+	# dodge. Out within NEAR_MISS of the clang is a near-miss, which gives the air jump
+	# back as its bonus; out earlier is a safe resolution, acknowledged without one.
 	if loop_mode != "v2" and _core_touched and is_instance_valid(_core_ring) and not _core_ring.contains(ball) and fleet != null:
-		near_misses += 1
-		fleet.events().warden_near_miss.emit(ball)
+		var near := _charge_len - _core_last_in <= NEAR_MISS
+		if near:
+			near_misses += 1
+			target.refresh_air()
+		else:
+			safe_dodges += 1
+		fleet.events().warden_pulse_dodged.emit(ball, near)
+	# Drop mode: the air is a safe place through the telegraph (section 2, "where to be":
+	# on a drop line, on the bank, or in the air), so the pulse throws and burns only a
+	# ball on the floor, never one already on its drop arc.
+	var airborne: bool = drop != null and not target.state.grounded
+	if airborne:
+		last_pulse_lifted = false
 	if drop != null:
 		drop.on_pulse(last_pulse_lifted, ball)
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
-	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
+	if not airborne and is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
 	if family == Roster.REACTOR:

@@ -15,7 +15,15 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 #     a chunk of the god falling off, the reward ladder one rung per segment lost, and
 #     the rebound's spring snap pitched by the arrival speed.
 #   - The held door: each weapon hit that holds it ticks, climbing.
-#   - I dodged it: the near-miss whip and a short streak behind the ball.
+#   - When it opens (review finding 2): a dial of SCHEDULE_PIPS bone pips over the
+#     Warden fills toward the next opening on its committed schedule, readable from the
+#     shelf before you leave the lip; it gives way to the beam while the core stands open.
+#   - Where you will land: on a drop line's approach, and in the air off its lip, an
+#     amber ring on the core's top where the lip's arc comes down if the schedule says the
+#     core will be open then, HAZARD if it will be shut; none when the arc falls short.
+#   - I dodged it: bone and an arrow, never the class colour or the core, which mean
+#     "open". A near-miss is the whip and a streak; a safe resolution a quiet tick and a
+#     hollow ring flashing at the core ring's edge.
 #   - The cage (section 8, Anticipation 4): the break reward hangs over the Warden in a
 #     cage of the gate toppers' rarity frames, one frame more per bonus core, and drops
 #     when the Warden breaks.
@@ -28,6 +36,12 @@ const CAGE_RADIUS := 2.2
 const CAGE_TIERS := ["common", "uncommon", "rare"]
 const CHUNK_SECONDS := 2.2
 const STREAK_SECONDS := 0.3
+const SCHEDULE_PIPS := 12
+const SCHEDULE_RISE := 7.0
+const SCHEDULE_RADIUS := 3.2
+const MARKER_REACH := 70.0
+const MARKER_CONE := 35.0
+const HOLLOW_SECONDS := 0.45
 
 var ctx
 var audio
@@ -36,8 +50,17 @@ var cage: Node3D
 var chunks := 0
 var drops_heard := 0
 var near_misses_heard := 0
+var safe_dodges_heard := 0
+var schedule: Node3D
+var marker: MeshInstance3D
+# The last landing forecast drawn: {"eta", "open"}, empty when none.
+var forecast := {}
 
 var _beam_mat: StandardMaterial3D
+var _pip_on: Material
+var _pip_off: Material
+var _marker_open: Material
+var _marker_shut: Material
 var _held := 0
 var _cage_frames := -1
 
@@ -60,9 +83,10 @@ func setup(ctx_ref, audio_ref) -> void:
 	events.warden_state_changed.connect(_on_state)
 	events.warden_window_held.connect(_on_held)
 	events.warden_drop_landed.connect(_on_drop)
-	events.warden_near_miss.connect(_on_near_miss)
+	events.warden_pulse_dodged.connect(_on_dodged)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): _clear_cage())
 	events.beacon_unsealed.connect(func(_stage: int): _release_cage())
+	_build_schedule()
 
 
 func _drop_record():
@@ -84,6 +108,8 @@ func _process(_delta: float) -> void:
 		_beam_mat.albedo_color = Color(ctx.player.class_color(), 0.6)
 	if drop != null:
 		_dress_cage(drop)
+	_show_schedule(drop)
+	_show_forecast(drop)
 
 
 func _on_state(state: String, _at: Vector3) -> void:
@@ -109,22 +135,134 @@ func _on_drop(at: Vector3, speed: float, segments_left: int, segments: int) -> v
 	_chunk(at)
 
 
-func _on_near_miss(at: Vector3) -> void:
+func _on_dodged(at: Vector3, near: bool) -> void:
+	if not near:
+		safe_dodges_heard += 1
+		audio.play("warden_pulse_dodged", -8.0, 0.8, "SFX", "ui_tick")
+		var drop = _drop_record()
+		if drop != null:
+			_hollow_ring(drop.warden.global_position)
+		return
 	near_misses_heard += 1
-	audio.play("warden_near_miss", 0.0, 1.35)
+	audio.play("warden_pulse_dodged", 0.0, 1.35)
 	var v: Vector3 = ctx.player.state.velocity
 	var back := -v.normalized() if v.length() > 1.0 else Vector3.UP
 	var streak := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(0.25, 0.25, 4.0)
 	streak.mesh = mesh
-	streak.material_override = Palette.unshaded(Color(ctx.player.class_color(), 0.8))
+	streak.material_override = Palette.unshaded(Color(Palette.SAND, 0.85))
 	add_child(streak)
 	streak.global_position = at + back * 2.5
 	streak.look_at(at + back * 5.0, Vector3.UP if absf(back.y) < 0.95 else Vector3.RIGHT)
 	var tween := streak.create_tween()
 	tween.tween_property(streak, "scale", Vector3(0.1, 0.1, 1.6), STREAK_SECONDS)
 	tween.tween_callback(streak.queue_free)
+
+
+# A safe resolution: the core ring's edge flashes hollow, in bone, and is gone.
+func _hollow_ring(at: Vector3) -> void:
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 5.7
+	tm.outer_radius = 6.0
+	ring.mesh = tm
+	ring.material_override = Palette.unshaded(Color(Palette.SAND, 0.7))
+	add_child(ring)
+	ring.global_position = Vector3(at.x, ctx.terrain.height(at.x, at.z) + 0.3, at.z)
+	var tween := ring.create_tween()
+	tween.tween_property(ring, "scale", Vector3(1.15, 1.0, 1.15), HOLLOW_SECONDS)
+	tween.tween_callback(ring.queue_free)
+
+
+func _build_schedule() -> void:
+	if schedule != null:
+		return
+	_pip_on = Palette.unshaded(Color(Palette.SAND, 0.95))
+	_pip_off = Palette.unshaded(Color(Palette.SAND, 0.18))
+	schedule = Node3D.new()
+	schedule.name = "OpeningDial"
+	schedule.visible = false
+	add_child(schedule)
+	for i in SCHEDULE_PIPS:
+		var pip := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.5, 0.5, 0.5)
+		pip.mesh = bm
+		var a := TAU * i / SCHEDULE_PIPS - PI * 0.5
+		pip.position = Vector3(cos(a) * SCHEDULE_RADIUS, 0.0, sin(a) * SCHEDULE_RADIUS)
+		schedule.add_child(pip)
+	_marker_open = Palette.unshaded(Color(Palette.AMBER, 0.9))
+	_marker_shut = Palette.unshaded(Color(Palette.HAZARD, 0.9))
+	marker = MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 2.4
+	tm.outer_radius = 3.0
+	marker.mesh = tm
+	marker.visible = false
+	add_child(marker)
+
+
+# The dial fills toward the next opening; the beam replaces it while the core is open.
+func _show_schedule(drop) -> void:
+	schedule.visible = drop != null and drop.window_left() <= 0.0
+	if not schedule.visible:
+		return
+	schedule.global_position = drop.warden.global_position + Vector3.UP * SCHEDULE_RISE
+	var cycle: float = drop.cycle_seconds(drop.warden.PULSE_CYCLE)
+	var lit := int(round((1.0 - clampf(drop.next_pulse_in() / cycle, 0.0, 1.0)) * SCHEDULE_PIPS))
+	for i in SCHEDULE_PIPS:
+		(schedule.get_child(i) as MeshInstance3D).material_override = _pip_on if i < lit else _pip_off
+
+
+# The landing forecast: which drop line the ball is running at, the speed it will have
+# at the lip (the height it still has to lose, rolling), the lip's arc, and the
+# schedule at the arrival.
+func _show_forecast(drop) -> void:
+	forecast = {}
+	marker.visible = false
+	if drop == null:
+		return
+	var map = ctx.terrain.map()
+	if not map.loop_live:
+		return
+	var ball: Vector3 = ctx.player.ball_position()
+	var v: Vector3 = ctx.player.state.velocity
+	var planar := Vector2(v.x, v.z)
+	if planar.length() < 4.0:
+		return
+	var mast: Vector3 = drop.warden.global_position
+	var top_y: float = mast.y + drop.warden.HALF_HEIGHT + 1.0
+	var g: float = ctx.tuning.f("gravity")
+	var eta := -1.0
+	if not ctx.player.state.grounded and Vector2(mast.x - ball.x, mast.z - ball.z).length() < 26.0 \
+			and planar.normalized().dot(Vector2(mast.x - ball.x, mast.z - ball.z).normalized()) > cos(deg_to_rad(MARKER_CONE)):
+		eta = Vector2(mast.x - ball.x, mast.z - ball.z).length() / planar.length()
+	else:
+		for line in map.drop_lines:
+			var lip: Vector2 = line["at"]
+			var dir: Vector2 = line["dir"]
+			var rel := Vector2(ball.x, ball.z) - lip
+			var u := rel.dot(dir)
+			if u > 0.0 or u < -MARKER_REACH or absf(rel.dot(Vector2(-dir.y, dir.x))) > float(line["width"]) + 10.0:
+				continue
+			if planar.normalized().dot(dir) < cos(deg_to_rad(MARKER_CONE)):
+				continue
+			var lip_y: float = ctx.terrain.height(lip.x, lip.y) + 1.0
+			var speed := sqrt(v.length_squared() + 10.0 / 7.0 * g * maxf(0.0, ball.y - lip_y))
+			var d: float = (line["target"] as Vector2).distance_to(lip) - 1.0
+			var arc = map.aim_arc(speed, d, top_y - lip_y, g)
+			if arc == null:
+				return
+			eta = -u / planar.length() + d / arc.x
+			break
+	if eta < 0.0:
+		return
+	var open: bool = drop.open_at(eta)
+	forecast = {"eta": eta, "open": open}
+	marker.visible = true
+	marker.material_override = _marker_open if open else _marker_shut
+	marker.global_position = Vector3(mast.x, top_y - 0.9, mast.z)
 
 
 # A piece of the god falls off: a slate chunk off the core's rim, tumbling to the floor.

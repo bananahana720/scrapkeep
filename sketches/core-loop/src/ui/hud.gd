@@ -373,7 +373,7 @@ func objective_reading() -> Dictionary:
 				# The drop mode's badge: drops left as whole segments, no punch race.
 				var drop = flow.warden.get("drop") if is_instance_valid(flow.warden) else null
 				if drop != null:
-					out["words"] = EventKinds.drop_objective(drop.segments_left())
+					out["words"] = EventKinds.drop_objective(drop.gun_role)
 					out["punch"] = -1.0
 					out["plating"] = -1.0
 					out["progress"] = -1.0
