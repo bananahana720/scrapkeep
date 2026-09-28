@@ -120,6 +120,14 @@ const ROWS := {
 	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
 	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
 	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
+	# v3 fun lab, the drop mode (LOOP-REDESIGN sections 2 and 7). The Warden's states are
+	# music-only; the held door ticks on the ready pulse; a landed drop is a reward (the
+	# ladder climbs a rung per segment lost, drop_juice.gd); the near-miss is a rising
+	# whip in the class colour. `sound` stands in, `sound_next` names the cue to bake.
+	"warden_state_changed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"warden_window_held": {"group": "combat", "color": Palette.ANCIENT, "shape": "ring", "sound": "scrap_tick", "sound_next": "held_door_tick", "hud": "", "objective": "", "priority": 1},
+	"warden_drop_landed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "boss_weak_hit", "sound_next": "drop_segment_pop", "hud": "", "objective": "", "priority": 2},
+	"warden_near_miss": {"group": "movement", "color": Palette.SAND, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "near_miss_whip", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -229,6 +237,16 @@ const LESSON_SHORT := {
 	"caps": "Bowl its guard, slam caps",
 	"magnet": "Shoot its magnet while pulled",
 }
+# The drop mode's objective line (LOOP-REDESIGN section 2, under 25 words), for flow's
+# readout and the HUD alike.
+const DROP_OBJECTIVE := {
+	"many": "Drop on the Warden from a chute. {drops} drops left.",
+	"last": "Drop on the Warden from a chute. Last drop.",
+}
+
+
+static func drop_objective(drops_left: int) -> String:
+	return DROP_OBJECTIVE["last" if drops_left <= 1 else "many"].format({"drops": drops_left})
 
 
 # v2 W7 enemies

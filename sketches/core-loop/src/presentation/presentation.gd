@@ -6,6 +6,7 @@ const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const DropJuice := preload("res://src/presentation/drop_juice.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -28,6 +29,8 @@ var juice
 var vfx
 var banner
 var hero_assets
+# The v3 drop mode's own juice (drop_juice.gd), apart from the universal layer.
+var drop_juice
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -56,6 +59,9 @@ func setup(ctx_ref) -> void:
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	drop_juice = DropJuice.new()
+	add_child(drop_juice)
+	drop_juice.setup(ctx, audio)
 	wire_optional()
 
 

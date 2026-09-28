@@ -4,6 +4,7 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Habits := preload("res://src/combat/habits.gd")
+const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -120,6 +121,12 @@ var _guard_wait := 0.0
 var _adapt_clock := 0.0
 var _adapt_time := 0.0
 var _brace_left := 0.0
+var loop_mode := "v2"
+var drop = null
+# Whether the ball stood inside the core ring at any point of the current charge.
+var _core_touched := false
+var near_misses := 0
+var _charge_len := PULSE_TELEGRAPH
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -140,6 +147,30 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	# Clamped to the mast base: sits on the ground under the point it was given.
 	global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
 	_build_body()
+	loop_mode = String(spec.get("loop_mode", "v2"))
+	if spec.get("drop_rules", false) and fleet != null:
+		drop = WardenDrop.new(self, spec)
+
+
+# --- The v3 fun lab (loop_mode.gd) ---------------------------------------------------
+# drop is warden_drop.gd's rules when the drop mode applies here, else null: every
+# drop-mode branch in this file is behind it, so v2 runs exactly as before. Any loop
+# mode (drop, laps) also publishes the pulse's near-miss.
+
+func loop_rule(hit_kind: String, part: String, _force: float, punch: float, heft: float) -> Dictionary:
+	return drop.rule(hit_kind, part, punch, heft) if drop != null else {}
+
+
+func loop_state() -> String:
+	return drop.state if drop != null else ""
+
+
+func _cycle_seconds() -> float:
+	return drop.cycle_seconds(PULSE_CYCLE) if drop != null else PULSE_CYCLE
+
+
+func _telegraph_seconds() -> float:
+	return drop.telegraph_seconds(PULSE_TELEGRAPH) if drop != null else PULSE_TELEGRAPH
 
 
 func state_name() -> String:
@@ -220,6 +251,8 @@ func on_guard_scattered(swarm, _at: Vector3) -> void:
 
 
 func _open(seconds: float) -> void:
+	if drop != null:
+		seconds = drop.opened(seconds)
 	_open_left = seconds
 	family_opens += 1
 	if fleet != null:
@@ -317,6 +350,8 @@ func on_struck(hit_kind: String, part: String, _result: Dictionary) -> void:
 		_end_magnet()
 	if part == "cap" and _cap_material != null:
 		_cap_material.emission_energy_multiplier = 5.0
+	if drop != null:
+		drop.on_struck(hit_kind, _result)
 
 
 func _physics_process(delta: float) -> void:
@@ -327,10 +362,15 @@ func _physics_process(delta: float) -> void:
 	_since_pulse += delta
 	_unplated = maxf(0.0, _unplated - delta)
 	var inside := _flat_to_ball().length() <= reach
+	var was_open := _open_left > 0.0
 	_step_family(delta, inside)
-	_step_pulse(delta, inside)
+	# Drop mode runs the cycle on its own clock from the stage's start, so a drop can be
+	# timed from the shelf; v2's runs only while you are in reach.
+	_step_pulse(delta, inside or drop != null)
 	if lesson == "magnet":
 		_step_magnet(delta, inside)
+	if drop != null:
+		drop.step(delta, was_open)
 
 
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
@@ -340,29 +380,40 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_charge_time += delta
 		var ring := telegraph()
 		if ring != null:
-			ring.set_progress(_charge_time / PULSE_TELEGRAPH)
+			ring.set_progress(_charge_time / _charge_len)
 		if is_instance_valid(_core_ring):
-			_core_ring.set_progress(_charge_time / PULSE_TELEGRAPH)
-		if _charge_time >= PULSE_TELEGRAPH:
+			_core_ring.set_progress(_charge_time / _charge_len)
+			if loop_mode != "v2" and _core_ring.contains(_ball()):
+				_core_touched = true
+		if _charge_time >= _charge_len:
 			_pulse()
 		return
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
+	if _pulse_clock >= _cycle_seconds() - _telegraph_seconds():
 		_charging = true
 		_charge_time = 0.0
+		_charge_len = _telegraph_seconds()
+		_core_touched = false
 		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
 		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
 		if family == Roster.REACTOR and fleet != null:
-			fleet.events().vent_charging.emit(global_position, PULSE_TELEGRAPH)
+			fleet.events().vent_charging.emit(global_position, _charge_len)
 
 
 func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
 	last_pulse_lifted = ring != null and ring.contains(ball)
+	# The near-miss (LOOP-REDESIGN section 2, "I dodged it"): inside the drawn core ring
+	# during its telegraph, outside it at the clang. A loop-mode read only.
+	if loop_mode != "v2" and _core_touched and is_instance_valid(_core_ring) and not _core_ring.contains(ball) and fleet != null:
+		near_misses += 1
+		fleet.events().warden_near_miss.emit(ball)
+	if drop != null:
+		drop.on_pulse(last_pulse_lifted, ball)
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
@@ -427,6 +478,8 @@ func _exit_tree() -> void:
 	for node in [_core_ring, _magnet_ring]:
 		if is_instance_valid(node):
 			node.queue_free()
+	if drop != null:
+		drop.clear()
 
 
 func _build_body() -> void:
@@ -463,7 +516,7 @@ func _process(delta: float) -> void:
 # --- Read by the look --------------------------------------------------------------
 
 func charge_fraction() -> float:
-	return clampf(_charge_time / PULSE_TELEGRAPH, 0.0, 1.0) if _charging else 0.0
+	return clampf(_charge_time / _charge_len, 0.0, 1.0) if _charging else 0.0
 
 
 # 0 when the magnet is stowed, rising to 1 through its telegraph, 1 through the tug.

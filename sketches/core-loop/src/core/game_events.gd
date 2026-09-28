@@ -122,6 +122,14 @@ signal swarm_scattered(at: Vector3, drones: int)
 signal mind_adapted(habit: String, icon: String)
 signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
 
+# v3 fun lab, the drop mode's Warden (combat; emitted by warden.gd and warden_drop.gd).
+# warden_state_changed carries the five states (closed, telegraph, open, recover,
+# punish) for the look to dress; the other three are the drop fight's reads.
+signal warden_state_changed(state: String, at: Vector3)
+signal warden_window_held(at: Vector3, seconds_left: float)
+signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
+signal warden_near_miss(at: Vector3)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

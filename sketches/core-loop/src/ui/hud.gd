@@ -370,6 +370,15 @@ func objective_reading() -> Dictionary:
 				out["progress"] = game.beacon.fraction()
 				out["punch"] = flow.punch_now()
 				out["plating"] = flow.warden_plating()
+				# The drop mode's badge: drops left as whole segments, no punch race.
+				var drop = flow.warden.get("drop") if is_instance_valid(flow.warden) else null
+				if drop != null:
+					out["words"] = EventKinds.drop_objective(drop.segments_left())
+					out["punch"] = -1.0
+					out["plating"] = -1.0
+					out["progress"] = -1.0
+					out["segments"] = drop.drops
+					out["segments_left"] = drop.segments_left()
 			else:
 				out["icon"] = "obj_beacon"
 				out["words"] = EventKinds.objective("beacon_unsealed")
@@ -487,6 +496,7 @@ func _process(delta: float) -> void:
 	var reading := objective_reading()
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"],
 		reading["punch"], reading["plating"], run.bonus_cores, RunState.CORE_TIER_CAP)
+	_objective.set_segments(int(reading.get("segments", 0)), int(reading.get("segments_left", 0)))
 	_status.set_status(run.stage, StageDefs.COUNT, game.boss != null, flow.in_arena, run.run_time, _threat)
 
 	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)
