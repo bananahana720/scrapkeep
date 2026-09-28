@@ -29,6 +29,9 @@ var rivets := true
 var tape := -1.0
 # A tag's punched hole, on its left end.
 var hole := true
+# Every colour the frame draws, rivets and tape included, times this alpha: a frame
+# fading in or out with the thing it holds (the reward card).
+var fade := 1.0
 
 
 static func plate(edge: Color, serial_value: int, fill := Color(Palette.CHARCOAL, 0.94), width := 2.0, tape_at := -1.0) -> StyleBox:
@@ -88,7 +91,7 @@ static func quirk(serial_value: int, slot: int) -> float:
 
 
 # A strip of tape centred on `at`, low contrast, with torn ends.
-static func draw_tape(item: RID, at: Vector2, angle: float, size := TAPE) -> void:
+static func draw_tape(item: RID, at: Vector2, angle: float, size := TAPE, alpha := 1.0) -> void:
 	var along := Vector2.from_angle(angle)
 	var across := Vector2(-along.y, along.x)
 	var half := size * 0.5
@@ -97,9 +100,9 @@ static func draw_tape(item: RID, at: Vector2, angle: float, size := TAPE) -> voi
 		points.append(at + along * (half.x - (3.0 if i % 2 == 1 else 0.0)) + across * lerpf(-half.y, half.y, i / 3.0))
 	for i in 4:
 		points.append(at - along * (half.x - (3.0 if i % 2 == 0 else 0.0)) + across * lerpf(half.y, -half.y, i / 3.0))
-	RenderingServer.canvas_item_add_polygon(item, points, PackedColorArray([Color(Palette.SAND, 0.42)]))
+	RenderingServer.canvas_item_add_polygon(item, points, PackedColorArray([Color(Palette.SAND, 0.42 * alpha)]))
 	RenderingServer.canvas_item_add_line(item, at - along * (half.x - 4.0) - across * (half.y - 2.5),
-		at + along * (half.x - 4.0) - across * (half.y - 2.5), Color(Palette.SAND, 0.3), 1.0)
+		at + along * (half.x - 4.0) - across * (half.y - 2.5), Color(Palette.SAND, 0.3 * alpha), 1.0)
 
 
 func _draw(item: RID, rect: Rect2) -> void:
@@ -115,13 +118,13 @@ func _draw(item: RID, rect: Rect2) -> void:
 		Vector2(e.x - cut[2], e.y), Vector2(p.x + cut[3], e.y), Vector2(p.x, e.y - cut[3]), Vector2(p.x, p.y + cut[0]),
 	])
 	if bg_color.a > 0.0:
-		RenderingServer.canvas_item_add_polygon(item, outline, PackedColorArray([bg_color]))
+		RenderingServer.canvas_item_add_polygon(item, outline, PackedColorArray([Color(bg_color, bg_color.a * fade)]))
 	if kind == Kind.PLATE and bg_color.a > 0.0:
 		var lip := 2.0 + 2.0 * quirk(serial, 4)
 		RenderingServer.canvas_item_add_polygon(item, PackedVector2Array([
 			Vector2(p.x + cut[3], e.y - lip), Vector2(e.x - cut[2], e.y - lip), outline[4], outline[5],
-		]), PackedColorArray([Color(Palette.CHARCOAL.darkened(0.5), 0.55)]))
-		var shine := Color.from_hsv(border_color.h, border_color.s * 0.5, minf(border_color.v * 1.25, 1.0), 0.18)
+		]), PackedColorArray([Color(Palette.CHARCOAL.darkened(0.5), 0.55 * fade)]))
+		var shine := Color.from_hsv(border_color.h, border_color.s * 0.5, minf(border_color.v * 1.25, 1.0), 0.18 * fade)
 		var inset := border_width + 1.0 + quirk(serial, 5)
 		RenderingServer.canvas_item_add_polyline(item, PackedVector2Array([
 			Vector2(p.x + inset, e.y - cut[3] - inset), Vector2(p.x + inset, p.y + cut[0] + inset),
@@ -129,20 +132,20 @@ func _draw(item: RID, rect: Rect2) -> void:
 		]), PackedColorArray([shine]), 1.5)
 	var closed := outline.duplicate()
 	closed.append(outline[0])
-	RenderingServer.canvas_item_add_polyline(item, closed, PackedColorArray([border_color]), border_width, true)
+	RenderingServer.canvas_item_add_polyline(item, closed, PackedColorArray([Color(border_color, border_color.a * fade)]), border_width, true)
 	if kind == Kind.TAG:
 		if hole:
 			var at := Vector2(p.x + 6.5, rect.get_center().y)
-			RenderingServer.canvas_item_add_circle(item, at, 2.4, Color(border_color, 0.7))
-			RenderingServer.canvas_item_add_circle(item, at, 1.5, Palette.CHARCOAL.darkened(0.5))
+			RenderingServer.canvas_item_add_circle(item, at, 2.4, Color(border_color, 0.7 * fade))
+			RenderingServer.canvas_item_add_circle(item, at, 1.5, Color(Palette.CHARCOAL.darkened(0.5), fade))
 		return
 	if rivets and small >= 48.0:
 		var corners := [p, Vector2(e.x, p.y), e, Vector2(p.x, e.y)]
 		for i in 4:
 			var inward: Vector2 = (rect.get_center() - corners[i]).sign()
 			var at: Vector2 = corners[i] + inward * (cut[i] * 0.5 + border_width + 5.0)
-			RenderingServer.canvas_item_add_circle(item, at, 3.6, Color.from_hsv(border_color.h, border_color.s, border_color.v * 0.55, 1.0))
-			RenderingServer.canvas_item_add_circle(item, at - Vector2(1.0, 1.0), 1.4, Color(Palette.SAND, 0.55))
+			RenderingServer.canvas_item_add_circle(item, at, 3.6, Color.from_hsv(border_color.h, border_color.s, border_color.v * 0.55, fade))
+			RenderingServer.canvas_item_add_circle(item, at - Vector2(1.0, 1.0), 1.4, Color(Palette.SAND, 0.55 * fade))
 	if tape >= 0.0:
 		var x := lerpf(p.x + cut[0] + TAPE.x * 0.5, e.x - cut[1] - TAPE.x * 0.5, tape)
-		draw_tape(item, Vector2(x, p.y + 1.0), (quirk(serial, 6) - 0.5) * 0.24)
+		draw_tape(item, Vector2(x, p.y + 1.0), (quirk(serial, 6) - 0.5) * 0.24, TAPE, fade)

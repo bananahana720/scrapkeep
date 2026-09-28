@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # What the reward ceremony draws (v3 W13): the reveal card, the crate that shakes, cracks
 # and bursts, the hull slot the part sockets into, and the payoff's flash over the ball.
@@ -12,8 +13,8 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 #
 # The look is salvage (Andrew's standing HUD direction): roughness lives on the frame, a
 # riveted plate with a jittered outline, a paint stripe and a stamped tag, and never on
-# the information, whose glyph and name stay crisp. The plate is drawn inline in
-# _plate(); adopt src/ui/scrap_frame.gd there once W12's frame is merged. The class
+# the information, whose glyph and name stay crisp. The plate is W12's scrap_frame.gd
+# plate, the same salvage frame as the class cards and field notes. The class
 # colour means yours (the burst, the rays, the snapped wire, the socket); the rarity
 # colour is the find's own (the stripe, the stamp, the glyph). No red: nothing here is
 # hostile.
@@ -226,30 +227,16 @@ static func _partial(path: PackedVector2Array, fraction: float) -> PackedVector2
 	return out
 
 
-# A salvaged plate: a jittered chamfered outline, a rarity paint stripe down the left,
-# four rivets and a weld tack line along the bottom. Inline until scrap_frame.gd merges.
+# A salvaged plate: scrap_frame.gd's cut plate (uneven corners, lip, rivets, a strip of
+# tape where the seed puts it), edged verdigris warmed by the find's colour, with the
+# rarity paint stripe down the left. The seed is the frame's serial, so a card keeps its
+# quirks on every redraw, and the frame fades with the card.
 func _plate(rect: Rect2, edge: Color, plate_seed: int, alpha: float) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = plate_seed
-	var j := func() -> Vector2: return Vector2(rng.randf_range(-2.5, 2.5), rng.randf_range(-2.5, 2.5))
-	var c := 11.0
-	var pts := PackedVector2Array([
-		rect.position + Vector2(c, 0.0) + j.call(), Vector2(rect.end.x - c * 0.4, rect.position.y) + j.call(),
-		Vector2(rect.end.x, rect.position.y + c) + j.call(), rect.end + Vector2(0.0, -c * 0.5) + j.call(),
-		rect.end + Vector2(-c, 0.0) + j.call(), Vector2(rect.position.x + c * 0.6, rect.end.y) + j.call(),
-		Vector2(rect.position.x, rect.end.y - c) + j.call(), rect.position + Vector2(0.0, c * 1.4) + j.call()])
-	draw_colored_polygon(pts, _faded(Color(Palette.CHARCOAL, 0.94), alpha))
-	var loop := pts.duplicate()
-	loop.append(pts[0])
-	draw_polyline(loop, _faded(Palette.VERDIGRIS.lerp(edge, 0.35), alpha), 2.0, true)
+	var box = ScrapFrame.plate(Palette.VERDIGRIS.lerp(edge, 0.35), plate_seed, Color(Palette.CHARCOAL, 0.94), 2.0,
+		0.2 + 0.6 * ScrapFrame.quirk(plate_seed, 8))
+	box.fade = alpha
+	draw_style_box(box, rect)
 	draw_rect(Rect2(rect.position + Vector2(5.0, 13.0), Vector2(5.0, rect.size.y - 26.0)), _faded(edge, alpha))
-	for p in [rect.position + Vector2(15.0, 9.0), Vector2(rect.end.x - 13.0, rect.position.y + 10.0), rect.end - Vector2(13.0, 9.0),
-			Vector2(rect.position.x + 16.0, rect.end.y - 9.0)]:
-		draw_circle(p, 3.6, _faded(Palette.SANDSTONE.darkened(0.3), alpha))
-		draw_circle(p + Vector2(-0.8, -0.8), 1.5, _faded(Palette.SAND, alpha))
-	for k in 6:
-		var x := rect.position.x + rect.size.x * 0.36 + k * 7.0
-		draw_line(Vector2(x, rect.end.y - 3.0), Vector2(x + 4.0, rect.end.y - 7.0), _faded(Color(Palette.SANDSTONE, 0.45), alpha), 1.5)
 
 
 # A socket: a dark disc ringed in `tint` holding a crisp glyph; rare-plus adds a mint heart.
