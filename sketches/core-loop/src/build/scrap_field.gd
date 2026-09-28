@@ -18,6 +18,11 @@ const HOME_SPEED := 16.0
 const HOME_OVER_BALL := 1.4
 const SPACING := 8.0
 const MAX_PER_LINE := 14
+# A caught piece swings in on a curve (v3 W11): sideways and up at this share of its
+# homing speed while far, straight in as it closes, so the pull reads as a greedy
+# swirl. The homing term is unchanged, so the pull takes as long as it did.
+const ARC_SIDE := 0.6
+const ARC_LIFT := 0.3
 
 var magnet_scale := 1.0
 # The run's heft; build sets it every tick.
@@ -104,10 +109,13 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			_caught.erase(item)
 			item.queue_free()
 		else:
-			if distance < reach:
-				_caught[item] = true
+			if distance < reach and not _caught.has(item):
+				_caught[item] = 1.0 if item.get_instance_id() % 2 == 0 else -1.0
 			if _caught.has(item):
-				item.global_position += offset / distance * home * delta
+				var far := clampf(distance / reach, 0.0, 1.0)
+				var side := offset.cross(Vector3.UP)
+				side = side.normalized() * float(_caught[item]) if side.length() > 0.01 else Vector3.ZERO
+				item.global_position += (offset / distance + side * ARC_SIDE * far + Vector3.UP * ARC_LIFT * far) * home * delta
 				item.scale = Vector3.ONE * clampf(distance / reach, 0.45, 1.0)
 			item.rotation = Vector3(_spin * 0.7, _spin, 0.0)
 		i -= 1

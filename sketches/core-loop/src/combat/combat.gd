@@ -19,10 +19,13 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
+const NearMiss := preload("res://src/combat/near_miss.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -152,6 +155,10 @@ var _proc_ready := {}
 var _echo := {}
 var _echoing := false
 var _marks := {}
+# The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
+# presentation's edge flash. Both read only.
+var near_miss
+var last_player_hit := {}
 var _cloud := {}
 var _sentry := {}
 var _pulse_left := 0.0
@@ -180,6 +187,9 @@ func setup(ctx_ref) -> void:
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
+	near_miss = NearMiss.new()
+	add_child(near_miss)
+	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
 		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
@@ -291,7 +301,8 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	enemy.take_damage(result["dealt"])
-	_add_shred(enemy, result["punch"])
+	if result.get("shred", true):
+		_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
 
 
@@ -307,6 +318,12 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 	if kind == SYNERGY:
 		part = ""
 	var punch := punch_of(kind, force)
+	# The v3 fun lab: a loop mode's own damage rule (warden_drop.gd) answers first; an
+	# empty answer (v2, or any enemy without one) falls through to the plating rule.
+	if enemy.has_method("loop_rule"):
+		var rule: Dictionary = enemy.loop_rule(kind, part, force, punch, heft())
+		if not rule.is_empty():
+			return rule
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
@@ -856,7 +873,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 		# Marked: the line tags what it hits, and charges hit tagged targets harder.
 		if _knob("line_marks") > 0.0:
 			_marks[enemy.get_instance_id()] = _clock + _knob("line_marks")
-		_hit(enemy, "line", damage, to - from, Weapons.OVERDRIVE_KNOCK * 0.5, 0.5)
+		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, 0.5)
 		hit += 1
 	# Fuse Line: charges left along the line.
 	var along: int = _knob("line_charges")
@@ -1351,6 +1368,7 @@ static func _pinnable(enemy) -> bool:
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
+	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
 	ctx.run.damage(amount, source)
 	if ctx.calm:
 		return
@@ -1397,6 +1415,26 @@ func warden_spec(stage: int) -> Dictionary:
 	}
 
 
+# The fun lab's fields on a Warden spec (loop_mode.gd): the mode and gun role, and the
+# drop rules only where the stage's map has drop lines to hit it from (stage 1 in the
+# lab), so a drop-mode run meets v2 Wardens on stages 2 and 3.
+func _loop_spec(stage: int) -> Dictionary:
+	var map = ctx.terrain.map_for(stage) if ctx.terrain != null and ctx.terrain.has_method("map_for") else null
+	var lines: bool = map != null and "drop_lines" in map and not (map.drop_lines as Array).is_empty()
+	var out := {"loop_mode": LoopMode.mode(ctx.tuning), "gun_role": LoopMode.gun_role(ctx.tuning),
+		"drop_rules": LoopMode.is_drop(ctx.tuning) and lines,
+		"drops": int(ctx.flow.stage_def().get("warden_drops", 4)),
+		"cores": func() -> int: return int(ctx.run.bonus_cores) if ctx.run != null else 0,
+		"gravity": ctx.tuning.f("gravity")}
+	if lines and map.return_at != Vector2.INF:
+		out["rebound_to"] = ctx.terrain.drop_point(map.return_at.x, map.return_at.y, 1.0)
+		# Under `full` a drop throws the ball up the bank a quarter-turn from the return, so
+		# the stagger is gunned from the bank before the ride.
+		var side: Vector2 = (map.return_at - map.beacon).normalized().rotated(-PI * 0.5) * WardenDrop.STAGGER_PERCH
+		out["perch_to"] = ctx.terrain.drop_point(map.beacon.x + side.x, map.beacon.y + side.y, 1.0)
+	return out
+
+
 func _spec_for(kind: String) -> Dictionary:
 	var stage: int = ctx.flow.stage()
 	match kind:
@@ -1404,6 +1442,7 @@ func _spec_for(kind: String) -> Dictionary:
 			var w := warden_spec(stage)
 			w["stage"] = stage
 			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
+			w.merge(_loop_spec(stage))
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}

@@ -120,6 +120,16 @@ const ROWS := {
 	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
 	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
 	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
+	# v3 fun lab, the drop mode (LOOP-REDESIGN sections 2 and 7). The Warden's states are
+	# music-only; the held door ticks on the ready pulse; a landed drop is a reward (the
+	# ladder climbs a rung per segment lost, drop_juice.gd). A dodge wears bone and an
+	# arrow, never the class colour and the core that mean "open": a near-miss is the
+	# rising whip, a safe resolution a quiet tick (drop_juice.gd picks by `near`).
+	# `sound` stands in, `sound_next` names the cue to bake.
+	"warden_state_changed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"warden_window_held": {"group": "combat", "color": Palette.ANCIENT, "shape": "ring", "sound": "scrap_tick", "sound_next": "held_door_tick", "hud": "", "objective": "", "priority": 1},
+	"warden_drop_landed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "boss_weak_hit", "sound_next": "drop_segment_pop", "hud": "", "objective": "", "priority": 2},
+	"warden_pulse_dodged": {"group": "movement", "color": Palette.SAND, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "near_miss_whip_or_safe_tick", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -135,7 +145,81 @@ const ROWS := {
 	"bay_entered": {"group": "flow", "color": Palette.SANDSTONE, "shape": "square", "sound": "pylon_plant", "sound_next": "bay_lounge_in", "hud": "Moss's workshop", "objective": "", "priority": 2},
 	"bay_left": {"group": "flow", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "pylon_eject", "sound_next": "bay_slingshot_out", "hud": "", "objective": "", "priority": 1},
 	"world_fact": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 W11 juice. A dodge: the ball stood in a committed threat while it warned and was
+	# clear when it landed. Amber, because it is your own move, on the chevron of motion
+	# past; a rising whoosh that ends on a bright fifth, never the danger family.
+	"near_miss": {"group": "combat", "color": Palette.AMBER, "shape": "chevron", "sound": "near_whoosh", "hud": "", "objective": "", "priority": 1},
+	# v3 interact. Each fact is heard and drawn in its family's register and colour
+	# (world/interactables.gd FAMILIES); these rows are the schema's stand-ins. No toast:
+	# the device, its dial and the core facts carry the result, inside the word budget.
+	"interact_armed": {"group": "event", "color": Palette.AMBER, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
+	"interact_fired": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"ambush_ended": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "event_end", "hud": "", "objective": "", "priority": 2},
+	"bet_resolved": {"group": "economy", "color": Palette.COPPER, "shape": "star", "sound": "clank", "hud": "", "objective": "", "priority": 2},
+	# v3 fun lab, laps mode (LOOP-REDESIGN section 1 C and section 7's lap notch). The
+	# bell and the notch are the beacon's own family (arc); a checkpoint is roll-through
+	# movement, so amber, and its pop climbs the reward ladder ring by ring; stripped
+	# plating falls off in the plates' copper. `sound` stands in; `sound_next` names the
+	# cue to bake. The lap's notch and the ring that closes it land on the beat with the
+	# director's threat_rose stinger (audio.gd).
+	"lap_bell_rung": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "shop_bell", "sound_next": "course_bell_toll", "hud": "The course lights up", "objective": "Lap the lit course: {lap} of {required}. The Warden wakes at {required}.", "priority": 3},
+	"lap_ring_passed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "found_chime", "sound_next": "checkpoint_pop", "hud": "", "objective": "", "priority": 1},
+	"lap_completed": {"group": "flow", "color": Palette.ARC, "shape": "bar", "sound": "core_socket", "sound_next": "beacon_notch_chime", "hud": "", "objective": "", "priority": 2},
+	"warden_stripped": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "shatter", "sound_next": "plate_shear_clang", "hud": "Warden plating stripped", "objective": "", "priority": 3},
 }
+
+# The laps mode's objective before the bell: the lap_bell_rung row carries it after.
+const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then lap the course: {lap} of {required}."
+
+# v3 W11 juice
+# How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
+# particles and streak window sit beside its colour, shape and sound. Milliseconds for
+# times, particles per burst for counts. presentation (juice.gd, vfx.gd, audio.gd) reads
+# these; the pause menu's Screen shake and Hit-stop rows scale every shake, kick, punch
+# and stop here.
+#   stop_ms, stop_per_damage, stop_min_ms, stop_cap_ms   hit-stop: base + per damage point,
+#       clamped; crit multiplies, heavy (a ram, stomp or slam) adds
+#   sparks, dust, pop, debris, fountain   particles in the burst
+#   shake, kick, punch_fov   camera: shake amplitude, kick metres along travel, fov degrees
+#   chain_ms, chain_cap   a streak: the window that keeps it alive and its top rung
+#   pulse   the ball's squash for the fact (negative shrinks: a heft loss)
+const JUICE := {
+	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8, "shake": 0.1,
+		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "shake": 0.3, "dust": 12}},
+	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
+	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
+	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
+	"part_gained": {"fountain": 18, "element": {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}},
+	"core_gained": {"fountain": 24},
+	# Your own shots and throws: a camera kick against the aim and a recoil squash on the
+	# ball, per weapon; both are camera and shell only, never the ball's velocity.
+	"shot_fired": {"weapons": {"rapid_laser": {"kick": 0.05, "recoil": 0.04}, "arc_caster": {"kick": 0.12, "recoil": 0.08},
+			"pylon_turret": {"kick": 0.08, "recoil": 0.0}, "sticky_charge": {"kick": 0.16, "recoil": 0.12}},
+		"throw": {"sound": "dash_whoosh", "pitch": 1.5, "db": -4.0}, "stick": {"sound": "grapple_clink", "pitch": 0.7, "sparks": 8}},
+	# Kest's bomb: a flash, a shockwave ring and debris; the punch grows with each enemy the
+	# blast catches. Inside near_m of the ball it kicks the camera and squashes the shell.
+	"sticky_detonated": {"punch_fov": 3.0, "punch_per_enemy": 1.5, "punch_cap": 10.0, "debris": 12, "dust": 14, "shake": 0.35,
+		"near_m": 6.0, "near_kick": 0.6},
+	"rocket_jumped": {"kick": 0.8, "punch_fov": 8.0, "squash": 0.35},
+	"near_miss": {"stop_ms": 45.0, "punch_fov": -5.0, "grace_ms": 250},
+	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "shake": 0.5, "shake_s": 0.25, "color": Palette.HAZARD},
+	"scrap_lost": {"pulse": -0.22},
+	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+}
+# Rapid fire never stutters. Every stop, whatever asked for it, draws on one shared
+# budget: a stop starts at least STOP_GAP_MS after the last one ended, at most
+# STOP_WINDOW_BUDGET_MS of stop falls in any STOP_WINDOW_MS, and at most STOP_BUDGET_MS in
+# any second. The hits of one frame coalesce into one stop.
+const STOP_GAP_MS := 90
+const STOP_WINDOW_MS := 300
+const STOP_WINDOW_BUDGET_MS := 60.0
+const STOP_BUDGET_MS := 100.0
+const STOP_PER_EXTRA_HIT_MS := 2.0
+
+
+static func juice(kind: String) -> Dictionary:
+	return JUICE.get(kind, {})
 
 # v2 W2 threat grammar
 # One row per enemy attack type (combat/threat_grammar.gd), in the ROWS schema. They sit
@@ -220,6 +304,9 @@ const OBJECTIVE_SHORT := {
 	"stage_entered": "Break the Warden",
 	"beacon_charge_changed": "Break the Warden",
 	"boss_arena_entered": "Break Brindle's Requisition",
+	# Laps mode while the Warden sleeps: before the bell, then counting laps.
+	"lap_bell": "Ring the Warden's bell",
+	"lap_bell_rung": "Lap the course: {lap}/{required}",
 }
 # Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
 # worded for the stage's family: stage 1's reactor opens its core as it vents, stage
@@ -229,6 +316,18 @@ const LESSON_SHORT := {
 	"caps": "Bowl its guard, slam caps",
 	"magnet": "Shoot its magnet while pulled",
 }
+# The drop mode's objective line (LOOP-REDESIGN section 2, under 25 words), for flow's
+# readout and the HUD alike.
+# Keyed by gun role. The badge's chunks say how much is left; the words promise no count
+# (review finding 6: speed, heft and the gun make "drops left" untrue).
+const DROP_OBJECTIVE := {
+	"hold": "Drop on the Warden from a chute.",
+	"full": "Drop on the Warden, then gun it while it reels.",
+}
+
+
+static func drop_objective(gun_role: String) -> String:
+	return DROP_OBJECTIVE.get(gun_role, DROP_OBJECTIVE["hold"])
 
 
 # v2 W7 enemies
@@ -263,7 +362,41 @@ const LOOT_ROWS := {
 	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
 	"item_proc": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "sound_next": "trigger_tick", "hud": "", "objective": "", "priority": 0},
 	"par_split": {"group": "flow", "color": Palette.SAND, "shape": "bar", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 W13 reward ceremony. How a part find is presented, one row per tier, read by
+	# presentation/reward_ceremony.gd; the tier comes from REWARD_TIER_BY_RARITY and the
+	# find's context. A tier's colour is its ring and card edge before the rarity tints
+	# it; `pause` is never (in the flow) or calm (only when nothing hostile is near).
+	# Times in seconds. The payoff is the one-time accent the first time a revealed or
+	# ceremonial part's effect fires, ringing the same rarity bell it arrived with.
+	"reward_common": {"group": "economy", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "rarity_tick", "hud": "", "objective": "", "priority": 1,
+		"tier": "common", "pause": "never"},
+	"reward_rare": {"group": "economy", "color": Palette.AMBER, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
+	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
+		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,
+		"stamps": {"common": "COMMON", "uncommon": "UNCOMMON", "rare": "RARE", "rare_plus": "RARE+", "evolution": "EVOLVED", "first": "NEW"}},
+	"reward_ceremony": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "ceremony_build", "sound_burst": "ceremony_resolve", "hud": "", "objective": "", "priority": 3,
+		"tier": "ceremony", "pause": "calm", "burst_role": "class", "in_s": 0.25, "build_s": 1.4, "hold_s": 1.8, "out_s": 0.25,
+		"calm_hold_s": 0.4, "calm_wait_s": 10.0, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
+	"reward_payoff": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+		"tier": "payoff", "pause": "never", "flash_s": 0.7},
 }
+
+# v3 W13 reward ceremony. The ladder: the tier a rarity is presented at before the
+# find's context raises it (a first find or a completed synergy raises common and rare
+# to the reveal card). Evolution is the ladder's top rung, a ceremony wherever it drops.
+const REWARD_TIERS := ["common", "rare", "reveal", "ceremony"]
+const REWARD_TIER_BY_RARITY := {"common": "common", "uncommon": "common", "rare": "rare", "rare_plus": "reveal", "evolution": "ceremony"}
+# part_gained sources that are a ceremony whatever the rarity: the gate the Warden's break
+# opens, Brindle's crest, a vault, and the cracked-wall cache, the cage on the mast and
+# evolution rewards once their sources publish.
+const CEREMONY_SOURCES := ["gate", "boss", "vault", "cache", "cage", "warden", "evolution"]
+# Each rarity's bell on the reward ladder (Harmony.pentatonic_step), so a rarer find rings higher.
+const REWARD_RUNGS := {"common": 0, "uncommon": 2, "rare": 4, "rare_plus": 5, "evolution": 7}
+
+
+static func reward_row(tier: String) -> Dictionary:
+	return LOOT_ROWS.get("reward_" + tier, {})
 
 
 # v2 W6 world
@@ -306,6 +439,9 @@ const WORLD_ROWS := {
 	"lap_started": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "ui_tick", "sound_next": "lap_start_tick", "hud": "", "objective": "", "priority": 1},
 	"lap_checkpoint": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "scrap_tick", "sound_next": "lap_checkpoint_tick", "hud": "", "objective": "", "priority": 1},
 	"lap_finished": {"group": "event", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "lap_done_beeps", "hud": "Lap {seconds} s", "objective": "", "priority": 2},
+	# v3 fun lab: the Spillway loop's return (map_spillway.gd), a ride, so rising and
+	# breathy like the geyser; the launch arpeggio is the cue to bake.
+	"steam_lift_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "return_launch_arpeggio", "hud": "", "objective": "", "priority": 1},
 }
 
 

@@ -1,12 +1,21 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Palette := preload("res://src/core/palette.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
+const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
+const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# The one copy of the field notes: the Tab overlay prints these and README.md mirrors
-# them by hand. They are the full key list; in play the HUD shows a key only while its
-# action is available. The legend is generated from event_kinds.gd, so it always shows
-# the colours and wording the game uses.
-const TITLE := "Scrapkeep: First Run · field notes"
+# Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
+# text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
+# you, and how you grow, then the codex pages. Each picture page stays inside the
+# calm-screen budget of 40 words. CONTROLS below is the one key list; the diagram draws
+# its rows with caps and a short word. The tester notes (TESTING, QUESTIONS, TRY_FIRST,
+# SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you, in one line: the title screen shows it too.
 const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three stages, then rout Admiral Brindle."
 
@@ -35,8 +44,8 @@ const TRY_FIRST := [
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
-# The key list. A row with "caps" and "short" also shows on the title's how-to-play
-# page, as its keycaps and those one or two words.
+# The key list. A row with "caps" and "short" is drawn on the controls diagram (Tab's
+# Keys page and the title's Help page), as its keycaps and those one or two words.
 const CONTROLS := [
 	{"keys": "W A S D", "does": "drive, relative to where the camera looks", "caps": ["key_w", "key_a", "key_s", "key_d"], "short": "drive"},
 	{"keys": "mouse", "does": "look", "caps": ["key_mouse"], "short": "look"},
@@ -47,7 +56,7 @@ const CONTROLS := [
 	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "caps": ["key_f"], "short": "special"},
 	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels", "caps": ["key_rmb"], "short": "move"},
 	{"keys": "Q (hold)", "does": "Sable: winch toward the hook"},
-	{"keys": "E", "does": "Sable: plant a pylon on a steep face or a close wall hook; again to drop off"},
+	{"keys": "E", "does": "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "caps": ["key_e"], "short": "use / ride"},
 	{"keys": "mouse wheel", "does": "Sable: down pays rope out, up notches it in"},
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
@@ -78,41 +87,22 @@ const SHAPE_GLYPHS := {
 	"ring": "○", "arrow": "»", "bar": "=", "cross": "×", "core": "◆", "none": "",
 }
 const CARD_COLUMNS := 3
+const MOUSE_STEPS := {MOUSE_BUTTON_LEFT: 1, MOUSE_BUTTON_WHEEL_DOWN: 1, MOUSE_BUTTON_RIGHT: -1, MOUSE_BUTTON_WHEEL_UP: -1}
+# The picture pages, before the codex: id -> {label, icon}. An icon names an Icons id.
+const PICTURE_PAGES := {
+	"keys": {"label": "Keys", "icon": "key_lmb"},
+	"hurts": {"label": "What hurts", "icon": "thr_instant"},
+	"grow": {"label": "Growth", "icon": "res_heft"},
+}
 
 var game
 
 var _notes: Control
-var _title: Label
-var _notes_page: Control
+var _tabs
+var _diagram
+var _pictures := {}
 var _codex_page: VBoxContainer
 var _page := 0
-
-
-static func notes_text() -> String:
-	var lines := PackedStringArray()
-	lines.append("Testing in this build")
-	for line in TESTING:
-		lines.append("  - " + line)
-	lines.append("")
-	lines.append("Questions for you")
-	for line in QUESTIONS:
-		lines.append("  - " + line)
-	lines.append("")
-	lines.append("What to try first")
-	for i in TRY_FIRST.size():
-		lines.append("  %d. %s" % [i + 1, TRY_FIRST[i]])
-	return "\n".join(lines)
-
-
-static func controls_text() -> String:
-	var lines := PackedStringArray(["Controls"])
-	for row in CONTROLS:
-		lines.append("%-12s %s" % [row["keys"], row["does"]])
-	lines.append("")
-	lines.append("Screens (every choice is also a button: click it, or press its key)")
-	for row in SCREEN_KEYS:
-		lines.append("%-12s %s" % [row["keys"], row["does"]])
-	return "\n".join(lines)
 
 
 # Every notable fact in its own colour and wording, straight from event_kinds.gd.
@@ -137,23 +127,22 @@ func setup(game_ref) -> void:
 	_notes = PanelContainer.new()
 	_notes.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_notes.offset_left = 40.0
-	_notes.offset_top = 24.0
+	# Below the objective and run status strip, which presentation draws on top.
+	_notes.offset_top = 72.0
 	_notes.offset_right = -40.0
 	_notes.offset_bottom = -24.0
 	_notes.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var backing := StyleBoxFlat.new()
-	backing.bg_color = Color(0.07, 0.08, 0.11, 0.94)
+	var backing := ScrapFrame.plate(Color(Palette.SAND, 0.3), 5, Color(0.07, 0.08, 0.11, 0.94), 2.0, 0.62)
 	backing.set_content_margin_all(22.0)
-	backing.set_corner_radius_all(6)
 	_notes.add_theme_stylebox_override("panel", backing)
 	add_child(_notes)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
+	box.add_theme_constant_override("separation", 18)
 	_notes.add_child(box)
-	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 22)
-	box.add_child(_title)
+	_tabs = TabStrip.new()
+	_tabs.notes = self
+	box.add_child(_tabs)
 
 	_codex_page = VBoxContainer.new()
 	_codex_page.add_theme_constant_override("separation", 12)
@@ -161,42 +150,24 @@ func setup(game_ref) -> void:
 	_codex_page.visible = false
 	box.add_child(_codex_page)
 
-	var columns := HBoxContainer.new()
-	_notes_page = columns
-	columns.add_theme_constant_override("separation", 30)
-	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(columns)
-	var notes := Label.new()
-	notes.text = notes_text()
-	notes.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	notes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	notes.size_flags_stretch_ratio = 1.5
-	notes.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	notes.add_theme_font_size_override("font_size", 15)
-	columns.add_child(notes)
-	var controls := Label.new()
-	controls.text = controls_text()
-	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	controls.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	controls.add_theme_font_size_override("font_size", 15)
-	columns.add_child(controls)
-	var legend := RichTextLabel.new()
-	legend.bbcode_enabled = true
-	legend.text = legend_bbcode()
-	legend.fit_content = true
-	legend.custom_minimum_size = Vector2(300.0, 0.0)
-	legend.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	legend.add_theme_font_size_override("normal_font_size", 15)
-	columns.add_child(legend)
+	_diagram = ControlsDiagram.new()
+	var sheets := {"keys": _diagram, "hurts": ThreatSheet.new(), "grow": GrowthSheet.new()}
+	for id in PICTURE_PAGES:
+		var holder := CenterContainer.new()
+		holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(sheets[id])
+		box.add_child(holder)
+		_pictures[id] = holder
 	_notes.visible = false
 	show_page(0)
 
 
-# Notes first, then one page per codex category (reserved ones only once they hold
-# entries), then the Found list.
+# The picture pages first, then one page per codex category (reserved ones only once
+# they hold entries), then the Found list.
 func pages() -> Array[String]:
-	var list: Array[String] = ["notes"]
+	var list: Array[String] = []
+	list.append_array(PICTURE_PAGES.keys())
 	for id in EventKinds.CODEX_CATEGORIES:
 		var reserved: bool = EventKinds.CODEX_CATEGORIES[id]["reserved"]
 		if not reserved or (_codex() != null and not _codex().entries(id).is_empty()):
@@ -213,23 +184,108 @@ func show_page(index: int) -> void:
 	var list := pages()
 	_page = posmod(index, list.size())
 	var page: String = list[_page]
-	_notes_page.visible = page == "notes"
-	_codex_page.visible = page != "notes"
-	_title.text = _tab_row(list, page)
-	if page != "notes":
+	for id in _pictures:
+		_pictures[id].visible = id == page
+	_codex_page.visible = not PICTURE_PAGES.has(page)
+	if page == "keys":
+		_diagram.set_class(game.run.class_def if game != null and game.run != null else null)
+	elif not PICTURE_PAGES.has(page):
 		render_page(page)
+	_tabs.queue_redraw()
 
 
-func _tab_row(list: Array[String], current: String) -> String:
-	var tabs := PackedStringArray()
-	for page in list:
-		var label := "Notes"
-		if page == "found":
-			label = "Found %d" % (_codex().found().size() if _codex() != null else 0)
-		elif page != "notes":
-			label = "%s %d%%" % [EventKinds.category(page)["label"], int(_codex().completion(page) * 100.0) if _codex() != null else 0]
-		tabs.append("[ %s ]" % label if page == current else label)
-	return "%s  ·  %s  ·  Q / E switch  ·  paused while Tab is held" % [TITLE, "   ".join(tabs)]
+func current_page() -> String:
+	return pages()[_page]
+
+
+func diagram():
+	return _diagram
+
+
+func tab_label(page := "") -> String:
+	if page == "":
+		page = current_page()
+	if PICTURE_PAGES.has(page):
+		return PICTURE_PAGES[page]["label"]
+	if page == "found":
+		return "Found %d" % (_codex().found().size() if _codex() != null else 0)
+	return "%s %d%%" % [EventKinds.category(page)["label"], int(_codex().completion(page) * 100.0) if _codex() != null else 0]
+
+
+func _tab_icon(page: String) -> Texture2D:
+	if PICTURE_PAGES.has(page):
+		return Icons.texture(PICTURE_PAGES[page]["icon"])
+	if page == "found":
+		return Icons.shape("star")
+	return Icons.shape(EventKinds.category(page)["shape"])
+
+
+func _tab_color(page: String) -> Color:
+	if page == "hurts":
+		return Palette.HAZARD
+	if page == "grow":
+		return Palette.AMBER
+	if page == "keys":
+		var def = game.run.class_def if game != null and game.run != null else null
+		return def.color if def != null else Palette.SAND
+	if page == "found":
+		return Palette.SAND
+	return EventKinds.category(page)["color"]
+
+
+# The page row: Q, one icon per page (the open one wears its name and an underline in
+# its colour), E. Hovering an icon opens its page when the mouse is free (notes pinned
+# from the pause menu).
+class TabStrip:
+	extends Control
+
+	const H := 40.0
+	const CAP := 26.0
+	const ICON := 26.0
+	const STEP := 46.0
+	const FONT := 20
+
+	var notes
+	var _spots: Array = []
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(0.0, H)
+		mouse_filter = Control.MOUSE_FILTER_PASS
+
+	func drawn_words() -> PackedStringArray:
+		var out := PackedStringArray(["Q", "E"])
+		out.append(notes.tab_label())
+		return out
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseMotion:
+			for spot in _spots:
+				if spot["rect"].has_point(event.position) and spot["index"] != notes._page:
+					notes.show_page(spot["index"])
+					return
+
+	func _draw() -> void:
+		var list: Array[String] = notes.pages()
+		var x := 0.0
+		var mid := H * 0.5
+		x += Keycap.draw(self, Vector2(CAP * 0.5, mid), "key_q", Palette.SAND, CAP).size.x + 18.0
+		_spots.clear()
+		var font := UiFonts.bold()
+		for i in list.size():
+			var page: String = list[i]
+			var color: Color = notes._tab_color(page)
+			var open: bool = i == notes._page
+			var icon := Rect2(Vector2(x, mid - ICON * 0.5), Vector2(ICON, ICON))
+			draw_texture_rect(notes._tab_icon(page), icon, false, Color(color, 1.0 if open else 0.45))
+			var width := ICON
+			if open:
+				var label: String = notes.tab_label(page)
+				draw_string(font, Vector2(x + ICON + 8.0, mid + font.get_ascent(FONT) * 0.5 - 2.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT, color)
+				width += 8.0 + font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
+				draw_line(Vector2(x, H - 1.0), Vector2(x + width, H - 1.0), color, 3.0)
+			_spots.append({"index": i, "rect": Rect2(Vector2(x - 6.0, 0.0), Vector2(width + 12.0, H))})
+			x += width + STEP - ICON
+		Keycap.draw(self, Vector2(x + 4.0 + CAP * 0.5, mid), "key_e", Palette.SAND, CAP)
 
 
 # Builds one codex page and returns how many cards or lines it shows.
@@ -315,7 +371,13 @@ func _render_found(codex) -> int:
 	return codex.found().size()
 
 
+# While Tab is held the mouse is captured, so its buttons turn pages: left or wheel down
+# for the next, right or wheel up for the one before.
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and game != null and game.notes_held() and MOUSE_STEPS.has(event.button_index):
+		show_page(_page + MOUSE_STEPS[event.button_index])
+		get_viewport().set_input_as_handled()
+		return
 	if not (event is InputEventKey) or event.echo:
 		return
 	if event.pressed and game != null and game.notes_held() and (event.physical_keycode == KEY_Q or event.physical_keycode == KEY_E):

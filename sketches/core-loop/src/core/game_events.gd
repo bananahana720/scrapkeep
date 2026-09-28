@@ -122,6 +122,37 @@ signal swarm_scattered(at: Vector3, drones: int)
 signal mind_adapted(habit: String, icon: String)
 signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
 
+# v3 W11 juice. Combat's near-miss watch (src/combat/near_miss.gd): the ball was inside
+# a committed threat while it warned and outside it when it landed, or left within the
+# grace unhurt. kind is the threat's type kind (threat_instant, threat_lane, ...).
+signal near_miss(kind: String, at: Vector3)
+# v3 interact (LOOP-REDESIGN section 9; world's interact system and its devices publish
+# all four). family keys world/interactables.gd FAMILIES and device_id names the device.
+# interact_armed: consent given (E in a travel lane, a hold completed, a press).
+# interact_fired: the device acted (a launch, a pack arriving, a chest opening, a bet's
+# needle stopping). ambush_ended: an altar's pack cleared in time (won) or not.
+# bet_resolved: a double-or-nothing landed; stake is the cores it put up.
+signal interact_armed(family: String, device_id: String, at: Vector3)
+signal interact_fired(family: String, device_id: String, at: Vector3)
+signal ambush_ended(device_id: String, won: bool, at: Vector3)
+signal bet_resolved(device_id: String, won: bool, stake: int, at: Vector3)
+# v3 fun lab, laps mode (loop_mode.gd, world's lap_course.gd). World publishes the
+# course: the bell as the ball first rolls into the Warden's ring, each checkpoint ring
+# passed (index 0 to count - 1, in order), and each lap closed with its time. Flow
+# publishes warden_stripped when a lap past the required ones takes plating off the
+# Warden; plating is what is left.
+signal lap_bell_rung(at: Vector3)
+signal lap_ring_passed(index: int, count: int, at: Vector3)
+signal lap_completed(lap: int, required: int, seconds: float)
+signal warden_stripped(plating: float, at: Vector3)
+# v3 fun lab, the drop mode's Warden (combat; emitted by warden.gd and warden_drop.gd).
+# warden_state_changed carries the five states (closed, telegraph, open, recover,
+# punish) for the look to dress; the other three are the drop fight's reads.
+signal warden_state_changed(state: String, at: Vector3)
+signal warden_window_held(at: Vector3, seconds_left: float)
+signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
+signal warden_pulse_dodged(at: Vector3, near: bool)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

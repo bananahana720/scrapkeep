@@ -5,6 +5,9 @@ const Rows := preload("res://src/presentation/rows.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const EdgeFlash := preload("res://src/presentation/edge_flash.gd")
+const Interactables := preload("res://src/world/interactables.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -18,6 +21,26 @@ const SPARKLE_POOL := 6
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
 const TRAIL_WIDTH := [0.0, 0.28, 0.48, 0.72]
 const LINES_PER_TIER := [0, 0, 10, 20]
+# v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
+# each burst sets only its emitter's colour, place and count. pool emitters x max count
+# is the ceiling a dense fight can hold alive at once (DESIGN-NOTES v3 W11).
+#   spark     a hit: thin shards flying out in the hit's colour
+#   pop       a kill: a quick round puff
+#   debris    a kill or a blast: chunks thrown up under gravity
+#   dust      a ram, a rebound or a blast: soft puffs rolling out along the ground
+#   fountain  a part or a core: a column that rises and falls around the drop
+const BURSTS := {
+	"spark": {"pool": 10, "max": 16, "life": 0.28, "speed": [5.0, 11.0], "spread": 180.0, "gravity": -9.0,
+		"size": Vector3(0.05, 0.05, 0.24), "align": true},
+	"pop": {"pool": 6, "max": 14, "life": 0.32, "speed": [3.0, 7.0], "spread": 180.0, "gravity": -3.0, "size": Vector3.ONE * 0.16},
+	"debris": {"pool": 6, "max": 12, "life": 0.7, "speed": [4.0, 9.0], "spread": 55.0, "gravity": -26.0, "size": Vector3.ONE * 0.24},
+	"dust": {"pool": 4, "max": 14, "life": 0.5, "speed": [2.0, 5.0], "spread": 85.0, "gravity": 1.5, "size": Vector3.ONE * 0.4, "soft": true},
+	"fountain": {"pool": 3, "max": 24, "life": 0.9, "speed": [6.0, 10.0], "spread": 22.0, "gravity": -18.0, "size": Vector3.ONE * 0.18},
+}
+# The kill chain: a pip per kill in the run over the ball, from 2 up.
+const PIPS := 8
+const PIP_RADIUS := 0.9
+const PIP_HEIGHT := 2.5
 
 var ctx
 var player
@@ -40,6 +63,14 @@ var _launch_boost := 0.0
 var _rings := {}
 var _heft_class := 1
 var _found_wired := false
+var _bursts := {}
+var _burst_next := {}
+var _pips: Array = []
+var _pip_mat: StandardMaterial3D
+var _chain := 0
+var _chain_rung := 0
+var _pip_pop := 0.0
+var edge: Control
 
 
 func setup(ctx_ref) -> void:
@@ -67,6 +98,14 @@ func setup(ctx_ref) -> void:
 		_glyphs.append({"node": glyph, "mat": mat, "t": 1.0, "life": 1.0, "from": 1.0, "to": 1.0, "color": Color.WHITE})
 	for i in SPARKLE_POOL:
 		_sparkles.append(_make_sparkle())
+	_build_bursts()
+	_build_pips()
+	var layer := CanvasLayer.new()
+	layer.name = "EdgeFlashLayer"
+	layer.layer = 4
+	add_child(layer)
+	edge = EdgeFlash.new()
+	layer.add_child(edge)
 	_build_trail()
 	var events = ctx.events
 	events.landed.connect(_on_landed)
@@ -100,6 +139,14 @@ func wire_optional() -> void:
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "element_resolved", _on_element)
+	_listen(events, "interact_armed", _on_interact_armed)
+	_listen(events, "interact_fired", _on_interact_fired)
+	_listen(events, "ambush_ended", _on_ambush_ended)
+	_listen(events, "bet_resolved", _on_bet_resolved)
+	_listen(events, "lap_bell_rung", _on_lap_bell)
+	_listen(events, "lap_ring_passed", _on_lap_ring)
+	_listen(events, "lap_completed", _on_lap_notch)
+	_listen(events, "warden_stripped", _on_warden_stripped)
 	if events.has_signal("interaction_found") and not _found_wired:
 		_found_wired = true
 		var argc := 0
@@ -107,6 +154,26 @@ func wire_optional() -> void:
 			if info["name"] == "interaction_found":
 				argc = (info["args"] as Array).size()
 		events.connect("interaction_found", _on_found.unbind(argc) if argc > 0 else _on_found)
+
+
+# An interactable's consent and act, in its family's shape and colour; a result as a
+# star for a win and a cross for a loss.
+func _on_interact_armed(family: String, _id: String, at: Vector3) -> void:
+	var row := Interactables.row(family)
+	glyph("interact_armed", at + Vector3.UP * 2.0, 0.4, 1.2, 0.3, Vector3.ZERO, String(row["shape"]), row["color"])
+
+
+func _on_interact_fired(family: String, _id: String, at: Vector3) -> void:
+	var row := Interactables.row(family)
+	glyph("interact_fired", at + Vector3.UP * 2.0, 0.6, 2.4, 0.45, Vector3.ZERO, String(row["shape"]), row["color"])
+
+
+func _on_ambush_ended(_id: String, won: bool, at: Vector3) -> void:
+	glyph("ambush_ended", at + Vector3.UP * 3.0, 0.6, 2.2 if won else 1.2, 0.5, Vector3.ZERO, "star" if won else "cross", Interactables.color("fight"))
+
+
+func _on_bet_resolved(_id: String, won: bool, _stake: int, at: Vector3) -> void:
+	glyph("bet_resolved", at + Vector3.UP * 5.0, 0.6, 2.6 if won else 1.0, 0.5, Vector3.ZERO, "star" if won else "cross", Palette.ARC if won else Palette.RUST)
 
 
 static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
@@ -126,6 +193,27 @@ func _on_unsealed(stage: int) -> void:
 		radius = float(ctx.flow.stage_def().get("beacon_radius", radius))
 	glyph("beacon_unsealed", at + Vector3.UP * 6.0, 1.0, 6.0, 0.6)
 	glyph("beacon_unsealed", at + Vector3.UP * 0.3, 2.0, radius, 0.7, Vector3.UP, "ring")
+
+
+# v3 fun lab, laps mode. The bell: a ring out across the Warden's reach, like the break's.
+func _on_lap_bell(at: Vector3) -> void:
+	glyph("lap_bell_rung", at + Vector3.UP * 0.3, 2.0, 30.0, 0.8, Vector3.UP, "ring")
+
+
+# A checkpoint: a burst where the ball went through the ring.
+func _on_lap_ring(_index: int, _count: int, at: Vector3) -> void:
+	glyph("lap_ring_passed", at + Vector3.UP * 5.0, 1.0, 5.0, 0.3)
+
+
+# The notch: a flash on the beacon's mast, up where its collars stand.
+func _on_lap_notch(_lap: int, _required: int, _seconds: float) -> void:
+	if ctx.terrain != null and ctx.flow != null:
+		glyph("lap_completed", ctx.terrain.beacon_point(ctx.flow.stage()) + Vector3.UP * 12.0, 2.0, 7.0, 0.5, Vector3.ZERO, "star")
+
+
+# Plating off a Warden: a copper burst on its body.
+func _on_warden_stripped(_plating: float, at: Vector3) -> void:
+	glyph("warden_stripped", at + Vector3.UP * 2.0, 1.5, 6.0, 0.5)
 
 
 # A new heft class ripples out from the ball along the ground.
@@ -219,6 +307,10 @@ func clear() -> void:
 	for g in _glyphs:
 		g["t"] = 1.0
 		g["node"].visible = false
+	for kind in _bursts:
+		for p in _bursts[kind]:
+			p.emitting = false
+	_chain = 0
 	_trail_points.clear()
 	_streaks.clear()
 	if ctx.run.has_method("heft_class"):
@@ -469,6 +561,7 @@ func _process(delta: float) -> void:
 		var node: Node3D = entry["node"]
 		if is_instance_valid(node):
 			node.basis = Basis(Vector3.UP, _clock * entry["speed"]) * Basis(Vector3.RIGHT, entry["tilt"])
+	_draw_pips(delta)
 	var tier: int = player.speed_tier()
 	if _launch_boost > 0.0:
 		tier = SpeedTier.BLAZING
@@ -544,3 +637,136 @@ func _draw_lines(tier: int, delta: float) -> void:
 		mesh.surface_set_color(Color(color.r, color.g, color.b, 0.0))
 		mesh.surface_add_vertex(tail)
 	mesh.surface_end()
+
+
+# --- v3 W11 bursts, the chain and the edge flash ----------------------------------------
+
+func _build_bursts() -> void:
+	for kind in BURSTS:
+		var spec: Dictionary = BURSTS[kind]
+		var mesh: PrimitiveMesh
+		if spec.get("soft", false):
+			var ball := SphereMesh.new()
+			ball.radius = spec["size"].x * 0.5
+			ball.height = spec["size"].x
+			ball.radial_segments = 6
+			ball.rings = 3
+			mesh = ball
+		else:
+			var box := BoxMesh.new()
+			box.size = spec["size"]
+			mesh = box
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.vertex_color_use_as_albedo = true
+		if spec.get("soft", false):
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mesh.material = mat
+		var curve := Curve.new()
+		curve.add_point(Vector2(0.0, 1.0))
+		curve.add_point(Vector2(1.0, 0.0 if not spec.get("soft", false) else 0.3))
+		var pool: Array = []
+		for i in int(spec["pool"]):
+			var p := CPUParticles3D.new()
+			p.emitting = false
+			p.one_shot = true
+			p.amount = int(spec["max"])
+			p.lifetime = spec["life"]
+			p.explosiveness = 1.0
+			p.direction = Vector3.UP
+			p.spread = spec["spread"]
+			p.initial_velocity_min = spec["speed"][0]
+			p.initial_velocity_max = spec["speed"][1]
+			p.gravity = Vector3(0.0, spec["gravity"], 0.0)
+			p.scale_amount_min = 0.6
+			p.scale_amount_max = 1.2
+			p.scale_amount_curve = curve
+			p.particle_flag_align_y = spec.get("align", false)
+			p.mesh = mesh
+			p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			p.name = "Burst_%s_%d" % [kind, i]
+			root.add_child(p)
+			pool.append(p)
+		_bursts[kind] = pool
+		_burst_next[kind] = 0
+
+
+# One pooled burst: the oldest emitter of its kind restarts here in this colour.
+func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
+	if not _bursts.has(kind) or count <= 0 or root == null or not root.is_inside_tree():
+		return
+	var pool: Array = _bursts[kind]
+	var p: CPUParticles3D = pool[_burst_next[kind]]
+	_burst_next[kind] = (_burst_next[kind] + 1) % pool.size()
+	var amount := mini(count, int(BURSTS[kind]["max"]))
+	if p.amount != amount:
+		p.amount = amount
+	p.global_position = at
+	p.color = color
+	p.restart()
+	p.emitting = true
+	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1
+
+
+# The most particles the bursts can hold alive at once, for the notes.
+static func burst_ceiling() -> int:
+	var total := 0
+	for kind in BURSTS:
+		total += int(BURSTS[kind]["pool"]) * int(BURSTS[kind]["max"])
+	return total
+
+
+func _build_pips() -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.22, 0.22, 0.22)
+	_pip_mat = StandardMaterial3D.new()
+	_pip_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_pip_mat.albedo_color = EventKinds.color("enemy_killed")
+	mesh.material = _pip_mat
+	for i in PIPS:
+		var pip := MeshInstance3D.new()
+		pip.mesh = mesh
+		pip.name = "ChainPip%d" % i
+		pip.top_level = true
+		pip.visible = false
+		pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(pip)
+		_pips.append(pip)
+
+
+# The kill chain over the ball: a pip per kill in the run from the second one, climbing
+# from the kill colour to the reward amber and to white at the top rung. 0 hides it.
+func set_chain(length: int, rung: int) -> void:
+	var shown := mini(length, PIPS) if length >= 2 else 0
+	if shown > chain_pips():
+		_pip_pop = 1.0
+	_chain = shown
+	_chain_rung = rung
+
+
+func chain_pips() -> int:
+	return _chain
+
+
+func _draw_pips(delta: float) -> void:
+	_pip_pop = maxf(0.0, _pip_pop - delta * 5.0)
+	var top := float(EventKinds.juice("enemy_killed").get("chain_cap", 7))
+	var heat := clampf(_chain_rung / top, 0.0, 1.0)
+	_pip_mat.albedo_color = EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(heat * 1.6, 1.0)).lerp(Color.WHITE, maxf(0.0, heat - 0.7) * 2.0)
+	var centre: Vector3 = player.shown_position() + Vector3.UP * PIP_HEIGHT
+	for i in PIPS:
+		var pip: MeshInstance3D = _pips[i]
+		pip.visible = i < _chain
+		if not pip.visible:
+			continue
+		var angle := _clock * 2.2 + TAU * float(i) / maxf(1.0, _chain)
+		var size := 1.0 + (0.8 * _pip_pop if i == _chain - 1 else 0.0) + 0.25 * heat
+		pip.global_transform = Transform3D(Basis(Vector3.UP, angle * 2.0).scaled(Vector3.ONE * size),
+			centre + Vector3(cos(angle), 0.0, sin(angle)) * PIP_RADIUS)
+
+
+# The screen edge toward direction (x right, y down; zero for every edge) flashes.
+func edge_flash(direction: Vector2, color: Color, strength: float, seconds: float) -> void:
+	if edge != null:
+		edge.flash(direction, color, strength, seconds)
+	spawned["edge_flash"] = spawned.get("edge_flash", 0) + 1

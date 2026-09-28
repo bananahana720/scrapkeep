@@ -74,7 +74,9 @@ func _on_reset() -> void:
 func _refresh() -> void:
 	for key in _rows:
 		var spec: Dictionary = _rows[key]["spec"]
-		if spec.get("toggle", false):
+		if spec.has("options"):
+			_rows[key]["label"].text = "%s: %s (hold R to apply)" % [spec["label"], tuning.option(key)]
+		elif spec.get("toggle", false):
 			_rows[key]["label"].text = "%s: %s" % [spec["label"], "on" if tuning.on(key) else "off"]
 		else:
 			_rows[key]["label"].text = "%s: %.2f" % [spec["label"], tuning.base(key)]

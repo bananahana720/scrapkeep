@@ -6,6 +6,8 @@ const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const DropJuice := preload("res://src/presentation/drop_juice.gd")
+const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -16,11 +18,14 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 #   sfx_bank       one synthesized sound per event_kinds sound id
 #   synth          the instrument rack both of them play
 #   harmony        tempo, key and scales, the one musical source
-#   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon
-#   vfx            trails, speed lines, flashes, rings and sparkles
+#   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon, and
+#                  how hits, kills, pickups, dodges and hits taken land (v3 W11)
+#   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
+#   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
+#   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
 
 var ctx
 var audio
@@ -28,6 +33,9 @@ var juice
 var vfx
 var banner
 var hero_assets
+# The v3 drop mode's own juice (drop_juice.gd), apart from the universal layer.
+var drop_juice
+var ceremony
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -47,6 +55,8 @@ func setup(ctx_ref) -> void:
 	vfx = Vfx.new()
 	add_child(vfx)
 	vfx.setup(ctx)
+	juice.audio = audio
+	juice.vfx = vfx
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)
@@ -56,6 +66,12 @@ func setup(ctx_ref) -> void:
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	drop_juice = DropJuice.new()
+	add_child(drop_juice)
+	drop_juice.setup(ctx, audio)
+	ceremony = RewardCeremony.new()
+	add_child(ceremony)
+	ceremony.setup(ctx, audio, juice, vfx)
 	wire_optional()
 
 

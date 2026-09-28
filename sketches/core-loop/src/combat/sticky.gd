@@ -19,6 +19,9 @@ const FLIGHT_MAX := 1.1
 
 var charges: Array = []
 
+# A thrown charge bit into the world here; presentation pops on it. Read-only.
+signal stuck(at: Vector3)
+
 
 # The flight time a throw of this length takes, shared by the arc drawn and the throw.
 static func flight_time(origin: Vector3, landing: Vector3) -> float:
@@ -115,9 +118,11 @@ func _fly(charge: Dictionary, delta: float, space: PhysicsDirectSpaceState3D) ->
 	if not hit.is_empty():
 		charge["pos"] = hit["position"]
 		charge["stuck"] = true
+		stuck.emit(charge["pos"])
 	elif charge["t"] >= charge["flight"]:
 		charge["pos"] = charge["landing"]
 		charge["stuck"] = true
+		stuck.emit(charge["pos"])
 	else:
 		charge["pos"] = after
 

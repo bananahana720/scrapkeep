@@ -2,7 +2,6 @@ extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const Tuning := preload("res://src/movement/tuning.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
@@ -76,25 +75,11 @@ func _physics_process(_delta: float) -> void:
 	available["slingshot"] = kit.mounted
 	available["grapple"] = kit.on(Augments.GRAPPLE) and not kit.hooked and not kit.mounted \
 		and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE
-	available["mount"] = kit.on(Augments.PYLON) and not kit.mounted and kit.mount_block <= 0.0 and _face_in_reach(kit)
-
-
-# The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
-# or the wall the hook is in when the ball is close to it.
-func _face_in_reach(kit) -> bool:
-	var origin: Vector3 = game.player.ball_position()
-	if kit.hooked and kit.on(Augments.GRAPPLE) and kit.anchor_normal != Vector3.ZERO \
-			and absf(kit.anchor_normal.y) < Augments.FACE_MAX_TILT and origin.distance_to(kit.anchor) <= Augments.MOUNT_HOOK_REACH:
-		return true
-	var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
-	var reach: float = Tuning.RADIUS + Augments.FACE_REACH
-	for i in Augments.FACE_RAYS:
-		var angle := TAU * float(i) / float(Augments.FACE_RAYS)
-		var dir := Vector3(cos(angle), 0.0, sin(angle))
-		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
-		if not hit.is_empty() and absf((hit["normal"] as Vector3).y) < Augments.FACE_MAX_TILT:
-			return true
-	return false
+	# E is interact first (LOOP-REDESIGN section 9): the pylon glyph shows only when E
+	# would mount, never beside an interactable's own keycap.
+	var claim: Callable = game.player.interact_claim
+	available["mount"] = kit.on(Augments.PYLON) and not kit.mounted and kit.mount_block <= 0.0 and game.player.face_in_reach() \
+		and (game.player.mobility_started() or not (claim.is_valid() and claim.call(true)))
 
 
 func _process(_delta: float) -> void:

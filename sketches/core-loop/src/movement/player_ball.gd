@@ -71,6 +71,9 @@ var builtin_squash := true
 var crush_check := Callable()
 # Answers the heft the ball plays at; combat wires it to its heft(). 1.0 when unwired.
 var heft_of := Callable()
+# E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
+# when an interactable takes this press, so it never also plants a pylon.
+var interact_claim := Callable()
 # The arc slam's tagged faces: [{point, left}].
 var face_tags: Array = []
 var _cc_ignored_at := {}
@@ -365,6 +368,7 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	source.poll(intent)
+	_route_interact()
 	_read_grammar()
 	abilities.tick(delta)
 	immune_left = maxf(0.0, immune_left - delta)
@@ -413,6 +417,42 @@ func _read_grammar() -> void:
 	if tree.knob("winch_mount") and kit.hooked and intent.reel_held and not kit.mounted \
 			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
 		intent.mount_pressed = true
+
+
+# E is interact everywhere (LOOP-REDESIGN section 9): the interactable E has locked takes
+# the press, else it stays Sable's mount at a face. A lock farther than the interact
+# reach yields to a face she could mount, and a mobility move already under way (the
+# hook in, a slam plant, the slingshot drawing) keeps E. Mounted, E always drops off.
+func _route_interact() -> void:
+	if not intent.mount_pressed or kit.mounted or mobility_started() or not interact_claim.is_valid():
+		return
+	if interact_claim.call(kit.on(Augments.PYLON) and face_in_reach()):
+		intent.mount_pressed = false
+		intent.interact_pressed = true
+
+
+func mobility_started() -> bool:
+	return kit.hooked or kit.plant_time > 0.0 or kit.slingshot.charging
+
+
+# The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
+# or the wall the hook is in when the ball is close to it.
+func face_in_reach() -> bool:
+	var origin := ball_position()
+	if kit.hooked and kit.on(Augments.GRAPPLE) and kit.anchor_normal != Vector3.ZERO \
+			and absf(kit.anchor_normal.y) < Augments.FACE_MAX_TILT and origin.distance_to(kit.anchor) <= Augments.MOUNT_HOOK_REACH:
+		return true
+	if not is_inside_tree():
+		return false
+	var space := get_world_3d().direct_space_state
+	var reach: float = Tuning.RADIUS + Augments.FACE_REACH
+	for i in Augments.FACE_RAYS:
+		var angle := TAU * float(i) / float(Augments.FACE_RAYS)
+		var dir := Vector3(cos(angle), 0.0, sin(angle))
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
+		if not hit.is_empty() and absf((hit["normal"] as Vector3).y) < Augments.FACE_MAX_TILT:
+			return true
+	return false
 
 
 # Coil Hook: letting go of the rope throws you on along your swing.
@@ -755,7 +795,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
-		enemy.knock(away + Vector3.UP * 0.35, 18.0)
+		enemy.knock(away + Vector3.UP * 0.35, Augments.RAM_KNOCK)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
 		# Planar speed, the same measure punch_now and the crush check use (one query).

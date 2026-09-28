@@ -17,18 +17,23 @@ const Screens := preload("res://src/ui/screens.gd")
 # It pauses through game.toggle_pause() and never opens while the workshop holds the
 # player (the game's menu_held meta), so it cannot stack on the pick or the counter.
 # Closing restores the tree pause the pick still holds. Volumes go to the mixer through
-# audio.set_volume() and are kept per viewer in settings.json (settings_store.gd).
+# audio.set_volume() and are kept per viewer in settings.json (settings_store.gd). The
+# comfort rows (v3 W11) step the same way: Screen shake scales every camera shake, kick
+# and punch, Hit-stop every freeze, through juice.set_comfort(), saved beside the volumes.
 
 const LAYER := 6
 const FADE_IN := 0.16
 const FADE_OUT := 0.12
-const WIDTH := 440.0
+const WIDTH := 500.0
 const ROWS := [
 	{"id": "resume", "key": "key_p", "words": "Resume"},
 	{"id": "restart", "key": "key_n", "words": "Restart run"},
 	{"id": "notes", "key": "key_tab", "words": "Field notes"},
 	{"id": "music", "bus": "Music", "glyph": "music", "words": "Music"},
 	{"id": "effects", "bus": "SFX", "glyph": "effects", "words": "Effects"},
+	{"id": "shake", "comfort": "shake", "glyph": "shake", "words": "Screen shake"},
+	{"id": "hitstop", "comfort": "hitstop", "glyph": "hitstop", "words": "Hit-stop"},
+	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
 	{"id": "quit", "key": "key_q", "words": "Quit"},
 ]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
@@ -93,6 +98,9 @@ func setup(game_ref) -> void:
 		if spec.has("bus"):
 			row = VolumeRow.new(spec["bus"], spec["words"], spec["glyph"], WIDTH)
 			row.changed.connect(_on_volume.bind(spec["bus"]))
+		elif spec.has("comfort"):
+			row = VolumeRow.new(spec["comfort"], spec["words"], spec["glyph"], WIDTH)
+			row.changed.connect(_on_comfort.bind(spec["comfort"]))
 		else:
 			row = ChoiceButton.new(spec["id"], spec["key"], spec["words"])
 			row.custom_minimum_size.x = WIDTH
@@ -112,6 +120,8 @@ func apply_saved() -> void:
 	store.load_saved()
 	for bus in store.volumes:
 		_set_bus(bus, store.volumes[bus])
+	for id in store.comfort:
+		_set_comfort(id, store.comfort[id])
 
 
 func is_open() -> bool:
@@ -145,6 +155,7 @@ func open() -> void:
 		game.toggle_pause()
 	game._capture_mouse(false)
 	_sync_levels()
+	_show_ceremony()
 	_set_live(true)
 	_fade(true)
 	_rows["resume"].grab_focus()
@@ -186,8 +197,26 @@ func press(id: String) -> void:
 			game.notes.show_page(0)
 		"quit":
 			get_tree().quit()
+		"ceremony":
+			_toggle_ceremony()
 		_:
 			_rows[id].grab_focus()
+
+
+# v3 W13: C or the row flips reward ceremonies between full and short (every find at the
+# rare tier), saved in settings.json as the ceremony's comfort level (1 full, 0 short).
+func _toggle_ceremony() -> void:
+	var ceremony = game.presentation.get("ceremony") if game.presentation != null else null
+	if ceremony != null:
+		ceremony.short = not ceremony.short
+		store.set_comfort(ceremony.SETTING, 0.0 if ceremony.short else 1.0)
+	_show_ceremony()
+	_rows["ceremony"].grab_focus()
+
+
+func _show_ceremony() -> void:
+	var ceremony = game.presentation.get("ceremony") if game.presentation != null else null
+	_rows["ceremony"].text = "Ceremonies: short" if ceremony != null and ceremony.short else "Ceremonies: full"
 
 
 func _input(event: InputEvent) -> void:
@@ -246,6 +275,9 @@ func _menu_key(event: InputEvent) -> bool:
 				return true
 			KEY_Q:
 				press("quit")
+				return true
+			KEY_C:
+				press("ceremony")
 				return true
 			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
 				_accept()
@@ -308,10 +340,34 @@ func _on_volume(level: float, bus: String) -> void:
 	_cue(Harmony.ratio(Harmony.pentatonic_step(int(level * 8.0))))
 
 
+func _juice():
+	var presentation = game.presentation if game != null else null
+	return presentation.get("juice") if presentation != null else null
+
+
+func _set_comfort(id: String, level: float) -> void:
+	var juice = _juice()
+	if juice != null and juice.has_method("set_comfort"):
+		juice.set_comfort(id, level)
+
+
+func _on_comfort(level: float, id: String) -> void:
+	_set_comfort(id, level)
+	store.set_comfort(id, level)
+	_cue(Harmony.ratio(Harmony.pentatonic_step(int(level * 8.0))))
+
+
 func _sync_levels() -> void:
 	var audio = _audio()
+	var juice = _juice()
 	for id in _order:
 		var spec: Dictionary = ROWS[_order.find(id)]
+		if spec.has("comfort"):
+			var feel: float = store.comfort.get(spec["comfort"], 1.0)
+			if juice != null and juice.has_method("comfort"):
+				feel = juice.comfort(spec["comfort"])
+			_rows[id].show_level(feel)
+			continue
 		if not spec.has("bus"):
 			continue
 		var level: float = store.volumes.get(spec["bus"], 1.0)

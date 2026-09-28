@@ -6,12 +6,14 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const Streak := preload("res://src/presentation/streak.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
 const Augments := preload("res://src/movement/augments.gd")
 # v2 W9: the class row names the motif every class cue resolves through, and the roster
 # tells an ancient from the Fleet.
 const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -35,8 +37,8 @@ const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_p
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
-# Pickups inside this window climb the pentatonic ladder; a gap resets to home.
-const COMBO_WINDOW_MS := 700
+# Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
+# their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
 const MENU_STATES := ["title", "class_select", "summary", "dead"]
 # Weapon voices per class, so each class sounds like itself (identity, principle 5).
@@ -56,7 +58,12 @@ const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "fou
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "sable_ready", "rivet_ready", "kest_ready",
 	"sable_break", "rivet_break", "kest_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "hold_pit", "hold_bola", "hold_tether", "hold_net",
-	"hold_riser", "callout_chime", "shop_bell"]
+	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "reveal_clank", "ceremony_build",
+	"ceremony_resolve",
+	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
+	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
+	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold"]
 # Event progress until the spine publishes event_progress(event_id, fraction): the
 # seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
@@ -100,10 +107,10 @@ var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
 var _voices := {}
 var _last_start := {}
-var _scrap_combo := 0
-var _scrap_last := -100000
-var _kill_combo := 0
-var _kill_last := -100000
+# The pickup streak and the kill chain. Audio bumps them as it plays each rung; juice
+# reads the same records at the end of the frame to draw the chain and the pulse.
+var scrap_streak := Streak.for_kind("scrap_collected")
+var kill_streak := Streak.for_kind("enemy_killed")
 var _beacon_rung := -1
 var _gates_announced := false
 var _heft_class := 1
@@ -400,6 +407,16 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 	cue_log.append([kind, sound, "now", engine.clock, pitch])
 
 
+# Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
+# its drum roll so the burst lands clean.
+func stop(sound: String) -> void:
+	if _sfx != null:
+		for id in _voices.get(sound, []):
+			if _sfx.is_stream_playing(id):
+				_sfx.stop_stream(id)
+	_voices.erase(sound)
+
+
 # v2 W2 threat grammar. A committed threat warns on the game frame it is declared, never
 # on the beat (SOUND-STORY.md section 7): its type's row sound, then the owner's voice
 # and the mechanic tag when the threat carries them. Only hostile threats join the
@@ -527,7 +544,19 @@ func wire_optional() -> void:
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
+	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
+	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
+	_listen(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
+		play("interact_armed", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "arm"), cue_context())))
+	_listen(events, "interact_fired", func(family: String, _id: String, _at: Vector3):
+		play("interact_fired", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "fire"), cue_context())))
+	_listen(events, "ambush_ended", func(_id: String, won: bool, _at: Vector3):
+		play("ambush_ended", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("fight", "won" if won else "lost"), cue_context())))
+	_listen(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
+		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
+	_wire_laps(events)
 	_listen(events, "core_gained", _on_core)
+	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
 	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
@@ -593,6 +622,22 @@ static func motif_of(class_id: String) -> String:
 # octave at the vault cap (SOUND-STORY section 3), so a weak kick falls short of it.
 func _on_vault_kicked(_at: Vector3, speed: float) -> void:
 	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
+
+
+# v3 fun lab, laps mode (LOOP-REDESIGN section 7, the lap notch). A checkpoint pops at
+# once, one reward-ladder rung higher per ring; the ring that closes a lap pops on the
+# beat instead, with the beacon's notch, so they land with the director's threat_rose
+# stinger, which world publishes the same tick. The bell and a plating strip are flow
+# moments, so on the beat too.
+func _wire_laps(events) -> void:
+	_listen(events, "lap_bell_rung", func(_at: Vector3): on_beat("lap_bell_rung"))
+	_listen(events, "lap_ring_passed", func(index: int, count: int, _at: Vector3):
+		if index == count - 1:
+			on_beat("lap_ring_passed")
+		else:
+			play("lap_ring_passed", 0.0, Harmony.ratio(Harmony.pentatonic_step(index))))
+	_listen(events, "lap_completed", func(_lap: int, _required: int, _seconds: float): on_beat("lap_completed"))
+	_listen(events, "warden_stripped", func(_plating: float, _at: Vector3): on_beat("warden_stripped"))
 
 
 # Connects once. loose drops whatever arguments the signal carries.
@@ -671,7 +716,8 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		engine.set_heft_lift(_heft_class - 1)
 	_beacon_rung = -1
 	_gates_announced = false
-	_scrap_combo = 0
+	scrap_streak.reset()
+	kill_streak.reset()
 	# Each stage starts its own difficulty clock and never carries a vent pedal over.
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
@@ -688,10 +734,8 @@ func _on_beacon(fraction: float) -> void:
 
 
 func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:
-	var now := Time.get_ticks_msec()
-	_scrap_combo = mini(_scrap_combo + 1, 9) if now - _scrap_last < COMBO_WINDOW_MS else 0
-	_scrap_last = now
-	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(_scrap_combo)))
+	var rung: int = scrap_streak.bump(Time.get_ticks_msec())
+	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
 
 # The growl is the Fleet's voice: an ancient (a relic, a drone, a hand, a Warden) never
@@ -760,10 +804,8 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	if _kind == "vault":
 		# A small drop, on the moment the vault breaks.
 		play("enemy_killed", 2.0, 1.0, "SFX", "vault_drop")
-	var now := Time.get_ticks_msec()
-	_kill_combo = mini(_kill_combo + 1, 7) if now - _kill_last < KILL_COMBO_WINDOW_MS else 0
-	_kill_last = now
-	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(_kill_combo)))
+	var rung: int = kill_streak.bump(Time.get_ticks_msec())
+	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
 
 func _on_died() -> void:

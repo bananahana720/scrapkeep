@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const Shapes := preload("res://src/world/features.gd")
 
 # One stage's shape as data plus a height function. The terrain builds the ground
 # from sample(), and every other question (where you spawn, where the beacon stands,
@@ -31,13 +32,91 @@ var beacon_floor := 0.0
 # {"at": Vector2 lip, "dir": Vector2, "width": float}.
 var kickers: Array = []
 
+# The v3 loop (design-v3/LOOP-REDESIGN.md sections 1 and 3), empty on a map without
+# one. loop is the lap as a route.gd-style polyline: shelf, a drop line, the bowl, the
+# return. Each drop line runs from the shelf to an amber kicker lip aimed at the
+# Warden's mast: {"id", "kind" ("fast" or "long"), "start" (Vector2, where it leaves
+# the shelf), "via" (Array of Vector2 on the way down), "at" (Vector2, the lip),
+# "dir" (Vector2 unit, the way you ride it), "width", "length", "lip" (m of rise),
+# "target" (Vector2, the mast)}. return_at is the return contraption's mouth in the
+# bowl and return_to where it sets the ball down on the shelf.
+var loop := PackedVector2Array()
+var drop_lines: Array = []
+var return_at := Vector2.INF
+var return_to := Vector2.INF
+# True while a loop mode has the lips and the return live on this map (world sets it at
+# stage entry), so the codex reads a drop lip as a kicker only when one stands there.
+var loop_live := false
+# The loop's swap id: its lips are pre-built colliders parked until a loop mode is on.
+const LOOP_SWAP := "drop_loop"
+const LOOP_PARK := 400.0
 
-# How far p is from the fall line, the straight run from the spawn to the beacon.
+
+# How far p is from the fall line, the straight run from the spawn to the beacon. The
+# v2 route contract (world_route_test) reads this; the loop reads off_loop().
 func off_line(p: Vector2) -> float:
 	return p.distance_to(Geometry2D.get_closest_point_to_segment(p, spawn, beacon))
 
 
+# How far p is from the loop, INF on a map without one.
+func off_loop(p: Vector2) -> float:
+	var best := INF
+	for i in range(1, loop.size()):
+		best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, loop[i - 1], loop[i])))
+	return best
+
+
+# The drop lines' lips as height over the ground, 0 away from them.
+func drop_lip_height(x: float, z: float) -> float:
+	var h := 0.0
+	for line in drop_lines:
+		h = maxf(h, Shapes.kicker(x, z, line["at"], line["dir"], line["length"], line["width"], line["lip"]))
+	return h
+
+
+# The drop line whose lip p is at or just past, else {}. whole_ramp widens the reach
+# back over the lip's whole run-up, where a hopping ball crosses it in the air.
+func drop_line_at(p: Vector2, whole_ramp := false) -> Dictionary:
+	for line in drop_lines:
+		var rel: Vector2 = p - (line["at"] as Vector2)
+		var dir: Vector2 = line["dir"]
+		var u := rel.dot(dir)
+		var back: float = float(line["length"]) if whole_ramp else 3.0
+		if u > -back and u < 6.0 and absf(rel.dot(Vector2(-dir.y, dir.x))) < float(line["width"]) * 0.5 + 1.5:
+			return line
+	return {}
+
+
+# The flatter arc at this speed that covers distance d and rises by dy: (planar, up), or
+# null when no arc at this speed reaches.
+static func aim_arc(speed: float, d: float, dy: float, g: float):
+	var s2 := speed * speed
+	var disc := s2 * s2 - g * (g * d * d + 2.0 * dy * s2)
+	if disc < 0.0:
+		return null
+	var angle := atan((s2 - sqrt(disc)) / (g * d))
+	return Vector2(cos(angle), sin(angle)) * speed
+
+
+# Puts a pre-built terrain change in or out by moving its finished bodies (the gorge's
+# swap, map_gorge.gd apply_swap): swaps is id -> {"before": [Node3D], "after": [Node3D]},
+# each node carrying its "home" meta.
+static func move_swap(swaps: Dictionary, id: String, changed: bool) -> void:
+	if not swaps.has(id):
+		return
+	for node in swaps[id]["after"]:
+		var home: Vector3 = node.get_meta("home")
+		node.position = home if changed else home + Vector3.DOWN * LOOP_PARK
+		node.visible = changed
+	for node in swaps[id]["before"]:
+		var home: Vector3 = node.get_meta("home")
+		node.position = home + Vector3.DOWN * LOOP_PARK if changed else home
+		node.visible = not changed
+
+
 func near_kicker_lip(p: Vector2) -> bool:
+	if loop_live and not drop_line_at(p).is_empty():
+		return true
 	for k in kickers:
 		var rel: Vector2 = p - (k["at"] as Vector2)
 		var dir: Vector2 = k["dir"]
