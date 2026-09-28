@@ -5,7 +5,8 @@ extends SceneTree
 # A still fails when more than MAX_SHARE of its pixels differ by more than CHANNEL_STEP
 # in any channel, or the mean absolute difference over every channel exceeds MAX_MEAN.
 # Writes diffs.json, an amplified diff image per still and contact.png (reference, head,
-# diff x8 per row). Stills named in --expect-change are reported but not judged.
+# diff x8 per row). Stills named in --expect-change are reported but not judged; a still
+# named control-* is a known-bad calibration and must fail the budget.
 
 const CHANNEL_STEP := 12
 const MAX_SHARE := 0.003
@@ -41,11 +42,14 @@ func _initialize() -> void:
 		row["name"] = name
 		row["judged"] = not name in expect
 		row["pass"] = row["share"] <= MAX_SHARE and row["mean"] <= MAX_MEAN
-		if row["judged"] and not row["pass"]:
+		row["control"] = name.begins_with("control-")
+		if row["judged"] and row["pass"] == row["control"]:
 			failed += 1
 		rows.append(row)
-		print("%-48s share %.4f%% mean %.3f/255 max %d -> %s" % [name, row["share"] * 100.0, row["mean"], row["max"],
-			("PASS" if row["pass"] else "FAIL") if row["judged"] else ("differs" if not row["pass"] else "same")])
+		var verdict := ("PASS" if row["pass"] else "FAIL") if row["judged"] else ("differs" if not row["pass"] else "same")
+		if row["control"]:
+			verdict = "known-bad control %s the budget" % ("FAILS" if not row["pass"] else "PASSES (budget too loose)")
+		print("%-48s share %.4f%% mean %.3f/255 max %d -> %s" % [name, row["share"] * 100.0, row["mean"], row["max"], verdict])
 	sheet.save_png(String(args["out"]).path_join("contact.png"))
 	var f := FileAccess.open(String(args["out"]).path_join("diffs.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify({"budget": {"channel_step": CHANNEL_STEP, "max_share": MAX_SHARE, "max_mean": MAX_MEAN},

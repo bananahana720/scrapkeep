@@ -12,6 +12,8 @@ extends Node3D
 # - Bolts draw at PRIORITY, below every enemy telegraph (Telegraph.PRIORITY), and never
 #   in HAZARD, the colour telegraphs own.
 
+const Density := preload("res://src/presentation/density.gd")
+
 const MAX_LIVE := 64
 const PRIORITY := 0
 const WORLD_MASK := 1
@@ -198,10 +200,11 @@ func _process(_delta: float) -> void:
 	if count == 0:
 		return
 	var alpha := crowd_alpha(count)
+	var tail := Density.SHED_STREAK_SCALE if Density.live().sheds("bolt_tails") else 1.0
 	for i in count:
 		var bolt: Dictionary = _bolts[i]
 		var dir: Vector3 = bolt["dir"]
-		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"]))
+		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * tail
 		var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(WIDTH, WIDTH, streak))
 		var head: Vector3 = bolt["shown"]

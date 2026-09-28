@@ -427,11 +427,9 @@ func _flush_kills() -> void:
 	if _kills.is_empty():
 		return
 	var row := EventKinds.juice("enemy_killed")
-	var color := EventKinds.color("enemy_killed")
 	if vfx != null:
-		for i in mini(_kills.size(), MAX_BURSTS):
-			vfx.burst("pop", _kills[i] + Vector3.UP * 0.8, color, int(row["pop"]))
-			vfx.burst("debris", _kills[i] + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(row["debris"]))
+		for at in _kills:
+			vfx.kill_pop(at)
 	var now := Time.get_ticks_msec()
 	var before := _multi_size if now - _multi_last <= int(row["multi_ms"]) else 0
 	_multi_size = before + _kills.size()
@@ -492,8 +490,8 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
 	if vfx != null:
 		var travel: Vector3 = player.planar_velocity()
-		vfx.glyph("near_miss", at + Vector3.UP * 1.8, 0.6, 1.4, 0.35, travel if travel.length() > 0.5 else Vector3.ZERO)
-		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring")
+		vfx.glyph("near_miss", at + Vector3.UP * 1.8, 0.6, 1.4, 0.35, travel if travel.length() > 0.5 else Vector3.ZERO, "", Color(0, 0, 0, 0), "P2")
+		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring", Color(0, 0, 0, 0), "P2")
 
 
 # A hit taken: the screen edge toward the source flashes, a short shake.
