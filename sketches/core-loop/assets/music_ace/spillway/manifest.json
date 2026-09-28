@@ -457,6 +457,6 @@
   "from_build_bar": 16,
   "to_build_bar": 9,
   "never_to_bar": 1,
-  "reason": "warden-F-085-s7 passes only the jumps the timeline plays; its 16 -> 1 wrap read 17.4 ms"
+  "reason": "Bars 9 to 16 loop on warden-F-085-s42 (the packaged take). Measured on its packaged build clip (fix round 2, scratchpad/acemusic-fix2/seam_s42.py): the native 16 -> 9 wrap's join step is 26.3 dB under the loop's own 99.9th-percentile step, and its kick lands 10.2 ms off the grid across the join (an ordinary bar boundary reads 13.1 ms in the same measure). warden-F-085-s7's 16 -> 1 wrap read 17.4 ms in pack 3's screen, which is why the loop never targets bar 1."
  }
 }

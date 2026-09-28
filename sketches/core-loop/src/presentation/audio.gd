@@ -90,12 +90,27 @@ var ace_manifest := AceSequencer.MANIFEST
 # The file a failed load named, "" when the package loaded or was never asked for.
 var ace_missing := ""
 var _ace_failed := false
+# The stems load on a worker while the title shows (24 Oggs, 5.8 MB): the task, its
+# result and the manifest it read. ace_ready() waits for the rest of it, or loads them
+# in place when the option or the manifest changed after setup.
+var _ace_task := -1
+var _ace_loaded: AceSequencer
+var _ace_loaded_from := ""
 var _ring_capacity := 0
 # The ACE ring's depth: the POC's QUEUE_TARGET, raised a step whenever the ring runs dry,
 # for a device that pulls more per period than the 512 or 1024 frames it was sized on
 # (the headless Dummy driver pulls 4096).
 var queue_target := AceSequencer.QUEUE_TARGET
 var _skips_seen := 0
+# The synth band fades in over this many frames when it comes back from mute, so a voice
+# still sounding under the mute never steps to full level. _unmute_at is the transport
+# sample the ramp starts from, -1 when none runs.
+const UNMUTE_RAMP := AceSequencer.STOP_RAMP
+var _unmute_at := -1
+# A set piece heard through a launch's flight: the flight holds the ACE band, and the
+# landing hands it to the synth on a beat. _handover_at is that beat while it is coming.
+var _ace_flight := false
+var _handover_at := -1
 # The transport sample the synth band starts fading out under the ACE band, -1 when the
 # synth band plays alone. It fades over AceSequencer.STOP_RAMP and is muted after.
 var _band_fade_start := -1
@@ -173,6 +188,7 @@ func setup(ctx_ref) -> void:
 	_make_overlay()
 	_connect_all(ctx.events)
 	_start_bake()
+	_start_ace_load()
 
 
 # --- Baking -------------------------------------------------------------------------
@@ -215,6 +231,17 @@ static func _poll_bake() -> bool:
 	return _baked
 
 
+func _start_ace_load() -> void:
+	if _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
+		return
+	_ace_loaded_from = ace_manifest
+	_ace_task = WorkerThreadPool.add_task(_load_ace, false, "presentation ACE stems")
+
+
+func _load_ace() -> void:
+	_ace_loaded = AceSequencer.new(_ace_loaded_from)
+
+
 # Blocks until the bank is baked; the tests call it, the game never needs to.
 func bake_now() -> void:
 	if _bake_task >= 0:
@@ -239,6 +266,9 @@ func _exit_tree() -> void:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
 		_baked = true
+	if _ace_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_ace_task)
+		_ace_task = -1
 	if _rest_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_rest_task)
 		_rest_task = -1
@@ -272,6 +302,8 @@ func _on_ready() -> void:
 	_music_pb = _music_player.get_stream_playback()
 	_stinger_pb = _stinger_player.get_stream_playback()
 	_ring_capacity = _music_pb.get_frames_available()
+	if ace_wanted():
+		print("ACE music: generator ring %d frames, queue target %d" % [_ring_capacity, queue_target])
 	_pump()
 
 
@@ -356,21 +388,27 @@ func _pump() -> void:
 		var owed := int((now - _virtual_usec) * Harmony.RATE / 1000000.0)
 		if owed > 0:
 			_virtual_usec += int(owed * 1000000.0 / Harmony.RATE)
+			_unmute_for_handover(mini(owed, 8192))
 			engine.render(mini(owed, 8192))
 			_ace_render(mini(owed, 8192), ace_live)
 		return
 	if _music_pb == null or _stinger_pb == null:
 		return
 	var frames := mini(_music_pb.get_frames_available(), _stinger_pb.get_frames_available())
-	if ace_live:
+	if not ace_live:
+		# Skips the synth alone took are not an ACE dry-run.
+		_skips_seen = _music_pb.get_skips()
+	else:
 		_deepen_on_skip()
 		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, queue_target), _stinger_pb.get_frames_available())
 	frames = mini(frames, 8192)
 	if frames <= 0:
 		return
 	var from := engine.clock
+	_unmute_for_handover(frames)
 	engine.render(frames)
 	var music := _ace_render(frames, ace_live)
+	_fade_in_band(from, frames)
 	if not ace_live:
 		_music_pb.push_buffer(engine.out_music)
 	elif engine.band_muted:
@@ -386,10 +424,11 @@ func _pump() -> void:
 # comes back at once and the ACE fade tail is summed over it.
 func _hand_over_band() -> void:
 	if not ace_playing():
-		_band_fade_start = -1
-		engine.band_muted = false
+		_ace_flight = false
+		_handover_at = -1
+		_unmute_band()
 		return
-	if engine.band_muted:
+	if engine.band_muted or _handover_at >= 0:
 		return
 	if _band_fade_start < 0 or _band_fade_start > engine.clock:
 		_band_fade_start = ace.sound_from()
@@ -413,8 +452,47 @@ func _with_band(music: PackedVector2Array, from: int) -> PackedVector2Array:
 	return music
 
 
+# The synth band comes back from mute: its ramp starts at from (the next transport sample
+# by default) and ends UNMUTE_RAMP frames later.
+func _unmute_band(from := -1) -> void:
+	_band_fade_start = -1
+	if not engine.band_muted:
+		return
+	engine.band_muted = false
+	_unmute_at = from if from >= 0 else engine.clock
+
+
+# The landing's beat is coming inside this block: the synth band un-mutes so its ramp ends
+# on the beat and the drop's first hit sounds whole.
+func _unmute_for_handover(frames: int) -> void:
+	if _handover_at >= 0 and engine.band_muted and engine.clock + frames > _handover_at - UNMUTE_RAMP:
+		_unmute_band(_handover_at - UNMUTE_RAMP)
+
+
+# The synth band's block, scaled by the un-mute ramp; from is the transport sample of its
+# first frame.
+func _fade_in_band(from: int, frames: int) -> void:
+	if _unmute_at < 0:
+		return
+	if from >= _unmute_at + UNMUTE_RAMP:
+		_unmute_at = -1
+		return
+	var band := engine.out_music
+	var n := mini(frames, band.size())
+	for i in n:
+		var g := clampf(float(from + i - _unmute_at) / UNMUTE_RAMP, 0.0, 1.0)
+		if g >= 1.0:
+			break
+		band[i] *= g
+	engine.out_music = band
+
+
 func _deepen_on_skip() -> void:
-	var skips := _music_pb.get_skips()
+	_deepen_for(_music_pb.get_skips())
+
+
+# A skip the ring took since the last look deepens the queue by a step, up to the ring.
+func _deepen_for(skips: int) -> void:
 	if skips <= _skips_seen:
 		return
 	_skips_seen = skips
@@ -434,7 +512,9 @@ func _ace_render(frames: int, live: bool) -> PackedVector2Array:
 
 
 func ace_wanted() -> bool:
-	return ctx.tuning != null and ctx.tuning.option(LoopMode.MUSIC_KEY) == "ace"
+	# Some tests set the director up on a stand-in context with no tuning.
+	var tuning = ctx.get("tuning")
+	return tuning != null and tuning.option(LoopMode.MUSIC_KEY) == "ace"
 
 
 # Loads the ACE package on first need. A missing manifest or stem is one warning naming
@@ -444,7 +524,16 @@ func ace_ready() -> bool:
 		return true
 	if _ace_failed or not ace_wanted():
 		return false
-	var loaded := AceSequencer.new(ace_manifest)
+	var loaded: AceSequencer = null
+	if _ace_task >= 0:
+		# Loading started at setup; wait only for what is left of it.
+		WorkerThreadPool.wait_for_task_completion(_ace_task)
+		_ace_task = -1
+	if _ace_loaded != null and _ace_loaded_from == ace_manifest:
+		loaded = _ace_loaded
+	_ace_loaded = null
+	if loaded == null:
+		loaded = AceSequencer.new(ace_manifest)
 	if not loaded.ready():
 		_ace_failed = true
 		ace_missing = loaded.missing
@@ -457,11 +546,15 @@ func ace_ready() -> bool:
 
 
 # Stage 1 starts the ACE band at transport sample at; any other stage hands back to the
-# synth, except that a break set piece already playing is heard to its end first.
+# synth, except that the band held through a launch's flight waits for the landing.
 func _ace_stage(stage: int, at: int) -> void:
 	if stage == 1 and ace_ready():
+		_ace_flight = false
+		_handover_at = -1
 		ace.start_level(at if at >= 0 else engine.clock)
 		engine.grid = ace
+		return
+	if _ace_flight and ace_playing():
 		return
 	# Another stage: the synth band takes over now, so the new stage's restart, launch
 	# build and landing drop are heard; the ACE band fades over a beat under it.
@@ -472,10 +565,12 @@ func _ace_stage(stage: int, at: int) -> void:
 # now (the death boom, a restart's first beat) is heard over the ACE fade tail.
 func _ace_end(ramp := AceSequencer.STOP_RAMP) -> void:
 	engine.grid = null
+	_ace_flight = false
+	_handover_at = -1
 	if ace != null and ace.mode != "off":
 		ace.stop(ramp)
-	engine.band_muted = false
-	_band_fade_start = -1
+	_unmute_band()
+	_release_grid()
 
 
 func ace_playing() -> bool:
@@ -1042,9 +1137,16 @@ func _on_launched(_velocity: Vector3) -> void:
 	# the unseal drop); never out of Brindle's arena.
 	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == "brindle":
 		return
-	# A launch out of the Warden's break leaves Spillway: the synth build takes the flight
-	# and the ACE set piece fades under it over a beat.
+	# A launch out of the Warden's break is directed from A to B: the piece plays through
+	# the flight and the landing hands it to the synth on a beat (_land_drop). Any other
+	# ACE mode (an unsealed stage's gate) hands to the synth now, so its launch riser sounds.
 	if ace_playing() and ace.mode == "piece":
+		_ace_flight = true
+		_launch_armed = true
+		_landing_theme = -1
+		_launch_stage = false
+		return
+	if ace_playing():
 		_ace_end(ace.grid_beat)
 	# The launch is the build: the riser, the snare roll and the sweep carry the flight.
 	engine.start_build(LAUNCH_BUILD_SECONDS, true)
@@ -1065,12 +1167,22 @@ func _land_drop() -> void:
 	var touchdown := engine.clock
 	var at := engine.drop_now(4, 0.85, {}, _landing_theme)
 	drop_log.append([touchdown, at])
+	if _ace_flight:
+		# The piece sounds to the landing's beat, fades under the synth drop over a beat and
+		# leaves the synth band to un-mute so its ramp ends on that beat.
+		_ace_flight = false
+		if ace_playing():
+			ace.stop_at(at, ace.grid_beat)
+			_handover_at = at
 	cue_log.append(["landed", "drop", "beat", at, 1.0])
 	_launch_armed = false
 	_landing_theme = -1
 
 
 func _disarm_launch() -> void:
+	if _ace_flight:
+		# The landing that would hand the band over is not coming.
+		_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 	if _launch_armed:
 		engine.cancel_build()
 	_launch_armed = false

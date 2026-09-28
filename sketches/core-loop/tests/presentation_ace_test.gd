@@ -14,7 +14,10 @@ const Ace := preload("res://src/presentation/ace_sequencer.gd")
 #   - zero skips over 180 s at QUEUE_TARGET with the Warden cycling, steady and hitched;
 #   - each held-breath style's kick band in the open against the build;
 #   - the break set piece plays through untouched by the game;
-#   - a change asked on the grid or inside a join gets the whole join on the next grid point.
+#   - a change asked on the grid or inside a join gets the whole join on the next grid point;
+#   - a request inside a begun join leaves no silence, and stop and start_level fade a begun
+#     join over the ramp they were asked for;
+#   - stop_at plays a section to a sample and fades from there.
 # Needs tools/ace/package_music.py to have run: without the Oggs the audio checks SKIP.
 
 const FRAME_US := 26000.0
@@ -46,6 +49,7 @@ func _initialize() -> void:
 		_breath_levels()
 		_set_piece()
 		_joins()
+		_begun_joins()
 	print("presentation_ace_test: %s (%.1f s, %d skipped)" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, (Time.get_ticks_msec() - t0) / 1000.0, _skipped])
 	quit(0 if _failures == 0 else 1)
 
@@ -489,6 +493,127 @@ func _joins() -> void:
 	ok = ok and re_ok
 	rows.append("start_level in the pivot at %d: %s, misses %d" % [at_restart, calm.map(func(e): return "%s@%d" % [e[2], e[1]]), re.misses])
 	_check("joins never shorter than 10 ms", ok, "; ".join(rows))
+
+
+# The longest run of frames whose two channels are both under 1e-5.
+func _longest_silence(buf: PackedVector2Array) -> int:
+	var run := 0
+	var longest := 0
+	for f in buf:
+		if absf(f.x) < 1e-5 and absf(f.y) < 1e-5:
+			run += 1
+			longest = maxi(longest, run)
+		else:
+			run = 0
+	return longest
+
+
+func _peak(buf: PackedVector2Array, from: int, to: int) -> float:
+	var m := 0.0
+	for i in range(from, mini(to, buf.size())):
+		m = maxf(m, maxf(absf(buf[i].x), absf(buf[i].y)))
+	return m
+
+
+# Under a drop, a telegraph pending off the bar; the unseal lands inside its begun join.
+func _drop_with_telegraph(seq) -> int:
+	var cbar := int(seq.clips["calm"]["bar"])
+	var wbar := int(seq.clips["build"]["bar"])
+	var wbeat := int(seq.clips["build"]["beat"])
+	seq.start_level(0)
+	_render_to(seq, cbar + 1000, 997)
+	seq.commit_warden()
+	_render_to(seq, 2 * cbar + 2000 + 2 * wbar, 997)
+	_render_to(seq, seq.next_beat(seq.clock + 1), 997)
+	var drop_at: int = seq.drop_now()
+	_render_to(seq, drop_at + wbar + wbeat + 3000, 997)
+	seq.set_warden_state("telegraph")
+	return drop_at
+
+
+# A begun join is a section already entered from the listener's side: the old one fades
+# out under it. A request that cancels it must not leave the fade with nothing after it.
+func _begun_joins() -> void:
+	var rows := []
+	var ok := true
+	var join := 441
+	# 1. The unseal inside a begun telegraph join: no silent stretch until the break's bar.
+	var seq := Ace.new()
+	var wbar := int(seq.clips["build"]["bar"])
+	var drop_at := _drop_with_telegraph(seq)
+	var tele_at := int(seq.pending.get("at", -1))
+	var off_bar: bool = seq.pending.get("section", "") == "telegraph" and posmod(tele_at - drop_at, wbar) != 0
+	var from := tele_at - 200
+	_render_to(seq, from, 997)
+	var begun: bool = bool(seq.pending.get("begun", false))
+	seq.warden_broken()
+	var break_at := int(seq.pending.get("at", -1))
+	var buf := _render_to(seq, break_at + 3000, 997)
+	var silent := _longest_silence(buf)
+	var brk := _enters(seq, drop_at).filter(func(e): return e[2] == "break")
+	var hole_ok: bool = off_bar and begun and brk.size() == 1 and int(brk[0][1]) == break_at and break_at - tele_at > 4000 and silent < 64 and seq.misses == 0
+	ok = ok and hole_ok
+	rows.append("telegraph pending at %d (off the drop's bar %s, begun %s), unseal 200 frames into its join: break at %d, %d frames later; the longest silence from the unseal to 3000 frames into the break is %d frames (a hole ran %d before the fix)" % [
+		tele_at, off_bar, begun, break_at, break_at - tele_at, silent, break_at - tele_at])
+	# 1b. The drop-line commit inside a begun travel join: the pivot's bar is not silent either.
+	var c := Ace.new()
+	var cbar := int(c.clips["calm"]["bar"])
+	c.start_level(0)
+	_render_to(c, cbar + 3000, 997)
+	c.set_pressure(0.9)
+	var travel_at := int(c.pending["at"])
+	_render_to(c, travel_at - 200, 997)
+	var c_begun := bool(c.pending.get("begun", false))
+	c.commit_warden()
+	var cbuf := _render_to(c, int(c.pending["at"]) + 3000, 997)
+	var c_silent := _longest_silence(cbuf)
+	var pivot := _enters(c, travel_at - 300).filter(func(e): return e[2] == "pivot")
+	var commit_ok: bool = c_begun and c_silent < 64 and pivot.size() == 1
+	ok = ok and commit_ok
+	rows.append("commit_warden inside a begun travel join (%d): longest silence %d frames, pivot at %s" % [travel_at, c_silent, pivot.map(func(e): return e[1])])
+	# 2. stop(ramp) and start_level on a begun join: the ramp asked is the ramp heard.
+	var st := Ace.new()
+	st.start_level(0)
+	_render_to(st, cbar + 3000, 997)
+	st.set_pressure(0.9)
+	_render_to(st, int(st.pending["at"]) - 200, 997)
+	var stop_begun := bool(st.pending.get("begun", false))
+	st.stop(4410)
+	var sbuf := _render_to(st, st.clock + 4410 + 200, 997)
+	var mid := _peak(sbuf, 1500, 2500)
+	var tail := _peak(sbuf, 4410, 4610)
+	var stop_ok: bool = stop_begun and mid > 0.02 and tail < 0.002
+	ok = ok and stop_ok
+	rows.append("stop(4410) on a begun join: peak %.3f 1500..2500 frames after (silent after 96 before the fix), %.4f at the ramp's end" % [mid, tail])
+	var sl := Ace.new()
+	sl.start_level(0)
+	_render_to(sl, cbar + 3000, 997)
+	sl.set_pressure(0.9)
+	_render_to(sl, int(sl.pending["at"]) - 200, 997)
+	var sl_begun := bool(sl.pending.get("begun", false))
+	var asked: int = sl.clock
+	sl.start_level(asked)
+	var lbuf := _render_to(sl, asked + 6000, 997)
+	var calm_in := _enters(sl, asked).filter(func(e): return e[2] == "travel")
+	var mid_sl := _peak(lbuf, 250, 400)
+	var sl_ok: bool = sl_begun and calm_in.size() == 1 and int(calm_in[0][1]) == asked + join and mid_sl > 0.02
+	ok = ok and sl_ok
+	rows.append("start_level on a begun join at %d: travel (the pressure still asks for it) enters %s (want %d, the whole join), the old join still sounds %.3f at 250..400 frames" % [asked, calm_in.map(func(e): return e[1]), asked + join, mid_sl])
+	# 3. stop_at: the section plays to the sample and fades from there.
+	var sa := Ace.new()
+	sa.start_level(0)
+	_render_to(sa, 2 * cbar + 5000, 997)
+	var stop_from: int = sa.clock + 6000
+	sa.stop_at(stop_from, 8820)
+	var pre := _render_to(sa, stop_from, 997)
+	var fade := _render_to(sa, stop_from + 8820 + 500, 997)
+	var pre_peak := _peak(pre, pre.size() - 2000, pre.size())
+	var half := _peak(fade, 4000, 4800)
+	var end_peak := _peak(fade, 8820, fade.size())
+	var sa_ok: bool = sa.mode == "off" and pre_peak > 0.05 and half > 0.005 and end_peak < 0.002 and not sa.active()
+	ok = ok and sa_ok
+	rows.append("stop_at: %.3f before the sample, %.3f half way through the 8820-frame fade, %.4f after it; mode %s, active %s" % [pre_peak, half, end_peak, sa.mode, sa.active()])
+	_check("begun joins never leave silence", ok, "; ".join(rows))
 
 
 func _check(label: String, ok: bool, detail: String) -> void:

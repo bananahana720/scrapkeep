@@ -173,9 +173,12 @@ func sound_from() -> int:
 # restart while the band sounds fades the old section out and gives the new one its
 # full join, so no one-shot is left without a follower.
 func start_level(at: int) -> void:
-	_cancel_pending()
+	# A begun join's voices fade over the full ramp too, and calm waits out its join.
+	var faded := _cancel_pending(STOP_RAMP)
 	actions.clear()
 	var earliest := clock
+	if faded:
+		earliest = clock + _ramp_frames(float(manifest.get("join_ms", 10.0)))
 	if not voices.is_empty():
 		for v: Voice in voices:
 			_ramp_to(v, 0.0, STOP_RAMP)
@@ -195,7 +198,8 @@ func start_level(at: int) -> void:
 # The band stops: every voice fades over ramp frames (a beat when a launch takes the
 # music, STOP_RAMP otherwise).
 func stop(ramp := STOP_RAMP) -> void:
-	_cancel_pending()
+	# Voices of a begun join fade over the same ramp as the rest.
+	_cancel_pending(ramp)
 	actions.clear()
 	mode = "off"
 	for v: Voice in voices:
@@ -204,6 +208,15 @@ func stop(ramp := STOP_RAMP) -> void:
 	voices.clear()
 	section = ""
 	events_log.append(["stop", clock, ""])
+
+
+# The band stops at transport sample at: the sounding section plays to it and fades over
+# ramp frames from there (a set piece heard through a launch's flight, then handed to the
+# synth on the landing's beat). Anything that restarts or stops the band cancels it.
+func stop_at(at: int, ramp := STOP_RAMP) -> void:
+	if mode == "off":
+		return
+	_add({"at": maxi(at, clock), "type": "stop", "ramp": ramp})
 
 
 func set_pressure(value: float) -> void:
@@ -227,7 +240,7 @@ func commit_warden() -> void:
 	if mode != "level":
 		return
 	mode = "warden"
-	_cancel_pending()
+	_cancel_pending(GAP_RAMP, true)
 	_schedule("pivot", _landing("pivot", false))
 
 
@@ -273,7 +286,9 @@ func warden_broken() -> void:
 		# The drop's follower is already scheduled: the break takes its place, on the
 		# first bar of the drop's grid at or after it (a follower may sit on a beat).
 		at = next_bar(maxi(int(pending["at"]), clock + _join_frames("break")))
-	_cancel_pending()
+	# A follower whose join has begun keeps sounding until the break's own join replaces
+	# it, so the wait for the bar is never silent.
+	_cancel_pending(GAP_RAMP, true)
 	_schedule("break", at)
 
 
@@ -664,17 +679,24 @@ func _add(action: Dictionary) -> void:
 	actions.insert(i, action)
 
 
-func _cancel_pending() -> void:
+# Drops the pending section. Once its join has begun the old section is already fading
+# out and the pending voices are the ones sounding, so they must not vanish: with keep
+# they stay in voices and the replacement's own begin fades them (the replacement
+# schedules itself right after); otherwise they fade over ramp, as for a gap or a stop.
+# Returns true when a begun join's voices were faded or kept.
+func _cancel_pending(ramp := GAP_RAMP, keep := false) -> bool:
 	if pending.is_empty():
-		return
+		return false
 	var serial: int = pending["serial"]
 	actions = actions.filter(func(a: Dictionary) -> bool: return int(a.get("serial", -1)) != serial)
-	if bool(pending.get("begun", false)):
+	var begun := bool(pending.get("begun", false))
+	if begun and not keep:
 		for v: Voice in pending["voices"]:
 			voices.erase(v)
-			_ramp_to(v, 0.0, GAP_RAMP)
+			_ramp_to(v, 0.0, ramp)
 			fading.append(v)
 	pending = {}
+	return begun
 
 
 func _run(action: Dictionary) -> void:
@@ -702,6 +724,8 @@ func _run(action: Dictionary) -> void:
 				_follow()
 		"follow":
 			_follow()
+		"stop":
+			stop(int(action["ramp"]))
 
 
 func _commit() -> void:

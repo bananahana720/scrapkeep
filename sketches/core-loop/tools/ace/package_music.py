@@ -222,6 +222,10 @@ def main():
             loop_to_bar=loop_bar, sample_count=count, key='D', key_offset=0, files=files)
         print(f'{cid}: {bars} bars at {st["bpm"]} from {state_name}, {count} frames'
               + (f', loops to bar {loop_bar}' if loop_bar else ', one-shot'), flush=True)
+    build_loop = json.loads((slice_dir / 'round2/automation/build.json').read_text())['loop']
+    if args.warden == 's42':
+        # The automation file's reason was written for s7; this is the packaged take's own seam.
+        build_loop['reason'] = "Bars 9 to 16 loop on warden-F-085-s42 (the packaged take). Measured on its packaged build clip (fix round 2, scratchpad/acemusic-fix2/seam_s42.py): the native 16 -> 9 wrap's join step is 26.3 dB under the loop's own 99.9th-percentile step, and its kick lands 10.2 ms off the grid across the join (an ordinary bar boundary reads 13.1 ms in the same measure). warden-F-085-s7's 16 -> 1 wrap read 17.4 ms in pack 3's screen, which is why the loop never targets bar 1."
     manifest = dict(
         format=1, theme='spillway', rate=RATE, key='D', key_offset=0, stems=list(STEMS), level_db=LEVEL_DB,
         pre_roll=PRE_ROLL, post_roll=POST_ROLL, loop_join=LOOP_JOIN, join_ms=10.0, silent_db=SILENT_DB,
@@ -230,7 +234,7 @@ def main():
         timeline=str(slice_dir / 'timeline.json'),
         clips=clips, sections=SECTIONS, set_piece=SET_PIECE, profiles=PROFILES, breath=breath(slice_dir),
         breath_default='hard',
-        build_loop=json.loads((slice_dir / 'round2/automation/build.json').read_text())['loop'],
+        build_loop=build_loop,
     )
     (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n')
     print('wrote', OUT / 'manifest.json', 'and', sum(len(c['files']) for c in clips.values()), 'Oggs')
