@@ -9,6 +9,8 @@ const CHARCOAL := Color("242a28")
 const VERDIGRIS := Color("365754")
 const AMBER := Color("e5a044")
 const ARC := Color("8bf0d3")
+# Cherenkov seams belong to awakened ancient machines.
+const ANCIENT := Color("3d8bff")
 # Outside the greybox palette on purpose: a klaxon has to read as nothing else on screen.
 const HAZARD := Color("ff5a3c")
 # Admiral Brindle's brass: every boss fact wears it.
@@ -26,16 +28,34 @@ static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> Imag
 	return ImageTexture.create_from_image(image)
 
 
-# The ground is tinted per vertex by which surface it is (shelf, chute, bypass),
-# so one mesh carries three readable materials without a second surface.
+# Neutral painted value variation multiplies the existing surface-role vertex tint.
+static func painted_texture(size := 256, ground := false) -> ImageTexture:
+	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+	var noise := FastNoiseLite.new()
+	noise.seed = 270927
+	noise.frequency = 0.014 if ground else 0.027
+	noise.fractal_octaves = 1 if ground else 3
+	for y in size:
+		for x in size:
+			var broad := noise.get_noise_2d(x, y)
+			var value := 0.94 + broad * 0.08
+			if not ground:
+				var brush := noise.get_noise_2d(x * 1.8 + 73.0, y * 7.0)
+				var grain := noise.get_noise_2d(x * 9.0, y * 9.0)
+				value = 0.87 + broad * 0.16 + brush * 0.055 + grain * 0.025
+			value = clampf(value, 0.66, 1.0)
+			image.set_pixel(x, y, Color(value, value, value))
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+
 static func ground_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = checker_texture(Color(1.0, 1.0, 1.0), Color(0.72, 0.72, 0.74))
+	mat.albedo_texture = painted_texture(256, true)
 	mat.vertex_color_use_as_albedo = true
-	# Triplanar keeps the check square on slopes, which is what makes speed readable.
 	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3(0.11, 0.11, 0.11)
-	mat.roughness = 0.95
+	mat.uv1_scale = Vector3(0.045, 0.045, 0.045)
+	mat.roughness = 0.96
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	return mat
 

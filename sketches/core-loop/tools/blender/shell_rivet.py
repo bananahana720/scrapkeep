@@ -1,10 +1,5 @@
-# Rivet's class shell (VISUAL-LANGUAGE.md section 9): the shared scrap ball core, three
-# tiers of raked copper fins sweeping back from the pod in a chevron, twin exhaust
-# stacks behind, and a flat optical rail running straight forward to a cutting lens.
-# A mole machinist rides under the glass in a copper visor, its instrument cable
-# plugged into the dash. Provenance: authored procedurally here from Blender primitives
-# and bmesh operators; no external assets. Measured tris: shell 3440, pilot 508
-# (targets 3000 to 5000 and 400 to 800).
+# VD-01 Rivet pilot and class equipment. shell_base.spherical() seats the
+# pilot inside the clear rolling hull. Authored here from Blender primitives.
 
 import math
 import os
@@ -65,24 +60,16 @@ def pilot():
     f = Part("Pilot")
     fur = common.mix("charcoal", "bone", 0.32)
     pink = common.mix("oxide", "bone", 0.55)
-    f.cyl("pilot", 0.28, 0.2, 0.16, 12, loc=(0, -0.02, 0.9), color="bone")
-    f.box("pilot", (0.06, 0.03, 0.14), loc=(0.12, 0.2, 0.9), color="copper")
-    f.box("pilot", (0.06, 0.03, 0.14), loc=(-0.12, 0.2, 0.9), color="copper")
-    f.ico("pilot", 0.23, 2, loc=(0, 0.0, 1.1), scale=(1.1, 1.05, 0.88), color=fur)
-    f.rod("pilot", (0, 0.14, 1.06), (0, 0.4, 1.02), 0.085, 8, color=pink, r2=0.04)
-    for k in range(6):
-        a = k * math.tau / 6
-        f.rod("pilot", (0, 0.41, 1.02), (0.05 * math.cos(a), 0.45, 1.02 + 0.05 * math.sin(a)), 0.012, 4,
-              color=pink)
-    f.ring("pilot", 0.22, 0.27, 0.035, 12, loc=(0, 0.0, 1.14), color="charcoal", arc=(math.pi - 0.2, 2 * math.pi + 0.2))
+    f.uv("pilot", 0.23, 24, 16, loc=(0, 0, 1.1), scale=(1.12, 0.96, 0.93), color=fur)
+    f.uv("pilot", 0.1, 16, 10, loc=(0, 0.21, 1.045), scale=(1.05, 1.15, 0.72), color=pink)
+    f.uv("pilot", 0.055, 12, 8, loc=(0, 0.31, 1.052), scale=(1, 0.58, 0.68), color=pink)
+    f.ring("pilot", 0.224, 0.247, 0.035, 24, loc=(0, 0, 1.16), color="charcoal", arc=(math.pi - 0.2, 2 * math.pi + 0.2))
     for side in (-1, 1):
-        f.ico("pilot", 0.07, 1, loc=(side * 0.2, 0.22, 0.94), scale=(1.2, 0.8, 0.6), color=pink)
-        for k in (-1, 0, 1):
-            f.rod("pilot", (side * 0.2 + k * 0.035, 0.27, 0.94), (side * 0.2 + k * 0.04, 0.33, 0.93), 0.012, 4,
-                  color="bone")
-    cable = [(-0.24, 0.02, 1.12), (-0.32, -0.08, 1.02), (-0.34, -0.14, 0.92), (-0.28, -0.22, 0.86)]
-    for a, b in zip(cable, cable[1:]):
-        f.rod("pilot", a, b, 0.018, 5, color="charcoal")
+        f.uv("pilot", 0.06, 12, 8, loc=(side * 0.225, 0.0, 1.135), scale=(0.7, 0.75, 1), color=fur)
+        f.ring("pilot", 0.052, 0.076, 0.04, 16, loc=(side * 0.092, 0.195, 1.165), rot=(math.pi / 2, 0, 0), color="copper")
+        sb.eye(f, (side * 0.092, 0.218, 1.165), 0.047)
+        f.uv("pilot", 0.012, 8, 6, loc=(side * 0.023, 0.34, 1.055), scale=(1, 0.3, 0.7), color="charcoal")
+    f.rod("pilot", (-0.024, 0.212, 1.17), (0.024, 0.212, 1.17), 0.011, 8, color="copper")
     return f
 
 
@@ -97,13 +84,7 @@ def visor():
 def main():
     common.reset()
     common.preview_class("copper")
-    rng = sb.rng_for("rivet")
-    core = Part("Core")
-    sb.scrap_core(core, rng)
-    glass = Part("Dome")
-    sb.dome(glass, DOME_C, DOME_R)
-    root, core_obj, pilot_obj = sb.assemble("Rivet", core, pod(), glass, pilot(), DOME_C)
-    visor().to_object(DOME_C, pilot_obj)
+    root, core_obj, pilot_obj = sb.spherical("Rivet", pod(), pilot())
     sb.finish("Rivet", root, core_obj, pilot_obj)
 
 

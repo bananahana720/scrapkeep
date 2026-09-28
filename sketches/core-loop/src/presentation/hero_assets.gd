@@ -1,10 +1,15 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
+const WardenLook := preload("res://src/combat/warden_look.gd")
+const WardenKit := preload("res://src/combat/warden_kit.gd")
+const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
+const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
+
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 
-# V3 hero assets (VISUAL-LANGUAGE.md section 9). Dresses the greybox in the procedural
+# VD-01 clear sphere slice. Dresses the greybox in the procedural
 # models from tools/blender/ as nodes enter the tree, without editing the gameplay
 # scripts that own them: the player's class shell, accretion chunks and the reward
 # gate arches. Each placeholder mesh is hidden (render layers cleared, shadow off),
@@ -16,9 +21,9 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 # palette colours baked as vertex colours (the test pins paint to the paint roles).
 #
 # The shell splits the way it moves. Core rolls with the ball under its rolling mesh;
-# Pod (the kit, the dome and the pilot) rides the juice node, stays upright and yaws to
+# Pod (the kit and seated pilot) rides the juice node, stays upright and yaws to
 # the heading, so the cockpit is always findable (AD-01, AC-01) and Rivet's fins and
-# Kest's satchel bands keep their direction. Chunks tuck under the pod's saddle as they
+# Kest's satchel bands keep their direction. Chunks tuck below the cockpit as they
 # roll through it instead of clipping the glass.
 
 const SHELLS := {
@@ -32,14 +37,11 @@ const GATE_PATH := "res://assets/models/reward_gate.glb"
 # Accretion slot index bands: a young build carries small scrap, a heavy one large.
 const CHUNK_BANDS := [[12, "small"], [24, "medium"], [Accretion.MAX_CHUNKS, "large"]]
 # Cosine from straight up where a chunk starts tucking under the pod, and where it is gone.
-const TUCK_FROM := 0.52
-const TUCK_GONE := 0.74
+const TUCK_FROM := -0.15
+const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
-# ANCIENT is still pending Andrew (VISUAL-LANGUAGE section 2); candidate A until W7
-# adds Palette.ANCIENT.
-const ANCIENT := Color("3d8bff")
 
 const SLOTS := {
 	"paint": {"color": Color.WHITE, "vertex": true, "rough": 0.8},
@@ -47,12 +49,12 @@ const SLOTS := {
 	"rubber": {"color": Palette.CHARCOAL, "rough": 0.95},
 	"class_accent": {"from": "class", "emit": 0.5, "rough": 0.5},
 	"field": {"color": Palette.ARC, "emit": 1.6, "rough": 0.4},
-	"glass": {"color": Color.WHITE, "alpha": 0.16, "rough": 0.04},
+	"glass": {"color": Color.WHITE, "alpha": 0.10, "rough": 0.04},
 	"pilot": {"color": Color.WHITE, "vertex": true, "rough": 0.9},
 	"fleet_paint": {"color": Palette.RUST, "rough": 0.8},
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
 	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.55},
-	"ancient_light": {"color": ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
 }
 
@@ -61,6 +63,8 @@ var _materials := {}
 var _scenes := {}
 var _meshes := {}
 var _players := {}
+var _wardens := {}
+var _mast := {}
 var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
 
@@ -68,8 +72,12 @@ var _warned := {}
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "HeroAssets"
+	_prewarm_warden_strokes()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_node("WardenLook"):
+			_dress_warden.call_deferred(enemy)
 
 
 func _enter_tree() -> void:
@@ -78,6 +86,10 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	for rec in _wardens.values():
+		_restore_warden(rec)
+	_wardens.clear()
+	_restore_mast()
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
 
@@ -86,7 +98,9 @@ func _on_node_added(node: Node) -> void:
 	var parent := node.get_parent()
 	if parent == null:
 		return
-	if node is MeshInstance3D and parent.get_script() == Accretion:
+	if node.get_script() == WardenLook or node.get_script() == WardenKit:
+		_dress_warden.call_deferred(parent)
+	elif node is MeshInstance3D and parent.get_script() == Accretion:
 		dress_chunk(node)
 	elif node is Node3D and parent.get_script() == RewardGates:
 		_dress_gate.call_deferred(node)
@@ -94,10 +108,27 @@ func _on_node_added(node: Node) -> void:
 
 # --- materials ---------------------------------------------------------------------
 
-func material(slot: String, tint := Color.WHITE) -> StandardMaterial3D:
+func material(slot: String, tint := Color.WHITE) -> Material:
 	var key := "%s:%s" % [slot, tint.to_html()]
 	if _materials.has(key):
 		return _materials[key]
+	if slot == "glass":
+		var glass := ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+void fragment() {
+	float edge = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 3.0);
+	ALBEDO = vec3(0.95, 0.98, 1.0);
+	ALPHA = 0.025 + edge * 0.32;
+	ROUGHNESS = 0.08;
+	SPECULAR = 0.7;
+}
+"""
+		glass.shader = shader
+		glass.resource_name = slot
+		_materials[key] = glass
+		return glass
 	var spec: Dictionary = SLOTS[slot]
 	var color: Color = tint if spec.has("from") else spec["color"]
 	color = color.lerp(Color.WHITE, spec.get("lighten", 0.0))
@@ -107,9 +138,14 @@ func material(slot: String, tint := Color.WHITE) -> StandardMaterial3D:
 	mat.vertex_color_use_as_albedo = spec.get("vertex", false)
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
+	if slot in ["paint", "pilot", "bare_metal"]:
+		mat.albedo_texture = Palette.painted_texture(128)
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE * 2.0
 	if spec.has("alpha"):
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.metallic_specular = 1.0
+		mat.metallic_specular = 0.65
+		mat.cull_mode = BaseMaterial3D.CULL_BACK
 	if spec.get("emit", 0.0) > 0.0:
 		mat.emission_enabled = true
 		mat.emission = color
@@ -225,6 +261,13 @@ func _process(delta: float) -> void:
 		_fit(rec)
 		_steer_pod(rec, player, delta)
 	_tuck_chunks()
+	for key in _wardens.keys():
+		var rec: Dictionary = _wardens[key]
+		if not is_instance_valid(rec.warden) or not rec.warden.is_inside_tree():
+			_restore_warden(rec)
+			_wardens.erase(key)
+		else:
+			_update_warden(rec)
 
 
 func _steer_pod(rec: Dictionary, player, delta: float) -> void:
@@ -234,6 +277,10 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	if flat.length() > POD_TURN_SPEED:
 		var want := atan2(-v.x, -v.z)
 		pod.rotation.y = lerp_angle(pod.rotation.y, want, 1.0 - exp(-POD_TURN_RATE * delta))
+	var gyro := pod.get_node_or_null("Gyro") as Node3D
+	if gyro != null and v.length() > 0.01:
+		# Motion comes from the real velocity; the pilot remains on the upright Pod.
+		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	var open := 1.0 if player.kit.gliding else 0.0
 	for vane_name in ["VaneL", "VaneR"]:
 		var vane := pod.get_node_or_null(vane_name) as Node3D
@@ -334,3 +381,390 @@ func _dress_gate(gate: Node3D) -> void:
 			plate.position = (child as Sprite3D).position + Vector3(0.0, 0.0, -0.14)
 			gate.add_child(plate)
 			paint(plate, tints)
+
+
+# --- Warden clamp and family kit ----------------------------------------------------
+
+func warden_of(warden: Node) -> Dictionary:
+	return _wardens.get(warden.get_instance_id(), {})
+
+
+func _warden_scene(path: String) -> Node3D:
+	if not ResourceLoader.exists(path):
+		return null
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return null
+	var imported := packed.instantiate() as Node3D
+	if imported.get_child_count() != 1 or not imported.get_child(0) is Node3D:
+		imported.free()
+		return null
+	var authored := imported.get_child(0) as Node3D
+	imported.remove_child(authored)
+	authored.transform = imported.transform * authored.transform
+	imported.free()
+	return authored
+
+
+func _dress_warden(warden) -> void:
+	if not is_inside_tree() or not is_instance_valid(warden) or not warden.is_inside_tree() or _wardens.has(warden.get_instance_id()):
+		return
+	if warden._look == null or warden._kit == null or not WARDEN_KITS.has(warden.family):
+		return
+	var base := _warden_scene(WARDEN_BASE)
+	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WARDEN_KITS[warden.family])
+	if base == null or kit == null:
+		if base != null: base.free()
+		if kit != null: kit.free()
+		_warn_once("warden", "hero_assets: Warden assets unavailable; keeping functional placeholders")
+		return
+	var tower := base.get_node_or_null("Tower") as MeshInstance3D
+	var mount := base.get_node_or_null("Tower/KitMount") as Node3D
+	var weak := kit.get_node_or_null("WeakPoint") as Node3D
+	if tower == null or mount == null or weak == null or not base.has_node("JawL") or not base.has_node("JawR"):
+		base.free()
+		kit.free()
+		_warn_once("warden_nodes", "hero_assets: incomplete Warden asset hierarchy; keeping placeholders")
+		return
+	base.name = "HeroWarden"
+	base.position.y = -warden.HALF_HEIGHT
+	# Authored seam corners reach 2.826 m; keep the housing inside the 2.8 m collider.
+	base.get_node("Housing").scale = Vector3(0.99, 1.0, 0.99)
+	kit.name = "HeroKit"
+	var target: Vector3 = warden._kit.point_offset() + Vector3.UP * warden.HALF_HEIGHT
+	kit.position = target - weak.position
+	var old_mount: Vector3 = tower.position + mount.position
+	_adapt_warden_tower(tower, kit.position - old_mount, old_mount.y)
+	mount.position = kit.position - tower.position
+	base.add_child(kit)
+	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
+		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null}
+	if warden.family == "swarm":
+		_split_queen_hatch(weak, rec)
+	_paint_warden(base, rec)
+	if warden.family == "mind":
+		var lens := Node3D.new()
+		lens.name = "HeroLens"
+		lens.position = weak.position
+		kit.add_child(lens)
+		for child in kit.get_children():
+			if child == weak or String(child.name).begins_with("Shutter"):
+				var at: Vector3 = child.position - lens.position
+				kit.remove_child(child)
+				lens.add_child(child)
+				child.position = at
+				if child != weak:
+					rec.shutters.append({"node": child, "rest": at})
+		rec.lens = lens
+	warden.add_child(base)
+	for child in warden._look.get_children():
+		if child is MeshInstance3D and child.material_override == warden._look.body_material and child != warden._look._arm:
+			_hide_warden_mesh(child, rec)
+	_hide_warden_tree(warden._look._jaws, rec)
+	_hide_warden_tree(warden._kit, rec)
+	_add_warden_strokes(base, warden._look, warden, rec)
+	_wardens[warden.get_instance_id()] = rec
+	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
+	_update_warden(rec)
+	_dress_mast.call_deferred(warden)
+
+
+func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
+	var body := ArrayMesh.new()
+	var cap := ArrayMesh.new()
+	for surface in weak.mesh.get_surface_count():
+		var target := cap if slot_of(weak.mesh, surface) == "rubber" else body
+		target.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, weak.mesh.surface_get_arrays(surface))
+		target.surface_set_material(target.get_surface_count() - 1, weak.mesh.surface_get_material(surface))
+	if cap.get_surface_count() == 0:
+		return
+	weak.mesh = body
+	var bounds := cap.get_aabb()
+	var hinge := Node3D.new()
+	hinge.name = "QueenHatch"
+	hinge.position = Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z)
+	weak.add_child(hinge)
+	var shutter := MeshInstance3D.new()
+	shutter.name = "Shutter"
+	shutter.mesh = cap
+	shutter.position = -hinge.position
+	hinge.add_child(shutter)
+	rec.queen_hatch = hinge
+
+
+func _prewarm_warden_strokes() -> void:
+	var base := _warden_scene(WARDEN_BASE)
+	if base == null or not base.has_node("JawL") or not base.has_node("JawR"):
+		if base != null: base.free()
+		return
+	# Detached presentation builders only: no enemy setup, tree entry, events or physics.
+	var cue_owner := preload("res://src/combat/enemy.gd").new()
+	var look := WardenLook.new()
+	cue_owner.add_child(look)
+	cue_owner.add_child(base)
+	look._build_jaws()
+	_add_warden_strokes(base, look, cue_owner, {"seams": [], "cracks": []})
+	cue_owner.free()
+
+
+func _add_warden_strokes(base: Node3D, look: Node3D, cue_owner: Node3D, rec: Dictionary) -> void:
+	for side in [-1.0, 1.0]:
+		var jaw: MeshInstance3D = base.get_node("JawL" if side < 0 else "JawR")
+		var faces := jaw.mesh.get_faces()
+		var angle: float = side * 1.3
+		var normal := Vector3(cos(angle), 0, sin(angle))
+		var panel := Node3D.new()
+		panel.position = normal * 3.77 + Vector3.UP * 3.9 - jaw.position
+		panel.basis = Basis.looking_at(-normal)
+		jaw.add_child(panel)
+		for level in look._seams.size():
+			var row: Array = look._seams[level]
+			for i in 3:
+				var old := row[i] as MeshInstance3D
+				var seam := MeshInstance3D.new()
+				seam.mesh = old.mesh
+				seam.material_override = old.material_override
+				seam.transform = old.transform
+				seam.position *= 0.4
+				seam.position.z = 0.04
+				seam.scale *= 0.5
+				panel.add_child(seam)
+				_fit_warden_stroke(seam, jaw, faces)
+				rec.seams.append({"node": seam, "source": old})
+		# Existing enemy helper owns the class-colour open-crack grammar and tint list.
+		var crack: Node3D = cue_owner._add_crack(panel, Vector3(0, 0, 0.08), 0.8)
+		for stroke in crack.get_children():
+			_fit_warden_stroke(stroke, jaw, faces)
+		rec.cracks.append(crack)
+
+
+# Keep each stroke's readable length, but wrap a narrow ribbon around the cast jaw.
+# Projection runs once during attachment; animation still reads the original cue.
+func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: PackedVector3Array) -> void:
+	var box := stroke.mesh as BoxMesh
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var to_jaw := Transform3D.IDENTITY
+	var ancestor: Node3D = stroke
+	while ancestor != jaw:
+		to_jaw = ancestor.transform * to_jaw
+		ancestor = ancestor.get_parent() as Node3D
+	var key := "warden_stroke:%s:%s:%s" % [jaw.name, box.size, to_jaw]
+	stroke.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
+	if _meshes.has(key):
+		stroke.mesh = _meshes[key]
+		return
+	var from_jaw := to_jaw.affine_inverse()
+	var low := INF
+	var high := -INF
+	for x in [-0.5, 0.5]:
+		for y in [-0.5, 0.5]:
+			var height: float = (to_jaw * Vector3(box.size.x * x, box.size.y * y, 0)).y
+			low = minf(low, height)
+			high = maxf(high, height)
+	var candidates := PackedVector3Array()
+	for i in range(0, faces.size(), 3):
+		if maxf(faces[i].y, maxf(faces[i + 1].y, faces[i + 2].y)) >= low and minf(faces[i].y, minf(faces[i + 1].y, faces[i + 2].y)) <= high:
+			candidates.append_array(PackedVector3Array([faces[i], faces[i + 1], faces[i + 2]]))
+	for row in 17:
+		for side in [-0.5, 0.5]:
+			var point := to_jaw * Vector3(box.size.x * side, box.size.y * (float(row) / 16.0 - 0.5), 0)
+			var radial := Vector3(point.x + jaw.position.x, 0, point.z + jaw.position.z).normalized()
+			var start := radial * 8.0 + Vector3.UP * point.y - Vector3(jaw.position.x, 0, jaw.position.z)
+			var nearest := INF
+			var contact := Vector3.ZERO
+			for triangle in range(0, candidates.size(), 3):
+				var hit = Geometry3D.ray_intersects_triangle(start, -radial, candidates[triangle], candidates[triangle + 1], candidates[triangle + 2])
+				if hit != null:
+					var distance: float = start.distance_squared_to(hit)
+					if distance < nearest:
+						nearest = distance
+						contact = hit
+			if nearest == INF:
+				_warn_once("warden_stroke", "hero_assets: Warden stroke missed jaw surface at %s" % point)
+				return
+			vertices.append(from_jaw * (contact + radial * 0.015))
+			normals.append((to_jaw.basis.transposed() * radial).normalized())
+		if row > 0:
+			var n := row * 2
+			indices.append_array(PackedInt32Array([n - 2, n, n - 1, n - 1, n, n + 1]))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var ribbon := ArrayMesh.new()
+	ribbon.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	_meshes[key] = ribbon
+	stroke.mesh = ribbon
+
+
+func _adapt_warden_tower(tower: MeshInstance3D, shift: Vector3, top: float) -> void:
+	var adapted := ArrayMesh.new()
+	for surface in tower.mesh.get_surface_count():
+		var arrays := tower.mesh.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		for i in vertices.size():
+			var y := vertices[i].y + tower.position.y
+			if y > 2.2:
+				vertices[i] += shift * ((y - 2.2) / (top - 2.2))
+				var shear := Basis(Vector3.RIGHT, Vector3.UP + shift / (top - 2.2), Vector3.BACK)
+				normals[i] = (shear.inverse().transposed() * normals[i]).normalized()
+		arrays[Mesh.ARRAY_VERTEX] = vertices
+		arrays[Mesh.ARRAY_NORMAL] = normals
+		adapted.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		adapted.surface_set_material(surface, tower.mesh.surface_get_material(surface))
+	tower.mesh = adapted
+
+
+func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
+	kit = kit or root.name == "HeroKit"
+	if root is MeshInstance3D:
+		for i in root.mesh.get_surface_count():
+			var slot := slot_of(root.mesh, i)
+			var key := slot
+			if slot == "ancient_light" and not kit:
+				key += "_jaw" if String(root.name).begins_with("Jaw") else "_base"
+			if not rec.materials.has(key):
+				rec.materials[key] = material(slot).duplicate()
+			root.set_surface_override_material(i, rec.materials[key])
+	for child in root.get_children():
+		_paint_warden(child, rec, kit)
+
+
+func _hide_warden_mesh(mesh: MeshInstance3D, rec: Dictionary) -> void:
+	rec.hidden.append({"mesh": mesh, "layers": mesh.layers, "shadow": mesh.cast_shadow})
+	hide_placeholder(mesh)
+
+
+func _hide_warden_tree(node: Node, rec: Dictionary) -> void:
+	if node is MeshInstance3D:
+		_hide_warden_mesh(node, rec)
+	for child in node.get_children():
+		_hide_warden_tree(child, rec)
+
+
+func _update_warden(rec: Dictionary) -> void:
+	var warden = rec.warden
+	rec.base.rotation.y = warden._look._jaws.rotation.y
+	rec.weak.scale = warden._kit._open_node.scale
+	if rec.queen_hatch != null:
+		rec.queen_hatch.rotation.z = -PI * 0.5 if warden.family_open() else 0.0
+	if rec.lens != null:
+		rec.lens.global_basis = warden._kit._lens.global_basis * Basis(Vector3.UP, PI * 0.5)
+		for shutter in rec.shutters:
+			shutter.node.position = shutter.rest * (1.5 if warden.family_open() else 1.0)
+	rec.materials.ancient_light_base.emission_energy_multiplier = warden._look._core_material.emission_energy_multiplier
+	var light: StandardMaterial3D = rec.materials.ancient_light
+	light.emission_energy_multiplier = warden._kit._seam_material.emission_energy_multiplier
+	var enamel: StandardMaterial3D = rec.materials.ancient_enamel
+	enamel.albedo_color = Color.WHITE.lerp(warden._look.body_material.albedo_color, warden._flash)
+	enamel.emission_enabled = warden._flash > 0.0
+	enamel.emission = warden._look.body_material.emission
+	enamel.emission_energy_multiplier = warden._look.body_material.emission_energy_multiplier
+	var rim: StandardMaterial3D = rec.materials.ancient_light_jaw
+	var plate: StandardMaterial3D = warden._look.plate_material
+	rim.emission = plate.emission if warden.tint_state == "amber" else Palette.ANCIENT
+	rim.albedo_color = rim.emission
+	rim.emission_energy_multiplier = plate.emission_energy_multiplier if warden.tint_state == "amber" else 0.8
+	for seam in rec.seams:
+		seam.node.visible = seam.source.visible
+
+
+func _forget_warden(id: int) -> void:
+	if _wardens.has(id):
+		_restore_warden(_wardens[id])
+		_wardens.erase(id)
+
+
+func _restore_warden(rec: Dictionary) -> void:
+	if not _mast.is_empty() and is_instance_valid(rec.warden) and _mast.owner == rec.warden.get_instance_id():
+		_restore_mast()
+	for item in rec.hidden:
+		if is_instance_valid(item.mesh):
+			item.mesh.layers = item.layers
+			item.mesh.cast_shadow = item.shadow
+	if is_instance_valid(rec.warden):
+		for crack in rec.cracks:
+			rec.warden._cracks.erase(crack)
+	if is_instance_valid(rec.base):
+		rec.base.queue_free()
+
+
+func _dress_mast(warden) -> void:
+	if not is_inside_tree() or not is_instance_valid(warden) or not warden.is_inside_tree():
+		return
+	if ctx == null or ctx.flow == null or ctx.flow.warden != warden or not _wardens.has(warden.get_instance_id()):
+		return
+	if not _mast.is_empty() and _mast.owner == warden.get_instance_id():
+		return
+	_restore_mast()
+	var beacon = ctx.flow.beacon
+	if not is_instance_valid(beacon):
+		return
+	for child in beacon.get_children():
+		if not child is MeshInstance3D or not child.mesh is CylinderMesh:
+			continue
+		var cylinder: CylinderMesh = child.mesh
+		if not is_equal_approx(cylinder.height, beacon.MAST_HEIGHT):
+			continue
+		var centre: Vector3 = child.to_local(warden.family_point_at())
+		if Vector2(centre.x, centre.z).length() > 0.001 or not child.global_basis.get_scale().is_equal_approx(Vector3.ONE):
+			return
+		var low := centre.y - 1.45
+		var high := centre.y + 1.45
+		var half := cylinder.height * 0.5
+		if low <= -half or high >= half:
+			return
+		var support := Node3D.new()
+		support.name = "HeroMastSupport"
+		child.add_child(support)
+		_mast = {"owner": warden.get_instance_id(), "mesh": child, "root": support, "layers": child.layers, "shadow": child.cast_shadow}
+		for span in [Vector2(-half, low), Vector2(high, half)]:
+			var segment := cylinder.duplicate() as CylinderMesh
+			segment.height = span.y - span.x
+			segment.bottom_radius = _mast_radius(cylinder, span.x)
+			segment.top_radius = _mast_radius(cylinder, span.y)
+			var visual := _mast_visual(segment, support, child)
+			visual.position.y = (span.x + span.y) * 0.5
+		for side in [-1.0, 1.0]:
+			var points := [Vector3(side * _mast_radius(cylinder, low), low, 0), Vector3(side * 1.5, centre.y - 0.8, 0), Vector3(side * 1.5, centre.y + 0.8, 0), Vector3(side * _mast_radius(cylinder, high), high, 0)]
+			for i in 3:
+				var start: Vector3 = points[i]
+				var end: Vector3 = points[i + 1]
+				var beam := BoxMesh.new()
+				beam.size = Vector3(0.12, start.distance_to(end), 0.12)
+				var visual := _mast_visual(beam, support, child)
+				visual.position = (start + end) * 0.5
+				visual.rotation.z = -atan2(end.x - start.x, end.y - start.y)
+		child.layers = 0
+		child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		return
+
+
+func _mast_radius(cylinder: CylinderMesh, height: float) -> float:
+	return lerpf(cylinder.bottom_radius, cylinder.top_radius, (height + cylinder.height * 0.5) / cylinder.height)
+
+
+func _mast_visual(mesh: Mesh, parent: Node3D, original: MeshInstance3D) -> MeshInstance3D:
+	var visual := MeshInstance3D.new()
+	visual.mesh = mesh
+	visual.material_override = original.material_override
+	visual.layers = original.layers
+	visual.cast_shadow = original.cast_shadow
+	parent.add_child(visual)
+	return visual
+
+
+func _restore_mast() -> void:
+	if _mast.is_empty():
+		return
+	if is_instance_valid(_mast.mesh):
+		_mast.mesh.layers = _mast.layers
+		_mast.mesh.cast_shadow = _mast.shadow
+	if is_instance_valid(_mast.root):
+		_mast.root.get_parent().remove_child(_mast.root)
+		_mast.root.queue_free()
+	_mast.clear()
