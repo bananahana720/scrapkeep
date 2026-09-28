@@ -11,6 +11,8 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const GameMap := preload("res://src/core/game_map.gd")
+const ShellView := preload("res://src/ui/shell/shell_view.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -41,6 +43,7 @@ var _stats: HBoxContainer
 var _choices: HBoxContainer
 var _actions: HBoxContainer
 var _help
+var _shell
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
@@ -79,6 +82,10 @@ func setup(game_ref) -> void:
 	_help.visible = false
 	_help.back.pressed.connect(_press.bind("key_h"))
 	_content.add_child(_help)
+	_shell = ShellView.new()
+	_shell.setup(game)
+	_shell.changed.connect(_on_shell_changed)
+	_content.add_child(_shell)
 	game.events.flow_changed.connect(_on_flow_changed)
 
 
@@ -102,6 +109,8 @@ func _row(separation: int) -> HBoxContainer:
 func _on_flow_changed(state: String) -> void:
 	_state = state
 	_help.visible = false
+	_shell.visible = false
+	_title.visible = true
 	_actions.visible = true
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
@@ -114,6 +123,7 @@ func _on_flow_changed(state: String) -> void:
 			_action("help", "key_h", "Help")
 			_action("loop", "key_l", "")
 			_action("gun", "key_g", "")
+			_action("menu", "key_m", "Menu")
 			refresh_lab_row()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
@@ -132,7 +142,7 @@ func _on_flow_changed(state: String) -> void:
 				_action("replay", "key_t", "Replay stage %d" % StageDefs.COUNT)
 			_guard = CLICK_GUARD
 		"victory":
-			_show("BRINDLE ROUTED", EventKinds.color("boss_defeated"), "The Requisition is scrap.")
+			_show("BRINDLE ROUTED", EventKinds.color("boss_defeated"), "The Requisition is scrap.\n%s" % GameMap.after_brindle())
 		"summary":
 			_show("RUN COMPLETE", EventKinds.color("run_ended"), String(game.run.summary()["class"]))
 			_summary_stats()
@@ -157,6 +167,33 @@ func toggle_help() -> void:
 
 func help_open() -> bool:
 	return _help.visible
+
+
+# The home screen (shell_view.gd). M on the title opens it; while it is open the title's
+# other keys wait behind it, and Space still starts a run.
+func shell_open() -> bool:
+	return _shell.visible
+
+
+func shell_key(key: int) -> bool:
+	if not _shell.visible and _help.visible:
+		return false
+	return _shell.key(key)
+
+
+func shell_view():
+	return _shell
+
+
+func _on_shell_changed() -> void:
+	var open: bool = _shell.visible
+	_actions.visible = not open
+	_title.visible = not (open and _shell.view() == "page")
+	if open:
+		_show(_shell.heading(), Palette.AMBER, "")
+	else:
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_fade(true)
 
 
 # The fun lab's switch on the title (LOOP-REDESIGN section 7): L cycles the loop mode,
