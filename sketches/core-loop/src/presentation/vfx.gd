@@ -71,6 +71,8 @@ var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
 var edge: Control
+# False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
+var trails := true
 
 
 func setup(ctx_ref) -> void:
@@ -565,8 +567,9 @@ func _process(delta: float) -> void:
 	var tier: int = player.speed_tier()
 	if _launch_boost > 0.0:
 		tier = SpeedTier.BLAZING
-	_draw_trail(tier)
-	_draw_lines(tier, delta)
+	if trails:
+		_draw_trail(tier)
+		_draw_lines(tier, delta)
 
 
 func _draw_trail(tier: int) -> void:
