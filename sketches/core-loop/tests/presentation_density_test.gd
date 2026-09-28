@@ -139,6 +139,20 @@ func _check_juice_path() -> void:
 	_vfx.pops.clear()
 
 
+# The global the shader reads, from the renderer. The dummy renderer of a headless run
+# stores no globals, so there it falls back to the last value Density.publish_fill_scale
+# handed the renderer; a native run reads the renderer itself.
+var _fill_source := "renderer"
+
+
+func _published_fill_scale() -> float:
+	var value = RenderingServer.global_shader_parameter_get(Density.FILL_GLOBAL)
+	if value == null:
+		_fill_source = "last value handed to the renderer (dummy renderer stores no globals)"
+		value = Density.last_published
+	return float(value) if value != null else -1.0
+
+
 func _check_exemption() -> void:
 	var at: Vector3 = _game.player.ball_position() + Vector3(0.0, 1.0, -4.0)
 	var quiet := {}
@@ -153,7 +167,8 @@ func _check_exemption() -> void:
 			var slot: Dictionary = _vfx.glyph(kind, at, 0.6, 1.4, 0.35, Vector3.ZERO, "", Color(0, 0, 0, 0), "P2" if kind == "near_miss" else "")
 			drawn[kind] = [slot["alpha"], slot["from"], slot["to"], slot["life"]]
 		_vfx._govern(0.0)
-		drawn["fill_scale"] = _vfx._fill_scale
+		# The shader reads the published global, not the VFX field behind it.
+		drawn["fill_scale"] = _published_fill_scale()
 		var wave: Node3D = Telegraph.wave(_game.ctx.root, _game.ctx.terrain, at + Vector3(0.0, 0.0, -20.0), 10.0, 6.0, 0.5)
 		wave.step(1.0)
 		var ring: Node3D = Telegraph.ring(_game.ctx.root, _game.ctx.terrain, Threat.Type.INSTANT, at + Vector3(20.0, 0.0, -20.0), 6.0)
@@ -165,7 +180,7 @@ func _check_exemption() -> void:
 			var set_scale = instance.get_instance_shader_parameter("alpha_scale")
 			var alpha_scale: float = 1.0 if set_scale == null else float(set_scale)
 			# What the shader multiplies the vertex alpha by: ALPHA *= alpha_scale * mix(1, threat_fill_scale, governed).
-			var effective := alpha_scale * lerpf(1.0, _vfx._fill_scale, governed)
+			var effective := alpha_scale * lerpf(1.0, float(drawn["fill_scale"]), governed)
 			uniforms.append([pair[1], instance.get_instance_shader_parameter("clip"), governed, effective])
 		drawn["uniforms"] = uniforms
 		wave.free()
@@ -188,8 +203,8 @@ func _check_exemption() -> void:
 			fills_governed = fills_governed and now[2] == 1.0 and is_equal_approx(now[3], was[3] * Density.FILL_FLOOR)
 	_check("P0 to P3 exempt", quiet["near_miss"] == loud["near_miss"] and quiet["enemy_struck"] != loud["enemy_struck"]
 			and lines_same and fills_governed and quiet["fill_scale"] == 1.0 and is_equal_approx(loud["fill_scale"], Density.FILL_FLOOR),
-		"at density 1.0 a P2 near-miss glyph draws %s as at 0, a P5 hit glyph goes from %s to %s; a wave's line layers multiply alpha by %s at density 1.0 as at 0: %s; fill layers multiply by %s at 1.0 (floor %.2f of their 0 value): %s; scale %.2f -> %.2f"
-			% [loud["near_miss"], quiet["enemy_struck"], loud["enemy_struck"], loud["uniforms"].slice(0, 2).map(func(r): return r[3]), lines_same, loud["uniforms"].slice(2).map(func(r): return r[3]), Density.FILL_FLOOR, fills_governed, quiet["fill_scale"], loud["fill_scale"]])
+		"at density 1.0 a P2 near-miss glyph draws %s as at 0, a P5 hit glyph goes from %s to %s; a wave's line layers multiply alpha by %s at density 1.0 as at 0: %s; fill layers multiply by %s at 1.0 (floor %.2f of their 0 value): %s; global threat_fill_scale %.2f -> %.2f, read from the %s"
+			% [loud["near_miss"], quiet["enemy_struck"], loud["enemy_struck"], loud["uniforms"].slice(0, 2).map(func(r): return r[3]), lines_same, loud["uniforms"].slice(2).map(func(r): return r[3]), Density.FILL_FLOOR, fills_governed, quiet["fill_scale"], loud["fill_scale"], _fill_source])
 
 
 # The gate's record of emitted pops is for the tests: it keeps at most EMITTED_KEEP and

@@ -40,6 +40,7 @@ var _shooting := false
 var _written: Array = []
 var _cam: Camera3D
 var _probes := {}
+var _front_probe := {}
 
 
 func _initialize() -> void:
@@ -114,6 +115,9 @@ func _plan() -> void:
 	# side (fix round 2, item 3). check_live_over_pending compares the overlap's mean colour.
 	_shots.append({"name": "overlap-live-pending-front", "cam": Vector3(0.0, 17.0, 17.0), "make": func(): return _live_over_pending()})
 	_shots.append({"name": "overlap-live-pending-back", "cam": Vector3(0.0, 17.0, -14.0), "make": func(): return _live_over_pending()})
+	# A WAVE front crossing a live lane band: the front is a P1 line and reads at its own
+	# strength inside the band as outside it (fix round 3, item 1). check_front_over_live.
+	_shots.append({"name": "overlap-front-live", "make": func(): return _front_over_live()})
 	if _control:
 		_shots.append({"name": "control-instant-ring-50--no-stripe-motion", "make": func(): return _control_ring(func(layers: Dictionary):
 			layers["stripe_motion"].visible = false)})
@@ -142,6 +146,34 @@ func _live_over_pending() -> Array:
 	return [pending, live]
 
 
+const FRONT_CENTRE := Vector3(0.0, 0.0, -4.0)
+const FRONT_IN_LANE := Vector3(0.0, 0.0, 1.0)
+const FRONT_OUT_OF_LANE := Vector3(0.0, 0.0, -9.0)
+const LANE_ONLY := Vector3(-8.0, 0.0, 1.5)
+const FRONT_PATCH := 6
+
+
+# A live lane band across z 1.5 +- 4, and a half-run WAVE (front at 5 m) centred at z -4 so
+# its front crosses the band at (0, 0, 1) and runs on bare ground at (0, 0, -9).
+func _front_over_live() -> Array:
+	var live: Node3D = _progress(Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(-14.0, 0.0, 1.5), Vector3.RIGHT, 28.0, 8.0), 1.0)[0]
+	var wave: Node3D = _wave(0.5, FRONT_CENTRE)[0]
+	return [live, wave]
+
+
+func _small_mean(image: Image, point: Vector3) -> Color:
+	var at := Vector2i(_cam.unproject_position(point))
+	var sum := Vector3.ZERO
+	var count := 0
+	for y in range(at.y - FRONT_PATCH, at.y + FRONT_PATCH):
+		for x in range(at.x - FRONT_PATCH, at.x + FRONT_PATCH):
+			var c := image.get_pixel(x, y)
+			sum += Vector3(c.r, c.g, c.b)
+			count += 1
+	sum /= count
+	return Color(sum.x, sum.y, sum.z)
+
+
 # The mean colour of a PATCH x PATCH square around a world point in the current still.
 func _patch_mean(image: Image, point: Vector3) -> Color:
 	var at := Vector2i(_cam.unproject_position(point))
@@ -157,6 +189,9 @@ func _patch_mean(image: Image, point: Vector3) -> Color:
 
 
 func _probe(image: Image, name: String) -> void:
+	if name == "overlap-front-live":
+		_front_probe = {"in_lane": _small_mean(image, FRONT_IN_LANE), "out_of_lane": _small_mean(image, FRONT_OUT_OF_LANE), "lane_only": _small_mean(image, LANE_ONLY)}
+		return
 	if not name.begins_with("overlap-live-pending"):
 		return
 	_probes[name] = {"cross": _patch_mean(image, CROSS), "live_only": _patch_mean(image, LIVE_ONLY), "pending_only": _patch_mean(image, PENDING_ONLY)}
@@ -186,6 +221,31 @@ func check_live_over_pending() -> bool:
 	f2.store_string(JSON.stringify({"front": _dump(f), "back": _dump(b), "sides": sides, "apart": apart, "near_live": near_live, "pass": ok}, " "))
 	f2.close()
 	return ok
+
+
+# The front's line pixels inside the live band read as they do on bare ground: the two
+# differ by less than a fifth of what separates the front from the bare live band, and the
+# front inside the band is nearer the front outside than the live band alone. A line the
+# band covered at 20% would read as the band and fail both.
+func check_front_over_live() -> bool:
+	if _front_probe.is_empty():
+		return true
+	var inside: Color = _front_probe["in_lane"]
+	var outside: Color = _front_probe["out_of_lane"]
+	var band: Color = _front_probe["lane_only"]
+	var same := _dist(inside, outside)
+	var apart := _dist(outside, band)
+	var ok := apart >= FRONT_APART_MIN and same <= apart * FRONT_SAME_SHARE and _dist(inside, band) > same
+	print("front over live: front in the band vs on bare ground differ by %.2f, front vs the bare band %.2f apart (min %.1f), allowed share %.2f -> %s"
+		% [same, apart, FRONT_APART_MIN, FRONT_SAME_SHARE, "PASS" if ok else "FAIL"])
+	var f := FileAccess.open(_out.path_join("front-over-live.json"), FileAccess.WRITE)
+	f.store_string(JSON.stringify({"in_lane": _dump(_front_probe), "same": same, "apart": apart, "pass": ok}, " "))
+	f.close()
+	return ok
+
+
+const FRONT_APART_MIN := 20.0
+const FRONT_SAME_SHARE := 0.2
 
 
 func _dump(probe: Dictionary) -> Dictionary:
@@ -273,7 +333,9 @@ func _process(_delta: float) -> bool:
 			"adapter": RenderingServer.get_video_adapter_name()}, " "))
 		f.close()
 		print("still_capture: wrote %d stills to %s" % [_written.size(), _out])
-		quit(0 if check_live_over_pending() else 1)
+		var live_ok := check_live_over_pending()
+		var front_ok := check_front_over_live()
+		quit(0 if live_ok and front_ok else 1)
 		return true
 	_cam.look_at_from_position(_shots[_index].get("cam", Vector3(0.0, 17.0, 17.0)),
 		CROSS if _shots[_index].has("cam") else Vector3(0.0, 0.0, -1.0))

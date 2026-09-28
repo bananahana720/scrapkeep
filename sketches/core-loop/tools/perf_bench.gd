@@ -115,6 +115,7 @@ var _warden_note := ""
 var _frame := 0
 var _samples: Array = []
 var _errors: Array = []
+var _materials_at_record := 0
 var _load_ok := true
 var _proc_start := 0
 var _phys_start := 0
@@ -282,6 +283,7 @@ func _process_end() -> void:
 			_phase = "record"
 			_frame = 0
 			_probe_open = _checks()
+			_materials_at_record = Threat.Painter.materials_built
 		return
 	if sample["perf_process_ms"] != _last_perf:
 		_perf_updates += 1
@@ -291,6 +293,8 @@ func _process_end() -> void:
 		_check_load()
 	if _frame >= RECORD_FRAMES:
 		_probe_close = _checks()
+		if Threat.Painter.materials_built != _materials_at_record:
+			_errors.append("%d mark materials were built during the recorded window (warm-up missed a key)" % (Threat.Painter.materials_built - _materials_at_record))
 		_finish()
 
 
@@ -672,7 +676,7 @@ func _finish() -> void:
 		"physics_hz": Engine.physics_ticks_per_second, "seed": RIVET_SEED,
 		"warm_frames": _warm_frames, "warm_seconds": _warm_seconds, "record_frames": _samples.size(), "warden": _warden_note,
 		"sound_ready_at_s": snappedf(_sound_ready_s, 0.01), "parts_granted": _granted.size(), "telegraphs_committed": _threats.size(),
-		"perf_monitor_value_changes": _perf_updates,
+		"perf_monitor_value_changes": _perf_updates, "mark_materials": Threat.Painter.materials_built, "mark_materials_built_in_window": Threat.Painter.materials_built - _materials_at_record,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1),
 		"source_sha256": {"res://tools/perf_bench.gd": FileAccess.get_sha256("res://tools/perf_bench.gd"),
 			"res://src/presentation/vfx.gd": FileAccess.get_sha256("res://src/presentation/vfx.gd")},

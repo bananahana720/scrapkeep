@@ -89,6 +89,16 @@ static func class_of_kind(kind: String) -> String:
 	return CLASS_OF_KIND.get(kind, "P5")
 
 
+# The one place the fill scale reaches the shader. The last value is kept because the dummy
+# renderer a headless run uses stores no globals, so a test cannot read them back there.
+static var last_published := 1.0  # the project setting's default
+
+
+static func publish_fill_scale(value: float) -> void:
+	last_published = value
+	RenderingServer.global_shader_parameter_set(FILL_GLOBAL, value)
+
+
 static func fill_scale(density: float) -> float:
 	return lerpf(1.0, FILL_FLOOR, clampf((density - FILL_FROM) / (1.0 - FILL_FROM), 0.0, 1.0))
 

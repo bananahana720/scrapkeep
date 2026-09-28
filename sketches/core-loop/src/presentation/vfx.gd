@@ -831,7 +831,7 @@ func _count_density() -> float:
 func _publish_fill_scale(value: float) -> void:
 	if value != _fill_scale:
 		_fill_scale = value
-		RenderingServer.global_shader_parameter_set(Density.FILL_GLOBAL, value)
+		Density.publish_fill_scale(value)
 
 
 # The most particles the bursts can hold alive at once, for the notes.

@@ -10,6 +10,7 @@ const CodexWorld := preload("res://src/world/codex_world.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
 const Bay := preload("res://src/world/bay.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 const Interact := preload("res://src/world/interact.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -158,6 +159,8 @@ func _setup_gorge() -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once.
+	Threat.Painter.warm_up(ctx.root)
 	if events != null:
 		_publish(events.end_all())
 	launch.stop()

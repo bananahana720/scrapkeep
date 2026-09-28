@@ -46,6 +46,15 @@ const KINDS := ["threat_instant", "threat_wave", "threat_projectile", "threat_la
 const GROUP := "threat"
 
 const PRIORITY := 40
+# Draw layers by render priority, back to front: the charcoal keylines under the fills
+# (their base look), the fills at PRIORITY, a live lane's band one above (it wins over the
+# other fills), then every hot P1 line above that band (FEEL-READABILITY.md section 1.1: a
+# P1 line is never covered by a fill). A keyline stays under the fills, because lifting it
+# over them changes every telegraph's look (measured 0.3 to 0.7 percent of the frame,
+# over the still budget); inside a live band it is dimmed, the hot line above it is not.
+const LIVE_PRIORITY := PRIORITY + 1
+const LINE_UNDER_PRIORITY := PRIORITY - 1
+const LINE_PRIORITY := PRIORITY + 2
 const SEGMENTS := 72
 const AREA_ALPHA := 0.1
 const EDGE_ALPHA := 0.95
@@ -105,12 +114,15 @@ const CURTAIN_STEPS := 48
 #   area   INSTANT and LANE footprints (AREA_ALPHA)
 #   reach  a PROJECTILE's footprint (AREA_ALPHA * 1.4), its own class since fix round 2
 #   fill, swept, run  the INSTANT fill, a WAVE's swept ground, a pending LANE's run
-#   live   a LANE that is damaging (LIVE_ALPHA). It renders one priority above the lines
-#          (41), so its band draws over a pending run, a fill, a swept ring and another
-#          telegraph's front band from every camera depth, as the base drew it whenever the
-#          lane sorted nearer. Lanes still union with lanes of their own class.
+#   live   a LANE that is damaging (LIVE_ALPHA). It renders one priority above the other
+#          fills (LIVE_PRIORITY), so its band draws over a pending run, a fill and a swept
+#          ring from every camera depth, as the base drew it whenever the lane sorted nearer.
+#          Every P1 line (LINE_UNDER_PRIORITY, LINE_PRIORITY) draws above it. Lanes still
+#          union with lanes of their own class.
 const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4, "run": 8, "live": 16, "reach": 32}
-const FILL_SORT := {"area": -3000.0, "reach": -2900.0, "fill": -2000.0, "run": -1500.0, "swept": -1000.0, "live": -500.0}
+# Offsets are spaced at least 1000 apart: only their order matters, and a gap under the
+# camera far plane (700 m) could let depth sort reorder two classes.
+const FILL_SORT := {"area": -6000.0, "reach": -5000.0, "fill": -4000.0, "run": -3000.0, "swept": -2000.0, "live": -1000.0}
 
 
 # hostile (HAZARD), owned (the player's, AMBER) or neutral (a harmless bone field).
@@ -909,6 +921,9 @@ class Painter:
 
 	static var _stripes: ImageTexture
 	static var _materials := {}
+	# Materials created so far; a run that has warmed up must not raise it.
+	static var materials_built := 0
+	static var _warmed := false
 
 	# One shared material per (stencil class, stripes, priority, governed), so every driven
 	# telegraph draws with the same few materials. governed comes from the layer's roles
@@ -933,7 +948,61 @@ class Painter:
 			mat.set_shader_parameter("texture_albedo", stripe_texture())
 			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
 		_materials[key] = mat
+		materials_built += 1
 		return mat
+
+	# Every (class, stripes, priority, governed) a driven telegraph can ask mark_material
+	# for: each fill class governed or not, and the two line layers.
+	static func warm_keys() -> Array:
+		var keys := []
+		for fill_class in FILL_STENCIL:
+			for governed in [false, true]:
+				keys.append([fill_class, true, LIVE_PRIORITY if fill_class == "live" else PRIORITY, governed])
+		keys.append(["", false, LINE_UNDER_PRIORITY, false])
+		keys.append(["", false, LINE_PRIORITY, false])
+		return keys
+
+	# Compiles every mark pipeline before play: one driven-format triangle per key, at zero
+	# alpha, kept in view for a few frames and then freed. Without it the first live lane or
+	# projectile compiles its shader mid-fight. Once per process; the materials are shared.
+	static func warm_up(parent: Node) -> Node3D:
+		if _warmed or parent == null:
+			return null
+		_warmed = true
+		var holder := Node3D.new()
+		parent.add_child(holder)
+		for key in warm_keys():
+			var arrays := []
+			arrays.resize(Mesh.ARRAY_MAX)
+			arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3.ZERO, Vector3(0.01, 0.0, 0.0), Vector3(0.0, 0.0, 0.01)])
+			arrays[Mesh.ARRAY_COLOR] = PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE])
+			arrays[Mesh.ARRAY_CUSTOM0] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+			arrays[Mesh.ARRAY_CUSTOM1] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+			var flags := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
+				| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+			var mesh := ArrayMesh.new()
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
+			var instance := MeshInstance3D.new()
+			instance.top_level = true
+			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			instance.extra_cull_margin = 16384.0
+			instance.mesh = mesh
+			instance.material_override = mark_material(key[0], key[1], key[2], key[3])
+			instance.sorting_offset = FILL_SORT.get(key[0], 0.0)
+			instance.set_instance_shader_parameter("centre", Vector3.ZERO)
+			instance.set_instance_shader_parameter("heading", Vector2(0.0, -1.0))
+			instance.set_instance_shader_parameter("clip", Vector4.ZERO)
+			instance.set_instance_shader_parameter("alpha_scale", 0.0)
+			holder.add_child(instance)
+		_free_after_frames(holder, 3)
+		return holder
+
+	static func _free_after_frames(node: Node, frames: int) -> void:
+		var tree := node.get_tree()
+		for i in frames:
+			await tree.process_frame
+		if is_instance_valid(node):
+			node.queue_free()
 
 	# 45-degree HAZARD and charcoal stripes, one period per texture repeat.
 	static func stripe_texture() -> ImageTexture:
@@ -1065,11 +1134,15 @@ class Painter:
 	func _apply_class(layer: String) -> void:
 		var instance: MeshInstance3D = _layers[layer]
 		var fill_class := _fill_class(layer)
-		instance.material_override = mark_material(fill_class, layer.begins_with("stripe"), _priority(layer) + (1 if fill_class == "live" else 0), _governed.get(layer, false))
+		instance.material_override = mark_material(fill_class, layer.begins_with("stripe"), LIVE_PRIORITY if fill_class == "live" else _priority(layer), _governed.get(layer, false))
 		instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
 
 	static func _priority(layer: String) -> int:
-		return PRIORITY - 1 if layer.ends_with("under") else PRIORITY
+		if layer.ends_with("under"):
+			return LINE_UNDER_PRIORITY
+		if layer == "base" or layer == "motion":
+			return LINE_PRIORITY
+		return PRIORITY
 
 	func _layer(layer: String) -> MeshInstance3D:
 		if _layers.has(layer):
@@ -1092,7 +1165,7 @@ class Painter:
 		mat.no_depth_test = true
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
-		mat.render_priority = PRIORITY - 1 if layer.ends_with("under") else PRIORITY
+		mat.render_priority = _priority(layer)
 		if layer.begins_with("stripe"):
 			mat.albedo_texture = stripe_texture()
 			mat.uv1_triplanar = true

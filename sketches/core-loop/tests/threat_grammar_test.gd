@@ -52,6 +52,8 @@ func _process(_delta: float) -> bool:
 	_check_drive_layers()
 	_check_no_rebuild()
 	_check_fill_classes()
+	_check_line_priority()
+	_check_warm_up()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -478,10 +480,87 @@ func _check_fill_classes() -> void:
 	var back_to_run: bool = _stencil(lane, "stripe_motion") == pending_class
 	_report("fill classes", one_alpha and reach_apart and live_class != pending_class and after_all and back_to_run
 			and absf(pending_alpha - Threat.RUN_ALPHA) < 0.005 and absf(live_alpha - Threat.LIVE_ALPHA) < 0.005,
-		"stencil value -> alphas drawn %s (one alpha each: %s); the projectile's footprint is its own class (%s); a lane goes from class %d (alpha %.2f, sort %.0f) to class %d (alpha %.2f, sort %.0f, after the swept ring at %.0f, priority %d over the lines' %d) live, and back on a retarget (%s)"
+		"stencil value -> alphas drawn %s (one alpha each: %s); the projectile's footprint is its own class (%s); a lane goes from class %d (alpha %.2f, sort %.0f) to class %d (alpha %.2f, sort %.0f, after the swept ring at %.0f, priority %d over the fills' %d) live, and back on a retarget (%s)"
 			% [alphas, one_alpha, reach_apart, pending_class, pending_alpha, pending_sort, live_class, live_alpha, live_sort, swept_sort, live_priority, Threat.PRIORITY, back_to_run])
 	for node in nodes:
 		node.free()
+
+
+# A P1 line is never covered by a fill (FEEL-READABILITY.md section 1.1), so every hot line
+# layer of every telegraph draws above the live lane's band, and each keyline stays under
+# the fills (lifting it changes the look); and the class
+# sort offsets sit at least 1000 apart, more than the camera far plane's 700 m.
+func _check_line_priority() -> void:
+	var nodes: Array = [
+		Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0),
+		Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(40.0, 0.0, 400.0), Vector3.FORWARD, 11.0, 3.0),
+		Telegraph.wave(_world, _ground, Vector3(60.0, 0.0, 400.0), 10.0, 6.0, 0.5),
+		Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(80.0, 0.0, 400.0), 3.5),
+	]
+	nodes[1].set_progress(1.0)
+	nodes[3].set_flight(Vector3(92.0, 1.5, 388.0), 6.0)
+	nodes[0].set_progress(0.5)
+	nodes[3].set_progress(0.5)
+	nodes[2].step(1.0)
+	var live_priority := Threat.LIVE_PRIORITY
+	var seen := 0
+	var above := true
+	var ordered := true
+	for node in nodes:
+		var layers: Dictionary = node.painter()._layers
+		for layer in ["base", "motion"]:
+			if not layers.has(layer):
+				continue
+			var priority: int = layers[layer].material_override.render_priority
+			seen += 1
+			above = above and priority > live_priority
+		for layer in ["under", "motion_under"]:
+			if layers.has(layer):
+				ordered = ordered and layers[layer].material_override.render_priority < Threat.PRIORITY
+	var sorts: Array = Threat.FILL_SORT.values()
+	sorts.sort()
+	var spaced := true
+	for i in range(1, sorts.size()):
+		spaced = spaced and sorts[i] - sorts[i - 1] >= 1000.0
+	_report("P1 lines above the live band", seen >= 8 and above and ordered and spaced,
+		"%d hot line layers across INSTANT, LANE, WAVE and PROJECTILE all render above the live band (priority %d): %s, keylines under the fills: %s; class sort offsets %s at least 1000 apart: %s"
+			% [seen, live_priority, above, ordered, sorts, spaced])
+	for node in nodes:
+		node.free()
+
+
+# Every mark pipeline is compiled before play: after warm_up the shared material cache
+# holds exactly warm_keys(), and driving every threat type through its states (a live lane,
+# a projectile with a flight, a wave, an owned and a neutral fill) creates no new key.
+func _check_warm_up() -> void:
+	var holder := Threat.Painter.warm_up(_world)
+	var keys := Threat.Painter.warm_keys()
+	var cache: Dictionary = Threat.Painter._materials
+	var listed := true
+	for key in keys:
+		listed = listed and cache.has("%s/%s/%d/%s" % [key[0], key[1], key[2], key[3]])
+	var warmed_size := cache.size()
+	var built := Threat.Painter.materials_built
+	var nodes: Array = [
+		Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0),
+		Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0),
+		Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(40.0, 0.0, 400.0), Vector3.FORWARD, 11.0, 3.0),
+		Telegraph.wave(_world, _ground, Vector3(60.0, 0.0, 400.0), 10.0, 6.0, 0.5),
+		Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(80.0, 0.0, 400.0), 3.5),
+	]
+	nodes[4].set_flight(Vector3(92.0, 1.5, 388.0), 6.0)
+	for p in [0.25, 0.5, 0.95, 1.0]:
+		for node in nodes:
+			if node.type != Threat.Type.WAVE:
+				node.set_progress(p)
+		nodes[3].step(0.5)
+	var stable: bool = cache.size() == warmed_size and Threat.Painter.materials_built == built
+	_report("warm-up covers every mark key", holder != null and listed and warmed_size == keys.size() and stable,
+		"warm_up built %d materials, exactly warm_keys() (%d listed, all present: %s); five telegraphs through 25%%, 50%%, 95%% and live built %d more" % [warmed_size, keys.size(), listed, Threat.Painter.materials_built - built])
+	for node in nodes:
+		node.free()
+	if holder != null:
+		holder.free()
 
 
 func _meshes(node: Node3D) -> Dictionary:
