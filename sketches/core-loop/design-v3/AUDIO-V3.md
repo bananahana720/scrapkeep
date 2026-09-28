@@ -268,16 +268,75 @@ Filled in from the workers' reports (audition WAVs, the density simulation, the 
 5. **The bet's question.** (a) The tritone D to Ab on the clunk, lifted to A on a win. (b) No pitch on the bet; drums only. Recommend (a): the win is a semitone, the same lean the Fleet makes, resolved the right way.
 6. **Two Moss keys** (`drops_missed >= 3`, `laps_run >= 5`) for the vision keeper to write lines for, or leave his table as it is. Recommend adding them after the sitting, not before.
 
-## 12. The roadmap's definition of done
+## 12. The music revamp: ACE-Step beds under the live engine
 
-`design-v3/ROADMAP.md` (branch `proto/core-loop-v3-design`, 1589f4f) names row 8 as Sound and its measure as this file's. Each measure of §7 maps to a row; the contributions to other rows are the ear column of that row's read.
+Andrew authorised a revamp of the music within the game's theme and his intent (spill-B, gems never lost, motifs in D, jazzy EDM drive, Pyramids layering), using the music-video repo's tools: `/home/andrew/Projects/music-video` `engine/` (numba DSP, instruments, auto-mix, mastering), `ace/` (the ACE-Step 1.5 cover pipeline at cover strength 0.7, `ace/master.py`) and `tools/separate.py` (Demucs). The Feel lead weighed four options in `FEEL-READABILITY.md` §7 (9b9eb78) and recommended D, a hybrid: cover only the drum-and-bass core bed per stage, tempo and key, keep the engine live above it, swap beds on the bar at thresholds. As the owner I evaluated D against its own audition.
+
+### 12.1 What the audition measured
+
+The Feel lead's worker rendered a 16-bar Spillway guide from the engine at pressure 0.6 (`tools/ace_guide.gd`, uncommitted on `core-loop-v3-feel-3`), covered it with ACE-Step (45 s wall, 12.3 GB GPU peak, `logs/cover.time.json`), separated both with Demucs (4 s), then looped, matched and measured everything (`tools/ace/audition.py`, `metrics.json`). Paths are under `/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-feel-3/artifacts/local/ace-audition/`. All numbers below are from that `metrics.json`; none is a listening claim.
+
+| Measure | Guide (engine) | Cover (ACE-Step) | Read |
+| --- | --- | --- | --- |
+| Drift against the guide's kick grid | 0 | slope -1.84 ms per bar, offset -8 ms, median lag -18 ms, residual RMS 25.8 ms, total -29.5 ms over 16 bars; bar 6 is an outlier at -117 ms | Tempo is held (0.13% over 16 bars). The jitter is a 64th note at 172 (a sixteenth is 87 ms), which is a flam against a sample-exact kick; bar 6 is a re-performance, more than a sixteenth off. Without retiming, the engine's own drums cannot play over this bed |
+| Tempo estimate (librosa) | 172.3 | 178.2 | Librosa's estimate disagrees with the lag slope; the lag slope is the better instrument here |
+| Key | KS "G major" r 0.75 (the relative major of the Dorian set), Dorian-D energy 0.65, B natural 3.2 dB under Bb | KS D minor r 0.87, Dorian-D energy 0.66, B natural 3.0 dB under Bb, top pitch classes D A Bb G C F E | The cover stays in D and keeps the guide's Aeolian lean at this pressure. Chroma cosine 0.97 between the two |
+| Loop seam (20 ms wrap crossfade) | join 26.9 dB under the body's p99.9 step | join 67.9 dB under (40.2 dB without the crossfade) | Both loop cleanly; the cover is the cleaner seam |
+| Loudness | matched to -14.0 LUFS, peak -2.3 dBFS | matched to -14.0 LUFS, peak -1.2 dBFS; the drums stem needed 4.0 dB of limiting to reach -15, the other stem 1.9 dB | The mix cover masters like the guide; the stems are peakier than the mix |
+| Spectrum (band levels, dB re the loudest) | sub -9.1, low -1.7, mid -7.4, high -18.0, air -24.0; centroid 305 Hz | sub -11.0, low -2.4, mid -5.3, high -13.2, air -24.5; centroid 461 Hz | The cover is 5 dB brighter in the highs, 2 dB up in the mids, 2 dB down in the sub: a produced drum kit against a synth kit |
+| Dynamics | crest 12.8 dB; per-bar RMS spread 0.24 dB | crest 14.8 dB; spread 1.03 dB | The cover breathes bar to bar; the guide is a static loop |
+| Stem bleed (energy above 300 Hz over below, bass stem) | engine bass solo truth -8.0 dB; Demucs bass of the guide -35.4 dB | Demucs bass of the cover -22.4 dB | Demucs strips the reese's upper harmonics on both, so a Demucs bass stem is not the reese roll (G8); bleed into the bass stem is low |
+| Disk | | mix loop 282 KB Opus 96k, stems 231 to 305 KB each; 54 stems at 6 pressure steps = 13.7 MiB | Size is not a constraint |
+
+### 12.2 What D gets right and what it would break
+
+Right: covering the core as one mix coheres (the per-layer option A cannot, and the audition shows why: Demucs stems are already not the parts). The bed is the thing that most reads as produced (drums), which is also the layer that never changes shape.
+
+Broken, if the bed carries the bass as D proposes:
+
+1. **The bass lines are gems (G8) and the engine's own notes.** `bass_log` and `layer_starts` are what `presentation_gems_test` and `presentation_bass_test` read; a bed's bass is not a note the engine played, and the Demucs measurement shows a covered bass is not the reese roll note for note (verified only at the harmonic level; the figure was not onset-matched, which the §12.4 spike does not cover either).
+2. **Danger ducks the bass bus alone** (item 47, `duck_bass`), **breaking free returns it on the frame** (`free_bass`), **the reactor pedal moves the sub to Ab** (`set_reactor_pedal`), and **the open window holds the bass down** (§1.1). A bed with bass baked in can do none of these.
+3. **Calm leaves space** (item 7): the kick enters with pressure. One bed at 0.6 has a kick in every calm.
+4. **The drop's gap** (G9: a beat of silence, then everything) is the engine's `_gap`; a bed that is not mixed inside `render()` plays through it.
+
+### 12.3 Decision: D amended, "bed without bass, inside the engine"
+
+- **The bed is the cover's drums plus keys** (Demucs `drums` and `other` of a core cover), never its bass. The engine keeps the sub, the reese, the funk slap, the ladder, every melodic layer, the stingers, the drops and the SFX. G8 stays note for note; the ducks, the pedal, the free and the open loop keep working.
+- **Two beds per (stage, tempo, key): calm and full.** Calm is a cover of the core at pressure 0 (keys and a light hat, no kick); full is pressure 0.6. They crossfade on the bar where `CURVES` brings the kick in, so calm still leaves space. That is 3 stages x (level 172 D calm, level 172 D full, level 172 Eb full, Warden 129 D, Warden 129 Eb) plus Brindle's three = 18 beds; at 0.3 MB each about 5.5 MB Opus. The sinister break, the pivot bar, the lounge and the cadence stay synth.
+- **The bed is layer 16 of the engine**, `BED`: a looped buffer chosen by (theme, step, key, tier), advanced on the engine's own clock modulo its length, with a gain target from the same curve family, so it takes the pump, the priority duck, the drop's gap and the tone filter exactly as the fifteen synth layers do. The synth kick, snare, hats and keys keep sequencing (the logs and the gems test are untouched) at a floor of 0.15 under a live bed, so the identity survives if a bed fails to load and a bed is an addition on top of the core rather than a file replacing it.
+- **Every bed is retimed to the grid per bar before it ships** (`tools/ace/retime_bed.py`, §12.4): a bar whose residual lag is over 30 ms after retiming is a rejected bed, re-covered with a new seed. Bar 6 of the audition would have been rejected as is.
+- **The gate before any bed enters the game is Andrew's ear**: the A/B pair of §12.4 (the hybrid over the retimed bed against the all-synth control, both at -14 LUFS) played blind. If the produced core costs the thing he loves in G1 and G8, the revamp stops at option C (static beds for the title, the lounge and the summary) and the engine's own mastering chain from `music-video/engine` (auto-mix, a proper limiter) becomes the revamp instead.
+
+The build cost is one engine layer (AU1), a bed loader (`bed_bank.gd`, new), the retime tool and the covers themselves (18 x 45 s of GPU, one job at a time under the memory scope). It sits in P3 after the sitting, because the beds depend on the spine's tempo map (once-per-stage pivot or per lap, §1.4).
+
+### 12.4 The hybrid spike (this session)
+
+A worker is retiming the existing cover per bar and rendering the pair: `hybrid-spillway-16bar.wav` (the engine's layers above the core, at pressure 0.9, over the retimed cover drums and keys) against `synth-spillway-16bar.wav` (the engine alone), with per-bar lag before and after, the drum flam between the engine's kick and the retimed drums, and the loudness and spectrum of both. Results are appended in §9.2 when they land; the doc's decision above does not depend on them beyond the 30 ms retime bound, which the spike tests.
+
+## 13. Systems' asks, folded in
+
+From `SYSTEMS-CHAOS.md` §9 (7144a9e). Each lands in a section above or is answered here.
+
+| Ask | Answer | Where |
+| --- | --- | --- |
+| Evolution fanfare: the class motif whole, then the evolved rig's two-note tag, so each of the 16 rigs is "mine plus that" | Yes: `evolution_fanfare` resolves `motif_release` for the class and appends the rig's tag from a 16-row table in `harmony.gd` `RIG_TAGS` (two notes, one instrument each, all on the reward ladder). The fanfare lands on the beat like `mastery_earned`; the band pins the rotation slot in the same bar (§3.2) | AU2 bank, AU1 pins |
+| Socket tick per copy toward ripe, the ripe socket hum | The tick is the reward ladder climbing one rung per notch on the mallet, on the frame; ripe is a soft sine hum on the pair's tag note at -20 dB under the band, priority 0, that stops on the fanfare | AU2 |
+| Each rig's running sound (Pinball Hull's bumper ding, Storm Tether's crackle, Glacier Wake's creak) at low priority, ducked by threats | Yes, priority 1, reward register, in `KEYED_SOUNDS` where pitched, with a `VOICE_LIMIT` of 2 and a 90 ms gap each so a fountain of rebounds never turns to mush | AU2, §3.3 budgets |
+| The cadence's lean cue at 6 m, left or right | A two-note ladder step panned hard to the gate's side: up a rung for the rarer gate, level for the other; UI bus, priority 0 | AU2 |
+| The rule part's band cue on the hook's relent: Moss's grumble resolving into a low brass hit | Yes: the relent cue (sigh, padlock clunk, the chain rising D to A) gains the Fleet brass on D2 on the beat after the chain, because a rule is Fleet-scale; and the one-bar lounge preview of §6 | AU2, §6 |
+| Each rule's change played once when it first fires (the pin's whip for rule 1, a second Geiger for Clock Cores) | Yes, on the frame, through the rule's own event row | AU3 |
+| Bets: roll, clunk, crack, bone, plus a stake tick while the class ring fills; the curse's band cracking off at the break as a glass break inside the stage-clear cadence | The stake tick is the roll's snare gaining a rung per 0.1 s of hold; the curse crack-off is the existing shatter (glass pings over noise, item 28) on beat 2 of the cadence's A7b9 bar, so it sits inside G2 without moving it | §4, AU2 |
+| A blessed Warden's crown adds one Cherenkov shimmer layer to the family idle | Yes: the landmark's sub pulse idea (SOUND-STORY V1 could) as a bell shimmer on bar 1 of each phrase, priority 0 | §1.3 idle |
+| A blessed pack's leader borrows the miniboss riser a fourth lower | Yes, baked as `leader_riser` at -5 semitones, danger register | AU2 |
+| Each stage variant is one extra layer in the level theme (water for Flooded, wind for Squall) | Yes, but as ambience on the SFX bus at priority 0, not a band layer: the band's sixteenth layer is the bed (§12.3), and a variant texture must not compete with the snowball's headroom | §3.3 |
+| The rack's arrival as the anvil in a 1-2-3 rhythm; "full both ways" is the band at its top layer with threats still low and minor | The rack keeps the swarm's unison buzz (an ancient never makes the Fleet's anvil, SOUND-STORY coherence check 4); a Fleet pack's arrival is the stamp in a 1-2-3. Full both ways is §3.3's threat margin at the densest state | §1.3, §3.3 |
+
+## 14. The roadmap's definition of done
+
+`design-v3/ROADMAP.md` (branch `proto/core-loop-v3-design`, 1589f4f). This design owns row 8 and contributes the ear of rows 2 and 5 (the coordinator's correction, 2026-09-28; rows 6 and 7 are the Feel lead's and W12's).
 
 | Row | This design's part | Measure (§7) |
 | --- | --- | --- |
-| 8 Sound (owned) | The Warden fight, laps, drops and snowball scored in the spill-B grammar; the music adaptive in theme; no gem lost; SFX in key | Events on the grid; the five states; voice counts; loudness per state; threat margin; bass share; gem regression; keyed cues; listening receipt |
+| 8 Sound (owned) | The Warden fight, laps, drops and snowball scored in the spill-B grammar; the music revamped as beds under the live engine (§12); no gem lost; SFX in key | Events on the grid; the five states; voice counts; loudness per state; threat margin; bass share; gem regression; keyed cues; listening receipt; the retime bound (30 ms) per bed and the blind A/B before any bed ships |
 | 2 The Warden (contributes) | The ear column of closed, telegraph, open, punish and recover per family; the dodge as the whip on the clang; "it is open now" as the chord snapping and the band thinning; progress as the ladder | The five states; events on the grid (the clang on the beat, the ratchet on the frame) |
-| 3 The snowball (contributes) | One texture change per power tier, evolution and rule part; never mud | Voice counts; loudness at full snowball; bass share |
-| 4 Discovery (contributes) | Five sound families, each learnable by ear; the sunken bell finds secrets before they are seen | Keyed cues (the five families resolve); the listening receipt's bet, ally and secret takes |
-| 5 Feel (contributes) | The sound layer of every hit, kill, pickup, drop and dodge, on the frame and in key (§5's ten rules for W11) | Events on the grid ("now" cues within a frame); keyed cues |
-| 6 Readability (contributes) | Threats audible in the densest late-run scene: the threat margin and the reserved threat voices | Threat margin ≥ 6 LU at every density state; voice budgets |
-| 7 Selling the pilot (contributes) | The class card plays the motif whole on select (SOUND-STORY UI table), and the ally hums it back straight | Keyed cues (`class_motif` resolves per class) |
+| 5 Feel (contributes) | The sound layer of every hit, kill, pickup, drop and dodge, on the frame and in key (§5's ten rules for W11); the evolution fanfare, socket ticks and rig sounds (§13) | Events on the grid ("now" cues within a frame); keyed cues; voice budgets |
