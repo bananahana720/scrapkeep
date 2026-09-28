@@ -591,17 +591,21 @@ func _camera(hook: String, fact: String, direction: Vector3, amount: float, time
 			camera.kick(direction, amount)
 
 
-# The one way presentation asks for a freeze. Gated by the spacing and the budget, and
+# The one way presentation asks for a freeze, so every stop shares one budget. Gated by
+# the spacing and the short and long budgets, and
 # scaled by the viewer's Hit-stop setting; a stop over the budget is trimmed to fit.
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := Time.get_ticks_msec()
 	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
 	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
 	var spent := 0.0
+	var recent := 0.0
 	for stop in _stops:
 		spent += float(stop[1])
-	var sent := minf(wanted, EventKinds.STOP_BUDGET_MS - spent)
-	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) >= EventKinds.STOP_GAP_MS
+		if now - int(stop[0]) < EventKinds.STOP_WINDOW_MS:
+			recent += float(stop[1])
+	var sent := minf(wanted, minf(EventKinds.STOP_BUDGET_MS - spent, EventKinds.STOP_WINDOW_BUDGET_MS - recent))
+	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventKinds.STOP_GAP_MS
 	var in_play: bool = ctx.flow == null or ctx.flow.in_play()
 	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
 		hit_stop_log.append([seconds, 0.0, fact, now])

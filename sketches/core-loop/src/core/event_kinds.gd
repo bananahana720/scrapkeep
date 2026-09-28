@@ -177,9 +177,13 @@ const JUICE := {
 	"scrap_lost": {"pulse": -0.22},
 	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
 }
-# Rapid fire never stutters: stops start at least STOP_GAP_MS apart and add up to at most
-# STOP_BUDGET_MS in any second; the hits of one frame coalesce into one stop.
+# Rapid fire never stutters. Every stop, whatever asked for it, draws on one shared
+# budget: a stop starts at least STOP_GAP_MS after the last one ended, at most
+# STOP_WINDOW_BUDGET_MS of stop falls in any STOP_WINDOW_MS, and at most STOP_BUDGET_MS in
+# any second. The hits of one frame coalesce into one stop.
 const STOP_GAP_MS := 90
+const STOP_WINDOW_MS := 300
+const STOP_WINDOW_BUDGET_MS := 60.0
 const STOP_BUDGET_MS := 100.0
 const STOP_PER_EXTRA_HIT_MS := 2.0
 

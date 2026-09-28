@@ -82,6 +82,14 @@ func _process(_delta: float) -> bool:
 				events.enemy_struck.emit(_target, "arc", 1.0)
 			_juice.flush()
 			_marks["frame"] = [_sent().size() - before, _last_sent()]])
+		# Stacking: a crit ram, a dodge and a multi-kill beat 100 ms apart share one budget.
+		_plan.append([950, func():
+			_juice.reset_stops()
+			_marks["stack_from"] = _juice.hit_stop_log.size()
+			_juice.request_hit_stop(0.06, "enemy_struck")])
+		_plan.append([1000, func(): _juice.request_hit_stop(0.045, "near_miss")])
+		_plan.append([1050, func(): _juice.request_hit_stop(0.03, "multi_kill")])
+		_plan.append([1090, func(): _marks["stack"] = _juice.hit_stop_log.slice(_marks["stack_from"]).filter(func(e: Array): return e[1] > 0.0)])
 		# Rapid fire: a hit every 33 ms for a second.
 		_plan.append([1100, func():
 			_juice.reset_stops()
@@ -120,15 +128,29 @@ func _process(_delta: float) -> bool:
 	var expected := (Juice.stop_ms_for(20.0) + 4.0 * EventKinds.STOP_PER_EXTRA_HIT_MS) / 1000.0
 	_check("one frame, one stop", one[0] == 1 and absf(one[1] - expected) < 0.0005,
 		"five hits in one frame send %d stop of %.0f ms (the band plus %.0f ms per extra hit)" % [one[0], one[1] * 1000.0, EventKinds.STOP_PER_EXTRA_HIT_MS])
+	var stack: Array = _marks["stack"]
+	var stacked := 0.0
+	for entry in stack:
+		stacked += entry[1] * 1000.0
+	_check("stops never stack", stack.size() == 1 and stacked <= EventKinds.STOP_WINDOW_BUDGET_MS + 0.5,
+		"a 60 ms stop, a dodge tick 50 ms later and a multi-kill beat 100 ms later send %d stop totalling %.0f ms (at most %.0f in any %d ms)"
+			% [stack.size(), stacked, EventKinds.STOP_WINDOW_BUDGET_MS, EventKinds.STOP_WINDOW_MS])
 	var rapid: Array = _marks["rapid"]
 	var total := 0.0
 	var gaps_ok := true
+	var window_ok := true
 	for i in rapid.size():
 		total += rapid[i][1] * 1000.0
 		if i > 0:
-			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] >= EventKinds.STOP_GAP_MS
-	_check("rapid fire capped", rapid.size() >= 2 and total <= EventKinds.STOP_BUDGET_MS + 0.5 and gaps_ok,
-		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), gaps >= %d ms %s" % [rapid.size(), total, EventKinds.STOP_BUDGET_MS, EventKinds.STOP_GAP_MS, gaps_ok])
+			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] - rapid[i - 1][1] * 1000.0 >= EventKinds.STOP_GAP_MS
+		var span := 0.0
+		for other in rapid:
+			if other[3] <= rapid[i][3] and rapid[i][3] - other[3] < EventKinds.STOP_WINDOW_MS:
+				span += other[1] * 1000.0
+		window_ok = window_ok and span <= EventKinds.STOP_WINDOW_BUDGET_MS + 0.5
+	_check("rapid fire capped", rapid.size() >= 2 and total <= EventKinds.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
+		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), %d ms clear after each %s, %.0f ms per %d ms window %s"
+			% [rapid.size(), total, EventKinds.STOP_BUDGET_MS, EventKinds.STOP_GAP_MS, gaps_ok, EventKinds.STOP_WINDOW_BUDGET_MS, EventKinds.STOP_WINDOW_MS, window_ok])
 	var flat_before := Vector2(_velocity_before.x, _velocity_before.z)
 	var drift := (Vector2(_velocity_after.x, _velocity_after.z) - flat_before).length()
 	_check("momentum kept", _stop_seen and drift < 0.05 and flat_before.length() > 10.0,
