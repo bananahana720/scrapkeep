@@ -666,3 +666,31 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Settings.** `settings_store.gd` reads and writes `settings.json` in `game.storage_dir` as `{"volumes": {bus: level}}`. The per-process folder in test mode keeps tests off the player's file.
 - **Help.** `screens.toggle_help()` and `help_open()`; `button_for("help")` and `button_for("back")`. The page (`help_page.gd`) lists the `FieldNotes.CONTROLS` rows that carry `caps` (key glyph ids) and `short` (one or two words).
 - **Tests.** `ui_pause_menu_test`.
+
+## Interact seam (v3 L3)
+
+E is interact everywhere (`design-v3/LOOP-REDESIGN.md` section 9). World owns the system (`world.interact`, `src/world/interact.gd`), its family rows (`src/world/interactables.gd`) and its devices. The spine keeps one hook.
+
+- **Routing.** The spine hook is `player.interact_claim`. World sets it to `world.interact.claims` (`claims() -> bool`). `player_ball._route_interact()` asks it on an E press before Sable's mount. A claimed press becomes `intent.interact_pressed` and clears `intent.mount_pressed`, so it never also plants a pylon. Mounted, E always drops off. `intent.mount_held` is E held. `key_glyphs.gd` hides the pylon glyph while a claim holds. `hud.gd` fills the reticle's class ring with `interact.hold_fraction()`.
+- **Reach.** A device is in reach within `Interactables.REACH` (6 m) of its `reach_point()` and inside `FACING_DEG` (60 degrees) of the camera's look. A travel device is in reach anywhere in its lane. The nearest ready device in reach wins.
+- **Consent.** Each family row's `consent` sets it. `roll`: E in the lane arms it, and it fires as the ball crosses the mouth. `hold`: E held for `HOLD_SECONDS` (0.35 s); a release or leaving reach first does nothing. `press`: E once.
+- **Families.** Each `Interactables.FAMILIES` row holds `icon`, `shape`, `color`, `accent`, `consent`, `verb`, and the sound register: `arm`, `fire`, `won` and `lost`, each as `{sound, sound_next}`. Audio resolves each fact's cue with `Rows.heard(Interactables.sound(family, beat))`. VFX draws the family's shape and colour. `PLACEMENTS[stage]` lists each stage's devices, so the map files stay untouched.
+- **Signals** (`game_events.gd`). The interact system and its devices publish all four, and presentation hears all four.
+  - `interact_armed(family, device_id, at)` when consent is given.
+  - `interact_fired(family, device_id, at)` when the device acts.
+  - `ambush_ended(device_id, won, at)` when an altar's clock or pack ends; a won altar also calls `run.add_core("ambush", at)` first.
+  - `bet_resolved(device_id, won, stake, at)` after a crate's `run.add_core("bet", at)` times the stake, or its `run.burn_cores()`.
+- **Devices.** A device extends `src/world/device.gd`. It overrides `build`, `reach_point`, `ready_now`, `gauge` (a not-ready fill 0 to 1, or -1), `terms` (the words after the family verb), `fire`, `tick` and `stand_down`. `fire()` returns true when the device acts at once; false means the device calls `system.fired(self)` itself after its own beat. The base owns the prompt grammar, drawn through `WorldPrompt.set_interact(icon, words, key, fill)`:
+  - within 30 m, the family glyph alone;
+  - in reach and ready, the E keycap, the glyph and at most `PROMPT_WORDS` (5) words;
+  - not ready, the gauge round the glyph and no keycap.
+- **Luck.** `interact.luck()` returns a fresh `RandomNumberGenerator`. It is seeded by `luck_seed(run seed, stage, retries, draw index, stage tick)` and the draw is recorded in `interact.last_luck`, so a replay with the same inputs rolls the same. It never touches `ctx.rng`.
+
+### How the lift (writer L1) and later travel devices adopt roll-through
+
+1. Build the device once, parented under its stage's geometry root, with `world.interact.travel(id, mouth, heading, on_fire, parent)`. It returns a `TravelDevice` (`src/world/travel_device.gd`) that is registered for good. It sleeps while that stage's root is parked (it is live only while visible in the tree), so it needs no per-stage registration. With no `parent` it belongs to the current stage and goes at the next stage change.
+2. `on_fire(ball: Vector3, velocity: Vector3)` is the owner's launch, for example `world.ride = RideRail.arc(...)`. The system calls it on the tick an armed ball crosses the mouth, then publishes `interact_fired("travel", id, at)`. A device that adopts consent must not also fire on mouth contact alone.
+3. Two fields are optional. `device.ready_check` is a Callable returning bool; a not-ready device shows its gauge and no keycap. `device.destination` sets the words after "Ride: to", 5 words at most.
+4. `RollThrough` (`src/world/roll_through.gd`) is the pure model a custom device may carry in `roll` instead. Its fields are `mouth`, `heading`, `length` (12 m), `half_width` (5 m) and `mouth_radius` (3 m). Its calls are `in_lane(p)`, `arm()` and `step(from, to) -> bool`. It tests the crossing on the tick's segment, so a ball at any speed fires. A ball that leaves the lane or crosses wide disarms it at no cost.
+
+**Tests.** `world_interact_test` (routing, tap and hold, roll-through, a missed mouth, prompt words), `world_ambush_test`, `world_cache_test` and `world_bet_test`.

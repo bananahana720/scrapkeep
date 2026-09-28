@@ -71,6 +71,9 @@ var builtin_squash := true
 var crush_check := Callable()
 # Answers the heft the ball plays at; combat wires it to its heft(). 1.0 when unwired.
 var heft_of := Callable()
+# E's first claim (world's interact system, claims() -> bool): true when an interactable
+# in reach takes this press, so it never also plants a pylon.
+var interact_claim := Callable()
 # The arc slam's tagged faces: [{point, left}].
 var face_tags: Array = []
 var _cc_ignored_at := {}
@@ -365,6 +368,7 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	source.poll(intent)
+	_route_interact()
 	_read_grammar()
 	abilities.tick(delta)
 	immune_left = maxf(0.0, immune_left - delta)
@@ -413,6 +417,14 @@ func _read_grammar() -> void:
 	if tree.knob("winch_mount") and kit.hooked and intent.reel_held and not kit.mounted \
 			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
 		intent.mount_pressed = true
+
+
+# E is interact everywhere (LOOP-REDESIGN section 9): an interactable in reach takes the
+# press, else it stays Sable's mount at a face. Mounted, E always drops you off.
+func _route_interact() -> void:
+	if intent.mount_pressed and not kit.mounted and interact_claim.is_valid() and interact_claim.call():
+		intent.mount_pressed = false
+		intent.interact_pressed = true
 
 
 # Coil Hook: letting go of the rope throws you on along your swing.

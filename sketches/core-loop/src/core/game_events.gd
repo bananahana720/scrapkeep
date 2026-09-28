@@ -122,6 +122,17 @@ signal swarm_scattered(at: Vector3, drones: int)
 signal mind_adapted(habit: String, icon: String)
 signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
 
+# v3 interact (LOOP-REDESIGN section 9; world's interact system and its devices publish
+# all four). family keys world/interactables.gd FAMILIES and device_id names the device.
+# interact_armed: consent given (E in a travel lane, a hold completed, a press).
+# interact_fired: the device acted (a launch, a pack arriving, a chest opening, a bet's
+# needle stopping). ambush_ended: an altar's pack cleared in time (won) or not.
+# bet_resolved: a double-or-nothing landed; stake is the cores it put up.
+signal interact_armed(family: String, device_id: String, at: Vector3)
+signal interact_fired(family: String, device_id: String, at: Vector3)
+signal ambush_ended(device_id: String, won: bool, at: Vector3)
+signal bet_resolved(device_id: String, won: bool, stake: int, at: Vector3)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

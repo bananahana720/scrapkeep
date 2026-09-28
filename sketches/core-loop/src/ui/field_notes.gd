@@ -47,7 +47,7 @@ const CONTROLS := [
 	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "caps": ["key_f"], "short": "special"},
 	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels", "caps": ["key_rmb"], "short": "move"},
 	{"keys": "Q (hold)", "does": "Sable: winch toward the hook"},
-	{"keys": "E", "does": "Sable: plant a pylon on a steep face or a close wall hook; again to drop off"},
+	{"keys": "E", "does": "interact with what you face within 6 m: hold it for a cost or a bet; in an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off"},
 	{"keys": "mouse wheel", "does": "Sable: down pays rope out, up notches it in"},
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},

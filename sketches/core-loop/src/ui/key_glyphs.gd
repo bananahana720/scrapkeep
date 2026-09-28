@@ -76,7 +76,11 @@ func _physics_process(_delta: float) -> void:
 	available["slingshot"] = kit.mounted
 	available["grapple"] = kit.on(Augments.GRAPPLE) and not kit.hooked and not kit.mounted \
 		and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE
-	available["mount"] = kit.on(Augments.PYLON) and not kit.mounted and kit.mount_block <= 0.0 and _face_in_reach(kit)
+	# E is interact first (LOOP-REDESIGN section 9): the pylon glyph shows only when E
+	# would mount, never beside an interactable's own keycap.
+	var claim: Callable = game.player.interact_claim
+	available["mount"] = kit.on(Augments.PYLON) and not kit.mounted and kit.mount_block <= 0.0 and _face_in_reach(kit) \
+		and not (claim.is_valid() and claim.call())
 
 
 # The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
