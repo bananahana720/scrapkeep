@@ -115,7 +115,15 @@ const RANGE_MID_M := 16.0
 # outside this file (build.gd, element_field.gd) that does not name its source falls
 # through to item_proc: SEAMS.md says those strikes are never the player's own weapon
 # fire or gauge release, both of which always tag themselves below.
-# target_class: enemy, Warden, adds (a Fleet reinforcement kind) or boss (Brindle).
+# target_class: enemy (a v1 kind or the v2 Fleet roster's own field population), Warden,
+# adds (a Fleet reinforcement pack, fleet.gd's own name for it), boss (Brindle) or
+# boss_adds (something spawned while ctx.flow.in_arena is true, e.g. Brindle's
+# drone-dropped lobbers; boss.gd is out of this unit's allowed files, so the tag comes
+# from spawn provenance in spawn_enemy() below, not a caller-set flag). Fleet-roster
+# kinds keep "adds" (fleet.gd calls its own spawns "reinforcement packs", and an
+# existing test already encodes that as intended); confirm that reading with the owner
+# before tuning on it, per review finding 2 (fix round 1). cache (the vault: static,
+# never attacks, never moves) is its own class, not "enemy" (finding 3, fix round 1).
 # "Scenery" is excluded by construction: a piece that cannot be hit (boss_target.gd's
 # world-layer wrecked hull) never reaches strike() to begin with.
 
@@ -146,6 +154,11 @@ var _ledger := {}
 # reset every attempt (_start_attempt) and snapshotted into _ledger.drops_to_break on
 # beacon_unsealed (the Warden's break).
 var _warden_drop_hits := 0
+# Instance ids spawned while ctx.flow.in_arena was true (M0, review fix round 1): the
+# only spawner call reachable there is boss.gd's own drone drop, so this is how a boss
+# add is told apart from an ordinary field enemy without a flag boss.gd would have to
+# set (boss.gd is not in this unit's allowed files). Entries are erased on death.
+var _boss_add_ids := {}
 # A block of hits' source when the kind string alone cannot say it (a discharge, an
 # overdrive blast, an upgrade proc): set right before the calls, cleared right after.
 # strike()'s own `source` argument always wins over this when given.
@@ -260,6 +273,7 @@ func setup(ctx_ref) -> void:
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
+		_boss_add_ids = {}
 		_reset_ledger()
 		_rebuild_patterns())
 	ctx.events.beacon_unsealed.connect(func(stage: int):
@@ -301,6 +315,11 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
 	enemy.global_position = at
+	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
+	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
+	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
+	if ctx.flow != null and ctx.flow.in_arena:
+		_boss_add_ids[enemy.get_instance_id()] = true
 	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
 	# and the vault are set pieces and always see the ball.
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
@@ -308,7 +327,9 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		ctx.run.record_kill(kind, where, scrap)
-		_record_retirement(_target_class_of_kind(kind)))
+		var id := enemy.get_instance_id()
+		_record_retirement(_class_for_id(id, kind))
+		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	ctx.events.enemy_spawned.emit(enemy, kind)
@@ -344,15 +365,21 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "")
 	var removed: float = enemy.take_damage(result["dealt"])
 	_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
-	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source)
+	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source,
+		bool(result.get("drop", false)))
 
 
 # --- M0: delivered-damage ledger (see the constants above for the categories) --------
 
-func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String) -> void:
+# `drop` is resolve()'s own "drop" key when present (finding 5, fix round 1): the
+# drop-mode writer's warden_drop.gd tags a landing that broke the drop verdict, which
+# this unit's own kind-only guess (kind == "slam") missed on a stomp-kind drop. The key
+# is absent on this base (only warden_drop.gd sets it, on proto/core-loop-v3-lab), so
+# `drop` reads false here and the kind fallback below is what actually runs.
+func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, drop: bool) -> void:
 	if _ledger.is_empty():
 		_reset_ledger()
-	var source := _classify_source(kind, raw_source)
+	var source := _classify_source(kind, raw_source, drop)
 	var target_class := _target_class(enemy)
 	_ledger["hits"] = int(_ledger["hits"]) + 1
 	if removed <= 0.0:
@@ -379,11 +406,13 @@ static func _bump(map: Dictionary, key: String, amount: float) -> void:
 	map[key] = float(map.get(key, 0.0)) + amount
 
 
-func _classify_source(kind: String, explicit: String) -> String:
+func _classify_source(kind: String, explicit: String, drop := false) -> String:
 	if explicit != "":
 		return explicit
 	if kind == SYNERGY:
 		return "item_proc"
+	if drop:
+		return "drop_or_slam"
 	if kind in CONTACT_KINDS:
 		return "drop_or_slam" if kind == "slam" else "ram_or_contact"
 	if kind == "pin" or kind == "shell":
@@ -392,7 +421,16 @@ func _classify_source(kind: String, explicit: String) -> String:
 
 
 func _target_class(enemy: Node3D) -> String:
-	return _target_class_of_kind(_spawn_kind_of(enemy))
+	return _class_for_id(enemy.get_instance_id(), _spawn_kind_of(enemy))
+
+
+# Boss-add provenance wins over the kind name (finding 2, fix round 1): shared by
+# _target_class (a live strike) and spawn_enemy's died handler (a retirement), so both
+# read the same tag instead of two derivations that could drift apart.
+func _class_for_id(id: int, kind: String) -> String:
+	if _boss_add_ids.has(id):
+		return "boss_adds"
+	return _target_class_of_kind(kind)
 
 
 # The kind an enemy was spawned as: a Fleet unit and the Warden carry it on spec
@@ -411,6 +449,11 @@ func _target_class_of_kind(kind: String) -> String:
 		return "Warden"
 	if kind.begins_with("brindle_"):
 		return "boss"
+	# The vault (roster.gd role "cache") never moves and never attacks (vault.gd's own
+	# header); it is the one static, non-combatant damageable in the game, so it earns
+	# its own class rather than inflating "enemy" (finding 3, fix round 1).
+	if kind == "vault":
+		return "cache"
 	if kind in KINDS:
 		return "enemy"
 	return "adds"
@@ -724,7 +767,7 @@ func _rate(weapon: String) -> float:
 	return rate
 
 
-func _fire(weapon: String) -> void:
+func _fire(weapon: String, source := "weapon") -> void:
 	var p: Resource = _patterns[weapon]
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -747,7 +790,7 @@ func _fire(weapon: String) -> void:
 			"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
 			"chain_falloff": p.chain_falloff, "color": color,
 			"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
-			"source": "weapon",
+			"source": source,
 		})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
@@ -1391,7 +1434,7 @@ func _proc_volley(scale: float) -> void:
 	if not _patterns.has(weapon) or ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
 		return
 	for i in int(scale):
-		_fire(weapon)
+		_fire(weapon, "item_proc")
 
 
 # The upgrade-tree proc actions (M0: item_proc, never the player's own gauge release).

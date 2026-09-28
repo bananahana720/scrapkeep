@@ -8,14 +8,19 @@ const Game := preload("res://src/game.gd")
 # the real accounting path strike() -> enemy.take_damage() -> the ledger.
 #
 # Proves:
-# 1. the ledger total equals the total HP lost by enemies, bosses and adds;
-# 2. overkill is clamped;
-# 3. scenery (a node without take_damage) is excluded, silently, not double-counted;
+# 1. the ledger total equals the real HP lost, summed directly off every struck target
+#    (a chaser, the Warden, a Fleet add, a vault and Brindle's hull), not a re-derivation;
+# 2. overkill is clamped, on an ordinary kill and on a boss hit that would pass a
+#    phase floor (boss.gd clamps to the floor, not to 0);
+# 3. a vault (the one static, non-combatant damageable in the game) is counted under its
+#    own "cache" class, not "enemy"; a plain non-damageable node is still excluded,
+#    silently, not double-counted;
 # 4. a zero-damage run is reported as zero (delivered_damage present, total 0.0), not
 #    missing, the instant a run starts and before any hit;
 # 5. per-source and per-action attribution reconcile (they sum to the same total);
 # 6. range buckets (near/mid/far) are assigned from distance to the ball.
-# Also touches retirement counts and drops_to_break, which the ledger carries too.
+# Also touches retirement counts, drops_to_break, and an upgrade-tree proc volley's
+# bolts tagging themselves item_proc instead of the player's own weapon fire.
 
 var _game
 var _combat
@@ -74,7 +79,11 @@ func _run_all() -> void:
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", Vector3(10.0, 0.0, 0.0))
 	var adds: Node3D = ctx.spawner.spawn_enemy("mag_trapper", Vector3(20.0, 0.0, 0.0))
 	var lobber: Node3D = ctx.spawner.spawn_enemy("lobber", Vector3(3.0, 0.0, 0.0))
-	for e in [enemy_a, warden, adds, lobber]:
+	# A real, hittable non-combatant (finding 3, fix round 1): vault.gd's own header
+	# says it never moves and never attacks, unlike the plain Node3D the scenery check
+	# below uses, which strike() already rejected before this unit even existed.
+	var vault: Node3D = ctx.spawner.spawn_enemy("vault", Vector3(6.0, 0.0, 0.0))
+	for e in [enemy_a, warden, adds, lobber, vault]:
 		e.plating = 0.0
 	# The Warden and the vault sit on the ground under `at` (spawn_enemy's own contract),
 	# which can lift them off the flat plane this test assumes; pin the exact 3D spot the
@@ -88,6 +97,14 @@ func _run_all() -> void:
 			% [_combat._range_bucket(enemy_a), _combat._range_bucket(warden), _combat._range_bucket(adds)])
 
 	var before: Dictionary = _combat.delivered_damage().duplicate(true)
+
+	# 1 (finding 4, fix round 1): the actual HP lost, read off each target directly
+	# (never through the ledger being tested), for the independent reconciliation at
+	# the end of this run. Keyed by instance id: enemy_a dies, so its node may not
+	# survive to be read again the ordinary way.
+	var hp_before := {}
+	for e in [enemy_a, warden, adds, lobber, vault]:
+		hp_before[e.get_instance_id()] = e.hp
 
 	# 1 + 2. Overkill: a hit far past a chaser's hp. removed must clamp to exactly its hp
 	# (the real HP lost), even though the hit's own "dealt" was ten times that.
@@ -105,6 +122,17 @@ func _run_all() -> void:
 	_report("enemy_target_class", float(_combat.delivered_damage()["by_target_class"].get("enemy", 0.0)) >= hp_a - 0.01,
 		"a chaser (target class 'enemy') accounted for %.1f under by_target_class.enemy (needs >= %.0f)"
 			% [float(_combat.delivered_damage()["by_target_class"].get("enemy", 0.0)), hp_a])
+
+	# finding 5, fix round 1: resolve()'s own "drop" key (the drop-mode writer's
+	# warden_drop.gd tags a landing this way on proto/core-loop-v3-lab) must win over
+	# the kind guess, so a stomp-kind drop lands as drop_or_slam too, not
+	# ram_or_contact. The key does not exist on this base yet (only warden_drop.gd
+	# sets it), so this is a direct unit check on _classify_source rather than a full
+	# strike(), which cannot produce a "drop" result here.
+	_report("stomp_drop_flag_wins", _combat._classify_source("stomp", "", true) == "drop_or_slam"
+			and _combat._classify_source("stomp", "", false) == "ram_or_contact",
+		"_classify_source('stomp', '', drop) read '%s' with drop=true and '%s' with drop=false (needs drop_or_slam, then ram_or_contact)"
+			% [_combat._classify_source("stomp", "", true), _combat._classify_source("stomp", "", false)])
 
 	# drop_or_slam, auto-classified from kind "slam" alone (no explicit source), on the
 	# Warden target class; three partial hits feed drops_to_break.
@@ -138,6 +166,8 @@ func _run_all() -> void:
 			% [hits_before_zero, int(_combat.delivered_damage()["hits"]), zero_before, int(_combat.delivered_damage()["zero_damage_hits"])])
 
 	# 3. Scenery: a plain node with no take_damage never reaches the ledger, silently.
+	# strike() rejected this case before M0 existed; it is regression coverage for the
+	# guard, not evidence about caches or vaults (finding 3, fix round 1's own point).
 	var scenery := Node3D.new()
 	var before_scenery: Dictionary = _combat.delivered_damage().duplicate(true)
 	_combat.strike(scenery, "arc", 999.0)
@@ -146,6 +176,76 @@ func _run_all() -> void:
 		"a strike() call on a plain node (no take_damage) left hits at %d and total at %.1f unchanged"
 			% [int(_combat.delivered_damage()["hits"]), float(_combat.delivered_damage()["total"])])
 	scenery.free()
+
+	# 3. The real case: a vault, the one static non-combatant that does reach strike()
+	# (finding 3, fix round 1). It must be counted, just not under "enemy".
+	var hp_v: float = vault.max_hp
+	var enemy_before_vault: float = float(_combat.delivered_damage()["by_target_class"].get("enemy", 0.0))
+	_combat.strike(vault, "arc", hp_v * 0.4, "", "weapon")
+	_report("cache_target_class", float(_combat.delivered_damage()["by_target_class"].get("cache", 0.0)) >= hp_v * 0.4 - 0.01,
+		"a vault hit landed %.1f under by_target_class.cache (needs >= %.1f)"
+			% [float(_combat.delivered_damage()["by_target_class"].get("cache", 0.0)), hp_v * 0.4])
+	_report("cache_excluded_from_enemy", float(_combat.delivered_damage()["by_target_class"].get("enemy", 0.0)) == enemy_before_vault,
+		"the vault hit left by_target_class.enemy at %.1f, unchanged from %.1f (a static cache is not an 'enemy')"
+			% [float(_combat.delivered_damage()["by_target_class"].get("enemy", 0.0)), enemy_before_vault])
+
+	# 1 (finding 1, fix round 1): an upgrade-tree proc volley tags its bolts item_proc,
+	# not the hardcoded "weapon" _fire() used to write into every bolt regardless of
+	# who fired it. Read the fired bolt directly; a collision is a separate concern
+	# (combat_pattern_test.gd already covers bolts reaching their target).
+	var weapon: String = _combat.active_weapon()
+	var bolts_before: int = _combat.bolts.fired
+	_combat._fire(weapon, "item_proc")
+	var fired_bolts: Array = _combat.bolts._bolts
+	_report("proc_volley_source", _combat.bolts.fired > bolts_before and fired_bolts.size() > 0
+			and String(fired_bolts[-1].get("source", "")) == "item_proc",
+		"an upgrade-tree-sourced _fire() call tagged its bolt '%s' (needs 'item_proc', not the old hardcoded 'weapon')"
+			% [String(fired_bolts[-1].get("source", "")) if fired_bolts.size() > 0 else "<no bolt>"])
+
+	# drops_to_break: three drop_or_slam hits landed on the Warden this stage attempt;
+	# the Warden's own break (beacon_unsealed) must snapshot that count for the stage.
+	# Read before entering the boss arena below: stage_content_cleared (which entering
+	# the arena emits) starts a fresh attempt and would zero this count first.
+	ctx.events.beacon_unsealed.emit(1)
+	var drops: Dictionary = _combat.delivered_damage()["drops_to_break"]
+	_report("drops_to_break", int(drops.get("1", -1)) == 3,
+		"stage 1's drops_to_break read %s after three slam hits on the Warden and its break (needs 3)" % [drops])
+
+	# Boss (finding 4, fix round 1): boss.gd clamps to a phase floor instead of to 0,
+	# and that path was never exercised. Enter the arena, strike the hull once inside
+	# the phase-1 floor headroom, then again hard enough to hit the floor, and check
+	# the ledger's own boss bucket against what boss.gd itself reports losing.
+	_game.flow.enter_boss(Vector3.ZERO)
+	var boss = ctx.boss
+	var hull = boss.ship.hull
+	var boss_hp_before: float = boss.hp
+	var boss_bucket_before: float = float(_combat.delivered_damage()["by_target_class"].get("boss", 0.0))
+	_combat.strike(hull, "arc", 5000.0, "", "weapon")
+	_combat.strike(hull, "arc", boss.max_hp * 5.0, "", "weapon")
+	var boss_hp_after: float = boss.hp
+	var real_boss_loss: float = boss_hp_before - boss_hp_after
+	var boss_bucket_after: float = float(_combat.delivered_damage()["by_target_class"].get("boss", 0.0))
+	_report("boss_floor_clamped", boss_hp_after > 0.0 and boss_hp_after < boss_hp_before,
+		"the second hull hit was sized to blow past the phase-1 floor; boss.hp landed at %.1f (needs clamped above 0, below %.1f)"
+			% [boss_hp_after, boss_hp_before])
+	_report("boss_target_class", absf(boss_bucket_after - boss_bucket_before - real_boss_loss) < 0.05,
+		"two hull hits (the second past the phase-1 floor) dropped the boss %.1f hp; by_target_class.boss rose by %.1f (need equal)"
+			% [real_boss_loss, boss_bucket_after - boss_bucket_before])
+
+	# 1 (finding 4, fix round 1): sum the real HP lost over every struck target this run
+	# (partial and overkill hits alike, enemies, the vault and the boss) and compare it
+	# with the ledger's own total, independent of the by_* buckets below.
+	var real_total_lost := real_boss_loss
+	for e in [enemy_a, warden, adds, lobber, vault]:
+		var id: int = e.get_instance_id()
+		# enemy.gd's own take_damage() subtracts past 0 rather than clamping (hp -=
+		# amount, unlike the removed value it returns), so a dead target's hp can read
+		# negative; the real HP it had to lose bottoms out at 0, same as removed did.
+		var after: float = maxf(0.0, e.hp) if is_instance_valid(e) else 0.0
+		real_total_lost += float(hp_before[id]) - after
+	_report("total_matches_real_hp_lost", absf(float(_combat.delivered_damage()["total"]) - real_total_lost) < 0.5,
+		"ledger total %.2f vs the sum of real HP lost across every struck target %.2f (need equal)"
+			% [float(_combat.delivered_damage()["total"]), real_total_lost])
 
 	# 5. Reconciliation: no hit counts twice and none go unattributed.
 	var ledger: Dictionary = _combat.delivered_damage()
@@ -163,13 +263,8 @@ func _run_all() -> void:
 	_report("retirements", int(ledger["retirements"].get("enemy", 0)) == 1,
 		"one chaser killed retired %d under retirements.enemy (needs 1)" % [int(ledger["retirements"].get("enemy", 0))])
 
-	# drops_to_break: three drop_or_slam hits landed on the Warden this stage attempt;
-	# the Warden's own break (beacon_unsealed) must snapshot that count for the stage.
-	ctx.events.beacon_unsealed.emit(1)
-	var drops: Dictionary = _combat.delivered_damage()["drops_to_break"]
-	_report("drops_to_break", int(drops.get("1", -1)) == 3,
-		"stage 1's drops_to_break read %s after three slam hits on the Warden and its break (needs 3)" % [drops])
-
-	# No double counting: exactly the strike() calls made above, once each.
-	_report("hit_count", int(ledger["hits"]) == 6,
-		"6 strike() calls above produced %d ledger hits (needs 6, one per call, none doubled)" % [int(ledger["hits"])])
+	# No double counting: exactly the strike() calls made above, once each (chaser,
+	# 3x warden slam, adds, lobber, vault, 2x boss hull; the two scenery/proc-only
+	# calls above never reach take_damage() and are not in this count).
+	_report("hit_count", int(ledger["hits"]) == 9,
+		"9 strike() calls above produced %d ledger hits (needs 9, one per call, none doubled)" % [int(ledger["hits"])])
