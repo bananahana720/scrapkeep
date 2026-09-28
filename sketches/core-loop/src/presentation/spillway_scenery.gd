@@ -3,7 +3,7 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
-# All instances sit beyond the terrain footprint. The stage root owns visibility.
+# All instances stay outside the stage-1 play rectangle plus an 8 m apron. No collisions.
 static func build(stage_root: Node3D) -> Node3D:
 	var scenery := Node3D.new()
 	scenery.name = "SpillwayScenery"
@@ -17,6 +17,13 @@ static func build(stage_root: Node3D) -> Node3D:
 	var leaves: Array[Transform3D] = []
 	var banners: Array[Transform3D] = []
 	var masonry: Array[Transform3D] = []
+	var water: Array[Transform3D] = []
+	var pools: Array[Transform3D] = []
+	var mist: Array[Transform3D] = []
+	var cables: Array[Transform3D] = []
+	var cabins: Array[Transform3D] = []
+	var lamps: Array[Transform3D] = []
+	var glyphs: Array[Transform3D] = []
 
 	# A downstream retaining wall with three valve towers above the existing rim.
 	_place(stone, Vector3(0, 70, 247), Vector3(270, 100, 22))
@@ -35,41 +42,73 @@ static func build(stage_root: Node3D) -> Node3D:
 		_place(metal, Vector3(x, 94, 224), Vector3(3, 40, 3))
 
 	# Shallow block faces and lintels give the retaining wall scale in three batches.
-	for row in 18:
+	for row in 14:
 		for col in 18:
 			var x := -126.0 + col * 14.0 + (3.0 if row % 2 else 0.0)
-			_place(masonry, Vector3(x, 29.0 + row * 5.0, 235.0), Vector3(13.5, 4.6, 0.45))
+			_place(masonry, Vector3(x, 29.0 + row * 6.4, 235.0), Vector3(13.5, 6.0, 0.45))
 	for x in [-90.0, 0.0, 90.0]:
 		_place(banners, Vector3(x + 12, 106, 228), Vector3(7, 26, 0.25))
 		_place(metal, Vector3(x + 12, 120, 228), Vector3(11, 0.7, 1.0))
 		for floor_index in 3:
 			_place(trim, Vector3(x, 132 + floor_index * 10, 229), Vector3(28, 1.0, 2.0))
 
-	# Layered shoulders: broad rooted slabs, smaller offset crowns, no route dressing.
+	# All water is behind the existing southern rim, never on a traversable shelf.
+	for x in [-103.0, -47.0, 37.0, 93.0]:
+		_place(water, Vector3(x, 75, 227), Vector3(14, 90, 0.5))
+		for j in 4:
+			_place(mist, Vector3(x - 8 + j * 5, 33 + (j % 2) * 3, 215), Vector3(10, 5, 6))
+	_place(pools, Vector3(0, 28, 217), Vector3(276, 0.4, 28))
+	# Shingled shoulders are deliberately irregular; each exposed lip catches the key.
 	for side in [-1.0, 1.0]:
-		for i in 5:
-			var z := -155.0 + i * 79.0
-			var h := 72.0 + 15.0 * sin(i * 1.8 + side)
-			var x: float = side * (259.0 + 12.0 * sin(i * 2.1))
-			_place(rocks, Vector3(x, h * 0.5, z), Vector3(40, h * 0.5, 50), i * 0.13)
-			_place(rocks, Vector3(x + side * 9, h + 9, z + 4), Vector3(31, 12, 40), i * 0.13)
-			_place(rocks, Vector3(x + side * 15, h + 26, z + 9), Vector3(23, 8, 30), i * 0.13)
-			# Plant clusters on the top slab, with greener groups toward the basin.
-			for j in (3 if i >= 2 else 1):
-				var foot := Vector3(x + side * 15 + j * 6, h + 34, z + 2 + j * 7)
-				_place(trunks, foot + Vector3(0, 4, 0), Vector3(0.8, 4, 0.8))
-				_place(leaves, foot + Vector3(-2, 9, 0), Vector3(7, 6, 6))
-				_place(leaves, foot + Vector3(3, 12, 2), Vector3(6, 7, 5))
-				_place(leaves, foot + Vector3(5, 8, -2), Vector3(5, 5, 6))
+		for i in 8:
+			var z := -176.0 + i * 56.0
+			var h := 74.0 + 15.0 * sin(i * 1.8 + side)
+			var x: float = side * (246.0 + 8.0 * sin(i * 2.1))
+			for shelf in 4:
+				var width := 36.0 - shelf * 4.0
+				_place(rocks, Vector3(x + side * shelf * 5, h * 0.25 * shelf + 12, z), Vector3(width, h * 0.20, 32), i * 0.27)
+			for j in 4:
+				var foot := Vector3(x + side * 15 + j * 3, h * 0.75 + h * 0.18 + 12, z - 15 + j * 7)
+				var size := 0.6 + 0.4 * sin(j * 2.3 + i)
+				_place(trunks, foot + Vector3(0, 3, 0), Vector3(0.55, 3, 0.55))
+				_place(leaves, foot + Vector3(-2, 6, 0), Vector3(5, 4, 4) * size)
+				_place(leaves, foot + Vector3(2, 8, 1), Vector3(4, 5, 4) * size)
+			for j in 3:
+				_place(rocks, Vector3(side * (206 + j * 2), 31, z + j * 2), Vector3(0.5, 0.3, 0.7), j)
+	# Rock shells on the non-playable rim break its ruler-straight silhouette.
+	# The nearest west vertex is x=-125; the playable shelf starts at x=-105.
+	for i in 9:
+		var z := -160.0 + i * 40.0
+		var y := 66.0 + (30.0 if z < -60 else (15.0 if z < 45 else 0.0))
+		_place(rocks, Vector3(-155, y, z), Vector3(27, 24 + 5 * sin(i * 2.3), 25), i * 0.09)
+		_place(leaves, Vector3(-151, y + 27, z), Vector3(5, 3, 4))
+		_place(rocks, Vector3(196, 44 + (30.0 if z < -60 else 0.0), z), Vector3(21, 16 + 5 * cos(i), 24), i * 0.06)
+	# Service balconies, lanterns and ball-culture marks share existing batches.
+	for x in [-90.0, 0.0, 90.0]:
+		_place(metal, Vector3(x, 91, 221), Vector3(29, 1, 8))
+		for dx in [-12.0, 12.0]:
+			_place(metal, Vector3(x + dx, 99, 218), Vector3(0.7, 16, 0.7))
+			_place(lamps, Vector3(x + dx, 104, 217), Vector3(1.1, 1.8, 1.1))
+		_place(metal, Vector3(x, 107, 218), Vector3(26, 0.6, 0.6))
+		_place(glyphs, Vector3(x + 12, 106, 227.6), Vector3(2.6, 2.6, 0.5))
+		# Gyro rings are narrow segments around the sphere, no letters or warning bands.
+		for k in 16:
+			var a := k * TAU / 16.0
+			var tr := Transform3D(Basis(Vector3.FORWARD, -a).scaled(Vector3(0.27, 1.3, 0.2)), Vector3(x + 12 + cos(a) * 2.5, 106 + sin(a) * 4.1, 227.3))
+			cables.append(tr)
+	for k in 36:
+		var x := -250.0 + k * 14.0
+		_place(cables, Vector3(x, 157 - 16 * (1.0 - pow(x / 260.0, 2)), 267), Vector3(14.2, 0.24, 0.24))
+	for x in [-171.0, -24.0, 137.0]:
+		var cable_y := 157 - 16 * (1.0 - pow(x / 260.0, 2))
+		_place(cables, Vector3(x, cable_y - 4, 267), Vector3(0.3, 8, 0.3))
+		_place(cabins, Vector3(x, cable_y - 11, 267), Vector3(8, 6, 6))
+		_place(metal, Vector3(x, cable_y - 7.5, 267), Vector3(10, 0.7, 8))
+		_place(recess, Vector3(x, cable_y - 10, 263.9), Vector3(6, 2.7, 0.2))
 
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
-	var rock := CylinderMesh.new()
-	rock.top_radius = 0.82
-	rock.bottom_radius = 1.0
-	rock.height = 2.0
-	rock.radial_segments = 7
-	rock.rings = 1
+	var rock := _eroded_rock()
 	var trunk := CylinderMesh.new()
 	trunk.top_radius = 0.7
 	trunk.bottom_radius = 1.0
@@ -79,8 +118,8 @@ static func build(stage_root: Node3D) -> Node3D:
 	var canopy := SphereMesh.new()
 	canopy.radius = 1.0
 	canopy.height = 2.0
-	canopy.radial_segments = 8
-	canopy.rings = 4
+	canopy.radial_segments = 6
+	canopy.rings = 2
 	_batch(scenery, "Masonry", box, stone, Color("b79468"))
 	_batch(scenery, "LimestoneCaps", box, trim, Color("d5b785"))
 	_batch(scenery, "Recesses", box, recess, Color("454943"))
@@ -89,12 +128,60 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "CottonwoodTrunks", trunk, trunks, Color("766744"))
 	_batch(scenery, "CottonwoodCrowns", canopy, leaves, Color("728249"))
 	_batch(scenery, "BlockFaces", box, masonry, Color("bda078"))
-	_batch(scenery, "ValvePennants", box, banners, Color("9b513a"))
+	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
+	_batch(scenery, "SpillSheets", box, water, Color.WHITE)
+	_batch(scenery, "Tailrace", box, pools, Color.WHITE)
+	_batch(scenery, "WaterMist", canopy, mist, Color("c2d4cb"))
+	_batch(scenery, "CablesAndGyros", box, cables, Color("c7b18c"))
+	_batch(scenery, "CableCars", box, cabins, Color("537b72"))
+	_batch(scenery, "LanternLenses", box, lamps, Color("f2cc88"))
+	_batch(scenery, "BallInsignia", canopy, glyphs, Color("e2ceb0"))
+	_merge_opaque(scenery)
 	return scenery
 
 
 static func _place(into: Array[Transform3D], at: Vector3, size: Vector3, turn := 0.0) -> void:
 	into.append(Transform3D(Basis(Vector3.UP, turn).scaled(size), at))
+
+
+static func _merge_opaque(parent: Node3D) -> void:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	var material: StandardMaterial3D
+	for child in parent.get_children():
+		var mat = child.material_override
+		if not mat is StandardMaterial3D or mat.emission_enabled or mat.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			continue
+		var arrays: Array = child.mesh.surface_get_arrays(0)
+		var offset := vertices.size()
+		vertices.append_array(arrays[Mesh.ARRAY_VERTEX])
+		normals.append_array(arrays[Mesh.ARRAY_NORMAL])
+		for color in arrays[Mesh.ARRAY_COLOR]:
+			colors.append(color * mat.albedo_color.srgb_to_linear())
+		for index in arrays[Mesh.ARRAY_INDEX]:
+			indices.append(index + offset)
+		if material == null:
+			material = mat.duplicate()
+			material.albedo_color = Color.WHITE
+		child.free()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var importer := ImporterMesh.new()
+	importer.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	importer.generate_lods(60.0, 0.0, [])
+	var view := MeshInstance3D.new()
+	view.name = "DamAndLedgeDressing"
+	view.mesh = importer.get_mesh()
+	view.material_override = material
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(view)
+	GraphicsPreset.register_scenery(view)
 
 
 static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[Transform3D], tint: Color) -> void:
@@ -137,6 +224,50 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	importer.generate_lods(60.0, 0.0, [])
 	view.mesh = importer.get_mesh()
 	view.material_override = material
+	if label == "SandstoneShoulders":
+		var strata := ShaderMaterial.new()
+		strata.shader = preload("res://src/presentation/sandstone.gdshader")
+		strata.set_shader_parameter("cliff_only", true)
+		view.material_override = strata
+	elif label in ["SpillSheets", "Tailrace"]:
+		var flowing := ShaderMaterial.new()
+		flowing.shader = preload("res://src/presentation/spill_water.gdshader")
+		flowing.set_shader_parameter("falling", label == "SpillSheets")
+		view.material_override = flowing
+	elif label == "WaterMist":
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.albedo_color.a = 0.12
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	elif label == "LanternLenses":
+		material.emission_enabled = true
+		material.emission = tint
+		material.emission_energy_multiplier = 1.1
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(view)
 	GraphicsPreset.register_scenery(view)
+
+
+static func _eroded_rock() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rings: Array[PackedVector3Array] = []
+	for row in 5:
+		var ring := PackedVector3Array()
+		var y := -1.0 + row / 2.0
+		for col in 8:
+			var a := col * TAU / 8.0
+			var lip := 1.0 if row % 2 == 0 else 0.92
+			var r := (0.91 + 0.09 * sin(col * 2.7 + row * 0.4)) * lip * (1.0 - maxf(y, 0.0) * 0.12)
+			ring.append(Vector3(cos(a) * r, y + sin(col * 2.1) * 0.05, sin(a) * r))
+		rings.append(ring)
+	for row in 4:
+		for col in 8:
+			var j := (col + 1) % 8
+			for v in [rings[row][col], rings[row][j], rings[row + 1][col], rings[row][j], rings[row + 1][j], rings[row + 1][col]]:
+				st.add_vertex(v)
+	for col in 8:
+		for v in [Vector3(0, 1, 0), rings[4][(col + 1) % 8], rings[4][col], Vector3(0, -1, 0), rings[0][col], rings[0][(col + 1) % 8]]:
+			st.add_vertex(v)
+	st.generate_normals()
+	st.index()
+	return st.commit()

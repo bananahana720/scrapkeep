@@ -57,21 +57,13 @@ static func painted_texture(size := 256, ground := false) -> ImageTexture:
 	return texture
 
 
-static var _ground: StandardMaterial3D
+static var _ground: ShaderMaterial
 
-static func ground_material() -> StandardMaterial3D:
-	if _ground != null:
-		return _ground
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = painted_texture(256, true)
-	mat.vertex_color_use_as_albedo = true
-	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3(0.14, 0.14, 0.14)
-	mat.albedo_color = Color("f7e3c4")
-	mat.roughness = 0.96
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	_ground = mat
-	return mat
+static func ground_material() -> ShaderMaterial:
+	if _ground == null:
+		_ground = ShaderMaterial.new()
+		_ground.shader = preload("res://src/presentation/sandstone.gdshader")
+	return _ground
 
 
 static func ball_material() -> StandardMaterial3D:

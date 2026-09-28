@@ -33,9 +33,19 @@ func _run() -> void:
 			continue
 		var mesh: Mesh = child.mesh
 		nodes_ok = nodes_ok and mesh.get_surface_count() == 1
-		var mat: StandardMaterial3D = child.material_override
-		materials_ok = materials_ok and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
-		materials_ok = materials_ok and not mat.emission_enabled and not mat.no_depth_test
+		var mat: Material = child.material_override
+		if mat is ShaderMaterial:
+			var expected := "sandstone.gdshader" if child.name == "SandstoneShoulders" else "spill_water.gdshader"
+			materials_ok = materials_ok and child.name in ["SandstoneShoulders", "SpillSheets", "Tailrace"]
+			materials_ok = materials_ok and mat.shader.resource_path.ends_with(expected)
+		elif mat is StandardMaterial3D:
+			if child.name == "WaterMist":
+				materials_ok = materials_ok and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA and mat.albedo_color.a <= 0.12
+			else:
+				materials_ok = materials_ok and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
+			materials_ok = materials_ok and (not mat.emission_enabled or child.name == "LanternLenses") and not mat.no_depth_test
+		else:
+			materials_ok = false
 		materials_ok = materials_ok and child.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for surface in mesh.get_surface_count():
 			var arrays := mesh.surface_get_arrays(surface)
@@ -47,13 +57,15 @@ func _run() -> void:
 				var bounds := AABB(vertices[indices[i]], Vector3.ZERO)
 				bounds = bounds.expand(vertices[indices[i + 1]])
 				bounds = bounds.expand(vertices[indices[i + 2]])
-				var outside := bounds.end.x < -200.0 or bounds.position.x > 200.0 or bounds.end.z < -200.0 or bounds.position.z > 200.0
+				var outside := bounds.end.x < -113.0 or bounds.position.x > 160.0 or bounds.end.z < -186.0 or bounds.position.z > 186.0
+				if child.name in ["SpillSheets", "Tailrace", "WaterMist"]:
+					outside = outside and bounds.position.z > 200.0
 				if not outside:
 					print("OVERLAP %s triangle %d %s" % [child.name, i / 3, bounds])
 				bounds_ok = bounds_ok and outside
-	_check(bounds_ok, "all %d triangle AABBs outside terrain footprint" % checked)
+	_check(bounds_ok, "all %d triangle AABBs outside stage-1 play rectangle plus 8 m apron" % checked)
 	_check(nodes_ok, "only inert mesh nodes, no collision/navigation/gameplay nodes")
-	_check(materials_ok, "opaque nonemissive depth-tested materials; shadows disabled")
+	_check(materials_ok, "depth-tested materials; only named mist alpha and lantern emission; approved rock/water shaders; shadows disabled")
 	_check(triangles > 0 and triangles <= 25000 and scenery.get_child_count() <= 20,
 		"geometry budget: %d triangles, %d single-surface batches (not measured draw calls)" % [triangles, scenery.get_child_count()])
 	_check(scenery.is_visible_in_tree(), "visible under stage 1")
