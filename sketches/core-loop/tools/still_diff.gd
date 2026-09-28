@@ -25,6 +25,18 @@ const BOX_MAX_SHARE := 0.005
 const BOX_MAX_MEAN := 0.3
 const BOX_PAD := 8
 const THUMB := Vector2i(480, 270)
+# Stills whose look changed on purpose and were accepted by the coordinator (E1 fix round 2).
+# They are reported as "accepted change" with the reason, never passed by the budget.
+const ACCEPTED := {
+	"lane-lane-25": "LANE red rails and chevrons draw cleanly over the run stripes",
+	"lane-lane-50": "LANE red rails and chevrons draw cleanly over the run stripes",
+	"lane-wedge-25": "LANE red rails and chevrons draw cleanly over the run stripes",
+	"lane-wedge-50": "LANE red rails and chevrons draw cleanly over the run stripes",
+	"overlap-5ring-50": "same-class fills union and draw once; the base blended each layer",
+	"overlap-5ring-50-density1": "as overlap-5ring-50, and the fills fade to the density floor",
+	"overlap-mixed-50": "classes batch in a fixed order; the base blended by camera depth",
+	"overlap-mixed-live": "a live lane draws over every line and fill; the base ordered it by camera depth",
+}
 
 
 func _initialize() -> void:
@@ -61,7 +73,9 @@ func _initialize() -> void:
 		var row := _compare(a, b, empty, String(args["out"]).path_join(name + "-diff.png"), sheet, i)
 		row["name"] = name
 		row["ref"] = _ref_name(name)
-		row["judged"] = not name in expect
+		row["judged"] = not name in expect and not ACCEPTED.has(name)
+		if ACCEPTED.has(name):
+			row["accepted"] = ACCEPTED[name]
 		row["pass"] = row["share"] <= MAX_SHARE and row["mean"] <= MAX_MEAN \
 			and row["box_share"] <= BOX_MAX_SHARE and row["box_mean"] <= BOX_MAX_MEAN
 		row["control"] = name.begins_with("control-")
@@ -69,6 +83,8 @@ func _initialize() -> void:
 			failed += 1
 		rows.append(row)
 		var verdict := ("PASS" if row["pass"] else "FAIL") if row["judged"] else ("differs" if not row["pass"] else "same")
+		if row.has("accepted"):
+			verdict = "%s, accepted change: %s" % ["differs" if not row["pass"] else "same", row["accepted"]]
 		if row["control"]:
 			verdict = "known-bad control %s the budget" % ("FAILS" if not row["pass"] else "PASSES (budget too loose)")
 		print("%-44s frame %.4f%% mean %.3f | box %dx%d %.4f%% mean %.3f | max %d -> %s" % [name, row["share"] * 100.0, row["mean"],

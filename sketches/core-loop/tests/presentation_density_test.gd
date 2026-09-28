@@ -159,13 +159,14 @@ func _check_exemption() -> void:
 		var ring: Node3D = Telegraph.ring(_game.ctx.root, _game.ctx.terrain, Threat.Type.INSTANT, at + Vector3(20.0, 0.0, -20.0), 6.0)
 		ring.set_progress(0.5)
 		var uniforms: Array = []
-		for layer in ["motion", "motion_under"]:
-			var instance: GeometryInstance3D = wave.painter()._layers[layer]
-			uniforms.append([layer, instance.get_instance_shader_parameter("clip"), instance.get_instance_shader_parameter("alpha_scale"),
-				float(instance.material_override.get_shader_parameter("governed"))])
-		for pair in [[wave, "stripe_motion"], [ring, "stripe_motion"], [ring, "stripe"]]:
+		for pair in [[wave, "motion"], [wave, "motion_under"], [wave, "stripe_motion"], [ring, "stripe_motion"], [ring, "stripe"]]:
 			var instance: GeometryInstance3D = pair[0].painter()._layers[pair[1]]
-			uniforms.append([pair[1], float(instance.material_override.get_shader_parameter("governed"))])
+			var governed := float(instance.material_override.get_shader_parameter("governed"))
+			var set_scale = instance.get_instance_shader_parameter("alpha_scale")
+			var alpha_scale: float = 1.0 if set_scale == null else float(set_scale)
+			# What the shader multiplies the vertex alpha by: ALPHA *= alpha_scale * mix(1, threat_fill_scale, governed).
+			var effective := alpha_scale * lerpf(1.0, _vfx._fill_scale, governed)
+			uniforms.append([pair[1], instance.get_instance_shader_parameter("clip"), governed, effective])
 		drawn["uniforms"] = uniforms
 		wave.free()
 		ring.free()
@@ -173,17 +174,22 @@ func _check_exemption() -> void:
 			quiet = drawn
 		else:
 			loud = drawn
-	var set_values := true
-	for row in loud["uniforms"].slice(0, 2):
-		set_values = set_values and row[1] is Vector4 and row[2] != null and row[3] == 0.0
+	# The exemption, measured on what the shader would multiply the alpha by: a line layer's
+	# multiplier is identical at density 0 and 1.0 (so it fails if a line layer turns governed),
+	# and each fill layer's falls to the floor (so it fails if a fill stops being governed).
+	var lines_same := true
 	var fills_governed := true
-	for row in loud["uniforms"].slice(2):
-		fills_governed = fills_governed and row[1] == 1.0
-	var lines_same: bool = quiet["uniforms"] == loud["uniforms"]
+	for i in loud["uniforms"].size():
+		var was: Array = quiet["uniforms"][i]
+		var now: Array = loud["uniforms"][i]
+		if i < 2:
+			lines_same = lines_same and now[1] is Vector4 and now[1] == was[1] and is_equal_approx(now[3], was[3])
+		else:
+			fills_governed = fills_governed and now[2] == 1.0 and is_equal_approx(now[3], was[3] * Density.FILL_FLOOR)
 	_check("P0 to P3 exempt", quiet["near_miss"] == loud["near_miss"] and quiet["enemy_struck"] != loud["enemy_struck"]
-			and set_values and lines_same and fills_governed and quiet["fill_scale"] == 1.0 and is_equal_approx(loud["fill_scale"], Density.FILL_FLOOR),
-		"at density 1.0 a P2 near-miss glyph draws %s as at 0, a P5 hit glyph goes from %s to %s; a wave's line layers carry %s at density 1.0, the same as at 0: %s; fills governed: %s, scale %.2f -> %.2f"
-			% [loud["near_miss"], quiet["enemy_struck"], loud["enemy_struck"], loud["uniforms"].slice(0, 2), lines_same, loud["uniforms"].slice(2), quiet["fill_scale"], loud["fill_scale"]])
+			and lines_same and fills_governed and quiet["fill_scale"] == 1.0 and is_equal_approx(loud["fill_scale"], Density.FILL_FLOOR),
+		"at density 1.0 a P2 near-miss glyph draws %s as at 0, a P5 hit glyph goes from %s to %s; a wave's line layers multiply alpha by %s at density 1.0 as at 0: %s; fill layers multiply by %s at 1.0 (floor %.2f of their 0 value): %s; scale %.2f -> %.2f"
+			% [loud["near_miss"], quiet["enemy_struck"], loud["enemy_struck"], loud["uniforms"].slice(0, 2).map(func(r): return r[3]), lines_same, loud["uniforms"].slice(2).map(func(r): return r[3]), Density.FILL_FLOOR, fills_governed, quiet["fill_scale"], loud["fill_scale"]])
 
 
 # The gate's record of emitted pops is for the tests: it keeps at most EMITTED_KEEP and

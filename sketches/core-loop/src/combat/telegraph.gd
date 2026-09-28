@@ -248,6 +248,7 @@ func _build() -> void:
 	_painter.centre = center
 	_painter.heading = Vector2(dir.x, dir.z)
 	_painter.motion_class = {Threat.Type.WAVE: "swept", Threat.Type.LANE: "run"}.get(type, "fill")
+	_painter.area_class = "reach" if type == Threat.Type.PROJECTILE else "area"
 	add_child(_painter)
 	_painter.paint(Threat.marks(d, false), Threat.STATIC_LAYERS)
 	_paint_motion()

@@ -99,12 +99,18 @@ const CURTAIN_STEPS := 48
 # P6 fill classes: the stencil value a class writes and tests, so overlapping fills of
 # one class draw once (E1-DENSITY.md section 2), and a sorting offset that runs each class
 # as one contiguous batch under every line at the same priority. A class writes over
-# another's value, so the batches must not interleave for the union to hold. A LANE's run
-# is its own class, batched after the INSTANT fills: a running lane is live damage, and
-# unioned with a pending fill its brighter band vanished wherever the fill drew first
-# (E1 fix round, mixed overlap still). Lanes still union with lanes.
-const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4, "run": 8}
-const FILL_SORT := {"area": -3000.0, "fill": -2000.0, "run": -1500.0, "swept": -1000.0}
+# another's value, so the batches must not interleave for the union to hold. Fills unioned
+# in one class must share an alpha, or the overlap shows whichever drew first and flips
+# with camera depth, so a class exists per alpha:
+#   area   INSTANT and LANE footprints (AREA_ALPHA)
+#   reach  a PROJECTILE's footprint (AREA_ALPHA * 1.4), its own class since fix round 2
+#   fill, swept, run  the INSTANT fill, a WAVE's swept ground, a pending LANE's run
+#   live   a LANE that is damaging (LIVE_ALPHA). It renders one priority above the lines
+#          (41), so its band draws over a pending run, a fill, a swept ring and another
+#          telegraph's front band from every camera depth, as the base drew it whenever the
+#          lane sorted nearer. Lanes still union with lanes of their own class.
+const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4, "run": 8, "live": 16, "reach": 32}
+const FILL_SORT := {"area": -3000.0, "reach": -2900.0, "fill": -2000.0, "run": -1500.0, "swept": -1000.0, "live": -500.0}
 
 
 # hostile (HAZARD), owned (the player's, AMBER) or neutral (a harmless bone field).
@@ -265,10 +271,10 @@ static func drive(d: Dictionary) -> Dictionary:
 			if lane:
 				var back: float = d["back"]
 				var end := -back + p * (float(d["length"]) + back)
-				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, end, -1.0, FAR), "alpha": alpha, "from": -back, "to": end}
+				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, end, -1.0, FAR), "alpha": alpha, "from": -back, "to": end, "live": live}
 			else:
 				var reach_r := lerpf(float(d["r_in"]), float(d["r_out"]), p)
-				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, reach_r, 0.0, 0.0), "alpha": alpha, "from": d["r_in"], "to": reach_r}
+				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, reach_r, 0.0, 0.0), "alpha": alpha, "from": d["r_in"], "to": reach_r, "live": live}
 		Type.WAVE:
 			var r_in: float = d["r_in"]
 			var r_out: float = d["r_out"]
@@ -894,6 +900,10 @@ class Painter:
 	# The P6 class of the stripe_motion layer: "fill" (an INSTANT fill, a LANE run) or
 	# "swept" (a WAVE's swept ground).
 	var motion_class := "fill"
+	# The stencil class of the "stripe" (footprint) layer; a PROJECTILE's is "reach".
+	var area_class := "area"
+	var _live := false
+	var _governed := {}
 	var _layers := {}
 	var _driven_values := {}
 
@@ -992,6 +1002,9 @@ class Painter:
 				continue
 			var now: Dictionary = values[layer]
 			var last: Dictionary = _driven_values.get(layer, {})
+			if layer == "stripe_motion" and bool(now.get("live", false)) != _live:
+				_live = bool(now.get("live", false))
+				_apply_class(layer)
 			if last.get("clip") != now["clip"]:
 				instance.set_instance_shader_parameter("clip", now["clip"])
 			if last.get("alpha") != now["alpha"]:
@@ -1021,7 +1034,8 @@ class Painter:
 			c0 := PackedFloat32Array(), c1 := PackedFloat32Array(), governed := false) -> void:
 		var instance := _layer(layer)
 		if _is_driven(layer):
-			instance.material_override = mark_material(_fill_class(layer), layer.begins_with("stripe"), _priority(layer), governed)
+			_governed[layer] = governed
+			_apply_class(layer)
 		if verts.is_empty():
 			instance.mesh = null
 			return
@@ -1043,7 +1057,16 @@ class Painter:
 	func _fill_class(layer: String) -> String:
 		if not layer.begins_with("stripe"):
 			return ""
-		return "area" if layer == "stripe" else motion_class
+		if layer == "stripe":
+			return area_class
+		return "live" if _live else motion_class
+
+	# The layer's shared material and batch for its current stencil class.
+	func _apply_class(layer: String) -> void:
+		var instance: MeshInstance3D = _layers[layer]
+		var fill_class := _fill_class(layer)
+		instance.material_override = mark_material(fill_class, layer.begins_with("stripe"), _priority(layer) + (1 if fill_class == "live" else 0), _governed.get(layer, false))
+		instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
 
 	static func _priority(layer: String) -> int:
 		return PRIORITY - 1 if layer.ends_with("under") else PRIORITY
@@ -1055,13 +1078,12 @@ class Painter:
 		instance.top_level = true
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if _is_driven(layer):
-			instance.material_override = mark_material(_fill_class(layer), layer.begins_with("stripe"), _priority(layer), false)
-			instance.sorting_offset = FILL_SORT.get(_fill_class(layer), 0.0)
 			instance.extra_cull_margin = 4.0
 			instance.set_instance_shader_parameter("centre", centre)
 			instance.set_instance_shader_parameter("heading", heading)
 			add_child(instance)
 			_layers[layer] = instance
+			_apply_class(layer)
 			return instance
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

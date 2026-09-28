@@ -38,6 +38,8 @@ var _wait := 0
 var _current: Array = []
 var _shooting := false
 var _written: Array = []
+var _cam: Camera3D
+var _probes := {}
 
 
 func _initialize() -> void:
@@ -85,6 +87,7 @@ func _build_world() -> void:
 	_world.add_child(cam)
 	cam.look_at_from_position(Vector3(0.0, 17.0, 17.0), Vector3(0.0, 0.0, -1.0))
 	cam.current = true
+	_cam = cam
 
 
 func _plan() -> void:
@@ -106,6 +109,11 @@ func _plan() -> void:
 	# live variant has the lane running at its brighter live alpha.
 	_shots.append({"name": "overlap-mixed-50", "make": func(): return _mixed(0.5)})
 	_shots.append({"name": "overlap-mixed-live", "make": func(): return _mixed(1.0)})
+	# A live lane over a pending lane, seen from the two sides so the lanes' depth order flips.
+	# Both lanes are one stencil class family; the live one must own the overlap from either
+	# side (fix round 2, item 3). check_live_over_pending compares the overlap's mean colour.
+	_shots.append({"name": "overlap-live-pending-front", "cam": Vector3(0.0, 17.0, 17.0), "make": func(): return _live_over_pending()})
+	_shots.append({"name": "overlap-live-pending-back", "cam": Vector3(0.0, 17.0, -14.0), "make": func(): return _live_over_pending()})
 	if _control:
 		_shots.append({"name": "control-instant-ring-50--no-stripe-motion", "make": func(): return _control_ring(func(layers: Dictionary):
 			layers["stripe_motion"].visible = false)})
@@ -120,6 +128,75 @@ func _control_ring(defect: Callable) -> Array:
 	var nodes := _progress(Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3.ZERO, 6.0), 0.5)
 	defect.call(nodes[0].painter()._layers)
 	return nodes
+
+
+const CROSS := Vector3(0.0, 0.0, 1.5)
+const LIVE_ONLY := Vector3(0.0, 0.0, -6.0)
+const PENDING_ONLY := Vector3(6.0, 0.0, 1.5)
+const PATCH := 36
+
+
+func _live_over_pending() -> Array:
+	var pending: Node3D = _progress(Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(-8.0, 0.0, 1.5), Vector3.RIGHT, 16.0, 8.0), 0.95)[0]
+	var live: Node3D = _progress(Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(0.0, 0.0, -9.5), Vector3.BACK, 16.0, 8.0), 1.0)[0]
+	return [pending, live]
+
+
+# The mean colour of a PATCH x PATCH square around a world point in the current still.
+func _patch_mean(image: Image, point: Vector3) -> Color:
+	var at := Vector2i(_cam.unproject_position(point))
+	var sum := Vector3.ZERO
+	var count := 0
+	for y in range(at.y - PATCH, at.y + PATCH):
+		for x in range(at.x - PATCH, at.x + PATCH):
+			var c := image.get_pixel(x, y)
+			sum += Vector3(c.r, c.g, c.b)
+			count += 1
+	sum /= count
+	return Color(sum.x, sum.y, sum.z)
+
+
+func _probe(image: Image, name: String) -> void:
+	if not name.begins_with("overlap-live-pending"):
+		return
+	_probes[name] = {"cross": _patch_mean(image, CROSS), "live_only": _patch_mean(image, LIVE_ONLY), "pending_only": _patch_mean(image, PENDING_ONLY)}
+
+
+func _dist(a: Color, b: Color) -> float:
+	return (absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b)) / 3.0 * 255.0
+
+
+# The overlap reads the same from both sides and reads as the live band: it sits nearer the
+# live-only colour than the pending-only colour, and live and pending are apart enough for
+# that to mean something.
+func check_live_over_pending() -> bool:
+	if not _probes.has("overlap-live-pending-front") or not _probes.has("overlap-live-pending-back"):
+		return true
+	var f: Dictionary = _probes["overlap-live-pending-front"]
+	var b: Dictionary = _probes["overlap-live-pending-back"]
+	var sides := _dist(f["cross"], b["cross"])
+	var apart := minf(_dist(f["live_only"], f["pending_only"]), _dist(b["live_only"], b["pending_only"]))
+	var near_live := true
+	for probe in [f, b]:
+		near_live = near_live and _dist(probe["cross"], probe["live_only"]) < _dist(probe["cross"], probe["pending_only"])
+	var ok := sides <= LIVE_SIDES_MAX and apart >= LIVE_APART_MIN and near_live
+	print("live over pending: overlap front vs back differ by %.2f (max %.1f), live and pending are %.2f apart (min %.1f), overlap nearer live than pending: %s -> %s"
+		% [sides, LIVE_SIDES_MAX, apart, LIVE_APART_MIN, near_live, "PASS" if ok else "FAIL"])
+	var f2 := FileAccess.open(_out.path_join("live-over-pending.json"), FileAccess.WRITE)
+	f2.store_string(JSON.stringify({"front": _dump(f), "back": _dump(b), "sides": sides, "apart": apart, "near_live": near_live, "pass": ok}, " "))
+	f2.close()
+	return ok
+
+
+func _dump(probe: Dictionary) -> Dictionary:
+	var out := {}
+	for key in probe:
+		out[key] = probe[key].to_html(false)
+	return out
+
+
+const LIVE_SIDES_MAX := 6.0
+const LIVE_APART_MIN := 5.0
 
 
 func _mixed(lane_progress: float) -> Array:
@@ -181,6 +258,7 @@ func _process(_delta: float) -> bool:
 	if _shooting:
 		var image := _view.get_texture().get_image()
 		var path := _out.path_join(String(_shots[_index]["name"]) + ".png")
+		_probe(image, String(_shots[_index]["name"]))
 		image.save_png(path)
 		_written.append({"name": _shots[_index]["name"], "size": [image.get_width(), image.get_height()]})
 		for node in _current:
@@ -195,8 +273,10 @@ func _process(_delta: float) -> bool:
 			"adapter": RenderingServer.get_video_adapter_name()}, " "))
 		f.close()
 		print("still_capture: wrote %d stills to %s" % [_written.size(), _out])
-		quit(0)
+		quit(0 if check_live_over_pending() else 1)
 		return true
+	_cam.look_at_from_position(_shots[_index].get("cam", Vector3(0.0, 17.0, 17.0)),
+		CROSS if _shots[_index].has("cam") else Vector3(0.0, 0.0, -1.0))
 	_current = _shots[_index]["make"].call()
 	_shooting = true
 	_wait = SETTLE_FRAMES

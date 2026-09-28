@@ -226,3 +226,18 @@ Per-run native frame p99 / proc p99: E0′ 51.84 / 26.34, 48.51 / 25.61, 31.27 /
 Result. The fix round keeps H1's saving: headless s3 frame p50 1.31 (E1 1.31), with the telegraph draw ablated 1.12. Native p50 is 4.75 against 4.29 for E1, at load 8 to 9 instead of 4.7 to 8.5. The `run` class adds one batch, and GPU p99 is 1.39 against 1.63 for E1.
 
 Look budget, recalibrated (DESIGN-NOTES, E1 section). Each still is also judged inside its telegraph's box, found from an `empty` ground still, with a box budget of 0.5% share and 0.3/255 mean. Controls: the hidden fill fails at 25.3% of the box, the hidden static keyline at 23.6%, and a 0.4 m band cut from the fill at 2.57%. On the whole frame that band differs on only 0.34% of pixels, at the old 0.3% line. The one-pixel seams reach at most 0.33% of the box. The LANE draw-order change reaches 2.39% (`lane-wedge-50`). It is listed as an expected change, not passed.
+
+## E1 fix round 2, 2026-09-28  the proc-max spike
+
+Symptom: every E1 headless run had one proc max of 69 to 86 ms against the base's 45 to 48. Method: `perf_bench --series=<tsv>` writes every recorded frame; the worst frame's process time was inside `Audio._process` (timed with temporary probes, since removed): `engine.render()` of 189 to 1549 samples took 35 to 86 ms, different frame indexes per run (535, 329, 239 in three runs), physics 0, harness 0.3 ms. Ablations, one run each: `--no-audio` max 2.2 ms; `--no-telegraph-draw`, `--no-vfx`, `--no-hud`, `--no-music` (SilentBand still schedules and synthesises) all kept a 73 to 86 ms frame. The cause is `Audio._on_ready` skipping `prepare_rest()` without an audio device: the instruments bake on the main thread the first time a bar asks, and E1's fast warm phase (120 frames, under a second) ends before those bars. The base has the same spike when its warm phase is as short (base, `--warm-frames=5`: max 71.2 and 72.3 ms). With `--warm-seconds=15` the E1 tree's proc max is 1.65 ms. Not compilation: a headless run compiles no shaders, and pipeline compilation runs on the render thread, outside the proc probe. Native shows the same shape (proc max 35 against 26), probably the worker's bake not yet done when the shorter warm ends; not re-measured, per the brief.
+
+Fix in the bench, not the game: `perf_bench` finishes the band bake before the warm phase (`MusicEngine.prepare_rest()` headless, the worker's task natively), with `--cold-band` to reproduce, plus `--series`, `--warm-frames` and `--warm-seconds`.
+
+Headless s3, three paired runs each, the same bench on both trees (band prebaked), load 10 to 30 on 32 threads. Raw: `artifacts/local/e1fix2/f{a,b}{1,2,3}.{json,tsv}`.
+
+| Tree | Frame p50 | Frame p99 | Proc p99 | Proc max |
+| --- | --- | --- | --- | --- |
+| E0' base | 19.1, 21.2, 18.4 | 26.0, 32.1, 27.4 | 3.0, 4.1, 3.1 | 35.4, 33.9, 31.7 |
+| E1 fix 2 | 1.45, 1.43, 1.42 | 7.7, 7.6, 7.2 | 2.0, 1.6, 1.7 | 18.2, 16.7, 18.3 |
+
+Before the bench fix, the E1 tree's proc max in three runs was 74.4, 80.0 and 84.0 ms. A residual 17 to 19 ms frame remains in the E1 runs (the base's is 32 to 35), with physics 0, in `Audio._process`: a first-use bake `prepare_rest` does not cover. It is not a telegraph cost, and it is the audio owner's to trace.

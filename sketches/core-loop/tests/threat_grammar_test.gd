@@ -51,6 +51,7 @@ func _process(_delta: float) -> bool:
 	_check_driven()
 	_check_drive_layers()
 	_check_no_rebuild()
+	_check_fill_classes()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -406,6 +407,80 @@ func _check_no_rebuild() -> void:
 		"100 frames of progress leave every driven layer's mesh and vertex count unchanged (%s); the per-frame path rebuilds (%s)"
 			% [", ".join(counts), rebuilt])
 	for node in nodes + [control]:
+		node.free()
+
+
+# The stencil value a driven layer's material writes and tests ("compare_not_equal, N").
+func _stencil(node: Node3D, layer: String) -> int:
+	var instance: MeshInstance3D = node.painter()._layers[layer]
+	var code: String = (instance.material_override as ShaderMaterial).shader.code
+	var at := code.find("compare_not_equal, ")
+	return int(code.substr(at + 19)) if at >= 0 else 0
+
+
+# What a fill layer draws its alpha at (vertex colours are 8-bit, so within about 0.004): the largest vertex alpha, times alpha_scale where the
+# vertices ask for it (CUSTOM1.y), as the shader does.
+func _fill_alpha(node: Node3D, layer: String) -> float:
+	var instance: MeshInstance3D = node.painter()._layers[layer]
+	var arrays: Array = (instance.mesh as ArrayMesh).surface_get_arrays(0)
+	var alpha := 0.0
+	for c in arrays[Mesh.ARRAY_COLOR]:
+		alpha = maxf(alpha, c.a)
+	var scaled: float = arrays[Mesh.ARRAY_CUSTOM1][1]
+	var set_scale = instance.get_instance_shader_parameter("alpha_scale")
+	var scale: float = 1.0 if set_scale == null else float(set_scale)
+	return alpha * (scale if scaled > 0.5 else 1.0)
+
+
+# Fills unioned in one stencil class draw once, so one class must mean one alpha (an
+# overlap shows whichever drew first, which flips with camera depth); and a live lane
+# batches after a pending one, a fill and a swept ring, so its band always wins.
+func _check_fill_classes() -> void:
+	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
+	var wedge: Node3D = Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0)
+	var lane: Node3D = Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(40.0, 0.0, 400.0), Vector3.FORWARD, 11.0, 3.0)
+	var wave: Node3D = Telegraph.wave(_world, _ground, Vector3(60.0, 0.0, 400.0), 10.0, 6.0, 0.5)
+	var shell: Node3D = Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(80.0, 0.0, 400.0), 3.5)
+	shell.set_flight(Vector3(92.0, 1.5, 388.0), 6.0)
+	var nodes: Array = [ring, wedge, lane, wave, shell]
+	for node in [ring, wedge, lane, shell]:
+		node.set_progress(0.5)
+	wave.step(1.0)
+	var alphas := {}
+	for node in nodes:
+		for layer in ["stripe", "stripe_motion"]:
+			var instance: MeshInstance3D = node.painter()._layers.get(layer)
+			if instance == null or instance.mesh == null:
+				continue
+			var key := _stencil(node, layer)
+			var alpha := snappedf(_fill_alpha(node, layer), 0.001)
+			if not alphas.has(key):
+				alphas[key] = []
+			if not alpha in alphas[key]:
+				alphas[key].append(alpha)
+	var one_alpha := true
+	for key in alphas:
+		one_alpha = one_alpha and alphas[key].size() == 1
+	var reach_apart: bool = _stencil(shell, "stripe") != _stencil(ring, "stripe")
+	# A pending lane, then the same lane live: the class and the batch move it after the rest.
+	var pending_class := _stencil(lane, "stripe_motion")
+	var pending_sort: float = lane.painter()._layers["stripe_motion"].sorting_offset
+	var pending_alpha := _fill_alpha(lane, "stripe_motion")
+	lane.set_progress(1.0)
+	var live_class := _stencil(lane, "stripe_motion")
+	var live_sort: float = lane.painter()._layers["stripe_motion"].sorting_offset
+	var live_alpha := _fill_alpha(lane, "stripe_motion")
+	var swept_sort: float = wave.painter()._layers["stripe_motion"].sorting_offset
+	var live_priority: int = (lane.painter()._layers["stripe_motion"].material_override as ShaderMaterial).render_priority
+	var after_all: bool = live_sort > pending_sort and live_sort > swept_sort and live_sort > Threat.FILL_SORT["fill"] \
+		and live_priority > Threat.PRIORITY
+	lane.set_progress(0.5)
+	var back_to_run: bool = _stencil(lane, "stripe_motion") == pending_class
+	_report("fill classes", one_alpha and reach_apart and live_class != pending_class and after_all and back_to_run
+			and absf(pending_alpha - Threat.RUN_ALPHA) < 0.005 and absf(live_alpha - Threat.LIVE_ALPHA) < 0.005,
+		"stencil value -> alphas drawn %s (one alpha each: %s); the projectile's footprint is its own class (%s); a lane goes from class %d (alpha %.2f, sort %.0f) to class %d (alpha %.2f, sort %.0f, after the swept ring at %.0f, priority %d over the lines' %d) live, and back on a retarget (%s)"
+			% [alphas, one_alpha, reach_apart, pending_class, pending_alpha, pending_sort, live_class, live_alpha, live_sort, swept_sort, live_priority, Threat.PRIORITY, back_to_run])
+	for node in nodes:
 		node.free()
 
 
