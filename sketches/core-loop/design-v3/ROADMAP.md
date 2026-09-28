@@ -43,7 +43,7 @@ Andrew: "consider subtracting to add ... refine and slim down ... start trimming
 3. **Build the minimum high-impact set first.** The spine, the Warden's reads, juice, the core interactables, a handful of evolutions (not 16), drop gates, the HUD fix, and the audio bed if its spike passes.
    - Deferred to a post-draft backlog unless the sitting says otherwise: meta progression, Tally, rule parts, cursed caches, blessed Wardens, the seed field, and the extra evolutions.
 4. **Delete losers in code.** After the lab verdict, the unchosen loop mode, the v2 fallback paths and any system the spine makes redundant are removed, not left switchable.
-5. **Fewer threads.** At most 5 Claude agents at once. Codex (Astra) takes consolidation, reviews and design so the Claude limit goes to building. One integration branch for v3.
+5. **Sustainable threads.** Revised 2026-09-28 for throughput on Sonnet 5.5: at most 8 Claude delegates at once (5 writers, 3 verifiers or gates), per ORCHESTRATOR's review lane. Sonnet builds, a Sonnet verifier returns receipts, Opus gates, and Fable joins for consequential seams. Codex (Astra) takes consolidation, reviews and design. One integration branch for v3; the coordinator merges serially.
 6. **Worktree hygiene.** Merged or finished worktrees are archived (`artifacts/local` moved to `/home/andrew/Projects/scrapkeep/artifacts/local/core-loop-worktrees/`), then removed; branches are kept. 21 were removed on 2026-09-28.
 
 ## HUD look: scrapped together, clean to read (Andrew, 2026-09-28)
@@ -113,7 +113,7 @@ Andrew: "the pilot should react to the player's actions, achievements, or failur
   - Length follows what the motion must communicate, and only impacts are fast.
   - Reactions are cosmetic and never touch the ball.
   - The bar is "good enough, not overly complex".
-- The table and wiring are WIP 0a07aaf on `codex/pilot-reactions` in the visual clone. The clips continue in the main clone, the only trusted Codex project with GPU access.
+- The table and wiring are WIP 0a07aaf on `codex/pilot-reactions` in the visual clone, and the four clips landed at b6a595e. New clips follow the split below: Codex draws the keyframes, Sonnet agents pose and export them in Blender.
 
 ## Tool stack (checked 2026-09-28; research R3)
 
@@ -137,7 +137,8 @@ Andrew: "the pilot should react to the player's actions, achievements, or failur
 
 ## Rules that keep it reasonable
 
-- Small waves, with results read before the next wave. The coordinator alone merges. The Codex track owns appearance.
+- Small waves, with results read before the next wave. The coordinator alone merges.
+- **Assets and animation: Codex designs, Sonnet builds** (Andrew, 2026-09-28). Codex owns art direction and makes the clear keyframes, three-view reference sheets, painted textures and the visual layout of how each mesh is built and moves. Sonnet agents implement them as Blender CLI recipes, meshes, rigs, poses and Godot wiring. The guardrail is rendered evidence: rear chase-camera stills and recipe checks go through the Opus gate, and Andrew judges the look.
 - Nothing is called ready on tests alone. The fun gate (the camper fails, the map matters, the windows are legible) comes before Andrew's play.
 - Andrew's design principles and rulings stand: momentum is sacred, quick restart, opt-in layers, readable caps, no reskins, spill-B music, gems never lost.
 - Each lead's design names its measures. A system without a measure isn't done.
