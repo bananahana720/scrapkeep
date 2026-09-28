@@ -171,6 +171,7 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
+	add_child(preload("res://src/ui/workshop.gd").new())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -371,7 +372,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		if not _mouse_captured():
-			if event.pressed and flow.in_play() and not panel.visible:
+			if event.pressed and flow.in_play() and not panel.visible and not get_meta("menu_held", false):
 				_capture_mouse(true)
 			return
 		_mouse_button(event)

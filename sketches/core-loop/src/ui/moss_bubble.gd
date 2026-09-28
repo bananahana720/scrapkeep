@@ -1,0 +1,271 @@
+extends Control
+
+const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+
+# Moss is never seen (DESIGN-V2 sections 12 and 15): a voice from the hatch and a pair
+# of hands. His line is a speech bubble whose tail runs off the screen's left edge, the
+# side his counter is on, with a hand below it that gestures what he just did. The line
+# is his own words from shop.gd and nothing else.
+#
+# Exasperation lives in the bubble, not in extra words: each beat of the conversation
+# loop sharpens the bubble's corners, cuts teeth into its edge and shakes it harder,
+# and a grumbling beat lands with a squash. The restart line rewinds it: the bubble
+# shrinks, turns back and comes round smooth again. The relent is the one good-news
+# motion (VISUAL-LANGUAGE section 8, bounce means good news): an amber, rounded bubble
+# that pops with overshoot over the moss_relent row's star. Colour and shape per fact
+# come from event_kinds' LOOT_ROWS.
+
+const TEXT_WIDTH := 330.0
+const FONT := 20
+const PAD := Vector2(20.0, 14.0)
+const TAIL := 28.0
+const RADIUS := 18.0
+const TOOTH := 16.0
+const MAX_EXASPERATION := 5
+const HOLD_BASE := 1.6
+const HOLD_PER_WORD := 0.3
+const FADE := 0.25
+const HAND := 15.0
+const GESTURE_SECONDS := 0.6
+
+var text := ""
+var kind := "moss_beat"
+var mood := ""
+var exasperation := 0.0
+var shown_exasperation := 0.0
+var grumble := false
+# While Moss's counter is open his line stays up until the next one replaces it.
+var sticky := false
+var gesture := ""
+var _label: Label
+var _clock := 0.0
+var _hold := 0.0
+var _gesture_clock := 0.0
+var _body := Vector2.ZERO
+var _spin := 0.0
+var _pop := 1.0
+var _tween: Tween
+
+
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	modulate.a = 0.0
+	visible = false
+	_label = Label.new()
+	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label.custom_minimum_size = Vector2(TEXT_WIDTH, 0.0)
+	_label.add_theme_font_override("font", UiFonts.bold())
+	_label.add_theme_font_size_override("font_size", FONT)
+	_label.add_theme_color_override("font_color", Palette.SAND)
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_label)
+
+
+func row() -> Dictionary:
+	return EventKinds.LOOT_ROWS.get(kind, EventKinds.LOOT_ROWS["moss_beat"])
+
+
+func showing() -> bool:
+	return visible and modulate.a > 0.05 and text != ""
+
+
+# One press of the talk key: a beat record from shop.talk().
+func beat(record: Dictionary) -> void:
+	if record.is_empty():
+		return
+	var mood_now := "beat"
+	if record.get("relent", false):
+		mood_now = "relent"
+	elif record.get("restart", false):
+		mood_now = "restart"
+	var level := 0.0 if mood_now != "beat" else float(record.get("exasperation", 0))
+	_say(String(record.get("text", "")), "moss_relent" if mood_now == "relent" else "moss_beat", mood_now,
+		level, bool(record.get("grumble", false)), "give" if mood_now == "relent" else "tap")
+
+
+# A verb's bark ({line_id, text, root}) with the fact it answered (a LOOT_ROWS kind).
+func bark(line: Dictionary, fact: String) -> void:
+	if line.is_empty():
+		return
+	var refused := fact == "shop_refused"
+	_say(String(line.get("text", "")), fact, "refuse" if refused else "bark", 0.0, refused,
+		"refuse" if refused else ("give" if fact in ["shop_bought", "shop_charge", "shop_sold"] else ""))
+
+
+func hush() -> void:
+	_hold = 0.0
+	if not visible:
+		return
+	if _tween != null:
+		_tween.kill()
+	_tween = create_tween()
+	_tween.tween_property(self, "modulate:a", 0.0, FADE).set_ease(Tween.EASE_IN)
+	_tween.tween_callback(func():
+		if _hold <= 0.0:
+			visible = false)
+
+
+func _say(line: String, fact: String, mood_now: String, level: float, grumbles: bool, hand: String) -> void:
+	text = line
+	kind = fact
+	mood = mood_now
+	exasperation = clampf(level, 0.0, MAX_EXASPERATION)
+	grumble = grumbles
+	gesture = hand
+	_gesture_clock = 0.0
+	_clock = 0.0
+	_label.text = line
+	_label.add_theme_color_override("font_color", Palette.SAND)
+	_label.size = Vector2(TEXT_WIDTH, 0.0)
+	_body = Vector2(TEXT_WIDTH, _label.get_minimum_size().y) + PAD * 2.0
+	_label.position = Vector2(TAIL, 0.0) + PAD
+	size = Vector2(TAIL + _body.x + 12.0, _body.y + HAND * 3.5)
+	pivot_offset = Vector2(0.0, _body.y * 0.5)
+	_hold = HOLD_BASE + HOLD_PER_WORD * line.split(" ", false).size()
+	visible = true
+	if _tween != null:
+		_tween.kill()
+	_tween = create_tween().set_parallel(true)
+	_tween.tween_property(self, "modulate:a", 1.0, 0.12).set_ease(Tween.EASE_OUT)
+	match mood_now:
+		"restart":
+			_spin = -0.35
+			_pop = 0.7
+			_tween.tween_property(self, "_spin", 0.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			_tween.tween_property(self, "_pop", 1.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			_tween.tween_property(self, "shown_exasperation", 0.0, 0.45)
+		"relent":
+			_spin = 0.0
+			_pop = 0.6
+			_tween.tween_property(self, "_pop", 1.0, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			_tween.tween_property(self, "shown_exasperation", 0.0, 0.3)
+		_:
+			_spin = 0.0
+			_pop = 0.9 if grumbles else 0.96
+			_tween.tween_property(self, "_pop", 1.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			_tween.tween_property(self, "shown_exasperation", exasperation, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _process(delta: float) -> void:
+	if not visible:
+		return
+	_clock += delta
+	_gesture_clock += delta
+	# A line waits out a pause (the pick screen over the bay's greeting) instead of
+	# expiring unread behind it.
+	if not sticky and _hold > 0.0 and not get_tree().paused:
+		_hold -= delta
+		if _hold <= 0.0:
+			hush()
+	queue_redraw()
+
+
+# The bubble's outline: a rounded box whose corners tighten and whose edge grows teeth
+# as Moss's patience runs out.
+func outline(e: float) -> PackedVector2Array:
+	var r := maxf(3.0, RADIUS - e * 3.0)
+	var box := Rect2(Vector2(TAIL, 0.0), _body)
+	var corners := [
+		[box.position + Vector2(r, r), PI, PI * 1.5],
+		[Vector2(box.end.x - r, box.position.y + r), PI * 1.5, TAU],
+		[box.end - Vector2(r, r), 0.0, PI * 0.5],
+		[Vector2(box.position.x + r, box.end.y - r), PI * 0.5, PI],
+	]
+	var ring := PackedVector2Array()
+	for c in corners:
+		for step in 5:
+			var a: float = lerpf(c[1], c[2], step / 4.0)
+			ring.append(c[0] + Vector2(cos(a), sin(a)) * r)
+	if e <= 0.05:
+		return ring
+	# Square teeth along the straight edges only, pointing out, so the outline never
+	# crosses itself at a tight corner. At the send-off the bubble is a cog: the scrap
+	# glyph, which is what Moss keeps telling you to bring.
+	var toothed := PackedVector2Array()
+	var amp := e * 1.6
+	for i in ring.size():
+		var a := ring[i]
+		var b := ring[(i + 1) % ring.size()]
+		toothed.append(a)
+		var n := int(a.distance_to(b) / TOOTH)
+		if n < 1:
+			continue
+		var normal := (b - a).orthogonal().normalized()
+		for k in n:
+			var rise := a.lerp(b, (k + 0.3) / n)
+			var fall := a.lerp(b, (k + 0.7) / n)
+			toothed.append_array([rise, rise + normal * amp, fall + normal * amp, fall])
+	return toothed
+
+
+func _draw() -> void:
+	if text == "":
+		return
+	var e := shown_exasperation
+	var shake := Vector2(sin(_clock * TAU * 13.0), cos(_clock * TAU * 11.0)) * (e * 0.8 + (3.0 if grumble else 0.0)) * exp(-_clock * 5.0)
+	var squash := Vector2(1.0 / _pop, _pop) if grumble and mood == "beat" else Vector2(_pop, _pop)
+	draw_set_transform(pivot_offset + shake, _spin, squash)
+	var root := -pivot_offset
+	var edge: Color = row().get("color", Palette.SAND)
+	if mood == "relent":
+		var star := Icons.shape(String(row().get("shape", "star")))
+		var burst := _body.y * 1.6
+		draw_texture_rect(star, Rect2(root + Vector2(TAIL + _body.x - burst * 0.5, -burst * 0.3), Vector2(burst, burst)), false, Color(edge, 0.35))
+	var body := outline(e)
+	var shifted := PackedVector2Array()
+	for p in body:
+		shifted.append(p + root)
+	var mid_y := _body.y * 0.5
+	var wag := sin(_clock * TAU * 3.0) * e * 1.5
+	var tail := PackedVector2Array([root + Vector2(TAIL + 2.0, mid_y - 10.0), root + Vector2(-4.0, mid_y + 8.0 + wag), root + Vector2(TAIL + 2.0, mid_y + 10.0)])
+	draw_colored_polygon(tail, Color(Palette.CHARCOAL, 0.94))
+	draw_colored_polygon(shifted, Color(Palette.CHARCOAL, 0.94))
+	shifted.append(shifted[0])
+	draw_polyline(shifted, edge, 3.0 if mood == "relent" else 2.0 + e * 0.3)
+	draw_line(tail[0], tail[1], edge, 2.0)
+	draw_line(tail[1], tail[2], edge, 2.0)
+	var glyph := String(row().get("shape", "none"))
+	if glyph != "none" and mood in ["refuse", "bark"]:
+		draw_texture_rect(Icons.shape(glyph), Rect2(root + Vector2(TAIL + _body.x - 14.0, -10.0), Vector2(24.0, 24.0)), false, edge)
+	draw_set_transform(Vector2.ZERO)
+	_label.position = Vector2(TAIL, 0.0) + PAD + shake
+	_draw_hand(Vector2(0.0, _body.y + HAND * 1.8), edge)
+
+
+# One of Moss's hands at the counter's edge: a mitt that slides out to give, taps on a
+# grumble, or holds up a flat palm and wags when he refuses.
+func _draw_hand(at: Vector2, edge: Color) -> void:
+	var t := clampf(_gesture_clock / GESTURE_SECONDS, 0.0, 1.0)
+	if gesture == "" or t >= 1.0:
+		return
+	var reach := sin(t * PI)
+	var p := at
+	var angle := 0.0
+	match gesture:
+		"give":
+			p.x += -HAND + reach * HAND * 3.0
+		"tap":
+			p.x += HAND * 0.8
+			p.y += -absf(sin(t * TAU * 2.0)) * HAND * 0.7
+		"refuse":
+			p.x += HAND * 1.2 * reach
+			angle = sin(t * TAU * 3.0) * 0.35
+	draw_set_transform(p, angle, Vector2.ONE)
+	var palm := PackedVector2Array()
+	for i in 12:
+		var a := TAU * i / 12.0
+		palm.append(Vector2(cos(a) * HAND, sin(a) * HAND * 0.8))
+	draw_colored_polygon(palm, Palette.SANDSTONE)
+	palm.append(palm[0])
+	draw_polyline(palm, Palette.CHARCOAL, 2.0)
+	var fingers := 4
+	for i in fingers:
+		var x := -HAND * 0.6 + i * HAND * 0.4
+		var tip := Vector2(x, -HAND * 1.35) if gesture == "refuse" else Vector2(HAND * 1.35, -HAND * 0.5 + i * HAND * 0.33)
+		var base := Vector2(x, -HAND * 0.5) if gesture == "refuse" else Vector2(HAND * 0.5, -HAND * 0.5 + i * HAND * 0.33)
+		draw_line(base, tip, Palette.CHARCOAL, 7.0)
+		draw_line(base, tip, Palette.SANDSTONE, 4.5)
+	draw_set_transform(Vector2.ZERO)
