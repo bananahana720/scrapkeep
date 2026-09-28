@@ -1,7 +1,7 @@
 ---
 name: scrapkeep-writer
-description: Implement one authorized Scrapkeep card on Opus 5.5 high in the coordinator-created worktree named in its packet. Use for ordinary code or contract changes that need design judgement within the packet.
-model: opus
+description: Implement one authorized Scrapkeep card on Sonnet 5.5 medium in the coordinator-created worktree named in its packet. Use for ordinary code or contract changes that need design judgement within the packet.
+model: sonnet
 effort: medium
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
