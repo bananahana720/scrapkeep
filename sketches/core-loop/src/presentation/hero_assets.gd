@@ -3,6 +3,7 @@ extends Node
 const Palette := preload("res://src/core/palette.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const ShellAnimator := preload("res://src/presentation/shell_animator.gd")
 
 # V3 hero assets (VISUAL-LANGUAGE.md section 9). Dresses the greybox in the procedural
 # models from tools/blender/ as nodes enter the tree, without editing the gameplay
@@ -16,9 +17,10 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 # palette colours baked as vertex colours (the test pins paint to the paint roles).
 #
 # The shell splits the way it moves. Core rolls with the ball under its rolling mesh;
-# Pod (the kit, the dome and the pilot) rides the juice node, stays upright and yaws to
-# the heading, so the cockpit is always findable (AD-01, AC-01) and Rivet's fins and
-# Kest's satchel bands keep their direction. Chunks tuck under the pod's saddle as they
+# Pod (the kit, the dome and the pilot) rides the juice node and stays upright, so the
+# cockpit is always findable (AD-01, AC-01) and Rivet's fins and Kest's satchel bands
+# keep their direction. Each fitted shell gets a shell_animator.gd, which yaws the pod to
+# the heading and gives the shell its idle, motion, ability and reaction life. Chunks tuck under the pod's saddle as they
 # roll through it instead of clipping the glass.
 
 const SHELLS := {
@@ -34,9 +36,6 @@ const CHUNK_BANDS := [[12, "small"], [24, "medium"], [Accretion.MAX_CHUNKS, "lar
 # Cosine from straight up where a chunk starts tucking under the pod, and where it is gone.
 const TUCK_FROM := 0.52
 const TUCK_GONE := 0.74
-const POD_TURN_RATE := 10.0
-const POD_TURN_SPEED := 1.5
-const VANE_RATE := 8.0
 # ANCIENT is still pending Andrew (VISUAL-LANGUAGE section 2); candidate A until W7
 # adds Palette.ANCIENT.
 const ANCIENT := Color("3d8bff")
@@ -203,16 +202,23 @@ func _fit(rec: Dictionary) -> void:
 	core.get_parent().remove_child(core)
 	pod.get_parent().remove_child(pod)
 	shell.free()
-	core.name = "HeroCore"
-	pod.name = "HeroPod"
 	var tints := {"class": player.class_color()}
 	paint(core, tints)
 	paint(pod, tints)
+	# The animator binds by the glb's role names, before the pod and core take theirs here.
+	var animator := ShellAnimator.new()
+	animator.name = "ShellAnimator"
+	animator.clock = _sixteenths
+	animator.bind([core, pod], id, player, ctx.events if ctx != null else null)
+	core.name = "HeroCore"
+	pod.name = "HeroPod"
+	pod.add_child(animator)
 	rolling.add_child(core)
 	player.juice_node().add_child(pod)
 	rec["class"] = id
 	rec["core"] = core
 	rec["pod"] = pod
+	rec["animator"] = animator
 
 
 func _process(delta: float) -> void:
@@ -223,26 +229,19 @@ func _process(delta: float) -> void:
 			_players.erase(key)
 			continue
 		_fit(rec)
-		_steer_pod(rec, player, delta)
 	_tuck_chunks()
 
 
-func _steer_pod(rec: Dictionary, player, delta: float) -> void:
-	var pod: Node3D = rec["pod"]
-	var v: Vector3 = player.state.velocity
-	var flat := Vector2(v.x, v.z)
-	if flat.length() > POD_TURN_SPEED:
-		var want := atan2(-v.x, -v.z)
-		pod.rotation.y = lerp_angle(pod.rotation.y, want, 1.0 - exp(-POD_TURN_RATE * delta))
-	var open := 1.0 if player.kit.gliding else 0.0
-	for vane_name in ["VaneL", "VaneR"]:
-		var vane := pod.get_node_or_null(vane_name) as Node3D
-		if vane != null:
-			var side := -1.0 if vane_name == "VaneL" else 1.0
-			vane.rotation.z = lerpf(vane.rotation.z, -side * open * PI * 0.5, 1.0 - exp(-VANE_RATE * delta))
+# The band's position in sixteenths, so the shells pulse on its grid; -1 when silent.
+func _sixteenths() -> float:
+	var audio = get_parent().get("audio") if get_parent() != null else null
+	var engine = audio.engine if audio != null else null
+	if engine == null or engine.step_len <= 0:
+		return -1.0
+	return float(engine.clock - engine.grid_origin) / float(engine.step_len)
 
 
-# The shell the player wears, for tests and tools: {class, core, pod} or {}.
+# The shell the player wears, for tests and tools: {class, core, pod, animator} or {}.
 func shell_of(player: Node) -> Dictionary:
 	return _players.get(player.get_instance_id(), {})
 

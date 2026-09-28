@@ -8,12 +8,16 @@
 # -Z forward. The ball centre is the origin and the player collider radius is 1.0 m
 # (src/movement/tuning.gd RADIUS), so the core stays inside CORE_LIMIT.
 #
-# Node contract read by src/presentation/hero_assets.gd:
+# Node contract read by src/presentation/hero_assets.gd and shell_animator.gd:
 #   Shell (root)
 #     Core   rolls with the ball
 #     Pod    stays upright and yaws to the heading; carries the class kit
 #       Dome   the cockpit glass and rim, origin at the dome centre
 #         Pilot  the animal bust, origin at the dome centre
+#           Head  origin at the neck; Eyes, EarL/EarR, Crest or Visor hang from it
+#           PawL, PawR
+#       Accent_<slot>[_<slot>]...  a device that lights while those ability slots work
+# Animated parts are separate objects with their origin at their pivot.
 
 import math
 import random
@@ -144,27 +148,28 @@ def ear(part, base, height, width, tilt, color, inner=None, tip=None):
                    0.055, matrix=mt, color=tip)
 
 
-def assemble(name, core, pod, dome_part, pilot, dome_center, extras=()):
-    """Builds the node tree in the contract above. extras: (Part, origin) under Pod,
-    or (name, origin) for an empty."""
+def assemble(name, core, pod, dome_part, pilot, dome_center, parts=()):
+    """Builds the node tree in the contract above. parts: (Part, or a name for an
+    empty, origin, parent name) in order; a parent is Pod, Dome, Pilot or an earlier part."""
     root = common.empty("Shell" + name)
-    core_obj = core.to_object((0, 0, 0), root)
-    pod_obj = pod.to_object((0, 0, 0), root)
-    dome_obj = dome_part.to_object(dome_center, pod_obj)
-    pilot_obj = pilot.to_object(dome_center, dome_obj)
-    for item, origin in extras:
+    objs = {"Core": core.to_object((0, 0, 0), root)}
+    objs["Pod"] = pod.to_object((0, 0, 0), root)
+    objs["Dome"] = dome_part.to_object(dome_center, objs["Pod"])
+    objs["Pilot"] = pilot.to_object(dome_center, objs["Dome"])
+    for item, origin, parent in parts:
         if isinstance(item, str):
-            common.empty(item, origin, pod_obj)
+            obj = common.empty(item, origin, objs[parent])
         else:
-            item.to_object(origin, pod_obj)
-    return root, core_obj, pilot_obj
+            obj = item.to_object(origin, objs[parent])
+        objs[obj.name] = obj
+    return root, objs["Core"], objs["Pilot"]
 
 
 def finish(name, root, core_obj, pilot_obj):
     a = common.args()
-    shell_tris = common.tri_total(root, skip=(pilot_obj.name,))
-    ok = common.report(name, [("shell", shell_tris, SHELL_TRIS),
-                              ("pilot", common.tris(pilot_obj), PILOT_TRIS)])
+    pilot_tris = common.tri_total(pilot_obj)
+    ok = common.report(name, [("shell", common.tri_total(root) - pilot_tris, SHELL_TRIS),
+                              ("pilot", pilot_tris, PILOT_TRIS)])
     radius = common.max_radius(core_obj)
     print("CORE_RADIUS %s %.3f %s" % (name, radius, "ok" if radius <= 1.0 else "OUT"))
     common.export(root, a["out"] or common.default_out("shell_" + name.lower()))

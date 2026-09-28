@@ -181,9 +181,10 @@ func _check_models() -> void:
 		var scene: Node = (load(MODELS + "shell_%s.glb" % shell) as PackedScene).instantiate()
 		var all := meshes(scene)
 		_slots_ok(shell, scene, slots)
-		_band(shell + " shell", tri_sum(all, ["Pilot"]), SHELL_TRIS)
 		var pilot := scene.find_child("Pilot", true, false) as MeshInstance3D
-		_band(shell + " pilot", tris(pilot.mesh) if pilot != null else 0, PILOT_TRIS)
+		var pilot_tris := tri_sum(meshes(pilot)) if pilot != null else 0
+		_band(shell + " shell", tri_sum(all) - pilot_tris, SHELL_TRIS)
+		_band(shell + " pilot", pilot_tris, PILOT_TRIS)
 		var core := scene.find_child("Core", true, false) as MeshInstance3D
 		var pod := scene.find_child("Pod", true, false) as Node3D
 		var dome := scene.find_child("Dome", true, false) as Node3D
@@ -284,14 +285,16 @@ func _check_stub() -> void:
 		var accent := _accent_color(pod)
 		_report("stub " + def.id + " accent", accent.is_equal_approx(def.color), "class_accent wears the class row colour")
 	stub.state.velocity = Vector3(10.0, 0.0, 0.0)
-	hook._process(1.0)
+	var animator = hook.shell_of(stub)["animator"]
+	animator.step(1.0)
 	var pod: Node3D = hook.shell_of(stub)["pod"]
 	var forward := -pod.transform.basis.z
 	_report("stub heading", forward.dot(Vector3.RIGHT) > 0.99, "pod faces the heading (%s)" % forward)
 	stub.kit.gliding = true
-	hook._process(1.0)
+	animator.step(1.0)
 	var vane := pod.get_node_or_null("VaneL") as Node3D
-	_report("stub vane", vane != null and absf(vane.rotation.z - PI * 0.5) < 0.01, "Kest's vane opens while gliding")
+	_report("stub vane", vane != null and absf(vane.rotation.z - PI * 0.5) < 0.05,
+		"Kest's vane opens while gliding, fluttering in the airflow")
 	stub.free()
 	hook.free()
 
