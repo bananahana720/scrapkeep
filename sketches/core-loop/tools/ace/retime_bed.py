@@ -16,9 +16,16 @@ drift lags into <out>, the same for the downbeat lags into <out>/downbeat,
 synth-spillway-16bar.wav, Opus 96 kbps encodes of the takes and metrics-hybrid.json.
 
     /home/andrew/Projects/music-video/.venv/bin/python retime_bed.py <audition dir> <engine dir> <out dir>
+
+--mode slice uses quarter slices with measured donor repair, uninterrupted keys,
+shared bed glue and kick ducking. --baseline <v1 dir> adds like-for-like v1 metrics.
+Its bed-*.loop.wav exports are written only when all timing, join and level gates
+pass; a rejected render retains candidate stems and an explicit failed receipt.
+The default legacy mode and individual drift/downbeat modes retain the old DSP.
 """
 
 import json
+import argparse
 import shutil
 import sys
 from pathlib import Path
@@ -144,7 +151,18 @@ def variant(cover, shifts, guide_env, kick_env, renders, out, bar, bars):
 
 
 def main():
-    audition, engine_dir, out = (Path(p) for p in sys.argv[1:4])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("audition", type=Path)
+    parser.add_argument("engine", type=Path)
+    parser.add_argument("out", type=Path)
+    parser.add_argument("--mode", choices=("legacy", "drift", "downbeat", "slice"), default="legacy")
+    parser.add_argument("--baseline", type=Path, help="existing v1 hybrid directory, read only")
+    args = parser.parse_args()
+    audition, engine_dir, out = args.audition, args.engine, args.out
+    if args.mode == "slice":
+        from retime_slice import produce
+        produce(audition, engine_dir, out, args.baseline)
+        return
     grid = json.loads((audition / "guide.json").read_text())
     engine = json.loads((engine_dir / "engine.json").read_text())
     bar, bars = grid["samples_per_bar"], grid["bars"]
@@ -163,10 +181,12 @@ def main():
     by_down, by_down_m = windowed_lags(guide_env, cover_env, bar, bars, DOWNBEAT_MS, DOWNBEAT_REACH_S)
     raw_flam = windowed_lags(kick_env, cover_env, bar, bars, DOWNBEAT_MS, DOWNBEAT_REACH_S)
 
-    variants = {
-        "drift": variant(cover, [round(v / 1000 * SR) for v in by_bar], guide_env, kick_env, renders, out, bar, bars),
-        "downbeat": variant(cover, [round(v / 1000 * SR) for v in by_down], guide_env, kick_env, renders, out / "downbeat", bar, bars),
-    }
+    variants = {}
+    if args.mode in ("legacy", "drift"):
+        variants["drift"] = variant(cover, [round(v / 1000 * SR) for v in by_bar], guide_env, kick_env, renders, out, bar, bars)
+    if args.mode in ("legacy", "downbeat"):
+        dest = out / "downbeat" if args.mode == "legacy" else out
+        variants["downbeat"] = variant(cover, [round(v / 1000 * SR) for v in by_down], guide_env, kick_env, renders, dest, bar, bars)
     synth = take(renders["full"], out / "synth-spillway-16bar.wav", bar)
     under = renders["full"] - renders["above"] - renders["keys"] - renders["drums"]
     control = windowed_lags(kick_env, kick_envelope(renders["drums"]), bar, bars, DOWNBEAT_MS, DOWNBEAT_REACH_S)[0]
