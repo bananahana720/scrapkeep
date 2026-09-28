@@ -24,6 +24,7 @@ const AIM_OFFSET := Vector2(34.0, 24.0)
 var game
 var profile
 var available := {}
+var _placed: Array = []
 
 
 func setup(game_ref, profile_ref) -> void:
@@ -82,22 +83,34 @@ func _physics_process(_delta: float) -> void:
 		and (game.player.mobility_started() or not (claim.is_valid() and claim.call(true)))
 
 
-func _process(_delta: float) -> void:
-	queue_redraw()
-
-
-func _draw() -> void:
+# Where each shown glyph sits on screen: [{action, at}]. Redraw only when it changes.
+func _placements() -> Array:
+	var out := []
 	if game == null or not game.flow.in_play():
-		return
+		return out
 	var cam: Camera3D = game.camera.cam
-	var color: Color = EventKinds.UI_ROWS["key_glyph"]["color"]
 	for action in shown(available):
 		var spec: Dictionary = ACTIONS[action]
 		var world: Vector3 = game.player.shown_position() if spec["anchor"] == "ball" else game.player.kit.aim.get("point", Vector3.INF)
 		if world == Vector3.INF or cam.is_position_behind(world):
 			continue
 		var offset: Vector2 = BALL_OFFSET if spec["anchor"] == "ball" else AIM_OFFSET
-		var at := cam.unproject_position(world) + offset
+		out.append({"action": action, "at": cam.unproject_position(world) + offset})
+	return out
+
+
+func _process(_delta: float) -> void:
+	var now := _placements()
+	if now != _placed:
+		_placed = now
+		queue_redraw()
+
+
+func _draw() -> void:
+	var color: Color = EventKinds.UI_ROWS["key_glyph"]["color"]
+	for placed in _placed:
+		var spec: Dictionary = ACTIONS[placed["action"]]
+		var at: Vector2 = placed["at"]
 		var cap := Keycap.draw(self, at, spec["key"], color, KEY_H)
 		var icon := Rect2(Vector2(cap.end.x + 5.0, at.y - KEY_H * 0.45), Vector2(KEY_H * 0.9, KEY_H * 0.9))
 		draw_texture_rect(Icons.texture(spec["icon"]), icon, false, Icons.tint(spec["icon"], color))
