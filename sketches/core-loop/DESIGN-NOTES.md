@@ -1006,4 +1006,6 @@ ACE costs less than the synth band it replaces, because the muted synth skips it
 
 **Open for Andrew.** The breath default is `hard` because the brief asked for it, and it makes the Warden opening unmistakable. Andrew's slight pack-3 favourite, Y3, is the raw breath. Under raw the open measures within 0.1 dB of the build, so as an audio cue it barely reads. Pick the default after play: flip B mid-fight to compare.
 
+**Open for Andrew: the launch cuts the set piece.** In the drop-mode lapper bounce, the killing drop and the break land together at 34.1 s. The break waits for the drop's 4 bars. The bot launches at 39.85 s, before the break enters, so the directed piece is not heard. Before this fix it played on over stage 2 for 22 s with the synth muted. One of these could keep both: (a) the break takes over at the killing drop's next bar instead of its end; (b) the piece plays as the flight's soundtrack and hands over at the landing drop; or (c) keep the current behaviour.
+
 **Evidence limit.** Headless tests and the bounce show the transport and the levels. Whether the music carries the fight, and whether the open reads as a cue from the lift, is Andrew's sitting.
