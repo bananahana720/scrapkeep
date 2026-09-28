@@ -15,6 +15,9 @@ import rig_pilot as rig
 PILOT=sys.argv[sys.argv.index('--')+1]
 assert PILOT in ('rivet','sable','kest')
 OUT=rig.ROOT/'artifacts/anim-pilot'/(PILOT if PILOT!='rivet' else '')
+RETIME='--retime' in sys.argv
+if RETIME:
+    OUT=rig.ROOT/'artifacts/anim-pilot/retime'/PILOT
 GLB=HERE.parents[1]/f'assets/models/pilot_{PILOT}_anim.glb'
 MANIFEST=json.loads((OUT/'rig-manifest.json').read_text())
 
@@ -52,8 +55,11 @@ def main():
     times=[doc['accessors'][s['input']] for s in doc['animations'][0]['samplers']]
     start=min(a['min'][0] for a in times)
     end=max(a['max'][0] for a in times)
-    assert abs(start)<1e-6 and abs(end-1.1)<1e-5,(start,end)
+    expected=json.loads((OUT/'timing.json').read_text()) if RETIME else {'duration_seconds':1.1}
+    assert abs(start)<1e-6 and abs(end-expected['duration_seconds'])<1e-5,(start,end)
     rows=json.loads((HERE/f'{PILOT}-drop-poses.json').read_text())['rows']
+    if RETIME:
+        rows=[dict(row,frame=frame) for row,frame in zip(rows,expected['key_frames'])]
     bpy.ops.wm.open_mainfile(filepath=str(OUT/f'{PILOT}-drop.blend'))
     original=[bpy.data.objects[n] for n in MANIFEST['mesh_nodes']]
     source={}
@@ -73,8 +79,10 @@ def main():
         errors.append({'key':row['key'],'frame':row['frame'],'hausdorff_distance':error})
     worst=max(e['hausdorff_distance'] for e in errors)
     skeleton=next(o for o in bpy.context.scene.objects if o.type=='ARMATURE')
+    assert max(abs(v-1) for v in skeleton.scale)<1e-6,tuple(skeleton.scale)
     radius=0;drift=0
-    for half in range(67):
+    samples=round(end*60)+1
+    for half in range(samples):
         frame=half/2
         bpy.context.scene.frame_set(int(frame),subframe=frame%1)
         bpy.context.view_layer.update()
@@ -88,7 +96,8 @@ def main():
              'pilot':PILOT,'animation':'drop_land','start_seconds':start,'end_seconds':end,
              'skins':1,'joints':25,'triangles':tris,'channels':len(doc['animations'][0]['channels']),
              'reimport_meshes':len(imported),'pose_geometry_errors':errors,
-             'reimport_max_radius_67_samples':radius,'reimport_pelvis_max_drift':drift,'bone_hierarchy_matches':True,
+             'reimport_max_radius':radius,'reimport_samples':samples,'rig_scale':list(skeleton.scale),
+             'reimport_pelvis_max_drift':drift,'bone_hierarchy_matches':True,
              'max_pose_error':worst,'tolerance':.0001,'pass':worst<.0001}
     (OUT/'glb-verification.json').write_text(json.dumps(receipt,indent=2)+'\n')
     assert worst<.0001,receipt

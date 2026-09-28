@@ -108,12 +108,13 @@ def author_table(arm,pilot,out):
     return rows
 
 
-def check(arm,meshes,rows,out):
+def check(arm,meshes,rows,out,pilot=None):
     scene=bpy.context.scene
     anchor=arm.data.bones['pelvis'].head_local
     radius=0; drift=0; worst=None
     # Half-frame samples catch interpolation problems between authored poses.
-    for half in range(2,69):
+    end = scene.frame_end
+    for half in range(2,end*2+1):
         frame=half/2
         scene.frame_set(int(frame),subframe=frame%1)
         bpy.context.view_layer.update()
@@ -128,16 +129,16 @@ def check(arm,meshes,rows,out):
     assert radius<.98,(radius,worst)
     for obj in meshes:
         assert all(len(v.groups)==1 and abs(v.groups[0].weight-1)<1e-6 for v in obj.data.vertices)
-    scene.frame_set(34)
+    scene.frame_set(end)
     grips={s:(arm.pose.bones['hand.'+s].head-Vector((sign*.32,.4,.05))).length for s,sign in [('R',1),('L',-1)]}
     assert max(grips.values())<1e-6,grips
-    report={'action':'drop_land','fps':30,'duration_seconds':1.1,'key_frames':FRAMES,'samples':67,
+    report={'action':'drop_land','fps':30,'duration_seconds':(end-1)/30,'key_frames':[r['frame'] for r in rows],'samples':end*2-1,
             'pelvis_max_drift':drift,'max_vertex_radius':radius,'worst_radius_sample':worst,'hull_radius':.98,
             'settle_grip_error':grips,'bones':len(arm.data.bones),'triangles':sum(common.tris(o) for o in meshes),
             'mesh_nodes':[o.name for o in meshes],'rig_node':arm.name,'all_vertices_rigid_weighted':True}
-    if out.name=='kest':
+    if (pilot or out.name)=='kest':
         from pilot_kest_poses import contact, FEATHER_TIP
-        scene.frame_set(22)
+        scene.frame_set(rows[11]['frame'])
         bpy.context.view_layer.update()
         b=arm.pose.bones['hand.R']
         tip=b.matrix@b.bone.matrix_local.inverted()@FEATHER_TIP
@@ -189,7 +190,33 @@ def render(arm,meshes,root,rows,out,pilot,draft=False):
 
 def main():
     args=sys.argv[sys.argv.index('--')+1:]
-    pilot=args[0];assert pilot in ('sable','kest')
+    pilot=args[0];assert pilot in ('rivet','sable','kest')
+    if '--retime' in args:
+        import pilot_drop_timing as timing
+        out=rig.ROOT/'artifacts/anim-pilot/retime'/pilot
+        arm,meshes,root=rig.build(pilot,out=out)
+        reference=rig.ROOT/'artifacts/anim-pilot'/(pilot if pilot!='rivet' else '')
+        rows=json.loads((HERE/f'{pilot}-drop-poses.json').read_text())['rows']
+        timing.action(arm,rows,pilot,reference,shared.apply_row)
+        timed=[dict(row,frame=frame) for row,frame in zip(rows,timing.FRAMES[pilot])]
+        # Compare every authored bone value at its new key before export.
+        max_error=0
+        for row in timed:
+            bpy.context.scene.frame_set(row['frame'])
+            for name,pose in row['bones'].items():
+                bone=arm.pose.bones[name]
+                for actual,expected in ((bone.rotation_euler,[math.radians(v) for v in pose['rotation_degrees_xyz']]),
+                                        (bone.location,pose['location']),(bone.scale,pose['scale'])):
+                    max_error=max(max_error,max(abs(a-b) for a,b in zip(actual,expected)))
+        assert max_error<1e-5,max_error
+        report=timing.receipt(pilot)
+        report['max_authored_bone_value_error']=max_error
+        (out/'timing.json').write_text(json.dumps(report,indent=2)+'\n')
+        check(arm,meshes,timed,out,pilot)
+        export(arm,meshes,pilot)
+        bpy.ops.wm.save_as_mainfile(filepath=str(out/f'{pilot}-drop.blend'))
+        return
+    assert pilot in ('sable','kest')
     arm,meshes,root=rig.build(pilot)
     out=rig.OUT;shared.OUT=out
     rows=author_table(arm,pilot,out) if '--author' in args else json.loads((HERE/f'{pilot}-drop-poses.json').read_text())['rows']
