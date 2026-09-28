@@ -10,6 +10,7 @@ Pack 4 plays one span of each combination:
     PY=/home/andrew/Projects/music-video/.venv/bin/python
     $PY pack4.py excerpts <slice>        # round2/pack4/<track>/, automation/open-gentle.json, excerpts.json
     $PY pack4.py pack <slice> <dest>     # Z1..Z5 shuffled, WAV and Opus, .key.json, README.txt
+    $PY pack4.py rekey <slice> <dest>    # rewrite .key.json from excerpts.json, same Z labels, audio checked unchanged
 
 The span is timeline.json's pivot, warden-1 build, telegraph, open and drop, then the first 4 bars
 of warden-2's build (the timeline's jump back to build bar 9). Each track is cut from the full
@@ -33,7 +34,11 @@ lowers its whole-build reference), and the drop's loudness rise over the open. C
 pack3.clicks' one-sample-jump ratio. The window at an automation edge runs from 12 ms before
 the ramp starts to 12 ms after the edge, so it covers both ends of a 60 ms ramp. That ratio is
 compared with the worst one at the excerpt's bar lines. The negative control is each automated
-track switched in one sample.
+track switched in one sample. Both edges fall on bar-line downbeats, so the detector can miss even
+that switch; a track's clicks.passes is true or false only where it flagged the negative, and null
+otherwise, with ramp_evidence (read from the gain curves: ramp length and largest one-sample gain
+step) as the structural record. kick_attribution measures the automation's own kick-band dip
+pre-master, against the take's unautomated stem sum, per stem, and for gentle across bass levels.
 """
 
 import hashlib
@@ -100,7 +105,7 @@ def span(plan):
     return a, b, dict(states=states, total_frames=b - a)
 
 
-def gentle_mix(stems, plan, profile=GENTLE, ramp_in=GENTLE_IN, ramp_out=GENTLE_OUT):
+def gentle_curves(plan, profile=GENTLE, ramp_in=GENTLE_IN, ramp_out=GENTLE_OUT):
     """Per-stem gain and low-pass wet curves: the given profile in every state pack3.STATE_PROFILE
     marks as the breath, full elsewhere. A linear ramp ends on each edge; ramp_in into the breath,
     ramp_out out of it."""
@@ -122,6 +127,11 @@ def gentle_mix(stems, plan, profile=GENTLE, ramp_in=GENTLE_IN, ramp_out=GENTLE_O
             before, after = arr[e - 1], arr[e]
             if before != after:
                 arr[e - edge:e] = np.linspace(before, after, edge + 1)[:-1]
+    return gain, wet
+
+
+def gentle_mix(stems, plan, profile=GENTLE, ramp_in=GENTLE_IN, ramp_out=GENTLE_OUT):
+    gain, wet = gentle_curves(plan, profile, ramp_in, ramp_out)
     out = 0
     for s in p3.STEMS:
         y = stems[s]
@@ -131,6 +141,76 @@ def gentle_mix(stems, plan, profile=GENTLE, ramp_in=GENTLE_IN, ramp_out=GENTLE_O
             y = y * (1 - wet[s][:, None]) + sosfilt(lp, y, axis=0) * wet[s][:, None]
         out = out + y * gain[s][:, None]
     return out
+
+
+def automated(stems, plan, automation, instant=False):
+    """The automation's per-stem output and its gain and wet curves; their sum is mix()'s
+    (hard term by term as pack3.mix_stems, gentle as gentle_mix)."""
+    if automation == 'hard':
+        gain, w, _ = p3.curves(plan, 1 if instant else p3.EDGE)
+        wet = {s: w if s == 'other' else np.zeros_like(w) for s in p3.STEMS}
+        lp = {'other': p3.LOWPASS}
+    else:
+        gain, wet = gentle_curves(plan, ramp_in=1, ramp_out=1) if instant else gentle_curves(plan)
+        lp = {s: butter(GENTLE[s].get('lowpass_order', 2), GENTLE[s]['lowpass_hz'], 'low', fs=SR, output='sos')
+              for s in p3.STEMS if GENTLE[s]['lowpass_hz']}
+    parts = {}
+    for s in p3.STEMS:
+        y = stems[s]
+        if s in lp:
+            y = y * (1 - wet[s][:, None]) + sosfilt(lp[s], y, axis=0) * wet[s][:, None]
+        parts[s] = y * gain[s][:, None]
+    return parts, gain, wet
+
+
+def ramp_evidence(gain, wet, a, sub, ramp_in, ramp_out):
+    """From the gain and wet curves, not the audio: at the open's two edges, how many samples the
+    curves move over and their largest one-sample step. A linear ramp of n samples between levels
+    g0 and g1 steps |g1 - g0| / n per sample; an instant switch steps the whole change at once."""
+    st = {s['state']: s for s in sub['states']}
+    rows = {}
+    for name, state, ramp in (('open', 'warden-1:open', ramp_in), ('drop', 'warden-1:drop', ramp_out)):
+        e = a + st[state]['out_start']
+        lo, hi = e - 4 * ramp, e + 4 * ramp
+        steps = [np.abs(np.diff(c[lo:hi])) for c in [*gain.values(), *wet.values()]]
+        moving = max(int((s > 0).sum()) for s in steps)
+        rows[name] = dict(ramp_samples=moving, ramp_ms=round(moving / SR * 1000, 2),
+                          largest_one_sample_gain_step=round(float(max(s.max() for s in steps)), 5))
+    return rows
+
+
+def kick_attribution(parts, raw_parts, a, b, sub, ramp_out):
+    """Pre-master, in the open less its closing ramp: the three-stem sum's kick band (< 120 Hz)
+    after the automation against the same sum unautomated (the dip the automation alone makes,
+    with no master gain in it), each stem's likewise, and each unautomated stem's kick band
+    against the unautomated sum's."""
+    o = {s['state']: s for s in sub['states']}['warden-1:open']
+    lo, hi = o['out_start'], o['out_start'] + o['frames'] - ramp_out
+
+    def low(y):
+        return sosfiltfilt(p3.KICK_BAND, y[a:b].mean(axis=1))[lo:hi]
+    auto_low = {s: low(parts[s]) for s in p3.STEMS}
+    raw_low = {s: low(raw_parts[s]) for s in p3.STEMS}
+    raw_sum = rms_db(sum(raw_low.values()))
+    row = dict(open_kick_dip_vs_unautomated_stems_db=round(rms_db(sum(auto_low.values())) - raw_sum, 1),
+               per_stem_dip_db={s: round(rms_db(auto_low[s]) - rms_db(raw_low[s]), 1) for s in p3.STEMS},
+               unautomated_stem_kick_vs_sum_db={s: round(rms_db(raw_low[s]) - raw_sum, 1) for s in p3.STEMS})
+    return row, (auto_low, raw_low, raw_sum)
+
+
+def rms_db(x):
+    return db(np.sqrt(np.mean(x ** 2)))
+
+
+def bass_sweep(auto_low, raw_low, raw_sum):
+    """The gentle breath's pre-master kick-band dip with drums and other as specified and the bass
+    at 0 to -40 dB or muted. The kick band is linear in each stem's gain, so this is exact for the
+    open's body; it only asks what bass level a deeper dip would need, and changes nothing."""
+    rows = {}
+    for v in [*range(0, -41, -2), None]:
+        g = 0.0 if v is None else 10 ** (v / 20)
+        rows['muted' if v is None else str(v)] = round(rms_db(auto_low['drums'] + auto_low['other'] + raw_low['bass'] * g) - raw_sum, 1)
+    return rows
 
 
 def mix(take, plan, automation, instant=False):
@@ -185,7 +265,21 @@ def clicks(y, sub, ramp_in, ramp_out):
     drop_spike = spike(out - ramp_out - reach, out + reach)
     return dict(open_edge_spike=round(open_spike, 1), drop_edge_spike=round(drop_spike, 1),
                 bar_line_max_spike=round(max(music), 1), bar_line_p95_spike=round(float(np.quantile(music, .95)), 1),
-                passes=bool(max(open_spike, drop_spike) <= max(music)))
+                below_bar_max=bool(max(open_spike, drop_spike) <= max(music)))
+
+
+def click_verdict(measured, negative):
+    """passes is True or False only where the detector flagged the instant-switch negative, so it
+    can tell a switch from the music at these edges; None where it could not (both edges fall on
+    bar-line downbeats, whose own jumps can hide a switch) or where no automation edge exists."""
+    if negative is None:
+        return dict(passes=None, verdict='no automation edge: the take plays contiguous source through the open and the drop')
+    if negative['below_bar_max']:
+        return dict(passes=None, verdict='inconclusive: the one-sample-jump detector did not flag the instant-switch '
+                                         'negative at these downbeat edges; see ramp_evidence for the structural record')
+    if measured['below_bar_max']:
+        return dict(passes=True, verdict='pass: the detector flagged the instant-switch negative and not the ramped edges')
+    return dict(passes=False, verdict='fail: a ramped edge scores above the worst bar line')
 
 
 def write_gentle(slice_dir):
@@ -249,13 +343,64 @@ def excerpts(slice_dir):
                      packed=(label, take, auto) in TRACKS,
                      arc=arc1(mastered, sub, ramps['ramp_out']), clicks=clicks(mastered, sub, ramps['ramp_in'], ramps['ramp_out']),
                      wav=str(dest / name / f'{name}.wav'), seconds=round(len(mastered) / SR, 2), master=loud)
+        negative = None
         if auto in ('hard', 'gentle'):
             instant = mix(t, plan, auto, instant=True)[a:b] * fade
-            entry['clicks_negative_instant'] = clicks(instant, sub, 1, 1)
+            negative = entry['clicks_negative_instant'] = clicks(instant, sub, 1, 1)
+            parts, gain, wet = automated(t['stems'], plan, auto)
+            entry['parts_sum_vs_mix_max_abs_diff'] = float(np.abs(sum(parts.values()) - mix(t, plan, auto)).max())
+            entry['ramp_evidence'] = ramp_evidence(gain, wet, a, sub, ramps['ramp_in'], ramps['ramp_out'])
+            _, gain1, wet1 = automated(t['stems'], plan, auto, instant=True)
+            entry['ramp_evidence_negative_instant'] = ramp_evidence(gain1, wet1, a, sub, 1, 1)
+            entry['kick_attribution'], lows = kick_attribution(parts, t['stems'], a, b, sub, ramps['ramp_out'])
+            if auto == 'gentle':
+                entry['kick_attribution']['bass_sweep_dip_db'] = bass_sweep(*lows)
+        entry['clicks'].update(click_verdict(entry['clicks'], negative))
         report['tracks'][label] = entry
         print(label, entry['arc'], entry['clicks'], loud['lufs_after'], loud['true_peak_dbtp'], loud['opus']['true_peak_dbtp'],
               flush=True)
     (dest / 'excerpts.json').write_text(json.dumps(report, indent=1, default=str))
+
+
+def key_entry(label, entry):
+    return dict(label=label, take=entry['take'], automation=entry['automation'], source_mix=entry['source_mix'],
+                stem_sum_residual_vs_take_db=entry['stem_sum_residual_vs_take_db'],
+                automation_file=entry['automation_file'], source=entry['wav'], arc=entry['arc'],
+                kick_attribution=entry.get('kick_attribution'), clicks=entry['clicks'],
+                clicks_negative_instant=entry.get('clicks_negative_instant'), ramp_evidence=entry.get('ramp_evidence'),
+                master=entry['master'])
+
+
+KEY_NOTES = dict(
+    kick='arc is measured on the master against the track\'s own build. kick_attribution is pre-master against the '
+         'same take\'s unautomated drums+bass+other sum, so it is the automation\'s own dip. The gentle spec '
+         '(drums -12 dB, bass -6 dB, other untouched) gives a mix dip smaller than the drums\' 12 dB, because the '
+         'bass stem, only 6 dB down, carries kick-band energy too (unautomated_stem_kick_vs_sum_db shows each '
+         'stem\'s share); bass_sweep_dip_db shows what a lower bass would give.',
+    clicks='passes is true or false only where the one-sample-jump detector flagged the instant-switch negative. '
+           'It is null where it could not, because both edges fall on bar-line downbeats, and for raw tracks, which '
+           'have no automation edge. ramp_evidence is read from the gain curves: the samples each ramp spans and '
+           'its largest one-sample gain step.')
+
+
+def rekey(slice_dir, dest):
+    """Rewrite dest/.key.json from the current excerpts.json under the pack's existing Z labels,
+    after checking that every packed Z file is still the audio the manifest recorded."""
+    report = json.loads((out_dir(slice_dir) / 'excerpts.json').read_text())
+    manifest = json.loads((out_dir(slice_dir) / 'pack-manifest.json').read_text())['sha256']
+    old = json.loads((dest / '.key.json').read_text())
+    key = dict(_notes=dict(old['_notes'], **KEY_NOTES))
+    for z in sorted(k for k in old if k.startswith('Z')):
+        label = old[z]['label']
+        entry = report['tracks'][label]
+        wav = dest / f'{z}.wav'
+        if hashlib.sha256(wav.read_bytes()).hexdigest() != manifest[wav.name]:
+            raise SystemExit(f'{wav} changed since it was packed')
+        if hashlib.sha256(Path(entry['wav']).read_bytes()).hexdigest() != manifest[wav.name]:
+            raise SystemExit(f'{label} re-rendered to different audio than {wav}; re-pack instead of re-keying')
+        key[z] = key_entry(label, entry)
+    (dest / '.key.json').write_text(json.dumps(key, indent=1))
+    print('re-keyed', len(key) - 1, 'excerpts in', dest, {z: key[z]['label'] for z in key if z != '_notes'})
 
 
 def pack(slice_dir, dest):
@@ -263,7 +408,7 @@ def pack(slice_dir, dest):
     items = [(label, e) for label, e in report['tracks'].items() if e['packed']]
     random.SystemRandom().shuffle(items)
     dest.mkdir(parents=True, exist_ok=True)
-    key = dict(_notes=dict(
+    key = dict(_notes=dict(**KEY_NOTES,
         question='Pack 3 Y2 (s7 hard) and Y3 (s42 raw) differed in the Warden take and in the automation at once; '
                  'these five separate them.',
         span=report['span_states'], seconds=report['seconds'],
@@ -277,10 +422,7 @@ def pack(slice_dir, dest):
             target = dest / f'Z{i}{ext}'
             shutil.copyfile(src.with_suffix(ext), target)
             manifest[target.name] = hashlib.sha256(target.read_bytes()).hexdigest()
-        key[f'Z{i}'] = dict(label=label, take=entry['take'], automation=entry['automation'], source_mix=entry['source_mix'],
-                            stem_sum_residual_vs_take_db=entry['stem_sum_residual_vs_take_db'],
-                            automation_file=entry['automation_file'], source=str(src), arc=entry['arc'],
-                            clicks=entry['clicks'], master=entry['master'])
+        key[f'Z{i}'] = key_entry(label, entry)
     (dest / '.key.json').write_text(json.dumps(key, indent=1))
     (dest / 'README.txt').write_text(README)
     (out_dir(slice_dir) / 'pack-manifest.json').write_text(json.dumps(dict(dest=str(dest), sha256=manifest), indent=1))
@@ -294,5 +436,7 @@ if __name__ == '__main__':
         excerpts(args[0])
     elif cmd == 'pack' and len(args) == 2:
         pack(*args)
+    elif cmd == 'rekey' and len(args) == 2:
+        rekey(*args)
     else:
         sys.exit(__doc__)
