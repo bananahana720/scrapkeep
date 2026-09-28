@@ -40,7 +40,7 @@ The 24 immutable ribbon meshes are prepared during startup. In a paired headless
 
 The retained pre-reuse gorge dense encounter at `cf2363e31ffe9864262297d1c6d98711d70ff9cd` measured **14.223 ms p99** over **120.000572 seconds** at an actual rendered **1920×1080**, using Forward+ on the RTX 4080. It kept 42–48 enemies active with a grown player. This is one staged scenario, not full-run or human-feel acceptance.
 
-The first post-reuse run was interrupted during a session restart. Its screenshot survives, but no timing receipt does. Separately, a music-video generation process was observed at 99% GPU utilization. That process belongs to another session and was left running. No after-change performance verdict is claimed from the interrupted run.
+The first post-reuse run was interrupted during a session restart. Its screenshot survives, but no timing receipt does. Andrew later clarified that Claude’s roughly three-minute, vsync-off capture contributed to the observed 100% GPU load; a separate music-video image-generation Python job was also resident. The observed load cannot be attributed entirely to either job. Both sessions were left alone. No after-change performance verdict is claimed from the interrupted run.
 
 The Warden captures are short visual inspections under competing GPU load, explicitly ineligible for performance qualification. Final 120-second after-change traversal, dense-grown and boss scenarios remain pending. No after-change FPS gain or target pass is claimed.
 
@@ -53,3 +53,7 @@ W8 is not included in the supplied base. Preserve its workshop node in `_ready` 
 Claude retains the canonical design documents, contracts, tracking and playtest log. `Palette.ANCIENT` is now available for its remaining call-site substitutions in roster, map_gorge, event_kinds and contraptions. No sibling design branch was merged.
 
 The [fidelity gaps](FIDELITY-GAPS.md) remain explicit. The atlas provides direction; the current game does not yet match its sculpting, material depth or every motion sequence.
+
+### Preflight for the next measurement
+
+Every 120-second run now checks the GPU before desktop startup and again immediately before game launch. Each check takes three samples one second apart and requires no GPU processes beyond the resident desktop/UI clients, with aggregate utilization at most 5% in every sample. Missing telemetry blocks launch. The local runner saves process identities and load samples in `gpu-preflight-before-desktop.json` and `gpu-preflight-before-launch.json`. This prevents starting against a known competing capture or Python job; it does not guarantee that another job cannot start afterward.
