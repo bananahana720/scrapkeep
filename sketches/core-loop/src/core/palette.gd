@@ -27,18 +27,21 @@ static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> Imag
 
 
 # Neutral painted value variation multiplies the existing surface-role vertex tint.
-static func painted_texture(size := 256) -> ImageTexture:
+static func painted_texture(size := 256, ground := false) -> ImageTexture:
 	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
 	var noise := FastNoiseLite.new()
 	noise.seed = 270927
-	noise.frequency = 0.027
-	noise.fractal_octaves = 3
+	noise.frequency = 0.014 if ground else 0.027
+	noise.fractal_octaves = 1 if ground else 3
 	for y in size:
 		for x in size:
 			var broad := noise.get_noise_2d(x, y)
-			var brush := noise.get_noise_2d(x * 1.8 + 73.0, y * 7.0)
-			var grain := noise.get_noise_2d(x * 9.0, y * 9.0)
-			var value := clampf(0.87 + broad * 0.16 + brush * 0.055 + grain * 0.025, 0.66, 1.0)
+			var value := 0.94 + broad * 0.08
+			if not ground:
+				var brush := noise.get_noise_2d(x * 1.8 + 73.0, y * 7.0)
+				var grain := noise.get_noise_2d(x * 9.0, y * 9.0)
+				value = 0.87 + broad * 0.16 + brush * 0.055 + grain * 0.025
+			value = clampf(value, 0.66, 1.0)
 			image.set_pixel(x, y, Color(value, value, value))
 	image.generate_mipmaps()
 	return ImageTexture.create_from_image(image)
@@ -46,7 +49,7 @@ static func painted_texture(size := 256) -> ImageTexture:
 
 static func ground_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = painted_texture()
+	mat.albedo_texture = painted_texture(256, true)
 	mat.vertex_color_use_as_albedo = true
 	mat.uv1_triplanar = true
 	mat.uv1_scale = Vector3(0.045, 0.045, 0.045)

@@ -316,7 +316,7 @@ func _build_sky(parent: Node3D) -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
 	sun.light_energy = 1.15
-	sun.light_color = Palette.SAND.lerp(Color.WHITE, 0.65)
+	sun.light_color = Palette.AMBER.lerp(Color.WHITE, 0.45)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 260.0
 	parent.add_child(sun)

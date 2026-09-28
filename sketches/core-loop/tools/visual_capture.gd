@@ -17,6 +17,7 @@ var samples := 1800
 var finished := false
 var metadata := {}
 var started_usec := 0
+var inspection_camera: Camera3D
 
 
 func _initialize() -> void:
@@ -24,7 +25,7 @@ func _initialize() -> void:
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
 	if DisplayServer.get_name() == "headless" or not settings.has("out"):
-		printerr("visual_capture requires a rendered display and -- --out=<absolute directory> [--class=0|1|2] [--mode=dense|pilots] [--samples=1800]")
+		printerr("visual_capture requires a rendered display and -- --out=<absolute directory> [--class=0|1|2] [--mode=dense|pilots] [--samples=1800] [--azimuth=35]")
 		quit(2)
 		return
 	started_usec = Time.get_ticks_usec()
@@ -54,6 +55,8 @@ func _initialize() -> void:
 
 
 func _process(_delta: float) -> bool:
+	if inspection_camera != null and not finished:
+		_place_inspection_camera()
 	if started_usec > 0 and not finished and Time.get_ticks_usec() - started_usec > 90_000_000:
 		metadata["timed_out"] = true
 		_finish()
@@ -80,13 +83,11 @@ func _physics_process(_delta: float) -> bool:
 		game.run.set_max_hp(999999.0)
 		game.player.source = source
 		if settings.get("mode", "dense") == "pilots":
-			var camera := Camera3D.new()
-			game.add_child(camera)
-			var at: Vector3 = game.player.shown_position()
-			camera.global_position = at + Vector3(2.3, 1.2, -3.3)
-			camera.look_at(at + Vector3(0, 0.05, 0))
-			camera.fov = 42.0
-			camera.current = true
+			inspection_camera = Camera3D.new()
+			game.add_child(inspection_camera)
+			inspection_camera.fov = 42.0
+			inspection_camera.current = true
+			_place_inspection_camera()
 			game.hud.visible = false
 			game.player.body().freeze = true
 		return false
@@ -99,6 +100,18 @@ func _physics_process(_delta: float) -> bool:
 				var at: Vector3 = game.player.ball_position() + Vector3(cos(angle), 0, sin(angle)) * (12.0 + i % 4 * 3.0)
 				game.ctx.spawner.spawn_enemy("lobber" if i % 3 == 0 else "chaser", game.ctx.terrain.drop_point(at.x, at.z, 1.2))
 	return false
+
+
+func _place_inspection_camera() -> void:
+	var fitted: Dictionary = game.presentation.hero_assets.shell_of(game.player)
+	var pod := fitted.get("pod") as Node3D
+	if pod == null:
+		return
+	var azimuth := deg_to_rad(float(settings.get("azimuth", "35")))
+	var offset := Vector3(sin(azimuth) * 4.0, 1.2, -cos(azimuth) * 4.0)
+	var at: Vector3 = game.player.shown_position()
+	inspection_camera.global_position = at + pod.global_basis * offset
+	inspection_camera.look_at(at + Vector3(0, 0.05, 0))
 
 
 func _frame_drawn() -> void:
