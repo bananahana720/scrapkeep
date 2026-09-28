@@ -24,7 +24,10 @@ const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+# The v3 fun lab's loop_mode switch and the roster row fleet.gd's own
+# reinforcement-pack system reads (M0's "adds" classification).
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
@@ -98,6 +101,36 @@ const STRIKE_DAMAGE := {
 	"slam": [0.0, 1.2],
 }
 
+# M0: delivered-damage baseline and provenance (design-v3/STRATEGY-SPINE.md §7 row M0,
+# §8 row 1). strike() is the one place a hit becomes damage (TADR-008), so it is the
+# one place the ledger is written; no double counting is possible across combat.gd and
+# enemy.gd because enemy.take_damage() only ever returns the HP it actually removed,
+# clamped to what was left (overkill), and never records anything itself.
+# Range buckets are metres from the ball at the moment of the hit; near/mid match a
+# weapon's close reach and mid-fight spacing, not measured play data yet.
+const RANGE_NEAR_M := 6.0
+const RANGE_MID_M := 16.0
+# source: weapon (fired bolts, chains); ram_or_contact (a ball contact, a pin, a batted
+# shell); drop_or_slam (the slam contact kind, or any contact warden_drop.gd's rule
+# judged a drop, whatever its kind); special (a gauge release); item_proc (a build
+# synergy, an element-field proc, an upgrade-tree proc or timed upgrade); persistent_actor
+# (a standing structure's own attack, e.g. the Sentry Post). Any strike() call from
+# outside this file (build.gd, element_field.gd) that does not name its source falls
+# through to item_proc: SEAMS.md says those strikes are never the player's own weapon
+# fire or gauge release, both of which always tag themselves below.
+# target_class: enemy (a v1 kind or the v2 Fleet roster's own field population), Warden,
+# adds (a Fleet reinforcement pack, fleet.gd's own name for it), boss (Brindle) or
+# boss_adds (something spawned while ctx.flow.in_arena is true, e.g. Brindle's
+# drone-dropped lobbers; boss.gd is out of this unit's allowed files, so the tag comes
+# from spawn provenance in spawn_enemy() below, not a caller-set flag). Fleet-roster
+# kinds keep "adds" (fleet.gd calls its own spawns "reinforcement packs", asserted in
+# _target_class_of_kind against Roster.is_reinforcement rather than left as an implicit
+# complement of KINDS, review finding 3, fix round 2, confirmed rather than renamed: see
+# that function for the evidence). cache (the vault: static, never attacks, never moves)
+# is its own class, not "enemy" (finding 3, fix round 1).
+# "Scenery" is excluded by construction: a piece that cannot be hit (boss_target.gd's
+# world-layer wrecked hull) never reaches strike() to begin with.
+
 var ctx
 var fleet
 var bolts
@@ -117,6 +150,26 @@ var deflections := 0
 # Codex ids discovered this run, in order, with where (also sent to ctx.codex).
 var discovered := {}
 var discovery_log: Array = []
+# M0's delivered-damage ledger, reset on run_started only (a per-run measure; a stage
+# retry does not clear it). Mirrored onto ctx.run's meta after every change so run_log
+# can read it without a new reference or bus signal. delivered_damage() reads it.
+var _ledger := {}
+# This stage attempt's landed drops (one per warden_drop_landed, however many strikes the
+# landing made) and its damaging stomp and slam hits on the Warden, kept apart so a hit
+# count is never read as a drop count. Reset every attempt (_start_attempt) and
+# snapshotted into _ledger's drops_to_break and warden_slam_hits on beacon_unsealed.
+var _warden_drops := 0
+var _warden_slam_hits := 0
+# Instance ids spawned while ctx.flow.in_arena was true (M0, review fix round 1): the
+# only spawner call reachable there is boss.gd's own drone drop, so this is how a boss
+# add is told apart from an ordinary field enemy without a flag boss.gd would have to
+# set (boss.gd is not in this unit's allowed files). Entries are erased on death.
+var _boss_add_ids := {}
+# A block of hits' source when the kind string alone cannot say it (a discharge, an
+# overdrive blast, an upgrade proc): set right before the calls and restored right after,
+# so a block nested inside another keeps the outer block's tag.
+# strike()'s own `source` argument always wins over this when given.
+var _forced_source := ""
 # Where warden_spec reads a stage other than the current one. A test may swap in any
 # object with of(stage) -> Dictionary.
 var stage_defs = StageDefs
@@ -212,6 +265,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
+	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
 	ctx.events.arc_slammed.connect(func(at: Vector3, _faces: int): effects.ring(at, 12.0, ClassDef.SABLE_COLOR))
 	ctx.events.skid_smashed.connect(func(at: Vector3, _hits: int): effects.ring(at, 4.0, ClassDef.RIVET_COLOR))
@@ -226,7 +280,23 @@ func setup(ctx_ref) -> void:
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
+		_boss_add_ids = {}
+		_reset_ledger()
 		_rebuild_patterns())
+	ctx.events.warden_drop_landed.connect(func(_at: Vector3, _speed: float, _left: int, _segments: int):
+		_warden_drops += 1)
+	ctx.events.beacon_unsealed.connect(func(stage: int):
+		_ledger["drops_to_break"][str(stage)] = _warden_drops if LoopMode.is_drop(ctx.tuning) else null
+		_ledger["warden_slam_hits"][str(stage)] = _warden_slam_hits
+		_warden_drops = 0
+		_warden_slam_hits = 0)
+	# review finding 1, fix round 2: Brindle's parts are never spawned through
+	# spawn_enemy(), so the died-signal retirement path below never sees him; boss_defeated
+	# (already a bus fact, game_events.gd:73 / event_kinds.gd:81, published once by
+	# boss.gd's own _defeat()) is the one signal every boss kill fires, whatever finished
+	# him (the scooter catch or, if a future path lets a hull hit zero the pool directly,
+	# that too), so it is where the "boss" retirement belongs instead.
+	ctx.events.boss_defeated.connect(func(): _record_retirement("boss"))
 	ctx.events.dismounted.connect(func(v: Vector3):
 		if v.length() > 0.1:
 			_since_slingshot = 0.0)
@@ -262,12 +332,21 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 			enemy = Chaser.new()
 	ctx.root.add_child(enemy)
 	enemy.global_position = at
+	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
+	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
+	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
+	if ctx.flow != null and ctx.flow.in_arena:
+		_boss_add_ids[enemy.get_instance_id()] = true
 	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
 	# and the vault are set pieces and always see the ball.
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), fleet.dress(kind, _spec_for(kind)))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
-	enemy.died.connect(func(where: Vector3, scrap: int): ctx.run.record_kill(kind, where, scrap))
+	enemy.died.connect(func(where: Vector3, scrap: int):
+		ctx.run.record_kill(kind, where, scrap)
+		var id := enemy.get_instance_id()
+		_record_retirement(_class_for_id(id, kind))
+		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	ctx.events.enemy_spawned.emit(enemy, kind)
@@ -284,7 +363,7 @@ func build_read() -> Dictionary:
 # out before the damage so a kill never publishes a freed node: enemy_struck always,
 # then strike_deflected when the punch fell short of the plating. `part` names a weak
 # point ("" for the body; a ball contact finds its own through contact_part()).
-func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
+func strike(enemy: Node3D, kind: String, force: float, part := "", source := "") -> void:
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 		return
 	if enemy.has_method("is_dead") and enemy.is_dead():
@@ -293,6 +372,18 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	_detect_before(enemy, kind, result)
 	var outer := _pending
 	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
+	# review finding 1, fix round 2: a Brindle piece's hp is a getter over the boss's one
+	# shared pool (boss_target.gd), and a listener on enemy_struck can remove HP from that
+	# pool synchronously (boss.gd's _on_enemy_struck -> _defeat, the scooter catch) before
+	# take_damage() ever runs, outside take_damage()'s own return-value accounting. Reading
+	# hp before the emit and again after take_damage() catches that removal too, clamped
+	# the same way overkill already is; for every ordinary target this equals what
+	# take_damage() itself returned, so the maxf below never double-counts. hp_after is
+	# floored at 0 before the subtraction: enemy.gd's own take_damage() subtracts past 0
+	# rather than clamping (unlike the removed value it returns and unlike boss.gd's own
+	# floor clamp), so an unclamped delta would read the full overkill swing as "removed"
+	# on every ordinary kill.
+	var hp_before := _hp_of(enemy)
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	if not result["full"]:
 		deflections += 1
@@ -300,10 +391,167 @@ func strike(enemy: Node3D, kind: String, force: float, part := "") -> void:
 	_pending = outer
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
-	enemy.take_damage(result["dealt"])
+	# Hits, not drops: one Rivet skid landing strikes SLAM twice (the shockwave, then the
+	# skid push), so drops come only from warden_drop_landed (see setup()). Counted before
+	# take_damage() because a killing hit unseals the stage (beacon_unsealed, which
+	# snapshots this count) inside it.
+	if kind in ["stomp", "slam"] and float(result["dealt"]) > 0.0 and _target_class(enemy) == "Warden":
+		_warden_slam_hits += 1
+	var removed: float = enemy.take_damage(result["dealt"])
+	if is_instance_valid(enemy):
+		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
 	if result.get("shred", true):
 		_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
+	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source,
+		bool(result.get("drop", false)))
+
+
+# hp is not part of the enemy protocol (README.md), but every implementation carries it
+# (enemy.gd's own var, boss_target.gd's getter over boss.hp); a target without one (the
+# scenery-guard's plain Node3D, which never reaches here because it fails the
+# has_method("take_damage") check above) reads 0.0 and never inflates a delta.
+func _hp_of(enemy: Node3D) -> float:
+	if not is_instance_valid(enemy):
+		return 0.0
+	var v = enemy.get("hp")
+	return float(v) if v != null else 0.0
+
+
+# --- M0: delivered-damage ledger (see the constants above for the categories) --------
+
+# `drop` is resolve()'s own "drop" key: warden_drop.gd's rule sets it on a contact it
+# judged a drop, so a stomp- or ram-kind drop still lands under drop_or_slam.
+func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, drop: bool) -> void:
+	if _ledger.is_empty():
+		_reset_ledger()
+	var source := _classify_source(kind, raw_source, drop)
+	var target_class := _target_class(enemy)
+	_ledger["hits"] = int(_ledger["hits"]) + 1
+	if removed <= 0.0:
+		_ledger["zero_damage_hits"] = int(_ledger["zero_damage_hits"]) + 1
+	_ledger["total"] = float(_ledger["total"]) + removed
+	_ledger["overkill"] = float(_ledger["overkill"]) + maxf(0.0, dealt - removed)
+	_bump(_ledger["by_source"], source, removed)
+	_bump(_ledger["by_action"], kind, removed)
+	_bump(_ledger["by_target_class"], target_class, removed)
+	_bump(_ledger["by_range"], _range_bucket(enemy), removed)
+
+
+func _record_retirement(target_class: String) -> void:
+	if _ledger.is_empty():
+		_reset_ledger()
+	_ledger["retirements"][target_class] = int(_ledger["retirements"].get(target_class, 0)) + 1
+
+
+static func _bump(map: Dictionary, key: String, amount: float) -> void:
+	map[key] = float(map.get(key, 0.0)) + amount
+
+
+func _classify_source(kind: String, explicit: String, drop := false) -> String:
+	if explicit != "":
+		return explicit
+	if kind == SYNERGY:
+		return "item_proc"
+	if drop:
+		return "drop_or_slam"
+	if kind in CONTACT_KINDS:
+		return "drop_or_slam" if kind == "slam" else "ram_or_contact"
+	if kind == "pin" or kind == "shell":
+		return "ram_or_contact"
+	return "item_proc"
+
+
+func _target_class(enemy: Node3D) -> String:
+	return _class_for_id(enemy.get_instance_id(), _spawn_kind_of(enemy))
+
+
+# Boss-add provenance wins over the kind name (finding 2, fix round 1): shared by
+# _target_class (a live strike) and spawn_enemy's died handler (a retirement), so both
+# read the same tag instead of two derivations that could drift apart.
+func _class_for_id(id: int, kind: String) -> String:
+	if _boss_add_ids.has(id):
+		return "boss_adds"
+	return _target_class_of_kind(kind)
+
+
+# The kind an enemy was spawned as: a Fleet unit and the Warden carry it on spec
+# (fleet.dress); the base kinds (chaser, lobber, miniboss, vault) set their own `kind`
+# var instead, since dress() never touches their spec.
+func _spawn_kind_of(enemy: Node3D) -> String:
+	var spec_val = enemy.get("spec")
+	if spec_val is Dictionary and (spec_val as Dictionary).has("kind"):
+		return String((spec_val as Dictionary)["kind"])
+	var k = enemy.get("kind")
+	return String(k) if k != null else ""
+
+
+func _target_class_of_kind(kind: String) -> String:
+	if kind == "warden":
+		return "Warden"
+	if kind.begins_with("brindle_"):
+		return "boss"
+	# The vault (roster.gd role "cache") never moves and never attacks (vault.gd's own
+	# header); it is the one static, non-combatant damageable in the game, so it earns
+	# its own class rather than inflating "enemy" (finding 3, fix round 1).
+	if kind == "vault":
+		return "cache"
+	if kind in KINDS:
+		return "enemy"
+	# review finding 3, fix round 2 (confidence 0.6, evidence a director-composed
+	# mag_trapper landing in "adds"): rejected as a bug, kept as a deliberate reading,
+	# confirmed rather than renamed. spawn_enemy()'s match above only ever builds a v1
+	# KINDS enemy, the Warden, the vault, or a fleet.makes(kind) enemy, so any kind
+	# reaching here is a Fleet SCRIPTS kind, whoever spawned it. fleet.gd's own
+	# reinforcement-pack system (on_spawned, Roster.is_reinforcement, the per-frame batch
+	# it flushes into pack_arrived: "every reinforcement spawned in one physics frame is
+	# one pack") already calls every one of those kinds a reinforcement, director-composed
+	# or not; chaser and lobber, KINDS' only other director-spawned kinds, are not
+	# reinforcements and land in "enemy" above. "adds" names that system, so it is
+	# asserted against Roster.is_reinforcement here instead of left as an implicit
+	# complement of KINDS, so the two names cannot silently drift apart. A kind that is
+	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
+	# counts under "adds" but is warned once rather than counted silently.
+	if not Roster.is_reinforcement(kind):
+		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
+	return "adds"
+
+
+func _range_bucket(enemy: Node3D) -> String:
+	if ctx == null or ctx.player == null:
+		return "far"
+	var d := enemy.global_position.distance_to(ctx.player.ball_position())
+	if d <= RANGE_NEAR_M:
+		return "near"
+	if d <= RANGE_MID_M:
+		return "mid"
+	return "far"
+
+
+func _reset_ledger() -> void:
+	_ledger = {
+		"total": 0.0, "overkill": 0.0, "hits": 0, "zero_damage_hits": 0,
+		"by_source": {}, "by_action": {}, "by_target_class": {}, "by_range": {"near": 0.0, "mid": 0.0, "far": 0.0},
+		"retirements": {}, "drops_to_break": {}, "warden_slam_hits": {},
+	}
+	_warden_drops = 0
+	_warden_slam_hits = 0
+	# review finding 4, fix round 2: a duplicate(true) on every hit is a hot-path
+	# allocation (measured ~36x the rest of a hit's bookkeeping; a multi-target discharge
+	# can spend roughly 0.8 ms of a ~26 ms frame on copies that are thrown away every time
+	# but the run's end). GDScript Dictionaries are references, so publishing this once
+	# and mutating it in place (_bump and friends assign into the same object) keeps
+	# ctx.run's meta current without a copy; run_log._write() reads it once, right before
+	# JSON.stringify serialises the line synchronously, so no caller ever observes a
+	# half-written ledger.
+	if ctx != null and ctx.run != null:
+		ctx.run.set_meta("delivered_damage", _ledger)
+
+
+# Read-only: run_log mirrors this onto ctx.run's meta (delivered_damage) at every
+# change; a test may read it directly.
+func delivered_damage() -> Dictionary:
+	return _ledger
 
 
 # The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
@@ -588,7 +836,7 @@ func _rate(weapon: String) -> float:
 	return rate
 
 
-func _fire(weapon: String) -> void:
+func _fire(weapon: String, source := "weapon") -> void:
 	var p: Resource = _patterns[weapon]
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -611,6 +859,7 @@ func _fire(weapon: String) -> void:
 			"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
 			"chain_falloff": p.chain_falloff, "color": color,
 			"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
+			"source": source,
 		})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
@@ -621,18 +870,18 @@ func _fire(weapon: String) -> void:
 func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -> void:
 	effects.spark(point, bolt["color"])
 	var from: Vector3 = enemy.global_position
-	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"], 0.25, part)
+	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"], 0.25, part, bolt.get("source", "weapon"))
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
 
 
 # One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
-func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, lift := 0.25, part := "") -> void:
+func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, lift := 0.25, part := "", source := "") -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * lift, knock)
 	enemy.flash()
-	strike(enemy, kind, damage, part)
+	strike(enemy, kind, damage, part, source)
 	# Death Mark: a marked enemy that dies here bursts like a charge.
 	var id := enemy.get_instance_id()
 	if _marks.has(id) and enemy.is_dead():
@@ -640,7 +889,8 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 		_marks.erase(id)
 		if live and _knob("mark_burst"):
 			_detonate({"pos": enemy.global_position, "radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"],
-				"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), "crit": false, "born": _clock})
+				"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), "crit": false, "born": _clock,
+				"_source": "item_proc"})
 
 
 # The arc jumps from the struck enemy to the nearest one it has not touched, losing
@@ -656,7 +906,7 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
 		visited.append(next)
 		var to: Vector3 = next.global_position
 		effects.arc(at, to, bolt["color"])
-		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * 0.5)
+		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * 0.5, 0.25, "", bolt.get("source", "weapon"))
 		damage *= bolt["chain_falloff"]
 		at = to
 
@@ -819,7 +1069,10 @@ func _discharge_geometry(f: float) -> Dictionary:
 
 func _fire_discharge(f: float, shape: Dictionary) -> void:
 	var kit = ctx.player.kit
+	var prev_source := _forced_source
+	_forced_source = "special"
 	_discharge(ctx.player.ball_position(), _discharge_speed(f), "turret" if kit.mounted else "arc", shape["centre"])
+	_forced_source = prev_source
 
 
 func _overdrive_geometry(f: float) -> Dictionary:
@@ -829,7 +1082,10 @@ func _overdrive_geometry(f: float) -> Dictionary:
 
 
 func _fire_overdrive(f: float, shape: Dictionary) -> void:
+	var prev_source := _forced_source
+	_forced_source = "special"
 	_overdrive_blast(ctx.player.ball_position(), AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL), shape)
+	_forced_source = prev_source
 
 
 # Point Blank, Rivet's variant: half the radius, double the damage, same gauge.
@@ -841,8 +1097,11 @@ func _point_blank_geometry(f: float) -> Dictionary:
 
 
 func _fire_point_blank(f: float, shape: Dictionary) -> void:
+	var prev_source := _forced_source
+	_forced_source = "special"
 	_overdrive_blast(ctx.player.ball_position(), AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL), shape,
 		Weapons.POINT_BLANK_RADIUS, Weapons.POINT_BLANK_DAMAGE)
+	_forced_source = prev_source
 
 
 func _line_geometry(f: float) -> Dictionary:
@@ -873,14 +1132,15 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 		# Marked: the line tags what it hits, and charges hit tagged targets harder.
 		if _knob("line_marks") > 0.0:
 			_marks[enemy.get_instance_id()] = _clock + _knob("line_marks")
-		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, 0.5)
+		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, 0.5, "", "special")
 		hit += 1
 	# Fuse Line: charges left along the line.
 	var along: int = _knob("line_charges")
 	for i in along:
 		var spot: Vector3 = from.lerp(to, (float(i) + 0.5) / float(along))
-		sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
+		var fuse_charge: Dictionary = sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
 			Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
+		fuse_charge["_source"] = "item_proc"
 	effects.arc(from + Vector3.UP * 0.5, to + Vector3.UP * 0.5, ClassDef.KEST_COLOR)
 	_start_cloak()
 	last_burst = {"at": from, "to": to, "damage": damage, "hit": hit, "kind": "line", "caught": caught.size()}
@@ -894,7 +1154,10 @@ func _on_mounted(at: Vector3, banked_speed: float) -> void:
 	var abilities = ctx.player.abilities
 	if not abilities.cap(AbilityState.SPECIAL, "plant_discharge", false):
 		return
+	var prev_source := _forced_source
+	_forced_source = "special"
 	_discharge(at, banked_speed, "turret", null, 64 if _knob("plant_all") else -1)
+	_forced_source = prev_source
 	ctx.events.special_used.emit(abilities.id_of(AbilityState.SPECIAL), at)
 
 
@@ -1052,7 +1315,8 @@ func _throw_sticky(landing: Vector3) -> void:
 		if count > 1:
 			var angle := TAU * float(i) / float(count)
 			spot = landing + Vector3(cos(angle), 0.0, sin(angle)) * p.bolt_radius
-		sticky.throw(origin, spot, damage, radius, _knob("sticky_fuse"), crit, _knob("sticky_reach"), _clock, _knob("sticky_ride"))
+		var thrown: Dictionary = sticky.throw(origin, spot, damage, radius, _knob("sticky_fuse"), crit, _knob("sticky_reach"), _clock, _knob("sticky_ride"))
+		thrown["_source"] = "weapon"
 	volleys += 1
 	last_shot = {"weapon_id": Weapons.STICKY_CHARGE, "from": origin, "to": landing, "point": landing,
 		"blocked": false, "bolts": count, "volley": volleys, "radius": radius}
@@ -1079,7 +1343,8 @@ func _detonate(charge: Dictionary) -> void:
 			dealt *= _knob("sticky_breach")
 		if _marks.get(enemy.get_instance_id(), -1.0) > _clock:
 			dealt *= Weapons.MARK_BONUS
-		_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"], 0.4)
+		_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"], 0.4,
+			"", charge.get("_source", "weapon"))
 	effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.events.sticky_detonated.emit(at, charge["crit"])
 	_rocket_jump(at)
@@ -1128,8 +1393,9 @@ func _on_demo_slammed(at: Vector3) -> void:
 	for i in count:
 		var angle := turn + TAU * float(i) / float(count)
 		var spot := at + Vector3(cos(angle), 0.0, sin(angle)) * Weapons.MINI_SPREAD * sqrt(scale)
-		sticky.drop(spot, Weapons.MINI_DAMAGE * scale * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS * sqrt(scale),
+		var slam_charge: Dictionary = sticky.drop(spot, Weapons.MINI_DAMAGE * scale * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS * sqrt(scale),
 			linger if linger > 0.0 else Weapons.MINI_FUSE, 0.0 if linger > 0.0 else Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
+		slam_charge["_source"] = "drop_or_slam"
 
 
 # The blink's smoke. Phantom cuts whatever the blink passed through; Smoke Screen
@@ -1140,7 +1406,7 @@ func _on_blink(from: Vector3, to: Vector3) -> void:
 	if _knob("blink_cut"):
 		for enemy in get_tree().get_nodes_in_group("enemy"):
 			if not enemy.is_dead() and in_line(from, to, Weapons.BLINK_CUT_WIDTH, enemy.global_position, _hull(enemy)):
-				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, 8.0, 0.3)
+				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, 8.0, 0.3, "", "item_proc")
 	if _knob("smoke_cloud") > 0.0:
 		_cloud = {"at": from, "left": _knob("smoke_cloud")}
 
@@ -1222,14 +1488,11 @@ func _on_proc_fact(kind: String) -> void:
 func _proc_actions() -> Dictionary:
 	var abilities = func(): return ctx.player.abilities
 	return {
-		"discharge": func(scale: float): _discharge(ctx.player.ball_position(), scale * Weapons.DISCHARGE_FULL_SPEED, "arc"),
-		"blast": func(scale: float): _overdrive_blast(ctx.player.ball_position(), scale, {}, 1.0, 1.0, false),
+		"discharge": _proc_discharge,
+		"blast": _proc_blast,
 		"volley": _proc_volley,
 		"charge": _proc_charges,
-		"detonate": func(scale: float): _detonate({"pos": _floor_at(ctx.player.ball_position()),
-			"radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"] * scale,
-			"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE) * scale,
-			"crit": false, "born": _clock}),
+		"detonate": _proc_detonate,
 		"grant_special": func(_scale: float): abilities.call().grant(AbilityState.SPECIAL),
 		"grant_move": func(_scale: float): abilities.call().grant(AbilityState.MOVEMENT),
 		"refund_special": func(scale: float): abilities.call().refund(AbilityState.SPECIAL, scale),
@@ -1244,7 +1507,29 @@ func _proc_volley(scale: float) -> void:
 	if not _patterns.has(weapon) or ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
 		return
 	for i in int(scale):
-		_fire(weapon)
+		_fire(weapon, "item_proc")
+
+
+# The upgrade-tree proc actions (M0: item_proc, never the player's own gauge release).
+func _proc_discharge(scale: float) -> void:
+	var prev_source := _forced_source
+	_forced_source = "item_proc"
+	_discharge(ctx.player.ball_position(), scale * Weapons.DISCHARGE_FULL_SPEED, "arc")
+	_forced_source = prev_source
+
+
+func _proc_blast(scale: float) -> void:
+	var prev_source := _forced_source
+	_forced_source = "item_proc"
+	_overdrive_blast(ctx.player.ball_position(), scale, {}, 1.0, 1.0, false)
+	_forced_source = prev_source
+
+
+func _proc_detonate(scale: float) -> void:
+	_detonate({"pos": _floor_at(ctx.player.ball_position()),
+		"radius": Weapons.BASE[Weapons.STICKY_CHARGE]["bolt_radius"] * scale,
+		"damage": _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE) * scale,
+		"crit": false, "born": _clock, "_source": "item_proc"})
 
 
 func _proc_charges(scale: float) -> void:
@@ -1253,8 +1538,9 @@ func _proc_charges(scale: float) -> void:
 	for i in count:
 		var angle := TAU * float(i) / float(count)
 		var spot := ground + (Vector3(cos(angle), 0.0, sin(angle)) * Weapons.MINI_SPREAD if count > 1 else Vector3.ZERO)
-		sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
+		var proc_charge: Dictionary = sticky.drop(spot, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
 			Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
+		proc_charge["_source"] = "item_proc"
 
 
 # Upgrades that run on a clock: Anchor Storm, Fortress, Carpet Bomb, the Sentry Post.
@@ -1264,15 +1550,22 @@ func _tick_upgrades(delta: float) -> void:
 	_pulse_left = maxf(0.0, _pulse_left - delta)
 	if _pulse_left <= 0.0:
 		if kit.hooked and _knob("anchor_pulse") > 0.0:
+			var prev_source := _forced_source
+			_forced_source = "item_proc"
 			_discharge(kit.anchor, Weapons.DISCHARGE_FULL_SPEED * 0.2, "arc")
+			_forced_source = prev_source
 			_pulse_left = _knob("anchor_pulse")
 		elif kit.mounted and _knob("mount_pulse") > 0.0:
+			var prev_source := _forced_source
+			_forced_source = "item_proc"
 			_discharge(ctx.player.ball_position(), kit.mount_banked * 0.5, "turret")
+			_forced_source = prev_source
 			_pulse_left = _knob("mount_pulse")
 		elif kit.gliding and _knob("glide_bombs") > 0.0:
 			var ground := _floor_at(ctx.player.ball_position())
-			sticky.drop(ground, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
+			var glide_charge: Dictionary = sticky.drop(ground, Weapons.MINI_DAMAGE * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS,
 				Weapons.MINI_FUSE, Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
+			glide_charge["_source"] = "item_proc"
 			_pulse_left = _knob("glide_bombs")
 	_tick_sentry(delta)
 
@@ -1306,6 +1599,7 @@ func _tick_sentry(delta: float) -> void:
 		"weapon_id": Weapons.PYLON_TURRET, "radius": p.bolt_radius, "knock": p.knock, "chain_jumps": p.chain_jumps,
 		"chain_range": p.chain_range, "chain_falloff": p.chain_falloff, "color": Weapons.color(Weapons.PYLON_TURRET),
 		"wave_amp": 0.0, "wave_hz": 0.0, "phase": 0.0,
+		"source": "persistent_actor",
 	})
 
 
@@ -1537,6 +1831,8 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
+	_warden_drops = 0
+	_warden_slam_hits = 0
 	_cooldown = 0.0
 	_overdrive = 0.0
 	_rocket_left = 0.0
