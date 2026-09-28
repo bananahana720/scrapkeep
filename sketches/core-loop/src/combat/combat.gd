@@ -111,10 +111,8 @@ const STRIKE_DAMAGE := {
 const RANGE_NEAR_M := 6.0
 const RANGE_MID_M := 16.0
 # source: weapon (fired bolts, chains); ram_or_contact (a ball contact, a pin, a batted
-# shell); drop_or_slam (the slam contact kind: Kest's ground pound and a drop-mode
-# landing both "slam" the target; drops_to_break below assumes every slam on the Warden
-# in loop_mode "drop" is that landing, which a later unit should confirm against
-# warden.gd's own hit-kind tagging); special (a gauge release); item_proc (a build
+# shell); drop_or_slam (the slam contact kind, or any contact warden_drop.gd's rule
+# judged a drop, whatever its kind); special (a gauge release); item_proc (a build
 # synergy, an element-field proc, an upgrade-tree proc or timed upgrade); persistent_actor
 # (a standing structure's own attack, e.g. the Sentry Post). Any strike() call from
 # outside this file (build.gd, element_field.gd) that does not name its source falls
@@ -156,17 +154,20 @@ var discovery_log: Array = []
 # retry does not clear it). Mirrored onto ctx.run's meta after every change so run_log
 # can read it without a new reference or bus signal. delivered_damage() reads it.
 var _ledger := {}
-# Hits landed on the Warden this stage attempt whose source classified as drop_or_slam,
-# reset every attempt (_start_attempt) and snapshotted into _ledger.drops_to_break on
-# beacon_unsealed (the Warden's break).
-var _warden_drop_hits := 0
+# This stage attempt's landed drops (one per warden_drop_landed, however many strikes the
+# landing made) and its damaging stomp and slam hits on the Warden, kept apart so a hit
+# count is never read as a drop count. Reset every attempt (_start_attempt) and
+# snapshotted into _ledger's drops_to_break and warden_slam_hits on beacon_unsealed.
+var _warden_drops := 0
+var _warden_slam_hits := 0
 # Instance ids spawned while ctx.flow.in_arena was true (M0, review fix round 1): the
 # only spawner call reachable there is boss.gd's own drone drop, so this is how a boss
 # add is told apart from an ordinary field enemy without a flag boss.gd would have to
 # set (boss.gd is not in this unit's allowed files). Entries are erased on death.
 var _boss_add_ids := {}
 # A block of hits' source when the kind string alone cannot say it (a discharge, an
-# overdrive blast, an upgrade proc): set right before the calls, cleared right after.
+# overdrive blast, an upgrade proc): set right before the calls and restored right after,
+# so a block nested inside another keeps the outer block's tag.
 # strike()'s own `source` argument always wins over this when given.
 var _forced_source := ""
 # Where warden_spec reads a stage other than the current one. A test may swap in any
@@ -282,9 +283,13 @@ func setup(ctx_ref) -> void:
 		_boss_add_ids = {}
 		_reset_ledger()
 		_rebuild_patterns())
+	ctx.events.warden_drop_landed.connect(func(_at: Vector3, _speed: float, _left: int, _segments: int):
+		_warden_drops += 1)
 	ctx.events.beacon_unsealed.connect(func(stage: int):
-		_ledger["drops_to_break"][str(stage)] = _warden_drop_hits if LoopMode.is_drop(ctx.tuning) else null
-		_warden_drop_hits = 0)
+		_ledger["drops_to_break"][str(stage)] = _warden_drops if LoopMode.is_drop(ctx.tuning) else null
+		_ledger["warden_slam_hits"][str(stage)] = _warden_slam_hits
+		_warden_drops = 0
+		_warden_slam_hits = 0)
 	# review finding 1, fix round 2: Brindle's parts are never spawned through
 	# spawn_enemy(), so the died-signal retirement path below never sees him; boss_defeated
 	# (already a bus fact, game_events.gd:73 / event_kinds.gd:81, published once by
@@ -386,6 +391,12 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "")
 	_pending = outer
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
+	# Hits, not drops: one Rivet skid landing strikes SLAM twice (the shockwave, then the
+	# skid push), so drops come only from warden_drop_landed (see setup()). Counted before
+	# take_damage() because a killing hit unseals the stage (beacon_unsealed, which
+	# snapshots this count) inside it.
+	if kind in ["stomp", "slam"] and float(result["dealt"]) > 0.0 and _target_class(enemy) == "Warden":
+		_warden_slam_hits += 1
 	var removed: float = enemy.take_damage(result["dealt"])
 	if is_instance_valid(enemy):
 		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
@@ -409,11 +420,8 @@ func _hp_of(enemy: Node3D) -> float:
 
 # --- M0: delivered-damage ledger (see the constants above for the categories) --------
 
-# `drop` is resolve()'s own "drop" key when present (finding 5, fix round 1): the
-# drop-mode writer's warden_drop.gd tags a landing that broke the drop verdict, which
-# this unit's own kind-only guess (kind == "slam") missed on a stomp-kind drop. The key
-# is absent on this base (only warden_drop.gd sets it, on proto/core-loop-v3-lab), so
-# `drop` reads false here and the kind fallback below is what actually runs.
+# `drop` is resolve()'s own "drop" key: warden_drop.gd's rule sets it on a contact it
+# judged a drop, so a stomp- or ram-kind drop still lands under drop_or_slam.
 func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, drop: bool) -> void:
 	if _ledger.is_empty():
 		_reset_ledger()
@@ -428,14 +436,6 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 	_bump(_ledger["by_action"], kind, removed)
 	_bump(_ledger["by_target_class"], target_class, removed)
 	_bump(_ledger["by_range"], _range_bucket(enemy), removed)
-	# review finding 2, fix round 2: drops_to_break is loop_mode "drop"'s own measure
-	# (spec: "drops-to-break when loop_mode is drop"), so it only counts there; a v2 or
-	# laps stage leaves it null (see beacon_unsealed below), not a misleading 0. A "drop"
-	# is a descending contact landing on the Warden: the smash/skid shockwave tags itself
-	# "slam" (player_ball.gd), but a ball dropping onto the Warden from above tags "stomp"
-	# (player_ball.gd's STOMP), so both count, not just the slam kind alone.
-	if target_class == "Warden" and kind in ["stomp", "slam"] and removed > 0.0 and LoopMode.is_drop(ctx.tuning):
-		_warden_drop_hits += 1
 
 
 func _record_retirement(target_class: String) -> void:
@@ -532,9 +532,10 @@ func _reset_ledger() -> void:
 	_ledger = {
 		"total": 0.0, "overkill": 0.0, "hits": 0, "zero_damage_hits": 0,
 		"by_source": {}, "by_action": {}, "by_target_class": {}, "by_range": {"near": 0.0, "mid": 0.0, "far": 0.0},
-		"retirements": {}, "drops_to_break": {},
+		"retirements": {}, "drops_to_break": {}, "warden_slam_hits": {},
 	}
-	_warden_drop_hits = 0
+	_warden_drops = 0
+	_warden_slam_hits = 0
 	# review finding 4, fix round 2: a duplicate(true) on every hit is a hot-path
 	# allocation (measured ~36x the rest of a hit's bookkeeping; a multi-target discharge
 	# can spend roughly 0.8 ms of a ~26 ms frame on copies that are thrown away every time
@@ -1068,9 +1069,10 @@ func _discharge_geometry(f: float) -> Dictionary:
 
 func _fire_discharge(f: float, shape: Dictionary) -> void:
 	var kit = ctx.player.kit
+	var prev_source := _forced_source
 	_forced_source = "special"
 	_discharge(ctx.player.ball_position(), _discharge_speed(f), "turret" if kit.mounted else "arc", shape["centre"])
-	_forced_source = ""
+	_forced_source = prev_source
 
 
 func _overdrive_geometry(f: float) -> Dictionary:
@@ -1080,9 +1082,10 @@ func _overdrive_geometry(f: float) -> Dictionary:
 
 
 func _fire_overdrive(f: float, shape: Dictionary) -> void:
+	var prev_source := _forced_source
 	_forced_source = "special"
 	_overdrive_blast(ctx.player.ball_position(), AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL), shape)
-	_forced_source = ""
+	_forced_source = prev_source
 
 
 # Point Blank, Rivet's variant: half the radius, double the damage, same gauge.
@@ -1094,10 +1097,11 @@ func _point_blank_geometry(f: float) -> Dictionary:
 
 
 func _fire_point_blank(f: float, shape: Dictionary) -> void:
+	var prev_source := _forced_source
 	_forced_source = "special"
 	_overdrive_blast(ctx.player.ball_position(), AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL), shape,
 		Weapons.POINT_BLANK_RADIUS, Weapons.POINT_BLANK_DAMAGE)
-	_forced_source = ""
+	_forced_source = prev_source
 
 
 func _line_geometry(f: float) -> Dictionary:
@@ -1150,9 +1154,10 @@ func _on_mounted(at: Vector3, banked_speed: float) -> void:
 	var abilities = ctx.player.abilities
 	if not abilities.cap(AbilityState.SPECIAL, "plant_discharge", false):
 		return
+	var prev_source := _forced_source
 	_forced_source = "special"
 	_discharge(at, banked_speed, "turret", null, 64 if _knob("plant_all") else -1)
-	_forced_source = ""
+	_forced_source = prev_source
 	ctx.events.special_used.emit(abilities.id_of(AbilityState.SPECIAL), at)
 
 
@@ -1507,15 +1512,17 @@ func _proc_volley(scale: float) -> void:
 
 # The upgrade-tree proc actions (M0: item_proc, never the player's own gauge release).
 func _proc_discharge(scale: float) -> void:
+	var prev_source := _forced_source
 	_forced_source = "item_proc"
 	_discharge(ctx.player.ball_position(), scale * Weapons.DISCHARGE_FULL_SPEED, "arc")
-	_forced_source = ""
+	_forced_source = prev_source
 
 
 func _proc_blast(scale: float) -> void:
+	var prev_source := _forced_source
 	_forced_source = "item_proc"
 	_overdrive_blast(ctx.player.ball_position(), scale, {}, 1.0, 1.0, false)
-	_forced_source = ""
+	_forced_source = prev_source
 
 
 func _proc_detonate(scale: float) -> void:
@@ -1543,14 +1550,16 @@ func _tick_upgrades(delta: float) -> void:
 	_pulse_left = maxf(0.0, _pulse_left - delta)
 	if _pulse_left <= 0.0:
 		if kit.hooked and _knob("anchor_pulse") > 0.0:
+			var prev_source := _forced_source
 			_forced_source = "item_proc"
 			_discharge(kit.anchor, Weapons.DISCHARGE_FULL_SPEED * 0.2, "arc")
-			_forced_source = ""
+			_forced_source = prev_source
 			_pulse_left = _knob("anchor_pulse")
 		elif kit.mounted and _knob("mount_pulse") > 0.0:
+			var prev_source := _forced_source
 			_forced_source = "item_proc"
 			_discharge(ctx.player.ball_position(), kit.mount_banked * 0.5, "turret")
-			_forced_source = ""
+			_forced_source = prev_source
 			_pulse_left = _knob("mount_pulse")
 		elif kit.gliding and _knob("glide_bombs") > 0.0:
 			var ground := _floor_at(ctx.player.ball_position())
@@ -1822,7 +1831,8 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
-	_warden_drop_hits = 0
+	_warden_drops = 0
+	_warden_slam_hits = 0
 	_cooldown = 0.0
 	_overdrive = 0.0
 	_rocket_left = 0.0

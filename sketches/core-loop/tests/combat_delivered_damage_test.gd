@@ -20,7 +20,8 @@ const LoopMode := preload("res://src/core/loop_mode.gd")
 #    missing, the instant a run starts and before any hit;
 # 5. per-source and per-action attribution reconcile (they sum to the same total);
 # 6. range buckets (near/mid/far) are assigned from distance to the ball.
-# Also touches retirement counts, drops_to_break, and an upgrade-tree proc volley's
+# Also touches retirement counts, drops_to_break against warden_slam_hits (drops come
+# only from warden_drop_landed; stomp and slam hits are not drops), and an upgrade-tree proc volley's
 # bolts tagging themselves item_proc instead of the player's own weapon fire.
 
 var _game
@@ -124,43 +125,41 @@ func _run_all() -> void:
 		"a chaser (target class 'enemy') accounted for %.1f under by_target_class.enemy (needs >= %.0f)"
 			% [float(_combat.delivered_damage()["by_target_class"].get("enemy", 0.0)), hp_a])
 
-	# finding 5, fix round 1: resolve()'s own "drop" key (the drop-mode writer's
-	# warden_drop.gd tags a landing this way on proto/core-loop-v3-lab) must win over
-	# the kind guess, so a stomp-kind drop lands as drop_or_slam too, not
-	# ram_or_contact. The key does not exist on this base yet (only warden_drop.gd
-	# sets it), so this is a direct unit check on _classify_source rather than a full
-	# strike(), which cannot produce a "drop" result here.
+	# resolve()'s own "drop" key (warden_drop.gd's rule sets it) must win over the kind
+	# guess, so a stomp-kind drop lands as drop_or_slam too, not ram_or_contact.
+	# combat_drop_ledger_test.gd covers the key arriving through a real landing.
 	_report("stomp_drop_flag_wins", _combat._classify_source("stomp", "", true) == "drop_or_slam"
 			and _combat._classify_source("stomp", "", false) == "ram_or_contact",
 		"_classify_source('stomp', '', drop) read '%s' with drop=true and '%s' with drop=false (needs drop_or_slam, then ram_or_contact)"
 			% [_combat._classify_source("stomp", "", true), _combat._classify_source("stomp", "", false)])
 
 	# drop_or_slam, auto-classified from kind "slam" alone (no explicit source), on the
-	# Warden target class; three partial hits feed drops_to_break. review finding 2, fix
-	# round 2: drops_to_break is loop_mode "drop"'s own measure, so the base's default
-	# "v2" mode must not count these; the mode-gated part is proven right after.
+	# Warden target class. Every damaging stomp or slam on the Warden is a slam hit in any
+	# loop_mode; none of them is a drop. This Warden was built in v2 mode, so it carries
+	# no warden_drop.gd rules and no hit here can emit warden_drop_landed.
 	var hp_w: float = warden.max_hp
 	_report("v2_mode_not_drop_counted", not LoopMode.is_drop(ctx.tuning),
-		"the base's default loop_mode read '%s' (needs anything but 'drop', so the count below proves the gate, not a coincidence)"
-			% [LoopMode.mode(ctx.tuning)])
+		"the base's default loop_mode read '%s' (needs anything but 'drop')" % [LoopMode.mode(ctx.tuning)])
 	_combat.strike(warden, "slam", hp_w * 0.1)
-	_report("v2_mode_slam_not_counted", _combat._warden_drop_hits == 0,
-		"a slam hit on the Warden outside loop_mode 'drop' bumped _warden_drop_hits to %d (needs 0, unmeasured)"
-			% [_combat._warden_drop_hits])
+	_report("v2_mode_slam_is_a_hit", _combat._warden_slam_hits == 1 and _combat._warden_drops == 0,
+		"a slam on the Warden in v2 left _warden_slam_hits %d and _warden_drops %d (needs 1 and 0)"
+			% [_combat._warden_slam_hits, _combat._warden_drops])
 	ctx.tuning.set_option("loop_mode", "drop")
 	_combat.strike(warden, "slam", hp_w * 0.1)
 	_combat.strike(warden, "slam", hp_w * 0.1)
-	# review finding 2, fix round 2: a ball dropping onto the Warden tags "stomp"
-	# (player_ball.gd's STOMP), not "slam"; it must count as a drop hit too.
 	_combat.strike(warden, "stomp", hp_w * 0.1)
 	_report("drop_or_slam_source", float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)) >= hp_w * 0.2 - 0.01,
 		"two slam hits on the Warden (in loop_mode drop) landed %.1f under by_source.drop_or_slam (needs >= %.1f)"
 			% [float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)), hp_w * 0.2])
 	_report("warden_target_class", float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)) >= hp_w * 0.4 - 0.01,
 		"the Warden's own bucket read %.1f (needs >= %.1f)" % [float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)), hp_w * 0.4])
-	_report("drop_hits_count_stomp_and_slam", _combat._warden_drop_hits == 3,
-		"one v2-mode slam (uncounted) plus two drop-mode slams and one drop-mode stomp left _warden_drop_hits at %d (needs 3)"
-			% [_combat._warden_drop_hits])
+	_report("slam_hits_are_not_drops", _combat._warden_slam_hits == 4 and _combat._warden_drops == 0,
+		"one v2 slam, two drop-mode slams and one drop-mode stomp left _warden_slam_hits %d and _warden_drops %d (needs 4 and 0: no drop landed)"
+			% [_combat._warden_slam_hits, _combat._warden_drops])
+	ctx.events.warden_drop_landed.emit(warden.global_position, 25.0, 3, 4)
+	_report("drop_counts_landed_event", _combat._warden_drops == 1 and _combat._warden_slam_hits == 4,
+		"one warden_drop_landed left _warden_drops %d and _warden_slam_hits %d (needs 1 and 4)"
+			% [_combat._warden_drops, _combat._warden_slam_hits])
 
 	# item_proc, auto-classified from kind "synergy", on a Fleet reinforcement ("adds").
 	var hp_adds: float = adds.max_hp
@@ -218,23 +217,23 @@ func _run_all() -> void:
 		"an upgrade-tree-sourced _fire() call tagged its bolt '%s' (needs 'item_proc', not the old hardcoded 'weapon')"
 			% [String(fired_bolts[-1].get("source", "")) if fired_bolts.size() > 0 else "<no bolt>"])
 
-	# drops_to_break: two drop-mode slam hits and one drop-mode stomp hit landed on the
-	# Warden this stage attempt (the earlier v2-mode slam above is excluded by design);
-	# the Warden's own break (beacon_unsealed) must snapshot that count for the stage,
-	# still in loop_mode "drop" (still set from above). Read before entering the boss
-	# arena below: stage_content_cleared (which entering the arena emits) starts a fresh
-	# attempt and would zero this count first.
+	# The Warden's break (beacon_unsealed) snapshots both counts for the stage, still in
+	# loop_mode "drop". Read before entering the boss arena below: stage_content_cleared
+	# (which entering the arena emits) starts a fresh attempt and would zero them first.
 	ctx.events.beacon_unsealed.emit(1)
 	var drops: Dictionary = _combat.delivered_damage()["drops_to_break"]
-	_report("drops_to_break", int(drops.get("1", -1)) == 3,
-		"stage 1's drops_to_break read %s after two drop-mode slams, one drop-mode stomp and its break (needs 3)" % [drops])
-	# The gate itself: a beacon break outside loop_mode "drop" must not read 0 (a
-	# measurement that never ran), it must read null (explicitly unmeasured).
+	var slam_hits: Dictionary = _combat.delivered_damage()["warden_slam_hits"]
+	_report("drops_to_break", int(drops.get("1", -1)) == 1 and int(slam_hits.get("1", -1)) == 4,
+		"stage 1 broke after one landed drop and four stomp or slam hits: drops_to_break %s, warden_slam_hits %s (needs 1 and 4)"
+			% [drops, slam_hits])
+	# A break outside loop_mode "drop" reads null drops (unmeasured, not 0) and a real 0
+	# slam hits.
 	ctx.tuning.set_option("loop_mode", "v2")
 	ctx.events.beacon_unsealed.emit(2)
 	var drops_v2: Dictionary = _combat.delivered_damage()["drops_to_break"]
-	_report("drops_to_break_null_outside_drop_mode", drops_v2.get("2", "missing") == null,
-		"stage 2's drops_to_break broke in loop_mode 'v2' and read %s (needs null, not 0 or missing)" % [drops_v2])
+	var slam_hits_v2: Dictionary = _combat.delivered_damage()["warden_slam_hits"]
+	_report("drops_to_break_null_outside_drop_mode", drops_v2.get("2", "missing") == null and int(slam_hits_v2.get("2", -1)) == 0,
+		"stage 2 broke in loop_mode 'v2': drops_to_break %s, warden_slam_hits %s (needs null, then 0)" % [drops_v2, slam_hits_v2])
 
 	# Boss (finding 4, fix round 1): boss.gd clamps to a phase floor instead of to 0,
 	# and that path was never exercised. Enter the arena, strike the hull once inside
