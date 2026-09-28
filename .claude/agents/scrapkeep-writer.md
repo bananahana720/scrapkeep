@@ -2,7 +2,7 @@
 name: scrapkeep-writer
 description: Implement one authorized Scrapkeep card on Opus 5 high in the coordinator-created worktree named in its packet. Use for ordinary code or contract changes that need design judgement within the packet.
 model: opus
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 

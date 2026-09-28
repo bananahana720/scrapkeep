@@ -2,7 +2,7 @@
 name: scrapkeep-writer-low
 description: Implement one authorized Scrapkeep card on Sonnet 5 high in the coordinator-created worktree named in its packet. Use for mechanical, fully specified edits where every change is named in the packet.
 model: sonnet
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 
