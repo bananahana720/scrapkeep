@@ -172,8 +172,8 @@ void fragment() {
 			mat.uv1_scale = Vector3.ONE / metres
 			# Plate maps average darker than the old neutral value noise; lift them once here
 			# instead of tinting twice.
-			if slot == "paint":
-				mat.albedo_color = Color(1.5, 1.5, 1.5, mat.albedo_color.a)
+			if slot == "paint":  # lift once, not a second tint
+				mat.albedo_color = Color(1.2, 1.2, 1.2, mat.albedo_color.a)
 			if slot == "ancient_enamel":
 				# Warden armour takes the teal-and-rust plate colours directly.
 				mat.vertex_color_use_as_albedo = false
