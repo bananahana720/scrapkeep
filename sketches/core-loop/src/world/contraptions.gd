@@ -52,6 +52,11 @@ var _slams: Array[Vector3] = []
 var _thermal_quiet := 0.0
 var _gauge_mat: Material
 var _needle_mat: Material
+var _rust_mat: Material
+var _copper_mat: Material
+var _band_mat: Material
+var _ring_mat: Material
+var _hook_mat: Material
 var _steam_mat: Material
 
 
@@ -63,6 +68,11 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 	name = "Contraptions"
 	_gauge_mat = Palette.solid(Palette.SAND)
 	_needle_mat = Palette.solid(Palette.CHARCOAL)
+	_rust_mat = Palette.solid(Palette.RUST)
+	_copper_mat = Palette.solid(Palette.COPPER)
+	_band_mat = Palette.solid(Palette.AMBER, 0.6)
+	_ring_mat = Palette.solid(Palette.AMBER, 0.8)
+	_hook_mat = Palette.solid(Palette.AMBER, 1.2)
 	_steam_mat = Palette.unshaded(Color(Palette.SAND, 0.55))
 	for spec in map.contraptions:
 		match spec["kind"]:
@@ -225,7 +235,7 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 	hm.bottom_radius = size.x * 0.2
 	hm.height = 3.0
 	hull.mesh = hm
-	hull.material_override = Palette.solid(Palette.RUST)
+	hull.material_override = _rust_mat
 	hull.position = Vector3.DOWN * 2.1
 	body.add_child(hull)
 	for corner in [Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, -1)]:
@@ -235,7 +245,7 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 		jm.bottom_radius = 1.2
 		jm.height = 1.6
 		jet.mesh = jm
-		jet.material_override = Palette.solid(Palette.COPPER)
+		jet.material_override = _copper_mat
 		jet.position = Vector3(corner.x * size.x * 0.42, -1.2, corner.z * size.z * 0.42)
 		body.add_child(jet)
 	# Amber hazard-free edge bands: a barge's rim reads as a ledge you can roll off.
@@ -244,7 +254,7 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 		var bm := BoxMesh.new()
 		bm.size = Vector3(size.x, 0.12, 0.5)
 		band.mesh = bm
-		band.material_override = Palette.solid(Palette.AMBER, 0.6)
+		band.material_override = _band_mat
 		band.position = Vector3(0.0, size.y * 0.5 + 0.02, side * (size.z * 0.5 - 0.25))
 		body.add_child(band)
 	add_child(body)
@@ -339,7 +349,7 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 	sm.bottom_radius = 1.2
 	sm.height = float(spec["rise"]) + 1.0
 	piston.mesh = sm
-	piston.material_override = Palette.solid(Palette.COPPER)
+	piston.material_override = _copper_mat
 	piston.position = Vector3.DOWN * (float(spec["rise"]) * 0.5 + 0.5)
 	body.add_child(piston)
 	add_child(body)
@@ -371,7 +381,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 	tm.inner_radius = float(spec["radius"]) - 0.6
 	tm.outer_radius = spec["radius"]
 	ring.mesh = tm
-	ring.material_override = Palette.solid(Palette.AMBER, 0.8)
+	ring.material_override = _ring_mat
 	ring.position = mouth + Vector3.DOWN * 0.8
 	root.add_child(ring)
 	var target: Vector3 = spec["target"]
@@ -385,7 +395,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			bm.bottom_radius = 2.8
 			bm.height = 8.0
 			barrel.mesh = bm
-			barrel.material_override = Palette.solid(Palette.RUST)
+			barrel.material_override = _rust_mat
 			barrel.position = mouth - aim * 5.0 + Vector3.UP * 2.0
 			barrel.basis = Basis.looking_at(aim + Vector3.UP * 0.9, Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 			root.add_child(barrel)
@@ -394,7 +404,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			km.inner_radius = 2.2
 			km.outer_radius = 2.9
 			band.mesh = km
-			band.material_override = Palette.solid(Palette.COPPER)
+			band.material_override = _copper_mat
 			band.position = barrel.position
 			band.basis = barrel.basis
 			root.add_child(band)
@@ -404,14 +414,14 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 				var pm := BoxMesh.new()
 				pm.size = Vector3(1.0, 12.0, 1.0)
 				post.mesh = pm
-				post.material_override = Palette.solid(Palette.RUST)
+				post.material_override = _rust_mat
 				post.position = mouth - aim * 6.0 + aim.cross(Vector3.UP) * side * 3.0 + Vector3.UP * 5.0
 				root.add_child(post)
 			arm = MeshInstance3D.new()
 			var am := BoxMesh.new()
 			am.size = Vector3(1.0, 1.0, 20.0)
 			arm.mesh = am
-			arm.material_override = Palette.solid(Palette.COPPER)
+			arm.material_override = _copper_mat
 			arm.position = mouth - aim * 6.0 + Vector3.UP * 10.5
 			root.add_child(arm)
 		"geyser":
@@ -454,7 +464,7 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 	cm.bottom_radius = 0.18
 	cm.height = from.distance_to(to)
 	cable.mesh = cm
-	cable.material_override = Palette.solid(Palette.CHARCOAL)
+	cable.material_override = _needle_mat
 	cable.position = (from + to) * 0.5
 	cable.basis = Basis.looking_at((to - from).normalized(), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 	add_child(cable)
@@ -463,7 +473,7 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 	hm.inner_radius = float(spec["radius"]) - 0.5
 	hm.outer_radius = spec["radius"]
 	hook.mesh = hm
-	hook.material_override = Palette.solid(Palette.AMBER, 1.2)
+	hook.material_override = _hook_mat
 	hook.position = from
 	hook.basis = Basis.looking_at(Vector3(to.x - from.x, 0.0, to.z - from.z).normalized(), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 	add_child(hook)
@@ -480,7 +490,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	wm.inner_radius = 1.3
 	wm.outer_radius = 1.9
 	wheel.mesh = wm
-	wheel.material_override = Palette.solid(Palette.RUST)
+	wheel.material_override = _rust_mat
 	wheel.position = foot + Vector3.UP * 1.6
 	wheel.rotation.x = PI * 0.5
 	add_child(wheel)
@@ -488,7 +498,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	var km := BoxMesh.new()
 	km.size = Vector3(0.25, 0.1, 3.6)
 	crack.mesh = km
-	crack.material_override = Palette.solid(Palette.CHARCOAL)
+	crack.material_override = _needle_mat
 	crack.position = wheel.position + Vector3(0.0, 0.0, 0.0)
 	crack.rotation = Vector3(PI * 0.5, 0.0, 0.6)
 	add_child(crack)
@@ -592,7 +602,7 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 		var cm := BoxMesh.new()
 		cm.size = Vector3(size.x * 0.7, 0.18, size.z + 0.1)
 		crack.mesh = cm
-		crack.material_override = Palette.solid(Palette.CHARCOAL)
+		crack.material_override = _needle_mat
 		crack.position = Vector3(0.0, -1.5 + k * 1.4, 0.0)
 		crack.rotation.z = 0.5 - k * 0.45
 		body.add_child(crack)
@@ -662,7 +672,7 @@ func _dial(at: Vector3) -> MeshInstance3D:
 	pm.bottom_radius = 0.2
 	pm.height = 3.0
 	post.mesh = pm
-	post.material_override = Palette.solid(Palette.COPPER)
+	post.material_override = _copper_mat
 	post.position = at + Vector3.UP * 1.5
 	add_child(post)
 	var face := MeshInstance3D.new()
@@ -679,7 +689,7 @@ func _dial(at: Vector3) -> MeshInstance3D:
 	var rm := BoxMesh.new()
 	rm.size = Vector3(0.2, 0.5, 0.05)
 	redline.mesh = rm
-	redline.material_override = Palette.solid(Palette.RUST)
+	redline.material_override = _rust_mat
 	redline.position = face.position + Vector3(0.75, 0.55, 0.1)
 	redline.rotation.z = -0.8
 	add_child(redline)
@@ -717,7 +727,7 @@ func _dashed_ring(at: Vector3, radius: float) -> void:
 		var dm := BoxMesh.new()
 		dm.size = Vector3(0.3, 0.06, radius * TAU / 32.0)
 		dash.mesh = dm
-		dash.material_override = Palette.solid(Palette.SAND)
+		dash.material_override = _gauge_mat
 		dash.position = at + Vector3(cos(a), 0.0, sin(a)) * radius
 		dash.rotation.y = -a
 		add_child(dash)
