@@ -9,6 +9,8 @@ Andrew's ear decides.
     $PY pack3.py screen <slice>          # round 1 and round 2 takes through the counted gates
     $PY pack3.py assemble <slice>        # chosen takes -> timeline assemblies, stem automation, arc measured
     $PY pack3.py pack <slice> <dest>     # Y1.. shuffled, WAV and Opus, .key.json, README.txt
+    $PY pack3.py rekey <slice> <dest>    # rewrite .key.json only; audio and Y labels unchanged
+    $PY pack3.py automation <slice>      # rewrite round2/automation/*.json only
 
 Everything lands in <slice>/round2 except the pack.
 
@@ -28,7 +30,7 @@ A gate counts for a parent only when the parent's guide through Demucs passes it
 its negative control fails it. Otherwise it is reported and never gates. Negatives are built
 from the same guide-through-Demucs inputs:
   tempo     resampled 0.2% slow                      (off-grid tempo)
-  downbeat  every stem one eighth late               (off-grid)
+  downbeat  every third bar one sixteenth late       (off-grid within the take; see below)
   dorian    up a semitone by resampling              (off the pitch grid)
   chords    bars shuffled by a fixed derangement     (shuffled)
   density   the 12-layer render Andrew rejected      (no off-grid or shuffled copy changes a band count)
@@ -40,11 +42,37 @@ Validity correction after screening (2026-09-28, recorded as a deviation, the pr
 result is kept in screen-preregistered.{json,md}). The Warden's seam measured the build's
 bar 16 -> bar 1 wrap against bar 17, a loop neither timeline.json nor the runtime plays; its
 continuation is the telegraph, and in warden-F-085-s7 bars 1-8 are a lighter intro kick whose
-envelope sits 9 ms earlier than bars 9-28 (per-bar drift lags 13-17 ms, then 24 ms flat), so it
-read a kick-sound change as 17.4 ms of seam. For parents in JUMP_SEAM_PARENTS the seam's timing
-half is instead the jumps the timeline plays between full-mix states (drop bar 28 -> build
-bar 9 and -> bar 13): |per-bar drift lag of the target - of the source| <= 12 ms. The join-step
-half is unchanged. Its negative control shifts each jump target bar one sixteenth late.
+envelope sits about 9 ms earlier than the rest (per-bar drift lags 13.1-17.0 ms in bars 1-8,
+23.4-24.5 ms in bars 9-20 and 25-28; bars 21-24 read -119.0, the no-kick sentinel of the guide's
+held breath), so it read a kick-sound change as 17.4 ms of seam. For parents in JUMP_SEAM_PARENTS
+the seam's timing half is instead the jumps the timeline plays between full-mix states (drop
+bar 28 -> build bar 9 and -> bar 13): |per-bar drift lag of the target - of the source| <= 12 ms.
+The join-step half is unchanged. Its negative control shifts each jump target bar one sixteenth
+late. The correction holds only if the runtime never wraps the Warden build from bar 16 to
+bar 1: the sequencer POC (43453ab) loops its 16-bar fixture stems natively from loop_offset 0,
+so the build's automation JSON names bar 9 as its loop target. It also flipped three rows that
+selection never reaches (F-085-s1001 and X1-085-s1001 now fail seam, X2-085-s7 no longer does).
+Under the frozen rules alone no Warden take survives and there is no pack.
+
+Downbeat negative, replaced after screening (2026-09-28, recorded as a deviation; the take
+measurements are unchanged, only the control is). The first negative shifted every stem one
+eighth late. The global trim, the median per-bar drift lag, absorbs any global shift inside
+audition.MAX_LAG_S: on the Warden guide it missed only bar 1, and a sixteenth, a quarter or all
+bars shuffled missed at most one bar; the calm's 18 misses came only from its eighth (174 ms)
+exceeding the trim's reach. That absorption is the design, since a full-ACE take's global offset
+is its trim. What the gate must catch is a downbeat displaced inside the take, so the negative
+shifts every third bar (2, 5, 8, ...) one sixteenth late, spliced with 5 ms crossfades that end
+on the bar lines: the median stays on the unshifted bars and the trim cannot follow. The matcher
+takes any low-band peak above its floor, so it catches only part of the displaced bars (the
+controls table lists which); a miss means no kick-band peak near that downbeat, a pass is not proof that every
+downbeat sits on the grid. The global shifts are still measured and reported in
+controls.json as absorbed_global_shifts, never as a negative.
+
+Hat swing is measured, not read from the caption: slot 2 of the take's hats against the calm
+guide's (swing_check.hat_slots). A take is swung when slot 2 sits at least a quarter of a
+sixteenth late (21.8 ms at the calm tempo; round 1's straight cluster reads -12 to +5.5 ms, its
+swung cluster +29 to +37 ms). Captions and measurement disagree on some takes, so the key
+carries both and the measured value decides how Andrew's swing verdict is read.
 
 Selection, fixed before round 2 was rendered or screened. A survivor passes every counted gate;
 pilot takes and the Fns diagnostic caption are never selected. The best of a pool has the lowest
@@ -54,7 +82,9 @@ order, the best straight calm survivor makes one assembly; then the best swung c
 all directions makes one more. So the pack holds at most one straight version per direction, one
 swung version in all and four candidates. Each assembly takes its own direction's best Warden
 survivor (0.85 and 0.95 pooled), or, when that direction has none, the best Warden survivor of
-any direction, labelled as a cross pair in the key. The planted weak take is round 1's diagnostic
+any direction, labelled as a cross pair in the key. A cross pair departs from the coordinator's
+"one assembly per surviving direction", since its calm direction has no Warden survivor; it is
+reported as a deviation and the coordinator may drop it. The planted weak take is round 1's diagnostic
 F master: raw ACE dynamics (the kick plays through the breath) on a Warden take that failed
 downbeats.
 
@@ -99,7 +129,8 @@ PLANT = 'diagnostic/F/F.wav'
 GATES = ('tempo', 'downbeat', 'dorian', 'chords', 'density', 'lag', 'vocals', 'seam')
 LIMITS = dict(tempo_ms=12.0, dorian_margin=.05, lag_ms=12.0, vocals_db=-45.0, seam_lag_ms=12.0, seam_step_db=0.0)
 JUMP_SEAM_PARENTS = ('warden',)
-NEGATIVE = dict(tempo='resampled 0.2% slow', downbeat='one eighth late', dorian='up a semitone',
+SPLICE_XFADE = round(0.005 * SR)
+NEGATIVE = dict(tempo='resampled 0.2% slow', downbeat='every third bar one sixteenth late, 5 ms crossfades', dorian='up a semitone',
                 chords='bars shuffled', density='12-layer render (rejected)', lag='bass 40 ms late',
                 vocals=f'real vocal {VOICE_UNDER_DB:.0f} dB under', seam='loop one sixteenth long')
 
@@ -128,6 +159,11 @@ PROFILES = {
 }
 STATE_PROFILE = {'open': 'breath', 'break': 'breath'}
 ENTER_ON = {'drop': 'the next beat after contact; scripted here on the drop bar line, the performance drop downbeat'}
+# If the runtime holds the build longer than timeline.json does, it loops bars 9-16, the jump the
+# timeline already takes after a drop. A 16 -> 1 wrap is the seam the frozen screen measured and
+# warden-F-085-s7 failed (17.4 ms, its lighter intro kick in bars 1-8).
+LOOPS = {'build': dict(from_build_bar=16, to_build_bar=9, never_to_bar=1,
+                       reason='warden-F-085-s7 passes only the jumps the timeline plays; its 16 -> 1 wrap read 17.4 ms')}
 ARC_LIMITS = dict(open_kick_max_db=-12.0, drop_rise_min_db=8.0)
 KICK_BAND = butter(4, 120, 'low', fs=SR, output='sos')
 LOWPASS = butter(2, LOWPASS_HZ, 'low', fs=SR, output='sos')
@@ -234,13 +270,30 @@ def jump_pairs(p, plan):
     return pairs
 
 
-def jump_targets_late(drums, p):
-    out = drums.copy()
-    shifted = late(drums, p.step)
-    for _, dst in p.jumps:
-        a = p.start + (dst - 1) * p.bar
-        out[a:a + p.bar] = shifted[a:a + p.bar]
+def bars_late(y, p, bars, xfade=0):
+    """The given region bars (1-based) one sixteenth late; every other bar untouched. With xfade, each
+    splice is an equal-power crossfade ending on its bar line: a hard splice is itself a low-band
+    onset on the downbeat, which the downbeat matcher accepts as a kick (3 of 10 shifted calm bars
+    caught hard, 8 of 10 crossfaded; Warden 2 and 4 of its 8 kick bars)."""
+    out = y.copy()
+    shifted = late(y, p.step)
+    th = np.linspace(0, np.pi / 2, max(xfade, 1))[:, None]
+    for b in bars:
+        a = p.start + (b - 1) * p.bar
+        e = a + p.bar
+        out[a:e] = shifted[a:e]
+        if xfade:
+            out[a - xfade:a] = y[a - xfade:a] * np.cos(th) + shifted[a - xfade:a] * np.sin(th)
+            out[e - xfade:e] = shifted[e - xfade:e] * np.cos(th) + y[e - xfade:e] * np.sin(th)
     return out
+
+
+def jump_targets_late(drums, p):
+    return bars_late(drums, p, [dst for _, dst in p.jumps])
+
+
+def every_third_bar(p):
+    return list(range(2, p.bars + 1, 3))
 
 
 def seam_measure(mix, drums, off, bar, n, extra=0):
@@ -328,7 +381,7 @@ def controls(slice_dir):
         eighth, sixteenth = 2 * p.step, p.step
         neg_rows = {
             'tempo': measure(p, *[resample_poly(y, 501, 500, axis=0) for y in (mix, drums, bass)], pos_voc),
-            'downbeat': measure(p, *[late(y, eighth) for y in (mix, drums, bass)], pos_voc),
+            'downbeat': measure(p, *[bars_late(y, p, every_third_bar(p), SPLICE_XFADE) for y in (mix, drums, bass)], pos_voc),
             'dorian': measure(p, *[resample_poly(y, 84, 89, axis=0) for y in (mix, drums, bass)], pos_voc),
             'chords': measure(p, shuffled_bars(mix, p), drums, bass, pos_voc),
             'lag': measure(p, mix, drums, late(bass, round(0.040 * SR)), pos_voc),
@@ -336,6 +389,12 @@ def controls(slice_dir):
                      else measure(p, mix, drums, bass, pos_voc, seam_extra=sixteenth)),
         }
         pv = values(pos, p, b_dens)
+        # Global shifts the trim absorbs by design; reported, never a negative.
+        absorbed = {}
+        for what, frames in (('sixteenth late', sixteenth), ('eighth late', eighth), ('quarter late', 4 * p.step)):
+            r = measure(p, *[late(y, frames) for y in (mix, drums, bass)], pos_voc)
+            absorbed[what] = dict(trim_ms=r['trim_ms'], missing_downbeats=r['missing_downbeats'])
+        neg_bars = every_third_bar(p)
         rows = {}
         for g in GATES:
             if g == 'density':
@@ -348,7 +407,11 @@ def controls(slice_dir):
             negative = 'jump targets one sixteenth late' if g == 'seam' and p.jumps else NEGATIVE[g]
             rows[g] = dict(positive=pv[g][0], positive_pass=pv[g][1], negative=negative, negative_value=neg_value,
                            negative_pass=neg_pass, counted=bool(pv[g][1] and not neg_pass))
-        report['parents'][parent] = dict(guide_dorian=p.ref['dorian'], seam_jumps=p.jumps, gates=rows)
+        rows['downbeat'].update(negative_bars_shifted=neg_bars,
+                                negative_missing=neg_rows['downbeat']['missing_downbeats'],
+                                negative_trim_ms=neg_rows['downbeat']['trim_ms'])
+        report['parents'][parent] = dict(guide_dorian=p.ref['dorian'], seam_jumps=p.jumps, gates=rows,
+                                         absorbed_global_shifts=absorbed)
         print(parent, {g: ('counted' if r['counted'] else 'report-only') for g, r in rows.items()}, flush=True)
     (out / 'controls.json').write_text(json.dumps(report, indent=1, default=str))
     lines = ['| parent | gate | positive (guide through Demucs) | pass | negative control | negative value | fails | status |',
@@ -359,6 +422,14 @@ def controls(slice_dir):
                          f"{r['negative_value']} | {'yes' if not r['negative_pass'] else 'NO'} | "
                          f"{'counted' if r['counted'] else 'report-only'} |")
     lines.append(f"\nB density mean/max {b_dens['mean']}/{b_dens['max']}. Limits {LIMITS}.")
+    lines.append('\nDownbeat: bars shifted in the negative, the bars it missed, and global shifts the trim absorbs '
+                 '(reported, not a negative):')
+    for parent, rep in report['parents'].items():
+        d = rep['gates']['downbeat']
+        lines.append(f"- {parent}: shifted {d['negative_bars_shifted']}, missed {d['negative_missing']} "
+                     f"(trim {d['negative_trim_ms']} ms); absorbed "
+                     + '; '.join(f"{k}: trim {v['trim_ms']} ms, missed {v['missing_downbeats'] or '-'}"
+                                 for k, v in rep['absorbed_global_shifts'].items()))
     (out / 'controls.md').write_text('\n'.join(lines) + '\n')
     print('\n'.join(lines))
 
@@ -590,8 +661,15 @@ def automation(plan, dest):
                        enter_on=ENTER_ON.get(k, 'the state bar line'),
                        ramp=dict(ms=round(EDGE / SR * 1000, 1), shape='linear', ends_on='the entry point'),
                        silent_db=SILENT_DB, stems=PROFILES[profile])
+        if k in LOOPS:
+            seen[k]['loop'] = LOOPS[k]
         (dest / f'{k}.json').write_text(json.dumps(seen[k], indent=1))
     return seen
+
+
+def automation_only(slice_dir):
+    from slice0 import timeline
+    print(sorted(automation(timeline(slice_dir), rdir(slice_dir) / 'automation')))
 
 
 def stems_of(path):
@@ -641,25 +719,78 @@ def assemble(slice_dir):
     (out / 'assemble.json').write_text(json.dumps(done, indent=1, default=str))
 
 
-def pack(slice_dir, dest):
+KEY_NOTES = dict(
+    condition=('Every Warden take in this pack survives only under the seam correction made after screening '
+               '(e268e3c); under the frozen rules (round2/screen-preregistered.*) no Warden take survives and '
+               'there is no pack. The correction assumes the runtime never wraps the Warden build from bar 16 '
+               'to bar 1 (automation/build.json names bar 9).'),
+    swing=('Read the swing verdict against calm_swing_measured, not the caption: slot 2 of the hats at least '
+           'a quarter of a sixteenth late against the guide is swung.'),
+    cross_pair=('cross_pair true: the calm direction has no Warden survivor, so the Warden is another '
+                "direction's; a departure from one assembly per surviving direction."))
+
+
+def swing_limit_ms(slice_dir):
+    return Parent(slice_dir, 'calm').step / SR * 1000 / 4
+
+
+def key_entry(label, entry, src, hat_s2, limit):
+    takes = {p: t['take'] for p, t in entry['takes'].items()}
+    calm, warden = parse(takes['calm']), parse(takes['warden'])
+    s2 = hat_s2.get(takes['calm'])
+    measured = None if s2 is None else ('swung' if s2 >= limit else 'straight')
+    cross = bool(entry.get('warden_rule', '') and entry['warden_rule'].startswith('cross'))
+    return dict(label=label, takes=takes, source=str(src), calm_rule=entry.get('calm_rule'),
+                warden_rule=entry.get('warden_rule'), cross_pair=cross,
+                calm_hats_caption=calm['hats'], calm_hat_s2_vs_guide_ms=s2,
+                calm_swing_measured=measured, swing_limit_ms=round(limit, 1),
+                label_measured=(f"{calm['direction']} calm, hats measured {measured} (caption {calm['hats']}), "
+                                f"{warden['direction']} Warden{' (cross pair)' if cross else ''}"))
+
+
+def key_inputs(slice_dir):
     done = json.loads((rdir(slice_dir) / 'assemble.json').read_text())
+    rows = json.loads((rdir(slice_dir) / 'screen.json').read_text())['rows']
+    hat_s2 = {r['take']: r.get('hat_s2_vs_guide_ms') for r in rows}
+    return done, hat_s2, swing_limit_ms(slice_dir)
+
+
+def pack(slice_dir, dest):
+    done, hat_s2, limit = key_inputs(slice_dir)
     items = [(label, Path(a['wav'])) for label, a in done['assemblies'].items()] + [('planted weak', Path(done['planted']['wav']))]
     random.SystemRandom().shuffle(items)
     dest.mkdir(parents=True, exist_ok=True)
-    key, manifest = {}, {}
+    key, manifest = dict(_notes=KEY_NOTES), {}
     for i, (label, src) in enumerate(items, 1):
         entry = done['assemblies'].get(label) or done['planted']
         for ext in ('.wav', '.opus'):
             target = dest / f'Y{i}{ext}'
             shutil.copyfile(src.with_suffix(ext), target)
             manifest[target.name] = hashlib.sha256(target.read_bytes()).hexdigest()
-        key[f'Y{i}'] = dict(label=label, takes={p: t['take'] for p, t in entry['takes'].items()}, source=str(src),
-                            calm_rule=entry.get('calm_rule'), warden_rule=entry.get('warden_rule'),
-                            calm_hat_s2_vs_guide_ms=entry['takes']['calm'].get('hat_s2_vs_guide_ms'))
+        key[f'Y{i}'] = key_entry(label, entry, src, hat_s2, limit)
     (dest / '.key.json').write_text(json.dumps(key, indent=1))
     (dest / 'README.txt').write_text('Rank by ear, note any moment that sounds wrong, and say which are fit for the game.\n')
     (rdir(slice_dir) / 'pack-manifest.json').write_text(json.dumps(dict(dest=str(dest), sha256=manifest), indent=1))
     print('packed', len(items), 'candidates to', dest)
+
+
+def rekey(slice_dir, dest):
+    """Rewrite .key.json for a pack already made, keeping each Y label on its file: the audio and the
+    shuffle stay, every file must still match pack-manifest.json."""
+    done, hat_s2, limit = key_inputs(slice_dir)
+    manifest = json.loads((rdir(slice_dir) / 'pack-manifest.json').read_text())['sha256']
+    for name, sha in manifest.items():
+        if hashlib.sha256((dest / name).read_bytes()).hexdigest() != sha:
+            raise SystemExit(f'{name} no longer matches pack-manifest.json; re-pack instead')
+    old = json.loads((dest / '.key.json').read_text())
+    key = dict(_notes=KEY_NOTES)
+    for y, e in old.items():
+        if y.startswith('_'):
+            continue
+        entry = done['assemblies'].get(e['label']) or done['planted']
+        key[y] = key_entry(e['label'], entry, e['source'], hat_s2, limit)
+    (dest / '.key.json').write_text(json.dumps(key, indent=1))
+    print('rekeyed', len(key) - 1, 'labels in', dest)
 
 
 if __name__ == '__main__':
@@ -667,7 +798,9 @@ if __name__ == '__main__':
     args = [Path(a) for a in sys.argv[2:]]
     if cmd in ('prep', 'controls', 'screen', 'assemble') and len(args) == 1:
         globals()[cmd](args[0])
-    elif cmd == 'pack' and len(args) == 2:
-        pack(*args)
+    elif cmd == 'automation' and len(args) == 1:
+        automation_only(args[0])
+    elif cmd in ('pack', 'rekey') and len(args) == 2:
+        globals()[cmd](*args)
     else:
         sys.exit(__doc__)
