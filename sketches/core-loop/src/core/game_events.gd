@@ -145,6 +145,13 @@ signal lap_bell_rung(at: Vector3)
 signal lap_ring_passed(index: int, count: int, at: Vector3)
 signal lap_completed(lap: int, required: int, seconds: float)
 signal warden_stripped(plating: float, at: Vector3)
+# v3 fun lab, the drop mode's Warden (combat; emitted by warden.gd and warden_drop.gd).
+# warden_state_changed carries the five states (closed, telegraph, open, recover,
+# punish) for the look to dress; the other three are the drop fight's reads.
+signal warden_state_changed(state: String, at: Vector3)
+signal warden_window_held(at: Vector3, seconds_left: float)
+signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
+signal warden_pulse_dodged(at: Vector3, near: bool)
 
 
 static func signal_names() -> PackedStringArray:
