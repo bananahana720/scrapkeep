@@ -333,7 +333,7 @@ def takes(run):
 def vocals(run):
     """Demucs' vocals RMS per take, from the separation logs (an instrumental that grew a voice)."""
     found, current = {}, None
-    for log in sorted([*(run / 'logs').glob('demucs*.log'), *(run.parent / 'logs').glob('demucs*.log')]):
+    for log in sorted(log for d in {run, run.parent, run.parent.parent} for log in (d / 'logs').glob('demucs*.log')):
         for line in log.read_text().splitlines():
             if ': separated in' in line:
                 current = line.split(':')[0]
