@@ -18,7 +18,9 @@ const MODES := ["v2", "drop", "laps"]
 const GUN_ROLES := ["hold", "full"]
 const LOOP_KEY := "loop_mode"
 const GUN_KEY := "gun_role"
-const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY}
+const MUSIC_KEY := "music"
+const BREATH_KEY := "breath"
+const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY}
 
 
 static func mode(tuning) -> String:
@@ -48,9 +50,9 @@ static func runs_laps(tuning, map) -> bool:
 	return mode(tuning) == "laps" and map != null and not map.drop_lines.is_empty()
 
 
-# `--loop=drop --gun=full`, from the user args (after Godot's `--`) or the engine args
-# (the launcher's `scrapkeep <sketch> -- --loop=drop` puts them there). Returns the
-# flags it applied.
+# `--loop=drop --gun=full --music=ace --breath=gentle`, from the user args (after
+# Godot's `--`) or the engine args (the launcher's `scrapkeep <sketch> -- --loop=drop`
+# puts them there). Returns the flags it applied.
 static func apply_args(tuning, args: PackedStringArray) -> Dictionary:
 	var applied := {}
 	for arg in args:

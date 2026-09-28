@@ -1,0 +1,462 @@
+{
+ "format": 1,
+ "theme": "spillway",
+ "rate": 44100,
+ "key": "D",
+ "key_offset": 0,
+ "stems": [
+  "drums",
+  "bass",
+  "other"
+ ],
+ "level_db": 4.0,
+ "pre_roll": 4096,
+ "post_roll": 1024,
+ "loop_join": 441,
+ "join_ms": 10.0,
+ "silent_db": -80.0,
+ "sources": {
+  "calm": {
+   "take": "calm-F-085-s1001",
+   "trim_samples": 503,
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/run/calm/takes/calm-F-085-s1001/calm-F-085-s1001/2b1f6f88-ead9-ca9f-4b12-ea4f9f41614d.drums.wav",
+     "sha256": "41b85f19abdeae6e849d7ea36c3650bd3d32e2d8c76d757de99830610996781a"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/run/calm/takes/calm-F-085-s1001/calm-F-085-s1001/2b1f6f88-ead9-ca9f-4b12-ea4f9f41614d.bass.wav",
+     "sha256": "26ed9083c402630d7f424a849cea6f5e897fa367777691bd418f805f0ffb27e6"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/run/calm/takes/calm-F-085-s1001/calm-F-085-s1001/2b1f6f88-ead9-ca9f-4b12-ea4f9f41614d.other.wav",
+     "sha256": "c81442ea5ebdb3e2fb57915c32d4574d2f6e54abfae67d3168a13bc89936f09a"
+    }
+   }
+  },
+  "warden": {
+   "take": "warden-F-085-s42",
+   "trim_samples": 326,
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/run/warden/takes/warden-F-085-s42/warden-F-085-s42/572aae51-660c-c3bc-a719-3460afd91c3b.drums.wav",
+     "sha256": "36f60a1b66f284a5c13a4fab32c569bb84a54280068093cad182deead787fa71"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/run/warden/takes/warden-F-085-s42/warden-F-085-s42/572aae51-660c-c3bc-a719-3460afd91c3b.bass.wav",
+     "sha256": "3a5041ac9cf860ae59335e7e274433b84d28e39a1b9ca1db4cf1af64b188c2df"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/run/warden/takes/warden-F-085-s42/warden-F-085-s42/572aae51-660c-c3bc-a719-3460afd91c3b.other.wav",
+     "sha256": "ffab3ee40e590c74885a5f09c6e75a6910842572517b7961c57af1e86e292c2f"
+    }
+   }
+  }
+ },
+ "timeline": "/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0/timeline.json",
+ "clips": {
+  "calm": {
+   "parent": "calm",
+   "take": "calm-F-085-s1001",
+   "source_state": "calm",
+   "source_bars": "1-16",
+   "source_start": 0,
+   "take_start": 503,
+   "bpm": 172.0,
+   "beat": 15384,
+   "bar": 61536,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 988672,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 988672,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "calm.drums.ogg",
+    "bass": "calm.bass.ogg",
+    "other": "calm.other.ogg"
+   }
+  },
+  "travel": {
+   "parent": "calm",
+   "take": "calm-F-085-s1001",
+   "source_state": "travel",
+   "source_bars": "1-15",
+   "source_start": 984576,
+   "take_start": 985079,
+   "bpm": 172.0,
+   "beat": 15384,
+   "bar": 61536,
+   "beats_per_bar": 4,
+   "bars": 15,
+   "entry": 4096,
+   "exit": 927136,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 927136,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "travel.drums.ogg",
+    "bass": "travel.bass.ogg",
+    "other": "travel.other.ogg"
+   }
+  },
+  "pivot": {
+   "parent": "warden",
+   "take": "warden-F-085-s42",
+   "source_state": "pivot",
+   "source_bars": "1-1",
+   "source_start": 0,
+   "take_start": 326,
+   "bpm": 172.0,
+   "beat": 15384,
+   "bar": 61536,
+   "beats_per_bar": 4,
+   "bars": 1,
+   "entry": 4096,
+   "exit": 65632,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 66656,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "pivot.drums.ogg",
+    "bass": "pivot.bass.ogg",
+    "other": "pivot.other.ogg"
+   }
+  },
+  "build": {
+   "parent": "warden",
+   "take": "warden-F-085-s42",
+   "source_state": "warden-1:build",
+   "source_bars": "1-16",
+   "source_start": 61536,
+   "take_start": 61862,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 1316864,
+   "loop": true,
+   "loop_offset": 660480,
+   "loop_to_bar": 9,
+   "sample_count": 1316864,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "build.drums.ogg",
+    "bass": "build.bass.ogg",
+    "other": "build.other.ogg"
+   }
+  },
+  "telegraph": {
+   "parent": "warden",
+   "take": "warden-F-085-s42",
+   "source_state": "warden-1:telegraph",
+   "source_bars": "1-4",
+   "source_start": 1374304,
+   "take_start": 1374630,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 332288,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "telegraph.drums.ogg",
+    "bass": "telegraph.bass.ogg",
+    "other": "telegraph.other.ogg"
+   }
+  },
+  "open": {
+   "parent": "warden",
+   "take": "warden-F-085-s42",
+   "source_state": "warden-1:open",
+   "source_bars": "1-4",
+   "source_start": 1702496,
+   "take_start": 1702822,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 332288,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "open.drums.ogg",
+    "bass": "open.bass.ogg",
+    "other": "open.other.ogg"
+   }
+  },
+  "drop": {
+   "parent": "warden",
+   "take": "warden-F-085-s42",
+   "source_state": "warden-1:drop",
+   "source_bars": "1-4",
+   "source_start": 2030688,
+   "take_start": 2031014,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 333312,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "drop.drums.ogg",
+    "bass": "drop.bass.ogg",
+    "other": "drop.other.ogg"
+   }
+  },
+  "cadence": {
+   "parent": "warden",
+   "take": "warden-F-085-s42",
+   "source_state": "return",
+   "source_bars": "1-2",
+   "source_start": 2358880,
+   "take_start": 2359206,
+   "bpm": 129.0,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 2,
+   "entry": 4096,
+   "exit": 168192,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 169216,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "cadence.drums.ogg",
+    "bass": "cadence.bass.ogg",
+    "other": "cadence.other.ogg"
+   }
+  }
+ },
+ "sections": {
+  "calm": {
+   "clip": "calm",
+   "game": "shelf, closed Warden, pressure low",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  },
+  "travel": {
+   "clip": "travel",
+   "game": "shelf, pressure up",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  },
+  "pivot": {
+   "clip": "pivot",
+   "game": "the drop-line commit: 172 into 129",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full",
+   "hold_bars": 1,
+   "then": "build"
+  },
+  "build": {
+   "clip": "build",
+   "game": "bank and lift, the Warden closed",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full",
+   "reenter_bar": 9
+  },
+  "telegraph": {
+   "clip": "telegraph",
+   "game": "the pulse charging",
+   "enter": "beat",
+   "phase": "keep",
+   "profile": "full"
+  },
+  "open": {
+   "clip": "open",
+   "game": "window open, the held breath",
+   "enter": "beat",
+   "phase": "keep",
+   "profile": "breath"
+  },
+  "drop": {
+   "clip": "drop",
+   "game": "landed on the core",
+   "enter": "contact",
+   "phase": "start",
+   "profile": "full",
+   "hold_bars": 1,
+   "then": "follow"
+  },
+  "break": {
+   "clip": "open",
+   "game": "the Warden breaks: breath before home",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "breath",
+   "bars": 4,
+   "then": "return",
+   "directed": true
+  },
+  "return": {
+   "clip": "cadence",
+   "game": "kill cadence, A7b9 then D",
+   "enter": "then",
+   "phase": "start",
+   "profile": "full",
+   "then": "home",
+   "directed": true
+  },
+  "home": {
+   "clip": "calm",
+   "game": "back on the shelf at 172",
+   "enter": "then",
+   "phase": "start",
+   "profile": "full",
+   "bars": 8,
+   "then": "release",
+   "directed": true
+  }
+ },
+ "set_piece": [
+  "break",
+  "return",
+  "home"
+ ],
+ "profiles": {
+  "full": {
+   "drums": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  },
+  "lounge": {
+   "drums": {
+    "volume_db": -12.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": -4.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  }
+ },
+ "breath": {
+  "raw": {
+   "stems": {
+    "drums": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "the take as ACE played it: every stem at 0 dB"
+  },
+  "hard": {
+   "stems": {
+    "drums": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": -8.0,
+     "lowpass_hz": 900,
+     "lowpass_order": 2
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "round2/automation/open.json"
+  },
+  "gentle": {
+   "stems": {
+    "drums": {
+     "volume_db": -12.0,
+     "lowpass_hz": 2000,
+     "lowpass_order": 2
+    },
+    "bass": {
+     "volume_db": -6.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 60.0,
+   "ramp_out_ms": 20.0,
+   "source": "round2/automation/open-gentle.json"
+  }
+ },
+ "breath_default": "hard",
+ "build_loop": {
+  "from_build_bar": 16,
+  "to_build_bar": 9,
+  "never_to_bar": 1,
+  "reason": "warden-F-085-s7 passes only the jumps the timeline plays; its 16 -> 1 wrap read 17.4 ms"
+ }
+}

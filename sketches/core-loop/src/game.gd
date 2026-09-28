@@ -340,6 +340,15 @@ func pause_toggled() -> bool:
 	return _pause_toggled
 
 
+# The ACE music's held breath, raw to hard to gentle: the title's B and the pause row.
+func cycle_breath() -> String:
+	var style := LoopMode.cycle(tuning, LoopMode.BREATH_KEY)
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null and audio.has_method("set_breath"):
+		audio.set_breath(style)
+	return style
+
+
 func notes_held() -> bool:
 	return _notes_held
 
@@ -440,6 +449,10 @@ func _screen_key(key: int) -> bool:
 				return true
 			if key == KEY_L or key == KEY_G:
 				LoopMode.cycle(tuning, LoopMode.LOOP_KEY if key == KEY_L else LoopMode.GUN_KEY)
+				screens.refresh_lab_row()
+				return true
+			if key == KEY_B and tuning.option(LoopMode.MUSIC_KEY) == "ace":
+				cycle_breath()
 				screens.refresh_lab_row()
 				return true
 		"class_select":
