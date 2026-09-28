@@ -1,7 +1,7 @@
 ---
 name: scrapkeep-writer-low
 description: Implement one authorized Scrapkeep card on Opus 5.5 medium in the coordinator-created worktree named in its packet. Use for mechanical, fully specified edits where every change is named in the packet.
-model: claude-opus-5-5
+model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---

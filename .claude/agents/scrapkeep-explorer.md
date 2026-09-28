@@ -1,7 +1,7 @@
 ---
 name: scrapkeep-explorer
 description: Inspect scoped Scrapkeep sources and return evidence without edits, on Opus 5.5 medium.
-model: claude-opus-5-5
+model: opus
 effort: medium
 tools: Read, Grep, Glob
 ---
