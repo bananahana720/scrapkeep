@@ -68,6 +68,20 @@ Andrew: the HUD should be "kind of like a um, hack together heads up display jus
 | **G. World and environment** | Codex track: Style A scenery on all three stages around the loop geometry; Warden family looks; interactable props (the 27k-triangle plan); lore surfaced by callbacks and the codex. | After C geometry lands |
 | **H. Performance and handoff** | CPU-side perf-lab (dense fights are CPU-bound, per STRESS-CAPTURE-1), native 1080p p99 of 16.7 ms or less, settings, Linux export, Andrew's early-access play. | Last |
 
+## Look and performance target (Andrew, 2026-09-28)
+
+Andrew: "keep iterating on it until it reaches maybe 80 to 90% of like the concept art at a playable frame rate at 60 FPS ... at 1080 ... at least 60 FPS on my setup as well ... I wouldn't want this game to be something that a mid-tier card or PC would be having a hard time to play."
+
+- **Look:** Style A at 80 to 90 percent of the concept art (Codex's storyboards and key art in `design-v2/visual-development/` and `design-v3/storyboards/`), judged by Andrew side by side with in-game captures.
+- **Machines:**
+  - Dev box: a Ryzen 9 5950X and an RTX 4080.
+  - Mid-tier reference: a 6-core Zen 2 or Zen 3 class CPU and an RTX 3060-class card, at 1080p and 60 FPS.
+- **Proxy budgets on the dev box.** These leave room for the mid-tier machine: roughly 1.5 times slower per CPU thread and 2.3 times slower on the GPU (an estimate, to be recalibrated if a mid-tier machine becomes available).
+  - In the densest fight, at 1080p and the default preset: **CPU main thread p99 ≤ 10 ms**, **GPU p99 ≤ 7 ms**, and frame p99 ≤ 16.7 ms.
+  - A lower preset must hold 60 on the mid-tier reference.
+- **Starting point:** STRESS-CAPTURE-1's densest scene costs about 26 ms p50 on the CPU and 1.5 ms p99 on the GPU. The CPU is the binding constraint, so performance work moves from wave H to now.
+- **Measured** with `tools/stress_capture.gd` (native) and a headless CPU benchmark on fixed scenes, before and after every optimisation. Keep a change only if it holds the look and the gameplay.
+
 ## Treasure-find ceremony (Andrew, 2026-09-28)
 
 Andrew wants "fun uh, discovery sort of like treasure find ceremony when you find an item". He wants anticipation that builds, then a reveal that pays off when the item "changes the the way they play or makes them feel empowered". The ceremony pauses only "if it's I guess warranted if ... the area has calmed down after a boss fight".
