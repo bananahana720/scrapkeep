@@ -6331,3 +6331,26 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 **Verification and evidence:** `node --test tests/asset-inspect.test.js`; `npm test`; `npm run check:scope -- <base> <candidate> --no-build`; `npm run check:docs`; `npm run check:project`; `npm run check:drift`; independent review; read-only CLI runs on the V3 exports. No browser or game build for this CLI-only scope.
 
 **Boundary:** No mesh mutation, decimation, Blender job, engine import, dependency, native change, asset design acceptance, engine migration or paused-sprint integration. The later clothing/fur library is separate.
+
+<a id="at-02"></a>
+
+### AT-02: Build a reusable fur and accessory mesh kit
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Asset tooling
+
+**Source and inputs:** Andrew's tooling request, instruction to proceed and subsequent "keep going"; [AT-01](#at-01); [asset provenance](docs/project/ASSETS.md); [TADR-001](adr/TADR-001-engine-language-platforms.md). The paused V3 session's chunky silhouette and material-role lessons inform the kit; its unapproved hero designs and dirty source files are not inputs.
+
+**Dependencies:** [AT-01](#at-01). **Blocking questions:** None.
+
+**Files touched:** `tools/asset-kit/**`; `docs/ASSET-TOOLING.md` (kit entry only); `artifacts/local/tasks/AT-02/`. Coordinator owns BACKLOG, TRACKING and consequential stated-hash maintenance.
+
+**Definition of done:**
+
+1. One reusable Blender library generates chunky fur tufts and fitted goggles/collar on two distinctly proportioned neutral head fixtures using explicit dimensions and anchors. Parts remain separate and editable in saved blend files.
+2. Each fixture has a detailed and reduced static GLB. Actual exported detailed assemblies are at most 6,000 triangles; reduced assemblies at most 3,000 and smaller than detailed. These are fixture ceilings, not adopted production character budgets. A manifest binds parameters, counts, source/artifact hashes and locally authored provenance.
+3. A repeatable headless recipe validates finite positive dimensions and bounded complexity, refuses existing output destinations and generates identical mesh geometry from identical inputs. Meaningful Blender probes cover these boundaries. All Blender runs use a capped user scope.
+4. A rendered contact sheet shows both shapes and LODs for visual review. Documentation explains commands, fit limits, modular selection, static exports, provenance and unmeasured engine import, runtime performance and human acceptance. No universal clothing fit or production character acceptance is claimed.
+
+**Verification and evidence:** Headless Blender probes and generation under `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G`; AT-01 checks on all four exports; rendered image inspection; `npm run check:scope -- <base> <candidate>` and its required commands; independent review. No browser flow changes; browser UAT is not applicable.
+
+**Boundary:** Local original mesh tooling and neutral fixtures only. No paid provider, new dependency, clothing rig, engine migration, game change, paused-sprint mutation or acceptance of pending hero/boss designs.
