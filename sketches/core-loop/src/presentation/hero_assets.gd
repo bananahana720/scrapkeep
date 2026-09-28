@@ -42,9 +42,6 @@ const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
-# ANCIENT is still pending Andrew (VISUAL-LANGUAGE section 2); candidate A until W7
-# adds Palette.ANCIENT.
-const ANCIENT := Color("3d8bff")
 
 const SLOTS := {
 	"paint": {"color": Color.WHITE, "vertex": true, "rough": 0.8},
@@ -57,7 +54,7 @@ const SLOTS := {
 	"fleet_paint": {"color": Palette.RUST, "rough": 0.8},
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
 	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.55},
-	"ancient_light": {"color": ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
 }
 
@@ -639,7 +636,7 @@ func _update_warden(rec: Dictionary) -> void:
 	enamel.emission_energy_multiplier = warden._look.body_material.emission_energy_multiplier
 	var rim: StandardMaterial3D = rec.materials.ancient_light_jaw
 	var plate: StandardMaterial3D = warden._look.plate_material
-	rim.emission = plate.emission if warden.tint_state == "amber" else ANCIENT
+	rim.emission = plate.emission if warden.tint_state == "amber" else Palette.ANCIENT
 	rim.albedo_color = rim.emission
 	rim.emission_energy_multiplier = plate.emission_energy_multiplier if warden.tint_state == "amber" else 0.8
 	for seam in rec.seams:

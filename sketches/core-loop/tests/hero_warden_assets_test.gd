@@ -99,6 +99,18 @@ func check_family() -> void:
 	check("badge remains", warden._look._badge.visible)
 	if warden.lesson == "caps":
 		check("lesson caps remain", warden._look.cap_material() == warden._cap_material and warden.cap_points().size() == 3)
+		var brood: Node3D = warden._look.get_node("BroodCells")
+		for i in 3:
+			var cell: Node3D = brood.get_node("BroodCap_%d" % i)
+			var membrane: MeshInstance3D = cell.get_node("Membrane")
+			var marker: Node3D = brood.get_node("BroodMarker_%d" % i)
+			check("brood membrane at gameplay cap", cell.global_position.distance_to(warden.cap_points()[i]) < 0.0001)
+			check("hex membrane and open marker replace heat column", membrane.mesh is CylinderMesh and membrane.mesh.radial_segments == 6 and membrane.mesh.height < 0.3 and marker.get_child_count() == 6)
+			check("brood cue remains visible with GLB", membrane.layers != 0 and marker.visible and membrane.material_override == warden._cap_material)
+		warden.on_struck("stomp", "cap", {})
+		check("brood membrane flashes on hit", is_equal_approx(warden._cap_material.emission_energy_multiplier, 5.0))
+		warden._look._update_caps(1.0)
+		check("brood membrane returns to idle", is_equal_approx(warden._cap_material.emission_energy_multiplier, 2.2))
 	if warden.lesson == "magnet":
 		warden.magnet_state = Warden.Magnet.TUG
 		warden._magnet_time = 0.3

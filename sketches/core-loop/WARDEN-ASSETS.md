@@ -26,7 +26,7 @@ Dynamic materials and adapted tower meshes belong to each Warden. Attachment is 
 
 The focused `tests/hero_warden_assets_test.gd` exercises all three real stage Wardens, attachment, world-space weak-point alignment through yaw, connected mounts, finite transforms/vertices, lower bounds, unchanged collision, independent materials/meshes, opening/reclosing, plating, flash, retained lesson cues, death, stage changes and hook teardown. Existing hero and Warden-family tests remain relevant regression checks.
 
-No native image or performance claim follows from headless checks. The parent owns rendered review of the bent tower, kit visibility, preserved cues and actual gameplay readability. If the adapted tower fails that review, geometry should be revised under a separate scoped decision rather than moving a gameplay hit target. `Palette.ANCIENT` is a parent-owned integration change; this candidate retains the existing alias.
+No native image or performance claim follows from headless checks. The parent owns rendered review of the bent tower, kit visibility, preserved cues and actual gameplay readability. If the adapted tower fails that review, geometry should be revised under a separate scoped decision rather than moving a gameplay hit target. `Palette.ANCIENT` now owns the shared blue; the hero hook consumes it directly.
 
 ## VD-04-A2 surface-fit correction
 
@@ -35,3 +35,7 @@ Independent review of 81477da found the flat copied shred strokes floated up to 
 The same stroke construction and projection helpers now prewarm those 24 immutable meshes in `HeroAssets.setup`, before `game.gd` connects title/start flow and input. Prewarming uses detached presentation builders: no enemy setup, tree entry, combat events or physics. Each live Warden retains private animated materials. This moves the measured first-fit CPU cost to startup; native first-appearance upload remains unmeasured.
 
 The signed-clearance follow-up closes the occlusion gap in the earlier absolute-distance check. Actual Godot probes across all three families measured 0.001013756–0.029058457 m outward clearance at 15 mm projection stand-off. All 4,482 samples satisfy the positive lower bound and unchanged 30 mm upper bound; no subdivision or runtime work changed. Prior results and benchmarks remain preserved.
+
+## Hive brood-cell correction
+
+Andrew flagged the stage-2 dome and heat columns as reactor language. The three existing cap targets now carry six-sided enamel rims and shallow amber membranes. Open hexagonal markers above the jaws preserve ground-approach visibility without heat columns. Membranes sit at the existing `cap_points()` coordinates and keep the original hit material, flash and damage rules. This is a presentation change in `warden_look.gd`; `warden.gd` and its lesson data are unchanged. It supersedes the old heat-plume appearance in the design reference, pending the coordinator's canonical record update.

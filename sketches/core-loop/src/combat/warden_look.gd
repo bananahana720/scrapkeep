@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Roster := preload("res://src/combat/roster.gd")
 
 # The Warden's body as a landmark, visual only: nothing here collides, and every
 # number the fight uses stays in warden.gd. It has to answer "what do I break?" from
@@ -21,8 +22,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # - Shred shows as glowing seams cracked across the jaw plates: none below SEAM_SHOW of
 #   the plating stripped, then more of them and brighter as the strip deepens, in the
 #   amber the plates turn once your punch beats what is left.
-# - Stage 2's vent caps are three glowing domes on the deck with heat plumes rising
-#   above the jaws; stage 3's magnet is a lit arm and head that burn amber while the
+# - Stage 2's brood cells have hexagonal rims and amber membranes, with matching
+#   hex markers above the jaws; stage 3's magnet is a lit arm and head that burn amber while the
 #   tug is on, the moment a shot on them counts.
 #
 # A rolling ball never reaches above 2 m, and below 2 m nothing here extends past the
@@ -47,7 +48,7 @@ const MARKER_SIZE := 1.9
 const MARKER_FADE_FAR := 20.0
 const MARKER_FADE_NEAR := 12.0
 const BADGE_PRIORITY := 30
-const PLUME_HEIGHT := 6.0
+const BROOD_MARKER_HEIGHT := 8.1
 const TURN_RATE := 3.0
 const SEAM_SHOW := 0.25
 # Each seam is a zigzag of strokes across a jaw's outer face: [x, y, tilt] in the
@@ -76,7 +77,6 @@ var _lit_material: StandardMaterial3D
 var _dim_material: StandardMaterial3D
 var _marker_material: StandardMaterial3D
 var _cap_material: StandardMaterial3D
-var _plume_material: StandardMaterial3D
 var _arm: MeshInstance3D
 var _head: Node3D
 var _magnet_material: StandardMaterial3D
@@ -232,25 +232,45 @@ func _badge_material(color: Color, alpha: float) -> StandardMaterial3D:
 
 func _build_caps() -> void:
 	_cap_material = _glow(Palette.AMBER, 2.2)
-	_plume_material = _flat(Palette.AMBER, 0.6)
+	var enamel := Palette.solid(Roster.ANCIENT_ENAMEL)
+	enamel.roughness = 0.8
+	var brood := Node3D.new()
+	brood.name = "BroodCells"
+	add_child(brood)
+	var index := 0
 	for cap in warden.cap_points():
 		var local: Vector3 = cap - warden.global_position
-		var dome := SphereMesh.new()
-		dome.radius = 1.05
-		dome.height = 1.05
-		dome.is_hemisphere = true
-		_mesh(dome, _cap_material, Vector3(local.x, _ground + DECK_HEIGHT, local.z))
-		# The jaws hide the deck from the ground, so each vent announces itself above
-		# them, against the sky: a heat plume topped by a lit crown ring.
-		var plume := CylinderMesh.new()
-		plume.top_radius = 0.45
-		plume.bottom_radius = 0.8
-		plume.height = PLUME_HEIGHT
-		_mesh(plume, _plume_material, Vector3(local.x, _ground + DECK_HEIGHT + 0.5 + PLUME_HEIGHT * 0.5, local.z))
-		var crown := TorusMesh.new()
-		crown.inner_radius = 0.45
-		crown.outer_radius = 0.85
-		_mesh(crown, _cap_material, Vector3(local.x, _ground + DECK_HEIGHT + 0.5 + PLUME_HEIGHT, local.z))
+		var cell := Node3D.new()
+		cell.name = "BroodCap_%d" % index
+		cell.position = local
+		brood.add_child(cell)
+		var membrane := CylinderMesh.new()
+		membrane.radial_segments = 6
+		membrane.top_radius = 0.72
+		membrane.bottom_radius = warden.CAP_RADIUS
+		membrane.height = 0.28
+		_mesh(membrane, _cap_material, Vector3.ZERO, cell).name = "Membrane"
+		_hex_rim(cell, 0.92, 0.14, enamel, false)
+		# The deck is hidden from a ground approach. An open hex glyph marks each
+		# cell's x/z without drawing a solid heat column through the family kit.
+		var marker := Node3D.new()
+		marker.name = "BroodMarker_%d" % index
+		marker.position = Vector3(local.x, _ground + BROOD_MARKER_HEIGHT, local.z)
+		brood.add_child(marker)
+		_hex_rim(marker, 0.45, 0.075, _cap_material, true)
+		index += 1
+
+
+func _hex_rim(parent: Node3D, radius: float, width: float, mat: Material, upright: bool) -> void:
+	for side in 6:
+		var a := TAU * float(side) / 6.0
+		var b := TAU * float(side + 1) / 6.0
+		var from := Vector3(cos(a), sin(a), 0.0) * radius if upright else Vector3(cos(a), 0.0, sin(a)) * radius
+		var to := Vector3(cos(b), sin(b), 0.0) * radius if upright else Vector3(cos(b), 0.0, sin(b)) * radius
+		var edge := BoxMesh.new()
+		edge.size = Vector3(width, width, from.distance_to(to))
+		var node := _mesh(edge, mat, (from + to) * 0.5, parent)
+		node.basis = Basis.looking_at(to - from, Vector3.FORWARD if upright else Vector3.UP)
 
 
 func _build_magnet() -> void:
@@ -327,7 +347,14 @@ func _update_caps(delta: float) -> void:
 	if _cap_material == null:
 		return
 	_cap_material.emission_energy_multiplier = move_toward(_cap_material.emission_energy_multiplier, 2.2, delta * 8.0)
-	_plume_material.albedo_color.a = 0.55 + 0.15 * sin(Time.get_ticks_msec() * 0.006)
+	var camera := get_viewport().get_camera_3d()
+	if camera != null:
+		for marker in get_node("BroodCells").get_children():
+			if String(marker.name).begins_with("BroodMarker_"):
+				var facing: Vector3 = camera.global_position - marker.global_position
+				facing.y = 0.0
+				if facing.length_squared() > 0.001:
+					marker.basis = Basis.looking_at(-facing, Vector3.UP)
 
 
 func _update_magnet() -> void:
