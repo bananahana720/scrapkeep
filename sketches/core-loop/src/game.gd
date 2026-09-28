@@ -136,6 +136,7 @@ func _ready() -> void:
 	run_log.setup(events, run, player, codex, storage_dir)
 
 	world = _module(World)
+	preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(1))
 	combat = _module(Combat)
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
