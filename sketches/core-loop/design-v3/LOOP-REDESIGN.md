@@ -201,6 +201,13 @@ Serial where seams collide: A0 first if the sitting is chosen, its `drop` branch
 
 ## 6. Open questions for Andrew (recommendation first)
 
+**Andrew's answers (AskUserQuestion, 2026-09-28).**
+- Fun lab: **Drop plus Laps against v2** as the control. Feeds is not built.
+- Gun's role: **a lab toggle to feel both.** `hold` (the gun holds the window; drops deal the damage) against `full` (the gun deals full damage inside the window; drops are burst).
+- Interact key: **E everywhere**, Sable's mount contextual when no interactable is in reach, Q stays the winch.
+
+The other questions (camper, cores, clock, stage 1 return, drop counts, feeds, evolutions) take the recommended option (a) for the lab. They are revisited after the sitting.
+
 1. **The gun's role in the Warden fight.** (a) The gun holds the window open and clears the packs; contact from a drop deals the damage. (b) The gun deals full damage inside the window, and the drop is a bonus. (c) Keep the 20% chip.
 2. **The bowl camper.** (a) Cannot break the Warden at all: nothing but a drop lands. (b) Can, through in-bowl slams off the pulse lift, in about 4 minutes. (c) Can, at twice a lapper's time.
 3. **Bonus cores in the fight.** (a) A core also opens every window 1 s longer this stage, and still sets the gate tier. (b) Gate tier only, as today.
