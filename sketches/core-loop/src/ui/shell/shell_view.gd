@@ -6,7 +6,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const PlaceholderPage := preload("res://src/ui/placeholder_page.gd")
 
 # The home screen and everything under it, as one view on the title (screens.gd owns
-# it, the way it owns the how-to-play page). M on the title opens the home; each entry
+# it, the way it owns the how-to-play page). O on the title opens the home; each entry
 # is a ChoiceButton that presses its key through game._screen_key, and every view is
 # drawn from game_map.gd, so nothing here names an entry. Enter walks a live entry
 # with children as a list, a placeholder as its page, and a live leaf to its route.
@@ -85,18 +85,18 @@ func button_for(id: String) -> Button:
 	return null
 
 
-# The key handler behind game._screen_key while the title shows the shell (and M on the
+# The key handler behind game._screen_key while the title shows the shell (and O on the
 # title). Keys it does not own return false, so F-keys still pass.
 func key(keycode: int) -> bool:
 	if not visible:
-		if keycode == KEY_M:
+		if keycode == KEY_O:
 			open()
 			return true
 		return false
 	if keycode == KEY_ESCAPE:
 		back()
 		return true
-	if keycode == KEY_M:
+	if keycode == KEY_O:
 		close()
 		return true
 	if keycode == KEY_SPACE or keycode == KEY_ENTER:

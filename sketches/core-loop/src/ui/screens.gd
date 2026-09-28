@@ -123,7 +123,7 @@ func _on_flow_changed(state: String) -> void:
 			_action("help", "key_h", "Help")
 			_action("loop", "key_l", "")
 			_action("gun", "key_g", "")
-			_action("menu", "key_m", "Menu")
+			_action("menu", "key_o", "Menu")
 			refresh_lab_row()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
@@ -169,7 +169,7 @@ func help_open() -> bool:
 	return _help.visible
 
 
-# The home screen (shell_view.gd). M on the title opens it; while it is open the title's
+# The home screen (shell_view.gd). O on the title opens it; while it is open the title's
 # other keys wait behind it, and Space still starts a run.
 func shell_open() -> bool:
 	return _shell.visible

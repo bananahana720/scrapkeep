@@ -12,7 +12,7 @@ extends RefCounted
 #   title     what the button and page show ("???" while the thing is a secret)
 #   status    live (the game has it today) or placeholder (a page, not a feature)
 #   parent    the entry it nests under, "" for the home screen
-#   key       the menu key on its screen (unique per level; never Space, H, L, G, M, or a
+#   key       the menu key on its screen (unique per level; never Space, H, L, G, O (M, -, =, [ and ] belong to audio), or a
 #             key the dead, summary or class-select screens use: R N C T Enter 1 to 3 are
 #             their keys, so a level with digits is only ever reached from the title)
 #   teaser    one player-facing line, at most TEASER_WORDS words
@@ -124,7 +124,7 @@ const ENTRIES := [
 		"teaser": "Locked. Something is warming up.", "route": "",
 		"note": "The glitchy, friendly ancient robot who transmogs to the tech it holds. Locked until the unlocks system exists.",
 		"avenues": ["transmogs to the last part picked up", "its kit is one slot swap per pickup, using the tree's swap op"],
-		"touches": ["src/core/class_def.gd", "src/core/upgrade_tree.gd", "src/core/trees/sable.gd", "src/core/ability_state.gd", "src/ui/class_card.gd", "src/presentation/hero_assets.gd", "src/core/codex.gd"],
+		"touches": ["src/core/class_def.gd", "src/core/upgrade_tree.gd", "src/core/trees/sable.gd", "src/core/ability_state.gd", "src/ui/class_card.gd", "src/ui/screens.gd", "src/core/flow.gd", "src/presentation/hero_assets.gd", "src/presentation/audio.gd", "src/presentation/sfx_bank.gd", "src/presentation/harmony.gd", "src/world/director.gd", "src/combat/roster.gd", "src/core/event_kinds.gd", "src/core/codex.gd"],
 	},
 	{
 		"id": "kit_tree", "title": "Kit tree", "status": PLACEHOLDER, "parent": HOME, "key": "K",

@@ -432,7 +432,7 @@ func _input(event: InputEvent) -> void:
 func _screen_key(key: int) -> bool:
 	match flow.state_name():
 		"title":
-			if screens.shell_open() or key == KEY_M:
+			if screens.shell_open() or key == KEY_O:
 				return screens.shell_key(key)
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()

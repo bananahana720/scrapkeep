@@ -91,7 +91,7 @@ func _title_keys() -> void:
 
 
 func _shell_holds_keys() -> void:
-	_game._screen_key(KEY_M)
+	_game._screen_key(KEY_O)
 	var open: bool = _game.screens.shell_open()
 	var loop_before := LoopMode.mode(_game.tuning)
 	var gun_before := LoopMode.gun_role(_game.tuning)
@@ -102,7 +102,7 @@ func _shell_holds_keys() -> void:
 		and not _game.screens.help_open(), "with the home open, L, G and H change nothing")
 	_game._screen_key(KEY_ESCAPE)
 	var closed: bool = not _game.screens.shell_open() and _game.flow.state_name() == "title"
-	_game._screen_key(KEY_M)
+	_game._screen_key(KEY_O)
 	_game._screen_key(KEY_SPACE)
 	_report("Esc and Space", closed and _game.flow.state_name() == "class_select" and not _game.screens.shell_open(),
 		"Esc leaves the home for the title; Space from the home starts a run (%s)" % _game.flow.state_name())
@@ -119,7 +119,7 @@ func _budget() -> void:
 	await create_timer(0.5).timeout
 	var counts := {}
 	counts["title"] = _words()
-	_game._screen_key(KEY_M)
+	_game._screen_key(KEY_O)
 	await create_timer(0.5).timeout
 	counts["home"] = _words()
 	_game._screen_key(KEY_P)
@@ -197,7 +197,7 @@ func _end_screens() -> void:
 	_game.flow._set_state(Flow.VICTORY)
 	await _frames(5)
 	var body: String = _game.screens._body.text
-	var no_keys: bool = not _game._screen_key(KEY_SPACE) and not _game._screen_key(KEY_M) and not _game.screens.shell_open()
+	var no_keys: bool = not _game._screen_key(KEY_SPACE) and not _game._screen_key(KEY_O) and not _game.screens.shell_open()
 	_report("victory screen", no_keys and body.contains(GameMap.after_brindle()) and body.contains("World 2: ???")
 		and _game.screens._actions.get_child_count() == 0,
 		"victory keeps no keys and no buttons; its body reads \"%s\"" % body.replace("\n", " / "))

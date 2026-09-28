@@ -13,7 +13,7 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # opens its page and Esc returns, every live leaf routes to class select, and the home
 # and its placeholders answer the mouse (a click in, a click on Back out).
 
-const RESERVED := [KEY_SPACE, KEY_ENTER, KEY_H, KEY_L, KEY_G, KEY_M, KEY_R, KEY_N, KEY_C, KEY_T]
+const RESERVED := [KEY_SPACE, KEY_ENTER, KEY_H, KEY_L, KEY_G, KEY_M, KEY_MINUS, KEY_EQUAL, KEY_BRACKETLEFT, KEY_BRACKETRIGHT, KEY_O, KEY_R, KEY_N, KEY_C, KEY_T]
 
 var _game
 var _failures := 0
@@ -165,7 +165,7 @@ func _walk_by_key() -> void:
 		_to_title()
 		await _frames(2)
 		var shell = _game.screens.shell_view()
-		var pressed_m: bool = _game._screen_key(KEY_M)
+		var pressed_m: bool = _game._screen_key(KEY_O)
 		var here := true
 		for step in _path(id):
 			var k := OS.find_keycode_from_string(GameMap.entry(step)["key"])
