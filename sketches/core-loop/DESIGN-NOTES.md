@@ -1083,3 +1083,142 @@ density_test.gd` gained the real load scenario (point 6) and a bolt-tail-shed ch
 existing "kill bursts" check now reports the true, undoubled pop count. Full
 `npm run sketch:smoke` rerun at the tip of this fix round; see the coordinator's own
 report for its result rather than duplicating it here.
+
+
+## v3 F1a fix round 2 (two Opus reviews, one blocker + twelve majors)
+
+Base `1f34faa` on `proto/core-loop-v3-f1a` (fix round 1's tip). Every listed finding was
+fixed; none were disputed as wrong.
+
+1. **The kill-pop hard budget (3 / 250 ms, §1.2) was not actually enforced (finding 1).**
+   Fix round 1's coalescing only merged pops *spatially* (within the band's window/metres);
+   at density 0, or when kills are spread outside the window, every kill still flushed its
+   own starburst immediately, uncapped. `vfx.gd` now tracks a list of pending pop clusters
+   (`_pending_pops`), and the rolling `kill_pops_per_250ms` budget applies at flush time
+   regardless of density: once `burst_count_within("pop", 250.0) >= Density.cap
+   ("kill_pops_per_250ms")`, a kill that cannot spatially merge into an open cluster folds
+   into the nearest *pending* one by distance instead of starting an unbounded new one, so
+   the number of live clusters stays bounded and the emitted-burst rate never exceeds the
+   cap. A held cluster keeps absorbing kills and flushes as soon as the rolling window
+   frees room — delayed, never dropped. New tests: 30 kills 10 m apart at density 0, and 30
+   kills alternating between two spots 12 m apart at density 0.8 (both scenarios the
+   original test's uniform 0.03 m spacing hid), plus a check that the folded overflow
+   still fires once the budget clears.
+2. **The coalesce window slid on every merge (finding 2).** `_pending_pop["time"]`/`["at"]`
+   used to reset to the *latest* member on every merge, so a steady kill chain (each kill
+   within the window of the previous one) never let the window elapse — no pop showed
+   until the whole chain ended. A cluster's `"at"`/`"time"` are now fixed to its FIRST
+   member and never move; the window is measured from that anchor, so a steady chain keeps
+   flushing partway through. New test: 25 kills 100 ms apart at one point now show several
+   pop bursts by kill 13, not zero.
+3. **`enemy_killed` was ungoverned P5, not P4 (finding 3).** The kill flash (`_on_killed`)
+   and juice.gd's multi-kill ring glyph both draw kind `"enemy_killed"` via `vfx.glyph()`,
+   but it was missing from `P5_KINDS`: no density caps, no count against the 40-glyph P5
+   budget, and it could evict any pool slot including the 8 reserved for P2/P3 shapes.
+   Added to `P5_KINDS` — juice.gd needed no edit, since both callers already route through
+   the same kind string. New test: a 60-strong `enemy_killed` flood (bigger than the whole
+   48-slot pool) leaves a `near_miss` glyph alive and keeps governed count ≤ 40.
+4. **The shared governor double-stepped every frame, and its own callers disagreed
+   within the frame (finding 4/15).** Fix round 1's `contribute()` let every caller
+   advance the Governor immediately, so with vfx.gd and bolts.gd both calling it every
+   frame (not "that one frame" as fix round 1's own note claimed), the smoothing ran at
+   roughly 2x its designed rate throughout, and the first caller in a frame read a value
+   computed off a partial fx total the second caller hadn't added in yet. `contribute()`
+   now advances the Governor once per frame, off the *previous* frame's accumulated
+   totals (a frame of lag, accepted so every caller that frame reads the same number);
+   every subsequent call that frame only accumulates for the next step. New test: two
+   `contribute()` calls in one frame (different fx counts) now return the identical value.
+5. **The rasterized union spilled past real edges (finding 5).** `_union_footprint` used
+   to emit a full grid-cell quad whenever the cell's *centre* fell inside a member's
+   footprint, spilling up to a cell-width beyond the real edge, and for an annular hazard
+   or a quenched arc, into the safe inner radius or open gap. `_union_cell` now only emits
+   a cell once every corner and edge midpoint tests inside the *same* member's real
+   footprint (`_point_in_footprint`, the same predicate `contains()` reads); a straddling
+   cell quarters down to `UNION_MIN_STEP` (0.25 m) and any remainder still failing is
+   dropped, trading a sliver of under-coverage at a curved boundary for never painting a
+   hostile stripe on safe ground. New test: 5 overlapping annulus hazards (r_in 8, r_out
+   14) produce a union whose every drawn vertex satisfies at least one member's real
+   `contains()`.
+6. **The union drew at the wrong height (findings 6, 14).** `_union_painter` was a bare
+   `Threat.Painter` (`floor_y` 0, no `ground` Callable, default `lift` 0.2), so on real
+   terrain the union drew near world y ≈ 0.2 while its members drew at their own ground
+   height, tens of metres apart. The union footprint now bakes each covered cell's y from
+   its own covering member's real `centre.y` (`abs=true`), matching telegraph.gd's own
+   `LIFT` (0.2). New test: 5 overlapping fills on ground at y=15 draw their union at
+   y=15.2, not y≈0.2.
+7. **The union did not replace a telegraph member's own static fill (finding 7).**
+   telegraph.gd paints `STATIC_LAYERS` (the "area" stripe) once, at commit, and never
+   again, so a member that started or stopped being unioned *after* commit kept drawing
+   (or lost) its own fill under the shared union mark — brightness stacking §6.1
+   forbids. Neither telegraph.gd nor hazard.gd needed editing: both already expose
+   `painter()`/`descriptor()` publicly (their own `_build()`/`_repaint()` call this exact
+   pattern). `refresh_union()` now repaints a member's `STATIC_LAYERS` through those public
+   methods whenever this frame's suppressed-role set for it changed from last frame. New
+   test: a committed member's own static "stripe" vertex count drops to 0 once
+   `refresh_union` runs and it joins a >4 union.
+8. **P0-P3 test coverage, and no hysteresis on the band/shed edges (finding 9).** The 0.4
+   and 0.7 band edges, and the 0.4 shed-step gate, were hard thresholds with no enter/exit
+   gap, so density hovering right at one flipped every discrete cap (alpha, size,
+   lifetime, coalescing, and now saturation) or the ambient shed step, frame to frame.
+   `density.gd`'s `band()` and `shed_step()` now hold a sticky band/gate (static state,
+   safe here since every caller reads the one shared governor's density) that needs
+   clearing a 0.02 margin (or, for the shed gate, the fix's own named 0.42 enter / 0.36
+   leave) before it moves. `Density.alpha_factor`'s normalising divide-by-band(0) no
+   longer routes through the *same* hysteretic lookup (it would otherwise yank the sticky
+   band back toward 0 on every single call) — it reads the constant `BANDS[0]["alpha"]`
+   directly. New tests: `shed_step(0.399)` and `shed_step(0.401)` now agree (both 0);
+   `ambient_p7`/`synergy_evolution_rings`/`drone_rack_seams` remain the only three
+   `SHED_ORDER` steps with no consumer, same as fix round 1 — `ambient_p7` because no P7
+   ambient emitter exists in this sketch yet (explicitly deferred at the const's own
+   definition), `drone_rack_seams` because it names enemy-model geometry no file in this
+   unit's write set (`density.gd`/`vfx.gd`/`bolts.gd`/`threat_grammar.gd`) owns. Wiring
+   either is a scope decision for the coordinator, not a bounded fix here.
+9. **§1.2's P5 saturation column did not exist (finding 10).** Added a `"saturation"`
+   field to `BANDS` (1.0 / 0.7 / 0.4, scaling the colour's own HSV saturation toward grey,
+   value held, so a colour that starts under full saturation is not boosted) and
+   `Density.apply_saturation()`, applied everywhere `alpha_factor`/`size_factor` already
+   governs a P5 colour: glyphs, bursts, the trail and speed lines.
+10. **The rasterized union always painted at `PRIORITY` (40), same as P1 edges and above
+    every P5 effect (finding 11).** `Threat.Painter`'s "stripe"/"stripe_motion"/"fill"
+    layers now draw at a new `UNION_PRIORITY` (10); every other layer (P1-P3 edges,
+    fronts, brackets, rails, owner ticks) stays at `PRIORITY` (40). `vfx.gd`'s pooled
+    glyph and burst materials now set `render_priority = P5_RENDER_PRIORITY` (20), so the
+    stack reads P6 (10) < P5 (20) < P1-P3 (40), matching §1.1's row for this unit. New
+    test asserts the two layer priorities directly.
+11. **The coalesced-burst scale formula did not match §1.5 (finding 12).** `1.0 + 1.2 *
+    extra` already hit the 2.5x cap at 3 kills and stopped distinguishing longer chains,
+    contradicting "a six-kill chain is one 2.5x burst". Now `pow(scale_per_extra, extra)`
+    (`1.2^5 ≈ 2.49` for a 6-kill chain), clamped to `scale_cap`. New test: 2 coalesced
+    kills scale ~1.2x, 6 scale ~2.49x.
+12. **Clustering cost real frame time even when nothing unioned, and grew exponentially
+    (finding 13, blocker).** `_hostile_indices` used to call `roles(d)` per descriptor —
+    building that descriptor's full static and motion mark GEOMETRY just to read role
+    names — and `suppressed_roles()`/`union_fill_marks_for()` each independently ran
+    Bron-Kerbosch (no pivot), which grows exponentially with the hostile count (measured
+    up to 89.91 ms at n=14). Replaced with: (a) `_is_hostile_fill`, a cheap type/progress
+    predicate (a hostile INSTANT/PROJECTILE/LANE always counts; a hostile WAVE only once
+    `front >= 0`, i.e. no longer arming) that reproduces the old role-based classification
+    without building any geometry; (b) `_union_groups`, the one shared clustering pass
+    both `suppressed_roles()` and `union_fill_marks_for()` call (and `refresh_union()`
+    calls once and reuses for both, instead of computing it twice live); (c) clustering
+    itself is now a coverage-depth count over the existing 2 m grid — a cell more than
+    `cap_hostile_union()` real footprints cover — prefiltered to members with at least
+    `cap` bounds-overlapping neighbours (a point covered by more than `cap` real
+    footprints implies every pair among them has overlapping bounds, so this prefilter
+    drops nothing a real group needs, and gives the "4 or fewer hostile fills" case its
+    own early exit for free), then grouped into connected regions (4-connected flood
+    fill over the grid) so one union mark still covers one continuous over-dense patch.
+    This is a literal reading of "more than four overlapping fills" (a point genuinely
+    covered by 5 real shapes), not the old maximal-clique's stricter all-pairwise-overlap
+    reading, and every existing union test (5 identical rings, 4 identical rings, arming
+    waves, a 10 m chain of 6 m rings) still passes unmodified against it. New perf test:
+    `suppressed_roles()` + `union_fill_marks_for()` together average ~3 ms per call at
+    n=12 overlapping fills (headless test machine, contended), against fix round 1's
+    Bron-Kerbosch evidence of up to 89.91 ms at n=14.
+
+**Checks, fix round 2.** `threat_grammar_test.gd` gained five cases (points 5, 6, 7, 10,
+12 above). `presentation_density_test.gd` gained eight (points 1, 2, 3, 4, 8, 11 above,
+plus the load scenario's own vacuous `not cap_engaged or ...` branch dropped now that the
+cap holds at every density). Both test files and the full `npm run sketch:smoke` pass at
+this fix round's tip; see the coordinator's own report for the smoke result rather than
+duplicating it here.

@@ -5,6 +5,7 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Game := preload("res://src/game.gd")
+const Vfx := preload("res://src/presentation/vfx.gd")
 
 # v3 F1a: the density governor (FEEL-READABILITY.md §1.2, §8, §9). Four things this unit
 # must hold: the scalar rises and falls back on its own clock; P0 to P3 are never
@@ -55,10 +56,16 @@ func _initialize() -> void:
 func _process(_delta: float) -> bool:
 	if not _instant_done:
 		_check_rise_and_fall()
+		_check_governor_shared_step()
 		_check_priority_exemption()
 		_check_shed_order()
+		_check_shed_hysteresis()
 		_check_bolts_simulation_parity()
 		_check_bolt_tail_shed()
+		_check_kill_pop_budget()
+		_check_kill_pop_coalesce_anchor()
+		_check_pop_scale_exponential()
+		_check_kill_flash_governed()
 		_instant_done = true
 		return false
 	if _game == null or _game.flow == null:
@@ -213,6 +220,166 @@ func _check_bolt_tail_shed() -> void:
 	bolts.free()
 
 
+# --- Fix round 2 unit tests (a bare Vfx instance, no full Game) -------------------------
+
+# A minimal Vfx that can burst()/glyph() without a full ctx: its own pooled meshes and
+# particles, added under a throwaway world. Density and the clock are driven by hand.
+func _bare_vfx(world: Node3D) -> Vfx:
+	var vfx := Vfx.new()
+	world.add_child(vfx)
+	vfx.root = Node3D.new()
+	world.add_child(vfx.root)
+	for i in Vfx.POOL:
+		var glyph := MeshInstance3D.new()
+		var mat := StandardMaterial3D.new()
+		glyph.material_override = mat
+		glyph.visible = false
+		vfx.root.add_child(glyph)
+		vfx._glyphs.append({"node": glyph, "mat": mat, "t": 1.0, "life": 1.0, "from": 1.0, "to": 1.0, "color": Color.WHITE})
+	vfx._build_meshes()
+	vfx._build_bursts()
+	return vfx
+
+
+# fix round 2, finding 4/15: two callers in the same frame (vfx.gd and bolts.gd) must read
+# back the identical density; the shared governor must not advance twice that tick, and
+# must not let the second caller's larger fx total retroactively change what the first
+# caller already read.
+func _check_governor_shared_step() -> void:
+	var first := Density.contribute(1.0 / 60.0, 2, 5, 3)
+	var second := Density.contribute(1.0 / 60.0, 2, 9, 3)
+	_report("same-frame callers read the same density", is_equal_approx(first, second),
+		"two contribute() calls in one frame return %.6f then %.6f: the second call's larger fx count (9 vs 5) does not retroactively re-advance what the first caller already read"
+			% [first, second])
+
+
+# fix round 2, finding 9: the 0.4 band/shed edge is a hard threshold with no gap, so
+# density hovering right at it (0.399 vs 0.401) used to flip shed_step from 0 straight to
+# 1. It now needs 0.42 to enter and 0.36 to leave.
+func _check_shed_hysteresis() -> void:
+	Density.shed_step(0.1)  # force a known starting state; Density's hysteresis is static
+	var below := Density.shed_step(0.399)
+	var above := Density.shed_step(0.401)
+	_report("shed step does not flip right at the raw 0.4 edge", below == 0 and above == 0,
+		"without hysteresis 0.401 alone would already ceil to 1 step; gated until 0.42 it reads %d then %d" % [below, above])
+	var entered := Density.shed_step(0.42)
+	_report("shed step activates once density clears the enter margin", entered > 0,
+		"at the 0.42 enter margin, shed_step reads %d" % entered)
+	var released := Density.shed_step(0.3)
+	_report("shed step releases once density clears the leave margin", released == 0,
+		"dropping to 0.3, past the 0.36 leave margin, releases back to %d step(s)" % released)
+
+
+# fix round 2, finding 1: §1.2's kill_pops_per_250ms cap (3) is a hard rolling budget at
+# EVERY density, not just once the coalesce window is open. The old code hid this with 30
+# kills 0.03 m apart (finding 1's own critique of fix round 1's test); this spreads them.
+func _check_kill_pop_budget() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var cap := Density.cap("kill_pops_per_250ms")
+
+	# Quiet run: density 0 (coalesce window closed), 30 kills 10 m apart over ~180 ms.
+	var quiet := _bare_vfx(world)
+	quiet._density = 0.0
+	for i in 30:
+		quiet.burst("pop", Vector3(10.0 * i, 0.0, 0.0), Color.WHITE, 1)
+		quiet._clock += 0.006
+		quiet._flush_ready_pops()
+	var quiet_pops := quiet.burst_count_within("pop", 250.0)
+	_report("kill pops cap at density 0", quiet_pops <= cap,
+		"30 kills 10 m apart at density 0 over ~180 ms produce %d pop burst(s) in the trailing 250 ms (cap %d)" % [quiet_pops, cap])
+
+	# Dense run: kills alternate between two spots 12 m apart, farther than any band's
+	# coalesce_m (6 m max), so they never spatially merge either.
+	var dense := _bare_vfx(world)
+	dense._density = 0.8
+	for i in 30:
+		var at := Vector3(0.0, 0.0, 0.0) if i % 2 == 0 else Vector3(12.0, 0.0, 0.0)
+		dense.burst("pop", at, Color.WHITE, 1)
+		dense._clock += 0.006
+		dense._flush_ready_pops()
+	var dense_pops := dense.burst_count_within("pop", 250.0)
+	_report("kill pops cap under load with kills spread in space", dense_pops <= cap,
+		"30 kills alternating between two spots 12 m apart at density 0.8 over ~180 ms produce %d pop burst(s) in the trailing 250 ms (cap %d)" % [dense_pops, cap])
+
+	# The cap delays, it never drops: the overflow folds into a pending cluster (fewer,
+	# bigger bursts, not one per kill -- that is the point of folding), and once the
+	# rolling window clears, that folded cluster still flushes instead of vanishing.
+	quiet._clock += 0.3
+	quiet._flush_ready_pops()
+	_report("capped pops still fire eventually, not silently dropped", quiet.spawned.get("burst_pop", 0) > quiet_pops,
+		"once the rolling budget clears, the folded overflow flushes too: %d pop burst(s) total, more than the %d that fired immediately"
+			% [quiet.spawned.get("burst_pop", 0), quiet_pops])
+	world.free()
+
+
+# fix round 2, finding 2: a coalesce cluster's window anchors to its FIRST member and does
+# not slide on every merge, so a steady kill chain keeps flushing partway through instead
+# of showing nothing until the chain ends.
+func _check_kill_pop_coalesce_anchor() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var vfx := _bare_vfx(world)
+	vfx._density = 0.6  # coalesce_ms 120, coalesce_m 4.0
+	var at := Vector3(50.0, 0.0, 0.0)
+	var during := 0
+	for i in 25:
+		vfx.burst("pop", at, Color.WHITE, 1)
+		vfx._clock += 0.1
+		vfx._flush_ready_pops()
+		if i == 12:
+			during = vfx.spawned.get("burst_pop", 0)
+	var after_chain: int = vfx.spawned.get("burst_pop", 0)
+	_report("a steady kill chain still flushes mid-chain, not just at the end", during > 0 and after_chain > during,
+		"25 kills 100 ms apart at one point (each within the 120 ms window of its predecessor) produce %d pop burst(s) by kill 13 and %d by the end -- a sliding window would show 0 until the chain ends"
+			% [during, after_chain])
+	world.free()
+
+
+# fix round 2, finding 12: a six-kill chain reads as one ~2.5x burst (§1.5) via
+# base^(kills-1) (1.2^5 ~= 2.49), not the old 1 + base*extra, which already hit the 2.5x
+# cap at three kills.
+func _check_pop_scale_exponential() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var two := _bare_vfx(world)
+	two._density = 0.6
+	for i in 2:
+		two.burst("pop", Vector3.ZERO, Color.WHITE, 1)
+		two._clock += 0.02
+	two._clock += 0.3
+	two._flush_ready_pops()
+	var six := _bare_vfx(world)
+	six._density = 0.6
+	for i in 6:
+		six.burst("pop", Vector3.ZERO, Color.WHITE, 1)
+		six._clock += 0.02
+	six._clock += 0.3
+	six._flush_ready_pops()
+	_report("a coalesced pop scales exponentially with the chain length", is_equal_approx(two.last_pop_scale(), 1.2)
+			and six.last_pop_scale() > 2.4 and six.last_pop_scale() <= 2.5,
+		"2 coalesced kills scale %.3fx (base^1 = 1.2x); 6 coalesced kills scale %.3fx (base^5 ~= 2.49x, clamped at 2.5x)"
+			% [two.last_pop_scale(), six.last_pop_scale()])
+	world.free()
+
+
+# fix round 2, finding 3/14: enemy_killed (the kill flash, and juice's multi-kill ring
+# glyph, which shares the same kind) is now P5: governed, capped by p5_glyphs, and never
+# able to evict a P2/P3 shape's reserved pool slots, even in a flood bigger than the pool.
+func _check_kill_flash_governed() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var vfx := _bare_vfx(world)
+	vfx.glyph("near_miss", Vector3.ZERO, 0.3, 0.9, 5.0)
+	for i in 60:
+		vfx.glyph("enemy_killed", Vector3(float(i), 0.0, 0.0), 0.6, 1.8, 5.0)
+	_report("enemy_killed is governed and never evicts a reserved P2/P3 slot",
+		vfx.kind_alive_count("near_miss") == 1 and vfx.governed_glyph_count() <= Density.cap("p5_glyphs"),
+		"a near_miss glyph stays alive (%d) through a 60-strong enemy_killed flood (pool %d), and governed P5 glyphs stay at or under the %d cap (%d alive)"
+			% [vfx.kind_alive_count("near_miss"), Vfx.POOL, Density.cap("p5_glyphs"), vfx.governed_glyph_count()])
+	world.free()
+
+
 # --- Fix round 1, finding 6: the real-game load scenario --------------------------------
 
 func _schedule_load_scenario(events) -> void:
@@ -284,9 +451,12 @@ func _check_load_scenario() -> void:
 			% [before, after])
 	var density_at_burst: float = _marks.get("density_at_burst", -1.0)
 	var pops: int = _marks.get("pops_in_250ms", -1)
-	var cap_engaged := density_at_burst >= 0.4
-	_report("kill pops coalesce under load", not cap_engaged or (pops >= 0 and pops <= Density.cap("kill_pops_per_250ms")),
-		"30 kills in ~180 ms at density %.3f produce %d pop burst(s) in the trailing 250 ms (cap %d; the cap only applies once density reaches a coalescing band)"
+	# fix round 2, finding 1: the kill_pops_per_250ms budget is a hard rolling cap at
+	# EVERY density now, not just once a coalescing band opens, so this no longer needs
+	# the "not cap_engaged or ..." bypass fix round 1 had (which the review flagged as
+	# vacuous once combined with kills spaced only 0.03 m apart).
+	_report("kill pops coalesce under load", pops >= 0 and pops <= Density.cap("kill_pops_per_250ms"),
+		"30 kills in ~180 ms at density %.3f produce %d pop burst(s) in the trailing 250 ms (cap %d, enforced at every density)"
 			% [density_at_burst, pops, Density.cap("kill_pops_per_250ms")])
 	var eventually: int = _marks.get("pops_eventually_fired", 0)
 	_report("the coalesced pop still fires, not silently dropped", eventually >= 1,

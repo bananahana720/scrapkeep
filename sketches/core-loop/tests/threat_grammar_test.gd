@@ -48,6 +48,11 @@ func _process(_delta: float) -> bool:
 	_check_sweep()
 	_check_projectile()
 	_check_union()
+	_check_union_no_spill()
+	_check_union_ground_height()
+	_check_union_priority()
+	_check_union_repaints_members()
+	_check_union_perf()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -204,6 +209,130 @@ func _check_union() -> void:
 			% [chain_union.size(), chain_suppressed.size()])
 	for n in chain:
 		n.free()
+
+
+# fix round 2, finding 5: the rasterized union used to paint a full grid cell whenever its
+# CENTRE fell inside a member's footprint, spilling past the real edge (worst case a whole
+# cell width) and, for an annular hazard, into the inner safe radius. _union_cell now only
+# emits a cell once every corner and edge midpoint tests inside the same member's real
+# footprint, so every drawn vertex must satisfy at least one member's contains().
+func _check_union_no_spill() -> void:
+	var at := Vector3(300.0, 0.0, 0.0)
+	var members: Array = []
+	for i in 5:
+		var h := Hazard.new()
+		h.ground = func(_p: Vector3) -> float: return 0.0
+		h.commit_annulus("union_spill_test_%d" % i, Threat.Type.INSTANT, at, Vector2(8.0, 14.0), 6.0, 2.5, 6.0)
+		_world.add_child(h)
+		members.append(h)
+	var descs: Array = members.map(func(n): return n.descriptor())
+	var union_marks := Threat.union_fill_marks_for(descs)
+	var total := 0
+	var outside := 0
+	for mark in union_marks:
+		for v in mark["tris"]:
+			total += 1
+			var covered := false
+			for m in members:
+				if m.contains(v):
+					covered = true
+					break
+			if not covered:
+				outside += 1
+	_report("union fill never paints outside every member's contains()", union_marks.size() == 1 and total > 0 and outside == 0,
+		"5 overlapping annulus hazards (r_in 8, r_out 14) produce a union whose %d vertices all satisfy at least one member's contains() (%d outside)"
+			% [total, outside])
+	for m in members:
+		m.free()
+
+
+# fix round 2, finding 6/14: the union used to draw at the shared painter's default
+# floor_y (0) and lift (0.2), so on real terrain it stood far below or above its members.
+# The union footprint now bakes each covered cell's y from its own member's real centre
+# height (abs=true), so a union on raised ground draws there, not at world y ~= 0.2.
+func _check_union_ground_height() -> void:
+	var ground_y := 15.0
+	var at := Vector3(320.0, ground_y, 0.0)
+	var members: Array = []
+	for i in 5:
+		var h := Hazard.new()
+		h.ground = func(_p: Vector3) -> float: return ground_y
+		h.commit_annulus("union_height_test_%d" % i, Threat.Type.INSTANT, at, Vector2(0.0, 6.0), 6.0, 2.5, 6.0)
+		_world.add_child(h)
+		members.append(h)
+	var descs: Array = members.map(func(n): return n.descriptor())
+	var union_marks := Threat.union_fill_marks_for(descs)
+	var ys: Array = []
+	if union_marks.size() == 1:
+		for v in union_marks[0]["tris"]:
+			ys.append(v.y)
+	var right_height := not ys.is_empty() and is_equal_approx(ys[0], ground_y + Threat.UNION_LIFT)
+	_report("union fill draws at the members' own ground height", union_marks.size() == 1 and right_height,
+		"5 overlapping hostile fills on ground at y=%.1f draw their union at y=%.2f (want %.2f = ground + UNION_LIFT), not the painter's y=0 default"
+			% [ground_y, ys[0] if not ys.is_empty() else -1.0, ground_y + Threat.UNION_LIFT])
+	for m in members:
+		m.free()
+
+
+# fix round 2, finding 11/§1.1: P6 (hostile fills, "stripe"/"stripe_motion"/"fill" layers)
+# draws below P1-P3 (every other layer, still PRIORITY).
+# fix round 2, finding 7: telegraph.gd paints STATIC_LAYERS (the "area"/"fill" stripe)
+# only once, at commit, so a member that becomes unioned after commit used to keep
+# drawing its own fill on top of the shared union mark. refresh_union() now repaints a
+# member's STATIC_LAYERS through its own public painter()/descriptor() whenever this
+# frame's suppression for it changed, so the double stacking clears.
+func _check_union_repaints_members() -> void:
+	var at := Vector3(340.0, 0.0, 0.0)
+	var members: Array = []
+	for i in 5:
+		members.append(Telegraph.ring(_world, _ground, Threat.Type.INSTANT, at, 6.0))
+	var before: int = members[0].painter().vertex_count("stripe")
+	Threat.refresh_union(members, Callable())
+	var after: int = members[0].painter().vertex_count("stripe")
+	_report("the union repaints a member's own static fill when suppression starts", before > 0 and after == 0,
+		"before refresh_union a committed member's own static fill draws %d stripe vertices; once it joins a >4 union, its own STATIC_LAYERS repaint drops that to %d (the shared union mark replaces it)"
+			% [before, after])
+	for m in members:
+		m.free()
+
+
+func _check_union_priority() -> void:
+	var painter := Threat.Painter.new()
+	_world.add_child(painter)
+	var tris := PackedVector3Array([Vector3.ZERO, Vector3.RIGHT, Vector3.UP])
+	var stripe_mark := Threat._mark("fill_union", "stripe", Color.WHITE, tris)
+	var edge_mark := Threat._mark("edge", "base", Color.WHITE, tris)
+	painter.paint([stripe_mark, edge_mark], ["stripe", "base"])
+	var stripe_priority: int = (painter._layer("stripe").material_override as StandardMaterial3D).render_priority
+	var base_priority: int = (painter._layer("base").material_override as StandardMaterial3D).render_priority
+	_report("hostile fills draw below P1-P3 edges", stripe_priority == Threat.UNION_PRIORITY
+			and base_priority == Threat.PRIORITY and stripe_priority < base_priority,
+		"the stripe (P6 fill) layer renders at priority %d, the base (P1-P3 edge) layer at %d" % [stripe_priority, base_priority])
+	painter.free()
+
+
+# fix round 2, finding 13 (blocker): clustering used to cost real time every frame --
+# roles()-based classification building full mark geometry, and Bron-Kerbosch growing
+# exponentially with the hostile count (fix round 1's own evidence: up to 89.91 ms at
+# n=14). The cheap type/progress predicate and coverage-depth grid should keep this cheap
+# well past the cap.
+func _check_union_perf() -> void:
+	var at := Vector3(400.0, 0.0, 0.0)
+	var members: Array = []
+	for i in 12:
+		members.append(Telegraph.ring(_world, _ground, Threat.Type.INSTANT, at + Vector3(0.2 * i, 0.0, 0.0), 6.0))
+	var descs: Array = members.map(func(n): return n.descriptor())
+	var t0 := Time.get_ticks_usec()
+	var runs := 30
+	for i in runs:
+		Threat.suppressed_roles(descs)
+		Threat.union_fill_marks_for(descs)
+	var elapsed_ms := float(Time.get_ticks_usec() - t0) / 1000.0 / float(runs)
+	_report("union clustering stays cheap at n=12 overlapping fills", elapsed_ms < 15.0,
+		"suppressed_roles()+union_fill_marks_for() together average %.3f ms per call over %d calls at n=12 (fix round 1's Bron-Kerbosch evidence measured up to 89.91 ms at n=14)"
+			% [elapsed_ms, runs])
+	for m in members:
+		m.free()
 
 
 func _check_stances() -> void:

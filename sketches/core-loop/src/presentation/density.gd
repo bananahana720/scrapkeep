@@ -37,22 +37,37 @@ static func raw(threats_in_view: int, fx_alive: int, enemies_in_view: int) -> fl
 
 
 # --- Per-frame caps table (§1.2) ------------------------------------------------------
-# Bands are inclusive of their lower edge; density 1.0 stays in the top band.
+# Bands are inclusive of their lower edge; density 1.0 stays in the top band. "saturation"
+# is §1.2's P5 colour column (finding 9/10): the band's HSV saturation held against the
+# glyph/burst/trail colour's own saturation (a scale, not an absolute floor, so a colour
+# that starts under 1.0 does not get boosted), value untouched.
 const BANDS := [
-	{"max": 0.4, "alpha": 0.9, "size": 1.0, "lifetime": 1.0, "ambient": "on",
+	{"max": 0.4, "alpha": 0.9, "size": 1.0, "lifetime": 1.0, "ambient": "on", "saturation": 1.0,
 		"coalesce_ms": 0, "coalesce_m": 0.0, "scale_per_extra": 0.0, "scale_cap": 1.0},
-	{"max": 0.7, "alpha": 0.6, "size": 0.85, "lifetime": 0.7, "ambient": "quarter",
+	{"max": 0.7, "alpha": 0.6, "size": 0.85, "lifetime": 0.7, "ambient": "quarter", "saturation": 0.7,
 		"coalesce_ms": 120, "coalesce_m": 4.0, "scale_per_extra": 1.2, "scale_cap": 2.5},
-	{"max": 1.01, "alpha": 0.35, "size": 0.7, "lifetime": 0.5, "ambient": "off",
+	{"max": 1.01, "alpha": 0.35, "size": 0.7, "lifetime": 0.5, "ambient": "off", "saturation": 0.4,
 		"coalesce_ms": 200, "coalesce_m": 6.0, "scale_per_extra": 1.2, "scale_cap": 2.5},
 ]
 
+# Hysteresis (finding 9, §6.1): the 0.4/0.7 band edges used to be hard thresholds with no
+# enter/exit gap, so density hovering right at one flipped every discrete cap (alpha,
+# size, lifetime, coalescing, saturation) frame to frame. A boundary must be cleared by
+# HYSTERESIS_MARGIN in the direction of travel before the reported band moves; sitting
+# still at the edge keeps the last band. This is process-lifetime static state, which is
+# fine here: every caller reads the one shared governor's density each frame (finding
+# 2/9), so there is only ever one meaningful band stream to track (both vfx.gd and
+# bolts.gd land on the same band, not two independent flickers).
+const HYSTERESIS_MARGIN := 0.02
+static var _band_index := 0
+
 
 static func band(density: float) -> Dictionary:
-	for b in BANDS:
-		if density < float(b["max"]):
-			return b
-	return BANDS[BANDS.size() - 1]
+	while _band_index < BANDS.size() - 1 and density >= float(BANDS[_band_index]["max"]) + HYSTERESIS_MARGIN:
+		_band_index += 1
+	while _band_index > 0 and density < float(BANDS[_band_index - 1]["max"]) - HYSTERESIS_MARGIN:
+		_band_index -= 1
+	return BANDS[_band_index]
 
 
 static func alpha_cap(density: float) -> float:
@@ -65,6 +80,19 @@ static func size_cap(density: float) -> float:
 
 static func lifetime_cap(density: float) -> float:
 	return float(band(density)["lifetime"])
+
+
+static func saturation_cap(density: float) -> float:
+	return float(band(density)["saturation"])
+
+
+# color's saturation scaled toward grey by the band's saturation column (finding 10),
+# value (brightness) held. A no-op at density 0 (saturation 1.0).
+static func apply_saturation(color: Color, density: float) -> Color:
+	var factor := saturation_cap(density)
+	if factor >= 0.999:
+		return color
+	return Color.from_hsv(color.h, color.s * factor, color.v, color.a)
 
 
 # 1.0 on, 0.4 at the middle band, 0.0 off. No P7 ambient emitter exists in this sketch
@@ -87,9 +115,12 @@ static func coalesce_window(density: float) -> Dictionary:
 
 # Multipliers normalised so density 0 gives 1.0, i.e. "no change from today's look" when
 # the governor is idle. alpha_cap(0) is 0.9, not 1.0, so alpha needs the divide; size and
-# lifetime already start at 1.0.
+# lifetime already start at 1.0. Divides by the constant BANDS[0] alpha, not alpha_cap(0.0):
+# alpha_cap(0.0) would call the hysteretic band() with a density of 0 every time, which is
+# only ever a normalisation constant here, not a real reading, and would otherwise yank
+# the shared sticky band index back toward band 0 on every single call (finding 9).
 static func alpha_factor(density: float) -> float:
-	return alpha_cap(density) / alpha_cap(0.0)
+	return alpha_cap(density) / float(BANDS[0]["alpha"])
 
 
 static func size_factor(density: float) -> float:
@@ -128,10 +159,26 @@ const SHED_ORDER := [
 ]
 
 
-# How many steps of SHED_ORDER are in effect at this density: 0 below 0.4, climbing to
-# every step by density 1.0. Always a prefix of SHED_ORDER, never skips or reorders.
+# Hysteresis on the "sheds at all" gate (finding 9): without it, density crossing 0.4 by
+# a hair (say 0.399 to 0.401) jumps shed_step from 0 straight to 1 (ceil() has no ramp-in
+# right at the edge), flipping ambient_p7 on the same flicker the band() edges had. Once
+# active it takes dropping below SHED_LEAVE to clear, matching the fix's own example
+# (enter 0.42, leave 0.36). The ramp above 0.4 stays a plain function of density -- once
+# active, every density above 0.4 already gives at least one step on its own, so this only
+# gates the entry, not the climb through SHED_ORDER's later steps.
+const SHED_ENTER := 0.42
+const SHED_LEAVE := 0.36
+static var _shed_active := false
+
+
+# How many steps of SHED_ORDER are in effect at this density: 0 below the gate, climbing
+# to every step by density 1.0. Always a prefix of SHED_ORDER, never skips or reorders.
 static func shed_step(density: float) -> int:
-	if density < 0.4:
+	if density >= SHED_ENTER:
+		_shed_active = true
+	elif density < SHED_LEAVE:
+		_shed_active = false
+	if not _shed_active:
 		return 0
 	var span := clampf((density - 0.4) / 0.6, 0.0, 1.0)
 	return clampi(int(ceil(span * SHED_ORDER.size())), 0, SHED_ORDER.size())
@@ -209,25 +256,32 @@ class Governor:
 		return value
 
 
-# --- One shared scalar per frame (§1.2, §8, finding 2/9) -------------------------------
+# --- One shared scalar per frame (§1.2, §8, finding 2/9, fix round 2 finding 4/15) ------
 # vfx.gd and bolts.gd each sample the live scene themselves (nothing upstream of this
 # unit's write set threads one shared instance through ctx), but they must land on the
 # same number, not two independent governors reading different fx counts off different
-# cameras. This is that single instance: whichever module calls contribute() first each
-# frame resets the per-frame totals, then every module's own fx count adds in, and every
-# caller reads back the same Governor.value. Two calls in the same frame do advance the
-# smoothing twice that tick (a small, bounded rounding difference against a single-owner
-# design); see DESIGN-NOTES "v3 F1a fix round 1" for why that trade is accepted here.
+# cameras. This is that single instance. Fix round 1 let every caller advance the
+# Governor immediately, which double-stepped the smoothing every frame (both callers run
+# every frame, not just "that one frame" DESIGN-NOTES claimed) and let the first caller
+# read a value computed off a partial fx total the second caller hadn't added in yet.
+# Now a new frame's first contribute() call advances the Governor once, off the PREVIOUS
+# frame's totals (one frame of lag, accepted so every caller in a frame reads the same
+# number), then every call that frame only accumulates into the next step; every caller
+# reads back the same already-advanced Governor.value.
 static var _shared_frame := -1
 static var _shared_threats := 0
 static var _shared_enemies := 0
 static var _shared_fx := 0
 static var _shared_gov := Governor.new()
+static var _shared_seen_frame := false
 
 
 static func contribute(delta: float, threats_in_view: int, fx_alive: int, enemies_in_view: int) -> float:
 	var frame := Engine.get_process_frames()
 	if frame != _shared_frame:
+		if _shared_seen_frame:
+			_shared_gov.update(delta, _shared_threats, _shared_fx, _shared_enemies)
+		_shared_seen_frame = true
 		_shared_frame = frame
 		_shared_threats = 0
 		_shared_enemies = 0
@@ -235,7 +289,7 @@ static func contribute(delta: float, threats_in_view: int, fx_alive: int, enemie
 	_shared_threats = maxi(_shared_threats, threats_in_view)
 	_shared_enemies = maxi(_shared_enemies, enemies_in_view)
 	_shared_fx += fx_alive
-	return _shared_gov.update(delta, _shared_threats, _shared_fx, _shared_enemies)
+	return _shared_gov.value
 
 
 static func shared_density() -> float:

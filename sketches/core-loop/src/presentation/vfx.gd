@@ -47,7 +47,17 @@ const PIP_HEIGHT := 2.5
 # hit sparks, kill pops, slam rings' afterglow, synergy shockwaves). Every other kind
 # glyph() draws is a one-off reward or discovery reveal (P4), owned by a later unit and
 # left ungoverned here. A dictionary stands in for a set.
-const P5_KINDS := {"enemy_struck": true, "shot_fired": true, "slammed": true, "synergy_discovered": true}
+# fix round 2, finding 3/14: "enemy_killed" (the kill flash _on_killed draws, and the same
+# kind juice.gd's multi-kill ring glyph uses via vfx.glyph("enemy_killed", ...)) belongs
+# here too -- it is a P5 kill pop, not a P4 reward, and un-governed it had no density caps,
+# never counted against the 40-glyph P5 budget, and could evict any pool slot including
+# the 8 reserved for P2/P3 shapes.
+const P5_KINDS := {"enemy_struck": true, "shot_fired": true, "slammed": true, "synergy_discovered": true,
+	"enemy_killed": true}
+# fix round 2, finding 11/§1.1: P5 effects draw above P6 (hostile fills, threat_grammar.gd's
+# Painter, priority 10) and below P1-P3 reads (priority 40, Threat.PRIORITY). Applied to
+# the pooled glyph and burst materials below.
+const P5_RENDER_PRIORITY := 20
 # The trail's own first TRAIL_FULL_SECONDS stay at full alpha regardless of density: the
 # ball's direction is a read, never candy (§1.2).
 const TRAIL_FULL_SECONDS := 0.12
@@ -85,14 +95,28 @@ var edge: Control
 # Governor, contributed to every frame by this module and bolts.gd), not a private one,
 # so the two modules never disagree on what "dense" means (finding 2/9).
 var _density := 0.0
-# One coalesced "pop" burst in flight: {"at", "time", "count", "color", "particles",
-# "size_scale"}, or empty. Every caller of burst("pop", ...) -- currently only juice.gd's
-# own per-kill bursts -- routes through this, so a kill chain shares one starburst
-# instead of stacking one per kill (finding 1/8).
-var _pending_pop := {}
+# Coalesced "pop" clusters in flight, each {"at", "time", "count", "color", "particles",
+# "size_scale"}. Every caller of burst("pop", ...) -- currently only juice.gd's own
+# per-kill bursts -- routes through this, so a kill chain shares one starburst instead of
+# stacking one per kill (finding 1/8, fix round 2 findings 1 and 2).
+#
+# fix round 2, finding 2: a cluster's "at"/"time" are its FIRST member's, fixed for the
+# cluster's whole life -- merging into it never slides the window, so a steady kill chain
+# still flushes partway through instead of waiting for the chain to end.
+#
+# fix round 2, finding 1: §1.2's kill_pops_per_250ms cap (3) is a hard rolling budget on
+# actual emitted pop bursts, enforced at EVERY density, not just while the coalesce window
+# is open. A cluster whose window has elapsed only actually flushes (and logs to
+# _burst_log, spending its share of the 250 ms budget) when the budget has room; otherwise
+# it, and any later kill that cannot find a spatial match, folds into the nearest still-
+# pending cluster instead of starting an unbounded new one.
+var _pending_pops: Array = []
 # Recent burst() timestamps by kind, trimmed to the last 5 s, for tests and the notes
 # (kill_pops_per_250ms, §1.2).
 var _burst_log := {}
+# The scale factor the most recently flushed coalesced pop actually used, for tests
+# (finding 12: pow(1.2, extra), not the old 1 + 1.2 * extra).
+var _last_pop_scale := 1.0
 # The shared union mark (threat_grammar.gd §1.3.1, finding 4): this module samples density
 # every frame with tree access already, so it also refreshes and draws the one union layer
 # every telegraph/hazard Painter otherwise has no shared place to draw.
@@ -119,6 +143,7 @@ func setup(ctx_ref) -> void:
 		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.no_depth_test = false
+		mat.render_priority = P5_RENDER_PRIORITY
 		glyph.material_override = mat
 		glyph.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		glyph.visible = false
@@ -341,7 +366,7 @@ func clear() -> void:
 	_chain = 0
 	_trail_points.clear()
 	_streaks.clear()
-	_pending_pop = {}
+	_pending_pops.clear()
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 
@@ -432,6 +457,7 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["basis"] = _facing_basis(silhouette, facing)
 	var tint: Color = color_override if color_override.a > 0.0 else Rows.color(kind)
 	if governed:
+		tint = Density.apply_saturation(tint, _density)
 		tint = Color(tint.r, tint.g, tint.b, tint.a * Density.alpha_factor(_density))
 	slot["color"] = tint
 	slot["t"] = 0.0
@@ -487,6 +513,10 @@ func governed_glyph_count() -> int:
 
 func kind_alive_count(k: String) -> int:
 	return _kind_alive_count(k)
+
+
+func last_pop_scale() -> float:
+	return _last_pop_scale
 
 
 func burst_count_within(kind: String, ms: float) -> int:
@@ -705,7 +735,7 @@ func _process(delta: float) -> void:
 	_clock += delta
 	_launch_boost = maxf(0.0, _launch_boost - delta)
 	_update_density(delta)
-	_maybe_flush_pending_pop()
+	_flush_ready_pops()
 	for g in _glyphs:
 		if g["t"] >= 1.0:
 			continue
@@ -738,7 +768,7 @@ func _draw_trail(tier: int) -> void:
 		return
 	var eye: Vector3 = camera.cam.global_position
 	var width: float = TRAIL_WIDTH[tier]
-	var color: Color = SpeedTier.COLORS[tier]
+	var color: Color = Density.apply_saturation(SpeedTier.COLORS[tier], _density)
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	var count := _trail_points.size()
 	var alpha_factor := Density.alpha_factor(_density)
@@ -784,7 +814,7 @@ func _draw_lines(tier: int, delta: float) -> void:
 		_streaks.append({"angle": angle, "radius": _rng.randf_range(1.7, 3.4), "offset": _rng.randf_range(-1.0, 0.4), "length": _rng.randf_range(1.2, 3.2)})
 	while _streaks.size() > wanted:
 		_streaks.pop_back()
-	var color: Color = SpeedTier.COLORS[tier]
+	var color: Color = Density.apply_saturation(SpeedTier.COLORS[tier], _density)
 	# Speed lines are P5 (§1.1): density caps their alpha the same way as trail and burst.
 	var head_alpha := 0.5 * Density.alpha_factor(_density)
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
@@ -824,6 +854,7 @@ func _build_bursts() -> void:
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.vertex_color_use_as_albedo = true
+		mat.render_priority = P5_RENDER_PRIORITY
 		if spec.get("soft", false):
 			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mesh.material = mat
@@ -896,7 +927,8 @@ func _emit_burst(kind: String, at: Vector3, color: Color, count: int, size_scale
 		p.scale_amount_min = 0.6 * scale
 		p.scale_amount_max = 1.2 * scale
 		p.lifetime = float(BURSTS[kind]["life"]) * Density.lifetime_factor(_density)
-		p.color = Color(color.r, color.g, color.b, color.a * Density.alpha_factor(_density))
+		var tinted := Density.apply_saturation(color, _density)
+		p.color = Color(tinted.r, tinted.g, tinted.b, color.a * Density.alpha_factor(_density))
 	p.global_position = at
 	p.restart()
 	p.emitting = true
@@ -904,47 +936,86 @@ func _emit_burst(kind: String, at: Vector3, color: Color, count: int, size_scale
 	_log_burst(kind)
 
 
-# Below density 0.4 every call gets its own starburst immediately, as before this unit.
-# Past that, calls within the band's window (time and distance) share one burst, scaled
-# by the extra-call count and capped, so a kill chain reads as one bigger shape rather
-# than a stack of small ones (§1.5).
+# fix round 2, findings 1 and 2 (§1.2 kill_pops_per_250ms, coalesce window anchoring).
+# Below density 0.4 every kill still tries for its own starburst immediately, as before
+# this unit, but the 3-per-250ms rolling budget below can still delay it. Past 0.4, kills
+# within the band's window (time and distance OF THE CLUSTER'S FIRST MEMBER -- merging
+# never moves the anchor, so a steady chain keeps flushing instead of waiting for a gap)
+# share one burst, scaled by the extra-kill count and capped (§1.5).
+const KILL_POP_CAP_WINDOW_MS := 250.0
+
+
 func _queue_pop(at: Vector3, color: Color, count: int, size_scale: float) -> void:
 	var win := Density.coalesce_window(_density)
 	var window_s: float = float(win["ms"]) / 1000.0
-	if window_s <= 0.0:
-		_flush_pending_pop()
-		_emit_burst("pop", at, color, count, size_scale)
-		return
 	var window_m: float = float(win["metres"])
-	if not _pending_pop.is_empty() and _clock - float(_pending_pop["time"]) <= window_s \
-			and at.distance_to(_pending_pop["at"]) <= window_m:
-		_pending_pop["count"] = int(_pending_pop["count"]) + 1
-		_pending_pop["at"] = at
-		_pending_pop["time"] = _clock
-		_pending_pop["color"] = color
-		_pending_pop["particles"] = maxi(int(_pending_pop["particles"]), count)
-		return
-	_flush_pending_pop()
-	_pending_pop = {"at": at, "time": _clock, "count": 1, "color": color, "particles": count, "size_scale": size_scale}
+	if window_s > 0.0:
+		for cluster in _pending_pops:
+			if _clock - float(cluster["time"]) <= window_s and at.distance_to(cluster["at"]) <= window_m:
+				cluster["count"] = int(cluster["count"]) + 1
+				cluster["color"] = color
+				cluster["particles"] = maxi(int(cluster["particles"]), count)
+				cluster["size_scale"] = maxf(float(cluster["size_scale"]), size_scale)
+				_flush_ready_pops()
+				return
+	# No open cluster claims this kill (density 0's window is always closed, or this kill
+	# sits outside every pending cluster's window/reach). The 250 ms budget still holds at
+	# every density (finding 1): once the budget has no room left, fold this kill into the
+	# nearest pending cluster by distance instead of starting an unbounded new one, so a
+	# quiet frame or kills spread far apart cannot bypass the cap by never spatially
+	# coalescing.
+	if not _pending_pops.is_empty() and _at_pop_budget_cap():
+		var nearest: Dictionary = _pending_pops[0]
+		var nearest_d := at.distance_to(nearest["at"])
+		for cluster in _pending_pops:
+			var d := at.distance_to(cluster["at"])
+			if d < nearest_d:
+				nearest = cluster
+				nearest_d = d
+		nearest["count"] = int(nearest["count"]) + 1
+		nearest["color"] = color
+		nearest["particles"] = maxi(int(nearest["particles"]), count)
+		nearest["size_scale"] = maxf(float(nearest["size_scale"]), size_scale)
+	else:
+		_pending_pops.append({"at": at, "time": _clock, "count": 1, "color": color,
+			"particles": count, "size_scale": size_scale})
+	_flush_ready_pops()
 
 
-func _flush_pending_pop() -> void:
-	if _pending_pop.is_empty():
-		return
-	var win := Density.coalesce_window(_density)
-	var extra: int = maxi(0, int(_pending_pop["count"]) - 1)
-	var scale: float = clampf(1.0 + float(win["scale_per_extra"]) * extra, 1.0, float(win["scale_cap"]))
-	_emit_burst("pop", _pending_pop["at"], _pending_pop["color"], int(_pending_pop["particles"]),
-		scale * float(_pending_pop["size_scale"]))
-	_pending_pop = {}
+func _at_pop_budget_cap() -> bool:
+	return burst_count_within("pop", KILL_POP_CAP_WINDOW_MS) >= Density.cap("kill_pops_per_250ms")
 
 
-func _maybe_flush_pending_pop() -> void:
-	if _pending_pop.is_empty():
+# Flushes every pending cluster whose coalesce window has elapsed (or, at density 0,
+# every cluster -- density 0's window is always "elapsed") and for which the rolling
+# kill_pops_per_250ms budget has room. A cluster that is ready but the budget is full
+# stays pending -- still absorbing new kills that fold into it -- until room frees up, so
+# the cap delays a pop, it never silently drops one.
+func _flush_ready_pops() -> void:
+	if _pending_pops.is_empty():
 		return
 	var window_s: float = float(Density.coalesce_window(_density)["ms"]) / 1000.0
-	if _clock - float(_pending_pop["time"]) > maxf(window_s, 0.001):
-		_flush_pending_pop()
+	var i := 0
+	while i < _pending_pops.size():
+		var cluster: Dictionary = _pending_pops[i]
+		var ready: bool = window_s <= 0.0 or _clock - float(cluster["time"]) > window_s
+		if ready and not _at_pop_budget_cap():
+			_pending_pops.remove_at(i)
+			_flush_pop_cluster(cluster)
+		else:
+			i += 1
+
+
+func _flush_pop_cluster(cluster: Dictionary) -> void:
+	var win := Density.coalesce_window(_density)
+	var extra: int = maxi(0, int(cluster["count"]) - 1)
+	# fix round 2, finding 12: a six-kill chain is one 2.5x burst (§1.5) is
+	# base^(kills-1) (1.2^5 ~= 2.49), not the old 1 + base*extra, which already hit the
+	# 2.5x cap at three kills and stopped distinguishing chains beyond that.
+	var scale: float = clampf(pow(maxf(float(win["scale_per_extra"]), 1.0), extra), 1.0, float(win["scale_cap"]))
+	_last_pop_scale = scale
+	_emit_burst("pop", cluster["at"], cluster["color"], int(cluster["particles"]),
+		scale * float(cluster["size_scale"]))
 
 
 # The most particles the bursts can hold alive at once, for the notes.

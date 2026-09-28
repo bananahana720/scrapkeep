@@ -45,6 +45,9 @@ const KINDS := ["threat_instant", "threat_wave", "threat_projectile", "threat_la
 const GROUP := "threat"
 
 const PRIORITY := 40
+# fix round 2, finding 11/§1.1: P6 hostile-fill layers ("stripe", "stripe_motion", "fill")
+# draw below P5 (vfx.gd's P5_RENDER_PRIORITY = 20) and below P1-P3 (PRIORITY above).
+const UNION_PRIORITY := 10
 const SEGMENTS := 72
 const AREA_ALPHA := 0.1
 const EDGE_ALPHA := 0.95
@@ -235,50 +238,42 @@ static func _bounds_overlap(a: Dictionary, b: Dictionary) -> bool:
 	return _centre_of(a).distance_to(_centre_of(b)) <= _extent_of(a) + _extent_of(b)
 
 
-# Maximal cliques among an overlap graph (Bron-Kerbosch, no pivot): used instead of
-# connected components (finding 5b) so a chain of overlapping-but-not-mutually-touching
-# fills does not union just because it is one connected blob -- five rings in a row,
-# each only touching its neighbour, never share a point with more than two others, and
-# should not read as "more than four overlapping". Only a group that all pairwise
-# overlap counts. Small n per frame (a handful of hostile fills), so the exponential
-# worst case never matters here.
-static func _overlap_adjacency(descs: Array) -> Array:
-	var n := descs.size()
-	var adj: Array = []
-	for i in n:
-		adj.append({})
-	for i in n:
-		for j in range(i + 1, n):
-			if _bounds_overlap(descs[i], descs[j]):
-				adj[i][j] = true
-				adj[j][i] = true
-	return adj
+# fix round 2, finding 13 (blocker): this whole clustering path used to cost real time
+# every frame -- suppressed_roles() and union_fill_marks_for() each called
+# _hostile_indices(), which called roles() per descriptor, which built that descriptor's
+# full static and motion mark GEOMETRY just to read role names; and clustering ran
+# Bron-Kerbosch (no pivot), which grows exponentially in the hostile count, paid even
+# when nothing unions. Both are replaced:
+#
+#  - _hostile_indices below is a cheap type/progress predicate, not role() geometry: a
+#    hostile INSTANT, PROJECTILE or LANE always emits its "area" role's static mark
+#    (_instant/_projectile/_lane's non-motion branch, unconditionally), so it always
+#    counts; a hostile WAVE only emits "swept" once it is no longer arming
+#    (float(d["front"]) >= 0.0, see _wave's motion branch). No mark geometry is built.
+#  - _union_groups is the ONE place clustering runs; suppressed_roles() and
+#    union_fill_marks_for() both call it, and refresh_union() (the live per-frame path)
+#    calls it once and reuses the result for both, instead of computing it twice.
+#  - clustering itself is a coverage-depth count over the existing 2 m grid -- a cell
+#    more than cap_hostile_union() real footprints cover -- which matches "more than four
+#    overlapping fills" literally (a point genuinely covered by 5 real shapes) and costs
+#    O(cells x n), with n restricted to members that even have cap_hostile_union()
+#    bounds-overlapping neighbours first (a point covered by more than `cap` real
+#    footprints implies every pair among them has overlapping bounds -- both circles
+#    contain that shared point -- so this prefilter drops nothing a real group needs, and
+#    it also gives "4 or fewer hostile fills in view" its own early exit for free).
+#  - grid cells are grouped into connected regions (4-connected flood fill); a region's
+#    group is every member that covers any of its cells, so one union mark still covers
+#    one continuous over-dense patch, the same shape the old maximal-clique version drew.
+
+const UNION_GROUP_STEP := 2.0
 
 
-static func _bron_kerbosch(r: Array, p: Array, x: Array, adj: Array, out: Array) -> void:
-	if p.is_empty() and x.is_empty():
-		if r.size() > 1:
-			out.append(r.duplicate())
-		return
-	for v in p.duplicate():
-		var neighbours: Dictionary = adj[v]
-		var p2: Array = p.filter(func(u): return neighbours.has(u))
-		var x2: Array = x.filter(func(u): return neighbours.has(u))
-		_bron_kerbosch(r + [v], p2, x2, adj, out)
-		p.erase(v)
-		x.append(v)
-
-
-# Every maximal clique of size > 1 in `descs`'s overlap graph, as Array[int] indices.
-static func maximal_overlap_cliques(descs: Array) -> Array:
-	if descs.size() < 2:
-		return []
-	var all: Array = []
-	for i in descs.size():
-		all.append(i)
-	var out: Array = []
-	_bron_kerbosch([], all, [], _overlap_adjacency(descs), out)
-	return out
+static func _is_hostile_fill(d: Dictionary) -> bool:
+	if stance(d["tone"]) != "hostile":
+		return false
+	if int(d["type"]) == Type.WAVE:
+		return float(d.get("front", -1.0)) >= 0.0
+	return true
 
 
 # Hostile descriptors that currently draw a fill/area/swept/run role at all (finding 5a):
@@ -287,14 +282,120 @@ static func maximal_overlap_cliques(descs: Array) -> Array:
 static func _hostile_indices(descriptors: Array) -> Array:
 	var out: Array = []
 	for i in descriptors.size():
-		var d: Dictionary = descriptors[i]
-		if stance(d["tone"]) != "hostile":
-			continue
-		for role in roles(d):
-			if role in SUPPRESSED_BY_UNION:
-				out.append(i)
-				break
+		if _is_hostile_fill(descriptors[i]):
+			out.append(i)
 	return out
+
+
+# Every maximal coverage-depth group of hostile fills whose real footprints overlap more
+# than cap_hostile_union() deep at some shared point, as Array[int] indices into
+# `descriptors`. The one shared computation suppressed_roles() and union_fill_marks_for()
+# both build on (finding 13).
+static func _union_groups(descriptors: Array) -> Array:
+	var hostile_idx := _hostile_indices(descriptors)
+	var cap := cap_hostile_union()
+	if hostile_idx.size() <= cap:
+		return []
+	var hostile_descs: Array = []
+	for i in hostile_idx:
+		hostile_descs.append(descriptors[i])
+	var degree: Array = []
+	degree.resize(hostile_descs.size())
+	for i in degree.size():
+		degree[i] = 0
+	for i in hostile_descs.size():
+		for j in range(i + 1, hostile_descs.size()):
+			if _bounds_overlap(hostile_descs[i], hostile_descs[j]):
+				degree[i] += 1
+				degree[j] += 1
+	var candidates: Array = []
+	for i in hostile_descs.size():
+		if degree[i] >= cap:
+			candidates.append(i)
+	if candidates.size() <= cap:
+		return []
+	var candidate_descs: Array = []
+	for i in candidates:
+		candidate_descs.append(hostile_descs[i])
+	var cell_owners := _coverage_cells(candidate_descs, cap)
+	if cell_owners.is_empty():
+		return []
+	var out: Array = []
+	for region in _connected_regions(cell_owners):
+		var members := {}
+		for cell in region:
+			for local_i in cell_owners[cell]:
+				members[local_i] = true
+		if members.size() > cap:
+			var group: Array = []
+			for local_i in members:
+				group.append(hostile_idx[candidates[local_i]])
+			group.sort()
+			out.append(group)
+	return out
+
+
+# Rasterizes `descs`' combined bounding box into a 2 m grid and returns, for every cell
+# more than `cap` of them cover (tested at the cell centre against the real footprint,
+# the same predicate contains() reads), the "ix,iz" cell key -> covering local indices.
+static func _coverage_cells(descs: Array, cap: int) -> Dictionary:
+	var out := {}
+	if descs.is_empty():
+		return out
+	var min_x := INF
+	var max_x := -INF
+	var min_z := INF
+	var max_z := -INF
+	for d in descs:
+		var c := _centre_of(d)
+		var e := _extent_of(d)
+		min_x = minf(min_x, c.x - e)
+		max_x = maxf(max_x, c.x + e)
+		min_z = minf(min_z, c.z - e)
+		max_z = maxf(max_z, c.z + e)
+	var half := UNION_GROUP_STEP * 0.5
+	var iz := 0
+	var z := min_z + half
+	while z <= max_z + 0.001:
+		var ix := 0
+		var x := min_x + half
+		while x <= max_x + 0.001:
+			var p := Vector3(x, 0.0, z)
+			var covering: Array = []
+			for i in descs.size():
+				if _point_in_footprint(descs[i], p):
+					covering.append(i)
+			if covering.size() > cap:
+				out["%d,%d" % [ix, iz]] = covering
+			ix += 1
+			x += UNION_GROUP_STEP
+		iz += 1
+		z += UNION_GROUP_STEP
+	return out
+
+
+static func _connected_regions(cell_owners: Dictionary) -> Array:
+	var seen := {}
+	var regions: Array = []
+	for key in cell_owners:
+		if seen.has(key):
+			continue
+		var stack: Array = [key]
+		var region: Array = []
+		seen[key] = true
+		while not stack.is_empty():
+			var cur: String = stack.pop_back()
+			region.append(cur)
+			var parts := cur.split(",")
+			var cx := int(parts[0])
+			var cz := int(parts[1])
+			for delta in [[1, 0], [-1, 0], [0, 1], [0, -1]]:
+				var nk := "%d,%d" % [cx + delta[0], cz + delta[1]]
+				if cell_owners.has(nk) and not seen.has(nk):
+					seen[nk] = true
+					stack.append(nk)
+		regions.append(region)
+	return regions
 
 
 static func _angle_in_sector(angle: float, a0: float, a1: float) -> bool:
@@ -328,6 +429,10 @@ static func _point_in_footprint(d: Dictionary, point: Vector3) -> bool:
 
 
 const UNION_GRID_STEP := 2.0
+const UNION_MIN_STEP := 0.25
+# The union mark's own draw height above ground (finding 6/14): telegraph.gd's own LIFT
+# is 0.2; matched here since the union mostly stands in for telegraph-sourced fills.
+const UNION_LIFT := 0.2
 
 
 # Rasterizes the cluster's combined static footprint into shared grid cells and emits one
@@ -362,30 +467,56 @@ static func _union_footprint(descs: Array) -> PackedVector3Array:
 			var p := Vector3(x, 0.0, z)
 			for d in descs:
 				if _point_in_footprint(d, p):
-					_quad(tris, p + Vector3(-half, 0.0, -half), p + Vector3(half, 0.0, -half),
-						p + Vector3(half, 0.0, half), p + Vector3(-half, 0.0, half))
+					_union_cell(tris, d, p, half)
 					break
 			x += UNION_GRID_STEP
 		z += UNION_GRID_STEP
 	return tris
 
 
-# One shared "fill_union" mark per maximal clique of more than four mutually overlapping
-# hostile fills, covering their combined footprint at a flat FILL_ALPHA in white (the
-# stripe texture carries the hostile read, same as a single fill). Empty when no clique
-# exceeds four.
+# Emits the cell centred at p (half-width `half`) at member d's own ground height
+# (finding 6/14), clipped to d's real footprint (finding 5/union-spill): a full quad only
+# when every corner and edge midpoint tests inside d's exact shape via
+# _point_in_footprint -- the same predicate contains() reads -- so the union never paints
+# past a real edge, into an inner safe radius (r_in > 0) or a quenched gap. A cell that
+# straddles an edge is quartered down to UNION_MIN_STEP and any remainder still failing is
+# dropped rather than drawn, trading a sliver of under-coverage at a curved boundary for
+# never drawing a hostile stripe on safe ground.
+static func _union_cell(tris: PackedVector3Array, d: Dictionary, p: Vector3, half: float) -> void:
+	var y: float = float((d["centre"] as Vector3).y) + UNION_LIFT
+	var corners := [Vector3(p.x - half, y, p.z - half), Vector3(p.x + half, y, p.z - half),
+		Vector3(p.x + half, y, p.z + half), Vector3(p.x - half, y, p.z + half)]
+	var samples := corners + [Vector3(p.x, y, p.z - half), Vector3(p.x + half, y, p.z),
+		Vector3(p.x, y, p.z + half), Vector3(p.x - half, y, p.z)]
+	var fits := true
+	for s in samples:
+		if not _point_in_footprint(d, Vector3(s.x, 0.0, s.z)):
+			fits = false
+			break
+	if fits:
+		_quad(tris, corners[0], corners[1], corners[2], corners[3])
+		return
+	if half <= UNION_MIN_STEP:
+		return
+	var q := half * 0.5
+	for dz in [-q, q]:
+		for dx in [-q, q]:
+			_union_cell(tris, d, Vector3(p.x + dx, 0.0, p.z + dz), q)
+
+
+# One shared "fill_union" mark per group of more than cap_hostile_union() mutually
+# overlapping hostile fills, covering their combined footprint at a flat FILL_ALPHA in
+# white (the stripe texture carries the hostile read, same as a single fill), drawn at
+# each member's own real ground height (abs=true, finding 6/14). Empty when no group
+# exceeds the cap.
 static func union_fill_marks_for(descriptors: Array) -> Array:
 	var out: Array = []
-	var hostile_idx := _hostile_indices(descriptors)
-	var hostile_descs: Array = []
-	for i in hostile_idx:
-		hostile_descs.append(descriptors[i])
-	for group in maximal_overlap_cliques(hostile_descs):
-		if group.size() > cap_hostile_union():
-			var members: Array = []
-			for gi in group:
-				members.append(hostile_descs[gi])
-			out.append(_mark("fill_union", "stripe", Color(1.0, 1.0, 1.0, FILL_ALPHA), _union_footprint(members), {"members": group.size()}))
+	for group in _union_groups(descriptors):
+		var members: Array = []
+		for i in group:
+			members.append(descriptors[i])
+		out.append(_mark("fill_union", "stripe", Color(1.0, 1.0, 1.0, FILL_ALPHA), _union_footprint(members),
+			{"members": group.size(), "abs": true}))
 	return out
 
 
@@ -398,14 +529,9 @@ static func cap_hostile_union() -> int:
 # in this list.
 static func suppressed_roles(descriptors: Array) -> Dictionary:
 	var out := {}
-	var hostile_idx := _hostile_indices(descriptors)
-	var hostile_descs: Array = []
-	for i in hostile_idx:
-		hostile_descs.append(descriptors[i])
-	for group in maximal_overlap_cliques(hostile_descs):
-		if group.size() > cap_hostile_union():
-			for gi in group:
-				out[hostile_idx[gi]] = SUPPRESSED_BY_UNION.duplicate()
+	for group in _union_groups(descriptors):
+		for i in group:
+			out[i] = SUPPRESSED_BY_UNION.duplicate()
 	return out
 
 
@@ -433,14 +559,23 @@ static func roles_after_union(descriptors: Array, index: int) -> Array:
 # progress/front/live, so the same threat maps to the same key every frame regardless of
 # how far its warning has run.
 #
-# telegraph.gd only repaints STATIC_LAYERS once, at commit, so a member's "area" role (a
-# STATIC_LAYERS mark) keeps whatever suppression state existed when it committed; only its
-# MOTION_LAYERS roles (fill/swept/run) react live. hazard.gd repaints STATIC_LAYERS on
-# every reshape, so its "area" role does react there. Both are the calling files' own
-# repaint schedule, not something this file's write set can change.
+# fix round 2, finding 7: telegraph.gd only repaints STATIC_LAYERS once, at commit, so a
+# member's "area" role (a STATIC_LAYERS mark) used to keep whatever suppression state
+# existed when it committed -- a member that started or stopped being unioned after
+# commit kept drawing (or stopped drawing) its own fill under the shared union mark,
+# doubling the stripe's brightness (§6.1 forbids overlapping fills adding brightness).
+# hazard.gd repaints STATIC_LAYERS on every reshape, so its "area" role mostly reacted
+# there already, but not on a pure suppression change with no reshape. Neither file needs
+# editing for this: both already expose painter() and descriptor() publicly (telegraph.gd
+# and hazard.gd's own _build()/_repaint() call exactly this pattern), so refresh_union
+# below calls back into a member's own painter to repaint STATIC_LAYERS whenever this
+# frame's suppressed-role set for it changed from last frame -- the union painter "owns"
+# each member's area layer in that sense, without this file's write set touching either
+# caller's source.
 
 static var _union_frame := -1
 static var _union_suppressed := {}
+static var _union_last_suppressed := {}
 static var _union_marks: Array = []
 
 
@@ -461,6 +596,7 @@ static func refresh_union(nodes: Array, in_view: Callable) -> void:
 		return
 	_union_frame = frame
 	var descs: Array = []
+	var live_nodes: Array = []
 	for node in nodes:
 		if not is_instance_valid(node) or not node.has_method("descriptor"):
 			continue
@@ -468,12 +604,37 @@ static func refresh_union(nodes: Array, in_view: Callable) -> void:
 		if in_view.is_valid() and not in_view.call(_centre_of(d)):
 			continue
 		descs.append(d)
-	var suppressed := suppressed_roles(descs)
+		live_nodes.append(node)
+	# fix round 2, finding 13: one shared clustering pass for both the suppression map and
+	# the union marks, instead of suppressed_roles() and union_fill_marks_for() each
+	# redoing _union_groups() independently.
+	var groups := _union_groups(descs)
 	var next_suppressed := {}
+	var marks_out: Array = []
+	for group in groups:
+		var members: Array = []
+		for i in group:
+			next_suppressed[_stable_key(descs[i])] = SUPPRESSED_BY_UNION.duplicate()
+			members.append(descs[i])
+		marks_out.append(_mark("fill_union", "stripe", Color(1.0, 1.0, 1.0, FILL_ALPHA), _union_footprint(members),
+			{"members": group.size(), "abs": true}))
 	for i in descs.size():
-		next_suppressed[_stable_key(descs[i])] = suppressed.get(i, [])
+		var key := _stable_key(descs[i])
+		if not next_suppressed.has(key):
+			next_suppressed[key] = []
 	_union_suppressed = next_suppressed
-	_union_marks = union_fill_marks_for(descs)
+	_union_marks = marks_out
+	for i in descs.size():
+		var key := _stable_key(descs[i])
+		var roles_now: Array = next_suppressed[key]
+		if roles_now == _union_last_suppressed.get(key, []):
+			continue
+		var node: Node = live_nodes[i]
+		if node.has_method("painter"):
+			var painter = node.painter()
+			if painter != null:
+				painter.paint(marks(descs[i], false), STATIC_LAYERS)
+	_union_last_suppressed = next_suppressed
 
 
 static func active_suppressed_roles(d: Dictionary) -> Array:
@@ -1030,7 +1191,14 @@ class Painter:
 		mat.no_depth_test = true
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
-		mat.render_priority = PRIORITY - 1 if layer.ends_with("under") else PRIORITY
+		# fix round 2, finding 11/§1.1: P6 (hostile area fills, the "stripe"/"stripe_motion"
+		# layers and the union's "fill" layer) sits below P5 (vfx.gd's glyphs and bursts,
+		# P5_RENDER_PRIORITY = 20); everything else here (P1-P3 edges/fronts/brackets/rails)
+		# stays at PRIORITY (40), above both.
+		if layer in ["stripe", "stripe_motion", "fill"]:
+			mat.render_priority = UNION_PRIORITY
+		else:
+			mat.render_priority = PRIORITY - 1 if layer.ends_with("under") else PRIORITY
 		if layer.begins_with("stripe"):
 			mat.albedo_texture = stripe_texture()
 			mat.uv1_triplanar = true
