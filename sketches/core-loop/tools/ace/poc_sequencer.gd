@@ -13,6 +13,9 @@ extends RefCounted
 #   - Seek with (sample + 0.5) / RATE; sample / RATE lands a frame early on some bars.
 #   - Keep the generator ring at a numeric depth (QUEUE_TARGET) instead of full.
 #   - Log every key commit by transport sample and read cues at the audible sample.
+#     audible_sample() is exact only while the mixer runs at RATE and the device pulls
+#     whole 128-frame resampler chunks; at any other mixer rate (48 kHz measured) it
+#     trails the sounding sample by 0 to GEN_CHUNK - 1 transport frames.
 # No preloads or class_name: the mix48 child project loads it by absolute path.
 
 const RATE := 44100
@@ -22,7 +25,11 @@ const LEAD_IN := 2
 # Frames between a sample leaving the generator ring and reaching the device: the
 # resampler's 128-frame internal chunk, pre-filled with zeros because a player starts
 # the generator on an empty ring, plus the same 2-frame lead-in. Measured by signal.
+# At a mixer rate other than RATE this is still 130 transport frames, but a transport
+# sample then sounds at a fractional device frame: see transport_at().
 const GEN_LEAD := 130
+# The resampler's internal chunk: the generator ring drains in steps of this size.
+const GEN_CHUNK := 128
 # Generator ring depth the pump keeps. See the test's skip sweep: the smallest target
 # with zero skips at steady 26 ms frames and through a 50 ms hitch, on 512- and
 # 1024-frame device periods.
@@ -119,8 +126,11 @@ func render_key() -> int:
 
 
 # The next transport sample to reach the speaker, given the generator ring's queued
-# frames: exact when the device period is a multiple of 128 (the resampler reads the
-# ring in 128-frame chunks). The device adds its output latency on top.
+# frames. The ring drains in GEN_CHUNK steps, so this is the start of the chunk the
+# resampler is playing: exact when the mixer runs at RATE and the device period is a
+# multiple of GEN_CHUNK; otherwise it trails the sounding sample by 0 to GEN_CHUNK - 1
+# transport frames (under 2.9 ms), bound measured at 48 kHz by the test. The device
+# adds its output latency on top.
 func audible_sample(queued: int) -> int:
 	return clock - queued - GEN_LEAD - int(round(AudioServer.get_output_latency() * RATE))
 
@@ -270,3 +280,205 @@ static func join_timeline(fixture_dir: String, lead := LEAD_IN) -> Dictionary:
 		buf.append_array(seq.render(mini(1150, total - buf.size())))
 	return {"frames": buf.size(), "l": find_clicks(buf, 0), "r": find_clicks(buf, 1), "short_reads": seq.short_reads,
 		"misses": seq.misses, "key_log": seq.key_log, "rate_scale": seq.rate_scale}
+
+
+# --- Device model, shared by the test (44.1 kHz) and the mix48 child (48 kHz) -----------
+#
+# A virtual device pulls the generator playback in fixed periods of mixer frames, as a
+# player would. Godot's AudioStreamPlaybackResampled steps through the ring's frames by
+# gen_step() / 65536 per device frame (16.16 fixed point, truncated) and plays chunk
+# frame pos - 2 by cubic interpolation behind a first chunk of zeros, so device frame d
+# sounds transport position d * step / 65536 - GEN_LEAD. At RATE the step is exactly
+# 65536; at 48 kHz it is 60211, not 44100 / 48000 * 65536 = 60211.2, so the generator
+# plays 3.3 ppm slow and the nominal ratio drifts off the device by a frame every ~6.8 s.
+# The clicks in the proof anchor this model: each lands on the frame it predicts.
+
+
+# The generator's resampler step per device frame at the current mixer rate.
+static func gen_step() -> int:
+	return int(float(RATE) / AudioServer.get_mix_rate() * 65536.0)
+
+
+# The transport sample (integer part) sounding at device frame d.
+static func transport_at(d: int, step: int) -> int:
+	return ((d * step) >> 16) - GEN_LEAD
+
+
+# The device frame nearest to where transport sample s sounds: a click's peak.
+static func device_frame_near(s: int, step: int) -> int:
+	return int(((s + GEN_LEAD) * 131072 + step) / (2 * step))
+
+
+# The first device frame at or past transport sample s.
+static func device_frame_from(s: int, step: int) -> int:
+	return int(((s + GEN_LEAD) * 65536 + step - 1) / step)
+
+
+# Contact times in microseconds: one every ~7.37 s from 3 s, the last leaving room for
+# its landing before seconds.
+static func contact_times(seconds: float) -> Array:
+	var out := []
+	var t := 3.0e6
+	while t < seconds * 1e6 - 6.5e6:
+		out.append(t)
+		t += 7370011.0
+	return out
+
+
+# One simulated run: stems play, 26 ms game frames pump the ring to target (target < 0
+# is the current engine, which pushes whatever the ring takes), and each contact gaps the
+# render head and drops the landing on the next beat, stems again 4 bars later. Every
+# game frame compares audible_sample() with transport_at(). Hitch adds hitch_us to every
+# hitch_every-th frame.
+static func device_run(fixture_dir: String, target: int, period: int, contacts: Array, seconds: float, frame_us: float,
+		gen_buffer: float, hitch_us := 0.0, hitch_every := 97) -> Dictionary:
+	var seq = load(fixture_dir.get_base_dir().path_join("poc_sequencer.gd")).new(fixture_dir)
+	var step := gen_step()
+	var mix_rate := AudioServer.get_mix_rate()
+	seq.start(STEMS)
+	var gen := AudioStreamGenerator.new()
+	gen.mix_rate = RATE
+	gen.buffer_length = gen_buffer
+	var gp: AudioStreamGeneratorPlayback = gen.instantiate_playback()
+	gp.start(0.0)
+	var capacity := gp.get_frames_available()
+	var fill := capacity if target < 0 else target
+	var end_us := seconds * 1e6
+	var exact := step == 65536
+	var t_game := 0.0
+	var game_frames := 0
+	var tick := 0
+	var dev := 0
+	var ci := 0
+	var pending := []
+	var done := []
+	var max_q := 0
+	var min_q := capacity
+	var gap_nonzero := 0
+	var err_lo := 1 << 30
+	var err_hi := -(1 << 30)
+	var err_frames := 0
+	while true:
+		var t_dev := tick * period * 1e6 / mix_rate
+		if t_game >= end_us and t_dev >= end_us:
+			break
+		if t_game <= t_dev:
+			if ci < contacts.size() and float(contacts[ci]) <= t_game:
+				var q := capacity - gp.get_frames_available()
+				var gap_at: int = seq.clock
+				var at: int = seq.drop_now(["landing"])
+				seq.schedule_enter(at + 4 * seq.bar, STEMS)
+				pending.append({"t_c": float(contacts[ci]), "gap": gap_at, "drop": at, "queued": q, "gap_us": -1.0, "drop_us": -1.0,
+					"click": false, "click_frame": device_frame_near(at, step), "nominal_frame": int(round((at + GEN_LEAD) * mix_rate / RATE))})
+				ci += 1
+			seq.pump(gp, capacity, fill)
+			var err: int = seq.audible_sample(capacity - gp.get_frames_available()) - transport_at(dev, step)
+			err_lo = mini(err_lo, err)
+			err_hi = maxi(err_hi, err)
+			err_frames += 1
+			max_q = maxi(max_q, capacity - gp.get_frames_available())
+			game_frames += 1
+			t_game += frame_us + (hitch_us if game_frames % hitch_every == 0 else 0.0)
+			continue
+		min_q = mini(min_q, capacity - gp.get_frames_available())
+		var out := gp.mix_audio(1.0, period)
+		var still := []
+		for p in pending:
+			var g: int = p["gap"]
+			var d: int = p["drop"]
+			var dg := device_frame_from(g, step)
+			if float(p["gap_us"]) < 0.0 and dg < dev + period:
+				p["gap_us"] = (dg - dev) * 1e6 / mix_rate + t_dev - float(p["t_c"])
+			# Silent where the interpolation reads only gap samples: at RATE the output is
+			# exactly one sample, elsewhere it reads one before and two after.
+			var lo := g if exact else g + 1
+			var hi := d if exact else d - 2
+			for i in range(maxi(dev, device_frame_from(lo, step)), mini(dev + period, device_frame_from(hi, step))):
+				if out[i - dev] != Vector2.ZERO:
+					gap_nonzero += 1
+			var dc: int = p["click_frame"]
+			if dc >= dev and dc < dev + period:
+				p["drop_us"] = (dc - dev) * 1e6 / mix_rate + t_dev - float(p["t_c"])
+				var v := absf(out[dc - dev].x)
+				var before := absf(out[dc - dev - 1].x) if dc > dev else 0.0
+				var after := absf(out[dc - dev + 1].x) if dc + 1 < dev + period else 0.0
+				p["click"] = v > 0.4 and v > before and v > after
+				done.append(p)
+			else:
+				still.append(p)
+		pending = still
+		dev += period
+		tick += 1
+	return {"skips": gp.get_skips(), "max_q": max_q, "min_q": min_q, "contacts": done, "gap_nonzero": gap_nonzero,
+		"short": seq.short_reads, "misses": seq.misses, "frames": dev, "err_lo": err_lo, "err_hi": err_hi, "err_frames": err_frames, "step": step}
+
+
+# A keyed cue fired every game frame across a lift (Eb at bar 2, the landing in D at bar
+# 3, stems at bar 7): the key at audible_sample() against the key at transport_at(), the
+# key the device is sounding. A misread is "chunk" when a key change sits between the
+# two, the only place the ring's 128-frame granularity can hide one.
+static func keyed_cue_run(fixture_dir: String, period: int, frame_us: float, gen_buffer: float) -> Dictionary:
+	var seq = load(fixture_dir.get_base_dir().path_join("poc_sequencer.gd")).new(fixture_dir)
+	var step := gen_step()
+	var mix_rate := AudioServer.get_mix_rate()
+	var b: int = seq.bar
+	seq.start(STEMS)
+	seq.schedule_enter(2 * b, ["lift"])
+	seq.schedule_enter(3 * b, ["landing"])
+	seq.schedule_enter(7 * b, STEMS)
+	var gen := AudioStreamGenerator.new()
+	gen.mix_rate = RATE
+	gen.buffer_length = gen_buffer
+	var gp: AudioStreamGeneratorPlayback = gen.instantiate_playback()
+	gp.start(0.0)
+	var capacity := gp.get_frames_available()
+	var end_us := 8.0e6
+	var t_game := 0.0
+	var tick := 0
+	var dev := 0
+	var frames := 0
+	var cue_wrong := 0
+	var cue_wrong_chunk := 0
+	var head_wrong := 0
+	var accounting_off := 0
+	var err_lo := 1 << 30
+	var err_hi := -(1 << 30)
+	var in_lift := 0
+	var lift_click := false
+	var landing_click := false
+	var lift_frame := device_frame_near(2 * b, step)
+	var landing_frame := device_frame_near(3 * b, step)
+	while true:
+		var t_dev := tick * period * 1e6 / mix_rate
+		if t_game >= end_us and t_dev >= end_us:
+			break
+		if t_game <= t_dev:
+			seq.pump(gp, capacity)
+			var audible: int = seq.audible_sample(capacity - gp.get_frames_available())
+			var truth_s := transport_at(dev, step)
+			var truth: int = seq.key_at(truth_s)
+			frames += 1
+			in_lift += 1 if truth == 1 else 0
+			var err := audible - truth_s
+			err_lo = mini(err_lo, err)
+			err_hi = maxi(err_hi, err)
+			accounting_off += 0 if err == 0 else 1
+			if seq.key_at(audible) != truth:
+				cue_wrong += 1
+				for entry in seq.key_log:
+					if int(entry[0]) > audible and int(entry[0]) <= truth_s:
+						cue_wrong_chunk += 1
+						break
+			head_wrong += 0 if seq.render_key() == truth else 1
+			t_game += frame_us
+			continue
+		var out := gp.mix_audio(1.0, period)
+		if lift_frame >= dev and lift_frame < dev + period:
+			lift_click = absf(out[lift_frame - dev].x) > 0.4
+		if landing_frame >= dev and landing_frame < dev + period:
+			landing_click = absf(out[landing_frame - dev].x) > 0.4
+		dev += period
+		tick += 1
+	return {"frames": frames, "in_lift": in_lift, "cue_wrong": cue_wrong, "cue_wrong_chunk": cue_wrong_chunk, "head_wrong": head_wrong,
+		"accounting_off": accounting_off, "err_lo": err_lo, "err_hi": err_hi, "lift_click": lift_click, "landing_click": landing_click,
+		"skips": gp.get_skips(), "key_log": seq.key_log, "step": step}

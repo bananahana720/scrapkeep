@@ -6,7 +6,8 @@ const Poc := preload("res://tools/ace/poc_sequencer.gd")
 # sequencer plays committed impulse Oggs (tools/ace/make_poc_fixtures.py) through one
 # pull mixer into an AudioStreamGenerator. Simulated time drives a virtual device that
 # pulls the generator playback directly, so get_skips() counts Godot's own underrun path
-# deterministically on the headless Dummy driver. Not ears: transport truth only.
+# deterministically on the headless Dummy driver. Not ears: transport truth only. The
+# device model and runs live in poc_sequencer.gd so the 48 kHz child runs the same code.
 
 const FIXTURES := "res://tools/ace/poc_fixtures"
 const GEN_BUFFER := 0.1  # audio.gd:26, the ring the current engine keeps full
@@ -149,14 +150,11 @@ func _joins() -> Dictionary:
 # frames pump it; a contact every ~7.37 s gaps the render head and drops the landing on
 # the next beat. Same contacts under the current engine's full ring for the latency bar.
 func _skips_and_latency() -> void:
-	var contacts := []
-	var t := 3.0e6
-	while t < SIM_SECONDS * 1e6 - 6.5e6:
-		contacts.append(t)
-		t += 7370011.0
+	var contacts := Poc.contact_times(SIM_SECONDS)
 	var sweep := []
 	var chosen := {}
 	var chosen_skips := 0
+	var chosen_err := []
 	var smallest_steady := -1
 	var smallest_hitch := -1
 	for target in TARGETS:
@@ -165,6 +163,8 @@ func _skips_and_latency() -> void:
 		for period in PERIODS:
 			for hitch in [0.0, HITCH_US]:
 				var s := _simulate(target, int(period), contacts, hitch)
+				if target == Poc.QUEUE_TARGET:
+					chosen_err.append_array([s["err_lo"], s["err_hi"]])
 				if hitch == 0.0:
 					steady_zero = steady_zero and int(s["skips"]) == 0
 				else:
@@ -184,9 +184,10 @@ func _skips_and_latency() -> void:
 		SIM_SECONDS, FRAME_US / 1000.0, ", ".join(sweep), current["skips"], current["min_q"], current["max_q"], current_1024["skips"]])
 
 	var clean: bool = chosen_skips == 0 and int(chosen["gap_nonzero"]) == 0 and int(chosen["short"]) == 0 and int(chosen["misses"]) == 0
-	_check("skips over 3 minutes", clean and smallest_hitch == Poc.QUEUE_TARGET,
-		"QUEUE_TARGET %d: get_skips() %d summed over its four runs (512/1024 periods, steady and hitched), %d device frames each (%.0f s), queued %d..%d frames at p512; smallest zero-skip target steady %d, with the 50 ms hitch %d" % [
-		Poc.QUEUE_TARGET, chosen_skips, chosen["frames"], SIM_SECONDS, chosen["min_q"], chosen["max_q"], smallest_steady, smallest_hitch])
+	var err_exact: bool = chosen_err.min() == 0 and chosen_err.max() == 0
+	_check("skips over 3 minutes", clean and smallest_hitch == Poc.QUEUE_TARGET and err_exact,
+		"QUEUE_TARGET %d: get_skips() %d summed over its four runs (512/1024 periods, steady and hitched), %d device frames each (%.0f s), queued %d..%d frames at p512; smallest zero-skip target steady %d, with the 50 ms hitch %d; audible_sample() minus the sounding sample %d..%d on every game frame of the four runs (44.1 kHz mixer, periods multiples of %d)" % [
+		Poc.QUEUE_TARGET, chosen_skips, chosen["frames"], SIM_SECONDS, chosen["min_q"], chosen["max_q"], smallest_steady, smallest_hitch, chosen_err.min(), chosen_err.max(), Poc.GEN_CHUNK])
 
 	var poc: Array = chosen["contacts"]
 	var cur: Array = current["contacts"]
@@ -206,70 +207,9 @@ func _skips_and_latency() -> void:
 		poc.size(), Poc.GEN_LEAD, clicks, poc.size(), _fmt(pq, 1.0), _fmt(cq, 1.0), _fmt(pg, 0.001), _fmt(cg, 0.001), _fmt(pd, 0.001), _fmt(cd, 0.001), DEVICE_MS, no_worse])
 
 
-# One simulated run. target < 0 is the current engine: push whatever the ring takes.
+# One simulated run at this project's 44.1 kHz mixer. target < 0 is the current engine.
 func _simulate(target: int, period: int, contacts: Array, hitch_us := 0.0) -> Dictionary:
-	var seq = Poc.new(_dir)
-	seq.start(Poc.STEMS)
-	var gen := AudioStreamGenerator.new()
-	gen.mix_rate = Poc.RATE
-	gen.buffer_length = GEN_BUFFER
-	var gp: AudioStreamGeneratorPlayback = gen.instantiate_playback()
-	gp.start(0.0)
-	var capacity := gp.get_frames_available()
-	var fill := capacity if target < 0 else target
-	var end_us := SIM_SECONDS * 1e6
-	var t_game := 0.0
-	var game_frames := 0
-	var tick := 0
-	var dev := 0
-	var ci := 0
-	var pending := []
-	var done := []
-	var max_q := 0
-	var min_q := capacity
-	var gap_nonzero := 0
-	while true:
-		var t_dev := tick * period * 1e6 / Poc.RATE
-		if t_game >= end_us and t_dev >= end_us:
-			break
-		if t_game <= t_dev:
-			if ci < contacts.size() and float(contacts[ci]) <= t_game:
-				var q := capacity - gp.get_frames_available()
-				var gap_at: int = seq.clock
-				var at: int = seq.drop_now(["landing"])
-				seq.schedule_enter(at + 4 * _bar, Poc.STEMS)
-				pending.append({"t_c": float(contacts[ci]), "gap": gap_at + Poc.GEN_LEAD, "drop": at + Poc.GEN_LEAD, "queued": q, "gap_us": -1.0, "drop_us": -1.0, "click": false})
-				ci += 1
-			seq.pump(gp, capacity, fill)
-			max_q = maxi(max_q, capacity - gp.get_frames_available())
-			game_frames += 1
-			t_game += FRAME_US + (hitch_us if game_frames % HITCH_EVERY == 0 else 0.0)
-			continue
-		min_q = mini(min_q, capacity - gp.get_frames_available())
-		var out := gp.mix_audio(1.0, period)
-		var still := []
-		for p in pending:
-			var g: int = p["gap"]
-			var d: int = p["drop"]
-			if float(p["gap_us"]) < 0.0 and g < dev + period:
-				p["gap_us"] = t_dev + (g - dev) * 1e6 / Poc.RATE - float(p["t_c"])
-			for i in range(maxi(g, dev), mini(d, dev + period)):
-				if out[i - dev] != Vector2.ZERO:
-					gap_nonzero += 1
-			if d >= dev and d < dev + period:
-				p["drop_us"] = t_dev + (d - dev) * 1e6 / Poc.RATE - float(p["t_c"])
-				var v := absf(out[d - dev].x)
-				var before := absf(out[d - dev - 1].x) if d > dev else 0.0
-				var after := absf(out[d - dev + 1].x) if d + 1 < dev + period else 0.0
-				p["click"] = v > 0.4 and v > before and v > after
-				done.append(p)
-			else:
-				still.append(p)
-		pending = still
-		dev += period
-		tick += 1
-	return {"skips": gp.get_skips(), "max_q": max_q, "min_q": min_q, "contacts": done, "gap_nonzero": gap_nonzero,
-		"short": seq.short_reads, "misses": seq.misses, "frames": dev}
+	return Poc.device_run(_dir, target, period, contacts, SIM_SECONDS, FRAME_US, GEN_BUFFER, hitch_us, HITCH_EVERY)
 
 
 # 4. A keyed cue fired every frame reads the key at the audible sample from the commit
@@ -277,70 +217,35 @@ func _simulate(target: int, period: int, contacts: Array, hitch_us := 0.0) -> Di
 # QUEUE_TARGET frames ahead, so reading it (what audio.gd:348 does today) is wrong
 # around each change. The accounting matches the device to the sample.
 func _keyed_cue_across_lift() -> void:
-	var seq = Poc.new(_dir)
-	seq.start(Poc.STEMS)
-	seq.schedule_enter(2 * _bar, ["lift"])
-	seq.schedule_enter(3 * _bar, ["landing"])
-	seq.schedule_enter(7 * _bar, Poc.STEMS)
-	var gen := AudioStreamGenerator.new()
-	gen.mix_rate = Poc.RATE
-	gen.buffer_length = GEN_BUFFER
-	var gp: AudioStreamGeneratorPlayback = gen.instantiate_playback()
-	gp.start(0.0)
-	var capacity := gp.get_frames_available()
-	var period := 512
-	var end_us := 8.0e6
-	var t_game := 0.0
-	var tick := 0
-	var dev := 0
-	var frames := 0
-	var cue_wrong := 0
-	var head_wrong := 0
-	var accounting_off := 0
-	var in_lift := 0
-	var lift_click := false
-	var landing_click := false
-	var lift_at := 2 * _bar + Poc.GEN_LEAD
-	var landing_at := 3 * _bar + Poc.GEN_LEAD
-	while true:
-		var t_dev := tick * period * 1e6 / Poc.RATE
-		if t_game >= end_us and t_dev >= end_us:
-			break
-		if t_game <= t_dev:
-			seq.pump(gp, capacity)
-			var q := capacity - gp.get_frames_available()
-			var audible: int = seq.audible_sample(q)
-			var truth := 1 if audible >= 2 * _bar and audible < 3 * _bar else 0
-			frames += 1
-			in_lift += truth
-			accounting_off += 0 if audible == dev - Poc.GEN_LEAD else 1
-			cue_wrong += 0 if seq.key_at(audible) == truth else 1
-			head_wrong += 0 if seq.render_key() == truth else 1
-			t_game += FRAME_US
-			continue
-		var out := gp.mix_audio(1.0, period)
-		if lift_at >= dev and lift_at < dev + period:
-			lift_click = absf(out[lift_at - dev].x) > 0.4
-		if landing_at >= dev and landing_at < dev + period:
-			landing_click = absf(out[landing_at - dev].x) > 0.4
-		dev += period
-		tick += 1
-	var ok := cue_wrong == 0 and accounting_off == 0 and head_wrong > 0 and in_lift > 0 and lift_click and landing_click and gp.get_skips() == 0
+	var k: Dictionary = Poc.keyed_cue_run(_dir, 512, FRAME_US, GEN_BUFFER)
+	var ok: bool = k["cue_wrong"] == 0 and k["accounting_off"] == 0 and k["head_wrong"] > 0 and k["in_lift"] > 0 and k["lift_click"] and k["landing_click"] and k["skips"] == 0
 	_check("keyed cue at the audible sample", ok,
 		"%d frames, %d inside the audible lift; key at audible sample wrong on %d, render-head key wrong on %d; audible_sample() == device frame - %d on every frame (%d off), anchored by the lift and landing clicks sounding at exactly their logged sample + %d: %s/%s; key log %s" % [
-		frames, in_lift, cue_wrong, head_wrong, Poc.GEN_LEAD, accounting_off, Poc.GEN_LEAD, lift_click, landing_click, seq.key_log])
+		k["frames"], k["in_lift"], k["cue_wrong"], k["head_wrong"], Poc.GEN_LEAD, k["accounting_off"], Poc.GEN_LEAD, k["lift_click"], k["landing_click"], k["key_log"]])
 
 
-# 6. The same join timeline in a child project with audio/driver/mix_rate=48000.
+# 6. A child project with audio/driver/mix_rate=48000 runs the same join timeline, then
+# the same generator, device, contact and keyed-cue runs. The generator at 44.1 kHz is
+# resampled to the device there, so a transport sample sounds at a fractional device
+# frame and the ring's 128-frame steps no longer fall on device periods.
+const MIX48_PERIODS := [480, 512, 1024]
+
+
 func _mix48(joins: Dictionary) -> void:
 	var child := ProjectSettings.globalize_path("res://tools/ace/poc_mix48")
+	var params := {"seconds": SIM_SECONDS, "frame_us": FRAME_US, "gen_buffer": GEN_BUFFER, "target": Poc.QUEUE_TARGET,
+		"periods": MIX48_PERIODS, "hitch_us": HITCH_US, "hitch_every": HITCH_EVERY}
 	var output := []
-	var code := OS.execute(OS.get_executable_path(), ["--headless", "--path", child, "--script", "res://run.gd", "--", "--fixtures=" + _dir], output, true)
+	var code := OS.execute(OS.get_executable_path(), ["--headless", "--path", child, "--script", "res://run.gd", "--",
+		"--fixtures=" + _dir, "--params=" + Marshalls.utf8_to_base64(JSON.stringify(params))], output, true)
 	var line := ""
+	var data = null
 	for chunk in output:
 		for l in str(chunk).split("\n"):
 			if l.begins_with("mix48 "):
 				line = l
+			elif l.begins_with("mix48json "):
+				data = JSON.parse_string(l.trim_prefix("mix48json "))
 	var fields := {}
 	for part in line.split(" "):
 		var kv := part.split("=")
@@ -353,6 +258,52 @@ func _mix48(joins: Dictionary) -> void:
 	_check("mix_rate 48000 frame counts", ok,
 		"child exit %d: %s; 44.1 kHz run %d frames. Clicks identical by md5 L %s R %s" % [code, line if line != "" else "no mix48 line", joins["frames"],
 		fields.get("l", "") == str(joins["l"]).md5_text(), fields.get("r", "") == str(joins["r"]).md5_text()])
+
+	if not data is Dictionary:
+		_check("mix_rate 48000 generator and device", false, "no mix48json line from the child (exit %d)" % code)
+		return
+	# Contacts land on the device frame the fixed-point model predicts, in every run; the
+	# nominal 44100 / 48000 ratio would miss some of them.
+	var contacts := Poc.contact_times(SIM_SECONDS).size()
+	var runs_ok := true
+	var skips := 0
+	var err_lo := 1 << 30
+	var err_hi := -(1 << 30)
+	var drift := 0
+	var q_lo := 1 << 30
+	var q_hi := 0
+	var detail := []
+	for run in data["runs"]:
+		skips += int(run["skips"])
+		err_lo = mini(err_lo, int(run["err_lo"]))
+		err_hi = maxi(err_hi, int(run["err_hi"]))
+		drift = maxi(drift, int(run["nominal_drift"]))
+		q_lo = mini(q_lo, int(run["min_q"]))
+		q_hi = maxi(q_hi, int(run["max_q"]))
+		var good: bool = int(run["step"]) == 60211 and int(run["skips"]) == 0 and int(run["contacts"]) == contacts and int(run["clicks"]) == contacts \
+			and int(run["gap_nonzero"]) == 0 and int(run["short"]) == 0 and int(run["misses"]) == 0
+		runs_ok = runs_ok and good
+		if not good and detail.size() < 3:
+			detail.append(str(run))
+	var bound_ok := err_lo >= -(Poc.GEN_CHUNK - 1) and err_hi <= 0
+	var lat: Dictionary = data["latency"]
+	_check("mix_rate 48000 generator and device", runs_ok and bound_ok and bool(lat["no_worse"]),
+		"QUEUE_TARGET %d at periods %s steady and hitched, %.0f s each: get_skips() %d summed, queued %d..%d; every landing click (%d contacts x %d runs) peaks on the device frame nearest (drop + %d) * 65536 / 60211, the fixed-point step, and gaps are silent; the nominal ratio misses by up to %d device frames by the end. audible_sample() minus the sounding sample %d..%d transport frames (bound 0..-%d, %.2f ms), so exact only at 44.1 kHz. Contact->gap audible POC %s ms, current %s ms; contact->drop POC %s ms, current %s ms; queued at contact POC %s, current %s; POC no worse on every contact: %s %s" % [
+		Poc.QUEUE_TARGET, MIX48_PERIODS, SIM_SECONDS, skips, q_lo, q_hi, contacts, data["runs"].size(), Poc.GEN_LEAD, drift, err_lo, err_hi, Poc.GEN_CHUNK - 1,
+		(Poc.GEN_CHUNK - 1) * 1000.0 / Poc.RATE, _fmt(lat["poc"]["gap_us"], 1.0), _fmt(lat["current"]["gap_us"], 1.0), _fmt(lat["poc"]["drop_us"], 1.0),
+		_fmt(lat["current"]["drop_us"], 1.0), _fmt(lat["poc"]["queued"], 1.0), _fmt(lat["current"]["queued"], 1.0), lat["no_worse"], detail])
+
+	# The keyed cue at 48 kHz: every misread sits where a key change falls inside the chunk
+	# audible_sample() cannot see into, and the clicks land where the model says.
+	var cues_ok := true
+	var parts := []
+	for k in data["cues"]:
+		var good: bool = int(k["cue_wrong"]) == int(k["cue_wrong_chunk"]) and bool(k["lift_click"]) and bool(k["landing_click"]) and int(k["skips"]) == 0 \
+			and int(k["err_lo"]) >= -(Poc.GEN_CHUNK - 1) and int(k["err_hi"]) <= 0 and int(k["in_lift"]) > 0
+		cues_ok = cues_ok and good
+		parts.append("p%d: %d frames, %d in the lift, cue wrong %d (inside a chunk after a key change %d), render-head wrong %d, error %d..%d, clicks %s/%s" % [
+			k["period"], k["frames"], k["in_lift"], k["cue_wrong"], k["cue_wrong_chunk"], k["head_wrong"], k["err_lo"], k["err_hi"], k["lift_click"], k["landing_click"]])
+	_check("mix_rate 48000 keyed cue", cues_ok, "; ".join(parts))
 
 
 # 5, how skips show on the Dummy driver: it mixes on its own thread in real time, so a
