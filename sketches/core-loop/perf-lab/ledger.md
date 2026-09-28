@@ -180,3 +180,28 @@ Native est60 minus harness is 7.6 ms with today's code; headless s3 without repa
 ### 5. Reachability
 
 Reachable at p50, marginal at p99. After H1, H2 and H4, native est60 is about 6 ms p50 (19.7 minus 12, 1 and 0.5) and p99 about 9 to 12 ms, left in physics ticks (2 to 3), render submission (about 2), draw spikes and machine noise (E0 ran at load 5 to 17). The deciding measurement is native s3 p99 on a quiet box after E1. A 6-core Zen 2 at roughly 0.7 times this single-thread speed lands near 9 to 13 ms, so the 10 ms dev-box p99 is the right gate.
+
+## E1 2026-09-28 13:00 to 13:08  H1 static telegraphs, GPU fill union, kill-pop gate
+
+Tool: `tools/perf_bench.gd` unchanged (sha256 4172d253...). Candidate: branch proto/core-loop-v3-e1 at 6fac7e7. Baseline (E0′): the same bench on 164a102, which is b980ff5 plus the bench and docs only, extracted with `git archive` into `artifacts/local/e1/tree-base/`. Each baseline run was followed by its candidate run, repeat-major, so both saw the same load. Other agents ran headless tests and `sketch:smoke` in sibling worktrees throughout, at load 3.6 to 4.7 (headless) and 4.7 to 8.5 (native) on 32 threads. Native runs waited while any GPU process held more than 3 GB (none did), held `/tmp/scrapkeep-gpu.lock`, and launched through `claude-open` on workspace 10. The raw JSON, logs, `summary.tsv` and `aggregate.json` are in `artifacts/local/e1/bench/m1` (headless) and `bench/n1` (native), git-ignored.
+
+Values are medians over 3 runs of each run's p50 or p99, in ms.
+
+| Scene | Tree | Frame p50 | Frame p99 | Proc p50 | Proc p99 | Harness p50 | Draws p50 / p99 | GPU p99 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| headless s2 | E0′ | 8.71 | 38.41 | 1.09 | 30.99 | 5.68 | | |
+| headless s2 | E1 | 1.15 | 4.45 | 0.68 | 1.12 | 0.15 | | |
+| headless s3 | E0′ | 16.23 | 44.10 | 1.58 | 30.51 | 11.02 | | |
+| headless s3 | E1 | 1.31 | 6.87 | 0.72 | 1.52 | 0.28 | | |
+| headless s3 `--no-telegraph-draw` (1 run) | E0′ | 1.08 | 5.91 | 0.71 | 1.21 | 0.05 | | |
+| headless s3 `--no-telegraph-draw` (1 run) | E1 | 1.10 | 5.85 | 0.73 | 1.40 | 0.05 | | |
+| native s3 | E0′ | 22.14 | 32.49 | 1.58 | 3.21 | 12.29 | 657 / 1639 | 0.80 |
+| native s3 | E1 | 4.29 | 12.49 | 0.71 | 2.54 | 0.34 | 737 / 1080 | 1.63 |
+
+Per-run native frame p50 / p99: E0′ 27.42 / 53.08, 22.07 / 32.49, 22.14 / 30.16; E1 4.48 / 26.59, 3.67 / 12.03, 4.29 / 12.49. Repeat 1 of both trees carries a proc p99 of 22 to 25 ms that repeats 2 and 3 do not (2.2 to 3.2), so repeat 1 is load- or first-launch-affected and its p99 is not read. The coordinator re-measures native p99 on a quiet machine.
+
+Result. H1 holds. Headless s3 frame p50 fell 14.9 ms (bar: at least 8), native s3 p50 fell 17.9 ms and p99 fell 20.0 ms (bar: p99 at least 10; H1 wrong under 3). The remaining telegraph cost is about 0.2 ms headless s3 (1.31 against 1.10 with the draw ablated); the harness step that recycles 32 telegraphs is 0.28 ms, down from 11.02. GPU p99 rose from about 0.8 to 1.6 ms: every driven layer now draws at full extent and discards outside its clip, and hostile fills test stencil. It stays far inside the 7 ms budget. Draws p50 rose by 80 because motion layers that used to be empty (an arming wave's swept ground, an eaten trace, a run at progress 0) now always draw, and p99 fell by 559.
+
+Native s3 frame p99 of about 12 ms still misses the 10 ms CPU target on this loaded machine; proc p99 2.2 to 2.5 and physics p99 3.2 to 4.3 in the clean repeats, so the remainder is render submission, physics ticks and neighbours. H2 (enemy group scans) and H4 (HUD) are next in the ledger's order.
+
+Look budget calibration (`tools/still_diff.gd`, 1920x1080, MSAA 2x, fixed SubViewport): the known-bad control (INSTANT ring at 0.5 with `stripe_motion` hidden) differs on 3.33% of pixels by more than 12/255 with a mean of 0.719/255. It fails on the share rule (budget 0.3%) and would pass the mean rule (0.75/255) alone, so the share rule is the one that discriminates. The worst candidate still is `lane-wedge-50` at 0.167% and `wave-ring-95` at a mean of 0.043/255.
