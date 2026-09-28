@@ -74,7 +74,9 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	box.add_child(role)
 	_details.append(role)
 	var line := _text(ClassKit.fantasy(def), 18, Palette.SAND)
-	line.custom_minimum_size = Vector2(0.0, 50.0)
+	# Two lines tall on every card, so the key rows line up across the three.
+	line.custom_minimum_size = Vector2(0.0, 58.0)
+	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	box.add_child(line)
 	var keys := HBoxContainer.new()
 	keys.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -91,7 +93,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 
 # The four slots and any Space extra, as {key, icon, words} in the bar's order.
 func keys_shown() -> Array:
-	return _cells.map(func(c): return {"key": c["key"], "icon": c["icon"], "words": c["label"].text})
+	return _cells.map(func(c): return {"key": c["key"], "icon": c["icon"], "words": c["words"]})
 
 
 func is_open() -> bool:
@@ -137,10 +139,13 @@ func _cell(record: Dictionary, color: Color, width: float) -> VBoxContainer:
 	var cap := KeycapView.new(record["key"], color, MOUSE_CAP if Keycap.is_mouse(record["key"]) else CELL_CAP)
 	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	cell.add_child(cap)
-	var label := _text(record["words"], 13, Palette.SAND)
+	# Every key's words stack on two lines, so no label wraps on its own and the row reads even.
+	var words: String = record["words"]
+	var gap := words.find(" ")
+	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), 13, Palette.SAND)
 	cell.add_child(label)
 	_details.append(label)
-	_cells.append({"key": record["key"], "icon": record["icon"], "label": label})
+	_cells.append({"key": record["key"], "icon": record["icon"], "words": words})
 	return cell
 
 
