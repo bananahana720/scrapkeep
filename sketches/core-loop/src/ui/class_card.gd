@@ -21,9 +21,9 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 # (game._screen_key). With nothing focused, the first arrow focuses a card.
 
 const KEY_H := 28.0
-const HEIGHT := 540.0
+const HEIGHT := 600.0
 const PAD := 18.0
-const PREVIEW_H := 190.0
+const PREVIEW_H := 260.0
 const LIFT := 0.06
 const BACK := 0.04
 const RATE := 9.0
@@ -68,6 +68,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	add_child(box)
 	preview = ClassPreview.new(def, Vector2(width - 2.0 * PAD, PREVIEW_H))
 	box.add_child(preview)
+	add_child(_fade(width))
 	box.add_child(_name_row(color))
 	var role := _text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.75))
 	box.add_child(role)
@@ -155,6 +156,42 @@ func _text(value: String, font_size: int, color: Color) -> Label:
 	return label
 
 
+# The preview's lower edge sinks into the card, so the words sit on a quiet floor.
+func _fade(width: float) -> TextureRect:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(Palette.CHARCOAL, 0.0))
+	gradient.set_color(1, Color(Palette.CHARCOAL, 0.94))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(0.0, 1.0)
+	var fade := TextureRect.new()
+	fade.texture = texture
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.position = Vector2(PAD, PAD + KEY_H + 8.0 + PREVIEW_H * 0.62)
+	fade.size = Vector2(width - 2.0 * PAD, PREVIEW_H * 0.38 + 2.0)
+	return fade
+
+
+# The key art's sky: a lit upper half behind the sphere that fades into the card's dark
+# lower region, where the words sit.
+func _backdrop(tint: Color) -> void:
+	var top := PAD + KEY_H + 8.0
+	var rect := Rect2(Vector2(PAD, top), Vector2(size.x - 2.0 * PAD, PREVIEW_H))
+	var sky := Palette.VERDIGRIS.lerp(Palette.SAND, 0.35)
+	var warm := Palette.SANDSTONE.darkened(0.45).lerp(tint, 0.15)
+	var floor_color := Color(Palette.CHARCOAL, 0.0)
+	var mid := rect.position.y + rect.size.y * 0.55
+	draw_polygon(PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), Vector2(rect.end.x, mid), Vector2(rect.position.x, mid)]),
+		PackedColorArray([sky, sky, warm, warm]))
+	draw_polygon(PackedVector2Array([Vector2(rect.position.x, mid), Vector2(rect.end.x, mid), rect.end, Vector2(rect.position.x, rect.end.y)]),
+		PackedColorArray([warm, warm, floor_color, floor_color]))
+	var glow := rect.position + rect.size * Vector2(0.5, 0.4)
+	for i in 6:
+		draw_circle(glow, PREVIEW_H * (0.45 - 0.06 * i), Color(tint, 0.03 + 0.04 * openness))
+
+
 static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.draw_center = fill
@@ -216,9 +253,7 @@ func _draw() -> void:
 		Color.WHITE if is_open() else Palette.SAND, KEY_H)
 	if def == null:
 		return
-	var glow := Vector2(size.x * 0.5, PAD + KEY_H + 8.0 + PREVIEW_H * 0.55)
-	for i in 6:
-		draw_circle(glow, PREVIEW_H * (0.62 - 0.08 * i), Color(tint, 0.035 + 0.05 * openness))
+	_backdrop(tint)
 	var level := ClassKit.difficulty(def)
 	var right := size.x - PAD - PIP
 	for i in ClassKit.DIFFICULTY_MAX:
