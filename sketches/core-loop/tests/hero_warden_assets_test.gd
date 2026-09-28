@@ -9,6 +9,8 @@ var failures := 0
 var prior_base: Node3D
 var prior_id := 0
 var dead_ids: Array[int] = []
+var mast_original := {}
+var prior_support: Node3D
 
 
 func _initialize() -> void:
@@ -28,6 +30,9 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	ticks += 1
 	if ticks == 1:
+		for child in game.flow.beacon.get_children():
+			if child is MeshInstance3D and child.mesh is CylinderMesh:
+				mast_original = {"node": child, "mesh": child.mesh, "material": child.material_override, "transform": child.transform, "layers": child.layers, "shadow": child.cast_shadow}
 		check("ribbons ready before run starts", game.presentation.hero_assets._meshes.keys().filter(func(k): return k.begins_with("warden_stroke:")).size() == 24)
 		game.ctx.calm = true
 		game.flow.force_warden = true
@@ -37,7 +42,14 @@ func _physics_process(_delta: float) -> bool:
 		check_family()
 	if ticks in [10, 20]:
 		game.flow.enter_stage(2 if ticks == 10 else 3, Vector3.ZERO, false)
+	if ticks == 28:
+		game.flow.warden._die()
 	if ticks == 30:
+		check_mast_restored("death")
+		game.flow.enter_stage(3, Vector3.ZERO, false)
+	if ticks == 33:
+		check_family()
+	if ticks == 35:
 		var hook = game.presentation.hero_assets
 		var warden = game.flow.warden
 		var rec: Dictionary = hook.warden_of(warden)
@@ -46,10 +58,20 @@ func _physics_process(_delta: float) -> bool:
 		var preserved: Array = rec.hidden.duplicate()
 		hook.get_parent().remove_child(hook)
 		hook.queue_free()
+		check_mast_restored("hook teardown")
 		for entry in preserved:
 			check("restore placeholder layers and shadow", entry.mesh.layers == entry.layers and entry.mesh.cast_shadow == entry.shadow)
-	if ticks == 32:
+	if ticks == 37:
 		check("restored hero freed", not is_instance_valid(prior_base))
+		var replacement := preload("res://src/presentation/hero_assets.gd").new()
+		game.presentation.add_child(replacement)
+		game.presentation.hero_assets = replacement
+		replacement.setup(game.ctx)
+	if ticks == 40:
+		check_mast(game.presentation.hero_assets, game.flow.warden)
+		game.presentation.remove_child(game.presentation.hero_assets)
+		game.presentation.hero_assets.queue_free()
+		check_mast_restored("replacement hook teardown")
 		print("hero_warden_assets_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 		quit(0 if failures == 0 else 1)
 	return false
@@ -64,6 +86,7 @@ func check_family() -> void:
 		return
 	if prior_id != 0:
 		check("stage cleanup", not is_instance_valid(prior_base) and not hook._wardens.has(prior_id))
+	check_mast(hook, warden)
 	prior_base = rec.base
 	prior_id = warden.get_instance_id()
 	hook._dress_warden(warden)
@@ -123,6 +146,8 @@ func check_family() -> void:
 	other.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, {"family": warden.family, "stage": warden.stage, "lesson": warden.lesson})
 	var fit_started := Time.get_ticks_usec()
 	hook._dress_warden(other)
+	hook._dress_mast(other)
+	check("extra Warden cannot claim mast", hook._mast.owner == warden.get_instance_id() and hook._mast.root == prior_support)
 	print("WARDEN_ATTACH_CPU_MS ", warden.family, " ", float(Time.get_ticks_usec() - fit_started) / 1000.0)
 	var second: Dictionary = hook.warden_of(other)
 	check("independent materials", rec.materials.ancient_light != second.materials.ancient_light and rec.materials.ancient_enamel != second.materials.ancient_enamel and rec.materials.ancient_light_jaw != second.materials.ancient_light_jaw)
@@ -220,3 +245,47 @@ func check_stroke_surfaces(rec: Dictionary) -> void:
 			samples += 1
 	print("STROKE_GEOMETRY ", rec.warden.family, " samples=", samples, " minimum_signed_clearance=", minimum, " maximum_signed_clearance=", worst)
 	check("shred centres endpoints and triangle interiors fit actual jaws", fitted and samples == 18 * 83)
+
+
+func check_mast_restored(reason: String) -> void:
+	var node: MeshInstance3D = mast_original.node
+	check("exact mast restoration " + reason, node.mesh == mast_original.mesh and node.material_override == mast_original.material and node.transform == mast_original.transform and node.layers == mast_original.layers and node.cast_shadow == mast_original.shadow)
+	check("no orphan support " + reason, node.get_child_count() == 0)
+
+
+func check_mast(hook, warden) -> void:
+	check("active mast owner", not hook._mast.is_empty() and hook._mast.owner == warden.get_instance_id())
+	if hook._mast.is_empty(): return
+	var support: Node3D = hook._mast.root
+	if prior_support != null:
+		check("old support freed on transition", not is_instance_valid(prior_support))
+	prior_support = support
+	hook._dress_mast(warden)
+	check("idempotent mast", hook._mast.root == support and mast_original.node.get_child_count() == 1)
+	check("original mast retained", mast_original.node.mesh == mast_original.mesh and mast_original.node.material_override == mast_original.material and mast_original.node.transform == mast_original.transform and mast_original.node.layers == 0)
+	var minimum := INF
+	var segments := 0
+	var rails := 0
+	for visual in support.get_children():
+		check("mast material preserved", visual.material_override == mast_original.material)
+		check("mast finite transform", visual.transform.is_finite() and absf(visual.basis.determinant()) > 0.99)
+		var centre: Vector3 = visual.to_local(warden.family_point_at())
+		if visual.mesh is BoxMesh:
+			rails += 1
+			var half: Vector3 = visual.mesh.size * 0.5
+			# Exact distance to the solid oriented box bounds covers faces and interiors.
+			var closest := centre.clamp(-half, half)
+			minimum = minf(minimum, centre.distance_to(closest))
+			check("narrow support rail", is_equal_approx(visual.mesh.size.x, 0.12) and is_equal_approx(visual.mesh.size.z, 0.12))
+		else:
+			segments += 1
+			var cylinder: CylinderMesh = visual.mesh
+			minimum = minf(minimum, absf(centre.y) - cylinder.height * 0.5)
+			for y in [-cylinder.height * 0.5, cylinder.height * 0.5]:
+				var mast_y: float = visual.position.y + y
+				var old: CylinderMesh = mast_original.mesh
+				var expected := lerpf(old.bottom_radius, old.top_radius, (mast_y + old.height * 0.5) / old.height)
+				check("original taper at segment end", absf((cylinder.bottom_radius if y < 0 else cylinder.top_radius) - expected) < 0.00001)
+	print("MAST_CLEARANCE ", warden.family, " ", minimum)
+	check("entire support outside fixed sphere", minimum >= Warden.FAMILY_POINT_RADIUS and segments == 2 and rails == 6)
+	check("lamp and ring retained", game.flow.beacon._core.is_inside_tree() and game.flow.beacon._core.layers != 0 and game.flow.beacon._ring.is_inside_tree() and game.flow.beacon._ring.layers != 0)

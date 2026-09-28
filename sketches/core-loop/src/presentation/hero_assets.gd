@@ -64,6 +64,7 @@ var _scenes := {}
 var _meshes := {}
 var _players := {}
 var _wardens := {}
+var _mast := {}
 var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
 
@@ -88,6 +89,7 @@ func _exit_tree() -> void:
 	for rec in _wardens.values():
 		_restore_warden(rec)
 	_wardens.clear()
+	_restore_mast()
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
 
@@ -405,7 +407,7 @@ func _warden_scene(path: String) -> Node3D:
 
 
 func _dress_warden(warden) -> void:
-	if not is_instance_valid(warden) or not warden.is_inside_tree() or _wardens.has(warden.get_instance_id()):
+	if not is_inside_tree() or not is_instance_valid(warden) or not warden.is_inside_tree() or _wardens.has(warden.get_instance_id()):
 		return
 	if warden._look == null or warden._kit == null or not WARDEN_KITS.has(warden.family):
 		return
@@ -462,6 +464,7 @@ func _dress_warden(warden) -> void:
 	_wardens[warden.get_instance_id()] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
+	_dress_mast.call_deferred(warden)
 
 
 func _prewarm_warden_strokes() -> void:
@@ -650,6 +653,8 @@ func _forget_warden(id: int) -> void:
 
 
 func _restore_warden(rec: Dictionary) -> void:
+	if not _mast.is_empty() and is_instance_valid(rec.warden) and _mast.owner == rec.warden.get_instance_id():
+		_restore_mast()
 	for item in rec.hidden:
 		if is_instance_valid(item.mesh):
 			item.mesh.layers = item.layers
@@ -659,3 +664,80 @@ func _restore_warden(rec: Dictionary) -> void:
 			rec.warden._cracks.erase(crack)
 	if is_instance_valid(rec.base):
 		rec.base.queue_free()
+
+
+func _dress_mast(warden) -> void:
+	if not is_inside_tree() or not is_instance_valid(warden) or not warden.is_inside_tree():
+		return
+	if ctx == null or ctx.flow == null or ctx.flow.warden != warden or not _wardens.has(warden.get_instance_id()):
+		return
+	if not _mast.is_empty() and _mast.owner == warden.get_instance_id():
+		return
+	_restore_mast()
+	var beacon = ctx.flow.beacon
+	if not is_instance_valid(beacon):
+		return
+	for child in beacon.get_children():
+		if not child is MeshInstance3D or not child.mesh is CylinderMesh:
+			continue
+		var cylinder: CylinderMesh = child.mesh
+		if not is_equal_approx(cylinder.height, beacon.MAST_HEIGHT):
+			continue
+		var centre: Vector3 = child.to_local(warden.family_point_at())
+		if Vector2(centre.x, centre.z).length() > 0.001 or not child.global_basis.get_scale().is_equal_approx(Vector3.ONE):
+			return
+		var low := centre.y - 1.45
+		var high := centre.y + 1.45
+		var half := cylinder.height * 0.5
+		if low <= -half or high >= half:
+			return
+		var support := Node3D.new()
+		support.name = "HeroMastSupport"
+		child.add_child(support)
+		_mast = {"owner": warden.get_instance_id(), "mesh": child, "root": support, "layers": child.layers, "shadow": child.cast_shadow}
+		for span in [Vector2(-half, low), Vector2(high, half)]:
+			var segment := cylinder.duplicate() as CylinderMesh
+			segment.height = span.y - span.x
+			segment.bottom_radius = _mast_radius(cylinder, span.x)
+			segment.top_radius = _mast_radius(cylinder, span.y)
+			var visual := _mast_visual(segment, support, child)
+			visual.position.y = (span.x + span.y) * 0.5
+		for side in [-1.0, 1.0]:
+			var points := [Vector3(side * _mast_radius(cylinder, low), low, 0), Vector3(side * 1.5, centre.y - 0.8, 0), Vector3(side * 1.5, centre.y + 0.8, 0), Vector3(side * _mast_radius(cylinder, high), high, 0)]
+			for i in 3:
+				var start: Vector3 = points[i]
+				var end: Vector3 = points[i + 1]
+				var beam := BoxMesh.new()
+				beam.size = Vector3(0.12, start.distance_to(end), 0.12)
+				var visual := _mast_visual(beam, support, child)
+				visual.position = (start + end) * 0.5
+				visual.rotation.z = -atan2(end.x - start.x, end.y - start.y)
+		child.layers = 0
+		child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		return
+
+
+func _mast_radius(cylinder: CylinderMesh, height: float) -> float:
+	return lerpf(cylinder.bottom_radius, cylinder.top_radius, (height + cylinder.height * 0.5) / cylinder.height)
+
+
+func _mast_visual(mesh: Mesh, parent: Node3D, original: MeshInstance3D) -> MeshInstance3D:
+	var visual := MeshInstance3D.new()
+	visual.mesh = mesh
+	visual.material_override = original.material_override
+	visual.layers = original.layers
+	visual.cast_shadow = original.cast_shadow
+	parent.add_child(visual)
+	return visual
+
+
+func _restore_mast() -> void:
+	if _mast.is_empty():
+		return
+	if is_instance_valid(_mast.mesh):
+		_mast.mesh.layers = _mast.layers
+		_mast.mesh.cast_shadow = _mast.shadow
+	if is_instance_valid(_mast.root):
+		_mast.root.get_parent().remove_child(_mast.root)
+		_mast.root.queue_free()
+	_mast.clear()

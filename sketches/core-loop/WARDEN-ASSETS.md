@@ -39,3 +39,12 @@ The signed-clearance follow-up closes the occlusion gap in the earlier absolute-
 ## Hive brood-cell correction
 
 Andrew flagged the stage-2 dome and heat columns as reactor language. The three existing cap targets now carry six-sided enamel rims and shallow amber membranes. Open hexagonal markers above the jaws preserve ground-approach visibility without heat columns. Membranes sit at the existing `cap_points()` coordinates and keep the original hit material, flash and damage rules. This is a presentation change in `warden_look.gd`; `warden.gd` and its lesson data are unchanged. It supersedes the old heat-plume appearance in the design reference, pending the coordinator's canonical record update.
+
+
+## VD-04-MAST open beacon support
+
+The hero hook dresses only the beacon belonging to `ctx.flow.warden`. The original mast node, mesh, transform and material stay intact. Its render layers and shadow casting are suspended while two copied frustum sections preserve the original taper below and above a 2.9 m band centered on the unchanged family weak point. Six 12 cm square beams form two split rails, reaching 1.5 m to either side on the beacon's local X axis. The lamp, charge ring and beacon controller are untouched. Geometry is built once per owner attachment; there is no per-frame mesh work.
+
+The focused test computes exact closest distance to each solid oriented beam box and a conservative vertical distance for both frusta, covering faces and interiors as well as vertices. All three families measured at least 1.440000057 m from the fixed weak-point center, exceeding its 1.3 m sphere. It also checks taper endpoints, material identity, duplicate attachment, extra-Warden isolation, death, stage replacement, hook teardown and attachment of a replacement hook to an already active Warden. Teardown removes the support immediately and restores the exact original render state. Deferred Warden callbacks now reject a hook that has left the tree.
+
+This establishes geometric clearance and lifecycle behavior only. The two narrow rails can still cross a kit silhouette from some angles; native orbit/readability and actual render performance remain the parent's acceptance work. No target, collider, charge, placement, family or combat rule changed.
