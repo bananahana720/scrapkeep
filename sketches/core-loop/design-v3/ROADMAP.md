@@ -138,6 +138,11 @@ Andrew: "the pilot should react to the player's actions, achievements, or failur
 ## Rules that keep it reasonable
 
 - Small waves, with results read before the next wave. The coordinator alone merges.
+- **Risk tolerance, measured only where it changes a decision** (Andrew, 2026-09-28). The Sonnet lane is a risk-based bet. It is fine while nothing game-breaking ships and tech debt stays manageable. The coordinator fills one row of `tools/coordinator/lane-ledger.tsv` per merged unit, from what the lane already produces. Each measure has a trigger:
+  1. **Escapes.** A merged unit that turns v3 smoke red, hangs a bot, or breaks something Andrew hits in play. The tolerance is none of the game-breaking kind. One escape pauses new units until its root cause is known, and the units after it get a Fable seam review.
+  2. **Gate overturns.** The verifier passed the unit and the Opus gate failed it. If more than 1 in 5 of the last units are overturned, verification moves back to Opus.
+  3. **Open debt.** The debt the gate names in PASS+NOTES that isn't fixed before merge. If more than 5 notes are open, or the count grows two waves in a row, a subtract pass runs before new units.
+  4. **Speed and spend.** The build-to-merge hours against today's Opus units (M0, ACE, E1), and the Opus-plus-Fable share of delegate spend from `~/.claude/hooks/bin/delegate-spend.sh` against the 90% measured on 2026-09-21. If Sonnet units aren't faster or cheaper after about 5 merges, the trial isn't buying anything, and that's reported to Andrew.
 - **Assets and animation: Codex designs, Sonnet builds** (Andrew, 2026-09-28). Codex owns art direction and makes the clear keyframes, three-view reference sheets, painted textures and the visual layout of how each mesh is built and moves. Sonnet agents implement them as Blender CLI recipes, meshes, rigs, poses and Godot wiring. The guardrail is rendered evidence: rear chase-camera stills and recipe checks go through the Opus gate, and Andrew judges the look.
 - Nothing is called ready on tests alone. The fun gate (the camper fails, the map matters, the windows are legible) comes before Andrew's play.
 - Andrew's design principles and rulings stand: momentum is sacred, quick restart, opt-in layers, readable caps, no reskins, spill-B music, gems never lost.
