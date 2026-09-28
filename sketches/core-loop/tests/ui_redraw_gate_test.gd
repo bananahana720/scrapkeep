@@ -18,6 +18,7 @@ var _frame := 0
 var _started := false
 var _draws := {}
 var _watched := {}
+var _runs := 0
 
 
 func _initialize() -> void:
@@ -73,9 +74,11 @@ func _process(_delta: float) -> bool:
 				hud.profile.add_use(action)
 	if _frame == WARM:
 		_reset()
+		_runs = hud.layout_runs
 	if _frame == WARM + WINDOW:
 		for label in _draws:
 			_report("idle " + label, _count(label) <= 2, "%s drew %d times over %d idle frames" % [label, _count(label), WINDOW])
+		_report("idle layout", hud.layout_runs == _runs, "layout ran %d times over %d idle frames" % [hud.layout_runs - _runs, WINDOW])
 		_reset()
 		# Same reading set again and again: no draw.
 		var gauge = hud._scrap
@@ -85,10 +88,15 @@ func _process(_delta: float) -> bool:
 	if _frame == WARM + WINDOW + 2:
 		_report("same reading", _count("scrap") == 0, "scrap drew %d times for 5 identical readings" % _count("scrap"))
 		var gauge = hud._scrap
-		gauge.set_reading(-1.0, gauge.color, "123456", false, Color.WHITE)
+		_runs = hud.layout_runs
+		_game.run.scrap = 123456
 		return false
 	if _frame == WARM + WINDOW + 4:
 		_report("changed reading", _count("scrap") >= 1, "scrap drew %d times after its label changed" % _count("scrap"))
+		var scrap = hud._scrap
+		var heft_edge: float = hud._heft.position.x + hud._heft.size.x + hud.BOTTOM_GAP
+		_report("relayout on size", hud.layout_runs > _runs and absf(heft_edge - scrap.position.x) < 0.5,
+			"layout ran %d times, scrap at %.1f, heft edge %.1f" % [hud.layout_runs - _runs, scrap.position.x, heft_edge])
 		var health = hud._health
 		health.set_reading(0.4, health.color, "", false, Color.WHITE)
 		return false

@@ -92,6 +92,10 @@ var _scrap: Control
 var _speed: Control
 var _threat := 0
 var _laid_out := Vector2.ZERO
+# What layout() last read besides the screen: the pieces whose own size moves their neighbours.
+var _laid_pieces: Array = []
+# Counts layout() runs, so a test can see it stay quiet on an idle frame.
+var layout_runs := 0
 
 
 func setup(game_ref) -> void:
@@ -317,6 +321,8 @@ func _screen_size() -> Vector2:
 # Puts every piece in its band for a screen of this size (screen_regions.gd).
 func layout(size: Vector2) -> void:
 	_laid_out = size
+	_laid_pieces = _piece_sizes()
+	layout_runs += 1
 	var top := ScreenRegions.rect("top", size)
 	var toasts := ScreenRegions.rect("toasts", size)
 	var bottom := ScreenRegions.rect("bottom", size)
@@ -339,6 +345,12 @@ func layout(size: Vector2) -> void:
 	_heft.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - _heft.size.y * 0.5)
 	_scrap.position = Vector2(_heft.position.x + _heft.size.x + BOTTOM_GAP, slot_mid - _scrap.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
+
+
+# The sizes layout() depends on. Relayout when one changes, not every frame: each
+# extent() call shapes text.
+func _piece_sizes() -> Array:
+	return [_objective.custom_minimum_size, _health.size, _heft.size, _scrap.size, maxi(ability_bar.slots.size(), 4)]
 
 
 # The screen rect of each piece, for the layout test: {region: [Rect2, ...]}.
@@ -523,7 +535,7 @@ func _process(delta: float) -> void:
 	if interact != null:
 		reticle.gauge = maxf(reticle.gauge, interact.hold_fraction())
 	reticle.gauge_color = tint
-	if ability_bar.size != _laid_out:
+	if _piece_sizes() != _laid_pieces:
 		layout(size)
 
 	var hold: float = game.restart_hold_fraction()
