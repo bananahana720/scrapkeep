@@ -262,6 +262,12 @@ def controls(guides, run):
     rows['v1 cover (B bed, raw, Demucs stems)'] = screen_take(
         load(V1 / 'cover-spillway-raw.wav'), load(V1 / 'cover-spillway-raw.drums.wav'),
         load(V1 / 'cover-spillway-raw.bass.wav'), ref, bar, step, n)
+    # Added after the sweep was screened: the same locked engine guide through Demucs, the path
+    # every take's stems take. The bass grid-deviation half of the lock screen reads ~17 ms here
+    # (5 ms on the clean synth bass), so on separated stems it measures Demucs smearing, not lock.
+    rows['engine guide through Demucs (v1 audition stems)'] = screen_take(
+        load(V1 / 'guide-spillway-16bar.wav'), load(V1 / 'guide-spillway-16bar.drums.wav'),
+        load(V1 / 'guide-spillway-16bar.bass.wav'), ref, bar, step, n)
     rows['B delivered mix density'] = b_density(bar)
     (run / 'controls.json').write_text(json.dumps(rows, indent=1))
     for k, v in rows.items():
@@ -346,8 +352,38 @@ def screen(guides, run):
     print('\n'.join(lines[-1:]))
 
 
+def master(y, path):
+    """retime_slice.master's chain (-14 LUFS, true-peak limiter, Opus 96k), with the limiter
+    ceiling lowered in 0.5 dB steps until the decoded Opus also sits under -1 dBTP."""
+    import subprocess
+    from scipy.signal import resample_poly
+    sys.path.insert(0, '/home/andrew/Projects/music-video')
+    from engine.dsp import true_peak_limit
+    before = lufs(y)
+    for ceiling in (-1.8, -2.3, -2.8, -3.3, -3.8):
+        gain = -14 - before
+        for _ in range(8):
+            z = true_peak_limit((y * 10 ** (gain / 20)).T, ceiling_db=ceiling).T
+            loud = lufs(z)
+            if abs(loud + 14) < .02:
+                break
+            gain += -14 - loud
+        sf.write(path, z, SR, subtype='PCM_24')
+        opus = path.with_suffix('.opus')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(path), '-c:a', 'libopus', '-b:a', '96k', str(opus)], check=True)
+        decoded = path.with_name('opus-decoded.wav')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(opus), '-ar', str(SR), str(decoded)], check=True)
+        enc = load(decoded)
+        tp = lambda a: round(db(np.abs(resample_poly(a, 4, 1, axis=0)).max()), 2)
+        row = dict(lufs_before=round(before, 2), gain_db=round(gain, 2), lufs_after=round(loud, 2), limiter_ceiling_db=ceiling,
+                   peak_dbfs=round(db(np.abs(z).max()), 2), true_peak_dbtp=tp(z),
+                   opus=dict(path=str(opus), bitrate=96000, lufs=round(lufs(enc), 2), true_peak_dbtp=tp(enc)))
+        if row['true_peak_dbtp'] < -1 and row['opus']['true_peak_dbtp'] < -1:
+            break
+    return z, row
+
+
 def finish(guides, run, names):
-    from retime_slice import master
     bar, n, step = grid(guides)
     report = json.loads((run / 'screen.json').read_text())
     rows = {r['take']: r for r in report['rows']}
