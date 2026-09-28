@@ -178,3 +178,8 @@ All bands are proposed acceptance targets, not measured successes. ROADMAP rows 
 | Spectacle still reads | Actor caps and Feel ledger every frame; dense moving footage at 1080p with the same damage schedule as low density; W13's first-fire cue exercised once per new effect. | No cap overflow or governed threat/target geometry; fight HUD ≤25 words, calm ≤40. Andrew can distinguish a prime, detonation and hostile warning while moving. |
 
 The historical fuzzer only exercised ten of twelve triggers naturally; smash and vault were injected. M5 must close the relevant natural-action gaps rather than counting bus injection as class coverage. Wacky control and persistent actors earn expansion only after these measures, not through a larger count of item names.
+
+## Andrew's answers (2026-09-28)
+
+1. **Primes:** shock, frost and wobble first. Burn and damage over time come in the next pass.
+2. **Active slot:** deferred. F's stockpiled charges stay the consumable layer. Add a slot only if play shows a decision is missing.
