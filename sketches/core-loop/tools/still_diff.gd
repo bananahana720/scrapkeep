@@ -25,6 +25,8 @@ const BOX_MAX_SHARE := 0.005
 const BOX_MAX_MEAN := 0.3
 const BOX_PAD := 8
 const THUMB := Vector2i(480, 270)
+
+
 func _initialize() -> void:
 	var args := {}
 	for arg in OS.get_cmdline_user_args():
