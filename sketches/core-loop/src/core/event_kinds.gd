@@ -119,7 +119,7 @@ const ROWS := {
 	"vent_erupted": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "reactor_erupt", "hud": "", "objective": "", "priority": 2},
 	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
 	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
-	"weak_point_opened": {"group": "combat", "color": Color("3d8bff"), "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
+	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -274,7 +274,7 @@ const LOOT_ROWS := {
 # layers and rides by the world's own sandstone, the landmark by the ancients' blue.
 # Rising and breathy means a ride; falling and pure means incoming: the launchers'
 # charge whistle rises, the impact's falls (SOUND-STORY section 7, W6 must).
-const ANCIENT_LIGHT := Color("3d8bff")
+const ANCIENT_LIGHT := Palette.ANCIENT
 const WORLD_ROWS := {
 	"lift_fired": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "lift_chuff_clank", "hud": "", "objective": "", "priority": 1},
 	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},

@@ -29,7 +29,7 @@ const MIND := "mind"
 
 # Cherenkov blue, the ancients' light (DESIGN-V2 section 11). Palette has no ANCIENT
 # constant yet; this is the stand-in until the spine adds one.
-const ANCIENT_LIGHT := Color("3d8bff")
+const ANCIENT_LIGHT := Palette.ANCIENT
 # Ancient enamel, dull petrol under the enamel cap (VISUAL-LANGUAGE section 11).
 const ANCIENT_ENAMEL := Palette.VERDIGRIS
 
