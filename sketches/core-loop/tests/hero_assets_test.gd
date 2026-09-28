@@ -16,7 +16,7 @@ const Game := preload("res://src/game.gd")
 
 const MODELS := "res://assets/models/"
 const SHELL_TRIS := Vector2i(3000, 6500)
-const PILOT_TRIS := Vector2i(400, 2200)
+const PILOT_TRIS := Vector2i(400, 4800)
 const CHUNK_TRIS := {"small": Vector2i(60, 120), "medium": Vector2i(150, 300), "large": Vector2i(400, 800)}
 const GATE_TRIS := Vector2i(1500, 2500)
 const WARDEN_BASE_TRIS := Vector2i(4000, 6000)

@@ -14,7 +14,7 @@ from common import Part
 
 CORE_LIMIT = 0.985
 SHELL_TRIS = (3000, 6500)
-PILOT_TRIS = (400, 2200)
+PILOT_TRIS = (400, 4800)
 
 
 def scrap_core(part, rng, radius=0.84, panels=24, lift=(0.03, 0.09), bolts=26, lopsided=0.045):
@@ -114,7 +114,7 @@ def dome(part, center, radius):
 
 def eye(part, loc, r=0.036):
     x, y, z = loc
-    part.uv("pilot", r, 6, 4, loc=loc, color="charcoal")
+    part.uv("pilot", r, 12, 8, loc=loc, scale=(1, 0.6, 1.1), color="charcoal")
     part.box("pilot", (r * 0.5, r * 0.3, r * 0.5), loc=(x + r * 0.3, y + r * 0.85, z + r * 0.35), color="bone")
 
 
@@ -194,22 +194,27 @@ def spherical(name, kit, animal, extras=()):
     kit.cyl("rubber", 0.36, 0.28, 0.16, 20, loc=(0, 0, -0.6))
     for z in (-0.62, -0.69, -0.76):
         kit.ring("field", 0.18, 0.25, 0.027, 24, loc=(0, 0, z))
-    kit.box("paint", (0.49, 0.12, 0.5), loc=(0, -0.29, -0.14), rot=(-0.12, 0, 0), color="oxide")
-    kit.box("rubber", (0.43, 0.09, 0.4), loc=(0, -0.21, -0.12))
+    seat = [(-0.22, -0.27), (0.22, -0.27), (0.27, -0.20), (0.24, 0.14), (0.16, 0.20), (-0.16, 0.20), (-0.24, 0.14), (-0.27, -0.20)]
+    kit.prism("paint", seat, 0.09, matrix=common.mtx((0, -0.27, -0.1), (math.pi / 2, 0, 0)), color="oxide")
+    kit.uv("rubber", 0.22, 12, 8, loc=(0, -0.22, -0.12), scale=(1.0, 0.35, 1.15))
     kit.box("rubber", (0.48, 0.42, 0.09), loc=(0, 0, -0.34))
     for side in (-1, 1):
         kit.rod("bare_metal", (side * 0.34, 0.28, -0.32), (side * 0.32, 0.4, 0.0), 0.025, 8)
         kit.rod("rubber", (side * 0.32, 0.4, 0.0), (side * 0.32, 0.4, 0.1), 0.045, 8)
     pod = kit.to_object((0, 0, 0), root)
     dome = common.empty("Dome", (0, 0, 0), pod)
-    # Enlarge the authored animal face and cap/crest, then supply the seated body.
+    # Head groups are reduced together; the connected seated body stays full size.
     for v in animal.bm.verts:
-        v.co = (v.co - Vector((0, 0.1 if name == "Kest" else 0, 0.86))) * 1.45 + Vector((0, 0, -0.18))
+        v.co = (v.co - Vector((0, 0.2 if name == "Kest" else 0.0, 1.1))) * 1.2325 + Vector((0, 0.015, 0.17))
+    jacket = "bone" if name == "Rivet" else "oxide"
+    animal.uv("pilot", 0.26, 20, 12, loc=(0, -0.005, -0.17), scale=(1.07, 0.78, 1.0), color=jacket)
+    animal.uv("pilot", 0.13, 12, 8, loc=(0, 0.035, 0.005), scale=(1.2, 0.75, 0.6), color="bone")
     for side in (-1, 1):
         animal.uv("pilot", 0.12, 8, 6, loc=(side * 0.18, 0.18, -0.3), scale=(1, 1.5, 0.85), color="oxide")
         animal.rod("pilot", (side * 0.18, 0.2, -0.3), (side * 0.2, 0.38, -0.46), 0.09, 8, color="petrol")
         animal.uv("pilot", 0.1, 8, 6, loc=(side * 0.2, 0.45, -0.48), scale=(1, 1.4, 0.6), color="charcoal")
-        animal.rod("pilot", (side * 0.29, 0.02, -0.06), (side * 0.36, 0.24, -0.12), 0.09, 8, color="oxide")
+        animal.uv("pilot", 0.12, 12, 8, loc=(side * 0.22, 0.005, -0.09), scale=(1.0, 0.85, 1.12), color=jacket)
+        animal.rod("pilot", (side * 0.24, 0.015, -0.09), (side * 0.36, 0.24, -0.12), 0.09, 8, color=jacket)
         animal.rod("pilot", (side * 0.36, 0.24, -0.12), (side * 0.32, 0.4, 0.04), 0.07, 8, color="charcoal")
         animal.uv("pilot", 0.075, 8, 6, loc=(side * 0.32, 0.4, 0.05), color="sandstone")
         animal.beam("pilot", (side * 0.16, 0.22, -0.25), (side * 0.14, 0.19, 0.06), 0.035, 0.02, color="copper")

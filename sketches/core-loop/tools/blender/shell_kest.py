@@ -71,28 +71,18 @@ def blade(name, side):
 def pilot():
     f = Part("Pilot")
     crest = common.mix("oxide", "amber", 0.2)
-    f.cyl("pilot", 0.25, 0.18, 0.16, 12, loc=(0, 0.18, 0.86), color="oxide")
-    f.uv("pilot", 0.21, 16, 10, loc=(0, 0.2, 1.06), scale=(1.0, 1.0, 0.95), color="bone")
-    f.ico("pilot", 0.09, 1, loc=(0.1, 0.31, 0.99), color="sandstone")
-    f.ico("pilot", 0.09, 1, loc=(-0.1, 0.31, 0.99), color="sandstone")
     beak = common.mix("amber", "sandstone", 0.35)
-    f.rod("pilot", (0, 0.36, 1.02), (0, 0.52, 0.98), 0.065, 4, color=beak, r2=0.004)
-    f.rod("pilot", (0, 0.35, 0.98), (0, 0.45, 0.96), 0.04, 4, color="charcoal", r2=0.004)
+    f.uv("pilot", 0.21, 24, 16, loc=(0, 0.2, 1.09), scale=(1.02, 0.88, 1.0), color="bone")
     for side in (-1, 1):
-        sb.eye(f, (side * 0.085, 0.36, 1.1), 0.036)
-        f.ring("pilot", 0.045, 0.075, 0.04, 8, loc=(side * 0.085, 0.37, 1.18), rot=(math.pi / 2 - 0.2, 0, 0),
-               color="charcoal")
-        f.cyl("pilot", 0.05, 0.05, 0.02, 8, loc=(side * 0.085, 0.37, 1.18), rot=(math.pi / 2 - 0.2, 0, 0),
-              color=common.mix("bone", "ffffff", 0.5))
-        f.prism("pilot", [(0, 0), (0.22, 0.04), (0.14, 0.12)], 0.04,
-                matrix=common.mtx((side * 0.24, 0.12, 0.88), (math.pi / 2, 0, side * 0.5 + math.pi / 2)),
-                color="sandstone")
-    f.box("pilot", (0.24, 0.03, 0.03), loc=(0, 0.33, 1.2), color="charcoal")
-    for k, (lean, h) in enumerate(((0.35, 0.3), (0.65, 0.26), (0.95, 0.2))):
-        m = common.mtx((0, 0.12 - 0.04 * k, 1.2), (math.pi / 2, 0, math.pi / 2)) @ common.mtx((0, 0, 0), (0, 0, lean))
-        f.prism("pilot", [(-0.035, 0), (0.035, 0), (0.02, h * 0.8), (0, h)], 0.035, matrix=m, color=crest)
-        tip = m @ Vector((0, h * 0.95, 0))
-        f.ico("pilot", 0.025, 1, loc=tip, color="charcoal")
+        f.uv("pilot", 0.08, 12, 8, loc=(side * 0.115, 0.302, 1.085), scale=(0.85, 0.40, 1.15), color="charcoal")
+        f.ring("pilot", 0.044, 0.063, 0.03, 16, loc=(side * 0.088, 0.35, 1.155), rot=(math.pi / 2, 0, 0), color="copper")
+        sb.eye(f, (side * 0.088, 0.374, 1.155), 0.040)
+    f.rod("pilot", (-0.027, 0.35, 1.158), (0.027, 0.35, 1.158), 0.012, 8, color="charcoal")
+    f.uv("pilot", 0.08, 16, 10, loc=(0, 0.357, 1.035), scale=(0.8, 1.2, 0.6), color=beak)
+    f.rod("pilot", (0, 0.39, 1.043), (0, 0.475, 0.99), 0.045, 10, color=beak, r2=0.006)
+    f.rod("pilot", (0, 0.37, 0.994), (0, 0.44, 0.976), 0.026, 8, color="charcoal", r2=0.005)
+    for k in range(3):
+        f.uv("pilot", 0.07, 12, 8, loc=(0, 0.16 - k * 0.05, 1.3 + k * 0.015), scale=(0.42, 0.65, 1.75), rot=(0.35 + k * 0.2, 0, 0), color=crest)
     return f
 
 
