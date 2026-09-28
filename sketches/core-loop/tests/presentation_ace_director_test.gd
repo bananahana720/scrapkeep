@@ -60,6 +60,8 @@ func _initialize() -> void:
 
 
 func _process(_delta: float) -> bool:
+	if _audio == null:
+		return true
 	var now := Time.get_ticks_usec()
 	if _step <= 2:
 		_frame_ms.append((now - _last_us) / 1000.0)
