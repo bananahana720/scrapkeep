@@ -4,7 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 
-# V3 hero assets (VISUAL-LANGUAGE.md section 9). Dresses the greybox in the procedural
+# VD-01 clear sphere slice. Dresses the greybox in the procedural
 # models from tools/blender/ as nodes enter the tree, without editing the gameplay
 # scripts that own them: the player's class shell, accretion chunks and the reward
 # gate arches. Each placeholder mesh is hidden (render layers cleared, shadow off),
@@ -16,9 +16,9 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 # palette colours baked as vertex colours (the test pins paint to the paint roles).
 #
 # The shell splits the way it moves. Core rolls with the ball under its rolling mesh;
-# Pod (the kit, the dome and the pilot) rides the juice node, stays upright and yaws to
+# Pod (the kit and seated pilot) rides the juice node, stays upright and yaws to
 # the heading, so the cockpit is always findable (AD-01, AC-01) and Rivet's fins and
-# Kest's satchel bands keep their direction. Chunks tuck under the pod's saddle as they
+# Kest's satchel bands keep their direction. Chunks tuck below the cockpit as they
 # roll through it instead of clipping the glass.
 
 const SHELLS := {
@@ -32,8 +32,8 @@ const GATE_PATH := "res://assets/models/reward_gate.glb"
 # Accretion slot index bands: a young build carries small scrap, a heavy one large.
 const CHUNK_BANDS := [[12, "small"], [24, "medium"], [Accretion.MAX_CHUNKS, "large"]]
 # Cosine from straight up where a chunk starts tucking under the pod, and where it is gone.
-const TUCK_FROM := 0.52
-const TUCK_GONE := 0.74
+const TUCK_FROM := -0.15
+const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
@@ -47,7 +47,7 @@ const SLOTS := {
 	"rubber": {"color": Palette.CHARCOAL, "rough": 0.95},
 	"class_accent": {"from": "class", "emit": 0.5, "rough": 0.5},
 	"field": {"color": Palette.ARC, "emit": 1.6, "rough": 0.4},
-	"glass": {"color": Color.WHITE, "alpha": 0.16, "rough": 0.04},
+	"glass": {"color": Color.WHITE, "alpha": 0.10, "rough": 0.04},
 	"pilot": {"color": Color.WHITE, "vertex": true, "rough": 0.9},
 	"fleet_paint": {"color": Palette.RUST, "rough": 0.8},
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
@@ -94,10 +94,27 @@ func _on_node_added(node: Node) -> void:
 
 # --- materials ---------------------------------------------------------------------
 
-func material(slot: String, tint := Color.WHITE) -> StandardMaterial3D:
+func material(slot: String, tint := Color.WHITE) -> Material:
 	var key := "%s:%s" % [slot, tint.to_html()]
 	if _materials.has(key):
 		return _materials[key]
+	if slot == "glass":
+		var glass := ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+void fragment() {
+	float edge = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 3.0);
+	ALBEDO = vec3(0.95, 0.98, 1.0);
+	ALPHA = 0.025 + edge * 0.32;
+	ROUGHNESS = 0.08;
+	SPECULAR = 0.7;
+}
+"""
+		glass.shader = shader
+		glass.resource_name = slot
+		_materials[key] = glass
+		return glass
 	var spec: Dictionary = SLOTS[slot]
 	var color: Color = tint if spec.has("from") else spec["color"]
 	color = color.lerp(Color.WHITE, spec.get("lighten", 0.0))
@@ -107,9 +124,14 @@ func material(slot: String, tint := Color.WHITE) -> StandardMaterial3D:
 	mat.vertex_color_use_as_albedo = spec.get("vertex", false)
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
+	if slot in ["paint", "pilot", "bare_metal"]:
+		mat.albedo_texture = Palette.painted_texture(128)
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE * 2.0
 	if spec.has("alpha"):
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.metallic_specular = 1.0
+		mat.metallic_specular = 0.65
+		mat.cull_mode = BaseMaterial3D.CULL_BACK
 	if spec.get("emit", 0.0) > 0.0:
 		mat.emission_enabled = true
 		mat.emission = color
@@ -234,6 +256,10 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	if flat.length() > POD_TURN_SPEED:
 		var want := atan2(-v.x, -v.z)
 		pod.rotation.y = lerp_angle(pod.rotation.y, want, 1.0 - exp(-POD_TURN_RATE * delta))
+	var gyro := pod.get_node_or_null("Gyro") as Node3D
+	if gyro != null and v.length() > 0.01:
+		# Motion comes from the real velocity; the pilot remains on the upright Pod.
+		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	var open := 1.0 if player.kit.gliding else 0.0
 	for vane_name in ["VaneL", "VaneR"]:
 		var vane := pod.get_node_or_null(vane_name) as Node3D

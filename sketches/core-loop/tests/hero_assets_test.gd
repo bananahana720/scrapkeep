@@ -15,8 +15,8 @@ const Game := preload("res://src/game.gd")
 # accretion chunks and each reward gate while hiding, not deleting, the placeholders.
 
 const MODELS := "res://assets/models/"
-const SHELL_TRIS := Vector2i(3000, 5000)
-const PILOT_TRIS := Vector2i(400, 800)
+const SHELL_TRIS := Vector2i(3000, 6500)
+const PILOT_TRIS := Vector2i(400, 2200)
 const CHUNK_TRIS := {"small": Vector2i(60, 120), "medium": Vector2i(150, 300), "large": Vector2i(400, 800)}
 const GATE_TRIS := Vector2i(1500, 2500)
 const WARDEN_BASE_TRIS := Vector2i(4000, 6000)
@@ -187,6 +187,21 @@ func _check_models() -> void:
 			for v in core.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
 				far = maxf(far, (core.transform * v).length())
 		_report(shell + " core", far <= Tuning.RADIUS, "rolling core reaches %.3f m, collider %.2f m" % [far, Tuning.RADIUS])
+		var glass_vertices := 0
+		var sphere_error := 0.0
+		for surface in core.mesh.get_surface_count():
+			if HeroAssets.slot_of(core.mesh, surface) == "glass":
+				for v in core.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+					glass_vertices += 1
+					sphere_error = maxf(sphere_error, absf((core.transform * v).length() - 0.98))
+		_report(shell + " sphere", glass_vertices > 500 and sphere_error < 0.001,
+			"full radius-0.98 glass hull (%d vertices, error %.6f)" % [glass_vertices, sphere_error])
+		var pilot_far := 0.0
+		for surface in pilot.mesh.get_surface_count():
+			for v in pilot.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+				pilot_far = maxf(pilot_far, (pod.transform * dome.transform * pilot.transform * v).length())
+		_report(shell + " seated inside", pilot_far < 0.94, "pilot enclosed, radius %.3f" % pilot_far)
+		_report(shell + " gyro", pod.get_node_or_null("Gyro") != null, "independent gyro under upright Pod")
 		var off := slot_colors(scene, "paint").filter(func(c): return not _near_any(c, paint_set))
 		_report(shell + " paint", off.is_empty(), "paint vertex colours are petrol, iron oxide or bone (%d off)" % off.size())
 		scene.free()
@@ -263,9 +278,15 @@ func _check_stub() -> void:
 			"shell fitted: core under the rolling mesh, pod on the juice node, placeholder hidden")
 		var accent := _accent_color(pod)
 		_report("stub " + def.id + " accent", accent.is_equal_approx(def.color), "class_accent wears the class row colour")
+	var resting_gyro: Node3D = hook.shell_of(stub)["pod"].get_node("Gyro")
+	var resting_basis := resting_gyro.basis
+	hook._process(0.5)
+	_report("gyro rests", resting_gyro.basis.is_equal_approx(resting_basis), "no velocity means no gyro motion")
 	stub.state.velocity = Vector3(10.0, 0.0, 0.0)
 	hook._process(1.0)
 	var pod: Node3D = hook.shell_of(stub)["pod"]
+	_report("gyro rolls", not resting_gyro.basis.is_equal_approx(resting_basis), "real velocity moves the independent ring")
+	_report("pilot upright", pod.basis.y.is_equal_approx(Vector3.UP), "gyro leaves pilot upright")
 	var forward := -pod.transform.basis.z
 	_report("stub heading", forward.dot(Vector3.RIGHT) > 0.99, "pod faces the heading (%s)" % forward)
 	stub.kit.gliding = true

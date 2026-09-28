@@ -1,19 +1,7 @@
-# The parts every class shell shares (VISUAL-LANGUAGE.md section 9): a lopsided scrap
-# ball core that rolls, an upright pod saddle that yaws to the heading, and a glass
-# cockpit dome with the pilot bust inside. Provenance: authored procedurally here from
-# Blender primitives and bmesh operators; no external assets. Shared by
-# shell_sable.py, shell_rivet.py and shell_kest.py.
-#
-# Axes: Blender +Z is up and +Y is forward, which glTF export turns into Godot +Y up and
-# -Z forward. The ball centre is the origin and the player collider radius is 1.0 m
-# (src/movement/tuning.gd RADIUS), so the core stays inside CORE_LIMIT.
-#
-# Node contract read by src/presentation/hero_assets.gd:
-#   Shell (root)
-#     Core   rolls with the ball
-#     Pod    stays upright and yaws to the heading; carries the class kit
-#       Dome   the cockpit glass and rim, origin at the dome centre
-#         Pilot  the animal bust, origin at the dome centre
+# Procedural class shells. VD-01 puts the clear rolling sphere under Core and
+# the seated pilot, equipment and independent gyro under upright Pod.
+# Blender +Z is up, +Y forward; glTF becomes Godot +Y up, -Z forward.
+# Original shape helpers remain for recipe equipment. spherical() owns the new assembly.
 
 import math
 import random
@@ -25,8 +13,8 @@ import common
 from common import Part
 
 CORE_LIMIT = 0.985
-SHELL_TRIS = (3000, 5000)
-PILOT_TRIS = (400, 800)
+SHELL_TRIS = (3000, 6500)
+PILOT_TRIS = (400, 2200)
 
 
 def scrap_core(part, rng, radius=0.84, panels=24, lift=(0.03, 0.09), bolts=26, lopsided=0.045):
@@ -179,3 +167,70 @@ def finish(name, root, core_obj, pilot_obj):
 
 def rng_for(name):
     return random.Random("scrapkeep-" + name)
+
+
+def spherical(name, kit, animal, extras=()):
+    """VD-01: full glass rolling hull, upright cockpit, independent gyro bearing."""
+    root = common.empty("Shell" + name)
+    hull = Part("Core")
+    hull.uv("glass", 0.98, 40, 24)
+    core = hull.to_object((0, 0, 0), root)
+    for polygon in core.data.polygons:
+        polygon.use_smooth = True
+    # Refit the existing class equipment below shoulder height, inside the ball.
+    def kit_point(point):
+        v = Vector(point)
+        return Vector((v.x * 0.67, v.y * 0.67, (v.z - 0.78) * 0.67 - 0.28))
+    for v in kit.bm.verts:
+        v.co = kit_point(v.co)
+    kit.ring("paint", 0.86, 0.92, 0.12, 48, loc=(0, 0, -0.29), color="petrol")
+    for k in range(16):
+        a = k * math.tau / 16
+        normal = Vector((math.cos(a), math.sin(a), 0))
+        kit.bolt(normal * 0.925 + Vector((0, 0, -0.29)), normal, r=0.018, h=0.015)
+        # Broken enamel at the rim exposes small warm metal edges.
+        kit.ring("paint", 0.916, 0.925, 0.04, 2, loc=(0, 0, -0.26), color="bone",
+                 arc=(a + 0.06, a + 0.13))
+    kit.cyl("rubber", 0.36, 0.28, 0.16, 20, loc=(0, 0, -0.6))
+    for z in (-0.62, -0.69, -0.76):
+        kit.ring("field", 0.18, 0.25, 0.027, 24, loc=(0, 0, z))
+    kit.box("paint", (0.49, 0.12, 0.5), loc=(0, -0.29, -0.14), rot=(-0.12, 0, 0), color="oxide")
+    kit.box("rubber", (0.43, 0.09, 0.4), loc=(0, -0.21, -0.12))
+    kit.box("rubber", (0.48, 0.42, 0.09), loc=(0, 0, -0.34))
+    for side in (-1, 1):
+        kit.rod("bare_metal", (side * 0.34, 0.28, -0.32), (side * 0.32, 0.4, 0.0), 0.025, 8)
+        kit.rod("rubber", (side * 0.32, 0.4, 0.0), (side * 0.32, 0.4, 0.1), 0.045, 8)
+    pod = kit.to_object((0, 0, 0), root)
+    dome = common.empty("Dome", (0, 0, 0), pod)
+    # Enlarge the authored animal face and cap/crest, then supply the seated body.
+    for v in animal.bm.verts:
+        v.co = (v.co - Vector((0, 0.1 if name == "Kest" else 0, 0.86))) * 1.45 + Vector((0, 0, -0.18))
+    for side in (-1, 1):
+        animal.uv("pilot", 0.12, 8, 6, loc=(side * 0.18, 0.18, -0.3), scale=(1, 1.5, 0.85), color="oxide")
+        animal.rod("pilot", (side * 0.18, 0.2, -0.3), (side * 0.2, 0.38, -0.46), 0.09, 8, color="petrol")
+        animal.uv("pilot", 0.1, 8, 6, loc=(side * 0.2, 0.45, -0.48), scale=(1, 1.4, 0.6), color="charcoal")
+        animal.rod("pilot", (side * 0.29, 0.02, -0.06), (side * 0.36, 0.24, -0.12), 0.09, 8, color="oxide")
+        animal.rod("pilot", (side * 0.36, 0.24, -0.12), (side * 0.32, 0.4, 0.04), 0.07, 8, color="charcoal")
+        animal.uv("pilot", 0.075, 8, 6, loc=(side * 0.32, 0.4, 0.05), color="sandstone")
+        animal.beam("pilot", (side * 0.16, 0.22, -0.25), (side * 0.14, 0.19, 0.06), 0.035, 0.02, color="copper")
+    animal.bm.normal_update()
+    for face in animal.bm.faces:
+        face.smooth = True
+    for edge in animal.bm.edges:
+        if edge.is_manifold and edge.calc_face_angle() > 1.2:
+            edge.smooth = False
+    pilot_obj = animal.to_object((0, 0, 0), dome)
+    gyro = Part("Gyro")
+    gyro.ring("bare_metal", 0.938, 0.965, 0.055, 64, rot=(math.pi / 2, 0, 0))
+    gyro.ring("paint", 0.946, 0.972, 0.028, 64, rot=(math.pi / 2, 0, 0), color="oxide")
+    for side in (-1, 1):
+        gyro.cyl("class_accent", 0.065, 0.065, 0.024, 12, loc=(side * 0.94, 0, 0), rot=(0, math.pi / 2, 0))
+    gyro.to_object((0, 0, 0), pod)
+    for item, origin in extras:
+        if isinstance(item, str):
+            common.empty(item, kit_point(origin), pod)
+        else:
+            for v in item.bm.verts:
+                v.co = kit_point(v.co)
+            item.to_object(kit_point(origin), pod)
+    return root, core, pilot_obj

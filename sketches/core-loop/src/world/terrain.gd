@@ -295,8 +295,8 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 
 func _build_sky(parent: Node3D) -> void:
 	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.13, 0.22, 0.30)
-	sky_material.sky_horizon_color = Palette.AMBER.lerp(Palette.SAND, 0.4)
+	sky_material.sky_top_color = Color(0.24, 0.43, 0.62)
+	sky_material.sky_horizon_color = Palette.SAND.lerp(Color.WHITE, 0.55)
 	sky_material.ground_bottom_color = Palette.CHARCOAL
 	sky_material.ground_horizon_color = Palette.SANDSTONE
 	var sky := Sky.new()
@@ -305,7 +305,7 @@ func _build_sky(parent: Node3D) -> void:
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.75
+	environment.ambient_light_energy = 0.85
 	environment.fog_enabled = true
 	environment.fog_density = 0.0009
 	environment.fog_light_color = Palette.SAND.lerp(Palette.VERDIGRIS, 0.35)
@@ -316,7 +316,7 @@ func _build_sky(parent: Node3D) -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
 	sun.light_energy = 1.15
-	sun.light_color = Palette.AMBER.lerp(Color.WHITE, 0.45)
+	sun.light_color = Palette.SAND.lerp(Color.WHITE, 0.65)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 260.0
 	parent.add_child(sun)

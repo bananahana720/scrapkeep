@@ -1,9 +1,5 @@
-# Sable's class shell (VISUAL-LANGUAGE.md section 9): a lopsided scrap ball, a
-# pylon-plate collar with mint field coils ringing the cockpit, a compact rope spool on
-# the right flank with its fairlead, a stubby pylon mast behind, and a fox pilot in a
-# cap under the glass. Provenance: authored procedurally here from Blender primitives
-# and bmesh operators; no external assets. Measured tris: shell 3860, pilot 536
-# (targets 3000 to 5000 and 400 to 800).
+# VD-01 Sable pilot and class equipment. shell_base.spherical() seats the
+# pilot inside the clear rolling hull. Authored here from Blender primitives.
 
 import math
 import os
@@ -58,13 +54,13 @@ def pilot():
     f = Part("Pilot")
     f.cyl("pilot", 0.27, 0.19, 0.16, 12, loc=(0, -0.02, 0.9), color="petrol")
     f.ring("pilot", 0.15, 0.21, 0.06, 10, loc=(0, 0, 0.99), color="bone")
-    f.ico("pilot", 0.22, 2, loc=(0, 0.01, 1.1), scale=(1.08, 0.95, 0.9), color="oxide")
-    f.ico("pilot", 0.11, 1, loc=(0.1, 0.11, 1.03), color="bone")
-    f.ico("pilot", 0.11, 1, loc=(-0.1, 0.11, 1.03), color="bone")
-    f.rod("pilot", (0, 0.1, 1.05), (0, 0.34, 1.02), 0.09, 6, color="bone", r2=0.03)
+    f.uv("pilot", 0.22, 16, 10, loc=(0, 0.01, 1.1), scale=(1.08, 0.95, 0.9), color="oxide")
+    f.uv("pilot", 0.11, 12, 8, loc=(0.1, 0.11, 1.03), color="bone")
+    f.uv("pilot", 0.11, 12, 8, loc=(-0.1, 0.11, 1.03), color="bone")
+    f.rod("pilot", (0, 0.1, 1.05), (0, 0.34, 1.02), 0.09, 6, color="bone", r2=0.05)
     f.ico("pilot", 0.035, 1, loc=(0, 0.345, 1.03), color="charcoal")
     for side in (-1, 1):
-        sb.eye(f, (side * 0.08, 0.18, 1.14), 0.042)
+        sb.eye(f, (side * 0.08, 0.18, 1.14), 0.034)
         sb.ear(f, (side * 0.12, -0.01, 1.2), 0.21, 0.16, side * -0.3, "oxide", inner="bone", tip="charcoal")
         f.ico("pilot", 0.045, 1, loc=(side * 0.2, 0.2, 0.92), color="oxide")
     f.cyl("pilot", 0.1, 0.09, 0.06, 10, loc=(0, -0.05, 1.28), color="petrol")
@@ -75,13 +71,7 @@ def pilot():
 
 def main():
     common.reset()
-    rng = sb.rng_for("sable")
-    core = Part("Core")
-    sb.scrap_core(core, rng)
-    glass = Part("Dome")
-    sb.dome(glass, DOME_C, DOME_R)
-    root, core_obj, pilot_obj = sb.assemble("Sable", core, pod(), glass, pilot(), DOME_C,
-                                            extras=[("RopeExit", (0.84, 0.36, 0.58))])
+    root, core_obj, pilot_obj = sb.spherical("Sable", pod(), pilot(), extras=[("RopeExit", (0.84, 0.36, 0.58))])
     sb.finish("Sable", root, core_obj, pilot_obj)
 
 

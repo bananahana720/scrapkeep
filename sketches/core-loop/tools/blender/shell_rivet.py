@@ -1,10 +1,5 @@
-# Rivet's class shell (VISUAL-LANGUAGE.md section 9): the shared scrap ball core, three
-# tiers of raked copper fins sweeping back from the pod in a chevron, twin exhaust
-# stacks behind, and a flat optical rail running straight forward to a cutting lens.
-# A mole machinist rides under the glass in a copper visor, its instrument cable
-# plugged into the dash. Provenance: authored procedurally here from Blender primitives
-# and bmesh operators; no external assets. Measured tris: shell 3440, pilot 508
-# (targets 3000 to 5000 and 400 to 800).
+# VD-01 Rivet pilot and class equipment. shell_base.spherical() seats the
+# pilot inside the clear rolling hull. Authored here from Blender primitives.
 
 import math
 import os
@@ -68,7 +63,7 @@ def pilot():
     f.cyl("pilot", 0.28, 0.2, 0.16, 12, loc=(0, -0.02, 0.9), color="bone")
     f.box("pilot", (0.06, 0.03, 0.14), loc=(0.12, 0.2, 0.9), color="copper")
     f.box("pilot", (0.06, 0.03, 0.14), loc=(-0.12, 0.2, 0.9), color="copper")
-    f.ico("pilot", 0.23, 2, loc=(0, 0.0, 1.1), scale=(1.1, 1.05, 0.88), color=fur)
+    f.uv("pilot", 0.23, 16, 10, loc=(0, 0.0, 1.1), scale=(1.1, 1.05, 0.88), color=fur)
     f.rod("pilot", (0, 0.14, 1.06), (0, 0.4, 1.02), 0.085, 8, color=pink, r2=0.04)
     for k in range(6):
         a = k * math.tau / 6
@@ -80,6 +75,9 @@ def pilot():
         for k in (-1, 0, 1):
             f.rod("pilot", (side * 0.2 + k * 0.035, 0.27, 0.94), (side * 0.2 + k * 0.04, 0.33, 0.93), 0.012, 4,
                   color="bone")
+    for side in (-1, 1):
+        f.ring("pilot", 0.055, 0.085, 0.04, 10, loc=(side * 0.09, 0.205, 1.16), rot=(math.pi / 2, 0, 0), color="copper")
+        sb.eye(f, (side * 0.09, 0.23, 1.16), 0.049)
     cable = [(-0.24, 0.02, 1.12), (-0.32, -0.08, 1.02), (-0.34, -0.14, 0.92), (-0.28, -0.22, 0.86)]
     for a, b in zip(cable, cable[1:]):
         f.rod("pilot", a, b, 0.018, 5, color="charcoal")
@@ -97,13 +95,7 @@ def visor():
 def main():
     common.reset()
     common.preview_class("copper")
-    rng = sb.rng_for("rivet")
-    core = Part("Core")
-    sb.scrap_core(core, rng)
-    glass = Part("Dome")
-    sb.dome(glass, DOME_C, DOME_R)
-    root, core_obj, pilot_obj = sb.assemble("Rivet", core, pod(), glass, pilot(), DOME_C)
-    visor().to_object(DOME_C, pilot_obj)
+    root, core_obj, pilot_obj = sb.spherical("Rivet", pod(), pilot())
     sb.finish("Rivet", root, core_obj, pilot_obj)
 
 

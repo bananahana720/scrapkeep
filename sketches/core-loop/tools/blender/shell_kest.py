@@ -1,11 +1,5 @@
-# Kest's class shell (VISUAL-LANGUAGE.md section 9): a smaller scrap core inside an
-# open icosahedral truss cage, three satchels girdled by horizontal amber bands (never
-# diagonal stripes, which are hostile) with fuse tips, a short mortar tube in a
-# recoil cradle, and a folded glide vane on top whose two blades hinge open. The dome
-# sits forward and holds a bird pilot with a crest, goggles and a beak.
-# Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Measured tris: shell 3820, pilot 592 (targets 3000 to 5000 and
-# 400 to 800).
+# VD-01 Kest pilot and class equipment. shell_base.spherical() seats the
+# pilot inside the clear rolling hull. Authored here from Blender primitives.
 
 import math
 import os
@@ -78,7 +72,7 @@ def pilot():
     f = Part("Pilot")
     crest = common.mix("oxide", "amber", 0.2)
     f.cyl("pilot", 0.25, 0.18, 0.16, 12, loc=(0, 0.18, 0.86), color="oxide")
-    f.ico("pilot", 0.21, 2, loc=(0, 0.2, 1.06), scale=(1.0, 1.0, 0.95), color="bone")
+    f.uv("pilot", 0.21, 16, 10, loc=(0, 0.2, 1.06), scale=(1.0, 1.0, 0.95), color="bone")
     f.ico("pilot", 0.09, 1, loc=(0.1, 0.31, 0.99), color="sandstone")
     f.ico("pilot", 0.09, 1, loc=(-0.1, 0.31, 0.99), color="sandstone")
     beak = common.mix("amber", "sandstone", 0.35)
@@ -105,14 +99,7 @@ def pilot():
 def main():
     common.reset()
     common.preview_class("amber")
-    rng = sb.rng_for("kest")
-    core = Part("Core")
-    sb.scrap_core(core, rng, radius=0.7, panels=20, bolts=16)
-    sb.truss_cage(core, radius=0.95, width=0.05)
-    glass = Part("Dome")
-    sb.dome(glass, DOME_C, DOME_R)
-    root, core_obj, pilot_obj = sb.assemble("Kest", core, pod(), glass, pilot(), DOME_C,
-                                            extras=[(blade("VaneL", -1), VANE_HINGE), (blade("VaneR", 1), VANE_HINGE)])
+    root, core_obj, pilot_obj = sb.spherical("Kest", pod(), pilot(), extras=[(blade("VaneL", -1), VANE_HINGE), (blade("VaneR", 1), VANE_HINGE)])
     sb.finish("Kest", root, core_obj, pilot_obj)
 
 
