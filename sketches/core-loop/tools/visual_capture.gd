@@ -180,7 +180,8 @@ func _place_inspection_camera() -> void:
 	if mode == "warden":
 		var warden = game.flow.warden
 		if is_instance_valid(warden):
-			inspection_camera.global_position = warden.global_position + Vector3(18, 10, 18)
+			var angle := deg_to_rad(float(settings.get("azimuth", "45")))
+			inspection_camera.global_position = warden.global_position + Vector3(sin(angle) * 25.455844, 10, cos(angle) * 25.455844)
 			inspection_camera.look_at(warden.global_position + Vector3(0, 4, 0))
 		return
 	var fitted: Dictionary = game.presentation.hero_assets.shell_of(game.player)
