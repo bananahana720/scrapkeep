@@ -1,0 +1,333 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+const RunState := preload("res://src/core/run_state.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
+const Intent := preload("res://src/movement/intent.gd")
+
+# The durability prototype (scrap as armour, DESIGN-NOTES): one damage order (mitigation,
+# then scrap, then hull), the 75/25 spill in at most 6 clusters, recovered scrap that is
+# not a fresh pickup, wear that is capped and grounded-only, class hysteresis, a restart
+# that restores every new piece of state, and a flag-off game equal to the base.
+
+var _failures := 0
+var _game
+var _phase := "boot"
+var _ticks := 0
+var _nodes: Array[Node] = []
+
+
+func _check(label: String, ok: bool, detail: String) -> void:
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _run(armor: bool, wear := false) -> RunState:
+	var events := GameEvents.new()
+	_nodes.append(events)
+	var run := RunState.new(events)
+	run.begin(load("res://src/core/class_def.gd").new())
+	run.armor_mode = armor
+	run.wear_on = wear
+	return run
+
+
+func _initialize() -> void:
+	_unit_checks()
+	var t := Tuning.new()
+	_check("flag defaults", not t.armor() and not t.wear_on() and t.base("route_seed") == 0.0 and t.base("start_mass") == 0.0,
+		"scrap_mode %s, wear %s" % [t.option("scrap_mode"), t.option("wear")])
+	var applied := t.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--seed=7", "--start-mass=200", "--scrap=bogus"]))
+	_check("flag parse", t.armor() and t.wear_on() and t.base("route_seed") == 7.0 and t.base("start_mass") == 200.0 and applied.size() == 4,
+		"applied %s; an unknown value is refused" % [applied])
+	var off := Tuning.new()
+	off.apply_args(PackedStringArray(["--wear=on"]))
+	_check("wear needs armour", not off.wear_on(), "--wear=on alone does not wear")
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+
+
+func _unit_checks() -> void:
+	# Damage order: a 12-damage hit on 100 scrap takes all 100 and 2 hull.
+	var run := _run(true)
+	run.grant_start_mass(100.0)
+	var spills := []
+	run.armor_hit.connect(func(removed: float, spill: int, _s: String): spills.append([removed, spill]))
+	var hits := []
+	run.events.player_hit.connect(func(a: float, _s: String): hits.append(a))
+	run.damage(12.0, "t")
+	_check("damage order", run.mass == 0.0 and is_equal_approx(run.hp, 98.0) and hits == [2.0],
+		"12 on 100 scrap: mass %.0f, hp %.1f, hull hit %s" % [run.mass, run.hp, hits])
+	_check("75/25 split", spills == [[100.0, 75]] and is_equal_approx(run.metrics["destroyed"], 25.0) and is_equal_approx(run.metrics["hit_loss"], 100.0),
+		"spill %s, destroyed %.0f" % [spills, run.metrics["destroyed"]])
+	# A hit the scrap fully absorbs never reaches the hull or player_hit.
+	var soft := _run(true)
+	soft.grant_start_mass(100.0)
+	var soft_hits := []
+	soft.events.player_hit.connect(func(a: float, _s: String): soft_hits.append(a))
+	soft.damage(4.0, "t")
+	_check("absorbed hit", soft.mass == 60.0 and soft.hp == 100.0 and soft_hits.is_empty() and soft.metrics["hull_damage"] == 0.0,
+		"4 on 100 scrap: mass %.0f, hp %.0f, hull hits %d" % [soft.mass, soft.hp, soft_hits.size()])
+	# Mitigation runs first: half of 12 is 6, all of it absorbed by 100 scrap.
+	var mit := _run(true)
+	mit.grant_start_mass(100.0)
+	mit.mitigation = 0.5
+	mit.damage(12.0, "t")
+	_check("mitigation first", mit.mass == 40.0 and mit.hp == 100.0, "12 at 50%% reduction on 100 scrap: mass %.0f, hp %.0f" % [mit.mass, mit.hp])
+	# Hull regeneration never regenerates scrap; wear and hits never touch the hull.
+	var regen := _run(true, true)
+	regen.grant_start_mass(100.0)
+	regen.damage(25.0, "t")
+	regen.since_damage = 99.0
+	regen.advance(4.0)
+	var mass_after_regen := regen.mass
+	regen.hp = 50.0
+	regen.wear_step(10.0, 14.0, 14.0, true)
+	_check("regen and wear split", mass_after_regen == 0.0 and regen.hp == 50.0 and regen.metrics["wear_loss"] == 0.0,
+		"regen left mass %.0f; wear on empty mass left hp %.0f" % [mass_after_regen, regen.hp])
+	# Flag off: the base game on the same inputs.
+	var base := _run(false)
+	base.grant_start_mass(100.0)
+	base.add_part("boost_coil", "t")
+	base.mitigation = 0.9
+	var base_hits := []
+	base.events.player_hit.connect(func(a: float, _s: String): base_hits.append(a))
+	base.damage(12.0, "t")
+	base.wear_on = true
+	base.wear_step(60.0, 14.0, 14.0, true)
+	var expect_heft := 1.0 + 100.0 / 450.0 + 0.2
+	_check("flag off equals base", is_equal_approx(base.hp, 88.0) and base.mass == 100.0 and base_hits == [12.0]
+			and is_equal_approx(base.heft(), expect_heft) and base.metrics["wear_loss"] == 0.0,
+		"hp %.0f, mass %.0f, hull hits %s, heft %.4f (parts count 0.2 each)" % [base.hp, base.mass, base_hits, base.heft()])
+	# Wear: 30 a minute at cruise, scaled below, capped above, zero when inactive.
+	var cruise := RunState.wear_rate(14.0, 14.0) * 60.0
+	var slow := RunState.wear_rate(7.0, 14.0) * 60.0
+	var fast := RunState.wear_rate(56.0, 14.0) * 60.0
+	_check("wear rate", is_equal_approx(cruise, 30.0) and is_equal_approx(slow, 15.0) and is_equal_approx(fast, 30.0),
+		"per minute: cruise %.1f, half cruise %.1f, 4x cruise %.1f" % [cruise, slow, fast])
+	var worn := _run(true, true)
+	worn.grant_start_mass(500.0)
+	for i in 3600:
+		worn.wear_step(1.0 / 60.0, 14.0, 14.0, true)
+	var idle := _run(true, true)
+	idle.grant_start_mass(500.0)
+	for i in 3600:
+		idle.wear_step(1.0 / 60.0, 14.0, 14.0, false)
+	var fast_run := _run(true, true)
+	fast_run.grant_start_mass(500.0)
+	for i in 3600:
+		fast_run.wear_step(1.0 / 60.0, 60.0, 14.0, true)
+	_check("wear over a minute", absf(worn.metrics["wear_loss"] - 30.0) <= 1.0 and idle.mass == 500.0 and absf(fast_run.metrics["wear_loss"] - 30.0) <= 1.0 and worn.hp == 100.0,
+		"cruise lost %.0f, inactive lost %.0f, 4x cruise lost %.0f, hull %.0f" % [worn.metrics["wear_loss"], 500.0 - idle.mass, fast_run.metrics["wear_loss"], worn.hp])
+	# Class hysteresis: mass 225 is heft 1.5 (class II). Wear drains across it with no flicker.
+	var h := _run(true, true)
+	h.grant_start_mass(230.0)
+	var drops := []
+	var rises := []
+	h.events.heft_class_dropped.connect(func(c: int, _h: float): drops.append(c))
+	h.events.heft_class_changed.connect(func(c: int, _h: float): rises.append(c))
+	h.mass = 228.0
+	for i in 8:
+		h.mass -= 1.0
+		h._publish_heft_class()
+	var held_at_220 := h.heft_class()
+	for i in 12:
+		h.mass -= 1.0
+		h._publish_heft_class()
+	var fell_at := h.mass
+	for i in 6:
+		h.recover_mass(1)
+	var after_small := h.heft_class()
+	h.recover_mass(20)
+	_check("class hysteresis", held_at_220 == 2 and drops == [1] and fell_at == 208.0 and rises == [2] and after_small == 1,
+		"class II held to mass 220, dropped once (drops %s) by mass %.0f, rose again only past 225 (rises %s)" % [drops, fell_at, rises])
+	var flicker := _run(true, true)
+	flicker.grant_start_mass(226.0)
+	var changes_before: int = flicker.metrics["class_changes"]
+	for i in 20:
+		flicker.mass = 224.0 if i % 2 == 0 else 226.0
+		flicker._publish_heft_class()
+	_check("no flicker", flicker.metrics["class_changes"] == changes_before and flicker.heft_class() == 2,
+		"224/226 around the threshold: %d class changes" % [int(flicker.metrics["class_changes"]) - changes_before])
+	# Spill clusters: at most 6, value conserved, laid ahead of or beside the line.
+	var field := ScrapField.new()
+	root.add_child(field)
+	field.setup()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	field.drop_recovery(null, Vector3.ZERO, Vector3(0, 0, -1), 75, 6, rng)
+	var ahead_ok := true
+	for item in field._items:
+		if item.position.z > -2.0:
+			ahead_ok = false
+	_check("spill clusters", field.recovery_count() == 6 and field.recovery_value() == 75 and ahead_ok,
+		"75 spilled as %d clusters worth %d, all ahead of the ball %s" % [field.recovery_count(), field.recovery_value(), ahead_ok])
+	field.clear()
+	field.drop_recovery(null, Vector3.ZERO, Vector3(0, 0, -1), 3, 6, rng)
+	_check("small spill", field.recovery_count() == 3 and field.recovery_value() == 3, "3 spilled as %d clusters" % field.recovery_count())
+	field.clear()
+	field.drop_recovery(null, Vector3.ZERO, Vector3(0, 0, -1), 5000, 999, rng)
+	_check("cluster cap", field.recovery_count() == 6 and field.recovery_value() == 5000, "5000 asked as 999 clusters: %d clusters worth %d" % [field.recovery_count(), field.recovery_value()])
+	field.free()
+	for node in _nodes:
+		node.free()
+	_nodes.clear()
+
+
+func _physics_process(_delta: float) -> bool:
+	if _game.flow == null:
+		return false
+	_ticks += 1
+	match _phase:
+		"boot":
+			_game.ctx.calm = true
+			_game.player.source = Intent.Scripted.new()
+			_game.tuning.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--seed=7", "--start-mass=300"]))
+			_game.flow.press_start()
+			_game.flow.choose_class(0)
+			_phase = "armor"
+			_ticks = 0
+		"armor":
+			if _ticks < 30:
+				return false
+			_armor_game_checks()
+			_game.free()
+			_game = Game.new()
+			_game.test_mode = true
+			root.add_child(_game)
+			_phase = "off_boot"
+			_ticks = 0
+		"off_boot":
+			if _ticks < 2:
+				return false
+			_game.ctx.calm = true
+			_game.player.source = Intent.Scripted.new()
+			_game.flow.press_start()
+			_game.flow.choose_class(0)
+			_phase = "off"
+			_ticks = 0
+		"off":
+			if _ticks < 30:
+				return false
+			_off_game_checks()
+			print("durability_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+			_game.free()
+			quit(0 if _failures == 0 else 1)
+			return true
+	return false
+
+
+func _armor_game_checks() -> void:
+	var run = _game.run
+	var build = _game.build
+	_check("route start", run.armor_mode and run.wear_on and run.mass == 300.0 and run.scrap == 0 and run.snapshot_value("mass") == 300.0,
+		"mass %.0f, wallet %d, checkpoint mass %s" % [run.mass, run.scrap, run.snapshot_value("mass")])
+	# Recovered scrap restores mass but is not a fresh pickup.
+	var collected := [0]
+	_game.events.scrap_collected.connect(func(_a, _b, _c): collected[0] += 1)
+	var passes_before: int = build.bus.passes
+	var ball: Vector3 = _game.player.ball_position()
+	build.scrap.drop_recovery(null, ball, Vector3(0, 0, 1), 4, 1, _game.ctx.rng)
+	for item in build.scrap._items:
+		item.global_position = ball
+	var mass_before: float = run.mass
+	build.scrap.step(ball, 0.0, 0.02)
+	build._step_armor(ball, 0.02)
+	build._post(build.Triggers.Kind.ON_PICKUP, "control", 1.0, ball)
+	_check("recovered is not fresh", run.mass == mass_before + 4.0 and collected[0] == 0 and run.scrap == 0 and run.metrics["recovered"] == 4.0,
+		"cluster of 4: mass %.0f -> %.0f, scrap_collected %d, wallet %d" % [mass_before, run.mass, collected[0], run.scrap])
+	build.bus.pending.clear()
+	build.scrap.drop(ball, 1, _game.ctx.rng)
+	for item in build.scrap._items:
+		item.global_position = ball
+	for at in build.scrap.step(ball, 0.0, 0.02):
+		run.add_scrap(1, at)
+		build._post(build.Triggers.Kind.ON_PICKUP, "scrap", 1.0, at)
+	_check("fresh is a pickup", collected[0] == 1 and run.scrap == 1 and build.bus.pending.size() == 1,
+		"control: a fresh piece fires scrap_collected %d and %d pickup commitment" % [collected[0], build.bus.pending.size()])
+	build.bus.pending.clear()
+	# A hit spills clusters into the field and the HUD's armour gauge flashes.
+	var spill_from: float = run.mass
+	run.damage(10.0, "test")
+	_check("hit spills", build.scrap.recovery_count() >= 1 and build.scrap.recovery_count() <= 6 and run.mass < spill_from
+			and build.scrap.recovery_value() == int(round((spill_from - run.mass) * 0.75)) and run.hp == 100.0,
+		"mass %.0f -> %.0f, %d clusters worth %d, hull %.0f" % [spill_from, run.mass, build.scrap.recovery_count(), build.scrap.recovery_value(), run.hp])
+	_check("hud armour readout", _game.hud._armor.visible and _game.hud._armor_flash > 0.0 and _game.hud._armor.label.is_valid_int(),
+		"armour gauge visible %s, flash %.2f, label %s" % [_game.hud._armor.visible, _game.hud._armor_flash, _game.hud._armor.label])
+	# Wear runs only in grounded stage play: not in flight, not paused.
+	var flow = _game.flow
+	_game.player.state.grounded = true
+	_game.player.state.velocity = Vector3(0, 0, -14)
+	var wear_before: float = run.metrics["wear_loss"]
+	var stage_state: int = flow.state
+	flow.state = flow.LAUNCH
+	build._step_armor(ball, 120.0)
+	var in_flight: float = run.metrics["wear_loss"] - wear_before
+	flow.state = stage_state
+	_game.player.state.grounded = false
+	build._step_armor(ball, 120.0)
+	var airborne: float = run.metrics["wear_loss"] - wear_before
+	_game.player.state.grounded = true
+	build._step_armor(ball, 120.0)
+	var grounded_loss: float = run.metrics["wear_loss"] - wear_before
+	_check("wear grounded only", in_flight == 0.0 and airborne == 0.0 and absf(grounded_loss - 60.0) <= 1.0,
+		"120 s in flight lost %.0f, airborne %.0f, grounded at cruise %.0f" % [in_flight, airborne, grounded_loss])
+	# Restart restores mass, class, wear and hull, and clears the live spill.
+	var snap := {"mass": run.snapshot_value("mass"), "hp": run.snapshot_value("hp"), "heft_class": run.snapshot_value("heft_class"),
+		"wear_accum": run.snapshot_value("wear_accum")}
+	run.mass = 90.0
+	run.hp = 40.0
+	run._wear_accum = 0.7
+	run._heft_class = 1
+	var hit_loss_before: float = run.metrics["hit_loss"]
+	flow.retry_stage()
+	_check("restart restores state", run.mass == snap["mass"] and run.hp == snap["hp"] and run._heft_class == snap["heft_class"]
+			and run._wear_accum == snap["wear_accum"] and build.scrap.recovery_count() == 0 and run.metrics["hit_loss"] == hit_loss_before,
+		"mass %.0f/%.0f, hp %.0f/%.0f, class %d/%d, wear %.2f/%.2f, live spills %d, metrics kept"
+			% [run.mass, snap["mass"], run.hp, snap["hp"], run._heft_class, snap["heft_class"], run._wear_accum, snap["wear_accum"], build.scrap.recovery_count()])
+	var heft_from_scrap: bool = is_equal_approx(run.heft(), 1.0 + run.mass / 450.0)
+	run.add_part("boost_coil", "test")
+	_check("armour heft is scrap alone", heft_from_scrap and is_equal_approx(run.heft(), 1.0 + run.mass / 450.0),
+		"a part adds no heft in armour mode: heft %.4f" % run.heft())
+	# The run log carries the metrics in armour mode.
+	run.damage(5.0, "test")
+	_game.run_log._write("lost")
+	var line := _last_line(_game.run_log.storage_dir.path_join("runs.ndjson"))
+	var parsed = JSON.parse_string(line) if line != "" else null
+	_check("run log metrics", parsed != null and parsed.has("durability") and parsed["durability"].has("wear_loss") and parsed["durability"].has("reverse_seconds"),
+		"durability keys %s" % [parsed["durability"].keys() if parsed != null and parsed.has("durability") else "missing"])
+
+
+func _off_game_checks() -> void:
+	var run = _game.run
+	var hud = _game.hud
+	run.add_part("boost_coil", "test")
+	run.add_scrap(90, Vector3.ZERO)
+	var hp_before: float = run.hp
+	run.damage(12.0, "test")
+	var mass_before: float = run.mass
+	_check("off: damage path", not run.armor_mode and is_equal_approx(run.hp, hp_before - 12.0) and run.mass == mass_before and _game.build.scrap.recovery_count() == 0,
+		"12 damage: hp %.0f -> %.0f, mass %.0f untouched, no spill" % [hp_before, run.hp, run.mass])
+	_check("off: heft", is_equal_approx(run.heft(), 1.0 + run.mass / 450.0 + 0.2), "heft %.4f counts the part" % run.heft())
+	_check("off: hud", not hud._armor.visible and hud.piece_rects()["bottom"].size() == 5, "armour gauge hidden, %d bottom pieces" % hud.piece_rects()["bottom"].size())
+	_game.build._step_armor(_game.player.ball_position(), 60.0)
+	_game.run_log._write("lost")
+	var line := _last_line(_game.run_log.storage_dir.path_join("runs.ndjson"))
+	var parsed = JSON.parse_string(line) if line != "" else null
+	_check("off: run log", parsed != null and not parsed.has("durability"), "no durability block in a flag-off line")
+
+
+func _last_line(path: String) -> String:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return ""
+	var last := ""
+	while not f.eof_reached():
+		var l := f.get_line()
+		if l != "":
+			last = l
+	return last

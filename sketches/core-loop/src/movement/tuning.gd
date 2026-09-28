@@ -35,6 +35,14 @@ const SPECS := [
 	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
 	# The v3 fun lab's switch (src/core/loop_mode.gd): an option row stores its index.
 	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
+	# The durability prototype (DESIGN-NOTES, "Scrap as armour"): `--scrap=armor` makes mass a
+	# temporary health layer over the hull, `--wear=on` lets rolling friction wear it. Both
+	# default off, and off is the base game. `--seed=<n>` reseeds the run's streams and
+	# `--start-mass=<n>` opens the run with that mass, so the three variants share a route.
+	{"key": "scrap_mode", "label": "Scrap mode", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "armor"]},
+	{"key": "wear", "label": "Scrap wear", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "start_mass", "label": "Start mass", "min": 0.0, "max": 3000.0, "step": 10.0, "value": 0.0},
+	{"key": "route_seed", "label": "Route seed (0 = off)", "min": 0.0, "max": 999999.0, "step": 1.0, "value": 0.0},
 	{"key": "gun_role", "label": "Gun role", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["hold", "full"]},
 ]
 
@@ -61,6 +69,46 @@ var boost_cooldown_scale := 1.0
 
 func _init() -> void:
 	reset()
+	apply_cmdline()
+
+
+# The durability prototype's flags, read from the engine and user args the way
+# loop_mode.gd reads --loop: `--scrap=armor --wear=on --seed=7 --start-mass=200`.
+# Returns the flags it applied.
+const OPTION_FLAGS := {"scrap": "scrap_mode", "wear": "wear"}
+const NUMBER_FLAGS := {"seed": "route_seed", "start-mass": "start_mass"}
+
+
+func apply_args(args: PackedStringArray) -> Dictionary:
+	var applied := {}
+	for arg in args:
+		if not arg.begins_with("--") or not "=" in arg:
+			continue
+		var flag := arg.substr(2, arg.find("=") - 2)
+		var value := arg.substr(arg.find("=") + 1)
+		if OPTION_FLAGS.has(flag):
+			if set_option(OPTION_FLAGS[flag], value):
+				applied[flag] = value
+			else:
+				push_warning("tuning: unknown --%s=%s" % [flag, value])
+		elif NUMBER_FLAGS.has(flag) and value.is_valid_float():
+			set_value(NUMBER_FLAGS[flag], float(value))
+			applied[flag] = value
+	return applied
+
+
+func apply_cmdline() -> Dictionary:
+	var args := OS.get_cmdline_args()
+	args.append_array(OS.get_cmdline_user_args())
+	return apply_args(args)
+
+
+func armor() -> bool:
+	return option("scrap_mode") == "armor"
+
+
+func wear_on() -> bool:
+	return armor() and option("wear") == "on"
 
 
 func f(key: String) -> float:

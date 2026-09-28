@@ -15,6 +15,20 @@ const HEFT_PER_PART := 0.2
 const HEFT_CLASS_AT := [1.0, 1.5, 2.2, 3.2, 4.6]
 # Bonus cores past this many add nothing more to the gate tier.
 const CORE_TIER_CAP := 2
+# Scrap as armour (the durability prototype, tuning `scrap_mode`): mass is a temporary
+# health layer over the hull. SCRAP_PER_HP scrap absorbs one HP; of the scrap a hit
+# removes, SPILL_SHARE spills as at most SPILL_CLUSTERS recovery clusters and the rest
+# is destroyed. Wear (tuning `wear`) is WEAR_PER_MINUTE scrap a minute at cruise.
+const SCRAP_PER_HP := 10.0
+const SPILL_SHARE := 0.75
+const SPILL_CLUSTERS := 6
+const WEAR_PER_MINUTE := 30.0
+# A class falls only this share of the preceding class interval below its threshold.
+const CLASS_HYSTERESIS := 0.05
+
+# A hit that reached the scrap: how much it removed, how much of that spills, and the
+# source. Hull overflow still publishes player_hit, so an armour-only hit is silent there.
+signal armor_hit(removed: float, spill: int, source: String)
 
 var events
 var class_def: Resource
@@ -39,6 +53,17 @@ var over := false
 # Seam faults the run log should carry, such as a Warden that vanished unbroken.
 var anomalies: Array[Dictionary] = []
 
+# The prototype's switches; build sets them from the tuning flags. Off is the base game.
+var armor_mode := false
+var wear_on := false
+# The share of a hit the passive damage reduction removes first (build sets it each
+# tick in armour mode, where the reduction runs before the scrap).
+var mitigation := 0.0
+# Whole wear units owed but not yet taken from the mass.
+var _wear_accum := 0.0
+# The armour metrics the run log carries; a retry adds to them, they are never restored.
+var metrics := {}
+
 var _snapshot := {}
 var _heft_class := 1
 # The first stage-start snapshot of each stage in this run, kept for a replay of that
@@ -52,6 +77,7 @@ static func roman(n: int) -> String:
 
 func _init(events_ref = null) -> void:
 	events = events_ref
+	reset_metrics()
 
 
 func begin(chosen_class: Resource) -> void:
@@ -75,6 +101,8 @@ func begin(chosen_class: Resource) -> void:
 	over = false
 	anomalies.clear()
 	_snapshot = {}
+	_wear_accum = 0.0
+	reset_metrics()
 
 
 func alive() -> bool:
@@ -100,6 +128,7 @@ func add_scrap(amount: int, at: Vector3) -> void:
 		return
 	scrap += amount
 	mass += amount
+	metrics["fresh"] += amount
 	events.scrap_collected.emit(amount, at, scrap)
 	_publish_heft_class()
 
@@ -117,17 +146,45 @@ func lose_scrap(amount: int, at: Vector3, cause: String) -> int:
 	return taken
 
 
+func reset_metrics() -> void:
+	metrics = {"fresh": 0.0, "hit_loss": 0.0, "wear_loss": 0.0, "recovered": 0.0, "destroyed": 0.0,
+		"expired": 0.0, "hull_damage": 0.0, "class_changes": 0, "reverse_seconds": 0.0}
+
+
+# Heft in armour mode comes from scrap alone; the base formula is untouched otherwise.
 func heft() -> float:
+	if armor_mode:
+		return 1.0 + mass * HEFT_PER_MASS
 	return 1.0 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()
 
 
-func heft_class() -> int:
-	var h := heft()
+# The class heft reaches with no memory: the highest threshold it has crossed.
+func raw_heft_class(h: float) -> int:
 	var result := 1
 	for i in HEFT_CLASS_AT.size():
 		if h >= HEFT_CLASS_AT[i]:
 			result = i + 1
 	return result
+
+
+# Armour mode adds hysteresis: a class is held until heft is CLASS_HYSTERESIS of the
+# interval below it under its threshold, so wear draining across a threshold cannot
+# flicker the class. It only rises at the threshold itself.
+func heft_class() -> int:
+	var h := heft()
+	var raw := raw_heft_class(h)
+	if not armor_mode:
+		return raw
+	var held := clampi(_heft_class, 1, HEFT_CLASS_AT.size())
+	if raw >= held:
+		return raw
+	while held > raw and held > 1:
+		var below: float = HEFT_CLASS_AT[held - 1]
+		var interval: float = HEFT_CLASS_AT[held - 1] - HEFT_CLASS_AT[held - 2]
+		if h >= below - CLASS_HYSTERESIS * interval:
+			break
+		held -= 1
+	return maxi(held, raw)
 
 
 # 0 to 1 across the current class toward the next; 1 at the top class.
@@ -148,6 +205,7 @@ func _publish_heft_class() -> void:
 		return
 	var rose := c > _heft_class
 	_heft_class = c
+	metrics["class_changes"] += 1
 	if rose:
 		events.heft_class_changed.emit(c, heft())
 	else:
@@ -204,14 +262,87 @@ func heal(amount: float) -> void:
 		hp = minf(max_hp, hp + amount)
 
 
+# Armour mode resolves every hit in one order: mitigation, then the scrap layer, then
+# the hull. The scrap layer takes what it can (SCRAP_PER_HP scrap per HP), SPILL_SHARE of
+# the scrap removed spills as recovery clusters and the rest is destroyed.
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
+		return
+	if armor_mode:
+		_damage_armored(amount, source)
 		return
 	hp = maxf(0.0, hp - amount)
 	since_damage = 0.0
 	events.player_hit.emit(amount, source)
 	if hp <= 0.0:
 		events.player_died.emit()
+
+
+func _damage_armored(amount: float, source: String) -> void:
+	var left := amount * (1.0 - clampf(mitigation, 0.0, 1.0))
+	if left <= 0.0:
+		return
+	var absorbed := minf(left, mass / SCRAP_PER_HP)
+	var removed := absorbed * SCRAP_PER_HP
+	var overflow := left - absorbed
+	since_damage = 0.0
+	if removed > 0.0:
+		mass = maxf(0.0, mass - removed)
+		var spill := int(round(removed * SPILL_SHARE))
+		metrics["hit_loss"] += removed
+		metrics["destroyed"] += removed - spill
+		_publish_heft_class()
+		armor_hit.emit(removed, spill, source)
+	if overflow > 0.0:
+		hp = maxf(0.0, hp - overflow)
+		metrics["hull_damage"] += overflow
+		events.player_hit.emit(overflow, source)
+		if hp <= 0.0:
+			events.player_died.emit()
+
+
+# Spilled scrap picked back up: mass returns, but it is not a fresh pickup, so no
+# scrap_collected, no wallet, no procs and no discovery.
+func recover_mass(amount: int) -> void:
+	if amount <= 0 or not alive():
+		return
+	mass += amount
+	metrics["recovered"] += amount
+	_publish_heft_class()
+
+
+# A spill cluster that timed out unreached: its value is gone for good.
+func note_spill_expired(amount: int) -> void:
+	metrics["expired"] += amount
+
+
+# The wear rate in scrap a second: WEAR_PER_MINUTE at cruise, scaled down below it and
+# capped above it, so a faster ball pays no more than a cruising one.
+static func wear_rate(speed: float, cruise: float) -> float:
+	if cruise <= 0.0:
+		return 0.0
+	return WEAR_PER_MINUTE / 60.0 * clampf(speed / cruise, 0.0, 1.0)
+
+
+# Rolling friction takes whole units of mass. `active` is false while paused, in the bay
+# and in authored transfers or flights; wear never touches the hull and makes no event.
+func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
+	if not armor_mode or not wear_on or not active or not alive() or delta <= 0.0 or mass <= 0.0:
+		return
+	_wear_accum += wear_rate(speed, cruise) * delta
+	var whole := minf(floorf(_wear_accum), mass)
+	if whole < 1.0:
+		return
+	_wear_accum -= whole
+	mass -= whole
+	metrics["wear_loss"] += whole
+	_publish_heft_class()
+
+
+# The fixed route's opening mass (tuning `start_mass`): mass only, no wallet, no procs.
+func grant_start_mass(amount: float) -> void:
+	mass = maxf(0.0, amount)
+	_heft_class = raw_heft_class(heft())
 
 
 func record_kill(kind: String, at: Vector3, scrap_value: int) -> void:
@@ -244,6 +375,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"hp": hp,
 		"scrap": scrap,
 		"mass": mass,
+		"heft_class": _heft_class,
+		"wear_accum": _wear_accum,
 		"bonus_cores": bonus_cores,
 		"parts": parts.duplicate(),
 		"kills": kills,
@@ -303,7 +436,12 @@ func restore() -> void:
 	retries += 1
 	over = false
 	# A restore is a rewind, not growth: the class follows silently, with no stinger.
-	_heft_class = heft_class()
+	# Armour mode puts back the class held at the checkpoint, hysteresis and all.
+	if armor_mode:
+		_heft_class = int(_snapshot.get("heft_class", raw_heft_class(heft())))
+		_wear_accum = float(_snapshot.get("wear_accum", 0.0))
+	else:
+		_heft_class = heft_class()
 
 
 func summary() -> Dictionary:

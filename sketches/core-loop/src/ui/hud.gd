@@ -90,6 +90,16 @@ var _health: Control
 var _heft: Control
 var _scrap: Control
 var _speed: Control
+# The armour gauge (scrap mode `armor`): the scrap layer over the hull, left of the hull
+# gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
+# its edge amber for ARMOR_FLASH seconds; a hull hit still pulses the hull gauge's rust.
+# Wear draws nothing but the bar sinking. The bar is mass against the run's peak.
+const ARMOR_BAR := 120.0
+const ARMOR_FLASH := 0.35
+const ARMOR_PEAK_FLOOR := 100.0
+var _armor: Control
+var _armor_flash := 0.0
+var _armor_peak := ARMOR_PEAK_FLOOR
 var _threat := 0
 var _laid_out := Vector2.ZERO
 # What layout() last read besides the screen: the pieces whose own size moves their neighbours.
@@ -157,6 +167,10 @@ func setup(game_ref) -> void:
 	add_child(_heft)
 	_scrap = Gauge.new("res_scrap", 0.0)
 	add_child(_scrap)
+	_armor = Gauge.new("res_scrap", ARMOR_BAR, true)
+	add_child(_armor)
+	_armor.visible = false
+	game.run.armor_hit.connect(func(_removed: float, _spill: int, _source: String): _armor_flash = ARMOR_FLASH)
 
 	reticle = AimReticle.new()
 	add_child(reticle)
@@ -174,7 +188,9 @@ func setup(game_ref) -> void:
 	game.events.threat_rose.connect(func(tier: int): _threat = maxi(_threat, tier))
 	game.events.boss_arena_entered.connect(func():
 		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
-	game.events.run_started.connect(func(_class_id: String): _threat = 0)
+	game.events.run_started.connect(func(_class_id: String):
+		_threat = 0
+		_armor_peak = ARMOR_PEAK_FLOOR)
 	layout(_screen_size())
 
 
@@ -344,13 +360,14 @@ func layout(size: Vector2) -> void:
 	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
 	_heft.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - _heft.size.y * 0.5)
 	_scrap.position = Vector2(_heft.position.x + _heft.size.x + BOTTOM_GAP, slot_mid - _scrap.size.y * 0.5)
+	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 
 
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
 # extent() call shapes text.
 func _piece_sizes() -> Array:
-	return [_objective.custom_minimum_size, _health.size, _heft.size, _scrap.size, maxi(ability_bar.slots.size(), 4)]
+	return [_objective.custom_minimum_size, _health.size, _armor.size, _heft.size, _scrap.size, maxi(ability_bar.slots.size(), 4)]
 
 
 # The screen rect of each piece, for the layout test: {region: [Rect2, ...]}.
@@ -358,7 +375,8 @@ func piece_rects() -> Dictionary:
 	return {
 		"top": [_rect_of(_objective), _rect_of(_status)],
 		"toasts": [_rect_of(_toasts)],
-		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_heft), _rect_of(_scrap), _rect_of(_speed)],
+		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_heft), _rect_of(_scrap), _rect_of(_speed)]
+			+ ([_rect_of(_armor)] if _armor.visible else []),
 	}
 
 
@@ -507,6 +525,7 @@ func _process(delta: float) -> void:
 	place_prompts(size, playing)
 	for piece in [_objective, _status, _toasts, ability_bar, _health, _heft, _scrap, _speed, reticle, key_glyphs, edge_markers]:
 		piece.visible = playing
+	_armor.visible = playing and game.run.armor_mode
 	if not playing:
 		_restart.set_fraction(0.0)
 		return
@@ -523,6 +542,11 @@ func _process(delta: float) -> void:
 	var heft := heft_reading()
 	_heft.set_reading(heft["class"], heft["classes"], heft["progress"], heft["numeral"], EventKinds.color("heft_class_changed"))
 	_scrap.set_reading(-1.0, EventKinds.color("scrap_collected"), str(run.scrap))
+	if run.armor_mode:
+		_armor_peak = maxf(_armor_peak, run.mass)
+		_armor_flash = maxf(0.0, _armor_flash - delta)
+		_armor.set_reading(clampf(run.mass / _armor_peak, 0.0, 1.0), EventKinds.color("scrap_collected"),
+			str(int(round(run.mass))), _armor_flash > 0.0, Palette.AMBER)
 	_speed.set_tier(game.player.state.tier)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND

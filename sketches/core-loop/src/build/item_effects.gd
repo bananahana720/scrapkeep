@@ -402,7 +402,9 @@ func _soften(c) -> void:
 	var ctx = build.ctx
 	if not ctx.run.alive():
 		return
-	var share: float = damage_reduction
+	# Armour mode runs the passive reduction first, inside run.damage (the damage order),
+	# so it must not heal the same share back a second time here.
+	var share: float = 0.0 if ctx.run.armor_mode else damage_reduction
 	if _clock < _brace_until and (_brace_source == "" or c.source == _brace_source):
 		share = 1.0 - (1.0 - share) * (1.0 - _brace_share)
 	if share > 0.0:
