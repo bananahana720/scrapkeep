@@ -5,8 +5,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
 # The v2 word budget (playtest entry 7: "so much words"). A real stage-1 fight as the
-# runner, gun held, three chasers close, a part and a threat toast just landed and
-# nothing held open: the words a player can read on the HUD stay at or under 25.
+# runner, gun held, three chasers close, a part, a rare part's flare and reveal card and a
+# threat toast just landed and nothing held open: the words a player can read on the HUD
+# stay at or under 25.
 # World signs (Label3D, owned by other modules) are counted and reported beside it.
 
 const BUDGET := 25
@@ -50,6 +51,11 @@ func _physics_process(_delta: float) -> bool:
 				_phase = "fight"
 				_wait = 0
 		"fight":
+			if _wait == FIGHT_TICKS - 2:
+				# v3 W13: a rare find flares and, being a first find, shows its reveal card,
+				# presented without adding the part so the fight itself stays the same.
+				var ceremony = _game.presentation.ceremony
+				ceremony.present(ceremony.find_of("sunforged_core", "test"))
 			if _wait == FIGHT_TICKS:
 				_count()
 				print("ui_word_budget_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

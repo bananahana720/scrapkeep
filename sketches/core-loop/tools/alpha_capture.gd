@@ -9,11 +9,12 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 # every few seconds of play. It needs a rendered display; launch it off Andrew's screen:
 #
 #   claude-open <godot> --path sketches/core-loop --script res://tools/alpha_capture.gd \
-#     -- --out=<absolute dir> [--seed=0] [--seconds=150]
+#     -- --out=<absolute dir> [--seed=0] [--seconds=150] [--ui=1] [--policy=lapper] [--loop=drop]
 #
 # The seed picks the class the way bot_run does (seed % class count). The pick screen
 # pauses the tree, so after its still the script presses 1 through Input, as a player
-# would. Stills render at 1920x1080 whatever the window's size.
+# would. Stills render at 1920x1080 whatever the window's size. --ui=1 adds the class
+# select at rest and with the seed's card open, and Tab's three picture pages in play.
 
 const EVERY := 9.0
 
@@ -29,6 +30,10 @@ var _pending: Array = []
 var _shots: Array = []
 var _paused_once := false
 var _seed := 0
+var _ui := false
+var _notes_shot := false
+var _policy := "skipper"
+var _windows_shot := 0
 
 
 func _initialize() -> void:
@@ -43,6 +48,8 @@ func _initialize() -> void:
 	_out = settings["out"]
 	_seed = int(settings.get("seed", "0"))
 	_limit = float(settings.get("seconds", "150"))
+	_ui = settings.get("ui", "0") == "1"
+	_policy = settings.get("policy", "skipper")
 	DirAccess.make_dir_recursive_absolute(_out)
 	root.content_scale_size = Vector2i(1920, 1080)
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
@@ -76,6 +83,16 @@ func _process(delta: float) -> bool:
 				_game.screens.toggle_help()
 				_step = 2
 				_clock = 0.0
+				if _ui:
+					_game.flow.press_start()
+					var cards: Array = _game.screens.class_cards()
+					_pending.append({"at": 1.0, "name": "class-select", "then": func(): cards[_seed % cards.size()].grab_focus()})
+					_pending.append({"at": 2.6, "name": "class-open"})
+					_step = 4
+		4:
+			if _clock > 2.9:
+				_step = 2
+				_clock = 0.0
 		2:
 			if _clock > 0.5:
 				_start_run()
@@ -85,6 +102,13 @@ func _process(delta: float) -> bool:
 			if _play_clock >= _next_periodic:
 				_next_periodic += EVERY
 				_save("play")
+			if _ui and not _notes_shot and _play_clock > 8.0 and _pending.is_empty() and _game.flow.in_play():
+				_notes_shot = true
+				_game.hold_notes(true)
+				_game.notes.show_page(0)
+				_pending.append({"at": _clock + 0.5, "name": "notes-keys", "then": func(): _game.notes.show_page(1)})
+				_pending.append({"at": _clock + 1.2, "name": "notes-hurts", "then": func(): _game.notes.show_page(2)})
+				_pending.append({"at": _clock + 1.9, "name": "notes-grow", "then": func(): _game.hold_notes(false)})
 			if not _paused_once and _play_clock > 24.0 and _pending.is_empty() and _game.flow.in_play() and not _game.get_meta("menu_held", false):
 				_paused_once = true
 				_press(KEY_P)
@@ -102,7 +126,7 @@ func _physics_process(delta: float) -> bool:
 
 
 func _start_run() -> void:
-	_driver = BotDriver.new(_game, "skipper", _seed)
+	_driver = BotDriver.new(_game, _policy, _seed)
 	_driver.tree_policy = ""
 	for child in _game.get_children():
 		var script = child.get_script()
@@ -119,6 +143,14 @@ func _start_run() -> void:
 		_pending.append({"at": _clock + 2.0, "name": "bay"}))
 	events.warden_engaged.connect(func(stage: int):
 		_pending.append({"at": _clock + 2.5, "name": "warden%d" % stage}))
+	# The drop loop's reads: the first two open windows, and each landed drop just after
+	# touchdown, when the impact effects are on screen.
+	events.warden_state_changed.connect(func(state: String, _at: Vector3):
+		if state == "open" and _windows_shot < 2:
+			_windows_shot += 1
+			_pending.append({"at": _clock + 0.3, "name": "window-open"}))
+	events.warden_drop_landed.connect(func(_at: Vector3, _speed: float, left: int, _segments: int):
+		_pending.append({"at": _clock + 0.12, "name": "drop-landed-%d-left" % left}))
 	_driver.start()
 
 

@@ -29,6 +29,17 @@ const MINIBOSS_FALLBACK := "chaser"
 const VAULT_KIND := "vault"
 const TAILWIND := 0.7
 const SAIL_WIND := 0.5
+# The drop lips' aim (_aim_drop): the cone a launch must be heading in, and where on the
+# Warden the arc comes down: the ball's centre over its top (3.2 m and the ball's 1 m
+# radius, with a little clearance), DROP_AIM_SHORT on the near side of the mast.
+const DROP_AIM_CONE := 30.0
+const DROP_AIM_RISE := 4.5
+const DROP_AIM_SHORT := 1.0
+# A ball already in the air as it crosses a live lip's run-up (it hopped the chute's
+# foot on the way down) is caught by the lip too, while it skims within DROP_AIM_SKIM of
+# the ramp: once per flight, so the aimed arc is never re-aimed. Measured before this:
+# a hopping ball struck the ramp's face, lost a third of its speed and fell short.
+const DROP_AIM_SKIM := 3.5
 
 var ctx
 var terrain
@@ -58,6 +69,9 @@ var bay_bark := {}
 # The height band the ball last settled in, and each terrain swap's cost.
 var layer := ""
 var swap_log: Array[Dictionary] = []
+# Launches a drop lip turned onto the mast this session.
+var drop_aims := 0
+var _lip_aimed := false
 
 # The laps mode's course on this stage (lap_course.gd), else null, and its rings.
 var course
@@ -227,6 +241,35 @@ func _step_course(delta: float, ball: Vector3) -> void:
 				bus.lap_completed.emit(fact["lap"], fact["required"], fact["seconds"])
 
 
+# A drop lip aims at the mast by geometry (LOOP-REDESIGN section 1, risk 3): a ball
+# leaving a live lip heading within DROP_AIM_CONE of the mast keeps its speed and has its
+# arc turned onto the Warden's top, the flatter of the two arcs that reach it. A ball
+# too slow for any arc to reach keeps its own and falls short. The aim belongs to drop
+# mode's impact rule, not to the lips' geometry: laps mode keeps the lips live but lets a
+# lip throw the ball on its own arc, so the lap course over the west chute reaches the lift.
+func _aim_drop(ball: Vector3) -> bool:
+	var m = terrain.map()
+	if not m.loop_live or not LoopMode.is_drop(ctx.tuning):
+		return false
+	var line: Dictionary = m.drop_line_at(Vector2(ball.x, ball.z), true)
+	if line.is_empty():
+		return false
+	var v: Vector3 = ctx.player.state.velocity
+	var target: Vector2 = line["target"]
+	var flat := Vector2(target.x - ball.x, target.y - ball.z)
+	var heading := Vector2(v.x, v.z)
+	if heading.length() < 1.0 or heading.normalized().dot(flat.normalized()) < cos(deg_to_rad(DROP_AIM_CONE)):
+		return false
+	var rise: float = terrain.height(target.x, target.y) + DROP_AIM_RISE - ball.y
+	var aimed = m.aim_arc(v.length(), maxf(1.0, flat.length() - DROP_AIM_SHORT), rise, ctx.tuning.f("gravity"))
+	if aimed == null:
+		return false
+	var along := flat.normalized()
+	ctx.player.set_velocity_now(Vector3(along.x * aimed.x, aimed.y, along.y * aimed.x))
+	drop_aims += 1
+	return true
+
+
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
 # director, the flood and the launch rail stop, and every stage map is parked until
 # the next stage_entered rebuilds the stage. Flow publishes this on arena entry and on
@@ -368,6 +411,10 @@ func _spawn_miniboss(at: Vector2) -> void:
 func _watch_ground(delta: float, ball: Vector3) -> void:
 	codex_world.advance(delta)
 	var grounded: bool = ctx.player.state.grounded
+	if grounded:
+		_lip_aimed = false
+	elif not _lip_aimed and (_was_grounded or ball.y - terrain.height(ball.x, ball.z) <= DROP_AIM_SKIM):
+		_lip_aimed = _aim_drop(ball)
 	if _was_grounded and not grounded:
 		_discover(codex_world.note("airborne", {"at": ball, "off_kicker": terrain.map().near_kicker_lip(Vector2(ball.x, ball.z))}))
 	elif grounded and flood.in_basin(ball) and flood.surface_y() > terrain.height(ball.x, ball.z):

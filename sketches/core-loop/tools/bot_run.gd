@@ -13,8 +13,10 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 #     -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--trace=1]
 #
 # --trace prints the bot's goal and the ball every two game seconds. --fixed-fps 90 makes one frame one physics tick, so runs go faster than real time.
-# --stages=N ends the run ("stages_done") once stage N is cleared. The game reads its lab
-# flags from the same args, so --loop=laps runs the laps mode (loop_mode.gd).
+# --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
+# run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
+# same args: --loop=laps runs the laps mode, --loop=drop --gun=full the drop mode
+# (loop_mode.gd).
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
 # are pointed at --out, the way test mode points them at a per-process folder; --out may
 # be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
@@ -88,6 +90,10 @@ func _physics_process(delta: float) -> bool:
 	var over: bool = _driver.tick(delta)
 	if not over and _settings.has("stages") and _game.run.stage > int(_settings["stages"]):
 		_driver._end("stages_done")
+		over = true
+	# --until=N ends a run as it enters stage N+1 (the drop mode lab measures stage 1).
+	if not over and _settings.has("until") and _game.run.stage > int(_settings["until"]):
+		_driver._end("until")
 		over = true
 	if not over:
 		return false

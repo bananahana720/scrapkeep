@@ -59,14 +59,28 @@ Andrew: the HUD should be "kind of like a um, hack together heads up display jus
 
 | Wave | What | Status |
 | --- | --- | --- |
-| **A. Lab** | L1 drop, L2 laps, L3 interact, W11 juice, W12 cards and Tab, W13 ceremony. Merge into `proto/core-loop-v3`, run the fun gate (the camper fails), then Andrew's sitting. | Building |
+| **A. Lab** | L1 drop, L2 laps, L3 interact, W11 juice, W12 cards and Tab, W13 ceremony. Merge into `proto/core-loop-v3`, run the fun gate (the camper fails), then Andrew's sitting. | Merged at ac0311e (192 smoke PASS, three verifiers PASS, fun gate held: the camper deals 0 in drop mode). Andrew's sitting next |
 | **B. Consolidate** | The lab verdict plus a one-page `DESIGN-V3.md`: fold in LOOP, SYSTEMS, STRATEGY-SPINE, AUDIO-V3, FEEL and STAGES; archive the rest; delete the losing loop mode and the v2 fallbacks. | After A |
 | **C. Spine on all stages** | STAGES-2-3 build units (shared returns, gorge, weir, bot evidence); the Warden reads for the hive and mind families. | After B |
 | **D. Systems core** | The strategy spine's minimal set (rarity ladder, 3 primes, 4 reactions, 2 persistent actors, channel mapping), drop gates, and 4 evolutions. | After B, parallel with C |
 | **E. Feel and HUD** | F1 density governor, F2 HUD v3 in the scrapped-together look, F3 camera; synergy toasts become a glyph plus a name; visual accretion is capped. | After A, parallel with C and D |
-| **F. Music and sound** | AU1 engine (window, pivot, pins), AU2 bank, AU3 wiring, AU4 measures. **ACE-Step beds: yes.** Andrew chose the hybrid in the blind A/B (2026-09-28) and asked for tighter production (the middle bars were choppy). Beds are made per stage, retimed per slice, glued and ducked under the engine kick. **Arrangement by area and flow:** each area and state (shelf, drop line, bowl, open window, bay, return) has its own percussion set and harmony layer, and melodies pop in and out on game events so every switch-up is understandable. | AU1 and the bed-tightening pass now; AU2 and AU3 after A |
-| **G. World and environment** | Codex track: Style A scenery on all three stages around the loop geometry; Warden family looks; interactable props (the 27k-triangle plan); lore surfaced by callbacks and the codex. | After C geometry lands |
-| **H. Performance and handoff** | CPU-side perf-lab (dense fights are CPU-bound, per STRESS-CAPTURE-1), native 1080p p99 of 16.7 ms or less, settings, Linux export, Andrew's early-access play. | Last |
+| **F. Music and sound** | **Full ACE-Step** (Andrew, blind pack 2, 2026-09-28: all three full-ACE takes beat the hybrid, which he'd liked, and the ten-layer and two-layer hybrids had failed). The synth engine composes guides, and ACE-Step performs and produces them, so drums and bass always come from one performance. **Dynamics are the runtime's job:** the Warden's held breath takes the drums and bass stems out and thins the rest, and the drop brings every stem back on the next beat. ACE ignores a guide's dynamics (Slice 0 round 1: 18 of 18 takes). The runtime sequencer PoC (`proto/core-loop-v3-seq` 43453ab) mixes stems sample-accurately, makes the landing audible at a 67 ms mean (the old engine took 183 ms), and has zero skips at a 3072-frame queue. Sound effects stay synth and keyed (AU2 bank merged). **Arrangement by area and flow:** each area and state (shelf, drop line, bowl, open window, bay, return) has its own percussion set and harmony layer, and melodies pop in and out on game events, so every switch-up is understandable. Restraint: density is earned by the game, not the default. | Slice 0 round 2 (blind pack 3) now; the sequencer rewrite and AU3 wiring after Andrew's pack-3 verdict |
+| **G. World and environment** | Codex track: Style A scenery on all three stages around the loop geometry; Warden family looks; interactable props (the 27k-triangle plan); lore surfaced by callbacks and the codex; pilot reactions (below). | Look pass 1 committed in the visual clone (3fa27b4): GPU p99 1.7 ms, fidelity 28 to 76 of 100, and the gap is geometry. Look pass 2 (strata, water, instanced props, the Warden form, the bay) and the image-to-3D trial (`proto/core-loop-v3-img3d`) are running |
+| **H. Performance and handoff** | CPU perf-lab, native 1080p p99 of 16.7 ms or less, settings, Linux export, Andrew's early-access play. The binding constraint is found (`perf-lab/ledger.md` on `proto/core-loop-v3-perf`, 288eb21): telegraphs rebuild their mesh every frame (about 0.35 ms each). Fixes run in order: E1 static telegraph geometry with a shader-driven fill (about 10 ms), E2 one enemy snapshot per tick (about 1 ms), E3 HUD redraw on change (about 0.5 ms). E1 follows F1a because both edit `threat_grammar.gd`. | Now, alongside E |
+
+## Look and performance target (Andrew, 2026-09-28)
+
+Andrew: "keep iterating on it until it reaches maybe 80 to 90% of like the concept art at a playable frame rate at 60 FPS ... at 1080 ... at least 60 FPS on my setup as well ... I wouldn't want this game to be something that a mid-tier card or PC would be having a hard time to play."
+
+- **Look:** Style A at 80 to 90 percent of the concept art (Codex's storyboards and key art in `design-v2/visual-development/` and `design-v3/storyboards/`), judged by Andrew side by side with in-game captures. The target is **look and feel only**: lighting, materials, palette, mood, silhouettes and atmosphere. UI, layouts, HUD elements or gameplay details drawn into the concept images are not specs (Andrew, 2026-09-28). UI follows its own rulings (the scrapped-together HUD, the word budgets).
+- **Machines:**
+  - Dev box: a Ryzen 9 5950X and an RTX 4080.
+  - Mid-tier reference: a 6-core Zen 2 or Zen 3 class CPU and an RTX 3060-class card, at 1080p and 60 FPS.
+- **Proxy budgets on the dev box.** These leave room for the mid-tier machine: roughly 1.5 times slower per CPU thread and 2.3 times slower on the GPU (an estimate, to be recalibrated if a mid-tier machine becomes available).
+  - In the densest fight, at 1080p and the default preset: **CPU main thread p99 ≤ 10 ms**, **GPU p99 ≤ 7 ms**, and frame p99 ≤ 16.7 ms.
+  - A lower preset must hold 60 on the mid-tier reference.
+- **Starting point:** STRESS-CAPTURE-1's densest scene costs about 26 ms p50 on the CPU and 1.5 ms p99 on the GPU. The CPU is the binding constraint, so performance work moves from wave H to now.
+- **Measured** with `tools/stress_capture.gd` (native) and a headless CPU benchmark on fixed scenes, before and after every optimisation. Keep a change only if it holds the look and the gameplay.
 
 ## Treasure-find ceremony (Andrew, 2026-09-28)
 
@@ -80,6 +94,26 @@ Andrew wants "fun uh, discovery sort of like treasure find ceremony when you fin
 - **The pause is calm-gated.** A ceremony queues until the area is safe, velocity is preserved, any input skips, and a "full / short" setting is available.
 - **The payoff is felt.** The first time the new part fires, it flashes once with its own cue, so the reward connects to the change in play.
 - Built as W13, `proto/core-loop-v3-ceremony`, on W11's juice. It maps to done-rows 3 (growth) and 5 (feel).
+
+## Pilot reactions (Andrew, 2026-09-28)
+
+Andrew: "the pilot should react to the player's actions, achievements, or failures". The pilots are characters, built up as we go.
+
+- **One reaction table** (`src/presentation/pilot_reactions.gd`) maps each event to a clip, a priority and a cooldown, with per-class overrides.
+  - A higher priority interrupts a lower one, and cooldowns stop spam.
+  - Missed-drop and evolution rows wait for their events.
+- **Clips are made with the keyframe pipeline** (mesh, rig, imagegen keyframes in three views, then Blender posing), on the shared 25-bone pilot rig:
+  - `drop_land`: exists, about 2.2 s.
+  - `big_cheer`: Warden break and stage clear.
+  - `wince`: a hit.
+  - `slump`: death.
+  - `phew`: a near miss.
+- **Rules:**
+  - Poses read from the rear chase camera: bigger, side-on, breaking the hull's outline.
+  - Length follows what the motion must communicate, and only impacts are fast.
+  - Reactions are cosmetic and never touch the ball.
+  - The bar is "good enough, not overly complex".
+- The table and wiring are WIP 0a07aaf on `codex/pilot-reactions` in the visual clone. The clips continue in the main clone, the only trusted Codex project with GPU access.
 
 ## Tool stack (checked 2026-09-28; research R3)
 

@@ -40,6 +40,8 @@ const AUDIT := {
 	"res://src/combat/swarm_remnant.gd": ["LANE"],
 	"res://src/combat/mind_hand.gd": ["LANE"],
 	"res://src/combat/bola_thrower.gd": ["PROJECTILE"],
+	# v3 fun lab, the drop mode's punish: the reactor's crater burns at one place.
+	"res://src/combat/warden_drop.gd": ["INSTANT"],
 }
 const FACTORIES := {
 	"res://src/combat/telegraph.gd": ["ring", "lane", "wedge"],

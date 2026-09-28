@@ -58,7 +58,12 @@ const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "fou
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "sable_ready", "rivet_ready", "kest_ready",
 	"sable_break", "rivet_break", "kest_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "hold_pit", "hold_bola", "hold_tether", "hold_net",
-	"hold_riser", "callout_chime", "shop_bell"]
+	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "reveal_clank", "ceremony_build",
+	"ceremony_resolve",
+	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
+	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
+	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold"]
 # Event progress until the spine publishes event_progress(event_id, fraction): the
 # seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
@@ -400,6 +405,16 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 			live.append(id)
 		_voices[sound] = live
 	cue_log.append([kind, sound, "now", engine.clock, pitch])
+
+
+# Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
+# its drum roll so the burst lands clean.
+func stop(sound: String) -> void:
+	if _sfx != null:
+		for id in _voices.get(sound, []):
+			if _sfx.is_stream_playing(id):
+				_sfx.stop_stream(id)
+	_voices.erase(sound)
 
 
 # v2 W2 threat grammar. A committed threat warns on the game frame it is declared, never

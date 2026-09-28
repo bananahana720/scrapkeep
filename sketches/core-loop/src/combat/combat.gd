@@ -24,11 +24,11 @@ const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
-# The v3 fun lab's loop_mode switch (M0's drops_to_break gate, review finding 2, fix
-# round 2) and the roster row fleet.gd's own reinforcement-pack system reads (M0's
-# "adds" classification, review finding 3, fix round 2).
+# The v3 fun lab's loop_mode switch and the roster row fleet.gd's own
+# reinforcement-pack system reads (M0's "adds" classification).
 const LoopMode := preload("res://src/core/loop_mode.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -389,7 +389,8 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "")
 	var removed: float = enemy.take_damage(result["dealt"])
 	if is_instance_valid(enemy):
 		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
-	_add_shred(enemy, result["punch"])
+	if result.get("shred", true):
+		_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
 	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source,
 		bool(result.get("drop", false)))
@@ -564,6 +565,12 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 	if kind == SYNERGY:
 		part = ""
 	var punch := punch_of(kind, force)
+	# The v3 fun lab: a loop mode's own damage rule (warden_drop.gd) answers first; an
+	# empty answer (v2, or any enemy without one) falls through to the plating rule.
+	if enemy.has_method("loop_rule"):
+		var rule: Dictionary = enemy.loop_rule(kind, part, force, punch, heft())
+		if not rule.is_empty():
+			return rule
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
@@ -1693,6 +1700,26 @@ func warden_spec(stage: int) -> Dictionary:
 	}
 
 
+# The fun lab's fields on a Warden spec (loop_mode.gd): the mode and gun role, and the
+# drop rules only where the stage's map has drop lines to hit it from (stage 1 in the
+# lab), so a drop-mode run meets v2 Wardens on stages 2 and 3.
+func _loop_spec(stage: int) -> Dictionary:
+	var map = ctx.terrain.map_for(stage) if ctx.terrain != null and ctx.terrain.has_method("map_for") else null
+	var lines: bool = map != null and "drop_lines" in map and not (map.drop_lines as Array).is_empty()
+	var out := {"loop_mode": LoopMode.mode(ctx.tuning), "gun_role": LoopMode.gun_role(ctx.tuning),
+		"drop_rules": LoopMode.is_drop(ctx.tuning) and lines,
+		"drops": int(ctx.flow.stage_def().get("warden_drops", 4)),
+		"cores": func() -> int: return int(ctx.run.bonus_cores) if ctx.run != null else 0,
+		"gravity": ctx.tuning.f("gravity")}
+	if lines and map.return_at != Vector2.INF:
+		out["rebound_to"] = ctx.terrain.drop_point(map.return_at.x, map.return_at.y, 1.0)
+		# Under `full` a drop throws the ball up the bank a quarter-turn from the return, so
+		# the stagger is gunned from the bank before the ride.
+		var side: Vector2 = (map.return_at - map.beacon).normalized().rotated(-PI * 0.5) * WardenDrop.STAGGER_PERCH
+		out["perch_to"] = ctx.terrain.drop_point(map.beacon.x + side.x, map.beacon.y + side.y, 1.0)
+	return out
+
+
 func _spec_for(kind: String) -> Dictionary:
 	var stage: int = ctx.flow.stage()
 	match kind:
@@ -1700,6 +1727,7 @@ func _spec_for(kind: String) -> Dictionary:
 			var w := warden_spec(stage)
 			w["stage"] = stage
 			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
+			w.merge(_loop_spec(stage))
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}

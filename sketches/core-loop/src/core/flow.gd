@@ -559,6 +559,8 @@ func objective_text() -> String:
 		STAGE, BEACON:
 			if sealed and lap_dormant():
 				return lap_objective()
+			if sealed and is_instance_valid(warden) and warden.get("drop") != null:
+				return EventKinds.drop_objective(warden.drop.gun_role)
 			if sealed:
 				return EventKinds.objective("stage_entered" if state == STAGE else "beacon_charge_changed", fight)
 			var text := EventKinds.objective("beacon_unsealed", fight)

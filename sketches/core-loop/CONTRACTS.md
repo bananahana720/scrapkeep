@@ -709,3 +709,11 @@ E is interact everywhere (`design-v3/LOOP-REDESIGN.md` section 9). World owns th
 4. `RollThrough` (`src/world/roll_through.gd`) is the pure model a custom device may carry in `roll` instead. Its fields are `mouth`, `heading`, `length` (12 m), `half_width` (5 m) and `mouth_radius` (3 m). Its calls are `in_lane(p)`, `arm()` and `step(from, to) -> bool`. It tests the crossing on the tick's segment, so a ball at any speed fires. A ball that leaves the lane or crosses wide disarms it at no cost.
 
 **Tests.** `world_interact_test` covers routing, a far lock yielding to a face, a started move keeping E, a lock at 40 m/s finishing after the pass, tap and hold, roll-through, a missed mouth and prompt words. `world_ambush_test`, `world_cache_test` and `world_bet_test` cover the devices; the bet test includes one wager per crate, the stake on the prompt, and a restart replaying the roll.
+
+## Reward ceremony v3 (v3 W13)
+
+- **Rows.** `EventKinds.LOOT_ROWS` holds `reward_common`, `reward_rare`, `reward_reveal`, `reward_ceremony` and `reward_payoff`, each with its tier, colour, sound, pause rule (`never` or `calm`) and timings. `REWARD_TIER_BY_RARITY` is the ladder from a part's rarity to its tier, `CEREMONY_SOURCES` lists the `part_gained` sources that are always a ceremony, and `REWARD_RUNGS` sets each rarity's bell on the reward ladder.
+- **One rarity read.** `RewardCeremony.rarity_of(part_id)` reads the part row's `rarity`, and `tier_of(part_id, context)` maps it. No other code picks a tier per part id.
+- **Sources.** A module that grants a ceremonial find calls `run.add_part(id, source)` with a source from `CEREMONY_SOURCES` (`cache`, `cage`, `warden` and `evolution` are reserved for sources not yet on this base). Nothing else is needed.
+- **Reads, never decides.** The ceremony reads `part_gained`, the payoff facts and `build.item_procs()`. It pauses the tree only when calm, sets `menu_held` while it holds, and hands back the ball's exact velocity. `presentation.ceremony.pause_armed` is off in test mode.
+- **Audio.** `audio.stop(sound)` cuts every SFX voice of a sound (a skipped build). Tested by `presentation_ceremony_test`.

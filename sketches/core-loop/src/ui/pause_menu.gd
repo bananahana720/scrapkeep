@@ -33,6 +33,7 @@ const ROWS := [
 	{"id": "effects", "bus": "SFX", "glyph": "effects", "words": "Effects"},
 	{"id": "shake", "comfort": "shake", "glyph": "shake", "words": "Screen shake"},
 	{"id": "hitstop", "comfort": "hitstop", "glyph": "hitstop", "words": "Hit-stop"},
+	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
 	{"id": "quit", "key": "key_q", "words": "Quit"},
 ]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
@@ -154,6 +155,7 @@ func open() -> void:
 		game.toggle_pause()
 	game._capture_mouse(false)
 	_sync_levels()
+	_show_ceremony()
 	_set_live(true)
 	_fade(true)
 	_rows["resume"].grab_focus()
@@ -195,8 +197,26 @@ func press(id: String) -> void:
 			game.notes.show_page(0)
 		"quit":
 			get_tree().quit()
+		"ceremony":
+			_toggle_ceremony()
 		_:
 			_rows[id].grab_focus()
+
+
+# v3 W13: C or the row flips reward ceremonies between full and short (every find at the
+# rare tier), saved in settings.json as the ceremony's comfort level (1 full, 0 short).
+func _toggle_ceremony() -> void:
+	var ceremony = game.presentation.get("ceremony") if game.presentation != null else null
+	if ceremony != null:
+		ceremony.short = not ceremony.short
+		store.set_comfort(ceremony.SETTING, 0.0 if ceremony.short else 1.0)
+	_show_ceremony()
+	_rows["ceremony"].grab_focus()
+
+
+func _show_ceremony() -> void:
+	var ceremony = game.presentation.get("ceremony") if game.presentation != null else null
+	_rows["ceremony"].text = "Ceremonies: short" if ceremony != null and ceremony.short else "Ceremonies: full"
 
 
 func _input(event: InputEvent) -> void:
@@ -255,6 +275,9 @@ func _menu_key(event: InputEvent) -> bool:
 				return true
 			KEY_Q:
 				press("quit")
+				return true
+			KEY_C:
+				press("ceremony")
 				return true
 			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
 				_accept()
