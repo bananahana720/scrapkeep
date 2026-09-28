@@ -36,6 +36,10 @@ const SPECS := [
 	# The v3 fun lab's switch (src/core/loop_mode.gd): an option row stores its index.
 	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
 	{"key": "gun_role", "label": "Gun role", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["hold", "full"]},
+	# The music lab: the synth band, or the ACE takes on stage 1 (presentation/ace_sequencer.gd),
+	# and the Warden open's held breath in the ACE music.
+	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["synth", "ace"]},
+	{"key": "breath", "label": "Breath", "min": 0.0, "max": 2.0, "step": 1.0, "value": 1.0, "options": ["raw", "hard", "gentle"]},
 ]
 
 const BRAKE_RESISTANCE := 4.0

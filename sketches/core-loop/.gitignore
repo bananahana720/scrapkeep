@@ -1,3 +1,6 @@
 .godot/
 *.import
 export_presets.cfg
+# ACE music (tools/ace/package_music.py): the Oggs are local; manifest.json is committed.
+assets/music_ace/**/*.ogg
+assets/music_ace/.gdignore

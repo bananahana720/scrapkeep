@@ -114,6 +114,8 @@ func _on_flow_changed(state: String) -> void:
 			_action("help", "key_h", "Help")
 			_action("loop", "key_l", "")
 			_action("gun", "key_g", "")
+			if game.tuning.option(LoopMode.MUSIC_KEY) == "ace":
+				_action("breath", "key_b", "")
 			refresh_lab_row()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
@@ -160,14 +162,18 @@ func help_open() -> bool:
 
 
 # The fun lab's switch on the title (LOOP-REDESIGN section 7): L cycles the loop mode,
-# G the gun's role; each button names what the next run plays.
+# G the gun's role, and with --music=ace B the Warden open's held breath; each button
+# names what the next run plays.
 func refresh_lab_row() -> void:
 	var loop := button_for("loop")
 	var gun := button_for("gun")
+	var breath := button_for("breath")
 	if loop != null:
 		loop.text = "Loop: %s" % LoopMode.mode(game.tuning)
 	if gun != null:
 		gun.text = "Gun: %s" % LoopMode.gun_role(game.tuning)
+	if breath != null:
+		breath.text = "Breath: %s" % game.tuning.option(LoopMode.BREATH_KEY)
 
 
 func _input(event: InputEvent) -> void:
