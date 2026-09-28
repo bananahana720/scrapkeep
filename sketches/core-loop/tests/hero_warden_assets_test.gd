@@ -170,6 +170,7 @@ func check_geometry(node: Node3D, base: Node3D) -> void:
 
 func check_stroke_surfaces(rec: Dictionary) -> void:
 	var worst := 0.0
+	var minimum := INF
 	var samples := 0
 	var fitted := true
 	for seam in rec.seams:
@@ -201,8 +202,9 @@ func check_stroke_surfaces(rec: Dictionary) -> void:
 				if hit != null:
 					surface_distance = minf(surface_distance, origin.distance_to(hit))
 			var clearance := surface_distance - origin.distance_to(point)
-			fitted = fitted and is_finite(clearance) and clearance >= -0.03 and clearance <= 0.03
-			worst = maxf(worst, absf(clearance))
+			fitted = fitted and is_finite(clearance) and clearance >= 0.0005 and clearance <= 0.03
+			minimum = minf(minimum, clearance)
+			worst = maxf(worst, clearance)
 			samples += 1
-	print("STROKE_GEOMETRY ", rec.warden.family, " samples=", samples, " maximum_absolute_clearance=", worst)
+	print("STROKE_GEOMETRY ", rec.warden.family, " samples=", samples, " minimum_signed_clearance=", minimum, " maximum_signed_clearance=", worst)
 	check("shred centres endpoints and triangle interiors fit actual jaws", fitted and samples == 18 * 83)

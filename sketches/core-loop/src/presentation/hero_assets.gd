@@ -559,7 +559,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 			if nearest == INF:
 				_warn_once("warden_stroke", "hero_assets: Warden stroke missed jaw surface at %s" % point)
 				return
-			vertices.append(from_jaw * (contact + radial * 0.008))
+			vertices.append(from_jaw * (contact + radial * 0.015))
 			normals.append((to_jaw.basis.transposed() * radial).normalized())
 		if row > 0:
 			var n := row * 2
