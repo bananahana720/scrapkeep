@@ -13,7 +13,8 @@ const Ace := preload("res://src/presentation/ace_sequencer.gd")
 #   - contacts drop on the next beat: gap and drop reach the device no later than the POC's;
 #   - zero skips over 180 s at QUEUE_TARGET with the Warden cycling, steady and hitched;
 #   - each held-breath style's kick band in the open against the build;
-#   - the break set piece plays through untouched by the game.
+#   - the break set piece plays through untouched by the game;
+#   - a change asked on the grid or inside a join gets the whole join on the next grid point.
 # Needs tools/ace/package_music.py to have run: without the Oggs the audio checks SKIP.
 
 const FRAME_US := 26000.0
@@ -44,6 +45,7 @@ func _initialize() -> void:
 		_contacts_and_skips()
 		_breath_levels()
 		_set_piece()
+		_joins()
 	print("presentation_ace_test: %s (%.1f s, %d skipped)" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, (Time.get_ticks_msec() - t0) / 1000.0, _skipped])
 	quit(0 if _failures == 0 else 1)
 
@@ -202,7 +204,7 @@ func _contacts_and_skips() -> void:
 	_check("zero skips over 180 s", ok, "QUEUE_TARGET %d: p512 steady skips %d, p1024 with a 50 ms frame every %d skips %d; queued %d..%d; %d section entries; misses %d, short reads %d; render %.3f ms per 1000 frames" % [
 		Ace.QUEUE_TARGET, runs[0]["skips"], HITCH_EVERY, runs[1]["skips"], r0["min_q"], r0["max_q"], r0["enters"], r0["misses"], r0["short"], r0["usec_per_k"] / 1000.0])
 	_check("drop on the next beat after contact", beats_ok and gaps.max() <= POC_GAP_MS_MAX and waits.max() <= POC_GAP_MS_MAX,
-		"%d contacts, %d dropped on the next Warden beat after the render head (entry at the returned sample, within one beat); contact -> gap audible %.1f..%.1f ms (POC max %.0f); drop audible minus the wait for its beat %.1f..%.1f ms (the ring and GEN_LEAD, POC gap max %.0f); wait for the beat %.1f..%.1f ms" % [
+		"%d contacts, %d dropped on the next Warden beat after the render head (entry at the returned sample, within one beat plus the 10 ms join); contact -> gap audible %.1f..%.1f ms (POC max %.0f); drop audible minus the wait for its beat %.1f..%.1f ms (the ring and GEN_LEAD, POC gap max %.0f); wait for the beat %.1f..%.1f ms" % [
 		r0["contacts"], r0["on_beat"], gaps.min(), gaps.max(), POC_GAP_MS_MAX, waits.min(), waits.max(), POC_GAP_MS_MAX, (r0["wait_ms"] as Array).min(), (r0["wait_ms"] as Array).max()])
 
 
@@ -252,7 +254,8 @@ func _device_run(period: int, hitch_us: float) -> Dictionary:
 				var at: int = seq.drop_now()
 				contacts += 1
 				var beat: int = seq.grid_beat
-				if at >= head and at - head <= beat:
+				# The next beat with room for the drop's 10 ms fade-in (441 frames).
+				if at > head and at - head < beat + 441:
 					pending.append({"t": t_game, "head": head, "at": at, "gap": -1.0, "wait": (at - head) * 1000.0 / Ace.RATE})
 				next_contact += 7370011.0
 			var n: int = seq.frames_to_pump(gp, capacity)
@@ -401,6 +404,91 @@ func _set_piece() -> void:
 	var want2 := ["drop@%d" % drop_at, "break@%d" % (drop_at + 4 * wbar)]
 	ok = ok and seq2 == want2 and under.misses == 0 and seq.misses == 0
 	_check("break set piece plays through", ok, rows + "; broken under a drop: %s (want %s)" % [seq2, want2])
+
+
+# Changes asked on the grid itself or inside the join before it (the fix-round timing
+# findings): each lands on the next grid point with its whole 10 ms join, never on the
+# sample it was asked, so no two entries share a sample and no edge is a one-frame cut.
+#   - telegraph asked during the pivot's hold (the follow runs at the build's commit);
+#   - a contact exactly on a beat;
+#   - pressure up during home (the follow runs at the release);
+#   - a telegraph scheduled on a beat under the drop, then the unseal: the break still
+#     enters on a bar of the drop's grid;
+#   - start_level while the pivot sounds: the old section fades, calm gets its join, and
+#     no one-shot runs out with nothing after it;
+#   - misses stay 0 at block 997 (a fading one-shot ending on its follower is no miss).
+func _joins() -> void:
+	var join := 441
+	var rows := []
+	var ok := true
+	var seq := Ace.new()
+	var cbar := int(seq.clips["calm"]["bar"])
+	var wbar := int(seq.clips["build"]["bar"])
+	var wbeat := int(seq.clips["build"]["beat"])
+	seq.start_level(0)
+	_render_to(seq, cbar + 1000, 997)
+	seq.commit_warden()
+	var pivot_at := 2 * cbar
+	_render_to(seq, pivot_at + 2000, 997)
+	seq.set_warden_state("telegraph")
+	_render_to(seq, pivot_at + cbar + 2 * wbar, 997)
+	var got: Array = _enters(seq, pivot_at)
+	var build_at := pivot_at + cbar
+	var tele: Array = got.filter(func(e): return e[2] == "telegraph")
+	var tele_ok: bool = got.size() >= 3 and got[1][2] == "build" and int(got[1][1]) == build_at and tele.size() == 1 \
+		and int(tele[0][1]) == build_at + wbeat
+	ok = ok and tele_ok
+	rows.append("telegraph asked in the pivot hold: %s (build %d, telegraph one beat later %d)" % [got.map(func(e): return "%s@%d" % [e[2], e[1]]), build_at, build_at + wbeat])
+	# A contact exactly on a beat of the telegraph's grid.
+	_render_to(seq, seq.next_beat(seq.clock + 1), 997)
+	seq.set_warden_state("closed")
+	var head := seq.clock
+	var drop_at := seq.drop_now()
+	var drop_ok: bool = drop_at == head + wbeat
+	ok = ok and drop_ok
+	rows.append("contact on the beat at %d drops at %d (want the next beat %d)" % [head, drop_at, head + wbeat])
+	# Under the drop, after its one-bar hold: a telegraph on a beat, then the unseal.
+	_render_to(seq, drop_at + wbar + wbeat + 3000, 997)
+	seq.set_warden_state("telegraph")
+	var tele_pending: int = int(seq.pending.get("at", -1)) if seq.pending.get("section", "") == "telegraph" else -1
+	seq.warden_broken()
+	_render_to(seq, drop_at + 12 * wbar, 997)
+	var brk: Array = _enters(seq, drop_at).filter(func(e): return e[2] == "break")
+	var brk_ok: bool = tele_pending > 0 and posmod(tele_pending - drop_at, wbar) != 0 and brk.size() == 1 and posmod(int(brk[0][1]) - drop_at, wbar) == 0
+	ok = ok and brk_ok
+	rows.append("telegraph pending at %d under the drop, then broken: break at %s (a drop bar: %s)" % [tele_pending, brk.map(func(e): return e[1]), brk_ok])
+	# Pressure up during home: travel waits for the release and then a full join.
+	var home: Array = _enters(seq, drop_at).filter(func(e): return e[2] == "home")
+	if not home.is_empty():
+		_render_to(seq, int(home[0][1]) + cbar, 997)
+		seq.set_pressure(1.0)
+		_render_to(seq, int(home[0][1]) + 10 * cbar, 997)
+	var released: Array = seq.events_log.filter(func(e): return e[0] == "release")
+	var travel: Array = _enters(seq, drop_at).filter(func(e): return e[2] == "travel")
+	var rel_ok: bool = released.size() == 1 and travel.size() == 1 and int(travel[0][1]) >= int(released[0][1]) + join
+	ok = ok and rel_ok
+	rows.append("pressure up in home: released %s, travel at %s" % [released.map(func(e): return e[1]), travel.map(func(e): return e[1])])
+	var all: Array = _enters(seq)
+	var same := 0
+	for i in range(1, all.size()):
+		if int(all[i][1]) - int(all[i - 1][1]) < join:
+			same += 1
+	ok = ok and same == 0 and seq.misses == 0
+	rows.append("%d entries, %d closer than the join; misses %d" % [all.size(), same, seq.misses])
+	# A restart while the pivot sounds.
+	var re := Ace.new()
+	re.start_level(0)
+	_render_to(re, cbar + 1000, 997)
+	re.commit_warden()
+	_render_to(re, 2 * cbar + 5000, 997)
+	var at_restart := re.clock
+	re.start_level(re.clock)
+	_render_to(re, at_restart + 4 * cbar, 997)
+	var calm: Array = _enters(re, at_restart)
+	var re_ok: bool = calm.size() == 1 and calm[0][2] == "calm" and int(calm[0][1]) == at_restart + join and re.misses == 0 and re.fading.is_empty()
+	ok = ok and re_ok
+	rows.append("start_level in the pivot at %d: %s, misses %d" % [at_restart, calm.map(func(e): return "%s@%d" % [e[2], e[1]]), re.misses])
+	_check("joins never shorter than 10 ms", ok, "; ".join(rows))
 
 
 func _check(label: String, ok: bool, detail: String) -> void:

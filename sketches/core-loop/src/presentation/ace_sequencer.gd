@@ -101,8 +101,6 @@ var in_bay := false
 var built := false
 var hold_until := -1
 var piece_after_drop := false
-# The stage moved on during the set piece: stop at its release instead of resuming play.
-var stop_after_piece := false
 
 var duck_level := 1.0
 var duck_target := 1.0
@@ -151,33 +149,57 @@ func ready() -> bool:
 	return missing == "" and not clips.is_empty()
 
 
-# Something is sounding or about to: the synth band stays muted while this is true.
+# Something is sounding or about to: the director renders the band while this is true.
 func active() -> bool:
 	return mode != "off" or not voices.is_empty() or not fading.is_empty()
 
 
+# The transport sample the band first sounds from: now when voices play, the pending
+# section's fade-in when one is waiting, -1 when nothing is on the way. The synth band
+# hands over here.
+func sound_from() -> int:
+	if mode == "off":
+		return -1
+	if not voices.is_empty():
+		return clock
+	if not pending.is_empty():
+		return int(pending["begin"])
+	return -1
+
+
 # --- Facts the audio director hands over ------------------------------------------------
 
-# A stage starts on the shelf: calm (or travel) from bar 1 at transport sample at.
+# A stage starts on the shelf: calm (or travel) from bar 1 at transport sample at. A
+# restart while the band sounds fades the old section out and gives the new one its
+# full join, so no one-shot is left without a follower.
 func start_level(at: int) -> void:
 	_cancel_pending()
 	actions.clear()
+	var earliest := clock
+	if not voices.is_empty():
+		for v: Voice in voices:
+			_ramp_to(v, 0.0, STOP_RAMP)
+			fading.append(v)
+		voices.clear()
+		earliest = clock + _ramp_frames(float(manifest.get("join_ms", 10.0)))
+	section = ""
 	mode = "level"
 	built = false
 	piece_after_drop = false
-	stop_after_piece = false
 	hold_until = -1
 	warden_state = "closed"
 	threat = 0
-	_schedule(_desired(), maxi(at, clock))
+	_schedule(_desired(), maxi(at, earliest))
 
 
-func stop() -> void:
+# The band stops: every voice fades over ramp frames (a beat when a launch takes the
+# music, STOP_RAMP otherwise).
+func stop(ramp := STOP_RAMP) -> void:
 	_cancel_pending()
 	actions.clear()
 	mode = "off"
 	for v: Voice in voices:
-		_ramp_to(v, 0.0, STOP_RAMP)
+		_ramp_to(v, 0.0, ramp)
 		fading.append(v)
 	voices.clear()
 	section = ""
@@ -206,7 +228,7 @@ func commit_warden() -> void:
 		return
 	mode = "warden"
 	_cancel_pending()
-	_schedule("pivot", next_bar())
+	_schedule("pivot", _landing("pivot", false))
 
 
 func set_warden_state(state: String) -> void:
@@ -225,13 +247,14 @@ func drop_now() -> int:
 	if mode == "level":
 		mode = "warden"
 	_cancel_pending()
-	var at := next_beat()
-	if at > clock:
-		for v: Voice in voices:
-			_ramp_to(v, 0.0, GAP_RAMP)
-			fading.append(v)
-		voices.clear()
-		events_log.append(["gap", clock, section])
+	# The next beat with room for the drop's full fade-in: a contact on (or just before)
+	# a beat drops on the one after, never with a one-frame join.
+	var at := next_beat(clock + maxi(GAP_RAMP, _ramp_frames(float(manifest.get("join_ms", 10.0)))))
+	for v: Voice in voices:
+		_ramp_to(v, 0.0, GAP_RAMP)
+		fading.append(v)
+	voices.clear()
+	events_log.append(["gap", clock, section])
 	_schedule("drop", at)
 	return at
 
@@ -245,10 +268,11 @@ func warden_broken() -> void:
 	if pending.get("section", "") == "drop" or (section == "drop" and pending.is_empty()):
 		piece_after_drop = true
 		return
-	var at := next_bar()
+	var at := _landing("break", false)
 	if section == "drop":
-		# The drop's follower is already scheduled: the break takes its place.
-		at = int(pending["at"])
+		# The drop's follower is already scheduled: the break takes its place, on the
+		# first bar of the drop's grid at or after it (a follower may sit on a beat).
+		at = next_bar(maxi(int(pending["at"]), clock + _join_frames("break")))
 	_cancel_pending()
 	_schedule("break", at)
 
@@ -281,6 +305,13 @@ func _next(unit: int, from: int) -> int:
 	if section == "":
 		return base
 	return origin + int(ceil(float(base - origin) / unit)) * unit
+
+
+# The first bar (or beat) far enough ahead for name's whole crossfade: a change asked on
+# the grid itself, or inside the join before it, lands on the next grid point.
+func _landing(name: String, on_beat: bool) -> int:
+	var from := clock + _join_frames(name)
+	return next_beat(from) if on_beat else next_bar(from)
 
 
 func key_at(s: int) -> int:
@@ -322,23 +353,30 @@ func render(n: int) -> PackedVector2Array:
 		if not actions.is_empty():
 			span = mini(span, int(actions[0]["at"]) - clock)
 		var ended: Voice = null
+		var faded: Voice = null
 		for list in [voices, fading]:
 			for v: Voice in list:
 				if not v.loop:
 					var left := v.exit - v.pos
 					if left <= 0:
-						ended = v
+						if list == voices:
+							ended = v
+						else:
+							faded = v
 					span = mini(span, left)
 				if v.gain != v.target:
 					span = mini(span, maxi(1, int(ceil(absf(v.target - v.gain) / v.step - 0.001))))
 				if v.wet != v.wet_target:
 					span = mini(span, maxi(1, int(ceil(absf(v.wet_target - v.wet) / v.wet_step - 0.001))))
+		if faded != null:
+			# A one-shot fading out under its follower reached its exit: nothing is lost.
+			fading.erase(faded)
+			continue
 		if ended != null:
 			# A one-shot reached its exit with nothing scheduled: keep time in silence.
 			misses += 1
 			events_log.append(["miss", clock, ended.stem])
 			voices.erase(ended)
-			fading.erase(ended)
 			continue
 		_mix(done, span)
 		done += span
@@ -373,6 +411,8 @@ func _mix(at: int, span: int) -> void:
 				v.pos = v.loop_offset + (v.pos - v.count)
 			var g0 := v.gain
 			v.gain = move_toward(v.gain, v.target, v.step * span)
+			if absf(v.gain - v.target) < 1e-9:
+				v.gain = v.target
 			var w0 := v.wet
 			v.wet = move_toward(v.wet, v.wet_target, v.wet_step * span)
 			if (not solo.is_empty() and not v.stem in solo) or (g0 <= 0.00001 and v.gain <= 0.00001):
@@ -500,7 +540,7 @@ func _follow() -> void:
 	if want == section:
 		return
 	var row: Dictionary = sections[want]
-	_schedule(want, next_beat() if row["enter"] == "beat" else next_bar())
+	_schedule(want, _landing(want, row["enter"] == "beat"))
 
 
 # home and calm share a clip: the release from home into calm plays on without a join.
@@ -555,7 +595,7 @@ func _schedule(name: String, at: int) -> void:
 	for stem in stems:
 		fresh.append(_open(clip, stem, entry - (at - begin), gains[stem], at - begin))
 	_serial += 1
-	pending = {"section": name, "at": at, "entry": entry, "voices": fresh, "serial": _serial}
+	pending = {"section": name, "at": at, "begin": begin, "entry": entry, "voices": fresh, "serial": _serial}
 	_add({"at": begin, "type": "begin", "serial": _serial})
 	_add({"at": at, "type": "commit", "serial": _serial})
 
@@ -658,9 +698,6 @@ func _run(action: Dictionary) -> void:
 		"release":
 			if section == action["section"] and mode == "piece":
 				events_log.append(["release", clock, section])
-				if stop_after_piece:
-					stop()
-					return
 				mode = "level"
 				_follow()
 		"follow":

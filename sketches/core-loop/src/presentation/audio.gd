@@ -96,6 +96,9 @@ var _ring_capacity := 0
 # (the headless Dummy driver pulls 4096).
 var queue_target := AceSequencer.QUEUE_TARGET
 var _skips_seen := 0
+# The transport sample the synth band starts fading out under the ACE band, -1 when the
+# synth band plays alone. It fades over AceSequencer.STOP_RAMP and is muted after.
+var _band_fade_start := -1
 # v2 W3 characters: which of CHARACTER_KINDS are already connected.
 var _character_wired := {}
 # v2 W9: the run's class motif id (class_def motif), from run_started.
@@ -345,7 +348,7 @@ func _process(_delta: float) -> void:
 # QUEUE_TARGET, so a contact reaches the speaker sooner.
 func _pump() -> void:
 	var ace_live := ace != null and ace.active()
-	engine.band_muted = ace_live
+	_hand_over_band()
 	_release_grid()
 	if not live_output:
 		# No device: advance the band by the real time that passed, as a speaker would.
@@ -365,10 +368,49 @@ func _pump() -> void:
 	frames = mini(frames, 8192)
 	if frames <= 0:
 		return
+	var from := engine.clock
 	engine.render(frames)
 	var music := _ace_render(frames, ace_live)
-	_music_pb.push_buffer(music if ace_live else engine.out_music)
+	if not ace_live:
+		_music_pb.push_buffer(engine.out_music)
+	elif engine.band_muted:
+		_music_pb.push_buffer(music)
+	else:
+		_music_pb.push_buffer(_with_band(music, from))
 	_stinger_pb.push_buffer(engine.out_stinger)
+
+
+# One band at a time, handed over without a hole: the synth band plays until the ACE
+# band's first fade-in, fades out over STOP_RAMP from there, and stays muted while the
+# ACE band plays (through its drop gaps too). When the ACE band stops, the synth band
+# comes back at once and the ACE fade tail is summed over it.
+func _hand_over_band() -> void:
+	if not ace_playing():
+		_band_fade_start = -1
+		engine.band_muted = false
+		return
+	if engine.band_muted:
+		return
+	if _band_fade_start < 0 or _band_fade_start > engine.clock:
+		_band_fade_start = ace.sound_from()
+	engine.band_muted = _band_fade_start >= 0 and engine.clock >= _band_fade_start + AceSequencer.STOP_RAMP
+
+
+# The ACE frames with the synth band summed in at its hand-over gain (1 before the fade
+# starts, 0 after it ends). from is the transport sample of the block's first frame.
+func _with_band(music: PackedVector2Array, from: int) -> PackedVector2Array:
+	var band := engine.out_music
+	var n := mini(music.size(), band.size())
+	if _band_fade_start < 0:
+		for i in n:
+			music[i] += band[i]
+		return music
+	var inv := 1.0 / AceSequencer.STOP_RAMP
+	for i in n:
+		var g := clampf(1.0 - float(from + i - _band_fade_start) * inv, 0.0, 1.0)
+		if g > 0.0:
+			music[i] += band[i] * g
+	return music
 
 
 func _deepen_on_skip() -> void:
@@ -420,18 +462,20 @@ func _ace_stage(stage: int, at: int) -> void:
 	if stage == 1 and ace_ready():
 		ace.start_level(at if at >= 0 else engine.clock)
 		engine.grid = ace
-		engine.band_muted = true
 		return
-	if ace_playing() and ace.mode == "piece":
-		ace.stop_after_piece = true
-		return
-	_ace_end()
+	# Another stage: the synth band takes over now, so the new stage's restart, launch
+	# build and landing drop are heard; the ACE band fades over a beat under it.
+	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 
 
-func _ace_end() -> void:
+# The ACE band stops and the synth band plays again from this moment, so a note it starts
+# now (the death boom, a restart's first beat) is heard over the ACE fade tail.
+func _ace_end(ramp := AceSequencer.STOP_RAMP) -> void:
 	engine.grid = null
 	if ace != null and ace.mode != "off":
-		ace.stop()
+		ace.stop(ramp)
+	engine.band_muted = false
+	_band_fade_start = -1
 
 
 func ace_playing() -> bool:
@@ -998,6 +1042,10 @@ func _on_launched(_velocity: Vector3) -> void:
 	# the unseal drop); never out of Brindle's arena.
 	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == "brindle":
 		return
+	# A launch out of the Warden's break leaves Spillway: the synth build takes the flight
+	# and the ACE set piece fades under it over a beat.
+	if ace_playing() and ace.mode == "piece":
+		_ace_end(ace.grid_beat)
 	# The launch is the build: the riser, the snare roll and the sweep carry the flight.
 	engine.start_build(LAUNCH_BUILD_SECONDS, true)
 	_launch_armed = true

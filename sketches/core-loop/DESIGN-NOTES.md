@@ -979,3 +979,31 @@ The AU2 bank (design-v3/AUDIO-V3.md section 8's AU2 row): bets, secrets, allies,
 `tests/audio_v3_bank_test.gd` checks every id above bakes non-silent, under the soft-clip ceiling, and within its role's length; that `crater_hold` loops seamlessly (both ends fade to near-silence); and that a keyed AU2 cue actually moves with a live `audio.gd` key lift, not just structurally listed. `presentation_sfx_test`, `presentation_gems_test`, `presentation_v3_test` and `audio_cue_resolution_test` are unchanged and green.
 
 AU3's wiring: the three class-suffixed families (`ally_hum_*`, `near_miss_whip_*`) resolve by the run's motif the same way `mind_sable`/`mind_rivet`/`mind_kest` already do (`id.get_slice("_", n)` inside the bank; the event-side lookup is `"ally_hum_" + motif` and `"near_miss_whip_" + motif`). `kill_chain_tier` and `drop_landing` want a pitch ratio at `play()`, from the chain rung and from segments cut, not a re-bake. `bet_clunk`, `bet_crack` and `bet_refusal` already carry Andrew's option (a) ruling (AUDIO-V3.md section 11 question 5): no further pitch decision needed at the call site.
+
+## v3 ACE music on Spillway (`--music=ace`)
+
+Andrew committed the music to full ACE-Step (the synth composes guides, ACE performs whole tracks) and asked to judge it while fighting, because nuance heard on a pack gets lost in play. This build puts the ACE takes on stage 1 behind a flag. The default stays `synth` until his verdict. Launch with `scrapkeep core-loop-v3 --loop=drop --music=ace`, and add `--breath=raw|hard|gentle` to pick the held breath (default `hard`). The pause menu's Breath row and the title's B cycle the style while music is ace.
+
+1. **The package.** `tools/ace/package_music.py` cuts calm-F-085-s1001 and warden-F-085-s42 (pack 3's Y3; `--warden s7` swaps in the other take) into 8 clips of 3 Demucs stems each, Ogg Vorbis q6, into `assets/music_ace/spillway/` (gitignored). It also writes the committed `manifest.json`, which holds each clip's entry and exit, bpm, beat, bar, key D, loop and loop_offset, the sections, and the raw, hard and gentle breath as numbers. Rerunning the script reproduces the Oggs byte for byte.
+2. **Systemic play follows the player.** `src/presentation/ace_sequencer.gd` is the production version of the POC sequencer (core-loop-v3-seq 43453ab) and keeps its measured rules: equal-length stem pulls split at every action, `start((entry+0.5)/44100)` with 2 frames dropped, native loops, a 3072-frame ring, and keys logged by transport sample and read at the audible sample. The music plays calm or travel on the shelf by pressure. The drop-line commit (or `warden_engaged`) brings the pivot on the next bar, then the build, which loops bars 9 to 16 and never returns to bar 1. The telegraph and the open come in on the Warden's next beat and keep the bar's beat. A contact starts the gap at the render head and drops on the next beat after it.
+3. **One directed set piece.** When the Warden breaks, break, return and home play start to finish on the bar grid, whatever the game does during them. After a drop that is still sounding, the break waits for the drop's end.
+4. **Every edge gets its whole join (fix round).** A change asked on the grid itself, or inside the 10 ms before a grid point, lands on the next grid point with its full crossfade, never as a one-frame cut. That covers a follow at a hold's end, at a commit and at the release, and a contact on a beat. A break asked while a beat-scheduled telegraph waits under the drop enters on the drop's next bar. `start_level` while the band sounds fades the old section out, so no one-shot is left without a follower. A one-shot fading under its follower is not counted as a miss, and gains snap within 1e-9 of their target.
+5. **One band at a time, handed over without a hole (fix round).** The synth band plays until the ACE band's first fade-in. It then fades out over 441 frames and stays muted while ACE plays, drop gaps included. When ACE stops (a death, the run's end, a stage change), the synth band unmutes in the same frame and the ACE fade tail is summed over it, so the death boom and a restart's first beat are heard. A stage change or a launch out of the break hands over at once, with ACE fading under the synth over one beat. The set piece no longer holds stage 2's restart, launch build and landing drop in silence. SFX stay synth and keyed, and read the ACE key (D) at the audible sample.
+6. **Fallback.** A missing manifest or stem logs one warning naming the file, and the synth plays on.
+
+**Measured.** `tests/presentation_ace_test.gd`: the held breath's kick band in the open against the build, drums alone / whole mix, is raw -0.1 / +0.1 dB, hard -182 / -32.5 dB and gentle -12.1 / -9.7 dB. Contact to audible gap is 46.6 to 58.2 ms (the POC's max was 82). There were zero skips over 180 s at p512 and at p1024 with a hitch, and 0 misses. `tests/ui_breath_row_test.gd` drives the flags, the ACE key, the Warden facts through `audio.gd`, stage 2 back to the synth, and a death unmuting the synth in the same frame.
+
+**Perf, fix round.** `tools/perf_bench.gd` from core-loop-v3-perf 0cd689c, copied in uncommitted and wrapped to print which band played. Headless, 3 runs each, medians. Logs are under `artifacts/local/ace-music/perf-fix/`. Another worktree's Godot tests were running at the same time (load average about 7 on 32 threads).
+
+| Scene, music | process_ms p50 | frame_ms p50 | frame_ms p99 | ACE render per second of audio |
+| --- | --- | --- | --- | --- |
+| s2, synth | 1.195 | 9.27 | 40.20 | |
+| s2, ace | 0.739 | 8.43 | 39.16 | 10.4 ms (about 0.17 ms a 60 fps frame) |
+| s3, synth | 1.948 | 18.48 | 46.91 | |
+| s3, ace | 1.034 | 17.54 | 45.70 | 10.6 ms |
+
+ACE costs less than the synth band it replaces, because the muted synth skips its mix.
+
+**Open for Andrew.** The breath default is `hard` because the brief asked for it, and it makes the Warden opening unmistakable. Andrew's slight pack-3 favourite, Y3, is the raw breath. Under raw the open measures within 0.1 dB of the build, so as an audio cue it barely reads. Pick the default after play: flip B mid-fight to compare.
+
+**Evidence limit.** Headless tests and the bounce show the transport and the levels. Whether the music carries the fight, and whether the open reads as a cue from the lift, is Andrew's sitting.
