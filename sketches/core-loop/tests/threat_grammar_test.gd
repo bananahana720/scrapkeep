@@ -47,6 +47,8 @@ func _process(_delta: float) -> bool:
 	_check_wave()
 	_check_sweep()
 	_check_projectile()
+	_check_driven()
+	_check_no_rebuild()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -260,3 +262,104 @@ func _check_projectile() -> void:
 			and back_points[back_points.size() - 1].is_equal_approx(back.center),
 		"a batted shell draws its own amber projectile reticle and trace to its new landing %s" % [back.center])
 	shell.free()
+
+
+# E1: a combat telegraph draws from Threat.drive(d), not marks(d, true). Its numbers must
+# be the ones marks() draws and contains() tests, at a quarter, half and 95% of the warning.
+func _check_driven() -> void:
+	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 200.0), 6.0)
+	var slam: Node3D = Telegraph.lane(_world, _ground, Threat.Type.INSTANT, Vector3(20.0, 0.0, 200.0), Vector3.FORWARD, 12.0, 4.0)
+	var lane: Node3D = Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(40.0, 0.0, 200.0), Vector3.FORWARD, 11.0, 3.0)
+	var pull: Node3D = Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(60.0, 0.0, 200.0), Vector3.FORWARD, 9.0, 30.0)
+	var shell: Node3D = Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(80.0, 0.0, 200.0), 3.5)
+	shell.set_flight(Vector3(92.0, 1.5, 188.0), 6.0)
+	var wave: Node3D = Telegraph.wave(_world, _ground, Vector3(100.0, 0.0, 200.0), 10.0, 6.0, 0.5)
+	var rows: Array = []
+	var agree := true
+	for p in [0.25, 0.5, 0.95]:
+		for node in [ring, slam, lane, pull, shell]:
+			node.set_progress(p)
+		wave.age = wave.warn_seconds + p * wave.radius / wave.speed
+		wave.set_progress(wave.age / wave.warn_seconds)
+		var pairs := [
+			[_drive(ring, "stripe_motion").get("inner"), _mark(ring.descriptor(), "fill").get("inner")],
+			[_drive(slam, "stripe_motion").get("inner"), _mark(slam.descriptor(), "fill").get("inner")],
+			[_drive(lane, "stripe_motion").get("to"), _mark(lane.descriptor(), "run").get("to")],
+			[_drive(pull, "stripe_motion").get("to"), _mark(pull.descriptor(), "run").get("to")],
+			[_drive(shell, "motion").get("gap"), _mark(shell.descriptor(), "bracket").get("gap")],
+			[_drive(wave, "motion").get("radius"), _mark(wave.descriptor(), "front").get("radius")],
+			[_drive(wave, "motion").get("inner"), _mark(wave.descriptor(), "front").get("inner")],
+			[_drive(wave, "motion").get("outer"), _mark(wave.descriptor(), "front").get("outer")],
+		]
+		for pair in pairs:
+			agree = agree and pair[0] != null and pair[1] != null and is_equal_approx(float(pair[0]), float(pair[1]))
+		var f: float = wave.front_radius()
+		var clip: Vector4 = _drive(wave, "motion")["clip"]
+		var c: Vector3 = wave.center
+		var edge := Threat.WAVE_EDGE
+		var outer := minf(wave.radius, f + edge)
+		var flips: bool = wave.contains(c + Vector3(outer - 0.02, 1.0, 0.0)) and not wave.contains(c + Vector3(outer + 0.02, 1.0, 0.0)) \
+			and (f - edge < 0.05 or (wave.contains(c + Vector3(f - edge + 0.02, 1.0, 0.0)) and not wave.contains(c + Vector3(f - edge - 0.02, 1.0, 0.0))))
+		var drawn: bool = is_equal_approx(clip.y, minf(wave.radius, f + edge)) and is_equal_approx(clip.x, maxf(0.0, f - edge))
+		var ring_clip: Vector4 = _drive(ring, "stripe_motion")["clip"]
+		var ring_edge: bool = ring.contains(ring.center + Vector3(ring.radius - 0.01, 1.0, 0.0)) and not ring.contains(ring.center + Vector3(ring.radius + 0.01, 1.0, 0.0)) \
+			and is_equal_approx(ring_clip.x, ring.radius * (1.0 - p)) and ring_clip.y >= ring.radius
+		agree = agree and flips and drawn and ring_edge
+		rows.append("p %.2f wave front %.2f clip [%.2f, %.2f] flips %s, ring inner %.2f" % [p, f, clip.x, clip.y, flips, ring_clip.x])
+	lane.set_progress(1.0)
+	var live: Dictionary = _drive(lane, "stripe_motion")
+	var end_ok: bool = is_equal_approx(float(live["to"]), lane.length) and lane.contains(lane.center + lane.dir * (lane.length - 0.01) + Vector3.UP) \
+		and not lane.contains(lane.center + lane.dir * (lane.length + 0.01) + Vector3.UP) and is_equal_approx(float(live["alpha"]), Threat.LIVE_ALPHA / Threat.RUN_ALPHA)
+	_report("driven numbers", agree and end_ok,
+		"drive(d) gives the numbers marks(d, true) draws, the wave clip is contains()'s front band and the fill ends on its edge: %s; a live lane runs to %.1f m, where contains() ends"
+			% ["; ".join(rows), float(live["to"])])
+	for node in [ring, slam, lane, pull, shell, wave]:
+		node.free()
+
+
+func _drive(node: Node3D, layer: String) -> Dictionary:
+	return Threat.drive(node.descriptor()).get(layer, {})
+
+
+# E1: after commit a driven telegraph never rebuilds a mesh. The same check on a telegraph
+# forced back onto the per-frame path must see rebuilds, so the check can fail.
+func _check_no_rebuild() -> void:
+	var nodes: Array = [
+		Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 300.0), 6.0),
+		Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 300.0), Vector3.FORWARD, 11.0, 3.0),
+		Telegraph.wave(_world, _ground, Vector3(40.0, 0.0, 300.0), 10.0, 6.0, 0.5),
+	]
+	var shell: Node3D = Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(60.0, 0.0, 300.0), 3.5)
+	shell.set_flight(Vector3(72.0, 1.5, 288.0), 6.0)
+	nodes.append(shell)
+	var control: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(80.0, 0.0, 300.0), 6.0)
+	control.set("_driven", false)
+	var before := {}
+	for node in nodes + [control]:
+		before[node] = _meshes(node)
+	for i in 100:
+		for node in nodes + [control]:
+			if node.type == Threat.Type.WAVE:
+				node.step(0.02)
+			else:
+				node.set_progress(0.95 * i / 99.0)
+	var kept := true
+	var counts: Array = []
+	for node in nodes:
+		kept = kept and _meshes(node) == before[node]
+		counts.append("%s %d" % [Threat.kind(node.type), node.painter().vertex_count("stripe_motion") + node.painter().vertex_count("motion")])
+	var rebuilt: bool = _meshes(control) != before[control]
+	_report("no rebuild", kept and rebuilt,
+		"100 frames of progress leave every driven layer's mesh and vertex count unchanged (%s); the per-frame path rebuilds (%s)"
+			% [", ".join(counts), rebuilt])
+	for node in nodes + [control]:
+		node.free()
+
+
+func _meshes(node: Node3D) -> Dictionary:
+	var out := {}
+	var layers: Dictionary = node.painter()._layers
+	for layer in layers:
+		var mesh: Mesh = layers[layer].mesh
+		out[layer] = [mesh.get_instance_id() if mesh != null else 0, node.painter().vertex_count(layer)]
+	return out

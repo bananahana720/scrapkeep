@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Density := preload("res://src/presentation/density.gd")
 
 # One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
 # hazard.gd. The attack type decides how a threat draws; its committed geometry decides
@@ -88,6 +89,19 @@ const OWNER_SPACING := 4.0
 # Layers whose name starts with "stripe" draw the hostile stripe pattern.
 const STATIC_LAYERS := ["under", "stripe", "base", "fill"]
 const MOTION_LAYERS := ["motion_under", "stripe_motion", "motion"]
+# The layers a driven painter draws with threat_mark.gdshaderinc.
+const DRIVEN_LAYERS := ["stripe", "stripe_motion", "motion", "motion_under"]
+
+# How a driven mark follows the frame (threat_mark.gdshaderinc names each one).
+enum Drive { PASS, RADIAL, LANE, DOTS, CHEVRON, CURTAIN, BRACKET }
+const FAR := 1.0e9
+const CURTAIN_STEPS := 48
+# P6 fill classes: the stencil value a class writes and tests, so overlapping fills of
+# one class draw once (E1-DENSITY.md section 2), and a sorting offset that runs each class
+# as one contiguous batch under every line at the same priority. A class writes over
+# another's value, so the batches must not interleave for the union to hold.
+const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4}
+const FILL_SORT := {"area": -3000.0, "fill": -2000.0, "swept": -1000.0}
 
 
 # hostile (HAZARD), owned (the player's, AMBER) or neutral (a harmless bone field).
@@ -187,6 +201,208 @@ static func roles(d: Dictionary) -> Array:
 			out.append(m["role"])
 	out.sort()
 	return out
+
+
+# --- Driven drawing (E1-DENSITY.md section 1) ----------------------------------------
+# A combat telegraph builds its motion marks once, at full extent, each vertex tagged with
+# how it follows the frame; drive(d) then hands the frame's numbers to the shader. The
+# numbers are the same expressions marks(d, true) draws, so both paths draw one shape. A
+# sector wave (a boss hazard's) stays on marks().
+
+static func can_drive(d: Dictionary) -> bool:
+	return int(d["type"]) != Type.WAVE or is_full(d)
+
+
+static func driven_marks(d: Dictionary) -> Array:
+	var out: Array = []
+	if stance(d["tone"]) == "neutral":
+		return out
+	var lane: bool = d["form"] == "lane"
+	match int(d["type"]):
+		Type.INSTANT:
+			out.append(_driven(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _footprint(d)),
+				Drive.LANE if lane else Drive.RADIAL))
+		Type.LANE:
+			var tris: PackedVector3Array
+			if lane:
+				var half: float = d["half_width"]
+				tris = _lane_strip(d, -float(d["back"]), float(d["length"]), -half * 0.9, half * 0.9)
+			else:
+				tris = _arc(d, d["r_in"], d["r_out"], d["a0"], d["a1"])
+			out.append(_driven(_mark("run", _area_layer(d, true), _area_tone(d, RUN_ALPHA), tris),
+				Drive.LANE if lane else Drive.RADIAL, 1.0))
+		Type.WAVE:
+			_driven_wave(d, out)
+		Type.PROJECTILE:
+			_driven_projectile(d, out)
+	return out
+
+
+# Per layer, the frame's clip and alpha scale (threat_mark.gdshaderinc), plus the numbers
+# they stand for, which the tests compare with contains().
+static func drive(d: Dictionary) -> Dictionary:
+	var out := {}
+	var live: bool = d.get("live", false)
+	var p: float = 1.0 if live else float(d["progress"])
+	var lane: bool = d["form"] == "lane"
+	match int(d["type"]):
+		Type.INSTANT:
+			if lane:
+				var inner: float = float(d["half_width"]) * (1.0 - p)
+				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, FAR, inner, FAR), "alpha": 1.0, "inner": inner}
+			else:
+				var inner := lerpf(float(d["r_out"]), float(d["r_in"]), p)
+				out[_area_layer(d, true)] = {"clip": Vector4(inner, FAR, 0.0, 0.0), "alpha": 1.0, "inner": inner}
+		Type.LANE:
+			var alpha := LIVE_ALPHA / RUN_ALPHA if live else 1.0
+			if lane:
+				var back: float = d["back"]
+				var end := -back + p * (float(d["length"]) + back)
+				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, end, -1.0, FAR), "alpha": alpha, "from": -back, "to": end}
+			else:
+				var reach_r := lerpf(float(d["r_in"]), float(d["r_out"]), p)
+				out[_area_layer(d, true)] = {"clip": Vector4(-FAR, reach_r, 0.0, 0.0), "alpha": alpha, "from": d["r_in"], "to": reach_r}
+		Type.WAVE:
+			var r_in: float = d["r_in"]
+			var r_out: float = d["r_out"]
+			var arming := float(d["front"]) < 0.0
+			var f := maxf(float(d["front"]), 0.0)
+			var inner := maxf(r_in, f - WAVE_EDGE)
+			var outer := minf(r_out, f + WAVE_EDGE)
+			var lines := {"clip": Vector4(inner, outer, f + WAVE_EDGE + 0.3 + CHEVRON_DEPTH, clampf(f, r_in, r_out)),
+				"alpha": lerpf(0.35, 0.8, float(d["progress"])) if arming else 1.0, "radius": f, "inner": inner, "outer": outer}
+			out["motion"] = lines
+			out["motion_under"] = lines
+			out[_area_layer(d, true)] = {"clip": Vector4(-FAR, -1.0 if arming else maxf(r_in, f - WAVE_EDGE), 0.0, 0.0), "alpha": 1.0}
+		Type.PROJECTILE:
+			var gap := float(d["r_out"]) * lerpf(BRACKET_OPEN, BRACKET_SHUT, float(d["progress"]))
+			var reticle := {"clip": Vector4(gap, maxf(0.8, gap * 0.4), float(d["progress"]), 0.0), "alpha": 1.0, "gap": gap}
+			out["motion"] = reticle
+			out["motion_under"] = reticle
+	return out
+
+
+static func _driven(m: Dictionary, drive_mode: int, scaled := 0.0, grow := 0.0) -> Dictionary:
+	m["c1"] = Vector4(drive_mode, scaled, grow, 0.0)
+	return m
+
+
+# One hot line and its charcoal keyline, as _lined draws them; build(grow) returns the
+# line's mark widened by grow.
+static func _driven_lined(out: Array, role: String, hot: Color, build: Callable) -> void:
+	var under: Dictionary = build.call(UNDERLAY)
+	under.merge({"role": role + "_under", "layer": "motion_under", "tone": Color(Palette.CHARCOAL, UNDERLAY_ALPHA)}, true)
+	out.append(under)
+	var line: Dictionary = build.call(0.0)
+	line.merge({"role": role, "layer": "motion", "tone": hot}, true)
+	out.append(line)
+
+
+static func _driven_wave(d: Dictionary, out: Array) -> void:
+	var c: Vector3 = d["centre"]
+	var r_in: float = d["r_in"]
+	var r_out: float = d["r_out"]
+	var reach: float = d["reach"]
+	out.append(_driven(_mark("swept", _area_layer(d, true), _area_tone(d, SWEPT_ALPHA), _arc(d, r_in, r_out, 0.0, TAU)), Drive.RADIAL))
+	var hot := Color(bright(d["tone"]), 1.0)
+	_driven_lined(out, "front", hot, func(grow: float):
+		var m := _mark("front", "", hot, _arc(d, r_in - grow, r_out + grow, 0.0, TAU))
+		return _driven(m, Drive.RADIAL, 0.0 if grow > 0.0 else 1.0, grow))
+	_driven_lined(out, "chevrons", hot, func(grow: float):
+		var tris := PackedVector3Array()
+		var c0 := PackedFloat32Array()
+		for i in RADIAL_CHEVRONS:
+			var a := TAU * (i + 0.5) / RADIAL_CHEVRONS
+			var ray := Vector3(cos(a), 0.0, sin(a))
+			var side := Vector3.UP.cross(ray)
+			var tip := _at(c, a, r_out)
+			var start := tris.size()
+			_chevron(tris, tip, ray, CHEVRON_LINE + grow)
+			for k in range(start, tris.size()):
+				var off: Vector3 = tris[k] - tip
+				c0.append_array([ray.x, ray.z, off.dot(ray), off.dot(side)])
+		var m := _mark("chevrons", "", hot, tris, {"outward": true})
+		m["c0"] = c0
+		m["c1"] = Vector4(Drive.CHEVRON, 0.0 if grow > 0.0 else 1.0, r_out, 0.0)
+		return m)
+	var wall := PackedVector3Array()
+	var top := PackedVector3Array()
+	var rays := PackedFloat32Array()
+	for i in CURTAIN_STEPS:
+		var a0 := TAU * i / CURTAIN_STEPS
+		var a1 := TAU * (i + 1) / CURTAIN_STEPS
+		_wall(wall, _at(c, a0, r_out), _at(c, a1, r_out), 0.0, reach)
+		_wall(top, _at(c, a0, r_out), _at(c, a1, r_out), reach - BAND_TOP, reach + BAND_TOP)
+		for a in [a0, a0, a1, a0, a1, a1]:
+			rays.append_array([cos(a), sin(a), 0.0, 0.0])
+	var band := _driven(_mark("band", "motion", Color(hot, BAND_ALPHA), wall, {"height": reach}), Drive.CURTAIN)
+	band["c0"] = rays
+	out.append(band)
+	var band_top := _driven(_mark("band_top", "motion", Color(hot, 0.8), top, {"height": reach}), Drive.CURTAIN, 1.0)
+	band_top["c0"] = rays
+	out.append(band_top)
+
+
+static func _driven_projectile(d: Dictionary, out: Array) -> void:
+	var c: Vector3 = d["centre"]
+	var r: float = d["r_out"]
+	var hot := Color(bright(d["tone"]), EDGE_ALPHA)
+	_driven_lined(out, "bracket", hot, func(grow: float): return _driven_brackets(c, r, grow))
+	if not d.has("launch"):
+		return
+	var launch: Vector3 = d["launch"]
+	var bump: float = d["bump"]
+	var steps := clampi(int((launch.distance_to(c) + bump * 0.5) / DOT_SPACING), 6, 48)
+	var dots := PackedVector3Array()
+	var keyline := PackedVector3Array()
+	var shares := PackedFloat32Array()
+	var points := PackedVector3Array()
+	for i in range(1, steps + 1):
+		var s := float(i) / steps
+		var at := flight_point(launch, c, bump, s)
+		points.append(at)
+		_dot(dots, at, DOT_SIZE)
+		_dot(keyline, at, DOT_SIZE + 0.08)
+		for k in 18:
+			shares.append_array([s, 0.0, 0.0, 0.0])
+	var under := _driven(_mark("trace_under", "motion_under", Color(Palette.CHARCOAL, UNDERLAY_ALPHA), keyline), Drive.DOTS)
+	under["abs"] = true
+	under["c0"] = shares
+	out.append(under)
+	var trace := _driven(_mark("trace", "motion", Color(bright(d["tone"]), TRACE_ALPHA), dots, {"points": points}), Drive.DOTS)
+	trace["abs"] = true
+	trace["c0"] = shares
+	out.append(trace)
+
+
+# The four corner brackets as _brackets draws them, placed at the open gap; the shader
+# moves each vertex to the frame's gap and arm by the same formula.
+static func _driven_brackets(c: Vector3, r: float, grow: float) -> Dictionary:
+	var gap := r * BRACKET_OPEN
+	var arm := maxf(0.8, gap * 0.4)
+	var half := 0.14 + r * 0.015 + grow
+	var tris := PackedVector3Array()
+	var c0 := PackedFloat32Array()
+	var c1 := PackedFloat32Array()
+	var corners := [Vector2(0.0, -1.0), Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(1.0, -1.0)]
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			for axis in 2:
+				for k in [0, 1, 2, 0, 2, 3]:
+					var t: float = corners[k].x
+					var s: float = corners[k].y
+					var at := Vector2(c.x + sx * gap, c.z + sz * gap)
+					if axis == 0:
+						at += Vector2(-sx * arm * t, s * sx * half)
+					else:
+						at += Vector2(-s * sz * half, -sz * arm * t)
+					tris.append(Vector3(at.x, 0.0, at.y))
+					c0.append_array([sx, sz, t, s])
+					c1.append_array([Drive.BRACKET, 0.0, axis, half])
+	var m := _mark("bracket", "", Color.WHITE, tris, {"centre": c})
+	m["c0"] = c0
+	m["c1"] = c1
+	return m
 
 
 # --- The four types ----------------------------------------------------------------
@@ -663,9 +879,44 @@ class Painter:
 	var ground := Callable()
 	var floor_y := 0.0
 	var lift := 0.2
+	# A driven painter (a combat telegraph) draws DRIVEN_LAYERS with the shared
+	# threat_mark shaders, builds its motion marks once and moves them with drive().
+	var driven := false
+	var centre := Vector3.ZERO
+	var heading := Vector2(0.0, -1.0)
+	# The P6 class of the stripe_motion layer: "fill" (an INSTANT fill, a LANE run) or
+	# "swept" (a WAVE's swept ground).
+	var motion_class := "fill"
 	var _layers := {}
+	var _driven_values := {}
 
 	static var _stripes: ImageTexture
+	static var _materials := {}
+
+	# One shared material per (stencil class, stripes, priority), so every driven
+	# telegraph draws with the same few materials.
+	static func mark_material(fill_class: String, stripes: bool, priority: int) -> ShaderMaterial:
+		var key := "%s/%s/%d" % [fill_class, stripes, priority]
+		if _materials.has(key):
+			return _materials[key]
+		var code := "shader_type spatial;\n"
+		if stripes:
+			code += "#define STRIPES\n"
+		if FILL_STENCIL.has(fill_class):
+			code += "stencil_mode read, write, compare_not_equal, %d;\n" % FILL_STENCIL[fill_class]
+		code += "#include \"res://src/combat/threat_mark.gdshaderinc\"\n"
+		var shader := Shader.new()
+		shader.code = code
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		mat.render_priority = priority
+		var role_class: String = Density.CLASS_OF_ROLE.get(fill_class, "P1")
+		mat.set_shader_parameter("governed", 0.0 if Density.is_shed_exempt(role_class) else 1.0)
+		if stripes:
+			mat.set_shader_parameter("texture_albedo", stripe_texture())
+			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
+		_materials[key] = mat
+		return mat
 
 	# 45-degree HAZARD and charcoal stripes, one period per texture repeat.
 	static func stripe_texture() -> ImageTexture:
@@ -684,6 +935,9 @@ class Painter:
 		for layer in layers:
 			var verts := PackedVector3Array()
 			var colors := PackedColorArray()
+			var custom := _is_driven(layer)
+			var c0 := PackedFloat32Array()
+			var c1 := PackedFloat32Array()
 			for m in all:
 				if m["layer"] != layer:
 					continue
@@ -698,17 +952,47 @@ class Painter:
 							heights[key] = ground.call(Vector3(v.x, floor_y, v.z)) if ground.is_valid() else floor_y
 						verts.append(Vector3(v.x, heights[key] + lift + v.y, v.z))
 					colors.append(tone)
-			_set_layer(layer, verts, colors)
+				if custom:
+					_append_custom(c0, m.get("c0"), m["tris"].size())
+					_append_custom(c1, m.get("c1"), m["tris"].size())
+			_set_layer(layer, verts, colors, c0, c1)
+
+	# The frame's numbers for each driven layer (Threat.drive); only changed values reach
+	# the renderer.
+	func drive(values: Dictionary) -> void:
+		for layer in values:
+			var instance: MeshInstance3D = _layers.get(layer)
+			if instance == null:
+				continue
+			var now: Dictionary = values[layer]
+			var last: Dictionary = _driven_values.get(layer, {})
+			if last.get("clip") != now["clip"]:
+				instance.set_instance_shader_parameter("clip", now["clip"])
+			if last.get("alpha") != now["alpha"]:
+				instance.set_instance_shader_parameter("alpha_scale", now["alpha"])
+			_driven_values[layer] = now
 
 	func tint(layer: String, color: Color) -> void:
 		(_layer(layer).material_override as StandardMaterial3D).albedo_color = color
+
+	func _is_driven(layer: String) -> bool:
+		return driven and layer in DRIVEN_LAYERS
+
+	static func _append_custom(into: PackedFloat32Array, value, count: int) -> void:
+		if value is PackedFloat32Array:
+			into.append_array(value)
+			return
+		var per: Vector4 = value if value is Vector4 else Vector4.ZERO
+		for i in count:
+			into.append_array([per.x, per.y, per.z, per.w])
 
 	func vertex_count(layer: String) -> int:
 		if not _layers.has(layer) or _layers[layer].mesh == null:
 			return 0
 		return (_layers[layer].mesh as ArrayMesh).surface_get_array_len(0)
 
-	func _set_layer(layer: String, verts: PackedVector3Array, colors: PackedColorArray) -> void:
+	func _set_layer(layer: String, verts: PackedVector3Array, colors: PackedColorArray,
+			c0 := PackedFloat32Array(), c1 := PackedFloat32Array()) -> void:
 		var instance := _layer(layer)
 		if verts.is_empty():
 			instance.mesh = null
@@ -717,8 +1001,14 @@ class Painter:
 		arrays.resize(Mesh.ARRAY_MAX)
 		arrays[Mesh.ARRAY_VERTEX] = verts
 		arrays[Mesh.ARRAY_COLOR] = colors
+		var flags := 0
+		if _is_driven(layer):
+			arrays[Mesh.ARRAY_CUSTOM0] = c0
+			arrays[Mesh.ARRAY_CUSTOM1] = c1
+			flags = (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
+				| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
 		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 		instance.mesh = mesh
 
 	func _layer(layer: String) -> MeshInstance3D:
@@ -727,6 +1017,17 @@ class Painter:
 		var instance := MeshInstance3D.new()
 		instance.top_level = true
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if _is_driven(layer):
+			var stripes := layer.begins_with("stripe")
+			var fill_class := ("area" if layer == "stripe" else motion_class) if stripes else ""
+			instance.material_override = mark_material(fill_class, stripes, PRIORITY - 1 if layer.ends_with("under") else PRIORITY)
+			instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
+			instance.extra_cull_margin = 4.0
+			instance.set_instance_shader_parameter("centre", centre)
+			instance.set_instance_shader_parameter("heading", heading)
+			add_child(instance)
+			_layers[layer] = instance
+			return instance
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
