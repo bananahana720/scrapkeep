@@ -179,6 +179,7 @@ func _frame_drawn() -> void:
 		var capture := root.get_texture().get_image()
 		metadata["screenshot_dimensions"] = [capture.get_width(), capture.get_height()]
 		metadata["screenshot_tick"] = ticks
+		metadata["screenshot_monitors"] = _monitor_snapshot()
 		metadata["growth_actual"] = {"mass": game.run.mass, "heft_class": game.run.heft_class(), "chunks": game.build.accretion.chunk_count(), "shell_scale": game.build.accretion.scale.x}
 		metadata["screenshot_shots_fired"] = shots
 		metadata["screenshot_boss_attacks"] = boss_attacks
@@ -200,6 +201,15 @@ func _frame_drawn() -> void:
 		_finish()
 
 
+func _monitor_snapshot() -> Dictionary:
+	return {"visible_primitives": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+		"draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+		"static_memory_bytes": Performance.get_monitor(Performance.MEMORY_STATIC),
+		"video_memory_bytes": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
+		"texture_memory_bytes": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED),
+		"buffer_memory_bytes": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)}
+
+
 func _finish() -> void:
 	finished = true
 	var sorted := timings.duplicate()
@@ -211,9 +221,13 @@ func _finish() -> void:
 	var render_size := root.get_texture().get_size()
 	var window_size := DisplayServer.window_get_size()
 	var resolution_ok: bool = render_size == Vector2(1920, 1080) and metadata.get("screenshot_dimensions", []) == [1920, 1080]
+	var growth_actual: Dictionary = metadata.get("growth_actual", {})
+	var grown: bool = growth_actual.get("heft_class", 1) > 1 and growth_actual.get("chunks", 0) > 0 and growth_actual.get("shell_scale", 1.0) > 1.0
+	var growth_ok: bool = int(settings.get("growth", "0")) == 0 or grown
 	var encounter_ok: bool = (mode == "dense" and not counts.is_empty() and counts.min() >= 30) or (mode == "traversal" and distance_travelled > 100.0) or (mode == "boss" and boss_attacks > 0 and hazard_peak > 0)
-	var qualified: bool = hardware and resolution_ok and encounter_ok and seconds >= 120.0 and duration >= 120.0 and not metadata.get("timed_out", false)
+	var qualified: bool = hardware and resolution_ok and encounter_ok and growth_ok and seconds >= 120.0 and duration >= 120.0 and not metadata.get("timed_out", false)
 	metadata.merge({"frame_intervals_ms": timings, "enemy_counts": counts, "physics_ticks": ticks,
+		"final_monitors": _monitor_snapshot(), "grown_build_verified": grown, "growth_criteria_met": growth_ok,
 		"scene_physics_seconds": physics_seconds, "measured_physics_seconds": physics_seconds - measured_physics_start,
 		"measurement_wall_seconds": duration, "requested_seconds": seconds,
 		"scene_wall_seconds": float(Time.get_ticks_usec() - started_usec) / 1000000.0,
