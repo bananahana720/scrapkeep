@@ -86,6 +86,70 @@ const TAG_RULES := {
 }
 
 
+# Evolutions (v3 spike S2, LOOP-REDESIGN section 8), behind the tuning flag
+# "evolutions". A row is ripe while its base part is held at `count` copies and a
+# different held part carries `pair_tag`; at the Warden break build swaps the base
+# copies for the evolved part (items.gd EVOLVED). Like a synergy it is derived from the
+# part list, so a retry that restores the list takes the evolution back.
+const EVOLUTIONS := {
+	"pinball_hull": {"name": "Pinball Hull", "base": "spring_hull", "count": 3, "pair_tag": "speed",
+		"text": "Spring Hull at three plus something fast becomes Pinball Hull: rebounds surge, refresh a jump and relaunch pins."},
+}
+
+
+static func _paired(held: Array, tag_sets: Array, base: String, pair_tag: String) -> bool:
+	for i in held.size():
+		if held[i] != base and pair_tag in tag_sets[i]:
+			return true
+	return false
+
+
+# True when the base part is at its count and a different part carries the pair tag.
+static func evolution_ripe(held: Array, tag_sets: Array, evolution_id: String) -> bool:
+	var row: Dictionary = EVOLUTIONS[evolution_id]
+	return held.count(row["base"]) >= row["count"] and _paired(held, tag_sets, row["base"], row["pair_tag"])
+
+
+# The first ripe evolution for this part list, or "".
+static func ripe_evolution(held: Array, tag_sets: Array) -> String:
+	for key in EVOLUTIONS:
+		if evolution_ripe(held, tag_sets, key):
+			return key
+	return ""
+
+
+# The evolution this candidate moves toward, or "": it adds a base copy below the
+# count, or it brings the missing pair tag while the base is already at its count.
+static func ripened_by(held: Array, tag_sets: Array, candidate: String, candidate_tags: Array) -> String:
+	for key in EVOLUTIONS:
+		var row: Dictionary = EVOLUTIONS[key]
+		var copies: int = held.count(row["base"])
+		if candidate == row["base"] and copies < row["count"]:
+			return key
+		if candidate != row["base"] and copies >= row["count"] and row["pair_tag"] in candidate_tags \
+				and not _paired(held, tag_sets, row["base"], row["pair_tag"]):
+			return key
+	return ""
+
+
+# Codex hint cards for the evolutions, shaped like the synergy cards plus "evolution".
+static func evolution_declarations(name_of: Callable) -> Array:
+	var cards: Array = []
+	for key in EVOLUTIONS:
+		var row: Dictionary = EVOLUTIONS[key]
+		var hidden: String = CLUES.get(row["pair_tag"], "something")
+		cards.append({
+			"id": key,
+			"category": CATEGORY,
+			"name": row["name"],
+			"hint": "%s ×%d + %s" % [name_of.call(row["base"]), row["count"], hidden],
+			"clue": hidden,
+			"text": row["text"],
+			"evolution": true,
+		})
+	return cards
+
+
 # True while two different held parts carry the pair's two tags.
 static func pair_live(tag_sets: Array, pair: Array) -> bool:
 	for i in tag_sets.size():

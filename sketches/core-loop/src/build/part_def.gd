@@ -71,6 +71,8 @@ const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", 
 @export var needs := ""
 # Sold only by Moss (a charge cell), never rolled by a gate, fabricator or vault.
 @export var shop_only := false
+# Granted only by an evolution at the Warden break (v3 spike S2); never offered.
+@export var evolved := false
 
 
 # The cat_ glyph a row gets from its family when it names none (I2: weapon is damage,
@@ -109,6 +111,7 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.charges = row.get("charges", {})
 	def.needs = row.get("needs", "")
 	def.shop_only = row.get("shop_only", false)
+	def.evolved = row.get("evolved", false)
 	return def
 
 

@@ -223,7 +223,45 @@ func codex_declarations() -> Array:
 	var cards: Array = Synergies.declarations(func(part_id: String) -> String: return Parts.display_name(part_id))
 	for entry in Lanes.ENTRIES:
 		cards.append(entry.duplicate())
+	if _evolutions_on():
+		cards.append_array(Synergies.evolution_declarations(func(part_id: String) -> String: return Parts.display_name(part_id)))
 	return cards
+
+
+# ---- Evolutions (v3 spike S2, behind the tuning flag "evolutions") ----
+
+func _evolutions_on() -> bool:
+	return ctx != null and ctx.tuning != null and ctx.tuning.on("evolutions")
+
+
+# At the Warden break, the first ripe evolution swaps its base copies for the evolved
+# part. At most one per break. run_state has no remove_part, so the copies come off
+# the list the way shop.gd's _remove_part does it; add_part then publishes the new part
+# (part_gained, source "evolution") and the heft class, and part_gained recomputes.
+# Returns the evolution id, or "".
+func try_evolve() -> String:
+	if not _evolutions_on():
+		return ""
+	var run = ctx.run
+	var evolution_id := Synergies.ripe_evolution(run.parts, Parts.tag_sets(run.parts))
+	if evolution_id == "":
+		return ""
+	var row: Dictionary = Synergies.EVOLUTIONS[evolution_id]
+	for i in int(row["count"]):
+		if run.has_method("remove_part"):
+			run.remove_part(row["base"], "evolution")
+		else:
+			var at: int = run.parts.rfind(row["base"])
+			if at >= 0:
+				run.parts.remove_at(at)
+	run.add_part(evolution_id, "evolution")
+	_discovered[evolution_id] = true
+	var codex = _codex()
+	if codex != null:
+		# The flag may have been set after the first declare; a repeat declare is harmless.
+		_declare()
+		codex.mark_discovered(evolution_id, ctx.player.ball_position(), PARTICIPANTS)
+	return evolution_id
 
 
 func discovered() -> Array:
@@ -268,6 +306,10 @@ func offer_mark(part_id: String) -> String:
 	var completes := Parts.completed_by(part_id, held)
 	if completes != "":
 		return "* completes %s *" % Synergies.ROWS[completes]["name"]
+	if _evolutions_on():
+		var ripens := Synergies.ripened_by(held, Parts.tag_sets(held), part_id, Parts.tags_of(part_id))
+		if ripens != "":
+			return "* ripens %s *" % Synergies.EVOLUTIONS[ripens]["name"]
 	var ingredient := Parts.ingredient_of(part_id, held)
 	if ingredient != "":
 		var named: bool = is_known(ingredient) or has_perk("lens")
@@ -578,6 +620,9 @@ func _on_stage_content_cleared(_reason: String) -> void:
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	if has_transformer("shrapnel_bloom"):
 		_kills.append(at)
+	# The Warden break is the evolution beat (v3 spike S2); off unless the flag is on.
+	if kind == "warden":
+		try_evolve()
 	if not ctx.flow.in_stage():
 		return
 	var amount := int(round(scrap_value * sheet.kill_scrap)) if not scrapless() else 0

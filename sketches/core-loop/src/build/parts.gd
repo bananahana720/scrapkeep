@@ -171,6 +171,8 @@ static func rows() -> Dictionary:
 
 static func row(part_id: String) -> Dictionary:
 	var authored: Dictionary = rows().get(part_id, {})
+	if authored.is_empty() and Items.EVOLVED.has(part_id):
+		authored = ItemGen.finish(part_id, Items.EVOLVED[part_id])
 	return authored if not authored.is_empty() else ItemGen.generated_row(part_id)
 
 
@@ -184,7 +186,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
+	return rows().has(part_id) or Items.EVOLVED.has(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
 
 
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.
@@ -272,7 +274,7 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	var all := rows()
 	for key in all:
 		var r: Dictionary = all[key]
-		if not r["rarity"] in rarities or r.get("shop_only", false) or not seam_met(r.get("needs", "")):
+		if not r["rarity"] in rarities or r.get("shop_only", false) or r.get("evolved", false) or not seam_met(r.get("needs", "")):
 			continue
 		var only: String = r.get("class_id", "")
 		if only != "" and only != class_id:

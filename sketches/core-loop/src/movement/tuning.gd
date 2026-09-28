@@ -33,6 +33,9 @@ const SPECS := [
 	# v2's ground probe turned with the ball, so "grounded" flickered with the spin.
 	# Off is the fix; on brings the v2 feel back for a side-by-side comparison.
 	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
+	# v3 spike S2 (LOOP-REDESIGN section 8): a ripe part plus its pair evolves at the
+	# Warden break. Off leaves the build exactly as it was.
+	{"key": "evolutions", "label": "Evolutions (v3 spike)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
 ]
 
 const BRAKE_RESISTANCE := 4.0

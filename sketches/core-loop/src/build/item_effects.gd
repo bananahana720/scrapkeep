@@ -30,6 +30,9 @@ const EFFECTS := {
 	"damage_reduction": "per", "heal_back": "chance", "brace": "share", "hp_per_mass": "per", "floor_hp": "",
 	"bonus_scrap": "chance", "ping": "", "price_scale": "per", "perk": "", "drone": "chance",
 	"slot_cooldown": "per", "overcharge": "damage",
+	# v3 spike S2: {"do": "combo", "all": [effect, ...]} runs each listed effect on one
+	# trigger, each stacked by its own key under the row's stack rule (an evolved part).
+	"combo": "",
 }
 const PASSIVE_EFFECTS := ["slot_cooldown", "damage_reduction", "price_scale", "hp_per_mass", "perk", "ballast",
 	"vault_cooldown", "vault_charges"]
@@ -271,6 +274,18 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 	var ctx = build.ctx
 	var element: String = fx.get("element", d.element)
 	match fx.get("do", ""):
+		"combo":
+			var any := false
+			var n: int = copies.get(id, 1)
+			for sub in fx.get("all", []):
+				var sub_key: String = stack_key(sub.get("do", ""))
+				var sub_power: float = 0.0
+				if sub_key != "" and sub.has(sub_key):
+					sub_power = PartDef.Stacking.value(d.stack_rule, float(sub[sub_key]), n, d.stack_cap)
+				if sub.get("do", "") != "combo" and _apply(id, d, sub, c, sub_power, draw, item_index):
+					_count("%s:%s" % [id, sub["do"]])
+					any = true
+			return any
 		"zap":
 			var from: Vector3 = c.enemy.global_position if is_instance_valid(c.enemy) else c.at
 			var near: Array = build.enemies_near(from, fx.get("reach", 10.0), 2)

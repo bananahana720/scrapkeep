@@ -200,6 +200,21 @@ const TABLE := {
 		"effect": {"do": "perk", "perk": "par"}},
 }
 
+# Evolved parts (v3 spike S2, LOOP-REDESIGN section 8). Only an evolution at the Warden
+# break grants one (synergies.gd EVOLUTIONS); no source ever offers one. They sit outside
+# Parts.ids() so the offer pool, its pinned tag counts and the 61-item table stay as
+# they were. "combo" runs a list of existing effects on one trigger.
+const EVOLVED := {
+	"pinball_hull": {"base": "defense", "rarity": "rare_plus", "trigger": "on_rebound", "stack": "capped", "cap": 1,
+		"tags": ["speed", "kinetic"], "evolved": true, "name": "Pinball Hull", "verb": "Ricochet off everything",
+		"text": "Rebounds surge, refresh a jump, relaunch pins",
+		"effect": {"do": "combo", "all": [
+			{"do": "speed", "gain": 0.3, "max_speed": 45.0},
+			{"do": "air_jump"},
+			{"do": "relaunch_pin", "radius": 7.0, "speed": 10.0, "window": 2.0},
+		]}},
+}
+
 # Moss's charge cells (DESIGN-V2 section 12): the stockpile path you pay for. A cell is
 # a part, so it rides the run's part list (a retry restores it), adds heft like any
 # part and can be sold back. Only Moss sells them; the pool never rolls one. Two per
