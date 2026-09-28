@@ -1,1 +1,2 @@
 date	unit	branch	head	writer	fix_rounds	verifier	gate	overturned	smoke_after_merge	debt_notes	hours_to_merge	escapes	notes
+2026-09-28	m0	proto/core-loop-v3-m0	6a0bcbc	opus	1	pass-with-gaps	coordinator	no	pass 194/194	1	1.7	0	Built last session; this session verified, fixed bot replay (SimClock) and merged at d660a96. Open debt: stress_capture.gd and item_fuzz.gd still read the wall clock.
