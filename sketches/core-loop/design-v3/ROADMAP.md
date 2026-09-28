@@ -136,6 +136,21 @@ Andrew wants feedback solid enough for an alpha in a game about timing, dodging 
     - Two or three hot-wired parts in wave D, pitched as a first taste: the upside is obvious, the downside is readable and survivable, and the forced-skip tension appears once.
   - **After the alpha, as principles until then:** progression ceremonies for unlocks and tree branches, the home-menu codex (the in-run Tab codex stays), more hot-wired parts, and mutated starting seeds.
 
+## Scrap is size, and every system earns its place (Andrew, 2026-09-28)
+
+**The finding.** Scrap drove almost no decisions. Every pickup silently raised two numbers, the wallet and mass (`run_state.gd:98-104`). Spending the wallet kept mass, so it cost nothing felt (`:25-26`, `:177-181`). Free picks arrive at about 2.5 to 3 a minute (`SYSTEMS-CHAOS.md:416`), so buying was rarely a real choice. Andrew: "what's the point of me accumulating this currency?"
+
+**The ruling.**
+- **Scrap is your size:** the Katamari number that already drives punch against plating, the magnet and the heft class.
+- **The wallet as a second number goes.**
+- **Scrap also gets a benefit that is easy to understand and fits the theme.** The lead candidate is **durability**: scrap is armour plating on the ball, a hit knocks scrap loose as a spill you can roll back up (Sonic's rings, in scrap), and a big ball is a tough ball. Playing clean keeps you big, and greed and recovery become decisions.
+- **Open for the design run:**
+  - how durability relates to hull health (a layer on top, or a replacement);
+  - where fabricators and Moss's shop get their price once there's no wallet (weight, parts or cores);
+  - whether a voluntary melt of weight into a part in Moss's calm bay earns its place.
+
+**The purpose audit.** Every world-one system is scored on the dimensions it serves: strategy, risk, gambling, performance and skill, personal-best mastery, expression, discovery, spectacle and feel, pacing, momentum cost and readability cost. For each system, it names the decision it hands the player. A system that serves no dimension, or duplicates another, is merged or cut; one that serves several is protected. The audit feeds `DESIGN-V3.md` in wave B, and loop-dependent verdicts wait for the lab sitting.
+
 ## Tool stack (checked 2026-09-28; research R3)
 
 - **Keep:**
