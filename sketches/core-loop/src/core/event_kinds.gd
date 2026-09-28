@@ -221,10 +221,12 @@ const OBJECTIVE_SHORT := {
 	"beacon_charge_changed": "Break the Warden",
 	"boss_arena_entered": "Break Brindle's Requisition",
 }
-# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near.
+# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
+# worded for the stage's family: stage 1's reactor opens its core as it vents, stage
+# 2's hive stands behind a guard rack.
 const LESSON_SHORT := {
-	"plate": "Ram it hard",
-	"caps": "Slam its vent caps",
+	"plate": "Ram it as it vents",
+	"caps": "Bowl its guard, slam caps",
 	"magnet": "Shoot its magnet while pulled",
 }
 

@@ -35,33 +35,36 @@ const TRY_FIRST := [
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
+# The key list. A row with "caps" and "short" also shows on the title's how-to-play
+# page, as its keycaps and those one or two words.
 const CONTROLS := [
-	{"keys": "W A S D", "does": "drive, relative to where the camera looks"},
-	{"keys": "mouse", "does": "look"},
-	{"keys": "Space", "does": "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump"},
-	{"keys": "Shift", "does": "boost"},
-	{"keys": "Ctrl", "does": "brake; airborne, the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam"},
-	{"keys": "left mouse", "does": "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw"},
-	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free"},
-	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels"},
+	{"keys": "W A S D", "does": "drive, relative to where the camera looks", "caps": ["key_w", "key_a", "key_s", "key_d"], "short": "drive"},
+	{"keys": "mouse", "does": "look", "caps": ["key_mouse"], "short": "look"},
+	{"keys": "Space", "does": "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "caps": ["key_space"], "short": "jump"},
+	{"keys": "Shift", "does": "boost", "caps": ["key_shift"], "short": "boost"},
+	{"keys": "Ctrl", "does": "brake; airborne, the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam", "caps": ["key_ctrl"], "short": "smash"},
+	{"keys": "left mouse", "does": "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw", "caps": ["key_lmb"], "short": "weapon"},
+	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "caps": ["key_f"], "short": "special"},
+	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels", "caps": ["key_rmb"], "short": "move"},
 	{"keys": "Q (hold)", "does": "Sable: winch toward the hook"},
 	{"keys": "E", "does": "Sable: plant a pylon on a steep face or a close wall hook; again to drop off"},
 	{"keys": "mouse wheel", "does": "Sable: down pays rope out, up notches it in"},
-	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages"},
-	{"keys": "- / =", "does": "music volume down / up"},
-	{"keys": "[ / ]", "does": "effects volume down / up"},
+	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
+	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
+	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
 	{"keys": "F6", "does": "boss tempo: 129, or 172 while held"},
-	{"keys": "P", "does": "pause / resume"},
-	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again"},
+	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume, quit", "caps": ["key_p"], "short": "pause"},
+	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "caps": ["key_r"], "short": "hold retry"},
 	{"keys": "F1", "does": "tuning panel (frees the mouse)"},
 	{"keys": "F3", "does": "physics interpolation on/off (off by default)"},
 	{"keys": "F4", "does": "save every tuning value to user://tuning-<time>.json"},
-	{"keys": "Esc", "does": "free the mouse; again to quit"},
+	{"keys": "Esc", "does": "outside play: quit"},
 ]
 
 const SCREEN_KEYS := [
 	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
+	{"keys": "H", "does": "title: how to play, and back"},
 	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
 	{"keys": "R", "does": "death screen: retry the stage, or the fight in the arena"},
 	{"keys": "T", "does": "arena death screen: replay stage 3 from its start"},
@@ -79,7 +82,6 @@ const CARD_COLUMNS := 3
 var game
 
 var _notes: Control
-var _paused: Label
 var _title: Label
 var _notes_page: Control
 var _codex_page: VBoxContainer
@@ -125,8 +127,8 @@ static func legend_bbcode() -> String:
 	return "\n".join(lines)
 
 
-# Pause has to keep listening while the tree is paused, so this layer always processes
-# and the game it steers does not.
+# Tab has to keep listening while the tree is paused, so this layer always processes
+# and the game it steers does not. P and Esc belong to the pause menu (pause_menu.gd).
 func setup(game_ref) -> void:
 	game = game_ref
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -189,16 +191,6 @@ func setup(game_ref) -> void:
 	columns.add_child(legend)
 	_notes.visible = false
 	show_page(0)
-
-	_paused = Label.new()
-	_paused.text = "PAUSED  ·  P to resume  ·  hold Tab for field notes"
-	_paused.add_theme_font_size_override("font_size", 40)
-	_paused.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
-	_paused.add_theme_constant_override("outline_size", 10)
-	_paused.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_paused.position = Vector2(-470.0, 120.0)
-	_paused.visible = false
-	add_child(_paused)
 
 
 # Notes first, then one page per codex category (reserved ones only once they hold
@@ -336,14 +328,9 @@ func _input(event: InputEvent) -> void:
 			if event.pressed:
 				show_page(_page)
 			get_viewport().set_input_as_handled()
-		KEY_P:
-			if event.pressed:
-				game.toggle_pause()
-				get_viewport().set_input_as_handled()
 
 
 func _process(_delta: float) -> void:
 	if game == null:
 		return
 	_notes.visible = game.notes_held()
-	_paused.visible = game.pause_toggled() and not game.notes_held()

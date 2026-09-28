@@ -656,3 +656,13 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Sound.** Shop facts play their `LOOT_ROWS` stand-in through `presentation.audio.play(fact, 0, pitch, "UI", row.sound)` when that method exists. A talk beat's pitch is its babble `root` relative to D3.
 - **Words.** The calm-screen budget is 40 words per screen, counted by `word_budget.gd` over the workshop layer. The fight HUD budget (25) is unchanged.
 - **Tests.** `ui_workshop_pick_test`, `ui_workshop_shop_test` and `ui_workshop_bay_test`; the input helper is `tests/workshop/push.gd`.
+
+## Pause menu and help (v2 W10)
+
+- **Where.** The node `PauseMenu` under the game (`src/ui/pause_menu.gd`, a CanvasLayer on layer 6 that processes while paused; `game.get_node("PauseMenu")`). It sits above the screens (5) and the workshop (4) and under the field notes (10). `is_open()`, `open()`, `close()`, `press(id)` and `row(id)` are its surface; the ids are `resume`, `restart`, `notes`, `music`, `effects` and `quit`.
+- **game.gd hooks.** There are two small hunks. `_ready` adds the pause menu after the workshop, and `_screen_key` maps H on the title to `screens.toggle_help()`. Pausing goes through the existing `toggle_pause()`, `pause_toggled()`, `hold_notes()` and `_capture_mouse()`. P and Esc in play belong to the pause menu; field notes keep Tab only.
+- **Coexistence.** It opens only when `flow.in_play()`, the game's meta `menu_held` is false and the notes are not held. On close it restores `get_tree().paused` for an open workshop pick.
+- **Audio.** `audio.set_volume(bus, level)` sets `volumes[bus]` (0 to 1; SFX also sets UI) and calls `_apply_volumes()`. The menu plays its ticks through `audio.play("flow_changed", 0, pitch, "UI")`.
+- **Settings.** `settings_store.gd` reads and writes `settings.json` in `game.storage_dir` as `{"volumes": {bus: level}}`. The per-process folder in test mode keeps tests off the player's file.
+- **Help.** `screens.toggle_help()` and `help_open()`; `button_for("help")` and `button_for("back")`. The page (`help_page.gd`) lists the `FieldNotes.CONTROLS` rows that carry `caps` (key glyph ids) and `short` (one or two words).
+- **Tests.** `ui_pause_menu_test`.

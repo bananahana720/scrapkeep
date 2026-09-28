@@ -1052,6 +1052,16 @@ func _apply_volumes() -> void:
 		AudioServer.set_bus_mute(index, muted)
 
 
+# The pause menu's volume rows set a bus to a level; the keys above nudge it.
+func set_volume(bus: String, level: float) -> void:
+	if not volumes.has(bus):
+		return
+	volumes[bus] = clampf(snappedf(level, 0.01), 0.0, 1.0)
+	if bus == "SFX":
+		volumes["UI"] = volumes["SFX"]
+	_apply_volumes()
+
+
 func _make_overlay() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 50

@@ -172,6 +172,7 @@ func _ready() -> void:
 	add_child(panel)
 	panel.setup(tuning)
 	add_child(preload("res://src/ui/workshop.gd").new())
+	add_child(preload("res://src/ui/pause_menu.gd").new())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
@@ -409,6 +410,9 @@ func _screen_key(key: int) -> bool:
 		"title":
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
+				return true
+			if key == KEY_H:
+				screens.toggle_help()
 				return true
 		"class_select":
 			if key >= KEY_1 and key < KEY_1 + mini(flow.classes.size(), 9):
