@@ -130,11 +130,8 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
 		tree.open_checkpoint())
-	# The workshop visits after stages 1 to 3 each open one more pick (W6's bay may call
-	# tree.open_checkpoint() itself instead, once it owns the visit).
-	events.stage_cleared.connect(func(stage: int):
-		if stage < UpgradeTree.DEPTHS:
-			tree.open_checkpoint())
+	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
+	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
 	events.stage_entered.connect(func(_stage: int, _retry: bool): abilities.refill())
 	events.stage_content_cleared.connect(func(_reason: String): abilities.refill())
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))

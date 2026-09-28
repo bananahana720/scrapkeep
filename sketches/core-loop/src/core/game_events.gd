@@ -97,6 +97,14 @@ signal demo_slammed(at: Vector3)
 signal tree_offered(class_id: String, depth: int, choices: Array)
 signal tree_picked(class_id: String, node_id: String, depth: int)
 
+# v2 W6 world. Moss's bay and the gorge's contraptions (world publishes all three).
+# bay_entered fires when the cradle catches the ball and banks its speed; bay_left
+# when the exit pad fires it back out, or it rolls off the deck. world_fact carries every contraption, terrain, layer, ride and toy fact as a
+# kind that keys event_kinds.WORLD_ROWS, so one signal serves the whole family.
+signal bay_entered(banked_speed: float)
+signal bay_left(velocity: Vector3)
+signal world_fact(kind: String, at: Vector3)
+
 # v2 W7 enemies: the counters' holds and tenacity, pack arrivals, and the ancients'
 # facts. Combat emits every one (src/combat/holds.gd, fleet.gd and the units). kind is
 # the holding unit's mechanic (roster.gd); method is the player's own action that broke

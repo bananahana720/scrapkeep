@@ -5,6 +5,7 @@ const DustSquall := preload("res://src/world/dust_squall.gd")
 const SurgeRun := preload("res://src/world/surge_run.gd")
 const HoldRelay := preload("res://src/world/hold_relay.gd")
 const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
+const TerrainEvent := preload("res://src/world/terrain_event.gd")
 
 # The event director for one stage (TADR-010): pure, stepped with a delta, drawing
 # from its own seeded stream. It composes the ambient events (the flood, the dust
@@ -19,6 +20,8 @@ const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 #   {"kind": "miniboss", "id", "at": Vector2} {"kind": "scrap", "amount", "at": Vector3}
 #   {"kind": "gate", "id", "at": Vector2}     an event gate was taken
 #   {"kind": "progress", "id", "fraction"}    a live event's progress moved (0 to 1)
+#   {"kind": "terrain_swap", "id", "at"}      a terrain change lands this tick (v2 W6)
+#   {"kind": "world", "fact", "at": Vector3}  a world_fact for the bus (v2 W6)
 
 enum { WAITING, ANNOUNCED, ARMED, LIVE, COOLDOWN, DONE }
 enum { SQUALL_CALM, SQUALL_WARNING, SQUALL_LIVE }
@@ -46,6 +49,8 @@ var stage_time := 0.0
 var flood: FloodCycle
 var squall: DustSquall
 var offers: Array[Dictionary] = []
+# v2 W6: the stage's terrain-changing events (terrain_event.gd), ambient like the flood.
+var terrain: Array = []
 
 var _squall_phase := SQUALL_CALM
 var _squall_timer := 0.0
@@ -67,6 +72,27 @@ func _init(seed_value: int, def: Dictionary, map, cruise: float, height: Callabl
 		_squall_gap = SQUALL_GAP / w
 		_squall_timer = rng.randf_range(SQUALL_FIRST.x, SQUALL_FIRST.y) / w
 	_build_offers(mix, def.get("threat", 1.0), map, cruise, height)
+	_build_terrain(mix, map, cruise, height)
+
+
+# Drawn after every other event's, so adding them left the older events' seeds alone.
+func _build_terrain(mix: Dictionary, map, cruise: float, height: Callable) -> void:
+	if not "terrain_sites" in map:
+		return
+	for id in ["cave_in", "impact"]:
+		if not mix.has(id) or not map.terrain_sites.has(id):
+			continue
+		var site: Dictionary = map.terrain_sites[id]
+		var first: Vector2 = site.get("first", Vector2(30.0, 60.0))
+		var at := rng.randf_range(first.x, first.y) / maxf(0.1, mix[id])
+		terrain.append(TerrainEvent.new(id, site, at, cruise, height))
+
+
+func terrain_event(id: String):
+	for t in terrain:
+		if t.id == id:
+			return t
+	return null
 
 
 func _build_offers(mix: Dictionary, threat: float, map, cruise: float, height: Callable) -> void:
@@ -112,6 +138,8 @@ func advance(delta: float, ball: Vector3, velocity: Vector3) -> Array:
 	_advance_squall(delta, facts)
 	for offer in offers:
 		_advance_offer(offer, delta, ball, velocity, facts)
+	for t in terrain:
+		facts.append_array(t.advance(delta, ball, velocity))
 	return facts
 
 
@@ -262,6 +290,9 @@ func pressure_bonus() -> float:
 		bonus += 0.1 * squall.intensity()
 	if flood != null and (flood.phase == FloodCycle.RISING or flood.phase == FloodCycle.HIGH):
 		bonus += 0.1
+	for t in terrain:
+		if t.phase == TerrainEvent.ANNOUNCED or t.phase == TerrainEvent.HOLDING:
+			bonus += 0.1
 	return minf(bonus, 0.4)
 
 
@@ -284,4 +315,8 @@ func end_all() -> Array:
 		facts.append({"kind": "ended", "id": "flood", "outcome": "passed"})
 	if squall != null and _squall_phase == SQUALL_LIVE:
 		facts.append({"kind": "ended", "id": squall.id, "outcome": "passed"})
+	for t in terrain:
+		if t.phase == TerrainEvent.CHANGED:
+			t.phase = TerrainEvent.DONE
+			facts.append({"kind": "ended", "id": t.id, "outcome": "passed"})
 	return facts

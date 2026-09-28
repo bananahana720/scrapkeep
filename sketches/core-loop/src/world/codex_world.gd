@@ -35,6 +35,23 @@ const ENTRIES := [
 		"hint": "The flood can hold you up, briefly, if it is cold enough.",
 		"clue": "Frost + flood water + rolling across",
 		"text": "Freezing the flood and using the ice as a shortcut across it."},
+	# v2 W6 world: callbacks that ride the gorge's contraptions and Moss's barge.
+	{"id": "steam_thermal", "category": "world", "name": "Thermal",
+		"hint": "Warm air rises. So does anything gliding in it.",
+		"clue": "Glide + steam vent",
+		"text": "Gliding into a steam vent and riding it upward like a thermal."},
+	{"id": "sprint_through", "category": "world", "name": "Through the Crack",
+		"hint": "Some walls only need a runner who will not stop.",
+		"clue": "Overdrive sprint + cracked wall",
+		"text": "Sprinting into a cracked tunnel wall and coming out the other side."},
+	{"id": "do_not_open_until_clear", "category": "world", "name": "Do Not Open Until Clear",
+		"hint": "A valve beside an old reactor vent. Stand outside the ring.",
+		"clue": "Pressure valve + reactor vent, from outside its ring",
+		"text": "Smashing the valve beside a dug-up reactor vent from outside its ring, venting it early."},
+	{"id": "pit_stop_lap", "category": "world", "name": "Pit Stop",
+		"hint": "The barge's rim is a track. There is a par.",
+		"clue": "Moss's rim track under par",
+		"text": "A lap of the workshop barge's rim under par. The nomads build every camp as a marble run: streets banked, tiers joined by chutes."},
 ]
 
 const LIVE_WIRE_SECONDS := 4.0

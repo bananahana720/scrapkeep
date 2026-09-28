@@ -7,6 +7,11 @@ const EventDirector := preload("res://src/world/event_director.gd")
 const EventView := preload("res://src/world/event_view.gd")
 const Launch := preload("res://src/world/launch.gd")
 const CodexWorld := preload("res://src/world/codex_world.gd")
+const Contraptions := preload("res://src/world/contraptions.gd")
+const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
+const Bay := preload("res://src/world/bay.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -36,7 +41,26 @@ var codex_world := CodexWorld.new()
 # Every world codex entry fired this session, in order: {"id", "at"}.
 var discoveries: Array = []
 
+# v2 W6: the gorge's contraptions per stage index, the terrain events' telegraphs,
+# Moss's bay, and the contraption ride the ball is held to (a RideRail), if any.
+var contraptions := {}
+var terrain_view
+var bay
+var ride
+# What Moss said last (the shop's result record), for the shop UI.
+var bay_bark := {}
+# The height band the ball last settled in, and each terrain swap's cost.
+var layer := ""
+var swap_log: Array[Dictionary] = []
+
 var _stage_seed := 0
+var _chute_clock := 0.0
+var _skylight_clock := 0.0
+var _glide_clock := 0.0
+var _air_clock := 0.0
+var _bay_calm := false
+# Stages whose between-stage upgrade pick has been opened this run.
+var _picks_opened := {}
 var _pressure := -1.0
 var _vault_pending := false
 var _was_grounded := true
@@ -61,6 +85,7 @@ func setup(ctx_ref) -> void:
 	launch.name = "Launch"
 	ctx.root.add_child(launch)
 	launch.setup()
+	_setup_gorge()
 	director = Director.new(ctx.rng.randi())
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
@@ -69,15 +94,50 @@ func setup(ctx_ref) -> void:
 	ctx.events.slammed.connect(_on_slammed)
 	ctx.events.jumped.connect(_on_jumped)
 	ctx.events.element_resolved.connect(_on_element_resolved)
+	ctx.events.reward_offered.connect(_on_reward_offered)
+	ctx.events.flow_changed.connect(_on_flow_changed)
+	ctx.events.run_started.connect(func(_class_id: String): _picks_opened.clear())
+	ctx.events.stage_cleared.connect(_open_pick)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
+
+
+func _setup_gorge() -> void:
+	var g: float = ctx.tuning.f("gravity")
+	var cruise: float = ctx.tuning.f("cruise")
+	for i in terrain.maps.size():
+		var m = terrain.maps[i]
+		if not "contraptions" in m or m.contraptions.is_empty():
+			continue
+		var c := Contraptions.new()
+		terrain.geometry_root(i + 1).add_child(c)
+		c.setup(m, terrain.ground_callable(i + 1), cruise, g)
+		contraptions[i + 1] = c
+	terrain_view = TerrainEventView.new()
+	terrain_view.name = "TerrainEvents"
+	ctx.root.add_child(terrain_view)
+	terrain_view.setup(Callable(terrain, "height"))
+	bay = Bay.new()
+	ctx.root.add_child(bay)
+	bay.setup(g, cruise)
+	terrain.bay = bay
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	if events != null:
 		_publish(events.end_all())
 	launch.stop()
+	ride = null
+	bay.undock()
+	_bay_calm = false
 	terrain.use(stage)
+	var m = terrain.map()
+	if "swaps" in m:
+		for id in m.swaps:
+			m.apply_swap(id, false)
+	if contraptions.has(stage):
+		contraptions[stage].reset()
+	layer = ""
 	# A retry replays the same stage: same event plan, same miniboss spots. A new
 	# entry draws a fresh plan from the run's stream.
 	if not retry or _stage_seed == 0:
@@ -98,6 +158,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		flood.configure(basin, 0.0, Vector3.ZERO)
 	flood.render()
 	view.rebuild(events)
+	terrain_view.rebuild(events)
 	last_miniboss_at = Vector3.INF
 	_pressure = -1.0
 	# Combat clears the stage's enemies in its own stage_entered handler, after this
@@ -121,6 +182,10 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	flood.configure({}, 0.0, Vector3.ZERO)
 	launch.stop()
 	launch.clear_landing()
+	ride = null
+	bay.undock()
+	_bay_calm = false
+	terrain_view.clear()
 	director.arrivals.clear()
 	view.clear()
 	vault = null
@@ -163,14 +228,34 @@ func _physics_process(delta: float) -> void:
 		var rail = launch.rail(delta)
 		if rail != null:
 			player.set_velocity_now(rail)
+	elif ride != null:
+		_hold_ride(delta)
 	var ball: Vector3 = player.ball_position()
 	var velocity: Vector3 = player.state.velocity
-	_publish(events.advance(delta, ball, velocity))
+	var riding: bool = ride != null or launch.flying()
+	for fact in bay.step(delta, ball, velocity, riding):
+		_bay_fact(fact)
+	var calm_bay: bool = bay.inside
+	if calm_bay != _bay_calm:
+		_bay_calm = calm_bay
+		if calm_bay:
+			_pressure = 0.0
+			ctx.events.pressure_changed.emit(0.0)
+	if not calm_bay:
+		_publish(events.advance(delta, ball, velocity))
+	if contraptions.has(ctx.flow.stage()):
+		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
+		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
+			_contraption_fact(fact)
+	if bay.in_yard(ball):
+		_free_cooldowns()
 	_watch_ground(delta, ball)
+	_watch_layer(delta, ball)
 	flood.render()
-	if not ctx.calm:
+	if not ctx.calm and not calm_bay:
 		player.add_external_accel(flood.external_accel(ball, velocity) + events.push(ball, velocity))
-	_step_director(delta)
+	if not calm_bay:
+		_step_director(delta)
 
 
 func _publish(facts: Array) -> void:
@@ -197,6 +282,10 @@ func _publish(facts: Array) -> void:
 				var g: Vector2 = fact["at"]
 				_discover(codex_world.note("gate", {"id": fact["id"], "at": terrain.drop_point(g.x, g.y, 1.0),
 					"tier": ctx.player.speed_tier()}))
+			"terrain_swap":
+				_swap(fact["id"])
+			"world":
+				bus.world_fact.emit(fact["fact"], fact["at"])
 
 
 # The miniboss arrives where the director's seeded stream put it, on the ground and
@@ -231,6 +320,8 @@ func _on_enemy_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 
 
 func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
+	if contraptions.has(ctx.flow.stage()):
+		contraptions[ctx.flow.stage()].note_slam(at)
 	if ctx.flow.in_stage():
 		_discover(codex_world.note("slam", {"at": at}))
 
@@ -305,3 +396,152 @@ func _on_reward_chosen(_part_id: String) -> void:
 	player.set_velocity_now(start)
 	launch.fire(player.ball_position(), velocity, start)
 	ctx.events.launched.emit(velocity)
+
+
+# ---- v2 W6: contraptions, terrain changes, layers and Moss's bay ----
+
+# The ride holds the ball to its path each tick, then lets go with the speed it banked.
+func _hold_ride(delta: float) -> void:
+	var v = ride.step(delta)
+	if v != null:
+		ctx.player.set_velocity_now(v)
+		return
+	ctx.player.set_velocity_now(ride.release_velocity())
+	ride = null
+
+
+func _contraption_fact(fact: Dictionary) -> void:
+	match fact["kind"]:
+		"ride":
+			ride = fact["ride"]
+			ctx.player.set_velocity_now(ride.velocity_at(0.0))
+		"fact":
+			ctx.events.world_fact.emit(fact["fact"], fact["at"])
+		"codex":
+			_mark(fact["id"], fact["at"])
+		"accel":
+			if not ctx.calm:
+				ctx.player.add_external_accel(fact["accel"])
+		"carry":
+			# The deck's own frame, not a world push, so it holds in calm too.
+			ctx.player.add_external_accel(fact["accel"])
+
+
+func _bay_fact(fact: Dictionary) -> void:
+	var shop = _shop()
+	match fact["kind"]:
+		"entered":
+			if shop != null:
+				bay_bark = shop.enter()
+			ctx.events.bay_entered.emit(fact["banked"])
+			_open_pick(ctx.flow.stage())
+		"left":
+			if shop != null:
+				bay_bark = shop.leave()
+			ctx.events.bay_left.emit(fact["velocity"])
+		"ride":
+			ride = fact["ride"]
+			ctx.player.set_velocity_now(ride.velocity_at(0.0))
+		"fact":
+			ctx.events.world_fact.emit(fact["fact"], fact["at"])
+		"codex":
+			_mark(fact["id"], fact["at"])
+
+
+# The shop seam: W4's economy (CONTRACTS "Loot and shop") when build carries one.
+func _shop():
+	var b = ctx.build_module() if ctx.has_method("build_module") else ctx.get("build")
+	if b == null or not "shop" in b:
+		return null
+	return b.shop
+
+
+# The practice yard: whatever the ball spends there comes straight back, so a slot is
+# never left cooling while you are inside the yard's lines.
+func _free_cooldowns() -> void:
+	var abilities = ctx.player.abilities
+	for name in AbilityState.SLOTS:
+		var s = abilities.slot(name)
+		if s.charges < s.max_charges:
+			abilities.grant(name, s.max_charges)
+
+
+func _swap(id: String) -> void:
+	var m = terrain.map()
+	var began := Time.get_ticks_usec()
+	m.apply_swap(id, true)
+	terrain.overlays.erase(id + "_before")
+	if not terrain.overlays.has(id + "_after"):
+		terrain.overlays.append(id + "_after")
+	swap_log.append({"id": id, "usec": Time.get_ticks_usec() - began, "stage_time": events.stage_time})
+
+
+func _mark(id: String, at: Vector3) -> void:
+	discoveries.append({"id": id, "at": at})
+	ctx.codex.mark_discovered(id, at)
+
+
+# The ball settles into a height band only on the ground, so a jump never flickers
+# the music. A change says which ride carried it there: the marble-run chutes, the
+# skylight halfpipe, or a drop or glide off a ledge. The grapple line and the
+# launchers announce themselves when they fire.
+func _watch_layer(delta: float, ball: Vector3) -> void:
+	var m = terrain.map()
+	if not m.has_method("layer_at"):
+		return
+	_chute_clock = maxf(0.0, _chute_clock - delta)
+	_skylight_clock = maxf(0.0, _skylight_clock - delta)
+	_glide_clock = maxf(0.0, _glide_clock - delta)
+	if "marble_path" in m and m._polyline_channel(ball.x, ball.z, m.marble_path, m.MARBLE_HALF, m.MARBLE_WALL)[1] > 0.5:
+		_chute_clock = 3.0
+	if absf(ball.x - m.SKYLIGHT_X) < m.SKYLIGHT_DEPTH and ball.z > m.SKYLIGHT_Z.x and ball.z < m.SKYLIGHT_Z.y:
+		_skylight_clock = 3.0
+	if ctx.player.kit.gliding:
+		_glide_clock = 4.0
+	var grounded: bool = ctx.player.state.grounded
+	if ride != null or launch.flying():
+		_air_clock = 0.0
+		_glide_clock = 0.0
+		return
+	_air_clock = 0.0 if grounded else _air_clock + delta
+	if not grounded:
+		if _air_clock > 1.0:
+			_glide_clock = maxf(_glide_clock, 2.0)
+		return
+	var now: String = m.layer_at(ball)
+	if now == layer:
+		return
+	var was := layer
+	layer = now
+	if was == "" or bay.inside:
+		return
+	ctx.events.world_fact.emit("layer_" + now, ball)
+	var via := ""
+	if _chute_clock > 0.0:
+		via = "chute"
+	elif _skylight_clock > 0.0:
+		via = "skylight"
+	elif _glide_clock > 0.0:
+		via = "glide_drop"
+	if via != "":
+		ctx.events.world_fact.emit("ride_" + via, ball)
+
+
+func _on_reward_offered(offers: Array) -> void:
+	if ctx.flow.in_stage() and ctx.flow.state_name() == "gates":
+		bay.dock(offers, Callable(terrain, "height"), ctx.root.get_world_3d().direct_space_state if ctx.root.is_inside_tree() else null)
+
+
+func _on_flow_changed(state: String) -> void:
+	if state != "gates" and not bay.inside:
+		bay.undock()
+
+
+# The workshop visit after each stage opens the upgrade tree's next pick (W3), once per
+# stage per run: on boarding the bay, or at the stage's clear if the bay was skipped,
+# so no pick is lost and a retried visit never opens a second one.
+func _open_pick(stage: int) -> void:
+	if stage >= UpgradeTree.DEPTHS or _picks_opened.has(stage) or not "tree" in ctx.player or ctx.player.tree == null:
+		return
+	_picks_opened[stage] = true
+	ctx.player.tree.open_checkpoint()

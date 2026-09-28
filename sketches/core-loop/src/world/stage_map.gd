@@ -61,6 +61,11 @@ func build_props(_parent: Node3D, _ground: Callable) -> void:
 	pass
 
 
+# A live terrain change's height at (x, z) over the ground, or -INF where it has none.
+func overlay_height(_id: String, _x: float, _z: float, _ground: float) -> float:
+	return -INF
+
+
 static func box(parent: Node3D, size: Vector3, origin: Vector3, mat: Material, turn := 0.0) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.position = origin

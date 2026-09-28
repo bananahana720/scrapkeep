@@ -601,6 +601,17 @@ One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick
 
 A slot's charge cap and cooldown scale take two layers: upgrade-tree picks change them directly (add to the cap, multiply the scale), and `item_effects.apply_abilities` re-applies the item layer as a delta it records on the slot (`item_charges`, `item_scale`). Nothing may set an absolute cap or scale except `AbilityState` on a new run. `tests/build_charge_layers_test.gd` holds this in both orders, through sell-back and the cap.
 
+## World and stage v2 (v2 W6)
+
+- **Signals** (`game_events.gd`, world publishes all three): `bay_entered(banked_speed)` when the cradle catches the ball; `bay_left(velocity)` when the pad fires it out or it rolls off the deck; `world_fact(kind, at)` for every contraption, terrain, layer, ride and toy fact. `kind` keys `EventKinds.WORLD_ROWS` (read with `EventKinds.world_row(kind)`), each row naming its sound id. Presentation (W5) needs listeners for all three; until then `presentation_sfx_test` lists them as unheard.
+- **Terrain** (`terrain.gd`): `height()` is the higher of the grid and every live overlay; `overlays` resets from the map's `start_overlays` on `use()`. Also `landmark_point(index)`, `layer_at(point)` ("sky", "shelf" or "undercroft"), `in_bay(point)`, `moss_point()`, `near_moss(point)` and `ground_callable(index)`. Maps may define `overlay_height(id, x, z, ground)`; the default returns -INF.
+- **Event director** (`event_director.gd`): `terrain_event(id)` returns the live `TerrainEvent` model; terrain events announce through `event_announced`, start through `event_started`, and swap through `world._swap(id)`, which logs `swap_log` rows with the call's microseconds.
+- **Bay reads**: `world.bay.inside`, `in_yard(point)`, `on_deck(point)`, `deck_y()`, `cradle_at`, `facing`. While `inside`, world stops the difficulty director, the event clock and pushes and emits pressure 0.
+- **Shop seam**: world calls `ctx.build_module().shop.enter()` on the catch and `leave()` on the way out, keeping the returned line in `world.bay_bark`. Build's own clock reads `shop.clock_paused()`.
+- **Upgrade picks**: world opens `player.tree.open_checkpoint()` on the catch, or at `stage_cleared` for a skipped bay, once per stage per run (`world._open_pick`). player_ball keeps only the `run_started` pick.
+- **Yard**: inside the yard lines world refills each slot's current charges with `abilities.grant(slot, max_charges)`. It never writes a cap or a cooldown scale (Charge and cooldown layers).
+- **Carry in calm**: the barge carry fact is applied even when `ctx.calm` is set; the thermal's lift is a world push and applies only when not calm.
+
 ## v2 V3 hero assets (`src/presentation/hero_assets.gd`)
 
 `presentation.gd` creates the hook as `presentation.hero_assets` and calls `setup(ctx)`. It edits no gameplay file. It reads only these existing seams.
