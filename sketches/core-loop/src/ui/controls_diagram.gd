@@ -6,13 +6,15 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The controls as a picture: the left half of a keyboard and a mouse, every key the
 # game uses drawn in place with its cap, and the rest left blank so the shape reads as
 # a keyboard at a glance. The key list and its words are FieldNotes.CONTROLS (the rows
 # with caps and a short word); with a class, that pilot's own keys (class_kit.gd) light
 # in its class colour and wear their ability icon and two words. Tab's first page and
-# the title's Help page both draw this.
+# the title's Help page both draw this. The board is scrap (scrap_frame.gd): each key a
+# cut plate, its cap from a mismatched set, the mouse taped together, its words on tags.
 
 const ROWS := [
 	[["key_tab", 1.5], ["key_q", 1.0], ["key_w", 1.0], ["key_e", 1.0], ["key_r", 1.0], ["key_t", 1.0], ["key_y", 1.0],
@@ -131,16 +133,16 @@ func _draw() -> void:
 
 
 func _blank(rect: Rect2) -> void:
-	draw_style_box(_plate(Color(Palette.VERDIGRIS, 0.35), Color(Palette.CHARCOAL, 0.35), 1), rect)
+	draw_style_box(_scrap(Color(Palette.VERDIGRIS, 0.35), Color(Palette.CHARCOAL, 0.35), 1, int(rect.position.x * 7.0 + rect.position.y)), rect)
 
 
 func _key(key: String, rect: Rect2) -> void:
 	var entry: Dictionary = _keys[key]
 	var tone: Color = entry["tone"]
 	var lit: bool = entry["lit"]
-	draw_style_box(_plate(tone, Color(tone, 0.2) if lit else Color(Palette.CHARCOAL, 0.9), 3 if lit else 2), rect)
+	draw_style_box(_scrap(tone, Color(tone, 0.2) if lit else Color(Palette.CHARCOAL, 0.9), 3 if lit else 2, key.hash()), rect)
 	var cap := Keycap.size_of(key, CAP)
-	Keycap.draw(self, rect.position + Vector2(6.0 + cap.x * 0.5, 6.0 + CAP * 0.5), key, tone, CAP)
+	Keycap.draw(self, rect.position + Vector2(6.0 + cap.x * 0.5, 6.0 + CAP * 0.5), key, ScrapFrame.wear(tone, key.hash()), CAP)
 	var icon_rect := Rect2(Vector2(rect.end.x - 6.0 - ICON, rect.position.y + 4.0), Vector2(ICON, ICON))
 	if entry["icon"] != "":
 		draw_texture_rect(Icons.texture(entry["icon"]), icon_rect, false, Icons.tint(entry["icon"], tone))
@@ -189,10 +191,11 @@ func _mouse() -> void:
 		if entry["icon"] != "":
 			draw_texture_rect(Icons.texture(entry["icon"]), Rect2(half.get_center() - Vector2(ICON, ICON) * 0.5, Vector2(ICON, ICON)), false,
 				Icons.tint(entry["icon"], tone))
-		var label_rect := Rect2(Vector2(body.position.x - MOUSE_LABEL - 4.0 if i == 0 else body.end.x + 4.0, half.get_center().y - 14.0),
-			Vector2(MOUSE_LABEL, 36.0))
-		_words(entry["label"], label_rect, tone, HORIZONTAL_ALIGNMENT_RIGHT if i == 0 else HORIZONTAL_ALIGNMENT_LEFT)
+		ScrapFrame.stamp(self, entry["label"], UiFonts.bold(), FONT, tone, Color(tone, 0.55), key.hash(),
+			Vector2(body.position.x - 6.0 if i == 0 else body.end.x + 6.0, half.get_center().y + 4.0),
+			HORIZONTAL_ALIGNMENT_RIGHT if i == 0 else HORIZONTAL_ALIGNMENT_LEFT)
 	draw_line(Vector2(body.position.x + 6.0, split), Vector2(body.end.x - 6.0, split), Color(Palette.SAND, 0.5), 2.0)
+	ScrapFrame.draw_tape(get_canvas_item(), Vector2(body.get_center().x, body.end.y - 46.0), -0.32, Vector2(MOUSE_SIZE.x * 0.7, 16.0))
 	if _keys.has(LOOK):
 		var mid := Vector2(body.get_center().x, body.end.y + 16.0)
 		for dir in [Vector2.LEFT, Vector2.RIGHT]:
@@ -213,6 +216,13 @@ func _words(text: String, rect: Rect2, color: Color, align := HORIZONTAL_ALIGNME
 func _arrow(at: Vector2, dir: Vector2, color: Color) -> void:
 	var side := Vector2(-dir.y, dir.x)
 	draw_colored_polygon(PackedVector2Array([at + dir * 9.0, at - dir * 6.0 + side * 8.0, at - dir * 6.0 - side * 8.0]), color)
+
+
+# A key's plate: cut and worn, without rivets, since its cap sits in the corner.
+static func _scrap(edge: Color, fill: Color, width: int, serial: int) -> StyleBox:
+	var box = ScrapFrame.plate(edge, serial, fill, width)
+	box.rivets = false
+	return box
 
 
 static func _plate(edge: Color, fill: Color, width: int) -> StyleBoxFlat:

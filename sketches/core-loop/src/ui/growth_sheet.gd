@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # Tab's "how you grow" page as a flow: scrap rolls into heft, heft makes the punch that
 # beats a Warden's plating, and three side roads feed it (parts from the reward gates,
@@ -89,10 +90,9 @@ func _node(id: String, node: Dictionary) -> void:
 		draw_texture_rect(Icons.shape(shape), Rect2(at + Vector2(R * 0.55, -R * 1.05), Vector2(18.0, 18.0)), false, color)
 	var font := UiFonts.bold()
 	var words: String = node["words"]
-	var w := font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
 	# The top row reads above its nodes, so the side roads rising into it cross no words.
 	var below: bool = at.y > 150.0
-	draw_string(font, Vector2(at.x - w * 0.5, at.y + (R + 30.0 if below else -R - 16.0)), words, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT, Palette.SAND)
+	ScrapFrame.stamp(self, words, font, FONT, Palette.SAND, Color(color, 0.55), id.hash(), Vector2(at.x, at.y + (R + 22.0 if below else -R - 24.0)))
 
 
 # One of the tree's fork cards, tilted.

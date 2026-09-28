@@ -8,6 +8,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
 const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
 # text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
@@ -131,10 +132,8 @@ func setup(game_ref) -> void:
 	_notes.offset_right = -40.0
 	_notes.offset_bottom = -24.0
 	_notes.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var backing := StyleBoxFlat.new()
-	backing.bg_color = Color(0.07, 0.08, 0.11, 0.94)
+	var backing := ScrapFrame.plate(Color(Palette.SAND, 0.3), 5, Color(0.07, 0.08, 0.11, 0.94), 2.0, 0.62)
 	backing.set_content_margin_all(22.0)
-	backing.set_corner_radius_all(6)
 	_notes.add_theme_stylebox_override("panel", backing)
 	add_child(_notes)
 

@@ -7,6 +7,7 @@ const KeycapView := preload("res://src/ui/keycap_view.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
 # the class colour, the role glyph (the row's shape) and name, the fantasy line, a
@@ -14,7 +15,9 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 # opens it: the card lifts, the others step back, the preview plays the signature
 # move, and each key gains its two words and the role line fades in. Those words show
 # only on the open card, so the screen stays calm until you ask about one pilot.
-# Colour and shape come from the class row, keys and icons from class_kit.gd.
+# Colour and shape come from the class row, keys and icons from class_kit.gd. The frame
+# is scrap (scrap_frame.gd): a riveted plate taped at the top, the role line on a stamped
+# tag, keycaps from mismatched sets; the words, icons and letters stay crisp.
 #
 # The mouse opens a card by hovering it (hover takes focus, so there is one open card).
 # The arrows move focus and Enter or Space picks it; the number keys pick at once
@@ -39,6 +42,7 @@ var openness := 0.0
 var preview
 var _details: Array[CanvasItem] = []
 var _cells: Array = []
+var _serial := 0
 
 
 func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
@@ -49,11 +53,12 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	custom_minimum_size = Vector2(width, HEIGHT)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var color: Color = def.color if def != null else Palette.SAND
-	add_theme_stylebox_override("normal", _plate(Color(color, 0.6), 2))
-	add_theme_stylebox_override("hover", _plate(color, 3))
-	add_theme_stylebox_override("pressed", _plate(Palette.AMBER, 4))
-	add_theme_stylebox_override("focus", _plate(color.lightened(0.35), 4, false))
-	add_theme_stylebox_override("disabled", _plate(Color(color, 0.3), 2))
+	_serial = hash(def.id) if def != null else 0
+	add_theme_stylebox_override("normal", _frame(Color(color, 0.6), 2))
+	add_theme_stylebox_override("hover", _frame(color, 3))
+	add_theme_stylebox_override("pressed", _frame(Palette.AMBER, 4))
+	add_theme_stylebox_override("focus", _frame(color.lightened(0.35), 4, false))
+	add_theme_stylebox_override("disabled", _frame(Color(color, 0.3), 2))
 	mouse_entered.connect(_on_hover)
 	if def == null:
 		return
@@ -70,7 +75,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	box.add_child(preview)
 	add_child(_fade(width))
 	box.add_child(_name_row(color))
-	var role := _text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.75))
+	var role := _tagged(_text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.8)), color, _serial + 1)
 	box.add_child(role)
 	_details.append(role)
 	var line := _text(ClassKit.fantasy(def), 18, Palette.SAND)
@@ -136,8 +141,10 @@ func _cell(record: Dictionary, color: Color, width: float) -> VBoxContainer:
 	icon.custom_minimum_size = Vector2(CELL_ICON, CELL_ICON)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(icon)
-	var cap := KeycapView.new(record["key"], color, MOUSE_CAP if Keycap.is_mouse(record["key"]) else CELL_CAP)
+	var cap := KeycapView.new(record["key"], ScrapFrame.wear(color, _serial + record["key"].hash()), MOUSE_CAP if Keycap.is_mouse(record["key"]) else CELL_CAP)
 	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	# Letter caps sit in the mouse cap's height, so every key's words start on one line.
+	cap.custom_minimum_size.y = maxf(cap.custom_minimum_size.y, MOUSE_CAP)
 	cell.add_child(cap)
 	# Every key's words stack on two lines, so no label wraps on its own and the row reads even.
 	var words: String = record["words"]
@@ -197,6 +204,13 @@ func _backdrop(tint: Color) -> void:
 		draw_circle(glow, PREVIEW_H * (0.45 - 0.06 * i), Color(tint, 0.03 + 0.04 * openness))
 
 
+# Every state shares the card's serial, so the plate keeps its cuts, rivets and tape
+# when it lights up.
+func _frame(edge: Color, width: int, fill := true) -> StyleBox:
+	return ScrapFrame.plate(edge, _serial, Color(Palette.CHARCOAL, 0.94 if fill else 0.0), width, 0.5)
+
+
+# The tree pick's cards still draw this flat plate.
 static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.draw_center = fill
@@ -206,6 +220,14 @@ static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 	box.set_corner_radius_all(10)
 	box.corner_detail = 3
 	return box
+
+
+# A label hugging its words on a stamped tag edged in the class colour.
+func _tagged(label: Label, color: Color, serial: int) -> Label:
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	label.add_theme_stylebox_override("normal", ScrapFrame.tag(Color(color, 0.55), serial))
+	return label
 
 
 func _on_hover() -> void:

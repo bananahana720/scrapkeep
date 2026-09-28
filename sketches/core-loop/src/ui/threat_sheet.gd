@@ -5,6 +5,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ThreatGrammar := preload("res://src/combat/threat_grammar.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # Tab's "what hurts you" page: the four attack types of threat_grammar.gd, each as a
 # looping top-down miniature of its telegraph (the same striped fill, front, reticle and
@@ -65,12 +66,8 @@ func _draw() -> void:
 		var id: String = list[i]
 		var rect := Rect2(Vector2(i * (TILE.x + GAP), 0.0), TILE)
 		var tone := Palette.AMBER if id == "own" else Palette.HAZARD
-		var plate := StyleBoxFlat.new()
-		plate.bg_color = Color(Palette.CHARCOAL, 0.95)
-		plate.border_color = Color(tone, 0.8)
-		plate.set_border_width_all(2)
-		plate.set_corner_radius_all(8)
-		draw_style_box(plate, rect)
+		var tape := ScrapFrame.quirk(i, 9) if ScrapFrame.quirk(i, 8) > 0.45 else -1.0
+		draw_style_box(ScrapFrame.plate(Color(tone, 0.8), i + 11, Color(Palette.CHARCOAL, 0.95), 2.0, tape), rect)
 		var stage := Rect2(rect.position + Vector2(10.0, 10.0), Vector2(TILE.x - 20.0, STAGE))
 		var p := fmod(clock + i * 0.23, LOOP) / WARN
 		match id:
@@ -94,8 +91,7 @@ func _draw() -> void:
 			draw_texture_rect(Icons.shape("ring"), Rect2(Vector2(mid - 13.0, row_y + 2.0), Vector2(26.0, 26.0)), false, tone)
 		var font := UiFonts.bold()
 		var words: String = WORDS[id]
-		var w := font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
-		draw_string(font, Vector2(mid - w * 0.5, row_y + 62.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Palette.SAND)
+		ScrapFrame.stamp(self, words, font, 20, Palette.SAND, Color(tone, 0.6), i + 11, Vector2(mid, row_y + 56.0))
 
 
 # A sharp edge; stripes close in from it over the warning; a solid flash on landing.
