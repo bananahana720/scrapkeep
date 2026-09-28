@@ -36,6 +36,16 @@ from the same guide-through-Demucs inputs:
   vocals    a real sung vocal 24 dB under the guide, through Demucs
   seam      the loop cut one sixteenth long          (off-grid)
 
+Validity correction after screening (2026-09-28, recorded as a deviation, the pre-registered
+result is kept in screen-preregistered.{json,md}). The Warden's seam measured the build's
+bar 16 -> bar 1 wrap against bar 17, a loop neither timeline.json nor the runtime plays; its
+continuation is the telegraph, and in warden-F-085-s7 bars 1-8 are a lighter intro kick whose
+envelope sits 9 ms earlier than bars 9-28 (per-bar drift lags 13-17 ms, then 24 ms flat), so it
+read a kick-sound change as 17.4 ms of seam. For parents in JUMP_SEAM_PARENTS the seam's timing
+half is instead the jumps the timeline plays between full-mix states (drop bar 28 -> build
+bar 9 and -> bar 13): |per-bar drift lag of the target - of the source| <= 12 ms. The join-step
+half is unchanged. Its negative control shifts each jump target bar one sixteenth late.
+
 Selection, fixed before round 2 was rendered or screened. A survivor passes every counted gate;
 pilot takes and the Fns diagnostic caption are never selected. The best of a pool has the lowest
 |tempo drift|, then the lowest vocal residue. Calm takes are straight (the caption asks for
@@ -88,6 +98,7 @@ PLANT = 'diagnostic/F/F.wav'
 
 GATES = ('tempo', 'downbeat', 'dorian', 'chords', 'density', 'lag', 'vocals', 'seam')
 LIMITS = dict(tempo_ms=12.0, dorian_margin=.05, lag_ms=12.0, vocals_db=-45.0, seam_lag_ms=12.0, seam_step_db=0.0)
+JUMP_SEAM_PARENTS = ('warden',)
 NEGATIVE = dict(tempo='resampled 0.2% slow', downbeat='one eighth late', dorian='up a semitone',
                 chords='bars shuffled', density='12-layer render (rejected)', lag='bass 40 ms late',
                 vocals=f'real vocal {VOICE_UNDER_DB:.0f} dB under', seam='loop one sixteenth long')
@@ -198,9 +209,38 @@ class Parent:
         self.bar, self.n, self.step = bl.grid(self.guides)
         self.start, self.bars, self.bpm, _ = bl.region(self.guides)
         self.ref = bl.reference(self.guides, self.bar, self.step)
+        self.jumps = jump_pairs(self, json.loads((slice_dir / 'timeline.json').read_text())) if parent in JUMP_SEAM_PARENTS else []
+
+    def region_bar(self, frame):
+        return (frame - self.start) // self.bar + 1
 
     def guide(self):
         return [load(self.guides / f'guide-full{s}.wav') for s in ('', '.drums', '.bass')]
+
+
+def jump_pairs(p, plan):
+    """(last region bar before, first region bar after) for every jump the timeline makes between two
+    full-mix states of this parent, both inside the screened region."""
+    pairs = []
+    states = plan['states']
+    for a, b in zip(states, states[1:]):
+        if a['parent'] != p.name or b['parent'] != p.name or a['source_start'] + a['frames'] == b['source_start']:
+            continue
+        if STATE_PROFILE.get(kind(a['state']), 'full') != 'full' or STATE_PROFILE.get(kind(b['state']), 'full') != 'full':
+            continue
+        src, dst = p.region_bar(a['source_start'] + a['frames'] - 1), p.region_bar(b['source_start'])
+        if 1 <= src <= p.bars and 1 <= dst <= p.bars and (src, dst) not in pairs:
+            pairs.append((src, dst))
+    return pairs
+
+
+def jump_targets_late(drums, p):
+    out = drums.copy()
+    shifted = late(drums, p.step)
+    for _, dst in p.jumps:
+        a = p.start + (dst - 1) * p.bar
+        out[a:a + p.bar] = shifted[a:a + p.bar]
+    return out
 
 
 def seam_measure(mix, drums, off, bar, n, extra=0):
@@ -225,6 +265,9 @@ def measure(p, mix, drums, bass, vocals_db, seam_extra=0):
     row = bl.screen_take(*cut, p.ref, p.bar, p.step, p.n)
     row.update(seam_measure(cut[0], cut[1], row['trim_samples'], p.bar, 16 * p.bar, seam_extra))
     row['vocals_rms_db'] = vocals_db
+    if p.jumps:
+        lags = row['drift_lag_ms_per_bar']
+        row['seam_jump_ms'] = round(max(abs(lags[dst - 1] - lags[src - 1]) for src, dst in p.jumps), 2)
     return row
 
 
@@ -241,8 +284,15 @@ def values(row, p, b_dens):
                  row['density_mean'] <= b_dens['mean'] and row['density_p90'] <= b_dens['max']),
         lag=(row['lock_lag_median_ms'], abs(row['lock_lag_median_ms']) <= LIMITS['lag_ms']),
         vocals=(row['vocals_rms_db'], row['vocals_rms_db'] is not None and row['vocals_rms_db'] <= LIMITS['vocals_db']),
-        seam=(f"{row['seam_step_over_p999_db']}/{row['seam_lag_ms']}",
-              row['seam_step_over_p999_db'] <= LIMITS['seam_step_db'] and abs(row['seam_lag_ms']) <= LIMITS['seam_lag_ms']))
+        seam=seam_value(row, p))
+
+
+def seam_value(row, p):
+    step_ok = row['seam_step_over_p999_db'] <= LIMITS['seam_step_db']
+    if p.jumps:
+        return (f"{row['seam_step_over_p999_db']}/jumps {row['seam_jump_ms']}",
+                step_ok and row['seam_jump_ms'] <= LIMITS['seam_lag_ms'])
+    return f"{row['seam_step_over_p999_db']}/{row['seam_lag_ms']}", step_ok and abs(row['seam_lag_ms']) <= LIMITS['seam_lag_ms']
 
 
 def late(y, frames):
@@ -282,7 +332,8 @@ def controls(slice_dir):
             'dorian': measure(p, *[resample_poly(y, 84, 89, axis=0) for y in (mix, drums, bass)], pos_voc),
             'chords': measure(p, shuffled_bars(mix, p), drums, bass, pos_voc),
             'lag': measure(p, mix, drums, late(bass, round(0.040 * SR)), pos_voc),
-            'seam': measure(p, mix, drums, bass, pos_voc, seam_extra=sixteenth),
+            'seam': (measure(p, mix, jump_targets_late(drums, p), bass, pos_voc) if p.jumps
+                     else measure(p, mix, drums, bass, pos_voc, seam_extra=sixteenth)),
         }
         pv = values(pos, p, b_dens)
         rows = {}
@@ -294,9 +345,10 @@ def controls(slice_dir):
                 neg_value, neg_pass = neg_voc, neg_voc <= LIMITS['vocals_db']
             else:
                 neg_value, neg_pass = values(neg_rows[g], p, b_dens)[g]
-            rows[g] = dict(positive=pv[g][0], positive_pass=pv[g][1], negative=NEGATIVE[g], negative_value=neg_value,
+            negative = 'jump targets one sixteenth late' if g == 'seam' and p.jumps else NEGATIVE[g]
+            rows[g] = dict(positive=pv[g][0], positive_pass=pv[g][1], negative=negative, negative_value=neg_value,
                            negative_pass=neg_pass, counted=bool(pv[g][1] and not neg_pass))
-        report['parents'][parent] = dict(guide_dorian=p.ref['dorian'], gates=rows)
+        report['parents'][parent] = dict(guide_dorian=p.ref['dorian'], seam_jumps=p.jumps, gates=rows)
         print(parent, {g: ('counted' if r['counted'] else 'report-only') for g, r in rows.items()}, flush=True)
     (out / 'controls.json').write_text(json.dumps(report, indent=1, default=str))
     lines = ['| parent | gate | positive (guide through Demucs) | pass | negative control | negative value | fails | status |',
@@ -419,7 +471,17 @@ def build(plan, sources):
         y, trim = sources[s['parent']]
         joined = i > 0 and not continues(states[i - 1], s)
         pre = JOIN if joined else 0
-        seg = segment(y, s['source_start'] + trim - pre, pre + s['frames'])
+        lo = s['source_start'] + trim - pre
+        seg = segment(y, lo, pre + s['frames'])
+        # A cut that reaches past either end of the take meets the take's first or last sample; ramp it.
+        if lo < 0:
+            k = -lo
+            n = min(JOIN, len(seg) - k)
+            seg[k:k + n] *= np.sin(np.linspace(0, np.pi / 2, n))[:, None]
+        if lo + len(seg) > len(y):
+            k = len(y) - lo
+            n = min(JOIN, k)
+            seg[k - n:k] *= np.cos(np.linspace(0, np.pi / 2, n))[:, None]
         if joined:
             seg[:JOIN] *= np.sin(theta)
         if i == len(states) - 1:
@@ -561,7 +623,8 @@ def assemble(slice_dir):
         done['assemblies'][label] = dict(
             takes={p: dict(take=pick[p]['take'], path=pick[p]['path'], sha256=pick[p]['sha256'],
                            trim_samples=pick[p]['trim_samples'], tempo=pick[p]['tempo_drift_per_16_bars_ms'],
-                           vocals=pick[p]['vocals_rms_db'], reported=pick[p]['reported']) for p in PARENTS},
+                           vocals=pick[p]['vocals_rms_db'], reported=pick[p]['reported'], hats_caption=pick[p]['hats'],
+                           hat_s2_vs_guide_ms=pick[p].get('hat_s2_vs_guide_ms')) for p in PARENTS},
             calm_rule=pick['calm_rule'], warden_rule=pick['warden_rule'],
             drop_downbeat_kick=25 not in pick['warden']['missing_downbeats'],
             arc=measured, arc_negative_raw=raw, edge_clicks=clicks(mastered, plan),
@@ -590,7 +653,9 @@ def pack(slice_dir, dest):
             target = dest / f'Y{i}{ext}'
             shutil.copyfile(src.with_suffix(ext), target)
             manifest[target.name] = hashlib.sha256(target.read_bytes()).hexdigest()
-        key[f'Y{i}'] = dict(label=label, takes={p: t['take'] for p, t in entry['takes'].items()}, source=str(src))
+        key[f'Y{i}'] = dict(label=label, takes={p: t['take'] for p, t in entry['takes'].items()}, source=str(src),
+                            calm_rule=entry.get('calm_rule'), warden_rule=entry.get('warden_rule'),
+                            calm_hat_s2_vs_guide_ms=entry['takes']['calm'].get('hat_s2_vs_guide_ms'))
     (dest / '.key.json').write_text(json.dumps(key, indent=1))
     (dest / 'README.txt').write_text('Rank by ear, note any moment that sounds wrong, and say which are fit for the game.\n')
     (rdir(slice_dir) / 'pack-manifest.json').write_text(json.dumps(dict(dest=str(dest), sha256=manifest), indent=1))
