@@ -13,6 +13,7 @@ const Push := preload("res://tests/workshop/push.gd")
 #     and the short setting, and every card's effect line is at most six words;
 #   - a vault find queues while an enemy is near and pauses the tree only once it is gone;
 #   - the ball's velocity is identical across the pause;
+#   - a reveal card showing when the crate opens plays again after it;
 #   - a key during the build jumps to the reveal, a second key closes it;
 #   - the payoff accent waits for the part to land, then fires once on its first effect;
 #   - a completed synergy's card snaps a wire to the partner's glyph;
@@ -35,6 +36,7 @@ var _revealed := ""
 var _v0 := Vector3.ZERO
 var _s0 := Vector3.ZERO
 var _t0 := 0
+var _card_after := false
 
 
 func _initialize() -> void:
@@ -109,6 +111,7 @@ func _process(_delta: float) -> bool:
 				var ball: Vector3 = _game.player.ball_position()
 				_enemy = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x + 6.0, ball.z + 6.0, 1.0))
 				_game.run.add_part("sunforged_core", "vault")
+				_game.run.add_part("tempest_core", "milestone")
 				_game.ctx.spawner.strike(_enemy, "shell", 1.0)
 				_next("near")
 		"near":
@@ -116,8 +119,9 @@ func _process(_delta: float) -> bool:
 				_report("queued while not calm", _ceremony.queued() == 1 and not _ceremony.active() and not paused and not _ceremony.calm(),
 					"an enemy %.1f m off: queued %d, active %s, paused %s" % [_enemy.global_position.distance_to(_game.player.ball_position()),
 						_ceremony.queued(), _ceremony.active(), paused])
-				_report("no payoff before it lands", _ceremony.payoffs.is_empty() and _ceremony.armed().is_empty(),
-					"a strike while the find waits: payoffs %s, armed %s" % [_ceremony.payoffs, _ceremony.armed()])
+				_report("no payoff before it lands", _ceremony.payoffs.filter(func(p: Array): return p[0] == "sunforged_core").is_empty()
+						and not _ceremony.armed().has("sunforged_core"),
+					"a strike while the vault find waits: payoffs %s, armed %s" % [_ceremony.payoffs, _ceremony.armed()])
 				_game.ctx.spawner.strike(_enemy, "ram", 9999.0)
 				_game.player.set_velocity_now(Vector3(4.0, 0.0, 3.0))
 				_next("calming")
@@ -139,10 +143,16 @@ func _process(_delta: float) -> bool:
 				var v1: Vector3 = body.linear_velocity
 				var s1: Vector3 = _game.player.state.velocity
 				_report("closes", not paused and _ceremony.phase() == "out", "a second key: paused %s, phase %s" % [paused, _ceremony.phase()])
+				_card_after = true
 				_report("velocity kept", v1 == _v0 and s1 == _s0 and _v0.length() > 0.5,
 					"body %s -> %s, state %s -> %s" % [_v0, v1, _s0, s1])
 				_next("payoff")
 		"payoff":
+			if _card_after and _elapsed() > 400:
+				_card_after = false
+				var shown: Dictionary = _ceremony.view.card
+				_report("a card the crate interrupted comes back", shown.get("part", "") == "tempest_core" and not shown.get("ceremony", true),
+					"after the ceremony the card shows %s" % shown.get("part", "nothing"))
 			if _elapsed() > 600:
 				var armed: Array = _ceremony.armed()
 				var ball: Vector3 = _game.player.ball_position()

@@ -338,7 +338,7 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 		"tint": RewardGates.rarity_color(rarity), "heart": row["heart"] if rarity == "rare_plus" else false,
 		"partner_icon": icon_of(find["partner"]) if String(find["partner"]) != "" else "", "link": find["link"],
 		"class_color": _class_color(), "start_ms": start, "in_s": row["in_s"], "hold_s": row["hold_s"], "out_s": row["out_s"],
-		"snap_s": row["snap_s"], "seed": absi(String(find["part"]).hash()), "ceremony": in_ceremony}
+		"snap_s": row["snap_s"], "seed": absi(String(find["part"]).hash()), "ceremony": in_ceremony, "find": find}
 
 
 func _class_color() -> Color:
@@ -438,6 +438,8 @@ func _begin(find: Dictionary) -> void:
 	view.set_ceremony({"start_ms": now, "burst_ms": -1, "close_ms": -1, "in_s": row["in_s"], "build_s": row["build_s"],
 		"hold_s": row["hold_s"], "out_s": row["out_s"], "tint": RewardGates.rarity_color(find["rarity"]),
 		"class_color": _class_color(), "seed": absi(String(find["part"]).hash()), "hull": hull})
+	if not view.card.is_empty() and not view.card.get("ceremony", false):
+		_cards.push_front(view.card["find"])
 	view.card = card_state(find, now, true)
 	audio.play("reward_ceremony")
 	started.emit(find["part"])
