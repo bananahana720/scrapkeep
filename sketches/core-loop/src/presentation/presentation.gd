@@ -7,6 +7,7 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const DropJuice := preload("res://src/presentation/drop_juice.gd")
+const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -24,6 +25,7 @@ const DropJuice := preload("res://src/presentation/drop_juice.gd")
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
+#   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
 
 var ctx
 var audio
@@ -33,6 +35,7 @@ var banner
 var hero_assets
 # The v3 drop mode's own juice (drop_juice.gd), apart from the universal layer.
 var drop_juice
+var ceremony
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -66,6 +69,9 @@ func setup(ctx_ref) -> void:
 	drop_juice = DropJuice.new()
 	add_child(drop_juice)
 	drop_juice.setup(ctx, audio)
+	ceremony = RewardCeremony.new()
+	add_child(ceremony)
+	ceremony.setup(ctx, audio, juice, vfx)
 	wire_optional()
 
 

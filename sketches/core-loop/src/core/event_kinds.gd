@@ -362,7 +362,41 @@ const LOOT_ROWS := {
 	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
 	"item_proc": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "sound_next": "trigger_tick", "hud": "", "objective": "", "priority": 0},
 	"par_split": {"group": "flow", "color": Palette.SAND, "shape": "bar", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 W13 reward ceremony. How a part find is presented, one row per tier, read by
+	# presentation/reward_ceremony.gd; the tier comes from REWARD_TIER_BY_RARITY and the
+	# find's context. A tier's colour is its ring and card edge before the rarity tints
+	# it; `pause` is never (in the flow) or calm (only when nothing hostile is near).
+	# Times in seconds. The payoff is the one-time accent the first time a revealed or
+	# ceremonial part's effect fires, ringing the same rarity bell it arrived with.
+	"reward_common": {"group": "economy", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "rarity_tick", "hud": "", "objective": "", "priority": 1,
+		"tier": "common", "pause": "never"},
+	"reward_rare": {"group": "economy", "color": Palette.AMBER, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
+	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
+		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,
+		"stamps": {"common": "COMMON", "uncommon": "UNCOMMON", "rare": "RARE", "rare_plus": "RARE+", "evolution": "EVOLVED", "first": "NEW"}},
+	"reward_ceremony": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "ceremony_build", "sound_burst": "ceremony_resolve", "hud": "", "objective": "", "priority": 3,
+		"tier": "ceremony", "pause": "calm", "burst_role": "class", "in_s": 0.25, "build_s": 1.4, "hold_s": 1.8, "out_s": 0.25,
+		"calm_hold_s": 0.4, "calm_wait_s": 10.0, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
+	"reward_payoff": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+		"tier": "payoff", "pause": "never", "flash_s": 0.7},
 }
+
+# v3 W13 reward ceremony. The ladder: the tier a rarity is presented at before the
+# find's context raises it (a first find or a completed synergy raises common and rare
+# to the reveal card). Evolution is the ladder's top rung, a ceremony wherever it drops.
+const REWARD_TIERS := ["common", "rare", "reveal", "ceremony"]
+const REWARD_TIER_BY_RARITY := {"common": "common", "uncommon": "common", "rare": "rare", "rare_plus": "reveal", "evolution": "ceremony"}
+# part_gained sources that are a ceremony whatever the rarity: the gate the Warden's break
+# opens, Brindle's crest, a vault, and the cracked-wall cache, the cage on the mast and
+# evolution rewards once their sources publish.
+const CEREMONY_SOURCES := ["gate", "boss", "vault", "cache", "cage", "warden", "evolution"]
+# Each rarity's bell on the reward ladder (Harmony.pentatonic_step), so a rarer find rings higher.
+const REWARD_RUNGS := {"common": 0, "uncommon": 2, "rare": 4, "rare_plus": 5, "evolution": 7}
+
+
+static func reward_row(tier: String) -> Dictionary:
+	return LOOT_ROWS.get("reward_" + tier, {})
 
 
 # v2 W6 world
