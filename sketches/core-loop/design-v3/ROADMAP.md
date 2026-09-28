@@ -55,6 +55,19 @@ Andrew: the HUD should be "kind of like a um, hack together heads up display jus
 - **One procedural helper** (`src/ui/scrap_frame.gd`: plate, rivets, tape, stamp tag), started by W12 on the class card and Tab pages. The HUD v3 build wave (FEEL-READABILITY F2) adopts it. The Codex track may supply painted Style A reference sheets for it.
 - **Measure:** the word budget, glyph legibility at 1080p, and the density-governor stills are unchanged by the frame. A fight still reads at a glance.
 
+## Waves to the final draft (set 2026-09-28)
+
+| Wave | What | Status |
+| --- | --- | --- |
+| **A. Lab** | L1 drop, L2 laps, L3 interact, W11 juice, W12 cards and Tab, W13 ceremony. Merge into `proto/core-loop-v3`, run the fun gate (the camper fails), then Andrew's sitting. | Building |
+| **B. Consolidate** | The lab verdict plus a one-page `DESIGN-V3.md`: fold in LOOP, SYSTEMS, STRATEGY-SPINE, AUDIO-V3, FEEL and STAGES; archive the rest; delete the losing loop mode and the v2 fallbacks. | After A |
+| **C. Spine on all stages** | STAGES-2-3 build units (shared returns, gorge, weir, bot evidence); the Warden reads for the hive and mind families. | After B |
+| **D. Systems core** | The strategy spine's minimal set (rarity ladder, 3 primes, 4 reactions, 2 persistent actors, channel mapping), drop gates, and 4 evolutions. | After B, parallel with C |
+| **E. Feel and HUD** | F1 density governor, F2 HUD v3 in the scrapped-together look, F3 camera; synergy toasts become a glyph plus a name; visual accretion is capped. | After A, parallel with C and D |
+| **F. Music and sound** | AU1 engine (window, pivot, pins), AU2 bank, AU3 wiring, AU4 measures; ACE-Step beds only if Andrew's blind A/B says yes. | AU1 now; AU2 and AU3 after A |
+| **G. World and environment** | Codex track: Style A scenery on all three stages around the loop geometry; Warden family looks; interactable props (the 27k-triangle plan); lore surfaced by callbacks and the codex. | After C geometry lands |
+| **H. Performance and handoff** | CPU-side perf-lab (dense fights are CPU-bound, per STRESS-CAPTURE-1), native 1080p p99 of 16.7 ms or less, settings, Linux export, Andrew's early-access play. | Last |
+
 ## Treasure-find ceremony (Andrew, 2026-09-28)
 
 Andrew wants "fun uh, discovery sort of like treasure find ceremony when you find an item". He wants anticipation that builds, then a reveal that pays off when the item "changes the the way they play or makes them feel empowered". The ceremony pauses only "if it's I guess warranted if ... the area has calmed down after a boss fight".
