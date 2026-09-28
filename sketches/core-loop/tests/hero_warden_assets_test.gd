@@ -158,6 +158,9 @@ func check_family() -> void:
 	warden._kit.update(0.0)
 	hook._update_warden(rec)
 	check("weak point opening", rec.weak.scale.is_equal_approx(Vector3.ONE * 1.3) and rec.materials.ancient_light.emission_energy_multiplier == warden._kit.SEAM_OPEN)
+	if warden.family == "swarm":
+		check("queen hatch exposes core while open", rec.queen_hatch != null and is_equal_approx(rec.queen_hatch.rotation.z, -PI * 0.5))
+		check("other queen hatch stays closed", is_zero_approx(second.queen_hatch.rotation.z))
 	check("other stays closed", second.weak.scale.is_equal_approx(Vector3.ONE) and is_equal_approx(second.materials.ancient_light.emission_energy_multiplier, other._kit.SEAM_DIM))
 	warden.set_tint("amber")
 	hook._update_warden(rec)
@@ -177,6 +180,8 @@ func check_family() -> void:
 	warden._kit.update(0.0)
 	hook._update_warden(rec)
 	check("weak point recloses", rec.weak.scale.is_equal_approx(Vector3.ONE))
+	if warden.family == "swarm":
+		check("queen hatch recloses", is_zero_approx(rec.queen_hatch.rotation.z))
 	dead_ids.append(other.get_instance_id())
 	other._die()
 

@@ -438,7 +438,9 @@ func _dress_warden(warden) -> void:
 	mount.position = kit.position - tower.position
 	base.add_child(kit)
 	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
-		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": []}
+		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null}
+	if warden.family == "swarm":
+		_split_queen_hatch(weak, rec)
 	_paint_warden(base, rec)
 	if warden.family == "mind":
 		var lens := Node3D.new()
@@ -465,6 +467,29 @@ func _dress_warden(warden) -> void:
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
 	_dress_mast.call_deferred(warden)
+
+
+func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
+	var body := ArrayMesh.new()
+	var cap := ArrayMesh.new()
+	for surface in weak.mesh.get_surface_count():
+		var target := cap if slot_of(weak.mesh, surface) == "rubber" else body
+		target.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, weak.mesh.surface_get_arrays(surface))
+		target.surface_set_material(target.get_surface_count() - 1, weak.mesh.surface_get_material(surface))
+	if cap.get_surface_count() == 0:
+		return
+	weak.mesh = body
+	var bounds := cap.get_aabb()
+	var hinge := Node3D.new()
+	hinge.name = "QueenHatch"
+	hinge.position = Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z)
+	weak.add_child(hinge)
+	var shutter := MeshInstance3D.new()
+	shutter.name = "Shutter"
+	shutter.mesh = cap
+	shutter.position = -hinge.position
+	hinge.add_child(shutter)
+	rec.queen_hatch = hinge
 
 
 func _prewarm_warden_strokes() -> void:
@@ -625,6 +650,8 @@ func _update_warden(rec: Dictionary) -> void:
 	var warden = rec.warden
 	rec.base.rotation.y = warden._look._jaws.rotation.y
 	rec.weak.scale = warden._kit._open_node.scale
+	if rec.queen_hatch != null:
+		rec.queen_hatch.rotation.z = -PI * 0.5 if warden.family_open() else 0.0
 	if rec.lens != null:
 		rec.lens.global_basis = warden._kit._lens.global_basis * Basis(Vector3.UP, PI * 0.5)
 		for shutter in rec.shutters:
