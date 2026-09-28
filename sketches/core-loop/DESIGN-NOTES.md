@@ -871,3 +871,25 @@ Option C of `design-v3/LOOP-REDESIGN.md` on stage 1, behind `--loop=laps` (or th
 - Visible from the drop: before the bell, the five rings and three collars stand, and the terrain blocks no sight line from the stage's drop point to any ring's top or to the top collar; the farthest is 176 m. That is a height-field sight line, not a render. Fog, the camera's heading and whether dim bone reads against the sand still need Andrew's eye.
 
 `tests/loop_laps_test.gd` covers the camper, the course standing before the bell with clear sight lines from the drop, the lift's banked speed, the wake, the strip, ring order, the director per lap and v2 untouched.
+
+## v3 M0 delivered damage
+
+Before any balance work, a baseline: how much HP is actually removed, from what, and where (design-v3/STRATEGY-SPINE.md §7 row M0, §8 row 1; design-v3/research/CODEX-REVIEW-2-systems.md's recommendation). `strike()` in `combat.gd` is the one place a hit becomes damage, so it is the one place a ledger can be written without double counting; `enemy.take_damage()` now returns the HP it actually removed, clamped to what was left, so overkill is clamped at the source instead of re-derived later.
+
+**The ledger.** Per hit: source (`weapon`, `ram_or_contact`, `drop_or_slam`, `special`, `item_proc`, `persistent_actor`), action id (the strike kind: `arc`, `runner`, `ram`, `sticky`, `synergy`...), target class (`enemy`, `Warden`, `adds` for a Fleet reinforcement, `boss` for Brindle), and a range bucket (near ≤ 6 m, mid ≤ 16 m, far beyond, from the ball at the moment of the hit). Totals, overkill, hit count and zero-damage-hit count are cumulative for the run; retirement counts are kills by target class; `drops_to_break` counts `drop_or_slam` hits landed on the Warden since stage entry, snapshotted per stage on `beacon_unsealed` (the Warden's break).
+
+**Source, honestly.** Where the kind string alone says the source (a ball contact, a synergy strike, a pin, a batted shell), classification is automatic. Where it does not (a discharge, an overdrive blast, an upgrade-tree proc, a sticky charge thrown versus dropped), combat tags the call site or the charge itself; every strike() call from outside this file (build.gd, element_field.gd) that names no source falls back to `item_proc`, since SEAMS.md says those are never the player's own weapon fire or gauge release. One known simplification: `drops_to_break` counts every `slam`-kind hit on the Warden, not specifically drop-mode's own lip-and-weak-point landing, since that tagging lives in warden.gd (out of this unit's file scope); a later unit should confirm the two agree before trusting the count for tuning.
+
+**Scenery.** Never a special case: a piece that cannot be hit (boss_target.gd's world-layer wrecked hull) never reaches `strike()`, so it never reaches the ledger.
+
+**Where it lands.** `run_log.gd` mirrors the ledger from `ctx.run`'s meta into each run's own `delivered_damage` record (present and at zero for a run with no hits, never missing), and `tools/balance_report.gd` sums it across runs into a "Delivered damage (M0 baseline)" section: HP by source, by action, by target class (with retirements), and by range.
+
+**Measured.** One skipper seed (runner_gunner), stage 1 only: `godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/m0-bot --policy=skipper --seeds=1 --stages=1`, then `godot --headless --path sketches/core-loop --script res://tools/balance_report.gd -- --in=artifacts/local/m0-bot --label=m0-demo`. One run, not a trend; the table below is the report doing its job, not a balance reading.
+
+| Source | HP | | Action | HP | | Target class | HP | Retirements | | Range | HP |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ram_or_contact | 269 | | ram | 243 | | Warden | 800 | 1 | | near | 365 |
+| special | 72 | | runner | 557 | | enemy | 26 | 1 | | mid | 211 |
+| weapon | 485 | | shell | 26 | | | | | | far | 250 |
+
+359 hits, 826 HP delivered, 15 HP overkill clamped, 0 zero-damage runs. Every column sums to the same 826, on the same run: `tests/combat_delivered_damage_test.gd` proves that reconciliation directly (overkill clamp, zero-damage hits, scenery exclusion, retirements, drops_to_break) rather than trusting one bot run to show it.

@@ -174,6 +174,10 @@ func _write(outcome: String) -> void:
 	line["stages"] = stages
 	line["codex"] = codex.discovered_this_run() if codex != null else []
 	line["anomalies"] = run.anomalies.duplicate(true)
+	# M0's delivered-damage ledger (combat.gd), mirrored onto the run through set_meta so
+	# this module never needs its own reference to the spawner. A run with no hits still
+	# carries the reset ledger (total 0.0), so a zero-damage run reads as zero, not missing.
+	line["delivered_damage"] = run.get_meta("delivered_damage", {})
 	_dirty = false
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1
