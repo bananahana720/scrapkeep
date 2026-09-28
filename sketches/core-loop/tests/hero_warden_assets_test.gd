@@ -28,6 +28,7 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	ticks += 1
 	if ticks == 1:
+		check("ribbons ready before run starts", game.presentation.hero_assets._meshes.keys().filter(func(k): return k.begins_with("warden_stroke:")).size() == 24)
 		game.ctx.calm = true
 		game.flow.force_warden = true
 		game.flow.press_start()

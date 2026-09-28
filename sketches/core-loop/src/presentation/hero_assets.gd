@@ -74,6 +74,7 @@ var _warned := {}
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "HeroAssets"
+	_prewarm_warden_strokes()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -460,6 +461,28 @@ func _dress_warden(warden) -> void:
 			_hide_warden_mesh(child, rec)
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
+	_add_warden_strokes(base, warden._look, warden, rec)
+	_wardens[warden.get_instance_id()] = rec
+	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
+	_update_warden(rec)
+
+
+func _prewarm_warden_strokes() -> void:
+	var base := _warden_scene(WARDEN_BASE)
+	if base == null or not base.has_node("JawL") or not base.has_node("JawR"):
+		if base != null: base.free()
+		return
+	# Detached presentation builders only: no enemy setup, tree entry, events or physics.
+	var cue_owner := preload("res://src/combat/enemy.gd").new()
+	var look := WardenLook.new()
+	cue_owner.add_child(look)
+	cue_owner.add_child(base)
+	look._build_jaws()
+	_add_warden_strokes(base, look, cue_owner, {"seams": [], "cracks": []})
+	cue_owner.free()
+
+
+func _add_warden_strokes(base: Node3D, look: Node3D, cue_owner: Node3D, rec: Dictionary) -> void:
 	for side in [-1.0, 1.0]:
 		var jaw: MeshInstance3D = base.get_node("JawL" if side < 0 else "JawR")
 		var faces := jaw.mesh.get_faces()
@@ -469,8 +492,8 @@ func _dress_warden(warden) -> void:
 		panel.position = normal * 3.77 + Vector3.UP * 3.9 - jaw.position
 		panel.basis = Basis.looking_at(-normal)
 		jaw.add_child(panel)
-		for level in warden._look._seams.size():
-			var row: Array = warden._look._seams[level]
+		for level in look._seams.size():
+			var row: Array = look._seams[level]
 			for i in 3:
 				var old := row[i] as MeshInstance3D
 				var seam := MeshInstance3D.new()
@@ -484,13 +507,10 @@ func _dress_warden(warden) -> void:
 				_fit_warden_stroke(seam, jaw, faces)
 				rec.seams.append({"node": seam, "source": old})
 		# Existing enemy helper owns the class-colour open-crack grammar and tint list.
-		var crack: Node3D = warden._add_crack(panel, Vector3(0, 0, 0.08), 0.8)
+		var crack: Node3D = cue_owner._add_crack(panel, Vector3(0, 0, 0.08), 0.8)
 		for stroke in crack.get_children():
 			_fit_warden_stroke(stroke, jaw, faces)
 		rec.cracks.append(crack)
-	_wardens[warden.get_instance_id()] = rec
-	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
-	_update_warden(rec)
 
 
 # Keep each stroke's readable length, but wrap a narrow ribbon around the cast jaw.

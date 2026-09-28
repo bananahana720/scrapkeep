@@ -31,3 +31,5 @@ No native image or performance claim follows from headless checks. The parent ow
 ## VD-04-A2 surface-fit correction
 
 Independent review of 81477da found the flat copied shred strokes floated up to 0.705 m from the tapered jaws. The replacement samples both edges and the centre of every ribbon cross-section, including stroke endpoints and centre, plus every triangle interior, against independently intersected jaw triangles. The focused test requires absolute radial clearance at most 0.03 m for all 1,494 samples per family. Three shred levels and their source-driven visibility remain. Native readability still requires parent inspection. Prior candidate evidence is preserved under VD-04-A1.
+
+The same stroke construction and projection helpers now prewarm those 24 immutable meshes in `HeroAssets.setup`, before `game.gd` connects title/start flow and input. Prewarming uses detached presentation builders: no enemy setup, tree entry, combat events or physics. Each live Warden retains private animated materials. This moves the measured first-fit CPU cost to startup; native first-appearance upload remains unmeasured.
