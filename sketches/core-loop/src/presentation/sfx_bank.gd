@@ -66,6 +66,14 @@ const TRIM_DB := {
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
 	"near_whoosh": -6.0, "crit_ping": -7.0, "kest_kick_thump": 0.0,
+	# v3 AU2 bank: bets, secrets, allies, opt-in fights, the escalation's ladder and the
+	# ride's return (design-v3/AUDIO-V3.md sections 4, 5, 8, 11).
+	"bet_roll": -7.0, "bet_clunk": -4.0, "bet_crack": -2.0, "bet_refusal": -6.0,
+	"sunken_bell": -6.0, "ally_hum_sable": -14.0, "ally_hum_rivet": -14.0, "ally_hum_kest": -14.0,
+	"ally_wake": -6.0, "fight_arm_stamp": -4.0,
+	"near_miss_whip_sable": -6.0, "near_miss_whip_rivet": -6.0, "near_miss_whip_kest": -6.0,
+	"kill_chain_tier": -5.0, "drop_landing": -3.0, "door_tick": -9.0,
+	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -334,6 +342,36 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_noise(0.05, 2500.0, 900.0, 60.0), 0, 0.6], [_fm(0.25, 523.0, 2.76, 2.0, 14.0), Synth.seconds(0.06), 0.35]], true)
 		"babble":
 			return babble("Hm. Hm, hm.", BABBLE_LEVEL)
+		"bet_roll":
+			return _bet_roll()
+		"bet_clunk":
+			return _bet_clunk()
+		"bet_crack":
+			return _bet_crack()
+		"bet_refusal":
+			return _bet_refusal()
+		"sunken_bell":
+			return _sunken_bell()
+		"ally_hum_sable", "ally_hum_rivet", "ally_hum_kest":
+			return _ally_hum(id.get_slice("_", 2))
+		"ally_wake":
+			return _ally_wake()
+		"fight_arm_stamp":
+			return _fight_arm_stamp()
+		"near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest":
+			return _near_miss_whip(id.get_slice("_", 3))
+		"kill_chain_tier":
+			return _kill_chain_tier()
+		"drop_landing":
+			return _drop_landing()
+		"door_tick":
+			return _door_tick()
+		"return_launch_arpeggio":
+			return _return_launch_arpeggio()
+		"lift_hiss":
+			return _lift_hiss()
+		"crater_hold":
+			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
@@ -888,10 +926,12 @@ static func _mind_quote(class_id: String) -> PackedFloat32Array:
 	return Synth.render_score(score, 2.4)
 
 
-# A hold loop, n samples long. The four holds of SOUND-STORY.md section 3 sit on the
-# sinister degrees around home, so a chain of them assembles D, Bb, Eb and Ab. strain
-# (0..1) raises the tether's pitch as the ball pulls against it. The riser is the one
-# sound that means "this is about to be over".
+# A hold loop, n samples long. The four counter holds of SOUND-STORY.md section 3 sit
+# on the sinister degrees around home, so a chain of them assembles D, Bb, Eb and Ab.
+# "crater" (v3 AU2) is the reactor's own hold, the burning ring left by a missed pulse,
+# on the family's Ab in its Geiger crackle. strain (0..1) raises the tether's pitch as
+# the ball pulls against it. The riser is the one sound that means "this is about to be
+# over".
 static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
 	var buf := Synth.buffer(n)
 	var rng := RandomNumberGenerator.new()
@@ -960,6 +1000,22 @@ static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
 				p2 += TAU * f * 1.5 * Synth.INV_RATE
 				var shimmer := 0.75 + 0.25 * sin(TAU * lerpf(4.0, 16.0, x) * i * Synth.INV_RATE)
 				buf[i] = (sin(phase) + 0.5 * sin(p2)) * shimmer * (0.2 + 0.8 * x)
+		"crater":
+			var f := _hz(56)
+			for i in n:
+				var t := i * Synth.INV_RATE
+				var burn := 0.6 + 0.4 * sin(TAU * 1.1 * t)
+				if i >= next_grain:
+					grain = rng.randf_range(0.5, 1.0)
+					next_grain = i + int(Synth.seconds(lerpf(0.05, 0.02, burn) * rng.randf_range(0.7, 1.3)))
+				grain *= 0.993
+				var x := rng.randf_range(-1.0, 1.0) * grain
+				var g := 2.0 * sin(PI * 4200.0 * Synth.INV_RATE)
+				low += g * band
+				band += g * (x - low - 0.65 * band)
+				phase = fposmod(phase + f * Synth.INV_RATE, 1.0)
+				tone += ((2.0 * phase - 1.0) - tone) * 0.05
+				buf[i] = band * 0.55 + tone * 1.3
 	for i in mini(n, 400):
 		buf[i] *= float(i) / 400.0
 	return Synth.declick(Synth.normalize(buf, 0.9), 64, 600)
@@ -970,6 +1026,122 @@ static func _shop_bell() -> PackedFloat32Array:
 	return _mix([[_fm(0.6, _hz(93), 3.5, 2.0, 5.0), 0, 0.6], [_cut(_n("beep", 86), 0.12), Synth.seconds(0.16), 0.9],
 		[_cut(_n("mallet", 86), 0.12), Synth.seconds(0.16), 0.5], [_cut(_n("beep", 86), 0.2), Synth.seconds(0.34), 0.9],
 		[_cut(_n("mallet", 86), 0.2), Synth.seconds(0.34), 0.5]])
+
+
+# --- v3 AU2 bank: bets, secrets, allies, fights and the ride ---------------------------
+# design-v3/AUDIO-V3.md sections 4 (interactables), 5 (W11's juice), 8 (this wave) and
+# 11 (Andrew's ruling on the bet's pitch, option a).
+
+# The bet's question: an anvil accent under the fbass leaping the tritone, D to Ab.
+static func _bet_clunk() -> PackedFloat32Array:
+	return _mix([[Synth.drum("anvil"), 0, db_to_linear(-6.0)], [_cut(_n("fbass", 38), 0.16), 0, 0.9],
+		[_cut(_n("fbass", 44), 0.22), Synth.seconds(0.1), 0.9]])
+
+
+# The 0.35 s hold: a snare roll accelerating from the eighth at 172 to the thirty-second.
+static func _bet_roll() -> PackedFloat32Array:
+	var parts := []
+	var at := 0.0
+	var gap := 0.174
+	var i := 0
+	while at < 0.35:
+		parts.append([Synth.drum("snare"), Synth.seconds(at), 0.5 + 0.05 * i])
+		at += gap
+		gap = maxf(0.0435, gap * 0.78)
+		i += 1
+	return _mix(parts)
+
+
+# The win: the question resolves up a semitone, Ab to A, home's own dominant, with a
+# snare crack and the rice-cooker's two "done" beeps a fifth up (A5 D6, not D6 D6).
+static func _bet_crack() -> PackedFloat32Array:
+	return _mix([[Synth.drum("snare"), 0, 1.0], [_cut(_n("fbass", 45), 0.24), 0, 0.9],
+		[_cut(_n("beep", 81), 0.12), Synth.seconds(0.1), 0.8], [_cut(_n("mallet", 81), 0.12), Synth.seconds(0.1), 0.45],
+		[_cut(_n("beep", 86), 0.2), Synth.seconds(0.26), 0.9], [_cut(_n("mallet", 86), 0.2), Synth.seconds(0.26), 0.5]])
+
+
+# The loss: the question resolves down a semitone, Ab to G, and stops on a dry click.
+static func _bet_refusal() -> PackedFloat32Array:
+	return _mix([[_noise(0.04, 3000.0, 3000.0, 150.0), 0, 0.5], [_cut(_n("fbass", 43), 0.3), 0, 0.85]])
+
+
+# The reward bell an octave down through a dark low-pass: the ladder's first interval
+# reversed, a falling fourth A to D, something old rather than earned.
+static func _sunken_bell() -> PackedFloat32Array:
+	var bell := _mix([[_n("bell", 69), 0, 0.85], [_n("bell", 62), Synth.seconds(0.22), 1.0]])
+	var low := 0.0
+	var g := 2.0 * sin(PI * 900.0 * Synth.INV_RATE)
+	for i in bell.size():
+		low += g * (bell[i] - low)
+		bell[i] = low
+	return _cut(bell, 2.0)
+
+
+# The ally quotes you right: the class motif straight on the Mind's own sine, an octave
+# up, where the Mind's hand quotes it wrong (_mind_quote always inverts).
+static func _ally_hum(class_id: String) -> PackedFloat32Array:
+	return Synth.render_score(_motif_score(class_id, 0, "chime", 0.7, 12), 1.4)
+
+
+# The wake: a Cherenkov flicker on bell, D6 A5 D6, 40 ms apart.
+static func _ally_wake() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 86), 0.1), 0, 0.8], [_cut(_n("bell", 81), 0.12), Synth.seconds(0.04), 0.7],
+		[_cut(_n("bell", 86), 0.16), Synth.seconds(0.08), 0.9]])
+
+
+# The opt-in fight's arm: one anvil stamp on the beat, the Fleet's brass lean (D to Eb)
+# under it, so a small fight still sounds like a small Brindle (SOUND-STORY section 2).
+static func _fight_arm_stamp() -> PackedFloat32Array:
+	return _mix([[Synth.drum("anvil"), 0, 1.0], [_n("brass", 50), 0, 0.5],
+		[_n("brass", 51), Synth.seconds(0.12), 0.4]], true)
+
+
+# The class-colour whip: a rising sweep plus the class motif's first interval, an
+# octave up, on the class's own voice (SOUND-STORY section 5, "a reward, not a threat").
+static func _near_miss_whip(class_id: String) -> PackedFloat32Array:
+	var cells: Array = Harmony.motif(class_id)["cells"]
+	var voice: String = Harmony.motif(class_id)["voice"]
+	var a: int = int(cells[0][1]) + 12
+	var b: int = int(cells[1][1]) + 12
+	return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.85],
+		[_cut(_n(voice, a), 0.16), 0, 0.8], [_cut(_n(voice, b), 0.22), Synth.seconds(0.09), 0.85]])
+
+
+# A two-note ladder stab, the kill chain's own accent so a tier never sounds like a lone
+# kill_pop; resolved by rung through the same pitch ratio kill_pop already uses.
+static func _kill_chain_tier() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 74), 0.14), 0, 0.85], [_cut(_n("bell", 77), 0.14), 0, 0.7],
+		[_noise(0.03, 5500.0, 4000.0, 130.0), 0, 0.4]])
+
+
+# The drop the player caused: the reward note on the ladder, then the rebound's own
+# spring snap, resolved by segments cut the same way.
+static func _drop_landing() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.85], [_tone(0.12, 260.0, 620.0, "sine", 26.0), Synth.seconds(0.02), 0.7],
+		[_noise(0.03, 5000.0, 3000.0, 120.0), 0, 0.4]])
+
+
+# The held-door ready pulse, class-independent: a bright blip on the next sixteenth, so
+# a hit reads as progress without borrowing whichever class happens to be playing.
+static func _door_tick() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 86), 0.08), 0, 0.8], [_noise(0.015, 6500.0, 6500.0, 250.0), 0, 0.35]])
+
+
+# The return's launch grammar: the rice-cooker climb up A7, on the ride family's mallet,
+# pitched by throw speed at playback (KEYED_SOUNDS carries it, same as every ride cue).
+static func _return_launch_arpeggio() -> PackedFloat32Array:
+	return _arpeggio(Harmony.LAUNCH_TUNE, 0.07, "mallet", 0.5)
+
+
+# The bone gauge's pressure hiss, rising through the cycle: noise only, so it never
+# competes with a pitched cue for the ear.
+static func _lift_hiss() -> PackedFloat32Array:
+	var hiss := _noise(1.2, 500.0, 3200.0, 0.0, 0.05)
+	var n := hiss.size()
+	for i in n:
+		var x := float(i) / n
+		hiss[i] *= x * x
+	return Synth.declick(Synth.normalize(hiss, 0.85), 64, 300)
 
 
 # --- Moss's babble (SOUND-STORY.md section 8) --------------------------------------------

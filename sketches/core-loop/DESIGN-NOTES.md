@@ -818,3 +818,29 @@ Playtest entry 8 found the loop flat: on the Warden Andrew "was just going aroun
 12. **Cost.** All particles come from pools built at setup, with one mesh and one material per burst kind. A burst sets only its emitter's colour, position and count, and no hit creates a material. The pools (emitters times the most particles each) are spark 10 x 16, pop 6 x 14, debris 6 x 12, dust 4 x 14 and fountain 3 x 24. That caps live burst particles at 444, on top of the 6 x 20 scrap sparkles. At most 6 bursts per kind start in one frame, whatever a blast catches. The chain pips are 8 meshes sharing one material. The p99 frame time at 1080p is not measured here, because headless tests do not render. Andrew's play is the check.
 
 `presentation_hitstop_test`, `presentation_near_miss_test`, `presentation_chain_test`, `presentation_comfort_test` and `combat_knockback_test` cover notes 1 to 3, 5 to 7, 9 and 11.
+
+## v3 AU2 sound bank
+
+The AU2 bank (design-v3/AUDIO-V3.md section 8's AU2 row): bets, secrets, allies, opt-in fights, the escalation's ladder and the return's launch grammar, additive in `sfx_bank.gd`. Every pitched id carries `KEYED_SOUNDS` (`audio.gd`), so a Warden key lift transposes it the way every other motif cue already does; `bet_roll` (percussion), `door_tick` (engine-managed, its own explicit shift) and `lift_hiss` (noise) are the deliberate exceptions. `crater_hold` is a new `hold()` kind, the reactor's own hold, on the family's upper Ab pedal in its Geiger crackle; its length below is `_bake`'s fixed 2-beat sample, and the runtime hold calls `SfxBank.hold("crater", n)` directly at whatever length the punish state needs (5 s per the design). `music_engine.gd`'s `door_tick()` action now always resolves the `door_tick` id (AU1 had left a class-ready fallback for the id that did not exist yet; that branch is gone, nothing else in the file changed). `kill_chain_tier` and `drop_landing` are resolved by rung and by segments cut through a playback pitch ratio, the same mechanism the kill combo and `boss_weak_hit` already use, not by baking one buffer per tier. Listening board: `tools/au2_board.gd`, every cue mastered to -14 LUFS under a -1 dBFS ceiling, `artifacts/local/au2/`.
+
+| Cue | Notes | Instrument | Length |
+| --- | --- | --- | --- |
+| `bet_roll` | A snare roll accelerating from the eighth at 172 toward the thirty-second, the bet's 0.35 s arm | snare | 0.55 s |
+| `bet_clunk` | The question: an anvil accent under the fbass leaping the tritone, D to Ab | anvil, fbass | 1.10 s |
+| `bet_crack` | The win: the fbass resolves Ab to A (home's dominant), a snare crack, the rice-cooker's two "done" beeps a fifth up (A5 D6) | snare, fbass, beep, mallet | 0.46 s |
+| `bet_refusal` | The loss: the fbass resolves Ab to G and stops, a dry 40 ms click | fbass, noise click | 0.30 s |
+| `sunken_bell` | The reward bell an octave down through a 900 Hz low-pass, a falling fourth A to D (the ladder's first interval reversed) | bell | 1.22 s |
+| `ally_hum_sable`, `ally_hum_rivet`, `ally_hum_kest` | The class motif straight on the Mind's own sine, an octave up: the ally quotes you right where the Mind quotes you wrong | chime | 1.92 to 2.27 s |
+| `ally_wake` | A Cherenkov flicker on bell, D6 A5 D6, 40 ms apart | bell | 0.24 s |
+| `fight_arm_stamp` | One anvil stamp on the beat, the Fleet's brass lean (D to Eb) under it | anvil, brass | 1.12 s |
+| `near_miss_whip_sable`, `near_miss_whip_rivet`, `near_miss_whip_kest` | A rising noise sweep plus the class motif's first interval, an octave up, on the class's own voice | mallet/clav/tom, noise | 0.31 s |
+| `kill_chain_tier` | A two-note bell ladder stab, the chain tier's own accent over a lone `kill_pop` | bell, noise | 0.14 s |
+| `drop_landing` | The reward note on the ladder, then the rebound's own spring snap | bell, sine sweep | 0.30 s |
+| `door_tick` | A bright, class-independent ready-pulse tick for a held-door weapon hit | bell | 0.08 s |
+| `return_launch_arpeggio` | The rice-cooker climb up A7 (`Harmony.LAUNCH_TUNE`), the ride family's own voice | mallet | 0.99 s |
+| `lift_hiss` | The bone gauge's pressure hiss, rising through the cycle | filtered noise | 1.20 s |
+| `crater_hold` | New `hold()` kind: the reactor's burning ring, a Geiger crackle on the upper Ab pedal | filtered noise, sine drone | 0.70 s baked (2 beats); the runtime hold is called at its own length |
+
+`tests/audio_v3_bank_test.gd` checks every id above bakes non-silent, under the soft-clip ceiling, and within its role's length; that `crater_hold` loops seamlessly (both ends fade to near-silence); and that a keyed AU2 cue actually moves with a live `audio.gd` key lift, not just structurally listed. `presentation_sfx_test`, `presentation_gems_test`, `presentation_v3_test` and `audio_cue_resolution_test` are unchanged and green.
+
+AU3's wiring: the three class-suffixed families (`ally_hum_*`, `near_miss_whip_*`) resolve by the run's motif the same way `mind_sable`/`mind_rivet`/`mind_kest` already do (`id.get_slice("_", n)` inside the bank; the event-side lookup is `"ally_hum_" + motif` and `"near_miss_whip_" + motif`). `kill_chain_tier` and `drop_landing` want a pitch ratio at `play()`, from the chain rung and from segments cut, not a re-bake. `bet_clunk`, `bet_crack` and `bet_refusal` already carry Andrew's option (a) ruling (AUDIO-V3.md section 11 question 5): no further pitch decision needed at the call site.

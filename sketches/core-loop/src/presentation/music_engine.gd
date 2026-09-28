@@ -1185,7 +1185,7 @@ func _on_step() -> void:
 func _run(action: Dictionary) -> void:
 	match action["type"]:
 		"door_tick":
-			var id := "door_tick" if SfxBank.has_recipe("door_tick") else (class_motif + "_ready" if class_motif in Harmony.CLASS_MOTIFS else "sable_ready")
+			var id := "door_tick"
 			var buf := SfxBank.samples_at(id, step_len, key, theme)
 			_start(buf, buf.size(), -1, db_to_linear(SfxBank.trim_db(id)), 0.0, true)
 			events_log.append(["door_tick", clock, id])
