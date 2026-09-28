@@ -95,6 +95,15 @@ func _show(id: String) -> void:
 	_tween.tween_interval(SHOW_SECONDS - FADE_IN - FADE_OUT)
 	_tween.tween_property(self, "modulate:a", 0.0, FADE_OUT)
 	_tween.tween_callback(func(): showing = "")
+	_chime(id)
+
+
+# The callout's row sound (callout_chime) on the UI bus as it appears.
+func _chime(id: String) -> void:
+	var presentation = game.get("presentation")
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null and audio.has_method("play"):
+		audio.play(id, 0.0, 1.0, "UI")
 
 
 func text() -> String:

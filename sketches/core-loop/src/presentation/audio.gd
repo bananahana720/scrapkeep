@@ -8,6 +8,10 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
 const Augments := preload("res://src/movement/augments.gd")
+# v2 W9: the class row names the motif every class cue resolves through, and the roster
+# tells an ancient from the Fleet.
+const ClassDef := preload("res://src/core/class_def.gd")
+const Roster := preload("res://src/combat/roster.gd")
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -23,10 +27,13 @@ const GEN_BUFFER := 0.1
 const POLYPHONY := 32
 # Simultaneous voices per cue, and the shortest gap between two starts. A burst of
 # pickups or a held trigger stays crisp instead of turning into mush.
+# Moss says one line at a time: a new line cuts the last one off. The Mind's quote is
+# heard once per adaptation: mind_adapted and the hand's telegraph layers (its voice and
+# its tag are both the quote) land on one frame, and the first one sounds.
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
-	"hop": 2, "land_thud": 2, "hurt": 2}
+	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40}
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Pickups inside this window climb the pentatonic ladder; a gap resets to home.
 const COMBO_WINDOW_MS := 700
@@ -58,17 +65,21 @@ const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampe
 const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
 	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
 	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked"]
-# v2 W7 enemies: holds, tenacity, packs and the ancients' tells. Each plays its event
-# row's sound through the same wiring as the character facts. vent_charging and
-# vent_erupted also drive the reactor pedal (v2 W5b), so they get their own listener
-# below instead of the generic bind.
-const ENEMY_KINDS := ["hold_started", "hold_broken", "hold_ended", "tenacity_gained", "pack_arrived",
+# v2 W7 enemies: holds, tenacity and the ancients' tells. Each plays its event row's
+# sound through the same wiring as the character facts. vent_charging and vent_erupted
+# also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by
+# who holds or arrives (v2 W9), so they get their own listeners below.
+const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
 	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
 
 var ctx
 var engine: MusicEngine
 # v2 W3 characters: which of CHARACTER_KINDS are already connected.
 var _character_wired := {}
+# v2 W9: the run's class motif id (class_def motif), from run_started.
+var _motif := ""
+# Moss's babble, baked once per line, beat and key: {"beat|key|text": AudioStreamWAV}.
+var _babble := {}
 var sound_ready := false
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
@@ -151,6 +162,10 @@ static func _sound_ids() -> Array:
 	for extra in ["womp", "build_riser", "vault_rise", "vault_drop", "synergy_hit"]:
 		if not extra in ids:
 			ids.append(extra)
+	# Every baked recipe a row can resolve to (a class motif, a hold, an arrival, the bell).
+	for id in SfxBank.TRIM_DB:
+		if not id in ids:
+			ids.append(id)
 	return ids
 
 
@@ -323,9 +338,43 @@ func _pump() -> void:
 
 # --- Playing a cue ------------------------------------------------------------------
 
-# Plays a cue now. Returns false if it was gated by the voice limit or the gap.
+# Plays a cue now. Returns false if it was gated by the voice limit or the gap. With no
+# override the kind's row decides, resolved for the run's class.
 func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "") -> bool:
-	var sound: String = sound_override if sound_override != "" else Rows.sound(kind)
+	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
+	if not _admit(kind, sound, pitch):
+		return false
+	if sound in KEYED_SOUNDS:
+		pitch *= Harmony.ratio(engine.key)
+	_start(kind, sound, SfxBank.stream(sound), SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
+	if Rows.priority(kind) >= 2:
+		engine.duck(0.55, 0.35)
+	if sound in DANGER_SOUNDS:
+		engine.duck_bass(0.3, 0.45)
+	return true
+
+
+# Moss says a line (SOUND-STORY section 8): one babble blip per letter, baked in the
+# live key once per line and beat. beat is SfxBank's 1 to 6 for the conversation loop,
+# BABBLE_LEVEL for a bark or BABBLE_RELENT for the sigh. SFX bus at the babble trim and
+# no duck: the lounge already sits about 4 LU under it (DESIGN-NOTES, v2 W5 note 8).
+func speak(kind: String, text: String, beat: int) -> bool:
+	if text == "" or not _admit(kind, "babble", 1.0):
+		return false
+	var key := "%d|%d|%s" % [beat, engine.key, text]
+	if not _babble.has(key):
+		_babble[key] = Synth.to_wav(SfxBank.babble(text, beat, engine.key))
+	_start(kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
+	return true
+
+
+# What the run's rows resolve by: the player's class motif.
+func cue_context() -> Dictionary:
+	return {"motif": _motif}
+
+
+# False (and logged) while the bank bakes, for a row with no sound, or inside the cue's gap.
+func _admit(kind: String, sound: String, pitch: float) -> bool:
 	if not sound_ready or sound == "":
 		cue_log.append([kind, sound, "skip", -1, pitch])
 		return false
@@ -334,25 +383,21 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 		cue_log.append([kind, sound, "skip", -1, pitch])
 		return false
 	_last_start[sound] = now
-	if sound in KEYED_SOUNDS:
-		pitch *= Harmony.ratio(engine.key)
+	return true
+
+
+func _start(kind: String, sound: String, stream: AudioStream, volume: float, pitch: float, bus: String) -> void:
 	var playback := _ui if bus == "UI" else _sfx
 	if playback != null:
 		var live: Array = _voices.get(sound, [])
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, 3)):
 			playback.stop_stream(live.pop_front())
-		var volume: float = SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db
-		var id := playback.play_stream(SfxBank.stream(sound), 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
+		var id := playback.play_stream(stream, 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 		_voices[sound] = live
 	cue_log.append([kind, sound, "now", engine.clock, pitch])
-	if Rows.priority(kind) >= 2:
-		engine.duck(0.55, 0.35)
-	if sound in DANGER_SOUNDS:
-		engine.duck_bass(0.3, 0.45)
-	return true
 
 
 # v2 W2 threat grammar. A committed threat warns on the game frame it is declared, never
@@ -392,7 +437,7 @@ func _threat_distance_db(node: Node) -> float:
 
 # Plays a cue on the next beat through the band. lane queues it behind flow stingers.
 func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_override := "") -> int:
-	var sound: String = sound_override if sound_override != "" else Rows.sound(kind)
+	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not sound_ready or sound == "":
 		cue_log.append([kind, sound, "skip", -1, 1.0])
 		return -1
@@ -410,7 +455,8 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 func _connect_all(events) -> void:
 	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
-		engine.set_class_motif(class_id)
+		_motif = motif_of(class_id)
+		engine.set_class_motif(_motif)
 		engine.set_fleet_ticks(0)
 		_flow_queue.append(["run"]))
 	events.flow_changed.connect(_on_flow_changed)
@@ -480,7 +526,7 @@ func wire_optional() -> void:
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen(events, "world_fact", func(kind: String, _at: Vector3):
-		play("world_fact", 0.0, 1.0, "SFX", String(EventKinds.world_row(kind).get("sound", ""))))
+		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
@@ -519,8 +565,14 @@ func wire_optional() -> void:
 			engine.cancel_pending()
 			engine.restart_boss("brindle")
 		play("stage_content_cleared"))
-	# v2 W3 characters: each class-ability fact plays its event row's stand-in sound
-	# until W5 bakes the id named in the row's sound_next.
+	# v2 W9: a hold sounds the holding unit's loop, and a pack its faction's arrival (the
+	# Fleet stamp, the reactor tick, the swarm lock, the Mind's quote of your motif).
+	_listen(events, "hold_started", func(kind: String, _at: Vector3):
+		play("hold_started", 0.0, 1.0, "SFX", Rows.sound("hold_started", cue_context().merged({"hold": kind}))))
+	_listen(events, "pack_arrived", func(faction: String, _at: Vector3, _kinds: Array):
+		play("pack_arrived", 0.0, 1.0, "SFX", Rows.sound("pack_arrived", cue_context().merged({"faction": faction}))))
+	# v2 W3 characters: each class-ability fact plays its event row's sound_next once W5
+	# has baked it (resolved for the run's class), else its stand-in.
 	for kind in CHARACTER_KINDS + ENEMY_KINDS:
 		if events.has_signal(kind) and not _character_wired.has(kind):
 			_character_wired[kind] = true
@@ -528,6 +580,13 @@ func wire_optional() -> void:
 				events.connect(kind, _on_vault_kicked)
 			else:
 				events.connect(kind, play.bind(kind).unbind(_argc(events, kind)))
+
+
+# run_started carries the class row's id (pylon_engineer); the band and every class cue
+# want its motif id (sable). A motif id passes through as itself.
+static func motif_of(class_id: String) -> String:
+	var def: Resource = ClassDef.by_id(class_id)
+	return String(def.motif) if def != null else class_id
 
 
 # Sable's vault is an octave leap: the top note climbs with exit speed and reaches the
@@ -635,9 +694,12 @@ func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:
 	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(_scrap_combo)))
 
 
+# The growl is the Fleet's voice: an ancient (a relic, a drone, a hand, a Warden) never
+# makes it, and its pack arrives on its own family's cue (pack_arrived).
 func _on_enemy_spawned(_enemy: Node3D, kind: String) -> void:
 	var boss := kind == "miniboss"
-	play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
+	if not Roster.is_ancient(Roster.faction_of(kind)):
+		play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
 	if boss:
 		_miniboss = _enemy
 	if boss and sound_ready:
@@ -1050,6 +1112,16 @@ func _apply_volumes() -> void:
 			continue
 		AudioServer.set_bus_volume_linear(index, volumes[bus] * db_to_linear(BUSES[bus]))
 		AudioServer.set_bus_mute(index, muted)
+
+
+# The pause menu's volume rows set a bus to a level; the keys above nudge it.
+func set_volume(bus: String, level: float) -> void:
+	if not volumes.has(bus):
+		return
+	volumes[bus] = clampf(snappedf(level, 0.01), 0.0, 1.0)
+	if bus == "SFX":
+		volumes["UI"] = volumes["SFX"]
+	_apply_volumes()
 
 
 func _make_overlay() -> void:

@@ -22,7 +22,7 @@ const LocalMesh := preload("res://src/world/local_mesh.gd")
 # beacon is a descent all the way, so a ball that does nothing clever still rolls
 # down to the Warden.
 
-const ANCIENT := Color("3d8bff")
+const ANCIENT := Palette.ANCIENT
 const SPAWN := Vector2(0.0, -160.0)
 const BEACON := Vector2(0.0, 118.0)
 const BEACON_FLOOR := -8.0

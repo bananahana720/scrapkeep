@@ -542,7 +542,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		pm.bottom_radius = 1.4
 		pm.height = 18.0
 		plume.mesh = pm
-		plume.material_override = Palette.unshaded(Color(Color("3d8bff"), 0.35))
+		plume.material_override = Palette.unshaded(Color(Palette.ANCIENT, 0.35))
 		plume.position = vfoot + Vector3.UP * 9.0
 		plume.visible = false
 		add_child(plume)

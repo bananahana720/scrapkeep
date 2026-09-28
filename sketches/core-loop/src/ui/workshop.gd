@@ -1,0 +1,472 @@
+extends CanvasLayer
+
+const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
+const TreePick := preload("res://src/ui/tree_pick.gd")
+const ShopCounter := preload("res://src/ui/shop_counter.gd")
+const MossBubble := preload("res://src/ui/moss_bubble.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+
+# The workshop's screens, the calm between fights: the upgrade pick, Moss's counter and
+# Moss's voice. This layer decides when each opens and what a choice does; the three
+# children only show and animate.
+#
+#   The pick opens whenever the tree offers one (tree_offered): with the run, on the
+#   bay's catch, or at a stage clear when the bay was skipped. It pauses the tree, since
+#   it is a choice screen, and "Later" leaves the pick open for the next checkpoint or
+#   the counter's pick plate.
+#   The counter opens when the ball pulls up to Moss slowly (inside his reach, under
+#   PULL_UP m/s), like a pit stop. The bay's clocks already stand still, so it pauses
+#   nothing; it parks the ball until you leave, and speed was banked on the catch.
+#   Moss's bubble speaks his greeting on the catch, his bark on every verb, a beat on
+#   each talk press, and his send-off on the pad.
+#
+# While a screen is open this layer holds the player: the ball's keyboard source is
+# off, the mouse is free, and the game's "menu_held" meta tells game.gd not to recapture
+# the mouse on a click (its one-line hook). The pick also holds the tree paused. Each is
+# re-asserted every frame and after every flow change, since game.gd sets them too.
+# Every choice takes the mouse, the keys and a pad alike. The layer processes while the
+# tree is paused. armed is off in test mode, so the bots and the older tests run the
+# game exactly as before; the workshop tests switch it on.
+
+const LAYER := 4
+const PULL_UP := 4.0
+const BUBBLE_Y := 0.30
+const COUNTER_X := 0.36
+const COUNTER_Y := 0.33
+const TALK_KEY := KEY_T
+
+var game
+var armed := true
+var pick
+var counter
+var bubble
+var talk: Button
+var _counter_ready := true
+var _ball_parked := false
+var _offer_pending := false
+var _held := false
+var _paused := false
+
+
+class TalkButton extends Button:
+	# The talk key by Moss's hatch: its keycap and a small bubble tail, no words. It is a
+	# button for the mouse while the counter holds it, and just a prompt otherwise.
+	const H := 30.0
+
+	func _init() -> void:
+		focus_mode = Control.FOCUS_NONE
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		custom_minimum_size = Vector2(Keycap.size_of("key_t", H).x + 34.0, H + 8.0)
+		size = custom_minimum_size
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			add_theme_stylebox_override(state, StyleBoxEmpty.new())
+
+	func drawn_words() -> PackedStringArray:
+		return Keycap.words("key_t")
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var tint := Color.WHITE if is_hovered() else Palette.SAND
+		var cap := Keycap.size_of("key_t", H)
+		Keycap.draw(self, Vector2(cap.x * 0.5, size.y * 0.5), "key_t", tint, H)
+		var at := Vector2(cap.x + 8.0, size.y * 0.5 - 9.0)
+		var bubble_rect := Rect2(at, Vector2(24.0, 16.0))
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(Palette.CHARCOAL, 0.9)
+		box.border_color = tint
+		box.set_border_width_all(2)
+		box.set_corner_radius_all(6)
+		draw_style_box(box, bubble_rect)
+		draw_colored_polygon(PackedVector2Array([at + Vector2(4.0, 15.0), at + Vector2(-2.0, 22.0), at + Vector2(11.0, 15.0)]), tint)
+
+
+func _init() -> void:
+	name = "Workshop"
+
+
+# game.gd adds this layer as its child; it sets itself up from its parent.
+func _ready() -> void:
+	if game == null:
+		setup(get_parent())
+
+
+func setup(game_ref) -> void:
+	game = game_ref
+	armed = not game.test_mode
+	layer = LAYER
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	bubble = MossBubble.new()
+	add_child(bubble)
+	talk = TalkButton.new()
+	talk.visible = false
+	talk.pressed.connect(say_next)
+	add_child(talk)
+	counter = ShopCounter.new()
+	add_child(counter)
+	counter.setup(game)
+	counter.acted.connect(_on_acted)
+	counter.pick_wanted.connect(open_pick)
+	counter.leave_wanted.connect(close_counter)
+	pick = TreePick.new()
+	add_child(pick)
+	pick.chosen.connect(choose)
+	pick.later.connect(close_pick)
+	game.events.tree_offered.connect(func(_c: String, _d: int, _choices: Array): _offer_later())
+	game.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _offer_later())
+	game.events.bay_entered.connect(func(_banked: float): _speak_world_bark("shop_entered"))
+	game.events.bay_left.connect(func(_v: Vector3): _on_bay_left())
+	game.events.stage_entered.connect(func(_i: int, retry: bool):
+		if retry:
+			close_all())
+	game.events.flow_changed.connect(func(_s: String):
+		if not game.flow.in_play():
+			close_all()
+		elif _held:
+			_enforce_hold())
+
+
+func shop():
+	var b = game.build
+	return b.shop if b != null and "shop" in b else null
+
+
+func tree():
+	return game.player.get("tree") if game.player != null else null
+
+
+func screen_size() -> Vector2:
+	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
+
+
+# ---- The pick ----
+
+# Picks arrive from inside other handlers (run start, the bay's catch), so the screen
+# opens once the frame's flow has settled.
+func _offer_later() -> void:
+	if _offer_pending:
+		return
+	_offer_pending = true
+	_sync_pick.call_deferred()
+
+
+func _sync_pick() -> void:
+	_offer_pending = false
+	var t = tree()
+	if not armed or t == null or not game.flow.in_play():
+		return
+	if not t.pending():
+		if pick.is_open():
+			close_pick()
+		return
+	if pick.is_open() and pick.depth == t.path().size() + 1:
+		return
+	open_pick()
+
+
+func open_pick() -> void:
+	var t = tree()
+	if t == null or not t.pending():
+		return
+	var depth: int = t.path().size() + 1
+	var nodes: Array = t.offered(t.class_id, depth)
+	if nodes.size() != 2:
+		return
+	var color: Color = game.run.class_def.color if game.run.class_def != null else Palette.SAND
+	pick.open(t.class_id, depth, nodes, t.path(), color)
+	# A pick taken from the counter's plate stands in for the counter until it closes,
+	# so the two screens never add their words together.
+	counter.visible = false
+	_apply_hold()
+
+
+func close_pick(chosen_index := -1) -> void:
+	pick.close(chosen_index)
+	_apply_hold()
+	if counter.is_open():
+		counter.visible = true
+		counter.refresh()
+		counter.focus_first()
+
+
+# A card was chosen: the tree takes it, and a skipped depth offers the next pair at once.
+func choose(index: int) -> void:
+	var t = tree()
+	if t == null or not pick.is_open():
+		return
+	var nodes: Array = t.offered(t.class_id, pick.depth)
+	if index < 0 or index >= nodes.size():
+		return
+	if not t.pick(String(nodes[index]["id"])):
+		return
+	if t.pending():
+		open_pick()
+	else:
+		close_pick(index)
+
+
+# ---- The counter ----
+
+func open_counter() -> void:
+	var s = shop()
+	if s == null or not s.inside or counter.is_open():
+		return
+	_counter_ready = false
+	var size := screen_size()
+	counter.position.y = size.y * COUNTER_Y
+	counter.open(s, size.x * COUNTER_X)
+	if game.flow.in_play() and not game.player.frozen():
+		game.player.set_frozen(true)
+		_ball_parked = true
+	bubble.sticky = true
+	_update_talk(armed)
+	_apply_hold()
+
+
+func close_counter() -> void:
+	if not counter.is_open():
+		return
+	counter.close()
+	bubble.sticky = false
+	_release_ball()
+	_apply_hold()
+
+
+func close_all() -> void:
+	if pick.is_open():
+		pick.close()
+	if counter.is_open():
+		counter.close()
+	bubble.sticky = false
+	_release_ball()
+	_apply_hold()
+
+
+func _release_ball() -> void:
+	if _ball_parked:
+		_ball_parked = false
+		if game.flow.in_play():
+			game.player.set_frozen(false)
+
+
+# Pulling up to Moss opens the counter once per approach: rolling away re-arms it.
+func should_open_counter(inside: bool, near: bool, speed: float) -> bool:
+	return inside and near and speed < PULL_UP and _counter_ready
+
+
+func _near_moss() -> bool:
+	var terrain = game.ctx.terrain if game.ctx != null else null
+	return terrain != null and terrain.has_method("near_moss") and terrain.near_moss(game.player.ball_position())
+
+
+func held() -> bool:
+	return _held
+
+
+func _apply_hold() -> void:
+	var held_now: bool = pick.is_open() or counter.is_open()
+	var pause: bool = pick.is_open()
+	if held_now == _held and pause == _paused:
+		return
+	_held = held_now
+	_paused = pause
+	game.set_meta("menu_held", held_now)
+	get_tree().paused = pause or game.pause_toggled() or game.notes_held()
+	if held_now:
+		_enforce_hold()
+		return
+	if game.keyboard != null:
+		game.keyboard.enabled = game.flow.in_play()
+	game._capture_mouse(game.flow.in_play())
+
+
+func _enforce_hold() -> void:
+	if game.keyboard != null:
+		game.keyboard.enabled = false
+	if game._mouse_captured():
+		game._capture_mouse(false)
+	if _paused and not get_tree().paused:
+		get_tree().paused = true
+
+
+# ---- Moss's voice ----
+
+func say_next() -> Dictionary:
+	var s = shop()
+	if s == null or not s.inside:
+		return {}
+	var record: Dictionary = s.talk()
+	if record.is_empty():
+		return record
+	bubble.beat(record)
+	_place_bubble()
+	_babble("moss_relent" if record.get("relent", false) else "moss_beat", String(record.get("text", "")), babble_beat(record))
+	if record.get("relent", false) and counter.is_open():
+		counter.refresh()
+	return record
+
+
+func _on_acted(fact: String, record: Dictionary) -> void:
+	if record.has("bark"):
+		bubble.bark(record["bark"], fact)
+		_place_bubble()
+		_babble(fact, String(record["bark"].get("text", "")), SfxBank.BABBLE_LEVEL)
+	_cue(fact)
+
+
+# The bay's greeting on the catch and the send-off on the pad (world.bay_bark).
+func _speak_world_bark(fact: String) -> void:
+	_counter_ready = true
+	var line: Dictionary = game.world.bay_bark if game.world != null and "bay_bark" in game.world else {}
+	if armed and not line.is_empty():
+		bubble.bark(line, fact)
+		_place_bubble()
+		_babble(fact, String(line.get("text", "")), SfxBank.BABBLE_LEVEL)
+
+
+func _on_bay_left() -> void:
+	close_counter()
+	_speak_world_bark("shop_left")
+
+
+func _place_bubble() -> void:
+	bubble.position = Vector2(0.0, screen_size().y * BUBBLE_Y)
+
+
+# A LOOT_ROWS fact heard through the audio director's own play(), which resolves the
+# row: its baked sound_next (the shop bell, the bench clank), else its stand-in.
+func _cue(fact: String) -> void:
+	var audio = _audio()
+	if EventKinds.LOOT_ROWS.has(fact) and audio != null:
+		audio.play(fact, 0.0, 1.0, "UI")
+
+
+# Moss's line spoken as babble in the live key (SOUND-STORY section 8).
+func _babble(fact: String, text: String, beat: int) -> void:
+	var audio = _audio()
+	if audio != null and audio.has_method("speak"):
+		audio.speak(fact, text, beat)
+
+
+func _audio():
+	var presentation = game.presentation if game != null else null
+	var audio = presentation.get("audio") if presentation != null else null
+	return audio if audio != null and audio.has_method("play") else null
+
+
+# A talk record's babble beat: 1 to 6 up the conversation loop, so Moss's root climbs
+# and his blips shorten as he loses patience; the relent is the sigh; the restart line
+# is level, like a bark.
+static func babble_beat(record: Dictionary) -> int:
+	if record.get("relent", false):
+		return SfxBank.BABBLE_RELENT
+	if record.get("restart", false):
+		return SfxBank.BABBLE_LEVEL
+	return int(record.get("beat", 0)) + 1
+
+
+# ---- Per frame ----
+
+func _process(_delta: float) -> void:
+	if _held:
+		_enforce_hold()
+	var s = shop()
+	var inside: bool = armed and s != null and s.inside and game.flow.in_play()
+	var near := inside and _near_moss()
+	if not near and not counter.is_open():
+		_counter_ready = true
+	if not pick.is_open() and should_open_counter(inside, near, game.player.state.velocity.length() if game.player != null else 99.0):
+		open_counter()
+	_update_talk(inside and (near or counter.is_open()))
+
+
+# The talk key shows only while the bay is open and the ball is at Moss's counter.
+func _update_talk(shown: bool) -> void:
+	talk.visible = shown
+	talk.position = Vector2(18.0, screen_size().y * BUBBLE_Y - talk.size.y - 10.0)
+	talk.disabled = not counter.is_open()
+	talk.mouse_filter = Control.MOUSE_FILTER_STOP if counter.is_open() and not pick.is_open() else Control.MOUSE_FILTER_IGNORE
+
+
+# ---- Keys and the pad ----
+
+func _input(event: InputEvent) -> void:
+	if not armed:
+		return
+	if pick.is_open():
+		if _pick_key(event):
+			get_viewport().set_input_as_handled()
+		return
+	if counter.is_open():
+		if _counter_key(event):
+			get_viewport().set_input_as_handled()
+		return
+	if talk.visible and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == TALK_KEY:
+		say_next()
+		get_viewport().set_input_as_handled()
+
+
+func _pick_key(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			KEY_1, KEY_KP_1:
+				pick.chosen.emit(0)
+				return true
+			KEY_2, KEY_KP_2:
+				pick.chosen.emit(1)
+				return true
+			KEY_A:
+				pick.step_focus(-1)
+				return true
+			KEY_D:
+				pick.step_focus(1)
+				return true
+			KEY_TAB, KEY_P:
+				return true
+	if event.is_action_pressed("ui_cancel"):
+		close_pick()
+		return true
+	if event.is_action_pressed("ui_left"):
+		pick.step_focus(-1)
+		return true
+	if event.is_action_pressed("ui_right"):
+		pick.step_focus(1)
+		return true
+	if event.is_action_pressed("ui_accept"):
+		pick.confirm()
+		return true
+	return false
+
+
+func _counter_key(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			TALK_KEY:
+				say_next()
+				return true
+			KEY_W:
+				counter.step_focus(0, -1)
+				return true
+			KEY_S:
+				counter.step_focus(0, 1)
+				return true
+			KEY_A:
+				counter.step_focus(-1, 0)
+				return true
+			KEY_D:
+				counter.step_focus(1, 0)
+				return true
+	if event.is_action_pressed("ui_cancel"):
+		close_counter()
+		return true
+	for dir in [["ui_left", -1, 0], ["ui_right", 1, 0], ["ui_up", 0, -1], ["ui_down", 0, 1]]:
+		if event.is_action_pressed(dir[0]):
+			counter.step_focus(dir[1], dir[2])
+			return true
+	if event.is_action_pressed("ui_accept"):
+		counter.confirm()
+		return true
+	return false

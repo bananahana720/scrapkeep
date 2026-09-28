@@ -119,7 +119,7 @@ const ROWS := {
 	"vent_erupted": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "reactor_erupt", "hud": "", "objective": "", "priority": 2},
 	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
 	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
-	"weak_point_opened": {"group": "combat", "color": Color("3d8bff"), "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
+	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -198,8 +198,8 @@ static func category(id: String) -> Dictionary:
 # row per bus signal. Sounds are ids for presentation to bake. A slot's state reads by
 # shape first (frame weight, wedge, doubled frame, strike); active wears the class
 # colour, since class colour means yours. "class_motif" is not a synth id: it names the
-# class row's own sound (sound_next, else sound), so the ready swell and a charge pip
-# filling play the class's tune (SOUND-STORY section 7, W1).
+# class row's ready pulse (<motif>_ready, resolved in rows.gd), so the ready swell plays
+# the class's tune (SOUND-STORY section 7, W1).
 const UI_ROWS := {
 	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "class_motif", "hud": "", "objective": "", "priority": 1},
 	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -221,10 +221,12 @@ const OBJECTIVE_SHORT := {
 	"beacon_charge_changed": "Break the Warden",
 	"boss_arena_entered": "Break Brindle's Requisition",
 }
-# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near.
+# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
+# worded for the stage's family: stage 1's reactor opens its core as it vents, stage
+# 2's hive stands behind a guard rack.
 const LESSON_SHORT := {
-	"plate": "Ram it hard",
-	"caps": "Slam its vent caps",
+	"plate": "Ram it as it vents",
+	"caps": "Bowl its guard, slam caps",
 	"magnet": "Shoot its magnet while pulled",
 }
 
@@ -254,8 +256,8 @@ const LOOT_ROWS := {
 	"shop_left": {"group": "economy", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
 	"shop_bought": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
 	"shop_charge": {"group": "economy", "color": Palette.ARC, "shape": "core", "sound": "core_socket", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
-	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
-	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "workbench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "bench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "bench_clank", "hud": "", "objective": "", "priority": 1},
 	"shop_refused": {"group": "economy", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "moss_grumble", "hud": "", "objective": "", "priority": 1},
 	"moss_beat": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "moss_babble", "hud": "", "objective": "", "priority": 1},
 	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
@@ -272,7 +274,7 @@ const LOOT_ROWS := {
 # layers and rides by the world's own sandstone, the landmark by the ancients' blue.
 # Rising and breathy means a ride; falling and pure means incoming: the launchers'
 # charge whistle rises, the impact's falls (SOUND-STORY section 7, W6 must).
-const ANCIENT_LIGHT := Color("3d8bff")
+const ANCIENT_LIGHT := Palette.ANCIENT
 const WORLD_ROWS := {
 	"lift_fired": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "lift_chuff_clank", "hud": "", "objective": "", "priority": 1},
 	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},

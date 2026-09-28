@@ -9,12 +9,14 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const HelpPage := preload("res://src/ui/help_page.gd")
 
-# The screens outside play: title, class select, death, victory and summary. Each is
-# one glance and one key, and every choice is also a button that presses that key
-# through game._screen_key, so a click and a key can never disagree. Starting and
-# restarting take a second (principle 2). Screens fade in and out with a tween; the fade
-# never holds input or the ball, so play starts under a fading veil.
+# The screens outside play: title (with its how-to-play page on H), class select,
+# death, victory and summary. Each is one glance and one key, and every choice is also
+# a button that presses that key through game._screen_key, so a click and a key can
+# never disagree. Starting and restarting take a second (principle 2). Screens fade in
+# and out with a tween; the fade never holds input or the ball, so play starts under a
+# fading veil.
 
 const FADE_IN := 0.3
 const FADE_OUT := 0.25
@@ -26,6 +28,7 @@ const CARD_GAP := 24.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
+const TITLE := "SCRAPKEEP: FIRST RUN"
 
 var game
 
@@ -36,6 +39,7 @@ var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
 var _actions: HBoxContainer
+var _help
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
@@ -70,6 +74,10 @@ func setup(game_ref) -> void:
 	_content.add_child(_choices)
 	_actions = _row(18)
 	_content.add_child(_actions)
+	_help = HelpPage.new()
+	_help.visible = false
+	_help.back.pressed.connect(_press.bind("key_h"))
+	_content.add_child(_help)
 	game.events.flow_changed.connect(_on_flow_changed)
 
 
@@ -92,14 +100,17 @@ func _row(separation: int) -> HBoxContainer:
 
 func _on_flow_changed(state: String) -> void:
 	_state = state
+	_help.visible = false
+	_actions.visible = true
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
 			child.queue_free()
 	match state:
 		"title":
-			_show("SCRAPKEEP: FIRST RUN", Palette.AMBER, FieldNotes.OBJECTIVE)
+			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 			_action("start", "key_space", "Start")
+			_action("help", "key_h", "Help")
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
@@ -125,6 +136,31 @@ func _on_flow_changed(state: String) -> void:
 			_action("class", "key_space", "Choose class")
 	_fade(state in MENU_STATES)
 	_update_enabled()
+
+
+# H on the title swaps its body and actions for the how-to-play page, and back.
+func toggle_help() -> void:
+	if _state != "title":
+		return
+	_help.visible = not _help.visible
+	_actions.visible = not _help.visible
+	if _help.visible:
+		_show("HOW TO PLAY", Palette.AMBER, "")
+	else:
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_fade(true)
+
+
+func help_open() -> bool:
+	return _help.visible
+
+
+func _input(event: InputEvent) -> void:
+	if not _help.visible or not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if event.physical_keycode == KEY_ESCAPE:
+		toggle_help()
+		get_viewport().set_input_as_handled()
 
 
 func _show(title: String, color: Color, body: String) -> void:
@@ -215,6 +251,8 @@ func _update_enabled() -> void:
 
 
 func button_for(action: String) -> Button:
+	if action == "back":
+		return _help.back
 	for child in _actions.get_children():
 		if child.action == action:
 			return child
