@@ -34,7 +34,7 @@ const WORDS := {
 const EXTRAS := {
 	"vault": {"key": "key_space", "icon": "ab_sable_vault", "words": "vault kick", "card": true},
 	"glide": {"key": "key_space", "icon": "ab_kest_glide", "words": "glide + rocket", "card": true},
-	"pylon": {"key": "key_e", "icon": "ab_sable_mount", "words": "plant pylon", "card": false},
+	"pylon": {"key": "key_e", "icon": "ab_sable_mount", "words": "wall mount", "card": false},
 	"grapple": {"key": "key_q", "icon": "ab_sable_move", "words": "winch", "card": false},
 }
 

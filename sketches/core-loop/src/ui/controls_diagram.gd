@@ -34,6 +34,7 @@ const GAP := 6.0
 const CAP := 22.0
 const ICON := 30.0
 const FONT := 13
+const EXTRA_FONT := 12
 const MOUSE_GAP := 34.0
 const MOUSE_SIZE := Vector2(132.0, 206.0)
 const MOUSE_LABEL := 112.0
@@ -151,6 +152,14 @@ func _key(key: String, rect: Rect2) -> void:
 	if entry["extra"] == "":
 		_words(entry["label"], _label_rect(rect, rect.size.x), tone)
 		return
+	if rect.size.x < 2.0 * U:
+		# A narrow key stacks the shared word over the pilot's own and wears the pilot's icon.
+		draw_texture_rect(Icons.texture(entry["extra_icon"]), icon_rect, false, Icons.tint(entry["extra_icon"], tone))
+		var below := _label_rect(rect, rect.size.x)
+		var line := Vector2(below.size.x, below.size.y * 0.5)
+		_words(entry["label"], Rect2(below.position, line), Color(Palette.SAND, 0.8))
+		_words(entry["extra"], Rect2(below.position + Vector2(0.0, line.y), line), tone, HORIZONTAL_ALIGNMENT_CENTER, EXTRA_FONT)
+		return
 	var half := rect.size.x * 0.5
 	_words(entry["label"], _label_rect(rect, half), Color(Palette.SAND, 0.8))
 	var side := Rect2(rect.position + Vector2(half, 0.0), Vector2(half, rect.size.y))
@@ -203,14 +212,14 @@ func _mouse() -> void:
 		_words(_keys[LOOK]["label"], Rect2(mid - Vector2(40.0, 10.0), Vector2(80.0, 24.0)), Color(Palette.SAND, 0.8))
 
 
-func _words(text: String, rect: Rect2, color: Color, align := HORIZONTAL_ALIGNMENT_CENTER) -> void:
+func _words(text: String, rect: Rect2, color: Color, align := HORIZONTAL_ALIGNMENT_CENTER, font_size := FONT) -> void:
 	if text == "":
 		return
 	var font := UiFonts.bold()
-	var line := font.get_height(FONT)
-	var lines := 1 if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x <= rect.size.x else 2
-	var top := rect.position.y + (rect.size.y - line * lines) * 0.5 + font.get_ascent(FONT)
-	draw_multiline_string(font, Vector2(rect.position.x, top), text, align, rect.size.x, FONT, 2, color)
+	var line := font.get_height(font_size)
+	var lines := 1 if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= rect.size.x else 2
+	var top := rect.position.y + (rect.size.y - line * lines) * 0.5 + font.get_ascent(font_size)
+	draw_multiline_string(font, Vector2(rect.position.x, top), text, align, rect.size.x, font_size, 2, color)
 
 
 func _arrow(at: Vector2, dir: Vector2, color: Color) -> void:
