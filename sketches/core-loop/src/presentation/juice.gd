@@ -36,6 +36,11 @@ const PULSE_SPEED := 9.0
 const SPRING := 420.0
 const DAMPING := 17.0
 const MAX_SQUASH := 0.45
+# The springs integrate in steps no longer than this, so one long frame (a stage load,
+# a stall under a scaled time_scale) cannot blow them up: the squash spring's explicit
+# step goes unstable near 0.1 s. At most MAX_SPRING_STEPS per frame.
+const SPRING_STEP := 1.0 / 120.0
+const MAX_SPRING_STEPS := 64
 
 var ctx
 var player
@@ -212,20 +217,24 @@ func _on_slammed(_at: Vector3, strength: float, _flatness: float) -> void:
 func _process(delta: float) -> void:
 	if player == null:
 		return
-	# The spring runs on scaled time, so a hit-stop freezes the squash mid-frame too.
-	var accel := -SPRING * _squash - DAMPING * _squash_velocity
-	_squash_velocity += accel * delta
-	_squash += _squash_velocity * delta
+	# The springs run on scaled time, so a hit-stop freezes the squash mid-frame too.
+	var steps := clampi(ceili(delta / SPRING_STEP), 1, MAX_SPRING_STEPS)
+	var h := delta / float(steps)
+	var target := shell_target()
+	for _i in steps:
+		var accel := -SPRING * _squash - DAMPING * _squash_velocity
+		_squash_velocity += accel * h
+		_squash += _squash_velocity * h
+		# The shell: an underdamped spring toward the heft class's size.
+		var shell_accel := SHELL_RATE * SHELL_RATE * (target - shell) - 2.0 * 0.45 * SHELL_RATE * _shell_velocity
+		_shell_velocity += shell_accel * h
+		shell += _shell_velocity * h
 	var juice: Node3D = player.juice_node()
 	var basis := _axis_scale(_axis, _squash)
 	# A gentle stretch along the travel line, scaled by speed.
 	var flat: Vector3 = player.planar_velocity()
 	if flat.length() > 1.0:
 		basis = _axis_scale(flat.normalized(), -0.1 * player.speed_fraction()) * basis
-	# The shell: an underdamped spring toward the heft class's size.
-	var shell_accel := SHELL_RATE * SHELL_RATE * (shell_target() - shell) - 2.0 * 0.45 * SHELL_RATE * _shell_velocity
-	_shell_velocity += shell_accel * delta
-	shell += _shell_velocity * delta
 	juice.basis = basis.scaled(Vector3.ONE * shell)
 	# Keep the contact point planted while squashed, and a grown shell resting on the
 	# ground rather than sunk into it.
