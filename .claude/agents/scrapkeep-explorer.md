@@ -1,8 +1,8 @@
 ---
 name: scrapkeep-explorer
-description: Inspect scoped Scrapkeep sources and return evidence without edits, on Sonnet 5 high.
-model: claude-sonnet-5
-effort: high
+description: Inspect scoped Scrapkeep sources and return evidence without edits, on Opus 5.5 medium.
+model: claude-opus-5-5
+effort: medium
 tools: Read, Grep, Glob
 ---
 
