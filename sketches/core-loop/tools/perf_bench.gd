@@ -65,7 +65,7 @@ const SCENES := {
 	"s2": {"packs": 3, "per_type": 4, "warden": false},
 	"s3": {"packs": 6, "per_type": 8, "warden": true},
 }
-const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails"]
+const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
 const RIVET_SEED := 1
@@ -115,6 +115,7 @@ var _warden_note := ""
 var _frame := 0
 var _samples: Array = []
 var _errors: Array = []
+var _materials_at_record := 0
 var _load_ok := true
 var _proc_start := 0
 var _phys_start := 0
@@ -127,6 +128,15 @@ var _last_perf := -1.0
 var _probe_open := {}
 var _probe_close := {}
 var _ablation_notes := {}
+# --series=<absolute .tsv>: every recorded frame's process, frame and physics time, for hunting a hitch.
+var _series := ""
+# --warm-frames=N and --warm-seconds=S: the warm phase lasts N frames and at least S wall seconds. The
+# music engine bakes each instrument the first time a bar plays it, on the main thread (35 to 85 ms, see
+# the E1 ledger), so a warm phase measured in frames alone ends before those first bars once the
+# frames are fast.
+var _warm_frames := WARM_FRAMES
+var _warm_seconds := 0.0
+var _warm_usec := 0
 # The sound bank and band bake on a worker; the scene waits for them so every run has audio.
 var _sound_ready_s := -1.0
 
@@ -145,6 +155,9 @@ func _initialize() -> void:
 			quit(2)
 			return
 	_scene_id = settings.get("scene", "")
+	_series = settings.get("series", "")
+	_warm_frames = int(settings.get("warm-frames", str(WARM_FRAMES)))
+	_warm_seconds = float(settings.get("warm-seconds", "0"))
 	_out = settings.get("out", "")
 	if not SCENES.has(_scene_id) or not _out.is_absolute_path() or not _out.ends_with(".json"):
 		printerr("perf_bench: needs -- --scene=s1|s2|s3 --out=<absolute .json path>")
@@ -215,6 +228,7 @@ func _process(delta: float) -> bool:
 			if _sound_ready_s < 0.0 and _game.presentation.audio.sound_ready:
 				_sound_ready_s = _seconds_since(_start_usec)
 			if _seconds_since(_phase_usec) > 2.0 and _sound_ready_s >= 0.0:
+				_prebake_band()
 				_build_scene()
 				_apply_ablations()
 				_phase = "warm"
@@ -263,10 +277,13 @@ func _process_end() -> void:
 		return
 	_frame += 1
 	if _phase == "warm":
-		if _frame >= WARM_FRAMES:
+		if _frame == 1:
+			_warm_usec = Time.get_ticks_usec()
+		if _frame >= _warm_frames and _seconds_since(_warm_usec) >= _warm_seconds:
 			_phase = "record"
 			_frame = 0
 			_probe_open = _checks()
+			_materials_at_record = Threat.Painter.materials_built
 		return
 	if sample["perf_process_ms"] != _last_perf:
 		_perf_updates += 1
@@ -276,10 +293,29 @@ func _process_end() -> void:
 		_check_load()
 	if _frame >= RECORD_FRAMES:
 		_probe_close = _checks()
+		if Threat.Painter.materials_built != _materials_at_record:
+			_errors.append("%d mark materials were built during the recorded window (warm-up missed a key)" % (Threat.Painter.materials_built - _materials_at_record))
 		_finish()
 
 
 # --- Scene ---------------------------------------------------------------------------------
+
+# A played run bakes the other themes and instruments on a worker behind stage 1 (Audio._on_ready); a
+# headless run has no device and renders them on the main thread the first time a bar asks. That first
+# use costs 35 to 85 ms in one frame, and with fast frames it lands in the recorded window. The bench
+# finishes the bake before it warms, so the window measures the frame and not the cold band. --cold-band
+# leaves it out, to reproduce that hitch.
+func _prebake_band() -> void:
+	if _off.has("cold-band"):
+		return
+	var audio = _game.presentation.audio
+	if audio.live_output:
+		if audio._rest_task >= 0:
+			WorkerThreadPool.wait_for_task_completion(audio._rest_task)
+			audio._rest_task = -1
+	else:
+		MusicEngine.prepare_rest()
+
 
 func _grant() -> void:
 	var pool := Parts.offer_pool(_game.run.class_id(), ["common", "uncommon", "rare", "rare_plus"])
@@ -620,6 +656,15 @@ func _finish() -> void:
 			continue
 		frames.sort()
 		by_ticks[str(n)] = {"n": frames.size(), "p50": snappedf(_pct(frames, 0.5), 0.001), "p99": snappedf(_pct(frames, 0.99), 0.001)}
+	if _series != "":
+		var rows := PackedStringArray(["frame\tprocess_ms\tframe_ms\tphysics_ms\tticks\tharness_ms"])
+		for i in _samples.size():
+			var f: Dictionary = _samples[i]
+			rows.append("%d\t%.3f\t%.3f\t%.3f\t%d\t%.3f" % [i, f["process_ms"], f["frame_ms"], f["physics_ms"], f["ticks"], f["harness_ms"]])
+		var series_file := FileAccess.open(_series, FileAccess.WRITE)
+		if series_file != null:
+			series_file.store_string("\n".join(rows) + "\n")
+			series_file.close()
 	var ablations: Array = _off.keys()
 	ablations.sort()
 	var info := {
@@ -629,9 +674,9 @@ func _finish() -> void:
 		"adapter": RenderingServer.get_video_adapter_name(),
 		"size": [root.get_texture().get_width(), root.get_texture().get_height()],
 		"physics_hz": Engine.physics_ticks_per_second, "seed": RIVET_SEED,
-		"warm_frames": WARM_FRAMES, "record_frames": _samples.size(), "warden": _warden_note,
+		"warm_frames": _warm_frames, "warm_seconds": _warm_seconds, "record_frames": _samples.size(), "warden": _warden_note,
 		"sound_ready_at_s": snappedf(_sound_ready_s, 0.01), "parts_granted": _granted.size(), "telegraphs_committed": _threats.size(),
-		"perf_monitor_value_changes": _perf_updates,
+		"perf_monitor_value_changes": _perf_updates, "mark_materials": Threat.Painter.materials_built, "mark_materials_built_in_window": Threat.Painter.materials_built - _materials_at_record,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1),
 		"source_sha256": {"res://tools/perf_bench.gd": FileAccess.get_sha256("res://tools/perf_bench.gd"),
 			"res://src/presentation/vfx.gd": FileAccess.get_sha256("res://src/presentation/vfx.gd")},

@@ -8,6 +8,8 @@ const Augments := preload("res://src/movement/augments.gd")
 const EdgeFlash := preload("res://src/presentation/edge_flash.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Density := preload("res://src/presentation/density.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -73,6 +75,64 @@ var _pip_pop := 0.0
 var edge: Control
 # False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
+# Every kill's starburst, pop and debris pass through this gate (kill_pop).
+var pops := PopGate.new()
+var _fill_scale := 1.0
+# What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
+var _density_target := 0.0
+var _density_wait := 0.0
+
+
+# At most Density.KILL_POPS_PER_WINDOW kill pops in any KILL_POP_WINDOW seconds
+# (FEEL-READABILITY.md §1.2, E1-DENSITY.md §3). A kill that finds no room, or arrives in a
+# band that coalesces, joins the nearest pending cluster within reach, else opens one;
+# a fourth cluster folds into the nearest. A cluster pops once, scaled by its kill count,
+# when the window has room and it has waited the band's coalesce time. O(1) per kill.
+class PopGate:
+	extends RefCounted
+
+	var ring := PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
+	var oldest := 0
+	var pending: Array = []
+	# The last EMITTED_KEEP pops: [clock, kills, scale], for the tests.
+	const EMITTED_KEEP := 64
+	var emitted: Array = []
+
+	func add(clock: float, at: Vector3, reach: float) -> void:
+		var nearest: Dictionary = {}
+		var best := INF
+		for cluster in pending:
+			var d: float = (cluster["sum"] / cluster["n"]).distance_to(at)
+			if d < best:
+				best = d
+				nearest = cluster
+		if not nearest.is_empty() and (best <= reach or pending.size() >= Density.KILL_POPS_PER_WINDOW):
+			nearest["sum"] += at
+			nearest["n"] += 1
+			return
+		pending.append({"sum": at, "n": 1, "since": clock})
+
+	# The clusters that pop now, oldest first.
+	func ready(clock: float, wait: float) -> Array:
+		var out: Array = []
+		while not pending.is_empty() and clock - ring[oldest] >= Density.KILL_POP_WINDOW \
+				and clock - float(pending[0]["since"]) >= wait:
+			var cluster: Dictionary = pending.pop_front()
+			ring[oldest] = clock
+			oldest = (oldest + 1) % ring.size()
+			cluster["at"] = cluster["sum"] / cluster["n"]
+			cluster["scale"] = Density.pop_scale(cluster["n"])
+			emitted.append([clock, cluster["n"], cluster["scale"]])
+			if emitted.size() > EMITTED_KEEP:
+				emitted.pop_front()
+			out.append(cluster)
+		return out
+
+	func clear() -> void:
+		pending.clear()
+		emitted.clear()
+		ring = PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
+		oldest = 0
 
 
 func setup(ctx_ref) -> void:
@@ -117,7 +177,6 @@ func setup(ctx_ref) -> void:
 	events.grapple_fired.connect(func(anchor: Vector3): glyph("grapple_fired", anchor, 0.25, 0.7, 0.25))
 	events.shot_fired.connect(_on_shot)
 	events.enemy_struck.connect(_on_struck)
-	events.enemy_killed.connect(func(_kind: String, at: Vector3, _value: int): glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6, 1.8, 0.3))
 	events.scrap_collected.connect(_on_scrap)
 	events.part_gained.connect(func(_id: String, _source: String): glyph("part_gained", player.ball_position() + Vector3.UP * 2.2, 0.4, 1.1, 0.5))
 	events.milestone_won.connect(func(_id: String): glyph("milestone_won", player.ball_position() + Vector3.UP * 2.5, 0.5, 1.6, 0.7))
@@ -315,6 +374,11 @@ func clear() -> void:
 	_chain = 0
 	_trail_points.clear()
 	_streaks.clear()
+	pops.clear()
+	Density.live().reset()
+	_density_target = 0.0
+	_density_wait = 0.0
+	_publish_fill_scale(1.0)
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 
@@ -377,9 +441,16 @@ static func _star_mesh(spokes: int, thickness: float, length: float) -> ArrayMes
 
 # Spawns the fact's glyph: its event_kinds shape and colour, growing from size_from to
 # size_to over life seconds while it fades. facing orients rings and bars.
-func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: float, facing := Vector3.ZERO, shape := "", color_override := Color(0, 0, 0, 0)) -> void:
+# priority_class is the fact's FEEL-READABILITY §1.1 class; unset, the kind's own
+# (Density.class_of_kind). The governor thins P5 glyphs and never P0 to P3.
+func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: float, facing := Vector3.ZERO, shape := "",
+		color_override := Color(0, 0, 0, 0), priority_class := "") -> Dictionary:
 	if root == null or not root.is_inside_tree():
-		return
+		return {}
+	var governed := Density.live().apply(priority_class if priority_class != "" else Density.class_of_kind(kind), 0.9, 1.0, life)
+	size_from *= governed.y
+	size_to *= governed.y
+	life = governed.z
 	var silhouette: String = shape if shape != "" else Rows.shape(kind)
 	var slot: Dictionary = _glyphs[0]
 	for g in _glyphs:
@@ -398,9 +469,11 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["from"] = size_from
 	slot["to"] = size_to
 	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square", "core"] else 0.0
+	slot["alpha"] = governed.x
 	node.visible = true
 	spawned[kind] = spawned.get(kind, 0) + 1
 	_draw_glyph(slot)
+	return slot
 
 
 func _facing_basis(silhouette: String, facing: Vector3) -> Basis:
@@ -432,7 +505,7 @@ func _draw_glyph(slot: Dictionary) -> void:
 	node.basis = base.scaled(Vector3.ONE * size)
 	var color: Color = slot["color"]
 	var mat: StandardMaterial3D = slot["mat"]
-	mat.albedo_color = Color(color.r, color.g, color.b, (1.0 - t) * 0.9)
+	mat.albedo_color = Color(color.r, color.g, color.b, (1.0 - t) * slot.get("alpha", 0.9))
 
 
 # --- Facts -------------------------------------------------------------------------------
@@ -564,6 +637,8 @@ func _process(delta: float) -> void:
 		if is_instance_valid(node):
 			node.basis = Basis(Vector3.UP, _clock * entry["speed"]) * Basis(Vector3.RIGHT, entry["tilt"])
 	_draw_pips(delta)
+	_govern(delta)
+	_emit_pops()
 	var tier: int = player.speed_tier()
 	if _launch_boost > 0.0:
 		tier = SpeedTier.BLAZING
@@ -709,6 +784,54 @@ func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 	p.restart()
 	p.emitting = true
 	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1
+
+
+# A kill's starburst, pop and debris, through the kill-pop gate: one call per kill.
+func kill_pop(at: Vector3) -> void:
+	var governor := Density.live()
+	pops.add(_clock, at, governor.coalesce_metres())
+	_emit_pops()
+
+
+func _emit_pops() -> void:
+	if pops.pending.is_empty():
+		return
+	var row := EventKinds.juice("enemy_killed")
+	for cluster in pops.ready(_clock, Density.live().coalesce_seconds()):
+		var at: Vector3 = cluster["at"]
+		var scale: float = cluster["scale"]
+		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3)
+		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed"), int(ceil(float(row["pop"]) * scale)))
+		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
+
+
+# One density per frame from what is in view (FEEL-READABILITY.md §1.2); the P6 fill
+# scale reaches every governed fill as one global shader value. The group walks run
+# Density.SAMPLE_HZ times a second; between samples the governor eases toward the last
+# count, so a frame costs one update and at most one server call.
+func _govern(delta: float) -> void:
+	_density_wait -= delta
+	if _density_wait <= 0.0:
+		_density_wait = 1.0 / Density.SAMPLE_HZ
+		_density_target = _count_density()
+	_publish_fill_scale(Density.fill_scale(Density.live().update(delta, _density_target)))
+
+
+func _count_density() -> float:
+	var cam: Camera3D = camera.cam if camera != null and camera.get("cam") is Camera3D else null
+	var alive := 0
+	for g in _glyphs:
+		if g["t"] < 1.0:
+			alive += 1
+	var tree := get_tree()
+	return Density.raw(Density.count_in_view(cam, tree.get_nodes_in_group(Threat.GROUP)), alive,
+		Density.count_in_view(cam, tree.get_nodes_in_group("enemy")))
+
+
+func _publish_fill_scale(value: float) -> void:
+	if value != _fill_scale:
+		_fill_scale = value
+		Density.publish_fill_scale(value)
 
 
 # The most particles the bursts can hold alive at once, for the notes.

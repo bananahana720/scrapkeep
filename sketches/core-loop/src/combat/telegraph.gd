@@ -56,6 +56,9 @@ var mechanic_tag := ""
 
 var _painter
 var _flashed := false
+# Driven: the motion marks were built once and each frame only moves them (E1).
+var _driven := false
+var _fill_tint := Color(-1.0, -1.0, -1.0, -1.0)
 
 
 static func ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float, reach := 3.5,
@@ -181,6 +184,7 @@ func set_flight(from: Vector3, arc_bump: float) -> void:
 	launch = from
 	bump = arc_bump
 	has_flight = true
+	_paint_motion()
 	_repaint()
 
 
@@ -235,20 +239,41 @@ func _build() -> void:
 	if not Threat.valid(type):
 		push_error("telegraph committed without an attack type")
 		return
+	var d := descriptor()
+	_driven = Threat.can_drive(d)
 	_painter = Threat.Painter.new()
 	_painter.floor_y = center.y
 	_painter.lift = LIFT
+	_painter.driven = _driven
+	_painter.centre = center
+	_painter.heading = Vector2(dir.x, dir.z)
+	_painter.motion_class = {Threat.Type.WAVE: "swept", Threat.Type.LANE: "run"}.get(type, "fill")
+	_painter.area_class = "reach" if type == Threat.Type.PROJECTILE else "area"
 	add_child(_painter)
-	_painter.paint(Threat.marks(descriptor(), false), Threat.STATIC_LAYERS)
+	_painter.paint(Threat.marks(d, false), Threat.STATIC_LAYERS)
+	_paint_motion()
 	_repaint()
+
+
+# A driven telegraph builds its motion marks here, at commit and when its flight is set;
+# nothing else rebuilds a mesh for the life of the node.
+func _paint_motion() -> void:
+	if _painter != null and _driven:
+		_painter.paint(Threat.driven_marks(descriptor()), Threat.MOTION_LAYERS)
 
 
 func _repaint() -> void:
 	if _painter == null:
 		return
 	var d := descriptor()
-	_painter.paint(Threat.marks(d, true), Threat.MOTION_LAYERS)
-	_painter.tint("fill", Threat.fill_tint(d))
+	if _driven:
+		_painter.drive(Threat.drive(d))
+	else:
+		_painter.paint(Threat.marks(d, true), Threat.MOTION_LAYERS)
+	var fill := Threat.fill_tint(d)
+	if fill != _fill_tint:
+		_fill_tint = fill
+		_painter.tint("fill", fill)
 
 
 static func material(alpha: float, tint := Palette.HAZARD) -> StandardMaterial3D:
