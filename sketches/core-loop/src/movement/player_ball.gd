@@ -15,6 +15,7 @@ const Indicator := preload("res://src/movement/indicator.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
 # movement and publishes each movement fact on the bus; what a collision does to an
@@ -314,7 +315,7 @@ func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> b
 	if _frozen:
 		return false
 	if kit.sprinting or immune_left > 0.0 or (kit.mounted and tree.knob("mount_cc_immune")):
-		var now := Time.get_ticks_msec()
+		var now := SimClock.msec()
 		if now - int(_cc_ignored_at.get(kind, -100000)) >= CC_IGNORED_GAP_MS:
 			_cc_ignored_at[kind] = now
 			events.cc_ignored.emit(kind)
