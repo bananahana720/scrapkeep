@@ -152,13 +152,19 @@ void fragment() {
 	mat.vertex_color_use_as_albedo = spec.get("vertex", false)
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
-	if slot in ["paint", "pilot", "bare_metal", "ancient_enamel", "fleet_paint"]:
+	if slot == "ancient_enamel":
+		# Section 11: cast, seamless petrol with dust in the vertex colours; no plate map.
+		mat.albedo_texture = Palette.painted_texture(128)
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE * 2.0
+		Palette.enamel_wear(mat)
+	if slot in ["paint", "pilot", "bare_metal", "fleet_paint"]:
 		# Look pass 3: broad painted material groups. Plate for hulls and Warden armor,
 		# the worn variant for old fleet repairs, riveted gyro metal for bare metal.
 		var map := ""
 		var metres := 1.5
 		match slot:
-			"paint", "ancient_enamel":
+			"paint":
 				map = "rusted-salvaged-plate"
 			"fleet_paint":
 				map = "rusted-salvaged-plate-worn"
@@ -166,7 +172,7 @@ void fragment() {
 				map = "riveted-gyro-metal"
 				metres = 0.8
 		if map != "":
-			mat.albedo_texture = Palette.look_texture(map, slot != "ancient_enamel")
+			mat.albedo_texture = Palette.look_texture(map, true)
 			mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 			mat.uv1_triplanar = true
 			mat.uv1_scale = Vector3.ONE / metres
@@ -174,10 +180,6 @@ void fragment() {
 			# instead of tinting twice.
 			if slot == "paint":  # lift once, not a second tint
 				mat.albedo_color = Color(1.2, 1.2, 1.2, mat.albedo_color.a)
-			if slot == "ancient_enamel":
-				# Warden armour takes the teal-and-rust plate colours directly.
-				mat.vertex_color_use_as_albedo = false
-				mat.albedo_color = Color(1.5, 1.5, 1.5)
 		else:
 			mat.albedo_texture = Palette.painted_texture(128)
 			mat.uv1_triplanar = true
