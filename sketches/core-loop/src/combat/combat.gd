@@ -24,6 +24,11 @@ const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+# The v3 fun lab's loop_mode switch (M0's drops_to_break gate, review finding 2, fix
+# round 2) and the roster row fleet.gd's own reinforcement-pack system reads (M0's
+# "adds" classification, review finding 3, fix round 2).
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const Roster := preload("res://src/combat/roster.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -120,10 +125,11 @@ const RANGE_MID_M := 16.0
 # boss_adds (something spawned while ctx.flow.in_arena is true, e.g. Brindle's
 # drone-dropped lobbers; boss.gd is out of this unit's allowed files, so the tag comes
 # from spawn provenance in spawn_enemy() below, not a caller-set flag). Fleet-roster
-# kinds keep "adds" (fleet.gd calls its own spawns "reinforcement packs", and an
-# existing test already encodes that as intended); confirm that reading with the owner
-# before tuning on it, per review finding 2 (fix round 1). cache (the vault: static,
-# never attacks, never moves) is its own class, not "enemy" (finding 3, fix round 1).
+# kinds keep "adds" (fleet.gd calls its own spawns "reinforcement packs", asserted in
+# _target_class_of_kind against Roster.is_reinforcement rather than left as an implicit
+# complement of KINDS, review finding 3, fix round 2, confirmed rather than renamed: see
+# that function for the evidence). cache (the vault: static, never attacks, never moves)
+# is its own class, not "enemy" (finding 3, fix round 1).
 # "Scenery" is excluded by construction: a piece that cannot be hit (boss_target.gd's
 # world-layer wrecked hull) never reaches strike() to begin with.
 
@@ -277,9 +283,15 @@ func setup(ctx_ref) -> void:
 		_reset_ledger()
 		_rebuild_patterns())
 	ctx.events.beacon_unsealed.connect(func(stage: int):
-		_ledger["drops_to_break"][str(stage)] = _warden_drop_hits
-		_warden_drop_hits = 0
-		_publish_ledger())
+		_ledger["drops_to_break"][str(stage)] = _warden_drop_hits if LoopMode.is_drop(ctx.tuning) else null
+		_warden_drop_hits = 0)
+	# review finding 1, fix round 2: Brindle's parts are never spawned through
+	# spawn_enemy(), so the died-signal retirement path below never sees him; boss_defeated
+	# (already a bus fact, game_events.gd:73 / event_kinds.gd:81, published once by
+	# boss.gd's own _defeat()) is the one signal every boss kill fires, whatever finished
+	# him (the scooter catch or, if a future path lets a hull hit zero the pool directly,
+	# that too), so it is where the "boss" retirement belongs instead.
+	ctx.events.boss_defeated.connect(func(): _record_retirement("boss"))
 	ctx.events.dismounted.connect(func(v: Vector3):
 		if v.length() > 0.1:
 			_since_slingshot = 0.0)
@@ -355,6 +367,18 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "")
 	_detect_before(enemy, kind, result)
 	var outer := _pending
 	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
+	# review finding 1, fix round 2: a Brindle piece's hp is a getter over the boss's one
+	# shared pool (boss_target.gd), and a listener on enemy_struck can remove HP from that
+	# pool synchronously (boss.gd's _on_enemy_struck -> _defeat, the scooter catch) before
+	# take_damage() ever runs, outside take_damage()'s own return-value accounting. Reading
+	# hp before the emit and again after take_damage() catches that removal too, clamped
+	# the same way overkill already is; for every ordinary target this equals what
+	# take_damage() itself returned, so the maxf below never double-counts. hp_after is
+	# floored at 0 before the subtraction: enemy.gd's own take_damage() subtracts past 0
+	# rather than clamping (unlike the removed value it returns and unlike boss.gd's own
+	# floor clamp), so an unclamped delta would read the full overkill swing as "removed"
+	# on every ordinary kill.
+	var hp_before := _hp_of(enemy)
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	if not result["full"]:
 		deflections += 1
@@ -363,10 +387,23 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "")
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
 	var removed: float = enemy.take_damage(result["dealt"])
+	if is_instance_valid(enemy):
+		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
 	_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
 	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source,
 		bool(result.get("drop", false)))
+
+
+# hp is not part of the enemy protocol (README.md), but every implementation carries it
+# (enemy.gd's own var, boss_target.gd's getter over boss.hp); a target without one (the
+# scenery-guard's plain Node3D, which never reaches here because it fails the
+# has_method("take_damage") check above) reads 0.0 and never inflates a delta.
+func _hp_of(enemy: Node3D) -> float:
+	if not is_instance_valid(enemy):
+		return 0.0
+	var v = enemy.get("hp")
+	return float(v) if v != null else 0.0
 
 
 # --- M0: delivered-damage ledger (see the constants above for the categories) --------
@@ -390,16 +427,20 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 	_bump(_ledger["by_action"], kind, removed)
 	_bump(_ledger["by_target_class"], target_class, removed)
 	_bump(_ledger["by_range"], _range_bucket(enemy), removed)
-	if target_class == "Warden" and source == "drop_or_slam" and removed > 0.0:
+	# review finding 2, fix round 2: drops_to_break is loop_mode "drop"'s own measure
+	# (spec: "drops-to-break when loop_mode is drop"), so it only counts there; a v2 or
+	# laps stage leaves it null (see beacon_unsealed below), not a misleading 0. A "drop"
+	# is a descending contact landing on the Warden: the smash/skid shockwave tags itself
+	# "slam" (player_ball.gd), but a ball dropping onto the Warden from above tags "stomp"
+	# (player_ball.gd's STOMP), so both count, not just the slam kind alone.
+	if target_class == "Warden" and kind in ["stomp", "slam"] and removed > 0.0 and LoopMode.is_drop(ctx.tuning):
 		_warden_drop_hits += 1
-	_publish_ledger()
 
 
 func _record_retirement(target_class: String) -> void:
 	if _ledger.is_empty():
 		_reset_ledger()
 	_ledger["retirements"][target_class] = int(_ledger["retirements"].get(target_class, 0)) + 1
-	_publish_ledger()
 
 
 static func _bump(map: Dictionary, key: String, amount: float) -> void:
@@ -456,6 +497,22 @@ func _target_class_of_kind(kind: String) -> String:
 		return "cache"
 	if kind in KINDS:
 		return "enemy"
+	# review finding 3, fix round 2 (confidence 0.6, evidence a director-composed
+	# mag_trapper landing in "adds"): rejected as a bug, kept as a deliberate reading,
+	# confirmed rather than renamed. spawn_enemy()'s match above only ever builds a v1
+	# KINDS enemy, the Warden, the vault, or a fleet.makes(kind) enemy, so any kind
+	# reaching here is a Fleet SCRIPTS kind, whoever spawned it. fleet.gd's own
+	# reinforcement-pack system (on_spawned, Roster.is_reinforcement, the per-frame batch
+	# it flushes into pack_arrived: "every reinforcement spawned in one physics frame is
+	# one pack") already calls every one of those kinds a reinforcement, director-composed
+	# or not; chaser and lobber, KINDS' only other director-spawned kinds, are not
+	# reinforcements and land in "enemy" above. "adds" names that system, so it is
+	# asserted against Roster.is_reinforcement here instead of left as an implicit
+	# complement of KINDS, so the two names cannot silently drift apart. A kind that is
+	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
+	# counts under "adds" but is warned once rather than counted silently.
+	if not Roster.is_reinforcement(kind):
+		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
 	return "adds"
 
 
@@ -477,12 +534,16 @@ func _reset_ledger() -> void:
 		"retirements": {}, "drops_to_break": {},
 	}
 	_warden_drop_hits = 0
-	_publish_ledger()
-
-
-func _publish_ledger() -> void:
+	# review finding 4, fix round 2: a duplicate(true) on every hit is a hot-path
+	# allocation (measured ~36x the rest of a hit's bookkeeping; a multi-target discharge
+	# can spend roughly 0.8 ms of a ~26 ms frame on copies that are thrown away every time
+	# but the run's end). GDScript Dictionaries are references, so publishing this once
+	# and mutating it in place (_bump and friends assign into the same object) keeps
+	# ctx.run's meta current without a copy; run_log._write() reads it once, right before
+	# JSON.stringify serialises the line synchronously, so no caller ever observes a
+	# half-written ledger.
 	if ctx != null and ctx.run != null:
-		ctx.run.set_meta("delivered_damage", _ledger.duplicate(true))
+		ctx.run.set_meta("delivered_damage", _ledger)
 
 
 # Read-only: run_log mirrors this onto ctx.run's meta (delivered_damage) at every

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # M0: the delivered-damage baseline and provenance (design-v3/STRATEGY-SPINE.md §7 row
 # M0, §8 row 1). Every assertion reads combat's own ledger (delivered_damage(), mirrored
@@ -135,16 +136,31 @@ func _run_all() -> void:
 			% [_combat._classify_source("stomp", "", true), _combat._classify_source("stomp", "", false)])
 
 	# drop_or_slam, auto-classified from kind "slam" alone (no explicit source), on the
-	# Warden target class; three partial hits feed drops_to_break.
+	# Warden target class; three partial hits feed drops_to_break. review finding 2, fix
+	# round 2: drops_to_break is loop_mode "drop"'s own measure, so the base's default
+	# "v2" mode must not count these; the mode-gated part is proven right after.
 	var hp_w: float = warden.max_hp
+	_report("v2_mode_not_drop_counted", not LoopMode.is_drop(ctx.tuning),
+		"the base's default loop_mode read '%s' (needs anything but 'drop', so the count below proves the gate, not a coincidence)"
+			% [LoopMode.mode(ctx.tuning)])
+	_combat.strike(warden, "slam", hp_w * 0.1)
+	_report("v2_mode_slam_not_counted", _combat._warden_drop_hits == 0,
+		"a slam hit on the Warden outside loop_mode 'drop' bumped _warden_drop_hits to %d (needs 0, unmeasured)"
+			% [_combat._warden_drop_hits])
+	ctx.tuning.set_option("loop_mode", "drop")
 	_combat.strike(warden, "slam", hp_w * 0.1)
 	_combat.strike(warden, "slam", hp_w * 0.1)
-	_combat.strike(warden, "slam", hp_w * 0.1)
-	_report("drop_or_slam_source", float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)) >= hp_w * 0.3 - 0.01,
-		"three slam hits on the Warden landed %.1f under by_source.drop_or_slam (needs >= %.1f)"
-			% [float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)), hp_w * 0.3])
-	_report("warden_target_class", float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)) >= hp_w * 0.3 - 0.01,
-		"the Warden's own bucket read %.1f (needs >= %.1f)" % [float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)), hp_w * 0.3])
+	# review finding 2, fix round 2: a ball dropping onto the Warden tags "stomp"
+	# (player_ball.gd's STOMP), not "slam"; it must count as a drop hit too.
+	_combat.strike(warden, "stomp", hp_w * 0.1)
+	_report("drop_or_slam_source", float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)) >= hp_w * 0.2 - 0.01,
+		"two slam hits on the Warden (in loop_mode drop) landed %.1f under by_source.drop_or_slam (needs >= %.1f)"
+			% [float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)), hp_w * 0.2])
+	_report("warden_target_class", float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)) >= hp_w * 0.4 - 0.01,
+		"the Warden's own bucket read %.1f (needs >= %.1f)" % [float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)), hp_w * 0.4])
+	_report("drop_hits_count_stomp_and_slam", _combat._warden_drop_hits == 3,
+		"one v2-mode slam (uncounted) plus two drop-mode slams and one drop-mode stomp left _warden_drop_hits at %d (needs 3)"
+			% [_combat._warden_drop_hits])
 
 	# item_proc, auto-classified from kind "synergy", on a Fleet reinforcement ("adds").
 	var hp_adds: float = adds.max_hp
@@ -202,14 +218,23 @@ func _run_all() -> void:
 		"an upgrade-tree-sourced _fire() call tagged its bolt '%s' (needs 'item_proc', not the old hardcoded 'weapon')"
 			% [String(fired_bolts[-1].get("source", "")) if fired_bolts.size() > 0 else "<no bolt>"])
 
-	# drops_to_break: three drop_or_slam hits landed on the Warden this stage attempt;
-	# the Warden's own break (beacon_unsealed) must snapshot that count for the stage.
-	# Read before entering the boss arena below: stage_content_cleared (which entering
-	# the arena emits) starts a fresh attempt and would zero this count first.
+	# drops_to_break: two drop-mode slam hits and one drop-mode stomp hit landed on the
+	# Warden this stage attempt (the earlier v2-mode slam above is excluded by design);
+	# the Warden's own break (beacon_unsealed) must snapshot that count for the stage,
+	# still in loop_mode "drop" (still set from above). Read before entering the boss
+	# arena below: stage_content_cleared (which entering the arena emits) starts a fresh
+	# attempt and would zero this count first.
 	ctx.events.beacon_unsealed.emit(1)
 	var drops: Dictionary = _combat.delivered_damage()["drops_to_break"]
 	_report("drops_to_break", int(drops.get("1", -1)) == 3,
-		"stage 1's drops_to_break read %s after three slam hits on the Warden and its break (needs 3)" % [drops])
+		"stage 1's drops_to_break read %s after two drop-mode slams, one drop-mode stomp and its break (needs 3)" % [drops])
+	# The gate itself: a beacon break outside loop_mode "drop" must not read 0 (a
+	# measurement that never ran), it must read null (explicitly unmeasured).
+	ctx.tuning.set_option("loop_mode", "v2")
+	ctx.events.beacon_unsealed.emit(2)
+	var drops_v2: Dictionary = _combat.delivered_damage()["drops_to_break"]
+	_report("drops_to_break_null_outside_drop_mode", drops_v2.get("2", "missing") == null,
+		"stage 2's drops_to_break broke in loop_mode 'v2' and read %s (needs null, not 0 or missing)" % [drops_v2])
 
 	# Boss (finding 4, fix round 1): boss.gd clamps to a phase floor instead of to 0,
 	# and that path was never exercised. Enter the arena, strike the hull once inside
@@ -232,10 +257,39 @@ func _run_all() -> void:
 		"two hull hits (the second past the phase-1 floor) dropped the boss %.1f hp; by_target_class.boss rose by %.1f (need equal)"
 			% [real_boss_loss, boss_bucket_after - boss_bucket_before])
 
+	# review finding 1, fix round 2: the scooter catch removes the rest of the boss's HP
+	# pool through boss.gd's own _defeat() (an enemy_struck listener that runs before
+	# take_damage() and sets hp = 0.0 outside its accounting, and boss.take_damage()
+	# itself returns 0 in EJECT since state != FIGHT), so strike()'s own return-value
+	# path used to miss the whole remaining pool and never retire the boss. jump_to_phase
+	# (boss.gd's own dev hook, also how the round-2 review reproduced this) goes straight
+	# to EJECT without simulating the full 75 s fight; the scooter still starts mid-air,
+	# so it is marked landed and the ball is put on it directly, the same way
+	# boss_flow_test.gd's own scooter case does (Harness.put_ball to the scooter, never
+	# the other way: the scooter is an AnimatableBody3D with sync_to_physics, so setting
+	# its own global_position from script does not take effect before a physics tick).
+	boss.jump_to_phase(4)
+	boss._eject["landed"] = true
+	ctx.player.reset_to(boss.scooter.global_position)
+	ctx.player.body().global_position = boss.scooter.global_position
+	var boss_hp_before_catch: float = boss.hp
+	var boss_bucket_before_catch: float = float(_combat.delivered_damage()["by_target_class"].get("boss", 0.0))
+	var boss_retirements_before: int = int(_combat.delivered_damage()["retirements"].get("boss", 0))
+	_combat.strike(boss.scooter, "ram", 50.0)
+	var boss_bucket_after_catch: float = float(_combat.delivered_damage()["by_target_class"].get("boss", 0.0))
+	_report("boss_defeat_ledger", boss.state_name() == "defeated" and boss.hp == 0.0 and boss_hp_before_catch > 0.0
+			and absf(boss_bucket_after_catch - boss_bucket_before_catch - boss_hp_before_catch) < 0.05,
+		"the scooter catch dropped boss.hp %.1f -> %.1f (state %s); by_target_class.boss rose by %.1f (needs the whole remaining pool, %.1f, not 0)"
+			% [boss_hp_before_catch, boss.hp, boss.state_name(), boss_bucket_after_catch - boss_bucket_before_catch, boss_hp_before_catch])
+	_report("boss_retirement", int(_combat.delivered_damage()["retirements"].get("boss", 0)) == boss_retirements_before + 1,
+		"the boss's defeat retired %d under retirements.boss (needs %d, one more than before the catch)"
+			% [int(_combat.delivered_damage()["retirements"].get("boss", 0)), boss_retirements_before + 1])
+
 	# 1 (finding 4, fix round 1): sum the real HP lost over every struck target this run
 	# (partial and overkill hits alike, enemies, the vault and the boss) and compare it
-	# with the ledger's own total, independent of the by_* buckets below.
-	var real_total_lost := real_boss_loss
+	# with the ledger's own total, independent of the by_* buckets below. The scooter
+	# catch's own loss (finding 1, fix round 2) folds in here too.
+	var real_total_lost := real_boss_loss + boss_hp_before_catch
 	for e in [enemy_a, warden, adds, lobber, vault]:
 		var id: int = e.get_instance_id()
 		# enemy.gd's own take_damage() subtracts past 0 rather than clamping (hp -=
@@ -264,7 +318,8 @@ func _run_all() -> void:
 		"one chaser killed retired %d under retirements.enemy (needs 1)" % [int(ledger["retirements"].get("enemy", 0))])
 
 	# No double counting: exactly the strike() calls made above, once each (chaser,
-	# 3x warden slam, adds, lobber, vault, 2x boss hull; the two scenery/proc-only
-	# calls above never reach take_damage() and are not in this count).
-	_report("hit_count", int(ledger["hits"]) == 9,
-		"9 strike() calls above produced %d ledger hits (needs 9, one per call, none doubled)" % [int(ledger["hits"])])
+	# 4x warden [1 v2-mode slam, 2 drop-mode slam, 1 drop-mode stomp], adds, lobber,
+	# vault, 2x boss hull, the scooter catch; the two scenery/proc-only calls above
+	# never reach take_damage() and are not in this count).
+	_report("hit_count", int(ledger["hits"]) == 11,
+		"11 strike() calls above produced %d ledger hits (needs 11, one per call, none doubled)" % [int(ledger["hits"])])
