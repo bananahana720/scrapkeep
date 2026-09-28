@@ -115,6 +115,22 @@ Andrew: "the pilot should react to the player's actions, achievements, or failur
   - The bar is "good enough, not overly complex".
 - The table and wiring are WIP 0a07aaf on `codex/pilot-reactions` in the visual clone, and the four clips landed at b6a595e. New clips follow the split below: Codex draws the keyframes, Sonnet agents pose and export them in Blender.
 
+## Feedback and discovery (Andrew, 2026-09-28)
+
+Andrew wants feedback solid enough for an alpha in a game about timing, dodging and reading 3D space from different perspectives. These are standing principles on top of everything else.
+
+- **Attacks read through the attacker first.** Every attack, whether enemy, Warden or the player's own, is announced by its body and its sound: a wind-up pose, a charge glow, an audible inhale or ratchet, then the strike and the recovery. The floor marking becomes **support, not the message**: a thin, translucent red haze or projection line that traces where the hit lands. RR-01 still holds: the haze draws from the same committed geometry that deals the damage. This extends principle 15 (wind-ups mapped onto the telegraph, strike and recovery keys) to every attacker. E1's static geometry with a shader-driven fill makes the thinner haze a shader change rather than a rebuild.
+- **First discovery explains itself; repeats just pop.** The first time a player finds a synergy, item, interactable or reaction, a picture card shows what it does: a short looping animation of the thing working, plus a name and at most a few words. It follows the ceremony's calm gate. It pauses only when the area is calm; mid-fight it lands in place as a glyph and the card waits for the next calm moment. Any input skips it, and velocity is kept. After that, triggers are a quick glyph-plus-name pop (wave E's toast). This reconciles FEEL-READABILITY §5 ("learn by experimenting, the codex names it after the fact"): the player still discovers by doing, and the card celebrates and explains what they just did rather than instructing in advance.
+- **Progression gets a ceremony.** Unlocking an area or a pilot, and completing a branch of the upgrade tree, get their own celebration tier on W13's ceremony, with its own cue in the spill-B grammar.
+- **The codex is browsable from the home menu.** Each entry has a short description, its known synergies and its interactions, and fills in as the player discovers them.
+- **Double-edged items.** Parts with tremendous upside and a real downside, which can make or ruin a run, including a forced skip when you need something else, and mutated starting seeds. The working name is **hot-wired parts** (salvage culture, not "cursed"). These are the existing cursed caches, rule parts and seed-field ideas, now wanted by Andrew.
+- **Alpha scope: introductory level** (Andrew, 2026-09-28). The alpha is the start of the game, world one up to its boss, so everything is built for what a first-time player meets there.
+  - **In the alpha:**
+    - Attack reads through the attacker, for world one's enemies and its Warden.
+    - First-discovery picture cards, for world one's synergies, items, interactables and reactions.
+    - Two or three hot-wired parts in wave D, pitched as a first taste: the upside is obvious, the downside is readable and survivable, and the forced-skip tension appears once.
+  - **After the alpha, as principles until then:** progression ceremonies for unlocks and tree branches, the home-menu codex (the in-run Tab codex stays), more hot-wired parts, and mutated starting seeds.
+
 ## Tool stack (checked 2026-09-28; research R3)
 
 - **Keep:**
