@@ -161,8 +161,3 @@ func _pose() -> void:
 		var seat := _flight_basis if _bola.top_level else _seat()
 		_bola.basis = seat * Basis(Vector3.UP, _spin)
 
-
-# Capture staging (asset_capture --call): enter the wind-up now, then the throw follows.
-func stage_throw() -> void:
-	_rest = 0.0
-	_warn(_flat_to_ball())
