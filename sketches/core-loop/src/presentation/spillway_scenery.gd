@@ -150,11 +150,12 @@ static func build(stage_root: Node3D) -> Node3D:
 
 
 # I01: broad cast courses and repaired service frames from dam.glb, on the wall's front face
-# (z 236, at most 1.2 m proud). One node per material slot, baked to world space, opaque and
-# unlit-emission free, so _merge_opaque folds it into the existing scenery draw.
+# (z 236, at most 1.2 m proud). One node with a surface per slot, so each slot keeps the sheet's
+# roughness; no material_override, so _merge_opaque leaves it as its own three draws.
 const DAM_PATH := "res://assets/models/world_one/dam.glb"
 const DAM_FACE := Vector3(0, 0, 236)
 const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("7a7a70"), "rubber": Color("454943")}
+const DAM_ROUGHNESS := {"paint": 0.8, "bare_metal": 0.45, "rubber": 0.95}
 
 
 static func _dam_detail(parent: Node3D) -> void:
@@ -163,28 +164,29 @@ static func _dam_detail(parent: Node3D) -> void:
 		push_warning("spillway_scenery: dam.glb missing, the dam face stays bare")
 		return
 	var scene := packed.instantiate()
-	var found := scene.find_children("*", "MeshInstance3D", true, false)
-	for view: MeshInstance3D in found:
+	var mesh := ArrayMesh.new()
+	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		for surface in view.mesh.get_surface_count():
 			var arrays := view.mesh.surface_get_arrays(surface)
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			for i in vertices.size():
 				vertices[i] += DAM_FACE
 			arrays[Mesh.ARRAY_VERTEX] = vertices
-			var mesh := ArrayMesh.new()
-			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			var slot: String = view.mesh.surface_get_material(surface).resource_name
 			var material := StandardMaterial3D.new()
+			material.resource_name = slot
 			material.albedo_color = DAM_TINT.get(slot, Color.WHITE)
-			material.roughness = 1.0
+			material.roughness = DAM_ROUGHNESS.get(slot, 1.0)
 			material.vertex_color_use_as_albedo = true
-			var node := MeshInstance3D.new()
-			node.name = "DamDetail_" + slot
-			node.mesh = mesh
-			node.material_override = material
-			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			parent.add_child(node)
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			mesh.surface_set_material(mesh.get_surface_count() - 1, material)
 	scene.free()
+	var node := MeshInstance3D.new()
+	node.name = "DamDetail"
+	node.mesh = mesh
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(node)
+	GraphicsPreset.register_scenery(node)
 
 
 static func _place(into: Array[Transform3D], at: Vector3, size: Vector3, turn := 0.0) -> void:

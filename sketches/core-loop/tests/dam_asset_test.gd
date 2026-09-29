@@ -70,7 +70,19 @@ func _run() -> void:
 		"the 252 BlockFaces boxes are gone from spillway_scenery.gd and the dam asset is placed")
 	var stage := Node3D.new()
 	var built = load("res://src/presentation/spillway_scenery.gd").build(stage)
-	_check(built.find_child("BlockFaces", true, false) == null, "built scenery has no BlockFaces batch")
+	var dam: MeshInstance3D = built.find_child("DamDetail", true, false)
+	var want := {"paint": 0.8, "bare_metal": 0.45, "rubber": 0.95}
+	var got := {}
+	if dam != null:
+		for surface in dam.mesh.get_surface_count():
+			var material: StandardMaterial3D = dam.mesh.surface_get_material(surface)
+			got[material.resource_name] = material.roughness
+	var rough_ok := got.size() == want.size()
+	for slot in want:
+		rough_ok = rough_ok and got.has(slot) and absf(got[slot] - want[slot]) < 0.005
+	print("dam surfaces %s" % got)
+	_check(dam != null and dam.material_override == null and dam.mesh.get_surface_count() <= 3 and rough_ok,
+		"the dam is its own node of at most 3 draws, roughness per slot as the sheet sets it")
 	stage.free()
 	print("dam_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)

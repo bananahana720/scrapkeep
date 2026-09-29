@@ -32,7 +32,7 @@ func _run() -> void:
 		if not child is MeshInstance3D:
 			continue
 		var mesh: Mesh = child.mesh
-		nodes_ok = nodes_ok and mesh.get_surface_count() == 1
+		nodes_ok = nodes_ok and (mesh.get_surface_count() <= 3 if child.name == "DamDetail" else mesh.get_surface_count() == 1)
 		var mat: Material = child.material_override
 		if mat is ShaderMaterial:
 			var expected := "sandstone.gdshader" if child.name == "SandstoneShoulders" else "spill_water.gdshader"
@@ -44,6 +44,11 @@ func _run() -> void:
 			else:
 				materials_ok = materials_ok and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
 			materials_ok = materials_ok and (not mat.emission_enabled or child.name == "LanternLenses") and not mat.no_depth_test
+		elif child.name == "DamDetail" and mat == null:
+			for surface in mesh.get_surface_count():
+				var slot_mat := mesh.surface_get_material(surface) as StandardMaterial3D
+				materials_ok = materials_ok and slot_mat != null and slot_mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
+				materials_ok = materials_ok and not slot_mat.emission_enabled and not slot_mat.no_depth_test
 		else:
 			materials_ok = false
 		materials_ok = materials_ok and child.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
