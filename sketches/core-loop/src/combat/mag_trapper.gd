@@ -18,6 +18,7 @@ const HP := 50.0
 
 var rating := RATING_BASE
 var _stack: Node3D
+var _disc_material: StandardMaterial3D
 
 
 func _configure(threat: float) -> void:
@@ -37,6 +38,7 @@ func _configure(threat: float) -> void:
 # flashing body material as a surface override.
 const TILT := 0.42
 const SHUDDER := 0.012
+const CORE_EMISSION := 0.6
 
 static var _shared: Dictionary = {}
 
@@ -60,6 +62,9 @@ func _build_tool() -> void:
 	var discs := MeshInstance3D.new()
 	discs.name = "MagDiscs"
 	discs.mesh = parts["discs"]
+	_disc_material = Palette.solid(Color.WHITE)
+	_disc_material.vertex_color_use_as_albedo = true
+	discs.set_surface_override_material(parts["disc_paint"], _disc_material)
 	_stack.add_child(discs)
 
 
@@ -70,7 +75,9 @@ static func _parts() -> Dictionary:
 	var charcoal := Palette.solid(Palette.CHARCOAL)
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
+	var core := Palette.solid(Palette.HAZARD, CORE_EMISSION)
 	var flash := 0
+	var disc_paint := 0
 	var meshes := {}
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
@@ -78,12 +85,26 @@ static func _parts() -> Dictionary:
 			var slot := mesh.surface_get_material(i).resource_name
 			if slot == "fleet_paint":
 				flash = i
-			mesh.surface_set_material(i, painted if slot == "paint" else charcoal)
+			elif slot == "paint" and node.name == "MagDiscs":
+				disc_paint = i
+			mesh.surface_set_material(i, core if slot == "class_accent" else (painted if slot == "paint" else charcoal))
 		meshes[node.name] = mesh
-	_shared = {"body": meshes["MagTrapperBody"], "discs": meshes["MagDiscs"], "flash": flash,
+	_shared = {"body": meshes["MagTrapperBody"], "discs": meshes["MagDiscs"], "flash": flash, "disc_paint": disc_paint,
 		"pivot": (scene.find_child("MagStack", true, false) as Node3D).position}
 	scene.free()
 	return _shared
+
+
+# The discs' own material answers the hit event the body's does: enemy.flash() sets _flash,
+# the base decays it, and this mirrors the same amber pulse (and the rest look) on the discs.
+func _update_flash(delta: float) -> void:
+	super(delta)
+	if _disc_material == null:
+		return
+	_disc_material.albedo_color = Color.WHITE.lerp(Color(1.0, 1.0, 0.85), _flash)
+	_disc_material.emission_enabled = _flash > 0.0
+	_disc_material.emission = Palette.AMBER
+	_disc_material.emission_energy_multiplier = _flash * 2.0
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

@@ -1,13 +1,15 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Palette := preload("res://src/core/palette.gd")
 
-# C12 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly (crew, cart and
+# C12 limits. The asset: 1,200 T / 4 D ceiling (Codex's C12 exception: the fourth draw is the hazard cores) for the whole moving assembly (crew, cart and
 # discs), opaque. The base contract: the trapper's collider, pit (radius, reach, lead), hold
 # (drag, pull, rating), timing and damage-side numbers are the values mag_trapper.gd had
 # before the dressing swap, and the stack tilts on the existing wind-up.
 const CEILING_T := 1200
-const CEILING_D := 3
+const CEILING_D := 4
+const CORE_EMISSION := 0.6
 const BASE_CONSTS := {
 	"PIT_RADIUS": 4.5, "PIT_REACH": 1.4, "LEAD": 0.7, "DRAG": 2.4, "CENTRE_PULL": 2.5,
 	"RATING_BASE": 1.6, "RATING_PER_THREAT": 0.4, "HP": 50.0,
@@ -107,8 +109,41 @@ func _run() -> void:
 	print("live assembly: %d T, %d D, %d meshes" % [live["tris"], live["draws"], live["meshes"]])
 	_check(trapper.find_child("MagTrapperBody", true, false) != null, "the live trapper carries its MagTrapperBody dressing")
 	_check(live["meshes"] > 0 and live["tris"] > 0, "the live measurement saw meshes (the check runs)")
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 4" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha")
+
+	# The hazard cores glow at 0.6, read from the live material; a hit through the existing
+	# event (enemy.flash()) changes the disc-bearing material's colour for the flash window,
+	# then the rest look returns.
+	var discs: MeshInstance3D = trapper.find_child("MagDiscs", true, false)
+	_check(discs != null and discs.mesh.get_surface_count() == 2, "MagDiscs has two surfaces (discs, cores)")
+	if discs != null:
+		var core_energy := -1.0
+		var disc_mat: StandardMaterial3D = null
+		for i in discs.mesh.get_surface_count():
+			var mat := discs.get_active_material(i) as StandardMaterial3D
+			if mat != null and mat.emission_enabled and mat.emission.is_equal_approx(Palette.HAZARD):
+				core_energy = mat.emission_energy_multiplier
+			elif mat != null and mat.vertex_color_use_as_albedo:
+				disc_mat = mat
+		_check(is_equal_approx(core_energy, CORE_EMISSION), "hazard-core surface emission is 0.6 (live %.2f)" % core_energy)
+		_check(disc_mat != null, "the disc surface is its own vertex-colour material")
+		if disc_mat != null:
+			var rest_colour := disc_mat.albedo_color
+			_check(not disc_mat.emission_enabled, "discs do not glow at rest")
+			trapper.flash()
+			trapper._update_flash(0.02)
+			_check(disc_mat.albedo_color != rest_colour and disc_mat.emission_enabled and disc_mat.emission_energy_multiplier > 1.0,
+				"a hit flashes the disc material (emission %.2f)" % disc_mat.emission_energy_multiplier)
+			trapper._update_flash(1.0)
+			_check(disc_mat.albedo_color == rest_colour and not disc_mat.emission_enabled, "the disc material restores after the flash window")
+			var other: Node3D = game.ctx.spawner.spawn_enemy("mag_trapper", Vector3(20, 30, 0))
+			other.set_physics_process(false)
+			var other_mat := (other.find_child("MagDiscs", true, false) as MeshInstance3D).get_active_material(0) as StandardMaterial3D
+			var other_disc: StandardMaterial3D = other_mat if other_mat.vertex_color_use_as_albedo else (other.find_child("MagDiscs", true, false) as MeshInstance3D).get_active_material(1) as StandardMaterial3D
+			trapper.flash()
+			trapper._update_flash(0.02)
+			_check(other_disc != disc_mat and not other_disc.emission_enabled, "a hit on one trapper leaves another's discs alone")
 
 	# The stack tilts on the existing wind-up: WARN's own progress, hidden while LIVE.
 	var stack: Node3D = trapper.find_child("MagStack", true, false)

@@ -4,11 +4,13 @@
 # -Y and the cart trails behind at +Y. Origin is the trapper's collider centre, ground at
 # z = -1.1 (the 2.2 m capsule the collider keeps).
 #
-# Two meshes, three surfaces (three colour-pass draws), no alpha:
+# Two meshes, four surfaces (four colour-pass draws, the ceiling Codex granted C12 alone), no alpha:
 #   MagTrapperBody  static: fleet_paint (crew body and head, flashes with the enemy) and
 #                   paint (vertex colour: cart, wheels, ears, strap, the brass chest tag).
 #   MagStack/MagDiscs  the tilting stack, pivot at the cart bed: paint (vertex colour:
-#                   three charcoal discs, hazard cores, charcoal spacers).
+#                   three charcoal discs and spacers; the runtime gives it its own material
+#                   so it flashes on a hit) and class_accent (the hazard cores; the runtime
+#                   swaps in the hazard colour at emission 0.6).
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
 #   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
@@ -69,7 +71,7 @@ px, py, pz = PIVOT
 for i, dz in enumerate((0.10, 0.50, 0.90)):
     tone = (CHAR, common.mix("charcoal", "oxide", 0.22), WORN)[i]
     s.cyl("paint", 1.05, 1.05, 0.20, segs=12, loc=(px, py, pz + dz), color=tone)
-    s.cyl("paint", 0.50, 0.50, 0.30, segs=8, loc=(px, py, pz + dz), color=HAZ)
+    s.cyl("class_accent", 0.50, 0.50, 0.30, segs=8, loc=(px, py, pz + dz), color=HAZ)
 for dz in (0.30, 0.70):
     s.cyl("paint", 0.26, 0.26, 0.24, segs=8, loc=(px, py, pz + dz), color=CHAR)
 discs = s.to_object(origin=PIVOT, parent=stack_pivot)
@@ -84,7 +86,7 @@ surfaces = len(body.data.materials) + len(discs.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3),
       "STACK_TOP", round(max(dzs), 3))
-if tris > 1200 or surfaces > 3 or max(abs(x) for x in xs) > 1.4 or min(ys) < -0.9 or max(ys) > 3.2 \
+if tris > 1200 or surfaces > 4 or max(abs(x) for x in xs) > 1.4 or min(ys) < -0.9 or max(ys) > 3.2 \
         or min(zs) < GROUND - 0.001 or max(zs) > 1.9:
     raise SystemExit("C12 limits exceeded")
 
