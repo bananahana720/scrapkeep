@@ -23,6 +23,14 @@ const ROWS := {
 	# k_smoke_trail is held back: its Codex line "Glide cloaked. Heavy fins steer harder." names
 	# the Riveted Shell inversion, which needs hot-wired part H1. Add the row when H1 lands.
 	"k_ambush": "Throw payloads without breaking cloak.",
+	# Rivet, R1 to R5. R6 (r_second_wind) is held back: its Codex line "Bank two sprints. Heavy
+	# fins open during sprint." names the Riveted Shell cancellation, which needs hot-wired part
+	# H1. Add the row when H1 lands.
+	"r_gunline": "Twin bolts sweep the running line.",
+	"r_juggernaut": "Starting a sprint blasts enemies back.",
+	"r_tracer": "Running fire jumps to a neighbour.",
+	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
+	"r_ram_fins": "Sprint through bodies instead of rebounding.",
 }
 
 

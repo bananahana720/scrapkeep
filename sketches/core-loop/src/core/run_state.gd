@@ -29,6 +29,9 @@ const CLASS_HYSTERESIS := 0.05
 # A hit that reached the scrap: how much it removed, how much of that spills, and the
 # source. player_hit still fires for every hit, armour-only included, with the whole hit.
 signal armor_hit(removed: float, spill: int, source: String)
+# Rolling wear took `removed` whole units of mass (wear_step only, --wear=on). Read-only; Rivet's
+# Run and Gun trail reads it (world_one_rtree_test).
+signal wear_taken(removed: float)
 
 var events
 var class_def: Resource
@@ -362,6 +365,7 @@ func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
 	mass -= whole
 	metrics["wear_loss"] += whole
 	_publish_heft_class()
+	wear_taken.emit(whole)
 
 
 # The fixed route's opening mass (tuning `start_mass`): mass only, no wallet, no procs.

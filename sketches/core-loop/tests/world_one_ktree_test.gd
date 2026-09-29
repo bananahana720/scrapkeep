@@ -157,7 +157,7 @@ func _cards() -> void:
 		for parent in [[], [UpgradeTree.nodes(class_id)[0]["id"]], [UpgradeTree.nodes(class_id)[1]["id"]]]:
 			for l in _card_lines(class_id, parent):
 				var own := String(UpgradeTree.node(class_id, l[0])["effect"])
-				if l[1] != own:
+				if not WorldOneCards.has_row(l[0]) and l[1] != own:
 					other_ok = false
 					other = "%s: %s vs %s" % [l[0], l[1], own]
 	_check("no row, own effect (flag on, Rivet)", other_ok and not WorldOneCards.has_row("s_none"), other if other != "" else "every Rivet card reads its node effect")

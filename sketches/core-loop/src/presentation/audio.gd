@@ -1089,6 +1089,10 @@ func _wire_armor() -> void:
 	var run = ctx.get("run")
 	if run != null and run.has_signal("armor_hit") and not run.armor_hit.is_connected(_on_armor_hit):
 		run.armor_hit.connect(_on_armor_hit)
+	var combat = ctx.get("spawner")
+	var trail = combat.get("wear_trail") if combat != null else null
+	if trail != null and not trail.patched.is_connected(_on_wear_patch):
+		trail.patched.connect(_on_wear_patch)
 	var build = ctx.get("build")
 	var field = build.get("scrap") if build != null else null
 	if field != null and field.has_signal("recovered") and not field.recovered.is_connected(_on_spill_recovered):
@@ -1102,6 +1106,11 @@ func _on_armor_hit(removed: float, _spill: int, _source: String) -> void:
 	var size := clampf(removed / ARMOR_SHED_FULL, 0.0, 1.0)
 	var sound := "armor_shed_small" if removed < ARMOR_SHED_BIG_FROM * 0.4 else ("armor_shed_big" if removed >= ARMOR_SHED_BIG_FROM else "armor_shed")
 	play("armor_hit", lerpf(-2.0, 2.0, size), Harmony.ratio(lerpf(2.0, -3.0, size)), "SFX", sound)
+
+
+# Rivet's wear trail left a patch: one soft sputter, quiet against the armour cues.
+func _on_wear_patch(_at: Vector3) -> void:
+	play("wear_sputter")
 
 
 # A spilled cluster rolled back up: a chime that climbs the pentatonic through a run.
