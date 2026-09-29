@@ -363,6 +363,8 @@ func _trail_checks() -> void:
 	_combat._actions["refund_move"] = func(_s: float): refunds[0] += 1
 	build.sheet.transformers.append("shrapnel_bloom")
 	_armed(r4, true)
+	_take_deep(UpgradeTree.path_to(CLASS, "r_rampage", true))
+	_combat._proc_ready.clear()
 	_wear(1)
 	var frail := _foe(0.6, 10.0)
 	_kills = 0
@@ -381,12 +383,9 @@ func _trail_checks() -> void:
 	_check("spark kill posts no ON_KILL", build.bus.pending.size() == pending_before, "%d pending (was %d)" % [build.bus.pending.size(), pending_before])
 	_check("spark kill records no shrapnel_bloom kill", build._kills.size() == bloom_before, "%d kills recorded (was %d)" % [build._kills.size(), bloom_before])
 	_check("flag clear after the emit", not _game.run.last_kill_from_spark, "last_kill_from_spark %s" % _game.run.last_kill_from_spark)
-	# Rampage's refund rides the same gate: a spark-sourced record_kill gives none, an ordinary one does.
-	_take_deep(UpgradeTree.path_to(CLASS, "r_rampage", true))
-	_combat._proc_ready.clear()
+	# Rampage's refund rides the same gate: the patch kill above gave none, an ordinary kill does.
+	_check("spark kill gives no Rampage refund", refunds[0] == 0 and not _procs_of("refund_move").is_empty(), "%d refunds, %d rampage procs" % [refunds[0], _procs_of("refund_move").size()])
 	var refunds_spark: int = refunds[0]
-	_game.run.record_kill("chaser", _player.ball_position(), 3, "spark")
-	_check("spark kill gives no Rampage refund", refunds[0] == refunds_spark and not _procs_of("refund_move").is_empty(), "%d refunds, %d rampage procs" % [refunds[0] - refunds_spark, _procs_of("refund_move").size()])
 	_combat._proc_ready.clear()
 	_game.run.record_kill("chaser", _player.ball_position(), 3)
 	_check("ordinary kill gives the Rampage refund", refunds[0] == refunds_spark + 1, "%d refunds" % (refunds[0] - refunds_spark))
