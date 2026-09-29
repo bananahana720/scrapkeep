@@ -519,18 +519,17 @@ func _facts_begin_lobber(charge: float) -> void:
 	attack_phase.emit(_facts_dict(PHASE_WINDUP))
 
 
-# The release commits the aim: strike carries the landing ring the shell will draw
-# (projectile.gd), then the lobber's own part is over.
-func _facts_on_fired(_origin: Vector3, landing: Vector3, flight: float) -> void:
+# The release is the strike. Its landing ring belongs to the shell (projectile.gd builds and
+# owns that Telegraph), so the fact stays uncommitted with empty geometry until a later
+# packet hands the shell's own descriptor over; then recover in the same tick, since the
+# shell's flight belongs to the projectile.
+func _facts_on_fired(_origin: Vector3, _landing: Vector3, _flight: float) -> void:
 	if _dead:
 		return
 	if _atk.is_empty():
 		_facts_begin_lobber(1.0)
 	if _atk.is_empty():
 		return
-	var blast: float = load("res://src/combat/projectile.gd").BLAST_RADIUS
-	_atk["geometry"] = {"type": Threat.Type.PROJECTILE, "form": "radial", "centre": landing, "reach": 3.5,
-		"r_in": 0.0, "r_out": blast, "a0": 0.0, "a1": TAU, "progress": 0.0, "live": false, "flight": flight}
 	_atk["progress"] = 0.0
 	_facts_phase(PHASE_STRIKE)
 	_facts_end(false)

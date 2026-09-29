@@ -5,7 +5,7 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Chaser := preload("res://src/combat/chaser.gd")
-const Projectile := preload("res://src/combat/projectile.gd")
+const Enemy := preload("res://src/combat/enemy.gd")
 
 # Attack facts, packet 1 (DESIGN-NOTES, "Attack facts, enemies"): a mapped enemy's attack
 # publishes attack_phase with a unique instance id, its ATTACK_ROWS id, its phase and the
@@ -13,8 +13,10 @@ const Projectile := preload("res://src/combat/projectile.gd")
 # - Chaser: windup, strike, recover on row E01; two overlapping lunges get two ids; the
 #   published geometry equals what the telegraph tests at 25, 50 and 95 percent.
 # - A knocked or killed wind-up publishes cancelled.
-# - Lobber: windup with uncommitted aim, then strike with the landing ring the shell will
-#   draw, then recover, on row E02; a kill in the wind-up cancels.
+# - Lobber: windup with uncommitted aim, then strike (still uncommitted: the landing ring is
+#   the shell's own Telegraph, not copied here), then recover, on row E02; a kill in the
+#   wind-up cancels. The wind-up reads lobber.gd's glow formula; a source check pins it.
+# - Damage: a chaser lunge that lands emits hit_player with Chaser.DAMAGE.
 # - A counter (the mag trapper) publishes the same phases from its own loop, row E05.
 # - Nothing about the attacks changes: TIMELINE below is captured from base 1c2f777 (md5 of the text), where
 #   the same scenario ran with no facts.
@@ -23,6 +25,8 @@ const TICK_LIMIT := 480
 const OFFSET := Vector3(8.0, 0.0, 0.0)
 const FRACTIONS := [0.25, 0.5, 0.95]
 const TIMELINE_STAGES := [0, 1, 2, 3, 4, 5, 6]
+const LAST_STAGE := 7
+const LOBBER_GLOW_FORMULA := "0.8 + charge * 5.0"
 const TIMELINE_GOLDEN := "31b06bf983e69dd05bff824779147fe1"
 
 var _game
@@ -42,6 +46,7 @@ var _last_state := {}
 var _stage_done := false
 var _acted := false
 var _seen := {}
+var _hits: Array = []
 
 
 func _initialize() -> void:
@@ -94,7 +99,7 @@ func _next_stage() -> bool:
 	_stage_done = false
 	_acted = false
 	_seen = {}
-	if _stage > 6:
+	if _stage > LAST_STAGE:
 		return _finish()
 	_game.player.reset_to(_ball)
 	match _stage:
@@ -109,6 +114,10 @@ func _next_stage() -> bool:
 		5, 6:
 			_spawn("mag_trapper", OFFSET)
 			_units[0]._rest = 0.3
+		7:
+			_hits = []
+			_spawn("chaser", OFFSET)
+			_units[0].hit_player.connect(func(amount: float, shove: Vector3) -> void: _hits.append([amount, shove.snappedf(0.01)]))
 	return false
 
 
@@ -183,7 +192,6 @@ func _observe() -> void:
 				first.take_damage(100000.0)
 				_stage_done = true
 		3:
-			_sample_lobber()
 			if first.shots > 0:
 				_stage_done = true
 		4:
@@ -198,6 +206,9 @@ func _observe() -> void:
 				_acted = true
 				first.knock(Vector3.RIGHT, 400.0)
 			elif _acted and state == "roam":
+				_stage_done = true
+		7:
+			if not _hits.is_empty() and state == "recover":
 				_stage_done = true
 
 
@@ -253,22 +264,6 @@ func _sample_chaser(unit: Node) -> void:
 			_sampled[key + "d"] = "progress %.3f, geometry equal %s, hit test agrees %s" % [tele.progress, same, _agree(d, tele)]
 
 
-func _sample_lobber() -> void:
-	for facts in _log[0]:
-		if facts["phase"] == "strike" and not _sampled.has("ring"):
-			_sampled["ring"] = true
-			var d: Dictionary = facts["geometry"]
-			var ring: Node3D = Telegraph.ring(_ctx.root, _ctx.terrain, Threat.Type.PROJECTILE, d["centre"], Projectile.BLAST_RADIUS)
-			var want: Dictionary = ring.descriptor()
-			var same := true
-			for key in ["type", "form", "centre", "reach", "r_in", "r_out", "a0", "a1"]:
-				if d[key] != want[key]:
-					same = false
-			_sampled["ring_same"] = same
-			_sampled["ring_agree"] = _agree(d, ring)
-			ring.queue_free()
-
-
 func _judge() -> void:
 	match _stage:
 		0:
@@ -290,6 +285,8 @@ func _judge() -> void:
 			var ph := _phases(0)
 			_report("counter_phases", ph == ["windup", "strike", "recover"], "the mag trapper publishes %s" % [ph])
 			_report("counter_row", facts.size() > 0 and facts[0]["row"] == "E05", "row %s" % [facts[0]["row"] if facts.size() > 0 else "none"])
+		7:
+			_judge_damage()
 		6:
 			_report("counter_cancel", _phases(0) == ["windup", "cancelled"], "a knocked counter wind-up publishes %s" % [_phases(0)])
 
@@ -332,10 +329,18 @@ func _judge_lobber() -> void:
 	_report("lobber_row", facts[0]["row"] == "E02" and facts[0]["owner"] == "lobber", "row %s" % facts[0]["row"])
 	_report("lobber_uncommitted", facts[0]["committed"] == false and facts[0]["geometry"].is_empty() and facts[0]["progress"] > 0.0,
 		"wind-up aim uncommitted: committed %s, geometry %s, progress %.3f" % [facts[0]["committed"], facts[0]["geometry"], facts[0]["progress"]])
-	_report("lobber_committed", facts[1]["committed"] == true, "strike commits the aim")
-	_report("lobber_ring", _sampled.get("ring_same", false) and _sampled.get("ring_agree", false),
-		"strike geometry equals the shell's ring (same %s, hit test agrees at 25/50/95 %s)" % [_sampled.get("ring_same"), _sampled.get("ring_agree")])
+	_report("lobber_strike_uncommitted", facts[1]["committed"] == false and facts[1]["geometry"].is_empty(),
+		"strike publishes no geometry (committed %s): the shell's ring is a later packet" % facts[1]["committed"])
+	var src := FileAccess.get_file_as_string("res://src/combat/lobber.gd")
+	_report("lobber_glow_formula", src.contains("emission_energy_multiplier = " + LOBBER_GLOW_FORMULA) \
+			and Enemy.LOBBER_GLOW_BASE == 0.8 and Enemy.LOBBER_GLOW_SPAN == 5.0,
+		"lobber.gd still draws the glow the wind-up fact inverts (%s)" % LOBBER_GLOW_FORMULA)
 	_report("lobber_instance", facts[0]["instance"] == facts[1]["instance"] and facts[1]["instance"] == facts[2]["instance"], "one instance")
+
+
+func _judge_damage() -> void:
+	_report("chaser_damage", _hits.size() == 1 and is_equal_approx(_hits[0][0], 9.0) and is_equal_approx(Chaser.DAMAGE, 9.0),
+		"a landed lunge emits hit_player %s (base: one hit of 9.0)" % [_hits])
 
 
 func _finish() -> bool:
