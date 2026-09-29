@@ -188,6 +188,50 @@ func _run() -> void:
 	missing["frames"][0]["frozen"]["/root/Scene/Spinner"] = []
 	var missing_result := Cap.compare(doc, missing)
 	_check(missing_result["errors"].is_empty() and not missing_result["notes"].is_empty(), "compare: a node present on one side only is a note, not a refusal")
+	# subject-context-depth: subject black, other meshes flat grey but still drawn (depth), lights hidden.
+	undo = Cap.apply_mode(scene, root, "subject-context-depth", [subject], [glass])
+	var grey := ground.material_override as StandardMaterial3D
+	_check(_uses_black(part_a) and _uses_black(part_b), "subject-context-depth: subject meshes black")
+	_check(ground.visible and grey != null and grey.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED and grey.albedo_color == Cap.GREY \
+		and grey.albedo_texture == null and grey.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and not grey.no_depth_test and not grey.emission_enabled, "subject-context-depth: context mesh is opaque unshaded background grey with depth test on")
+	_check(not lamp.visible and not sign.visible and not glass.visible, "subject-context-depth: lights and labels hidden, a --hide subtree omitted")
+	Cap.revert(undo)
+	_check(ground.material_override.albedo_texture != null and part_a.material_override.albedo_texture != null, "subject-context-depth: revert restores the lit materials")
+	_check(Cap.MODES.has("subject-context-depth") and Cap.MODES.slice(0, 3) == ["lit", "subject-black", "assembly-black"], "modes: the three original modes keep their place")
+
+	# Orthographic family camera and the isolate filter.
+	var box := AABB(Vector3(-175, -20, 60), Vector3(16, 40, 120))
+	var front := Cams.ortho_view("ortho-front", box)
+	var side := Cams.ortho_view("ortho-side", box)
+	var top := Cams.ortho_view("ortho-top", box)
+	var box_centre := box.get_center()
+	_check(front["eye"].is_equal_approx(box_centre + Vector3(250, 0, 0)) and side["eye"].is_equal_approx(box_centre + Vector3(0, 0, 250)) and top["eye"].is_equal_approx(box_centre + Vector3(0, 250, 0)) and top["up"] == Vector3(0, 0, 1), "ortho: front 250 m toward the arena along X, side +Z, top +Y with up +Z")
+	_check(is_equal_approx(front["size"], 120.0 * 1.1) and Cams.ortho_view("ortho-front", AABB(Vector3(190, 0, 0), Vector3(16, 40, 120)))["eye"].x < 190.0, "ortho: span is the largest extent times 1.10; an east box looks from -X")
+	var camera := Camera3D.new()
+	root.add_child(camera)
+	Cams.aim_ortho(camera, top)
+	_check(camera.projection == Camera3D.PROJECTION_ORTHOGONAL and is_equal_approx(camera.size, top["size"]) and is_equal_approx(camera.near, 0.05) and is_equal_approx(camera.far, 1800.0) and camera.keep_aspect == Camera3D.KEEP_HEIGHT, "ortho: orthogonal, vertical span, near 0.05, far 1800")
+	_check((-camera.global_transform.basis.z).is_equal_approx(Vector3.DOWN) and camera.global_transform.basis.y.is_equal_approx(Vector3(0, 0, 1)), "ortho: top camera looks down with +Z up")
+	Cams.aim(camera, Vector3(0, 5, 5), Vector3.ZERO, 62.0)
+	_check(camera.projection == Camera3D.PROJECTION_PERSPECTIVE, "aim restores a perspective projection after an orthographic frame")
+	camera.free()
+	_check(not Cams.names().any(func(n): return Cams.is_ortho(n)), "ortho cameras are not part of the default camera set")
+	var two := ArrayMesh.new()
+	var quad := PackedVector3Array([Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(50, 0, 0), Vector3(51, 0, 0), Vector3(50, 1, 0)])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = quad
+	arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.BACK, Vector3.BACK, Vector3.BACK, Vector3.BACK, Vector3.BACK, Vector3.BACK])
+	arrays[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 3, 4, 5])
+	two.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var kept := Cap.filter_mesh(two, Transform3D(Basis.IDENTITY, Vector3(1, 0, 0)), AABB(Vector3(0, -1, -1), Vector3(5, 3, 2)))
+	var kept_vertices: PackedVector3Array = kept.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	_check(kept_vertices.size() == 3 and kept_vertices[0] == Vector3(0, 0, 0), "filter_mesh keeps only the triangles whose centroid is inside the world box")
+	var rest := Cap.filter_mesh(two, Transform3D(Basis.IDENTITY, Vector3(1, 0, 0)), AABB(Vector3(0, -1, -1), Vector3(5, 3, 2)), true)
+	var rest_vertices: PackedVector3Array = rest.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	_check(rest_vertices.size() == 3 and rest_vertices[0] == Vector3(50, 0, 0), "filter_mesh with invert keeps exactly the triangles outside the box (the isolate-rest context)")
+	_check(Cap.filter_mesh(two, Transform3D.IDENTITY, AABB(Vector3(200, 0, 0), Vector3(1, 1, 1))).get_surface_count() == 0, "filter_mesh returns an empty mesh when nothing is inside")
+
 	quit(failures)
 
 

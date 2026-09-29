@@ -15,6 +15,10 @@ extends SceneTree
 #     [--centre=x,y,z] [--mode=lit,subject-black,assembly-black] [--cameras=name,name]
 #     [--freeze=<path>=rx,ry,rz[:px,py,pz] (degrees, local; global position)] [--freeze=<path>@<clip>:<seconds>]
 #     [--hide=<path>]   (subtree omitted from the black modes, e.g. glass)
+#     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path> [--isolate-rest]]   keep only the triangles of that mesh inside the
+#       world box; --isolate-rest keeps the other triangles as a sibling mesh, so they draw as grey depth context
+#     --cameras also takes ortho-front, ortho-side, ortho-top: orthographic views of --aabb (never in the default set)
+#   Mode subject-context-depth: subject black, every other mesh flat background grey but still writing depth.
 #   Writes <out>/<mode>/<camera>.png (1920x1080), <camera>.thumb.png (480x270) and <out>/<mode>/frames.json.
 # Pair (headless ok):
 #   godot --headless --path sketches/core-loop --script res://tools/asset_capture.gd -- --pair
@@ -25,7 +29,7 @@ const Intent := preload("res://src/movement/intent.gd")
 
 const VERSION := 1
 const SEED := 280928
-const MODES := ["lit", "subject-black", "assembly-black"]
+const MODES := ["lit", "subject-black", "assembly-black", "subject-context-depth"]
 const GREY := Color(0.5, 0.5, 0.5)
 const EPS := 1.0e-4
 const SETTLE_PHYSICS_FRAMES := 120
@@ -43,6 +47,9 @@ var anchor_offset := Vector3.ZERO
 var centre_override = null
 var freeze_specs: Array = []
 var hide_paths: Array = []
+var aabb_arg = null
+var isolate_path := ""
+var isolate_rest := false
 var base_dir := ""
 var head_dir := ""
 var game
@@ -77,6 +84,13 @@ func _initialize() -> void:
 			freeze_specs.append(arg.trim_prefix("--freeze="))
 		elif arg.begins_with("--hide="):
 			hide_paths.append(arg.trim_prefix("--hide="))
+		elif arg.begins_with("--aabb="):
+			var box := arg.trim_prefix("--aabb=").split(",")
+			aabb_arg = AABB(Vector3(float(box[0]), float(box[1]), float(box[2])), Vector3(float(box[3]), float(box[4]), float(box[5])))
+		elif arg.begins_with("--isolate="):
+			isolate_path = arg.trim_prefix("--isolate=")
+		elif arg == "--isolate-rest":
+			isolate_rest = true
 	if pair_mode:
 		if base_dir.is_empty() or head_dir.is_empty() or out.is_empty():
 			printerr("pair needs --base, --head and --out")
@@ -91,7 +105,7 @@ func _initialize() -> void:
 	if camera_ids.is_empty():
 		camera_ids = Cams.names()
 	for id in camera_ids:
-		if not Cams.names().has(id):
+		if not Cams.names().has(id) and not (Cams.is_ortho(id) and aabb_arg != null):
 			printerr("unknown camera ", id)
 			quit(2)
 			return
@@ -142,7 +156,8 @@ func _run() -> void:
 	camera = Camera3D.new()
 	game.add_child(camera)
 	camera.current = true
-	camera.far = 1800.0
+	camera.far = Cams.FAR
+	camera.near = Cams.NEAR
 	var subjects: Array = []
 	for path in subject_path.split(",", false):
 		var node := root.get_node_or_null(path)
@@ -161,12 +176,30 @@ func _run() -> void:
 			quit(3)
 			return
 		hides.append(node)
+	if not isolate_path.is_empty():
+		var isolated := root.get_node_or_null(isolate_path) as MeshInstance3D
+		if isolated == null or aabb_arg == null:
+			printerr("--isolate needs a mesh path and --aabb: ", isolate_path)
+			quit(3)
+			return
+		if isolate_rest:
+			var rest := MeshInstance3D.new()
+			rest.name = isolated.name + "Rest"
+			rest.mesh = filter_mesh(isolated.mesh, isolated.global_transform, aabb_arg, true)
+			rest.transform = isolated.transform
+			rest.layers = isolated.layers
+			isolated.get_parent().add_child(rest)
+		isolated.mesh = filter_mesh(isolated.mesh, isolated.global_transform, aabb_arg)
 	# Plan every camera once, in the lit scene, so all modes share one set of values.
 	var plan := {}
 	var frozen_specs_seen := {}
 	for id in camera_ids:
 		await _stage(id)
 		var records := apply_freeze(root, freeze_specs)
+		if Cams.is_ortho(id):
+			plan[id] = Cams.ortho_view(id, aabb_arg)
+			frozen_specs_seen = records
+			continue
 		var centre: Vector3 = centre_override if centre_override != null else subject_centre(subjects)
 		var ground := anchor.global_transform * anchor_offset
 		var v := Cams.view(id, Transform3D(anchor.global_basis, ground), centre)
@@ -189,7 +222,10 @@ func _run() -> void:
 			var state := await prepare(root, root.get_viewport(), mode, subjects, hides, _stage.bind(id))
 			var records := apply_freeze(root, freeze_specs)
 			var v: Dictionary = plan[id]
-			Cams.aim(camera, v["eye"], v["target"], v["fov"])
+			if Cams.is_ortho(id):
+				Cams.aim_ortho(camera, v)
+			else:
+				Cams.aim(camera, v["eye"], v["target"], v["fov"])
 			for i in DRAW_FRAMES:
 				await RenderingServer.frame_post_draw
 			for node in root.find_children("*", "CanvasItem", true, false):
@@ -204,8 +240,9 @@ func _run() -> void:
 				quit(3)
 				return
 			var frozen := snapshot(records)
-			frames.append({"id": id, "eye": _arr(v["eye"]), "target": _arr(v["target"]), "fov": v["fov"],
-				"camera_basis": _basis(camera.global_transform.basis), "anchor": [] if Cams.is_look(id) else _arr(v["anchor"]), "centre": [] if Cams.is_look(id) else _arr(v["centre"]),
+			var ortho := Cams.is_ortho(id)
+			frames.append({"id": id, "eye": _arr(v["eye"]), "target": _arr(v["target"]), "fov": 0.0 if ortho else v["fov"], "ortho_size": v["size"] if ortho else 0.0,
+				"camera_basis": _basis(camera.global_transform.basis), "anchor": [] if Cams.is_look(id) or ortho else _arr(v["anchor"]), "centre": [] if Cams.is_look(id) or ortho else _arr(v["centre"]),
 				"exposure": exposure, "frozen": frozen,
 				"file": id + ".png", "sha256": FileAccess.get_sha256(png),
 				"thumb": id + ".thumb.png", "thumb_sha256": FileAccess.get_sha256(thumb_png)})
@@ -214,7 +251,7 @@ func _run() -> void:
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
 			"mode": mode, "class": class_index, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
-			"hide": hide_paths, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
+			"hide": hide_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
 		file.store_string(JSON.stringify(doc, "\t"))
@@ -285,6 +322,36 @@ static func black_material() -> StandardMaterial3D:
 	return m
 
 
+static func context_material() -> StandardMaterial3D:
+	var m := black_material()
+	m.albedo_color = GREY
+	return m
+
+
+# The triangles of `mesh` (one surface) whose centroid lies inside the world box `box` after `xf`.
+static func filter_mesh(mesh: Mesh, xf: Transform3D, box: AABB, invert := false) -> ArrayMesh:
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var out_vertices := PackedVector3Array()
+	var out_normals := PackedVector3Array()
+	for i in range(0, indices.size(), 3):
+		var centroid := (xf * vertices[indices[i]] + xf * vertices[indices[i + 1]] + xf * vertices[indices[i + 2]]) / 3.0
+		if box.has_point(centroid) != invert:
+			for e in 3:
+				out_vertices.append(vertices[indices[i + e]])
+				out_normals.append(normals[indices[i + e]])
+	var kept := []
+	kept.resize(Mesh.ARRAY_MAX)
+	kept[Mesh.ARRAY_VERTEX] = out_vertices
+	kept[Mesh.ARRAY_NORMAL] = out_normals
+	var result := ArrayMesh.new()
+	if out_vertices.size() > 0:
+		result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, kept)
+	return result
+
+
 static func flat_environment() -> Environment:
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
@@ -315,8 +382,9 @@ static func _is_mesh(n: Node) -> bool:
 # background with fog, sky, glow and the other screen effects off, and no anti-aliasing so the
 # frame holds two values. Returns the undo record for revert().
 static func apply_mode(scene_root: Node, viewport: Viewport, mode: String, subjects: Array, hides: Array) -> Dictionary:
-	var undo := {"nodes": [], "envs": [], "aa": [viewport.msaa_3d, viewport.screen_space_aa, viewport.use_taa], "black": [], "hidden": []}
+	var undo := {"nodes": [], "envs": [], "aa": [viewport.msaa_3d, viewport.screen_space_aa, viewport.use_taa], "black": [], "hidden": [], "context": []}
 	var material := black_material()
+	var context := context_material()
 	var flat := flat_environment()
 	for node in scene_root.find_children("*", "WorldEnvironment", true, false):
 		var w := node as WorldEnvironment
@@ -341,7 +409,15 @@ static func apply_mode(scene_root: Node, viewport: Viewport, mode: String, subje
 		var wanted := _is_mesh(n) and (mode == "assembly-black" or (in_subject and not omitted))
 		var g := n as GeometryInstance3D
 		undo["nodes"].append([n, n.visible, g.material_override if g != null else null, g.cast_shadow if g != null else 0])
-		if wanted:
+		if mode == "subject-context-depth" and _is_mesh(n) and not wanted and not (in_subject and omitted):
+			g.material_override = context
+			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			undo["context"].append(n)
+		elif mode == "subject-context-depth" and _is_mesh(n) and wanted:
+			g.material_override = material
+			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			undo["black"].append(n)
+		elif wanted:
 			g.material_override = material
 			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			undo["black"].append(n)
@@ -477,7 +553,7 @@ static func _close(a, b) -> bool:
 static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	var errors: Array = []
 	var notes: Array = []
-	for key in ["mode", "class", "seed", "size", "freeze_specs", "hide", "anchor_offset"]:
+	for key in ["mode", "class", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
 	var fa := {}
@@ -497,7 +573,7 @@ static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 			continue
 		var x: Dictionary = fa[id]
 		var y: Dictionary = fb[id]
-		for key in ["eye", "target", "fov", "camera_basis", "anchor", "centre", "exposure"]:
+		for key in ["eye", "target", "fov", "ortho_size", "camera_basis", "anchor", "centre", "exposure"]:
 			if not _close(x.get(key), y.get(key)):
 				errors.append("%s: %s differs: %s vs %s" % [id, key, x.get(key), y.get(key)])
 		var paths := {}
