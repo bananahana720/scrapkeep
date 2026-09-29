@@ -32,10 +32,17 @@ DOME_R = 0.56
 VANE_HINGE = (0.0, -0.32, 1.02)
 
 
+# Working-edge faces the wear pass rubs, collected while the pod is built: each satchel's
+# canvas body and flap (with the frame it was placed in) and the mortar tube.
+WORKING = []
+TUBE = []
+
+
 def satchel(p, loc, yaw, canvas):
     m = common.mtx(loc, (0, 0, yaw))
-    p.box("paint", (0.3, 0.2, 0.26), loc=m @ Vector((0, 0, 0)), rot=(0, 0, yaw), color=canvas)
-    p.box("paint", (0.31, 0.12, 0.08), loc=m @ Vector((0, 0.05, 0.12)), rot=(0.3, 0, yaw), color="petrol")
+    body = p.box("paint", (0.3, 0.2, 0.26), loc=m @ Vector((0, 0, 0)), rot=(0, 0, yaw), color=canvas)
+    flap = p.box("paint", (0.31, 0.12, 0.08), loc=m @ Vector((0, 0.05, 0.12)), rot=(0.3, 0, yaw), color="petrol")
+    WORKING.append((m, body, flap))
     for dz in (-0.07, 0.03):
         p.box("class_accent", (0.32, 0.22, 0.045), loc=m @ Vector((0, 0, dz)), rot=(0, 0, yaw))
     for dx in (-0.07, 0.07):
@@ -54,7 +61,7 @@ def pod():
     satchel(p, (-0.74, 0.3, 0.62), -math.pi / 2 - 0.3, "oxide")
     base = Vector((-0.6, -0.42, 0.78))
     mouth = Vector((-0.66, -0.26, 1.2))
-    p.rod("paint", base, mouth, 0.09, 10, color="oxide")
+    TUBE.append((base, mouth, p.rod("paint", base, mouth, 0.09, 10, color="oxide")))
     p.rod("bare_metal", base - (mouth - base) * 0.12, base + (mouth - base) * 0.12, 0.11, 10)
     p.ring("class_accent", 0.065, 0.115, 0.05, 10, loc=mouth,
            rot=(Vector((0, 0, 1)).rotation_difference((mouth - base).normalized())).to_euler())
@@ -67,7 +74,40 @@ def pod():
     p.beam("bare_metal", (0, -0.2, 0.88), (0, -0.9, 0.9), 0.06, 0.05)
     p.beam("bare_metal", (0, -0.62, 0.9), (0, -0.62, 0.72), 0.05)
     wear(p)
+    rub_edges(p)
     return p
+
+
+def rub_edges(p):
+    """Broaden the wear onto the working edges with no new geometry (C09 correction 1): the
+    paint the satchels and the mortar tube already carry is rubbed through where a hand, a
+    strap or a shell touches it. Vertex colours move to bone (already in the paint set) and
+    the tube's two upper faces move to the bare_metal slot the pod already has."""
+    bone = tuple(common.rgba("bone"))
+    col = p.col
+    p.bm.normal_update()
+    for m, body, flap in WORKING:
+        inv = m.inverted()
+        # Canvas body: the whole top edge, top face and the upper rim of each side.
+        for f in body:
+            for loop in f.loops:
+                if (inv @ loop.vert.co).z > 0.06:
+                    loop[col] = bone
+        # Flap: the outer lip and upper edge, where the strap chafes.
+        for f in flap:
+            for loop in f.loops:
+                c = inv @ loop.vert.co
+                if c.y > 0.09 or c.z > 0.19:
+                    loop[col] = bone
+    for base, mouth, faces in TUBE:
+        d = (mouth - base).normalized()
+        length = (mouth - base).length
+        for f in faces:
+            for loop in f.loops:
+                if (loop.vert.co - base).dot(d) / length > 0.8:
+                    loop[col] = bone
+            if f.normal.z > 0.6 and abs(f.normal.dot(d)) < 0.3:
+                f.material_index = p._slot("bare_metal")
 
 
 def wear(p):

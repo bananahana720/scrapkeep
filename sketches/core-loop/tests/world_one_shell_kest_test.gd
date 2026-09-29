@@ -21,6 +21,9 @@ const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro", "VaneL", "VaneR"]
 const BASE := "res://assets/models/shell_kest.glb"
 const RIG_SHA := "c6ba29f531b86a54afe21bec4746ce5865b5e275810f0ff611b6a5914dd9ad9e"
 const GROW := 0.002
+# The wear pass adds nothing: shell counts at the merged C09 (32fa64c), Godot import.
+const NO_GROWTH_V := 11596
+const NO_GROWTH_T := 10788
 # Pod kit mesh bounds of the base shell in shell space.
 const BASE_POD_MIN := Vector3(-0.94, -0.7735, -0.94)
 const BASE_POD_MAX := Vector3(0.94, 0.133, 0.94)
@@ -157,12 +160,77 @@ func _kept(base: Node, shell: Node, node_name: String, region: AABB) -> String:
 	return "%d of %d base vertices" % [lost, want.size()] if lost > 0 or want.is_empty() else ""
 
 
+# C09 correction 1: the wear on the working edges. The working faces are the Pod paint
+# triangles of the satchels (canvas bodies and flaps) and the mortar tube: paint triangles in
+# the region whose base colour is not already bone. Over them, the share that reads as worn
+# in the shell: bone on any vertex, or moved to the bare_metal slot. Triangles are matched to
+# the base by centroid (the wear adds no geometry, so the centroids are identical).
+const WEAR_MIN := {"satchel right": 0.4, "satchel rear": 0.4, "satchel left": 0.4, "mortar": 0.2}
+const WEAR_REGIONS := {
+	"satchel right": AABB(Vector3(0.376, -0.52, -0.106), Vector3(0.32, 0.32, 0.32)),
+	"satchel rear": AABB(Vector3(-0.12, -0.53, 0.376), Vector3(0.32, 0.32, 0.32)),
+	"satchel left": AABB(Vector3(-0.656, -0.54, -0.36), Vector3(0.32, 0.32, 0.32)),
+	"mortar": AABB(Vector3(-0.56, -0.36, 0.05), Vector3(0.3, 0.45, 0.4)),
+}
+
+
+# Pod triangles by rounded centroid: {key: [slot, has_bone_vertex, centroid]}.
+static func pod_tris(scene: Node) -> Dictionary:
+	var bone: Color = Palette.SAND.srgb_to_linear()
+	var out := {}
+	for mi in meshes(scene):
+		if String(mi.name) != "Pod":
+			continue
+		var t := to_root(mi, scene)
+		for i in mi.mesh.get_surface_count():
+			var slot := HeroAssets.slot_of(mi.mesh, i)
+			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
+			var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var cs = arrays[Mesh.ARRAY_COLOR]
+			var index = arrays[Mesh.ARRAY_INDEX]
+			var n: int = index.size() if index != null else vs.size()
+			for k in range(0, n, 3):
+				var ids: Array = [index[k], index[k + 1], index[k + 2]] if index != null else [k, k + 1, k + 2]
+				var centre: Vector3 = t * ((vs[ids[0]] + vs[ids[1]] + vs[ids[2]]) / 3.0)
+				var has_bone := false
+				if cs != null:
+					for id in ids:
+						var c: Color = cs[id]
+						has_bone = has_bone or (absf(c.r - bone.r) < 0.01 and absf(c.g - bone.g) < 0.01 and absf(c.b - bone.b) < 0.01)
+				out[Vector3i((centre * 1000.0).round())] = [slot, has_bone, centre]
+	return out
+
+
+# [worn, working, missing]: working = base paint triangles in the region with no bone vertex.
+static func wear_share(base_tris: Dictionary, shell_tris: Dictionary, region: AABB) -> Array:
+	var worn := 0
+	var working := 0
+	var missing := 0
+	for key in base_tris:
+		var b: Array = base_tris[key]
+		if b[0] != "paint" or b[1] or not region.has_point(b[2]):
+			continue
+		working += 1
+		if not shell_tris.has(key):
+			missing += 1
+			continue
+		var s: Array = shell_tris[key]
+		if s[0] == "bare_metal" or s[1]:
+			worn += 1
+	return [worn, working, missing]
+
+
 func _initialize() -> void:
-	var shell: Node = (load(SHELL) as PackedScene).instantiate()
+	var shell_path := SHELL
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--shell="):
+			shell_path = a.substr(8)
+	var shell: Node = (load(shell_path) as PackedScene).instantiate()
 	var rig: Node = (load(RIG) as PackedScene).instantiate()
 	var a := counts(shell)
 	var b := counts(rig)
 	_report("kest pod V", a.v + b.v <= MAX_V, "%d + %d = %d vertices, ceiling %d" % [a.v, b.v, a.v + b.v, MAX_V])
+	_report("kest no growth", a.v <= NO_GROWTH_V and a.t <= NO_GROWTH_T, "shell %d V and %d T, no more than %d V and %d T before the wear correction" % [a.v, a.t, NO_GROWTH_V, NO_GROWTH_T])
 	_report("kest pod T", a.t + b.t <= MAX_T, "%d + %d = %d triangles, ceiling %d" % [a.t, b.t, a.t + b.t, MAX_T])
 	_report("kest pod draws", a.s + b.s <= MAX_DRAWS, "%d + %d = %d surfaces, ceiling %d" % [a.s, b.s, a.s + b.s, MAX_DRAWS])
 	_report("kest glass", a.alpha == 1 and b.alpha == 0, "one glass surface (%d shell, %d rig)" % [a.alpha, b.alpha])
@@ -224,6 +292,12 @@ func _initialize() -> void:
 	# the pilot with its crest (the Pilot mesh is not edited at all). Every base vertex in a
 	# region must still exist in the new shell.
 	var base: Node = (load(BASE) as PackedScene).instantiate()
+	var base_tris := pod_tris(base)
+	var shell_tris := pod_tris(shell)
+	for key in WEAR_REGIONS:
+		var w := wear_share(base_tris, shell_tris, WEAR_REGIONS[key])
+		var share := float(w[0]) / maxf(1.0, float(w[1]))
+		_report("kest wear " + key, w[1] > 0 and w[2] == 0 and share >= WEAR_MIN[key], "%d of %d working paint triangles read as worn = %.2f, minimum %.2f (%d not matched to base)" % [w[0], w[1], share, WEAR_MIN[key], w[2]])
 	var everything := AABB(Vector3(-3, -3, -3), Vector3(6, 6, 6))
 	var features := {
 		"satchel right": ["Pod", AABB(Vector3(0.376, -0.52, -0.106), Vector3(0.32, 0.32, 0.32))],
