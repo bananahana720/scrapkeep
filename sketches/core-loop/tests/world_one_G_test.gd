@@ -24,7 +24,6 @@ var _game
 var _done := false
 var _failures := 0
 var _offers: Array = []
-var _bay_open := false
 
 
 func _initialize() -> void:
@@ -118,7 +117,6 @@ func _brindle_run(index: int, on: bool) -> void:
 	_check(label + " parents stable", second == expected, "depth-2 pair %s are the children of %s" % [second, first[0]])
 	# Boarding the bay after a skipped clear, and a retry, must not offer again or change the pair.
 	world._open_pick(1)
-	_bay_open = true
 	_game.flow.retry_stage()
 	world._open_pick(1)
 	_check(label + " no second open", _offers.size() == 2 and _pair(tree) == second and tree.path() == at_pick_1, "skip, bay entry and retry keep one open depth-2 offer %s" % [_pair(tree)])
@@ -128,9 +126,12 @@ func _brindle_run(index: int, on: bool) -> void:
 		_game.events.stage_cleared.emit(stage)
 		world._open_pick(stage)
 		_game.flow.retry_stage()
+	# Land the ball so anything queued while airborne would be delivered before the count.
+	_game.player.state.grounded = true
+	world._physics_process(0.0)
 	if on:
-		_check(label + " exactly two", _offers.size() == 2 and tree.path() == path and not tree.pending() and tree.allowed == 2,
-			"%d offers and %d picks through Brindle, allowed %d, pending %s" % [_offers.size(), tree.path().size(), tree.allowed, tree.pending()])
+		_check(label + " exactly two", _offers.size() == 2 and tree.path() == path and not tree.pending() and tree.allowed == 2 and world._picks_waiting.is_empty(),
+			"%d offers and %d picks through Brindle, allowed %d, pending %s, waiting %s" % [_offers.size(), tree.path().size(), tree.allowed, tree.pending(), world._picks_waiting])
 	else:
 		var depths: Array = _offers.map(func(o): return o["depth"])
 		_check(label + " base four", depths == BASE_OFFER_DEPTHS,
