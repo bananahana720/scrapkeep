@@ -112,8 +112,8 @@ func _run() -> void:
 		"the dressing adds no collision object")
 	_check(dish.radius == 0.8 and dish.half_height == 1.1 and is_equal_approx(dish.weight, 2.0), "radius 0.8, half-height 1.1 and weight 2.0 unchanged")
 	_check(is_equal_approx(dish.warn_seconds, 0.9) and is_equal_approx(dish.live_seconds, 2.6) and is_equal_approx(dish.rest_seconds, 2.5)
-		and is_equal_approx(dish.attack_range, 16.0) and is_equal_approx(dish.keep_near, 7.0) and is_equal_approx(dish.walk_speed, 2.6)
-		and dish.scrap_value == 5, "warn 0.9, live 2.6, rest 2.5, range 16, keep-near 7, walk 2.6 and scrap 5 unchanged")
+		and is_equal_approx(dish.attack_range, 16.0) and is_equal_approx(dish.keep_near, 7.0) and is_equal_approx(dish.keep_far, 14.4) and is_equal_approx(dish.walk_speed, 2.6)
+		and dish.scrap_value == 5, "warn 0.9, live 2.6, rest 2.5, range 16, keep-near 7, keep-far 20 clamped to 14.4 by counter.gd, walk 2.6 and scrap 5 unchanged")
 	var consts: Dictionary = (dish.get_script() as Script).get_script_constant_map()
 	var same := true
 	for key in BASE_CONSTS:
