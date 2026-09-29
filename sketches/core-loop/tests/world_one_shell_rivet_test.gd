@@ -90,6 +90,48 @@ static func verts_in(scene: Node, node_name: String, region: AABB) -> Dictionary
 	return out
 
 
+# Per-feature extent: bin Pod vertices into CELL-metre cells; every shell vertex must sit in
+# a cell the base also occupies, so a fin or stack cannot grow into empty space inside the
+# overall bounds. Returns the count of shell vertices in cells the base leaves empty.
+const CELL := 0.12
+
+
+static func cell_of(w: Vector3) -> Vector3i:
+	return Vector3i((w / CELL).floor())
+
+
+static func occupied(scene: Node, node_name: String) -> Dictionary:
+	var out := {}
+	for mi in meshes(scene):
+		if String(mi.name) != node_name:
+			continue
+		var t := to_root(mi, scene)
+		for i in mi.mesh.get_surface_count():
+			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+				out[cell_of(t * v)] = true
+	return out
+
+
+func _outside_cells(base: Node, shell: Node) -> int:
+	var have := occupied(base, "Pod")
+	var n := 0
+	for mi in meshes(shell):
+		if String(mi.name) != "Pod":
+			continue
+		var t := to_root(mi, shell)
+		for i in mi.mesh.get_surface_count():
+			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+				var w := t * v
+				var ok := false
+				for dx in [-1, 0, 1]:
+					for dy in [-1, 0, 1]:
+						for dz in [-1, 0, 1]:
+							ok = ok or have.has(cell_of(w) + Vector3i(dx, dy, dz))
+				if not ok:
+					n += 1
+	return n
+
+
 func _kept(base: Node, shell: Node, node_name: String, region: AABB) -> String:
 	var want := verts_in(base, node_name, region)
 	var have := verts_in(shell, node_name, region.grow(0.002))
@@ -172,6 +214,8 @@ func _initialize() -> void:
 	for key in features:
 		var lost := _kept(base, shell, features[key][0], features[key][1])
 		_report("rivet keeps " + key, lost == "", "base vertices still present (%s)" % lost)
+	var stray := _outside_cells(base, shell)
+	_report("rivet extent", stray == 0, "%d Pod vertices sit in space the base shell leaves empty (fins, stacks, rail cannot grow)" % stray)
 	base.free()
 	var rig_sha := FileAccess.get_sha256(RIG)
 	_report("rivet rig file", rig_sha == RIG_SHA, "pilot_rivet_anim.glb sha256 %s" % rig_sha.substr(0, 12))
