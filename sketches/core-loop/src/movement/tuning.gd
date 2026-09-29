@@ -50,6 +50,12 @@ const SPECS := [
 	{"key": "breath", "label": "Breath", "min": 0.0, "max": 2.0, "step": 1.0, "value": 1.0, "options": ["raw", "hard", "gentle"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["banner", "cards"]},
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["classic", "haze"]},
+	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
+	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
+	# alone. The hot-wired flags are registered here; their effects belong to later units.
+	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 ]
 
 const BRAKE_RESISTANCE := 4.0
@@ -85,7 +91,8 @@ func _init() -> void:
 #         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
 #         so a bot or tool that builds a bare Tuning never sees them.
 # `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --loop=drop --gun=full
-# --music=ace --breath=gentle --discovery=cards --telegraph=haze`, from the engine args
+# --music=ace --breath=gentle --discovery=cards --telegraph=haze --world-one-builds=on
+# --hotwire-shell=on --hotwire-tread=on`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
 # since the static-drawn floor marking has no tuning in reach; tuning_flags_test checks
@@ -101,6 +108,9 @@ const FLAGS := {
 	"breath": ["breath", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
+	"world-one-builds": ["world_one_builds", "option", "launch"],
+	"hotwire-shell": ["hotwire_shell", "option", "launch"],
+	"hotwire-tread": ["hotwire_tread", "option", "launch"],
 }
 
 
@@ -133,6 +143,10 @@ func apply_cmdline(when := "") -> Dictionary:
 	var args := OS.get_cmdline_args()
 	args.append_array(OS.get_cmdline_user_args())
 	return apply_args(args, when)
+
+
+func world_one() -> bool:
+	return option("world_one_builds") == "on"
 
 
 func armor() -> bool:

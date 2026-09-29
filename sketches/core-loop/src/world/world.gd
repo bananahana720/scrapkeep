@@ -86,6 +86,8 @@ var _air_clock := 0.0
 var _bay_calm := false
 # Stages whose between-stage upgrade pick has been opened this run.
 var _picks_opened := {}
+# Stages whose pick the world-one profile is holding for a calm moment (the ball airborne).
+var _picks_waiting: Array[int] = []
 var _pressure := -1.0
 var _vault_pending := false
 var _was_grounded := true
@@ -128,7 +130,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.element_resolved.connect(_on_element_resolved)
 	ctx.events.reward_offered.connect(_on_reward_offered)
 	ctx.events.flow_changed.connect(_on_flow_changed)
-	ctx.events.run_started.connect(func(_class_id: String): _picks_opened.clear())
+	ctx.events.run_started.connect(func(_class_id: String):
+		_picks_opened.clear()
+		_picks_waiting.clear())
 	ctx.events.stage_cleared.connect(_open_pick)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
@@ -323,6 +327,7 @@ func _physics_process(delta: float) -> void:
 	if ctx == null or events == null or not ctx.flow.in_stage():
 		return
 	var player = ctx.player
+	_deliver_waiting_picks()
 	if _vault_pending:
 		_vault_pending = false
 		_spawn_vault()
@@ -650,9 +655,32 @@ func _on_flow_changed(state: String) -> void:
 
 # The workshop visit after each stage opens the upgrade tree's next pick (W3), once per
 # stage per run: on boarding the bay, or at the stage's clear if the bay was skipped,
-# so no pick is lost and a retried visit never opens a second one.
+# so no pick is lost and a retried visit never opens a second one. Under --world-one-builds
+# the tree stops at two depths (the start and the visit after stage 1), and a pick that
+# falls due while the ball is airborne waits for the next calm frame (grounded, or in the
+# bay), so the choice screen never pauses a jump.
 func _open_pick(stage: int) -> void:
-	if stage >= UpgradeTree.DEPTHS or _picks_opened.has(stage) or not "tree" in ctx.player or ctx.player.tree == null:
+	var tree = ctx.player.tree if "tree" in ctx.player else null
+	if tree == null:
+		return
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS if ctx.tuning.world_one() else UpgradeTree.DEPTHS
+	if stage >= tree.max_depth or _picks_opened.has(stage):
 		return
 	_picks_opened[stage] = true
-	ctx.player.tree.open_checkpoint()
+	if ctx.tuning.world_one() and not _pick_calm():
+		_picks_waiting.append(stage)
+		return
+	tree.open_checkpoint()
+
+
+func _pick_calm() -> bool:
+	return ctx.player.state.grounded or bay.inside
+
+
+func _deliver_waiting_picks() -> void:
+	if _picks_waiting.is_empty() or not _pick_calm():
+		return
+	var tree = ctx.player.tree
+	for _stage in _picks_waiting:
+		tree.open_checkpoint()
+	_picks_waiting.clear()
