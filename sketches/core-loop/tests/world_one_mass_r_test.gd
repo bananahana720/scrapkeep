@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Combat := preload("res://src/combat/combat.gd")
-const Route := preload("res://tests/world_one_mass_route.gd")
+const Route := preload("res://tests/doubles/world_one_mass_route.gd")
 
 # Mass-R (BUILD-SYSTEMS.md, Rivet row): at mass 0, 450 and 990, the same speed, a sprint ram
 # and a ground smash deal damage that rises once with heft, the formula already in
