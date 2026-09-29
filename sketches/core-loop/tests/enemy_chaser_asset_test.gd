@@ -104,9 +104,9 @@ func _run() -> void:
 
 	var live := _measure(chaser)
 	print("live assembly: %d T, %d D, radius %.3f, half-height %.3f" % [live["tris"], live["draws"], live["r"], live["y"]])
-	if chaser.find_child("ChaserBody", true, false) != null:
-		_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
-		_check(not live["alpha"], "live assembly has no alpha")
-		_check(live["r"] <= CORE_RADIUS + 0.001 and live["y"] <= CORE_HALF_HEIGHT + 0.001, "live assembly inside the 2 x 3 m core at rest")
+	_check(chaser.find_child("ChaserBody", true, false) != null, "the live Chaser carries its ChaserBody dressing")
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(not live["alpha"], "live assembly has no alpha")
+	_check(live["r"] <= CORE_RADIUS + 0.001 and live["y"] <= CORE_HALF_HEIGHT + 0.001, "live assembly inside the 2 x 3 m core at rest")
 	print("enemy_chaser_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)
