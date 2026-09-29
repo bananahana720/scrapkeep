@@ -116,14 +116,19 @@ func _go_live() -> void:
 	_landed = false
 
 
+# The loop leaves the crew keeping the seat it had, so it reads open in flight too.
+func _take_flight() -> void:
+	_flight_basis = global_basis * _seat()
+	_bola.top_level = true
+
+
 func _live(_delta: float) -> bool:
 	var ring := telegraph()
 	if ring == null:
 		return false
 	if _t < FLIGHT:
 		if not _bola.top_level:
-			_flight_basis = global_basis * _seat()
-			_bola.top_level = true
+			_take_flight()
 		_bola.global_position = Threat.flight_point(_launch, ring.center, _bump, _t / FLIGHT)
 		ring.set_progress(_t / FLIGHT)
 		return true

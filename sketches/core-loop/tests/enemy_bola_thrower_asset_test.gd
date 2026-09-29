@@ -227,8 +227,7 @@ func _check_pose(bola: Node3D) -> void:
 	_check(still_open, "the ring axis stays exposed through 40 wind-up whirl steps")
 	bola.phase = bola.Phase.ROAM
 	# In flight the loop is top_level and keeps the enemy-frame seat it left with.
-	bola._flight_basis = bola.global_basis * bola._seat()
-	loop.top_level = true
+	bola._take_flight()
 	for i in 10:
 		bola._pose()
 	_check(_open(loop), "the flying loop's ring axis stays exposed")
