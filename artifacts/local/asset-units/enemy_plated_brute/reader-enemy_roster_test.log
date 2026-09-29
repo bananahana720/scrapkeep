@@ -1,0 +1,12 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[no shared mechanics] 19 enemy ids, 19 mechanic tags, shared [] -> PASS
+[one tag per entry] 14 reinforcement tags, duplicate or empty [], not a baked sound [] -> PASS
+[two timbre families] Fleet voice clank; ancient voices ["reactor_tick", "swarm_buzz", "mind_quote"]; crossed [] -> PASS
+[every hold breaks] holding rows whose breaks are not the player's own: [] -> PASS
+[every kind spawns as itself] 14 reinforcements spawned; wrong [] -> PASS
+[one pack per faction per frame] one frame's spawns arrived as { "fleet": 1, "reactor": 1, "swarm": 1, "mind": 1 } -> PASS
+[pack_arrived] a trapper and a thrower in one frame: [["fleet", ["mag_trapper", "bola_thrower"], (-30.0, 34.58425, -160.0)]]; every faction has its fac_ icon true -> PASS
+[fodder is not a pack] a lone chaser published 0 pack_arrived -> PASS
+enemy_roster_test: PASS
+exit 0

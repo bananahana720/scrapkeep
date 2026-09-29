@@ -1,0 +1,17 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[data] 10 enemy entries, unique ids, every field filled: ["shell_return", "counter_ram", "crush_chain", "parting_shot", "pulse_stomp", "magnet_break", "tether_snap", "shield_vault", "awaiting_operator", "what_it_learned"] -> PASS
+[counter_ram] a ram on a chaser mid wind-up -> PASS
+[crush_chain] three unplated one-hit ram kills in the same second -> PASS
+[parting_shot] a laser kill right after a slingshot dismount -> PASS
+[tether_snap] a tether held, then snapped by speed -> PASS
+[shield_vault] a jump in a deflector's rebound window vaulted at 16.2 m/s -> PASS
+[awaiting_operator] a scattered drone led into a chaser pinned it (3 pins) -> PASS
+[what_it_learned] a Mind's hand read the ram habit and quoted it: [{ "habit": "ram", "icon": "trg_on_speed_tier_up" }] -> PASS
+[bat] a shell in flight was batted back toward its lobber -> PASS
+[shell_return] a batted shell landed on its own lobber and killed it (0.90 s after the bat) -> PASS
+[pulse_stomp] a cap stomp 0.6 s after a pulse -> PASS
+[magnet_break] the Warden broken while its magnet had it unplated -> PASS
+[all] discovered this run: ["counter_ram", "crush_chain", "parting_shot", "tether_snap", "shield_vault", "awaiting_operator", "what_it_learned", "shell_return", "pulse_stomp", "magnet_break"] -> PASS
+combat_codex_test: PASS
+exit 0

@@ -1,0 +1,43 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS enemy_plated_brute.glb loads
+asset: 924 T, 3 D
+PASS asset triangles 924 <= 1200
+PASS asset draws 3 <= 3
+PASS asset has no alpha surface
+PASS a plated brute spawns
+PASS one collision shape on the brute (1)
+PASS collider is the base capsule r 0.8, h 2.2
+PASS collider sits at the origin
+PASS the dressing adds no collision object
+PASS radius 0.8, half-height 1.1 and weight 3 unchanged
+PASS warn 1.1, live 0.15, rest 2.8, range 6.5, keep-near 3, walk 3.2, scrap 8 and uninterruptible unchanged
+PASS one plate, plating from the spec (default 24) and 110 health unchanged
+PASS plating scale, slam radius, range, damage, shove and health constants equal base
+live assembly intact: 924 T, 3 D
+PASS the live measure saw meshes (924 T, 3 D)
+PASS live assembly 924 T / 3 D within 1200 / 3
+PASS live assembly has no alpha
+PASS the live brute has BruteBody and BrutePlates
+body bounds: y -1.100..1.550, radius 0.790
+PASS the body stands inside the 0.8 m collider footprint
+PASS the body stands on the collider floor (y -1.100)
+PASS the body stays under 2.3 m (top 1.55)
+plate bounds: y -1.100..1.140, reach 1.790
+PASS the plate group reaches 1.790 m <= 1.8
+PASS the plate group stays between the floor and 1.3 m
+PASS the slab stands proud of the body at the front (z 1.46)
+PASS the resting body surface is the Fleet oxide colour (RUST) on the enemy's own material
+PASS a hit flashes the body through the existing event
+PASS the body returns to oxide after the flash
+PASS a second brute's flash leaves this one's body unlit
+PASS a hit that is not full leaves the plate group standing
+live assembly stripped: 580 T, 2 D (intact 924 T, 3 D)
+PASS a full result strips the plate: plates 0, popped 1
+PASS no part of the plate group renders after the strip
+PASS the plate group is 344 T <= 400
+PASS the stripped brute has visibly less mass (580 T against 924 T)
+PASS with no plate left a full result strips nothing more
+PASS the popped plate still takes the first hit whole
+enemy_plated_brute_asset_test: PASS
+exit 0

@@ -1,0 +1,6 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[control] an unplated crushable enemy at hp 240: a ram of punch 274.0 crushes -> PASS
+[veto] crushable() false at plating 0, hp 240, dealt 274.0: would_crush false -> PASS
+combat_crush_veto_test: PASS
+exit 0
