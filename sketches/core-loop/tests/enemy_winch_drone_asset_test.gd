@@ -9,6 +9,7 @@ const Palette := preload("res://src/core/palette.gd")
 # either way. The base contract: the drone's collider, lane, winch, timing and damage values are
 # what winch_drone.gd had before the dressing swap, pinned both as its source text (the literals
 # in _configure and _live) and as the runtime values counter.gd leaves after clamping.
+const GLB := "res://assets/models/world_one/enemy_winch_drone.glb"
 const CEILING_T := 1200
 const CEILING_D := 3
 const X_MIN := -1.7
@@ -192,8 +193,8 @@ func _check_base(drone: Node3D) -> void:
 	_check(missing.is_empty(), "the source keeps every base literal (keep_far 22.0, timing, lane, catch, pull and hover lines)")
 
 
-# The rotor is the base's: 1.6 m radius, 16-sided, 2.0 m up, turned by the existing _pose each
-# physics tick (no new clock), and it does not flash.
+# The rotor: 1.6 m radius, 16-sided, 2.0 m up, turned by _pose each physics tick (the drone's own
+# clock), and it does not flash.
 func _check_rotor(drone: Node3D) -> void:
 	var rotor := drone.find_child("WinchRotor", true, false) as MeshInstance3D
 	_check(rotor != null and drone._rotor == rotor, "the pose turns the WinchRotor node")
@@ -210,7 +211,7 @@ func _check_rotor(drone: Node3D) -> void:
 	_check(tris > 0 and tris + 64 < 150, "the 16-sided rotor (%d T) and 16-sided drum (64 T) stay under 150 T" % tris)
 	var before: float = rotor.rotation.y
 	drone._pose()
-	_check(is_equal_approx(rotor.rotation.y - before, 0.6), "_pose still turns the rotor 0.6 rad per physics tick")
+	_check(is_equal_approx(rotor.rotation.y - before, 0.6), "_pose turns the rotor 0.6 rad per physics tick")
 	_check(rotor.get_surface_override_material(0) == null or rotor.get_surface_override_material(0) != drone._material, "the rotor does not take the flashing material")
 
 
@@ -261,9 +262,21 @@ func _check_exit(drone: Node3D) -> void:
 # existing event.
 func _check_paint(drone: Node3D) -> void:
 	var body := drone.find_child("Body", true, false) as MeshInstance3D
+	var scene := (load(GLB) as PackedScene).instantiate()
+	var named := -1
+	var found := 0
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var glb_mesh := (node as MeshInstance3D).mesh
+		for i in glb_mesh.get_surface_count():
+			if glb_mesh.surface_get_material(i).resource_name == "fleet_paint":
+				named = i
+				found += 1
+	scene.free()
+	_check(found == 1, "the glb names exactly one surface fleet_paint (%d)" % found)
 	var mat: StandardMaterial3D = null
 	for s in body.mesh.get_surface_count():
 		var o := body.get_surface_override_material(s) as StandardMaterial3D
+		_check((o == drone._material) == (s == named), "surface %d takes the flashing material only if it is fleet_paint (index %d)" % [s, named])
 		if o != null and o == drone._material:
 			mat = o
 			var arrays := body.mesh.surface_get_arrays(s)
