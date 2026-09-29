@@ -1208,3 +1208,14 @@ Slice Mass-R of `design-v3/research/build-systems/BUILD-SYSTEMS.md`. No game cod
 - **Flag.** No new flag: the rows are identical with `--world-one-builds` on and off, because the slice adds no behaviour.
 - **Test.** `tests/world_one_mass_r_test.gd` computes the expected punch from `Combat.STRIKE_DAMAGE` and `run.heft()`, and fails if damage rises by more than heft, drops out of order, or turning moves with mass. A scratch edit making `punch_of` multiply heft twice fails it three ways.
 - **Open for play:** whether x3.2 at mass 990 reads as weight; mass 990 is BUILD-SYSTEMS' proposed saturation point, not a game value.
+
+## Sable's mass launch, Mass-S under `--world-one-builds=on` (2026-09-29)
+
+One slice of `design-v3/research/build-systems/BUILD-SYSTEMS.md` ("Mass becomes the pilot's action", the Sable row). Size is banked in the rope and the wall: q = clamp(mass / 990, 0, 1), and the slingshot release, the vault kick and the Coil Hook release each add up to 8 m/s x q. No new flag; the verb rides the master flag and both Sable depth-1 nodes (Cannonball, Beachhead) carry the new `mass_launch` knob.
+
+- **Budget.** `AugmentKit.mass_gap` is the one shared grant: the first launch that takes a bonus starts a 1 s cooldown for all three verbs. A launch that gets nothing (cooling, or at the ceiling) leaves it untouched.
+- **Ceiling.** `Augments.LAUNCH_CEILING` (45) bounds generated speed only. The bonus is `min(8q, max(0, 45 - speed))`, taken after Pylon Capacitor's slingshot mods (they change the launch speed before it), so the capacitor and the mass bonus resolve once and never past 45. A launch already at or above 45 keeps its speed and adds nothing; with the verb on the vault also stops trimming an incoming speed above its 45 cap. Long Lane and Spring Hull are item surges that already decline at a 45 cap (`item_effects.gd` `_surge`), so they add nothing on top of a full launch.
+- **Where mass comes from.** `player_ball._read_mass` sets `kit.mass_q` each tick from `mass_of`, which `combat.gd` wires beside `heft_of` to the run's scrap mass alone, so held parts never count as mass and the verb works in every scrap mode. Unwired, mass reads 0. Reading it spends nothing.
+- **Untouched.** Steering, friction, collider, gravity and air control never read q; the test compares an airborne run at mass 0 and 990. Flag off, or no depth-1 pick, every launch equals base.
+- **Open for play.** Whether +8 m/s reads as a bigger launch without losing landing control, and whether the aim cone's speed should show the bonus (it does now).
+- **Tests.** `tests/world_one_mass_s_test.gd`.

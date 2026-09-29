@@ -7,9 +7,10 @@ extends RefCounted
 
 const NODES := [
 	{"id": "s_cannonball", "name": "Cannonball", "effect": "Vault kicks set off a small discharge", "key": "movement",
-		"icon": "ab_sable_vault", "tags": ["air", "burst"], "proc": [{"on": "vault_kicked", "do": "discharge", "scale": 0.3, "gap": 1.0}]},
+		"icon": "ab_sable_vault", "tags": ["air", "burst"], "proc": [{"on": "vault_kicked", "do": "discharge", "scale": 0.3, "gap": 1.0}],
+		"knob": {"mass_launch": true}},
 	{"id": "s_beachhead", "name": "Beachhead", "effect": "Plant a pylon from twice as far", "key": "movement",
-		"icon": "ab_sable_mount", "tags": ["mounted"], "knob": {"mount_reach": 2.0}},
+		"icon": "ab_sable_mount", "tags": ["mounted"], "knob": {"mount_reach": 2.0, "mass_launch": true}},
 
 	{"id": "s_coil_hook", "name": "Coil Hook", "effect": "Letting go of the rope flings you", "key": "movement",
 		"icon": "ab_sable_move", "tags": ["air", "mobility"], "knob": {"grapple_fling": 10.0}},

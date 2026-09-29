@@ -268,6 +268,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
+	ctx.player.mass_of = func() -> float: return ctx.run.mass
 	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
 	ctx.events.arc_slammed.connect(func(at: Vector3, _faces: int): effects.ring(at, 12.0, ClassDef.SABLE_COLOR))

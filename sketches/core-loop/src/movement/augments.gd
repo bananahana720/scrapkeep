@@ -70,6 +70,15 @@ const VAULT_GAIN := 1.8
 # Pole Vault lets the kick find enemies (collision layer 3) as faces too.
 const ENEMY_MASK := 4
 const VAULT_CAP := 45.0
+# Mass-S (--world-one-builds): q = clamp(mass / MASS_FULL, 0, 1) adds up to MASS_BONUS m/s to a
+# slingshot, vault or Coil Hook launch, one shared grant per MASS_GAP seconds. LAUNCH_CEILING
+# bounds generated launch speed only: at or above it the bonus is nothing and the speed stays.
+const MASS_FULL := 990.0
+const MASS_BONUS := 8.0
+# Heft per mass is 1/450 (run_state.gd HEFT_PER_MASS), so mass is heft - 1 times this.
+const MASS_HEFT_DIVISOR := 450.0
+const MASS_GAP := 1.0
+const LAUNCH_CEILING := 45.0
 const VAULT_FACE_COOLDOWN := 1.5
 # Rivet's sprint raises the drive's cruise target while it runs.
 const SPRINT_CRUISE := 1.25
@@ -105,6 +114,23 @@ static func holding(kit) -> bool:
 	return kit != null and (kit.mounted or kit.plant_time > 0.0)
 
 
+# The mass bonus a launch at this speed could take right now; spends nothing. Zero with the
+# verb off, while the shared grant is cooling, or at or above the ceiling.
+static func mass_room(kit, speed: float) -> float:
+	if kit == null or not kit.mass_on or kit.mass_gap > 0.0:
+		return 0.0
+	return minf(MASS_BONUS * kit.mass_q, maxf(0.0, LAUNCH_CEILING - speed))
+
+
+# The bonus a launch takes: mass_room, and the one shared grant starts cooling only when
+# something was granted, so a launch above the ceiling leaves the budget whole.
+static func mass_spend(kit, speed: float) -> float:
+	var add := mass_room(kit, speed)
+	if add > 0.0:
+		kit.mass_gap = MASS_GAP
+	return add
+
+
 # The vault kick's exit speed for an incoming speed; the cap holds whatever the gain.
 static func vault_exit(incoming: float, jump_speed: float, gain := VAULT_GAIN) -> float:
 	return minf(VAULT_CAP, maxf(jump_speed, incoming * gain))
@@ -134,11 +160,15 @@ static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
 	var incoming: float = body_state.linear_velocity.length()
 	var dir := eject_direction(face["normal"], aim)
 	var speed := vault_exit(incoming, tuning.f("jump_speed"), kit.knob("vault_gain"))
-	kit.vault_aim = {"point": face["point"], "normal": face["normal"], "dir": dir, "speed": speed}
+	# Mass-S: the cap never takes speed the ball arrived with, and the bonus rides on top.
+	if kit.mass_on:
+		speed = maxf(speed, incoming)
+	kit.vault_aim = {"point": face["point"], "normal": face["normal"], "dir": dir, "speed": speed + mass_room(kit, speed)}
 	if state.jump_buffer <= 0.0:
 		return
 	state.jump_buffer = 0.0
 	state.coyote = 0.0
+	speed += mass_spend(kit, speed)
 	body_state.linear_velocity = dir * speed
 	kit.vault_faces[key] = kit.knob("vault_lock")
 	kit.last_vault_face = key
@@ -404,12 +434,15 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: flo
 			gauge.begin()
 			kit.facts.append(["gauge_charging", ["slingshot"]])
 		if gauge.step(step, intent.jump_held):
-			_dismount(kit, _slingshot(kit, tuning, aim, gauge.fired_fraction))
+			var launch := _slingshot(kit, tuning, aim, gauge.fired_fraction)
+			if kit.mass_on:
+				launch += launch.normalized() * mass_spend(kit, launch.length())
+			_dismount(kit, launch)
 			kit.facts.append(["gauge_released", ["slingshot", gauge.fired_fraction]])
 			body_state.linear_velocity = kit.dismount_velocity
 			return false
 		kit.slingshot_aim = {"dir": eject_direction(kit.mount_normal, aim),
-			"speed": _slingshot(kit, tuning, aim, gauge.fraction()).length(), "fill": gauge.fraction()}
+			"speed": _slingshot_shown(kit, tuning, aim, gauge.fraction()), "fill": gauge.fraction()}
 		_pin(body_state, kit.mount_point)
 		return true
 	if not kit.on(PYLON) or not intent.mount_pressed or kit.mount_block > 0.0:
@@ -449,6 +482,12 @@ static func _slingshot(kit, tuning, aim: Basis, fraction := 0.0) -> Vector3:
 	var speed := maxf(tuning.f("jump_speed"), kit.mount_banked * tuning.f("slingshot_keep") + tuning.f("slingshot_boost"))
 	speed *= AbilityState.Gauge.scaled(fraction, 1.0, SLINGSHOT_FULL)
 	return eject_direction(kit.mount_normal, aim) * speed
+
+
+# The speed the aim cone shows: the launch's, mass bonus included, spending nothing.
+static func _slingshot_shown(kit, tuning, aim: Basis, fraction: float) -> float:
+	var speed := _slingshot(kit, tuning, aim, fraction).length()
+	return speed + mass_room(kit, speed)
 
 
 # The one eject line off a face, shared by the slingshot and the vault kick: along the
