@@ -21,10 +21,9 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const SEED := 3
 const CAMP_SECONDS := {"hold": 240.0, "full": 80.0}
 const SCALE := 4.0
-# On a loaded machine the scaled span runs slower than 4x; the full span then ends at
-# FULL_WALL_MS of wall time if it has camped FULL_MIN seconds, and says so.
-const FULL_WALL_MS := 100000
-const FULL_MIN := 30.0
+# Both spans end on sim time alone. A wall-clock budget here once cut the full span to
+# 30 s of sim on a loaded machine, 4 windows against the 10 the verdict needs, and failed
+# it with no code change; the smoke's own per-test timeout is the only wall limit now.
 
 var _game
 var _driver
@@ -67,8 +66,7 @@ func _physics_process(delta: float) -> bool:
 	_driver.tick(delta)
 	if _game.flow.state_name() in ["stage", "beacon"]:
 		_sim += delta
-	var out_of_wall: bool = _role == "full" and Time.get_ticks_msec() > FULL_WALL_MS and _sim >= FULL_MIN
-	if _sim >= CAMP_SECONDS[_role] or _driver.outcome == "died" or out_of_wall:
+	if _sim >= CAMP_SECONDS[_role] or _driver.outcome == "died":
 		return _judge()
 	return false
 
@@ -83,7 +81,7 @@ func _judge() -> bool:
 	var summary := "%.0f s camping as %s (bot %s): Warden %.0f / %.0f HP, drop %.1f, gun %.1f, lapsed share %.1f, windows %d, drops %d, staggers %d, core misses %d" \
 		% [_sim, _driver.class_id(), _driver.outcome if _driver.outcome != "" else "camping", warden.hp, warden.max_hp,
 			d["drop"], d["gun"], d["banked_lost"], drop.windows, drop.drops_landed, drop.staggers, drop.misses]
-	var lasted: bool = _sim >= CAMP_SECONDS[_role] - 0.5 or (_role == "full" and _sim >= FULL_MIN)
+	var lasted: bool = _sim >= CAMP_SECONDS[_role] - 0.5
 	if _role == "hold":
 		_report("hold camper deals 0", lasted and warden.hp == warden.max_hp and drop.drops_landed == 0 and drop.windows >= 20, summary)
 		_report("hold gun only holds", d["gun"] == 0.0 and (d["banked_lost"] > 0.0 or drop.held == 0.0),

@@ -52,8 +52,13 @@ func _initialize() -> void:
 		covered[k] = true
 	for k in injected:
 		covered[k] = true
-	_report("fuzz slice ran", code == 0 and runs.size() == 8 and not text.contains("SCRIPT ERROR") and seconds_ok,
-		"exit %d, %d seed records of %d s each" % [code, runs.size(), SECONDS])
+	# No wall clock decides this verdict: the seed list and --seconds are fixed, a seed
+	# ends on physics ticks (the tool sets SimClock.ticks), and the tool's one wall-clock
+	# read only feeds the soft frame_time anomaly. Each term is named so a failure says
+	# which one tripped.
+	var script_error := text.contains("SCRIPT ERROR")
+	_report("fuzz slice ran", code == 0 and runs.size() == 8 and not script_error and seconds_ok,
+		"exit %d, %d seed records of %d s each, script error %s, every seed ran its span %s" % [code, runs.size(), SECONDS, script_error, seconds_ok])
 	_report("every trigger reached", covered.size() == 12,
 		"%d of 12 kinds fired, %d naturally %s, the rest injected %s" % [covered.size(), natural.size(), natural.keys(), injected.keys()])
 	_report("hard invariants", hard.is_empty(), "violations %s" % [hard])
