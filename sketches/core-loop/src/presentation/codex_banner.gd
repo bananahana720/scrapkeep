@@ -2,6 +2,9 @@ extends Control
 
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const UiProfile := preload("res://src/ui/ui_profile.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
 # name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
@@ -13,6 +16,14 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # a paused screen can pin it. Discoveries in quick succession queue and play one at a
 # time. dismiss() clears it at once (presentation calls it on flow changes, arena
 # entry, death and run end).
+#
+# `--discovery=cards` (cards = true, profile set by the owner): the first time an id is
+# discovered a picture card lands in the same slot: a larger panel with a looping
+# animated glyph drawn from the discovery's EventKinds shape and colour, the name and
+# its one line. Every later time it is a POP: glyph and name only, under a second. The
+# card never pauses the game or touches Engine.time_scale; any input dismisses it at
+# once and is left unhandled, so play never notices. It uses the banner's slot in the
+# toasts band, so the calm-screen word budget is unchanged. Off, none of this runs.
 
 const HOLD := 2.5
 const IN_TIME := 0.22
@@ -21,13 +32,43 @@ const WIDTH := 360.0
 const MARGIN := 18.0
 # The HUD's toast column width (hud.gd TOAST_WIDTH), which the banner stays beside.
 const TOAST_COLUMN := 800.0
+# The first-discovery card and the repeat pop (cards mode).
+const CARD_HOLD := 4.0
+const POP_TIME := 0.8
+const GLYPH_CARD := 92.0
+# A card is at least this tall (the toasts band at 900p is 126) and its line takes at
+# most CARD_LINES lines, so it stays inside the band whatever the text.
+const CARD_HEIGHT := 124.0
+const CARD_LINES := 3
+const GLYPH_POP := 36.0
+const GLYPH_PERIOD := 1.2
+const DEFAULT_KIND := "synergy_discovered"
 
 var shown := 0
 var last_title := ""
+# Cards mode: set by the owner from the discovery option, with a UiProfile that
+# persists discoveries_seen. Without a profile the ids seen this session stand in.
+var cards := false
+var profile = null
+# Where the profile lives when the banner opens it itself (--discovery=cards on the
+# command line); empty means the owner supplies one.
+var storage_dir := ""
+# "banner", "card" or "pop": how the current item is shown, and how many of each.
+var last_style := ""
+var cards_shown := 0
+var pops_shown := 0
 # The clock in milliseconds; tests swap it for a fake.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
 
 var _queue: Array = []
+var _session_seen := {}
+var _style_name := "banner"
+var _hold := HOLD
+var _in_time := IN_TIME
+var _out_time := OUT_TIME
+var _glyph: Control
+var _glyph_shape := "star"
+var _glyph_color := Color.WHITE
 var _started_ms := -1
 var _panel: PanelContainer
 var _icon: TextureRect
@@ -67,6 +108,12 @@ func _init() -> void:
 	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(_icon)
+	_glyph = Control.new()
+	_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_glyph.custom_minimum_size = Vector2(GLYPH_CARD, GLYPH_CARD)
+	_glyph.visible = false
+	_glyph.draw.connect(_draw_glyph)
+	row.add_child(_glyph)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 0)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -88,8 +135,19 @@ func _init() -> void:
 
 # kicker: "New synergy", "Synergy", "Found" or similar. While one is showing the next
 # waits its turn.
-func show_discovery(title: String, category: String, detail := "", kicker := "New synergy") -> void:
-	_queue.append([title, category, detail, kicker])
+# id names the discovery for the first-time test in cards mode (default: category and
+# title); kind is the EventKinds row whose shape and colour the glyph wears.
+func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND) -> void:
+	var style := "banner"
+	if cards:
+		style = "auto"
+		if profile == null and storage_dir != "":
+			profile = UiProfile.new(storage_dir)
+	# In cards mode the id rides in the entry; whether it is a card or a pop, and the
+	# record of it, are settled when it comes up to show (_next), so a discovery that is
+	# queued and then dropped is not counted as seen.
+	var key := id if id != "" else "%s:%s" % [category, title]
+	_queue.append([title, category, detail, kicker, style, kind, key])
 	if not showing():
 		_next()
 
@@ -110,19 +168,94 @@ func dismiss(clear_queue := true) -> void:
 		_queue.clear()
 
 
+func _was_seen(key: String) -> bool:
+	return profile.discovered(key) if profile != null else _session_seen.has(key)
+
+
+func _mark_seen(key: String) -> void:
+	if profile != null:
+		profile.mark_discovered(key)
+	else:
+		_session_seen[key] = true
+
+
+# Any key, mouse button or pad button press (or a hard stick push) dismisses a card or
+# pop at once. The event is not consumed: the press still reaches the game.
+func _input(event: InputEvent) -> void:
+	if not showing() or _style_name == "banner":
+		return
+	var pressed := false
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
+		pressed = event.is_pressed() and not (event is InputEventKey and event.echo)
+	elif event is InputEventJoypadMotion:
+		pressed = absf(event.axis_value) > 0.6
+	if pressed:
+		dismiss(false)
+		_next()
+
+
+func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
+	_style_name = style
+	var card := style == "card"
+	var pop := style == "pop"
+	_icon.visible = not (card or pop)
+	_glyph.visible = card or pop
+	_kicker.visible = not pop
+	_hold = HOLD
+	_in_time = IN_TIME
+	_out_time = OUT_TIME
+	_panel.custom_minimum_size = Vector2(WIDTH, 0.0)
+	_body.custom_minimum_size = Vector2(WIDTH - 90.0, 0.0)
+	_body.max_lines_visible = -1
+	_title.add_theme_font_size_override("font_size", 24)
+	_body.add_theme_font_size_override("font_size", 15)
+	if card:
+		var side := GLYPH_CARD
+		_glyph.custom_minimum_size = Vector2(side, side)
+		_body.custom_minimum_size = Vector2(WIDTH - side - 12.0 - 30.0, 0.0)
+		_title.add_theme_font_size_override("font_size", 26)
+		_body.add_theme_font_size_override("font_size", 14)
+		_body.max_lines_visible = CARD_LINES
+		_body.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_panel.custom_minimum_size = Vector2(WIDTH, CARD_HEIGHT)
+		_hold = CARD_HOLD
+	elif pop:
+		_glyph.custom_minimum_size = Vector2(GLYPH_POP, GLYPH_POP)
+		_panel.custom_minimum_size = Vector2.ZERO
+		_in_time = 0.1
+		_out_time = 0.15
+		_hold = POP_TIME - _in_time - _out_time
+	if card or pop:
+		var row := EventKinds.row(kind) if EventKinds.has(kind) else EventKinds.row(DEFAULT_KIND)
+		_glyph_shape = String(row["shape"])
+		_glyph_color = row["color"]
+	_panel.reset_size()
+
+
 func _next() -> void:
 	if _queue.is_empty():
 		return
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
 	var color: Color = entry["color"]
+	var style: String = item[4]
+	if style == "auto":
+		style = "pop" if _was_seen(item[6]) else "card"
+		if style == "card":
+			_mark_seen(item[6])
+	_apply_style(style, entry, item[5])
 	_icon.texture = entry["icon"]
 	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
 	_kicker.add_theme_color_override("font_color", color)
 	_title.text = item[0]
 	_body.text = item[2]
-	_body.visible = item[2] != ""
+	_body.visible = item[2] != "" and _style_name != "pop"
 	_style.border_color = color
+	last_style = _style_name
+	if _style_name == "card":
+		cards_shown += 1
+	elif _style_name == "pop":
+		pops_shown += 1
 	shown += 1
 	last_title = item[0]
 	_started_ms = int(now_ms.call())
@@ -134,18 +267,20 @@ func _process(_delta: float) -> void:
 	if _started_ms < 0:
 		return
 	var t := (int(now_ms.call()) - _started_ms) / 1000.0
-	var total := IN_TIME + HOLD + OUT_TIME
+	var total := _in_time + _hold + _out_time
 	if t >= total:
 		dismiss(false)
 		_next()
 		return
 	var slide := 1.0
-	if t < IN_TIME:
-		var x := t / IN_TIME
+	if t < _in_time:
+		var x := t / _in_time
 		slide = 1.0 + 0.08 * sin(x * PI) if x > 0.6 else x / 0.6
-	elif t > IN_TIME + HOLD:
-		slide = 1.0 - (t - IN_TIME - HOLD) / OUT_TIME
+	elif t > _in_time + _hold:
+		slide = 1.0 - (t - _in_time - _hold) / _out_time
 	_place(slide)
+	if _glyph.visible:
+		_glyph.queue_redraw()
 
 
 func _place(slide: float) -> void:
@@ -168,3 +303,73 @@ func rest_position() -> Vector2:
 
 func _screen() -> Vector2:
 	return get_viewport_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
+
+
+# The looping glyph: the EventKinds shape in its colour, pulsing with an echo ring on a
+# GLYPH_PERIOD loop. Shapes that mean motion (chevron, arrow) travel, the rest turn or
+# swell, so the picture is never only a static icon.
+func _draw_glyph() -> void:
+	if _started_ms < 0:
+		return
+	var side := _glyph.size.x
+	var c := Vector2(side, _glyph.size.y) * 0.5
+	var r := minf(side, _glyph.size.y) * 0.32
+	var t := (int(now_ms.call()) - _started_ms) / 1000.0
+	var ph := fmod(t / GLYPH_PERIOD, 1.0)
+	var pulse := 1.0 + 0.1 * sin(ph * TAU)
+	var col := _glyph_color
+	_glyph.draw_circle(c, minf(side, _glyph.size.y) * 0.48, Color(0.05, 0.06, 0.06, 0.55))
+	_glyph.draw_arc(c, r * (1.0 + 0.55 * ph), 0.0, TAU, 40, Color(col, 1.0 - ph), 2.0)
+	var lw := maxf(2.0, r * 0.14)
+	match _glyph_shape:
+		"ring":
+			_glyph.draw_arc(c, r * pulse, 0.0, TAU, 40, col, lw)
+			_glyph.draw_circle(c, r * 0.22, col)
+		"diamond":
+			_glyph.draw_colored_polygon(_poly(c, r * pulse, 4, ph * PI * 0.5), col)
+		"square":
+			_glyph.draw_colored_polygon(_poly(c, r * pulse * 1.15, 4, PI * 0.25 + 0.25 * sin(ph * TAU)), col)
+		"chevron", "arrow":
+			for i in 3:
+				var o := fmod(ph + i / 3.0, 1.0)
+				var x := lerpf(-r, r, o)
+				var a := sin(o * PI)
+				var pts := PackedVector2Array([c + Vector2(x - r * 0.35, -r * 0.6), c + Vector2(x + r * 0.25, 0.0), c + Vector2(x - r * 0.35, r * 0.6)])
+				_glyph.draw_polyline(pts, Color(col, a), lw)
+			if _glyph_shape == "arrow":
+				_glyph.draw_line(c + Vector2(-r, 0.0), c + Vector2(r * 0.6, 0.0), Color(col, 0.6), lw)
+		"burst":
+			for i in 8:
+				var ang := i * TAU / 8.0 + ph * 0.5
+				var d := Vector2.from_angle(ang)
+				_glyph.draw_line(c + d * r * 0.35, c + d * r * (0.7 + 0.5 * ph), col, lw)
+		"bar":
+			var w := r * 2.0
+			_glyph.draw_rect(Rect2(c + Vector2(-r, -r * 0.25), Vector2(w, r * 0.5)), Color(col, 0.35), true)
+			_glyph.draw_rect(Rect2(c + Vector2(-r, -r * 0.25), Vector2(w * ph, r * 0.5)), col, true)
+		"star":
+			var pts := PackedVector2Array()
+			for i in 10:
+				pts.append(c + Vector2.from_angle(-PI * 0.5 + i * PI / 5.0 + ph * TAU * 0.25) * r * pulse * (1.0 if i % 2 == 0 else 0.45))
+			_glyph.draw_colored_polygon(pts, col)
+		"cross":
+			var d := Vector2.from_angle(PI * 0.25 + ph * TAU * 0.25) * r * pulse
+			var e := Vector2(-d.y, d.x)
+			_glyph.draw_line(c - d, c + d, col, lw)
+			_glyph.draw_line(c - e, c + e, col, lw)
+		"wave":
+			for i in 3:
+				var o := fmod(ph + i / 3.0, 1.0)
+				_glyph.draw_arc(c, r * (0.3 + 0.9 * o), 0.0, TAU, 40, Color(col, 1.0 - o), lw)
+		"core":
+			_glyph.draw_circle(c, r * 0.6 * pulse, col)
+			_glyph.draw_arc(c, r, ph * TAU, ph * TAU + TAU * 0.7, 32, col, lw)
+		_:
+			_glyph.draw_circle(c, r * 0.5 * pulse, col)
+
+
+static func _poly(c: Vector2, radius: float, n: int, rot: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n:
+		pts.append(c + Vector2.from_angle(rot + i * TAU / n) * radius)
+	return pts

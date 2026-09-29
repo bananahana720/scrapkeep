@@ -48,6 +48,7 @@ const SPECS := [
 	# and the Warden open's held breath in the ACE music.
 	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["synth", "ace"]},
 	{"key": "breath", "label": "Breath", "min": 0.0, "max": 2.0, "step": 1.0, "value": 1.0, "options": ["raw", "hard", "gentle"]},
+	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["banner", "cards"]},
 ]
 
 const BRAKE_RESISTANCE := 4.0

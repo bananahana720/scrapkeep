@@ -8,6 +8,7 @@ const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const DropJuice := preload("res://src/presentation/drop_juice.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -66,6 +67,10 @@ func setup(ctx_ref) -> void:
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	var codex = ctx.get("codex")
+	if ctx.tuning != null and ctx.tuning.option(LoopMode.DISCOVERY_KEY) == "cards" and codex != null:
+		banner.cards = true
+		banner.storage_dir = codex.storage_dir
 	drop_juice = DropJuice.new()
 	add_child(drop_juice)
 	drop_juice.setup(ctx, audio)
@@ -84,6 +89,8 @@ func wire_optional() -> void:
 	var events = ctx.events
 	if events.has_signal("synergy_discovered") and not events.is_connected("synergy_discovered", _on_synergy):
 		events.connect("synergy_discovered", _on_synergy)
+	if events.has_signal("part_gained") and not events.is_connected("part_gained", _on_part):
+		events.connect("part_gained", _on_part)
 	# The banner never outlives the moment: a flow change, arena entry, death or the
 	# run's end clears it at once.
 	for signal_name in ["stage_content_cleared", "player_died", "run_ended"]:
@@ -124,7 +131,15 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 		return
 	var entry := _codex_entry(id)
 	var title: String = entry.get("name", id.capitalize())
-	banner.show_discovery(title, category, String(entry.get("text", "")), "New synergy" if first_time else "Synergy")
+	banner.show_discovery(title, category, String(entry.get("text", "")), "New synergy" if first_time else "Synergy", id, "synergy_discovered")
+
+
+# In cards mode a found part gets its first-time card, then the quick pop.
+func _on_part(part_id: String, _source: String) -> void:
+	if not auto_banner or not banner.cards:
+		return
+	var entry := _codex_entry(part_id)
+	banner.show_discovery(entry.get("name", part_id.capitalize()), "part", String(entry.get("text", "")), "Found", "part:" + part_id, "part_gained")
 
 
 # The registry entry for an id, if the spine's codex offers one.
