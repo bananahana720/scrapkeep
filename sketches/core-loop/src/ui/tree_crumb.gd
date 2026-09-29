@@ -25,10 +25,10 @@ func _init() -> void:
 	custom_minimum_size = Vector2(300.0, ROW_GAP * (UpgradeTree.DEPTHS - 1) + DOT * 6.0)
 
 
-func set_path(for_class: String, picked: Array, pair: Array, tint: Color) -> void:
+func set_path(for_class: String, picked: Array, pair: Array, tint: Color, world_one := false) -> void:
 	class_id = for_class
-	path = picked.map(func(id): return UpgradeTree.index_of(for_class, id))
-	offered = pair.map(func(id): return UpgradeTree.index_of(for_class, id))
+	path = picked.map(func(id): return UpgradeTree.index_of(for_class, id, world_one))
+	offered = pair.map(func(id): return UpgradeTree.index_of(for_class, id, world_one))
 	color = tint
 	queue_redraw()
 

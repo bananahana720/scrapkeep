@@ -663,7 +663,7 @@ func _open_pick(stage: int) -> void:
 	var tree = ctx.player.tree if "tree" in ctx.player else null
 	if tree == null:
 		return
-	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS if ctx.tuning.world_one() else UpgradeTree.DEPTHS
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS if ctx.tuning.world_one() else UpgradeTree.DEPTHS; tree.world_one = ctx.tuning.world_one()
 	if stage >= tree.max_depth or _picks_opened.has(stage):
 		return
 	_picks_opened[stage] = true

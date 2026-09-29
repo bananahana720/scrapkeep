@@ -153,14 +153,14 @@ func _cards() -> void:
 	# A class with no rows keeps its own copy under the flag.
 	var other_ok := true
 	var other := ""
-	for class_id in ["pylon_engineer", "runner_gunner"]:
+	for class_id in ["runner_gunner"]:
 		for parent in [[], [UpgradeTree.nodes(class_id)[0]["id"]], [UpgradeTree.nodes(class_id)[1]["id"]]]:
 			for l in _card_lines(class_id, parent):
 				var own := String(UpgradeTree.node(class_id, l[0])["effect"])
 				if l[1] != own:
 					other_ok = false
 					other = "%s: %s vs %s" % [l[0], l[1], own]
-	_check("no row, own effect (flag on, Sable and Rivet)", other_ok and not WorldOneCards.has_row("s_none"), other if other != "" else "every Sable and Rivet card reads its node effect")
+	_check("no row, own effect (flag on, Rivet)", other_ok and not WorldOneCards.has_row("s_none"), other if other != "" else "every Rivet card reads its node effect")
 	# Flag off: every card of every class is the node's own effect; Kest's equal the base strings.
 	_flag(false)
 	var off_ok := true

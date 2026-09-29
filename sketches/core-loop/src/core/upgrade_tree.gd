@@ -32,6 +32,9 @@ const SIZE := 30
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES}
+# A pilot may declare NODES_WORLD_ONE (same heap order); with the tree's world_one flag on, every
+# reader sees it in place of NODES. A pilot without one keeps NODES on both sides of the flag.
+const WORLD_ONE_TABLES := {"pylon_engineer": Sable}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.
@@ -85,6 +88,8 @@ var allowed := 0
 # The most picks a run may take: DEPTHS, or WORLD_ONE_DEPTHS under the world-one profile.
 # world.gd sets it from the tuning flag; a new run leaves it alone.
 var max_depth := DEPTHS
+# The world-one node tables in force (--world-one-builds=on); world.gd sets it beside max_depth.
+var world_one := false
 var events
 
 var _knobs := {}
@@ -100,7 +105,9 @@ func _init(events_ref = null) -> void:
 	events = events_ref
 
 
-static func nodes(for_class: String) -> Array:
+static func nodes(for_class: String, world_one := false) -> Array:
+	if world_one and WORLD_ONE_TABLES.has(for_class):
+		return WORLD_ONE_TABLES[for_class].NODES_WORLD_ONE
 	return TREES.get(for_class, [])
 
 
@@ -112,36 +119,36 @@ static func children_of(index: int) -> Array:
 	return [2 * index + 2, 2 * index + 3]
 
 
-static func index_of(for_class: String, node_id: String) -> int:
-	var list := nodes(for_class)
+static func index_of(for_class: String, node_id: String, world_one := false) -> int:
+	var list := nodes(for_class, world_one)
 	for i in list.size():
 		if list[i]["id"] == node_id:
 			return i
 	return -1
 
 
-static func node(for_class: String, node_id: String) -> Dictionary:
-	var i := index_of(for_class, node_id)
-	return nodes(for_class)[i] if i >= 0 else {}
+static func node(for_class: String, node_id: String, world_one := false) -> Dictionary:
+	var i := index_of(for_class, node_id, world_one)
+	return nodes(for_class, world_one)[i] if i >= 0 else {}
 
 
 # The four node ids from the root pair down to a node, or [] for an unknown id.
-static func path_to(for_class: String, node_id: String) -> Array[String]:
+static func path_to(for_class: String, node_id: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
-	var i := index_of(for_class, node_id)
+	var i := index_of(for_class, node_id, world_one)
 	while i >= 0:
-		out.push_front(nodes(for_class)[i]["id"])
+		out.push_front(nodes(for_class, world_one)[i]["id"])
 		i = (i - 2) / 2 if i >= 2 else -1
 	return out
 
 
 # A node's icon: its ability glyph with one variant notch per depth (VISUAL-LANGUAGE
 # section 5's variant notch, drawn by V2).
-static func icon_of(for_class: String, node_id: String) -> Dictionary:
-	var i := index_of(for_class, node_id)
+static func icon_of(for_class: String, node_id: String, world_one := false) -> Dictionary:
+	var i := index_of(for_class, node_id, world_one)
 	if i < 0:
 		return {}
-	return {"id": nodes(for_class)[i]["icon"], "notch": depth_of(i)}
+	return {"id": nodes(for_class, world_one)[i]["icon"], "notch": depth_of(i)}
 
 
 # Everything wrong with a class's tree, as sentences; empty when it is sound.
@@ -150,7 +157,7 @@ static func icon_of(for_class: String, node_id: String) -> Dictionary:
 # check (their leaves are the depth-2 nodes).
 static func problems(for_class: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
-	var list := nodes(for_class)
+	var list := nodes(for_class, world_one)
 	if list.size() != SIZE:
 		out.append("%s has %d nodes, not %d" % [for_class, list.size(), SIZE])
 	var seen := {}
@@ -160,7 +167,7 @@ static func problems(for_class: String, world_one := false) -> Array[String]:
 		list = list.slice(0, WORLD_ONE_SIZE)
 		first_leaf = WORLD_ONE_SIZE - 4
 	for leaf in range(first_leaf, list.size()):
-		var loop := _proc_loop(for_class, path_to(for_class, list[leaf].get("id", "")))
+		var loop := _proc_loop(for_class, path_to(for_class, list[leaf].get("id", ""), world_one), world_one)
 		if loop != "":
 			out.append("%s: the build ending in %s can loop on %s" % [for_class, list[leaf].get("id", ""), loop])
 	for n in list:
@@ -213,10 +220,10 @@ static func problems(for_class: String, world_one := false) -> Array[String]:
 
 # A bus fact from which one build's procs can lead back to itself, or "" when every
 # chain ends: each proc links its trigger to the facts its action causes.
-static func _proc_loop(for_class: String, build: Array[String]) -> String:
+static func _proc_loop(for_class: String, build: Array[String], world_one := false) -> String:
 	var links := {}
 	for id in build:
-		for p in node(for_class, id).get("proc", []):
+		for p in node(for_class, id, world_one).get("proc", []):
 			if not links.has(p["on"]):
 				links[p["on"]] = []
 			links[p["on"]].append_array(ACTIONS.get(p["do"], []))
@@ -261,10 +268,10 @@ func pending() -> bool:
 func offered(for_class: String, depth: int) -> Array:
 	if for_class != class_id or depth < 1 or depth > max_depth or depth > picks.size() + 1:
 		return []
-	var list := nodes(for_class)
+	var list := nodes(for_class, world_one)
 	var pair := [0, 1]
 	if depth > 1:
-		pair = children_of(index_of(for_class, picks[depth - 2]))
+		pair = children_of(index_of(for_class, picks[depth - 2], world_one))
 	return pair.map(func(i): return list[i])
 
 
@@ -276,7 +283,7 @@ func pick(node_id: String) -> bool:
 		return false
 	picks.append(node_id)
 	_resolve()
-	picked.emit(node(class_id, node_id))
+	picked.emit(node(class_id, node_id, world_one))
 	events_emit("tree_picked", [class_id, node_id, depth])
 	# A skipped pick leaves one open: the next depth is offered as soon as this one lands.
 	if pending():
@@ -325,7 +332,7 @@ func _resolve() -> void:
 	_patterns = {}
 	_tags = []
 	for id in picks:
-		var n := node(class_id, id)
+		var n := node(class_id, id, world_one)
 		for k in n.get("knob", {}):
 			var value = n["knob"][k]
 			if KNOBS[k].get("time", false) and float(value) > 0.0:

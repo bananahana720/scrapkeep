@@ -113,7 +113,7 @@ func _brindle_run(index: int, on: bool) -> void:
 	var second: Array = _pair(tree)
 	_check(label + " second offer", _offers.size() == 2 and _offers.back()["depth"] == 2,
 		"stage 1 clear (bay skipped) offers depth 2: %s" % [second])
-	var expected: Array = UpgradeTree.children_of(UpgradeTree.index_of(def.id, first[0])).map(func(i): return UpgradeTree.nodes(def.id)[i]["id"])
+	var expected: Array = UpgradeTree.children_of(UpgradeTree.index_of(def.id, first[0], on)).map(func(i): return UpgradeTree.nodes(def.id, on)[i]["id"])
 	_check(label + " parents stable", second == expected, "depth-2 pair %s are the children of %s" % [second, first[0]])
 	# Boarding the bay after a skipped clear, and a retry, must not offer again or change the pair.
 	world._open_pick(1)

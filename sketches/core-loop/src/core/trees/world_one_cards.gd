@@ -7,6 +7,14 @@ extends RefCounted
 # Rivet rows join this table in their own units; nothing else needs to change.
 
 const ROWS := {
+	# Sable, S1 to S3, S5 and S6. S4 (s_face_runner) is held back: its Codex line "Vaults restore
+	# jumps. Heavy fins steer harder." names the Riveted Shell inversion, which needs hot-wired
+	# part H1. Add the row when H1 lands.
+	"s_cannonball": "Vault kicks discharge. Weight launches farther.",
+	"s_beachhead": "Catch distant walls. Launch your weight.",
+	"s_coil_hook": "Release the rope into a cannonball.",
+	"s_arc_nest": "Mounted bolts chain to another target.",
+	"s_bulwark": "Mounted, shrug off crowd control.",
 	# Kest, K1 to K6.
 	"k_trapper": "Five waiting payloads. Weight widens their blasts.",
 	"k_ghost": "Blink unseen. Carry a larger surprise.",
