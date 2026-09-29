@@ -79,6 +79,7 @@ const TRIM_DB := {
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
+	"armor_deflect": -10.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -204,6 +205,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _shed(5)
 		"armor_reclaim":
 			return _reclaim()
+		"armor_deflect":
+			return _deflect()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -710,6 +713,13 @@ static func _shed(plates: int) -> PackedFloat32Array:
 static func _reclaim() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 81), 0.2), 0, 0.75], [_cut(_n("bell", 86), 0.32), Synth.seconds(0.075), 0.95],
 		[_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.12]])
+
+
+# A hit turned aside entirely: one short, soft, high metal tick (a single bell partial and
+# a breath of grit, about 110 ms). No plates, no thunk and no second note, so it is not the
+# shed's clatter, the reclaim's chime or the hurt's low square.
+static func _deflect() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 91), 0.11), 0, 0.8], [_noise(0.012, 7000.0, 5000.0, 250.0), 0, 0.15]])
 
 
 # Torn metal: a zipper of teeth sweeping down while a saw sags.

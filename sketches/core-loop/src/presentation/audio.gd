@@ -152,6 +152,8 @@ var kill_streak := Streak.for_kind("enemy_killed")
 # damage already heard, so a hit is hurt only when the hull took some.
 var reclaim_streak := Streak.for_kind("armor_reclaim")
 var _hull_seen := 0.0
+# True once armor_hit sounded for the hit in flight; player_hit reads and clears it.
+var _shed_heard := false
 var _beacon_rung := -1
 var _gates_announced := false
 var _heft_class := 1
@@ -700,7 +702,7 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 		_voices[sound] = live
-	cue_log.append([kind, sound, "now", engine.clock, pitch])
+	cue_log.append([kind, sound, "now", engine.clock, pitch, volume])
 
 
 # Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
@@ -1055,15 +1057,21 @@ func _on_beacon(fraction: float) -> void:
 
 # A hit. Flag off it is the base sound for the whole hit. In armour mode the hull's own
 # damage decides: an armour-only hit already sounded as the plates shedding (armor_hit
-# fires first), so it stays silent here, and a hit that reached the hull is as loud as
-# the hull damage it did. hull_damage only grows within a run, so a smaller reading is
-# a new run and the count starts again.
+# fires first), so it stays silent here, and a hit turned aside entirely plays the soft
+# deflect tick, and a hit that reached the hull is as loud as the hull damage it did.
+# hull_damage only grows within a run, so a smaller reading is a new run and the count
+# starts again.
 func _on_player_hit(amount: float, _source: String) -> void:
 	if _armor_on():
 		var hull := float(ctx.run.metrics.get("hull_damage", 0.0))
 		var took := hull if hull < _hull_seen else hull - _hull_seen
 		_hull_seen = hull
+		var shed := _shed_heard
+		_shed_heard = false
 		if took <= 0.0001:
+			# Nothing shed and no hull damage: the hit was turned aside entirely.
+			if not shed:
+				play("armor_deflect")
 			return
 		amount = took
 	play("player_hit", clampf(amount / 10.0, 0.0, 1.0) * 4.0 - 4.0)
@@ -1090,6 +1098,7 @@ func _wire_armor() -> void:
 # Scrap knocked off the ball: a clatter whose size follows the scrap removed (three
 # baked sizes, then lower and louder up to ARMOR_SHED_FULL scrap).
 func _on_armor_hit(removed: float, _spill: int, _source: String) -> void:
+	_shed_heard = true
 	var size := clampf(removed / ARMOR_SHED_FULL, 0.0, 1.0)
 	var sound := "armor_shed_small" if removed < ARMOR_SHED_BIG_FROM * 0.4 else ("armor_shed_big" if removed >= ARMOR_SHED_BIG_FROM else "armor_shed")
 	play("armor_hit", lerpf(-2.0, 2.0, size), Harmony.ratio(lerpf(2.0, -3.0, size)), "SFX", sound)

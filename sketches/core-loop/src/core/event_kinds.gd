@@ -390,6 +390,9 @@ const LOOT_ROWS := {
 	# removed. The reclaim is scrap's own mint square, a rising two-note chime.
 	"armor_hit": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "armor_shed", "hud": "", "objective": "", "priority": 1},
 	"armor_reclaim": {"group": "economy", "color": Palette.ARC, "shape": "square", "sound": "armor_reclaim", "hud": "", "objective": "", "priority": 1},
+	# A hit turned aside entirely (mitigation or a deflect item: no scrap, no hull). Steel
+	# sand, a small square: quieter and plainer than the amber shed. Audio's own fact.
+	"armor_deflect": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "armor_deflect", "hud": "", "objective": "", "priority": 1},
 }
 
 # v3 W13 reward ceremony. The ladder: the tier a rarity is presented at before the

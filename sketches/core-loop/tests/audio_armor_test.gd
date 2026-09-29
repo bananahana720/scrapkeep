@@ -77,6 +77,7 @@ func _process(_delta: float) -> bool:
 	_bank()
 	_shed_and_hurt()
 	_reclaim()
+	_deflect()
 	_flag_off()
 	for node in _nodes:
 		node.free()
@@ -87,7 +88,7 @@ func _process(_delta: float) -> bool:
 
 func _bank() -> void:
 	var bad := []
-	for id in ["armor_shed_small", "armor_shed", "armor_shed_big", "armor_reclaim"]:
+	for id in ["armor_shed_small", "armor_shed", "armor_shed_big", "armor_reclaim", "armor_deflect"]:
 		var buf := SfxBank.samples(id)
 		var peak := 0.0
 		for s in buf:
@@ -95,7 +96,7 @@ func _bank() -> void:
 		var seconds := buf.size() / float(SfxBank.RATE)
 		if not SfxBank.has_recipe(id) or peak < 0.1 or peak > 0.95 or seconds < 0.1 or seconds > 0.6:
 			bad.append("%s peak %.2f %.2fs" % [id, peak, seconds])
-	_check("bank", bad.is_empty(), "4 armour recipes bake non-silent under 0.95 peak and 0.6 s; failing %s" % [bad])
+	_check("bank", bad.is_empty(), "5 armour recipes bake non-silent under 0.95 peak and 0.6 s; failing %s" % [bad])
 	var shed := EventKinds.LOOT_ROWS["armor_hit"]
 	var reclaim := EventKinds.LOOT_ROWS["armor_reclaim"]
 	var hurt := EventKinds.row("player_hit")
@@ -183,16 +184,65 @@ func _reclaim() -> void:
 	_check("no pickup cue", audio.cue_log.filter(func(c): return c[0] == "scrap_collected").is_empty(), "recovering a cluster played no scrap_tick")
 
 
+# A hit turned aside entirely (mitigation 100 percent here: no scrap removed, no hull
+# damage) plays the soft deflect tick and neither shed nor hurt; a shed and a hull hit
+# stay as they were.
+func _deflect() -> void:
+	var rig := _rig(true)
+	var run: RunState = rig["run"]
+	run.grant_start_mass(100.0)
+	run.mitigation = 1.0
+	var aside := _played(rig["audio"], func(): run.damage(5.0, "t"))
+	_check("deflected hit ticks", aside == [["armor_deflect", "armor_deflect"]] and is_equal_approx(run.hp, run.max_hp) and is_equal_approx(run.mass, 100.0),
+		"a fully mitigated 5 HP hit played %s, scrap %.0f, hull %.0f" % [aside, run.mass, run.hp])
+	# A deflect item (the run's own hook) turns aside a hit the same way.
+	run.mitigation = 0.0
+	run.deflect_hook = func(_source: String) -> bool: return true
+	var hooked := _played(rig["audio"], func(): run.damage(9.0, "t"))
+	_check("deflect item ticks", hooked == [["armor_deflect", "armor_deflect"]], "a deflect-hook hit played %s" % [hooked])
+	run.deflect_hook = Callable()
+	# The next hit is not read as deflected because of the last one: it sheds.
+	var shed := _played(rig["audio"], func(): run.damage(5.0, "t"))
+	_check("shed unchanged", shed.size() == 1 and String(shed[0][1]).begins_with("armor_shed"), "the next 5 HP hit played %s" % [shed])
+	run.mass = 20.0
+	var hull := _played(rig["audio"], func(): run.damage(12.0, "t"))
+	_check("hull hit unchanged", hull.size() == 2 and String(hull[0][1]).begins_with("armor_shed") and hull[1][1] == "hurt",
+		"a 12 HP hit on 20 scrap played %s" % [hull])
+	var buf := SfxBank.samples("armor_deflect")
+	var seconds := buf.size() / float(SfxBank.RATE)
+	var row := EventKinds.LOOT_ROWS["armor_deflect"]
+	_check("tick is its own", seconds < 0.15 and seconds >= 0.1 and row["sound"] == "armor_deflect" and row["sound"] != "hurt"
+			and not String(row["sound"]).begins_with("armor_shed") and row["sound"] != "armor_reclaim" and SfxBank.trim_db("armor_deflect") <= -9.0,
+		"deflect is %.2f s at trim %.0f dB, its own sound id" % [seconds, SfxBank.trim_db("armor_deflect")])
+
+
 # Flag off, a scripted hit sequence plays the base game's cues: one hurt per hit, nothing
-# armour, and no chime because no cluster ever exists.
+# armour, and no chime because no cluster ever exists. Each cue matches the base by name,
+# pitch and volume: hurt at the bank trim plus the row's priority level plus the hit's
+# own size, at pitch 1, computed here from the bank and the row and not from audio.gd.
 func _flag_off() -> void:
 	var rig := _rig(false)
 	var run: RunState = rig["run"]
 	var signature := []
-	for amount in [3.0, 12.0, 40.0, 8.0]:
-		var cues := _played(rig["audio"], func(): run.damage(amount, "t"))
+	var amounts := [3.0, 12.0, 40.0, 8.0]
+	var expected := []
+	for amount in amounts:
+		var cues := _played_full(rig["audio"], func(): run.damage(amount, "t"))
 		signature.append(cues)
-	var base := [[["player_hit", "hurt"]], [["player_hit", "hurt"]], [["player_hit", "hurt"]], [["player_hit", "hurt"]]]
-	_check("flag off is the base", signature == base and rig["field"].recovery_count() == 0,
-		"4 scripted hits played %s" % [signature])
+		var db: float = snappedf(SfxBank.trim_db("hurt") + Audio.PRIORITY_DB[Rows.priority("player_hit")] + clampf(amount / 10.0, 0.0, 1.0) * 4.0 - 4.0, 0.0001)
+		expected.append([["player_hit", "hurt", 1.0, db]])
+	_check("flag off is the base", signature == expected and rig["field"].recovery_count() == 0,
+		"4 scripted hits played [kind, sound, pitch, dB] %s against base %s" % [signature, expected])
 	print("off_signature: %s" % [signature])
+
+
+# Like _played, with each cue's pitch and volume.
+func _played_full(audio, action: Callable) -> Array:
+	audio._last_start.clear()
+	audio.cue_log.clear()
+	action.call()
+	var out := []
+	for cue in audio.cue_log:
+		if cue[2] == "now":
+			out.append([cue[0], cue[1], snappedf(float(cue[4]), 0.0001), snappedf(float(cue[5]), 0.0001)])
+	return out

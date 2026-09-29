@@ -36,6 +36,10 @@ const BREAK_REFUND := 0.6
 const BINDING_WIDTH := 0.12
 const BRACKET_RADIUS := 2.1
 const FLICKER_HZ := 9.0
+# Draw layer of the binding line and the bracket: one above threat_grammar's hot P1 line
+# layer (LINE_PRIORITY, 42), so it ties with no telegraph layer and is never covered by a
+# fill or a band. A hold's line is a hostile P1 line (FEEL-READABILITY section 1.1).
+const DRAW_PRIORITY := 43
 
 var ctx
 var player
@@ -75,14 +79,14 @@ func setup(ctx_ref) -> void:
 	_lines.mesh = ImmediateMesh.new()
 	var line_material := Palette.unshaded(Palette.HAZARD)
 	line_material.no_depth_test = true
-	line_material.render_priority = 41
+	line_material.render_priority = DRAW_PRIORITY
 	_lines.material_override = line_material
 	add_child(_lines)
 	_bracket = MeshInstance3D.new()
 	_bracket.mesh = ImmediateMesh.new()
 	_bracket_material = Palette.unshaded(Palette.ARC)
 	_bracket_material.no_depth_test = true
-	_bracket_material.render_priority = 41
+	_bracket_material.render_priority = DRAW_PRIORITY
 	_bracket.material_override = _bracket_material
 	_bracket.visible = false
 	add_child(_bracket)
