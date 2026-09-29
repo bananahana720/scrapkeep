@@ -265,8 +265,7 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 		material.albedo_color = Color("bcd4da", 0.12)
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		var soft := Gradient.new()
-		# Eased multi-stop falloff carried by the card's own UVs. The shared triplanar mapping
-		# tiled the gradient every 6 m and printed a grid of hard-edged blocks.
+		# Card UVs, not triplanar, so each card carries one falloff.
 		material.uv1_triplanar = false
 		material.uv1_scale = Vector3.ONE
 		soft.offsets = PackedFloat32Array([0.0, 0.3, 0.6, 0.85, 1.0])
