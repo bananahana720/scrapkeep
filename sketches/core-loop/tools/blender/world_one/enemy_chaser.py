@@ -59,8 +59,13 @@ hull("fleet_paint", [
 p.box("fleet_paint", (0.06, 0.55, 0.62), loc=(0.86, -0.05, 0.55), rot=(0.0, 0.0, 0.0))
 p.box("fleet_paint", (0.06, 0.42, 0.50), loc=(-0.86, -0.18, -0.35), rot=(0.0, 0.0, 0.0))
 p.box("fleet_paint", (0.5, 0.10, 0.40), loc=(0.0, -0.66, 0.30), rot=(0.0, 0.0, 0.0))
-# Visor: the one brass tag, a slit under the shoulder shield, lit at runtime.
-p.box("requisition_tag", (0.78, 0.09, 0.15), loc=(0.0, 0.11, 0.42))
+# Visor: the one brass tag, a slit proud of the shoulder shield's front ridge (the shield
+# sits at y 0.55-0.62 there), so it stands out of the hull rather than inside it, lit at
+# runtime. Its back is buried in the hull; its front face is at y 0.74.
+hull("requisition_tag", [
+    (-0.34, 0.34, 0.33), (0.34, 0.34, 0.33), (-0.34, 0.34, 0.49), (0.34, 0.34, 0.49),
+    (-0.30, 0.74, 0.34), (0.30, 0.74, 0.34), (-0.30, 0.74, 0.47), (0.30, 0.74, 0.47),
+])
 # Weld seams: charcoal straps round the hump and across the wedge.
 p.box("rubber", (1.72, 0.07, 0.10), loc=(0.0, -0.05, -0.80))
 p.box("rubber", (1.30, 0.07, 0.10), loc=(0.0, -0.58, 0.85))
