@@ -453,7 +453,11 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 # the hit because a kill retires a boss add's tag. Action "spark", source persistent_actor.
 func _trail_deal(enemy: Node3D, amount: float) -> float:
 	var target_class := _target_class(enemy)
+	var hp_before := _hp_of(enemy)
 	var removed: float = enemy.take_damage(amount)
+	# Same measure as strike(): a Brindle piece's return value undercounts (M0 delivered damage).
+	if is_instance_valid(enemy):
+		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
 	_record_delivered(enemy, "spark", removed, amount, "persistent_actor", false, target_class)
 	return removed
 
