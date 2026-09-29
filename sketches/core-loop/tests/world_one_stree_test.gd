@@ -118,6 +118,7 @@ func _physics_process(_delta: float) -> bool:
 	_offers_and_cards()
 	_retained()
 	_face_runner()
+	_duplicate_guard()
 	_identities()
 	print("world_one_stree_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
@@ -379,6 +380,37 @@ func _face_runner() -> void:
 	_take(["s_cannonball", "s_coil_hook"])
 	var none := _vault(0)
 	_check("control: without Face Runner a vault restores no jump", none["kicked"] and none["air"] == 0, "air jumps %d" % none["air"])
+
+
+# Ids a pilot's table offers at more than one node within `cap` depths. World-one Face Runner
+# (index 3) and the base Face Runner (index 9) share an id; that is safe only while the depth
+# cap keeps index 9 out of reach.
+func _offerable_dupes(table: Array, cap: int) -> Array:
+	var seen := {}
+	var dupes := []
+	for i in table.size():
+		if UpgradeTree.depth_of(i) > cap:
+			continue
+		var id: String = table[i]["id"]
+		if seen.has(id) and not dupes.has(id):
+			dupes.append(id)
+		seen[id] = true
+	return dupes
+
+
+func _duplicate_guard() -> void:
+	var table: Array = UpgradeTree.nodes(CLASS_ID, true)
+	var cap: int = UpgradeTree.WORLD_ONE_DEPTHS
+	var base_depth: int = UpgradeTree.depth_of(9)
+	var live := _offerable_dupes(table, cap)
+	_check("no id offerable at two depths within the world-one cap", live.is_empty(), "cap %d, duplicates %s" % [cap, live])
+	# The cap is what keeps base Face Runner (index 9) unreachable: it must stay below its depth
+	# while the world-one table still holds the id at index 3 and index 9.
+	var stays: bool = table[9]["id"] == "s_face_runner" and table[3]["id"] == "s_face_runner"
+	_check("cap below base Face Runner's depth while it stays in the table", not stays or cap < base_depth, "cap %d, index 9 at depth %d, held %s" % [cap, base_depth, stays])
+	# The guard itself: a scratch cap of 3 must trip it.
+	var raised := _offerable_dupes(table, base_depth)
+	_check("guard trips when the cap reaches base Face Runner", raised == ["s_face_runner"], "cap %d reports %s" % [base_depth, raised])
 
 
 func _identities() -> void:

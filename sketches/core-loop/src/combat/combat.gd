@@ -248,6 +248,7 @@ func setup(ctx_ref) -> void:
 	ctx.root.add_child(sticky)
 	wear_trail = WearTrail.new()
 	wear_trail.setup(ctx, effects, _floor_at)
+	wear_trail.deal = _trail_deal
 	near_miss = NearMiss.new()
 	add_child(near_miss)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
@@ -431,11 +432,11 @@ func _hp_of(enemy: Node3D) -> float:
 
 # `drop` is resolve()'s own "drop" key: warden_drop.gd's rule sets it on a contact it
 # judged a drop, so a stomp- or ram-kind drop still lands under drop_or_slam.
-func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, drop: bool) -> void:
+func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, drop: bool, known_class := "") -> void:
 	if _ledger.is_empty():
 		_reset_ledger()
 	var source := _classify_source(kind, raw_source, drop)
-	var target_class := _target_class(enemy)
+	var target_class := known_class if known_class != "" else _target_class(enemy)
 	_ledger["hits"] = int(_ledger["hits"]) + 1
 	if removed <= 0.0:
 		_ledger["zero_damage_hits"] = int(_ledger["zero_damage_hits"]) + 1
@@ -445,6 +446,16 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 	_bump(_ledger["by_action"], kind, removed)
 	_bump(_ledger["by_target_class"], target_class, removed)
 	_bump(_ledger["by_range"], _range_bucket(enemy), removed)
+
+
+# A wear-trail patch's damage (wear_trail.gd): straight to take_damage, never strike(), so no
+# bus fact goes out, but the HP it removes is still delivered damage. The class is read before
+# the hit because a kill retires a boss add's tag. Action "spark", source persistent_actor.
+func _trail_deal(enemy: Node3D, amount: float) -> float:
+	var target_class := _target_class(enemy)
+	var removed: float = enemy.take_damage(amount)
+	_record_delivered(enemy, "spark", removed, amount, "persistent_actor", false, target_class)
+	return removed
 
 
 func _record_retirement(target_class: String) -> void:

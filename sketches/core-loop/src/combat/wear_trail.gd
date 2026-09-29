@@ -36,6 +36,9 @@ var _floor_at: Callable
 var _clock := 0.0
 var _last_hit := {}
 var _run
+# Set by combat: deals the hit and writes it into the M0 delivered-damage ledger, returning the
+# HP actually removed. Unset (a bare trail in a test), the patch calls take_damage itself.
+var deal: Callable
 
 
 func setup(ctx, effects, floor_at: Callable) -> void:
@@ -121,7 +124,10 @@ func _touch(patch: Dictionary, enemy) -> void:
 	var tagged: bool = "last_damage_source" in enemy
 	if tagged:
 		enemy.last_damage_source = "spark"
-	enemy.take_damage(DAMAGE)
+	if deal.is_valid():
+		deal.call(enemy, DAMAGE)
+	else:
+		enemy.take_damage(DAMAGE)
 	if tagged and is_instance_valid(enemy):
 		enemy.last_damage_source = ""
 	_effects.arc(patch["at"] + Vector3.UP * 0.1, at, _tone(1.0))
