@@ -20,7 +20,7 @@ const LOOP_KEY := "loop_mode"
 const GUN_KEY := "gun_role"
 const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
-const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY}
+const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY, "discovery": "discovery"}
 
 
 static func mode(tuning) -> String:
