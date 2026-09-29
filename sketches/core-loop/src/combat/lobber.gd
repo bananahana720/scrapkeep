@@ -38,33 +38,49 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	add_child(shape)
 	_base_color = Palette.VERDIGRIS
 	_material = Palette.solid(_base_color)
-	var mesh := MeshInstance3D.new()
-	var body := BoxMesh.new()
-	body.size = Vector3(2.4, 4.0, 2.4)
-	mesh.mesh = body
-	mesh.material_override = _material
-	add_child(mesh)
-
+	# The C11 mortar cart (enemy_lobber.glb): a braced tower on wheels under a loading bulb and a
+	# stout leaning tube. LobberBody carries the flashing body material as its paint surface; the
+	# bulb is the muzzle, and _show_charge swells and lights it exactly as before.
 	_muzzle_material = Palette.solid(Palette.HAZARD, 0.2)
-	_muzzle = MeshInstance3D.new()
-	var bulb := SphereMesh.new()
-	bulb.radius = 0.9
-	bulb.height = 1.8
-	_muzzle.mesh = bulb
-	_muzzle.material_override = _muzzle_material
-	_muzzle.position = Vector3.UP * 2.6
-	add_child(_muzzle)
-	# A mortar tube on top and a lit waist band: the lobber's silhouette says artillery
-	# from a distance, and the band keeps it visible against the ground.
-	var tube := CylinderMesh.new()
-	tube.top_radius = 0.45
-	tube.bottom_radius = 0.6
-	tube.height = 2.6
-	var barrel := _accent(tube, Palette.CHARCOAL, 0.0, Vector3(0.0, 3.6, 0.0))
-	barrel.rotation.x = 0.35
-	var band := BoxMesh.new()
-	band.size = Vector3(2.55, 0.35, 2.55)
-	_accent(band, Palette.VERDIGRIS.lightened(0.55), 2.2, Vector3.UP * 0.9)
+	var dressing := Node3D.new()
+	dressing.name = "LobberBody"
+	add_child(dressing)
+	for part in _parts():
+		var mi := MeshInstance3D.new()
+		mi.mesh = part.mesh
+		mi.transform = part.xform
+		if part.bulb:
+			mi.name = "LobberBulb"
+			mi.set_surface_override_material(0, _muzzle_material)
+			add_child(mi)
+			_muzzle = mi
+		else:
+			mi.set_surface_override_material(part.body, _material)
+			dressing.add_child(mi)
+
+
+static var _shared: Array = []
+
+
+# The glb is read once; every lobber shares its meshes and carries only its own flashing
+# body and muzzle materials as surface overrides.
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_lobber.glb") as PackedScene).instantiate()
+	var charcoal := Palette.solid(Palette.CHARCOAL)
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var body := 0
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				body = i
+			mesh.surface_set_material(i, charcoal)
+		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "bulb": mi.name.begins_with("LobberBulb")})
+	scene.free()
+	return _shared
 
 
 func muzzle_point() -> Vector3:

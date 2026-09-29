@@ -1,0 +1,35 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS enemy_lobber.glb loads
+asset: 840 T, 3 D
+PASS asset triangles 840 <= 1200
+PASS asset draws 3 <= 3
+PASS asset has no alpha surface
+asset bounds: x -1.200..1.200, y -2.000..4.995, z -1.200..1.200
+PASS asset inside the 2.4 m collider footprint
+PASS asset between y -2.0 and 5.0
+PASS the mortar still stands overhead (top 5.00 >= 4.6)
+PASS asset has its LobberBulb node
+PASS asset bulb centre at y 2.60
+PASS asset bulb radius 0.900 <= 0.9
+PASS a lobber spawns
+PASS one collision shape on the lobber (1)
+PASS collider is the base box 2.4 x 4 x 2.4
+PASS collider sits at the origin
+PASS the dressing adds no collision object
+PASS radius 1.3, half-height 2 and weight 3 unchanged
+PASS muzzle point is 2.6 m above the origin
+PASS aim (lead 0.5, range 75), telegraph, flight, cycle, health and scrap constants equal base
+live assembly: 852 T, 4 D
+PASS the live Lobber carries its LobberBody dressing
+PASS the live measure saw meshes (852 T, 4 D)
+FAIL live assembly 852 T / 4 D within 1200 / 3
+PASS live assembly has no alpha
+live assembly bounds: x -1.200..1.200, y -2.000..4.995, z -1.200..1.200
+PASS live assembly inside the 2.4 m collider footprint
+PASS live assembly between y -2.0 and 5.0
+PASS the mortar still stands overhead (top 5.00 >= 4.6)
+PASS live assembly has its LobberBulb node
+PASS live assembly bulb centre at y 2.60
+PASS live assembly bulb radius 0.900 <= 0.9
+enemy_lobber_asset_test: FAIL
