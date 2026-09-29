@@ -40,7 +40,7 @@ static func build(stage_root: Node3D) -> Node3D:
 			_place(recess, Vector3(x + dx, 143, 230.5), Vector3(3, 12, 1))
 		_place(metal, Vector3(x, 94, 224), Vector3(3, 40, 3))
 
-	# The 252 shallow block faces are replaced by the dam asset (_dam_detail); lintels follow.
+	# Lintels give the retaining wall scale.
 	for x in [-90.0, 0.0, 90.0]:
 		_place(banners, Vector3(x + 12, 106, 228), Vector3(7, 26, 0.25))
 		_place(metal, Vector3(x + 12, 120, 228), Vector3(11, 0.7, 1.0))
@@ -154,7 +154,7 @@ static func build(stage_root: Node3D) -> Node3D:
 # unlit-emission free, so _merge_opaque folds it into the existing scenery draw.
 const DAM_PATH := "res://assets/models/world_one/dam.glb"
 const DAM_FACE := Vector3(0, 0, 236)
-const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("885e43"), "rubber": Color("454943")}
+const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("7a7a70"), "rubber": Color("454943")}
 
 
 static func _dam_detail(parent: Node3D) -> void:
