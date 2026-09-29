@@ -33,14 +33,11 @@ func _configure(threat: float) -> void:
 	rest_seconds = 3.5
 
 
-# C18 dressing (enemy_winch_drone.glb). The counter's capsule crew, head, ears and tag and the
-# base's rotor disc, mast and brass drum are replaced by the glb's crew under one flat rotor with
-# the drum hung low on a central hanger, the cable's exit clear ahead of it. The rotor keeps its
-# height and radius, and _pose below still turns it about its own axis each physics tick, the
-# existing clock. The lane the mechanic commits is _commit below, untouched. The glb is read once;
-# every drone shares its meshes and adds only its own flashing body material as a surface
-# override. The resting body is the Fleet oxide _add_capsule already set (RUST), so the hit flash
-# and the event colour are unchanged.
+# C18 dressing (enemy_winch_drone.glb): a small Fleet oxide crew under one flat 16-sided rotor
+# (1.6 m radius, 2.0 m up) with a cable drum hung low on a central hanger, the cable's exit
+# clear ahead of it. _pose turns the rotor about its own axis each physics tick. The glb is read
+# once and its meshes are shared; each drone adds only its own flashing body material, set on the
+# glb's fleet_paint surface (Fleet oxide, RUST).
 static var _shared: Array = []
 
 
