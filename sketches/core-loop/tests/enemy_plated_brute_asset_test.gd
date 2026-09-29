@@ -12,7 +12,8 @@ const Palette := preload("res://src/core/palette.gd")
 # not counted, and hide with the plate group.
 const CEILING_T := 1200
 const CEILING_D := 3
-const PLATE_T := 400
+# Plate group share of the 1,200 T ceiling: 416 T with the six trim strips (12 T each) that carry the amber cue.
+const PLATE_T := 450
 const CREW_R := 0.8
 const PLATE_REACH := 1.8
 const Y_BOTTOM := -1.1

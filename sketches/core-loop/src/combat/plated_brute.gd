@@ -44,6 +44,12 @@ func _configure(threat: float) -> void:
 # override and its own tinted plate material.
 static var _shared: Dictionary = {}
 
+# The crack glyph sits on the slab's face (front face at z = 1.35), 0.07 m off it so its strokes
+# clear the face and the lit bolts, centred between the two ribs and under the brow lip. Sized
+# 1.5 so it reads at asset-front30 (about 40 px tall) and at asset-use6.
+const GLYPH_AT := Vector3(0.0, -0.05, 1.42)
+const GLYPH_SIZE := 1.5
+
 
 func _build_tool() -> void:
 	_crew.free()
@@ -58,7 +64,7 @@ func _build_tool() -> void:
 	_plate.mesh = parts["plates"]
 	_plate.material_override = _plate_material(_rim_mask())
 	add_child(_plate)
-	_add_crack(_plate, Vector3(0.0, 0.1, CREW_RADIUS + 0.3 + 0.28), 1.1).name = "PlateCrack"
+	_add_crack(_plate, GLYPH_AT, GLYPH_SIZE).name = "PlateCrack"
 
 
 static func _parts() -> Dictionary:

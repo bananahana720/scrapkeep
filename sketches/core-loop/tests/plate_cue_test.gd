@@ -7,6 +7,16 @@ const Enemy := preload("res://src/combat/enemy.gd")
 # body or the plate faces. Amber: the plate material emits through its mask and only the
 # rim and bolt texels are lit; slate: no emission at all. Both states keep the resting
 # albedo, the body never glows, the switch follows tint_state, and no draw is added.
+# The cue is trim, not a flood: what lights must stay a small share of the plate group's face
+# area (LIT_CEILING), so a recipe that paints a slab, brow or cap as rim fails.
+
+const LIT_CEILING := 0.15
+# The two capture cameras (capture_cameras.gd ASSET: dir, dist, up, fov 65), staged from the
+# ball's side (+Z, the side a brute faces) at the brute's centre + 1.5 m.
+const CAMERAS := {"asset-use6": 6.0, "asset-front30": 30.0}
+const CAM_UP := 3.0
+const CAM_FOV := 65.0
+const FRAME := Vector2(1920.0, 1080.0)
 
 var failures := 0
 var game
@@ -46,6 +56,31 @@ func _draws(node: Node) -> int:
 	return n
 
 
+# Screen box (in pixels of the 1920x1080 frame) the glyph's strokes project to from a capture
+# camera on the ball's side; corners behind the camera return an empty rect.
+func _glyph_rect(brute: Node3D, crack: Node3D, dist: float) -> Rect2:
+	var centre := brute.global_position + Vector3.UP * 1.5
+	var eye := brute.global_position + brute.global_basis.z * dist + Vector3.UP * CAM_UP
+	var cam := Transform3D(Basis.IDENTITY, eye).looking_at(centre, Vector3.UP)
+	var inv := cam.affine_inverse()
+	var tan_half := tan(deg_to_rad(CAM_FOV) * 0.5)
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for stroke in crack.get_children():
+		var mi := stroke as MeshInstance3D
+		var box := mi.mesh.get_aabb()
+		for corner in 8:
+			var local := box.position + box.size * Vector3(corner & 1, (corner >> 1) & 1, (corner >> 2) & 1)
+			var p := inv * (mi.global_transform * local)
+			if p.z >= -0.05:
+				return Rect2()
+			var px := Vector2(p.x / -p.z / (tan_half * FRAME.x / FRAME.y), -p.y / -p.z / tan_half)
+			var pix := (px * 0.5 + Vector2(0.5, 0.5)) * FRAME
+			lo = lo.min(pix)
+			hi = hi.max(pix)
+	return Rect2(lo, hi - lo)
+
+
 func _run() -> void:
 	game.ctx.calm = true
 	var brute: Node3D = game.ctx.spawner.spawn_enemy("plated_brute", Vector3(0, 30, 0))
@@ -68,7 +103,21 @@ func _run() -> void:
 		slate_sum += _added(mat, uvs[i].x, uvs[i].y)
 	var slate_draws := _draws(brute)
 	brute.set_tint("amber")
-	_check(brute.tint_state == "amber" and mat.emission_enabled, "amber: the plate material emits (state follows tint_state)")
+	var total_area := 0.0
+	var lit_area := 0.0
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	for t in idx.size() / 3:
+		var a := verts[idx[t * 3]]
+		var b := verts[idx[t * 3 + 1]]
+		var c := verts[idx[t * 3 + 2]]
+		var area := (b - a).cross(c - a).length() * 0.5
+		var lit_verts := 0
+		for k in 3:
+			if _added(mat, uvs[idx[t * 3 + k]].x, uvs[idx[t * 3 + k]].y) > 0.0:
+				lit_verts += 1
+		total_area += area
+		lit_area += area * lit_verts / 3.0
 	for i in uvs.size():
 		var light := _added(mat, uvs[i].x, uvs[i].y)
 		var rim: bool = colors[i].r < 0.5
@@ -81,8 +130,12 @@ func _run() -> void:
 			dark_rim += 1
 		else:
 			dark_face += 1
+	_check(brute.tint_state == "amber" and mat.emission_enabled, "amber: the plate material emits (state follows tint_state)")
 	_check(lit_rim > 0 and dark_rim == 0, "amber: every rim and bolt vertex is lit (%d lit, %d dark)" % [lit_rim, dark_rim])
 	_check(lit_face == 0 and dark_face > 0, "amber: no plate-face vertex is lit (%d lit, %d dark)" % [lit_face, dark_face])
+	var frac := lit_area / total_area
+	print("plate group: lit area %.3f of %.3f m2 = %.1f%% (ceiling %.0f%%)" % [lit_area, total_area, frac * 100.0, LIT_CEILING * 100.0])
+	_check(frac > 0.0 and frac <= LIT_CEILING, "amber: lit area is trim, at most %.0f%% of the plate group's face area (%.1f%%)" % [LIT_CEILING * 100.0, frac * 100.0])
 	_check(mat.albedo_color == slate_albedo and mat.albedo_color == Enemy.PLATE_CLOSED, "plate faces keep the resting albedo in both states")
 	_check(not brute._material.emission_enabled and brute._material.albedo_color == slate_body_albedo and not slate_body_on,
 		"body keeps its resting finish and never glows in either state")
@@ -91,6 +144,14 @@ func _run() -> void:
 	# The crack glyph is the third part of the cue (its strokes are counted apart, as in the asset test).
 	var crack := brute.get_node("BrutePlates/PlateCrack") as Node3D
 	_check(crack.visible, "amber: the crack glyph shows")
+	# The glyph must read on the slab's face from the ball's side at both capture cameras: on the
+	# camera-facing side of the slab face (z = 1.35), its box inside the frame and big enough to see.
+	var glyph_z: float = crack.global_position.z - brute.global_position.z
+	_check(glyph_z > 1.35 and crack.global_basis.z.dot(brute.global_basis.z) > 0.99, "glyph stands off the slab's front face, on the ball's side (z %.2f > 1.35)" % glyph_z)
+	for cam_name in CAMERAS:
+		var rect := _glyph_rect(brute, crack, CAMERAS[cam_name])
+		var inside := rect.size != Vector2.ZERO and rect.position.x >= 0.0 and rect.position.y >= 0.0 and rect.end.x <= FRAME.x and rect.end.y <= FRAME.y
+		_check(inside and rect.size.y >= 30.0, "%s: glyph box %.0f x %.0f px at (%.0f, %.0f) inside the frame, at least 30 px tall" % [cam_name, rect.size.x, rect.size.y, rect.position.x, rect.position.y])
 	brute.set_tint("slate")
 	_check(not mat.emission_enabled and not crack.visible and brute.tint_state == "slate", "back to slate: the switch follows tint_state, no light, no glyph")
 	# Combat drives the state from punch_now(); one _tint() pass must agree with it, and the
