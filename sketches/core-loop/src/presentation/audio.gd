@@ -42,6 +42,10 @@ const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
+# The plate shed's size: scrap removed at which the big clatter starts (the small one
+# stops at 40% of it) and at which pitch and level bottom out.
+const ARMOR_SHED_BIG_FROM := 150.0
+const ARMOR_SHED_FULL := 250.0
 const MENU_STATES := ["title", "class_select", "summary", "dead"]
 # Weapon voices per class, so each class sounds like itself (identity, principle 5).
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0}
@@ -54,7 +58,7 @@ const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["scrap_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "sable_ready", "rivet_ready", "kest_ready",
@@ -144,6 +148,10 @@ var _last_start := {}
 # reads the same records at the end of the frame to draw the chain and the pulse.
 var scrap_streak := Streak.for_kind("scrap_collected")
 var kill_streak := Streak.for_kind("enemy_killed")
+# Armour mode only: recovered spill clusters climb like a pickup streak, and the hull
+# damage already heard, so a hit is hurt only when the hull took some.
+var reclaim_streak := Streak.for_kind("armor_reclaim")
+var _hull_seen := 0.0
 var _beacon_rung := -1
 var _gates_announced := false
 var _heft_class := 1
@@ -760,6 +768,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 func _connect_all(events) -> void:
 	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
+		_hull_seen = 0.0
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
 		engine.set_fleet_ticks(0)
@@ -773,7 +782,7 @@ func _connect_all(events) -> void:
 	events.beacon_charge_changed.connect(_on_beacon)
 	events.scrap_collected.connect(_on_scrap)
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
-	events.player_hit.connect(func(amount: float, _source: String): play("player_hit", clampf(amount / 10.0, 0.0, 1.0) * 4.0 - 4.0))
+	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
 	events.enemy_killed.connect(_on_kill)
 	events.milestone_won.connect(func(_event_id: String): _flow_queue.append(["milestone"]))
@@ -798,12 +807,14 @@ func _connect_all(events) -> void:
 	events.launched.connect(_on_launched)
 	events.pressure_changed.connect(_on_pressure)
 	wire_optional()
+	_wire_armor()
 
 
 # The demo-spec signals the spine is adding. Each one is connected only if the bus
 # has it, and this can be called again once it does (tests add them locally).
 func wire_optional() -> void:
 	var events = ctx.events
+	_wire_armor()
 	_listen(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
 	_listen(events, "heft_class_changed", _on_heft_class)
 	_listen(events, "heft_class_dropped", _on_heft_dropped)
@@ -1026,6 +1037,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_gates_announced = false
 	scrap_streak.reset()
 	kill_streak.reset()
+	reclaim_streak.reset()
 	# Each stage starts its own difficulty clock and never carries a vent pedal over.
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
@@ -1039,6 +1051,54 @@ func _on_beacon(fraction: float) -> void:
 		return
 	_beacon_rung = rung
 	play("beacon_charge_changed", 2.0 if rung == 10 else 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+
+
+# A hit. Flag off it is the base sound for the whole hit. In armour mode the hull's own
+# damage decides: an armour-only hit already sounded as the plates shedding (armor_hit
+# fires first), so it stays silent here, and a hit that reached the hull is as loud as
+# the hull damage it did. hull_damage only grows within a run, so a smaller reading is
+# a new run and the count starts again.
+func _on_player_hit(amount: float, _source: String) -> void:
+	if _armor_on():
+		var hull := float(ctx.run.metrics.get("hull_damage", 0.0))
+		var took := hull if hull < _hull_seen else hull - _hull_seen
+		_hull_seen = hull
+		if took <= 0.0001:
+			return
+		amount = took
+	play("player_hit", clampf(amount / 10.0, 0.0, 1.0) * 4.0 - 4.0)
+
+
+func _armor_on() -> bool:
+	var run = ctx.get("run")
+	return run != null and bool(run.get("armor_mode"))
+
+
+# The armour cues hang off two sources the bus does not carry: the run's armor_hit and the
+# scrap field's recovered. Connected once each, and only if the source exists, so a test
+# double without them, or a later call, is harmless. Neither ever fires with --scrap off.
+func _wire_armor() -> void:
+	var run = ctx.get("run")
+	if run != null and run.has_signal("armor_hit") and not run.armor_hit.is_connected(_on_armor_hit):
+		run.armor_hit.connect(_on_armor_hit)
+	var build = ctx.get("build")
+	var field = build.get("scrap") if build != null else null
+	if field != null and field.has_signal("recovered") and not field.recovered.is_connected(_on_spill_recovered):
+		field.recovered.connect(_on_spill_recovered)
+
+
+# Scrap knocked off the ball: a clatter whose size follows the scrap removed (three
+# baked sizes, then lower and louder up to ARMOR_SHED_FULL scrap).
+func _on_armor_hit(removed: float, _spill: int, _source: String) -> void:
+	var size := clampf(removed / ARMOR_SHED_FULL, 0.0, 1.0)
+	var sound := "armor_shed_small" if removed < ARMOR_SHED_BIG_FROM * 0.4 else ("armor_shed_big" if removed >= ARMOR_SHED_BIG_FROM else "armor_shed")
+	play("armor_hit", lerpf(-2.0, 2.0, size), Harmony.ratio(lerpf(2.0, -3.0, size)), "SFX", sound)
+
+
+# A spilled cluster rolled back up: a chime that climbs the pentatonic through a run.
+func _on_spill_recovered(value: int) -> void:
+	var rung: int = reclaim_streak.bump(Time.get_ticks_msec())
+	play("armor_reclaim", clampf(value / 8.0, 0.0, 1.0) * 1.5 - 1.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
 
 func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:

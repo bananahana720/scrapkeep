@@ -190,6 +190,8 @@ const JUICE := {
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
 	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
+	# Recovered spill clusters arrive further apart than pickups, so the run's window is wider.
+	"armor_reclaim": {"chain_ms": 900, "chain_cap": 7},
 	"part_gained": {"fountain": 18, "element": {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}},
 	"core_gained": {"fountain": 24},
 	# Your own shots and throws: a camera kick against the aim and a recoil squash on the
@@ -380,6 +382,14 @@ const LOOT_ROWS := {
 		"calm_hold_s": 0.4, "calm_wait_s": 10.0, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
 	"reward_payoff": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
 		"tier": "payoff", "pause": "never", "flash_s": 0.7},
+	# The durability prototype (--scrap=armor), facts that are not bus signals: run_state's
+	# armor_hit and the scrap field's recovered. The shed is the same amber as the HUD's
+	# armour flash (hud.gd), so the plate that flashes is the plate that clatters; it is
+	# priority 1 (no music duck, no bass duck) because a hit the scrap absorbed is not a
+	# hull hit. `sound` is the mid clatter; audio picks a small or big one by the scrap
+	# removed. The reclaim is scrap's own mint square, a rising two-note chime.
+	"armor_hit": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "armor_shed", "hud": "", "objective": "", "priority": 1},
+	"armor_reclaim": {"group": "economy", "color": Palette.ARC, "shape": "square", "sound": "armor_reclaim", "hud": "", "objective": "", "priority": 1},
 }
 
 # v3 W13 reward ceremony. The ladder: the tier a rarity is presented at before the
