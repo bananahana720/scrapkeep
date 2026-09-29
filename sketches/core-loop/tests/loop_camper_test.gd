@@ -88,7 +88,7 @@ func _judge() -> bool:
 		_role = "full"
 		_game.tuning.set_option("gun_role", "full")
 		_game.flow.retry_stage()
-		# The bot calls a 240 s stage stalled and stops; the retry is a fresh stage.
+		# The retry is a fresh stage, so the driver starts with no outcome.
 		_driver.outcome = ""
 		_sim = 0.0
 		return false
