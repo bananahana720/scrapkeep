@@ -768,6 +768,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 func _connect_all(events) -> void:
 	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
+		_hull_seen = 0.0
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
 		engine.set_fleet_ticks(0)

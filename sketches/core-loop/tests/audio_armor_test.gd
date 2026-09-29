@@ -132,6 +132,16 @@ func _shed_and_hurt() -> void:
 	var second := _played(rig["audio"], func(): run.damage(2.0, "t"))
 	_check("second run hurt", second == [["player_hit", "hurt"]] and run.metrics["hull_damage"] < old_total,
 		"after a run that took %.0f hull damage, a 2 HP bare hit in the next run played %s" % [old_total, second])
+	# A new run started through the bus, as flow does: its first hull hit equal to the
+	# previous run's total must still sound.
+	var before_total: float = run.metrics["hull_damage"]
+	run.begin(load("res://src/core/class_def.gd").new())
+	run.armor_mode = true
+	run.mass = 0.0
+	rig["events"].run_started.emit("sable")
+	var equal := _played(rig["audio"], func(): run.damage(before_total, "t"))
+	_check("new run, equal hit, hurt", equal == [["player_hit", "hurt"]],
+		"after run_started, a %.0f HP bare hit equal to the last run's hull total played %s" % [before_total, equal])
 	# Size follows the scrap removed: a bigger clatter is a bigger sound, lower and louder.
 	var sizes := []
 	var pitches := []
