@@ -4,10 +4,10 @@ extends RefCounted
 const PRESETS := {
 	"high": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
 		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.45, "sun": 1.75, "fog": 0.0004, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.16},
+		"ambient": 0.30, "sun": 2.1, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.18},
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
-		"ambient": 0.45, "sun": 1.75, "fog": 0.0004, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.16},
+		"ambient": 0.30, "sun": 2.1, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.18},
 }
 static var current := "high"
 static var _worlds: Array = []
@@ -48,7 +48,7 @@ static func _apply_world(world: Dictionary) -> void:
 	var sun: DirectionalLight3D = world.sun.get_ref()
 	var viewport: Viewport = world.viewport.get_ref()
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("a7bbd0")
+	env.ambient_light_color = Color("9db5cf")
 	env.ambient_light_sky_contribution = 0.25
 	env.ambient_light_energy = spec.ambient
 	# Look pass 3: AgX with a fixed exposure; auto exposure and SDFGI/SSIL/SSR stay off.
@@ -75,11 +75,11 @@ static func _apply_world(world: Dictionary) -> void:
 	env.glow_hdr_threshold = 1.5
 	env.fog_enabled = true
 	env.fog_density = spec.fog
-	env.fog_light_color = Color("a7bcc6")
+	env.fog_light_color = Color("a3bdd0")
 	env.fog_light_energy = 0.75
-	env.fog_sky_affect = 0.15
+	env.fog_sky_affect = 0.25
 	env.fog_aerial_perspective = 0.0
-	env.fog_sun_scatter = 0.05
+	env.fog_sun_scatter = 0.25
 	env.volumetric_fog_enabled = false
 	sun.rotation_degrees = spec.sun_rotation
 	sun.light_color = Color("ffe0ac")
@@ -108,8 +108,11 @@ static func _apply_fill(sun: DirectionalLight3D, spec: Dictionary) -> void:
 		fill = DirectionalLight3D.new()
 		fill.name = "SkyFill"
 		fill.shadow_enabled = false
-		fill.rotation_degrees = Vector3(-50.0, 298.0, 0.0)
-		fill.light_color = Color("afc9df")
+		fill.rotation_degrees = Vector3(-50.0, spec.sun_rotation.y + 180.0, 0.0)
+		fill.light_color = Color("a3c4e6")
 		fill.light_specular = 0.0
 		parent.add_child(fill)
+	# Opposite the sun's yaw, so the wall faces the key misses get cool light (pass 4a).
+	fill.rotation_degrees = Vector3(-50.0, spec.sun_rotation.y + 180.0, 0.0)
 	fill.light_energy = spec.fill
+

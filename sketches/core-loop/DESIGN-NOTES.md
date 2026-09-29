@@ -1107,3 +1107,17 @@ Against the b980ff5 reference, 20 of the 24 type stills pass. The wave, INSTANT 
 - **`lines_same` replaced.** The exemption test now measures what the shader multiplies alpha by (`alpha_scale * mix(1, threat_fill_scale, governed)`) for the wave's line layers and for the fill layers at density 0 and 1.0. Making `layer_governed` return true or false for every layer fails it.
 
 - **Fix round 3 (9532a27).** Hot P1 lines (`base`, `motion`) draw at priority 42, above the live band at 41, so a WAVE front crossing a live lane reads at full strength (`overlap-front-live` still, a mutation back to 40 fails it). Deviation, open: the charcoal keylines stay at 39 under the fills, because lifting them failed every still's look budget; inside a live lane another telegraph's keyline is dimmed while its hot line is not. `Painter.warm_up` builds all 14 material keys at stage load so no shader is built mid-fight; the native hitch removal is unmeasured. Stencil class sort offsets are spaced 1000 apart. `holds.gd` binding lines sit at 41, tied with the live band, and are left for a later round.
+
+## Look pass 4a: lighting and material correction
+
+Built from the independent pass-3 judgment (`look-pass-3/judge/JUDGE.md`). Appearance files only; no meshes, proportions, camera, collision, UI or input changed. Sun azimuth -55 and exposure 1.1 are kept as JUDGE.md directs.
+
+- **Shared rig** (`graphics_preset.gd`): sun 1.75 to 2.1 for warm crest planes; ambient 0.45 to 0.30 with color `9db5cf`; the SkyFill now sits opposite the sun's yaw (`sun yaw + 180`; it was at 298, the same side as the sun at azimuth -55, so it filled nothing) at energy 0.18. Fog density 0.0004 to 0.0006, color `a3bdd0`, sky affect 0.25, sun scatter 0.25. A first try at fill 0.30 and fog 0.0009 turned the whole frame blue-grey and was backed off.
+- **Sky** (`palette.gd`): ridge layers `a5b3b4`/`8c9ea6` to `93aecb`/`7d9dc0`, horizon `e6c898`, zenith `4a78a8`, for blue distance under a warm horizon.
+- **Spill mist** (`spillway_scenery.gd`): the WaterMist cards get a soft-edged unshaded shader (peak alpha 0.18, `fog_disabled`) and grow from 10x5x6 to 12x8x7. Only the four falls carry it. It is hard to see in the launch frame; the falls' bases sit behind the wall rim from that camera.
+- **Warden** (`hero_assets.gd`): shadowless 9 m OmniLight `a8c2d4` at 0.9 on the Warden's base, offset to the camera side. Ancient enamel is untouched.
+- **Moss** (`hero_assets.gd`): the amber lamp goes from 1.4 to 3.0, range 5 to 6.5, and the baked pool alpha from 0.26 to 0.42. No cool entry fill.
+- **Pilot glass** (`hero_assets.gd`): roughness 0.08 to 0.32, specular 0.7 to 0.08 plus an edge term of 0.5, alpha 0.05 plus 0.22 at the edge, and the glass no longer casts a shadow.
+- **Pilot speckling.** The stipple on the fox's face and chest was the glass shell's own shadow. The shell is an alpha-blended surface, and in the sun's shadow map it dithers, so a dotted gradient lands on what is inside. Turning the glass caster off removed it with no change to the pilot's own materials.
+
+Not judged here: Codex scores these frames independently. Geometry (Warden upper mass, Moss alcove, cliff profile) is the next pass.

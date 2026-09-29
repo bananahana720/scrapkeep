@@ -133,10 +133,12 @@ func material(slot: String, tint := Color.WHITE) -> Material:
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 void fragment() {
 	float edge = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 3.0);
-	ALBEDO = vec3(0.95, 0.98, 1.0);
-	ALPHA = 0.025 + edge * 0.32;
-	ROUGHNESS = 0.08;
-	SPECULAR = 0.7;
+	// Reflection lives at the edge: a rough, low-specular face-on lobe keeps the sun from
+	// landing as a hotspot on the forehead, and the edge term carries the sky tint.
+	ALBEDO = vec3(0.86, 0.94, 1.0);
+	ALPHA = 0.05 + edge * 0.22;
+	ROUGHNESS = 0.32;
+	SPECULAR = 0.08 + edge * 0.5;
 }
 """
 		glass.shader = shader
@@ -217,6 +219,8 @@ func paint(root: Node, tints: Dictionary) -> void:
 					continue
 				var from: String = SLOTS[slot].get("from", "")
 				mi.set_surface_override_material(i, material(slot, tints.get(from, Color.WHITE)))
+				if slot == "glass":
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 static func hide_placeholder(mi: GeometryInstance3D) -> void:
@@ -604,6 +608,18 @@ func _dress_warden(warden) -> void:
 					rec.shutters.append({"node": child, "rest": at})
 		rec.lens = lens
 	warden.add_child(base)
+	# Conditional cool fill (LIGHTING-TARGETS, Warden): shadowless, 9 m, low energy, so the
+	# front barrel and left armour separate from the shared warm key.
+	var cool := OmniLight3D.new()
+	cool.name = "WardenCoolFill"
+	cool.light_color = Color("a8c2d4")
+	cool.light_energy = 0.9
+	cool.omni_range = 9.0
+	cool.omni_attenuation = 1.2
+	cool.shadow_enabled = false
+	cool.light_specular = 0.0
+	cool.position = Vector3(-4.5, 3.5, -5.5)
+	base.add_child(cool)
 	for child in warden._look.get_children():
 		if child is MeshInstance3D and child.material_override == warden._look.body_material and child != warden._look._arm:
 			_hide_warden_mesh(child, rec)
@@ -955,7 +971,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
 void fragment() {
 	float edge = max(0.0, 1.0 - length((UV - vec2(0.5)) * 2.0));
 	ALBEDO = vec3(0.75, 0.34, 0.09);
-	ALPHA = edge * edge * 0.26;
+	ALPHA = edge * edge * 0.42;
 }
 """
 		glow.shader = shader
@@ -966,9 +982,9 @@ void fragment() {
 	var lamp := OmniLight3D.new()
 	lamp.name = "WorkshopWarmFill"
 	lamp.light_color = Color("ffc982")
-	lamp.light_energy = 1.4
-	lamp.omni_range = 5.0
-	lamp.omni_attenuation = 1.8
+	lamp.light_energy = 3.0
+	lamp.omni_range = 6.5
+	lamp.omni_attenuation = 1.5
 	lamp.shadow_enabled = false
-	lamp.position = Vector3(-12.6, 2.6, 0.0)
+	lamp.position = Vector3(-12.4, 3.0, 0.0)
 	barge.add_child(lamp)

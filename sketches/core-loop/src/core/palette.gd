@@ -174,13 +174,13 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 			for x in 1024:
 				var angle := float(x) / 1024.0 * TAU
 				var direction := Vector3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
-				var color := Color("ddcba8").lerp(Color("527fa6"), clampf(elevation * 1.6, 0.0, 1.0))
+				var color := Color("e6c898").lerp(Color("4a78a8"), clampf(elevation * 1.6, 0.0, 1.0))
 				var ridge := 0.035 + 0.065 * noise.get_noise_2d(cos(angle) * 4.0, sin(angle) * 4.0)
 				var far_ridge := ridge + 0.045 + 0.035 * noise.get_noise_2d(cos(angle) * 11.0, sin(angle) * 11.0)
 				if elevation < far_ridge:
-					color = Color("a5b3b4")
+					color = Color("93aecb")
 				if elevation < ridge:
-					color = Color("8c9ea6")
+					color = Color("7d9dc0")
 				if elevation > 0.12:
 					var cloud := noise.get_noise_3d(direction.x * 7.0, direction.y * 16.0, direction.z * 7.0)
 					var coverage := smoothstep(0.22, 0.5, cloud) * smoothstep(0.14, 0.34, elevation)

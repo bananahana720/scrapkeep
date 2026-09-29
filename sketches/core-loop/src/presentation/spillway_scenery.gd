@@ -56,7 +56,7 @@ static func build(stage_root: Node3D) -> Node3D:
 	for x in [-103.0, -47.0, 37.0, 93.0]:
 		_place(water, Vector3(x, 75, 227), Vector3(14, 90, 0.5))
 		for j in 4:
-			_place(mist, Vector3(x - 8 + j * 5, 33 + (j % 2) * 3, 215), Vector3(10, 5, 6))
+			_place(mist, Vector3(x - 8 + j * 5, 33 + (j % 2) * 3, 215), Vector3(12, 8, 7))
 	_place(pools, Vector3(0, 28, 217), Vector3(276, 0.4, 28))
 	# Shingled shoulders are deliberately irregular; each exposed lip catches the key.
 	for side in [-1.0, 1.0]:
@@ -236,9 +236,21 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 		flowing.set_shader_parameter("falling", label == "SpillSheets")
 		view.material_override = flowing
 	elif label == "WaterMist":
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.albedo_color.a = 0.12
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		# Soft-edged spill mist (LIGHTING-TARGETS: #BCD4DA, peak opacity 0.18). Only the
+		# cards at the falls carry it; global fog does not stand in for spray.
+		var haze := ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode unshaded, depth_draw_never, cull_back, fog_disabled;
+void fragment() {
+	float face = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
+	float low = smoothstep(0.0, 1.0, UV.y);
+	ALBEDO = vec3(0.737, 0.831, 0.855);
+	ALPHA = 0.18 * pow(face, 1.6) * (0.55 + 0.45 * low);
+}
+"""
+		haze.shader = shader
+		view.material_override = haze
 	elif label == "LanternLenses":
 		material.emission_enabled = true
 		material.emission = tint
