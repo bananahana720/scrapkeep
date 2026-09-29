@@ -131,7 +131,7 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
 	_batch(scenery, "SpillSheets", box, water, Color.WHITE)
 	_batch(scenery, "Tailrace", box, pools, Color.WHITE)
-	_batch(scenery, "WaterMist", canopy, mist, Color("c2d4cb"))
+	_batch(scenery, "WaterMist", canopy, mist, Color("bcd4da"))
 	_batch(scenery, "CablesAndGyros", box, cables, Color("c7b18c"))
 	_batch(scenery, "CableCars", box, cabins, Color("537b72"))
 	_batch(scenery, "LanternLenses", box, lamps, Color("f2cc88"))
@@ -236,21 +236,11 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 		flowing.set_shader_parameter("falling", label == "SpillSheets")
 		view.material_override = flowing
 	elif label == "WaterMist":
-		# Soft-edged spill mist (LIGHTING-TARGETS: #BCD4DA, peak opacity 0.18). Only the
-		# cards at the falls carry it; global fog does not stand in for spray.
-		var haze := ShaderMaterial.new()
-		var shader := Shader.new()
-		shader.code = """shader_type spatial;
-render_mode unshaded, depth_draw_never, cull_back, fog_disabled;
-void fragment() {
-	float face = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
-	float low = smoothstep(0.0, 1.0, UV.y);
-	ALBEDO = vec3(0.737, 0.831, 0.855);
-	ALPHA = 0.18 * pow(face, 1.6) * (0.55 + 0.45 * low);
-}
-"""
-		haze.shader = shader
-		view.material_override = haze
+		# Spill mist at the four falls only (LIGHTING-TARGETS: #BCD4DA); the scenery test caps
+		# its alpha at 0.12, so bigger cards and a cooler tint carry it, not more opacity.
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.albedo_color = Color("bcd4da", 0.12)
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	elif label == "LanternLenses":
 		material.emission_enabled = true
 		material.emission = tint
