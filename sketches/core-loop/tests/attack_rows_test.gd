@@ -15,6 +15,7 @@ const DOC := "res://design-v3/research/attack-reads/ATTACK-READS.md"
 # Hashes of var_to_str at base e05c1e3, before the attack rows were added.
 const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
+const ROWS_HASH := 2558770678
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
@@ -197,6 +198,8 @@ func _check_existing() -> void:
 	var fields_hash := var_to_str(EventKinds.FIELDS).hash()
 	_report("threat rows unchanged", threat_hash == THREAT_ROWS_HASH and EventKinds.THREAT_ROWS.size() == 4, "THREAT_ROWS hash %d, expected %d" % [threat_hash, THREAT_ROWS_HASH])
 	_report("row schema unchanged", fields_hash == FIELDS_HASH, "FIELDS hash %d, expected %d" % [fields_hash, FIELDS_HASH])
+	var rows_hash := var_to_str(EventKinds.ROWS).hash()
+	_report("existing row values pinned", rows_hash == ROWS_HASH, "ROWS hash %d, expected %d" % [rows_hash, ROWS_HASH])
 	var acc_ok := true
 	for kind in EventKinds.ROWS:
 		var row: Dictionary = EventKinds.ROWS[kind]

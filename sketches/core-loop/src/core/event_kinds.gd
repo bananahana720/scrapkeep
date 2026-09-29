@@ -312,7 +312,7 @@ const ATTACK_ROWS := {
 	"W05": {"label": "Mind Warden magnet tug", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_lane", "glyph": "chevron", "color": Palette.HAZARD,
 		"pose": "w05_arm_swing", "warn": "atk_w05_warn", "release": "atk_w05_release", "floor": "L", "open": []},
 	"W06": {"label": "Mind Warden adaptation", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "neutral", "threat": "", "glyph": "core", "color": Palette.SAND,
-		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": []},
+		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": ["color"]},
 	"W07": {"label": "Caught-pulse crater", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "", "glyph": "burst", "color": Palette.HAZARD,
 		"pose": "w07_crater_bowl", "warn": NONE, "release": "atk_w07_release", "floor": "B", "open": []},
 	"B01": {"label": "Crane sweep", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_wave", "glyph": "wave", "color": Palette.HAZARD,
