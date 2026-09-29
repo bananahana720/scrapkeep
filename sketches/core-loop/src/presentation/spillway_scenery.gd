@@ -55,8 +55,14 @@ static func build(stage_root: Node3D) -> Node3D:
 	# All water is behind the existing southern rim, never on a traversable shelf.
 	for x in [-103.0, -47.0, 37.0, 93.0]:
 		_place(water, Vector3(x, 75, 227), Vector3(14, 90, 0.5))
-		for j in 4:
-			_place(mist, Vector3(x - 8 + j * 5, 33 + (j % 2) * 3, 215), Vector3(12, 8, 7))
+		# Spill mist: alpha stays at the test cap, so many overlapping cards at the base of
+		# each fall accumulate into a pool of spray instead of a global haze.
+		for j in 14:
+			var layer := j % 3
+			_place(mist, Vector3(x - 9 + (j % 5) * 4.5, 31 + layer * 5 + (j % 2) * 3, 211 + layer * 4.5), Vector3(16, 12, 8))
+		# Ledge spray where each sheet strikes the visible dam faces, above the rim line.
+		for j in 15:
+			_place(mist, Vector3(x - 7 + (j % 5) * 3.6, 38 + (j / 5) * 7 + (j % 2) * 2, 222 + (j % 3) * 1.5), Vector3(13, 10, 4))
 	_place(pools, Vector3(0, 28, 217), Vector3(276, 0.4, 28))
 	# Shingled shoulders are deliberately irregular; each exposed lip catches the key.
 	for side in [-1.0, 1.0]:
@@ -116,6 +122,11 @@ static func build(stage_root: Node3D) -> Node3D:
 	trunk.radial_segments = 6
 	trunk.rings = 1
 	var canopy := SphereMesh.new()
+	# Spray cards: a two-triangle quad facing the play area with a soft radial alpha edge,
+	# so the shared triangle budget is not spent on spheres.
+	var puff := QuadMesh.new()
+	puff.size = Vector2(2, 2)
+	puff.flip_faces = true
 	canopy.radius = 1.0
 	canopy.height = 2.0
 	canopy.radial_segments = 6
@@ -131,7 +142,7 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
 	_batch(scenery, "SpillSheets", box, water, Color.WHITE)
 	_batch(scenery, "Tailrace", box, pools, Color.WHITE)
-	_batch(scenery, "WaterMist", canopy, mist, Color("bcd4da"))
+	_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
 	_batch(scenery, "CablesAndGyros", box, cables, Color("c7b18c"))
 	_batch(scenery, "CableCars", box, cabins, Color("537b72"))
 	_batch(scenery, "LanternLenses", box, lamps, Color("f2cc88"))
@@ -241,6 +252,14 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.albedo_color = Color("bcd4da", 0.12)
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		var soft := Gradient.new()
+		soft.colors = PackedColorArray([Color.WHITE, Color(1, 1, 1, 0)])
+		var falloff := GradientTexture2D.new()
+		falloff.gradient = soft
+		falloff.fill = GradientTexture2D.FILL_RADIAL
+		falloff.fill_from = Vector2(0.5, 0.5)
+		falloff.fill_to = Vector2(1.0, 0.5)
+		material.albedo_texture = falloff
 	elif label == "LanternLenses":
 		material.emission_enabled = true
 		material.emission = tint

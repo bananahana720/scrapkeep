@@ -4,10 +4,10 @@ extends RefCounted
 const PRESETS := {
 	"high": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
 		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.30, "sun": 2.1, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.18},
+		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5},
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
-		"ambient": 0.30, "sun": 2.1, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.18},
+		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.5},
 }
 static var current := "high"
 static var _worlds: Array = []
@@ -82,9 +82,12 @@ static func _apply_world(world: Dictionary) -> void:
 	env.fog_sun_scatter = 0.25
 	env.volumetric_fog_enabled = false
 	sun.rotation_degrees = spec.sun_rotation
-	sun.light_color = Color("ffe0ac")
+	sun.light_color = Color("ffd49a")
 	sun.directional_shadow_split_1 = 0.18
-	sun.light_angular_distance = 1.5
+	# Pilot speckle (pass 4a): PCSS (angular distance above 0) sampled the hoop shadow on the
+	# pilot's head with noise; a smooth high-quality filter blurs it with none.
+	sun.light_angular_distance = 0.0
+	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	sun.shadow_blur = 1.0
 	_apply_fill(sun, spec)
 	sun.light_energy = spec.sun

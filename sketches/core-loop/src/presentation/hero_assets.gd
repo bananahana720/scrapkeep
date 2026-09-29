@@ -982,9 +982,19 @@ void fragment() {
 	var lamp := OmniLight3D.new()
 	lamp.name = "WorkshopWarmFill"
 	lamp.light_color = Color("ffc982")
-	lamp.light_energy = 3.0
-	lamp.omni_range = 6.5
-	lamp.omni_attenuation = 1.5
+	lamp.light_energy = 7.0
+	lamp.omni_range = 8.0
+	lamp.omni_attenuation = 1.3
 	lamp.shadow_enabled = false
 	lamp.position = Vector3(-12.4, 3.0, 0.0)
 	barge.add_child(lamp)
+	# A second amber source up under the roof and shutter, so the upper interior reads warm.
+	var upper := OmniLight3D.new()
+	upper.name = "WorkshopWarmFillUpper"
+	upper.light_color = Color("ffbb70")
+	upper.light_energy = 4.5
+	upper.omni_range = 5.0
+	upper.omni_attenuation = 1.2
+	upper.shadow_enabled = false
+	upper.position = Vector3(-12.5, 5.2, 0.0)
+	barge.add_child(upper)
