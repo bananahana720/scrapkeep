@@ -1,0 +1,268 @@
+{
+	"aabb": [],
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"anchor": "/root/Game/Spawn_bola_thrower",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [
+		"/root/Game/Spawn_bola_thrower:set:0:[\"attack_range\",0.0]",
+		"/root/Game/Spawn_bola_thrower:set:0:[\"walk_speed\",0.0]",
+		"/root/Game/Spawn_bola_thrower:set_indexed:0:[\"global_position:x\",80.0]",
+		"/root/Game/Spawn_bola_thrower:set_indexed:0:[\"global_position:y\",30.9]",
+		"/root/Game/Spawn_bola_thrower:set_indexed:0:[\"global_position:z\",-100.0]",
+		"/root/Game/Spawn_bola_thrower:set_indexed:0:[\"velocity:y\",0.0]",
+		"/root/Game/Player/RigidBall:set_indexed:0:[\"global_position:x\",80.0]",
+		"/root/Game/Player/RigidBall:set_indexed:0:[\"global_position:y\",31.2]",
+		"/root/Game/Player/RigidBall:set_indexed:0:[\"global_position:z\",-92.0]",
+		"/root/Game/Player/RigidBall:set_indexed:0:[\"linear_velocity:x\",0.0]",
+		"/root/Game/Player/RigidBall:set_indexed:0:[\"linear_velocity:y\",0.0]",
+		"/root/Game/Player/RigidBall:set_indexed:90:[\"linear_velocity:z\",0.0]",
+		"/root/Game/Player/RigidBall:set:2:[\"freeze\",true]",
+		"/root/Game/Spawn_bola_thrower:set:1:[\"attack_range\",30.0]",
+		"/root/Game/Spawn_bola_thrower:set:1:[\"_t\",0.5]",
+		"/root/Game/Spawn_bola_thrower:set:1:[\"_t\",0.898889]"
+	],
+	"class": 0,
+	"frames": [
+		{
+			"anchor": [
+				80.0,
+				30.8506507873535,
+				-100.0
+			],
+			"camera_basis": [
+				-1.0,
+				0.0,
+				0.0000000874227765734759,
+				0.00000000436568559081252,
+				0.998752355575562,
+				0.0499376207590103,
+				-0.0000000873137011581093,
+				0.0499376207590103,
+				-0.998752355575562
+			],
+			"centre": [
+				80.0,
+				32.3506507873535,
+				-100.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				80.0,
+				33.8506507873535,
+				-130.0
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_bola_thrower": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					80.0,
+					30.8506507873535,
+					-100.0
+				]
+			},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "22333991f0499a7b586a3b64ae1d3e6b4393aa6123fbc9f32d1da937549d0a18",
+			"target": [
+				80.0,
+				32.3506507873535,
+				-100.0
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "5391ed947bf955ef933a32b34384a0d49360d55e1fd9e06fade5ec19fdd86444"
+		},
+		{
+			"anchor": [
+				80.0,
+				30.8506507873535,
+				-100.0
+			],
+			"camera_basis": [
+				-0.0000000437113882867379,
+				0.0,
+				-1.0,
+				-0.0499376207590103,
+				0.998752355575562,
+				0.00000000218284279540626,
+				0.998752355575562,
+				0.0499376207590103,
+				-0.0000000436568505790547
+			],
+			"centre": [
+				80.0,
+				32.3506507873535,
+				-100.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				110.0,
+				33.8506507873535,
+				-100.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_bola_thrower": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					80.0,
+					30.8506507873535,
+					-100.0
+				]
+			},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "2261c1608a0af7f97519e7f5a0359c70f3af8da0a8d1a891ef176741fd953bbf",
+			"target": [
+				80.0,
+				32.3506507873535,
+				-100.0
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "ff96591be46cd9ad4c20773d293654d7910c87199193599c5468678ee6a489f4"
+		},
+		{
+			"anchor": [
+				80.0,
+				30.8506507873535,
+				-100.0
+			],
+			"camera_basis": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				0.998752355575562,
+				-0.0499376207590103,
+				0.0,
+				0.0499376207590103,
+				0.998752355575562
+			],
+			"centre": [
+				80.0,
+				32.3506507873535,
+				-100.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				80.0,
+				33.8506507873535,
+				-70.0
+			],
+			"file": "asset-rear30.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_bola_thrower": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					80.0,
+					30.8506507873535,
+					-100.0
+				]
+			},
+			"id": "asset-rear30",
+			"ortho_size": 0.0,
+			"sha256": "7c58d412aea4c4e12d26b7370bbee227e05265811e974ba9cbe02e649711e8ad",
+			"target": [
+				80.0,
+				32.3506507873535,
+				-100.0
+			],
+			"thumb": "asset-rear30.thumb.png",
+			"thumb_sha256": "3c351e56431b1fb058d9f64b683b66b161b719613265dadc540fe942fa176a3b"
+		}
+	],
+	"freeze_specs": [
+		"/root/Game/Spawn_bola_thrower=0,0,0:80,30.85065,-100"
+	],
+	"frozen_nodes": {
+		"/root/Game/Spawn_bola_thrower": {
+			"found": true,
+			"global": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				80.0,
+				30.8506507873535,
+				-100.0
+			],
+			"local": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				80.0,
+				30.8506507873535,
+				-100.0
+			],
+			"path": "/root/Game/Spawn_bola_thrower",
+			"spec": "/root/Game/Spawn_bola_thrower=0,0,0:80,30.85065,-100"
+		}
+	},
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "subject-black",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1d3a52739f59d7b4f863a7d99d5d587c0e0ccbfb10e5b1745d48d5f127b97af5",
+		"src/presentation/hero_assets.gd": "0579cec1234f4d9cf75c50a4d646af39101bf05fbea53767be0ca9f4510c169d",
+		"src/presentation/spillway_scenery.gd": "c03d9e4edf729addadb142d90873850029638e776d10db2e981a461b45dda5ae",
+		"src/world/terrain.gd": "ae4ecd9aae5213c0db4f281271988bb813741e99b375210119a988a12dae1225",
+		"tools/asset_capture.gd": "12dfb3ede9180a88b390a5582720c6b6255bbcfe4884fc7b64964f9a1a86e40c",
+		"tools/capture_cameras.gd": "26a36059793766f2b979cc375dc21e1d06091ad45fff9ce0bc5e4547af886a53"
+	},
+	"spawn": [
+		"bola_thrower@80,29.74855,-100"
+	],
+	"subject": "/root/Game/Spawn_bola_thrower",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

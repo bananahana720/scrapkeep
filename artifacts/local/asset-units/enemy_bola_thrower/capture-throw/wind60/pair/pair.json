@@ -1,0 +1,26 @@
+{
+	"base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c13b/artifacts/local/asset-units/enemy_bola_thrower/capture-throw/wind60/base",
+	"head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c13b/artifacts/local/asset-units/enemy_bola_thrower/capture-throw/wind60/head",
+	"modes": {
+		"lit": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-front30",
+				"asset-side30",
+				"asset-rear30"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c13b/artifacts/local/asset-units/enemy_bola_thrower/capture-throw/wind60/pair/pair-lit.png"
+		},
+		"subject-black": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-front30",
+				"asset-side30",
+				"asset-rear30"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c13b/artifacts/local/asset-units/enemy_bola_thrower/capture-throw/wind60/pair/pair-subject-black.png"
+		}
+	}
+}
