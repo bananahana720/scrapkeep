@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,6 +49,42 @@ export function skipLines(output) {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => skipWord.test(line) || skippedCount.test(line));
+}
+
+// Parallel lanes share one machine. Each run sizes its pool from the idle cores, so
+// several runs starting together all see idle cores and overload it (load 73 on 32
+// threads, 2026-09-29, turned healthy tests into timeouts). One run holds the machine
+// at a time; the others wait, then size their pool from the load they find.
+const LOCK = path.join(os.tmpdir(), "scrapkeep-sketch-smoke.lock");
+
+function lockHolder() {
+  try {
+    const pid = Number(readFileSync(path.join(LOCK, "pid"), "utf8"));
+    process.kill(pid, 0);
+    return pid;
+  } catch {
+    return 0;
+  }
+}
+
+export async function acquireMachine(pollMs = 2000) {
+  const started = Date.now();
+  let told = false;
+  for (;;) {
+    try {
+      mkdirSync(LOCK);
+      writeFileSync(path.join(LOCK, "pid"), String(process.pid));
+      process.on("exit", () => rmSync(LOCK, { recursive: true, force: true }));
+      return Date.now() - started;
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      const holder = lockHolder();
+      if (!holder && Date.now() - started > pollMs) rmSync(LOCK, { recursive: true, force: true });
+      if (!told) console.log(`sketch:smoke waiting for another run to finish (pid ${holder || "unknown"})`);
+      told = true;
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+    }
+  }
 }
 
 function report(label, status, output, ms) {
@@ -123,6 +159,8 @@ async function main() {
     console.log("sketch:smoke found no sketches/*/project.godot");
     return;
   }
+  const waited = await acquireMachine();
+  if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
   const width = jobCount();
   const started = Date.now();
   const results = [];
