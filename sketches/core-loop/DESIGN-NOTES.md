@@ -1188,3 +1188,13 @@ Placeholders, frozen with their gaps visible (each is in the row's `open` list):
 - **P13 `glyph`, `color`, `pose`, `warn`, `release`, `floor`:** the upgrade procs reuse each parent attack's pose, cue and floor, so no single value exists. `pose`, `warn`, `release` and `floor` hold the value `tbd`; `glyph` (`diamond`) and `color` (`Palette.SAND`) are stand-ins. The consumer resolves them through the parent attack.
 
 Other gaps not marked `open`, because the document says something but not an ID: pose keys are named from the body description (`e01_brace_back`), cue ids are the reserved names above, and glyphs for enemy and Warden rows are chosen by geometry (lane `bar`, instant ring `ring`, projectile `cross`, wedge `chevron`, slam `burst`, net `star`). Keyframe status (K or N), lead times and the bone second colour of mixed floors are not in the rows; the document remains their source.
+
+## Mass-K, Kest's mass verb (--world-one-builds=on, 2026-09-29)
+
+Second slice of `design-v3/research/build-systems/BUILD-SYSTEMS.md` (Mass-K row): Kest turns mass into payload geometry. No new flag; it rides `--world-one-builds`.
+
+- **One number.** `Combat.mass_radius_scale()` is `1 + 0.25q`, `q = clamp(run.mass / 990, 0, 1)`, and exactly 1.0 with the flag off. `_throw_sticky` reads it once when the charge is committed (the ring and the Sticky Rain scatter distance use the same scaled value), `_on_demo_slammed` reads it once per slam, and the aim ring in `_draw_throw` reads the same function. `_detonate` already tests the charge's own stored `radius`, so the hit test and the blast ring need no second copy.
+- **Committed once.** A charge keeps the radius it was made with; mass gained afterwards does not grow it.
+- **Untouched.** Blast damage, blink distance, glide physics and the other mini-charge sources (procs, glide drops, fuse charges) are unchanged. Constants `MASS_K_RADIUS` and `MASS_K_SATURATION` sit in `combat.gd` because `weapons.gd` was outside the slice.
+- **Slam preview.** The demo slam has no aim preview, so only the throw ring shows the radius; the slam's blast ring is drawn by `effects.ring` from the committed radius.
+- **Test.** `tests/world_one_mass_k_test.gd`: mass 0/450/990 commit 1.0x, 1.114x, 1.25x on throw and slam; ring equals committed; hit test reaches exactly radius x forgiveness + hull; damage, blink distance and glide velocity equal; late mass leaves committed charges small; flag off equals base. Blink and glide equality cannot fail by reverting combat.gd, since nothing on those paths reads mass; they guard against later coupling. Open for play: whether the wider blast changes where Andrew places it.

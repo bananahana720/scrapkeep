@@ -68,6 +68,9 @@ const MUZZLE := 1.25
 const AIM_SLACK := 14.0
 const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
+# Mass-K: radius bonus at full mass, and the mass that counts as full (BUILD-SYSTEMS.md).
+const MASS_K_RADIUS := 0.25
+const MASS_K_SATURATION := 990.0
 # A build synergy's strike: its force is the punch (build scales it by heft), and it
 # always meets body plating, since it is never a landing on a weak point.
 const SYNERGY := "synergy"
@@ -1292,7 +1295,17 @@ func _draw_throw(landing: Dictionary) -> void:
 	ctx.player.indicator.set_shape("weapon", ctx.player.yours({"kind": "arc",
 		"points": Sticky.arc_points(_throw_origin(), at), "blocked": blocked}))
 	ctx.player.indicator.set_shape("landing", ctx.player.yours({"kind": "ring", "centre": at,
-		"radius": _lob_pattern().bolt_radius, "blocked": blocked}))
+		"radius": _lob_pattern().bolt_radius * mass_radius_scale(), "blocked": blocked}))
+
+
+# Mass-K (--world-one-builds=on): a thrown or slammed charge's blast radius is multiplied by
+# 1 + 0.25q, q = clamp(mass / 990, 0, 1). Read once where the charge is committed (the throw,
+# the slam) and by the aim ring, so the hit test and the preview share one number. Damage,
+# blink and glide never read it. Flag off it is exactly 1.
+func mass_radius_scale() -> float:
+	if not ctx.tuning.world_one():
+		return 1.0
+	return 1.0 + MASS_K_RADIUS * clampf(ctx.run.mass / MASS_K_SATURATION, 0.0, 1.0)
 
 
 # One throw. A lob row with more than one charge (Sticky Rain) scatters that many smaller
@@ -1303,7 +1316,8 @@ func _throw_sticky(landing: Vector3) -> void:
 	var origin := _throw_origin()
 	var crit := cloak_left > 0.0
 	var damage: float = p.damage * _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
-	var radius: float = p.bolt_radius
+	var ring: float = p.bolt_radius * mass_radius_scale()
+	var radius: float = ring
 	if count > 1:
 		damage *= Weapons.RAIN_DAMAGE / float(count)
 		radius *= Weapons.RAIN_RADIUS
@@ -1314,7 +1328,7 @@ func _throw_sticky(landing: Vector3) -> void:
 		var spot := landing
 		if count > 1:
 			var angle := TAU * float(i) / float(count)
-			spot = landing + Vector3(cos(angle), 0.0, sin(angle)) * p.bolt_radius
+			spot = landing + Vector3(cos(angle), 0.0, sin(angle)) * ring
 		var thrown: Dictionary = sticky.throw(origin, spot, damage, radius, _knob("sticky_fuse"), crit, _knob("sticky_reach"), _clock, _knob("sticky_ride"))
 		thrown["_source"] = "weapon"
 	volleys += 1
@@ -1390,10 +1404,11 @@ func _on_demo_slammed(at: Vector3) -> void:
 	if _knob("slam_fall_scale"):
 		scale = clampf(ctx.player.kit.slam_landed / Weapons.DIVE_FALL, 1.0, Weapons.DIVE_MAX)
 	var linger: float = _knob("mini_linger")
+	var mass_scale := mass_radius_scale()
 	for i in count:
 		var angle := turn + TAU * float(i) / float(count)
 		var spot := at + Vector3(cos(angle), 0.0, sin(angle)) * Weapons.MINI_SPREAD * sqrt(scale)
-		var slam_charge: Dictionary = sticky.drop(spot, Weapons.MINI_DAMAGE * scale * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS * sqrt(scale),
+		var slam_charge: Dictionary = sticky.drop(spot, Weapons.MINI_DAMAGE * scale * _damage_mod(Weapons.STICKY_CHARGE), Weapons.MINI_RADIUS * sqrt(scale) * mass_scale,
 			linger if linger > 0.0 else Weapons.MINI_FUSE, 0.0 if linger > 0.0 else Weapons.MINI_ARM, _knob("sticky_reach"), _clock)
 		slam_charge["_source"] = "drop_or_slam"
 
