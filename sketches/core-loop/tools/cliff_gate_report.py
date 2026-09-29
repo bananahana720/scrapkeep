@@ -176,7 +176,7 @@ def hull_checks(meta, prop):
             continue
         da = F.angle_between(doms[hi][0], doms[hi + 1][0])
         ds = abs(doms[hi][1] - doms[hi + 1][1])
-        ok = da >= 12.0 and ds >= 0.10
+        ok = da >= 12.0 and ds >= 0.05  # share gap 5 points: RULINGS.md (rulings-1) item 1
         nb.append({"pair": [hi, hi + 1], "d_az": round(da, 1), "d_share_pts": round(ds * 100, 1), "pass": bool(ok)})
     return rows, nb, tri_total
 
