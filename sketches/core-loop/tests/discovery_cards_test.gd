@@ -71,7 +71,9 @@ func _process(_delta: float) -> bool:
 			var banner_rect: Rect2 = _off._panel.get_global_rect()
 			var band := ScreenRegions.rect("toasts", _cards.get_viewport_rect().size)
 			_check("card larger than banner", card.size.y > banner_rect.size.y and card.size.x >= banner_rect.size.x and _cards._glyph.size.x > _off._icon.size.x * 2.0 and _cards._glyph.visible and not _cards._icon.visible, "card %s (glyph %s) vs banner %s (icon %s); the toast band caps width at 360 and height at 126" % [card.size, _cards._glyph.size, banner_rect.size, _off._icon.size])
-			_check("card in toasts band", band.encloses(card), "card %s inside toasts band %s" % [card, band])
+			var centre := Rect2(400.0, band.end.y, 800.0, ScreenRegions.rect("prompts", _cards.get_viewport_rect().size).position.y - band.end.y)
+			var clear := not card.intersects(centre) and not card.intersects(band) and not card.intersects(ScreenRegions.rect("top", _cards.get_viewport_rect().size)) and not card.intersects(ScreenRegions.rect("prompts", _cards.get_viewport_rect().size)) and Rect2(Vector2.ZERO, _cards.get_viewport_rect().size).encloses(card)
+			_check("card clear of play area and bands", clear, "card %s clear of toasts %s and centre %s (full clearances in discovery_card_size_test)" % [card, band, centre])
 			var words: int = WordBudget.count(_cards)["hud"]
 			_check("card inside word budget", words > 0 and words <= 40, "%d words on the card (budget 40)" % words)
 			var row := EventKinds.row("synergy_discovered")
