@@ -15,7 +15,8 @@ extends SceneTree
 #     [--centre=x,y,z] [--mode=lit,subject-black,assembly-black] [--cameras=name,name]
 #     [--freeze=<path>=rx,ry,rz[:px,py,pz] (degrees, local; global position)] [--freeze=<path>@<clip>:<seconds>]
 #     [--hide=<path>]   (subtree omitted from the black modes, e.g. glass)
-#     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path>]   keep only the triangles of that mesh inside the world box
+#     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path> [--isolate-rest]]   keep only the triangles of that mesh inside the
+#       world box; --isolate-rest keeps the other triangles as a sibling mesh, so they draw as grey depth context
 #     --cameras also takes ortho-front, ortho-side, ortho-top: orthographic views of --aabb (never in the default set)
 #   Mode subject-context-depth: subject black, every other mesh flat background grey but still writing depth.
 #   Writes <out>/<mode>/<camera>.png (1920x1080), <camera>.thumb.png (480x270) and <out>/<mode>/frames.json.
@@ -48,6 +49,7 @@ var freeze_specs: Array = []
 var hide_paths: Array = []
 var aabb_arg = null
 var isolate_path := ""
+var isolate_rest := false
 var base_dir := ""
 var head_dir := ""
 var game
@@ -87,6 +89,8 @@ func _initialize() -> void:
 			aabb_arg = AABB(Vector3(float(box[0]), float(box[1]), float(box[2])), Vector3(float(box[3]), float(box[4]), float(box[5])))
 		elif arg.begins_with("--isolate="):
 			isolate_path = arg.trim_prefix("--isolate=")
+		elif arg == "--isolate-rest":
+			isolate_rest = true
 	if pair_mode:
 		if base_dir.is_empty() or head_dir.is_empty() or out.is_empty():
 			printerr("pair needs --base, --head and --out")
@@ -178,6 +182,13 @@ func _run() -> void:
 			printerr("--isolate needs a mesh path and --aabb: ", isolate_path)
 			quit(3)
 			return
+		if isolate_rest:
+			var rest := MeshInstance3D.new()
+			rest.name = isolated.name + "Rest"
+			rest.mesh = filter_mesh(isolated.mesh, isolated.global_transform, aabb_arg, true)
+			rest.transform = isolated.transform
+			rest.layers = isolated.layers
+			isolated.get_parent().add_child(rest)
 		isolated.mesh = filter_mesh(isolated.mesh, isolated.global_transform, aabb_arg)
 	# Plan every camera once, in the lit scene, so all modes share one set of values.
 	var plan := {}
@@ -240,7 +251,7 @@ func _run() -> void:
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
 			"mode": mode, "class": class_index, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
-			"hide": hide_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
+			"hide": hide_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
 		file.store_string(JSON.stringify(doc, "\t"))
@@ -318,7 +329,7 @@ static func context_material() -> StandardMaterial3D:
 
 
 # The triangles of `mesh` (one surface) whose centroid lies inside the world box `box` after `xf`.
-static func filter_mesh(mesh: Mesh, xf: Transform3D, box: AABB) -> ArrayMesh:
+static func filter_mesh(mesh: Mesh, xf: Transform3D, box: AABB, invert := false) -> ArrayMesh:
 	var arrays := mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
@@ -327,7 +338,7 @@ static func filter_mesh(mesh: Mesh, xf: Transform3D, box: AABB) -> ArrayMesh:
 	var out_normals := PackedVector3Array()
 	for i in range(0, indices.size(), 3):
 		var centroid := (xf * vertices[indices[i]] + xf * vertices[indices[i + 1]] + xf * vertices[indices[i + 2]]) / 3.0
-		if box.has_point(centroid):
+		if box.has_point(centroid) != invert:
 			for e in 3:
 				out_vertices.append(vertices[indices[i + e]])
 				out_normals.append(normals[indices[i + e]])

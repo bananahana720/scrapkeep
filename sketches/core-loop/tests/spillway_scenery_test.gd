@@ -111,6 +111,8 @@ func _check_rim() -> void:
 	var open_edges := 0
 	var budget_ok := true
 	var fold_ok := true
+	var s_rise := INF
+	var h_rise := INF
 	var last_z := {-1: -INF, 1: -INF}
 	var gully_worst := INF
 	for crown in plan:
@@ -139,15 +141,16 @@ func _check_rim() -> void:
 		var zsign := 1.0 if crown["side"] < 0 else -1.0
 		for i in stations.size():
 			var u: float = stations[i]["u"]
-			table_worst = maxf(table_worst, absf(rings[4][i].y - Scenery.crest_rise(v, u)))
-			table_worst = maxf(table_worst, absf(rings[2][i].y - 0.35 * Scenery.crest_rise(v, u)))
+			table_worst = maxf(table_worst, absf(rings[4][i].y - _spec_rise(v, u)))
+			table_worst = maxf(table_worst, absf(rings[2][i].y - SPEC_RING_Y[2] * _spec_rise(v, u)))
+			table_worst = maxf(table_worst, absf(rings[3][i].y - SPEC_RING_Y[3] * _spec_rise(v, u)))
 			var world_z: float = (xf * rings[1][i]).z
 			table_worst = maxf(table_worst, absf(world_z - (crown["z"] + (u - 0.5) * crown["width"])))
 		# Depth kept at .35/.70/top: 95, 85, 75 percent about the same centre.
 		for k in [2, 3, 4]:
 			for i in stations.size():
 				var kept: float = absf(rings[k][i].x) / (crown["depth"] * 0.5)
-				table_worst = maxf(table_worst, absf(kept - Scenery.RIM_RING_DEPTH[k]) * 100.0 * 0.01)
+				table_worst = maxf(table_worst, absf(kept - SPEC_RING_DEPTH[k]) * crown["depth"] * 0.5)
 		# Terrain under the final footprint: root at least 5 m under the lowest, h0 the highest.
 		var hi := -INF
 		var lo := INF
@@ -169,11 +172,11 @@ func _check_rim() -> void:
 			var in_fold := false
 			for f in folds:
 				in_fold = in_fold or (u >= f.x and u <= f.y)
-			var rise: float = Scenery.crest_rise(v, u)
+			var rise: float = _spec_rise(v, u)
 			for face in [1.0, -1.0]:
 				var previous := INF
 				var y := 0.0
-				while y <= rise - 0.5:
+				while y <= rise - 1.0:
 					var reach := _flank_reach(local, indices, face, y, z)
 					if reach == -INF:
 						open_edges += 1
@@ -184,6 +187,10 @@ func _check_rim() -> void:
 							previous = reach
 					y += 1.0
 		fold_ok = fold_ok and _fold_depth_ok(crown)
+		if v == 1:
+			s_rise = minf(s_rise, _fold_rise(crown))
+		elif v == 2:
+			h_rise = minf(h_rise, _fold_rise(crown))
 		var side: int = crown["side"]
 		var start: float = crown["z"] - crown["width"] * 0.5
 		if last_z[side] > -INF:
@@ -197,6 +204,7 @@ func _check_rim() -> void:
 	_check(step_worst <= 0.05, "unfractured flank never steps outward as it rises: worst step %.3f m" % step_worst)
 	_check(lip_worst <= 0.001, "no projecting lip past the base plane: %.3f m" % lip_worst)
 	_check(fold_ok, "each fold recesses 0.5 to 0.8 m inside its parent flank and stays within it")
+	_check(s_rise >= 2.9 and h_rise >= 4.8, "fold rise from the mesh: S %.2f m (spec 3), H %.2f m (spec 5)" % [s_rise, h_rise])
 	_check(absf(gully_worst - 6.0) < 0.001, "narrowest gully between crowns %.1f m, 6 m" % gully_worst)
 	_check(budget_ok and vertex_total <= 7128 and triangle_total <= 2376, "crown set budget: %d vertices of 7128, %d triangles of 2376" % [vertex_total, triangle_total])
 	var repeats := 0
@@ -225,6 +233,24 @@ func _check_rim() -> void:
 	print("rim counts: crown V %d T %d" % [vertex_total, triangle_total])
 
 
+# CLIFF-R2 section 1, typed in from the spec so a drifted constant fails here.
+const SPEC_CREST := [
+	[[0.0, 8.0], [0.20, 16.0], [0.38, 18.0], [0.64, 17.0], [0.85, 12.0], [1.0, 8.0]],
+	[[0.0, 3.0], [0.20, 5.0], [0.40, 6.0], [0.60, 5.5], [0.85, 4.0], [1.0, 3.0]],
+	[[0.0, 5.0], [0.20, 10.0], [0.38, 12.0], [0.64, 12.0], [0.85, 10.0], [1.0, 6.0]],
+]
+const SPEC_RING_Y := [0.0, 0.0, 0.35, 0.70, 1.0]
+const SPEC_RING_DEPTH := [1.0, 1.0, 0.95, 0.85, 0.75]
+
+
+func _spec_rise(variant: int, u: float) -> float:
+	var keys: Array = SPEC_CREST[variant]
+	for i in keys.size() - 1:
+		if u <= keys[i + 1][0]:
+			return lerpf(keys[i][1], keys[i + 1][1], (u - keys[i][0]) / (keys[i + 1][0] - keys[i][0]))
+	return keys[keys.size() - 1][1]
+
+
 # u intervals of the diagonal folds of a crown.
 func _fold_ranges(crown: Dictionary) -> Array:
 	var ranges := []
@@ -237,6 +263,7 @@ func _fold_ranges(crown: Dictionary) -> Array:
 # Folds sit 0.5 to 0.8 m inside the parent flank: each fold segment has exactly two points that
 # are not ring corners and lie off the flank's two original triangles, both that deep.
 func _fold_depth_ok(crown: Dictionary) -> bool:
+	var v: int = crown["variant"]
 	var mesh: ArrayMesh = Scenery.crown_mesh(crown)
 	var local: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 	var rings: Array[PackedVector3Array] = Scenery.crown_rings(crown)
@@ -244,24 +271,47 @@ func _fold_depth_ok(crown: Dictionary) -> bool:
 	for ring in rings:
 		for p in ring:
 			corners[_key(p)] = true
-	var ok := true
-	for i in Scenery.RIM_FOLDS[crown["variant"]]:
-		var a := rings[2][i]
-		var b := rings[2][i + 1]
-		var c := rings[3][i + 1]
-		var d := rings[3][i]
-		var n1 := (b - a).cross(d - a).normalized()
-		var n2 := (c - b).cross(d - b).normalized()
-		var box := AABB(a, Vector3.ZERO).expand(b).expand(c).expand(d).grow(1.0)
-		var deep := {}
-		for p in local:
-			if box.has_point(p) and not corners.has(_key(p)):
-				var depth := minf(absf((p - a).dot(n1)), absf((p - b).dot(n2)))
-				deep[_key(p)] = depth
-		ok = ok and deep.size() == 2
-		for key in deep:
-			ok = ok and deep[key] >= 0.5 and deep[key] <= 0.8
+	var quads := []
+	for i in Scenery.RIM_FOLDS[v]:
+		for row in Scenery.RIM_FOLD_BANDS[v]:
+			var k: int = row[0]
+			quads.append([rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], rings[k + 1][i]])
+	var deep := {}
+	for p in local:
+		if corners.has(_key(p)):
+			continue
+		var best := INF
+		for quad in quads:
+			var a: Vector3 = quad[0]
+			var b: Vector3 = quad[1]
+			var c: Vector3 = quad[2]
+			var d: Vector3 = quad[3]
+			var box := AABB(a, Vector3.ZERO).expand(b).expand(c).expand(d).grow(1.0)
+			if box.has_point(p):
+				var n1 := (b - a).cross(d - a).normalized()
+				var n2 := (c - b).cross(d - b).normalized()
+				best = minf(best, minf(absf((p - a).dot(n1)), absf((p - b).dot(n2))))
+		deep[_key(p)] = best
+	var ok: bool = deep.size() == 2 * quads.size()
+	for key in deep:
+		ok = ok and deep[key] >= 0.5 and deep[key] <= 0.8
 	return ok
+
+
+# Vertical extent of a single-fold crown (S or H), from the fold's non-corner points.
+func _fold_rise(crown: Dictionary) -> float:
+	var local: PackedVector3Array = Scenery.crown_mesh(crown).surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var corners := {}
+	for ring in Scenery.crown_rings(crown):
+		for p in ring:
+			corners[_key(p)] = true
+	var lo := INF
+	var hi := -INF
+	for p in local:
+		if not corners.has(_key(p)):
+			lo = minf(lo, p.y)
+			hi = maxf(hi, p.y)
+	return hi - lo
 
 
 # Outermost x of the flank at height y and z (crown-local), face = +1 for +x, -1 for -x; -INF when

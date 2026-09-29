@@ -40,8 +40,14 @@ const RIM_FACE_U := [
 # Face segments (index of the first station) carrying a diagonal fold: C two, S one, H one.
 const RIM_FOLDS := [[1, 3], [2], [2]]
 const RIM_FOLD_DEPTH := 0.72
-# Fold ends sit this far along the quad diagonal, so the fold tapers to zero over its last metres.
-const RIM_FOLD_TAPER := 0.14
+# Groove chains per variant, low end to high end: [band k, w0, h0, w1, h1] where w runs along the
+# fold's low-to-high direction and h up the band, both as fractions of the quad. S and H run one
+# groove through two or three bands (meeting on the shared edge) to reach their rise; C keeps one band per fold.
+const RIM_FOLD_BANDS := [
+	[[2, 0.14, 0.14, 0.86, 0.86]],
+	[[1, 0.10, 0.8, 0.3, 1.0], [2, 0.3, 0.0, 0.6, 1.0], [3, 0.6, 0.0, 0.88, 1.0]],
+	[[2, 0.12, 0.0, 0.6, 1.0], [3, 0.6, 0.0, 0.88, 0.6]],
+]
 
 # Shoulder hulls, section 2: one continuous hull per old four-shelf stack. Plan outline in
 # normalised (d outward from the arena, e along Z) coordinates, chamfered so no corner is a knife.
@@ -690,6 +696,16 @@ static func crown_rings(crown: Dictionary) -> Array[PackedVector3Array]:
 	return rings
 
 
+# The groove row of band k on face segment i for a variant, or empty.
+static func _fold_band(variant: int, k: int, i: int) -> Array:
+	if not (i in RIM_FOLDS[variant]):
+		return []
+	for row in RIM_FOLD_BANDS[variant]:
+		if row[0] == k:
+			return row
+	return []
+
+
 # A closed solid: four bands of 12 quads, zipped caps, and a local fold on each listed face segment.
 static func crown_mesh(crown: Dictionary) -> ArrayMesh:
 	var v: int = crown["variant"]
@@ -705,13 +721,15 @@ static func crown_mesh(crown: Dictionary) -> ArrayMesh:
 			var b := rings[k][j]
 			var c := rings[k + 1][j]
 			var d := rings[k + 1][i]
-			if k == 2 and i in RIM_FOLDS[v]:
-				# Corners in perimeter order; the fold runs low to high along world Z.
-				var low_first: bool = rising
-				if low_first:
-					_fold_quad(tris, a, b, c, d, Vector2(RIM_FOLD_TAPER, RIM_FOLD_TAPER), Vector2(1.0 - RIM_FOLD_TAPER, 1.0 - RIM_FOLD_TAPER), RIM_FOLD_DEPTH, middle)
+			var chain := _fold_band(v, k, i)
+			if not chain.is_empty():
+				# Corners in perimeter order; the groove runs low to high along world Z.
+				var p := Vector2(chain[1], chain[2])
+				var q := Vector2(chain[3], chain[4])
+				if rising:
+					_fold_quad(tris, a, b, c, d, p, q, RIM_FOLD_DEPTH, middle)
 				else:
-					_fold_quad(tris, d, a, b, c, Vector2(RIM_FOLD_TAPER, RIM_FOLD_TAPER), Vector2(1.0 - RIM_FOLD_TAPER, 1.0 - RIM_FOLD_TAPER), RIM_FOLD_DEPTH, middle)
+					_fold_quad(tris, d, a, b, c, Vector2(1.0 - p.y, 1.0 - p.x), Vector2(1.0 - q.y, 1.0 - q.x), RIM_FOLD_DEPTH, middle)
 			else:
 				_quad(tris, a, b, c, d, middle)
 	_zip_cap(tris, rings[4], v, Vector3.UP)

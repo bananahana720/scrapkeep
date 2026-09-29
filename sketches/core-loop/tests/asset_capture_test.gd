@@ -227,6 +227,9 @@ func _run() -> void:
 	var kept := Cap.filter_mesh(two, Transform3D(Basis.IDENTITY, Vector3(1, 0, 0)), AABB(Vector3(0, -1, -1), Vector3(5, 3, 2)))
 	var kept_vertices: PackedVector3Array = kept.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 	_check(kept_vertices.size() == 3 and kept_vertices[0] == Vector3(0, 0, 0), "filter_mesh keeps only the triangles whose centroid is inside the world box")
+	var rest := Cap.filter_mesh(two, Transform3D(Basis.IDENTITY, Vector3(1, 0, 0)), AABB(Vector3(0, -1, -1), Vector3(5, 3, 2)), true)
+	var rest_vertices: PackedVector3Array = rest.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	_check(rest_vertices.size() == 3 and rest_vertices[0] == Vector3(50, 0, 0), "filter_mesh with invert keeps exactly the triangles outside the box (the isolate-rest context)")
 	_check(Cap.filter_mesh(two, Transform3D.IDENTITY, AABB(Vector3(200, 0, 0), Vector3(1, 1, 1))).get_surface_count() == 0, "filter_mesh returns an empty mesh when nothing is inside")
 
 	quit(failures)
