@@ -68,6 +68,9 @@ var hp := 40.0
 var max_hp := 40.0
 var plating := 0.0
 var scrap_value := 3
+# Who is dealing the hit that may kill: "" for every ordinary source, "spark" while a wear
+# patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
+var last_damage_source := ""
 var weight := 1.0
 var radius := 1.0
 var half_height := 1.5
