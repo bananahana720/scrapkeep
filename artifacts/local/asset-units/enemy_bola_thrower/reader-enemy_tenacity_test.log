@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[clock cuts the chain] two sources summed to the cut at 1.81 s; released by tenacity -> PASS
+[immune] immune for 2.50 s and a new catch is refused -> PASS
+[bracket and recovery] the bracket flickered through the immunity; a catch lands again after 2.61 s -> PASS
+[window slides] a 1.0 s hold and a 1.2 s hold 4 s apart never summed (grants 1, still held true) -> PASS
+[pack chain forms] the pack held the ball with ["mag_pit", "bola_wrap"] -> PASS
+[pack chain ends by tenacity] tenacity cut ["mag_pit", "bola_wrap"] together; 0 held ticks inside the immunity -> PASS
+enemy_tenacity_test: PASS
