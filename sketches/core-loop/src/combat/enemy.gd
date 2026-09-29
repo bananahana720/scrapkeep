@@ -3,6 +3,7 @@ extends CharacterBody3D
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -38,6 +39,25 @@ static var rim_color := Palette.ARC
 
 signal hit_player(amount: float, shove: Vector3)
 signal died(at: Vector3, scrap_value: int)
+# Attack facts (DESIGN-NOTES, "Attack facts, enemies"): one read-only fact per phase
+# change of a mapped enemy's attack. It decides nothing and owns no clock; it reports
+# what the existing state machine and its committed telegraph already did.
+signal attack_phase(facts: Dictionary)
+
+const PHASE_WINDUP := "windup"
+const PHASE_STRIKE := "strike"
+const PHASE_RECOVER := "recover"
+const PHASE_CANCELLED := "cancelled"
+# Enemies whose attack has no clean owner among these files, so they publish nothing.
+const FACTS_UNMAPPED := {
+	"swarm_remnant": "the formation lane is committed and driven by swarm.gd, not by the remnant's own state",
+}
+# The lobber's muzzle glow is its wind-up: _show_charge sets emission to 0.8 + 5 x charge.
+const LOBBER_GLOW_BASE := 0.8
+const LOBBER_GLOW_SPAN := 5.0
+const LOBBER_MIN_CHARGE := 0.0005
+# Instance ids are unique for the process; nothing reads their order.
+static var _attack_serial := 0
 
 var kind := "chaser"
 # The faction whose timbre and arrival cue this enemy carries (roster.gd): "fleet", or
@@ -70,6 +90,8 @@ var _telegraph: Node3D
 var _tint_materials: Array = []
 # Open-crack glyphs a plated enemy shows only while your punch breaks it now.
 var _cracks: Array = []
+# The open attack instance, or {} between attacks: instance, row, phase, managed, geometry, progress.
+var _atk := {}
 
 
 # Subclasses call this first from their own setup, then build their body.
@@ -85,6 +107,8 @@ func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_r
 	set_collision_layer_value(3, true)
 	set_collision_mask_value(1, true)
 	floor_max_angle = deg_to_rad(60.0)
+	if has_signal("fired"):
+		connect("fired", _facts_on_fired)
 
 
 func _set_health(value: float) -> void:
@@ -186,6 +210,7 @@ func telegraph() -> Node3D:
 # visual belongs to presentation, reading enemy_killed; this node is gone at frame end.
 func _die() -> void:
 	_dead = true
+	_facts_end(true)
 	collision_layer = 0
 	collision_mask = 0
 	_clear_telegraph()
@@ -194,10 +219,12 @@ func _die() -> void:
 
 
 func _exit_tree() -> void:
+	_facts_end(true)
 	_clear_telegraph()
 
 
 func _clear_telegraph() -> void:
+	_facts_end(false)
 	if is_instance_valid(_telegraph):
 		_telegraph.queue_free()
 	_telegraph = null
@@ -206,12 +233,14 @@ func _clear_telegraph() -> void:
 func _commit_ring(threat_type: int, at: Vector3, ring_radius: float, reach := 3.5, tint := Palette.HAZARD) -> Node3D:
 	_clear_telegraph()
 	_telegraph = Telegraph.ring(world_root, terrain, threat_type, at, ring_radius, reach, tint)
+	_facts_begin(_telegraph)
 	return _telegraph
 
 
 func _commit_lane(threat_type: int, from: Vector3, heading: Vector3, lane_length: float, lane_width: float, reach := 3.5) -> Node3D:
 	_clear_telegraph()
 	_telegraph = Telegraph.lane(world_root, terrain, threat_type, from, heading, lane_length, lane_width, reach)
+	_facts_begin(_telegraph)
 	return _telegraph
 
 
@@ -357,3 +386,151 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 	parent.add_child(glyph)
 	_cracks.append(glyph)
 	return glyph
+
+
+# --- Attack facts ---------------------------------------------------------------------
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PHYSICS_PROCESS:
+		_facts_poll()
+
+
+# The open attack as a fact, with the geometry and progress it has right now; {} when
+# this enemy is between attacks or unmapped.
+func attack_facts() -> Dictionary:
+	if _atk.is_empty():
+		return {}
+	return _facts_dict(String(_atk["phase"]))
+
+
+# The row an attack of this enemy reads (ATTACK_ROWS): its roster row, chosen by lane or
+# ring when the owner has two (the miniboss). "" for an unmapped enemy.
+func _facts_row(is_lane: bool) -> String:
+	if FACTS_UNMAPPED.has(kind):
+		return ""
+	var found: Array = []
+	for id in EventKinds.ATTACK_ROWS:
+		var row: Dictionary = EventKinds.ATTACK_ROWS[id]
+		if row["group"] == "enemy" and row["owner_kind"] == "roster" and row["owner"] == kind:
+			found.append(id)
+	if found.size() <= 1:
+		return "" if found.is_empty() else found[0]
+	for id in found:
+		if (EventKinds.ATTACK_ROWS[id]["threat"] == "threat_lane") == is_lane:
+			return id
+	return ""
+
+
+func _facts_begin(tele: Node3D, managed := false) -> void:
+	_facts_end(false)
+	var row := _facts_row(tele.shape == Telegraph.Shape.LANE)
+	if row == "":
+		return
+	_attack_serial += 1
+	_atk = {"instance": _attack_serial, "row": row, "phase": PHASE_WINDUP, "managed": managed, "tele": tele,
+		"geometry": tele.descriptor(), "progress": tele.progress}
+	attack_phase.emit(_facts_dict(PHASE_WINDUP))
+
+
+# A counter drives its own phases: it takes over an instance the commit opened, or opens
+# one for a telegraph it set directly (the swatter's wedge).
+func _facts_manage(tele: Node3D) -> void:
+	if _atk.is_empty():
+		_facts_begin(tele, true)
+	else:
+		_atk["managed"] = true
+
+
+func _facts_phase(phase: String) -> void:
+	if _atk.is_empty() or _atk["phase"] == phase:
+		return
+	_facts_refresh()
+	_atk["phase"] = phase
+	attack_phase.emit(_facts_dict(phase))
+
+
+# Closes the open instance. A wind-up that never reached its strike, and any death or
+# removal, is cancelled; an attack that struck ends in recover.
+func _facts_end(cancel: bool) -> void:
+	if _atk.is_empty():
+		return
+	if not cancel and not _dead:
+		_facts_poll()
+	var closing := PHASE_CANCELLED if (cancel or _dead or _atk["phase"] == PHASE_WINDUP) else PHASE_RECOVER
+	_facts_refresh()
+	var facts := _facts_dict(closing)
+	_atk = {}
+	attack_phase.emit(facts)
+
+
+func _facts_refresh() -> void:
+	var tele = _atk.get("tele")
+	if tele != null and is_instance_valid(tele):
+		_atk["geometry"] = tele.descriptor()
+		_atk["progress"] = tele.progress
+
+
+func _facts_dict(phase: String) -> Dictionary:
+	if String(_atk["phase"]) == phase:
+		_facts_refresh()
+	var geometry: Dictionary = _atk["geometry"]
+	return {"instance": _atk["instance"], "row": _atk["row"], "owner": kind, "phase": phase,
+		"committed": not geometry.is_empty(), "progress": _atk["progress"], "geometry": geometry.duplicate(),
+		"at": global_position}
+
+
+func _facts_poll() -> void:
+	if _dead:
+		return
+	if kind == "lobber":
+		_facts_poll_lobber()
+		return
+	if _atk.is_empty() or _atk["managed"] or _atk["phase"] != PHASE_WINDUP:
+		return
+	var tele = _atk.get("tele")
+	if tele != null and is_instance_valid(tele) and tele.progress >= 1.0:
+		_facts_phase(PHASE_STRIKE)
+
+
+# The lobber has no telegraph until release, so its wind-up is the muzzle charge it
+# already draws, and its aim stays uncommitted (empty geometry) until fired.
+func _facts_poll_lobber() -> void:
+	var mat = get("_muzzle_material")
+	if mat == null:
+		return
+	var charge: float = (mat.emission_energy_multiplier - LOBBER_GLOW_BASE) / LOBBER_GLOW_SPAN
+	if _atk.is_empty():
+		if charge > LOBBER_MIN_CHARGE and _in_play():
+			_facts_begin_lobber(charge)
+	elif _atk["phase"] == PHASE_WINDUP:
+		if charge <= LOBBER_MIN_CHARGE:
+			_facts_end(true)
+		else:
+			_atk["progress"] = clampf(charge, 0.0, 1.0)
+
+
+func _facts_begin_lobber(charge: float) -> void:
+	var row := _facts_row(false)
+	if row == "":
+		return
+	_attack_serial += 1
+	_atk = {"instance": _attack_serial, "row": row, "phase": PHASE_WINDUP, "managed": true, "tele": null,
+		"geometry": {}, "progress": clampf(charge, 0.0, 1.0)}
+	attack_phase.emit(_facts_dict(PHASE_WINDUP))
+
+
+# The release commits the aim: strike carries the landing ring the shell will draw
+# (projectile.gd), then the lobber's own part is over.
+func _facts_on_fired(_origin: Vector3, landing: Vector3, flight: float) -> void:
+	if _dead:
+		return
+	if _atk.is_empty():
+		_facts_begin_lobber(1.0)
+	if _atk.is_empty():
+		return
+	var blast: float = load("res://src/combat/projectile.gd").BLAST_RADIUS
+	_atk["geometry"] = {"type": Threat.Type.PROJECTILE, "form": "radial", "centre": landing, "reach": 3.5,
+		"r_in": 0.0, "r_out": blast, "a0": 0.0, "a1": TAU, "progress": 0.0, "live": false, "flight": flight}
+	_atk["progress"] = 0.0
+	_facts_phase(PHASE_STRIKE)
+	_facts_end(false)

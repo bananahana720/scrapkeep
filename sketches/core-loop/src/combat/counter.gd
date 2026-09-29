@@ -154,6 +154,7 @@ func _physics_process(delta: float) -> void:
 				phase = Phase.LIVE
 				_t = 0.0
 				caught_live = 0
+				_facts_phase(PHASE_STRIKE)
 				_go_live()
 		Phase.LIVE:
 			_move(delta, _live_motion(to_ball))
@@ -176,6 +177,7 @@ func _warn(to_ball: Vector3) -> void:
 		_rest = 0.5
 		return
 	_voice(tele)
+	_facts_manage(tele)
 	warned += 1
 	broken_by = ""
 	phase = Phase.WARN
@@ -211,6 +213,7 @@ func _on_broken(_method: String) -> void:
 
 
 func _end() -> void:
+	_facts_end(false)
 	if holds != null and holds.held(self):
 		holds.release(self, "expired")
 	_on_end()
