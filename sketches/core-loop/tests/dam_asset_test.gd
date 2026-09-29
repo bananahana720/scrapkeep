@@ -65,5 +65,12 @@ func _run() -> void:
 	_check(box.position.x >= -133.0 and box.end.x <= 133.0 and box.position.y >= 26.0 and box.end.y <= 116.0,
 		"inside the wall's extent: x within 133 m of centre, height 26..116 m")
 	scene.free()
+	var source := FileAccess.get_file_as_string("res://src/presentation/spillway_scenery.gd")
+	_check(not source.contains("BlockFaces") and source.contains("_dam_detail(scenery)"),
+		"the 252 BlockFaces boxes are gone from spillway_scenery.gd and the dam asset is placed")
+	var stage := Node3D.new()
+	var built = load("res://src/presentation/spillway_scenery.gd").build(stage)
+	_check(built.find_child("BlockFaces", true, false) == null, "built scenery has no BlockFaces batch")
+	stage.free()
 	print("dam_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)
