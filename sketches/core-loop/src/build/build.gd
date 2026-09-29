@@ -42,6 +42,8 @@ const SHELL_AIR_FACTOR := 0.75
 # after a valid vault the shell's air factor is SHELL_AIR_FACTOR_VAULT instead.
 const SHELL_VAULT_WINDOW := 2.0
 const SHELL_AIR_FACTOR_VAULT := 1.25
+# R6 Second Wind (world-one): while sprinting the shell's penalty cancels (factor 1.0).
+const SHELL_AIR_FACTOR_SPRINT := 1.0
 const PARTICIPANTS := ["player"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
@@ -125,6 +127,8 @@ var _shrapnel_budget := SHRAPNEL_PER_SECOND
 # Sim seconds left in S4's inverted-shell window; counted down in _physics_process, so a
 # paused tree or the bay does not spend it.
 var _shell_window := 0.0
+# The last kit.sprinting Build saw, so a sprint start or end (any path) refreshes the air mod once.
+var _sprint_seen := false
 var _tesla_clock := 0.0
 var _pinwheel_clock := 0.0
 # Pinwheel cuts each enemy at most once per PINWHEEL_EVERY: instance id to time left.
@@ -478,7 +482,25 @@ func shell_fitted() -> bool:
 func shell_air_factor() -> float:
 	if not shell_fitted():
 		return 1.0
-	return SHELL_AIR_FACTOR_VAULT if _shell_window > 0.0 else SHELL_AIR_FACTOR
+	# Active inversions do not stack: the highest factor wins (an implementation choice, not a
+	# design ruling; BUILD-SYSTEMS.md lists S4, K5 and R6 without ranking them).
+	var factor := SHELL_AIR_FACTOR
+	if _shell_window > 0.0:
+		factor = maxf(factor, SHELL_AIR_FACTOR_VAULT)
+	if _sprinting() and _second_wind_r6():
+		factor = maxf(factor, SHELL_AIR_FACTOR_SPRINT)
+	return factor
+
+
+# R6 is taken: Rivet's Second Wind with the world-one profile on (parity with S4's gate).
+func _second_wind_r6() -> bool:
+	var tree = ctx.player.tree if ctx != null and ctx.player != null else null
+	return tree != null and tree.world_one and "r_second_wind" in tree.picks
+
+
+# The live sprint state: augments.gd owns kit.sprinting and posts no end signal.
+func _sprinting() -> bool:
+	return ctx != null and ctx.player != null and ctx.player.kit != null and ctx.player.kit.sprinting
 
 
 # S4 is taken: the world-one Face Runner (same id as the base node at index 9, which the
@@ -817,6 +839,14 @@ func _physics_process(delta: float) -> void:
 		_shell_window -= delta
 		if _shell_window <= 0.0:
 			_shell_window = 0.0
+			_refresh_air_mod()
+	# Sprint edge: polled from kit.sprinting on the sim clock, so a release, a drain and a
+	# cleared SPRINT flag all refresh. Reads at most one physics tick behind the player, and
+	# not at all while not in play (the guard above), so an end during a pause lands late.
+	var sprinting_now := _sprinting()
+	if sprinting_now != _sprint_seen:
+		_sprint_seen = sprinting_now
+		if shell_fitted():
 			_refresh_air_mod()
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
