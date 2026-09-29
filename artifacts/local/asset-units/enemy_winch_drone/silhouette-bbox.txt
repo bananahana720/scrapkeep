@@ -16,3 +16,13 @@ working
   asset-rear30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(588)) w=90 h=113 area=4332
   asset-use6 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(772), np.int64(175), np.int64(1147), np.int64(797)) w=376 h=623 area=125030
   asset-use6 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(769), np.int64(175), np.int64(1150), np.int64(774)) w=382 h=600 area=136630
+
+comparison (head, resting; subject-black bounding box w x h px and black area)
+unit          asset-front30        asset-side30         asset-rear30         asset-use6
+winch drone   90x118  a3558        90x117  a3534        90x118  a3544        379x622  a125017
+hooker        67x145  a4530        91x148  a3969        67x145  a4536        343x726  a108625
+netcaster     96x122  a5926        50x126  a2523        94x123  a5960        442x611  a148698
+bola thrower  48x102  a2936        62x102  a3102        48x102  a2948        241x506  a70762
+deflector    104x94   a7188        76x93   a4036       116x96   a8486        410x478  a127635
+sources: winch drone above (resting set); hooker, netcaster and bola thrower from asset-c16/artifacts/local/asset-units/enemy_netcaster/silhouette-bbox.txt (the bola thrower there is C13 as first merged, before the C13b loop reorientation); deflector from asset-c17/artifacts/local/asset-units/enemy_deflector/silhouette-bbox.txt (capture set).
+The winch drone is the only one of the five as wide from the side as from the front (the round rotor), and its use6 box is the tallest-but-one after the hooker's.
