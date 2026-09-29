@@ -20,6 +20,22 @@ const GROW := 0.002
 const BASE_POD_MIN := Vector3(-0.94, -0.7735, -0.94)
 const BASE_POD_MAX := Vector3(0.94, 0.16555, 0.94)
 
+# Ring wear (C07 correction): the cosmetic wear on the plate ring is a few unequal contact
+# patches, not many small regular marks. An island is a connected bare_metal or paint piece
+# in the ring zone (shell space, y up, ring at y about -0.36) that is neither a plate
+# (longest side 0.165 or more) nor a bolt (under 0.065). The flank spool sector (within 0.5 rad
+# of +x) and the class_accent tops are outside the zone or slots counted.
+const WEAR_SLOTS := ["bare_metal", "paint"]
+const WEAR_R := Vector2(0.45, 0.60)
+const WEAR_Y := Vector2(-0.46, -0.30)
+const WEAR_MIN_ANGLE := 0.5
+const BOLT_EXTENT := 0.065
+const PLATE_EXTENT := 0.165
+const WEAR_MAX_ISLANDS := 4
+const WEAR_MIN_ISLANDS := 3
+const WEAR_MIN_AREA := 0.010
+const WEAR_UNEQUAL := 1.5
+
 var _failures := 0
 
 
@@ -68,6 +84,70 @@ static func counts(scene: Node) -> Dictionary:
 			out.s += 1
 			if HeroAssets.slot_of(mi.mesh, i) == "glass":
 				out.alpha += 1
+	return out
+
+
+# Connected pieces (by welded position) of every wear-slot surface of the Pod mesh, kept when
+# they sit in the ring zone and are neither bolts nor plates. Each entry is {area, centre}.
+static func wear_islands(shell: Node) -> Array:
+	var out := []
+	for mi in meshes(shell):
+		if String(mi.name) != "Pod":
+			continue
+		var t := to_root(mi, shell)
+		for si in mi.mesh.get_surface_count():
+			if not (HeroAssets.slot_of(mi.mesh, si) in WEAR_SLOTS):
+				continue
+			var arrays := (mi.mesh as Mesh).surface_get_arrays(si)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var index = arrays[Mesh.ARRAY_INDEX]
+			var ids := {}
+			var parent := []
+			var vid := PackedInt32Array()
+			for v in verts:
+				var w := t * v
+				var key := Vector3i((w * 10000.0).round())
+				if not ids.has(key):
+					ids[key] = parent.size()
+					parent.append(parent.size())
+				vid.append(ids[key])
+			var tri_count: int = (index.size() if index != null else verts.size()) / 3
+			for f in tri_count:
+				var a: int = vid[index[f * 3] if index != null else f * 3]
+				for j in 1 + 1:
+					var b: int = vid[index[f * 3 + 1 + j] if index != null else f * 3 + 1 + j]
+					var ra := a
+					while parent[ra] != ra:
+						ra = parent[ra]
+					var rb := b
+					while parent[rb] != rb:
+						rb = parent[rb]
+					if ra != rb:
+						parent[rb] = ra
+			var boxes := {}
+			for i in verts.size():
+				var r: int = vid[i]
+				while parent[r] != r:
+					r = parent[r]
+				var w := t * verts[i]
+				if not boxes.has(r):
+					boxes[r] = AABB(w, Vector3.ZERO)
+				else:
+					boxes[r] = (boxes[r] as AABB).expand(w)
+			for r in boxes:
+				var bb: AABB = boxes[r]
+				var c := bb.get_center()
+				var rad := Vector2(c.x, c.z).length()
+				var ang := absf(atan2(c.z, c.x))
+				var ext := bb.size
+				var dims := [ext.x, ext.y, ext.z]
+				dims.sort()
+				var area: float = dims[1] * dims[2]
+				if rad < WEAR_R.x or rad > WEAR_R.y or c.y < WEAR_Y.x or c.y > WEAR_Y.y or ang < WEAR_MIN_ANGLE:
+					continue
+				if dims[2] < BOLT_EXTENT or dims[2] >= PLATE_EXTENT:
+					continue
+				out.append({"area": area, "centre": c})
 	return out
 
 
@@ -129,6 +209,16 @@ func _initialize() -> void:
 		clips = Array(player.get_animation_list())
 	var lost := CLIPS.filter(func(c): return not (c in clips))
 	_report("sable rig clips", player != null and lost.is_empty(), "five pilot clips present (missing %s)" % [lost])
+	var islands := wear_islands(shell)
+	var areas := []
+	for isl in islands:
+		areas.append(isl.area)
+		print("wear island area %.4f m2 at %s" % [isl.area, isl.centre])
+	areas.sort()
+	var few: bool = islands.size() >= WEAR_MIN_ISLANDS and islands.size() <= WEAR_MAX_ISLANDS
+	_report("sable wear count", few, "%d ring wear islands, want %d to %d" % [islands.size(), WEAR_MIN_ISLANDS, WEAR_MAX_ISLANDS])
+	_report("sable wear size", not areas.is_empty() and areas[0] >= WEAR_MIN_AREA, "smallest island %.4f m2, want at least %.3f" % [areas[0] if not areas.is_empty() else 0.0, WEAR_MIN_AREA])
+	_report("sable wear unequal", areas.size() >= 2 and areas[-1] >= areas[0] * WEAR_UNEQUAL, "largest %.4f over smallest %.4f, want ratio %.1f" % [areas[-1] if not areas.is_empty() else 0.0, areas[0] if not areas.is_empty() else 0.0, WEAR_UNEQUAL])
 	shell.free()
 	rig.free()
 	print("world_one_shell_sable_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

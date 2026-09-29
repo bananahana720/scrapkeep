@@ -1,6 +1,6 @@
 # C07 Sable pod, world-one wear pass. Ports tools/blender/shell_sable.py (read-only
 # reference) and adds broad wear and exposed mechanisms without growing the silhouette:
-# chipped and mismatched-repair patches on the plates, worn saddle edge, weld beads,
+# three unequal contact-wear patches on the plates (C07 correction), worn saddle edge,
 # a ratchet gear and pawl on the flank spool, spool braces, a rope run and a guy wire
 # on the stubby mast. Ears, spool, mast, node names, pilot and slots are unchanged.
 # Budget: shell+rig pod stays under the 16,000 T / 15,000 V no-growth ceiling.
@@ -66,24 +66,20 @@ def pod():
 
 def wear(p, sx, sz):
     """Wear and exposed mechanisms; every piece stays inside the old pod extents."""
-    # Plates: a rubbed-through metal chip and a mismatched repair patch on each panel.
-    repair = ["bone", "petrol", "oxide", "bone", "petrol"]
-    for k, deg in enumerate((40, 100, 140, 220, 300)):
-        a = math.radians(deg)
-        b = a + 0.16
-        p.box("bare_metal", (0.052, 0.07, 0.08), loc=(0.782 * math.cos(b), 0.782 * math.sin(b), 0.58),
-              rot=(0, -0.45, b))
-        c = a - 0.13
-        p.box("paint", (0.05, 0.075, 0.09), loc=(0.775 * math.cos(c), 0.775 * math.sin(c), 0.69),
-              rot=(0, -0.45, c), color=repair[k])
+    # Plates: three unequal contact patches where the pod gets dragged, not a mark on every
+    # panel. (dx, dz) offsets the patch from the plate centre along the plate's face; the
+    # patches stay on their plate so the silhouette does not grow.
+    for deg, dx, dz, size, slot, color in (
+        (300, 0.0, 0.0, (0.052, 0.20, 0.22), "bare_metal", None),
+        (100, -0.045, 0.05, (0.052, 0.13, 0.15), "bare_metal", None),
+        (220, 0.03, -0.05, (0.052, 0.12, 0.15), "paint", "bone"),
+    ):
+        a = math.radians(deg) + dx / 0.78
+        p.box(slot, size, loc=(0.782 * math.cos(a), 0.782 * math.sin(a), 0.64 + dz), rot=(0, -0.45, a),
+              **({"color": color} if color else {}))
     # Saddle edge rubbed to bare metal in two arcs.
     for start in (0.4, 3.6):
         p.ring("bare_metal", 0.615, 0.643, 0.03, 4, loc=(0, 0, 0.79), arc=(start, start + 0.8))
-    # Weld beads where plates meet.
-    for deg in (70, 180, 260):
-        a = math.radians(deg)
-        p.rod("bare_metal", (0.77 * math.cos(a), 0.77 * math.sin(a), 0.55),
-              (0.79 * math.cos(a), 0.79 * math.sin(a), 0.75), 0.014, 5)
     # Spool ratchet: toothed wheel on the outer flange with a pinned pawl.
     tx = sx + 0.093
     for k in range(8):
