@@ -376,6 +376,8 @@ func _trail_checks() -> void:
 	var flag_seen := [false]
 	var watch: Callable = func(_k, _a, _s): flag_seen[0] = _game.run.last_kill_from_spark
 	_game.events.enemy_killed.connect(watch)
+	var spark_before: float = float(_combat.delivered_damage()["by_action"].get("spark", 0.0))
+	var over_before: float = float(_combat.delivered_damage()["overkill"])
 	_trail.step(0.05, [frail])
 	_game.events.enemy_killed.disconnect(watch)
 	_check("spark kill counts in run.kills and enemy_killed", _game.run.kills == kills_before + 1 and _kills == 1 and flag_seen[0], "run.kills +%d, %d enemy_killed, flag during emit %s" % [_game.run.kills - kills_before, _kills, flag_seen[0]])
@@ -389,6 +391,18 @@ func _trail_checks() -> void:
 	_combat._proc_ready.clear()
 	_game.run.record_kill("chaser", _player.ball_position(), 3)
 	_check("ordinary kill gives the Rampage refund", refunds[0] == refunds_spark + 1, "%d refunds" % (refunds[0] - refunds_spark))
+	# M0 ledger: the kill above removed 10 of a 14 patch; the ledger counts the HP removed, not 14.
+	var led: Dictionary = _combat.delivered_damage()
+	var spark_gain: float = float(led["by_action"].get("spark", 0.0)) - spark_before
+	_check("trail damage lands in the delivered-damage ledger with the HP removed", is_equal_approx(spark_gain, 10.0) and is_equal_approx(float(led["overkill"]) - over_before, 4.0) and float(led["by_source"].get("persistent_actor", 0.0)) >= 10.0,
+		"a 14 patch on 10 hp: spark +%.1f, overkill +%.1f, persistent_actor %.1f" % [spark_gain, float(led["overkill"]) - over_before, float(led["by_source"].get("persistent_actor", 0.0))])
+	var total_before: float = float(led["total"])
+	var hits_before: int = int(led["hits"])
+	var ledger_foe := _foe(0.6, 500.0)
+	_wear(1)
+	_trail.step(0.05, [ledger_foe])
+	_check("a patch adds one ledger hit of 14", is_equal_approx(float(led["total"]) - total_before, 14.0) and int(led["hits"]) == hits_before + 1, "total +%.1f, hits +%d" % [float(led["total"]) - total_before, int(led["hits"]) - hits_before])
+	_drop(ledger_foe)
 	# A strike-sourced kill of a 10 hp enemy does the item, bloom, scrap and count.
 	_armed(r4, true)
 	var normal := _foe(0.6, 10.0)
