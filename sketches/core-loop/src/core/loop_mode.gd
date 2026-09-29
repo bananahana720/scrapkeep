@@ -22,9 +22,9 @@ const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
+# The launch flags live in tuning.gd's FLAGS, the one table and the one parse pass.
 # threat_grammar.gd reads telegraph from the launch args itself, since the static-drawn
 # floor marking has no tuning in reach; the tuning row makes the flag known and shows it.
-const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY, "discovery": DISCOVERY_KEY, "telegraph": TELEGRAPH_KEY}
 
 
 static func mode(tuning) -> String:
@@ -54,29 +54,10 @@ static func runs_laps(tuning, map) -> bool:
 	return mode(tuning) == "laps" and map != null and not map.drop_lines.is_empty()
 
 
-# `--loop=drop --gun=full --music=ace --breath=gentle`, from the user args (after
-# Godot's `--`) or the engine args (the launcher's `scrapkeep <sketch> -- --loop=drop`
-# puts them there). Returns the flags it applied.
+# The launch-time flags (`--loop=drop --gun=full --music=ace --breath=gentle ...`), through
+# tuning.gd's one parse pass; game.gd calls tuning.apply_cmdline("launch"). Returns the flags it applied.
 static func apply_args(tuning, args: PackedStringArray) -> Dictionary:
-	var applied := {}
-	for arg in args:
-		if not arg.begins_with("--") or not "=" in arg:
-			continue
-		var flag := arg.substr(2, arg.find("=") - 2)
-		if not FLAGS.has(flag):
-			continue
-		var value := arg.substr(arg.find("=") + 1)
-		if tuning.set_option(FLAGS[flag], value):
-			applied[flag] = value
-		else:
-			push_warning("loop_mode: unknown --%s=%s" % [flag, value])
-	return applied
-
-
-static func apply_cmdline(tuning) -> Dictionary:
-	var args := OS.get_cmdline_args()
-	args.append_array(OS.get_cmdline_user_args())
-	return apply_args(tuning, args)
+	return tuning.apply_args(args, "launch")
 
 
 # The next option in a row's list, wrapping: the title screen's L and G.
