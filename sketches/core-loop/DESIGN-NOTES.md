@@ -1130,3 +1130,12 @@ Codex's blind judgment kept 4a and asked for one bounded fix: the spill mist at 
 - **Fix.** WaterMist turns triplanar off and takes the quad's own UVs (copied for that batch only), so each card carries one radial falloff. The falloff is five eased stops (alpha 1, 0.7, 0.3, 0.06, 0) instead of two. Placement is a seeded cluster per fall: 11 base patches (10 to 22 by 6 to 13 m, y 30 to 42, z 211 to 222, x within 15 m of the fall) and 8 ledge patches (8 to 16 by 5 to 11 m, y 38 to 58, z 222 to 225), each rolled in the card plane, up to 0.7 and 1.0 rad. No row, column or grid.
 - **Kept.** Alpha 0.12, mist only at the four falls, one batch, 23,164 triangles, 6 batches (the test's budget). The mist is fainter and softer than before; the fix did not raise opacity.
 - **Not touched.** The beige square puffs around the Warden's mast in the launch frame come from another effect and are unchanged.
+
+## Asset G05: water edges
+
+The four fall sheets and the tailrace were five boxes (60 T). `water_edges.glb` replaces them with two meshes in world metres, `SpillSheets` and `Tailrace`, built by `tools/blender/world_one/water_edges.py`. Wired by one commit in `spillway_scenery.gd`; the batches keep their names, `spill_water.gdshader` and shadow-off setting.
+
+- **Measured after Godot import.** Before: 120 V, 60 T, 2 draws. After: 106 V, 112 T, 2 draws (ceiling 180 V / 120 T / 2 D). Smooth shading is required: flat faces split to 302 V on import.
+- **Shape.** Each sheet is two columns by five rows with unequal row heights; the left and right edges bite inward by different amounts per ring, the lip and foot the most, and the ridge between them shifts in depth. The tailrace is a 16-quad strip whose play-side lip wanders 0.6 to 4.6 m inward and whose ends round off.
+- **Bounds.** Every vertex stays inside the box it replaces, so the silhouette never grows; `tests/water_edges_test.gd` fails otherwise, and on the V, T and draw ceilings.
+- **Not done.** No wet-stone band at the shoreline: it would need a third surface or a rock-shader change outside this unit. Flood and event surfaces are untouched. Codex judges the look.
