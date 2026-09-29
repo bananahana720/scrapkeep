@@ -3,6 +3,7 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
 # hazard.gd. The attack type decides how a threat draws; its committed geometry decides
@@ -95,6 +96,26 @@ const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
 
+# --telegraph=haze (loop_mode.gd FLAGS, default classic): a hostile floor fill becomes a
+# thin low-alpha red haze with no hazard stripes. Every fill alpha scales by the one
+# HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
+# hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
+# the drive clips are not touched. HAZE_SOLID is the live INSTANT slag layer's alpha.
+const HAZE_FILL := 0.5
+const HAZE_SOLID := 0.4
+const TELEGRAPH_FLAG := "telegraph"
+
+
+# Whether the haze look is on: set_haze() (tests, tools), else the launcher flag, read once.
+# The state lives on Painter, whose static code cannot call this class's statics.
+static func haze() -> bool:
+	return Painter.haze_on()
+
+
+static func set_haze(on: bool) -> void:
+	Painter._haze = 1 if on else 0
+
+
 # Layers whose name starts with "stripe" draw the hostile stripe pattern.
 const STATIC_LAYERS := ["under", "stripe", "base", "fill"]
 const MOTION_LAYERS := ["motion_under", "stripe_motion", "motion"]
@@ -183,7 +204,7 @@ static func fill_tint(d: Dictionary) -> Color:
 	if int(d["type"]) != Type.INSTANT or not d.get("live", false):
 		return Color(0.0, 0.0, 0.0, 0.0)
 	var live_tone: Color = d.get("live_tone", d["tone"])
-	return Color(live_tone, LIVE_ALPHA)
+	return Color(live_tone, HAZE_SOLID if haze() and stance(d["tone"]) == "hostile" else LIVE_ALPHA)
 
 
 # Every mark a descriptor draws, static (drawn once) or motion (redrawn as it runs).
@@ -577,7 +598,8 @@ static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 		{"pull": pull})
 
 
-# Hostile areas draw on the stripe layers in white, so the stripe texture shows through.
+# Hostile areas draw on the stripe layers in white, so the stripe texture shows through
+# (under haze, in HAZARD red with no texture).
 static func _area_layer(d: Dictionary, motion: bool) -> String:
 	if stance(d["tone"]) == "hostile":
 		return "stripe_motion" if motion else "stripe"
@@ -585,7 +607,9 @@ static func _area_layer(d: Dictionary, motion: bool) -> String:
 
 
 static func _area_tone(d: Dictionary, alpha: float) -> Color:
-	return Color(1.0, 1.0, 1.0, alpha) if stance(d["tone"]) == "hostile" else Color(d["tone"], alpha)
+	if stance(d["tone"]) != "hostile":
+		return Color(d["tone"], alpha)
+	return Color(Palette.HAZARD, alpha * HAZE_FILL) if haze() else Color(1.0, 1.0, 1.0, alpha)
 
 
 # RR-02 for the ground types: posts every POST_SPACING metres along the outer boundary
@@ -920,6 +944,15 @@ class Painter:
 	var _driven_values := {}
 
 	static var _stripes: ImageTexture
+	static var _haze := -1  # -1 unread, 0 classic, 1 haze
+
+	static func haze_on() -> bool:
+		if _haze < 0:
+			var args := OS.get_cmdline_args()
+			args.append_array(OS.get_cmdline_user_args())
+			_haze = 1 if "--%s=haze" % TELEGRAPH_FLAG in args else 0
+		return _haze == 1
+
 	static var _materials := {}
 	# Materials created so far; a run that has warmed up must not raise it.
 	static var materials_built := 0
@@ -957,7 +990,7 @@ class Painter:
 		var keys := []
 		for fill_class in FILL_STENCIL:
 			for governed in [false, true]:
-				keys.append([fill_class, true, LIVE_PRIORITY if fill_class == "live" else PRIORITY, governed])
+				keys.append([fill_class, not haze_on(), LIVE_PRIORITY if fill_class == "live" else PRIORITY, governed])
 		keys.append(["", false, LINE_UNDER_PRIORITY, false])
 		keys.append(["", false, LINE_PRIORITY, false])
 		return keys
@@ -1134,7 +1167,7 @@ class Painter:
 	func _apply_class(layer: String) -> void:
 		var instance: MeshInstance3D = _layers[layer]
 		var fill_class := _fill_class(layer)
-		instance.material_override = mark_material(fill_class, layer.begins_with("stripe"), LIVE_PRIORITY if fill_class == "live" else _priority(layer), _governed.get(layer, false))
+		instance.material_override = mark_material(fill_class, layer.begins_with("stripe") and not haze_on(), LIVE_PRIORITY if fill_class == "live" else _priority(layer), _governed.get(layer, false))
 		instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
 
 	static func _priority(layer: String) -> int:
@@ -1166,7 +1199,7 @@ class Painter:
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = _priority(layer)
-		if layer.begins_with("stripe"):
+		if layer.begins_with("stripe") and not haze_on():
 			mat.albedo_texture = stripe_texture()
 			mat.uv1_triplanar = true
 			mat.uv1_world_triplanar = true

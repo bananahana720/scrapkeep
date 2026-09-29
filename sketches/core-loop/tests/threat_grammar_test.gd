@@ -54,6 +54,7 @@ func _process(_delta: float) -> bool:
 	_check_fill_classes()
 	_check_line_priority()
 	_check_warm_up()
+	_check_haze()
 	print("threat_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -570,3 +571,101 @@ func _meshes(node: Node3D) -> Dictionary:
 		var mesh: Mesh = layers[layer].mesh
 		out[layer] = [mesh.get_instance_id() if mesh != null else 0, node.painter().vertex_count(layer)]
 	return out
+
+
+# --telegraph=haze: a hostile fill is a thin red haze without stripes; every P1 line, the
+# geometry, contains() and the drive are the classic ones. Fails if a fill draws at or above
+# a P1 line's priority, a fill carries stripes or the wrong alpha, a line changes, or a
+# hit test differs between the modes.
+func _haze_nodes() -> Array:
+	var nodes: Array = [
+		Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0),
+		Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(40.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0),
+		Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(80.0, 0.0, 400.0), Vector3.FORWARD, 11.0, 3.0),
+		Telegraph.wave(_world, _ground, Vector3(120.0, 0.0, 400.0), 10.0, 6.0, 0.5),
+		Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(160.0, 0.0, 400.0), 3.5),
+	]
+	nodes[4].set_flight(Vector3(172.0, 1.5, 388.0), 6.0)
+	return nodes
+
+
+func _hit_map(nodes: Array, progress: float) -> String:
+	var out := ""
+	for node in nodes:
+		if node.type == Threat.Type.WAVE:
+			node.step(0.4)
+		else:
+			node.set_progress(progress)
+		var c: Vector3 = node.descriptor()["centre"]
+		for ix in range(-16, 17):
+			for iz in range(-16, 17):
+				out += "1" if node.contains(c + Vector3(ix * 0.75, 0.0, iz * 0.75)) else "0"
+	return out
+
+
+func _check_haze() -> void:
+	Threat.set_haze(false)
+	var classic_drive = Threat.drive(_descriptor_for(Threat.Type.LANE))
+	var classic_hits := {}
+	var classic_nodes := _haze_nodes()
+	for p in [0.25, 0.5, 0.95]:
+		classic_hits[p] = _hit_map(classic_nodes, p)
+	var classic_marks := {}
+	for i in classic_nodes.size():
+		classic_marks[i] = Threat.all_marks(classic_nodes[i].descriptor())
+		classic_nodes[i].free()
+	Threat.set_haze(true)
+	var hits_same := true
+	var lines_same := true
+	var fills_red := true
+	var fills_seen := 0
+	var no_stripes := true
+	var lines_above := true
+	var alive := true
+	var nodes := _haze_nodes()
+	for p in [0.25, 0.5, 0.95]:
+		hits_same = hits_same and _hit_map(nodes, p) == classic_hits[p]
+		for node in nodes:
+			var layers: Dictionary = node.painter()._layers
+			var fill_top := 0
+			var line_bottom := 1000
+			for layer in layers:
+				var instance: MeshInstance3D = layers[layer]
+				if instance.mesh == null:
+					continue
+				var mat := instance.material_override
+				var priority: int = mat.render_priority
+				if layer.begins_with("stripe"):
+					fills_seen += 1
+					fill_top = maxi(fill_top, priority)
+					no_stripes = no_stripes and mat is ShaderMaterial and not "#define STRIPES" in (mat as ShaderMaterial).shader.code
+					var alpha := _fill_alpha(node, layer)
+					alive = alive and alpha > 0.03 and alpha < 0.5
+				elif layer in ["base", "motion"]:
+					line_bottom = mini(line_bottom, priority)
+			lines_above = lines_above and line_bottom > fill_top
+	for i in nodes.size():
+		for m in Threat.all_marks(nodes[i].descriptor()):
+			var was: Dictionary = {}
+			for c in classic_marks[i]:
+				if c["role"] == m["role"] and c["layer"] == m["layer"]:
+					was = c
+			if was.is_empty():
+				continue
+			if m["role"] in ["area", "fill", "swept", "run"]:
+				var tone: Color = m["tone"]
+				fills_red = fills_red and tone.is_equal_approx(Color(Palette.HAZARD, was["tone"].a * Threat.HAZE_FILL)) \
+					and m["tris"] == was["tris"]
+			else:
+				lines_same = lines_same and m["tone"] == was["tone"] and m["tris"] == was["tris"] and m["layer"] == was["layer"]
+	var live_desc := _descriptor_for(Threat.Type.INSTANT)
+	live_desc["live"] = true
+	var solid_alpha := Threat.fill_tint(live_desc).a
+	var drive_same: bool = Threat.drive(_descriptor_for(Threat.Type.LANE)) == classic_drive
+	_report("haze look", hits_same and lines_same and fills_red and fills_seen >= 8 and no_stripes and lines_above and alive
+			and absf(solid_alpha - Threat.HAZE_SOLID) < 0.001 and drive_same,
+		"contains() over 5 telegraphs x 3 progress samples equals classic (%s); every P1 line mark is unchanged (%s); every fill is HAZARD at %.2f of its classic alpha with the same tris (%s, %d fill layers seen); no fill layer carries stripes (%s); every fill renders under every P1 line (%s); each fill draws visibly at 25/50/95%% (%s); live slag alpha %.2f"
+			% [hits_same, lines_same, Threat.HAZE_FILL, fills_red, fills_seen, no_stripes, lines_above, alive, solid_alpha])
+	for node in nodes:
+		node.free()
+	Threat.set_haze(false)

@@ -21,8 +21,10 @@ const GUN_KEY := "gun_role"
 const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
 const DISCOVERY_KEY := "discovery"
-const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY, "discovery": DISCOVERY_KEY}
-
+const TELEGRAPH_KEY := "telegraph"
+# threat_grammar.gd reads telegraph from the launch args itself, since the static-drawn
+# floor marking has no tuning in reach; the tuning row makes the flag known and shows it.
+const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY, "discovery": DISCOVERY_KEY, "telegraph": TELEGRAPH_KEY}
 
 
 static func mode(tuning) -> String:

@@ -14,7 +14,9 @@ const Palette := preload("res://src/core/palette.gd")
 # control-<still>--<defect> so tools/still_diff.gd compares each with the reference
 # <still>: the whole stripe_motion fill hidden, a 0.4 m band of that fill cut (about a
 # tenth of it), and the static charcoal keyline hidden. The diff budget must fail all
-# three; they run on a driven (E1) build only. "empty" is the ground alone, which the diff
+# three; they run on a driven (E1) build only. --telegraph=haze draws the stills in the
+# haze look (threat_grammar.gd), for a classic-vs-haze contact sheet; the references are
+# classic, so a haze run is compared by eye, not by still_diff. "empty" is the ground alone, which the diff
 # uses to box each telegraph. The same script runs on the build before E1; it reads
 # threat_fill_scale only where that build has it.
 
@@ -49,6 +51,8 @@ func _initialize() -> void:
 			_out = arg.substr(6)
 		elif arg == "--control":
 			_control = true
+		elif arg == "--telegraph=haze":
+			Threat.set_haze(true)
 	if _out == "":
 		push_error("still_capture: --out=<dir> is required")
 		quit(2)
