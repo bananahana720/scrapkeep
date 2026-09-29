@@ -66,15 +66,15 @@ for side in (-1, 1):
         thick = rng.uniform(0.47, 0.64)
         z_a, z_b = sorted((side * outer, side * (outer - thick)))
         front = rng.uniform(-14.95, -14.62)
-        slab(X_BACK, front, y0, y1, z_a, z_b, rng.uniform(0.10, 0.16), 0.72 + 0.05 * k)
+        slab(X_BACK, front, y0, y1, z_a, z_b, rng.uniform(0.10, 0.16), 0.86 + 0.04 * k)
 # Rear skin: five strata across the back wall.
 for k in range(5):
     thick = rng.uniform(0.47, 0.64)
     slab(X_BACK, X_BACK + thick, bands[k], bands[k + 1], -(4.0 - rng.uniform(0, 0.07)), 4.0 - rng.uniform(0, 0.07),
-         rng.uniform(0.10, 0.16), 0.7 + 0.05 * k)
+         rng.uniform(0.10, 0.16), 0.84 + 0.04 * k)
 # Neck over the cabin footprint, Y 6..7.5 (the cap hides its top).
-slab(X_BACK, -14.7, 6.0, 6.75, -3.95, 3.95, 0.12, 0.82)
-slab(X_BACK, -14.78, 6.7, 7.55, -3.9, 3.9, 0.14, 0.8)
+slab(X_BACK, -14.7, 6.0, 6.75, -3.95, 3.95, 0.12, 0.92)
+slab(X_BACK, -14.78, 6.7, 7.55, -3.9, 3.9, 0.14, 0.9)
 
 # Cap: one closed asymmetrical profile, 10 perimeter points, 6 height bands.
 perimeter = [(-19.5, -5.0), (-18.5, -6.3), (-15.4, -5.85), (-12.4, -6.25), (-11.5, -4.2), (-11.9, -0.6),
@@ -116,12 +116,12 @@ for i in range(n):
     crown.append(bm.faces.new((rows[-1][i], rows[-1][j], apex)))
 sides = close(rows)
 for f in under:
-    colour(f, grey(0.5))
+    colour(f, grey(0.66))
 for f in crown:
     colour(f, grey(1.0 * rng.uniform(0.96, 1.02), 1.0))
 for k, f in enumerate(sides):
     band = k // n
-    lit = 0.55 + 0.09 * band
+    lit = 0.72 + 0.05 * band
     colour(f, grey(lit * rng.uniform(0.94, 1.03), 0.9 if band >= 4 else 0.3))
 
 bmesh_ops_normals = __import__('bmesh').ops.recalc_face_normals(bm, faces=bm.faces[:])
