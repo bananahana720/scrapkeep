@@ -93,11 +93,22 @@ func _run() -> void:
 	_check(crack.visible, "amber: the crack glyph shows")
 	brute.set_tint("slate")
 	_check(not mat.emission_enabled and not crack.visible and brute.tint_state == "slate", "back to slate: the switch follows tint_state, no light, no glyph")
-	# Combat drives the state from punch_now(); one physics tick must agree with the setter.
+	# Combat drives the state from punch_now(); one _tint() pass must agree with it, and the
+	# cue must follow: amber lights the rim, slate is dark (the switch reads tint_state only).
+	var combat = game.ctx.spawner
 	brute.set_tint("")
-	await physics_frame
-	await physics_frame
-	_check(brute.tint_state in ["", "amber", "slate"], "combat still writes tint_state (%s)" % brute.tint_state)
+	brute.plating = 40.0
+	for open_case in [true, false]:
+		# Shred the whole plate away (punch 0 then meets plating 0: amber), or leave it whole (slate).
+		if open_case:
+			combat._shred[brute.get_instance_id()] = {"amount": 1.0e9, "cap": 1.0e9, "idle": 0.0}
+		else:
+			combat._shred.erase(brute.get_instance_id())
+		combat._tint()
+		var expect: String = "amber" if combat.punch_now() >= combat.plating_of(brute) else "slate"
+		_check(brute.tint_state == expect, "combat _tint writes tint_state (%s, expected %s)" % [brute.tint_state, expect])
+		_check(mat.emission_enabled == (brute.tint_state == "amber"), "the plate light follows the state combat wrote (%s)" % brute.tint_state)
+	_check(brute.tint_state == "slate" and not mat.emission_enabled, "combat closed the plate again and the light went out")
 
 	# Warden: the jaw plates take the frame mask, a rim on every face of the box.
 	var warden: Node3D = game.ctx.spawner.spawn_enemy("warden", Vector3(40, 30, 0))
@@ -123,5 +134,24 @@ func _run() -> void:
 			_check(is_zero_approx(_added(m, 0.5, 0.5)) and is_zero_approx(_added(m, 0.1, 0.9)), "mind hand plate bone: dark mask, no face light in amber")
 			break
 	_check(found, "mind hand plate bone carries a mask material")
+	# Miniboss and vault: BoxMesh plates take the frame mask, so amber still differs from slate.
+	for kind in ["miniboss", "vault"]:
+		var boxed: Node3D = game.ctx.spawner.spawn_enemy(kind, Vector3(120, 30, 0))
+		await process_frame
+		var bmat: StandardMaterial3D = null
+		for mi in boxed.find_children("*", "MeshInstance3D", true, false):
+			var bm := (mi as MeshInstance3D).material_override as StandardMaterial3D
+			if bm != null and bm.emission_operator == BaseMaterial3D.EMISSION_OP_MULTIPLY:
+				bmat = bm
+				break
+		_check(bmat != null, "%s carries a plate material" % kind)
+		if bmat != null:
+			boxed.set_tint("slate")
+			var b_slate := _added(bmat, 0.5 / 24.0, 0.25)
+			boxed.set_tint("amber")
+			var b_edge := _added(bmat, 0.5 / 24.0, 0.25)
+			var b_face := _added(bmat, 1.0 / 6.0, 0.25)
+			_check(is_zero_approx(b_slate) and b_edge > 0.0 and is_zero_approx(b_face) and bmat.albedo_color == Enemy.PLATE_CLOSED,
+				"%s: amber lights the plate rim (%.2f), not the face (%.2f); slate is dark" % [kind, b_edge, b_face])
 	print("plate_cue_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)

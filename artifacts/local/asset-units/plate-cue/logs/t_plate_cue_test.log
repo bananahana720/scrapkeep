@@ -9,10 +9,18 @@ PASS slate: no added light on any plate vertex
 PASS draws per brute unchanged across states (3)
 PASS amber: the crack glyph shows
 PASS back to slate: the switch follows tint_state, no light, no glyph
-PASS combat still writes tint_state ()
+PASS combat _tint writes tint_state (amber, expected amber)
+PASS the plate light follows the state combat wrote (amber)
+PASS combat _tint writes tint_state (slate, expected slate)
+PASS the plate light follows the state combat wrote (slate)
+PASS combat closed the plate again and the light went out
 PASS warden jaw: amber lights the face edge (1.80) and not the face centre (0.00)
 PASS warden jaw keeps the resting plate albedo in amber
 PASS warden jaw: slate adds no light
 PASS mind hand plate bone: dark mask, no face light in amber
 PASS mind hand plate bone carries a mask material
+PASS miniboss carries a plate material
+PASS miniboss: amber lights the plate rim (1.80), not the face (0.00); slate is dark
+PASS vault carries a plate material
+PASS vault: amber lights the plate rim (1.80), not the face (0.00); slate is dark
 plate_cue_test: PASS

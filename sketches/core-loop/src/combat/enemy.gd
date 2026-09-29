@@ -322,8 +322,11 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 
 # A tinted material for a plating mesh, registered so set_tint recolours it.
 # `rim_mask` is the emission mask: rim_frame_mask() for BoxMesh plates, a mesh-specific
-# mask where the mesh carries its own UVs, or the dark default (no plate-face light).
+# mask where the mesh carries its own UVs. With no mask the plates are BoxMesh (miniboss,
+# vault), so they get the frame mask; only the mind hand's round bone stays dark.
 func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
+	if rim_mask == null and not _plates_are_round():
+		rim_mask = rim_frame_mask()
 	var mat := Palette.solid(PLATE_CLOSED)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
@@ -334,6 +337,12 @@ func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
 	_paint_plate(mat, PLATE_CLOSED, false)
 	_tint_materials.append(mat)
 	return mat
+
+
+# The mind hand's plate bone is a cylinder; the box frame mask would stripe it.
+func _plates_are_round() -> bool:
+	var script := get_script() as Script
+	return script != null and script.resource_path.get_file() == "mind_hand.gd"
 
 
 # Plating carries its read in light, not just paint, so it survives distance and shade:
