@@ -30,6 +30,28 @@ export function testScripts(directory) {
     .map((name) => "res://tests/" + name);
 }
 
+// A test whose pass or fail reads a wall-clock measurement (a CPU or frame-time cap, a
+// real-time freeze) declares it in a comment among its first lines: "# smoke: solo". The
+// runner runs those files one at a time after the parallel batch, so load from sibling
+// tests cannot push the measurement over its cap. Only the head of the file is read, so
+// a mention further down (or in a string) does not opt a test in.
+const SOLO_MARKER = /^#\s*smoke:\s*solo\b/;
+const MARKER_LINES = 5;
+
+export function isSolo(source) {
+  return source
+    .split("\n", MARKER_LINES)
+    .some((line) => SOLO_MARKER.test(line.replace(/\r$/, "")));
+}
+
+export function isSoloScript(directory, script) {
+  try {
+    return isSolo(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
+  } catch {
+    return false;
+  }
+}
+
 // Each headless Godot is one mostly single-threaded process, so tests run side by side.
 // The pool sizes itself to the idle cores (other agents share this machine), keeps at
 // least 2 and at most 8, and SMOKE_JOBS overrides it.
@@ -165,15 +187,21 @@ async function main() {
   const started = Date.now();
   const results = [];
   const jobs = [];
+  const solo = [];
   for (const directory of sketches) {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
     results.push(runSync(`${name} import`, [...base, "--import"]));
     jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
-    for (const script of testScripts(directory))
-      jobs.push({ label: `${name} ${script}`, args: [...base, "--script", script] });
+    for (const script of testScripts(directory)) {
+      const job = { label: `${name} ${script}`, args: [...base, "--script", script] };
+      (isSoloScript(directory, script) ? solo : jobs).push(job);
+    }
   }
   results.push(...(await pool(jobs, width)));
+  const soloStarted = Date.now();
+  for (const job of solo) results.push(await runAsync(job.label, job.args));
+  const soloSeconds = (Date.now() - soloStarted) / 1000;
   const ok = results.every((result) => result.ok);
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
   console.log(`slowest ${slowest.length}:`);
@@ -185,7 +213,7 @@ async function main() {
     for (const line of result.skips.slice(0, 3)) console.log(`    ${line}`);
   }
   console.log(
-    `sketch:smoke ${ok ? "pass" : "fail"}: ${sketches.length} sketches, ${results.length} runs, ${width} at a time, ${((Date.now() - started) / 1000).toFixed(0)}s. Headless boot and sketch tests only; feel needs Andrew's play.`,
+    `sketch:smoke ${ok ? "pass" : "fail"}: ${sketches.length} sketches, ${results.length} runs, ${width} at a time, ${solo.length} solo (${soloSeconds.toFixed(0)}s), ${((Date.now() - started) / 1000).toFixed(0)}s. Headless boot and sketch tests only; feel needs Andrew's play.`,
   );
   process.exit(ok ? 0 : 1);
 }

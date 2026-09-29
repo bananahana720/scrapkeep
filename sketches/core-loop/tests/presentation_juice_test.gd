@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: real-time hit-stop freeze under 100 ms)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
