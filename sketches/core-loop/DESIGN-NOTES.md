@@ -1170,3 +1170,13 @@ First slice of `design-v3/research/build-systems/BUILD-SYSTEMS.md` ("Build G fir
 - **Calm delivery.** Under the flag a pick that falls due while the ball is airborne and outside the bay is held in `_picks_waiting` and opens on the first grounded (or in-bay) physics frame. A skipped bay at stage 1's clear lands mid-launch, so the second pick arrives on landing in stage 2, not before entering it. Flag off, the offer is immediate as before (measured on the base commit: offers at depths 1, 2, 3, 3 for the test script, and one offer in the air).
 - **Outside the named files.** `tests/tuning_flags_test.gd` gained the three rows, since it fails on any `Tuning.FLAGS` row it does not list. `workshop.gd` and `tree_pick.gd` are unchanged: the pick screen reads `tree.offered` and `tree.pending`, which already honour the cap. `tree_crumb.gd` still draws four levels of dots.
 - **Tests.** `tests/world_one_G_test.gd`. Open for play: whether the on-landing delivery feels calm, and whether the crumb should show two levels.
+
+## Rivet's mass verb, Mass-R (2026-09-29)
+
+Slice Mass-R of `design-v3/research/build-systems/BUILD-SYSTEMS.md`. No game code changes: the premise held. `combat.gd` `punch_of()` already returns `(base + force * k) * heft() * knob`, so a sprint ram and a ground smash carry mass once, through `run.heft()` = 1 + mass / 450 (+0.2 per part). This slice makes that contribution visible and pins it. Nothing multiplies mass into damage again, and `rivet.gd`, `combat.gd`, `augments.gd` and `player_ball.gd` are untouched; the Rivet row asks for no tree change in this slice (Second Wind's air-control cancel belongs to R6).
+
+- **Fixture.** `tests/world_one_mass_route.gd` holds one route: the same 30 m/s ram (sprinting) and smash (slam kind) on a bare target at mass 0, 450 and 990, and a 30-frame side-input turn at 14 m/s. It reads results from the real `combat`; the formula is not restated there.
+- **Measured** (Rivet, no parts, sprint knob 1.0): heft 1.00 / 2.00 / 3.20; ram 66.25 / 132.50 / 212.00; smash 36.00 / 72.00 / 115.20. Mass 990 over mass 0 is x3.20 on both, not x10.24. The turn heading is -0.6123 rad at all three masses.
+- **Flag.** No new flag: the rows are identical with `--world-one-builds` on and off, because the slice adds no behaviour.
+- **Test.** `tests/world_one_mass_r_test.gd` computes the expected punch from `Combat.STRIKE_DAMAGE` and `run.heft()`, and fails if damage rises by more than heft, drops out of order, or turning moves with mass. A scratch edit making `punch_of` multiply heft twice fails it three ways.
+- **Open for play:** whether x3.2 at mass 990 reads as weight; mass 990 is BUILD-SYSTEMS' proposed saturation point, not a game value.
