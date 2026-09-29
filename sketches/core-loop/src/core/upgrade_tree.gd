@@ -26,6 +26,11 @@ const Sticky := preload("res://src/combat/sticky.gd")
 
 const DEPTHS := 4
 const SIZE := 30
+# The world-one profile (--world-one-builds=on): depth 1 and depth 2 only, six nodes a pilot
+# (indices 0 to 5 of the same heap-ordered list), and the run's picks are the start and the
+# workshop after stage 1. Deeper nodes stay in the data and are never offered.
+const WORLD_ONE_DEPTHS := 2
+const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
@@ -77,6 +82,9 @@ var class_id := ""
 var picks: Array[String] = []
 # How many picks the run has opened so far: the start, then each workshop visit.
 var allowed := 0
+# The most picks a run may take: DEPTHS, or WORLD_ONE_DEPTHS under the world-one profile.
+# world.gd sets it from the tuning flag; a new run leaves it alone.
+var max_depth := DEPTHS
 var events
 
 var _knobs := {}
@@ -137,14 +145,21 @@ static func icon_of(for_class: String, node_id: String) -> Dictionary:
 
 
 # Everything wrong with a class's tree, as sentences; empty when it is sound.
-static func problems(for_class: String) -> Array[String]:
+# `world_one` validates the two-depth profile: the tree is still the fixed 30 nodes, but only
+# its first six are offered, so only those six are held to the node rules and to the proc-loop
+# check (their leaves are the depth-2 nodes).
+static func problems(for_class: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
 	var list := nodes(for_class)
 	if list.size() != SIZE:
 		out.append("%s has %d nodes, not %d" % [for_class, list.size(), SIZE])
 	var seen := {}
 	var bus: Script = GameEvents
-	for leaf in range(list.size() - 16, list.size()):
+	var first_leaf := list.size() - 16
+	if world_one:
+		list = list.slice(0, WORLD_ONE_SIZE)
+		first_leaf = WORLD_ONE_SIZE - 4
+	for leaf in range(first_leaf, list.size()):
 		var loop := _proc_loop(for_class, path_to(for_class, list[leaf].get("id", "")))
 		if loop != "":
 			out.append("%s: the build ending in %s can loop on %s" % [for_class, list[leaf].get("id", ""), loop])
@@ -229,7 +244,7 @@ func reset(for_class: String) -> void:
 
 # A checkpoint (class select, or a workshop visit) opens the next pick and offers it.
 func open_checkpoint() -> void:
-	if allowed >= DEPTHS or class_id == "":
+	if allowed >= max_depth or class_id == "":
 		return
 	allowed += 1
 	if pending():
@@ -238,13 +253,13 @@ func open_checkpoint() -> void:
 
 
 func pending() -> bool:
-	return picks.size() < allowed and picks.size() < DEPTHS
+	return picks.size() < allowed and picks.size() < max_depth
 
 
 # The two choices at this depth for the path this run has taken: the children of the
 # pick one level up. A depth already picked answers with the pair it offered.
 func offered(for_class: String, depth: int) -> Array:
-	if for_class != class_id or depth < 1 or depth > DEPTHS or depth > picks.size() + 1:
+	if for_class != class_id or depth < 1 or depth > max_depth or depth > picks.size() + 1:
 		return []
 	var list := nodes(for_class)
 	var pair := [0, 1]
