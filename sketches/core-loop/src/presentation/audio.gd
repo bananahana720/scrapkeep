@@ -1058,8 +1058,9 @@ func _on_beacon(fraction: float) -> void:
 # A hit. Flag off it is the base sound for the whole hit. In armour mode the hull's own
 # damage decides: an armour-only hit already sounded as the plates shedding (armor_hit
 # fires first), so it stays silent here, and a hit turned aside entirely plays the soft
-# deflect tick, and a hit that reached the hull is as loud as the hull damage it did. hull_damage only grows within a run, so a smaller reading is
-# a new run and the count starts again.
+# deflect tick, and a hit that reached the hull is as loud as the hull damage it did.
+# hull_damage only grows within a run, so a smaller reading is a new run and the count
+# starts again.
 func _on_player_hit(amount: float, _source: String) -> void:
 	if _armor_on():
 		var hull := float(ctx.run.metrics.get("hull_damage", 0.0))
