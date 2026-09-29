@@ -235,6 +235,124 @@ const THREAT_ROWS := {
 	"threat_lane": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "threat_hum", "hud": "", "objective": "", "priority": 2},
 }
 
+# v3 attack reads, prerequisite A (design-v3/research/attack-reads/ATTACK-READS.md)
+# One row per attack ID in that document (E enemy, W Warden, B Brindle, P pilot), so the
+# body pose, the sounds, the codex and the floor support of an attack read one fact. The
+# rows are a frozen contract: nothing consumes them yet, and an actor reads its row
+# instead of carrying its own colour, cue or label.
+#
+# label      the codex wording, not floating combat text.
+# threat     the THREAT_ROWS key the attack's committed telegraph uses, or "" when it has
+#            none (player attacks, a non-damaging read, a crater with no advance warning).
+#            A key, not Threat.Type, because roster.gd loads the threat grammar.
+# glyph      a SHAPES entry. A pilot's own attacks wear their class shape (ClassDef).
+# color      the allegiance colour: HAZARD for hostile, the class colour for a pilot's own
+#            (ClassDef), a palette colour for a neutral read (harmless lift is bone).
+# pose       the presentation key for the attacker's body. It picks a pose, never a timer.
+# warn       the cue id at wind-up start; release: the cue id on the live transition. Ids
+#            are reserved names Audio bakes later, "atk_<id>_warn" and "atk_<id>_release";
+#            NONE where the document gives that beat no cue.
+# floor      L thin boundary, H haze, B both, none no floor marking.
+# group      enemy | warden | brindle | pilot. owner_kind and owner name the voice by
+#            reference: a roster id (Roster.ROWS), a faction (Roster.FACTIONS), the boss,
+#            or a class id (ClassDef) or "any" for an all-pilot row. No palette or motif
+#            is copied here. allegiance: hostile | player | neutral.
+# open       the fields still holding a stand-in the document leaves undecided. A field
+#            equal to PLACEHOLDER is always listed; a concrete stand-in may be too.
+const NONE := "none"
+const PLACEHOLDER := "tbd"
+const ATTACK_GROUPS := ["enemy", "warden", "brindle", "pilot"]
+const ATTACK_FIELDS := ["label", "threat", "glyph", "color", "pose", "warn", "release", "floor"]
+const FLOOR_MODES := ["L", "H", "B", NONE]
+const ATTACK_ROWS := {
+	"E01": {"label": "Chaser lunge", "group": "enemy", "owner_kind": "roster", "owner": "chaser", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e01_brace_back", "warn": "atk_e01_warn", "release": "atk_e01_release", "floor": "B", "open": []},
+	"E02": {"label": "Lobber shell", "group": "enemy", "owner_kind": "roster", "owner": "lobber", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
+		"pose": "e02_tube_raise", "warn": "atk_e02_warn", "release": "atk_e02_release", "floor": "B", "open": []},
+	"E03": {"label": "Miniboss leap slam", "group": "enemy", "owner_kind": "roster", "owner": "miniboss", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e03_leap_spread", "warn": "atk_e03_warn", "release": "atk_e03_release", "floor": "B", "open": []},
+	"E04": {"label": "Miniboss charge", "group": "enemy", "owner_kind": "roster", "owner": "miniboss", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e04_charge_close", "warn": "atk_e04_warn", "release": "atk_e04_release", "floor": "B", "open": []},
+	"E05": {"label": "Mag trapper pit", "group": "enemy", "owner_kind": "roster", "owner": "mag_trapper", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e05_stack_hoist", "warn": "atk_e05_warn", "release": "atk_e05_release", "floor": "B", "open": []},
+	"E06": {"label": "Hooker harpoon", "group": "enemy", "owner_kind": "roster", "owner": "hooker", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e06_harpoon_draw", "warn": "atk_e06_warn", "release": "atk_e06_release", "floor": "L", "open": []},
+	"E07": {"label": "Netcaster air net", "group": "enemy", "owner_kind": "roster", "owner": "netcaster", "allegiance": "hostile", "threat": "threat_instant", "glyph": "star", "color": Palette.HAZARD,
+		"pose": "e07_net_umbrella", "warn": "atk_e07_warn", "release": "atk_e07_release", "floor": "L", "open": []},
+	"E08": {"label": "Bola throw", "group": "enemy", "owner_kind": "roster", "owner": "bola_thrower", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
+		"pose": "e08_loop_raise", "warn": "atk_e08_warn", "release": "atk_e08_release", "floor": "B", "open": []},
+	"E09": {"label": "Plated brute slam", "group": "enemy", "owner_kind": "roster", "owner": "plated_brute", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e09_pads_raise", "warn": "atk_e09_warn", "release": "atk_e09_release", "floor": "B", "open": []},
+	"E10": {"label": "Deflector brace", "group": "enemy", "owner_kind": "roster", "owner": "deflector", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e10_dish_wall", "warn": "atk_e10_warn", "release": "atk_e10_release", "floor": "L", "open": []},
+	"E11": {"label": "Winch drone pull", "group": "enemy", "owner_kind": "roster", "owner": "winch_drone", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e11_cable_guide", "warn": "atk_e11_warn", "release": "atk_e11_release", "floor": "L", "open": []},
+	"E12": {"label": "Gyro jammer field", "group": "enemy", "owner_kind": "roster", "owner": "gyro_jammer", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e12_hoops_planes", "warn": "atk_e12_warn", "release": "atk_e12_release", "floor": "B", "open": []},
+	"E13": {"label": "Swatter swing", "group": "enemy", "owner_kind": "roster", "owner": "swatter", "allegiance": "hostile", "threat": "threat_instant", "glyph": "chevron", "color": Palette.HAZARD,
+		"pose": "e13_paddle_side", "warn": "atk_e13_warn", "release": "atk_e13_release", "floor": "B", "open": []},
+	"E14": {"label": "Ramp flipper", "group": "enemy", "owner_kind": "roster", "owner": "ramp_flipper", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e14_lip_raise", "warn": "atk_e14_warn", "release": "atk_e14_release", "floor": "B", "open": []},
+	"E15": {"label": "Catch trap", "group": "enemy", "owner_kind": "roster", "owner": "catch_trap", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e15_cup_splay", "warn": "atk_e15_warn", "release": "atk_e15_release", "floor": "B", "open": []},
+	"E16": {"label": "Reactor relic eruption", "group": "enemy", "owner_kind": "roster", "owner": "reactor_relic", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e16_vents_open", "warn": "atk_e16_warn", "release": "atk_e16_release", "floor": "B", "open": []},
+	"E17": {"label": "Swarm formation dive", "group": "enemy", "owner_kind": "roster", "owner": "swarm_remnant", "allegiance": "hostile", "threat": "threat_lane", "glyph": "arrow", "color": Palette.HAZARD,
+		"pose": "e17_rack_bow", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
+	"E18": {"label": "Mind hand strike", "group": "enemy", "owner_kind": "roster", "owner": "mind_hand", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e18_elbow_telescope", "warn": "atk_e18_warn", "release": "atk_e18_release", "floor": "L", "open": []},
+	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
+	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "w02_cells_retract", "warn": "atk_w02_warn", "release": "atk_w02_release", "floor": "B", "open": []},
+	"W03": {"label": "Hive guard dive", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_lane", "glyph": "arrow", "color": Palette.HAZARD,
+		"pose": "w03_cells_direct", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
+	"W04": {"label": "Mind Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "w04_mast_telescope", "warn": "atk_w04_warn", "release": "atk_w04_release", "floor": "B", "open": []},
+	"W05": {"label": "Mind Warden magnet tug", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_lane", "glyph": "chevron", "color": Palette.HAZARD,
+		"pose": "w05_arm_swing", "warn": "atk_w05_warn", "release": "atk_w05_release", "floor": "L", "open": []},
+	"W06": {"label": "Mind Warden adaptation", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "neutral", "threat": "", "glyph": "core", "color": Palette.SAND,
+		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": []},
+	"W07": {"label": "Caught-pulse crater", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "w07_crater_bowl", "warn": NONE, "release": "atk_w07_release", "floor": "B", "open": []},
+	"B01": {"label": "Crane sweep", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_wave", "glyph": "wave", "color": Palette.HAZARD,
+		"pose": "b01_crane_windback", "warn": "atk_b01_warn", "release": "atk_b01_release", "floor": "B", "open": []},
+	"B02": {"label": "Furnace slag", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "b02_outlets_open", "warn": "atk_b02_warn", "release": "atk_b02_release", "floor": "B", "open": []},
+	"B03": {"label": "Scuttle charge", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "b03_prow_dip", "warn": "atk_b03_warn", "release": "atk_b03_release", "floor": "B", "open": []},
+	"B04": {"label": "Drone deployment", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "neutral", "threat": "", "glyph": "diamond", "color": Palette.AMBER,
+		"pose": "b04_hatch_open", "warn": "atk_b04_warn", "release": NONE, "floor": "L", "open": []},
+	"B05": {"label": "Ejection chase", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "neutral", "threat": "", "glyph": "arrow", "color": Palette.BRASS,
+		"pose": "b05_seat_compress", "warn": NONE, "release": "atk_b05_release", "floor": "none", "open": ["color"]},
+	"P01": {"label": "Arc caster volley", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
+		"pose": "p01_prongs_aim", "warn": NONE, "release": "atk_p01_release", "floor": "L", "open": []},
+	"P02": {"label": "Discharge and plant burst", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
+		"pose": "p02_coils_open", "warn": "atk_p02_warn", "release": "atk_p02_release", "floor": "L", "open": []},
+	"P03": {"label": "Arc slam", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
+		"pose": "p03_prongs_down", "warn": "atk_p03_warn", "release": "atk_p03_release", "floor": "L", "open": []},
+	"P04": {"label": "Rapid laser", "group": "pilot", "owner_kind": "class", "owner": "runner_gunner", "allegiance": "player", "threat": "", "glyph": "chevron", "color": ClassDef.RIVET_COLOR,
+		"pose": "p04_barrel_shoulder", "warn": NONE, "release": "atk_p04_release", "floor": "L", "open": []},
+	"P05": {"label": "Overdrive blast", "group": "pilot", "owner_kind": "class", "owner": "runner_gunner", "allegiance": "player", "threat": "", "glyph": "chevron", "color": ClassDef.RIVET_COLOR,
+		"pose": "p05_vanes_flare", "warn": "atk_p05_warn", "release": "atk_p05_release", "floor": "L", "open": []},
+	"P06": {"label": "Sprint ram and skid", "group": "pilot", "owner_kind": "class", "owner": "runner_gunner", "allegiance": "player", "threat": "", "glyph": "chevron", "color": ClassDef.RIVET_COLOR,
+		"pose": "p06_brace_forward", "warn": "atk_p06_warn", "release": "atk_p06_release", "floor": "L", "open": []},
+	"P07": {"label": "Sticky charge", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p07_payload_raise", "warn": "atk_p07_warn", "release": "atk_p07_release", "floor": "B", "open": []},
+	"P08": {"label": "Detonation line", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p08_detonator_stretch", "warn": "atk_p08_warn", "release": "atk_p08_release", "floor": "B", "open": []},
+	"P09": {"label": "Demo slam mini-charges", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p09_rack_open", "warn": "atk_p09_warn", "release": "atk_p09_release", "floor": "B", "open": []},
+	"P10": {"label": "Phantom blink cut", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p10_tool_blink", "warn": NONE, "release": "atk_p10_release", "floor": "L", "open": []},
+	"P11": {"label": "Ram, crush and stomp", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "arrow", "color": Palette.SAND,
+		"pose": "p11_cockpit_tilt", "warn": "atk_p11_warn", "release": "atk_p11_release", "floor": "L", "open": ["glyph", "color"]},
+	"P12": {"label": "Batted shell and pins", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "ring", "color": Palette.AMBER,
+		"pose": "p12_trail_stretch", "warn": NONE, "release": "atk_p12_release", "floor": "B", "open": []},
+	"P13": {"label": "Pilot upgrade attacks", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "diamond", "color": Palette.SAND,
+		"pose": PLACEHOLDER, "warn": PLACEHOLDER, "release": PLACEHOLDER, "floor": PLACEHOLDER, "open": ["glyph", "color", "pose", "warn", "release", "floor"]},
+}
+
 # Codex categories: each has its own colour, glyph shape and label, so the Tab codex
 # pages, a discovery banner and a found-list line all dress a category the same way.
 # npc and coop are reserved: the demo is solo, but the schema already carries them.
@@ -275,6 +393,61 @@ static func objective(kind: String, fields := {}) -> String:
 
 static func category(id: String) -> Dictionary:
 	return CODEX_CATEGORIES.get(id, CODEX_CATEGORIES["build"])
+
+
+# v3 attack reads accessors: read a row by attack ID; an unknown ID reads as empty.
+static func has_attack(id: String) -> bool:
+	return ATTACK_ROWS.has(id)
+
+
+static func attack_row(id: String) -> Dictionary:
+	return ATTACK_ROWS.get(id, {})
+
+
+# Attack IDs in document order, optionally only one group.
+static func attack_ids(group := "") -> Array[String]:
+	var ids: Array[String] = []
+	for id in ATTACK_ROWS:
+		if group == "" or ATTACK_ROWS[id]["group"] == group:
+			ids.append(id)
+	return ids
+
+
+static func attack_label(id: String) -> String:
+	return String(attack_row(id).get("label", ""))
+
+
+static func attack_threat(id: String) -> String:
+	return String(attack_row(id).get("threat", ""))
+
+
+static func attack_glyph(id: String) -> String:
+	return String(attack_row(id).get("glyph", "none"))
+
+
+static func attack_color(id: String) -> Color:
+	return attack_row(id).get("color", Palette.SAND)
+
+
+static func attack_pose(id: String) -> String:
+	return String(attack_row(id).get("pose", ""))
+
+
+static func attack_warn_cue(id: String) -> String:
+	return String(attack_row(id).get("warn", NONE))
+
+
+static func attack_release_cue(id: String) -> String:
+	return String(attack_row(id).get("release", NONE))
+
+
+static func attack_floor(id: String) -> String:
+	return String(attack_row(id).get("floor", NONE))
+
+
+# The fields of a row still on a stand-in value.
+static func attack_open(id: String) -> Array:
+	return attack_row(id).get("open", [])
 
 
 # v2 W1 UI
