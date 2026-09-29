@@ -33,11 +33,54 @@ func _configure(threat: float) -> void:
 	rest_seconds = 3.5
 
 
+# C18 dressing (enemy_winch_drone.glb). The counter's capsule crew, head, ears and tag and the
+# base's rotor disc, mast and brass drum are replaced by the glb's crew under one flat rotor with
+# the drum hung low on a central hanger, the cable's exit clear ahead of it. The rotor keeps its
+# height and radius, and _pose below still turns it about its own axis each physics tick, the
+# existing clock. The lane the mechanic commits is _commit below, untouched. The glb is read once;
+# every drone shares its meshes and adds only its own flashing body material as a surface
+# override. The resting body is the Fleet oxide _add_capsule already set (RUST), so the hit flash
+# and the event colour are unchanged.
+static var _shared: Array = []
+
+
 func _build_tool() -> void:
-	_rotor = _cylinder(1.6, 0.08, Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 0.9, 0.0))
-	_cylinder(0.08, 0.9, Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 0.45, 0.0))
-	var drum := _cylinder(0.45, 0.9, Palette.BRASS, Vector3(0.0, -CREW_HALF - 0.2, 0.0), 0.2)
-	drum.rotation.z = PI * 0.5
+	_crew.free()
+	_crew = null
+	var dressing := Node3D.new()
+	dressing.name = "WinchBody"
+	add_child(dressing)
+	for part in _parts():
+		var mi := MeshInstance3D.new()
+		mi.mesh = part.mesh
+		mi.transform = part.xform
+		if part.rotor:
+			mi.name = "WinchRotor"
+			_rotor = mi
+			add_child(mi)
+		else:
+			mi.name = "Body"
+			mi.set_surface_override_material(part.body, _material)
+			dressing.add_child(mi)
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_winch_drone.glb") as PackedScene).instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var body := 0
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				body = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "rotor": mi.name.begins_with("WinchRotor")})
+	scene.free()
+	return _shared
 
 
 func _wants_attack(to_ball: Vector3) -> bool:
