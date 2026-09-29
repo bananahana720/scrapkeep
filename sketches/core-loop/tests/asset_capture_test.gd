@@ -224,6 +224,18 @@ func _run() -> void:
 	_check(ground.material_override.albedo_texture != null and part_a.material_override.albedo_texture != null, "subject-context-depth: revert restores the lit materials")
 	_check(Cap.MODES.has("subject-context-depth") and Cap.MODES.slice(0, 3) == ["lit", "subject-black", "assembly-black"], "modes: the three original modes keep their place")
 
+	# clay: a lit override on one subtree, flat neutral and shaded, every other mesh left alone.
+	var clay_undo := Cap.apply_clay([subject])
+	var clay := part_a.material_override as StandardMaterial3D
+	_check(clay != null and clay.shading_mode == BaseMaterial3D.SHADING_MODE_PER_PIXEL and clay.albedo_color == Cap.CLAY and clay.albedo_texture == null \
+		and clay.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and not clay.emission_enabled and not clay.vertex_color_use_as_albedo and part_b.material_override == clay and glass.material_override == clay, "clay: every mesh under the subtree takes one flat neutral shaded material")
+	_check(ground.material_override.albedo_texture != null, "clay: a mesh outside the subtree keeps its material")
+	Cap.revert_clay(clay_undo)
+	_check(part_a.material_override.albedo_texture != null and glass.material_override.albedo_texture != null, "clay: revert restores the materials")
+
+	# --exposure: overrides the scene's lit exposure; absent (-1) keeps it.
+	_check(is_equal_approx(Cap.lit_exposure_for(1.1, 1.0), 1.0) and is_equal_approx(Cap.lit_exposure_for(1.1, -1.0), 1.1), "exposure: the override replaces the scene value; without it the scene value stays")
+
 	# Orthographic family camera and the isolate filter.
 	var box := AABB(Vector3(-175, -20, 60), Vector3(16, 40, 120))
 	var front := Cams.ortho_view("ortho-front", box)
