@@ -86,6 +86,31 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
+# C15c finish: the wash was the state tint, not the paint. enemy.gd burns the class colour
+# through every plated enemy at full strength (body 0.9, plates 1.8 over an albedo lifted to
+# mint), which on this brute's broad slab and torso reads as one pale block. The state read
+# survives (the emission still turns on and off with the punch, and the open crack glyph
+# carries "breaks now"); the brute wears it as a rim of light, not a flood.
+const AMBER_BODY_GLOW := 0.03
+const AMBER_PLATE_GLOW := 0.08
+const AMBER_PLATE_LIFT := 0.03
+
+
+func set_tint(state: String) -> void:
+	super.set_tint(state)
+	for mat in _tint_materials:
+		var plate := mat as StandardMaterial3D
+		if tint_state == "amber":
+			plate.albedo_color = PLATE_CLOSED.lerp(rim_color, AMBER_PLATE_LIFT)
+			plate.emission_energy_multiplier = AMBER_PLATE_GLOW
+
+
+func _apply_rest_look() -> void:
+	super._apply_rest_look()
+	if _material != null and _material.emission_enabled:
+		_material.emission_energy_multiplier = AMBER_BODY_GLOW
+
+
 func _wants_attack(to_ball: Vector3) -> bool:
 	return to_ball.length() <= attack_range and is_on_floor()
 

@@ -134,6 +134,7 @@ func _run() -> void:
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_shape(brute)
 	_check_paint(brute)
+	_check_wash(brute)
 	_check_strip(brute)
 	print("enemy_plated_brute_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)
@@ -189,6 +190,33 @@ func _check_paint(brute: Node3D) -> void:
 	brute._update_flash(0.0)
 	_check(second._material != brute._material and brute._material.albedo_color.is_equal_approx(Palette.RUST),
 		"a second brute's flash leaves this one's body unlit")
+
+
+# C15c: the mint wash. With the class-colour state tint on (the punch beats the plate) the
+# body and the plate must keep the sheet's Fleet roles: oxide body, charcoal-oxide plate. Each
+# surface's added light (emission times energy) stays a rim, and the resting plate albedo stays
+# near the closed-plate charcoal. Failing values before the fix: body 0.9 energy, plate 1.8.
+func _check_wash(brute: Node3D) -> void:
+	var rim: Color = brute.rim_color
+	var plate_mat := brute._tint_materials[0] as StandardMaterial3D
+	for state in ["amber", "slate"]:
+		brute.set_tint(state)
+		var body_add: Color = (rim * brute._material.emission_energy_multiplier) if brute._material.emission_enabled else Color(0, 0, 0)
+		var plate_add: Color = (rim * plate_mat.emission_energy_multiplier) if plate_mat.emission_enabled else Color(0, 0, 0)
+		var body_top := maxf(body_add.r, maxf(body_add.g, body_add.b))
+		var plate_top := maxf(plate_add.r, maxf(plate_add.g, plate_add.b))
+		print("  %s: body added light %.2f, plate added light %.2f, plate albedo %s" % [state, body_top, plate_top, plate_mat.albedo_color.to_html(false)])
+		_check(body_top <= 0.05, "%s tint: body added light %.2f <= 0.05, not a mint flood" % [state, body_top])
+		_check(plate_top <= 0.1, "%s tint: plate added light %.2f <= 0.1, not a mint flood" % [state, plate_top])
+		_check(brute._material.albedo_color.is_equal_approx(Palette.RUST), "%s tint: body albedo stays Fleet oxide" % state)
+		var d := Vector3(plate_mat.albedo_color.r, plate_mat.albedo_color.g, plate_mat.albedo_color.b).distance_to(Vector3(0.231, 0.251, 0.239))
+		_check(d <= 0.2, "%s tint: plate albedo %.2f from the closed-plate charcoal (<= 0.2)" % [state, d])
+	brute.set_tint("amber")
+	brute.flash()
+	for i in 20:
+		brute._update_flash(0.1)
+	_check(brute._material.emission_enabled and brute._material.emission_energy_multiplier <= 0.05, "the settled flash returns to the restrained amber rim")
+	brute.set_tint("")
 
 
 # The armour is one group: it renders while plates > 0 and none of it renders once a full hit pops it.
