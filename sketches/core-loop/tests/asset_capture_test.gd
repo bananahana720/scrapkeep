@@ -233,6 +233,9 @@ func _run() -> void:
 	Cap.revert_clay(clay_undo)
 	_check(part_a.material_override.albedo_texture != null and glass.material_override.albedo_texture != null, "clay: revert restores the materials")
 
+	# --exposure: overrides the scene's lit exposure; absent (-1) keeps it.
+	_check(is_equal_approx(Cap.lit_exposure_for(1.1, 1.0), 1.0) and is_equal_approx(Cap.lit_exposure_for(1.1, -1.0), 1.1), "exposure: the override replaces the scene value; without it the scene value stays")
+
 	# Orthographic family camera and the isolate filter.
 	var box := AABB(Vector3(-175, -20, 60), Vector3(16, 40, 120))
 	var front := Cams.ortho_view("ortho-front", box)

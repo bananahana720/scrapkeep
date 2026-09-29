@@ -1,0 +1,113 @@
+{
+	"aabb": [],
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"anchor": "/root/Game/Stage1/SpillwayScenery/SandstoneShoulders",
+	"anchor_offset": [
+		0.0,
+		0.0,
+		0.0
+	],
+	"call": [],
+	"class": 0,
+	"clay": [
+		"/root/Game/Stage1/SpillwayScenery/SandstoneShoulders"
+	],
+	"frames": [
+		{
+			"anchor": [],
+			"camera_basis": [
+				-0.98124885559082,
+				0.0,
+				0.192745327949524,
+				0.00843526422977448,
+				0.99904191493988,
+				0.0429431572556496,
+				-0.192560657858849,
+				0.0437637828290462,
+				-0.980308711528778
+			],
+			"centre": [],
+			"exposure": 1.0,
+			"eye": [
+				-56.0485877990723,
+				19.6139030456543,
+				-43.2774467468262
+			],
+			"file": "launch.png",
+			"fov": 62.0,
+			"frozen": {},
+			"id": "launch",
+			"ortho_size": 0.0,
+			"sha256": "ecf4330b0f52d2a0114e7ca13177451f26dcffa619ed2eef72b31f58f0098c7b",
+			"target": [
+				-53.8485870361328,
+				19.1139030456543,
+				-32.0774459838867
+			],
+			"thumb": "launch.thumb.png",
+			"thumb_sha256": "47b16dfb19d87bb9a11ae5e23f629cb22fc8acc94ef1e0f8196ce86ba8a10f1e"
+		},
+		{
+			"anchor": [],
+			"camera_basis": [
+				-0.880994439125061,
+				0.0,
+				-0.473126620054245,
+				-0.167483374476433,
+				0.935248255729675,
+				0.311865597963333,
+				0.442490786314011,
+				0.35399267077446,
+				-0.823948442935944
+			],
+			"centre": [],
+			"exposure": 1.0,
+			"eye": [
+				145.0,
+				160.0,
+				-240.0
+			],
+			"file": "overview.png",
+			"fov": 65.0,
+			"frozen": {},
+			"id": "overview",
+			"ortho_size": 0.0,
+			"sha256": "a849c20c03baa36acd3a546eba3a86bf0bb7a8b8785d8cdcc6a04bfc30177a45",
+			"target": [
+				0.0,
+				44.0,
+				30.0
+			],
+			"thumb": "overview.thumb.png",
+			"thumb_sha256": "5dd2120fca80a66d56fbe5a88386a2cabcead8fe618f8020791d3dd7019dc1af"
+		}
+	],
+	"freeze_specs": [],
+	"frozen_nodes": {},
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "lit",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1d3a52739f59d7b4f863a7d99d5d587c0e0ccbfb10e5b1745d48d5f127b97af5",
+		"src/presentation/hero_assets.gd": "0579cec1234f4d9cf75c50a4d646af39101bf05fbea53767be0ca9f4510c169d",
+		"src/presentation/spillway_scenery.gd": "c03d9e4edf729addadb142d90873850029638e776d10db2e981a461b45dda5ae",
+		"src/world/terrain.gd": "ae4ecd9aae5213c0db4f281271988bb813741e99b375210119a988a12dae1225",
+		"tools/asset_capture.gd": "8dcd606740455218cca3f914a8b429e7f6cb65898296f292431c83ce8a448cf9",
+		"tools/capture_cameras.gd": "26a36059793766f2b979cc375dc21e1d06091ad45fff9ce0bc5e4547af886a53"
+	},
+	"spawn": [],
+	"subject": "/root/Game/Stage1/SpillwayScenery/SandstoneShoulders",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}

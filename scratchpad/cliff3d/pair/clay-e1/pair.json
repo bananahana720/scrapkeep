@@ -1,0 +1,15 @@
+{
+	"base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/clay-e1",
+	"head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/clay-e1",
+	"modes": {
+		"lit": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"launch",
+				"overview"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/pair/clay-e1/pair-lit.png"
+		}
+	}
+}

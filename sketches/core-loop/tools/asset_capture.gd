@@ -17,6 +17,7 @@ extends SceneTree
 #     [--hide=<path>]   (subtree omitted from the black modes, e.g. glass)
 #     [--clay=<node path>]   lit mode only: every mesh under that subtree takes one flat neutral shaded material (no bands,
 #       no vertex colour), so broad faces read without the fine surface detail; nothing else changes
+#     [--exposure=<float>]   lit mode only: use this tonemap exposure instead of the scene environment's (masks are always 1.0)
 #     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
 #     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
 #       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
@@ -59,6 +60,7 @@ var centre_override = null
 var freeze_specs: Array = []
 var hide_paths: Array = []
 var clay_paths: Array = []
+var exposure_override: float = -1.0
 var aabb_arg = null
 var isolate_path := ""
 var isolate_rest := false
@@ -102,6 +104,8 @@ func _initialize() -> void:
 			hide_paths.append(arg.trim_prefix("--hide="))
 		elif arg.begins_with("--clay="):
 			clay_paths.append(arg.trim_prefix("--clay="))
+		elif arg.begins_with("--exposure="):
+			exposure_override = float(arg.trim_prefix("--exposure="))
 		elif arg.begins_with("--aabb="):
 			var box := arg.trim_prefix("--aabb=").split(",")
 			aabb_arg = AABB(Vector3(float(box[0]), float(box[1]), float(box[2])), Vector3(float(box[3]), float(box[4]), float(box[5])))
@@ -250,7 +254,9 @@ func _run() -> void:
 		plan[id] = v
 		frozen_specs_seen = records
 	var env := _first_environment()
-	var lit_exposure: float = env.tonemap_exposure if env != null else 1.0
+	var lit_exposure := lit_exposure_for(env.tonemap_exposure if env != null else 1.0, exposure_override)
+	if env != null and exposure_override > 0.0:
+		env.tonemap_exposure = lit_exposure
 	for mode in modes:
 		var exposure := lit_exposure
 		if mode != "lit":
@@ -523,6 +529,11 @@ static func prepare(scene_root: Node, viewport: Viewport, mode: String, subjects
 
 # Pause the tree so nothing animated moves between frames.
 # <path>:<method>[:<frames>[:<JSON array>]]; the JSON may itself hold colons.
+# Lit exposure: the scene environment's unless --exposure gave a positive override.
+static func lit_exposure_for(scene_exposure: float, override: float) -> float:
+	return override if override > 0.0 else scene_exposure
+
+
 static func parse_call(spec: String) -> Dictionary:
 	var parts := spec.split(":", true, 3)
 	var args = JSON.parse_string(parts[3]) if parts.size() > 3 else []
