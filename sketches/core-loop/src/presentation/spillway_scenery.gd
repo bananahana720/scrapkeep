@@ -16,7 +16,6 @@ static func build(stage_root: Node3D) -> Node3D:
 	var trunks: Array[Transform3D] = []
 	var leaves: Array[Transform3D] = []
 	var banners: Array[Transform3D] = []
-	var masonry: Array[Transform3D] = []
 	var water: Array[Transform3D] = []
 	var pools: Array[Transform3D] = []
 	var mist: Array[Transform3D] = []
@@ -41,11 +40,7 @@ static func build(stage_root: Node3D) -> Node3D:
 			_place(recess, Vector3(x + dx, 143, 230.5), Vector3(3, 12, 1))
 		_place(metal, Vector3(x, 94, 224), Vector3(3, 40, 3))
 
-	# Shallow block faces and lintels give the retaining wall scale in three batches.
-	for row in 14:
-		for col in 18:
-			var x := -126.0 + col * 14.0 + (3.0 if row % 2 else 0.0)
-			_place(masonry, Vector3(x, 29.0 + row * 6.4, 235.0), Vector3(13.5, 6.0, 0.45))
+	# The 252 shallow block faces are replaced by the dam asset (_dam_detail); lintels follow.
 	for x in [-90.0, 0.0, 90.0]:
 		_place(banners, Vector3(x + 12, 106, 228), Vector3(7, 26, 0.25))
 		_place(metal, Vector3(x + 12, 120, 228), Vector3(11, 0.7, 1.0))
@@ -141,7 +136,7 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "SandstoneShoulders", rock, rocks, Color("b37d50"))
 	_batch(scenery, "CottonwoodTrunks", trunk, trunks, Color("766744"))
 	_batch(scenery, "CottonwoodCrowns", canopy, leaves, Color("728249"))
-	_batch(scenery, "BlockFaces", box, masonry, Color("bda078"))
+	_dam_detail(scenery)
 	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
 	_batch(scenery, "SpillSheets", box, water, Color.WHITE)
 	_batch(scenery, "Tailrace", box, pools, Color.WHITE)
@@ -152,6 +147,44 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "BallInsignia", canopy, glyphs, Color("e2ceb0"))
 	_merge_opaque(scenery)
 	return scenery
+
+
+# I01: broad cast courses and repaired service frames from dam.glb, on the wall's front face
+# (z 236, at most 1.2 m proud). One node per material slot, baked to world space, opaque and
+# unlit-emission free, so _merge_opaque folds it into the existing scenery draw.
+const DAM_PATH := "res://assets/models/world_one/dam.glb"
+const DAM_FACE := Vector3(0, 0, 236)
+const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("885e43"), "rubber": Color("454943")}
+
+
+static func _dam_detail(parent: Node3D) -> void:
+	var packed := load(DAM_PATH) as PackedScene
+	if packed == null:
+		push_warning("spillway_scenery: dam.glb missing, the dam face stays bare")
+		return
+	var scene := packed.instantiate()
+	var found := scene.find_children("*", "MeshInstance3D", true, false)
+	for view: MeshInstance3D in found:
+		for surface in view.mesh.get_surface_count():
+			var arrays := view.mesh.surface_get_arrays(surface)
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for i in vertices.size():
+				vertices[i] += DAM_FACE
+			arrays[Mesh.ARRAY_VERTEX] = vertices
+			var mesh := ArrayMesh.new()
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			var slot: String = view.mesh.surface_get_material(surface).resource_name
+			var material := StandardMaterial3D.new()
+			material.albedo_color = DAM_TINT.get(slot, Color.WHITE)
+			material.roughness = 1.0
+			material.vertex_color_use_as_albedo = true
+			var node := MeshInstance3D.new()
+			node.name = "DamDetail_" + slot
+			node.mesh = mesh
+			node.material_override = material
+			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			parent.add_child(node)
+	scene.free()
 
 
 static func _place(into: Array[Transform3D], at: Vector3, size: Vector3, turn := 0.0) -> void:
