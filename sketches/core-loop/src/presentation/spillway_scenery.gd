@@ -161,7 +161,7 @@ static func build(stage_root: Node3D) -> Node3D:
 	var cliff := SurfaceTool.new()
 	cliff.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for placement in rocks:
-		cliff.append_from(rock, 0, placement)
+		cliff.append_from(_placed_rock(rock, placement), 0, Transform3D.IDENTITY)
 	for crown in rim:
 		cliff.append_from(crown_mesh(crown), 0, crown_transform(crown))
 	cliff.index()
@@ -331,6 +331,28 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(view)
 	GraphicsPreset.register_scenery(view)
+
+
+# Bakes one shelf with the base _batch rule: positions by the placement, normals by its
+# inverse transpose, so non-uniform scale keeps the lit normals the base had.
+static func _placed_rock(rock: ArrayMesh, placement: Transform3D) -> ArrayMesh:
+	var source := rock.surface_get_arrays(0)
+	var vertices: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = source[Mesh.ARRAY_NORMAL]
+	var normal_basis := placement.basis.inverse().transposed()
+	var out_vertices := PackedVector3Array()
+	var out_normals := PackedVector3Array()
+	for i in vertices.size():
+		out_vertices.append(placement * vertices[i])
+		out_normals.append((normal_basis * normals[i]).normalized())
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = out_vertices
+	arrays[Mesh.ARRAY_NORMAL] = out_normals
+	arrays[Mesh.ARRAY_INDEX] = source[Mesh.ARRAY_INDEX]
+	var baked := ArrayMesh.new()
+	baked.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return baked
 
 
 static func _eroded_rock() -> ArrayMesh:

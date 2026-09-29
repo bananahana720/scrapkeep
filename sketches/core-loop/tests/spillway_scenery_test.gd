@@ -98,7 +98,6 @@ func _check_rim() -> void:
 	var root_ok := true
 	var last_z := {-1: -INF, 1: -INF}
 	var gully_worst := INF
-	var map := Spillway.new()
 	for crown in plan:
 		var mesh: ArrayMesh = Scenery.crown_mesh(crown)
 		var xf: Transform3D = Scenery.crown_transform(crown)
@@ -115,7 +114,6 @@ func _check_rim() -> void:
 				inside += 1
 			lo = lo.min(point)
 			hi = hi.max(point)
-			# Root and gully stay in existing stone: nothing below the sampled terrain floor of its footprint.
 		depth_worst = maxf(depth_worst, hi.x - lo.x)
 		width_ok = width_ok and hi.z - lo.z <= crown["width"] + 0.001
 		top_ok = top_ok and absf(hi.y - crown["add"]) < 0.01
