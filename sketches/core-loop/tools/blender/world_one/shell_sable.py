@@ -12,6 +12,10 @@ import math
 import os
 import sys
 
+import bmesh
+import bpy
+from mathutils import Vector
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 import common  # noqa: E402
@@ -121,9 +125,63 @@ def pilot():
     return f
 
 
+# Petrol band pale marks. shell_base.spherical() edges the band (r 0.86 to 0.92, z -0.29) with
+# 16 small bone arcs at tau/16, which read as regular fittings. Sable drops them after the
+# build and lays a few broad, unequal contact patches at the same radii and colour, so the
+# pod bounds and the 16 bolts are unchanged and the vertex count falls.
+BAND_R = (0.905, 0.93)
+BAND_Z = (-0.37, -0.2)
+# (start angle, arc, segments, centre z, depth)
+PATCHES = [(0.75, 0.95, 5, -0.30, 0.075), (2.4, 0.6, 3, -0.305, 0.06), (4.9, 0.3, 2, -0.28, 0.07)]
+PATCH_R = (0.916, 0.925)
+
+
+def band_patches(pod_obj):
+    mesh = pod_obj.data
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    col = bm.loops.layers.float_color["Color"]
+    bone = tuple(common.rgba("bone"))
+    old = []
+    for f in bm.faces:
+        c = f.calc_center_median()
+        r = math.hypot(c.x, c.y)
+        got = f.loops[0][col]
+        if (BAND_R[0] <= r <= BAND_R[1] and BAND_Z[0] <= c.z <= BAND_Z[1]
+                and all(abs(got[i] - bone[i]) < 0.01 for i in range(3))):
+            old.append(f)
+    slot = old[0].material_index
+    bmesh.ops.delete(bm, geom=old, context="FACES")
+    made = []
+    for start, span, segs, z, depth in PATCHES:
+        rows = []
+        for k in range(segs + 1):
+            a = start + span * k / segs
+            ca, sa = math.cos(a), math.sin(a)
+            quad = [(PATCH_R[0], z - depth / 2), (PATCH_R[1], z - depth / 2),
+                    (PATCH_R[1], z + depth / 2), (PATCH_R[0], z + depth / 2)]
+            rows.append([bm.verts.new(Vector((r * ca, r * sa, zz))) for r, zz in quad])
+        for k in range(segs):
+            for i in range(4):
+                j = (i + 1) % 4
+                made.append(bm.faces.new((rows[k][i], rows[k + 1][i], rows[k + 1][j], rows[k][j])))
+        made.append(bm.faces.new(list(reversed(rows[0]))))
+        made.append(bm.faces.new(rows[-1]))
+    for f in made:
+        f.material_index = slot
+        for loop in f.loops:
+            loop[col] = bone
+    bmesh.ops.triangulate(bm, faces=made, quad_method="FIXED", ngon_method="EAR_CLIP")
+    bm.normal_update()
+    bm.to_mesh(mesh)
+    bm.free()
+    print("BAND_PATCHES removed %d faces, added %d quads and caps" % (len(old), len(made)))
+
+
 def main():
     common.reset()
     root, core_obj, pilot_obj = sb.spherical("Sable", pod(), pilot(), extras=[("RopeExit", (0.84, 0.36, 0.58))])
+    band_patches(next(o for o in root.children if o.name.split(".")[0] == "Pod"))
     shell_tris = common.tri_total(root, skip=(pilot_obj.name,))
     ok = common.report("Sable", [("shell", shell_tris, SHELL_TRIS), ("pilot", common.tris(pilot_obj), sb.PILOT_TRIS)])
     radius = common.max_radius(core_obj)
