@@ -3,6 +3,8 @@ extends Control
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const UiProfile := preload("res://src/ui/ui_profile.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
 # name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
@@ -48,6 +50,9 @@ var last_title := ""
 # persists discoveries_seen. Without a profile the ids seen this session stand in.
 var cards := false
 var profile = null
+# Where the profile lives when the banner opens it itself (--discovery=cards on the
+# command line); empty means the owner supplies one.
+var storage_dir := ""
 # "banner", "card" or "pop": how the current item is shown, and how many of each.
 var last_style := ""
 var cards_shown := 0
@@ -75,6 +80,9 @@ var _style: StyleBoxFlat
 
 func _init() -> void:
 	name = "CodexBanner"
+	if LoopMode.discovery_cards_cmdline():
+		cards = true
+		storage_dir = "user://"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -135,10 +143,14 @@ func _init() -> void:
 func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND) -> void:
 	var style := "banner"
 	if cards:
-		var key := id if id != "" else "%s:%s" % [category, title]
-		style = "pop" if _was_seen(key) else "card"
-		_mark_seen(key)
-	_queue.append([title, category, detail, kicker, style, kind])
+		style = "auto"
+		if profile == null and storage_dir != "":
+			profile = UiProfile.new(storage_dir)
+	# In cards mode the id rides in the entry; whether it is a card or a pop, and the
+	# record of it, are settled when it comes up to show (_next), so a discovery that is
+	# queued and then dropped is not counted as seen.
+	var key := id if id != "" else "%s:%s" % [category, title]
+	_queue.append([title, category, detail, kicker, style, kind, key])
 	if not showing():
 		_next()
 
@@ -229,7 +241,12 @@ func _next() -> void:
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
 	var color: Color = entry["color"]
-	_apply_style(item[4], entry, item[5])
+	var style: String = item[4]
+	if style == "auto":
+		style = "pop" if _was_seen(item[6]) else "card"
+		if style == "card":
+			_mark_seen(item[6])
+	_apply_style(style, entry, item[5])
 	_icon.texture = entry["icon"]
 	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
 	_kicker.add_theme_color_override("font_color", color)

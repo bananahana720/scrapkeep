@@ -77,7 +77,28 @@ func mark_discovered(discovery_id: String) -> void:
 	save()
 
 
+# Two owners (the HUD and the banner) may hold the same file; a save keeps what the
+# other one wrote instead of dropping it.
+func _merge_disk() -> void:
+	if not FileAccess.file_exists(path):
+		return
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not parsed is Dictionary:
+		return
+	for id in parsed.get("callouts_seen", []):
+		if not String(id) in callouts_seen:
+			callouts_seen.append(String(id))
+	for id in parsed.get("discoveries_seen", []):
+		if not String(id) in discoveries_seen:
+			discoveries_seen.append(String(id))
+	var uses = parsed.get("glyph_uses", {})
+	if uses is Dictionary:
+		for action in uses:
+			glyph_uses[String(action)] = maxi(int(uses[action]), int(glyph_uses.get(String(action), 0)))
+
+
 func save() -> void:
+	_merge_disk()
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		last_error = error_string(FileAccess.get_open_error())
