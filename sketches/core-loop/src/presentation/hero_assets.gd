@@ -34,8 +34,8 @@ const PILOTS := {
 
 const SHELLS := {
 	"pylon_engineer": "res://assets/models/world_one/shell_sable.glb",
-	"runner_gunner": "res://assets/models/shell_rivet.glb",
-	"demolitions_caster": "res://assets/models/shell_kest.glb",
+	"runner_gunner": "res://assets/models/world_one/shell_rivet.glb",
+	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
 }
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
