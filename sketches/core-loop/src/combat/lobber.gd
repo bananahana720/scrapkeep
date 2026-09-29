@@ -12,6 +12,7 @@ const SHOT_RANGE := 75.0
 const LEAD := 0.5
 const HP := 26.0
 const SCRAP := 4
+const BODY_PAINT := Palette.RUST
 
 signal fired(origin: Vector3, landing: Vector3, flight: float)
 
@@ -36,8 +37,10 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	box.size = Vector3(2.4, 4.0, 2.4)
 	shape.shape = box
 	add_child(shape)
+	# C11 correction: _base_color is the event/UI colour (the hit flash lerps from it), so it stays
+	# verdigris; the resting body paints Fleet oxide (the Chaser's RUST) through BODY_PAINT.
 	_base_color = Palette.VERDIGRIS
-	_material = Palette.solid(_base_color)
+	_material = Palette.solid(BODY_PAINT)
 	# The C11 mortar cart (enemy_lobber.glb): a braced tower on wheels under a loading bulb and a
 	# stout leaning tube. LobberBody carries the flashing body material as its paint surface; the
 	# bulb is the muzzle, and _show_charge swells and lights it exactly as before.
@@ -81,6 +84,13 @@ static func _parts() -> Array:
 		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "bulb": mi.name.begins_with("LobberBulb")})
 	scene.free()
 	return _shared
+
+
+# The resting look ends on the Fleet oxide body paint, not the verdigris event colour.
+func _apply_rest_look() -> void:
+	super()
+	if _material != null:
+		_material.albedo_color = BODY_PAINT
 
 
 func muzzle_point() -> Vector3:

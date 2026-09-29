@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # C11 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly (body plus loading
 # bulb), opaque, the cart inside the 2.4 x 4 x 2.4 m collider box, the mortar tube inside the base
@@ -127,6 +128,7 @@ func _run() -> void:
 	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_envelope(lobber, "live assembly")
+	_check_paint(lobber)
 	print("enemy_lobber_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)
 
@@ -151,3 +153,30 @@ func _check_envelope(node: Node3D, label: String) -> void:
 		for v in (bulb as MeshInstance3D).mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX] as PackedVector3Array:
 			reach = maxf(reach, v.length())
 	_check(reach <= BULB_R + 0.001, "%s bulb radius %.3f <= %.1f" % [label, reach, BULB_R])
+
+
+# C11 correction: the resting body is Fleet oxide (the Chaser's RUST); the hit flash and the event
+# colour (_base_color, the only Lobber colour read outside lobber.gd is enemy.gd's flash lerp and
+# _apply_rest_look, which lobber.gd overrides) stay verdigris.
+func _check_paint(lobber: Node3D) -> void:
+	var body := lobber.find_child("LobberBody", true, false)
+	var mat: StandardMaterial3D = null
+	for mi in body.find_children("*", "MeshInstance3D", true, false):
+		var m := (mi as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
+		if m != null and m.albedo_color.is_equal_approx(Palette.RUST):
+			mat = m
+	_check(mat != null, "the resting body surface is the Fleet oxide colour (RUST)")
+	_check(lobber._base_color == Palette.VERDIGRIS, "the event/UI colour _base_color is still verdigris")
+	_check(lobber._material.albedo_color.is_equal_approx(Palette.RUST), "resting state: body albedo is oxide")
+	lobber.flash()
+	lobber._update_flash(0.0)
+	var hit: Color = lobber._material.albedo_color
+	var want: Color = Palette.VERDIGRIS.lerp(Color(1.0, 1.0, 0.85), 1.0)
+	_check(hit.is_equal_approx(want) and lobber._material.emission_enabled, "hit state: the flash lerps from verdigris toward cream with amber emission")
+	lobber._flash = 0.3
+	lobber._update_flash(0.0)
+	_check(lobber._material.albedo_color.is_equal_approx(Palette.VERDIGRIS.lerp(Color(1.0, 1.0, 0.85), lobber._flash)), "mid-flash colour still derives from verdigris")
+	for i in 20:
+		lobber._update_flash(0.1)
+	_check(lobber._material.albedo_color.is_equal_approx(Palette.RUST) and not lobber._material.emission_enabled, "recovery state: the body returns to oxide with the flash emission off")
+	_check(lobber._base_color == Palette.VERDIGRIS, "the event colour is unchanged after recovery")
