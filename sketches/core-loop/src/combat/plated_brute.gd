@@ -86,23 +86,34 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
-# C15c finish: the wash was the state tint, not the paint. enemy.gd burns the class colour
-# through every plated enemy at full strength (body 0.9, plates 1.8 over an albedo lifted to
-# mint), which on this brute's broad slab and torso reads as one pale block. The state read
-# survives (the emission still turns on and off with the punch, and the open crack glyph
-# carries "breaks now"); the brute wears it as a rim of light, not a flood.
-const AMBER_BODY_GLOW := 0.03
-const AMBER_PLATE_GLOW := 0.08
-const AMBER_PLATE_LIFT := 0.03
+# The finish follows the sheet's Fleet roles: oxide plate over charcoal recesses. enemy.gd
+# burns the class colour through every plated enemy (plates 1.8, body 0.9); on this brute's
+# broad slab that shows as a teal block, and even 0.08 still washes the shaded faces from
+# oxide to teal. Here the plates keep their own oxide albedo with low metal, and the state
+# reads as a faint class-colour lift plus the open crack glyph.
+const PLATE_OXIDE := Color("7a4232")
+const PLATE_METAL := 0.15
+const AMBER_BODY_GLOW := 0.01
+const AMBER_PLATE_GLOW := 0.02
+
+
+func _plate_material() -> StandardMaterial3D:
+	var mat := super._plate_material()
+	_dress_plate(mat)
+	return mat
+
+
+func _dress_plate(mat: StandardMaterial3D) -> void:
+	mat.albedo_color = PLATE_OXIDE
+	mat.metallic = PLATE_METAL
+	if tint_state == "amber":
+		mat.emission_energy_multiplier = AMBER_PLATE_GLOW
 
 
 func set_tint(state: String) -> void:
 	super.set_tint(state)
 	for mat in _tint_materials:
-		var plate := mat as StandardMaterial3D
-		if tint_state == "amber":
-			plate.albedo_color = PLATE_CLOSED.lerp(rim_color, AMBER_PLATE_LIFT)
-			plate.emission_energy_multiplier = AMBER_PLATE_GLOW
+		_dress_plate(mat as StandardMaterial3D)
 
 
 func _apply_rest_look() -> void:

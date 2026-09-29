@@ -37,4 +37,3 @@ Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
 [catch_trap through the door] 1 hold_started facts -> PASS
 [catch_trap breaks] boost broke the cup_hold hold on the next tick (release { "kind": "cup_hold", "reason": "boost", "held": 0.0 }, hold_broken [["cup_hold", "boost"]], refund paid true) -> PASS
 enemy_counters_test: PASS
-exit 0

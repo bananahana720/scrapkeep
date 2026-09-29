@@ -193,29 +193,37 @@ func _check_paint(brute: Node3D) -> void:
 
 
 # C15c: the mint wash. With the class-colour state tint on (the punch beats the plate) the
-# body and the plate must keep the sheet's Fleet roles: oxide body, charcoal-oxide plate. Each
-# surface's added light (emission times energy) stays a rim, and the resting plate albedo stays
-# near the closed-plate charcoal. Failing values before the fix: body 0.9 energy, plate 1.8.
+# body and plate keep the sheet's Fleet roles (oxide body, oxide plate, low metal), each
+# surface's added light stays faint (0.08 of the class colour already turns shaded oxide faces teal
+# in the lit capture), and the state read survives: light on when the punch
+# breaks, off when it does not.
 func _check_wash(brute: Node3D) -> void:
 	var rim: Color = brute.rim_color
 	var plate_mat := brute._tint_materials[0] as StandardMaterial3D
+	var oxide := Vector3(Palette.RUST.r, Palette.RUST.g, Palette.RUST.b)
+	var tops := {}
 	for state in ["amber", "slate"]:
 		brute.set_tint(state)
 		var body_add: Color = (rim * brute._material.emission_energy_multiplier) if brute._material.emission_enabled else Color(0, 0, 0)
 		var plate_add: Color = (rim * plate_mat.emission_energy_multiplier) if plate_mat.emission_enabled else Color(0, 0, 0)
 		var body_top := maxf(body_add.r, maxf(body_add.g, body_add.b))
 		var plate_top := maxf(plate_add.r, maxf(plate_add.g, plate_add.b))
-		print("  %s: body added light %.2f, plate added light %.2f, plate albedo %s" % [state, body_top, plate_top, plate_mat.albedo_color.to_html(false)])
-		_check(body_top <= 0.05, "%s tint: body added light %.2f <= 0.05, not a mint flood" % [state, body_top])
-		_check(plate_top <= 0.1, "%s tint: plate added light %.2f <= 0.1, not a mint flood" % [state, plate_top])
+		tops[state] = [body_top, plate_top]
+		print("  %s: body added light %.3f, plate added light %.3f, plate albedo %s metallic %.2f" % [state, body_top, plate_top, plate_mat.albedo_color.to_html(false), plate_mat.metallic])
+		_check(body_top <= 0.015, "%s tint: body added light %.3f <= 0.015, not a mint flood" % [state, body_top])
+		_check(plate_top <= 0.03, "%s tint: plate added light %.3f <= 0.03, not a mint flood" % [state, plate_top])
 		_check(brute._material.albedo_color.is_equal_approx(Palette.RUST), "%s tint: body albedo stays Fleet oxide" % state)
-		var d := Vector3(plate_mat.albedo_color.r, plate_mat.albedo_color.g, plate_mat.albedo_color.b).distance_to(Vector3(0.231, 0.251, 0.239))
-		_check(d <= 0.2, "%s tint: plate albedo %.2f from the closed-plate charcoal (<= 0.2)" % [state, d])
+		var d := Vector3(plate_mat.albedo_color.r, plate_mat.albedo_color.g, plate_mat.albedo_color.b).distance_to(oxide)
+		_check(d <= 0.2, "%s tint: plate albedo %.2f from the Fleet oxide (<= 0.2)" % [state, d])
+		_check(plate_mat.albedo_color.b <= plate_mat.albedo_color.r, "%s tint: plate leans warm, not teal" % state)
+		_check(plate_mat.metallic <= 0.3, "%s tint: plate metallic %.2f <= 0.3, no mirrored teal sheen" % [state, plate_mat.metallic])
+	_check(tops["amber"][0] >= 0.005 and tops["amber"][1] >= 0.01, "breaks-now keeps a lit rim: body %.3f >= 0.005, plate %.3f >= 0.01" % [tops["amber"][0], tops["amber"][1]])
+	_check(tops["slate"][0] == 0.0 and tops["slate"][1] == 0.0, "not-yet carries no added light")
 	brute.set_tint("amber")
 	brute.flash()
 	for i in 20:
 		brute._update_flash(0.1)
-	_check(brute._material.emission_enabled and brute._material.emission_energy_multiplier <= 0.05, "the settled flash returns to the restrained amber rim")
+	_check(brute._material.emission_enabled and brute._material.emission_energy_multiplier <= 0.015 and brute._material.emission_energy_multiplier >= 0.005, "the settled flash returns to the restrained amber rim")
 	brute.set_tint("")
 
 

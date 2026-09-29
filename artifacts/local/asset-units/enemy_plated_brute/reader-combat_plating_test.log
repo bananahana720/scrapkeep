@@ -6,4 +6,3 @@ Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
 [would_crush] would_crush matched the outcome in 20 of 20 contacts (8 kills, 12 survivors) -> PASS
 [tint] plating 8: slate at punch 7.00, amber on the next tick at punch 8.75 -> PASS
 combat_plating_test: PASS
-exit 0

@@ -9,4 +9,3 @@ Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
 [pack_arrived] a trapper and a thrower in one frame: [["fleet", ["mag_trapper", "bola_thrower"], (-30.0, 34.58425, -160.0)]]; every faction has its fac_ icon true -> PASS
 [fodder is not a pack] a lone chaser published 0 pack_arrived -> PASS
 enemy_roster_test: PASS
-exit 0

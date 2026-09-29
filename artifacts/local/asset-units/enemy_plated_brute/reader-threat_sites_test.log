@@ -6,4 +6,3 @@ Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
 [boss attacks tagged] Brindle's hazards carry their audited types { "crane": "WAVE", "slag": "INSTANT", "drone_pad": "INSTANT", "charge": "LANE" }, each attack in group threat and the amber drone pad out of it: true -> PASS
 [combat attacks tagged] live combat telegraphs carry their audited types { "chaser lunge": "LANE", "miniboss leap slam": "PROJECTILE", "miniboss charge": "LANE", "warden pulse": "INSTANT", "warden core": "INSTANT", "warden magnet": "LANE", "lobber shell": "PROJECTILE" }; the leap slam draws the miniboss's flight: true; the Warden's lift ring is a harmless field and its core ring a threat: true -> PASS
 threat_sites_test: PASS
-exit 0

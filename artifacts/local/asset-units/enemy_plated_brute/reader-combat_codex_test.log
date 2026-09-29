@@ -14,4 +14,3 @@ Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
 [magnet_break] the Warden broken while its magnet had it unplated -> PASS
 [all] discovered this run: ["counter_ram", "crush_chain", "parting_shot", "tether_snap", "shield_vault", "awaiting_operator", "what_it_learned", "shell_return", "pulse_stomp", "magnet_break"] -> PASS
 combat_codex_test: PASS
-exit 0

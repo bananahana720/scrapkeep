@@ -3,12 +3,11 @@ Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
 [skipper_floor] base runner fire (7.0 damage) for 20 s, 237 hits on Warden III (plating 140): shred peaked at 17.9 (needs 1+, chips strip too), plating never below 122.1 (needs above 7.0) -> PASS
 [synergy] a synergy strike of punch 60 added 1.020 shred (needs 60 x 0.0170 = 1.020) -> PASS
 [weak_point] with shred 18.9 the tugging magnet met plating 0.0 (needs 0) and the body 121.1 (needs 121.1) -> PASS
-[engaged] engaged build (16.9 damage x 5 bolts at 20 a second) stripped Warden III from 140 to 16.8, at or below its bolt, after 4.90 s (needs 4 to 8 s) -> PASS
+[engaged] engaged build (16.9 damage x 5 bolts at 20 a second) stripped Warden III from 140 to 16.4, at or below its bolt, after 4.90 s (needs 4 to 8 s) -> PASS
 [hud] 441 ticks: plating_of = max(0, base - shred) and flow.warden_plating() matched it on 441 (mismatches 0); objective 'Break the Warden at the beacon (14 m). Punch 16 / plating 140. In its ring, shoot the magnet while it pulls you.' became 'Warden 21% broken. Punch 16 / plating 16. In its ring, shoot the magnet while it pulls you.' -> PASS
 [seams] glowing seams on the jaws: 0 lit at the skipper's 13% strip, 36 lit at the engaged 88% strip (needs 0, then some) -> PASS
-[decay] fire stopped at shred 123.2; shred reached 0 after 6.98 s and plating_of read 140 again (needs within 8 s) -> PASS
+[decay] fire stopped at shred 123.6; shred reached 0 after 6.99 s and plating_of read 140 again (needs within 8 s) -> PASS
 [vault] stage-3 vault plating 168 above Warden III's 140; ten 20-damage hits shredded 3.4, plating_of 164.6 -> PASS
 [brindle] real boss hull (plating 120) after 20 16-damage hits: shred 5.4, resolve met 114.6, plating_of 114.6 -> PASS
 [brindle_weak] crane magnet after 20 hits (shred 0.0) meets a weapon at plating 0.0 (needs 0) -> PASS
 combat_shred_test: PASS
-exit 0
