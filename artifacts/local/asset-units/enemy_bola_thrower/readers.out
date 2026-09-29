@@ -1,0 +1,9 @@
+enemy_bola_thrower_asset_test exit=0
+enemy_counters_test exit=0
+enemy_rivet_test exit=0
+enemy_roster_test exit=0
+threat_sites_test exit=0
+enemy_tenacity_test exit=0
+audio_cue_resolution_test exit=0
+presentation_motifs_test exit=0
+done

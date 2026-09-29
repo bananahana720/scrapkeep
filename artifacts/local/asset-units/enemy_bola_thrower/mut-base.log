@@ -1,0 +1,27 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS enemy_bola_thrower.glb loads
+asset: 640 T, 3 D
+PASS asset triangles 640 <= 1200
+PASS asset draws 3 <= 3
+PASS asset has no alpha surface
+PASS a bola thrower spawns
+PASS one collision shape on the thrower (1)
+PASS collider is the base capsule r 0.8, h 2.2
+PASS collider sits at the origin
+PASS the dressing adds no collision object
+PASS radius 0.8, half-height 1.1 and weight 1 unchanged
+PASS warn 0.5, live 2.6, rest 3.2, range 30, keep-near 14 and scrap 4 unchanged
+PASS flight, ring, height, wrap, drag, pull, sting and health constants equal base
+live assembly: 13196 T, 6 D
+PASS the live measure saw meshes (13196 T, 6 D)
+FAIL live assembly 13196 T / 6 D within 1200 / 3
+PASS live assembly has no alpha
+FAIL the live thrower has BolaThrowerBody and BolaLoop
+SCRIPT ERROR: Invalid access to property or key 'mesh' on a base object of type 'null instance'.
+          at: _check_paint (res://tests/enemy_bola_thrower_asset_test.gd:162)
+          GDScript backtrace (most recent call first):
+              [0] _check_paint (res://tests/enemy_bola_thrower_asset_test.gd:162)
+              [1] _run (res://tests/enemy_bola_thrower_asset_test.gd:122)
+FAIL the loop whirls faster through WARN (0.250 vs 0.250 rad/step)
+enemy_bola_thrower_asset_test: FAIL

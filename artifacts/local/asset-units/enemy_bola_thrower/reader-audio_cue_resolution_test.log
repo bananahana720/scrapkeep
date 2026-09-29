@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[each class hears its own motif] Sable: band sable, release ["sable_arpeggio", "now"], ready ["sable_ready", "now"], break ["sable_break", "now"], mind ["mind_sable", "now"], telegraph quote again false, release candidates ["sable_arpeggio"]; Rivet: band rivet, release ["rivet_hihat_roll", "now"], ready ["rivet_ready", "now"], break ["rivet_break", "now"], mind ["mind_rivet", "now"], telegraph quote again false, release candidates ["rivet_hihat_roll"]; Kest: band kest, release ["kest_low_thump", "now"], ready ["kest_ready", "now"], break ["kest_break", "now"], mind ["mind_kest", "now"], telegraph quote again false, release candidates ["kest_low_thump"] -> PASS
+[each hold kind hears its own hold] mag_pit -> ["hold_pit", "now"], anchor_tether -> ["hold_tether", "now"], air_net -> ["hold_net", "now"], bola_wrap -> ["hold_bola", "now"], gyro_drift -> ["hold_riser", "now"] -> PASS
+[the shop bell plays] a purchase rings ["shop_bell", "now"]; a reroll is ["bench_clank", "now"] -> PASS
+[ancients arrive in their own voice] ancient spawns made []; a Fleet chaser growls ["enemy_arrive", "now"]; packs: fleet -> fleet_motif, reactor -> reactor_tick, swarm -> swarm_lock, mind -> mind_kest -> PASS
+[Moss babbles] 'The hook. Everyone looks at the hook. Shelf's the thing for sale.' babbles 4.08 s at peak 0.90; the workshop speaks it as ["babble", "now"]; baked lines 1, 1 on a repeat, 2 in Eb; beats ask, send-off, restart, relent -> [1, 6, 0, -1] -> PASS
+[a callout chimes as it appears] callout_scrap plays ["callout_chime", "now"] -> PASS
+audio_cue_resolution_test: PASS
