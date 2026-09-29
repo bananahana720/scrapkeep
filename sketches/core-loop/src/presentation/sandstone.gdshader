@@ -1,6 +1,8 @@
 shader_type spatial;
 render_mode diffuse_burley;
 uniform bool cliff_only = false;
+// Anchor the pattern in the mesh's own metres (Moss's carried shelter) instead of world metres.
+uniform bool local_pattern = false;
 uniform sampler2D strata_map : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D floor_map : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float strata_metres = 6.0;
@@ -13,8 +15,8 @@ float grain(vec3 p) {
  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
 }
 void vertex() {
- world_at = (MODEL_MATRIX * vec4(VERTEX,1.0)).xyz;
- world_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
+ world_at = local_pattern ? VERTEX : (MODEL_MATRIX * vec4(VERTEX,1.0)).xyz;
+ world_normal = local_pattern ? normalize(NORMAL) : normalize(MODEL_NORMAL_MATRIX * NORMAL);
 }
 void fragment() {
  vec3 p = world_at;

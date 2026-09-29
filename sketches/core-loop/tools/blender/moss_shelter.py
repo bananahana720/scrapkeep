@@ -1,155 +1,154 @@
-"""Moss sandstone shelter: a carried stone shell around the existing 5 x 6 x 8 m cabin.
+"""Moss sandstone shelter, round 2: one broken sandstone mass carried over the workshop.
 Blender +Z is up; coordinates below are the bay's Godot coordinates (Barge space, +X front).
-Two side cheeks and a rear skin sit inside the cabin volume (X -19.5..-14.5, Z -4..4, Y 0..6),
-a neck joins them up to the cap, and one asymmetrical cap spans X -19.5..-11.5, Z -6.3..6.3,
-Y 7.35..9.2 over the awning (Y 7.1). No ground-level stone outside the cabin footprint, no
-collision, no lights. One mesh, one slot: hero_assets.gd puts the scenery sandstone material
-on it (matte, sandstone-strata, 6 m triplanar), so `paint` here only carries vertex colour.
+Two continuous cheek skins and a rear skin sit inside the cabin volume (X -19.5..-14.5, Z -4..4,
+Y 0..6) and carry on through a neck to the cap, which spans X -19.5..-11.5, Z -6.3..6.3,
+Y 7.35..9.2 over the awning (Y 7.1). Each cheek is one closed shell whose outer face breaks
+into a few broad oblique planes (no stacked slabs); the cap keeps a full front belly with a
+1.3 to 1.6 m lip and a crown of three planar regions folded along two offset ridges. No
+ground-level stone outside the cabin footprint, no collision, no lights. One mesh, one slot;
+vertex colour is neutral white because hero_assets.gd puts the cliff rock shader on it
+(sandstone.gdshader, cliff_only, pattern anchored in Barge-local metres).
 """
-import math, os, random, sys
+import math, os, sys
 import bmesh
 sys.path.insert(0, os.path.dirname(__file__))
 import common
 from common import Part
 common.reset()
-rng = random.Random(280929)
 root = common.empty('MossShelter')
 p = Part('SandstoneShelter')
 bm = p.bm
 
 CAP_LOW, CAP_HIGH = 7.35, 9.2
-X_BACK, X_FRONT_CABIN = -19.5, -14.5
+X_BACK = -19.5
 
 
 def point(g): return (g[0], -g[2], g[1])
 def vert(g): return bm.verts.new(point(g))
-def grey(v, warm=0.0):
-    """Linear vertex colour multiplier on the sandstone albedo (tinted against the orange strata texture); warm > 0 lifts the crown."""
-    return (v * (1.0 + 0.02 * warm), v * (1.0 + 0.02 * warm), v * (1.0 - 0.02 * warm), 1.0)
-def colour(face, value):
-    for loop in face.loops:
-        loop[p.col] = value
-def close(rows, top=None, bottom=None):
-    """Quad strips between consecutive rings (each a list of verts in the same order)."""
-    faces = []
-    n = len(rows[0])
-    for a, b in zip(rows, rows[1:]):
+
+
+def shell(rows):
+    """A closed prism through rows of (y, [(x, z) ring]); consecutive rings make the oblique side planes."""
+    rings = [[vert((x, y, z)) for x, z in ring] for y, ring in rows]
+    n = len(rings[0])
+    for a, b in zip(rings, rings[1:]):
         for i in range(n):
             j = (i + 1) % n
-            faces.append(bm.faces.new((a[i], a[j], b[j], b[i])))
-    if bottom is not None:
-        faces.append(bm.faces.new(bottom))
-    if top is not None:
-        faces.append(bm.faces.new(top))
-    return faces
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    bm.faces.new(list(reversed(rings[0])))
+    bm.faces.new(rings[-1])
 
 
-def slab(x0, x1, y0, y1, z0, z1, bevel, shade):
-    """A chamfered stratum: horizontal section insets at both ends, full size between."""
-    sections = [(y0, bevel), (y0 + bevel, 0.0), (y1 - bevel, 0.0), (y1, bevel)]
+NECK_TOP = 7.62  # buried in the cap: its underside reaches Y 7.61 above the cheek strip
+# Cheeks: one closed skin per side, 0.45 to 0.65 m thick. Each side breaks at its own heights and its
+# front edge steps X in long oblique planes (visible side, Godot +Z, follows the brief's stations).
+cheeks = {
+    1: [(0.0, -14.65, 3.99, 0.50), (2.3, -15.15, 3.94, 0.62), (4.8, -14.75, 3.99, 0.47), (6.0, -15.25, 3.93, 0.58),
+        (NECK_TOP, -15.05, 3.96, 0.55)],
+    -1: [(0.0, -14.95, 3.97, 0.56), (1.4, -14.6, 4.0, 0.46), (4.2, -15.3, 3.93, 0.64), (6.0, -14.85, 3.98, 0.52),
+         (NECK_TOP, -15.1, 3.95, 0.60)],
+}
+for side, stations in cheeks.items():
     rows = []
-    for y, inset in sections:
-        a, b = x0 + inset, x1 - inset
-        c, d = z0 + inset, z1 - inset
-        rows.append([vert((a, y, c)), vert((b, y, c)), vert((b, y, d)), vert((a, y, d))])
-    faces = close(rows, top=rows[-1], bottom=list(reversed(rows[0])))
-    for f in faces:
-        colour(f, grey(shade * rng.uniform(0.93, 1.03), 0.4 if f.normal.z > 0.5 else 0.0))
-    return faces
+    for y, xf, zo, thick in stations:
+        rows.append((y, [(X_BACK, side * zo), (xf, side * zo), (xf, side * (zo - thick)), (X_BACK, side * (zo - thick))]))
+    shell(rows)
+# Rear skin: one continuous wall, three broad planes across the back.
+shell([(0.0, [(X_BACK, -3.98), (X_BACK + 0.50, -3.98), (X_BACK + 0.50, 3.98), (X_BACK, 3.98)]),
+       (3.1, [(X_BACK, -3.94), (X_BACK + 0.62, -3.94), (X_BACK + 0.62, 3.99), (X_BACK, 3.99)]),
+       (6.0, [(X_BACK, -3.99), (X_BACK + 0.47, -3.99), (X_BACK + 0.47, 3.93), (X_BACK, 3.93)]),
+       (NECK_TOP, [(X_BACK, -3.96), (X_BACK + 0.55, -3.96), (X_BACK + 0.55, 3.96), (X_BACK, 3.96)])])
 
-
-bands = [0.0, 1.05, 2.3, 3.55, 4.85, 6.15]
-# Cheeks: irregular strips, 0.45 to 0.65 m thick inside |z| 3.3..4.0, fronts behind X -14.5.
-# Each side breaks the 6 m height at its own heights, so the strata do not line up left to right.
-cuts = {-1: [0.0, 2.1, 3.3, 4.8, 6.15], 1: [0.0, 1.4, 3.6, 4.4, 6.15]}
-for side in (-1, 1):
-    b = cuts[side]
-    for k in range(4):
-        outer = 4.0 - rng.uniform(0.0, 0.05)
-        thick = rng.uniform(0.47, 0.64)
-        z_a, z_b = sorted((side * outer, side * (outer - thick)))
-        front = rng.uniform(-15.6, -14.6)
-        slab(X_BACK, front, b[k], b[k + 1], z_a, z_b, rng.uniform(0.15, 0.18), rng.uniform(0.74, 1.0))
-# Rear skin: strata across the back wall.
-for k in range(5):
-    thick = rng.uniform(0.47, 0.64)
-    slab(X_BACK, X_BACK + thick, bands[k], bands[k + 1], -(4.0 - rng.uniform(0, 0.1)), 4.0 - rng.uniform(0, 0.1),
-         rng.uniform(0.12, 0.18), 0.78 + 0.04 * k)
-# Neck over the cabin footprint, Y 6..7.55 (the cap hides its top).
-slab(X_BACK, -14.7, 6.0, 6.75, -3.95, 3.95, 0.12, 0.9)
-slab(X_BACK, -14.78, 6.7, 7.55, -3.9, 3.9, 0.14, 0.88)
-
-# Cap: one closed asymmetrical profile, 10 perimeter points, 6 height bands.
-perimeter = [(-19.5, -5.0), (-18.5, -6.3), (-15.4, -5.85), (-12.4, -6.25), (-11.5, -4.2), (-11.9, -0.6),
-             (-11.55, 3.6), (-12.7, 6.15), (-16.2, 6.3), (-19.3, 5.5)]
-centre = (sum(x for x, _ in perimeter) / 10.0, sum(z for _, z in perimeter) / 10.0)
+# Cap perimeter, 12 points. Ridge 1 is the chord 2->10, ridge 2 the chord 3->9 (offset, not parallel).
+perimeter = [(-19.5, -5.0), (-18.5, -6.3), (-15.5, -5.9), (-13.0, -6.2), (-11.9, -6.0), (-11.5, -4.2),
+             (-11.9, -0.6), (-11.55, 3.6), (-12.6, 6.15), (-13.5, 6.3), (-15.7, 6.3), (-19.3, 5.5)]
 n = len(perimeter)
-# Broken crest: the lip stays 1.1 to 1.7 m thick at the front and the back stands near the ceiling.
-crest = []
-for i, (x, z) in enumerate(perimeter):
-    rear = max(0.0, min(1.0, (-11.5 - x) / 8.0))
-    crest.append(min(CAP_HIGH - 0.06, 8.55 + 0.5 * rear + rng.uniform(-0.2, 0.12) + (0.12 if z > 0 else -0.05)))
-# Ring k: height fraction, plane scale about the centre. The bulge is monotone (chamfered foot, full
-# belly, shoulder rolling in), so the flank reads as one broken mass rather than stacked ledges.
-ring_spec = [(0.0, 0.95), (0.14, 1.0), (0.42, 1.0), (0.68, 0.98), (0.86, 0.92), (1.0, 0.84)]
-rows = []
-for t, s in ring_spec:
-    row = []
-    for i, (x, z) in enumerate(perimeter):
-        sx = s * (1.0 + rng.uniform(-0.03, 0.02))
-        px = centre[0] + (x - centre[0]) * sx
-        pz = centre[1] + (z - centre[1]) * sx
-        px = max(X_BACK, min(-11.5, px))
-        pz = max(-6.3, min(6.3, pz))
-        row.append(vert((px, CAP_LOW + (crest[i] - CAP_LOW) * t, pz)))
-    rows.append(row)
-# Underside scooped up 0.40 toward the centre.
-inner = [vert((centre[0] + (x - centre[0]) * 0.55, CAP_LOW + 0.26, centre[1] + (z - centre[1]) * 0.55)) for x, z in perimeter]
-hub = vert((centre[0], CAP_LOW + 0.40, centre[1]))
-under = []
-for i in range(n):
-    j = (i + 1) % n
-    under.append(bm.faces.new((rows[0][j], rows[0][i], inner[i], inner[j])))
-    under.append(bm.faces.new((inner[j], inner[i], hub)))
-# Crown: an inner ring of two offset planes meeting at a fold, the rear-left plane lifted to the ceiling.
-top = rows[-1]
-plane_a = lambda x, z: CAP_HIGH - 0.03 - 0.10 * (x - X_BACK) / 8.0 - 0.06 * (z + 6.3) / 12.6
-plane_b = lambda x, z: 8.86 - 0.16 * (x - X_BACK) / 8.0 + 0.10 * (z + 6.3) / 12.6
-ring_in = []
-for i, (x, z) in enumerate(perimeter):
-    px = centre[0] + (x - centre[0]) * 0.5 + 0.35
-    pz = centre[1] + (z - centre[1]) * 0.5
-    ring_in.append((px, pz))
-left = list(range(0, 6))
-right = list(range(5, 10)) + [0]
-crown = []
-top_in = {}
-for i, (px, pz) in enumerate(ring_in):
-    h = plane_a(px, pz) if i in left else plane_b(px, pz)
-    if i in (0, 5):
-        h = 0.5 * (plane_a(px, pz) + plane_b(px, pz))
-    top_in[i] = vert((px, h, pz))
-for i in range(n):
-    j = (i + 1) % n
-    crown.append(bm.faces.new((top[i], top[j], top_in[j], top_in[i])))
-crown.append(bm.faces.new([top_in[i] for i in left]))
-crown.append(bm.faces.new([top_in[i] for i in right]))
-sides = close(rows)
-for f in under:
-    colour(f, grey(0.62))
-for k, f in enumerate(crown):
-    colour(f, grey(0.98 * rng.uniform(0.96, 1.02), 1.0))
-for k, f in enumerate(sides):
-    band = k // n
-    colour(f, grey((0.70 + 0.05 * band) * rng.uniform(0.94, 1.04), 0.9 if band >= 4 else 0.3))
+centre = (sum(x for x, _ in perimeter) / n, sum(z for _, z in perimeter) / n)
+FRONT = (5, 6, 7)
+CORNER = (1, 4, 8, 9, 10)
+# Ring k: height fraction and inward inset (m) per point class. The front keeps its belly (inset
+# near zero until the last ring); only the corners roll in.
+t_rings = [0.0, 0.14, 0.42, 0.68, 0.86, 1.0]
+inset = {'front': [0.10, 0.0, 0.0, 0.0, 0.03, 0.08],
+         'corner': [0.20, 0.0, 0.0, 0.05, 0.25, 0.50],
+         'side': [0.15, 0.0, 0.02, 0.06, 0.20, 0.40]}
 
+
+def cls(i): return 'front' if i in FRONT else ('corner' if i in CORNER else 'side')
+def moved(i, k):
+    x, z = perimeter[i]
+    dx, dz = centre[0] - x, centre[1] - z
+    d = math.hypot(dx, dz)
+    s = inset[cls(i)][k]
+    px, pz = x + dx / d * s, z + dz / d * s
+    return (max(X_BACK, min(-11.5, px)), max(-6.3, min(6.3, pz)))
+xz = [[moved(i, k) for i in range(n)] for k in range(len(t_rings))]
+top_xz = xz[-1]
+
+
+def plane(a, b, c):
+    """Height plane h = h0 + gx*x + gz*z through three (x, z, h) points."""
+    (x1, z1, h1), (x2, z2, h2), (x3, z3, h3) = a, b, c
+    det = (x2 - x1) * (z3 - z1) - (x3 - x1) * (z2 - z1)
+    gx = ((h2 - h1) * (z3 - z1) - (h3 - h1) * (z2 - z1)) / det
+    gz = ((x2 - x1) * (h3 - h1) - (x3 - x1) * (h2 - h1)) / det
+    return lambda x, z: h1 + gx * (x - x1) + gz * (z - z1)
+
+
+# Crown: three planar regions. Rear plane crests at the ceiling, middle plane near 9.0, the lower
+# forward shoulder near 8.8; adjacent planes share their ridge chord's two top vertices.
+P_R = lambda x, z: 9.18 - 0.040 * (x - X_BACK) - 0.004 * z
+h = {}
+for i in (10, 11, 0, 1, 2):
+    h[i] = P_R(*top_xz[i])
+P_M = plane((*top_xz[2], h[2]), (*top_xz[10], h[10]), (*top_xz[3], h[2] - 0.11))
+for i in (2, 3, 10, 9):
+    h[i] = P_M(*top_xz[i])
+P_F = plane((*top_xz[3], h[3]), (*top_xz[9], h[9]), (*top_xz[7], 8.76))
+for i in (3, 4, 5, 6, 7, 8, 9):
+    h[i] = P_F(*top_xz[i])
+REGIONS = {'R': [10, 11, 0, 1, 2], 'M': [2, 3, 9, 10], 'F': [3, 4, 5, 6, 7, 8, 9]}
+
+
+def area(idx):
+    pts = [top_xz[i] for i in idx]
+    return 0.5 * abs(sum(pts[a][0] * pts[(a + 1) % len(pts)][1] - pts[(a + 1) % len(pts)][0] * pts[a][1] for a in range(len(pts))))
+areas = {k: area(v) for k, v in REGIONS.items()}
+total = sum(areas.values())
+
+rings = []
+for k, t in enumerate(t_rings):
+    rings.append([vert((xz[k][i][0], CAP_LOW + (h[i] - CAP_LOW) * t, xz[k][i][1])) for i in range(n)])
+for a, b in zip(rings, rings[1:]):
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((a[i], a[j], b[j], b[i]))
+# Underside scooped up 0.40 m toward the centre (deepest point Y 7.75), Y 7.35 at the lip.
+inner = [vert((centre[0] + (x - centre[0]) * 0.55, CAP_LOW + 0.26, centre[1] + (z - centre[1]) * 0.55)) for x, z in xz[0]]
+hub = vert((centre[0], CAP_LOW + 0.40, centre[1]))
+for i in range(n):
+    j = (i + 1) % n
+    bm.faces.new((rings[0][j], rings[0][i], inner[i], inner[j]))
+    bm.faces.new((inner[j], inner[i], hub))
+for idx in REGIONS.values():
+    bm.faces.new([rings[-1][i] for i in idx])
+
+for f in bm.faces:
+    for loop in f.loops:
+        loop[p.col] = (1.0, 1.0, 1.0, 1.0)
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 p.paint([], 'paint')  # registers the one slot
 for f in bm.faces:
     f.material_index = 0
     f.smooth = False
+    for loop in f.loops:
+        loop[p.col] = (1.0, 1.0, 1.0, 1.0)
 p.to_object(parent=root)
 tris = common.tri_total(root)
 assert tris < 1600, tris
+top = max(h.values())
+assert top <= CAP_HIGH, top
 common.export(root, common.args()['out'] or os.path.join(common.MODELS, 'moss_shelter.glb'))
-print('moss_shelter triangles', tris)
+print('moss_shelter triangles', tris, 'crown top %.3f' % top,
+      'areas %s' % {k: round(v / total, 3) for k, v in areas.items()},
+      'rim heights', {i: round(h[i], 3) for i in (4, 5, 6, 7, 8)})

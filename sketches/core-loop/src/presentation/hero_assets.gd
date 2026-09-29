@@ -934,21 +934,18 @@ func _restore_mast() -> void:
 
 
 ## Carried sandstone shell beside HeroWorkshop: visual only, no collision, shares the barge's
-## transforms. One mesh, one material: the scenery sandstone contract (matte, strata, 6 m triplanar).
+## transforms. One mesh, one material: the dry cliff rock calculation (sandstone.gdshader,
+## cliff_only) with its pattern anchored in Barge-local metres so it rides the stone.
 func _dress_shelter(barge: Node) -> void:
 	if barge.has_node("HeroShelter"):
 		return
 	var shelter := _scene("res://assets/models/moss_shelter.glb")
 	shelter.name = "HeroShelter"
 	if not _materials.has("moss_sandstone"):
-		var stone := StandardMaterial3D.new()
-		stone.albedo_color = Color(1.12, 1.32, 1.55)
-		stone.roughness = 1.0
-		stone.vertex_color_use_as_albedo = true
-		stone.albedo_texture = Palette.look_texture("sandstone-strata")
-		stone.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-		stone.uv1_triplanar = true
-		stone.uv1_scale = Vector3.ONE / 6.0
+		var stone := ShaderMaterial.new()
+		stone.shader = preload("res://src/presentation/sandstone.gdshader")
+		stone.set_shader_parameter("cliff_only", true)
+		stone.set_shader_parameter("local_pattern", true)
 		_materials["moss_sandstone"] = stone
 	for node in shelter.find_children("*", "MeshInstance3D", true, false):
 		(node as MeshInstance3D).material_override = _materials["moss_sandstone"]
