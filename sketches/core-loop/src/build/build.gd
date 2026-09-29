@@ -38,6 +38,10 @@ const GATE_CHOICES := 2
 # shell_air_factor() only, so an inversion (S4, K5, R6) changes one return value later.
 const SHELL_SCRAP_PER_HP := 5.0
 const SHELL_AIR_FACTOR := 0.75
+# S4, Face Runner (--world-one-builds=on, node taken, shell fitted): for this many sim seconds
+# after a valid vault the shell's air factor is SHELL_AIR_FACTOR_VAULT instead.
+const SHELL_VAULT_WINDOW := 2.0
+const SHELL_AIR_FACTOR_VAULT := 1.25
 const PARTICIPANTS := ["player"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
@@ -118,6 +122,9 @@ var _shots: Array[Vector3] = []
 # stage is never swallowed.
 var _rod_budget := ROD_PER_SECOND
 var _shrapnel_budget := SHRAPNEL_PER_SECOND
+# Sim seconds left in S4's inverted-shell window; counted down in _physics_process, so a
+# paused tree or the bay does not spend it.
+var _shell_window := 0.0
 var _tesla_clock := 0.0
 var _pinwheel_clock := 0.0
 # Pinwheel cuts each enemy at most once per PINWHEEL_EVERY: instance id to time left.
@@ -379,7 +386,8 @@ func _connect_triggers() -> void:
 			_post(Triggers.Kind.ON_REBOUND, "rebound", Triggers.DISCRETE_PROC, ctx.player.ball_position(), enemy, speed))
 	if events.has_signal("vault_kicked"):
 		events.vault_kicked.connect(func(at: Vector3, speed: float):
-			_post(Triggers.Kind.ON_VAULT, "vault", Triggers.DISCRETE_PROC, at, null, speed))
+			_post(Triggers.Kind.ON_VAULT, "vault", Triggers.DISCRETE_PROC, at, null, speed)
+			_open_shell_window())
 	if events.has_signal("gauge_released"):
 		events.gauge_released.connect(func(ability_id: String, fraction: float):
 			_post(Triggers.Kind.ON_CHARGE_RELEASE, ability_id, Triggers.DISCRETE_PROC, ctx.player.ball_position(), null, fraction))
@@ -468,7 +476,31 @@ func shell_fitted() -> bool:
 # The resolved air-control factor Riveted Shell contributes; 1.0 when not fitted. The one place
 # an inversion flips it.
 func shell_air_factor() -> float:
-	return SHELL_AIR_FACTOR if shell_fitted() else 1.0
+	if not shell_fitted():
+		return 1.0
+	return SHELL_AIR_FACTOR_VAULT if _shell_window > 0.0 else SHELL_AIR_FACTOR
+
+
+# S4 is taken: the world-one Face Runner (same id as the base node at index 9, which the
+# world-one depth cap keeps out of reach), so tree.world_one tells them apart.
+func _face_runner_s4() -> bool:
+	var tree = ctx.player.tree if ctx != null and ctx.player != null else null
+	return tree != null and tree.world_one and "s_face_runner" in tree.picks
+
+
+# A valid vault opens (or restarts) the window. build recomputes only on part changes, so the
+# air-control mod is refreshed here and when the window closes; recompute() reads the same
+# live factor, so a recompute inside the window keeps the flip.
+func _open_shell_window() -> void:
+	if not shell_fitted() or not _face_runner_s4():
+		return
+	_shell_window = SHELL_VAULT_WINDOW
+	_refresh_air_mod()
+
+
+# The part-derived air_control mod times the shell's current factor; nothing else touched.
+func _refresh_air_mod() -> void:
+	ctx.tuning.set_mod("air_control", sheet.mod("air_control") * shell_air_factor())
 
 
 func shell_scrap_per_hp() -> float:
@@ -781,6 +813,11 @@ func _physics_process(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var speed: float = ctx.player.planar_velocity().length()
 	scrap.heft = ctx.run.heft()
+	if _shell_window > 0.0:
+		_shell_window -= delta
+		if _shell_window <= 0.0:
+			_shell_window = 0.0
+			_refresh_air_mod()
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
 	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()
