@@ -127,7 +127,7 @@ func _run() -> void:
 	game.player.source = Intent.Scripted.new()
 	for i in SETTLE_PHYSICS_FRAMES:
 		await physics_frame
-	paused = true
+	freeze_tree(self)
 	game.player.body().freeze = true
 	for node in root.find_children("*", "CanvasLayer", true, false):
 		node.visible = false
@@ -174,16 +174,16 @@ func _run() -> void:
 	var env := _first_environment()
 	var lit_exposure: float = env.tonemap_exposure if env != null else 1.0
 	for mode in modes:
-		var state := {}
 		var exposure := lit_exposure
 		if mode != "lit":
-			state = apply_mode(root, root.get_viewport(), mode, subjects, hides)
 			exposure = 1.0
 		var frames: Array = []
 		var dir := out.path_join(mode)
 		DirAccess.make_dir_recursive_absolute(dir)
 		for id in camera_ids:
-			await _stage(id)
+			# Stage first, then apply the mode: staging can show nodes (the moss bay), and a mode
+			# applied earlier would leave them lit.
+			var state := await prepare(root, root.get_viewport(), mode, subjects, hides, _stage.bind(id))
 			var records := apply_freeze(root, freeze_specs)
 			var v: Dictionary = plan[id]
 			Cams.aim(camera, v["eye"], v["target"], v["fov"])
@@ -206,13 +206,13 @@ func _run() -> void:
 				"exposure": exposure, "frozen": frozen,
 				"file": id + ".png", "sha256": FileAccess.get_sha256(png),
 				"thumb": id + ".thumb.png", "thumb_sha256": FileAccess.get_sha256(thumb_png)})
+			if mode != "lit":
+				revert(state)
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
 			"mode": mode, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
 			"hide": hide_paths, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
-		if mode != "lit":
-			revert(state)
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
 		file.store_string(JSON.stringify(doc, "\t"))
 		file.close()
@@ -346,6 +346,20 @@ static func apply_mode(scene_root: Node, viewport: Viewport, mode: String, subje
 			n.visible = false
 			undo["hidden"].append(n)
 	return undo
+
+
+# Run the stage step (it may show or move nodes), then apply the mode to the scene as staged.
+# Returns the undo record, empty for lit.
+static func prepare(scene_root: Node, viewport: Viewport, mode: String, subjects: Array, hides: Array, stage: Callable) -> Dictionary:
+	await stage.call()
+	if mode == "lit":
+		return {}
+	return apply_mode(scene_root, viewport, mode, subjects, hides)
+
+
+# Pause the tree so nothing animated moves between frames.
+static func freeze_tree(tree: SceneTree) -> void:
+	tree.paused = true
 
 
 static func revert(undo: Dictionary) -> void:

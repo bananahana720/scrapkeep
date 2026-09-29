@@ -93,6 +93,25 @@ func _run() -> void:
 	Cap.revert(undo)
 	_check(ground.visible and sign.visible and lamp.visible and glass.visible and world.environment == env and part_a.material_override.albedo_texture != null, "revert restores the lit scene")
 
+	# a node the stage step shows after the mode was chosen still gets the mode (the moss bay).
+	var bay := Node3D.new()
+	bay.visible = false
+	var bay_hull := _mesh("BayHull", Vector3(8, 1, 0))
+	var bay_lamp := OmniLight3D.new()
+	bay.add_child(bay_hull)
+	bay.add_child(bay_lamp)
+	scene.add_child(bay)
+	var show_bay := func() -> void:
+		bay.visible = true
+		await process_frame
+	for mode in ["subject-black", "assembly-black"]:
+		undo = await Cap.prepare(scene, root, mode, [subject], [], show_bay)
+		_check(bay.visible and not bay_lamp.visible and (_uses_black(bay_hull) if mode == "assembly-black" else not bay_hull.visible), "%s: a node shown by the stage step is blacked or hidden, not left lit" % mode)
+		Cap.revert(undo)
+		bay.visible = false
+	scene.remove_child(bay)
+	bay.free()
+
 	# assembly-black: every visible mesh black.
 	undo = Cap.apply_mode(scene, root, "assembly-black", [subject], [])
 	_check(_uses_black(part_a) and _uses_black(part_b) and _uses_black(glass) and _uses_black(ground) and not lamp.visible and not sign.visible, "assembly-black: every visible mesh is black, non-mesh visuals hidden")
@@ -108,7 +127,9 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_check(not is_equal_approx(before, spinner.rotation.y), "control: the unfrozen spinner moves")
-	paused = true
+	_check(not paused, "control: the tree is not paused before the tool freezes it")
+	Cap.freeze_tree(self)
+	_check(paused, "freeze_tree pauses the tree")
 	var records := Cap.apply_freeze(root, specs)
 	var first := Cap.snapshot(records)
 	for i in 5:
