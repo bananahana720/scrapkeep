@@ -62,6 +62,13 @@ var vault_faces := {}
 var last_vault_face := ""
 var vault_aim := {}
 
+# Mass-S: whether the run's picks grant the mass launch verb under --world-one-builds, its
+# q, and the seconds until the one shared bonus grant is available again. player_ball sets
+# the first two each tick; nothing here touches steering, friction or the collider.
+var mass_on := false
+var mass_q := 0.0
+var mass_gap := 0.0
+
 var sprinting := false
 var sprint_left := 0.0
 
@@ -103,6 +110,7 @@ func toggle(key: String) -> bool:
 
 func tick_timers(delta: float) -> void:
 	mount_block = maxf(0.0, mount_block - delta)
+	mass_gap = maxf(0.0, mass_gap - delta)
 	for key in vault_faces.keys():
 		vault_faces[key] -= delta
 		if vault_faces[key] <= 0.0:
@@ -133,6 +141,7 @@ func clear_runtime() -> void:
 	mount_block = 0.0
 	mount_banked = 0.0
 	vault_faces.clear()
+	mass_gap = 0.0
 	last_vault_face = ""
 	vault_aim = {}
 	slingshot_aim = {}
