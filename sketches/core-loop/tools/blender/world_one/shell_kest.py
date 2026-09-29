@@ -81,8 +81,8 @@ def pod():
 def rub_edges(p):
     """Broaden the wear onto the working edges with no new geometry (C09 correction 1): the
     paint the satchels and the mortar tube already carry is rubbed through where a hand, a
-    strap or a shell touches it. Vertex colours move to bone (already in the paint set) and
-    the tube's two upper faces move to the bare_metal slot the pod already has."""
+    strap or a shell touches it. Vertex colours move to bone (already in the paint set); no
+    face changes slot."""
     bone = tuple(common.rgba("bone"))
     col = p.col
     p.bm.normal_update()
@@ -106,8 +106,6 @@ def rub_edges(p):
             for loop in f.loops:
                 if (loop.vert.co - base).dot(d) / length > 0.8:
                     loop[col] = bone
-            if f.normal.z > 0.6 and abs(f.normal.dot(d)) < 0.3:
-                f.material_index = p._slot("bare_metal")
 
 
 def wear(p):
