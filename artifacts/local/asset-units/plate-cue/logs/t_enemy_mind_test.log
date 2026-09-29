@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[the quote is the telegraph] mind_adapted ["ram"] with its strike lane already committed true; lane voice mind_sable; braced false -> PASS
+[brace] braced against ram: ram meets 37, a shot 23, the open lens 0 -> PASS
+[brace ends] the brace lasted 5.01 s, then ram meets the plating again -> PASS
+[adapts within the run] second read weapon; memory [{ "habit": "ram", "icon": "trg_on_speed_tier_up" }, { "habit": "weapon", "icon": "trg_on_hit" }] -> PASS
+[resets per run] after a new run: top habit '', memory [] -> PASS
+[no memory across runs] a fresh hand in the new run acted 0 times with nothing learned -> PASS
+enemy_mind_test: PASS

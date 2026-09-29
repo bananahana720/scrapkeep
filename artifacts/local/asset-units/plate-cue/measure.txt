@@ -1,0 +1,10 @@
+mean relative luminance (linear) per region; use6 fixed boxes on the head/base plate
+use6 amber base rim (brow lip)=0.707 plate face (front slab)=0.698 body (torso, visible)=0.538
+use6 amber head rim (brow lip)=0.690 plate face (front slab)=0.048 body (torso, visible)=0.063
+use6 slate base rim (brow lip)=0.028 plate face (front slab)=0.016 body (torso, visible)=0.062
+use6 slate head rim (brow lip)=0.028 plate face (front slab)=0.016 body (torso, visible)=0.062
+front30 diff bbox 919 548 1000 578 px 862
+front30 base amber bbox mean lum 0.6541 max 0.719
+front30 base slate bbox mean lum 0.0714 max 0.552
+front30 head amber bbox mean lum 0.2830 max 0.701
+front30 head slate bbox mean lum 0.0714 max 0.552

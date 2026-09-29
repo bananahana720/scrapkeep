@@ -1,0 +1,18 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS amber: the plate material emits (state follows tint_state)
+PASS amber: every rim and bolt vertex is lit (504 lit, 0 dark)
+FAIL amber: no plate-face vertex is lit (144 lit, 0 dark)
+PASS plate faces keep the resting albedo in both states
+PASS body keeps its resting finish and never glows in either state
+PASS slate: no added light on any plate vertex
+PASS draws per brute unchanged across states (3)
+PASS amber: the crack glyph shows
+PASS back to slate: the switch follows tint_state, no light, no glyph
+PASS combat still writes tint_state ()
+PASS warden jaw: amber lights the face edge (1.80) and not the face centre (0.00)
+PASS warden jaw keeps the resting plate albedo in amber
+PASS warden jaw: slate adds no light
+PASS mind hand plate bone: dark mask, no face light in amber
+PASS mind hand plate bone carries a mask material
+plate_cue_test: FAIL

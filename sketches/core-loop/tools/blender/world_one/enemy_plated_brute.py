@@ -5,6 +5,8 @@
 # exporter turns +Y into Godot -Z), so the brute faces -Y. Origin is the collider centre, ground
 # at z = -1.1 (the 2.2 m capsule the collider keeps, radius 0.8).
 #
+# The plate's rim and bolts carry vertex colour black (the amber cue mask); no draw is added.
+#
 # Two meshes, three surfaces (three colour-pass draws, the E ceiling), no alpha:
 #   BruteBody    fleet_paint (torso, head, hump, shoulders, arms, legs; flashes with the enemy)
 #                and paint (vertex colour: snout, ears, fists, feet, strap, the one brass tag,
@@ -33,6 +35,9 @@ root = common.empty("PlatedBrute")
 
 GROUND = -1.1
 CHAR = "charcoal"
+# Vertex colour black marks the plate's rim (brow lip, ribs, caps) and every bolt: the runtime lights
+# only those vertices in amber (enemy.gd emission mask); white plate faces stay unlit.
+RIM = "000000"
 BRASS = "brass"
 
 # --- Body: a squat barrel torso, hump, arms hanging to fists, a low head --------------
@@ -57,20 +62,20 @@ body = b.to_object(parent=root)
 # --- Plate group: front slab, brow, ribs, bolts, shoulder and rear cladding ----------
 p = Part("BrutePlates")
 p.box("bare_metal", (2.0, 0.5, 1.9), loc=(0, -1.10, 0.10))  # front slab, face at -1.35
-p.box("bare_metal", (2.1, 0.62, 0.22), loc=(0, -1.14, 1.02))  # brow lip
+p.box("bare_metal", (2.1, 0.62, 0.22), loc=(0, -1.14, 1.02), color=RIM)  # brow lip
 for s in (-1, 1):
-    p.box("bare_metal", (0.16, 0.06, 1.5), loc=(s * 0.78, -1.37, 0.10))  # ribs
+    p.box("bare_metal", (0.16, 0.06, 1.5), loc=(s * 0.78, -1.37, 0.10), color=RIM)  # ribs
     p.box("bare_metal", (0.7, 1.7, 0.5), loc=(s * 1.15, -0.05, 0.66))  # shoulder cladding
-    p.box("bare_metal", (0.5, 1.4, 0.2), loc=(s * 1.15, -0.05, 0.98))  # shoulder cap
+    p.box("bare_metal", (0.5, 1.4, 0.2), loc=(s * 1.15, -0.05, 0.98), color=RIM)  # shoulder cap
     for z in (-0.5, 0.5):
-        p.bolt((s * 0.78, -1.40, 0.10 + z), (0, -1, 0), r=0.07, h=0.06, segs=6)
+        p.paint(p.bolt((s * 0.78, -1.40, 0.10 + z), (0, -1, 0), r=0.07, h=0.06, segs=6), "bare_metal", RIM)
     for y in (-0.5, 0.4):
-        p.bolt((s * 1.15, y, 1.08), (0, 0, 1), r=0.08, h=0.06, segs=6)
+        p.paint(p.bolt((s * 1.15, y, 1.08), (0, 0, 1), r=0.08, h=0.06, segs=6), "bare_metal", RIM)
     p.box("bare_metal", (0.42, 0.5, 0.5), loc=(s * 0.55, -1.06, -0.85))  # kick block
 p.box("bare_metal", (1.5, 0.4, 1.3), loc=(0, 1.0, 0.10))  # rear slab
-p.box("bare_metal", (1.7, 0.3, 0.2), loc=(0, 1.0, 0.85))  # rear cap
+p.box("bare_metal", (1.7, 0.3, 0.2), loc=(0, 1.0, 0.85), color=RIM)  # rear cap
 for x in (-0.5, 0.5):
-    p.bolt((x, 1.2, 0.3), (0, 1, 0), r=0.07, h=0.06, segs=6)
+    p.paint(p.bolt((x, 1.2, 0.3), (0, 1, 0), r=0.07, h=0.06, segs=6), "bare_metal", RIM)
 plates = p.to_object(parent=root)
 bpy.context.view_layer.update()
 

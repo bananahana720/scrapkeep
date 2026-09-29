@@ -1,0 +1,10 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[blazing_ram] a blazing ram (26.6 m/s, punch 48.6) on plating 45 dealt 48.6 in full -> PASS
+[pulses] 4 pulses in 30 s, shortest telegraph 2.022 s (needs >= 2.0) -> PASS
+[pulse_planar] planar speed across 3 pulses changed by at most 0.17% (needs < 3%) -> PASS
+[pulse_lift] 3 pulses caught the ball in the reach ring and each raised its vertical speed by at least 8.84 m/s (+10 less gravity over the sample); 1 fired with the ball outside the ring and lifted nothing -> PASS
+[immobile] the Warden moved 0.0000 m over 30 s -> PASS
+[break_1] warden I broke after 47.9 s of continuous base runner fire (limit 60 s); aimed at the body, magnet stuns 0 -> PASS
+[break_3] warden III broke not within 95.1 s of continuous base runner fire (must outlast 90 s); aimed at the body, magnet stuns 0 -> PASS
+combat_warden_test: PASS

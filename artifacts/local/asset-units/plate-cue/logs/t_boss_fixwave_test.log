@@ -1,0 +1,20 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[objective phase 1] objective "Shoot the crane magnets holding your scrap. Punch 0 / hull plating 120.", live plating 120, flow.boss_plating 120 -> PASS
+[rim rescue keeps direction] a ball leaving over the rim clockwise at 15 m/s came back at r 50.0 moving -15.0 m/s along the counter-clockwise tangent -> PASS
+[objective phase 2] objective "Slam the vent caps from a mast or ramp. Punch 0 / hull plating 120." -> PASS
+[drone arrival] a drone pad was marked 1.01 s before the drone arrived, 19.2 m from the ball (at least 8) and 9.0 m off the hull's centre line -> PASS
+[drone aims at the arena] the drone's ground query answers the arena floor, not the parked stage 30 m below: true -> PASS
+[crust under telegraphs] the crust draws at priority 39 (telegraphs 40) and the live slag leaves the quenched span open: true -> PASS
+[synergy is not a landing] a synergy strike of 48 on a cap with the ball on top chipped 9.6 against the hull's plating -> PASS
+[landing needs the ball on top] a slam-kind strike on a cap with the ball on the floor beside the hull chipped 9.6; with the ball on the cap it took 72.0 -> PASS
+[clash preview is ram only] charging, with a 160 weapon and a standing ball: tint slate, readout "BRINDLE · bow plating 150", objective "Out-clash the charge with a ram, or get out of its lane. Ram 0 / bow plating 150.", live plating 150 -> PASS
+[tint verb] the hull's tint_verb() reads "ram" while charging and "" once stunned -> PASS
+[stunned hull uncrushable] stunned true: crushable() false, would_crush on a 500 ram false, a 5 shot still landed 5.0, live plating 0.01 -> PASS
+[arena ground seam] ground_height_at() matches the bowl's floor and bank within 0.000 m at 60 points; the parked stage lies 38 m below -> PASS
+[objective chase] objective "Catch the Admiral's scooter: ram it or land on it.", live plating 0, flow.boss_plating 0 -> PASS
+[chase drones pay] a drone killed during the chase dropped 1 pickup(s) -> PASS
+[synergy is not a catch] a synergy strike with the ball on the scooter left the boss eject -> PASS
+[catch needs contact] a slam-kind strike with the ball 7 m away left the boss eject; with the ball on the scooter it was defeated -> PASS
+[arena retry is fresh] after ["arena_retry"] the fight restarted at phase 1, hp 22000, with 0 hazards, 0 pickups and 0 drone pads left over (the dead attempt had some: true) -> PASS
+boss_fixwave_test: PASS
