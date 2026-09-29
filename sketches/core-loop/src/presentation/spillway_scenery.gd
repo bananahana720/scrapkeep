@@ -54,7 +54,6 @@ static func build(stage_root: Node3D) -> Node3D:
 
 	# All water is behind the existing southern rim, never on a traversable shelf.
 	for x in [-103.0, -47.0, 37.0, 93.0]:
-		_place(water, Vector3(x, 75, 227), Vector3(14, 90, 0.5))
 		# Spill mist: a small cluster of irregular, feathered patches per fall. Sizes, offsets and
 		# in-plane rolls vary from a fixed seed, so no row or grid reads; alpha stays at the cap.
 		var rng := RandomNumberGenerator.new()
@@ -66,7 +65,10 @@ static func build(stage_root: Node3D) -> Node3D:
 		for j in 8:
 			_place_mist(mist, Vector3(x + rng.randf_range(-8.0, 8.0), rng.randf_range(38.0, 58.0), 222.0 + rng.randf_range(0.0, 3.0)),
 				Vector2(rng.randf_range(8.0, 16.0), rng.randf_range(5.0, 11.0)), rng.randf_range(-1.0, 1.0))
-	_place(pools, Vector3(0, 28, 217), Vector3(276, 0.4, 28))
+	# G05: the four sheets and the tailrace are hand-broken meshes in world metres (water_edges.glb),
+	# each inside the box it replaces, so they take one identity placement.
+	_place(water, Vector3.ZERO, Vector3.ONE)
+	_place(pools, Vector3.ZERO, Vector3.ONE)
 	# Shingled shoulders are deliberately irregular; each exposed lip catches the key.
 	for side in [-1.0, 1.0]:
 		for i in 8:
@@ -143,8 +145,8 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "CottonwoodCrowns", canopy, leaves, Color("728249"))
 	_batch(scenery, "BlockFaces", box, masonry, Color("bda078"))
 	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
-	_batch(scenery, "SpillSheets", box, water, Color.WHITE)
-	_batch(scenery, "Tailrace", box, pools, Color.WHITE)
+	_batch(scenery, "SpillSheets", _water_edge_mesh("SpillSheets", box), water, Color.WHITE)
+	_batch(scenery, "Tailrace", _water_edge_mesh("Tailrace", box), pools, Color.WHITE)
 	_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
 	_batch(scenery, "CablesAndGyros", box, cables, Color("c7b18c"))
 	_batch(scenery, "CableCars", box, cabins, Color("537b72"))
@@ -152,6 +154,18 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "BallInsignia", canopy, glyphs, Color("e2ceb0"))
 	_merge_opaque(scenery)
 	return scenery
+
+
+static func _water_edge_mesh(node_name: String, fallback: Mesh) -> Mesh:
+	var packed := load("res://assets/models/world_one/water_edges.glb") as PackedScene
+	if packed == null:
+		return fallback
+	var scene := packed.instantiate()
+	var found: Mesh = null
+	for candidate in scene.find_children(node_name, "MeshInstance3D", true, false):
+		found = (candidate as MeshInstance3D).mesh
+	scene.free()
+	return found if found != null else fallback
 
 
 static func _place(into: Array[Transform3D], at: Vector3, size: Vector3, turn := 0.0) -> void:

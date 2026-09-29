@@ -1151,3 +1151,12 @@ Direction: `look-pass-4/geometry/round2/ROUND2.md`, Moss section. Visual only; n
 - **Test** `tests/moss_shelter_test.gd` measures the lip with vertical rays through the cap triangles (upper minus lower surface at the same X/Z, 0.15 m inside the front edge, columns where the edge is ahead of X -13): at least 70% must be 1.30 to 1.60 m and none under 1.10 m except the last 0.30 m at each end. `-- --mutate=thin-lip|outside|entry` bends the vertices in-test; each fails the run (exit 1). Current: 124 columns, 87% in range, thinnest 0.606 m (chipped corner).
 - **Budget**: 619 vertices, 266 triangles, one surface, one opaque draw. Renderer draw calls at the moss view: 145 with shadows, 143 with the shelter's cast shadow off, so the shelter adds 2 shadow draws.
 - **Not judged**: the look; Codex judges it blind. Frames and sheets are under `artifacts/local/geo-moss/r2/`.
+
+## Asset G05: water edges
+
+The four fall sheets and the tailrace were five boxes (60 T). `water_edges.glb` replaces them with two meshes in world metres, `SpillSheets` and `Tailrace`, built by `tools/blender/world_one/water_edges.py`. Wired by one commit in `spillway_scenery.gd`; the batches keep their names, `spill_water.gdshader` and shadow-off setting.
+
+- **Measured after Godot import.** Before: 120 V, 60 T, 2 draws. After: 106 V, 112 T, 2 draws (ceiling 180 V / 120 T / 2 D). Smooth shading is required: flat faces split to 302 V on import.
+- **Shape.** Each sheet is two columns by five rows with unequal row heights; the left and right edges bite inward by different amounts per ring, the lip and foot the most, and the ridge between them shifts in depth. The tailrace is a 16-quad strip whose play-side lip wanders 0.6 to 4.6 m inward and whose ends round off.
+- **Bounds.** Every vertex stays inside the box it replaces, so the silhouette never grows; `tests/water_edges_test.gd` fails otherwise, and on the V, T and draw ceilings.
+- **Not done.** No wet-stone band at the shoreline: it would need a third surface or a rock-shader change outside this unit. Flood and event surfaces are untouched. Codex judges the look.
