@@ -933,6 +933,25 @@ func _restore_mast() -> void:
 	_mast.clear()
 
 
+## Carried sandstone shell beside HeroWorkshop: visual only, no collision, shares the barge's
+## transforms. One mesh, one material: the dry cliff rock calculation (sandstone.gdshader,
+## cliff_only) with its pattern anchored in Barge-local metres so it rides the stone.
+func _dress_shelter(barge: Node) -> void:
+	if barge.has_node("HeroShelter"):
+		return
+	var shelter := _scene("res://assets/models/moss_shelter.glb")
+	shelter.name = "HeroShelter"
+	if not _materials.has("moss_sandstone"):
+		var stone := ShaderMaterial.new()
+		stone.shader = preload("res://src/presentation/sandstone.gdshader")
+		stone.set_shader_parameter("cliff_only", true)
+		stone.set_shader_parameter("local_pattern", true)
+		_materials["moss_sandstone"] = stone
+	for node in shelter.find_children("*", "MeshInstance3D", true, false):
+		(node as MeshInstance3D).material_override = _materials["moss_sandstone"]
+	barge.add_child(shelter)
+
+
 func _dress_bay() -> void:
 	if ctx == null or not is_inside_tree():
 		return
@@ -947,6 +966,7 @@ func _dress_bay() -> void:
 	workshop.name = "HeroWorkshop"
 	paint(workshop, {"class": Palette.AMBER})
 	barge.add_child(workshop)
+	_dress_shelter(barge)
 	for child in cabin.get_children():
 		if child is MeshInstance3D:
 			hide_placeholder(child)

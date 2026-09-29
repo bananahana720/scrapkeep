@@ -16,8 +16,9 @@ def rod(a,b,r,color='copper'):
     return p.rod('paint',point(a),point(b),r,segs=8,color=color)
 def disc(at,r,depth,slot='bare_metal'):
     return p.cyl(slot,r,r,depth,segs=12,loc=point(at),rot=(0,math.pi/2,0))
-# Fits the grey cabin's 5 x 6 x 8 m volume, with shallow trim over its front.
-box((5.08,6.05,8.08),(-17,3,0))
+# The cabin hull is inset from the sandstone cheeks and rear skin (moss_shelter.py) and
+# keeps its front face at the old plane, so no old box shows outside the stone.
+box((4.36,6.05,6.8),(-16.68,3,0))
 box((0.12,4.7,7.1),(-14.40,3.45,0),'charcoal')
 for z in [-3.6,3.6]:
     box((0.3,5.9,0.3),(-14.25,3.1,z),'copper')
@@ -42,8 +43,7 @@ for z in [-3.9,3.9]:
     box((0.55,0.95,0.48),(-13.92,4.7,z),'charcoal')
     box((0.58,0.60,0.32),(-13.87,4.7,z),slot='class_accent')
     for y in [4.35,5.05]:box((0.72,0.1,0.68),(-13.9,y,z),'copper')
-# Riveted roof overhang and two patched plates.
-box((5.8,0.25,8.8),(-16.8,6.18,0),'oxide')
+# Two patched plates; the stone neck and cap replace the old riveted roof overhang.
 for z in [-2.0,1.4]:
     box((0.12,0.9,1.2),(-14.08,3.3,z),'oxide')
     for dz in [-0.48,0.48]:
