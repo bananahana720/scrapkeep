@@ -36,6 +36,9 @@ const RECOVERY_LIFE := 20.0
 const RECOVERY_MAX_CLUSTERS := 6
 const RECOVERY_AHEAD := Vector2(6.0, 16.0)
 const RECOVERY_SIDE := 4.5
+# One cluster taken back, with its scrap value. Audio chimes on it; the mass is still
+# credited by build from recovered_values, and this is no pickup (no scrap_collected).
+signal recovered(value: int)
 # What the last step() collected and let expire, as scrap values.
 var recovered_values: Array[int] = []
 var expired_values: Array[int] = []
@@ -172,6 +175,7 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 		if distance <= COLLECT or (_caught.has(item) and distance <= home * delta):
 			if _value.has(item):
 				recovered_values.append(int(_value[item]))
+				recovered.emit(int(_value[item]))
 			else:
 				taken.append(item.global_position)
 			_forget(item)

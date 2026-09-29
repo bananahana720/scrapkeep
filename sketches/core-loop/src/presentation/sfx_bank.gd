@@ -77,6 +77,8 @@ const TRIM_DB := {
 	"near_miss_whip_sable": -6.0, "near_miss_whip_rivet": -6.0, "near_miss_whip_kest": -6.0,
 	"kill_chain_tier": -5.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
+	# Durability prototype: the plate shed in three sizes and the reclaim chime.
+	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -194,6 +196,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.13, _hz(53), _hz(53), "square_dark", 8.0), 0, 1.0],
 				[_tone(0.2, _hz(50), _hz(48), "square_dark", 9.0), Synth.seconds(0.11), 1.0],
 				[_noise(0.1, 900.0, 300.0, 30.0), 0, 0.5]], true)
+		"armor_shed_small":
+			return _shed(2)
+		"armor_shed":
+			return _shed(3)
+		"armor_shed_big":
+			return _shed(5)
+		"armor_reclaim":
+			return _reclaim()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -679,6 +689,27 @@ static func _unseal() -> PackedFloat32Array:
 static func _clank() -> PackedFloat32Array:
 	return _mix([[_fm(0.3, _hz(76), 1.41, 1.6, 11.0), 0, 1.0], [_fm(0.22, _hz(83), 2.76, 1.2, 16.0), 0, 0.55],
 		[_tone(0.03, 1800.0, 1200.0, "sine", 90.0), 0, 0.3]])
+
+
+# Plates knocked loose: `plates` inharmonic FM pings, each a little lower and later than
+# the last, over a grit of noise. More plates also add a low thunk, so the size of the hit
+# reads by how much falls, not only by loudness. Clatter, never a tune: it must not be
+# mistaken for a pickup.
+static func _shed(plates: int) -> PackedFloat32Array:
+	var notes := [86, 81, 84, 77, 79]
+	var parts: Array = [[_noise(0.03 + 0.012 * plates, 4800.0, 2400.0, 90.0 / plates), 0, 0.35]]
+	for i in plates:
+		parts.append([_fm(0.13 + 0.02 * plates, _hz(notes[i]), 2.76, 1.5, 24.0 - 2.0 * plates), Synth.seconds(0.038 * i), 0.9 - 0.08 * i])
+	if plates >= 3:
+		parts.append([_tone(0.1 + 0.02 * plates, 170.0, 62.0, "sine", 22.0), 0, 0.5 + 0.1 * plates])
+	return _mix(parts)
+
+
+# The scrap is back: a quick, bright, rising fourth (A to D on the bell), the tail of a
+# rice cooker's melody. Audio climbs it up the pentatonic while recoveries keep coming.
+static func _reclaim() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 81), 0.2), 0, 0.75], [_cut(_n("bell", 86), 0.32), Synth.seconds(0.075), 0.95],
+		[_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.12]])
 
 
 # Torn metal: a zipper of teeth sweeping down while a saw sags.
