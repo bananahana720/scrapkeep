@@ -49,6 +49,7 @@ var _hits: Array = []
 var _shell := {}
 var _charge_ticks := 0
 var _charge_bad: Array = []
+var _glow_bad: Array = []
 var _glow_ticks := 0
 
 
@@ -249,8 +250,14 @@ func _observe_charge(lobber) -> void:
 	_charge_ticks += 1
 	if not is_equal_approx(float(facts["progress"]), lobber.charge):
 		_charge_bad.append("tick %d: progress %.4f vs charge %.4f" % [_ticks, facts["progress"], lobber.charge])
+	# Force the glow off its formula and poll again in this same tick, so a fact that read the
+	# glow would pick the forced value up; the fact must still equal the charge.
 	lobber._muzzle_material.emission_energy_multiplier = 77.0
+	lobber._facts_poll()
 	_glow_ticks += 1
+	var forced: Dictionary = lobber.attack_facts()
+	if forced.is_empty() or not is_equal_approx(float(forced["progress"]), lobber.charge):
+		_glow_bad.append("tick %d: progress %s vs charge %.4f" % [_ticks, forced.get("progress", "none"), lobber.charge])
 
 
 func _inside(d: Dictionary, p: Vector3) -> bool:
@@ -380,8 +387,8 @@ func _judge_lobber() -> void:
 	_report("lobber_recover_committed", facts[2]["committed"] == true and facts[2]["geometry"] == ring, "recover keeps the committed ring")
 	_report("lobber_progress_is_charge", _charge_ticks >= 5 and _charge_bad.is_empty(),
 		"wind-up progress equals the public charge on %d ticks %s" % [_charge_ticks, _charge_bad.slice(0, 3)])
-	_report("lobber_glow_independent", _glow_ticks >= 5 and _charge_bad.is_empty(),
-		"the glow was forced to 77 on %d wind-up ticks and the facts still followed the charge" % _glow_ticks)
+	_report("lobber_glow_independent", _glow_ticks >= 5 and _glow_bad.is_empty(),
+		"the glow was forced to 77 and the fact re-polled in the same tick on %d wind-up ticks; progress still equalled the charge %s" % [_glow_ticks, _glow_bad.slice(0, 3)])
 	var src := FileAccess.get_file_as_string("res://src/combat/enemy.gd")
 	_report("lobber_no_glow_inversion", not src.contains("_muzzle") \
 			and not src.contains("LOBBER_GLOW") and not src.contains("LOBBER_MIN_CHARGE"),
