@@ -5,7 +5,6 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Chaser := preload("res://src/combat/chaser.gd")
-const Enemy := preload("res://src/combat/enemy.gd")
 
 # Attack facts, packet 1 (DESIGN-NOTES, "Attack facts, enemies"): a mapped enemy's attack
 # publishes attack_phase with a unique instance id, its ATTACK_ROWS id, its phase and the
@@ -13,9 +12,10 @@ const Enemy := preload("res://src/combat/enemy.gd")
 # - Chaser: windup, strike, recover on row E01; two overlapping lunges get two ids; the
 #   published geometry equals what the telegraph tests at 25, 50 and 95 percent.
 # - A knocked or killed wind-up publishes cancelled.
-# - Lobber: windup with uncommitted aim, then strike (still uncommitted: the landing ring is
-#   the shell's own Telegraph, not copied here), then recover, on row E02; a kill in the
-#   wind-up cancels. The wind-up reads lobber.gd's glow formula; a source check pins it.
+# - Lobber (packet 2): windup with uncommitted aim whose progress equals lobber.gd's public
+#   charge on every tick and reads nothing of the muzzle glow; then strike, committed with
+#   geometry equal to the shell Telegraph's own descriptor (hit test agreeing inside, on the
+#   edge and outside the landing ring); then recover, on row E02; a kill in the wind-up cancels.
 # - Damage: a chaser lunge that lands emits hit_player with Chaser.DAMAGE.
 # - A counter (the mag trapper) publishes the same phases from its own loop, row E05.
 # - Nothing about the attacks changes: TIMELINE below is captured from base 1c2f777 (md5 of the text), where
@@ -26,7 +26,6 @@ const OFFSET := Vector3(8.0, 0.0, 0.0)
 const FRACTIONS := [0.25, 0.5, 0.95]
 const TIMELINE_STAGES := [0, 1, 2, 3, 4, 5, 6]
 const LAST_STAGE := 7
-const LOBBER_GLOW_FORMULA := "0.8 + charge * 5.0"
 const TIMELINE_GOLDEN := "31b06bf983e69dd05bff824779147fe1"
 
 var _game
@@ -47,6 +46,11 @@ var _stage_done := false
 var _acted := false
 var _seen := {}
 var _hits: Array = []
+var _shell := {}
+var _charge_ticks := 0
+var _charge_bad: Array = []
+var _glow_bad: Array = []
+var _glow_ticks := 0
 
 
 func _initialize() -> void:
@@ -132,6 +136,8 @@ func _spawn(kind: String, offset: Vector3) -> void:
 
 func _on_phase(facts: Dictionary, index: int) -> void:
 	_log[index].append(facts)
+	if _stage == 3 and facts["phase"] == "strike":
+		_capture_shell()
 	_all_ids.append([_stage, facts["instance"], facts["phase"]])
 	if facts["phase"] == "windup":
 		_open[facts["instance"]] = true
@@ -139,6 +145,27 @@ func _on_phase(facts: Dictionary, index: int) -> void:
 	else:
 		if facts["phase"] == "cancelled" or facts["phase"] == "recover":
 			_open.erase(facts["instance"])
+
+
+# At the strike the shell already exists: keep its Telegraph's own descriptor and check the
+# published geometry against that Telegraph's hit test right away, while the ring is live.
+func _capture_shell() -> void:
+	for shell in get_nodes_in_group("enemy_shot"):
+		if shell.get("ring") != null and is_instance_valid(shell.ring):
+			var d: Dictionary = shell.ring.descriptor()
+			_shell = {"descriptor": d, "agree": _agree_ring(d, shell.ring)}
+
+
+func _agree_ring(d: Dictionary, tele: Node3D) -> bool:
+	var points: Array = []
+	for f in [0.0, 0.5, 0.98, 1.02, 1.5]:
+		points.append(d["centre"] + Vector3.RIGHT * d["r_out"] * f)
+		points.append(d["centre"] + Vector3.BACK * d["r_out"] * f)
+	for p in points:
+		var q := _ground(p)
+		if _inside(d, q) != tele.contains(q):
+			return false
+	return true
 
 
 func _phases(index: int) -> Array:
@@ -169,6 +196,8 @@ func _observe() -> void:
 	if is_instance_valid(first) and first.get("shots") != null and _stage == 3 and first.shots > 0 and not _sampled.has("shot"):
 		_sampled["shot"] = true
 		_timeline.append("s%d:%d:fired" % [_stage, _ticks])
+	if _stage == 3:
+		_observe_charge(first)
 	var state: String = first.state_name() if first.has_method("state_name") else ""
 	if state != "":
 		_seen[state] = true
@@ -210,6 +239,25 @@ func _observe() -> void:
 		7:
 			if not _hits.is_empty() and state == "recover":
 				_stage_done = true
+
+
+# Each tick of the wind-up, the fact's progress must be the lobber's public charge, and
+# moving the muzzle glow away from its formula must not move the fact.
+func _observe_charge(lobber) -> void:
+	var facts: Dictionary = lobber.attack_facts()
+	if facts.is_empty() or facts["phase"] != "windup":
+		return
+	_charge_ticks += 1
+	if not is_equal_approx(float(facts["progress"]), lobber.charge):
+		_charge_bad.append("tick %d: progress %.4f vs charge %.4f" % [_ticks, facts["progress"], lobber.charge])
+	# Force the glow off its formula and poll again in this same tick, so a fact that read the
+	# glow would pick the forced value up; the fact must still equal the charge.
+	lobber._muzzle_material.emission_energy_multiplier = 77.0
+	lobber._facts_poll()
+	_glow_ticks += 1
+	var forced: Dictionary = lobber.attack_facts()
+	if forced.is_empty() or not is_equal_approx(float(forced["progress"]), lobber.charge):
+		_glow_bad.append("tick %d: progress %s vs charge %.4f" % [_ticks, forced.get("progress", "none"), lobber.charge])
 
 
 func _inside(d: Dictionary, p: Vector3) -> bool:
@@ -329,12 +377,22 @@ func _judge_lobber() -> void:
 	_report("lobber_row", facts[0]["row"] == "E02" and facts[0]["owner"] == "lobber", "row %s" % facts[0]["row"])
 	_report("lobber_uncommitted", facts[0]["committed"] == false and facts[0]["geometry"].is_empty() and facts[0]["progress"] > 0.0,
 		"wind-up aim uncommitted: committed %s, geometry %s, progress %.3f" % [facts[0]["committed"], facts[0]["geometry"], facts[0]["progress"]])
-	_report("lobber_strike_uncommitted", facts[1]["committed"] == false and facts[1]["geometry"].is_empty(),
-		"strike publishes no geometry (committed %s): the shell's ring is a later packet" % facts[1]["committed"])
-	var src := FileAccess.get_file_as_string("res://src/combat/lobber.gd")
-	_report("lobber_glow_formula", src.contains("emission_energy_multiplier = " + LOBBER_GLOW_FORMULA) \
-			and Enemy.LOBBER_GLOW_BASE == 0.8 and Enemy.LOBBER_GLOW_SPAN == 5.0,
-		"lobber.gd still draws the glow the wind-up fact inverts (%s)" % LOBBER_GLOW_FORMULA)
+	var strike: Dictionary = facts[1]
+	var ring: Dictionary = _shell.get("descriptor", {})
+	_report("lobber_strike_committed", strike["committed"] == true and not ring.is_empty() and strike["geometry"] == ring,
+		"strike committed %s with geometry equal to the shell telegraph's descriptor: %s" % [strike["committed"], strike["geometry"] == ring])
+	_report("lobber_strike_form", ring.get("form", "") == "radial" and is_equal_approx(float(ring.get("r_out", 0.0)), 3.6),
+		"the ring is the shell's blast ring: %s r_out %s" % [ring.get("form", "none"), ring.get("r_out", "none")])
+	_report("lobber_hit_test", _shell.get("agree", false), "published ring agrees with the shell telegraph's hit test at 0, 50, 98, 102 and 150 percent of radius")
+	_report("lobber_recover_committed", facts[2]["committed"] == true and facts[2]["geometry"] == ring, "recover keeps the committed ring")
+	_report("lobber_progress_is_charge", _charge_ticks >= 5 and _charge_bad.is_empty(),
+		"wind-up progress equals the public charge on %d ticks %s" % [_charge_ticks, _charge_bad.slice(0, 3)])
+	_report("lobber_glow_independent", _glow_ticks >= 5 and _glow_bad.is_empty(),
+		"the glow was forced to 77 and the fact re-polled in the same tick on %d wind-up ticks; progress still equalled the charge %s" % [_glow_ticks, _glow_bad.slice(0, 3)])
+	var src := FileAccess.get_file_as_string("res://src/combat/enemy.gd")
+	_report("lobber_no_glow_inversion", not src.contains("_muzzle") \
+			and not src.contains("LOBBER_GLOW") and not src.contains("LOBBER_MIN_CHARGE"),
+		"enemy.gd names neither the muzzle material nor the glow constants")
 	_report("lobber_instance", facts[0]["instance"] == facts[1]["instance"] and facts[1]["instance"] == facts[2]["instance"], "one instance")
 
 
