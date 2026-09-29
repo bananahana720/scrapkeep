@@ -26,6 +26,20 @@ const ASSET := {
 }
 
 
+# Orthographic family views (CLIFF-R2 section 4). Each looks at the centre of a world AABB from
+# `dir` (front: 250 m toward the arena along X, sign chosen by which side the AABB is on; side:
+# +Z; top: +Y with camera-up +Z). The vertical span is the largest AABB extent times 1.10.
+const ORTHO := {
+	"ortho-front": {"dir": Vector3(1, 0, 0), "up": Vector3.UP},
+	"ortho-side": {"dir": Vector3(0, 0, 1), "up": Vector3.UP},
+	"ortho-top": {"dir": Vector3(0, 1, 0), "up": Vector3(0, 0, 1)},
+}
+const ORTHO_DISTANCE := 250.0
+const ORTHO_MARGIN := 1.10
+const NEAR := 0.05
+const FAR := 1800.0
+
+
 static func names() -> Array:
 	return ASSET.keys() + LOOK.keys()
 
@@ -44,7 +58,33 @@ static func view(id: String, anchor: Transform3D = Transform3D.IDENTITY, centre 
 	return {"eye": eye, "target": centre, "fov": row["fov"]}
 
 
+static func is_ortho(id: String) -> bool:
+	return ORTHO.has(id)
+
+
+# {eye, target, up, size} for an orthographic family view of the world box `box`.
+static func ortho_view(id: String, box: AABB) -> Dictionary:
+	var row: Dictionary = ORTHO[id]
+	var centre := box.get_center()
+	var dir: Vector3 = row["dir"]
+	if id == "ortho-front" and centre.x >= 0.0:
+		dir = -dir
+	var span := maxf(box.size.y, maxf(box.size.z, box.size.x)) * ORTHO_MARGIN
+	return {"eye": centre + dir * ORTHO_DISTANCE, "target": centre, "up": row["up"], "size": span}
+
+
 static func aim(camera: Camera3D, eye: Vector3, target: Vector3, fov: float) -> void:
+	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	camera.global_position = eye
 	camera.look_at(target)
 	camera.fov = fov
+
+
+static func aim_ortho(camera: Camera3D, v: Dictionary) -> void:
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.size = v["size"]
+	camera.near = NEAR
+	camera.far = FAR
+	camera.global_position = v["eye"]
+	camera.look_at(v["target"], v["up"])
