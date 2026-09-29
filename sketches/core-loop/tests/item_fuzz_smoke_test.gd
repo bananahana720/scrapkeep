@@ -54,8 +54,7 @@ func _initialize() -> void:
 		covered[k] = true
 	# No wall clock decides this verdict: the seed list and --seconds are fixed, a seed
 	# ends on physics ticks (the tool sets SimClock.ticks), and the tool's one wall-clock
-	# read only feeds the soft frame_time anomaly. Each term is named so a failure says
-	# which one tripped.
+	# read only feeds the soft frame_time anomaly.
 	var script_error := text.contains("SCRIPT ERROR")
 	_report("fuzz slice ran", code == 0 and runs.size() == 8 and not script_error and seconds_ok,
 		"exit %d, %d seed records of %d s each, script error %s, every seed ran its span %s" % [code, runs.size(), SECONDS, script_error, seconds_ok])

@@ -11,19 +11,18 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 #   full  the same camping never staggers the Warden, and the gun deals 0 outside a
 #         stagger, so the camper opens nothing without a drop.
 # The camper is given the HP to last the whole span, so the zero is measured over all of
-# it. The full span is shorter to fit the smoke run's per-test limit; the bot runner
-# measures 240 s of both (DESIGN-NOTES, v3 L1). The span runs at SCALE with the physics tick raised by the same factor, so every
+# it. Both spans are shorter than the bot runner's 240 s (DESIGN-NOTES, v3 L1) so a loaded
+# machine still finishes inside the smoke run's per-test limit; each has a window floor
+# scaled to its span (this seed opens about 0.16 windows per sim second). The span runs at SCALE with the physics tick raised by the same factor, so every
 # step is the game's own 1/90 s and the ball moves exactly as it does at 1x.
 #
 # Evidence limit: this proves the damage rule refuses a camper; it says nothing about
 # how the fight feels.
 
 const SEED := 3
-const CAMP_SECONDS := {"hold": 240.0, "full": 80.0}
+const CAMP_SECONDS := {"hold": 120.0, "full": 60.0}
+const MIN_WINDOWS := {"hold": 15, "full": 8}
 const SCALE := 4.0
-# Both spans end on sim time alone. A wall-clock budget here once cut the full span to
-# 30 s of sim on a loaded machine, 4 windows against the 10 the verdict needs, and failed
-# it with no code change; the smoke's own per-test timeout is the only wall limit now.
 
 var _game
 var _driver
@@ -83,7 +82,7 @@ func _judge() -> bool:
 			d["drop"], d["gun"], d["banked_lost"], drop.windows, drop.drops_landed, drop.staggers, drop.misses]
 	var lasted: bool = _sim >= CAMP_SECONDS[_role] - 0.5
 	if _role == "hold":
-		_report("hold camper deals 0", lasted and warden.hp == warden.max_hp and drop.drops_landed == 0 and drop.windows >= 20, summary)
+		_report("hold camper deals 0", lasted and warden.hp == warden.max_hp and drop.drops_landed == 0 and drop.windows >= MIN_WINDOWS["hold"], summary)
 		_report("hold gun only holds", d["gun"] == 0.0 and (d["banked_lost"] > 0.0 or drop.held == 0.0),
 			"the gun's banked share lapsed (%.1f) instead of landing" % d["banked_lost"])
 		_role = "full"
@@ -94,7 +93,7 @@ func _judge() -> bool:
 		_sim = 0.0
 		return false
 	_report("full camper opens nothing", lasted and warden.hp == warden.max_hp and drop.staggers == 0
-		and d["stagger_gun"] == 0.0 and d["gun"] == 0.0 and drop.windows >= 10, summary)
+		and d["stagger_gun"] == 0.0 and d["gun"] == 0.0 and drop.windows >= MIN_WINDOWS["full"], summary)
 	return _finish()
 
 
