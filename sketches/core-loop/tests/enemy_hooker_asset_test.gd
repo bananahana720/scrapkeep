@@ -3,10 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# C14 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly (body plus loading
-# bulb), opaque, the cart inside the 2.4 x 4 x 2.4 m collider box, the mortar tube inside the base
-# tube's reach (top at most 5.0 m), the bulb the base 0.9 m sphere at y 2.6. The base contract: the
-# lobber's collider, hitbox, aim, timing and damage are the values lobber.gd had before the dressing swap.
 # C14 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly (body plus harpoon),
 # opaque, inside the envelope the base gun, post and hazard tip stood in (post x 0.9, gun 1.5 m long
 # from z -0.35), widened for the anchor crown and the longer harpoon with its whole pose travel.
