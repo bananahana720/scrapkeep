@@ -1,0 +1,3 @@
+Live bola_thrower assembly (game spawn, T = triangles from surface arrays, D = surfaces = colour-pass draws)
+before (base c782620 bola_thrower.gd, measured at 8624bb0 with the glb present but unwired): 13196 T, 6 D
+after (wiring 6321d71): 640 T, 3 D, no alpha

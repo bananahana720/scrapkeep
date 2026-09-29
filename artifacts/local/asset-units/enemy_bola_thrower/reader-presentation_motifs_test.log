@@ -1,0 +1,12 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS ids resolve: ["sable", "rivet", "kest", "fleet", "reactor", "swarm", "mind"] resolve through Harmony.motif; missing []
+PASS notes: Sable D F A C E, Rivet A A A D, Kest D A F D, the Fleet's D Eb D, the reactor's Ab pedal, the swarm's G into stacked fourths
+PASS the Mind quotes wrong: Sable inverted, last note a semitone flat: [62, 59, 55, 52, 47] (D B G E B)
+PASS class rows bake: every class row's motif resolves and its ready and break cues bake; failing []
+PASS new cues: 28 cues bake non-silent; unbaked []; pitched but not keyed []
+PASS babble hurries: a line babbles the same way twice, and faster at beat 5 (71442 then 61186 samples)
+PASS class motif is a layer: Sable's rising arpeggio four times per phrase on the counter rotation; the lead is untouched
+PASS fleet ticks add: the second tick's anvil and brass enter on the next bar line and play
+PASS the lounge masks, the drop returns: the sax leads with no kick in the bay; the landing drop ends the lounge on the beat into the full band
+presentation_motifs_test: PASS
