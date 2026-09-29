@@ -68,7 +68,7 @@ static func _parts() -> Dictionary:
 	var charcoal := Palette.solid(Palette.CHARCOAL)
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
-	var flash := 0
+	var flash := -1
 	var meshes := {}
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
@@ -78,6 +78,9 @@ static func _parts() -> Dictionary:
 				flash = i
 			mesh.surface_set_material(i, painted if slot == "paint" else charcoal)
 		meshes[node.name] = mesh
+	if flash < 0:
+		push_error("enemy_plated_brute.glb has no fleet_paint surface; the flash lands on surface 0")
+		flash = 0
 	_shared = {"body": meshes["BruteBody"], "plates": meshes["BrutePlates"], "flash": flash}
 	scene.free()
 	return _shared

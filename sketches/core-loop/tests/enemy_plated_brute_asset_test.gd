@@ -165,12 +165,17 @@ func _check_shape(brute: Node3D) -> void:
 # (enemy.flash() sets _flash, _update_flash lerps _material from _base_color).
 func _check_paint(brute: Node3D) -> void:
 	var body := brute.find_child("BruteBody", true, false) as MeshInstance3D
-	var found := false
-	for s in body.mesh.get_surface_count():
-		var mat := body.get_surface_override_material(s) as StandardMaterial3D
-		if mat != null and mat == brute._material and mat.albedo_color.is_equal_approx(Palette.RUST):
-			found = true
-	_check(found, "the resting body surface is the Fleet oxide colour (RUST) on the enemy's own material")
+	# Find the glb's fleet_paint slot on its own, so the flashing material is pinned to that surface.
+	var scene := (load("res://assets/models/world_one/enemy_plated_brute.glb") as PackedScene).instantiate()
+	var source := scene.find_child("BruteBody", true, false) as MeshInstance3D
+	var slot := -1
+	for s in source.mesh.get_surface_count():
+		if source.mesh.surface_get_material(s).resource_name == "fleet_paint":
+			slot = s
+	scene.free()
+	var mat: StandardMaterial3D = body.get_surface_override_material(slot) as StandardMaterial3D if slot >= 0 else null
+	var found: bool = mat != null and mat == brute._material and mat.albedo_color.is_equal_approx(Palette.RUST)
+	_check(found, "the glb's fleet_paint surface (%d) is the Fleet oxide colour (RUST) on the enemy's own material" % slot)
 	brute.flash()
 	brute._update_flash(0.0)
 	var hit: Color = brute._material.albedo_color
