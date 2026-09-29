@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: no main-thread frame over 50 ms)
 extends SceneTree
 
 const Audio := preload("res://src/presentation/audio.gd")

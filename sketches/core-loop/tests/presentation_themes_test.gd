@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: cpu ratio cap on paired CPU-time runs)
 extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")

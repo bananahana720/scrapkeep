@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: cpu cap on main-thread ms per second of music)
 extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")
