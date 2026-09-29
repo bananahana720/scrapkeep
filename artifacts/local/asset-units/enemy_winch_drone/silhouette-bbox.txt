@@ -1,0 +1,18 @@
+resting
+  asset-front30 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(593)) w=90 h=118 area=3558
+  asset-front30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(588)) w=90 h=113 area=4332
+  asset-side30 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(592)) w=90 h=117 area=3534
+  asset-side30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(589)) w=90 h=114 area=4243
+  asset-rear30 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(593)) w=90 h=118 area=3544
+  asset-rear30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(588)) w=90 h=113 area=4332
+  asset-use6 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(770), np.int64(176), np.int64(1148), np.int64(797)) w=379 h=622 area=125017
+  asset-use6 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(769), np.int64(175), np.int64(1150), np.int64(774)) w=382 h=600 area=136631
+working
+  asset-front30 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(593)) w=90 h=118 area=3558
+  asset-front30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(588)) w=90 h=113 area=4332
+  asset-side30 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(592)) w=90 h=117 area=3534
+  asset-side30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(589)) w=90 h=114 area=4243
+  asset-rear30 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(593)) w=90 h=118 area=3544
+  asset-rear30 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(915), np.int64(476), np.int64(1004), np.int64(588)) w=90 h=113 area=4332
+  asset-use6 head values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(770), np.int64(176), np.int64(1148), np.int64(797)) w=379 h=622 area=125017
+  asset-use6 base values=2 [(np.uint8(0), np.uint8(0), np.uint8(0)), (np.uint8(127), np.uint8(127), np.uint8(127))] bbox_of_black=(np.int64(769), np.int64(175), np.int64(1150), np.int64(774)) w=382 h=600 area=136631
