@@ -38,6 +38,7 @@ var modes: Array = ["lit"]
 var camera_ids: Array = []
 var subject_path := ""
 var anchor_path := ""
+var class_index := 0
 var anchor_offset := Vector3.ZERO
 var centre_override = null
 var freeze_specs: Array = []
@@ -64,6 +65,8 @@ func _initialize() -> void:
 			camera_ids = Array(arg.trim_prefix("--cameras=").split(",", false))
 		elif arg.begins_with("--subject="):
 			subject_path = arg.trim_prefix("--subject=")
+		elif arg.begins_with("--class="):
+			class_index = int(arg.trim_prefix("--class="))
 		elif arg.begins_with("--anchor="):
 			anchor_path = arg.trim_prefix("--anchor=")
 		elif arg.begins_with("--anchor-offset="):
@@ -122,7 +125,7 @@ func _run() -> void:
 	game.ctx.calm = true
 	game.flow.force_warden = true
 	game.flow.press_start()
-	game.flow.choose_class(0)
+	game.flow.choose_class(class_index)
 	game.run.set_max_hp(999999.0)
 	game.player.source = Intent.Scripted.new()
 	for i in SETTLE_PHYSICS_FRAMES:
@@ -210,7 +213,7 @@ func _run() -> void:
 				revert(state)
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
-			"mode": mode, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
+			"mode": mode, "class": class_index, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
 			"hide": hide_paths, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
@@ -474,7 +477,7 @@ static func _close(a, b) -> bool:
 static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	var errors: Array = []
 	var notes: Array = []
-	for key in ["mode", "seed", "size", "freeze_specs", "hide", "anchor_offset"]:
+	for key in ["mode", "class", "seed", "size", "freeze_specs", "hide", "anchor_offset"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
 	var fa := {}
