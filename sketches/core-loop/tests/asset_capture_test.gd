@@ -175,6 +175,9 @@ func _run() -> void:
 	var pilot := doc.duplicate(true)
 	pilot["class"] = int(doc.get("class", 0)) + 1
 	_check(not Cap.compare(doc, pilot)["errors"].is_empty(), "compare: a different pilot class is refused")
+	var spawned := doc.duplicate(true)
+	spawned["spawn"] = ["lobber@0,0,0"]
+	_check(not Cap.compare(doc, spawned)["errors"].is_empty(), "compare: a different enemy spawn is refused")
 	var frozen := doc.duplicate(true)
 	frozen["frames"][0]["frozen"]["/root/Scene/Spinner"][3] = 0.25
 	_check(not Cap.compare(doc, frozen)["errors"].is_empty() and Cap.pair(same, _write_run("frozen", frozen), TMP.path_join("sheet_frozen")) == 4, "pair: a different frozen node transform is refused")

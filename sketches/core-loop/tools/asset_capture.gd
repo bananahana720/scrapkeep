@@ -15,6 +15,9 @@ extends SceneTree
 #     [--centre=x,y,z] [--mode=lit,subject-black,assembly-black] [--cameras=name,name]
 #     [--freeze=<path>=rx,ry,rz[:px,py,pz] (degrees, local; global position)] [--freeze=<path>@<clip>:<seconds>]
 #     [--hide=<path>]   (subtree omitted from the black modes, e.g. glass)
+#     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
+#     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
+#       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
 #     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path> [--isolate-rest]]   keep only the triangles of that mesh inside the
 #       world box; --isolate-rest keeps the other triangles as a sibling mesh, so they draw as grey depth context
 #     --cameras also takes ortho-front, ortho-side, ortho-top: orthographic views of --aabb (never in the default set)
@@ -43,6 +46,7 @@ var camera_ids: Array = []
 var subject_path := ""
 var anchor_path := ""
 var class_index := 0
+var spawn_specs: Array = []
 var anchor_offset := Vector3.ZERO
 var centre_override = null
 var freeze_specs: Array = []
@@ -74,6 +78,8 @@ func _initialize() -> void:
 			subject_path = arg.trim_prefix("--subject=")
 		elif arg.begins_with("--class="):
 			class_index = int(arg.trim_prefix("--class="))
+		elif arg.begins_with("--spawn="):
+			spawn_specs.append(arg.trim_prefix("--spawn="))
 		elif arg.begins_with("--anchor="):
 			anchor_path = arg.trim_prefix("--anchor=")
 		elif arg.begins_with("--anchor-offset="):
@@ -141,6 +147,11 @@ func _run() -> void:
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
 	game.run.set_max_hp(999999.0)
+	for spec: String in spawn_specs:
+		var kind := spec.get_slice("@", 0)
+		var enemy: Node3D = game.combat.spawn_enemy(kind, _vec(spec.get_slice("@", 1)))
+		enemy.name = "Spawn_" + kind
+		print("spawned ", enemy.get_path())
 	game.player.source = Intent.Scripted.new()
 	for i in SETTLE_PHYSICS_FRAMES:
 		await physics_frame
@@ -250,7 +261,7 @@ func _run() -> void:
 				revert(state)
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
-			"mode": mode, "class": class_index, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
+			"mode": mode, "class": class_index, "spawn": spawn_specs, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
 			"hide": hide_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
@@ -553,7 +564,7 @@ static func _close(a, b) -> bool:
 static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	var errors: Array = []
 	var notes: Array = []
-	for key in ["mode", "class", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
+	for key in ["mode", "class", "spawn", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
 	var fa := {}
