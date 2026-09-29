@@ -152,7 +152,7 @@ const GENERATED_SHARE := 0.25
 # Hot-wired parts (BUILD-SYSTEMS.md, Two hot-wired parts). Not in CATALOGUE, so they never
 # enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
 # never drawn as loot. Each row names both consequences with an icon id and at most three
-# words; "{armor}" and "{steer}" are resolved from Build and RunState by hotwire_choice.gd,
+# words; "{armor}", "{armor_x}" and "{steer}" are resolved from Build and RunState by hotwire_choice.gd,
 # so the words follow the tuning. Fitting still comes from --hotwire-shell; nothing here
 # equips a part.
 const HOTWIRED := {

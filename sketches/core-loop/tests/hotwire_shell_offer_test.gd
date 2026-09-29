@@ -54,6 +54,11 @@ func _entry() -> void:
 	# The numbers come from the constants.
 	var mult := RunState.SCRAP_PER_HP / Build.SHELL_SCRAP_PER_HP
 	var steer := int(round((1.0 - Build.SHELL_AIR_FACTOR) * 100.0))
+	# The stored words carry placeholders, so a typed "25" or "2x" cannot pass as derived.
+	var raw := Parts.hotwired("riveted_shell")
+	var templated: bool = "{steer}" in raw["downside"]["words"] and "{armor" in raw["upside"]["words"] \
+		and "{steer}" in raw["label"] and "{armor" in raw["label"]
+	_check("templated", templated, "upside \"%s\", downside \"%s\", label \"%s\"" % [raw["upside"]["words"], raw["downside"]["words"], raw["label"]])
 	_check("derived", is_equal_approx(mult, 2.0) and steer == 25
 		and ("Double" in copy["label"] or "2" in copy["upside"]["words"]) and str(steer) in copy["downside"]["words"],
 		"multiplier %.1f from %.0f/%.0f, steering %d; upside \"%s\", downside \"%s\"" % [mult,
