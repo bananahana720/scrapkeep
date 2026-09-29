@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: stage 2 median frame time against stage 1)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
