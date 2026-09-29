@@ -15,6 +15,7 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Ground := preload("res://src/combat/ground.gd")
+const WearTrail := preload("res://src/combat/wear_trail.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -193,6 +194,8 @@ var _shred := {}
 # special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}.
 var _specials := {}
 var sticky
+# Rivet's Run and Gun wear trail (world one, --wear=on); wear_trail.gd.
+var wear_trail
 # The last gauge release: {id, fraction, geometry}, the geometry exactly as drawn.
 var last_committed := {}
 # Kest's dust cloak: seconds left and where it began (what hidden enemies see).
@@ -243,6 +246,8 @@ func setup(ctx_ref) -> void:
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
+	wear_trail = WearTrail.new()
+	wear_trail.setup(ctx, effects, _floor_at)
 	near_miss = NearMiss.new()
 	add_child(near_miss)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
@@ -761,6 +766,7 @@ func _physics_process(delta: float) -> void:
 	bolts.step(delta, space, enemies, shells)
 	for charge in sticky.step(delta, space, enemies):
 		_detonate(charge)
+	wear_trail.step(delta, enemies)
 	_pin_step(enemies)
 	_bat_by_ball(shells)
 	_decay_shred(delta)

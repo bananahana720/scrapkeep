@@ -80,6 +80,8 @@ const TRIM_DB := {
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
+	# Rivet's wear trail: one soft sputter per patch (world one, --wear=on).
+	"wear_sputter": -14.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -207,6 +209,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _reclaim()
 		"armor_deflect":
 			return _deflect()
+		"wear_sputter":
+			return _sputter()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -720,6 +724,11 @@ static func _reclaim() -> PackedFloat32Array:
 # shed's clatter, the reclaim's chime or the hurt's low square.
 static func _deflect() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 91), 0.11), 0, 0.8], [_noise(0.012, 7000.0, 5000.0, 250.0), 0, 0.15]])
+
+
+# A dry, soft crackle: a short filtered noise puff over a low ember tick.
+static func _sputter() -> PackedFloat32Array:
+	return _mix([[_noise(0.06, 2600.0, 900.0, 60.0, 0.004), 0, 0.5], [_tone(0.05, 300.0, 180.0, "sine", 40.0), 0, 0.5]])
 
 
 # Torn metal: a zipper of teeth sweeping down while a saw sags.
