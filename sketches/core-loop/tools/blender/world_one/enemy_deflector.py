@@ -1,7 +1,7 @@
 # C17 Deflector: a Fleet animal crew standing behind one broad concave dish, braced toward the
 # ball. The dish is the tool and the biggest shape: a 3.9 m plate whose rim (outer radius 1.95 m,
-# the base torus's) is a raised worn-bone bead, so the rebound edge reads as a bright outline from
-# the ball's side. The read against the neighbours: the Hooker is one slim post with a crossbar
+# the base torus's) is a raised worn-bone bead (WORN, a charcoal-bone mix that renders grey-slate
+# against the oxide plates, lower contrast than the base's brass ring). The read against the neighbours: the Hooker is one slim post with a crossbar
 # crown (a T), the Bola thrower a crew under an overhead hoop, the Netcaster a gate of two tall
 # masts; the Deflector is one wide round-shouldered plate that fills the frame edge to edge with
 # the crew hidden behind it. It replaces the capsule crew, its head, ears and tag, and the base
