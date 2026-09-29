@@ -1,0 +1,5 @@
+4d69a5538f79563d16622499208521837459447b
+cf422b629450705f01c7ed48d678cc6006aa4840
+5377dc23a0b8cf1378899470cc27b0e41e4be596a348cbc4ad99971519fbba87  sketches/core-loop/tools/blender/world_one/enemy_lobber.py
+0de404e0f88f5b35f069ad1c8395b4ed5d7d408ec5ec31414058afcc8b851f35  sketches/core-loop/assets/models/world_one/enemy_lobber.glb
+63b595c9bfca8a22829bc50f344ab0f57bbf39374c3f4bf6ecd74e818e9f08c1  sketches/core-loop/src/combat/lobber.gd
