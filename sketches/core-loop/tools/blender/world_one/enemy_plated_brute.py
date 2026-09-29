@@ -37,7 +37,7 @@ root = common.empty("PlatedBrute")
 
 GROUND = -1.1
 CHAR = "charcoal"
-# Vertex colour black marks the plate's rim (brow lip, ribs, caps) and every bolt: the runtime lights
+# Vertex colour black marks the thin trim strips (brow front edge, ribs, slab and cap outer edges) and every bolt: the runtime lights
 # only those vertices in amber (enemy.gd emission mask); white plate faces stay unlit.
 RIM = "000000"
 BRASS = "brass"
