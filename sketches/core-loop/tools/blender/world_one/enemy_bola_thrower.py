@@ -9,9 +9,11 @@
 #                    paint (vertex colour: snout, ears, glove, wrist cord, strap, the brass tag).
 #   BolaLoop         one surface, class_accent (the runtime gives it the hazard bola material).
 #                    Its origin is the loop centre, 2.2 m over the collider centre, so the
-#                    runtime spins the node about Y exactly as it spun the base torus and
-#                    carries it on the throw. The ring is tilted so it reads as a hoop from
-#                    the 30 m side and rear cameras, not a thin edge-on line.
+#                    runtime seats the node (bola_thrower.gd SEAT_AXIS) and whirls it about
+#                    the ring's own axis, local +Y in Godot (Blender +Z), so the opening stays
+#                    open on the 30 m cameras. The node carries no tilt here: the runtime reads
+#                    only the mesh, so a tilt on the node never showed. Nothing crosses the
+#                    opening: an earlier diameter cord and hub ball read as a bar or a spoke.
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
 #   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
@@ -34,7 +36,6 @@ GROUND = -1.1
 LOOP_Z = 2.2  # CREW_HALF + 1.1, where bola_thrower.gd seats the bola
 RING_R, RING_TUBE = 0.75, 0.10  # outer radius 0.85 (base torus 0.9)
 WEIGHT_R = 0.26
-TILT = 0.42
 CHAR = "charcoal"
 WORN = common.mix("charcoal", "bone", 0.18)
 BRASS = "brass"
@@ -54,16 +55,13 @@ b.rod("fleet_paint", (0.60, 0.0, 0.55), (0.14, 0.0, 1.95), 0.11, segs=6)
 b.uv("paint", 0.17, u=8, v=5, loc=(0.14, 0.0, 2.0), color=CHAR)
 body = b.to_object(parent=root)
 
-# --- Loop: a tilted hoop, a weighted end on each side, a cord across the hub ----------
+# --- Loop: an open hoop with a weighted end on each side --------------------------------
 loop = Part("BolaLoop")
 loop.ring("class_accent", RING_R - RING_TUBE, RING_R + RING_TUBE, RING_TUBE * 2.0, segs=16,
           rot=(0, 0, 0))
 for sx in (-1, 1):
     loop.uv("class_accent", WEIGHT_R, u=8, v=5, loc=(sx * (RING_R + 0.10), 0, 0))
-loop.rod("class_accent", (-RING_R, 0, 0), (RING_R, 0, 0), 0.04, segs=4)
-loop.uv("class_accent", 0.10, u=6, v=4)
 bola = loop.to_object(origin=(0, 0, 0), parent=root)
-bola.rotation_euler = (TILT, 0, 0)
 bola.location = (0.0, 0.0, LOOP_Z)
 bpy.context.view_layer.update()
 
