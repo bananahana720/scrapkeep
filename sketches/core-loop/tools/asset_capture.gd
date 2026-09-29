@@ -527,13 +527,12 @@ static func prepare(scene_root: Node, viewport: Viewport, mode: String, subjects
 	return apply_mode(scene_root, viewport, mode, subjects, hides)
 
 
-# Pause the tree so nothing animated moves between frames.
-# <path>:<method>[:<frames>[:<JSON array>]]; the JSON may itself hold colons.
 # Lit exposure: the scene environment's unless --exposure gave a positive override.
 static func lit_exposure_for(scene_exposure: float, override: float) -> float:
 	return override if override > 0.0 else scene_exposure
 
 
+# <path>:<method>[:<frames>[:<JSON array>]]; the JSON may itself hold colons.
 static func parse_call(spec: String) -> Dictionary:
 	var parts := spec.split(":", true, 3)
 	var args = JSON.parse_string(parts[3]) if parts.size() > 3 else []
@@ -544,6 +543,7 @@ static func parse_call(spec: String) -> Dictionary:
 	}
 
 
+# Pause the tree so nothing animated moves between frames.
 static func freeze_tree(tree: SceneTree) -> void:
 	tree.paused = true
 
