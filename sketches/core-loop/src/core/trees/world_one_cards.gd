@@ -12,7 +12,8 @@ const ROWS := {
 	"k_ghost": "Blink unseen. Carry a larger surprise.",
 	"k_tripwire": "Charges spring when enemies approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
-	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
+	# k_smoke_trail is held back: its Codex line "Glide cloaked. Heavy fins steer harder." names
+	# the Riveted Shell inversion, which needs hot-wired part H1. Add the row when H1 lands.
 	"k_ambush": "Throw payloads without breaking cloak.",
 }
 
