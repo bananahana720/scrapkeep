@@ -1,0 +1,39 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[mag_trapper telegraphs first] held 1.12 s after its warning drew (warning 1.10 s) -> PASS
+[mag_trapper voice] telegraph voice clank, tag hold_pit (row tag hold_pit) -> PASS
+[mag_trapper through the door] 1 hold_started facts -> PASS
+[mag_trapper breaks] jump broke the mag_pit hold on the next tick (release { "kind": "mag_pit", "reason": "jump", "held": 0.0 }, hold_broken [["mag_pit", "jump"]], refund paid true) -> PASS
+[hooker telegraphs first] held 1.01 s after its warning drew (warning 1.00 s) -> PASS
+[hooker voice] telegraph voice clank, tag hold_tether (row tag hold_tether) -> PASS
+[hooker through the door] 1 hold_started facts -> PASS
+[hooker breaks] boost broke the anchor_tether hold on the next tick (release { "kind": "anchor_tether", "reason": "boost", "held": 0.0 }, hold_broken [["anchor_tether", "boost"]], refund paid true) -> PASS
+[netcaster telegraphs first] held 1.22 s after its warning drew (warning 1.20 s) -> PASS
+[netcaster voice] telegraph voice clank, tag hold_net (row tag hold_net) -> PASS
+[netcaster through the door] 1 hold_started facts -> PASS
+[netcaster breaks] jump broke the air_net hold on the next tick (release { "kind": "air_net", "reason": "jump", "held": 0.0 }, hold_broken [["air_net", "jump"]], refund paid true) -> PASS
+[bola_thrower telegraphs first] held 1.81 s after its warning drew (warning 0.50 s) -> PASS
+[bola_thrower voice] telegraph voice clank, tag hold_bola (row tag hold_bola) -> PASS
+[bola_thrower through the door] 1 hold_started facts -> PASS
+[bola_thrower breaks] boost broke the bola_wrap hold on the next tick (release { "kind": "bola_wrap", "reason": "boost", "held": 0.0 }, hold_broken [["bola_wrap", "boost"]], refund paid true) -> PASS
+[winch_drone telegraphs first] held 1.01 s after its warning drew (warning 1.00 s) -> PASS
+[winch_drone voice] telegraph voice clank, tag scrap_rip (row tag scrap_rip) -> PASS
+[winch_drone through the door] 1 hold_started facts -> PASS
+[winch_drone breaks] boost broke the winch_pull hold on the next tick (release { "kind": "winch_pull", "reason": "boost", "held": 0.0 }, hold_broken [["winch_pull", "boost"]], refund paid true) -> PASS
+[gyro_jammer telegraphs first] held 1.02 s after its warning drew (warning 1.00 s) -> PASS
+[gyro_jammer voice] telegraph voice clank, tag hold_riser (row tag hold_riser) -> PASS
+[gyro_jammer through the door] 1 hold_started facts -> PASS
+[gyro_jammer breaks] boost broke the gyro_drift hold on the next tick (release { "kind": "gyro_drift", "reason": "boost", "held": 0.0 }, hold_broken [["gyro_drift", "boost"]], refund paid true) -> PASS
+[swatter telegraphs first] held 0.81 s after its warning drew (warning 0.80 s) -> PASS
+[swatter voice] telegraph voice clank, tag hit_thwack (row tag hit_thwack) -> PASS
+[swatter through the door] 1 hold_started facts -> PASS
+[swatter breaks] boost broke the paddle_bat hold on the next tick (release { "kind": "paddle_bat", "reason": "boost", "held": 0.0 }, hold_broken [["paddle_bat", "boost"]], refund paid true) -> PASS
+[ramp_flipper telegraphs first] held 1.01 s after its warning drew (warning 1.00 s) -> PASS
+[ramp_flipper voice] telegraph voice clank, tag vault_rise (row tag vault_rise) -> PASS
+[ramp_flipper through the door] 1 hold_started facts -> PASS
+[ramp_flipper breaks] jump broke the tilt_fling hold on the next tick (release { "kind": "tilt_fling", "reason": "jump", "held": 0.0 }, hold_broken [["tilt_fling", "jump"]], refund paid true) -> PASS
+[catch_trap telegraphs first] held 1.02 s after its warning drew (warning 1.00 s) -> PASS
+[catch_trap voice] telegraph voice clank, tag ice_form (row tag ice_form) -> PASS
+[catch_trap through the door] 1 hold_started facts -> PASS
+[catch_trap breaks] boost broke the cup_hold hold on the next tick (release { "kind": "cup_hold", "reason": "boost", "held": 0.0 }, hold_broken [["cup_hold", "boost"]], refund paid true) -> PASS
+enemy_counters_test: PASS

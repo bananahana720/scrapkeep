@@ -1,0 +1,4 @@
+9bc9557257ed1ba1e39ccedb1c9218425e93f9bd28819f08a6ad1831ae176dd0  sketches/core-loop/tools/blender/world_one/enemy_mag_trapper.py
+925efcaaa5d9daad301c7d023ca397f2aecd27a76fc30c4c0345e2be22451be1  sketches/core-loop/assets/models/world_one/enemy_mag_trapper.glb
+7f75f8e3ca19251bf56dd7b21c5947804920ce9613301c680dd52b9ddd5f563f  sketches/core-loop/src/combat/mag_trapper.gd
+986526ec2167a031bd7cf166bc14985aee14858fd9970d7987a7994582f06462  sketches/core-loop/tests/enemy_mag_trapper_asset_test.gd
