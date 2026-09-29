@@ -241,3 +241,9 @@ Headless s3, three paired runs each, the same bench on both trees (band prebaked
 | E1 fix 2 | 1.45, 1.43, 1.42 | 7.7, 7.6, 7.2 | 2.0, 1.6, 1.7 | 18.2, 16.7, 18.3 |
 
 Before the bench fix, the E1 tree's proc max in three runs was 74.4, 80.0 and 84.0 ms. A residual 17 to 19 ms frame remains in the E1 runs (the base's is 32 to 35), with physics 0, in `Audio._process`: a first-use bake `prepare_rest` does not cover. It is not a telegraph cost, and it is the audio owner's to trace.
+
+## Coordinator, 2026-09-28: after E1, H2's verdict, and the s1 gap
+
+- **Quiet native s3 after E1** (v3 88ca24d with E1 at 9532a27, load 2.3 to 2.7, 3 runs): frame p50 3.4 to 3.8 ms, frame p99 10.4 to 13.8 (median 10.9), proc p99 3.0 to 3.6, physics p99 3.0 to 3.2, GPU p99 1.5 to 1.6, draws p99 1040 to 1392, 0 mark materials built in the window. The 18 ms proc max is the audio first-bar bake, not telegraphs. Data: `core-loop-v3-e1/artifacts/local/e1/bench/quiet-native/`.
+- **H2 is unproven and not merged.** The E2 unit (branch `proto/core-loop-v3-e2`, 8413f8f) measured 0.29 ms physics p50 in s3 before its stale-list fix, under the 0.4 ms bar, and the final verifier rerun had the change slower (3.92 against 3.66 ms on ticks=2 frames). Its cache already produced one stale-list bug. With proc and physics p99 near 3 ms after E1, the group scans are not the constraint. The branch is parked for reference.
+- **New item: s1's frame p99 misses the budget in the visual clone.** Look pass 3's native stress runs show s1 at 23 to 32 ms frame p99 with GPU p99 1 to 2 ms and CPU p99 22 to 35 ms, and the base tree shows 31 ms too, so it predates the look work. s1 is the light scene, so a startup, stage-entry or first-use cost is the leading guess. Measure it on v3 with `perf_bench --scene=s1 --series=<tsv>` before guessing further.
