@@ -9,7 +9,9 @@ const Game := preload("res://src/game.gd")
 # banked lap get no new geometry. One mesh, one surface, one shared sandstone material,
 # no collision, and it rides the barge's transforms. The cap's front lip is measured as upper
 # minus lower surface at the same X/Z by vertical rays, and the material matches the cliff rock.
-# `--mutate=thin-lip|outside|entry` self-tests must each make the run fail.
+# The visible cheek edge (outer face, either side) must break in broad unequal oblique fractures, not
+# a near-straight line: measured in elevation as the outer front X per Y row.
+# `--mutate=thin-lip|outside|entry|straight-cheek` self-tests must each make the run fail.
 
 const CAP_LOW := 7.35
 const CAP_HIGH := 9.2
@@ -19,6 +21,11 @@ const EPS := 0.002
 const LIP_MIN := 1.10
 const LIP_TARGET := Vector2(1.30, 1.60)
 const FRONT_X := -13.0
+const CHEEK_TOP := 6.01
+const CHEEK_MIN_PLANES := 3
+const CHEEK_MIN_ANGLE := 20.0  # degrees off vertical, per fracture plane
+const CHEEK_MIN_LENGTH_RATIO := 1.3  # longest over shortest plane
+const CHEEK_MIN_SWING := 1.2  # metres of X across the whole edge
 
 var _game
 var _ticks := 0
@@ -105,6 +112,7 @@ func _run(bay: Node) -> void:
 	_check("vertex budget", verts.size() <= 2400, str(verts.size()))
 	_check("triangle budget", (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3 <= 1600)
 	_check_lip(verts, arrays[Mesh.ARRAY_INDEX])
+	_check_cheek(verts, to_barge)
 	# LANDING (4,0), PAD (14,0) and MOSS (-13,0) all lie ahead of the cabin front (X -14.5), so the
 	# entry check above is also their clearance check.
 	# Rides the barge: move it and the stone follows exactly.
@@ -128,6 +136,9 @@ func _mutated(verts: PackedVector3Array) -> PackedVector3Array:
 			"outside":
 				if v.y > CAP_LOW and v.x > CAP_X.y - 0.5:
 					v.x += 0.3
+			"straight-cheek":
+				if v.y < CAP_LOW and v.x > -17.5 and absf(v.z) > 3.3:
+					v.x = -15.0
 			"entry":
 				if v.y < 1.0 and v.x < -14.6:
 					v.x = -13.5
@@ -179,6 +190,44 @@ func _check_lip(verts: PackedVector3Array, indices: PackedInt32Array) -> void:
 			% [columns.size(), int(100.0 * inside / columns.size()), least, thin])
 	_check("lip 1.30..1.60 m across 70% of the front", inside >= 0.7 * columns.size(), "%d of %d" % [inside, columns.size()])
 	_check("lip at least 1.10 m elsewhere", thin == 0, str(thin))
+
+
+## Outer cheek face, elevation: max X per Y row for stone at |Z| > 3.9 ahead of the rear skin, Y up to the neck.
+func _check_cheek(verts: PackedVector3Array, to_barge: Transform3D) -> void:
+	for side in [1.0, -1.0]:
+		var rows := {}
+		for v in verts:
+			var g: Vector3 = to_barge * v
+			if g.z * side > 3.9 and g.x > -17.5 and g.y <= CHEEK_TOP:
+				var key := snappedf(g.y, 0.01)
+				rows[key] = maxf(rows.get(key, -INF), g.x)
+		var ys := rows.keys()
+		ys.sort()
+		var angled := 0
+		var shortest := INF
+		var longest := 0.0
+		var lo := INF
+		var hi := -INF
+		for i in ys.size():
+			lo = minf(lo, rows[ys[i]])
+			hi = maxf(hi, rows[ys[i]])
+			if i == 0:
+				continue
+			var dx: float = rows[ys[i]] - rows[ys[i - 1]]
+			var dy: float = ys[i] - ys[i - 1]
+			var length := Vector2(dx, dy).length()
+			shortest = minf(shortest, length)
+			longest = maxf(longest, length)
+			if rad_to_deg(atan2(absf(dx), dy)) >= CHEEK_MIN_ANGLE:
+				angled += 1
+		var ratio: float = longest / shortest if shortest > 0.0 and shortest < INF else 0.0
+		print("moss_shelter_test: cheek %+d rows %d, planes >= %d deg %d, length ratio %.2f, X swing %.2f" \
+				% [int(side), ys.size(), int(CHEEK_MIN_ANGLE), angled, ratio, hi - lo])
+		var tag := "cheek %+d" % int(side)
+		_check(tag + " has fracture rows", ys.size() > CHEEK_MIN_PLANES, str(ys.size()))
+		_check(tag + " oblique fracture planes", angled >= CHEEK_MIN_PLANES, str(angled))
+		_check(tag + " planes unequal", ratio >= CHEEK_MIN_LENGTH_RATIO, "%.2f" % ratio)
+		_check(tag + " edge is not a near-straight line", hi - lo >= CHEEK_MIN_SWING, "%.2f" % (hi - lo))
 
 
 func _hits(tris: Array, x: float, z: float) -> Array:
