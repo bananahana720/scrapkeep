@@ -55,14 +55,17 @@ static func build(stage_root: Node3D) -> Node3D:
 	# All water is behind the existing southern rim, never on a traversable shelf.
 	for x in [-103.0, -47.0, 37.0, 93.0]:
 		_place(water, Vector3(x, 75, 227), Vector3(14, 90, 0.5))
-		# Spill mist: alpha stays at the test cap, so many overlapping cards at the base of
-		# each fall accumulate into a pool of spray instead of a global haze.
-		for j in 14:
-			var layer := j % 3
-			_place(mist, Vector3(x - 9 + (j % 5) * 4.5, 31 + layer * 5 + (j % 2) * 3, 211 + layer * 4.5), Vector3(16, 12, 8))
-		# Ledge spray where each sheet strikes the visible dam faces, above the rim line.
-		for j in 15:
-			_place(mist, Vector3(x - 7 + (j % 5) * 3.6, 38 + (j / 5) * 7 + (j % 2) * 2, 222 + (j % 3) * 1.5), Vector3(13, 10, 4))
+		# Spill mist: a small cluster of irregular, feathered patches per fall. Sizes, offsets and
+		# in-plane rolls vary from a fixed seed, so no row or grid reads; alpha stays at the cap.
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(absf(x) * 31.0) + 7
+		for j in 11:
+			_place_mist(mist, Vector3(x + rng.randf_range(-15.0, 15.0), rng.randf_range(30.0, 42.0), 211.0 + rng.randf_range(0.0, 11.0)),
+				Vector2(rng.randf_range(10.0, 22.0), rng.randf_range(6.0, 13.0)), rng.randf_range(-0.7, 0.7))
+		# Ledge spray where the sheet strikes the visible dam face, above the rim line.
+		for j in 8:
+			_place_mist(mist, Vector3(x + rng.randf_range(-8.0, 8.0), rng.randf_range(38.0, 58.0), 222.0 + rng.randf_range(0.0, 3.0)),
+				Vector2(rng.randf_range(8.0, 16.0), rng.randf_range(5.0, 11.0)), rng.randf_range(-1.0, 1.0))
 	_place(pools, Vector3(0, 28, 217), Vector3(276, 0.4, 28))
 	# Shingled shoulders are deliberately irregular; each exposed lip catches the key.
 	for side in [-1.0, 1.0]:
@@ -155,6 +158,10 @@ static func _place(into: Array[Transform3D], at: Vector3, size: Vector3, turn :=
 	into.append(Transform3D(Basis(Vector3.UP, turn).scaled(size), at))
 
 
+static func _place_mist(into: Array[Transform3D], at: Vector3, half: Vector2, roll: float) -> void:
+	into.append(Transform3D(Basis(Vector3.BACK, roll).scaled(Vector3(half.x, half.y, 1.0)), at))
+
+
 static func _merge_opaque(parent: Node3D) -> void:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -211,9 +218,12 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
 	var indices := PackedInt32Array()
 	for placement in placements:
 		var offset := vertices.size()
+		if label == "WaterMist":
+			uvs.append_array(source[Mesh.ARRAY_TEX_UV])
 		var variation := 0.91 + 0.09 * sin(placement.origin.x * 4.7 + placement.origin.z * 2.3 + placement.origin.y)
 		var normal_basis := placement.basis.inverse().transposed()
 		for i in source_vertices.size():
@@ -229,6 +239,8 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = indices
+	if label == "WaterMist":
+		arrays[Mesh.ARRAY_TEX_UV] = uvs
 	var view := MeshInstance3D.new()
 	view.name = label
 	var importer := ImporterMesh.new()
@@ -253,7 +265,12 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 		material.albedo_color = Color("bcd4da", 0.12)
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		var soft := Gradient.new()
-		soft.colors = PackedColorArray([Color.WHITE, Color(1, 1, 1, 0)])
+		# Eased multi-stop falloff carried by the card's own UVs. The shared triplanar mapping
+		# tiled the gradient every 6 m and printed a grid of hard-edged blocks.
+		material.uv1_triplanar = false
+		material.uv1_scale = Vector3.ONE
+		soft.offsets = PackedFloat32Array([0.0, 0.3, 0.6, 0.85, 1.0])
+		soft.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0.7), Color(1, 1, 1, 0.3), Color(1, 1, 1, 0.06), Color(1, 1, 1, 0)])
 		var falloff := GradientTexture2D.new()
 		falloff.gradient = soft
 		falloff.fill = GradientTexture2D.FILL_RADIAL

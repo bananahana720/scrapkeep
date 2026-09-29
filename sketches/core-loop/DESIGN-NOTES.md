@@ -1121,3 +1121,12 @@ Built from the independent pass-3 judgment (`look-pass-3/judge/JUDGE.md`). Appea
 - **Pilot speckling (corrected).** An earlier version of this entry blamed the glass shell's shadow; that was wrong, the stipple survived turning the glass caster off. Measured by toggling one thing per capture on the same frame: SSAO off, pilot meshes not casting, and the pilot texture removed all left the stipple; sun shadows off removed it; `light_angular_distance` 0 cut it to a faint pattern; shadow blur 0 made hard acne. Cause: the sun's `light_angular_distance` 1.5 turns on PCSS, and its noisy sampling dithers the penumbra of the pod hoop's real shadow across the fox's head, cheek and chest (the hard-filter capture shows that hoop shadow as a stepped band). Fix in `graphics_preset.gd`: `light_angular_distance` 0.0 and `RenderingServer.directional_soft_shadow_filter_set_quality(SHADOW_QUALITY_SOFT_HIGH)`. The face is smooth in the final frame. Every cast shadow in the game now uses the fixed-width soft filter, so contact shadows are a little less variable in softness.
 
 Not judged here: Codex scores these frames independently. Geometry (Warden upper mass, Moss alcove, cliff profile) is the next pass.
+
+## Look pass 4a-3: mist cleanup
+
+Codex's blind judgment kept 4a and asked for one bounded fix: the spill mist at the dam foot read as a dashed grid of pale blocks. Only `spillway_scenery.gd` changed.
+
+- **Cause.** The shared `_batch` material sets `uv1_triplanar` at 1/6 scale, so the mist's radial falloff texture was projected in world space and tiled every 6 m, printing hard-edged tiles across the overlapping cards. The 5-wide grid placement then lined them up. A softer texture alone would not have fixed it.
+- **Fix.** WaterMist turns triplanar off and takes the quad's own UVs (copied for that batch only), so each card carries one radial falloff. The falloff is five eased stops (alpha 1, 0.7, 0.3, 0.06, 0) instead of two. Placement is a seeded cluster per fall: 11 base patches (10 to 22 by 6 to 13 m, y 30 to 42, z 211 to 222, x within 15 m of the fall) and 8 ledge patches (8 to 16 by 5 to 11 m, y 38 to 58, z 222 to 225), each rolled in the card plane, up to 0.7 and 1.0 rad. No row, column or grid.
+- **Kept.** Alpha 0.12, mist only at the four falls, one batch, 23,100 triangles, 6 batches (the test's budget). The mist is fainter and softer than before; the fix did not raise opacity.
+- **Not touched.** The beige square puffs around the Warden's mast in the launch frame come from another effect and are unchanged.
