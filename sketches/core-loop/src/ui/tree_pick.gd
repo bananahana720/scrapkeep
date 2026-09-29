@@ -91,7 +91,7 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one())
 		card.pressed.connect(func(): chosen.emit(i))
 		_row.add_child(card)
-	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color)
+	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color, _world_one())
 	_set_live(true)
 	var first: Array = cards()
 	if not first.is_empty():
