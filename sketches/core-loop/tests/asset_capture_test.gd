@@ -194,6 +194,12 @@ func _run() -> void:
 	var called := doc.duplicate(true)
 	called["call"] = ["/root/Game/Spawn_lobber:flash:2"]
 	_check(not Cap.compare(doc, called)["errors"].is_empty(), "compare: a different staged event call is refused")
+	var parsed := Cap.parse_call('/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]')
+	_check(parsed["ok"] and parsed["path"] == "/root/Game/Spawn_plated_brute" and parsed["method"] == "on_struck"
+		and parsed["frames"] == 2 and parsed["args"] == ["x", "y", {"full": true}], "parse_call keeps a JSON argument list that holds colons")
+	var bare := Cap.parse_call("/root/Game/Spawn_lobber:flash")
+	_check(bare["ok"] and bare["frames"] == 0 and bare["args"] == [], "parse_call defaults to no frames and no arguments")
+	_check(not Cap.parse_call("/root/Game/Spawn_lobber:flash:2:{\"a\":1}")["ok"], "parse_call refuses arguments that are not a JSON array")
 	var frozen := doc.duplicate(true)
 	frozen["frames"][0]["frozen"]["/root/Scene/Spinner"][3] = 0.25
 	_check(not Cap.compare(doc, frozen)["errors"].is_empty() and Cap.pair(same, _write_run("frozen", frozen), TMP.path_join("sheet_frozen")) == 4, "pair: a different frozen node transform is refused")

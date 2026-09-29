@@ -18,8 +18,9 @@ extends SceneTree
 #     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
 #     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
 #       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
-#     [--call=<node path>:<method>[:<physics frames>]]   after the settle, call that method on the node (for example
-#       a hit flash), then run the given physics frames (default 0) before the freeze, so an event state is captured
+#     [--call=<node path>:<method>[:<physics frames>[:<JSON array of args>]]]   after the settle, call that method on the
+#       node (for example a hit flash), then run the given physics frames (default 0) before the freeze, so an event
+#       state is captured; e.g. --call=/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]
 #     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path> [--isolate-rest]]   keep only the triangles of that mesh inside the
 #       world box; --isolate-rest keeps the other triangles as a sibling mesh, so they draw as grey depth context
 #     --cameras also takes ortho-front, ortho-side, ortho-top: orthographic views of --aabb (never in the default set)
@@ -161,16 +162,15 @@ func _run() -> void:
 	for i in SETTLE_PHYSICS_FRAMES:
 		await physics_frame
 	for spec: String in call_specs:
-		var node := root.get_node_or_null(spec.get_slice(":", 0))
-		var method := spec.get_slice(":", 1)
-		if node == null or not node.has_method(method):
-			printerr("--call target missing: ", spec)
+		var call := parse_call(spec)
+		var node := root.get_node_or_null(call["path"])
+		if not call["ok"] or node == null or not node.has_method(call["method"]):
+			printerr("--call target missing or args not a JSON array: ", spec)
 			quit(2)
 			return
-		node.call(method)
+		node.callv(call["method"], call["args"])
 		print("called ", spec)
-		var frames := int(spec.get_slice(":", 2)) if spec.get_slice_count(":") > 2 else 0
-		for i in frames:
+		for i in call["frames"]:
 			await physics_frame
 	freeze_tree(self)
 	game.player.body().freeze = true
@@ -473,6 +473,17 @@ static func prepare(scene_root: Node, viewport: Viewport, mode: String, subjects
 
 
 # Pause the tree so nothing animated moves between frames.
+# <path>:<method>[:<frames>[:<JSON array>]]; the JSON may itself hold colons.
+static func parse_call(spec: String) -> Dictionary:
+	var parts := spec.split(":", true, 3)
+	var args = JSON.parse_string(parts[3]) if parts.size() > 3 else []
+	return {
+		"path": parts[0], "method": parts[1] if parts.size() > 1 else "",
+		"frames": int(parts[2]) if parts.size() > 2 else 0, "args": args if args is Array else [],
+		"ok": parts.size() > 1 and args is Array,
+	}
+
+
 static func freeze_tree(tree: SceneTree) -> void:
 	tree.paused = true
 
