@@ -51,7 +51,7 @@ func _initialize() -> void:
 	# The order in isolation: 12 HP post-mitigation on 200 mass.
 	var base := _run(true, RunState.SCRAP_PER_HP)
 	base.damage(12.0, "t")
-	_check("base cost", is_equal_approx(base.mass, 80.0) and is_equal_approx(base.hp, 100.0 - 0.0) or is_equal_approx(base.hp, 92.0),
+	_check("base cost", is_equal_approx(base.mass, 80.0) and is_equal_approx(base.hp, 100.0),
 		"12 on 200 at 10/HP: mass %.0f, hp %.0f" % [base.mass, base.hp])
 	var shell := _run(true, 5.0)
 	var spills := []
@@ -96,7 +96,7 @@ func _collider_radius() -> float:
 func _tuning_snapshot() -> Dictionary:
 	var out := {}
 	for spec in Tuning.SPECS:
-		# The two option rows are the switches under test, not values the part may move.
+		# air_control is the value under test; scrap_mode and hotwire_shell are the switches.
 		if not spec["key"] in ["air_control", "scrap_mode", "hotwire_shell"]:
 			out[spec["key"]] = _game.tuning.f(spec["key"])
 	return out
