@@ -92,7 +92,7 @@ var _scrap: Control
 var _speed: Control
 # The armour gauge (scrap mode `armor`): the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
-# its edge amber for ARMOR_FLASH seconds; a hull hit still pulses the hull gauge's rust.
+# its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
 # Wear draws nothing but the bar sinking. The bar is mass against the run's peak.
 const ARMOR_BAR := 120.0
 const ARMOR_FLASH := 0.35

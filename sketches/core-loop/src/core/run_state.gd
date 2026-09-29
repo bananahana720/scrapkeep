@@ -27,7 +27,7 @@ const WEAR_PER_MINUTE := 30.0
 const CLASS_HYSTERESIS := 0.05
 
 # A hit that reached the scrap: how much it removed, how much of that spills, and the
-# source. Hull overflow still publishes player_hit, so an armour-only hit is silent there.
+# source. player_hit still fires for every hit, armour-only included, with the whole hit.
 signal armor_hit(removed: float, spill: int, source: String)
 
 var events
