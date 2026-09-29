@@ -35,11 +35,12 @@ const TOAST_COLUMN := 800.0
 # The first-discovery card and the repeat pop (cards mode).
 const CARD_HOLD := 4.0
 const POP_TIME := 0.8
-const GLYPH_CARD := 92.0
-# A card is at least this tall (the toasts band at 900p is 126) and its line takes at
-# most CARD_LINES lines, so it stays inside the band whatever the text.
-const CARD_HEIGHT := 124.0
-const CARD_LINES := 3
+const GLYPH_CARD := 132.0
+# A card is this tall (250 at 900p: from just under the toasts band, y 279, to 529, above
+# the prompts band at 558) so it reads as the bigger ceremony, and its line takes at
+# most CARD_LINES lines, so it stays clear of the play area whatever the text.
+const CARD_HEIGHT := 250.0
+const CARD_LINES := 4
 const GLYPH_POP := 36.0
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
