@@ -75,38 +75,64 @@ var boost_cooldown_scale := 1.0
 
 func _init() -> void:
 	reset()
-	apply_cmdline()
+	apply_cmdline("start")
 
 
-# The durability prototype's flags, read from the engine and user args the way
-# loop_mode.gd reads --loop: `--scrap=armor --wear=on --route-seed=7 --start-mass=200`.
-# Returns the flags it applied.
-const OPTION_FLAGS := {"scrap": "scrap_mode", "wear": "wear"}
-const NUMBER_FLAGS := {"route-seed": "route_seed", "start-mass": "start_mass"}
+# Every launch flag, one table and one parse pass. name -> [tuning key, kind, when]:
+#   kind  "option" names one of the row's options; an unknown value warns and is refused
+#         "number" takes any float (clamped by the row); a non-number is ignored quietly
+#   when  "start" flags apply as Tuning is built (the durability flags, so every Tuning
+#         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
+#         so a bot or tool that builds a bare Tuning never sees them.
+# `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --loop=drop --gun=full
+# --music=ace --breath=gentle --discovery=cards --telegraph=haze`, from the engine args
+# or the user args (after Godot's `--`). A flag in neither table is ignored.
+# threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
+# since the static-drawn floor marking has no tuning in reach; tuning_flags_test checks
+# that its name is a row here.
+const FLAGS := {
+	"scrap": ["scrap_mode", "option", "start"],
+	"wear": ["wear", "option", "start"],
+	"route-seed": ["route_seed", "number", "start"],
+	"start-mass": ["start_mass", "number", "start"],
+	"loop": ["loop_mode", "option", "launch"],
+	"gun": ["gun_role", "option", "launch"],
+	"music": ["music", "option", "launch"],
+	"breath": ["breath", "option", "launch"],
+	"discovery": ["discovery", "option", "launch"],
+	"telegraph": ["telegraph", "option", "launch"],
+}
 
 
-func apply_args(args: PackedStringArray) -> Dictionary:
+# The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
+# every row. Returns the flags it applied, name to value text.
+func apply_args(args: PackedStringArray, when := "") -> Dictionary:
 	var applied := {}
 	for arg in args:
 		if not arg.begins_with("--") or not "=" in arg:
 			continue
 		var flag := arg.substr(2, arg.find("=") - 2)
+		if not FLAGS.has(flag):
+			continue
+		var row: Array = FLAGS[flag]
+		if when != "" and row[2] != when:
+			continue
 		var value := arg.substr(arg.find("=") + 1)
-		if OPTION_FLAGS.has(flag):
-			if set_option(OPTION_FLAGS[flag], value):
+		if row[1] == "option":
+			if set_option(row[0], value):
 				applied[flag] = value
 			else:
 				push_warning("tuning: unknown --%s=%s" % [flag, value])
-		elif NUMBER_FLAGS.has(flag) and value.is_valid_float():
-			set_value(NUMBER_FLAGS[flag], float(value))
+		elif value.is_valid_float():
+			set_value(row[0], float(value))
 			applied[flag] = value
 	return applied
 
 
-func apply_cmdline() -> Dictionary:
+func apply_cmdline(when := "") -> Dictionary:
 	var args := OS.get_cmdline_args()
 	args.append_array(OS.get_cmdline_user_args())
-	return apply_args(args)
+	return apply_args(args, when)
 
 
 func armor() -> bool:

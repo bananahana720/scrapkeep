@@ -39,11 +39,24 @@ export function jobCount() {
   return Math.min(8, Math.max(2, Math.floor(idle / 3)));
 }
 
+// A test that prints SKIP, or "N skipped" with N above zero, passed without checking
+// something. The run still passes, but the summary lists it so a missing asset stays visible.
+const skipWord = /\bSKIP\b/;
+const skippedCount = /\b([1-9]\d*) skipped\b/;
+
+export function skipLines(output) {
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => skipWord.test(line) || skippedCount.test(line));
+}
+
 function report(label, status, output, ms) {
   const ok = status === 0 && !errorLine.test(output);
+  const skips = skipLines(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
-  return { label, ok, ms };
+  return { label, ok, ms, skips };
 }
 
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
@@ -127,6 +140,12 @@ async function main() {
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
   console.log(`slowest ${slowest.length}:`);
   for (const result of slowest) console.log(`  ${(result.ms / 1000).toFixed(1)}s ${result.label}`);
+  const skipped = results.filter((result) => result.skips.length > 0);
+  console.log(`skipped ${skipped.length} (passed without running every check; not a failure):`);
+  for (const result of skipped) {
+    console.log(`  ${result.label}`);
+    for (const line of result.skips.slice(0, 3)) console.log(`    ${line}`);
+  }
   console.log(
     `sketch:smoke ${ok ? "pass" : "fail"}: ${sketches.length} sketches, ${results.length} runs, ${width} at a time, ${((Date.now() - started) / 1000).toFixed(0)}s. Headless boot and sketch tests only; feel needs Andrew's play.`,
   );

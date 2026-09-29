@@ -103,7 +103,7 @@ func _ready() -> void:
 			summary_guard_left = SUMMARY_GUARD)
 	run = RunState.new(events)
 	tuning = Tuning.new()
-	LoopMode.apply_cmdline(tuning)
+	tuning.apply_cmdline("launch")
 
 	player = PlayerBall.new()
 	player.name = "Player"
