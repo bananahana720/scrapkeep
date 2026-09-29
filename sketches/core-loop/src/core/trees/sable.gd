@@ -73,3 +73,13 @@ const NODES := [
 	{"id": "s_breach_plate", "name": "Breach Plate", "effect": "Planting throws enemies into pins", "key": "movement",
 		"icon": "ab_sable_mount", "tags": ["mounted", "close"], "knob": {"plant_repel": 2.0}},
 ]
+
+
+# The world-one tree (--world-one-builds=on): NODES with index 3 (S4, under Cannonball) the
+# world-one Face Runner in Live Wire's place. Each valid vault restores one air jump and the
+# same face stays locked for the default Augments.VAULT_FACE_COOLDOWN (1.5 s), so no vault_lock
+# knob. The base Face Runner (index 9, 1 s lock) is untouched. Ninja platformer: S1 to S4.
+const FACE_RUNNER_WORLD_ONE := {"id": "s_face_runner", "name": "Face Runner", "effect": "Vault kicks hand back your air jump", "key": "movement",
+	"icon": "ab_sable_vault", "tags": ["air", "mobility"], "knob": {"vault_air": true}}
+# A static var, not a const: GDScript cannot fold Array.slice into a constant.
+static var NODES_WORLD_ONE: Array = NODES.slice(0, 3) + [FACE_RUNNER_WORLD_ONE] + NODES.slice(4)
