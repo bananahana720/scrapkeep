@@ -52,10 +52,6 @@ const PHASE_CANCELLED := "cancelled"
 const FACTS_UNMAPPED := {
 	"swarm_remnant": "the formation lane is committed and driven by swarm.gd, not by the remnant's own state",
 }
-# The lobber's muzzle glow is its wind-up: _show_charge sets emission to 0.8 + 5 x charge.
-const LOBBER_GLOW_BASE := 0.8
-const LOBBER_GLOW_SPAN := 5.0
-const LOBBER_MIN_CHARGE := 0.0005
 # Instance ids are unique for the process; nothing reads their order.
 static var _attack_serial := 0
 
@@ -107,8 +103,8 @@ func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_r
 	set_collision_layer_value(3, true)
 	set_collision_mask_value(1, true)
 	floor_max_angle = deg_to_rad(60.0)
-	if has_signal("fired"):
-		connect("fired", _facts_on_fired)
+	if has_signal("released"):
+		connect("released", _facts_on_released)
 
 
 func _set_health(value: float) -> void:
@@ -492,18 +488,15 @@ func _facts_poll() -> void:
 		_facts_phase(PHASE_STRIKE)
 
 
-# The lobber has no telegraph until release, so its wind-up is the muzzle charge it
-# already draws, and its aim stays uncommitted (empty geometry) until fired.
+# The lobber has no telegraph until release, so its wind-up is its public charge, and
+# its aim stays uncommitted (empty geometry) until released.
 func _facts_poll_lobber() -> void:
-	var mat = get("_muzzle_material")
-	if mat == null:
-		return
-	var charge: float = (mat.emission_energy_multiplier - LOBBER_GLOW_BASE) / LOBBER_GLOW_SPAN
+	var charge: float = get("charge")
 	if _atk.is_empty():
-		if charge > LOBBER_MIN_CHARGE and _in_play():
+		if charge > 0.0 and _in_play():
 			_facts_begin_lobber(charge)
 	elif _atk["phase"] == PHASE_WINDUP:
-		if charge <= LOBBER_MIN_CHARGE:
+		if charge <= 0.0:
 			_facts_end(true)
 		else:
 			_atk["progress"] = clampf(charge, 0.0, 1.0)
@@ -519,11 +512,11 @@ func _facts_begin_lobber(charge: float) -> void:
 	attack_phase.emit(_facts_dict(PHASE_WINDUP))
 
 
-# The release is the strike. Its landing ring belongs to the shell (projectile.gd builds and
-# owns that Telegraph), so the fact stays uncommitted with empty geometry until a later
-# packet hands the shell's own descriptor over; then recover in the same tick, since the
-# shell's flight belongs to the projectile.
-func _facts_on_fired(_origin: Vector3, _landing: Vector3, _flight: float) -> void:
+# The release is the strike. The lobber hands over the descriptor of the ring its shell
+# just committed (the shell's own Telegraph builds it), so the strike is committed with
+# that geometry; then recover in the same tick, since the shell's flight belongs to the
+# projectile. An empty ring (no shell was made) leaves the strike uncommitted.
+func _facts_on_released(ring: Dictionary) -> void:
 	if _dead:
 		return
 	if _atk.is_empty():
@@ -531,5 +524,6 @@ func _facts_on_fired(_origin: Vector3, _landing: Vector3, _flight: float) -> voi
 	if _atk.is_empty():
 		return
 	_atk["progress"] = 0.0
+	_atk["geometry"] = ring.duplicate()
 	_facts_phase(PHASE_STRIKE)
 	_facts_end(false)
