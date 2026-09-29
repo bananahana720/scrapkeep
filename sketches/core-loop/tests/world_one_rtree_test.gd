@@ -303,7 +303,7 @@ func _trail_checks() -> void:
 	var ball: Vector3 = _player.ball_position()
 	var on_path := true
 	for patch in _trail.patches:
-		on_path = on_path and Vector2(patch["at"].x - ball.x, patch["at"].z - ball.z).length() < 0.01 and ball.y - patch["at"].y <= WearTrail.FLOOR_REACH
+		on_path = on_path and patch["at"].is_equal_approx(_combat._floor_at(ball)) and ball.y - patch["at"].y <= WearTrail.FLOOR_REACH and patch["at"].y < ball.y
 	_check("one patch per unit of wear, one sputter each", lost == 3.0 and _trail.patches.size() == 3 and heard.size() == 3 and on_path,
 		"%.0f units worn, %d patches, %d sputters, on the ball's ground %s" % [lost, _trail.patches.size(), heard.size(), on_path])
 	# Cap of six, oldest retired.
@@ -315,6 +315,13 @@ func _trail_checks() -> void:
 	_player.state.grounded = false
 	_wear(2)
 	_check("airborne wear makes no patch", _trail.patches.is_empty(), "%d patches" % _trail.patches.size())
+	# Ground more than FLOOR_REACH below the ball: nothing.
+	_player.state.grounded = true
+	var real_floor: Callable = _trail._floor_at
+	_trail._floor_at = func(at: Vector3) -> Vector3: return Vector3(at.x, at.y - WearTrail.FLOOR_REACH - 1.0, at.z)
+	_wear(2)
+	_check("ground far below makes no patch", _trail.patches.is_empty(), "%d patches with the floor %.1f m below" % [_trail.patches.size(), WearTrail.FLOOR_REACH + 1.0])
+	_trail._floor_at = real_floor
 	_player.state.grounded = true
 	# Damage and radius: 14 inside the hull reach, nothing outside it.
 	_armed(r4, true)
@@ -332,6 +339,19 @@ func _trail_checks() -> void:
 		"near lost %.1f, far lost %.1f, reach %.2f m" % [500.0 - near.hp, 500.0 - far.hp, reach])
 	_check("no item proc, no patch from a patch, no water", _struck == 0 and _trail.patches.size() == live_before and _game.run.metrics["wear_loss"] == wear_before and not _trail_source_touches_procs(),
 		"%d enemy_struck, %d patches (was %d), wear unchanged" % [_struck, _trail.patches.size(), live_before])
+	_check("no kill event from a trail hit", _kills == 0, "%d enemy_killed" % _kills)
+	# A lethal patch never kills: it leaves 1 hp, so no enemy_killed reaches build's on-kill items.
+	_armed(r4, true)
+	_wear(1)
+	var frail := _foe(0.6, 10.0)
+	_struck = 0
+	_kills = 0
+	_trail.step(0.05, [frail])
+	_check("lethal patch leaves 1 hp, no kill, no item proc", is_instance_valid(frail) and is_equal_approx(frail.hp, WearTrail.LAST_HP) and _kills == 0 and _struck == 0,
+		"hp %.1f, %d enemy_killed, %d enemy_struck" % [frail.hp, _kills, _struck])
+	_trail.step(0.6, [frail])
+	_check("a patch cannot finish a 1 hp enemy", is_instance_valid(frail) and frail.hp > 0.0 and _kills == 0, "hp %.1f, %d enemy_killed" % [frail.hp, _kills])
+	_drop(frail)
 	# One hit per enemy per 0.5 s across every patch.
 	_armed(r4, true)
 	_wear(3)

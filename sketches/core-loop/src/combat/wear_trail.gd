@@ -21,6 +21,8 @@ const LIFE := 2.0
 const MAX_LIVE := 6
 const HIT_GAP := 0.5
 const PULSE := 0.25
+# Hp a patch always leaves, so a trail hit is never a kill.
+const LAST_HP := 1.0
 # The floor must lie this far below the ball or the ball is not on ground it traversed.
 const FLOOR_REACH := 2.5
 
@@ -111,10 +113,18 @@ func _touch(patch: Dictionary, enemy) -> void:
 	offset.y = 0.0
 	if offset.length() > reach:
 		return
+	# A patch wears an enemy down but never finishes one: a kill posts enemy_killed, which build
+	# turns into on-kill item triggers and Rampage's refund. It always leaves LAST_HP.
+	var dealt := DAMAGE
+	var left = enemy.get("hp")
+	if left != null:
+		dealt = minf(DAMAGE, float(left) - LAST_HP)
+	if dealt <= 0.0:
+		return
 	_last_hit[id] = _clock
 	hits += 1
 	var at: Vector3 = enemy.global_position
-	enemy.take_damage(DAMAGE)
+	enemy.take_damage(dealt)
 	_effects.arc(patch["at"] + Vector3.UP * 0.1, at, _tone(1.0))
 
 
