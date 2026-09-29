@@ -1,0 +1,5 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[sprint ignores every hold] 0 holds taken while sprinting; refused at the door: ["mag_pit", "anchor_tether", "winch_pull", "gyro_drift", "paddle_bat", "bola_wrap", "tilt_fling", "cup_hold"]; never tried: [] -> PASS
+[control] without the sprint the same field held Rivet 1 times in 0.5 s -> PASS
+enemy_rivet_test: PASS

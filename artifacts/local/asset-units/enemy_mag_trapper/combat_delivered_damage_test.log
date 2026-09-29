@@ -1,0 +1,33 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[zero_damage_run] a run with no hits yet carries delivered_damage { "total": 0.0, "overkill": 0.0, "hits": 0, "zero_damage_hits": 0, "by_source": {  }, "by_action": {  }, "by_target_class": {  }, "by_range": { "near": 0.0, "mid": 0.0, "far": 0.0 }, "retirements": {  }, "drops_to_break": {  }, "warden_slam_hits": {  } } (needs total 0.0, hits 0, present) -> PASS
+[range_buckets] chaser at 3 m -> near, warden at 10 m -> mid, adds at 20 m -> far (need near, mid, far) -> PASS
+[overkill_clamped] a 60-hp chaser hit for 10x its hp: ledger total rose by 60.00 (needs exactly 60, the real hp lost) -> PASS
+[overkill_recorded] overkill 540.0 recorded on the killing blow (needs > 0) -> PASS
+[weapon_source] an explicit weapon-sourced hit landed 60.0 under by_source.weapon (needs >= 60) -> PASS
+[enemy_target_class] a chaser (target class 'enemy') accounted for 60.0 under by_target_class.enemy (needs >= 60) -> PASS
+[stomp_drop_flag_wins] _classify_source('stomp', '', drop) read 'drop_or_slam' with drop=true and 'ram_or_contact' with drop=false (needs drop_or_slam, then ram_or_contact) -> PASS
+[v2_mode_not_drop_counted] the base's default loop_mode read 'v2' (needs anything but 'drop') -> PASS
+[v2_mode_slam_is_a_hit] a slam on the Warden in v2 left _warden_slam_hits 1 and _warden_drops 0 (needs 1 and 0) -> PASS
+[drop_or_slam_source] two slam hits on the Warden (in loop_mode drop) landed 288.0 under by_source.drop_or_slam (needs >= 160.0) -> PASS
+[warden_target_class] the Warden's own bucket read 406.0 (needs >= 320.0) -> PASS
+[slam_hits_are_not_drops] one v2 slam, two drop-mode slams and one drop-mode stomp left _warden_slam_hits 4 and _warden_drops 0 (needs 4 and 0: no drop landed) -> PASS
+[drop_counts_landed_event] one warden_drop_landed left _warden_drops 1 and _warden_slam_hits 4 (needs 1 and 4) -> PASS
+[item_proc_source] a synergy hit on a Fleet unit landed 15.0 under by_source.item_proc (needs >= 15.0) -> PASS
+[adds_target_class] a Fleet unit's own bucket read 15.0 (needs >= 15.0) -> PASS
+[zero_damage_hit] a force-0 hit counted as a hit (6 -> 7) and as a zero-damage hit (0 -> 1) -> PASS
+[scenery_excluded] a strike() call on a plain node (no take_damage) left hits at 7 and total at 481.0 unchanged -> PASS
+[cache_target_class] a vault hit landed 160.0 under by_target_class.cache (needs >= 160.0) -> PASS
+[cache_excluded_from_enemy] the vault hit left by_target_class.enemy at 60.0, unchanged from 60.0 (a static cache is not an 'enemy') -> PASS
+[proc_volley_source] an upgrade-tree-sourced _fire() call tagged its bolt 'item_proc' (needs 'item_proc', not the old hardcoded 'weapon') -> PASS
+[drops_to_break] stage 1 broke after one landed drop and four stomp or slam hits: drops_to_break { "1": 1 }, warden_slam_hits { "1": 4 } (needs 1 and 4) -> PASS
+[drops_to_break_null_outside_drop_mode] stage 2 broke in loop_mode 'v2': drops_to_break { "1": 1, "2": <null> }, warden_slam_hits { "1": 4, "2": 0 } (needs null, then 0) -> PASS
+[boss_floor_clamped] the second hull hit was sized to blow past the phase-1 floor; boss.hp landed at 14520.0 (needs clamped above 0, below 22000.0) -> PASS
+[boss_target_class] two hull hits (the second past the phase-1 floor) dropped the boss 7480.0 hp; by_target_class.boss rose by 7480.0 (need equal) -> PASS
+[boss_defeat_ledger] the scooter catch dropped boss.hp 2200.0 -> 0.0 (state defeated); by_target_class.boss rose by 2200.0 (needs the whole remaining pool, 2200.0, not 0) -> PASS
+[boss_retirement] the boss's defeat retired 1 under retirements.boss (needs 1, one more than before the catch) -> PASS
+[total_matches_real_hp_lost] ledger total 10321.00 vs the sum of real HP lost across every struck target 10321.00 (need equal) -> PASS
+[reconciles] total 10321.00 vs by_source 10321.00, by_action 10321.00, by_target_class 10321.00, by_range 10321.00 (all must match) -> PASS
+[retirements] one chaser killed retired 1 under retirements.enemy (needs 1) -> PASS
+[hit_count] 11 strike() calls above produced 11 ledger hits (needs 11, one per call, none doubled) -> PASS
+combat_delivered_damage_test: PASS
