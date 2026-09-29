@@ -374,9 +374,16 @@ func grant_start_mass(amount: float) -> void:
 	_heft_class = raw_heft_class(heft())
 
 
-func record_kill(kind: String, at: Vector3, scrap_value: int) -> void:
+# True only while enemy_killed is emitting for a kill a wear spark landed: the item and tree
+# consumers skip it, the bookkeeping ones do not.
+var last_kill_from_spark := false
+
+
+func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> void:
 	kills += 1
+	last_kill_from_spark = source == "spark"
 	events.enemy_killed.emit(kind, at, scrap_value)
+	last_kill_from_spark = false
 
 
 func note_anomaly(kind: String) -> void:

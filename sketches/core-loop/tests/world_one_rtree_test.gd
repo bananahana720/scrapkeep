@@ -136,6 +136,16 @@ func _take(picks: Array) -> bool:
 	return ok
 
 
+# Like _take without the world-one depth cap, for a node the pilot's two depths never reach.
+func _take_deep(picks: Array) -> void:
+	var tree = _player.tree
+	tree.reset(CLASS)
+	tree.max_depth = picks.size()
+	for id in picks:
+		tree.open_checkpoint()
+		tree.pick(id)
+
+
 func _card_lines(picks: Array) -> Array:
 	_take(picks)
 	_player.tree.open_checkpoint()
@@ -340,18 +350,57 @@ func _trail_checks() -> void:
 	_check("no item proc, no patch from a patch, no water", _struck == 0 and _trail.patches.size() == live_before and _game.run.metrics["wear_loss"] == wear_before and not _trail_source_touches_procs(),
 		"%d enemy_struck, %d patches (was %d), wear unchanged" % [_struck, _trail.patches.size(), live_before])
 	_check("no kill event from a trail hit", _kills == 0, "%d enemy_killed" % _kills)
-	# A lethal patch never kills: it leaves 1 hp, so no enemy_killed reaches build's on-kill items.
+	# A patch deals its full 14 to a 30 hp enemy.
 	_armed(r4, true)
 	_wear(1)
+	var mid := _foe(0.6, 30.0)
+	_trail.step(0.05, [mid])
+	_check("a patch deals 14 to a 30 hp enemy", is_equal_approx(mid.hp, 16.0) and is_instance_valid(mid) and mid.last_damage_source == "", "hp %.1f, source '%s'" % [mid.hp, mid.last_damage_source])
+	_drop(mid)
+	# A patch kills a 10 hp enemy: scrap and run.kills count it, no item, shrapnel or Rampage sees it.
+	var build = _game.ctx.get_meta("build")
+	var refunds := [0]
+	_combat._actions["refund_move"] = func(_s: float): refunds[0] += 1
+	build.sheet.transformers.append("shrapnel_bloom")
+	_armed(r4, true)
+	_take_deep(UpgradeTree.path_to(CLASS, "r_rampage", true))
+	_combat._proc_ready.clear()
+	_wear(1)
 	var frail := _foe(0.6, 10.0)
-	_struck = 0
 	_kills = 0
+	_struck = 0
+	var kills_before: int = _game.run.kills
+	var scrap_before: int = build.scrap.count()
+	var pending_before: int = build.bus.pending.size()
+	var bloom_before: int = build._kills.size()
+	var flag_seen := [false]
+	var watch: Callable = func(_k, _a, _s): flag_seen[0] = _game.run.last_kill_from_spark
+	_game.events.enemy_killed.connect(watch)
 	_trail.step(0.05, [frail])
-	_check("lethal patch leaves 1 hp, no kill, no item proc", is_instance_valid(frail) and is_equal_approx(frail.hp, WearTrail.LAST_HP) and _kills == 0 and _struck == 0,
-		"hp %.1f, %d enemy_killed, %d enemy_struck" % [frail.hp, _kills, _struck])
-	_trail.step(0.6, [frail])
-	_check("a patch cannot finish a 1 hp enemy", is_instance_valid(frail) and frail.hp > 0.0 and _kills == 0, "hp %.1f, %d enemy_killed" % [frail.hp, _kills])
-	_drop(frail)
+	_game.events.enemy_killed.disconnect(watch)
+	_check("spark kill counts in run.kills and enemy_killed", _game.run.kills == kills_before + 1 and _kills == 1 and flag_seen[0], "run.kills +%d, %d enemy_killed, flag during emit %s" % [_game.run.kills - kills_before, _kills, flag_seen[0]])
+	_check("spark kill drops scrap", build.scrap.count() > scrap_before, "%d -> %d scrap items" % [scrap_before, build.scrap.count()])
+	_check("spark kill posts no ON_KILL", build.bus.pending.size() == pending_before, "%d pending (was %d)" % [build.bus.pending.size(), pending_before])
+	_check("spark kill records no shrapnel_bloom kill", build._kills.size() == bloom_before, "%d kills recorded (was %d)" % [build._kills.size(), bloom_before])
+	_check("flag clear after the emit", not _game.run.last_kill_from_spark, "last_kill_from_spark %s" % _game.run.last_kill_from_spark)
+	# Rampage's refund rides the same gate: the patch kill above gave none, an ordinary kill does.
+	_check("spark kill gives no Rampage refund", refunds[0] == 0 and not _procs_of("refund_move").is_empty(), "%d refunds, %d rampage procs" % [refunds[0], _procs_of("refund_move").size()])
+	var refunds_spark: int = refunds[0]
+	_combat._proc_ready.clear()
+	_game.run.record_kill("chaser", _player.ball_position(), 3)
+	_check("ordinary kill gives the Rampage refund", refunds[0] == refunds_spark + 1, "%d refunds" % (refunds[0] - refunds_spark))
+	# A strike-sourced kill of a 10 hp enemy does the item, bloom, scrap and count.
+	_armed(r4, true)
+	var normal := _foe(0.6, 10.0)
+	build._last_strike_kind = "ram"
+	pending_before = build.bus.pending.size()
+	bloom_before = build._kills.size()
+	scrap_before = build.scrap.count()
+	kills_before = _game.run.kills
+	_combat.strike(normal, "ram", 1.0)
+	_check("strike kill posts ON_KILL, bloom record, scrap and counts", build.bus.pending.size() > pending_before and build._kills.size() == bloom_before + 1 and build.scrap.count() > scrap_before and _game.run.kills == kills_before + 1,
+		"pending %d (was %d), bloom %d (was %d), scrap %d (was %d), run.kills +%d" % [build.bus.pending.size(), pending_before, build._kills.size(), bloom_before, build.scrap.count(), scrap_before, _game.run.kills - kills_before])
+	build.sheet.transformers.erase("shrapnel_bloom")
 	# One hit per enemy per 0.5 s across every patch.
 	_armed(r4, true)
 	_wear(3)

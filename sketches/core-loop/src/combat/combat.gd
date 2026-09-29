@@ -352,7 +352,7 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), _threat(), fleet.dress(kind, _spec_for(kind)))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	enemy.died.connect(func(where: Vector3, scrap: int):
-		ctx.run.record_kill(kind, where, scrap)
+		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
 		var id := enemy.get_instance_id()
 		_record_retirement(_class_for_id(id, kind))
 		_boss_add_ids.erase(id))
@@ -1494,6 +1494,9 @@ func cloak_sight() -> float:
 # gap. No build's actions can lead back to their own trigger (UpgradeTree.problems).
 func _on_proc_fact(kind: String) -> void:
 	if ctx == null or not ctx.flow.in_play() or ctx.run.class_def == null:
+		return
+	# A spark kill (wear_trail) procs no tree effect.
+	if kind == "enemy_killed" and ctx.run.last_kill_from_spark:
 		return
 	for proc in ctx.player.tree.procs():
 		if proc["on"] != kind:
