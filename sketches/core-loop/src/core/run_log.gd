@@ -178,6 +178,16 @@ func _write(outcome: String) -> void:
 	# this module never needs its own reference to the spawner. A run with no hits still
 	# carries the reset ledger (total 0.0), so a zero-damage run reads as zero, not missing.
 	line["delivered_damage"] = run.get_meta("delivered_damage", {})
+	# The durability prototype's per-run metrics (run_state.gd), present only in armour
+	# mode so a flag-off line is byte-identical to the base. reverse_seconds is an
+	# approximation: seconds with a spill live and the ball moving against the stage's
+	# entry heading (build.gd _step_armor).
+	if run.armor_mode:
+		var durability: Dictionary = run.metrics.duplicate()
+		durability["scrap_mode"] = "armor"
+		durability["wear"] = "on" if run.wear_on else "off"
+		durability["mass_end"] = run.mass
+		line["durability"] = durability
 	_dirty = false
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1

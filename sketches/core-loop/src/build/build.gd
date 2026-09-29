@@ -15,6 +15,7 @@ const ItemEffects := preload("res://src/build/item_effects.gd")
 const RunClock := preload("res://src/build/run_clock.gd")
 const Shop := preload("res://src/build/shop.gd")
 const Lanes := preload("res://src/build/lanes.gd")
+const RunState := preload("res://src/core/run_state.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -172,6 +173,8 @@ func setup(ctx_ref) -> void:
 	ctx.events.shot_fired.connect(_on_shot_fired)
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
+	ctx.run.armor_hit.connect(_on_armor_hit)
+	_sync_scrap_flags()
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
@@ -429,9 +432,15 @@ func _step_loot(delta: float) -> void:
 # and a stage entry all call the same thing. A named synergy that comes live here for
 # the first time this run is a discovery.
 func recompute() -> void:
+	_sync_scrap_flags()
 	sheet = BuildSheet.from_parts(ctx.run.parts)
 	effects.refresh(ctx.run.parts)
-	_mass_hp = effects.mass_health(ctx.run.mass)
+	var mass_hp: float = effects.mass_health(ctx.run.mass)
+	# Armour mode: mass lost to hits or wear never lowers the hull ceiling, so the
+	# Scrap Armor bonus only ratchets up (same rule as _on_scrap_collected).
+	if ctx.run.armor_mode:
+		mass_hp = maxf(mass_hp, _mass_hp)
+	_mass_hp = mass_hp
 	sheet.max_hp_bonus += _mass_hp
 	sheet.apply(ctx.tuning, ctx.run)
 	effects.apply_abilities(ctx.player)
@@ -514,6 +523,10 @@ func _on_part_gained(part_id: String, _source: String) -> void:
 # build changes with mass.
 func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 	var mass_hp: float = effects.mass_health(ctx.run.mass)
+	# Armour mode lets the mass layer wear and spill without ever touching the hull, so
+	# the ceiling Scrap Armor grants only ratchets up.
+	if ctx.run.armor_mode:
+		mass_hp = maxf(mass_hp, _mass_hp)
 	if mass_hp != _mass_hp:
 		sheet.max_hp_bonus += mass_hp - _mass_hp
 		_mass_hp = mass_hp
@@ -523,6 +536,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 func _on_run_started(_class_id_value: String) -> void:
 	_live = []
+	_mass_hp = 0.0
 	_discovered.clear()
 	_found.clear()
 	_refresh_seams()
@@ -532,6 +546,8 @@ func _on_run_started(_class_id_value: String) -> void:
 	if ctx.codex != null:
 		clock.load_best(ctx.codex.storage_dir.path_join("runs.ndjson"), Engine.physics_ticks_per_second)
 	ctx.run.set_meta("run_tags", clock.tags())
+	_sync_scrap_flags()
+	_apply_route()
 	shop.reset_run()
 	lanes.reset()
 	recompute()
@@ -669,6 +685,65 @@ func _heading() -> Vector3:
 	return -ctx.camera.yaw_basis().z
 
 
+# ---- Scrap as armour (the durability prototype; every branch is behind tuning flags) ----
+
+func _sync_scrap_flags() -> void:
+	if ctx == null or ctx.tuning == null or ctx.run == null:
+		return
+	ctx.run.armor_mode = ctx.tuning.armor()
+	ctx.run.wear_on = ctx.tuning.wear_on()
+
+
+# The fixed route: --route-seed reseeds the run's streams, --start-mass opens with that mass.
+# Flow takes the stage checkpoint after run_started, so a retry restores it.
+func _apply_route() -> void:
+	if ctx.tuning == null:
+		return
+	var route_seed := int(ctx.tuning.base("route_seed"))
+	if route_seed > 0:
+		ctx.rng.seed = route_seed
+		seed(route_seed)
+	var start := float(ctx.tuning.base("start_mass"))
+	if start > 0.0:
+		ctx.run.grant_start_mass(start)
+
+
+# A hit removed scrap: SPILL_CLUSTERS at most, ahead of or beside the outgoing line.
+# Recovery runs only where the scrap field does (stage play). The boss arena clears the
+# field and never steps it, so a cluster dropped there could never be collected: the
+# spill is destroyed instead and logged, so the hit reads as what it cost.
+func _on_armor_hit(_removed: float, spill: int, _source: String) -> void:
+	if not ctx.flow.in_stage():
+		ctx.run.metrics["destroyed"] += spill
+		ctx.run.metrics["arena_destroyed"] += spill
+		_redraw()
+		return
+	scrap.drop_recovery(ctx.terrain, ctx.player.ball_position(), _heading(), spill, RunState.SPILL_CLUSTERS, ctx.rng)
+	_redraw()
+
+
+# Runs in stage play only: wear, recovered scrap and the reversing metric. Wear is
+# grounded play in a stage: not paused (the tree does not tick), not in the bay, and not
+# in the launch flight or an authored transfer.
+func _step_armor(ball: Vector3, delta: float) -> void:
+	var run = ctx.run
+	for value in scrap.recovered_values:
+		run.recover_mass(value)
+	for value in scrap.expired_values:
+		run.note_spill_expired(value)
+	run.mitigation = effects.damage_reduction
+	run.brace_hook = effects.brace_share_for
+	run.deflect_hook = effects.deflect_for
+	run.ward_hook = effects.ward_floor_for
+	var grounded: bool = ctx.player.state.grounded and ctx.flow.state in [ctx.flow.STAGE, ctx.flow.BEACON, ctx.flow.GATES]
+	var planar: Vector3 = ctx.player.planar_velocity()
+	run.wear_step(delta, planar.length(), ctx.tuning.f("cruise"), grounded and not get_tree().paused and not shop.clock_paused())
+	# Seconds reversing toward a spill (an approximation): a spill is live and the ball
+	# is moving against the stage's entry heading, the route's forward direction.
+	if scrap.recovery_count() > 0 and planar.length() > 1.0 and planar.dot(ctx.terrain.entry_heading(run.stage)) < 0.0:
+		run.metrics["reverse_seconds"] += delta
+
+
 func _physics_process(delta: float) -> void:
 	if ctx == null or not ctx.flow.in_play():
 		return
@@ -691,6 +766,8 @@ func _physics_process(delta: float) -> void:
 				if has_transformer("lightning_rod"):
 					_lightning_rod(ball)
 			_step_fabricators(ball, delta)
+		if ctx.run.armor_mode:
+			_step_armor(ball, delta)
 		if gates.step(ball, _heading()):
 			ctx.events.reward_offered.emit(gates.offers)
 	_step_elements(ball, delta)
