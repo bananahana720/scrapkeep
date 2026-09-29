@@ -152,6 +152,12 @@ func _check_shape(bola: Node3D) -> void:
 		if absf(v.x) > 0.95:
 			ends += 1
 	_check(ends > 0, "the two weighted ends stand proud of the ring")
+	# Nothing crosses the opening: no vertex of the loop lies inside the ring's inner edge (0.65 m).
+	var crossing := 0
+	for v in loop.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array:
+		if Vector2(v.x, v.z).length() < 0.6:
+			crossing += 1
+	_check(crossing == 0, "nothing crosses the loop's opening (%d vertices inside 0.6 m)" % crossing)
 
 
 # The resting body is Fleet oxide (RUST); the hit flashes through the existing event
@@ -179,17 +185,51 @@ func _check_paint(bola: Node3D) -> void:
 		"a second thrower's flash leaves this one's body unlit")
 
 
-# Pose: the loop whirls faster through WARN, easing with the existing warning clock.
+# Pose: the loop whirls faster through WARN, easing with the existing warning clock, about its
+# own ring axis; that axis stays exposed (horizontal component on both the z and x view lines) at
+# rest, through the wind-up and in flight, so the opening reads from front, side and rear cameras.
+const OPEN_MIN := 0.45  # |axis.x| and |axis.z| at least this: the opening is >= 45% of face-on on each camera line
+
+
+func _axis(loop: Node3D) -> Vector3:
+	return (loop.global_transform.basis * Vector3.UP).normalized()
+
+
+func _step(loop: Node3D, bola: Node3D) -> float:
+	var before: Vector3 = loop.global_transform.basis.x
+	bola._pose()
+	return before.angle_to(loop.global_transform.basis.x)
+
+
+func _open(loop: Node3D) -> bool:
+	var a := _axis(loop).abs()
+	return a.x >= OPEN_MIN and a.z >= OPEN_MIN
+
+
 func _check_pose(bola: Node3D) -> void:
 	var loop: MeshInstance3D = bola._bola
-	var w0: float = loop.rotation.y
+	var ring_y := 0.0
+	for v in loop.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array:
+		ring_y = maxf(ring_y, absf(v.y))
+	_check(ring_y < 0.3, "the glb hoop lies in its local XZ plane, so its ring axis is local Y (max |y| %.3f)" % ring_y)
+	_check(_open(loop), "the loop's ring axis is exposed at rest: |x| %.2f, |z| %.2f >= %.2f" % [_axis(loop).abs().x, _axis(loop).abs().z, OPEN_MIN])
 	bola.phase = bola.Phase.ROAM
-	bola._pose()
-	var rest_step: float = loop.rotation.y - w0
+	var rest_step := _step(loop, bola)
 	bola.phase = bola.Phase.WARN
 	bola._t = bola.warn_seconds
-	var w1: float = loop.rotation.y
-	bola._pose()
-	var wind_step: float = loop.rotation.y - w1
+	var wind_step := _step(loop, bola)
 	_check(is_equal_approx(rest_step, 0.25) and wind_step > rest_step, "the loop whirls faster through WARN (%.3f vs %.3f rad/step)" % [wind_step, rest_step])
+	var still_open := true
+	for i in 40:
+		bola._pose()
+		if not _open(loop):
+			still_open = false
+	_check(still_open, "the ring axis stays exposed through 40 wind-up whirl steps")
 	bola.phase = bola.Phase.ROAM
+	# In flight the loop is top_level and keeps the enemy-frame seat it left with.
+	bola._take_flight()
+	for i in 10:
+		bola._pose()
+	_check(_open(loop), "the flying loop's ring axis stays exposed")
+	loop.top_level = false
+	bola._pose()
