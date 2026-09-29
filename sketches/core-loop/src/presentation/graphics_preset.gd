@@ -51,7 +51,7 @@ static func _apply_world(world: Dictionary) -> void:
 	env.ambient_light_color = Color("9db5cf")
 	env.ambient_light_sky_contribution = 0.25
 	env.ambient_light_energy = spec.ambient
-	# Look pass 3: AgX with a fixed exposure; auto exposure and SDFGI/SSIL/SSR stay off.
+	# AgX with a fixed exposure; auto exposure and SDFGI/SSIL/SSR stay off.
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = 1.1
 	env.tonemap_agx_white = 16.29
@@ -84,8 +84,8 @@ static func _apply_world(world: Dictionary) -> void:
 	sun.rotation_degrees = spec.sun_rotation
 	sun.light_color = Color("ffd49a")
 	sun.directional_shadow_split_1 = 0.18
-	# Pilot speckle (pass 4a): PCSS (angular distance above 0) sampled the hoop shadow on the
-	# pilot's head with noise; a smooth high-quality filter blurs it with none.
+	# PCSS (angular distance above 0) samples the hoop's shadow on the pilot's head with visible
+	# noise; the smooth high-quality filter blurs it without any.
 	sun.light_angular_distance = 0.0
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	sun.shadow_blur = 1.0
@@ -115,7 +115,7 @@ static func _apply_fill(sun: DirectionalLight3D, spec: Dictionary) -> void:
 		fill.light_color = Color("a3c4e6")
 		fill.light_specular = 0.0
 		parent.add_child(fill)
-	# Opposite the sun's yaw, so the wall faces the key misses get cool light (pass 4a).
+	# Opposite the sun's yaw, so the wall faces the key misses get cool light.
 	fill.rotation_degrees = Vector3(-50.0, spec.sun_rotation.y + 180.0, 0.0)
 	fill.light_energy = spec.fill
 
