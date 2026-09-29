@@ -149,6 +149,19 @@ const PATTERN_GUARANTEE_STAGE := 2
 # item table (items.gd).
 const GENERATED_SHARE := 0.25
 
+# Hot-wired parts (BUILD-SYSTEMS.md, Two hot-wired parts). Not in CATALOGUE, so they never
+# enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
+# never drawn as loot. Each row names both consequences with an icon id and at most three
+# words; "{armor}" and "{steer}" are resolved from Build and RunState by hotwire_choice.gd,
+# so the words follow the tuning. Fitting still comes from --hotwire-shell; nothing here
+# equips a part.
+const HOTWIRED := {
+	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "needs_armor": true,
+		"label": "{armor} armour. Air steering \u2212{steer}%.",
+		"upside": {"icon": "cat_defense", "words": "{armor_x}x armour"},
+		"downside": {"icon": "cat_mobility", "words": "Air steering \u2212{steer}%"}},
+}
+
 static var _defs := {}
 static var _rows := {}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
@@ -190,6 +203,26 @@ static func has(part_id: String) -> bool:
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.
 static func ids() -> Array:
 	return rows().keys()
+
+
+# The hot-wired row for an id, or {} when the id is not hot-wired.
+static func hotwired(part_id: String) -> Dictionary:
+	return HOTWIRED.get(part_id, {})
+
+
+# The hot-wired parts an offer may show. A part that needs armour mode (Riveted Shell is a
+# pure downside without it, DESIGN-NOTES H1) is left out when armor_mode is false. At most
+# one hot-wired part is held, so nothing is offered once one is. Pure: read armor_mode from
+# tuning.armor() or RunState.armor_mode.
+static func hotwire_offer(armor_mode: bool, held: Array = []) -> Array:
+	if held.any(func(key): return HOTWIRED.has(key)):
+		return []
+	var out: Array = []
+	for key in HOTWIRED:
+		if HOTWIRED[key].get("needs_armor", false) and not armor_mode:
+			continue
+		out.append(key)
+	return out
 
 
 static func seam_met(need: String) -> bool:
