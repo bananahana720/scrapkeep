@@ -1,0 +1,4 @@
+22244c0fd4cb9e855b8822629ff8b2640261c94cdcedcdf773c22cadd182bff7  sketches/core-loop/assets/models/world_one/enemy_chaser.glb
+e3003485de67a132097406d82d35963e466b9770693b0ef31f3847f6364edf87  sketches/core-loop/tools/blender/world_one/enemy_chaser.py
+dac4a539f7a4bd9aaf1bacf02d7f452d5866d3d278ee2217488dcc8574826a4a  sketches/core-loop/src/combat/chaser.gd
+f9041a5a313cdcbc7c8b1fd09dea9aa8a6de3736
