@@ -33,6 +33,13 @@ const PLATE_CLOSED := Color("3b403d")
 const TINT_ENERGY := 0.9
 const PLATE_GLOW_AMBER := 1.8
 const PLATE_GLOW_SLATE := 0.0
+# The cue lives on the plate's rim, not its faces (Andrew, 2026-09-29): the plate material
+# emits through a tiny nearest-filtered mask texture, so light appears only where the mask
+# is white (rim, bolts) and body and plate faces keep their resting finish in both states.
+# One material, one draw: the mask adds no surface. A mesh with no mask UVs takes the dark
+# mask and shows nothing on its faces; its crack glyph carries the cue.
+const RIM_CELL := 8
+const RIM_EDGE := 2
 # The class colour "now" is drawn in: combat sets it when a run starts.
 static var rim_color := Palette.ARC
 
@@ -275,18 +282,12 @@ func _update_flash(delta: float) -> void:
 			_apply_rest_look()
 
 
-# The resting look: the base colour, with the plating tint glowing through on a plated
-# enemy so the read survives any lighting.
+# The resting look: the base colour and no glow. The plating cue is on the plate's rim.
 func _apply_rest_look() -> void:
 	if _material == null:
 		return
 	_material.albedo_color = _base_color
-	if tint_state == "":
-		_material.emission_enabled = false
-		return
-	_material.emission_enabled = tint_state == "amber"
-	_material.emission = rim_color
-	_material.emission_energy_multiplier = TINT_ENERGY
+	_material.emission_enabled = false
 
 
 func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) -> MeshInstance3D:
@@ -320,22 +321,63 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 
 
 # A tinted material for a plating mesh, registered so set_tint recolours it.
-func _plate_material() -> StandardMaterial3D:
+# `rim_mask` is the emission mask: rim_frame_mask() for BoxMesh plates, a mesh-specific
+# mask where the mesh carries its own UVs. With no mask the plates are BoxMesh (miniboss,
+# vault), so they get the frame mask; only the mind hand's round bone stays dark.
+func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
+	if rim_mask == null and not _plates_are_round():
+		rim_mask = rim_frame_mask()
 	var mat := Palette.solid(PLATE_CLOSED)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
+	mat.emission_texture = rim_mask if rim_mask != null else mask_texture([Color.BLACK], 1)
+	# Multiply, not the default add: the colour must only show where the mask is white.
+	mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	_paint_plate(mat, PLATE_CLOSED, false)
 	_tint_materials.append(mat)
 	return mat
 
 
+# The mind hand's plate bone is a cylinder; the box frame mask would stripe it.
+func _plates_are_round() -> bool:
+	var script := get_script() as Script
+	return script != null and script.resource_path.get_file() == "mind_hand.gd"
+
+
 # Plating carries its read in light, not just paint, so it survives distance and shade:
 # the class-colour rim burns (your punch breaks through now); closed plates stay dark.
 static func _paint_plate(mat: StandardMaterial3D, color: Color, beatable: bool) -> void:
-	mat.albedo_color = color.darkened(0.35) if beatable else color
+	# The resting finish stays in both states; "now" arrives as light through the mask.
+	mat.albedo_color = PLATE_CLOSED
 	mat.emission_enabled = beatable
 	mat.emission = color
 	mat.emission_energy_multiplier = PLATE_GLOW_AMBER if beatable else PLATE_GLOW_SLATE
+
+
+# A one-row or grid mask texture, nearest-sampled and mipless so a texel never blends.
+static func mask_texture(texels: Array, width: int, height := 1) -> ImageTexture:
+	var img := Image.create_empty(width, height, false, Image.FORMAT_RGB8)
+	for i in texels.size():
+		img.set_pixel(i % width, i / width, texels[i])
+	return ImageTexture.create_from_image(img)
+
+
+# White border on every cell of BoxMesh's 3x2 face atlas: a rim on all six faces.
+static var _frame_mask: ImageTexture
+static func rim_frame_mask() -> ImageTexture:
+	if _frame_mask == null:
+		var w := RIM_CELL * 3
+		var h := RIM_CELL * 2
+		var texels := []
+		for y in h:
+			for x in w:
+				var cx := x % RIM_CELL
+				var cy := y % RIM_CELL
+				var edge := cx < RIM_EDGE or cx >= RIM_CELL - RIM_EDGE or cy < RIM_EDGE or cy >= RIM_CELL - RIM_EDGE
+				texels.append(Color.WHITE if edge else Color.BLACK)
+		_frame_mask = mask_texture(texels, w, h)
+	return _frame_mask
 
 
 # An open-crack glyph on a plate: a lit zigzag in the class colour, shown only while

@@ -44,6 +44,12 @@ func _configure(threat: float) -> void:
 # override and its own tinted plate material.
 static var _shared: Dictionary = {}
 
+# The crack glyph sits on the slab's face (front face at z = 1.35), 0.07 m off it so its strokes
+# clear the face and the lit bolts, centred between the two ribs and under the brow lip. Sized
+# 1.5 so it reads at asset-front30 (about 40 px tall) and at asset-use6.
+const GLYPH_AT := Vector3(0.0, -0.05, 1.42)
+const GLYPH_SIZE := 1.5
+
 
 func _build_tool() -> void:
 	_crew.free()
@@ -56,9 +62,9 @@ func _build_tool() -> void:
 	_plate = MeshInstance3D.new()
 	_plate.name = "BrutePlates"
 	_plate.mesh = parts["plates"]
-	_plate.material_override = _plate_material()
+	_plate.material_override = _plate_material(_rim_mask())
 	add_child(_plate)
-	_add_crack(_plate, Vector3(0.0, 0.1, CREW_RADIUS + 0.3 + 0.28), 1.1).name = "PlateCrack"
+	_add_crack(_plate, GLYPH_AT, GLYPH_SIZE).name = "PlateCrack"
 
 
 static func _parts() -> Dictionary:
@@ -81,9 +87,36 @@ static func _parts() -> Dictionary:
 	if flash < 0:
 		push_error("enemy_plated_brute.glb has no fleet_paint surface; the flash lands on surface 0")
 		flash = 0
+	meshes["BrutePlates"] = _mask_uvs(meshes["BrutePlates"])
 	_shared = {"body": meshes["BruteBody"], "plates": meshes["BrutePlates"], "flash": flash}
 	scene.free()
 	return _shared
+
+
+# The amber cue's mask. The recipe paints the plate's rim and bolts vertex-colour black;
+# each vertex's UV is moved to the lit texel (right) or the dark one (left) of a 2x1 mask,
+# so the emission lands on the rim and bolts of the one plate surface.
+static var _mask: ImageTexture
+
+
+static func _rim_mask() -> ImageTexture:
+	if _mask == null:
+		_mask = mask_texture([Color.BLACK, Color.WHITE], 2)
+	return _mask
+
+
+static func _mask_uvs(mesh: ArrayMesh) -> ArrayMesh:
+	var out := ArrayMesh.new()
+	for i in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(i)
+		var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+		var uvs := PackedVector2Array()
+		for c in colors:
+			uvs.append(Vector2(0.25 if c.r > 0.5 else 0.75, 0.5))
+		arrays[Mesh.ARRAY_TEX_UV] = uvs
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(i, mesh.surface_get_material(i))
+	return out
 
 
 func _wants_attack(to_ball: Vector3) -> bool:

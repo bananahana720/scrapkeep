@@ -1,0 +1,1042 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[ribbons ready before run starts] PASS
+[automatic attach reactor] PASS
+[active mast owner] PASS
+[idempotent mast] PASS
+[original mast retained] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+MAST_CLEARANCE reactor 1.44000005722046
+[entire support outside fixed sphere] PASS
+[lamp and ring retained] PASS
+[idempotent attachment] PASS
+[original collider only] PASS
+[mount meets kit] PASS
+[world weak point 0.0] PASS
+[world weak point 0.7] PASS
+[world weak point -2.4] PASS
+[finite nonsingular HeroWarden] PASS
+[finite nonsingular Housing] PASS
+[finite vertices and normals Housing] PASS
+[lower collider envelope Housing] PASS
+[finite nonsingular JawL] PASS
+[finite vertices and normals JawL] PASS
+[lower collider envelope JawL] PASS
+[finite nonsingular @Node3D@1176] PASS
+[finite nonsingular @MeshInstance3D@1177] PASS
+[finite vertices and normals @MeshInstance3D@1177] PASS
+[lower collider envelope @MeshInstance3D@1177] PASS
+[finite nonsingular @MeshInstance3D@1178] PASS
+[finite vertices and normals @MeshInstance3D@1178] PASS
+[lower collider envelope @MeshInstance3D@1178] PASS
+[finite nonsingular @MeshInstance3D@1179] PASS
+[finite vertices and normals @MeshInstance3D@1179] PASS
+[lower collider envelope @MeshInstance3D@1179] PASS
+[finite nonsingular @MeshInstance3D@1180] PASS
+[finite vertices and normals @MeshInstance3D@1180] PASS
+[lower collider envelope @MeshInstance3D@1180] PASS
+[finite nonsingular @MeshInstance3D@1181] PASS
+[finite vertices and normals @MeshInstance3D@1181] PASS
+[lower collider envelope @MeshInstance3D@1181] PASS
+[finite nonsingular @MeshInstance3D@1182] PASS
+[finite vertices and normals @MeshInstance3D@1182] PASS
+[lower collider envelope @MeshInstance3D@1182] PASS
+[finite nonsingular @MeshInstance3D@1183] PASS
+[finite vertices and normals @MeshInstance3D@1183] PASS
+[lower collider envelope @MeshInstance3D@1183] PASS
+[finite nonsingular @MeshInstance3D@1184] PASS
+[finite vertices and normals @MeshInstance3D@1184] PASS
+[lower collider envelope @MeshInstance3D@1184] PASS
+[finite nonsingular @MeshInstance3D@1185] PASS
+[finite vertices and normals @MeshInstance3D@1185] PASS
+[lower collider envelope @MeshInstance3D@1185] PASS
+[finite nonsingular @Node3D@1189] PASS
+[finite nonsingular @MeshInstance3D@1186] PASS
+[finite vertices and normals @MeshInstance3D@1186] PASS
+[lower collider envelope @MeshInstance3D@1186] PASS
+[finite nonsingular @MeshInstance3D@1187] PASS
+[finite vertices and normals @MeshInstance3D@1187] PASS
+[lower collider envelope @MeshInstance3D@1187] PASS
+[finite nonsingular @MeshInstance3D@1188] PASS
+[finite vertices and normals @MeshInstance3D@1188] PASS
+[lower collider envelope @MeshInstance3D@1188] PASS
+[finite nonsingular JawR] PASS
+[finite vertices and normals JawR] PASS
+[lower collider envelope JawR] PASS
+[finite nonsingular @Node3D@1190] PASS
+[finite nonsingular @MeshInstance3D@1191] PASS
+[finite vertices and normals @MeshInstance3D@1191] PASS
+[lower collider envelope @MeshInstance3D@1191] PASS
+[finite nonsingular @MeshInstance3D@1192] PASS
+[finite vertices and normals @MeshInstance3D@1192] PASS
+[lower collider envelope @MeshInstance3D@1192] PASS
+[finite nonsingular @MeshInstance3D@1193] PASS
+[finite vertices and normals @MeshInstance3D@1193] PASS
+[lower collider envelope @MeshInstance3D@1193] PASS
+[finite nonsingular @MeshInstance3D@1194] PASS
+[finite vertices and normals @MeshInstance3D@1194] PASS
+[lower collider envelope @MeshInstance3D@1194] PASS
+[finite nonsingular @MeshInstance3D@1195] PASS
+[finite vertices and normals @MeshInstance3D@1195] PASS
+[lower collider envelope @MeshInstance3D@1195] PASS
+[finite nonsingular @MeshInstance3D@1196] PASS
+[finite vertices and normals @MeshInstance3D@1196] PASS
+[lower collider envelope @MeshInstance3D@1196] PASS
+[finite nonsingular @MeshInstance3D@1197] PASS
+[finite vertices and normals @MeshInstance3D@1197] PASS
+[lower collider envelope @MeshInstance3D@1197] PASS
+[finite nonsingular @MeshInstance3D@1198] PASS
+[finite vertices and normals @MeshInstance3D@1198] PASS
+[lower collider envelope @MeshInstance3D@1198] PASS
+[finite nonsingular @MeshInstance3D@1199] PASS
+[finite vertices and normals @MeshInstance3D@1199] PASS
+[lower collider envelope @MeshInstance3D@1199] PASS
+[finite nonsingular @Node3D@1203] PASS
+[finite nonsingular @MeshInstance3D@1200] PASS
+[finite vertices and normals @MeshInstance3D@1200] PASS
+[lower collider envelope @MeshInstance3D@1200] PASS
+[finite nonsingular @MeshInstance3D@1201] PASS
+[finite vertices and normals @MeshInstance3D@1201] PASS
+[lower collider envelope @MeshInstance3D@1201] PASS
+[finite nonsingular @MeshInstance3D@1202] PASS
+[finite vertices and normals @MeshInstance3D@1202] PASS
+[lower collider envelope @MeshInstance3D@1202] PASS
+[finite nonsingular Tower] PASS
+[finite vertices and normals Tower] PASS
+[lower collider envelope Tower] PASS
+[finite nonsingular KitMount] PASS
+[finite nonsingular HeroKit] PASS
+[finite nonsingular Body] PASS
+[finite vertices and normals Body] PASS
+[lower collider envelope Body] PASS
+[finite nonsingular Vent0] PASS
+[finite vertices and normals Vent0] PASS
+[lower collider envelope Vent0] PASS
+[finite nonsingular Vent1] PASS
+[finite vertices and normals Vent1] PASS
+[lower collider envelope Vent1] PASS
+[finite nonsingular Vent2] PASS
+[finite vertices and normals Vent2] PASS
+[lower collider envelope Vent2] PASS
+[finite nonsingular WeakPoint] PASS
+[finite vertices and normals WeakPoint] PASS
+[lower collider envelope WeakPoint] PASS
+[finite nonsingular WardenCoolFill] PASS
+STROKE_GEOMETRY reactor samples=1494 minimum_signed_clearance=0.00101518630981 maximum_signed_clearance=0.0290584564209
+[shred centres endpoints and triangle interiors fit actual jaws] PASS
+[jaw meshes and hinges unchanged] PASS
+[lower tower unchanged] PASS
+[tower geometry reaches kit joint] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[badge remains] PASS
+[extra Warden cannot claim mast] PASS
+WARDEN_ATTACH_CPU_MS reactor 2.134
+[independent materials] PASS
+[immutable ribbons cached with private animated materials] PASS
+[independent tower mesh] PASS
+[weak point opening] PASS
+[other stays closed] PASS
+[plating rim and crack] PASS
+[shred follows source] PASS
+[damage flash isolated] PASS
+[open weak point hit contract] PASS
+[weak point recloses] PASS
+[automatic attach swarm] PASS
+[stage cleanup] PASS
+[active mast owner] PASS
+[idempotent mast] PASS
+[original mast retained] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+MAST_CLEARANCE swarm 1.44000005722046
+[entire support outside fixed sphere] PASS
+[lamp and ring retained] PASS
+[idempotent attachment] PASS
+[original collider only] PASS
+[mount meets kit] PASS
+[world weak point 0.0] PASS
+[world weak point 0.7] PASS
+[world weak point -2.4] PASS
+[finite nonsingular HeroWarden] PASS
+[finite nonsingular Housing] PASS
+[finite vertices and normals Housing] PASS
+[lower collider envelope Housing] PASS
+[finite nonsingular JawL] PASS
+[finite vertices and normals JawL] PASS
+[lower collider envelope JawL] PASS
+[finite nonsingular @Node3D@1602] PASS
+[finite nonsingular @MeshInstance3D@1603] PASS
+[finite vertices and normals @MeshInstance3D@1603] PASS
+[lower collider envelope @MeshInstance3D@1603] PASS
+[finite nonsingular @MeshInstance3D@1604] PASS
+[finite vertices and normals @MeshInstance3D@1604] PASS
+[lower collider envelope @MeshInstance3D@1604] PASS
+[finite nonsingular @MeshInstance3D@1605] PASS
+[finite vertices and normals @MeshInstance3D@1605] PASS
+[lower collider envelope @MeshInstance3D@1605] PASS
+[finite nonsingular @MeshInstance3D@1606] PASS
+[finite vertices and normals @MeshInstance3D@1606] PASS
+[lower collider envelope @MeshInstance3D@1606] PASS
+[finite nonsingular @MeshInstance3D@1607] PASS
+[finite vertices and normals @MeshInstance3D@1607] PASS
+[lower collider envelope @MeshInstance3D@1607] PASS
+[finite nonsingular @MeshInstance3D@1608] PASS
+[finite vertices and normals @MeshInstance3D@1608] PASS
+[lower collider envelope @MeshInstance3D@1608] PASS
+[finite nonsingular @MeshInstance3D@1609] PASS
+[finite vertices and normals @MeshInstance3D@1609] PASS
+[lower collider envelope @MeshInstance3D@1609] PASS
+[finite nonsingular @MeshInstance3D@1610] PASS
+[finite vertices and normals @MeshInstance3D@1610] PASS
+[lower collider envelope @MeshInstance3D@1610] PASS
+[finite nonsingular @MeshInstance3D@1611] PASS
+[finite vertices and normals @MeshInstance3D@1611] PASS
+[lower collider envelope @MeshInstance3D@1611] PASS
+[finite nonsingular @Node3D@1615] PASS
+[finite nonsingular @MeshInstance3D@1612] PASS
+[finite vertices and normals @MeshInstance3D@1612] PASS
+[lower collider envelope @MeshInstance3D@1612] PASS
+[finite nonsingular @MeshInstance3D@1613] PASS
+[finite vertices and normals @MeshInstance3D@1613] PASS
+[lower collider envelope @MeshInstance3D@1613] PASS
+[finite nonsingular @MeshInstance3D@1614] PASS
+[finite vertices and normals @MeshInstance3D@1614] PASS
+[lower collider envelope @MeshInstance3D@1614] PASS
+[finite nonsingular JawR] PASS
+[finite vertices and normals JawR] PASS
+[lower collider envelope JawR] PASS
+[finite nonsingular @Node3D@1616] PASS
+[finite nonsingular @MeshInstance3D@1617] PASS
+[finite vertices and normals @MeshInstance3D@1617] PASS
+[lower collider envelope @MeshInstance3D@1617] PASS
+[finite nonsingular @MeshInstance3D@1618] PASS
+[finite vertices and normals @MeshInstance3D@1618] PASS
+[lower collider envelope @MeshInstance3D@1618] PASS
+[finite nonsingular @MeshInstance3D@1619] PASS
+[finite vertices and normals @MeshInstance3D@1619] PASS
+[lower collider envelope @MeshInstance3D@1619] PASS
+[finite nonsingular @MeshInstance3D@1620] PASS
+[finite vertices and normals @MeshInstance3D@1620] PASS
+[lower collider envelope @MeshInstance3D@1620] PASS
+[finite nonsingular @MeshInstance3D@1621] PASS
+[finite vertices and normals @MeshInstance3D@1621] PASS
+[lower collider envelope @MeshInstance3D@1621] PASS
+[finite nonsingular @MeshInstance3D@1622] PASS
+[finite vertices and normals @MeshInstance3D@1622] PASS
+[lower collider envelope @MeshInstance3D@1622] PASS
+[finite nonsingular @MeshInstance3D@1623] PASS
+[finite vertices and normals @MeshInstance3D@1623] PASS
+[lower collider envelope @MeshInstance3D@1623] PASS
+[finite nonsingular @MeshInstance3D@1624] PASS
+[finite vertices and normals @MeshInstance3D@1624] PASS
+[lower collider envelope @MeshInstance3D@1624] PASS
+[finite nonsingular @MeshInstance3D@1625] PASS
+[finite vertices and normals @MeshInstance3D@1625] PASS
+[lower collider envelope @MeshInstance3D@1625] PASS
+[finite nonsingular @Node3D@1629] PASS
+[finite nonsingular @MeshInstance3D@1626] PASS
+[finite vertices and normals @MeshInstance3D@1626] PASS
+[lower collider envelope @MeshInstance3D@1626] PASS
+[finite nonsingular @MeshInstance3D@1627] PASS
+[finite vertices and normals @MeshInstance3D@1627] PASS
+[lower collider envelope @MeshInstance3D@1627] PASS
+[finite nonsingular @MeshInstance3D@1628] PASS
+[finite vertices and normals @MeshInstance3D@1628] PASS
+[lower collider envelope @MeshInstance3D@1628] PASS
+[finite nonsingular Tower] PASS
+[finite vertices and normals Tower] PASS
+[lower collider envelope Tower] PASS
+[finite nonsingular KitMount] PASS
+[finite nonsingular HeroKit] PASS
+[finite nonsingular Body] PASS
+[finite vertices and normals Body] PASS
+[lower collider envelope Body] PASS
+[finite nonsingular Drone0] PASS
+[finite vertices and normals Drone0] PASS
+[lower collider envelope Drone0] PASS
+[finite nonsingular Drone1] PASS
+[finite vertices and normals Drone1] PASS
+[lower collider envelope Drone1] PASS
+[finite nonsingular Drone2] PASS
+[finite vertices and normals Drone2] PASS
+[lower collider envelope Drone2] PASS
+[finite nonsingular Drone3] PASS
+[finite vertices and normals Drone3] PASS
+[lower collider envelope Drone3] PASS
+[finite nonsingular Drone4] PASS
+[finite vertices and normals Drone4] PASS
+[lower collider envelope Drone4] PASS
+[finite nonsingular Drone5] PASS
+[finite vertices and normals Drone5] PASS
+[lower collider envelope Drone5] PASS
+[finite nonsingular WeakPoint] PASS
+[finite vertices and normals WeakPoint] PASS
+[lower collider envelope WeakPoint] PASS
+[finite nonsingular QueenHatch] PASS
+[finite nonsingular Shutter] PASS
+[finite vertices and normals Shutter] PASS
+[lower collider envelope Shutter] PASS
+[finite nonsingular WardenCoolFill] PASS
+STROKE_GEOMETRY swarm samples=1494 minimum_signed_clearance=0.00101375579834 maximum_signed_clearance=0.0290584564209
+[shred centres endpoints and triangle interiors fit actual jaws] PASS
+[jaw meshes and hinges unchanged] PASS
+[lower tower unchanged] PASS
+[tower geometry reaches kit joint] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[badge remains] PASS
+[lesson caps remain] PASS
+[brood membrane at gameplay cap] PASS
+[hex membrane and open marker replace heat column] PASS
+[brood cue remains visible with GLB] PASS
+[brood membrane at gameplay cap] PASS
+[hex membrane and open marker replace heat column] PASS
+[brood cue remains visible with GLB] PASS
+[brood membrane at gameplay cap] PASS
+[hex membrane and open marker replace heat column] PASS
+[brood cue remains visible with GLB] PASS
+[brood membrane flashes on hit] PASS
+[brood membrane returns to idle] PASS
+[extra Warden cannot claim mast] PASS
+WARDEN_ATTACH_CPU_MS swarm 2.357
+[independent materials] PASS
+[immutable ribbons cached with private animated materials] PASS
+[independent tower mesh] PASS
+[weak point opening] PASS
+[queen hatch exposes core while open] PASS
+[other queen hatch stays closed] PASS
+[other stays closed] PASS
+[plating rim and crack] PASS
+[shred follows source] PASS
+[damage flash isolated] PASS
+[open weak point hit contract] PASS
+[weak point recloses] PASS
+[queen hatch recloses] PASS
+[automatic attach mind] PASS
+[stage cleanup] PASS
+[active mast owner] PASS
+[idempotent mast] PASS
+[original mast retained] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+MAST_CLEARANCE mind 1.44000005722046
+[entire support outside fixed sphere] PASS
+[lamp and ring retained] PASS
+[idempotent attachment] PASS
+[original collider only] PASS
+[mount meets kit] PASS
+[world weak point 0.0] PASS
+[world weak point 0.7] PASS
+[world weak point -2.4] PASS
+[finite nonsingular HeroWarden] PASS
+[finite nonsingular Housing] PASS
+[finite vertices and normals Housing] PASS
+[lower collider envelope Housing] PASS
+[finite nonsingular JawL] PASS
+[finite vertices and normals JawL] PASS
+[lower collider envelope JawL] PASS
+[finite nonsingular @Node3D@1943] PASS
+[finite nonsingular @MeshInstance3D@1944] PASS
+[finite vertices and normals @MeshInstance3D@1944] PASS
+[lower collider envelope @MeshInstance3D@1944] PASS
+[finite nonsingular @MeshInstance3D@1945] PASS
+[finite vertices and normals @MeshInstance3D@1945] PASS
+[lower collider envelope @MeshInstance3D@1945] PASS
+[finite nonsingular @MeshInstance3D@1946] PASS
+[finite vertices and normals @MeshInstance3D@1946] PASS
+[lower collider envelope @MeshInstance3D@1946] PASS
+[finite nonsingular @MeshInstance3D@1947] PASS
+[finite vertices and normals @MeshInstance3D@1947] PASS
+[lower collider envelope @MeshInstance3D@1947] PASS
+[finite nonsingular @MeshInstance3D@1948] PASS
+[finite vertices and normals @MeshInstance3D@1948] PASS
+[lower collider envelope @MeshInstance3D@1948] PASS
+[finite nonsingular @MeshInstance3D@1949] PASS
+[finite vertices and normals @MeshInstance3D@1949] PASS
+[lower collider envelope @MeshInstance3D@1949] PASS
+[finite nonsingular @MeshInstance3D@1950] PASS
+[finite vertices and normals @MeshInstance3D@1950] PASS
+[lower collider envelope @MeshInstance3D@1950] PASS
+[finite nonsingular @MeshInstance3D@1951] PASS
+[finite vertices and normals @MeshInstance3D@1951] PASS
+[lower collider envelope @MeshInstance3D@1951] PASS
+[finite nonsingular @MeshInstance3D@1952] PASS
+[finite vertices and normals @MeshInstance3D@1952] PASS
+[lower collider envelope @MeshInstance3D@1952] PASS
+[finite nonsingular @Node3D@1956] PASS
+[finite nonsingular @MeshInstance3D@1953] PASS
+[finite vertices and normals @MeshInstance3D@1953] PASS
+[lower collider envelope @MeshInstance3D@1953] PASS
+[finite nonsingular @MeshInstance3D@1954] PASS
+[finite vertices and normals @MeshInstance3D@1954] PASS
+[lower collider envelope @MeshInstance3D@1954] PASS
+[finite nonsingular @MeshInstance3D@1955] PASS
+[finite vertices and normals @MeshInstance3D@1955] PASS
+[lower collider envelope @MeshInstance3D@1955] PASS
+[finite nonsingular JawR] PASS
+[finite vertices and normals JawR] PASS
+[lower collider envelope JawR] PASS
+[finite nonsingular @Node3D@1957] PASS
+[finite nonsingular @MeshInstance3D@1958] PASS
+[finite vertices and normals @MeshInstance3D@1958] PASS
+[lower collider envelope @MeshInstance3D@1958] PASS
+[finite nonsingular @MeshInstance3D@1959] PASS
+[finite vertices and normals @MeshInstance3D@1959] PASS
+[lower collider envelope @MeshInstance3D@1959] PASS
+[finite nonsingular @MeshInstance3D@1960] PASS
+[finite vertices and normals @MeshInstance3D@1960] PASS
+[lower collider envelope @MeshInstance3D@1960] PASS
+[finite nonsingular @MeshInstance3D@1961] PASS
+[finite vertices and normals @MeshInstance3D@1961] PASS
+[lower collider envelope @MeshInstance3D@1961] PASS
+[finite nonsingular @MeshInstance3D@1962] PASS
+[finite vertices and normals @MeshInstance3D@1962] PASS
+[lower collider envelope @MeshInstance3D@1962] PASS
+[finite nonsingular @MeshInstance3D@1963] PASS
+[finite vertices and normals @MeshInstance3D@1963] PASS
+[lower collider envelope @MeshInstance3D@1963] PASS
+[finite nonsingular @MeshInstance3D@1964] PASS
+[finite vertices and normals @MeshInstance3D@1964] PASS
+[lower collider envelope @MeshInstance3D@1964] PASS
+[finite nonsingular @MeshInstance3D@1965] PASS
+[finite vertices and normals @MeshInstance3D@1965] PASS
+[lower collider envelope @MeshInstance3D@1965] PASS
+[finite nonsingular @MeshInstance3D@1966] PASS
+[finite vertices and normals @MeshInstance3D@1966] PASS
+[lower collider envelope @MeshInstance3D@1966] PASS
+[finite nonsingular @Node3D@1970] PASS
+[finite nonsingular @MeshInstance3D@1967] PASS
+[finite vertices and normals @MeshInstance3D@1967] PASS
+[lower collider envelope @MeshInstance3D@1967] PASS
+[finite nonsingular @MeshInstance3D@1968] PASS
+[finite vertices and normals @MeshInstance3D@1968] PASS
+[lower collider envelope @MeshInstance3D@1968] PASS
+[finite nonsingular @MeshInstance3D@1969] PASS
+[finite vertices and normals @MeshInstance3D@1969] PASS
+[lower collider envelope @MeshInstance3D@1969] PASS
+[finite nonsingular Tower] PASS
+[finite vertices and normals Tower] PASS
+[lower collider envelope Tower] PASS
+[finite nonsingular KitMount] PASS
+[finite nonsingular HeroKit] PASS
+[finite nonsingular ArmL] PASS
+[finite vertices and normals ArmL] PASS
+[lower collider envelope ArmL] PASS
+[finite nonsingular ArmR] PASS
+[finite vertices and normals ArmR] PASS
+[lower collider envelope ArmR] PASS
+[finite nonsingular Body] PASS
+[finite vertices and normals Body] PASS
+[lower collider envelope Body] PASS
+[finite nonsingular HeroLens] PASS
+[finite nonsingular Shutter0] PASS
+[finite vertices and normals Shutter0] PASS
+[lower collider envelope Shutter0] PASS
+[finite nonsingular Shutter1] PASS
+[finite vertices and normals Shutter1] PASS
+[lower collider envelope Shutter1] PASS
+[finite nonsingular Shutter2] PASS
+[finite vertices and normals Shutter2] PASS
+[lower collider envelope Shutter2] PASS
+[finite nonsingular Shutter3] PASS
+[finite vertices and normals Shutter3] PASS
+[lower collider envelope Shutter3] PASS
+[finite nonsingular Shutter4] PASS
+[finite vertices and normals Shutter4] PASS
+[lower collider envelope Shutter4] PASS
+[finite nonsingular Shutter5] PASS
+[finite vertices and normals Shutter5] PASS
+[lower collider envelope Shutter5] PASS
+[finite nonsingular WeakPoint] PASS
+[finite vertices and normals WeakPoint] PASS
+[lower collider envelope WeakPoint] PASS
+[finite nonsingular WardenCoolFill] PASS
+STROKE_GEOMETRY mind samples=1494 minimum_signed_clearance=0.00101566314697 maximum_signed_clearance=0.02905654907227
+[shred centres endpoints and triangle interiors fit actual jaws] PASS
+[jaw meshes and hinges unchanged] PASS
+[lower tower unchanged] PASS
+[tower geometry reaches kit joint] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[badge remains] PASS
+[magnet cue remains] PASS
+[mind icon remains] PASS
+[extra Warden cannot claim mast] PASS
+WARDEN_ATTACH_CPU_MS mind 2.479
+[independent materials] PASS
+[immutable ribbons cached with private animated materials] PASS
+[independent tower mesh] PASS
+[weak point opening] PASS
+[other stays closed] PASS
+[plating rim and crack] PASS
+[shred follows source] PASS
+[damage flash isolated] PASS
+[open weak point hit contract] PASS
+[weak point recloses] PASS
+WARNING: bay: no clear dock beside these gates; the bay stays away this time
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] dock (res://src/world/bay.gd:163)
+         [1] _on_reward_offered (res://src/world/world.gd:643)
+         [2] _on_flow_changed (res://src/build/build.gd:607)
+         [3] _set_state (res://src/core/flow.gd:592)
+         [4] _unseal (res://src/core/flow.gd:514)
+         [5] _on_enemy_killed (res://src/core/flow.gd:490)
+         [6] record_kill (res://src/core/run_state.gd:219)
+         [7] <anonymous lambda> (res://src/combat/combat.gd:346)
+         [8] _die (res://src/combat/enemy.gd:199)
+         [9] _physics_process (res://tests/hero_warden_assets_test.gd:46)
+[exact mast restoration death] PASS
+[no orphan support death] PASS
+[automatic attach mind] PASS
+[stage cleanup] PASS
+[active mast owner] PASS
+[idempotent mast] PASS
+[original mast retained] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+MAST_CLEARANCE mind 1.44000005722046
+[entire support outside fixed sphere] PASS
+[lamp and ring retained] PASS
+[idempotent attachment] PASS
+[original collider only] PASS
+[mount meets kit] PASS
+[world weak point 0.0] PASS
+[world weak point 0.7] PASS
+[world weak point -2.4] PASS
+[finite nonsingular HeroWarden] PASS
+[finite nonsingular Housing] PASS
+[finite vertices and normals Housing] PASS
+[lower collider envelope Housing] PASS
+[finite nonsingular JawL] PASS
+[finite vertices and normals JawL] PASS
+[lower collider envelope JawL] PASS
+[finite nonsingular @Node3D@2345] PASS
+[finite nonsingular @MeshInstance3D@2346] PASS
+[finite vertices and normals @MeshInstance3D@2346] PASS
+[lower collider envelope @MeshInstance3D@2346] PASS
+[finite nonsingular @MeshInstance3D@2347] PASS
+[finite vertices and normals @MeshInstance3D@2347] PASS
+[lower collider envelope @MeshInstance3D@2347] PASS
+[finite nonsingular @MeshInstance3D@2348] PASS
+[finite vertices and normals @MeshInstance3D@2348] PASS
+[lower collider envelope @MeshInstance3D@2348] PASS
+[finite nonsingular @MeshInstance3D@2349] PASS
+[finite vertices and normals @MeshInstance3D@2349] PASS
+[lower collider envelope @MeshInstance3D@2349] PASS
+[finite nonsingular @MeshInstance3D@2350] PASS
+[finite vertices and normals @MeshInstance3D@2350] PASS
+[lower collider envelope @MeshInstance3D@2350] PASS
+[finite nonsingular @MeshInstance3D@2351] PASS
+[finite vertices and normals @MeshInstance3D@2351] PASS
+[lower collider envelope @MeshInstance3D@2351] PASS
+[finite nonsingular @MeshInstance3D@2352] PASS
+[finite vertices and normals @MeshInstance3D@2352] PASS
+[lower collider envelope @MeshInstance3D@2352] PASS
+[finite nonsingular @MeshInstance3D@2353] PASS
+[finite vertices and normals @MeshInstance3D@2353] PASS
+[lower collider envelope @MeshInstance3D@2353] PASS
+[finite nonsingular @MeshInstance3D@2354] PASS
+[finite vertices and normals @MeshInstance3D@2354] PASS
+[lower collider envelope @MeshInstance3D@2354] PASS
+[finite nonsingular @Node3D@2358] PASS
+[finite nonsingular @MeshInstance3D@2355] PASS
+[finite vertices and normals @MeshInstance3D@2355] PASS
+[lower collider envelope @MeshInstance3D@2355] PASS
+[finite nonsingular @MeshInstance3D@2356] PASS
+[finite vertices and normals @MeshInstance3D@2356] PASS
+[lower collider envelope @MeshInstance3D@2356] PASS
+[finite nonsingular @MeshInstance3D@2357] PASS
+[finite vertices and normals @MeshInstance3D@2357] PASS
+[lower collider envelope @MeshInstance3D@2357] PASS
+[finite nonsingular JawR] PASS
+[finite vertices and normals JawR] PASS
+[lower collider envelope JawR] PASS
+[finite nonsingular @Node3D@2359] PASS
+[finite nonsingular @MeshInstance3D@2360] PASS
+[finite vertices and normals @MeshInstance3D@2360] PASS
+[lower collider envelope @MeshInstance3D@2360] PASS
+[finite nonsingular @MeshInstance3D@2361] PASS
+[finite vertices and normals @MeshInstance3D@2361] PASS
+[lower collider envelope @MeshInstance3D@2361] PASS
+[finite nonsingular @MeshInstance3D@2362] PASS
+[finite vertices and normals @MeshInstance3D@2362] PASS
+[lower collider envelope @MeshInstance3D@2362] PASS
+[finite nonsingular @MeshInstance3D@2363] PASS
+[finite vertices and normals @MeshInstance3D@2363] PASS
+[lower collider envelope @MeshInstance3D@2363] PASS
+[finite nonsingular @MeshInstance3D@2364] PASS
+[finite vertices and normals @MeshInstance3D@2364] PASS
+[lower collider envelope @MeshInstance3D@2364] PASS
+[finite nonsingular @MeshInstance3D@2365] PASS
+[finite vertices and normals @MeshInstance3D@2365] PASS
+[lower collider envelope @MeshInstance3D@2365] PASS
+[finite nonsingular @MeshInstance3D@2366] PASS
+[finite vertices and normals @MeshInstance3D@2366] PASS
+[lower collider envelope @MeshInstance3D@2366] PASS
+[finite nonsingular @MeshInstance3D@2367] PASS
+[finite vertices and normals @MeshInstance3D@2367] PASS
+[lower collider envelope @MeshInstance3D@2367] PASS
+[finite nonsingular @MeshInstance3D@2368] PASS
+[finite vertices and normals @MeshInstance3D@2368] PASS
+[lower collider envelope @MeshInstance3D@2368] PASS
+[finite nonsingular @Node3D@2372] PASS
+[finite nonsingular @MeshInstance3D@2369] PASS
+[finite vertices and normals @MeshInstance3D@2369] PASS
+[lower collider envelope @MeshInstance3D@2369] PASS
+[finite nonsingular @MeshInstance3D@2370] PASS
+[finite vertices and normals @MeshInstance3D@2370] PASS
+[lower collider envelope @MeshInstance3D@2370] PASS
+[finite nonsingular @MeshInstance3D@2371] PASS
+[finite vertices and normals @MeshInstance3D@2371] PASS
+[lower collider envelope @MeshInstance3D@2371] PASS
+[finite nonsingular Tower] PASS
+[finite vertices and normals Tower] PASS
+[lower collider envelope Tower] PASS
+[finite nonsingular KitMount] PASS
+[finite nonsingular HeroKit] PASS
+[finite nonsingular ArmL] PASS
+[finite vertices and normals ArmL] PASS
+[lower collider envelope ArmL] PASS
+[finite nonsingular ArmR] PASS
+[finite vertices and normals ArmR] PASS
+[lower collider envelope ArmR] PASS
+[finite nonsingular Body] PASS
+[finite vertices and normals Body] PASS
+[lower collider envelope Body] PASS
+[finite nonsingular HeroLens] PASS
+[finite nonsingular Shutter0] PASS
+[finite vertices and normals Shutter0] PASS
+[lower collider envelope Shutter0] PASS
+[finite nonsingular Shutter1] PASS
+[finite vertices and normals Shutter1] PASS
+[lower collider envelope Shutter1] PASS
+[finite nonsingular Shutter2] PASS
+[finite vertices and normals Shutter2] PASS
+[lower collider envelope Shutter2] PASS
+[finite nonsingular Shutter3] PASS
+[finite vertices and normals Shutter3] PASS
+[lower collider envelope Shutter3] PASS
+[finite nonsingular Shutter4] PASS
+[finite vertices and normals Shutter4] PASS
+[lower collider envelope Shutter4] PASS
+[finite nonsingular Shutter5] PASS
+[finite vertices and normals Shutter5] PASS
+[lower collider envelope Shutter5] PASS
+[finite nonsingular WeakPoint] PASS
+[finite vertices and normals WeakPoint] PASS
+[lower collider envelope WeakPoint] PASS
+[finite nonsingular WardenCoolFill] PASS
+STROKE_GEOMETRY mind samples=1494 minimum_signed_clearance=0.00101566314697 maximum_signed_clearance=0.02905654907227
+[shred centres endpoints and triangle interiors fit actual jaws] PASS
+[jaw meshes and hinges unchanged] PASS
+[lower tower unchanged] PASS
+[tower geometry reaches kit joint] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[placeholder hidden without deletion] PASS
+[badge remains] PASS
+[magnet cue remains] PASS
+[mind icon remains] PASS
+[extra Warden cannot claim mast] PASS
+WARDEN_ATTACH_CPU_MS mind 2.399
+[independent materials] PASS
+[immutable ribbons cached with private animated materials] PASS
+[independent tower mesh] PASS
+[weak point opening] PASS
+[other stays closed] PASS
+[plating rim and crack] PASS
+[shred follows source] PASS
+[damage flash isolated] PASS
+[open weak point hit contract] PASS
+[weak point recloses] PASS
+[dead Warden record cleaned] PASS
+[dead Warden record cleaned] PASS
+[dead Warden record cleaned] PASS
+[dead Warden record cleaned] PASS
+[exact mast restoration hook teardown] PASS
+[no orphan support hook teardown] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restore placeholder layers and shadow] PASS
+[restored hero freed] PASS
+[active mast owner] PASS
+[idempotent mast] PASS
+[original mast retained] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[original taper at segment end] PASS
+[original taper at segment end] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+[mast material preserved] PASS
+[mast finite transform] PASS
+[narrow support rail] PASS
+MAST_CLEARANCE mind 1.44000005722046
+[entire support outside fixed sphere] PASS
+[lamp and ring retained] PASS
+[exact mast restoration replacement hook teardown] PASS
+[no orphan support replacement hook teardown] PASS
+hero_warden_assets_test: PASS

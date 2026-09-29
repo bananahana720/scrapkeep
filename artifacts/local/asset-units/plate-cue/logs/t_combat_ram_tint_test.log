@@ -1,0 +1,6 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[ram_punch_now] below cruise (tier 0): ram_punch_now 0.0, punch_now 160.0 -> PASS
+[charging] charging at plating 150 with 160 bolts and no ram: tint slate -> PASS
+[not_charging] the same hull not charging, bolts 160 against plating 150: tint amber -> PASS
+combat_ram_tint_test: PASS

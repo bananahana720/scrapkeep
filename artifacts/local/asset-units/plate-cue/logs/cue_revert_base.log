@@ -1,0 +1,54 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Static function "rim_frame_mask()" not found in base "res://src/combat/enemy.gd".
+          at: GDScript::reload (res://src/combat/warden_look.gd:96)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/presentation/hero_assets.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/ui/class_preview.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/ui/class_card.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/ui/screens.gd:0)
+SCRIPT ERROR: Parse Error: Too many arguments for "_plate_material()" call. Expected at most 0 but received 1.
+          at: GDScript::reload (res://src/combat/plated_brute.gd:59)
+SCRIPT ERROR: Parse Error: Function "mask_texture()" not found in base self.
+          at: GDScript::reload (res://src/combat/plated_brute.gd:98)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/combat/fleet.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/combat/combat.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/game.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://tests/plate_cue_test.gd:0)
+ERROR: Failed to load script "res://tests/plate_cue_test.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+SCRIPT ERROR: Invalid call. Nonexistent function 'new' in base 'GDScript'.
+          at: _prewarm_warden_strokes (res://src/presentation/hero_assets.gd:665)
+          GDScript backtrace (most recent call first):
+              [0] _prewarm_warden_strokes (res://src/presentation/hero_assets.gd:665)
+              [1] setup (res://src/presentation/hero_assets.gd:84)
+              [2] setup (res://src/presentation/presentation.gd:62)
+              [3] _module (res://src/game.gd:203)
+              [4] _ready (res://src/game.gd:154)
+SCRIPT ERROR: Invalid call. Nonexistent function 'new' in base 'GDScript'.
+          at: make (res://src/combat/fleet.gd:92)
+          GDScript backtrace (most recent call first):
+              [0] make (res://src/combat/fleet.gd:92)
+              [1] spawn_enemy (res://src/combat/combat.gd:328)
+              [2] _run (res://tests/plate_cue_test.gd:51)
+ERROR: Required object "rp_child" is null.
+   at: add_child (scene/main/node.cpp:1715)
+   GDScript backtrace (most recent call first):
+       [0] spawn_enemy (res://src/combat/combat.gd:333)
+       [1] _run (res://tests/plate_cue_test.gd:51)
+SCRIPT ERROR: Invalid assignment of property or key 'global_position' with value of type 'Vector3' on a base object of type 'Nil'.
+          at: spawn_enemy (res://src/combat/combat.gd:334)
+          GDScript backtrace (most recent call first):
+              [0] spawn_enemy (res://src/combat/combat.gd:334)
+              [1] _run (res://tests/plate_cue_test.gd:51)
+SCRIPT ERROR: Cannot call method 'get_node' on a null value.
+          at: _run (res://tests/plate_cue_test.gd:53)
+          GDScript backtrace (most recent call first):
+              [0] _run (res://tests/plate_cue_test.gd:53)
