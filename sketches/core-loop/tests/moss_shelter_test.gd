@@ -7,9 +7,9 @@ const Game := preload("res://src/game.gd")
 # envelope (X -19.5..-11.5, Z -6.3..6.3, Y 7.35..9.2) above it; none sits at ground level
 # outside the cabin footprint, so LANDING, PAD, MOSS, the bell, jukebox, practice yard and
 # banked lap get no new geometry. One mesh, one surface, one shared sandstone material,
-# no collision, and it rides the barge's transforms. Round 2 adds the cap's front lip, measured
-# as upper minus lower surface at the same X/Z by vertical rays, the cliff rock material, and
-# `--mutate=thin-lip|outside|entry` self-tests that must each make the run fail.
+# no collision, and it rides the barge's transforms. The cap's front lip is measured as upper
+# minus lower surface at the same X/Z by vertical rays, and the material matches the cliff rock.
+# `--mutate=thin-lip|outside|entry` self-tests must each make the run fail.
 
 const CAP_LOW := 7.35
 const CAP_HIGH := 9.2

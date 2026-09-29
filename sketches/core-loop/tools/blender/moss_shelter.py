@@ -1,4 +1,4 @@
-"""Moss sandstone shelter, round 2: one broken sandstone mass carried over the workshop.
+"""Moss sandstone shelter: one broken sandstone mass carried over the workshop.
 Blender +Z is up; coordinates below are the bay's Godot coordinates (Barge space, +X front).
 Two continuous cheek skins and a rear skin sit inside the cabin volume (X -19.5..-14.5, Z -4..4,
 Y 0..6) and carry on through a neck to the cap, which spans X -19.5..-11.5, Z -6.3..6.3,
@@ -133,9 +133,6 @@ for i in range(n):
 for idx in REGIONS.values():
     bm.faces.new([rings[-1][i] for i in idx])
 
-for f in bm.faces:
-    for loop in f.loops:
-        loop[p.col] = (1.0, 1.0, 1.0, 1.0)
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 p.paint([], 'paint')  # registers the one slot
 for f in bm.faces:
