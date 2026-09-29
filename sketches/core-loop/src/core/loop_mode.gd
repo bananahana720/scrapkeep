@@ -20,28 +20,9 @@ const LOOP_KEY := "loop_mode"
 const GUN_KEY := "gun_role"
 const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
-const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY}
+const DISCOVERY_KEY := "discovery"
+const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY, "discovery": DISCOVERY_KEY}
 
-
-# `--discovery=cards` turns on the first-discovery picture cards (codex_banner.gd);
-# `banner` (the default) keeps the plain banner. It is a presentation-only option with
-# no tuning row, so the banner reads it from the launch args itself.
-const DISCOVERY_FLAG := "discovery"
-const DISCOVERY_CARDS := "cards"
-
-
-static func discovery_cards(args: PackedStringArray) -> bool:
-	var on := false
-	for arg in args:
-		if arg.begins_with("--%s=" % DISCOVERY_FLAG):
-			on = arg.substr(arg.find("=") + 1) == DISCOVERY_CARDS
-	return on
-
-
-static func discovery_cards_cmdline() -> bool:
-	var args := OS.get_cmdline_args()
-	args.append_array(OS.get_cmdline_user_args())
-	return discovery_cards(args)
 
 
 static func mode(tuning) -> String:

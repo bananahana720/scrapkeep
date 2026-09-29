@@ -80,9 +80,6 @@ var _style: StyleBoxFlat
 
 func _init() -> void:
 	name = "CodexBanner"
-	if LoopMode.discovery_cards_cmdline():
-		cards = true
-		storage_dir = "user://"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_preset(Control.PRESET_TOP_LEFT)
