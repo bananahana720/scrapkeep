@@ -1130,3 +1130,14 @@ Codex's blind judgment kept 4a and asked for one bounded fix: the spill mist at 
 - **Fix.** WaterMist turns triplanar off and takes the quad's own UVs (copied for that batch only), so each card carries one radial falloff. The falloff is five eased stops (alpha 1, 0.7, 0.3, 0.06, 0) instead of two. Placement is a seeded cluster per fall: 11 base patches (10 to 22 by 6 to 13 m, y 30 to 42, z 211 to 222, x within 15 m of the fall) and 8 ledge patches (8 to 16 by 5 to 11 m, y 38 to 58, z 222 to 225), each rolled in the card plane, up to 0.7 and 1.0 rad. No row, column or grid.
 - **Kept.** Alpha 0.12, mist only at the four falls, one batch, 23,164 triangles, 6 batches (the test's budget). The mist is fainter and softer than before; the fix did not raise opacity.
 - **Not touched.** The beige square puffs around the Warden's mast in the launch frame come from another effect and are unchanged.
+
+## World-one asset I01: dam facade detail
+
+One slice of the asset sheet's I01. `tools/blender/world_one/dam.py` builds `assets/models/world_one/dam.glb`; `spillway_scenery.gd` swaps it in for the 252 BlockFaces boxes.
+
+- **What it is.** Seven rows of staggered, raised cast panels (broad courses, 8 to 50 m wide) and five large repaired service frames (hatch, patch, brace) on the dam's front face at Godot z 236. Slots are `paint`, `bare_metal` and `rubber`; the game tints them cream/bone courses, copper `885e43` and charcoal `454943`. No emission, alpha or light was added, so the lamps stay the existing LanternLenses.
+- **Numbers.** 2,340 T (old blocks 3,024), 4,600 V after Godot import, 3 primitives. Every vertex is within 1.2 m of the face (the old blocks stood off 1.225 m) and inside x +-131.7, y 26.4 to 114.9, so the 270x100x22 m wall, the three towers and the four falls are unchanged. Scenery triangles go 23,164 to 22,480.
+- **Draws.** The nodes are baked to world space and merged by `_merge_opaque` with the rest of the opaque scenery, so the asset adds no colour draw. Native perf_bench s3 draws p99 went 1,247 to 1,249 (max 1,252 to 1,293) at load average about 26 on both runs, inside the run-to-run spread; treat frame p99 (25.3 to 17.3 ms) as load noise, not a gain.
+- **Where you see it.** Only in the 20 m bays between buttress piers, mostly behind the falls' bays: the piers stand 12 m proud of the face and hide the rest, as the old blocks were. The frames sit in the fall-free bays at x -70, -14, 14, 70 and the open wall end at 124.
+- **Limits.** `tests/dam_asset_test.gd` fails on more than 3,000 T, 9,000 V or 3 surfaces, an alpha surface, an unknown slot, stand-off beyond 1.225 m or leaving the wall's extent.
+- **Not judged here.** Codex scores the look. Follow-up: the petrol plates read dark under the strata texture; a lighter plate colour is a recipe-only change.
