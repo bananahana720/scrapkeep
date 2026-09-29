@@ -942,7 +942,7 @@ func _dress_shelter(barge: Node) -> void:
 	shelter.name = "HeroShelter"
 	if not _materials.has("moss_sandstone"):
 		var stone := StandardMaterial3D.new()
-		stone.albedo_color = Color("c6a274")
+		stone.albedo_color = Color(1.12, 1.32, 1.55)
 		stone.roughness = 1.0
 		stone.vertex_color_use_as_albedo = true
 		stone.albedo_texture = Palette.look_texture("sandstone-strata")

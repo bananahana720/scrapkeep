@@ -7,6 +7,7 @@ collision, no lights. One mesh, one slot: hero_assets.gd puts the scenery sandst
 on it (matte, sandstone-strata, 6 m triplanar), so `paint` here only carries vertex colour.
 """
 import math, os, random, sys
+import bmesh
 sys.path.insert(0, os.path.dirname(__file__))
 import common
 from common import Part
@@ -23,8 +24,8 @@ X_BACK, X_FRONT_CABIN = -19.5, -14.5
 def point(g): return (g[0], -g[2], g[1])
 def vert(g): return bm.verts.new(point(g))
 def grey(v, warm=0.0):
-    """Linear vertex colour multiplier; warm > 0 pushes toward the sun-lit crown value."""
-    return (v * (1.0 + 0.10 * warm), v * (1.0 - 0.02 * warm), v * (1.0 - 0.14 * warm), 1.0)
+    """Linear vertex colour multiplier on the sandstone albedo (tinted against the orange strata texture); warm > 0 lifts the crown."""
+    return (v * (1.0 + 0.02 * warm), v * (1.0 + 0.02 * warm), v * (1.0 - 0.02 * warm), 1.0)
 def colour(face, value):
     for loop in face.loops:
         loop[p.col] = value
@@ -57,48 +58,50 @@ def slab(x0, x1, y0, y1, z0, z1, bevel, shade):
     return faces
 
 
-# Cheeks: 5 strata, 0.45 to 0.65 m thick inside |z| 3.35..4.0, fronts behind X -14.5.
 bands = [0.0, 1.05, 2.3, 3.55, 4.85, 6.15]
+# Cheeks: irregular strips, 0.45 to 0.65 m thick inside |z| 3.3..4.0, fronts behind X -14.5.
+# Each side breaks the 6 m height at its own heights, so the strata do not line up left to right.
+cuts = {-1: [0.0, 2.1, 3.3, 4.8, 6.15], 1: [0.0, 1.4, 3.6, 4.4, 6.15]}
 for side in (-1, 1):
-    for k in range(5):
-        y0, y1 = bands[k], bands[k + 1]
-        outer = 4.0 - rng.uniform(0.0, 0.07)
+    b = cuts[side]
+    for k in range(4):
+        outer = 4.0 - rng.uniform(0.0, 0.05)
         thick = rng.uniform(0.47, 0.64)
         z_a, z_b = sorted((side * outer, side * (outer - thick)))
-        front = rng.uniform(-14.95, -14.62)
-        slab(X_BACK, front, y0, y1, z_a, z_b, rng.uniform(0.10, 0.16), 0.86 + 0.04 * k)
-# Rear skin: five strata across the back wall.
+        front = rng.uniform(-15.6, -14.6)
+        slab(X_BACK, front, b[k], b[k + 1], z_a, z_b, rng.uniform(0.15, 0.18), rng.uniform(0.74, 1.0))
+# Rear skin: strata across the back wall.
 for k in range(5):
     thick = rng.uniform(0.47, 0.64)
-    slab(X_BACK, X_BACK + thick, bands[k], bands[k + 1], -(4.0 - rng.uniform(0, 0.07)), 4.0 - rng.uniform(0, 0.07),
-         rng.uniform(0.10, 0.16), 0.84 + 0.04 * k)
-# Neck over the cabin footprint, Y 6..7.5 (the cap hides its top).
-slab(X_BACK, -14.7, 6.0, 6.75, -3.95, 3.95, 0.12, 0.92)
-slab(X_BACK, -14.78, 6.7, 7.55, -3.9, 3.9, 0.14, 0.9)
+    slab(X_BACK, X_BACK + thick, bands[k], bands[k + 1], -(4.0 - rng.uniform(0, 0.1)), 4.0 - rng.uniform(0, 0.1),
+         rng.uniform(0.12, 0.18), 0.78 + 0.04 * k)
+# Neck over the cabin footprint, Y 6..7.55 (the cap hides its top).
+slab(X_BACK, -14.7, 6.0, 6.75, -3.95, 3.95, 0.12, 0.9)
+slab(X_BACK, -14.78, 6.7, 7.55, -3.9, 3.9, 0.14, 0.88)
 
 # Cap: one closed asymmetrical profile, 10 perimeter points, 6 height bands.
 perimeter = [(-19.5, -5.0), (-18.5, -6.3), (-15.4, -5.85), (-12.4, -6.25), (-11.5, -4.2), (-11.9, -0.6),
              (-11.55, 3.6), (-12.7, 6.15), (-16.2, 6.3), (-19.3, 5.5)]
 centre = (sum(x for x, _ in perimeter) / 10.0, sum(z for _, z in perimeter) / 10.0)
 n = len(perimeter)
+# Broken crest: the lip stays 1.1 to 1.7 m thick at the front and the back stands near the ceiling.
 crest = []
 for i, (x, z) in enumerate(perimeter):
     rear = max(0.0, min(1.0, (-11.5 - x) / 8.0))
-    crest.append(min(CAP_HIGH - 0.03, 8.0 + 1.15 * rear + rng.uniform(-0.12, 0.10)))
-# Ring k: height fraction of the crest, plane scale about the centre, sideways offset.
-ring_spec = [(0.0, 1.0), (0.10, 1.0), (0.34, 0.86), (0.55, 1.0), (0.72, 0.88), (0.90, 0.92), (1.0, 0.78)]
+    crest.append(min(CAP_HIGH - 0.06, 8.55 + 0.5 * rear + rng.uniform(-0.2, 0.12) + (0.12 if z > 0 else -0.05)))
+# Ring k: height fraction, plane scale about the centre. The bulge is monotone (chamfered foot, full
+# belly, shoulder rolling in), so the flank reads as one broken mass rather than stacked ledges.
+ring_spec = [(0.0, 0.95), (0.14, 1.0), (0.42, 1.0), (0.68, 0.98), (0.86, 0.92), (1.0, 0.84)]
 rows = []
-for k, (t, s) in enumerate(ring_spec):
+for t, s in ring_spec:
     row = []
     for i, (x, z) in enumerate(perimeter):
-        wobble = 1.0 + (0.04 if (i + k) % 3 == 0 else 0.0)
-        sx = min(1.0, s * wobble)
+        sx = s * (1.0 + rng.uniform(-0.03, 0.02))
         px = centre[0] + (x - centre[0]) * sx
         pz = centre[1] + (z - centre[1]) * sx
         px = max(X_BACK, min(-11.5, px))
         pz = max(-6.3, min(6.3, pz))
-        y = CAP_LOW + (crest[i] - CAP_LOW) * t
-        row.append(vert((px, y, pz)))
+        row.append(vert((px, CAP_LOW + (crest[i] - CAP_LOW) * t, pz)))
     rows.append(row)
 # Underside scooped up 0.40 toward the centre.
 inner = [vert((centre[0] + (x - centre[0]) * 0.55, CAP_LOW + 0.26, centre[1] + (z - centre[1]) * 0.55)) for x, z in perimeter]
@@ -108,23 +111,39 @@ for i in range(n):
     j = (i + 1) % n
     under.append(bm.faces.new((rows[0][j], rows[0][i], inner[i], inner[j])))
     under.append(bm.faces.new((inner[j], inner[i], hub)))
-# Crown: broad offset planes, a fan to a rear-set apex, plus a lifted second peak plane.
-apex = vert((centre[0] - 0.7, CAP_HIGH, centre[1] + 0.5))
+# Crown: an inner ring of two offset planes meeting at a fold, the rear-left plane lifted to the ceiling.
+top = rows[-1]
+plane_a = lambda x, z: CAP_HIGH - 0.03 - 0.10 * (x - X_BACK) / 8.0 - 0.06 * (z + 6.3) / 12.6
+plane_b = lambda x, z: 8.86 - 0.16 * (x - X_BACK) / 8.0 + 0.10 * (z + 6.3) / 12.6
+ring_in = []
+for i, (x, z) in enumerate(perimeter):
+    px = centre[0] + (x - centre[0]) * 0.5 + 0.35
+    pz = centre[1] + (z - centre[1]) * 0.5
+    ring_in.append((px, pz))
+left = list(range(0, 6))
+right = list(range(5, 10)) + [0]
 crown = []
+top_in = {}
+for i, (px, pz) in enumerate(ring_in):
+    h = plane_a(px, pz) if i in left else plane_b(px, pz)
+    if i in (0, 5):
+        h = 0.5 * (plane_a(px, pz) + plane_b(px, pz))
+    top_in[i] = vert((px, h, pz))
 for i in range(n):
     j = (i + 1) % n
-    crown.append(bm.faces.new((rows[-1][i], rows[-1][j], apex)))
+    crown.append(bm.faces.new((top[i], top[j], top_in[j], top_in[i])))
+crown.append(bm.faces.new([top_in[i] for i in left]))
+crown.append(bm.faces.new([top_in[i] for i in right]))
 sides = close(rows)
 for f in under:
-    colour(f, grey(0.66))
-for f in crown:
-    colour(f, grey(1.0 * rng.uniform(0.96, 1.02), 1.0))
+    colour(f, grey(0.62))
+for k, f in enumerate(crown):
+    colour(f, grey(0.98 * rng.uniform(0.96, 1.02), 1.0))
 for k, f in enumerate(sides):
     band = k // n
-    lit = 0.72 + 0.05 * band
-    colour(f, grey(lit * rng.uniform(0.94, 1.03), 0.9 if band >= 4 else 0.3))
+    colour(f, grey((0.70 + 0.05 * band) * rng.uniform(0.94, 1.04), 0.9 if band >= 4 else 0.3))
 
-bmesh_ops_normals = __import__('bmesh').ops.recalc_face_normals(bm, faces=bm.faces[:])
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 p.paint([], 'paint')  # registers the one slot
 for f in bm.faces:
     f.material_index = 0
