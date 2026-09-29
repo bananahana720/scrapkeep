@@ -129,9 +129,12 @@ func _run() -> void:
 	_check("no S4 stays x0.75", is_equal_approx(_ratio(), 0.75), "ratio %.3f" % _ratio())
 
 	# The base Face Runner (no world-one profile) is not S4.
-	_setup(s4, false, true)
+	# Base tree heap index 9 is s_face_runner: Cannonball (0), Live Wire (3), Face Runner (9).
+	_setup(["s_cannonball", "s_live_wire", "s_face_runner"], false, true)
+	var tree = _player.tree
+	_check("base Face Runner taken", tree.picks.has("s_face_runner") and not tree.world_one, "picks %s, world_one %s" % [tree.picks, tree.world_one])
 	_vault()
-	_check("base Face Runner: no inversion", is_equal_approx(_ratio(), 0.75) and not build._face_runner_s4(), "ratio %.3f" % _ratio())
+	_check("base Face Runner: no inversion", is_equal_approx(_ratio(), 0.75) and not build._face_runner_s4(), "ratio %.3f, s4 %s" % [_ratio(), build._face_runner_s4()])
 
 	# Without the shell there is no change at all.
 	_setup(s4, true, false)
