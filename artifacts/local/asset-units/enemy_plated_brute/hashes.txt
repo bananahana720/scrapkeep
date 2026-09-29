@@ -1,0 +1,2 @@
+30e6b7f1160a1a72cc6a93554b5b2a2fb6a73344047de3ed214f371883a5adf6  assets/models/world_one/enemy_plated_brute.glb
+d3c970ec7b69646301692ee6a1b4ea27fb2d34725f9cafeb9fb4ac140ab1a3ea  tools/blender/world_one/enemy_plated_brute.py
