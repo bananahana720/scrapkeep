@@ -40,28 +40,45 @@ func _configure(threat: float) -> void:
 	rest_seconds = 2.5
 
 
+# C17 dressing (enemy_deflector.glb). The counter's capsule crew, head, ears and tag and the base
+# disc and torus are replaced by the glb's crew behind one concave dish whose bead rim is the
+# rebound edge. The dish sits where the base disc did (0, 0.2, CREW_RADIUS + 0.6), so it still turns
+# with the enemy's yaw toward the ball (_facing, at commit); the lane the mechanic throws through
+# is committed by _commit below, untouched. The glb is read once; every deflector shares its mesh
+# and adds only its own flashing body material as a surface override. The resting body is the
+# Fleet oxide _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
+static var _shared: Dictionary = {}
+
+
 func _build_tool() -> void:
+	_crew.free()
+	_crew = null
+	var parts := _parts()
 	_dish = Node3D.new()
-	_dish.position = Vector3(0.0, 0.2, CREW_RADIUS + 0.6)
+	_dish.name = "DeflectorBody"
 	add_child(_dish)
-	var face := CylinderMesh.new()
-	face.top_radius = 1.9
-	face.bottom_radius = 1.5
-	face.height = 0.3
-	var disc := MeshInstance3D.new()
-	disc.mesh = face
-	disc.rotation.x = PI * 0.5
-	disc.material_override = Palette.solid(Palette.CHARCOAL.lightened(0.2), 0.0)
-	_dish.add_child(disc)
-	var rim := TorusMesh.new()
-	rim.inner_radius = 1.75
-	rim.outer_radius = 1.95
-	var ring := MeshInstance3D.new()
-	ring.mesh = rim
-	ring.rotation.x = PI * 0.5
-	ring.position = Vector3(0.0, 0.0, 0.18)
-	ring.material_override = Palette.solid(Palette.BRASS, 0.4)
-	_dish.add_child(ring)
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	body.mesh = parts["body"]
+	body.set_surface_override_material(parts["flash"], _material)
+	_dish.add_child(body)
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_deflector.glb") as PackedScene).instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var flash := 0
+	var mesh: Mesh = (scene.find_child("DeflectorBody", true, false) as MeshInstance3D).mesh.duplicate()
+	for i in mesh.get_surface_count():
+		if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			flash = i
+		mesh.surface_set_material(i, painted)
+	_shared = {"body": mesh, "flash": flash}
+	scene.free()
+	return _shared
 
 
 func _commit(to_ball: Vector3) -> Node3D:
