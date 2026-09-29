@@ -181,8 +181,8 @@ func _run() -> void:
 	quit(0 if failures == 0 else 1)
 
 
-# Two separated masts 2.4 m apart: the decor has geometry at both mast axes up to the crossbar
-# and none of it spans the gap below the crossbar except the sill at the ground.
+# Two separated masts 2.4 m apart: the decor reaches at least 2.5 m at both mast axes (x +-1.2).
+# Intrusion into the gap between them is caught separately, inside the net window, by _window_hits.
 func _check_masts(caster: Node3D) -> void:
 	var left := _decor_top(caster, -1.2)
 	var right := _decor_top(caster, 1.2)
