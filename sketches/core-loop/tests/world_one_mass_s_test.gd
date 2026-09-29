@@ -93,6 +93,7 @@ func _finish() -> void:
 func _arm(flag: bool, verb: bool, mass: float) -> void:
 	var p = _game.player
 	_game.ctx.tuning.set_option("world_one_builds", "on" if flag else "off")
+	_game.ctx.tuning.set_option("scrap_mode", "armor")
 	p.tree._knobs["mass_launch"] = verb
 	p.tree._knobs["grapple_fling"] = 10.0
 	p.heft_of = func(): return 1.0 + mass / 450.0
@@ -176,6 +177,14 @@ func _static_checks() -> void:
 	var no_verb := _launches(20.0, 30.0, 20.0)
 	_check("verb not picked is base", _near(no_verb[0], base[0]) and _near(no_verb[1], base[1]) and _near(no_verb[2], base[2]),
 		"flag on, no depth-1 pick, mass 990: %s against base %s" % [no_verb, base])
+	# Outside armour mode heft counts parts, not mass: a Sable with parts and no scrap gets nothing.
+	_arm(true, true, 0.0)
+	_game.ctx.tuning.set_option("scrap_mode", "off")
+	_game.player.heft_of = func(): return 2.0
+	_game.player._read_mass()
+	var parts_only := _launches(20.0, 30.0, 20.0)
+	_check("parts are not mass outside armour", not kit.mass_on and kit.mass_q == 0.0 and _near(parts_only[0], base[0]) and _near(parts_only[1], base[1]) and _near(parts_only[2], base[2]),
+		"scrap mode off, heft 2.0: mass_on %s, q %.3f, launches %s against base %s" % [kit.mass_on, kit.mass_q, parts_only, base])
 	# Flag on: three masses, same input and approach.
 	var results := {}
 	for mass in [0.0, 450.0, 990.0]:
