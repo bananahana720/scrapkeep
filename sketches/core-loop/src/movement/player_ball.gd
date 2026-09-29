@@ -72,6 +72,8 @@ var builtin_squash := true
 var crush_check := Callable()
 # Answers the heft the ball plays at; combat wires it to its heft(). 1.0 when unwired.
 var heft_of := Callable()
+# Answers the run's scrap mass alone, without parts; combat wires it. Unwired, mass reads 0.
+var mass_of := Callable()
 # E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
 # when an interactable takes this press, so it never also plants a pylon.
 var interact_claim := Callable()
@@ -460,11 +462,9 @@ func face_in_reach() -> bool:
 # Mass-S: under --world-one-builds a pilot who took the depth-1 pick has the mass launch verb.
 # q is heft turned back into mass (the run's mass at 1/450 heft each; a class IV heft of 3.2
 # is 990) and read only; sampling it spends nothing, and the kit never lets it near steering.
-# Outside --scrap=armor heft also counts held parts (0.2 each), which are not mass, so the verb
-# stays off there until a mass_of wire (game.gd/combat.gd) hands the ball scrap mass alone.
 func _read_mass() -> void:
-	kit.mass_on = tuning != null and tuning.world_one() and tuning.armor() and tree.knob("mass_launch")
-	var mass := maxf(0.0, (heft() - 1.0) * Augments.MASS_HEFT_DIVISOR) if kit.mass_on else 0.0
+	kit.mass_on = tuning != null and tuning.world_one() and tree.knob("mass_launch")
+	var mass := maxf(0.0, float(mass_of.call())) if kit.mass_on and mass_of.is_valid() else 0.0
 	kit.mass_q = clampf(mass / Augments.MASS_FULL, 0.0, 1.0)
 
 

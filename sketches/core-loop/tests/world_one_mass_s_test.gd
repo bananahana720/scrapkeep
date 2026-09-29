@@ -93,10 +93,11 @@ func _finish() -> void:
 func _arm(flag: bool, verb: bool, mass: float) -> void:
 	var p = _game.player
 	_game.ctx.tuning.set_option("world_one_builds", "on" if flag else "off")
-	_game.ctx.tuning.set_option("scrap_mode", "armor")
+	_game.ctx.tuning.set_option("scrap_mode", "off")
 	p.tree._knobs["mass_launch"] = verb
 	p.tree._knobs["grapple_fling"] = 10.0
 	p.heft_of = func(): return 1.0 + mass / 450.0
+	p.mass_of = func() -> float: return mass
 	p._read_mass()
 	p.kit.mass_gap = 0.0
 	p.kit.vault_faces.clear()
@@ -167,6 +168,10 @@ func _static_checks() -> void:
 	var kit = _game.player.kit
 	var tuning = _game.ctx.tuning
 	# Base: the same launches, flag off. Vault 20 in -> 36; swing 20 + 10.
+	_game.ctx.run.mass = 612.0
+	var wired: bool = _game.player.mass_of.is_valid() and is_equal_approx(float(_game.player.mass_of.call()), 612.0)
+	_check("combat wires mass_of to the run's scrap mass", wired, "mass_of valid %s" % _game.player.mass_of.is_valid())
+	_game.ctx.run.mass = 0.0
 	_arm(false, true, 990.0)
 	var base := _launches(20.0, 30.0, 20.0)
 	_check("the run is Sable's", _game.player.kit.movement_id == "grapple" and _game.player.tree.class_id == "pylon_engineer",
@@ -177,14 +182,13 @@ func _static_checks() -> void:
 	var no_verb := _launches(20.0, 30.0, 20.0)
 	_check("verb not picked is base", _near(no_verb[0], base[0]) and _near(no_verb[1], base[1]) and _near(no_verb[2], base[2]),
 		"flag on, no depth-1 pick, mass 990: %s against base %s" % [no_verb, base])
-	# Outside armour mode heft counts parts, not mass: a Sable with parts and no scrap gets nothing.
+	# Heft counts held parts too; the verb reads scrap mass alone, so parts and no scrap add nothing.
 	_arm(true, true, 0.0)
-	_game.ctx.tuning.set_option("scrap_mode", "off")
 	_game.player.heft_of = func(): return 2.0
 	_game.player._read_mass()
 	var parts_only := _launches(20.0, 30.0, 20.0)
-	_check("parts are not mass outside armour", not kit.mass_on and kit.mass_q == 0.0 and _near(parts_only[0], base[0]) and _near(parts_only[1], base[1]) and _near(parts_only[2], base[2]),
-		"scrap mode off, heft 2.0: mass_on %s, q %.3f, launches %s against base %s" % [kit.mass_on, kit.mass_q, parts_only, base])
+	_check("parts are not mass", kit.mass_q == 0.0 and _near(parts_only[0], base[0]) and _near(parts_only[1], base[1]) and _near(parts_only[2], base[2]),
+		"heft 2.0 from parts, mass 0: q %.3f, launches %s against base %s" % [kit.mass_q, parts_only, base])
 	# Flag on: three masses, same input and approach.
 	var results := {}
 	for mass in [0.0, 450.0, 990.0]:
@@ -202,7 +206,7 @@ func _static_checks() -> void:
 	# Sampling mass never spends it: the run's mass is the same after reading and launching.
 	_arm(true, true, 990.0)
 	_game.ctx.run.mass = 990.0
-	_game.player.heft_of = _game.ctx.run.heft
+	_game.player.mass_of = func() -> float: return _game.ctx.run.mass
 	for i in 5:
 		_game.player._read_mass()
 	_vault(20.0)
