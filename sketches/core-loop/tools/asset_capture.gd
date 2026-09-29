@@ -111,7 +111,7 @@ func _initialize() -> void:
 	if camera_ids.is_empty():
 		camera_ids = Cams.names()
 	for id in camera_ids:
-		if not Cams.names().has(id) and not (Cams.is_ortho(id) and aabb_arg != null):
+		if not Cams.names().has(id) and not Cams.is_bay(id) and not (Cams.is_ortho(id) and aabb_arg != null):
 			printerr("unknown camera ", id)
 			quit(2)
 			return
@@ -282,7 +282,15 @@ func _stage(id: String) -> void:
 	game.player.reset_to(ball)
 	game.player._visual_root.global_position = ball
 	var bay = game.world.bay
-	if id == "moss":
+	if Cams.is_bay(id):
+		var row: Dictionary = Cams.BAY[id]
+		bay.visible = true
+		bay._barge.visible = true
+		bay._barge.position = Cams.BAY_HOME + row["barge"]
+		if row["ball"] != null:
+			game.player.reset_to(row["ball"])
+			game.player._visual_root.global_position = row["ball"]
+	elif id == "moss":
 		bay.visible = true
 		bay._barge.visible = true
 		bay._barge.position = Vector3(50, 65, -90)
