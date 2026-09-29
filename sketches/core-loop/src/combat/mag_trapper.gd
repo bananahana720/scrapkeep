@@ -42,7 +42,6 @@ static var _shared: Dictionary = {}
 
 
 func _build_tool() -> void:
-	# The crew mesh and its head, ears and tag go; the collider was laid beside them.
 	_crew.free()
 	_crew = null
 	var parts := _parts()
