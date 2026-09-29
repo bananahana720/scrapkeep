@@ -25,12 +25,21 @@ var _failures := 0
 var _stage := 0
 var _wait := 0
 var _phase := "static"
+var _frames := 0
 
 
 func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
+
+
+# The event view hides all but one event beam in its own _process, so the beams are only
+# settled once a rendered frame has run after the stage was entered. Physics ticks can
+# batch ahead of rendered frames under load, so the pillar count waits on frames too.
+func _process(_delta: float) -> bool:
+	_frames += 1
+	return false
 
 
 func _physics_process(_delta: float) -> bool:
@@ -57,11 +66,12 @@ func _physics_process(_delta: float) -> bool:
 				_game.flow.press_start()
 				_game.flow.choose_class(0)
 		"pillars":
-			if _stage == 0 or _wait >= 4:
+			if _stage == 0 or (_wait >= 4 and _frames >= 2):
 				if _stage > 0:
 					_check_pillars(_stage)
 				_stage += 1
 				_wait = 0
+				_frames = 0
 				if _stage > 3:
 					return _finish()
 				_game.flow.enter_stage(_stage, Vector3(0.0, 0.0, 18.0), false)
