@@ -6,6 +6,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 # One side of an upgrade pick. The middle is the ability bar's own slot: the node's ab_
 # glyph on a rounded square with one notch per depth along its top edge and the key it
@@ -29,7 +30,7 @@ var _effect: Label
 var _lift := 0.0
 
 
-func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1) -> void:
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false) -> void:
 	node = node_row
 	key = key_id
 	color = class_color
@@ -55,7 +56,7 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	add_child(box)
 	_name = _text(String(node.get("name", "")), 26, color)
 	box.add_child(_name)
-	_effect = _text(String(node.get("effect", "")), 18, Palette.SAND)
+	_effect = _text(WorldOneCards.effect_line(node, world_one), 18, Palette.SAND)
 	box.add_child(_effect)
 	mouse_entered.connect(func():
 		if not disabled:
@@ -65,6 +66,11 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 # The slot key the node changes, as a key glyph id: weapon is key_lmb, smash key_ctrl.
 static func slot_key(node_row: Dictionary) -> String:
 	return "key_" + String(AbilityState.KEYS.get(node_row.get("key", ""), "")).to_lower()
+
+
+# The effect line as drawn: the world-one copy under the flag, else the node's own.
+func effect_text() -> String:
+	return _effect.text
 
 
 func node_id() -> String:

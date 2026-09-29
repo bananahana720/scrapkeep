@@ -88,7 +88,7 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 		_row.remove_child(child)
 		child.queue_free()
 	for i in nodes.size():
-		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth)
+		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one())
 		card.pressed.connect(func(): chosen.emit(i))
 		_row.add_child(card)
 	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color)
@@ -97,6 +97,16 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 	if not first.is_empty():
 		first[0].grab_focus()
 	_play_in()
+
+
+# --world-one-builds, read through the workshop this screen sits under (its game's tuning);
+# a pick screen with no workshop above it reads as off.
+func _world_one() -> bool:
+	var host = get_parent()
+	if host == null or host.get("game") == null:
+		return false
+	var game = host.game
+	return game.tuning != null and game.tuning.world_one()
 
 
 # Closes. chosen_index lifts that card with the success pop while the rest leaves.
