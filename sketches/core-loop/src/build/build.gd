@@ -33,6 +33,11 @@ const RunState := preload("res://src/core/run_state.gd")
 # public API is the "Build API" block; SEAMS.md lists the ids.
 
 const GATE_CHOICES := 2
+# Hot-wired H1, Riveted Shell (--hotwire-shell=on): the armour costs this much less scrap per
+# absorbed HP, and airborne steering takes this factor. Read through shell_scrap_per_hp() and
+# shell_air_factor() only, so an inversion (S4, K5, R6) changes one return value later.
+const SHELL_SCRAP_PER_HP := 5.0
+const SHELL_AIR_FACTOR := 0.75
 const PARTICIPANTS := ["player"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
@@ -445,6 +450,7 @@ func recompute() -> void:
 	_mass_hp = mass_hp
 	sheet.max_hp_bonus += _mass_hp
 	sheet.apply(ctx.tuning, ctx.run)
+	_apply_shell()
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
@@ -453,6 +459,27 @@ func recompute() -> void:
 			_on_synergy_live(synergy_id)
 	_live = sheet.synergies.duplicate()
 	_redraw()
+
+
+func shell_fitted() -> bool:
+	return ctx != null and ctx.tuning != null and ctx.tuning.option("hotwire_shell") == "on"
+
+
+# The resolved air-control factor Riveted Shell contributes; 1.0 when not fitted. The one place
+# an inversion flips it.
+func shell_air_factor() -> float:
+	return SHELL_AIR_FACTOR if shell_fitted() else 1.0
+
+
+func shell_scrap_per_hp() -> float:
+	return SHELL_SCRAP_PER_HP if shell_fitted() else RunState.SCRAP_PER_HP
+
+
+# After sheet.apply has cleared and refilled the mods, so the penalty survives every recompute.
+func _apply_shell() -> void:
+	ctx.run.scrap_per_hp = shell_scrap_per_hp()
+	if shell_fitted():
+		ctx.tuning.set_mod("air_control", ctx.tuning.mod("air_control") * shell_air_factor())
 
 
 func _redraw() -> void:

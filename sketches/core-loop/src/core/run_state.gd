@@ -58,6 +58,9 @@ var anomalies: Array[Dictionary] = []
 
 # The prototype's switches; build sets them from the tuning flags. Off is the base game.
 var armor_mode := false
+# Scrap one absorbed HP costs. Build resolves it on each recompute (Riveted Shell halves it);
+# nothing else writes it, and the damage order below is the only reader.
+var scrap_per_hp := SCRAP_PER_HP
 var wear_on := false
 # The share of a hit the passive damage reduction removes first (build sets it each
 # tick in armour mode, where the reduction runs before the scrap).
@@ -303,8 +306,8 @@ func _damage_armored(amount: float, source: String) -> void:
 	if left <= 0.0:
 		events.player_hit.emit(amount, source)
 		return
-	var absorbed := minf(left, mass / SCRAP_PER_HP)
-	var removed := absorbed * SCRAP_PER_HP
+	var absorbed := minf(left, mass / scrap_per_hp)
+	var removed := absorbed * scrap_per_hp
 	var overflow := left - absorbed
 	if removed > 0.0:
 		mass = maxf(0.0, mass - removed)
