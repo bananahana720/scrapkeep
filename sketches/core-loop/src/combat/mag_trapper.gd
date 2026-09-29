@@ -34,8 +34,8 @@ func _configure(threat: float) -> void:
 
 # C12 dressing (enemy_mag_trapper.glb). The counter's capsule crew is replaced by the glb's
 # crew and cart (the collider _add_capsule laid stays), and the pit discs ride a pivot at the
-# cart bed. The glb is read once; every trapper shares its meshes and adds only its own
-# flashing body material as a surface override.
+# cart bed. The glb is read once; every trapper shares its meshes and adds its own flashing body and disc materials as
+# surface overrides.
 const TILT := 0.42
 const SHUDDER := 0.012
 const CORE_EMISSION := 0.6
@@ -96,7 +96,8 @@ static func _parts() -> Dictionary:
 
 
 # The discs' own material answers the hit event the body's does: enemy.flash() sets _flash,
-# the base decays it, and this mirrors the same amber pulse (and the rest look) on the discs.
+# the base decays it, and this mirrors the same amber pulse on the discs and settles them to plain white at rest
+# (the discs carry no plating tint).
 func _update_flash(delta: float) -> void:
 	super(delta)
 	if _disc_material == null:
