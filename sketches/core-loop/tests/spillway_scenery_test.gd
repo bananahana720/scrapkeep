@@ -173,7 +173,9 @@ func _check_rim() -> void:
 					var reach := _flank_reach(local, indices, face, y, z)
 					if reach != -INF:
 						lip_worst = maxf(lip_worst, reach - half)
-						pass
+						if previous != INF:
+							step_worst = maxf(step_worst, reach - previous)
+						previous = reach
 					y += 1.0
 		var side: int = crown["side"]
 		var start: float = crown["z"] - crown["width"] * 0.5
@@ -185,7 +187,7 @@ func _check_rim() -> void:
 	_check(table_worst <= 0.10 and peak_worst <= 0.05 and bounds_ok, "upper rings on the crest profile within %.3f m of 0.10, no crest above the old maximum (%.3f m over), rings inside the R2 envelope" % [table_worst, peak_worst])
 	_check(form_bad == 0, "CLIFF-R3 crown form rules on the mesh (plan sections at h0 and half rise: longest run, axis share, rectangle occupancy, three arena-facing runs): %d rule failures" % form_bad)
 	_check(root_worst >= 5.0 - 0.0001 and contact_ok, "root %.2f m under the lowest footprint terrain (5 m), terrain contact continuous at 2 m spacing (%s)" % [root_worst, contact_ok])
-	_check(open_edges == 0, "every crown is a closed shell: %d open edges or empty flank rays" % open_edges)
+	_check(open_edges == 0, "every crown is a closed shell: %d open edges" % open_edges)
 	_check(step_worst <= 0.05, "flank never steps outward as it rises: worst step %.3f m" % step_worst)
 	_check(lip_worst <= 0.001, "no projecting lip past the base plane: %.3f m" % lip_worst)
 	_check(absf(gully_worst - 6.0) < 0.001, "narrowest gully between crowns %.1f m, 6 m" % gully_worst)
