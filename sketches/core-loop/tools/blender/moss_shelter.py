@@ -41,17 +41,21 @@ def shell(rows):
 
 NECK_TOP = 7.62  # buried in the cap: its underside reaches Y 7.61 above the cheek strip
 # Cheeks: one closed skin per side, 0.45 to 0.65 m thick. Each side breaks at its own heights and its
-# front edge steps X in long oblique planes (visible side, Godot +Z, follows the brief's stations).
+# outer front edge runs in three broad, unequal oblique fractures (X swings 1.4 to 1.6 m, so the edge
+# is well off vertical; round 2's 0.6 m swing read as a near-straight slab). The end face is oblique
+# in plan too: the inner edge sits 0.5 to 0.6 m forward or back of the outer one, never past X -14.52.
+# Stations: (Y, outer front X, |Z| outer, thickness, inner shear).
 cheeks = {
-    1: [(0.0, -14.65, 3.99, 0.50), (2.3, -15.15, 3.94, 0.62), (4.8, -14.75, 3.99, 0.47), (6.0, -15.25, 3.93, 0.58),
-        (NECK_TOP, -15.05, 3.96, 0.55)],
-    -1: [(0.0, -14.95, 3.97, 0.56), (1.4, -14.6, 4.0, 0.46), (4.2, -15.3, 3.93, 0.64), (6.0, -14.85, 3.98, 0.52),
-         (NECK_TOP, -15.1, 3.95, 0.60)],
+    1: [(0.0, -14.6, 3.99, 0.50, -0.50), (1.5, -16.0, 3.94, 0.62, 0.60), (4.3, -14.85, 3.99, 0.47, -0.55),
+        (6.0, -16.5, 3.93, 0.58, 0.60), (NECK_TOP, -15.8, 3.96, 0.55, -0.50)],
+    -1: [(0.0, -15.9, 3.97, 0.56, 0.55), (1.2, -14.6, 4.0, 0.46, -0.50), (3.9, -16.2, 3.93, 0.64, 0.60),
+         (6.0, -15.0, 3.98, 0.52, -0.55), (NECK_TOP, -15.4, 3.95, 0.60, 0.55)],
 }
 for side, stations in cheeks.items():
     rows = []
-    for y, xf, zo, thick in stations:
-        rows.append((y, [(X_BACK, side * zo), (xf, side * zo), (xf, side * (zo - thick)), (X_BACK, side * (zo - thick))]))
+    for y, xf, zo, thick, sh in stations:
+        xi = min(-14.52, xf + sh)
+        rows.append((y, [(X_BACK, side * zo), (xf, side * zo), (xi, side * (zo - thick)), (X_BACK, side * (zo - thick))]))
     shell(rows)
 # Rear skin: one continuous wall, three broad planes across the back.
 shell([(0.0, [(X_BACK, -3.98), (X_BACK + 0.50, -3.98), (X_BACK + 0.50, 3.98), (X_BACK, 3.98)]),
@@ -67,11 +71,14 @@ centre = (sum(x for x, _ in perimeter) / n, sum(z for _, z in perimeter) / n)
 FRONT = (5, 6, 7)
 CORNER = (1, 4, 8, 9, 10)
 # Ring k: height fraction and inward inset (m) per point class. The front keeps its belly (inset
-# near zero until the last ring); only the corners roll in.
+# near zero until the last ring). Corners and sides hold their wall, then break in one broad
+# planar chamfer over the last third (rings 3 to 5 are collinear in inset), scaled per point so no
+# two chips match: a chipped edge rather than a rolled bevel.
 t_rings = [0.0, 0.14, 0.42, 0.68, 0.86, 1.0]
 inset = {'front': [0.10, 0.0, 0.0, 0.0, 0.03, 0.08],
-         'corner': [0.20, 0.0, 0.0, 0.05, 0.25, 0.50],
-         'side': [0.15, 0.0, 0.02, 0.06, 0.20, 0.40]}
+         'corner': [0.20, 0.0, 0.0, 0.0, 0.45, 0.80],
+         'side': [0.15, 0.0, 0.02, 0.02, 0.30, 0.55]}
+CHIP = {0: 1.5, 1: 1.3, 2: 0.7, 3: 0.8, 4: 0.4, 8: 0.5, 9: 0.6, 10: 1.4, 11: 0.8}
 
 
 def cls(i): return 'front' if i in FRONT else ('corner' if i in CORNER else 'side')
@@ -79,7 +86,7 @@ def moved(i, k):
     x, z = perimeter[i]
     dx, dz = centre[0] - x, centre[1] - z
     d = math.hypot(dx, dz)
-    s = inset[cls(i)][k]
+    s = inset[cls(i)][k] * (CHIP.get(i, 1.0) if k >= 4 else 1.0)
     px, pz = x + dx / d * s, z + dz / d * s
     return (max(X_BACK, min(-11.5, px)), max(-6.3, min(6.3, pz)))
 xz = [[moved(i, k) for i in range(n)] for k in range(len(t_rings))]
