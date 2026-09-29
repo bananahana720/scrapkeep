@@ -1,0 +1,15 @@
+{
+	"base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/unit-wS",
+	"head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/unit-wS",
+	"modes": {
+		"subject-context-depth": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"launch",
+				"overview"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/pair/unit-wS/pair-subject-context-depth.png"
+		}
+	}
+}

@@ -15,6 +15,8 @@ extends SceneTree
 #     [--centre=x,y,z] [--mode=lit,subject-black,assembly-black] [--cameras=name,name]
 #     [--freeze=<path>=rx,ry,rz[:px,py,pz] (degrees, local; global position)] [--freeze=<path>@<clip>:<seconds>]
 #     [--hide=<path>]   (subtree omitted from the black modes, e.g. glass)
+#     [--clay=<node path>]   lit mode only: every mesh under that subtree takes one flat neutral shaded material (no bands,
+#       no vertex colour), so broad faces read without the fine surface detail; nothing else changes
 #     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
 #     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
 #       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
@@ -37,6 +39,7 @@ const VERSION := 1
 const SEED := 280928
 const MODES := ["lit", "subject-black", "assembly-black", "subject-context-depth"]
 const GREY := Color(0.5, 0.5, 0.5)
+const CLAY := Color(0.62, 0.6, 0.57)
 const EPS := 1.0e-4
 const SETTLE_PHYSICS_FRAMES := 120
 const DRAW_FRAMES := 12
@@ -55,6 +58,7 @@ var anchor_offset := Vector3.ZERO
 var centre_override = null
 var freeze_specs: Array = []
 var hide_paths: Array = []
+var clay_paths: Array = []
 var aabb_arg = null
 var isolate_path := ""
 var isolate_rest := false
@@ -96,6 +100,8 @@ func _initialize() -> void:
 			freeze_specs.append(arg.trim_prefix("--freeze="))
 		elif arg.begins_with("--hide="):
 			hide_paths.append(arg.trim_prefix("--hide="))
+		elif arg.begins_with("--clay="):
+			clay_paths.append(arg.trim_prefix("--clay="))
 		elif arg.begins_with("--aabb="):
 			var box := arg.trim_prefix("--aabb=").split(",")
 			aabb_arg = AABB(Vector3(float(box[0]), float(box[1]), float(box[2])), Vector3(float(box[3]), float(box[4]), float(box[5])))
@@ -204,6 +210,14 @@ func _run() -> void:
 			quit(3)
 			return
 		hides.append(node)
+	var clay_nodes: Array = []
+	for path in clay_paths:
+		var node := root.get_node_or_null(path)
+		if node == null:
+			printerr("clay path not found: ", path)
+			quit(3)
+			return
+		clay_nodes.append(node)
 	if not isolate_path.is_empty():
 		var isolated := root.get_node_or_null(isolate_path) as MeshInstance3D
 		if isolated == null or aabb_arg == null:
@@ -249,6 +263,7 @@ func _run() -> void:
 			# applied earlier would leave them lit.
 			var state := await prepare(root, root.get_viewport(), mode, subjects, hides, _stage.bind(id))
 			var records := apply_freeze(root, freeze_specs)
+			var clay_undo := apply_clay(clay_nodes) if mode == "lit" else []
 			var v: Dictionary = plan[id]
 			if Cams.is_ortho(id):
 				Cams.aim_ortho(camera, v)
@@ -274,12 +289,13 @@ func _run() -> void:
 				"exposure": exposure, "frozen": frozen,
 				"file": id + ".png", "sha256": FileAccess.get_sha256(png),
 				"thumb": id + ".thumb.png", "thumb_sha256": FileAccess.get_sha256(thumb_png)})
+			revert_clay(clay_undo)
 			if mode != "lit":
 				revert(state)
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
 			"mode": mode, "class": class_index, "spawn": spawn_specs, "call": call_specs, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
-			"hide": hide_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
+			"hide": hide_paths, "clay": clay_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
 		file.store_string(JSON.stringify(doc, "\t"))
@@ -386,6 +402,39 @@ static func filter_mesh(mesh: Mesh, xf: Transform3D, box: AABB, invert := false)
 	if out_vertices.size() > 0:
 		result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, kept)
 	return result
+
+
+static func clay_material() -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = CLAY
+	m.roughness = 1.0
+	m.metallic = 0.0
+	m.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	m.vertex_color_use_as_albedo = false
+	m.emission_enabled = false
+	return m
+
+
+# Clay override for a lit frame: every mesh under the given subtrees takes one flat neutral shaded
+# material. Returns [node, previous override] rows for revert_clay.
+static func apply_clay(subtrees: Array) -> Array:
+	var undo := []
+	var material := clay_material()
+	for subtree: Node in subtrees:
+		var meshes: Array = subtree.find_children("*", "GeometryInstance3D", true, false)
+		meshes.append(subtree)
+		for found in meshes:
+			var g := found as GeometryInstance3D
+			if g != null and _is_mesh(g):
+				undo.append([g, g.material_override])
+				g.material_override = material
+	return undo
+
+
+static func revert_clay(undo: Array) -> void:
+	for row in undo:
+		if is_instance_valid(row[0]):
+			(row[0] as GeometryInstance3D).material_override = row[1]
 
 
 static func flat_environment() -> Environment:

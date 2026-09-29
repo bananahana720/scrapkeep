@@ -1,0 +1,62 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS subject-black: every visible subject mesh has the opaque unshaded black override
+PASS subject-black: non-subject mesh, label and light are hidden
+PASS subject-black: a --hide subtree is omitted
+PASS subject-black: a mesh with no render layers is left alone
+PASS subject-black: fog, sky, glow and ssao off, flat colour background
+PASS subject-black: no camera attributes, exposure 1, no ambient light
+PASS subject-black: anti-aliasing off so the frame holds two values
+PASS revert restores the lit scene
+PASS subject-black: a node shown by the stage step is blacked or hidden, not left lit
+PASS assembly-black: a node shown by the stage step is blacked or hidden, not left lit
+PASS assembly-black: every visible mesh is black, non-mesh visuals hidden
+PASS control: the unfrozen spinner moves
+PASS control: the tree is not paused before the tool freezes it
+PASS freeze_tree pauses the tree
+PASS frozen node has the same transform in two frames
+PASS freeze applies the explicit rotation and position and records a missing node as not found
+PASS camera asset-front30: 30 m from the anchor, 3 m above, FOV 65, aimed at the centre
+PASS camera asset-side30: 30 m from the anchor, 3 m above, FOV 65, aimed at the centre
+PASS camera asset-rear30: 30 m from the anchor, 3 m above, FOV 65, aimed at the centre
+PASS camera asset-use6: 6 m from the anchor, 3 m above, FOV 65, aimed at the centre
+PASS the five look views keep the sheet's FOVs
+PASS front and rear cameras sit on opposite sides
+PASS bay views match the round-2 moss frames
+PASS bay views stay out of the default camera set
+PASS dock views stage different barge positions
+PASS compare: identical documents have no errors
+PASS pair: matching runs write a sheet
+PASS pair: sheet is base and head thumbnails side by side, one row per camera
+REFUSED lit: 1 mismatches, first: asset-use6: eye differs: [1.0, 2.0, 3.0] vs [1.5, 2.0, 3.0]
+PASS pair: a moved camera is refused and writes no sheet
+PASS compare: a different FOV is refused
+PASS compare: a different exposure is refused
+PASS compare: a different pilot class is refused
+PASS compare: a different enemy spawn is refused
+PASS compare: a different staged event call is refused
+PASS parse_call keeps a JSON argument list that holds colons
+PASS parse_call defaults to no frames and no arguments
+PASS parse_call refuses arguments that are not a JSON array
+REFUSED lit: 1 mismatches, first: asset-front30: frozen node /root/Scene/Spinner differs: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0] vs [1.0, 0.0, 0.0, 0.25, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+PASS pair: a different frozen node transform is refused
+PASS compare: different freeze specs are refused
+PASS compare: different modes are refused
+PASS compare: a node present on one side only is a note, not a refusal
+PASS subject-context-depth: subject meshes black
+PASS subject-context-depth: context mesh is opaque unshaded background grey with depth test on
+PASS subject-context-depth: lights and labels hidden, a --hide subtree omitted
+PASS subject-context-depth: revert restores the lit materials
+PASS modes: the three original modes keep their place
+PASS clay: every mesh under the subtree takes one flat neutral shaded material
+PASS clay: a mesh outside the subtree keeps its material
+PASS clay: revert restores the materials
+PASS ortho: front 250 m toward the arena along X, side +Z, top +Y with up +Z
+PASS ortho: span is the largest extent times 1.10; an east box looks from -X
+PASS ortho: orthogonal, vertical span, near 0.05, far 1800
+PASS ortho: top camera looks down with +Z up
+PASS aim restores a perspective projection after an orthographic frame
+PASS ortho cameras are not part of the default camera set
+PASS filter_mesh keeps only the triangles whose centroid is inside the world box
+PASS filter_mesh with invert keeps exactly the triangles outside the box (the isolate-rest context)
+PASS filter_mesh returns an empty mesh when nothing is inside

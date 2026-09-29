@@ -1,0 +1,118 @@
+{
+ "selection_rule": "exact RGB (0,0,0) on native 1920x1080 subject-context-depth PNG (dam or G01 subject black, all else grey 127 depth-writing); other-value pixel count reported",
+ "lost = count(base_dam_visible AND NOT head_dam_visible); overlap = count(head_G01_visible AND base_dam_visible)": true,
+ "cams": {
+  "launch": {
+   "dam-a": {
+    "base_dam_px": 202883,
+    "head_dam_px": 203259,
+    "lost_px": 0,
+    "gained_px": 376,
+    "other_value_px": [
+     0,
+     0
+    ],
+    "files": {
+     "base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/dam-a/subject-context-depth/launch.png",
+     "base_sha256": "5573cc03e37072b4bf424e38809d15bafb5dc7f4a6086f3df6328add14d25252",
+     "head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/dam-a/subject-context-depth/launch.png",
+     "head_sha256": "c278c94409204fef3762fd7f488378d26482d75a2d92331a1fd059ec5db7b60c"
+    },
+    "overlap_head_g01_on_base_dam_px": 0,
+    "overlap_base_g01_on_base_dam_px": 0,
+    "overlap_head_g01_on_head_dam_px": 0
+   },
+   "dam-b": {
+    "base_dam_px": 53247,
+    "head_dam_px": 53247,
+    "lost_px": 0,
+    "gained_px": 0,
+    "other_value_px": [
+     0,
+     0
+    ],
+    "files": {
+     "base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/dam-b/subject-context-depth/launch.png",
+     "base_sha256": "5d1ea6fc96b38d202efe889674663240ec3dfa2f54cadaeb5a04fd3f0dda21cd",
+     "head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/dam-b/subject-context-depth/launch.png",
+     "head_sha256": "5d1ea6fc96b38d202efe889674663240ec3dfa2f54cadaeb5a04fd3f0dda21cd"
+    },
+    "overlap_head_g01_on_base_dam_px": 0,
+    "overlap_base_g01_on_base_dam_px": 0,
+    "overlap_head_g01_on_head_dam_px": 0
+   },
+   "g01": {
+    "base_px": 43836,
+    "head_px": 34933,
+    "lost_base_g01_px": 10020,
+    "new_head_g01_px": 1117,
+    "other_value_px": [
+     0,
+     0
+    ],
+    "files": {
+     "base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/g01/subject-context-depth/launch.png",
+     "base_sha256": "9498f44b85820521e0bd9ea306262b32569f0ed39009477b09d7e3d4c7a47954",
+     "head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/g01/subject-context-depth/launch.png",
+     "head_sha256": "38f1e37487bf8a37a1b8f277b2f8304ba3f52166ebd0735cd8890fb8a85c7f9b"
+    }
+   }
+  },
+  "overview": {
+   "dam-a": {
+    "base_dam_px": 79840,
+    "head_dam_px": 79864,
+    "lost_px": 0,
+    "gained_px": 24,
+    "other_value_px": [
+     0,
+     0
+    ],
+    "files": {
+     "base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/dam-a/subject-context-depth/overview.png",
+     "base_sha256": "1cd93f492198e817ac624c71feb289306d2878081c41cb6e3c13775586694d8a",
+     "head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/dam-a/subject-context-depth/overview.png",
+     "head_sha256": "9738d9335570ccf706ac3c251509f9c700d829bd26236de741fa9eab42f6b7ac"
+    },
+    "overlap_head_g01_on_base_dam_px": 0,
+    "overlap_base_g01_on_base_dam_px": 0,
+    "overlap_head_g01_on_head_dam_px": 0
+   },
+   "dam-b": {
+    "base_dam_px": 20037,
+    "head_dam_px": 20037,
+    "lost_px": 0,
+    "gained_px": 0,
+    "other_value_px": [
+     0,
+     0
+    ],
+    "files": {
+     "base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/dam-b/subject-context-depth/overview.png",
+     "base_sha256": "d7512911c7d018241cd79ad169e3d3f7956296893eb77dc2908e849b63a9fbdc",
+     "head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/dam-b/subject-context-depth/overview.png",
+     "head_sha256": "d7512911c7d018241cd79ad169e3d3f7956296893eb77dc2908e849b63a9fbdc"
+    },
+    "overlap_head_g01_on_base_dam_px": 0,
+    "overlap_base_g01_on_base_dam_px": 0,
+    "overlap_head_g01_on_head_dam_px": 0
+   },
+   "g01": {
+    "base_px": 247488,
+    "head_px": 225280,
+    "lost_base_g01_px": 23856,
+    "new_head_g01_px": 1648,
+    "other_value_px": [
+     0,
+     0
+    ],
+    "files": {
+     "base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/g01/subject-context-depth/overview.png",
+     "base_sha256": "e0d13810aa75c14c6d5f4fac798d1af023ff1a02ba059800fa440e91ba0fae4e",
+     "head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/g01/subject-context-depth/overview.png",
+     "head_sha256": "4dd57c4c8fd8b2fae7c1628842fa82e18a0124900e42984b4af30afb5c104995"
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,16 @@
+{
+	"base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/fam-e0",
+	"head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/fam-e0",
+	"modes": {
+		"subject-black": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"ortho-front",
+				"ortho-side",
+				"ortho-top"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/pair/fam-e0/pair-subject-black.png"
+		}
+	}
+}

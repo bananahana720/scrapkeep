@@ -1,0 +1,15 @@
+{
+	"base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/base/dam-b",
+	"head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/cap/head/dam-b",
+	"modes": {
+		"subject-context-depth": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"launch",
+				"overview"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/geo-cliff3/scratchpad/cliff3d/pair/dam-b/pair-subject-context-depth.png"
+		}
+	}
+}
