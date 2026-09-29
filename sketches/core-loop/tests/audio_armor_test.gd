@@ -123,6 +123,15 @@ func _shed_and_hurt() -> void:
 	# No scrap left: the hull takes the whole hit, so it is hurt and there is nothing to shed.
 	var bare := _played(rig["audio"], func(): run.damage(6.0, "t"))
 	_check("bare hull is hurt", bare == [["player_hit", "hurt"]], "a 6 HP hit on no scrap played %s" % [bare])
+	# A new run on the same director: hull_damage restarts below the old total, and its first
+	# hull hit must still be heard.
+	var old_total: float = run.metrics["hull_damage"]
+	run.begin(load("res://src/core/class_def.gd").new())
+	run.armor_mode = true
+	run.mass = 0.0
+	var second := _played(rig["audio"], func(): run.damage(2.0, "t"))
+	_check("second run hurt", second == [["player_hit", "hurt"]] and run.metrics["hull_damage"] < old_total,
+		"after a run that took %.0f hull damage, a 2 HP bare hit in the next run played %s" % [old_total, second])
 	# Size follows the scrap removed: a bigger clatter is a bigger sound, lower and louder.
 	var sizes := []
 	var pitches := []

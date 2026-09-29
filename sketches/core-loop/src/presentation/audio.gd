@@ -1060,8 +1060,7 @@ func _on_beacon(fraction: float) -> void:
 func _on_player_hit(amount: float, _source: String) -> void:
 	if _armor_on():
 		var hull := float(ctx.run.metrics.get("hull_damage", 0.0))
-		_hull_seen = minf(_hull_seen, hull)
-		var took := hull - _hull_seen
+		var took := hull if hull < _hull_seen else hull - _hull_seen
 		_hull_seen = hull
 		if took <= 0.0001:
 			return
