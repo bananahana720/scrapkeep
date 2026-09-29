@@ -152,6 +152,19 @@ func _run() -> void:
 		fovs[id] = Cams.view(id)["fov"]
 	_check(fovs == {"overview": 65.0, "launch": 62.0, "warden": 56.0, "moss": 58.0, "pilot": 39.0}, "the five look views keep the sheet's FOVs")
 	_check(Cams.view("asset-front30", anchor, centre)["eye"] != Cams.view("asset-rear30", anchor, centre)["eye"], "front and rear cameras sit on opposite sides")
+	var recorded := {
+		"approach-in": [Vector3(68.0, 70.2, -92.0), Vector3(49.0, 69.2, -90.0)],
+		"approach-out": [Vector3(42.0, 70.2, -79.0), Vector3(49.5, 68.5, -89.5)],
+		"approach-leave": [Vector3(54.0, 70.5, -86.5), Vector3(70.0, 68.5, -90.0)],
+		"dock-1": [Vector3(48.0, 74.0, -64.0), Vector3(40.0, 68.0, -90.0)],
+	}
+	var bay_ok := true
+	for id in recorded:
+		var v := Cams.view(id)
+		bay_ok = bay_ok and v["eye"].is_equal_approx(recorded[id][0]) and v["target"].is_equal_approx(recorded[id][1]) and v["fov"] == 62.0
+	_check(bay_ok, "bay views match the round-2 moss frames")
+	_check(not Cams.names().any(func(id): return Cams.is_bay(id)), "bay views stay out of the default camera set")
+	_check(Cams.BAY["dock-0"]["barge"] != Cams.BAY["dock-2"]["barge"], "dock views stage different barge positions")
 
 	# pair: matching runs pair, mismatched cameras or frozen state are refused.
 	DirAccess.make_dir_recursive_absolute(TMP)
@@ -175,6 +188,9 @@ func _run() -> void:
 	var pilot := doc.duplicate(true)
 	pilot["class"] = int(doc.get("class", 0)) + 1
 	_check(not Cap.compare(doc, pilot)["errors"].is_empty(), "compare: a different pilot class is refused")
+	var spawned := doc.duplicate(true)
+	spawned["spawn"] = ["lobber@0,0,0"]
+	_check(not Cap.compare(doc, spawned)["errors"].is_empty(), "compare: a different enemy spawn is refused")
 	var frozen := doc.duplicate(true)
 	frozen["frames"][0]["frozen"]["/root/Scene/Spinner"][3] = 0.25
 	_check(not Cap.compare(doc, frozen)["errors"].is_empty() and Cap.pair(same, _write_run("frozen", frozen), TMP.path_join("sheet_frozen")) == 4, "pair: a different frozen node transform is refused")

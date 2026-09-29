@@ -18,6 +18,19 @@ const LOOK := {
 	"pilot": {"eye": Vector3(-67.6782531738281, 36.8234672546387, -126.02904510498), "target": Vector3(-65.0, 35.476634979248, -130.0), "fov": 39.0},
 }
 
+# BAY holds Moss's approach and dock views, world-fixed, as recorded in geo-moss r2/flat/frames.json.
+# Each also stages the barge (offset from its home at (50, 65, -90)) and the ball; they are never in
+# the default set.
+const BAY_HOME := Vector3(50, 65, -90)
+const BAY := {
+	"approach-in": {"eye": Vector3(68.0, 70.2, -92.0), "target": Vector3(49.0, 69.2, -90.0), "fov": 62.0, "ball": Vector3(59.0, 66.0, -90.0), "barge": Vector3.ZERO},
+	"approach-out": {"eye": Vector3(42.0, 70.2, -79.0), "target": Vector3(49.5, 68.5, -89.5), "fov": 62.0, "ball": Vector3(43.5, 66.0, -88.5), "barge": Vector3.ZERO},
+	"approach-leave": {"eye": Vector3(54.0, 70.5, -86.5), "target": Vector3(70.0, 68.5, -90.0), "fov": 62.0, "ball": Vector3(62.0, 66.0, -90.0), "barge": Vector3.ZERO},
+	"dock-0": {"eye": Vector3(48.0, 74.0, -64.0), "target": Vector3(40.0, 68.0, -90.0), "fov": 62.0, "ball": null, "barge": Vector3(26, 16, -12)},
+	"dock-1": {"eye": Vector3(48.0, 74.0, -64.0), "target": Vector3(40.0, 68.0, -90.0), "fov": 62.0, "ball": null, "barge": Vector3(12, 7, -5)},
+	"dock-2": {"eye": Vector3(48.0, 74.0, -64.0), "target": Vector3(40.0, 68.0, -90.0), "fov": 62.0, "ball": null, "barge": Vector3.ZERO},
+}
+
 const ASSET := {
 	"asset-front30": {"dir": Vector3(0, 0, -1), "dist": 30.0, "up": 3.0, "fov": 65.0},
 	"asset-side30": {"dir": Vector3(1, 0, 0), "dist": 30.0, "up": 3.0, "fov": 65.0},
@@ -45,13 +58,19 @@ static func names() -> Array:
 
 
 static func is_look(id: String) -> bool:
-	return LOOK.has(id)
+	return LOOK.has(id) or BAY.has(id)
+
+
+static func is_bay(id: String) -> bool:
+	return BAY.has(id)
 
 
 # {eye, target, fov} for a named camera. Look views ignore anchor and centre.
 static func view(id: String, anchor: Transform3D = Transform3D.IDENTITY, centre := Vector3.ZERO) -> Dictionary:
 	if LOOK.has(id):
 		return LOOK[id].duplicate()
+	if BAY.has(id):
+		return {"eye": BAY[id]["eye"], "target": BAY[id]["target"], "fov": BAY[id]["fov"]}
 	var row: Dictionary = ASSET[id]
 	var flat_basis := Basis(Vector3.UP, atan2(anchor.basis.z.x, anchor.basis.z.z))
 	var eye: Vector3 = anchor.origin + flat_basis * (row["dir"] * row["dist"]) + Vector3.UP * row["up"]

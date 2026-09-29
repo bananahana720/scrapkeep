@@ -1,0 +1,171 @@
+{
+  "ablation_notes": {},
+  "ablations": [],
+  "adapter": "NVIDIA GeForce RTX 4080",
+  "checks": {
+    "at_end": {
+      "audio_cues_logged": 1858,
+      "audio_listeners": 93,
+      "audio_processing": true,
+      "band_clock": 246567,
+      "band_is_silent": false,
+      "band_out_peak": 0.309997409582138,
+      "band_skipped_mixes": -1,
+      "band_voices": 20,
+      "detached_painters_visible": 0,
+      "effects_processing": true,
+      "enemies": 27,
+      "enemies_thinking": 27,
+      "hud_listeners": 23,
+      "hud_processing": true,
+      "hud_visible": true,
+      "juice_has_vfx": true,
+      "painters_visible": 38,
+      "speed_lines": 0,
+      "telegraphs": 38,
+      "trail_points": 2,
+      "vfx_clock": 12.4095903354339,
+      "vfx_glyphs_spawned": 2142,
+      "vfx_listeners": 31,
+      "vfx_particles_emitting": 3,
+      "vfx_processing": true
+    },
+    "audio_cues_in_window": 972,
+    "band_clock_advanced": 189145,
+    "band_mixes_skipped_in_window": 0,
+    "detached_painters": 0,
+    "detached_painters_repainted": 0,
+    "enemies_tracked": 13,
+    "enemy_metres_moved": 347.65,
+    "vfx_clock_advanced": 4.01712375933148,
+    "vfx_glyphs_in_window": 1104
+  },
+  "display": "X11",
+  "errors": [],
+  "frame_ms_by_ticks": {
+    "0": {
+      "n": 224,
+      "p50": 4.202,
+      "p99": 7.048
+    },
+    "1": {
+      "n": 368,
+      "p50": 7.978,
+      "p99": 18.355
+    },
+    "2": {
+      "n": 7,
+      "p50": 15.446,
+      "p99": 36.356
+    }
+  },
+  "godot": "4.7.2-stable (official)",
+  "mark_materials": 14,
+  "mark_materials_built_in_window": 0,
+  "parts_granted": 33,
+  "perf_monitor_value_changes": 5,
+  "physics_hz": 90,
+  "record_frames": 600,
+  "scene": "s3",
+  "scene_def": {
+    "packs": 6,
+    "per_type": 8,
+    "warden": true
+  },
+  "seed": 1,
+  "size": [
+    1920,
+    1080
+  ],
+  "sound_ready_at_s": 10.34,
+  "source_sha256": {
+    "res://src/presentation/vfx.gd": "30c3f0f7cf116315238a9b1c02468a27c1fed2e2b26dc1a6c0e63a6b42ed27d4",
+    "res://tools/perf_bench.gd": "0431af0e0b40b01f97c7d54dc80529844c06232f3f4f35e5ba6c461ca551c177"
+  },
+  "stats": {
+    "draws": {
+      "max": 1226.0,
+      "mean": 931.492,
+      "p50": 911.0,
+      "p95": 1199.0,
+      "p99": 1219.0
+    },
+    "frame_ms": {
+      "max": 36.647,
+      "mean": 7.148,
+      "p50": 6.813,
+      "p95": 11.597,
+      "p99": 20.082
+    },
+    "gpu_ms": {
+      "max": 2.327,
+      "mean": 1.369,
+      "p50": 1.316,
+      "p95": 1.891,
+      "p99": 2.047
+    },
+    "harness_ms": {
+      "max": 4.518,
+      "mean": 0.548,
+      "p50": 0.471,
+      "p95": 0.763,
+      "p99": 2.259
+    },
+    "nodes": {
+      "max": 1868.0,
+      "mean": 1819.252,
+      "p50": 1821.0,
+      "p95": 1845.0,
+      "p99": 1860.0
+    },
+    "perf_physics_ms": {
+      "max": 11.821,
+      "mean": 8.711,
+      "p50": 10.205,
+      "p95": 11.821,
+      "p99": 11.821
+    },
+    "perf_process_ms": {
+      "max": 25.937,
+      "mean": 18.484,
+      "p50": 14.97,
+      "p95": 24.688,
+      "p99": 25.937
+    },
+    "physics_ms": {
+      "max": 8.794,
+      "mean": 1.566,
+      "p50": 1.959,
+      "p95": 3.463,
+      "p99": 4.945
+    },
+    "process_ms": {
+      "max": 32.996,
+      "mean": 1.726,
+      "p50": 1.54,
+      "p95": 2.62,
+      "p99": 3.693
+    },
+    "render_cpu_ms": {
+      "max": 5.855,
+      "mean": 0.892,
+      "p50": 0.798,
+      "p95": 1.446,
+      "p99": 1.826
+    },
+    "ticks": {
+      "max": 4.0,
+      "mean": 0.643,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 2.0
+    }
+  },
+  "telegraphs_committed": 32,
+  "tool": "perf_bench",
+  "valid": true,
+  "wall_seconds": 31.6,
+  "warden": "moved to 16 m ahead, pulse charge started, HP raised",
+  "warm_frames": 120,
+  "warm_seconds": 0.0
+}
