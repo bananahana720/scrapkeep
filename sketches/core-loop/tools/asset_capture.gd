@@ -18,6 +18,8 @@ extends SceneTree
 #     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
 #     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
 #       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
+#     [--call=<node path>:<method>[:<physics frames>]]   after the settle, call that method on the node (for example
+#       a hit flash), then run the given physics frames (default 0) before the freeze, so an event state is captured
 #     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path> [--isolate-rest]]   keep only the triangles of that mesh inside the
 #       world box; --isolate-rest keeps the other triangles as a sibling mesh, so they draw as grey depth context
 #     --cameras also takes ortho-front, ortho-side, ortho-top: orthographic views of --aabb (never in the default set)
@@ -47,6 +49,7 @@ var subject_path := ""
 var anchor_path := ""
 var class_index := 0
 var spawn_specs: Array = []
+var call_specs: Array = []
 var anchor_offset := Vector3.ZERO
 var centre_override = null
 var freeze_specs: Array = []
@@ -80,6 +83,8 @@ func _initialize() -> void:
 			class_index = int(arg.trim_prefix("--class="))
 		elif arg.begins_with("--spawn="):
 			spawn_specs.append(arg.trim_prefix("--spawn="))
+		elif arg.begins_with("--call="):
+			call_specs.append(arg.trim_prefix("--call="))
 		elif arg.begins_with("--anchor="):
 			anchor_path = arg.trim_prefix("--anchor=")
 		elif arg.begins_with("--anchor-offset="):
@@ -155,6 +160,18 @@ func _run() -> void:
 	game.player.source = Intent.Scripted.new()
 	for i in SETTLE_PHYSICS_FRAMES:
 		await physics_frame
+	for spec: String in call_specs:
+		var node := root.get_node_or_null(spec.get_slice(":", 0))
+		var method := spec.get_slice(":", 1)
+		if node == null or not node.has_method(method):
+			printerr("--call target missing: ", spec)
+			quit(2)
+			return
+		node.call(method)
+		print("called ", spec)
+		var frames := int(spec.get_slice(":", 2)) if spec.get_slice_count(":") > 2 else 0
+		for i in frames:
+			await physics_frame
 	freeze_tree(self)
 	game.player.body().freeze = true
 	for node in root.find_children("*", "CanvasLayer", true, false):
@@ -261,7 +278,7 @@ func _run() -> void:
 				revert(state)
 		var doc := {"tool": "asset_capture.gd", "version": VERSION, "seed": SEED, "size": [Cams.SIZE.x, Cams.SIZE.y],
 			"thumb_size": [Cams.THUMB.x, Cams.THUMB.y], "adapter": RenderingServer.get_video_adapter_name(),
-			"mode": mode, "class": class_index, "spawn": spawn_specs, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
+			"mode": mode, "class": class_index, "spawn": spawn_specs, "call": call_specs, "subject": subject_path, "anchor": anchor_path, "anchor_offset": _arr(anchor_offset),
 			"hide": hide_paths, "aabb": [] if aabb_arg == null else _arr(aabb_arg.position) + _arr(aabb_arg.size), "isolate": isolate_path, "isolate_rest": isolate_rest, "freeze_specs": freeze_specs, "frozen_nodes": frozen_specs_seen,
 			"paused": paused, "source_sha256": _hashes(), "frames": frames}
 		var file := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
@@ -572,7 +589,7 @@ static func _close(a, b) -> bool:
 static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	var errors: Array = []
 	var notes: Array = []
-	for key in ["mode", "class", "spawn", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
+	for key in ["mode", "class", "spawn", "call", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
 	var fa := {}
