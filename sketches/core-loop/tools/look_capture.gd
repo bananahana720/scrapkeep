@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Cams := preload("res://tools/capture_cameras.gd")
 var game
 var out := ""
 var camera: Camera3D
@@ -43,7 +44,8 @@ func _run() -> void:
 	camera.current = true
 	camera.far = 1800.0
 	var terrain = game.ctx.terrain
-	await _shot("overview", Vector3(145, 160, -240), Vector3(0, 44, 30), 65.0)
+	var overview: Dictionary = Cams.LOOK["overview"]
+	await _shot("overview", overview["eye"], overview["target"], overview["fov"])
 	var warden = game.flow.warden
 	warden._look._badge.visible = false
 	for label in root.find_children("*", "Label3D", true, false):
@@ -53,12 +55,12 @@ func _run() -> void:
 	var lip: Vector2 = line["at"]
 	var ball: Vector3 = terrain.drop_point(lip.x - 2, lip.y - 9, 3.0)
 	_pose(ball)
-	await _shot("launch", ball + Vector3(-2.2, 1.5, -4.2), ball + Vector3(0, 1.0, 7), 62.0)
+	await _shot("launch", ball + Vector3(-2.2, 1.5, -4.2), ball + Vector3(0, 1.0, 7), Cams.LOOK["launch"]["fov"])
 	_pose(target + Vector3(-9, 2, -12))
 	for i in 5:
 		var p: Vector3 = target + Vector3(cos(i * 1.3) * 17, 0, sin(i * 1.3) * 17)
 		game.ctx.spawner.spawn_enemy("chaser", terrain.drop_point(p.x, p.z, 1.2))
-	await _shot("warden", target + Vector3(-12, 7, -17), target + Vector3(0, 3, 0), 56.0)
+	await _shot("warden", target + Vector3(-12, 7, -17), target + Vector3(0, 3, 0), Cams.LOOK["warden"]["fov"])
 	# The real bay is undocked during the fight. Place its authored barge for inspection.
 	var bay = game.world.bay
 	bay.visible = true
@@ -66,21 +68,19 @@ func _run() -> void:
 	bay._barge.position = Vector3(50, 65, -90)
 	var bay_at: Vector3 = bay._barge.global_position
 	_pose(bay_at + Vector3(0, 2, 0))
-	await _shot("moss", bay_at + Vector3(-2, 6, 12), bay_at + Vector3(-14, 2.8, 0), 58.0)
+	await _shot("moss", bay_at + Vector3(-2, 6, 12), bay_at + Vector3(-14, 2.8, 0), Cams.LOOK["moss"]["fov"])
 	bay.visible = false
 	ball = terrain.drop_point(-65, -130, 1.2)
 	_pose(ball)
 	var fitted: Dictionary = game.presentation.hero_assets.shell_of(game.player)
 	var pod: Node3D = fitted["pod"]
-	await _shot("pilot", ball + pod.global_basis * Vector3(2.9, 1.5, -3.8), ball + Vector3(0, 0.2, 0), 39.0)
+	await _shot("pilot", ball + pod.global_basis * Vector3(2.9, 1.5, -3.8), ball + Vector3(0, 0.2, 0), Cams.LOOK["pilot"]["fov"])
 	var file := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({"seed": 280928, "size": [1920, 1080], "adapter": RenderingServer.get_video_adapter_name(), "frames": records, "source_sha256": _hashes(), "limits": "Staged fixed cameras, paused real scene, real drop lip and Warden; launch is an airborne pose, not a timed traversal. Bay uses authored barge placed for inspection; no gameplay changes."}, "\t"))
 	quit()
 
 func _shot(id: String, eye: Vector3, target: Vector3, fov: float) -> void:
-	camera.global_position = eye
-	camera.look_at(target)
-	camera.fov = fov
+	Cams.aim(camera, eye, target, fov)
 	for i in 12:
 		await RenderingServer.frame_post_draw
 	for node in root.find_children("*", "CanvasItem", true, false):
