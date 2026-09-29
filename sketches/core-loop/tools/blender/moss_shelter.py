@@ -41,7 +41,7 @@ def shell(rows):
 
 NECK_TOP = 7.62  # buried in the cap: its underside reaches Y 7.61 above the cheek strip
 # Cheeks: one closed skin per side, 0.45 to 0.65 m thick. Each side breaks at its own heights and its
-# outer front edge runs in three broad, unequal oblique fractures (X swings 1.4 to 1.6 m, so the edge
+# outer front edge runs in three broad, unequal oblique fractures (X swings 1.6 to 1.9 m, so the edge
 # is well off vertical; round 2's 0.6 m swing read as a near-straight slab). The end face is oblique
 # in plan too: the inner edge sits 0.5 to 0.6 m forward or back of the outer one, never past X -14.52.
 # Stations: (Y, outer front X, |Z| outer, thickness, inner shear).
