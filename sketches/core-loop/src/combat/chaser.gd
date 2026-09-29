@@ -54,9 +54,12 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	var visor := Palette.solid(ACCENT, 3.0)
 	for node in _mesh.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
+		# The mesh is copied per chaser so its body surface can carry this enemy's flashing
+		# material; surface overrides on the imported instance trip the dummy renderer at teardown.
+		mi.mesh = mi.mesh.duplicate()
 		for i in mi.mesh.get_surface_count():
 			var slot := mi.mesh.surface_get_material(i).resource_name
-			mi.set_surface_override_material(i, _material if slot == "fleet_paint" else (visor if slot == "requisition_tag" else charcoal))
+			mi.mesh.surface_set_material(i, _material if slot == "fleet_paint" else (visor if slot == "requisition_tag" else charcoal))
 
 
 func state_name() -> String:
