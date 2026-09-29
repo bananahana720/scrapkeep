@@ -605,6 +605,7 @@ func _hit_map(nodes: Array, progress: float) -> String:
 
 func _check_haze() -> void:
 	Threat.set_haze(false)
+	var classic_drive = Threat.drive(_descriptor_for(Threat.Type.LANE))
 	var classic_hits := {}
 	var classic_nodes := _haze_nodes()
 	for p in [0.25, 0.5, 0.95]:
@@ -660,7 +661,7 @@ func _check_haze() -> void:
 	var live_desc := _descriptor_for(Threat.Type.INSTANT)
 	live_desc["live"] = true
 	var solid_alpha := Threat.fill_tint(live_desc).a
-	var drive_same := Threat.drive(_descriptor_for(Threat.Type.LANE)) == Threat.drive(_descriptor_for(Threat.Type.LANE))
+	var drive_same: bool = Threat.drive(_descriptor_for(Threat.Type.LANE)) == classic_drive
 	_report("haze look", hits_same and lines_same and fills_red and fills_seen >= 8 and no_stripes and lines_above and alive
 			and absf(solid_alpha - Threat.HAZE_SOLID) < 0.001 and drive_same,
 		"contains() over 5 telegraphs x 3 progress samples equals classic (%s); every P1 line mark is unchanged (%s); every fill is HAZARD at %.2f of its classic alpha with the same tris (%s, %d fill layers seen); no fill layer carries stripes (%s); every fill renders under every P1 line (%s); each fill draws visibly at 25/50/95%% (%s); live slag alpha %.2f"
