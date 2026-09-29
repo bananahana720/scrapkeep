@@ -1,0 +1,39 @@
+{
+	"base": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c15/artifacts/local/asset-units/enemy_plated_brute/capture/base-intact",
+	"head": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c15/artifacts/local/asset-units/enemy_plated_brute/capture/head-intact",
+	"modes": {
+		"assembly-black": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-front30",
+				"asset-side30",
+				"asset-rear30",
+				"asset-use6"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c15/artifacts/local/asset-units/enemy_plated_brute/capture/pair-intact/pair-assembly-black.png"
+		},
+		"lit": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-front30",
+				"asset-side30",
+				"asset-rear30",
+				"asset-use6"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c15/artifacts/local/asset-units/enemy_plated_brute/capture/pair-intact/pair-lit.png"
+		},
+		"subject-black": {
+			"errors": [],
+			"notes": [],
+			"rows": [
+				"asset-front30",
+				"asset-side30",
+				"asset-rear30",
+				"asset-use6"
+			],
+			"sheet": "/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/asset-c15/artifacts/local/asset-units/enemy_plated_brute/capture/pair-intact/pair-subject-black.png"
+		}
+	}
+}

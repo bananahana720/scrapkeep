@@ -30,10 +30,45 @@ func _configure(threat: float) -> void:
 	attack_range = 24.0
 
 
+# C16 dressing (enemy_netcaster.glb). The counter's capsule crew and the two cylinder masts are
+# replaced by the glb's crew, masts, crossbar, sill and stays (the collider _add_capsule laid
+# stays). The net stays the runtime hazard box below, untouched: the glb frames its 2.4 x 1.6 m
+# window and adds no geometry inside it. The glb is read once; every netcaster shares its mesh
+# and adds only its own flashing body material as a surface override. The resting body is the
+# Fleet oxide _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
+static var _shared: Dictionary = {}
+
+
 func _build_tool() -> void:
-	for side in [-1.0, 1.0]:
-		_cylinder(0.1, MAST_HEIGHT, Palette.CHARCOAL, Vector3(side * 1.2, MAST_HEIGHT * 0.5 - CREW_HALF, -0.3))
+	_crew.free()
+	_crew = null
+	var parts := _parts()
+	var dress := Node3D.new()
+	dress.name = "NetcasterBody"
+	add_child(dress)
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	body.mesh = parts["body"]
+	body.set_surface_override_material(parts["flash"], _material)
+	dress.add_child(body)
 	_net = _box(Vector3(2.4, 1.6, 0.04), Palette.HAZARD, Vector3(0.0, MAST_HEIGHT - CREW_HALF - 0.9, -0.3), 0.9)
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_netcaster.glb") as PackedScene).instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var flash := 0
+	var mesh: Mesh = (scene.find_child("NetcasterBody", true, false) as MeshInstance3D).mesh.duplicate()
+	for i in mesh.get_surface_count():
+		if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			flash = i
+		mesh.surface_set_material(i, painted)
+	_shared = {"body": mesh, "flash": flash}
+	scene.free()
+	return _shared
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

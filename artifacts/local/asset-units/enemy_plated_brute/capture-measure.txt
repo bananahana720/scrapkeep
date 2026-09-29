@@ -1,0 +1,17 @@
+subject-black: values, bbox (x0,y0,x1,y1) and black-pixel area; lit: non-background area is not measured
+asset-front30  base-intact    values=[0, 127] bbox=(np.int64(917), np.int64(531), np.int64(1002), np.int64(612)) area=3968
+asset-front30  base-stripped  values=[0, 127] bbox=(np.int64(917), np.int64(531), np.int64(1002), np.int64(612)) area=3400
+asset-front30  head-intact    values=[0, 127] bbox=(np.int64(917), np.int64(539), np.int64(1002), np.int64(613)) area=4178
+asset-front30  head-stripped  values=[0, 127] bbox=(np.int64(938), np.int64(539), np.int64(981), np.int64(613)) area=2508
+asset-side30   base-intact    values=[0, 127] bbox=(np.int64(920), np.int64(532), np.int64(982), np.int64(612)) area=3704
+asset-side30   base-stripped  values=[0, 127] bbox=(np.int64(936), np.int64(532), np.int64(982), np.int64(612)) area=2759
+asset-side30   head-intact    values=[0, 127] bbox=(np.int64(918), np.int64(538), np.int64(995), np.int64(615)) area=4258
+asset-side30   head-stripped  values=[0, 127] bbox=(np.int64(938), np.int64(538), np.int64(981), np.int64(614)) area=2209
+asset-rear30   base-intact    values=[0, 127] bbox=(np.int64(917), np.int64(531), np.int64(1002), np.int64(612)) area=4176
+asset-rear30   base-stripped  values=[0, 127] bbox=(np.int64(917), np.int64(531), np.int64(1002), np.int64(612)) area=3400
+asset-rear30   head-intact    values=[0, 127] bbox=(np.int64(916), np.int64(539), np.int64(1003), np.int64(617)) area=4445
+asset-rear30   head-stripped  values=[0, 127] bbox=(np.int64(938), np.int64(539), np.int64(981), np.int64(613)) area=2503
+asset-use6     base-intact    values=[0, 127] bbox=(np.int64(735), np.int64(498), np.int64(1184), np.int64(872)) area=95788
+asset-use6     base-stripped  values=[0, 127] bbox=(np.int64(735), np.int64(498), np.int64(1184), np.int64(872)) area=86436
+asset-use6     head-intact    values=[0, 127] bbox=(np.int64(731), np.int64(532), np.int64(1188), np.int64(889)) area=112682
+asset-use6     head-stripped  values=[0, 127] bbox=(np.int64(856), np.int64(532), np.int64(1063), np.int64(876)) area=52849

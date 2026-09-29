@@ -20,49 +20,39 @@ const RIM_EAST_X := [192.0, 194.0, 193.0]
 # Family order along increasing world Z. F2 is C/S/H on both sides.
 const RIM_WEST_ORDER := [[0, 1, 2], [0, 2, 1], [0, 1, 2]]
 const RIM_EAST_ORDER := [[2, 1, 0], [2, 0, 1], [0, 1, 2]]
-# Fraction of the crest rise per ring, and the fraction of full depth kept at each ring.
+# Fraction of the crest rise per ring.
 const RIM_RING_Y := [0.0, 0.0, 0.35, 0.70, 1.0]
-const RIM_RING_DEPTH := [1.0, 1.0, 0.95, 0.85, 0.75]
-# The two crest ends shorten by 1 m at the top ring only.
-const RIM_END_TRIM := 1.0
 # Crest profile, u along the unit's world-Z interval : metres above h0, linear between.
 const RIM_CREST := [
 	[Vector2(0, 8), Vector2(0.20, 16), Vector2(0.38, 18), Vector2(0.64, 17), Vector2(0.85, 12), Vector2(1, 8)],
 	[Vector2(0, 3), Vector2(0.20, 5), Vector2(0.40, 6), Vector2(0.60, 5.5), Vector2(0.85, 4), Vector2(1, 3)],
 	[Vector2(0, 5), Vector2(0.20, 10), Vector2(0.38, 12), Vector2(0.64, 12), Vector2(0.85, 10), Vector2(1, 6)],
 ]
-# Arena-face stations (u). Each fold spans one face segment, so its ends are stations.
-const RIM_FACE_U := [
-	[0.0, 0.13, 0.43, 0.55, 0.85, 1.0],
-	[0.0, 0.18, 0.356, 0.744, 0.87, 1.0],
-	[0.0, 0.125, 0.251, 0.709, 0.85, 1.0],
+# CLIFF-R3 section 2: oblique plans. The proposal tables come from tools/cliff_gate_report.py (its
+# gate passed on exactly these values). Crowns: 12 stations (x toward the arena, z along world Z,
+# face list ascending then back list descending) and per-face batter (metres of inward lean per metre
+# of rise); hulls: 10 (d outward from the arena, e along Z) stations at the bottom level and per-face
+# batter. Corner lines are solved so every face stays planar. Crowns index by variant; hulls by
+# (index in side + 2 on the east side) mod 4.
+const RIM_PLAN := [
+	{"plan": [Vector2(-3.8857, -21.8841), Vector2(6.0186, -20.1818), Vector2(4.6834, -3.8842), Vector2(7.4083, 7.5523), Vector2(2.5292, 20.1855), Vector2(8, 21.5691), Vector2(1.6873, 24), Vector2(-6.8807, 21.516), Vector2(-4.599, 11.216), Vector2(-8, -3.2799), Vector2(-6.4321, -10.1929), Vector2(-6.2417, -12.0995)],
+	 "batter": [0.0778, 0.2858, 0.1053, 0.02, 0.1028, 0.2007, 0.2948, 0.0926, 0.0537, 0.272, 0.2475, 0.1651]},
+	{"plan": [Vector2(-5.3384, -18), Vector2(5.0068, -7.8037), Vector2(4.0388, -1.4971), Vector2(6, 8.1457), Vector2(5.499, 11.9715), Vector2(-0.0322, 18), Vector2(-2.9332, 18), Vector2(-6, 9.5838), Vector2(-4.2738, 7.8286), Vector2(-5.5903, 1.2087), Vector2(-6, -8.7386), Vector2(-2.8077, -13.1506)],
+	 "batter": [0.02, 0.2324, 0.1959, 0.0433, 0.1852, 0.2431, 0.2651, 0.3045, 0.3005, 0.048, 0.0768, 0.32]},
+	{"plan": [Vector2(2.5445, -12), Vector2(7, -6.9406), Vector2(4.0358, -0.9369), Vector2(7, 4.372), Vector2(4.4128, 5.4377), Vector2(-1.2843, 12), Vector2(-6.4143, 9.2166), Vector2(-6.207, 1.4193), Vector2(-7, -2.7744), Vector2(-3.9308, -5.5223), Vector2(-4.4633, -6.6451), Vector2(-2.7144, -12)],
+	 "batter": [0.02, 0.1009, 0.2302, 0.0529, 0.2369, 0.0261, 0.1525, 0.1863, 0.169, 0.0707, 0.2332, 0.2826]},
 ]
-# Face segments (index of the first station) carrying a diagonal fold: C two, S one, H one.
-const RIM_FOLDS := [[1, 3], [2], [2]]
-const RIM_FOLD_DEPTH := 0.72
-# Groove chains per variant, low end to high end: [band k, w0, h0, w1, h1] where w runs along the
-# fold's low-to-high direction and h up the band, both as fractions of the quad. S and H run one
-# groove through two or three bands (meeting on the shared edge) to reach their rise; C keeps one band per fold.
-const RIM_FOLD_BANDS := [
-	[[2, 0.14, 0.14, 0.86, 0.86]],
-	[[1, 0.10, 0.8, 0.3, 1.0], [2, 0.3, 0.0, 0.6, 1.0], [3, 0.6, 0.0, 0.88, 1.0]],
-	[[2, 0.12, 0.0, 0.6, 1.0], [3, 0.6, 0.0, 0.88, 0.6]],
+const HULL_PLAN := [
+	{"plan": [Vector2(-4.332, -26), Vector2(-19.7882, -19.525), Vector2(-29.6859, -10.3039), Vector2(-27.946, 10.5188), Vector2(-13.0824, 22.1212), Vector2(0.4141, 26), Vector2(28.9284, 7.5273), Vector2(22.0613, -9.4136), Vector2(21.4312, -18.4303), Vector2(13.978, -20.3406)],
+	 "batter": [0.1797, 0.3018, 0.1882, 0.073, 0.0669, 0.0222, 0.0197, 0.0209, 0.0125, 0.01]},
+	{"plan": [Vector2(-9.4633, -25.6169), Vector2(-27.9152, -14.8311), Vector2(-31.1228, 0.0565), Vector2(-18.7477, 13.1224), Vector2(-2.2894, 25.6612), Vector2(20.3481, 19.6373), Vector2(35, 9.3607), Vector2(35, -9.6425), Vector2(25.5241, -26), Vector2(7.1036, -21.8069)],
+	 "batter": [0.1778, 0.2965, 0.154, 0.1128, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]},
+	{"plan": [Vector2(-5.8695, -26), Vector2(-25.0628, -13.6264), Vector2(-29.6513, 0.8798), Vector2(-21.2899, 16.0649), Vector2(-14.8329, 25.8409), Vector2(7.7628, 24.3933), Vector2(32.0479, 10.0798), Vector2(27.4522, 3.8008), Vector2(21.164, -15.3955), Vector2(17.9963, -17.4291)],
+	 "batter": [0.1325, 0.2552, 0.2846, 0.2816, 0.0507, 0.01, 0.01, 0.0137, 0.01, 0.01]},
+	{"plan": [Vector2(-3.9122, -22.5991), Vector2(-26.4237, -9.3698), Vector2(-29.5856, 5.5511), Vector2(-18.2767, 17.5192), Vector2(-2.779, 21.7131), Vector2(15.7282, 23.8975), Vector2(35, 8.1077), Vector2(26.7593, -13.9213), Vector2(11.3319, -26), Vector2(6.89, -12.2567)],
+	 "batter": [0.0826, 0.0818, 0.1351, 0.112, 0.085, 0.01, 0.01, 0.0459, 0.0145, 0.1785]},
 ]
 
-# Shoulder hulls, section 2: one continuous hull per old four-shelf stack. Plan outline in
-# normalised (d outward from the arena, e along Z) coordinates, chamfered so no corner is a knife.
-const HULL_OUTLINE := [
-	Vector2(1.0, -0.62), Vector2(1.0, 0.35), Vector2(0.72, 0.98), Vector2(0.05, 1.0), Vector2(-0.75, 0.90),
-	Vector2(-1.0, 0.25), Vector2(-1.0, -0.45), Vector2(-0.55, -1.0), Vector2(0.25, -1.0), Vector2(0.82, -0.90),
-]
-# Per level: centre d, semi d, centre e, semi e. Each level nests inside the one below.
-const HULL_LEVELS := [
-	[2.0, 31.0, 0.0, 26.0],
-	[4.0, 27.0, -1.0, 24.0],
-	[8.0, 22.0, -3.0, 20.0],
-	[14.0, 15.0, -4.0, 18.0],
-]
-const HULL_FOLD_DEPTH := 0.9
 # All instances stay outside the stage-1 play rectangle plus an 8 m apron. No collisions.
 static func build(stage_root: Node3D) -> Node3D:
 	var scenery := Node3D.new()
@@ -495,14 +485,6 @@ static func shoulder_envelope(hull: Dictionary) -> AABB:
 	return box
 
 
-static func _level_point(hull: Dictionary, level: int, k: int) -> Vector3:
-	var row: Array = HULL_LEVELS[level]
-	var n: Vector2 = HULL_OUTLINE[k]
-	var d: float = row[0] + row[1] * n.x
-	var e: float = row[2] + row[3] * n.y
-	return Vector3(hull["x"] + hull["side"] * d, 0.0, hull["z"] + e)
-
-
 # Heights of the four levels at station k: bottom of the old stack, two irregular mid levels,
 # and an upper surface at least 0.15 m over the root height, never above the old top.
 static func hull_levels_y(hull: Dictionary, k: int) -> Array:
@@ -514,51 +496,81 @@ static func hull_levels_y(hull: Dictionary, k: int) -> Array:
 	return [bottom, bottom + span * 0.34 + 1.2 * sin(k * 2.1 + hull["i"]), bottom + span * 0.68 + 1.2 * sin(k * 1.7 + hull["side"]), top]
 
 
+static func hull_variant(hull: Dictionary) -> int:
+	return (int(hull["i"]) + (0 if hull["side"] < 0 else 2)) % 4
+
+
+# Per-vertex plan lean (metres of plan movement per metre of height): the corner line where face j-1
+# and face j meet, so both faces stay planar. Face i runs from station i to i+1.
+static func corner_slopes(plan: Array, batter: Array) -> Array:
+	var n := plan.size()
+	var area := 0.0
+	for i in n:
+		var a: Vector2 = plan[i]
+		var b: Vector2 = plan[(i + 1) % n]
+		area += a.x * b.y - b.x * a.y
+	var wind := 1.0 if area > 0.0 else -1.0
+	var normals := []
+	for i in n:
+		var e: Vector2 = plan[(i + 1) % n] - plan[i]
+		normals.append(Vector2(e.y, -e.x).normalized() * wind)
+	var slopes := []
+	for j in n:
+		var n0: Vector2 = normals[(j - 1 + n) % n]
+		var n1: Vector2 = normals[j]
+		var r0: float = -batter[(j - 1 + n) % n]
+		var r1: float = -batter[j]
+		var det := n0.x * n1.y - n0.y * n1.x
+		slopes.append(Vector2((r0 * n1.y - n0.y * r1) / det, (n0.x * r1 - n1.x * r0) / det))
+	return slopes
+
+
 static func hull_rings(hull: Dictionary) -> Array[PackedVector3Array]:
+	var table: Dictionary = HULL_PLAN[hull_variant(hull)]
+	var plan: Array = table["plan"]
+	var slopes := corner_slopes(plan, table["batter"])
 	var rings: Array[PackedVector3Array] = []
 	for level in 4:
-		var ring := PackedVector3Array()
-		for k in HULL_OUTLINE.size():
-			var p := _level_point(hull, level, k)
-			p.y = hull_levels_y(hull, k)[level]
-			ring.append(p)
-		rings.append(ring)
+		rings.append(PackedVector3Array())
+	for k in plan.size():
+		var ys := hull_levels_y(hull, k)
+		var d: Vector2 = plan[k]
+		var m: Vector2 = slopes[k]
+		for level in 4:
+			var t: float = ys[level] - ys[0]
+			rings[level].append(Vector3(hull["x"] + hull["side"] * (d.x + m.x * t), ys[level], hull["z"] + d.y + m.y * t))
 	return rings
 
 
-# One closed hull in world metres: 10 stations, three bands, fan caps, two recessed folds.
+# One closed hull in world metres: 10 stations, three planar-faced bands, fan caps. No folds.
 static func shoulder_mesh(hull: Dictionary) -> ArrayMesh:
 	var rings := hull_rings(hull)
-	var n := rings[0].size()
 	var tris := PackedVector3Array()
-	var middle := Vector3(hull["x"] + hull["side"] * 15.0, 0.0, hull["z"] - 4.0)
-	# Folds: arena-facing segment 5 in band 1, segment 4 in band 2.
-	var folds := {[1, 5]: [0.5, 8.0], [2, 4]: [0.5, 6.0]}
 	for band in 3:
-		for i in n:
-			var j := (i + 1) % n
-			var a := rings[band][i]
-			var b := rings[band][j]
-			var c := rings[band + 1][j]
-			var d := rings[band + 1][i]
-			var key := [band, i]
-			if folds.has(key):
-				var t_mid: float = folds[key][0]
-				var rise: float = folds[key][1]
-				var t_half: float = rise * 0.5 / ((d.y - a.y + c.y - b.y) * 0.5)
-				_fold_quad(tris, a, b, c, d, Vector2(0.14, t_mid - t_half), Vector2(0.86, t_mid + t_half), HULL_FOLD_DEPTH, middle)
-			else:
-				_quad(tris, a, b, c, d, middle)
+		_wall(tris, rings[band], rings[band + 1])
 	_fan_cap(tris, rings[3], Vector3.UP)
 	_fan_cap(tris, rings[0], Vector3.DOWN)
 	return _solid(tris)
 
 
-# Wall triangles are oriented away from the vertical axis through `middle`.
-static func _outward_tri(tris: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3, middle: Vector3) -> void:
-	var centroid := (a + b + c) / 3.0
-	var hint := Vector3(centroid.x - middle.x, 0.0, centroid.z - middle.z)
-	_oriented_tri(tris, a, b, c, hint)
+# Bands between two same-length rings, outward by the ring's winding in plan.
+static func _wall(tris: PackedVector3Array, ring_a: PackedVector3Array, ring_b: PackedVector3Array) -> void:
+	var n := ring_a.size()
+	var area := 0.0
+	for i in n:
+		var a := ring_a[i]
+		var b := ring_a[(i + 1) % n]
+		area += a.x * b.z - b.x * a.z
+	var wind := 1.0 if area > 0.0 else -1.0
+	for i in n:
+		var j := (i + 1) % n
+		var e := ring_a[j] - ring_a[i]
+		var hint := Vector3(e.z, 0.0, -e.x) * wind
+		if hint.length() < 0.000001:
+			e = ring_b[j] - ring_b[i]
+			hint = Vector3(e.z, 0.0, -e.x) * wind
+		_oriented_tri(tris, ring_a[i], ring_a[j], ring_b[i], hint)
+		_oriented_tri(tris, ring_a[j], ring_b[j], ring_b[i], hint)
 
 
 static func _oriented_tri(tris: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3, hint: Vector3) -> void:
@@ -566,27 +578,6 @@ static func _oriented_tri(tris: PackedVector3Array, a: Vector3, b: Vector3, c: V
 		tris.append_array([a, c, b])
 	else:
 		tris.append_array([a, b, c])
-
-
-static func _quad(tris: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3, d: Vector3, middle: Vector3) -> void:
-	_outward_tri(tris, a, b, d, middle)
-	_outward_tri(tris, b, c, d, middle)
-
-
-# A quad A B C D (in order) with a groove between P and Q, two points inside it at the (s, t)
-# parameters, both pushed `depth` metres into the parent flank. Six triangles instead of two.
-static func _fold_quad(tris: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3, d: Vector3, sp: Vector2, sq: Vector2, depth: float, middle: Vector3) -> void:
-	var p := a.lerp(b, sp.x).lerp(d.lerp(c, sp.x), sp.y)
-	var q := a.lerp(b, sq.x).lerp(d.lerp(c, sq.x), sq.y)
-	var normal := (b - a).cross(d - a)
-	var centroid := (a + b + c + d) / 4.0
-	if normal.dot(Vector3(centroid.x - middle.x, 0.0, centroid.z - middle.z)) < 0.0:
-		normal = -normal
-	var inward := -normal.normalized() * depth
-	p += inward
-	q += inward
-	for t in [[a, b, p], [b, q, p], [b, c, q], [a, p, d], [p, q, d], [q, c, d]]:
-		_outward_tri(tris, t[0], t[1], t[2], middle)
 
 
 static func _fan_cap(tris: PackedVector3Array, ring: PackedVector3Array, up: Vector3) -> void:
@@ -663,94 +654,57 @@ static func crest_rise(variant: int, u: float) -> float:
 	return keys[keys.size() - 1].y
 
 
-# Station u values in perimeter order: the face list ascending, then the back list descending.
-static func crown_stations(variant: int) -> Array:
-	var stations := []
-	for u in RIM_FACE_U[variant]:
-		stations.append({"u": u, "face": true})
-	var back: Array = RIM_CREST[variant].map(func(k): return k.x)
-	back.reverse()
-	for u in back:
-		stations.append({"u": u, "face": false})
-	return stations
-
-
 # Crown-local rings: origin at h0, +x toward the arena, z along the crest (mirrored under the east
-# yaw so u always runs along increasing world Z). Five rings of 12 stations.
+# yaw so the plan's z always runs along increasing world Z). Five rings of 12 stations. Ring 0 is
+# the buried base; the upper rings lean inward per face by the batter and take the crest rise at
+# the station's own final z, so a sloped face keeps its height ceiling.
 static func crown_rings(crown: Dictionary) -> Array[PackedVector3Array]:
 	var v: int = crown["variant"]
-	var stations := crown_stations(v)
+	var table: Dictionary = RIM_PLAN[v]
+	var plan: Array = table["plan"]
+	var slopes := corner_slopes(plan, table["batter"])
 	var zsign := 1.0 if crown["side"] < 0 else -1.0
 	var rings: Array[PackedVector3Array] = []
 	for k in 5:
 		var ring := PackedVector3Array()
-		for s in stations:
-			var u: float = s["u"]
-			var z: float = zsign * (u - 0.5) * crown["width"]
-			if k == 4 and (u <= 0.0 or u >= 1.0):
-				z -= zsign * (u - 0.5) * 2.0 * RIM_END_TRIM
-			var x: float = crown["depth"] * 0.5 * RIM_RING_DEPTH[k] * (1.0 if s["face"] else -1.0)
-			var y: float = -crown["root"] if k == 0 else crest_rise(v, u) * RIM_RING_Y[k]
-			ring.append(Vector3(x, y, z))
+		for j in plan.size():
+			var p: Vector2 = plan[j]
+			var m: Vector2 = slopes[j]
+			if k == 0:
+				ring.append(Vector3(p.x, -crown["root"], zsign * p.y))
+				continue
+			var y := 0.0
+			for _i in 8:
+				y = crest_rise(v, (p.y + m.y * y) / crown["width"] + 0.5) * RIM_RING_Y[k]
+			ring.append(Vector3(p.x + m.x * y, y, zsign * (p.y + m.y * y)))
 		rings.append(ring)
 	return rings
 
 
-# The groove row of band k on face segment i for a variant, or empty.
-static func _fold_band(variant: int, k: int, i: int) -> Array:
-	if not (i in RIM_FOLDS[variant]):
-		return []
-	for row in RIM_FOLD_BANDS[variant]:
-		if row[0] == k:
-			return row
-	return []
-
-
-# A closed solid: four bands of 12 quads, zipped caps, and a local fold on each listed face segment.
+# A closed solid: four bands of 12 quads and zipped caps. No folds.
 static func crown_mesh(crown: Dictionary) -> ArrayMesh:
-	var v: int = crown["variant"]
 	var rings := crown_rings(crown)
-	var n := rings[0].size()
 	var tris := PackedVector3Array()
-	var middle := Vector3.ZERO
-	var rising: bool = crown["family"] != 1
 	for k in 4:
-		for i in n:
-			var j := (i + 1) % n
-			var a := rings[k][i]
-			var b := rings[k][j]
-			var c := rings[k + 1][j]
-			var d := rings[k + 1][i]
-			var chain := _fold_band(v, k, i)
-			if not chain.is_empty():
-				# Corners in perimeter order; the groove runs low to high along world Z.
-				var p := Vector2(chain[1], chain[2])
-				var q := Vector2(chain[3], chain[4])
-				if rising:
-					_fold_quad(tris, a, b, c, d, p, q, RIM_FOLD_DEPTH, middle)
-				else:
-					_fold_quad(tris, d, a, b, c, Vector2(1.0 - p.y, 1.0 - p.x), Vector2(1.0 - q.y, 1.0 - q.x), RIM_FOLD_DEPTH, middle)
-			else:
-				_quad(tris, a, b, c, d, middle)
-	_zip_cap(tris, rings[4], v, Vector3.UP)
-	_zip_cap(tris, rings[0], v, Vector3.DOWN)
+		_wall(tris, rings[k], rings[k + 1])
+	var zsign := 1.0 if crown["side"] < 0 else -1.0
+	_zip_cap(tris, rings[4], zsign, Vector3.UP)
+	_zip_cap(tris, rings[0], zsign, Vector3.DOWN)
 	return _solid(tris)
 
 
-# Triangulates a ring as a strip between its face and back stations, so no radial fan shows.
-static func _zip_cap(tris: PackedVector3Array, ring: PackedVector3Array, variant: int, up: Vector3) -> void:
-	var faces: int = RIM_FACE_U[variant].size()
-	var face_idx := range(faces)
-	var back_idx := range(ring.size() - 1, faces - 1, -1)
+# Triangulates a ring as a strip between its six face stations and six back stations, merged by
+# world Z (`zsign` undoes the east mirror), so no radial fan shows.
+static func _zip_cap(tris: PackedVector3Array, ring: PackedVector3Array, zsign: float, up: Vector3) -> void:
+	var faces := ring.size() / 2
 	var fi := 0
-	var bi := 0
-	var stations := crown_stations(variant)
-	while fi < face_idx.size() - 1 or bi < back_idx.size() - 1:
-		var next_f: float = stations[face_idx[fi + 1]]["u"] if fi < face_idx.size() - 1 else INF
-		var next_b: float = stations[back_idx[bi + 1]]["u"] if bi < back_idx.size() - 1 else INF
+	var bi := ring.size() - 1
+	while fi < faces - 1 or bi > faces:
+		var next_f: float = zsign * ring[fi + 1].z if fi < faces - 1 else INF
+		var next_b: float = zsign * ring[bi - 1].z if bi > faces else INF
 		if next_f <= next_b:
-			_oriented_tri(tris, ring[face_idx[fi]], ring[face_idx[fi + 1]], ring[back_idx[bi]], up)
+			_oriented_tri(tris, ring[fi], ring[fi + 1], ring[bi], up)
 			fi += 1
 		else:
-			_oriented_tri(tris, ring[face_idx[fi]], ring[back_idx[bi + 1]], ring[back_idx[bi]], up)
-			bi += 1
+			_oriented_tri(tris, ring[fi], ring[bi - 1], ring[bi], up)
+			bi -= 1
