@@ -1,0 +1,45 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PASS enemy_winch_drone.glb loads
+asset: 552 T, 3 D
+PASS asset triangles 552 <= 1200
+PASS asset draws 3 <= 3
+PASS asset has no alpha surface
+PASS a winch drone spawns
+PASS one collision shape on the drone (1)
+PASS collider is the base capsule r 0.8 h 2.2
+PASS collider sits at the origin
+PASS the dressing adds no collision object
+PASS radius 0.8, half-height 1.1 and weight 0.8 unchanged
+PASS warn 1.0, live 1.9, rest 3.5, range 18, keep-near 8, keep-far 22 clamped to 16.2 by counter.gd, walk 5.0 and scrap 4 unchanged
+PASS hover, climb, lane length and width, pull, winch, pack reach and health constants equal base
+  source literals missing: []
+PASS the source keeps every base literal (keep_far 22.0, timing, lane, catch, pull and hover lines)
+live assembly: 552 T, 3 D
+PASS the live drone carries its WinchBody and WinchRotor dressing
+PASS the live measure saw meshes (552 T, 3 D)
+PASS live assembly 552 T / 3 D within 1200 / 3
+PASS live assembly has no alpha surface
+bounds: x -1.600..1.600, y -1.900..2.040, z -1.600..1.600
+PASS inside the footprint x -1.7..1.7, z -1.70..1.70
+PASS between y -1.95 and 2.3
+PASS the pose turns the WinchRotor node
+PASS the rotor pivots at its own centre, 2.0 m above the origin
+rotor: radius 1.600, 64 T
+PASS the rotor radius is 1.6 m (1.600)
+PASS the 16-sided rotor (64 T) and 16-sided drum (64 T) stay under 150 T
+PASS _pose still turns the rotor 0.6 rad per physics tick
+PASS the rotor does not take the flashing material
+drum: bottom -1.900, half length 0.460, vertices 174
+PASS the drum is the lowest mass, its underside at -1.90 m
+PASS the drum is 0.9 m long on an X axis (half length 0.46)
+PASS the 16-sided drum has its vertices (174)
+cable exit: 0 triangle hits over 552 triangles
+PASS nothing occludes the cable exit line out to 3 m (0 hits)
+PASS the exit line, walked back, meets the drum (4 triangles)
+PASS the flashing surface is the crew, not the mast, hanger or drum
+PASS the body's paint surface is the enemy's flashing material
+PASS resting state: the body is Fleet oxide (RUST)
+PASS hit state: the existing flash lerps the body toward cream with amber emission
+PASS recovery state: the body returns to oxide
+enemy_winch_drone_asset_test: PASS

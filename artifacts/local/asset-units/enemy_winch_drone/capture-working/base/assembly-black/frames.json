@@ -1,0 +1,310 @@
+{
+	"aabb": [],
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"anchor": "/root/Game",
+	"anchor_offset": [
+		-62.0,
+		33.25,
+		-128.0
+	],
+	"call": [
+		"/root/Game/Spawn_winch_drone:set:40:[\"_rest\",0.0]"
+	],
+	"class": 0,
+	"frames": [
+		{
+			"anchor": [
+				-62.0,
+				33.25,
+				-128.0
+			],
+			"camera_basis": [
+				-1.0,
+				0.0,
+				0.0000000874227765734759,
+				-0.00000000726006765816578,
+				0.996545791625977,
+				-0.0830454975366592,
+				-0.0000000871208030162052,
+				-0.0830454975366592,
+				-0.996545791625977
+			],
+			"centre": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				-62.0,
+				36.25,
+				-158.0
+			],
+			"file": "asset-front30.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_winch_drone": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					-62.0,
+					38.75,
+					-128.0
+				]
+			},
+			"id": "asset-front30",
+			"ortho_size": 0.0,
+			"sha256": "b0a04f88078e93604aaebf663d1b6dbbc45b25c530e239865af04176e23e0110",
+			"target": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"thumb": "asset-front30.thumb.png",
+			"thumb_sha256": "bcf0e5c0203c458683a4f760a7525159465fd2ed6be42e98758da3cc39e34c79"
+		},
+		{
+			"anchor": [
+				-62.0,
+				33.25,
+				-128.0
+			],
+			"camera_basis": [
+				-0.0000000437113882867379,
+				0.0,
+				-1.0,
+				0.0830454975366592,
+				0.996545791625977,
+				-0.00000000363003382908289,
+				0.996545791625977,
+				-0.0830454975366592,
+				-0.0000000435604015081026
+			],
+			"centre": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				-32.0,
+				36.25,
+				-128.0
+			],
+			"file": "asset-side30.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_winch_drone": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					-62.0,
+					38.75,
+					-128.0
+				]
+			},
+			"id": "asset-side30",
+			"ortho_size": 0.0,
+			"sha256": "a0ff22988424359242b43daef4c2130afa064fca5c1a40571cb92b7534c3ea1e",
+			"target": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"thumb": "asset-side30.thumb.png",
+			"thumb_sha256": "96297fba489f1992e252c66f007bf21791ad2ced3cbf640d37c5425be183e850"
+		},
+		{
+			"anchor": [
+				-62.0,
+				33.25,
+				-128.0
+			],
+			"camera_basis": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				0.996545791625977,
+				0.0830454900860786,
+				0.0,
+				-0.0830454900860786,
+				0.996545791625977
+			],
+			"centre": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				-62.0,
+				36.25,
+				-98.0
+			],
+			"file": "asset-rear30.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_winch_drone": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					-62.0,
+					38.75,
+					-128.0
+				]
+			},
+			"id": "asset-rear30",
+			"ortho_size": 0.0,
+			"sha256": "ce2ffe6dbc8df4cbca8cddf2e14f710a9fa8d775f8f9465fa551a8bb30765b0c",
+			"target": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"thumb": "asset-rear30.thumb.png",
+			"thumb_sha256": "295cd856a153497f8f7dfe7a77c47ab99d8486a3a4304a9f8b2f0beaf9cc3494"
+		},
+		{
+			"anchor": [
+				-62.0,
+				33.25,
+				-128.0
+			],
+			"camera_basis": [
+				-1.0,
+				0.0,
+				0.0000000874227765734759,
+				-0.0000000336241470222376,
+				0.923076927661896,
+				-0.384615391492844,
+				-0.0000000806979514322848,
+				-0.384615391492844,
+				-0.923076927661896
+			],
+			"centre": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"exposure": 1.0,
+			"eye": [
+				-62.0,
+				36.25,
+				-134.0
+			],
+			"file": "asset-use6.png",
+			"fov": 65.0,
+			"frozen": {
+				"/root/Game/Spawn_winch_drone": [
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					0.0,
+					0.0,
+					0.0,
+					1.0,
+					-62.0,
+					38.75,
+					-128.0
+				]
+			},
+			"id": "asset-use6",
+			"ortho_size": 0.0,
+			"sha256": "a39acc89a013e5cf439d11f67ced58bd13c382442862f4c2701a15a392808e46",
+			"target": [
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"thumb": "asset-use6.thumb.png",
+			"thumb_sha256": "a7860f082afd0479a43b7c36832307872cc00afe612929e313b6b600bdcfa146"
+		}
+	],
+	"freeze_specs": [
+		"/root/Game/Spawn_winch_drone=0,0,0:-62,38.75,-128"
+	],
+	"frozen_nodes": {
+		"/root/Game/Spawn_winch_drone": {
+			"found": true,
+			"global": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"local": [
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				0.0,
+				0.0,
+				0.0,
+				1.0,
+				-62.0,
+				38.75,
+				-128.0
+			],
+			"path": "/root/Game/Spawn_winch_drone",
+			"spec": "/root/Game/Spawn_winch_drone=0,0,0:-62,38.75,-128"
+		}
+	},
+	"hide": [],
+	"isolate": "",
+	"isolate_rest": false,
+	"mode": "assembly-black",
+	"paused": true,
+	"seed": 280928,
+	"size": [
+		1920,
+		1080
+	],
+	"source_sha256": {
+		"src/core/palette.gd": "1d3a52739f59d7b4f863a7d99d5d587c0e0ccbfb10e5b1745d48d5f127b97af5",
+		"src/presentation/hero_assets.gd": "0579cec1234f4d9cf75c50a4d646af39101bf05fbea53767be0ca9f4510c169d",
+		"src/presentation/spillway_scenery.gd": "c03d9e4edf729addadb142d90873850029638e776d10db2e981a461b45dda5ae",
+		"src/world/terrain.gd": "ae4ecd9aae5213c0db4f281271988bb813741e99b375210119a988a12dae1225",
+		"tools/asset_capture.gd": "12dfb3ede9180a88b390a5582720c6b6255bbcfe4884fc7b64964f9a1a86e40c",
+		"tools/capture_cameras.gd": "26a36059793766f2b979cc375dc21e1d06091ad45fff9ce0bc5e4547af886a53"
+	},
+	"spawn": [
+		"winch_drone@-62,33.25,-128"
+	],
+	"subject": "/root/Game/Spawn_winch_drone",
+	"thumb_size": [
+		480,
+		270
+	],
+	"tool": "asset_capture.gd",
+	"version": 1
+}
