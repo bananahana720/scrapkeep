@@ -20,7 +20,10 @@ const LOOP_KEY := "loop_mode"
 const GUN_KEY := "gun_role"
 const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
-const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY}
+const TELEGRAPH_KEY := "telegraph"
+# telegraph is read by combat/threat_grammar.gd itself (the floor marking is static-drawn,
+# with no tuning in reach): `--telegraph=haze`, default classic.
+const FLAGS := {"loop": LOOP_KEY, "gun": GUN_KEY, "music": MUSIC_KEY, "breath": BREATH_KEY, "telegraph": TELEGRAPH_KEY}
 
 
 static func mode(tuning) -> String:
