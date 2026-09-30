@@ -8,7 +8,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 # The shell's air-factor cue (--hotwire-shell=on --world-one-builds=on): one cue whenever Build's
 # resolved shell factor moves between two fitted values, read from Build.shell_air_changed, so S4,
-# R6 and the K5 inversion coming later share it with no per-inversion code. Three layers are
+# R6 and K5 share it with no per-inversion code. Three layers are
 # counted from that one signal: the signal itself, the ring on the hero pod (hero_assets.gd) and
 # the spring sound (audio.gd), each rise and return told apart. Colour, shape and sound id come
 # from the EventKinds row shell_air_shift.
@@ -290,6 +290,32 @@ func _run() -> void:
 	_release()
 	await _ticks(STEP + 3)
 	_check("shell on, no inversion taken: a sprint gives 0 cues", build.shell_fitted() and not build._second_wind_r6() and _tally() == [0, 0, 0], "tally %s" % [_tally()])
+
+	# --- K5 (Kest), shell on: the glide edge refreshes through the same emit point ----------
+	# Real input as in hotwire_k5_test: a jump press spends the air jump (fixture air_actions 1,
+	# the lifted ball never touched ground), the held jump glides once the ball falls.
+	_fit("demolitions_caster")
+	await _sim(0.3)
+	_setup("demolitions_caster", ["k_ghost", "k_smoke_trail"], true)
+	_lift()
+	_player.state.air_actions = 1
+	await _ticks(STEP)
+	_reset()
+	_player.source.hold = {"jump_held": true}
+	_player.source.press = {"jump_pressed": true}
+	var glided := false
+	for i in 200:
+		await physics_frame
+		if _player.kit.gliding:
+			glided = true
+			break
+	await _ticks(STEP)
+	_check("K5 glide: exactly 1 rise cue on start", glided and build._smoke_trail_k5() and _tally() == [1, 1, 1] and _rises(_sig) == 1,
+		"glided %s, [signal, ring, sound] %s" % [glided, _tally()])
+	_release()
+	await _ticks(STEP + 1)
+	_check("K5 glide end: exactly 1 return cue", not _player.kit.gliding and _tally() == [2, 2, 2] and _returns(_sig) == 1,
+		"[signal, ring, sound] %s, rises %d returns %d" % [_tally(), _rises(_sig), _returns(_sig)])
 
 	if _failures == 0:
 		print("hotwire_cue_test: PASS")
