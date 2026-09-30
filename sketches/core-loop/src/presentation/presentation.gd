@@ -9,6 +9,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const DropJuice := preload("res://src/presentation/drop_juice.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -138,8 +139,9 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 func _on_part(part_id: String, _source: String) -> void:
 	if not auto_banner or not banner.cards:
 		return
-	var entry := _codex_entry(part_id)
-	banner.show_discovery(entry.get("name", part_id.capitalize()), "part", String(entry.get("text", "")), "Found", "part:" + part_id, "part_gained")
+	var row := Parts.row(part_id)
+	var title: String = row.get("name", part_id.capitalize())
+	banner.show_discovery(title, "part", String(row.get("text", "")), "Found", "part:" + part_id, "part_gained")
 
 
 # The registry entry for an id, if the spine's codex offers one.
