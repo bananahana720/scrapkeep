@@ -11,7 +11,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 # Smoke Trail taken. The glide edge is polled from kit.gliding in Build's physics step (no end
 # signal exists), so the mod follows within STEP_TICKS physics ticks. The glide is driven through
 # the real player tick: a jump press spends the air jump, then a held jump while falling makes
-# augments._glide set kit.gliding; nothing here assigns kit.gliding. Fixture: state.air_actions
+# augments._glide set kit.gliding; nothing here sets kit.gliding true (_setup only clears it to
+# false between scenarios, which the next tick overwrites anyway). Fixture: state.air_actions
 # is set to 1 before the press (the lifted ball never touched ground), the press spends it.
 # K5 with S4 or R6 cannot co-occur through UpgradeTree.pick; overlaps are forced fixtures, and
 # the highest active factor wins (a code choice from the R6 entry).
