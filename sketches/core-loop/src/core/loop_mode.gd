@@ -27,7 +27,14 @@ const TELEGRAPH_KEY := "telegraph"
 # floor marking has no tuning in reach; the tuning row makes the flag known and shows it.
 
 
+# The mode the stage entered with (Tuning.latch_stage, called at each stage entry and
+# retry): one value per stage for every reader, so a panel edit never half-applies.
 static func mode(tuning) -> String:
+	return tuning.stage_loop() if tuning != null else "v2"
+
+
+# The row as the panel or the title screen shows it now, which the next stage entry reads.
+static func picked(tuning) -> String:
 	return tuning.option(LOOP_KEY) if tuning != null else "v2"
 
 
