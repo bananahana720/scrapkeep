@@ -292,6 +292,7 @@ func _refit() -> void:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 	else:
 		kit.fit(abilities.id_of(AbilityState.MOVEMENT), abilities.id_of(AbilityState.SMASH))
+	abilities.movement_key = Harpoon.movement_key(kit, tuning)
 	_paint_effects()
 
 
@@ -628,8 +629,8 @@ func _try_crush(body: Node3D) -> void:
 	if kit.sprinting:
 		kit.sprint_left += tree.knob("crush_refund")
 	_rigid.add_collision_exception_with(body)
-	var landing := _begin_landing(body)
 	var closing := kit.line_closing
+	var landing := _begin_landing(body)
 	struck.emit(body, RAM, speed)
 	if landing:
 		_finish_landing(body, closing)
@@ -890,8 +891,8 @@ func pre_contact_velocity(toward: Vector3) -> Vector3:
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	if _crushing.has(enemy.get_instance_id()):
 		return
-	var landing := _begin_landing(enemy)
 	var closing := kit.line_closing
+	var landing := _begin_landing(enemy)
 	var to_enemy := enemy.global_position - ball_position()
 	var before := pre_contact_velocity(to_enemy.normalized() if to_enemy.length() > 0.01 else Vector3.DOWN)
 	var planar := Vector2(before.x, before.z).length()

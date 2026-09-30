@@ -34,6 +34,8 @@ var _combat
 var _source := Intent.Scripted.new()
 var _counts := {}
 var _origin := Vector3.ZERO
+var _smash_speed := 0.0
+var _slam_strength := 0.0
 
 
 func _check(label: String, ok: bool, detail: String) -> void:
@@ -65,6 +67,15 @@ func _bus() -> void:
 		_counts[kind] = 0
 		var tally := _tally.bind(kind)
 		_game.events.get(kind).connect(tally.unbind(arity[kind]) if arity[kind] > 0 else tally)
+	_game.events.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, speed: float): _smash_speed = speed)
+	_game.events.slammed.connect(func(_at: Vector3, strength: float, _flatness: float): _slam_strength = strength)
+
+
+func _keys_of(slot: String) -> String:
+	for record in _player.abilities.slots():
+		if record["slot"] == slot:
+			return record["key"]
+	return ""
 
 
 func _tally(kind: String) -> void:
@@ -221,6 +232,12 @@ func _keys() -> void:
 		await _sim(0.1)
 		_check("keep: %s burst on C, boost on Shift" % name, _counts[burst] == 1 and _counts["boosted"] == 1,
 			"%s %d, plain boosts %d" % [burst, _counts[burst], _counts["boosted"]])
+	var labels := []
+	for setup in [["rivet", "off", "shift"], ["rivet", "shot", "shift"], ["rivet", "shot", "keep"], ["kest", "shot", "keep"], ["sable", "shot", "keep"]]:
+		_pilot(setup[0], setup[1], "self", setup[2])
+		labels.append(_keys_of(AbilityState.MOVEMENT))
+	_check("the bar's movement key follows the layout", labels == ["RMB", "Shift", "C", "C", "RMB"],
+		"Rivet off, shift, keep; Kest keep; Sable keep: %s" % [labels])
 	_pilot("sable", "shot", "self", "shift")
 	_place(ball, Vector3(0, 0, -6))
 	_counts["boosted"] = 0
@@ -380,10 +397,14 @@ func _smash() -> void:
 	_pilot("sable", "shot")
 	var kit = _player.kit
 	var chaser := _spawn("chaser", _point(0, -22, 1.5))
+	# A light ball, so the landing wounds the chaser without killing it and the rewind can be read.
+	_combat.heft_override = 0.4
 	await _sim(0.1)
 	var run := await _haul(chaser, _point(0, 0, 1.4))
 	_check("smash commits and never slows", run["committed"] and run["min"] >= run["floor"] - 0.6,
 		"committed %s at %.1f m/s, slowest during the haul %.1f" % [run["committed"], run["floor"], run["min"]])
+	_check("the landing carries the closing speed", _smash_speed >= run["floor"] - 0.6 and _slam_strength >= 0.7,
+		"harpoon_smashed at %.1f m/s (committed at %.1f), slam strength %.2f (24 m/s is 0.8)" % [_smash_speed, run["floor"], _slam_strength])
 	_check("smash lands once", _counts["harpoon_smashed"] == 1 and _counts["slammed"] == 1 and not kit.hooked,
 		"harpoon_smashed %d, slammed %d, line released %s" % [_counts["harpoon_smashed"], _counts["slammed"], not kit.hooked])
 	var hp_after: float = chaser.hp if is_instance_valid(chaser) else 0.0
@@ -392,6 +413,7 @@ func _smash() -> void:
 	_check("rewind starts at the landing", kit.rewind_left > 0.0 and kit.rewind_left <= _game.tuning.f("harpoon_rewind"),
 		"%.2f s of %.1f s left with the chaser alive at %.1f hp" % [kit.rewind_left, _game.tuning.f("harpoon_rewind"), hp_after])
 
+	_combat.heft_override = 1.0
 	# The spent hook: a press with rewind left fires nothing, and a kill re-seats it at once.
 	_place(_point(0, 0, 1.4))
 	_cam(_point(0, 0, 2.2) + Vector3(0, 0, 4.0), chaser.global_position)

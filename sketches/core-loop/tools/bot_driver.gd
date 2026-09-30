@@ -9,6 +9,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
 const Features := preload("res://src/world/features.gd")
+const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -99,8 +100,11 @@ const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
 const BOOST_GAP := 1.6
 # The ram lap: charge until this close, then run up this far and charge again.
 const CHARGE_CLOSE := 3.8
-# The harpoon hand works the bowl floor (its radius, features.gd) and never bites from the bank
-# or the rim: a haul from up there is a drop without a lip, which is another bot (the rim harpooner).
+# The harpoon hand is the bowl-floor camper's: grounded on the floor (its radius, features.gd) and
+# not within DROP_MEMORY of having been beyond the drop line. A bite sooner is an arrival off the
+# map, which the rule answers with a `miss` and a throw to the lift, so the camper laps and can
+# drop (4 of 4 runs with only the floor and grounded gates did, Warden 213 to 621 of 800 HP).
+# That is the rim harpooner, another bot; DESIGN-NOTES lists it as the open exposure.
 const HARPOON_FLOOR := 30.0
 const RUNUP := 24.0
 const RUNUP_SECONDS := 3.2
@@ -244,6 +248,8 @@ var _lap_contact := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
 var _harpoon_commit := false
+# Seconds since the ball was last beyond the drop line of its fight target.
+var _off_line := 0.0
 
 
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
@@ -985,11 +991,12 @@ func _note_shred(target: Node3D, delta: float) -> void:
 
 
 # With --harpoon on, the fight bites its target from the bowl floor when the reticle holds it
-# and commits the smash once the line is on. RMB and Ctrl go through _drive's hold, which is rebuilt every
-# tick; the bite is a one-tick press.
-func _harpoon_hand(target: Node3D) -> void:
+# and commits the smash once the line is on. RMB and Ctrl go through _drive's hold, which is
+# rebuilt every tick; the bite is a one-tick press.
+func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	_harpoon_commit = false
+	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > WardenDrop.LINE_REACH else _off_line + delta
 	if not kit.harpoon_on:
 		_harpoon_held = false
 		return
@@ -998,14 +1005,15 @@ func _harpoon_hand(target: Node3D) -> void:
 		_harpoon_commit = true
 		return
 	_harpoon_held = false
-	if kit.aim.get("body") == target and kit.rewind_left <= 0.0 and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+	if kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
+			and _off_line > WardenDrop.DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
 		_count("harpoon_bites")
 
 
 func _ram_laps(target: Node3D, aim, delta: float) -> void:
-	_harpoon_hand(target)
+	_harpoon_hand(target, delta)
 	var ball: Vector3 = game.player.ball_position()
 	var at: Vector3 = target.global_position
 	var distance := _flat(ball, at)
