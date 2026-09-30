@@ -621,7 +621,8 @@ static func _winching(kit, intent) -> bool:
 
 # Moves the anchor with the body. The line lets go, keeping the ball's velocity, when
 # the body is gone, stretched past BREAK_STRETCH ranges, or (latched only) passed inside
-# the minimum rope and both radii: an enemy line has no pendulum to dead-stop on.
+# the minimum rope and both radii, measured centre to centre whatever point the bite stored:
+# an enemy line has no pendulum to dead-stop on.
 static func _follow(kit, tuning, origin: Vector3) -> bool:
 	var body = kit.anchor_body
 	if not is_instance_valid(body) or not body.is_inside_tree() or (body.has_method("is_dead") and body.is_dead()):
@@ -634,7 +635,8 @@ static func _follow(kit, tuning, origin: Vector3) -> bool:
 		return false
 	if kit.line_state == LINE_LATCHED:
 		var radius = body.get("radius")
-		if dist <= MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0):
+		var centre_dist := origin.distance_to(body.global_position)
+		if centre_dist <= MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0):
 			kit.drop_line()
 			return false
 	return true
