@@ -211,7 +211,7 @@ func _run() -> void:
 	_check("rise and return ring differ (swell out vs draw in)", rise_ring.get("rose", false) and not ret_ring.get("rose", true) and rise_ring.get("from", 0.0) < ret_ring.get("from", 0.0),
 		"rise starts %s, return starts %s" % [rise_ring.get("from"), ret_ring.get("from")])
 	_check("ring colour, shape and sound id read the one row", rise_ring.get("color", Color.BLACK) == row.get("color") and ret_ring.get("color", Color.BLACK) == row.get("color")
-			and rise_ring.get("shape", "") == row.get("shape") and String(sounds[0][1]) == row.get("sound", "?"),
+			and rise_ring.get("shape", "") == row.get("shape") and sounds.size() > 0 and String(sounds[0][1]) == row.get("sound", "?"),
 		"colour %s, shape %s, sound %s" % [rise_ring.get("color"), rise_ring.get("shape"), sounds[0][1] if sounds.size() > 0 else ""])
 
 	# Shell off: a vault gives nothing.
