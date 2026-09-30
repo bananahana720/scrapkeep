@@ -6,6 +6,7 @@ const WardenKit := preload("res://src/combat/warden_kit.gd")
 const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
 const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
 
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 
@@ -42,6 +43,15 @@ const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
+# The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
+# out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
+# which means heft). No overlay: it is a mesh under the pod.
+const AIR_CUE_ROW := "shell_air_shift"
+const AIR_CUE_SECONDS := 0.45
+const AIR_CUE_RISE := [0.9, 1.9]
+const AIR_CUE_RETURN := [1.9, 0.9]
+const AIR_CUE_RADIUS := 0.62
+const AIR_CUE_NAME := "AirCue"
 
 const SLOTS := {
 	"paint": {"color": Color.WHITE, "vertex": true, "rough": 0.8},
@@ -75,6 +85,8 @@ func setup(ctx_ref) -> void:
 	_prewarm_warden_strokes()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
+	if ctx != null and ctx.get("build") != null and ctx.build.has_signal("shell_air_changed"):
+		ctx.build.shell_air_changed.connect(air_cue)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_node("WardenLook"):
 			_dress_warden.call_deferred(enemy)
@@ -268,6 +280,46 @@ func _process(delta: float) -> void:
 			_wardens.erase(key)
 		else:
 			_update_warden(rec)
+
+
+# The ring for one change of the resolved air factor, on the player's pod (every attached
+# player). The row decides colour and shape; `rose` decides only the direction of the swell.
+func air_cue(_factor: float, rose: bool) -> Node3D:
+	var row: Dictionary = EventKinds.ROWS.get(AIR_CUE_ROW, EventKinds.WORLD_ROWS.get(AIR_CUE_ROW, {}))
+	var made: Node3D = null
+	for rec in _players.values():
+		var pod = rec["pod"]
+		if pod == null or not is_instance_valid(pod):
+			continue
+		for old in pod.get_children():
+			if old.name == AIR_CUE_NAME:
+				pod.remove_child(old)
+				old.queue_free()
+		var ring := MeshInstance3D.new()
+		ring.name = AIR_CUE_NAME
+		var torus := TorusMesh.new()
+		torus.inner_radius = AIR_CUE_RADIUS * 0.86
+		torus.outer_radius = AIR_CUE_RADIUS
+		ring.mesh = torus
+		var mat := StandardMaterial3D.new()
+		var color: Color = row.get("color", Palette.AMBER)
+		mat.albedo_color = color
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		ring.material_override = mat
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ring.set_meta("rose", rose)
+		ring.set_meta("shape", String(row.get("shape", "")))
+		var span: Array = AIR_CUE_RISE if rose else AIR_CUE_RETURN
+		ring.scale = Vector3.ONE * float(span[0])
+		pod.add_child(ring)
+		var tween := ring.create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(ring, "scale", Vector3.ONE * float(span[1]), AIR_CUE_SECONDS).set_ease(Tween.EASE_OUT)
+		tween.tween_property(mat, "albedo_color:a", 0.0, AIR_CUE_SECONDS).from(0.85)
+		tween.chain().tween_callback(ring.queue_free)
+		made = ring
+	return made
 
 
 func _steer_pod(rec: Dictionary, player, delta: float) -> void:

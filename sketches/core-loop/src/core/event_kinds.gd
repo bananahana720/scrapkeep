@@ -595,6 +595,9 @@ static func reward_row(tier: String) -> Dictionary:
 # charge whistle rises, the impact's falls (SOUND-STORY section 7, W6 must).
 const ANCIENT_LIGHT := Palette.ANCIENT
 const WORLD_ROWS := {
+	# The shell's resolved air factor moved (Build.shell_air_changed): one fact for S4, K5 and R6. The ring on the
+	# hero pod, its colour and the released-spring sound read this row; direction is the ring's motion and the pitch.
+	"shell_air_shift": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "shell_spring", "hud": "", "objective": "", "priority": 1},
 	"lift_fired": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "lift_chuff_clank", "hud": "", "objective": "", "priority": 1},
 	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},
 	"cannon_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "cannon_bang_rail_whoosh", "hud": "", "objective": "", "priority": 1},

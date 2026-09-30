@@ -44,7 +44,7 @@ const CODEX := {
 	"s_cannonball": "Vault kicks discharge. Weight launches farther.",
 	"s_beachhead": "Catch distant walls. Launch your weight.",
 	"s_coil_hook": "Release the rope into a cannonball.",
-	"s_face_runner": "Vault kicks hand back your air jump",  # held back until H1: no promise of the inversion
+	"s_face_runner": "Vaults restore jumps. Heavy fins steer harder.",
 	"s_arc_nest": "Mounted bolts chain to another target.",
 	"s_bulwark": "Mounted, shrug off crowd control.",
 }
@@ -221,8 +221,8 @@ func _offers_and_cards() -> void:
 		var same := true
 		for l in lines:
 			same = same and l[1] == CODEX[l[0]]
-		_check("codex lines, S4 held back (flag on, after %s)" % label, same, "%s" % [lines])
-	_check("S4 has no card row", not WorldOneCards.has_row("s_face_runner") and WorldOneCards.has_row("s_cannonball") and WorldOneCards.has_row("s_bulwark"), "rows for S1, S2, S3, S5, S6 only")
+		_check("codex lines (flag on, after %s)" % label, same, "%s" % [lines])
+	_check("S4 has a card row", WorldOneCards.has_row("s_face_runner") and WorldOneCards.has_row("s_cannonball") and WorldOneCards.has_row("s_bulwark"), "rows for S1 to S6")
 	# Flag off: Live Wire in S4's place, every card the node's own effect.
 	var off_pairs := {"": ["s_cannonball", "s_beachhead"], "s_cannonball": ["s_coil_hook", "s_live_wire"], "s_beachhead": ["s_arc_nest", "s_bulwark"]}
 	var off_ok := true
