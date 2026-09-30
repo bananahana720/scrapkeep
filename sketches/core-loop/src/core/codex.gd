@@ -246,7 +246,7 @@ func _load() -> void:
 	var path := storage_dir.path_join(STATE_FILE)
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY)
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"discovered": SafeStore.STRINGS, "found": SafeStore.STRINGS, "found_categories": SafeStore.STRING_MAP})
 	if parsed == null:
 		last_error = "codex file unreadable; kept as %s; starting empty" % SafeStore.quarantine(path)
 		return
@@ -254,9 +254,7 @@ func _load() -> void:
 		_discovered[String(id)] = true
 	for text in parsed.get("found", []):
 		_found.append(String(text))
-	var categories = parsed.get("found_categories", {})
-	if categories is Dictionary:
-		_found_category = categories
+	_found_category = parsed.get("found_categories", {})
 
 
 func _save() -> void:

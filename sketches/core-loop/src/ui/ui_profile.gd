@@ -29,22 +29,23 @@ func load_saved() -> void:
 	discoveries_seen = []
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY)
+	var parsed = _read_disk()
+	if parsed == null:
+		return
+	var uses: Dictionary = parsed.get("glyph_uses", {})
+	for action in uses:
+		glyph_uses[String(action)] = int(uses[action])
+	for id in parsed.get("callouts_seen", []):
+		callouts_seen.append(String(id))
+	for id in parsed.get("discoveries_seen", []):
+		discoveries_seen.append(String(id))
+
+
+func _read_disk() -> Variant:
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"glyph_uses": SafeStore.NUMBERS, "callouts_seen": SafeStore.STRINGS, "discoveries_seen": SafeStore.STRINGS})
 	if parsed == null:
 		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
-		return
-	var uses = parsed.get("glyph_uses", {})
-	if uses is Dictionary:
-		for action in uses:
-			glyph_uses[String(action)] = int(uses[action])
-	var seen = parsed.get("callouts_seen", [])
-	if seen is Array:
-		for id in seen:
-			callouts_seen.append(String(id))
-	var found = parsed.get("discoveries_seen", [])
-	if found is Array:
-		for id in found:
-			discoveries_seen.append(String(id))
+	return parsed
 
 
 func uses(action: String) -> int:
@@ -84,9 +85,8 @@ func mark_discovered(discovery_id: String) -> void:
 func _merge_disk() -> void:
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY)
+	var parsed = _read_disk()
 	if parsed == null:
-		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
 		return
 	for id in parsed.get("callouts_seen", []):
 		if not String(id) in callouts_seen:
@@ -94,10 +94,9 @@ func _merge_disk() -> void:
 	for id in parsed.get("discoveries_seen", []):
 		if not String(id) in discoveries_seen:
 			discoveries_seen.append(String(id))
-	var uses = parsed.get("glyph_uses", {})
-	if uses is Dictionary:
-		for action in uses:
-			glyph_uses[String(action)] = maxi(int(uses[action]), int(glyph_uses.get(String(action), 0)))
+	var uses: Dictionary = parsed.get("glyph_uses", {})
+	for action in uses:
+		glyph_uses[String(action)] = maxi(int(uses[action]), int(glyph_uses.get(String(action), 0)))
 
 
 func save() -> void:

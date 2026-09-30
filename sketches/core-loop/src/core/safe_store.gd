@@ -7,7 +7,7 @@ extends RefCounted
 
 
 static func tmp_path(path: String) -> String:
-	return path + ".tmp"
+	return "%s.%d.tmp" % [path, OS.get_process_id()]
 
 
 static func write_atomic(path: String, text: String) -> Error:
@@ -15,8 +15,12 @@ static func write_atomic(path: String, text: String) -> Error:
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
-	file.store_string(text)
+	var stored := file.store_string(text)
+	var write_err := file.get_error()
 	file.close()
+	if not stored or write_err != OK:
+		DirAccess.remove_absolute(tmp)
+		return write_err if write_err != OK else FAILED
 	var err := DirAccess.rename_absolute(tmp, path)
 	if err != OK:
 		DirAccess.remove_absolute(tmp)
@@ -24,14 +28,45 @@ static func write_atomic(path: String, text: String) -> Error:
 
 
 # The parsed value when the text is JSON of the wanted type (TYPE_DICTIONARY or
-# TYPE_ARRAY), else null.
-static func parse(text: String, type: int) -> Variant:
+# TYPE_ARRAY), else null. A dictionary is also checked against `shape` (key -> SHAPE_*):
+# a listed key that is present with the wrong type makes the whole file unreadable, so a
+# loader never meets a value it cannot handle and a later save cannot drop what it skipped.
+static func parse(text: String, type: int, shape := {}) -> Variant:
 	var json := JSON.new()
 	if json.parse(text) != OK:
 		return null
 	if typeof(json.data) != type:
 		return null
+	for key in shape:
+		if json.data.has(key) and not _shape_ok(json.data[key], shape[key]):
+			return null
 	return json.data
+
+
+const STRINGS := "strings"
+const NUMBERS := "numbers"
+const STRING_MAP := "string_map"
+
+
+static func is_strings(value: Variant) -> bool:
+	return _shape_ok(value, STRINGS)
+
+
+static func _shape_ok(value: Variant, kind: String) -> bool:
+	if kind == STRINGS:
+		return value is Array and _all(value, TYPE_STRING)
+	if kind == NUMBERS:
+		return value is Dictionary and _all(value.values(), TYPE_FLOAT, TYPE_INT)
+	if kind == STRING_MAP:
+		return value is Dictionary and _all(value.values(), TYPE_STRING)
+	return false
+
+
+static func _all(items: Array, type: int, alt := -1) -> bool:
+	for item in items:
+		if typeof(item) != type and typeof(item) != alt:
+			return false
+	return true
 
 
 # Moves an unreadable file aside and returns where it went, or "" when it could not.
