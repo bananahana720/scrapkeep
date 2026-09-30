@@ -192,6 +192,31 @@ Andrew wants feedback solid enough for an alpha in a game about timing, dodging 
 
 **The purpose audit.** Every world-one system is scored on the dimensions it serves: strategy, risk, gambling, performance and skill, personal-best mastery, expression, discovery, spectacle and feel, pacing, momentum cost and readability cost. For each system, it names the decision it hands the player. A system that serves no dimension, or duplicates another, is merged or cut; one that serves several is protected. The audit feeds `DESIGN-V3.md` in wave B, and loop-dependent verdicts wait for the lab sitting.
 
+## Harpoon and winch, the shared verb (Andrew, 2026-09-30)
+
+Andrew wants every pilot to carry a right-click harpoon on a winch, fired from the front of the gyro, as the game's identity. He listed its jobs:
+- reel yourself to surfaces: escape, hang from overhangs, pull-vault over walls;
+- pull, drag, whip and throw enemies;
+- latch a boss and winch-launch a smash onto its open core.
+
+It is skill-based but feasible: a skill shot, or a soft-lock while RMB is held. He left the system design to us.
+- **Scaling.** The base harpoon is modest. Pulling enemies in, whips, throws and the juiced versions come from upgrades, items, and unlocks earned over runs.
+- **The base verb, from the first run.** Harpoon an enemy and winch yourself in for a directed smash. That is the risk-reward: a careless commit lands you in the crowd, and only a ready dash gets you out.
+
+**The pattern, one abstraction up.** A line joins two bodies, the winch shortens it, and the looser end travels.
+- **Fixed ends** (world, the Warden, a mounted ball) pull you in. A footed enemy counts as fixed while your ball is loose, so the base verb falls out of the law.
+- **Pulling enemies to you is the earned layer.** It comes from a brace upgrade, the heft tiers, or both; the prototype tests which.
+- **What flows along the line is each pilot's own.** Sable, the winch master, sends motion (swing, pay-out, pylon mount, Coil Hook). Rivet sends force (tow, whip, throw into pins). Kest sends payloads (stickies ride the line; claymore jump or hang).
+- **Canon.** The Fleet's anti-ball harpoons are salvaged and turned on them (T7). T6's "the fox winches" becomes mastery: every ball carries a line, and only Sable's sings. The player's line never takes the Fleet's HAZARD stripes or its crack-and-creak sound.
+
+**Rulings, 2026-09-30:**
+- At the Warden the harpoon is a **drop finisher**, not a fourth spine. Off a lip or shelf, you hook the open core and winch-smash down. From the bowl floor it clanks for 0, so the camper still fails.
+- **The lab sitting (Part 1) comes first** on the unchanged build. The harpoon builds in parallel as a flag-gated prototype (`proto/core-loop-v3-harpoon`, flags `--harpoon=shot|lock`, `--harpoon-pull=self|heft`, `--harpoon-keys=shift|keep`, all off by default). It is played as Part 3 of `LAB-SITTING.md` and gets its own playtest entry.
+
+**After that verdict:** the full program is canon and spec, the chassis line, the input grammar, the Warden per family, brace and heft tiers, pilot flavours, Fleet counterplay, items and a hot-wired drum, stage hard points, presentation, and deleting the losers. It folds into `DESIGN-V3.md` in wave B; this is not a separate design doc.
+
+**Parked:** co-op tugs and griefing (TADR-005 keeps co-op out of scope), rope wrapping around geometry, cross-run unlocks (meta is deferred), and Kest's claymore against blink as her escape.
+
 ## Tool stack (checked 2026-09-28; research R3)
 
 - **Keep:**
