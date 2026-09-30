@@ -21,8 +21,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 #     dive bomber K1 to K4, gliding infiltrator K2 to K5, ambusher K2 to K6.
 #
 # Evidence limit: a fixture on the real Game; nothing here says the paths feel different.
-# K5's Riveted Shell inversion is not built (hot-wired part H1 is not), so the K5 card keeps
-# its own effect line instead of the Codex one, which would promise the inversion.
+# K5's Riveted Shell inversion is built, so the K5 card shows its Codex line like the rest.
 
 const BASE_EFFECT := {
 	"k_trapper": "Charges wait longer; five can be live",
@@ -37,7 +36,7 @@ const CODEX := {
 	"k_ghost": "Blink unseen. Carry a larger surprise.",
 	"k_tripwire": "Charges spring when enemies approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
-	"k_smoke_trail": "Gliding keeps you cloaked",  # held back until H1: no promise of the inversion
+	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
 	"k_ambush": "Throw payloads without breaking cloak.",
 }
 const LANDING := Vector3(6.0, 0.0, 6.0)
@@ -147,7 +146,7 @@ func _cards() -> void:
 		var same := true
 		for l in lines:
 			same = same and l[1] == CODEX[l[0]]
-		_check("codex lines, K5 held back (flag on, after %s)" % (parent if parent != "" else "start"), same, "%s" % [lines])
+		_check("codex lines (flag on, after %s)" % (parent if parent != "" else "start"), same, "%s" % [lines])
 		seen += lines.size()
 	_check("all six Kest cards seen", seen == 6, "%d cards" % seen)
 	# A class with no rows keeps its own copy under the flag.
