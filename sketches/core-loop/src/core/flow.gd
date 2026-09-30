@@ -151,6 +151,9 @@ func new_run() -> void:
 func _begin_run(chosen: Resource) -> void:
 	in_arena = false
 	boss_active = false
+	if ctx.run_log != null:
+		ctx.run_log.abandon_open_run()
+	ctx.tuning.latch_stage()
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
@@ -160,6 +163,7 @@ func _begin_run(chosen: Resource) -> void:
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
+	ctx.tuning.latch_stage()
 	ctx.run.enter_stage(index)
 	_launched = false
 	_flight = 0.0
@@ -188,6 +192,7 @@ func retry_stage() -> void:
 		_retry_arena()
 		return
 	ctx.run.restore()
+	ctx.tuning.latch_stage()
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1

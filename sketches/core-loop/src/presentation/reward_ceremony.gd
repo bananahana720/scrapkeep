@@ -6,6 +6,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 
 # The reward ceremony (v3 W13, playtest entry 8 follow-up: "treasure find ceremony").
@@ -65,6 +66,7 @@ var payoffs: Array = []
 
 var _seen := {}
 var _seen_path := ""
+var last_error := ""
 var _queue: Array = []
 var _cards: Array = []
 var _active := {}
@@ -620,20 +622,23 @@ func _load_seen() -> void:
 	_seen = {}
 	if not FileAccess.file_exists(_seen_path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(_seen_path))
-	if parsed is Array:
-		for id in parsed:
-			_seen[String(id)] = true
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(_seen_path), TYPE_ARRAY)
+	if parsed != null and not SafeStore.is_strings(parsed):
+		parsed = null
+	if parsed == null:
+		last_error = "unreadable %s; kept as %s" % [_seen_path, SafeStore.quarantine(_seen_path)]
+		return
+	for id in parsed:
+		_seen[String(id)] = true
 
 
 func _mark_seen(part_id: String) -> void:
 	if _seen.has(part_id):
 		return
 	_seen[part_id] = true
-	var file := FileAccess.open(_seen_path, FileAccess.WRITE)
-	if file != null:
-		file.store_string(JSON.stringify(_seen.keys()))
-		file.close()
+	var err := SafeStore.write_atomic(_seen_path, JSON.stringify(_seen.keys()))
+	if err != OK:
+		last_error = "cannot save %s: %s" % [_seen_path, error_string(err)]
 
 
 func seen(part_id: String) -> bool:

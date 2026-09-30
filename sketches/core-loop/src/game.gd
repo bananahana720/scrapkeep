@@ -151,6 +151,7 @@ func _ready() -> void:
 	run_log = RunLog.new()
 	add_child(run_log)
 	run_log.setup(events, run, player, codex, storage_dir)
+	ctx.run_log = run_log
 
 	world = _module(World)
 	preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(1))

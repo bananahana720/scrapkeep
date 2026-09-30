@@ -355,10 +355,11 @@ static func wear_rate(speed: float, cruise: float) -> float:
 	return WEAR_PER_MINUTE / 60.0 * clampf(speed / cruise, 0.0, 1.0)
 
 
-# Rolling friction takes whole units of mass. `active` is false while paused, in the bay
+# Rolling friction takes whole units of mass, and accrues only while a whole unit is left to
+# take, so a fractional remainder never banks debt for the next pickup. `active` is false while paused, in the bay
 # and in authored transfers or flights; wear never touches the hull and makes no event.
 func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
-	if not armor_mode or not wear_on or not active or not alive() or delta <= 0.0 or mass <= 0.0:
+	if not armor_mode or not wear_on or not active or not alive() or delta <= 0.0 or mass < 1.0:
 		return
 	_wear_accum += wear_rate(speed, cruise) * delta
 	var whole := minf(floorf(_wear_accum), mass)

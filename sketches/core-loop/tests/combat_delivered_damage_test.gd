@@ -145,6 +145,9 @@ func _run_all() -> void:
 		"a slam on the Warden in v2 left _warden_slam_hits %d and _warden_drops %d (needs 1 and 0)"
 			% [_combat._warden_slam_hits, _combat._warden_drops])
 	ctx.tuning.set_option("loop_mode", "drop")
+	ctx.tuning.latch_stage()
+	_report("drop_mode_in_force", LoopMode.is_drop(ctx.tuning),
+		"after picking loop_mode drop the stage read '%s' (needs drop)" % [LoopMode.mode(ctx.tuning)])
 	_combat.strike(warden, "slam", hp_w * 0.1)
 	_combat.strike(warden, "slam", hp_w * 0.1)
 	_combat.strike(warden, "stomp", hp_w * 0.1)
@@ -229,6 +232,9 @@ func _run_all() -> void:
 	# A break outside loop_mode "drop" reads null drops (unmeasured, not 0) and a real 0
 	# slam hits.
 	ctx.tuning.set_option("loop_mode", "v2")
+	ctx.tuning.latch_stage()
+	_report("v2_mode_in_force", not LoopMode.is_drop(ctx.tuning),
+		"after picking loop_mode v2 the stage read '%s' (needs v2)" % [LoopMode.mode(ctx.tuning)])
 	ctx.events.beacon_unsealed.emit(2)
 	var drops_v2: Dictionary = _combat.delivered_damage()["drops_to_break"]
 	var slam_hits_v2: Dictionary = _combat.delivered_damage()["warden_slam_hits"]

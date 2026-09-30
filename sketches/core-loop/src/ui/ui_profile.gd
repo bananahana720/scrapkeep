@@ -5,6 +5,8 @@ extends RefCounted
 # which first-run callouts have shown. Storage failures never throw; the profile keeps
 # working in memory, as the codex does.
 
+const SafeStore := preload("res://src/core/safe_store.gd")
+
 const FILE := "ui-profile.json"
 
 var path := ""
@@ -27,22 +29,23 @@ func load_saved() -> void:
 	discoveries_seen = []
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
-		last_error = "unreadable %s" % path
+	var parsed = _read_disk()
+	if parsed == null:
 		return
-	var uses = parsed.get("glyph_uses", {})
-	if uses is Dictionary:
-		for action in uses:
-			glyph_uses[String(action)] = int(uses[action])
-	var seen = parsed.get("callouts_seen", [])
-	if seen is Array:
-		for id in seen:
-			callouts_seen.append(String(id))
-	var found = parsed.get("discoveries_seen", [])
-	if found is Array:
-		for id in found:
-			discoveries_seen.append(String(id))
+	var uses: Dictionary = parsed.get("glyph_uses", {})
+	for action in uses:
+		glyph_uses[String(action)] = int(uses[action])
+	for id in parsed.get("callouts_seen", []):
+		callouts_seen.append(String(id))
+	for id in parsed.get("discoveries_seen", []):
+		discoveries_seen.append(String(id))
+
+
+func _read_disk() -> Variant:
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"glyph_uses": SafeStore.NUMBERS, "callouts_seen": SafeStore.STRINGS, "discoveries_seen": SafeStore.STRINGS})
+	if parsed == null:
+		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
+	return parsed
 
 
 func uses(action: String) -> int:
@@ -82,8 +85,8 @@ func mark_discovered(discovery_id: String) -> void:
 func _merge_disk() -> void:
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
+	var parsed = _read_disk()
+	if parsed == null:
 		return
 	for id in parsed.get("callouts_seen", []):
 		if not String(id) in callouts_seen:
@@ -91,17 +94,13 @@ func _merge_disk() -> void:
 	for id in parsed.get("discoveries_seen", []):
 		if not String(id) in discoveries_seen:
 			discoveries_seen.append(String(id))
-	var uses = parsed.get("glyph_uses", {})
-	if uses is Dictionary:
-		for action in uses:
-			glyph_uses[String(action)] = maxi(int(uses[action]), int(glyph_uses.get(String(action), 0)))
+	var uses: Dictionary = parsed.get("glyph_uses", {})
+	for action in uses:
+		glyph_uses[String(action)] = maxi(int(uses[action]), int(glyph_uses.get(String(action), 0)))
 
 
 func save() -> void:
 	_merge_disk()
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		last_error = error_string(FileAccess.get_open_error())
-		return
-	file.store_string(JSON.stringify({"glyph_uses": glyph_uses, "callouts_seen": callouts_seen, "discoveries_seen": discoveries_seen}, "  "))
-	file.close()
+	var err := SafeStore.write_atomic(path, JSON.stringify({"glyph_uses": glyph_uses, "callouts_seen": callouts_seen, "discoveries_seen": discoveries_seen}, "  "))
+	if err != OK:
+		last_error = error_string(err)

@@ -594,11 +594,11 @@ func _begun_joins() -> void:
 	var asked: int = sl.clock
 	sl.start_level(asked)
 	var lbuf := _render_to(sl, asked + 6000, 997)
-	var calm_in := _enters(sl, asked).filter(func(e): return e[2] == "travel")
+	var calm_in := _enters(sl, asked).filter(func(e): return e[2] == "calm")
 	var mid_sl := _peak(lbuf, 250, 400)
 	var sl_ok: bool = sl_begun and calm_in.size() == 1 and int(calm_in[0][1]) == asked + join and mid_sl > 0.02
 	ok = ok and sl_ok
-	rows.append("start_level on a begun join at %d: travel (the pressure still asks for it) enters %s (want %d, the whole join), the old join still sounds %.3f at 250..400 frames" % [asked, calm_in.map(func(e): return e[1]), asked + join, mid_sl])
+	rows.append("start_level on a begun join at %d: a fresh level starts calm and enters %s (want %d, the whole join), the old join still sounds %.3f at 250..400 frames" % [asked, calm_in.map(func(e): return e[1]), asked + join, mid_sl])
 	# 3. stop_at: the section plays to the sample and fades from there.
 	var sa := Ace.new()
 	sa.start_level(0)
