@@ -23,6 +23,9 @@ const EXPECTED := {
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
+	"harpoon": ["harpoon", "lock", "bogus", "launch"],
+	"harpoon-pull": ["harpoon_pull", "heft", "bogus", "launch"],
+	"harpoon-keys": ["harpoon_keys", "keep", "bogus", "launch"],
 }
 
 var _failures := 0

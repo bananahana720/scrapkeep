@@ -10,18 +10,23 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 #         with every window nobody drops through.
 #   full  the same camping never staggers the Warden, and the gun deals 0 outside a
 #         stagger, so the camper opens nothing without a drop.
+#   harpoon  the hold arm again with --harpoon=lock: the bot's harpoon hand latches the Warden and
+#         commits the haul from the bowl floor (DESIGN-NOTES "Harpoon and winch"), lands smashes on
+#         it, and still deals 0: a line smash from the bowl is `floor` like any other arrival.
 # The camper is given the HP to last the whole span, so the zero is measured over all of
 # it. Both spans are shorter than the bot runner's 240 s (DESIGN-NOTES, v3 L1) so a loaded
 # machine still finishes inside the smoke run's per-test limit; each has a window floor
 # scaled to its span (this seed opens about 0.16 windows per sim second). The span runs at SCALE with the physics tick raised by the same factor, so every
 # step is the game's own 1/90 s and the ball moves exactly as it does at 1x.
 #
-# Evidence limit: this proves the damage rule refuses a camper; it says nothing about
-# how the fight feels.
+# Evidence limit: this proves the damage rule refuses a camper, harpoon included; it says
+# nothing about how the fight feels.
 
 const SEED := 3
-const CAMP_SECONDS := {"hold": 120.0, "full": 60.0}
-const MIN_WINDOWS := {"hold": 15, "full": 8}
+const CAMP_SECONDS := {"hold": 120.0, "full": 60.0, "harpoon": 60.0}
+const MIN_WINDOWS := {"hold": 15, "full": 8, "harpoon": 8}
+# Harpoon smashes the bot must land on the Warden for the harpoon arm not to be vacuous.
+const MIN_SMASHES := 3
 const SCALE := 4.0
 
 var _game
@@ -29,6 +34,7 @@ var _driver
 var _failures := 0
 var _role := "hold"
 var _sim := 0.0
+var _smashes := 0
 var _done := false
 var _base_tps := 90
 
@@ -59,6 +65,9 @@ func _physics_process(delta: float) -> bool:
 		_game.ctx._hit_stop = Callable()
 		_driver = BotDriver.new(_game, "skipper", SEED)
 		_driver.start()
+		_game.events.harpoon_smashed.connect(func(enemy: Node3D, _at: Vector3, _speed: float):
+			if is_instance_valid(enemy) and enemy == _game.flow.warden:
+				_smashes += 1)
 		return false
 	if _game.flow.state_name() in ["stage", "beacon"] and _game.run.max_hp < 9000.0:
 		_game.run.set_max_hp(99999.0)
@@ -92,8 +101,20 @@ func _judge() -> bool:
 		_driver.outcome = ""
 		_sim = 0.0
 		return false
-	_report("full camper opens nothing", lasted and warden.hp == warden.max_hp and drop.staggers == 0
-		and d["stagger_gun"] == 0.0 and d["gun"] == 0.0 and drop.windows >= MIN_WINDOWS["full"], summary)
+	if _role == "full":
+		_report("full camper opens nothing", lasted and warden.hp == warden.max_hp and drop.staggers == 0
+			and d["stagger_gun"] == 0.0 and d["gun"] == 0.0 and drop.windows >= MIN_WINDOWS["full"], summary)
+		_role = "harpoon"
+		_game.tuning.set_option("gun_role", "hold")
+		_game.tuning.set_option("harpoon", "lock")
+		_game.flow.retry_stage()
+		_driver.outcome = ""
+		_sim = 0.0
+		_smashes = 0
+		return false
+	_report("harpoon camper deals 0", lasted and warden.hp == warden.max_hp and drop.drops_landed == 0 and drop.staggers == 0
+		and drop.windows >= MIN_WINDOWS["harpoon"] and _smashes >= MIN_SMASHES,
+		"%s; %d harpoon smashes landed on the Warden (need %d)" % [summary, _smashes, MIN_SMASHES])
 	return _finish()
 
 

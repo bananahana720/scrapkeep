@@ -12,10 +12,12 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 # before untouched. Nothing consumes the rows yet.
 
 const DOC := "res://design-v3/research/attack-reads/ATTACK-READS.md"
-# Hashes of var_to_str at base e05c1e3, before the attack rows were added.
+# Hashes of var_to_str at base e05c1e3, before the attack rows were added. ROWS was re-pinned
+# for the harpoon prototype, which adds harpoon_bit and harpoon_smashed and moves grapple_fired
+# off Kest's amber onto the rope craft's colour; the rows that existed are otherwise unchanged.
 const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
-const ROWS_HASH := 2558770678
+const ROWS_HASH := 2204365968
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
