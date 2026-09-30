@@ -48,7 +48,6 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 
 
 func _on_run_started(class_id: String) -> void:
-	_abandon()
 	_stages = {}
 	_in_arena = false
 	_phase = 0
@@ -148,6 +147,11 @@ func _on_boss_phase(phase: int, _name: String) -> void:
 
 func _on_run_ended(won: bool) -> void:
 	_write("won" if won else "lost")
+
+
+# Flow calls this before run state resets, so the line carries the run it closes.
+func abandon_open_run() -> void:
+	_abandon()
 
 
 func _abandon() -> void:

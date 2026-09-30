@@ -12,7 +12,6 @@ const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 var _game
 var _failures := 0
 var _frames := 0
-var _expected_mass := 0.0
 
 
 func _initialize() -> void:
@@ -49,9 +48,10 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	_game.run.armor_mode = true
 	_game.run.note_anomaly("probe_marker")
-	_game.run.mass = 7.5
+	_game.run.mass += 7.5
 	_game.run.metrics["probe_metric"] = 3
 	_game.codex.mark_discovered("probe_entry", _game.player.ball_position())
+	var mass_before: float = _game.run.mass
 	_game.flow.new_run()
 	var path: String = _game.storage_dir.path_join(RunLog.LOG_FILE)
 	var lines := FileAccess.get_file_as_string(path).strip_edges().split("\n", false)
@@ -63,7 +63,7 @@ func _physics_process(_delta: float) -> bool:
 	_check("codex", (line.get("codex", []) as Array).has("probe_entry"), JSON.stringify(line.get("codex", [])))
 	var durability: Dictionary = line.get("durability", {})
 	_check("metrics", durability.get("probe_metric") == 3, JSON.stringify(durability))
-	_check("mass", is_equal_approx(float(durability.get("mass_end", -1.0)), 7.5), "mass_end %s" % durability.get("mass_end"))
+	_check("mass", mass_before > 7.0 and is_equal_approx(float(durability.get("mass_end", -1.0)), mass_before), "mass_end %s" % durability.get("mass_end"))
 	print("run_log_abandon_test: %s" % ("PASS" if _failures == 0 else "FAIL"))
 	quit(1 if _failures > 0 else 0)
 	return true
