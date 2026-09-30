@@ -82,6 +82,9 @@ const TRIM_DB := {
 	"armor_deflect": -10.0,
 	# Rivet's wear trail: one soft sputter per patch (world one, --wear=on).
 	"wear_sputter": -14.0,
+	# The shell's air factor moved: a released spring, an up-and-settle boing (audio.gd plays it
+	# up a fifth for the rise and down a fourth for the return).
+	"shell_spring": -9.0,
 }
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -211,6 +214,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _deflect()
 		"wear_sputter":
 			return _sputter()
+		"shell_spring":
+			return _shell_spring()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -1221,6 +1226,12 @@ static func _kill_chain_tier() -> PackedFloat32Array:
 static func _drop_landing() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.85], [_tone(0.12, 260.0, 620.0, "sine", 26.0), Synth.seconds(0.02), 0.7],
 		[_noise(0.03, 5000.0, 3000.0, 120.0), 0, 0.4]])
+
+
+# The shell's released spring: a sine that snaps up and settles back, with a small metal tick.
+static func _shell_spring() -> PackedFloat32Array:
+	return _mix([[_tone(0.16, 240.0, 620.0, "sine", 14.0), 0, 0.9], [_tone(0.22, 620.0, 410.0, "sine", 16.0), Synth.seconds(0.05), 0.6],
+		[_noise(0.02, 4500.0, 3000.0, 200.0), 0, 0.3]])
 
 
 # The held-door ready pulse, class-independent: a bright blip on the next sixteenth, so

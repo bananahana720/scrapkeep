@@ -7,12 +7,11 @@ extends RefCounted
 # Rivet rows join this table in their own units; nothing else needs to change.
 
 const ROWS := {
-	# Sable, S1 to S3, S5 and S6. S4 (s_face_runner) is held back: its Codex line "Vaults restore
-	# jumps. Heavy fins steer harder." names the Riveted Shell inversion, which needs hot-wired
-	# part H1. Add the row when H1 lands.
+	# Sable, S1 to S6.
 	"s_cannonball": "Vault kicks discharge. Weight launches farther.",
 	"s_beachhead": "Catch distant walls. Launch your weight.",
 	"s_coil_hook": "Release the rope into a cannonball.",
+	"s_face_runner": "Vaults restore jumps. Heavy fins steer harder.",
 	"s_arc_nest": "Mounted bolts chain to another target.",
 	"s_bulwark": "Mounted, shrug off crowd control.",
 	# Kest, K1 to K6.
@@ -23,14 +22,13 @@ const ROWS := {
 	# k_smoke_trail is held back: its Codex line "Glide cloaked. Heavy fins steer harder." names
 	# the Riveted Shell inversion, which needs hot-wired part H1. Add the row when H1 lands.
 	"k_ambush": "Throw payloads without breaking cloak.",
-	# Rivet, R1 to R5. R6 (r_second_wind) is held back: its Codex line "Bank two sprints. Heavy
-	# fins open during sprint." names the Riveted Shell cancellation, which needs hot-wired part
-	# H1. Add the row when H1 lands.
+	# Rivet, R1 to R6.
 	"r_gunline": "Twin bolts sweep the running line.",
 	"r_juggernaut": "Starting a sprint blasts enemies back.",
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of rebounding.",
+	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
 }
 
 
