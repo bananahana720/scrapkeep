@@ -169,7 +169,7 @@ func refresh_lab_row() -> void:
 	var gun := button_for("gun")
 	var breath := button_for("breath")
 	if loop != null:
-		loop.text = "Loop: %s" % LoopMode.mode(game.tuning)
+		loop.text = "Loop: %s" % LoopMode.picked(game.tuning)
 	if gun != null:
 		gun.text = "Gun: %s" % LoopMode.gun_role(game.tuning)
 	if breath != null:
