@@ -65,3 +65,19 @@ func _run_checks() -> void:
 	_game._screen_key(KEY_C)
 	_report("deliberate C", flow.state_name() == "class_select",
 		"C after the guard ran out reached %s" % flow.state_name())
+
+	_game.tuning.set_option("harpoon_keys", "shift")
+	flow.choose_class(1)
+	run.damage(9999.0, "test")
+	var dead_default: bool = flow.state_name() == "dead"
+	_game._screen_key(KEY_C)
+	_report("default layout C", dead_default and flow.state_name() == "class_select",
+		"died %s, C at once on the death screen under the default layout reached %s" % [dead_default, flow.state_name()])
+	_game.tuning.set_option("harpoon_keys", "keep")
+	_game.tuning.set_option("harpoon", "off")
+	flow.choose_class(1)
+	run.damage(9999.0, "test")
+	var dead_off: bool = flow.state_name() == "dead"
+	_game._screen_key(KEY_C)
+	_report("harpoon off C", dead_off and flow.state_name() == "class_select",
+		"died %s, C at once with the harpoon off reached %s" % [dead_off, flow.state_name()])
