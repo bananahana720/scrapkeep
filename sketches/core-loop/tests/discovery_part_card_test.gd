@@ -16,7 +16,8 @@ func _initialize() -> void:
 	root.add_child(banner)
 	banner.cards = true
 	var p = Presentation.new()
-	p.ctx = {"codex": Codex.new()}
+	var codex = Codex.new()
+	p.ctx = {"codex": codex}
 	p.banner = banner
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
@@ -38,5 +39,8 @@ func _initialize() -> void:
 			fails += 1
 		else:
 			print("ok %s: \"%s\" / \"%s\"" % [id, want_name, want_text])
+	p.free()
+	codex.free()
+	banner.free()
 	print("discovery_part_card_test: %s" % ("FAIL" if fails > 0 else "PASS"))
 	quit(1 if fails > 0 else 0)
