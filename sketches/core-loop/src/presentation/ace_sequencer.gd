@@ -192,6 +192,8 @@ func start_level(at: int) -> void:
 	hold_until = -1
 	warden_state = "closed"
 	threat = 0
+	pressure = 0.0
+	in_bay = false
 	_schedule(_desired(), maxi(at, earliest))
 
 
