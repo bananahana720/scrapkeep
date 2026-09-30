@@ -30,6 +30,7 @@ const Presentation := preload("res://src/presentation/presentation.gd")
 const REEL_NOTCH := 1.2
 const RESTART_HOLD := 0.5
 const SUMMARY_GUARD := 0.75
+const DEAD_GUARD := 0.5
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const HIT_STOP_BUDGET := 0.12
@@ -88,6 +89,9 @@ var _restart_latched := false
 # Seconds before the summary takes a key: the victory beat ends while the player may
 # still be pressing Space to jump, and the run's only summary must stay readable.
 var summary_guard_left := 0.0
+# Seconds before the death screen's C takes a press: C is the burst key under the keep
+# layout, so a reflex press as the ball dies must not cost the run its retry.
+var dead_guard_left := 0.0
 var _hit_stopped := false
 # The loop modes' hit-stop budget: [msec, seconds] per stop taken, and the running totals.
 var _stop_log: Array = []
@@ -102,7 +106,9 @@ func _ready() -> void:
 	add_child(events)
 	events.flow_changed.connect(func(state: String):
 		if state == "summary":
-			summary_guard_left = SUMMARY_GUARD)
+			summary_guard_left = SUMMARY_GUARD
+		if state == "dead":
+			dead_guard_left = DEAD_GUARD)
 	run = RunState.new(events)
 	tuning = Tuning.new()
 	tuning.apply_cmdline("launch")
@@ -227,6 +233,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
+	dead_guard_left = maxf(0.0, dead_guard_left - delta)
 	if test_mode:
 		return
 	step_restart_hold(delta, Input.is_physical_key_pressed(KEY_R))
@@ -472,6 +479,8 @@ func _screen_key(key: int) -> bool:
 				flow.new_run()
 				return true
 			if key == KEY_C:
+				if dead_guard_left > 0.0:
+					return true
 				flow.open_class_select()
 				return true
 			if key == KEY_T and flow.can_replay_final_stage():
