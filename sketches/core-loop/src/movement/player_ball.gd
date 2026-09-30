@@ -904,7 +904,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		refresh_air()
 		kit.rewind_left = 0.0
 		state.impact = maxf(state.impact, -before.y)
-		_rigid.set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
+		set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0)
 		shockwave.emit(enemy.global_position, 0.6)
 		struck.emit(enemy, STOMP, -before.y)
@@ -952,7 +952,7 @@ func _rebounds_off(enemy: Node3D) -> bool:
 # fast enough for one.
 func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, away: Vector3) -> void:
 	var out := Contact.rebound_velocity(before, normal, tuning.f("jump_speed"))
-	_rigid.set_velocity_now(out)
+	set_velocity_now(out)
 	refresh_air()
 	state.impact = maxf(state.impact, -before.dot(normal))
 	enemy.knock(away + Vector3.UP * 0.2, 6.0)
