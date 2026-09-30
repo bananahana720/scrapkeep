@@ -83,11 +83,14 @@ static func movement_key(kit, tuning) -> String:
 	return "Shift" if tuning.option("harpoon_keys") == "shift" else "C"
 
 
-# Whether the class movement burst can fire now: Rivet's sprint or Kest's blink with a
-# charge (or Kest's free blink out of the cloak).
+# Whether the class movement burst can take a press this tick: Rivet's sprint with a
+# charge and not already running, Kest's blink with a charge (or her free blink out of the
+# cloak). A slam plant or a pylon mount stands the burst down, so Shift stays the boost.
 static func burst_ready(kit) -> bool:
+	if Augments.holding(kit):
+		return false
 	if kit.on(Augments.SPRINT):
-		return kit.abilities.ready(AbilityState.MOVEMENT)
+		return kit.abilities.ready(AbilityState.MOVEMENT) and not kit.sprinting
 	if kit.on(Augments.BLINK):
 		return kit.abilities.ready(AbilityState.MOVEMENT) or (kit.cloaked and kit.knob("cloak_free_blink"))
 	return false
