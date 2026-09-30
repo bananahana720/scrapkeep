@@ -20,6 +20,9 @@ var rides := 0
 var _plate: MeshInstance3D
 var _side := Vector3.RIGHT
 
+# C21: one cached Fleet crew/cart and one painted plate at the original centre pivot.
+static var _shared: Dictionary = {}
+
 
 func _configure(threat: float) -> void:
 	_set_health(HP * threat)
@@ -32,14 +35,41 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	_crew.free()
+	_crew = null
+	var parts := _parts()
+	var body := MeshInstance3D.new()
+	body.name = "RampBody"
+	body.mesh = parts["body"]
+	body.set_surface_override_material(parts["flash"], _material)
+	add_child(body)
 	_plate = MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(PLATE_RADIUS * 1.6, 0.18, PLATE_RADIUS * 1.6)
-	_plate.mesh = box
-	_plate.material_override = Palette.striped(Palette.CHARCOAL, Palette.HAZARD)
+	_plate.name = "RampPlate"
+	_plate.mesh = parts["plate"]
 	_plate.position = Vector3(0.0, CREW_HALF + 0.4, -0.4)
 	_plate.scale = Vector3.ONE * 0.4
 	add_child(_plate)
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_ramp_flipper.glb") as PackedScene).instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var body: Mesh = (scene.find_child("RampBody", true, false) as MeshInstance3D).mesh.duplicate()
+	var plate: Mesh = (scene.find_child("RampPlate", true, false) as MeshInstance3D).mesh.duplicate()
+	var flash := -1
+	for i in body.get_surface_count():
+		if body.surface_get_material(i).resource_name == "fleet_paint":
+			flash = i
+		body.surface_set_material(i, painted)
+	for i in plate.get_surface_count():
+		plate.surface_set_material(i, painted)
+	assert(flash >= 0, "RampBody must contain fleet_paint")
+	_shared = {"body": body, "plate": plate, "flash": flash}
+	scene.free()
+	return _shared
 
 
 func _commit(_to_ball: Vector3) -> Node3D:
