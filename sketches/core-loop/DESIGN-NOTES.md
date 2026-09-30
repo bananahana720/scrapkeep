@@ -1373,6 +1373,7 @@ S4 and R6 gain their card rows, and every change of Riveted Shell's resolved air
 - **Scratch mutants (each fails its checks, reverted).** no emit; emit on every refresh; same cue for rise and return; no shell gate (fails the toggle check); no sound; no ring; ring under a CanvasLayer; same ring motion both ways; same pitch both ways.
 - **Evidence limit.** Counts, parameters and node types on the real Game, headless. Whether the ring reads at chase distance and how the spring feels are unjudged; Andrew's play decides both.
 - **Follow-ups.** K5's card row. If the ring is too faint on a heavy shell, tune `AIR_CUE_RADIUS`; the pitch split lives in two constants in `audio.gd`.
+
 ## K5 card row (--world-one-builds=on, 2026-09-29)
 
 Smoke Trail's world-one card now shows its ruling text, "Glide cloaked. Heavy fins steer harder." (BUILD-SYSTEMS.md K5). No mechanic, number or cue changed.
@@ -1386,5 +1387,5 @@ Smoke Trail's world-one card now shows its ruling text, "Glide cloaked. Heavy fi
 
 Closes the haze perf debt (lane-ledger "haze": inconclusive at load 19 to 25). Ten native `perf_bench` runs on s3 at 1920x1080 (Godot 4.7.2, RTX 4080, X11), strictly alternating classic, haze x5 each, warm 300 frames and 20 s, load1 3.16 to 5.02 before each, none discarded. Mode proved by the command line plus a probe of `Painter.haze_on()` and the material key; `mark_materials` is 14 in both modes, so it is not a mode receipt.
 - Per-run p99 frame ms, min / median / max: classic 6.63 / 7.33 / 9.57, haze 5.84 / 7.61 / 10.30. p50 frame: classic 2.09 / 2.85 / 3.32, haze 2.37 / 2.51 / 3.63. Process p99 1.54 / 1.71 / 1.74 vs 1.31 / 1.69 / 1.95; GPU p99 0.63 / 0.75 / 0.81 vs 0.63 / 0.73 / 1.00.
-- Every ranges-overlap test came out inside the run-to-run spread, including draws (bimodal per run in both modes, about 480 to 735 or 1440 to 1525 at p50). No ablation was needed. Haze has no measurable cost on s3; the sample cannot rule out a sub-millisecond difference under the 3 ms p99 spread.
+- Every ranges-overlap test came out inside the run-to-run spread, including draws (per-run p50 classic 476 to 735, haze 531 to 1525; p99 classic 626 to 1649, haze 790 to 1638; a high-draw phase of about 1440 to 1650 shows up at p99 in both modes and at p50 in two haze runs, cause not investigated). No ablation was needed. Haze has no measurable cost on s3; the sample cannot rule out a sub-millisecond difference under the 3 ms p99 spread.
 - Evidence and scripts (untracked): `artifacts/local/perf/haze/` (RESULTS.md, run JSONs, loadavg, commands, `run_one.sh`, `drive.sh`).
