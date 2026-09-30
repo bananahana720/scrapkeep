@@ -888,12 +888,13 @@ async function main(argv) {
     return;
   }
   const passthrough = argv.indexOf("--");
-  const extra = passthrough === -1 ? [] : argv.slice(passthrough + 1);
+  const afterDashes = passthrough === -1 ? [] : argv.slice(passthrough + 1);
   const words = passthrough === -1 ? argv : argv.slice(0, passthrough);
   const entries = catalogue(root);
 
   let command = words[0];
   let name = words[1];
+  let launchWords = words.slice(2);
   // A bare name is the common case: `scrapkeep mobility` should just play it.
   const verbs = ["play", "test", "watch", "shot", "list", "help"];
   if (command !== undefined && command.startsWith("--")) {
@@ -901,6 +902,7 @@ async function main(argv) {
   } else if (command !== undefined && !verbs.includes(command)) {
     name = command;
     command = "play";
+    launchWords = words.slice(1);
   }
   if (command === undefined) {
     command = "list";
@@ -920,6 +922,9 @@ async function main(argv) {
     // Each sketch owns its own keys (core-loop's Esc opens a pause menu), so
     // the launcher states only what holds for every sketch.
     console.log(dim("  Controls are in the game; closing its window quits.\n"));
+    // `scrapkeep core-loop-v3 --loop=drop` is the documented form, so words
+    // after the name reach Godot just as those after `--` do.
+    const extra = [...launchWords, ...afterDashes];
     const result = spawnSync(binary, ["--path", entry.directory, ...extra], {
       stdio: "inherit",
     });
@@ -995,7 +1000,7 @@ async function main(argv) {
         "res://tools/shot.gd",
         "--",
         out,
-        ...extra,
+        ...afterDashes,
       ];
       const opener = findOnPath("claude-open");
       let result;
