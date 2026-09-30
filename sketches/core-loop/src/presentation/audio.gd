@@ -33,11 +33,12 @@ const POLYPHONY := 32
 # pickups or a held trigger stays crisp instead of turning into mush.
 # Moss says one line at a time: a new line cuts the last one off. The Mind's quote is
 # heard once per adaptation: mind_adapted and the hand's telegraph layers (its voice and
-# its tag are both the quote) land on one frame, and the first one sounds.
+# its tag are both the quote) land on one frame, and the first one sounds. A harpoon bite
+# rides on grapple_fired and a line smash on slammed, so each is heard once, not doubled.
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600}
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "grapple_clink": 60, "slam_boom": 60}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.

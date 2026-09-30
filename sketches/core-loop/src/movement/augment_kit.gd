@@ -27,11 +27,10 @@ var aim := Augments.no_aim()
 # The harpoon's line record, on top of the grapple's fields above (one rope, in
 # Augments._grapple). on_body says the line is bitten into anchor_body, an enemy, and
 # anchor then follows it at anchor_offset; a freed body reads as null, so the flag is
-# its own. ball_share is the ball's share of the
-# closing (1 flies you in, less tows the body), smash_left the seconds a committed haul
-# may still run and smash_floor the speed it never drops below. tow is the velocity handed
-# to the body this tick. lock_body is the soft-lock's sticky pick; rewind_left the seconds
-# the hook is spent after a line smash.
+# its own. ball_share is the ball's share of the closing (1 flies you in, less tows the
+# body), smash_left the seconds a committed haul may still run and smash_floor the speed
+# it never drops below. tow is the velocity handed to the body this tick. lock_body is
+# the soft-lock's sticky pick; rewind_left the seconds the hook is spent after a line smash.
 var harpoon_on := false
 var on_body := false
 var anchor_body: Node3D = null

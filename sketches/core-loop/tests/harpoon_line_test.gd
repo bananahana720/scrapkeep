@@ -521,6 +521,27 @@ func _pull() -> void:
 		chaser.queue_free()
 		await _sim(0.1)
 
+	# The winch drone moves through its own mover, not the shared _move, so the tow must reach it too.
+	_pilot("rivet", "shot", "heft")
+	_combat.heft_override = 3.2
+	var drone := _spawn("winch_drone", _point(0, -16, 1.5))
+	await _sim(0.1)
+	_place(_point(0, 0, 1.4))
+	_player.grapple_to(drone.global_position, Vector3.UP, drone)
+	_source.hold = {"harpoon_held": true}
+	var drone_fastest := 0.0
+	for tick in roundi(0.6 * Engine.physics_ticks_per_second):
+		await physics_frame
+		if is_instance_valid(drone):
+			drone_fastest = maxf(drone_fastest, Vector2(drone.velocity.x, drone.velocity.z).length())
+	_source.hold = {}
+	_check("heft tows a winch drone past the pin speed", drone_fastest > PIN_SPEED,
+		"drone moved at %.1f m/s through its own mover (pin bar %.0f)" % [drone_fastest, PIN_SPEED])
+	_player.release_grapple()
+	if is_instance_valid(drone):
+		drone.queue_free()
+	await _sim(0.1)
+
 	# A tow through three victims pins each at most once: the tow is not a fresh knock() every tick.
 	_pilot("rivet", "shot", "heft")
 	_combat.heft_override = 3.2
