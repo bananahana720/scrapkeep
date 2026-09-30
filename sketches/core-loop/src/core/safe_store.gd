@@ -6,8 +6,12 @@ extends RefCounted
 # .bad copy, so the next save cannot replace it with an empty store.
 
 
+static func tmp_path(path: String) -> String:
+	return path + ".tmp"
+
+
 static func write_atomic(path: String, text: String) -> Error:
-	var tmp := path + ".tmp"
+	var tmp := tmp_path(path)
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
