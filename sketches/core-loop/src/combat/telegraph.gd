@@ -243,6 +243,8 @@ func _build() -> void:
 	_driven = Threat.can_drive(d)
 	_painter = Threat.Painter.new()
 	_painter.floor_y = center.y
+	if terrain != null:
+		_painter.ground = func(point: Vector3) -> float: return ground_under(terrain, point)
 	_painter.lift = LIFT
 	_painter.driven = _driven
 	_painter.centre = center
