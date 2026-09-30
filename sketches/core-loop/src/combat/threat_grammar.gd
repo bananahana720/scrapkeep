@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
 # hazard.gd. The attack type decides how a threat draws; its committed geometry decides
@@ -106,7 +107,9 @@ const HAZE_SOLID := 0.4
 const TELEGRAPH_FLAG := "telegraph"
 
 
-# Whether the haze look is on: set_haze() (tests, tools), else the launcher flag, read once.
+# Whether the haze look is on: set_haze() (tests, tools), else the launcher flag, read once
+# through Tuning's own parse so a repeated flag resolves the same way (the last wins). A
+# running game re-reads the telegraph row at each stage entry and retry (follow_row).
 # The state lives on Painter, whose static code cannot call this class's statics.
 static func haze() -> bool:
 	return Painter.haze_on()
@@ -114,6 +117,15 @@ static func haze() -> bool:
 
 static func set_haze(on: bool) -> void:
 	Painter._haze = 1 if on else 0
+
+
+# The F1 telegraph row takes effect at the next stage entry or retry. A flip re-warms the
+# mark pipelines, since the haze look draws with a different material key.
+static func follow_row(tuning) -> void:
+	var on: bool = tuning.option(LoopMode.TELEGRAPH_KEY) == "haze"
+	if on != haze():
+		set_haze(on)
+		Painter._warmed = false
 
 
 # Layers whose name starts with "stripe" draw the hostile stripe pattern.
@@ -948,9 +960,9 @@ class Painter:
 
 	static func haze_on() -> bool:
 		if _haze < 0:
-			var args := OS.get_cmdline_args()
-			args.append_array(OS.get_cmdline_user_args())
-			_haze = 1 if "--%s=haze" % TELEGRAPH_FLAG in args else 0
+			var flags := Tuning.new()
+			flags.apply_cmdline("launch")
+			_haze = 1 if flags.option(Tuning.FLAGS[TELEGRAPH_FLAG][0]) == "haze" else 0
 		return _haze == 1
 
 	static var _materials := {}

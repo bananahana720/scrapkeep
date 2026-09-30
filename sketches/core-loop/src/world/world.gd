@@ -163,6 +163,7 @@ func _setup_gorge() -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	Threat.follow_row(ctx.tuning)
 	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once.
 	Threat.Painter.warm_up(ctx.root)
 	if events != null:
