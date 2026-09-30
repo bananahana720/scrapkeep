@@ -69,7 +69,7 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "kill_pop", "part_get", "c
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold"]
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring"]
 # Event progress until the spine publishes event_progress(event_id, fraction): the
 # seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
@@ -851,6 +851,10 @@ func wire_optional() -> void:
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
+	# The shell's air factor moved (build.gd shell_air_changed): the row's spring, up a fifth on the
+	# rise and down a fourth on the return, so the two read apart without looking.
+	if ctx.get("build") != null and ctx.build.has_signal("shell_air_changed") and not ctx.build.shell_air_changed.is_connected(_on_shell_air):
+		ctx.build.shell_air_changed.connect(_on_shell_air)
 	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
 	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
 	_listen(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
@@ -978,6 +982,14 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 			return true
 	events.connect(signal_name, target)
 	return true
+
+
+const SHELL_RISE_SEMITONES := 7.0
+const SHELL_RETURN_SEMITONES := -5.0
+
+
+func _on_shell_air(_factor: float, rose: bool) -> void:
+	play("world_fact", 0.0, Harmony.ratio(SHELL_RISE_SEMITONES if rose else SHELL_RETURN_SEMITONES), "SFX", Rows.heard(EventKinds.world_row("shell_air_shift"), cue_context()))
 
 
 func _on_event_started(event_id: String) -> void:

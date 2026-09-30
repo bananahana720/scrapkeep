@@ -44,7 +44,7 @@ const CODEX := {
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of rebounding.",
-	"r_second_wind": "Stockpile two sprint charges",  # held back until H1
+	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
 }
 const CLASS := "runner_gunner"
 
@@ -169,9 +169,9 @@ func _cards() -> void:
 		var same := true
 		for l in lines:
 			same = same and l[1] == CODEX[l[0]]
-		_check("codex lines, R6 keeps its own (after %s)" % (parent if parent != "" else "start"), same, "%s" % [lines])
+		_check("codex lines, R6 ruling text (after %s)" % (parent if parent != "" else "start"), same, "%s" % [lines])
 		seen += lines.size()
-	_check("six Rivet cards seen, R6 has no row", seen == 6 and not WorldOneCards.has_row("r_second_wind") and WorldOneCards.has_row("r_run_gun"), "%d cards" % seen)
+	_check("six Rivet cards seen, R6 has a row", seen == 6 and WorldOneCards.has_row("r_second_wind") and WorldOneCards.has_row("r_run_gun"), "%d cards" % seen)
 
 
 func _pattern() -> Resource:

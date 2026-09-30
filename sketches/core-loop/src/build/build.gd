@@ -44,6 +44,9 @@ const SHELL_VAULT_WINDOW := 2.0
 const SHELL_AIR_FACTOR_VAULT := 1.25
 # R6 Second Wind (world-one): while sprinting the shell's penalty cancels (factor 1.0).
 const SHELL_AIR_FACTOR_SPRINT := 1.0
+# The resolved shell factor moved between two fitted values: `rose` is true above the base
+# factor (an inversion is live), false on the return to it. Presentation reads only this.
+signal shell_air_changed(factor: float, rose: bool)
 const PARTICIPANTS := ["player"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
@@ -127,6 +130,9 @@ var _shrapnel_budget := SHRAPNEL_PER_SECOND
 # Sim seconds left in S4's inverted-shell window; counted down in _physics_process, so a
 # paused tree or the bay does not spend it.
 var _shell_window := 0.0
+# The last resolved factor seen while the shell was fitted; 0.0 while it is not (or before the
+# first read of a fit), so fitting, unfitting and the first recompute stay silent.
+var _air_seen := 0.0
 # The last kit.sprinting Build saw, so a sprint start or end (any path) refreshes the air mod once.
 var _sprint_seen := false
 var _tesla_clock := 0.0
@@ -523,6 +529,20 @@ func _open_shell_window() -> void:
 # The part-derived air_control mod times the shell's current factor; nothing else touched.
 func _refresh_air_mod() -> void:
 	ctx.tuning.set_mod("air_control", sheet.mod("air_control") * shell_air_factor())
+	_note_air_factor()
+
+
+# One emit point for every inversion: a change of the resolved factor between two fitted
+# reads. An unfitted shell resets the memory, so a toggle or a first read never cues.
+func _note_air_factor() -> void:
+	if not shell_fitted():
+		_air_seen = 0.0
+		return
+	var factor := shell_air_factor()
+	var before := _air_seen
+	_air_seen = factor
+	if before > 0.0 and not is_equal_approx(before, factor):
+		shell_air_changed.emit(factor, factor > SHELL_AIR_FACTOR)
 
 
 func shell_scrap_per_hp() -> float:
@@ -534,6 +554,7 @@ func _apply_shell() -> void:
 	ctx.run.scrap_per_hp = shell_scrap_per_hp()
 	if shell_fitted():
 		ctx.tuning.set_mod("air_control", ctx.tuning.mod("air_control") * shell_air_factor())
+	_note_air_factor()
 
 
 func _redraw() -> void:
