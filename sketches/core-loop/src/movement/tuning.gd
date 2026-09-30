@@ -80,6 +80,10 @@ var boost_cooldown_scale := 1.0
 # What the command line set, key to value: reset() returns to how this launch started, so
 # the F1 panel's Reset defaults keeps the flags and only the sliders go back to defaults.
 var _launch := {}
+# The loop mode the current stage entered with; empty until the first stage, when a bare
+# Tuning reads the row live. The panel writes the row at once under "hold R to apply", so
+# every reader of the mode takes this one per-stage value instead.
+var _stage_loop := ""
 
 
 func _init() -> void:
@@ -216,6 +220,14 @@ func set_option(key: String, name: String) -> bool:
 		return false
 	set_value(key, float(index))
 	return true
+
+
+func latch_stage() -> void:
+	_stage_loop = option("loop_mode")
+
+
+func stage_loop() -> String:
+	return _stage_loop if _stage_loop != "" else option("loop_mode")
 
 
 func reset() -> void:
