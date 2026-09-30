@@ -1373,3 +1373,11 @@ S4 and R6 gain their card rows, and every change of Riveted Shell's resolved air
 - **Scratch mutants (each fails its checks, reverted).** no emit; emit on every refresh; same cue for rise and return; no shell gate (fails the toggle check); no sound; no ring; ring under a CanvasLayer; same ring motion both ways; same pitch both ways.
 - **Evidence limit.** Counts, parameters and node types on the real Game, headless. Whether the ring reads at chase distance and how the spring feels are unjudged; Andrew's play decides both.
 - **Follow-ups.** K5's card row. If the ring is too faint on a heavy shell, tune `AIR_CUE_RADIUS`; the pitch split lives in two constants in `audio.gd`.
+## K5 card row (--world-one-builds=on, 2026-09-29)
+
+Smoke Trail's world-one card now shows its ruling text, "Glide cloaked. Heavy fins steer harder." (BUILD-SYSTEMS.md K5). No mechanic, number or cue changed.
+
+- **Row.** `world_one_cards.gd` ROWS gains `k_smoke_trail` between `k_demo_expert` and `k_ambush`; the held-back comment is gone. `kest.gd`'s node effect and `BASE_EFFECT['k_smoke_trail']` ("Gliding keeps you cloaked") are unchanged, so the flag-off card and the node-effect constants still read as before.
+- **Pins moved.** Grep of `tests/` for `k_smoke_trail` and `has_row` found the K5 held-back pins only in `world_one_ktree_test.gd`: the header comment, `CODEX['k_smoke_trail']` (now the ruling text) and the `_cards()` check label (no longer "K5 held back"). The stree, rtree, hotwire_cue, hotwire_k5 and tree_data hits use K5 only as a pick and were left.
+- **Test.** The existing `_cards()` codex-lines check already covers the row: with the row removed the card falls back to the node effect and that check fails (scratch mutant, reverted). No new assertion.
+- **Evidence limit.** Headless card text on the real Game; how the card reads on screen is unjudged.
