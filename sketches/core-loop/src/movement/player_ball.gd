@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const AimStyle := preload("res://src/movement/aim_style.gd")
+const Harpoon := preload("res://src/movement/harpoon.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -102,6 +103,10 @@ var _aim_marks := {}
 var _roll := Basis.IDENTITY
 var _frozen := false
 var _was_hooked := false
+# Ctrl's raw state last tick, and whether a body line has claimed the press still held.
+var _brake_was_held := false
+var _ctrl_claimed := false
+var _hook_head: MeshInstance3D
 var _bow: Area3D
 var _crushing := {}
 
@@ -132,6 +137,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.kit_fact.connect(_on_kit_fact)
 	tree.events = events
 	tree.picked.connect(_on_tree_picked)
+	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
@@ -250,11 +256,16 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	kit.clear_runtime()
 	_roll = Basis.IDENTITY
 	_was_hooked = false
+	_brake_was_held = false
+	_ctrl_claimed = false
 	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
 
+# A ride, a launch, a deflect or a throw sets the velocity outright, and a harpoon line
+# would fight it, so it lets go.
 func set_velocity_now(velocity: Vector3) -> void:
+	cut_line()
 	_rigid.set_velocity_now(velocity)
 
 
@@ -276,6 +287,7 @@ func _on_tree_picked(n: Dictionary) -> void:
 
 # The movement kit the movement slot's row names, the smash flavour, the class colour.
 func _refit() -> void:
+	kit.harpoon_on = tuning != null and tuning.harpoon_on()
 	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 	else:
@@ -288,6 +300,7 @@ func _refit() -> void:
 func _paint_effects() -> void:
 	var color := class_color()
 	_rope.material_override = Palette.unshaded(color)
+	_hook_head.material_override = Palette.unshaded(color)
 	_wings_material.albedo_color = Color(color, 0.75)
 	_plate.material_override = Palette.solid(color, 1.2)
 
@@ -348,15 +361,37 @@ func refresh_air() -> void:
 
 # The rope is a hard max-length constraint on the ball, so it is anchored where the
 # ball is standing when it is fired, not where the camera ray started.
-func grapple_to(point: Vector3, normal := Vector3.ZERO) -> void:
+func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> void:
 	if not kit.on(Augments.GRAPPLE):
 		return
-	Augments.attach(kit, ball_position(), point, normal)
+	Augments.attach(kit, ball_position(), point, normal, body)
 	events.grapple_fired.emit(point)
+	if body != null:
+		_share_line()
+		if body.has_method("flash"):
+			body.flash()
+		events.harpoon_bit.emit(body, point)
 
 
 func release_grapple() -> void:
-	kit.hooked = false
+	kit.drop_line()
+
+
+# A hostile hold that lands cuts the harpoon line; the release cue is grapple_released.
+func cut_line() -> void:
+	if kit.harpoon_on:
+		kit.drop_line()
+
+
+# The line's split with its body, from heft and the body's weight, and the tow the winch
+# handed it last tick.
+func _share_line() -> void:
+	var body = kit.anchor_body
+	if not kit.hooked or not kit.on_body or not is_instance_valid(body):
+		return
+	kit.ball_share = Harpoon.ball_share(tuning.option("harpoon_pull"), heft(), Harpoon.weight_of(body))
+	if kit.tow != Vector3.ZERO and body.has_method("tow"):
+		body.tow(kit.tow)
 
 
 func reel_step(metres: float) -> void:
@@ -371,6 +406,9 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	source.poll(intent)
+	if tuning != null and tuning.harpoon_on() != kit.harpoon_on:
+		_refit()
+	abilities.movement_key = Harpoon.movement_key(kit, tuning)
 	_read_mass()
 	_route_interact()
 	_read_grammar()
@@ -386,6 +424,7 @@ func _physics_process(delta: float) -> void:
 	if _was_hooked and not kit.hooked:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
+	_share_line()
 	_recheck_bow()
 	_tick_face_tags(delta)
 	_mark_slots()
@@ -394,7 +433,7 @@ func _physics_process(delta: float) -> void:
 # The slot states the ability bar reads that no spend or gauge sets: the grapple is
 # active while hooked, and the smash is an air move, so on the ground it is unavailable.
 func _mark_slots() -> void:
-	if kit.on(Augments.GRAPPLE):
+	if kit.on(Augments.GRAPPLE) and kit.movement_id == Augments.GRAPPLE:
 		abilities.slot(AbilityState.MOVEMENT).active = kit.hooked
 	var smash = abilities.slot(AbilityState.SMASH)
 	smash.active = kit.slamming or kit.plant_time > 0.0
@@ -404,23 +443,60 @@ func _mark_slots() -> void:
 # RMB is the class movement, except while the special or the slingshot charges: then
 # its press cancels the charge and moves nothing. Kest's held throw is not included, or
 # holding LMB would swallow her blink. Sable's grapple rides RMB here like the other
-# classes' movement.
+# classes' movement. Under --harpoon RMB is the harpoon for every pilot, the cancel rule
+# follows it, and the class movement moves to Shift or C.
 func _read_grammar() -> void:
 	var special = abilities.gauge(AbilityState.SPECIAL)
-	if intent.movement_pressed and ((special != null and special.charging) or kit.slingshot.charging):
+	var charging: bool = (special != null and special.charging) or kit.slingshot.charging
+	if kit.harpoon_on:
+		_route_burst()
+		if intent.harpoon_pressed and charging:
+			intent.harpoon_pressed = false
+			intent.cancel_pressed = true
+		_read_ctrl()
+	elif intent.movement_pressed and charging:
 		intent.movement_pressed = false
 		intent.cancel_pressed = true
 	if _frozen or not kit.on(Augments.GRAPPLE):
 		return
-	if intent.movement_pressed and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
-		grapple_to(kit.aim["point"], kit.aim["normal"])
-	elif intent.movement_released:
+	var pressed: bool = intent.harpoon_pressed if kit.harpoon_on else intent.movement_pressed
+	var released: bool = intent.harpoon_released if kit.harpoon_on else intent.movement_released
+	if pressed and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
+		if not kit.harpoon_on or kit.rewind_left <= 0.0:
+			grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
+	elif released:
 		_fling()
 		release_grapple()
 	# Rope Anchor: winching up to the wall plants the pylon there.
 	if tree.knob("winch_mount") and kit.hooked and intent.reel_held and not kit.mounted \
 			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
 		intent.mount_pressed = true
+
+
+# --harpoon-keys=shift: Shift fires the class burst (Rivet's sprint, Kest's blink) when
+# its charge is ready and is the plain boost otherwise, so the boost never waits on the
+# class charge. The keyboard reports Shift held as movement_held; the press is routed here.
+func _route_burst() -> void:
+	if tuning.option("harpoon_keys") == "shift" and intent.boost_pressed and Harpoon.burst_ready(kit):
+		intent.boost_pressed = false
+		intent.movement_pressed = true
+
+
+# Ctrl on a latched body line commits the smash haul. While a body line stands, and until
+# that press is let go, Ctrl is neither the brake nor the slam: the commit is all of it, so
+# a haul can never plant or brake inside the crowd it flew into.
+func _read_ctrl() -> void:
+	var edge: bool = intent.brake_held and not _brake_was_held
+	_brake_was_held = intent.brake_held
+	var on_body: bool = kit.hooked and kit.on_body
+	if on_body and edge and kit.line_state == Augments.LINE_LATCHED:
+		Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
+	if on_body:
+		_ctrl_claimed = true
+	if not intent.brake_held:
+		_ctrl_claimed = false
+	if _ctrl_claimed:
+		intent.brake_held = false
 
 
 # E is interact everywhere (LOOP-REDESIGN section 9): the interactable E has locked takes
@@ -436,14 +512,14 @@ func _route_interact() -> void:
 
 
 func mobility_started() -> bool:
-	return kit.hooked or kit.plant_time > 0.0 or kit.slingshot.charging
+	return (kit.hooked and (kit.on(Augments.PYLON) or not kit.harpoon_on)) or kit.plant_time > 0.0 or kit.slingshot.charging
 
 
 # The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
 # or the wall the hook is in when the ball is close to it.
 func face_in_reach() -> bool:
 	var origin := ball_position()
-	if kit.hooked and kit.on(Augments.GRAPPLE) and kit.anchor_normal != Vector3.ZERO \
+	if kit.hooked and kit.on(Augments.GRAPPLE) and not kit.on_body and kit.anchor_normal != Vector3.ZERO \
 			and absf(kit.anchor_normal.y) < Augments.FACE_MAX_TILT and origin.distance_to(kit.anchor) <= Augments.MOUNT_HOOK_REACH:
 		return true
 	if not is_inside_tree():
@@ -552,7 +628,11 @@ func _try_crush(body: Node3D) -> void:
 	if kit.sprinting:
 		kit.sprint_left += tree.knob("crush_refund")
 	_rigid.add_collision_exception_with(body)
+	var landing := _begin_landing(body)
+	var closing := kit.line_closing
 	struck.emit(body, RAM, speed)
+	if landing:
+		_finish_landing(body, closing)
 	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
 
 
@@ -571,6 +651,16 @@ func _build_augment_visuals() -> void:
 	_rope.material_override = Palette.unshaded(class_color())
 	_rope.visible = false
 	add_child(_rope)
+
+	# The harpoon's head, seated in the body the line is bitten into.
+	_hook_head = MeshInstance3D.new()
+	var head := BoxMesh.new()
+	head.size = Vector3.ONE * 0.8
+	_hook_head.mesh = head
+	_hook_head.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
+	_hook_head.material_override = Palette.unshaded(class_color())
+	_hook_head.visible = false
+	add_child(_hook_head)
 
 	_wings = Node3D.new()
 	var wing_material := Palette.unshaded(Color(class_color(), 0.75))
@@ -637,7 +727,13 @@ func pylon_node() -> Node3D:
 
 func _update_augment_visuals(at: Vector3) -> void:
 	_rope.visible = kit.hooked
+	_hook_head.visible = kit.hooked and kit.on_body
+	if _hook_head.visible:
+		_hook_head.global_position = kit.anchor
 	if kit.hooked:
+		# A committed haul draws its line brighter than a latched one.
+		(_rope.material_override as StandardMaterial3D).albedo_color = \
+			class_color().lightened(0.55) if kit.line_state == Augments.LINE_SMASH else class_color()
 		var line: ImmediateMesh = _rope.mesh
 		line.clear_surfaces()
 		line.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
@@ -794,6 +890,8 @@ func pre_contact_velocity(toward: Vector3) -> Vector3:
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	if _crushing.has(enemy.get_instance_id()):
 		return
+	var landing := _begin_landing(enemy)
+	var closing := kit.line_closing
 	var to_enemy := enemy.global_position - ball_position()
 	var before := pre_contact_velocity(to_enemy.normalized() if to_enemy.length() > 0.01 else Vector3.DOWN)
 	var planar := Vector2(before.x, before.z).length()
@@ -803,6 +901,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		# The one mechanic worth keeping from the orchard: a descending rebound
 		# gives the air jump back, so bouncing is a way to keep a line going.
 		refresh_air()
+		kit.rewind_left = 0.0
 		state.impact = maxf(state.impact, -before.y)
 		_rigid.set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0)
@@ -816,6 +915,26 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		shockwave.emit(enemy.global_position, 1.0)
 		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, planar)
+	if landing:
+		_finish_landing(enemy, closing)
+
+
+# The first contact of a committed haul lets the line go, so the ordinary contact (stomp,
+# rebound or ram) resolves on a free ball, and starts the rewind before it: a kill or a
+# stomp inside that contact re-seats the hook at once.
+func _begin_landing(enemy: Node3D) -> bool:
+	if not kit.hooked or kit.line_state != Augments.LINE_SMASH or kit.anchor_body != enemy:
+		return false
+	kit.drop_line()
+	kit.rewind_left = tuning.f("harpoon_rewind")
+	return true
+
+
+# What the haul adds to that contact: the smash's shockwave, pins and this pilot's
+# flavour at the speed the line closed at, then the fact.
+func _finish_landing(enemy: Node3D, closing: float) -> void:
+	_on_slammed(ball_position(), closing, 1.0)
+	events.harpoon_smashed.emit(enemy if is_instance_valid(enemy) else null, ball_position(), closing)
 
 
 # Only a body that says what it weighs can bounce you; a boss piece without a weight

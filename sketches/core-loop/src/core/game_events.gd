@@ -41,6 +41,10 @@ signal landed(impact: float)
 signal slammed(at: Vector3, strength: float, flatness: float)
 signal grapple_fired(anchor: Vector3)
 signal grapple_released
+# The harpoon (player_ball.gd): a line bitten into an enemy, and a committed haul landing on
+# one, at the speed the line closed at.
+signal harpoon_bit(enemy: Node3D, at: Vector3)
+signal harpoon_smashed(enemy: Node3D, at: Vector3, speed: float)
 signal mounted(at: Vector3, banked_speed: float)
 signal dismounted(velocity: Vector3)
 

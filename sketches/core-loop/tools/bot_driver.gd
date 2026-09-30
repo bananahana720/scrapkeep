@@ -99,6 +99,9 @@ const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
 const BOOST_GAP := 1.6
 # The ram lap: charge until this close, then run up this far and charge again.
 const CHARGE_CLOSE := 3.8
+# The harpoon hand works the bowl floor (its radius, features.gd) and never bites from the bank
+# or the rim: a haul from up there is a drop without a lip, which is another bot (the rim harpooner).
+const HARPOON_FLOOR := 30.0
 const RUNUP := 24.0
 const RUNUP_SECONDS := 3.2
 const AIM_REACH := 40.0
@@ -238,6 +241,9 @@ var _lap_ended_kind := ""
 var _lap_arrived := false
 var _lap_lip := {}
 var _lap_contact := {}
+# The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
+var _harpoon_held := false
+var _harpoon_commit := false
 
 
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
@@ -978,7 +984,28 @@ func _note_shred(target: Node3D, delta: float) -> void:
 		_note["stripped_half_s"] = snappedf(float(_note.get("stripped_half_s", 0.0)) + delta, 0.01)
 
 
+# With --harpoon on, the fight bites its target from the bowl floor when the reticle holds it
+# and commits the smash once the line is on. RMB and Ctrl go through _drive's hold, which is rebuilt every
+# tick; the bite is a one-tick press.
+func _harpoon_hand(target: Node3D) -> void:
+	var kit = game.player.kit
+	_harpoon_commit = false
+	if not kit.harpoon_on:
+		_harpoon_held = false
+		return
+	if kit.hooked and kit.anchor_body == target:
+		_harpoon_held = true
+		_harpoon_commit = true
+		return
+	_harpoon_held = false
+	if kit.aim.get("body") == target and kit.rewind_left <= 0.0 and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+		source.press["harpoon_pressed"] = true
+		_harpoon_held = true
+		_count("harpoon_bites")
+
+
 func _ram_laps(target: Node3D, aim, delta: float) -> void:
+	_harpoon_hand(target)
 	var ball: Vector3 = game.player.ball_position()
 	var at: Vector3 = target.global_position
 	var distance := _flat(ball, at)
@@ -1481,6 +1508,10 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded:
 			_boost_clock = BOOST_GAP
 			source.press["boost_pressed"] = true
+	if _harpoon_held:
+		hold["harpoon_held"] = true
+	if _harpoon_commit:
+		hold["brake_held"] = true
 	source.hold = hold
 
 

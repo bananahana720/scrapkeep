@@ -36,12 +36,23 @@ const DEFAULT_MOVEMENT := "grapple"
 const AIM_NONE := 0
 const AIM_REACH := 1
 const AIM_ASSIST := 2
+# The harpoon's: an enemy under the centre ray or inside the soft-lock cone.
+const AIM_BODY := 3
 const AIM_CAST := 90.0
 const ASSIST_RINGS := [0.34, 0.67, 1.0]
 const ASSIST_SPOKES := 16
 const WORLD_MASK := 1
 
 const MIN_ROPE := 2.5
+# A harpoon line is idle, latched to a world point or a body, or committed to a smash
+# haul on a body. SMASH_MAX bounds a haul; a line stretched past BREAK_STRETCH times the
+# rope range lets go; ground under this normal.y is walkable and cannot be hooked.
+const LINE_IDLE := 0
+const LINE_LATCHED := 1
+const LINE_SMASH := 2
+const SMASH_MAX := 1.2
+const BREAK_STRETCH := 1.5
+const WALKABLE_Y := 0.7
 const FACE_REACH := 1.5
 # sin 60 deg: the face leans less than 60 degrees off vertical, so a pylon can bite.
 const FACE_MAX_TILT := 0.866
@@ -242,11 +253,25 @@ static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
 	kit.facts.append(["dashed", [dir]])
 
 
-static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO) -> void:
+static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> void:
 	kit.hooked = true
 	kit.anchor = point
 	kit.anchor_normal = normal
 	kit.rope = maxf(MIN_ROPE, from.distance_to(point))
+	kit.on_body = body != null
+	kit.anchor_body = body
+	kit.anchor_offset = point - body.global_position if body != null else Vector3.ZERO
+	kit.line_state = LINE_LATCHED
+	kit.smash_left = 0.0
+	kit.tow = Vector3.ZERO
+
+
+# Ctrl on a body line: the haul homes on the body at no less than the speed it starts at.
+static func commit_smash(kit, tuning, velocity: Vector3) -> void:
+	kit.line_state = LINE_SMASH
+	kit.smash_left = SMASH_MAX
+	kit.smash_floor = maxf(velocity.length(), tuning.f("harpoon_smash_speed") * kit.ball_share)
+	kit.slamming = false
 
 
 static func no_aim() -> Dictionary:
@@ -255,12 +280,17 @@ static func no_aim() -> Dictionary:
 
 # The hook is electromagnetic: if the crosshair ray misses, it finds the nearest
 # hookable surface inside a small cone around it. Range is the rope's, measured from
-# the ball rather than from the camera behind it.
+# the ball rather than from the camera behind it. The harpoon widens the centre ray to
+# `mask` (world and enemies) and turns walkable ground away; the assist stays on world
+# surfaces, so an enemy is only ever a skill shot or a lock.
 static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forward: Vector3,
-		ball: Vector3, reach: float, assist_deg: float) -> Dictionary:
+		ball: Vector3, reach: float, assist_deg: float, mask := WORLD_MASK, walkable := true) -> Dictionary:
 	forward = forward.normalized()
-	var centre := _hook_ray(space, from, forward, ball, reach)
+	var centre := _hook_ray(space, from, forward, ball, reach, mask, walkable)
 	if not centre.is_empty():
+		var body = centre["collider"]
+		if mask != WORLD_MASK and body is Node3D and body.is_in_group("enemy"):
+			return {"state": AIM_BODY, "point": centre["position"], "normal": centre["normal"], "body": body}
 		return {"state": AIM_REACH, "point": centre["position"], "normal": centre["normal"]}
 	if assist_deg <= 0.0:
 		return no_aim()
@@ -278,7 +308,7 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 		for i in ASSIST_SPOKES:
 			var spin := TAU * float(i) / float(ASSIST_SPOKES)
 			var dir := (forward + (side * cos(spin) + up * sin(spin)) * spread).normalized()
-			var hit := _hook_ray(space, from, dir, ball, reach)
+			var hit := _hook_ray(space, from, dir, ball, reach, WORLD_MASK, walkable)
 			if hit.is_empty():
 				continue
 			var gap: float = (hit["position"] as Vector3).distance_to(ball)
@@ -290,10 +320,32 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 	return no_aim()
 
 
+# An enemy the ray can bite: alive, on the enemy layer's group.
+static func hookable_body(body) -> bool:
+	return body is Node3D and body.is_in_group("enemy") and not (body.has_method("is_dead") and body.is_dead())
+
+
 static func _hook_ray(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vector3,
-		ball: Vector3, reach: float) -> Dictionary:
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * AIM_CAST, WORLD_MASK))
+		ball: Vector3, reach: float, mask := WORLD_MASK, walkable := true) -> Dictionary:
+	var query := PhysicsRayQueryParameters3D.create(from, from + dir * AIM_CAST, mask)
+	var skipped: Array[RID] = []
+	var hit := {}
+	# The camera sits behind the ball: an enemy between the two is not ahead of the ball,
+	# so the ray looks past it.
+	for i in 3:
+		query.exclude = skipped
+		hit = space.intersect_ray(query)
+		if hit.is_empty() or mask == WORLD_MASK:
+			break
+		var behind: bool = ((hit["position"] as Vector3) - ball).dot(dir) <= 0.0
+		if not (behind and hookable_body(hit["collider"])):
+			break
+		skipped.append(hit["rid"])
 	if hit.is_empty() or (hit["position"] as Vector3).distance_to(ball) > reach:
+		return {}
+	if hit["collider"] is Node3D and (hit["collider"] as Node3D).is_in_group("enemy"):
+		return hit if hookable_body(hit["collider"]) else {}
+	if not walkable and (hit["normal"] as Vector3).y > WALKABLE_Y:
 		return {}
 	return hit
 
@@ -335,7 +387,8 @@ static func _slam(kit, state, tuning, intent, body_state, step: float) -> void:
 		kit.brake_from_ground = false
 	elif state.grounded:
 		kit.brake_from_ground = true
-	if kit.on(SLAM) and intent.brake_held and not state.grounded and not kit.brake_from_ground:
+	if kit.on(SLAM) and intent.brake_held and not state.grounded and not kit.brake_from_ground \
+			and not (kit.hooked and kit.on_body):
 		kit.slamming = true
 		kit.slam_fall = maxf(0.0, -v.y)
 		kit.slam_velocity = v
@@ -505,7 +558,7 @@ static func _mount_spot(kit, body_state) -> Dictionary:
 	var face := _steepest_face(body_state, WORLD_MASK, kit.knob("mount_reach"))
 	if not face.is_empty():
 		return face
-	if kit.hooked and kit.on(GRAPPLE) and absf(kit.anchor_normal.y) < FACE_MAX_TILT \
+	if kit.hooked and kit.on(GRAPPLE) and not kit.on_body and absf(kit.anchor_normal.y) < FACE_MAX_TILT \
 			and kit.anchor_normal != Vector3.ZERO \
 			and body_state.transform.origin.distance_to(kit.anchor) <= MOUNT_HOOK_REACH * kit.knob("mount_reach"):
 		return {"point": kit.anchor, "normal": kit.anchor_normal.normalized()}
@@ -522,15 +575,24 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	if not kit.hooked:
 		return
 	if not kit.on(GRAPPLE):
-		kit.hooked = false
+		kit.drop_line()
 		return
-	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
+	var origin: Vector3 = body_state.transform.origin
+	if kit.on_body:
+		if not _follow(kit, tuning, origin):
+			return
+		if kit.line_state == LINE_SMASH:
+			_haul(kit, tuning, intent, body_state, step)
+		else:
+			_winch_body(kit, tuning, intent, body_state, step)
+		return
+	var to_anchor: Vector3 = kit.anchor - origin
 	var dist := to_anchor.length()
 	if dist < 0.001:
 		return
 	var dir: Vector3 = to_anchor / dist
 	var v: Vector3 = body_state.linear_velocity
-	if intent.reel_held:
+	if _winching(kit, intent):
 		# A winch, not a shorter maximum: it hauls whether or not the rope is taut, and
 		# the rope follows you in so no slack builds up behind the haul.
 		kit.rope = maxf(MIN_ROPE, minf(kit.rope, dist))
@@ -545,6 +607,77 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 		if outward > 0.0:
 			v += dir * outward
 		v += dir * (dist - kit.rope) * tuning.f("rope_spring")
+	body_state.linear_velocity = v
+
+
+# Q winches every line. Under the harpoon RMB held winches a line on a body, and any
+# line for a pilot whose kit has no rope craft of its own; Sable's world lines keep the
+# swing and hold Q for the winch.
+static func _winching(kit, intent) -> bool:
+	if intent.reel_held:
+		return true
+	return kit.harpoon_on and intent.harpoon_held and (kit.on_body or kit.movement_id != GRAPPLE)
+
+
+# Moves the anchor with the body. The line lets go, keeping the ball's velocity, when
+# the body is gone, stretched past BREAK_STRETCH ranges, or (latched only) passed inside
+# the minimum rope and both radii: an enemy line has no pendulum to dead-stop on.
+static func _follow(kit, tuning, origin: Vector3) -> bool:
+	var body = kit.anchor_body
+	if not is_instance_valid(body) or not body.is_inside_tree() or (body.has_method("is_dead") and body.is_dead()):
+		kit.drop_line()
+		return false
+	kit.anchor = body.global_position + kit.anchor_offset
+	var dist := origin.distance_to(kit.anchor)
+	if dist > BREAK_STRETCH * tuning.f("rope_range"):
+		kit.drop_line()
+		return false
+	if kit.line_state == LINE_LATCHED:
+		var radius = body.get("radius")
+		if dist <= MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0):
+			kit.drop_line()
+			return false
+	return true
+
+
+# A latched body line only pulls: the ball takes its ball_share of the winch, and the body
+# is handed the rest as a tow toward the ball.
+static func _winch_body(kit, tuning, intent, body_state, step: float) -> void:
+	kit.tow = Vector3.ZERO
+	if not _winching(kit, intent):
+		return
+	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
+	var dist := to_anchor.length()
+	if dist < 0.001:
+		return
+	var dir := to_anchor / dist
+	var v: Vector3 = body_state.linear_velocity
+	var head := clampf(1.0 - v.dot(dir) / tuning.f("reel_speed"), 0.0, 1.0)
+	v += dir * tuning.f("reel_force") * head * step * kit.ball_share
+	kit.tow = -dir * tuning.f("reel_speed") * (1.0 - kit.ball_share)
+	kit.rope = maxf(MIN_ROPE, minf(kit.rope, dist))
+	body_state.linear_velocity = v
+
+
+# The committed haul homes on the body and never slows the ball. A jump, boost or dash
+# lets the line go; so does running out of SMASH_MAX. Contact is the ball's, which
+# releases the line before the landing resolves (player_ball._land_harpoon).
+static func _haul(kit, tuning, intent, body_state, step: float) -> void:
+	kit.smash_left -= step
+	if kit.smash_left <= 0.0 or intent.jump_pressed or intent.boost_pressed or intent.movement_pressed:
+		kit.drop_line()
+		return
+	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
+	var dist := to_anchor.length()
+	if dist < 0.001:
+		return
+	var dir := to_anchor / dist
+	var v: Vector3 = body_state.linear_velocity
+	var speed := maxf(v.length(), kit.smash_floor)
+	v = dir * speed
+	kit.rope = minf(kit.rope, dist)
+	kit.tow = -dir * tuning.f("harpoon_smash_speed") * (1.0 - kit.ball_share)
+	kit.line_closing = speed + kit.tow.length()
 	body_state.linear_velocity = v
 
 

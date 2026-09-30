@@ -10,6 +10,7 @@ const STYLES := {
 	Augments.AIM_NONE: {"color": Color(0.85, 0.88, 0.92, 0.55), "shape": "cross", "word": ""},
 	Augments.AIM_REACH: {"color": Palette.SAND, "shape": "ring", "word": "in reach"},
 	Augments.AIM_ASSIST: {"color": Palette.ARC, "shape": "diamond", "word": "magnet assist"},
+	Augments.AIM_BODY: {"color": Palette.SAND, "shape": "brackets", "word": ""},
 }
 
 

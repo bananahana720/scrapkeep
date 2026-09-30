@@ -24,6 +24,27 @@ var anchor_normal := Vector3.ZERO
 var rope := 0.0
 var aim := Augments.no_aim()
 
+# The harpoon's line record, on top of the grapple's fields above (one rope, in
+# Augments._grapple). on_body says the line is bitten into anchor_body, an enemy, and
+# anchor then follows it at anchor_offset; a freed body reads as null, so the flag is
+# its own. ball_share is the ball's share of the
+# closing (1 flies you in, less tows the body), smash_left the seconds a committed haul
+# may still run and smash_floor the speed it never drops below. tow is the velocity handed
+# to the body this tick. lock_body is the soft-lock's sticky pick; rewind_left the seconds
+# the hook is spent after a line smash.
+var harpoon_on := false
+var on_body := false
+var anchor_body: Node3D = null
+var anchor_offset := Vector3.ZERO
+var line_state := Augments.LINE_IDLE
+var ball_share := 1.0
+var smash_left := 0.0
+var smash_floor := 0.0
+var line_closing := 0.0
+var tow := Vector3.ZERO
+var lock_body: Node3D = null
+var rewind_left := 0.0
+
 var gliding := false
 
 var slamming := false
@@ -85,6 +106,8 @@ func fit(movement: String, smash: String) -> void:
 	smash_id = smash
 	smash_flavour = AbilityState.ABILITIES.get(smash, {}).get("flavour", "")
 	var keys: Array = AbilityState.ABILITIES.get(movement, {}).get("augments", []) + Augments.SHARED
+	if harpoon_on:
+		keys = keys + [Augments.GRAPPLE]
 	for spec in Augments.SPECS:
 		set_on(spec["key"], spec["key"] in keys)
 
@@ -110,6 +133,7 @@ func toggle(key: String) -> bool:
 
 func tick_timers(delta: float) -> void:
 	mount_block = maxf(0.0, mount_block - delta)
+	rewind_left = maxf(0.0, rewind_left - delta)
 	mass_gap = maxf(0.0, mass_gap - delta)
 	for key in vault_faces.keys():
 		vault_faces[key] -= delta
@@ -131,6 +155,19 @@ func release_holds() -> void:
 	slingshot.cancel()
 
 
+# The line ends and the ball keeps whatever velocity it has.
+func drop_line() -> void:
+	hooked = false
+	on_body = false
+	anchor_body = null
+	line_state = Augments.LINE_IDLE
+	ball_share = 1.0
+	smash_left = 0.0
+	smash_floor = 0.0
+	line_closing = 0.0
+	tow = Vector3.ZERO
+
+
 func clear_runtime() -> void:
 	for spec in Augments.SPECS:
 		_stop(spec["key"])
@@ -145,13 +182,15 @@ func clear_runtime() -> void:
 	last_vault_face = ""
 	vault_aim = {}
 	slingshot_aim = {}
+	lock_body = null
+	rewind_left = 0.0
 	facts.clear()
 
 
 func _stop(key: String) -> void:
 	match key:
 		Augments.GRAPPLE:
-			hooked = false
+			drop_line()
 			aim = Augments.no_aim()
 		Augments.GLIDE:
 			gliding = false

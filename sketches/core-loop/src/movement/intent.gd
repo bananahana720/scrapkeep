@@ -28,6 +28,11 @@ var special_released := false
 var movement_pressed := false
 var movement_held := false
 var movement_released := false
+# The harpoon's own key. With --harpoon off the keyboard leaves these false and RMB stays
+# the class movement; with it on RMB is here and movement_* moves to the burst key.
+var harpoon_pressed := false
+var harpoon_held := false
+var harpoon_released := false
 # Drops whatever gauge is charging, spending nothing. The player turns an RMB press made
 # during a charge into this (the League convention: right click cancels a cast).
 var cancel_pressed := false
@@ -52,6 +57,9 @@ func clear() -> void:
 	movement_pressed = false
 	movement_held = false
 	movement_released = false
+	harpoon_pressed = false
+	harpoon_held = false
+	harpoon_released = false
 	cancel_pressed = false
 
 
@@ -84,6 +92,10 @@ class Keyboard:
 	extends Source
 
 	var enabled := true
+	# Read live, so the F1 panel flips the layout: RMB is the class movement while
+	# --harpoon is off; on, RMB is the harpoon and the burst is Shift (routed by the ball,
+	# which knows whether its charge is ready) or C.
+	var tuning
 
 	func poll(out) -> void:
 		out.clear()
@@ -103,6 +115,16 @@ class Keyboard:
 		out.special_pressed = Input.is_action_just_pressed("cl_special")
 		out.special_held = Input.is_action_pressed("cl_special")
 		out.special_released = Input.is_action_just_released("cl_special")
-		out.movement_pressed = Input.is_action_just_pressed("cl_movement")
-		out.movement_held = Input.is_action_pressed("cl_movement")
-		out.movement_released = Input.is_action_just_released("cl_movement")
+		if tuning == null or not tuning.harpoon_on():
+			out.movement_pressed = Input.is_action_just_pressed("cl_movement")
+			out.movement_held = Input.is_action_pressed("cl_movement")
+			out.movement_released = Input.is_action_just_released("cl_movement")
+			return
+		out.harpoon_pressed = Input.is_action_just_pressed("cl_movement")
+		out.harpoon_held = Input.is_action_pressed("cl_movement")
+		out.harpoon_released = Input.is_action_just_released("cl_movement")
+		var keep: bool = tuning.option("harpoon_keys") == "keep"
+		var burst := "cl_dash" if keep else "cl_boost"
+		out.movement_pressed = keep and Input.is_action_just_pressed(burst)
+		out.movement_held = Input.is_action_pressed(burst)
+		out.movement_released = Input.is_action_just_released(burst)

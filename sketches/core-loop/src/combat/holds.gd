@@ -138,6 +138,7 @@ func catch(source: Node3D, kind: String, breaks: Array, max_seconds := 0.0, shov
 	active[id] = {"kind": kind, "source": weakref(source), "breaks": breaks.duplicate(), "since": _clock,
 		"left": max_seconds, "anchor": anchor}
 	catches += 1
+	player.cut_line()
 	ctx.events.hold_started.emit(kind, player.ball_position())
 	return true
 

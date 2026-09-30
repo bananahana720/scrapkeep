@@ -1,0 +1,93 @@
+extends RefCounted
+
+const Augments := preload("res://src/movement/augments.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+
+# The harpoon's static rules (DESIGN-NOTES, "Harpoon and winch"): which body a press would
+# bite, and how a line's closing splits between the ball and the body. The line itself is
+# the grapple's, on AugmentKit, and moves in Augments._grapple.
+
+# Weight from which a body cannot be towed: the Warden, the vault, a boss part.
+const IMMOVABLE := 100.0
+# A lock already held survives out to this many times the cone.
+const STICKY := 1.5
+
+
+# The ball's share of the closing, 0 to 1. `self` always flies you in; `heft` splits it by
+# weight against heft, so the lighter end travels: 0.5 for a chaser at heft 1, 0.24 at
+# heft 3.2. An immovable body is never towed. Heft stays the run's stat: the ball's
+# rigid mass is untouched (CONTRACTS, "Heft never changes RigidBody mass").
+static func ball_share(law: String, heft: float, weight: float) -> float:
+	if law != "heft" or weight >= IMMOVABLE:
+		return 1.0
+	return weight / (weight + heft)
+
+
+static func weight_of(body: Node3D) -> float:
+	var weight = body.get("weight")
+	return float(weight) if weight != null else IMMOVABLE
+
+
+# What a press would bite right now, in the record the reticle, the world marker and the
+# fire action share. Off is the grapple's own world-only aim. Shot lets the centre ray
+# take an enemy; lock prefers one inside the cone, seen from the ball, and otherwise
+# falls back to the shot. Walkable ground is refused either way.
+static func target(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array, from: Vector3,
+		forward: Vector3, ball: Vector3) -> Dictionary:
+	var reach: float = tuning.f("rope_range")
+	var assist: float = tuning.f("grapple_assist_deg")
+	var mode: String = tuning.option("harpoon")
+	if mode == "off":
+		return Augments.grapple_target(space, from, forward, ball, reach, assist)
+	forward = forward.normalized()
+	if mode == "lock":
+		var locked := _lock(kit, tuning, space, enemies, from, forward, ball, reach)
+		if not locked.is_empty():
+			return locked
+	return Augments.grapple_target(space, from, forward, ball, reach, assist,
+		Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
+
+
+static func _lock(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array, from: Vector3,
+		forward: Vector3, ball: Vector3, reach: float) -> Dictionary:
+	var cone := deg_to_rad(tuning.f("harpoon_lock_deg"))
+	var held = kit.lock_body
+	var found: Array = []
+	for enemy in enemies:
+		if not Augments.hookable_body(enemy):
+			continue
+		var centre: Vector3 = enemy.global_position
+		var gap := centre.distance_to(ball)
+		if gap > reach or (centre - ball).dot(forward) <= 0.0:
+			continue
+		var angle := forward.angle_to(centre - from)
+		if angle <= cone * (STICKY if enemy == held else 1.0):
+			found.append([angle, enemy])
+	found.sort_custom(func(a, b): return a[0] < b[0])
+	for entry in found:
+		var enemy: Node3D = entry[1]
+		if space.intersect_ray(PhysicsRayQueryParameters3D.create(ball, enemy.global_position, Augments.WORLD_MASK)).is_empty():
+			kit.lock_body = enemy
+			var away := ball - enemy.global_position
+			return {"state": Augments.AIM_BODY, "point": enemy.global_position,
+				"normal": away.normalized() if away.length() > 0.01 else Vector3.UP, "body": enemy}
+	kit.lock_body = null
+	return {}
+
+
+# The key the movement slot shows: RMB when it is the rope or the harpoon is off, else
+# the burst's own key.
+static func movement_key(kit, tuning) -> String:
+	if not kit.harpoon_on or kit.movement_id == Augments.GRAPPLE:
+		return AbilityState.KEYS[AbilityState.MOVEMENT]
+	return "Shift" if tuning.option("harpoon_keys") == "shift" else "C"
+
+
+# Whether the class movement burst can fire now: Rivet's sprint or Kest's blink with a
+# charge (or Kest's free blink out of the cloak).
+static func burst_ready(kit) -> bool:
+	if kit.on(Augments.SPRINT):
+		return kit.abilities.ready(AbilityState.MOVEMENT)
+	if kit.on(Augments.BLINK):
+		return kit.abilities.ready(AbilityState.MOVEMENT) or (kit.cloaked and kit.knob("cloak_free_blink"))
+	return false

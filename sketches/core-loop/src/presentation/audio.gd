@@ -77,7 +77,8 @@ const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampe
 # v2 W3 characters: the class-ability facts, heard through their event rows.
 const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
 	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
-	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked"]
+	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked",
+	"harpoon_bit", "harpoon_smashed"]
 # v2 W7 enemies: holds, tenacity and the ancients' tells. Each plays its event row's
 # sound through the same wiring as the character facts. vent_charging and vent_erupted
 # also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by

@@ -174,7 +174,10 @@ func setup(ctx_ref) -> void:
 	events.slammed.connect(_on_slammed)
 	events.mounted.connect(_on_mounted)
 	events.dismounted.connect(_on_dismounted)
-	events.grapple_fired.connect(func(anchor: Vector3): glyph("grapple_fired", anchor, 0.25, 0.7, 0.25))
+	events.grapple_fired.connect(func(anchor: Vector3): glyph("grapple_fired", anchor, 0.25, 0.7, 0.25, Vector3.ZERO, "", player.class_color()))
+	events.harpoon_bit.connect(func(_enemy: Node3D, at: Vector3): glyph("harpoon_bit", at, 0.3, 1.0, 0.3, Vector3.ZERO, "", player.class_color()))
+	events.harpoon_smashed.connect(func(_enemy: Node3D, at: Vector3, speed: float):
+		glyph("harpoon_smashed", at, 0.6, 2.0 + speed * 0.05, 0.4, Vector3.ZERO, "", player.class_color()))
 	events.shot_fired.connect(_on_shot)
 	events.enemy_struck.connect(_on_struck)
 	events.scrap_collected.connect(_on_scrap)

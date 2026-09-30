@@ -4,6 +4,8 @@ const AimStyle := preload("res://src/movement/aim_style.gd")
 
 const RING := 13.0
 const DIAMOND := 15.0
+const BRACKET := 17.0
+const BRACKET_TICK := 8.0
 const GAUGE_RING := 24.0
 const GAUGE_WIDTH := 3.0
 
@@ -53,6 +55,18 @@ func _draw() -> void:
 		"ring":
 			draw_arc(centre, RING, 0.0, TAU, 40, color, 2.5)
 			draw_circle(centre, 2.5, color)
+		"brackets":
+			# An enemy the harpoon would bite: four corner ticks at the body, and the same snap line
+			# as the magnet. The shape, not the colour, says a body.
+			var at := centre
+			if camera != null and not camera.is_position_behind(aim["point"]):
+				at = camera.unproject_position(aim["point"])
+			draw_line(centre, at, Color(color, 0.6), 1.5)
+			draw_circle(centre, 2.0, color)
+			for corner in [Vector2(1.0, 1.0), Vector2(-1.0, 1.0), Vector2(1.0, -1.0), Vector2(-1.0, -1.0)]:
+				var tip: Vector2 = at + corner * BRACKET
+				draw_line(tip, tip - Vector2(corner.x * BRACKET_TICK, 0.0), color, 2.5)
+				draw_line(tip, tip - Vector2(0.0, corner.y * BRACKET_TICK), color, 2.5)
 		"diamond":
 			var at := centre
 			if camera != null and not camera.is_position_behind(aim["point"]):

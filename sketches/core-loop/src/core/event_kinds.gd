@@ -54,8 +54,12 @@ const ROWS := {
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
 	"landed": {"group": "movement", "color": Palette.SANDSTONE, "shape": "ring", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
 	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
-	"grapple_fired": {"group": "movement", "color": Palette.AMBER, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
+	"grapple_fired": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
 	"grapple_released": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "grapple_release", "hud": "", "objective": "", "priority": 1},
+	# The harpoon is yours, so its facts wear the class colour where they draw (vfx.gd passes the live
+	# class); the row holds the rope craft's, Sable's. Never the Hooker's HAZARD and never its atk_e06 cues.
+	"harpoon_bit": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
+	"harpoon_smashed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
 	"mounted": {"group": "movement", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
 	"dismounted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
 	"enemy_spawned": {"group": "combat", "color": Palette.RUST, "shape": "chevron", "sound": "enemy_arrive", "hud": "", "objective": "", "priority": 1},

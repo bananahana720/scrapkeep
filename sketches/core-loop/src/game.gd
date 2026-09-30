@@ -13,7 +13,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const Augments := preload("res://src/movement/augments.gd")
+const Harpoon := preload("res://src/movement/harpoon.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
@@ -48,8 +48,10 @@ const ACTIONS := {
 	"cl_mount": [KEY_E],
 	"cl_reel": [KEY_Q],
 	"cl_special": [KEY_F],
+	"cl_dash": [KEY_C],
 }
-# RMB is every class's movement ability (Sable's grapple rides it through the intent).
+# RMB is every class's movement ability (Sable's grapple rides it through the intent). Under
+# --harpoon it is the harpoon and cl_dash (C) or Shift carries the class burst.
 const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT, "cl_movement": MOUSE_BUTTON_RIGHT}
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
@@ -186,6 +188,7 @@ func _ready() -> void:
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
+		keyboard.tuning = tuning
 		keyboard.enabled = false
 		player.source = keyboard
 	# The first stage's ground is where the title parks the ball.
@@ -252,8 +255,8 @@ func restart_hold_fraction() -> float:
 # The single answer to "what would the grapple hit right now". The reticle, the world
 # marker and the ball's RMB grapple all read the record this stores.
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
-	player.kit.aim = Augments.grapple_target(get_world_3d().direct_space_state, from, forward,
-		player.ball_position(), player.grapple_range(), tuning.f("grapple_assist_deg"))
+	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
+		get_tree().get_nodes_in_group("enemy") if tuning.harpoon_on() else [], from, forward, player.ball_position())
 	return player.kit.aim
 
 

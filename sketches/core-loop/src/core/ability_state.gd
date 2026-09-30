@@ -130,6 +130,9 @@ class Slot:
 	var item_scale := 1.0
 
 
+# The key the movement slot shows: RMB, or under --harpoon Shift or C for a pilot whose
+# movement is not the rope (player_ball sets it).
+var movement_key := KEYS[MOVEMENT]
 var _slots := {}
 
 
@@ -304,7 +307,7 @@ func slots() -> Array:
 		var frac := 0.0
 		if s.charges < s.max_charges and cd > 0.0:
 			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
-		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": KEYS[name], "cooldown_frac": frac,
+		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": movement_key if name == MOVEMENT else KEYS[name], "cooldown_frac": frac,
 			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
 			"gauge": s.gauge.fraction() if s.gauge != null else 0.0})
 	return out
