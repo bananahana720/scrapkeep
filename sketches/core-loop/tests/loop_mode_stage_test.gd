@@ -45,10 +45,13 @@ func _run() -> void:
 	_game.ctx.events.beacon_unsealed.emit(1)
 	var ledger = _game.combat._ledger["drops_to_break"].get("1")
 	_check("ledger", ledger != null, "drops_to_break for the drop stage is %s, not null, after the flip" % [ledger])
+	_game.player.reset_to(ball, launch)
+	await physics_frame
 	audio.ace.mode = "level"
 	audio._follow_drop_line()
 	_check("ace", audio.ace.mode == "warden", "the ACE band commits on the drop line after the flip: mode %s" % audio.ace.mode)
 	_game.tuning.set_option("loop_mode", "v2")
+	_game._end_hit_stop()
 	var spent: float = _game.hit_stop_spent
 	_game.hit_stop(0.04)
 	_game._end_hit_stop()
