@@ -77,6 +77,9 @@ var _values := {}
 var _mods := {}
 # Parts shorten the shared boost cooldown; a constant, not a slider row.
 var boost_cooldown_scale := 1.0
+# What the command line set, key to value: reset() returns to how this launch started, so
+# the F1 panel's Reset defaults keeps the flags and only the sliders go back to defaults.
+var _launch := {}
 
 
 func _init() -> void:
@@ -130,11 +133,13 @@ func apply_args(args: PackedStringArray, when := "") -> Dictionary:
 		var value := arg.substr(arg.find("=") + 1)
 		if row[1] == "option":
 			if set_option(row[0], value):
+				_launch[row[0]] = _values[row[0]]
 				applied[flag] = value
 			else:
 				push_warning("tuning: unknown --%s=%s" % [flag, value])
 		elif value.is_valid_float():
 			set_value(row[0], float(value))
+			_launch[row[0]] = _values[row[0]]
 			applied[flag] = value
 	return applied
 
@@ -216,3 +221,5 @@ func set_option(key: String, name: String) -> bool:
 func reset() -> void:
 	for spec in SPECS:
 		_values[spec["key"]] = spec["value"]
+	for key in _launch:
+		_values[key] = _launch[key]
