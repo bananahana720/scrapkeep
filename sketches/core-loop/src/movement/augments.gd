@@ -320,9 +320,10 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 	return no_aim()
 
 
-# An enemy the ray can bite: alive, on the enemy layer's group.
+# An enemy the line can bite: alive, in the enemy group, and on the enemy layer so the ball can touch it.
 static func hookable_body(body) -> bool:
-	return body is Node3D and body.is_in_group("enemy") and not (body.has_method("is_dead") and body.is_dead())
+	return body is CollisionObject3D and body.is_in_group("enemy") and (body.collision_layer & ENEMY_MASK) != 0 \
+		and not (body.has_method("is_dead") and body.is_dead())
 
 
 static func _hook_ray(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vector3,
