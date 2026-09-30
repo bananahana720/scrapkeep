@@ -151,6 +151,8 @@ func new_run() -> void:
 func _begin_run(chosen: Resource) -> void:
 	in_arena = false
 	boss_active = false
+	if ctx.run_log != null:
+		ctx.run_log.abandon_open_run()
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
