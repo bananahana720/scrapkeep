@@ -6,6 +6,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 
 # The reward ceremony (v3 W13, playtest entry 8 follow-up: "treasure find ceremony").
@@ -620,20 +621,19 @@ func _load_seen() -> void:
 	_seen = {}
 	if not FileAccess.file_exists(_seen_path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(_seen_path))
-	if parsed is Array:
-		for id in parsed:
-			_seen[String(id)] = true
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(_seen_path), TYPE_ARRAY)
+	if parsed == null:
+		SafeStore.quarantine(_seen_path)
+		return
+	for id in parsed:
+		_seen[String(id)] = true
 
 
 func _mark_seen(part_id: String) -> void:
 	if _seen.has(part_id):
 		return
 	_seen[part_id] = true
-	var file := FileAccess.open(_seen_path, FileAccess.WRITE)
-	if file != null:
-		file.store_string(JSON.stringify(_seen.keys()))
-		file.close()
+	SafeStore.write_atomic(_seen_path, JSON.stringify(_seen.keys()))
 
 
 func seen(part_id: String) -> bool:

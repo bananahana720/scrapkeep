@@ -1,6 +1,7 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 
 # The codex: one registry of every synergy, trick and interaction the demo knows,
 # saved across runs (the demo's only meta-progression, DEMO-SPEC). Owners declare
@@ -245,9 +246,9 @@ func _load() -> void:
 	var path := storage_dir.path_join(STATE_FILE)
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
-		last_error = "codex file unreadable; starting empty"
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY)
+	if parsed == null:
+		last_error = "codex file unreadable; kept as %s; starting empty" % SafeStore.quarantine(path)
 		return
 	for id in parsed.get("discovered", []):
 		_discovered[String(id)] = true
@@ -260,9 +261,6 @@ func _load() -> void:
 
 func _save() -> void:
 	var path := storage_dir.path_join(STATE_FILE)
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		last_error = "cannot save %s: %s" % [path, error_string(FileAccess.get_open_error())]
-		return
-	file.store_string(JSON.stringify({"discovered": _discovered.keys(), "found": _found, "found_categories": _found_category}, "  "))
-	file.close()
+	var err := SafeStore.write_atomic(path, JSON.stringify({"discovered": _discovered.keys(), "found": _found, "found_categories": _found_category}, "  "))
+	if err != OK:
+		last_error = "cannot save %s: %s" % [path, error_string(err)]
