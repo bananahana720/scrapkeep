@@ -5,6 +5,8 @@ extends RefCounted
 # which first-run callouts have shown. Storage failures never throw; the profile keeps
 # working in memory, as the codex does.
 
+const SafeStore := preload("res://src/core/safe_store.gd")
+
 const FILE := "ui-profile.json"
 
 var path := ""
@@ -27,9 +29,9 @@ func load_saved() -> void:
 	discoveries_seen = []
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
-		last_error = "unreadable %s" % path
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY)
+	if parsed == null:
+		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
 		return
 	var uses = parsed.get("glyph_uses", {})
 	if uses is Dictionary:
@@ -82,8 +84,9 @@ func mark_discovered(discovery_id: String) -> void:
 func _merge_disk() -> void:
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY)
+	if parsed == null:
+		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
 		return
 	for id in parsed.get("callouts_seen", []):
 		if not String(id) in callouts_seen:
@@ -99,9 +102,6 @@ func _merge_disk() -> void:
 
 func save() -> void:
 	_merge_disk()
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		last_error = error_string(FileAccess.get_open_error())
-		return
-	file.store_string(JSON.stringify({"glyph_uses": glyph_uses, "callouts_seen": callouts_seen, "discoveries_seen": discoveries_seen}, "  "))
-	file.close()
+	var err := SafeStore.write_atomic(path, JSON.stringify({"glyph_uses": glyph_uses, "callouts_seen": callouts_seen, "discoveries_seen": discoveries_seen}, "  "))
+	if err != OK:
+		last_error = error_string(err)
