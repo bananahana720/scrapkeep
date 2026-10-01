@@ -107,6 +107,7 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	kit.tick_timers(step)
 	_sprint(kit, state, tuning, intent, body_state, step)
 	if _mount(kit, state, tuning, intent, aim, body_state, step):
+		_keep_body_line(kit, tuning, body_state)
 		return
 	if _hold_plant(kit, state, intent, body_state, step):
 		return
@@ -570,6 +571,13 @@ static func _pin(body_state, at: Vector3) -> void:
 	body_state.transform = Transform3D(body_state.transform.basis, at)
 	body_state.linear_velocity = Vector3.ZERO
 	body_state.angular_velocity *= PLANT_SPIN_DAMP
+
+
+# A mounted ball skips the grapple rule, but a line on a body still follows it and lets go
+# when it dies; there is no swing, spring or winch while mounted.
+static func _keep_body_line(kit, tuning, body_state) -> void:
+	if kit.hooked and kit.on_body and kit.on(GRAPPLE):
+		_follow(kit, tuning, body_state.transform.origin)
 
 
 static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
