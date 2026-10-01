@@ -207,6 +207,52 @@ func _unmovable_file_survives() -> void:
 		c["free"].call(store)
 
 
+func _healthy_reload_cases() -> Array:
+	return [
+		{"label": "codex", "file": "codex.json", "healthy": '{"discovered": ["a"], "found": [], "found_categories": {}}', "marker": "parting_shot",
+		"reload": func(store: Variant) -> void: store[0]._load()},
+		{"label": "settings_store", "file": "settings.json", "healthy": '{"volumes": {"music": 0.2}, "comfort": {}}', "marker": "sfx",
+		"reload": func(store: Variant) -> void: store.load_saved()},
+		{"label": "ui_profile", "file": "ui-profile.json", "healthy": '{"glyph_uses": {}, "callouts_seen": ["a"], "discoveries_seen": []}', "marker": "\"x\"",
+		"reload": func(store: Variant) -> void: store.load_saved()},
+		{"label": "reward_ceremony", "file": Ceremony.SEEN_FILE, "healthy": '["a"]', "marker": "\"x\"",
+		"reload": func(store: Variant) -> void: store._load_seen()},
+	]
+
+
+func _healthy_reload_unblocks() -> void:
+	var stores := {}
+	for c in _store_cases():
+		stores[c["label"]] = c
+	for h in _healthy_reload_cases():
+		var c: Dictionary = stores[h["label"]]
+		var dir := _fresh_dir(h["file"], "{corrupt")
+		var path := dir.path_join(h["file"])
+		var real := ProjectSettings.globalize_path(dir)
+		OS.execute("chmod", ["555", real])
+		var store = c["make"].call(dir)
+		OS.execute("chmod", ["755", real])
+		_write(path, h["healthy"])
+		h["reload"].call(store)
+		c["save"].call(store)
+		_check(FileAccess.get_file_as_string(path).contains(h["marker"]), "%s: a load that reads a healthy file lifts the save block" % h["label"])
+		c["free"].call(store)
+
+
+func _blocked_save_after_merge() -> void:
+	var dir := "user://persist-trunc-%d-merge-block" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir.path_join("ui-profile.json")
+	var profile = UiProfile.new(dir)
+	_write(path, "{corrupt")
+	var real := ProjectSettings.globalize_path(dir)
+	OS.execute("chmod", ["555", real])
+	profile.mark_discovered("x")
+	OS.execute("chmod", ["755", real])
+	_check(FileAccess.get_file_as_string(path) == "{corrupt", "ui_profile: the unreadable file is untouched by a save that finds it mid-merge")
+	_check(profile.last_error.contains("could not be moved aside"), "ui_profile: a save blocked by its merge records the block (got \"%s\")" % profile.last_error)
+
+
 func _save_error_survives_log_error() -> void:
 	var dir := "user://persist-trunc-%d-nope/missing" % OS.get_process_id()
 	var events = GameEvents.new()
@@ -272,6 +318,8 @@ func _initialize() -> void:
 	_write_stays_atomic()
 	_directory_at_bad()
 	_unmovable_file_survives()
+	_healthy_reload_unblocks()
+	_blocked_save_after_merge()
 	_save_error_survives_log_error()
 
 	for d in DirAccess.get_directories_at("user://"):
