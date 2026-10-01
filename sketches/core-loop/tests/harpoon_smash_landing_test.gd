@@ -9,6 +9,7 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 # rearm and plays the clank, the sound of a failure, over the best moment of the fight.
 #   landed drop      one drop, no strike_deflected, and exactly one contact on the Warden
 #   bystander        a second enemy inside the shockwave radius still takes the SLAM strike
+#   plain chaser     a landed body with no drop rule still takes the shockwave's SLAM strike
 # Evidence limit: contacts are real physics from placed starts, not a player's run.
 
 const OUT := 58.0
@@ -25,6 +26,8 @@ var _smashed := 0
 var _warden_strikes: Array = []
 var _bystander_slams := 0
 var _bystander: Node3D
+var _chaser: Node3D
+var _chaser_slams := 0
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -65,6 +68,8 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		_warden_strikes.append(kind)
 	elif enemy == _bystander and kind == "slam":
 		_bystander_slams += 1
+	elif enemy == _chaser and kind == "slam":
+		_chaser_slams += 1
 
 
 func _run() -> void:
@@ -97,6 +102,7 @@ func _run() -> void:
 			enemy.queue_free()
 
 	await _landed_drop()
+	await _landed_chaser()
 
 	print("harpoon_smash_landing_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
@@ -135,3 +141,30 @@ func _landed_drop() -> void:
 		"the enemy beside the Warden took %d slam strikes" % _bystander_slams)
 	if is_instance_valid(_bystander):
 		_bystander.queue_free()
+
+
+
+func _landed_chaser() -> void:
+	_smashed = 0
+	_chaser_slams = 0
+	_player.reset_to(_ground(OUT))
+	await _sim(0.3)
+	_chaser = _game.ctx.spawner.spawn_enemy("chaser", _top() + Vector3(0.0, 0.5, 8.0))
+	_chaser.live = func(): return false
+	_chaser.hp = 99999.0
+	_player.reset_to(_chaser.global_position + Vector3(-6.0, 6.0, 0.0))
+	_player.grapple_to(_chaser.global_position, Vector3.UP, _chaser)
+	_source.hold = {"harpoon_held": true}
+	await _sim(0.02)
+	_source.hold = {"harpoon_held": true, "brake_held": true}
+	for tick in roundi(1.5 * Engine.physics_ticks_per_second):
+		await physics_frame
+		if _smashed > 0:
+			break
+	_source.hold = {}
+	await _sim(0.3)
+	_report("chaser smash landed", _smashed == 1, "%d smashes on the plain chaser" % _smashed)
+	_report("plain chaser still shocked", _chaser_slams >= 1,
+		"the landed chaser took %d shockwave slam strikes" % _chaser_slams)
+	if is_instance_valid(_chaser):
+		_chaser.queue_free()
