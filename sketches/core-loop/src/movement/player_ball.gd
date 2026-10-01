@@ -41,6 +41,8 @@ const FACE_TAG_RAYS := 16
 # Rivet's skid pushes enemies in this cone ahead of the ball, and each one it reaches
 # pays back this much sprint recharge.
 const SKID_REACH := 10.0
+# How far past the ball's own radius a body still counts as the one it landed on.
+const LANDED_ON_MARGIN := 0.6
 const SKID_CONE := 0.35
 const SKID_REFUND := 0.5
 const AIM_CONE_LENGTH := 5.0
@@ -130,7 +132,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	else:
 		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
-	_rigid.slammed.connect(_on_slammed)
+	_rigid.slammed.connect(_on_ball_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
 	_rigid.pylon_ejected.connect(func(v: Vector3): events.dismounted.emit(v))
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
@@ -765,6 +767,27 @@ func _update_augment_visuals(at: Vector3) -> void:
 			_wings.global_basis = Basis.looking_at(heading.normalized(), Vector3.UP)
 
 
+# The Warden under the ball already took the landing contact as its drop.
+func _on_ball_slammed(at: Vector3, speed: float, flatness: float) -> void:
+	_landed_on = _spared_by_shockwave(_body_under())
+	_on_slammed(at, speed, flatness)
+	_landed_on = null
+
+
+func _body_under() -> Node3D:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS + LANDED_ON_MARGIN
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, ball_position())
+	query.collision_mask = Augments.ENEMY_MASK
+	for hit in _rigid.get_world_3d().direct_space_state.intersect_shape(query, 8):
+		var body = hit["collider"]
+		if body.is_in_group("enemy") and body.global_position.y < ball_position().y:
+			return body
+	return null
+
+
 # The shockwave carries the same flatness as the plant: a full thump on flat ground,
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
@@ -820,6 +843,14 @@ func _spared_by_shockwave(body: Node3D) -> Node3D:
 
 
 # Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
+# A Warden judging drops scores a landing's own shockwave as a 0-damage floor clank, so the
+# shockwave spares it; every other landed body still takes the shockwave's strike.
+func _spared_by_shockwave(body: Node3D) -> Node3D:
+	if is_instance_valid(body) and body.get("drop") != null:
+		return body
+	return null
+
+
 func _skid_push(at: Vector3, strength: float) -> int:
 	var ahead := planar_velocity()
 	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD
