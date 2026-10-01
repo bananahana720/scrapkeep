@@ -288,6 +288,11 @@ func warden_broken() -> void:
 		# The drop's follower is already scheduled: the break takes its place, on the
 		# first bar of the drop's grid at or after it (a follower may sit on a beat).
 		at = next_bar(maxi(int(pending["at"]), clock + _join_frames("break")))
+		# The drop's stems run out at their exit: a break placed after that plays the
+		# gap as silence, so it enters there with the join it has left.
+		for v: Voice in voices:
+			if not v.loop:
+				at = mini(at, clock + v.exit - v.pos)
 	# A follower whose join has begun keeps sounding until the break's own join replaces
 	# it, so the wait for the bar is never silent.
 	_cancel_pending(GAP_RAMP, true)
