@@ -811,6 +811,14 @@ func _tick_face_tags(delta: float) -> void:
 	face_tags = face_tags.filter(func(tag): return tag["left"] > 0.0)
 
 
+# A Warden judging drops scores a landing's own shockwave as a 0-damage floor clank, so the
+# shockwave spares it; every other landed body still takes the shockwave's strike.
+func _spared_by_shockwave(body: Node3D) -> Node3D:
+	if is_instance_valid(body) and body.get("drop") != null:
+		return body
+	return null
+
+
 # Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
 func _skid_push(at: Vector3, strength: float) -> int:
 	var ahead := planar_velocity()
@@ -938,9 +946,9 @@ func _begin_landing(enemy: Node3D) -> bool:
 
 # What the haul adds to that contact: the smash's shockwave, pins and this pilot's
 # flavour at the speed the line closed at, then the fact. The struck body already took the
-# landing contact, so the shockwave moves it but does not strike it a second time.
+# landing contact; the shockwave strikes it again except a Warden judging drops.
 func _finish_landing(enemy: Node3D, closing: float) -> void:
-	_landed_on = enemy if is_instance_valid(enemy) else null
+	_landed_on = _spared_by_shockwave(enemy)
 	_on_slammed(ball_position(), closing, 1.0)
 	_landed_on = null
 	events.harpoon_smashed.emit(enemy if is_instance_valid(enemy) else null, ball_position(), closing)
