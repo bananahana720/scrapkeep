@@ -196,6 +196,7 @@ var _crumb_offered: Array = []
 
 func _card_lines(picks: Array, on: bool) -> Array:
 	_take(picks, on)
+	_game.ctx.tuning.set_option("hotwire_shell", "on")
 	_player.tree.open_checkpoint()
 	_ws.open_pick()
 	_crumb_offered = _ws.pick._crumb.offered.duplicate()
@@ -203,6 +204,7 @@ func _card_lines(picks: Array, on: bool) -> Array:
 	for card in _ws.pick.cards():
 		out.append([card.node_id(), card.effect_text()])
 	_ws.close_pick()
+	_game.ctx.tuning.set_option("hotwire_shell", "off")
 	return out
 
 
