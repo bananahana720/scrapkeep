@@ -85,6 +85,7 @@ var _cc_ignored_at := {}
 var immune_left := 0.0
 # The landing each smash flavour adds to the shared slam.
 var _smashes := {}
+var _landed_on: Node3D
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -823,7 +824,8 @@ func _skid_push(at: Vector3, strength: float) -> int:
 		var falloff := 1.0 - to.length() / SKID_REACH
 		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
 		enemy.flash()
-		struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
+		if enemy != _landed_on:
+			struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
 		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
 		hits += 1
 	return hits
@@ -874,7 +876,7 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> vo
 		var falloff := 1.0 - reach / radius
 		enemy.knock(away + Vector3.UP * 0.5, force * falloff)
 		enemy.flash()
-		if kind != "":
+		if kind != "" and enemy != _landed_on:
 			struck.emit(enemy, kind, force * falloff)
 
 
@@ -935,9 +937,12 @@ func _begin_landing(enemy: Node3D) -> bool:
 
 
 # What the haul adds to that contact: the smash's shockwave, pins and this pilot's
-# flavour at the speed the line closed at, then the fact.
+# flavour at the speed the line closed at, then the fact. The struck body already took the
+# landing contact, so the shockwave moves it but does not strike it a second time.
 func _finish_landing(enemy: Node3D, closing: float) -> void:
+	_landed_on = enemy if is_instance_valid(enemy) else null
 	_on_slammed(ball_position(), closing, 1.0)
+	_landed_on = null
 	events.harpoon_smashed.emit(enemy if is_instance_valid(enemy) else null, ball_position(), closing)
 
 
