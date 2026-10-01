@@ -6,7 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 # A drop landed with a natural smash (Rivet, brake held in the air onto the open core)
 # must not be followed by the landing's own skid push striking the Warden again: inside
 # the drop's rearm the rule answers floor and the Warden clanks (strike_deflected). Every
-# other enemy in reach still takes the shockwave.
+# other enemy in reach still takes the shockwave, and so does a plain chaser the ball lands on.
 
 const OUT := 58.0
 const WAIT := 1.6
@@ -20,6 +20,7 @@ var _failures := 0
 var _warden
 var _drop
 var _bystander
+var _plain
 var _phase := "boot"
 var _clock := 0.0
 var _contacts := 0
@@ -27,6 +28,7 @@ var _landed := 0
 var _warden_strikes: Array[String] = []
 var _warden_deflects := 0
 var _bystander_slams := 0
+var _plain_slams := 0
 var _smashed := 0
 
 
@@ -65,7 +67,9 @@ func _physics_process(delta: float) -> bool:
 				if enemy == _warden:
 					_warden_strikes.append(kind)
 				elif enemy == _bystander and kind == "slam":
-					_bystander_slams += 1)
+					_bystander_slams += 1
+				elif enemy == _plain and kind == "slam":
+					_plain_slams += 1)
 			_to("settle")
 		"settle":
 			if _clock > 0.3:
@@ -111,6 +115,20 @@ func _physics_process(delta: float) -> bool:
 			_hold_cycle()
 			if _clock >= SETTLE:
 				_judge()
+				_to("plain_place")
+		"plain_place":
+			_hold_cycle()
+			var at: Vector3 = _ground(30.0)
+			_plain = _game.ctx.spawner.spawn_enemy("chaser", at)
+			_source.hold = {}
+			_game.player.reset_to(at + Vector3(0.0, 6.0, 0.0), Vector3(0.0, -8.0, 0.0))
+			_to("plain_fly")
+		"plain_fly":
+			_hold_cycle()
+			if _clock > 0.03 and not _game.player.state.grounded:
+				_source.hold = {"brake_held": true}
+			if _clock > 1.2:
+				_judge_plain()
 				return _finish()
 	return false
 
@@ -123,6 +141,11 @@ func _judge() -> void:
 		"%d strike_deflected on the Warden after the landed drop (needs 0)" % _warden_deflects)
 	_report("shockwave elsewhere", _bystander_slams >= 1,
 		"an enemy in reach took %d SLAM strike(s) from the landing (needs >= 1)" % _bystander_slams)
+
+
+func _judge_plain() -> void:
+	_report("plain landing", _plain_slams >= 1,
+		"a chaser with no drop rule that the held-brake slam landed on took %d SLAM strike(s) (needs >= 1)" % _plain_slams)
 
 
 func _ground(out: float) -> Vector3:
@@ -146,6 +169,8 @@ func _to(phase: String) -> void:
 func _finish() -> bool:
 	if is_instance_valid(_bystander):
 		_bystander.queue_free()
+	if is_instance_valid(_plain):
+		_plain.queue_free()
 	print("combat_slam_landing_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 	return true
