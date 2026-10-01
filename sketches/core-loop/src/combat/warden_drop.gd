@@ -154,12 +154,19 @@ func base_window() -> float:
 	return warden.CORE_WINDOW + CORE_BONUS * _cores()
 
 
-# The family cycle asked for a window. A stagger standing longer keeps its time.
+# The family cycle asked for a window. Time already standing is never taken away: a
+# stagger or window longer than the fresh one keeps its time, and a window still open at
+# the pulse keeps its banked share and held time and is not counted a second time.
 func opened(seconds: float) -> float:
-	if staggered and warden._open_left > seconds:
-		return warden._open_left
+	var fresh := seconds + CORE_BONUS * _cores()
+	var left: float = warden._open_left
+	if staggered and left > fresh:
+		return left
+	if not staggered and left > 0.0:
+		window_total = maxf(left, fresh)
+		return window_total
 	staggered = false
-	window_total = seconds + CORE_BONUS * _cores()
+	window_total = fresh
 	held = 0.0
 	_forfeit()
 	windows += 1
