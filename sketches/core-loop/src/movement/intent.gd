@@ -97,6 +97,11 @@ class Keyboard:
 	# which knows whether its charge is ready) or C.
 	var tuning
 
+	# Whether C is the in-play burst key: the harpoon is on and the layout keeps the burst
+	# on C. The death screen's C guard reads it from here too.
+	static func burst_is_c(tuning) -> bool:
+		return tuning != null and tuning.harpoon_on() and tuning.option("harpoon_keys") == "keep"
+
 	func poll(out) -> void:
 		out.clear()
 		if not enabled:
@@ -123,7 +128,7 @@ class Keyboard:
 		out.harpoon_pressed = Input.is_action_just_pressed("cl_movement")
 		out.harpoon_held = Input.is_action_pressed("cl_movement")
 		out.harpoon_released = Input.is_action_just_released("cl_movement")
-		var keep: bool = tuning.option("harpoon_keys") == "keep"
+		var keep: bool = burst_is_c(tuning)
 		var burst := "cl_dash" if keep else "cl_boost"
 		out.movement_pressed = keep and Input.is_action_just_pressed(burst)
 		out.movement_held = Input.is_action_pressed(burst)
