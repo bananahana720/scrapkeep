@@ -31,14 +31,25 @@ const ROWS := {
 }
 
 
+# The three rows that name the Riveted Shell inversion read these instead while the shell is
+# not fitted (--hotwire-shell off), because build.gd applies the inversion only with it fitted.
+const UNFITTED_ROWS := {
+	"s_face_runner": "Vaults restore jumps.",
+	"k_smoke_trail": "Glide cloaked.",
+	"r_second_wind": "Bank two sprints.",
+}
+
+
 static func has_row(node_id: String) -> bool:
 	return ROWS.has(node_id)
 
 
 # The effect line a card shows for this node: the world-one row when `world_one` and a
-# row exists, else the node's own effect.
-static func effect_line(node: Dictionary, world_one: bool) -> String:
+# row exists, else the node's own effect. `shell` is whether Riveted Shell is fitted.
+static func effect_line(node: Dictionary, world_one: bool, shell: bool) -> String:
 	var id := String(node.get("id", ""))
+	if world_one and not shell and UNFITTED_ROWS.has(id):
+		return String(UNFITTED_ROWS[id])
 	if world_one and ROWS.has(id):
 		return String(ROWS[id])
 	return String(node.get("effect", ""))

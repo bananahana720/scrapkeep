@@ -288,6 +288,11 @@ func warden_broken() -> void:
 		# The drop's follower is already scheduled: the break takes its place, on the
 		# first bar of the drop's grid at or after it (a follower may sit on a beat).
 		at = next_bar(maxi(int(pending["at"]), clock + _join_frames("break")))
+		# The drop's stems run out at their exit: a break placed after that plays the
+		# gap as silence, so it enters there with the join it has left.
+		for v: Voice in voices:
+			if not v.loop:
+				at = mini(at, clock + v.exit - v.pos)
 	# A follower whose join has begun keeps sounding until the break's own join replaces
 	# it, so the wait for the bar is never silent.
 	_cancel_pending(GAP_RAMP, true)
@@ -319,9 +324,16 @@ func next_bar(from := -1) -> int:
 
 func _next(unit: int, from: int) -> int:
 	var base := maxi(clock, from)
+	var grid_origin := origin
+	var step := unit
 	if section == "":
-		return base
-	return origin + int(ceil(float(base - origin) / unit)) * unit
+		if pending.is_empty():
+			return base
+		# Before the first commit the section about to enter owns the grid.
+		var clip: Dictionary = clips[sections[String(pending["section"])]["clip"]]
+		grid_origin = int(pending["at"]) - posmod(int(pending["entry"]) - int(clip["entry"]), int(clip["bar"]))
+		step = int(clip["beat"]) if unit == grid_beat else int(clip["bar"])
+	return grid_origin + int(ceil(float(base - grid_origin) / step)) * step
 
 
 # The first bar (or beat) far enough ahead for name's whole crossfade: a change asked on

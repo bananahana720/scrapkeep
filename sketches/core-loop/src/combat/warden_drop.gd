@@ -99,11 +99,11 @@ var window_total := 0.0
 var held := 0.0
 var staggered := false
 var damage := {"drop": 0.0, "gun": 0.0, "outside": 0.0, "stagger_gun": 0.0, "banked_lost": 0.0}
-# The hold role's gun share banked this window, and every ball contact judged.
+# The hold role's gun share banked this window, and every ball contact that struck.
 var banked := 0.0
 var contacts := 0
 var last_drop := {}
-# The last ball contact the rule judged, with its verdict; the bots' miss notes read it.
+# The last ball contact that struck, with its verdict; the bots' miss notes read it.
 var last_contact := {}
 var state := "closed"
 
@@ -154,12 +154,19 @@ func base_window() -> float:
 	return warden.CORE_WINDOW + CORE_BONUS * _cores()
 
 
-# The family cycle asked for a window. A stagger standing longer keeps its time.
+# The family cycle asked for a window. Time already standing is never taken away: a
+# stagger or window longer than the fresh one keeps its time, and a window still open at
+# the pulse keeps its banked share and held time and is not counted a second time.
 func opened(seconds: float) -> float:
-	if staggered and warden._open_left > seconds:
-		return warden._open_left
+	var fresh := seconds + CORE_BONUS * _cores()
+	var left: float = warden._open_left
+	if staggered and left > fresh:
+		return left
+	if not staggered and left > 0.0:
+		window_total = maxf(left, fresh)
+		return window_total
 	staggered = false
-	window_total = seconds + CORE_BONUS * _cores()
+	window_total = fresh
 	held = 0.0
 	_forfeit()
 	windows += 1
@@ -197,8 +204,7 @@ func rule(kind: String, part: String, punch: float, heft: float) -> Dictionary:
 		var arrival := _arrival()
 		var verdict := _verdict(arrival)
 		out["speed"] = arrival["speed"]
-		contacts += 1
-		last_contact = {"kind": kind, "verdict": verdict, "open": warden.family_open(), "on_core": arrival["on_core"],
+		out["contact"] = {"kind": kind, "verdict": verdict, "open": warden.family_open(), "on_core": arrival["on_core"],
 			"descending": arrival["descending"], "from_line": arrival["from_line"], "speed": snappedf(arrival["speed"], 0.1),
 			"height": snappedf(arrival["height"], 0.01)}
 		if verdict == "drop":
@@ -245,6 +251,9 @@ func _verdict(a: Dictionary) -> String:
 
 
 func on_struck(kind: String, result: Dictionary) -> void:
+	if result.has("contact"):
+		contacts += 1
+		last_contact = result["contact"]
 	var dealt: float = result.get("dealt", 0.0)
 	if not warden.family_open() and dealt > 0.0:
 		damage["outside"] += dealt
