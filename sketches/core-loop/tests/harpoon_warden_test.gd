@@ -29,6 +29,7 @@ var _drop
 var _source := Intent.Scripted.new()
 var _failures := 0
 var _counts := {"harpoon_smashed": 0, "strike_deflected": 0, "warden_drop_landed": 0, "slammed": 0}
+var _landed_contact := {}
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -70,6 +71,14 @@ func _cam(from: Vector3, to: Vector3) -> void:
 	_game.camera.cam.global_transform = Transform3D(Basis.looking_at(to - from, Vector3.UP), from)
 
 
+# on_struck ledgers a contact before it lands the drop, so this is the contact that landed it.
+# The smash's own shockwave strikes again in the same frame, so polling last_contact reads that.
+func _on_drop_landed(_at: Vector3, _speed: float, _left: int, _n: int) -> void:
+	_counts["warden_drop_landed"] += 1
+	if _drop != null:
+		_landed_contact = _drop.last_contact.duplicate()
+
+
 func _open() -> void:
 	if _warden._open_left <= 0.0:
 		_warden._open(_warden.CORE_WINDOW)
@@ -89,7 +98,7 @@ func _run() -> void:
 	_game.flow.choose_class(1)
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, _speed: float): _counts["harpoon_smashed"] += 1)
 	_game.events.strike_deflected.connect(func(_e: Node3D, _kind: String, _punch: float, _plating: float): _counts["strike_deflected"] += 1)
-	_game.events.warden_drop_landed.connect(func(_at: Vector3, _speed: float, _left: int, _n: int): _counts["warden_drop_landed"] += 1)
+	_game.events.warden_drop_landed.connect(_on_drop_landed)
 	_game.events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float): _counts["slammed"] += 1)
 	await _sim(0.4)
 	_game.run.set_max_hp(99999.0)
@@ -172,19 +181,15 @@ func _finisher() -> void:
 	await _sim(0.02)
 	_source.hold = {"harpoon_held": true, "brake_held": true}
 	var arrived := false
-	var contacts_before: int = _drop.contacts
-	var c := {}
+	_landed_contact = {}
 	for tick in roundi(1.5 * Engine.physics_ticks_per_second):
 		await physics_frame
-		# The smash's own shockwave strikes the Warden again a moment after the landing (a
-		# `floor` inside the rearm), so the arrival is read on the first contact.
-		if c.is_empty() and _drop.contacts > contacts_before:
-			c = _drop.last_contact.duplicate()
 		if _counts["harpoon_smashed"] > smashed_before:
 			arrived = true
 			break
 	_source.hold = {}
 	await _sim(0.3)
+	var c := _landed_contact
 	_report("finisher gets the drop", arrived and c.get("verdict") == "drop" and _counts["warden_drop_landed"] == drops_before + 1 and _warden.hp < hp,
 		"line smash from beyond %.0f m onto the top cap: verdict %s at %.1f m/s (min %.0f), Warden %.0f -> %.0f HP, drops landed %d"
 			% [WardenDrop.LINE_REACH, c.get("verdict"), c.get("speed", 0.0), WardenDrop.DROP_MIN_SPEED, hp, _warden.hp, _counts["warden_drop_landed"] - drops_before])
