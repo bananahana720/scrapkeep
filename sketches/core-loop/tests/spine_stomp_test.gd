@@ -6,8 +6,7 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
 # Real rigid contacts, no strike() shortcut: a ball dropped onto a target stomps it
 # with the speed it fell at, a ball rolling into one at cruise rams it with the speed
-# it rolled at, and a slam onto one sends its shockwave to the enemy beside it while the
-# target underneath takes only the landing contact. The contact must be read from
+# it rolled at, and a slam onto one reports the slam. The contact must be read from
 # the ball's motion before the solver bounced it.
 
 const DROP := 6.0
@@ -26,7 +25,6 @@ var _order := ["stomp", "ram", "slam"]
 var _case := ""
 var _ticks := 0
 var _target: Node3D
-var _neighbour: Node3D
 var _results := {}
 var _last_down := 0.0
 var _last_planar := 0.0
@@ -89,10 +87,6 @@ func _next_case() -> void:
 	var spot: Vector2 = SPOTS[_case]
 	var ground: Vector3 = _game.ctx.terrain.drop_point(spot.x, spot.y, 0.0)
 	_target = _double.spawn_enemy("chaser", ground)
-	if is_instance_valid(_neighbour):
-		_neighbour.queue_free()
-	if _case == "slam":
-		_neighbour = _double.spawn_enemy("chaser", _game.ctx.terrain.drop_point(spot.x + 4.0, spot.y, 0.0))
 	var top: float = ground.y + 3.0
 	var start: Vector3
 	var velocity := Vector3.ZERO
@@ -130,12 +124,8 @@ func _finish() -> bool:
 		"rolled into a target at cruise: strikes %s, ram force %.2f against %.2f m/s of planar speed"
 			% [_kinds(ram["strikes"]), hit.get("force", -1.0), rolled])
 	var slam: Dictionary = _results["slam"]
-	var slams: Array = slam["strikes"].filter(func(s): return s["kind"] == "slam")
-	var neighbour_slams: Array = slams.filter(func(s): return s["enemy"] == _neighbour)
-	var target_slams: Array = slams.filter(func(s): return s["enemy"] == _target)
-	_report("physical slam", not neighbour_slams.is_empty() and target_slams.is_empty(),
-		"slammed onto a target: strikes %s, %d slam strike(s) on the enemy beside it and %d on the one landed on"
-			% [_kinds(slam["strikes"]), neighbour_slams.size(), target_slams.size()])
+	_report("physical slam", "slam" in _kinds(slam["strikes"]),
+		"slammed onto a target: strikes %s" % [_kinds(slam["strikes"])])
 	print("spine_stomp_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

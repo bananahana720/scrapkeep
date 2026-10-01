@@ -667,10 +667,9 @@ func _update_augment_visuals(at: Vector3) -> void:
 			_wings.global_basis = Basis.looking_at(heading.normalized(), Vector3.UP)
 
 
-# The body under the ball already took the landing contact, so the shockwave moves it but
-# does not strike it again.
+# The Warden under the ball already took the landing contact as its drop.
 func _on_ball_slammed(at: Vector3, speed: float, flatness: float) -> void:
-	_landed_on = _body_under()
+	_landed_on = _spared_by_shockwave(_body_under())
 	_on_slammed(at, speed, flatness)
 	_landed_on = null
 
@@ -736,6 +735,14 @@ func _tick_face_tags(delta: float) -> void:
 
 
 # Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
+# A Warden judging drops scores a landing's own shockwave as a 0-damage floor clank, so the
+# shockwave spares it; every other landed body still takes the shockwave's strike.
+func _spared_by_shockwave(body: Node3D) -> Node3D:
+	if is_instance_valid(body) and body.get("drop") != null:
+		return body
+	return null
+
+
 func _skid_push(at: Vector3, strength: float) -> int:
 	var ahead := planar_velocity()
 	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD

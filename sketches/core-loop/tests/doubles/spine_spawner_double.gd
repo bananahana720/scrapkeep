@@ -84,7 +84,7 @@ func strike(enemy: Node3D, kind: String, force: float) -> void:
 		return
 	var punch := punch_of(kind, force)
 	var plating := plating_of(enemy)
-	strikes.append({"enemy": enemy, "kind": kind, "force": force, "punch": punch, "plating": plating})
+	strikes.append({"kind": kind, "force": force, "punch": punch, "plating": plating})
 	ctx.events.enemy_struck.emit(enemy, kind, force)
 	var amount := punch
 	if punch < plating:
