@@ -831,8 +831,13 @@ func _apply_route() -> void:
 # A hit removed scrap: SPILL_CLUSTERS at most, ahead of or beside the outgoing line.
 # Recovery runs only where the scrap field does (stage play). The boss arena clears the
 # field and never steps it, so a cluster dropped there could never be collected: the
-# spill is destroyed instead and logged, so the hit reads as what it cost.
+# spill is destroyed instead and logged, so the hit reads as what it cost. A scrapless run
+# never steps the field either, so its spill is destroyed the same way.
 func _on_armor_hit(_removed: float, spill: int, _source: String) -> void:
+	if scrapless():
+		ctx.run.metrics["destroyed"] += spill
+		_redraw()
+		return
 	if not ctx.flow.in_stage():
 		ctx.run.metrics["destroyed"] += spill
 		ctx.run.metrics["arena_destroyed"] += spill
