@@ -996,6 +996,8 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # and commits the smash once the line is on. RMB and Ctrl go through _drive's hold, which is
 # rebuilt every tick; the bite is a one-tick press. The hand's state is cleared at the top of
 # every tick, so only a tick that runs the hand carries it.
+# The press is withheld where the player discards it (a charging special or slingshot, a
+# frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	_harpoon_commit = false
@@ -1008,7 +1010,11 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 		_harpoon_commit = true
 		return
 	_harpoon_held = false
-	if kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
+	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
+	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
+	if special != null and special.charging:
+		swallowed = true
+	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and _off_line > WardenDrop.DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
