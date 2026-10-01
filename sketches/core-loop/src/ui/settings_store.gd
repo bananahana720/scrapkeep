@@ -14,6 +14,7 @@ var path := ""
 var volumes := {}
 var comfort := {}
 var last_error := ""
+var _save_blocked := false
 
 
 func _init(storage_dir := "user://") -> void:
@@ -28,7 +29,12 @@ func load_saved() -> void:
 		return
 	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"volumes": SafeStore.NUMBERS, "comfort": SafeStore.NUMBERS})
 	if parsed == null:
-		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
+		var kept := SafeStore.quarantine(path)
+		if kept.is_empty():
+			_save_blocked = true
+			last_error = "unreadable %s and could not be moved aside; not saving this session" % path
+		else:
+			last_error = "unreadable %s; kept as %s" % [path, kept]
 		return
 	var saved: Dictionary = parsed.get("volumes", {})
 	for bus in saved:
@@ -49,6 +55,8 @@ func set_comfort(id: String, level: float) -> void:
 
 
 func save() -> void:
+	if _save_blocked:
+		return
 	var err := SafeStore.write_atomic(path, JSON.stringify({"volumes": volumes, "comfort": comfort}, "  "))
 	if err != OK:
 		last_error = error_string(err)

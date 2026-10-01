@@ -69,11 +69,12 @@ static func _all(items: Array, type: int, alt := -1) -> bool:
 	return true
 
 
-# Moves an unreadable file aside and returns where it went, or "" when it could not.
+# Moves an unreadable file aside and returns where it went, or "" when it could not; a
+# caller that gets "" must not save over the file.
 static func quarantine(path: String) -> String:
 	var bad := path + ".bad"
 	var n := 1
-	while FileAccess.file_exists(bad):
+	while FileAccess.file_exists(bad) or DirAccess.dir_exists_absolute(bad):
 		bad = "%s.bad%d" % [path, n]
 		n += 1
 	if DirAccess.rename_absolute(path, bad) != OK:

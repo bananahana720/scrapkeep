@@ -16,6 +16,7 @@ var callouts_seen: Array = []
 # (--discovery=cards); a repeat only gets the quick glyph-and-name pop.
 var discoveries_seen: Array = []
 var last_error := ""
+var _save_blocked := false
 
 
 func _init(storage_dir := "user://") -> void:
@@ -44,7 +45,12 @@ func load_saved() -> void:
 func _read_disk() -> Variant:
 	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"glyph_uses": SafeStore.NUMBERS, "callouts_seen": SafeStore.STRINGS, "discoveries_seen": SafeStore.STRINGS})
 	if parsed == null:
-		last_error = "unreadable %s; kept as %s" % [path, SafeStore.quarantine(path)]
+		var kept := SafeStore.quarantine(path)
+		if kept.is_empty():
+			_save_blocked = true
+			last_error = "unreadable %s and could not be moved aside; not saving this session" % path
+		else:
+			last_error = "unreadable %s; kept as %s" % [path, kept]
 	return parsed
 
 
@@ -100,6 +106,8 @@ func _merge_disk() -> void:
 
 
 func save() -> void:
+	if _save_blocked:
+		return
 	_merge_disk()
 	var err := SafeStore.write_atomic(path, JSON.stringify({"glyph_uses": glyph_uses, "callouts_seen": callouts_seen, "discoveries_seen": discoveries_seen}, "  "))
 	if err != OK:
