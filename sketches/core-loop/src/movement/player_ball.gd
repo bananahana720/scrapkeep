@@ -734,7 +734,6 @@ func _tick_face_tags(delta: float) -> void:
 	face_tags = face_tags.filter(func(tag): return tag["left"] > 0.0)
 
 
-# Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
 # A Warden judging drops scores a landing's own shockwave as a 0-damage floor clank, so the
 # shockwave spares it; every other landed body still takes the shockwave's strike.
 func _spared_by_shockwave(body: Node3D) -> Node3D:
@@ -743,6 +742,7 @@ func _spared_by_shockwave(body: Node3D) -> Node3D:
 	return null
 
 
+# Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
 func _skid_push(at: Vector3, strength: float) -> int:
 	var ahead := planar_velocity()
 	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD
