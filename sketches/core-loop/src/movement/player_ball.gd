@@ -843,14 +843,6 @@ func _spared_by_shockwave(body: Node3D) -> Node3D:
 
 
 # Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
-# A Warden judging drops scores a landing's own shockwave as a 0-damage floor clank, so the
-# shockwave spares it; every other landed body still takes the shockwave's strike.
-func _spared_by_shockwave(body: Node3D) -> Node3D:
-	if is_instance_valid(body) and body.get("drop") != null:
-		return body
-	return null
-
-
 func _skid_push(at: Vector3, strength: float) -> int:
 	var ahead := planar_velocity()
 	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD
