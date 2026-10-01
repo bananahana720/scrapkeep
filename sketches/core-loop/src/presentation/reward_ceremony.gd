@@ -67,6 +67,7 @@ var payoffs: Array = []
 var _seen := {}
 var _seen_path := ""
 var last_error := ""
+var _save_blocked := false
 var _queue: Array = []
 var _cards: Array = []
 var _active := {}
@@ -626,7 +627,12 @@ func _load_seen() -> void:
 	if parsed != null and not SafeStore.is_strings(parsed):
 		parsed = null
 	if parsed == null:
-		last_error = "unreadable %s; kept as %s" % [_seen_path, SafeStore.quarantine(_seen_path)]
+		var kept := SafeStore.quarantine(_seen_path)
+		if kept.is_empty():
+			_save_blocked = true
+			last_error = "unreadable %s and could not be moved aside; not saving this session" % _seen_path
+		else:
+			last_error = "unreadable %s; kept as %s" % [_seen_path, kept]
 		return
 	for id in parsed:
 		_seen[String(id)] = true
@@ -636,6 +642,8 @@ func _mark_seen(part_id: String) -> void:
 	if _seen.has(part_id):
 		return
 	_seen[part_id] = true
+	if _save_blocked:
+		return
 	var err := SafeStore.write_atomic(_seen_path, JSON.stringify(_seen.keys()))
 	if err != OK:
 		last_error = "cannot save %s: %s" % [_seen_path, error_string(err)]

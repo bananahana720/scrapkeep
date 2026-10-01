@@ -19,6 +19,7 @@ var run
 var flow
 var storage_dir := "user://"
 var last_error := ""
+var _save_blocked := false
 
 var _entries := {}
 var _order: Array[String] = []
@@ -248,7 +249,12 @@ func _load() -> void:
 		return
 	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"discovered": SafeStore.STRINGS, "found": SafeStore.STRINGS, "found_categories": SafeStore.STRING_MAP})
 	if parsed == null:
-		last_error = "codex file unreadable; kept as %s; starting empty" % SafeStore.quarantine(path)
+		var kept := SafeStore.quarantine(path)
+		if kept.is_empty():
+			_save_blocked = true
+			last_error = "codex file unreadable and could not be moved aside; not saving this session"
+		else:
+			last_error = "codex file unreadable; kept as %s; starting empty" % kept
 		return
 	for id in parsed.get("discovered", []):
 		_discovered[String(id)] = true
@@ -258,6 +264,8 @@ func _load() -> void:
 
 
 func _save() -> void:
+	if _save_blocked:
+		return
 	var path := storage_dir.path_join(STATE_FILE)
 	var err := SafeStore.write_atomic(path, JSON.stringify({"discovered": _discovered.keys(), "found": _found, "found_categories": _found_category}, "  "))
 	if err != OK:
