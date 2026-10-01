@@ -17,6 +17,8 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 const SOUND := "shell_spring"
 const STEP := 2
+const R6_PHASES := 40
+const R6_PHASE_STEP := 8
 
 var _failures := 0
 var _game
@@ -239,17 +241,27 @@ func _run() -> void:
 	_fit("runner_gunner")
 	await _sim(0.3)
 	var r6 := ["r_juggernaut", "r_second_wind"]
-	# Grounded first (before any lift): the factor still moves, so the cue still fires.
-	_setup("runner_gunner", r6, true)
-	await _ticks(STEP + 5)
-	_reset()
-	var grounded: bool = _player.state.grounded
-	_sprint_start()
-	await _ticks(STEP + 2)
-	_release()
-	await _ticks(STEP + 3)
-	_check("R6 sprint while grounded cues the same (rise then return)", grounded and _tally() == [2, 2, 2] and _rises(_sig) == 1 and _returns(_sig) == 1,
-		"grounded %s, [signal, ring, sound] %s" % [grounded, _tally()])
+	# Grounded first (before any lift): the factor still moves, so the cue still fires. The hero
+	# is still rolling down the spawn slope here, and where it is on that slope depends on how many
+	# physics ticks the sound bake took (wall time), so the same scenario runs at many phases of the
+	# roll and has to hold at every one.
+	var grounded_bad := 0
+	var grounded_last := ""
+	for phase in R6_PHASES:
+		await _ticks(R6_PHASE_STEP)
+		_setup("runner_gunner", r6, true)
+		await _ticks(STEP + 5)
+		_reset()
+		var grounded: bool = _player.state.grounded
+		_sprint_start()
+		await _ticks(STEP + 2)
+		_release()
+		await _ticks(STEP + 3)
+		if not (grounded and _tally() == [2, 2, 2] and _rises(_sig) == 1 and _returns(_sig) == 1):
+			grounded_bad += 1
+			grounded_last = "grounded %s, [signal, ring, sound] %s" % [grounded, _tally()]
+	_check("R6 sprint while grounded cues the same (rise then return)", grounded_bad == 0,
+		"%d of %d phases failed, last: %s" % [grounded_bad, R6_PHASES, grounded_last])
 
 	# Airborne sprint.
 	_setup("runner_gunner", r6, true)
