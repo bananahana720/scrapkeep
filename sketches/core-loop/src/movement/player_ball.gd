@@ -40,6 +40,8 @@ const FACE_TAG_RAYS := 16
 # Rivet's skid pushes enemies in this cone ahead of the ball, and each one it reaches
 # pays back this much sprint recharge.
 const SKID_REACH := 10.0
+# How far past the ball's own radius a body still counts as the one it landed on.
+const LANDED_ON_MARGIN := 0.6
 const SKID_CONE := 0.35
 const SKID_REFUND := 0.5
 const AIM_CONE_LENGTH := 5.0
@@ -84,6 +86,7 @@ var _cc_ignored_at := {}
 var immune_left := 0.0
 # The landing each smash flavour adds to the shared slam.
 var _smashes := {}
+var _landed_on: Node3D
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -124,7 +127,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	else:
 		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
-	_rigid.slammed.connect(_on_slammed)
+	_rigid.slammed.connect(_on_ball_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
 	_rigid.pylon_ejected.connect(func(v: Vector3): events.dismounted.emit(v))
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
@@ -664,6 +667,28 @@ func _update_augment_visuals(at: Vector3) -> void:
 			_wings.global_basis = Basis.looking_at(heading.normalized(), Vector3.UP)
 
 
+# The body under the ball already took the landing contact, so the shockwave moves it but
+# does not strike it again.
+func _on_ball_slammed(at: Vector3, speed: float, flatness: float) -> void:
+	_landed_on = _body_under()
+	_on_slammed(at, speed, flatness)
+	_landed_on = null
+
+
+func _body_under() -> Node3D:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS + LANDED_ON_MARGIN
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, ball_position())
+	query.collision_mask = Augments.ENEMY_MASK
+	for hit in _rigid.get_world_3d().direct_space_state.intersect_shape(query, 8):
+		var body = hit["collider"]
+		if body.is_in_group("enemy") and body.global_position.y < ball_position().y:
+			return body
+	return null
+
+
 # The shockwave carries the same flatness as the plant: a full thump on flat ground,
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
@@ -723,7 +748,8 @@ func _skid_push(at: Vector3, strength: float) -> int:
 		var falloff := 1.0 - to.length() / SKID_REACH
 		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
 		enemy.flash()
-		struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
+		if enemy != _landed_on:
+			struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
 		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
 		hits += 1
 	return hits
@@ -774,7 +800,7 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> vo
 		var falloff := 1.0 - reach / radius
 		enemy.knock(away + Vector3.UP * 0.5, force * falloff)
 		enemy.flash()
-		if kind != "":
+		if kind != "" and enemy != _landed_on:
 			struck.emit(enemy, kind, force * falloff)
 
 
