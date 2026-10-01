@@ -316,7 +316,8 @@ func _dress_cage(drop) -> void:
 		cage.add_child(hoop)
 	for child in cage.get_children():
 		if child.name.begins_with("Frame"):
-			child.queue_free()
+			cage.remove_child(child)
+			child.free()
 	for i in frames:
 		var tier: String = CAGE_TIERS[i]
 		var topper: MeshInstance3D = RewardGates._topper(tier, Palette.solid(Palette.AMBER if tier != "common" else Palette.SAND, 2.0))
