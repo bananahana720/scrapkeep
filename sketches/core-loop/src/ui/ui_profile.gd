@@ -51,6 +51,8 @@ func _read_disk() -> Variant:
 			last_error = "unreadable %s and could not be moved aside; not saving this session" % path
 		else:
 			last_error = "unreadable %s; kept as %s" % [path, kept]
+	else:
+		_save_blocked = false
 	return parsed
 
 
@@ -109,6 +111,8 @@ func save() -> void:
 	if _save_blocked:
 		return
 	_merge_disk()
+	if _save_blocked:
+		return
 	var err := SafeStore.write_atomic(path, JSON.stringify({"glyph_uses": glyph_uses, "callouts_seen": callouts_seen, "discoveries_seen": discoveries_seen}, "  "))
 	if err != OK:
 		last_error = error_string(err)

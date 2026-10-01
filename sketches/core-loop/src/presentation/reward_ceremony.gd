@@ -634,6 +634,7 @@ func _load_seen() -> void:
 		else:
 			last_error = "unreadable %s; kept as %s" % [_seen_path, kept]
 		return
+	_save_blocked = false
 	for id in parsed:
 		_seen[String(id)] = true
 

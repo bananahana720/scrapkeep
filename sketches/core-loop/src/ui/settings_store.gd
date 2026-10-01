@@ -36,6 +36,7 @@ func load_saved() -> void:
 		else:
 			last_error = "unreadable %s; kept as %s" % [path, kept]
 		return
+	_save_blocked = false
 	var saved: Dictionary = parsed.get("volumes", {})
 	for bus in saved:
 		volumes[String(bus)] = clampf(float(saved[bus]), 0.0, 1.0)

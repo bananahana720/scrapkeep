@@ -211,7 +211,7 @@ func _healthy_reload_cases() -> Array:
 	return [
 		{"label": "codex", "file": "codex.json", "healthy": '{"discovered": ["a"], "found": [], "found_categories": {}}', "marker": "parting_shot",
 		"reload": func(store: Variant) -> void: store[0]._load()},
-		{"label": "settings_store", "file": "settings.json", "healthy": '{"volumes": {"music": 0.2}, "comfort": {}}', "marker": "sfx",
+		{"label": "settings_store", "file": "settings.json", "healthy": '{"volumes": {"music": 0.2}, "comfort": {}}', "marker": "0.5",
 		"reload": func(store: Variant) -> void: store.load_saved()},
 		{"label": "ui_profile", "file": "ui-profile.json", "healthy": '{"glyph_uses": {}, "callouts_seen": ["a"], "discoveries_seen": []}', "marker": "\"x\"",
 		"reload": func(store: Variant) -> void: store.load_saved()},

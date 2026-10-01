@@ -258,6 +258,7 @@ func _load() -> void:
 		else:
 			last_error = "codex file unreadable; kept as %s; starting empty" % kept
 		return
+	_save_blocked = false
 	for id in parsed.get("discovered", []):
 		_discovered[String(id)] = true
 	for text in parsed.get("found", []):
