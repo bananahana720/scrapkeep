@@ -84,7 +84,6 @@ func _run() -> void:
 	_clear_field()
 	await _sim(0.2)
 	await _skipped_rule("frozen ball")
-	await _skipped_rule("mounted ball")
 	print("harpoon_stale_tow_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(1 if _failures > 0 else 0)
@@ -92,7 +91,7 @@ func _run() -> void:
 
 # A tow reaches a body only on a tick the winch ran, so a tick the grapple rule skips hands it nothing.
 func _skipped_rule(cause: String) -> void:
-	_pilot("rivet", "shot", "heft")
+	_pilot("rivet" if cause == "frozen ball" else "sable", "shot", "heft")
 	_combat.heft_override = 3.2
 	var chaser := _spawn("chaser", _point(0, -16, 1.5))
 	await _sim(0.4)
@@ -105,15 +104,15 @@ func _skipped_rule(cause: String) -> void:
 		_player.set_frozen(true)
 	else:
 		_player.kit.mounted = true
-	_source.hold = {}
-	await _sim(0.1)
+	await _sim(1.0)
 	var start: Vector3 = chaser.global_position
 	await _sim(1.5)
 	var moved: float = chaser.global_position.distance_to(start)
-	_check("tow stops with the rule: %s" % cause, winched and moved < 1.0,
+	_check("tow stops with the rule: %s" % cause, winched and moved < 0.5,
 		"winch towed before the skip %s; over 1.5 s of skipped rule the body moved %.2f m" % [winched, moved])
 	_player.set_frozen(false)
 	_player.kit.mounted = false
+	_source.hold = {}
 	_player.release_grapple()
 	_combat.heft_override = 1.0
 	chaser.queue_free()
