@@ -7,8 +7,9 @@ const Hud := preload("res://src/ui/hud.gd")
 
 # The first-discovery card is the bigger ceremony: at least twice the flag-off banner's
 # height, on the right of the middle view, clear of the top, prompts and bottom bands,
-# the HUD toast column and the centre play rect. The banner and the repeat pop keep the
-# rects they had at base 39b0f3f (measured there, at 1600x900, line LINE).
+# the HUD toast column and the centre play rect. The banner keeps the
+# rect it had at base 39b0f3f (measured there, at 1600x900, line LINE). The repeat pop is sized
+# to its own content, so it rests inside the right edge (tests/discovery_rest_onscreen_test.gd).
 
 const DIR := "user://discovery_card_size_test/"
 const LINE := "Ram fast and everything ahead of you breaks."
@@ -16,8 +17,8 @@ const SCREEN := Vector2(1600.0, 900.0)
 # Measured at base 39b0f3f.
 const BASE_BANNER_SIZE := Vector2(360.0, 121.0)
 const BASE_BANNER_REST := Vector2(1222.0, 135.0)
-const BASE_POP_SIZE := Vector2(348.0, 59.0)
-const BASE_POP_REST := Vector2(1347.0, 135.0)
+const POP_SIZE := Vector2(248.0, 58.0)
+const POP_REST := Vector2(1347.0, 135.0)
 
 var _failures := 0
 var _step := 0
@@ -99,7 +100,7 @@ func _process(_delta: float) -> bool:
 			var pop_rest: Vector2 = _cards.rest_position()
 			print("pop rect    %s rest %s" % [pop, pop_rest])
 			_check("pop is a pop", _cards.last_style == "pop" and pop.size.y > 0.0, "style '%s' h %.1f" % [_cards.last_style, pop.size.y])
-			_check("pop unchanged", pop.size.is_equal_approx(BASE_POP_SIZE) and pop_rest.is_equal_approx(BASE_POP_REST), "pop size %s rest %s (base %s, %s)" % [pop.size, pop_rest, BASE_POP_SIZE, BASE_POP_REST])
+			_check("pop sized to its content, on screen", pop.size.is_equal_approx(POP_SIZE) and pop_rest.is_equal_approx(POP_REST), "pop size %s rest %s (base %s, %s)" % [pop.size, pop_rest, POP_SIZE, POP_REST])
 			_check("pop constants", Banner.POP_TIME == 0.8 and Banner.GLYPH_POP == 36.0, "POP_TIME %s GLYPH_POP %s" % [Banner.POP_TIME, Banner.GLYPH_POP])
 			DirAccess.remove_absolute(DIR + UiProfile.FILE)
 			DirAccess.remove_absolute(DIR)

@@ -230,7 +230,6 @@ func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 		var row := EventKinds.row(kind) if EventKinds.has(kind) else EventKinds.row(DEFAULT_KIND)
 		_glyph_shape = String(row["shape"])
 		_glyph_color = row["color"]
-	_panel.reset_size()
 
 
 func _next() -> void:
@@ -251,6 +250,7 @@ func _next() -> void:
 	_title.text = item[0]
 	_body.text = item[2]
 	_body.visible = item[2] != "" and _style_name != "pop"
+	_panel.reset_size()
 	_style.border_color = color
 	last_style = _style_name
 	if _style_name == "card":
