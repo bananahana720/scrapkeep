@@ -46,6 +46,31 @@ const ENTRIES := [
 		"clue": "a Warden's magnet + a shot during the tug",
 		"text": "Shoot the Warden's magnet mid-tug and break the Warden before its plating comes back.",
 	},
+	# v2 W7 enemies: the counters' opportunities and the ancients' secrets.
+	{
+		"id": "tether_snap", "name": "Slingshot Snap",
+		"hint": "A line is only as strong as what it holds.",
+		"clue": "a hooker's tether + more speed than it can take",
+		"text": "Outrun or boost against a hooker's tether and it snaps, slinging you forward.",
+	},
+	{
+		"id": "shield_vault", "name": "Off the Dish",
+		"hint": "What throws you back can throw you up.",
+		"clue": "a deflector's rebound + a jump",
+		"text": "Jump the instant a deflector's dish throws you back and the rebound becomes a vault, whatever you pilot.",
+	},
+	{
+		"id": "awaiting_operator", "name": "Awaiting Operator",
+		"hint": "Scattered drones look for something to follow.",
+		"clue": "a scattered swarm + another enemy",
+		"text": "Bowl through a swarm and its drones follow you for two seconds. Lead them into another enemy and they hit it like pins. Fragment 5 reads: awaiting operator.",
+	},
+	{
+		"id": "what_it_learned", "name": "What It Learned",
+		"hint": "Something is keeping count.",
+		"clue": "one of the Mind's hands + your favourite move",
+		"text": "The Mind's hands brace against the move you use most this run, and show you which. Change verbs while its lens is open.",
+	},
 ]
 
 

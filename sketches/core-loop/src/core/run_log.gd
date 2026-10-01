@@ -10,6 +10,7 @@ extends Node
 # arena block (I3) is the boss-entry record: it rides in every line after entry.
 
 const LOG_FILE := "runs.ndjson"
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 var events
 var run
@@ -47,11 +48,18 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 
 
 func _on_run_started(class_id: String) -> void:
-	_abandon()
 	_stages = {}
 	_in_arena = false
 	_phase = 0
 	_record = {"run_id": run.run_id, "class": class_id, "outcome": "running", "brindle_phase_reached": null}
+	_record.merge(_lab_tag())
+
+
+# The fun lab's mode and gun role (loop_mode.gd), on the run and on each stage entry, so
+# a report splits runs by mode even when the panel flipped it mid-run.
+func _lab_tag() -> Dictionary:
+	var tuning = player.get("tuning") if player != null else null
+	return LoopMode.tag(tuning) if tuning != null else {}
 
 
 func _stage(index: int) -> Dictionary:
@@ -81,7 +89,7 @@ func _ticks() -> int:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_in_arena = false
 	_dirty = true
-	_stage(stage)
+	_stage(stage).merge(_lab_tag(), true)
 
 
 # warden_engaged fires once per stage attempt, so a retry's engagement replaces the
@@ -141,6 +149,11 @@ func _on_run_ended(won: bool) -> void:
 	_write("won" if won else "lost")
 
 
+# Flow calls this before run state resets, so the line carries the run it closes.
+func abandon_open_run() -> void:
+	_abandon()
+
+
 func _abandon() -> void:
 	if _dirty and not _record.is_empty():
 		_record["abandoned_in"] = "arena" if _in_arena else "stage"
@@ -165,6 +178,20 @@ func _write(outcome: String) -> void:
 	line["stages"] = stages
 	line["codex"] = codex.discovered_this_run() if codex != null else []
 	line["anomalies"] = run.anomalies.duplicate(true)
+	# M0's delivered-damage ledger (combat.gd), mirrored onto the run through set_meta so
+	# this module never needs its own reference to the spawner. A run with no hits still
+	# carries the reset ledger (total 0.0), so a zero-damage run reads as zero, not missing.
+	line["delivered_damage"] = run.get_meta("delivered_damage", {})
+	# The durability prototype's per-run metrics (run_state.gd), present only in armour
+	# mode so a flag-off line is byte-identical to the base. reverse_seconds is an
+	# approximation: seconds with a spill live and the ball moving against the stage's
+	# entry heading (build.gd _step_armor).
+	if run.armor_mode:
+		var durability: Dictionary = run.metrics.duplicate()
+		durability["scrap_mode"] = "armor"
+		durability["wear"] = "on" if run.wear_on else "off"
+		durability["mass_end"] = run.mass
+		line["durability"] = durability
 	_dirty = false
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1

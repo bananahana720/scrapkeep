@@ -1,6 +1,10 @@
 extends "res://src/combat/enemy.gd"
 
 const WardenLook := preload("res://src/combat/warden_look.gd")
+const WardenKit := preload("res://src/combat/warden_kit.gd")
+const Roster := preload("res://src/combat/roster.gd")
+const Habits := preload("res://src/combat/habits.gd")
+const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -22,6 +26,20 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 #     contains toward it at MAGNET_PULL m/s^2 for MAGNET_TUG. The magnet is a weak
 #     point only in the tug: a weapon hit on it then drops the Warden's plating to 0
 #     for UNPLATE_SECONDS and ends the tug. An earlier shot meets the body.
+#
+# v2 W7 enemies: the clamp is a shared ancient base with one family kit per stage
+# (DESIGN-V2 section 11), on top of the lesson. The body's plating, the 20% chip, the
+# gate and breaking it anywhere are untouched; each kit adds a weak point with plating
+# 0 that opens only when the family's own mechanic is answered:
+#   - reactor (stage 1): the pulse is the reactor venting. The pulse charge publishes
+#     vent_charging, the pulse vent_erupted, and the core stands open for CORE_WINDOW.
+#   - swarm (stage 2): the hive keeps a guard rack of drones between itself and you.
+#     Bowl through the rack and it scatters: the queen cell opens for QUEEN_WINDOW. A
+#     guard that dies out is rebuilt after GUARD_RESPAWN.
+#   - mind (stage 3): every ADAPT_CYCLE in reach it reads your most-used habit, quotes
+#     your class motif back wrong (mind_adapted) and shows the habit's trigger icon on
+#     its lens for ADAPT_WARN, then braces for BRACE: hits of that verb meet BRACE_MULT
+#     times its plating, and its lens stands open. Within a run only.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -54,7 +72,21 @@ const MAGNET_RADIUS := 1.1
 const MAGNET_WEDGE_DEG := 35.0
 const UNPLATE_SECONDS := 3.0
 const WEAPON_KINDS := ["runner", "arc", "turret"]
+const CORE_WINDOW := 2.5
+const QUEEN_WINDOW := 4.0
+const GUARD_RESPAWN := 10.0
+const GUARD_OFFSET := 9.0
+const ADAPT_CYCLE := 10.0
+const ADAPT_WARN := 1.2
+const BRACE := 5.0
+const BRACE_MULT := 1.4
+const FAMILY_POINT_RADIUS := 1.3
+const FAMILY_REACH := 3.2
 const CONTACT_KINDS := ["stomp", "slam"]
+# What a hit on a sleeping Warden meets: no punch reaches it, so nothing lands, and
+# take_damage refuses the chip. plating_now() reads 0 while asleep, so combat's shred
+# (capped at it) never builds on a Warden nothing can hurt and it wakes whole.
+const DORMANT_PLATING := 999.0
 
 enum Magnet { IDLE, TELEGRAPH, TUG }
 
@@ -68,6 +100,17 @@ var min_pulse_telegraph := INF
 var magnet_stuns := 0
 var magnet_state := Magnet.IDLE
 var shred := 0.0
+var family := Roster.REACTOR
+var fleet
+var guard
+var family_opens := 0
+var adapt_habit := ""
+var braced_kinds: Array = []
+# v3 fun lab, laps mode (loop_mode.gd): flow puts the Warden to sleep at spawn and wakes
+# it when the course is lapped. Asleep, it neither pulses nor opens, and no hit lands.
+# Awake, it is the v2 Warden; the section 2 window reads come with the drop branch's
+# warden.gd, which this gate sits in front of.
+var dormant := false
 
 var _pulse_clock := 0.0
 var _charging := false
@@ -81,6 +124,21 @@ var _magnet_ring: Node3D
 var _unplated := 0.0
 var _cap_material: StandardMaterial3D
 var _look: Node3D
+var _kit: Node3D
+var _open_left := 0.0
+var _guard_wait := 0.0
+var _adapt_clock := 0.0
+var _adapt_time := 0.0
+var _brace_left := 0.0
+var loop_mode := "v2"
+var drop = null
+# Whether the ball stood inside the core ring at any point of the current charge.
+var _core_touched := false
+var _core_last_in := 0.0
+var near_misses := 0
+var safe_dodges := 0
+const NEAR_MISS := 0.3
+var _charge_len := PULSE_TELEGRAPH
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -89,6 +147,9 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	stage = spec.get("stage", 1)
 	lesson = spec.get("lesson", "plate")
 	reach = spec.get("reach", DEFAULT_REACH)
+	family = spec.get("family", Roster.warden_family(stage))
+	faction = family
+	fleet = spec.get("fleet")
 	plating = spec.get("plating", 30.0)
 	_set_health(spec.get("hp", 400.0))
 	scrap_value = 30 * stage
@@ -98,6 +159,30 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	# Clamped to the mast base: sits on the ground under the point it was given.
 	global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
 	_build_body()
+	loop_mode = String(spec.get("loop_mode", "v2"))
+	if spec.get("drop_rules", false) and fleet != null:
+		drop = WardenDrop.new(self, spec)
+
+
+# --- The v3 fun lab (loop_mode.gd) ---------------------------------------------------
+# drop is warden_drop.gd's rules when the drop mode applies here, else null: every
+# drop-mode branch in this file is behind it, so v2 runs exactly as before. Any loop
+# mode (drop, laps) also publishes the pulse's near-miss.
+
+func loop_rule(hit_kind: String, part: String, _force: float, punch: float, heft: float) -> Dictionary:
+	return drop.rule(hit_kind, part, punch, heft) if drop != null else {}
+
+
+func loop_state() -> String:
+	return drop.state if drop != null else ""
+
+
+func _cycle_seconds() -> float:
+	return drop.cycle_seconds(PULSE_CYCLE) if drop != null else PULSE_CYCLE
+
+
+func _telegraph_seconds() -> float:
+	return drop.telegraph_seconds(PULSE_TELEGRAPH) if drop != null else PULSE_TELEGRAPH
 
 
 func state_name() -> String:
@@ -112,8 +197,35 @@ func knock(_direction: Vector3, _force: float) -> void:
 	pass
 
 
+func sleep() -> void:
+	dormant = true
+
+
+func wake() -> void:
+	dormant = false
+
+
+# A lap past the required ones (flow): takes `share` of the stage's plating off, down to
+# 0. Returns the plating left.
+func strip_plating(share: float) -> float:
+	plating = maxf(0.0, plating - float(spec.get("plating", plating)) * share)
+	return plating
+
+
+func take_damage(amount: float) -> float:
+	if dormant:
+		flash()
+		return 0.0
+	return super.take_damage(amount)
+
+
+# Asleep, its plates read slate whatever the punch: nothing lands.
+func set_tint(state: String) -> void:
+	super.set_tint("slate" if dormant else state)
+
+
 func plating_now() -> float:
-	return 0.0 if _unplated > 0.0 else plating
+	return 0.0 if dormant or _unplated > 0.0 else plating
 
 
 func unplated_by_magnet() -> bool:
@@ -125,8 +237,14 @@ func seconds_since_pulse() -> float:
 
 
 func plating_for(hit_kind: String, part: String) -> float:
+	if dormant:
+		return DORMANT_PLATING
 	if part == "cap" and hit_kind in CONTACT_KINDS:
 		return 0.0
+	if part == family_point() and family_open():
+		return 0.0
+	if braced() and hit_kind in braced_kinds:
+		return plating_now() * BRACE_MULT
 	if part == "magnet" and hit_kind in WEAPON_KINDS and magnet_state == Magnet.TUG:
 		return 0.0
 	return plating_now()
@@ -140,7 +258,104 @@ func weak_points() -> Array:
 	var points := []
 	if lesson == "magnet" and magnet_state == Magnet.TUG:
 		points.append({"id": "magnet", "at": magnet_point(), "radius": MAGNET_RADIUS})
+	if family_open():
+		points.append({"id": family_point(), "at": family_point_at(), "radius": FAMILY_POINT_RADIUS})
 	return points
+
+
+# --- The family kit (v2 W7) ---------------------------------------------------------
+
+# The kit's weak point: the reactor's core, the hive's queen cell, the Mind's lens.
+func family_point() -> String:
+	return {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}.get(family, "core")
+
+
+func family_point_at() -> Vector3:
+	return global_position + (_kit.point_offset() if _kit != null else Vector3.UP * 4.0)
+
+
+func family_open() -> bool:
+	return _open_left > 0.0 or braced()
+
+
+func braced() -> bool:
+	return _brace_left > 0.0
+
+
+func adapting() -> bool:
+	return adapt_habit != "" and _brace_left <= 0.0
+
+
+func on_guard_scattered(swarm, _at: Vector3) -> void:
+	if swarm == guard and family == Roster.SWARM:
+		_open(QUEEN_WINDOW)
+
+
+func _open(seconds: float) -> void:
+	if drop != null:
+		seconds = drop.opened(seconds)
+	_open_left = seconds
+	family_opens += 1
+	if fleet != null:
+		fleet.events().weak_point_opened.emit(family_point(), family_point_at(), seconds)
+
+
+func _step_family(delta: float, inside: bool) -> void:
+	_open_left = maxf(0.0, _open_left - delta)
+	match family:
+		Roster.SWARM:
+			_step_guard(delta)
+		Roster.MIND:
+			_step_mind(delta, inside)
+
+
+func _step_guard(delta: float) -> void:
+	if fleet == null:
+		return
+	if guard != null and not guard.alive().is_empty():
+		return
+	_guard_wait -= delta
+	if _guard_wait > 0.0:
+		return
+	_guard_wait = GUARD_RESPAWN
+	var out := flat_to_ball()
+	var at := global_position + (out.normalized() if out.length() > 0.1 else Vector3.FORWARD) * GUARD_OFFSET
+	guard = fleet.spawn_guard(global_position, terrain.drop_point(at.x, at.z, 1.4))
+
+
+func _step_mind(delta: float, inside: bool) -> void:
+	if fleet == null:
+		return
+	if _brace_left > 0.0:
+		_brace_left -= delta
+		if _brace_left <= 0.0:
+			adapt_habit = ""
+			braced_kinds = []
+			_kit.show_icon("")
+		return
+	if adapt_habit != "":
+		_adapt_time += delta
+		if _adapt_time >= ADAPT_WARN:
+			_brace_left = BRACE
+			if fleet != null:
+				fleet.events().weak_point_opened.emit("lens", family_point_at(), BRACE)
+			family_opens += 1
+		return
+	if not inside:
+		return
+	_adapt_clock += delta
+	if _adapt_clock < ADAPT_CYCLE:
+		return
+	var habit: String = fleet.habits.top()
+	if habit == "":
+		return
+	_adapt_clock = 0.0
+	_adapt_time = 0.0
+	adapt_habit = habit
+	var brace: Dictionary = Habits.BRACES[habit]
+	braced_kinds = brace["kinds"]
+	_kit.show_icon(String(brace["icon"]))
+	fleet.mind_adapt(habit, String(brace["icon"]), family_point_at())
 
 
 func cap_points() -> Array:
@@ -158,6 +373,9 @@ func magnet_point() -> Vector3:
 
 
 func contact_part(ball: Vector3, hit_kind: String) -> String:
+	if family_open() and family != Roster.MIND and hit_kind in CONTACT_KINDS \
+			and Vector2(ball.x - global_position.x, ball.z - global_position.z).length() <= FAMILY_REACH:
+		return family_point()
 	if lesson != "caps" or not hit_kind in CONTACT_KINDS:
 		return ""
 	for cap in cap_points():
@@ -173,19 +391,27 @@ func on_struck(hit_kind: String, part: String, _result: Dictionary) -> void:
 		_end_magnet()
 	if part == "cap" and _cap_material != null:
 		_cap_material.emission_energy_multiplier = 5.0
+	if drop != null:
+		drop.on_struck(hit_kind, _result)
 
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_pose(delta)
-	if not _in_play() or target == null:
+	if not _in_play() or target == null or dormant:
 		return
 	_since_pulse += delta
 	_unplated = maxf(0.0, _unplated - delta)
 	var inside := _flat_to_ball().length() <= reach
-	_step_pulse(delta, inside)
+	var was_open := _open_left > 0.0
+	_step_family(delta, inside)
+	# Drop mode runs the cycle on its own clock from the stage's start, so a drop can be
+	# timed from the shelf; v2's runs only while you are in reach.
+	_step_pulse(delta, inside or drop != null)
 	if lesson == "magnet":
 		_step_magnet(delta, inside)
+	if drop != null:
+		drop.step(delta, was_open)
 
 
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
@@ -195,31 +421,63 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_charge_time += delta
 		var ring := telegraph()
 		if ring != null:
-			ring.set_progress(_charge_time / PULSE_TELEGRAPH)
+			ring.set_progress(_charge_time / _charge_len)
 		if is_instance_valid(_core_ring):
-			_core_ring.set_progress(_charge_time / PULSE_TELEGRAPH)
-		if _charge_time >= PULSE_TELEGRAPH:
+			_core_ring.set_progress(_charge_time / _charge_len)
+			if loop_mode != "v2" and _core_ring.contains(_ball()):
+				_core_touched = true
+				_core_last_in = _charge_time
+		if _charge_time >= _charge_len:
 			_pulse()
 		return
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
+	if _pulse_clock >= _cycle_seconds() - _telegraph_seconds():
 		_charging = true
 		_charge_time = 0.0
-		_commit_ring(global_position, reach, LIFT_REACH_UP)
-		_core_ring = Telegraph.ring(world_root, terrain, global_position, CORE_RADIUS)
+		_charge_len = _telegraph_seconds()
+		_core_touched = false
+		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
+		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
+		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
+		if family == Roster.REACTOR and fleet != null:
+			fleet.events().vent_charging.emit(global_position, _charge_len)
 
 
 func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
 	last_pulse_lifted = ring != null and ring.contains(ball)
+	# "I dodged it" (LOOP-REDESIGN section 2, review finding 6), a loop-mode read only:
+	# inside the drawn core ring during its telegraph and outside it at the clang is a
+	# dodge. Out within NEAR_MISS of the clang is a near-miss, which gives the air jump
+	# back as its bonus; out earlier is a safe resolution, acknowledged without one.
+	if loop_mode != "v2" and _core_touched and is_instance_valid(_core_ring) and not _core_ring.contains(ball) and fleet != null:
+		var near := _charge_len - _core_last_in <= NEAR_MISS
+		if near:
+			near_misses += 1
+			target.refresh_air()
+		else:
+			safe_dodges += 1
+		fleet.events().warden_pulse_dodged.emit(ball, near)
+	# Drop mode: the air is a safe place through the telegraph (section 2, "where to be":
+	# on a drop line, on the bank, or in the air), so the pulse throws and burns only a
+	# ball on the floor, never one already on its drop arc.
+	var airborne: bool = drop != null and not target.state.grounded
+	if airborne:
+		last_pulse_lifted = false
+	if drop != null:
+		drop.on_pulse(last_pulse_lifted, ball)
 	if last_pulse_lifted:
-		target.add_external_accel(Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
-	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
+		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
+	if not airborne and is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
+	if family == Roster.REACTOR:
+		if fleet != null:
+			fleet.events().vent_erupted.emit(global_position)
+		_open(CORE_WINDOW)
 	min_pulse_telegraph = minf(min_pulse_telegraph, _charge_time)
 	_since_pulse = 0.0
 	_charging = false
@@ -241,7 +499,7 @@ func _step_magnet(delta: float, inside: bool) -> void:
 				_magnet_dir = to.normalized() if to.length() > 0.1 else Vector3.FORWARD
 				magnet_state = Magnet.TELEGRAPH
 				_magnet_time = 0.0
-				_magnet_ring = Telegraph.wedge(world_root, terrain, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
+				_magnet_ring = Telegraph.wedge(world_root, terrain, Threat.Type.LANE, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
 						reach, MAGNET_WEDGE_DEG, LIFT_REACH_UP)
 		Magnet.TELEGRAPH:
 			_magnet_time += delta
@@ -256,7 +514,7 @@ func _step_magnet(delta: float, inside: bool) -> void:
 			if is_instance_valid(_magnet_ring) and _magnet_ring.contains(ball):
 				var to := -_flat_to_ball()
 				if to.length() > 0.5:
-					target.add_external_accel(to.normalized() * MAGNET_PULL)
+					target.crowd_control("warden_magnet", to.normalized() * MAGNET_PULL, false)
 			if _magnet_time >= MAGNET_TUG:
 				_end_magnet()
 
@@ -275,6 +533,8 @@ func _exit_tree() -> void:
 	for node in [_core_ring, _magnet_ring]:
 		if is_instance_valid(node):
 			node.queue_free()
+	if drop != null:
+		drop.clear()
 
 
 func _build_body() -> void:
@@ -289,6 +549,9 @@ func _build_body() -> void:
 	_look = WardenLook.new()
 	add_child(_look)
 	_look.build(self, HALF_HEIGHT)
+	_kit = WardenKit.new()
+	add_child(_kit)
+	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
 	_cap_material = _look.cap_material()
@@ -301,12 +564,14 @@ func _pose(_delta: float) -> void:
 func _process(delta: float) -> void:
 	if _look != null:
 		_look.update(delta)
+	if _kit != null:
+		_kit.update(delta)
 
 
 # --- Read by the look --------------------------------------------------------------
 
 func charge_fraction() -> float:
-	return clampf(_charge_time / PULSE_TELEGRAPH, 0.0, 1.0) if _charging else 0.0
+	return clampf(_charge_time / _charge_len, 0.0, 1.0) if _charging else 0.0
 
 
 # 0 when the magnet is stowed, rising to 1 through its telegraph, 1 through the tug.

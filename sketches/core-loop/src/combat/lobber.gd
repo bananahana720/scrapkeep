@@ -14,8 +14,13 @@ const HP := 26.0
 const SCRAP := 4
 
 signal fired(origin: Vector3, landing: Vector3, flight: float)
+# Emitted right after fired, once the shell exists: the shell's own committed landing-ring
+# descriptor ({} if nothing took the shot). The attack facts read it; nothing else does.
+signal released(ring: Dictionary)
 
 var shots := 0
+# The wind-up, 0 to 1: the value the muzzle glow is drawn from and the attack facts read.
+var charge := 0.0
 
 var _clock := 0.0
 var _muzzle: MeshInstance3D
@@ -92,8 +97,20 @@ func _physics_process(delta: float) -> void:
 	var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 	shots += 1
 	fired.emit(muzzle_point(), landing, FLIGHT)
+	released.emit(_shell_ring())
 
 
-func _show_charge(charge: float) -> void:
-	_muzzle_material.emission_energy_multiplier = 0.8 + charge * 5.0
-	_muzzle.scale = Vector3.ONE * (1.0 + charge * 0.9)
+# The descriptor of the ring the shell just committed: the newest of this lobber's shells.
+func _shell_ring() -> Dictionary:
+	var shells := get_tree().get_nodes_in_group("enemy_shot")
+	for i in range(shells.size() - 1, -1, -1):
+		var shell = shells[i]
+		if shell.get("lobber") == self and is_instance_valid(shell.get("ring")):
+			return shell.ring.descriptor()
+	return {}
+
+
+func _show_charge(value: float) -> void:
+	charge = value
+	_muzzle_material.emission_energy_multiplier = 0.8 + value * 5.0
+	_muzzle.scale = Vector3.ONE * (1.0 + value * 0.9)

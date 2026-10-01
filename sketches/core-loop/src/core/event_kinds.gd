@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # One row per GameEvents signal, keyed by the signal's name. Form mirrors function: the
 # HUD toast, the objective line, the VFX shape and colour, the synthesized sound and
@@ -35,16 +36,16 @@ const ROWS := {
 	"beacon_charge_changed": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "beacon_hum", "hud": "", "objective": "Warden {percent}% broken. Punch {punch} / plating {plating}. {hint}", "priority": 1},
 	"warden_engaged": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "warden_theme_in", "hud": "The Warden wakes", "objective": "", "priority": 2},
 	"stage_content_cleared": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "stage_fade", "hud": "", "objective": "", "priority": 0},
-	"beacon_unsealed": {"group": "flow", "color": Palette.ARC, "shape": "star", "sound": "stinger_unseal", "hud": "Warden broken: gates open", "objective": "Charge the beacon: {percent}%. Keep rolling inside its ring.", "priority": 3},
+	"beacon_unsealed": {"group": "flow", "color": Palette.ARC, "shape": "star", "sound": "stinger_unseal", "hud": "Warden broken: gates open", "objective": "Charge the beacon", "priority": 3},
 	"scrap_collected": {"group": "economy", "color": Palette.ARC, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
-	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "New part: {part}", "objective": "", "priority": 2},
+	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "+ {part}", "objective": "", "priority": 2},
 	"player_hit": {"group": "combat", "color": Palette.RUST, "shape": "burst", "sound": "hurt", "hud": "", "objective": "", "priority": 2},
 	"player_died": {"group": "combat", "color": Palette.RUST, "shape": "cross", "sound": "death", "hud": "Scrapped", "objective": "", "priority": 3},
 	"enemy_killed": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "kill_pop", "hud": "", "objective": "", "priority": 1},
-	"milestone_won": {"group": "event", "color": Palette.AMBER, "shape": "star", "sound": "stinger_milestone", "hud": "Milestone won: {event}", "objective": "", "priority": 3},
+	"milestone_won": {"group": "event", "color": Palette.AMBER, "shape": "star", "sound": "stinger_milestone", "hud": "{event} won", "objective": "", "priority": 3},
 	"heft_class_changed": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "class_up", "hud": "Heft {class}", "objective": "", "priority": 3},
-	"heft_class_dropped": {"group": "economy", "color": Palette.RUST, "shape": "chevron", "sound": "class_down", "hud": "Heft down to {class}", "objective": "", "priority": 2},
-	"scrap_lost": {"group": "economy", "color": Palette.RUST, "shape": "cross", "sound": "scrap_rip", "hud": "Scrap torn loose: chase it down", "objective": "", "priority": 2},
+	"heft_class_dropped": {"group": "economy", "color": Palette.RUST, "shape": "chevron", "sound": "class_down", "hud": "Heft {class}", "objective": "", "priority": 2},
+	"scrap_lost": {"group": "economy", "color": Palette.RUST, "shape": "cross", "sound": "scrap_rip", "hud": "Chase your scrap", "objective": "", "priority": 2},
 	"core_gained": {"group": "economy", "color": Palette.ARC, "shape": "core", "sound": "core_socket", "hud": "Bonus core: gates overcharged", "objective": "", "priority": 3},
 	"synergy_discovered": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "synergy_fanfare", "hud": "SYNERGY: {name}", "objective": "", "priority": 3},
 	"interaction_found": {"group": "event", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
@@ -53,8 +54,12 @@ const ROWS := {
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
 	"landed": {"group": "movement", "color": Palette.SANDSTONE, "shape": "ring", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
 	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
-	"grapple_fired": {"group": "movement", "color": Palette.AMBER, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
+	"grapple_fired": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
 	"grapple_released": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "grapple_release", "hud": "", "objective": "", "priority": 1},
+	# The harpoon is yours, so its facts wear the class colour where they draw (vfx.gd passes the live
+	# class); the row holds the rope craft's, Sable's. Never the Hooker's HAZARD and never its atk_e06 cues.
+	"harpoon_bit": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
+	"harpoon_smashed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
 	"mounted": {"group": "movement", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
 	"dismounted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
 	"enemy_spawned": {"group": "combat", "color": Palette.RUST, "shape": "chevron", "sound": "enemy_arrive", "hud": "", "objective": "", "priority": 1},
@@ -62,16 +67,16 @@ const ROWS := {
 	"shot_fired": {"group": "combat", "color": Palette.ARC, "shape": "bar", "sound": "weapon_zap", "hud": "", "objective": "", "priority": 1},
 	"special_used": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "hud": "", "objective": "", "priority": 2},
 	"strike_deflected": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "clank", "hud": "", "objective": "", "priority": 1},
-	"reward_offered": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "gates_open", "hud": "Reward gates ahead", "objective": "Roll through a gate to take its part.", "priority": 3},
-	"reward_chosen": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "gate_through", "hud": "Took {part}", "objective": "Launch pad engaged.", "priority": 3},
+	"reward_offered": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "gates_open", "hud": "Reward gates ahead", "objective": "Roll through a gate", "priority": 3},
+	"reward_chosen": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "gate_through", "hud": "Took {part}", "objective": "Hold your line", "priority": 3},
 	"element_resolved": {"group": "event", "color": Palette.ARC, "shape": "wave", "sound": "element_resolved", "hud": "", "objective": "", "priority": 1},
 	"event_announced": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "klaxon", "hud": "{event} incoming", "objective": "", "priority": 3},
 	"event_started": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "event_start", "hud": "{event}", "objective": "", "priority": 2},
-	"event_ended": {"group": "event", "color": Palette.VERDIGRIS, "shape": "wave", "sound": "event_end", "hud": "{event} lost: it comes round again", "objective": "", "priority": 2},
+	"event_ended": {"group": "event", "color": Palette.VERDIGRIS, "shape": "wave", "sound": "event_end", "hud": "{event} lost", "objective": "", "priority": 2},
 	# Quiet: presentation drives the event's music from it and plays no cue, so the
 	# sound id is only the schema's placeholder.
 	"event_progress": {"group": "event", "color": Palette.VERDIGRIS, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"launched": {"group": "flow", "color": Palette.ARC, "shape": "arrow", "sound": "launch_roar", "hud": "Launch!", "objective": "In flight. Hold your line.", "priority": 3},
+	"launched": {"group": "flow", "color": Palette.ARC, "shape": "arrow", "sound": "launch_roar", "hud": "Launch!", "objective": "Hold your line", "priority": 3},
 	"pressure_changed": {"group": "event", "color": Palette.RUST, "shape": "wave", "sound": "music_pressure", "hud": "", "objective": "", "priority": 0},
 	"boss_arena_entered": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "boss_arena_in", "hud": "Admiral Brindle", "objective": "Break Brindle's Requisition. Punch {punch} / hull plating {plating}.", "priority": 3},
 	"boss_phase_changed": {"group": "event", "color": Palette.BRASS, "shape": "chevron", "sound": "boss_phase", "hud": "{name}", "objective": "", "priority": 3},
@@ -79,6 +84,277 @@ const ROWS := {
 	"boss_weak_point_hit": {"group": "combat", "color": Palette.BRASS, "shape": "burst", "sound": "boss_weak_hit", "hud": "", "objective": "", "priority": 1},
 	"boss_defeated": {"group": "flow", "color": Palette.BRASS, "shape": "star", "sound": "stinger_boss_defeated", "hud": "Brindle routed", "objective": "", "priority": 3},
 	"threat_rose": {"group": "event", "color": Palette.RUST, "shape": "chevron", "sound": "threat_up", "hud": "Threat rising", "objective": "", "priority": 2},
+	# v2 W3 characters. A class's own facts wear its colour and shape from class_def.gd;
+	# shared facts (contact, gauge) wear neutral ones. `sound` is an existing synth id
+	# standing in; `sound_next` names the SOUND-STORY section 3 cue W5 is to bake. The
+	# motif_* cues resolve through the class row's motif id. Sable's two discharges
+	# differ by ear: the gauge release is gauge_released (the motif resolved), the free
+	# plant discharge rides mounted (the plant clack and the motif's first notes).
+	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "clank", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
+	"enemy_pinned": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "hit_thwack", "sound_next": "pin_double_thwack", "hud": "", "objective": "", "priority": 1},
+	"vault_kicked": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "pylon_eject", "sound_next": "sable_octave_leap", "hud": "", "objective": "", "priority": 1},
+	"gauge_charging": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "motif_accumulate", "hud": "", "objective": "", "priority": 1},
+	"gauge_released": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "motif_release", "hud": "", "objective": "", "priority": 1},
+	"gauge_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "gauge_dry_click", "hud": "", "objective": "", "priority": 1},
+	"sprint_started": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "rivet_hat_roll", "hud": "", "objective": "", "priority": 1},
+	"cc_ignored": {"group": "combat", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "clank", "sound_next": "rivet_cymbal_choke", "hud": "", "objective": "", "priority": 1},
+	"cloak_started": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "stage_fade", "sound_next": "kest_muffled_thump", "hud": "", "objective": "", "priority": 1},
+	"cloak_broken": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "shatter", "sound_next": "kest_snare_crack", "hud": "", "objective": "", "priority": 1},
+	"sticky_detonated": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_kick_thump", "hud": "", "objective": "", "priority": 1},
+	"rocket_jumped": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "boost_whoosh", "sound_next": "kest_blast_lift", "hud": "", "objective": "", "priority": 1},
+	"blink_used": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "dash_whoosh", "sound_next": "kest_blink_thump", "hud": "", "objective": "", "priority": 1},
+	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_root_fifth", "hud": "", "objective": "", "priority": 1},
+	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
+	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
+	# v2 W7 enemies. Danger is HAZARD; a break, tenacity and the shield vault are yours,
+	# so they wear bone here and the class colour where they draw (holds.gd). A hold's
+	# loop and a pack's motif depend on who holds or arrives: `sound` is the stand-in and
+	# `sound_next` names the SOUND-STORY section 3 cue, resolved through roster.gd's row
+	# (`hold`) or faction (`arrival`). pack_arrived's `icon` is the Fleet's edge-marker
+	# badge; an ancient pack shows its family's fac_ icon from the roster. Cherenkov
+	# blue (3d8bff) is the ancients' light, so a weak point opening is its seam.
+	"hold_started": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "hold_pit", "sound_next": "hold_by_kind", "hud": "", "objective": "", "priority": 1},
+	"hold_broken": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "shatter", "sound_next": "class_break", "hud": "", "objective": "", "priority": 1},
+	"hold_ended": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"tenacity_gained": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "tenacity_choke", "hud": "", "objective": "", "priority": 1},
+	"pack_arrived": {"group": "event", "color": Palette.HAZARD, "shape": "diamond", "sound": "fleet_motif", "sound_next": "faction_arrival", "icon": "fac_fleet", "hud": "", "objective": "", "priority": 2},
+	"shield_vaulted": {"group": "movement", "color": Palette.SAND, "shape": "chevron", "sound": "pylon_eject", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
+	"vent_charging": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "reactor_tick", "hud": "", "objective": "", "priority": 1},
+	"vent_erupted": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "reactor_erupt", "hud": "", "objective": "", "priority": 2},
+	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
+	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
+	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
+	# v3 fun lab, the drop mode (LOOP-REDESIGN sections 2 and 7). The Warden's states are
+	# music-only; the held door ticks on the ready pulse; a landed drop is a reward (the
+	# ladder climbs a rung per segment lost, drop_juice.gd). A dodge wears bone and an
+	# arrow, never the class colour and the core that mean "open": a near-miss is the
+	# rising whip, a safe resolution a quiet tick (drop_juice.gd picks by `near`).
+	# `sound` stands in, `sound_next` names the cue to bake.
+	"warden_state_changed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"warden_window_held": {"group": "combat", "color": Palette.ANCIENT, "shape": "ring", "sound": "scrap_tick", "sound_next": "held_door_tick", "hud": "", "objective": "", "priority": 1},
+	"warden_drop_landed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "boss_weak_hit", "sound_next": "drop_segment_pop", "hud": "", "objective": "", "priority": 2},
+	"warden_pulse_dodged": {"group": "movement", "color": Palette.SAND, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "near_miss_whip_or_safe_tick", "hud": "", "objective": "", "priority": 1},
+	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
+	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
+	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
+	# with the class row. motif_fork is the class motif's first note answered by two
+	# notes, one per branch; motif_pick resolves the chosen one onto the motif head. The
+	# shop bell stays purchases only. The pick UI (W1) and the bay (W6) own the words.
+	"tree_offered": {"group": "economy", "color": Palette.SAND, "shape": "diamond", "sound": "found_chime", "sound_next": "motif_fork", "hud": "", "objective": "", "priority": 1},
+	"tree_picked": {"group": "economy", "color": Palette.SAND, "shape": "diamond", "sound": "part_get", "sound_next": "motif_pick", "hud": "", "objective": "", "priority": 1},
+	# v2 W6 world. The bay banks speed like the pylon mount and the pad slingshots it
+	# back, so entry and exit stand in with the plant and eject cues (SOUND-STORY
+	# section 7, Moss's workshop). world_fact is quiet here: each kind's own row is in
+	# WORLD_ROWS at the end of this file.
+	"bay_entered": {"group": "flow", "color": Palette.SANDSTONE, "shape": "square", "sound": "pylon_plant", "sound_next": "bay_lounge_in", "hud": "Moss's workshop", "objective": "", "priority": 2},
+	"bay_left": {"group": "flow", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "pylon_eject", "sound_next": "bay_slingshot_out", "hud": "", "objective": "", "priority": 1},
+	"world_fact": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 W11 juice. A dodge: the ball stood in a committed threat while it warned and was
+	# clear when it landed. Amber, because it is your own move, on the chevron of motion
+	# past; a rising whoosh that ends on a bright fifth, never the danger family.
+	"near_miss": {"group": "combat", "color": Palette.AMBER, "shape": "chevron", "sound": "near_whoosh", "hud": "", "objective": "", "priority": 1},
+	# v3 interact. Each fact is heard and drawn in its family's register and colour
+	# (world/interactables.gd FAMILIES); these rows are the schema's stand-ins. No toast:
+	# the device, its dial and the core facts carry the result, inside the word budget.
+	"interact_armed": {"group": "event", "color": Palette.AMBER, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
+	"interact_fired": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"ambush_ended": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "event_end", "hud": "", "objective": "", "priority": 2},
+	"bet_resolved": {"group": "economy", "color": Palette.COPPER, "shape": "star", "sound": "clank", "hud": "", "objective": "", "priority": 2},
+	# v3 fun lab, laps mode (LOOP-REDESIGN section 1 C and section 7's lap notch). The
+	# bell and the notch are the beacon's own family (arc); a checkpoint is roll-through
+	# movement, so amber, and its pop climbs the reward ladder ring by ring; stripped
+	# plating falls off in the plates' copper. `sound` stands in; `sound_next` names the
+	# cue to bake. The lap's notch and the ring that closes it land on the beat with the
+	# director's threat_rose stinger (audio.gd).
+	"lap_bell_rung": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "shop_bell", "sound_next": "course_bell_toll", "hud": "The course lights up", "objective": "Lap the lit course: {lap} of {required}. The Warden wakes at {required}.", "priority": 3},
+	"lap_ring_passed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "found_chime", "sound_next": "checkpoint_pop", "hud": "", "objective": "", "priority": 1},
+	"lap_completed": {"group": "flow", "color": Palette.ARC, "shape": "bar", "sound": "core_socket", "sound_next": "beacon_notch_chime", "hud": "", "objective": "", "priority": 2},
+	"warden_stripped": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "shatter", "sound_next": "plate_shear_clang", "hud": "Warden plating stripped", "objective": "", "priority": 3},
+}
+
+# The laps mode's objective before the bell: the lap_bell_rung row carries it after.
+const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then lap the course: {lap} of {required}."
+
+# v3 W11 juice
+# How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
+# particles and streak window sit beside its colour, shape and sound. Milliseconds for
+# times, particles per burst for counts. presentation (juice.gd, vfx.gd, audio.gd) reads
+# these; the pause menu's Screen shake and Hit-stop rows scale every shake, kick, punch
+# and stop here.
+#   stop_ms, stop_per_damage, stop_min_ms, stop_cap_ms   hit-stop: base + per damage point,
+#       clamped; crit multiplies, heavy (a ram, stomp or slam) adds
+#   sparks, dust, pop, debris, fountain   particles in the burst
+#   shake, kick, punch_fov   camera: shake amplitude, kick metres along travel, fov degrees
+#   chain_ms, chain_cap   a streak: the window that keeps it alive and its top rung
+#   pulse   the ball's squash for the fact (negative shrinks: a heft loss)
+const JUICE := {
+	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8, "shake": 0.1,
+		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "shake": 0.3, "dust": 12}},
+	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
+	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
+	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
+	# Recovered spill clusters arrive further apart than pickups, so the run's window is wider.
+	"armor_reclaim": {"chain_ms": 900, "chain_cap": 7},
+	"part_gained": {"fountain": 18, "element": {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}},
+	"core_gained": {"fountain": 24},
+	# Your own shots and throws: a camera kick against the aim and a recoil squash on the
+	# ball, per weapon; both are camera and shell only, never the ball's velocity.
+	"shot_fired": {"weapons": {"rapid_laser": {"kick": 0.05, "recoil": 0.04}, "arc_caster": {"kick": 0.12, "recoil": 0.08},
+			"pylon_turret": {"kick": 0.08, "recoil": 0.0}, "sticky_charge": {"kick": 0.16, "recoil": 0.12}},
+		"throw": {"sound": "dash_whoosh", "pitch": 1.5, "db": -4.0}, "stick": {"sound": "grapple_clink", "pitch": 0.7, "sparks": 8}},
+	# Kest's bomb: a flash, a shockwave ring and debris; the punch grows with each enemy the
+	# blast catches. Inside near_m of the ball it kicks the camera and squashes the shell.
+	"sticky_detonated": {"punch_fov": 3.0, "punch_per_enemy": 1.5, "punch_cap": 10.0, "debris": 12, "dust": 14, "shake": 0.35,
+		"near_m": 6.0, "near_kick": 0.6},
+	"rocket_jumped": {"kick": 0.8, "punch_fov": 8.0, "squash": 0.35},
+	"near_miss": {"stop_ms": 45.0, "punch_fov": -5.0, "grace_ms": 250},
+	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "shake": 0.5, "shake_s": 0.25, "color": Palette.HAZARD},
+	"scrap_lost": {"pulse": -0.22},
+	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+}
+# Rapid fire never stutters. Every stop, whatever asked for it, draws on one shared
+# budget: a stop starts at least STOP_GAP_MS after the last one ended, at most
+# STOP_WINDOW_BUDGET_MS of stop falls in any STOP_WINDOW_MS, and at most STOP_BUDGET_MS in
+# any second. The hits of one frame coalesce into one stop.
+const STOP_GAP_MS := 90
+const STOP_WINDOW_MS := 300
+const STOP_WINDOW_BUDGET_MS := 60.0
+const STOP_BUDGET_MS := 100.0
+const STOP_PER_EXTRA_HIT_MS := 2.0
+
+
+static func juice(kind: String) -> Dictionary:
+	return JUICE.get(kind, {})
+
+# v2 W2 threat grammar
+# One row per enemy attack type (combat/threat_grammar.gd), in the ROWS schema. They sit
+# outside ROWS because ROWS is keyed by bus signal and a threat is a committed telegraph,
+# not a signal. Presentation can give each type its own warning by playing `sound` when
+# a node in the group "threat" enters the tree.
+const THREAT_ROWS := {
+	"threat_instant": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "hud": "", "objective": "", "priority": 2},
+	"threat_wave": {"group": "combat", "color": Palette.HAZARD, "shape": "wave", "sound": "threat_whoosh", "hud": "", "objective": "", "priority": 2},
+	"threat_projectile": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "hud": "", "objective": "", "priority": 2},
+	"threat_lane": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "threat_hum", "hud": "", "objective": "", "priority": 2},
+}
+
+# v3 attack reads, prerequisite A (design-v3/research/attack-reads/ATTACK-READS.md)
+# One row per attack ID in that document (E enemy, W Warden, B Brindle, P pilot), so the
+# body pose, the sounds, the codex and the floor support of an attack read one fact. The
+# rows are a frozen contract: nothing consumes them yet, and an actor reads its row
+# instead of carrying its own colour, cue or label.
+#
+# label      the codex wording, not floating combat text.
+# threat     the THREAT_ROWS key the attack's committed telegraph uses, or "" when it has
+#            none (player attacks, a non-damaging read, a crater with no advance warning).
+#            A key, not Threat.Type, because roster.gd loads the threat grammar.
+# glyph      a SHAPES entry. A pilot's own attacks wear their class shape (ClassDef).
+# color      the allegiance colour: HAZARD for hostile, the class colour for a pilot's own
+#            (ClassDef), a palette colour for a neutral read (harmless lift is bone).
+# pose       the presentation key for the attacker's body. It picks a pose, never a timer.
+# warn       the cue id at wind-up start; release: the cue id on the live transition. Ids
+#            are reserved names Audio bakes later, "atk_<id>_warn" and "atk_<id>_release";
+#            NONE where the document gives that beat no cue.
+# floor      L thin boundary, H haze, B both, none no floor marking.
+# group      enemy | warden | brindle | pilot. owner_kind and owner name the voice by
+#            reference: a roster id (Roster.ROWS), a faction (Roster.FACTIONS), the boss,
+#            or a class id (ClassDef) or "any" for an all-pilot row. No palette or motif
+#            is copied here. allegiance: hostile | player | neutral.
+# open       the fields still holding a stand-in the document leaves undecided. A field
+#            equal to PLACEHOLDER is always listed; a concrete stand-in may be too.
+const NONE := "none"
+const PLACEHOLDER := "tbd"
+const ATTACK_GROUPS := ["enemy", "warden", "brindle", "pilot"]
+const ATTACK_FIELDS := ["label", "threat", "glyph", "color", "pose", "warn", "release", "floor"]
+const FLOOR_MODES := ["L", "H", "B", NONE]
+const ATTACK_ROWS := {
+	"E01": {"label": "Chaser lunge", "group": "enemy", "owner_kind": "roster", "owner": "chaser", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e01_brace_back", "warn": "atk_e01_warn", "release": "atk_e01_release", "floor": "B", "open": []},
+	"E02": {"label": "Lobber shell", "group": "enemy", "owner_kind": "roster", "owner": "lobber", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
+		"pose": "e02_tube_raise", "warn": "atk_e02_warn", "release": "atk_e02_release", "floor": "B", "open": []},
+	"E03": {"label": "Miniboss leap slam", "group": "enemy", "owner_kind": "roster", "owner": "miniboss", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e03_leap_spread", "warn": "atk_e03_warn", "release": "atk_e03_release", "floor": "B", "open": []},
+	"E04": {"label": "Miniboss charge", "group": "enemy", "owner_kind": "roster", "owner": "miniboss", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e04_charge_close", "warn": "atk_e04_warn", "release": "atk_e04_release", "floor": "B", "open": []},
+	"E05": {"label": "Mag trapper pit", "group": "enemy", "owner_kind": "roster", "owner": "mag_trapper", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e05_stack_hoist", "warn": "atk_e05_warn", "release": "atk_e05_release", "floor": "B", "open": []},
+	"E06": {"label": "Hooker harpoon", "group": "enemy", "owner_kind": "roster", "owner": "hooker", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e06_harpoon_draw", "warn": "atk_e06_warn", "release": "atk_e06_release", "floor": "L", "open": []},
+	"E07": {"label": "Netcaster air net", "group": "enemy", "owner_kind": "roster", "owner": "netcaster", "allegiance": "hostile", "threat": "threat_instant", "glyph": "star", "color": Palette.HAZARD,
+		"pose": "e07_net_umbrella", "warn": "atk_e07_warn", "release": "atk_e07_release", "floor": "L", "open": []},
+	"E08": {"label": "Bola throw", "group": "enemy", "owner_kind": "roster", "owner": "bola_thrower", "allegiance": "hostile", "threat": "threat_projectile", "glyph": "cross", "color": Palette.HAZARD,
+		"pose": "e08_loop_raise", "warn": "atk_e08_warn", "release": "atk_e08_release", "floor": "B", "open": []},
+	"E09": {"label": "Plated brute slam", "group": "enemy", "owner_kind": "roster", "owner": "plated_brute", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e09_pads_raise", "warn": "atk_e09_warn", "release": "atk_e09_release", "floor": "B", "open": []},
+	"E10": {"label": "Deflector brace", "group": "enemy", "owner_kind": "roster", "owner": "deflector", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e10_dish_wall", "warn": "atk_e10_warn", "release": "atk_e10_release", "floor": "L", "open": []},
+	"E11": {"label": "Winch drone pull", "group": "enemy", "owner_kind": "roster", "owner": "winch_drone", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e11_cable_guide", "warn": "atk_e11_warn", "release": "atk_e11_release", "floor": "L", "open": []},
+	"E12": {"label": "Gyro jammer field", "group": "enemy", "owner_kind": "roster", "owner": "gyro_jammer", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e12_hoops_planes", "warn": "atk_e12_warn", "release": "atk_e12_release", "floor": "B", "open": []},
+	"E13": {"label": "Swatter swing", "group": "enemy", "owner_kind": "roster", "owner": "swatter", "allegiance": "hostile", "threat": "threat_instant", "glyph": "chevron", "color": Palette.HAZARD,
+		"pose": "e13_paddle_side", "warn": "atk_e13_warn", "release": "atk_e13_release", "floor": "B", "open": []},
+	"E14": {"label": "Ramp flipper", "group": "enemy", "owner_kind": "roster", "owner": "ramp_flipper", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e14_lip_raise", "warn": "atk_e14_warn", "release": "atk_e14_release", "floor": "B", "open": []},
+	"E15": {"label": "Catch trap", "group": "enemy", "owner_kind": "roster", "owner": "catch_trap", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "e15_cup_splay", "warn": "atk_e15_warn", "release": "atk_e15_release", "floor": "B", "open": []},
+	"E16": {"label": "Reactor relic eruption", "group": "enemy", "owner_kind": "roster", "owner": "reactor_relic", "allegiance": "hostile", "threat": "threat_instant", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "e16_vents_open", "warn": "atk_e16_warn", "release": "atk_e16_release", "floor": "B", "open": []},
+	"E17": {"label": "Swarm formation dive", "group": "enemy", "owner_kind": "roster", "owner": "swarm_remnant", "allegiance": "hostile", "threat": "threat_lane", "glyph": "arrow", "color": Palette.HAZARD,
+		"pose": "e17_rack_bow", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
+	"E18": {"label": "Mind hand strike", "group": "enemy", "owner_kind": "roster", "owner": "mind_hand", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e18_elbow_telescope", "warn": "atk_e18_warn", "release": "atk_e18_release", "floor": "L", "open": []},
+	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
+	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "w02_cells_retract", "warn": "atk_w02_warn", "release": "atk_w02_release", "floor": "B", "open": []},
+	"W03": {"label": "Hive guard dive", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_lane", "glyph": "arrow", "color": Palette.HAZARD,
+		"pose": "w03_cells_direct", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
+	"W04": {"label": "Mind Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "w04_mast_telescope", "warn": "atk_w04_warn", "release": "atk_w04_release", "floor": "B", "open": []},
+	"W05": {"label": "Mind Warden magnet tug", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_lane", "glyph": "chevron", "color": Palette.HAZARD,
+		"pose": "w05_arm_swing", "warn": "atk_w05_warn", "release": "atk_w05_release", "floor": "L", "open": []},
+	"W06": {"label": "Mind Warden adaptation", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "neutral", "threat": "", "glyph": "core", "color": Palette.SAND,
+		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": ["color"]},
+	"W07": {"label": "Caught-pulse crater", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "", "glyph": "burst", "color": Palette.HAZARD,
+		"pose": "w07_crater_bowl", "warn": NONE, "release": "atk_w07_release", "floor": "B", "open": []},
+	"B01": {"label": "Crane sweep", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_wave", "glyph": "wave", "color": Palette.HAZARD,
+		"pose": "b01_crane_windback", "warn": "atk_b01_warn", "release": "atk_b01_release", "floor": "B", "open": []},
+	"B02": {"label": "Furnace slag", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+		"pose": "b02_outlets_open", "warn": "atk_b02_warn", "release": "atk_b02_release", "floor": "B", "open": []},
+	"B03": {"label": "Scuttle charge", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "b03_prow_dip", "warn": "atk_b03_warn", "release": "atk_b03_release", "floor": "B", "open": []},
+	"B04": {"label": "Drone deployment", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "neutral", "threat": "", "glyph": "diamond", "color": Palette.AMBER,
+		"pose": "b04_hatch_open", "warn": "atk_b04_warn", "release": NONE, "floor": "L", "open": []},
+	"B05": {"label": "Ejection chase", "group": "brindle", "owner_kind": "boss", "owner": "brindle", "allegiance": "neutral", "threat": "", "glyph": "arrow", "color": Palette.BRASS,
+		"pose": "b05_seat_compress", "warn": NONE, "release": "atk_b05_release", "floor": "none", "open": ["color"]},
+	"P01": {"label": "Arc caster volley", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
+		"pose": "p01_prongs_aim", "warn": NONE, "release": "atk_p01_release", "floor": "L", "open": []},
+	"P02": {"label": "Discharge and plant burst", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
+		"pose": "p02_coils_open", "warn": "atk_p02_warn", "release": "atk_p02_release", "floor": "L", "open": []},
+	"P03": {"label": "Arc slam", "group": "pilot", "owner_kind": "class", "owner": "pylon_engineer", "allegiance": "player", "threat": "", "glyph": "ring", "color": ClassDef.SABLE_COLOR,
+		"pose": "p03_prongs_down", "warn": "atk_p03_warn", "release": "atk_p03_release", "floor": "L", "open": []},
+	"P04": {"label": "Rapid laser", "group": "pilot", "owner_kind": "class", "owner": "runner_gunner", "allegiance": "player", "threat": "", "glyph": "chevron", "color": ClassDef.RIVET_COLOR,
+		"pose": "p04_barrel_shoulder", "warn": NONE, "release": "atk_p04_release", "floor": "L", "open": []},
+	"P05": {"label": "Overdrive blast", "group": "pilot", "owner_kind": "class", "owner": "runner_gunner", "allegiance": "player", "threat": "", "glyph": "chevron", "color": ClassDef.RIVET_COLOR,
+		"pose": "p05_vanes_flare", "warn": "atk_p05_warn", "release": "atk_p05_release", "floor": "L", "open": []},
+	"P06": {"label": "Sprint ram and skid", "group": "pilot", "owner_kind": "class", "owner": "runner_gunner", "allegiance": "player", "threat": "", "glyph": "chevron", "color": ClassDef.RIVET_COLOR,
+		"pose": "p06_brace_forward", "warn": "atk_p06_warn", "release": "atk_p06_release", "floor": "L", "open": []},
+	"P07": {"label": "Sticky charge", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p07_payload_raise", "warn": "atk_p07_warn", "release": "atk_p07_release", "floor": "B", "open": []},
+	"P08": {"label": "Detonation line", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p08_detonator_stretch", "warn": "atk_p08_warn", "release": "atk_p08_release", "floor": "B", "open": []},
+	"P09": {"label": "Demo slam mini-charges", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p09_rack_open", "warn": "atk_p09_warn", "release": "atk_p09_release", "floor": "B", "open": []},
+	"P10": {"label": "Phantom blink cut", "group": "pilot", "owner_kind": "class", "owner": "demolitions_caster", "allegiance": "player", "threat": "", "glyph": "burst", "color": ClassDef.KEST_COLOR,
+		"pose": "p10_tool_blink", "warn": NONE, "release": "atk_p10_release", "floor": "L", "open": []},
+	"P11": {"label": "Ram, crush and stomp", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "arrow", "color": Palette.SAND,
+		"pose": "p11_cockpit_tilt", "warn": "atk_p11_warn", "release": "atk_p11_release", "floor": "L", "open": ["glyph", "color"]},
+	"P12": {"label": "Batted shell and pins", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "ring", "color": Palette.AMBER,
+		"pose": "p12_trail_stretch", "warn": NONE, "release": "atk_p12_release", "floor": "B", "open": []},
+	"P13": {"label": "Pilot upgrade attacks", "group": "pilot", "owner_kind": "pilot_any", "owner": "any", "allegiance": "player", "threat": "", "glyph": "diamond", "color": Palette.SAND,
+		"pose": PLACEHOLDER, "warn": PLACEHOLDER, "release": PLACEHOLDER, "floor": PLACEHOLDER, "open": ["glyph", "color", "pose", "warn", "release", "floor"]},
 }
 
 # Codex categories: each has its own colour, glyph shape and label, so the Tab codex
@@ -121,3 +397,246 @@ static func objective(kind: String, fields := {}) -> String:
 
 static func category(id: String) -> Dictionary:
 	return CODEX_CATEGORIES.get(id, CODEX_CATEGORIES["build"])
+
+
+# v3 attack reads accessors: read a row by attack ID; an unknown ID reads as empty.
+static func has_attack(id: String) -> bool:
+	return ATTACK_ROWS.has(id)
+
+
+static func attack_row(id: String) -> Dictionary:
+	return ATTACK_ROWS.get(id, {})
+
+
+# Attack IDs in document order, optionally only one group.
+static func attack_ids(group := "") -> Array[String]:
+	var ids: Array[String] = []
+	for id in ATTACK_ROWS:
+		if group == "" or ATTACK_ROWS[id]["group"] == group:
+			ids.append(id)
+	return ids
+
+
+static func attack_label(id: String) -> String:
+	return String(attack_row(id).get("label", ""))
+
+
+static func attack_threat(id: String) -> String:
+	return String(attack_row(id).get("threat", ""))
+
+
+static func attack_glyph(id: String) -> String:
+	return String(attack_row(id).get("glyph", "none"))
+
+
+static func attack_color(id: String) -> Color:
+	return attack_row(id).get("color", Palette.SAND)
+
+
+static func attack_pose(id: String) -> String:
+	return String(attack_row(id).get("pose", ""))
+
+
+static func attack_warn_cue(id: String) -> String:
+	return String(attack_row(id).get("warn", NONE))
+
+
+static func attack_release_cue(id: String) -> String:
+	return String(attack_row(id).get("release", NONE))
+
+
+static func attack_floor(id: String) -> String:
+	return String(attack_row(id).get("floor", NONE))
+
+
+# The fields of a row still on a stand-in value.
+static func attack_open(id: String) -> Array:
+	return attack_row(id).get("open", [])
+
+
+# v2 W1 UI
+# Facts the HUD shows that no bus signal carries: ability slot states, key glyphs, the
+# run clock and the first-run callouts. Same fields as ROWS, so colour, shape, sound and
+# wording still come from one place; they live apart from ROWS because ROWS holds one
+# row per bus signal. Sounds are ids for presentation to bake. A slot's state reads by
+# shape first (frame weight, wedge, doubled frame, strike); active wears the class
+# colour, since class colour means yours. "class_motif" is not a synth id: it names the
+# class row's ready pulse (<motif>_ready, resolved in rows.gd), so the ready swell plays
+# the class's tune (SOUND-STORY section 7, W1).
+const UI_ROWS := {
+	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "class_motif", "hud": "", "objective": "", "priority": 1},
+	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"ability_active": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"ability_unavailable": {"group": "combat", "color": Palette.SANDSTONE, "shape": "cross", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"key_glyph": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
+	"run_timer": {"group": "flow", "color": Palette.SAND, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"callout_scrap": {"group": "economy", "color": Palette.ARC, "shape": "square", "sound": "callout_chime", "hud": "Scrap = heft", "objective": "", "priority": 2},
+	"callout_warden": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "callout_chime", "hud": "Break it", "objective": "", "priority": 2},
+	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
+	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab}: notes", "objective": "", "priority": 2},
+}
+# The HUD's words for the three objective rows that stay flow's full readout (punch and
+# plating as numbers, which combat's and the arena's tests read). On screen the gauges
+# carry the numbers, so the objective shows only these words; every other row's wording
+# is short already.
+const OBJECTIVE_SHORT := {
+	"stage_entered": "Break the Warden",
+	"beacon_charge_changed": "Break the Warden",
+	"boss_arena_entered": "Break Brindle's Requisition",
+	# Laps mode while the Warden sleeps: before the bell, then counting laps.
+	"lap_bell": "Ring the Warden's bell",
+	"lap_bell_rung": "Lap the course: {lap}/{required}",
+}
+# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
+# worded for the stage's family: stage 1's reactor opens its core as it vents, stage
+# 2's hive stands behind a guard rack.
+const LESSON_SHORT := {
+	"plate": "Ram it as it vents",
+	"caps": "Bowl its guard, slam caps",
+	"magnet": "Shoot its magnet while pulled",
+}
+# The drop mode's objective line (LOOP-REDESIGN section 2, under 25 words), for flow's
+# readout and the HUD alike.
+# Keyed by gun role. The badge's chunks say how much is left; the words promise no count
+# (review finding 6: speed, heft and the gun make "drops left" untrue).
+const DROP_OBJECTIVE := {
+	"hold": "Drop on the Warden from a chute.",
+	"full": "Drop on the Warden, then gun it while it reels.",
+}
+
+
+static func drop_objective(gun_role: String) -> String:
+	return DROP_OBJECTIVE.get(gun_role, DROP_OBJECTIVE["hold"])
+
+
+# v2 W7 enemies
+# Each faction's fac_ icon, so the pack_arrived edge marker and any faction badge read
+# one table: the Fleet's requisition tag, or the ancient family's own mark.
+const FACTION_ICONS := {"fleet": "fac_fleet", "reactor": "fac_reactor", "swarm": "fac_swarm", "mind": "fac_mind"}
+
+
+static func faction_icon(faction: String) -> String:
+	return FACTION_ICONS.get(faction, "fac_fleet")
+
+
+# v2 W4 loot
+# Facts from Moss's shop and the item triggers that are not bus signals: build publishes
+# them in its shop results and item_procs(), and W1, W5 and W6 read their look and sound
+# here, in the ROWS schema. They sit outside ROWS for the same reason as UI_ROWS: ROWS is
+# one row per bus signal, and a new signal would need presentation wiring this unit does
+# not own. `sound` is an existing synth id standing in; `sound_next` names the cue W5 is
+# to bake (DESIGN-V2 section 12: a workbench clank, a shop bell, a grumble when he
+# refuses). Entering and leaving the bay reuse the mount and slingshot cues (SOUND-STORY
+# section 7), because the bay banks speed like a pylon. A refusal is one dry
+# interruption, never a damage alarm, so it is bone, not rust.
+const LOOT_ROWS := {
+	"shop_entered": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
+	"shop_left": {"group": "economy", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
+	"shop_bought": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
+	"shop_charge": {"group": "economy", "color": Palette.ARC, "shape": "core", "sound": "core_socket", "sound_next": "shop_bell", "hud": "", "objective": "", "priority": 2},
+	"shop_rerolled": {"group": "economy", "color": Palette.SANDSTONE, "shape": "square", "sound": "clank", "sound_next": "bench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_sold": {"group": "economy", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "scrap_tick", "sound_next": "bench_clank", "hud": "", "objective": "", "priority": 1},
+	"shop_refused": {"group": "economy", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "moss_grumble", "hud": "", "objective": "", "priority": 1},
+	"moss_beat": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "moss_babble", "hud": "", "objective": "", "priority": 1},
+	"moss_relent": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "sound_next": "moss_babble_sigh", "hud": "", "objective": "", "priority": 2},
+	"item_proc": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "sound_next": "trigger_tick", "hud": "", "objective": "", "priority": 0},
+	"par_split": {"group": "flow", "color": Palette.SAND, "shape": "bar", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# v3 W13 reward ceremony. How a part find is presented, one row per tier, read by
+	# presentation/reward_ceremony.gd; the tier comes from REWARD_TIER_BY_RARITY and the
+	# find's context. A tier's colour is its ring and card edge before the rarity tints
+	# it; `pause` is never (in the flow) or calm (only when nothing hostile is near).
+	# Times in seconds. The payoff is the one-time accent the first time a revealed or
+	# ceremonial part's effect fires, ringing the same rarity bell it arrived with.
+	"reward_common": {"group": "economy", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "rarity_tick", "hud": "", "objective": "", "priority": 1,
+		"tier": "common", "pause": "never"},
+	"reward_rare": {"group": "economy", "color": Palette.AMBER, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
+	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
+		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,
+		"stamps": {"common": "COMMON", "uncommon": "UNCOMMON", "rare": "RARE", "rare_plus": "RARE+", "evolution": "EVOLVED", "first": "NEW"}},
+	"reward_ceremony": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "ceremony_build", "sound_burst": "ceremony_resolve", "hud": "", "objective": "", "priority": 3,
+		"tier": "ceremony", "pause": "calm", "burst_role": "class", "in_s": 0.25, "build_s": 1.4, "hold_s": 1.8, "out_s": 0.25,
+		"calm_hold_s": 0.4, "calm_wait_s": 10.0, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
+	"reward_payoff": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+		"tier": "payoff", "pause": "never", "flash_s": 0.7},
+	# The durability prototype (--scrap=armor), facts that are not bus signals: run_state's
+	# armor_hit and the scrap field's recovered. The shed is the same amber as the HUD's
+	# armour flash (hud.gd), so the plate that flashes is the plate that clatters; it is
+	# priority 1 (no music duck, no bass duck) because a hit the scrap absorbed is not a
+	# hull hit. `sound` is the mid clatter; audio picks a small or big one by the scrap
+	# removed. The reclaim is scrap's own mint square, a rising two-note chime.
+	"armor_hit": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "armor_shed", "hud": "", "objective": "", "priority": 1},
+	"armor_reclaim": {"group": "economy", "color": Palette.ARC, "shape": "square", "sound": "armor_reclaim", "hud": "", "objective": "", "priority": 1},
+	# A hit turned aside entirely (mitigation or a deflect item: no scrap, no hull). Steel
+	# sand, a small square: quieter and plainer than the amber shed. Audio's own fact.
+	"armor_deflect": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "armor_deflect", "hud": "", "objective": "", "priority": 1},
+}
+
+# v3 W13 reward ceremony. The ladder: the tier a rarity is presented at before the
+# find's context raises it (a first find or a completed synergy raises common and rare
+# to the reveal card). Evolution is the ladder's top rung, a ceremony wherever it drops.
+const REWARD_TIERS := ["common", "rare", "reveal", "ceremony"]
+const REWARD_TIER_BY_RARITY := {"common": "common", "uncommon": "common", "rare": "rare", "rare_plus": "reveal", "evolution": "ceremony"}
+# part_gained sources that are a ceremony whatever the rarity: the gate the Warden's break
+# opens, Brindle's crest, a vault, and the cracked-wall cache, the cage on the mast and
+# evolution rewards once their sources publish.
+const CEREMONY_SOURCES := ["gate", "boss", "vault", "cache", "cage", "warden", "evolution"]
+# Each rarity's bell on the reward ladder (Harmony.pentatonic_step), so a rarer find rings higher.
+const REWARD_RUNGS := {"common": 0, "uncommon": 2, "rare": 4, "rare_plus": 5, "evolution": 7}
+
+
+static func reward_row(tier: String) -> Dictionary:
+	return LOOT_ROWS.get("reward_" + tier, {})
+
+
+# v2 W6 world
+# One row per world_fact kind, in the ROWS schema. `sound` is an existing synth id
+# standing in; `sound_next` names the SOUND-STORY section 3 cue W5 is to bake. Colour
+# follows VISUAL-LANGUAGE section 11: contraptions read by their bone gauge (SAND), a
+# terrain change by the hostile telegraph family (HAZARD) until it lands, the gorge's
+# layers and rides by the world's own sandstone, the landmark by the ancients' blue.
+# Rising and breathy means a ride; falling and pure means incoming: the launchers'
+# charge whistle rises, the impact's falls (SOUND-STORY section 7, W6 must).
+const ANCIENT_LIGHT := Palette.ANCIENT
+const WORLD_ROWS := {
+	# The shell's resolved air factor moved (Build.shell_air_changed): one fact for S4, K5 and R6. The ring on the
+	# hero pod, its colour and the released-spring sound read this row; direction is the ring's motion and the pitch.
+	"shell_air_shift": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "shell_spring", "hud": "", "objective": "", "priority": 1},
+	"lift_fired": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "lift_chuff_clank", "hud": "", "objective": "", "priority": 1},
+	"launcher_charging": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "steam_whistle_rise", "hud": "", "objective": "", "priority": 0},
+	"cannon_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "cannon_bang_rail_whoosh", "hud": "", "objective": "", "priority": 1},
+	"trebuchet_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "trebuchet_creak_whoosh", "hud": "", "objective": "", "priority": 1},
+	"geyser_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "geyser_whistle_bang", "hud": "", "objective": "", "priority": 1},
+	"valve_smashed": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "slam_boom", "sound_next": "valve_womp_hiss", "hud": "", "objective": "", "priority": 2},
+	"route_opened": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "found_chime", "sound_next": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"cave_in_crumble": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
+	"cave_in_swap": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
+	"impact_incoming": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "far_thunk_falling_whistle", "hud": "", "objective": "", "priority": 2},
+	"impact_swap": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "crater_crump_sub_boom", "hud": "", "objective": "", "priority": 2},
+	"crater_ride": {"group": "event", "color": Palette.SANDSTONE, "shape": "ring", "sound": "boost_whoosh", "sound_next": "rail_ride_whoosh", "hud": "", "objective": "", "priority": 1},
+	"layer_undercroft": {"group": "event", "color": Palette.VERDIGRIS, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_reese_sub", "hud": "", "objective": "", "priority": 0},
+	"layer_shelf": {"group": "event", "color": Palette.SANDSTONE, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_theme", "hud": "", "objective": "", "priority": 0},
+	"layer_sky": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "music_layer_bells_arp", "hud": "", "objective": "", "priority": 0},
+	"ride_grapple_line": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "grapple_clink", "sound_next": "ride_cable_clink", "hud": "", "objective": "", "priority": 1},
+	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
+	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},
+	"ride_chute": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rolling_metal", "hud": "", "objective": "", "priority": 1},
+	"landmark_hum": {"group": "event", "color": ANCIENT_LIGHT, "shape": "wave", "sound": "beacon_hum", "sound_next": "landmark_sub_pulse", "hud": "", "objective": "", "priority": 0},
+	"thermal_ride": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "thermal_updraft_swell", "hud": "", "objective": "", "priority": 1},
+	"wall_crumbled": {"group": "event", "color": Palette.SANDSTONE, "shape": "burst", "sound": "shatter", "sound_next": "cracked_wall_crumble", "hud": "", "objective": "", "priority": 1},
+	"reactor_vented": {"group": "event", "color": ANCIENT_LIGHT, "shape": "wave", "sound": "beacon_hum", "sound_next": "reactor_vent_sine_plume", "hud": "", "objective": "", "priority": 1},
+	"bay_bell": {"group": "event", "color": Palette.SAND, "shape": "ring", "sound": "found_chime", "sound_next": "bay_bell_ring", "hud": "", "objective": "", "priority": 1},
+	"bay_jukebox": {"group": "event", "color": Palette.AMBER, "shape": "wave", "sound": "ui_tick", "sound_next": "lounge_flip", "hud": "", "objective": "", "priority": 1},
+	"bay_marble_note": {"group": "event", "color": Palette.SAND, "shape": "square", "sound": "scrap_tick", "sound_next": "marble_tick_ladder", "hud": "", "objective": "", "priority": 1},
+	"bay_pins": {"group": "event", "color": Palette.SAND, "shape": "burst", "sound": "hit_thwack", "sound_next": "pins_crash", "hud": "", "objective": "", "priority": 1},
+	"lap_started": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "ui_tick", "sound_next": "lap_start_tick", "hud": "", "objective": "", "priority": 1},
+	"lap_checkpoint": {"group": "event", "color": Palette.SAND, "shape": "chevron", "sound": "scrap_tick", "sound_next": "lap_checkpoint_tick", "hud": "", "objective": "", "priority": 1},
+	"lap_finished": {"group": "event", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "lap_done_beeps", "hud": "Lap {seconds} s", "objective": "", "priority": 2},
+	# v3 fun lab: the Spillway loop's return (map_spillway.gd), a ride, so rising and
+	# breathy like the geyser; the launch arpeggio is the cue to bake.
+	"steam_lift_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "return_launch_arpeggio", "hud": "", "objective": "", "priority": 1},
+}
+
+
+static func world_row(kind: String) -> Dictionary:
+	return WORLD_ROWS.get(kind, {})

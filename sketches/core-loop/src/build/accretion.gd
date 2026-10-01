@@ -31,7 +31,8 @@ const RARITY_COLORS := {
 	"common": Palette.COPPER,
 	"uncommon": Palette.ARC,
 	"rare": Palette.AMBER,
-	"rare_plus": Palette.HAZARD,
+	# Red is only for what hurts you (DESIGN-V2 section 11): rare-plus is amber.
+	"rare_plus": Palette.AMBER,
 }
 const ICE := Color("c8f0ff")
 # One colour per tag, so a synergy's ring says what it is made of.

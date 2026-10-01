@@ -31,8 +31,8 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 # beat of silence, and their payoff is the full texture plus the bass. A restrained
 # grid-locked wobble is kept only inside the Warden and Brindle drops.
 
-enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER }
-const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter"]
+enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET }
+const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
 # The bass figure (layer 5) has a floor: it never leaves.
 const CURVES := [
@@ -50,12 +50,13 @@ const CURVES := [
 	[0.0, 0.45, 0.65],
 	[0.0, 0.7, 0.9],
 	[0.0, 0.8, 1.0],
+	[1.0, 0.0, 1.0],
 ]
 # The warm and wobble rows are placeholders: _retarget sets them from the overcharge
-# and the drop. The melodic layers, in the order they enter: pad, arp, choir, lead,
-# echo, counter.
+# and the drop; the fleet row is gated by the difficulty ticks instead (set_fleet_ticks).
+# The melodic layers, in the order they enter: pad, arp, choir, lead, echo, counter.
 const MELODIC := [PAD, ARP, CHOIR, LEAD, ECHO, COUNTER]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18]
+const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3]
 # The restrained wobble: only in the Warden's and Brindle's drops, at half level.
 const WOB_DROP_GAIN := 0.5
 # The warm layer is not pressure: it is the overcharge, one step per bonus core.
@@ -66,9 +67,9 @@ const MODE_NAMES := ["idle", "play", "dead"]
 # What each mode lets through, per layer. Menus keep keys, sub, a light hat and the
 # restrained bass riff; death keeps the keys alone, so the band waits with you.
 const MODE_MASK := [
-	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0],
-	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0],
+	[1.0, 0.7, 0.4, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0],
+	[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	[0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0],
 ]
 const BASS_LAYERS := [SUB, REESE, WOB]
 # The build's own voices (riser, snare roll, launch tune) skip the tone filter.
@@ -85,6 +86,17 @@ const DUCK_RELEASE := Harmony.BEAT
 const RISER_SPACING := Harmony.BAR * 4
 # Boss tracks move to 129 by metric modulation unless Andrew picks "held at 172".
 const BOSS_PIVOT_DEFAULT := true
+# AUDIO-V3 section 11: defaults for the lab; AU3 owns the bowl/clock listeners.
+const WARDEN_PIVOT_ONCE_PER_STAGE := true
+const WARDEN_OPEN_HELD_BREATH := true
+const WARDEN_ESCALATE_FROM_SEGMENTS := true
+const RULE_DOUBLE_CLAP := 1 << 0
+const RULE_DEEP_PUMP := 1 << 1
+const RULE_FLEET_ANSWER := 1 << 2
+# presentation_v3_test: 30 voices across four dense states and all three themes,
+# including evolution pins, rules and the reactor pedal; ceil(30 * 1.25) = 38.
+const BAND_VOICE_CAP := 38
+const OPEN_GAINS := [1.0, 1.0, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # Brindle's phase 3 runs at 150.
 const PHASE3_STEP := 4410
 # The sidechain pump: the pumped layers dip under each kick and breathe back.
@@ -92,7 +104,7 @@ const PUMP_ATTACK := 400
 const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER]
 # Brindle's phases add layers: phase 1 at 0.8 (pad, arp, choir, lead, half the echo),
 # phase 2 brings the echo and half the counter, phase 3 everything.
-const PRESSURE_FLOOR := {"level": 0.0, "miniboss": 0.8, "warden:build": 0.55, "warden:lift": 0.7, "warden:break": 0.85, "warden:drop": 1.0,
+const PRESSURE_FLOOR := {"level": 0.0, "miniboss": 0.8, "warden:build": 0.55, "warden:open": 0.55, "warden:lift": 0.7, "warden:break": 0.85, "warden:drop": 1.0,
 	"brindle:1": 0.8, "brindle:2": 0.9, "brindle:3": 1.0, "brindle:chase": 1.0, "brindle:victory": 1.0}
 const LEAD_VOICE := ["lead", "brass", "talk"]
 # The Warden's escalation: half broken lifts the key a half step, three quarters
@@ -139,6 +151,16 @@ const FUNK_CALM := {0: [0, 2], 3: [12, 1], 10: [0, 2], 13: [7, 1]}
 const WEIR_CALM := {0: [0, 4], 6: [7, 2], 8: [12, 4], 14: [10, 2]}
 const HOUSE_BASS := {0: [0, 1], 2: [12, 1], 3: [0, 1], 6: [12, 1], 7: [10, 1], 10: [0, 1], 11: [12, 1], 14: [7, 1]}
 const BRINDLE_BASS := {0: [0, 6], 6: [0, 2], 8: [12, 2], 10: [0, 4], 14: [1, 2]}
+# v2 W5 (SOUND-STORY.md section 2). The class motif seeds the counter-line on one of the
+# four re-voicings, as a layer and never the lead; this is the rotation it takes.
+const CLASS_ROTATION := 2
+const CLASS_COUNTER_GAIN := 2.8
+# Moss's lounge (SOUND-STORY.md section 8): a layer mask over the stage theme. Kick,
+# hats, arp, choir, echo and counter out; brushes, the calm bass on the clean sub, keys
+# on beats 1 and 3, the pad and the sax in, the whole about 7 LU under the full band so
+# Moss's babble sits on top of it. The warm row keeps its overcharge.
+const LOUNGE_GAINS := [0.5, 0.32, 0.0, 0.0, 0.7, 0.45, 0.9, 0.0, -1.0, 0.0, 0.7, 0.0, 0.0, 0.0, 0.0]
+const LOUNGE_FLOOR := 0.15
 
 
 class Voice:
@@ -175,6 +197,14 @@ var section := ""
 # Semitones above D the band is playing in.
 var key := 0
 var boss_pivot := BOSS_PIVOT_DEFAULT
+var warden_pivot_once_per_stage := WARDEN_PIVOT_ONCE_PER_STAGE
+var warden_open_held_breath := WARDEN_OPEN_HELD_BREATH
+var warden_escalate_from_segments := WARDEN_ESCALATE_FROM_SEGMENTS
+var rules := 0
+var _dominant_held := false
+var _rotation_pins: Dictionary = {}
+var _segment_fraction := -1.0
+var _warden_rest_section := "build"
 # [what, sample, detail] for every tempo, theme, track, key, build, gap and drop
 # change, for the tests and the notes.
 var events_log: Array = []
@@ -191,6 +221,9 @@ var solo: Array = []
 var _gains := PackedFloat32Array()
 var _targets := PackedFloat32Array()
 var _voices: Array = []
+var band_voice_peak := 0
+var band_voice_rejections := 0
+var band_voice_steals := 0
 var _actions: Array = []
 var _step_clock := -1
 var _bar_step := 0
@@ -246,6 +279,20 @@ var _dl := PackedFloat32Array()
 var _dr := PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
 var _stingers_live := false
+# v2 W5 layers, each added on a real game-state threshold and never swapped in:
+# the player's class motif in the counter rotation, the Fleet's reinforcement weight
+# per difficulty tick (0..3), the reactor relic's Ab pedal while a vent charges, and
+# Moss's lounge while the ball is in the bay.
+var class_motif := ""
+var fleet_ticks := 0
+var reactor_pedal := false
+var lounge := false
+var _class_counter: Array = []
+# One band at a time: while the ACE sequencer plays, the band starts no notes and mixes
+# nothing, and stingers land on the ACE beat in its key (grid is the sequencer, which
+# answers next_beat() and key_at() in this engine's transport samples).
+var band_muted := false
+var grid: Object = null
 
 
 func _init() -> void:
@@ -467,6 +514,8 @@ func _next_multiple(steps_per: int, from := -1) -> int:
 # The next beat at or after the play head (or a later sample). A stinger asked for
 # mid-beat waits for the beat; one asked for exactly on an unplayed beat starts on it.
 func next_beat(from := -1) -> int:
+	if grid != null:
+		return grid.next_beat(from)
 	return _next_multiple(Harmony.STEPS_PER_BEAT, from)
 
 
@@ -531,6 +580,9 @@ func begin_miniboss() -> int:
 func begin_boss(kind: String) -> int:
 	if track == kind:
 		return -1
+	for action in _actions:
+		if action["type"] == "track" and action.get("track", "") == kind:
+			return -1
 	var first := "build" if kind == "warden" else "1"
 	_warden_lifted = false
 	_warden_broken = false
@@ -566,6 +618,90 @@ func warden_charge(fraction: float) -> void:
 	if track != "warden" or section == "drop":
 		return
 	escalate(fraction)
+
+
+# A lap's window changes the arrangement without restarting the clock or B arc.
+# Closing a missed window restores the earned section. The final break still uses
+# unseal_drop(), and AU3 uses the pivot policy when deciding whether to end a lap.
+func warden_section(name: String) -> int:
+	if track != "warden" or name not in ["open", "build"]:
+		return -1
+	if name == "open" and not warden_open_held_breath:
+		return drop_now(4, 1.0)
+	if name == "open" and section != "open":
+		_warden_rest_section = section if section in ["build", "lift", "break"] else "build"
+	cancel_build()
+	_drop = {}
+	section = "open" if name == "open" else _warden_rest_section
+	if name == "build" and _segment_fraction >= 0.0:
+		escalate(_segment_fraction)
+	_retarget()
+	_release_all()
+	events_log.append(["section", clock, section])
+	return clock
+
+
+# A shelf return is not a boss death. The lab's per-lap alternative uses the same
+# cadence as before; the default keeps the earned club arrangement at 129.
+func end_warden_lap() -> int:
+	if track != "warden" or warden_pivot_once_per_stage:
+		return -1
+	return end_boss()
+
+
+func hold_dominant(on: bool) -> void:
+	_dominant_held = on
+	events_log.append(["hold_dominant", clock, on])
+
+
+# The ready pulse is already baked per class; AU2 may supply the dedicated recipe.
+# Resolve the live key at playback, including a key change on this very sixteenth.
+func door_tick() -> int:
+	var at := _next_multiple(1)
+	_add_action(at, {"type": "door_tick"})
+	return at
+
+
+func segments_cut(n: int, total: int) -> void:
+	if not warden_escalate_from_segments or track != "warden" or total <= 0:
+		return
+	_segment_fraction = maxf(_segment_fraction, clampf(float(n) / total, 0.0, 1.0))
+	escalate(_segment_fraction)
+
+
+# Pins start at the next four-bar rotation. rotations=1 is the armed tease;
+# rotations=0 persists until cleared with an empty shape (or a new engine).
+# arp: {arp: 2, arp_oct: 12}; echo: {echo_voice: "bell", shift: 7};
+# counter: {counter: "tom", class_counter: true, counter_oct: -12, counter_boom: true}.
+func pin_rotation(slot: String, shape: Dictionary, rotations := 0) -> bool:
+	var fields := {
+		"arp": ["arp", "arp_oct"], "echo": ["echo_voice", "shift"],
+		"counter": ["counter", "class_counter", "counter_oct", "counter_boom"],
+		"choir": ["choir", "vowel"],
+	}
+	if not fields.has(slot) or rotations < 0:
+		return false
+	if shape.is_empty():
+		_rotation_pins.erase(slot)
+		return true
+	for field in shape:
+		if field not in fields[slot]:
+			return false
+	if shape.has("arp") and (int(shape["arp"]) < 0 or int(shape["arp"]) >= ARP_SHAPES.size()):
+		return false
+	_rotation_pins[slot] = {"shape": shape.duplicate(true), "from": _rotation + 1,
+		"until": _rotation + 1 + rotations if rotations > 0 else -1}
+	return true
+
+
+func _rotation_state() -> Dictionary:
+	var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()].duplicate()
+	for pin in _rotation_pins.values():
+		if _rotation >= int(pin["from"]) and (int(pin["until"]) < 0 or _rotation < int(pin["until"])):
+			rot.merge(pin["shape"], true)
+	if _dominant_held:
+		rot["arp"] = 0
+	return rot
 
 
 # B's grammar, for any track (MUSIC-GEMS G11). fraction is how far the fight or event
@@ -631,6 +767,7 @@ func miniboss_drop() -> int:
 func _reset_escalation(clear_esc := true) -> void:
 	_warden_lifted = false
 	_warden_broken = false
+	_segment_fraction = -1.0
 	if clear_esc:
 		escalation = ""
 
@@ -642,6 +779,36 @@ func set_heft_lift(steps: int) -> void:
 	if next == heft_lift:
 		return
 	_queue({"heft": next})
+
+
+# The player's class motif (a Harmony.MOTIFS id) seeds the counter-line on its
+# rotation: a layer, refitted to the chord it lands on.
+func set_class_motif(id: String) -> void:
+	class_motif = id
+	_class_counter = _make_class_counter()
+
+
+# The difficulty clock's ticks past the Warden break (threat_rose). Each adds a Fleet
+# layer from the next bar line and never swaps one: 1 the anvil on beats 2 and 4, 2 the
+# brass semitone lean answering the lead, 3 the anvil on every beat.
+func set_fleet_ticks(ticks: int) -> int:
+	var at := next_bar()
+	_add_action(at, {"type": "fleet", "ticks": clampi(ticks, 0, 3)})
+	return at
+
+
+# A reactor relic's vent is charging: the sub takes the Ab pedal from the next bar
+# line, under the bass figure, until the vent blows.
+func set_reactor_pedal(on: bool) -> void:
+	reactor_pedal = on
+
+
+# The ball is banked in Moss's bay: the lounge from the next bar line. Leaving is the
+# launch build and the landing drop, which ends the lounge on the beat.
+func set_lounge(on: bool) -> int:
+	var at := next_bar()
+	_add_action(at, {"type": "lounge", "on": on})
+	return at
 
 
 # A death: on the next beat the band breaks (a boom, everything cut), then keys only.
@@ -691,12 +858,12 @@ func drop_now(bars: int, weight: float, then := {}, next_theme := -1, change := 
 # The Warden breaks: the heaviest drop in the stage, eight bars back home in D, then
 # the kill cadence resolves home to the level at 172.
 func unseal_drop() -> int:
-	return drop_now(8, 1.0, {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}})
+	return drop_now(8, 1.0, {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, -1, {"unseal": true})
 
 
 # The unseal drop at a given beat (kept for callers that pick the beat).
 func drop_at(at: int) -> void:
-	_add_action(at, {"type": "drop", "bars": 8, "weight": 1.0, "then": {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, "theme": -1})
+	_add_action(at, {"type": "drop", "bars": 8, "weight": 1.0, "then": {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, "theme": -1, "set": {"unseal": true}})
 
 
 # A boss dies: cadence home from the next beat, then the level theme at 172.
@@ -820,6 +987,7 @@ func force_track(next_track: String, next_theme: int, next_section := "", boss_t
 # Drops every stinger and phrase change not yet played and fades the ones playing:
 # a retry or a new run starts clean instead of finishing the old announcements.
 func cancel_pending() -> void:
+	_dominant_held = false
 	var keep: Array = []
 	for action in _actions:
 		if (action["type"] == "stinger" and action.get("music", false)) or action["type"] == "wob":
@@ -840,7 +1008,9 @@ func cancel_pending() -> void:
 
 # Pulls the band down under an important cue, then lets it back up.
 func duck(amount: float, hold_seconds: float) -> void:
-	_duck_target = minf(_duck_target, clampf(amount, 0.1, 1.0))
+	# Preserve the requested depth at full intensity; soften it in the sparse band.
+	var depth := lerpf(2.0 / 3.0, 1.0, clampf((_intensity - 0.3) / 0.7, 0.0, 1.0))
+	_duck_target = minf(_duck_target, 1.0 - (1.0 - clampf(amount, 0.1, 1.0)) * depth)
 	_duck_until = maxi(_duck_until, clock + int(hold_seconds * Harmony.RATE))
 
 
@@ -848,6 +1018,12 @@ func duck(amount: float, hold_seconds: float) -> void:
 func duck_bass(amount: float, hold_seconds: float) -> void:
 	_bass_duck_target = minf(_bass_duck_target, clampf(amount, 0.1, 1.0))
 	_bass_duck_until = maxi(_bass_duck_until, clock + int(hold_seconds * Harmony.RATE))
+
+
+# Breaking free: the bass comes back from this frame, over a beat.
+func free_bass() -> void:
+	_bass_duck_until = clock
+	_bass_duck_target = 1.0
 
 
 func pending_actions() -> int:
@@ -915,6 +1091,9 @@ func _run_due() -> void:
 	var due: Array = []
 	for action in _actions:
 		if action["at"] <= clock:
+			# A tick on a bar line hears that bar's queued key, not the old key.
+			if action["type"] == "door_tick" and _step_clock != clock and posmod(clock - grid_origin, step_len) == 0:
+				continue
 			due.append(action)
 	for action in due:
 		_actions.erase(action)
@@ -938,7 +1117,13 @@ func _on_step() -> void:
 	# A drop that has run its bars hands over to what follows it.
 	if not _drop.is_empty() and _bar_step >= int(_drop["end_step"]):
 		var then: Dictionary = _drop["then"]
+		var lap: bool = _drop.get("lap", false)
+		if lap:
+			section = _drop["rest"]
+			_bar_queue = _drop["queue"]
 		_drop = {}
+		if lap:
+			escalate(_segment_fraction)
 		_reset_bar()
 		_step_clock = clock
 		_new_phrase()
@@ -959,6 +1144,8 @@ func _on_step() -> void:
 	if _gap:
 		return
 	var chord := _chord(bar)
+	if fleet_ticks > 0 and track == "level" and _cadence_bar < 0 and not _lounge_live():
+		_fleet_layer(s, chord)
 	if not _drop.is_empty():
 		_trigger_drop(bar, s, chord)
 		# A gate taken mid-drop (right after the unseal) builds over the drop.
@@ -982,13 +1169,16 @@ func _on_step() -> void:
 		"miniboss" when section == "break":
 			_trigger_break(bar, s, chord)
 		_:
-			match theme:
-				1:
-					_trigger_funk(bar, s, chord)
-				2:
-					_trigger_halfpipe(bar, s, chord)
-				_:
-					_trigger_dnb(bar, s, chord)
+			if _lounge_live():
+				_trigger_lounge(bar, s, chord)
+			else:
+				match theme:
+					1:
+						_trigger_funk(bar, s, chord)
+					2:
+						_trigger_halfpipe(bar, s, chord)
+					_:
+						_trigger_dnb(bar, s, chord)
 	if track == "miniboss" and (s % 2 == 1) and applied_pressure >= 0.5:
 		# The miniboss's denser top: the arpeggio fills every sixteenth.
 		var tones: Array = chord["voicing"]
@@ -1001,14 +1191,21 @@ func _on_step() -> void:
 
 func _run(action: Dictionary) -> void:
 	match action["type"]:
+		"door_tick":
+			var id := "door_tick"
+			var buf := SfxBank.samples_at(id, step_len, key, theme)
+			_start(buf, buf.size(), -1, db_to_linear(SfxBank.trim_db(id)), 0.0, true)
+			events_log.append(["door_tick", clock, id])
 		"stinger":
 			# Pitched stingers sound in the live key, and a themed one in this level's motif.
 			var music: bool = action.get("music", false)
-			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else key, theme)
+			var live_key: int = key if grid == null else grid.key_at(clock)
+			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else live_key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
 		"restart":
+			_dominant_held = false
 			_reset_escalation()
 			_bar_queue.clear()
 			_transition = {}
@@ -1019,6 +1216,7 @@ func _run(action: Dictionary) -> void:
 			_set_grid(Harmony.STEP)
 			track = "level"
 			section = ""
+			lounge = false
 			_set_key(0)
 			_reset_bar()
 			_cadence_bar = -1
@@ -1029,6 +1227,7 @@ func _run(action: Dictionary) -> void:
 			_release_all()
 			_retarget()
 		"cadence":
+			_dominant_held = false
 			_reset_bar()
 			_cadence_bar = 0
 			_cadence_then = action.get("then", {})
@@ -1051,6 +1250,7 @@ func _run(action: Dictionary) -> void:
 				_set_grid(int(action["step"]))
 			track = action["track"]
 			section = action.get("section", "")
+			lounge = false
 			if action.get("play", false):
 				mode = PLAY
 			_set_key(int(action.get("key", 0)))
@@ -1080,6 +1280,14 @@ func _run(action: Dictionary) -> void:
 			events_log.append(["hit", clock, action["drums"]])
 		"echo":
 			_start_note(action["voice"], int(action["midi"]), 1, ECHO, 0.9, float(action["pan"]))
+		"fleet":
+			fleet_ticks = int(action["ticks"])
+			events_log.append(["fleet", clock, fleet_ticks])
+		"lounge":
+			lounge = bool(action["on"])
+			events_log.append(["lounge", clock, lounge])
+			_new_phrase()
+			_retarget()
 		"roll":
 			_start(Synth.drum("snare"), Synth.drum("snare").size(), DRY, LEVELS[SNARE] * float(action["gain"]), 0.0, false)
 		"wob":
@@ -1093,15 +1301,22 @@ func _run(action: Dictionary) -> void:
 			_release_all()
 			events_log.append(["gap", clock, ""])
 		"drop":
+			var change: Dictionary = action.get("set", {})
+			var lap: bool = track == "warden" and _segment_fraction >= 0.0 and not change.get("unseal", false) and int(action.get("theme", -1)) < 0
+			var saved_queue := _bar_queue.duplicate(true) if lap else []
+			var rest := _warden_rest_section if section == "open" else section
+			_dominant_held = false
 			_gap = false
+			lounge = false
 			_build_from = -1
 			_build_level = -1.0
 			_build_tune = false
 			_pending_drop = {}
 			_bar_queue.clear()
 			_transition = {}
-			_lead_octave = 0
-			_reset_escalation()
+			if not lap:
+				_lead_octave = 0
+				_reset_escalation()
 			var next_theme := int(action.get("theme", -1))
 			if next_theme >= 0:
 				# A drop into the level is home: D, whatever the fight lifted it to.
@@ -1111,7 +1326,6 @@ func _run(action: Dictionary) -> void:
 				_set_key(0)
 				_set_grid(Harmony.STEP)
 				events_log.append(["theme", clock, theme])
-			var change: Dictionary = action.get("set", {})
 			if change.has("step"):
 				_set_grid(int(change["step"]))
 			if change.has("track"):
@@ -1121,9 +1335,12 @@ func _run(action: Dictionary) -> void:
 				_set_key(int(change["key"]))
 			if track == "warden":
 				section = "drop"
-				_set_key(0)
+				if not lap:
+					_set_key(0)
 			_reset_bar()
 			_drop = {"end_step": int(action["bars"]) * Harmony.STEPS_PER_BAR, "weight": float(action["weight"]), "then": action.get("then", {})}
+			if lap:
+				_drop.merge({"lap": true, "rest": rest, "queue": saved_queue})
 			_cadence_bar = -1
 			_new_phrase()
 			_release_all()
@@ -1157,6 +1374,7 @@ func _new_phrase() -> void:
 	phrase_index += 1
 	_lead = _make_track_lead()
 	_counter = _make_counter(_lead)
+	_class_counter = _make_class_counter()
 
 
 func _on_bar() -> void:
@@ -1192,7 +1410,10 @@ func _on_bar() -> void:
 		if change.has("key"):
 			_set_key(int(change["key"]))
 		if change.has("section"):
-			section = change["section"]
+			if section == "open":
+				_warden_rest_section = change["section"]
+			else:
+				section = change["section"]
 			events_log.append(["section", clock, section])
 		if change.has("lead_octave"):
 			_lead_octave = int(change["lead_octave"])
@@ -1252,9 +1473,21 @@ func _retarget() -> void:
 	_pump_depth = 0.0
 	if mode == PLAY and _cadence_bar < 0:
 		if track == "warden" and section != "break":
-			_pump_depth = 0.65
+			_pump_depth = 0.8 if rules & RULE_DEEP_PUMP else 0.65
 		elif track == "brindle":
 			_pump_depth = 0.4
+	if _lounge_live() and mode == PLAY and _drop.is_empty() and _cadence_bar < 0:
+		for layer in LOUNGE_GAINS.size():
+			if layer != WARM:
+				_targets[layer] = LOUNGE_GAINS[layer]
+		_intensity = maxf(LOUNGE_FLOOR, build_level())
+	if track == "warden" and section == "open" and mode == PLAY and _cadence_bar < 0:
+		for layer in OPEN_GAINS.size():
+			_targets[layer] = OPEN_GAINS[layer]
+
+
+func _lounge_live() -> bool:
+	return lounge and track == "level"
 
 
 # Bonus cores this stage. The warm pad swells in on the next bar and stays until the
@@ -1294,6 +1527,8 @@ func _chord(bar: int) -> Dictionary:
 	# D: the rice-cooker cadence, carried by the flight.
 	if _build_tune and _build_from >= 0:
 		return Harmony.CADENCE[0]
+	if _dominant_held:
+		return _held_chord()
 	var progression := _progression()
 	if track == "brindle" and section == "victory" and _drop.is_empty():
 		return progression[mini(bar, progression.size() - 1)]
@@ -1301,12 +1536,32 @@ func _chord(bar: int) -> Dictionary:
 
 
 func _next_chord(bar: int) -> Dictionary:
+	if _dominant_mask_live():
+		return _held_chord()
 	var progression := _progression()
 	return progression[(bar + 1) % progression.size()]
 
 
 func _voicing(chord: Dictionary) -> Array:
+	if _dominant_mask_live():
+		return _shift(_held_chord()["voicing"], _chord_key())
 	return _shift(chord["voicing"], _chord_key())
+
+
+func _dominant_mask_live() -> bool:
+	return _dominant_held and _cadence_bar < 0 and _transition.is_empty() and not (_build_tune and _build_from >= 0)
+
+
+func _held_chord() -> Dictionary:
+	var chord := Harmony.DOMINANT.duplicate(true)
+	chord["name"] = "A7sus4"
+	chord["voicing"] = [55, 57, 62, 64]
+	chord["tones"] = [57, 62, 64, 67]
+	if section == "open" or (_build_from >= 0 and clock >= _build_from + _build_len - beat_len()):
+		chord["name"] = "A7b9sus4"
+		chord["voicing"].append(58)
+		chord["tones"].append(58)
+	return chord
 
 
 # The pickup bar's pivot chord already sounds in the key it leads to.
@@ -1327,8 +1582,11 @@ func _make_track_lead() -> Array:
 			var quote := {"1": 2, "2": 1, "3": 0}.get(section, 0) as int
 			return make_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][quote], _progression(), 73)
 		_:
-			_lead_voice = LEAD_VOICE[theme]
 			var progression := _progression()
+			if _lounge_live():
+				_lead_voice = "sax_lounge"
+				return make_lounge_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][theme], progression, [1] if theme == 2 else [0, 1])
+			_lead_voice = LEAD_VOICE[theme]
 			match theme:
 				1:
 					return make_lead(phrase_index, MOTIF_SLUICE, progression, 73)
@@ -1341,6 +1599,7 @@ func _make_track_lead() -> Array:
 
 # Spillway: drum and bass. Also plays every cadence.
 func _trigger_dnb(bar: int, s: int, chord: Dictionary) -> void:
+	_rule_accents(s, chord)
 	var cadence := _cadence_bar >= 0
 	var phrase_bar := bar % Harmony.PHRASE_BARS
 	var busy := _intensity >= 0.3 and mode == PLAY
@@ -1475,16 +1734,21 @@ func _trigger_house(bar: int, s: int, chord: Dictionary) -> void:
 	# octave up and the arp; the drop adds a crash every four bars and the full layers.
 	var drop := section == "drop"
 	var lifted := section == "lift"
+	var open := section == "open"
 	var phrase_bar := bar % Harmony.PHRASE_BARS
-	if s % 4 == 0:
+	if not open:
+		_rule_accents(s, chord)
+	if not open and s % 4 == 0:
 		_hit("kick", KICK, 1.0, 0.0)
-	if s == 4 or s == 12:
+	if not open and (s == 4 or s == 12):
 		_hit("clap", SNARE, 1.0, 0.1)
 		if drop or lifted:
 			_hit("snare", SNARE, 0.5, -0.1)
-	if not drop and phrase_bar % 4 == 3 and s >= 8:
+	if not open and not drop and phrase_bar % 4 == 3 and s >= 8:
 		_hit("snare", SNARE, 0.3 + 0.08 * (s - 8), 0.0)
-	if s % 4 == 2:
+	if open:
+		_hit("hat", HATS, 1.0 if s % 4 == 2 else 0.55, 0.25)
+	elif s % 4 == 2:
 		_hit("open_hat", HATS, 0.8, 0.25)
 	elif s % 2 == 1:
 		_hit("hat", HATS, 0.35, -0.25)
@@ -1496,7 +1760,7 @@ func _trigger_house(bar: int, s: int, chord: Dictionary) -> void:
 	if HOUSE_BASS.has(s):
 		_bass("fbass", root + int(HOUSE_BASS[s][0]), int(HOUSE_BASS[s][1]), 1.3)
 	if s == 0:
-		_start_note("sub", root, 16, SUB, 0.8, 0.0)
+		_start_sub(root, 0.8)
 	# Under the funk bass, the level's own bass figure (round 3) on the reese, softer.
 	var figure: Dictionary = [DNB_CALM, FUNK_CALM, WEIR_CALM][theme]
 	if figure.has(s):
@@ -1521,6 +1785,17 @@ func _trigger_house(bar: int, s: int, chord: Dictionary) -> void:
 	elif lifted:
 		_play_lead(phrase_bar, s)
 		_arp(bar, s, chord, "bell")
+	elif _dominant_held and not open:
+		_arp(bar, s, chord, "bell")
+
+
+# Each rule adds at most one accent per bar. The second clap answers beat four
+# one sixteenth later; the brass uses the existing Fleet layer and live harmony.
+func _rule_accents(s: int, chord: Dictionary) -> void:
+	if rules & RULE_DOUBLE_CLAP and s == 13:
+		_hit("clap", SNARE, 0.7, -0.1)
+	if rules & RULE_FLEET_ANSWER and s == 12:
+		_start_note("brass", int(chord["root"]) + 24, 2, FLEET, 0.8, 0.25)
 
 
 # The Warden at three quarters broken: half time, the bass walking the tritone, the
@@ -1538,7 +1813,7 @@ func _trigger_break(bar: int, s: int, chord: Dictionary) -> void:
 		_hit("hat", HATS, 0.5, 0.25)
 	var root: int = chord["root"]
 	if s == 0:
-		_start_note("sub", root, 16, SUB, 1.0, 0.0)
+		_start_sub(root, 1.0)
 		var stab := Synth.stab_chord(_voicing(chord), false)
 		_start(stab, stab.size(), KEYS, LEVELS[KEYS] * 1.2, 0.0, false)
 		_bass("reese", root + 12, 8, 1.0)
@@ -1671,15 +1946,71 @@ func _trigger_victory(bar: int, s: int, chord: Dictionary) -> void:
 	_play_lead(bar, s)
 
 
+# Moss's lounge: the stage theme re-voiced, same grid, half the feel. Brushes and a
+# ride instead of kick and hats, the snare only on beat 3, the calm bass figure on the
+# clean sub, keys on beats 1 and 3, the pad, and the sax at half speed. Sluice keeps its
+# clav and Weir its organ, quietly.
+func _trigger_lounge(bar: int, s: int, chord: Dictionary) -> void:
+	var voicing := _voicing(chord)
+	if s == 0 or s == 8:
+		_release_layers([KEYS])
+		var keys := Synth.chord(voicing)
+		_start(keys, mini(keys.size(), 7 * step_len + RELEASE), KEYS, LEVELS[KEYS], 0.0, false)
+		if theme == 1:
+			var clav := Synth.note("clav", int(voicing[1]) + 12)
+			_start(clav, mini(clav.size(), step_len + RELEASE), KEYS, LEVELS[KEYS] * 0.35, -0.3, false)
+	if theme == 2 and s == 0:
+		var organ := Synth.organ_chord(voicing)
+		_start(organ, mini(organ.size(), 16 * step_len + RELEASE), KEYS, LEVELS[KEYS] * 0.3, 0.2, false)
+	if s == 0:
+		_start_sub(chord["root"], 1.0)
+	if s % 4 == 0:
+		_hit("brush", SNARE, 0.8 if s % 8 == 0 else 0.5, 0.25)
+	if s in [0, 8, 14]:
+		_hit("ride", SNARE, 0.3 if s == 14 else 0.45, -0.3)
+	if s == 8:
+		_hit("snare", SNARE, 0.3, 0.05)
+	var figure: Dictionary = [DNB_CALM, FUNK_CALM, WEIR_CALM][theme]
+	if figure.has(s):
+		_bass("sub", int(chord["root"]) + 12 + int(figure[s][0]), int(figure[s][1]), 0.9)
+	_melodic(bar, s, chord, "bell")
+
+
+# The Fleet borrows Brindle's anvil and brass, one layer per difficulty tick: the anvil
+# on beats 2 and 4 under the kick, then the brass semitone lean (root, a half step up,
+# root) answering the lead in the second half of the bar, then the anvil on every beat.
+func _fleet_layer(s: int, chord: Dictionary) -> void:
+	if (fleet_ticks >= 3 and s % 4 == 0) or s == 4 or s == 12:
+		_hit("anvil", FLEET, 1.3 if s == 4 or s == 12 else 1.0, -0.3 if s < 8 else 0.3)
+	if fleet_ticks < 2:
+		return
+	var root: int = int(chord["root"]) + 12
+	var lean := {8: [0, 2], 10: [1, 2], 12: [0, 3]}
+	if lean.has(s):
+		_start_note("brass", root + int(lean[s][0]), int(lean[s][1]), FLEET, 1.1, 0.25)
+		_start_note("brass", root + 12 + int(lean[s][0]), int(lean[s][1]), FLEET, 0.45, 0.25)
+
+
 # --- Pieces every arrangement shares ------------------------------------------------------
 
 func _sub_and_pad(s: int, chord: Dictionary) -> void:
 	if s != 0:
 		return
-	_start_note("sub", chord["root"], 16, SUB, 1.0, 0.0)
+	_start_sub(chord["root"], 1.0)
 	if _targets[WARM] > 0.0 or _gains[WARM] > 0.0:
 		var pad := Synth.pad_chord(_voicing(chord))
 		_start(pad, mini(pad.size(), 16 * step_len + RELEASE), WARM, LEVELS[WARM], 0.0, false)
+
+
+# The bar's held sub: the chord root, or while a reactor vent charges the Ab pedal on
+# the tritone (and its octave, quieter) under whatever the bass figure plays.
+func _start_sub(root: int, gain: float) -> void:
+	if not reactor_pedal:
+		_start_note("sub", root, 16, SUB, gain, 0.0)
+		return
+	var cells: Array = Harmony.motif("reactor")["cells"]
+	_start_note("sub", int(cells[0][1]), 16, SUB, gain, 0.0)
+	_start_note("sub", int(cells[1][1]), 16, SUB, gain * 0.3, 0.0)
 
 
 # A bass-figure note: it cuts the previous one, so the riff stays tight.
@@ -1728,8 +2059,8 @@ func _play_lead(phrase_bar: int, s: int) -> void:
 			# The chopped echo: each lead note comes back a dotted eighth later, cut
 			# short and pitched up, on the rotation's voice.
 			if _on(ECHO):
-				var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()]
-				var voice: String = ECHO_VOICES[theme][int(rot["echo"])]
+				var rot := _rotation_state()
+				var voice: String = rot.get("echo_voice", ECHO_VOICES[theme][int(rot["echo"])])
 				_add_action(clock + 3 * step_len, {"type": "echo", "voice": voice, "midi": int(event[1]) + int(rot["shift"]), "pan": -0.35 if event[0] % 8 < 4 else 0.35})
 			if track == "miniboss":
 				_start_note(_lead_voice, event[1] + 12, event[2], LEAD, 0.4, -0.1)
@@ -1739,7 +2070,7 @@ func _arp(bar: int, s: int, chord: Dictionary, instrument: String) -> void:
 	if not _on(ARP):
 		return
 	if s % 2 == 0 or _intensity >= 0.9:
-		var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()]
+		var rot := _rotation_state()
 		var tones: Array = chord["voicing"]
 		var pattern: Array = ARP_SHAPES[int(rot["arp"])]
 		var midi: int = tones[int(pattern[(s / 2 + bar % Harmony.PHRASE_BARS) % pattern.size()]) % tones.size()] + int(rot["arp_oct"])
@@ -1777,7 +2108,7 @@ func _on(layer: int) -> bool:
 func _choir(bar: int, s: int, chord: Dictionary) -> void:
 	if not _on(CHOIR) or (s != 0 and s != 8):
 		return
-	var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()]
+	var rot := _rotation_state()
 	var tones: Array = chord["voicing"]
 	var midi: int = int(tones[3 if s == 0 else 1]) + 12
 	if rot["choir"] == "answer":
@@ -1801,13 +2132,22 @@ func _play_counter(phrase_bar: int, s: int) -> void:
 	if not _on(COUNTER):
 		return
 	var at := phrase_bar * Harmony.STEPS_PER_BAR + s
-	var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()]
+	var rot := _rotation_state()
 	var voice: String = rot["counter"]
-	for event in _counter:
+	var line := _counter
+	var gain := 1.0
+	var seeded: bool = not _class_counter.is_empty() and (rot.get("class_counter", false) or _rotation % ROTATIONS.size() == CLASS_ROTATION)
+	if seeded:
+		line = _class_counter
+		voice = rot["counter"] if rot.get("class_counter", false) else Harmony.motif(class_motif)["band"]
+		gain = CLASS_COUNTER_GAIN
+	for event in line:
 		if event[0] == at:
 			_release_layers([COUNTER])
-			var steps: int = mini(int(event[2]), 2) if voice != "keys" else int(event[2])
-			_start_note(voice, event[1], steps, COUNTER, 1.0, -0.3)
+			var steps: int = int(event[2]) if seeded or voice == "keys" else mini(int(event[2]), 2)
+			_start_note(voice, int(event[1]) + int(rot.get("counter_oct", 0)), steps, COUNTER, gain, -0.3)
+			if seeded and rot.get("counter_boom", false):
+				_start_note("sub", int(event[1]) - 24, steps, COUNTER, gain * 0.35, 0.0)
 
 
 # The counter-line: the lead's own call, two bars late and a third lower, refitted to
@@ -1829,10 +2169,33 @@ func _make_counter(lead: Array) -> Array:
 	return out
 
 
+# The class motif on the counter-line: once per two-bar call, ending just before the
+# next call, moved to the chord tone nearest its first note and snapped into that
+# chord's scale, so its shape survives and it never clashes.
+func _make_class_counter() -> Array:
+	var row := Harmony.motif(class_motif)
+	if row.get("family", "") != "class":
+		return []
+	var cells: Array = row["cells"]
+	var last: Array = cells[cells.size() - 1]
+	var span: int = int(last[0]) + int(last[2])
+	var octave: int = row.get("band_octave", 0)
+	var progression := _progression()
+	var out: Array = []
+	for k in 4:
+		var start := 32 * k + 30 - span
+		var chord: Dictionary = progression[(start / 16) % progression.size()]
+		var first: int = int(cells[0][1]) + octave
+		var shift := Harmony.nearest_tone(first, chord["tones"]) - first
+		for cell in cells:
+			out.append([start + int(cell[0]), Harmony.snap(int(cell[1]) + octave + shift, chord["scale"]), int(cell[2])])
+	return out
+
+
 # Every four bars the lines trade voices, so the texture keeps evolving.
 func _revoice() -> void:
 	_rotation += 1
-	var rot: Dictionary = ROTATIONS[_rotation % ROTATIONS.size()]
+	var rot := _rotation_state()
 	events_log.append(["revoice", clock, "echo:%s+%d counter:%s choir:%s/%s arp:%d" % [ECHO_VOICES[theme][int(rot["echo"])], rot["shift"], rot["counter"], rot["choir"], rot["vowel"], rot["arp"]]])
 
 
@@ -1868,12 +2231,13 @@ func _start_riser() -> void:
 	if _build_riser != null:
 		return
 	var buf := SfxBank.samples_at("build_riser", step_len)
-	_start(buf, buf.size(), DRY, db_to_linear(SfxBank.trim_db("build_riser")), 0.0, false)
-	_build_riser = _voices[_voices.size() - 1]
+	_build_riser = _start(buf, buf.size(), DRY, db_to_linear(SfxBank.trim_db("build_riser")), 0.0, false)
 
 
 # Pitched notes follow the key.
 func _start_note(instrument: String, midi: int, steps: int, layer: int, gain: float, pan: float) -> void:
+	if _dominant_mask_live() and layer in [LEAD, ECHO, COUNTER, ARP, CHOIR]:
+		midi = Harmony.nearest_tone(midi, _held_chord()["tones"])
 	var buf := Synth.note(instrument, midi + _chord_key())
 	_start(buf, mini(buf.size(), steps * step_len + RELEASE), layer, gain * LEVELS[layer], pan, false)
 
@@ -1886,7 +2250,29 @@ func _hit(instrument: String, layer: int, gain: float, pan: float) -> void:
 	_start(buf, buf.size(), layer, gain * LEVELS[layer], pan, false)
 
 
-func _start(buf: PackedFloat32Array, length: int, layer: int, gain: float, pan: float, to_stinger: bool) -> void:
+func _start(buf: PackedFloat32Array, length: int, layer: int, gain: float, pan: float, to_stinger: bool) -> Voice:
+	if band_muted and not to_stinger:
+		return null
+	var band_count := 0
+	if not to_stinger:
+		var oldest: Voice
+		for playing: Voice in _voices:
+			if playing.to_stinger:
+				continue
+			band_count += 1
+			if oldest == null and playing.layer == layer and layer not in BASS_LAYERS:
+				oldest = playing
+		if band_count >= BAND_VOICE_CAP:
+			# If this layer has no stealable note, decline rather than steal bass or
+			# another layer. The ordinary dense arrangement has measured headroom.
+			if oldest == null:
+				band_voice_rejections += 1
+				return null
+			_voices.erase(oldest)
+			band_voice_steals += 1
+			if oldest == _build_riser:
+				_build_riser = null
+			band_count -= 1
 	var voice := Voice.new()
 	voice.buf = buf
 	voice.end = length
@@ -1902,6 +2288,9 @@ func _start(buf: PackedFloat32Array, length: int, layer: int, gain: float, pan: 
 	if voice.mono:
 		voice.gl = gain
 	_voices.append(voice)
+	if not to_stinger:
+		band_voice_peak = maxi(band_voice_peak, band_count + 1)
+	return voice
 
 
 func _release_layers(layers: Array) -> void:
@@ -2016,6 +2405,8 @@ func _mix(offset: int, n: int) -> void:
 		_voices.erase(voice)
 		if voice == _build_riser:
 			_build_riser = null
+	if band_muted:
+		return
 	# The duck envelope, the silence gate and the build's high-pass, per sub-block.
 	if clock >= _duck_until:
 		_duck_target = 1.0
@@ -2026,8 +2417,10 @@ func _mix(offset: int, n: int) -> void:
 	_gate = move_toward(_gate, 0.0 if _gap else 1.0, float(n) / 96.0)
 	var level := master * pause_gain
 	# The tone filter follows intensity, and a build closes it and opens it again.
-	var target := lerpf(TONE_CALM_HZ, TONE_OPEN_HZ, smoothstep(0.0, 0.7, _intensity))
-	if _build_from >= 0 or _build_level >= 0.0:
+	var target := TONE_CALM_HZ if _lounge_live() else lerpf(TONE_CALM_HZ, TONE_OPEN_HZ, smoothstep(0.0, 0.7, _intensity))
+	if track == "warden" and section == "open":
+		target = TONE_OPEN_HZ
+	elif _build_from >= 0 or _build_level >= 0.0:
 		var b := build_level()
 		target = minf(target, lerpf(BUILD_LOW_HZ, TONE_OPEN_HZ, b * b))
 	_cutoff = lerpf(_cutoff, target, minf(1.0, float(n) / 2048.0))
@@ -2061,14 +2454,17 @@ func _mix(offset: int, n: int) -> void:
 
 
 func _finish(frames: int) -> void:
-	for i in frames:
-		var l := _left[i]
-		var r := _right[i]
-		if l > 0.75 or l < -0.75:
-			l = _soft(l)
-		if r > 0.75 or r < -0.75:
-			r = _soft(r)
-		out_music[i] = Vector2(l, r)
+	if band_muted:
+		out_music.fill(Vector2.ZERO)
+	else:
+		for i in frames:
+			var l := _left[i]
+			var r := _right[i]
+			if l > 0.75 or l < -0.75:
+				l = _soft(l)
+			if r > 0.75 or r < -0.75:
+				r = _soft(r)
+			out_music[i] = Vector2(l, r)
 	if _stingers_live:
 		for i in frames:
 			out_stinger[i] = Vector2(_soft(_sl[i]), _soft(_sr[i]))
@@ -2131,6 +2527,35 @@ static func make_lead(index: int, motif := MOTIF, progression := Harmony.PROGRES
 			ornamented.append([event[0] - 1, event[1] - 1, 1])
 		ornamented.append(event)
 	return ornamented
+
+
+# The lounge phrase: the stage motif at half speed, then its answer (inversion or
+# retrograde), fitted to the same eight bars of chords.
+static func make_lounge_lead(index: int, motif: Array, progression: Array, answers := [0, 1]) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260927 + index * 7919
+	var slow: Array = []
+	for cell in motif:
+		slow.append([int(cell[0]) * 2, int(cell[1]), int(cell[2]) * 2])
+	var notes: Array = _place(slow, 0)
+	notes.append_array(_place(_answer(slow, answers[rng.randi() % answers.size()], 0), 64))
+	var fitted: Array = []
+	for event in notes:
+		var step: int = event[0]
+		if step >= 128:
+			continue
+		var chord: Dictionary = progression[(step / 16) % progression.size()]
+		var midi: int = event[1]
+		midi = Harmony.nearest_tone(midi, chord["tones"]) if step % 4 == 0 else Harmony.snap(midi, chord["scale"])
+		while midi < 62:
+			midi += 12
+		while midi > 81:
+			midi -= 12
+		fitted.append([step, midi, mini(event[2], 128 - step)])
+	if not fitted.is_empty():
+		var last: Array = fitted[fitted.size() - 1]
+		last[1] = Harmony.nearest_tone(last[1], progression[(int(last[0]) / 16) % progression.size()]["tones"])
+	return fitted
 
 
 static func _place(cell: Array, offset: int) -> Array:

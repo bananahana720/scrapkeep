@@ -21,6 +21,9 @@ var pitch := -0.30
 # mounted, presentation calls punch_fov, kick and shake. Nothing else writes the rig.
 var shoulder_target := 0.0
 var shoulder_blend := 0.0
+# The viewer's comfort (the pause menu's Screen shake row): scales every punch, kick and
+# shake, the landing shake included. 0 holds the camera still.
+var motion_scale := 1.0
 
 var arm: SpringArm3D
 var cam: Camera3D
@@ -95,16 +98,17 @@ func aim_forward() -> Vector3:
 
 # Adds degrees of field of view that bleed away over time seconds.
 func punch_fov(amount: float, time: float) -> void:
-	_punch = clampf(_punch + amount, -MAX_PUNCH, MAX_PUNCH)
+	_punch = clampf(_punch + amount * motion_scale, -MAX_PUNCH, MAX_PUNCH)
 	_punch_decay = absf(_punch) / maxf(0.01, time)
 
 
 # Knocks the camera along a world direction; it springs back on its own.
 func kick(direction: Vector3, amount: float) -> void:
-	_kick += direction.normalized() * amount if direction.length_squared() > 0.0001 else Vector3.ZERO
+	_kick += direction.normalized() * amount * motion_scale if direction.length_squared() > 0.0001 else Vector3.ZERO
 
 
 func shake(amount: float, time := 0.4) -> void:
+	amount *= motion_scale
 	if amount > _shake:
 		_shake = amount
 		_shake_decay = amount / maxf(0.05, time)
@@ -137,7 +141,7 @@ func _process(delta: float) -> void:
 	var lateral := accel.dot(yaw_basis().x)
 	_roll = lerpf(_roll, clampf(-lateral * 0.0022, -0.13, 0.13), 1.0 - exp(-8.0 * delta))
 
-	_shake = maxf(_shake, clampf(target.state.impact / 30.0, 0.0, 1.2))
+	_shake = maxf(_shake, clampf(target.state.impact / 30.0, 0.0, 1.2) * motion_scale)
 	_shake = maxf(0.0, _shake - delta * maxf(_shake_decay, 2.4))
 	_kick = _kick.lerp(Vector3.ZERO, 1.0 - exp(-KICK_RETURN * delta))
 	var jitter := Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), 0.0) * _shake * 0.22

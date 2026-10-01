@@ -8,10 +8,12 @@ const Beacon := preload("res://src/core/beacon.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const Augments := preload("res://src/movement/augments.gd")
+const Harpoon := preload("res://src/movement/harpoon.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
@@ -28,8 +30,11 @@ const Presentation := preload("res://src/presentation/presentation.gd")
 const REEL_NOTCH := 1.2
 const RESTART_HOLD := 0.5
 const SUMMARY_GUARD := 0.75
+const DEAD_GUARD := 0.5
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
+const HIT_STOP_BUDGET := 0.12
+const HIT_STOP_WINDOW_MS := 1000
 const SEED := 20260926
 const BOSS_PATH := "res://src/boss/boss.gd"
 
@@ -44,8 +49,11 @@ const ACTIONS := {
 	"cl_mount": [KEY_E],
 	"cl_reel": [KEY_Q],
 	"cl_special": [KEY_F],
+	"cl_dash": [KEY_C],
 }
-const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT}
+# RMB is every class's movement ability (Sable's grapple rides it through the intent). Under
+# --harpoon it is the harpoon and cl_dash (C) or Shift carries the class burst.
+const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT, "cl_movement": MOUSE_BUTTON_RIGHT}
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false
@@ -81,7 +89,14 @@ var _restart_latched := false
 # Seconds before the summary takes a key: the victory beat ends while the player may
 # still be pressing Space to jump, and the run's only summary must stay readable.
 var summary_guard_left := 0.0
+# Seconds before the death screen's C takes a press: C is the burst key under the keep
+# layout, so a reflex press as the ball dies must not cost the run its retry.
+var dead_guard_left := 0.0
 var _hit_stopped := false
+# The loop modes' hit-stop budget: [msec, seconds] per stop taken, and the running totals.
+var _stop_log: Array = []
+var hit_stop_spent := 0.0
+var hit_stops_skipped := 0
 
 
 func _ready() -> void:
@@ -91,9 +106,12 @@ func _ready() -> void:
 	add_child(events)
 	events.flow_changed.connect(func(state: String):
 		if state == "summary":
-			summary_guard_left = SUMMARY_GUARD)
+			summary_guard_left = SUMMARY_GUARD
+		if state == "dead":
+			dead_guard_left = DEAD_GUARD)
 	run = RunState.new(events)
 	tuning = Tuning.new()
+	tuning.apply_cmdline("launch")
 
 	player = PlayerBall.new()
 	player.name = "Player"
@@ -133,8 +151,10 @@ func _ready() -> void:
 	run_log = RunLog.new()
 	add_child(run_log)
 	run_log.setup(events, run, player, codex, storage_dir)
+	ctx.run_log = run_log
 
 	world = _module(World)
+	preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(1))
 	combat = _module(Combat)
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
@@ -170,9 +190,12 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
+	add_child(preload("res://src/ui/workshop.gd").new())
+	add_child(preload("res://src/ui/pause_menu.gd").new())
 
 	if not test_mode:
 		keyboard = Intent.Keyboard.new()
+		keyboard.tuning = tuning
 		keyboard.enabled = false
 		player.source = keyboard
 	# The first stage's ground is where the title parks the ball.
@@ -211,6 +234,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
+	dead_guard_left = maxf(0.0, dead_guard_left - delta)
 	if test_mode:
 		return
 	step_restart_hold(delta, Input.is_physical_key_pressed(KEY_R))
@@ -237,24 +261,31 @@ func restart_hold_fraction() -> float:
 
 
 # The single answer to "what would the grapple hit right now". The reticle, the world
-# marker and fire_grapple() all read the record this stores.
+# marker and the ball's RMB grapple all read the record this stores.
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
-	player.kit.aim = Augments.grapple_target(get_world_3d().direct_space_state, from, forward,
-		player.ball_position(), player.grapple_range(), tuning.f("grapple_assist_deg"))
+	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
+		get_tree().get_nodes_in_group("enemy") if tuning.harpoon_on() else [], from, forward, player.ball_position())
 	return player.kit.aim
-
-
-func fire_grapple() -> bool:
-	var aim: Dictionary = player.kit.aim
-	if aim["state"] == Augments.AIM_NONE:
-		return false
-	player.grapple_to(aim["point"], aim["normal"])
-	return true
 
 
 func hit_stop(seconds: float) -> void:
 	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
 		return
+	# The v3 loop modes add a cumulative budget (Codex review finding 5): at most
+	# HIT_STOP_BUDGET of stops in any HIT_STOP_WINDOW_MS, so a chain of drops, kills and
+	# slams never piles up into a stall. v2 keeps its per-stop cap alone.
+	if LoopMode.mode(tuning) != "v2":
+		var now := SimClock.msec()
+		_stop_log = _stop_log.filter(func(entry: Array) -> bool: return now - int(entry[0]) < HIT_STOP_WINDOW_MS)
+		var spent := 0.0
+		for entry in _stop_log:
+			spent += float(entry[1])
+		var stop := minf(seconds, HIT_STOP_MAX)
+		if spent + stop > HIT_STOP_BUDGET:
+			hit_stops_skipped += 1
+			return
+		_stop_log.append([now, stop])
+		hit_stop_spent += stop
 	_hit_stopped = true
 	Engine.time_scale = HIT_STOP_SCALE
 	var timer := get_tree().create_timer(minf(seconds, HIT_STOP_MAX), true, false, true)
@@ -321,6 +352,15 @@ func pause_toggled() -> bool:
 	return _pause_toggled
 
 
+# The ACE music's held breath, raw to hard to gentle: the title's B and the pause row.
+func cycle_breath() -> String:
+	var style := LoopMode.cycle(tuning, LoopMode.BREATH_KEY)
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null and audio.has_method("set_breath"):
+		audio.set_breath(style)
+	return style
+
+
 func notes_held() -> bool:
 	return _notes_held
 
@@ -378,7 +418,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		if not _mouse_captured():
-			if event.pressed and flow.in_play() and not panel.visible:
+			if event.pressed and flow.in_play() and not panel.visible and not get_meta("menu_held", false):
 				_capture_mouse(true)
 			return
 		_mouse_button(event)
@@ -408,15 +448,27 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-# One key per choice on every screen outside play.
+# One key per choice on every screen outside play. The screens' buttons press these
+# same keys, so a click and a key always do the same thing.
 func _screen_key(key: int) -> bool:
 	match flow.state_name():
 		"title":
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
 				return true
+			if key == KEY_H:
+				screens.toggle_help()
+				return true
+			if key == KEY_L or key == KEY_G:
+				LoopMode.cycle(tuning, LoopMode.LOOP_KEY if key == KEY_L else LoopMode.GUN_KEY)
+				screens.refresh_lab_row()
+				return true
+			if key == KEY_B and tuning.option(LoopMode.MUSIC_KEY) == "ace":
+				cycle_breath()
+				screens.refresh_lab_row()
+				return true
 		"class_select":
-			if key == KEY_1 or key == KEY_2:
+			if key >= KEY_1 and key < KEY_1 + mini(flow.classes.size(), 9):
 				flow.choose_class(key - KEY_1)
 				return true
 		"dead":
@@ -428,6 +480,8 @@ func _screen_key(key: int) -> bool:
 				flow.new_run()
 				return true
 			if key == KEY_C:
+				if dead_guard_left > 0.0 and Intent.Keyboard.burst_is_c(tuning):
+					return true
 				flow.open_class_select()
 				return true
 			if key == KEY_T and flow.can_replay_final_stage():
@@ -449,11 +503,6 @@ func _mouse_button(event: InputEventMouseButton) -> void:
 	if not flow.in_play():
 		return
 	match event.button_index:
-		MOUSE_BUTTON_RIGHT:
-			if event.pressed:
-				fire_grapple()
-			else:
-				player.release_grapple()
 		MOUSE_BUTTON_WHEEL_UP:
 			if event.pressed:
 				player.reel_step(REEL_NOTCH)

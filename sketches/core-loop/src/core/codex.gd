@@ -1,13 +1,15 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 
 # The codex: one registry of every synergy, trick and interaction the demo knows,
 # saved across runs (the demo's only meta-progression, DEMO-SPEC). Owners declare
 # their entries at setup and call the mutators when one fires; the codex publishes the
 # bus fact, grants the treasure burst once per entry per run, and writes the developer
 # log, so the UI, the stinger and the log read one record. Storage failures never
-# throw: the codex keeps working in memory and notes last_error.
+# throw: the codex keeps working in memory, noting a save failure in last_error and a
+# log append failure in log_error.
 
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
 const STATE_FILE := "codex.json"
@@ -18,6 +20,8 @@ var run
 var flow
 var storage_dir := "user://"
 var last_error := ""
+var log_error := ""
+var _save_blocked := false
 
 var _entries := {}
 var _order: Array[String] = []
@@ -234,7 +238,7 @@ func append_line(path: String, text: String) -> bool:
 	else:
 		file = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		last_error = "cannot write %s: %s" % [path, error_string(FileAccess.get_open_error())]
+		log_error = "cannot write %s: %s" % [path, error_string(FileAccess.get_open_error())]
 		return false
 	file.store_line(text)
 	file.close()
@@ -245,24 +249,29 @@ func _load() -> void:
 	var path := storage_dir.path_join(STATE_FILE)
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
-		last_error = "codex file unreadable; starting empty"
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"discovered": SafeStore.STRINGS, "found": SafeStore.STRINGS, "found_categories": SafeStore.STRING_MAP})
+	if parsed == null:
+		var kept := SafeStore.quarantine(path)
+		if kept.is_empty():
+			_save_blocked = true
+			last_error = "codex file unreadable and could not be moved aside; not saving this session"
+		else:
+			last_error = "codex file unreadable; kept as %s; starting empty" % kept
 		return
+	_save_blocked = false
+	_discovered = {}
+	_found = []
 	for id in parsed.get("discovered", []):
 		_discovered[String(id)] = true
 	for text in parsed.get("found", []):
 		_found.append(String(text))
-	var categories = parsed.get("found_categories", {})
-	if categories is Dictionary:
-		_found_category = categories
+	_found_category = parsed.get("found_categories", {})
 
 
 func _save() -> void:
-	var path := storage_dir.path_join(STATE_FILE)
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		last_error = "cannot save %s: %s" % [path, error_string(FileAccess.get_open_error())]
+	if _save_blocked:
 		return
-	file.store_string(JSON.stringify({"discovered": _discovered.keys(), "found": _found, "found_categories": _found_category}, "  "))
-	file.close()
+	var path := storage_dir.path_join(STATE_FILE)
+	var err := SafeStore.write_atomic(path, JSON.stringify({"discovered": _discovered.keys(), "found": _found, "found_categories": _found_category}, "  "))
+	if err != OK:
+		last_error = "cannot save %s: %s" % [path, error_string(err)]

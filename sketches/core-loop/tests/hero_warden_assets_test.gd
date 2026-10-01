@@ -1,0 +1,296 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Warden := preload("res://src/combat/warden.gd")
+
+var game
+var ticks := 0
+var failures := 0
+var prior_base: Node3D
+var prior_id := 0
+var dead_ids: Array[int] = []
+var mast_original := {}
+var prior_support: Node3D
+
+
+func _initialize() -> void:
+	game = Game.new()
+	game.test_mode = true
+	root.add_child(game)
+
+
+func check(label: String, ok: bool) -> void:
+	print("[%s] %s" % [label, "PASS" if ok else "FAIL"])
+	if not ok:
+		failures += 1
+
+
+func _physics_process(_delta: float) -> bool:
+	if game.flow == null:
+		return false
+	ticks += 1
+	if ticks == 1:
+		for child in game.flow.beacon.get_children():
+			if child is MeshInstance3D and child.mesh is CylinderMesh:
+				mast_original = {"node": child, "mesh": child.mesh, "material": child.material_override, "transform": child.transform, "layers": child.layers, "shadow": child.cast_shadow}
+		check("ribbons ready before run starts", game.presentation.hero_assets._meshes.keys().filter(func(k): return k.begins_with("warden_stroke:")).size() == 24)
+		game.ctx.calm = true
+		game.flow.force_warden = true
+		game.flow.press_start()
+		game.flow.choose_class(0)
+	if ticks in [5, 15, 25]:
+		check_family()
+	if ticks in [10, 20]:
+		game.flow.enter_stage(2 if ticks == 10 else 3, Vector3.ZERO, false)
+	if ticks == 28:
+		game.flow.warden._die()
+	if ticks == 30:
+		check_mast_restored("death")
+		game.flow.enter_stage(3, Vector3.ZERO, false)
+	if ticks == 33:
+		check_family()
+	if ticks == 35:
+		var hook = game.presentation.hero_assets
+		var warden = game.flow.warden
+		var rec: Dictionary = hook.warden_of(warden)
+		for id in dead_ids:
+			check("dead Warden record cleaned", not hook._wardens.has(id))
+		var preserved: Array = rec.hidden.duplicate()
+		hook.get_parent().remove_child(hook)
+		hook.queue_free()
+		check_mast_restored("hook teardown")
+		for entry in preserved:
+			check("restore placeholder layers and shadow", entry.mesh.layers == entry.layers and entry.mesh.cast_shadow == entry.shadow)
+	if ticks == 37:
+		check("restored hero freed", not is_instance_valid(prior_base))
+		var replacement := preload("res://src/presentation/hero_assets.gd").new()
+		game.presentation.add_child(replacement)
+		game.presentation.hero_assets = replacement
+		replacement.setup(game.ctx)
+	if ticks == 40:
+		check_mast(game.presentation.hero_assets, game.flow.warden)
+		game.presentation.remove_child(game.presentation.hero_assets)
+		game.presentation.hero_assets.queue_free()
+		check_mast_restored("replacement hook teardown")
+		print("hero_warden_assets_test: %s" % ("PASS" if failures == 0 else "FAIL"))
+		quit(0 if failures == 0 else 1)
+	return false
+
+
+func check_family() -> void:
+	var hook = game.presentation.hero_assets
+	var warden = game.flow.warden
+	var rec: Dictionary = hook.warden_of(warden)
+	check("automatic attach " + warden.family, not rec.is_empty())
+	if rec.is_empty():
+		return
+	if prior_id != 0:
+		check("stage cleanup", not is_instance_valid(prior_base) and not hook._wardens.has(prior_id))
+	check_mast(hook, warden)
+	prior_base = rec.base
+	prior_id = warden.get_instance_id()
+	hook._dress_warden(warden)
+	check("idempotent attachment", hook.warden_of(warden).base == rec.base and warden.find_children("HeroWarden", "", false, false).size() == 1)
+	var shapes: Array = warden.find_children("*", "CollisionShape3D", true, false)
+	check("original collider only", shapes.size() == 1 and is_equal_approx(shapes[0].shape.radius, Warden.RADIUS) and is_equal_approx(shapes[0].shape.height, Warden.HALF_HEIGHT * 2.0))
+	check("mount meets kit", rec.base.get_node("Tower/KitMount").global_position.distance_to(rec.kit.global_position) < 0.0001)
+	for angle in [0.0, 0.7, -2.4]:
+		warden._look._jaws.rotation.y = angle
+		hook._update_warden(rec)
+		check("world weak point " + str(angle), rec.weak.global_position.distance_to(warden.family_point_at()) < 0.0001)
+	check_geometry(rec.base, rec.base)
+	check_stroke_surfaces(rec)
+	var authored: Node3D = hook._warden_scene(hook.WARDEN_BASE)
+	check("jaw meshes and hinges unchanged", authored.get_node("JawL").mesh == rec.base.get_node("JawL").mesh and authored.get_node("JawR").transform == rec.base.get_node("JawR").transform)
+	var tower: MeshInstance3D = rec.base.get_node("Tower")
+	var low_unchanged := true
+	var joint_distance := INF
+	for surface in tower.mesh.get_surface_count():
+		var old_arrays: Array = authored.get_node("Tower").mesh.surface_get_arrays(surface)
+		var new_arrays: Array = tower.mesh.surface_get_arrays(surface)
+		for i in new_arrays[Mesh.ARRAY_VERTEX].size():
+			var old_v: Vector3 = old_arrays[Mesh.ARRAY_VERTEX][i]
+			var new_v: Vector3 = new_arrays[Mesh.ARRAY_VERTEX][i]
+			if old_v.y <= 2.2:
+				low_unchanged = low_unchanged and old_v == new_v
+			joint_distance = minf(joint_distance, (new_v + tower.position).distance_to(rec.kit.position))
+	check("lower tower unchanged", low_unchanged)
+	check("tower geometry reaches kit joint", joint_distance < 0.5)
+	authored.free()
+	for entry in rec.hidden:
+		check("placeholder hidden without deletion", is_instance_valid(entry.mesh) and entry.mesh.layers == 0 and entry.mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	check("badge remains", warden._look._badge.visible)
+	if warden.lesson == "caps":
+		check("lesson caps remain", warden._look.cap_material() == warden._cap_material and warden.cap_points().size() == 3)
+		var brood: Node3D = warden._look.get_node("BroodCells")
+		for i in 3:
+			var cell: Node3D = brood.get_node("BroodCap_%d" % i)
+			var membrane: MeshInstance3D = cell.get_node("Membrane")
+			var marker: Node3D = brood.get_node("BroodMarker_%d" % i)
+			check("brood membrane at gameplay cap", cell.global_position.distance_to(warden.cap_points()[i]) < 0.0001)
+			check("hex membrane and open marker replace heat column", membrane.mesh is CylinderMesh and membrane.mesh.radial_segments == 6 and membrane.mesh.height < 0.3 and marker.get_child_count() == 6)
+			check("brood cue remains visible with GLB", membrane.layers != 0 and marker.visible and membrane.material_override == warden._cap_material)
+		warden.on_struck("stomp", "cap", {})
+		check("brood membrane flashes on hit", is_equal_approx(warden._cap_material.emission_energy_multiplier, 5.0))
+		warden._look._update_caps(1.0)
+		check("brood membrane returns to idle", is_equal_approx(warden._cap_material.emission_energy_multiplier, 2.2))
+	if warden.lesson == "magnet":
+		warden.magnet_state = Warden.Magnet.TUG
+		warden._magnet_time = 0.3
+		warden._look.update(0.0)
+		check("magnet cue remains", warden._look._arm.layers != 0 and warden._look._head.visible)
+		check("mind icon remains", is_instance_valid(warden._kit._icon) and warden._kit._icon.get_parent() == warden._kit._lens)
+	var other := Warden.new()
+	game.add_child(other)
+	other.position = warden.position + Vector3(20, 0, 0)
+	other.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, {"family": warden.family, "stage": warden.stage, "lesson": warden.lesson})
+	var fit_started := Time.get_ticks_usec()
+	hook._dress_warden(other)
+	hook._dress_mast(other)
+	check("extra Warden cannot claim mast", hook._mast.owner == warden.get_instance_id() and hook._mast.root == prior_support)
+	print("WARDEN_ATTACH_CPU_MS ", warden.family, " ", float(Time.get_ticks_usec() - fit_started) / 1000.0)
+	var second: Dictionary = hook.warden_of(other)
+	check("independent materials", rec.materials.ancient_light != second.materials.ancient_light and rec.materials.ancient_enamel != second.materials.ancient_enamel and rec.materials.ancient_light_jaw != second.materials.ancient_light_jaw)
+	check("immutable ribbons cached with private animated materials", rec.seams[0].node.mesh == second.seams[0].node.mesh and rec.seams[0].node.material_override != second.seams[0].node.material_override)
+	check("independent tower mesh", rec.base.get_node("Tower").mesh != second.base.get_node("Tower").mesh)
+	warden._open_left = 2.0
+	warden._brace_left = 2.0
+	warden._kit.update(0.0)
+	hook._update_warden(rec)
+	check("weak point opening", rec.weak.scale.is_equal_approx(Vector3.ONE * 1.3) and rec.materials.ancient_light.emission_energy_multiplier == warden._kit.SEAM_OPEN)
+	if warden.family == "swarm":
+		check("queen hatch exposes core while open", rec.queen_hatch != null and is_equal_approx(rec.queen_hatch.rotation.z, -PI * 0.5))
+		check("other queen hatch stays closed", is_zero_approx(second.queen_hatch.rotation.z))
+	check("other stays closed", second.weak.scale.is_equal_approx(Vector3.ONE) and is_equal_approx(second.materials.ancient_light.emission_energy_multiplier, other._kit.SEAM_DIM))
+	warden.set_tint("amber")
+	hook._update_warden(rec)
+	check("plating rim and crack", rec.materials.ancient_light_jaw.emission == warden.rim_color and rec.cracks[0].visible)
+	warden.shred = warden.plating * 0.8
+	warden._look.update(0.0)
+	hook._update_warden(rec)
+	check("shred follows source", rec.seams[0].node.visible == rec.seams[0].source.visible)
+	warden.flash()
+	warden._update_flash(0.01)
+	hook._update_warden(rec)
+	check("damage flash isolated", rec.materials.ancient_enamel.emission_enabled and not second.materials.ancient_enamel.emission_enabled)
+	var point: Vector3 = warden.family_point_at()
+	check("open weak point hit contract", warden.plating_for("runner", warden.family_point()) == 0.0 and warden.weak_points().any(func(p): return p.id == warden.family_point() and p.at == point))
+	warden._open_left = 0.0
+	warden._brace_left = 0.0
+	warden._kit.update(0.0)
+	hook._update_warden(rec)
+	check("weak point recloses", rec.weak.scale.is_equal_approx(Vector3.ONE))
+	if warden.family == "swarm":
+		check("queen hatch recloses", is_zero_approx(rec.queen_hatch.rotation.z))
+	dead_ids.append(other.get_instance_id())
+	other._die()
+
+
+func check_geometry(node: Node3D, base: Node3D) -> void:
+	check("finite nonsingular " + node.name, node.transform.is_finite() and absf(node.transform.basis.determinant()) > 0.0001)
+	if node is MeshInstance3D:
+		var low_ok := true
+		var finite := true
+		var lower_max := 0.0
+		for surface in node.mesh.get_surface_count():
+			var arrays: Array = node.mesh.surface_get_arrays(surface)
+			for v in arrays[Mesh.ARRAY_VERTEX]:
+				var at: Vector3 = base.to_local(node.to_global(v))
+				finite = finite and at.is_finite()
+				if at.y <= 2.0:
+					lower_max = maxf(lower_max, Vector2(at.x, at.z).length())
+					low_ok = low_ok and Vector2(at.x, at.z).length() <= 2.8001
+			for normal in arrays[Mesh.ARRAY_NORMAL]:
+				finite = finite and normal.is_finite() and normal.length() > 0.99
+		check("finite vertices and normals " + node.name, finite)
+		if not low_ok: print("LOWER_RADIUS ", node.name, " ", lower_max)
+		check("lower collider envelope " + node.name, low_ok)
+	for child in node.get_children():
+		if child is Node3D:
+			check_geometry(child, base)
+
+
+func check_stroke_surfaces(rec: Dictionary) -> void:
+	var worst := 0.0
+	var minimum := INF
+	var samples := 0
+	var fitted := true
+	for seam in rec.seams:
+		var stroke: MeshInstance3D = seam.node
+		var jaw := stroke.get_parent().get_parent() as MeshInstance3D
+		var faces := jaw.mesh.get_faces()
+		var arrays := stroke.mesh.surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		fitted = fitted and vertices.size() == 34
+		if vertices.size() != 34:
+			continue
+		var to_jaw := jaw.global_transform.affine_inverse() * stroke.global_transform
+		var probes := PackedVector3Array()
+		# Both endpoints and centre of every cross-section, including stroke centre.
+		for row in 17:
+			probes.append(to_jaw * vertices[row * 2])
+			probes.append(to_jaw * vertices[row * 2 + 1])
+			probes.append(to_jaw * ((vertices[row * 2] + vertices[row * 2 + 1]) * 0.5))
+		# Interior triangle samples catch a chord bridging across a tapered surface.
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		for i in range(0, indices.size(), 3):
+			probes.append(to_jaw * ((vertices[indices[i]] + vertices[indices[i + 1]] + vertices[indices[i + 2]]) / 3.0))
+		for point in probes:
+			var radial := Vector3(point.x + jaw.position.x, 0, point.z + jaw.position.z).normalized()
+			var origin := Vector3(-jaw.position.x, point.y, -jaw.position.z) + radial * 10.0
+			var surface_distance := INF
+			for i in range(0, faces.size(), 3):
+				var hit = Geometry3D.ray_intersects_triangle(origin, -radial, faces[i], faces[i + 1], faces[i + 2])
+				if hit != null:
+					surface_distance = minf(surface_distance, origin.distance_to(hit))
+			var clearance := surface_distance - origin.distance_to(point)
+			fitted = fitted and is_finite(clearance) and clearance >= 0.0005 and clearance <= 0.03
+			minimum = minf(minimum, clearance)
+			worst = maxf(worst, clearance)
+			samples += 1
+	print("STROKE_GEOMETRY ", rec.warden.family, " samples=", samples, " minimum_signed_clearance=", minimum, " maximum_signed_clearance=", worst)
+	check("shred centres endpoints and triangle interiors fit actual jaws", fitted and samples == 18 * 83)
+
+
+func check_mast_restored(reason: String) -> void:
+	var node: MeshInstance3D = mast_original.node
+	check("exact mast restoration " + reason, node.mesh == mast_original.mesh and node.material_override == mast_original.material and node.transform == mast_original.transform and node.layers == mast_original.layers and node.cast_shadow == mast_original.shadow)
+	check("no orphan support " + reason, node.get_child_count() == 0)
+
+
+func check_mast(hook, warden) -> void:
+	check("active mast owner", not hook._mast.is_empty() and hook._mast.owner == warden.get_instance_id())
+	if hook._mast.is_empty(): return
+	var support: Node3D = hook._mast.root
+	if prior_support != null:
+		check("old support freed on transition", not is_instance_valid(prior_support))
+	prior_support = support
+	hook._dress_mast(warden)
+	check("idempotent mast", hook._mast.root == support and mast_original.node.get_child_count() == 1)
+	check("original mast retained", mast_original.node.mesh == mast_original.mesh and mast_original.node.material_override == mast_original.material and mast_original.node.transform == mast_original.transform and mast_original.node.layers == 0)
+	var minimum := INF
+	var segments := 0
+	var rails := 0
+	for visual in support.get_children():
+		check("mast material preserved", visual.material_override == mast_original.material)
+		check("mast finite transform", visual.transform.is_finite() and absf(visual.basis.determinant()) > 0.99)
+		var centre: Vector3 = visual.to_local(warden.family_point_at())
+		if visual.mesh is BoxMesh:
+			rails += 1
+			var half: Vector3 = visual.mesh.size * 0.5
+			# Exact distance to the solid oriented box bounds covers faces and interiors.
+			var closest := centre.clamp(-half, half)
+			minimum = minf(minimum, centre.distance_to(closest))
+			check("narrow support rail", is_equal_approx(visual.mesh.size.x, 0.12) and is_equal_approx(visual.mesh.size.z, 0.12))
+		else:
+			segments += 1
+			var cylinder: CylinderMesh = visual.mesh
+			minimum = minf(minimum, absf(centre.y) - cylinder.height * 0.5)
+			for y in [-cylinder.height * 0.5, cylinder.height * 0.5]:
+				var mast_y: float = visual.position.y + y
+				var old: CylinderMesh = mast_original.mesh
+				var expected := lerpf(old.bottom_radius, old.top_radius, (mast_y + old.height * 0.5) / old.height)
+				check("original taper at segment end", absf((cylinder.bottom_radius if y < 0 else cylinder.top_radius) - expected) < 0.00001)
+	print("MAST_CLEARANCE ", warden.family, " ", minimum)
+	check("entire support outside fixed sphere", minimum >= Warden.FAMILY_POINT_RADIUS and segments == 2 and rails == 6)
+	check("lamp and ring retained", game.flow.beacon._core.is_inside_tree() and game.flow.beacon._core.layers != 0 and game.flow.beacon._ring.is_inside_tree() and game.flow.beacon._ring.layers != 0)

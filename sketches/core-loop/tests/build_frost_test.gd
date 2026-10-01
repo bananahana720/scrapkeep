@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The element x material table in the world. The test registers a patch of water 3 m
 # deep over the flat top shelf through the build's register_material() seam (the same
@@ -10,7 +11,9 @@ const Intent := preload("res://src/movement/intent.gd")
 #   ice       frost on the water makes StaticBody3D slabs, and the same ball rolls on
 #             them at the water's surface;
 #   overlap   ice formed where the ball already sits forms under it, never inside it;
-#   dash      with Frost Vane, a real air dash over the water leaves ice behind;
+#   dash      with Frost Vane, a real dash over the water leaves ice behind. The shared
+#             air dash is gone (v2 W3), so the ball is fitted as Kest for this phase and
+#             her smoke blink, which publishes `dashed`, is the dash; then it is refitted;
 #   electrify arc on water strikes an enemy standing in it;
 #   shatter   arc on ice bursts it;
 #   melt      slabs leave when their window ends.
@@ -108,11 +111,12 @@ func _physics_process(_delta: float) -> bool:
 				_next("dash_arm")
 		"dash_arm":
 			if _wait == 3:
-				_source.press = {"boost_pressed": true}
+				_source.press = {"movement_pressed": true}
 				_next("dash")
 		"dash":
 			if _wait == 40:
 				_check_dash()
+				_game.player.fit_class(_game.run.class_def)
 				_start_electrify()
 				_next("electrify")
 		"electrify":
@@ -206,6 +210,7 @@ func _check_overlap_end() -> void:
 
 func _start_dash() -> void:
 	_game.run.add_part("frost_vane", "test")
+	_game.player.fit_class(ClassDef.by_id("demolitions_caster"))
 	var at := Vector3(LANE_X, _surface + 2.5, LANE_FROM + 4.0)
 	_game.player.reset_to(at, Vector3(0.0, 0.0, 10.0))
 	_game.player.body().global_position = at
@@ -216,7 +221,7 @@ func _start_dash() -> void:
 func _check_dash() -> void:
 	var slabs: int = _build.field.slab_count()
 	_report("frost vane dash freezes", _dashes >= 1 and slabs >= 2,
-		"Frost Vane air dash over the water (%d dash published) left %d ice slabs behind" % [_dashes, slabs])
+		"Frost Vane blink over the water (%d dash published) left %d ice slabs behind" % [_dashes, slabs])
 
 
 func _start_electrify() -> void:

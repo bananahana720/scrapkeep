@@ -4,6 +4,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -62,6 +63,15 @@ var _launched := false
 var _flight := 0.0
 var _last_percent := -1
 
+# v3 fun lab, laps mode (loop_mode.gd runs_laps): the Warden sleeps until world's course
+# has closed laps_required laps, then wakes and fights by the v2 rules; each lap past
+# those strips LAP_STRIP of the stage's plating off it. laps_required is 0 on a stage
+# with no lap gate, which is every stage in the other modes.
+const LAP_STRIP := 1.0 / 3.0
+var laps_required := 0
+var laps := 0
+var bell_rung := false
+
 
 func setup(ctx_ref, beacon_ref) -> void:
 	ctx = ctx_ref
@@ -73,6 +83,8 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
 	ctx.events.boss_defeated.connect(_on_boss_defeated)
+	ctx.events.lap_bell_rung.connect(func(_at: Vector3): bell_rung = true)
+	ctx.events.lap_completed.connect(_on_lap_completed)
 
 
 func state_name() -> String:
@@ -139,6 +151,9 @@ func new_run() -> void:
 func _begin_run(chosen: Resource) -> void:
 	in_arena = false
 	boss_active = false
+	if ctx.run_log != null:
+		ctx.run_log.abandon_open_run()
+	ctx.tuning.latch_stage()
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
@@ -148,6 +163,7 @@ func _begin_run(chosen: Resource) -> void:
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
+	ctx.tuning.latch_stage()
 	ctx.run.enter_stage(index)
 	_launched = false
 	_flight = 0.0
@@ -176,6 +192,7 @@ func retry_stage() -> void:
 		_retry_arena()
 		return
 	ctx.run.restore()
+	ctx.tuning.latch_stage()
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
@@ -286,7 +303,7 @@ func gap_line() -> String:
 	var plating := -1.0
 	if boss_active:
 		plating = _death_plating if state == DEAD and _death_plating >= 0.0 else boss_plating_now()
-	elif sealed and is_instance_valid(warden):
+	elif sealed and is_instance_valid(warden) and not lap_dormant():
 		plating = warden_plating()
 	if plating < 0.0:
 		return ""
@@ -316,6 +333,32 @@ func _place_beacon() -> void:
 	# presence path rather than locking the exit.
 	if warden == null:
 		sealed = false
+	laps = 0
+	bell_rung = false
+	laps_required = LoopMode.LAPS_REQUIRED if sealed and LoopMode.runs_laps(ctx.tuning, ctx.terrain.map_for(stage())) else 0
+	if laps_required > 0:
+		warden.sleep()
+	beacon.set_notches(laps_required, 0)
+
+
+# True while a lap gate holds the Warden asleep.
+func lap_dormant() -> bool:
+	return laps_required > 0 and laps < laps_required
+
+
+# World closed a lap of the course: the notch, then the wake on the last required lap
+# or the strip on any lap past it.
+func _on_lap_completed(lap: int, _required: int, _seconds: float) -> void:
+	if laps_required == 0 or not sealed or not is_instance_valid(warden):
+		return
+	laps = lap
+	beacon.set_notches(laps_required, laps)
+	if laps == laps_required:
+		warden.wake()
+		_engage()
+	elif laps > laps_required:
+		var left: float = warden.strip_plating(LAP_STRIP)
+		ctx.events.warden_stripped.emit(left, warden.global_position)
 
 
 func _spawn_warden() -> Node3D:
@@ -375,8 +418,9 @@ func physics_step(delta: float) -> void:
 				return
 			var done: bool = beacon.advance(delta, ball, sealed)
 			if sealed:
-				beacon.show_progress(beacon.duration * minf(SEALED_CAP, 1.0 - warden_integrity()))
-				if beacon.phase != Beacon.IDLE:
+				var charge: float = float(laps) / laps_required if lap_dormant() else 1.0 - warden_integrity()
+				beacon.show_progress(beacon.duration * minf(SEALED_CAP, charge))
+				if beacon.phase != Beacon.IDLE and not lap_dormant():
 					_engage()
 			if state == STAGE and beacon.phase != Beacon.IDLE:
 				_set_state(BEACON)
@@ -477,7 +521,7 @@ func _unseal() -> void:
 
 
 func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:
-	if sealed and enemy == warden:
+	if sealed and enemy == warden and not lap_dormant():
 		_engage()
 
 
@@ -518,6 +562,10 @@ func objective_text() -> String:
 	}
 	match state:
 		STAGE, BEACON:
+			if sealed and lap_dormant():
+				return lap_objective()
+			if sealed and is_instance_valid(warden) and warden.get("drop") != null:
+				return EventKinds.drop_objective(warden.drop.gun_role)
 			if sealed:
 				return EventKinds.objective("stage_entered" if state == STAGE else "beacon_charge_changed", fight)
 			var text := EventKinds.objective("beacon_unsealed", fight)
@@ -531,6 +579,15 @@ func objective_text() -> String:
 		BOSS:
 			return _boss_objective()
 	return ""
+
+
+# The laps mode's objective while the Warden sleeps: before the bell, then the count.
+# short is the HUD's line (five words at most), else the full one.
+func lap_objective(short := false) -> String:
+	var fields := {"lap": laps, "required": laps_required}
+	if short:
+		return String(EventKinds.OBJECTIVE_SHORT["lap_bell_rung" if bell_rung else "lap_bell"]).format(fields)
+	return EventKinds.objective("lap_bell_rung", fields) if bell_rung else EventKinds.LAP_BELL_OBJECTIVE.format(fields)
 
 
 func _set_state(next: int) -> void:

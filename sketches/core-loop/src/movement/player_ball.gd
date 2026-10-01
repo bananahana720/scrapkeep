@@ -10,6 +10,13 @@ const Palette := preload("res://src/core/palette.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const AimStyle := preload("res://src/movement/aim_style.gd")
+const Harpoon := preload("res://src/movement/harpoon.gd")
+const Contact := preload("res://src/movement/contact.gd")
+const Indicator := preload("res://src/movement/indicator.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
 # movement and publishes each movement fact on the bus; what a collision does to an
@@ -25,6 +32,21 @@ const CRUSH_PASS := 0.3
 # A contact is a stomp when the ball was coming down faster than this onto an enemy
 # below its centre.
 const STOMP_SPEED := 3.0
+# A held pull the sprint ignores says so at most this often, not every tick.
+const CC_IGNORED_GAP_MS := 250
+# The arc slam tags steep faces this close for this long, for a vault.
+const FACE_TAG_REACH := 12.0
+const FACE_TAG_SECONDS := 2.0
+const FACE_TAG_RAYS := 16
+# Rivet's skid pushes enemies in this cone ahead of the ball, and each one it reaches
+# pays back this much sprint recharge.
+const SKID_REACH := 10.0
+# How far past the ball's own radius a body still counts as the one it landed on.
+const LANDED_ON_MARGIN := 0.6
+const SKID_CONE := 0.35
+const SKID_REFUND := 0.5
+const AIM_CONE_LENGTH := 5.0
+const AIM_CONE_HALF := 0.3
 
 signal shockwave(position: Vector3, strength: float)
 # A physical contact the ball made, for combat to turn into damage. Local, not the bus:
@@ -35,6 +57,13 @@ var tuning
 var events
 var state := BallState.new()
 var kit := AugmentKit.new()
+var abilities = kit.abilities
+# The run's upgrade picks (upgrade_tree.gd): offered at class select and each workshop.
+var tree = kit.tree
+# The class this ball is fitted as; null before a run (the kit is then the engineer's).
+var class_def: Resource
+# The skill-shot geometry, player-owned and drawn in the class colour.
+var indicator: Node3D
 var intent := Intent.new()
 var source = Intent.Source.new()
 var drive_basis := Basis.IDENTITY
@@ -44,6 +73,21 @@ var builtin_squash := true
 # Asks combat whether a contact would kill outright: (enemy, kind, force) -> bool.
 # game.gd wires it to ctx.spawner.would_crush once combat is set up.
 var crush_check := Callable()
+# Answers the heft the ball plays at; combat wires it to its heft(). 1.0 when unwired.
+var heft_of := Callable()
+# Answers the run's scrap mass alone, without parts; combat wires it. Unwired, mass reads 0.
+var mass_of := Callable()
+# E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
+# when an interactable takes this press, so it never also plants a pylon.
+var interact_claim := Callable()
+# The arc slam's tagged faces: [{point, left}].
+var face_tags: Array = []
+var _cc_ignored_at := {}
+# Seconds of crowd-control immunity granted from outside the sprint (Unstoppable).
+var immune_left := 0.0
+# The landing each smash flavour adds to the shared slam.
+var _smashes := {}
+var _landed_on: Node3D
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -55,11 +99,17 @@ var _mesh: MeshInstance3D
 var _roll_mount: Node3D
 var _rope: MeshInstance3D
 var _wings: Node3D
+var _wings_material: StandardMaterial3D
 var _pylon: Node3D
+var _plate: MeshInstance3D
 var _aim_marks := {}
 var _roll := Basis.IDENTITY
 var _frozen := false
 var _was_hooked := false
+# Ctrl's raw state last tick, and whether a body line has claimed the press still held.
+var _brake_was_held := false
+var _ctrl_claimed := false
+var _hook_head: MeshInstance3D
 var _bow: Area3D
 var _crushing := {}
 
@@ -82,12 +132,23 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	else:
 		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
-	_rigid.slammed.connect(_on_slammed)
+	_rigid.slammed.connect(_on_ball_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
 	_rigid.pylon_ejected.connect(func(v: Vector3): events.dismounted.emit(v))
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
 	_rigid.boosted.connect(func(dir: Vector3): events.boosted.emit(dir))
-	_rigid.dashed.connect(func(dir: Vector3): events.dashed.emit(dir))
+	_rigid.kit_fact.connect(_on_kit_fact)
+	tree.events = events
+	tree.picked.connect(_on_tree_picked)
+	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
+	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
+	events.run_started.connect(func(class_id: String):
+		fit_class(ClassDef.by_id(class_id))
+		tree.open_checkpoint())
+	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
+	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
+	events.stage_entered.connect(func(_stage: int, _retry: bool): abilities.refill())
+	events.stage_content_cleared.connect(func(_reason: String): abilities.refill())
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
 
 	# Everything under the player is placed per frame in _process, which interpolation
@@ -116,6 +177,9 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 
 	_build_bow()
 	_build_augment_visuals()
+	indicator = Indicator.new()
+	indicator.name = "Indicator"
+	add_child(indicator)
 	_rigid.set_active(true)
 	reset_to(spawn_point)
 
@@ -195,25 +259,146 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	kit.clear_runtime()
 	_roll = Basis.IDENTITY
 	_was_hooked = false
+	_brake_was_held = false
+	_ctrl_claimed = false
 	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
 
+# A ride, a launch, a deflect or a throw sets the velocity outright, and a harpoon line
+# would fight it, so it lets go.
 func set_velocity_now(velocity: Vector3) -> void:
+	cut_line()
 	_rigid.set_velocity_now(velocity)
+
+
+# Fits the class's movement kit, smash and ability slots. Everyone keeps jump, double
+# jump, boost and the smash; only the class's own movement augments are on.
+func fit_class(def: Resource) -> void:
+	class_def = def
+	tree.reset(def.id if def != null else "")
+	abilities.fit(class_def)
+	_refit()
+
+
+# A pick lands on the live kit: its slot ops, then the movement kit and smash flavour
+# the (maybe swapped) slots name. Nothing else about the slots is reset.
+func _on_tree_picked(n: Dictionary) -> void:
+	UpgradeTree.apply_pick(abilities, n)
+	_refit()
+
+
+# The movement kit the movement slot's row names, the smash flavour, the class colour.
+func _refit() -> void:
+	kit.harpoon_on = tuning != null and tuning.harpoon_on()
+	if not kit.harpoon_on and kit.on_body:
+		kit.drop_line()
+	if class_def == null:
+		kit.fit(Augments.DEFAULT_MOVEMENT, "")
+	else:
+		kit.fit(abilities.id_of(AbilityState.MOVEMENT), abilities.id_of(AbilityState.SMASH))
+	abilities.movement_key = Harpoon.movement_key(kit, tuning)
+	_paint_effects()
+
+
+# Everything the player's own action lights (rope, pylon plate, glide vane) glows in the
+# class colour: class colour means yours (VISUAL-LANGUAGE section 2).
+func _paint_effects() -> void:
+	var color := class_color()
+	_rope.material_override = Palette.unshaded(color)
+	_hook_head.material_override = Palette.unshaded(color)
+	_wings_material.albedo_color = Color(color, 0.75)
+	_plate.material_override = Palette.solid(color, 1.2)
+
+
+func class_color() -> Color:
+	return class_def.color if class_def != null else ClassDef.SABLE_COLOR
+
+
+# A skill-shot record dressed as yours: the class colour and the class's rim ticks.
+func yours(shape: Dictionary) -> Dictionary:
+	shape["color"] = class_color()
+	shape["ticks"] = class_def.shape if class_def != null else "ring"
+	return shape
+
+
+func heft() -> float:
+	return float(heft_of.call()) if heft_of.is_valid() else 1.0
+
+
+# The one door for crowd control: a knock, the Warden's pulse and magnet, Brindle's
+# shoves, and wave 3's pits, tethers and nets. Rivet's sprint ignores all of it and
+# says so (true means it landed). An interrupting hit force-cancels every charging
+# gauge with nothing spent and collapses the indicator; a steady pull (a magnet's tug)
+# is still a stop the sprint ignores, but it does not wipe a charge every tick. The
+# shove, an acceleration like add_external_accel's, is applied here.
+func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> bool:
+	if _frozen:
+		return false
+	if kit.sprinting or immune_left > 0.0 or (kit.mounted and tree.knob("mount_cc_immune")):
+		var now := SimClock.msec()
+		if now - int(_cc_ignored_at.get(kind, -100000)) >= CC_IGNORED_GAP_MS:
+			_cc_ignored_at[kind] = now
+			events.cc_ignored.emit(kind)
+		return false
+	if interrupts:
+		for id in abilities.cancel_gauges():
+			events.gauge_cancelled.emit(id, kind)
+		if kit.slingshot.cancel():
+			events.gauge_cancelled.emit("slingshot", kind)
+		indicator.collapse_all()
+	if shove != Vector3.ZERO:
+		add_external_accel(shove)
+	return true
+
+
+# Crowd control slides off for this long (Unstoppable's boosted window).
+func grant_immunity(seconds: float) -> void:
+	immune_left = maxf(immune_left, seconds)
+
+
+# The stomp and rebound refresh, one rule so they never disagree: one air jump and one
+# charge of the class movement ability (for Sable, the last face it kicked).
+func refresh_air() -> void:
+	state.air_actions = 1
+	abilities.grant(AbilityState.MOVEMENT)
+	kit.refresh_vault()
 
 
 # The rope is a hard max-length constraint on the ball, so it is anchored where the
 # ball is standing when it is fired, not where the camera ray started.
-func grapple_to(point: Vector3, normal := Vector3.ZERO) -> void:
+func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> void:
 	if not kit.on(Augments.GRAPPLE):
 		return
-	Augments.attach(kit, ball_position(), point, normal)
+	Augments.attach(kit, ball_position(), point, normal, body)
 	events.grapple_fired.emit(point)
+	if body != null:
+		_share_line()
+		if body.has_method("flash"):
+			body.flash()
+		events.harpoon_bit.emit(body, point)
 
 
 func release_grapple() -> void:
-	kit.hooked = false
+	kit.drop_line()
+
+
+# A hostile hold that lands cuts the harpoon line; the release cue is grapple_released.
+func cut_line() -> void:
+	if kit.harpoon_on:
+		kit.drop_line()
+
+
+# The line's split with its body, from heft and the body's weight, and the tow the winch
+# handed it last tick.
+func _share_line() -> void:
+	var body = kit.anchor_body
+	if not kit.hooked or not kit.on_body or not is_instance_valid(body):
+		return
+	kit.ball_share = Harpoon.ball_share(tuning.option("harpoon_pull"), heft(), Harpoon.weight_of(body))
+	if kit.tow != Vector3.ZERO and body.has_method("tow"):
+		body.tow(kit.tow)
+	kit.tow = Vector3.ZERO
 
 
 func reel_step(metres: float) -> void:
@@ -228,6 +413,16 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	source.poll(intent)
+	if tuning != null and tuning.harpoon_on() != kit.harpoon_on:
+		_refit()
+	abilities.movement_key = Harpoon.movement_key(kit, tuning)
+	_read_mass()
+	_route_interact()
+	_read_grammar()
+	abilities.tick(delta)
+	immune_left = maxf(0.0, immune_left - delta)
+	if kit.mounted and tree.knob("mounted_recharge") > 1.0:
+		abilities.refund(AbilityState.SPECIAL, delta * (tree.knob("mounted_recharge") - 1.0))
 	state.tick_timers(delta)
 	if intent.jump_pressed:
 		state.jump_buffer = Tuning.JUMP_BUFFER
@@ -236,7 +431,137 @@ func _physics_process(delta: float) -> void:
 	if _was_hooked and not kit.hooked:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
+	_share_line()
 	_recheck_bow()
+	_tick_face_tags(delta)
+	_mark_slots()
+
+
+# The slot states the ability bar reads that no spend or gauge sets: the grapple is
+# active while hooked, and the smash is an air move, so on the ground it is unavailable.
+func _mark_slots() -> void:
+	if kit.on(Augments.GRAPPLE) and kit.movement_id == Augments.GRAPPLE:
+		abilities.slot(AbilityState.MOVEMENT).active = kit.hooked
+	var smash = abilities.slot(AbilityState.SMASH)
+	smash.active = kit.slamming or kit.plant_time > 0.0
+	smash.available = smash.active or not state.grounded
+
+
+# RMB is the class movement, except while the special or the slingshot charges: then
+# its press cancels the charge and moves nothing. Kest's held throw is not included, or
+# holding LMB would swallow her blink. Sable's grapple rides RMB here like the other
+# classes' movement. Under --harpoon RMB is the harpoon for every pilot, the cancel rule
+# follows it, and the class movement moves to Shift or C.
+func _read_grammar() -> void:
+	var special = abilities.gauge(AbilityState.SPECIAL)
+	var charging: bool = (special != null and special.charging) or kit.slingshot.charging
+	if kit.harpoon_on:
+		_route_burst()
+		if intent.harpoon_pressed and charging:
+			intent.harpoon_pressed = false
+			intent.cancel_pressed = true
+		_read_ctrl()
+	elif intent.movement_pressed and charging:
+		intent.movement_pressed = false
+		intent.cancel_pressed = true
+	if _frozen or not kit.on(Augments.GRAPPLE):
+		return
+	var pressed: bool = intent.harpoon_pressed if kit.harpoon_on else intent.movement_pressed
+	var released: bool = intent.harpoon_released if kit.harpoon_on else intent.movement_released
+	if pressed and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
+		if not kit.harpoon_on or kit.rewind_left <= 0.0:
+			grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
+	elif released:
+		_fling()
+		release_grapple()
+	# Rope Anchor: winching up to the wall plants the pylon there.
+	if tree.knob("winch_mount") and kit.hooked and intent.reel_held and not kit.mounted \
+			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
+		intent.mount_pressed = true
+
+
+# --harpoon-keys=shift: Shift fires the class burst (Rivet's sprint, Kest's blink) when
+# its charge is ready and is the plain boost otherwise, so the boost never waits on the
+# class charge. The keyboard reports Shift held as movement_held; the press is routed here.
+func _route_burst() -> void:
+	if tuning.option("harpoon_keys") == "shift" and intent.boost_pressed and Harpoon.burst_ready(kit):
+		intent.boost_pressed = false
+		intent.movement_pressed = true
+
+
+# Ctrl on a latched body line commits the smash haul. While a body line stands, and until
+# that press is let go, Ctrl is neither the brake nor the slam: the commit is all of it, so
+# a haul can never plant or brake inside the crowd it flew into.
+func _read_ctrl() -> void:
+	var edge: bool = intent.brake_held and not _brake_was_held
+	_brake_was_held = intent.brake_held
+	var on_body: bool = kit.hooked and kit.on_body
+	if on_body and edge and kit.line_state == Augments.LINE_LATCHED:
+		Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
+	if on_body:
+		_ctrl_claimed = true
+	if not intent.brake_held:
+		_ctrl_claimed = false
+	if _ctrl_claimed:
+		intent.brake_held = false
+
+
+# E is interact everywhere (LOOP-REDESIGN section 9): the interactable E has locked takes
+# the press, else it stays Sable's mount at a face. A lock farther than the interact
+# reach yields to a face she could mount, and a mobility move already under way (the
+# hook in, a slam plant, the slingshot drawing) keeps E. Mounted, E always drops off.
+func _route_interact() -> void:
+	if not intent.mount_pressed or kit.mounted or mobility_started() or not interact_claim.is_valid():
+		return
+	if interact_claim.call(kit.on(Augments.PYLON) and face_in_reach()):
+		intent.mount_pressed = false
+		intent.interact_pressed = true
+
+
+func mobility_started() -> bool:
+	return (kit.hooked and (kit.on(Augments.PYLON) or not kit.harpoon_on)) or kit.plant_time > 0.0 or kit.slingshot.charging
+
+
+# The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
+# or the wall the hook is in when the ball is close to it.
+func face_in_reach() -> bool:
+	var origin := ball_position()
+	if kit.hooked and kit.on(Augments.GRAPPLE) and not kit.on_body and kit.anchor_normal != Vector3.ZERO \
+			and absf(kit.anchor_normal.y) < Augments.FACE_MAX_TILT and origin.distance_to(kit.anchor) <= Augments.MOUNT_HOOK_REACH:
+		return true
+	if not is_inside_tree():
+		return false
+	var space := get_world_3d().direct_space_state
+	var reach: float = Tuning.RADIUS + Augments.FACE_REACH
+	for i in Augments.FACE_RAYS:
+		var angle := TAU * float(i) / float(Augments.FACE_RAYS)
+		var dir := Vector3(cos(angle), 0.0, sin(angle))
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
+		if not hit.is_empty() and absf((hit["normal"] as Vector3).y) < Augments.FACE_MAX_TILT:
+			return true
+	return false
+
+
+# Mass-S: under --world-one-builds a pilot who took the depth-1 pick has the mass launch verb.
+# q is heft turned back into mass (the run's mass at 1/450 heft each; a class IV heft of 3.2
+# is 990) and read only; sampling it spends nothing, and the kit never lets it near steering.
+func _read_mass() -> void:
+	kit.mass_on = tuning != null and tuning.world_one() and tree.knob("mass_launch")
+	var mass := maxf(0.0, float(mass_of.call())) if kit.mass_on and mass_of.is_valid() else 0.0
+	kit.mass_q = clampf(mass / Augments.MASS_FULL, 0.0, 1.0)
+
+
+# Coil Hook: letting go of the rope throws you on along your swing.
+func _fling() -> void:
+	var fling: float = tree.knob("grapple_fling")
+	if not kit.hooked or fling <= 0.0:
+		return
+	var v: Vector3 = state.velocity
+	var dir := v.normalized() if v.length() > 0.5 else -drive_basis.z
+	var flung := v + dir * fling
+	if kit.mass_on:
+		flung += dir * Augments.mass_spend(kit, flung.length())
+	set_velocity_now(flung)
 
 
 func _process(_delta: float) -> void:
@@ -244,6 +569,7 @@ func _process(_delta: float) -> void:
 	_visual_root.global_position = shown.origin
 	_visual_root.global_basis = Basis.IDENTITY
 	_update_augment_visuals(shown.origin)
+	_update_aim_cones(shown.origin)
 	_roll = shown.basis.orthonormalized()
 	_mesh.basis = (_squash_basis() if builtin_squash else Basis.IDENTITY) * _roll
 
@@ -306,8 +632,14 @@ func _try_crush(body: Node3D) -> void:
 	if not crush_check.call(body, RAM, speed):
 		return
 	_crushing[id] = true
+	if kit.sprinting:
+		kit.sprint_left += tree.knob("crush_refund")
 	_rigid.add_collision_exception_with(body)
+	var closing := kit.line_closing
+	var landing := _begin_landing(body)
 	struck.emit(body, RAM, speed)
+	if landing:
+		_finish_landing(body, closing)
 	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
 
 
@@ -323,12 +655,23 @@ func _end_crush(id: int) -> void:
 func _build_augment_visuals() -> void:
 	_rope = MeshInstance3D.new()
 	_rope.mesh = ImmediateMesh.new()
-	_rope.material_override = Palette.unshaded(Color(1.0, 0.72, 0.30))
+	_rope.material_override = Palette.unshaded(class_color())
 	_rope.visible = false
 	add_child(_rope)
 
+	# The harpoon's head, seated in the body the line is bitten into.
+	_hook_head = MeshInstance3D.new()
+	var head := BoxMesh.new()
+	head.size = Vector3.ONE * 0.8
+	_hook_head.mesh = head
+	_hook_head.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
+	_hook_head.material_override = Palette.unshaded(class_color())
+	_hook_head.visible = false
+	add_child(_hook_head)
+
 	_wings = Node3D.new()
-	var wing_material := Palette.unshaded(Color(0.55, 0.85, 1.0, 0.75))
+	var wing_material := Palette.unshaded(Color(class_color(), 0.75))
+	_wings_material = wing_material
 	for side in [-1.0, 1.0]:
 		var fin := MeshInstance3D.new()
 		var box := BoxMesh.new()
@@ -359,7 +702,8 @@ func _build_augment_visuals() -> void:
 	disc.bottom_radius = 0.7
 	disc.height = 0.12
 	plate.mesh = disc
-	plate.material_override = Palette.solid(Color(1.0, 0.72, 0.30), 1.2)
+	plate.material_override = Palette.solid(class_color(), 1.2)
+	_plate = plate
 	_pylon.add_child(plate)
 	_pylon.visible = false
 	add_child(_pylon)
@@ -390,7 +734,13 @@ func pylon_node() -> Node3D:
 
 func _update_augment_visuals(at: Vector3) -> void:
 	_rope.visible = kit.hooked
+	_hook_head.visible = kit.hooked and kit.on_body
+	if _hook_head.visible:
+		_hook_head.global_position = kit.anchor
 	if kit.hooked:
+		# A committed haul draws its line brighter than a latched one.
+		(_rope.material_override as StandardMaterial3D).albedo_color = \
+			class_color().lightened(0.55) if kit.line_state == Augments.LINE_SMASH else class_color()
 		var line: ImmediateMesh = _rope.mesh
 		line.clear_surfaces()
 		line.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
@@ -417,21 +767,133 @@ func _update_augment_visuals(at: Vector3) -> void:
 			_wings.global_basis = Basis.looking_at(heading.normalized(), Vector3.UP)
 
 
+# The Warden under the ball already took the landing contact as its drop.
+func _on_ball_slammed(at: Vector3, speed: float, flatness: float) -> void:
+	_landed_on = _spared_by_shockwave(_body_under())
+	_on_slammed(at, speed, flatness)
+	_landed_on = null
+
+
+func _body_under() -> Node3D:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS + LANDED_ON_MARGIN
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, ball_position())
+	query.collision_mask = Augments.ENEMY_MASK
+	for hit in _rigid.get_world_3d().direct_space_state.intersect_shape(query, 8):
+		var body = hit["collider"]
+		if body.is_in_group("enemy") and body.global_position.y < ball_position().y:
+			return body
+	return null
+
+
 # The shockwave carries the same flatness as the plant: a full thump on flat ground,
 # next to nothing when the slam went into a launch.
+# Every class slams the same way; the landing then takes the class's flavour.
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	var strength := clampf(speed / 30.0, 0.4, 1.6) * flatness
 	events.slammed.emit(at, strength, flatness)
-	if strength < 0.05:
-		return
-	shockwave.emit(at, strength)
-	_push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
+	if strength >= 0.05:
+		shockwave.emit(at, strength)
+		_push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
+	if _smashes.has(kit.smash_flavour):
+		_smashes[kit.smash_flavour].call(at, speed)
+
+
+func _smash_arc(at: Vector3, _speed: float) -> void:
+	events.arc_slammed.emit(at, _tag_faces(at))
+
+
+func _smash_skid(at: Vector3, speed: float) -> void:
+	events.skid_smashed.emit(at, _skid_push(at, clampf(speed / 30.0, 0.4, 1.6)))
+
+
+func _smash_demo(at: Vector3, _speed: float) -> void:
+	events.demo_slammed.emit(at)
+
+
+# Sable's arc slam marks every steep face within FACE_TAG_REACH for a vault.
+func _tag_faces(at: Vector3) -> int:
+	face_tags.clear()
+	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
+	var from := at + Vector3.UP * 1.0
+	for i in FACE_TAG_RAYS:
+		var angle := TAU * float(i) / float(FACE_TAG_RAYS)
+		var dir := Vector3(cos(angle), 0.0, sin(angle))
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * FACE_TAG_REACH, Augments.WORLD_MASK))
+		if hit.is_empty() or absf((hit["normal"] as Vector3).y) >= Augments.FACE_MAX_TILT:
+			continue
+		face_tags.append({"point": hit["position"] + (hit["normal"] as Vector3) * 0.1, "left": FACE_TAG_SECONDS})
+	return face_tags.size()
+
+
+func _tick_face_tags(delta: float) -> void:
+	for tag in face_tags:
+		tag["left"] -= delta
+	face_tags = face_tags.filter(func(tag): return tag["left"] > 0.0)
+
+
+# A Warden judging drops scores a landing's own shockwave as a 0-damage floor clank, so the
+# shockwave spares it; every other landed body still takes the shockwave's strike.
+func _spared_by_shockwave(body: Node3D) -> Node3D:
+	if is_instance_valid(body) and body.get("drop") != null:
+		return body
+	return null
+
+
+# Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
+func _skid_push(at: Vector3, strength: float) -> int:
+	var ahead := planar_velocity()
+	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD
+	var hits := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		var to: Vector3 = enemy.global_position - at
+		to.y = 0.0
+		if to.length() > SKID_REACH or (to.length() > 1.5 and to.normalized().dot(ahead) < SKID_CONE):
+			continue
+		var falloff := 1.0 - to.length() / SKID_REACH
+		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
+		enemy.flash()
+		if enemy != _landed_on:
+			struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
+		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
+		hits += 1
+	return hits
+
+
+# The vault and slingshot aim cones and the arc slam's face tags, in the class colour.
+func _update_aim_cones(at: Vector3) -> void:
+	if not kit.vault_aim.is_empty():
+		indicator.set_shape("vault", yours({"kind": "cone", "apex": at, "dir": kit.vault_aim["dir"],
+			"length": AIM_CONE_LENGTH, "half_angle": AIM_CONE_HALF}))
+	else:
+		indicator.clear("vault")
+	if kit.mounted and not kit.slingshot_aim.is_empty():
+		var fill: float = kit.slingshot_aim["fill"]
+		indicator.set_shape("slingshot", yours({"kind": "cone", "apex": at, "dir": kit.slingshot_aim["dir"],
+			"length": AIM_CONE_LENGTH * (1.0 + fill), "half_angle": AIM_CONE_HALF, "fill": fill}))
+	else:
+		indicator.clear("slingshot")
+	if face_tags.is_empty():
+		indicator.clear("faces")
+	else:
+		indicator.set_shape("faces", yours({"kind": "marks", "points": face_tags.map(func(tag): return tag["point"])}))
+
+
+# A kit rule's fact goes on the bus; a dropped slingshot charge also collapses its cone.
+func _on_kit_fact(kind: String, args: Array) -> void:
+	if kind == "gauge_cancelled":
+		indicator.collapse("slingshot")
+	if kind == "vault_kicked" and tree.knob("vault_tags"):
+		_tag_faces(ball_position())
+	events.callv("emit_signal", [kind] + args)
 
 
 func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	events.mounted.emit(at, banked_speed)
 	shockwave.emit(at, 0.7)
-	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK, "")
+	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
 func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> void:
@@ -445,7 +907,7 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> vo
 		var falloff := 1.0 - reach / radius
 		enemy.knock(away + Vector3.UP * 0.5, force * falloff)
 		enemy.flash()
-		if kind != "":
+		if kind != "" and enemy != _landed_on:
 			struck.emit(enemy, kind, force * falloff)
 
 
@@ -465,6 +927,8 @@ func pre_contact_velocity(toward: Vector3) -> Vector3:
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	if _crushing.has(enemy.get_instance_id()):
 		return
+	var closing := kit.line_closing
+	var landing := _begin_landing(enemy)
 	var to_enemy := enemy.global_position - ball_position()
 	var before := pre_contact_velocity(to_enemy.normalized() if to_enemy.length() > 0.01 else Vector3.DOWN)
 	var planar := Vector2(before.x, before.z).length()
@@ -473,16 +937,66 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	if before.y < -STOMP_SPEED and normal.y > 0.3:
 		# The one mechanic worth keeping from the orchard: a descending rebound
 		# gives the air jump back, so bouncing is a way to keep a line going.
-		state.air_actions = 1
-		kit.dash_ready = true
+		refresh_air()
+		kit.rewind_left = 0.0
 		state.impact = maxf(state.impact, -before.y)
-		_rigid.set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
+		set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0)
 		shockwave.emit(enemy.global_position, 0.6)
 		struck.emit(enemy, STOMP, -before.y)
+	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
+		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
-		enemy.knock(away + Vector3.UP * 0.35, 18.0)
+		enemy.knock(away + Vector3.UP * 0.35, Augments.RAM_KNOCK)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
 		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, planar)
+	if landing:
+		_finish_landing(enemy, closing)
+
+
+# The first contact of a committed haul lets the line go, so the ordinary contact (stomp,
+# rebound or ram) resolves on a free ball, and starts the rewind before it: a kill or a
+# stomp inside that contact re-seats the hook at once.
+func _begin_landing(enemy: Node3D) -> bool:
+	if not kit.hooked or kit.line_state != Augments.LINE_SMASH or kit.anchor_body != enemy:
+		return false
+	kit.drop_line()
+	kit.rewind_left = tuning.f("harpoon_rewind")
+	return true
+
+
+# What the haul adds to that contact: the smash's shockwave, pins and this pilot's
+# flavour at the speed the line closed at, then the fact. The struck body already took the
+# landing contact; the shockwave strikes it again except a Warden judging drops.
+func _finish_landing(enemy: Node3D, closing: float) -> void:
+	_landed_on = _spared_by_shockwave(enemy)
+	_on_slammed(ball_position(), closing, 1.0)
+	_landed_on = null
+	events.harpoon_smashed.emit(enemy if is_instance_valid(enemy) else null, ball_position(), closing)
+
+
+# Only a body that says what it weighs can bounce you; a boss piece without a weight
+# keeps the plain ram.
+func _rebounds_off(enemy: Node3D) -> bool:
+	var weight = enemy.get("weight")
+	if kit.sprinting and tree.knob("sprint_no_rebound"):
+		return false
+	return weight != null and Contact.rebounds(float(weight), heft(), kit.sprinting)
+
+
+# The bowling-ball rebound off something at least your weight: the incoming velocity
+# reflected with restitution, one refresh, and the ram still lands if you were rolling
+# fast enough for one.
+func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, away: Vector3) -> void:
+	var out := Contact.rebound_velocity(before, normal, tuning.f("jump_speed"))
+	set_velocity_now(out)
+	refresh_air()
+	state.impact = maxf(state.impact, -before.dot(normal))
+	enemy.knock(away + Vector3.UP * 0.2, 6.0)
+	enemy.flash()
+	shockwave.emit(enemy.global_position, 0.8)
+	if SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
+		struck.emit(enemy, RAM, planar)
+	events.enemy_rebounded.emit(enemy, out.length())

@@ -11,7 +11,8 @@ const SPECS := [
 	{"key": "restitution", "label": "Restitution", "min": 0.0, "max": 0.95, "step": 0.01, "value": 0.35},
 	{"key": "rolling_resistance", "label": "Rolling resist", "min": 0.0, "max": 3.0, "step": 0.05, "value": 0.30},
 	{"key": "rigid_torque", "label": "Rigid torque", "min": 10.0, "max": 600.0, "step": 10.0, "value": 220.0},
-	{"key": "dash_impulse", "label": "Dash impulse", "min": 4.0, "max": 40.0, "step": 0.5, "value": 16.0},
+	# Kest's blink leaves at least this speed; Dash Vane scales it and the blink's reach.
+	{"key": "dash_impulse", "label": "Blink speed floor", "min": 4.0, "max": 40.0, "step": 0.5, "value": 16.0},
 	{"key": "glide_gravity", "label": "Glide gravity", "min": 0.05, "max": 1.0, "step": 0.01, "value": 0.30},
 	{"key": "glide_lift", "label": "Glide lift", "min": 0.0, "max": 4.0, "step": 0.05, "value": 1.30},
 	{"key": "rope_range", "label": "Rope range", "min": 10.0, "max": 60.0, "step": 1.0, "value": 45.0},
@@ -29,10 +30,42 @@ const SPECS := [
 	# the face: keep is the fraction returned, boost is added on top.
 	{"key": "slingshot_keep", "label": "Slingshot keep", "min": 0.0, "max": 1.5, "step": 0.05, "value": 0.85},
 	{"key": "slingshot_boost", "label": "Slingshot boost", "min": 0.0, "max": 20.0, "step": 0.5, "value": 6.0},
-	{"key": "split_dash_cooldown", "label": "Split dash cooldown", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
 	# v2's ground probe turned with the ball, so "grounded" flickered with the spin.
 	# Off is the fix; on brings the v2 feel back for a side-by-side comparison.
 	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
+	# The v3 fun lab's switch (src/core/loop_mode.gd): an option row stores its index.
+	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
+	# The durability prototype (DESIGN-NOTES, "Scrap as armour"): `--scrap=armor` makes mass a
+	# temporary health layer over the hull, `--wear=on` lets rolling friction wear it. Both
+	# default off, and off is the base game. `--route-seed=<n>` reseeds the run's streams and
+	# `--start-mass=<n>` opens the run with that mass, so the three variants share a route.
+	{"key": "scrap_mode", "label": "Scrap mode", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "armor"]},
+	{"key": "wear", "label": "Scrap wear", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "start_mass", "label": "Start mass", "min": 0.0, "max": 3000.0, "step": 10.0, "value": 0.0},
+	{"key": "route_seed", "label": "Route seed (0 = off)", "min": 0.0, "max": 999999.0, "step": 1.0, "value": 0.0},
+	{"key": "gun_role", "label": "Gun role", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["hold", "full"]},
+	# The music lab: the synth band, or the ACE takes on stage 1 (presentation/ace_sequencer.gd),
+	# and the Warden open's held breath in the ACE music.
+	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["synth", "ace"]},
+	{"key": "breath", "label": "Breath", "min": 0.0, "max": 2.0, "step": 1.0, "value": 1.0, "options": ["raw", "hard", "gentle"]},
+	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["banner", "cards"]},
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["classic", "haze"]},
+	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
+	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
+	# alone. The hot-wired flags are registered here; their effects belong to later units.
+	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The harpoon feel prototype (DESIGN-NOTES, "Harpoon and winch"): RMB fires a line for every pilot.
+	# `shot` hits what the centre ray hits; `lock` prefers an enemy inside harpoon_lock_deg. `self` always
+	# flies you in; `heft` splits the closing by weight against heft. `shift` puts the class burst on
+	# Shift when its charge is ready, `keep` moves it to C. Off is the base game.
+	{"key": "harpoon", "label": "Harpoon", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "shot", "lock"]},
+	{"key": "harpoon_pull", "label": "Harpoon pull", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["self", "heft"]},
+	{"key": "harpoon_keys", "label": "Harpoon keys", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["shift", "keep"]},
+	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
+	{"key": "harpoon_lock_deg", "label": "Harpoon lock (deg)", "min": 0.0, "max": 25.0, "step": 0.5, "value": 10.0},
+	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
 ]
 
 const BRAKE_RESISTANCE := 4.0
@@ -52,12 +85,102 @@ var _values := {}
 # Parts scale knobs through mods rather than by moving the sliders, so the F1 panel
 # keeps showing the base value and a recompute from the part list is idempotent.
 var _mods := {}
-# Parts shorten the shared boost and dash cooldown; a constant, not a slider row.
+# Parts shorten the shared boost cooldown; a constant, not a slider row.
 var boost_cooldown_scale := 1.0
+# What the command line set, key to value: reset() returns to how this launch started, so
+# the F1 panel's Reset defaults keeps the flags and only the sliders go back to defaults.
+var _launch := {}
+# The loop mode the current stage entered with; empty until the first stage, when a bare
+# Tuning reads the row live. The panel writes the row at once under "hold R to apply", so
+# every reader of the mode takes this one per-stage value instead.
+var _stage_loop := ""
 
 
 func _init() -> void:
 	reset()
+	apply_cmdline("start")
+
+
+# Every launch flag, one table and one parse pass. name -> [tuning key, kind, when]:
+#   kind  "option" names one of the row's options; an unknown value warns and is refused
+#         "number" takes any float (clamped by the row); a non-number is ignored quietly
+#   when  "start" flags apply as Tuning is built (the durability flags, so every Tuning
+#         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
+#         so a bot or tool that builds a bare Tuning never sees them.
+# `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --loop=drop --gun=full
+# --music=ace --breath=gentle --discovery=cards --telegraph=haze --world-one-builds=on
+# --hotwire-shell=on --hotwire-tread=on --harpoon=lock --harpoon-pull=heft --harpoon-keys=keep`, from the engine args
+# or the user args (after Godot's `--`). A flag in neither table is ignored.
+# threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
+# since the static-drawn floor marking has no tuning in reach; tuning_flags_test checks
+# that its name is a row here.
+const FLAGS := {
+	"scrap": ["scrap_mode", "option", "start"],
+	"wear": ["wear", "option", "start"],
+	"route-seed": ["route_seed", "number", "start"],
+	"start-mass": ["start_mass", "number", "start"],
+	"loop": ["loop_mode", "option", "launch"],
+	"gun": ["gun_role", "option", "launch"],
+	"music": ["music", "option", "launch"],
+	"breath": ["breath", "option", "launch"],
+	"discovery": ["discovery", "option", "launch"],
+	"telegraph": ["telegraph", "option", "launch"],
+	"world-one-builds": ["world_one_builds", "option", "launch"],
+	"hotwire-shell": ["hotwire_shell", "option", "launch"],
+	"hotwire-tread": ["hotwire_tread", "option", "launch"],
+	"harpoon": ["harpoon", "option", "launch"],
+	"harpoon-pull": ["harpoon_pull", "option", "launch"],
+	"harpoon-keys": ["harpoon_keys", "option", "launch"],
+}
+
+
+# The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
+# every row. Returns the flags it applied, name to value text.
+func apply_args(args: PackedStringArray, when := "") -> Dictionary:
+	var applied := {}
+	for arg in args:
+		if not arg.begins_with("--") or not "=" in arg:
+			continue
+		var flag := arg.substr(2, arg.find("=") - 2)
+		if not FLAGS.has(flag):
+			continue
+		var row: Array = FLAGS[flag]
+		if when != "" and row[2] != when:
+			continue
+		var value := arg.substr(arg.find("=") + 1)
+		if row[1] == "option":
+			if set_option(row[0], value):
+				_launch[row[0]] = _values[row[0]]
+				applied[flag] = value
+			else:
+				push_warning("tuning: unknown --%s=%s" % [flag, value])
+		elif value.is_valid_float():
+			set_value(row[0], float(value))
+			_launch[row[0]] = _values[row[0]]
+			applied[flag] = value
+	return applied
+
+
+func apply_cmdline(when := "") -> Dictionary:
+	var args := OS.get_cmdline_args()
+	args.append_array(OS.get_cmdline_user_args())
+	return apply_args(args, when)
+
+
+func world_one() -> bool:
+	return option("world_one_builds") == "on"
+
+
+func harpoon_on() -> bool:
+	return option("harpoon") != "off"
+
+
+func armor() -> bool:
+	return option("scrap_mode") == "armor"
+
+
+func wear_on() -> bool:
+	return armor() and option("wear") == "on"
 
 
 func f(key: String) -> float:
@@ -96,6 +219,36 @@ func on(key: String) -> bool:
 	return _values[key] >= 0.5
 
 
+func options_of(key: String) -> Array:
+	for spec in SPECS:
+		if spec["key"] == key:
+			return spec.get("options", [])
+	return []
+
+
+func option(key: String) -> String:
+	var options := options_of(key)
+	return String(options[clampi(roundi(_values[key]), 0, options.size() - 1)]) if not options.is_empty() else ""
+
+
+func set_option(key: String, name: String) -> bool:
+	var index := options_of(key).find(name)
+	if index < 0:
+		return false
+	set_value(key, float(index))
+	return true
+
+
+func latch_stage() -> void:
+	_stage_loop = option("loop_mode")
+
+
+func stage_loop() -> String:
+	return _stage_loop if _stage_loop != "" else option("loop_mode")
+
+
 func reset() -> void:
 	for spec in SPECS:
 		_values[spec["key"]] = spec["value"]
+	for key in _launch:
+		_values[key] = _launch[key]

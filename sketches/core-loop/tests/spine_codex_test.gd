@@ -77,11 +77,11 @@ func _checks() -> void:
 	var notes = _game.notes
 	var cards: int = notes.render_page("build")
 	var world_cards: int = notes.render_page("world")
-	notes.show_page(1)
-	var tabs: String = notes._title.text
-	_report("codex page", notes.pages() == ["notes", "build", "world", "enemy", "found"] and cards == base_build + 1 and world_cards == base_world + 1
-			and tabs.contains("[ Build %d%% ]" % int(codex.completion("build") * 100.0)),
-		"pages %s; build shows %d card, world %d; tab row \"%s\"" % [notes.pages(), cards, world_cards, tabs.get_slice("  ·  ", 1)])
+	notes.show_page(3)
+	var tabs: String = notes.tab_label()
+	_report("codex page", notes.pages() == ["keys", "hurts", "grow", "build", "world", "enemy", "found"] and cards == base_build + 1 and world_cards == base_world + 1
+			and tabs == "Build %d%%" % int(codex.completion("build") * 100.0),
+		"pages %s; build shows %d card, world %d; open tab \"%s\"" % [notes.pages(), cards, world_cards, tabs])
 
 	var new_text: bool = codex.mark_found("frost then a ram shatters", "enemy")
 	var old_text: bool = codex.mark_found("frost then a ram shatters", "enemy")

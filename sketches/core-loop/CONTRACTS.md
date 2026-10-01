@@ -239,6 +239,7 @@ Flow calls `spawn_point`, `entry_heading` and `beacon_point` right after `stage_
 - `punch_fov(amount_degrees, time)` adds field of view that bleeds away over `time`, capped at 20 degrees.
 - `kick(direction: Vector3, amount)` knocks the camera along a world direction, and it springs back.
 - `shake(amount, time = 0.4)` shakes the camera; the strongest shake wins.
+- `motion_scale: float` (0 to 1) is the viewer's Screen shake comfort. Juice sets it; the camera multiplies every punch, kick and shake by it, its own landing shake included.
 - `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules.
 
 Juice follows the player's actions and must never hide the next threat. Keep punches and shakes short.
@@ -328,3 +329,391 @@ During play the screen is four horizontal bands, as shares of the visible height
 - Build the game with `Game.new()`, set `test_mode = true`, add it to `root` and wait for `flow` to be set. Test mode writes the codex and run logs to a per-process folder, removed when the game leaves the tree. Drive input with `Intent.Scripted` (`hold` and `press`). Set `ctx.calm` when measuring speed.
 - `tests/doubles/spine_spawner_double.gd` is a spawner that follows A's plating rule, so spine tests don't depend on combat. The smoke runner reads only `tests/*.gd`, so helpers go in subfolders.
 - `npm run sketch:smoke` runs every sketch's import, a 300-frame boot and every test. All the `spine_*` tests must keep passing with your module installed.
+
+## Ability slots
+
+The HUD's ability bar (`src/ui/ability_bar.gd`) draws one input, an ordered array of slot records. Order is the bar's, left to right: weapon (LMB), movement (RMB), special (F), smash (Ctrl), as `VISUAL-LANGUAGE.md` section 7 lays it out.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `slot` | String | `weapon`, `movement`, `special` or `smash` |
+| `id` | String | the ability id from the class row, such as `grapple` or `overdrive_blast` |
+| `icon` | String | an Icons id (below): `ab_<pilot>_<role>`, the role being `weapon`, `move`, `special` or `smash` |
+| `key` | String | a key glyph id: `key_lmb`, `key_rmb`, `key_f`, `key_ctrl` |
+| `cooldown_frac` | float, 0 to 1 | the share of the recharging charge still to go; 0 when every charge is in |
+| `charges` | int, 0 to `max_charges` | charges stocked now |
+| `max_charges` | int, 1 or more | the stockpile cap; pips show under the key only when it is above 1 |
+| `state` | String | one of `ready`, `cooling`, `active`, `unavailable` |
+| `gauge` | float, 0 to 1 | the fill of a charging hold-gauge-release; the reticle's gauge ring shows the fullest |
+
+- `ready` means pressing the key does the thing now. `cooling` means no charge is in. `active` means the ability is running or its gauge is charging. `unavailable` means the key does nothing useful now.
+- The bar tells the states apart by shape as well as colour. `ready` has a solid frame. `cooling` has a petrol wedge that uncovers the icon clockwise from twelve. `active` has a doubled frame in the class colour and a lifted slot. `unavailable` has a faded icon struck through. A slot going from `cooling` to `ready` swells once, and the swell and the charge pips wear the class row's `shape`.
+- **Publisher (W3).** `player.abilities.slots()` (`src/core/ability_state.gd`). The HUD reads it every frame through `src/ui/ability_slots.gd`, which names icons and keys the Icons way. An `icon` that is not an Icons id becomes `ab_<pilot>_<role>`, the pilot being the class row's `display_name` in lower case. A `key` label such as `LMB` or `F` becomes `key_lmb` or `key_f`. A record that then fails `AbilitySlots.valid_slot` empties the bar and warns once.
+- **Reticle gauge.** While any slot's `gauge` is above 0, a ring round the reticle fills clockwise from twelve, linearly, in the class colour. It closes when the gauge is full.
+- `ui_ability_slots_test.gd` checks all three pilots' records, a charging special and its ring, the release to cooling, the normaliser and the swell.
+
+## Icons
+
+`Icons.texture(id) -> Texture2D` (`src/ui/icons.gd`) loads `res://assets/icons/<id>.svg` when it exists, imported or not. All 70 ids have their SVG now (`ui_contract_test.gd` checks it). Otherwise it returns a 64 px procedural placeholder, white on clear, drawn from a signed-distance glyph. `Icons.tint(id, color)` gives the modulate to draw with: the fact's colour on a placeholder, and only its alpha on an SVG, which carries its own colours (a bone glyph on a charcoal backplate with one accent). An id outside the list still draws a placeholder picked by its prefix, so a new ability shows before its SVG and its contract line land.
+
+The ids are the 70 of `VISUAL-LANGUAGE.md` section 5, which owns each one's meaning and drawing. `ui_contract_test.gd` fails if this list and the registry disagree.
+
+- **Class emblems.** `cls_sable`, `cls_rivet`, `cls_kest`.
+- **Abilities.**
+  - Sable: `ab_sable_weapon`, `ab_sable_move`, `ab_sable_special`, `ab_sable_smash`, `ab_sable_vault`, `ab_sable_mount`.
+  - Rivet: `ab_rivet_weapon`, `ab_rivet_move`, `ab_rivet_special`, `ab_rivet_smash`.
+  - Kest: `ab_kest_weapon`, `ab_kest_move`, `ab_kest_special`, `ab_kest_smash`, `ab_kest_glide`, `ab_kest_cloak`.
+- **Key glyphs.** `key_lmb`, `key_rmb`, `key_f`, `key_ctrl`, `key_space`, `key_shift`, `key_e`, `key_q`, `key_r`, `key_tab`. Any other key is drawn as a keycap from its id: key_1 reads 1, key_n reads N (`src/ui/keycap.gd`). The menus draw their number keys (1 to 3) and the N, C and T keys this way until those keys have SVGs.
+- **Item categories.** `cat_damage`, `cat_mobility`, `cat_defense`, `cat_utility`, `cat_charge`, `cat_transform`.
+- **Elements.** `el_frost`, `el_arc`, `el_kinetic`.
+- **Triggers.** `trg_on_hit`, `trg_on_kill`, `trg_on_smash`, `trg_on_rebound`, `trg_on_vault`, `trg_on_charge_release`, `trg_on_cloak_break`, `trg_on_land`, `trg_on_speed_tier_up`, `trg_on_pickup`, `trg_on_damage_taken`, `trg_timed`.
+- **Threat types.** `thr_instant`, `thr_wave`, `thr_projectile`, `thr_lane`.
+- **Objectives.** `obj_beacon`, `obj_warden`, `obj_gate`, `obj_fabricator`, `obj_vault`, `obj_event`.
+- **Resources.** `res_scrap`, `res_heft`, `res_health`, `res_core`, `res_timer`, `res_difficulty`.
+- **Factions.** `fac_fleet`, `fac_reactor`, `fac_swarm`, `fac_mind`.
+
+The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, not files: `Icons.shape(name)` draws them, and a toast wears its row's shape.
+
+### Where the HUD uses them
+
+- **Top band.**
+  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` over a notched bar that fills with `threat_rose`.
+  - The objective shows its `obj_` icon ringed by the Warden's broken share, at most five words, and the core diamonds. While a lock stands it shows two bars: punch (`cat_damage`) over plating (`cat_defense`, hatched), with a white notch at the plating.
+- **Toast band.** It holds the stage card (`obj_beacon` and the stage name, or `fac_fleet` for Brindle) or one toast, then a first-run callout or the hold-R meter (`key_r`). This supersedes the UI regions table above: one toast at a time (`ScreenRegions.TOAST_ROWS` is 1).
+- **Bottom band.** Left to right: the speed chevrons, health as a tank gauge (`res_health`), the ability bar, the heft dial (`res_heft`) and scrap (`res_scrap`). This replaces the speed line and the key hints.
+- **Play view.**
+  - Contextual key glyphs sit beside the ball or the grapple target: `key_e` with `ab_sable_mount`, `key_rmb` with `ab_sable_move` and `key_space` with `ab_sable_vault`.
+  - Edge markers use `obj_warden`, `obj_beacon` or `obj_gate`.
+- **Menus.** Class cards use `cls_<pilot>`, and every button draws its key's cap.
+- **Type.** Noto Sans Bold for words and Noto Sans Mono Bold for numbers, vendored in `assets/fonts/` with `OFL.txt` and `PROVENANCE.txt` (`src/ui/ui_fonts.gd`).
+
+### World prompt parts
+
+A world prompt (`src/ui/world_prompt.gd`) shows an icon and a title of at most three words at range, and adds its detail lines within 12 m of the ball (`DETAIL_RANGE`).
+
+- **Structured.** An owner calls `prompt.set_parts(title, detail, icon)`:
+  - `title` is at most three words.
+  - `detail` is lines joined by `\n`.
+  - `icon` is an Icons id: `obj_gate` for a reward gate, `obj_fabricator` for a fabricator, `obj_vault` for the vault, or `fac_fleet` for a Brindle readout.
+- **Parsed.** Until the owner calls it, the text it sets is parsed.
+  - The first line is the title. Text after a colon, and words past the third, move to the front of the detail. The remaining lines are the detail.
+  - The icon is `obj_vault` for a title starting "Vault", `obj_fabricator` for "FABRICATING..." or a detail that names a price in scrap, and `obj_gate` otherwise.
+- **Unchanged.** The prompt's `text` stays what the owner wrote, so owners and tests that read it keep working. The HUD places the drawn size (`shown_extent()`) in the prompts band as before.
+
+## Threat grammar
+
+Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss hazard (`src/boss/hazard.gd`) with one attack type from `src/combat/threat_grammar.gd`: `Threat.Type.INSTANT`, `WAVE`, `PROJECTILE` or `LANE`. The type decides how the threat draws and sounds; the committed geometry decides where it hits. Both nodes build `descriptor()` from the fields `contains()` reads, and the grammar draws from that descriptor, so the drawing and the damage cannot disagree.
+
+| Type | Draws | Hurts | Row |
+| --- | --- | --- | --- |
+| INSTANT | a sharp edge; a striped fill closing in from the edge over the warning; a solid flash on landing | the whole area, at once | `threat_instant`: `ring`, `threat_tick` |
+| WAVE | a faint dashed reach; a bright front at speed x elapsed, chevrons, a curtain as tall as its height band; 15% stripes on the swept ground | only the front band, `WAVE_EDGE` (1 m) either side | `threat_wave`: `wave`, `threat_whoosh` |
+| PROJECTILE | a dotted flight trace to the landing point; a reticle whose brackets close on the blast edge | the blast ring, when the shell lands | `threat_projectile`: `cross`, `threat_whistle` |
+| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` |
+
+Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
+
+The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.
+
+- **Ring, lane or wedge.** `Telegraph.ring(parent, ground, type, at, radius, reach := 3.5, tint := HAZARD)`, `Telegraph.lane(parent, ground, type, from, heading, length, width, reach := 3.5)` and `Telegraph.wedge(parent, ground, type, apex, heading, radius, half_angle_deg, reach := 3.5)`. The owner calls `set_progress(0..1)` across the warning. An INSTANT flash fires on reaching 1.
+- **Wave.** `Telegraph.wave(parent, ground, at, radius, speed, warn, reach := 3.5)` is always WAVE. The owner calls `step(delta)` every tick; `front_radius()` is -1 while it arms, and `is_spent()` turns true once the front has passed the reach.
+- **Projectile.** Commit a PROJECTILE ring at the landing point, then call `set_flight(launch, bump)` with `Threat.lob_bump(gravity, flight_seconds)` for a fixed-time lob. The shell must fly `Threat.flight_point(launch, landing, bump, t / flight)`.
+- **From an enemy.** `enemy.gd`'s `_commit_ring(type, at, radius, reach, tint := HAZARD)` and `_commit_lane(type, from, heading, length, width, reach)` keep one telegraph per enemy and return it.
+- **A boss hazard.** `commit_sector(id, type, ...)`, `commit_annulus(id, type, ...)` and `commit_lane(id, type, ...)`. A WAVE hazard is a sector sweep whose front is `front()`, the same `span x live_fraction()` a sweep test reads.
+- **Stance.** The tint decides it (`Threat.stance`). `Palette.HAZARD` is hostile: striped areas, a warn sound, and the group `threat`. `AMBER` is the player's own: clean fills and no sound. `Palette.SAND` (bone) is a harmless field that only draws a dashed ring. A boss hazard tinted `BRASS` draws in HAZARD with brass owner ticks.
+- **Sound.** Each type's row is in `EventKinds.THREAT_ROWS` (the `ROWS` schema), with the sound's recipe in `sfx_bank.gd`. Every hostile telegraph and hazard joins the group `threat` (`Threat.GROUP`) and answers `threat_kind()` with its row key. `audio.gd` plays the row's sound at the end of the frame the node enters the tree, never on the beat. It then plays the node's `owner_voice` (the owner's timbre) and `mechanic_tag` when set; set both right after the commit. No unit adds a fifth type sound.
+- **Colour.** Every layer draws with no depth test at `Threat.PRIORITY` (40), and the charcoal keylines at 39. The grammar only lightens the tone for the moving pieces.
+- **Seam.** `hazard.gd` preloads `combat/threat_grammar.gd`. It is the one boss-to-combat preload, kept on purpose so the two systems share one grammar.
+
+## Classes and abilities (v2 W3)
+
+- **The class row** (`src/core/class_def.gd`) is the one source for a character: `id`, `display_name`, `role`, `species`, `pitch`, the four ability ids (`weapon_id`, `movement_id`, `special_id`, `smash_id`), `color`, `shape` (an event_kinds shape; the indicator's rim ticks), `motif` (the leitmotif id, `sable`, `rivet` or `kest`, whose notes live in W5's motif table in `harmony.gd`), `sound` (a synth id standing in now), `bible_home` and `synergy_hooks`. `ClassDef.all()` is ordered Sable, Rivet, Kest, and flow's class index follows it. `SABLE_COLOR`, `RIVET_COLOR` and `KEST_COLOR` are what class-owned event rows and the indicator read.
+- **The ability state** (`src/core/ability_state.gd`) lives on the ball as `player.abilities` (the kit's). Movement and combat spend from it, and nothing else writes it. Slots are `weapon`, `movement`, `special` and `smash`.
+  - `slots() -> Array` returns W1's ability-slot records in bar order: `{slot, id, icon, key, cooldown_frac, charges, max_charges, state, gauge}`. `state` is `ready`, `cooling`, `active` or `unavailable`. `cooldown_frac` is the share of the recharging charge still to go, 0 when full. `gauge` is the fill of a charging hold, 0 to 1, for the reticle ring.
+  - `set_max_charges(slot, n)` and `set_cooldown_scale(slot, s)` are the item seams. Charges recharge one at a time and stockpile. No scale takes a cooldown under `COOLDOWN_FLOOR` (0.4 s), and `AbilityState.floored(base, scale)` applies the same floor to cooldowns outside the slots, such as combat's `rocket_cooldown_scale`.
+  - `Gauge` is the one hold-gauge-release rule. Only ticks with the key down fill it. Release fires at the fraction reached, a full gauge fires by itself 0.5 s later, and a cancel spends nothing.
+- **The grammar** is the same for every class: LMB weapon, RMB class movement, F hold-gauge-release special, Ctrl smash, Space jump, Shift boost. `Intent` adds `special_held`, `special_released`, `movement_pressed`, `movement_held`, `movement_released`, `fire_released` and `cancel_pressed`. The ball turns an RMB press made during any charge into `cancel_pressed`. Sable's grapple rides RMB through the intent; `game.gd` has no RMB branch.
+- **Skill-shot geometry.** `player.indicator` (`src/movement/indicator.gd`) is player-owned and draws to VISUAL-LANGUAGE §3 and §4: class colour (never `Palette.HAZARD`), a 15% clean fill, a charcoal keyline, rounded caps, the class's rim ticks, a dashed full-charge extent and a fill that breathes on a 0.5 s period at full. `player.yours(record)` adds the colour and ticks. `set_shape(layer, record)` draws exactly the record a release commits, and `last_shape[layer]` keeps the last one drawn. `collapse(layer)` shrinks a cancelled or knocked shape into its origin in 120 ms. A record with `blocked` draws in bone, dashed, with a charcoal cross, and its release fires nothing. Hit tests forgive a hull up to `AbilityState.FORGIVENESS` (18%) past the drawn edge: combat's `in_ring()` and `in_line()` are the rule.
+- **Crowd control.** `player.crowd_control(kind, shove := Vector3.ZERO, interrupts := true) -> bool` is the one door for a stop an enemy imposes. An interrupting one force-cancels every charging gauge (publishing `gauge_cancelled(id, kind)`) and collapses the indicator; a steady pull passes `interrupts = false` so it does not wipe a charge every tick. It applies the shove (an acceleration, as `add_external_accel`) and returns true. While Rivet sprints it does neither, publishes `cc_ignored(kind)` at most every 250 ms per kind and returns false. Damage never goes through it. Its users: combat's committed-hit knock (`knock`), the Warden's pulse (`warden_pulse`) and magnet (`warden_magnet`, steady), and Brindle's tug (`brindle_tug`, steady), slag bounce (`brindle_slag`) and charge shove (`brindle_charge`). Wave 3's crowd control should use it too. The world's flood and event pushes stay on `add_external_accel`: they are terrain, not crowd control.
+- **Contact.** `src/movement/contact.gd` is the bowling-ball rule: `rebounds(weight, heft, sprinting)` and `rebound_velocity(v, normal, jump_speed)`. The ball asks `heft_of` (combat wires it to `combat.heft`) and an enemy's `weight`. A body without `weight` is never a rebound. A rebound refreshes like a stomp through `player.refresh_air()`.
+- **Enemy sight.** Combat hands chasers, lobbers and minibosses a `Sight` proxy as their target (`ball_position()`, `planar_velocity()`, `add_external_accel()`), which answers the cloak's smoke point to enemies beyond `CLOAK_SIGHT` of their reach. An enemy that needs more of the player must add it to the proxy.
+- **Bus facts and their owners.** Movement (`player_ball`) publishes `enemy_rebounded`, `vault_kicked`, `sprint_started`, `blink_used`, `arc_slammed`, `skid_smashed`, `demo_slammed`, `cc_ignored`, `dashed` (the movement burst of any class) and the slingshot's `gauge_*`. Combat publishes `enemy_pinned`, the specials' `gauge_charging`, `gauge_released` and `gauge_cancelled`, `cloak_started`, `cloak_broken`, `sticky_detonated` and `rocket_jumped`. `special_used(special_id, at)` now carries `detonation_gauge`, `overdrive_blast` or `detonation_line`.
+
+## Loot and shop (v2 W4)
+
+Build owns the items, their triggers, the run and difficulty clocks, and Moss's shop economy (DESIGN-V2 sections 5, 7 and 12). Everything below is reached through `ctx.build`.
+
+### Triggers (`src/build/triggers.gd`)
+
+- **The vocabulary is closed at twelve kinds:** `on_hit`, `on_kill`, `on_smash`, `on_rebound`, `on_vault`, `on_charge_release`, `on_cloak_break`, `on_land`, `on_speed_tier_up`, `on_pickup`, `on_damage_taken` and `timed`. A thirteenth kind is a code change. Each kind's glyph is `trg_<kind>`.
+- **Every kind reads a fact that is already published.** No other module emits anything new.
+
+  | Kind | Read from |
+  | --- | --- |
+  | `on_hit` | `enemy_struck` |
+  | `on_kill` | `enemy_killed` |
+  | `on_smash` | `slammed`, `arc_slammed`, `skid_smashed` and `demo_slammed`, at most one per tick |
+  | `on_rebound` | `enemy_rebounded` |
+  | `on_vault` | `vault_kicked` |
+  | `on_charge_release` | `gauge_released` (the amount is the fraction) |
+  | `on_cloak_break` | `cloak_broken` |
+  | `on_land` | `landed` (the amount is the impact) |
+  | `on_damage_taken` | `player_hit` |
+  | `on_pickup` | build's own scrap pickup |
+  | `on_speed_tier_up` | build's own read of `player.speed_tier()` |
+  | `timed` | the item's own clock |
+
+- **The handlers only queue.** The passes resolve in build's physics step (TADR-008).
+- **Proc coefficients.** A discrete action has a base proc of 1.0. `on_hit` and `on_kill` read the strike kind: `ram`, `stomp`, `slam` and `shell` 1.0; `arc` 0.6; `turret` and `pin` 0.5; `runner` 0.4; `synergy` 0. Build's own strikes never post `on_hit`. An item's `proc_coeff` multiplies the base.
+- **The guard.** A root commitment opens a pass and takes one draw from build's loot stream. That stream is reseeded at each stage entry and is never `ctx.rng`. Inside the pass a kind already queued or resolved is refused, so each kind fires at most once per commitment and every pass ends within twelve resolutions. Domino Wire's explicit chain is capped at `MAX_CHAIN_DEPTH` 1.
+
+### Part fields (`src/build/part_def.gd`)
+
+- **New fields:** `trigger`, `proc_coeff`, `stack_rule` (`linear`, `hyperbolic` or `capped`), `stack_cap`, `icon_category` (the `cat_` family), `element` (the `el_` glyph), `effect` (`{"do": id, ...}` from `item_effects.gd`'s closed `EFFECTS`), `charges` (slot to extra `max_charges`), `needs` and `shop_only`.
+- **Stack caps.** For linear and capped rows, `stack_cap` counts copies. For hyperbolic rows it is a value ceiling below 1. `PartDef.Stacking.value` is the one rule.
+- **The seam gate.** A part whose `needs` seam is missing is never offered. Build fills `Parts.seams` at run start.
+
+### The pool
+
+- **Rows.** `Parts.rows()` holds the 28 first catalogue rows, the 58 new rows of `items.gd` and Moss's four shop-only cells. The first two together are I2's 61-item table plus 25 older rows.
+- **Generated items.** A generated item's id is its recipe: `gen:<base>:<rarity>:<element|none>:<trigger>`. `Parts.def(id)` rebuilds it, so a generated part stacks, survives a retry and reads in the run log like any other.
+- **Rolls.** `Parts.roll` draws each slot's rarity by the weights 60/27/10/3. A slot is a generated recipe 25% of the time. It down-weights parts already offered this stage (`offered`).
+- **Class items.** `glide_vane`, `jet_vent` and `cloak_flask` go only to Kest. `sprint_cell` goes only to Rivet. `grapple_coil`, `anchor_spring` and `vault_battery` go only to Sable.
+
+### Build API additions
+
+| Call | Returns |
+| --- | --- |
+| `enemies_near(at, radius, count)` | the nearest enemies |
+| `item_hit(enemy, damage, element := "")` | strikes as `synergy`, after the weapon multiplier, and applies the element where it lands |
+| `item_procs()` | item id to procs this run |
+| `trigger_stats()` | `{passes, fired, refused, max_same_kind, leaked}` |
+| `has_perk(id)` | `lens` (hint marks name the synergy) or `par` (the par ghost) |
+| `set_modifiers({"scrapless": bool, "par": bool})` | the class screen calls it before `choose_class`; it applies at `run_started` |
+| `run_tags()`, `scrapless()` | the run's modifier tags; also on `ctx.run.get_meta("run_tags")` |
+| `clock_record()` | the clock record below |
+| `clock_paused()` | true while the ball is in Moss's bay |
+| `shop` | the shop economy below |
+
+**Scrapless.** No scrap pickup and no kill scrap. Gates, vaults and won events add no part. A gate still publishes `reward_chosen`, so the launch handshake holds.
+
+**Gate offer records** add `family`, `icon` (`cat_*`), `trigger_icon` (`trg_*` or `""`) and `element_icon` (`el_*` or `""`). A gate draws the three glyphs beside its topper and pulses when it completes a synergy. Gates and fabricators pass `set_parts(title, detail, icon)` with `obj_gate` and `obj_fabricator`.
+
+### The clock record (W1 draws it)
+
+`clock_record()` returns:
+
+```
+{run_seconds, stage_seconds, timer_icon: "res_timer",
+ difficulty: {fraction 0..1, tier 0..2, tiers 2, paused, icon: "res_difficulty"},
+ par: {on, best (seconds or null), split (stage seconds - best, frozen at the Warden break), broken},
+ tags}
+```
+
+- The difficulty schedule is the director's (45 s a tier, two tiers). `build_clock_test` fails if they drift.
+- The bar pauses while `clock_paused()`. The par timer does not.
+- `par.best` is the best `ticks_to_warden_break` for this stage in `runs.ndjson`.
+
+### Moss's shop (`ctx.build.shop`, W6 and W1)
+
+The shop is an economy with no geometry.
+
+- **Result record.** Every verb returns `{ok, reason, part_id, price, scrap, bark?}`. `reason` is one of `ok`, `cant_afford`, `sold_out`, `locked`, `capped`, `no_reroll`, `welded`, `not_held` or `closed`. `bark` is `{line_id, text, root}`.
+- **Line ids** are `moss.<beat>.<n>`, `moss.<beat>.<class>`, `moss.restart`, `moss.relent.<n>`, `moss.bark.<moment>` and `moss.remember.<key>`. The text is SOUND-STORY section 8's, word for word; `shop_lines_test` checks it.
+
+| Call (caller) | Does |
+| --- | --- |
+| `enter()` (W6, the ball enters the bay) | stocks the shelf and the hook, pauses the difficulty clock, returns the greeting line |
+| `leave()` (W6, the exit pad) | returns the leaving bark and restarts the clock |
+| `shelf_offers()` (W1) | three `{index, part_id, name, price, sold, rarity, text, icon, trigger_icon, element_icon, affordable}` |
+| `buy(index)` | spends scrap and adds the part with source `shop` |
+| `reroll_price()`, `reroll()` | one reroll per visit: 12 scrap, times 1.5 for each visit after the first |
+| `charge_offers()`, `buy_charge(slot)` | `{slot, part_id, price, cells, cap, max_charges, icon, can}` for each slot that recharges; a cell is a shop-only part, at most 2 per slot, and the slot's ceiling is 4 charges |
+| `sell_offers()`, `sell_quote(part_id)`, `sell(part_id)` | half the part's current price back; heft drops with the part |
+| `top_shelf()`, `buy_top()` | `{part_id, name, price, locked, needs_class, heft_class, lock_icon: "res_heft", sold, relented}`; locked until the heft class at entry plus one |
+| `talk()` (the key glyph by Moss) | `{beat 0..5 or 6 restart or -1 relent, beat_id, line_id, text, root, grumble, exasperation, relent, restart, loops}` |
+| `greeting_line()`, `history`, `note_death(scrap)` | the remembers-you line; `history` takes PROGRESSION's keys (`died_last_run`, `won_last_run`, `class_changed`, `skipped_visits`); `relented_before` and `neglected` come from the codex and this run |
+
+- **The loop.** Six beats, then the restart line, then fresh variations. A visit never repeats a variation until they are all used. Class lines are extra choices for that class.
+- **The relent.** Once the heft class reaches the lock, the next press relents, the hook unlocks and the codex discovers `too_heavy_for_you`.
+
+### event_kinds (`LOOT_ROWS`)
+
+These rows are for shop and item facts that are not bus signals: `shop_entered`, `shop_left`, `shop_bought`, `shop_charge`, `shop_rerolled`, `shop_sold`, `shop_refused`, `moss_beat`, `moss_relent`, `item_proc` and `par_split`. Each `sound_next` names the cue W5 is to bake.
+
+### Codex (category `build`)
+
+`codex_declarations()` now also returns `strike`, `spare`, `turkey` (the bowling score, `src/build/lanes.gd`) and `too_heavy_for_you`.
+
+### Requested shared-file changes (W4 handback)
+
+1. **`run_state.gd`.** Add `remove_part(part_id, reason)`, which removes one copy and publishes a `part_lost(part_id, reason)` fact that combat rebuilds on, then `heft_class_dropped` if the class fell. Add `refund_scrap(amount)` for the wallet only. Until then the shop removes the part itself and never sells a pattern part (`welded`).
+2. **`run_log.gd`.** Add `line["tags"] = run.get_meta("run_tags", [])` in `_write`.
+3. **World's director.** Skip advancing `stage_time` while `ctx.build.clock_paused()`.
+4. **Combat.** Add `pattern.gd` transformer rows `fan_spread` and `helix_drill`, and `extend_cloak(seconds)`.
+5. **Movement.** Add `player.set_vault_cooldown_scale(s)` and `player.set_vault_charges(n)`. Five parts wait on these seams and are not offered until they exist.
+
+### Upgrade trees (v2 W3)
+
+One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick at class select, then one at Moss's workshop after each of stages 1, 2 and 3. Each tree has 2, 4, 8 and 16 nodes by depth, 30 in all, and 16 end builds. A pick lasts the run, and a new run starts with the untouched kit.
+
+- **Where.** The run's picks are `player.tree` (`src/core/upgrade_tree.gd`, also `player.kit.tree`). The data is `src/core/trees/sable.gd`, `rivet.gd` and `kest.gd`, in heap order: node `i`'s children are `2i + 2` and `2i + 3`.
+- **Node record.** Every field below is a string unless noted.
+  - `id`.
+  - `name`: at most 3 words.
+  - `effect`: at most 8 words.
+  - `key`: `weapon`, `movement`, `special` or `smash`.
+  - `icon`: an `ab_` id.
+  - `tags`: an Array from `UpgradeTree.TAGS`.
+  - One or more ops: `swap`, `knob`, `proc`, `pattern`, `charges` or `cooldown`. The header of `upgrade_tree.gd` says what each op does.
+  - `UpgradeTree.problems(class_id)` is the validator. `tree_data_test` fails on any sentence it returns.
+- **Picking.**
+  - `offered(class_id, depth) -> Array` returns the two node records a pick chooses between. At depth 1 that is the root pair; after that it is the children of the pick one depth up. It returns `[]` for a depth not reached yet or for another class.
+  - `pick(node_id) -> bool` takes an offered node. It refuses anything that was not offered and anything past the picks opened so far.
+  - `pending()` is true while a pick is open.
+  - `path()` returns the ids picked so far.
+  - `open_checkpoint()` opens the next pick. The ball calls it on `run_started` (depth 1) and on `stage_cleared(1..3)`. When W6's bay takes over the visit, the bay calls it instead, and the one-line `stage_cleared` hook in `player_ball.setup` goes, so a visit never opens two picks.
+  - A skipped pick stays open. Taking it then offers the next depth at once.
+- **The start pick (W1).** The pair is known before the run exists: `UpgradeTree.nodes(class_id).slice(0, 2)`. Class select shows it, calls `flow.choose_class(i)`, and then calls `player.tree.pick(id)`. The depth-1 offer is already open when `choose_class` returns.
+- **Bus.**
+  - `tree_offered(class_id: String, depth: int, choices: Array)` carries the two node ids.
+  - `tree_picked(class_id: String, node_id: String, depth: int)` fires after the pick's effects are live.
+  - Both have event rows: economy, bone, diamond, with `sound_next` set to `motif_fork` and `motif_pick` for W5. Neither has HUD words; the pick UI owns the wording.
+  - `special_used` can now also carry `point_blank`.
+- **Icons.**
+  - `UpgradeTree.icon_of(class_id, node_id)` returns `{id, notch}`: the node's `ab_` glyph plus one variant notch per depth. The notch is the one VISUAL-LANGUAGE §5 asks V2 to draw (primer ruling 12).
+  - No new ids are required. V2 may later give the three slot swaps their own glyphs; proposed ids are `ab_sable_crater`, `ab_rivet_point_blank` and `ab_kest_rain`. Until then they wear their slot's glyph and notch.
+- **The director (W7).** `player.tree.branch_tags() -> PackedStringArray` is read-only and returns a copy. It lists the build's leanings in pick order. The vocabulary is `air`, `burst`, `close`, `ranged`, `mobility`, `mounted`, `sustain`, `cc_immune`, `traps` and `stealth`. Weight packs so they test the build; never hard-counter it.
+- **Items and the shop (build).**
+  - A pick changes the live ability state on its own. `AbilityState.swap` keeps the slot's `max_charges` and `cooldown_scale`, because items and picks raise the slot, not the ability in it.
+  - A tree `charges` op adds to the current cap.
+  - **Build's charge upgrades must also add** (`set_max_charges(slot, abilities.slot(slot).max_charges + 1)`) and never set an absolute count, or they erase a pick.
+- **Variants plug in by table, never by branch.**
+  - A variant is one `AbilityState.ABILITIES` row. The rest of the game reads that row's capabilities: `pattern`, `mounted`, `lob`, `augments`, `rocket`, `cloak`, `plant_discharge`, `flavour` and `spends_special`.
+  - A variant that plays differently adds one entry to the table its slot dispatches on:
+    - combat's `_specials`, keyed by the special slot's id;
+    - combat's `_actions`, keyed by proc action;
+    - the ball's `_smashes`, keyed by the smash flavour.
+  - Knobs are read at the point of use through `tree.knob(name)`: `kit.knob()` in movement, `_knob()` in combat.
+- **Mastery (later).** Alternate branches from mastery unlocks would be extra node lists offered in place of a pair. The demo ships none.
+- **Tests.** `tree_data_test`, `tree_apply_test`, `tree_play_test` and `tree_bot_test`. The play and bot tests run children at a fixed 90 fps through `tests/trees/child_runs.gd`, which gives the same ticks as real time, in parallel.
+
+## Charge and cooldown layers (coordinator, after the W3 merge)
+
+A slot's charge cap and cooldown scale take two layers: upgrade-tree picks change them directly (add to the cap, multiply the scale), and `item_effects.apply_abilities` re-applies the item layer as a delta it records on the slot (`item_charges`, `item_scale`). Nothing may set an absolute cap or scale except `AbilityState` on a new run. `tests/build_charge_layers_test.gd` holds this in both orders, through sell-back and the cap.
+
+## World and stage v2 (v2 W6)
+
+- **Signals** (`game_events.gd`, world publishes all three): `bay_entered(banked_speed)` when the cradle catches the ball; `bay_left(velocity)` when the pad fires it out or it rolls off the deck; `world_fact(kind, at)` for every contraption, terrain, layer, ride and toy fact. `kind` keys `EventKinds.WORLD_ROWS` (read with `EventKinds.world_row(kind)`), each row naming its sound id. Presentation (W5) needs listeners for all three; until then `presentation_sfx_test` lists them as unheard.
+- **Terrain** (`terrain.gd`): `height()` is the higher of the grid and every live overlay; `overlays` resets from the map's `start_overlays` on `use()`. Also `landmark_point(index)`, `layer_at(point)` ("sky", "shelf" or "undercroft"), `in_bay(point)`, `moss_point()`, `near_moss(point)` and `ground_callable(index)`. Maps may define `overlay_height(id, x, z, ground)`; the default returns -INF.
+- **Event director** (`event_director.gd`): `terrain_event(id)` returns the live `TerrainEvent` model; terrain events announce through `event_announced`, start through `event_started`, and swap through `world._swap(id)`, which logs `swap_log` rows with the call's microseconds.
+- **Bay reads**: `world.bay.inside`, `in_yard(point)`, `on_deck(point)`, `deck_y()`, `cradle_at`, `facing`. While `inside`, world stops the difficulty director, the event clock and pushes and emits pressure 0.
+- **Shop seam**: world calls `ctx.build_module().shop.enter()` on the catch and `leave()` on the way out, keeping the returned line in `world.bay_bark`. Build's own clock reads `shop.clock_paused()`.
+- **Upgrade picks**: world opens `player.tree.open_checkpoint()` on the catch, or at `stage_cleared` for a skipped bay, once per stage per run (`world._open_pick`). player_ball keeps only the `run_started` pick.
+- **Yard**: inside the yard lines world refills each slot's current charges with `abilities.grant(slot, max_charges)`. It never writes a cap or a cooldown scale (Charge and cooldown layers).
+- **Carry in calm**: the barge carry fact is applied even when `ctx.calm` is set; the thermal's lift is a world push and applies only when not calm.
+
+## v2 V3 hero assets (`src/presentation/hero_assets.gd`)
+
+`presentation.gd` creates the hook as `presentation.hero_assets` and calls `setup(ctx)`. It edits no gameplay file. It reads only these existing seams.
+
+| Owner | What the hook reads | What it adds |
+| --- | --- | --- |
+| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()` | `HeroCore` under the rolling mesh, `HeroPod` under the juice node; the greybox ball mesh is hidden |
+| `build/accretion.gd` | Each direct `MeshInstance3D` child is a chunk; its slot index is read back from `position` (`_slot(i, MAX_CHUNKS) * 1.02`) | `HeroChunk` under each chunk; the box is hidden |
+| `build/reward_gates.gd` | Each child `Node3D` is a gate; its offer is the `offers` row whose `at` matches its position; `Topper`, `Glyph<i>` sprites, `rarity_color()` | `HeroArch`, `Topper/HeroTopper`, one `HeroPlate<i>` per glyph; posts, bar, topper and heart are hidden |
+
+- **Hidden means hidden.** A placeholder keeps its node, script and transform, with `layers = 0` and shadows off. Anything that animates it (the topper's spin and pulse, the chunk pop and fling, the squash) still drives the hero child.
+- **Slots to colours.** `SLOTS` in the hook is the one table from section 9 slot names to palette roles. glb surfaces are named for their slot. Change a colour there or in `palette.gd`, never in a recipe.
+- **Shell nodes.** Each `shell_<class>.glb` is `Shell<Name>` > `Core`, `Pod` > `Dome` > `Pilot`, plus `RopeExit` (Sable) and `VaneL`/`VaneR` (Kest, hinged about Godot Z). The glbs use Godot axes, +Y up and -Z forward.
+
+**Not wired (for the coordinator after W7 merges).** `warden_clamp_base.glb` is `WardenClampBase` > `Housing`, `Tower` > `KitMount`, `JawL`, `JawR`. The beacon stands at the origin. The jaw origins sit on the vertical hinge axis at x 2.2, so rotating them about Y opens the clamp, and closed is the modelled pose. `warden_kit_{reactor,hive,mind}.glb` roots sit at `KitMount`. Each has a `WeakPoint` node, plus `Vent0..2` (reactor), `Drone0..5` (hive), and `ArmL`, `ArmR` and `Shutter0..5` (mind). Their slots are `ancient_enamel`, `ancient_light`, `bare_metal` and `rubber` (the charcoal grooves). The hook's `paint(node, {})` dresses them with no tint.
+
+**Requested seams (not blocking).**
+
+1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
+2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
+3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
+
+## Enemies v2
+
+- **The roster** (`src/combat/roster.gd`) is the one source for an enemy: `faction`, `role`, `mechanic`, `telegraph`, `holds`, `breaks`, `tag` (and `tag_next`), `hold`, `tests` and `line`, per kind. `Roster.COUNTERS` is the Fleet unlock order and `Roster.ANCIENTS` the three families. `Roster.voiced(id, motif)` turns `mind_quote` into `mind_<motif>`.
+- **Spawner kinds.** `spawn_enemy` also takes `mag_trapper`, `hooker`, `netcaster`, `bola_thrower`, `plated_brute`, `deflector`, `winch_drone`, `gyro_jammer`, `swatter`, `ramp_flipper`, `catch_trap`, `reactor_relic`, `swarm_remnant` and `mind_hand`. One `swarm_remnant` spawn brings its whole rack of six. Every one is in group `enemy`, carries `kind` and `faction`, and sees the player through `Sight`.
+- **`combat.fleet`** (`src/combat/fleet.gd`) owns `holds`, `habits`, `mind_memory` and the swarms. `build_read()` on the spawner returns `{class, habits: {habit: share}, branch_tags}` for the director.
+- **Holds** (`src/combat/holds.gd`, `fleet.holds`). A unit never touches the ball; it calls `catch(source, kind, breaks, max_seconds, shove, anchor)`, then `pull(source, accel)` each tick, and `release(source, reason)`. Both go through `player.crowd_control`, so Rivet's sprint refuses them. Tenacity: 1.8 s summed over a sliding 4 s releases every hold with the reason `tenacity` and makes `catch` refuse for 2.5 s. A player break is one of `jump`, `boost`, `smash`, `glide`, `speed`; it kicks the ball forward and refunds 0.6 s of the movement slot. `released(source_id, kind, reason)` is the node's own signal.
+- **Bus facts and their owner.** Combat publishes `hold_started(kind, at)`, `hold_broken(kind, method)`, `hold_ended(kind, reason)`, `tenacity_gained(seconds)`, `pack_arrived(faction, at, kinds)`, `shield_vaulted(at, speed)`, `vent_charging(at, seconds)`, `vent_erupted(at)`, `swarm_scattered(at, drones)`, `mind_adapted(habit, icon)` and `weak_point_opened(point_id, at, seconds)`. `kind` in the hold facts is the unit's mechanic; `faction` is `fleet`, `reactor`, `swarm` or `mind`, and `EventKinds.faction_icon(faction)` is its `fac_` icon.
+- **Packs.** The director times a pack's members on one arrival ring, so every reinforcement spawned in one physics frame is one pack; combat publishes `pack_arrived` once per faction in it. A lone chaser or lobber is not a pack.
+- **The director's inputs** (`src/world/director.gd`). World may set `director.stage` (1 to 3; 0 reads it from the threat dial) and `director.build` (the spawner's `build_read()`); both default safely, so the director works before world sets them. `KIND_NAMES` holds every spawnable reinforcement; `packs` records each pack composed.
+- **Warden family kits.** The stage Warden has `family` (`Roster.warden_family(stage)`), `family_point()` (`core`, `queen` or `lens`), `family_open()` and `braced()`. An open family point meets plating 0 through `plating_for(kind, part)`, is listed in `weak_points()`, and takes contacts near the top through `contact_part`. The lessons are unchanged.
+- **The plating dress.** `set_tint("amber")` now means "breaks now": a class-colour rim (`Enemy.rim_color`, which fleet sets from the run's class row) and the open-crack glyphs; `"slate"` means closed dark plates. The state names are kept for their callers.
+
+## Workshop UI (v2 W8)
+
+- **Where.** The node `Workshop` under the game (`src/ui/workshop.gd`, a CanvasLayer on layer 4 that processes while paused; `game.get_node("Workshop")`) owns the upgrade pick (`pick`, `tree_pick.gd`), Moss's counter (`counter`, `shop_counter.gd`), his bubble (`bubble`, `moss_bubble.gd`) and the talk key (`talk`). It reads `player.tree`, `game.build.shop`, `ctx.terrain.near_moss(point)` and `world.bay_bark`, and listens to `tree_offered`, `tree_picked`, `bay_entered`, `bay_left`, `stage_entered` (a retry closes everything) and `flow_changed` (leaving play closes everything). World is unchanged.
+- **The hold.** `game.gd` carries two one-line hooks: `_ready` adds the workshop as its child after the tuning panel, and `_input` skips its click-to-recapture while the game's meta `menu_held` is true. The workshop sets that meta while a screen is open, turns the ball's `keyboard` source off, frees the mouse through `game._capture_mouse(false)`, and for the pick holds `get_tree().paused`. It re-asserts all of it every frame and after every `flow_changed`, because game.gd writes the same state on flow changes and on P and Tab; P and Tab are swallowed while the pick is up. On release it restores the tree pause to `pause_toggled() or notes_held()`, the keyboard to `flow.in_play()` and the capture likewise.
+- **armed.** `workshop.armed` is false in test mode, so no screen opens and nothing is held unless a test sets it.
+- **The pick.** Opens deferred on `tree_offered` while in play, for `tree.path().size() + 1`. It calls `tree.pick(id)` and nothing else; a pending next depth reopens at once. `pick.chosen(index)` and `pick.later` are its signals; `workshop.open_pick()` opens a pending pick on demand (the counter's pick plate).
+- **The counter.** Opens when `should_open_counter(shop.inside, near_moss, speed)` holds (in reach, under `PULL_UP` 4 m/s, re-armed after leaving reach). It parks the ball with `player.set_frozen(true)` and releases it on leave, a retry or leaving play. `counter.acted(fact, record)` carries every verb's result record with its `LOOT_ROWS` fact; a refusal of any verb is `shop_refused`.
+- **Sound.** Shop facts play their `LOOT_ROWS` stand-in through `presentation.audio.play(fact, 0, pitch, "UI", row.sound)` when that method exists. A talk beat's pitch is its babble `root` relative to D3.
+- **Words.** The calm-screen budget is 40 words per screen, counted by `word_budget.gd` over the workshop layer. The fight HUD budget (25) is unchanged.
+- **Tests.** `ui_workshop_pick_test`, `ui_workshop_shop_test` and `ui_workshop_bay_test`; the input helper is `tests/workshop/push.gd`.
+
+## Pause menu and help (v2 W10)
+
+- **Where.** The node `PauseMenu` under the game (`src/ui/pause_menu.gd`, a CanvasLayer on layer 6 that processes while paused; `game.get_node("PauseMenu")`). It sits above the screens (5) and the workshop (4) and under the field notes (10). `is_open()`, `open()`, `close()`, `press(id)` and `row(id)` are its surface; the ids are `resume`, `restart`, `notes`, `music`, `effects` and `quit`.
+- **game.gd hooks.** There are two small hunks. `_ready` adds the pause menu after the workshop, and `_screen_key` maps H on the title to `screens.toggle_help()`. Pausing goes through the existing `toggle_pause()`, `pause_toggled()`, `hold_notes()` and `_capture_mouse()`. P and Esc in play belong to the pause menu; field notes keep Tab only.
+- **Coexistence.** It opens only when `flow.in_play()`, the game's meta `menu_held` is false and the notes are not held. On close it restores `get_tree().paused` for an open workshop pick.
+- **Audio.** `audio.set_volume(bus, level)` sets `volumes[bus]` (0 to 1; SFX also sets UI) and calls `_apply_volumes()`. The menu plays its ticks through `audio.play("flow_changed", 0, pitch, "UI")`.
+- **Settings.** `settings_store.gd` reads and writes `settings.json` in `game.storage_dir` as `{"volumes": {bus: level}}`. The per-process folder in test mode keeps tests off the player's file.
+- **Help.** `screens.toggle_help()` and `help_open()`; `button_for("help")` and `button_for("back")`. The page (`help_page.gd`) lists the `FieldNotes.CONTROLS` rows that carry `caps` (key glyph ids) and `short` (one or two words).
+- **Tests.** `ui_pause_menu_test`.
+- **Comfort rows (v3 W11).** `shake` (Screen shake) and `hitstop` (Hit-stop) sit under `effects`, drawn by `volume_row.gd`. A step calls `presentation.juice.set_comfort(id, level)` and `store.set_comfort(id, level)`; `settings.json` gains `"comfort": {id: level}`, applied at launch like the volumes. Tested by `presentation_comfort_test`.
+
+## Juice v3 (v3 W11)
+
+- **Rows.** `EventKinds.JUICE` holds how hard each fact lands, keyed by its `ROWS` kind: hit-stop bands, particle counts, camera shake, kick and punch, streak windows, the ball's pulse and the per-weapon shot feel. `EventKinds.STOP_GAP_MS` (clear time after a stop ends), `STOP_WINDOW_MS` with `STOP_WINDOW_BUDGET_MS` (60 ms per 300 ms), `STOP_BUDGET_MS` (100 ms per second) and `STOP_PER_EXTRA_HIT_MS` bound the stops. Every stop goes through `juice.request_hit_stop`, so all of them share the one budget. Presentation reads these rows; nothing else does.
+- **`near_miss(kind, at)`.** Combat's watch (`src/combat/near_miss.gd`, `ctx.spawner.near_miss`) publishes it. It reads every node in the `threat` group through its own `contains()` and `descriptor()` (`live` or `progress >= 1` means landed). It fires when the ball was inside during the warning and is outside when the threat lands, or leaves within `grace_ms` without a `player_hit`. It never changes an outcome.
+- **Read-only combat hooks.** `ctx.spawner.last_player_hit` is `{from, shove, source, frame}` for the last hit the ball took (presentation's edge flash). `ctx.spawner.sticky.stuck(at)` is the charge manager's own signal for a thrown charge biting in.
+- **Knockback by class.** `knock` in `Weapons.BASE` is a gun's shove (3 to 6 m/s); a bomb's is its row's `knock` (26) and `BURST_KNOCK`, `LINE_KNOCK`, `OVERDRIVE_KNOCK` (24 to 34); a ram's is `Augments.RAM_KNOCK` (24). The enemy's `weight` divides every shove. Tested by `combat_knockback_test`.
+- **Momentum.** Every feedback kick is camera and shell only. Hit-stop is `Engine.time_scale` through the spine. The ball's velocity changes only where the design already does it (the rocket jump). Tested by `presentation_hitstop_test` and `combat_knockback_test`.
+
+## Interact seam (v3 L3)
+
+E is interact everywhere (`design-v3/LOOP-REDESIGN.md` section 9). World owns the system (`world.interact`, `src/world/interact.gd`), its family rows (`src/world/interactables.gd`) and its devices. The spine keeps one hook.
+
+- **Routing.** The spine hook is `player.interact_claim`. World sets it to `world.interact.claims` (`claims(face_in_reach: bool) -> bool`). `player_ball._route_interact()` asks it on an E press before Sable's mount, passing `face_in_reach()` (the pylon's face test, now on the player and shared with `key_glyphs.gd`). A claimed press becomes `intent.interact_pressed` and clears `intent.mount_pressed`, so it never also plants a pylon. Three things keep E for the mount. Mounted, E always drops off. A mobility move already under way (`player.mobility_started()`: the hook in, a slam plant, the slingshot drawing) is never interrupted. A lock farther than `REACH` yields to a face Sable could mount. `intent.mount_held` is E held. `key_glyphs.gd` shows the pylon glyph only when E would mount. `hud.gd` fills the reticle's class ring with `interact.hold_fraction()`.
+- **Lock.** E locks the nearest ready device within `Interactables.LOCK_REACH` (18 m) of its `reach_point()` and inside `FACING_DEG` (60 degrees) of the camera's look. That gives a 40 m/s ball about 0.45 s. A travel device locks anywhere in its lane. The lock holds, facing or not, until the device is `RELEASE_REACH` (24 m) away, so a hold may finish after the ball has passed. While a hold runs, the held device keeps the lock. `interact.target` is this tick's lock.
+- **Consent.** Each family row's `consent` sets it. `roll`: E in the lane arms it, and it fires as the ball crosses the mouth. `hold`: E held for `HOLD_SECONDS` (0.35 s); a release or losing the lock first does nothing. `press`: E once.
+- **Families.** Each `Interactables.FAMILIES` row holds `icon`, `shape`, `color`, `accent`, `cost`, `consent`, `verb`, and the sound register: `arm`, `fire`, `won` and `lost`, each as `{sound, sound_next}`. Audio resolves each fact's cue with `Rows.heard(Interactables.sound(family, beat))`. VFX draws the family's shape and colour. `PLACEMENTS[stage]` lists each stage's devices, so the map files stay untouched.
+- **Signals** (`game_events.gd`). The interact system and its devices publish all four, and presentation hears all four.
+  - `interact_armed(family, device_id, at)` when consent is given.
+  - `interact_fired(family, device_id, at)` when the device acts.
+  - `ambush_ended(device_id, won, at)` when an altar's clock or pack ends; a won altar also calls `run.add_core("ambush", at)` first.
+  - `bet_resolved(device_id, won, stake, at)` after a crate's `run.add_core("bet", at)` times the stake, or its `run.burn_cores()`.
+- **Devices.** A device extends `src/world/device.gd`. It overrides `build`, `reach_point`, `ready_now`, `gauge` (a not-ready fill 0 to 1, or -1), `terms` (the words after the family verb), `fire`, `tick` and `stand_down`. `fire()` returns true when the device acts at once; false means the device calls `system.fired(self)` itself after its own beat. The base owns the prompt grammar, drawn through `WorldPrompt.set_interact(icon, words, key, fill)`:
+  - within 30 m, the family glyph alone;
+  - locked and ready, the E keycap, the glyph and at most `PROMPT_WORDS` (5) words, so a cost or a stake is on screen before any hold starts;
+  - not ready, the gauge round the glyph and no keycap.
+- **Luck.** `interact.luck(device_id)` returns the device's one stream for this run and stage, seeded by `luck_seed(run seed, run.run_id, stage, device_id)`. A stage restart replays it, so a restart never re-rolls a result. Another run (another `run_id`) rolls differently. A replay that restores `run_id` (the run log keeps it) matches. It never touches `ctx.rng`.
+- **Economy rules** (review findings 7 and 10).
+  - A bet is one committed wager per device per stage, and its stake shows on the locked prompt before the hold. A restart replays the same roll.
+  - A family whose `cost` is `scrap` (allies) charges wallet scrap through `run.spend_scrap()`, which keeps mass, so paying never shrinks heft. Only a telegraphed theft (`run.lose_scrap`) takes mass.
+  - A "call the Warden" device (fights, not built) must keep a real cost at the clock's cap. When the clock can jump no further, the call still costs something else, for example this stage's cores.
+
+### How the lift (writer L1) and later travel devices adopt roll-through
+
+1. Build the device once, parented under its stage's geometry root, with `world.interact.travel(id, mouth, heading, on_fire, parent)`. It returns a `TravelDevice` (`src/world/travel_device.gd`) that is registered for good. It sleeps while that stage's root is parked (it is live only while visible in the tree), so it needs no per-stage registration. With no `parent` it belongs to the current stage and goes at the next stage change.
+2. `on_fire(ball: Vector3, velocity: Vector3)` is the owner's launch, for example `world.ride = RideRail.arc(...)`. The system calls it on the tick an armed ball crosses the mouth, then publishes `interact_fired("travel", id, at)`. A device that adopts consent must not also fire on mouth contact alone.
+   - The ride banks the ball's speed and gives it back, never less. `device.banked` is the planar speed the ball crossed with; pass it as `RideRail.arc()`'s `planar_in`. The ride's release returns that speed or the ride's floor, whichever is higher (`ride_rail.gd`). A fixed 85% return is not allowed.
+3. Two fields are optional. `device.ready_check` is a Callable returning bool; a not-ready device shows its gauge and no keycap. `device.destination` sets the words after "Ride: to", 5 words at most.
+4. `RollThrough` (`src/world/roll_through.gd`) is the pure model a custom device may carry in `roll` instead. Its fields are `mouth`, `heading`, `length` (12 m), `half_width` (5 m) and `mouth_radius` (3 m). Its calls are `in_lane(p)`, `arm()` and `step(from, to) -> bool`. It tests the crossing on the tick's segment, so a ball at any speed fires. A ball that leaves the lane or crosses wide disarms it at no cost.
+
+**Tests.** `world_interact_test` covers routing, a far lock yielding to a face, a started move keeping E, a lock at 40 m/s finishing after the pass, tap and hold, roll-through, a missed mouth and prompt words. `world_ambush_test`, `world_cache_test` and `world_bet_test` cover the devices; the bet test includes one wager per crate, the stake on the prompt, and a restart replaying the roll.
+
+## Reward ceremony v3 (v3 W13)
+
+- **Rows.** `EventKinds.LOOT_ROWS` holds `reward_common`, `reward_rare`, `reward_reveal`, `reward_ceremony` and `reward_payoff`, each with its tier, colour, sound, pause rule (`never` or `calm`) and timings. `REWARD_TIER_BY_RARITY` is the ladder from a part's rarity to its tier, `CEREMONY_SOURCES` lists the `part_gained` sources that are always a ceremony, and `REWARD_RUNGS` sets each rarity's bell on the reward ladder.
+- **One rarity read.** `RewardCeremony.rarity_of(part_id)` reads the part row's `rarity`, and `tier_of(part_id, context)` maps it. No other code picks a tier per part id.
+- **Sources.** A module that grants a ceremonial find calls `run.add_part(id, source)` with a source from `CEREMONY_SOURCES` (`cache`, `cage`, `warden` and `evolution` are reserved for sources not yet on this base). Nothing else is needed.
+- **Reads, never decides.** The ceremony reads `part_gained`, the payoff facts and `build.item_procs()`. It pauses the tree only when calm, sets `menu_held` while it holds, and hands back the ball's exact velocity. `presentation.ceremony.pause_armed` is off in test mode.
+- **Audio.** `audio.stop(sound)` cuts every SFX voice of a sound (a skipped build). Tested by `presentation_ceremony_test`.

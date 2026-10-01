@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: retry and replay must take under one second)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

@@ -41,6 +41,10 @@ signal landed(impact: float)
 signal slammed(at: Vector3, strength: float, flatness: float)
 signal grapple_fired(anchor: Vector3)
 signal grapple_released
+# The harpoon (player_ball.gd): a line bitten into an enemy, and a committed haul landing on
+# one, at the speed the line closed at.
+signal harpoon_bit(enemy: Node3D, at: Vector3)
+signal harpoon_smashed(enemy: Node3D, at: Vector3, speed: float)
 signal mounted(at: Vector3, banked_speed: float)
 signal dismounted(velocity: Vector3)
 
@@ -71,6 +75,87 @@ signal boss_phase_changed(phase: int, name: String)
 signal boss_attack_telegraphed(attack_id: String, seconds_until: float)
 signal boss_weak_point_hit(point_id: String)
 signal boss_defeated
+
+# v2 W3 characters: the class abilities and the shared bowling-ball contact. Movement
+# (player_ball) emits the contact, vault, sprint, blink, smash-flavour, slingshot-gauge
+# and cc_ignored facts; combat emits pins, the specials' gauges, the cloak, stickies
+# and rocket jumps. ability_id is the slot's ability id, or "slingshot".
+signal enemy_rebounded(enemy: Node3D, speed: float)
+signal enemy_pinned(enemy: Node3D, damage: float)
+signal vault_kicked(at: Vector3, speed: float)
+signal gauge_charging(ability_id: String)
+signal gauge_released(ability_id: String, fraction: float)
+signal gauge_cancelled(ability_id: String, reason: String)
+signal sprint_started(direction: Vector3)
+signal cc_ignored(kind: String)
+signal cloak_started(seconds: float)
+signal cloak_broken(reason: String)
+signal sticky_detonated(at: Vector3, crit: bool)
+signal rocket_jumped(at: Vector3, speed: float)
+signal blink_used(from: Vector3, to: Vector3)
+signal arc_slammed(at: Vector3, faces: int)
+signal skid_smashed(at: Vector3, hits: int)
+signal demo_slammed(at: Vector3)
+# The upgrade tree (upgrade_tree.gd, emitted by the player's tree): a pick opened with
+# its two node ids, and a pick taken.
+signal tree_offered(class_id: String, depth: int, choices: Array)
+signal tree_picked(class_id: String, node_id: String, depth: int)
+
+# v2 W6 world. Moss's bay and the gorge's contraptions (world publishes all three).
+# bay_entered fires when the cradle catches the ball and banks its speed; bay_left
+# when the exit pad fires it back out, or it rolls off the deck. world_fact carries every contraption, terrain, layer, ride and toy fact as a
+# kind that keys event_kinds.WORLD_ROWS, so one signal serves the whole family.
+signal bay_entered(banked_speed: float)
+signal bay_left(velocity: Vector3)
+signal world_fact(kind: String, at: Vector3)
+
+# v2 W7 enemies: the counters' holds and tenacity, pack arrivals, and the ancients'
+# facts. Combat emits every one (src/combat/holds.gd, fleet.gd and the units). kind is
+# the holding unit's mechanic (roster.gd); method is the player's own action that broke
+# it ("jump", "boost", "smash", "glide", "speed"); faction is "fleet", "reactor",
+# "swarm" or "mind"; point_id names a family Warden's weak point.
+signal hold_started(kind: String, at: Vector3)
+signal hold_broken(kind: String, method: String)
+signal hold_ended(kind: String, reason: String)
+signal tenacity_gained(seconds: float)
+signal pack_arrived(faction: String, at: Vector3, kinds: Array)
+signal shield_vaulted(at: Vector3, speed: float)
+signal vent_charging(at: Vector3, seconds: float)
+signal vent_erupted(at: Vector3)
+signal swarm_scattered(at: Vector3, drones: int)
+signal mind_adapted(habit: String, icon: String)
+signal weak_point_opened(point_id: String, at: Vector3, seconds: float)
+
+# v3 W11 juice. Combat's near-miss watch (src/combat/near_miss.gd): the ball was inside
+# a committed threat while it warned and outside it when it landed, or left within the
+# grace unhurt. kind is the threat's type kind (threat_instant, threat_lane, ...).
+signal near_miss(kind: String, at: Vector3)
+# v3 interact (LOOP-REDESIGN section 9; world's interact system and its devices publish
+# all four). family keys world/interactables.gd FAMILIES and device_id names the device.
+# interact_armed: consent given (E in a travel lane, a hold completed, a press).
+# interact_fired: the device acted (a launch, a pack arriving, a chest opening, a bet's
+# needle stopping). ambush_ended: an altar's pack cleared in time (won) or not.
+# bet_resolved: a double-or-nothing landed; stake is the cores it put up.
+signal interact_armed(family: String, device_id: String, at: Vector3)
+signal interact_fired(family: String, device_id: String, at: Vector3)
+signal ambush_ended(device_id: String, won: bool, at: Vector3)
+signal bet_resolved(device_id: String, won: bool, stake: int, at: Vector3)
+# v3 fun lab, laps mode (loop_mode.gd, world's lap_course.gd). World publishes the
+# course: the bell as the ball first rolls into the Warden's ring, each checkpoint ring
+# passed (index 0 to count - 1, in order), and each lap closed with its time. Flow
+# publishes warden_stripped when a lap past the required ones takes plating off the
+# Warden; plating is what is left.
+signal lap_bell_rung(at: Vector3)
+signal lap_ring_passed(index: int, count: int, at: Vector3)
+signal lap_completed(lap: int, required: int, seconds: float)
+signal warden_stripped(plating: float, at: Vector3)
+# v3 fun lab, the drop mode's Warden (combat; emitted by warden.gd and warden_drop.gd).
+# warden_state_changed carries the five states (closed, telegraph, open, recover,
+# punish) for the look to dress; the other three are the drop fight's reads.
+signal warden_state_changed(state: String, at: Vector3)
+signal warden_window_held(at: Vector3, seconds_left: float)
+signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
+signal warden_pulse_dodged(at: Vector3, near: bool)
 
 
 static func signal_names() -> PackedStringArray:

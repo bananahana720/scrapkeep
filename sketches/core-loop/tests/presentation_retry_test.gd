@@ -9,7 +9,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #   the boss track (drums, bass, lead), not the keys alone for the whole fight.
 # - Arena entry clears the stage's overcharge pad.
 # - Hit-stop reads the plating the hit resolved against: a stomp on a weak-point cap
-#   (plating 0 there, 50 on the body) never freezes; a body break-through does.
+#   (plating 0 there, 50 on the body) freezes harder than a body break-through (v3 W11:
+#   weak points get the crit's stop).
 
 class Capped extends Node3D:
 	var part_hit := "cap"
@@ -85,18 +86,18 @@ func _process(_delta: float) -> bool:
 			var resolver: Callable = juice.resolve_of
 			var capped := Capped.new()
 			_game.add_child(capped)
-			juice._last_stop_ms = -100000
-			var before: int = juice.hit_stop_log.size()
-			_game.events.enemy_struck.emit(capped, "stomp", 400.0)
-			var cap_stops: int = juice.hit_stop_log.size() - before
-			juice._last_stop_ms = -100000
+			juice.reset_stops()
+			_game.events.enemy_struck.emit(capped, "stomp", 40.0)
+			juice.flush()
+			var cap_stop: float = juice.hit_stop_log.back()[0]
+			juice.reset_stops()
 			capped.part_hit = ""
-			var body: Dictionary = resolver.call(capped, "stomp", 400.0) if resolver.is_valid() else {}
-			before = juice.hit_stop_log.size()
-			_game.events.enemy_struck.emit(capped, "stomp", 400.0)
-			var body_stops: int = juice.hit_stop_log.size() - before
-			var ok: bool = resolver.is_valid() and cap_stops == 0 and (body_stops == 1 if bool(body.get("full", false)) else body_stops == 0)
-			_check("weak points never freeze", ok, "a stomp on the cap (plating 0 where it landed, 50 on the body) asks for %d stops; the body hit (full %s) asks for %d" % [cap_stops, body.get("full", "?"), body_stops])
+			var body: Dictionary = resolver.call(capped, "stomp", 40.0) if resolver.is_valid() else {}
+			_game.events.enemy_struck.emit(capped, "stomp", 40.0)
+			juice.flush()
+			var body_stop: float = juice.hit_stop_log.back()[0]
+			var ok: bool = resolver.is_valid() and bool(body.get("full", false)) and cap_stop > body_stop and body_stop > 0.0
+			_check("weak points freeze harder", ok, "a stomp on the cap (plating 0 where it landed, 50 on the body) asks for a %.0f ms stop; the body break-through (full %s) %.0f ms" % [cap_stop * 1000.0, body.get("full", "?"), body_stop * 1000.0])
 			_game.free()
 			_game = null
 			_step = 4

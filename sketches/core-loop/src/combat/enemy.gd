@@ -2,6 +2,8 @@ extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -21,17 +23,42 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
-# Plating reads: amber when your punch beats it, slate when it does not.
+# The plating dress (primer ruling 6, 2026-09-27): "breaks now" is a rim in the class
+# colour with an open-crack glyph; "not yet" is closed plates with no rim, and the
+# clank ladder already says how close you were. Amber belongs to Kest and the rare
+# rarity and slate vanishes on ancient petrol, so neither reads plating any more. The
+# tint_state names ("amber" for now, "slate" for not yet) stay as the state's names.
 const AMBER := Palette.AMBER
 const SLATE := Color("5d6b78")
+const PLATE_CLOSED := Color("3b403d")
 const TINT_ENERGY := 0.9
 const PLATE_GLOW_AMBER := 1.8
-const PLATE_GLOW_SLATE := 0.45
+const PLATE_GLOW_SLATE := 0.0
+# The class colour "now" is drawn in: combat sets it when a run starts.
+static var rim_color := Palette.ARC
 
 signal hit_player(amount: float, shove: Vector3)
 signal died(at: Vector3, scrap_value: int)
+# Attack facts (DESIGN-NOTES, "Attack facts, enemies"): one read-only fact per phase
+# change of a mapped enemy's attack. It decides nothing and owns no clock; it reports
+# what the existing state machine and its committed telegraph already did.
+signal attack_phase(facts: Dictionary)
+
+const PHASE_WINDUP := "windup"
+const PHASE_STRIKE := "strike"
+const PHASE_RECOVER := "recover"
+const PHASE_CANCELLED := "cancelled"
+# Enemies whose attack has no clean owner among these files, so they publish nothing.
+const FACTS_UNMAPPED := {
+	"swarm_remnant": "the formation lane is committed and driven by swarm.gd, not by the remnant's own state",
+}
+# Instance ids are unique for the process; nothing reads their order.
+static var _attack_serial := 0
 
 var kind := "chaser"
+# The faction whose timbre and arrival cue this enemy carries (roster.gd): "fleet", or
+# an ancient family, "reactor", "swarm" or "mind".
+var faction := "fleet"
 var target
 var terrain
 var world_root: Node3D
@@ -41,6 +68,9 @@ var hp := 40.0
 var max_hp := 40.0
 var plating := 0.0
 var scrap_value := 3
+# Who is dealing the hit that may kill: "" for every ordinary source, "spark" while a wear
+# patch resolves (wear_trail sets it around take_damage). The died handler passes it on.
+var last_damage_source := ""
 var weight := 1.0
 var radius := 1.0
 var half_height := 1.5
@@ -57,6 +87,10 @@ var _base_color := Palette.RUST
 var _telegraph: Node3D
 # Extra materials a plated enemy recolours with its tint (armour plates, shells).
 var _tint_materials: Array = []
+# Open-crack glyphs a plated enemy shows only while your punch breaks it now.
+var _cracks: Array = []
+# The open attack instance, or {} between attacks: instance, row, phase, managed, geometry, progress.
+var _atk := {}
 
 
 # Subclasses call this first from their own setup, then build their body.
@@ -72,6 +106,8 @@ func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_r
 	set_collision_layer_value(3, true)
 	set_collision_mask_value(1, true)
 	floor_max_angle = deg_to_rad(60.0)
+	if has_signal("released"):
+		connect("released", _facts_on_released)
 
 
 func _set_health(value: float) -> void:
@@ -87,6 +123,18 @@ func knock(direction: Vector3, force: float) -> void:
 	if push.length() > Vector3(_knock.x, 0.0, _knock.z).length():
 		_knock = Vector3(push.x, _knock.y, push.z)
 	_knock.y = maxf(_knock.y, maxf(push.y, force * 0.2 / weight))
+
+
+# The harpoon's tow: a winch's pull on this body, refreshed every tick while the line is
+# taut. It sets the planar knock and never calls knock(), so it counts no shove and the
+# pin rule does not re-key on it every tick.
+func tow(velocity: Vector3) -> void:
+	if _dead:
+		return
+	var pull := Vector3(velocity.x, 0.0, velocity.z)
+	if pull.length() > _knocked_speed():
+		_knock.x = pull.x
+		_knock.z = pull.z
 
 
 func flash() -> void:
@@ -135,9 +183,12 @@ func set_tint(state: String) -> void:
 	if state == tint_state:
 		return
 	tint_state = state
-	var color := AMBER if state == "amber" else SLATE
+	var now := state == "amber"
 	for mat in _tint_materials:
-		_paint_plate(mat as StandardMaterial3D, color, state == "amber")
+		_paint_plate(mat as StandardMaterial3D, rim_color if now else PLATE_CLOSED, now)
+	for crack in _cracks:
+		if is_instance_valid(crack):
+			crack.visible = now
 	if _flash <= 0.0:
 		_apply_rest_look()
 
@@ -147,15 +198,18 @@ func damage_scale() -> float:
 	return 1.0
 
 
-# Resolves one hit's damage, already decided by strike(). Returns the damage dealt.
+# Resolves one hit's damage, already decided by strike(). Returns the HP actually
+# removed, clamped to what was left (M0's delivered-damage ledger reads this, not the
+# raw amount, so overkill is clamped at the one place hp actually changes).
 func take_damage(amount: float) -> float:
 	if _dead:
 		return 0.0
+	var removed := minf(amount, hp)
 	hp -= amount
 	flash()
 	if hp <= 0.0:
 		_die()
-	return amount
+	return removed
 
 
 func telegraph() -> Node3D:
@@ -167,6 +221,7 @@ func telegraph() -> Node3D:
 # visual belongs to presentation, reading enemy_killed; this node is gone at frame end.
 func _die() -> void:
 	_dead = true
+	_facts_end(true)
 	collision_layer = 0
 	collision_mask = 0
 	_clear_telegraph()
@@ -175,24 +230,28 @@ func _die() -> void:
 
 
 func _exit_tree() -> void:
+	_facts_end(true)
 	_clear_telegraph()
 
 
 func _clear_telegraph() -> void:
+	_facts_end(false)
 	if is_instance_valid(_telegraph):
 		_telegraph.queue_free()
 	_telegraph = null
 
 
-func _commit_ring(at: Vector3, ring_radius: float, reach := 3.5) -> Node3D:
+func _commit_ring(threat_type: int, at: Vector3, ring_radius: float, reach := 3.5, tint := Palette.HAZARD) -> Node3D:
 	_clear_telegraph()
-	_telegraph = Telegraph.ring(world_root, terrain, at, ring_radius, reach)
+	_telegraph = Telegraph.ring(world_root, terrain, threat_type, at, ring_radius, reach, tint)
+	_facts_begin(_telegraph)
 	return _telegraph
 
 
-func _commit_lane(from: Vector3, heading: Vector3, lane_length: float, lane_width: float, reach := 3.5) -> Node3D:
+func _commit_lane(threat_type: int, from: Vector3, heading: Vector3, lane_length: float, lane_width: float, reach := 3.5) -> Node3D:
 	_clear_telegraph()
-	_telegraph = Telegraph.lane(world_root, terrain, from, heading, lane_length, lane_width, reach)
+	_telegraph = Telegraph.lane(world_root, terrain, threat_type, from, heading, lane_length, lane_width, reach)
+	_facts_begin(_telegraph)
 	return _telegraph
 
 
@@ -265,8 +324,8 @@ func _apply_rest_look() -> void:
 	if tint_state == "":
 		_material.emission_enabled = false
 		return
-	_material.emission_enabled = true
-	_material.emission = AMBER if tint_state == "amber" else SLATE
+	_material.emission_enabled = tint_state == "amber"
+	_material.emission = rim_color
 	_material.emission_energy_multiplier = TINT_ENERGY
 
 
@@ -302,18 +361,184 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 
 # A tinted material for a plating mesh, registered so set_tint recolours it.
 func _plate_material() -> StandardMaterial3D:
-	var mat := Palette.solid(SLATE)
+	var mat := Palette.solid(PLATE_CLOSED)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
-	_paint_plate(mat, SLATE, false)
+	_paint_plate(mat, PLATE_CLOSED, false)
 	_tint_materials.append(mat)
 	return mat
 
 
 # Plating carries its read in light, not just paint, so it survives distance and shade:
-# amber burns bright (your punch breaks through), slate glows dull (not yet).
+# the class-colour rim burns (your punch breaks through now); closed plates stay dark.
 static func _paint_plate(mat: StandardMaterial3D, color: Color, beatable: bool) -> void:
-	mat.albedo_color = color
-	mat.emission_enabled = true
+	mat.albedo_color = color.darkened(0.35) if beatable else color
+	mat.emission_enabled = beatable
 	mat.emission = color
 	mat.emission_energy_multiplier = PLATE_GLOW_AMBER if beatable else PLATE_GLOW_SLATE
+
+
+# An open-crack glyph on a plate: a lit zigzag in the class colour, shown only while
+# the plate breaks now. Visual only; parented to the plate so it moves with it.
+func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
+	var glyph := Node3D.new()
+	glyph.position = at
+	var mat := Palette.unshaded(rim_color)
+	for i in 3:
+		var stroke := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.09, size * 0.45, 0.06)
+		stroke.mesh = box
+		stroke.material_override = mat
+		stroke.position = Vector3((i - 1) * size * 0.18, (1 - i) * size * 0.28, 0.0)
+		stroke.rotation.z = 0.6 if i % 2 == 0 else -0.6
+		glyph.add_child(stroke)
+	glyph.visible = tint_state == "amber"
+	parent.add_child(glyph)
+	_cracks.append(glyph)
+	return glyph
+
+
+# --- Attack facts ---------------------------------------------------------------------
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PHYSICS_PROCESS:
+		_facts_poll()
+
+
+# The open attack as a fact, with the geometry and progress it has right now; {} when
+# this enemy is between attacks or unmapped.
+func attack_facts() -> Dictionary:
+	if _atk.is_empty():
+		return {}
+	return _facts_dict(String(_atk["phase"]))
+
+
+# The row an attack of this enemy reads (ATTACK_ROWS): its roster row, chosen by lane or
+# ring when the owner has two (the miniboss). "" for an unmapped enemy.
+func _facts_row(is_lane: bool) -> String:
+	if FACTS_UNMAPPED.has(kind):
+		return ""
+	var found: Array = []
+	for id in EventKinds.ATTACK_ROWS:
+		var row: Dictionary = EventKinds.ATTACK_ROWS[id]
+		if row["group"] == "enemy" and row["owner_kind"] == "roster" and row["owner"] == kind:
+			found.append(id)
+	if found.size() <= 1:
+		return "" if found.is_empty() else found[0]
+	for id in found:
+		if (EventKinds.ATTACK_ROWS[id]["threat"] == "threat_lane") == is_lane:
+			return id
+	return ""
+
+
+func _facts_begin(tele: Node3D, managed := false) -> void:
+	_facts_end(false)
+	var row := _facts_row(tele.shape == Telegraph.Shape.LANE)
+	if row == "":
+		return
+	_attack_serial += 1
+	_atk = {"instance": _attack_serial, "row": row, "phase": PHASE_WINDUP, "managed": managed, "tele": tele,
+		"geometry": tele.descriptor(), "progress": tele.progress}
+	attack_phase.emit(_facts_dict(PHASE_WINDUP))
+
+
+# A counter drives its own phases: it takes over an instance the commit opened, or opens
+# one for a telegraph it set directly (the swatter's wedge).
+func _facts_manage(tele: Node3D) -> void:
+	if _atk.is_empty():
+		_facts_begin(tele, true)
+	else:
+		_atk["managed"] = true
+
+
+func _facts_phase(phase: String) -> void:
+	if _atk.is_empty() or _atk["phase"] == phase:
+		return
+	_facts_refresh()
+	_atk["phase"] = phase
+	attack_phase.emit(_facts_dict(phase))
+
+
+# Closes the open instance. A wind-up that never reached its strike, and any death or
+# removal, is cancelled; an attack that struck ends in recover.
+func _facts_end(cancel: bool) -> void:
+	if _atk.is_empty():
+		return
+	if not cancel and not _dead:
+		_facts_poll()
+	var closing := PHASE_CANCELLED if (cancel or _dead or _atk["phase"] == PHASE_WINDUP) else PHASE_RECOVER
+	_facts_refresh()
+	var facts := _facts_dict(closing)
+	_atk = {}
+	attack_phase.emit(facts)
+
+
+func _facts_refresh() -> void:
+	var tele = _atk.get("tele")
+	if tele != null and is_instance_valid(tele):
+		_atk["geometry"] = tele.descriptor()
+		_atk["progress"] = tele.progress
+
+
+func _facts_dict(phase: String) -> Dictionary:
+	if String(_atk["phase"]) == phase:
+		_facts_refresh()
+	var geometry: Dictionary = _atk["geometry"]
+	return {"instance": _atk["instance"], "row": _atk["row"], "owner": kind, "phase": phase,
+		"committed": not geometry.is_empty(), "progress": _atk["progress"], "geometry": geometry.duplicate(),
+		"at": global_position}
+
+
+func _facts_poll() -> void:
+	if _dead:
+		return
+	if kind == "lobber":
+		_facts_poll_lobber()
+		return
+	if _atk.is_empty() or _atk["managed"] or _atk["phase"] != PHASE_WINDUP:
+		return
+	var tele = _atk.get("tele")
+	if tele != null and is_instance_valid(tele) and tele.progress >= 1.0:
+		_facts_phase(PHASE_STRIKE)
+
+
+# The lobber has no telegraph until release, so its wind-up is its public charge, and
+# its aim stays uncommitted (empty geometry) until released.
+func _facts_poll_lobber() -> void:
+	var charge: float = get("charge")
+	if _atk.is_empty():
+		if charge > 0.0 and _in_play():
+			_facts_begin_lobber(charge)
+	elif _atk["phase"] == PHASE_WINDUP:
+		if charge <= 0.0:
+			_facts_end(true)
+		else:
+			_atk["progress"] = clampf(charge, 0.0, 1.0)
+
+
+func _facts_begin_lobber(charge: float) -> void:
+	var row := _facts_row(false)
+	if row == "":
+		return
+	_attack_serial += 1
+	_atk = {"instance": _attack_serial, "row": row, "phase": PHASE_WINDUP, "managed": true, "tele": null,
+		"geometry": {}, "progress": clampf(charge, 0.0, 1.0)}
+	attack_phase.emit(_facts_dict(PHASE_WINDUP))
+
+
+# The release is the strike. The lobber hands over the descriptor of the ring its shell
+# just committed (the shell's own Telegraph builds it), so the strike is committed with
+# that geometry; then recover in the same tick, since the shell's flight belongs to the
+# projectile. An empty ring (no shell was made) leaves the strike uncommitted.
+func _facts_on_released(ring: Dictionary) -> void:
+	if _dead:
+		return
+	if _atk.is_empty():
+		_facts_begin_lobber(1.0)
+	if _atk.is_empty():
+		return
+	_atk["progress"] = 0.0
+	_atk["geometry"] = ring.duplicate()
+	_facts_phase(PHASE_STRIKE)
+	_facts_end(false)

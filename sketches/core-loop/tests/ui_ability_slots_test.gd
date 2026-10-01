@@ -1,0 +1,126 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const AbilitySlots := preload("res://src/ui/ability_slots.gd")
+const AbilityBar := preload("res://src/ui/ability_bar.gd")
+const Icons := preload("res://src/ui/icons.gd")
+
+# The ability bar reads W3's published slots (player.abilities.slots()) through the UI's
+# normaliser (CONTRACTS, Ability slots):
+#   - each pilot's four slots, in bar order, carry that pilot's ab_ icons (all Icons ids)
+#     and key glyph ids, with every field well formed;
+#   - Rivet's held F makes the special active and fills its gauge, which the HUD hands
+#     to the reticle ring; letting go fires it and puts the slot to cooling;
+#   - a malformed record empties the bar instead of drawing it;
+#   - a slot whose cooldown ends swells once, and the pips and swell wear the class shape.
+
+const PILOTS := ["sable", "rivet", "kest"]
+const KEYS := ["key_lmb", "key_rmb", "key_f", "key_ctrl"]
+const CHARGE_TICKS := 45
+
+var _game
+var _source
+var _failures := 0
+var _phase := "boot"
+var _wait := 0
+var _class := 0
+var _adapter := AbilitySlots.new()
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+
+
+func _report(label: String, ok: bool, detail: String) -> void:
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _physics_process(_delta: float) -> bool:
+	if _game.flow == null:
+		return false
+	_wait += 1
+	match _phase:
+		"boot":
+			_game.ctx.calm = true
+			_source = Intent.Scripted.new()
+			_game.player.source = _source
+			_game.flow.press_start()
+			_game.flow.choose_class(_class)
+			_phase = "pilot"
+			_wait = 0
+		"pilot":
+			if _wait == 20:
+				var list: Array = _adapter.slots(_game)
+				var pilot: String = PILOTS[_class]
+				var want := ["ab_%s_weapon" % pilot, "ab_%s_move" % pilot, "ab_%s_special" % pilot, "ab_%s_smash" % pilot]
+				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == KEYS
+						and want.all(func(id): return Icons.has(id)),
+					"ids %s icons %s keys %s states %s" % [_field(list, "id"), _field(list, "icon"), _field(list, "key"), _field(list, "state")])
+				_class += 1
+				_game.run.damage(99999.0, "test")
+				_game.flow.open_class_select()
+				if _class < PILOTS.size():
+					_game.flow.choose_class(_class)
+				else:
+					_game.flow.choose_class(1)
+					_phase = "rivet"
+				_wait = 0
+		"rivet":
+			if _wait == 20:
+				_source.press["special_pressed"] = true
+				_source.hold["special_held"] = true
+			if _wait == 20 + CHARGE_TICKS:
+				var list: Array = _adapter.slots(_game)
+				var gauge: float = AbilitySlots.gauge_of(list)
+				var ring: float = _game.hud.reticle.gauge
+				_report("charging", list[2]["state"] == "active" and gauge > 0.2 and gauge < 1.0 and absf(ring - gauge) < 0.05,
+					"F held %d ticks: special %s, gauge %.2f, reticle ring %.2f" % [CHARGE_TICKS, list[2]["state"], gauge, ring])
+				_source.hold.erase("special_held")
+			if _wait == 30 + CHARGE_TICKS:
+				var list: Array = _adapter.slots(_game)
+				var special: Dictionary = list[2]
+				_report("released", special["state"] == "cooling" and special["cooldown_frac"] > 0.0 and special["charges"] == 0
+						and special["gauge"] == 0.0 and _game.hud.reticle.gauge == 0.0,
+					"after the release: special %s at %.2f with %d charge, gauge %.2f, reticle ring %.2f"
+						% [special["state"], special["cooldown_frac"], special["charges"], special["gauge"], _game.hud.reticle.gauge])
+				_check_malformed()
+				_check_pulse()
+				print("ui_ability_slots_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+				quit(0 if _failures == 0 else 1)
+				return true
+	return false
+
+
+func _check_malformed() -> void:
+	var def = _game.run.class_def
+	var good: Dictionary = AbilitySlots.normalized({"slot": "special", "id": "overdrive_blast", "icon": "blast_chevron", "key": "F",
+		"cooldown_frac": 0.5, "charges": 0, "max_charges": 2, "state": "cooling", "gauge": 0.0}, def)
+	var bad: Dictionary = AbilitySlots.normalized({"slot": "special", "id": "overdrive_blast", "state": "bogus"}, def)
+	_report("normalised", good["icon"] == "ab_rivet_special" and good["key"] == "key_f" and AbilitySlots.valid([good])
+			and not AbilitySlots.valid([good, bad]) and not AbilitySlots.valid([]),
+		"W3's icon blast_chevron reads as %s and key F as %s; a record missing fields fails validation" % [good["icon"], good["key"]])
+
+
+func _check_pulse() -> void:
+	var bar := AbilityBar.new()
+	root.add_child(bar)
+	bar.update_slots([AbilitySlots.slot("overdrive_blast", "ab_rivet_special", "key_f", 0.4, 0, 1, "cooling")], Color.WHITE, "chevron")
+	var before: float = bar.pulse_left("overdrive_blast")
+	bar.update_slots([AbilitySlots.slot("overdrive_blast", "ab_rivet_special", "key_f", 0.0, 1, 1, "ready")], Color.WHITE, "chevron")
+	var after: float = bar.pulse_left("overdrive_blast")
+	bar.update_slots([AbilitySlots.slot("shockwave_skid", "ab_rivet_smash", "key_ctrl", 0.0, 1, 1, "unavailable")], Color.WHITE, "chevron")
+	bar.update_slots([AbilitySlots.slot("shockwave_skid", "ab_rivet_smash", "key_ctrl", 0.0, 1, 1, "ready")], Color.WHITE, "chevron")
+	var smash: float = bar.pulse_left("shockwave_skid")
+	var motif: String = bar.motif
+	bar.free()
+	_report("ready pulse", before == 0.0 and after > 0.0 and smash == 0.0 and motif == "chevron",
+		"a cooldown ending swells for %.2f s; leaving the ground does not (%.2f); the bar wears the %s motif" % [after, smash, motif])
+
+
+static func _field(list: Array, key: String) -> Array:
+	return list.map(func(s): return s.get(key))

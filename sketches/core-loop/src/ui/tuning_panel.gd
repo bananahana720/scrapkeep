@@ -59,6 +59,14 @@ func setup(tuning_ref) -> void:
 	_refresh()
 
 
+func _process(_delta: float) -> void:
+	if not visible or tuning == null:
+		return
+	for key in _rows:
+		_rows[key]["slider"].set_value_no_signal(tuning.base(key))
+	_refresh()
+
+
 func _on_changed(value: float, key: String) -> void:
 	tuning.set_value(key, value)
 	_refresh()
@@ -74,7 +82,9 @@ func _on_reset() -> void:
 func _refresh() -> void:
 	for key in _rows:
 		var spec: Dictionary = _rows[key]["spec"]
-		if spec.get("toggle", false):
+		if spec.has("options"):
+			_rows[key]["label"].text = "%s: %s (hold R to apply)" % [spec["label"], tuning.option(key)]
+		elif spec.get("toggle", false):
 			_rows[key]["label"].text = "%s: %s" % [spec["label"], "on" if tuning.on(key) else "off"]
 		else:
 			_rows[key]["label"].text = "%s: %.2f" % [spec["label"], tuning.base(key)]

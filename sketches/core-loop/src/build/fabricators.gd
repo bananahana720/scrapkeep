@@ -202,7 +202,7 @@ static func _rarity_color(rarity: String) -> Color:
 		"rare":
 			return Palette.AMBER
 		"rare_plus":
-			return Palette.HAZARD
+			return Palette.AMBER
 	return Palette.SANDSTONE
 
 
@@ -225,12 +225,33 @@ func _refresh_label(fab: Dictionary, scrap: int, held: Array) -> void:
 	fab["text"] = text
 	var label: Label = fab["label"]
 	label.text = text
+	label.set_parts(prompt_title(part_id) if fab["restock"] <= 0.0 else "Fabricating",
+		_detail(text), "obj_fabricator")
 	label.modulate = Palette.AMBER if ready else Palette.SAND.darkened(0.25)
 	var mat: StandardMaterial3D = fab["hoop_mat"]
 	mat.albedo_color = Palette.AMBER if ready else Palette.COPPER.darkened(0.3)
 	mat.emission_enabled = true
 	mat.emission = mat.albedo_color
 	mat.emission_energy_multiplier = 2.2 if ready else 0.15
+
+
+# The prompt's title at range: the part's name, at most three words.
+static func prompt_title(part_id: String) -> String:
+	var words: PackedStringArray = Parts.display_name(part_id).split(" ", false)
+	return " ".join(words.slice(0, WorldPrompt.TITLE_WORDS))
+
+
+# Everything after the headline's name: the verb and punch, the effect, the price line
+# and the star line.
+static func _detail(text: String) -> String:
+	var lines := Array(text.split("\n", false))
+	if lines.is_empty():
+		return ""
+	var head: String = lines.pop_front()
+	var colon: int = head.find(":")
+	if colon > 0:
+		lines.push_front(head.substr(colon + 1).strip_edges())
+	return "\n".join(PackedStringArray(lines))
 
 
 func _process(delta: float) -> void:

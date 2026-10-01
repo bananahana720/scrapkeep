@@ -1,19 +1,29 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Palette := preload("res://src/core/palette.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
+const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
+const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# The one copy of the field notes: the Tab overlay prints these, the HUD hint line is
-# built from CONTROLS, and README.md mirrors them by hand. The legend is generated
-# from event_kinds.gd, so it always shows the colours and wording the game uses.
-const TITLE := "Scrapkeep: First Run · field notes"
+# Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
+# text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
+# you, and how you grow, then the codex pages. Each picture page stays inside the
+# calm-screen budget of 40 words. CONTROLS below is the one key list; the diagram draws
+# its rows with caps and a short word. The tester notes (TESTING, QUESTIONS, TRY_FIRST,
+# SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you, in one line: the title screen shows it too.
 const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three stages, then rout Admiral Brindle."
 
 const TESTING := [
 	"One run: title, class, three stages, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Stage 3's launch drops you into the arena against Admiral Brindle; beat him for the summary.",
-	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The objective line shows your punch against the Warden's plating.",
-	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the pips beside the objective) that raise the gate tiers.",
-	"The pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
+	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
+	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
+	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
 	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In the arena, R retries the fight from its entry and T replays stage 3.",
 ]
 
@@ -26,102 +36,73 @@ const QUESTIONS := [
 ]
 
 const TRY_FIRST := [
-	"Pick either class with 1 or 2. You drop in already rolling; the Warden is at the beacon you can see from the drop.",
-	"Roll the scrap lines on the way down: watch Heft climb beside your speed, and your punch climb in the objective line.",
-	"Break the Warden (the stage hint says how); the gates open wherever you are. Roll through one to take its part.",
-	"Hit a steep face at speed, press E, fire with left mouse, then Space to slingshot off.",
+	"Pick Sable, Rivet or Kest with a number key or a click. You drop in already rolling; the Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.",
+	"Roll the scrap lines on the way down: watch the heft dial's needle climb, and your punch bar grow under the objective.",
+	"Break the Warden (close to it, the objective says how); the gates open wherever you are. Roll through one to take its part.",
+	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
 	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
+# The key list. A row with "caps" and "short" is drawn on the controls diagram (Tab's
+# Keys page and the title's Help page), as its keycaps and those one or two words.
 const CONTROLS := [
-	{"keys": "W A S D", "does": "drive, relative to where the camera looks", "hint": "WASD move"},
-	{"keys": "mouse", "does": "look", "hint": "mouse look"},
-	{"keys": "Space", "does": "jump, double jump, hold falling to glide; slingshots off a pylon", "hint": "Space jump/glide"},
-	{"keys": "Shift", "does": "boost; airborne it is the air dash", "hint": "Shift boost/dash"},
-	{"keys": "Ctrl", "does": "brake; airborne it is the slam", "hint": "Ctrl brake/slam"},
-	{"keys": "left mouse", "does": "fire the class weapon (hold); both classes", "hint": "LMB fire"},
-	{"keys": "F", "does": "runner overdrive blast; engineer pylon discharge (planting fires it free)", "hint": "F special"},
-	{"keys": "right mouse", "does": "fire the grapple at the reticle's target; release to let go", "hint": "RMB grapple"},
-	{"keys": "Q (hold)", "does": "winch: haul toward the hook", "hint": "Q winch"},
-	{"keys": "E", "does": "plant a pylon on a steep face or a close wall hook; again to drop off", "hint": "E pylon"},
-	{"keys": "mouse wheel", "does": "down pays rope out, up notches it in", "hint": "wheel rope"},
-	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "hint": "Tab notes/codex"},
-	{"keys": "- / =", "does": "music volume down / up", "hint": "-/= music"},
-	{"keys": "[ / ]", "does": "effects volume down / up", "hint": "[/] effects"},
-	{"keys": "M", "does": "mute or unmute", "hint": "M mute"},
-	{"keys": "F6", "does": "boss tempo: 129, or 172 while held", "hint": "F6 boss tempo"},
-	{"keys": "P", "does": "pause / resume", "hint": "P pause"},
-	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "hint": "hold R retry"},
-	{"keys": "F1", "does": "tuning panel (frees the mouse)", "hint": "F1 tuning"},
-	{"keys": "F3", "does": "physics interpolation on/off (off by default)", "hint": "F3 interp"},
-	{"keys": "F4", "does": "save every tuning value to user://tuning-<time>.json", "hint": "F4 save tuning"},
-	{"keys": "Esc", "does": "free the mouse; again to quit", "hint": "Esc mouse/quit"},
+	{"keys": "W A S D", "does": "drive, relative to where the camera looks", "caps": ["key_w", "key_a", "key_s", "key_d"], "short": "drive"},
+	{"keys": "mouse", "does": "look", "caps": ["key_mouse"], "short": "look"},
+	{"keys": "Space", "does": "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "caps": ["key_space"], "short": "jump"},
+	{"keys": "Shift", "does": "boost", "caps": ["key_shift"], "short": "boost"},
+	{"keys": "Ctrl", "does": "brake; airborne, the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam", "caps": ["key_ctrl"], "short": "smash"},
+	{"keys": "left mouse", "does": "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw", "caps": ["key_lmb"], "short": "weapon"},
+	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "caps": ["key_f"], "short": "special"},
+	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels", "caps": ["key_rmb"], "short": "move"},
+	{"keys": "Q (hold)", "does": "Sable: winch toward the hook"},
+	{"keys": "E", "does": "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "caps": ["key_e"], "short": "use / ride"},
+	{"keys": "mouse wheel", "does": "Sable: down pays rope out, up notches it in"},
+	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
+	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
+	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
+	{"keys": "M", "does": "mute or unmute"},
+	{"keys": "F6", "does": "boss tempo: 129, or 172 while held"},
+	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume, quit", "caps": ["key_p"], "short": "pause"},
+	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "caps": ["key_r"], "short": "hold retry"},
+	{"keys": "F1", "does": "tuning panel (frees the mouse)"},
+	{"keys": "F3", "does": "physics interpolation on/off (off by default)"},
+	{"keys": "F4", "does": "save every tuning value to user://tuning-<time>.json"},
+	{"keys": "Esc", "does": "outside play: quit"},
 ]
 
 const SCREEN_KEYS := [
 	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
-	{"keys": "1 / 2", "does": "class select: Pylon engineer / Runner-gunner"},
+	{"keys": "H", "does": "title: how to play, and back"},
+	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
 	{"keys": "R", "does": "death screen: retry the stage, or the fight in the arena"},
 	{"keys": "T", "does": "arena death screen: replay stage 3 from its start"},
 	{"keys": "N", "does": "death or summary: new run, same class"},
 	{"keys": "C", "does": "death screen: choose a class"},
 ]
 
-const HINT_BREAK := 10
 # A glyph per event_kinds shape, so a codex card wears its category's silhouette.
 const SHAPE_GLYPHS := {
 	"diamond": "◆", "wave": "≈", "burst": "*", "square": "■", "chevron": "›", "star": "★",
 	"ring": "○", "arrow": "»", "bar": "=", "cross": "×", "core": "◆", "none": "",
 }
 const CARD_COLUMNS := 3
+const MOUSE_STEPS := {MOUSE_BUTTON_LEFT: 1, MOUSE_BUTTON_WHEEL_DOWN: 1, MOUSE_BUTTON_RIGHT: -1, MOUSE_BUTTON_WHEEL_UP: -1}
+# The picture pages, before the codex: id -> {label, icon}. An icon names an Icons id.
+const PICTURE_PAGES := {
+	"keys": {"label": "Keys", "icon": "key_lmb"},
+	"hurts": {"label": "What hurts", "icon": "thr_instant"},
+	"grow": {"label": "Growth", "icon": "res_heft"},
+}
 
 var game
 
 var _notes: Control
-var _paused: Label
-var _title: Label
-var _notes_page: Control
+var _tabs
+var _diagram
+var _pictures := {}
 var _codex_page: VBoxContainer
 var _page := 0
-
-
-static func hint_rows() -> String:
-	var first := PackedStringArray()
-	var second := PackedStringArray()
-	for i in CONTROLS.size():
-		if i < HINT_BREAK:
-			first.append(CONTROLS[i]["hint"])
-		else:
-			second.append(CONTROLS[i]["hint"])
-	return "  ·  ".join(first) + "\n" + "  ·  ".join(second)
-
-
-static func notes_text() -> String:
-	var lines := PackedStringArray()
-	lines.append("Testing in this build")
-	for line in TESTING:
-		lines.append("  - " + line)
-	lines.append("")
-	lines.append("Questions for you")
-	for line in QUESTIONS:
-		lines.append("  - " + line)
-	lines.append("")
-	lines.append("What to try first")
-	for i in TRY_FIRST.size():
-		lines.append("  %d. %s" % [i + 1, TRY_FIRST[i]])
-	return "\n".join(lines)
-
-
-static func controls_text() -> String:
-	var lines := PackedStringArray(["Controls"])
-	for row in CONTROLS:
-		lines.append("%-12s %s" % [row["keys"], row["does"]])
-	lines.append("")
-	lines.append("Screens")
-	for row in SCREEN_KEYS:
-		lines.append("%-12s %s" % [row["keys"], row["does"]])
-	return "\n".join(lines)
 
 
 # Every notable fact in its own colour and wording, straight from event_kinds.gd.
@@ -136,8 +117,8 @@ static func legend_bbcode() -> String:
 	return "\n".join(lines)
 
 
-# Pause has to keep listening while the tree is paused, so this layer always processes
-# and the game it steers does not.
+# Tab has to keep listening while the tree is paused, so this layer always processes
+# and the game it steers does not. P and Esc belong to the pause menu (pause_menu.gd).
 func setup(game_ref) -> void:
 	game = game_ref
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -146,23 +127,22 @@ func setup(game_ref) -> void:
 	_notes = PanelContainer.new()
 	_notes.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_notes.offset_left = 40.0
-	_notes.offset_top = 24.0
+	# Below the objective and run status strip, which presentation draws on top.
+	_notes.offset_top = 72.0
 	_notes.offset_right = -40.0
 	_notes.offset_bottom = -24.0
 	_notes.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var backing := StyleBoxFlat.new()
-	backing.bg_color = Color(0.07, 0.08, 0.11, 0.94)
+	var backing := ScrapFrame.plate(Color(Palette.SAND, 0.3), 5, Color(0.07, 0.08, 0.11, 0.94), 2.0, 0.62)
 	backing.set_content_margin_all(22.0)
-	backing.set_corner_radius_all(6)
 	_notes.add_theme_stylebox_override("panel", backing)
 	add_child(_notes)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
+	box.add_theme_constant_override("separation", 18)
 	_notes.add_child(box)
-	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 22)
-	box.add_child(_title)
+	_tabs = TabStrip.new()
+	_tabs.notes = self
+	box.add_child(_tabs)
 
 	_codex_page = VBoxContainer.new()
 	_codex_page.add_theme_constant_override("separation", 12)
@@ -170,52 +150,24 @@ func setup(game_ref) -> void:
 	_codex_page.visible = false
 	box.add_child(_codex_page)
 
-	var columns := HBoxContainer.new()
-	_notes_page = columns
-	columns.add_theme_constant_override("separation", 30)
-	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(columns)
-	var notes := Label.new()
-	notes.text = notes_text()
-	notes.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	notes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	notes.size_flags_stretch_ratio = 1.5
-	notes.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	notes.add_theme_font_size_override("font_size", 15)
-	columns.add_child(notes)
-	var controls := Label.new()
-	controls.text = controls_text()
-	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	controls.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	controls.add_theme_font_size_override("font_size", 15)
-	columns.add_child(controls)
-	var legend := RichTextLabel.new()
-	legend.bbcode_enabled = true
-	legend.text = legend_bbcode()
-	legend.fit_content = true
-	legend.custom_minimum_size = Vector2(300.0, 0.0)
-	legend.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	legend.add_theme_font_size_override("normal_font_size", 15)
-	columns.add_child(legend)
+	_diagram = ControlsDiagram.new()
+	var sheets := {"keys": _diagram, "hurts": ThreatSheet.new(), "grow": GrowthSheet.new()}
+	for id in PICTURE_PAGES:
+		var holder := CenterContainer.new()
+		holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(sheets[id])
+		box.add_child(holder)
+		_pictures[id] = holder
 	_notes.visible = false
 	show_page(0)
 
-	_paused = Label.new()
-	_paused.text = "PAUSED  ·  P to resume  ·  hold Tab for field notes"
-	_paused.add_theme_font_size_override("font_size", 40)
-	_paused.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
-	_paused.add_theme_constant_override("outline_size", 10)
-	_paused.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_paused.position = Vector2(-470.0, 120.0)
-	_paused.visible = false
-	add_child(_paused)
 
-
-# Notes first, then one page per codex category (reserved ones only once they hold
-# entries), then the Found list.
+# The picture pages first, then one page per codex category (reserved ones only once
+# they hold entries), then the Found list.
 func pages() -> Array[String]:
-	var list: Array[String] = ["notes"]
+	var list: Array[String] = []
+	list.append_array(PICTURE_PAGES.keys())
 	for id in EventKinds.CODEX_CATEGORIES:
 		var reserved: bool = EventKinds.CODEX_CATEGORIES[id]["reserved"]
 		if not reserved or (_codex() != null and not _codex().entries(id).is_empty()):
@@ -232,23 +184,108 @@ func show_page(index: int) -> void:
 	var list := pages()
 	_page = posmod(index, list.size())
 	var page: String = list[_page]
-	_notes_page.visible = page == "notes"
-	_codex_page.visible = page != "notes"
-	_title.text = _tab_row(list, page)
-	if page != "notes":
+	for id in _pictures:
+		_pictures[id].visible = id == page
+	_codex_page.visible = not PICTURE_PAGES.has(page)
+	if page == "keys":
+		_diagram.set_class(game.run.class_def if game != null and game.run != null else null)
+	elif not PICTURE_PAGES.has(page):
 		render_page(page)
+	_tabs.queue_redraw()
 
 
-func _tab_row(list: Array[String], current: String) -> String:
-	var tabs := PackedStringArray()
-	for page in list:
-		var label := "Notes"
-		if page == "found":
-			label = "Found %d" % (_codex().found().size() if _codex() != null else 0)
-		elif page != "notes":
-			label = "%s %d%%" % [EventKinds.category(page)["label"], int(_codex().completion(page) * 100.0) if _codex() != null else 0]
-		tabs.append("[ %s ]" % label if page == current else label)
-	return "%s  ·  %s  ·  Q / E switch  ·  paused while Tab is held" % [TITLE, "   ".join(tabs)]
+func current_page() -> String:
+	return pages()[_page]
+
+
+func diagram():
+	return _diagram
+
+
+func tab_label(page := "") -> String:
+	if page == "":
+		page = current_page()
+	if PICTURE_PAGES.has(page):
+		return PICTURE_PAGES[page]["label"]
+	if page == "found":
+		return "Found %d" % (_codex().found().size() if _codex() != null else 0)
+	return "%s %d%%" % [EventKinds.category(page)["label"], int(_codex().completion(page) * 100.0) if _codex() != null else 0]
+
+
+func _tab_icon(page: String) -> Texture2D:
+	if PICTURE_PAGES.has(page):
+		return Icons.texture(PICTURE_PAGES[page]["icon"])
+	if page == "found":
+		return Icons.shape("star")
+	return Icons.shape(EventKinds.category(page)["shape"])
+
+
+func _tab_color(page: String) -> Color:
+	if page == "hurts":
+		return Palette.HAZARD
+	if page == "grow":
+		return Palette.AMBER
+	if page == "keys":
+		var def = game.run.class_def if game != null and game.run != null else null
+		return def.color if def != null else Palette.SAND
+	if page == "found":
+		return Palette.SAND
+	return EventKinds.category(page)["color"]
+
+
+# The page row: Q, one icon per page (the open one wears its name and an underline in
+# its colour), E. Hovering an icon opens its page when the mouse is free (notes pinned
+# from the pause menu).
+class TabStrip:
+	extends Control
+
+	const H := 40.0
+	const CAP := 26.0
+	const ICON := 26.0
+	const STEP := 46.0
+	const FONT := 20
+
+	var notes
+	var _spots: Array = []
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(0.0, H)
+		mouse_filter = Control.MOUSE_FILTER_PASS
+
+	func drawn_words() -> PackedStringArray:
+		var out := PackedStringArray(["Q", "E"])
+		out.append(notes.tab_label())
+		return out
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseMotion:
+			for spot in _spots:
+				if spot["rect"].has_point(event.position) and spot["index"] != notes._page:
+					notes.show_page(spot["index"])
+					return
+
+	func _draw() -> void:
+		var list: Array[String] = notes.pages()
+		var x := 0.0
+		var mid := H * 0.5
+		x += Keycap.draw(self, Vector2(CAP * 0.5, mid), "key_q", Palette.SAND, CAP).size.x + 18.0
+		_spots.clear()
+		var font := UiFonts.bold()
+		for i in list.size():
+			var page: String = list[i]
+			var color: Color = notes._tab_color(page)
+			var open: bool = i == notes._page
+			var icon := Rect2(Vector2(x, mid - ICON * 0.5), Vector2(ICON, ICON))
+			draw_texture_rect(notes._tab_icon(page), icon, false, Color(color, 1.0 if open else 0.45))
+			var width := ICON
+			if open:
+				var label: String = notes.tab_label(page)
+				draw_string(font, Vector2(x + ICON + 8.0, mid + font.get_ascent(FONT) * 0.5 - 2.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT, color)
+				width += 8.0 + font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
+				draw_line(Vector2(x, H - 1.0), Vector2(x + width, H - 1.0), color, 3.0)
+			_spots.append({"index": i, "rect": Rect2(Vector2(x - 6.0, 0.0), Vector2(width + 12.0, H))})
+			x += width + STEP - ICON
+		Keycap.draw(self, Vector2(x + 4.0 + CAP * 0.5, mid), "key_e", Palette.SAND, CAP)
 
 
 # Builds one codex page and returns how many cards or lines it shows.
@@ -334,7 +371,13 @@ func _render_found(codex) -> int:
 	return codex.found().size()
 
 
+# While Tab is held the mouse is captured, so its buttons turn pages: left or wheel down
+# for the next, right or wheel up for the one before.
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and game != null and game.notes_held() and MOUSE_STEPS.has(event.button_index):
+		show_page(_page + MOUSE_STEPS[event.button_index])
+		get_viewport().set_input_as_handled()
+		return
 	if not (event is InputEventKey) or event.echo:
 		return
 	if event.pressed and game != null and game.notes_held() and (event.physical_keycode == KEY_Q or event.physical_keycode == KEY_E):
@@ -347,14 +390,9 @@ func _input(event: InputEvent) -> void:
 			if event.pressed:
 				show_page(_page)
 			get_viewport().set_input_as_handled()
-		KEY_P:
-			if event.pressed:
-				game.toggle_pause()
-				get_viewport().set_input_as_handled()
 
 
 func _process(_delta: float) -> void:
 	if game == null:
 		return
 	_notes.visible = game.notes_held()
-	_paused.visible = game.pause_toggled() and not game.notes_held()

@@ -5,6 +5,11 @@ const Juice := preload("res://src/presentation/juice.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const DropJuice := preload("res://src/presentation/drop_juice.gd")
+const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
+const LoopMode := preload("res://src/core/loop_mode.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -15,16 +20,24 @@ const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 #   sfx_bank       one synthesized sound per event_kinds sound id
 #   synth          the instrument rack both of them play
 #   harmony        tempo, key and scales, the one musical source
-#   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon
-#   vfx            trails, speed lines, flashes, rings and sparkles
+#   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon, and
+#                  how hits, kills, pickups, dodges and hits taken land (v3 W11)
+#   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
+#   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
+#   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
+#   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
 
 var ctx
 var audio
 var juice
 var vfx
 var banner
+var hero_assets
+# The v3 drop mode's own juice (drop_juice.gd), apart from the universal layer.
+var drop_juice
+var ceremony
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -44,12 +57,27 @@ func setup(ctx_ref) -> void:
 	vfx = Vfx.new()
 	add_child(vfx)
 	vfx.setup(ctx)
+	juice.audio = audio
+	juice.vfx = vfx
+	hero_assets = HeroAssets.new()
+	add_child(hero_assets)
+	hero_assets.setup(ctx)
 	var layer := CanvasLayer.new()
 	layer.name = "CodexBannerLayer"
 	layer.layer = 40
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	var codex = ctx.get("codex")
+	if ctx.tuning != null and ctx.tuning.option(LoopMode.DISCOVERY_KEY) == "cards" and codex != null:
+		banner.cards = true
+		banner.storage_dir = codex.storage_dir
+	drop_juice = DropJuice.new()
+	add_child(drop_juice)
+	drop_juice.setup(ctx, audio)
+	ceremony = RewardCeremony.new()
+	add_child(ceremony)
+	ceremony.setup(ctx, audio, juice, vfx)
 	wire_optional()
 
 
@@ -62,6 +90,8 @@ func wire_optional() -> void:
 	var events = ctx.events
 	if events.has_signal("synergy_discovered") and not events.is_connected("synergy_discovered", _on_synergy):
 		events.connect("synergy_discovered", _on_synergy)
+	if events.has_signal("part_gained") and not events.is_connected("part_gained", _on_part):
+		events.connect("part_gained", _on_part)
 	# The banner never outlives the moment: a flow change, arena entry, death or the
 	# run's end clears it at once.
 	for signal_name in ["stage_content_cleared", "player_died", "run_ended"]:
@@ -102,7 +132,16 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 		return
 	var entry := _codex_entry(id)
 	var title: String = entry.get("name", id.capitalize())
-	banner.show_discovery(title, category, String(entry.get("text", "")), "New synergy" if first_time else "Synergy")
+	banner.show_discovery(title, category, String(entry.get("text", "")), "New synergy" if first_time else "Synergy", id, "synergy_discovered")
+
+
+# In cards mode a found part gets its first-time card, then the quick pop.
+func _on_part(part_id: String, _source: String) -> void:
+	if not auto_banner or not banner.cards:
+		return
+	var row := Parts.row(part_id)
+	var title: String = row.get("name", part_id.capitalize())
+	banner.show_discovery(title, "part", String(row.get("text", "")), "Found", "part:" + part_id, "part_gained")
 
 
 # The registry entry for an id, if the spine's codex offers one.
