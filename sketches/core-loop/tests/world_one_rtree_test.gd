@@ -148,12 +148,14 @@ func _take_deep(picks: Array) -> void:
 
 func _card_lines(picks: Array) -> Array:
 	_take(picks)
+	_game.ctx.tuning.set_option("hotwire_shell", "on")
 	_player.tree.open_checkpoint()
 	_ws.open_pick()
 	var out: Array = []
 	for card in _ws.pick.cards():
 		out.append([card.node_id(), card.effect_text()])
 	_ws.close_pick()
+	_game.ctx.tuning.set_option("hotwire_shell", "off")
 	return out
 
 

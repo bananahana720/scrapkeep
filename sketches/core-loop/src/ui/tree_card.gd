@@ -30,7 +30,7 @@ var _effect: Label
 var _lift := 0.0
 
 
-func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false) -> void:
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false) -> void:
 	node = node_row
 	key = key_id
 	color = class_color
@@ -56,7 +56,7 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	add_child(box)
 	_name = _text(String(node.get("name", "")), 26, color)
 	box.add_child(_name)
-	_effect = _text(WorldOneCards.effect_line(node, world_one), 18, Palette.SAND)
+	_effect = _text(WorldOneCards.effect_line(node, world_one, shell), 18, Palette.SAND)
 	box.add_child(_effect)
 	mouse_entered.connect(func():
 		if not disabled:

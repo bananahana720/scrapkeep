@@ -88,7 +88,7 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 		_row.remove_child(child)
 		child.queue_free()
 	for i in nodes.size():
-		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one())
+		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one(), _shell())
 		card.pressed.connect(func(): chosen.emit(i))
 		_row.add_child(card)
 	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color, _world_one())
@@ -107,6 +107,16 @@ func _world_one() -> bool:
 		return false
 	var game = host.game
 	return game.tuning != null and game.tuning.world_one()
+
+
+# --hotwire-shell, read the same way: the cards that name the shell's inversion say so only
+# while it is fitted.
+func _shell() -> bool:
+	var host = get_parent()
+	if host == null or host.get("game") == null:
+		return false
+	var game = host.game
+	return game.tuning != null and game.tuning.option("hotwire_shell") == "on"
 
 
 # Closes. chosen_index lifts that card with the success pop while the rest leaves.

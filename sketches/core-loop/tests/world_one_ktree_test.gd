@@ -118,6 +118,7 @@ func _take(picks: Array) -> void:
 
 
 func _card_lines(class_id: String, picks: Array) -> Array:
+	_game.ctx.tuning.set_option("hotwire_shell", "on")
 	var tree = _player.tree
 	tree.reset(class_id)
 	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
@@ -129,6 +130,7 @@ func _card_lines(class_id: String, picks: Array) -> Array:
 	var out: Array = []
 	for card in _ws.pick.cards():
 		out.append([card.node_id(), card.effect_text()])
+	_game.ctx.tuning.set_option("hotwire_shell", "off")
 	return out
 
 
