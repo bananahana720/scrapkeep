@@ -393,6 +393,7 @@ func _share_line() -> void:
 	kit.ball_share = Harpoon.ball_share(tuning.option("harpoon_pull"), heft(), Harpoon.weight_of(body))
 	if kit.tow != Vector3.ZERO and body.has_method("tow"):
 		body.tow(kit.tow)
+	kit.tow = Vector3.ZERO
 
 
 func reel_step(metres: float) -> void:
