@@ -145,6 +145,76 @@ func _write_stays_atomic() -> void:
 	_check(SafeStore.tmp_path(other) != other + ".tmp", "the temp name is per-process")
 
 
+func _holds_bytes(dir: String, file: String, original: String) -> bool:
+	for copy in _bad_copies(dir, file):
+		if FileAccess.get_file_as_string(copy) == original:
+			return true
+	return false
+
+
+func _store_cases() -> Array:
+	return [
+		{"label": "codex", "file": "codex.json", "make": func(dir: String) -> Variant:
+			var events = GameEvents.new()
+			var codex = Codex.new()
+			codex.setup(events, null, null, dir)
+			return [codex, events],
+		"save": func(store: Variant) -> void: store[0].mark_discovered("parting_shot"),
+		"error": func(store: Variant) -> String: return store[0].last_error,
+		"free": func(store: Variant) -> void:
+			store[1].free()
+			store[0].free()},
+		{"label": "settings_store", "file": "settings.json", "make": func(dir: String) -> Variant: return SettingsStore.new(dir),
+		"save": func(store: Variant) -> void: store.set_volume("music", 0.5),
+		"error": func(store: Variant) -> String: return store.last_error,
+		"free": func(_store: Variant) -> void: pass},
+		{"label": "ui_profile", "file": "ui-profile.json", "make": func(dir: String) -> Variant: return UiProfile.new(dir),
+		"save": func(store: Variant) -> void: store.mark_discovered("x"),
+		"error": func(store: Variant) -> String: return store.last_error,
+		"free": func(_store: Variant) -> void: pass},
+		{"label": "reward_ceremony", "file": Ceremony.SEEN_FILE, "make": func(dir: String) -> Variant:
+			var ceremony = Ceremony.new()
+			ceremony._seen_path = dir.path_join(Ceremony.SEEN_FILE)
+			ceremony._load_seen()
+			return ceremony,
+		"save": func(store: Variant) -> void: store._mark_seen("x"),
+		"error": func(store: Variant) -> String: return store.last_error,
+		"free": func(store: Variant) -> void: store.free()},
+	]
+
+
+func _directory_at_bad() -> void:
+	for c in _store_cases():
+		var dir := _fresh_dir(c["file"], "{corrupt")
+		DirAccess.make_dir_recursive_absolute(dir.path_join(c["file"] + ".bad"))
+		var store = c["make"].call(dir)
+		c["save"].call(store)
+		_check(_holds_bytes(dir, c["file"], "{corrupt"), "%s: a directory at .bad does not cost the unreadable file" % c["label"])
+		c["free"].call(store)
+
+
+func _unmovable_file_survives() -> void:
+	for c in _store_cases():
+		var dir := _fresh_dir(c["file"], "{corrupt")
+		var path := dir.path_join(c["file"])
+		var real := ProjectSettings.globalize_path(dir)
+		OS.execute("chmod", ["555", real])
+		var store = c["make"].call(dir)
+		OS.execute("chmod", ["755", real])
+		c["save"].call(store)
+		_check(FileAccess.get_file_as_string(path) == "{corrupt", "%s: a file that could not be moved aside is not overwritten" % c["label"])
+		_check(not String(c["error"].call(store)).is_empty(), "%s: the refused save is recorded" % c["label"])
+		c["free"].call(store)
+
+
+func _rm_tree(path: String) -> void:
+	for sub in DirAccess.get_directories_at(path):
+		_rm_tree(path.path_join(sub))
+	for n in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(n))
+	DirAccess.remove_absolute(path)
+
+
 func _initialize() -> void:
 	var base := "user://persist-trunc-%d" % OS.get_process_id()
 	var cases := {
@@ -188,13 +258,12 @@ func _initialize() -> void:
 	_wrong_typed()
 	_well_formed_kept()
 	_write_stays_atomic()
+	_directory_at_bad()
+	_unmovable_file_survives()
 
 	for d in DirAccess.get_directories_at("user://"):
 		if d.begins_with("persist-trunc-%d" % OS.get_process_id()):
-			var full := "user://" + d
-			for n in DirAccess.get_files_at(full):
-				DirAccess.remove_absolute(full.path_join(n))
-			DirAccess.remove_absolute(full)
+			_rm_tree("user://" + d)
 
 	print("persistence_truncation_test: %s (%d fails)" % ["FAIL" if _fails > 0 else "PASS", _fails])
 	quit(1 if _fails > 0 else 0)
