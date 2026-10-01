@@ -494,7 +494,7 @@ func shell_air_factor() -> float:
 	# Active inversions do not stack: the highest factor wins (an implementation choice, not a
 	# design ruling; BUILD-SYSTEMS.md lists S4, K5 and R6 without ranking them).
 	var factor := SHELL_AIR_FACTOR
-	if _shell_window > 0.0:
+	if _shell_window > 0.0 and _face_runner_s4():
 		factor = maxf(factor, SHELL_AIR_FACTOR_VAULT)
 	if _sprinting() and _second_wind_r6():
 		factor = maxf(factor, SHELL_AIR_FACTOR_SPRINT)
@@ -657,6 +657,8 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 func _on_run_started(_class_id_value: String) -> void:
 	_live = []
 	_mass_hp = 0.0
+	_shell_window = 0.0
+	_air_seen = 0.0
 	_discovered.clear()
 	_found.clear()
 	_refresh_seams()
