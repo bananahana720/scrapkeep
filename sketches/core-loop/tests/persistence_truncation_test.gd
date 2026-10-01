@@ -207,6 +207,18 @@ func _unmovable_file_survives() -> void:
 		c["free"].call(store)
 
 
+func _save_error_survives_log_error() -> void:
+	var dir := "user://persist-trunc-%d-nope/missing" % OS.get_process_id()
+	var events = GameEvents.new()
+	var codex = Codex.new()
+	codex.setup(events, null, null, dir)
+	codex.mark_discovered("parting_shot")
+	_check(codex.last_error.contains("codex.json"), "codex: the save failure stays in last_error after the log append fails (got \"%s\")" % codex.last_error)
+	_check(str(codex.get("log_error")).contains("codex-log.ndjson"), "codex: the log failure is kept as well")
+	events.free()
+	codex.free()
+
+
 func _rm_tree(path: String) -> void:
 	for sub in DirAccess.get_directories_at(path):
 		_rm_tree(path.path_join(sub))
@@ -260,6 +272,7 @@ func _initialize() -> void:
 	_write_stays_atomic()
 	_directory_at_bad()
 	_unmovable_file_survives()
+	_save_error_survives_log_error()
 
 	for d in DirAccess.get_directories_at("user://"):
 		if d.begins_with("persist-trunc-%d" % OS.get_process_id()):
