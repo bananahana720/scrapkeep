@@ -324,9 +324,16 @@ func next_bar(from := -1) -> int:
 
 func _next(unit: int, from: int) -> int:
 	var base := maxi(clock, from)
+	var grid_origin := origin
+	var step := unit
 	if section == "":
-		return base
-	return origin + int(ceil(float(base - origin) / unit)) * unit
+		if pending.is_empty():
+			return base
+		# Before the first commit the section about to enter owns the grid.
+		var clip: Dictionary = clips[sections[String(pending["section"])]["clip"]]
+		grid_origin = int(pending["at"]) - posmod(int(pending["entry"]) - int(clip["entry"]), int(clip["bar"]))
+		step = int(clip["beat"]) if unit == grid_beat else int(clip["bar"])
+	return grid_origin + int(ceil(float(base - grid_origin) / step)) * step
 
 
 # The first bar (or beat) far enough ahead for name's whole crossfade: a change asked on
