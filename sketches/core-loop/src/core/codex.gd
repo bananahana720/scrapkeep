@@ -8,7 +8,8 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 # their entries at setup and call the mutators when one fires; the codex publishes the
 # bus fact, grants the treasure burst once per entry per run, and writes the developer
 # log, so the UI, the stinger and the log read one record. Storage failures never
-# throw: the codex keeps working in memory and notes last_error.
+# throw: the codex keeps working in memory, noting a save failure in last_error and a
+# log append failure in log_error.
 
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
 const STATE_FILE := "codex.json"
@@ -19,6 +20,7 @@ var run
 var flow
 var storage_dir := "user://"
 var last_error := ""
+var log_error := ""
 var _save_blocked := false
 
 var _entries := {}
@@ -236,7 +238,7 @@ func append_line(path: String, text: String) -> bool:
 	else:
 		file = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		last_error = "cannot write %s: %s" % [path, error_string(FileAccess.get_open_error())]
+		log_error = "cannot write %s: %s" % [path, error_string(FileAccess.get_open_error())]
 		return false
 	file.store_line(text)
 	file.close()
