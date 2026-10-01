@@ -288,6 +288,8 @@ func _on_tree_picked(n: Dictionary) -> void:
 # The movement kit the movement slot's row names, the smash flavour, the class colour.
 func _refit() -> void:
 	kit.harpoon_on = tuning != null and tuning.harpoon_on()
+	if not kit.harpoon_on and kit.on_body:
+		kit.drop_line()
 	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 	else:
