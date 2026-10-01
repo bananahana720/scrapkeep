@@ -480,7 +480,7 @@ func _screen_key(key: int) -> bool:
 				flow.new_run()
 				return true
 			if key == KEY_C:
-				if dead_guard_left > 0.0 and tuning.harpoon_on() and tuning.option("harpoon_keys") == "keep":
+				if dead_guard_left > 0.0 and Intent.Keyboard.burst_is_c(tuning):
 					return true
 				flow.open_class_select()
 				return true
