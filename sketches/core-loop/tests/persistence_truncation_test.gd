@@ -265,6 +265,60 @@ func _save_error_survives_log_error() -> void:
 	codex.free()
 
 
+func _reload_replaces() -> void:
+	var cases := [
+		{"label": "codex", "file": "codex.json", "text": '{"discovered": ["a"], "found": ["f1"], "found_categories": {"f1": "world"}}',
+		"make": func(dir: String) -> Variant:
+			var events = GameEvents.new()
+			var codex = Codex.new()
+			codex.setup(events, null, null, dir)
+			return [codex, events],
+		"reload": func(store: Variant) -> void: store[0]._load(),
+		"state": func(store: Variant) -> Array: return [store[0].found(), store[0].discovered()],
+		"want": [["f1"], ["a"]],
+		"free": func(store: Variant) -> void:
+			store[1].free()
+			store[0].free()},
+		{"label": "settings_store", "file": "settings.json", "text": '{"volumes": {"music": 0.2}, "comfort": {"shake": 0.3}}',
+		"make": func(dir: String) -> Variant: return SettingsStore.new(dir),
+		"reload": func(store: Variant) -> void: store.load_saved(),
+		"state": func(store: Variant) -> Array: return [store.volumes.keys(), store.comfort.keys()],
+		"want": [["music"], ["shake"]],
+		"free": func(_store: Variant) -> void: pass},
+		{"label": "ui_profile", "file": "ui-profile.json", "text": '{"glyph_uses": {"jump": 2}, "callouts_seen": ["a"], "discoveries_seen": ["b"]}',
+		"make": func(dir: String) -> Variant: return UiProfile.new(dir),
+		"reload": func(store: Variant) -> void: store.load_saved(),
+		"state": func(store: Variant) -> Array: return [store.callouts_seen, store.discoveries_seen, store.uses("jump")],
+		"want": [["a"], ["b"], 2],
+		"free": func(_store: Variant) -> void: pass},
+		{"label": "reward_ceremony", "file": Ceremony.SEEN_FILE, "text": '["a"]',
+		"make": func(dir: String) -> Variant:
+			var ceremony = Ceremony.new()
+			ceremony._seen_path = dir.path_join(Ceremony.SEEN_FILE)
+			ceremony._load_seen()
+			return ceremony,
+		"reload": func(store: Variant) -> void: store._load_seen(),
+		"state": func(store: Variant) -> Array: return [store._seen.keys()],
+		"want": [["a"]],
+		"free": func(store: Variant) -> void: store.free()},
+	]
+	for c in cases:
+		var dir := _fresh_dir(c["file"], c["text"])
+		var store = c["make"].call(dir)
+		c["reload"].call(store)
+		c["reload"].call(store)
+		_check(c["state"].call(store) == c["want"], "%s: a reload replaces the in-memory state (got %s)" % [c["label"], str(c["state"].call(store))])
+		c["free"].call(store)
+
+	var dir := _fresh_dir("codex.json", cases[0]["text"])
+	var store = cases[0]["make"].call(dir)
+	store[0]._load()
+	store[0].mark_discovered("parting_shot")
+	var saved = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("codex.json")))
+	_check(saved != null and saved["found"] == ["f1"], "codex: the save after a reload writes no duplicate")
+	cases[0]["free"].call(store)
+
+
 func _rm_tree(path: String) -> void:
 	for sub in DirAccess.get_directories_at(path):
 		_rm_tree(path.path_join(sub))
@@ -321,6 +375,7 @@ func _initialize() -> void:
 	_healthy_reload_unblocks()
 	_blocked_save_after_merge()
 	_save_error_survives_log_error()
+	_reload_replaces()
 
 	for d in DirAccess.get_directories_at("user://"):
 		if d.begins_with("persist-trunc-%d" % OS.get_process_id()):
