@@ -14,6 +14,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Ground := preload("res://src/combat/ground.gd")
 const WearTrail := preload("res://src/combat/wear_trail.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -895,16 +896,16 @@ func _fire(weapon: String, source := "weapon") -> void:
 func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -> void:
 	effects.spark(point, bolt["color"])
 	var from: Vector3 = enemy.global_position
-	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"], 0.25, part, bolt.get("source", "weapon"))
+	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"], part, bolt.get("source", "weapon"))
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
 
 
 # One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
-func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, lift := 0.25, part := "", source := "") -> void:
+func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "") -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
-	enemy.knock(push + Vector3.UP * lift, knock)
+	enemy.knock(push + Vector3.UP * float(EventKinds.impact(impact if impact != "" else kind)["lift"]), knock)
 	enemy.flash()
 	strike(enemy, kind, damage, part, source)
 	# Death Mark: a marked enemy that dies here bursts like a charge.
@@ -931,7 +932,7 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
 		visited.append(next)
 		var to: Vector3 = next.global_position
 		effects.arc(at, to, bolt["color"])
-		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * 0.5, 0.25, "", bolt.get("source", "weapon"))
+		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * 0.5, "", bolt.get("source", "weapon"))
 		damage *= bolt["chain_falloff"]
 		at = to
 
@@ -1157,7 +1158,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 		# Marked: the line tags what it hits, and charges hit tagged targets harder.
 		if _knob("line_marks") > 0.0:
 			_marks[enemy.get_instance_id()] = _clock + _knob("line_marks")
-		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, 0.5, "", "special")
+		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, "", "special")
 		hit += 1
 	# Fuse Line: charges left along the line.
 	var along: int = _knob("line_charges")
@@ -1201,7 +1202,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 	for enemy in targets:
 		var to: Vector3 = enemy.global_position
 		effects.arc(at, to, color)
-		_hit(enemy, kind, burst["damage"], to - at, Weapons.BURST_KNOCK, 0.4)
+		_hit(enemy, kind, burst["damage"], to - at, Weapons.BURST_KNOCK, "", "", "burst")
 	if _knob("discharge_chain"):
 		for enemy in targets:
 			if not is_instance_valid(enemy):
@@ -1209,7 +1210,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 			var next := _nearest(enemy.global_position, Weapons.BASE[Weapons.ARC_CASTER]["chain_range"], targets)
 			if next != null:
 				effects.arc(enemy.global_position, next.global_position, color)
-				_hit(next, kind, burst["damage"] * 0.5, next.global_position - enemy.global_position, Weapons.BURST_KNOCK * 0.5, 0.3)
+				_hit(next, kind, burst["damage"] * 0.5, next.global_position - enemy.global_position, Weapons.BURST_KNOCK * 0.5, "", "", "spill")
 	effects.ring(at, burst["radius"], color)
 	last_burst = burst.duplicate()
 	last_burst["at"] = at
@@ -1240,7 +1241,7 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
 		var away: Vector3 = enemy.global_position - at
-		_hit(enemy, "runner", damage, -away if pull else away, Weapons.OVERDRIVE_KNOCK * scale, 0.5)
+		_hit(enemy, "runner", damage, -away if pull else away, Weapons.OVERDRIVE_KNOCK * scale, "", "", "overdrive")
 		hit += 1
 	if boost:
 		_boost(Weapons.OVERDRIVE_SECONDS * p.special_scale)
@@ -1379,7 +1380,7 @@ func _detonate(charge: Dictionary) -> void:
 			dealt *= _knob("sticky_breach")
 		if _marks.get(enemy.get_instance_id(), -1.0) > _clock:
 			dealt *= Weapons.MARK_BONUS
-		_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"], 0.4,
+		_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
 			"", charge.get("_source", "weapon"))
 	effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.events.sticky_detonated.emit(at, charge["crit"])
@@ -1443,7 +1444,7 @@ func _on_blink(from: Vector3, to: Vector3) -> void:
 	if _knob("blink_cut"):
 		for enemy in get_tree().get_nodes_in_group("enemy"):
 			if not enemy.is_dead() and in_line(from, to, Weapons.BLINK_CUT_WIDTH, enemy.global_position, _hull(enemy)):
-				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, 8.0, 0.3, "", "item_proc")
+				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "proc")
 	if _knob("smoke_cloud") > 0.0:
 		_cloud = {"at": from, "left": _knob("smoke_cloud")}
 

@@ -188,9 +188,9 @@ const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then 
 #   chain_ms, chain_cap   a streak: the window that keeps it alive and its top rung
 #   pulse   the ball's squash for the fact (negative shrinks: a heft loss)
 const JUICE := {
-	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8, "shake": 0.1,
+	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8,
 		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
-		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "shake": 0.3, "dust": 12}},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
 	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
@@ -209,10 +209,43 @@ const JUICE := {
 		"near_m": 6.0, "near_kick": 0.6},
 	"rocket_jumped": {"kick": 0.8, "punch_fov": 8.0, "squash": 0.35},
 	"near_miss": {"stop_ms": 45.0, "punch_fov": -5.0, "grace_ms": 250},
-	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "shake": 0.5, "shake_s": 0.25, "color": Palette.HAZARD},
+	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "squash": 0.18, "color": Palette.HAZARD},
 	"scrap_lost": {"pulse": -0.22},
 	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
 }
+# What one hit of each kind does, in one place: the shove and lift combat gives the enemy,
+# the stop and shake presentation gives the screen, and how the enemy should answer.
+# Keyed by the strike kind combat passes to _hit and the contact kinds the player makes,
+# plus the sources that share a kind with another hit but throw differently: burst (the
+# pylon discharge), overdrive (the runner's blast, whose strike kind is the laser's),
+# spill (the discharge's second jump) and proc (a blink cut).
+#   knock   m/s before the enemy's weight divides it
+#   lift    the upward share added to the shove's direction
+#   stop    "none" (a gun: it never freezes time), "hit" (a bomb or blast), "heavy" (a ram,
+#           stomp or slam: hit plus the heavy add, kick and dust of the enemy_struck row)
+#   shake   camera shake for one hit; a crit raises it to the crit row's, never on "none"
+#   react   "flinch", "stagger" or "launch": how the enemy should answer (data only)
+# Damage taken has no row: it never shakes the camera (FEEL-READABILITY 3.1).
+const IMPACT_FIELDS := ["knock", "lift", "stop", "shake", "react"]
+const IMPACT := {
+	"runner": {"knock": 3.0, "lift": 0.25, "stop": "none", "shake": 0.0, "react": "flinch"},
+	"arc": {"knock": 5.0, "lift": 0.25, "stop": "none", "shake": 0.0, "react": "flinch"},
+	"turret": {"knock": 6.0, "lift": 0.25, "stop": "none", "shake": 0.0, "react": "flinch"},
+	"sticky": {"knock": 26.0, "lift": 0.4, "stop": "hit", "shake": 0.1, "react": "launch"},
+	"line": {"knock": 28.0, "lift": 0.5, "stop": "hit", "shake": 0.1, "react": "launch"},
+	"burst": {"knock": 24.0, "lift": 0.4, "stop": "hit", "shake": 0.1, "react": "launch"},
+	"spill": {"knock": 12.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
+	"overdrive": {"knock": 34.0, "lift": 0.5, "stop": "hit", "shake": 0.1, "react": "launch"},
+	"proc": {"knock": 8.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
+	"ram": {"knock": 24.0, "lift": 0.35, "stop": "heavy", "shake": 0.3, "react": "launch"},
+	"slam": {"knock": 26.0, "lift": 0.5, "stop": "heavy", "shake": 0.3, "react": "launch"},
+	"stomp": {"knock": 7.0, "lift": 0.0, "stop": "heavy", "shake": 0.3, "react": "stagger"},
+}
+const IMPACT_STOPS := ["none", "hit", "heavy"]
+const IMPACT_REACTS := ["flinch", "stagger", "launch"]
+# A strike kind with no row (a shell, a ring, a boss's own) lands as a plain hit.
+const IMPACT_FALLBACK := {"knock": 0.0, "lift": 0.0, "stop": "hit", "shake": 0.1, "react": "flinch"}
+
 # Rapid fire never stutters. Every stop, whatever asked for it, draws on one shared
 # budget: a stop starts at least STOP_GAP_MS after the last one ended, at most
 # STOP_WINDOW_BUDGET_MS of stop falls in any STOP_WINDOW_MS, and at most STOP_BUDGET_MS in
@@ -226,6 +259,10 @@ const STOP_PER_EXTRA_HIT_MS := 2.0
 
 static func juice(kind: String) -> Dictionary:
 	return JUICE.get(kind, {})
+
+
+static func impact(kind: String) -> Dictionary:
+	return IMPACT.get(kind, IMPACT_FALLBACK)
 
 # v2 W2 threat grammar
 # One row per enemy attack type (combat/threat_grammar.gd), in the ROWS schema. They sit

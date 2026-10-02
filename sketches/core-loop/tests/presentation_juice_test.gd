@@ -2,6 +2,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # Juice through the real game: the camera hooks fire for dash, slam and launch; a
 # landing squashes the ball; the hits of one frame send one stop, never above the
@@ -77,6 +78,50 @@ func _process(_delta: float) -> bool:
 				"eight hits in one frame ask once and send %d stop" % sent)
 			_next(200)
 		3:
+			_juice.reset_stops()
+			_game.camera._shake = 0.0
+			var gun_base: int = _juice.hit_stop_log.size()
+			var cues_before: int = _juice.audio.cue_log.size() if _juice.audio != null else 0
+			_juice.resolve_of = func(_e, _k, force): return {"dealt": force * 2.0, "punch": force, "full": true, "part": "", "plating": 0.0}
+			for gun in ["runner", "arc", "turret"]:
+				_game.events.enemy_struck.emit(_enemy, gun, 14.0)
+			_game.events.enemy_struck.emit(_enemy, "runner", 40.0)
+			_juice.flush()
+			_juice.resolve_of = Callable()
+			var pinged: bool = _juice.audio != null and _juice.audio.cue_log.slice(cues_before).any(func(c: Array): return c[1] == "crit_ping")
+			_check("guns do not stop", _juice.hit_stop_log.size() == gun_base and _game.camera._shake == 0.0,
+				"laser, arc and turret hits, crits among them, ask for %d stops and the camera shake is %.2f" % [_juice.hit_stop_log.size() - gun_base, _game.camera._shake])
+			_check("gun crit pings", pinged, "a crit on a gun kind still plays crit_ping")
+			_juice.reset_stops()
+			_game.events.enemy_struck.emit(_enemy, "sticky", 16.0)
+			_juice.flush()
+			var bomb_shake: float = _game.camera._shake
+			_check("bombs stop and shake", _sent_for("enemy_struck").size() >= 1 and bomb_shake > 0.0,
+				"a sticky hit sends a stop and shakes the camera %.2f" % bomb_shake)
+			_game.camera._shake = 0.0
+			_juice.reset_stops()
+			var rams_before := _sent().size()
+			_game.events.enemy_struck.emit(_enemy, "ram", 20.0)
+			_juice.flush()
+			_check("rams stop and shake", _sent().size() > rams_before and _game.camera._shake > 0.0,
+				"a ram sends a stop and shakes the camera %.2f" % _game.camera._shake)
+			_juice.reset_stops()
+			var mixed_base := _sent().size()
+			for i in 30:
+				_game.events.enemy_struck.emit(_enemy, "sticky" if i % 2 == 0 else "ram", 40.0)
+				_juice.flush()
+			var mixed := 0.0
+			for entry in _sent().slice(mixed_base):
+				mixed += entry[1] * 1000.0
+			_check("mixed burst keeps the budget", mixed <= EventKinds.STOP_BUDGET_MS + 0.5, "30 bomb and ram hits send %.0f ms of stop (budget %.0f)" % [mixed, EventKinds.STOP_BUDGET_MS])
+			_game.camera._shake = 0.0
+			_juice.hook_log.clear()
+			_juice.squash(0.0, Vector3.FORWARD)
+			_game.events.player_hit.emit(10.0, "chaser")
+			_check("damage taken does not shake", _logged("edge_flash", "player_hit") and absf(_juice.squash_amount()) > 0.0 and _game.camera._shake == 0.0,
+				"a hit taken flashes the edge, squashes the shell by %.2f and leaves the camera shake at %.2f" % [_juice.squash_amount(), _game.camera._shake])
+			_next(200)
+		4:
 			var within := true
 			var values: Array = []
 			for entry in _sent():

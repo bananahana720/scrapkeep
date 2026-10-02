@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # Knockback by weapon class (v3 W11), through combat's real hit on real chasers: at the
 # same damage a gun nudges, a bomb or blast throws and a ram pushes about as hard, all
@@ -45,25 +46,35 @@ func _knockback() -> void:
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	var combat = _game.combat
+	var impact: Dictionary = EventKinds.IMPACT
 	var shoves := {
-		"rapid_laser": Weapons.BASE[Weapons.RAPID_LASER]["knock"],
-		"arc_caster": Weapons.BASE[Weapons.ARC_CASTER]["knock"],
-		"pylon_turret": Weapons.BASE[Weapons.PYLON_TURRET]["knock"],
-		"sticky_charge": Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
-		"discharge": Weapons.BURST_KNOCK,
-		"detonation_line": Weapons.LINE_KNOCK,
-		"overdrive": Weapons.OVERDRIVE_KNOCK,
-		"ram": Augments.RAM_KNOCK,
+		"rapid_laser": impact["runner"]["knock"],
+		"arc_caster": impact["arc"]["knock"],
+		"pylon_turret": impact["turret"]["knock"],
+		"sticky_charge": impact["sticky"]["knock"],
+		"discharge": impact["burst"]["knock"],
+		"detonation_line": impact["line"]["knock"],
+		"overdrive": impact["overdrive"]["knock"],
+		"ram": impact["ram"]["knock"],
 	}
+	var kinds := {"rapid_laser": "runner", "arc_caster": "arc", "pylon_turret": "turret", "sticky_charge": "sticky", "discharge": "turret",
+		"detonation_line": "line", "overdrive": "runner", "ram": "ram"}
+	var sources := {"discharge": "burst", "overdrive": "overdrive"}
 	var moved := {}
 	var i := 0
 	for id in shoves:
 		var at: Vector3 = _game.player.ball_position() + Vector3(40.0 + 8.0 * i, 0.0, 40.0)
 		var enemy: Node3D = combat.spawn_enemy("chaser", _game.ctx.terrain.drop_point(at.x, at.z, 1.0))
 		enemy.hp = 1000.0
-		combat._hit(enemy, "runner", DAMAGE, Vector3.RIGHT, shoves[id])
+		combat._hit(enemy, kinds[id], DAMAGE, Vector3.RIGHT, shoves[id], "", "", sources.get(id, ""))
 		moved[id] = enemy._knocked_speed()
 		i += 1
+	var pinned := Weapons.BASE[Weapons.RAPID_LASER]["knock"] == 3.0 and Weapons.BASE[Weapons.STICKY_CHARGE]["knock"] == 26.0 \
+		and Weapons.OVERDRIVE_KNOCK == 34.0 and Weapons.BURST_KNOCK == 24.0 and Weapons.LINE_KNOCK == 28.0 \
+		and Weapons.BASE[Weapons.ARC_CASTER]["knock"] == 5.0 and Weapons.BASE[Weapons.PYLON_TURRET]["knock"] == 6.0
+	_check("knock sizes held", pinned and moved["sticky_charge"] > Weapons.PIN_MIN_SPEED,
+		"laser 3, arc 5, turret 6, sticky 26, burst 24, line 28, overdrive 34 as before the table; a sticky hit moves %.1f m/s against the pin floor %.0f"
+			% [moved["sticky_charge"], Weapons.PIN_MIN_SPEED])
 	var guns := maxf(moved["rapid_laser"], maxf(moved["arc_caster"], moved["pylon_turret"]))
 	var blasts := minf(moved["sticky_charge"], minf(moved["discharge"], minf(moved["detonation_line"], moved["overdrive"])))
 	var listed := PackedStringArray()

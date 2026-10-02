@@ -307,7 +307,9 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	var weak := String(result.get("part", "")) != "" and plating_of.is_valid() and is_instance_valid(enemy) \
 		and float(result.get("plating", 0.0)) < float(plating_of.call(enemy))
 	var crit := weak or dealt > float(result.get("punch", dealt)) * 1.01
-	_hits.append({"at": at + Vector3.UP * 0.6, "damage": dealt, "crit": crit, "heavy": kind in CONTACT_KINDS, "kind": kind})
+	var impact := EventKinds.impact(kind)
+	_hits.append({"at": at + Vector3.UP * 0.6, "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
+		"stop": impact["stop"] != "none", "shake": float(impact["shake"])})
 	_queue_flush()
 
 
@@ -355,13 +357,17 @@ func _flush_hits() -> void:
 	var row := EventKinds.juice("enemy_struck")
 	var color := EventKinds.color("enemy_struck")
 	var stop := 0.0
-	var shake := float(row["shake"])
+	var shake := 0.0
 	var heavy := false
 	var crit := false
 	var contact := Vector3.ZERO
 	for i in _hits.size():
 		var hit: Dictionary = _hits[i]
-		stop = maxf(stop, stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]))
+		if hit["stop"]:
+			stop = maxf(stop, stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]))
+			if hit["crit"]:
+				shake = maxf(shake, float(row["crit"]["shake"]))
+		shake = maxf(shake, hit["shake"])
 		crit = crit or hit["crit"]
 		if hit["heavy"]:
 			heavy = true
@@ -371,18 +377,17 @@ func _flush_hits() -> void:
 				vfx.burst("spark", hit["at"], row["crit"]["color"], int(row["crit"]["sparks"]))
 			else:
 				vfx.burst("spark", hit["at"], color, int(row["sparks"]))
-	stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
-	if crit:
-		shake = maxf(shake, float(row["crit"]["shake"]))
-		if audio != null:
-			audio.play("enemy_struck", 0.0, 1.0, "SFX", String(row["crit"]["sound"]))
+	if stop > 0.0:
+		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
+	if crit and audio != null:
+		audio.play("enemy_struck", 0.0, 1.0, "SFX", String(row["crit"]["sound"]))
 	if heavy:
 		_thump(contact, float(row["heavy"]["kick"]), int(row["heavy"]["dust"]), "enemy_struck")
-		shake = maxf(shake, float(row["heavy"]["shake"]))
-	if camera != null:
+	if camera != null and shake > 0.0:
 		camera.shake(shake, 0.2)
 	_hits.clear()
-	request_hit_stop(stop / 1000.0, "enemy_struck")
+	if stop > 0.0:
+		request_hit_stop(stop / 1000.0, "enemy_struck")
 
 
 # The ram's weight: the camera kicked along the ball's travel, dust at the contact and
@@ -495,12 +500,11 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring", Color(0, 0, 0, 0), "P2")
 
 
-# A hit taken: the screen edge toward the source flashes, a short shake.
+# A hit taken: the screen edge toward the source flashes and the shell winces. Never a camera shake: it would hide whether the hit was dodged.
 func _on_player_hit(amount: float, _source: String) -> void:
 	var row := EventKinds.juice("player_hit")
-	if camera != null:
-		camera.shake(float(row["shake"]) * clampf(0.5 + amount / 20.0, 0.5, 1.2), float(row["shake_s"]))
 	hook_log.append(["edge_flash", "player_hit"])
+	squash(float(row["squash"]), Vector3.ZERO)
 	if vfx == null:
 		return
 	var from = null
