@@ -227,6 +227,11 @@ Each is worded so he can veto it.
 16. A line held on a body reels the ball in, as in the build he played, and Ctrl commits the smash. The first build of the harpoon rules had dropped the reel; it is back so the approach to the move he called super fun is unchanged. The other choice is no pull until Ctrl.
 17. Ctrl with no line is the brake or the slam and plays no "can't" sound.
 18. The traversal bar is "no regression" on flow share, plus zero dead stops and anchors within 40 m. The retrofit is judged on the authored line's length and the verbs it chains, and on his play.
+19. The lock's brackets are drawn once, on the target in the world. The reticle is a dot while a line stands.
+20. Death drops the line.
+21. A prompt that returns lasts at most 3 s of "you could press this now". Sable keeps her mount and slingshot prompts.
+22. Cause glyphs are one fixed set: bolt for arc, disc for kinetic, core for mass, bar for anchor, chevron for speed, wave for spiral, diamond for split.
+23. Not built in wave R1 and still owed: right mouse still cancels a charge; the ability bar does not yet hide a keycap while its prompt shows; there is no "let go to fling" prompt; a latched body does not yet lean or drag sparks.
 
 ## 11. What only Andrew can decide
 

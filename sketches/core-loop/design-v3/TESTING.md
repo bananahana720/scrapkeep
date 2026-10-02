@@ -146,3 +146,13 @@ All three units failed their first review and took one fix round (cause split: C
 
 A SCRIPT ERROR inside a check body left the test's own verdict line reading PASS; the runner's SCRIPT ERROR scan caught it. The check helper should fail the test itself.
 
+### After wave R1b, `proto/alpha` at `ba03120`
+
+One gate run for four units (receipt `gate-c834277ff5d5-2026-10-02T09-18-37-659Z.json`): 244 runs, 0 failed, 2 quarantined red, 448 s.
+
+Two of four units failed their first review, both cause `writer`: a looped sound that outlived its line on a route no check walked (death), and a prompt rule whose tests never reached the code that reads the player. One fix round; the second C1 review failed on one line, fixed by the coordinator with a check that puts a device in front of a pilot who cannot mount.
+
+Three review findings were tests that could not fail: a width check that used the function under test to convert metres to pixels, a level check that equalled its own constants, and a spy that passed on the base code. Each was rewritten to measure independently.
+
+`ui_word_budget_test` reads 34 words against 25 at this head (32 before the prompts). It stays quarantined to the HUD unit in wave R2.
+
