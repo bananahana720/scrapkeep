@@ -151,7 +151,7 @@ func _check_event_kinds() -> void:
 	for sig in _game.events.get_script().get_script_signal_list():
 		names.append(sig["name"])
 	for kind in names:
-		var row: Dictionary = EventKinds.ROWS.get(kind, {})
+		var row: Dictionary = EventKinds.row(kind)
 		if row.is_empty():
 			missing.append("%s (no row)" % kind)
 		elif String(row.get("sound", "")).strip_edges() == "":

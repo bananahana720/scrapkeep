@@ -6,6 +6,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The legibility grammar's rows (design-v3/LEGIBILITY.md sections 1 to 3): every colour is one
 # of the five roles, words stay short, the live colour stays clear of every other meaning, no
@@ -38,7 +39,7 @@ func run(t) -> void:
 				long_words.append("%s.%s" % [name, id])
 			if not String(row.get("shape", "")) in EventKinds.SHAPES:
 				bad_shapes.append("%s.%s" % [name, id])
-	t.check("every colour role is one of the five", bad_roles.is_empty(), "rows with another role: %s" % [bad_roles])
+	t.check("every colour role is one of the five meanings or neutral", bad_roles.is_empty(), "rows with another role: %s" % [bad_roles])
 	t.check("every motion is a known word", bad_motions.is_empty(), "rows with another motion: %s" % [bad_motions])
 	t.check("every word is three words or fewer", long_words.is_empty(), "rows over %d words: %s" % [EventKinds.MAX_WORDS, long_words])
 	t.check("every shape is a known shape", bad_shapes.is_empty(), "rows with another shape: %s" % [bad_shapes])
@@ -60,12 +61,17 @@ func run(t) -> void:
 			slate_close.append("%s %.1f" % [name, gap])
 	t.check("slate sits clear of the warm colours and the ancients' blue", slate_close.is_empty(),
 		"slate is under %.0f CIE76 from: %s" % [MIN_SLATE_DISTANCE, slate_close])
-	var live_rows: Array = []
-	for name in new_rows:
-		for id in new_rows[name]:
-			if new_rows[name][id].get("color", "") == "live" and EventKinds.role_color("live") != live:
-				live_rows.append("%s.%s" % [name, id])
-	t.check("the live role resolves through Palette.live", live_rows.is_empty(), "rows that resolve elsewhere: %s" % [live_rows])
+	var not_mint: Array = []
+	for class_def in ClassDef.all():
+		var pilot_live: Color = Palette.live(class_def)
+		if pilot_live != Color("8bf0d3"):
+			not_mint.append("%s is %s" % [class_def.id, pilot_live.to_html(false)])
+		for name in rivals:
+			if _cie76(pilot_live, rivals[name]) < MIN_LIVE_DISTANCE:
+				not_mint.append("%s is close to %s" % [class_def.id, name])
+	t.check("the live colour is mint for every pilot", not_mint.is_empty() and ClassDef.all().size() >= 3, "%s" % [not_mint])
+	t.check("the live role resolves to the live colour", EventKinds.role_color("live") == live and EventKinds.state_color("open") == live and EventKinds.state_color("chunk_shatter") == live,
+		"role %s, open %s, chunk_shatter %s" % [EventKinds.role_color("live").to_html(false), EventKinds.state_color("open").to_html(false), EventKinds.state_color("chunk_shatter").to_html(false)])
 
 	var seen := {}
 	var twice: Array = []
@@ -147,20 +153,27 @@ func run(t) -> void:
 	t.check("a smash reads as it did", smash.get("shape") == "ring" and smash.get("sound") == "slam_boom" and smash.get("color") == Palette.ARC and smash.get("priority") == 1 and smash.get("group") == "movement",
 		"smash row %s" % [smash])
 
-	var boss_rows := ["posture_step", "stagger", "chunk_shatter"]
-	var bad_boss: Array = []
-	for id in boss_rows:
-		var row := EventKinds.row(id)
-		if row.get("group", "") != "combat" or row.get("hud", "x") != "":
-			bad_boss.append(id)
-	t.check("boss rows are combat rows with no HUD text", bad_boss.is_empty(), "rows: %s" % [bad_boss])
+	var missing_posture: Array = []
+	for id in ["posture_step", "open", "chunk_shatter"]:
+		if not EventKinds.STATE_ROWS.has(id) or EventKinds.ROWS.has(id):
+			missing_posture.append(id)
+	t.check("the Warden's posture facts are state rows with no amber", missing_posture.is_empty()
+			and EventKinds.STATE_ROWS["posture_step"]["color"] == "neutral" and EventKinds.STATE_ROWS["open"]["color"] == "live",
+		"not state rows: %s" % [missing_posture])
 
-	var signals := GameEvents.signal_names()
-	var absent: Array = []
-	for name in ["line_state_changed", "verb_failed", "cause_fired", "posture_changed"]:
-		if not name in signals:
-			absent.append(name)
-	t.check("the four grammar signals exist", absent.is_empty(), "missing: %s" % [absent])
+	var arity := {"line_state_changed": 4, "verb_failed": 3, "cause_armed": 1, "cause_fired": 3, "posture_changed": 3}
+	var wrong: Array = []
+	for info in (GameEvents as Script).get_script_signal_list():
+		if arity.has(info["name"]):
+			if info["args"].size() != arity[info["name"]]:
+				wrong.append("%s takes %d" % [info["name"], info["args"].size()])
+			arity.erase(info["name"])
+	t.check("the five grammar signals exist with their arguments", wrong.is_empty() and arity.is_empty(), "wrong %s, missing %s" % [wrong, arity.keys()])
+	var unlisted: Array = []
+	for name in EventKinds.GRAMMAR_SIGNALS:
+		if not EventKinds.ROWS.has(name):
+			unlisted.append(name)
+	t.check("each unheard grammar signal has its quiet row", unlisted.is_empty(), "no row: %s" % [unlisted])
 
 
 static func _word_count(text: String) -> int:

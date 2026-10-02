@@ -157,11 +157,15 @@ signal warden_window_held(at: Vector3, seconds_left: float)
 signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
 signal warden_pulse_dodged(at: Vector3, near: bool)
 
-# The legibility grammar (design-v3/LEGIBILITY.md). line_state_changed names a LINE_ROWS id,
-# verb_failed a Bindings.VERBS id, cause_fired a CAUSE_ROWS id; posture_changed carries the
-# Warden's posture bar.
-signal line_state_changed(state: String, target: Node3D, at: Vector3)
-signal verb_failed(verb: String, at: Vector3)
+# The legibility grammar (design-v3/LEGIBILITY.md). line_state_changed names a LINE_ROWS id;
+# cause is "" except on "broke", where it says what cut the line. verb_failed names a
+# Bindings.VERBS id and why the press could not succeed, at the place it would have landed.
+# cause_armed and cause_fired name a build/synergies.gd id: armed when it becomes live, fired
+# each time its effect happens (target is null where no one body is struck). posture_changed
+# carries the Warden's posture bar.
+signal line_state_changed(state: String, target: Node3D, at: Vector3, cause: String)
+signal verb_failed(verb: String, reason: String, at: Vector3)
+signal cause_armed(id: String)
 signal cause_fired(id: String, target: Node3D, at: Vector3)
 signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
 
