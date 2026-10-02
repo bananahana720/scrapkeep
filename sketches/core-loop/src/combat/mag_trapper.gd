@@ -18,6 +18,7 @@ const HP := 50.0
 
 var rating := RATING_BASE
 var _stack: Node3D
+var _disc_material: StandardMaterial3D
 
 
 func _configure(threat: float) -> void:
@@ -31,13 +32,80 @@ func _configure(threat: float) -> void:
 	rating = RATING_BASE + RATING_PER_THREAT * (threat - 1.0)
 
 
+# C12 dressing (enemy_mag_trapper.glb). The counter's capsule crew is replaced by the glb's
+# crew and cart (the collider _add_capsule laid stays), and the pit discs ride a pivot at the
+# cart bed. The glb is read once; every trapper shares its meshes and adds its own flashing body and disc materials as
+# surface overrides.
+const TILT := 0.42
+const SHUDDER := 0.012
+const CORE_EMISSION := 0.6
+
+static var _shared: Dictionary = {}
+
+
 func _build_tool() -> void:
+	_crew.free()
+	_crew = null
+	var parts := _parts()
+	var dress := Node3D.new()
+	dress.name = "MagTrapperBody"
+	add_child(dress)
+	var cart := MeshInstance3D.new()
+	cart.name = "Cart"
+	cart.mesh = parts["body"]
+	cart.set_surface_override_material(parts["flash"], _material)
+	dress.add_child(cart)
 	_stack = Node3D.new()
-	_stack.position = Vector3(0.0, CREW_HALF + 0.2, -CREW_RADIUS - 0.4)
-	add_child(_stack)
-	for i in 4:
-		_cylinder(1.05, 0.16, Palette.CHARCOAL, Vector3(0.0, i * 0.2, 0.0), 0.0, _stack)
-		_cylinder(0.5, 0.18, Palette.HAZARD, Vector3(0.0, i * 0.2, 0.0), 0.6, _stack)
+	_stack.name = "MagStack"
+	_stack.position = parts["pivot"]
+	dress.add_child(_stack)
+	var discs := MeshInstance3D.new()
+	discs.name = "MagDiscs"
+	discs.mesh = parts["discs"]
+	_disc_material = Palette.solid(Color.WHITE)
+	_disc_material.vertex_color_use_as_albedo = true
+	discs.set_surface_override_material(parts["disc_paint"], _disc_material)
+	_stack.add_child(discs)
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_mag_trapper.glb") as PackedScene).instantiate()
+	var charcoal := Palette.solid(Palette.CHARCOAL)
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var core := Palette.solid(Palette.HAZARD, CORE_EMISSION)
+	var flash := 0
+	var disc_paint := 0
+	var meshes := {}
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				flash = i
+			elif slot == "paint" and node.name == "MagDiscs":
+				disc_paint = i
+			mesh.surface_set_material(i, core if slot == "class_accent" else (painted if slot == "paint" else charcoal))
+		meshes[node.name] = mesh
+	_shared = {"body": meshes["MagTrapperBody"], "discs": meshes["MagDiscs"], "flash": flash, "disc_paint": disc_paint,
+		"pivot": (scene.find_child("MagStack", true, false) as Node3D).position}
+	scene.free()
+	return _shared
+
+
+# The discs' own material answers the hit event the body's does: enemy.flash() sets _flash,
+# the base decays it, and this mirrors the same amber pulse on the discs and settles them to plain white at rest
+# (the discs carry no plating tint).
+func _update_flash(delta: float) -> void:
+	super(delta)
+	if _disc_material == null:
+		return
+	_disc_material.albedo_color = Color.WHITE.lerp(Color(1.0, 1.0, 0.85), _flash)
+	_disc_material.emission_enabled = _flash > 0.0
+	_disc_material.emission = Palette.AMBER
+	_disc_material.emission_energy_multiplier = _flash * 2.0
 
 
 func _commit(_to_ball: Vector3) -> Node3D:
@@ -64,6 +132,18 @@ func _live(_delta: float) -> bool:
 	return true
 
 
+# The wind-up cocks the stack back on its pivot, easing with the warning's own progress
+# (WARN phase, _warn_progress()); it reads that clock and adds none. The discs are hidden
+# while the pit is live (the thrown disc has left), and come back upright.
 func _pose() -> void:
-	if _stack != null:
-		_stack.visible = phase != Phase.LIVE
+	if _stack == null:
+		return
+	_stack.visible = phase != Phase.LIVE
+	match phase:
+		Phase.WARN:
+			var t := clampf(_warn_progress(), 0.0, 1.0)
+			_stack.rotation.x = -TILT * t * t * (3.0 - 2.0 * t) + sin(_t * 38.0) * SHUDDER * t
+		Phase.LIVE:
+			_stack.rotation.x = 0.0
+		_:
+			_stack.rotation.x = lerpf(_stack.rotation.x, 0.0, 1.0 - exp(-10.0 * get_physics_process_delta_time()))

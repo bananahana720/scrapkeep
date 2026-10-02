@@ -19,3 +19,11 @@ XDG_DATA_HOME=/tmp/scrapkeep-vd02-data /home/andrew/.local/share/godot/4.7.2/God
 ```
 
 Native rendering, measured performance, whole-sketch smoke and human acceptance belong to the parent integration gate. This receipt is structural only.
+
+## Stage-1 placement hold for the v3 fun lab
+
+As of 28 September 2026, hold further Spillway scenery placement until the coordinator supplies the merged base containing `proto/core-loop-v3-lab` and `proto/core-loop-v3-interact`. Reserve the Warden bowl rim and route to the top shelf for the steam lift; both chute mouths and their trajectories toward the Warden mast for the amber kicker lips; the east line for the ambush altar; the area behind the vault plinth for the cracked wall and cache; and Moss's cradle surroundings for the double-or-nothing crate.
+
+The existing exterior scenery remains unchanged and subject to its x/z ±200 exclusion invariant. That bound does not establish clearance or visual readability against the unmerged v3 geometry. On the refreshed base, check the new routes, destinations and interaction sightlines before revising placement. Do not infer exact footprints from the v2 map.
+
+Warden dome open/closed states and the reactor crater are deferred appearance work. Read the lab's published state contract after integration before adapting their look. The lab leaves `hero_assets.gd`, `warden_look.gd`, `palette.gd` and terrain sky/material code untouched.

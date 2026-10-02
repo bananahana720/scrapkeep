@@ -19,3 +19,4 @@ leads.lock
 .claude/worktrees/
 native/.godot/
 native/**/*.import
+artifacts/anim-pilot/

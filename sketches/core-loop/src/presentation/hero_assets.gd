@@ -9,6 +9,12 @@ const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
+const PILOTS := {
+	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
+	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
+	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
+}
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
 # models from tools/blender/ as nodes enter the tree, without editing the gameplay
@@ -28,9 +34,9 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 # roll through it instead of clipping the glass.
 
 const SHELLS := {
-	"pylon_engineer": "res://assets/models/shell_sable.glb",
-	"runner_gunner": "res://assets/models/shell_rivet.glb",
-	"demolitions_caster": "res://assets/models/shell_kest.glb",
+	"pylon_engineer": "res://assets/models/world_one/shell_sable.glb",
+	"runner_gunner": "res://assets/models/world_one/shell_rivet.glb",
+	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
 }
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
@@ -63,7 +69,7 @@ const SLOTS := {
 	"pilot": {"color": Color.WHITE, "vertex": true, "rough": 0.9},
 	"fleet_paint": {"color": Palette.RUST, "rough": 0.8},
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
-	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.55},
+	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.72},
 	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
 }
@@ -77,12 +83,16 @@ var _wardens := {}
 var _mast := {}
 var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
+var _reaction_clock := 0.0
+var _reaction_connections: Array = []
 
 
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "HeroAssets"
+	_connect_pilot_events()
 	_prewarm_warden_strokes()
+	_dress_bay.call_deferred()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
 	if ctx != null and ctx.get("build") != null and ctx.build.has_signal("shell_air_changed"):
@@ -98,6 +108,10 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	for connection in _reaction_connections:
+		if is_instance_valid(connection.bus) and connection.bus.is_connected(connection.event, connection.callback):
+			connection.bus.disconnect(connection.event, connection.callback)
+	_reaction_connections.clear()
 	for rec in _wardens.values():
 		_restore_warden(rec)
 	_wardens.clear()
@@ -131,10 +145,12 @@ func material(slot: String, tint := Color.WHITE) -> Material:
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 void fragment() {
 	float edge = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 3.0);
-	ALBEDO = vec3(0.95, 0.98, 1.0);
-	ALPHA = 0.025 + edge * 0.32;
-	ROUGHNESS = 0.08;
-	SPECULAR = 0.7;
+	// Reflection lives at the edge: a rough, low-specular face-on lobe keeps the sun from
+	// landing as a hotspot on the forehead, and the edge term carries the sky tint.
+	ALBEDO = vec3(0.86, 0.94, 1.0);
+	ALPHA = 0.05 + edge * 0.22;
+	ROUGHNESS = 0.32;
+	SPECULAR = 0.08 + edge * 0.5;
 }
 """
 		glass.shader = shader
@@ -150,10 +166,39 @@ void fragment() {
 	mat.vertex_color_use_as_albedo = spec.get("vertex", false)
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
-	if slot in ["paint", "pilot", "bare_metal"]:
+	if slot == "ancient_enamel":
+		# Section 11: cast, seamless petrol with dust in the vertex colours; no plate map.
 		mat.albedo_texture = Palette.painted_texture(128)
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE * 2.0
+		Palette.enamel_wear(mat)
+	if slot in ["paint", "pilot", "bare_metal", "fleet_paint"]:
+		# Look pass 3: broad painted material groups. Plate for hulls and Warden armor,
+		# the worn variant for old fleet repairs, riveted gyro metal for bare metal.
+		var map := ""
+		var metres := 1.5
+		match slot:
+			"paint":
+				map = "rusted-salvaged-plate"
+			"fleet_paint":
+				map = "rusted-salvaged-plate-worn"
+			"bare_metal":
+				map = "riveted-gyro-metal"
+				metres = 0.8
+		if map != "":
+			mat.albedo_texture = Palette.look_texture(map, true)
+			mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+			mat.uv1_triplanar = true
+			mat.uv1_scale = Vector3.ONE / metres
+			# Plate maps average darker than the old neutral value noise; lift them once here
+			# instead of tinting twice.
+			if slot == "paint":  # lift once, not a second tint
+				mat.albedo_color = Color(1.2, 1.2, 1.2, mat.albedo_color.a)
+		else:
+			mat.albedo_texture = Palette.painted_texture(128)
+			mat.uv1_triplanar = true
+			mat.uv1_scale = Vector3.ONE * 2.0
+	# The plate maps carry their own wear; the old detail-mask oxide would double it.
 	if spec.has("alpha"):
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.metallic_specular = 0.65
@@ -186,6 +231,8 @@ func paint(root: Node, tints: Dictionary) -> void:
 					continue
 				var from: String = SLOTS[slot].get("from", "")
 				mi.set_surface_override_material(i, material(slot, tints.get(from, Color.WHITE)))
+				if slot == "glass":
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 static func hide_placeholder(mi: GeometryInstance3D) -> void:
@@ -261,9 +308,11 @@ func _fit(rec: Dictionary) -> void:
 	rec["class"] = id
 	rec["core"] = core
 	rec["pod"] = pod
+	_fit_pilot(rec)
 
 
 func _process(delta: float) -> void:
+	_reaction_clock += delta
 	for key in _players.keys():
 		var rec: Dictionary = _players[key]
 		var player = rec["player"]
@@ -344,6 +393,108 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 # The shell the player wears, for tests and tools: {class, core, pod} or {}.
 func shell_of(player: Node) -> Dictionary:
 	return _players.get(player.get_instance_id(), {})
+
+
+# --- cosmetic pilot reactions ------------------------------------------------------
+
+func _fit_pilot(rec: Dictionary) -> void:
+	var pilot := _scene(PILOTS[rec["class"]])
+	pilot.name = "AnimatedPilot"
+	var pod: Node3D = rec.pod
+	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D
+	if placeholder != null:
+		hide_placeholder(placeholder)
+	pod.add_child(pilot)
+	paint(pilot, {"class": rec.player.class_color()})
+	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	rec["animator"] = animator
+	rec["pilot"] = pilot
+	rec["reaction"] = ""
+	rec["priority"] = -1
+	rec["cooldowns"] = {}
+	if animator != null:
+		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
+		_seat_pilot(rec)
+
+
+func _connect_pilot_events() -> void:
+	if ctx == null or ctx.events == null or not _reaction_connections.is_empty():
+		return
+	for info in ctx.events.get_signal_list():
+		var event := String(info.name)
+		if not PilotReactions.ROWS.has(event) or PilotReactions.ROWS[event].get("pending", false):
+			continue
+		var handlers := [_pilot_event_0, _pilot_event_1, _pilot_event_2, _pilot_event_3, _pilot_event_4]
+		var callback: Callable = handlers[info.args.size()].bind(event)
+		ctx.events.connect(event, callback)
+		_reaction_connections.append({"bus": ctx.events, "event": event, "callback": callback})
+
+
+func _pilot_event_0(event: String) -> void:
+	_on_pilot_event(event, [])
+
+
+func _pilot_event_1(a, event: String) -> void:
+	_on_pilot_event(event, [a])
+
+
+func _pilot_event_2(a, b, event: String) -> void:
+	_on_pilot_event(event, [a, b])
+
+
+func _pilot_event_3(a, b, c, event: String) -> void:
+	_on_pilot_event(event, [a, b, c])
+
+
+func _pilot_event_4(a, b, c, d, event: String) -> void:
+	_on_pilot_event(event, [a, b, c, d])
+
+
+func _on_pilot_event(event: String, args: Array) -> void:
+	for rec in _players.values():
+		if is_instance_valid(rec.player):
+			react(rec.player, event, args)
+
+
+# Returns acceptance for tests and capture tools. Never writes to the player.
+func react(player: Node, event: String, args: Array = []) -> bool:
+	if not PilotReactions.ROWS.has(event):
+		return false
+	var row: Dictionary = PilotReactions.ROWS[event]
+	if row.get("pending", false):
+		return false
+	if row.has("near_arg") and (args.size() <= row.near_arg or args[row.near_arg] != true):
+		return false
+	var rec := shell_of(player)
+	if rec.is_empty() or not is_instance_valid(rec.get("animator")):
+		return false
+	var clip := PilotReactions.clip_for(row, rec["class"])
+	var animator: AnimationPlayer = rec.animator
+	if not animator.has_animation(clip) or _reaction_clock < float(rec.cooldowns.get(clip, 0.0)):
+		return false
+	if rec.reaction != "" and int(row.priority) <= int(rec.priority):
+		return false
+	rec.reaction = clip
+	rec.priority = row.priority
+	rec.cooldowns[clip] = _reaction_clock + float(row.cooldown)
+	# No blend on impact: the authored recoil must be visible in its first frames.
+	animator.play(clip, 0.0)
+	animator.advance(0.0)
+	return true
+
+
+func _pilot_finished(_clip: StringName, player_id: int, animator: AnimationPlayer) -> void:
+	var rec: Dictionary = _players.get(player_id, {})
+	if not rec.is_empty() and rec.animator == animator:
+		_seat_pilot(rec)
+
+
+func _seat_pilot(rec: Dictionary) -> void:
+	rec.animator.stop()
+	for skeleton in rec.pilot.find_children("*", "Skeleton3D", true, false):
+		skeleton.reset_bone_poses()
+	rec.reaction = ""
+	rec.priority = -1
 
 
 # --- accretion chunks --------------------------------------------------------------
@@ -509,6 +660,18 @@ func _dress_warden(warden) -> void:
 					rec.shutters.append({"node": child, "rest": at})
 		rec.lens = lens
 	warden.add_child(base)
+	# Conditional cool fill (LIGHTING-TARGETS, Warden): shadowless, 9 m, low energy, so the
+	# front barrel and left armour separate from the shared warm key.
+	var cool := OmniLight3D.new()
+	cool.name = "WardenCoolFill"
+	cool.light_color = Color("a8c2d4")
+	cool.light_energy = 0.9
+	cool.omni_range = 9.0
+	cool.omni_attenuation = 1.2
+	cool.shadow_enabled = false
+	cool.light_specular = 0.0
+	cool.position = Vector3(-4.5, 3.5, -5.5)
+	base.add_child(cool)
 	for child in warden._look.get_children():
 		if child is MeshInstance3D and child.material_override == warden._look.body_material and child != warden._look._arm:
 			_hide_warden_mesh(child, rec)
@@ -680,7 +843,7 @@ func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
 			if slot == "ancient_light" and not kit:
 				key += "_jaw" if String(root.name).begins_with("Jaw") else "_base"
 			if not rec.materials.has(key):
-				rec.materials[key] = material(slot).duplicate()
+				rec.materials[key] = material(slot).duplicate() if slot in ["ancient_light", "ancient_enamel"] else material(slot)
 			root.set_surface_override_material(i, rec.materials[key])
 	for child in root.get_children():
 		_paint_warden(child, rec, kit)
@@ -820,3 +983,90 @@ func _restore_mast() -> void:
 		_mast.root.get_parent().remove_child(_mast.root)
 		_mast.root.queue_free()
 	_mast.clear()
+
+
+## Carried sandstone shell beside HeroWorkshop: visual only, no collision, shares the barge's
+## transforms. One mesh, one material: the dry cliff rock calculation (sandstone.gdshader,
+## cliff_only) with its pattern anchored in Barge-local metres so it rides the stone.
+func _dress_shelter(barge: Node) -> void:
+	if barge.has_node("HeroShelter"):
+		return
+	var shelter := _scene("res://assets/models/moss_shelter.glb")
+	shelter.name = "HeroShelter"
+	if not _materials.has("moss_sandstone"):
+		var stone := ShaderMaterial.new()
+		stone.shader = preload("res://src/presentation/sandstone.gdshader")
+		stone.set_shader_parameter("cliff_only", true)
+		stone.set_shader_parameter("local_pattern", true)
+		_materials["moss_sandstone"] = stone
+	for node in shelter.find_children("*", "MeshInstance3D", true, false):
+		(node as MeshInstance3D).material_override = _materials["moss_sandstone"]
+	barge.add_child(shelter)
+
+
+func _dress_bay() -> void:
+	if ctx == null or not is_inside_tree():
+		return
+	var bay: Node = ctx.root.find_child("MossBay", true, false)
+	if bay == null:
+		return
+	var cabin: Node = bay.find_child("MossCabin", true, false)
+	var barge: Node = bay.find_child("Barge", true, false)
+	if cabin == null or barge == null or barge.has_node("HeroWorkshop"):
+		return
+	var workshop := _scene("res://assets/models/moss_workshop.glb")
+	workshop.name = "HeroWorkshop"
+	paint(workshop, {"class": Palette.AMBER})
+	barge.add_child(workshop)
+	_dress_shelter(barge)
+	for child in cabin.get_children():
+		if child is MeshInstance3D:
+			hide_placeholder(child)
+	# The old shutter and shelf occupy the same cabin front; keep their gameplay owner.
+	for child in barge.get_children():
+		if child is MeshInstance3D and child.mesh is BoxMesh and child.position.x < -13.0 and child.position.y < 6.0:
+			hide_placeholder(child)
+
+	var pool := MeshInstance3D.new()
+	pool.name = "BakedLamplight"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(4.0, 7.0)
+	pool.mesh = quad
+	pool.rotation.x = -PI * 0.5
+	pool.position = Vector3(-12.8, 0.06, 0)
+	pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if not _materials.has("bay_lamplight"):
+		var glow := ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
+void fragment() {
+	float edge = max(0.0, 1.0 - length((UV - vec2(0.5)) * 2.0));
+	ALBEDO = vec3(0.75, 0.34, 0.09);
+	ALPHA = edge * edge * 0.42;
+}
+"""
+		glow.shader = shader
+		_materials["bay_lamplight"] = glow
+	pool.material_override = _materials["bay_lamplight"]
+	barge.add_child(pool)
+	# One tightly bounded shadowless amber light under the roof (LIGHTING-TARGETS, Moss).
+	var lamp := OmniLight3D.new()
+	lamp.name = "WorkshopWarmFill"
+	lamp.light_color = Color("ffc982")
+	lamp.light_energy = 7.0
+	lamp.omni_range = 8.0
+	lamp.omni_attenuation = 1.3
+	lamp.shadow_enabled = false
+	lamp.position = Vector3(-12.4, 3.0, 0.0)
+	barge.add_child(lamp)
+	# A second amber source up under the roof and shutter, so the upper interior reads warm.
+	var upper := OmniLight3D.new()
+	upper.name = "WorkshopWarmFillUpper"
+	upper.light_color = Color("ffbb70")
+	upper.light_energy = 4.5
+	upper.omni_range = 5.0
+	upper.omni_attenuation = 1.2
+	upper.shadow_enabled = false
+	upper.position = Vector3(-12.5, 5.2, 0.0)
+	barge.add_child(upper)

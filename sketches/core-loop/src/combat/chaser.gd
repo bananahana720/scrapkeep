@@ -32,7 +32,8 @@ var lunges := 0
 var _clock := 0.0
 var _rest := 0.0
 var _landed := false
-var _mesh: MeshInstance3D
+var _mesh: Node3D
+var _lean := 0.0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -43,16 +44,44 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	weight = 1.0
 	radius = 1.0
 	half_height = 1.5
-	_mesh = _add_capsule(radius, half_height * 2.0, Palette.RUST)
-	# A lit visor and a dorsal fin, so a chaser reads at 60 to 100 m as a hunting shape
-	# with a hot eye, not a rust-coloured pill against rust-coloured ground.
-	var visor := TorusMesh.new()
-	visor.inner_radius = radius * 0.9
-	visor.outer_radius = radius * 1.15
-	_accent(visor, ACCENT, 3.0, Vector3.UP * 0.55, _mesh)
-	var fin := BoxMesh.new()
-	fin.size = Vector3(0.22, 1.5, 1.3)
-	_accent(fin, Palette.CHARCOAL, 0.0, Vector3(0.0, half_height + 0.35, 0.25), _mesh)
+	# _add_capsule still lays the collider and the flashing material; its capsule mesh is
+	# replaced by the C10 wedge (enemy_chaser.glb): plough wedge, shoulder shield, raked fin
+	# and braced haunches, with the lit visor as the glb's brass surface.
+	_add_capsule(radius, half_height * 2.0, Palette.RUST).free()
+	_mesh = Node3D.new()
+	_mesh.name = "ChaserBody"
+	add_child(_mesh)
+	# The glb is read once; every chaser shares its mesh and carries only its own flashing
+	# body material as a surface override, so a spawn costs a few nodes, not a scene load.
+	for part in _parts():
+		var mi := MeshInstance3D.new()
+		mi.mesh = part.mesh
+		mi.transform = part.xform
+		_mesh.add_child(mi)
+		mi.set_surface_override_material(part.body, _material)
+
+
+static var _shared: Array = []
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_chaser.glb") as PackedScene).instantiate()
+	var charcoal := Palette.solid(Palette.CHARCOAL)
+	var visor := Palette.solid(ACCENT, 3.0)
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var body := 0
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				body = i
+			mesh.surface_set_material(i, visor if slot == "requisition_tag" else charcoal)
+		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body})
+	scene.free()
+	return _shared
 
 
 func state_name() -> String:
@@ -132,15 +161,28 @@ func _end_attack(next: int) -> void:
 	_clear_telegraph()
 
 
-# The wind-up crouches and swells: a body read to match the ground read.
+# The wind-up crouches and swells: a body read to match the ground read. The wedge turns to
+# face the ball (the lane while a lunge is committed), sits back on its haunches through the
+# wind-up (nose up, WINDUP state) and drives nose-down through the lunge (LUNGE state); it
+# reads the existing state and clock only, and adds no timer of its own.
 func _pose() -> void:
 	if _mesh == null:
 		return
+	var dt := get_physics_process_delta_time()
+	var lane := telegraph() if state == State.WINDUP or state == State.LUNGE else null
+	var face: Vector3 = lane.dir if lane != null else _flat_to_ball()
+	if face.length() > 0.01:
+		_mesh.rotation.y = lerp_angle(_mesh.rotation.y, atan2(-face.x, -face.z), 1.0 - exp(-14.0 * dt))
+	var lean := 0.0
 	match state:
 		State.WINDUP:
 			var t := clampf(_clock / WINDUP, 0.0, 1.0)
 			_mesh.scale = Vector3(1.0 + 0.2 * t, 1.0 - 0.25 * t, 1.0 + 0.2 * t)
+			lean = 0.14 * t
 		State.LUNGE:
 			_mesh.scale = Vector3(0.85, 1.15, 0.85)
+			lean = -0.18
 		_:
 			_mesh.scale = Vector3.ONE
+	_lean = lerpf(_lean, lean, 1.0 - exp(-16.0 * dt))
+	_mesh.rotation.x = _lean

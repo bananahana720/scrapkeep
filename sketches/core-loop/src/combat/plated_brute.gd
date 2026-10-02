@@ -37,23 +37,86 @@ func _configure(threat: float) -> void:
 	interruptible = false
 
 
+# C15 dressing (enemy_plated_brute.glb). The counter's capsule crew is replaced by the glb's
+# body (the collider _add_capsule laid stays) and the plate slab and pads by one plate group
+# (front slab, shoulder and rear cladding) that shows exactly while plates > 0. The glb is read
+# once; every brute shares its meshes and adds only its own flashing body material as a surface
+# override and its own tinted plate material.
+static var _shared: Dictionary = {}
+
+# The crack glyph sits on the slab's face (front face at z = 1.35), 0.07 m off it so its strokes
+# clear the face and the lit bolts, centred between the two ribs and under the brow lip. Sized
+# 1.5 so it reads at asset-front30 (about 40 px tall) and at asset-use6.
+const GLYPH_AT := Vector3(0.0, -0.05, 1.42)
+const GLYPH_SIZE := 1.5
+
+
 func _build_tool() -> void:
+	_crew.free()
+	var parts := _parts()
+	_crew = MeshInstance3D.new()
+	_crew.name = "BruteBody"
+	_crew.mesh = parts["body"]
+	_crew.set_surface_override_material(parts["flash"], _material)
+	add_child(_crew)
 	_plate = MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(2.0, 1.9, 0.5)
-	_plate.mesh = box
-	_plate.material_override = _plate_material()
-	_plate.position = Vector3(0.0, 0.1, CREW_RADIUS + 0.3)
+	_plate.name = "BrutePlates"
+	_plate.mesh = parts["plates"]
+	_plate.material_override = _plate_material(_rim_mask())
 	add_child(_plate)
-	_add_crack(_plate, Vector3(0.0, 0.0, 0.27), 1.1)
-	for side in [-1.0, 1.0]:
-		var pad := MeshInstance3D.new()
-		var pad_box := BoxMesh.new()
-		pad_box.size = Vector3(0.7, 0.5, 1.4)
-		pad.mesh = pad_box
-		pad.material_override = _plate_material()
-		pad.position = Vector3(side * (CREW_RADIUS + 0.35), CREW_HALF * 0.6, 0.0)
-		add_child(pad)
+	_add_crack(_plate, GLYPH_AT, GLYPH_SIZE).name = "PlateCrack"
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_plated_brute.glb") as PackedScene).instantiate()
+	var charcoal := Palette.solid(Palette.CHARCOAL)
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var flash := -1
+	var meshes := {}
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted if slot == "paint" else charcoal)
+		meshes[node.name] = mesh
+	if flash < 0:
+		push_error("enemy_plated_brute.glb has no fleet_paint surface; the flash lands on surface 0")
+		flash = 0
+	meshes["BrutePlates"] = _mask_uvs(meshes["BrutePlates"])
+	_shared = {"body": meshes["BruteBody"], "plates": meshes["BrutePlates"], "flash": flash}
+	scene.free()
+	return _shared
+
+
+# The amber cue's mask. The recipe paints the plate's rim and bolts vertex-colour black;
+# each vertex's UV is moved to the lit texel (right) or the dark one (left) of a 2x1 mask,
+# so the emission lands on the rim and bolts of the one plate surface.
+static var _mask: ImageTexture
+
+
+static func _rim_mask() -> ImageTexture:
+	if _mask == null:
+		_mask = mask_texture([Color.BLACK, Color.WHITE], 2)
+	return _mask
+
+
+static func _mask_uvs(mesh: ArrayMesh) -> ArrayMesh:
+	var out := ArrayMesh.new()
+	for i in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(i)
+		var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+		var uvs := PackedVector2Array()
+		for c in colors:
+			uvs.append(Vector2(0.25 if c.r > 0.5 else 0.75, 0.5))
+		arrays[Mesh.ARRAY_TEX_UV] = uvs
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(i, mesh.surface_get_material(i))
+	return out
 
 
 func _wants_attack(to_ball: Vector3) -> bool:
