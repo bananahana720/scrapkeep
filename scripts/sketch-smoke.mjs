@@ -340,22 +340,32 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
 
 export const MISSING_VERDICT = "no verdict line: the test ended early";
 
-// A test ends with one verdict line or a skip line. Exiting 0 with neither means the body stopped early.
+const failVerdictLine = /^[\w.-]+: FAIL\b/m;
+
+// A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
+// verdict fails the test whatever the exit code. The reason names the cause that applies.
 export function judge({ test, status, output }) {
   const verdict = test ? hasVerdictLine(output) : null;
   const skips = skipLines(output);
-  const missing = verdict === false && skips.length === 0;
-  const ok = status === 0 && !errorLine.test(output) && !missing;
-  return { ok, verdict, skips, missing };
+  const { passes, fails } = countChecks(output);
+  const missing = verdict === false && (skips.length === 0 || passes + fails > 0);
+  const failVerdict = Boolean(test) && failVerdictLine.test(output.replace(/\r/g, ""));
+  const ok = status === 0 && !errorLine.test(output) && !missing && !failVerdict;
+  let reason = null;
+  if (status === null) reason = "the test was killed at the time limit or by a signal";
+  else if (status !== 0) reason = `the test exited with code ${status}`;
+  else if (missing) reason = MISSING_VERDICT;
+  else if (failVerdict) reason = "the test printed a FAIL verdict";
+  return { ok, verdict, skips, missing, reason };
 }
 
 function report(job, status, output, ms) {
-  const { ok, verdict, skips, missing } = judge({ test: job.test, status, output });
+  const { ok, verdict, skips, missing, reason } = judge({ test: job.test, status, output });
   const quarantined = Boolean(job.quarantined);
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
-  if (missing) console.log(MISSING_VERDICT);
+  if (reason) console.log(reason);
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
   return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined };
 }

@@ -236,6 +236,7 @@ test("a test that exits 0 with no verdict line fails and says why", () => {
   const ended = judge({ test: true, status: 0, output: "[a] x -> PASS\n[b] y -> PASS\n" });
   assert.equal(ended.ok, false);
   assert.equal(ended.missing, true);
+  assert.equal(ended.reason, MISSING_VERDICT);
   assert.equal(MISSING_VERDICT, "no verdict line: the test ended early");
   const done = judge({ test: true, status: 0, output: "[a] x -> PASS\nsuite_test: PASS (1 checks)\n" });
   assert.equal(done.ok, true);
@@ -246,6 +247,38 @@ test("a test that exits 0 with no verdict line fails and says why", () => {
   assert.equal(skipped.skips.length, 1);
   assert.equal(judge({ test: false, status: 0, output: "booted\n" }).ok, true);
   assert.equal(judge({ test: true, status: 1, output: "suite_test: FAIL (1 of 2 checks)\n" }).ok, false);
+  assert.equal(done.reason, null);
+  assert.equal(skipped.reason, null);
+});
+
+test("a nonzero exit and a kill give their own reason, not the missing-verdict one", () => {
+  const crashed = judge({ test: true, status: 1, output: "[a] x -> PASS\n" });
+  assert.equal(crashed.ok, false);
+  assert.equal(crashed.reason, "the test exited with code 1");
+  assert.notEqual(crashed.reason, MISSING_VERDICT);
+  const killed = judge({ test: true, status: null, output: "[a] x -> PASS\n" });
+  assert.equal(killed.ok, false);
+  assert.equal(killed.reason, "the test was killed at the time limit or by a signal");
+  const failed = judge({ test: true, status: 0, output: "suite_test: FAIL (1 of 2 checks)\n" });
+  assert.equal(failed.reason, "the test printed a FAIL verdict");
+});
+
+test("a skip line exempts a test only when no check ran", () => {
+  const mixed = judge({ test: true, status: 0, output: "[a] x -> PASS\n[b] stems missing -> SKIP\n" });
+  assert.equal(mixed.ok, false);
+  assert.equal(mixed.missing, true);
+  assert.equal(mixed.reason, MISSING_VERDICT);
+  const withVerdict = judge({ test: true, status: 0, output: "[a] x -> PASS\n[b] stems missing -> SKIP\nsuite_test: PASS (1 checks)\n" });
+  assert.equal(withVerdict.ok, true);
+});
+
+test("a FAIL verdict fails the test whatever the exit code and wherever the line sits", () => {
+  const early = judge({ test: true, status: 0, output: "suite_test: FAIL (1 of 2 checks)\ntrailing line\n" });
+  assert.equal(early.ok, false);
+  assert.equal(early.missing, false);
+  assert.equal(early.reason, "the test printed a FAIL verdict");
+  const both = judge({ test: true, status: 0, output: "suite_test: PASS (2 checks)\nsuite_test: FAIL (1 of 2 checks)\n" });
+  assert.equal(both.ok, false);
 });
 
 test("a skipped test is not counted as missing a verdict in the receipt", () => {
@@ -287,6 +320,7 @@ test("a script error inside an awaited part of a test cannot pass", { skip: !exi
     });
     const output = (run.stdout || "") + (run.stderr || "");
     assert.equal(run.status, 0);
+    assert.match(output, /^SCRIPT ERROR/m);
     assert.match(output, /\[one\] first -> PASS/);
     assert.doesNotMatch(output, /\[two\]/);
     assert.equal(hasVerdictLine(output), false);

@@ -33,11 +33,14 @@ static func summary(result: Dictionary) -> Dictionary:
 	var checks := []
 	var errors := []
 	var verdict := ""
+	var verdict_line := RegEx.create_from_string("^[\\w.-]+( \\([^)]*\\))?: (PASS|FAIL)\\b")
 	for line in String(result["log"]).split("\n"):
 		if line.begins_with("["):
 			checks.append(line)
 		elif line.contains("SCRIPT ERROR") or line.begins_with("ERROR"):
 			errors.append(line.strip_edges())
-		elif line.ends_with(": PASS") or line.contains(": FAIL"):
-			verdict = line
+		elif verdict_line.search(line) != null:
+			# A trailing note after PASS is dropped, so callers can still test ends_with(": PASS").
+			var found := verdict_line.search(line)
+			verdict = found.get_string() if found.get_string(2) == "PASS" else line.strip_edges()
 	return {"checks": checks, "errors": errors, "verdict": verdict}
