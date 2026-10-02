@@ -603,6 +603,11 @@ func _declare() -> void:
 			"hint": card["hint"], "clue": card["clue"], "text": card["text"]})
 
 
+func _exit_tree() -> void:
+	if Synergies.table == ctx.stages:
+		Synergies.table = null
+
+
 # A synergy coming live is announced once per run; discovery waits for its first firing
 # (_fire), because the owner learns a synergy by seeing what it does.
 func _on_synergy_live(synergy_id: String) -> void:
@@ -624,7 +629,7 @@ func _fire(synergy_id: String, body: Node3D, at: Vector3) -> void:
 	if codex != null:
 		if not _declared:
 			_declare()
-		codex.mark_discovered(synergy_id, at, PARTICIPANTS)
+		codex.mark_discovered(synergy_id, ctx.player.ball_position(), PARTICIPANTS)
 
 
 # An unnamed interaction, reported every time it fires; the codex logs it once per
@@ -699,7 +704,9 @@ func _on_run_started(_class_id_value: String) -> void:
 	recompute()
 
 
-func _on_stage_entered(stage: int, _retry: bool) -> void:
+func _on_stage_entered(stage: int, retry: bool) -> void:
+	if retry:
+		_fired.clear()
 	gates.close()
 	field.clear()
 	_trail = 0.0
@@ -728,7 +735,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 # The build itself, its synergies and its elements keep working in the fight. An arena
 # retry has just restored the run silently, so the build and the ball's shell are
 # recomputed from the restored parts and mass.
-func _on_stage_content_cleared(_reason: String) -> void:
+func _on_stage_content_cleared(reason: String) -> void:
+	if reason == "arena_retry":
+		_fired.clear()
 	scrap.clear()
 	fabricators.clear()
 	gates.close()

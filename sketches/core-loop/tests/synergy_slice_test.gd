@@ -125,7 +125,7 @@ func _slice_cuts() -> void:
 	_hold(hand)
 	_report("slice cuts storm_lattice", not "storm_lattice" in _build.active_synergies() and not _build.has_transformer("storm_lattice")
 			and not _build.accretion.halo_visible("storm_lattice") and not "storm_lattice" in cards
-			and not "Storm Lattice" in completes and not "Storm Lattice" in ingredient and _armed.is_empty(),
+			and completes == "" and ingredient == "" and _armed.is_empty(),
 		"holding %s is not live (%s), not carded (cards %s), offers read '%s' and '%s', armed %s" % [hand, _build.active_synergies(), cards, completes, ingredient, _armed])
 	_hold(["spiral_wave", "chain_arc"])
 	_report("slice drops the unnamed rule", _build.sheet.rules.is_empty() and not _build.has_transformer("linked_spiral"),
@@ -144,6 +144,12 @@ func _default_cuts() -> void:
 	var cards: Array = _game.ctx.codex.entries("build").map(func(e): return e["id"])
 	_report("default keeps storm_lattice", "storm_lattice" in _build.active_synergies() and "storm_lattice" in cards,
 		"the same parts %s on the default table give %s and the card is there %s" % [hand, _build.active_synergies(), "storm_lattice" in cards])
+	_hold([hand[1]])
+	var completes: String = _build.offer_mark(hand[0])
+	_hold([])
+	var ingredient: String = _build.offer_mark(hand[0])
+	_report("default offers storm_lattice", completes == "* completes Storm Lattice *" and ingredient == "* ingredient: ??? *",
+		"on the default table %s reads '%s' with its partner held and '%s' with nothing held" % [hand[0], completes, ingredient])
 	_hold([])
 
 
@@ -221,10 +227,22 @@ func _spawn(at: Vector3) -> Node3D:
 
 
 func _finish(id: String, hits: Array) -> void:
+	if _case.get("again", false) and _case.get("retry", false):
+		_report("a live synergy is found again after a retry", hits.size() > _case["before"] and _discovered.count(id) == 2 and _armed.count(id) == 1 and id in _game.codex.discovered_this_run(),
+			"held at the stage start, fired, retried, fired again: %d more cause_fired; synergy_discovered total %d, cause_armed total %d, in the run's codex list %s" % [hits.size() - _case["before"], _discovered.count(id), _armed.count(id), id in _game.codex.discovered_this_run()])
+		_case = {}
+		return
 	if _case.get("again", false):
 		_report("second firing is not a discovery", hits.size() > _case["before"] and _discovered.count(id) == 1 and _armed.count(id) == 1,
 			"a second firing added %d cause_fired; synergy_discovered total %d, cause_armed total %d" % [hits.size() - _case["before"], _discovered.count(id), _armed.count(id)])
-		_case = {}
+		if _case.get("retry", false):
+			_case = {}
+			return
+		_case = {"id": id, "again": true, "retry": true, "before": hits.size()}
+		_waited = 0
+		_game.run.snapshot(_game.player.ball_position(), Vector3.ZERO, 0.0)
+		_game.flow.retry_stage()
+		_retrigger()
 		return
 	var ball: Vector3 = _game.player.ball_position()
 	var first: Dictionary = hits[0] if not hits.is_empty() else {}
@@ -260,6 +278,8 @@ func _next_game() -> bool:
 	_enemies.clear()
 	if _phase == "slice":
 		_game.free()
+		_report("a freed slice game resets the table filter", Synergies.table == null,
+			"after the slice game is freed the synergy table filter is %s" % [Synergies.table])
 		_phase = "default"
 		_fired.clear()
 		_armed.clear()
