@@ -183,6 +183,7 @@ func _process(_delta: float) -> bool:
 		return false
 	match _step:
 		0:
+			_game.tuning.set_option("music", "synth")
 			_audio = _game.presentation.audio
 			_audio.bake_now()
 			_game.ctx.calm = true

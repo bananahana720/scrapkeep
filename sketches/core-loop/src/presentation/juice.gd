@@ -313,12 +313,12 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	_queue_flush()
 
 
-# A blast publishes enemy_struck under a gun kind, so the row comes from the hit combat
-# just resolved on this enemy (last_impact) while that record is fresh, else from the kind.
+# A blast publishes enemy_struck under a gun kind, so the row comes from the record combat
+# holds for the strike being published (last_impact) when it names this enemy, else from
+# the kind.
 func _impact_key(enemy: Node3D, kind: String) -> String:
 	var last = ctx.spawner.get("last_impact") if ctx != null and ctx.spawner != null else null
-	if last is Dictionary and not last.is_empty() and is_instance_valid(enemy) \
-			and Engine.get_physics_frames() - int(last.get("frame", -100)) <= 2 and int(last.get("enemy", 0)) == enemy.get_instance_id():
+	if last is Dictionary and not last.is_empty() and is_instance_valid(enemy) and int(last.get("enemy", 0)) == enemy.get_instance_id():
 		return String(last["key"])
 	return kind
 

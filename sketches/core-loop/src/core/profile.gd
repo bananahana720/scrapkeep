@@ -82,7 +82,7 @@ func save() -> bool:
 	if read["state"] != "missing" and read["state"] != "ok":
 		last_error = "not saving: %s changed since it was loaded and cannot be read (%s)" % [path, read["why"]]
 		return false
-	if read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) > _loaded_generation):
+	if read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) != _loaded_generation):
 		next = merge(next, read["doc"])
 		if backup_path.is_empty() and read["from_version"] < SCHEMA:
 			backup_path = "%s.v%d" % [path, read["from_version"]]
@@ -107,9 +107,9 @@ func save() -> bool:
 
 
 # What two writers of one file both did, as one document: lists are the union,
-# achievements keep the earliest time and stats the larger value, equipped and
-# last_pilot are the saver's, and a key only the other side holds is kept. The
-# generation is the larger of the two.
+# achievements keep the earliest time and stats the larger value, an equipped slot
+# both hold and last_pilot are the saver's, and a slot or key only the other side
+# holds is kept. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
 	for key in ["pilots", "worlds", "cosmetics"]:
@@ -124,6 +124,10 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	for stat_name in stats:
 		if not out["stats"].has(stat_name) or stats[stat_name] > out["stats"][stat_name]:
 			out["stats"][stat_name] = stats[stat_name]
+	var worn: Dictionary = theirs.get("equipped", {})
+	for slot in worn:
+		if not out["equipped"].has(slot):
+			out["equipped"][slot] = worn[slot]
 	for key in theirs:
 		if not out.has(key):
 			out[key] = theirs[key]

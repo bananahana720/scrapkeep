@@ -283,16 +283,30 @@ func _two_stores_one_path() -> void:
 	_write(late, _bytes(FIXTURES + "v0.json"))
 	_t.check("F3-2 older file that appeared since load is merged", e.save() and e.has_pilot("runner_gunner") and e.has_pilot("mine"), e.last_error)
 	_t.check("F3-2 and its bytes are kept as a backup", _bytes(late + ".v0") == _bytes(FIXTURES + "v0.json"))
+	var f := Profile.new(_fresh_path())
+	f.load_profile()
+	f.unlock_pilot("f_one")
+	f.save()
+	f.unlock_pilot("f_two")
+	f.save()
+	var other := Profile.new(_fresh_path())
+	other.load_profile()
+	other.unlock_pilot("other_one")
+	other.save()
+	_write(f.path, _bytes(other.path))
+	f.unlock_cosmetic("f_paint")
+	_t.check("F3-2 a replaced file behind this store's generation is merged", f.save() and f.has_pilot("other_one") and f.has_pilot("f_two") and f.has_cosmetic("f_paint"),
+		"generation %d after the save, other_one %s, error '%s'" % [f.generation(), f.has_pilot("other_one"), f.last_error])
 
 
 func _merge_is_pure() -> void:
 	var ours := {
 		"schema": 1, "generation": 4, "pilots": ["a"], "worlds": [], "cosmetics": ["c1"], "achievements": {"x": 10, "y": 50},
-		"equipped": {"a/paint": "c1"}, "stats": {"runs": 2, "wins": 9}, "last_pilot": "a", "shared": "ours",
+		"equipped": {"a/paint": "c1", "a/trail": "t1"}, "stats": {"runs": 2, "wins": 9}, "last_pilot": "a", "shared": "ours",
 	}
 	var theirs := {
 		"schema": 1, "generation": 6, "pilots": ["b", "a"], "worlds": ["w"], "cosmetics": ["c2"], "achievements": {"x": 20, "y": 30, "z": 5},
-		"equipped": {"b/paint": "c2"}, "stats": {"runs": 7, "wins": 1, "kills": 3}, "last_pilot": "b", "shared": "theirs", "only_theirs": {"k": 1},
+		"equipped": {"b/paint": "c2", "a/trail": "t9"}, "stats": {"runs": 7, "wins": 1, "kills": 3}, "last_pilot": "b", "shared": "theirs", "only_theirs": {"k": 1},
 	}
 	var ours_before := ours.duplicate(true)
 	var theirs_before := theirs.duplicate(true)
@@ -301,7 +315,8 @@ func _merge_is_pure() -> void:
 	_t.eq("F3-2 merge lists are the union", [merged["pilots"], merged["worlds"], merged["cosmetics"]], [["a", "b"], ["w"], ["c1", "c2"]])
 	_t.eq("F3-2 merge keeps the earliest time", merged["achievements"], {"x": 10, "y": 30, "z": 5})
 	_t.eq("F3-2 merge keeps the larger stat", merged["stats"], {"runs": 7, "wins": 9, "kills": 3})
-	_t.check("F3-2 merge takes the saver's equipped and last pilot", merged["equipped"] == {"a/paint": "c1"} and merged["last_pilot"] == "a")
+	_t.check("F3-2 merge keeps every equipped slot, the saver's where both hold one, and the saver's last pilot",
+		merged["equipped"] == {"a/paint": "c1", "a/trail": "t1", "b/paint": "c2"} and merged["last_pilot"] == "a", str(merged["equipped"]))
 	_t.check("F3-2 merge keeps their unknown key but not over ours", merged["only_theirs"] == {"k": 1} and merged["shared"] == "ours")
 	_t.eq("F3-2 merge generation is the larger", merged["generation"], 6)
 	_t.eq("F3-2 merge is the same both times", Profile.merge(ours, theirs), merged)

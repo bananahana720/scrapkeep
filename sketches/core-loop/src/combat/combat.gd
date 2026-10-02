@@ -216,8 +216,9 @@ var _echo := {}
 var _echoing := false
 var _marks := {}
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
-# presentation's edge flash, and the last hit the ball dealt: its IMPACT key, the frame and
-# the enemy, because a blast publishes enemy_struck under a gun kind. All read only.
+# presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
+# whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
+# empty outside that emission and for a strike that names no row. All read only.
 var near_miss
 var last_player_hit := {}
 var last_impact := {}
@@ -376,7 +377,7 @@ func build_read() -> Dictionary:
 # out before the damage so a kill never publishes a freed node: enemy_struck always,
 # then strike_deflected when the punch fell short of the plating. `part` names a weak
 # point ("" for the body; a ball contact finds its own through contact_part()).
-func strike(enemy: Node3D, kind: String, force: float, part := "", source := "") -> void:
+func strike(enemy: Node3D, kind: String, force: float, part := "", source := "", impact := "") -> void:
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 		return
 	if enemy.has_method("is_dead") and enemy.is_dead():
@@ -397,7 +398,10 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "")
 	# floor clamp), so an unclamped delta would read the full overkill swing as "removed"
 	# on every ordinary kill.
 	var hp_before := _hp_of(enemy)
+	var outer_impact := last_impact
+	last_impact = {"key": impact, "enemy": enemy.get_instance_id()} if impact != "" else {}
 	ctx.events.enemy_struck.emit(enemy, kind, force)
+	last_impact = outer_impact
 	if not result["full"]:
 		deflections += 1
 		ctx.events.strike_deflected.emit(enemy, kind, result["punch"], result["plating"])
@@ -909,8 +913,7 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * float(EventKinds.impact(impact if impact != "" else kind)["lift"]), knock)
 	enemy.flash()
-	last_impact = {"key": impact if impact != "" else kind, "frame": Engine.get_physics_frames(), "enemy": enemy.get_instance_id()}
-	strike(enemy, kind, damage, part, source)
+	strike(enemy, kind, damage, part, source, impact)
 	# Death Mark: a marked enemy that dies here bursts like a charge.
 	var id := enemy.get_instance_id()
 	if _marks.has(id) and enemy.is_dead():

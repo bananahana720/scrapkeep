@@ -61,14 +61,25 @@ func _knockback() -> void:
 		"detonation_line": "line", "overdrive": "runner", "ram": "ram"}
 	var sources := {"discharge": "burst", "overdrive": "overdrive"}
 	var moved := {}
+	var keys := {}
+	var current := [""]
+	var note := func(_enemy: Node3D, _kind: String, _force: float) -> void:
+		keys[current[0]] = String(combat.last_impact.get("key", ""))
+	_game.events.enemy_struck.connect(note)
 	var i := 0
 	for id in shoves:
 		var at: Vector3 = _game.player.ball_position() + Vector3(40.0 + 8.0 * i, 0.0, 40.0)
 		var enemy: Node3D = combat.spawn_enemy("chaser", _game.ctx.terrain.drop_point(at.x, at.z, 1.0))
 		enemy.hp = 1000.0
+		current[0] = id
 		combat._hit(enemy, kinds[id], DAMAGE, Vector3.RIGHT, shoves[id], "", "", sources.get(id, ""))
 		moved[id] = enemy._knocked_speed()
 		i += 1
+	_game.events.enemy_struck.disconnect(note)
+	_check("the impact key rides its own hit", keys.get("overdrive", "?") == "overdrive" and keys.get("discharge", "?") == "burst"
+			and keys.get("rapid_laser", "?") == "" and keys.get("ram", "?") == "" and combat.last_impact.is_empty(),
+		"while enemy_struck is out combat names the row: overdrive '%s', discharge '%s', laser '%s', ram '%s'; after the hit the record is empty (%s)"
+			% [keys.get("overdrive", "?"), keys.get("discharge", "?"), keys.get("rapid_laser", "?"), keys.get("ram", "?"), combat.last_impact.is_empty()])
 	var pinned := Weapons.BASE[Weapons.RAPID_LASER]["knock"] == 3.0 and Weapons.BASE[Weapons.STICKY_CHARGE]["knock"] == 26.0 \
 		and Weapons.OVERDRIVE_KNOCK == 34.0 and Weapons.BURST_KNOCK == 24.0 and Weapons.LINE_KNOCK == 28.0 \
 		and Weapons.BASE[Weapons.ARC_CASTER]["knock"] == 5.0 and Weapons.BASE[Weapons.PYLON_TURRET]["knock"] == 6.0
