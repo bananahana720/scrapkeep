@@ -159,6 +159,12 @@ var tree_policy := ""
 var tree_picks: Array[String] = []
 var _tree_rng := RandomNumberGenerator.new()
 
+# The sweep's limits. stage_limit replaces STAGE_LIMIT. fight_limit, when above zero, ends the
+# run as "fight_capped" that many seconds after the bot's first strike on the Warden (or, for
+# a bot that never closes, after the Warden wakes) if the Warden is not broken by then.
+var stage_limit := STAGE_LIMIT
+var fight_limit := 0.0
+
 # "", then won, died, stalled, boss or boss_stalled.
 var outcome := ""
 var ticks := 0
@@ -339,9 +345,16 @@ func tick(delta: float) -> bool:
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
 	# gate 1 behind a Spillway chute kerb) once ran a process forever, since only the
 	# Warden fight had a limit. stall_state says which state ran out.
-	if flow.in_stage() and game.run.stage_time > STAGE_LIMIT:
+	if flow.in_stage() and game.run.stage_time > stage_limit:
 		_note_set("stall_state", state)
 		_end("stalled")
+		return true
+	var fight_start = _note.get("warden_fight_s")
+	if fight_start == null:
+		fight_start = _note.get("warden_engaged_s")
+	if fight_limit > 0.0 and fight_start != null and _note.get("warden_broken_s") == null \
+			and game.run.stage_time - float(fight_start) > fight_limit:
+		_end("fight_capped")
 		return true
 	_boost_clock -= delta
 	_harpoon_held = false
@@ -787,6 +800,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	# (warden_engaged) on the way past long before it turns to fight.
 	if target == game.flow.warden and _note.get("warden_fight_s") == null:
 		_note["warden_fight_s"] = snappedf(game.run.stage_time, 0.01)
+		_note["warden_fight_heft"] = snappedf(game.run.heft(), 0.001)
 	var short: bool = _punch_seen < _plating(target)
 	if short:
 		_note["punch_short_s"] = float(_note.get("punch_short_s", 0.0)) + delta

@@ -82,7 +82,7 @@ The harpoon has no ability slot. Its readiness is the reticle ring.
 
 The slice Warden is the posture chassis and nothing else. In one line: hit it until it cracks open, then smash the core.
 
-- **Posture** is a bar from 0 to 100. Each landed hit adds `base x clamp(punch / plating, 0.2, 1.5)`. Base is 30 for a ram or slam, 45 for a harpoon smash, 1.5 for a gun bolt and 3 on the part that is telegraphing. After 3 s with no gain it drains at 12 per second.
+- **Posture** is a bar from 0 to 100. Each landed hit adds `base x clamp(punch / plating, 0.2, 1.5) ^ curve`, with `curve` 1 unless the stage row's `posture` dictionary says otherwise. The row may also carry `ram_shatters` (default true: a ram at speed tier 2 or better shatters an open core) and any other rule number by name; a missing key keeps the constant. Base is 30 for a ram or slam, 45 for a harpoon smash, 1.5 for a gun bolt and 3 on the part that is telegraphing. After 3 s with no gain it drains at 12 per second.
 - **Stagger.** At 100 the Warden staggers for 4 s. The jaws spring at least 25 degrees apart and the core shows a live rim and takes harpoon brackets. Health can fall only now.
 - **Health** is four chunks. One stagger removes at most one, and a shatter closes the Warden at once. A harpoon smash, or a ram at speed tier 2 or better into the core, shatters the whole chunk. A lesser contact leaves it cracked for the next stagger; a second lesser contact in the same opening does nothing more. A hit at the glance floor counts as any other contact here. While it is open, a contact anywhere on the Warden is a hit on the core. Guns, blasts and synergy strikes fill posture but cannot crack or shatter the core, and no path other than this rule can lower its health.
 - **One gain per frame from contacts.** A smash landing strikes several times in one physics frame; contact gains in a frame take the largest, not the sum. The hit that fills the bar cannot also shatter, and contacts in the frame a chunk shatters gain nothing.
@@ -102,6 +102,8 @@ The slice Warden is the posture chassis and nothing else. In one line: hit it un
 - 50 hits outside a stagger leave health unchanged.
 
 **First measurement** (unit B0a, today's Reach, the numbers above): the brawler fights for 28 to 32 s after growing, the skipper for 28 to 34 s from a cold start, and guns alone never remove a chunk. Two bands are missed: growing does not yet matter. The bands unit tunes the numbers with a bot sweep after the map retrofit.
+
+**Second measurement** (unit BN, 2026-10-02, `tools/posture_sweep.md`): 24 cells of plating 45, 60, 75, 90, curve 1, 2, 3 and `ram_shatters` true or false, five seeds of each bot. No cell met every band, so the slice row keeps 45 and no `posture` key. The nearest were plating 90, curve 2, rams shattering (brawler 55.3 s, skipper 1.57 times that, under the 60 s floor) and plating 90, curve 3, rams not shattering (4 of 5 brawler seeds broke it). The brawler's heft at its first strike is 1.04 to 1.10 against the skipper's 1.0 in every cell, so growth lifts punch by under 10 percent and neither plating nor the curve separates the two bots; the build has to arrive grown, which the map's activities are for. Rerun the sweep after they land. The same seed did not always repeat its fight second for second (up to 23 percent on a brawler seed); the cause is open.
 
 ## 5. Callouts and prompts
 

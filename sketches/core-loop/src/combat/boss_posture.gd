@@ -19,6 +19,22 @@ const CHUNKS := 4
 const SHATTER_TIER := 2
 const FULL := 100.0
 
+# The numbers this rule runs on. A stage row's "posture" dictionary overrides any of them
+# by key; a missing key keeps the constant above. "curve" is the exponent on the clamped
+# ratio and "ram_shatters" says whether a ram at SHATTER_TIER shatters an open core.
+var base := BASE
+var smash_base := SMASH_BASE
+var other_base := OTHER_BASE
+var other_base_charging := OTHER_BASE_CHARGING
+var mult_min := MULT_MIN
+var mult_max := MULT_MAX
+var drain_delay := DRAIN_DELAY
+var drain_rate := DRAIN_RATE
+var stagger_seconds := STAGGER_SECONDS
+var shatter_tier := SHATTER_TIER
+var curve := 1.0
+var ram_shatters := true
+
 var posture := 0.0
 var staggered := false
 var stagger_left := 0.0
@@ -36,6 +52,21 @@ var staggers := 0
 var glances := 0
 
 
+func _init(numbers := {}) -> void:
+	base = numbers.get("base", BASE)
+	smash_base = float(numbers.get("smash_base", SMASH_BASE))
+	other_base = float(numbers.get("other_base", OTHER_BASE))
+	other_base_charging = float(numbers.get("other_base_charging", OTHER_BASE_CHARGING))
+	mult_min = float(numbers.get("mult_min", MULT_MIN))
+	mult_max = float(numbers.get("mult_max", MULT_MAX))
+	drain_delay = float(numbers.get("drain_delay", DRAIN_DELAY))
+	drain_rate = float(numbers.get("drain_rate", DRAIN_RATE))
+	stagger_seconds = float(numbers.get("stagger_seconds", STAGGER_SECONDS))
+	shatter_tier = int(numbers.get("shatter_tier", SHATTER_TIER))
+	curve = float(numbers.get("curve", 1.0))
+	ram_shatters = bool(numbers.get("ram_shatters", true))
+
+
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
 # combat's resolve() shape (punch, plating, full, dealt, part) plus shred, gain, glance,
 # shatter, crack and contact.
@@ -44,9 +75,9 @@ func judge(hit: Dictionary) -> Dictionary:
 	var punch := float(hit.get("punch", 0.0))
 	var plating := float(hit.get("plating", 0.0))
 	var frame := int(hit.get("frame", 0))
-	var contact := BASE.has(kind)
-	var ratio := punch / plating if plating > 0.0 else MULT_MAX
-	var glance := ratio <= MULT_MIN
+	var contact := base.has(kind)
+	var ratio := punch / plating if plating > 0.0 else mult_max
+	var glance := ratio <= mult_min
 	var result := {"punch": punch, "plating": plating, "full": not glance, "dealt": 0.0, "part": "", "shred": false,
 			"gain": 0.0, "glance": glance, "shatter": false, "crack": false, "contact": contact}
 	if staggered:
@@ -56,10 +87,10 @@ func judge(hit: Dictionary) -> Dictionary:
 		return result
 	if contact and frame == shatter_frame:
 		return result
-	var base := OTHER_BASE_CHARGING if bool(hit.get("charging", false)) else OTHER_BASE
+	var hit_base := other_base_charging if bool(hit.get("charging", false)) else other_base
 	if contact:
-		base = SMASH_BASE if bool(hit.get("smash", false)) else float(BASE[kind])
-	var gain := base * clampf(ratio, MULT_MIN, MULT_MAX)
+		hit_base = smash_base if bool(hit.get("smash", false)) else float(base[kind])
+	var gain := hit_base * pow(clampf(ratio, mult_min, mult_max), curve)
 	if contact and frame == gain_frame:
 		gain = maxf(0.0, gain - gain_in_frame)
 	result["gain"] = gain
@@ -68,7 +99,7 @@ func judge(hit: Dictionary) -> Dictionary:
 
 func _judge_core(result: Dictionary, hit: Dictionary) -> void:
 	var smash := bool(hit.get("smash", false))
-	var fast_ram := String(hit.get("kind", "")) == "ram" and int(hit.get("tier", 0)) >= SHATTER_TIER
+	var fast_ram := ram_shatters and String(hit.get("kind", "")) == "ram" and int(hit.get("tier", 0)) >= shatter_tier
 	if smash or fast_ram or (cracked and crack_stagger < staggers):
 		var max_hp := float(hit.get("max_hp", 0.0))
 		result["shatter"] = true
@@ -101,7 +132,7 @@ func apply(result: Dictionary, frame: int) -> void:
 		gain_frame = frame
 	if posture >= FULL:
 		staggered = true
-		stagger_left = STAGGER_SECONDS
+		stagger_left = stagger_seconds
 		stagger_frame = frame
 		shattered_this_stagger = false
 		staggers += 1
@@ -114,9 +145,9 @@ func step(delta: float) -> void:
 			_end_stagger()
 		return
 	idle += delta
-	var draining := minf(delta, idle - DRAIN_DELAY)
+	var draining := minf(delta, idle - drain_delay)
 	if draining > 0.0:
-		posture = maxf(0.0, posture - DRAIN_RATE * draining)
+		posture = maxf(0.0, posture - drain_rate * draining)
 
 
 func _end_stagger() -> void:

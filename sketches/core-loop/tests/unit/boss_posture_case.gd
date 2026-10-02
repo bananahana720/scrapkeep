@@ -35,6 +35,10 @@ func run(t) -> void:
 	_outside_a_stagger(t)
 	_core(t)
 	_pure(t)
+	_defaults_unchanged(t)
+	_curve(t)
+	_ram_shatters(t)
+	_row_numbers(t)
 
 
 func _gain(t) -> void:
@@ -193,3 +197,97 @@ func _pure(t) -> void:
 	var after := [rule.posture, rule.staggered, rule.stagger_left, rule.stagger_frame, rule.idle, rule.chunks, rule.cracked,
 			rule.shattered_this_stagger, rule.gain_frame, rule.gain_in_frame, rule.staggers, rule.glances, rule.get("crack_stagger"), rule.get("shatter_frame")]
 	t.check("judge twenty times changes nothing and answers the same", same and after == snapshot, "before %s after %s" % [snapshot, after])
+
+
+# The kinds and ratios of 20 hits, each answered with the rule's original formula
+# (base times the clamped ratio) written out here.
+func _defaults_unchanged(t) -> void:
+	var kinds := ["ram", "stomp", "slam", "ram", "runner"]
+	var ratios := [0.05, 0.2, 0.5, 0.9, 1.0, 1.3, 1.5, 2.5]
+	var plain := Posture.new()
+	var explicit := Posture.new({"curve": 1.0, "ram_shatters": true})
+	var same := true
+	var detail := ""
+	for i in 20:
+		var kind: String = kinds[i % kinds.size()]
+		var ratio: float = ratios[i % ratios.size()]
+		var smash := i % 4 == 3
+		var charging := i % 7 == 6
+		var expected := 30.0
+		if kind == "runner":
+			expected = Posture.OTHER_BASE_CHARGING if charging else Posture.OTHER_BASE
+		elif smash:
+			expected = Posture.SMASH_BASE
+		expected *= clampf(ratio, 0.2, 1.5)
+		var extra := {"smash": smash, "charging": charging, "tier": 3}
+		_frame += 1
+		var hit := {"kind": kind, "punch": PLATING * ratio, "plating": PLATING, "frame": _frame, "hp": HP, "max_hp": HP}
+		hit.merge(extra, true)
+		var a: Dictionary = plain.judge(hit)
+		var b: Dictionary = explicit.judge(hit)
+		if a != b or not is_equal_approx(float(a["gain"]), expected):
+			same = false
+			detail = "hit %d %s ratio %s: plain %s, explicit %s, expected %s" % [i, kind, ratio, a["gain"], b["gain"], expected]
+		plain.apply(a, _frame)
+		explicit.apply(b, _frame)
+		if plain.staggered:
+			plain.step(10.0)
+			explicit.step(10.0)
+	t.check("curve 1.0 and ram_shatters true reproduce the original gain over 20 hits", same, detail)
+	t.check("both rules end in the same state", plain.posture == explicit.posture and plain.staggers == explicit.staggers and plain.glances == explicit.glances,
+			"%s vs %s" % [plain.posture, explicit.posture])
+	var open := Posture.new({"curve": 1.0, "ram_shatters": true})
+	_stagger(open)
+	t.check("a tier-2 ram still shatters with the numbers given", _hit("ram", PLATING, open, {"tier": 2})["shatter"], "tier 2 ram")
+
+
+func _curve(t) -> void:
+	var square := Posture.new({"curve": 2.0})
+	t.near("curve 2 turns a half-matched ram into 30 x 0.25", _hit("ram", PLATING * 0.5, square)["gain"], 7.5)
+	t.near("curve 2 leaves a matched ram at 30", _hit("ram", PLATING, square)["gain"], 30.0)
+	t.near("curve 2 on the 1.5 cap is 30 x 2.25", _hit("ram", PLATING * 4.0, square)["gain"], 67.5)
+	t.near("curve 2 on a smash at 0.8 is 45 x 0.64", _hit("stomp", PLATING * 0.8, Posture.new({"curve": 2.0}), {"smash": true})["gain"], 28.8)
+	var cube := Posture.new({"curve": 3.0})
+	t.near("curve 3 turns a half-matched ram into 30 x 0.125", _hit("ram", PLATING * 0.5, cube)["gain"], 3.75)
+	t.near("curve 3 on the 1.5 cap is 30 x 3.375", _hit("ram", PLATING * 4.0, Posture.new({"curve": 3.0}))["gain"], 101.25)
+	t.near("curve 3 on a gun bolt at 0.5 is 1.5 x 0.125", _hit("runner", PLATING * 0.5, Posture.new({"curve": 3.0}))["gain"], 0.1875)
+	var floor_rule := Posture.new({"curve": 3.0})
+	var glance := _hit("ram", PLATING * Posture.MULT_MIN, floor_rule)
+	t.near("curve 3 at the 0.2 floor still gains 30 x 0.008 a ram", glance["gain"], 0.24)
+	t.check("the floor hit under a curve is still a glance and still gains", glance["glance"] and floor_rule.posture > 0.0, "gain %s" % glance["gain"])
+	var steady := Posture.new({"curve": 2.0})
+	var gains := 0
+	for i in 5:
+		if _hit("ram", PLATING * Posture.MULT_MIN, steady)["gain"] > 0.0:
+			gains += 1
+	t.check("a build at the floor gains posture on every ram under curve 2", gains == 5, "%d of 5 ram gained" % gains)
+
+
+func _ram_shatters(t) -> void:
+	var rule := Posture.new({"ram_shatters": false})
+	_stagger(rule)
+	var fast := _hit("ram", PLATING, rule, {"tier": 3})
+	t.check("with ram_shatters false a tier-3 ram only cracks", fast["crack"] and not fast["shatter"] and fast["dealt"] == 0.0 and rule.cracked and rule.chunks == 4, "result %s" % fast)
+	var smash := Posture.new({"ram_shatters": false})
+	_stagger(smash)
+	var hit := _hit("stomp", PLATING, smash, {"smash": true, "tier": 3})
+	t.check("with ram_shatters false a smash still shatters", hit["shatter"] and smash.chunks == 3 and absf(float(hit["dealt"]) - HP / 4.0) < 0.001, "result %s" % hit)
+	rule.step(Posture.STAGGER_SECONDS + 0.1)
+	_stagger(rule)
+	var second := _hit("ram", PLATING, rule, {"tier": 3})
+	t.check("with ram_shatters false the crack still pays off in the next stagger", second["shatter"] and rule.chunks == 3, "result %s" % second)
+
+
+func _row_numbers(t) -> void:
+	var fast := Posture.new({"stagger_seconds": 2.0, "drain_delay": 1.0, "drain_rate": 10.0, "smash_base": 60.0})
+	_hit("ram", PLATING, fast)
+	fast.step(2.0)
+	t.near("a row's drain delay and rate apply: 1 s of drain at 10", fast.posture, 20.0)
+	t.near("a row's smash base applies", _hit("stomp", PLATING, Posture.new({"smash_base": 60.0}), {"smash": true})["gain"], 60.0)
+	var long_rule := Posture.new({"stagger_seconds": 2.0})
+	_stagger(long_rule)
+	long_rule.step(2.1)
+	t.check("a row's stagger seconds apply", not long_rule.staggered, "still staggered")
+	var empty := Posture.new({})
+	t.check("an empty numbers dictionary keeps every constant", empty.curve == 1.0 and empty.ram_shatters and empty.stagger_seconds == Posture.STAGGER_SECONDS
+			and empty.mult_min == Posture.MULT_MIN and empty.drain_rate == Posture.DRAIN_RATE, "curve %s" % empty.curve)
