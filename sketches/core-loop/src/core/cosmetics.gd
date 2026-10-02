@@ -1,0 +1,94 @@
+extends RefCounted
+
+const Palette := preload("res://src/core/palette.gd")
+
+# Looks only, never power. A row may carry nothing but the ALLOWED keys, so a stat
+# cannot ride in on a cosmetic. A tint is a new colour, never a hostile hue: those mean
+# danger on screen (Palette.HAZARD for threats, BRASS for the boss).
+#
+# slot    one of SLOTS
+# pilot   a pilot id, or "" for any pilot
+# name    the label shown in the wardrobe
+# starter owned from the first run
+# tint    a Color, or mesh: a res:// path (none exist yet); exactly one of the two
+
+const SLOTS := ["paint", "trail", "topper"]
+const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "mesh"]
+const HOSTILE := [Palette.HAZARD, Palette.BRASS]
+const HOSTILE_DISTANCE := 0.2
+const MIN_ROWS := 6
+
+const ROWS := {
+	"paint_any_salt": {"slot": "paint", "pilot": "", "name": "Salt White", "starter": true, "tint": Color("e9ecea")},
+	"paint_any_night": {"slot": "paint", "pilot": "", "name": "Night Slate", "starter": false, "tint": Color("2b3a4a")},
+	"paint_sable_lagoon": {"slot": "paint", "pilot": "pylon_engineer", "name": "Lagoon", "starter": true, "tint": Color("2fc6b5")},
+	"paint_sable_violet": {"slot": "paint", "pilot": "pylon_engineer", "name": "Violet Static", "starter": false, "tint": Color("8a6bd6")},
+	"paint_rivet_moss": {"slot": "paint", "pilot": "runner_gunner", "name": "Moss", "starter": true, "tint": Color("6f9a4a")},
+	"paint_rivet_forge": {"slot": "paint", "pilot": "runner_gunner", "name": "Forge Blue", "starter": false, "tint": Color("3a6fb0")},
+	"paint_kest_plum": {"slot": "paint", "pilot": "demolitions_caster", "name": "Ember Plum", "starter": true, "tint": Color("8a3f6e")},
+	"paint_kest_dusk": {"slot": "paint", "pilot": "demolitions_caster", "name": "Dusk Pink", "starter": false, "tint": Color("d68ab0")},
+}
+
+
+static func ids() -> Array:
+	return ROWS.keys()
+
+
+static func row(id: String) -> Dictionary:
+	return ROWS.get(id, {})
+
+
+# The ids that fit a slot for a pilot: rows for any pilot and rows for that pilot.
+static func for_slot(slot: String, pilot: String) -> Array:
+	var out: Array = []
+	for id in ROWS:
+		var r: Dictionary = ROWS[id]
+		if r["slot"] == slot and (r["pilot"] == "" or r["pilot"] == pilot):
+			out.append(id)
+	return out
+
+
+static func is_hostile(tint: Color) -> bool:
+	for hue in HOSTILE:
+		var d := Vector3(tint.r - hue.r, tint.g - hue.g, tint.b - hue.b).length()
+		if d < HOSTILE_DISTANCE:
+			return true
+	return false
+
+
+# pilots: an array of pilot ids.
+static func validate(rows: Dictionary, pilots: Array) -> Array:
+	var problems: Array = []
+	var starter_paints := 0
+	if rows.size() < MIN_ROWS:
+		problems.append("table: needs at least %d rows, has %d" % [MIN_ROWS, rows.size()])
+	for id in rows:
+		var r: Dictionary = rows[id]
+		for key in r:
+			if not ALLOWED.has(key):
+				problems.append("%s: key %s is not allowed on a cosmetic" % [id, key])
+		if not SLOTS.has(r.get("slot", "")):
+			problems.append("%s: slot %s is not one of the slots" % [id, r.get("slot", "")])
+		var pilot = r.get("pilot")
+		if not (pilot is String) or (pilot != "" and not pilots.has(pilot)):
+			problems.append("%s: pilot %s is neither empty nor a real pilot" % [id, pilot])
+		if str(r.get("name", "")) == "":
+			problems.append("%s: name is empty" % id)
+		if not (r.get("starter") is bool):
+			problems.append("%s: starter must be a bool" % id)
+		var has_tint: bool = r.has("tint")
+		var has_mesh: bool = r.has("mesh")
+		if has_tint == has_mesh:
+			problems.append("%s: needs exactly one of tint or mesh" % id)
+		if has_tint:
+			if not (r["tint"] is Color):
+				problems.append("%s: tint must be a Color" % id)
+			elif is_hostile(r["tint"]):
+				problems.append("%s: tint is a hostile hue" % id)
+		if has_mesh and not str(r["mesh"]).begins_with("res://"):
+			problems.append("%s: mesh must be a res:// path" % id)
+		if r.get("slot", "") == "paint" and r.get("starter", false) == true:
+			starter_paints += 1
+	if starter_paints < 1:
+		problems.append("table: needs at least one starter paint")
+	return problems
