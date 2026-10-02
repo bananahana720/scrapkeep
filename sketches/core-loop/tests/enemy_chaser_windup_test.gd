@@ -5,7 +5,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 const SAMPLES := [0.0, 0.5, 1.0]
-const FULL_SHIFT := Vector3(0.0, -0.22, 0.55)
+const FULL_SHIFT := Vector3(0.0, 0.3, 0.7)
+const FULL_PITCH := 42.0
 const PART_NAMES := ["ChaserBody", "ChaserFin", "ChaserClaws"]
 var _game
 var _t := T.new("enemy_chaser_windup_test")
@@ -59,7 +60,7 @@ func _rest(enemy) -> bool:
 
 func _brace(enemy) -> bool:
 	var body := _relative(enemy, "ChaserBody")
-	return body.origin.is_equal_approx(FULL_SHIFT) and is_equal_approx(body.basis.get_euler().x, deg_to_rad(18.0))
+	return body.origin.is_equal_approx(FULL_SHIFT) and is_equal_approx(body.basis.get_euler().x, deg_to_rad(FULL_PITCH))
 
 
 func _samples() -> void:
@@ -97,6 +98,10 @@ func _samples() -> void:
 		"progress 0, 0.5, 1: [travel m, nose deg, fin flare deg] %s; rest %s; monotonic %s" % [values, rests, monotonic])
 	_t.check("WC-2 range", values[2][0] >= 0.35 and values[2][2] >= 25.0,
 		"body %.6f m; hinged fin %.3f deg relative to body (enemy space)" % [values[2][0], values[2][2]])
+	# PC-2: head-on the 18 degree brace hid in the silhouette; the rear-up now travels 0.762 m and pitches 42 degrees.
+	_t.check("PC-2 rear-up travel", absf(values[2][0] - 0.7616) < 0.001 and absf(values[1][0] - 0.3808) < 0.001
+		and absf(values[2][1] - 42.0) < 0.001 and absf(values[1][1] - 21.0) < 0.001,
+		"travel %.4f m and nose %.3f deg at progress 1; %.4f m and %.3f deg at 0.5" % [values[2][0], values[2][1], values[1][0], values[1][1]])
 	_t.check("pose row", EventKinds.attack_row("E01")["pose"] == "e01_brace_back")
 	_t.check("no scale squash", enemy._mesh.scale == Vector3.ONE)
 	enemy.free()

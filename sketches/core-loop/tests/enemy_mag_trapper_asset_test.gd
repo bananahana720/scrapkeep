@@ -8,6 +8,8 @@ const Palette := preload("res://src/core/palette.gd")
 # Collider, pit, hold, timing and damage-side values remain the pre-dressing contract.
 const CEILING_T := 1200
 const CEILING_D := 6 # Independent top disc adds two surfaces; geometry stays unchanged.
+# The live assembly adds MagTopLink, the mast from the stack to the lifted disc (PC): one more draw than the asset.
+const LIVE_CEILING_D := 7
 const CORE_EMISSION := 0.6
 const BASE_CONSTS := {
 	"PIT_RADIUS": 4.5, "PIT_REACH": 1.4, "LEAD": 0.7, "CENTRE_PULL": 2.5,
@@ -125,7 +127,7 @@ func _run() -> void:
 	print("live assembly: %d T, %d D, %d meshes" % [live["tris"], live["draws"], live["meshes"]])
 	_check(trapper.find_child("MagTrapperBody", true, false) != null, "the live trapper carries its MagTrapperBody dressing")
 	_check(live["meshes"] > 0 and live["tris"] > 0, "the live measurement saw meshes (the check runs)")
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 6" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within 1200 / 7" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha")
 
 	# The hazard cores glow at 0.6, read from the live material; a hit through the existing

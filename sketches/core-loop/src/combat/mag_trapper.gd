@@ -17,12 +17,13 @@ const RATING_PER_THREAT := 0.4
 const HP := 50.0
 
 var rating := RATING_BASE
-var pose_enabled := true # Test seam: presentation only.
+var windup_pose_enabled := true # Test seam: presentation only.
 var _stack: Node3D
 var _body: MeshInstance3D
 var _top_disc: MeshInstance3D
 var _top_rest := Vector3.ZERO
 var _disc_material: StandardMaterial3D
+var _top_link: MeshInstance3D
 
 
 func _configure(threat: float) -> void:
@@ -44,6 +45,10 @@ const BODY_LEAN := 0.22
 const HOIST := 1.4
 const SPIN := TAU * 1.25
 const CORE_EMISSION := 0.6
+# The mast that links the stack to the lifted disc, in stack space: its foot sits in the stack's
+# top disc (the top face is at y 0.6) and its head in the lifted disc, so the disc never hangs free.
+const LINK_FOOT := 0.5
+const LINK_RADIUS := 0.16
 
 static var _shared: Dictionary = {}
 
@@ -78,6 +83,17 @@ func _build_tool() -> void:
 	_top_disc.position = _top_rest
 	_top_disc.set_surface_override_material(parts["top_paint"], _disc_material)
 	_stack.add_child(_top_disc)
+	var mast := CylinderMesh.new()
+	mast.top_radius = LINK_RADIUS
+	mast.bottom_radius = LINK_RADIUS
+	mast.height = 1.0
+	mast.radial_segments = 8
+	mast.rings = 1
+	_top_link = MeshInstance3D.new()
+	_top_link.name = "MagTopLink"
+	_top_link.mesh = mast
+	_top_link.material_override = Palette.solid(Palette.CHARCOAL)
+	_stack.add_child(_top_link)
 
 
 static func _parts() -> Dictionary:
@@ -156,16 +172,18 @@ func _pose() -> void:
 	if _top_disc == null:
 		return
 	var t := 0.0
-	if pose_enabled and not is_dead() and not is_queued_for_deletion():
+	if windup_pose_enabled and not is_dead() and not is_queued_for_deletion():
 		if phase == Phase.WARN:
 			t = clampf(_warn_progress(), 0.0, 1.0)
 		elif phase == Phase.LIVE and _t == 0.0:
 			t = 1.0
-	var ease := t * t * (3.0 - 2.0 * t)
-	# Keep the exact endpoint distinct from a WARN tick rounded just below one.
-	if t < 1.0:
-		ease = minf(ease, 1.0 - 0.000001)
-	_body.rotation.x = -BODY_LEAN * ease
-	_top_disc.position = _top_rest + Vector3.UP * HOIST * ease
+	var raised := t * t * (3.0 - 2.0 * t)
+	_body.rotation.x = -BODY_LEAN * raised
+	_top_disc.position = _top_rest + Vector3.UP * HOIST * raised
 	_top_disc.rotation.y = SPIN * t * t
-	_top_disc.visible = not pose_enabled or phase != Phase.LIVE or is_dead() or is_queued_for_deletion()
+	# The mast runs from the stack to the disc's centre and goes with the disc when it is thrown.
+	var head := _top_disc.position.y
+	_top_link.scale = Vector3(1.0, maxf(head - LINK_FOOT, 0.0001), 1.0)
+	_top_link.position = Vector3(_top_disc.position.x, (head + LINK_FOOT) * 0.5, _top_disc.position.z)
+	_top_disc.visible = not windup_pose_enabled or phase != Phase.LIVE or is_dead() or is_queued_for_deletion()
+	_top_link.visible = _top_disc.visible

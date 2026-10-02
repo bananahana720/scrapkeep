@@ -24,6 +24,11 @@ const HP := 60.0
 const SCRAP := 3
 const ACCENT := Color("ffb070")
 
+# The wind-up rears the wedge up on its planted claws: nose raised, body lifted and drawn back.
+# Head-on a small pitch hides in the silhouette, so the rear-up is large enough to show from 10 m.
+const REAR_SHIFT := Vector3(0.0, 0.3, 0.7)
+const REAR_PITCH := 42.0
+
 enum State { CHASE, WINDUP, LUNGE, RECOVER }
 
 var state := State.CHASE
@@ -184,13 +189,13 @@ func _pose() -> void:
 	if windup_pose_enabled and lane != null and not _dead and not is_queued_for_deletion():
 		if state == State.WINDUP:
 			var t := smoothstep(0.0, 1.0, clampf(_clock / WINDUP, 0.0, 1.0))
-			shift = Vector3(0.0, -0.22, 0.55) * t
-			pitch = deg_to_rad(18.0) * t
+			shift = REAR_SHIFT * t
+			pitch = deg_to_rad(REAR_PITCH) * t
 			flare = deg_to_rad(32.0) * t
 		elif state == State.LUNGE:
 			var snap := smoothstep(0.0, 1.0, clampf(_clock / 0.08, 0.0, 1.0))
-			shift = Vector3(0.0, -0.22, 0.55).lerp(Vector3(0.0, -0.08, -0.25), snap)
-			pitch = lerpf(deg_to_rad(18.0), deg_to_rad(-12.0), snap)
+			shift = REAR_SHIFT.lerp(Vector3(0.0, -0.08, -0.25), snap)
+			pitch = lerpf(deg_to_rad(REAR_PITCH), deg_to_rad(-12.0), snap)
 			flare = deg_to_rad(32.0) * (1.0 - snap)
 	var body_pose := Transform3D(Basis(Vector3.RIGHT, pitch), shift)
 	for part_name in _pose_parts:
