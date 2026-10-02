@@ -17,7 +17,7 @@ Each is implemented as written here. The detector is `RunLog.Traversal` in `src/
 
 ## The bot
 
-`traversal` in `tools/bot_driver.gd` follows the pilot's route from `tools/traversal_lines.json` (today none: spawn to beacon) and never fights. Its whole output, the stick and every press, goes out `TRAVERSE_REACTION` (0.15 s, 14 ticks) after it was decided, so nothing it reads (position, velocity, the wall rays, the stuck check) is answered sooner. Its presses pass one gate that drops a second verb inside `TRAVERSE_PRESS_GAP` (0.4 s). It never holds fire. `tests/traversal_measure_test.gd` changes the route's target on one tick and asserts the stick does not answer for 13 ticks and has by tick 16, that no tick holds fire, and, with a press on every tick, that presses stay 0.4 s apart.
+`traversal` in `tools/bot_driver.gd` follows the pilot's route from `tools/traversal_lines.json` (today none: spawn to beacon) and never fights. Its whole output, the stick, the camera turn and every press, goes out `TRAVERSE_REACTION` (0.15 s, 14 ticks) after it was decided, so nothing it reads (position, velocity, the wall rays, the stuck check) is answered sooner. The stick keeps the world direction it meant through the delay. Shift is pressed and held as the keyboard does it, only when the verb is ready. Its presses pass one gate that drops a second verb inside `TRAVERSE_PRESS_GAP` (0.4 s). It never holds fire. `tests/traversal_measure_test.gd` changes the route's target on one tick and asserts neither the camera nor the stick's world direction answers for 13 ticks and both have by tick 16, that no tick holds fire, and, with a press on every tick, that presses stay 0.4 s apart.
 
 Fight profiles for the later Warden bands (this unit does not run the bands):
 
@@ -43,13 +43,13 @@ Godot is the binary named in `scripts/sketch-smoke.mjs`. Each JSON holds the pil
 
 ## Baseline: the Reach as it is
 
-Taken on the working tree of the TM fix-round commit (code identical to it; its parent is `0e26a306982bed472361d48e419805bc120e98df`). The JSONs record the label `final-head` because the commit did not yet exist when they ran. Slice table, spawn to beacon with no authored waypoints, seeds 1 to 8, nothing tuned. The earlier table (commit `8a6c846`) is replaced: the bot now delays its whole output, not only its view.
+Taken on the merged wave R1a head, commit `b52f58e`: the harpoon canon, the synergy facts and this unit together, with the bot's camera delayed with its stick and its Shift pressed as the keyboard presses it. Slice table, spawn to beacon with no authored waypoints, seeds 1 to 8, nothing tuned. Earlier tables (commits `8a6c846` and the fix round's working tree) are replaced.
 
 | Pilot | JSON | Reached Warden | Median flow share | Worst seed | Dead stops | Max anchor gap | Time to Warden |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Sable | `artifacts/local/traversal/sable.json` | 8 of 8 | 0.9274 | 0.8946 (seed 7) | 1 (seed 7) | 17.0 m | 8.26 to 8.32 s, 15.78 s on seed 7 |
-| Rivet | `artifacts/local/traversal/rivet.json` | 8 of 8 | 0.8839 | 0.6917 (seed 7) | 1 (seed 7) | 16.7 m | 9.47 to 9.50 s, 11.82 s on seed 7 |
-| Kest | `artifacts/local/traversal/kest.json` | 8 of 8 | 0.9165 | 0.9165 (seed 1) | 0 | 14.3 m | 8.79 to 9.00 s |
+| Sable | `artifacts/local/traversal/sable.json` | 8 of 8 | 0.9274 | 0.9030 (seed 7) | 1 (seed 7) | 16.8 m | 8.26 to 8.32 s, 15.67 s on seed 7 |
+| Rivet | `artifacts/local/traversal/rivet.json` | 8 of 8 | 0.9114 | 0.7447 (seed 7) | 1 (seed 7) | 14.4 m | 11.84 to 12.79 s, 14.11 s on seed 7 |
+| Kest | `artifacts/local/traversal/kest.json` | 8 of 8 | 0.9319 | 0.6114 (seed 7) | 1 (seed 7) | 12.5 m | 10.66 to 11.33 s, 13.05 s on seed 7 |
 
 The JSON files are local evidence and are not committed.
 
@@ -60,19 +60,20 @@ Median flow share at or above the larger of 0.70 and the pilot's baseline median
 | Pilot | Baseline median | Bar: median flow share | No seed under | Dead stops | Anchor gap |
 | --- | --- | --- | --- | --- | --- |
 | Sable | 0.9274 | 0.8974 | 0.60 | 0 | 40 m or less |
-| Rivet | 0.8839 | 0.8539 | 0.60 | 0 | 40 m or less |
-| Kest | 0.9165 | 0.8865 | 0.60 | 0 | 40 m or less |
+| Rivet | 0.9114 | 0.8814 | 0.60 | 0 | 40 m or less |
+| Kest | 0.9319 | 0.9019 | 0.60 | 0 | 40 m or less |
 
-**Provisional.** The coordinator retakes the baseline after the harpoon unit merges, and the bars follow it. The map retrofit unit adds route measures: the authored line's length and the verbs it chains. A nine-second straight shot to the beacon is itself what the owner called not fun to traverse, and flow share alone cannot see that.
+**Provisional.** The map retrofit unit adds route measures: the authored line's length and the verbs it chains. A straight shot of 8 to 13 seconds to the beacon is itself what the owner called not fun to traverse, and flow share alone cannot see that.
 
 ## What the baseline says
 
-- The measure is near its ceiling on today's map. The bot reaches the beacon ring in about 8 to 10 s at tier 2 or better for nine ticks in ten, so the flow-share bar sits close to what the map already gives. It tells a stall from a clean run; it cannot tell a long, varied route from a short straight one. The route measures above are for that.
+- **Today's map fails the bar on one count: seed 7 stops every pilot once.** Each loses 2 to 7 seconds there. The measure does not say what stopped them; the retrofit unit finds it.
+- The measure is near its ceiling on today's map. The bot reaches the beacon ring at tier 2 or better for nine ticks in ten, so the flow-share bar sits close to what the map already gives. It tells a stall from a clean run; it cannot tell a long, varied route from a short straight one. The route measures above are for that.
+- Rivet and Kest are slower to the Warden than in the earlier tables (about 12 s and 11 s against 9.5 s and 9 s). The earlier bot pressed a plain boost that the keyboard cannot give those pilots; this one presses Shift, which is Rivet's sprint and Kest's blink.
 - Flow share uses the 3D speed tier, so a fall counts as flow. If descents should not count, the measure should use planar speed.
-- The eight seeds give nearly the same run per pilot: for Sable six of eight share one flow share (0.9272 to 0.9278) and one time (8.26 to 8.32 s), Kest's seven of eight sit within 0.9165 to 0.9177, and Rivet's seven of eight within 0.8837 to 0.8842. The seed moves little; read the median as one run's number with a few outliers, not as a spread.
-- Seed 7 is the outlier for Sable and Rivet and each has one dead stop there (Sable 15.78 s to the Warden, Rivet 11.82 s). Today's map therefore fails the zero-dead-stops bar for those two pilots. The measure does not say what stopped them.
+- The eight seeds give nearly the same run per pilot. Read the median as one run's number with seed 7 as the outlier, not as a spread.
 - The bot's line does not show what Andrew feels. A bot that holds tier 2 down the gorge in 8 s and a person who finds the map not fun to traverse can both be right, which is the case for logging his own run (below) and reading it beside these numbers.
-- Anchor gaps of 14 to 17 m mean the gorge walls always offer a hookable surface in range. The 40 m limit is not tight on today's map.
+- Anchor gaps of 12 to 17 m mean the gorge walls always offer a hookable surface in range. The 40 m limit is not tight on today's map.
 
 ## The run log
 
