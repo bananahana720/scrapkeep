@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # The Warden's body as a landmark, visual only: nothing here collides, and every
 # number the fight uses stays in warden.gd. It has to answer "what do I break?" from
@@ -23,6 +24,8 @@ const Enemy := preload("res://src/combat/enemy.gd")
 # - Shred shows as glowing seams cracked across the jaw plates: none below SEAM_SHOW of
 #   the plating stripped, then more of them and brighter as the strip deepens, in the
 #   amber the plates turn once your punch beats what is left.
+# - On the posture rule the look changes: the cracks are the guard, in the neutral colour,
+#   the jaws lean open and the core goes live while staggered, and the ring is hidden.
 # - Stage 2's brood cells have hexagonal rims and amber membranes, with matching
 #   hex markers above the jaws; stage 3's magnet is a lit arm and head that burn amber while the
 #   tug is on, the moment a shot on them counts.
@@ -64,6 +67,18 @@ const SEAM_WIDTH := 0.1
 const SEAM_LENGTH := 0.9
 const SEAM_GLOW_MIN := 1.4
 const SEAM_GLOW_MAX := 4.5
+# On the posture rule the seams are the guard: level n lights at SEAM_STEP times n and
+# seals again as the guard drains below it, in the neutral role colour.
+const SEAM_STEP := 25.0
+const POSTURE_SEAM_GLOW_MIN := 1.0
+const POSTURE_SEAM_GLOW_MAX := 2.6
+# A staggered posture Warden's jaws each lean this far further out from their bottom edge,
+# so two opposite jaws stand 2 x JAW_OPEN_DEGREES further apart. The opening springs fast
+# and closes slower.
+const JAW_OPEN_DEGREES := 14.0
+const JAW_OPEN_RATE := 9.0
+const JAW_CLOSE_RATE := 4.0
+const OPEN_CORE_GLOW := 2.6
 
 var warden
 var body_material: StandardMaterial3D
@@ -84,6 +99,10 @@ var _magnet_material: StandardMaterial3D
 var _seam_material: StandardMaterial3D
 # Per seam level, the stroke nodes on every jaw.
 var _seams: Array = []
+var _jaw_plates: Array = []
+var _jaw_bottom := Vector3.ZERO
+var _open := 0.0
+var _outline: MeshInstance3D
 
 
 func build(owner_warden, half_height: float) -> void:
@@ -106,6 +125,29 @@ func build(owner_warden, half_height: float) -> void:
 
 func cap_material() -> StandardMaterial3D:
 	return _cap_material
+
+
+# True when this Warden fights on the posture rule (the plate carries its health).
+func posture_fight() -> bool:
+	return warden != null and warden.has_method("fight") and warden.fight() == "posture"
+
+
+# How far the jaws stand open, 0 at rest to 1 fully sprung.
+func jaw_open() -> float:
+	return _open
+
+
+# How many seam levels are lit now.
+func lit_levels() -> int:
+	var count := 0
+	for level in _seams.size():
+		if not _seams[level].is_empty() and (_seams[level][0] as MeshInstance3D).visible:
+			count += 1
+	return count
+
+
+func core_material() -> StandardMaterial3D:
+	return _core_material
 
 
 func _mesh(mesh: Mesh, material: Material, at: Vector3, parent: Node3D = self) -> MeshInstance3D:
@@ -163,6 +205,8 @@ func _build_jaws() -> void:
 		var jaw := _mesh(plate, plate_material, Vector3(JAW_RADIUS, _ground + JAW_BOTTOM + JAW_SIZE.y * 0.5, 0.0), pivot)
 		# Width runs round the mast, thickness out from it; the top leans outward.
 		jaw.rotation = Vector3(JAW_TILT, PI * 0.5, 0.0)
+		_jaw_plates.append(jaw)
+		_jaw_bottom = jaw.position - jaw.basis * Vector3(0.0, JAW_SIZE.y * 0.5, 0.0)
 		_build_seams(jaw)
 		# A heavy lip on top of each jaw, reaching inward like a clamp's teeth.
 		var lip := BoxMesh.new()
@@ -173,7 +217,7 @@ func _build_jaws() -> void:
 # The plate's +z is its outer face; strokes sit just proud of it, so they never clip.
 func _build_seams(jaw: Node3D) -> void:
 	if _seam_material == null:
-		_seam_material = _glow(Palette.AMBER, SEAM_GLOW_MIN)
+		_seam_material = _glow(EventKinds.role_color("neutral") if posture_fight() else Palette.AMBER, SEAM_GLOW_MIN)
 		for i in SEAM_STROKES.size():
 			_seams.append([])
 	for level in SEAM_STROKES.size():
@@ -186,8 +230,14 @@ func _build_seams(jaw: Node3D) -> void:
 			_seams[level].append(seam)
 
 
+# The core's colour at rest: the beacon row's, except on the posture rule, where the live
+# colour belongs to an open core alone.
+func _rest_core_color() -> Color:
+	return EventKinds.role_color("neutral") if posture_fight() else EventKinds.color("beacon_charge_changed")
+
+
 func _build_core() -> void:
-	_core_material = _glow(EventKinds.color("beacon_charge_changed"), 1.2)
+	_core_material = _glow(_rest_core_color(), 1.2)
 	var sphere := SphereMesh.new()
 	sphere.radius = CORE_RADIUS
 	sphere.height = CORE_RADIUS * 2.0
@@ -201,7 +251,7 @@ func _build_badge() -> void:
 	_badge.name = "Badge"
 	_badge.position = Vector3.UP * (_ground + BADGE_HEIGHT)
 	add_child(_badge)
-	var tint := EventKinds.color("beacon_charge_changed")
+	var tint := _rest_core_color()
 	_lit_material = _badge_material(tint, 1.0)
 	_dim_material = _badge_material(Palette.CHARCOAL, 0.7)
 	for i in BADGE_SEGMENTS:
@@ -217,11 +267,17 @@ func _build_badge() -> void:
 	outline.outer_radius = BADGE_RADIUS + 0.4
 	var ring := _mesh(outline, _badge_material(tint, 0.85), Vector3.ZERO, _badge)
 	ring.rotation.x = PI * 0.5
+	_outline = ring
 	_marker_material = _badge_material(tint, 0.95)
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE * MARKER_SIZE
 	var marker := _mesh(quad, _marker_material, Vector3.ZERO, _badge)
 	marker.rotation.z = PI * 0.25
+	# The plate carries a posture Warden's health, so the ring is not drawn.
+	if posture_fight():
+		for segment in _segments:
+			(segment as MeshInstance3D).visible = false
+		_outline.visible = false
 
 
 func _badge_material(color: Color, alpha: float) -> StandardMaterial3D:
@@ -301,11 +357,13 @@ func update(delta: float) -> void:
 	if warden == null:
 		return
 	_turn_jaws(delta)
+	_update_open(delta)
 	_update_core()
 	_update_badge()
 	_update_caps(delta)
 	_update_magnet()
 	_update_seams()
+	_update_body_glow()
 
 
 func _turn_jaws(delta: float) -> void:
@@ -322,7 +380,33 @@ func _update_core() -> void:
 	var energy: float = 1.2 + 2.0 * warden.charge_fraction()
 	if warden.unplated_by_magnet():
 		energy = 0.4 + 2.6 * absf(sin(Time.get_ticks_msec() * 0.02))
+	if posture_fight():
+		var live := EventKinds.state_color("open")
+		var shown := live if warden.staggered() else _rest_core_color()
+		_core_material.albedo_color = shown
+		_core_material.emission = shown
+		energy = OPEN_CORE_GLOW if warden.staggered() else 1.2
 	_core_material.emission_energy_multiplier = energy
+
+
+# The jaws lean out while the core is open and close after it, from their bottom edge so
+# nothing dips under the 2 m line.
+func _update_open(delta: float) -> void:
+	if not posture_fight():
+		return
+	var want := 1.0 if warden.staggered() else 0.0
+	_open = move_toward(_open, want, (JAW_OPEN_RATE if want > _open else JAW_CLOSE_RATE) * delta)
+	var tilt := JAW_TILT + deg_to_rad(JAW_OPEN_DEGREES) * _open
+	for jaw in _jaw_plates:
+		(jaw as Node3D).rotation = Vector3(tilt, PI * 0.5, 0.0)
+		(jaw as Node3D).position = _jaw_bottom + (jaw as Node3D).basis * Vector3(0.0, JAW_SIZE.y * 0.5, 0.0)
+
+
+# Combat's hit flash lights the body amber; a posture Warden shows no amber, so its flash
+# keeps its size and loses the colour.
+func _update_body_glow() -> void:
+	if posture_fight():
+		body_material.emission = EventKinds.role_color("neutral")
 
 
 func _update_badge() -> void:
@@ -381,6 +465,9 @@ func _update_magnet() -> void:
 
 
 func _update_seams() -> void:
+	if posture_fight():
+		_update_guard_seams()
+		return
 	var strip: float = warden.shred_fraction()
 	var depth := clampf((strip - SEAM_SHOW) / (1.0 - SEAM_SHOW), 0.0, 1.0)
 	for level in _seams.size():
@@ -388,3 +475,13 @@ func _update_seams() -> void:
 		for seam in _seams[level]:
 			(seam as MeshInstance3D).visible = lit
 	_seam_material.emission_energy_multiplier = lerpf(SEAM_GLOW_MIN, SEAM_GLOW_MAX, depth)
+
+
+# The guard as cracks: one more level at each quarter, sealing as the guard drains.
+func _update_guard_seams() -> void:
+	var guard: float = warden.posture()
+	for level in _seams.size():
+		var lit := guard >= SEAM_STEP * (level + 1)
+		for seam in _seams[level]:
+			(seam as MeshInstance3D).visible = lit
+	_seam_material.emission_energy_multiplier = lerpf(POSTURE_SEAM_GLOW_MIN, POSTURE_SEAM_GLOW_MAX, clampf(guard / BossPosture.FULL, 0.0, 1.0))

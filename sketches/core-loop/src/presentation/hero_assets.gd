@@ -641,10 +641,13 @@ func _dress_warden(warden) -> void:
 	mount.position = kit.position - tower.position
 	base.add_child(kit)
 	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
-		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null}
+		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null,
+		"jaws": [], "light_rest": {}}
 	if warden.family == "swarm":
 		_split_queen_hatch(weak, rec)
 	_paint_warden(base, rec)
+	if warden._look.posture_fight():
+		_rig_warden_jaws(base, rec)
 	if warden.family == "mind":
 		var lens := Node3D.new()
 		lens.name = "HeroLens"
@@ -682,6 +685,18 @@ func _dress_warden(warden) -> void:
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
 	_dress_mast.call_deferred(warden)
+
+
+# A posture Warden's jaws lean out from their outer bottom edge while its core is open.
+# Each entry keeps the rest transform, the edge to turn about and which way is out.
+func _rig_warden_jaws(base: Node3D, rec: Dictionary) -> void:
+	for side in [-1.0, 1.0]:
+		var jaw := base.get_node("JawL" if side < 0 else "JawR") as MeshInstance3D
+		var bounds := jaw.mesh.get_aabb()
+		var edge := Vector3(0.0, bounds.position.y, bounds.position.z if side < 0 else bounds.end.z)
+		rec.jaws.append({"node": jaw, "rest": jaw.transform, "pivot": jaw.transform * edge, "out": side})
+	for key in ["ancient_light_base", "ancient_light"]:
+		rec.light_rest[key] = (rec.materials[key] as StandardMaterial3D).emission
 
 
 func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
@@ -886,6 +901,22 @@ func _update_warden(rec: Dictionary) -> void:
 	rim.emission_energy_multiplier = plate.emission_energy_multiplier if warden.tint_state == "amber" else 0.8
 	for seam in rec.seams:
 		seam.node.visible = seam.source.visible
+	if not rec.jaws.is_empty():
+		_update_warden_open(rec)
+
+
+# The jaws spring out and the core takes the live colour while a posture Warden is open.
+func _update_warden_open(rec: Dictionary) -> void:
+	var warden = rec.warden
+	var lean: float = deg_to_rad(warden._look.JAW_OPEN_DEGREES) * warden._look.jaw_open()
+	for entry in rec.jaws:
+		var turn := Transform3D(Basis(Vector3.RIGHT, entry.out * lean), entry.pivot)
+		entry.node.transform = turn * Transform3D(Basis.IDENTITY, -entry.pivot) * entry.rest
+	# The body material carries combat's amber hit flash; a posture Warden never wears amber.
+	(rec.materials.ancient_enamel as StandardMaterial3D).emission = EventKinds.role_color("neutral")
+	var open: bool = warden.staggered()
+	for key in rec.light_rest:
+		(rec.materials[key] as StandardMaterial3D).emission = EventKinds.state_color("open") if open else rec.light_rest[key]
 
 
 func _forget_warden(id: int) -> void:
