@@ -2,11 +2,18 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 
-# C10 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly, opaque, inside the
+# C10 limits. The asset: 1,200 T / 5 D ceiling for the whole moving assembly, opaque, inside the
 # 2 x 3 m core (radius 1 m, half-height 1.5 m). The base contract: the chaser's collider and its
 # committed lunge lane, timing and damage are the values chaser.gd had before the dressing swap.
 const CEILING_T := 1200
-const CEILING_D := 3
+# Two extra rubber draws let the fin hinge and claws remain planted independently.
+const CEILING_D := 5
+const BASE_TRIANGLES := 228
+const PART_SURFACES := {
+	"ChaserBody": ["fleet_paint", "requisition_tag", "rubber"],
+	"ChaserFin": ["rubber"],
+	"ChaserClaws": ["rubber"],
+}
 const CORE_RADIUS := 1.0
 const CORE_HALF_HEIGHT := 1.5
 const BASE_CONSTS := {
@@ -70,7 +77,23 @@ func _run() -> void:
 		return
 	var scene := packed.instantiate()
 	root.add_child(scene)
+	var names: Array[String] = []
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		names.append(String(node.name))
+		var slots: Array[String] = []
+		for i in node.mesh.get_surface_count():
+			slots.append(node.mesh.surface_get_material(i).resource_name)
+		slots.sort()
+		var want: Array = PART_SURFACES.get(String(node.name), []).duplicate()
+		want.sort()
+		_check(slots == want and not want.is_empty(), "%s surface names %s" % [node.name, slots])
+	names.sort()
+	var expected: Array = PART_SURFACES.keys()
+	expected.sort()
+	_check(names == expected, "body, fin and claws node names pinned: %s" % [names])
 	var m := _measure(scene)
+	_check(absf(float(m["tris"] - BASE_TRIANGLES)) <= BASE_TRIANGLES * 0.10,
+		"triangles %d within 10%% of %d before splitting" % [m["tris"], BASE_TRIANGLES])
 	print("asset: %d T, %d D, radius %.3f, half-height %.3f" % [m["tris"], m["draws"], m["r"], m["y"]])
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
@@ -105,8 +128,13 @@ func _run() -> void:
 	var live := _measure(chaser)
 	print("live assembly: %d T, %d D, radius %.3f, half-height %.3f" % [live["tris"], live["draws"], live["r"], live["y"]])
 	_check(chaser.find_child("ChaserBody", true, false) != null, "the live Chaser carries its ChaserBody dressing")
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 5" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check(live["r"] <= CORE_RADIUS + 0.001 and live["y"] <= CORE_HALF_HEIGHT + 0.001, "live assembly inside the 2 x 3 m core at rest")
+	var handles_ok: bool = chaser._pose_parts.size() == PART_SURFACES.size()
+	for part_name in PART_SURFACES:
+		var part: Dictionary = chaser._pose_parts.get(part_name, {})
+		handles_ok = handles_ok and not part.is_empty() and part.node.name == part_name and chaser.reaction_pivot.is_ancestor_of(part.node)
+	_check(handles_ok, "live body, fin and claws retain imported names below ReactionPivot")
 	print("enemy_chaser_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)
