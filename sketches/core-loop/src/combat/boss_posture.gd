@@ -26,7 +26,10 @@ var stagger_frame := -1
 var idle := 0.0
 var chunks := CHUNKS
 var cracked := false
+# The stagger the crack was made in: it pays off only in a later one.
+var crack_stagger := -1
 var shattered_this_stagger := false
+var shatter_frame := -1
 var gain_frame := -1
 var gain_in_frame := 0.0
 var staggers := 0
@@ -49,8 +52,9 @@ func judge(hit: Dictionary) -> Dictionary:
 	if staggered:
 		if contact and frame > stagger_frame:
 			result["part"] = "core"
-			if not glance:
-				_judge_core(result, hit)
+			_judge_core(result, hit)
+		return result
+	if contact and frame == shatter_frame:
 		return result
 	var base := OTHER_BASE_CHARGING if bool(hit.get("charging", false)) else OTHER_BASE
 	if contact:
@@ -65,7 +69,7 @@ func judge(hit: Dictionary) -> Dictionary:
 func _judge_core(result: Dictionary, hit: Dictionary) -> void:
 	var smash := bool(hit.get("smash", false))
 	var fast_ram := String(hit.get("kind", "")) == "ram" and int(hit.get("tier", 0)) >= SHATTER_TIER
-	if smash or fast_ram or cracked:
+	if smash or fast_ram or (cracked and crack_stagger < staggers):
 		var max_hp := float(hit.get("max_hp", 0.0))
 		result["shatter"] = true
 		result["dealt"] = maxf(0.0, float(hit.get("hp", 0.0)) - max_hp * (chunks - 1) / CHUNKS)
@@ -81,9 +85,11 @@ func apply(result: Dictionary, frame: int) -> void:
 			chunks = maxi(0, chunks - 1)
 			cracked = false
 			shattered_this_stagger = true
+			shatter_frame = frame
 			_end_stagger()
-		elif result.get("crack", false):
+		elif result.get("crack", false) and not cracked:
 			cracked = true
+			crack_stagger = staggers
 		return
 	var gain := float(result.get("gain", 0.0))
 	if gain <= 0.0:

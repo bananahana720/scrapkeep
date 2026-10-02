@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # The posture fight on the slice table, through combat.strike() and real contacts
@@ -134,6 +135,7 @@ func _run() -> void:
 	await _charge_lands()
 	await _charge_cancelled()
 	await _bar_and_stagger()
+	await _filling_smash()
 	await _chunks()
 	_game.free()
 	await _default_table()
@@ -179,7 +181,7 @@ func _charge_cancelled() -> void:
 	await _fill()
 	await _frames(2)
 	_report("a stagger cancels the charge", was_charging and _warden.staggered() and not _warden._charging and _warden._charge_time == 0.0 \
-			and _warden._pulse_clock == 0.0 and not is_instance_valid(ring) and _warden.telegraph() == null,
+			and _warden._pulse_clock == 0.0 and not is_instance_valid(ring) and _warden.telegraph() == null and _warden._core_ring == null,
 		"was charging %s, staggered %s, charging now %s, clock %.2f, ring freed %s" % [was_charging, _warden.staggered(), _warden._charging, _warden._pulse_clock, not is_instance_valid(ring)])
 	var lift_before: bool = _warden.last_pulse_lifted
 	await _seconds(2.6)
@@ -230,6 +232,32 @@ func _bar_and_stagger() -> void:
 	_report("posture_changed went out", posture_events >= 4, "%d posture_changed" % posture_events)
 	await _seconds(3.2)
 	_report("it closes when the stagger runs out", not _warden.staggered() and _warden.posture() == 0.0, "staggered %s, posture %.1f" % [_warden.staggered(), _warden.posture()])
+
+
+# A real smash that fills the bar opens the Warden and removes nothing: the landing's own
+# shockwave arrives on the stagger's frame and is not a core hit.
+func _filling_smash() -> void:
+	_player.reset_to(_ground(OUT))
+	await _seconds(0.3)
+	for i in 3:
+		await _ram()
+	var parts: Array = []
+	var record := func(enemy: Node3D, kind: String, force: float):
+		if enemy == _warden:
+			parts.append([kind, String(_combat.resolve(enemy, kind, force)["part"])])
+	_game.events.enemy_struck.connect(record)
+	await _smash(_top())
+	var landing := parts.duplicate()
+	_combat.strike(_warden, "runner", 10.0, "core")
+	_game.events.enemy_struck.disconnect(record)
+	var slams := landing.filter(func(entry): return entry[0] == "slam")
+	_report("a smash that fills the bar opens it and removes nothing", _smashed == 1 and _warden.staggered() and _warden.chunks_left() == 4 and _warden.hp == HP,
+		"smashes %d, staggered %s, %d chunks, hp %.1f; landing %s" % [_smashed, _warden.staggered(), _warden.chunks_left(), _warden.hp, landing])
+	_report("the stagger frame's shockwave is not a core hit", not slams.is_empty() and slams.all(func(entry): return entry[1] == ""),
+		"landing strikes %s" % [landing])
+	_report("a bolt on the open core is not a core hit", parts.back() == ["runner", ""], "the bolt resolved as %s" % [parts.back()])
+	_player.reset_to(_ground(OUT))
+	await _seconds(BossPosture.STAGGER_SECONDS + 0.5)
 
 
 func _chunks() -> void:

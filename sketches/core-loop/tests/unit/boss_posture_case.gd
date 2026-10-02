@@ -133,11 +133,17 @@ func _core(t) -> void:
 	t.check("a smash on the open core shatters", smash["shatter"] and smash["part"] == "core" and not rule.staggered, "result %s" % smash)
 	t.near("the shatter deals one chunk", smash["dealt"], HP / 4.0)
 	t.check("a shatter closes the Warden and clears the bar", rule.chunks == 3 and rule.posture == 0.0 and not rule.cracked and rule.shattered_this_stagger, "chunks %d posture %s" % [rule.chunks, rule.posture])
+	var shockwave := rule.judge({"kind": "slam", "punch": PLATING, "plating": PLATING, "smash": true, "frame": _frame, "hp": HP, "max_hp": HP})
+	t.near("the shatter's own frame gains nothing", shockwave["gain"], 0.0)
+	var next := rule.judge({"kind": "ram", "punch": PLATING, "plating": PLATING, "frame": _frame + 1, "hp": HP, "max_hp": HP})
+	t.near("the next frame's contact gains in full again", next["gain"], 30.0)
 
 	var slow := Posture.new()
 	_stagger(slow)
 	var crack := _hit("ram", PLATING, slow, {"tier": 1})
 	t.check("a tier-1 ram cracks and deals 0", crack["crack"] and not crack["shatter"] and crack["dealt"] == 0.0 and slow.cracked and slow.chunks == 4, "result %s" % crack)
+	var again := _hit("ram", PLATING, slow, {"tier": 1})
+	t.check("a second lesser hit in the same stagger does not shatter", not again["shatter"] and again["dealt"] == 0.0 and slow.chunks == 4 and slow.staggered and slow.cracked, "result %s" % again)
 	slow.step(Posture.STAGGER_SECONDS + 0.1)
 	t.check("a stagger that runs out keeps the crack and clears the bar", not slow.staggered and slow.cracked and slow.posture == 0.0 and slow.chunks == 4, "cracked %s" % slow.cracked)
 	_stagger(slow)
@@ -147,6 +153,14 @@ func _core(t) -> void:
 	var fast := Posture.new()
 	_stagger(fast)
 	t.check("a tier-2 ram shatters", _hit("ram", PLATING, fast, {"tier": 2})["shatter"], "tier 2 ram")
+
+	var weak := Posture.new()
+	_stagger(weak)
+	var weak_stomp := _hit("stomp", PLATING * Posture.MULT_MIN, weak)
+	t.check("a glancing contact on the open core still cracks", weak_stomp["glance"] and weak_stomp["crack"] and weak.cracked and weak.chunks == 4, "result %s" % weak_stomp)
+	var weak_smash := Posture.new()
+	_stagger(weak_smash)
+	t.check("a glancing smash on the open core still shatters", _hit("stomp", PLATING * Posture.MULT_MIN, weak_smash, {"smash": true})["shatter"] and weak_smash.chunks == 3, "chunks %d" % weak_smash.chunks)
 
 	var gun := Posture.new()
 	_stagger(gun)
@@ -170,12 +184,12 @@ func _pure(t) -> void:
 	var rule := Posture.new()
 	_hit("ram", PLATING, rule)
 	var snapshot := [rule.posture, rule.staggered, rule.stagger_left, rule.stagger_frame, rule.idle, rule.chunks, rule.cracked,
-			rule.shattered_this_stagger, rule.gain_frame, rule.gain_in_frame, rule.staggers, rule.glances]
+			rule.shattered_this_stagger, rule.gain_frame, rule.gain_in_frame, rule.staggers, rule.glances, rule.get("crack_stagger"), rule.get("shatter_frame")]
 	var hit := {"kind": "stomp", "punch": PLATING, "plating": PLATING, "smash": true, "tier": 2, "charging": true, "frame": rule.gain_frame, "hp": HP, "max_hp": HP}
 	var first: Dictionary = rule.judge(hit)
 	var same := true
 	for i in 20:
 		same = same and rule.judge(hit) == first
 	var after := [rule.posture, rule.staggered, rule.stagger_left, rule.stagger_frame, rule.idle, rule.chunks, rule.cracked,
-			rule.shattered_this_stagger, rule.gain_frame, rule.gain_in_frame, rule.staggers, rule.glances]
+			rule.shattered_this_stagger, rule.gain_frame, rule.gain_in_frame, rule.staggers, rule.glances, rule.get("crack_stagger"), rule.get("shatter_frame")]
 	t.check("judge twenty times changes nothing and answers the same", same and after == snapshot, "before %s after %s" % [snapshot, after])

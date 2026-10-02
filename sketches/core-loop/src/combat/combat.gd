@@ -585,8 +585,6 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 		var tier: int = SpeedTier.of(force, ctx.player.tuning.f("cruise")) if kind == "ram" else 0
 		var judged: Dictionary = enemy.judge_hit(kind, punch, ctx.player.smash_landing == enemy, tier)
 		if not judged.is_empty():
-			if part != "" and judged["part"] == "":
-				judged["part"] = part
 			return judged
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))

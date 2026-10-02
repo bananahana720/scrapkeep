@@ -551,8 +551,9 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int) -> Dictio
 func _apply_posture(result: Dictionary) -> void:
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
+	var chunks_before: int = _posture.chunks
 	_posture.apply(result, Engine.get_physics_frames())
-	if result.get("shatter", false):
+	if _posture.chunks < chunks_before:
 		_armed = float(result["dealt"])
 	if _posture.staggered and not was_staggered:
 		_begin_stagger()
@@ -597,7 +598,7 @@ func take_damage(amount: float) -> float:
 
 
 func set_tint(state: String) -> void:
-	super.set_tint("slate" if _posture != null else state)
+	super.set_tint("" if _posture != null else state)
 
 
 func integrity() -> float:
