@@ -22,6 +22,8 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const SPINE_CAP_MS := 60.0
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0
+# The harpoon biting a body stops time this long (LEGIBILITY section 3). A world latch sends none.
+const BITE_STOP_MS := 40.0
 const CONTACT_KINDS := ["ram", "stomp", "slam"]
 # Bursts per frame, so a blast through a crowd costs a handful of emitters, not one each.
 const MAX_BURSTS := 6
@@ -141,6 +143,11 @@ func wire_optional() -> void:
 	_listen(events, "rocket_jumped", _on_rocket_jumped)
 	_listen(events, "part_gained", _on_part)
 	_listen(events, "core_gained", _on_core)
+	_listen(events, "harpoon_bit", _on_harpoon_bit)
+
+
+func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
+	request_hit_stop(BITE_STOP_MS / 1000.0, "harpoon_bit")
 
 
 static func _listen(events: Object, signal_name: String, callable: Callable) -> void:

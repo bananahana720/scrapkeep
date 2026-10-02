@@ -110,6 +110,15 @@ func _process(_delta: float) -> bool:
 					events.enemy_struck.emit(_target, gun, 1.0)
 					_juice.flush()
 			_marks["guns"] = _sent().size() - before])
+		# The harpoon's bite to a body is one stop of 40 ms; a world latch sends none.
+		_plan.append([2250, func():
+			_juice.reset_stops()
+			var before: int = _sent().size()
+			events.harpoon_bit.emit(_target, Vector3.ZERO)
+			_marks["bite"] = _sent().slice(before)
+			before = _sent().size()
+			events.grapple_fired.emit(Vector3.ZERO)
+			_marks["world_latch"] = _sent().size() - before])
 		# A real stop on the rolling ball.
 		_plan.append([2400, func():
 			_juice.reset_stops()
@@ -161,6 +170,9 @@ func _process(_delta: float) -> bool:
 	_check("rapid fire capped", rapid.size() >= 2 and total <= EventKinds.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
 		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), %d ms clear after each %s, %.0f ms per %d ms window %s"
 			% [rapid.size(), total, EventKinds.STOP_BUDGET_MS, EventKinds.STOP_GAP_MS, gaps_ok, EventKinds.STOP_WINDOW_BUDGET_MS, EventKinds.STOP_WINDOW_MS, window_ok])
+	var bite: Array = _marks["bite"]
+	_check("bite stops 40 ms", bite.size() == 1 and absf(bite[0][1] - 0.04) < 0.0005 and bite[0][1] * 1000.0 <= EventKinds.STOP_WINDOW_BUDGET_MS and _marks["world_latch"] == 0,
+		"a bite to a body sends %d stop of %.0f ms (window budget %.0f); a world latch sends %d" % [bite.size(), bite[0][1] * 1000.0 if not bite.is_empty() else 0.0, EventKinds.STOP_WINDOW_BUDGET_MS, _marks["world_latch"]])
 	_check("guns never stop", _marks["guns"] == 0, "twelve laser, arc and turret hits send %d stops" % _marks["guns"])
 	var flat_before := Vector2(_velocity_before.x, _velocity_before.z)
 	var drift := (Vector2(_velocity_after.x, _velocity_after.z) - flat_before).length()

@@ -1,0 +1,390 @@
+extends Node3D
+
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Augments := preload("res://src/movement/augments.gd")
+
+# What the harpoon line looks like in the world, state by state (LEGIBILITY section 3). Every
+# colour and every motion is read from the line's EventKinds row, so the sight, the sound and the
+# prompt of a state cannot drift apart. The cable is a camera-facing ribbon; its width is the
+# row's radius or MIN_PX at REF_HEIGHT, whichever is wider, so it never thins out at range.
+#
+#   cable      the line from the ball to the anchor, slack and sagging or taut and bright
+#   brackets   live corners closing on a target the press would bite; they pulse
+#   barb       the head seated in a body, with a steady collar that tightens as the gap closes
+#   post_ring  a steady ring on the world post the line stands on
+#   dry fire, let go, broke and the smash landing are short beats of their own
+
+const MIN_PX := 5.0
+const REF_HEIGHT := 1080.0
+const SLACK_RADIUS := 0.09
+const TAUT_RADIUS := 0.14
+const TAUT_LIGHTEN := 0.4
+const SLACK_DIM := 0.35
+const SEGMENTS := 20
+const MAX_SAG := 3.0
+const SAG_PER_SLACK := 0.3
+const TAUT_MARGIN := 0.4
+
+const LOCK_CLOSE := 0.1
+const LOCK_FROM_SCALE := 1.8
+const BRACKET_BASE := 0.9
+const BRACKET_PER_METRE := 0.015
+const BRACKET_TICK := 0.45
+const MARK_PX := 3.0
+const PULSE_HZ := 2.0
+const PULSE_DEPTH := 0.14
+
+const COLLAR_MIN := 0.9
+const COLLAR_MAX := 3.2
+const COLLAR_PER_METRE := 0.07
+const POST_RING := 1.1
+const BARB_SIZE := 0.55
+
+const DRY_DART := 8.0
+const DRY_TIME := 0.25
+const DRY_REACH_AT := 0.08
+const DRY_SAG := 1.6
+const LET_GO_TIME := 0.15
+const BROKE_TIME := 0.3
+const SMASH_FLASH := 0.12
+const POP_TIME := 0.1
+
+var player
+var camera: Camera3D
+var events
+
+var cable: MeshInstance3D
+var cable_taut := false
+var cable_radius := SLACK_RADIUS
+var brackets: MeshInstance3D
+var lock_scale := 1.0
+var barb: MeshInstance3D
+var collar: MeshInstance3D
+var collar_radius := 0.0
+var collar_scale := 1.0
+var post_ring: MeshInstance3D
+var pop: MeshInstance3D
+
+var _clock := 0.0
+var _state := "searching"
+var _lock_age := 0.0
+var _smash_age := 0.0
+var _dry_age := -1.0
+var _dry_dir := Vector3.FORWARD
+var _let_go_age := -1.0
+var _broke_age := -1.0
+var _gone_anchor := Vector3.ZERO
+var _pop_age := -1.0
+var _pop_at := Vector3.ZERO
+var _cable_material: StandardMaterial3D
+var _bracket_material: StandardMaterial3D
+var _collar_material: StandardMaterial3D
+var _ring_material: StandardMaterial3D
+var _barb_material: StandardMaterial3D
+var _pop_material: StandardMaterial3D
+
+
+func setup(player_ref, camera_ref: Camera3D, events_ref) -> void:
+	player = player_ref
+	camera = camera_ref
+	events = events_ref
+	name = "LineView"
+	_cable_material = _material()
+	cable = _node("Cable", _cable_material)
+	_bracket_material = _material(true)
+	brackets = _node("LockBrackets", _bracket_material)
+	_ring_material = _material(true)
+	post_ring = _node("PostRing", _ring_material)
+	_pop_material = _material(true)
+	pop = _node("SmashPop", _pop_material)
+	events.line_state_changed.connect(_on_line_state)
+
+
+func _node(label: String, material: StandardMaterial3D) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	node.name = label
+	node.mesh = ImmediateMesh.new()
+	node.material_override = material
+	node.visible = false
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.extra_cull_margin = 4096.0
+	add_child(node)
+	return node
+
+
+static func _material(over := false) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.no_depth_test = over
+	if over:
+		mat.render_priority = 10
+	return mat
+
+
+func _process(delta: float) -> void:
+	step(delta)
+
+
+# One frame of the view. Tests step it with fixed deltas; the engine calls it from _process.
+func step(delta: float) -> void:
+	if player == null or camera == null:
+		return
+	_clock += delta
+	var kit = player.kit
+	var ball: Vector3 = player.shown_position()
+	_advance(delta)
+	var smash: bool = kit.hooked and kit.line_state == Augments.LINE_SMASH
+	_smash_age = _smash_age + delta if smash else 0.0
+	_draw_cable(kit, ball, smash)
+	_draw_lock(kit)
+	_draw_latch(kit, ball)
+	_draw_pop()
+
+
+func _advance(delta: float) -> void:
+	if _dry_age >= 0.0:
+		_dry_age += delta
+		if _dry_age >= DRY_TIME:
+			_dry_age = -1.0
+	if _let_go_age >= 0.0:
+		_let_go_age += delta
+		if _let_go_age >= LET_GO_TIME:
+			_let_go_age = -1.0
+	if _broke_age >= 0.0:
+		_broke_age += delta
+		if _broke_age >= BROKE_TIME:
+			_broke_age = -1.0
+	if _pop_age >= 0.0:
+		_pop_age += delta
+		if _pop_age >= POP_TIME:
+			_pop_age = -1.0
+	if _state == "locked":
+		_lock_age += delta
+
+
+func _on_line_state(state: String, _target: Node3D, at: Vector3, _cause: String) -> void:
+	if state == "locked" and _state != "locked":
+		_lock_age = 0.0
+	_state = state
+	match state:
+		"dry_fire":
+			_dry_age = 0.0
+			_dry_dir = _aim_direction(at)
+		"let_go":
+			_let_go_age = 0.0
+			_gone_anchor = at
+		"broke":
+			_broke_age = 0.0
+			_gone_anchor = at
+		"smash_lands":
+			_pop_age = 0.0
+			_pop_at = at
+
+
+func _aim_direction(from: Vector3) -> Vector3:
+	var aim: Dictionary = player.kit.aim
+	if aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
+		var to: Vector3 = (aim["point"] as Vector3) - from
+		if to.length() > 0.1:
+			return to.normalized()
+	return -camera.global_basis.z
+
+
+# The motion factor a row asks for: a pulse swings 2 Hz around one, steady and none stay at one.
+func motion_factor(state: String) -> float:
+	if String(EventKinds.line_row(state).get("motion", "none")) == "pulse":
+		return 1.0 + PULSE_DEPTH * sin(TAU * PULSE_HZ * _clock)
+	return 1.0
+
+
+# Half the cable's width in metres at a depth: the radius, or the wider of that and MIN_PX.
+func half_width(radius: float, depth: float) -> float:
+	return maxf(radius, MIN_PX * depth * 0.5 / focal_px())
+
+
+# Pixels per metre at one metre of depth, from the camera's own projection at REF_HEIGHT.
+func focal_px() -> float:
+	return camera.get_camera_projection()[1][1] * REF_HEIGHT * 0.5
+
+
+# The cable's width on screen, in pixels at REF_HEIGHT, for a radius at a depth.
+func projected_px(radius: float, depth: float) -> float:
+	return half_width(radius, depth) * 2.0 * focal_px() / depth
+
+
+func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
+	var mesh: ImmediateMesh = cable.mesh
+	mesh.clear_surfaces()
+	var live := EventKinds.line_color("latched_world")
+	if kit.hooked:
+		_dry_age = -1.0
+		_let_go_age = -1.0
+		_broke_age = -1.0
+		var gap: float = ball.distance_to(kit.anchor)
+		var taut: bool = smash or kit.on_body or kit.winching or gap >= kit.rope - TAUT_MARGIN
+		cable_taut = taut
+		cable_radius = TAUT_RADIUS if taut else SLACK_RADIUS
+		var color := live.lightened(TAUT_LIGHTEN) if taut else live.darkened(SLACK_DIM)
+		if smash:
+			color = EventKinds.line_color("smash_committed").lightened(1.0 - clampf(_smash_age / SMASH_FLASH, 0.0, 1.0))
+		var sag: float = 0.0 if taut else minf(maxf(kit.rope - gap, 0.0) * SAG_PER_SLACK, MAX_SAG)
+		_cable_material.albedo_color = color
+		_ribbon(mesh, ball, kit.anchor, sag, cable_radius)
+	elif _broke_age >= 0.0:
+		var t := _broke_age / BROKE_TIME
+		cable_radius = TAUT_RADIUS
+		_cable_material.albedo_color = Color(EventKinds.line_color("broke"), 1.0 - t * 0.5)
+		var mid := ball.lerp(_gone_anchor, 0.5)
+		var near := ball.lerp(mid, 1.0 - t * 0.35)
+		var far := _gone_anchor.lerp(mid, 1.0 - t * 0.35)
+		_ribbon(mesh, ball, near, t * DRY_SAG, cable_radius)
+		_ribbon(mesh, _gone_anchor, far, t * DRY_SAG, cable_radius)
+	elif _let_go_age >= 0.0:
+		var t := _let_go_age / LET_GO_TIME
+		cable_radius = SLACK_RADIUS
+		cable_taut = false
+		_cable_material.albedo_color = live
+		_ribbon(mesh, ball, _gone_anchor.lerp(ball, t), 0.0, cable_radius)
+	elif _dry_age >= 0.0:
+		var reach := DRY_DART * clampf(_dry_age / DRY_REACH_AT, 0.0, 1.0)
+		var slack := clampf((_dry_age - DRY_REACH_AT) / (DRY_TIME - DRY_REACH_AT), 0.0, 1.0)
+		cable_radius = SLACK_RADIUS
+		cable_taut = false
+		_cable_material.albedo_color = Color(EventKinds.line_color("dry_fire"), 1.0 - slack * 0.6)
+		_ribbon(mesh, ball, ball + _dry_dir * reach, slack * DRY_SAG, cable_radius)
+	cable.visible = mesh.get_surface_count() > 0
+
+
+# A camera-facing strip along the line, sagging by `sag` metres at the middle.
+func _ribbon(mesh: ImmediateMesh, from: Vector3, to: Vector3, sag: float, radius: float) -> void:
+	var eye := camera.global_position
+	var points: Array[Vector3] = []
+	for i in SEGMENTS + 1:
+		var f := float(i) / float(SEGMENTS)
+		points.append(from.lerp(to, f) + Vector3.DOWN * sag * 4.0 * f * (1.0 - f))
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	for i in points.size():
+		var tangent := points[mini(i + 1, points.size() - 1)] - points[maxi(i - 1, 0)]
+		var side := tangent.cross(eye - points[i])
+		side = side.normalized() if side.length_squared() > 0.000001 else camera.global_basis.x
+		var half := half_width(radius, maxf(eye.distance_to(points[i]), 0.5))
+		mesh.surface_add_vertex(points[i] + side * half)
+		mesh.surface_add_vertex(points[i] - side * half)
+	mesh.surface_end()
+
+
+func _draw_lock(kit) -> void:
+	var mesh: ImmediateMesh = brackets.mesh
+	mesh.clear_surfaces()
+	var locked: bool = _state == "locked" and not kit.hooked
+	brackets.visible = locked
+	if not locked:
+		lock_scale = 1.0
+		return
+	var at: Vector3 = kit.aim.get("point", Vector3.ZERO)
+	var closing := LOCK_FROM_SCALE - (LOCK_FROM_SCALE - 1.0) * clampf(_lock_age / LOCK_CLOSE, 0.0, 1.0)
+	lock_scale = closing * motion_factor("locked")
+	var depth := maxf(camera.global_position.distance_to(at), 0.5)
+	var half := (BRACKET_BASE + depth * BRACKET_PER_METRE) * lock_scale
+	_bracket_material.albedo_color = EventKinds.line_color("locked")
+	var right := camera.global_basis.x
+	var up := camera.global_basis.y
+	var width := MARK_PX * depth / focal_px()
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for corner in [Vector2(1.0, 1.0), Vector2(-1.0, 1.0), Vector2(1.0, -1.0), Vector2(-1.0, -1.0)]:
+		var tip: Vector3 = at + (right * corner.x + up * corner.y) * half
+		var reach := half * BRACKET_TICK * 2.0
+		_bar(mesh, tip, tip - right * corner.x * reach, up, width)
+		_bar(mesh, tip, tip - up * corner.y * reach, right, width)
+	mesh.surface_end()
+
+
+func _draw_latch(kit, ball: Vector3) -> void:
+	var on_body: bool = kit.hooked and kit.on_body
+	var on_world: bool = kit.hooked and not kit.on_body
+	if on_body:
+		_seat_barb(kit, ball)
+	else:
+		_free_barb()
+	post_ring.visible = on_world
+	var ring: ImmediateMesh = post_ring.mesh
+	ring.clear_surfaces()
+	if on_world:
+		_ring_material.albedo_color = EventKinds.line_color("latched_world")
+		_circle(ring, kit.anchor, POST_RING * motion_factor("latched_world"), ball)
+
+
+func _seat_barb(kit, ball: Vector3) -> void:
+	if barb == null:
+		_barb_material = _material(true)
+		barb = _node("Barb", _barb_material)
+		var box := BoxMesh.new()
+		box.size = Vector3.ONE * BARB_SIZE
+		barb.mesh = box
+		barb.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
+		_collar_material = _material(true)
+		collar = _node("Collar", _collar_material)
+	var color := EventKinds.line_color("latched_body")
+	_barb_material.albedo_color = color
+	_collar_material.albedo_color = color
+	barb.visible = true
+	barb.global_position = kit.anchor
+	var gap: float = ball.distance_to(kit.anchor)
+	collar_radius = clampf(COLLAR_MIN + gap * COLLAR_PER_METRE, COLLAR_MIN, COLLAR_MAX)
+	collar_scale = motion_factor("latched_body")
+	collar.visible = true
+	var mesh: ImmediateMesh = collar.mesh
+	mesh.clear_surfaces()
+	_circle(mesh, kit.anchor, collar_radius * collar_scale, ball)
+
+
+func _free_barb() -> void:
+	if barb != null:
+		barb.free()
+		barb = null
+	if collar != null:
+		collar.free()
+		collar = null
+	collar_radius = 0.0
+	collar_scale = 1.0
+
+
+# A smash landing: the barb pops out and a ring flashes where the contact was.
+func _draw_pop() -> void:
+	var mesh: ImmediateMesh = pop.mesh
+	mesh.clear_surfaces()
+	pop.visible = _pop_age >= 0.0
+	if _pop_age < 0.0:
+		return
+	var t := _pop_age / POP_TIME
+	_pop_material.albedo_color = Color(EventKinds.line_color("smash_lands"), 1.0 - t)
+	_circle(mesh, _pop_at, COLLAR_MIN * (1.0 + t * 2.0), camera.global_position)
+
+
+# A ring in the plane facing `toward`, drawn as a strip MARK_PX wide at its depth.
+func _circle(mesh: ImmediateMesh, centre: Vector3, radius: float, toward: Vector3) -> void:
+	var axis := (toward - centre).normalized()
+	if axis.length_squared() < 0.5:
+		axis = Vector3.UP
+	var basis := Basis.looking_at(axis, Vector3.UP if absf(axis.y) < 0.99 else Vector3.RIGHT)
+	var depth := maxf(camera.global_position.distance_to(centre), 0.5)
+	var half := MARK_PX * depth * 0.5 / focal_px()
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	for i in 33:
+		var angle := TAU * float(i) / 32.0
+		var out: Vector3 = basis * Vector3(cos(angle), sin(angle), 0.0)
+		mesh.surface_add_vertex(centre + out * (radius + half))
+		mesh.surface_add_vertex(centre + out * (radius - half))
+	mesh.surface_end()
+
+
+func _bar(mesh: ImmediateMesh, a: Vector3, b: Vector3, across: Vector3, width: float) -> void:
+	var side := across * width * 0.5
+	mesh.surface_add_vertex(a + side)
+	mesh.surface_add_vertex(a - side)
+	mesh.surface_add_vertex(b + side)
+	mesh.surface_add_vertex(a - side)
+	mesh.surface_add_vertex(b - side)
+	mesh.surface_add_vertex(b + side)
