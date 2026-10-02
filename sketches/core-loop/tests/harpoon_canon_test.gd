@@ -321,6 +321,26 @@ func _smash(name: String) -> void:
 		kit.line_state == Augments.LINE_SMASH and "smash_committed" in _ids() and after >= before - SPEED_SLACK,
 		"states %s, planar %.3f -> %.3f m/s" % [_ids(), before, after])
 	_check("%s: a committed haul cannot haul again" % name, not _player.verb_ready("haul"), "verb_ready(haul) %s mid-haul" % _player.verb_ready("haul"))
+	_fails.clear()
+	_source.hold = {"harpoon_held": true}
+	await physics_frame
+	_source.hold = {"harpoon_held": true, "brake_held": true}
+	await physics_frame
+	await physics_frame
+	_check("%s: Ctrl pressed again on a committed haul is refused" % name,
+		_failed("haul", "committed") and kit.hooked and kit.line_state == Augments.LINE_SMASH,
+		"fails %s, hooked %s, line_state %s" % [_fails, kit.hooked, kit.line_state])
+	if name == "sable":
+		_player.state.boost_cooldown = 5.0
+		_fails.clear()
+		_source.press = {"shift_pressed": true}
+		await physics_frame
+		_source.press = {}
+		await physics_frame
+		_check("sable: a Shift refused on cooldown mid-haul leaves the smash committed",
+			_failed("boost", "cooldown") and kit.hooked and kit.line_state == Augments.LINE_SMASH,
+			"fails %s, hooked %s, line_state %s" % [_fails, kit.hooked, kit.line_state])
+		_player.state.boost_cooldown = 0.0
 	if name != "sable":
 		_player.abilities.slot(AbilityState.MOVEMENT).charges = 0
 		_fails.clear()

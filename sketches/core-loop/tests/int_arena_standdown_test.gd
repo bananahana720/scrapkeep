@@ -61,6 +61,7 @@ var _window := {}
 var _shots := 0
 var _spawned := 0
 var _scrap_events := 0
+var _discoveries := 0
 
 
 func _initialize() -> void:
@@ -106,6 +107,7 @@ func _start() -> void:
 	events.shot_fired.connect(func(_w: String, _f: Vector3, _t: Vector3): _shots += 1)
 	events.enemy_spawned.connect(func(_e: Node3D, _k: String): _spawned += 1)
 	events.scrap_collected.connect(func(_a: int, _at: Vector3, _t: int): _scrap_events += 1)
+	events.synergy_discovered.connect(func(_id: String, _c: String, _f: bool): _discoveries += 1)
 	_game.player.source = _source
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
@@ -256,7 +258,7 @@ func _open_window(which: String) -> void:
 			"the ball dunked in stage 3's flooded basin was pushed at %.1f m/s^2, so the probe sees world pushes" % _probe.worst)
 	_phase = "window"
 	_wait = 0
-	_window = {"which": which, "shots": _shots, "spawned": _spawned, "scrap": _scrap_events,
+	_window = {"which": which, "shots": _shots, "spawned": _spawned, "scrap": _scrap_events, "discoveries": _discoveries,
 		"enemies_max": 0, "shots_max": 0, "maps_seen": 0, "maps_solid": 0, "ray_hits": 0,
 		"entries": _boss.entries, "not_stage": 0}
 	_probe.worst = 0.0
@@ -306,9 +308,10 @@ func _step_window() -> void:
 	var gate_nodes: int = build.gates.get_child_count()
 	_report("%s no stage scrap or fabricators" % which,
 		build.scrap.count() == 0 and scrap_nodes == 0 and build.fabricators.records().is_empty() and fab_nodes == 0
-			and gate_nodes == 0 and not build.gates.is_open() and _scrap_events == w["scrap"],
-		"%d scrap pickups (%d nodes), %d fabricators (%d nodes), %d gate nodes, %d scrap_collected over 5 s"
-			% [build.scrap.count(), scrap_nodes, build.fabricators.records().size(), fab_nodes, gate_nodes, _scrap_events - w["scrap"]])
+			and gate_nodes == 0 and not build.gates.is_open() and _scrap_events - w["scrap"] == _discoveries - w["discoveries"],
+		"%d scrap pickups (%d nodes), %d fabricators (%d nodes), %d gate nodes, %d scrap_collected over 5 s against %d discovery bursts"
+			% [build.scrap.count(), scrap_nodes, build.fabricators.records().size(), fab_nodes, gate_nodes, _scrap_events - w["scrap"],
+				_discoveries - w["discoveries"]])
 	_report("%s stage maps parked" % which, w["maps_seen"] == 0 and w["maps_solid"] == 0 and w["ray_hits"] == 0,
 		"at 5 ticks and at 4.9 s: %d stage maps visible, %d stage colliders in the physics space, %d world-layer hits under the arena"
 			% [w["maps_seen"], w["maps_solid"], w["ray_hits"]])

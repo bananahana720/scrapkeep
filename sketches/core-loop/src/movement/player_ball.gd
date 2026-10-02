@@ -460,7 +460,7 @@ func _read_grammar() -> void:
 	_read_ctrl()
 	if _frozen or not kit.on(Augments.GRAPPLE):
 		return
-	if intent.harpoon_pressed:
+	if intent.harpoon_pressed and not kit.hooked:
 		_press_harpoon()
 	elif intent.harpoon_released and kit.hooked:
 		_fling()
@@ -489,7 +489,8 @@ func _read_shift() -> void:
 		if intent.shift_pressed and not Harpoon.burst_ready(kit):
 			_fail("boost", "busy" if Augments.holding(kit) else "uncharged")
 	else:
-		intent.boost_pressed = intent.boost_pressed or intent.shift_pressed
+		intent.boost_pressed = intent.boost_pressed \
+				or (intent.shift_pressed and (state.boost_cooldown <= 0.0 or kit.plant_time > 0.0))
 		if intent.shift_pressed and state.boost_cooldown > 0.0:
 			_fail("boost", "cooldown")
 		elif intent.shift_pressed and kit.mounted:
@@ -508,7 +509,8 @@ func verb_ready(verb: String) -> bool:
 			return not _frozen and kit.on(Augments.GRAPPLE) and not kit.hooked and not _charging() \
 					and _harpoon_refusal() == ""
 		"haul":
-			return kit.hooked and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)
+			return not _frozen and not Augments.holding(kit) and kit.hooked \
+					and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)
 		"boost":
 			if _burst_pilot():
 				return Harpoon.burst_ready(kit)
