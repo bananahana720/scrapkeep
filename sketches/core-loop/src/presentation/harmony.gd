@@ -190,6 +190,23 @@ static func ratio(semitones: float) -> float:
 	return pow(2.0, semitones / 12.0)
 
 
+const NOTE_OFFSETS := {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+
+
+# A note name as a midi number: C4 is 60, F#3 is 54, Bb2 is 46.
+static func note_midi(name: String) -> int:
+	var semitone: int = NOTE_OFFSETS.get(name.substr(0, 1), 0)
+	var at := 1
+	var mark := name.substr(1, 1)
+	if mark == "#":
+		semitone += 1
+		at = 2
+	elif mark == "b":
+		semitone -= 1
+		at = 2
+	return 12 * (int(name.substr(at)) + 1) + semitone
+
+
 # The nth rung of the reward ladder above home, in semitones. Rung 0 is home.
 static func pentatonic_step(rung: int) -> int:
 	var octave := int(floor(float(rung) / PENTATONIC.size()))

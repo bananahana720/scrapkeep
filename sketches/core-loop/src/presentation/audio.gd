@@ -9,6 +9,7 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
 const Streak := preload("res://src/presentation/streak.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
 const Augments := preload("res://src/movement/augments.gd")
 # v2 W9: the class row names the motif every class cue resolves through, and the roster
@@ -33,8 +34,8 @@ const POLYPHONY := 32
 # pickups or a held trigger stays crisp instead of turning into mush.
 # Moss says one line at a time: a new line cuts the last one off. The Mind's quote is
 # heard once per adaptation: mind_adapted and the hand's telegraph layers (its voice and
-# its tag are both the quote) land on one frame, and the first one sounds. A harpoon bite
-# rides on grapple_fired and a line smash on slammed, so each is heard once, not doubled.
+# its tag are both the quote) land on one frame, and the first one sounds. The harpoon's
+# bite, release and smash are heard from line_state_changed alone, so each is heard once.
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
@@ -51,6 +52,19 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 # Weapon voices per class, so each class sounds like itself (identity, principle 5).
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0}
 const VOLUME_STEP := 0.1
+
+# The harpoon line's grammar (design-v3/LEGIBILITY.md sections 3 and 5). Gaps are in seconds on
+# the audio clock, which _process advances by its delta so a test can step it.
+const LOCK_TICK_GAP := 0.25
+const FAIL_GAP := 0.25
+const DRY_TICK_GAP := 0.1
+const CAUSE_RESOLVE_GAP := 4.0
+const NOTE_SPACING := 0.14
+# The hum stands while the line does, and climbs an octave as the gap closes from far to near.
+const HUM_STATES := ["latched_world", "latched_body", "smash_committed"]
+const HUM_FAR := 45.0
+const HUM_NEAR := 3.0
+const HUM_DB := 0.0
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
@@ -78,8 +92,7 @@ const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampe
 # v2 W3 characters: the class-ability facts, heard through their event rows.
 const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "gauge_charging", "gauge_released",
 	"gauge_cancelled", "sprint_started", "cc_ignored", "cloak_started", "cloak_broken", "sticky_detonated",
-	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked",
-	"harpoon_bit", "harpoon_smashed"]
+	"rocket_jumped", "blink_used", "arc_slammed", "skid_smashed", "demo_slammed", "tree_offered", "tree_picked"]
 # v2 W7 enemies: holds, tenacity and the ancients' tells. Each plays its event row's
 # sound through the same wiring as the character facts. vent_charging and vent_erupted
 # also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by
@@ -146,6 +159,13 @@ var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
 var _voices := {}
 var _last_start := {}
+var clock := 0.0
+var hum_on := false
+var hum_pitch := 1.0
+var _hum_voice := -1
+var _gates := {}
+var _fired_this_run := {}
+var _notes: Array = []
 # The pickup streak and the kill chain. Audio bumps them as it plays each rung; juice
 # reads the same records at the end of the frame to draw the chain and the pulse.
 var scrap_streak := Streak.for_kind("scrap_collected")
@@ -220,6 +240,11 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.TRIM_DB:
 		if not id in ids:
 			ids.append(id)
+	for cause in EventKinds.CAUSE_ROWS:
+		for note in EventKinds.cause_motif(cause):
+			var id := SfxBank.cause_note_id(Harmony.note_midi(String(note)))
+			if not id in ids:
+				ids.append(id)
 	return ids
 
 
@@ -373,7 +398,8 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 	return player
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	clock += delta
 	if not sound_ready:
 		if _poll_bake():
 			_on_ready()
@@ -385,6 +411,8 @@ func _process(_delta: float) -> void:
 	if ace != null:
 		ace.pause_gain = engine.pause_gain
 	_flush_flow()
+	_play_due_notes()
+	_tend_hum()
 	_follow_drop_line()
 	_follow_warden()
 	_follow_escalation()
@@ -781,6 +809,7 @@ func _connect_all(events) -> void:
 	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
 		_hull_seen = 0.0
+		_fired_this_run.clear()
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
 		engine.set_fleet_ticks(0)
@@ -803,8 +832,6 @@ func _connect_all(events) -> void:
 	events.dashed.connect(func(_direction: Vector3): play("dashed"))
 	events.landed.connect(_on_landed)
 	events.slammed.connect(_on_slammed)
-	events.grapple_fired.connect(func(_anchor: Vector3): play("grapple_fired"))
-	events.grapple_released.connect(func(): play("grapple_released"))
 	events.mounted.connect(func(_at: Vector3, banked: float): play("mounted", 0.0, Harmony.ratio(minf(banked / 4.0, 7.0))))
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_spawned.connect(_on_enemy_spawned)
@@ -879,6 +906,11 @@ func wire_optional() -> void:
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen(events, "synergy_discovered", _on_synergy)
+	_listen(events, "line_state_changed", _on_line_state)
+	_listen(events, "grapple_released", _stop_hum, true)
+	_listen(events, "verb_failed", _on_verb_failed)
+	_listen(events, "cause_armed", _on_cause_armed)
+	_listen(events, "cause_fired", _on_cause_fired)
 	_listen(events, "interaction_found", func(): play("interaction_found"), true)
 	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
 		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
@@ -992,6 +1024,143 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 			return true
 	events.connect(signal_name, target)
 	return true
+
+
+# --- The harpoon line and the synergy motifs ------------------------------------------
+
+# True when the named gate is open, and then closes it for `gap` seconds.
+func _gate(key: String, gap: float) -> bool:
+	if clock < float(_gates.get(key, -1000.0)):
+		return false
+	_gates[key] = clock + gap
+	return true
+
+
+# A grammar cue at its trim: the row's priority offset is taken back out, so the level is the
+# bank's own, which is what the table of levels in sfx_bank.gd is written against.
+func _grammar_cue(kind: String, sound: String, bus := "SFX") -> bool:
+	return play(kind, -PRIORITY_DB[Rows.priority(kind)], 1.0, bus, sound)
+
+
+func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String) -> void:
+	if state in HUM_STATES:
+		_start_hum()
+	else:
+		_stop_hum()
+	var sound := EventKinds.line_sound(state)
+	if sound == EventKinds.NONE or sound == "":
+		return
+	match state:
+		"locked":
+			if not _gate("lock_tick", LOCK_TICK_GAP):
+				return
+		"dry_fire":
+			if not _gate("dry_tick", DRY_TICK_GAP):
+				return
+		"latched_body":
+			_grammar_cue("harpoon_bit", sound)
+			return
+		"smash_lands":
+			if _recent_ms("slam_boom") > MIN_GAP_MS["slam_boom"]:
+				_grammar_cue("harpoon_smashed", sound)
+			_grammar_cue("harpoon_smashed", "smash_crack")
+			return
+	_grammar_cue("line_state_changed", sound)
+
+
+func _recent_ms(sound: String) -> int:
+	return Time.get_ticks_msec() - int(_last_start.get(sound, -100000))
+
+
+# A refused press plays its verb's own cue. The harpoon's refusal is the dry tick that its dry
+# fire state also plays, so the two share one gate and a refusal is heard once.
+func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
+	var sound := String(Bindings.VERBS.get(verb, {}).get("fail", EventKinds.NONE))
+	if sound == EventKinds.NONE or sound == "":
+		return
+	if not _gate("fail:" + verb, FAIL_GAP):
+		return
+	if sound == "dry_tick" and not _gate("dry_tick", DRY_TICK_GAP):
+		return
+	_grammar_cue("verb_failed", sound)
+
+
+# The first two notes of a synergy's phrase when it goes live. The third waits for the effect.
+func _on_cause_armed(id: String) -> void:
+	var motif := EventKinds.cause_motif(id)
+	for i in mini(2, motif.size()):
+		_notes.append([clock + NOTE_SPACING * i, "cause_armed", Harmony.note_midi(String(motif[i]))])
+	_play_due_notes()
+
+
+# The phrase resolves the first time the effect really happens in a run; after that the third
+# note alone marks a firing, at most once per synergy every few seconds.
+func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
+	var motif := EventKinds.cause_motif(id)
+	if motif.size() < 3:
+		return
+	var first := not _fired_this_run.has(id)
+	_fired_this_run[id] = true
+	if first:
+		_gates["cause:" + id] = clock + CAUSE_RESOLVE_GAP
+	elif not _gate("cause:" + id, CAUSE_RESOLVE_GAP):
+		return
+	_notes.append([clock, "cause_fired", Harmony.note_midi(String(motif[2]))])
+	_play_due_notes()
+
+
+func _play_due_notes() -> void:
+	var waiting: Array = []
+	for note in _notes:
+		if note[0] > clock:
+			waiting.append(note)
+		elif sound_ready:
+			play(note[1], -PRIORITY_DB[Rows.priority(note[1])], 1.0, "SFX", SfxBank.cause_note_id(note[2]))
+	_notes = waiting
+
+
+# The pitch ratio of the hum at a gap: 1 at HUM_FAR and above, 2 at HUM_NEAR and below.
+static func hum_ratio(gap: float) -> float:
+	return pow(2.0, clampf((HUM_FAR - gap) / (HUM_FAR - HUM_NEAR), 0.0, 1.0))
+
+
+func _start_hum() -> void:
+	if not sound_ready:
+		return
+	if not hum_on:
+		hum_on = true
+		if _sfx != null:
+			_hum_voice = _sfx.play_stream(SfxBank.stream("line_hum"), 0.0, SfxBank.trim_db("line_hum") + HUM_DB, 1.0, AudioServer.PLAYBACK_TYPE_DEFAULT, "SFX")
+		cue_log.append(["line_state_changed", "line_hum", "now", engine.clock, 1.0])
+	_tend_hum()
+
+
+func _stop_hum() -> void:
+	if not hum_on:
+		return
+	hum_on = false
+	if _sfx != null and _hum_voice != AudioStreamPlaybackPolyphonic.INVALID_ID and _sfx.is_stream_playing(_hum_voice):
+		_sfx.stop_stream(_hum_voice)
+	_hum_voice = -1
+	hum_pitch = 1.0
+	cue_log.append(["line_state_changed", "line_hum", "stop", engine.clock, 1.0])
+
+
+# Follows the line each frame: its pitch from the gap on a body, and an end the line never
+# announced (a reset or a restore) stops it.
+func _tend_hum() -> void:
+	if not hum_on:
+		return
+	var player = ctx.get("player")
+	if player == null or player.get("kit") == null:
+		return
+	var kit = player.kit
+	if not kit.hooked:
+		_stop_hum()
+		return
+	hum_pitch = hum_ratio(player.ball_position().distance_to(kit.anchor)) if kit.on_body else 1.0
+	if _sfx != null and _hum_voice != AudioStreamPlaybackPolyphonic.INVALID_ID:
+		_sfx.set_stream_pitch_scale(_hum_voice, hum_pitch)
 
 
 const SHELL_RISE_SEMITONES := 7.0

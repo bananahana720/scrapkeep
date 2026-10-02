@@ -1682,3 +1682,15 @@ The harpoon is one mode for every pilot, and it says every state it passes throu
 The slice keeps five synergies; `cause_armed` fires once per run when one goes live, and `cause_fired` fires wherever its effect resolves. The first firing is the discovery, and the discovery burst stays at the ball. A retry or arena retry clears the build's fired record, so a synergy still live across the rewind is found again at its next firing (the codex deduplicates within an attempt).
 
 - **Owed: Storm Lattice and Thermal Shock emit from approximate sites.** Storm Lattice's `cause_fired` comes from every `shot_fired` while it is live, and Thermal Shock's carries a null body and the ball position. Both are cut from the slice. They move to combat's chain resolve and `element_field._shatter` when a writer has combat and the element field in scope.
+
+## HLs: the line you can hear, and the notes of a synergy
+
+Every harpoon state, refusal and synergy has its own cue, read from the grammar tables (`EventKinds.LINE_ROWS`, `Bindings.VERBS`, `CAUSE_ROWS`). `audio.gd` listens to `line_state_changed`, `verb_failed`, `cause_armed` and `cause_fired`.
+
+- **States.** The bite (`grapple_clink`) now has two layers, a knock under its ring, at -7 dB trim; the world clunk (`anchor_clunk`, -12) carries a rope creak. The dry tick (`dry_tick`, -21) sits 14 dB under the bite, measured from baked samples. The lock tick is gated to 0.25 s. The crack (`smash_crack`) is the A on the bite's ring a fifth down, played with the row's boom (`slam_boom`, which `slammed` already started on the same landing, so it is not requested twice). Whistle, dock click, zip and twang have their own recipes; the twang is lower and 0.6 s against the zip's 0.16 s.
+- **One event, one sound.** `grapple_fired`, `grapple_released`, `harpoon_bit` and `harpoon_smashed` no longer play from audio.gd: their sounds are the line's states. A refused right press publishes `verb_failed("harpoon")` and `dry_fire`, which share one dry tick through a 0.1 s gate.
+- **The hum.** `line_hum` loops (a whole number of cycles) from a latch and stops on any other state, or on the tick the kit is no longer hooked, so a silent reset ends it too. On a body its pitch follows the gap from 1.0 at 45 m to 2.0 at 3 m (`Audio.hum_ratio`); a world line holds 1.0.
+- **Refusals.** One quiet cue per verb (`verb_fail_*`, -18, under 0.3 s), at most one per 0.25 s per verb.
+- **Motifs.** Notes are `cause_note_<midi>` bank ids baked from the row's note names (`Harmony.note_midi`). Arming plays notes one and two 0.14 s apart; the first firing of a run plays the third; later firings play it at most every 4 s per synergy. `run_started` resets "first".
+- **Sketches.** `tools/sound_sketches.gd` writes WAVs to `artifacts/local/harpoon/sounds/` at their game levels: bite and crack A to C, clunk, dry tick, zip, twang, a 3 s hum with the octave climb, and the five motifs. Only A of each is wired. The owner picks by ear; nothing here certifies feel.
+- **Test** `tests/line_sound_test.gd`.
