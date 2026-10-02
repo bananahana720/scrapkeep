@@ -51,6 +51,11 @@ test("L3 lets a flag some file parses stand, and skips comments", () => {
   assert.deepEqual(lintL3(files, tuning), []);
 });
 
+test("L3 lets a flag a Python tool parses for itself stand", () => {
+  const files = [{ path: "render.py", text: "tag = next(v for v in sys.argv if v.startswith('--render-tag='))\n" }];
+  assert.deepEqual(lintL3(files, tuning), []);
+});
+
 test("L3 fails loudly when tuning.gd parses to no flags or no keys", () => {
   assert.throws(() => parseTuning("const FLAGS := {\n}\n"), /cannot check flags/);
   assert.throws(() => parseTuning('{"key": "a"}\n'), /0 FLAGS names/);

@@ -52,12 +52,12 @@ export function parseTuning(text) {
 }
 
 const flagLiteral = /--([a-z][a-z0-9-]*)=/g;
-const parsedFlag = /(?:begins_with|trim_prefix|startsWith|replace)\(\s*["']--([a-z][a-z0-9-]*)=/g;
+const parsedFlag = /(?:begins_with|trim_prefix|startsWith|startswith|replace)\(\s*["']--([a-z][a-z0-9-]*)=/g;
 const tuningCall = /\.(?:option|set_option|f|set_value)\(\s*"([^"]+)"/g;
 
 // L3: files is a list of { path, text } from tests/, tools/ and the scripts that hand
 // launch flags to the game. A "--name=" literal is dangling when it is not a FLAGS name
-// and no scanned file owns it: some file parses it (begins_with, startsWith), or some file
+// and no scanned file owns it: some file parses it (begins_with, startsWith, startswith), or some file
 // reads the bare name as a setting (_settings.get("policy")). Godot's
 // own flags carry no "=" and never match.
 export function lintL3(files, tuning) {
