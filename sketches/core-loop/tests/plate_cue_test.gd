@@ -2,11 +2,13 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # The plating cue lives on the plate's rim, bolts and glyph (Andrew, 2026-09-29), not the
-# body or the plate faces. Amber: the plate material emits through its mask and only the
-# rim and bolt texels are lit; slate: no emission at all. Both states keep the resting
-# albedo, the body never glows, the switch follows tint_state, and no draw is added.
+# body or the plate faces. Amber: the plate material emits through its mask in the live
+# colour and only the rim and bolt texels are lit; slate: the same texels glow in the slate
+# role colour at a lower, steady energy. Both states keep the resting albedo, the body never
+# glows, the switch follows tint_state, and no draw is added.
 # The cue is trim, not a flood: what lights must stay a small share of the plate group's face
 # area (LIT_CEILING), so a recipe that paints a slab, brow or cap as rim fails.
 
@@ -98,9 +100,15 @@ func _run() -> void:
 	var slate_albedo := mat.albedo_color
 	var slate_body_on: bool = brute._material.emission_enabled
 	var slate_body_albedo: Color = brute._material.albedo_color
-	var slate_sum := 0.0
+	var slate_rim_sum := 0.0
+	var slate_face_sum := 0.0
+	var slate_color := mat.emission
+	var slate_energy := mat.emission_energy_multiplier
 	for i in uvs.size():
-		slate_sum += _added(mat, uvs[i].x, uvs[i].y)
+		if colors[i].r < 0.5:
+			slate_rim_sum += _added(mat, uvs[i].x, uvs[i].y)
+		else:
+			slate_face_sum += _added(mat, uvs[i].x, uvs[i].y)
 	var slate_draws := _draws(brute)
 	brute.set_tint("amber")
 	var total_area := 0.0
@@ -139,7 +147,10 @@ func _run() -> void:
 	_check(mat.albedo_color == slate_albedo and mat.albedo_color == Enemy.PLATE_CLOSED, "plate faces keep the resting albedo in both states")
 	_check(not brute._material.emission_enabled and brute._material.albedo_color == slate_body_albedo and not slate_body_on,
 		"body keeps its resting finish and never glows in either state")
-	_check(is_zero_approx(slate_sum), "slate: no added light on any plate vertex")
+	_check(slate_rim_sum > 0.0 and is_zero_approx(slate_face_sum), "slate: the rim carries light and no plate face does")
+	_check(slate_color == EventKinds.role_color("slate") and slate_energy > 0.0 and slate_energy < Enemy.PLATE_GLOW_LIVE,
+		"slate: the rim is the slate role colour at energy %.2f, below the live rim's %.2f" % [slate_energy, Enemy.PLATE_GLOW_LIVE])
+	_check(mat.emission == EventKinds.state_color("will_break"), "amber: the rim is the live colour, not the class colour")
 	_check(_draws(brute) == slate_draws and slate_draws == 3, "draws per brute unchanged across states (%d)" % slate_draws)
 	# The crack glyph is the third part of the cue (its strokes are counted apart, as in the asset test).
 	var crack := brute.get_node("BrutePlates/PlateCrack") as Node3D
@@ -153,9 +164,10 @@ func _run() -> void:
 		var inside := rect.size != Vector2.ZERO and rect.position.x >= 0.0 and rect.position.y >= 0.0 and rect.end.x <= FRAME.x and rect.end.y <= FRAME.y
 		_check(inside and rect.size.y >= 30.0, "%s: glyph box %.0f x %.0f px at (%.0f, %.0f) inside the frame, at least 30 px tall" % [cam_name, rect.size.x, rect.size.y, rect.position.x, rect.position.y])
 	brute.set_tint("slate")
-	_check(not mat.emission_enabled and not crack.visible and brute.tint_state == "slate", "back to slate: the switch follows tint_state, no light, no glyph")
+	_check(mat.emission_enabled and mat.emission == EventKinds.role_color("slate") and not crack.visible and brute.tint_state == "slate",
+		"back to slate: the switch follows tint_state, a slate rim, no glyph")
 	# Combat drives the state from punch_now(); one _tint() pass must agree with it, and the
-	# cue must follow: amber lights the rim, slate is dark (the switch reads tint_state only).
+	# cue must follow: amber lights the rim live, slate lights it slate (the switch reads tint_state only).
 	var combat = game.ctx.spawner
 	brute.set_tint("")
 	brute.plating = 40.0
@@ -168,8 +180,10 @@ func _run() -> void:
 		combat._tint()
 		var expect: String = "amber" if combat.punch_now() >= combat.plating_of(brute) else "slate"
 		_check(brute.tint_state == expect, "combat _tint writes tint_state (%s, expected %s)" % [brute.tint_state, expect])
-		_check(mat.emission_enabled == (brute.tint_state == "amber"), "the plate light follows the state combat wrote (%s)" % brute.tint_state)
-	_check(brute.tint_state == "slate" and not mat.emission_enabled, "combat closed the plate again and the light went out")
+		var want := EventKinds.state_color("will_break") if brute.tint_state == "amber" else EventKinds.role_color("slate")
+		_check(mat.emission_enabled and mat.emission == want, "the plate light follows the state combat wrote (%s)" % brute.tint_state)
+	_check(brute.tint_state == "slate" and mat.emission == EventKinds.role_color("slate") and mat.emission_energy_multiplier < Enemy.PLATE_GLOW_LIVE,
+		"combat closed the plate again and the rim went slate")
 
 	# Warden: the jaw plates take the frame mask, a rim on every face of the box.
 	var warden: Node3D = game.ctx.spawner.spawn_enemy("warden", Vector3(40, 30, 0))
@@ -178,10 +192,13 @@ func _run() -> void:
 	warden.set_tint("amber")
 	var centre := _added(jaw_mat, 1.0 / 6.0, 0.25)
 	var edge := _added(jaw_mat, 0.5 / 24.0, 0.25)
+	var amber_edge := edge
 	_check(jaw_mat.emission_enabled and edge > 0.0 and is_zero_approx(centre), "warden jaw: amber lights the face edge (%.2f) and not the face centre (%.2f)" % [edge, centre])
 	_check(jaw_mat.albedo_color == Enemy.PLATE_CLOSED, "warden jaw keeps the resting plate albedo in amber")
 	warden.set_tint("slate")
-	_check(is_zero_approx(_added(jaw_mat, 0.5 / 24.0, 0.25)), "warden jaw: slate adds no light")
+	var slate_edge := _added(jaw_mat, 0.5 / 24.0, 0.25)
+	_check(slate_edge > 0.0 and slate_edge < amber_edge and is_zero_approx(_added(jaw_mat, 1.0 / 6.0, 0.25)),
+		"warden jaw: slate lights the face edge (%.2f) below amber (%.2f) and not the face centre" % [slate_edge, amber_edge])
 
 	# A mesh with no mask UVs gets the dark default: no flood on its faces.
 	var hand: Node3D = game.ctx.spawner.spawn_enemy("mind_hand", Vector3(80, 30, 0))
@@ -212,7 +229,7 @@ func _run() -> void:
 			boxed.set_tint("amber")
 			var b_edge := _added(bmat, 0.5 / 24.0, 0.25)
 			var b_face := _added(bmat, 1.0 / 6.0, 0.25)
-			_check(is_zero_approx(b_slate) and b_edge > 0.0 and is_zero_approx(b_face) and bmat.albedo_color == Enemy.PLATE_CLOSED,
-				"%s: amber lights the plate rim (%.2f), not the face (%.2f); slate is dark" % [kind, b_edge, b_face])
+			_check(b_slate > 0.0 and b_slate < b_edge and is_zero_approx(b_face) and bmat.albedo_color == Enemy.PLATE_CLOSED,
+				"%s: amber lights the plate rim (%.2f), not the face (%.2f); slate lights the rim lower (%.2f)" % [kind, b_edge, b_face, b_slate])
 	print("plate_cue_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)

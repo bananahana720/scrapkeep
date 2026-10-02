@@ -6,6 +6,7 @@ const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
+const StatusMarks := preload("res://src/presentation/status_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -23,6 +24,8 @@ const Parts := preload("res://src/build/parts.gd")
 #   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon, and
 #                  how hits, kills, pickups, dodges and hits taken land (v3 W11)
 #   line_view      the harpoon line in the world: cable, lock brackets, barb and collar
+#   status_marks   what an enemy's state shows on its body that no table row draws elsewhere:
+#                  the star over a wind-up a hit broke
 #   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
 #   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
@@ -35,6 +38,7 @@ var audio
 var juice
 var vfx
 var line_view
+var status_marks
 var banner
 var hero_assets
 var ceremony
@@ -63,6 +67,9 @@ func setup(ctx_ref) -> void:
 		line_view.setup(ctx.player, ctx.camera.cam, ctx.events)
 	juice.audio = audio
 	juice.vfx = vfx
+	status_marks = StatusMarks.new()
+	add_child(status_marks)
+	status_marks.setup(ctx, vfx)
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)
