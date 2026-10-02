@@ -245,6 +245,14 @@ func _check_picks() -> void:
 		and stage_two == after_visit and tree.allowed == after_visit,
 		"allowed %d after the visit (stage_cleared heard %s), %d on a second stage-1 open, %d for stage 2, %d for stage 3"
 			% [after_visit, _cleared, again, stage_two, tree.allowed])
+	_game.ctx.tuning.set_option("world_one_builds", "off")
+	var base_before: int = tree.allowed
+	_game.world._open_pick(3)
+	var skipped: int = tree.allowed
+	_game.world._open_pick(3)
+	_report("on the base tree a skipped bay still opens one", skipped == base_before + 1 and tree.allowed == skipped,
+		"allowed %d before, %d for a skipped stage-3 bay, %d on its repeat" % [base_before, skipped, tree.allowed])
+	_game.ctx.tuning.set_option("world_one_builds", "on")
 
 
 func _run_at_cradle() -> void:

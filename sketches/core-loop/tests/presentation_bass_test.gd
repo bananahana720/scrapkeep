@@ -183,7 +183,6 @@ func _process(_delta: float) -> bool:
 		return false
 	match _step:
 		0:
-			_game.tuning.set_option("music", "synth")
 			_audio = _game.presentation.audio
 			_audio.bake_now()
 			_game.ctx.calm = true
@@ -204,9 +203,8 @@ func _process(_delta: float) -> bool:
 			var biggest: bool = womps.size() == 2 and womps[0][4] < womps[1][4]
 			_check("womp on the slam frame", instant and biggest, "the slam at audio frame %d starts its womp at frame %d, unquantized; the flat full plant sits lower (pitch %.2f) than a half-strength tilted one (%.2f)" % [frame, int(big[0][3]) if big.size() > 0 else -1, womps[0][4] if womps.size() > 0 else 0.0, womps[1][4] if womps.size() > 1 else 0.0])
 			# Danger pulls the bass down. Under armour a hit that sheds only mass is a deflect with
-			# no danger cue, so the hit reaches the hull (hull_damage 5).
-			_game.ctx.run.metrics["hull_damage"] = 5.0
-			_game.events.player_hit.emit(5.0, "test")
+			# no danger cue, so the run takes a hit big enough to pass the scrap layer and reach the hull.
+			_game.ctx.run.damage(_game.ctx.run.mass / _game.ctx.run.scrap_per_hp / (1.0 - _game.ctx.run.mitigation) + 5.0, "test")
 			_check("danger ducks the bass", engine._bass_duck_target < 0.5, "a hit cue drops the bass bus to %.2f while it sounds" % engine._bass_duck_target)
 			# The launch is the build.
 			_game.events.launched.emit(Vector3(0.0, 12.0, 20.0))
