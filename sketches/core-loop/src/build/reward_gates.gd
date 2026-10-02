@@ -67,6 +67,8 @@ var _last_side := {}
 var _gates: Array[Node3D] = []
 var _spin := 0.0
 var _warned_blocked := false
+# Gates standing on the map's slots never move to follow the ball, so they open from both sides.
+var _fixed := false
 
 
 func setup(terrain) -> void:
@@ -96,7 +98,8 @@ func is_open() -> bool:
 	return not offers.is_empty()
 
 
-# Returns true when the gates moved, so the owner can publish the new offers.
+# Returns true when the gates moved, so the owner can publish the new offers. Gates on the
+# map's slots stay put when the ball passes them all.
 func step(ball: Vector3, heading: Vector3) -> bool:
 	if offers.is_empty():
 		return false
@@ -108,14 +111,17 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		var side: float = (rel - (offer["facing"] as Vector3) * along).length()
 		var was: float = _last_side.get(i, along)
 		_last_side[i] = along
-		if was < 0.0 and along >= 0.0 and side <= WIDTH * 0.5 + 1.0 and absf(rel.y) < HEIGHT + 4.0:
+		var through := was < 0.0 and along >= 0.0
+		if _fixed and was > 0.0 and along <= 0.0:
+			through = true
+		if through and side <= WIDTH * 0.5 + 1.0 and absf(rel.y) < HEIGHT + 4.0:
 			var id: String = offer["part_id"]
 			close()
 			chosen.emit(id)
 			return false
 		if along < MISSED_BEYOND and rel.length() < LOST_BEYOND:
 			passed_all = false
-	if passed_all:
+	if passed_all and not _fixed:
 		_place(ball, heading)
 		return true
 	return false
@@ -128,6 +134,7 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	offers = []
 	_last_side = {}
 	var plan := choose_placement(ball, heading)
+	_fixed = plan.get("fixed", false)
 	var facing: Vector3 = plan["facing"]
 	for i in _ids.size():
 		var at: Vector3 = plan["spots"][i]
@@ -157,6 +164,9 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 # spot or approach sample rises above the ground under the ball.
 func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 	var count := maxi(1, _ids.size())
+	var fixed := _slot_plan(count)
+	if not fixed.is_empty():
+		return fixed
 	var ground: float = _terrain.height(ball.x, ball.z)
 	var base := Vector3(heading.x, 0.0, heading.z).normalized()
 	if base.length() < 0.5:
@@ -176,6 +186,25 @@ func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 		_warned_blocked = true
 		push_warning("reward_gates: every gate candidate is blocked by a static prop; using the least-blocked spot")
 	return best
+
+
+# A map with gate slots stands its gates there whatever the ball does. With fewer gates
+# than slots the outermost slots are used, and a single gate takes the middle one; more
+# gates than slots fall back to the ordinary placement.
+func _slot_plan(count: int) -> Dictionary:
+	var m = _terrain.map() if _terrain.has_method("map") else null
+	if m == null or not "gate_slots" in m or (m.gate_slots as Array).is_empty():
+		return {}
+	var slots: Array = m.gate_slots
+	if count > slots.size():
+		return {}
+	var spots: Array[Vector3] = []
+	for i in count:
+		var pick := (slots.size() - 1) / 2 if count == 1 else roundi(float(i) * (slots.size() - 1) / (count - 1))
+		var at: Vector2 = slots[mini(pick, slots.size() - 1)]["at"]
+		spots.append(_terrain.drop_point(at.x, at.y, 0.0))
+	var facing: Vector3 = slots[0]["facing"]
+	return {"facing": facing, "spots": spots, "climb": 0.0, "distance": 0.0, "blocked": false, "fixed": true}
 
 
 func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int, exclude: Array) -> Dictionary:

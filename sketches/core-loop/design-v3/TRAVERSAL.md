@@ -65,6 +65,54 @@ Median flow share at or above the larger of 0.70 and the pilot's baseline median
 
 **Provisional.** The map retrofit unit adds route measures: the authored line's length and the verbs it chains. A straight shot of 8 to 13 seconds to the beacon is itself what the owner called not fun to traverse, and flow share alone cannot see that.
 
+## The rebuilt Reach (unit Z3, 2026-10-02)
+
+The slice table's stage now plays `src/world/map_reach.gd`: the gorge's ground with an authored line from the spawn to the Warden for each pilot (waypoints in `tools/traversal_lines.json`; the three-stage game keeps the gorge). Same commands as above, 8 seeds each, run on the Z3 working tree. The baseline section above stays as history.
+
+Route measures, added to each seed's row and the summary: `path_length_m` (distance travelled from spawn to engage), `rides` (which of `ride_grapple_line`, `ride_chute`, `ride_skylight`, `ride_glide_drop`, `wall_crumbled`, `kicker_launch`, `thermal_ride` fired) and `uphill_m` (the most z the ball gave back from its furthest point toward the Warden). The summary holds `median_path_length_m`, `median_uphill_m` and `median_rides` (the count).
+
+| Pilot | Reached Warden | Median flow share (bar) | Worst seed | Dead stops | Max anchor gap | Time to Warden | Median path | Rides | Median uphill |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sable | 8 of 8 | 0.7345 (0.8974) miss | 0.6625 (seed 1) | 12 over 8 seeds | 12.4 m | 20.3 to 22.3 s | 465.0 m | kicker only | 9.4 m |
+| Rivet | 8 of 8 | 0.8836 (0.8814) met | 0.8833 (seed 8) | 0 | 24.8 m | 16.0 to 16.1 s | 362.9 m | cable, wall, kicker on 8 of 8 | 0.0 m |
+| Kest | 8 of 8 | 0.9139 (0.9019) met | 0.9130 (seed 7) | 0 | 18.4 m | 16.7 to 17.5 s | 403.4 m | cable on 8 of 8 | 0.3 m |
+
+Rivet's and Kest's lines are 1.31 and 1.45 times the 278 m straight and meet the length floors (320 m and 350 m). Sable's line is the longest (465 m) and misses the bar: the bot leaves the marble run's second bend at 37 m/s, rides the west shelf for about four seconds, hits the satellite tower at (-72,-16) or the shelf, and lands in tunnel w1 hard enough to count as a stop (positions in the DESIGN-NOTES section). Her uphill figure is that detour, not the deck. The waypoint adjustment the layout allowed for a deck-leg miss (second waypoint 8 m downhill) was applied to Sable and Rivet: Rivet went from 0.866 to 0.884, Sable from 0.703 to 0.735.
+
+The seed 7 stop of the baseline does not appear on Rivet or Kest. On Sable seed 7 still stops once, in tunnel w1.
+
+## Round two: Sable's strand holds its speed (unit Z3, 2026-10-02)
+
+Round one built the sheet's marble run and tunnel for Sable, and she missed her bar (median 0.7345, 12 dead stops, 6.4 to 11.2 m back toward the spawn, 0.74 of her ticks within 8 m of her line). The sheet was the cause: at the 28 to 33 m/s she carries off the deck, the marble run's lip throws her, its 43 and 55 degree corners cannot turn her, the satellite at (-72,-16) stands on her line and a roof over tunnel w1 is a wall for a ball that arrives in flight. Her strand was rebuilt in eight measured tries (the table is in `DESIGN-NOTES.md`). Rivet's and Kest's strands are unchanged and their numbers are the round-one numbers, measured again.
+
+What her strand is now: the deck's glide lands her near (-28,-118) and she runs west into a banked sweeper (a `Features.banked_arc` of radius 58 to 70 about (-32.3,-78)) that carries her round the west shelf, then she dives down an open ramp that replaces tunnel w1's roof and floor (45 m before the mouth to 60 m past it, never steeper than about 23 degrees, a vertical radius of 55 to 63 m at its two bends, so a fast ball hops it for up to a second and lands on it) and is turned onto the trough floor toward the merge and the kicker. The marble run, the w1 roof and the satellite at (-72,-16) are gone from this map.
+
+`--trace` on the traversal command writes one file per seed, `<pilot>-seed-<n>-trace.json`, with a row per tick (position, velocity, planar speed, tier, grounded, the colliders touched, dead stops). The on-line share is the fraction of ticks, from the first within 8 m of the third waypoint, whose planar distance to the drawn line is 8 m or less; its bar is a median of 0.85. `python3 tools/traversal_on_line.py tools/traversal_lines.json <pilot> <trace files>` prints it per seed and exits 1 under the bar.
+
+| Pilot | Reached Warden | Median flow share (bar) | Worst seed | Dead stops | Max anchor gap | Time to Warden | Median path | Backward (max over seeds) | Median on-line | Rides |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sable | 8 of 8 | 0.9453 (0.8974) met | 0.9415 (seed 6) | 0 | 10.7 m | 10.8 to 12.2 s | 373.6 m | 3.0 m | 0.935 | kicker on 3 of 8 |
+| Rivet | 8 of 8 | 0.8837 (0.8814) met | 0.8835 (seed 1) | 0 | 24.8 m | 16.0 to 16.1 s | 363.0 m | 0.1 m | 0.933 | cable, wall, kicker on 8 of 8 |
+| Kest | 8 of 8 | 0.9138 (0.9019) met | 0.9130 (seed 1) | 0 | 18.4 m | 16.7 to 17.5 s | 402.9 m | 2.0 m | 0.921 | cable on 8 of 8 |
+
+### On the admitted line (after wave R2), 2026-10-02
+
+The table above was measured on the candidate's base, before wave R2. R2 moved device placements to their own map, which took a misplaced Spillway cache off the Reach's spawn apron. Every pilot used to land on that cache (9 m above the apron) and roll off it with extra speed; now the ball drops 16 m onto a near-level deck and keeps about 14 m/s. Measured again on the merged build, 8 seeds each, with the duplicate post at (-60,-96) removed and tunnel e1's roof left off:
+
+| Pilot | Reached Warden | Median flow share | Worst seed | Dead stops | Max anchor gap | Time to Warden | Median path | Median on-line | Rides (8 of 8) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sable | 8 of 8 | 0.9565 | 0.9558 (seed 1) | 0 | 20.2 m | 10.6 to 11.1 s | 372.3 m | 1.000 | `ride_chute` |
+| Rivet | 8 of 8 | 0.9164 | 0.9164 (seed 1) | 0 | 21.0 m | 15.7 to 15.8 s | 365.4 m | 0.931 | `ride_grapple_line`, `wall_crumbled`, `kicker_launch` |
+| Kest | 8 of 8 | 0.8694 | 0.8693 (seed 5) | 0 | 16.5 m | 16.9 to 18.1 s | 404.8 m | 0.880 | `ride_grapple_line`, `ride_skylight` |
+
+**Kest misses the bar written before the build (0.8694 against 0.9019).** Every tick the two east pilots spend under tier 2 falls in the first 6.5 s (Rivet 118 ticks, Kest 199): the drop from the spawn and about 3 s on the level deck at 14 to 16 m/s before the cable. After that neither line drops below tier 2. The bars themselves were set on the spawn with the cache on it. The old gorge map measured on this same base gives Sable 0.944, Rivet 0.963 and Kest 0.960, because its bot rolls straight down the fall line and reaches the Warden in about 11 s; against those, both east lines give up flow share for their length.
+
+A launch crown under the drop (a mound of 7 m, 3 m top, 30 m foot at (0,-150)) was tried twice at the merge and taken out again. It does what it is for: Rivet reaches 24 m/s by 2.8 s where he had 18, and Kest's median rises to 0.939. But the speed carries down every line. Rivet arrives at tunnel e1 at 25.9 m/s, leaves the ground at its lip and stops dead on the roof in 8 of 8 seeds, and Sable overshoots her sweeper's entry, arrives late and stalls on the kicker's ramp in 6 of 8. Fading the crown out across the fall line makes a scarp where the ball lands and is worse for all three. The crown needs the three lines retuned with it, which is its own unit. Tunnel e1's roof stays off in the meantime, because a roof facing a ball in flight is a wall and a player who sprints arrives faster than the bot.
+
+The slow start is named on the sitting sheet: the first three seconds on the east lines are a drop and a level roll.
+
+Sable's flow share is high because she is fast, not because the route is long: she reaches the Warden in about 11 s, the shortest of the three. The only ticks she spends under tier 2 are 0.6 s of the spawn's glide. The kicker fires on 3 of her 8 seeds because she reaches it a few metres off its centre line on the others; the acceptance does not ask for it and it is not tuned.
+
 ## What the baseline says
 
 - **Today's map fails the bar on one count: seed 7 stops every pilot once.** Each loses 2 to 7 seconds there. The measure does not say what stopped them; the retrofit unit finds it.

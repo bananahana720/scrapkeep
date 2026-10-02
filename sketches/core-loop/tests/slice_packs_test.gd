@@ -1,4 +1,4 @@
-# smoke: solo (its simulated span runs at wall pace, about 88 s, and a loaded batch pushes it toward the 120 s limit)
+# smoke: solo (its simulated span runs at wall pace, about 65 s, and a loaded batch pushes it toward the 120 s limit)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -6,8 +6,11 @@ const Intent := preload("res://src/movement/intent.gd")
 const Holds := preload("res://src/combat/holds.gd")
 
 # The slice's packs and holds on a live slice game (EN):
-# - 72 simulated seconds spawn only the six slice kinds (the stage's
+# - 50 simulated seconds spawn only the six slice kinds (the stage's
 #   Warden aside); no event starts, no vault and no miniboss appear;
+# - the elite is the third arrival and comes once; with a ball that never fights the cap is
+#   then full, so the field is cleared at 30 s and a fourth pack must follow, which is not
+#   the elite;
 # - a ball driven at 20 m/s through a live mag pit leaves no slower than the same line with
 #   no pit, within 0.1 m/s: the pit bends the path and never bleeds the ball;
 # - a ball caught by the winch drone and then driven past 19 m/s snaps free with a forward
@@ -15,11 +18,12 @@ const Holds := preload("res://src/combat/holds.gd")
 # Every wait is counted in physics frames; none reads the wall clock.
 
 # A headless run is paced by the wall clock at the physics rate, so the simulated span is
-# kept to the shortest that shows the elite third and one arrival after it. The spawning part runs at
-# SPAWN_RATE; the director schedules in seconds and every wait counts physics ticks.
+# kept short. The spawning part runs at SPAWN_RATE; the director schedules in seconds and
+# every wait counts physics ticks.
 const SEED := 11
 const SPAWN_RATE := 120
-const SIM_SECONDS := 72.0
+const SIM_SECONDS := 50.0
+const CLEAR_AT := 30
 const SLICE_KINDS := ["chaser", "lobber", "mag_trapper", "deflector", "plated_brute", "winch_drone"]
 const STAGE_KINDS := ["warden"]
 const ENTRY_SPEED := 20.0
@@ -84,18 +88,23 @@ func _sim_span(seed_value: int) -> void:
 	var live := {}
 	var miniboss := false
 	var vault := false
+	var arrived := []
+	var director = _game.world.director
 	for tick in roundi(SIM_SECONDS * rate):
 		await physics_frame
+		while arrived.size() < director.packs.size():
+			arrived.append(snappedf(float(tick + 1) / rate, 0.1))
 		for enemy in get_nodes_in_group("enemy"):
 			var kind := String(enemy.get("kind"))
 			seen[kind] = true
 			vault = vault or kind == "vault"
 			miniboss = miniboss or kind == "miniboss"
 		var second := (tick + 1) / rate
-		if (tick + 1) % rate == 0 and second in [24, 48, 72]:
+		if (tick + 1) % rate == 0 and second in [10, 20, CLEAR_AT]:
 			live[second] = get_nodes_in_group("enemy").size()
+		if tick + 1 == CLEAR_AT * rate:
+			_clear_enemies()
 	Engine.physics_ticks_per_second = normal
-	var director = _game.world.director
 	var foreign: Array = []
 	for kind in seen:
 		if not kind in SLICE_KINDS and not kind in STAGE_KINDS:
@@ -103,8 +112,10 @@ func _sim_span(seed_value: int) -> void:
 	var ids: Array = director.packs.map(func(p: Dictionary) -> String: return p["id"])
 	_report("seed %d: only the six slice kinds spawn" % seed_value, foreign.is_empty() and not seen.is_empty(),
 		"kinds seen %s, foreign %s" % [seen.keys(), foreign])
-	_report("seed %d: packs arrive by the table" % seed_value, ids.size() >= 4 and ids[2] == "elite" and ids.count("elite") == 1,
-		"%d packs in 72 s: %s; live enemies at 24/48/72 s: %s/%s/%s" % [ids.size(), ids, live.get(24), live.get(48), live.get(72)])
+	var before_clear: int = arrived.filter(func(at: float) -> bool: return at <= CLEAR_AT).size()
+	_report("seed %d: packs arrive by the table" % seed_value, ids.size() >= 4 and before_clear >= 3 and ids[2] == "elite" and ids.count("elite") == 1,
+		"%d packs in %d s: %s at %s s; %d before the field was cleared at %d s; live enemies at 10/20/%d s: %s/%s/%s"
+		% [ids.size(), int(SIM_SECONDS), ids, arrived, before_clear, CLEAR_AT, CLEAR_AT, live.get(10), live.get(20), live.get(CLEAR_AT)])
 	_report("seed %d: no event, no vault, no miniboss" % seed_value, _events_started == 0 and not vault and not miniboss and _game.world.last_miniboss_at == Vector3.INF,
 		"%d events started, vault %s, miniboss %s" % [_events_started, vault, miniboss])
 

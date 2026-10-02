@@ -237,7 +237,8 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 		return
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
 	_place_pack(at, kinds, ball)
-	_last_pack_id = _next_pack["id"]
+	if _next_pack != elite:
+		_last_pack_id = _next_pack["id"]
 	_next_pack = {}
 	_arrivals_made += 1
 

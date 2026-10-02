@@ -637,15 +637,18 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 
 
 # Only Rivet's overdrive sprint crumbles it, the tick before contact, so the ball never
-# meets it as a wall. Anyone else meets a plain wall, which they can see.
+# meets it as a wall. Anyone else meets a plain wall, which they can see. A wall whose
+# spec sets "break_at_cruise" crumbles for any ball at cruise speed or faster.
 func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Array) -> void:
-	if w["broken"] or kit == null or not kit.sprinting:
+	if w["broken"] or kit == null:
+		return
+	var flat := Vector2(velocity.x, velocity.z).length()
+	if not kit.sprinting and not (w["spec"].get("break_at_cruise", false) and flat >= cruise):
 		return
 	var body: StaticBody3D = w["body"]
 	var centre: Vector3 = body.global_position
 	var along: Vector3 = body.global_basis.z
 	var rel := ball - centre
-	var flat := Vector2(velocity.x, velocity.z).length()
 	var ahead := absf(rel.dot(along)) - float(w["spec"]["size"].z) * 0.5
 	var side := absf(rel.dot(body.global_basis.x))
 	if flat < WALL_SPEED or ahead > WALL_REACH + flat / 30.0 or side > float(w["spec"]["size"].x) * 0.5 + 1.0 or absf(rel.y) > 4.0:
