@@ -1,0 +1,236 @@
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const BASELINE_FILE = path.join(root, "scripts", "sketch-lint.baseline.json");
+const BASELINED_RULES = ["L1", "L2", "L3", "L4"];
+const MAX_QUARANTINE = 3;
+const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
+const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
+const launchesGame = /SMOKE_FLAGS|--flags|tuning\.gd/;
+const SOURCE_EXTENSIONS = new Set([".gd", ".mjs", ".js", ".sh", ".py"]);
+
+const finding = (rule, file, line, message) => ({ rule, path: file, line, message });
+
+export function formatFinding(item) {
+  return `${item.rule} ${item.path}:${item.line} ${item.message}`;
+}
+
+function codeLines(text) {
+  return text.split("\n").map((raw, index) => ({ raw, number: index + 1, code: raw.trim() }))
+    .filter((line) => !line.code.startsWith("#") && !line.code.startsWith("//"));
+}
+
+const wallClock = /Time\.get_ticks_(?:msec|usec)|Time\.get_unix_time_from_system|Time\.get_datetime_\w+|OS\.delay_(?:msec|usec)|\bcreate_timer\b/;
+
+// L1: a test that reads real time. Tests step frames or use the sim clock.
+export function lintL1(file, text) {
+  return codeLines(text)
+    .filter((line) => wallClock.test(line.raw))
+    .map((line) => finding("L1", file, line.number, `wall-clock read (${line.raw.match(wallClock)[0]}); step frames or use the sim clock`));
+}
+
+const writeOpen = /FileAccess\.open\([^)]*\b(?:WRITE|READ_WRITE|WRITE_READ)\b/;
+const storeCall = /\.store_(?:string|line|buffer|var|8|16|32|64|float|double|half|real|csv_line|pascal_string)\(/;
+
+// L2: a save written outside SafeStore. The caller exempts src/core/safe_store.gd.
+export function lintL2(file, text) {
+  return codeLines(text)
+    .filter((line) => writeOpen.test(line.raw) || storeCall.test(line.raw))
+    .map((line) => finding("L2", file, line.number, "raw file write; saves go through SafeStore.write_atomic"));
+}
+
+export function parseTuning(text) {
+  const table = text.match(/const FLAGS\s*:?=\s*\{([\s\S]*?)\n\}/);
+  const flags = table ? [...table[1].matchAll(/^\s*"([a-z][a-z0-9-]*)"\s*:/gm)].map((match) => match[1]) : [];
+  const keys = [...text.matchAll(/\{"key":\s*"([^"]+)"/g)].map((match) => match[1]);
+  if (flags.length === 0 || keys.length === 0) {
+    throw new Error(`sketch-lint: parsed ${flags.length} FLAGS names and ${keys.length} row keys from tuning.gd; the lint cannot check flags without both`);
+  }
+  return { flags: new Set(flags), keys: new Set(keys) };
+}
+
+const flagLiteral = /--([a-z][a-z0-9-]*)=/g;
+const parsedFlag = /(?:begins_with|trim_prefix|startsWith|replace)\(\s*["']--([a-z][a-z0-9-]*)=/g;
+const tuningCall = /\.(?:option|set_option|f|set_value)\(\s*"([^"]+)"/g;
+
+// L3: files is a list of { path, text } from tests/, tools/ and the scripts that hand
+// launch flags to the game. A "--name=" literal is dangling when it is not a FLAGS name
+// and no scanned file owns it: some file parses it (begins_with, startsWith), or some file
+// reads the bare name as a setting (_settings.get("policy")). Godot's
+// own flags carry no "=" and never match.
+export function lintL3(files, tuning) {
+  const parsed = new Set();
+  for (const file of files) {
+    for (const line of codeLines(file.text)) {
+      for (const match of line.raw.matchAll(parsedFlag)) parsed.add(match[1]);
+    }
+  }
+  const findings = [];
+  for (const file of files) {
+    const owned = (name) => parsed.has(name) || files.some((other) => other.text.includes(`"${name}"`));
+    for (const line of codeLines(file.text)) {
+      for (const match of line.raw.matchAll(flagLiteral)) {
+        if (!tuning.flags.has(match[1]) && !owned(match[1])) {
+          findings.push(finding("L3", file.path, line.number, `launch flag --${match[1]}= is not a FLAGS name in tuning.gd`));
+        }
+      }
+      for (const match of line.raw.matchAll(tuningCall)) {
+        if (!tuning.keys.has(match[1])) {
+          findings.push(finding("L3", file.path, line.number, `tuning key "${match[1]}" is not a row key in tuning.gd`));
+        }
+      }
+    }
+  }
+  return findings;
+}
+
+// L4: entries is the tests/ tree as { rel, dir } with rel relative to tests/.
+export function lintL4(entries, testsPath = "sketches/core-loop/tests") {
+  const findings = [];
+  for (const entry of entries) {
+    const parts = entry.rel.split("/");
+    const name = parts[parts.length - 1];
+    if (parts.length === 1) {
+      const known = entry.dir
+        ? TEST_FOLDERS.has(name)
+        : /^\w+\.gd(?:\.uid)?$/.test(name) || name === "QUARANTINE.tsv";
+      if (!known) findings.push(finding("L4", `${testsPath}/${entry.rel}`, 1, "stray entry under tests/; allowed: NAME.gd, NAME.gd.uid, QUARANTINE.tsv, unit, support, doubles, fixtures, trees, workshop"));
+    } else if (parts[0] === "unit" && parts.length === 2 && !entry.dir && !/^\w+_case\.gd(?:\.uid)?$/.test(name)) {
+      findings.push(finding("L4", `${testsPath}/${entry.rel}`, 1, "file under tests/unit/ is not NAME_case.gd"));
+    }
+  }
+  return findings;
+}
+
+// L5: text is QUARANTINE.tsv, tests the base names of the existing top-level tests.
+export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.tsv") {
+  const lines = text.split("\n").map((line) => line.replace(/\r$/, "")).filter((line) => line.trim() !== "");
+  if (lines[0] !== QUARANTINE_HEADER) return [finding("L5", file, 1, `header must be: ${QUARANTINE_HEADER.replaceAll("\t", " TAB ")}`)];
+  const entries = lines.slice(1);
+  const findings = [];
+  if (entries.length > MAX_QUARANTINE) findings.push(finding("L5", file, 1, `${entries.length} entries; at most ${MAX_QUARANTINE}`));
+  const seen = new Set();
+  entries.forEach((entry, index) => {
+    const number = index + 2;
+    const cells = entry.split("\t");
+    if (cells.length !== 5 || cells.some((cell) => cell.trim() === "")) {
+      findings.push(finding("L5", file, number, "entry needs test, owner, reason, added and deadline"));
+      return;
+    }
+    const [test, , , added] = cells;
+    if (!tests.has(test)) findings.push(finding("L5", file, number, `${test} is not an existing top-level test`));
+    if (seen.has(test)) findings.push(finding("L5", file, number, `${test} is listed twice`));
+    seen.add(test);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(added)) findings.push(finding("L5", file, number, `added date "${added}" is not YYYY-MM-DD`));
+  });
+  return findings;
+}
+
+// The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
+// offends or no longer exists is itself a finding. exists(path) answers for the disk.
+export function applyBaseline(findings, baseline, exists) {
+  const kept = [];
+  const offending = new Map();
+  for (const item of findings) {
+    const listed = baseline[item.rule] ?? [];
+    if (BASELINED_RULES.includes(item.rule) && listed.includes(item.path)) {
+      offending.set(`${item.rule} ${item.path}`, true);
+    } else {
+      kept.push(item);
+    }
+  }
+  for (const rule of BASELINED_RULES) {
+    for (const file of baseline[rule] ?? []) {
+      if (offending.has(`${rule} ${file}`)) continue;
+      kept.push(finding("BASELINE", file, 1, `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`));
+    }
+  }
+  return kept;
+}
+
+export function baselineFrom(findings) {
+  const baseline = {};
+  for (const rule of BASELINED_RULES) {
+    baseline[rule] = [...new Set(findings.filter((item) => item.rule === rule).map((item) => item.path))].sort();
+  }
+  return baseline;
+}
+
+export function parseLintArgs(argv) {
+  const options = { sketch: null, writeBaseline: false };
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
+    else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+  }
+  return options;
+}
+
+function walk(directory, base = directory) {
+  const entries = [];
+  if (!existsSync(directory)) return entries;
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const full = path.join(directory, entry.name);
+    entries.push({ rel: path.relative(base, full).split(path.sep).join("/"), dir: entry.isDirectory(), full });
+    if (entry.isDirectory()) entries.push(...walk(full, base));
+  }
+  return entries;
+}
+
+function sources(directory, extensions) {
+  return walk(directory)
+    .filter((entry) => !entry.dir && extensions.has(path.extname(entry.rel)))
+    .map((entry) => ({ path: path.relative(root, entry.full).split(path.sep).join("/"), text: readFileSync(entry.full, "utf8") }));
+}
+
+export function lintSketch(sketch) {
+  const directory = path.join(root, "sketches", sketch);
+  const relative = `sketches/${sketch}`;
+  const tuning = parseTuning(readFileSync(path.join(directory, "src", "movement", "tuning.gd"), "utf8"));
+  const findings = [];
+  const testFiles = sources(path.join(directory, "tests"), new Set([".gd"]));
+  for (const file of testFiles) findings.push(...lintL1(file.path, file.text));
+  for (const file of sources(path.join(directory, "src"), new Set([".gd"]))) {
+    if (file.path !== `${relative}/src/core/safe_store.gd`) findings.push(...lintL2(file.path, file.text));
+  }
+  const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);
+  const flagFiles = [
+    ...testFiles,
+    ...sources(path.join(directory, "tools"), SOURCE_EXTENSIONS),
+    ...sources(path.join(root, "scripts"), SOURCE_EXTENSIONS).filter((file) => !lintSelf.has(file.path) && launchesGame.test(file.text)),
+  ];
+  findings.push(...lintL3(flagFiles, tuning));
+  const tests = walk(path.join(directory, "tests"));
+  findings.push(...lintL4(tests, `${relative}/tests`));
+  const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");
+  if (existsSync(quarantine)) {
+    const names = new Set(tests.filter((entry) => !entry.dir && /^[^/]+\.gd$/.test(entry.rel)).map((entry) => entry.rel.replace(/\.gd$/, "")));
+    findings.push(...lintL5(readFileSync(quarantine, "utf8"), names, `${relative}/tests/QUARANTINE.tsv`));
+  }
+  return findings;
+}
+
+function main() {
+  const options = parseLintArgs(process.argv.slice(2));
+  if (!options.sketch || !existsSync(path.join(root, "sketches", options.sketch, "project.godot"))) {
+    console.error("sketch-lint: pass --sketch NAME for a folder under sketches/");
+    process.exit(2);
+  }
+  const started = Date.now();
+  const raw = lintSketch(options.sketch);
+  if (options.writeBaseline) {
+    const baseline = baselineFrom(raw);
+    writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
+    for (const rule of BASELINED_RULES) console.log(`${rule} ${baseline[rule].length} baseline paths`);
+    return;
+  }
+  const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
+  const findings = applyBaseline(raw, baseline, (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile());
+  for (const item of findings) console.log(formatFinding(item));
+  const baselined = BASELINED_RULES.map((rule) => `${rule}=${(baseline[rule] ?? []).length}`).join(" ");
+  console.log(`sketch-lint ${findings.length === 0 ? "pass" : "fail"}: ${findings.length} findings, baseline entries ${baselined}, ${Date.now() - started}ms`);
+  process.exit(findings.length === 0 ? 0 : 1);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) main();

@@ -6,12 +6,18 @@ import test from "node:test";
 import {
   buildReceipt,
   countChecks,
+  emitReceipt,
+  gateFlagsError,
   globToRegExp,
   hasVerdictLine,
   matchesGlob,
   namedRunMustWait,
   noMatchMessage,
   parseArgs,
+  parseQuarantine,
+  quarantinedNames,
+  quarantineVerdict,
+  runPasses,
   receiptFileName,
   selectTests,
   splitFlags,
@@ -74,8 +80,8 @@ test("flags split on spaces, and --flags wins over SMOKE_FLAGS", () => {
   assert.deepEqual(splitFlags("--scrap=armor  --loop=drop"), ["--scrap=armor", "--loop=drop"]);
   assert.deepEqual(splitFlags(""), []);
   assert.deepEqual(splitFlags(undefined), []);
-  assert.deepEqual(parseArgs(["--flags", "--a=1"], { SMOKE_FLAGS: "--b=2" }).flags, ["--a=1"]);
-  assert.deepEqual(parseArgs([], { SMOKE_FLAGS: "--b=2 --c" }).flags, ["--b=2", "--c"]);
+  assert.deepEqual(parseArgs(["--flags", "--scrap=armor"], { SMOKE_FLAGS: "--loop=drop" }).flags, ["--scrap=armor"]);
+  assert.deepEqual(parseArgs([], { SMOKE_FLAGS: "--loop=drop --c" }).flags, ["--loop=drop", "--c"]);
 });
 
 test("parseArgs reads tests, receipt label and the strict switch", () => {
@@ -145,7 +151,7 @@ test("the receipt carries every field and its totals", () => {
     results,
   });
   assert.equal(receipt.schema, "scrapkeep-smoke-receipt/1");
-  assert.deepEqual(receipt.totals, { runs: 3, failed: 1, skipped: 1, missing_verdict: 1 });
+  assert.deepEqual(receipt.totals, { runs: 3, failed: 1, skipped: 1, missing_verdict: 1, quarantined_red: [], quarantine_stale: [] });
   assert.equal(receipt.ok, false);
   for (const key of ["label", "argv", "root", "head", "tree", "clean", "dirty_paths", "godot", "sketches", "flags", "width", "lock_wait_ms", "started_at", "wall_ms", "stems", "results", "totals", "ok"]) {
     assert.ok(key in receipt, key);
@@ -161,4 +167,63 @@ test("without git the receipt's git fields are null", () => {
   assert.equal(receipt.clean, null);
   assert.equal(receipt.ok, true);
   assert.equal(receiptFileName("x", null, "2026-10-01T00:00:00.000Z"), "x-nogit-2026-10-01T00-00-00-000Z.json");
+});
+
+const result = (label, ok, extra = {}) => ({ label, ok, exit: ok ? 0 : 1, ms: 1, solo: false, passes: 0, fails: 0, verdict_line: true, skips: [], ...extra });
+const testLabel = (name) => `sketches/core-loop res://tests/${name}.gd`;
+
+test("the quarantine file parses into entries and names", () => {
+  const text = "test\towner\treason\tadded\tdeadline\na_test\tO1\twhy\t2026-10-01\twave 3\r\n\nb_test\tB0\tbecause\t2026-10-01\twave 3\n";
+  assert.deepEqual(parseQuarantine(text)[0], { test: "a_test", owner: "O1", reason: "why", added: "2026-10-01", deadline: "wave 3" });
+  assert.deepEqual([...quarantinedNames(text)], ["a_test", "b_test"]);
+  assert.deepEqual(parseQuarantine(""), []);
+});
+
+test("a red quarantined test does not fail the run, a green one is stale, any other failure fails", () => {
+  const red = [result("sketches/core-loop import", true), result(testLabel("a_test"), false, { quarantined: true }), result(testLabel("c_test"), true)];
+  assert.equal(runPasses(red), true);
+  assert.deepEqual(quarantineVerdict(red).quarantined_red, ["a_test"]);
+  assert.deepEqual(quarantineVerdict(red).quarantine_stale, []);
+  const green = [result(testLabel("a_test"), true, { quarantined: true })];
+  assert.equal(runPasses(green), true);
+  assert.deepEqual(quarantineVerdict(green).quarantine_stale, ["a_test"]);
+  assert.equal(runPasses([...red, result(testLabel("d_test"), false)]), false);
+});
+
+test("the receipt lists quarantine outcomes and never counts them as failed", () => {
+  const receipt = buildReceipt({
+    label: "named", argv: [], root: "/r", git: null, godot: { binary: "/g", version: null }, sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "t", wallMs: 0, stems: {},
+    results: [result(testLabel("a_test"), false, { quarantined: true }), result(testLabel("b_test"), true, { quarantined: true }), result(testLabel("c_test"), true)],
+  });
+  assert.equal(receipt.totals.failed, 0);
+  assert.deepEqual(receipt.totals.quarantined_red, ["a_test"]);
+  assert.deepEqual(receipt.totals.quarantine_stale, ["b_test"]);
+  assert.equal(receipt.results[0].quarantined, true);
+  assert.equal("quarantined" in receipt.results[2], false);
+  assert.equal(receipt.ok, true);
+});
+
+test("a gate run refuses launch flags from --flags or the environment", () => {
+  assert.match(gateFlagsError(parseArgs(["--receipt", "gate", "--flags", "--scrap=armor"])), /refuses launch flags/);
+  assert.match(gateFlagsError(parseArgs(["--receipt", "gate"], { SMOKE_FLAGS: "--loop=drop" })), /SMOKE_FLAGS/);
+  assert.equal(gateFlagsError(parseArgs(["--receipt", "gate"], {})), null);
+  assert.equal(gateFlagsError(parseArgs(["--flags", "--scrap=armor"])), null);
+});
+
+test("a receipt that cannot be written is exit 3 and one clear line", () => {
+  const lines = [];
+  const code = emitReceipt({ label: "x" }, () => { throw new Error("ENOSPC: no space left"); }, (line) => lines.push(line));
+  assert.equal(code, 3);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /could not write the receipt under .*receipts: ENOSPC/);
+  const ok = [];
+  assert.equal(emitReceipt({ label: "x" }, () => "/p/x.json", (line) => ok.push(line)), null);
+  assert.deepEqual(ok, ["receipt /p/x.json"]);
+});
+
+test("every export the runner had before the quarantine unit still exists", async () => {
+  const module = await import("./sketch-smoke.mjs");
+  for (const name of ["binary", "sketchDirectories", "testScripts", "isSolo", "isSoloScript", "jobCount", "skipLines", "hasVerdictLine", "countChecks", "globToRegExp", "matchesGlob", "selectTests", "splitFlags", "parseArgs", "validateRun", "noMatchMessage", "acquireMachine", "namedRunMustWait", "waitForMachine", "receiptFileName", "buildReceipt"]) {
+    assert.ok(name in module, name);
+  }
 });
