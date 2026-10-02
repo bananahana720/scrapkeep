@@ -8,6 +8,8 @@ const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
 const StatusMarks := preload("res://src/presentation/status_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const WardenRing := preload("res://src/presentation/warden_ring.gd")
+const WardenScript := preload("res://src/combat/warden.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
@@ -33,6 +35,7 @@ const Parts := preload("res://src/build/parts.gd")
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
 #   codex_style    category colours, icons and the discovery banner
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
+#   warden_ring    a posture Warden's health as four arcs on the ground round its foot
 #   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
 
 var ctx
@@ -91,6 +94,31 @@ func setup(ctx_ref) -> void:
 	ceremony.setup(ctx, audio, juice, vfx)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		_ring_warden.call_deferred(enemy)
+
+
+func _exit_tree() -> void:
+	if get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
+
+
+func _on_node_added(node: Node) -> void:
+	if node.get_script() == WardenScript:
+		_ring_warden.call_deferred(node)
+
+
+# One ring per posture Warden, a child of it so it is freed with it; a plating Warden has none.
+func _ring_warden(warden: Node) -> void:
+	if not is_instance_valid(warden) or warden.get_script() != WardenScript or not warden.is_inside_tree():
+		return
+	if warden.fight() != "posture" or warden.has_node("WardenRing"):
+		return
+	var ring := WardenRing.new()
+	warden.add_child(ring)
+	ring.bind(warden)
 
 
 # Connects the demo-spec signals the bus has now. Safe to call again after the spine

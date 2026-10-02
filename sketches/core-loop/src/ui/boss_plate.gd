@@ -98,11 +98,32 @@ func bar_fraction() -> float:
 # The crack mark is live only while the core is open, when the verb works on it; a cracked
 # core that is closed takes no shatter, so its mark is neutral.
 func crack_color() -> Color:
-	return EventKinds.state_color("chunk_shatter") if active() and _warden.staggered() else EventKinds.role_color("neutral")
+	return crack_color_for(active() and _warden.staggered())
 
 
 func bar_color() -> Color:
-	return EventKinds.state_color("open") if active() and _warden.staggered() else EventKinds.role_color("neutral")
+	return bar_color_for(active() and _warden.staggered())
+
+
+# The same colours for a given open state, read by every other drawing of the fight (the
+# ring on the ground round the Warden), so no second copy of the rule can drift.
+static func crack_color_for(open: bool) -> Color:
+	return EventKinds.state_color("chunk_shatter") if open else EventKinds.role_color("neutral")
+
+
+static func bar_color_for(open: bool) -> Color:
+	return EventKinds.state_color("open") if open else EventKinds.role_color("neutral")
+
+
+# A pip's colour: the neutral role filled, the same colour at EMPTY_ALPHA when lost.
+static func pip_color(filled: bool) -> Color:
+	var neutral := EventKinds.role_color("neutral")
+	return neutral if filled else _fade(neutral, EMPTY_ALPHA)
+
+
+# The dark backing under a crack mark.
+static func crack_backing() -> Color:
+	return UiDraw.OUTLINE
 
 
 # The state row the glyph shows: open while staggered, glancing for GLANCE_SECONDS after a
@@ -166,14 +187,14 @@ func _draw() -> void:
 	draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
 
 
-func _draw_pip(rect: Rect2, pip: Dictionary, color: Color) -> void:
+func _draw_pip(rect: Rect2, pip: Dictionary, _color: Color) -> void:
 	if pip["filled"]:
-		draw_rect(rect, color)
+		draw_rect(rect, pip_color(true))
 	else:
-		draw_rect(rect, _fade(color, EMPTY_ALPHA), false, 2.0)
+		draw_rect(rect, pip_color(false), false, 2.0)
 	if pip["cracked"]:
 		var c := rect.get_center()
 		var line := PackedVector2Array([c + Vector2(-3.0, -PIP * 0.5), c + Vector2(2.0, -2.0), c + Vector2(-2.0, 2.0), c + Vector2(3.0, PIP * 0.5)])
 		# A dark backing keeps the neutral mark readable on a neutral filled pip.
-		draw_polyline(line, UiDraw.OUTLINE, 4.5)
+		draw_polyline(line, crack_backing(), 4.5)
 		draw_polyline(line, crack_color(), 2.5)
