@@ -147,6 +147,10 @@ var _live: Array = []
 # Discovered this run (id to true) and found this run (key to description). The codex
 # registry, when present, is the lasting record; these keep the run's view.
 var _discovered := {}
+# Armed once per run; fired and discovered once per activation (a synergy that leaves the
+# live set and returns fires and discovers again).
+var _armed := {}
+var _fired := {}
 var _found := {}
 var _declared := false
 
@@ -154,6 +158,7 @@ var _declared := false
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Build"
+	Synergies.table = ctx.stages
 	sheet = BuildSheet.from_parts([])
 	scrap = ScrapField.new()
 	scrap.name = "Scrap"
@@ -458,7 +463,7 @@ func _step_loot(delta: float) -> void:
 # Folds run.parts into the sheet and pushes it out: tuning mods, health ceiling,
 # magnet, shatter damage and the ball's hardware. Idempotent, so a retry, a new part
 # and a stage entry all call the same thing. A named synergy that comes live here for
-# the first time this run is a discovery.
+# the first time this run is announced as armed.
 func recompute() -> void:
 	_sync_scrap_flags()
 	sheet = BuildSheet.from_parts(ctx.run.parts)
@@ -475,6 +480,9 @@ func recompute() -> void:
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
+	for synergy_id in _live:
+		if not synergy_id in sheet.synergies:
+			_fired.erase(synergy_id)
 	for synergy_id in sheet.synergies:
 		if not synergy_id in _live:
 			_on_synergy_live(synergy_id)
@@ -595,10 +603,27 @@ func _declare() -> void:
 			"hint": card["hint"], "clue": card["clue"], "text": card["text"]})
 
 
-# Every new activation goes to the codex, which owns the once-per-attempt rule: after
-# a retry that took the synergy back, reactivating it discovers it again, pays again
-# and keeps it in the run log (CONTRACTS, Codex; DESIGN-NOTES I3).
+func _exit_tree() -> void:
+	if Synergies.table == ctx.stages:
+		Synergies.table = null
+
+
+# A synergy coming live is announced once per run; discovery waits for its first firing
+# (_fire), because the owner learns a synergy by seeing what it does.
 func _on_synergy_live(synergy_id: String) -> void:
+	if _armed.has(synergy_id):
+		return
+	_armed[synergy_id] = true
+	ctx.events.cause_armed.emit(synergy_id)
+
+
+# A named synergy's effect really happened: publish where and on what (body is null when
+# no single body was struck), and the first firing of an activation is its discovery.
+func _fire(synergy_id: String, body: Node3D, at: Vector3) -> void:
+	ctx.events.cause_fired.emit(synergy_id, body, at)
+	if _fired.has(synergy_id):
+		return
+	_fired[synergy_id] = true
 	_discovered[synergy_id] = true
 	var codex = _codex()
 	if codex != null:
@@ -621,6 +646,8 @@ func _note_found(key: String, text: String) -> void:
 func _on_element_resolved(result: Dictionary) -> void:
 	ctx.events.element_resolved.emit(result["element"], result["material"], result["behaviour"], result["at"])
 	var key: String = result.get("key", "")
+	if key == "arc:ice" and result.get("source", "") == "slam" and has_transformer("thermal_shock") and result.get("shattered", 0) > 0:
+		_fire("thermal_shock", null, ctx.player.ball_position())
 	var row := Elements.ROWS.get(key, {}) as Dictionary
 	if row.has("found"):
 		_note_found("element:" + key, row["found"])
@@ -656,6 +683,8 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 func _on_run_started(_class_id_value: String) -> void:
 	_live = []
+	_armed.clear()
+	_fired.clear()
 	_mass_hp = 0.0
 	_shell_window = 0.0
 	_air_seen = 0.0
@@ -675,7 +704,9 @@ func _on_run_started(_class_id_value: String) -> void:
 	recompute()
 
 
-func _on_stage_entered(stage: int, _retry: bool) -> void:
+func _on_stage_entered(stage: int, retry: bool) -> void:
+	if retry:
+		_fired.clear()
 	gates.close()
 	field.clear()
 	_trail = 0.0
@@ -704,7 +735,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 # The build itself, its synergies and its elements keep working in the fight. An arena
 # retry has just restored the run silently, so the build and the ball's shell are
 # recomputed from the restored parts and mass.
-func _on_stage_content_cleared(_reason: String) -> void:
+func _on_stage_content_cleared(reason: String) -> void:
+	if reason == "arena_retry":
+		_fired.clear()
 	scrap.clear()
 	fabricators.clear()
 	gates.close()
@@ -792,6 +825,8 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 
 
 func _on_shot_fired(_weapon_id: String, _from: Vector3, to: Vector3) -> void:
+	if has_transformer("storm_lattice"):
+		_fire("storm_lattice", null, ctx.player.ball_position())
 	if not sheet.elements_for("shot").is_empty():
 		_shots.append(to)
 	for rule_id in sheet.rules:
@@ -988,22 +1023,32 @@ func _frost_ring(at: Vector3) -> void:
 func _step_synergies(ball: Vector3, delta: float) -> void:
 	for at in _rams:
 		field.flash_ring(at, WRECK_RADIUS, Palette.AMBER)
+		var wrecked := false
 		for enemy in _enemies_near(at, WRECK_RADIUS, 99):
 			if enemy.global_position.distance_to(at) > 0.5:
-				_synergy_hit(enemy, WRECK_FORCE)
+				wrecked = true
+				_synergy_hit(enemy, WRECK_FORCE, "wrecking_ball")
+		if not wrecked:
+			_fire("wrecking_ball", null, at)
 	_rams.clear()
 	for at in _kills:
 		if _shrapnel_budget < 1.0:
 			break
 		_shrapnel_budget -= 1.0
 		field.shard_burst(at)
-		for enemy in _enemies_near(at, SHRAPNEL_RADIUS, SHRAPNEL_TARGETS):
-			_synergy_hit(enemy, SHRAPNEL_FORCE)
+		var burst_targets := _enemies_near(at, SHRAPNEL_RADIUS, SHRAPNEL_TARGETS)
+		for enemy in burst_targets:
+			_synergy_hit(enemy, SHRAPNEL_FORCE, "shrapnel_bloom")
+		if burst_targets.is_empty():
+			_fire("shrapnel_bloom", null, at)
 	_kills.clear()
 	for impact in _landings:
 		field.flash_ring(ball + Vector3.DOWN * 0.8, GLACIER_RADIUS, ElementField.ICE)
-		for enemy in _enemies_near(ball, GLACIER_RADIUS, 99):
-			_synergy_hit(enemy, impact * 1.5)
+		var ring_targets := _enemies_near(ball, GLACIER_RADIUS, 99)
+		for enemy in ring_targets:
+			_synergy_hit(enemy, impact * 1.5, "glacier_hull")
+		if ring_targets.is_empty():
+			_fire("glacier_hull", null, ball)
 		_frost_ring(ball)
 	_landings.clear()
 	if has_transformer("tesla_pylon") and (ctx.player.kit.mounted or ctx.player.kit.hooked):
@@ -1013,6 +1058,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 			for enemy in _enemies_near(ball, TESLA_REACH, TESLA_TARGETS):
 				field.zap_line(ball, enemy.global_position)
 				_strike(enemy, "arc", TESLA_DAMAGE * sheet.mod("weapon_damage"))
+				_fire("tesla_pylon", enemy, enemy.global_position)
 	else:
 		_tesla_clock = 0.0
 	for id in _pinwheel_cut.keys():
@@ -1027,7 +1073,7 @@ func _step_synergies(ball: Vector3, delta: float) -> void:
 		for enemy in _enemies_near(ball, PINWHEEL_RADIUS, PINWHEEL_TARGETS):
 			if not _pinwheel_cut.has(enemy.get_instance_id()):
 				_pinwheel_cut[enemy.get_instance_id()] = PINWHEEL_EVERY
-				_synergy_hit(enemy, PINWHEEL_FORCE)
+				_synergy_hit(enemy, PINWHEEL_FORCE, "pinwheel")
 	else:
 		_pinwheel_clock = 0.0
 
@@ -1041,6 +1087,7 @@ func _lightning_rod(ball: Vector3) -> void:
 	_rod_budget -= 1.0
 	field.zap_line(ball, targets[0].global_position)
 	_strike(targets[0], "arc", ROD_DAMAGE * sheet.mod("weapon_damage"))
+	_fire("lightning_rod", targets[0], targets[0].global_position)
 
 
 # The nearest enemies within radius of at, nearest first, at most count.
@@ -1065,5 +1112,6 @@ func _strike(enemy: Node3D, kind: String, force: float) -> void:
 # landing: a weak point that takes a slam (a vent cap, the scooter) must not take one
 # the ball never landed. The spawner resolves a kind outside its contact table as the
 # damage given, so build scales it the way the slam row it replaced did.
-func _synergy_hit(enemy: Node3D, force: float) -> void:
+func _synergy_hit(enemy: Node3D, force: float, synergy_id: String) -> void:
 	_strike(enemy, SYNERGY_KIND, force * SYNERGY_PUNCH * ctx.run.heft())
+	_fire(synergy_id, enemy, enemy.global_position)

@@ -284,7 +284,7 @@ static func completing_part(held: Array, pool: Array) -> String:
 static func ingredient_of(part_id: String, held: Array) -> String:
 	var live := Synergies.active(held, tag_sets(held))
 	for key in Synergies.ROWS:
-		if Synergies.ROWS[key]["shown"] == part_id and not key in live:
+		if Synergies.in_play(key) and Synergies.ROWS[key]["shown"] == part_id and not key in live:
 			return key
 	return ""
 

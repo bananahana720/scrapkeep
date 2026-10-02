@@ -37,3 +37,7 @@ static func of(stage: int) -> Dictionary:
 
 static func is_last(stage: int) -> bool:
 	return stage >= COUNT
+
+
+static func synergy_in_play(_synergy_id: String) -> bool:
+	return true

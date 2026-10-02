@@ -7,6 +7,8 @@ const Parts := preload("res://src/build/parts.gd")
 const Ceremony := preload("res://src/presentation/reward_ceremony.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
+const Synergies := preload("res://src/build/synergies.gd")
+const SliceDefs := preload("res://src/core/slice_defs.gd")
 
 # The reward ceremony (v3 W13). A real run, the ceremony's pause armed as in play:
 #   - the tier follows rarity, a first find, a completed synergy, the ceremony sources
@@ -17,7 +19,8 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - a key during the build jumps to the reveal, a second key closes it;
 #   - the payoff accent waits for the part to land, then fires once on its first effect;
 #   - a completed synergy's card snaps a wire to the partner's glyph;
-#   - a part that feeds a synergy hints at the partner still to find;
+#   - a part that feeds a synergy hints at the partner still to find, and on the slice
+#     table never at a synergy the slice cuts;
 #   - short plays a gate find at the rare tier with no pause, its stop drawn from the
 #     shared hit-stop budget (the fight word budget with a flare up is ui_word_budget_test);
 #   - a find that never calms plays in the flow as a reveal card after calm_wait_s.
@@ -41,6 +44,7 @@ var _card_after := false
 
 func _initialize() -> void:
 	_check_tiers()
+	_check_slice_hints()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -51,6 +55,18 @@ func _report(label: String, ok: bool, detail: String) -> void:
 	if not ok:
 		_failures += 1
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _check_slice_hints() -> void:
+	Synergies.table = SliceDefs
+	var leaks: Array = []
+	for part_id in Parts.ids():
+		var fed: Array = Ceremony._fed(part_id, [])
+		if not fed.is_empty() and not Synergies.in_play(fed[0]):
+			leaks.append("%s -> %s" % [part_id, fed[0]])
+	Synergies.table = null
+	_report("slice never hints a cut synergy", leaks.is_empty() and Synergies.in_play("storm_lattice"),
+		"on the slice table no part feeds a cut synergy; leaks %s" % [leaks])
 
 
 func _check_tiers() -> void:

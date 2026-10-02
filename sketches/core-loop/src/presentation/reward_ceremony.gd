@@ -258,7 +258,7 @@ static func _partner(synergy: String, part_id: String, before: Array) -> String:
 static func _fed(part_id: String, before: Array) -> Array:
 	var live := Synergies.active(before, Parts.tag_sets(before))
 	for key in Synergies.ROWS:
-		if key in live:
+		if key in live or not Synergies.in_play(key):
 			continue
 		var row: Dictionary = Synergies.ROWS[key]
 		if part_id == row["shown"]:

@@ -1676,3 +1676,9 @@ The harpoon is one mode for every pilot, and it says every state it passes throu
 - **Momentum.** A bite, a commit, a let-go and a forced break never lower the planar speed. Free-flight drag still costs about 0.012 m/s per two ticks at 20 m/s; the test allows 0.03. A committed haul redirects the ball onto the body, so planar speed is kept only when the body is level with the ball; a steeply rising or falling haul trades some planar speed for vertical, as it did before.
 - **Drawing is unchanged.** The rope, hook head and aim marker in `player_ball.gd` read the same fields; the next unit replaces them.
 - **Tests.** `tests/harpoon_canon_test.gd` is new. Deleted with their options: `harpoon_toggle_off_test` (off), `harpoon_burst_route_test` (shift routing and the plain-boost fallback), `harpoon_stale_tow_test` (heft tow), `burst_key_rule_agreement_test` and `dead_screen_keep_key_test` (C as the burst key). The death screen's C guard is gone with it.
+
+## WY1: synergy facts on the slice
+
+The slice keeps five synergies; `cause_armed` fires once per run when one goes live, and `cause_fired` fires wherever its effect resolves. The first firing is the discovery, and the discovery burst stays at the ball. A retry or arena retry clears the build's fired record, so a synergy still live across the rewind is found again at its next firing (the codex deduplicates within an attempt).
+
+- **Owed: Storm Lattice and Thermal Shock emit from approximate sites.** Storm Lattice's `cause_fired` comes from every `shot_fired` while it is live, and Thermal Shock's carries a null body and the ball position. Both are cut from the slice. They move to combat's chain resolve and `element_field._shatter` when a writer has combat and the element field in scope.
