@@ -9,6 +9,9 @@ const BOSS := ""
 
 const COUNT := 1
 
+# The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
+const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
+
 const DEFS := [
 	{"stage": 1, "name": "The Cable Reach", "map": "gorge", "threat": 1.0,
 		"event_mix": {"flood": 1.0, "dust_squall": 0.6, "surge_run": 0.8, "cave_in": 1.0, "impact": 1.0}, "scrap_density": 1.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -22,3 +25,7 @@ static func of(stage: int) -> Dictionary:
 
 static func is_last(stage: int) -> bool:
 	return stage >= COUNT
+
+
+static func synergy_in_play(synergy_id: String) -> bool:
+	return synergy_id in SYNERGIES

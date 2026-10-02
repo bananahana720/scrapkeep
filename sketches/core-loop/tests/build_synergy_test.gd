@@ -11,9 +11,10 @@ const Synergies := preload("res://src/build/synergies.gd")
 # tag, every one changes behaviour rather than a number, and each goes live exactly
 # when its shown part is held with another part carrying its second tag; a different
 # part with the first tag does not stand in for the shown one. The codex hint cards name one
-# ingredient and clue the other. The first activation in a run is a discovery, and a
+# ingredient and clue the other. The first firing in a run is a discovery (activation alone is not), and a
 # retry does not repeat it. Offers carry "* completes X *" and "* ingredient: ??? *",
-# which names the synergy once it is discovered. Every live synergy puts a ring on
+# which names the synergy once it is discovered. Going live discovers nothing; the first
+# firing does. Every live synergy puts a ring on
 # the ball.
 
 var _game
@@ -138,18 +139,27 @@ func _check_marks_and_discovery() -> void:
 	_report("storm lattice", live and not ring_before and _build.accretion.halo_visible("storm_lattice"),
 		"Cross Split + Chain Arc: synergies %s, transformer storm_lattice %s, patterns %s; its ring appeared on the ball"
 			% [_build.active_synergies(), _build.has_transformer("storm_lattice"), _build.patterns()])
+	var armed_discovered: Array = _build.discovered()
+	_fire_lattice()
 	var discovered: Array = _build.discovered()
 	_game.flow.retry_stage()
 	var dropped: bool = _build.active_synergies().is_empty() and not _build.accretion.halo_visible("storm_lattice")
 	var named: String = _build.offer_mark("chain_arc")
 	run.add_part("cross_split", "test")
 	run.add_part("chain_arc", "test")
-	_report("discovery once per run", discovered == ["storm_lattice"] and _build.discovered() == ["storm_lattice"] and dropped,
+	_fire_lattice()
+	_report("discovery once per run", armed_discovered.is_empty() and discovered == ["storm_lattice"] and _build.discovered() == ["storm_lattice"] and dropped,
 		"first activation discovered %s; after a retry dropped it (%s) and it came back, discovered is still %s"
 			% [discovered, dropped, _build.discovered()])
 	_report("known ingredient is named", named == "* ingredient: Storm Lattice *",
 		"after the discovery, Chain Arc on an empty build reads '%s'" % named)
 	_game.flow.retry_stage()
+
+
+# Storm Lattice's effect resolves at a shot; the first one of an activation is the discovery.
+func _fire_lattice() -> void:
+	var ball: Vector3 = _game.player.ball_position()
+	_game.events.shot_fired.emit("arc_caster", ball, ball + Vector3(5, 0, 0))
 
 
 func _check_thermal_shock() -> void:

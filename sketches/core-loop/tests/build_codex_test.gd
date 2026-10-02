@@ -6,8 +6,9 @@ const Intent := preload("res://src/movement/intent.gd")
 # Build against the real codex and cores (DEMO-SPEC, CONTRACTS):
 #   - the eight build hint cards and the four callback cards are declared by the first
 #     tick of play;
-#   - a named synergy's first activation publishes synergy_discovered once (through the
-#     codex), with the treasure burst, and a retry does not repeat it;
+#   - a named synergy's first firing publishes synergy_discovered once (through the
+#     codex), with the treasure burst; activating it publishes nothing, and a retry that
+#     takes it back lets the next firing publish again;
 #   - an element result publishes element_resolved, and its first firing publishes
 #     interaction_found once (through the codex);
 #   - a vault kill adds a rare part and a vault core; a won event adds its milestone
@@ -104,21 +105,30 @@ func _check_declared() -> void:
 		"%d build entries in the codex after the first tick of play, e.g. %s" % [cards.size(), hints.slice(0, 2)])
 
 
+# Storm Lattice's effect resolves at a shot; the first one of an activation is the discovery.
+func _fire_lattice() -> void:
+	var ball: Vector3 = _game.player.ball_position()
+	_game.events.shot_fired.emit("arc_caster", ball, ball + Vector3(5, 0, 0))
+
+
 func _check_discovery() -> void:
 	var run = _game.run
 	var scrap_before: int = run.scrap
 	run.add_part("cross_split", "test")
 	run.add_part("chain_arc", "test")
+	var facts_armed: Array = _facts.duplicate()
+	_fire_lattice()
 	var burst: int = run.scrap - scrap_before
 	var facts_first: Array = _facts.duplicate()
 	_game.flow.retry_stage()
 	var scrap_retry: int = run.scrap
 	run.add_part("cross_split", "test")
 	run.add_part("chain_arc", "test")
+	_fire_lattice()
 	var burst_again: int = run.scrap - scrap_retry
 	# The retry took the synergy back with its burst, so the codex lets it fire and pay
 	# again, and the run log keeps it (CONTRACTS, Codex).
-	_report("synergy discovered through the codex", facts_first.size() == 1 and facts_first[0][0] == "storm_lattice"
+	_report("synergy discovered through the codex", facts_armed.is_empty() and facts_first.size() == 1 and facts_first[0][0] == "storm_lattice"
 			and facts_first[0][1] == "build" and burst == 20 * run.stage and _game.codex.known("storm_lattice")
 			and _facts.size() == 2 and burst_again == burst and "storm_lattice" in _game.codex.discovered_this_run(),
 		"Cross Split + Chain Arc published %s with a %d-scrap burst; after a retry and the same hand, %d fact(s) in total, a %d-scrap burst again, in the run's codex list %s"

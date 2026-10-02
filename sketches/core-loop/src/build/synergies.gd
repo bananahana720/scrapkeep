@@ -18,6 +18,10 @@ extends RefCounted
 
 const CATEGORY := "build"
 
+# The stage table the build runs on, set by the build at setup. A table's
+# synergy_in_play(id) names the synergies and tag rules it keeps; null keeps them all.
+static var table = null
+
 # The clue a hint card shows for its hidden ingredient, by that ingredient's tag.
 const CLUES := {
 	"frost": "something cold",
@@ -86,6 +90,11 @@ const TAG_RULES := {
 }
 
 
+# True when the table in use keeps this synergy or tag rule.
+static func in_play(synergy_id: String) -> bool:
+	return table == null or table.synergy_in_play(synergy_id)
+
+
 # True while two different held parts carry the pair's two tags.
 static func pair_live(tag_sets: Array, pair: Array) -> bool:
 	for i in tag_sets.size():
@@ -112,7 +121,7 @@ static func named_live(held: Array, tag_sets: Array, synergy_id: String) -> bool
 static func active(held: Array, tag_sets: Array) -> Array:
 	var live: Array = []
 	for key in ROWS:
-		if named_live(held, tag_sets, key):
+		if in_play(key) and named_live(held, tag_sets, key):
 			live.append(key)
 	return live
 
@@ -120,7 +129,7 @@ static func active(held: Array, tag_sets: Array) -> Array:
 static func active_rules(tag_sets: Array) -> Array:
 	var live: Array = []
 	for key in TAG_RULES:
-		if pair_live(tag_sets, TAG_RULES[key]["tags"]):
+		if in_play(key) and pair_live(tag_sets, TAG_RULES[key]["tags"]):
 			live.append(key)
 	return live
 
@@ -147,6 +156,8 @@ static func clue(synergy_id: String) -> String:
 static func declarations(name_of: Callable) -> Array:
 	var cards: Array = []
 	for key in ROWS:
+		if not in_play(key):
+			continue
 		var row: Dictionary = ROWS[key]
 		cards.append({
 			"id": key,
