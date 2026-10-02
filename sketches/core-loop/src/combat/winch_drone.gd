@@ -5,7 +5,10 @@ extends "res://src/combat/counter.gd"
 # Its warning is a lane down its cable's line toward the ball; when it fills, a ball
 # the lane contains is hooked and winched toward the pack (the middle of the other
 # enemies near it, or the drone itself when it flies alone) at PULL for up to WINCH
-# seconds. A jump, a boost or a smash snaps the cable; so does killing the drone.
+# seconds, through the hold bound (holds.gd). A jump, a boost or a smash snaps the cable,
+# and so does planar speed at SNAP_SPEED, which kicks the ball forward; so does killing the
+# drone. It draws no cable of its own (holds.gd draws the binding), so strain() is the
+# reading a cable glow would take.
 
 const HOVER := 5.5
 const CLIMB := 4.0
@@ -14,6 +17,7 @@ const LANE_WIDTH := 2.2
 const PULL := 7.0
 const WINCH := 1.8
 const PACK_REACH := 30.0
+const SNAP_SPEED := 19.0
 const HP := 30.0
 
 var winched := 0
@@ -31,6 +35,8 @@ func _configure(threat: float) -> void:
 	warn_seconds = 1.0
 	live_seconds = WINCH + 0.1
 	rest_seconds = 3.5
+	row = row.duplicate()
+	row["breaks"] = (row["breaks"] as Array) + ["speed"]
 
 
 # C18 dressing (enemy_winch_drone.glb): a small Fleet oxide crew under one flat 16-sided rotor
@@ -100,11 +106,22 @@ func _go_live() -> void:
 func _live(_delta: float) -> bool:
 	if not _holding():
 		return false
+	if strain() >= 1.0:
+		holds.snap(self, "speed")
+		return false
 	var to := pack_centre() - _real_ball()
 	to.y = 0.0
 	if to.length() > 1.5:
 		_pull(to.normalized() * PULL)
 	return true
+
+
+# How taut the cable is, 0 to 1: the ball's planar speed over the speed that snaps it.
+func strain() -> float:
+	var player = _player()
+	if player == null:
+		return 0.0
+	return clampf(player.planar_velocity().length() / SNAP_SPEED, 0.0, 1.0)
 
 
 # Where it winches you: the middle of the other enemies within PACK_REACH, or itself.

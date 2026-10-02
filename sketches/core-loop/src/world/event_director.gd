@@ -60,6 +60,8 @@ var _squall_gap := Vector2.ZERO
 func _init(seed_value: int, def: Dictionary, map, cruise: float, height: Callable) -> void:
 	rng.seed = seed_value
 	var mix: Dictionary = def.get("event_mix", {})
+	if mix.is_empty():
+		return
 	if mix.has("flood") and not map.basin.is_empty():
 		var w: float = maxf(0.1, mix["flood"])
 		flood = FloodCycle.new()

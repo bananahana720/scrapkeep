@@ -29,6 +29,12 @@ extends RefCounted
 #   up to twice as often and every other unlocked pack still comes: fair, never a hard
 #   counter. With no build read every pack weighs the same.
 # - HP stays the stage's threat only; the clock adds packs, never toughness.
+#
+# Authored packs (slice table): with `authored` set, every arrival is one whole pack from
+# that list and nothing else spawns: no single draws, no unlock clock, no build tilt, no
+# ancient share. Packs are drawn uniformly and never the same twice in a row; the
+# `elite_arrival`-th arrival is the `elite` pack, once. Pacing stays the director's own, and
+# a pack arrives only when the cap has room for all of it.
 enum { CHASER, LOBBER }
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
@@ -101,6 +107,11 @@ var stage := 0
 var build := {}
 # Every pack composed, in order: {id, kinds, tests}. For tests and the balance read.
 var packs: Array[Dictionary] = []
+# The stage table's authored packs ({id, kinds}), its elite pack and the arrival that is the
+# elite. Empty `authored` keeps the director's own rules.
+var authored: Array = []
+var elite := {}
+var elite_arrival := 0
 
 var _timer := FIRST_SPAWN
 var _rng := RandomNumberGenerator.new()
@@ -108,6 +119,9 @@ var _last_tier := 0
 var _rises: Array[int] = []
 var _spike_time := 0.0
 var _pack_seq := 0
+var _arrivals_made := 0
+var _next_pack := {}
+var _last_pack_id := ""
 
 
 func _init(seed_value := 20260922) -> void:
@@ -183,6 +197,9 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 		_timer += interval()
 		if alive_count + arrivals.size() + due.size() >= cap():
 			continue
+		if not authored.is_empty():
+			_authored_arrival(cap() - (alive_count + arrivals.size() + due.size()), ball, velocity, forward)
+			continue
 		var at := spawn_spot(ball, velocity, forward)
 		if at == Vector2.INF:
 			continue
@@ -192,15 +209,46 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 		if pack.is_empty():
 			arrivals.append({"kind": LOBBER if _rng.randf() < lobber_share() else CHASER, "at": at, "left": ARRIVAL})
 			continue
-		var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
-		var side := Vector2(-heading.y, heading.x)
-		for i in pack.size():
-			var spot: Vector2 = at + side * PACK_SPREAD * (i - (pack.size() - 1) * 0.5)
-			spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
-			spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
-			arrivals.append({"kind": KIND_NAMES.find(pack[i]), "at": spot, "left": ARRIVAL, "pack": _pack_seq})
-		_pack_seq += 1
+		_place_pack(at, pack, ball)
 	return due
+
+
+# One pack's members side by side across the line from the ball, on one ring timer.
+func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
+	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
+	var side := Vector2(-heading.y, heading.x)
+	for i in kinds.size():
+		var spot: Vector2 = at + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
+		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
+		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
+		arrivals.append({"kind": KIND_NAMES.find(kinds[i]), "at": spot, "left": ARRIVAL, "pack": _pack_seq})
+	_pack_seq += 1
+
+
+# An authored arrival: the pack due next waits until the cap has room for all of it.
+func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+	if _next_pack.is_empty():
+		_next_pack = _draw_authored()
+	var kinds: Array = _next_pack["kinds"]
+	if room < kinds.size():
+		return
+	var at := spawn_spot(ball, velocity, forward)
+	if at == Vector2.INF:
+		return
+	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
+	_place_pack(at, kinds, ball)
+	_last_pack_id = _next_pack["id"]
+	_next_pack = {}
+	_arrivals_made += 1
+
+
+func _draw_authored() -> Dictionary:
+	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 == elite_arrival:
+		return elite
+	var pool := authored.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
+	if pool.is_empty():
+		pool = authored
+	return pool[_rng.randi_range(0, pool.size() - 1)]
 
 
 # --- v2 W7 enemies: pack composition -------------------------------------------------

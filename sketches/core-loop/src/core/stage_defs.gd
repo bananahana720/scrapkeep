@@ -40,3 +40,21 @@ static func is_last(stage: int) -> bool:
 
 static func synergy_in_play(_synergy_id: String) -> bool:
 	return true
+
+
+# The slice table authors its packs (slice_defs.gd); this table has none, so the
+# director uses its own rules.
+static func packs() -> Array:
+	return []
+
+
+static func elite() -> Dictionary:
+	return {}
+
+
+static func elite_arrival() -> int:
+	return 0
+
+
+static func has_vault() -> bool:
+	return true
