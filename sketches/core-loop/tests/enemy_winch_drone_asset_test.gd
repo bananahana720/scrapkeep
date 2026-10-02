@@ -3,15 +3,16 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# C18 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly (the drone's
-# runtime meshes are only the glb's two), opaque, inside the envelope of the base drone: the rotor
+# C18 limits. The asset: 1,200 T / 4 D ceiling for the whole moving assembly (the drone's
+# runtime meshes are only the glb's three), opaque, inside the envelope of the base drone: the rotor
 # radius is 1.6 m at 2.0 m up, the drum hangs 0.45 m round below the crew, the crew stands 0.8 m
 # either way. The base contract: the drone's collider, lane, winch, timing and damage values are
 # what winch_drone.gd had before the dressing swap, pinned both as its source text (the literals
 # in _configure and _live) and as the runtime values counter.gd leaves after clamping.
 const GLB := "res://assets/models/world_one/enemy_winch_drone.glb"
 const CEILING_T := 1200
-const CEILING_D := 3
+# WD: splitting the drum adds one draw; the original triangle ceiling is unchanged.
+const CEILING_D := 4
 const X_MIN := -1.7
 const X_MAX := 1.7
 const Z_MIN := -1.7
@@ -129,6 +130,17 @@ func _run() -> void:
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
 	_check(not m["alpha"], "asset has no alpha surface")
+	var names := []
+	var surfaces := []
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		names.append(String(node.name))
+		for surface in node.mesh.get_surface_count():
+			surfaces.append(node.mesh.surface_get_material(surface).resource_name)
+	names.sort()
+	surfaces.sort()
+	_check(names == ["WinchBody", "WinchDrum", "WinchRotor"], "asset node names stay pinned, including the split drum")
+	_check(surfaces == ["fleet_paint", "paint", "paint", "paint"], "asset surface names stay pinned")
+	_check(absf(float(m["tris"]) - 552.0) <= 55.2, "WD-8 triangles within 10 percent of base 552")
 	scene.free()
 
 	game.ctx.calm = true
@@ -144,7 +156,7 @@ func _run() -> void:
 	_check(drone.find_child("WinchBody", true, false) != null and drone.find_child("WinchRotor", true, false) != null,
 		"the live drone carries its WinchBody and WinchRotor dressing")
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 4" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha surface")
 	var pts := _points(drone)
 	var lo := Vector3(INF, INF, INF)
@@ -193,8 +205,8 @@ func _check_base(drone: Node3D) -> void:
 	_check(missing.is_empty(), "the source keeps every base literal (keep_far 22.0, timing, lane, catch, pull and hover lines)")
 
 
-# The rotor: 1.6 m radius, 16-sided, 2.0 m up, turned by _pose each physics tick (the drone's own
-# clock), and it does not flash.
+# The rotor keeps its geometry and paint. WD replaces the constant 0.6 rad/tick spin with
+# warning-clock acceleration and exact rest after the coast.
 func _check_rotor(drone: Node3D) -> void:
 	var rotor := drone.find_child("WinchRotor", true, false) as MeshInstance3D
 	_check(rotor != null and drone._rotor == rotor, "the pose turns the WinchRotor node")
@@ -209,9 +221,17 @@ func _check_rotor(drone: Node3D) -> void:
 	print("rotor: radius %.3f, %d T" % [reach, tris])
 	_check(reach >= ROTOR_R - 0.01 and reach <= ROTOR_R + 0.01, "the rotor radius is 1.6 m (%.3f)" % reach)
 	_check(tris > 0 and tris + 64 < 150, "the 16-sided rotor (%d T) and 16-sided drum (64 T) stay under 150 T" % tris)
-	var before: float = rotor.rotation.y
+	drone.phase = drone.Phase.WARN
+	drone._t = 0.0
 	drone._pose()
-	_check(is_equal_approx(rotor.rotation.y - before, 0.6), "_pose turns the rotor 0.6 rad per physics tick")
+	_check(rotor.transform == drone._rotor_rest, "WD rotor starts at rest at warning progress zero")
+	drone._t = 0.5 * drone.warn_seconds
+	drone._pose()
+	_check(not rotor.transform.is_equal_approx(drone._rotor_rest), "WD rotor turns from the wind-up clock")
+	drone.phase = drone.Phase.ROAM
+	drone._t = 0.3
+	drone._pose()
+	_check(rotor.transform == drone._rotor_rest, "WD rotor coasts back to exact rest")
 	_check(rotor.get_surface_override_material(0) == null or rotor.get_surface_override_material(0) != drone._material, "the rotor does not take the flashing material")
 
 
