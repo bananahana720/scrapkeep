@@ -28,7 +28,8 @@ const HOLD_FRAMES := 300
 const OPEN_WITHIN := 60
 const QUIET_FRAMES := 30
 const STEP_S := 1.0 / 60.0
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const SOURCES := ["res://src/presentation/reward_ceremony.gd", "res://src/presentation/codex_banner.gd"]
 
 var _game

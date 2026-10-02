@@ -17,7 +17,8 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # a bar slot hides its keycap exactly while a prompt on the same key shows. Every wait is a
 # counted physics frame.
 
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const SIZES := [Vector2(1600.0, 900.0), Vector2(1280.0, 720.0)]
 const PLATE_SIZE := Vector2(420.0, 44.0)
 const WEAK_FORCE := 0.05

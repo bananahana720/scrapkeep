@@ -6,28 +6,41 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 
 # The Warden posture sweep (design-v3/LEGIBILITY.md section 4, tools/posture_sweep.md).
-# For every cell of the grid it plays the brawler, the skipper and the camper on the slice
-# over seeds 1 to 5 and writes one TSV row per cell. The seam is ctx.stages: after the game
-# is built the sweep swaps in a Table whose of() returns the slice row with warden_plating
-# and a posture dictionary replaced, so no source file changes between cells.
+# Every cell of the grid is played by every arm of ARMS over the seeds. Each run is its own
+# process, because a bot run repeats exactly only in a fresh process (tools/bot_run.gd,
+# tests/bot_repeat_test.gd). The seam is ctx.stages: after the game is built the child swaps
+# in a Table whose of() returns the slice row with warden_plating and a posture dictionary
+# replaced, so no source file changes between cells.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd \
-#     -- --out=<abs tsv> [--runs=<abs tsv>] [--procs=6] [--seeds=1,2,3,4,5] [--cap=240]
-#     [--plating=45,60] [--curve=1,2] [--shatter=true,false]
+#     -- --out=<abs tsv> --runs=<abs tsv> [--procs=6] [--seeds=1,2,3,4,5] [--cap=240]
+#     [--plating=70,90] [--curve=1,2] [--shatter=true,false] [--arms=small,grown]
 #
-# A parent run (no --part) splits the cells over --procs child processes of this same
-# script, waits for them and merges their rows in grid order. --part=<n>/<of> runs every
-# <of>th cell from <n> and writes to --out as is. A run that never breaks the Warden counts
-# as the cap in the medians and ranges.
+# The parent (no --arm) keeps up to --procs child processes going, one run each, and merges
+# their rows. A child (--arm=<name> --run-seed=<n> --result=<file> --home=<folder>) plays that
+# one run and writes one row to --result. A run that never breaks the Warden counts as the cap.
 
-const PLATINGS := [45.0, 60.0, 75.0, 90.0]
-const CURVES := [1.0, 2.0, 3.0]
+# The arms, one table: name, policy, and the ball's starting mass (the existing --start-mass flag).
+const ARMS := [
+	{"name": "small", "policy": "skipper", "mass": 0.0},
+	{"name": "mid", "policy": "skipper", "mass": 225.0},
+	{"name": "grown", "policy": "skipper", "mass": 540.0},
+	{"name": "camper", "policy": "camper", "mass": 0.0},
+]
+const PLATINGS := [70.0, 90.0, 110.0, 130.0]
+const CURVES := [1.0, 2.0]
 const SHATTERS := [true, false]
-const POLICIES := ["brawler", "skipper", "camper"]
-const HEADER := ["plating", "curve", "ram_shatters", "brawler_median_s", "brawler_min_s", "brawler_max_s",
-		"skipper_median_s", "skipper_min_s", "skipper_max_s", "skipper_to_brawler", "camper_broke",
-		"brawler_heft_median", "brawler_never", "skipper_never", "camper_never", "brawler_died", "skipper_died"]
-const RUN_HEADER := ["plating", "curve", "ram_shatters", "policy", "seed", "outcome", "broke", "engaged_s", "fight_s", "heft", "game_s", "note"]
+const RUN_HEADER := ["arm", "seed", "plating", "curve", "ram_shatters", "outcome", "broke", "engaged_s", "struck_s",
+		"turn_s", "fight_s", "mass", "heft", "game_s", "note"]
+const CELL_HEAD := ["plating", "curve", "ram_shatters"]
+const CELL_TAIL := ["small_to_grown", "band_grown", "band_small", "band_mid", "band_camper", "pass"]
+# Run column positions.
+const C_BROKE := 6
+const C_FIGHT := 10
+const C_MASS := 11
+const C_HEFT := 12
+# A run still going after this many wall seconds is killed and recorded as not broken.
+const WALL_LIMIT_S := 1500.0
 
 
 # The slice table with one Warden row changed. Every lookup the game makes on ctx.stages.
@@ -64,49 +77,64 @@ class Table extends RefCounted:
 
 
 var _settings := {}
-var _cells: Array = []
-var _seeds: Array[int] = []
 var _cap := 240.0
-var _jobs: Array = []
-var _job := -1
+var _parent := false
+var _done := false
+
+# Parent state.
+var _cells: Array = []
+var _arms: Array = []
+var _seeds: Array[int] = []
+var _queue: Array = []
+var _running: Array = []
+var _results := {}
+var _procs := 6
+var _total := 0
+var _sweep_dir := ""
+
+# Child state.
+var _arm := {}
+var _run_seed := 0
+var _cell := {}
 var _game
 var _driver
-var _table: Table
 var _swapped := false
-var _rows: Array[String] = []
-var _run_rows: Array[String] = []
-var _results := {}
-var _pids: Array[int] = []
-var _parts: Array[String] = []
-var _parent := false
+var _struck_s := -1.0
+var _struck_mass := 0.0
+var _struck_heft := 0.0
+var _scrap_serial := 0
+var _counter_serial := 0
 
 
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	_cap = float(_settings.get("cap", "240"))
+	if _settings.has("arm"):
+		_begin_child()
+		return
 	if not _settings.has("out"):
-		printerr("posture_sweep: usage: -- --out=<abs tsv> [--runs=<abs tsv>] [--procs=6] [--seeds=1,2,3,4,5] [--cap=240]")
+		printerr("posture_sweep: usage: -- --out=<abs tsv> --runs=<abs tsv> [--procs=6] [--seeds=1,2,3,4,5] [--cap=240]")
 		quit(2)
 		return
 	for part in String(_settings.get("seeds", "1,2,3,4,5")).split(",", false):
 		_seeds.append(int(part))
-	_cap = float(_settings.get("cap", "240"))
+	var wanted := String(_settings.get("arms", "")).split(",", false)
+	for arm in ARMS:
+		if wanted.is_empty() or arm["name"] in wanted:
+			_arms.append(arm)
 	_cells = _grid()
-	if not _settings.has("part"):
-		_parent = true
-		_launch_children()
-		return
-	var split := String(_settings["part"]).split("/")
-	var mine: Array = []
+	_procs = clampi(int(_settings.get("procs", "6")), 1, 6)
+	_sweep_dir = OS.get_user_data_dir().path_join("posture_sweep").path_join("p%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(_sweep_dir)
+	var n := 0
 	for i in _cells.size():
-		if i % int(split[1]) == int(split[0]):
-			mine.append(_cells[i])
-	_cells = mine
-	for cell in _cells:
-		for policy in POLICIES:
+		for arm in _arms:
 			for seed_value in _seeds:
-				_jobs.append({"cell": cell, "policy": policy, "seed": seed_value})
-	_next()
+				_queue.append({"n": n, "cell": i, "arm": arm["name"], "seed": seed_value})
+				n += 1
+	_total = n
+	_parent = true
 
 
 static func _parse(args: PackedStringArray) -> Dictionary:
@@ -115,6 +143,13 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 		if arg.begins_with("--") and "=" in arg:
 			out[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
 	return out
+
+
+static func arm_named(name: String) -> Dictionary:
+	for arm in ARMS:
+		if arm["name"] == name:
+			return arm
+	return {}
 
 
 func _list(key: String, fallback: Array) -> Array:
@@ -135,157 +170,302 @@ func _grid() -> Array:
 	return cells
 
 
-func _launch_children() -> void:
-	var procs := clampi(int(_settings.get("procs", "6")), 1, 6)
-	for n in procs:
-		var out: String = String(_settings["out"]) + ".part%d" % n
-		var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
-				"--script", "res://tools/posture_sweep.gd", "--", "--out=" + out, "--part=%d/%d" % [n, procs]])
-		for key in ["seeds", "cap", "plating", "curve", "shatter"]:
-			if _settings.has(key):
-				args.append("--%s=%s" % [key, _settings[key]])
-		if _settings.has("runs"):
-			args.append("--runs=" + String(_settings["runs"]) + ".part%d" % n)
-		_parts.append(out)
-		_pids.append(OS.create_process(OS.get_executable_path(), args))
-
+# ---- Parent: the pool -------------------------------------------------------------------
 
 func _process(_delta: float) -> bool:
-	if not _parent:
+	if not _parent or _done:
 		return false
-	for pid in _pids:
-		if OS.is_process_running(pid):
-			return false
-	_merge()
+	for run in _running.duplicate():
+		if not OS.is_process_running(run["pid"]):
+			_reap(run, false)
+		elif float(Time.get_ticks_msec() - int(run["started"])) / 1000.0 > WALL_LIMIT_S:
+			OS.kill(run["pid"])
+			_reap(run, true)
+	while _running.size() < _procs and not _queue.is_empty():
+		_spawn(_queue.pop_front())
+	if _running.is_empty() and _queue.is_empty():
+		_done = true
+		_merge()
+		return false
+	OS.delay_msec(250)
 	return false
 
 
+func _spawn(job: Dictionary) -> void:
+	var cell: Dictionary = _cells[job["cell"]]
+	var arm := arm_named(job["arm"])
+	# Each invocation owns its data folder (the parent's process id is in the path) and each job its own
+	# folder under it, which is removed once the run is recorded.
+	var home := _sweep_dir.path_join("job%d" % job["n"])
+	DirAccess.make_dir_recursive_absolute(home)
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+			"--script", "res://tools/posture_sweep.gd", "--", "--arm=" + String(job["arm"]), "--run-seed=%d" % job["seed"],
+			"--plating=%s" % cell["plating"], "--curve=%s" % cell["curve"], "--shatter=%s" % cell["ram_shatters"],
+			"--cap=%s" % _cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
+	if float(arm["mass"]) > 0.0:
+		args.append("--start-mass=%d" % int(arm["mass"]))
+	var previous := {}
+	for kind in ["DATA", "CONFIG", "CACHE"]:
+		var key: String = "XDG_%s_HOME" % kind
+		previous[key] = OS.get_environment(key)
+		OS.set_environment(key, home.path_join("state-" + kind.to_lower()))
+	var pid := OS.create_process(OS.get_executable_path(), args)
+	for key in previous:
+		if previous[key].is_empty():
+			OS.unset_environment(key)
+		else:
+			OS.set_environment(key, previous[key])
+	job["pid"] = pid
+	job["home"] = home
+	job["started"] = Time.get_ticks_msec()
+	_running.append(job)
+
+
+func _reap(run: Dictionary, timed_out: bool) -> void:
+	_running.erase(run)
+	var home: String = run["home"]
+	var cell: Dictionary = _cells[run["cell"]]
+	var line := ""
+	var path := home.path_join("result.tsv")
+	if FileAccess.file_exists(path):
+		line = FileAccess.get_file_as_string(path).rstrip("\n")
+	if line.is_empty() or timed_out:
+		line = "\t".join([run["arm"], str(run["seed"]), str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"]),
+				"wall_timeout" if timed_out else "no_result", "false", "", "", "", "%.2f" % _cap, "", "", "", ""])
+	_results[run["n"]] = {"job": run, "line": line}
+	_remove_tree(home)
+	print("posture_sweep: %d of %d: %s" % [_results.size(), _total, line.replace("\t", " ")])
+
+
+static func _remove_tree(path: String) -> void:
+	if not DirAccess.dir_exists_absolute(path):
+		return
+	for sub in DirAccess.get_directories_at(path):
+		_remove_tree(path.path_join(sub))
+	for file in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	DirAccess.remove_absolute(path)
+
+
 func _merge() -> void:
-	var rows := {}
-	for path in _parts:
-		for line in _read_lines(path):
-			var cols: PackedStringArray = line.split("\t")
-			rows["%s|%s|%s" % [cols[0], cols[1], cols[2]]] = line
-		DirAccess.remove_absolute(path)
-	var out := ["\t".join(HEADER)]
-	for cell in _cells:
-		var key := "%s|%s|%s" % [str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"])]
-		if rows.has(key):
-			out.append(rows[key])
+	var by_cell := {}
+	var runs := ["\t".join(RUN_HEADER)]
+	for n in _total:
+		if not _results.has(n):
+			continue
+		var line: String = _results[n]["line"]
+		runs.append(line)
+		var job: Dictionary = _results[n]["job"]
+		var key := "%d|%s" % [job["cell"], job["arm"]]
+		if not by_cell.has(key):
+			by_cell[key] = []
+		by_cell[key].append(line.split("\t"))
+	var out := ["\t".join(cell_header(_arms))]
+	for i in _cells.size():
+		var cell: Dictionary = _cells[i]
+		var by_arm := {}
+		for arm in _arms:
+			by_arm[arm["name"]] = by_cell.get("%d|%s" % [i, arm["name"]], [])
+		out.append("\t".join(cell_row(cell, by_arm, _arms)))
 	_write(String(_settings["out"]), out)
 	if _settings.has("runs"):
-		var runs := ["\t".join(RUN_HEADER)]
-		for n in _parts.size():
-			var path := String(_settings["runs"]) + ".part%d" % n
-			runs.append_array(_read_lines(path))
-			DirAccess.remove_absolute(path)
 		_write(String(_settings["runs"]), runs)
-	print("posture_sweep: %d of %d cell(s) written to %s" % [out.size() - 1, _cells.size(), _settings["out"]])
+	_remove_tree(_sweep_dir)
+	print("posture_sweep: %d cell(s), %d run(s) written to %s" % [_cells.size(), runs.size() - 1, _settings["out"]])
 	quit(0)
 
 
-func _read_lines(path: String) -> Array:
-	var out := []
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return out
-	for line in file.get_as_text().split("\n", false):
-		if not line.begins_with(HEADER[0]):
-			out.append(line)
-	return out
+static func cell_header(arms: Array) -> Array:
+	var head := CELL_HEAD.duplicate()
+	for arm in arms:
+		for column in ["median_s", "min_s", "max_s", "broke", "mass_median", "heft_median"]:
+			head.append("%s_%s" % [arm["name"], column])
+	head.append_array(CELL_TAIL)
+	return head
+
+
+# One cell's row: per arm the median, min and max fight seconds (a run that did not break counts
+# as the cap), how many broke the Warden, and the median mass and heft at the first strike;
+# then the small-to-grown ratio and the four bands (pass, miss, or n/a when an arm is not in the run).
+static func cell_row(cell: Dictionary, by_arm: Dictionary, arms: Array) -> Array:
+	var row := [str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"])]
+	var stats := {}
+	for arm in arms:
+		var runs: Array = by_arm.get(arm["name"], [])
+		var fights := []
+		var masses := []
+		var hefts := []
+		var broke := 0
+		for cols in runs:
+			fights.append(float(cols[C_FIGHT]))
+			if cols[C_BROKE] == "true":
+				broke += 1
+			if cols[C_MASS] != "":
+				masses.append(float(cols[C_MASS]))
+			if cols[C_HEFT] != "":
+				hefts.append(float(cols[C_HEFT]))
+		stats[arm["name"]] = {"median": median(fights), "broke": broke, "runs": runs.size()}
+		row.append_array(["%.1f" % median(fights), "%.1f" % _low(fights), "%.1f" % _high(fights), str(broke),
+				"%.1f" % median(masses), "%.3f" % median(hefts)])
+	row.append_array(bands(stats))
+	return row
+
+
+# The ratio and the bands over per-arm stats {median, broke, runs}.
+static func bands(stats: Dictionary) -> Array:
+	if not (stats.has("small") and stats.has("grown")):
+		return ["", "n/a", "n/a", "n/a", "n/a", "n/a"]
+	var grown: float = stats["grown"]["median"]
+	var small: float = stats["small"]["median"]
+	var ratio := small / grown if grown > 0.0 else 0.0
+	var band_grown := grown >= 25.0 and grown <= 45.0
+	var band_small: bool = ratio >= 2.0 and small <= 150.0 and stats["small"]["broke"] == stats["small"]["runs"]
+	var band_mid := "n/a"
+	if stats.has("mid"):
+		band_mid = "pass" if stats["mid"]["median"] > grown and stats["mid"]["median"] < small else "miss"
+	var band_camper := "n/a"
+	if stats.has("camper"):
+		band_camper = "pass" if stats["camper"]["broke"] == 0 else "miss"
+	var verdict := "pass"
+	if not (band_grown and band_small and band_mid == "pass" and band_camper == "pass"):
+		verdict = "miss"
+	if band_mid == "n/a" or band_camper == "n/a":
+		verdict = "n/a"
+	return ["%.2f" % ratio, "pass" if band_grown else "miss", "pass" if band_small else "miss", band_mid, band_camper, verdict]
+
+
+static func median(values: Array) -> float:
+	var sorted := values.duplicate()
+	sorted.sort()
+	if sorted.is_empty():
+		return 0.0
+	var n := sorted.size()
+	return float(sorted[n / 2]) if n % 2 == 1 else (float(sorted[n / 2 - 1]) + float(sorted[n / 2])) / 2.0
+
+
+static func _low(values: Array) -> float:
+	return float(values.min()) if not values.is_empty() else 0.0
+
+
+static func _high(values: Array) -> float:
+	return float(values.max()) if not values.is_empty() else 0.0
 
 
 func _write(path: String, lines: Array) -> void:
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	file.store_string("\n".join(lines) + "\n")
 	file.close()
 
 
-func _next() -> void:
-	_job += 1
-	if _job >= _jobs.size():
-		_finish()
+# ---- Child: one run ---------------------------------------------------------------------
+
+func _begin_child() -> void:
+	_arm = arm_named(String(_settings["arm"]))
+	if _arm.is_empty() or not _settings.has("result") or not _settings.has("home"):
+		printerr("posture_sweep: a child needs a known --arm, --result and --home")
+		quit(2)
 		return
+	_run_seed = int(_settings.get("run-seed", "1"))
+	_cell = {"plating": float(_settings.get("plating", "45")), "curve": float(_settings.get("curve", "1")),
+			"ram_shatters": String(_settings.get("shatter", "true")) == "true"}
+	node_added.connect(_on_node_added)
 	Engine.time_scale = 1.0
-	seed(int(_jobs[_job]["seed"]))
+	seed(_run_seed)
 	_game = Game.new()
 	_game.test_mode = true
 	_game.table = "slice"
 	root.add_child(_game)
-	_driver = null
-	_swapped = false
 
 
-func _physics_process(delta: float) -> bool:
-	if _parent or _game == null or _game.flow == null:
+# The two object-ID-dependent choices (a scrap pickup's swirl side, a counter's strafe) take their
+# sign from spawn order, as tools/bot_run.gd does, so a run repeats exactly.
+func _on_node_added(node: Node) -> void:
+	if _game == null or _game.build == null:
+		return
+	if "_strafe" in node:
+		node.set_meta("bot_strafe", 1.0 if (_counter_serial + _run_seed) % 2 == 0 else -1.0)
+		_counter_serial += 1
+	if node.get_parent() == _game.build.scrap:
+		node.set_meta("bot_side", 1.0 if (_scrap_serial + _run_seed) % 2 == 0 else -1.0)
+		_scrap_serial += 1
+
+
+func _physics_process(_delta: float) -> bool:
+	if _parent or _done or _game == null or _game.flow == null:
 		return false
-	var job: Dictionary = _jobs[_job]
 	if _driver == null:
 		if not _swapped:
-			_table = Table.new()
-			_table.plating = float(job["cell"]["plating"])
-			_table.posture = {"curve": float(job["cell"]["curve"]), "ram_shatters": bool(job["cell"]["ram_shatters"])}
-			_game.ctx.stages = _table
+			var table := Table.new()
+			table.plating = float(_cell["plating"])
+			table.posture = {"curve": float(_cell["curve"]), "ram_shatters": bool(_cell["ram_shatters"])}
+			_game.ctx.stages = table
 			_swapped = true
-		var home := _data_home()
+		var home := String(_settings["home"])
 		_game.codex.storage_dir = home
 		_game.run_log.storage_dir = home
-		_driver = BotDriver.new(_game, String(job["policy"]), int(job["seed"]))
+		_driver = BotDriver.new(_game, String(_arm["policy"]), _run_seed)
 		_driver.stage_limit = _cap * 4.0
 		_driver.fight_limit = _cap
+		_game.presentation.audio.bake_now()
+		_game.events.enemy_struck.connect(_on_struck)
 		_driver.start()
 		return false
-	var over: bool = _driver.tick(delta)
+	var over: bool = _driver.tick(_delta)
 	if not over and _driver.warden_broken():
 		_driver._end("broken")
 		over = true
 	if not over:
 		return false
-	_record(job)
+	_done = true
+	_record()
 	_game.free()
 	_game = null
-	_next()
+	quit(0)
 	return false
 
 
-static func measure(note: Dictionary, cap: float) -> Dictionary:
+# The first contact of any kind on the Warden: the mass and heft the ball struck with.
+func _on_struck(enemy: Node3D, _kind: String, _force: float) -> void:
+	if _struck_s >= 0.0 or not is_instance_valid(enemy) or _game.flow == null or enemy != _game.flow.warden:
+		return
+	_struck_s = _game.run.stage_time
+	_struck_mass = _game.run.mass
+	_struck_heft = _game.run.heft()
+
+
+# Fight seconds run from the later of the bot's turn to the Warden (warden_fight_s) and the first
+# contact on it (struck, -1 when none) to the break. With only one of the two, that one; with
+# neither, BotDriver.fight_start_of. A run that did not break counts as the cap.
+static func measure(note: Dictionary, cap: float, struck := -1.0) -> Dictionary:
 	var broke: bool = note.get("warden_broken_s") != null
-	var start = BotDriver.fight_start_of(note)
+	var turned = note.get("warden_fight_s")
+	var start = null
+	if struck >= 0.0 and turned != null:
+		start = maxf(struck, float(turned))
+	elif struck >= 0.0:
+		start = struck
+	else:
+		start = BotDriver.fight_start_of(note)
 	var fight := cap
 	if broke and start != null:
 		fight = float(note["warden_broken_s"]) - float(start)
-	return {"broke": broke, "fight": fight, "engaged": note.get("warden_engaged_s")}
+	return {"broke": broke, "fight": fight, "engaged": note.get("warden_engaged_s"), "turned": turned}
 
 
-func _data_home() -> String:
-	var home := "user://posture_sweep/part%s/job%d" % [String(_settings.get("part", "0")).replace("/", "of"), _job]
-	var dir := ProjectSettings.globalize_path(home)
-	if DirAccess.dir_exists_absolute(dir):
-		for file in DirAccess.get_files_at(dir):
-			DirAccess.remove_absolute(dir.path_join(file))
-	DirAccess.make_dir_recursive_absolute(dir)
-	return home
-
-
-func _record(job: Dictionary) -> void:
+func _record() -> void:
 	var note: Dictionary = _driver.stage_notes[_driver.stage_notes.size() - 1] if not _driver.stage_notes.is_empty() else {}
-	var run := measure(note, _cap)
-	var broke: bool = run["broke"]
-	var fight: float = run["fight"]
-	var cell: Dictionary = job["cell"]
-	var key := _key(cell)
-	if not _results.has(key):
-		_results[key] = {}
-	if not _results[key].has(job["policy"]):
-		_results[key][job["policy"]] = []
-	_results[key][job["policy"]].append({"broke": broke, "fight": fight, "heft": float(note.get("warden_fight_heft", 0.0)),
-			"died": _driver.outcome == "died"})
-	_run_rows.append("\t".join([str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"]), job["policy"],
-			str(job["seed"]), _driver.outcome, str(broke), str(run["engaged"]) if run["engaged"] != null else "", "%.2f" % fight,
-			str(note.get("warden_fight_heft", "")), "%.2f" % (float(_driver.ticks) / float(Engine.physics_ticks_per_second)),
-			_anomaly(note)]))
-	print("posture_sweep: %s plating %s curve %s shatter %s %s seed %d -> %s, fight %.1f s" % [key, cell["plating"], cell["curve"],
-			cell["ram_shatters"], job["policy"], job["seed"], _driver.outcome, fight])
+	var run := measure(note, _cap, _struck_s)
+	var struck: bool = _struck_s >= 0.0
+	var line := "\t".join([String(_arm["name"]), str(_run_seed), str(_cell["plating"]), str(_cell["curve"]),
+			str(_cell["ram_shatters"]), _driver.outcome, str(run["broke"]),
+			str(run["engaged"]) if run["engaged"] != null else "", "%.2f" % _struck_s if struck else "",
+			str(run["turned"]) if run["turned"] != null else "", "%.2f" % float(run["fight"]),
+			"%.1f" % _struck_mass if struck else "", "%.3f" % _struck_heft if struck else "",
+			"%.2f" % (float(_driver.ticks) / float(Engine.physics_ticks_per_second)), _anomaly(note)])
+	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
+	file.store_string(line + "\n")
+	file.close()
 
 
 # The run's own anomaly notes (RunState.note_anomaly, such as warden_vanished) and the stall state,
@@ -297,60 +477,3 @@ func _anomaly(note: Dictionary) -> String:
 	if note.get("stall_state") != null:
 		parts.append("stall_state=%s" % str(note["stall_state"]))
 	return ",".join(parts)
-
-
-func _key(cell: Dictionary) -> String:
-	return "%s|%s|%s" % [str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"])]
-
-
-static func _median(values: Array) -> float:
-	var sorted := values.duplicate()
-	sorted.sort()
-	if sorted.is_empty():
-		return 0.0
-	var n := sorted.size()
-	return float(sorted[n / 2]) if n % 2 == 1 else (float(sorted[n / 2 - 1]) + float(sorted[n / 2])) / 2.0
-
-
-func _finish() -> void:
-	var out := ["\t".join(HEADER)]
-	for cell in _cells:
-		var by: Dictionary = _results.get(_key(cell), {})
-		var brawler := _column(by.get("brawler", []), "fight")
-		var skipper := _column(by.get("skipper", []), "fight")
-		var camper: Array = by.get("camper", [])
-		var ratio := _median(skipper) / _median(brawler) if _median(brawler) > 0.0 else 0.0
-		out.append("\t".join([str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"]),
-				"%.1f" % _median(brawler), "%.1f" % _low(brawler), "%.1f" % _high(brawler),
-				"%.1f" % _median(skipper), "%.1f" % _low(skipper), "%.1f" % _high(skipper), "%.2f" % ratio,
-				str(_count(camper, "broke", true)), "%.3f" % _median(_column(by.get("brawler", []), "heft")),
-				str(_count(by.get("brawler", []), "broke", false)), str(_count(by.get("skipper", []), "broke", false)),
-				str(_count(camper, "broke", false)), str(_count(by.get("brawler", []), "died", true)),
-				str(_count(by.get("skipper", []), "died", true))]))
-	_write(String(_settings["out"]), out)
-	if _settings.has("runs"):
-		_write(String(_settings["runs"]), _run_rows)
-	quit(0)
-
-
-static func _column(runs: Array, key: String) -> Array:
-	var out := []
-	for run in runs:
-		out.append(run[key])
-	return out
-
-
-static func _low(values: Array) -> float:
-	return float(values.min()) if not values.is_empty() else 0.0
-
-
-static func _high(values: Array) -> float:
-	return float(values.max()) if not values.is_empty() else 0.0
-
-
-static func _count(runs: Array, key: String, want: bool) -> int:
-	var n := 0
-	for run in runs:
-		if bool(run[key]) == want:
-			n += 1
-	return n

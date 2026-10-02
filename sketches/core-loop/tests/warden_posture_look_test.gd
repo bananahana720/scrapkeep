@@ -15,7 +15,9 @@ const T := preload("res://tests/support/t.gd")
 #         the live colour is on it only while it is open.
 # Every wait is counted in physics frames; the look and the model are stepped by hand.
 
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
+const CURVE: float = SliceDefs.DEFS[0]["posture"]["curve"]
 const OPEN_APART_DEG := 25.0
 const JAWS_PER_PAIR := 9
 
@@ -50,10 +52,10 @@ func _ground(out: float) -> Vector3:
 	return _game.ctx.terrain.drop_point(_warden.global_position.x + out, _warden.global_position.z, 1.5)
 
 
-# The ram force whose punch is `share` of the plating at heft 1.
+# The ram force whose gain is `share` of a full hit at heft 1, under the row's curve.
 func _force_for(share: float) -> float:
 	var force := 1.0
-	while _combat.punch_of("ram", force) < PLATING * share:
+	while _combat.punch_of("ram", force) < PLATING * pow(share, 1.0 / CURVE):
 		force += 0.02
 	return force
 
