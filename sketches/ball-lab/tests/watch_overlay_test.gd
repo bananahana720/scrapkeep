@@ -259,7 +259,7 @@ func _finish() -> void:
 		_report("marks", first["schema"] == "scrapkeep-watch-mark/1" and first["screenshot"] == null,
 			"schema scrapkeep-watch-mark/1; no screenshot without a renderer")
 
-	print("watch_overlay_test: %d failures" % _failures)
+	print("watch_overlay_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	for c in _cases:
 		c["viewport"].queue_free()
 		if c["watched"]:

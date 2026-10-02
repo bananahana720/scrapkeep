@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  MISSING_VERDICT,
+  binary,
   buildReceipt,
   countChecks,
   emitReceipt,
   gateFlagsError,
   globToRegExp,
   hasVerdictLine,
+  judge,
   matchesGlob,
   namedRunMustWait,
   noMatchMessage,
@@ -225,5 +229,109 @@ test("every export the runner had before the quarantine unit still exists", asyn
   const module = await import("./sketch-smoke.mjs");
   for (const name of ["binary", "sketchDirectories", "testScripts", "isSolo", "isSoloScript", "jobCount", "skipLines", "hasVerdictLine", "countChecks", "globToRegExp", "matchesGlob", "selectTests", "splitFlags", "parseArgs", "validateRun", "noMatchMessage", "acquireMachine", "namedRunMustWait", "waitForMachine", "receiptFileName", "buildReceipt"]) {
     assert.ok(name in module, name);
+  }
+});
+
+test("a test that exits 0 with no verdict line fails and says why", () => {
+  const ended = judge({ test: true, status: 0, output: "[a] x -> PASS\n[b] y -> PASS\n" });
+  assert.equal(ended.ok, false);
+  assert.equal(ended.missing, true);
+  assert.equal(ended.reason, MISSING_VERDICT);
+  assert.equal(MISSING_VERDICT, "no verdict line: the test ended early");
+  const done = judge({ test: true, status: 0, output: "[a] x -> PASS\nsuite_test: PASS (1 checks)\n" });
+  assert.equal(done.ok, true);
+  assert.equal(done.missing, false);
+  const skipped = judge({ test: true, status: 0, output: "[ace] stems missing -> SKIP\n" });
+  assert.equal(skipped.ok, true);
+  assert.equal(skipped.missing, false);
+  assert.equal(skipped.skips.length, 1);
+  assert.equal(judge({ test: false, status: 0, output: "booted\n" }).ok, true);
+  assert.equal(judge({ test: true, status: 1, output: "suite_test: FAIL (1 of 2 checks)\n" }).ok, false);
+  assert.equal(done.reason, null);
+  assert.equal(skipped.reason, null);
+});
+
+test("a nonzero exit and a kill give their own reason, not the missing-verdict one", () => {
+  const crashed = judge({ test: true, status: 1, output: "[a] x -> PASS\n" });
+  assert.equal(crashed.ok, false);
+  assert.equal(crashed.reason, "the test exited with code 1");
+  assert.notEqual(crashed.reason, MISSING_VERDICT);
+  const killed = judge({ test: true, status: null, output: "[a] x -> PASS\n" });
+  assert.equal(killed.ok, false);
+  assert.equal(killed.reason, "the test was killed at the time limit or by a signal");
+  const failed = judge({ test: true, status: 0, output: "suite_test: FAIL (1 of 2 checks)\n" });
+  assert.equal(failed.reason, "the test printed a FAIL verdict");
+});
+
+test("a skip line exempts a test only when no check ran", () => {
+  const mixed = judge({ test: true, status: 0, output: "[a] x -> PASS\n[b] stems missing -> SKIP\n" });
+  assert.equal(mixed.ok, false);
+  assert.equal(mixed.missing, true);
+  assert.equal(mixed.reason, MISSING_VERDICT);
+  const withVerdict = judge({ test: true, status: 0, output: "[a] x -> PASS\n[b] stems missing -> SKIP\nsuite_test: PASS (1 checks)\n" });
+  assert.equal(withVerdict.ok, true);
+});
+
+test("a FAIL verdict fails the test whatever the exit code and wherever the line sits", () => {
+  const early = judge({ test: true, status: 0, output: "suite_test: FAIL (1 of 2 checks)\ntrailing line\n" });
+  assert.equal(early.ok, false);
+  assert.equal(early.missing, false);
+  assert.equal(early.reason, "the test printed a FAIL verdict");
+  const both = judge({ test: true, status: 0, output: "suite_test: PASS (2 checks)\nsuite_test: FAIL (1 of 2 checks)\n" });
+  assert.equal(both.ok, false);
+});
+
+test("a skipped test is not counted as missing a verdict in the receipt", () => {
+  const rows = [
+    { label: "s res://tests/a.gd", ok: true, exit: 0, ms: 1, passes: 0, fails: 0, verdict_line: false, skips: ["SKIP stems"] },
+    { label: "s res://tests/b.gd", ok: false, exit: 0, ms: 1, passes: 2, fails: 0, verdict_line: false, skips: [] },
+  ];
+  const receipt = buildReceipt({ label: "x", argv: [], root: "/r", git: null, godot: { binary: "/g", version: null }, sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "t", wallMs: 0, stems: {}, results: rows });
+  assert.equal(receipt.totals.missing_verdict, 1);
+  assert.equal(receipt.totals.skipped, 1);
+});
+
+test("a script error inside an awaited part of a test cannot pass", { skip: !existsSync(binary) }, () => {
+  const project = mkdtempSync(path.join(os.tmpdir(), "verdict-fixture-"));
+  try {
+    writeFileSync(path.join(project, "project.godot"), 'config_version=5\n[application]\nconfig/name="fixture"\n');
+    writeFileSync(
+      path.join(project, "hazard.gd"),
+      [
+        "extends SceneTree",
+        "func _initialize() -> void:",
+        "\t_run.call_deferred()",
+        "func _part() -> void:",
+        '\tprint("[one] first -> PASS")',
+        "\tawait process_frame",
+        "\tvar empty: Dictionary = {}",
+        '\tvar broken = empty["absent"].call()',
+        '\tprint("[two] second -> PASS")',
+        "func _run() -> void:",
+        "\tawait _part()",
+        "\tquit(0)",
+        "",
+      ].join("\n"),
+    );
+    const run = spawnSync(binary, ["--headless", "--path", project, "--script", "hazard.gd"], {
+      encoding: "utf8",
+      timeout: 60_000,
+      env: { ...process.env, XDG_DATA_HOME: path.join(project, "data") },
+    });
+    const output = (run.stdout || "") + (run.stderr || "");
+    assert.equal(run.status, 0);
+    assert.match(output, /^SCRIPT ERROR/m);
+    assert.match(output, /\[one\] first -> PASS/);
+    assert.doesNotMatch(output, /\[two\]/);
+    assert.equal(hasVerdictLine(output), false);
+    const judged = judge({ test: true, status: run.status, output });
+    assert.equal(judged.ok, false);
+    assert.equal(judged.missing, true);
+    const withoutErrorLines = output.split("\n").filter((line) => !/^SCRIPT ERROR/.test(line)).join("\n");
+    const quiet = judge({ test: true, status: 0, output: withoutErrorLines });
+    assert.equal(quiet.ok, false);
+    assert.equal(quiet.missing, true);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
   }
 });

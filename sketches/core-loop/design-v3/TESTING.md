@@ -79,7 +79,7 @@ The wave's one gate run, from the runner's own receipt (`gate-c57bcb8ef631-2026-
 | Build `Game`, run 3 frames, quit | 10.2 s | 3.06 s (the writer's probe, three runs) |
 | Unit cases, one process | none | 3 cases, 20 checks, 0.7 s |
 
-Summed test time fell 28 percent and the wall 26 percent. What is left is the long tail: 27 tests over 20 s and the six that run one at a time. Nine tests print no verdict line (`ace_restart_state`, `ace_stage_window_grid`, `ace_gentle_break_window`, `drop_cage_frames`, `char_bot_sable`, `char_bot`, `spine_run`, `telegraph_slope`, `wear_fraction_debt`); they pass, and `--strict-verdict` stays off until they are mended or deleted with their variants.
+Summed test time fell 28 percent and the wall 26 percent. What is left is the long tail: 27 tests over 20 s and the six that run one at a time. Nine tests print no verdict line (`ace_restart_state`, `ace_stage_window_grid`, `ace_gentle_break_window`, `drop_cage_frames`, `char_bot_sable`, `char_bot`, `spine_run`, `telegraph_slope`, `wear_fraction_debt`); they pass, and `--strict-verdict` stays off until they are mended or deleted with their variants. (superseded by the section below)
 
 The wave cost one full run for three merged units (0.33 runs per unit) and 27 minutes from launch to verdict.
 
@@ -114,7 +114,7 @@ Three of seven units had a review finding of medium or above at the first gate, 
 
 ### With the visual branch merged, `proto/alpha` at `ad78651`
 
-One gate run (receipt `gate-f817cf4e1b25-2026-10-02T06-03-11-287Z.json`): 241 runs, 0 failed, 2 quarantined red, 338 s, six solo tests 79 s. The 19 added tests cost 15 s of wall. Eleven tests now print no verdict line.
+One gate run (receipt `gate-f817cf4e1b25-2026-10-02T06-03-11-287Z.json`): 241 runs, 0 failed, 2 quarantined red, 338 s, six solo tests 79 s. The 19 added tests cost 15 s of wall. Eleven tests now print no verdict line. (superseded by the section below)
 
 ### After G1 and ST, `proto/alpha` at `2cbdb65`
 
@@ -195,7 +195,7 @@ Both fix-round failures were tests that pass with the rule removed, reported as 
 
 The first gate on the merged build failed twice for real, and both were merge effects no unit could have seen alone. The boss plate seated by the HUD and the armour number together broke the word budget. Moving devices to their own map removed walls a test was leaning on. Named runs after a merge are not a substitute for the gate.
 
-Found while merging: a `SCRIPT ERROR` inside an awaited test coroutine ended the coroutine and the test still exited 0 with no verdict line. The gate lists such tests under "lacks a verdict line"; ten are on that list. Owed: make a missing verdict line a failure, after giving those ten a verdict.
+Found while merging: a `SCRIPT ERROR` inside an awaited test coroutine ended the coroutine and the test still exited 0 with no verdict line. The gate lists such tests under "lacks a verdict line"; ten are on that list. Owed: make a missing verdict line a failure, after giving those ten a verdict. (superseded by the section below)
 
 The Sol unit PR reported FAIL on itself for two whole-file hash pins that the brief listed to run but not to edit (cause `brief`). Whole-file hash pins on generated rigs are owed a structural replacement.
 
@@ -212,4 +212,12 @@ Review failures by cause: the winner's Fable review failed it on two `writer` po
 A measure can ride on a bug. The traversal bars were taken on a spawn that had a misplaced Spillway cache on it; every pilot landed on the cache and rolled off it faster. When R2 moved devices to their own map the same lines measured lower for two pilots with no change to the map. A baseline is retaken on the admission head before a bar is trusted.
 
 `npm test` was red at the R2 admission head: `tests/lab-verdicts.test.js` wants one `verdicts.ndjson` line per playtest entry and entry 11 had none. `check:docs` does not cover it. Two R3a reviewers found it. The coordinator now runs `npm test` before committing a playtest entry.
+
+## A test ends with a verdict (unit HV)
+
+A test passes only if it prints a line matching `<name>: PASS`; new tests use `t.gd`'s `verdict()`. The runner fails a test that exits 0 with neither a verdict line nor a skip line, and prints `no verdict line: the test ended early`. A test that prints the skip line is counted as skipped. `--strict-verdict` is still accepted and does nothing more.
+
+Under `--script`, a `SCRIPT ERROR` inside an awaited part of a test (observed with Godot 4.7.2) ends that part, prints the error with its backtrace, and lets the caller carry on, so a test that then calls `quit(0)` exits 0 with its remaining checks never run. The runner's error-line scan already failed that output; the missing-verdict rule fails it a second way, and the runner's unit tests pin both. The same error in a deferred coroutine with no caller waiting leaves the process running until the runner's timeout.
+
+Nine tests were mended: `ace_stage_window_grid`, `ace_restart_state`, `ace_gentle_break_window`, `asset_capture`, `char_bot` (and `char_bot_sable` through it), `graphics_preset`, `spine_run`, `telegraph_slope` and `wear_fraction_debt`. Check counts are unchanged. `spine_run_test` prints its class on its own line and ends on a bare `spine_run_test: PASS`, because `char_full_run_test` reads that line with `ends_with(": PASS")`.
 

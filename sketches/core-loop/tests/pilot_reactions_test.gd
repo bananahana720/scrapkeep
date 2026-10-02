@@ -85,7 +85,7 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	if ticks == 3:
 		run_policy()
-		print("pilot_reactions_test%s: %s" % [" (policy fixture only)" if policy_only else "", "PASS" if failures == 0 else "FAIL"])
+		print("pilot_reactions_test: %s%s" % ["PASS" if failures == 0 else "FAIL", " (policy fixture only)" if policy_only else ""])
 		game.queue_free()
 		quit(0 if failures == 0 else 1)
 	return false

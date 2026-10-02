@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
+const T := preload("res://tests/support/t.gd")
 
 # A scripted full run through the real flow: title, class, then for each stage the
 # beacon, a reward gate and the launch, ending on the summary. The ball is placed at
@@ -19,7 +20,7 @@ const TICK_LIMIT := 90 * 90
 
 var _game
 var _source := Intent.Scripted.new()
-var _failures := 0
+var _t := T.new("spine_run_test")
 var _ticks := 0
 var _started := false
 var _done := false
@@ -179,9 +180,7 @@ func _on_chosen(part_id: String) -> void:
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
-	if not ok:
-		_failures += 1
-	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+	_t.check(label, ok, detail)
 
 
 # Only a loss counts against momentum: a gain, such as the launch rail easing a slow
@@ -223,7 +222,11 @@ func _finish() -> bool:
 			and _arena.get("after_defeat", "") == "victory",
 		"R put flow back in %s (arena entry %d) at hp %.0f; boss_defeated led to %s, then summary"
 			% [_arena.get("retried_state", "?"), _boss.entries, _arena.get("retried_hp", -1.0), _arena.get("after_defeat", "?")])
-	print("spine_run_test (%s): %s" % [_game.run.class_id(), "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
+	print("spine_run_test class: %s, %d checks" % [_game.run.class_id(), _t.checks])
 	_game.free()
-	quit(0 if _failures == 0 else 1)
+	if _t.failures == 0:
+		print("spine_run_test: PASS")
+		quit(0)
+	else:
+		quit(_t.verdict())
 	return true

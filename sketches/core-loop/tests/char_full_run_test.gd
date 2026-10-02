@@ -19,10 +19,11 @@ func _initialize() -> void:
 			["--headless", "--path", project, "--script", "res://tests/spine_run_test.gd", "--", "--class=%d" % index], output, true)
 		var text := "\n".join(output)
 		var verdict := ""
+		var verdict_line := RegEx.create_from_string("^spine_run_test: (PASS|FAIL)\\b")
 		for line in text.split("\n"):
-			if line.begins_with("spine_run_test"):
+			if verdict_line.search(line) != null:
 				verdict = line
-		var ok := code == 0 and verdict.ends_with(": PASS") and not text.contains("SCRIPT ERROR")
+		var ok := code == 0 and verdict.begins_with("spine_run_test: PASS") and not text.contains("SCRIPT ERROR")
 		if not ok:
 			failures += 1
 			for line in text.split("\n"):

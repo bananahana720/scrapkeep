@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Ace := preload("res://src/presentation/ace_sequencer.gd")
+const T := preload("res://tests/support/t.gd")
 
 # A Warden break asked in the last moments before the non-looping drop stems end must
 # enter on the drop's end, never a bar later: the stems would run out into silence.
@@ -8,6 +9,8 @@ const Ace := preload("res://src/presentation/ace_sequencer.gd")
 
 const ASKED_BEFORE_END := 1500
 const BLOCK := 4410
+
+var _t := T.new("ace_gentle_break_window_test")
 
 
 func _initialize() -> void:
@@ -17,18 +20,12 @@ func _initialize() -> void:
 		quit(0)
 		return
 
-	var failures := 0
 	for style in ["raw", "hard", "gentle"]:
-		failures += _check(style)
-	if failures > 0:
-		printerr("ace break window: %d failure(s)" % failures)
-		quit(1)
-		return
-	print("ace break window: ok")
-	quit(0)
+		_check(style)
+	quit(_t.verdict())
 
 
-func _check(style: String) -> int:
+func _check(style: String) -> void:
 	var seq := Ace.new()
 	seq.set_breath(style)
 	seq.start_level(0)
@@ -39,9 +36,8 @@ func _check(style: String) -> int:
 	while (seq.section != "drop" or seq.pending.is_empty()) and guard < 400:
 		seq.render(BLOCK)
 		guard += 1
-	if seq.pending.is_empty():
-		printerr("FAIL %s: the drop never scheduled a follower" % style)
-		return 1
+	if not _t.check("%s drop schedules a follower" % style, not seq.pending.is_empty(), "pending %s" % [seq.pending]):
+		return
 	var end: int = seq.pending["at"]
 	_render_to(seq, end - ASKED_BEFORE_END)
 	seq.warden_broken()
@@ -51,14 +47,8 @@ func _check(style: String) -> int:
 		if e[0] == "enter" and e[2] == "break" and int(e[1]) >= end - ASKED_BEFORE_END:
 			entered = int(e[1])
 			break
-	var failures := 0
-	if seq.misses > 0:
-		failures += 1
-		printerr("FAIL %s: %d stems ran out with nothing scheduled (silence); break entered at %d, drop ends at %d" % [style, seq.misses, entered, end])
-	if entered < 0 or entered > end:
-		failures += 1
-		printerr("FAIL %s: break entered at %d, want at or before the drop's end %d" % [style, entered, end])
-	return failures
+	_t.check("%s stems never run out" % style, seq.misses == 0, "%d stems ran out with nothing scheduled (silence); break entered at %d, drop ends at %d" % [seq.misses, entered, end])
+	_t.check("%s break enters by the drop's end" % style, entered >= 0 and entered <= end, "break entered at %d, want at or before the drop's end %d" % [entered, end])
 
 
 func _render_to(seq: Ace, sample: int) -> void:

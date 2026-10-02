@@ -1,9 +1,9 @@
 extends SceneTree
 const Preset := preload("res://src/presentation/graphics_preset.gd")
-var failed := false
+const T := preload("res://tests/support/t.gd")
+var _t := T.new("graphics_preset_test")
 func check(ok: bool, what: String) -> void:
-	print("PASS " if ok else "FAIL ", what)
-	failed = failed or not ok
+	_t.check(what, ok)
 func _initialize() -> void:
 	call_deferred("run")
 func run() -> void:
@@ -23,4 +23,4 @@ func run() -> void:
 	mesh.free()
 	sun.free()
 	check(Preset.apply("low"), "switch after scene disposal drops dead bindings")
-	quit(1 if failed else 0)
+	quit(_t.verdict())

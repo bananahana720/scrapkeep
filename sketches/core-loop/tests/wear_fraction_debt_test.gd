@@ -2,14 +2,13 @@ extends SceneTree
 
 const RunState := preload("res://src/core/run_state.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const T := preload("res://tests/support/t.gd")
 
-var _failures := 0
+var _t := T.new("wear_fraction_debt_test")
 
 
 func _check(ok: bool, what: String) -> void:
-	if not ok:
-		_failures += 1
-		print("FAIL: ", what)
+	_t.check(what, ok)
 
 
 func _initialize() -> void:
@@ -34,8 +33,4 @@ func _initialize() -> void:
 	var lost: float = before - run.mass
 	_check(lost <= 1.0, "one tick after a pickup took %s mass" % lost)
 	events.free()
-	if _failures > 0:
-		quit(1)
-	else:
-		print("PASS")
-		quit(0)
+	quit(_t.verdict())

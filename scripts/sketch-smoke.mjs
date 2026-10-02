@@ -311,7 +311,7 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     runs: rows.length,
     failed: verdict.failed.length,
     skipped: rows.filter((row) => row.skips.length > 0).length,
-    missing_verdict: rows.filter((row) => row.verdict_line === false).length,
+    missing_verdict: rows.filter((row) => row.verdict_line === false && row.skips.length === 0).length,
     quarantined_red: verdict.quarantined_red,
     quarantine_stale: verdict.quarantine_stale,
   };
@@ -338,29 +338,47 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
   };
 }
 
-// A job with a verdict check (a test, not an import or boot) reports whether it printed one.
-function report(job, status, output, ms, strict) {
-  const checks = job.test ? hasVerdictLine(output) : null;
-  const clean = status === 0 && !errorLine.test(output);
-  const ok = clean && !(strict && checks === false);
-  const quarantined = Boolean(job.quarantined);
+export const MISSING_VERDICT = "no verdict line: the test ended early";
+
+const failVerdictLine = /^[\w.-]+: FAIL\b/m;
+
+// A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
+// verdict fails the test whatever the exit code. The reason names the cause that applies.
+export function judge({ test, status, output }) {
+  const verdict = test ? hasVerdictLine(output) : null;
   const skips = skipLines(output);
+  const { passes, fails } = countChecks(output);
+  const missing = verdict === false && (skips.length === 0 || passes + fails > 0);
+  const failVerdict = Boolean(test) && failVerdictLine.test(output.replace(/\r/g, ""));
+  const ok = status === 0 && !errorLine.test(output) && !missing && !failVerdict;
+  let reason = null;
+  if (status === null) reason = "the test was killed at the time limit or by a signal";
+  else if (status !== 0) reason = `the test exited with code ${status}`;
+  else if (missing) reason = MISSING_VERDICT;
+  else if (failVerdict) reason = "the test printed a FAIL verdict";
+  return { ok, verdict, skips, missing, reason };
+}
+
+function report(job, status, output, ms) {
+  const { ok, verdict, skips, missing, reason } = judge({ test: job.test, status, output });
+  const quarantined = Boolean(job.quarantined);
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
+  if (reason) console.log(reason);
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
-  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: checks, skips, test: Boolean(job.test), quarantined };
+  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined };
 }
 
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
-function runSync(job, strict) {
+function runSync(job) {
   const started = Date.now();
   const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS });
-  return report(job, result.status, (result.stdout || "") + (result.stderr || ""), Date.now() - started, strict);
+  return report(job, result.status, (result.stdout || "") + (result.stderr || ""), Date.now() - started);
 }
 
 // Every test gets its own XDG_DATA_HOME, so user:// is never shared between parallel runs.
-function runAsync(job, strict) {
+function runAsync(job) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"));
@@ -372,18 +390,18 @@ function runAsync(job, strict) {
     child.on("close", (code) => {
       clearTimeout(timer);
       rmSync(dataHome, { recursive: true, force: true });
-      resolve(report(job, code, output, Date.now() - started, strict));
+      resolve(report(job, code, output, Date.now() - started));
     });
   });
 }
 
-async function pool(jobs, width, strict) {
+async function pool(jobs, width) {
   const results = [];
   let next = 0;
   async function worker() {
     while (next < jobs.length) {
       const job = jobs[next++];
-      results.push(await runAsync(job, strict));
+      results.push(await runAsync(job));
     }
   }
   await Promise.all(Array.from({ length: Math.min(width, jobs.length) }, worker));
@@ -443,7 +461,7 @@ async function main() {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
     const quarantine = readQuarantine(directory);
-    results.push(runSync({ label: `${name} import`, args: [...base, "--import"] }, options.strict));
+    results.push(runSync({ label: `${name} import`, args: [...base, "--import"] }));
     if (!named) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
@@ -451,9 +469,9 @@ async function main() {
       (isSoloJob ? solo : jobs).push(job);
     }
   }
-  results.push(...(await pool(jobs, width, options.strict)));
+  results.push(...(await pool(jobs, width)));
   const soloStarted = Date.now();
-  for (const job of solo) results.push(await runAsync(job, options.strict));
+  for (const job of solo) results.push(await runAsync(job));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
   const verdict = quarantineVerdict(results);
   const ok = runPasses(results);
@@ -474,10 +492,10 @@ async function main() {
     console.log(`quarantined but green: remove from quarantine (${verdict.quarantine_stale.length}):`);
     for (const name of verdict.quarantine_stale) console.log(`  ${name}`);
   }
-  const unverdicted = results.filter((result) => result.verdict_line === false);
+  const unverdicted = results.filter((result) => result.verdict_line === false && result.skips.length === 0);
   const names = unverdicted.slice(0, 10).map((result) => result.label.replace(/^.* res:\/\/tests\//, ""));
   console.log(
-    `${unverdicted.length} tests lack a verdict line${names.length > 0 ? ` (${names.join(", ")}${unverdicted.length > names.length ? ", ..." : ""})` : ""}${options.strict ? "; --strict-verdict counts them as failures" : ""}`,
+    `${unverdicted.length} tests lack a verdict line${names.length > 0 ? ` (${names.join(", ")}${unverdicted.length > names.length ? ", ..." : ""})` : ""}`,
   );
   console.log(
     `sketch:smoke ${ok ? "pass" : "fail"}: ${sketches.length} sketches, ${results.length} runs, ${width} at a time, ${solo.length} solo (${soloSeconds.toFixed(0)}s), ${((Date.now() - started) / 1000).toFixed(0)}s. Headless boot and sketch tests only; feel needs Andrew's play.`,
