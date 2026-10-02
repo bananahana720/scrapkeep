@@ -81,8 +81,8 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 ### What to try first
 
 1. Pick a class with its number key or a click. You drop in already rolling. The Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.
-2. Roll the scrap lines on the way down. Watch the heft dial's needle climb, and your punch bar grow under the objective.
-3. Break the Warden; close to it, the objective says how. The gates open wherever you are. Roll through one to take its part.
+2. Roll the scrap lines on the way down. Scrap is your armour and your weight, and a heavier ball hits harder.
+3. Break the Warden. The line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.
 4. As Sable, hit a steep face at speed and press E. Fire with left mouse, then hold and release Space to slingshot off.
 5. Get scrapped on purpose, then press R. You are back at the stage start in under a second.
 

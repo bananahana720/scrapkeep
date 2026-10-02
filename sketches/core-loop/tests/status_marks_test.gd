@@ -119,9 +119,9 @@ func _on_phase(facts: Dictionary) -> void:
 func _pulse_check() -> void:
 	if _ticks != 3 or _pulse_brute == null:
 		return
-	var moved := not is_equal_approx(_pulse_mat.emission_energy_multiplier, _pulse_before)
+	var moved: bool = _pulse_brute.tint_state == "amber" and not is_equal_approx(_pulse_mat.emission_energy_multiplier, _pulse_before)
 	_report("c5_1_amber_pulse", moved, "amber: three physics ticks move the rim %.3f to %.3f" % [_pulse_before, _pulse_mat.emission_energy_multiplier])
-	var steady := is_equal_approx((_slate_brute._tint_materials[0] as StandardMaterial3D).emission_energy_multiplier, _slate_before)
+	var steady: bool = _slate_brute.tint_state == "slate" and is_equal_approx((_slate_brute._tint_materials[0] as StandardMaterial3D).emission_energy_multiplier, _slate_before)
 	_report("c5_1_slate_steady", steady, "slate: three physics ticks leave the rim steady at %.3f" % _slate_before)
 	_pulse_brute.queue_free()
 	_slate_brute.queue_free()
@@ -223,10 +223,12 @@ func _plate_checks() -> void:
 	_report("c5_1_amber_crack", crack.visible and _crack_colours(brute).all(func(c): return c == live), "amber: the crack shows, in the live colour")
 	_report("c5_1_amber_idle_off", not brute.is_processing(), "set_tint amber does not turn idle processing on")
 	_pulse_brute = _ctx.spawner.spawn_enemy("plated_brute", Vector3(0, 30, -20))
+	_pulse_brute.plating = 0.0
 	_pulse_brute.set_tint("amber")
 	_pulse_mat = _pulse_brute._tint_materials[0]
 	_pulse_before = _pulse_mat.emission_energy_multiplier
 	_slate_brute = _ctx.spawner.spawn_enemy("plated_brute", Vector3(0, 30, -40))
+	_slate_brute.plating = 0.0
 	_slate_brute.set_tint("slate")
 	_slate_before = (_slate_brute._tint_materials[0] as StandardMaterial3D).emission_energy_multiplier
 	brute._pulse_rim(0.125)

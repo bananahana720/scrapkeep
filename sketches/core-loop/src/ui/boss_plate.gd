@@ -59,7 +59,7 @@ func unbind() -> void:
 
 # Whether the plate shows anything: a live Warden on the posture rule.
 func active() -> bool:
-	if _warden != null and not is_instance_valid(_warden):
+	if (_warden != null or _events != null) and not is_instance_valid(_warden):
 		unbind()
 	return is_instance_valid(_warden) and _warden.has_method("fight") and not _warden.is_dead() and _warden.fight() == "posture"
 

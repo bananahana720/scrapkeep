@@ -1,3 +1,4 @@
+# smoke: solo (its simulated span runs at wall pace, about 88 s, and a loaded batch pushes it toward the 120 s limit)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

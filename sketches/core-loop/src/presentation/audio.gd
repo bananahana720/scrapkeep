@@ -870,8 +870,9 @@ func wire_optional() -> void:
 			_warden_charging = true
 		play("vent_charging")
 		engine.set_reactor_pedal(true))
-	_listen(events, "vent_erupted", func(_at: Vector3):
-		_warden_charging = false
+	_listen(events, "vent_erupted", func(at: Vector3):
+		if _is_warden_at(at):
+			_warden_charging = false
 		play("vent_erupted")
 		engine.set_reactor_pedal(false))
 	# Moss's lounge is a layer mask over the stage theme, entered and left with the

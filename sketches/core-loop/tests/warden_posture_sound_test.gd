@@ -126,6 +126,7 @@ func _run() -> void:
 	await _stagger()
 	await _shatter()
 	await _foreign_charge()
+	await _foreign_eruption()
 	_game.free()
 	await _plating()
 	quit(_t.verdict())
@@ -240,6 +241,24 @@ func _foreign_charge() -> void:
 		guard += 1
 	_t.check("it staggered again", _warden.staggered())
 	_t.eq("the other enemy's charge cue was not stopped", _entries(charge, "stop").size(), 0)
+
+
+# Another enemy's eruption does not end the Warden's own charge: the next stagger still cuts it.
+func _foreign_eruption() -> void:
+	await _seconds(BossPosture.STAGGER_SECONDS + 0.5)
+	_player.reset_to(_ground(58.0))
+	await _seconds(0.5)
+	_t.check("the Warden closed a second time", not _warden.staggered())
+	_audio.cue_log.clear()
+	var charge := String(Rows.sound("vent_charging", _audio.cue_context()))
+	_game.events.vent_charging.emit(_warden.global_position, 2.0)
+	_game.events.vent_erupted.emit(_warden.global_position + Vector3(40.0, 0.0, 0.0))
+	var guard := 0
+	while not _warden.staggered() and guard < 20:
+		await _hit("ram", _force_for(1.0))
+		guard += 1
+	_t.check("it staggered a third time", _warden.staggered())
+	_t.check("the Warden's own charge cue was stopped", _entries(charge, "stop").size() >= 1, "%d stops" % _entries(charge, "stop").size())
 
 
 # A plating Warden's hit is pitched by its health, as on the base.

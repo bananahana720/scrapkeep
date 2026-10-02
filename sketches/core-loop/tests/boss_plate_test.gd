@@ -160,6 +160,12 @@ func _colour_sources() -> void:
 			var body := _body_of(source, name)
 			_t.check("%s %s is found" % [path.get_file(), name], body.length() > 0)
 			_t.check("%s %s holds no Color( literal or amber" % [path.get_file(), name], not body.contains("Color(") and not body.contains("AMBER"))
+	for path in BRANCHED_CODE:
+		var source := FileAccess.get_file_as_string(path)
+		for name in BRANCHED_CODE[path]:
+			var arm := _posture_arm(_body_of(source, name))
+			_t.check("%s %s has a posture arm" % [path.get_file(), name], arm.length() > 0)
+			_t.check("%s %s posture arm holds no Color( literal or amber" % [path.get_file(), name], not arm.contains("Color(") and not arm.contains("AMBER"))
 
 
 func _run() -> void:
@@ -283,6 +289,6 @@ func _plating_table() -> void:
 	_t.check("a plating Warden: not active", not _plate.active() and _plate.glyph_id() == "" and _plate.bar_fraction() == 0.0)
 	warden.free()
 	_t.eq("a freed Warden: no words", _plate.drawn_words(), [])
-	_t.check("the plate lets go of a freed Warden", _plate._warden == null)
+	_t.check("the plate lets go of a freed Warden and of its events", not _plate.active() and _plate._warden == null and _plate._events == null)
 	_plate.unbind()
 	_game.free()

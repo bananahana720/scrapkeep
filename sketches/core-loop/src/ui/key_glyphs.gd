@@ -233,13 +233,17 @@ static func glyph_of(verb: String) -> String:
 	return Bindings.glyph("harpoon" if verb == LETGO else verb)
 
 
-# Whether the screen draws a prompt: its anchor is a real point and in front of the camera.
+# Whether the screen draws a prompt: its anchor is a real point, in front of the camera
+# and inside the view.
 func _drawn(prompt: Dictionary) -> bool:
 	var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
 	if world == Vector3.INF:
 		return false
 	var camera = game.get("camera")
-	return camera == null or not camera.cam.is_position_behind(world)
+	if camera == null:
+		return true
+	var cam: Camera3D = camera.cam
+	return not cam.is_position_behind(world) and cam.get_viewport().get_visible_rect().has_point(cam.unproject_position(world))
 
 
 # The glyphs of the prompts the screen draws this tick, for the ability bar to leave its own caps off.

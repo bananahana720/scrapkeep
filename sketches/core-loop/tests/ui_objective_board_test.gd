@@ -308,4 +308,16 @@ func _bar_keys() -> void:
 	_report("O1-7 bar keys behind the camera", behind_view["points"]["haul"] != Vector3.INF and cam.is_position_behind(behind) and not "key_ctrl" in behind_glyphs
 			and not "key_ctrl" in behind_hidden and "Ctrl" in bar.drawn_words(),
 		"the haul prompt anchored behind the camera: glyphs told to the bar %s, caps hidden %s, Ctrl drawn on the bar %s" % [behind_glyphs, behind_hidden, "Ctrl" in bar.drawn_words()])
+	# The same for an anchor in front of the camera but off the side of the screen.
+	var aside: Vector3 = cam.global_position - cam.global_transform.basis.z * 2.0 + cam.global_transform.basis.x * 60.0
+	var aside_view: Dictionary = view.duplicate(true)
+	aside_view["points"]["haul"] = aside
+	glyphs.new_run()
+	glyphs.step(2.0, aside_view)
+	_hud._process(0.0)
+	var aside_glyphs: Array = glyphs.shown_glyphs()
+	var aside_hidden: Array = bar.slots.filter(func(slot): return bar.key_hidden(slot)).map(func(slot): return slot["key"])
+	var off_screen: bool = not cam.is_position_behind(aside) and not cam.get_viewport().get_visible_rect().has_point(cam.unproject_position(aside))
+	_report("O1-7 bar keys off the screen", off_screen and not "key_ctrl" in aside_glyphs and not "key_ctrl" in aside_hidden and "Ctrl" in bar.drawn_words(),
+		"the haul prompt anchored off the side of the screen: glyphs told to the bar %s, caps hidden %s, Ctrl drawn on the bar %s" % [aside_glyphs, aside_hidden, "Ctrl" in bar.drawn_words()])
 	glyphs.set_physics_process(true)

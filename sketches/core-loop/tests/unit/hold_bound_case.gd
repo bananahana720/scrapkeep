@@ -15,12 +15,21 @@ const Holds := preload("res://src/combat/holds.gd")
 var _t
 
 
+class Ball:
+	extends RefCounted
+	var v := Vector3(0.0, 0.0, -20.0)
+
+	func planar_velocity() -> Vector3:
+		return v
+
+
 func run(t) -> void:
 	_t = t
 	_directions()
 	_rest()
 	_second_of_pull()
 	_two_holds()
+	_ledger()
 
 
 func _close(a: Vector3, b: Vector3) -> bool:
@@ -81,3 +90,21 @@ func _two_holds() -> void:
 	var turned := rad_to_deg(start.angle_to(v))
 	_t.check("bound: two holds in one tick turn the heading at most 60 degrees a second", turned <= 60.0, "turned %.2f degrees" % turned)
 	_t.check("bound: two holds in one tick never lower the speed", lowest >= start.length() - 0.0001, "lowest speed %.4f of %.1f" % [lowest, start.length()])
+
+
+# The node's own tally: two bounded pulls in one physics frame are capped as a sum, and
+# a new frame starts the tally again.
+func _ledger() -> void:
+	var holds := Holds.new()
+	holds.player = Ball.new()
+	var limit := 20.0 * Holds.TURN_RATE
+	var first: Vector3 = holds._bounded(Vector3(40.0, 0.0, 0.0))
+	var second: Vector3 = holds._bounded(Vector3(40.0, 0.0, 0.0))
+	_t.check("ledger: the first pull takes the whole sideways cap", is_equal_approx(first.x, limit), "first %.3f of %.3f" % [first.x, limit])
+	_t.check("ledger: a second pull in the same frame gets nothing sideways", absf(second.x) < 0.0001 and absf((first + second).x) <= limit + 0.0001,
+		"second %.3f, sum %.3f of %.3f" % [second.x, (first + second).x, limit])
+	holds._granted_frame = Engine.get_physics_frames() - 1
+	var later: Vector3 = holds._bounded(Vector3(40.0, 0.0, 0.0))
+	_t.check("ledger: a new frame starts the tally again", is_equal_approx(later.x, limit), "later %.3f of %.3f" % [later.x, limit])
+	holds.free()
+
