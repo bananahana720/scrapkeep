@@ -22,6 +22,17 @@ const HP := 30.0
 
 var winched := 0
 var _rotor: MeshInstance3D
+var _drum: MeshInstance3D
+var _aim: Node3D
+var _rotor_rest := Transform3D.IDENTITY
+var _drum_rest := Transform3D.IDENTITY
+var _pose_phase := Phase.ROAM
+var _spin := Vector2.ZERO
+var _coast_from := Vector2.ZERO
+var _aim_angle := 0.0
+var _level_from := 0.0
+# Numeric control seam: disabling the body pose touches no combat state.
+var pose_enabled := true
 
 
 func _configure(threat: float) -> void:
@@ -41,7 +52,7 @@ func _configure(threat: float) -> void:
 
 # C18 dressing (enemy_winch_drone.glb): a small Fleet oxide crew under one flat 16-sided rotor
 # (1.6 m radius, 2.0 m up) with a cable drum hung low on a central hanger, the cable's exit
-# clear ahead of it. _pose turns the rotor about its own axis each physics tick. The glb is read
+# clear ahead of it. e11_cable_guide pitches the assembly and spins drum and rotor. The glb is read
 # once and its meshes are shared; each drone adds only its own flashing body material, set on the
 # glb's fleet_paint surface (Fleet oxide, RUST).
 static var _shared: Array = []
@@ -52,6 +63,7 @@ func _build_tool() -> void:
 	_crew = null
 	var dressing := Node3D.new()
 	dressing.name = "WinchBody"
+	_aim = dressing
 	_visual_parent().add_child(dressing)
 	for part in _parts():
 		var mi := MeshInstance3D.new()
@@ -60,7 +72,13 @@ func _build_tool() -> void:
 		if part.rotor:
 			mi.name = "WinchRotor"
 			_rotor = mi
-			_visual_parent().add_child(mi)
+			_rotor_rest = mi.transform
+			dressing.add_child(mi)
+		elif part.drum:
+			mi.name = "WinchDrum"
+			_drum = mi
+			_drum_rest = mi.transform
+			dressing.add_child(mi)
 		else:
 			mi.name = "Body"
 			mi.set_surface_override_material(part.body, _material)
@@ -81,7 +99,7 @@ static func _parts() -> Array:
 			if mesh.surface_get_material(i).resource_name == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, painted)
-		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "rotor": mi.name.begins_with("WinchRotor")})
+		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "rotor": mi.name.begins_with("WinchRotor"), "drum": mi.name.begins_with("WinchDrum")})
 	scene.free()
 	return _shared
 
@@ -148,5 +166,34 @@ func _move(delta: float, desired: Vector3) -> void:
 
 
 func _pose() -> void:
-	if _rotor != null:
-		_rotor.rotation.y += 0.6
+	if _aim == null:
+		return
+	# WARN uses only counter.gd's clock. LIVE starts at the endpoint on the release tick.
+	# The local +Z cable direction pitches down around +X; reaction_pivot stays owned by enemy.gd.
+	if not pose_enabled:
+		_aim.transform = Transform3D.IDENTITY
+		_rotor.transform = _rotor_rest
+		_drum.transform = _drum_rest
+		return
+	if phase == Phase.WARN:
+		var progress := clampf(_warn_progress(), 0.0, 1.0)
+		_aim_angle = deg_to_rad(32.0) * smoothstep(0.0, 1.0, progress)
+		_spin = Vector2(2.25, 3.25) * TAU * progress * progress
+	elif phase == Phase.LIVE:
+		_aim_angle = deg_to_rad(32.0)
+		_spin = Vector2(2.25, 3.25) * TAU * (1.0 + 2.0 * _t / warn_seconds)
+	else:
+		if _pose_phase != Phase.ROAM:
+			_coast_from = _spin
+			_level_from = _aim_angle
+		# _end resets _t. Coast forwards to whole turns, then restore exact rest transforms.
+		var recovery := clampf(_t / 0.25, 0.0, 1.0)
+		_aim_angle = _level_from * (1.0 - smoothstep(0.0, 1.0, recovery))
+		var stops := Vector2(ceilf(_coast_from.x / TAU), ceilf(_coast_from.y / TAU)) * TAU
+		_spin = _coast_from.lerp(stops, 1.0 - pow(1.0 - recovery, 3.0))
+		if recovery >= 1.0:
+			_spin = Vector2.ZERO
+	_pose_phase = phase
+	_aim.rotation.x = _aim_angle
+	_drum.transform = _drum_rest * Transform3D(Basis(Vector3.RIGHT, _spin.x), Vector3.ZERO)
+	_rotor.transform = _rotor_rest * Transform3D(Basis(Vector3.UP, _spin.y), Vector3.ZERO)

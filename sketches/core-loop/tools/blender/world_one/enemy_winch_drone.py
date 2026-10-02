@@ -19,13 +19,14 @@
 # cable wrap band across its middle, at x = 0, where the line leaves it. The cable itself is drawn
 # by the runtime hold, not here.
 #
-# Two meshes, three surfaces (three colour-pass draws), no alpha:
+# Three meshes, four surfaces (four colour-pass draws), no alpha:
 #   WinchBody   fleet_paint (crew barrel, chest and head; flashes with the enemy) and paint
 #               (vertex colour: charcoal mast, hanger, ears, snout, strap and pack, oxide plates and
-#               drum, the cable wrap in worn bone-grey, one brass tag on the chest).
+#               one brass tag on the chest).
+#   WinchDrum   paint only: the existing drum and cable wrap, pivoting on its X axle.
 #   WinchRotor  paint only: a 16-sided disc, oxide and charcoal blades in quarter turns so the spin
-#               shows. Its origin is the rotor centre (Godot y 2.0), so winch_drone.gd _pose still
-#               turns it about its own axis each physics tick, as the base rotor turned.
+#               shows. Its origin is the rotor centre (Godot y 2.0). The body pose uses the
+#               warning clock to spin it up, and the existing rest clock to coast it down.
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
 #   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
@@ -92,13 +93,16 @@ b.cyl("paint", 0.30, 0.26, 0.12, segs=8, loc=g(0, ROTOR_Y - 0.10, -0.32), rot=(0
 # --- The drum: hung low on one central hanger ------------------------------------------
 b.cyl("paint", 0.14, 0.18, 0.30, segs=6, loc=g(0, -0.88, 0), color=CHAR)  # the hanger, x = 0 only
 b.box("paint", (0.92, 0.10, 0.60), loc=g(0, DRUM_Y + DRUM_R + 0.04, 0), color=IRON)  # saddle over the drum
-drum = b.cyl("paint", DRUM_R, DRUM_R, DRUM_LEN, segs=16, loc=g(0, DRUM_Y, 0), rot=(0, HALF_PI, 0), color=DRUM_PAINT)
-b.bm.normal_update()
-b.paint([f for f in drum if abs(f.normal.x) > 0.9], "paint", CHAR)  # the two dark end flanges
-b.cyl("paint", DRUM_R + 0.05, DRUM_R + 0.05, 0.26, segs=8, loc=g(0, DRUM_Y, 0), rot=(0, HALF_PI, 0), color=WORN)  # cable wrap
+d = Part("WinchDrum")
+drum = d.cyl("paint", DRUM_R, DRUM_R, DRUM_LEN, segs=16, loc=g(0, DRUM_Y, 0), rot=(0, HALF_PI, 0), color=DRUM_PAINT)
+d.bm.normal_update()
+d.paint([f for f in drum if abs(f.normal.x) > 0.9], "paint", CHAR)  # the two dark end flanges
+d.cyl("paint", DRUM_R + 0.05, DRUM_R + 0.05, 0.26, segs=8, loc=g(0, DRUM_Y, 0), rot=(0, HALF_PI, 0), color=WORN)  # cable wrap
 
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
+bmesh.ops.recalc_face_normals(d.bm, faces=d.bm.faces[:])
+drum_node = d.to_object(origin=g(0, DRUM_Y, 0), parent=root)
 
 # --- The rotor: a flat 16-sided disc, blades alternating in quarter turns -----------------
 pivot = g(0, ROTOR_Y, 0)
@@ -121,14 +125,16 @@ rotor = r.to_object(origin=pivot, parent=root)
 bpy.context.view_layer.update()
 
 tris = common.tri_total(root)
-xs = [v.co.x for v in body.data.vertices]
-ys = [v.co.y for v in body.data.vertices]
-zs = [v.co.z for v in body.data.vertices]
-surfaces = len(body.data.materials) + len(rotor.data.materials)
+# Keep the original whole-body envelope check after splitting the drum.
+points = [obj.matrix_world @ v.co for obj in (body, drum_node) for v in obj.data.vertices]
+xs = [v.x for v in points]
+ys = [v.y for v in points]
+zs = [v.z for v in points]
+surfaces = len(body.data.materials) + len(rotor.data.materials) + len(drum_node.data.materials)
 rotor_drum = common.tris(rotor) + 64  # the 16-sided drum: 32 side + 32 cap triangles
 print("TRIS", tris, "SURFACES", surfaces, "ROTOR", common.tris(rotor), "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3))
-if tris > 1200 or surfaces > 3 or rotor_drum >= 150 or max(abs(x) for x in xs) > 1.0 or min(ys) < -1.1 or max(ys) > 1.0 \
+if tris > 1200 or surfaces > 4 or rotor_drum >= 150 or max(abs(x) for x in xs) > 1.0 or min(ys) < -1.1 or max(ys) > 1.0 \
         or min(zs) < DRUM_Y - DRUM_R - 0.06 or max(zs) > ROTOR_Y:
     raise SystemExit("C18 limits exceeded")
 
