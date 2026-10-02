@@ -1749,3 +1749,137 @@ On the slice table the Warden is fought on one rule: hit it until its guard bar 
 - **After review (coordinator).** A crack pays off only in a later stagger: a second lesser contact in the same opening does nothing more, so bouncing on an open core cannot shatter it. A glancing contact on the open core still cracks and a glancing smash still shatters, so a build at the floor is slow, not walled. Contacts in the frame a chunk shatters gain nothing, so the landing's own shockwave does not start the next bar. Health is armed only when a chunk actually fell. A hit the rule did not judge a core hit reports no part. The posture Warden's plates take no tint.
 - **Measured, not tuned.** Bots on today's Reach break the slice Warden in about 30 s of fighting whether they grew first or not, so the numbers do not yet make growing matter. The bands unit before the sitting owns that, after the map retrofit.
 - **Demand:** the Warden fight on the slice, which the plate, cracks and sounds units will draw.
+
+## Renderer target experiment, unit LK, 2026-10-02
+
+This round adds `--preset=target` and `tools/target_capture.gd` for comparison with the keyframe. It changes renderer settings only. The original `high` and `low` rows and their original `_apply_world` setter body remain byte-identical to base `37bc501f674a8229fbdef70256fec530cd0a9184`. Target overrides run after that body; leaving target restores its extra properties and the project defaults for its global server settings. Target reuses the existing sun and SkyFill. It adds no light node or sky material.
+
+The first settings aim for a warm low sun, lit shadowed rock, mild air scattering and contact definition. They are starting estimates. No still or frame time was taken in the writer sandbox, and headless checks do not establish colour hierarchy, readability or fidelity.
+
+| Feature and row key | Target values | Purpose |
+| --- | --- | --- |
+| `sun`, `sun_rotation`, `sun_properties` | Energy 2.15, rotation -28/-55/0 degrees, colour #ffe4bf, angular size 0.5 degrees; existing fill 0.30 | Long warm shadows with PCSS softness. The lower saturation key should leave hazard orange-red distinct. Check PCSS noise on the pilot in the returned still. |
+| `shadow_mode`, `shadow_distance`, `shadow_atlas` | Four splits at 0.10/0.25/0.55, 160 m reach, 4096 atlas with 16-bit depth, normal bias 0.40 | Give the next 40 m more shadow resolution and keep contacts attached. |
+| `sdfgi`, `sdfgi_rays`, `environment.sdfgi_*` | On, four cascades, 1 m minimum cells, 32 rays, occlusion and sky read on, bounce feedback 0.35, energy 1.0 | Broad rock and ground bounce. Engine probe reports mesh default `GI_MODE_STATIC=1`; no geometry participation flag is changed here. |
+| `ssil`, `ssil_quality`, `environment.ssil_*` | On, medium quality at half resolution, two blur passes, radius 3 m, intensity 0.65, sharpness 0.8, normal rejection 1.0 | Nearby visible bounce and recess fill. Screen-space coverage must be checked in all three views. |
+| `ssao`, `ssao_quality`, `environment.ssao_*` | On, medium half-resolution quality; radius 0.70, intensity 1.35, power 1.20, detail 0.50, direct-light affect 0.08 | Ground contact and small gaps without painting large shadows black. |
+| `ambient`, `environment.ambient_light_*` | Energy 0.30, colour #b4c3d1, sky contribution 0.35 | A restrained cool shadow floor while GI supplies local variation. |
+| `volumetric_fog`, `fog_volume_size`, `fog_volume_depth`, `environment.volumetric_fog_*` | On, volume size 96, depth 64, density 0.0015, length 160 m, albedo #dfded8, anisotropy 0.45, GI inject 0.5, ambient inject 0.30, sky affect 0.10, temporal blend 0.90 | Sun shafts where existing geometry occludes the light; neutral air colour to preserve mint and hazard reads. Sun volumetric contribution is 1.2. |
+| `fog`, `environment.fog_*` | Density 0.00015, colour #c0c9cf, energy 0.60, aerial perspective 0.20, sky affect 0.10 | Distant separation with little near-ground veiling. Uniform extinction from the two density terms alone would retain about 94% transmission over 40 m. Aerial perspective and scattering change the actual result; measure readability from the stills. |
+| `environment.tonemap_*`, `environment.adjustment_saturation` | AgX, exposure 1.05, contrast 1.15, white 16.29, saturation 1.05 | Filmic highlights without the established preset's stronger saturation. |
+| `glow`, `environment.glow_*` | On, intensity 0.22, HDR threshold 1.8 | A small halo on bright lamps and mint accents. |
+| `sky_properties` | Incremental processing, 256 radiance size; authored panorama retained | Keep sky reflections and aerial depth consistent with the existing sky. This does not add cloud geometry or change the panorama. |
+| `msaa`, `lod_threshold`, `scenery_distance` | 4x MSAA, threshold 1.0, 780 m scenery reach | Match high's geometry reach and antialiasing while comparing light. |
+
+`RenderingServer` applies the directional atlas size, SDFGI ray count, SSIL quality and volumetric volume size at runtime. No `project.godot` setting changes. Each expensive effect has its own row key. If the play median exceeds 8 ms at 1920x1080, first disable `ssil`, then reduce `sdfgi_rays` from 3 to 1, meaning 32 to 8 rays, then reduce fog volume size from 96 to 64. Next use two shadow splits or angular size 0 if PCSS is costly or noisy. Disable SDFGI after those reductions, then volumetric fog. Keep SSAO and the near-field shadow reach as long as possible. These are expected tradeoffs, not measured costs.
+
+The new `Cams.TARGET` table owns `play`, `site` and `wide`. Play samples the Spillway ground at x=-80, z=-93 and puts the camera exactly 8 m behind and 3 m above the ball at 70 degrees. Two chasers stage 28 m and 42 m farther down the fall line. This follows the west chute beside the west rock family; visibility and wall shadow composition remain unverified without a GPU. Site uses the Warden's real site at (-46,16.6,-12) and a three-quarter offset. Wide uses a fixed overview. Existing camera tables stay unchanged.
+
+The capture tool forces the default table, seeds 280928 and advances 120 physics frames. It measures 240 live draw intervals after 180 warmup frames with vsync disabled and `Engine.max_fps=0`. It writes the median, nearest-rank p95, all samples, preset, adapter, engine, rendering method, source hashes and each PNG hash to `frames.json`. Times are whole-frame wall intervals between `frame_post_draw` signals, not isolated GPU timings. Simulation runs during the measure, so presets can advance different distances through time. The tool rebuilds with the same seed and physics count before pausing for the stills. It waits 180 draws at each frozen camera for GI and fog history to settle. Capture or metadata write failure exits 3; headless display, missing output or unknown preset exits 2.
+
+The coordinator runs two visible captures on the RTX 4080, using separate output directories:
+
+```sh
+/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path sketches/core-loop --script res://tools/target_capture.gd -- --out="$PWD/artifacts/local/lk-high" --preset=high
+/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path sketches/core-loop --script res://tools/target_capture.gd -- --out="$PWD/artifacts/local/lk-target" --preset=target
+```
+
+Writer checks ran on Godot 4.7.2 stable, build `ed1daf0bf`. The requested smoke suite passed its import and all six tests with no skips; three existing tests do not print a final verdict line, but exit/error scanning still fails loudly. Lint reports zero findings. The headless capture exits 2 without script error. The inherited staging path builds the target game and advances 120 physics frames with no `SCRIPT ERROR` or `ERROR` line.
+
+[Baseline comparison](../../artifacts/local/lk/baseline-check.log) applies the base and candidate code to fresh Environment, sun, viewport and sky instances, including the existing fill. It compares 76 properties against the [base value table](../../artifacts/local/lk/base-values.json), for fresh high/low and target-to-high/low. All four comparisons pass. A server spy records the six server-setting groups because RenderingServer has no quality-setting getters; actual engine calls also run in the preset tests and staging probe. The [preparation script](../../artifacts/local/lk/prepare_baseline.py) extracts the accepted base and asserts unchanged row text and original setter body. The table includes target's additional properties at their original defaults.
+
+The [complete ClassDB dump](../../artifacts/local/lk/classdb.log) lists properties, methods and constants of all five requested classes. The [API check](../../artifacts/local/lk/check_api.py) verifies every touched property and renderer method against that dump. Relevant lines printed by the engine follow verbatim:
+
+```text
+PROPERTY Environment.adjustment_enabled
+PROPERTY Environment.adjustment_saturation
+PROPERTY Environment.ambient_light_color
+PROPERTY Environment.ambient_light_energy
+PROPERTY Environment.ambient_light_sky_contribution
+PROPERTY Environment.ambient_light_source
+PROPERTY Environment.fog_aerial_perspective
+PROPERTY Environment.fog_density
+PROPERTY Environment.fog_enabled
+PROPERTY Environment.fog_light_color
+PROPERTY Environment.fog_light_energy
+PROPERTY Environment.fog_sky_affect
+PROPERTY Environment.fog_sun_scatter
+PROPERTY Environment.glow_enabled
+PROPERTY Environment.glow_hdr_threshold
+PROPERTY Environment.glow_intensity
+PROPERTY Environment.sdfgi_bounce_feedback
+PROPERTY Environment.sdfgi_cascades
+PROPERTY Environment.sdfgi_enabled
+PROPERTY Environment.sdfgi_energy
+PROPERTY Environment.sdfgi_min_cell_size
+PROPERTY Environment.sdfgi_read_sky_light
+PROPERTY Environment.sdfgi_use_occlusion
+PROPERTY Environment.ssao_ao_channel_affect
+PROPERTY Environment.ssao_detail
+PROPERTY Environment.ssao_enabled
+PROPERTY Environment.ssao_intensity
+PROPERTY Environment.ssao_light_affect
+PROPERTY Environment.ssao_power
+PROPERTY Environment.ssao_radius
+PROPERTY Environment.ssao_sharpness
+PROPERTY Environment.ssil_enabled
+PROPERTY Environment.ssil_intensity
+PROPERTY Environment.ssil_normal_rejection
+PROPERTY Environment.ssil_radius
+PROPERTY Environment.ssil_sharpness
+PROPERTY Environment.ssr_enabled
+PROPERTY Environment.tonemap_agx_contrast
+PROPERTY Environment.tonemap_agx_white
+PROPERTY Environment.tonemap_exposure
+PROPERTY Environment.tonemap_mode
+PROPERTY Environment.volumetric_fog_albedo
+PROPERTY Environment.volumetric_fog_ambient_inject
+PROPERTY Environment.volumetric_fog_anisotropy
+PROPERTY Environment.volumetric_fog_density
+PROPERTY Environment.volumetric_fog_detail_spread
+PROPERTY Environment.volumetric_fog_enabled
+PROPERTY Environment.volumetric_fog_gi_inject
+PROPERTY Environment.volumetric_fog_length
+PROPERTY Environment.volumetric_fog_sky_affect
+PROPERTY Environment.volumetric_fog_temporal_reprojection_amount
+PROPERTY Environment.volumetric_fog_temporal_reprojection_enabled
+PROPERTY DirectionalLight3D.directional_shadow_blend_splits
+PROPERTY DirectionalLight3D.directional_shadow_max_distance
+PROPERTY DirectionalLight3D.directional_shadow_mode
+PROPERTY DirectionalLight3D.directional_shadow_split_1
+PROPERTY DirectionalLight3D.directional_shadow_split_2
+PROPERTY DirectionalLight3D.directional_shadow_split_3
+PROPERTY DirectionalLight3D.light_angular_distance
+PROPERTY DirectionalLight3D.light_color
+PROPERTY DirectionalLight3D.light_energy
+PROPERTY DirectionalLight3D.light_indirect_energy
+PROPERTY DirectionalLight3D.light_volumetric_fog_energy
+PROPERTY DirectionalLight3D.rotation_degrees
+PROPERTY DirectionalLight3D.shadow_blur
+PROPERTY DirectionalLight3D.shadow_normal_bias
+PROPERTY Sky.process_mode
+PROPERTY Sky.radiance_size
+PROPERTY Viewport.mesh_lod_threshold
+PROPERTY Viewport.msaa_3d
+PROPERTY DirectionalLight3D.light_specular
+PROPERTY DirectionalLight3D.name
+PROPERTY DirectionalLight3D.shadow_enabled
+METHOD RenderingServer.environment_set_ssao_quality(quality, half_size, adaptive_target, blur_passes, fadeout_from, fadeout_to)
+METHOD RenderingServer.directional_soft_shadow_filter_set_quality(quality)
+METHOD RenderingServer.directional_shadow_atlas_set_size(size, is_16bits)
+METHOD RenderingServer.environment_set_sdfgi_ray_count(ray_count)
+METHOD RenderingServer.environment_set_ssil_quality(quality, half_size, adaptive_target, blur_passes, fadeout_from, fadeout_to)
+METHOD RenderingServer.environment_set_volumetric_fog_volume_size(size, depth)
+METHOD RenderingServer.get_video_adapter_name()
+METHOD RenderingServer.get_current_rendering_method()
+```
+
+Renderer settings leave these gaps for later rounds, ranked by expected visual weight:
+
+1. Terrain and architecture mass, including the keyframe's enclosed ledges, eroded overhangs and giant wheel. Light cannot turn the current dam and broad open ground into that composition.
+2. Surface detail and material response, including chipped paint, rock fractures, roughness variation and dusty edges. Existing materials determine the remaining flatness under better light.
+3. Prop and vehicle silhouettes, density and placement, including the plated pod bowl and readable machinery in the middle distance.
+4. Local dust trails, particles and spatially varied haze. Global volumetric fog can produce occluded sun shafts but cannot author localized drifting dust or impact plumes.
+5. A richer sky panorama and cloud treatment if aerial perspective alone leaves the sky shallow.
+
+The next round needs the six PNGs and both `frames.json` files. Judge the next 40 m of ground, hazard/mint separation, pilot shadow noise and the play median before changing settings. The writer leaves the scoped changes uncommitted for the coordinator.
