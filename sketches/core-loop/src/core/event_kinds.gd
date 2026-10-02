@@ -534,6 +534,8 @@ const STATE_ROWS := {
 	"glancing": {"color": "slate", "motion": "none", "shape": "burst", "sound": "clank", "verb": NONE, "word": ""},
 	"interrupted": {"color": "live", "motion": "none", "shape": "star", "sound": NONE, "verb": NONE, "word": ""},
 	"held": {"color": "hazard", "motion": "steady", "shape": "bar", "sound": "hold_pit", "verb": NONE, "word": ""},
+	"beacon_sealed": {"color": "slate", "motion": "none", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
+	"beacon_open": {"color": "amber", "motion": "steady", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
 	"wearing": {"color": "rust", "motion": "steady", "shape": "chevron", "sound": NONE, "verb": NONE, "word": ""},
 }
 

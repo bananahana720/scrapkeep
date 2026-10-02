@@ -48,7 +48,7 @@ func targets() -> Array[Dictionary]:
 			if flow.sealed and is_instance_valid(flow.warden):
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
-				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "icon": _glyph("obj_beacon")})
+				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
 		"gates":
 			for at in gate_points:
 				out.append({"at": at, "kind": "reward_offered", "icon": _glyph("obj_gate")})
@@ -94,7 +94,7 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		dir = dir.normalized()
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
 		out.append({"at": _on_edge(view, centre, dir), "dir": dir, "size": lerpf(MAX_SIZE, MIN_SIZE, near),
-			"color": EventKinds.color(target["kind"]), "icon": target["icon"]})
+			"color": EventKinds.state_color(target["state"]) if target.has("state") else EventKinds.color(target["kind"]), "icon": target["icon"]})
 	return out
 
 
