@@ -257,6 +257,7 @@ Each is worded so he can veto it.
 41. In a Warden fight a first find shows its name only. Its card waits for the shared gate. A repeat shows nothing in either discovery mode, and a card or banner that is up when the fight goes live closes.
 42. The enemy read sheet is rendered from built wind-up poses and shown after the wind-up wave, not drawn before it. Owner may veto any kind's pose.
 43. On the read sheet: the six poses go in as they are; the chaser gets a larger rear-up and, if a state row already means "a hit now breaks this attack", that mark; the warning walls and rings are judged at the sitting; the mag trapper's lifted disc gets a visible link; the brute's arms stay joined to its raised pads. Owner may veto any of these.
+44. The Warden's body does not carry its health count. Two rounds put four segments on its jaws, and both times a blind judge could not count them: the chase camera sees the jaws end-on from the front, and light bands on a dark striped body read as panel lines. Neither round is admitted; both branches are kept. The count moves to four lit arcs on the ground round the Warden's foot, which mirror the boss plate's pips and read their colours from it. The body keeps what reads: the jaws splay open, and a segment breaks off on a shatter.
 
 ## 11. What only Andrew can decide
 
