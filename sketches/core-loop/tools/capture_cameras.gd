@@ -107,3 +107,16 @@ static func aim_ortho(camera: Camera3D, v: Dictionary) -> void:
 	camera.far = FAR
 	camera.global_position = v["eye"]
 	camera.look_at(v["target"], v["up"])
+
+
+# TARGET is the renderer experiment's repeatable three-view set. Play coordinates use
+# the sampled ground at ball_xz; the other rows use the Warden site or world coordinates.
+const TARGET := {
+	"play": {"ball_xz": Vector2(-80.0, -93.0), "clearance": 1.2,
+		"eye_offset": Vector3(0.0, 3.0, -8.0), "target_offset": Vector3(0.0, 1.0, 24.0),
+		"fov": 70.0, "enemies_xz": [Vector2(-68.0, -65.0), Vector2(-60.0, -51.0)]},
+	"site": {"eye_offset": Vector3(-12.0, 7.0, -17.0),
+		"target_offset": Vector3(0.0, 3.0, 0.0), "fov": 56.0},
+	"wide": {"eye": Vector3(145.0, 160.0, -240.0),
+		"target": Vector3(0.0, 44.0, 30.0), "fov": 65.0},
+}

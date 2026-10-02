@@ -289,6 +289,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var view := MeshInstance3D.new()
 	view.mesh = mesh
 	view.material_override = Palette.ground_material()
+	preload("res://src/presentation/graphics_preset.gd").register_ground(view)
 	var body := StaticBody3D.new()
 	body.name = "Ground"
 	var shape := CollisionShape3D.new()

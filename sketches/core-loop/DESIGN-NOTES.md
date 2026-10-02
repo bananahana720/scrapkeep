@@ -2098,3 +2098,287 @@ The final recipe was run twice. Both GLBs match byte for byte with SHA-256 `1c80
 Verification used Blender 5.2.2 LTS and Godot 4.7.2 headless. `node scripts/sketch-lint.mjs --sketch core-loop` reports 0 findings against the existing baseline. The exact requested smoke command with receipt `ck` passes the import and all three tests: `clutter_kit_asset_test`, `asset_capture_test`, `spillway_scenery_test`. It has zero skips and no error-prefixed lines. Godot initially failed to save editor settings under home; the retry with all three XDG roots under `artifacts/local/alpha-x2b-CK/xdg/` succeeded. The final receipt is `artifacts/local/receipts/ck-2df1e5543a0d-2026-10-02T15-20-43-281Z.json`.
 
 A test search found no existing clutter-kit references or hash pins. The two existing tests in VERIFY remain unchanged and pass. `dam_asset_test.gd` supplied the direct-GLB inspection pattern and was left unchanged. Independent review found the scrap hue check gap, now fixed with mutation evidence. Evidence, executable-check logs and a command ledger are under `artifacts/local/alpha-x2b-CK/`. Evidence level 4 establishes numeric geometry and real import/test behaviour. No contact sheet, rendered capture, chase-camera readability or human acceptance is claimed; the coordinator renders stills and judges the read at 8 m.
+
+## Renderer target experiment, unit LK, 2026-10-02
+
+This round adds `--preset=target` and `tools/target_capture.gd` for comparison with the keyframe. It changes renderer settings only. The original `high` and `low` rows and their original `_apply_world` setter body remain byte-identical to base `37bc501f674a8229fbdef70256fec530cd0a9184`. Target overrides run after that body; leaving target restores its extra properties and the project defaults for its global server settings. Target reuses the existing sun and SkyFill. It adds no light node or sky material.
+
+The first settings aim for a warm low sun, lit shadowed rock, mild air scattering and contact definition. They are starting estimates. No still or frame time was taken in the writer sandbox, and headless checks do not establish colour hierarchy, readability or fidelity.
+
+| Feature and row key | Target values | Purpose |
+| --- | --- | --- |
+| `sun`, `sun_rotation`, `sun_properties` | Energy 2.15, rotation -28/-55/0 degrees, colour #ffe4bf, angular size 0.5 degrees; existing fill 0.30 | Long warm shadows with PCSS softness. The lower saturation key should leave hazard orange-red distinct. Check PCSS noise on the pilot in the returned still. |
+| `shadow_mode`, `shadow_distance`, `shadow_atlas` | Four splits at 0.10/0.25/0.55, 160 m reach, 4096 atlas with 16-bit depth, normal bias 0.40 | Give the next 40 m more shadow resolution and keep contacts attached. |
+| `sdfgi`, `sdfgi_rays`, `environment.sdfgi_*` | On, four cascades, 1 m minimum cells, 32 rays, occlusion and sky read on, bounce feedback 0.35, energy 1.0 | Broad rock and ground bounce. Engine probe reports mesh default `GI_MODE_STATIC=1`; no geometry participation flag is changed here. |
+| `ssil`, `ssil_quality`, `environment.ssil_*` | On, medium quality at half resolution, two blur passes, radius 3 m, intensity 0.65, sharpness 0.8, normal rejection 1.0 | Nearby visible bounce and recess fill. Screen-space coverage must be checked in all three views. |
+| `ssao`, `ssao_quality`, `environment.ssao_*` | On, medium half-resolution quality; radius 0.70, intensity 1.35, power 1.20, detail 0.50, direct-light affect 0.08 | Ground contact and small gaps without painting large shadows black. |
+| `ambient`, `environment.ambient_light_*` | Energy 0.30, colour #b4c3d1, sky contribution 0.35 | A restrained cool shadow floor while GI supplies local variation. |
+| `volumetric_fog`, `fog_volume_size`, `fog_volume_depth`, `environment.volumetric_fog_*` | On, volume size 96, depth 64, density 0.0015, length 160 m, albedo #dfded8, anisotropy 0.45, GI inject 0.5, ambient inject 0.30, sky affect 0.10, temporal blend 0.90 | Sun shafts where existing geometry occludes the light; neutral air colour to preserve mint and hazard reads. Sun volumetric contribution is 1.2. |
+| `fog`, `environment.fog_*` | Density 0.00015, colour #c0c9cf, energy 0.60, aerial perspective 0.20, sky affect 0.10 | Distant separation with little near-ground veiling. Uniform extinction from the two density terms alone would retain about 94% transmission over 40 m. Aerial perspective and scattering change the actual result; measure readability from the stills. |
+| `environment.tonemap_*`, `environment.adjustment_saturation` | AgX, exposure 1.05, contrast 1.15, white 16.29, saturation 1.05 | Filmic highlights without the established preset's stronger saturation. |
+| `glow`, `environment.glow_*` | On, intensity 0.22, HDR threshold 1.8 | A small halo on bright lamps and mint accents. |
+| `sky_properties` | Incremental processing, 256 radiance size; authored panorama retained | Keep sky reflections and aerial depth consistent with the existing sky. This does not add cloud geometry or change the panorama. |
+| `msaa`, `lod_threshold`, `scenery_distance` | 4x MSAA, threshold 1.0, 780 m scenery reach | Match high's geometry reach and antialiasing while comparing light. |
+
+`RenderingServer` applies the directional atlas size, SDFGI ray count, SSIL quality and volumetric volume size at runtime. No `project.godot` setting changes. Each expensive effect has its own row key. If the play median exceeds 8 ms at 1920x1080, first disable `ssil`, then reduce `sdfgi_rays` from 3 to 1, meaning 32 to 8 rays, then reduce fog volume size from 96 to 64. Next use two shadow splits or angular size 0 if PCSS is costly or noisy. Disable SDFGI after those reductions, then volumetric fog. Keep SSAO and the near-field shadow reach as long as possible. These are expected tradeoffs, not measured costs.
+
+The new `Cams.TARGET` table owns `play`, `site` and `wide`. Play samples the Spillway ground at x=-80, z=-93 and puts the camera exactly 8 m behind and 3 m above the ball at 70 degrees. Two chasers stage 28 m and 42 m farther down the fall line. This follows the west chute beside the west rock family; visibility and wall shadow composition remain unverified without a GPU. Site uses the Warden's real site at (-46,16.6,-12) and a three-quarter offset. Wide uses a fixed overview. Existing camera tables stay unchanged.
+
+The capture tool forces the default table, seeds 280928 and advances 120 physics frames. It measures 240 live draw intervals after 180 warmup frames with vsync disabled and `Engine.max_fps=0`. It writes the median, nearest-rank p95, all samples, preset, adapter, engine, rendering method, source hashes and each PNG hash to `frames.json`. Times are whole-frame wall intervals between `frame_post_draw` signals, not isolated GPU timings. Simulation runs during the measure, so presets can advance different distances through time. The tool rebuilds with the same seed and physics count before pausing for the stills. It waits 180 draws at each frozen camera for GI and fog history to settle. Capture or metadata write failure exits 3; headless display, missing output or unknown preset exits 2.
+
+The coordinator runs two visible captures on the RTX 4080, using separate output directories:
+
+```sh
+/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path sketches/core-loop --script res://tools/target_capture.gd -- --out="$PWD/artifacts/local/lk-high" --preset=high
+/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path sketches/core-loop --script res://tools/target_capture.gd -- --out="$PWD/artifacts/local/lk-target" --preset=target
+```
+
+Writer checks ran on Godot 4.7.2 stable, build `ed1daf0bf`. The requested smoke suite passed its import and all six tests with no skips; three existing tests do not print a final verdict line, but exit/error scanning still fails loudly. Lint reports zero findings. The headless capture exits 2 without script error. The inherited staging path builds the target game and advances 120 physics frames with no `SCRIPT ERROR` or `ERROR` line.
+
+[Baseline comparison](../../artifacts/local/lk/baseline-check.log) applies the base and candidate code to fresh Environment, sun, viewport and sky instances, including the existing fill. It compares 76 properties against the [base value table](../../artifacts/local/lk/base-values.json), for fresh high/low and target-to-high/low. All four comparisons pass. A server spy records the six server-setting groups because RenderingServer has no quality-setting getters; actual engine calls also run in the preset tests and staging probe. The [preparation script](../../artifacts/local/lk/prepare_baseline.py) extracts the accepted base and asserts unchanged row text and original setter body. The table includes target's additional properties at their original defaults.
+
+The [complete ClassDB dump](../../artifacts/local/lk/classdb.log) lists properties, methods and constants of all five requested classes. The [API check](../../artifacts/local/lk/check_api.py) verifies every touched property and renderer method against that dump. Relevant lines printed by the engine follow verbatim:
+
+```text
+PROPERTY Environment.adjustment_enabled
+PROPERTY Environment.adjustment_saturation
+PROPERTY Environment.ambient_light_color
+PROPERTY Environment.ambient_light_energy
+PROPERTY Environment.ambient_light_sky_contribution
+PROPERTY Environment.ambient_light_source
+PROPERTY Environment.fog_aerial_perspective
+PROPERTY Environment.fog_density
+PROPERTY Environment.fog_enabled
+PROPERTY Environment.fog_light_color
+PROPERTY Environment.fog_light_energy
+PROPERTY Environment.fog_sky_affect
+PROPERTY Environment.fog_sun_scatter
+PROPERTY Environment.glow_enabled
+PROPERTY Environment.glow_hdr_threshold
+PROPERTY Environment.glow_intensity
+PROPERTY Environment.sdfgi_bounce_feedback
+PROPERTY Environment.sdfgi_cascades
+PROPERTY Environment.sdfgi_enabled
+PROPERTY Environment.sdfgi_energy
+PROPERTY Environment.sdfgi_min_cell_size
+PROPERTY Environment.sdfgi_read_sky_light
+PROPERTY Environment.sdfgi_use_occlusion
+PROPERTY Environment.ssao_ao_channel_affect
+PROPERTY Environment.ssao_detail
+PROPERTY Environment.ssao_enabled
+PROPERTY Environment.ssao_intensity
+PROPERTY Environment.ssao_light_affect
+PROPERTY Environment.ssao_power
+PROPERTY Environment.ssao_radius
+PROPERTY Environment.ssao_sharpness
+PROPERTY Environment.ssil_enabled
+PROPERTY Environment.ssil_intensity
+PROPERTY Environment.ssil_normal_rejection
+PROPERTY Environment.ssil_radius
+PROPERTY Environment.ssil_sharpness
+PROPERTY Environment.ssr_enabled
+PROPERTY Environment.tonemap_agx_contrast
+PROPERTY Environment.tonemap_agx_white
+PROPERTY Environment.tonemap_exposure
+PROPERTY Environment.tonemap_mode
+PROPERTY Environment.volumetric_fog_albedo
+PROPERTY Environment.volumetric_fog_ambient_inject
+PROPERTY Environment.volumetric_fog_anisotropy
+PROPERTY Environment.volumetric_fog_density
+PROPERTY Environment.volumetric_fog_detail_spread
+PROPERTY Environment.volumetric_fog_enabled
+PROPERTY Environment.volumetric_fog_gi_inject
+PROPERTY Environment.volumetric_fog_length
+PROPERTY Environment.volumetric_fog_sky_affect
+PROPERTY Environment.volumetric_fog_temporal_reprojection_amount
+PROPERTY Environment.volumetric_fog_temporal_reprojection_enabled
+PROPERTY DirectionalLight3D.directional_shadow_blend_splits
+PROPERTY DirectionalLight3D.directional_shadow_max_distance
+PROPERTY DirectionalLight3D.directional_shadow_mode
+PROPERTY DirectionalLight3D.directional_shadow_split_1
+PROPERTY DirectionalLight3D.directional_shadow_split_2
+PROPERTY DirectionalLight3D.directional_shadow_split_3
+PROPERTY DirectionalLight3D.light_angular_distance
+PROPERTY DirectionalLight3D.light_color
+PROPERTY DirectionalLight3D.light_energy
+PROPERTY DirectionalLight3D.light_indirect_energy
+PROPERTY DirectionalLight3D.light_volumetric_fog_energy
+PROPERTY DirectionalLight3D.rotation_degrees
+PROPERTY DirectionalLight3D.shadow_blur
+PROPERTY DirectionalLight3D.shadow_normal_bias
+PROPERTY Sky.process_mode
+PROPERTY Sky.radiance_size
+PROPERTY Viewport.mesh_lod_threshold
+PROPERTY Viewport.msaa_3d
+PROPERTY DirectionalLight3D.light_specular
+PROPERTY DirectionalLight3D.name
+PROPERTY DirectionalLight3D.shadow_enabled
+METHOD RenderingServer.environment_set_ssao_quality(quality, half_size, adaptive_target, blur_passes, fadeout_from, fadeout_to)
+METHOD RenderingServer.directional_soft_shadow_filter_set_quality(quality)
+METHOD RenderingServer.directional_shadow_atlas_set_size(size, is_16bits)
+METHOD RenderingServer.environment_set_sdfgi_ray_count(ray_count)
+METHOD RenderingServer.environment_set_ssil_quality(quality, half_size, adaptive_target, blur_passes, fadeout_from, fadeout_to)
+METHOD RenderingServer.environment_set_volumetric_fog_volume_size(size, depth)
+METHOD RenderingServer.get_video_adapter_name()
+METHOD RenderingServer.get_current_rendering_method()
+```
+
+Renderer settings leave these gaps for later rounds, ranked by expected visual weight:
+
+1. Terrain and architecture mass, including the keyframe's enclosed ledges, eroded overhangs and giant wheel. Light cannot turn the current dam and broad open ground into that composition.
+2. Surface detail and material response, including chipped paint, rock fractures, roughness variation and dusty edges. Existing materials determine the remaining flatness under better light.
+3. Prop and vehicle silhouettes, density and placement, including the plated pod bowl and readable machinery in the middle distance.
+4. Local dust trails, particles and spatially varied haze. Global volumetric fog can produce occluded sun shafts but cannot author localized drifting dust or impact plumes.
+5. A richer sky panorama and cloud treatment if aerial perspective alone leaves the sky shallow.
+
+The next round needs the six PNGs and both `frames.json` files. Judge the next 40 m of ground, hazard/mint separation, pilot shadow noise and the play median before changing settings. The writer leaves the scoped changes uncommitted for the coordinator.
+
+## Renderer and surface correction, unit LK round 2, 2026-10-02
+
+The coordinator's RTX 4080 captures at `artifacts/local/alpha/look/r1/` showed a worse play view under round-1 target: the ball lost its separate ground shadow, the dune lost its shaped shadow and haze washed out the dam. High measured 8.556 ms median and target 10.1895 ms, a 1.6335 ms difference. Both wall-time samples include simulation and were taken under host load 21–26 on 32 cores. They do not qualify either absolute frame budget. The writer verified all six PNG hashes against the two capture manifests and retained their metadata in [r1-source.json](../../artifacts/local/lk-r2/r1-source.json).
+
+Part A restores high's sun rotation (-36,-55,0), energy 2.35, fill 0.5, colour #ffd49a, two shadow splits, 180 m shadow distance, normal bias 0.65, angular size 0 and split 0.18. Exposure 1.1, AgX contrast 1.25, saturation 1.2 and all depth-fog properties also match high. SDFGI, SSIL, volumetric fog and aerial perspective are off. Global shafts are dropped because the first capture did not show a useful shaft worth its veil. SSAO remains a small contact improvement at radius 0.55, intensity 1.25 and detail 0.40. No additional light or fog node is created.
+
+The [headless shadow probe](../../artifacts/local/lk-r2/shadow-probe.log) isolates the changed sun elevation geometrically. At the play anchor, the ray from the ground toward the -36 degree sun is clear. At -28 degrees it intersects the western terrain rim at (-141.60,70.40,-49.86). That change puts the ground below the ball in the rim's shadow, so the ball cannot cast a separate direct-light shadow there. The row comment and preset test now pin the proven sun, distance, bias and split. The probe establishes light-path occlusion; a returned GPU still must confirm the ball's visible height cue.
+
+The site's hard dark edge is a renderer coverage artefact rather than the boundary of a real cast shadow at that location. Rays through site pixels x=1450–1900, y=550/750/950 meet the same western terrain occluder on both sides under the -28 degree sun; those ground points should all be shadowed. They lie well inside the 160 m fog length. A directional shadow cascade/frustum edge is the leading explanation, but the first images cannot isolate it from SDFGI coverage without a GPU ablation. Restoring high's directional shadow configuration and disabling SDFGI and volumetric fog removes the round-1 coverage changes. Exact subsystem attribution and disappearance in the image remain GPU checks.
+
+Part B adds procedural detail only under target. The original Palette file is preserved as a byte-identical prefix; all new construction is appended. The terrain edit adds one material-registration line after the original ground material selection. The preset binds scenery materials after the existing opaque merge, so shaders cannot prevent that merge or split its batch. It stores the original overrides and active materials, uses instance surface overrides on the imported dam, and restores the exact resources on high/low. It does not mutate original materials, mesh slots, vertices, colliders, transforms or shadow-caster flags.
+
+| Surface | Intended look in the returned stills | Readability guard |
+| --- | --- | --- |
+| Ground, `target_ground.gdshader` | Broad packed-sand variation, fine grain and shallow ripple relief; slope blends add small strata cavities on steep terrain faces. | Existing vertex colour carries the hue. Value modulation stays within 0.84–1.08; fine grain fades with screen footprint. No displacement or moving noise. |
+| Rock, `target_rock.gdshader` | Warped horizontal beds, dark thin cavities, a lighter worn lip and fine relief. | Desaturated stone #bca382, shallow relief, mild AO and filtered seams. No mint, amber or hazard pigment is introduced. |
+| Dam, `target_dam.gdshader` | World-space 3 x 2 m plate seams, vertical dirt variation and small worn/chipped seam edges. | Source vertex colours and material tint carry hue. The shared dressing batch applies seams only inside the authored dam envelope, z>=215, y>=60, abs(x)<146. Water, actors and telegraphs retain their materials. |
+
+The shaders share `target_surface.gdshaderinc`, use world metres and derivative normal relief, and add no texture file. `material_ground`, `material_rock` and `material_dam` are independent row switches that restore each surface's original material when disabled. `material_detail` and `material_relief` independently control visual detail and normal relief in the target resources.
+
+For the revised 3 ms incremental play budget, first turn off `material_relief` to cut derivative normal work. Then set `material_dam=false`, which removes the additional plate shader and its weathering calculations. Next set `material_rock=false`; keep the ground grain as long as it remains stable at speed. If necessary, restore high's SSAO radius/intensity/detail. GI, volumetric fog and PCSS are already off. These cuts need back-to-back GPU and wall-time captures; no incremental cost was measured here.
+
+The label leak was `WorldPrompt`, a screen-space Label outside the HUD layer, not Label3D. Capture now hides all CanvasItems, CanvasLayers and Label3D nodes, disables layer processing that can reveal prompts, and repeats the hide immediately before each still. The tool still measures the unfrozen scene and rebuilds a seeded frozen scene for the three stills.
+
+The engine's ClassDB dump printed these timing methods:
+
+```text
+METHOD RenderingServer.viewport_set_measure_render_time(viewport, enable)
+METHOD RenderingServer.viewport_get_measured_render_time_cpu(viewport)
+METHOD RenderingServer.viewport_get_measured_render_time_gpu(viewport)
+METHOD RenderingServer.get_frame_setup_time_cpu()
+```
+
+Capture enables measurement on the root viewport before warmup and retains 240 wall intervals beside 240 samples for each engine measure. `timing.gpu_render`, `timing.cpu_render` and `timing.cpu_frame_setup` each contain `median_ms`, `p95_ms`, `samples_ms`, `sample_count` and `available`. Any zero sample marks that summary unavailable rather than certifying a zero-cost renderer. GPU timestamps can arrive behind the corresponding wall sample. The CPU viewport timing excludes scripts and simulation; setup is recorded separately, so their medians must not be added as if they were one median. CPU scheduling and GPU clocks still respond to host conditions. See the [engine timing documentation](https://docs.godotengine.org/en/latest/classes/class_renderingserver.html#class-renderingserver-method-viewport-get-measured-render-time-cpu).
+
+The [base renderer comparison](../../artifacts/local/lk-r2/baseline-check.log) passes for fresh high/low and target-to-high/low against commit 79f62ab: 76 properties and six recorded server-setting groups. The [preparation check](../../artifacts/local/lk-r2/prepare_baseline.py) pins unchanged high/low rows, the original renderer setter body, all original Palette constructors and the one-line terrain fence. `target_material_test.gd` stages a live Warden and chaser, then checks 544 mesh instances and 568 active material slots. It also pins every unbound actor, prop and effect material under target. It verifies resource identity and every stored material value on high/low, all target roles, unchanged mesh/caster state, shader uniform/include parsing, label hiding, median/p95 calculation and unavailable timestamps. The target game also stages 120 physics frames headlessly without an error line.
+
+The round-1 smoke list plus `target_material_test` passes; lint reports zero findings. Headless capture still exits 2 without script error. The checks establish engine resource parsing and binding, not Forward+ shader execution or appearance. No rendered image was generated in the writer sandbox. Ball shadow visibility, absence of the site edge, dam colour at 150 m, fine-detail stability, actor/telegraph separation and the <=3 ms GPU increment remain coordinator checks. Changes are uncommitted for coordinator admission and capture.
+
+## Colour, readable detail and dressing, unit LK round 3, 2026-10-02
+
+Base: `e1f734d`. The coordinator's RTX 4080 captures put GPU medians at 0.875 ms
+for high and 0.883 ms for target. Round 2 restored the ball's ground shadow and
+removed the site edge. This round leaves the accepted sun, shadow, fog and grade
+unchanged. All comparisons of rendered colour, detail and cost still require the
+coordinator's next capture. No GPU capture runs in the writer sandbox.
+
+### Part A: retain the surface colours
+
+Ground gets `Palette.SAND` through a `source_color` base uniform, with
+`Palette.SANDSTONE` for its slope blend. Rock gets `Palette.SANDSTONE` through the
+same uniform path. This replaces round 2's raw terrain vertex tint and separate
+pale stone colour. The dam keeps the original material's albedo colour, source map
+and baked linear vertex colours. Round 2 explicitly removed that map inside the
+dam envelope, losing the map's rust hue; this round samples it there too.
+
+The established ground and rock shaders do not expose one base-colour uniform,
+and the dam's merged material contains multiple authored vertex tints and a colour
+texture rather than one Palette constant. The target factory therefore uses the
+terrain's shared palette constants and copies the dam's actual source inputs.
+Changing the high constructors to invent a common constant would violate scope.
+The colour test independently compares ground/rock uniforms to those constants
+and every dam uniform/map to its original material. Procedural detail multiplies
+each source albedo by a scalar clamped to 0.75–1.2, with detail strength clamped to
+0–1. It adds no hue. For the dam this bound is relative to the original textured
+pixel, not its white material tint alone.
+
+The shader source scan rejects numeric vec3/vec4 literals outside uniform defaults,
+including signed and exponential literals. The red run deliberately set the ground
+base to white and exited 1. Restoring the palette base passed the same test.
+
+### Part B: patterns in world metres
+
+| Surface | Layers and scale |
+| --- | --- |
+| Sand | Ripples every 0.6 m, bent over 12 m; drift lines every 4 m, bent over 18 m; continuous packed-sand field with principal wavelengths 16 m and 19.75 m and phase-warp wavelengths 21.92 m and 26.23 m; non-repeating fine grain on a 0.026 m noise lattice. |
+| Ground slopes and rock | Strata every 1.2 m vertically, warped over 24 m in X and 18 m in Z; darker recesses and worn lips share that period. Rock erosion has principal wavelengths 8 m and 9.88 m, with phase-warp wavelengths 10.96 m and 13.11 m. Rock grain uses a non-repeating 0.083 m lattice. |
+| Dam | Panels 3 × 3 m, seams roughly 0.05–0.17 m wide after antialiasing; streak field has principal wavelengths 0.8 m horizontally and 9.88 m vertically, phase warps over 10.96 m vertically and 1.31 m horizontally; seam-edge chips use a non-repeating 0.111 m lattice. The existing source map repeats every 6 m. |
+
+The old broad field used a 4.17 m value-noise lattice. It already interpolated its
+samples, so missing interpolation was not the cause. That cell-shaped field, raw
+2 m terrain vertex tint and derivative relief from fine grain were the patch-producing
+paths present in round 2. The new macro field is continuous sine-based variation,
+uses palette uniforms instead of raw vertex tint and excludes fine-grain derivatives
+from relief. Pinning the exact contribution of each old path would require rendered
+ablation; removal of the pictured patches remains a GPU check. Ground and rock
+have no time input or displacement. Fine grain fades with pixel footprint.
+
+### Part C: deterministic dressing and air
+
+`set_dressing`, `air_motes` and `air_streaks` are independent target keys. High and
+low create none of their nodes. Presentation creates/frees one target-only root on
+preset changes. Stage entry rebuilds it from the map id's hash and a private RNG;
+no gameplay RNG, terrain, collision, player, enemy or camera state is written.
+
+Pebbles, charcoal scrap flakes and muted sand tufts use three MultiMesh batches.
+Their placement avoids the scrap lines, beacon bowl, spawn, vault and device sites.
+The height test transforms every vertex from the exact submitted instance buffer
+and compares it to the sampled terrain. It measured a maximum 0.170 m protrusion
+across 1,173 small props in the Spillway. Broken rocks use a fourth batch on
+unclimbable slopes outside the play rectangle plus an apron. Their actual mesh
+extents stay inside 0.5–2 m. There are 53 in the tested Spillway. No batch casts
+shadows or has a collider.
+
+Air uses 160 tiny camera-facing dust cards and one batch of low ground streaks.
+Motes are seeded 2–29 m ahead; fragment opacity fades to zero by 30 m radial camera
+distance. Streaks move along the common XZ wind `(0.93, 0.367)` and use the same
+30 m cutoff. Peak alphas are 0.025 and 0.018 respectively, with feathered edges,
+no emission and no depth writes. A simulation-driven effect clock freezes with the
+capture. These cards cannot establish volumetric shafts or long-distance haze.
+
+Each prop and air shader clears padded screen rectangles around the player,
+enemies, scrap pickups and committed telegraphs. More than 64 protected objects
+hides the entire dressing root. The active camera drives the masks and dust box;
+the capture tool explicitly refreshes them after a frozen camera change. This avoids
+masking the wrong view when the tool uses a camera separate from the chase camera.
+The tool hashes the new presentation sources and shaders too.
+
+The headless dummy server does not support MultiMesh transform readback. Production
+submits one packed instance buffer and retains that exact buffer on the batch for
+the test to decode. This proves placement heights and seed reproducibility from
+submitted instances; GPU execution and pixel coverage are separate evidence.
+
+### Cost estimates and cut order
+
+These are planning estimates for incremental GPU time at 1080p, not measurements:
+material changes 0.05–0.20 ms; four prop batches 0.15–0.50 ms; dust 0.02–0.10 ms;
+streaks 0.02–0.10 ms. The expected total increase is under 1 ms, with the actual
+acceptance cap at 3 ms above high. Live protection rectangles also add unmeasured
+CPU work; GPU headroom does not establish a wall-time improvement.
+
+First disable `air_streaks`, then `air_motes`, then reduce prop density or disable
+`set_dressing`. If materials are costly, disable `material_relief` before restoring
+the dam/rock materials. Keep the accepted sun/shadow/fog values and readable sand
+ripples. The coordinator checks hue/value against high, ripple/strata/seam scale,
+patch removal, masking around feet and pickups, mote/streak opacity, shimmer at
+speed and the target-versus-high GPU delta. Native shader backend compilation and
+all of those image/playing judgments remain outside headless acceptance.
+
+## Target look, round 4 (rendered and viewed)
+
+Round 4's writer could render. The causes found by looking, not by test:
+
+- Every prop batch was invisible. A `visibility_range_end` is measured to the batch's bounds centre, and a map-wide batch's centre sat over 100 m from the camera. Props now rely on frustum culling; only the camera-anchored motes keep a range.
+- Sand was pale and blue-grey in shadow because `target_ground` ignored the floor map and the baked vertex tint. It now uses both (the floor map comes from the original ground material) so the mean colour sits within CIE76 1.3 of `high`.
+- Ripples and drift are weighted by flatness (zero at 15 degrees and above); steep faces take strata that follow height (bright lip, dark undercut, cracks).
+- Debris gathers in seeded drifts, is wide and low (protrusion stays under 0.2 m), and broken rock only stands at a cliff foot.
+- Scrap protection rects fill the slots actors and threats leave, nearest the camera first; actor and threat overflow still hides the dressing. A harmless telegraph protects its edge, not its whole disc.
+- `tools/still_compare.gd` prints per-rectangle mean colour and CIE76 distance between two stills.

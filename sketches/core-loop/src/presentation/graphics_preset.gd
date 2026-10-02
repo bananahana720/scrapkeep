@@ -8,10 +8,31 @@ const PRESETS := {
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
 		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.5},
+	# R1's -28 degree sun puts play ground in the western rim's shadow; the ball loses
+	# its separate height cue. Keep high's -36 degree sun, PSSM, bias and grade pinned.
+	# No global shaft veil: leave volumetric fog off until a bounded occluder test earns it.
+	"target": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
+		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
+		"ambient": 0.28, "sun": 2.35, "fog": 0.0006,
+		"sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5,
+		"sdfgi": false, "ssil": false, "volumetric_fog": false,
+		"shadow_atlas": 4096, "sdfgi_rays": 1, "ssil_quality": 2,
+		"fog_volume_size": 64, "fog_volume_depth": 64,
+		"material_detail": true, "material_relief": true,
+		"set_dressing": true, "air_motes": true, "air_streaks": true,
+		"material_ground": true, "material_rock": true, "material_dam": true,
+		"environment": {"ssao_radius": 0.55, "ssao_intensity": 1.25, "ssao_detail": 0.40},
+		"sun_properties": {"light_angular_distance": 0.0, "shadow_normal_bias": 0.65,
+			"directional_shadow_split_1": 0.18},
+		"sky_properties": {},
+	},
 }
 static var current := "high"
 static var _worlds: Array = []
 static var _scenery: Array = []
+static var _target_server_active := false
+static var _materials: Array = []
+static var _dressing_hosts: Array[WeakRef] = []
 
 static func apply(preset: String) -> bool:
 	if not PRESETS.has(preset):
@@ -23,7 +44,17 @@ static func apply(preset: String) -> bool:
 	_scenery = _scenery.filter(func(w): return w.get_ref() != null)
 	for ref in _scenery:
 		_apply_scenery(ref.get_ref())
+	_materials = _materials.filter(func(w): return w.view.get_ref() != null)
+	for binding in _materials:
+		_apply_material(binding)
+	_dressing_hosts = _dressing_hosts.filter(func(ref): return ref.get_ref() != null)
+	for ref in _dressing_hosts:
+		ref.get_ref()._sync_dressing()
 	return true
+
+static func register_dressing_host(host: Node) -> void:
+	_dressing_hosts.append(weakref(host))
+	host._sync_dressing()
 
 static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Viewport) -> void:
 	for arg in OS.get_cmdline_user_args():
@@ -36,6 +67,7 @@ static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Vi
 static func register_scenery(view: GeometryInstance3D) -> void:
 	_scenery.append(weakref(view))
 	_apply_scenery(view)
+	_bind_scenery_material.call_deferred(weakref(view))
 
 static func _apply_scenery(view: GeometryInstance3D) -> void:
 	view.visibility_range_end = PRESETS[current].scenery_distance
@@ -43,6 +75,9 @@ static func _apply_scenery(view: GeometryInstance3D) -> void:
 	view.lod_bias = 1.0 / PRESETS[current].lod_threshold
 
 static func _apply_world(world: Dictionary) -> void:
+	_restore_target(world)
+	if current != "target" and _target_server_active:
+		_restore_target_server()
 	var spec: Dictionary = PRESETS[current]
 	var env: Environment = world.environment
 	var sun: DirectionalLight3D = world.sun.get_ref()
@@ -98,6 +133,8 @@ static func _apply_world(world: Dictionary) -> void:
 	if viewport != null:
 		viewport.msaa_3d = spec.msaa
 		viewport.mesh_lod_threshold = spec.lod_threshold
+	if current == "target":
+		_apply_target(world, spec, env, sun)
 
 
 # One shadowless cool directional fill opposite the sun (LIGHTING-TARGETS: elevation 50,
@@ -119,3 +156,96 @@ static func _apply_fill(sun: DirectionalLight3D, spec: Dictionary) -> void:
 	fill.rotation_degrees = Vector3(-50.0, spec.sun_rotation.y + 180.0, 0.0)
 	fill.light_energy = spec.fill
 
+
+# Snapshot only the renderer properties target overrides. Returning to either established
+# preset restores untouched defaults too, including the terrain's existing sky resource.
+static func _target_properties(world: Dictionary, object: Object, values: Dictionary) -> void:
+	if object == null:
+		return
+	var saved := {}
+	for key in values:
+		saved[key] = object.get(key)
+		object.set(key, values[key])
+	world.target_defaults.append({"object": object, "values": saved})
+
+
+static func _restore_target(world: Dictionary) -> void:
+	for row in world.get("target_defaults", []):
+		if is_instance_valid(row.object):
+			for key in row.values:
+				row.object.set(key, row.values[key])
+	world.erase("target_defaults")
+
+
+static func _apply_target(world: Dictionary, spec: Dictionary, env: Environment, sun: DirectionalLight3D) -> void:
+	world.target_defaults = []
+	_target_properties(world, env, spec.environment)
+	_target_properties(world, env, {"sdfgi_enabled": spec.sdfgi,
+		"ssil_enabled": spec.ssil, "volumetric_fog_enabled": spec.volumetric_fog})
+	_target_properties(world, sun, spec.sun_properties)
+	_target_properties(world, env.sky, spec.sky_properties)
+	RenderingServer.directional_shadow_atlas_set_size(spec.shadow_atlas, true)
+	RenderingServer.environment_set_sdfgi_ray_count(spec.sdfgi_rays)
+	RenderingServer.environment_set_ssil_quality(spec.ssil_quality, true, 0.5, 2, 50.0, 300.0)
+	RenderingServer.environment_set_volumetric_fog_volume_size(spec.fog_volume_size, spec.fog_volume_depth)
+	_target_server_active = true
+
+
+static func _restore_target_server() -> void:
+	var shadows := "rendering/lights_and_shadows/directional_shadow/"
+	RenderingServer.directional_shadow_atlas_set_size(ProjectSettings.get_setting(shadows + "size"), ProjectSettings.get_setting(shadows + "16_bits"))
+	RenderingServer.environment_set_sdfgi_ray_count(ProjectSettings.get_setting("rendering/global_illumination/sdfgi/probe_ray_count"))
+	var ssil := "rendering/environment/ssil/"
+	RenderingServer.environment_set_ssil_quality(ProjectSettings.get_setting(ssil + "quality"), ProjectSettings.get_setting(ssil + "half_size"), ProjectSettings.get_setting(ssil + "adaptive_target"), ProjectSettings.get_setting(ssil + "blur_passes"), ProjectSettings.get_setting(ssil + "fadeout_from"), ProjectSettings.get_setting(ssil + "fadeout_to"))
+	var fog := "rendering/environment/volumetric_fog/"
+	RenderingServer.environment_set_volumetric_fog_volume_size(ProjectSettings.get_setting(fog + "volume_size"), ProjectSettings.get_setting(fog + "volume_depth"))
+	_target_server_active = false
+
+
+# Bind after the scenery builder's opaque merge. Changing the input materials before
+# that merge would split its batch and change the scene's geometry/draw structure.
+static func _bind_scenery_material(ref: WeakRef) -> void:
+	var view := ref.get_ref() as MeshInstance3D
+	if view == null:
+		return
+	match String(view.name):
+		"SandstoneShoulders":
+			_bind_material(view, "rock")
+		"DamAndLedgeDressing", "DamDetail":
+			_bind_material(view, "dam")
+
+
+static func register_ground(view: MeshInstance3D) -> void:
+	_bind_material(view, "ground")
+
+
+static func _bind_material(view: MeshInstance3D, role: String) -> void:
+	var surfaces := []
+	var originals := []
+	for i in view.mesh.get_surface_count():
+		surfaces.append(view.get_surface_override_material(i))
+		originals.append(view.get_active_material(i))
+	var binding := {"view": weakref(view), "role": role,
+		"override": view.material_override, "surfaces": surfaces, "originals": originals}
+	_materials.append(binding)
+	_apply_material(binding)
+
+
+static func _apply_material(binding: Dictionary) -> void:
+	var view := binding.view.get_ref() as MeshInstance3D
+	if view == null:
+		return
+	if current != "target" or not PRESETS.target["material_" + binding.role]:
+		view.material_override = binding.override
+		for i in binding.surfaces.size():
+			view.set_surface_override_material(i, binding.surfaces[i])
+		return
+	var palette := preload("res://src/core/palette.gd")
+	for i in binding.originals.size():
+		var material := palette.target_surface_material(binding.role, binding.originals[i])
+		material.set_shader_parameter("detail_enabled", PRESETS.target.material_detail)
+		material.set_shader_parameter("relief_enabled", PRESETS.target.material_relief)
+		if binding.override != null:
+			view.material_override = material
+			break
+		view.set_surface_override_material(i, material)

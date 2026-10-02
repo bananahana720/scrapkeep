@@ -10,6 +10,8 @@ const StatusMarks := preload("res://src/presentation/status_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Parts := preload("res://src/build/parts.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
@@ -42,6 +44,7 @@ var status_marks
 var banner
 var hero_assets
 var ceremony
+var set_dressing: Node3D
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -87,6 +90,7 @@ func setup(ctx_ref) -> void:
 	add_child(ceremony)
 	ceremony.setup(ctx, audio, juice, vfx)
 	wire_optional()
+	GraphicsPreset.register_dressing_host(self)
 
 
 # Connects the demo-spec signals the bus has now. Safe to call again after the spine
@@ -167,3 +171,14 @@ func _codex_entry(id: String) -> Dictionary:
 	if codex.has_method("name_of"):
 		return {"name": codex.name_of(id)}
 	return {}
+
+
+func _sync_dressing() -> void:
+	if is_instance_valid(set_dressing):
+		set_dressing.free()
+	set_dressing = null
+	var spec: Dictionary = GraphicsPreset.PRESETS.target
+	if GraphicsPreset.current == "target" and (spec.set_dressing or spec.air_motes or spec.air_streaks):
+		set_dressing = SetDressing.new()
+		add_child(set_dressing)
+		set_dressing.setup(ctx)
