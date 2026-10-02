@@ -812,6 +812,7 @@ func _connect_all(events) -> void:
 		_heft_class = 1
 		_hull_seen = 0.0
 		_fired_this_run.clear()
+		_line_was = ""
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
 		engine.set_fleet_ticks(0)
@@ -821,6 +822,7 @@ func _connect_all(events) -> void:
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
 	events.run_ended.connect(func(won: bool):
 		engine.set_reactor_pedal(false)
+		_line_was = ""
 		_stop_hum()
 		_flow_queue.append(["end", won]))
 	events.beacon_charge_changed.connect(_on_beacon)
@@ -1162,13 +1164,16 @@ func _stop_hum() -> void:
 # Follows the line each frame: its pitch from the gap on a body, and an end the line never
 # announced (a reset or a restore) stops it.
 func _tend_hum() -> void:
-	if not hum_on:
-		return
 	var player = ctx.get("player")
 	if player == null or player.get("kit") == null:
 		return
 	var kit = player.kit
-	if not kit.hooked or player.frozen():
+	var standing: bool = kit.hooked and not player.frozen()
+	if not hum_on:
+		if standing and _line_was in HUM_STATES:
+			_start_hum()
+		return
+	if not standing:
 		_stop_hum()
 		return
 	hum_pitch = hum_ratio(player.ball_position().distance_to(kit.anchor)) if kit.on_body else 1.0
@@ -1228,6 +1233,7 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	_line_was = ""
 	engine.set_overcharge(0)
 	if retry:
 		_disarm_launch()
@@ -1399,6 +1405,7 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 
 
 func _on_died() -> void:
+	_line_was = ""
 	_stop_hum()
 	play("player_died")
 	_flow_queue.append(["dead"])
@@ -1736,11 +1743,6 @@ func _flush_flow() -> void:
 # --- Mixer keys ---------------------------------------------------------------------
 # - and = move the music, [ and ] move the effects, M mutes everything.
 
-# The dev keys answer only to a game launched with --dev.
-static func _dev_launch() -> bool:
-	return "--dev" in OS.get_cmdline_args() or "--dev" in OS.get_cmdline_user_args()
-
-
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
@@ -1759,7 +1761,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_apply_volumes()
 			_show_mixer()
 		KEY_F6:
-			if not _dev_launch():
+			if not ctx.dev:
 				return
 			engine.boss_pivot = not engine.boss_pivot
 			_show_text("Boss tempo: %s (F6)" % ("129 by metric modulation" if engine.boss_pivot else "four on the floor held at 172"))

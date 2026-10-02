@@ -148,9 +148,7 @@ static func view_of(player) -> Dictionary:
 	var ready := {}
 	for verb in PROMPT_VERBS:
 		ready[verb] = player.verb_ready(verb)
-	var claim: Callable = player.interact_claim
-	var taken: bool = claim.is_valid() and claim.call(true) and not player.mobility_started()
-	ready["interact"] = ready["interact"] and not taken
+	ready["interact"] = player.mount_ready()
 	ready["jump"] = ready["jump"] and kit.mounted
 	return {
 		"ready": ready,

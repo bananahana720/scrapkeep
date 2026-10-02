@@ -30,7 +30,6 @@ const Bindings := preload("res://src/core/bindings.gd")
 
 const RESTART_HOLD := 0.5
 const SUMMARY_GUARD := 0.75
-const DEAD_GUARD := 0.5
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const HIT_STOP_BUDGET := 0.12
@@ -46,9 +45,13 @@ var test_mode := false
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
 # --table= from the launch args, and no argument is the default table.
 var table := ""
-# The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump) work only when the game was
-# launched with --dev; a test sets it directly.
-var dev := false
+# The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump, F6 boss tempo) work only when
+# the game was launched with --dev; a test sets it directly. Modules read ctx.dev.
+var dev := false:
+	set(value):
+		dev = value
+		if ctx != null:
+			ctx.dev = value
 
 var events
 var run
@@ -81,9 +84,6 @@ var _restart_latched := false
 # Seconds before the summary takes a key: the victory beat ends while the player may
 # still be pressing Space to jump, and the run's only summary must stay readable.
 var summary_guard_left := 0.0
-# Seconds before the death screen's C takes a press: C is the burst key under the keep
-# layout, so a reflex press as the ball dies must not cost the run its retry.
-var dead_guard_left := 0.0
 var _hit_stopped := false
 # The loop modes' hit-stop budget: [msec, seconds] per stop taken, and the running totals.
 var _stop_log: Array = []
@@ -99,9 +99,7 @@ func _ready() -> void:
 	add_child(events)
 	events.flow_changed.connect(func(state: String):
 		if state == "summary":
-			summary_guard_left = SUMMARY_GUARD
-		if state == "dead":
-			dead_guard_left = DEAD_GUARD)
+			summary_guard_left = SUMMARY_GUARD)
 	run = RunState.new(events)
 	tuning = Tuning.new()
 	tuning.apply_cmdline("launch")
@@ -123,6 +121,7 @@ func _ready() -> void:
 	beacon.setup()
 
 	ctx = Context.new(hit_stop)
+	ctx.dev = dev
 	ctx.stages = _chosen_table()
 	ctx.events = events
 	ctx.run = run
@@ -246,7 +245,6 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
-	dead_guard_left = maxf(0.0, dead_guard_left - delta)
 	if test_mode:
 		return
 	step_restart_hold(delta, Input.is_physical_key_pressed(KEY_R))

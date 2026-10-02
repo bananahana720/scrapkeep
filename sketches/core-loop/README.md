@@ -27,24 +27,22 @@ If you are scrapped, press R to retry the stage from its start, N for a new run,
 | W A S D | drive, relative to where the camera looks |
 | mouse | look |
 | Space | jump and double jump, every class. Sable: in the air at a steep face it is the vault kick; mounted, hold and release to slingshot off. Kest: hold falling to glide; hold inside your own blast to rocket jump |
-| Shift | boost, every class |
-| Ctrl | brake; airborne it is the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam |
+| Shift | the pilot's go verb: Sable's boost, Rivet's overdrive sprint while held, Kest's smoke blink |
+| Ctrl | haul the line in: the smash on an enemy, the winch on the world. With no line it is the brake; airborne it is the slam: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam |
 | left mouse | the class weapon. Sable's arc caster and Rivet's laser fire while held. Kest holds to aim a sticky charge and releases to throw it |
-| right mouse | the class movement. Sable: the grapple at the reticle's target, release to let go. Rivet: overdrive sprint while held. Kest: smoke blink. During a charge it cancels the charge |
+| right mouse | the harpoon, every pilot: press to bite the reticle's target, hold to keep the line (a line on an enemy reels you in), release to let go and fling. During a charge it cancels the charge |
 | F (hold, release) | the class special: hold to fill the gauge, release to fire. Sable's detonation gauge, Rivet's overdrive blast, Kest's detonation line. Planting a pylon still fires Sable's discharge free |
-| Q (hold) | Sable: winch, haul toward the hook |
 | E | interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet (the ring round the reticle fills), press it for a cache; inside an amber lane it arms the ride, which fires as you cross the mouth. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; press again to drop off |
-| mouse wheel | Sable: down pays rope out, up notches it in |
 | Tab (hold) | field notes and the codex; the game pauses while held; Q and E switch pages |
 | - / = | music volume down / up |
 | [ / ] | effects volume down / up |
 | M | mute or unmute |
-| F6 | boss tempo: 129, or 172 while held |
 | P, Esc or pad Start | pause menu: resume, restart run, field notes, music and effects volume, quit; mouse or keys. Closed while an upgrade pick or Moss's counter is open |
 | R (hold) | retry the stage from its start |
-| F1 | tuning panel (frees the mouse) |
-| F3 | physics interpolation on or off (off by default) |
-| F4 | save every tuning value to `user://tuning-<time>.json` |
+| F1 | tuning panel (frees the mouse); a game launched with `--dev` only |
+| F3 | physics interpolation on or off (off by default); `--dev` only |
+| F6 | boss tempo: 129, or 172 while held; `--dev` only |
+| F4 | save every tuning value to `user://tuning-<time>.json`; `--dev` only |
 
 On the screens outside play, every choice is also a button: click it, or press the key on its cap.
 

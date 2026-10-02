@@ -47,6 +47,8 @@ var rng := RandomNumberGenerator.new()
 # Set by the spine tests that measure momentum: while true, modules spawn no enemies
 # and apply no world pushes, so a speed check measures the ball and the seams alone.
 var calm := false
+# The game was launched with --dev: the dev keys (F1, F3, F4, F6) answer.
+var dev := false
 
 var _hit_stop: Callable
 

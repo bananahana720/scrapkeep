@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -396,11 +397,6 @@ func cut_line(cause := "hold") -> void:
 	kit.drop_line(cause)
 
 
-# Unused: the wheel does not move the line. game.gd's wheel handler still calls it.
-func reel_step(_metres: float) -> void:
-	pass
-
-
 func grapple_range() -> float:
 	return tuning.f("rope_range")
 
@@ -467,7 +463,7 @@ func _read_grammar() -> void:
 
 
 func _burst_key() -> String:
-	return AbilityState.KEYS[AbilityState.MOVEMENT] if kit.movement_id == Augments.GRAPPLE else "Shift"
+	return AbilityState.KEYS[AbilityState.MOVEMENT] if kit.movement_id == Augments.GRAPPLE else Bindings.label("boost")
 
 
 # The pilot's class burst is on Shift (Rivet's sprint, Kest's blink); Sable's Shift is the
@@ -510,9 +506,7 @@ func verb_ready(verb: String) -> bool:
 				return false
 			var taken: bool = interact_claim.is_valid() and interact_claim.call(kit.on(Augments.PYLON) and face_in_reach()) \
 					and not mobility_started()
-			var would_mount: bool = kit.on(Augments.PYLON) and kit.mount_block <= 0.0 and face_in_reach() \
-					and (mobility_started() or not (interact_claim.is_valid() and interact_claim.call(true)))
-			return taken or would_mount
+			return taken or mount_ready()
 		"jump":
 			if _frozen:
 				return false
@@ -527,6 +521,12 @@ func verb_ready(verb: String) -> bool:
 				return Harpoon.burst_ready(kit)
 			return state.boost_cooldown <= 0.0 and not Augments.holding(kit)
 	return false
+
+
+# E would mount the pylon on this tick, and no interactable takes the press first.
+func mount_ready() -> bool:
+	return not _frozen and not kit.mounted and kit.on(Augments.PYLON) and kit.mount_block <= 0.0 and face_in_reach() \
+			and (mobility_started() or not (interact_claim.is_valid() and interact_claim.call(true)))
 
 
 func _harpoon_refusal() -> String:

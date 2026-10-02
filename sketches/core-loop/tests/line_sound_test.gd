@@ -331,6 +331,28 @@ func _hum() -> void:
 		await _sim(1)
 		_t.check("HLs-3 the hum is down one tick after %s" % route, up and not _audio.hum_on, "up before %s, hum_on %s after" % [up, _audio.hum_on])
 		_player.set_frozen(false)
+		if route == "frozen":
+			await _sim(1)
+			_t.check("HLs-3 the hum is back when the ball thaws on a standing line", _player.kit.hooked and _audio.hum_on,
+				"hooked %s, hum_on %s" % [_player.kit.hooked, _audio.hum_on])
 		_player.release_grapple()
 		await _sim(2)
 	target.queue_free()
+	_audio.cue_log.clear()
+	_game.events.line_state_changed.emit("rewinding", null, Vector3.ZERO, "")
+	_game.events.stage_entered.emit(1, true)
+	_game.events.line_state_changed.emit("searching", null, Vector3.ZERO, "")
+	_t.eq("a reset during the rewind docks nothing", _count("dock_click", "now"), 0)
+	var pivot: bool = _audio.engine.boss_pivot
+	var f6 := InputEventKey.new()
+	f6.physical_keycode = KEY_F6
+	f6.pressed = true
+	_game.dev = false
+	_audio._unhandled_key_input(f6)
+	var shut: bool = _audio.engine.boss_pivot == pivot
+	_game.dev = true
+	_audio._unhandled_key_input(f6)
+	var open: bool = _audio.engine.boss_pivot != pivot
+	_game.dev = false
+	_audio.engine.boss_pivot = pivot
+	_t.check("F6 answers only to a dev launch", shut and open, "unchanged without dev %s, toggled with it %s" % [shut, open])

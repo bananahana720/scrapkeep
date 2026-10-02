@@ -226,6 +226,7 @@ func _run() -> void:
 		await _ready_walk(name)
 		await _ctrl_on_lines(name)
 	await _prompt_verbs()
+	await _device_claim()
 	await _rope_anchor()
 	await _death_cuts()
 	_all_rows()
@@ -507,6 +508,21 @@ func _body_reel(name: String) -> void:
 
 
 # A world line: right mouse bites and holds it, Ctrl winches it, release lets go.
+# An interactable that takes E is not a mount: the press is ready, the pylon prompt is not.
+func _device_claim() -> void:
+	_pilot("rivet")
+	var held: Callable = _player.interact_claim
+	_player.interact_claim = func(face: bool) -> bool: return not face
+	_place(_point(0, 0, 1.4))
+	await _sim(0.2)
+	var ready: bool = _player.verb_ready("interact")
+	var view: Dictionary = _game.hud.key_glyphs.view_of(_player)
+	var drawn: Array = _game.hud.key_glyphs.shown_verbs()
+	_check("rivet: a device takes E, and no mount prompt is drawn", ready and not view["ready"]["interact"] and not drawn.has("interact"),
+		"verb_ready(interact) %s, prompt view %s, drawn %s" % [ready, view["ready"]["interact"], drawn])
+	_player.interact_claim = held
+
+
 # Death ends the latch, so nothing that follows the line (its sight, its hum, a prompt)
 # outlives the pilot.
 func _death_cuts() -> void:

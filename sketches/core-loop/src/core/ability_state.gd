@@ -136,8 +136,8 @@ class Slot:
 	var item_scale := 1.0
 
 
-# The key the movement slot shows: RMB, or under --harpoon Shift or C for a pilot whose
-# movement is not the rope (player_ball sets it).
+# The key the movement slot shows: RMB for the rope, Shift for a pilot whose movement is a
+# burst (player_ball sets it).
 var movement_key: String = KEYS[MOVEMENT]
 var _slots := {}
 

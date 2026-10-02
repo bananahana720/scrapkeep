@@ -178,7 +178,7 @@ const ROWS := {
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list.
-const GRAMMAR_SIGNALS := ["line_state_changed", "verb_failed", "cause_armed", "cause_fired", "posture_changed"]
+const GRAMMAR_SIGNALS := ["posture_changed"]
 
 # The laps mode's objective before the bell: the lap_bell_rung row carries it after.
 const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then lap the course: {lap} of {required}."
