@@ -9,7 +9,7 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # engaged, a boss plate mounted (a stand-in Control that reports two words), two prompts, one
 # named callout and a part name on screen. The words a player can read on the HUD must stay at
 # or under the budget. repeat_find primes the ceremony so the pickup is a repeat find and no
-# reveal card opens; without it the pickup is a first find. World signs (Label3D, owned by other
+# reveal card is held; without it the pickup is a first find, whose card waits for the fight to end. World signs (Label3D, owned by other
 # modules) are counted and reported beside it.
 
 const BUDGET := 25
@@ -103,7 +103,7 @@ func _stage_fight() -> void:
 	hud.key_glyphs.step(2.0, view)
 	game.events.cause_fired.emit("wrecking_ball", null, game.player.ball_position())
 	if _repeat_find:
-		game.presentation.ceremony.find_of("boost_coil", "pickup")
+		game.presentation.ceremony._mark_seen("boost_coil")
 	game.events.part_gained.emit("boost_coil", "pickup")
 
 

@@ -117,6 +117,20 @@ static func is_calm(left: float, tree: SceneTree) -> bool:
 	return left <= 0.0 and not threat_live(tree) and not (tree != null and tree.paused)
 
 
+# A Warden that is awake and still standing: the flow seals the stage on it and has
+# seen the ring or a strike. A find never speaks across that fight.
+static func warden_fight_live(flow) -> bool:
+	if flow == null or not flow.sealed or not is_instance_valid(flow.warden) or not flow._engaged:
+		return false
+	return not (flow.warden.has_method("is_dead") and flow.warden.is_dead())
+
+
+# The one gate for a find's card, read by the reward ceremony and the discovery banner:
+# calm as is_calm defines it, and no Warden engaged and alive in `flow`.
+static func find_may_speak(left: float, tree: SceneTree, flow) -> bool:
+	return is_calm(left, tree) and not warden_fight_live(flow)
+
+
 func fight() -> bool:
 	return not is_calm(_calm_left, get_tree() if is_inside_tree() else null)
 

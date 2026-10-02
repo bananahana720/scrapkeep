@@ -8,6 +8,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
+const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 # The reward ceremony (v3 W13, playtest entry 8 follow-up: "treasure find ceremony").
 # Every part_gained is presented at a tier, so a big find feels big and a small one stays
@@ -25,9 +26,13 @@ const RewardView := preload("res://src/ui/reward_view.gd")
 #             evolution: a crate shakes and cracks over a drum and bell build, bursts on
 #             a resolving chord and seats the part in a hull slot
 #
-# A ceremony pauses the tree only when calm: in play (or the victory roll), no committed
-# threat or enemy near, on the ground and not launching. Otherwise it waits for the next
-# calm, and after calm_wait_s it plays in the flow as a reveal card instead. The ball's
+# A card or a ceremony opens only when WhyCallout.find_may_speak says so (may_show_card):
+# calm, and no Warden engaged and alive. A first find that cannot yet is held, at most
+# MAX_HELD of them, and opens in the order found; a part is seen when its card is shown, so a
+# dropped one is still unseen. A repeat find shows no card; the name at the ball is all it
+# says. A ceremony also waits for calm(): in play (or the victory roll), no committed
+# threat or enemy near, on the ground and not launching, and it waits as long as that takes.
+# The ball's
 # velocity is exactly what it was when the pause began. Any key or click jumps to the
 # reveal, a second closes it. The pause menu's "Ceremonies: short" presents every find at
 # the rare tier. After a revealed or ceremonial part lands, the first time its effect
@@ -45,6 +50,7 @@ const PAYOFF_FACTS := ["enemy_struck", "shot_fired", "dashed", "slammed", "eleme
 	"boosted", "scrap_collected", "special_used", "player_hit"]
 const PAYOFF_BY_MOD := {"weapon_rate": "shot_fired", "weapon_range": "shot_fired", "dash_impulse": "dashed",
 	"rope_range": "grapple_fired", "cruise": "boosted"}
+const MAX_HELD := 3
 const CLOSE_SCREENS := ["title", "class_select", "summary", "dead"]
 
 var ctx
@@ -72,6 +78,7 @@ var _queue: Array = []
 var _cards: Array = []
 var _active := {}
 var _calm_since := -1
+var _calm_left := 0.0
 var _armed: Array = []
 var _paid := {}
 var _held_velocity := Vector3.ZERO
@@ -101,6 +108,7 @@ func setup(ctx_ref, audio_ref, juice_ref, vfx_ref) -> void:
 	layer.add_child(view)
 	var events = ctx.events
 	events.part_gained.connect(_on_part_gained)
+	events.player_hit.connect(func(_amount: float, _source: String): _calm_left = WhyCallout.CALM_SECONDS)
 	events.run_started.connect(func(_class_id: String): _reset(true))
 	events.player_died.connect(func(): _reset(false))
 	events.stage_entered.connect(func(_stage: int, retry: bool):
@@ -222,7 +230,6 @@ func find_of(part_id: String, source: String) -> Dictionary:
 	if at >= 0:
 		before.remove_at(at)
 	var first := not _seen.has(part_id)
-	_mark_seen(part_id)
 	var synergy := Parts.completed_by(part_id, before)
 	var partner := ""
 	var link := ""
@@ -269,6 +276,8 @@ static func _fed(part_id: String, before: Array) -> Array:
 
 
 func present(find: Dictionary) -> void:
+	if find["tier"] in ["reveal", "ceremony"] and not _may_hold(find):
+		find["tier"] = "rare" if find["tier"] == "reveal" and flares(find["rarity"]) else "common"
 	presented.append([find["part"], find["tier"], find["source"], find["at"]])
 	match String(find["tier"]):
 		"common":
@@ -280,7 +289,7 @@ func present(find: Dictionary) -> void:
 				_flare(find)
 			else:
 				audio.play("reward_common", 0.0, rung_pitch(find["rarity"]))
-			_queue_card(find)
+			_hold_card(find)
 		"ceremony":
 			audio.play("reward_common", 0.0, rung_pitch(find["rarity"]))
 			if pause_armed:
@@ -289,11 +298,30 @@ func present(find: Dictionary) -> void:
 				_demote(find)
 
 
+# Whether a find may wait for a card: a first find of a part nothing is already holding a
+# card for, with fewer than MAX_HELD waiting. Anything else shows its name at the ball only.
+func _may_hold(find: Dictionary) -> bool:
+	return find["first"] and not _is_held(find["part"]) and _queue.size() + _cards.size() < MAX_HELD
+
+
+func _is_held(part_id: String) -> bool:
+	for find in _queue + _cards:
+		if find["part"] == part_id:
+			return true
+	return not _active.is_empty() and _active["find"]["part"] == part_id
+
+
+# The shared gate: WhyCallout.find_may_speak with this node's own damage clock.
+func may_show_card() -> bool:
+	return WhyCallout.find_may_speak(_calm_left, get_tree() if is_inside_tree() else null, ctx.flow)
+
+
 func _flare(find: Dictionary) -> void:
 	var row := EventKinds.reward_row("rare")
 	audio.play("reward_rare", 0.0, rung_pitch(find["rarity"]))
 	if juice != null:
-		juice.request_hit_stop(float(row["stop_ms"]) / 1000.0, "reward_rare")
+		if may_show_card():
+			juice.request_hit_stop(float(row["stop_ms"]) / 1000.0, "reward_rare")
 	if vfx != null and ctx.player != null:
 		var ball: Vector3 = ctx.player.ball_position()
 		var tint := RewardGates.rarity_color(find["rarity"])
@@ -301,27 +329,28 @@ func _flare(find: Dictionary) -> void:
 		vfx.glyph("reward_rare", ball + Vector3.UP * 2.4, 0.4, 1.8, float(row["flare_s"]), Vector3.ZERO, "star", tint)
 
 
-# A ceremony that never found its calm: the rare flare and the reveal card, in the flow.
+# A ceremony with no pause armed (test mode): the rare flare and the reveal card, in the flow.
 func _demote(find: Dictionary) -> void:
 	var shown := find.duplicate()
 	shown["tier"] = "reveal"
-	shown["demoted"] = true
 	presented.append([shown["part"], "reveal", shown["source"], int(now_ms.call())])
 	_flare(shown)
-	_queue_card(shown)
+	_hold_card(shown)
 
 
-func _queue_card(find: Dictionary) -> void:
+func _hold_card(find: Dictionary) -> void:
 	_cards.append(find)
 	if view.card.is_empty() or view.card.get("ceremony", false) and _active.is_empty():
 		_next_card()
 
 
+# The head of the held cards opens when the gate allows, and the part is seen only now.
 func _next_card() -> void:
 	view.card = {}
-	if _cards.is_empty():
+	if _cards.is_empty() or not may_show_card():
 		return
 	var find: Dictionary = _cards.pop_front()
+	_mark_seen(find["part"])
 	view.card = card_state(find, int(now_ms.call()), false)
 	audio.play("reward_reveal", 0.0, rung_pitch(find["rarity"]))
 	if find["link"] == "lit":
@@ -392,13 +421,16 @@ func phase() -> String:
 	return String(_active.get("phase", ""))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var now := int(now_ms.call())
 	view.now = now
+	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree())
 	if not _active.is_empty():
 		_step_ceremony(now)
 	elif not _queue.is_empty():
 		_step_queue(now)
+	if view.card.is_empty() and not _cards.is_empty() and _active.is_empty():
+		_next_card()
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		var c: Dictionary = view.card
 		if now - int(c["start_ms"]) > int((float(c["in_s"]) + float(c["hold_s"]) + float(c["out_s"])) * 1000.0):
@@ -409,12 +441,7 @@ func _process(_delta: float) -> void:
 
 func _step_queue(now: int) -> void:
 	var row := EventKinds.reward_row("ceremony")
-	var waited := now - int(_queue[0]["at"])
-	if waited > int(float(row["calm_wait_s"]) * 1000.0):
-		_calm_since = -1
-		_demote(_queue.pop_front())
-		return
-	if not calm():
+	if not may_show_card() or not calm():
 		_calm_since = -1
 		return
 	if _calm_since < 0:
@@ -443,6 +470,7 @@ func _begin(find: Dictionary) -> void:
 		"class_color": _class_color(), "seed": absi(String(find["part"]).hash()), "hull": hull})
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		_cards.push_front(view.card["find"])
+	_mark_seen(find["part"])
 	view.card = card_state(find, now, true)
 	audio.play("reward_ceremony")
 	started.emit(find["part"])

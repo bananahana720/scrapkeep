@@ -18,14 +18,15 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 # entry, death and run end).
 #
 # A first-discovery card raised in a fight waits at the head of the queue and shows at the
-# next calm moment: CALM_SECONDS with no live telegraph (the "threat" group) and no damage
-# taken. One raised when already calm shows at once. The banner finds the bus through its
-# presentation ancestor, or a test hands it one with watch().
+# next time WhyCallout.find_may_speak says so: calm, and no Warden engaged and alive. One
+# raised when the gate is already open shows at once. At most MAX_HELD wait; a repeat shows
+# nothing. The banner finds the bus and the flow through its presentation ancestor, or a
+# test hands it a bus with watch().
 #
 # `--discovery=cards` (cards = true, profile set by the owner): the first time an id is
 # discovered a picture card lands in the same slot: a larger panel with a looping
 # animated glyph drawn from the discovery's EventKinds shape and colour, the name and
-# its one line. Every later time it is a POP: glyph and name only, under a second. The
+# its one line. Every later time shows nothing: the part's name at the ball is enough. The
 # card never pauses the game or touches Engine.time_scale; any input dismisses it at
 # once and is left unhandled, so play never notices. It uses the banner's slot in the
 # toasts band, so the calm-screen word budget is unchanged. Off, none of this runs.
@@ -37,16 +38,15 @@ const WIDTH := 360.0
 const MARGIN := 18.0
 # The HUD's toast column width (hud.gd TOAST_WIDTH), which the banner stays beside.
 const TOAST_COLUMN := 800.0
-# The first-discovery card and the repeat pop (cards mode).
+# The first-discovery card (cards mode) and the most that wait for the gate.
 const CARD_HOLD := 4.0
-const POP_TIME := 0.8
+const MAX_HELD := 3
 const GLYPH_CARD := 132.0
 # A card is this tall (250 at 900p: from just under the toasts band, y 279, to 529, above
 # the prompts band at 558) so it reads as the bigger ceremony, and its line takes at
 # most CARD_LINES lines, so it stays clear of the play area whatever the text.
 const CARD_HEIGHT := 250.0
 const CARD_LINES := 4
-const GLYPH_POP := 36.0
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
 const CALM_SECONDS := WhyCallout.CALM_SECONDS
@@ -60,16 +60,16 @@ var profile = null
 # Where the profile lives when the banner opens it itself (--discovery=cards on the
 # command line); empty means the owner supplies one.
 var storage_dir := ""
-# "banner", "card" or "pop": how the current item is shown, and how many of each.
+# "banner" or "card": how the current item is shown, and how many cards.
 var last_style := ""
 var cards_shown := 0
-var pops_shown := 0
 # The clock in milliseconds; tests swap it for a fake.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
 
 var _queue: Array = []
 var _calm_left := 0.0
 var _events = null
+var _flow = null
 var _session_seen := {}
 var _style_name := "banner"
 var _hold := HOLD
@@ -147,6 +147,7 @@ func _ready() -> void:
 	while node != null and _events == null:
 		var ctx = node.get("ctx")
 		if ctx != null and ctx.get("events") != null:
+			_flow = ctx.get("flow")
 			watch(ctx.events)
 		node = node.get_parent()
 
@@ -164,10 +165,9 @@ func watch(events) -> void:
 				dismiss(true))
 
 
-# The callout's definition of calm (WhyCallout.is_calm): CALM_SECONDS since the last damage or
-# telegraph, and never while the tree is paused.
+# Whether a find may show its card now: the shared gate, WhyCallout.find_may_speak.
 func calm() -> bool:
-	return WhyCallout.is_calm(_calm_left, get_tree() if is_inside_tree() else null)
+	return WhyCallout.find_may_speak(_calm_left, get_tree() if is_inside_tree() else null, _flow)
 
 
 # A card is waiting for a calm moment.
@@ -181,14 +181,16 @@ func held() -> bool:
 # title); kind is the EventKinds row whose shape and colour the glyph wears.
 func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND) -> void:
 	var style := "banner"
+	var key := id if id != "" else "%s:%s" % [category, title]
 	if cards:
 		style = "auto"
 		if profile == null and storage_dir != "":
 			profile = UiProfile.new(storage_dir)
-	# In cards mode the id rides in the entry; whether it is a card or a pop, and the
-	# record of it, are settled when it comes up to show (_next), so a discovery that is
-	# queued and then dropped is not counted as seen.
-	var key := id if id != "" else "%s:%s" % [category, title]
+		# Seen means shown: the record is written when the card comes up (_next), so a
+		# discovery that is queued and then dropped stays unseen. A repeat, one already
+		# held, or one past MAX_HELD shows nothing.
+		if _was_seen(key) or _queue.size() >= MAX_HELD or _queue.any(func(item: Array): return item[6] == key):
+			return
 	_queue.append([title, category, detail, kicker, style, kind, key])
 	if not showing():
 		_next()
@@ -222,7 +224,7 @@ func _mark_seen(key: String) -> void:
 
 
 # Any key, mouse button or pad button press (or a hard stick push) dismisses a card or
-# pop at once. The event is not consumed: the press still reaches the game.
+# at once. The event is not consumed: the press still reaches the game.
 func _input(event: InputEvent) -> void:
 	if not showing() or _style_name == "banner":
 		return
@@ -239,10 +241,9 @@ func _input(event: InputEvent) -> void:
 func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 	_style_name = style
 	var card := style == "card"
-	var pop := style == "pop"
-	_icon.visible = not (card or pop)
-	_glyph.visible = card or pop
-	_kicker.visible = not pop
+	_icon.visible = not card
+	_glyph.visible = card
+	_kicker.visible = true
 	_hold = HOLD
 	_in_time = IN_TIME
 	_out_time = OUT_TIME
@@ -261,13 +262,7 @@ func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 		_body.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		_panel.custom_minimum_size = Vector2(WIDTH, CARD_HEIGHT)
 		_hold = CARD_HOLD
-	elif pop:
-		_glyph.custom_minimum_size = Vector2(GLYPH_POP, GLYPH_POP)
-		_panel.custom_minimum_size = Vector2.ZERO
-		_in_time = 0.1
-		_out_time = 0.15
-		_hold = POP_TIME - _in_time - _out_time
-	if card or pop:
+	if card:
 		var row := EventKinds.row(kind) if EventKinds.has(kind) else EventKinds.row(DEFAULT_KIND)
 		_glyph_shape = String(row["shape"])
 		_glyph_color = row["color"]
@@ -277,30 +272,32 @@ func _next() -> void:
 	if _queue.is_empty():
 		return
 	var head: Array = _queue[0]
-	if head[4] == "auto" and not _was_seen(head[6]) and not calm():
-		return
+	if head[4] == "auto":
+		if _was_seen(head[6]):
+			_queue.pop_front()
+			_next()
+			return
+		if not calm():
+			return
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
 	var color: Color = entry["color"]
 	var style: String = item[4]
 	if style == "auto":
-		style = "pop" if _was_seen(item[6]) else "card"
-		if style == "card":
-			_mark_seen(item[6])
+		style = "card"
+		_mark_seen(item[6])
 	_apply_style(style, entry, item[5])
 	_icon.texture = entry["icon"]
 	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
 	_kicker.add_theme_color_override("font_color", color)
 	_title.text = item[0]
 	_body.text = item[2]
-	_body.visible = item[2] != "" and _style_name != "pop"
+	_body.visible = item[2] != ""
 	_panel.reset_size()
 	_style.border_color = color
 	last_style = _style_name
 	if _style_name == "card":
 		cards_shown += 1
-	elif _style_name == "pop":
-		pops_shown += 1
 	shown += 1
 	last_title = item[0]
 	_started_ms = int(now_ms.call())
