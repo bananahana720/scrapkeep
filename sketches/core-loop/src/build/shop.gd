@@ -148,7 +148,8 @@ func enter() -> Dictionary:
 	shelf = _stock()
 	# The next heft class up; at the top class the hook is already yours.
 	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
-	top = {"part_id": _roll_one(TOP_RARITIES), "lock_class": lock_class, "sold": false}
+	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
+	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
 	var greeting: Dictionary = greeting_line()
 	neglected = false
@@ -417,14 +418,14 @@ func _stock() -> Array:
 	return out
 
 
-func _roll_one(rarities: Array) -> String:
-	var picks: Array = Parts.roll(_rng, rarities, ctx.run.class_id(), ctx.run.parts, 1)
+func _roll_one(rarities: Array, exclude: Array = []) -> String:
+	var picks: Array = Parts.roll(_rng, rarities, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 	if not picks.is_empty():
 		return picks[0]
-	# A table that lists its parts never gets a generated recipe: the next rarity up the
-	# shelf's own list, else any listed part, is what the empty pool falls back to.
+	# A table that lists its parts never gets a generated recipe. An empty pool falls back
+	# to the shelf's rarities, never a part already on the shelf, and "" when none is left.
 	if Parts.listed_only():
-		var any: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
+		var any: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 		return any[0] if not any.is_empty() else ""
 	return ItemGen.roll_id(_rng, rarities[0])
 

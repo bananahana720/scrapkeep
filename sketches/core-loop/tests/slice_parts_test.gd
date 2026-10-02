@@ -83,6 +83,20 @@ func _sources() -> void:
 		var ids: Array = slice[source]
 		_t.check("slice %s offers only the twelve" % source, not ids.is_empty() and _outside(ids).is_empty(),
 			"%d offers, outside the twelve: %s" % [ids.size(), _outside(ids).slice(0, 5)])
+	var shop = _game.ctx.build_module().shop
+	var repeats := 0
+	var empty_ids := 0
+	for visit in DRAWS:
+		shop.enter()
+		var shelf_ids: Array = shop.shelf.map(func(entry): return entry["part_id"])
+		if not shop.top.is_empty():
+			if shop.top["part_id"] == "":
+				empty_ids += 1
+			elif shop.top["part_id"] in shelf_ids:
+				repeats += 1
+		shop.leave()
+	_t.check("slice top shelf never repeats a shelf part or holds an empty id", repeats == 0 and empty_ids == 0,
+		"%d visits: %d repeats, %d empty ids" % [DRAWS, repeats, empty_ids])
 	Synergies.table = StageDefs
 	var base := _draw()
 	for source in SOURCES:

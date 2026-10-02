@@ -94,8 +94,8 @@ func _init(events_ref = null) -> void:
 
 
 # The highest heft class this run has been rewarded for (the slice table opens one tree pick
-# per new class). Class I is the start pick's. A new run resets it; a retry puts back the
-# checkpoint's.
+# per new class). Class I is the start pick's. A new run resets it. A retry keeps it, because
+# a retry keeps the tree picks it paid for.
 var class_rewarded := 1
 
 
@@ -423,7 +423,6 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"scrap": scrap,
 		"mass": mass,
 		"heft_class": _heft_class,
-		"class_rewarded": class_rewarded,
 		"wear_accum": _wear_accum,
 		"bonus_cores": bonus_cores,
 		"parts": parts.duplicate(),
@@ -483,7 +482,6 @@ func restore() -> void:
 	since_damage = 99.0
 	retries += 1
 	over = false
-	class_rewarded = int(_snapshot.get("class_rewarded", 1))
 	# A restore is a rewind, not growth: the class follows silently, with no stinger.
 	# Armour mode puts back the class held at the checkpoint, hysteresis and all.
 	if armor_mode:

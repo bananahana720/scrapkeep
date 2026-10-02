@@ -7,7 +7,7 @@ const T := preload("res://tests/support/t.gd")
 # On the slice table each heft class the run reaches for the first time opens one upgrade
 # tree pick, once the ball is on the ground and no Warden fight is live. The run keeps the
 # highest class rewarded: a drop and a re-rise open nothing, a new run resets it and a retry
-# puts back the stage start's. The default table opens none on a rise. Mass is set through
+# keeps it, as it keeps the tree. The default table opens none on a rise. Mass is set through
 # the real run state (scrap pickups and thefts), so the class moves by the real heft rule:
 # 225 mass is class II, 540 class III, 990 class IV. The workshop screen is not under test;
 # the tree's own pick allowance is. The tree stops at four depths, or two under the
@@ -124,11 +124,12 @@ func _slice() -> void:
 	_new_run()
 	_to(III)
 	_game.flow.retry_stage()
-	_t.eq("a retry restores the stage start's rewarded class", [_run().class_rewarded, _run().heft_class()], [1, 1])
+	_t.eq("a retry keeps the run's rewarded class, as it keeps the tree", [_run().class_rewarded, _run().heft_class()], [3, 1])
 	var before := _allowed()
 	_game.player.state.grounded = true
 	_to(II)
-	_t.eq("so the climb after a retry is rewarded again", _allowed(), before + 1)
+	_game.world._deliver_class_picks()
+	_t.eq("so the climb after a retry opens nothing new", _allowed(), before)
 
 	_new_run()
 	_to(IV)
