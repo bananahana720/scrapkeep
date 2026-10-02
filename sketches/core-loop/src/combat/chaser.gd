@@ -50,7 +50,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	_add_capsule(radius, half_height * 2.0, Palette.RUST).free()
 	_mesh = Node3D.new()
 	_mesh.name = "ChaserBody"
-	add_child(_mesh)
+	_visual_parent().add_child(_mesh)
 	# The glb is read once; every chaser shares its mesh and carries only its own flashing
 	# body material as a surface override, so a spawn costs a few nodes, not a scene load.
 	for part in _parts():

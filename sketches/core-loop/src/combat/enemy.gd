@@ -100,6 +100,137 @@ var _rim_clock := 0.0
 var _atk := {}
 
 
+# The test seam disables only this visual layer, never the enemy's physics loop.
+var reactions_enabled := true
+var reaction_pivot: Node3D
+var _reaction_bus: Node
+var _react_row := {}
+var _react_time := 0.0
+var _react_duration := 0.0
+var _react_start := Quaternion.IDENTITY
+var _react_pose := Quaternion.IDENTITY
+var _react_direction := Vector3.FORWARD
+var _react_speed := 0.0
+var _reaction_handed := false
+var _line_lean := 0.0
+var _line_lean_goal := 0.0
+var _line_lean_from := 0.0
+var _line_lean_time := LINE_EASE
+const LINE_LEAN := 10.0
+const LINE_EASE := 0.15
+
+
+func _visual_parent() -> Node3D:
+	if reaction_pivot == null:
+		reaction_pivot = Node3D.new()
+		reaction_pivot.name = "ReactionPivot"
+		add_child(reaction_pivot)
+	return reaction_pivot
+
+
+func _ordinary_reaction() -> bool:
+	return kind not in ["warden", "vault", "miniboss"] and not kind.begins_with("brindle_")
+
+
+func react(reaction: String, direction: Vector3, handed := false) -> void:
+	_reaction_handed = handed
+	if not reactions_enabled or _dead or not _ordinary_reaction():
+		return
+	_react_row = EventKinds.REACTIONS[reaction]
+	_react_start = _react_pose
+	_react_direction = Vector3(direction.x, 0.0, direction.z).normalized()
+	_react_speed = _knocked_speed()
+	_react_time = 0.0
+	_react_duration = float(_react_row["rise"]) + float(_react_row["hold"]) + float(_react_row["recover"])
+	if float(_react_row["tumble"]) > 0.0:
+		_react_duration = minf(float(_react_row["limit"]), maxf(_react_duration, _react_speed / KNOCK_DECAY + float(_react_row["recover"])))
+	_visual_parent()
+
+
+# Contacts call strike() directly; _hit() has already handed its row to react().
+func _on_reaction_hit(enemy: Node3D, hit: String, _force: float) -> void:
+	if enemy != self:
+		return
+	if _reaction_handed:
+		_reaction_handed = false
+		return
+	var away := _knock if _knocked_speed() > 0.0 else global_position - _reaction_ball()
+	react(String(EventKinds.impact(hit)["react"]), away)
+
+
+func _reaction_ball() -> Vector3:
+	# Sight may show a cloak decoy; a held body leans toward the real ball.
+	var player = target.get("player") if is_instance_valid(target) and "player" in target else target
+	return player.ball_position() if is_instance_valid(player) else global_position
+
+
+func _on_reaction_line(state: String, held: Node3D, _at: Vector3, _cause: String) -> void:
+	if not reactions_enabled or _dead or not _ordinary_reaction():
+		return
+	if state == "latched_body":
+		_set_line_lean(1.0 if held == self else 0.0)
+	elif state == "smash_committed":
+		if _line_lean_goal != 0.0:
+			_set_line_lean(-1.0)
+	else:
+		_set_line_lean(0.0)
+
+
+func _set_line_lean(goal: float) -> void:
+	if goal == _line_lean_goal:
+		return
+	_line_lean_from = _line_lean
+	_line_lean_goal = goal
+	_line_lean_time = 0.0
+
+
+func _reaction_axis(direction: Vector3) -> Vector3:
+	var local := global_basis.inverse() * direction
+	var axis := Vector3.UP.cross(local)
+	return axis.normalized() if axis.length_squared() > 0.0001 else Vector3.RIGHT
+
+
+func _update_reaction(delta: float) -> void:
+	if not reactions_enabled or not _ordinary_reaction():
+		_react_row = {}
+		_react_pose = Quaternion.IDENTITY
+		_line_lean = 0.0
+		_line_lean_goal = 0.0
+		_line_lean_from = 0.0
+	if not _react_row.is_empty():
+		_react_time += delta
+		var rise := float(_react_row["rise"])
+		var scale_angle := 1.0 / sqrt(maxf(weight, 1.0))
+		var axis := _reaction_axis(_react_direction)
+		var peak := deg_to_rad(float(_react_row["angle"])) * scale_angle
+		if _react_time >= _react_duration:
+			_react_pose = Quaternion.IDENTITY
+			_react_row = {}
+		elif _react_time < rise:
+			_react_pose = _react_start.slerp(Quaternion(axis, peak), smoothstep(0.0, rise, _react_time))
+		else:
+			var recovery := rise + float(_react_row["hold"])
+			var progress := clampf((_react_time - recovery) / (_react_duration - recovery), 0.0, 1.0)
+			var angle := peak * (1.0 - smoothstep(0.0, 1.0, progress))
+			if float(_react_row["tumble"]) > 0.0:
+				var knock_share := clampf(_knocked_speed() / maxf(_react_speed, 0.001), 0.0, 1.0)
+				angle *= knock_share
+				angle += deg_to_rad(float(_react_row["tumble"])) * scale_angle * sin(PI * progress) * knock_share
+			elif float(_react_row["overshoot"]) > 0.0:
+				var overshoot := -peak * float(_react_row["overshoot"])
+				angle = lerpf(peak, overshoot, smoothstep(0.0, 0.72, progress)) if progress < 0.72 else lerpf(overshoot, 0.0, smoothstep(0.72, 1.0, progress))
+			_react_pose = Quaternion(axis, angle)
+	_line_lean_time = minf(LINE_EASE, _line_lean_time + delta)
+	_line_lean = _line_lean_goal if _line_lean_time >= LINE_EASE else lerpf(_line_lean_from, _line_lean_goal, smoothstep(0.0, LINE_EASE, _line_lean_time))
+	if reaction_pivot == null and (_line_lean != 0.0 or not _react_row.is_empty()):
+		_visual_parent()
+	if reaction_pivot != null:
+		var lean_pose := Quaternion.IDENTITY
+		if _line_lean != 0.0 and is_instance_valid(target):
+			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
+		reaction_pivot.transform = Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO)
+
+
 # Subclasses call this first from their own setup, then build their body.
 func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_ref := {}) -> void:
 	target = target_ref
@@ -107,6 +238,10 @@ func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_r
 	world_root = root_ref
 	live = live_ref
 	spec = spec_ref
+	_reaction_bus = world_root.get_node_or_null("GameEvents") if world_root != null else null
+	if _reaction_bus != null:
+		_reaction_bus.line_state_changed.connect(_on_reaction_line)
+		_reaction_bus.enemy_struck.connect(_on_reaction_hit)
 	add_to_group("enemy")
 	collision_layer = 0
 	collision_mask = 0
@@ -226,6 +361,10 @@ func _die() -> void:
 
 
 func _exit_tree() -> void:
+	if is_instance_valid(_reaction_bus) and _reaction_bus.line_state_changed.is_connected(_on_reaction_line):
+		_reaction_bus.line_state_changed.disconnect(_on_reaction_line)
+	if is_instance_valid(_reaction_bus) and _reaction_bus.enemy_struck.is_connected(_on_reaction_hit):
+		_reaction_bus.enemy_struck.disconnect(_on_reaction_hit)
 	_facts_end(true)
 	_clear_telegraph()
 
@@ -334,7 +473,7 @@ func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) ->
 	capsule_mesh.height = capsule_height
 	mesh.mesh = capsule_mesh
 	mesh.material_override = _material
-	add_child(mesh)
+	_visual_parent().add_child(mesh)
 	return mesh
 
 
@@ -345,7 +484,7 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 	instance.mesh = mesh
 	instance.material_override = Palette.solid(color, energy)
 	instance.position = at
-	parent.add_child(instance)
+	(_visual_parent() if parent == self else parent).add_child(instance)
 	return instance
 
 
@@ -454,6 +593,7 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PHYSICS_PROCESS:
+		_update_reaction(get_physics_process_delta_time())
 		_facts_poll()
 		if tint_state == "amber" and _pulses():
 			_pulse_rim(get_physics_process_delta_time())

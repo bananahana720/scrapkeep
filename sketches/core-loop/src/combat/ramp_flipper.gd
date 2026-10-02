@@ -39,7 +39,7 @@ func _build_tool() -> void:
 	_plate.material_override = Palette.striped(Palette.CHARCOAL, Palette.HAZARD)
 	_plate.position = Vector3(0.0, CREW_HALF + 0.4, -0.4)
 	_plate.scale = Vector3.ONE * 0.4
-	add_child(_plate)
+	_visual_parent().add_child(_plate)
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

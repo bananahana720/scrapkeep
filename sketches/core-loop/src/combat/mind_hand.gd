@@ -136,12 +136,12 @@ func _build_crew() -> void:
 	base.mesh = foot
 	base.material_override = _enamel()
 	base.position = Vector3(0.0, -1.55, 0.0)
-	add_child(base)
+	_visual_parent().add_child(base)
 	var at := Vector3(0.0, -1.3, 0.0)
 	for i in 3:
 		var joint := Node3D.new()
 		joint.position = at
-		add_child(joint)
+		_visual_parent().add_child(joint)
 		_joints.append(joint)
 		var bone := MeshInstance3D.new()
 		var rod := CylinderMesh.new()

@@ -204,7 +204,7 @@ func _build_armour() -> void:
 	_core.mesh = sphere
 	_core.material_override = _core_material
 	_core.position = Vector3(0.0, 0.6, -RADIUS * 0.75)
-	add_child(_core)
+	_visual_parent().add_child(_core)
 	var plate_material := _plate_material()
 	for side in [-1.0, 1.0]:
 		var plate := MeshInstance3D.new()
@@ -213,7 +213,7 @@ func _build_armour() -> void:
 		plate.mesh = box
 		plate.material_override = plate_material
 		plate.position = Vector3(side * RADIUS * 0.5, 0.6, -RADIUS - 0.1)
-		add_child(plate)
+		_visual_parent().add_child(plate)
 		_plates.append({"node": plate, "side": side})
 	_halo = MeshInstance3D.new()
 	var torus := TorusMesh.new()
@@ -223,7 +223,7 @@ func _build_armour() -> void:
 	_halo.material_override = Palette.unshaded(Palette.SAND)
 	_halo.position = Vector3.UP * (HALF_HEIGHT + 1.4)
 	_halo.visible = false
-	add_child(_halo)
+	_visual_parent().add_child(_halo)
 	# A lit crown of spikes: the silhouette says "boss" from 100 m before its size does.
 	for i in 5:
 		var angle := TAU * i / 5.0

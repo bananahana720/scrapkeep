@@ -226,6 +226,12 @@ const IMPACT := {
 	"slam": {"knock": 26.0, "lift": 0.5, "stop": "heavy", "shake": 0.3, "react": "launch"},
 	"stomp": {"knock": 7.0, "lift": 0.0, "stop": "heavy", "shake": 0.3, "react": "stagger"},
 }
+# Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
+const REACTIONS := {
+	"flinch": {"angle": 10.0, "rise": 0.03, "hold": 0.0, "recover": 0.09, "overshoot": 0.0, "tumble": 0.0, "limit": 0.15},
+	"stagger": {"angle": 28.0, "rise": 0.05, "hold": 0.07, "recover": 0.24, "overshoot": 0.18, "tumble": 0.0, "limit": 0.45},
+	"launch": {"angle": 65.0, "rise": 0.05, "hold": 0.0, "recover": 0.18, "overshoot": 0.0, "tumble": 220.0, "limit": 0.9},
+}
 const IMPACT_STOPS := ["none", "hit", "heavy"]
 const IMPACT_REACTS := ["flinch", "stagger", "launch"]
 # A strike kind with no row (a shell, a ring, a boss's own) lands as a plain hit.

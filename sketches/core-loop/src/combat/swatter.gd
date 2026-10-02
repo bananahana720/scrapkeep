@@ -37,7 +37,7 @@ func _configure(threat: float) -> void:
 func _build_tool() -> void:
 	_paddle = Node3D.new()
 	_paddle.position = Vector3(0.0, -CREW_HALF + 0.5, 0.0)
-	add_child(_paddle)
+	_visual_parent().add_child(_paddle)
 	_box(Vector3(0.2, 0.2, 5.5), Palette.CHARCOAL, Vector3(0.0, 0.0, 2.9), 0.0, _paddle)
 	_box(Vector3(0.3, 1.0, 1.6), Palette.RUST.darkened(0.2), Vector3(0.0, 0.2, 5.4), 0.0, _paddle)
 	_box(Vector3(0.32, 0.18, 1.62), Palette.HAZARD, Vector3(0.0, 0.62, 5.4), 0.6, _paddle)

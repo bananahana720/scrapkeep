@@ -895,6 +895,8 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * float(EventKinds.impact(impact if impact != "" else kind)["lift"]), knock)
+	if enemy.has_method("react"):
+		enemy.react(String(EventKinds.impact(impact if impact != "" else kind)["react"]), push, true)
 	enemy.flash()
 	strike(enemy, kind, damage, part, source, impact)
 	# Death Mark: a marked enemy that dies here bursts like a charge.
