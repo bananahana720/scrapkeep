@@ -68,6 +68,7 @@ var pop: MeshInstance3D
 var _clock := 0.0
 var _state := "searching"
 var _lock_age := 0.0
+var _lock_target: Node3D
 var _smash_age := 0.0
 var _dry_age := -1.0
 var _dry_dir := Vector3.FORWARD
@@ -164,9 +165,11 @@ func _advance(delta: float) -> void:
 		_lock_age += delta
 
 
-func _on_line_state(state: String, _target: Node3D, at: Vector3, _cause: String) -> void:
-	if state == "locked" and _state != "locked":
+func _on_line_state(state: String, target: Node3D, at: Vector3, _cause: String) -> void:
+	if state == "locked" and (_state != "locked" or target != _lock_target):
 		_lock_age = 0.0
+	if state == "locked":
+		_lock_target = target
 	_state = state
 	match state:
 		"dry_fire":

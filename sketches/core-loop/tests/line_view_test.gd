@@ -15,6 +15,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 
 const FRAME := 1.0 / 60.0
 const DEPTH := 45.0
+# The chase camera's widest lens (FOV_CAP), where a cable is thinnest on screen.
+const WIDEST_FOV := 88.0
 const SOURCES := ["res://src/presentation/line_view.gd", "res://src/movement/aim_style.gd"]
 const BLACK_BACKING := "Color(0.0, 0.0, 0.0, 0.55)"
 
@@ -43,6 +45,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_t = T.new("line_view_test")
 	var camera := Camera3D.new()
+	camera.fov = WIDEST_FOV
 	root.add_child(camera)
 	camera.position = Vector3(0.0, 0.0, DEPTH)
 	camera.current = true
@@ -114,7 +117,8 @@ func _measured_px(view, camera) -> float:
 	for i in range(0, verts.size() - 1, 2):
 		var mid := (verts[i] + verts[i + 1]) * 0.5
 		var depth := absf(camera.global_position.z - mid.z)
-		widest = maxf(widest, verts[i].distance_to(verts[i + 1]) * view.focal_px() / depth)
+		var focal: float = LineView.REF_HEIGHT * 0.5 / tan(deg_to_rad(camera.fov) * 0.5)
+		widest = maxf(widest, verts[i].distance_to(verts[i + 1]) * focal / depth)
 	return widest
 
 
@@ -205,6 +209,14 @@ func _reticle(player) -> void:
 	var reticle := AimReticle.new()
 	root.add_child(reticle)
 	reticle.setup(player, null)
+	var body_style: Dictionary = AimStyle.of({"state": Augments.AIM_BODY})
+	player.kit.hooked = false
+	var free_shape: String = reticle.drawn_shape(body_style)
+	player.kit.hooked = true
+	var held_shape: String = reticle.drawn_shape(body_style)
+	player.kit.hooked = false
+	_t.check("the reticle is a dot while a line stands", free_shape == "brackets" and held_shape == "dot",
+		"aimed at a body: %s with no line, %s with one" % [free_shape, held_shape])
 	player.kit.rewind_left = 0.4
 	var fill: float = reticle.harpoon_readiness()
 	_t.near("HL-5 harpoon ring fill", fill, 1.0 - 0.4 / player.tuning.f("harpoon_rewind"))

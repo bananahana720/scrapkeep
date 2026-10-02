@@ -6,8 +6,6 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 
 const RING := 13.0
 const DIAMOND := 15.0
-const BRACKET := 17.0
-const BRACKET_TICK := 8.0
 const GAUGE_RING := 24.0
 const GAUGE_WIDTH := 3.0
 const HARPOON_RING := 19.0
@@ -90,6 +88,14 @@ func _out_of_range(aim: Dictionary) -> bool:
 	return not hit.is_empty() and (hit["position"] as Vector3).distance_to(player.ball_position()) > player.grapple_range()
 
 
+# What the reticle draws for an aim style. While a line stands it is a dot: the latch is shown
+# on the thing it bit, and a lock mark beside it would say "can hook" and "hooked" at once.
+func drawn_shape(style: Dictionary) -> String:
+	if player.kit.hooked:
+		return "dot"
+	return style["shape"]
+
+
 func _draw() -> void:
 	if player == null:
 		return
@@ -107,7 +113,9 @@ func _draw() -> void:
 		draw_arc(centre, GAUGE_RING, 0.0, TAU, 48, Color(0.0, 0.0, 0.0, 0.55), GAUGE_WIDTH + 2.0)
 		draw_arc(centre, GAUGE_RING, -PI * 0.5, -PI * 0.5 + TAU * clampf(gauge, 0.0, 1.0), 48, gauge_color,
 			GAUGE_WIDTH + (1.5 if gauge >= 1.0 else 0.0))
-	match style["shape"]:
+	match drawn_shape(style):
+		"dot":
+			draw_circle(centre, 2.5, color)
 		"cross":
 			draw_line(centre - Vector2(8.0, 0.0), centre + Vector2(8.0, 0.0), color, 2.0)
 			draw_line(centre - Vector2(0.0, 8.0), centre + Vector2(0.0, 8.0), color, 2.0)
@@ -118,17 +126,13 @@ func _draw() -> void:
 		"hollow_ring":
 			draw_arc(centre, RING, 0.0, TAU, 40, color, 2.5)
 		"brackets":
-			# An enemy the harpoon would bite: four corner ticks at the body, and the same snap line
-			# as the magnet. The shape, not the colour, says a body.
+			# An enemy the harpoon would bite: the snap line to the body. The brackets on the body
+			# are the line view's, in the world, so there is one set and it pulses.
 			var at := centre
 			if camera != null and not camera.is_position_behind(aim["point"]):
 				at = camera.unproject_position(aim["point"])
 			draw_line(centre, at, Color(color, 0.6), 1.5)
 			draw_circle(centre, 2.0, color)
-			for corner in [Vector2(1.0, 1.0), Vector2(-1.0, 1.0), Vector2(1.0, -1.0), Vector2(-1.0, -1.0)]:
-				var tip: Vector2 = at + corner * BRACKET
-				draw_line(tip, tip - Vector2(corner.x * BRACKET_TICK, 0.0), color, 2.5)
-				draw_line(tip, tip - Vector2(0.0, corner.y * BRACKET_TICK), color, 2.5)
 		"diamond":
 			var at := centre
 			if camera != null and not camera.is_position_behind(aim["point"]):

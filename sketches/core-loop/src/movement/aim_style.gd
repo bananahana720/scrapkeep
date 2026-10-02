@@ -7,7 +7,6 @@ const Augments := preload("res://src/movement/augments.gd")
 # cannot separate the colours. Every colour is a LINE_ROWS row's (the row names the harpoon
 # state the aim stands for), so the reticle and the line in the world cannot drift apart. A
 # surface past the line's reach is its own style: a hollow slate ring, not yet.
-const OUT_OF_RANGE := -1
 const STYLES := {
 	Augments.AIM_NONE: {"row": "searching", "shape": "cross", "word": ""},
 	Augments.AIM_REACH: {"row": "locked", "shape": "ring", "word": "in reach"},

@@ -196,6 +196,7 @@ func _run() -> void:
 		await _shift(name)
 		await _ready_walk(name)
 	await _rope_anchor()
+	await _death_cuts()
 	_all_rows()
 
 	print("harpoon_canon_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
@@ -475,6 +476,27 @@ func _body_reel(name: String) -> void:
 
 
 # A world line: right mouse bites and holds it, Ctrl winches it, release lets go.
+# Death ends the latch, so nothing that follows the line (its sight, its hum, a prompt)
+# outlives the pilot.
+func _death_cuts() -> void:
+	var kit = _player.kit
+	_pilot("sable")
+	var ball := _point(0, 0, 24.0)
+	_wall_at(ball, 28.0)
+	await _sim(0.1)
+	_place(ball, Vector3(0, 0, -10))
+	_look(ball, _wall.global_position)
+	await _sim(0.05)
+	_source.press = {"harpoon_pressed": true}
+	_source.hold = {"harpoon_held": true}
+	await physics_frame
+	await physics_frame
+	var latched: bool = kit.hooked
+	_game.events.player_died.emit()
+	_check("death drops the line", latched and not kit.hooked, "hooked %s before the death, %s after" % [latched, kit.hooked])
+	_source.hold = {}
+
+
 func _world_line(name: String) -> void:
 	var kit = _player.kit
 	_pilot(name)

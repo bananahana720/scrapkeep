@@ -149,6 +149,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	tree.events = events
 	tree.picked.connect(_on_tree_picked)
 	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
+	events.player_died.connect(func(): kit.drop_line("reset"))
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
