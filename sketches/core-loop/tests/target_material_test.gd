@@ -27,9 +27,12 @@ func _run() -> void:
 			var original := view.mesh.surface_get_material(surface)
 			var copy := Palette.target_clutter_material(original)
 			kit_surfaces += 1
-			kit_ok = kit_ok and copy != original and copy == Palette.target_clutter_material(original) and copy.vertex_color_use_as_albedo \
-				and not copy.emission_enabled and copy.resource_name == original.resource_name and copy.metallic == 0.0 and copy.roughness >= 0.9
-	check(kit_ok and kit_surfaces >= 10, "target clutter material reads vertex colour as albedo, keeps its slot name and leaves the kit's own resources alone: " + str(kit_surfaces) + " surfaces")
+			kit_ok = kit_ok and copy != original and copy == Palette.target_clutter_material(original) \
+				and copy.shader.resource_path == "res://src/presentation/clutter.gdshader" \
+				and copy.get_shader_parameter("albedo") == (original as StandardMaterial3D).albedo_color \
+				and copy.resource_name == original.resource_name \
+				and copy.shader.get_shader_uniform_list().any(func(row): return row.name == "protected_rects")
+	check(kit_ok and kit_surfaces >= 10, "target clutter material is the clutter shader with the slot's albedo and protection, keeps its slot name and leaves the kit's own resources alone: " + str(kit_surfaces) + " surfaces")
 	kit.free()
 	Preset.apply("high")
 	var game := Game.new()

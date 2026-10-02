@@ -7,7 +7,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 const Features := preload("res://src/world/features.gd")
 const Reach := preload("res://src/world/map_reach.gd")
 const KIT_PATH := "res://assets/models/world_one/clutter_kit.glb"
-const ROUTES := "res://tools/traversal_lines.json"
+const ROUTES := "res://src/world/reach_routes.json"
 # The kit is small beside a 1 m radius ball, so every piece is scaled up. Anchors are the
 # big pieces a cluster is built round; small ones gather at their feet.
 const KIT_ORDER := ["rock_a", "rock_b", "rock_c", "slab_a", "slab_b", "plate_a", "plate_b", "stub_a", "tuft_a", "tuft_b"]
@@ -25,6 +25,7 @@ const CLUSTER_SPACING := 9.0
 const CLIFF_CLUSTERS := 110
 const EDGE_SHARE := 0.6
 const WIND := Vector2(0.93, 0.367)
+static var _route_warned := false
 
 var ctx
 var map_id := ""
@@ -109,9 +110,31 @@ func _kit_meshes() -> Dictionary:
 	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh := view.mesh.duplicate() as ArrayMesh
 		for surface in mesh.get_surface_count():
-			mesh.surface_set_material(surface, Palette.target_clutter_material(view.mesh.surface_get_material(surface)))
-		result[String(view.name)] = mesh
+			var material := Palette.target_clutter_material(view.mesh.surface_get_material(surface))
+			if material not in _materials:
+				_materials.append(material)
+			mesh.surface_set_material(surface, material)
+		result[String(view.name)] = _dry_grass(mesh) if String(view.name).begins_with("tuft") else mesh
 	scene.free()
+	return result
+
+# The tufts' paint is the palette's dry grass: warm, a little darker at the root, through
+# the same vertex colours the other pieces use. The kit's own dark straw read as spikes.
+static func _dry_grass(mesh: ArrayMesh) -> ArrayMesh:
+	# Sandstone, lifted: the blades are thin and mostly lit by sky, so a plain sand tone reads grey-blue.
+	var tone := Palette.SANDSTONE.srgb_to_linear() * 1.4
+	var result := ArrayMesh.new()
+	var top := mesh.get_aabb().end.y
+	for surface in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(surface)
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var colours := PackedColorArray()
+		for point in points:
+			var shade := lerpf(0.85, 1.0, clampf(point.y / top, 0.0, 1.0))
+			colours.append(Color(tone.r * shade, tone.g * shade, tone.b * shade))
+		arrays[Mesh.ARRAY_COLOR] = colours
+		result.add_surface_from_arrays(mesh.surface_get_primitive_type(surface), arrays)
+		result.surface_set_material(result.get_surface_count() - 1, mesh.surface_get_material(surface))
 	return result
 
 # Where clutter gathers: the foot of a cliff, the base of a post, wall or tower, and the
@@ -212,7 +235,7 @@ static func keepouts(map, stage: int) -> Array:
 		rows.append(_row("scrap line", line, 3.0, true))
 	for kicker in map.kickers:
 		var dir: Vector2 = kicker.dir
-		rows.append(_row("kicker ramp", [kicker.at - dir * 8.0, kicker.at + dir * 6.0], float(kicker.width) * 0.5 + 3.0, true))
+		rows.append(_row("kicker ramp", [kicker.at - dir * float(kicker.get("length", Reach.KICKER_LENGTH)), kicker.at + dir * 5.0], float(kicker.width) * 0.5 + 3.0, true))
 	for slot in map.gate_slots:
 		rows.append(_row("reward gate slot", [slot.at], 6.0))
 	for site in map.activity_sites:
@@ -220,22 +243,9 @@ static func keepouts(map, stage: int) -> Array:
 	for row in Interactables.PLACEMENTS.get(stage, []):
 		rows.append(_row("device", [row.at], 7.0))
 	if map.get_script() == Reach:
-		var routes = JSON.parse_string(FileAccess.get_file_as_string(ROUTES))
-		for pilot in routes.get("pilots", {}):
-			var line := PackedVector2Array()
-			for pair in routes.pilots[pilot].waypoints:
-				line.append(Vector2(float(pair[0]), float(pair[1])))
-			rows.append(_row("ride line " + String(pilot), line, 4.0, true))
-		var sweep := PackedVector2Array()
-		for i in 24:
-			var angle := deg_to_rad(lerpf(Reach.SWEEP_START, Reach.SWEEP_END, i / 23.0))
-			sweep.append(Reach.SWEEP_CENTRE + Vector2(cos(angle), sin(angle)) * Reach.SWEEP_LINE)
-		rows.append(_row("sweeper ramp", sweep, Reach.SWEEP_WIDTH * 0.5 + Reach.SWEEP_BANK * 0.5 + 3.0, true))
-		var berm := PackedVector2Array()
-		for i in 16:
-			var angle := deg_to_rad(lerpf(Reach.BERM_FROM, Reach.BERM_TO, i / 15.0))
-			berm.append(Reach.BERM_CENTRE + Vector2(cos(angle), sin(angle)) * Reach.BERM_RADIUS)
-		rows.append(_row("berm ramp", berm, Reach.BERM_WIDTH * 0.5 + Reach.BERM_BANK * 0.5 + 3.0, true))
+		rows.append_array(pilot_rows(load_routes()))
+		rows.append(_arc_row("sweeper ramp", Reach.SWEEP_CENTRE, Reach.SWEEP_ARC, Reach.SWEEP_WIDTH + Reach.SWEEP_BANK, Reach.SWEEP_FROM, Reach.SWEEP_TO))
+		rows.append(_arc_row("berm ramp", Reach.BERM_CENTRE, Reach.BERM_RADIUS, Reach.BERM_WIDTH + Reach.BERM_BANK, Reach.BERM_FROM, Reach.BERM_TO))
 		var dive := PackedVector2Array([Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_FROM, Reach.MOUTH + Reach.DIVE_DIR * (Reach.DIVE_TO + Reach.DIVE_OUT)])
 		rows.append(_row("dive ramp", dive, Reach.DIVE_HALF + Reach.DIVE_SIDE + 3.0, true))
 		rows.append(_row("cable line", [Reach.CABLE_FROM, Reach.CABLE_TO], Reach.CABLE_RADIUS + 3.0, true))
@@ -245,6 +255,39 @@ static func keepouts(map, stage: int) -> Array:
 		for thermal in [Reach.THERMAL_A, Reach.THERMAL_B]:
 			rows.append(_row("thermal", [thermal], 8.0))
 	return rows
+
+# The authored ride lines of the three pilots, from src/world's route file. A file that is
+# missing or not a Dictionary places no pilot keep-outs and warns once; the game runs on.
+static func load_routes() -> Variant:
+	if not FileAccess.file_exists(ROUTES):
+		return null
+	return JSON.parse_string(FileAccess.get_file_as_string(ROUTES))
+
+static func pilot_rows(routes: Variant) -> Array:
+	var rows := []
+	if not routes is Dictionary or not routes.get("pilots") is Dictionary:
+		if not _route_warned:
+			_route_warned = true
+			push_warning("set_dressing: no pilot route file at " + ROUTES + "; clutter ignores the pilots' lines")
+		return rows
+	for pilot in routes.pilots:
+		var line := PackedVector2Array()
+		for pair in routes.pilots[pilot].get("waypoints", []):
+			line.append(Vector2(float(pair[0]), float(pair[1])))
+		if line.size() > 1:
+			rows.append(_row("ride line " + String(pilot), line, 4.0, true))
+	return rows
+
+# A banked arc's riding surface is the radial band from `radius` out by `band` (the face and
+# its bank) across the span the map hands Features.banked_arc: its centreline, half the band
+# plus the clear distance.
+static func _arc_row(what: String, centre: Vector2, radius: float, band: float, from_deg: float, to_deg: float) -> Dictionary:
+	var line := PackedVector2Array()
+	var span := wrapf(to_deg - from_deg, 0.0, 360.0)
+	for i in 24:
+		var angle := deg_to_rad(from_deg + span * i / 23.0)
+		line.append(centre + Vector2(cos(angle), sin(angle)) * (radius + band * 0.5))
+	return _row(what, line, band * 0.5 + 3.0, true)
 
 static func _row(what: String, points: Array, radius: float, ride := false) -> Dictionary:
 	return {"what": what, "points": PackedVector2Array(points), "radius": radius, "ride": ride}
@@ -369,9 +412,9 @@ func _clutter_batch(label: String, mesh: Mesh, transforms: Array) -> MultiMeshIn
 	view.multimesh = multi
 	view.set_meta("instance_buffer", buffer)
 	view.set_meta("clutter", true)
-	# The kit's own surface materials carry the paint; the pieces cast and receive shadow,
-	# which is what sets a stone on the sand instead of painting it there.
-	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	# Like every other dressing piece, clutter casts no shadow; the clutter shader's contact
+	# shade seats it on the ground and its protection hides it behind actors and telegraphs.
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(view)
 	batches.append(view)
 	return view
@@ -499,6 +542,10 @@ static func protection_rect(camera: Camera3D, at: Vector3, reach: float) -> Vect
 			for z in [-reach, reach]:
 				var corner := at + Vector3(x, y, z)
 				if camera.is_position_behind(corner):
+					# Near the camera the box covers the screen; far off, a box that only straddles the
+					# camera's plane lies 90 degrees off axis, out of view.
+					if camera.global_position.distance_to(at) > reach * 4.0:
+						return Vector4(-1.0, -1.0, -1.0, -1.0)
 					return Vector4(0.0, 0.0, 1.0, 1.0)
 				var point := camera.unproject_position(corner) / size
 				low = low.min(point)

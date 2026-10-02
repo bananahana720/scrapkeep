@@ -50,13 +50,13 @@ func _run() -> void:
 	for batch: MultiMeshInstance3D in dressing.batches:
 		var multi := batch.multimesh
 		check(batch.get_meta("instance_buffer").size() == multi.instance_count * (12 if batch.has_meta("clutter") else 16), "exact submitted instance buffer covers every placement")
+		check(batch.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "dressing, clutter and air cannot change gameplay shadows: " + String(batch.name))
 		if batch.has_meta("clutter"):
 			continue
 		check(batch.material_override.shader.get_shader_uniform_list().any(func(row): return row.name == "protected_count"), "engine parses dressing/air shader and protection include")
-		check(batch.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "air and broken rock cannot change gameplay shadows: " + String(batch.name))
 		if batch.name == "BrokenRock":
 			for i in multi.instance_count:
-				var tr := _instance(batch, i, 12 if batch.has_meta("clutter") else 16)
+				var tr := _instance(batch, i)
 				var at := Vector2(tr.origin.x, tr.origin.z)
 				check(not game.ctx.terrain.map().play_rect.grow(8.0).has_point(at) and _normal(ground, at).y < Tuning.MAX_SLOPE_DOT, "large rock on unclimbable ground outside playable apron")
 				var low := Vector3(INF, INF, INF)
@@ -77,6 +77,13 @@ func _run() -> void:
 			for i in multi.instance_count:
 				var tr := _instance(batch, i)
 				check(tr.basis.x.normalized().dot(Vector3(Dressing.WIND.x, 0.0, Dressing.WIND.y).normalized()) > 0.999, "all streaks follow one wind direction")
+	check(large_count > 0, "broken rocks exist on steep slopes")
+	var spill_rows := _surfaces(game.ctx.terrain.map_for(1), false)
+	var spill_near := _nearest(dressing, spill_rows)
+	check(spill_near.size() == spill_rows.size() and spill_rows.size() >= 4, "every spillway place is measured independently: " + str(spill_rows.size()))
+	for key in spill_near:
+		check(spill_near[key] >= CLEAR, "no spillway clutter within 3 m of the " + key + ": nearest " + str(snappedf(spill_near[key], 0.1)) + " m")
+	_route_checks()
 	print("Placed ", clutter.count, " clutter pieces on the Spillway; ", large_count, " broken rocks")
 	Preset.apply("target")
 	dressing = game.presentation.set_dressing
@@ -90,7 +97,13 @@ func _run() -> void:
 	var point := cam.unproject_position(enemy.global_position) / cam.get_viewport().get_visible_rect().size
 	check(protected.any(func(rect): return point.x >= rect.x and point.y >= rect.y and point.x <= rect.z and point.y <= rect.w), "enemy feet are inside dressing/air screen exclusion")
 	for batch in dressing.batches:
-		if not batch.has_meta("clutter"):
+		if batch.has_meta("clutter"):
+			var live := false
+			for surface in batch.multimesh.mesh.get_surface_count():
+				var mat := batch.multimesh.mesh.surface_get_material(surface) as ShaderMaterial
+				live = mat != null and mat.get_shader_parameter("protected_count") > 0
+				check(live, "every clutter surface shares live gameplay exclusion: " + String(batch.name) + " " + str(surface))
+		else:
 			check(batch.material_override.get_shader_parameter("protected_count") > 0, "every shader batch shares live gameplay exclusion")
 	var shot_camera := Camera3D.new()
 	game.add_child(shot_camera)
@@ -113,6 +126,10 @@ func _run() -> void:
 	check(dressing.visible, "frozen camera refresh restores dressing after protection overflow clears")
 	var tiny := Dressing.protection_rect(cam, cam.global_position + -cam.global_basis.z, 2.5)
 	check(tiny == Vector4(0, 0, 1, 1), "near-camera overlap protects the entire screen")
+	# A far object whose box merely straddles the camera's plane sits about 90 degrees off axis,
+	# outside the view: it must not blank the whole screen (it hid all Reach clutter in a still).
+	var straddle := Dressing.protection_rect(cam, cam.global_position + cam.global_basis.x * 150.0 - cam.global_basis.z * 1.0, 2.5)
+	check(straddle.z < 0.0, "a far object straddling the camera plane protects nothing: " + str(straddle))
 	Preset.apply("high")
 	# The enemy is the only deliberately added gameplay node in this test.
 	enemy.free()
@@ -171,8 +188,9 @@ func _clutter_checks(game, dressing, stage: int) -> Dictionary:
 			continue
 		var height := batch.multimesh.mesh.get_aabb().size.y
 		for surface in batch.multimesh.mesh.get_surface_count():
-			var mat := batch.multimesh.mesh.surface_get_material(surface) as StandardMaterial3D
-			stand = stand and mat != null and mat.vertex_color_use_as_albedo and not mat.emission_enabled
+			var mat := batch.multimesh.mesh.surface_get_material(surface) as ShaderMaterial
+			stand = stand and mat != null and mat.shader.resource_path == "res://src/presentation/clutter.gdshader" \
+				and mat.shader.get_shader_uniform_list().any(func(row): return row.name == "protected_rects")
 		for i in batch.multimesh.instance_count:
 			var tr := _instance(batch, i, 12)
 			var at := Vector2(tr.origin.x, tr.origin.z)
@@ -186,12 +204,16 @@ func _clutter_checks(game, dressing, stage: int) -> Dictionary:
 			tallest = maxf(tallest, standing)
 			floating = maxf(floating, tr.origin.y - (ground.call(at.x, at.y, 0.0) as Vector3).y)
 	check(worst.is_empty(), "no clutter inside a keepout row (" + str(rows.size()) + " rows): " + str(worst))
-	check(stand and names.size() == 10, "every kit mesh is placed and uses the target paint (vertex colour albedo, no emission)")
+	check(stand and names.size() == 10, "every kit mesh is placed and uses the clutter shader with the screen-space protection")
 	check(floating <= 0.0, "no clutter floats above the ground under its centre: " + str(floating))
 	check(tall >= 3 and tallest > 2.0, "pieces vary: " + str(tall) + " over 1 m, tallest " + str(tallest) + " m")
 	return {"count": count}
 
-# The Cable Reach: its own data, read independently of the keepout rows.
+# The Cable Reach and the Spillway: each map's own surfaces, read independently of the
+# keepout rows. A piece's origin must be 3 m clear of every riding surface, measured from the
+# surface and not from a centreline.
+const CLEAR := 3.0
+
 func _reach_checks() -> void:
 	Preset.apply("high")
 	var game := Game.new()
@@ -213,37 +235,112 @@ func _reach_checks() -> void:
 	check(dressing.find_children("*", "CollisionObject3D", true, false).is_empty(), "reach clutter has no collision")
 	var result := _clutter_checks(game, dressing, 1)
 	check(result.count > 300, "reach clutter stands: " + str(result.count) + " pieces")
-	var lines := []
+	var surfaces := _surfaces(map, true)
+	var expected: int = TraversalLine.PILOTS.size() + Reach.TUNNELS.size() + 1 + map.kickers.size() + 2 + 3
+	check(surfaces.size() == expected, "every ramp, kicker, tunnel and route is measured: " + str(surfaces.size()) + " of " + str(expected))
+	var nearest := _nearest(dressing, surfaces)
+	for key in nearest:
+		check(nearest[key] >= CLEAR, "no reach clutter within 3 m of the " + key + ": nearest " + str(snappedf(nearest[key], 0.1)) + " m")
+	check(nearest.size() == expected, "every measured surface met a piece: " + str(nearest.size()))
+	game.free()
+	Preset.apply("high")
+
+
+# The gap in metres from a point to each riding surface or authored place of the map. Each row
+# is {name, gap: Callable(Vector2) -> float}, the gap measured from the surface itself.
+func _surfaces(map, reach: bool) -> Array:
+	var rows := []
+	rows.append(["reward gate slot", func(at: Vector2) -> float: return _to_points(at, map.gate_slots.map(func(row): return row.at))])
+	rows.append(["activity site", func(at: Vector2) -> float: return _to_points(at, map.activity_sites.map(func(row): return row.at))])
+	rows.append(["Warden bowl", func(at: Vector2) -> float: return at.distance_to(map.beacon) - Features.BOWL_FLAT])
+	if not reach:
+		for k in map.scrap_lines.size():
+			var line: Array = map.scrap_lines[k]
+			rows.append(["scrap line " + str(k), func(at: Vector2) -> float: return _to_line(at, line)])
+		return rows
 	var routes := TraversalLine.load_routes()
 	for pilot in TraversalLine.PILOTS:
-		lines.append(["ride line " + pilot, TraversalLine.route_of(routes, pilot)])
+		var line := TraversalLine.route_of(routes, pilot)
+		rows.append(["ride line " + pilot, func(at: Vector2) -> float: return _to_line(at, line)])
 	for id in Reach.TUNNELS:
-		lines.append(["tunnel floor " + id, Reach.TUNNELS[id]])
-	lines.append(["dive ramp", [Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_FROM, Reach.MOUTH + Reach.DIVE_DIR * (Reach.DIVE_TO + Reach.DIVE_OUT)]])
-	var points := []
-	for slot in map.gate_slots:
-		points.append(["reward gate slot", slot.at])
-	for site in map.activity_sites:
-		points.append(["activity site", site.at])
-	points.append(["Warden bowl", map.beacon])
+		var ends: Array = Reach.TUNNELS[id]
+		rows.append(["tunnel floor " + id, func(at: Vector2) -> float: return _to_line(at, ends) - Reach.TUNNEL_HALF])
+	var dive := [Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_FROM, Reach.MOUTH + Reach.DIVE_DIR * (Reach.DIVE_TO + Reach.DIVE_OUT)]
+	rows.append(["dive ramp", func(at: Vector2) -> float: return _to_line(at, dive) - (Reach.DIVE_HALF + Reach.DIVE_SIDE)])
+	for k in map.kickers.size():
+		var kicker: Dictionary = map.kickers[k]
+		rows.append(["kicker " + str(k), func(at: Vector2) -> float: return _to_rect(at, kicker.at, kicker.dir, Reach.KICKER_LENGTH, Reach.KICKER_WIDTH)])
+	rows.append(["sweeper ramp", func(at: Vector2) -> float: return _to_arc(at, Reach.SWEEP_CENTRE, Reach.SWEEP_ARC, Reach.SWEEP_WIDTH + Reach.SWEEP_BANK, Reach.SWEEP_FROM, Reach.SWEEP_TO)])
+	rows.append(["berm ramp", func(at: Vector2) -> float: return _to_arc(at, Reach.BERM_CENTRE, Reach.BERM_RADIUS, Reach.BERM_WIDTH + Reach.BERM_BANK, Reach.BERM_FROM, Reach.BERM_TO)])
+	return rows
+
+
+func _nearest(dressing, surfaces: Array) -> Dictionary:
 	var nearest := {}
-	var cluster_total := 0
 	for batch: MultiMeshInstance3D in dressing.batches:
 		if not batch.has_meta("clutter"):
 			continue
 		for i in batch.multimesh.instance_count:
-			var at := Vector2(_instance(batch, i, 12).origin.x, _instance(batch, i, 12).origin.z)
-			cluster_total += 1
-			for line in lines:
-				var best := INF
-				for k in line[1].size() - 1:
-					best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, line[1][k], line[1][k + 1])))
-				nearest[line[0]] = minf(nearest.get(line[0], INF), best)
-			for point in points:
-				var gap: float = at.distance_to(point[1]) - (Features.BOWL_FLAT if point[0] == "Warden bowl" else 0.0)
-				nearest[point[0]] = minf(nearest.get(point[0], INF), gap)
-	for key in nearest:
-		check(nearest[key] >= 3.0, "no reach clutter within 3 m of the " + key + ": nearest " + str(snappedf(nearest[key], 0.1)) + " m")
-	check(nearest.size() >= 10, "all the authored lines and sites were measured: " + str(nearest.size()))
-	game.free()
-	Preset.apply("high")
+			var origin := _instance(batch, i, 12).origin
+			var at := Vector2(origin.x, origin.z)
+			for row in surfaces:
+				nearest[row[0]] = minf(nearest.get(row[0], INF), row[1].call(at))
+	return nearest
+
+
+func _to_points(at: Vector2, points: Array) -> float:
+	var best := INF
+	for point: Vector2 in points:
+		best = minf(best, at.distance_to(point))
+	return best
+
+
+func _to_line(at: Vector2, line: Array) -> float:
+	var best := INF
+	for k in line.size() - 1:
+		best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, line[k], line[k + 1])))
+	return best
+
+
+# Distance to a kicker's footprint: from `length` behind its foot to the lip, half its width each side.
+func _to_rect(at: Vector2, foot: Vector2, dir: Vector2, length: float, width: float) -> float:
+	var rel := at - foot
+	var along := rel.dot(dir)
+	var across := absf(rel.dot(Vector2(-dir.y, dir.x)))
+	return Vector2(maxf(maxf(-length - along, along), 0.0), maxf(across - width * 0.5, 0.0)).length()
+
+
+# Distance to a banked arc's surface: the radial band [radius, radius + band] within its
+# angular span, the end caps measured to the band's corners.
+func _to_arc(at: Vector2, centre: Vector2, radius: float, band: float, from_deg: float, to_deg: float) -> float:
+	var rel := at - centre
+	var span := wrapf(to_deg - from_deg, 0.0, 360.0)
+	var into := wrapf(rad_to_deg(atan2(rel.y, rel.x)) - from_deg, 0.0, 360.0)
+	var length := rel.length()
+	if into <= span:
+		return maxf(maxf(radius - length, length - radius - band), 0.0)
+	var best := INF
+	for end in [from_deg, to_deg]:
+		var direction := Vector2.from_angle(deg_to_rad(end))
+		best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, centre + direction * radius, centre + direction * (radius + band))))
+	return best
+
+
+# The Reach's route rows live under src/world, because tools/ is left out of the export, and
+# must equal the matching rows of the tools file the bots read.
+func _route_checks() -> void:
+	var local = JSON.parse_string(FileAccess.get_file_as_string(Dressing.ROUTES))
+	var tools := TraversalLine.load_routes()
+	check(local is Dictionary and local.get("pilots") is Dictionary, "the reach route file is a Dictionary of pilots: " + Dressing.ROUTES)
+	if not local is Dictionary:
+		return
+	check(not Dressing.ROUTES.begins_with("res://tools/"), "the runtime route file is not under tools/")
+	var same: bool = local.get("pilots", {}).size() == TraversalLine.PILOTS.size()
+	for pilot in TraversalLine.PILOTS:
+		same = same and local.get("pilots", {}).get(pilot, {}).get("waypoints") == tools.get("pilots", {}).get(pilot, {}).get("waypoints") \
+			and tools.get("pilots", {}).get(pilot, {}).get("waypoints", []).size() > 1
+	check(same, "reach_routes.json rows equal the matching rows of tools/traversal_lines.json")
+	Dressing._route_warned = false
+	check(Dressing.pilot_rows(null).is_empty() and Dressing.pilot_rows("x").is_empty() and Dressing.pilot_rows([]).is_empty(), "a missing or non-Dictionary route file places no pilot keep-outs")
+	check(Dressing._route_warned, "and warns")
+	check(Dressing.pilot_rows(local).size() == TraversalLine.PILOTS.size(), "a good route file gives one keep-out row per pilot")
