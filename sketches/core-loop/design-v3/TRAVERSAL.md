@@ -105,3 +105,30 @@ Sable seed 7 stops at tick 1523, time 16.9117 s, position (-50.466,24.401,-1.013
 The full static line sweeps fail at the existing `plinth_cache` overlapping spawn and each deck approach. `interact.gd` still uses the stage-1 entries in `interactables.gd`; the new map only publishes activity points for the later activity unit. Those files are outside Z3X scope. No collider was excluded to hide this failure.
 
 Receipts and all 24 per-seed rows are under `artifacts/local/alpha/r2/Z3X/` at the repository root, with final measurements in `traversal-final/`. The historical baseline above is unchanged.
+
+
+## Z3b west strand: measured redesign, try 6
+
+Leave the deck on the broad ramp pointing west. Ride the banked sweep around the west shelf, then dive across w1 into a bank that turns north under the bridges. That bank points the line toward the bowl's north ramp, reaching the Warden in flight.
+
+Godot 4.7.2, fixed 90 Hz, slice table, eight seeds per pilot, working changes based on `2ff4f350ed59f45ba0393b99996eb843575bfe9f`. These runs measure the bot; they do not establish human traversal feel. Every bar is unchanged.
+
+Sable meets Z3b-1 on try 6: median flow 0.9068 against 0.8974, minimum flow 0.9056, zero dead stops, all eight Warden reaches, shortest path 400.60 m, largest anchor gap 15.9 m, maximum backward travel 1.03 m, and median on-line share 0.944. The west bank follows a 75 m centreline radius; the north-facing exit follows a 50 m centreline radius. The deck approach's authored height is 40 m at (-42,-140), allowing her to reach the bank at speed. The marble path has 25 points.
+
+The static step check now covers the full authored marble line from its mouth to the merge, except the intended open flight from (-86.7115,-30.9205) to (-0.5311,36.732). Its largest tested rise is 0.2087 m at one-metre steps. The two changed terrain pins are (-62.1,-25.4): 30.70 to 29.09 m, and (-58,-10): 28.20 to 33.57 m; the 0.5 m tolerance is unchanged. All static line sweeps pass when the coordinator-owned Interact bodies are excluded and printed, as directed by the packet.
+
+The candidate still fails acceptance. The west wall's bottom is 1.1388 m above the lowest terrain under its footprint edge. Rivet's median flow is 0.8791 against 0.8814; Kest's is 0.8968 against 0.9019. Both have zero dead stops and reach the Warden on every seed, and retain their cable and path requirements. The first observed trace divergence from the committed runs is at the spawn cache: the new approach ramp changes terrain at its dock (-5,-156), changing the cache collider height. The new marble channel also changes the terrain on the east side of the merge.
+
+The packet freezes map changes once Sable passes Z3b-1. Permission to correct the west wall's footing and restore original terrain at the cache dock and east merge is pending. A compiled proposed correction is staged under `artifacts/local/alpha/r2/Z3b/`; it has not been applied to this map.
+
+| Try | One change | Median flow | Stops | Backward median / max m | Median on-line | Decision |
+|---|---|---:|---:|---:|---:|---|
+| 0 | Unchanged round-one layout | 0.7345 | 12 | 9.34 / 11.17 | 0.736 | baseline |
+| 1 | 103 m west sweeper and open dive | 0.7811 | 0 | 12.66 / 13.17 | 0.749 | kept |
+| 2 | Deck waypoint z -152 to -140 | 0.7764 | 0 | 16.20 / 25.61 | 0.747 | undone |
+| 3 | Tangent banks give the dive a north exit | 0.8588 | 0 | 2.38 / 2.38 | 0.835 | kept |
+| 4 | Forward deck departure joins bank farther down | 0.3740 | 100 | 11.21 / 22.53 | 0.166 | undone |
+| 5 | West bank floor grade 0.125 to 0.03 | 0.8324 | 3 | 5.90 / 5.90 | 0.956 | undone |
+| 6 | Deck approach point height to 40 m | 0.9068 | 0 | 1.02 / 1.03 | 0.944 | kept |
+
+All traces, source snapshots, commands, exit codes and evaluations are under `artifacts/local/alpha/r2/Z3b/` at the worktree root. No movement number, fight rule, bar, Rivet/Kest waypoint, gorge source or three-stage table changed.

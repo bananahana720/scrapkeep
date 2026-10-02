@@ -1760,3 +1760,12 @@ Maps with gate slots roll one offer per slot and place each offer at its authore
 The candidate fails traversal acceptance. After the single permitted deck-waypoint adjustment, median flow shares are Sable 0.7345, Rivet 0.8836, Kest 0.9139. All reach the Warden on 8/8 seeds. Sable has 12 dead stops and a largest uphill stretch of 11.17 m; Rivet and Kest have zero stops and meet their bars. The remaining Sable contacts are the kept satellite, marble terrain and w1 roof. The line sweeps also detect the existing stage-1 cache overlapping spawn. Resolving that placement needs the activity owner's files; further Sable geometry or bot changes need a new coordinator ruling. No further tuning was applied.
 
 All nine built heights are within 0.5 m of the sheet, all 18 post and wall collider bottoms pass the footprint-edge footing check, the channel's largest 1 m-step rise is 0.044 m, and 120 simulated idle seconds advance the empty event director with no timed starts. `design-v3/TRAVERSAL.md` records the route measures and final numbers. Headless tests do not establish Andrew's traversal or fight feel.
+
+
+## Z3b: west strand redesign, try 6
+
+The measured loop kept tries 1, 3 and 6 and undid tries 2, 4 and 5. Sable's new line uses a wide west bank and an open dive with a north-facing bank at its exit. Try 6 meets her flow, stops, reach, anchor, path, backward-travel and on-line bars over eight seeds; the full tries table and numerical results are in `design-v3/TRAVERSAL.md`.
+
+Two terrain height expectations changed with the strand: (-62.1,-25.4), 30.70 to 29.09 m; (-58,-10), 28.20 to 33.57 m. The terrain tolerance, footing interval, sphere radius, 0.3 m step limit and every traversal bar are unchanged. The whole-line step test names the intended open dive it excludes. The static sweep prints and excludes coordinator-owned Interact bodies.
+
+This candidate is not accepted: the west wall floats at its footprint edge, and Rivet/Kest lose their flow medians because the west ramp also changes the spawn cache's docking height; the parent channel calculation additionally leaks into the east merge. The map is frozen under the packet's stopping rule, with a concrete correction staged for approval. Human play and visual readability remain untested.

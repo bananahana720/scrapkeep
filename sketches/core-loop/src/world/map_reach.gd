@@ -1,7 +1,34 @@
 extends "res://src/world/map_gorge.gd"
 
-const REACH_MARBLE := [Vector2(-94.0, -122.0), Vector2(-120.0, -98.0), Vector2(-122.0, -72.0), Vector2(-100.0, -54.0),
-	Vector2(-78.0, -44.0), Vector2(-66.0, -30.0), Vector2(-58.0, -10.0)]
+const REACH_MARBLE := [
+	Vector2(-83.0330, -133.0330),
+	Vector2(-90.3572, -124.5197),
+	Vector2(-96.3281, -115.0082),
+	Vector2(-100.8119, -104.7118),
+	Vector2(-103.7080, -93.8613),
+	Vector2(-104.9514, -82.7001),
+	Vector2(-104.5143, -71.4783),
+	Vector2(-102.4065, -60.4475),
+	Vector2(-98.6752, -49.8552),
+	Vector2(-93.4042, -39.9387),
+	Vector2(-86.7115, -30.9205),
+	Vector2(-78.7473, -23.0027),
+	Vector2(-69.6901, -16.3628),
+	Vector2(-59.7431, -11.1498),
+	Vector2(-49.1291, -7.4805),
+	Vector2(-37.2473, -4.3463),
+	Vector2(-30.3551, -1.9791),
+	Vector2(-23.8802, 1.3648),
+	Vector2(-17.9602, 5.6144),
+	Vector2(-12.7208, 10.6795),
+	Vector2(-8.2732, 16.4523),
+	Vector2(-4.7121, 22.8103),
+	Vector2(-2.1130, 29.6184),
+	Vector2(-0.5311, 36.7320),
+	Vector2(0.0000, 44.0000)
+]
+const WEST_LINE := [Vector2(0.0, -160.0), Vector2(-42.0, -140.0)] + REACH_MARBLE
+const DIVE_LEG := 16
 const POSTS := [
 	Vector3(-80.0, 16.0, -124.0),
 	Vector3(-136.0, 16.0, -86.0),
@@ -60,23 +87,51 @@ func _init() -> void:
 		"hauler_bounty": Vector2(0.0, -88.0)}
 
 
-func _reach_marble_points() -> Array:
-	var pts := []
-	var total := 0.0
+func _west_profile() -> Array:
+	var heights := [57.23]
 	var lengths := [0.0]
-	for i in range(1, REACH_MARBLE.size()):
-		total += (REACH_MARBLE[i] as Vector2).distance_to(REACH_MARBLE[i - 1])
-		lengths.append(total)
-	var top := flank(REACH_MARBLE[0].y)
-	var bottom := flank(REACH_MARBLE[-1].y) - 0.3
+	var length_m := 0.0
+	for i in range(1, WEST_LINE.size()):
+		length_m += (WEST_LINE[i] as Vector2).distance_to(WEST_LINE[i - 1])
+		lengths.append(length_m)
+	var start_h: float = 57.23 - lengths[DIVE_LEG] * 0.125
+	for i in range(1, WEST_LINE.size()):
+		heights.append(57.23 - lengths[i] * 0.125 if i <= DIVE_LEG else Features.descent(lengths[i], lengths[DIVE_LEG], length_m, start_h, 2.7))
+	heights[1] = 40.0
+	return heights
+
+
+func _reach_marble_points() -> Array:
+	var heights := _west_profile()
+	var pts := []
 	for i in REACH_MARBLE.size():
-		var m: Vector2 = REACH_MARBLE[i]
-		pts.append(Vector3(m.x, lerpf(top, bottom, lengths[i] / total), m.y))
+		var at: Vector2 = REACH_MARBLE[i]
+		pts.append(Vector3(at.x, heights[i + 2], at.y))
 	return pts
+
+
+func _west_height(x: float, z: float, original: float) -> float:
+	var point := Vector2(x, z)
+	var nearest := INF
+	var floor_h := original
+	var heights := _west_profile()
+	for i in WEST_LINE.size() - 1:
+		var a: Vector2 = WEST_LINE[i]
+		var b: Vector2 = WEST_LINE[i + 1]
+		var q := Geometry2D.get_closest_point_to_segment(point, a, b)
+		var distance := point.distance_to(q)
+		if distance < nearest:
+			nearest = distance
+			floor_h = lerpf(heights[i], heights[i + 1], a.distance_to(q) / a.distance_to(b))
+	var weight := (1.0 - smoothstep(10.0, 22.0, nearest)) * (1.0 - smoothstep(-8.0, 0.0, x)) * (1.0 - smoothstep(40.0, 44.0, z))
+	var bank := Features.banked_arc(x, z, Vector2(-30.0, -80.0), 67.0, 12.0, 14.0, 92.7768, 235.0)
+	bank += Features.banked_arc(x, z, Vector2(-50.0, 44.0), 42.0, 12.0, 24.0, -87.2232, 12.0)
+	return lerpf(original, floor_h + bank, weight)
 
 
 func sample(x: float, z: float) -> Array:
 	var value := super.sample(x, z)
+	value[0] = _west_height(x, z, value[0])
 	value[0] += Features.banked_arc(x, z, Vector2(29.0, 90.0), 40.0, 12.0, 10.0, -15.0, 100.0) \
 		* smoothstep(Features.BOWL_RIM, Features.BOWL_OUT, Vector2(x, z).distance_to(BEACON))
 	value[0] += Features.kicker(x, z, Vector2(0.0, 86.0), Vector2(0.0, 1.0), 12.0, 10.0, 4.5)

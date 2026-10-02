@@ -8,11 +8,13 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const T := preload("res://tests/support/t.gd")
 
-const HEIGHTS := [Vector3(0.0, 57.23, -160.0), Vector3(-62.1, 30.7, -25.4), Vector3(-58.0, 28.2, -10.0),
+const HEIGHTS := [Vector3(0.0, 57.23, -160.0), Vector3(-62.1, 29.09, -25.4), Vector3(-58.0, 33.57, -10.0),
 	Vector3(74.0, 3.4, 86.0), Vector3(68.0, 1.4, 112.5), Vector3(74.0, 9.7, 116.0),
 	Vector3(0.0, -2.2, 86.0), Vector3(0.0, -8.0, 134.0), Vector3(-28.0, -6.55, 134.0)]
 const IDLE_SCALE := 8.0
-const CHANNEL := [Vector2(-78.0, -44.0), Vector2(-66.0, -30.0), Vector2(-58.0, -10.0), Vector2(-24.0, 20.0)]
+const CHANNEL := Reach.REACH_MARBLE
+const OPEN_DIVE_FROM := 10
+const OPEN_DIVE_TO := 23
 
 var _game
 var _t := T.new("reach_map_test")
@@ -64,16 +66,20 @@ func _check_map() -> void:
 	var map = terrain.map()
 	_t.eq("Reach script", map.get_script(), Reach)
 	_t.eq("parent title retained", map.title, "The Cable Reach")
-	_t.eq("extended marble path", map.marble_path.size(), 7)
+	_t.eq("west sweep and dive path", map.marble_path.size(), CHANNEL.size())
 	_t.eq("inherited surge site retained", map.sites["surge_run"]["ring"], Vector2(-44.0, -164.0))
 	_t.eq("activity points published", map.activity_sites, {"ambush_altar": Vector2(-16.0, 44.0),
 		"cracked_cache": Vector2(70.0, -4.0), "hauler_bounty": Vector2(0.0, -88.0)})
 	for point in HEIGHTS:
 		_t.near("built height at %.1f,%.1f" % [point.x, point.z], terrain.height(point.x, point.z), point.y, 0.5)
 	_check_feet()
+	_note_interact()
 	_check_lines()
 	var largest := 0.0
+	print("reach_map_test: intended flight: open dive from %s to %s" % [CHANNEL[OPEN_DIVE_FROM], CHANNEL[OPEN_DIVE_TO]])
 	for i in CHANNEL.size() - 1:
+		if i >= OPEN_DIVE_FROM and i < OPEN_DIVE_TO:
+			continue
 		var a: Vector2 = CHANNEL[i]
 		var b: Vector2 = CHANNEL[i + 1]
 		var steps := int(ceil(a.distance_to(b)))
@@ -83,7 +89,7 @@ func _check_map() -> void:
 			var h: float = terrain.height(p.x, p.y)
 			largest = maxf(largest, h - last)
 			last = h
-	_t.check("channel steps rise at most 0.3 m", largest <= 0.3, "largest rise %.4f m" % largest)
+	_t.check("whole west line ground steps rise at most 0.3 m", largest <= 0.3, "largest rise %.4f m" % largest)
 	_check_wall_rule()
 
 
@@ -127,6 +133,15 @@ func _foot(body: StaticBody3D) -> void:
 		"bottom %.4f lowest edge ground %.4f burial %.4f" % [bottom, lowest, depth])
 
 
+func _interact_bodies() -> Array:
+	var holder: Node = _game.find_child("Interact", true, false)
+	return holder.find_children("*", "StaticBody3D", true, false) if holder != null else []
+
+
+func _note_interact() -> void:
+	print("reach_map_test: coordinator-owned Interact bodies excluded from static route sweep: %s" % [_interact_bodies().map(func(body): return str(body.get_path()))])
+
+
 func _check_lines() -> void:
 	var routes := Traversal.load_routes()
 	for pilot in Traversal.PILOTS:
@@ -134,7 +149,7 @@ func _check_lines() -> void:
 		var hits := _sweep(points, 0.0, pilot == "rivet")
 		_t.check("%s authored line is clear" % pilot, hits.is_empty(), "%s" % [hits])
 	for offset in [-4.0, 4.0]:
-		var hits := _sweep([Vector2(-66.0, -30.0), Vector2(-58.0, -10.0)], offset, false)
+		var hits := _sweep([CHANNEL[-2], CHANNEL[-1]], offset, false)
 		_t.check("marble last segment offset %.0f is clear" % offset, hits.is_empty(), "%s" % [hits])
 
 
@@ -148,6 +163,7 @@ func _sweep(points: Array, offset: float, allow_wall: bool) -> Array:
 	var excluded: Array[RID] = [ground.get_rid()]
 	if allow_wall:
 		excluded.append(_game.world.contraptions[1].walls[0]["body"].get_rid())
+	excluded.append_array(_interact_bodies().map(func(body): return body.get_rid()))
 	q.exclude = excluded
 	var space = _game.get_world_3d().direct_space_state
 	var hits: Array = []
