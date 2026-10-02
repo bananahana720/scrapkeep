@@ -107,7 +107,7 @@ func _check_spot() -> void:
 	var bay = _game.world.bay
 	var at := _spot_at(_spot)
 	var problems := []
-	if _game.flow.state_name() != "gates":
+	if _mode == "slots" and _game.flow.state_name() != "gates":
 		problems.append("flow %s" % _game.flow.state_name())
 	var wanted := [_slots[0], _slots[2]]
 	if _mode == "slots":

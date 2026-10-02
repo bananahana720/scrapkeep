@@ -67,7 +67,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_footing()
 	_check_line_steps()
 	_check_lines()
-	_check_marble_side()
+	_check_dive_sides()
 	_game.free()
 	quit(_t.verdict())
 	return true
@@ -81,7 +81,7 @@ func _check_map() -> void:
 	var map = _terrain().map()
 	_t.check("slice map is the Reach", map.get_script() == Reach and map.title == "The Cable Reach",
 		"active map script is the Reach: %s, title '%s'" % [map.get_script() == Reach, map.title])
-	_t.check("cracked wall breaks at cruise here only", _wall_flag(map) and not _wall_flag(_terrain().map_for(1).get_script().new() if false else load("res://src/world/map_gorge.gd").new()),
+	_t.check("cracked wall breaks at cruise here only", _wall_flag(map) and not _wall_flag(load("res://src/world/map_gorge.gd").new()),
 		"Reach wall spec break_at_cruise %s, gorge's %s" % [_wall_flag(map), _wall_flag(load("res://src/world/map_gorge.gd").new())])
 
 
@@ -255,7 +255,7 @@ func _check_lines() -> void:
 
 # The dive's crest is where the old satellite tower stood beside the line: sweep the sweeper's end
 # and the whole dive 4 m to each side and name whatever a ball-sized sphere meets.
-func _check_marble_side() -> void:
+func _check_dive_sides() -> void:
 	var a: Vector2 = Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_FROM
 	var b: Vector2 = Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_TO
 	var steps := ceili(a.distance_to(b) / SWEEP_STEP)

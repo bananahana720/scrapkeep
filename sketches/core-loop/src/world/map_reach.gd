@@ -62,12 +62,13 @@ const CABLE_RADIUS := 4.5
 const THERMAL_A := Vector2(80.0, -12.0)
 const THERMAL_B := Vector2(44.0, 132.0)
 
+const OPEN_TUNNELS := ["w1", "e1"]
+
 const POST_HEIGHT := 16.0
 const PILLAR_HEIGHT := 20.0
 # Each {"at": Vector2, "height": float}: the posts this map adds or keeps, all footed at
 # ground - 0.5 like every other post.
 const POSTS := [
-	{"at": Vector2(-60.0, -96.0), "height": POST_HEIGHT},
 	{"at": Vector2(-136.0, -86.0), "height": POST_HEIGHT},
 	{"at": Vector2(46.0, -143.0), "height": POST_HEIGHT},
 	{"at": Vector2(100.0, -110.0), "height": 32.0},
@@ -266,10 +267,11 @@ func _landmark(parent: Node3D, ground: Callable, enamel: Material, light: Materi
 	parent.add_child(omni)
 
 
-# The gorge's tunnel roofs without w1's: the dive is open to the sky.
+# The gorge's tunnel roofs without those on an authored line: the dive (w1) and Rivet's
+# tunnel (e1) are open to the sky, since a ball arriving in flight meets a roof as a wall.
 func _tunnel_roofs(parent: Node3D, ground: Callable, mat: Material) -> void:
 	for id in TUNNELS:
-		if id == "w1":
+		if id in OPEN_TUNNELS:
 			continue
 		var ends: Array = TUNNELS[id]
 		var a: Vector2 = (ends[0] as Vector2).lerp(ends[1], 0.28)

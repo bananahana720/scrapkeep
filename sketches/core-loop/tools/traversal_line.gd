@@ -18,7 +18,8 @@ const Augments := preload("res://src/movement/augments.gd")
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
 #
 # Route measures, per seed: path_length_m (the distance travelled from spawn to engage), rides
-# (which of ride_grapple_line, wall_crumbled, kicker_launch and thermal_ride fired, by name) and
+# (which of ride_grapple_line, ride_chute, ride_skylight, ride_glide_drop, wall_crumbled,
+# kicker_launch and thermal_ride fired, by name) and
 # uphill_m (the most z the ball gave back from its furthest point toward the Warden). The summary
 # holds each one's median.
 
@@ -31,7 +32,7 @@ const WORLD_AIMS := [Augments.AIM_REACH, Augments.AIM_ASSIST]
 const PROBE_SECONDS := 0.1
 const PROBE_SPOKES := 12
 const PROBE_PITCHES := [0.0, 0.4, 0.8]
-const RIDE_FACTS := ["ride_grapple_line", "wall_crumbled", "thermal_ride"]
+const RIDE_FACTS := ["ride_grapple_line", "ride_chute", "ride_skylight", "ride_glide_drop", "wall_crumbled", "thermal_ride"]
 const KICKER_LAUNCH := "kicker_launch"
 
 
