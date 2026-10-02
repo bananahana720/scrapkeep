@@ -281,7 +281,9 @@ func _on_scrap_lost(_amount: int, at: Vector3, _total: int, _cause: String) -> v
 
 func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float) -> void:
 	if is_instance_valid(enemy) and enemy.is_inside_tree():
-		glyph("strike_deflected", enemy.global_position + Vector3.UP * 0.6, 0.35, 0.7, 0.15)
+		var row := EventKinds.state_row("glancing")
+		glyph("strike_deflected", enemy.global_position + Vector3.UP * 0.6, 0.35, 0.7, 0.15, Vector3.ZERO,
+			String(row["shape"]), EventKinds.state_color("glancing"))
 
 
 # The core locks in where it was won: a diamond flash and a tight ring.

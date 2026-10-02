@@ -23,17 +23,16 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
-# The plating dress (primer ruling 6, 2026-09-27): "breaks now" is a rim in the class
-# colour with an open-crack glyph; "not yet" is closed plates with no rim, and the
-# clank ladder already says how close you were. Amber belongs to Kest and the rare
-# rarity and slate vanishes on ancient petrol, so neither reads plating any more. The
-# tint_state names ("amber" for now, "slate" for not yet) stay as the state's names.
-const AMBER := Palette.AMBER
-const SLATE := Color("5d6b78")
+# The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
+# an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
+# crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
+# passes them; what they draw comes from the will_break and glancing rows.
 const PLATE_CLOSED := Color("3b403d")
 const TINT_ENERGY := 0.9
-const PLATE_GLOW_AMBER := 1.8
-const PLATE_GLOW_SLATE := 0.0
+const PLATE_GLOW_LIVE := 1.8
+const PLATE_GLOW_SLATE := 0.5
+const PULSE_DEPTH := 0.14
+const PULSE_HZ := 2.0
 # The cue lives on the plate's rim, not its faces (Andrew, 2026-09-29): the plate material
 # emits through a tiny nearest-filtered mask texture, so light appears only where the mask
 # is white (rim, bolts) and body and plate faces keep their resting finish in both states.
@@ -41,7 +40,7 @@ const PLATE_GLOW_SLATE := 0.0
 # mask and shows nothing on its faces; its crack glyph carries the cue.
 const RIM_CELL := 8
 const RIM_EDGE := 2
-# The class colour "now" is drawn in: combat sets it when a run starts.
+# The pilot's class colour, set when a run starts. Identity only: no plate cue reads it.
 static var rim_color := Palette.ARC
 
 signal hit_player(amount: float, shove: Vector3)
@@ -96,6 +95,7 @@ var _telegraph: Node3D
 var _tint_materials: Array = []
 # Open-crack glyphs a plated enemy shows only while your punch breaks it now.
 var _cracks: Array = []
+var _rim_clock := 0.0
 # The open attack instance, or {} between attacks: instance, row, phase, managed, geometry, progress.
 var _atk := {}
 
@@ -180,10 +180,11 @@ func set_tint(state: String) -> void:
 	tint_state = state
 	var now := state == "amber"
 	for mat in _tint_materials:
-		_paint_plate(mat as StandardMaterial3D, rim_color if now else PLATE_CLOSED, now)
+		_paint_plate(mat as StandardMaterial3D, state)
 	for crack in _cracks:
 		if is_instance_valid(crack):
 			crack.visible = now
+	_rim_clock = 0.0
 	if _flash <= 0.0:
 		_apply_rest_look()
 
@@ -362,7 +363,7 @@ func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
 	# Multiply, not the default add: the colour must only show where the mask is white.
 	mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	_paint_plate(mat, PLATE_CLOSED, false)
+	_paint_plate(mat, "")
 	_tint_materials.append(mat)
 	return mat
 
@@ -374,13 +375,33 @@ func _plates_are_round() -> bool:
 
 
 # Plating carries its read in light, not just paint, so it survives distance and shade:
-# the class-colour rim burns (your punch breaks through now); closed plates stay dark.
-static func _paint_plate(mat: StandardMaterial3D, color: Color, beatable: bool) -> void:
-	# The resting finish stays in both states; "now" arrives as light through the mask.
+# the live rim burns (your punch breaks through now), a slate rim holds (it would glance),
+# and no state leaves the plates at rest. The resting finish stays in every state; the
+# state arrives as light through the mask.
+static func _paint_plate(mat: StandardMaterial3D, state: String) -> void:
 	mat.albedo_color = PLATE_CLOSED
-	mat.emission_enabled = beatable
-	mat.emission = color
-	mat.emission_energy_multiplier = PLATE_GLOW_AMBER if beatable else PLATE_GLOW_SLATE
+	mat.emission_enabled = state == "amber" or state == "slate"
+	if state == "amber":
+		mat.emission = EventKinds.state_color("will_break")
+		mat.emission_energy_multiplier = PLATE_GLOW_LIVE
+	elif state == "slate":
+		mat.emission = EventKinds.state_color("glancing")
+		mat.emission_energy_multiplier = PLATE_GLOW_SLATE
+	else:
+		mat.emission = PLATE_CLOSED
+		mat.emission_energy_multiplier = 0.0
+
+
+static func _pulses() -> bool:
+	return String(EventKinds.state_row("will_break").get("motion", "none")) == "pulse"
+
+
+# The will_break row pulses at 2 Hz (LINE_ROWS' brackets beat the same).
+func _pulse_rim(delta: float) -> void:
+	_rim_clock += delta
+	var swing := 1.0 + PULSE_DEPTH * sin(TAU * PULSE_HZ * _rim_clock)
+	for mat in _tint_materials:
+		(mat as StandardMaterial3D).emission_energy_multiplier = PLATE_GLOW_LIVE * swing
 
 
 # A one-row or grid mask texture, nearest-sampled and mipless so a texel never blends.
@@ -408,12 +429,12 @@ static func rim_frame_mask() -> ImageTexture:
 	return _frame_mask
 
 
-# An open-crack glyph on a plate: a lit zigzag in the class colour, shown only while
+# An open-crack glyph on a plate: a lit zigzag in the live colour, shown only while
 # the plate breaks now. Visual only; parented to the plate so it moves with it.
 func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 	var glyph := Node3D.new()
 	glyph.position = at
-	var mat := Palette.unshaded(rim_color)
+	var mat := Palette.unshaded(EventKinds.state_color("will_break"))
 	for i in 3:
 		var stroke := MeshInstance3D.new()
 		var box := BoxMesh.new()
@@ -434,6 +455,8 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PHYSICS_PROCESS:
 		_facts_poll()
+		if tint_state == "amber" and _pulses():
+			_pulse_rim(get_physics_process_delta_time())
 
 
 # The open attack as a fact, with the geometry and progress it has right now; {} when
