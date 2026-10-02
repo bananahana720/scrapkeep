@@ -16,6 +16,7 @@ const FOV_REST := 65.0
 const FOV_FAST := 80.0
 const FALL_SPEED := -8.0
 const BIAS_LIMIT := 0.21
+const LOS_RADIUS := 1.3
 const PROFILE_EASE := 5.0
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
@@ -35,6 +36,10 @@ var pitch := -0.30
 # mounted, presentation calls punch_fov, kick and shake. Nothing else writes the rig.
 var shoulder_target := 0.0
 var shoulder_blend := 0.0
+# P1 probe change: while the ball falls fast the pivot sits on the ball with no follow lag, so the
+# spring arm starts at the ball and a deck edge between the lagged pivot and the ball cannot hide it.
+# Off unless the Dig probe's plate turns it on.
+var pin_pivot_when_falling := false
 # The viewer's comfort (the pause menu's Screen shake row): scales every punch, kick and
 # shake, the landing shake included. 0 holds the camera still.
 var motion_scale := 1.0
@@ -166,6 +171,8 @@ func _process(delta: float) -> void:
 	var shoulder := yaw_basis().x * SHOULDER_SIDE + Vector3.UP * SHOULDER_UP
 	var anchor: Vector3 = target.shown_position() + Vector3.UP * 0.8 + shoulder * shoulder_blend
 	global_position = global_position.lerp(anchor, lerpf(follow, 1.0, shoulder_blend * 0.5))
+	if pin_pivot_when_falling and not target.state.grounded and velocity.y < FALL_SPEED:
+		global_position = anchor
 	var ease := 1.0 - exp(-4.0 * delta)
 	var speed_arm := lerpf(7.5, 10.5, fraction)
 	var rows := active_profiles()
@@ -201,3 +208,23 @@ func _process(delta: float) -> void:
 	# The lens turns back by the bias so the view direction, and with it the aim, stays the player's.
 	cam.rotation = Vector3(-_pitch_bias, 0.0, _roll + jitter.x * 0.1)
 	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
+	if pin_pivot_when_falling and not target.state.grounded and velocity.y < FALL_SPEED:
+		_keep_line_of_sight()
+
+
+# P1 probe change (while falling only): a sphere cast a little wider than the ball, from the ball to the camera on the
+# world layer; a hit pulls the camera in to the last clear point, so the spring arm's one-tick lag and
+# its margin cannot leave part of the ball behind an edge.
+func _keep_line_of_sight() -> void:
+	var from: Vector3 = target.shown_position()
+	var to := cam.global_position
+	var query := PhysicsShapeQueryParameters3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = LOS_RADIUS
+	query.shape = shape
+	query.transform = Transform3D(Basis.IDENTITY, from)
+	query.motion = to - from
+	query.collision_mask = 1
+	var cast := get_world_3d().direct_space_state.cast_motion(query)
+	if cast.size() == 2 and cast[0] < 1.0:
+		cam.global_position = from + (to - from) * maxf(cast[0] - 0.02, 0.05)

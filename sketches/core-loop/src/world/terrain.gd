@@ -5,9 +5,10 @@ const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Weir := preload("res://src/world/map_weir.gd")
 const Reach := preload("res://src/world/map_reach.gd")
+const DigProbe := preload("res://src/world/map_dig_probe.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
-const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir, "reach": Reach}
+const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir, "reach": Reach, "dig_probe": DigProbe}
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #
