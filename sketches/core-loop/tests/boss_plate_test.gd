@@ -24,7 +24,7 @@ const T := preload("res://tests/support/t.gd")
 const PLATING := 45.0
 const ADDED_CODE := {
 	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams"],
-	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open"],
+	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open", "_warden_chunk_mark", "_update_warden_chunks", "_throw_warden_segment", "_paint_warden_inner"],
 }
 # Existing functions with a posture branch inside them: only the posture arm is scanned,
 # because the plating arm keeps its amber.

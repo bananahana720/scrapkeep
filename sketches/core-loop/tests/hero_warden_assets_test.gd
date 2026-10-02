@@ -31,6 +31,7 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	ticks += 1
 	if ticks == 1:
+		check_chunk_asset(game.presentation.hero_assets)
 		for child in game.flow.beacon.get_children():
 			if child is MeshInstance3D and child.mesh is CylinderMesh:
 				mast_original = {"node": child, "mesh": child.mesh, "material": child.material_override, "transform": child.transform, "layers": child.layers, "shadow": child.cast_shadow}
@@ -301,3 +302,53 @@ func check_mast(hook, warden) -> void:
 	print("MAST_CLEARANCE ", warden.family, " ", minimum)
 	check("entire support outside fixed sphere", minimum >= Warden.FAMILY_POINT_RADIUS and segments == 2 and rails == 6)
 	check("lamp and ring retained", game.flow.beacon._core.is_inside_tree() and game.flow.beacon._core.layers != 0 and game.flow.beacon._ring.is_inside_tree() and game.flow.beacon._ring.layers != 0)
+
+
+func check_chunk_asset(hook) -> void:
+	var base: Node3D = hook._warden_scene(hook.WARDEN_BASE)
+	root.add_child(base)
+	var minimum := Vector3(INF, INF, INF)
+	var maximum := Vector3(-INF, -INF, -INF)
+	for mesh in base.find_children("*", "MeshInstance3D", true, false):
+		for vertex in mesh.mesh.get_faces():
+			var at: Vector3 = base.transform * base.to_local(mesh.to_global(vertex))
+			minimum = minimum.min(at)
+			maximum = maximum.max(at)
+	var before := Vector3(6.729995012283325, 7.735000431537628, 7.506797790527344)
+	var ratio := (maximum - minimum) / before
+	print("WM_BASE_BOUNDS min=", minimum, " max=", maximum, " ratio=", ratio)
+	check("all armour on keeps base bounds within three percent", absf(ratio.x - 1.0) <= 0.03 and absf(ratio.y - 1.0) <= 0.03 and absf(ratio.z - 1.0) <= 0.03)
+	for i in 4:
+		var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
+		check("named armour segment %d" % i, segment != null and segment.mesh.get_aabb().size.y > 1.0)
+	var core := base.get_node_or_null("CoreAssembly")
+	check("named caged heart with one emissive surface", core != null and core.get_child_count() == 2 and core.get_node("HeartSurface").mesh.get_surface_count() == 1 and (core.get_node("HeartSurface").global_basis.get_scale() * core.get_node("HeartSurface").mesh.get_aabb().size).is_equal_approx(Vector3.ONE))
+	# Exact triangle union projected from the facing gap. Each missing half removes area
+	# above both the fixed jaws and the inner structure, where only armour can occlude.
+	var silhouettes: Array = []
+	for lost in 5:
+		var mask := PackedByteArray()
+		mask.resize(160 * 60)
+		for i in range(lost, 4):
+			var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
+			var faces := segment.mesh.get_faces()
+			for triangle in range(0, faces.size(), 3):
+				var a: Vector3 = base.to_local(segment.to_global(faces[triangle]))
+				var b: Vector3 = base.to_local(segment.to_global(faces[triangle + 1]))
+				var c: Vector3 = base.to_local(segment.to_global(faces[triangle + 2]))
+				if maxf(a.y, maxf(b.y, c.y)) < 5.9:
+					continue
+				var polygon := PackedVector2Array([Vector2(a.z, a.y), Vector2(b.z, b.y), Vector2(c.z, c.y)])
+				for x in 160:
+					var z := -4.0 + (x + 0.5) * 0.05
+					if z < minf(a.z, minf(b.z, c.z)) or z > maxf(a.z, maxf(b.z, c.z)):
+						continue
+					for y in 60:
+						var height := 5.9 + (y + 0.5) * 0.01
+						if Geometry2D.is_point_in_polygon(Vector2(z, height), polygon):
+							mask[y * 160 + x] = 1
+		silhouettes.append(mask.count(1))
+	print("WM_CROWN_SILHOUETTE_SAMPLES ", silhouettes)
+	for i in 4:
+		check("loss %d changes the facing crown silhouette" % (i + 1), silhouettes[i] > silhouettes[i + 1])
+	base.free()

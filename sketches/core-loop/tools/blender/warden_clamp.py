@@ -9,6 +9,8 @@
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
 # no external assets. Look pass 2: base 4492; kits reactor 1476, hive 1272, mind
 # 1464 (targets 4000 to 6000 and 800 to 1500).
+# WM: the unchanged crown exterior is cut into ArmourSegment0..3; InnerL/InnerR
+# stay below it and CoreAssembly cages a 1 m HeartSurface. Base 4956 triangles.
 #
 # Frame and nodes (for W7 to wire; this sketch does not wire the Warden):
 #   warden_clamp_base.glb  WardenClampBase > Housing, Tower > KitMount, JawL, JawR
@@ -168,6 +170,11 @@ def jaw(side):
         sweep(p, "ancient_enamel", [(-0.02, z), (0.34, z), (0.34, z + 0.9), (-0.02, z + 0.9)], 0.8,
               0, math.tau, 16, ENAMEL, center=(HINGE_X, 0.0), caps=False)
     seam_ring(p, 1.16, knuckles[0] + 0.45, 16, width=0.04)
+    return p
+
+
+def shoulder(side):
+    p = Part("Shoulder")
     p.ico("ancient_enamel", 1.0, 1, loc=(0.65, side*2.7, 5.1), scale=(1.9,1.15,1.1), color=ENAMEL)
     p.beam("ancient_enamel", (1.8,side*1.5,5.2), (-0.8,side*2.5,5.8), 0.65, 0.7, color=ENAMEL)
     for j in range(2):
@@ -175,8 +182,52 @@ def jaw(side):
         b = (1.0,side*(1.8+j*0.36),6.0)
         p.rod("rubber", a, b, 0.12, 6)
         p.rod("ancient_light", (1.05,side*(1.8+j*0.36),5.72), b, 0.045, 6)
-    dust(p)
     return p
+
+
+def segment_shoulder(side, half, name):
+    """Bisect the existing crown; the union keeps its exact exterior and bounds."""
+    p = shoulder(side)
+    dust(p)
+    p.name = name
+    normal = Vector((0, side * half, 0))
+    cut = bmesh.ops.bisect_plane(p.bm, geom=list(p.bm.verts) + list(p.bm.edges) + list(p.bm.faces),
+                               dist=1e-6, plane_co=Vector((0, side * 2.7, 0)), plane_no=normal,
+                               clear_inner=True, clear_outer=False)
+    edges = [e for e in cut["geom_cut"] if isinstance(e, bmesh.types.BMEdge) and e.is_boundary]
+    if edges:
+        caps = bmesh.ops.holes_fill(p.bm, edges=edges, sides=0)["faces"]
+        p.paint(caps, "rubber")
+    return p
+
+
+def shoulder_inner(side):
+    p = Part("InnerL" if side > 0 else "InnerR")
+    p.ico("rubber", 1.0, 1, loc=(0.65, side*2.7, 5.1), scale=(1.55, 0.85, 0.82))
+    p.beam("ancient_enamel", (1.7,side*1.6,5.2), (-0.65,side*2.45,5.65), 0.35, 0.4,
+           color=common.mix("oxide", "charcoal", 0.8))
+    return p
+
+
+def core_assembly(base):
+    root = common.empty("CoreAssembly", (1.2, 0, 3.9), base)
+    heart = Part("HeartSurface")
+    heart.ico("ancient_light", 0.5, 2, loc=(0, 0, 3.9))
+    centre = Vector((0, 0, 3.9))
+    for axis in range(3):
+        width = max(v.co[axis] for v in heart.bm.verts) - min(v.co[axis] for v in heart.bm.verts)
+        for v in heart.bm.verts:
+            v.co[axis] = centre[axis] + (v.co[axis] - centre[axis]) / width
+    heart.to_object((0, 0, 3.9), root).location = (0, 0, 0)
+    cage = Part("CoreCage")
+    for k in range(4):
+        a = k * math.tau / 4 + math.pi / 4
+        x, y = 0.55 * math.cos(a), 0.55 * math.sin(a)
+        cage.rod("rubber", (x, y, 3.35), (x, y, 4.45), 0.065, 6)
+    for z in (3.35, 4.45):
+        cage.ring("bare_metal", 0.43, 0.62, 0.12, 12, loc=(0, 0, z))
+    cage.to_object((0, 0, 3.9), root).location = (0, 0, 0)
+    return root
 
 
 def kit_reactor(rng):
@@ -349,11 +400,25 @@ def main():
     dust(t)
     tower_obj = t.to_object((HINGE_X, 0, 0), base)
     common.empty("KitMount", (HINGE_X, 0, TOWER_TOP), tower_obj)
-    jaw(1).to_object((HINGE_X, 0, 0), base)
-    jaw(-1).to_object((HINGE_X, 0, 0), base)
+    for side in (1, -1):
+        j = jaw(side)
+        dust(j)
+        jaw_obj = j.to_object((HINGE_X, 0, 0), base)
+        # Alternating sides, then outer/inner halves: four distinct crown silhouettes.
+        for half in (1, -1):
+            index = (0 if side > 0 else 1) + (0 if half > 0 else 2)
+            segment = segment_shoulder(side, half, "ArmourSegment%d" % index).to_object((HINGE_X, 0, 0), jaw_obj)
+            segment.location = (0, 0, 0)
+        inner = shoulder_inner(side).to_object((HINGE_X, 0, 0), jaw_obj)
+        inner.location = (0, 0, 0)
+    core_assembly(base)
     rows = [("base", common.tri_total(base), BASE_TRIS)]
     out_dir = os.path.dirname(a["out"]) if a["out"] else common.MODELS
     common.export(base, os.path.join(out_dir, "warden_clamp_base.glb"))
+    if "--base-only" in sys.argv:
+        if not common.report("warden", rows):
+            raise SystemExit("warden budget out of range")
+        return
     kits = []
     for fam, body, extras in (("reactor", kit_reactor, reactor_extras), ("hive", kit_hive, hive_extras),
                               ("mind", kit_mind, mind_extras)):
