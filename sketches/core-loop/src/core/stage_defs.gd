@@ -42,6 +42,19 @@ static func synergy_in_play(_synergy_id: String) -> bool:
 	return true
 
 
+# Every part is in play on this table; parts_listed false keeps the loot rules as they were.
+static func part_in_play(_part_id: String) -> bool:
+	return true
+
+
+static func parts_listed() -> bool:
+	return false
+
+
+# The slice table opens an upgrade pick on each new heft class (slice_defs.gd); this one does not.
+const PICK_ON_CLASS_UP := false
+
+
 # The slice table authors its packs (slice_defs.gd); this table has none, so the
 # director uses its own rules.
 static func packs() -> Array:

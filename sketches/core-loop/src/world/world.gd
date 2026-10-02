@@ -15,6 +15,7 @@ const Interact := preload("res://src/world/interact.gd")
 const Activities := preload("res://src/world/activities.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -70,6 +71,8 @@ var _bay_calm := false
 var _picks_opened := {}
 # Stages whose pick the world-one profile is holding for a calm moment (the ball airborne).
 var _picks_waiting: Array[int] = []
+# Upgrade picks owed for new heft classes (the slice table), held until the ball is calm.
+var _class_picks_owed := 0
 var _pressure := -1.0
 var _vault_pending := false
 var _was_grounded := true
@@ -112,7 +115,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.run_started.connect(func(_class_id: String):
 		_picks_opened.clear()
-		_picks_waiting.clear())
+		_picks_waiting.clear()
+		_class_picks_owed = 0)
+	ctx.events.heft_class_changed.connect(_on_class_rise)
 	ctx.events.stage_cleared.connect(_open_pick)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
@@ -144,6 +149,8 @@ func _setup_gorge() -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	if retry:
+		_class_picks_owed = 0
 	Threat.follow_row(ctx.tuning)
 	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once.
 	Threat.Painter.warm_up(ctx.root)
@@ -243,6 +250,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var player = ctx.player
 	_deliver_waiting_picks()
+	_deliver_class_picks()
 	if _vault_pending:
 		_vault_pending = false
 		_spawn_vault()
@@ -592,6 +600,31 @@ func _open_pick(stage: int) -> void:
 		_picks_waiting.append(stage)
 		return
 	tree.open_checkpoint()
+
+
+# The slice table: each heft class the run has not been rewarded for opens one pick, so a
+# rise from class I to III owes two. A drop and re-rise owes nothing, and a retry puts the
+# rewarded class back with the rest of the run state. The pick waits for a grounded ball
+# and no live Warden fight, since an open pick pauses the tree.
+func _on_class_rise(heft_class: int, _heft: float) -> void:
+	if not ctx.stages.PICK_ON_CLASS_UP or heft_class <= ctx.run.class_rewarded:
+		return
+	_class_picks_owed += heft_class - ctx.run.class_rewarded
+	ctx.run.class_rewarded = heft_class
+	_deliver_class_picks()
+
+
+func _deliver_class_picks() -> void:
+	if _class_picks_owed <= 0 or not _pick_calm() or WhyCallout.warden_fight_live(ctx.flow):
+		return
+	var tree = ctx.player.tree if "tree" in ctx.player else null
+	if tree == null:
+		return
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS if ctx.tuning.world_one() else UpgradeTree.DEPTHS; tree.world_one = ctx.tuning.world_one()
+	var owed := _class_picks_owed
+	_class_picks_owed = 0
+	for _i in owed:
+		tree.open_checkpoint()
 
 
 func _pick_calm() -> bool:

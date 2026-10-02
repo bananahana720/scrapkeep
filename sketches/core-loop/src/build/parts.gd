@@ -299,12 +299,21 @@ static func gate_rarities(bonus_cores: int) -> Array:
 	return ["common", "uncommon"]
 
 
+# True while the build runs on a table that names its parts (the slice). Then the pool is
+# that list, no slot is a generated recipe and the shop never falls back to one.
+static func listed_only() -> bool:
+	return Synergies.table != null and Synergies.table.parts_listed()
+
+
 # The parts a source may offer this class, at these rarities. Never another class's mod.
 static func offer_pool(class_id: String, rarities: Array) -> Array:
 	var pool: Array = []
 	var all := rows()
+	var listed := listed_only()
 	for key in all:
 		var r: Dictionary = all[key]
+		if listed and not Synergies.table.part_in_play(key):
+			continue
 		if not r["rarity"] in rarities or r.get("shop_only", false) or not seam_met(r.get("needs", "")):
 			continue
 		var only: String = r.get("class_id", "")
@@ -342,7 +351,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	while picks.size() < count and not pool.is_empty() and tries < count * 8:
 		tries += 1
 		var rarity := ItemGen.pick_rarity(rng, rarities)
-		if rng.randf() < GENERATED_SHARE:
+		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
 			if not recipe in picks and not recipe in exclude:
 				picks.append(recipe)

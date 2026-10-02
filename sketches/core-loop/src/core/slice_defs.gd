@@ -14,6 +14,21 @@ const COUNT := 1
 # The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
 const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
 
+# The twelve parts every source on this table offers, and the only ones. The five shown
+# parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;
+# arc comes from arc_coil, and the class mods carry it for the pylon pilot), the two class
+# mods, and three heavy hitters so the shelf has a rare tier. A synergy completes from this
+# list for every pilot (tests/slice_parts_test.gd). Generated recipes and milestone parts are out.
+const PARTS := [
+	"double_feed", "focus_lens", "spiral_wave", "cross_split", "arc_coil",
+	"hot_rivets", "loose_trigger", "rivet_plating",
+	"pylon_capacitor", "runner_overclock",
+	"sunforged_core", "gatling_heart",
+]
+
+# A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
+const PICK_ON_CLASS_UP := true
+
 const PACKS := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
@@ -41,6 +56,16 @@ static func is_last(stage: int) -> bool:
 
 static func synergy_in_play(synergy_id: String) -> bool:
 	return synergy_id in SYNERGIES
+
+
+static func part_in_play(part_id: String) -> bool:
+	return part_id in PARTS
+
+
+# True when part_in_play restricts what sources offer (the pool, the generated share and
+# the shop's fallback all read it).
+static func parts_listed() -> bool:
+	return true
 
 
 static func packs() -> Array:
