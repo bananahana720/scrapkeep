@@ -4,6 +4,26 @@ const Palette := preload("res://src/core/palette.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Interactables := preload("res://src/world/interactables.gd")
+const Features := preload("res://src/world/features.gd")
+const Reach := preload("res://src/world/map_reach.gd")
+const KIT_PATH := "res://assets/models/world_one/clutter_kit.glb"
+const ROUTES := "res://tools/traversal_lines.json"
+# The kit is small beside a 1 m radius ball, so every piece is scaled up. Anchors are the
+# big pieces a cluster is built round; small ones gather at their feet.
+const KIT_ORDER := ["rock_a", "rock_b", "rock_c", "slab_a", "slab_b", "plate_a", "plate_b", "stub_a", "tuft_a", "tuft_b"]
+const KIT_FOOTPRINT := {"rock_a": 0.48, "rock_b": 0.30, "rock_c": 0.58, "slab_a": 1.05, "slab_b": 0.79,
+	"plate_a": 0.64, "plate_b": 0.50, "stub_a": 0.21, "tuft_a": 0.11, "tuft_b": 0.11}
+const ANCHORS := ["rock_a", "rock_b", "rock_b", "rock_c", "slab_a", "slab_b", "slab_b", "plate_b", "stub_a"]
+const ANCHOR_SCALE := {"rock_a": Vector2(6.0, 10.0), "rock_b": Vector2(6.0, 9.0), "rock_c": Vector2(6.0, 10.0),
+	"slab_a": Vector2(3.5, 6.0), "slab_b": Vector2(4.0, 6.5), "plate_b": Vector2(5.0, 7.5), "stub_a": Vector2(5.0, 8.0)}
+const SMALL := ["rock_a", "rock_c", "rock_c", "plate_a", "plate_b", "stub_a", "tuft_a", "tuft_a", "tuft_b", "tuft_b", "slab_a"]
+const SMALL_SCALE := {"rock_a": Vector2(1.5, 3.0), "rock_c": Vector2(1.5, 3.0), "plate_a": Vector2(1.5, 3.0),
+	"plate_b": Vector2(1.5, 3.0), "stub_a": Vector2(1.5, 3.0), "tuft_a": Vector2(2.2, 4.0),
+	"tuft_b": Vector2(2.2, 4.0), "slab_a": Vector2(1.5, 2.5)}
+const CLUSTER_SMALL := Vector2i(6, 12)
+const CLUSTER_SPACING := 9.0
+const CLIFF_CLUSTERS := 110
+const EDGE_SHARE := 0.6
 const WIND := Vector2(0.93, 0.367)
 
 var ctx
@@ -54,56 +74,22 @@ func _build_stage() -> void:
 	_update_protection()
 
 func _build_props(map, stage: int) -> void:
+	var rect: Rect2 = map.play_rect
+	var rows := keepouts(map, stage)
+	var clusters := _cluster_centres(map, rect, rows)
+	var meshes := _kit_meshes()
+	var lists := {}
+	for kit_name in KIT_ORDER:
+		lists[kit_name] = []
+	for centre: Vector2 in clusters:
+		_place_cluster(centre, rect, rows, lists)
+	for kit_name in KIT_ORDER:
+		_clutter_batch("Clutter_" + kit_name, meshes.get(kit_name), lists[kit_name])
 	var pebble := SphereMesh.new()
 	pebble.radius = 0.5
 	pebble.height = 1.0
 	pebble.radial_segments = 7
 	pebble.rings = 3
-	var flake := BoxMesh.new()
-	flake.size = Vector3.ONE
-	var tuft := _tuft_mesh()
-	var meshes: Array[Mesh] = [pebble, flake, tuft]
-	var lists := [[], [], []]
-	var rect: Rect2 = map.play_rect
-	# Debris gathers in drifts around seeded centres, so a stone or a plate reads as a
-	# group at chase range instead of one speck on open sand.
-	var centres: Array[Vector2] = []
-	for i in 800:
-		centres.append(Vector2(_rng.randf_range(rect.position.x, rect.end.x), _rng.randf_range(rect.position.y, rect.end.y)))
-	for i in 18000:
-		var x := _rng.randf_range(rect.position.x, rect.end.x)
-		var z := _rng.randf_range(rect.position.y, rect.end.y)
-		if i % 4 != 0:
-			var centre := centres[_rng.randi() % centres.size()]
-			x = clampf(centre.x + _rng.randfn(0.0, 4.5), rect.position.x, rect.end.x)
-			z = clampf(centre.y + _rng.randfn(0.0, 4.5), rect.position.y, rect.end.y)
-		var at := Vector2(x, z)
-		if _normal(x, z).y < 0.72 or _reserved(at, map, stage):
-			continue
-		var kind := i % 3
-		# Low and wide so a stone, plate or tuft still reads at chase-camera range yet
-		# stays under the 0.2 m protrusion ceiling the test pins.
-		var height := _rng.randf_range(0.07, 0.16) if kind != 1 else _rng.randf_range(0.015, 0.03)
-		var width := _rng.randf_range(0.45, 1.0) if kind != 2 else _rng.randf_range(0.3, 0.55)
-		var basis := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
-		if kind == 1:
-			basis = basis * Basis(Vector3.RIGHT, _rng.randf_range(-0.2, 0.2))
-		basis = basis.scaled(Vector3(width, height, width * (_rng.randf_range(0.5, 1.0) if kind != 2 else 1.0)))
-		var tr := Transform3D(basis, _ground.call(x, z, 0.0))
-		# Bury the bottom on slopes. Check actual mesh vertices, not the nominal size.
-		var protrusion := -INF
-		for vertex in meshes[kind].get_faces():
-			var point: Vector3 = tr * vertex
-			protrusion = maxf(protrusion, point.y - (_ground.call(point.x, point.z, 0.0) as Vector3).y)
-		tr.origin.y += height - protrusion
-		lists[kind].append(tr)
-	for i in 3:
-		var color: Color = Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.10)
-		if i == 1:
-			color = Palette.CHARCOAL.lerp(Palette.SANDSTONE, 0.45)
-		elif i == 2:
-			color = Palette.SAND.lerp(Palette.CHARCOAL, 0.18)
-		_batch(["Pebbles", "ScrapFlakes", "SandTufts"][i], meshes[i], lists[i], color, false)
 	var rocks := []
 	for i in 700:
 		var x := _rng.randf_range(-192.0, 192.0)
@@ -116,16 +102,182 @@ func _build_props(map, stage: int) -> void:
 		rocks.append(tr)
 	_batch("BrokenRock", _broken_mesh(pebble), rocks, Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.28), false)
 
-func _reserved(at: Vector2, map, stage: int) -> bool:
-	if at.distance_to(map.beacon) < 4.0 or at.distance_to(map.spawn) < 6.0 or at.distance_to(map.vault) < 8.0:
-		return true
-	for line in map.scrap_lines:
-		if at.distance_to(Geometry2D.get_closest_point_to_segment(at, line[0], line[1])) < 2.5:
-			return true
-	for row in Interactables.PLACEMENTS.get(stage, []):
-		if at.distance_to(row.at) < 7.0:
-			return true
+# The kit's meshes by node name, each with the target copy of its slot materials.
+func _kit_meshes() -> Dictionary:
+	var result := {}
+	var scene := (load(KIT_PATH) as PackedScene).instantiate()
+	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		var mesh := view.mesh.duplicate() as ArrayMesh
+		for surface in mesh.get_surface_count():
+			mesh.surface_set_material(surface, Palette.target_clutter_material(view.mesh.surface_get_material(surface)))
+		result[String(view.name)] = mesh
+	scene.free()
+	return result
+
+# Where clutter gathers: the foot of a cliff, the base of a post, wall or tower, and the
+# edge of each ride line just outside its clear strip. Everything else stays bare.
+func _cluster_centres(map, rect: Rect2, rows: Array) -> Array[Vector2]:
+	var centres: Array[Vector2] = []
+	for point in structure_points(map):
+		_try_centre(centres, point, rect, rows, 4.0)
+	for row in rows:
+		if not row.ride:
+			continue
+		var points: PackedVector2Array = row.points
+		for i in points.size() - 1:
+			var length := points[i].distance_to(points[i + 1])
+			var steps := int(length / 9.0)
+			var along := (points[i + 1] - points[i]).normalized()
+			for k in steps:
+				if _rng.randf() > EDGE_SHARE:
+					continue
+				var side := Vector2(-along.y, along.x) * (1.0 if _rng.randf() < 0.5 else -1.0)
+				var at: Vector2 = points[i] + along * (float(k) + _rng.randf()) * 9.0 + side * (float(row.radius) + _rng.randf_range(2.0, 5.0))
+				_try_centre(centres, at, rect, rows, 4.0)
+	var limit := centres.size() + CLIFF_CLUSTERS
+	for i in 40000:
+		if centres.size() >= limit:
+			break
+		var at := Vector2(_rng.randf_range(rect.position.x, rect.end.x), _rng.randf_range(rect.position.y, rect.end.y))
+		if _at_cliff_foot(at):
+			_try_centre(centres, at, rect, rows, 4.0)
+	return centres
+
+func _try_centre(centres: Array[Vector2], at: Vector2, rect: Rect2, rows: Array, margin: float) -> void:
+	if not rect.grow(-6.0).has_point(at) or _normal(at.x, at.y).y < 0.9 or blocked(rows, at, margin) != "":
+		return
+	for other in centres:
+		if other.distance_to(at) < CLUSTER_SPACING:
+			return
+	centres.append(at)
+
+# Flat footing with a steep face a few metres off: the foot of a cliff or rock family.
+func _at_cliff_foot(at: Vector2) -> bool:
+	if _normal(at.x, at.y).y < 0.93:
+		return false
+	for k in 8:
+		for reach: float in [3.0, 5.0, 7.0]:
+			var probe: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * reach
+			if _normal(probe.x, probe.y).y < 0.6:
+				return true
 	return false
+
+# One big piece with small ones about its feet.
+func _place_cluster(centre: Vector2, rect: Rect2, rows: Array, lists: Dictionary) -> void:
+	var placed: Array = []
+	var anchor: String = ANCHORS[_rng.randi() % ANCHORS.size()]
+	_place_piece(anchor, centre, ANCHOR_SCALE[anchor], rect, rows, lists, placed)
+	if placed.is_empty():
+		return
+	var reach: float = placed[0].z
+	for i in _rng.randi_range(CLUSTER_SMALL.x, CLUSTER_SMALL.y):
+		var kit_name: String = SMALL[_rng.randi() % SMALL.size()]
+		for attempt in 4:
+			var at := centre + Vector2.from_angle(_rng.randf_range(0.0, TAU)) * (reach + _rng.randf_range(0.2, 3.2))
+			if _place_piece(kit_name, at, SMALL_SCALE[kit_name], rect, rows, lists, placed):
+				break
+
+# placed holds Vector3(x, z, footprint radius) per piece, so a cluster does not overlap itself.
+func _place_piece(kit_name: String, at: Vector2, span: Vector2, rect: Rect2, rows: Array, lists: Dictionary, placed: Array) -> bool:
+	var size := _rng.randf_range(span.x, span.y)
+	var stretch := Vector3(_rng.randf_range(0.9, 1.15), _rng.randf_range(0.9, 1.15), _rng.randf_range(0.9, 1.15)) * size
+	var footprint: float = KIT_FOOTPRINT[kit_name] * size * 0.5
+	if not rect.grow(-4.0).has_point(at) or _normal(at.x, at.y).y < 0.85 or blocked(rows, at, footprint) != "":
+		return false
+	for other: Vector3 in placed:
+		if Vector2(other.x, other.y).distance_to(at) < (other.z + footprint) * 0.75:
+			return false
+	var basis := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
+	basis = basis * Basis(Vector3.RIGHT, _rng.randf_range(-0.08, 0.08)) * Basis(Vector3.FORWARD, _rng.randf_range(-0.08, 0.08))
+	basis = basis.scaled_local(stretch)
+	# Stand on the lowest ground under the footprint: the high side is buried, nothing floats.
+	var low := INF
+	for k in 8:
+		var spot: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * footprint * 0.8
+		low = minf(low, (_ground.call(spot.x, spot.y, 0.0) as Vector3).y)
+	low = minf(low, (_ground.call(at.x, at.y, 0.0) as Vector3).y)
+	lists[kit_name].append(Transform3D(basis, Vector3(at.x, low - 0.03 * size, at.y)))
+	placed.append(Vector3(at.x, at.y, footprint))
+	return true
+
+# Every authored place the ground must stay clean of clutter, from the map's own data.
+# Each row is {what, points, radius, ride}: a point or a polyline, the clear distance in
+# metres from it, and whether it is a ride line (clutter gathers along its clear edge).
+static func keepouts(map, stage: int) -> Array:
+	var rows := []
+	rows.append(_row("spawn", [map.spawn], 6.0))
+	rows.append(_row("warden bowl", [map.beacon], Features.BOWL_FLAT + 3.0))
+	rows.append(_row("vault", [map.vault], 11.0))
+	for line in map.scrap_lines:
+		rows.append(_row("scrap line", line, 3.0, true))
+	for kicker in map.kickers:
+		var dir: Vector2 = kicker.dir
+		rows.append(_row("kicker ramp", [kicker.at - dir * 8.0, kicker.at + dir * 6.0], float(kicker.width) * 0.5 + 3.0, true))
+	for slot in map.gate_slots:
+		rows.append(_row("reward gate slot", [slot.at], 6.0))
+	for site in map.activity_sites:
+		rows.append(_row("activity site", [site.at], 11.0))
+	for row in Interactables.PLACEMENTS.get(stage, []):
+		rows.append(_row("device", [row.at], 7.0))
+	if map.get_script() == Reach:
+		var routes = JSON.parse_string(FileAccess.get_file_as_string(ROUTES))
+		for pilot in routes.get("pilots", {}):
+			var line := PackedVector2Array()
+			for pair in routes.pilots[pilot].waypoints:
+				line.append(Vector2(float(pair[0]), float(pair[1])))
+			rows.append(_row("ride line " + String(pilot), line, 4.0, true))
+		var sweep := PackedVector2Array()
+		for i in 24:
+			var angle := deg_to_rad(lerpf(Reach.SWEEP_START, Reach.SWEEP_END, i / 23.0))
+			sweep.append(Reach.SWEEP_CENTRE + Vector2(cos(angle), sin(angle)) * Reach.SWEEP_LINE)
+		rows.append(_row("sweeper ramp", sweep, Reach.SWEEP_WIDTH * 0.5 + Reach.SWEEP_BANK * 0.5 + 3.0, true))
+		var berm := PackedVector2Array()
+		for i in 16:
+			var angle := deg_to_rad(lerpf(Reach.BERM_FROM, Reach.BERM_TO, i / 15.0))
+			berm.append(Reach.BERM_CENTRE + Vector2(cos(angle), sin(angle)) * Reach.BERM_RADIUS)
+		rows.append(_row("berm ramp", berm, Reach.BERM_WIDTH * 0.5 + Reach.BERM_BANK * 0.5 + 3.0, true))
+		var dive := PackedVector2Array([Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_FROM, Reach.MOUTH + Reach.DIVE_DIR * (Reach.DIVE_TO + Reach.DIVE_OUT)])
+		rows.append(_row("dive ramp", dive, Reach.DIVE_HALF + Reach.DIVE_SIDE + 3.0, true))
+		rows.append(_row("cable line", [Reach.CABLE_FROM, Reach.CABLE_TO], Reach.CABLE_RADIUS + 3.0, true))
+		rows.append(_row("skylight halfpipe", [Vector2(Reach.SKYLIGHT_X, Reach.SKYLIGHT_Z.x), Vector2(Reach.SKYLIGHT_X, Reach.SKYLIGHT_Z.y)], 9.0, true))
+		for id in Reach.TUNNELS:
+			rows.append(_row("tunnel floor " + String(id), Reach.TUNNELS[id], Reach.TUNNEL_HALF + 3.0, true))
+		for thermal in [Reach.THERMAL_A, Reach.THERMAL_B]:
+			rows.append(_row("thermal", [thermal], 8.0))
+	return rows
+
+static func _row(what: String, points: Array, radius: float, ride := false) -> Dictionary:
+	return {"what": what, "points": PackedVector2Array(points), "radius": radius, "ride": ride}
+
+# Posts, walls and towers a cluster can lean against, on the map that has them.
+static func structure_points(map) -> Array[Vector2]:
+	var result: Array[Vector2] = []
+	if map.get_script() != Reach:
+		return result
+	for post in Reach.POSTS:
+		result.append(post.at + Vector2(3.0, 2.0))
+	for wall in Reach.WALLS:
+		result.append(wall.at + Vector2(0.0, 5.0))
+	result.append(Vector2(Reach.TOWER.x, Reach.TOWER.z) + Vector2(Reach.TOWER_RADIUS + 5.0, 0.0))
+	for sat in Reach.SATELLITES:
+		result.append(sat.at + Vector2(float(sat.radius) + 4.0, 0.0))
+	return result
+
+# The name of the first keepout within margin of `at` (its clear distance plus margin), or "".
+static func blocked(rows: Array, at: Vector2, margin: float) -> String:
+	for row in rows:
+		if distance_to_row(row, at) < float(row.radius) + margin:
+			return String(row.what)
+	return ""
+
+static func distance_to_row(row: Dictionary, at: Vector2) -> float:
+	var points: PackedVector2Array = row.points
+	if points.size() == 1:
+		return at.distance_to(points[0])
+	var best := INF
+	for i in points.size() - 1:
+		best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, points[i], points[i + 1])))
+	return best
 
 # Broken rock belongs at the foot of a cliff, never up on its face.
 func _near_flat(at: Vector2) -> bool:
@@ -200,6 +352,30 @@ func _batch(label: String, mesh: Mesh, transforms: Array, color: Color, air: boo
 	_materials.append(material)
 	return view
 
+func _clutter_batch(label: String, mesh: Mesh, transforms: Array) -> MultiMeshInstance3D:
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = transforms.size()
+	var buffer := PackedFloat32Array()
+	for tr: Transform3D in transforms:
+		buffer.append_array(PackedFloat32Array([
+			tr.basis.x.x, tr.basis.y.x, tr.basis.z.x, tr.origin.x,
+			tr.basis.x.y, tr.basis.y.y, tr.basis.z.y, tr.origin.y,
+			tr.basis.x.z, tr.basis.y.z, tr.basis.z.z, tr.origin.z]))
+	multi.buffer = buffer
+	var view := MultiMeshInstance3D.new()
+	view.name = label
+	view.multimesh = multi
+	view.set_meta("instance_buffer", buffer)
+	view.set_meta("clutter", true)
+	# The kit's own surface materials carry the paint; the pieces cast and receive shadow,
+	# which is what sets a stone on the sand instead of painting it there.
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	add_child(view)
+	batches.append(view)
+	return view
+
 func _build_dust() -> void:
 	var mesh := QuadMesh.new()
 	mesh.size = Vector2.ONE
@@ -216,11 +392,12 @@ func _build_streaks(map) -> void:
 	var transforms := []
 	var rect: Rect2 = map.play_rect
 	var wind_angle := atan2(-WIND.y, WIND.x)
+	var rows := keepouts(map, ctx.terrain.stage)
 	for i in 800:
 		var x := _rng.randf_range(rect.position.x, rect.end.x)
 		var z := _rng.randf_range(rect.position.y, rect.end.y)
 		# Both ends of the 3 m drift remain on open, almost level ground.
-		if _normal(x, z).y < 0.98 or _normal(x + WIND.x * 4.0, z + WIND.y * 4.0).y < 0.98 or _reserved(Vector2(x, z), map, ctx.terrain.stage):
+		if _normal(x, z).y < 0.98 or _normal(x + WIND.x * 4.0, z + WIND.y * 4.0).y < 0.98 or blocked(rows, Vector2(x, z), 0.0) != "":
 			continue
 		var basis := Basis(Vector3.UP, wind_angle) * Basis(Vector3.RIGHT, -PI / 2.0)
 		transforms.append(Transform3D(basis, _ground.call(x, z, 0.07)))

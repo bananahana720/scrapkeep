@@ -228,6 +228,23 @@ static func enamel_wear(mat: StandardMaterial3D) -> void:
 
 
 static var _target_surfaces := {}
+static var _target_clutter := {}
+
+# The clutter kit's paint slot carries its colour in vertex colours, which the importer
+# leaves unused as albedo. The target copy reads them, is fully rough and keeps the slot
+# name. The kit's own resources stay untouched; one copy serves every instance.
+static func target_clutter_material(original: Material) -> StandardMaterial3D:
+	var key := original.get_instance_id()
+	if _target_clutter.has(key):
+		return _target_clutter[key]
+	var mat: StandardMaterial3D = original.duplicate() if original is StandardMaterial3D else StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.95
+	mat.metallic = 0.0
+	mat.emission_enabled = false
+	mat.resource_name = original.resource_name
+	_target_clutter[key] = mat
+	return mat
 
 # Target resources wrap the existing surface; original materials and mesh slots are
 # retained by GraphicsPreset so high/low can restore the exact resource identities.
