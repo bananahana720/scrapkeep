@@ -136,7 +136,9 @@ func codex_style() -> Dictionary:
 
 
 func _on_synergy(id: String, category: String, first_time: bool) -> void:
-	if not auto_banner:
+	# A repeat draws nothing in either mode: cards mode drops it on the seen record,
+	# banner mode has no record, so it stops here.
+	if not auto_banner or (not first_time and not banner.cards):
 		return
 	var entry := _codex_entry(id)
 	var title: String = entry.get("name", id.capitalize())

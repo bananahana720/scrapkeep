@@ -20,14 +20,13 @@ import { cpus, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { binary, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
+import { binary, judge, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
 import { createRun } from "./lab/record.mjs";
 import { METRICS } from "./lab/metrics/index.mjs";
 import { EXIT } from "./lab/metrics/status.mjs";
 import { wilson } from "./lab/stats.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
 const tty = process.stdout.isTTY === true;
 
 function paint(code, text) {
@@ -241,9 +240,11 @@ function runHeadless(label, args) {
     child.stderr.on("data", (chunk) => (output += chunk));
     child.on("close", (status, signal) => {
       clearTimeout(timer);
+      const verdict = judge({ test: args.includes("--script"), status, output });
       resolve({
         label,
-        ok: status === 0 && !errorLine.test(output),
+        ok: verdict.ok,
+        reason: verdict.reason,
         status,
         // Killed by a signal that was not our own timeout: the engine went
         // down rather than the check simply failing its assertions.
@@ -284,7 +285,7 @@ function reportCheck(result) {
   if (result.ok) {
     console.log(`${green("PASS")} ${result.label}`);
   } else {
-    console.log(`${red("FAIL")} ${result.label} exit=${result.status}`);
+    console.log(`${red("FAIL")} ${result.label} exit=${result.status}${result.reason ? ` (${result.reason})` : ""}`);
     console.log(result.output.split("\n").slice(-40).join("\n"));
     try {
       mkdirSync(failureLog, { recursive: true });

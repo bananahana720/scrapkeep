@@ -228,8 +228,8 @@ func _physics_process(_delta: float) -> bool:
 					"four first finds in a fight: ceremony holds %d, banner holds %d, the fourth %s is unseen with its name only" % [held_cards, _banner().queued(), _held[3]])
 				_banner().dismiss(true)
 				_banner().cards = false
-				_banner().show_discovery("Test synergy", "synergy", "a body", "New synergy", "syn_a", "synergy_discovered")
-				_banner().show_discovery("Test synergy", "synergy", "a body", "Synergy", "syn_a", "synergy_discovered")
+				_game.events.synergy_discovered.emit("wrecking_ball", "build", true)
+				_game.events.synergy_discovered.emit("wrecking_ball", "build", false)
 				_next("banner_mode")
 		"banner_mode":
 			if _banner().showing() or _banner().visible:
@@ -237,8 +237,8 @@ func _physics_process(_delta: float) -> bool:
 				_banner().cards = true
 				return _finish()
 			if _wait == QUIET_FRAMES:
-				_report("the banner option waits too", _banner().queued() == 2 and _fight_on(),
-					"a synergy and its repeat found in a live Warden fight with --discovery=banner: nothing drawn for %d frames, %d queued" % [QUIET_FRAMES, _banner().queued()])
+				_report("the banner option waits too", _banner().queued() == 1 and _fight_on(),
+					"a synergy and its repeat found in a live Warden fight with --discovery=banner: nothing drawn for %d frames, %d queued (the repeat queues nothing)" % [QUIET_FRAMES, _banner().queued()])
 				_banner().cards = true
 				_game.flow.retry_stage()
 				_next("retried")
@@ -262,8 +262,8 @@ func _physics_process(_delta: float) -> bool:
 				return _finish()
 		"engaged":
 			if _wait == 2:
-				_report("a reveal card closes when the fight goes live", _fight_on() and _ceremony().view.card.is_empty() and _seen_both(_held[0]),
-					"a reveal card up as the Warden engages: card %s, %s still seen in both records" % [_ceremony().view.card.get("part", "none"), _held[0]])
+				_report("a reveal card closes when the fight goes live", _fight_on() and _ceremony().view.card.is_empty() and not _banner().showing() and _seen_both(_held[0]),
+					"a reveal card up as the Warden engages: card %s, banner showing %s, %s still seen in both records" % [_ceremony().view.card.get("part", "none"), _banner().showing(), _held[0]])
 				_game.flow.retry_stage()
 				_next("boss_ready")
 		"boss_ready":

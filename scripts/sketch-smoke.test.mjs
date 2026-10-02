@@ -291,6 +291,22 @@ test("a skipped test is not counted as missing a verdict in the receipt", () => 
   assert.equal(receipt.totals.skipped, 1);
 });
 
+test("the receipt counts a skip line with checks and no verdict as missing, as judge does", () => {
+  const rows = [
+    { label: "s res://tests/a.gd", ok: true, exit: 0, ms: 1, passes: 0, fails: 0, verdict_line: false, skips: ["SKIP stems"] },
+    { label: "s res://tests/c.gd", ok: false, exit: 0, ms: 1, passes: 1, fails: 0, verdict_line: false, skips: ["SKIP stems"] },
+  ];
+  const receipt = buildReceipt({ label: "x", argv: [], root: "/r", git: null, godot: { binary: "/g", version: null }, sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "t", wallMs: 0, stems: {}, results: rows });
+  assert.equal(receipt.totals.missing_verdict, 1);
+  assert.equal(receipt.totals.skipped, 2);
+});
+
+test("an error line under a PASS verdict fails with its own reason", () => {
+  const errored = judge({ test: true, status: 0, output: "SCRIPT ERROR: bad call\nsuite_test: PASS (2 checks)\n" });
+  assert.equal(errored.ok, false);
+  assert.equal(errored.reason, "the test printed an error line");
+});
+
 test("a script error inside an awaited part of a test cannot pass", { skip: !existsSync(binary) }, () => {
   const project = mkdtempSync(path.join(os.tmpdir(), "verdict-fixture-"));
   try {

@@ -19,9 +19,11 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 #
 # A first-discovery card raised in a fight waits at the head of the queue and shows at the
 # next time WhyCallout.find_may_speak says so: calm, and no Warden engaged and alive. One
-# raised when the gate is already open shows at once. At most MAX_HELD wait; a repeat shows
-# nothing. The banner finds the bus and the flow through its presentation ancestor, or a
-# test hands it a bus with watch().
+# raised when the gate is already open shows at once. Whatever is showing closes when a
+# Warden fight goes live. In cards mode at most MAX_HELD wait and a repeat shows nothing; in
+# banner mode presentation drops a repeat synergy before it reaches the queue. The banner
+# finds the bus and the flow through its presentation ancestor, or a test hands it a bus
+# with watch().
 #
 # `--discovery=cards` (cards = true, profile set by the owner): the first time an id is
 # discovered a picture card lands in the same slot: a larger panel with a looping
@@ -223,8 +225,8 @@ func _mark_seen(key: String) -> void:
 		_session_seen[key] = true
 
 
-# Any key, mouse button or pad button press (or a hard stick push) dismisses a card or
-# at once. The event is not consumed: the press still reaches the game.
+# Any key, mouse button or pad button press (or a hard stick push) dismisses a card at
+# once. The event is not consumed: the press still reaches the game.
 func _input(event: InputEvent) -> void:
 	if not showing() or _style_name == "banner":
 		return
@@ -309,6 +311,10 @@ func _process(delta: float) -> void:
 	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	if _started_ms < 0:
 		_next()
+		return
+	# A fight going live closes what is up; the discovery stays seen and the queue waits.
+	if WhyCallout.warden_fight_live(_flow):
+		dismiss(false)
 		return
 	var t := (int(now_ms.call()) - _started_ms) / 1000.0
 	var total := _in_time + _hold + _out_time

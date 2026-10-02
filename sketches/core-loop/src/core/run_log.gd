@@ -20,7 +20,9 @@ extends Node
 # The sitting (LEGIBILITY): the record carries the table the run was played on, and each
 # stage row carries the packs that arrived there in order, the synergies that fired there
 # by id and, for a posture Warden only, its posture fight: staggers, chunks lost, glanced
-# hits and the ticks from the first posture gain to the break or the stage's end.
+# hits and the ticks from the first posture gain to the break or the stage's end. A row
+# counts its attempts; packs, causes and posture describe the last attempt only and leave
+# out the boss arena.
 
 const LOG_FILE := "runs.ndjson"
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
@@ -283,7 +285,7 @@ func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
 
 
 # The Warden's bar moved. A stagger is the bar going from open to staggered; the rest is
-# read from the Warden when the line is written, because a glance moves no bar.
+# read from the Warden when the line is written, because no bus signal says a hit glanced.
 func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
 	if _record.is_empty() or not is_instance_valid(enemy):
 		return
@@ -301,7 +303,7 @@ func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> voi
 
 
 # Brings a stage's posture block up to date: chunks lost and glances from the Warden's
-# own accessors (glances move no bar, so no bus signal carries them), and the
+# own accessors (no bus signal says a hit glanced), and the
 # fight's length from the first posture gain to the break, or to now while it is open.
 func _close_posture(stage: int) -> void:
 	var row := _stage(stage)

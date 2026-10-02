@@ -311,7 +311,7 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     runs: rows.length,
     failed: verdict.failed.length,
     skipped: rows.filter((row) => row.skips.length > 0).length,
-    missing_verdict: rows.filter((row) => row.verdict_line === false && row.skips.length === 0).length,
+    missing_verdict: rows.filter((row) => row.verdict_line === false && (row.skips.length === 0 || row.passes + row.fails > 0)).length,
     quarantined_red: verdict.quarantined_red,
     quarantine_stale: verdict.quarantine_stale,
   };
@@ -356,6 +356,7 @@ export function judge({ test, status, output }) {
   else if (status !== 0) reason = `the test exited with code ${status}`;
   else if (missing) reason = MISSING_VERDICT;
   else if (failVerdict) reason = "the test printed a FAIL verdict";
+  else if (errorLine.test(output)) reason = "the test printed an error line";
   return { ok, verdict, skips, missing, reason };
 }
 
