@@ -2067,3 +2067,34 @@ This base sets `interruptible = false`, so a ram does not stagger-cancel the war
 
 
 The final requested VERIFY smoke command passes import and all nine named tests in 45 seconds, with zero skips and no missing verdict lines. Receipt: `artifacts/local/receipts/wb-2df1e5543a0d-2026-10-02T15-17-28-058Z.json`. The wind-up fixture passes 27 checks, including the harpoon smash brace and an enabled/disabled pose control. Lint reports zero findings. Godot's first import printed home-directory settings-write errors; setting all three XDG roots under `artifacts/local/wb/xdg/` resolves them. The deliberate asset faults rename a pad joint and `fleet_paint`; both named-structure checks fail, then the recipe is restored and Blender regenerates the final GLB. No check is removed and no existing bound is widened. Evidence level 4 applies to the numeric, structural and live-code checks.
+
+## Cut stone and dry scrap clutter kit (unit CK, 2026-10-02)
+
+`tools/blender/world_one/clutter_kit.py` exports ten independent mesh nodes to `assets/models/world_one/clutter_kit.glb`. Each node has an identity transform and its lowest vertex at Godot y = 0. This unit adds the kit only; a later unit places it. Cut planes, irregular outlines, solid blades, a broken open pipe rim and folded plate edges replace the sphere, flat box and flat star shapes. All geometry is procedural bmesh with seed 20261002 and no external assets or textures.
+
+The stone uses `common.py` sandstone mixed with charcoal. There is no separate strata or straw palette name in that helper. Slabs use a darker sandstone mix, and dry blades use sandstone mixed with bone and darkened. Upward faces receive lighter loop colours than downward faces. Scrap uses oxide `fleet_paint` with dull, dark `bare_metal` on the cut sides and pipe interior. The shared polished-bone bare-metal preview is darkened in this recipe only. The kit uses no mint, amber, hazard colour or emission, and its surfaces stay below sand brightness.
+
+| Mesh | Triangles | Godot size x / y / z, metres | Upward / downward colour luminance |
+| --- | --- | --- | --- |
+| rock_a | 26 | 0.480 / 0.260 / 0.320 | 0.191347 / 0.096913 |
+| rock_b | 26 | 0.300 / 0.430 / 0.130 | 0.146603 / 0.084242 |
+| rock_c | 26 | 0.580 / 0.210 / 0.200 | 0.184509 / 0.097697 |
+| slab_a | 24 | 1.050 / 0.105 / 0.650 | 0.231386 / 0.071071 |
+| slab_b | 24 | 0.790 / 0.488 / 0.480 | 0.201327 / 0.078622 |
+| plate_a | 20 | 0.641 / 0.136 / 0.400 | fleet paint / metal |
+| plate_b | 20 | 0.495 / 0.224 / 0.432 | fleet paint / metal |
+| stub_a | 48 | 0.210 / 0.295 / 0.182 | fleet paint / metal |
+| tuft_a | 18 | 0.113 / 0.320 / 0.105 | 0.113558 / 0.058205 |
+| tuft_b | 24 | 0.110 / 0.380 / 0.111 | 0.108140 / 0.058205 |
+
+The kit totals 256 triangles. All per-mesh size, triangle, ground and height limits pass. The test compares sorted, normalized rock dimensions, so rotating a copy cannot count as a distinct silhouette. Plates start as 5.5 cm extrusions. Matching cap triangles preserve the sheet across the fold. The test pairs opposite triangles by equal translation of all three corners and checks the normal gap across each complete facet. Their minimum gaps are 0.038100 m and 0.050566 m. This replaced an earlier centroid-ray test whose coverage missed locally thin corners.
+
+CK-8 changed only the recipe so `plate_a` had zero thickness, exported a scratch GLB and ran the unchanged asset test. The red process exited 1 and printed `FAIL CK-4 plate_a physical thickness 0.000000 m >= 0.030000 m -> FAIL`. The recipe was restored, and the green process exited 0 with `PASS CK-4 plate_a physical thickness 0.038100 m >= 0.030000 m -> PASS`. Twenty-one additional scratch mutations reject wrong/missing/extra nodes, node transforms, excess triangles, oversize meshes, low height, ground offset, a cloned rock, unknown slots, emission, missing/constant/reversed colours, excess brightness, short tufts, a missing underside, hazard/mint/amber scrap colours and a locally thinned plate corner. Constant colours exposed a floating-point false pass; the brightness comparison now requires a difference above 0.000001. No specified bound was widened.
+
+Godot 4.7.2 imports the `paint` vertex-colour arrays but leaves `vertex_color_use_as_albedo` false. An extra enabled-material assertion beyond CK-6 was removed after confirming this import behaviour. Colour-presence and directional-brightness checks remain. The later placement unit must enable that material flag or use the existing presentation palette mapping, which enables paint vertex colours. This unit adds no loader or material override at runtime.
+
+The final recipe was run twice. Both GLBs match byte for byte with SHA-256 `1c80b6308b27a08ecaad568c5eca643339e27d97e4958a494697e5d0ac748a78`. Neighboring world-one `.import` files are not tracked, so the generated clutter import descriptor stays ignored. The Godot test UID is included.
+
+Verification used Blender 5.2.2 LTS and Godot 4.7.2 headless. `node scripts/sketch-lint.mjs --sketch core-loop` reports 0 findings against the existing baseline. The exact requested smoke command with receipt `ck` passes the import and all three tests: `clutter_kit_asset_test`, `asset_capture_test`, `spillway_scenery_test`. It has zero skips and no error-prefixed lines. Godot initially failed to save editor settings under home; the retry with all three XDG roots under `artifacts/local/alpha-x2b-CK/xdg/` succeeded. The final receipt is `artifacts/local/receipts/ck-2df1e5543a0d-2026-10-02T15-20-43-281Z.json`.
+
+A test search found no existing clutter-kit references or hash pins. The two existing tests in VERIFY remain unchanged and pass. `dam_asset_test.gd` supplied the direct-GLB inspection pattern and was left unchanged. Independent review found the scrap hue check gap, now fixed with mutation evidence. Evidence, executable-check logs and a command ledger are under `artifacts/local/alpha-x2b-CK/`. Evidence level 4 establishes numeric geometry and real import/test behaviour. No contact sheet, rendered capture, chase-camera readability or human acceptance is claimed; the coordinator renders stills and judges the read at 8 m.
