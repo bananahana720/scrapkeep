@@ -9,7 +9,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 # plays at wall-clock speed.
 #
 #   godot --headless --path sketches/core-loop --script res://tools/ace_bounce.gd -- \
-#     --out=<absolute .wav> [--seconds=80] [--policy=lapper] [--seed=1] --loop=drop --music=ace
+#     --out=<absolute .wav> [--seconds=80] [--policy=skipper] [--seed=1] --music=ace
 #
 # Beside the WAV, <out>.json lists the game facts the music follows (Warden states,
 # drops, the commit, the break) and the ACE sections entered, both in seconds of the WAV,
@@ -61,7 +61,7 @@ func _physics_process(delta: float) -> bool:
 			printerr("ace_bounce: the audio started before the players could be forced live")
 			quit(3)
 			return false
-		_driver = BotDriver.new(_game, String(_settings.get("policy", "lapper")), int(_settings.get("seed", "1")))
+		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), int(_settings.get("seed", "1")))
 		_driver.start()
 		_record.set_recording_active(true)
 		_started = Time.get_ticks_msec()
@@ -69,8 +69,6 @@ func _physics_process(delta: float) -> bool:
 		var events = _game.events
 		events.stage_entered.connect(func(stage: int, retry: bool): _facts.append([_now(), "stage_entered", stage, retry]))
 		events.warden_engaged.connect(func(stage: int): _facts.append([_now(), "warden_engaged", stage]))
-		events.warden_state_changed.connect(func(state: String, _at: Vector3): _facts.append([_now(), "warden_state", state]))
-		events.warden_drop_landed.connect(func(_at: Vector3, speed: float, left: int, _n: int): _facts.append([_now(), "drop_landed", snappedf(speed, 0.1), left]))
 		events.beacon_unsealed.connect(func(stage: int): _facts.append([_now(), "warden_broken", stage]))
 		events.world_fact.connect(func(kind: String, _at: Vector3):
 			if kind.begins_with("steam_lift") or kind.begins_with("ride_"):
@@ -94,7 +92,7 @@ func _finish() -> void:
 		for e in ace.events_log:
 			sections.append([snappedf((int(e[1]) - _base_sample) / 44100.0, 0.01), e[0], e[2]])
 	var info := {"wav": out, "seconds": snappedf(_now(), 0.1), "mix_rate": AudioServer.get_mix_rate(), "driver": AudioServer.get_driver_name(),
-		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"), "loop": _game.tuning.option("loop_mode"),
+		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"),
 		"policy": _driver.policy, "outcome": _driver.outcome, "stage": _game.run.stage,
 		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "music_skips": audio._music_pb.get_skips() if audio._music_pb != null else -1,
 		"ace_misses": ace.misses if ace != null else -1, "ace_short_reads": ace.short_reads if ace != null else -1,

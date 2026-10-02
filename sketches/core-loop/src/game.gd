@@ -8,8 +8,6 @@ const Beacon := preload("res://src/core/beacon.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
-const SimClock := preload("res://src/core/sim_clock.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -32,8 +30,6 @@ const RESTART_HOLD := 0.5
 const SUMMARY_GUARD := 0.75
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
-const HIT_STOP_BUDGET := 0.12
-const HIT_STOP_WINDOW_MS := 1000
 const SEED := 20260926
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -85,10 +81,6 @@ var _restart_latched := false
 # still be pressing Space to jump, and the run's only summary must stay readable.
 var summary_guard_left := 0.0
 var _hit_stopped := false
-# The loop modes' hit-stop budget: [msec, seconds] per stop taken, and the running totals.
-var _stop_log: Array = []
-var hit_stop_spent := 0.0
-var hit_stops_skipped := 0
 
 
 func _ready() -> void:
@@ -281,21 +273,6 @@ func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 func hit_stop(seconds: float) -> void:
 	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
 		return
-	# The v3 loop modes add a cumulative budget (Codex review finding 5): at most
-	# HIT_STOP_BUDGET of stops in any HIT_STOP_WINDOW_MS, so a chain of drops, kills and
-	# slams never piles up into a stall. v2 keeps its per-stop cap alone.
-	if LoopMode.mode(tuning) != "v2":
-		var now := SimClock.msec()
-		_stop_log = _stop_log.filter(func(entry: Array) -> bool: return now - int(entry[0]) < HIT_STOP_WINDOW_MS)
-		var spent := 0.0
-		for entry in _stop_log:
-			spent += float(entry[1])
-		var stop := minf(seconds, HIT_STOP_MAX)
-		if spent + stop > HIT_STOP_BUDGET:
-			hit_stops_skipped += 1
-			return
-		_stop_log.append([now, stop])
-		hit_stop_spent += stop
 	_hit_stopped = true
 	Engine.time_scale = HIT_STOP_SCALE
 	var timer := get_tree().create_timer(minf(seconds, HIT_STOP_MAX), true, false, true)
@@ -364,7 +341,9 @@ func pause_toggled() -> bool:
 
 # The ACE music's held breath, raw to hard to gentle: the title's B and the pause row.
 func cycle_breath() -> String:
-	var style := LoopMode.cycle(tuning, LoopMode.BREATH_KEY)
+	var options: Array = tuning.options_of(Tuning.BREATH_KEY)
+	var style: String = options[(options.find(tuning.option(Tuning.BREATH_KEY)) + 1) % options.size()]
+	tuning.set_option(Tuning.BREATH_KEY, style)
 	var audio = presentation.get("audio") if presentation != null else null
 	if audio != null and audio.has_method("set_breath"):
 		audio.set_breath(style)
@@ -483,11 +462,7 @@ func _screen_key(key: int) -> bool:
 			if key == KEY_H:
 				screens.toggle_help()
 				return true
-			if key == KEY_L or key == KEY_G:
-				LoopMode.cycle(tuning, LoopMode.LOOP_KEY if key == KEY_L else LoopMode.GUN_KEY)
-				screens.refresh_lab_row()
-				return true
-			if key == KEY_B and tuning.option(LoopMode.MUSIC_KEY) == "ace":
+			if key == KEY_B and tuning.option(Tuning.MUSIC_KEY) == "ace":
 				cycle_breath()
 				screens.refresh_lab_row()
 				return true

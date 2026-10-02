@@ -51,9 +51,7 @@ func _run() -> void:
 	for label in root.find_children("*", "Label3D", true, false):
 		label.visible = false
 	var target: Vector3 = warden.global_position
-	var line: Dictionary = terrain.map().drop_lines[0]
-	var lip: Vector2 = line["at"]
-	var ball: Vector3 = terrain.drop_point(lip.x - 2, lip.y - 9, 3.0)
+	var ball: Vector3 = terrain.drop_point(-53.85, -39.07, 3.0)
 	_pose(ball)
 	await _shot("launch", ball + Vector3(-2.2, 1.5, -4.2), ball + Vector3(0, 1.0, 7), Cams.LOOK["launch"]["fov"])
 	_pose(target + Vector3(-9, 2, -12))

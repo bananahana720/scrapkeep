@@ -188,7 +188,6 @@ func _build_hauler(entry: Dictionary) -> void:
 
 
 # The surge run's gate ring, standing on the ground at `ground`, facing along `along`.
-# The laps course's checkpoints are the same ring (lap_course_view.gd).
 static func gate_ring(ground: Vector3, along: Vector2) -> MeshInstance3D:
 	var g := MeshInstance3D.new()
 	var torus := TorusMesh.new()

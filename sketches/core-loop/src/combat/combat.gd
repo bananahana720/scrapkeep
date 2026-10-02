@@ -25,11 +25,8 @@ const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
-# The v3 fun lab's loop_mode switch and the roster row fleet.gd's own
-# reinforcement-pack system reads (M0's "adds" classification).
-const LoopMode := preload("res://src/core/loop_mode.gd")
+# The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
-const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -115,8 +112,7 @@ const STRIKE_DAMAGE := {
 const RANGE_NEAR_M := 6.0
 const RANGE_MID_M := 16.0
 # source: weapon (fired bolts, chains); ram_or_contact (a ball contact, a pin, a batted
-# shell); drop_or_slam (the slam contact kind, or any contact warden_drop.gd's rule
-# judged a drop, whatever its kind); special (a gauge release); item_proc (a build
+# shell); drop_or_slam (the slam contact kind); special (a gauge release); item_proc (a build
 # synergy, an element-field proc, an upgrade-tree proc or timed upgrade); persistent_actor
 # (a standing structure's own attack, e.g. the Sentry Post). Any strike() call from
 # outside this file (build.gd, element_field.gd) that does not name its source falls
@@ -158,11 +154,8 @@ var discovery_log: Array = []
 # retry does not clear it). Mirrored onto ctx.run's meta after every change so run_log
 # can read it without a new reference or bus signal. delivered_damage() reads it.
 var _ledger := {}
-# This stage attempt's landed drops (one per warden_drop_landed, however many strikes the
-# landing made) and its damaging stomp and slam hits on the Warden, kept apart so a hit
-# count is never read as a drop count. Reset every attempt (_start_attempt) and
-# snapshotted into _ledger's drops_to_break and warden_slam_hits on beacon_unsealed.
-var _warden_drops := 0
+# This stage attempt's damaging stomp and slam hits on the Warden. Reset every attempt
+# (_start_attempt) and snapshotted into _ledger's warden_slam_hits on beacon_unsealed.
 var _warden_slam_hits := 0
 # Instance ids spawned while ctx.flow.in_arena was true (M0, review fix round 1): the
 # only spawner call reachable there is boss.gd's own drone drop, so this is how a boss
@@ -300,12 +293,8 @@ func setup(ctx_ref) -> void:
 		_boss_add_ids = {}
 		_reset_ledger()
 		_rebuild_patterns())
-	ctx.events.warden_drop_landed.connect(func(_at: Vector3, _speed: float, _left: int, _segments: int):
-		_warden_drops += 1)
 	ctx.events.beacon_unsealed.connect(func(stage: int):
-		_ledger["drops_to_break"][str(stage)] = _warden_drops if LoopMode.is_drop(ctx.tuning) else null
 		_ledger["warden_slam_hits"][str(stage)] = _warden_slam_hits
-		_warden_drops = 0
 		_warden_slam_hits = 0)
 	# review finding 1, fix round 2: Brindle's parts are never spawned through
 	# spawn_enemy(), so the died-signal retirement path below never sees him; boss_defeated
@@ -411,10 +400,8 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	_pending = outer
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(kind, result["part"], result)
-	# Hits, not drops: one Rivet skid landing strikes SLAM twice (the shockwave, then the
-	# skid push), so drops come only from warden_drop_landed (see setup()). Counted before
-	# take_damage() because a killing hit unseals the stage (beacon_unsealed, which
-	# snapshots this count) inside it.
+	# Counted before take_damage() because a killing hit unseals the stage
+	# (beacon_unsealed, which snapshots this count) inside it.
 	if kind in ["stomp", "slam"] and float(result["dealt"]) > 0.0 and _target_class(enemy) == "Warden":
 		_warden_slam_hits += 1
 	var removed: float = enemy.take_damage(result["dealt"])
@@ -423,8 +410,7 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if result.get("shred", true):
 		_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
-	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source,
-		bool(result.get("drop", false)))
+	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source)
 
 
 # hp is not part of the enemy protocol (README.md), but every implementation carries it
@@ -440,12 +426,10 @@ func _hp_of(enemy: Node3D) -> float:
 
 # --- M0: delivered-damage ledger (see the constants above for the categories) --------
 
-# `drop` is resolve()'s own "drop" key: warden_drop.gd's rule sets it on a contact it
-# judged a drop, so a stomp- or ram-kind drop still lands under drop_or_slam.
-func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, drop: bool, known_class := "") -> void:
+func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, known_class := "") -> void:
 	if _ledger.is_empty():
 		_reset_ledger()
-	var source := _classify_source(kind, raw_source, drop)
+	var source := _classify_source(kind, raw_source)
 	var target_class := known_class if known_class != "" else _target_class(enemy)
 	_ledger["hits"] = int(_ledger["hits"]) + 1
 	if removed <= 0.0:
@@ -468,7 +452,7 @@ func _trail_deal(enemy: Node3D, amount: float) -> float:
 	# Same measure as strike(): a Brindle piece's return value undercounts (M0 delivered damage).
 	if is_instance_valid(enemy):
 		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
-	_record_delivered(enemy, "spark", removed, amount, "persistent_actor", false, target_class)
+	_record_delivered(enemy, "spark", removed, amount, "persistent_actor", target_class)
 	return removed
 
 
@@ -482,13 +466,11 @@ static func _bump(map: Dictionary, key: String, amount: float) -> void:
 	map[key] = float(map.get(key, 0.0)) + amount
 
 
-func _classify_source(kind: String, explicit: String, drop := false) -> String:
+func _classify_source(kind: String, explicit: String) -> String:
 	if explicit != "":
 		return explicit
 	if kind == SYNERGY:
 		return "item_proc"
-	if drop:
-		return "drop_or_slam"
 	if kind in CONTACT_KINDS:
 		return "drop_or_slam" if kind == "slam" else "ram_or_contact"
 	if kind == "pin" or kind == "shell":
@@ -566,9 +548,8 @@ func _reset_ledger() -> void:
 	_ledger = {
 		"total": 0.0, "overkill": 0.0, "hits": 0, "zero_damage_hits": 0,
 		"by_source": {}, "by_action": {}, "by_target_class": {}, "by_range": {"near": 0.0, "mid": 0.0, "far": 0.0},
-		"retirements": {}, "drops_to_break": {}, "warden_slam_hits": {},
+		"retirements": {}, "warden_slam_hits": {},
 	}
-	_warden_drops = 0
 	_warden_slam_hits = 0
 	# review finding 4, fix round 2: a duplicate(true) on every hit is a hot-path
 	# allocation (measured ~36x the rest of a hit's bookkeeping; a multi-target discharge
@@ -600,12 +581,6 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 	if kind == SYNERGY:
 		part = ""
 	var punch := punch_of(kind, force)
-	# The v3 fun lab: a loop mode's own damage rule (warden_drop.gd) answers first; an
-	# empty answer (v2, or any enemy without one) falls through to the plating rule.
-	if enemy.has_method("loop_rule"):
-		var rule: Dictionary = enemy.loop_rule(kind, part, force, punch, heft())
-		if not rule.is_empty():
-			return rule
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
@@ -1759,26 +1734,6 @@ func warden_spec(stage: int) -> Dictionary:
 	}
 
 
-# The fun lab's fields on a Warden spec (loop_mode.gd): the mode and gun role, and the
-# drop rules only where the stage's map has drop lines to hit it from (stage 1 in the
-# lab), so a drop-mode run meets v2 Wardens on stages 2 and 3.
-func _loop_spec(stage: int) -> Dictionary:
-	var map = ctx.terrain.map_for(stage) if ctx.terrain != null and ctx.terrain.has_method("map_for") else null
-	var lines: bool = map != null and "drop_lines" in map and not (map.drop_lines as Array).is_empty()
-	var out := {"loop_mode": LoopMode.mode(ctx.tuning), "gun_role": LoopMode.gun_role(ctx.tuning),
-		"drop_rules": LoopMode.is_drop(ctx.tuning) and lines,
-		"drops": int(ctx.flow.stage_def().get("warden_drops", 4)),
-		"cores": func() -> int: return int(ctx.run.bonus_cores) if ctx.run != null else 0,
-		"gravity": ctx.tuning.f("gravity")}
-	if lines and map.return_at != Vector2.INF:
-		out["rebound_to"] = ctx.terrain.drop_point(map.return_at.x, map.return_at.y, 1.0)
-		# Under `full` a drop throws the ball up the bank a quarter-turn from the return, so
-		# the stagger is gunned from the bank before the ride.
-		var side: Vector2 = (map.return_at - map.beacon).normalized().rotated(-PI * 0.5) * WardenDrop.STAGGER_PERCH
-		out["perch_to"] = ctx.terrain.drop_point(map.beacon.x + side.x, map.beacon.y + side.y, 1.0)
-	return out
-
-
 func _spec_for(kind: String) -> Dictionary:
 	var stage: int = ctx.flow.stage()
 	match kind:
@@ -1786,7 +1741,6 @@ func _spec_for(kind: String) -> Dictionary:
 			var w := warden_spec(stage)
 			w["stage"] = stage
 			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
-			w.merge(_loop_spec(stage))
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
@@ -1881,7 +1835,6 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
-	_warden_drops = 0
 	_warden_slam_hits = 0
 	_cooldown = 0.0
 	_overdrive = 0.0

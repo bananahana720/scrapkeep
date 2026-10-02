@@ -7,7 +7,7 @@ const VolumeRow := preload("res://src/ui/volume_row.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Screens := preload("res://src/ui/screens.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
 # opens it in play and closes it again. Each row is a ChoiceButton with its key's cap,
@@ -226,8 +226,8 @@ func _toggle_ceremony() -> void:
 
 func _show_breath() -> void:
 	var row: Control = _rows["breath"]
-	row.visible = game.tuning.option(LoopMode.MUSIC_KEY) == "ace"
-	row.text = "Breath: %s" % game.tuning.option(LoopMode.BREATH_KEY)
+	row.visible = game.tuning.option(Tuning.MUSIC_KEY) == "ace"
+	row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
 
 
 func _show_ceremony() -> void:

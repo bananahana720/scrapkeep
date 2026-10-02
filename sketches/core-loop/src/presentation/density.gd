@@ -57,8 +57,7 @@ const CLASS_OF_ROLE := {
 const CLASS_OF_KIND := {
 	"near_miss": "P2", "interact_armed": "P2", "interact_fired": "P2",
 	"part_gained": "P4", "milestone_won": "P4", "core_gained": "P4", "reward_rare": "P4",
-	"reward_payoff": "P4", "beacon_unsealed": "P4", "lap_bell_rung": "P4", "lap_ring_passed": "P4",
-	"lap_completed": "P4", "bet_resolved": "P4", "ambush_ended": "P4", "interaction_found": "P4",
+	"reward_payoff": "P4", "beacon_unsealed": "P4", "bet_resolved": "P4", "ambush_ended": "P4", "interaction_found": "P4",
 }
 const GOVERNED_CLASSES := ["P5", "P6", "P7"]
 

@@ -42,27 +42,27 @@ function flagsOf(forwarded) {
 }
 
 test("a bare name forwards flags that follow it without --", () => {
-  const { result, forwarded } = launch(["demo", "--loop=drop", "--gun=hold"]);
+  const { result, forwarded } = launch(["demo", "--music=ace", "--breath=gentle"]);
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(flagsOf(forwarded), ["--loop=drop", "--gun=hold"]);
+  assert.deepEqual(flagsOf(forwarded), ["--music=ace", "--breath=gentle"]);
 });
 
 test("the -- form still forwards flags", () => {
-  const { result, forwarded } = launch(["demo", "--", "--loop=drop"]);
+  const { result, forwarded } = launch(["demo", "--", "--music=ace"]);
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(flagsOf(forwarded), ["--loop=drop"]);
+  assert.deepEqual(flagsOf(forwarded), ["--music=ace"]);
 });
 
 test("the play verb forwards flags that follow the name", () => {
-  const { result, forwarded } = launch(["play", "demo", "--loop=drop"]);
+  const { result, forwarded } = launch(["play", "demo", "--music=ace"]);
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(flagsOf(forwarded), ["--loop=drop"]);
+  assert.deepEqual(flagsOf(forwarded), ["--music=ace"]);
 });
 
 test("flags before and after -- both reach Godot", () => {
-  const { result, forwarded } = launch(["demo", "--gun=hold", "--", "--loop=drop"]);
+  const { result, forwarded } = launch(["demo", "--breath=gentle", "--", "--music=ace"]);
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(flagsOf(forwarded), ["--gun=hold", "--loop=drop"]);
+  assert.deepEqual(flagsOf(forwarded), ["--breath=gentle", "--music=ace"]);
 });
 
 test("a bare name with no flags forwards none", () => {

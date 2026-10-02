@@ -140,22 +140,6 @@ signal interact_armed(family: String, device_id: String, at: Vector3)
 signal interact_fired(family: String, device_id: String, at: Vector3)
 signal ambush_ended(device_id: String, won: bool, at: Vector3)
 signal bet_resolved(device_id: String, won: bool, stake: int, at: Vector3)
-# v3 fun lab, laps mode (loop_mode.gd, world's lap_course.gd). World publishes the
-# course: the bell as the ball first rolls into the Warden's ring, each checkpoint ring
-# passed (index 0 to count - 1, in order), and each lap closed with its time. Flow
-# publishes warden_stripped when a lap past the required ones takes plating off the
-# Warden; plating is what is left.
-signal lap_bell_rung(at: Vector3)
-signal lap_ring_passed(index: int, count: int, at: Vector3)
-signal lap_completed(lap: int, required: int, seconds: float)
-signal warden_stripped(plating: float, at: Vector3)
-# v3 fun lab, the drop mode's Warden (combat; emitted by warden.gd and warden_drop.gd).
-# warden_state_changed carries the five states (closed, telegraph, open, recover,
-# punish) for the look to dress; the other three are the drop fight's reads.
-signal warden_state_changed(state: String, at: Vector3)
-signal warden_window_held(at: Vector3, seconds_left: float)
-signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
-signal warden_pulse_dodged(at: Vector3, near: bool)
 
 # The legibility grammar (design-v3/LEGIBILITY.md). line_state_changed names a LINE_ROWS id;
 # cause is "" except on "broke", where it says what cut the line. verb_failed names a

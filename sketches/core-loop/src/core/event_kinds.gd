@@ -120,16 +120,6 @@ const ROWS := {
 	"swarm_scattered": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "swarm_scatter", "hud": "", "objective": "", "priority": 1},
 	"mind_adapted": {"group": "combat", "color": Palette.HAZARD, "shape": "ring", "sound": "mind_sable", "sound_next": "mind_quote", "hud": "", "objective": "", "priority": 2},
 	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
-	# v3 fun lab, the drop mode (LOOP-REDESIGN sections 2 and 7). The Warden's states are
-	# music-only; the held door ticks on the ready pulse; a landed drop is a reward (the
-	# ladder climbs a rung per segment lost, drop_juice.gd). A dodge wears bone and an
-	# arrow, never the class colour and the core that mean "open": a near-miss is the
-	# rising whip, a safe resolution a quiet tick (drop_juice.gd picks by `near`).
-	# `sound` stands in, `sound_next` names the cue to bake.
-	"warden_state_changed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"warden_window_held": {"group": "combat", "color": Palette.ANCIENT, "shape": "ring", "sound": "scrap_tick", "sound_next": "held_door_tick", "hud": "", "objective": "", "priority": 1},
-	"warden_drop_landed": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "boss_weak_hit", "sound_next": "drop_segment_pop", "hud": "", "objective": "", "priority": 2},
-	"warden_pulse_dodged": {"group": "movement", "color": Palette.SAND, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "near_miss_whip_or_safe_tick", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
 	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
@@ -156,16 +146,6 @@ const ROWS := {
 	"interact_fired": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
 	"ambush_ended": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "event_end", "hud": "", "objective": "", "priority": 2},
 	"bet_resolved": {"group": "economy", "color": Palette.COPPER, "shape": "star", "sound": "clank", "hud": "", "objective": "", "priority": 2},
-	# v3 fun lab, laps mode (LOOP-REDESIGN section 1 C and section 7's lap notch). The
-	# bell and the notch are the beacon's own family (arc); a checkpoint is roll-through
-	# movement, so amber, and its pop climbs the reward ladder ring by ring; stripped
-	# plating falls off in the plates' copper. `sound` stands in; `sound_next` names the
-	# cue to bake. The lap's notch and the ring that closes it land on the beat with the
-	# director's threat_rose stinger (audio.gd).
-	"lap_bell_rung": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "shop_bell", "sound_next": "course_bell_toll", "hud": "The course lights up", "objective": "Lap the lit course: {lap} of {required}. The Warden wakes at {required}.", "priority": 3},
-	"lap_ring_passed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "found_chime", "sound_next": "checkpoint_pop", "hud": "", "objective": "", "priority": 1},
-	"lap_completed": {"group": "flow", "color": Palette.ARC, "shape": "bar", "sound": "core_socket", "sound_next": "beacon_notch_chime", "hud": "", "objective": "", "priority": 2},
-	"warden_stripped": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "shatter", "sound_next": "plate_shear_clang", "hud": "Warden plating stripped", "objective": "", "priority": 3},
 	# The legibility grammar's signals carry no presentation of their own: each reads its row in
 	# LINE_ROWS, STATE_ROWS, Bindings.VERBS or CAUSE_ROWS, so these are the quiet stand-ins the
 	# schema asks for.
@@ -179,9 +159,6 @@ const ROWS := {
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list.
 const GRAMMAR_SIGNALS := ["posture_changed"]
-
-# The laps mode's objective before the bell: the lap_bell_rung row carries it after.
-const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then lap the course: {lap} of {required}."
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
@@ -692,9 +669,6 @@ const OBJECTIVE_SHORT := {
 	"stage_entered": "Break the Warden",
 	"beacon_charge_changed": "Break the Warden",
 	"boss_arena_entered": "Break Brindle's Requisition",
-	# Laps mode while the Warden sleeps: before the bell, then counting laps.
-	"lap_bell": "Ring the Warden's bell",
-	"lap_bell_rung": "Lap the course: {lap}/{required}",
 }
 # Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
 # worded for the stage's family: stage 1's reactor opens its core as it vents, stage
@@ -704,19 +678,6 @@ const LESSON_SHORT := {
 	"caps": "Bowl its guard, slam caps",
 	"magnet": "Shoot its magnet while pulled",
 }
-# The drop mode's objective line (LOOP-REDESIGN section 2, under 25 words), for flow's
-# readout and the HUD alike.
-# Keyed by gun role. The badge's chunks say how much is left; the words promise no count
-# (review finding 6: speed, heft and the gun make "drops left" untrue).
-const DROP_OBJECTIVE := {
-	"hold": "Drop on the Warden from a chute.",
-	"full": "Drop on the Warden, then gun it while it reels.",
-}
-
-
-static func drop_objective(gun_role: String) -> String:
-	return DROP_OBJECTIVE.get(gun_role, DROP_OBJECTIVE["hold"])
-
 
 # v2 W7 enemies
 # Each faction's fac_ icon, so the pack_arrived edge marker and any faction badge read

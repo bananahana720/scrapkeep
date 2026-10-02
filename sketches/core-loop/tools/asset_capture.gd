@@ -315,9 +315,7 @@ func _stage(id: String) -> void:
 	var terrain = game.ctx.terrain
 	var ball: Vector3 = terrain.drop_point(-65, -130, 1.2)
 	if id == "launch":
-		var line: Dictionary = terrain.map().drop_lines[0]
-		var lip: Vector2 = line["at"]
-		ball = terrain.drop_point(lip.x - 2, lip.y - 9, 3.0)
+		ball = terrain.drop_point(-53.85, -39.07, 3.0)
 	game.player.reset_to(ball)
 	game.player._visual_root.global_position = ball
 	var bay = game.world.bay

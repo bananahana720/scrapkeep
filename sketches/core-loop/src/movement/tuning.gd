@@ -33,8 +33,6 @@ const SPECS := [
 	# v2's ground probe turned with the ball, so "grounded" flickered with the spin.
 	# Off is the fix; on brings the v2 feel back for a side-by-side comparison.
 	{"key": "legacy_spin_probe", "label": "Legacy spin probe (v2)", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "toggle": true},
-	# The v3 fun lab's switch (src/core/loop_mode.gd): an option row stores its index.
-	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
 	# The durability prototype (DESIGN-NOTES, "Scrap as armour"): `--scrap=armor` makes mass a
 	# temporary health layer over the hull, `--wear=on` lets rolling friction wear it. Both
 	# default on; `--scrap=off --wear=off` brings back the old base game. `--route-seed=<n>` reseeds the run's streams and
@@ -43,7 +41,6 @@ const SPECS := [
 	{"key": "wear", "label": "Scrap wear", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "start_mass", "label": "Start mass", "min": 0.0, "max": 3000.0, "step": 10.0, "value": 0.0},
 	{"key": "route_seed", "label": "Route seed (0 = off)", "min": 0.0, "max": 999999.0, "step": 1.0, "value": 0.0},
-	{"key": "gun_role", "label": "Gun role", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["hold", "full"]},
 	# The music lab: the ACE takes on stage 1 (presentation/ace_sequencer.gd, the default), or the
 	# synth band, and the Warden open's held breath in the ACE music.
 	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["synth", "ace"]},
@@ -62,6 +59,12 @@ const SPECS := [
 	{"key": "harpoon_lock_deg", "label": "Harpoon lock (deg)", "min": 0.0, "max": 25.0, "step": 0.5, "value": 10.0},
 	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
 ]
+
+# The option rows other modules read by name.
+const MUSIC_KEY := "music"
+const BREATH_KEY := "breath"
+const DISCOVERY_KEY := "discovery"
+const TELEGRAPH_KEY := "telegraph"
 
 const BRAKE_RESISTANCE := 4.0
 const BRAKE_TURN_BOOST := 2.2
@@ -85,10 +88,6 @@ var boost_cooldown_scale := 1.0
 # What the command line set, key to value: reset() returns to how this launch started, so
 # the F1 panel's Reset defaults keeps the flags and only the sliders go back to defaults.
 var _launch := {}
-# The loop mode the current stage entered with; empty until the first stage, when a bare
-# Tuning reads the row live. The panel writes the row at once under "hold R to apply", so
-# every reader of the mode takes this one per-stage value instead.
-var _stage_loop := ""
 
 
 func _init() -> void:
@@ -102,9 +101,8 @@ func _init() -> void:
 #   when  "start" flags apply as Tuning is built (the durability flags, so every Tuning
 #         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
 #         so a bot or tool that builds a bare Tuning never sees them.
-# `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --loop=drop --gun=full
-# --music=ace --breath=gentle --discovery=cards --telegraph=haze --world-one-builds=on
-# --hotwire-shell=on --hotwire-tread=on`, from the engine args
+# `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --music=ace --breath=gentle
+# --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
 # since the static-drawn floor marking has no tuning in reach; tuning_flags_test checks
@@ -114,8 +112,6 @@ const FLAGS := {
 	"wear": ["wear", "option", "start"],
 	"route-seed": ["route_seed", "number", "start"],
 	"start-mass": ["start_mass", "number", "start"],
-	"loop": ["loop_mode", "option", "launch"],
-	"gun": ["gun_role", "option", "launch"],
 	"music": ["music", "option", "launch"],
 	"breath": ["breath", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
@@ -225,14 +221,6 @@ func set_option(key: String, name: String) -> bool:
 		return false
 	set_value(key, float(index))
 	return true
-
-
-func latch_stage() -> void:
-	_stage_loop = option("loop_mode")
-
-
-func stage_loop() -> String:
-	return _stage_loop if _stage_loop != "" else option("loop_mode")
 
 
 func reset() -> void:

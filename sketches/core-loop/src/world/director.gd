@@ -15,8 +15,7 @@ extends RefCounted
 # v2 W7 enemies: pack composition (DESIGN-V2 sections 10.5 and 15.4-15.5).
 # - The difficulty clock gates reinforcements. At tick 0 every spawn is a chaser or a
 #   lobber; from tick 1 a share of the spawn slots become packs, PACK_PER_TICK a tick,
-#   and each tick past the Warden break (while the spike is on) adds PAST_BREAK_STEP, as
-#   does each lap of a laps-mode course (step_lap).
+#   and each tick past the Warden break (while the spike is on) adds PAST_BREAK_STEP.
 # - A tagged pack pairs a controller with a punisher (PACKS): the enemy synergies. Its
 #   members arrive together, on one ring timer, so combat reads them as one pack and
 #   publishes pack_arrived with the faction.
@@ -103,11 +102,6 @@ var build := {}
 # Every pack composed, in order: {id, kinds, tests}. For tests and the balance read.
 var packs: Array[Dictionary] = []
 
-# v3 fun lab, laps mode: laps of the stage's course closed so far. Each is one
-# reinforcement step (LOOP-REDESIGN section 1: PAST_BREAK_STEP "per lap"), announced as
-# a rise like the clock's ticks, so every rise reads the level: ticks plus laps.
-var laps := 0
-
 var _timer := FIRST_SPAWN
 var _rng := RandomNumberGenerator.new()
 var _last_tier := 0
@@ -152,14 +146,9 @@ func pressure(alive_count: int) -> float:
 	return clampf(crowd * 0.7 + (0.3 if spike else 0.0) + minf(0.2, tier() * 0.05), 0.0, 1.0)
 
 
-# The level threat_rose announces: the effective tier plus the laps closed.
+# The level threat_rose announces: the effective tier.
 func level() -> int:
-	return effective_tier() + laps
-
-
-func step_lap() -> void:
-	laps += 1
-	_rises.append(level())
+	return effective_tier()
 
 
 # Every rise of the level since the last call, in order.
@@ -177,7 +166,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 	var now := effective_tier()
 	if now > _last_tier:
 		for t in range(_last_tier + 1, now + 1):
-			_rises.append(t + laps)
+			_rises.append(t)
 	_last_tier = now
 	var due: Array[Dictionary] = []
 	for a in arrivals:
@@ -233,9 +222,9 @@ func past_break_ticks() -> int:
 # The share of spawn slots that become packs: 0 at tick 0, the clock's gate.
 func reinforcement_weight() -> float:
 	var ticks := effective_tier()
-	if ticks <= 0 and laps <= 0:
+	if ticks <= 0:
 		return 0.0
-	return clampf(PACK_PER_TICK * ticks + PAST_BREAK_STEP * (past_break_ticks() + laps), 0.0, PACK_MAX)
+	return clampf(PACK_PER_TICK * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
 
 
 func unlocked_counters() -> Array:

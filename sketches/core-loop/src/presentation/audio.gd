@@ -7,7 +7,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Streak := preload("res://src/presentation/streak.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
@@ -415,7 +415,6 @@ func _process(delta: float) -> void:
 	_flush_flow()
 	_play_due_notes()
 	_tend_hum()
-	_follow_drop_line()
 	_follow_warden()
 	_follow_escalation()
 	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
@@ -564,7 +563,7 @@ func _ace_render(frames: int, live: bool) -> PackedVector2Array:
 func ace_wanted() -> bool:
 	# Some tests set the director up on a stand-in context with no tuning.
 	var tuning = ctx.get("tuning")
-	return tuning != null and tuning.option(LoopMode.MUSIC_KEY) == "ace"
+	return tuning != null and tuning.option(Tuning.MUSIC_KEY) == "ace"
 
 
 # Loads the ACE package on first need. A missing manifest or stem is one warning naming
@@ -634,13 +633,13 @@ func _release_grid() -> void:
 
 
 func breath() -> String:
-	return ctx.tuning.option(LoopMode.BREATH_KEY) if ctx.tuning != null else "hard"
+	return ctx.tuning.option(Tuning.BREATH_KEY) if ctx.tuning != null else "hard"
 
 
 # The pause menu's Breath row and the title's B: the style lands on the open sounding now.
 func set_breath(style: String) -> void:
 	if ctx.tuning != null:
-		ctx.tuning.set_option(LoopMode.BREATH_KEY, style)
+		ctx.tuning.set_option(Tuning.BREATH_KEY, style)
 	if ace != null:
 		ace.set_breath(breath())
 
@@ -659,25 +658,6 @@ func _duck(amount: float, hold_seconds: float) -> void:
 	engine.duck(amount, hold_seconds)
 	if ace_playing():
 		ace.duck(amount, hold_seconds)
-
-
-# Drop mode: rolling onto a live drop line toward its lip commits to the Warden, and the
-# ACE band pivots into its music on the next bar.
-func _follow_drop_line() -> void:
-	if not ace_playing() or ace.mode != "level" or not LoopMode.is_drop(ctx.tuning):
-		return
-	if ctx.terrain == null or ctx.player == null or not ctx.terrain.has_method("map"):
-		return
-	var map = ctx.terrain.map()
-	if map == null or not map.loop_live:
-		return
-	var ball: Vector3 = ctx.player.ball_position()
-	var line: Dictionary = map.drop_line_at(Vector2(ball.x, ball.z), true)
-	if line.is_empty():
-		return
-	var v: Vector3 = ctx.player.state.velocity
-	if Vector2(v.x, v.z).dot(line["dir"]) > 4.0:
-		ace.commit_warden()
 
 
 # --- Playing a cue ------------------------------------------------------------------
@@ -907,7 +887,6 @@ func wire_optional() -> void:
 		play("ambush_ended", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("fight", "won" if won else "lost"), cue_context())))
 	_listen(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
 		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
-	_wire_laps(events)
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen(events, "synergy_discovered", _on_synergy)
@@ -923,17 +902,6 @@ func wire_optional() -> void:
 		_begin_boss("warden_engaged", "warden")
 		if ace_playing():
 			ace.commit_warden())
-	# The drop fight's reads drive the ACE Warden: its sections follow the five states, and
-	# a landing drops on the next beat (drop_juice.gd plays the landing's own cues).
-	_listen(events, "warden_state_changed", func(state: String, _at: Vector3):
-		if ace_playing():
-			ace.set_warden_state(state))
-	_listen(events, "warden_drop_landed", func(_at: Vector3, _speed: float, _left: int, _segments: int):
-		if ace_playing():
-			var at := ace.drop_now()
-			if at >= 0:
-				drop_log.append([ace.clock, at])
-				cue_log.append(["warden_drop_landed", "ace_drop", "beat", at, 1.0]))
 	_listen(events, "boss_arena_entered", func():
 		_boss_phase = 1
 		_disarm_launch()
@@ -994,22 +962,6 @@ static func motif_of(class_id: String) -> String:
 # octave at the vault cap (SOUND-STORY section 3), so a weak kick falls short of it.
 func _on_vault_kicked(_at: Vector3, speed: float) -> void:
 	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
-
-
-# v3 fun lab, laps mode (LOOP-REDESIGN section 7, the lap notch). A checkpoint pops at
-# once, one reward-ladder rung higher per ring; the ring that closes a lap pops on the
-# beat instead, with the beacon's notch, so they land with the director's threat_rose
-# stinger, which world publishes the same tick. The bell and a plating strip are flow
-# moments, so on the beat too.
-func _wire_laps(events) -> void:
-	_listen(events, "lap_bell_rung", func(_at: Vector3): on_beat("lap_bell_rung"))
-	_listen(events, "lap_ring_passed", func(index: int, count: int, _at: Vector3):
-		if index == count - 1:
-			on_beat("lap_ring_passed")
-		else:
-			play("lap_ring_passed", 0.0, Harmony.ratio(Harmony.pentatonic_step(index))))
-	_listen(events, "lap_completed", func(_lap: int, _required: int, _seconds: float): on_beat("lap_completed"))
-	_listen(events, "warden_stripped", func(_plating: float, _at: Vector3): on_beat("warden_stripped"))
 
 
 # Connects once. loose drops whatever arguments the signal carries.

@@ -21,14 +21,6 @@ var _ring_material: StandardMaterial3D
 var _core_material: StandardMaterial3D
 var _ring: MeshInstance3D
 var _core: MeshInstance3D
-# v3 fun lab, laps mode: one collar on the mast per lap the Warden wants, lit as each
-# lap closes, so the count reads from the drop deck (set_notches).
-const NOTCH_LOW := 7.0
-const NOTCH_GAP := 3.5
-const NOTCH_POP := 0.35
-var _notches: Array[MeshInstance3D] = []
-var _notch_lit := 0
-var _notch_pop := 0.0
 
 
 func setup() -> void:
@@ -110,44 +102,6 @@ func show_progress(value: float) -> void:
 func open() -> void:
 	phase = READY
 	show_progress(duration)
-
-
-# total collars stand on the mast (0 takes them down), the first `lit` of them lit. A
-# newly lit collar pops.
-func set_notches(total: int, lit: int) -> void:
-	while _notches.size() < total:
-		var collar := MeshInstance3D.new()
-		var torus := TorusMesh.new()
-		torus.inner_radius = 1.5
-		torus.outer_radius = 2.4
-		collar.mesh = torus
-		collar.material_override = Palette.solid(Palette.SAND, 0.3)
-		collar.position = Vector3.UP * (NOTCH_LOW + NOTCH_GAP * _notches.size())
-		add_child(collar)
-		_notches.append(collar)
-	lit = mini(lit, total)
-	if lit > _notch_lit:
-		_notch_pop = NOTCH_POP
-	_notch_lit = lit
-	var tint := EventKinds.color("lap_completed")
-	for i in _notches.size():
-		var mat: StandardMaterial3D = _notches[i].material_override
-		_notches[i].visible = i < total
-		mat.albedo_color = tint if i < lit else Palette.SAND
-		mat.emission = mat.albedo_color
-		mat.emission_energy_multiplier = 4.0 if i < lit else 0.3
-		_notches[i].scale = Vector3.ONE
-
-
-func notches_lit() -> int:
-	return _notch_lit if not _notches.is_empty() and _notches[0].visible else 0
-
-
-func _process(delta: float) -> void:
-	if _notch_pop <= 0.0 or _notch_lit <= 0:
-		return
-	_notch_pop = maxf(0.0, _notch_pop - delta)
-	_notches[_notch_lit - 1].scale = Vector3.ONE * (1.0 + 0.6 * sin(PI * _notch_pop / NOTCH_POP))
 
 
 func _refresh() -> void:

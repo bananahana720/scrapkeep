@@ -61,9 +61,7 @@ func _run() -> void:
 	for i in 120:
 		await physics_frame
 	var terrain = game.ctx.terrain
-	var line: Dictionary = terrain.map().drop_lines[0]
-	var lip: Vector2 = line["at"]
-	var ball: Vector3 = terrain.drop_point(lip.x - 2, lip.y - 9, 3.0)
+	var ball: Vector3 = terrain.drop_point(-53.85, -39.07, 3.0)
 	game.player.reset_to(ball)
 	game.player._visual_root.global_position = ball
 	game.world.bay.visible = false

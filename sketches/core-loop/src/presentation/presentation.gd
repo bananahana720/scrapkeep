@@ -7,9 +7,8 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
-const DropJuice := preload("res://src/presentation/drop_juice.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Parts := preload("res://src/build/parts.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
@@ -38,8 +37,6 @@ var vfx
 var line_view
 var banner
 var hero_assets
-# The v3 drop mode's own juice (drop_juice.gd), apart from the universal layer.
-var drop_juice
 var ceremony
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
@@ -76,12 +73,9 @@ func setup(ctx_ref) -> void:
 	banner = CodexBanner.new()
 	layer.add_child(banner)
 	var codex = ctx.get("codex")
-	if ctx.tuning != null and ctx.tuning.option(LoopMode.DISCOVERY_KEY) == "cards" and codex != null:
+	if ctx.tuning != null and ctx.tuning.option(Tuning.DISCOVERY_KEY) == "cards" and codex != null:
 		banner.cards = true
 		banner.storage_dir = codex.storage_dir
-	drop_juice = DropJuice.new()
-	add_child(drop_juice)
-	drop_juice.setup(ctx, audio)
 	ceremony = RewardCeremony.new()
 	add_child(ceremony)
 	ceremony.setup(ctx, audio, juice, vfx)

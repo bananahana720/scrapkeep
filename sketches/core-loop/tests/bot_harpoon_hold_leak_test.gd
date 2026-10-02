@@ -5,7 +5,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 
 # The bot's harpoon hand holds RMB and Ctrl only on the ticks a ram lap runs it. A tick
 # that reaches _drive by another branch (the walk to the Warden, the caps loop, the
-# lapper's phases) must not inherit the last ram-lap tick's hold: a Ctrl held without a
+# other policy's phases) must not inherit the last ram-lap tick's hold: a Ctrl held without a
 # break keeps player._ctrl_claimed set, which strips the bot's own brakes.
 #
 # Evidence limit: this checks the hold the bot hands the player on a non-fight tick; it

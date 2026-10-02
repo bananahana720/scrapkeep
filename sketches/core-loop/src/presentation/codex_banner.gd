@@ -3,7 +3,6 @@ extends Control
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 

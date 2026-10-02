@@ -5,7 +5,6 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # --discovery=cards: the first time an id is discovered a picture card shows (a larger
@@ -40,8 +39,8 @@ func _initialize() -> void:
 
 func _flag(args: Array) -> String:
 	var tuning := Tuning.new()
-	LoopMode.apply_args(tuning, PackedStringArray(args))
-	return tuning.option(LoopMode.DISCOVERY_KEY)
+	tuning.apply_args(PackedStringArray(args), "launch")
+	return tuning.option(Tuning.DISCOVERY_KEY)
 
 
 func _banner(cards: bool, profile) -> Control:
@@ -145,7 +144,7 @@ func _process(_delta: float) -> bool:
 			fresh.show_discovery("Magnet Well", "build", LINE, "New synergy", "magnet_well")
 			_check("reloaded: old pops, new cards", old_is_pop and fresh.last_style == "card", "old '%s', new '%s'" % ["pop" if old_is_pop else "card", fresh.last_style])
 			_check("flag off leaves profile", _off.profile == null and not _profile.discovered("nothing") and _profile.discoveries_seen == ["wrecking_ball", "boarding_party_0", "boarding_party_1"], "profile %s" % [_profile.discoveries_seen])
-			_check("flag parsed", _flag(["--loop=drop", "--discovery=cards"]) == "cards" and _flag(["--discovery=banner"]) == "banner" and _flag([]) == "cards", "cards/banner/absent -> cards/banner/cards")
+			_check("flag parsed", _flag(["--music=ace", "--discovery=cards"]) == "cards" and _flag(["--discovery=banner"]) == "banner" and _flag([]) == "cards", "cards/banner/absent -> cards/banner/cards")
 			# Queued behind a card and dropped: not recorded, so its card still comes.
 			var dropped = _banner(true, reloaded)
 			dropped.show_discovery("Front", "build", LINE, "New synergy", "front_card")

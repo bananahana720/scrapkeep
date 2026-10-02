@@ -9,7 +9,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 # every few seconds of play. It needs a rendered display; launch it off Andrew's screen:
 #
 #   claude-open <godot> --path sketches/core-loop --script res://tools/alpha_capture.gd \
-#     -- --out=<absolute dir> [--seed=0] [--seconds=150] [--ui=1] [--policy=lapper] [--loop=drop]
+#     -- --out=<absolute dir> [--seed=0] [--seconds=150] [--ui=1] [--policy=skipper]
 #
 # The seed picks the class the way bot_run does (seed % class count). The pick screen
 # pauses the tree, so after its still the script presses 1 through Input, as a player
@@ -33,7 +33,6 @@ var _seed := 0
 var _ui := false
 var _notes_shot := false
 var _policy := "skipper"
-var _windows_shot := 0
 
 
 func _initialize() -> void:
@@ -143,14 +142,6 @@ func _start_run() -> void:
 		_pending.append({"at": _clock + 2.0, "name": "bay"}))
 	events.warden_engaged.connect(func(stage: int):
 		_pending.append({"at": _clock + 2.5, "name": "warden%d" % stage}))
-	# The drop loop's reads: the first two open windows, and each landed drop just after
-	# touchdown, when the impact effects are on screen.
-	events.warden_state_changed.connect(func(state: String, _at: Vector3):
-		if state == "open" and _windows_shot < 2:
-			_windows_shot += 1
-			_pending.append({"at": _clock + 0.3, "name": "window-open"}))
-	events.warden_drop_landed.connect(func(_at: Vector3, _speed: float, left: int, _segments: int):
-		_pending.append({"at": _clock + 0.12, "name": "drop-landed-%d-left" % left}))
 	_driver.start()
 
 

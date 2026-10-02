@@ -7,9 +7,6 @@ const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
-const Features := preload("res://src/world/features.gd")
-const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -31,16 +28,6 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 #                  gate that completes a synergy, then the higher tier.
 #   random         a seeded wander biased toward the beacon, which commits to the
 #                  Warden once close or late; random gate choice.
-#   lapper         the v3 loop's skilled player (LOOP-REDESIGN section 4), mode-aware.
-#                  Laps mode: rings the bell and laps the course ring by ring
-#                  (laps_wanted, default the course's required), no loot, then fights.
-#                  Drop mode: tight laps on the fast drop line, no loot, a drop on every
-#                  window it can time off the published schedule, the gun on the open
-#                  core. With no loop live it fights like the skipper.
-#   lapper_blind   the drop-mode laps without reading the schedule: it never stops at
-#                  the line's start, so every descent is a fast arrival on whatever the
-#                  core is doing, and its misses measure the recovery. In laps mode it
-#                  laps the course like the lapper.
 #   traversal      the Cable Reach's measuring pilot (design-v3/TRAVERSAL.md): it follows a
 #                  route from the drop to the beacon and never fights. It is human-shaped:
 #                  its whole stick and every press go out TRAVERSE_REACTION seconds after
@@ -48,11 +35,7 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 #   camper         holds the gun on the Warden from CAMP_RANGE and never closes.
 # The fight profiles for the Warden bands, by name: brawler is the completionist (it
 # fights with every verb it has), skipper is the skipper, camper is the camper.
-# All of them fight Brindle the same way once a boss module exists (see _boss). In the
-# drop mode the skipper is the section 4 camper: it beelines, holds fire and rams laps
-# on the bowl floor, which is exactly what drop mode must not reward. In laps mode the
-# skipper is the camper too: it rings the bell and rams the sleeping Warden without
-# lapping, and the completionist laps once its loot is done.
+# All of them fight Brindle the same way once a boss module exists (see _boss).
 #
 # The hands every policy shares, so a measured cost is the game's and not a blind spot:
 #   - Telegraph reading. A committed ring or lane (combat's telegraph.gd, the boss's
@@ -76,26 +59,12 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
 # limit ("stalled", "boss_stalled").
 
-const POLICIES := ["skipper", "completionist", "random", "lapper", "lapper_blind", "camper", "traversal"]
+const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
 const CAMP_RANGE := 30.0
 const TRAVERSE_REACTION := 0.15
 const TRAVERSE_PRESS_GAP := 0.4
 const TRAVERSE_REACHED := 12.0
-# The lapper: reach a line's start within LAP_REACHED, then leave when the Warden's
-# published schedule says the core stands open LAP_SLACK either side of its arrival. The
-# descent starts as a guess of LAP_DESCENT seconds and learns from every arrival within
-# LAP_ARRIVED of the mast, landed or not; a miss (the core throws it back) or a descent
-# not landed LAP_GIVE_UP after leaving the start sends the ball to the return.
-const LAP_REACHED := 7.0
-const LAP_WAYPOINT := 8.0
-const LAP_SLACK := 0.35
-# It leaves the start from nearly still, so one lap's descent predicts the next.
-const LAP_BRAKED := 4.0
-const LAP_ARRIVED := 5.0
-const LAP_DESCENT := 3.6
-const LAP_GIVE_UP := 9.0
-const LAP_BOWL := 45.0
 # Radians of camera yaw per second: a brisk mouse, not a snap.
 const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
@@ -116,11 +85,10 @@ const SHIFT_HOLD := 1.2
 # The ram lap: charge until this close, then run up this far and charge again.
 const CHARGE_CLOSE := 3.8
 # The harpoon hand is the bowl-floor camper's: grounded on the floor (its radius, features.gd) and
-# not within DROP_MEMORY of having been beyond the drop line. A bite sooner is an arrival off the
-# map, which the rule answers with a `miss` and a throw to the lift, so the camper laps and can
-# drop (4 of 4 runs with only the floor and grounded gates did, Warden 213 to 621 of 800 HP).
-# That is the rim harpooner, another bot; DESIGN-NOTES lists it as the open exposure.
+# not within DROP_MEMORY of having been beyond LINE_REACH of the fight target.
 const HARPOON_FLOOR := 30.0
+const LINE_REACH := 50.0
+const DROP_MEMORY := 6.0
 const RUNUP := 24.0
 const RUNUP_SECONDS := 3.2
 const AIM_REACH := 40.0
@@ -172,8 +140,6 @@ const RAMP_PAST := 18.0
 const RAMP_JUMP := 26.0
 const RAMP_WINDOW := 0.5
 const PICKUP_CHASE := 30.0
-# Laps mode: within this of the return lift, with the shelf's ring next, roll for its mouth.
-const LIFT_SEEK := 60.0
 const CAP_ABOVE := 1.2
 const CAP_REACH := 2.6
 
@@ -192,8 +158,6 @@ var trace := false
 var tree_policy := ""
 var tree_picks: Array[String] = []
 var _tree_rng := RandomNumberGenerator.new()
-# Laps mode: how many laps the lapper runs before it fights; 0 means the course's own.
-var laps_wanted := 0
 
 # "", then won, died, stalled, boss or boss_stalled.
 var outcome := ""
@@ -244,26 +208,6 @@ var _boss_clock := 0.0
 var _punch_seen := 0.0
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
-# The lapper's lap: climb (to the line's start), wait (for the window's timing), descend
-# (down the line, off the lip, onto the core) or return (to the lift).
-var _lap_phase := "climb"
-var _lap_go := 0.0
-var _lap_step := 0
-var _lap_descent := LAP_DESCENT
-# A landed drop's arrival speed, waiting LAP_SPEED_AFTER to be compared with the ball's.
-var _drop_probe := {}
-const LAP_SPEED_AFTER := 0.25
-# The stage Warden's drop rules (warden_drop.gd), kept past the Warden's break so the
-# note can read them, and its shortest telegraph seen.
-var _drop_rec = null
-var _min_telegraph = null
-var _lap_aims := 0
-var _lap_misses_at := 0
-var _lap_ended_at := -1.0
-var _lap_ended_kind := ""
-var _lap_arrived := false
-var _lap_lip := {}
-var _lap_contact := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
 var _harpoon_commit := false
@@ -311,12 +255,6 @@ func start() -> void:
 	events.event_started.connect(func(id: String):
 		if id in EventDirector.PARTICIPATORY:
 			_note_add("events_joined", id))
-	events.lap_bell_rung.connect(func(_at: Vector3): _note_set("bell_s", snappedf(game.run.stage_time, 0.01)))
-	events.lap_completed.connect(func(lap: int, _required: int, seconds: float):
-		_note_set("laps", lap)
-		_note_add("lap_times", snappedf(seconds, 0.01)))
-	_connect_optional("warden_drop_landed", _on_drop_landed)
-	_connect_optional("warden_pulse_dodged", func(_at: Vector3, near: bool): _count("near_misses" if near else "safe_dodges"))
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
 	events.part_gained.connect(func(id: String, source_id: String): _note_add("parts", "%s:%s" % [source_id, id]))
 	events.player_hit.connect(_on_player_hit)
@@ -409,12 +347,6 @@ func tick(delta: float) -> bool:
 	_harpoon_held = false
 	_harpoon_commit = false
 	_plant_cool -= delta
-	if not _drop_probe.is_empty():
-		_drop_probe["wait"] -= delta
-		if _drop_probe["wait"] <= 0.0:
-			var ratio: float = game.player.state.velocity.length() / maxf(0.1, float(_drop_probe["speed_in"]))
-			_note_add("drop_speed_ratios", snappedf(ratio, 0.01))
-			_drop_probe = {}
 	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var b: Vector3 = game.player.ball_position()
@@ -488,42 +420,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
-		"specials": 0, "punch_short_s": 0.0, "bell_s": null, "laps": 0, "lap_times": []}
-	_lap_phase = "climb"
-	_lap_step = 0
-	_lap_ended_at = -1.0
-	_drop_probe = {}
-	_drop_rec = null
-	if LoopMode.mode(game.tuning) != "v2":
-		_note.merge(LoopMode.tag(game.tuning))
-		_note.merge({"drop_speeds": [], "drop_speed_ratios": [], "descents": [], "laps": 0, "near_misses": 0, "safe_dodges": 0, "miss_recovery_s": [], "turnaround_s": [], "bowl_ticks": 0, "stage_ticks": 0})
-
-
-# A landed drop (warden_drop.gd): its arrival speed now, the ball's speed a moment later.
-func _on_drop_landed(_at: Vector3, speed: float, _left: int, _segments: int) -> void:
-	_note_add("drop_speeds", snappedf(speed, 0.1))
-	_drop_probe = {"speed_in": speed, "wait": LAP_SPEED_AFTER}
-	if policy.begins_with("lapper") and _lap_phase == "descend":
-		_lap_end("land")
-		_count("laps")
-		if not _note.has("lands"):
-			_note["lands"] = []
-		_note["lands"].append({"t": snappedf(game.run.stage_time - _lap_go, 0.01), "lip": _lap_lip})
-	_lap_phase = "return"
-
-
-# The drop fight's own record, read off the Warden's drop rules at the stage's end.
-func _note_drop() -> void:
-	if _drop_rec == null or _note.is_empty():
-		return
-	var d: Dictionary = _drop_rec.damage
-	var total: float = d["drop"] + d["gun"]
-	_note["drop"] = {"windows": _drop_rec.windows, "drops_landed": _drop_rec.drops_landed, "staggers": _drop_rec.staggers,
-		"core_misses": _drop_rec.misses, "gun_role": _drop_rec.gun_role, "damage_stagger_gun": snappedf(d["stagger_gun"], 0.1),
-		"damage_drop": snappedf(d["drop"], 0.1), "damage_gun": snappedf(d["gun"], 0.1), "damage_outside": snappedf(d["outside"], 0.1),
-		"drop_share": snappedf(d["drop"] / total, 0.001) if total > 0.0 else null,
-		"min_telegraph_s": snappedf(float(_drop_rec.warden.min_pulse_telegraph), 0.01) if is_instance_valid(_drop_rec.warden) else _min_telegraph,
-		"segments_left": _drop_rec.segments_left() if is_instance_valid(_drop_rec.warden) else 0}
+		"specials": 0, "punch_short_s": 0.0}
 
 
 func _note_set(key: String, value) -> void:
@@ -599,7 +496,6 @@ func _close_note() -> void:
 	if _note.is_empty():
 		return
 	_note["exit_s"] = snappedf(game.run.stage_time, 0.01)
-	_note_drop()
 	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	stage_notes.append(_note)
@@ -668,15 +564,6 @@ func _roam(delta: float) -> void:
 		_settle_warden_damage(float(warden.get("hp")))
 	if warden != null:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
-		if warden.get("drop") != null:
-			_drop_rec = warden.drop
-			if warden.min_pulse_telegraph < INF:
-				_min_telegraph = snappedf(float(warden.min_pulse_telegraph), 0.01)
-	if _note.has("stage_ticks"):
-		_note["stage_ticks"] += 1
-		var mast: Vector3 = game.ctx.terrain.beacon_point(_stage)
-		if _flat(game.player.ball_position(), mast) <= Features.BOWL_OUT:
-			_note["bowl_ticks"] += 1
 	match policy:
 		"skipper":
 			_fight(warden, delta)
@@ -686,13 +573,6 @@ func _roam(delta: float) -> void:
 			_camper(warden, delta)
 		"traversal":
 			_traverse(delta)
-		"lapper", "lapper_blind":
-			_lapper(warden, delta)
-			var on_course: bool = game.world != null and game.world.course != null
-			var phase := _goal.split(" ")[1] if _goal.begins_with("lap ") and not on_course else _goal
-			if not _note.has("lap_seconds"):
-				_note["lap_seconds"] = {}
-			_note["lap_seconds"][phase] = snappedf(float(_note["lap_seconds"].get(phase, 0.0)) + delta, 0.01)
 		_:
 			_random(warden, delta)
 
@@ -782,160 +662,6 @@ func _camper(target: Node3D, delta: float) -> void:
 		source.hold["brake_held"] = true
 
 
-# --- the lapper: the v3 loop's tight laps ------------------------------------------------
-
-# Up to the fast line's start, a wait there for the window's timing, then down the line,
-# off the lip and onto the core; the rebound and the lift bring it back. What it reads is
-# what a player sees: the telegraph ring filling, the beam standing, the seconds since
-# the last clang (the Warden's rhythm), and the ride it is on.
-func _lapper(warden: Node3D, delta: float) -> void:
-	# Laps mode (a course stands on this stage): the bell and the rings, then the fight.
-	if game.world != null and game.world.course != null:
-		_lap_or_fight(warden, delta)
-		return
-	var map = game.ctx.terrain.map()
-	if warden == null or not map.loop_live or map.drop_lines.is_empty():
-		_fight(warden, delta)
-		return
-	if game.world.ride != null:
-		_goal = "lap ride"
-		source.hold = {}
-		return
-	var line: Dictionary = map.drop_lines[0]
-	var ball: Vector3 = game.player.ball_position()
-	var mast: Vector3 = warden.global_position
-	var aim = _lap_aim(warden)
-	var in_bowl: bool = _flat(ball, mast) < LAP_BOWL
-	match _lap_phase:
-		"descend":
-			var drop_rec = warden.get("drop")
-			var missed: bool = drop_rec != null and int(drop_rec.misses) > _lap_misses_at
-			if missed or game.run.stage_time - _lap_go > LAP_GIVE_UP:
-				_lap_phase = "return"
-				_count("lap_misses")
-				_note_miss(warden)
-				_lap_end("miss")
-			else:
-				_watch_lip(warden)
-				_lap_descend(line, mast, aim, delta)
-				return
-		"climb", "wait":
-			if in_bowl:
-				_lap_phase = "return"
-	if _lap_phase == "return":
-		if not in_bowl and _flat(ball, mast) > LAP_BOWL + 10.0:
-			_lap_phase = "climb"
-		else:
-			# No boost on the way back: a boost taken on the core's top scales the throw
-			# past the lift (measured: x1.38, over the rim into the basin).
-			_boost_clock = BOOST_GAP
-			var drop_rec = warden.get("drop")
-			if drop_rec != null and drop_rec.staggered:
-				_goal = "lap gun"
-				_act(ball + game.player.planar_velocity() * 0.2, warden, delta, null, false)
-				if game.player.state.grounded:
-					source.hold["brake_held"] = true
-				return
-			_goal = "lap return"
-			var mouth: Vector2 = map.return_at
-			_act(game.ctx.terrain.drop_point(mouth.x, mouth.y, 1.0), aim, delta, null, false)
-			return
-	var start: Vector2 = line["start"]
-	var at: Vector3 = game.ctx.terrain.drop_point(start.x, start.y, 1.0)
-	if _lap_phase == "climb" and _flat(ball, at) < LAP_REACHED:
-		_lap_phase = "wait"
-	if _lap_phase == "wait":
-		_goal = "lap wait"
-		var blind := policy == "lapper_blind"
-		if blind or (game.player.planar_velocity().length() < LAP_BRAKED and _lap_ready(warden)):
-			_lap_phase = "descend"
-			_lap_go = game.run.stage_time
-			_lap_step = 0
-			_lap_aims = int(game.world.drop_aims)
-			_lap_lip = {}
-			_lap_arrived = false
-			var drop = warden.get("drop")
-			_lap_contact = drop.last_contact if drop != null else {}
-			_lap_misses_at = int(drop.misses) if drop != null else 0
-			if _lap_ended_at >= 0.0:
-				_note_add("miss_recovery_s" if _lap_ended_kind == "miss" else "turnaround_s", snappedf(game.run.stage_time - _lap_ended_at, 0.01))
-				_lap_ended_at = -1.0
-			_lap_descend(line, mast, aim, delta)
-			return
-		_act(at, aim, delta, null, false)
-		if game.player.state.grounded and _flat(ball, at) < LAP_REACHED:
-			source.hold["brake_held"] = true
-		return
-	_goal = "lap climb"
-	_act(at, aim, delta, null, false)
-
-
-# The window as the ball leaves the lip, for the miss notes: seconds of window left, or
-# the telegraph's share while it charges.
-func _watch_lip(warden: Node3D) -> void:
-	if not _lap_lip.is_empty() or int(game.world.drop_aims) == _lap_aims:
-		return
-	var drop = warden.get("drop")
-	_lap_lip = {"t": snappedf(game.run.stage_time - _lap_go, 0.01), "speed": snappedf(game.player.state.velocity.length(), 0.1),
-		"window_left": snappedf(drop.window_left(), 0.01) if drop != null else null,
-		"charge": snappedf(warden.charge_fraction(), 0.01), "since_pulse": snappedf(warden.seconds_since_pulse(), 0.01)}
-
-
-# Why a descent did not land: did the lip aim it, what it hit and when.
-func _note_miss(warden: Node3D) -> void:
-	var drop = warden.get("drop")
-	var contact = drop.last_contact if drop != null and not is_same(drop.last_contact, _lap_contact) else null
-	if not _note.has("misses"):
-		_note["misses"] = []
-	_note["misses"].append({"aimed": int(game.world.drop_aims) > _lap_aims, "lip": _lap_lip, "contact": contact})
-
-
-# Down the line: its waypoints, the lip, then the mast, boosting whenever lined up.
-func _lap_descend(line: Dictionary, mast: Vector3, aim, delta: float) -> void:
-	var points: Array = (line["via"] as Array) + [line["at"], Vector2(mast.x, mast.z)]
-	var ball: Vector3 = game.player.ball_position()
-	if not _lap_arrived and _flat(ball, mast) < LAP_ARRIVED:
-		_lap_arrived = true
-		_lap_descent = lerpf(_lap_descent, game.run.stage_time - _lap_go, 0.6)
-	while _lap_step < points.size() - 1:
-		var p: Vector2 = points[_lap_step]
-		var next: Vector2 = points[_lap_step + 1]
-		var along: float = (Vector2(ball.x, ball.z) - p).dot((next - p).normalized())
-		if Vector2(ball.x, ball.z).distance_to(p) < LAP_WAYPOINT or along > 0.0:
-			_lap_step += 1
-		else:
-			break
-	var target: Vector2 = points[_lap_step]
-	_goal = "lap descend %d" % _lap_step
-	_act(game.ctx.terrain.drop_point(target.x, target.y, 1.0), aim, delta, null, false)
-
-
-# Leave the line's start when the Warden's published schedule (the dial over it) says
-# the core will stand open for LAP_SLACK either side of the learned arrival.
-func _lap_ready(warden: Node3D) -> bool:
-	var drop = warden.get("drop")
-	if drop == null:
-		return true
-	return drop.open_at(_lap_descent - LAP_SLACK) and drop.open_at(_lap_descent + LAP_SLACK)
-
-
-func _lap_end(kind: String) -> void:
-	_lap_ended_at = game.run.stage_time
-	_lap_ended_kind = kind
-	_note_add("descents", kind)
-
-
-# The gun on the open core (it holds the door under `hold`), the whole Warden while it
-# reels under `full`, else nothing in particular.
-func _lap_aim(warden: Node3D):
-	var drop = warden.get("drop")
-	if drop != null and drop.staggered:
-		return warden
-	if warden.has_method("weak_points") and not (warden.weak_points() as Array).is_empty():
-		return {"at": warden.weak_points()[0]["at"]}
-	return _nearest_enemy()
-
-
 func _completionist(warden: Node3D, delta: float) -> void:
 	var event := _event_goal(delta)
 	if not event.is_empty():
@@ -961,27 +687,7 @@ func _completionist(warden: Node3D, delta: float) -> void:
 		else:
 			_fight(vault, delta)
 			return
-	_lap_or_fight(warden, delta)
-
-
-# Laps mode: the bell, then the course's next ring, until the laps wanted are in; then
-# the fight. With no course (any other mode, or a later stage) it is the fight.
-func _lap_or_fight(warden: Node3D, delta: float) -> void:
-	var course = game.world.course if game.world != null else null
-	var wanted: int = laps_wanted if laps_wanted > 0 else (course.required if course != null else 0)
-	if course == null or not game.flow.sealed or course.laps >= wanted:
-		_fight(warden, delta)
-		return
-	var ring: Vector3 = course.target()
-	_goal = "lap %d ring %d" % [course.laps + 1, course.next_ring] if course.bell_rung else "bell"
-	# The ring after the lift's approach is on the shelf: ride the lift to it, as a
-	# player rolls on through the approach ring into the lift's mouth.
-	var lift: Vector2 = game.ctx.terrain.map().return_at
-	var ball: Vector3 = game.player.ball_position()
-	if course.bell_rung and course.next_ring == 1 and Vector2(ball.x, ball.z).distance_to(lift) < LIFT_SEEK:
-		ring = Vector3(lift.x, 0.0, lift.y)
-		_goal = "lap %d lift" % (course.laps + 1)
-	_act(game.ctx.terrain.drop_point(ring.x, ring.z, 1.0), _nearest_enemy(), delta)
+	_fight(warden, delta)
 
 
 func _random(warden: Node3D, delta: float) -> void:
@@ -1118,7 +824,7 @@ func _note_shred(target: Node3D, delta: float) -> void:
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	_harpoon_commit = false
-	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > WardenDrop.LINE_REACH else _off_line + delta
+	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
 	if kit.hooked and kit.anchor_body == target:
 		_harpoon_held = true
 		_harpoon_commit = true
@@ -1129,7 +835,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	if special != null and special.charging:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
-			and _off_line > WardenDrop.DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
 		_count("harpoon_bites")
@@ -1344,7 +1050,7 @@ func _choose_gate(offers: Array) -> int:
 	if offers.is_empty():
 		return -1
 	match policy:
-		"skipper", "lapper", "lapper_blind":
+		"skipper":
 			return 0
 		"completionist":
 			var best := 0
@@ -1744,5 +1450,5 @@ func record(wall_seconds: float) -> Dictionary:
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
-		"reaction_s": REACTION, "loop_mode": LoopMode.mode(game.tuning), "gun_role": LoopMode.gun_role(game.tuning),
+		"reaction_s": REACTION,
 	}

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
@@ -14,8 +14,7 @@ const Push := preload("res://tests/workshop/push.gd")
 #     sequencer's style follows; with --music=synth the row is hidden;
 #   - the launch flags parse (--music=ace --breath=raw), and keyed SFX read the ACE key;
 #   - the game's Warden facts reach the sequencer through the audio director:
-#     warden_engaged pivots, warden_state_changed moves the state, warden_drop_landed
-#     drops on the next beat (logged in drop_log), beacon_unsealed starts the set piece;
+#     warden_engaged pivots, beacon_unsealed starts the set piece;
 #   - stage 2 hands back to the synth at once (band unmuted, no ACE grid), even from
 #     inside the set piece; back on stage 1 the ACE band returns;
 #   - a death stops the ACE band and unmutes the synth band in the same frame, so the
@@ -64,7 +63,7 @@ func _process(delta: float) -> bool:
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
 			_packaged = _audio.AceSequencer.new().ready()
-			_game.tuning.set_option(LoopMode.MUSIC_KEY, "ace")
+			_game.tuning.set_option(Tuning.MUSIC_KEY, "ace")
 			_game.screens._on_flow_changed("title")
 			_audio.ace_manifest = "res://tests/no_such_package/manifest.json"
 			_next("title")
@@ -73,7 +72,7 @@ func _process(delta: float) -> bool:
 			var before: String = button.text if button != null else ""
 			_game._screen_key(KEY_B)
 			var after: String = button.text if button != null else ""
-			_report("title B", before == "Breath: hard" and after == "Breath: gentle" and _game.tuning.option(LoopMode.BREATH_KEY) == "gentle",
+			_report("title B", before == "Breath: hard" and after == "Breath: gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle",
 				"with music ace the title shows %s; B made it %s" % [before, after])
 			Push.click(root, _game.screens.button_for("start"))
 			_next("class")
@@ -120,15 +119,15 @@ func _process(delta: float) -> bool:
 			var back: String = row.text
 			var ace_back: String = _audio.ace.breath if _audio.ace != null else "-"
 			_report("pause row cycles the style", shown and by_b == "Breath: raw" and ace_b == "raw" and by_click == "Breath: hard"
-					and ace_click == "hard" and back == "Breath: gentle" and ace_back == "gentle" and _game.tuning.option(LoopMode.BREATH_KEY) == "gentle"
+					and ace_click == "hard" and back == "Breath: gentle" and ace_back == "gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle"
 					and words <= CALM_BUDGET,
 				"open with the row shown %s (%d words, budget %d); B made it %s (sequencer %s), a click %s (sequencer %s), B again %s (sequencer %s)" % [
 				shown, words, CALM_BUDGET, by_b, ace_b, by_click, ace_click, back, ace_back])
 			Push.key(root, KEY_P)
 			_next("wiring")
 		"wiring":
-			var parsed: Dictionary = LoopMode.apply_args(_game.tuning, PackedStringArray(["--music=ace", "--breath=raw"]))
-			var flags_ok: bool = parsed == {"music": "ace", "breath": "raw"} and _game.tuning.option(LoopMode.BREATH_KEY) == "raw"
+			var parsed: Dictionary = _game.tuning.apply_args(PackedStringArray(["--music=ace", "--breath=raw"]), "launch")
+			var flags_ok: bool = parsed == {"music": "ace", "breath": "raw"} and _game.tuning.option(Tuning.BREATH_KEY) == "raw"
 			_audio.set_breath("gentle")
 			var ace = _audio.ace
 			var key_ok: bool = ace.key_log.size() > 0 and _audio.live_key() == 0 and _audio.engine.grid == ace
@@ -137,23 +136,16 @@ func _process(delta: float) -> bool:
 			var events = _game.events
 			events.warden_engaged.emit(1)
 			var engaged: bool = ace.mode == "warden" and ace.pending.get("section", "") == "pivot"
-			events.warden_state_changed.emit("telegraph", Vector3.ZERO)
-			var state_ok: bool = ace.warden_state == "telegraph"
-			var drops_before: int = _audio.drop_log.size()
-			events.warden_drop_landed.emit(Vector3.ZERO, 20.0, 3, 4)
-			var dropped: bool = ace.pending.get("section", "") == "drop" and _audio.drop_log.size() == drops_before + 1 \
-				and int(_audio.drop_log[-1][1]) > ace.clock
 			events.beacon_unsealed.emit(1)
-			_report("Warden facts reach the sequencer", engaged and state_ok and dropped,
-				"warden_engaged: mode %s, pivot pending %s; warden_state_changed: state %s; warden_drop_landed: drop pending %s, drop_log %d -> %d" % [
-				ace.mode, engaged, ace.warden_state, dropped, drops_before, _audio.drop_log.size()])
+			_report("Warden facts reach the sequencer", engaged,
+				"warden_engaged: mode %s, pivot pending %s" % [ace.mode, engaged])
 			_next("unseal")
 		"unseal":
 			var ace = _audio.ace
 			if ace.mode != "piece" and _clock < 2.0:
 				return false
-			_report("beacon_unsealed starts the set piece", ace.mode == "piece" and ace.piece_after_drop,
-				"after the unseal: mode %s, waiting for the drop's end %s" % [ace.mode, ace.piece_after_drop])
+			_report("beacon_unsealed starts the set piece", ace.mode == "piece",
+				"after the unseal: mode %s" % [ace.mode])
 			_game.flow.enter_stage(2, _game.ctx.terrain.spawn_point(2), false)
 			_next("stage2")
 		"stage2":
@@ -176,7 +168,7 @@ func _process(delta: float) -> bool:
 				"back on stage 1: %s; after the death flush: ACE mode %s, synth band muted %s" % [back_ok, ace.mode, _audio.engine.band_muted])
 			_next("synth")
 		"synth":
-			_game.tuning.set_option(LoopMode.MUSIC_KEY, "synth")
+			_game.tuning.set_option(Tuning.MUSIC_KEY, "synth")
 			Push.key(root, KEY_P)
 			_next("hidden")
 		"hidden":

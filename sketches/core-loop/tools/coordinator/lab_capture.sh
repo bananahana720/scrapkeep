@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Rendered lab stills, polite to the shared GPU.
-#   lab_capture.sh <out dir> <seed> <policy> <loop> [seconds]
+#   lab_capture.sh <out dir> <seed> <policy> [seconds]
 # Waits while any GPU process holds more than 3000 MiB, holds /tmp/scrapkeep-gpu.lock for
 # the run, launches alpha_capture on hidden workspace 10 and waits for its capture.json.
 set -uo pipefail
 out=$1
 seed=$2
 policy=$3
-loop=$4
-seconds=${5:-120}
+seconds=${4:-120}
 godot=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
 project=/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3/sketches/core-loop
 mkdir -p "$out"
@@ -33,7 +32,7 @@ if [ "$clear" -ne 1 ]; then
 	echo "BLOCKED: GPU busy for 45 minutes" | tee -a "$out/guard.log"
 	exit 3
 fi
-CLAUDE_WS=10 claude-open "$godot" --path "$project" --script res://tools/alpha_capture.gd -- --out="$out" --seed="$seed" --policy="$policy" --loop="$loop" --seconds="$seconds"
+CLAUDE_WS=10 claude-open "$godot" --path "$project" --script res://tools/alpha_capture.gd -- --out="$out" --seed="$seed" --policy="$policy" --seconds="$seconds"
 limit=$(( seconds + 240 ))
 waited=0
 while [ ! -f "$out/capture.json" ]; do

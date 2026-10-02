@@ -4,7 +4,6 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Habits := preload("res://src/combat/habits.gd")
-const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -83,10 +82,6 @@ const BRACE_MULT := 1.4
 const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
 const CONTACT_KINDS := ["stomp", "slam"]
-# What a hit on a sleeping Warden meets: no punch reaches it, so nothing lands, and
-# take_damage refuses the chip. plating_now() reads 0 while asleep, so combat's shred
-# (capped at it) never builds on a Warden nothing can hurt and it wakes whole.
-const DORMANT_PLATING := 999.0
 
 enum Magnet { IDLE, TELEGRAPH, TUG }
 
@@ -106,11 +101,6 @@ var guard
 var family_opens := 0
 var adapt_habit := ""
 var braced_kinds: Array = []
-# v3 fun lab, laps mode (loop_mode.gd): flow puts the Warden to sleep at spawn and wakes
-# it when the course is lapped. Asleep, it neither pulses nor opens, and no hit lands.
-# Awake, it is the v2 Warden; the section 2 window reads come with the drop branch's
-# warden.gd, which this gate sits in front of.
-var dormant := false
 
 var _pulse_clock := 0.0
 var _charging := false
@@ -130,14 +120,6 @@ var _guard_wait := 0.0
 var _adapt_clock := 0.0
 var _adapt_time := 0.0
 var _brace_left := 0.0
-var loop_mode := "v2"
-var drop = null
-# Whether the ball stood inside the core ring at any point of the current charge.
-var _core_touched := false
-var _core_last_in := 0.0
-var near_misses := 0
-var safe_dodges := 0
-const NEAR_MISS := 0.3
 var _charge_len := PULSE_TELEGRAPH
 
 
@@ -159,30 +141,6 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	# Clamped to the mast base: sits on the ground under the point it was given.
 	global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
 	_build_body()
-	loop_mode = String(spec.get("loop_mode", "v2"))
-	if spec.get("drop_rules", false) and fleet != null:
-		drop = WardenDrop.new(self, spec)
-
-
-# --- The v3 fun lab (loop_mode.gd) ---------------------------------------------------
-# drop is warden_drop.gd's rules when the drop mode applies here, else null: every
-# drop-mode branch in this file is behind it, so v2 runs exactly as before. Any loop
-# mode (drop, laps) also publishes the pulse's near-miss.
-
-func loop_rule(hit_kind: String, part: String, _force: float, punch: float, heft: float) -> Dictionary:
-	return drop.rule(hit_kind, part, punch, heft) if drop != null else {}
-
-
-func loop_state() -> String:
-	return drop.state if drop != null else ""
-
-
-func _cycle_seconds() -> float:
-	return drop.cycle_seconds(PULSE_CYCLE) if drop != null else PULSE_CYCLE
-
-
-func _telegraph_seconds() -> float:
-	return drop.telegraph_seconds(PULSE_TELEGRAPH) if drop != null else PULSE_TELEGRAPH
 
 
 func state_name() -> String:
@@ -197,35 +155,8 @@ func knock(_direction: Vector3, _force: float) -> void:
 	pass
 
 
-func sleep() -> void:
-	dormant = true
-
-
-func wake() -> void:
-	dormant = false
-
-
-# A lap past the required ones (flow): takes `share` of the stage's plating off, down to
-# 0. Returns the plating left.
-func strip_plating(share: float) -> float:
-	plating = maxf(0.0, plating - float(spec.get("plating", plating)) * share)
-	return plating
-
-
-func take_damage(amount: float) -> float:
-	if dormant:
-		flash()
-		return 0.0
-	return super.take_damage(amount)
-
-
-# Asleep, its plates read slate whatever the punch: nothing lands.
-func set_tint(state: String) -> void:
-	super.set_tint("slate" if dormant else state)
-
-
 func plating_now() -> float:
-	return 0.0 if dormant or _unplated > 0.0 else plating
+	return 0.0 if _unplated > 0.0 else plating
 
 
 func unplated_by_magnet() -> bool:
@@ -237,8 +168,6 @@ func seconds_since_pulse() -> float:
 
 
 func plating_for(hit_kind: String, part: String) -> float:
-	if dormant:
-		return DORMANT_PLATING
 	if part == "cap" and hit_kind in CONTACT_KINDS:
 		return 0.0
 	if part == family_point() and family_open():
@@ -292,8 +221,6 @@ func on_guard_scattered(swarm, _at: Vector3) -> void:
 
 
 func _open(seconds: float) -> void:
-	if drop != null:
-		seconds = drop.opened(seconds)
 	_open_left = seconds
 	family_opens += 1
 	if fleet != null:
@@ -391,27 +318,20 @@ func on_struck(hit_kind: String, part: String, _result: Dictionary) -> void:
 		_end_magnet()
 	if part == "cap" and _cap_material != null:
 		_cap_material.emission_energy_multiplier = 5.0
-	if drop != null:
-		drop.on_struck(hit_kind, _result)
 
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_pose(delta)
-	if not _in_play() or target == null or dormant:
+	if not _in_play() or target == null:
 		return
 	_since_pulse += delta
 	_unplated = maxf(0.0, _unplated - delta)
 	var inside := _flat_to_ball().length() <= reach
-	var was_open := _open_left > 0.0
 	_step_family(delta, inside)
-	# Drop mode runs the cycle on its own clock from the stage's start, so a drop can be
-	# timed from the shelf; v2's runs only while you are in reach.
-	_step_pulse(delta, inside or drop != null)
+	_step_pulse(delta, inside)
 	if lesson == "magnet":
 		_step_magnet(delta, inside)
-	if drop != null:
-		drop.step(delta, was_open)
 
 
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
@@ -424,20 +344,16 @@ func _step_pulse(delta: float, inside: bool) -> void:
 			ring.set_progress(_charge_time / _charge_len)
 		if is_instance_valid(_core_ring):
 			_core_ring.set_progress(_charge_time / _charge_len)
-			if loop_mode != "v2" and _core_ring.contains(_ball()):
-				_core_touched = true
-				_core_last_in = _charge_time
 		if _charge_time >= _charge_len:
 			_pulse()
 		return
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= _cycle_seconds() - _telegraph_seconds():
+	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
 		_charging = true
 		_charge_time = 0.0
-		_charge_len = _telegraph_seconds()
-		_core_touched = false
+		_charge_len = PULSE_TELEGRAPH
 		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
 		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
@@ -449,29 +365,9 @@ func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
 	last_pulse_lifted = ring != null and ring.contains(ball)
-	# "I dodged it" (LOOP-REDESIGN section 2, review finding 6), a loop-mode read only:
-	# inside the drawn core ring during its telegraph and outside it at the clang is a
-	# dodge. Out within NEAR_MISS of the clang is a near-miss, which gives the air jump
-	# back as its bonus; out earlier is a safe resolution, acknowledged without one.
-	if loop_mode != "v2" and _core_touched and is_instance_valid(_core_ring) and not _core_ring.contains(ball) and fleet != null:
-		var near := _charge_len - _core_last_in <= NEAR_MISS
-		if near:
-			near_misses += 1
-			target.refresh_air()
-		else:
-			safe_dodges += 1
-		fleet.events().warden_pulse_dodged.emit(ball, near)
-	# Drop mode: the air is a safe place through the telegraph (section 2, "where to be":
-	# on a drop line, on the bank, or in the air), so the pulse throws and burns only a
-	# ball on the floor, never one already on its drop arc.
-	var airborne: bool = drop != null and not target.state.grounded
-	if airborne:
-		last_pulse_lifted = false
-	if drop != null:
-		drop.on_pulse(last_pulse_lifted, ball)
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
-	if not airborne and is_instance_valid(_core_ring) and _core_ring.contains(ball):
+	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
 	pulses += 1
 	if family == Roster.REACTOR:
@@ -533,8 +429,6 @@ func _exit_tree() -> void:
 	for node in [_core_ring, _magnet_ring]:
 		if is_instance_valid(node):
 			node.queue_free()
-	if drop != null:
-		drop.clear()
 
 
 func _build_body() -> void:

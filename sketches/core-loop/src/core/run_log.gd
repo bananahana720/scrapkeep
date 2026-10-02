@@ -18,7 +18,6 @@ extends Node
 # does not choose and which are left out.
 
 const LOG_FILE := "runs.ndjson"
-const LoopMode := preload("res://src/core/loop_mode.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const UNKNOWN_CAUSE := "unspecified"
@@ -145,14 +144,6 @@ func _on_run_started(class_id: String) -> void:
 	_traversal = null
 	_measuring = false
 	_stage_clock = -1.0
-	_record.merge(_lab_tag())
-
-
-# The fun lab's mode and gun role (loop_mode.gd), on the run and on each stage entry, so
-# a report splits runs by mode even when the panel flipped it mid-run.
-func _lab_tag() -> Dictionary:
-	var tuning = player.get("tuning") if player != null else null
-	return LoopMode.tag(tuning) if tuning != null else {}
 
 
 func _stage(index: int) -> Dictionary:
@@ -188,7 +179,6 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 		_traversal.restart()
 	_measuring = _traversal != null
 	_stage_clock = -1.0
-	_stage(stage).merge(_lab_tag(), true)
 
 
 # warden_engaged fires once per stage attempt, so a retry's engagement replaces the

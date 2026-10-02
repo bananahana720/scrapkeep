@@ -29,52 +29,10 @@ var punch := -1.0
 var plating := -1.0
 var cores := 0
 var core_cap := 2
-# The v3 drop mode's badge (LOOP-REDESIGN section 2, "I am getting somewhere"): the
-# icon's ring is drawn as one segment per drop, and a landed drop pops one off whole.
-var segments := 0
-var segments_left := 0
-var _pop := 0.0
-var _popped := -1
-
-const POP_SECONDS := 0.5
-const SEGMENT_GAP := 0.14
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-
-func set_segments(total: int, left: int) -> void:
-	if total > 0 and segments == total and left < segments_left:
-		_pop = POP_SECONDS
-		_popped = left
-	var changed := total != segments or left != segments_left
-	segments = total
-	segments_left = left
-	if changed and total > 0:
-		queue_redraw()
-
-
-func _process(delta: float) -> void:
-	if _pop > 0.0:
-		_pop = maxf(0.0, _pop - delta)
-		queue_redraw()
-
-
-func _draw_segments(centre: Vector2, radius: float) -> void:
-	var step := TAU / segments
-	for i in segments:
-		var from := -PI * 0.5 + i * step + SEGMENT_GAP * 0.5
-		var to := from + step - SEGMENT_GAP
-		var lit := i < segments_left
-		draw_arc(centre, radius, from, to, 12, color if lit else Color(color, 0.18), 4.0 if lit else 2.0)
-	if _pop > 0.0 and _popped >= 0 and _popped < segments:
-		var f := 1.0 - _pop / POP_SECONDS
-		var mid := -PI * 0.5 + (_popped + 0.5) * step
-		var out := Vector2(cos(mid), sin(mid)) * (radius + 14.0 * f)
-		var from := mid - step * 0.5 + SEGMENT_GAP * 0.5
-		draw_arc(centre + out - Vector2(cos(mid), sin(mid)) * radius, radius, from, from + step - SEGMENT_GAP, 12,
-			Color(Color.WHITE, 1.0 - f), 5.0)
 
 
 func set_objective(icon: String, text: String, tint: Color, broken := -1.0, punch_now := -1.0, plating_now := -1.0,
@@ -143,9 +101,7 @@ func _draw() -> void:
 	var mid := ICON * 0.5
 	var icon_rect := Rect2(Vector2(x, 0.0), Vector2(ICON, ICON))
 	draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-4.0), false, Icons.tint(icon_id, color))
-	if segments > 0:
-		_draw_segments(icon_rect.get_center(), ICON * 0.52)
-	elif progress >= 0.0:
+	if progress >= 0.0:
 		draw_arc(icon_rect.get_center(), ICON * 0.52, 0.0, TAU, 32, Color(color, 0.22), 3.0)
 		if progress > 0.0:
 			draw_arc(icon_rect.get_center(), ICON * 0.52, -PI * 0.5, -PI * 0.5 + TAU * clampf(progress, 0.0, 1.0), 32, color, 3.0)

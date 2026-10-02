@@ -7,7 +7,6 @@ const Ctx := preload("res://src/core/context.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
 
 # The audio director's side of the ACE band (src/presentation/audio.gd), on the dummy
 # driver: the director's own pump renders the band against a controlled transport, so the
@@ -53,7 +52,7 @@ func _initialize() -> void:
 	_ctx.events = _events
 	_ctx.run = RunState.new(_events)
 	_ctx.tuning = Tuning.new()
-	_ctx.tuning.set_option(LoopMode.MUSIC_KEY, "ace")
+	_ctx.tuning.set_option(Tuning.MUSIC_KEY, "ace")
 	_audio = Audio.new()
 	root.add_child(_audio)
 	_audio.setup(_ctx)
@@ -152,7 +151,7 @@ func _peak(buf: PackedVector2Array, from: int, to: int) -> float:
 	return m
 
 
-# The unseal breaks the Warden mid-run; a lapper's launch comes before the piece ends.
+# The unseal breaks the Warden mid-run; a bot's launch comes before the piece ends.
 func _launch_out_of_the_break() -> void:
 	var ace: Ace = _audio.ace
 	var engine = _audio.engine

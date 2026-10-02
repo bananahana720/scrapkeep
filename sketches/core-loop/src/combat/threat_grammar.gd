@@ -3,7 +3,6 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
@@ -97,7 +96,7 @@ const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
 
-# --telegraph=haze (loop_mode.gd FLAGS, default classic): a hostile floor fill becomes a
+# --telegraph=haze (Tuning.FLAGS, default classic): a hostile floor fill becomes a
 # thin low-alpha red haze with no hazard stripes. Every fill alpha scales by the one
 # HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
 # hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
@@ -122,7 +121,7 @@ static func set_haze(on: bool) -> void:
 # The F1 telegraph row takes effect at the next stage entry or retry. A flip re-warms the
 # mark pipelines, since the haze look draws with a different material key.
 static func follow_row(tuning) -> void:
-	var on: bool = tuning.option(LoopMode.TELEGRAPH_KEY) == "haze"
+	var on: bool = tuning.option(Tuning.TELEGRAPH_KEY) == "haze"
 	if on != haze():
 		set_haze(on)
 		Painter._warmed = false

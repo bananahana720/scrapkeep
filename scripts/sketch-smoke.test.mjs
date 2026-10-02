@@ -77,11 +77,11 @@ test("selectTests keeps scripts that match any glob", () => {
 });
 
 test("flags split on spaces, and --flags wins over SMOKE_FLAGS", () => {
-  assert.deepEqual(splitFlags("--scrap=armor  --loop=drop"), ["--scrap=armor", "--loop=drop"]);
+  assert.deepEqual(splitFlags("--scrap=armor  --music=ace"), ["--scrap=armor", "--music=ace"]);
   assert.deepEqual(splitFlags(""), []);
   assert.deepEqual(splitFlags(undefined), []);
-  assert.deepEqual(parseArgs(["--flags", "--scrap=armor"], { SMOKE_FLAGS: "--loop=drop" }).flags, ["--scrap=armor"]);
-  assert.deepEqual(parseArgs([], { SMOKE_FLAGS: "--loop=drop --c" }).flags, ["--loop=drop", "--c"]);
+  assert.deepEqual(parseArgs(["--flags", "--scrap=armor"], { SMOKE_FLAGS: "--music=ace" }).flags, ["--scrap=armor"]);
+  assert.deepEqual(parseArgs([], { SMOKE_FLAGS: "--music=ace --c" }).flags, ["--music=ace", "--c"]);
 });
 
 test("parseArgs reads tests, receipt label and the strict switch", () => {
@@ -205,7 +205,7 @@ test("the receipt lists quarantine outcomes and never counts them as failed", ()
 
 test("a gate run refuses launch flags from --flags or the environment", () => {
   assert.match(gateFlagsError(parseArgs(["--receipt", "gate", "--flags", "--scrap=armor"])), /refuses launch flags/);
-  assert.match(gateFlagsError(parseArgs(["--receipt", "gate"], { SMOKE_FLAGS: "--loop=drop" })), /SMOKE_FLAGS/);
+  assert.match(gateFlagsError(parseArgs(["--receipt", "gate"], { SMOKE_FLAGS: "--music=ace" })), /SMOKE_FLAGS/);
   assert.equal(gateFlagsError(parseArgs(["--receipt", "gate"], {})), null);
   assert.equal(gateFlagsError(parseArgs(["--flags", "--scrap=armor"])), null);
 });

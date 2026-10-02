@@ -1,7 +1,6 @@
 extends SceneTree
 
 const Tuning := preload("res://src/movement/tuning.gd")
-const LoopMode := preload("res://src/core/loop_mode.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # The launch flags: one table (Tuning.FLAGS) and one parse pass (Tuning.apply_args). Every
@@ -14,8 +13,6 @@ const EXPECTED := {
 	"wear": ["wear", "on", "bogus", "start"],
 	"route-seed": ["route_seed", "7", "seven", "start"],
 	"start-mass": ["start_mass", "200", "heavy", "start"],
-	"loop": ["loop_mode", "laps", "bogus", "launch"],
-	"gun": ["gun_role", "full", "bogus", "launch"],
 	"music": ["music", "ace", "bogus", "launch"],
 	"breath": ["breath", "gentle", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
@@ -37,7 +34,7 @@ func _initialize() -> void:
 		_flag(flag, EXPECTED[flag])
 	var t := Tuning.new()
 	var before := _snapshot(t)
-	var applied := t.apply_args(PackedStringArray(["--nonsense=1", "--path", "x", "--loop", "--=drop", "-loop=drop", "loop=drop"]))
+	var applied := t.apply_args(PackedStringArray(["--nonsense=1", "--path", "x", "--loop", "--loop=drop", "--gun=full", "--=drop", "-loop=drop", "loop=drop"]))
 	_check("unknown ignored", applied.is_empty() and _snapshot(t) == before, "unknown flags and malformed args change nothing: %s" % [applied])
 	var all := PackedStringArray()
 	for flag in EXPECTED:
@@ -55,12 +52,12 @@ func _initialize() -> void:
 	var phases_ok: bool = true
 	for flag in EXPECTED:
 		phases_ok = phases_ok and started.has(flag) == (EXPECTED[flag][3] == "start") and launched.has(flag) == (EXPECTED[flag][3] == "launch")
-	_check("phases", phases_ok and LoopMode.apply_args(Tuning.new(), all).size() == launched.size(),
-		"start applies %s; launch applies %s; LoopMode.apply_args is the launch pass" % [started.keys(), launched.keys()])
+	_check("phases", phases_ok and Tuning.new().apply_args(all, "launch").size() == launched.size(),
+		"start applies %s; launch applies %s; a second launch pass applies the same flags" % [started.keys(), launched.keys()])
 	_check("table matches", Tuning.FLAGS.size() == EXPECTED.size() and _same_keys(Tuning.FLAGS, EXPECTED),
 		"Tuning.FLAGS has %d rows, this test covers %d" % [Tuning.FLAGS.size(), EXPECTED.size()])
 	_check("haze name", Threat.TELEGRAPH_FLAG == "telegraph" and Tuning.FLAGS.has(Threat.TELEGRAPH_FLAG)
-		and Tuning.FLAGS[Threat.TELEGRAPH_FLAG][0] == LoopMode.TELEGRAPH_KEY and Tuning.new().options_of(LoopMode.TELEGRAPH_KEY).has("haze"),
+		and Tuning.FLAGS[Threat.TELEGRAPH_FLAG][0] == Tuning.TELEGRAPH_KEY and Tuning.new().options_of(Tuning.TELEGRAPH_KEY).has("haze"),
 		"Painter.haze_on() reads --%s=haze, a row in the table" % Threat.TELEGRAPH_FLAG)
 	var bare := Tuning.new()
 	var off_default: Array = []

@@ -462,8 +462,6 @@ func _delivered_damage_section(runs: Array[Dictionary]) -> void:
 	var hits := 0
 	var zero_damage_runs := 0
 	var run_count := 0
-	var drop_stages := {}
-	var unmeasured_breaks := {}
 	var slam_stages := {}
 	for run in runs:
 		var record: Dictionary = run["spine"]
@@ -486,16 +484,6 @@ func _delivered_damage_section(runs: Array[Dictionary]) -> void:
 			by_range[key] = float(by_range.get(key, 0.0)) + float(d["by_range"][key])
 		for key in (d.get("retirements", {}) as Dictionary):
 			retirements[key] = int(retirements.get(key, 0)) + int(d["retirements"][key])
-		# The run's tag is its starting mode; a stage broken after a flip out of drop mode
-		# reads null (unmeasured), so it is counted as such, never cast to 0.
-		if String(record.get("loop_mode", "")) == "drop":
-			for stage in (d.get("drops_to_break", {}) as Dictionary):
-				if d["drops_to_break"][stage] == null:
-					unmeasured_breaks[stage] = int(unmeasured_breaks.get(stage, 0)) + 1
-					continue
-				var list: Array = drop_stages.get(stage, [])
-				list.append(int(d["drops_to_break"][stage]))
-				drop_stages[stage] = list
 		for stage in (d.get("warden_slam_hits", {}) as Dictionary):
 			var hit_list: Array = slam_stages.get(stage, [])
 			hit_list.append(int(d["warden_slam_hits"][stage]))
@@ -527,15 +515,8 @@ func _delivered_damage_section(runs: Array[Dictionary]) -> void:
 	for key in ["near", "mid", "far"]:
 		_lines.append("| %s | %.0f |" % [key, by_range[key]])
 	_lines.append("")
-	if not drop_stages.is_empty() or not unmeasured_breaks.is_empty():
-		_lines.append("Drops to break (loop_mode=drop, mean per broken stage; one per landed drop, warden_drop_landed):")
-		for stage in drop_stages:
-			_lines.append("- stage %s: %.1f (%d break(s))" % [stage, _mean(drop_stages[stage]), drop_stages[stage].size()])
-		for stage in unmeasured_breaks:
-			_lines.append("- stage %s: %d break(s) unmeasured (the mode left drop before the break)" % [stage, unmeasured_breaks[stage]])
-		_lines.append("")
 	if not slam_stages.is_empty():
-		_lines.append("Warden stomp and slam hits to break (hits, not drops; any loop_mode, mean per broken stage):")
+		_lines.append("Warden stomp and slam hits to break (mean per broken stage):")
 		for stage in slam_stages:
 			_lines.append("- stage %s: %.1f (%d break(s))" % [stage, _mean(slam_stages[stage]), slam_stages[stage].size()])
 		_lines.append("")
