@@ -2414,3 +2414,14 @@ Growing did not matter in the Warden fight: bots measured a starting ball breaki
 - **The result.** 57 minutes for 360 runs. No cell met every band: the brawler's heft at its first strike is 1.04 to 1.10, so plating and curve move both bots together (ratio 0.92 to 1.66 across the grid). The packet said to stop and report the closest cells, so the slice row is unchanged and `posture_bands_test` is not committed (it would fail until a pick exists; the draft is in `artifacts/local/bn/`).
 - **Repeatability.** Two runs of one cell differed by up to 23 percent on a brawler seed. Not the sweep (plain `bot_run.gd` does it too), not the camera jitter (a copy without it still did). Audio bake worker tasks and Jolt body ordering are the open suspects.
 - **Next.** Rerun the sweep after the map's activities land. If the brawler's heft at the Warden is then clearly above the skipper's, the same grid may separate the bots; if it stays near 1.1, the lever is growth, not posture numbers.
+
+## GR: growth pays on the slice (wave R4, 2026-10-02)
+
+Bots measured the ball's heft at 1.04 to 1.10 after 110 s of fighting: a kill paid 3 scrap, class II costs 225 and wear takes 30 a minute. Unit GR makes fighting and the standing activities pay enough to show.
+
+- **Two numbers, each in its owner's table.** The slice stage row carries `kill_scrap: 4.0`, a multiplier read in `build._on_enemy_killed` beside the sheet's own (`scrap_value * sheet.kill_scrap * row.kill_scrap`, rounded; a row without the key pays 1.0, so the three-stage table is unchanged). Each activity rule's `pay` carries `scrap: 180`. A chaser now drops 12 and a lobber 16 on the slice; the Warden's line scales the same way.
+- **The pay moment.** When the ball takes an activity's gem, `ctx.run.add_part` and `ctx.run.add_scrap(180, at)` run in one call site. A roll with no part pays the scrap at `_finish`. `add_scrap` raises mass and the wallet together and publishes the class change, so the shell swells through the juice that already exists.
+- **The arc.** Four arrivals and the two activity fights pay about 264 scrap at 4 times, three activities 540. Less about 100 of wear a clean player holds about 700 (class III starts at 540). A player who goes straight to the Warden arrives with almost none. The run log's stage row now records `mass_at_engage`, `heft_at_engage` and `heft_class_at_engage` when the Warden wakes; a retry's engagement replaces them.
+- **Side effect.** Scrap is also the wallet: three gems add 540 to what the workshop can spend on the slice. No price changed.
+- **The ambush.** Its three arrivals now start 30 degrees past the ring point opposite the ball's entry, so none stands within 4 m of the ball's line through the ring (before, one could drop onto it).
+- **Not measured.** Whether a bot or a player really reaches class III before the Warden is untested here; the Warden unit and the next posture sweep will say.

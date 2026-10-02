@@ -182,6 +182,9 @@ func _stage(index: int) -> Dictionary:
 			"stage": index,
 			"ticks_to_warden_engaged": null,
 			"ticks_to_warden_break": null,
+			"mass_at_engage": null,
+			"heft_at_engage": null,
+			"heft_class_at_engage": null,
 			"heft_at_exit": null,
 			"part_ids_at_exit": null,
 			"bonus_cores": 0,
@@ -226,7 +229,11 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 # warden_engaged fires once per stage attempt, so a retry's engagement replaces the
 # last one, as a retry's break does.
 func _on_warden_engaged(stage: int) -> void:
-	_stage(stage)["ticks_to_warden_engaged"] = _ticks()
+	var row := _stage(stage)
+	row["ticks_to_warden_engaged"] = _ticks()
+	row["mass_at_engage"] = run.mass
+	row["heft_at_engage"] = run.heft()
+	row["heft_class_at_engage"] = run.heft_class()
 	_measuring = false
 
 

@@ -117,6 +117,7 @@ func _run() -> void:
 	await _cache()
 	await _all_done_quiet()
 	await _retry()
+	await _lifetime()
 	await _calm()
 	_game.free()
 	await _frames(2)
@@ -211,6 +212,7 @@ func _bounty() -> void:
 func _ambush() -> void:
 	var s = _site("ambush_altar")
 	var ring := float(_game.world.activities.RULES["ambush_altar"]["ring"])
+	await _away_from_the_line(s, ring)
 	var outside: Vector3 = _ground(s.global_position + Vector3(ring + 6.0, 0.0, 0.0))
 	_put(outside)
 	await _hold(8)
@@ -264,6 +266,31 @@ func _ambush() -> void:
 	_t.check("the ring start does not take the ball's speed", through["after"] >= through["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
 		"through %.2f to %.2f, control %.2f to %.2f" % [through["before"], through["after"], control["before"], control["after"]])
 	_t.check("the ring no longer stands", s.view.lit() == false and pass_a["before"] > 0.0, "lit %s" % s.view.lit())
+
+
+# The ball enters the ring at 0, 60 and 120 degrees; none of the three arrivals stands within 3 m of
+# the ball's straight line through the ring. Each trial is wiped afterwards so the real run is unchanged.
+func _away_from_the_line(s, ring: float) -> void:
+	for deg in [0.0, 60.0, 120.0]:
+		var a := deg_to_rad(deg)
+		var dir := Vector3(cos(a), 0.0, sin(a))
+		_put(_ground(s.global_position + dir * (ring - 0.3)))
+		await _hold(2)
+		var ball: Vector3 = _game.player.ball_position()
+		var axis := Vector2(s.global_position.x - ball.x, s.global_position.z - ball.z).normalized()
+		var worst := 99.0
+		for e in s.pack:
+			var rel := Vector2(e.global_position.x - ball.x, e.global_position.z - ball.z)
+			worst = minf(worst, absf(rel.x * axis.y - rel.y * axis.x))
+		_t.check("entering at %d degrees, no arrival stands within 3 m of the ball's line through the ring" % int(deg), s.pack.size() == 3 and worst > 3.0,
+			"%d arrived, nearest %.1f m from the line" % [s.pack.size(), worst])
+		_put(_ground(s.global_position + Vector3(ring + 20.0, 0.0, 0.0)))
+		await _hold(2)
+		for e in s.pack:
+			if is_instance_valid(e):
+				e.free()
+		s.pack.clear()
+		s.started = false
 
 
 # ---- The cache ----
@@ -369,6 +396,30 @@ func _slams() -> void:
 	await _frames(2)
 	_t.check("a landing faster than cruise breaks it", s.done and not s.wall.visible, "landing %.1f m/s: done %s" % [cruise * RAM_AT, s.done])
 	_t.check("and one part waits on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5, "pickup %s" % [s.pickup])
+
+
+# A stage change and a death each leave no activity enemy standing and none of the old stage's sites.
+func _lifetime() -> void:
+	var old: Array = _game.world.activities.sites.duplicate()
+	var brutes: Array = old.filter(func(x): return x.brute != null).map(func(x): return x.brute)
+	_t.check("a brute stands before the stage changes", brutes.size() == 1 and is_instance_valid(brutes[0]), "brutes %s" % [brutes])
+	_game.events.stage_content_cleared.emit("arena")
+	await _frames(3)
+	_t.eq("a stage change leaves no site standing", _game.world.activities.sites.size(), 0)
+	_t.check("and no activity enemy alive", brutes.all(func(b): return not is_instance_valid(b) or b.is_dead()) and _game.world.activities.standing() == 0,
+		"brute valid %s" % [brutes.map(func(b): return is_instance_valid(b) and not b.is_dead())])
+	_game.flow.retry_stage()
+	await _frames(3)
+	old = _game.world.activities.sites.duplicate()
+	brutes = old.filter(func(x): return x.brute != null).map(func(x): return x.brute)
+	_game.events.player_died.emit()
+	await _frames(3)
+	_game.flow.retry_stage()
+	await _frames(3)
+	var now: Array = _game.world.activities.sites
+	_t.check("after a death and a retry no site of the old stage stands", now.size() == 3 and now.all(func(x): return not old.has(x)), "sites %d, reused %s" % [now.size(), now.filter(func(x): return old.has(x)).size()])
+	_t.check("and the old stage's enemy is gone", brutes.all(func(b): return not is_instance_valid(b) or b.is_dead()), "old brute alive")
+	_t.eq("one activity enemy stands, the new bounty's", _game.world.activities.standing(), 1)
 
 
 # Calm mode builds only what it can pay: the cache, not the ambush or the bounty.

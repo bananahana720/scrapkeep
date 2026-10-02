@@ -10,7 +10,7 @@ const StageMap := preload("res://src/world/stage_map.gd")
 # file carries a colour literal, so the amber on the beam is the row's and no other.
 
 const SOURCES := ["res://src/world/activities.gd", "res://src/world/activity_view.gd"]
-const PAY_FIELDS := ["rarities", "source", "where"]
+const PAY_FIELDS := ["rarities", "source", "where", "scrap"]
 const RULE_FIELDS := ["starts", "finishes", "pay", "ring"]
 
 

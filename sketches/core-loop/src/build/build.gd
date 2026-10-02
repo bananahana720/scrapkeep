@@ -751,7 +751,9 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		_kills.append(at)
 	if not ctx.flow.in_stage():
 		return
-	var amount := int(round(scrap_value * sheet.kill_scrap)) if not scrapless() else 0
+	# The stage row's kill_scrap (the slice's 4.0; a row without one pays 1.0) scales a kill on top of the sheet's.
+	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
+	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay)) if not scrapless() else 0
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, ctx.rng)
 	else:

@@ -17,23 +17,25 @@ const Parts := preload("res://src/build/parts.gd")
 #           "near_or_hit" (the ball inside `wake` metres, or the brute is hit).
 # finishes: "pack_dead" (every enemy the ring spawned is dead), "wall_broken" (the cache's wall
 #           goes to a ram at cruise or a slam of at least that strength) or "brute_dead".
-# pay:      one part from `rarities`, as a pickup at `where`: the altar, the pedestal or the
-#           place the brute fell. part_gained carries `source`, which is not in
+# pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
+#           part from `rarities`, as a pickup at `where`: the altar, the pedestal or the
+#           place the brute fell. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
 #           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it.
 const PAY_RARITIES := ["uncommon", "rare"]
+const PAY_SCRAP := 180
 const RULES := {
 	"ambush_altar": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "lobber"], "finishes": "pack_dead",
-		"pay": {"rarities": PAY_RARITIES, "source": "activity_ambush", "where": "altar"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_ambush", "where": "altar"},
 	},
 	"cracked_cache": {
 		"starts": "none", "ring": 5.0, "finishes": "wall_broken", "face": Vector2(0.0, -1.0),
-		"pay": {"rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
 	},
 	"hauler_bounty": {
 		"starts": "near_or_hit", "ring": 4.0, "wake": 30.0, "leash": 40.0, "return_speed": 9.0, "kind": "plated_brute",
 		"finishes": "brute_dead",
-		"pay": {"rarities": PAY_RARITIES, "source": "activity_bounty", "where": "fall"},
+		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_bounty", "where": "fall"},
 	},
 }
 
@@ -42,6 +44,7 @@ const PICKUP_HEIGHT := 3.0
 const RING_HEIGHT := 8.0
 const BRUTE_DROP := 2.4
 const SPAWN_CLEARANCE := 2.4
+const PACK_TURN := PI / 6.0
 
 # The cache's pocket: the cracked face, two side walls, a back wall and the pedestal, in the
 # site's frame with +z out through the face.
@@ -249,8 +252,12 @@ func _watch_ambush(s: Site, ball: Vector3) -> void:
 func _spawn_pack(s: Site) -> void:
 	var kinds: Array = s.rule["pack"]
 	s.pack.clear()
+	# The ring's first spot lies 30 degrees past the point opposite the ball's entry, so none of the
+	# three stands within 4 m of the ball's straight line through the ring.
+	var entry: Vector3 = ctx.player.ball_position() - s.global_position
+	var first := atan2(entry.z, entry.x) + PI + PACK_TURN
 	for i in kinds.size():
-		var a := TAU * float(i) / kinds.size()
+		var a := first + TAU * float(i) / kinds.size()
 		var spot := s.global_position + Vector3(cos(a), 0.0, sin(a)) * float(s.rule["ring"])
 		var enemy = ctx.spawner.spawn_enemy(kinds[i], ctx.terrain.drop_point(spot.x, spot.z, SPAWN_CLEARANCE))
 		if enemy != null:
@@ -335,7 +342,16 @@ func _finish(s: Site, at: Vector3) -> void:
 		s.add_child(s.pickup)
 		s.pickup.global_position = at
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH
+	else:
+		_pay_scrap(s, at)
 	ctx.events.activity_done.emit(s.id, at)
+
+
+# The rule's scrap, through the run's own add_scrap so it grows the ball and publishes a class up.
+func _pay_scrap(s: Site, at: Vector3) -> void:
+	var amount := int(s.rule["pay"].get("scrap", 0))
+	if amount > 0:
+		ctx.run.add_scrap(amount, at)
 
 
 func _roll(id: String, rarities: Array) -> String:
@@ -356,5 +372,6 @@ func _watch_pickup(s: Site, ball: Vector3) -> void:
 		s.pickup.queue_free()
 		s.pickup = null
 		ctx.run.add_part(s.pickup_part, String(s.rule["pay"]["source"]))
+		_pay_scrap(s, at)
 		return
 	s.inside_pickup = now
