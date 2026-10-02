@@ -205,7 +205,7 @@ func _check_base(drone: Node3D) -> void:
 	_check(missing.is_empty(), "the source keeps every base literal (keep_far 22.0, timing, lane, catch, pull and hover lines)")
 
 
-# The rotor keeps its geometry and paint. WD replaces the constant 0.6 rad/tick spin with
+# The rotor keeps its envelope and paint. WD replaces the constant 0.6 rad/tick spin with
 # warning-clock acceleration and exact rest after the coast.
 func _check_rotor(drone: Node3D) -> void:
 	var rotor := drone.find_child("WinchRotor", true, false) as MeshInstance3D
@@ -220,7 +220,8 @@ func _check_rotor(drone: Node3D) -> void:
 	var tris: int = (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	print("rotor: radius %.3f, %d T" % [reach, tris])
 	_check(reach >= ROTOR_R - 0.01 and reach <= ROTOR_R + 0.01, "the rotor radius is 1.6 m (%.3f)" % reach)
-	_check(tris > 0 and tris + 64 < 150, "the 16-sided rotor (%d T) and 16-sided drum (64 T) stay under 150 T" % tris)
+	_check(tris > 0 and tris + 64 < 150, "the bladed rotor (%d T) and 16-sided drum (64 T) stay under 150 T" % tris)
+	_check_blades(rotor)
 	drone.phase = drone.Phase.WARN
 	drone._t = 0.0
 	drone._pose()
@@ -235,6 +236,87 @@ func _check_rotor(drone: Node3D) -> void:
 	drone._pose()
 	_check(rotor.transform == drone._rotor_rest, "WD rotor coasts back to exact rest")
 	_check(rotor.get_surface_override_material(0) == null or rotor.get_surface_override_material(0) != drone._material, "the rotor does not take the flashing material")
+
+
+func _angle_distance(a: float, b: float) -> float:
+	return absf(wrapf(a - b, -PI, PI))
+
+
+func _check_blades(rotor: MeshInstance3D) -> void:
+	var angles: Array[float] = []
+	var tip_points := PackedVector3Array()
+	var tip_colors := PackedColorArray()
+	for surface in rotor.mesh.get_surface_count():
+		var arrays := rotor.mesh.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+		for i in vertices.size():
+			var v := vertices[i]
+			if Vector2(v.x, v.z).length() < ROTOR_R - 0.01:
+				continue
+			var angle := fposmod(atan2(v.z, v.x), TAU)
+			var duplicate := false
+			for other in angles:
+				duplicate = duplicate or _angle_distance(angle, other) < 0.001
+			if not duplicate:
+				angles.append(angle)
+			tip_points.append(v)
+			tip_colors.append(colors[i] if colors.size() == vertices.size() else Color.TRANSPARENT)
+	angles.sort()
+	# Cut the circular list at its largest gap, then group each blade's two tip corners.
+	var start := 0
+	var largest_gap := 0.0
+	for i in angles.size():
+		var gap := fposmod(angles[(i + 1) % angles.size()] - angles[i], TAU)
+		if gap > largest_gap:
+			largest_gap = gap
+			start = (i + 1) % angles.size()
+	var tips: Array[float] = []
+	var sum := Vector2.ZERO
+	var previous := 0.0
+	for step in angles.size():
+		var angle := angles[(start + step) % angles.size()]
+		if step > 0 and fposmod(angle - previous, TAU) > deg_to_rad(30.0):
+			tips.append(fposmod(atan2(sum.y, sum.x), TAU))
+			sum = Vector2.ZERO
+		sum += Vector2(cos(angle), sin(angle))
+		previous = angle
+	if not sum.is_zero_approx():
+		tips.append(fposmod(atan2(sum.y, sum.x), TAU))
+	_check(tips.size() >= 2 and tips.size() <= 4, "DR-1 rotor has two to four separated blades (%d)" % tips.size())
+	# Any rotational symmetry must carry the first tip to another tip. Test every candidate,
+	# including turns above 90 degrees: the authored silhouette has no rotational symmetry.
+	var symmetric := tips.size() < 2
+	for candidate in range(1, tips.size()):
+		var turn := fposmod(tips[candidate] - tips[0], TAU)
+		var matches := true
+		for tip in tips:
+			var found := false
+			for other in tips:
+				found = found or _angle_distance(tip + turn, other) < 0.01
+			matches = matches and found
+		symmetric = symmetric or matches
+	var degrees := []
+	for tip in tips:
+		degrees.append(fposmod(snappedf(rad_to_deg(tip), 0.01), 360.0))
+	_check(not symmetric, "DR-1 blade-tip angles %s have no rotational symmetry, including <= 90 degrees" % [degrees])
+	var marked := {}
+	var unmarked := {}
+	var metal := Palette.SAND.srgb_to_linear()
+	for i in tip_points.size():
+		var angle := atan2(tip_points[i].z, tip_points[i].x)
+		for blade in tips.size():
+			if _angle_distance(angle, tips[blade]) < deg_to_rad(15.0):
+				# Godot stores mesh vertex colours in 8-bit channels after GLB import.
+				var c := tip_colors[i]
+				var matches_metal := absf(c.r - metal.r) <= 1.0 / 255.0 and absf(c.g - metal.g) <= 1.0 / 255.0 \
+					and absf(c.b - metal.b) <= 1.0 / 255.0 and is_equal_approx(c.a, 1.0)
+				if matches_metal:
+					marked[blade] = true
+				else:
+					unmarked[blade] = true
+	_check(marked.size() == 1 and unmarked.size() == tips.size() - 1 and not unmarked.has(marked.keys()[0] if marked.size() == 1 else -1),
+		"DR-1 exactly one blade has a distinct bare-metal tip colour (%d marked, %d unmarked)" % [marked.size(), unmarked.size()])
 
 
 # The drum hangs under the crew: a 0.45 m drum centred near y -1.4, with air between the rotor

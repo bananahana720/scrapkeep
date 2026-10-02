@@ -1,5 +1,5 @@
 # C18 Winch drone: a Fleet animal crew slung under one broad flat rotor, with a cable drum
-# hanging beneath it. The mass is stacked top and bottom around a slim waist: a 3.2 m rotor disc
+# hanging beneath it. The mass is stacked top and bottom around a slim waist: a 3.2 m bladed rotor
 # high above (the widest shape by far), the small crew in the middle on a thin mast, and the winch
 # drum slung low on its own hanger. The Hooker is one slim post with a crossbar crown, the Bola
 # thrower an overhead hoop on a wide crew, the Netcaster a wide gate of masts, the Deflector one
@@ -24,8 +24,8 @@
 #               (vertex colour: charcoal mast, hanger, ears, snout, strap and pack, oxide plates and
 #               one brass tag on the chest).
 #   WinchDrum   paint only: the existing drum and cable wrap, pivoting on its X axle.
-#   WinchRotor  paint only: a 16-sided disc, oxide and charcoal blades in quarter turns so the spin
-#               shows. Its origin is the rotor centre (Godot y 2.0). The body pose uses the
+#   WinchRotor  paint only: three oxide blades with unequal angular spacing and one pale bare-metal
+#               tip. Its origin is the rotor centre (Godot y 2.0). The body pose uses the
 #               warning clock to spin it up, and the existing rest clock to coast it down.
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
@@ -51,7 +51,7 @@ HALF_PI = math.pi / 2
 ROTOR_Y = 2.0  # the base rotor's height above the origin
 ROTOR_R = 1.6
 ROTOR_T = 0.08
-SECTORS = 16
+BLADE_ANGLES = (0, 115, 245)
 DRUM_Y = -1.40
 DRUM_R = 0.45
 DRUM_LEN = 0.90
@@ -104,22 +104,34 @@ body = b.to_object(parent=root)
 bmesh.ops.recalc_face_normals(d.bm, faces=d.bm.faces[:])
 drum_node = d.to_object(origin=g(0, DRUM_Y, 0), parent=root)
 
-# --- The rotor: a flat 16-sided disc, blades alternating in quarter turns -----------------
+# --- The rotor: unequal tip spacing and one marked blade make the turn readable ------------
 pivot = g(0, ROTOR_Y, 0)
 r = Part("WinchRotor")
 rb = r.bm
-top_c = rb.verts.new(Vector(g(0, ROTOR_Y + ROTOR_T / 2, 0)))
-bot_c = rb.verts.new(Vector(g(0, ROTOR_Y - ROTOR_T / 2, 0)))
-step = 2 * math.pi / SECTORS
-top = [rb.verts.new(Vector(g(ROTOR_R * math.cos(k * step), ROTOR_Y + ROTOR_T / 2, ROTOR_R * math.sin(k * step)))) for k in range(SECTORS)]
-bot = [rb.verts.new(Vector(g(ROTOR_R * math.cos(k * step), ROTOR_Y - ROTOR_T / 2, ROTOR_R * math.sin(k * step)))) for k in range(SECTORS)]
-for k in range(SECTORS):
-    n = (k + 1) % SECTORS
-    blade = (k // 2) % 2 == 0  # two sectors of oxide, two of charcoal: four blades in the turn
-    col = PLATE if blade else CHAR
-    r.paint([rb.faces.new((top_c, top[k], top[n]))], "paint", col)
-    r.paint([rb.faces.new((bot_c, bot[n], bot[k]))], "paint", col)
-    r.paint([rb.faces.new((top[k], bot[k], bot[n], top[n]))], "paint", CHAR)
+r.cyl("paint", 0.28, 0.28, ROTOR_T, segs=8, loc=pivot, color=CHAR)
+
+
+def blade_section(angle, inner, outer, color):
+    # Corners lie on the radial envelope, so even the wide tip stays within 1.6 m.
+    outline = []
+    for radius, side in ((inner, -1), (outer, -1), (outer, 1), (inner, 1)):
+        theta = angle + side * math.radians(8)
+        outline.append((radius * math.cos(theta), radius * math.sin(theta)))
+    top = [rb.verts.new(Vector(g(x, ROTOR_Y + ROTOR_T / 2, z))) for x, z in outline]
+    bot = [rb.verts.new(Vector(g(x, ROTOR_Y - ROTOR_T / 2, z))) for x, z in outline]
+    r.paint([rb.faces.new(top), rb.faces.new(list(reversed(bot)))], "paint", color)
+    for k in range(4):
+        n = (k + 1) % 4
+        r.paint([rb.faces.new((top[k], bot[k], bot[n], top[n]))], "paint", color)
+
+
+for index, degrees in enumerate(BLADE_ANGLES):
+    angle = math.radians(degrees)
+    if index == 0:
+        blade_section(angle, 0.23, 1.15, PLATE)
+        blade_section(angle, 1.15, ROTOR_R, "bone")
+    else:
+        blade_section(angle, 0.23, ROTOR_R, PLATE)
 bmesh.ops.recalc_face_normals(rb, faces=rb.faces[:])
 rotor = r.to_object(origin=pivot, parent=root)
 bpy.context.view_layer.update()

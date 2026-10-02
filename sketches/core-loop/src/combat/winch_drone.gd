@@ -184,8 +184,8 @@ func _pose() -> void:
 		return
 	if phase == Phase.WARN:
 		if _pose_phase == Phase.ROAM:
-			# The spin-up starts from wherever the idle turn had the rotor, so release never jumps it.
-			_spin_base = _idle_angle()
+			# During the coast, _spin owns the current angle; the idle clock has not resumed yet.
+			_spin_base = _spin.y if _recovering else _idle_angle()
 		var progress := clampf(_warn_progress(), 0.0, 1.0)
 		_aim_angle = deg_to_rad(32.0) * smoothstep(0.0, 1.0, progress)
 		_spin = Vector2(2.25 * TAU * progress * progress, _spin_base + 3.25 * TAU * progress * progress)

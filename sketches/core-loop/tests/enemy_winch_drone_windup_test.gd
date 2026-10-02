@@ -190,6 +190,43 @@ func _trace(enabled: bool) -> Dictionary:
 	return {"trace": trace, "release": released}
 
 
+func _windup_jump(drone) -> float:
+	var previous := _rotor_yaw(drone)
+	var largest := 0.0
+	var frames := int(round(drone.warn_seconds * Engine.physics_ticks_per_second))
+	drone.phase = drone.Phase.WARN
+	for frame in range(frames + 1):
+		drone._t = float(frame) / float(Engine.physics_ticks_per_second)
+		drone._pose()
+		var angle := _rotor_yaw(drone)
+		largest = maxf(largest, absf(wrapf(angle - previous, -PI, PI)))
+		previous = angle
+		await physics_frame
+	return largest
+
+
+func _coast_restart() -> void:
+	var normal = _spawn()
+	normal.set_physics_process(false)
+	normal._idle_from = Engine.get_physics_frames()
+	var normal_jump := await _windup_jump(normal)
+	normal.free()
+	var drone = _spawn()
+	drone.set_physics_process(false)
+	drone._idle_from = Engine.get_physics_frames()
+	drone.phase = drone.Phase.WARN
+	drone._t = 0.5 * drone.warn_seconds
+	drone._pose()
+	drone.phase = drone.Phase.ROAM
+	drone._t = 1.0 / float(Engine.physics_ticks_per_second)
+	drone._pose()
+	var coasting: bool = drone._recovering and drone._pose_phase == drone.Phase.ROAM
+	var restart_jump := await _windup_jump(drone)
+	t.check("DR-3 coast restart continuity", coasting and normal_jump > 0.0 and restart_jump <= normal_jump + TOLERANCE,
+		"largest rotor step: normal %.6f rad, restart during coast %.6f rad; recovering %s" % [normal_jump, restart_jump, coasting])
+	drone.free()
+
+
 func _invariance() -> void:
 	var active := await _trace(true)
 	var control := await _trace(false)
@@ -260,6 +297,7 @@ func _run() -> void:
 	await _boot()
 	_samples()
 	await _idle()
+	await _coast_restart()
 	game.free()
 	game = null
 	await _invariance()
