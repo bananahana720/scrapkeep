@@ -12,7 +12,7 @@ const Augments := preload("res://src/movement/augments.gd")
 # commit. One command per pilot, one frame one physics tick:
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/traversal_line.gd \
-#     -- --pilot=sable|rivet|kest [--seeds=1,2,3,4,5,6,7,8] [--out=<dir>] [--commit=<sha>]
+#     -- --pilot=sable|rivet|kest [--seeds=1,2,3,4,5,6,7,8] [--out=<dir>] [--commit=<sha>] [--trace]
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -52,6 +52,8 @@ class Sampler:
 	var _was_grounded := true
 	var _furthest_z := -INF
 	var _uphill := 0.0
+	var tracing := false
+	var trace: Array = []
 
 	func _init(game_ref) -> void:
 		game = game_ref
@@ -90,6 +92,21 @@ class Sampler:
 			_last_anchor = _path
 		var intent = player.intent
 		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, RunLog.Traversal.is_exempt(player))
+		if tracing:
+			_record_tick(player, ball, grounded)
+
+	func _record_tick(player, ball: Vector3, grounded: bool) -> void:
+		var contacts: Array = []
+		for body in player._rigid.get_colliding_bodies():
+			contacts.append(str(body.get_path()))
+		var velocity: Vector3 = player.state.velocity
+		trace.append({
+			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
+			"at": [snappedf(ball.x, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
+			"velocity": [snappedf(velocity.x, 0.01), snappedf(velocity.y, 0.01), snappedf(velocity.z, 0.01)],
+			"planar_speed": snappedf(player.planar_velocity().length(), 0.01), "tier": player.speed_tier(),
+			"grounded": grounded, "contacts": contacts, "dead_stops": traversal.dead_stops,
+		})
 
 	func _anchored(ball: Vector3) -> bool:
 		var reach: float = game.player.grapple_range()
@@ -209,7 +226,7 @@ func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	_pilot = String(_settings.get("pilot", ""))
 	if not _pilot in PILOTS:
-		printerr("traversal_line: usage: -- --pilot=sable|rivet|kest [--seeds=1,2,3] [--out=<dir>] [--commit=<sha>]")
+		printerr("traversal_line: usage: -- --pilot=sable|rivet|kest [--seeds=1,2,3] [--out=<dir>] [--commit=<sha>] [--trace]")
 		quit(2)
 		return
 	var seeds: Array = DEFAULT_SEEDS
@@ -228,6 +245,8 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 	for arg in args:
 		if arg.begins_with("--") and "=" in arg:
 			out[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
+		elif arg.begins_with("--"):
+			out[arg.substr(2)] = "1"
 	return out
 
 
@@ -254,6 +273,7 @@ func _physics_process(delta: float) -> bool:
 		_driver.route = route_of(_routes, _pilot)
 		_driver.start()
 		_sampler = Sampler.new(_game)
+		_sampler.tracing = _settings.has("trace")
 		return false
 	var over: bool = _driver.tick(delta)
 	_sampler.sample()
@@ -261,6 +281,9 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
 	_runs.append(run)
+	if _sampler.tracing:
+		var trace_path := String(_settings.get("out", ProjectSettings.globalize_path(DEFAULT_OUT))).path_join("%s-seed-%d-trace.json" % [_pilot, _seeds[_index]])
+		write_document(trace_path, {"pilot": _pilot, "seed": _seeds[_index], "ticks": _sampler.trace})
 	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s, path %.1f m, rides %s, uphill %.1f m"
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],
 			run["path_length_m"], run["rides"], run["uphill_m"]])

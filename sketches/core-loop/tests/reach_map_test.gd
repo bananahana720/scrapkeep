@@ -7,10 +7,10 @@ const Reach := preload("res://src/world/map_reach.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-# The slice table's Cable Reach (unit Z3): the built terrain has the marble extension, the
-# berm and the kicker at the heights the layout sheet computed; every post and wall this map
+# The slice table's Cable Reach (unit Z3): the built terrain has Sable's sweeper and dive, the
+# berm and the kicker at the heights the layout sheet computed (Sable's two re-stated in round two); every post and wall this map
 # adds stands on its ground; a ball-sized sphere swept along each pilot's authored line meets
-# nothing but Rivet's cracked wall; the marble run has no end cup; and the three-stage
+# nothing but Rivet's cracked wall; Sable's line has no lip or kerb; and the three-stage
 # game's gorge is untouched.
 
 const HEIGHT_TOLERANCE := 0.5
@@ -19,8 +19,8 @@ const STEP_RISE := 0.3
 const SWEEP_STEP := 1.0
 const SIDE_SWEEP := 4.0
 const POINTS := [
-	{"at": Vector2(-62.1, -25.4), "h": 30.7, "what": "the marble's new last segment (the gorge gives 33.5)"},
-	{"at": Vector2(-58.0, -10.0), "h": 28.2, "what": "the marble and tunnel w1 join"},
+	{"at": Vector2(-62.1, -25.4), "h": 26.8, "what": "the dive, 24 m into the ramp (round one: 30.7 on the marble's last segment)"},
+	{"at": Vector2(-58.0, -10.0), "h": 20.0, "what": "the dive at w1's old mouth (round one: 28.2 where the marble and tunnel joined)"},
 	{"at": Vector2(74.0, 86.0), "h": 3.4, "what": "the halfpipe's exit"},
 	{"at": Vector2(68.0, 112.5), "h": 1.4, "what": "the berm face"},
 	{"at": Vector2(74.0, 116.0), "h": 9.7, "what": "the berm crest"},
@@ -29,7 +29,11 @@ const POINTS := [
 	{"at": Vector2(-28.0, 134.0), "h": -6.55, "what": "the bay's cradle"},
 	{"at": Vector2(0.0, -160.0), "h": 57.2, "what": "the spawn"},
 ]
-const CHANNEL := [Vector2(-100.0, -54.0), Vector2(-78.0, -44.0), Vector2(-66.0, -30.0), Vector2(-58.0, -10.0), Vector2(-24.0, 20.0)]
+# Sable's line is walked from the sweeper's first waypoint (index 2) to the merge under the bridges
+# (the first waypoint at or past z 44). No stretch of it is meant to be flown: the dive is a ramp.
+const LINE_FROM := 2
+const MERGE_Z := 44.0
+const FLOWN_STRETCHES := []
 
 var _t := T.new("reach_map_test")
 var _game
@@ -61,7 +65,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_map()
 	_check_heights()
 	_check_footing()
-	_check_channel()
+	_check_line_steps()
 	_check_lines()
 	_check_marble_side()
 	_game.free()
@@ -147,24 +151,42 @@ func _check_footing() -> void:
 		"worst float %.2f m, worst burial %.2f m (limit %.1f); offenders %s" % [worst_gap, worst_depth, FOOT_DEPTH, bad])
 
 
-# The marble channel's last four points: no step of 1 m rises more than 0.3 m, so the end cup is gone.
-func _check_channel() -> void:
+# Sable's whole line from the sweeper to the merge: no step of 1 m rises more than 0.3 m, so
+# the ground along it has no lip, kerb or cup. FLOWN_STRETCHES names any stretch left out.
+func _check_line_steps() -> void:
+	var line := TraversalLine.route_of(TraversalLine.load_routes(), "sable")
 	var worst := -INF
 	var at := Vector2.ZERO
-	for k in range(CHANNEL.size() - 1):
-		var a: Vector2 = CHANNEL[k]
-		var b: Vector2 = CHANNEL[k + 1]
+	var last_point := line.size() - 1
+	for k in range(LINE_FROM, line.size()):
+		if line[k].y >= MERGE_Z:
+			last_point = k
+			break
+	for k in range(LINE_FROM, last_point):
+		var a := line[k]
+		var b := line[k + 1]
 		var steps := ceili(a.distance_to(b) / 1.0)
 		var last: float = _terrain().height(a.x, a.y)
 		for i in range(1, steps + 1):
 			var p := a.lerp(b, float(i) / steps)
+			if _in_flown(p):
+				last = _terrain().height(p.x, p.y)
+				continue
 			var h: float = _terrain().height(p.x, p.y)
 			if h - last > worst:
 				worst = h - last
 				at = p
 			last = h
-	_t.check("the marble channel has no end cup", worst <= STEP_RISE,
-		"largest rise in a 1 m step along the last four marble points is %.3f m at %s (limit %.1f)" % [worst, at, STEP_RISE])
+	_t.check("Sable's line has no step up over 0.3 m", worst <= STEP_RISE,
+		"largest rise in a 1 m step from waypoint %d to the merge (z %.0f) is %.3f m at %s (limit %.1f); flown stretches left out: %s"
+		% [LINE_FROM, MERGE_Z, worst, at, STEP_RISE, FLOWN_STRETCHES])
+
+
+func _in_flown(p: Vector2) -> bool:
+	for stretch in FLOWN_STRETCHES:
+		if p.distance_to(stretch["at"]) <= float(stretch["radius"]):
+			return true
+	return false
 
 
 func _ground_rid() -> RID:
@@ -231,11 +253,11 @@ func _check_lines() -> void:
 	print("NOTE interactable devices under the authored lines (not counted): %s" % [devices])
 
 
-# The satellite tower stands 0.8 m outside a ball riding the channel wall top: sweep the
-# marble's last segment 4 m to each side and name whatever it meets.
+# The dive's crest is where the old satellite tower stood beside the line: sweep the sweeper's end
+# and the whole dive 4 m to each side and name whatever a ball-sized sphere meets.
 func _check_marble_side() -> void:
-	var a: Vector2 = Reach.REACH_MARBLE[-2]
-	var b: Vector2 = Reach.REACH_MARBLE[-1]
+	var a: Vector2 = Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_FROM
+	var b: Vector2 = Reach.MOUTH + Reach.DIVE_DIR * Reach.DIVE_TO
 	var steps := ceili(a.distance_to(b) / SWEEP_STEP)
 	var found := {}
 	for side in [-SIDE_SWEEP, SIDE_SWEEP]:
@@ -243,5 +265,5 @@ func _check_marble_side() -> void:
 			var p := a.lerp(b, float(i) / steps)
 			for hit in _hits(p, side, b - a):
 				found[hit["name"]] = p
-	_t.check("the marble's last segment is clear at 4 m to each side", found.is_empty(),
+	_t.check("the dive is clear at 4 m to each side", found.is_empty(),
 		"sphere swept along (%s)->(%s) offset %.0f m each way: hits %s" % [a, b, SIDE_SWEEP, found])

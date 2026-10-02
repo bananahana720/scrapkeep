@@ -81,6 +81,22 @@ Rivet's and Kest's lines are 1.31 and 1.45 times the 278 m straight and meet the
 
 The seed 7 stop of the baseline does not appear on Rivet or Kest. On Sable seed 7 still stops once, in tunnel w1.
 
+## Round two: Sable's strand holds its speed (unit Z3, 2026-10-02)
+
+Round one built the sheet's marble run and tunnel for Sable, and she missed her bar (median 0.7345, 12 dead stops, 6.4 to 11.2 m back toward the spawn, 0.74 of her ticks within 8 m of her line). The sheet was the cause: at the 28 to 33 m/s she carries off the deck, the marble run's lip throws her, its 43 and 55 degree corners cannot turn her, the satellite at (-72,-16) stands on her line and a roof over tunnel w1 is a wall for a ball that arrives in flight. Her strand was rebuilt in eight measured tries (the table is in `DESIGN-NOTES.md`). Rivet's and Kest's strands are unchanged and their numbers are the round-one numbers, measured again.
+
+What her strand is now: the deck's glide lands her near (-28,-118) and she runs west into a banked sweeper (a `Features.banked_arc` of radius 58 to 70 about (-32.3,-78)) that carries her round the west shelf, then she dives down an open ramp that replaces tunnel w1's roof and floor (45 m before the mouth to 60 m past it, never steeper than about 23 degrees, a vertical radius of 55 to 63 m at its two bends, so a fast ball hops it for up to a second and lands on it) and is turned onto the trough floor toward the merge and the kicker. The marble run, the w1 roof and the satellite at (-72,-16) are gone from this map.
+
+`--trace` on the traversal command writes one file per seed, `<pilot>-seed-<n>-trace.json`, with a row per tick (position, velocity, planar speed, tier, grounded, the colliders touched, dead stops). The on-line share is the fraction of ticks, from the first within 8 m of the third waypoint, whose planar distance to the drawn line is 8 m or less; its bar is a median of 0.85.
+
+| Pilot | Reached Warden | Median flow share (bar) | Worst seed | Dead stops | Max anchor gap | Time to Warden | Median path | Backward (max over seeds) | Median on-line | Rides |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sable | 8 of 8 | 0.9453 (0.8974) met | 0.9415 (seed 6) | 0 | 10.7 m | 10.8 to 12.2 s | 373.6 m | 3.0 m | 0.935 | kicker on 3 of 8 |
+| Rivet | 8 of 8 | 0.8837 (0.8814) met | 0.8835 (seed 1) | 0 | 24.8 m | 16.0 to 16.1 s | 363.0 m | 0.1 m | 0.933 | cable, wall, kicker on 8 of 8 |
+| Kest | 8 of 8 | 0.9138 (0.9019) met | 0.9130 (seed 1) | 0 | 18.4 m | 16.7 to 17.5 s | 402.9 m | 2.0 m | 0.921 | cable on 8 of 8 |
+
+Sable's flow share is high because she is fast, not because the route is long: she reaches the Warden in about 11 s, the shortest of the three. The only ticks she spends under tier 2 are 0.6 s of the spawn's glide. The kicker fires on 3 of her 8 seeds because she reaches it a few metres off its centre line on the others; the acceptance does not ask for it and it is not tuned.
+
 ## What the baseline says
 
 - **Today's map fails the bar on one count: seed 7 stops every pilot once.** Each loses 2 to 7 seconds there. The measure does not say what stopped them; the retrofit unit finds it.
