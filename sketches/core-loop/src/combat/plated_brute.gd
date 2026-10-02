@@ -20,6 +20,15 @@ var plates_popped := 0
 var slams := 0
 var _absorb := false
 var _plate: MeshInstance3D
+# Visual-only seam for the seeded physics control.
+var windup_pose_enabled := true
+var _windup_rig: Skeleton3D
+var _pad_bones: Array[int] = []
+var _rear_bone := -1
+const PAD_RISE := 2.5
+const REAR_ANGLE := -30.0
+const PAD_DROP_SECONDS := 0.08
+const PAD_PLANT := -0.47
 
 
 func _configure(threat: float) -> void:
@@ -54,11 +63,18 @@ const GLYPH_SIZE := 1.5
 func _build_tool() -> void:
 	_crew.free()
 	var parts := _parts()
+	_windup_rig = parts["rig"].instantiate() as Skeleton3D
+	_visual_parent().add_child(_windup_rig)
+	for name in ["SlamPadLeft", "SlamPadRight"]:
+		_pad_bones.append(_windup_rig.find_bone(name))
+	_rear_bone = _windup_rig.find_bone("BruteRear")
 	_crew = MeshInstance3D.new()
 	_crew.name = "BruteBody"
 	_crew.mesh = parts["body"]
 	_crew.set_surface_override_material(parts["flash"], _material)
 	_visual_parent().add_child(_crew)
+	_crew.skin = parts["skin"]
+	_crew.skeleton = _crew.get_path_to(_windup_rig)
 	_plate = MeshInstance3D.new()
 	_plate.name = "BrutePlates"
 	_plate.mesh = parts["plates"]
@@ -88,7 +104,17 @@ static func _parts() -> Dictionary:
 		push_error("enemy_plated_brute.glb has no fleet_paint surface; the flash lands on surface 0")
 		flash = 0
 	meshes["BrutePlates"] = _mask_uvs(meshes["BrutePlates"])
-	_shared = {"body": meshes["BruteBody"], "plates": meshes["BrutePlates"], "flash": flash}
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	var source := scene.find_child("BruteBody", true, false) as MeshInstance3D
+	var skin := source.skin
+	# Cache only the rest rig; the live body and plate keep their existing names/parents.
+	for child in rig.get_children():
+		child.free()
+	rig.get_parent().remove_child(rig)
+	var packed_rig := PackedScene.new()
+	packed_rig.pack(rig)
+	rig.free()
+	_shared = {"body": meshes["BruteBody"], "plates": meshes["BrutePlates"], "flash": flash, "rig": packed_rig, "skin": skin}
 	scene.free()
 	return _shared
 
@@ -158,10 +184,28 @@ func take_damage(amount: float) -> float:
 	return super.take_damage(amount)
 
 
+# E09 e09_pads_raise: glTF joint nodes preserve the body's two surfaces. Every value reads the counter's clock; no tween, timer or pivot write.
 func _pose() -> void:
-	if _crew == null:
+	if _windup_rig == null:
 		return
-	if phase == Phase.WARN:
-		_crew.scale = Vector3.ONE * (1.0 + 0.1 * clampf(_t / warn_seconds, 0.0, 1.0))
-	else:
-		_crew.scale = Vector3.ONE
+	var lift := 0.0
+	var rear := 0.0
+	if windup_pose_enabled and not is_dead() and _in_play():
+		if phase == Phase.WARN:
+			var progress := clampf(_warn_progress(), 0.0, 1.0)
+			lift = progress * progress
+			# Vector transforms are float32; avoid rounding to full one tick early.
+			if _t < warn_seconds:
+				lift = minf(lift, 0.999999)
+			rear = lift
+		elif phase == Phase.LIVE:
+			# LIVE starts at t=0 on the release frame, so that frame is full pose.
+			rear = 1.0 - clampf(_t / PAD_DROP_SECONDS, 0.0, 1.0)
+			lift = lerpf(PAD_PLANT / PAD_RISE, 1.0, rear)
+	# Rigid weights make each pad's complete arm/fist travel together in enemy space.
+	for bone in _pad_bones:
+		var rest := _windup_rig.get_bone_rest(bone)
+		_windup_rig.set_bone_pose_position(bone, rest.origin + Vector3.UP * PAD_RISE * lift)
+	var rest := _windup_rig.get_bone_rest(_rear_bone)
+	var rotation := Basis(Vector3.RIGHT, deg_to_rad(REAR_ANGLE) * rear)
+	_windup_rig.set_bone_pose_rotation(_rear_bone, (rotation * rest.basis).get_rotation_quaternion())
