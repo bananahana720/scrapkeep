@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 
 # Every hold an enemy puts on the ball, and the tenacity that bounds a chain of them
@@ -366,7 +367,7 @@ func _draw_bracket(ball: Vector3) -> void:
 	_bracket.visible = on
 	if not on:
 		return
-	_bracket_material.albedo_color = player.class_color()
+	_bracket_material.albedo_color = EventKinds.role_color("neutral")
 	var mesh: ImmediateMesh = _bracket.mesh
 	mesh.clear_surfaces()
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)

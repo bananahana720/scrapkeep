@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # C12's original 1,200 triangle / four-draw limit gains two draws when WG splits
 # the top disc's paint and core surfaces. Triangle and opacity bounds stay fixed.
@@ -153,6 +154,8 @@ func _run() -> void:
 			trapper._update_flash(0.02)
 			_check(disc_mat.albedo_color != rest_colour and disc_mat.emission_enabled and disc_mat.emission_energy_multiplier > 1.0,
 				"a hit flashes the disc material (emission %.2f)" % disc_mat.emission_energy_multiplier)
+			_check(disc_mat.emission.is_equal_approx(EventKinds.role_color("neutral")),
+				"the disc flash glows neutral, not amber (%s)" % disc_mat.emission.to_html(false))
 			trapper._update_flash(1.0)
 			_check(disc_mat.albedo_color == rest_colour and not disc_mat.emission_enabled, "the disc material restores after the flash window")
 			var other: Node3D = game.ctx.spawner.spawn_enemy("mag_trapper", Vector3(20, 30, 0))

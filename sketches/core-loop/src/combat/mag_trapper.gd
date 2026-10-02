@@ -129,7 +129,7 @@ static func _parts() -> Dictionary:
 
 
 # The discs' own material answers the hit event the body's does: enemy.flash() sets _flash,
-# the base decays it, and this mirrors the same amber pulse on the discs and settles them to plain white at rest
+# the base decays it, and this mirrors the same neutral pulse on the discs and settles them to plain white at rest
 # (the discs carry no plating tint).
 func _update_flash(delta: float) -> void:
 	super(delta)
@@ -137,7 +137,7 @@ func _update_flash(delta: float) -> void:
 		return
 	_disc_material.albedo_color = Color.WHITE.lerp(Color(1.0, 1.0, 0.85), _flash)
 	_disc_material.emission_enabled = _flash > 0.0
-	_disc_material.emission = Palette.AMBER
+	_disc_material.emission = EventKinds.role_color("neutral")
 	_disc_material.emission_energy_multiplier = _flash * 2.0
 
 

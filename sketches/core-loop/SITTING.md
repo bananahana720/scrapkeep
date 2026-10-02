@@ -9,7 +9,7 @@ About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first
 - **Key prompts appear only when the press would work,** and fade after you have used the verb a few times.
 - **The Warden fight is rebuilt.** Hit it to fill its guard bar. When the guard breaks, the jaws open and the core glows mint. Smash the open core to break off one of its four health pieces.
 - **The Warden's health is on the ground.** Four lit arcs round its feet, one per health piece. The boss plate on the HUD shows the same four.
-- **Growing matters.** Each side activity pays a part and a big scrap haul. A full-size ball breaks the Warden in about 25 s; a starting-size ball takes about three times as long.
+- **Growing matters.** Each side activity pays a part and a big scrap haul. A full-size ball breaks the Warden in about 25 s; a starting-size ball takes three to four times as long.
 - **Three side activities** stand on the map from the start: an ambush altar, a cracked cache, and a hauler bounty.
 - **Enemies arrive as packs** and show their attack in their body before it lands. Six kinds on the slice.
 - **The map has three lines down it,** one per pilot, and a shared ramp that throws you at the Warden.
@@ -46,7 +46,7 @@ About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first
 | Jump | Space |
 | Fire | Left mouse |
 | Harpoon | Right mouse: press to bite, hold to keep, release to fling |
-| Haul | Ctrl: smash the hooked enemy, or winch to a post |
+| Haul | Ctrl: smash the hooked enemy, or winch to a post. With no line, Ctrl brakes on the ground and slams in the air. |
 | Boost | Shift: your pilot's own move |
 | Special | F |
 | Interact | E |
@@ -71,3 +71,5 @@ Say "veto" on any of these and I change it.
 3. The hauler bounty sits on the straight route to the Warden, to guard the beeline.
 4. Sable hops on the dive ramp for up to a second.
 5. When you fall, the camera eases down toward the landing while your aim stays put.
+6. The deflector's dish throws you back at nine tenths of your speed. It is the one enemy that turns you faster than the hold limit, because jumping off the rebound vaults you.
+7. Guns fill the Warden's guard bar only a little and never break its core. Only your ball cracks it open.

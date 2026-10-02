@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # C14 limits. The asset: 1,200 T / 3 D ceiling for the whole moving assembly (body plus harpoon),
 # opaque, inside the envelope the base gun, post and hazard tip stood in (post x 0.9, gun 1.5 m long
@@ -185,7 +186,8 @@ func _check_pose(hooker: Node3D) -> void:
 
 
 # The resting body is Fleet oxide (RUST); a hit flashes through the existing event
-# (enemy.flash() sets _flash, _update_flash lerps _base_color toward cream with amber emission).
+# (enemy.flash() sets _flash, _update_flash lerps _base_color toward cream with neutral emission:
+# amber means the world is paying, so a hit carries no colour of its own).
 func _check_paint(hooker: Node3D) -> void:
 	var body := hooker.find_child("Body", true, false) as MeshInstance3D
 	var mat: StandardMaterial3D = null
@@ -199,7 +201,9 @@ func _check_paint(hooker: Node3D) -> void:
 	hooker.flash()
 	hooker._update_flash(0.0)
 	var want: Color = Palette.RUST.lerp(Color(1.0, 1.0, 0.85), 1.0)
-	_check(hooker._material.albedo_color.is_equal_approx(want) and hooker._material.emission_enabled, "hit state: the existing flash lerps the body toward cream with amber emission")
+	_check(hooker._material.albedo_color.is_equal_approx(want) and hooker._material.emission_enabled, "hit state: the existing flash lerps the body toward cream")
+	_check(hooker._material.emission.is_equal_approx(EventKinds.role_color("neutral")),
+		"hit state: the flash glows neutral, not amber (%s)" % hooker._material.emission.to_html(false))
 	for i in 20:
 		hooker._update_flash(0.1)
 	_check(hooker._material.albedo_color.is_equal_approx(Palette.RUST) and not hooker._material.emission_enabled, "recovery state: the body returns to oxide")

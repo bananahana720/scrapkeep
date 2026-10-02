@@ -2,11 +2,12 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Holds := preload("res://src/combat/holds.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # Tenacity bounds every chain (DESIGN-V2 section 10.3):
 # 1. The clock. Two holds from two sources, back to back, are cut when their sum reaches
 #    1.8 s inside 4 s; the ball is then immune for 2.5 s (a catch is refused and the
-#    class-colour bracket flickers), and holds again after. Holds 4 s apart never sum.
+#    neutral bracket flickers), and holds again after. Holds 4 s apart never sum.
 # 2. A tagged pack. The director's "grounded" pair, a mag trapper and a bola thrower,
 #    against a ball at rest: the pit holds, the bola wraps the held ball, both are cut
 #    by tenacity together, and nothing holds the ball through the immunity.
@@ -22,6 +23,7 @@ var _a: Node3D
 var _b: Node3D
 var _mark := 0.0
 var _saw_bracket := false
+var _bracket_colors: Array = []
 var _kinds := {}
 var _tenacity := 0
 var _held_in_immunity := 0
@@ -70,10 +72,15 @@ func _physics_process(delta: float) -> bool:
 				_step = 3
 		3:
 			_saw_bracket = _saw_bracket or _holds.get("_bracket").visible
+			if _holds.get("_bracket").visible:
+				_bracket_colors.append(_holds.get("_bracket_material").albedo_color)
 			if _clock - _mark >= Holds.TENACITY_IMMUNE + 0.1:
 				var caught: bool = _holds.catch(_a, "test_a", ["jump"])
 				_report("bracket and recovery", _saw_bracket and caught and not _holds.get("_bracket").visible,
 					"the bracket flickered through the immunity; a catch lands again after %.2f s" % (_clock - _mark))
+				var off_neutral := _bracket_colors.filter(func(c: Color) -> bool: return not c.is_equal_approx(EventKinds.role_color("neutral")))
+				_report("bracket is neutral ink", not _bracket_colors.is_empty() and off_neutral.is_empty(),
+					"%d bracket frames, %d off neutral (first %s)" % [_bracket_colors.size(), off_neutral.size(), "" if off_neutral.is_empty() else (off_neutral[0] as Color).to_html(false)])
 				_holds.release(_a, "expired")
 				_step = 4
 				_mark = _clock

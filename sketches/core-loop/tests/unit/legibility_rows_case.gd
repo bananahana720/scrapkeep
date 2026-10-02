@@ -18,6 +18,19 @@ const VOCAB_TABLES := {"LINE_ROWS": EventKinds.LINE_ROWS, "STATE_ROWS": EventKin
 	"CAUSE_ROWS": EventKinds.CAUSE_ROWS, "ACTIVITY_ROWS": EventKinds.ACTIVITY_ROWS}
 const OTHER_TABLES := {"ROWS": EventKinds.ROWS, "UI_ROWS": EventKinds.UI_ROWS, "LOOT_ROWS": EventKinds.LOOT_ROWS,
 	"WORLD_ROWS": EventKinds.WORLD_ROWS, "THREAT_ROWS": EventKinds.THREAT_ROWS}
+# Older rows may wear the live colour only where it is not a "your verb works" cue on the slice.
+const LIVE_ALLOWED := {
+	"beacon_charge_changed": "the default table's plating Warden badge; the posture Warden reads neutral",
+	"shot_fired": "vfx draws the pilot's own shots in the class colour",
+	"special_used": "the pilot's own move, drawn in the class colour",
+	"element_resolved": "the arc element's identity; timed events are off on the slice",
+	"grapple_fired": "Sable's own move in her class colour; vfx draws it in the pilot's class colour",
+	"vault_kicked": "Sable's own move in her class colour",
+	"arc_slammed": "Sable's own move in her class colour",
+}
+# Scrap, rewards and rides: the world offering or paying.
+const PAYING := {"ROWS": ["scrap_collected", "core_gained", "stage_cleared", "run_ended", "beacon_unsealed", "launched"],
+	"UI_ROWS": ["callout_scrap"], "LOOT_ROWS": ["shop_charge", "armor_reclaim"]}
 
 
 func run(t) -> void:
@@ -72,6 +85,22 @@ func run(t) -> void:
 	t.check("the live colour is mint for every pilot", not_mint.is_empty() and ClassDef.all().size() >= 3, "%s" % [not_mint])
 	t.check("the live role resolves to the live colour", EventKinds.role_color("live") == live and EventKinds.state_color("open") == live and EventKinds.state_color("chunk_shatter") == live,
 		"role %s, open %s, chunk_shatter %s" % [EventKinds.role_color("live").to_html(false), EventKinds.state_color("open").to_html(false), EventKinds.state_color("chunk_shatter").to_html(false)])
+
+	var minted: Array = []
+	for name in OTHER_TABLES:
+		var table: Dictionary = OTHER_TABLES[name]
+		for id in table:
+			var row = table[id]
+			if row is Dictionary and row.get("color") is Color and (row["color"] as Color).is_equal_approx(live) and not LIVE_ALLOWED.has(id):
+				minted.append("%s.%s" % [name, id])
+	t.check("no older row wears the live colour unless it is named", minted.is_empty(), "in the live colour: %s" % [minted])
+	var not_amber: Array = []
+	for name in PAYING:
+		for id in PAYING[name]:
+			var color: Color = (OTHER_TABLES[name] as Dictionary)[id]["color"]
+			if not color.is_equal_approx(Palette.AMBER):
+				not_amber.append("%s (%s)" % [id, color.to_html(false)])
+	t.check("scrap, rewards and rides wear amber", not_amber.is_empty(), "not amber: %s" % [not_amber])
 
 	var seen := {}
 	var twice: Array = []

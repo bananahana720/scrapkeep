@@ -553,9 +553,9 @@ func _on_dismounted(velocity: Vector3) -> void:
 func _on_shot(_weapon: String, from: Vector3, to: Vector3) -> void:
 	var dir := to - from
 	# Muzzle: a short bar along the shot, right at the barrel.
-	glyph("shot_fired", from + dir.normalized() * 0.4, 0.5, 0.9, 0.06, dir)
+	glyph("shot_fired", from + dir.normalized() * 0.4, 0.5, 0.9, 0.06, dir, "", player.class_color())
 	# Impact: a small flash where it landed.
-	glyph("shot_fired", to, 0.5, 1.1, 0.09, Vector3.ZERO, "flash")
+	glyph("shot_fired", to, 0.5, 1.1, 0.09, Vector3.ZERO, "flash", player.class_color())
 
 
 func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:

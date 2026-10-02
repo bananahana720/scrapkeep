@@ -444,7 +444,7 @@ func _update_flash(delta: float) -> void:
 		_flash = maxf(0.0, _flash - delta * 2.5)
 		_material.albedo_color = _base_color.lerp(Color(1.0, 1.0, 0.85), _flash)
 		_material.emission_enabled = true
-		_material.emission = Palette.AMBER
+		_material.emission = EventKinds.role_color("neutral")
 		_material.emission_energy_multiplier = _flash * 2.0
 		if _flash <= 0.0:
 			_apply_rest_look()
