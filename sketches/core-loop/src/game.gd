@@ -37,6 +37,9 @@ const HIT_STOP_BUDGET := 0.12
 const HIT_STOP_WINDOW_MS := 1000
 const SEED := 20260926
 const BOSS_PATH := "res://src/boss/boss.gd"
+const StageDefs := preload("res://src/core/stage_defs.gd")
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const TABLES := {"default": StageDefs, "slice": SliceDefs}
 
 const ACTIONS := {
 	"cl_forward": [KEY_W, KEY_UP],
@@ -57,6 +60,9 @@ const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT, "cl_movement": MOUSE_BUTTO
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false
+# The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
+# --table= from the launch args, and no argument is the default table.
+var table := ""
 
 var events
 var run
@@ -130,6 +136,7 @@ func _ready() -> void:
 	beacon.setup()
 
 	ctx = Context.new(hit_stop)
+	ctx.stages = _chosen_table()
 	ctx.events = events
 	ctx.run = run
 	ctx.tuning = tuning
@@ -207,6 +214,22 @@ func _ready() -> void:
 
 # The fixed order: world first (it sets ctx.terrain), then combat (ctx.spawner), then
 # build and presentation, which only read.
+func _chosen_table():
+	var id := table
+	if id.is_empty():
+		var args := OS.get_cmdline_args()
+		args.append_array(OS.get_cmdline_user_args())
+		for arg in args:
+			if arg.begins_with("--table="):
+				id = arg.trim_prefix("--table=")
+	if id.is_empty():
+		return StageDefs
+	if not TABLES.has(id):
+		push_warning("game: unknown stage table '%s'; using the default" % id)
+		return StageDefs
+	return TABLES[id]
+
+
 func _module(script: GDScript) -> Node:
 	var module: Node = script.new()
 	add_child(module)

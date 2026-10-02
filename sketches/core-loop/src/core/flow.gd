@@ -1,7 +1,6 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
@@ -104,6 +103,8 @@ func in_stage() -> bool:
 # The boss module (ctx.boss, set by src/boss/boss.gd) runs the arena; without one the
 # run ends on the summary after stage 3, as it did before the boss existed.
 func _boss_module() -> Node:
+	if ctx.stages.BOSS == "":
+		return null
 	var boss: Node = ctx.boss if "boss" in ctx else null
 	return boss if boss != null and boss.has_method("enter_arena") else null
 
@@ -113,7 +114,7 @@ func stage() -> int:
 
 
 func stage_def() -> Dictionary:
-	return StageDefs.of(ctx.run.stage)
+	return ctx.stages.of(ctx.run.stage)
 
 
 func show_title() -> void:
@@ -294,7 +295,7 @@ func discovery_burst(at: Vector3) -> void:
 
 
 func can_replay_final_stage() -> bool:
-	return boss_active and ctx.run.has_stage_start(StageDefs.COUNT)
+	return boss_active and ctx.run.has_stage_start(ctx.stages.COUNT)
 
 
 # What the death screen says about the fight that killed you: your punch against the
@@ -446,7 +447,7 @@ func physics_step(delta: float) -> void:
 func _finish_stage() -> void:
 	var cleared: int = ctx.run.stage
 	ctx.events.stage_cleared.emit(cleared)
-	if StageDefs.is_last(cleared):
+	if ctx.stages.is_last(cleared):
 		if _boss_module() != null:
 			enter_boss(ctx.player.state.velocity)
 			return

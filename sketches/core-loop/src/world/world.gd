@@ -96,7 +96,7 @@ var _was_grounded := true
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "World"
-	terrain = Terrain.new()
+	terrain = Terrain.new(ctx.stages)
 	terrain.build(ctx.root)
 	ctx.terrain = terrain
 	flood = Flood.new()

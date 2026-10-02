@@ -1,7 +1,6 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
@@ -302,7 +301,7 @@ func toast_texts() -> Array[String]:
 
 func _on_launched(_velocity: Vector3) -> void:
 	var next: int = game.run.stage + 1
-	if next <= StageDefs.COUNT:
+	if next <= game.ctx.stages.COUNT:
 		_card_for_stage(next)
 
 
@@ -317,7 +316,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 
 
 func _card_for_stage(stage: int) -> void:
-	launch_card.show_card("obj_beacon", StageDefs.of(stage)["name"], EventKinds.color("stage_entered"))
+	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"))
 
 
 func _label(font_size: int) -> Label:
@@ -535,7 +534,7 @@ func _process(delta: float) -> void:
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"],
 		reading["punch"], reading["plating"], run.bonus_cores, RunState.CORE_TIER_CAP)
 	_objective.set_segments(int(reading.get("segments", 0)), int(reading.get("segments_left", 0)))
-	_status.set_status(run.stage, StageDefs.COUNT, game.boss != null, flow.in_arena, run.run_time, _threat)
+	_status.set_status(run.stage, game.ctx.stages.COUNT, game.boss != null and game.ctx.stages.BOSS != "", flow.in_arena, run.run_time, _threat)
 
 	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)
 	_health.set_reading(hp_share, Palette.SAND, "", hp_share <= LOW_HEALTH, EventKinds.color("player_hit"))
