@@ -84,8 +84,8 @@ The slice Warden is the posture chassis and nothing else. In one line: hit it un
 
 - **Posture** is a bar from 0 to 100. Each landed hit adds `base x clamp(punch / plating, 0.2, 1.5)`. Base is 30 for a ram or slam, 45 for a harpoon smash, 1.5 for a gun bolt and 3 on the part that is telegraphing. After 3 s with no gain it drains at 12 per second.
 - **Stagger.** At 100 the Warden staggers for 4 s. The jaws spring at least 25 degrees apart and the core shows a live rim and takes harpoon brackets. Health can fall only now.
-- **Health** is four chunks. One stagger removes at most one, and a shatter closes the Warden at once. A harpoon smash, or a ram at speed tier 2 or better into the core, shatters the whole chunk. A lesser contact leaves it cracked for the next stagger. While it is open, a contact anywhere on the Warden is a hit on the core. Guns, blasts and synergy strikes fill posture but cannot crack or shatter the core, and no path other than this rule can lower its health.
-- **One gain per frame from contacts.** A smash landing strikes several times in one physics frame; contact gains in a frame take the largest, not the sum. The hit that fills the bar cannot also shatter.
+- **Health** is four chunks. One stagger removes at most one, and a shatter closes the Warden at once. A harpoon smash, or a ram at speed tier 2 or better into the core, shatters the whole chunk. A lesser contact leaves it cracked for the next stagger; a second lesser contact in the same opening does nothing more. A hit at the glance floor counts as any other contact here. While it is open, a contact anywhere on the Warden is a hit on the core. Guns, blasts and synergy strikes fill posture but cannot crack or shatter the core, and no path other than this rule can lower its health.
+- **One gain per frame from contacts.** A smash landing strikes several times in one physics frame; contact gains in a frame take the largest, not the sum. The hit that fills the bar cannot also shatter, and contacts in the frame a chunk shatters gain nothing.
 - **No wall.** A build at the 0.2 floor still fills posture, at 6 per ram.
 - **A glance** is a hit whose multiplier sits on the 0.2 floor. Only that case gets slate sparks and the low clank.
 - **The pulse** is unchanged and pauses during a stagger. A charge in flight when the stagger begins is cancelled. It never changes planar velocity. The reactor's own window after a pulse does not open, and shred does not build.
@@ -96,10 +96,12 @@ The slice Warden is the posture chassis and nothing else. In one line: hit it un
 
 **Bands** (bots decide only whether the build is worth his time):
 
-- A matched brawler breaks it in 60 to 150 s.
+- A matched brawler breaks it in 60 to 150 s of fighting, counted from its first strike on the Warden.
 - The hold-fire camper cannot.
 - A starting-size skipper takes at least 1.5 times the brawler's time, or fails. This is entry 8's "I could just go to the boss".
 - 50 hits outside a stagger leave health unchanged.
+
+**First measurement** (unit B0a, today's Reach, the numbers above): the brawler fights for 28 to 32 s after growing, the skipper for 28 to 34 s from a cold start, and guns alone never remove a chunk. Two bands are missed: growing does not yet matter. The bands unit tunes the numbers with a bot sweep after the map retrofit.
 
 ## 5. Callouts and prompts
 
@@ -236,6 +238,8 @@ Each is worded so he can veto it.
 24. The new Warden fight is on the slice only. Which rule a Warden uses is one field on its stage row; the three-stage game keeps today's fight until he has played the new one.
 25. Guns fill the guard bar but cannot hurt an open core. Only a ram, stomp, slam or harpoon smash cracks or shatters a chunk. Without this a player who only shoots from range could win.
 26. A shatter closes the Warden at once, and breaking its guard cancels a pulse it was charging.
+27. A crack pays off only the next time the Warden opens. Bouncing on an open core twice does not shatter it; a smash or a fast ram does.
+28. The fight's numbers are not final. Bots show a starting ball breaks this Warden as fast as a grown one, so they will be tuned before he plays, after the new map exists.
 
 ## 11. What only Andrew can decide
 
@@ -250,6 +254,7 @@ Each is worded so he can veto it.
 | The latch still does not read at speed | The computed cable width and three stills, then the first five minutes of his sitting |
 | Rivet and Kest get worse without plain boost and with swing-on-hold | Their flow share before and after C2. Fallback: restore hold-to-winch on the same binding row. |
 | Cutting Q breaks Sable's Rope Anchor knob | C2 states whether the knob plants from the Ctrl winch or leaves the world-one profile |
+| A starting ball breaks the Warden as fast as a grown one (measured in B0a) | The bands unit's sweep over the gain curve, the contact base, the plating and what shatters, on the retrofitted map |
 | The chassis-only Warden is readable but dull | The brawler and skipper bands, then his sitting. Fallback: the guard rack as one extra posture source. |
 | Six kinds feel thin after he praised the fuller mechanics | The bola card on the read sheet |
 | Prompts nag | Prompts shown per minute in the run log. Aim for six or fewer after minute three. |

@@ -166,3 +166,13 @@ For packets: when a unit deletes tests, the packet asks for each deleted test's 
 
 A smash landing on the Warden is four strikes: a stomp, the shockwave's slam and Rivet's skid slam in one physics frame, then a second stomp when the ball comes down from the rebound (`landing_shockwave_test`). The posture rule counts contacts per frame for this reason.
 
+### After unit B0a, `proto/alpha` at `67c0ecb`
+
+Gate: 235 runs, 0 failed, 2 quarantined red, 340 s (receipt `artifacts/local/alpha/r1/gate-914e0eb535a5-2026-10-02T10-53-43-234Z.json`). The unit adds one unit case (37 checks) and one scene test.
+
+Review passed with notes. Two were cause `writer` (combat relabelled a declined hit as a core hit; a glance exemption the packet did not allow), four were cause `brief` (a wrong statement about the spec, a band with no clock, a field list missing two fields, a forbidden line that contradicted an ordered edit).
+
+The bots measured the rule and found it does not reward growth. That is a design result, not a test failure: the unit's acceptance asked for the numbers, not for a band. A band that gates admission belongs to the bands unit, and it needs bots that repeat: one camper seed won once and stalled on a rerun.
+
+For packets: a rule object with a pure `judge` let the reviewer and the coordinator attack the rule with unit checks in under a second each. Ask for that shape whenever a rule can be separated from the scene.
+
