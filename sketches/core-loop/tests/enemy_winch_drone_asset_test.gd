@@ -224,7 +224,9 @@ func _check_rotor(drone: Node3D) -> void:
 	drone.phase = drone.Phase.WARN
 	drone._t = 0.0
 	drone._pose()
-	_check(rotor.transform == drone._rotor_rest, "WD rotor starts at rest at warning progress zero")
+	# The rotor idles while the drone roams (PC), so the spin-up starts from its idle yaw: same place, turned only about its own axis.
+	var yaw: Transform3D = rotor.transform * drone._rotor_rest.affine_inverse()
+	_check(yaw.origin.is_zero_approx() and yaw.basis.y.is_equal_approx(Vector3.UP), "WD rotor starts in place at warning progress zero, turned only about its own axis")
 	drone._t = 0.5 * drone.warn_seconds
 	drone._pose()
 	_check(not rotor.transform.is_equal_approx(drone._rotor_rest), "WD rotor turns from the wind-up clock")

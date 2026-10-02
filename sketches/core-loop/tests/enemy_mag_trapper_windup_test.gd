@@ -8,6 +8,11 @@ const HOIST := 1.4
 const LEAN := 0.22
 const SPIN := TAU * 1.25
 const FRAMES := 430
+# A pose read back from float32 transforms is this close to the value written.
+const TOLERANCE := 0.0001
+# The stack's top face and the top disc's thickness, in stack space (enemy_mag_trapper.py).
+const STACK_TOP := 0.6
+const DISC_HALF := 0.1
 
 var _game
 var _test := T.new("enemy_mag_trapper_windup_test")
@@ -50,7 +55,7 @@ func _spawn(enabled := true):
 	var enemy = _game.combat.spawn_enemy("mag_trapper", _game.ctx.terrain.drop_point(at.x, at.z, 1.8))
 	enemy.hp = 100000.0
 	enemy._strafe = 1.0 # Counter handedness uses instance id, so pin it in both runs.
-	enemy.pose_enabled = enabled
+	enemy.windup_pose_enabled = enabled
 	enemy._rest = 0.0
 	return enemy
 
@@ -82,7 +87,7 @@ func _samples() -> void:
 		spins.append(parts[1].rotation.y)
 	var detail := "e05_stack_hoist progress 0/0.5/1: lift %.6f/%.6f/%.6f m; lean %.6f/%.6f/%.6f rad; spin %.6f/%.6f/%.6f rad" % [values[0], values[1], values[2], leans[0], leans[1], leans[2], spins[0], spins[1], spins[2]]
 	_test.check("WG-1 clock samples", values[0] == 0.0 and values[1] > values[0] and values[2] > values[1] \
-		and is_equal_approx(values[2], HOIST) and leans[0] == 0.0 and spins[0] == 0.0 \
+		and absf(values[2] - HOIST) < TOLERANCE and leans[0] == 0.0 and spins[0] == 0.0 \
 		and is_equal_approx(leans[2], LEAN) and is_equal_approx(spins[2], SPIN), detail)
 	var monotonic := true
 	var last := Vector3(-1.0, -1.0, -1.0)
@@ -92,6 +97,7 @@ func _samples() -> void:
 		var value := Vector3((parts[1].position - rest).y, -parts[0].rotation.x, parts[1].rotation.y)
 		monotonic = monotonic and value.x >= last.x and value.y >= last.y and value.z >= last.z
 		last = value
+	_link(enemy)
 	_test.check("WG-1 monotonic travel", monotonic, "101 samples of lift, lean and unwrapped spin")
 	var measured: float = (enemy.transform.affine_inverse() * parts[1].global_position - enemy._stack.position - rest).length()
 	_test.check("WG-2 enemy-space travel", measured >= 0.35, "top disc %.6f m from rest" % measured)
@@ -120,6 +126,7 @@ func _trace(enabled: bool) -> Array:
 	var full_frames := []
 	var pivot_identity := true
 	var pre_release_full := false
+	var warn_full := []
 	var live_shorter := true
 	var rest_after := false
 	var saw_rest := false
@@ -136,9 +143,9 @@ func _trace(enabled: bool) -> Array:
 		enemy._pose()
 		if enabled:
 			pivot_identity = pivot_identity and enemy.reaction_pivot.transform == Transform3D.IDENTITY
-			if parts[1].position == enemy._top_rest + Vector3.UP * HOIST:
+			if parts[1].position.distance_to(enemy._top_rest + Vector3.UP * HOIST) < TOLERANCE:
 				full_frames.append(Engine.get_physics_frames())
-				pre_release_full = pre_release_full or enemy.phase == 1
+				warn_full.append(enemy.phase == 1)
 			if enemy.phase == 2:
 				live_shorter = live_shorter and not parts[1].visible and enemy._stack.visible and enemy.find_child("MagDiscs", true, false).visible
 			if not _strike_frames.is_empty() and enemy.phase == 0 and not saw_rest:
@@ -148,6 +155,11 @@ func _trace(enabled: bool) -> Array:
 		var delta := 999
 		if not full_frames.is_empty() and not _strike_frames.is_empty():
 			delta = int(full_frames[0]) - int(_strike_frames[0])
+			# The warn tick just before release has a clock a float32 ulp short of warn_seconds, so its pose is
+			# full to within TOLERANCE; any earlier warn tick at full pose is a fault.
+			for i in full_frames.size():
+				if warn_full[i] and int(full_frames[i]) < int(_strike_frames[0]) - 1:
+					pre_release_full = true
 		_test.check("WG-3 release frame", not pre_release_full and not full_frames.is_empty() and abs(delta) <= 1,
 			"strike frames %s; full frames %s; difference %d physics frames" % [_strike_frames, full_frames, delta])
 		_test.check("WG-4 completed cycle", rest_after and _rest(enemy), "exact rest on first ROAM frame after LIVE")
@@ -279,3 +291,24 @@ func _run() -> void:
 	await _invariance()
 	await _interruptions()
 	quit(_test.verdict())
+
+
+# PC-3: the mast between the stack and the lifted disc. Its foot sits in the stack's top disc and
+# its head reaches into the lifted disc, at progress 0.5 and 1.
+func _link(enemy) -> void:
+	var link: MeshInstance3D = enemy.find_child("MagTopLink", true, false)
+	var disc: Node3D = enemy.find_child("MagTopDisc", true, false)
+	if link == null:
+		_test.check("PC-3 link exists", false, "no MagTopLink node")
+		return
+	var spans := true
+	var detail := []
+	for progress in [0.5, 1.0]:
+		enemy._t = enemy.warn_seconds * progress
+		enemy._pose()
+		var box: AABB = link.transform * link.mesh.get_aabb()
+		var foot_ok: bool = box.position.y <= STACK_TOP + TOLERANCE and box.position.y >= STACK_TOP - 2.0 * DISC_HALF
+		var head_ok: bool = absf(box.end.y - disc.position.y) <= DISC_HALF + TOLERANCE
+		spans = spans and foot_ok and head_ok and link.visible and (box.end.y - box.position.y) > 0.3
+		detail.append("%.2f: foot %.3f head %.3f disc %.3f" % [progress, box.position.y, box.end.y, disc.position.y])
+	_test.check("PC-3 link spans stack to disc", spans, "stack top %.2f; %s" % [STACK_TOP, "; ".join(detail)])

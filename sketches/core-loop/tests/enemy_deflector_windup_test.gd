@@ -69,16 +69,20 @@ func _clock_samples() -> void:
 	var angle := rest.basis.get_rotation_quaternion().angle_to(full.basis.get_rotation_quaternion())
 	var distance := rest.origin.distance_to(full.origin)
 	var exact := true
-	for progress in [0.0, 0.5, 1.0]:
+	# Literal wall poses at progress 0 / 0.5 / 1: origin metres and rotation quaternion (x, y, z, w), body y and body scale y.
+	var wall_origins := [Vector3(0.6, 0.75, 1.15), Vector3(0.3, 0.475, 1.225), Vector3(0.0, 0.2, 1.3)]
+	var wall_turns := [Quaternion(-0.369254, 0.243469, 0.014104, 0.896758), Quaternion(-0.189585, 0.125004, 0.007241, 0.973848), Quaternion(0.0, 0.0, 0.0, 1.0)]
+	var body_ys := [0.0, -0.0825, -0.165]
+	var body_scales := [1.0, 0.925, 0.85]
+	for index in 3:
+		var progress: float = [0.0, 0.5, 1.0][index]
 		enemy.phase = enemy.Phase.WARN
 		enemy._t = enemy.warn_seconds * progress
 		enemy._pose()
-		var travel := smoothstep(0.0, 1.0, progress)
 		var wall: Transform3D = enemy._wall.transform
 		samples.append(rest.basis.get_rotation_quaternion().angle_to(wall.basis.get_rotation_quaternion()) / angle)
-		exact = exact and wall.is_equal_approx(rest.interpolate_with(full, travel))
-		exact = exact and enemy._body.position.is_equal_approx(Vector3(0, -0.165 * travel, 0))
-		exact = exact and enemy._body.scale.is_equal_approx(Vector3(1, lerpf(1, 0.85, travel), 1))
+		exact = exact and wall.origin.is_equal_approx(wall_origins[index]) and wall.basis.get_rotation_quaternion().is_equal_approx(wall_turns[index])
+		exact = exact and is_equal_approx(enemy._body.position.y, body_ys[index]) and is_equal_approx(enemy._body.scale.y, body_scales[index])
 	_t.check("WF-1 e10_dish_wall samples", exact and is_zero_approx(samples[0]) and is_equal_approx(samples[1], 0.5) and is_equal_approx(samples[2], 1.0), "progress 0/0.5/1 -> %.6f / %.6f / %.6f" % samples)
 	var monotonic := true
 	var previous := Vector4(-1, -1, -1, -1)

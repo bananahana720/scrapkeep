@@ -5,6 +5,11 @@ const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 const FRAMES := 360
+# The rotor's idle turn and the spin-up's end rate, as literal numbers: 2 * 3.25 * TAU rad/s at progress 1.
+const IDLE_RATE := 4.0
+const TOLERANCE := 0.0001
+# Literal expectations at progress 0 / 0.5 / 1 (pitch degrees, drum rad, rotor rad). TAU * 2.25 * p^2 and TAU * 3.25 * p^2.
+const WARN_VALUES := [[0.0, 0.0, 0.0], [16.0, 3.534292, 5.105088], [32.0, 14.137167, 20.420352]]
 
 var game
 var t := T.new("enemy_winch_drone_windup_test")
@@ -47,16 +52,23 @@ func _spawn(enabled := true):
 	var at := Vector3(ball.x + 9.0, 0.0, ball.z + 3.0)
 	at.y = game.ctx.terrain.height(at.x, at.z) + 5.5
 	var drone = game.combat.spawn_enemy("winch_drone", at)
-	drone.pose_enabled = enabled
+	drone.windup_pose_enabled = enabled
 	drone._strafe = 1.0
 	drone._rest = 0.1
 	drone.hp = 100000.0
 	return drone
 
 
+# At rest the aim and the drum sit at their rest transforms; the rotor is at its rest position and only
+# yawed about its own axis by the idle turn.
 func _rest(drone) -> bool:
+	var yaw: Transform3D = drone._rotor.transform * drone._rotor_rest.affine_inverse()
 	return drone._aim.transform == Transform3D.IDENTITY and drone._drum.transform == drone._drum_rest \
-		and drone._rotor.transform == drone._rotor_rest
+		and yaw.origin.is_zero_approx() and yaw.basis.y.is_equal_approx(Vector3.UP)
+
+
+func _rotor_yaw(drone) -> float:
+	return (drone._rotor.transform * drone._rotor_rest.affine_inverse()).basis.get_euler().y
 
 
 func _samples() -> void:
@@ -65,12 +77,15 @@ func _samples() -> void:
 	drone.phase = drone.Phase.WARN
 	var values := []
 	var correct := true
-	for progress in [0.0, 0.5, 1.0]:
+	drone._idle_from = Engine.get_physics_frames()
+	var rates := []
+	for index in 3:
+		var progress: float = [0.0, 0.5, 1.0][index]
 		drone._t = progress * drone.warn_seconds
 		drone._pose()
 		values.append([rad_to_deg(drone._aim.rotation.x), drone._spin.x, drone._spin.y])
-		correct = correct and is_equal_approx(drone._aim.rotation.x, deg_to_rad(32.0) * smoothstep(0.0, 1.0, progress))
-		correct = correct and drone._spin.is_equal_approx(Vector2(2.25, 3.25) * TAU * progress * progress)
+		for axis in 3:
+			correct = correct and absf(values[index][axis] - WARN_VALUES[index][axis]) < 0.001
 		correct = correct and drone._drum.transform.is_equal_approx(drone._drum_rest * Transform3D(Basis(Vector3.RIGHT, drone._spin.x), Vector3.ZERO))
 		correct = correct and drone._rotor.transform.is_equal_approx(drone._rotor_rest * Transform3D(Basis(Vector3.UP, drone._spin.y), Vector3.ZERO))
 		if progress == 0.0:
@@ -78,10 +93,48 @@ func _samples() -> void:
 	for i in range(1, values.size()):
 		for component in 3:
 			correct = correct and values[i][component] > values[i - 1][component]
+	# PC-4: the rotor's rate through the wind-up (rad/s) beats the idle rate from progress 0.25 on.
+	var beats := true
+	for progress in [0.25, 0.5, 0.75, 1.0]:
+		# Backward difference over 0.01 of the clock: it measures the rate at progress - 0.005.
+		drone._t = (progress - 0.01) * drone.warn_seconds
+		drone._pose()
+		var before: float = drone._spin.y
+		drone._t = progress * drone.warn_seconds
+		drone._pose()
+		var rate: float = (drone._spin.y - before) / (0.01 * drone.warn_seconds)
+		rates.append(rate)
+		beats = beats and rate > IDLE_RATE
+	var rate_pinned: bool = absf(rates[0] - 10.006) < 0.01 and absf(rates[3] - 40.636) < 0.01 and rates[0] > IDLE_RATE
+	t.check("PC-4 wind-up rate beats idle", beats and rate_pinned, "rotor rad/s at progress 0.25/0.5/0.75/1: %s; idle %.1f rad/s" % [rates, IDLE_RATE])
 	t.check("WD-1 e11_cable_guide", correct, "progress 0 / 0.5 / 1: [pitch deg, drum rad, rotor rad] %s" % [values])
 	var in_enemy: Transform3D = drone.global_transform.affine_inverse() * drone._aim.global_transform
 	var angle := rad_to_deg(acos(clampf(in_enemy.basis.y.dot(Vector3.UP), -1.0, 1.0)))
 	t.check("WD-2 body travel", angle >= 25.0, "%.6f degrees in the enemy's own space" % angle)
+	drone.free()
+
+
+# PC-4: a hovering drone's rotor turns at the idle rate, and not at all with the pose off.
+func _idle() -> void:
+	var drone = _spawn()
+	drone.set_physics_process(false)
+	drone._idle_from = Engine.get_physics_frames()
+	await _frames(15)
+	drone._pose()
+	var first := _rotor_yaw(drone)
+	await _frames(15)
+	drone._pose()
+	var second := _rotor_yaw(drone)
+	var seconds := 15.0 / float(Engine.physics_ticks_per_second)
+	var rate := (second - first) / seconds
+	t.check("PC-4 idle turn", absf(first - IDLE_RATE * seconds) < 0.001 and absf(second - 2.0 * IDLE_RATE * seconds) < 0.001 and absf(rate - IDLE_RATE) < 0.01,
+		"rotor yaw %.4f rad after 15 frames, %.4f after 30; %.3f rad/s against the %.1f rad/s the code names (%d ticks/s)" % [first, second, rate, IDLE_RATE, Engine.physics_ticks_per_second])
+	var still = _spawn(false)
+	still.set_physics_process(false)
+	await _frames(15)
+	still._pose()
+	t.check("PC-4 control seam rotor still", still._rotor.transform == still._rotor_rest, "pose off: the rotor stays at its rest transform")
+	still.free()
 	drone.free()
 
 
@@ -206,6 +259,7 @@ func _interruptions() -> void:
 func _run() -> void:
 	await _boot()
 	_samples()
+	await _idle()
 	game.free()
 	game = null
 	await _invariance()

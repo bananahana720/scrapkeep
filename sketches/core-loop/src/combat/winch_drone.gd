@@ -32,7 +32,14 @@ var _coast_from := Vector2.ZERO
 var _aim_angle := 0.0
 var _level_from := 0.0
 # Numeric control seam: disabling the body pose touches no combat state.
-var pose_enabled := true
+var windup_pose_enabled := true
+# The rotor idles at IDLE_SPIN rad/s whenever the drone is not attacking: slow enough that the wind-up's
+# spin-up (up to 2 * 3.25 * TAU rad/s at release) always reads as faster from a quarter of the way in.
+# The angle is a function of the physics frame count, so a repeated _pose call in one tick agrees.
+const IDLE_SPIN := 4.0
+var _idle_from := 0
+var _spin_base := 0.0
+var _recovering := false
 
 
 func _configure(threat: float) -> void:
@@ -170,30 +177,45 @@ func _pose() -> void:
 		return
 	# WARN uses only counter.gd's clock. LIVE starts at the endpoint on the release tick.
 	# The local +Z cable direction pitches down around +X; reaction_pivot stays owned by enemy.gd.
-	if not pose_enabled:
+	if not windup_pose_enabled:
 		_aim.transform = Transform3D.IDENTITY
 		_rotor.transform = _rotor_rest
 		_drum.transform = _drum_rest
 		return
 	if phase == Phase.WARN:
+		if _pose_phase == Phase.ROAM:
+			# The spin-up starts from wherever the idle turn had the rotor, so release never jumps it.
+			_spin_base = _idle_angle()
 		var progress := clampf(_warn_progress(), 0.0, 1.0)
 		_aim_angle = deg_to_rad(32.0) * smoothstep(0.0, 1.0, progress)
-		_spin = Vector2(2.25, 3.25) * TAU * progress * progress
+		_spin = Vector2(2.25 * TAU * progress * progress, _spin_base + 3.25 * TAU * progress * progress)
 	elif phase == Phase.LIVE:
 		_aim_angle = deg_to_rad(32.0)
-		_spin = Vector2(2.25, 3.25) * TAU * (1.0 + 2.0 * _t / warn_seconds)
+		_spin = Vector2(2.25 * TAU * (1.0 + 2.0 * _t / warn_seconds), _spin_base + 3.25 * TAU * (1.0 + 2.0 * _t / warn_seconds))
+		_recovering = true
 	else:
 		if _pose_phase != Phase.ROAM:
 			_coast_from = _spin
 			_level_from = _aim_angle
-		# _end resets _t. Coast forwards to whole turns, then restore exact rest transforms.
-		var recovery := clampf(_t / 0.25, 0.0, 1.0)
-		_aim_angle = _level_from * (1.0 - smoothstep(0.0, 1.0, recovery))
-		var stops := Vector2(ceilf(_coast_from.x / TAU), ceilf(_coast_from.y / TAU)) * TAU
-		_spin = _coast_from.lerp(stops, 1.0 - pow(1.0 - recovery, 3.0))
-		if recovery >= 1.0:
-			_spin = Vector2.ZERO
+			_recovering = true
+		if _recovering:
+			# _end resets _t. Coast forwards to whole turns, then hand the rotor back to the idle turn.
+			var recovery := clampf(_t / 0.25, 0.0, 1.0)
+			_aim_angle = _level_from * (1.0 - smoothstep(0.0, 1.0, recovery))
+			var stops := Vector2(ceilf(_coast_from.x / TAU), ceilf(_coast_from.y / TAU)) * TAU
+			_spin = _coast_from.lerp(stops, 1.0 - pow(1.0 - recovery, 3.0))
+			if recovery >= 1.0:
+				_recovering = false
+				_idle_from = Engine.get_physics_frames()
+				_spin = Vector2.ZERO
+		else:
+			_aim_angle = 0.0
+			_spin = Vector2(0.0, _idle_angle())
 	_pose_phase = phase
 	_aim.rotation.x = _aim_angle
 	_drum.transform = _drum_rest * Transform3D(Basis(Vector3.RIGHT, _spin.x), Vector3.ZERO)
 	_rotor.transform = _rotor_rest * Transform3D(Basis(Vector3.UP, _spin.y), Vector3.ZERO)
+
+
+func _idle_angle() -> float:
+	return fposmod(IDLE_SPIN * float(Engine.get_physics_frames() - _idle_from) * get_physics_process_delta_time(), TAU)
