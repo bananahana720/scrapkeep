@@ -16,6 +16,9 @@ var phase := IDLE
 var progress := 0.0
 var duration := 25.0
 var radius := 30.0
+# Sealed until the beacon opens: a Warden clamps it. The ring, the bulb and the edge marker
+# read this one fact through state_id(), so none of them wears the live colour.
+var sealed := true
 
 var _ring_material: StandardMaterial3D
 var _core_material: StandardMaterial3D
@@ -24,7 +27,7 @@ var _core: MeshInstance3D
 
 
 func setup() -> void:
-	var tint := EventKinds.color("beacon_charge_changed")
+	var tint := tint_color()
 	var mast := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
 	cyl.top_radius = 0.5
@@ -62,9 +65,19 @@ func place(at: Vector3, seconds: float, ring_radius: float) -> void:
 	radius = ring_radius
 	phase = IDLE
 	progress = 0.0
+	sealed = true
 	_ring.scale = Vector3(radius, 30.0, radius)
 	_ring.position = Vector3.UP * 0.6
 	_refresh()
+
+
+# The beacon's state row in EventKinds: sealed is "not yet", open is "the world is offering".
+func state_id() -> String:
+	return "beacon_sealed" if sealed else "beacon_open"
+
+
+func tint_color() -> Color:
+	return EventKinds.state_color(state_id())
 
 
 func in_ring(ball: Vector3) -> bool:
@@ -77,13 +90,17 @@ func fraction() -> float:
 
 # Returns true on the tick the charge completes. Sealed, ring entry still marks the
 # beacon engaged but only breaking the Warden moves the charge.
-func advance(delta: float, ball: Vector3, sealed := false) -> bool:
+func advance(delta: float, ball: Vector3, is_sealed := false) -> bool:
 	if phase == READY:
 		return false
+	var was_sealed := sealed
+	sealed = is_sealed
+	if was_sealed != sealed:
+		_refresh()
 	if not in_ring(ball):
 		return false
 	phase = CHARGING
-	if sealed:
+	if is_sealed:
 		return false
 	progress = minf(duration, progress + delta)
 	_refresh()
@@ -101,6 +118,7 @@ func show_progress(value: float) -> void:
 
 func open() -> void:
 	phase = READY
+	sealed = false
 	show_progress(duration)
 
 
@@ -108,6 +126,10 @@ func _refresh() -> void:
 	if _core_material == null:
 		return
 	var f := fraction()
+	var tint := tint_color()
+	_core_material.albedo_color = tint
+	_core_material.emission = tint
+	_ring_material.albedo_color = Color(tint, _ring_material.albedo_color.a)
 	_core_material.emission_energy_multiplier = 0.5 + f * 6.0
 	_core.scale = Vector3.ONE * (1.0 + f * 0.6)
 	_ring_material.albedo_color.a = 0.35 + f * 0.6
