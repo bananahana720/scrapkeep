@@ -143,6 +143,21 @@ const RAMP_WINDOW := 0.5
 const PICKUP_CHASE := 30.0
 const CAP_ABOVE := 1.2
 const CAP_REACH := 2.6
+# The explorer's standing activities (slice table): game seconds each may hold the bot, counted
+# from the first frame it is the target and including the roll onto its pay; past that it is
+# abandoned and the bot moves on. The cache's run-up point lies this far out from its face.
+const ACTIVITY_SECONDS := 40.0
+const CACHE_RUNUP := 24.0
+const CACHE_RUNUP_SECONDS := 5.0
+const CACHE_RAM_SECONDS := 3.0
+const CACHE_STAGE := 45.0
+const PAY_BACKOFF := 6.0
+# The high ground goes first: a ball cannot climb back out of the trough, so a site on a shelf is
+# worked before the ones below it, ties nearest first. Sites are ranked by ground height in bands.
+const LEVEL_BAND := 8.0
+# On a map with standing activities the explorer stops its other rolling (scrap lines, events, the
+# vault) at this stage second and goes to the Warden, so the fight has the rest of STAGE_LIMIT.
+const ENGAGE_BY := 140.0
 
 var game
 var policy := "skipper"
@@ -200,6 +215,12 @@ var _committed := false
 var _planned := false
 var _note := {}
 var _goal := ""
+var _activity := ""
+var _activity_time := {}
+var _activity_skip := {}
+var _cache_phase := "runup"
+var _cache_clock := 0.0
+var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
 var _seen := {}
 var _evaded := {}
@@ -285,6 +306,15 @@ func start() -> void:
 		_connect_optional("tree_offered", _on_tree_offered)
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
+	# The standing activities roll their pay from the run id, whose first half is the clock's second
+	# (src/world/activities.gd _roll), so two runs of one seed in different seconds would pay different
+	# parts. The explorer is the policy that takes the pay; it pins that half to a constant and keeps
+	# the seeded draw, so it repeats exactly per seed. Other policies keep the id the run made.
+	if policy == "completionist":
+		game.run.run_id = "%d-%s" % [20260926, String(game.run.run_id).split("-")[-1]]
+		# The run log copied the id when the run began; keep its record joined to the bot's line.
+		if game.run_log != null and "_record" in game.run_log and game.run_log._record is Dictionary:
+			game.run_log._record["run_id"] = game.run.run_id
 
 
 func _on_tree_offered(_class_id: String, _depth: int, choices: Array) -> void:
@@ -437,6 +467,11 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_vault_done = false
 	_event_time = {}
 	_event_skip = {}
+	_activity = ""
+	_activity_time = {}
+	_activity_skip = {}
+	_cache_phase = "runup"
+	_cache_clock = 0.0
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
@@ -692,6 +727,11 @@ func _camper(target: Node3D, delta: float) -> void:
 
 
 func _completionist(warden: Node3D, delta: float) -> void:
+	if _activity_goal(delta):
+		return
+	if _activity_rushed():
+		_fight(warden, delta)
+		return
 	var event := _event_goal(delta)
 	if not event.is_empty():
 		_goal = event["goal"]
@@ -737,6 +777,145 @@ func _random(warden: Node3D, delta: float) -> void:
 			source.press["jump_pressed"] = true
 	_goal = "wander"
 	_act(ball + _wander_heading * 30.0, _nearest_enemy(), delta)
+
+
+# The slice's standing activities (src/world/activities.gd), nearest first: the ambush altar's
+# ring fight, the cracked cache's ram and the hauler's brute, each then rolled onto for its pay.
+# One target at a time, held until it is done and paid or its ACTIVITY_SECONDS run out. True when
+# it drove this tick. Reads the sites' public state only, as a player reads what stands lit.
+func _activity_goal(delta: float) -> bool:
+	_ignore_walls = false
+	var world = game.world
+	if world == null or world.activities == null or world.activities.sites.is_empty():
+		_activity = ""
+		return false
+	var activities = world.activities
+	var ball: Vector3 = game.player.ball_position()
+	var s = activities.site(_activity) if _activity != "" else null
+	if s != null and not _activity_open(s):
+		s = null
+	if s == null:
+		var best_level := -INF
+		var best := INF
+		for c in activities.sites:
+			if not is_instance_valid(c) or not _activity_open(c):
+				continue
+			var level := roundf(c.global_position.y / LEVEL_BAND)
+			var d := _flat(ball, c.global_position)
+			if level > best_level or (level == best_level and d < best):
+				best_level = level
+				best = d
+				s = c
+		_activity = s.id if s != null else ""
+		_cache_phase = "runup"
+		_cache_clock = 0.0
+	if s == null:
+		return false
+	var finished: Array = []
+	for c in activities.sites:
+		if is_instance_valid(c) and c.done:
+			finished.append(c.id)
+	_note["activities_finished"] = finished
+	var entered: Array = _note.get("activities_entered", [])
+	if not s.id in entered:
+		entered.append(s.id)
+		_note["activities_entered"] = entered
+	_activity_time[s.id] = float(_activity_time.get(s.id, 0.0)) + delta
+	if float(_activity_time[s.id]) > ACTIVITY_SECONDS:
+		_activity_skip[s.id] = true
+		_activity = ""
+		return false
+	if s.done:
+		_goal = "activity %s pay" % s.id
+		_pay_roll(s, ball, delta)
+		return true
+	match s.id:
+		"ambush_altar":
+			var foe := _pack_foe(s, ball)
+			if foe != null:
+				_goal = "activity %s fight" % s.id
+				_fight(foe, delta)
+			else:
+				_goal = "activity %s" % s.id
+				_act(s.global_position, _nearest_enemy(), delta)
+		"cracked_cache":
+			_cache_ram(s, ball, delta)
+		"hauler_bounty":
+			if s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead():
+				_goal = "activity %s fight" % s.id
+				_fight(s.brute, delta)
+			else:
+				_activity_skip[s.id] = true
+				_activity = ""
+				return false
+	return true
+
+
+# Past ENGAGE_BY on a map with standing activities, only the Warden is left to do.
+func _activity_rushed() -> bool:
+	var world = game.world
+	if world == null or world.activities == null or world.activities.sites.is_empty():
+		return false
+	return game.run.stage_time > ENGAGE_BY
+
+
+# A site the bot may still work: not given up, and either unfinished or with its pay on the ground.
+func _activity_open(s) -> bool:
+	if _activity_skip.has(s.id):
+		return false
+	return not s.done or (s.pickup != null and not s.pickup_taken)
+
+
+func _pack_foe(s, ball: Vector3) -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for enemy in s.pack:
+		if is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()):
+			var d := _flat(ball, enemy.global_position)
+			if d < best_d:
+				best_d = d
+				best = enemy
+	return best
+
+
+# The pay is taken by a ball that rolls onto it, not one standing on it: step off first.
+func _pay_roll(s, ball: Vector3, delta: float) -> void:
+	if s.pickup == null:
+		return
+	var at: Vector3 = s.pickup.global_position
+	var steer := at
+	if s.inside_pickup or _flat(ball, at) < 1.0:
+		steer = at + Vector3(PAY_BACKOFF, 0.0, 0.0)
+	_act(steer, _nearest_enemy(), delta)
+
+
+# The cache breaks to a ram at cruise square into its face: out to a run-up point on the open
+# side, then at the wall along its axis with the wall-avoiding turn off.
+func _cache_ram(s, ball: Vector3, delta: float) -> void:
+	var out: Vector3 = s.global_basis.z
+	out.y = 0.0
+	out = out.normalized()
+	_cache_clock += delta
+	if _cache_phase == "runup":
+		var point: Vector3 = _ground_point(s.global_position.x + out.x * CACHE_RUNUP, s.global_position.z + out.z * CACHE_RUNUP)
+		_goal = "activity %s runup" % s.id
+		# From far off, square along the ball's own latitude first, so the line to the run-up
+		# does not cut across the shelf's edge.
+		var heading := point
+		if _flat(ball, point) > CACHE_STAGE and absf(ball.z - point.z) > CACHE_STAGE:
+			heading = _ground_point(point.x, ball.z)
+		_act(heading, null, delta)
+		if _flat(ball, point) < 5.0 or _cache_clock > CACHE_RUNUP_SECONDS:
+			_cache_phase = "ram"
+			_cache_clock = 0.0
+		return
+	_goal = "activity %s ram" % s.id
+	_ignore_walls = true
+	var through: Vector3 = s.global_position - out * 4.0
+	_act(Vector3(through.x, ball.y, through.z), null, delta, null, false)
+	if _cache_clock > CACHE_RAM_SECONDS:
+		_cache_phase = "runup"
+		_cache_clock = 0.0
 
 
 # The stage's participatory event, when the completionist should be on it: its ring
@@ -1349,7 +1528,7 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 	if _detour_time > 0.0:
 		_detour_time -= delta
 		heading = _detour
-	elif player.state.grounded:
+	elif player.state.grounded and not _ignore_walls:
 		heading = _around_walls(ball, heading)
 	var hold := {"fire_held": _throw_hold(aim)}
 	var look_at: Vector3 = ball + heading
