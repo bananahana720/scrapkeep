@@ -62,6 +62,16 @@ const CABLE_RADIUS := 4.5
 const THERMAL_A := Vector2(80.0, -12.0)
 const THERMAL_B := Vector2(44.0, 132.0)
 
+# The spawn launch: the flank under the 16 m drop is steepened between LAUNCH_FROM and
+# LAUNCH_TO by LAUNCH_DROP metres and eased back to the old flank by LAUNCH_BACK_TO, across
+# the whole width (a function of z only, so there is no scarp), so the landing turns the fall
+# into rolling speed toward any of the three lines.
+const LAUNCH_DROP := 3.5
+const LAUNCH_FROM := -158.0
+const LAUNCH_TO := -135.0
+const LAUNCH_BACK_FROM := -125.0
+const LAUNCH_BACK_TO := -100.0
+
 const OPEN_TUNNELS := ["w1", "e1"]
 
 const POST_HEIGHT := 16.0
@@ -140,6 +150,7 @@ func sample(x: float, z: float) -> Array:
 	var bowl := smoothstep(Features.BOWL_RIM, Features.BOWL_OUT, Vector2(x, z).distance_to(BEACON))
 	h += Features.banked_arc(x, z, BERM_CENTRE, BERM_RADIUS, BERM_WIDTH, BERM_BANK, BERM_FROM, BERM_TO) * bowl
 	h = _dive(x, z, h)
+	h -= LAUNCH_DROP * smoothstep(LAUNCH_FROM, LAUNCH_TO, z) * (1.0 - smoothstep(LAUNCH_BACK_FROM, LAUNCH_BACK_TO, z))
 	h += Features.kicker(x, z, KICKER_AT, KICKER_DIR, KICKER_LENGTH, KICKER_WIDTH, KICKER_LIP)
 	return [h, s[1]]
 

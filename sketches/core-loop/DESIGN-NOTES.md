@@ -2382,3 +2382,7 @@ Round 4's writer could render. The causes found by looking, not by test:
 - Debris gathers in seeded drifts, is wide and low (protrusion stays under 0.2 m), and broken rock only stands at a cliff foot.
 - Scrap protection rects fill the slots actors and threats leave, nearest the camera first; actor and threat overflow still hides the dressing. A harmless telegraph protects its edge, not its whole disc.
 - `tools/still_compare.gd` prints per-rectangle mean colour and CIE76 distance between two stills.
+
+## The spawn launch on the Cable Reach (unit ZL)
+
+Momentum is sacred, so the Reach's 16 m drop from the spawn now lands on a flank that falls 3.5 m faster over its first 23 m (map_reach.gd, `LAUNCH_*`) instead of a near-level deck. The first try used 5 m and over-fed Sable (42 m/s through the dive, stalled before the kicker); 3.5 m gives the east lines their speed at the landing. Sable's entry changed: her slowest time is 11.49 s against 11.1 s before, and her median on-line share is 0.893 against 1.000. The shape is a function of z only, so a ball that lands off the fall line meets no scarp. Measured numbers are in design-v3/TRAVERSAL.md, "The spawn launch (unit ZL)".

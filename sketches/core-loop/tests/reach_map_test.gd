@@ -66,6 +66,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_heights()
 	_check_footing()
 	_check_line_steps()
+	_check_first_legs()
 	_check_lines()
 	_check_dive_sides()
 	_game.free()
@@ -180,6 +181,51 @@ func _check_line_steps() -> void:
 	_t.check("Sable's line has no step up over 0.3 m", worst <= STEP_RISE,
 		"largest rise in a 1 m step from waypoint %d to the merge (z %.0f) is %.3f m at %s (limit %.1f); flown stretches left out: %s"
 		% [LINE_FROM, MERGE_Z, worst, at, STEP_RISE, FLOWN_STRETCHES])
+
+
+# The spawn launch (unit ZL): from the spawn to each pilot's first ride (waypoint 2), no step of
+# 1 m rises more than 0.3 m, and the launch feature's own face is no steeper than 30 degrees.
+const FIRST_RIDE := 2
+const FACE_LIMIT_DEG := 30.0
+# The gorge's own rim falls from z -101.75 at x = 0; the launch's ground ends before it.
+const FACE_SAMPLE_END := -102.5
+
+
+func _check_first_legs() -> void:
+	var routes := TraversalLine.load_routes()
+	for pilot in ["sable", "rivet", "kest"]:
+		var line := TraversalLine.route_of(routes, pilot)
+		var worst := -INF
+		var at := Vector2.ZERO
+		for k in range(0, FIRST_RIDE):
+			var a := line[k]
+			var b := line[k + 1]
+			var steps := ceili(a.distance_to(b) / 1.0)
+			var last: float = _terrain().height(a.x, a.y)
+			for i in range(1, steps + 1):
+				var p := a.lerp(b, float(i) / steps)
+				var h: float = _terrain().height(p.x, p.y)
+				if h - last > worst:
+					worst = h - last
+					at = p
+				last = h
+		_t.check("%s's first leg has no step up over 0.3 m" % pilot, worst <= STEP_RISE,
+			"largest rise in a 1 m step from the spawn to waypoint %d is %.3f m at %s (limit %.1f)" % [FIRST_RIDE, worst, at, STEP_RISE])
+	var steepest := 0.0
+	var steepest_z := Reach.LAUNCH_FROM
+	var z := -158.0
+	var last_h: float = _terrain().height(0.0, z)
+	while z < FACE_SAMPLE_END:
+		var h: float = _terrain().height(0.0, z + 0.5)
+		var slope := absf(h - last_h) / 0.5
+		if slope > steepest:
+			steepest = slope
+			steepest_z = z + 0.25
+		last_h = h
+		z += 0.5
+	var deg := rad_to_deg(atan(steepest))
+	_t.check("the built ground under the spawn launch has no face steeper than 30 degrees", deg <= FACE_LIMIT_DEG,
+		"the steepest slope on x = 0 from z -158 to -102.5 (the gorge's rim starts at -101.75) is %.1f degrees at z %.2f (limit %.0f)" % [deg, steepest_z, FACE_LIMIT_DEG])
 
 
 func _in_flown(p: Vector2) -> bool:
