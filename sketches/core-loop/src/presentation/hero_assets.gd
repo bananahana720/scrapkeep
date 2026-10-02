@@ -642,12 +642,14 @@ func _dress_warden(warden) -> void:
 	base.add_child(kit)
 	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
 		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null,
-		"jaws": [], "light_rest": {}}
+		"jaws": [], "light_rest": {}, "segments": [], "chunk_marks": [], "flights": [],
+		"chunks_seen": 4, "core": base.get_node("CoreAssembly")}
 	if warden.family == "swarm":
 		_split_queen_hatch(weak, rec)
 	_paint_warden(base, rec)
 	if warden._look.posture_fight():
 		_rig_warden_jaws(base, rec)
+	_rig_warden_chunks(base, rec)
 	if warden.family == "mind":
 		var lens := Node3D.new()
 		lens.name = "HeroLens"
@@ -684,6 +686,12 @@ func _dress_warden(warden) -> void:
 	_wardens[warden.get_instance_id()] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
+	if warden.fight() == "posture":
+		var bus = warden.fleet.events()
+		if not bus.posture_changed.is_connected(_warden_posture_changed):
+			bus.posture_changed.connect(_warden_posture_changed)
+		if not bus.stage_entered.is_connected(_warden_stage_entered):
+			bus.stage_entered.connect(_warden_stage_entered)
 	_dress_mast.call_deferred(warden)
 
 
@@ -856,7 +864,8 @@ func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
 			var slot := slot_of(root.mesh, i)
 			var key := slot
 			if slot == "ancient_light" and not kit:
-				key += "_jaw" if String(root.name).begins_with("Jaw") else "_base"
+				if root.name != "HeartSurface":
+					key += "_jaw" if String(root.name).begins_with("Jaw") or String(root.name).begins_with("ArmourSegment") else "_base"
 			if not rec.materials.has(key):
 				rec.materials[key] = material(slot).duplicate() if slot in ["ancient_light", "ancient_enamel"] else material(slot)
 			root.set_surface_override_material(i, rec.materials[key])
@@ -904,6 +913,7 @@ func _update_warden(rec: Dictionary) -> void:
 		seam.node.visible = seam.source.visible
 	if not rec.jaws.is_empty():
 		_update_warden_open(rec)
+	_update_warden_chunks(rec)
 
 
 # The jaws spring out and the core takes the live colour while a posture Warden is open.
@@ -916,17 +926,173 @@ func _update_warden_open(rec: Dictionary) -> void:
 	# The body material carries combat's amber hit flash; a posture Warden never wears amber.
 	(rec.materials.ancient_enamel as StandardMaterial3D).emission = EventKinds.role_color("neutral")
 	var open: bool = warden.staggered()
+	rec.core.visible = open
 	for key in rec.light_rest:
 		(rec.materials[key] as StandardMaterial3D).emission = EventKinds.state_color("open") if open else rec.light_rest[key]
 
 
+func _warden_posture_changed(warden: Node3D, _guard: float, _staggered: bool) -> void:
+	var rec := warden_of(warden)
+	if not rec.is_empty():
+		_update_warden(rec)
+
+
+func _warden_stage_entered(_stage: int, _retry: bool) -> void:
+	for child in get_children():
+		if child.has_meta("warden_flight"):
+			_clear_warden_fragment(child)
+
+
+func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
+	var posture: bool = rec.warden.fight() == "posture"
+	rec.core.visible = false
+	for i in 4:
+		var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
+		rec.segments.append(segment)
+		if posture:
+			rec.chunk_marks.append(_warden_chunk_mark(segment))
+	for side in ["L", "R"]:
+		var inner := base.get_node("Jaw%s/Inner%s" % [side, side]) as MeshInstance3D
+		inner.visible = posture
+		if posture:
+			_paint_warden_inner(inner)
+	if posture:
+		# The caged heart replaces the kit's visible weak point; both use ancient_light.
+		rec.weak.visible = false
+
+
+func _paint_warden_inner(inner: MeshInstance3D) -> void:
+	for surface in inner.mesh.get_surface_count():
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else Palette.RUST.lerp(Palette.CHARCOAL, 0.55)
+		mat.roughness = 0.95
+		inner.set_surface_override_material(surface, mat)
+
+
+func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
+	var mark := Node3D.new()
+	mark.name = "ChunkCrack"
+	var bounds := segment.mesh.get_aabb()
+	var centre := bounds.get_center()
+	var normal := Vector3(centre.x + 2.2, 0, centre.z).normalized()
+	mark.position = centre
+	mark.basis = Basis.looking_at(-normal)
+	segment.add_child(mark)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = EventKinds.role_color("neutral")
+	mat.emission_enabled = true
+	mat.emission = mat.albedo_color
+	mat.emission_energy_multiplier = 1.2
+	var points := [Vector2(-0.22, 0.5), Vector2(0.1, 0.17), Vector2(-0.1, -0.12), Vector2(0.2, -0.5)]
+	for i in 3:
+		var stroke := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.09, points[i].distance_to(points[i + 1]), 0.03)
+		stroke.mesh = mesh
+		stroke.material_override = mat
+		var mid: Vector2 = (points[i] + points[i + 1]) * 0.5
+		stroke.position = Vector3(mid.x, mid.y, 0)
+		var direction: Vector2 = points[i + 1] - points[i]
+		stroke.rotation.z = -atan2(direction.x, direction.y)
+		mark.add_child(stroke)
+		_fit_warden_stroke(stroke, segment, segment.mesh.get_faces())
+	mark.visible = false
+	return mark
+
+
+func _update_warden_chunks(rec: Dictionary) -> void:
+	var warden = rec.warden
+	if warden.fight() != "posture":
+		return
+	var lost: int = 4 - warden.chunks_left()
+	var seen: int = 4 - rec.chunks_seen
+	for i in range(seen, lost):
+		_throw_warden_segment(rec, i)
+	rec.chunks_seen = warden.chunks_left()
+	for i in 4:
+		rec.segments[i].visible = i >= lost
+		var mark: Node3D = rec.chunk_marks[i]
+		mark.visible = i == lost and warden.chunk_cracked()
+		var color := EventKinds.state_color("chunk_shatter") if warden.staggered() else EventKinds.role_color("neutral")
+		for stroke in mark.get_children():
+			var mat: StandardMaterial3D = stroke.material_override
+			mat.albedo_color = color
+			mat.emission = color
+
+
+func _throw_warden_segment(rec: Dictionary, index: int) -> void:
+	var segment: MeshInstance3D = rec.segments[index]
+	var fragment := MeshInstance3D.new()
+	fragment.name = "WardenFragment%d" % index
+	fragment.mesh = segment.mesh
+	for surface in segment.mesh.get_surface_count():
+		# Keep fragment materials alive with the hook, including after a copy is freed.
+		var slot := slot_of(segment.mesh, surface)
+		var key := "warden_fragment:" + slot
+		if not _materials.has(key):
+			var mat := material(slot).duplicate() as StandardMaterial3D
+			mat.emission_enabled = false
+			_materials[key] = mat
+		fragment.set_surface_override_material(surface, _materials[key])
+	add_child(fragment)
+	fragment.global_transform = segment.global_transform
+	var centre := segment.to_global(segment.mesh.get_aabb().get_center())
+	var normal: Vector3 = (centre - rec.base.global_position) * Vector3(1, 0, 1)
+	normal = normal.normalized()
+	var flight := {"node": fragment, "start": fragment.global_transform, "normal": normal, "centre": centre,
+		"born": Engine.get_physics_frames(), "seconds": 0.0}
+	rec.flights.append(flight)
+	fragment.set_meta("warden_flight", flight)
+	fragment.tree_exiting.connect(_clear_warden_fragment.bind(fragment), CONNECT_ONE_SHOT)
+	flight["step"] = _step_warden_fragment.bind(fragment)
+	get_tree().physics_frame.connect(flight.step)
+
+
+func _step_warden_fragment(fragment: MeshInstance3D) -> void:
+	var flight: Dictionary = fragment.get_meta("warden_flight")
+	flight.seconds = float(Engine.get_physics_frames() - flight.born) / Engine.physics_ticks_per_second
+	_move_warden_fragment(flight.seconds, flight)
+	if flight.seconds >= 0.55:
+		_clear_warden_fragment(fragment)
+
+
+func _clear_warden_fragment(fragment: MeshInstance3D) -> void:
+	var flight: Dictionary = fragment.get_meta("warden_flight")
+	if flight.has("step"):
+		if get_tree().physics_frame.is_connected(flight.step):
+			get_tree().physics_frame.disconnect(flight.step)
+		flight.erase("step")
+	if is_instance_valid(flight.node):
+		flight.node.queue_free()
+
+
+func _move_warden_fragment(seconds: float, flight: Dictionary) -> void:
+	if not is_instance_valid(flight.node):
+		return
+	var pose: Transform3D = flight.start
+	pose.origin += flight.normal * (14.0 * seconds) + Vector3.DOWN * (18.0 * seconds * seconds)
+	var turn := Basis(flight.normal.cross(Vector3.UP), seconds * 5.0)
+	var offset: Vector3 = flight.centre - flight.start.origin
+	pose.origin += offset - turn * offset
+	pose.basis = turn * pose.basis
+	flight.node.global_transform = pose
+	# After 0.18 s no camera can have its view of the core blocked by this copy.
+	flight.node.visible = seconds < 0.18
+
+
 func _forget_warden(id: int) -> void:
 	if _wardens.has(id):
-		_restore_warden(_wardens[id])
+		var rec: Dictionary = _wardens[id]
+		_update_warden_chunks(rec)
+		_restore_warden(rec, rec.warden.fight() == "posture" and rec.warden.chunks_left() == 0)
 		_wardens.erase(id)
 
 
-func _restore_warden(rec: Dictionary) -> void:
+func _restore_warden(rec: Dictionary, keep_flights := false) -> void:
+	if not keep_flights:
+		for flight in rec.flights:
+			if is_instance_valid(flight.node):
+				_clear_warden_fragment(flight.node)
 	if not _mast.is_empty() and is_instance_valid(rec.warden) and _mast.owner == rec.warden.get_instance_id():
 		_restore_mast()
 	for item in rec.hidden:
