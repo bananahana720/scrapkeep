@@ -56,7 +56,7 @@ func _build_tool() -> void:
 	var parts := _parts()
 	_dish = Node3D.new()
 	_dish.name = "DeflectorBody"
-	add_child(_dish)
+	_visual_parent().add_child(_dish)
 	var body := MeshInstance3D.new()
 	body.name = "Body"
 	body.mesh = parts["body"]

@@ -52,7 +52,7 @@ func _build_tool() -> void:
 	_crew = null
 	var dressing := Node3D.new()
 	dressing.name = "WinchBody"
-	add_child(dressing)
+	_visual_parent().add_child(dressing)
 	for part in _parts():
 		var mi := MeshInstance3D.new()
 		mi.mesh = part.mesh
@@ -60,7 +60,7 @@ func _build_tool() -> void:
 		if part.rotor:
 			mi.name = "WinchRotor"
 			_rotor = mi
-			add_child(mi)
+			_visual_parent().add_child(mi)
 		else:
 			mi.name = "Body"
 			mi.set_surface_override_material(part.body, _material)

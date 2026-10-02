@@ -87,7 +87,7 @@ func _run() -> void:
 	game.ctx.calm = true
 	var brute: Node3D = game.ctx.spawner.spawn_enemy("plated_brute", Vector3(0, 30, 0))
 	await process_frame
-	var plate := brute.get_node("BrutePlates") as MeshInstance3D
+	var plate := brute.get_node("ReactionPivot/BrutePlates") as MeshInstance3D
 	var mat := plate.material_override as StandardMaterial3D
 	var arrays := plate.mesh.surface_get_arrays(0)
 	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
@@ -153,7 +153,7 @@ func _run() -> void:
 	_check(mat.emission == EventKinds.state_color("will_break"), "amber: the rim is the live colour, not the class colour")
 	_check(_draws(brute) == slate_draws and slate_draws == 3, "draws per brute unchanged across states (%d)" % slate_draws)
 	# The crack glyph is the third part of the cue (its strokes are counted apart, as in the asset test).
-	var crack := brute.get_node("BrutePlates/PlateCrack") as Node3D
+	var crack := brute.get_node("ReactionPivot/BrutePlates/PlateCrack") as Node3D
 	_check(crack.visible, "amber: the crack glyph shows")
 	# The glyph must read on the slab's face from the ball's side at both capture cameras: on the
 	# camera-facing side of the slab face (z = 1.35), its box inside the frame and big enough to see.

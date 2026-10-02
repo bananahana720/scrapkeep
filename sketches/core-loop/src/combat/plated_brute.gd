@@ -58,12 +58,12 @@ func _build_tool() -> void:
 	_crew.name = "BruteBody"
 	_crew.mesh = parts["body"]
 	_crew.set_surface_override_material(parts["flash"], _material)
-	add_child(_crew)
+	_visual_parent().add_child(_crew)
 	_plate = MeshInstance3D.new()
 	_plate.name = "BrutePlates"
 	_plate.mesh = parts["plates"]
 	_plate.material_override = _plate_material(_rim_mask())
-	add_child(_plate)
+	_visual_parent().add_child(_plate)
 	_add_crack(_plate, GLYPH_AT, GLYPH_SIZE).name = "PlateCrack"
 
 

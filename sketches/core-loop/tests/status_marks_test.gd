@@ -213,8 +213,8 @@ func _plate_checks() -> void:
 	var live := EventKinds.state_color("will_break")
 	var slate := EventKinds.role_color("slate")
 	var brute: Node3D = _ctx.spawner.spawn_enemy("plated_brute", Vector3(0, 30, 0))
-	var mat := brute.get_node("BrutePlates").material_override as StandardMaterial3D
-	var crack := brute.get_node("BrutePlates/PlateCrack") as Node3D
+	var mat := brute.get_node("ReactionPivot/BrutePlates").material_override as StandardMaterial3D
+	var crack := brute.get_node("ReactionPivot/BrutePlates/PlateCrack") as Node3D
 	brute.set_tint("amber")
 	var amber_energy := mat.emission_energy_multiplier
 	var amber_draws := _draws(brute)

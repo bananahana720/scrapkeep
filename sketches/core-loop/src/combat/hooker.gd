@@ -56,7 +56,7 @@ func _build_tool() -> void:
 	var parts := _parts()
 	var dress := Node3D.new()
 	dress.name = "HookerBody"
-	add_child(dress)
+	_visual_parent().add_child(dress)
 	var body := MeshInstance3D.new()
 	body.name = "Body"
 	body.mesh = parts["body"]

@@ -52,7 +52,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	_muzzle_material = Palette.solid(Palette.HAZARD, 0.2)
 	var dressing := Node3D.new()
 	dressing.name = "LobberBody"
-	add_child(dressing)
+	_visual_parent().add_child(dressing)
 	for part in _parts():
 		var mi := MeshInstance3D.new()
 		mi.mesh = part.mesh
@@ -60,7 +60,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 		if part.bulb:
 			mi.name = "LobberBulb"
 			mi.set_surface_override_material(0, _muzzle_material)
-			add_child(mi)
+			_visual_parent().add_child(mi)
 			_muzzle = mi
 		else:
 			mi.set_surface_override_material(part.body, _material)

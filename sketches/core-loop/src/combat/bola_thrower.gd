@@ -61,13 +61,13 @@ func _build_tool() -> void:
 	body.name = "BolaThrowerBody"
 	body.mesh = parts["body"]
 	body.set_surface_override_material(parts["flash"], _material)
-	add_child(body)
+	_visual_parent().add_child(body)
 	_bola = MeshInstance3D.new()
 	_bola.name = "BolaLoop"
 	_bola.mesh = parts["loop"]
 	_bola.position = Vector3(0.0, CREW_HALF + 1.1, 0.0)
 	_bola.basis = _seat()
-	add_child(_bola)
+	_visual_parent().add_child(_bola)
 
 
 static func _seat() -> Basis:

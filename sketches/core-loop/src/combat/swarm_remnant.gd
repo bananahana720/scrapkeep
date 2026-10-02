@@ -169,7 +169,7 @@ func _build_body() -> void:
 	_body = MeshInstance3D.new()
 	_body.mesh = prism
 	_body.material_override = _material
-	add_child(_body)
+	_visual_parent().add_child(_body)
 	var edge := CylinderMesh.new()
 	edge.radial_segments = 3
 	edge.top_radius = SIZE * 0.55
@@ -179,4 +179,4 @@ func _build_body() -> void:
 	_seam.mesh = edge
 	_seam.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 2.2)
 	_seam.position = Vector3.UP * 0.02
-	add_child(_seam)
+	_visual_parent().add_child(_seam)

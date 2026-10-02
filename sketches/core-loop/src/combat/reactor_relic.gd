@@ -54,7 +54,7 @@ func _build_crew() -> void:
 	skirt.mesh = waist
 	skirt.material_override = _enamel()
 	skirt.position = Vector3(0.0, -BODY_HALF * 0.4, 0.0)
-	add_child(skirt)
+	_visual_parent().add_child(skirt)
 	var dome := SphereMesh.new()
 	dome.radius = BODY_RADIUS * 0.95
 	dome.height = BODY_RADIUS * 1.2
@@ -62,7 +62,7 @@ func _build_crew() -> void:
 	cap.mesh = dome
 	cap.material_override = _enamel()
 	cap.position = Vector3(0.0, BODY_HALF * 0.5, 0.0)
-	add_child(cap)
+	_visual_parent().add_child(cap)
 	for i in 3:
 		var angle := TAU * i / 3.0
 		var at := Vector3(cos(angle) * BODY_RADIUS * 0.75, BODY_HALF + 0.4, sin(angle) * BODY_RADIUS * 0.75)
@@ -74,7 +74,7 @@ func _build_crew() -> void:
 		stack.mesh = tube
 		stack.material_override = _enamel()
 		stack.position = at
-		add_child(stack)
+		_visual_parent().add_child(stack)
 		_stacks.append(stack)
 		_seam(Vector3(0.62, 0.06, 0.62), at + Vector3.UP * 0.62)
 	_seam(Vector3(BODY_RADIUS * 2.1, 0.07, 0.07), Vector3(0.0, 0.0, BODY_RADIUS * 0.02))

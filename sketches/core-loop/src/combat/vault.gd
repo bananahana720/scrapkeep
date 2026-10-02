@@ -34,7 +34,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	mesh.size = SIZE * 0.9
 	body.mesh = mesh
 	body.material_override = _material
-	add_child(body)
+	_visual_parent().add_child(body)
 	# Two plating bands wrap the crate; they carry the amber or slate tint.
 	var band_mat := _plate_material()
 	for y in [-0.6, 0.6]:
@@ -44,7 +44,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 		band.mesh = ring
 		band.material_override = band_mat
 		band.position = Vector3.UP * y
-		add_child(band)
+		_visual_parent().add_child(band)
 	# A lamp on a post: a cache you can spot from 100 m and roll off the line for.
 	var post := CylinderMesh.new()
 	post.top_radius = 0.12
