@@ -18,6 +18,16 @@ const HP := 110.0
 var plates := 1
 var plates_popped := 0
 var slams := 0
+# A hauler bounty's brute (world/activities.gd): it stands at bounty_home until the ball comes
+# within bounty_wake or it is hit, follows the ball while the ball is within bounty_leash of
+# home, and walks back at bounty_return_speed once the ball is further. Unset, it is an
+# ordinary brute.
+var bounty_home := Vector3.INF
+var bounty_wake := 30.0
+var bounty_leash := 40.0
+var bounty_return_speed := 9.0
+var bounty_woken := false
+var _crate: MeshInstance3D
 var _absorb := false
 var _plate: MeshInstance3D
 
@@ -120,7 +130,51 @@ static func _mask_uvs(mesh: ArrayMesh) -> ArrayMesh:
 
 
 func _wants_attack(to_ball: Vector3) -> bool:
+	if is_bounty() and (not bounty_woken or _homeward(to_ball)):
+		return false
 	return to_ball.length() <= attack_range and is_on_floor()
+
+
+func is_bounty() -> bool:
+	return bounty_home != Vector3.INF
+
+
+# Marks this brute as the bounty: the crate on its back wears the activity colour, apart from
+# its plates, so the plate cue still reads.
+func carry_bounty(home: Vector3, color: Color) -> void:
+	bounty_home = home
+	_crate = MeshInstance3D.new()
+	_crate.name = "BountyCrate"
+	var bm := BoxMesh.new()
+	bm.size = Vector3(1.4, 1.1, 1.4)
+	_crate.mesh = bm
+	_crate.material_override = Palette.solid(color, 1.6)
+	_crate.position = Vector3(0.0, 2.9, -0.5)
+	add_child(_crate)
+
+
+# The ball is out of the leash, or the brute has been walked off by it and now heads home.
+func _homeward(to_ball: Vector3) -> bool:
+	var ball := global_position + to_ball
+	var out := Vector2(ball.x - bounty_home.x, ball.z - bounty_home.z).length()
+	return out > bounty_leash
+
+
+func _roam(to_ball: Vector3) -> Vector3:
+	if not is_bounty():
+		return super(to_ball)
+	if not bounty_woken and to_ball.length() <= bounty_wake:
+		bounty_woken = true
+	if not bounty_woken:
+		return Vector3.ZERO
+	if _homeward(to_ball):
+		var back := bounty_home - global_position
+		back.y = 0.0
+		if back.length() <= 2.0:
+			bounty_woken = false
+			return Vector3.ZERO
+		return back.normalized() * bounty_return_speed
+	return super(to_ball)
 
 
 func _commit(to_ball: Vector3) -> Node3D:
@@ -141,6 +195,7 @@ func _go_live() -> void:
 
 
 func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
+	bounty_woken = true
 	if result.get("full", false) and plates > 0:
 		plates -= 1
 		plates_popped += 1

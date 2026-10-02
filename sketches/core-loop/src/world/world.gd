@@ -12,6 +12,7 @@ const TerrainEventView := preload("res://src/world/terrain_event_view.gd")
 const Bay := preload("res://src/world/bay.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Interact := preload("res://src/world/interact.gd")
+const Activities := preload("res://src/world/activities.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
@@ -51,6 +52,8 @@ var bay
 var ride
 # v3: the interact key's system and the stage's interactables (interact.gd).
 var interact
+# The map's standing activities (activities.gd).
+var activities
 # What Moss said last (the shop's result record), for the shop UI.
 var bay_bark := {}
 # The height band the ball last settled in, and each terrain swap's cost.
@@ -113,6 +116,10 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_cleared.connect(_open_pick)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
+	# After this module's own stage_entered handler, so the map is already the stage's.
+	activities = Activities.new()
+	ctx.root.add_child(activities)
+	activities.setup(ctx)
 
 
 func _setup_gorge() -> void:
@@ -389,7 +396,7 @@ func _author_director() -> void:
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
-	var alive := get_tree().get_nodes_in_group("enemy").size()
+	var alive := maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = -ctx.camera.yaw_basis().z

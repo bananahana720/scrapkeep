@@ -905,6 +905,8 @@ func wire_optional() -> void:
 		play("ambush_ended", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("fight", "won" if won else "lost"), cue_context())))
 	_listen(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
 		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
+	_listen(events, "activity_done", func(id: String, _at: Vector3):
+		play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
 	_listen(events, "synergy_discovered", _on_synergy)

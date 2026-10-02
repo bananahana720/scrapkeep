@@ -1845,3 +1845,19 @@ Round one's Sable line missed her bar (median 0.7345 against 0.8974, 12 dead sto
 - **Chose where the packet was silent.** Wall `(-45,-100)` was built on the lip and floated 21.8 m; it stands at (-64,-105). The step check walks Sable's line from waypoint 2 to the first waypoint at or past z 44 and leaves out nothing; the waypoints from the sweeper on lie at the berm's foot, where the ball climbs onto the bank by physics, so the check sees no kerb. The two heights on her strand are re-stated.
 - **Tests.** `reach_map_test`: the heights at (-62.1,-25.4) and (-58,-10) are 26.8 and 20.0 (round one: 30.7 and 28.2), the four-point marble step check is now the line step check, the marble side sweep covers the dive.
 - **Not changed or not checked.** The bot is not a person: 0.9453 says a ball can hold speed down the strand, not that it feels good. The kicker fires on 3 of 8 Sable seeds. The seeds give near-identical runs, so the median is one run's number.
+
+## Unit SA: three standing activities on the Cable Reach (wave R3, 2026-10-02)
+
+The Reach's `activity_sites` now stand as three optional activities, lit from the stage's first frame. `world/activities.gd` holds one table (`RULES`: how each starts, what finishes it, what it pays) and the node that runs them; `world/activity_view.gd` draws the amber column (70 m, readable from 150 m), the row's glyph, the ground ring and, within 30 m, the row's one word. Colour, shape and word are read through `EventKinds.ACTIVITY_ROWS`, and a new bus signal `activity_done(id, at)` (row in `ROWS`, one listener in `audio.gd`, sound `found_chime`) fires once when a site finishes.
+
+| Id | Starts | Finished when | Pays |
+| --- | --- | --- | --- |
+| `ambush_altar` | The ball is inside the 8 m ring | The chaser, chaser and lobber it spawned are all dead | A part at the altar |
+| `cracked_cache` | Nothing | A ram at `cruise` speed or better, or a slam or harpoon smash within 7 m of the face | A part on the pedestal |
+| `hauler_bounty` | The ball within 30 m, or the brute is hit | The plated brute is dead | A part where it fell |
+
+- **The pay** is a pickup, `ActivityView.gem`, that takes the ball that rolls onto it (a ball standing there when it appears does not take it) and then calls `run.add_part`. The part rolls from the uncommon and rare pool with a seeded stream (`hash([seed, run_id, stage, id])`), so `ctx.rng` is never drawn from.
+- **Sources** are `activity_ambush`, `activity_cache` and `activity_bounty`. None is in `EventKinds.CEREMONY_SOURCES`, so no ceremony pauses the game; the find still takes its rarity's tier (an uncommon is `common`, a rare flares with juice's hit-stop budget).
+- **The bounty** is a `plated_brute` with `carry_bounty` (an amber crate on its back, apart from its plates). It stands until the ball is within 30 m or it is struck, follows the ball while the ball is within 40 m of the site, and walks home at 9 m/s once the ball is further. It spawns on the stage's first physics tick (combat clears the stage's enemies in its own stage entry) and the director's cap does not count it (`World._step_director` subtracts `activities.standing()`).
+- **Once per attempt.** `stage_entered` rebuilds all three, so a retry and a new run restore them; nothing else does. Calm mode builds the sites but spawns neither the pack nor the brute.
+- **What stayed as it was.** The Spillway's three devices, `EventDirector` and every timed event, the director's pack table and the three-stage game. The cache wall is the activity's own collider (not the `cracked_wall` contraption), so Rivet's sprint wall into tunnel e1 is unchanged.
