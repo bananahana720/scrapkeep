@@ -2,6 +2,7 @@ extends Node3D
 
 const ActivityView := preload("res://src/world/activity_view.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Interact := preload("res://src/world/interact.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
 
@@ -356,7 +357,7 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 
 func _roll(id: String, rarities: Array) -> String:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([ctx.rng.seed, ctx.run.run_id, ctx.run.stage, id])
+	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, id)
 	var picks: Array = Parts.roll(rng, rarities, ctx.run.class_id(), ctx.run.parts, 1)
 	return String(picks[0]) if not picks.is_empty() else ""
 

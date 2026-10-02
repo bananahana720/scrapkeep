@@ -306,15 +306,6 @@ func start() -> void:
 		_connect_optional("tree_offered", _on_tree_offered)
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
-	# The standing activities roll their pay from the run id, whose first half is the clock's second
-	# (src/world/activities.gd _roll), so two runs of one seed in different seconds would pay different
-	# parts. The explorer is the policy that takes the pay; it pins that half to a constant and keeps
-	# the seeded draw, so it repeats exactly per seed. Other policies keep the id the run made.
-	if policy == "completionist":
-		game.run.run_id = "%d-%s" % [20260926, String(game.run.run_id).split("-")[-1]]
-		# The run log copied the id when the run began; keep its record joined to the bot's line.
-		if game.run_log != null and "_record" in game.run_log and game.run_log._record is Dictionary:
-			game.run_log._record["run_id"] = game.run.run_id
 
 
 func _on_tree_offered(_class_id: String, _depth: int, choices: Array) -> void:

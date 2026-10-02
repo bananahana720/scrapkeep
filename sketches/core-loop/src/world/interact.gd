@@ -213,8 +213,9 @@ func fired(device) -> void:
 # seed is the run's seed, the run's id, the stage and the device (luck_seed). A stage
 # restart replays the same luck, so restarting never re-rolls a result; another run
 # (another run_id; game.gd's SEED is one constant) rolls differently; the run log keeps
-# run_id, so a replay that restores it matches. ctx.rng is never touched, so a draw
-# cannot shift the gates' rolls.
+# run_id, so a replay that restores it matches. Only the id's drawn half is hashed, not its
+# clock second, so a seeded run repeats whenever it runs. ctx.rng is never touched, so a
+# draw cannot shift the gates' rolls.
 func luck(device_id: String) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, device_id)
@@ -222,4 +223,4 @@ func luck(device_id: String) -> RandomNumberGenerator:
 
 
 static func luck_seed(run_seed: int, run_id: String, stage: int, device_id: String) -> int:
-	return hash([run_seed, run_id, stage, device_id])
+	return hash([run_seed, run_id.get_slice("-", run_id.get_slice_count("-") - 1), stage, device_id])

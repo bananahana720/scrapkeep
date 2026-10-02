@@ -42,13 +42,10 @@ func _initialize() -> void:
 	_write(sidecar_manifest)
 	t.eq("sidecar found", Ace.resolve_manifest(absent, tmp), sidecar_manifest)
 
-	# Source first: an existing source path wins over a sidecar copy of the same manifest.
-	var source := tmp.path_join("source_manifest.json")
-	_write(source)
+	# Source first: the committed manifest in the source tree wins over a sidecar copy of it.
 	_write(tmp.path_join("music_ace").path_join(REL))
-	t.eq("source first", Ace.resolve_manifest(source, tmp), source)
-	if FileAccess.file_exists(ProjectSettings.globalize_path(res_path)):
-		t.eq("source tree first over sidecar", Ace.resolve_manifest(res_path, tmp), ProjectSettings.globalize_path(res_path))
+	t.check("the committed manifest is in the source tree", FileAccess.file_exists(ProjectSettings.globalize_path(res_path)), res_path)
+	t.eq("source tree first over sidecar", Ace.resolve_manifest(res_path, tmp), ProjectSettings.globalize_path(res_path))
 
 	_remove(tmp)
 	quit(t.verdict())
