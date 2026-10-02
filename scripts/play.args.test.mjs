@@ -70,3 +70,9 @@ test("a bare name with no flags forwards none", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(flagsOf(forwarded), []);
 });
+
+test("the dev flag reaches Godot for the dev keys", () => {
+  const { result, forwarded } = launch(["demo", "--dev"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(flagsOf(forwarded), ["--dev"]);
+});

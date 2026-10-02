@@ -67,11 +67,14 @@ func _process(_delta: float) -> bool:
 		_watch("ability_bar", hud.ability_bar)
 		_watch("key_glyphs", hud.key_glyphs)
 		_watch("edge_markers", hud.edge_markers)
-		# A glyph that is shown follows the ball or aim point, so it legitimately redraws
-		# as they move; retire them all to test the idle case.
-		for action in hud.key_glyphs.ACTIONS:
-			for i in 3:
-				hud.profile.add_use(action)
+		# A prompt that is shown follows the ball or aim point, so it legitimately redraws
+		# as they move; retire them all and spend their first availability to test the idle case.
+		for use in hud.key_glyphs.RETIRE_AFTER:
+			for i in hud.key_glyphs.RETIRE_AFTER[use]:
+				hud.profile.add_use(use)
+		# The first availability of a run shows a retired prompt once, so spend it too.
+		for verb in hud.key_glyphs.PROMPT_VERBS:
+			hud.key_glyphs._first[verb] = false
 	if _frame == WARM:
 		_reset()
 		_runs = hud.layout_runs

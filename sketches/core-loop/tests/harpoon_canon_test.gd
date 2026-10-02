@@ -19,6 +19,11 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   world line right mouse holds it, Ctrl winches it; the Rope Anchor knob plants from that winch
 #   ready      verb_ready is true and false at the right ticks on the ground, in the air, on a
 #              world line, on a body line, in a committed haul and in the rewind
+#   prompts    on every physics frame of that walk the verbs the HUD's key prompts draw are a subset
+#              of the verbs for which player.verb_ready is true (this reaches KeyGlyphs.view_of, the
+#              code that reads verb_ready); the harpoon is not ready mounted or planted, E is ready
+#              where it would mount, Space where it would jump, air-jump or slingshot
+#   ctrl       a Ctrl press on a world line and on a body line neither brakes nor slams
 # Evidence limit: rules through real contacts from placed starts and a fixed camera, not a
 # player's run; how the states look and sound is the next unit's.
 
@@ -39,6 +44,11 @@ var _fails: Array = []
 var _seen := {}
 var _counts := {"sprint_started": 0, "blink_used": 0, "boosted": 0}
 var _wall: StaticBody3D = null
+var _audit := false
+var _audit_frames := 0
+var _audit_drawn := 0
+var _audit_last: Array = []
+var _audit_bad: Array = []
 
 
 func _check(label: String, ok: bool, detail: String) -> void:
@@ -57,6 +67,25 @@ func _initialize() -> void:
 func _sim(seconds: float) -> void:
 	for i in roundi(seconds * Engine.physics_ticks_per_second):
 		await physics_frame
+		if _audit:
+			_audit_tick()
+
+
+# Every prompt the HUD draws must be one the player says would work. A violation counts only
+# when the same verb is drawn unready on two frames running, so the one tick the ball and the
+# prompt can disagree by does not trip it.
+func _audit_tick() -> void:
+	var drawn: Array = _game.hud.key_glyphs.shown_verbs()
+	var wrong: Array = []
+	for verb in drawn:
+		if not _player.verb_ready(verb):
+			wrong.append(verb)
+	_audit_frames += 1
+	_audit_drawn += drawn.size()
+	for verb in wrong:
+		if verb in _audit_last and not verb in _audit_bad:
+			_audit_bad.append(verb)
+	_audit_last = wrong
 
 
 func _never() -> bool:
@@ -195,6 +224,8 @@ func _run() -> void:
 		await _world_line(name)
 		await _shift(name)
 		await _ready_walk(name)
+		await _ctrl_on_lines(name)
+	await _prompt_verbs()
 	await _rope_anchor()
 	await _death_cuts()
 	_all_rows()
@@ -597,6 +628,13 @@ func _shift(name: String) -> void:
 func _ready_walk(name: String) -> void:
 	var kit = _player.kit
 	_pilot(name)
+	_game.hud.profile.glyph_uses = {}
+	_game.hud.key_glyphs.new_run()
+	_audit = true
+	_audit_frames = 0
+	_audit_drawn = 0
+	_audit_bad = []
+	_audit_last = []
 	var chaser := _spawn("chaser", _point(0, -22, 1.5))
 	await _sim(0.1)
 	var ground := _point(0, 0, 1.4)
@@ -668,6 +706,104 @@ func _ready_walk(name: String) -> void:
 	if is_instance_valid(chaser):
 		chaser.queue_free()
 	await _sim(0.1)
+	_audit = false
+	_check("%s: every prompt drawn over the walk is one verb_ready answers" % name, _audit_bad.is_empty() and _audit_drawn > 0,
+		"%d frames, %d prompts drawn, drawn while not ready %s" % [_audit_frames, _audit_drawn, _audit_bad])
+
+
+# Ctrl on a standing line: it is the smash or the winch, never the brake or the slam. The brake
+# is the intent field the ball reads, so a Ctrl that braked would leave brake_held true.
+func _ctrl_on_lines(name: String) -> void:
+	var kit = _player.kit
+	_pilot(name)
+	var chaser := _spawn("chaser", _point(0, -22, 1.5))
+	await _sim(0.1)
+	var high := _point(0, 0, 8.0)
+	_place(high)
+	_look(high, chaser.global_position)
+	await _sim(0.05)
+	_player.grapple_to(chaser.global_position, Vector3.UP, chaser)
+	_source.hold = {"harpoon_held": true, "brake_held": true}
+	var braked := false
+	var slammed := false
+	for tick in 20:
+		await physics_frame
+		braked = braked or _player.intent.brake_held
+		slammed = slammed or kit.slamming or kit.plant_time > 0.0
+	_check("%s: Ctrl on a body line neither brakes nor slams" % name, kit.on_body and not braked and not slammed,
+		"on body %s, braked %s, slammed %s" % [kit.on_body, braked, slammed])
+	_source.hold = {}
+	_player.release_grapple()
+	if is_instance_valid(chaser):
+		chaser.queue_free()
+	var ball := _point(0, 0, 24.0)
+	_wall_at(ball, 28.0)
+	await _sim(0.1)
+	_place(ball)
+	_look(ball, _wall.global_position)
+	await _sim(0.05)
+	_player.grapple_to(_wall.global_position + Vector3(0, 0, 0.6), Vector3(0, 0, 1), null)
+	_source.hold = {"harpoon_held": true, "brake_held": true}
+	braked = false
+	slammed = false
+	for tick in 20:
+		await physics_frame
+		braked = braked or _player.intent.brake_held
+		slammed = slammed or kit.slamming or kit.plant_time > 0.0
+	_check("%s: Ctrl on a world line neither brakes nor slams" % name, kit.hooked and not kit.on_body and not braked and not slammed,
+		"hooked %s, braked %s, slammed %s" % [kit.hooked, braked, slammed])
+	_source.hold = {}
+	_player.release_grapple()
+	_drop_wall()
+	await _sim(0.2)
+
+
+# E, Space and the harpoon where they would and would not work: Sable at a steep face, mounted,
+# on the ground, in the air with and without an air action left; Rivet at the same face.
+func _prompt_verbs() -> void:
+	var kit = _player.kit
+	_pilot("sable")
+	_game.hud.profile.glyph_uses = {}
+	_game.hud.key_glyphs.new_run()
+	var ball := _point(0, 0, 24.0)
+	_wall_at(ball, 2.4)
+	await _sim(0.1)
+	_place(ball)
+	_look(ball, _wall.global_position)
+	_audit = true
+	_audit_frames = 0
+	_audit_drawn = 0
+	_audit_bad = []
+	_audit_last = []
+	await _sim(0.1)
+	_check("sable: E is ready at a steep face and Space is not a prompt unmounted", _player.verb_ready("interact") and not _game.hud.key_glyphs.shown_verbs().has("jump"),
+		"interact %s, drawn %s" % [_player.verb_ready("interact"), _game.hud.key_glyphs.shown_verbs()])
+	_check("sable: the mount prompt is drawn at the face", _game.hud.key_glyphs.shown_verbs().has("interact"), "drawn %s" % [_game.hud.key_glyphs.shown_verbs()])
+	_player.state.air_actions = 0
+	_player.state.grounded = false
+	_player.state.coyote = 0.0
+	_check("sable: Space is not ready in the air with no air action", not _player.verb_ready("jump"), "verb_ready(jump) %s" % _player.verb_ready("jump"))
+	_player.state.air_actions = 1
+	_check("sable: Space is ready for an air jump", _player.verb_ready("jump"), "verb_ready(jump) %s" % _player.verb_ready("jump"))
+	_source.press = {"mount_pressed": true}
+	await _sim(0.15)
+	var mounted: bool = kit.mounted
+	_check("sable: mounted, the harpoon is not ready, Space is the slingshot and E drops off",
+		mounted and not _player.verb_ready("harpoon") and _player.verb_ready("jump") and not _player.verb_ready("interact") and not _player.verb_ready("boost"),
+		"mounted %s, harpoon %s, jump %s, interact %s, boost %s" % [mounted, _player.verb_ready("harpoon"), _player.verb_ready("jump"), _player.verb_ready("interact"), _player.verb_ready("boost")])
+	_check("sable: mounted, only the slingshot prompt is drawn", _game.hud.key_glyphs.shown_verbs() == ["jump"], "drawn %s" % [_game.hud.key_glyphs.shown_verbs()])
+	_source.press = {"mount_pressed": true}
+	await _sim(0.3)
+	_audit = false
+	_check("sable: every prompt drawn at the face and mounted is one verb_ready answers", _audit_bad.is_empty() and _audit_drawn > 0,
+		"%d frames, %d prompts drawn, drawn while not ready %s" % [_audit_frames, _audit_drawn, _audit_bad])
+	_player.release_grapple()
+	_pilot("rivet")
+	_place(ball)
+	await _sim(0.1)
+	_check("rivet: E is not ready at the same face, there is no pylon", not _player.verb_ready("interact"), "verb_ready(interact) %s" % _player.verb_ready("interact"))
+	_drop_wall()
+	await _sim(0.2)
 
 
 # Sable's Rope Anchor knob (winch_mount): winching a world line up to a wall with Ctrl plants the

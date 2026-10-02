@@ -5,12 +5,18 @@ extends RefCounted
 # slots() publishes the bar in W1's ability-slot shape, so the HUD, the rules and the
 # tests read one record.
 
+const Bindings := preload("res://src/core/bindings.gd")
+
 const WEAPON := "weapon"
 const MOVEMENT := "movement"
 const SPECIAL := "special"
 const SMASH := "smash"
 const SLOTS := [WEAPON, MOVEMENT, SPECIAL, SMASH]
-const KEYS := {WEAPON: "LMB", MOVEMENT: "RMB", SPECIAL: "F", SMASH: "Ctrl"}
+# The key each slot reads, from the bindings table: the weapon is fire, the movement slot the
+# harpoon (a pilot whose movement is not the line reads its own go key, player_ball sets that),
+# the special and the smash the special and the haul.
+static var KEYS := {WEAPON: Bindings.label("fire"), MOVEMENT: Bindings.label("harpoon"),
+	SPECIAL: Bindings.label("special"), SMASH: Bindings.label("haul")}
 
 const READY := "ready"
 const COOLING := "cooling"
@@ -132,7 +138,7 @@ class Slot:
 
 # The key the movement slot shows: RMB, or under --harpoon Shift or C for a pilot whose
 # movement is not the rope (player_ball sets it).
-var movement_key := KEYS[MOVEMENT]
+var movement_key: String = KEYS[MOVEMENT]
 var _slots := {}
 
 

@@ -1,29 +1,52 @@
 extends Control
 
+const AbilityState := preload("res://src/core/ability_state.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Augments := preload("res://src/movement/augments.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# Contextual key glyphs: a keycap beside the ball or the grapple target, shown only
-# while its action is available right now, and retired for good once the action has
-# succeeded RETIRE_AFTER times on this profile (ui_profile.gd). The Tab field notes keep
-# the full key list for anyone who wants it back.
+# The prompt (design-v3/LEGIBILITY.md sections 2, 3 and 5): a sand keycap about 28 px tall plus
+# the verb's icon in the live colour, drawn at the thing the verb acts on and only on ticks
+# where pressing the key would succeed (player.verb_ready). The keys come from the bindings
+# table. At most two show at once, the verb in the higher ball state first. A prompt retires
+# after RETIRE_AFTER successes on the profile (ui_profile.gd), five for the smash, and comes
+# back after a failed press, after IDLE_RETURN seconds unused in a run, and at its first
+# availability in each run. Each return lasts at most FAIL_RETURN seconds of ticks on which
+# the verb is ready, then the prompt retires again. HOOK rides the harpoon prompt until the
+# first bite on the profile and SMASH the haul prompt on a body until the first smash. The
+# haul prompt waits for the line to stand LINE_STAND seconds without a Ctrl press and wears
+# the reel glyph on a world line, the smash glyph on a body. Sable's E (mount) and Space
+# (slingshot, only while mounted) come through the same table. The brake has no prompt.
+# Tab's field notes keep the full key list.
 
-const RETIRE_AFTER := 3
-const KEY_H := 24.0
-# action: the key it asks for, the ability icon beside it, and what it sits next to.
-const ACTIONS := {
-	"mount": {"key": "key_e", "icon": "ab_sable_mount", "anchor": "ball"},
-	"grapple": {"key": "key_rmb", "icon": "ab_sable_move", "anchor": "aim"},
-	"slingshot": {"key": "key_space", "icon": "ab_sable_vault", "anchor": "ball"},
-}
+const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost"]
+const BALL_VERBS := ["boost", "interact", "jump"]
+const MAX_PROMPTS := 2
+const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3}
+const LINE_STAND := 1.5
+const FAIL_RETURN := 3.0
+const IDLE_RETURN := 90.0
+const KEY_H := 28.0
 const BALL_OFFSET := Vector2(52.0, -34.0)
 const AIM_OFFSET := Vector2(34.0, 24.0)
+const STACK := 36.0
+const WORD_SIZE := 16
 
 var game
 var profile
-var available := {}
+# The prompts drawn this tick, in draw order: [{verb, state, word}].
+var shown: Array = []
+var _forced := {}
+var _unused := {}
+var _revived := {}
+var _first := {}
+var _free := {}
+var _stood := 0.0
+var _winch_held := false
+var _line := ""
+var _points := {}
 var _placed: Array = []
 
 
@@ -32,28 +55,170 @@ func setup(game_ref, profile_ref) -> void:
 	profile = profile_ref
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	game.events.grapple_fired.connect(func(_anchor: Vector3): record_use("grapple"))
-	game.events.mounted.connect(func(_at: Vector3, _banked: float): record_use("mount"))
+	new_run()
+	game.events.run_started.connect(func(_class_id: String): new_run())
+	game.events.line_state_changed.connect(_on_line_state)
+	game.events.verb_failed.connect(func(verb: String, _reason: String, _at: Vector3): returned(verb))
+	game.events.boosted.connect(func(_direction: Vector3): record_use("boost"))
+	game.events.sprint_started.connect(func(_direction: Vector3): record_use("boost"))
+	game.events.blink_used.connect(func(_from: Vector3, _to: Vector3): record_use("boost"))
+	game.events.mounted.connect(func(_at: Vector3, _banked: float): record_use("interact"))
 	game.events.dismounted.connect(func(velocity: Vector3):
 		if velocity.length() > 0.1:
-			record_use("slingshot"))
+			record_use("jump"))
 
 
-func record_use(action: String) -> void:
-	if game.flow.in_play():
-		profile.add_use(action)
+# A new run: every prompt is owed its first availability, and nothing is overdue.
+func new_run() -> void:
+	for verb in PROMPT_VERBS:
+		_forced[verb] = 0.0
+		_unused[verb] = 0.0
+		_revived[verb] = false
+		_first[verb] = true
+		_free[verb] = 0.0
+	_stood = 0.0
+	_winch_held = false
+	shown = []
 
 
-func retired(action: String) -> bool:
-	return profile.uses(action) >= RETIRE_AFTER
+func _on_line_state(state: String, _target, _at: Vector3, _cause: String) -> void:
+	match state:
+		"latched_world", "latched_body":
+			record_use("harpoon")
+		"smash_committed":
+			record_use("smash")
 
 
-# The actions whose glyph shows for this availability, in ACTIONS order.
-func shown(avail: Dictionary) -> Array[String]:
+# The verb whose prompt a profile use feeds: a smash is the haul's.
+static func verb_of_use(use: String) -> String:
+	return "haul" if use == "smash" else use
+
+
+func record_use(use: String) -> void:
+	if not game.flow.in_play():
+		return
+	profile.add_use(use)
+	var verb := verb_of_use(use)
+	_unused[verb] = 0.0
+	_revived[verb] = false
+	_first[verb] = false
+	_free[verb] = 0.0
+	if verb == "haul":
+		_stood = 0.0
+
+
+# A failed press brings its prompt back for FAIL_RETURN seconds of ready ticks; a failed Ctrl
+# also restarts the haul prompt's wait.
+func returned(verb: String) -> void:
+	if verb in PROMPT_VERBS:
+		_forced[verb] = FAIL_RETURN
+	if verb == "haul":
+		_stood = 0.0
+
+
+func use_key(verb: String, line: String) -> String:
+	return "smash" if verb == "haul" and line == "body" else verb
+
+
+func retired(verb: String, line := "") -> bool:
+	var use := use_key(verb, line)
+	return profile.uses(use) >= RETIRE_AFTER[use]
+
+
+# The icon on a prompt: the haul wears the reel on a world line and the smash on a body.
+func icon_of(verb: String, line: String) -> String:
+	if verb == "haul" and line == "world":
+		return Icons.REEL
+	return Bindings.icon(verb)
+
+
+# The word riding a prompt: HOOK until the first bite on the profile, SMASH until the first smash.
+func word_for(verb: String, line: String) -> String:
+	if verb == "harpoon" and profile.uses("harpoon") == 0:
+		return EventKinds.LINE_ROWS["locked"]["word"]
+	if verb == "haul" and line == "body" and profile.uses("smash") == 0:
+		return EventKinds.LINE_ROWS["latched_body"]["word"]
+	return ""
+
+
+# What the prompts need to know of the ball this tick, read off the player.
+static func view_of(player) -> Dictionary:
+	var kit = player.kit
+	var special = player.abilities.gauge(AbilityState.SPECIAL)
+	var ready := {}
+	for verb in PROMPT_VERBS:
+		ready[verb] = player.verb_ready(verb)
+	var claim: Callable = player.interact_claim
+	var taken: bool = claim.is_valid() and claim.call(true) and not player.mobility_started()
+	ready["interact"] = ready["interact"] and not taken
+	ready["jump"] = ready["jump"] and kit.mounted
+	return {
+		"ready": ready,
+		"line": "" if not kit.hooked else ("body" if kit.on_body else "world"),
+		"charging": (special != null and special.charging) or kit.slingshot.charging,
+		"mounted": kit.mounted,
+		"airborne": not player.state.grounded,
+		"winching": kit.winching,
+		"points": {"harpoon": kit.aim.get("point", Vector3.INF), "haul": kit.anchor, "boost": player.shown_position(),
+			"interact": player.shown_position(), "jump": player.shown_position()},
+	}
+
+
+func _state_of(verb: String, view: Dictionary) -> String:
+	if verb == "haul":
+		return Bindings.ball_state(view["line"], false, false, false)
+	return Bindings.ball_state("", view["charging"], view["mounted"], view["airborne"])
+
+
+# One tick of the prompt rules over `view`; fills `shown`.
+func step(delta: float, view: Dictionary) -> void:
+	for verb in PROMPT_VERBS:
+		_unused[verb] += delta
+		if _unused[verb] >= IDLE_RETURN:
+			_revived[verb] = true
+	var ready: Dictionary = view["ready"]
+	for verb in PROMPT_VERBS:
+		if ready[verb]:
+			_forced[verb] = maxf(0.0, _forced[verb] - delta)
+	var line: String = view["line"]
+	if view["winching"] and not _winch_held:
+		record_use("haul")
+	_winch_held = view["winching"]
+	if line == "" or view["winching"]:
+		_stood = 0.0
+	elif ready["haul"]:
+		_stood += delta
+	_points = view["points"]
+	_line = line
+	var candidates: Array = []
+	for verb in PROMPT_VERBS:
+		var open: bool = ready[verb] and (verb != "haul" or _stood >= LINE_STAND)
+		if not open:
+			continue
+		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line):
+			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var ra: int = Bindings.STATES.find(a["state"])
+		var rb: int = Bindings.STATES.find(b["state"])
+		if ra != rb:
+			return ra < rb
+		return PROMPT_VERBS.find(a["verb"]) < PROMPT_VERBS.find(b["verb"]))
+	shown = candidates.slice(0, MAX_PROMPTS)
+	for prompt in shown:
+		var verb: String = prompt["verb"]
+		if _first[verb] or _revived[verb]:
+			_free[verb] += delta
+			if _free[verb] >= FAIL_RETURN:
+				_first[verb] = false
+				_revived[verb] = false
+				_free[verb] = 0.0
+				_unused[verb] = 0.0
+
+
+func shown_verbs() -> Array[String]:
 	var out: Array[String] = []
-	for action in ACTIONS:
-		if avail.get(action, false) and not retired(action):
-			out.append(action)
+	for prompt in shown:
+		out.append(prompt["verb"])
 	return out
 
 
@@ -61,41 +226,40 @@ func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()
 	if not visible:
 		return out
-	for action in shown(available):
-		out.append_array(Keycap.words(ACTIONS[action]["key"]))
+	for prompt in shown:
+		out.append_array(Keycap.words(Bindings.glyph(prompt["verb"])))
+		if prompt["word"] != "":
+			out.append(prompt["word"])
 	return out
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if game == null:
 		return
-	available = {}
 	if not game.flow.in_play():
+		shown = []
 		return
-	var kit = game.player.kit
-	available["slingshot"] = kit.mounted
-	available["grapple"] = kit.on(Augments.GRAPPLE) and not kit.hooked and not kit.mounted \
-		and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE
-	# E is interact first (LOOP-REDESIGN section 9): the pylon glyph shows only when E
-	# would mount, never beside an interactable's own keycap.
-	var claim: Callable = game.player.interact_claim
-	available["mount"] = kit.on(Augments.PYLON) and not kit.mounted and kit.mount_block <= 0.0 and game.player.face_in_reach() \
-		and (game.player.mobility_started() or not (claim.is_valid() and claim.call(true)))
+	step(delta, view_of(game.player))
 
 
-# Where each shown glyph sits on screen: [{action, at}]. Redraw only when it changes.
+# Where each shown prompt sits on screen: [{verb, at, word}]. Redraw only when it changes.
 func _placements() -> Array:
 	var out := []
 	if game == null or not game.flow.in_play():
 		return out
 	var cam: Camera3D = game.camera.cam
-	for action in shown(available):
-		var spec: Dictionary = ACTIONS[action]
-		var world: Vector3 = game.player.shown_position() if spec["anchor"] == "ball" else game.player.kit.aim.get("point", Vector3.INF)
+	var stacked := 0
+	for prompt in shown:
+		var world: Vector3 = _points.get(prompt["verb"], Vector3.INF)
 		if world == Vector3.INF or cam.is_position_behind(world):
 			continue
-		var offset: Vector2 = BALL_OFFSET if spec["anchor"] == "ball" else AIM_OFFSET
-		out.append({"action": action, "at": cam.unproject_position(world) + offset})
+		var at := cam.unproject_position(world).round()
+		if prompt["verb"] in BALL_VERBS:
+			at += BALL_OFFSET + Vector2(0.0, STACK * stacked)
+			stacked += 1
+		else:
+			at += AIM_OFFSET
+		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"], "icon": icon_of(prompt["verb"], _line)})
 	return out
 
 
@@ -107,10 +271,20 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	var color: Color = EventKinds.UI_ROWS["key_glyph"]["color"]
+	var cap_color: Color = EventKinds.UI_ROWS["key_glyph"]["color"]
+	var live := EventKinds.role_color("live")
 	for placed in _placed:
-		var spec: Dictionary = ACTIONS[placed["action"]]
+		var verb: String = placed["verb"]
 		var at: Vector2 = placed["at"]
-		var cap := Keycap.draw(self, at, spec["key"], color, KEY_H)
-		var icon := Rect2(Vector2(cap.end.x + 5.0, at.y - KEY_H * 0.45), Vector2(KEY_H * 0.9, KEY_H * 0.9))
-		draw_texture_rect(Icons.texture(spec["icon"]), icon, false, Icons.tint(spec["icon"], color))
+		var cap := Keycap.draw(self, at, Bindings.glyph(verb), cap_color, KEY_H)
+		var icon_id: String = placed["icon"]
+		var edge := cap.end.x + 5.0
+		if icon_id != "":
+			var icon := Rect2(Vector2(edge, at.y - KEY_H * 0.45), Vector2(KEY_H * 0.9, KEY_H * 0.9))
+			draw_texture_rect(Icons.texture(icon_id), icon, false, Icons.tint(icon_id, live))
+			edge = icon.end.x + 5.0
+		var word: String = placed["word"]
+		if word != "":
+			var font := UiFonts.bold()
+			draw_string(font, Vector2(edge, at.y + (font.get_ascent(WORD_SIZE) - font.get_descent(WORD_SIZE)) * 0.5), word,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, WORD_SIZE, live)

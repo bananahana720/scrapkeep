@@ -37,6 +37,10 @@ const IDS := {
 # new ability or class shows something before the contract and the SVG catch up.
 const PREFIX_FALLBACK := {"ab_": "ring_dot", "cls_": "diamond", "key_": "square", "cat_": "diamond", "el_": "disc",
 	"trg_": "square", "thr_": "triangle", "obj_": "square", "res_": "disc", "fac_": "diamond"}
+# Prompt pictures outside the 70 canonical ids: they draw a glyph but are not registry ids.
+const REEL := "ab_sable_reel"
+const EXTRA := {"ab_sable_reel": "reel"}
+
 # The event_kinds shapes as glyphs. These are drawn, never files: a toast wears its
 # row's silhouette (shape()).
 const SHAPES := {"ring": "ring", "diamond": "diamond", "square": "square", "chevron": "chevron", "arrow": "arrow",
@@ -86,6 +90,8 @@ static func ids() -> Array[String]:
 static func glyph_of(id: String) -> String:
 	if IDS.has(id):
 		return IDS[id]
+	if EXTRA.has(id):
+		return EXTRA[id]
 	for prefix in PREFIX_FALLBACK:
 		if id.begins_with(prefix):
 			return PREFIX_FALLBACK[prefix]
@@ -193,6 +199,8 @@ static func distance(glyph: String, p: Vector2) -> float:
 			return minf(_box(p, Vector2(0.0, -0.3), Vector2(0.12, 0.55)), p.distance_to(Vector2(0.0, 0.35)) - 0.3)
 		"wing":
 			return minf(_seg(p, Vector2(-0.85, -0.1), Vector2(0.0, 0.3), 0.1), _seg(p, Vector2(0.0, 0.3), Vector2(0.85, -0.1), 0.1))
+		"reel":
+			return minf(_ring(p, Vector2(-0.1, 0.2), 0.45, 0.12), _seg(p, Vector2(0.35, 0.2), Vector2(0.35, -0.8), 0.1))
 		"smash":
 			var shaft := _seg(p, Vector2(0.0, 0.8), Vector2(0.0, -0.2), 0.13)
 			var head := _chevron(Vector2(p.x, -(p.y + 0.15)))

@@ -497,12 +497,28 @@ func _fail(verb: String, reason: String) -> void:
 
 
 # Whether pressing the verb would succeed on this tick: "harpoon" bites, "haul" commits a
-# smash or winches, "boost" is Shift's verb for this pilot.
+# smash or winches, "boost" is Shift's verb for this pilot, "interact" is E where it would mount
+# the pylon or an interactable would take the press, "jump" is Space where it would jump,
+# air-jump or launch the slingshot.
 func verb_ready(verb: String) -> bool:
 	match verb:
 		"harpoon":
 			return not _frozen and kit.on(Augments.GRAPPLE) and not kit.hooked and not _charging() \
-					and _harpoon_refusal() == ""
+					and not Augments.holding(kit) and _harpoon_refusal() == ""
+		"interact":
+			if _frozen or kit.mounted:
+				return false
+			var taken: bool = interact_claim.is_valid() and interact_claim.call(kit.on(Augments.PYLON) and face_in_reach()) \
+					and not mobility_started()
+			var would_mount: bool = kit.on(Augments.PYLON) and kit.mount_block <= 0.0 and face_in_reach() \
+					and (mobility_started() or not (interact_claim.is_valid() and interact_claim.call(true)))
+			return taken or would_mount
+		"jump":
+			if _frozen:
+				return false
+			if kit.mounted:
+				return true
+			return not Augments.holding(kit) and (state.grounded or state.coyote > 0.0 or state.air_actions > 0)
 		"haul":
 			return not _frozen and not Augments.holding(kit) and kit.hooked \
 					and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)

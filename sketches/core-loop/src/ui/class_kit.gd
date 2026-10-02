@@ -2,11 +2,12 @@ extends RefCounted
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 
 # What a pilot offers, read off its class row: the ability id in each slot names the
-# icon (ability_state.gd), the slot names the key, and the movement row's augments name
-# the extra keys. The class card and the controls diagram both read this, so a pilot's
-# keys look and read the same on the pick and on the Tab page. Only the words, the
+# icon (ability_state.gd), the slot names the verb whose key the bindings table holds, and
+# the movement row's augments name the extra keys. The class card and the controls diagram
+# both read this, so a pilot's keys look and read the same on the pick and on the Tab page. Only the words, the
 # fantasy line and the difficulty are written here; colour and shape stay on the row.
 
 # Two words per ability, so one table serves the card (2 to 3 words) and the diagram
@@ -29,14 +30,16 @@ const WORDS := {
 	"demo_slam": "demo slam",
 }
 
-# Keys a movement kit adds, by the augment or flag that grants them. `card` marks the
-# Space extras the class card shows beside the four slots.
+# Keys a movement kit adds, by the augment or flag that grants them: the verb whose table key
+# it rides. `card` marks the Space extras the class card shows beside the four slots.
 const EXTRAS := {
-	"vault": {"key": "key_space", "icon": "ab_sable_vault", "words": "vault kick", "card": true},
-	"glide": {"key": "key_space", "icon": "ab_kest_glide", "words": "glide + rocket", "card": true},
-	"pylon": {"key": "key_e", "icon": "ab_sable_mount", "words": "wall mount", "card": false},
-	"grapple": {"key": "key_q", "icon": "ab_sable_move", "words": "winch", "card": false},
+	"vault": {"verb": "jump", "icon": "ab_sable_vault", "words": "vault kick", "card": true},
+	"glide": {"verb": "jump", "icon": "ab_kest_glide", "words": "glide + rocket", "card": true},
+	"pylon": {"verb": "interact", "icon": "ab_sable_mount", "words": "wall mount", "card": false},
 }
+# The verb each slot's key comes from. The movement slot is the harpoon for the pilot whose
+# movement is the line, and the pilot's go verb (Shift) for the others.
+const SLOT_VERBS := {"weapon": "fire", "special": "special", "smash": "haul"}
 
 # DESIGN-V2 section 2's Fantasy row, cut to fit a card.
 const FANTASY := {
@@ -62,15 +65,22 @@ static func keys(def) -> Array[Dictionary]:
 		var row: Dictionary = AbilityState.ABILITIES.get(ability, {})
 		out.append({"slot": slot, "ability": ability,
 			"icon": row.get("icon", "ab_%s_%s" % [AbilitySlots.pilot_of(def), AbilitySlots.ROLES[slot]]),
-			"key": "key_" + String(AbilityState.KEYS[slot]).to_lower(),
+			"key": Bindings.glyph(slot_verb(slot, def)),
 			"words": WORDS.get(ability, ability.replace("_", " ")), "card": true})
 	var movement: Dictionary = AbilityState.ABILITIES.get(String(def.movement_id), {})
 	for grant in movement.get("augments", []):
 		if EXTRAS.has(grant):
 			var extra: Dictionary = EXTRAS[grant]
-			out.append({"slot": "extra", "ability": grant, "icon": extra["icon"], "key": extra["key"],
+			out.append({"slot": "extra", "ability": grant, "icon": extra["icon"], "key": Bindings.glyph(extra["verb"]),
 				"words": extra["words"], "card": extra["card"]})
 	return out
+
+
+static func slot_verb(slot: String, def) -> String:
+	if slot != AbilityState.MOVEMENT:
+		return SLOT_VERBS[slot]
+	var movement: Dictionary = AbilityState.ABILITIES.get(String(def.movement_id), {})
+	return "harpoon" if "grapple" in movement.get("augments", []) else "boost"
 
 
 static func card_keys(def) -> Array[Dictionary]:

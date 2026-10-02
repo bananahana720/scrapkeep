@@ -4,10 +4,10 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 
-# Contextual key glyphs retire after three successful uses, and stay retired:
-#   - a fresh profile shows the grapple glyph whenever the grapple is available;
-#   - three hooks later it never shows again, while the untouched mount glyph still does;
-#   - an E drop off the pylon is not a slingshot, a slingshot is;
+# The prompts are a game-level wiring check (the rules themselves are tests/unit/prompt_rules_case.gd):
+#   - a fresh profile shows the harpoon prompt on a tick the harpoon is ready, with the word HOOK;
+#   - three bites later it is gone, while a verb never used still shows;
+#   - a committed smash counts a smash and a boost counts a boost, a drop off the pylon counts nothing;
 #   - a new profile read from the same file keeps the count, so a restart remembers.
 
 var _game
@@ -42,23 +42,34 @@ func _physics_process(_delta: float) -> bool:
 	if _wait < 3:
 		return false
 	var glyphs = _game.hud.key_glyphs
-	var fresh: Array = glyphs.shown({"grapple": true, "mount": true})
+	var ready := {"harpoon": true, "haul": false, "boost": true, "interact": false, "jump": false}
+	var view := {"ready": ready, "line": "", "charging": false, "mounted": false, "airborne": false, "winching": false,
+		"points": {"harpoon": Vector3.ONE, "haul": Vector3.ONE, "boost": Vector3.ONE, "interact": Vector3.ONE, "jump": Vector3.ONE}}
+	glyphs.new_run()
+	glyphs.step(0.016, view)
+	var fresh: Array = glyphs.shown_verbs()
+	var words: Array = Array(glyphs.drawn_words())
 	for i in 3:
-		_game.events.grapple_fired.emit(Vector3.ZERO)
-	var after: Array = glyphs.shown({"grapple": true, "mount": true})
-	_report("grapple retires", fresh == ["mount", "grapple"] and after == ["mount"] and glyphs.retired("grapple"),
-		"fresh profile shows %s; after 3 hooks it shows %s" % [fresh, after])
+		_game.events.line_state_changed.emit("latched_world", null, Vector3.ZERO, "")
+	glyphs.step(0.016, {"ready": {"harpoon": false, "haul": false, "boost": false, "interact": false, "jump": false}, "line": "", "charging": false, "mounted": false,
+		"airborne": false, "winching": false, "points": view["points"]})
+	glyphs.step(0.016, view)
+	var after: Array = glyphs.shown_verbs()
+	_report("harpoon retires", fresh == ["harpoon", "boost"] and "HOOK" in words and after == ["boost"] and glyphs.retired("harpoon"),
+		"fresh profile shows %s with %s; after 3 bites it shows %s" % [fresh, words, after])
 
-	_game.events.dismounted.emit(Vector3.ZERO)
-	var dropped: int = _game.hud.profile.uses("slingshot")
+	_game.events.line_state_changed.emit("smash_committed", null, Vector3.ZERO, "")
+	_game.events.boosted.emit(Vector3.ZERO)
+	_game.events.mounted.emit(Vector3.ZERO, 5.0)
 	_game.events.dismounted.emit(Vector3(0.0, 4.0, 9.0))
-	var slung: int = _game.hud.profile.uses("slingshot")
-	_report("slingshot counts only a slingshot", dropped == 0 and slung == 1,
-		"an E drop counted %d, a slingshot then counted %d" % [dropped, slung])
+	_game.events.dismounted.emit(Vector3.ZERO)
+	var profile = _game.hud.profile
+	_report("successes are counted per verb", profile.uses("smash") == 1 and profile.uses("boost") == 1 and profile.uses("interact") == 1 and profile.uses("jump") == 1,
+		"smash %d, boost %d, interact %d, slingshot (jump) %d" % [profile.uses("smash"), profile.uses("boost"), profile.uses("interact"), profile.uses("jump")])
 
 	var reread := UiProfile.new(_game.storage_dir)
-	_report("persisted", reread.uses("grapple") == 3 and reread.uses("mount") == 0 and reread.path.begins_with(_game.storage_dir),
-		"a profile read back from %s holds grapple %d, mount %d" % [reread.path, reread.uses("grapple"), reread.uses("mount")])
+	_report("persisted", reread.uses("harpoon") == 3 and reread.uses("smash") == 1 and reread.path.begins_with(_game.storage_dir),
+		"a profile read back from %s holds harpoon %d, smash %d" % [reread.path, reread.uses("harpoon"), reread.uses("smash")])
 	print("ui_key_glyph_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 	return true
