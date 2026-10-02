@@ -176,7 +176,7 @@ One owner per file within a wave. Every fence includes the tests that pin what t
 | HL, merged after C2 | The latch as a loud, persistent object | `line_view.gd`, `aim_reticle.gd`, `aim_style.gd`, `audio.gd`, `sfx_bank.gd` | The cable is at least 5 px wide at 45 m, computed. Lock and latch rows differ in motion. Bite, clunk and dry tick are three sound ids. Three stills for his glance. Two or three sketches of each motif as WAV files for his ear. |
 | WY | Cause and effect where a synergy fires | `synergies.gd`, `build.gd`, `why_callout.gd`, `codex_banner.gd`, `vfx.gd`, `accretion.gd`, `build_sheet.gd` | Five live rows. Each firing emits `cause_fired` at the struck body. No banner at pickup. A row with no emitter fails. |
 | TM | The traversal number, its baseline, the bots, the run-log fields | `tools/traversal_line.gd`, `tools/traversal_lines.json`, `tools/bot_driver.gd` (brawler, camper, skipper), `run_log.gd` | A baseline for three pilots on today's Reach with its commit. The rate limit is asserted. The dead-stop detector passes on synthetic traces. |
-| S1 | The Cable Reach becomes slot 1 | `terrain.gd` map order, the `stage_defs.gd` rows, the tests that assume Spillway is first | One discovery run after the move, a triage table for every failure, named reruns. |
+| ST, replaces S1, runs beside G1 | A stage table chosen when the game is built, and a one-stage slice table: the Cable Reach as stage 1 with slot-1 numbers and no boss | `stage_defs.gd`, `slice_defs.gd` (new), `context.gd`, the context build in `game.gd`, the table reads in `flow.gd`, `terrain.gd`, `world.gd`, `combat.gd`, `hud.gd`, `screens.gd` | A game on the slice table plays the Reach first and ends won at its gate. A game with no table chosen is unchanged, and no existing test is edited. |
 
 ### Between the waves
 
@@ -238,7 +238,7 @@ Each is worded so he can veto it.
 | Six kinds feel thin after he praised the fuller mechanics | The bola card on the read sheet |
 | Prompts nag | Prompts shown per minute in the run log. Aim for six or fewer after minute three. |
 | The flow-share bar measures a bot | His own flow share at the sitting |
-| Moving the Reach to slot 1 breaks more tests than expected | S1's discovery run. Fallback: a one-row slice table chosen by the sitting's launch. |
+| The slice table hits a read that still assumes three stages by position | ST's review walks a slice run and lists every positional read; the bots in TM then run on the slice table |
 | Several audit claims were never run | The traversal baseline and one run of the word-budget test before R1 is cut |
 
 ## Changes to the plan
@@ -246,3 +246,4 @@ Each is worded so he can veto it.
 - The fight axis and the harpoon-input axis are gone. There is no `--variant=` row.
 - Units VH and VD are not built. PK is replaced by EN. TL is absorbed by TM. B0 splits into B0b and B0a. G1, HL, S1 and R3's units are new.
 - The order is the one in section 9.
+- S1 (reorder the stages so the Reach is first) is replaced by ST (a slice table chosen at launch). The plan puts the Spillway back as zone 1-1 in M2, so a reorder would rewrite about 35 stage-order tests twice. The sitting launches with `--table=slice`.
