@@ -462,6 +462,14 @@ func piece_rects() -> Dictionary:
 	}
 
 
+# The beacon row reads the beacon's own state row, so the HUD, the ring and the edge marker
+# agree that an open beacon is an offering, not a live verb.
+static func row_color(id: String) -> Color:
+	if id == "charge_beacon":
+		return EventKinds.state_color("beacon_open")
+	return EventKinds.color(ROW_COLOR[id])
+
+
 static func _rect_of(control: Control) -> Rect2:
 	var s := control.get_combined_minimum_size()
 	return Rect2(control.position, Vector2(maxf(s.x, control.size.x), maxf(s.y, control.size.y)))
@@ -486,7 +494,7 @@ func objective_reading() -> Dictionary:
 	})
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
-	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": EventKinds.color(ROW_COLOR[id]),
+	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": row_color(id),
 		"progress": game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
 

@@ -94,8 +94,12 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		dir = dir.normalized()
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
 		out.append({"at": _on_edge(view, centre, dir), "dir": dir, "size": lerpf(MAX_SIZE, MIN_SIZE, near),
-			"color": EventKinds.state_color(target["state"]) if target.has("state") else EventKinds.color(target["kind"]), "icon": target["icon"]})
+			"color": marker_color(target), "icon": target["icon"]})
 	return out
+
+
+static func marker_color(target: Dictionary) -> Color:
+	return EventKinds.state_color(target["state"]) if target.has("state") else EventKinds.color(target["kind"])
 
 
 static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:

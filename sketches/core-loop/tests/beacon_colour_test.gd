@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Hud := preload("res://src/ui/hud.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
@@ -69,8 +70,8 @@ func _run() -> void:
 		var c: Color = _parts(beacon)[name]
 		_t.check("sealed: " + name + " is the not-yet colour", _same(c, not_yet), "%s, want %s" % [c.to_html(false), not_yet.to_html(false)])
 		_clear_of("sealed " + name, c)
-	var edge_sealed := EventKinds.state_color(beacon.state_id())
-	_t.check("sealed: the edge marker's source is the not-yet colour", edge_sealed == not_yet, "%s" % edge_sealed.to_html(false))
+	var edge_sealed: Color = EdgeMarkers.marker_color({"kind": "beacon_charge_changed", "state": beacon.state_id()})
+	_t.check("sealed: the edge marker draws the not-yet colour", edge_sealed == not_yet, "%s" % edge_sealed.to_html(false))
 	_clear_of("sealed edge marker", edge_sealed)
 
 	beacon.open()
@@ -84,10 +85,13 @@ func _run() -> void:
 	for target in markers.targets():
 		if target["kind"] == "beacon_charge_changed":
 			seen += 1
-			var c: Color = EventKinds.state_color(target["state"])
-			_t.check("open: the edge marker is the offering colour", c == offering, "%s" % c.to_html(false))
+			var c: Color = EdgeMarkers.marker_color(target)
+			_t.check("open: the edge marker draws the offering colour", c == offering, "%s" % c.to_html(false))
 			_clear_of("open edge marker", c)
 	_t.eq("open: the beacon has an edge marker", seen, 1)
+	var row := Hud.row_color("charge_beacon")
+	_t.check("open: the HUD's beacon row is the offering colour", row == offering, "%s" % row.to_html(false))
+	_clear_of("HUD beacon row", row)
 
 
 static func _cie76(a: Color, b: Color) -> float:
