@@ -128,3 +128,19 @@ Sable's flow share is high because she is fast, not because the route is long: s
 Every `runs.ndjson` record gains: `flow_share` (null before any measured tick), `dead_stops`, `bites`, `smashes`, `breaks` (count per cause, `unspecified` when the signal's cause is empty), `verb_fails` (count per verb) and `prompts_shown` (0 until the prompt unit lands). Bites are `line_state_changed` with state `latched_body`, smashes are `smash_lands`, breaks are `broke`, verb fails are `verb_failed`. The flow share and dead stops use the same detector as the measure, from each stage's start to its Warden engagement, accumulated across a run's stages and retries. The detector restarts at each stage entry (`Traversal.restart()` clears the arming and the slow clock, keeps the totals), so a stage boundary is not a stop. The exemption for a tick (frozen, mounted, interact pressed or mount held) is the static `RunLog.Traversal.is_exempt(player)`, used by the measure and the run log alike.
 
 **Joined events.** `events_joined` now lists an event only when the ball entered it. The director publishes `event_started` for a participatory event (`scrap_stampede`, `surge_run`, `hold_the_relay`) at the tick the ball reaches its ring, so those count. It also publishes it for the flood, the dust squall and the terrain changes, which start on a timer whatever the player does, so those no longer count. The altar and the cache publish `interact_fired` and `ambush_ended` rather than `event_started`; they are not counted, and whether pressing interact on them is "entering" is left open.
+
+### The spawn launch (unit ZL), 2026-10-02
+
+The Reach's flank is steepened under the 16 m drop: `LAUNCH_DROP` (3.5 m) is taken off the ground between z = -158 and -135 and eased back to the old flank by z = -100, across the whole width (a function of z only, so there is no scarp for a ball landing off the fall line). Its own slope peaks at 12.9 degrees; the flank under it adds about 12. The spawn height is unchanged (57.2) and so is every other pin. This is not the crown that was tried at the merge: it adds no mound for the ball to climb, so the east lines do not arrive at tunnel e1 or the sweeper faster than they can use.
+
+The landing now turns the fall into rolling speed: Rivet and Kest are above 16.5 m/s planar from 1.23 s on every seed (today they reach tier 2 at 2.2 s and 3.0 s), and Sable's entry is not faster than she can turn. One waypoint changed: Kest's (103,-100) is gone. Kest's Shift is a blink, and the bot used it at the cable's start to reach that waypoint, which moved him 7 m east of the cable's line at 19.5 m/s into the post at (92,-36), a dead stop on all 8 seeds. A person on the cable would not blink sideways. At 5.0 m of drop (try one) Sable also arrived at 42 m/s, could not turn onto the kicker's approach, and her slowest run was 14.7 s.
+
+8 seeds each, last try:
+
+| Pilot | Reached Warden | Median flow share | Bar | Worst seed | Dead stops | Time to Warden | Median on-line |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Sable | 8 of 8 | 0.9579 | 0.914 | 0.9552 | 0 | 10.4 to 11.5 s | 0.893 |
+| Rivet | 8 of 8 | 0.9701 | 0.933 | 0.9700 | 0 | 15.6 to 15.7 s | 0.937 |
+| Kest | 8 of 8 | 0.9746 | 0.930 | 0.9746 | 0 | 18.4 to 18.6 s | 0.948 |
+
+The bars are the old gorge map on this base (0.944, 0.963, 0.960) less 0.03.

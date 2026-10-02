@@ -1845,3 +1845,7 @@ Round one's Sable line missed her bar (median 0.7345 against 0.8974, 12 dead sto
 - **Chose where the packet was silent.** Wall `(-45,-100)` was built on the lip and floated 21.8 m; it stands at (-64,-105). The step check walks Sable's line from waypoint 2 to the first waypoint at or past z 44 and leaves out nothing; the waypoints from the sweeper on lie at the berm's foot, where the ball climbs onto the bank by physics, so the check sees no kerb. The two heights on her strand are re-stated.
 - **Tests.** `reach_map_test`: the heights at (-62.1,-25.4) and (-58,-10) are 26.8 and 20.0 (round one: 30.7 and 28.2), the four-point marble step check is now the line step check, the marble side sweep covers the dive.
 - **Not changed or not checked.** The bot is not a person: 0.9453 says a ball can hold speed down the strand, not that it feels good. The kicker fires on 3 of 8 Sable seeds. The seeds give near-identical runs, so the median is one run's number.
+
+## The spawn launch on the Cable Reach (unit ZL)
+
+Momentum is sacred, so the Reach's 16 m drop from the spawn now lands on a flank that falls 3.5 m faster over its first 23 m (map_reach.gd, `LAUNCH_*`) instead of a near-level deck. The first try used 5 m and over-fed Sable (42 m/s through the dive, stalled before the kicker); 3.5 m gives the east lines their speed at the landing and leaves Sable's entry as it was. The shape is a function of z only, so a ball that lands off the fall line meets no scarp. Measured numbers are in design-v3/TRAVERSAL.md, "The spawn launch (unit ZL)".
