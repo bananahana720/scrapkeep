@@ -26,6 +26,7 @@
     "native:smoke": "node scripts/native-smoke.mjs",
     "sketch:smoke": "node scripts/sketch-smoke.mjs",
     "sketch:lint": "node scripts/sketch-lint.mjs --sketch core-loop",
+    "sketch:export": "node scripts/sketch-export.mjs",
     "sketch:gate": "npm run sketch:lint && node scripts/sketch-smoke.mjs --sketch core-loop --receipt gate",
     "play": "node scripts/play.mjs",
     "sketch:checkpoint": "node scripts/checkpoint.mjs",
