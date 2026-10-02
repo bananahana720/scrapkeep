@@ -145,7 +145,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	family = spec.get("family", Roster.warden_family(stage))
 	_fight = String(spec.get("fight", "plating"))
 	if _fight == "posture":
-		_posture = BossPosture.new()
+		_posture = BossPosture.new(spec.get("posture", {}))
 	faction = family
 	fleet = spec.get("fleet")
 	plating = spec.get("plating", 30.0)

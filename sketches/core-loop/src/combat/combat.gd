@@ -1738,6 +1738,7 @@ func warden_spec(stage: int) -> Dictionary:
 		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
 		"hp": float(def.get("warden_hp", fallback["warden_hp"])),
 		"lesson": String(def.get("warden_lesson", fallback["warden_lesson"])),
+		"posture": def.get("posture", {}),
 	}
 
 

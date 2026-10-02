@@ -57,7 +57,8 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #
 # A run ends at stage-3 clear or a boss victory (outcome "won"), death ("died"), a
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
-# limit ("stalled", "boss_stalled").
+# limit ("stalled", "boss_stalled"). The sweep adds "fight_capped" (the fight ran past
+# fight_limit) and "broken" (the Warden broke; it ends the run there).
 
 const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
@@ -159,7 +160,13 @@ var tree_policy := ""
 var tree_picks: Array[String] = []
 var _tree_rng := RandomNumberGenerator.new()
 
-# "", then won, died, stalled, boss or boss_stalled.
+# The sweep's limits. stage_limit replaces STAGE_LIMIT. fight_limit, when above zero, ends the
+# run as "fight_capped" that many seconds after fight_start_of the stage note (the later of the
+# bot's turn to the Warden and the Warden's engagement) if the Warden is not broken by then.
+var stage_limit := STAGE_LIMIT
+var fight_limit := 0.0
+
+# "", then won, died, stalled, boss, boss_stalled, fight_capped or broken.
 var outcome := ""
 var ticks := 0
 # One row per stage the bot entered: what it tried, for the sidecar log.
@@ -339,9 +346,14 @@ func tick(delta: float) -> bool:
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
 	# gate 1 behind a Spillway chute kerb) once ran a process forever, since only the
 	# Warden fight had a limit. stall_state says which state ran out.
-	if flow.in_stage() and game.run.stage_time > STAGE_LIMIT:
+	if flow.in_stage() and game.run.stage_time > stage_limit:
 		_note_set("stall_state", state)
 		_end("stalled")
+		return true
+	var fight_start = fight_start_of(_note)
+	if fight_limit > 0.0 and fight_start != null and _note.get("warden_broken_s") == null \
+			and game.run.stage_time - float(fight_start) > fight_limit:
+		_end("fight_capped")
 		return true
 	_boost_clock -= delta
 	_harpoon_held = false
@@ -373,6 +385,23 @@ func tick(delta: float) -> bool:
 		_:
 			source.hold = {}
 	return outcome != ""
+
+
+# The fight clock starts at the later of the bot's turn to the Warden and the Warden's
+# engagement (first ring entry or strike), so a roll from spawn is not fight time. Null
+# until one of them is noted.
+static func fight_start_of(note: Dictionary):
+	var turned = note.get("warden_fight_s")
+	var engaged = note.get("warden_engaged_s")
+	if turned == null:
+		return engaged
+	if engaged == null:
+		return turned
+	return maxf(float(turned), float(engaged))
+
+
+func warden_broken() -> bool:
+	return _note.get("warden_broken_s") != null
 
 
 func _end(why: String) -> void:
@@ -787,6 +816,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	# (warden_engaged) on the way past long before it turns to fight.
 	if target == game.flow.warden and _note.get("warden_fight_s") == null:
 		_note["warden_fight_s"] = snappedf(game.run.stage_time, 0.01)
+		_note["warden_fight_heft"] = snappedf(game.run.heft(), 0.001)
 	var short: bool = _punch_seen < _plating(target)
 	if short:
 		_note["punch_short_s"] = float(_note.get("punch_short_s", 0.0)) + delta
