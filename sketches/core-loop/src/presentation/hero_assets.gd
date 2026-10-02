@@ -80,6 +80,7 @@ var _scenes := {}
 var _meshes := {}
 var _players := {}
 var _wardens := {}
+var _warden_fragments: Array[MeshInstance3D] = []
 var _mast := {}
 var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
@@ -624,7 +625,7 @@ func _dress_warden(warden) -> void:
 	var tower := base.get_node_or_null("Tower") as MeshInstance3D
 	var mount := base.get_node_or_null("Tower/KitMount") as Node3D
 	var weak := kit.get_node_or_null("WeakPoint") as Node3D
-	if tower == null or mount == null or weak == null or not base.has_node("JawL") or not base.has_node("JawR"):
+	if tower == null or mount == null or weak == null or not base.has_node("JawL") or not base.has_node("JawR") or not _has_warden_chunk_nodes(base):
 		base.free()
 		kit.free()
 		_warn_once("warden_nodes", "hero_assets: incomplete Warden asset hierarchy; keeping placeholders")
@@ -686,7 +687,7 @@ func _dress_warden(warden) -> void:
 	_wardens[warden.get_instance_id()] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
-	if warden.fight() == "posture":
+	if warden.fight() == "posture" and warden.fleet != null:
 		var bus = warden.fleet.events()
 		if not bus.posture_changed.is_connected(_warden_posture_changed):
 			bus.posture_changed.connect(_warden_posture_changed)
@@ -943,6 +944,16 @@ func _warden_stage_entered(_stage: int, _retry: bool) -> void:
 			_clear_warden_fragment(child)
 
 
+func _has_warden_chunk_nodes(base: Node3D) -> bool:
+	for path in ["CoreAssembly", "JawL/InnerL", "JawR/InnerR"]:
+		if not base.has_node(path):
+			return false
+	for i in 4:
+		if base.find_child("ArmourSegment%d" % i, true, false) == null:
+			return false
+	return true
+
+
 func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 	var posture: bool = rec.warden.fight() == "posture"
 	rec.core.visible = false
@@ -964,7 +975,7 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 func _paint_warden_inner(inner: MeshInstance3D) -> void:
 	for surface in inner.mesh.get_surface_count():
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else Palette.RUST.lerp(Palette.CHARCOAL, 0.55)
+		mat.albedo_color = Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else EventKinds.role_color("rust").lerp(Palette.CHARCOAL, 0.55)
 		mat.roughness = 0.95
 		inner.set_surface_override_material(surface, mat)
 
@@ -1044,26 +1055,36 @@ func _throw_warden_segment(rec: Dictionary, index: int) -> void:
 	rec.flights.append(flight)
 	fragment.set_meta("warden_flight", flight)
 	fragment.tree_exiting.connect(_clear_warden_fragment.bind(fragment), CONNECT_ONE_SHOT)
-	flight["step"] = _step_warden_fragment.bind(fragment)
-	get_tree().physics_frame.connect(flight.step)
+	_warden_fragments.append(fragment)
+	# One stepper for every copy in flight: a signal holds one connection per method,
+	# whatever is bound to it, so a second copy cannot connect its own.
+	if not get_tree().physics_frame.is_connected(_step_warden_fragments):
+		get_tree().physics_frame.connect(_step_warden_fragments)
 
 
-func _step_warden_fragment(fragment: MeshInstance3D) -> void:
-	var flight: Dictionary = fragment.get_meta("warden_flight")
-	flight.seconds = float(Engine.get_physics_frames() - flight.born) / Engine.physics_ticks_per_second
-	_move_warden_fragment(flight.seconds, flight)
-	if flight.seconds >= 0.55:
-		_clear_warden_fragment(fragment)
+func _step_warden_fragments() -> void:
+	for fragment in _warden_fragments.duplicate():
+		if not is_instance_valid(fragment):
+			_warden_fragments.erase(fragment)
+			continue
+		var flight: Dictionary = fragment.get_meta("warden_flight")
+		flight.seconds = float(Engine.get_physics_frames() - flight.born) / Engine.physics_ticks_per_second
+		_move_warden_fragment(flight.seconds, flight)
+		if flight.seconds >= 0.55:
+			_clear_warden_fragment(fragment)
+	_rest_warden_fragments()
 
 
 func _clear_warden_fragment(fragment: MeshInstance3D) -> void:
-	var flight: Dictionary = fragment.get_meta("warden_flight")
-	if flight.has("step"):
-		if get_tree().physics_frame.is_connected(flight.step):
-			get_tree().physics_frame.disconnect(flight.step)
-		flight.erase("step")
-	if is_instance_valid(flight.node):
-		flight.node.queue_free()
+	_warden_fragments.erase(fragment)
+	if is_instance_valid(fragment) and not fragment.is_queued_for_deletion():
+		fragment.queue_free()
+	_rest_warden_fragments()
+
+
+func _rest_warden_fragments() -> void:
+	if _warden_fragments.is_empty() and is_inside_tree() and get_tree().physics_frame.is_connected(_step_warden_fragments):
+		get_tree().physics_frame.disconnect(_step_warden_fragments)
 
 
 func _move_warden_fragment(seconds: float, flight: Dictionary) -> void:
@@ -1076,7 +1097,7 @@ func _move_warden_fragment(seconds: float, flight: Dictionary) -> void:
 	pose.origin += offset - turn * offset
 	pose.basis = turn * pose.basis
 	flight.node.global_transform = pose
-	# After 0.18 s no camera can have its view of the core blocked by this copy.
+	# Hidden after 0.18 s so the copy cannot block the core.
 	flight.node.visible = seconds < 0.18
 
 

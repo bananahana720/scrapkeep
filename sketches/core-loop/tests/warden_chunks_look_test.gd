@@ -142,7 +142,6 @@ func _flight(rec: Dictionary, index: int) -> void:
 		return
 	var flight: Dictionary = rec.flights[index]
 	var node: MeshInstance3D = flight.node
-	var step: Callable = flight.step
 	_t.check("flying copy is a mesh with no collision or physics", node is MeshInstance3D and node.get_child_count() == 0 and node.find_children("*", "CollisionObject3D", true, false).is_empty())
 	var centre: Vector3 = flight.centre
 	await _seconds(0.1)
@@ -153,7 +152,26 @@ func _flight(rec: Dictionary, index: int) -> void:
 	_t.check("flight cannot hide the core after 0.2 seconds", not is_instance_valid(node) or not node.visible, "flight %.4f s, time scale %.3f" % [flight.seconds, Engine.time_scale])
 	await _seconds(0.4)
 	_t.check("flying copy freed within 0.6 simulated seconds", not is_instance_valid(node), "flight %.4f s, time scale %.3f" % [flight.seconds, Engine.time_scale])
-	_t.check("freed copy leaves no physics callback", not physics_frame.is_connected(step))
+	_t.check("freed copy leaves no physics callback", not physics_frame.is_connected(_hook._step_warden_fragments))
+
+
+# Two segments broken inside one flight: each copy flies and frees by itself.
+func _two_at_once() -> void:
+	var rec: Dictionary = _hook.warden_of(_warden)
+	_hook._throw_warden_segment(rec, 0)
+	_hook._throw_warden_segment(rec, 1)
+	var first: MeshInstance3D = rec.flights[0].node
+	var second: MeshInstance3D = rec.flights[1].node
+	var start: Vector3 = second.global_position
+	await _seconds(0.1)
+	var moved := second.global_position.distance_to(start) if is_instance_valid(second) else -1.0
+	_t.check("two copies in flight both move", moved > 0.5, "the second copy moved %.3f m in 0.1 s" % moved)
+	await _seconds(0.5)
+	_t.check("two copies in flight both free within 0.6 seconds", not is_instance_valid(first) and not is_instance_valid(second),
+		"first alive %s, second alive %s" % [is_instance_valid(first), is_instance_valid(second)])
+	_t.eq("no flying debris is left", _hook.find_children("WardenFragment*", "MeshInstance3D", false, false).size(), 0)
+	_t.check("no physics callback is left", not physics_frame.is_connected(_hook._step_warden_fragments))
+	rec.flights.clear()
 
 
 func _fresh(state: String) -> void:
@@ -243,6 +261,7 @@ func _run() -> void:
 	await _frames(2)
 	await _start("slice")
 	_fresh("new run")
+	await _two_at_once()
 	await _shatters()
 	_game.free()
 	await _frames(2)
