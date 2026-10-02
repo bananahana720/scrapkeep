@@ -116,6 +116,10 @@ Three of seven units had a review finding of medium or above at the first gate, 
 
 One gate run (receipt `gate-f817cf4e1b25-2026-10-02T06-03-11-287Z.json`): 241 runs, 0 failed, 2 quarantined red, 338 s, six solo tests 79 s. The 19 added tests cost 15 s of wall. Eleven tests now print no verdict line.
 
+### After G1 and ST, `proto/alpha` at `2cbdb65`
+
+One gate run for two units (receipt `gate-f600d45526bf-2026-10-02T06-28-52-058Z.json`): 242 runs, 0 failed, 2 quarantined red, 339 s. The unit suite runs 92 checks in 0.7 s; the grammar's 25 are among them. Writers ran named tests only (17 and 28 runs, 42 s and 123 s, no lock). Both units failed review on a reader outside the fence, cause `brief`; neither cost a second gate, because the fixes went onto the unit branches before the merge.
+
 ## Decisions the numbers settled
 
 | Question | Decision | Why |
