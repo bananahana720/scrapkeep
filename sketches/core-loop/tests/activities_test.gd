@@ -169,7 +169,7 @@ func _bounty() -> void:
 	_t.eq("the director is given the enemy group's size less the bounty's brute",
 		_game.world.director_alive(), _game.get_tree().get_nodes_in_group("enemy").size() - 1)
 	_t.check("its crate wears the row's amber, apart from its plates", brute.get_node("BountyCrate").material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
-		and brute.get_node("BrutePlates") != null, "crate colour")
+		and brute.find_child("BrutePlates", true, false) != null, "crate colour")
 	# Walked off and woken, with the ball 60 m away, it goes home inside 300 frames.
 	var near: Vector3 = _ground(s.global_position + Vector3(20.0, 0.0, 0.0))
 	_put(near)
