@@ -59,6 +59,8 @@ func unbind() -> void:
 
 # Whether the plate shows anything: a live Warden on the posture rule.
 func active() -> bool:
+	if _warden != null and not is_instance_valid(_warden):
+		unbind()
 	return is_instance_valid(_warden) and _warden.has_method("fight") and not _warden.is_dead() and _warden.fight() == "posture"
 
 
@@ -93,6 +95,12 @@ func bar_fraction() -> float:
 	return clampf(_warden.posture() / BossPosture.FULL, 0.0, 1.0)
 
 
+# The crack mark is live only while the core is open, when the verb works on it; a cracked
+# core that is closed takes no shatter, so its mark is neutral.
+func crack_color() -> Color:
+	return EventKinds.state_color("chunk_shatter") if active() and _warden.staggered() else EventKinds.role_color("neutral")
+
+
 func bar_color() -> Color:
 	return EventKinds.state_color("open") if active() and _warden.staggered() else EventKinds.role_color("neutral")
 
@@ -122,6 +130,7 @@ func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float)
 
 func _process(delta: float) -> void:
 	advance(delta)
+	active()
 	queue_redraw()
 
 
@@ -163,6 +172,8 @@ func _draw_pip(rect: Rect2, pip: Dictionary, color: Color) -> void:
 	else:
 		draw_rect(rect, _fade(color, EMPTY_ALPHA), false, 2.0)
 	if pip["cracked"]:
-		var mark := EventKinds.state_color("chunk_shatter")
 		var c := rect.get_center()
-		draw_polyline(PackedVector2Array([c + Vector2(-3.0, -PIP * 0.5), c + Vector2(2.0, -2.0), c + Vector2(-2.0, 2.0), c + Vector2(3.0, PIP * 0.5)]), mark, 2.5)
+		var line := PackedVector2Array([c + Vector2(-3.0, -PIP * 0.5), c + Vector2(2.0, -2.0), c + Vector2(-2.0, 2.0), c + Vector2(3.0, PIP * 0.5)])
+		# A dark backing keeps the neutral mark readable on a neutral filled pip.
+		draw_polyline(line, UiDraw.OUTLINE, 4.5)
+		draw_polyline(line, crack_color(), 2.5)

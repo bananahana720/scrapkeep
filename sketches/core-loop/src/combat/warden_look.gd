@@ -24,6 +24,8 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 # - Shred shows as glowing seams cracked across the jaw plates: none below SEAM_SHOW of
 #   the plating stripped, then more of them and brighter as the strip deepens, in the
 #   amber the plates turn once your punch beats what is left.
+# - On the posture rule the look changes: the cracks are the guard, in the neutral colour,
+#   the jaws lean open and the core goes live while staggered, and the ring is hidden.
 # - Stage 2's brood cells have hexagonal rims and amber membranes, with matching
 #   hex markers above the jaws; stage 3's magnet is a lit arm and head that burn amber while the
 #   tug is on, the moment a shot on them counts.

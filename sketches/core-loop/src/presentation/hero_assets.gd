@@ -912,6 +912,8 @@ func _update_warden_open(rec: Dictionary) -> void:
 	for entry in rec.jaws:
 		var turn := Transform3D(Basis(Vector3.RIGHT, entry.out * lean), entry.pivot)
 		entry.node.transform = turn * Transform3D(Basis.IDENTITY, -entry.pivot) * entry.rest
+	# The body material carries combat's amber hit flash; a posture Warden never wears amber.
+	(rec.materials.ancient_enamel as StandardMaterial3D).emission = EventKinds.role_color("neutral")
 	var open: bool = warden.staggered()
 	for key in rec.light_rest:
 		(rec.materials[key] as StandardMaterial3D).emission = EventKinds.state_color("open") if open else rec.light_rest[key]

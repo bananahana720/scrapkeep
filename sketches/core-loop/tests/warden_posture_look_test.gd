@@ -76,6 +76,13 @@ func _step(delta := 1.0) -> void:
 	_hook._update_warden(_hook.warden_of(_warden))
 
 
+# The game's process order: the hero model copies the body material before the look
+# rewrites it, so a flash's amber reaches the model first.
+func _step_game_order(delta := 1.0) -> void:
+	_hook._update_warden(_hook.warden_of(_warden))
+	_look.update(delta)
+
+
 func _look_levels() -> int:
 	var count := 0
 	for level in _look._seams.size():
@@ -221,7 +228,7 @@ func _levels() -> void:
 	_t.check("the cracks are the neutral role colour", _look._seam_material.emission == neutral and _hook.warden_of(_warden).seams[0].node.material_override.emission == neutral)
 	_warden.flash()
 	_warden._update_flash(0.01)
-	_step(0.01)
+	_step_game_order(0.01)
 	_no_amber("hit flash")
 	await _seconds(8.5)
 	_step()
@@ -255,7 +262,8 @@ func _open_and_close() -> void:
 	_t.check("the look's jaws closed", absf(_look_apart() - rest_look) < 0.5, "%.1f over rest" % (_look_apart() - rest_look))
 	_t.check("the model's jaws closed", absf(_model_apart() - rest_model) < 0.5, "%.1f over rest" % (_model_apart() - rest_model))
 	_t.check("the look's core is back", _look.core_material().emission == rest_core and _look.core_material().emission != live)
-	_t.check("the model's core is back", light.emission != live)
+	var rest_light: Color = _hook.warden_of(_warden).light_rest["ancient_light"]
+	_t.check("the model's core is back to its rest emission", light.emission == rest_light and light.emission != live)
 	_t.eq("the cracks are sealed after the stagger", _look_levels(), 0)
 	_no_amber("closed")
 	_live_off("closed")

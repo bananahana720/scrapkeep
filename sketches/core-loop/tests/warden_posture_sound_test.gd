@@ -15,7 +15,7 @@ const T := preload("res://tests/support/t.gd")
 #   B3-3  four hits that cross the guard's marks play four rising pitches, the phrase's
 #         notes in the live key; the stagger plays the chord once; a shatter plays its sound
 #         and the low hit once each; two seconds of drain play nothing; a charge cue playing
-#         when the stagger begins is stopped on that tick. A glance keeps its clank, and a
+#         when the stagger begins is stopped on that tick, and another enemy's charge cue is not. A glance keeps its clank, and a
 #         plating Warden's hit is pitched by its health as before.
 
 const PLATING := 45.0
@@ -125,6 +125,7 @@ func _run() -> void:
 	await _drain()
 	await _stagger()
 	await _shatter()
+	await _foreign_charge()
 	_game.free()
 	await _plating()
 	quit(_t.verdict())
@@ -161,7 +162,9 @@ func _glance() -> void:
 	_audio._last_start.clear()
 	_combat.strike(_warden, "runner", 5.0)
 	var clanks := _pitches("clank")
-	var want: float = Harmony.ratio(lerpf(-7.0, 0.0, 5.0 / PLATING)) * _audio._warden_ladder(_warden) * _key()
+	# The base formula at full integrity (ladder rung 0), not the ladder the code computes.
+	_t.check("the Warden is at full integrity", is_equal_approx(float(_game.ctx.spawner.integrity_of(_warden)), 1.0))
+	var want: float = Harmony.ratio(lerpf(-7.0, 0.0, 5.0 / PLATING)) * Harmony.ratio(Harmony.pentatonic_step(0)) * _key()
 	_t.check("a glance keeps today's clank", clanks.size() == 1 and is_equal_approx(clanks[0], want), "clanks %s, want %.3f" % [clanks, want])
 
 
@@ -219,6 +222,24 @@ func _shatter() -> void:
 	_t.check("the low hit is baked in the bank", SfxBank.has_recipe("chunk_low"))
 	await _seconds(0.5)
 	_t.eq("nothing repeats", _entries(row).size() + _entries("chunk_low").size(), 2)
+
+
+# Another enemy's charge cue survives a Warden stagger: only a charge the Warden owns is cut.
+func _foreign_charge() -> void:
+	await _seconds(BossPosture.STAGGER_SECONDS + 0.5)
+	_player.reset_to(_ground(58.0))
+	await _seconds(0.5)
+	_t.check("the Warden closed again", not _warden.staggered())
+	_audio.cue_log.clear()
+	var charge := String(Rows.sound("vent_charging", _audio.cue_context()))
+	_game.events.vent_charging.emit(_warden.global_position + Vector3(40.0, 0.0, 0.0), 2.0)
+	_t.eq("the other charge cue plays", _entries(charge).size(), 1)
+	var guard := 0
+	while not _warden.staggered() and guard < 20:
+		await _hit("ram", _force_for(1.0))
+		guard += 1
+	_t.check("it staggered again", _warden.staggered())
+	_t.eq("the other enemy's charge cue was not stopped", _entries(charge, "stop").size(), 0)
 
 
 # A plating Warden's hit is pitched by its health, as on the base.

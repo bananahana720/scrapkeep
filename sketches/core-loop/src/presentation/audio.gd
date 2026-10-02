@@ -86,14 +86,14 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "kill_pop", "part_get", "c
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring"]
-# Event progress until the spine publishes event_progress(event_id, fraction): the
-# seconds each participatory event usually takes (REQUEST in the hand-back).
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
 const POSTURE_QUARTER := 25.0
 const POSTURE_PHRASE := 0
 const SHATTER_LOW := "chunk_low"
+# Event progress until the spine publishes event_progress(event_id, fraction): the
+# seconds each participatory event usually takes (REQUEST in the hand-back).
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
 
 # v2 W3 characters: the class-ability facts, heard through their event rows.
@@ -110,6 +110,8 @@ const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.
 var _posture_seen := {}
+# True from a charge cue the Warden began until vent_erupted or a stagger cuts it.
+var _warden_charging := false
 var engine: MusicEngine
 # The ACE band (--music=ace): stage 1 plays the ACE takes through the sequencer and the
 # synth band stays muted; every other stage, and any missing file, plays the synth.
@@ -863,10 +865,13 @@ func wire_optional() -> void:
 			ace.threat_rose(tier))
 	# The reactor relic is the only ancient that colours the band: a tritone pedal
 	# under the sub while its vent charges (DESIGN-V2 section 11 audio rulings).
-	_listen(events, "vent_charging", func(_at: Vector3, _seconds: float):
+	_listen(events, "vent_charging", func(at: Vector3, _seconds: float):
+		if _is_warden_at(at):
+			_warden_charging = true
 		play("vent_charging")
 		engine.set_reactor_pedal(true))
 	_listen(events, "vent_erupted", func(_at: Vector3):
+		_warden_charging = false
 		play("vent_erupted")
 		engine.set_reactor_pedal(false))
 	# Moss's lounge is a layer mask over the stage theme, entered and left with the
@@ -1577,9 +1582,20 @@ func _stagger_chord() -> void:
 	play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("open"), cue_context()))
 
 
+# Whether a charge cue began at the Warden's own position (the Warden emits it from there).
+func _is_warden_at(at: Vector3) -> bool:
+	if ctx == null or ctx.flow == null:
+		return false
+	var warden = ctx.flow.get("warden")
+	return is_instance_valid(warden) and warden.global_position.is_equal_approx(at)
+
+
 # A stagger cancels the pulse the Warden was charging, and vent_erupted never comes to end
 # the cue that began with it.
 func _cut_charge() -> void:
+	if not _warden_charging:
+		return
+	_warden_charging = false
 	var sound := Rows.sound("vent_charging", cue_context())
 	stop(sound)
 	engine.set_reactor_pedal(false)

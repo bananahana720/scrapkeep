@@ -15,14 +15,22 @@ const T := preload("res://tests/support/t.gd")
 #         bar fills to posture / 100; staggered the bar is the live colour and follows
 #         stagger_left; a glance shows the slate glyph for 0.6 s of stepped time; bound to
 #         a plating Warden or to nothing it draws nothing and reports no words.
-#   B3-5  boss_plate.gd and the posture code added to warden_look.gd and hero_assets.gd hold no
-#         Color( literal: every state colour is a STATE_ROWS row or a role.
+#         The crack mark is the live colour while the core is open and the neutral role while
+#         it is closed; a dead or freed Warden is never held.
+#   B3-5  boss_plate.gd and the posture code added to or branched inside warden_look.gd and
+#         hero_assets.gd hold no Color( literal: every state colour is a STATE_ROWS row or a role.
 # The plate's own clock is stepped by hand (its process is off), never read from the wall.
 
 const PLATING := 45.0
 const ADDED_CODE := {
 	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams"],
 	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open"],
+}
+# Existing functions with a posture branch inside them: only the posture arm is scanned,
+# because the plating arm keeps its amber.
+const BRANCHED_CODE := {
+	"res://src/combat/warden_look.gd": ["_build_seams", "_build_badge", "_update_core"],
+	"res://src/presentation/hero_assets.gd": ["_dress_warden"],
 }
 
 var _t := T.new("boss_plate_test")
@@ -121,6 +129,26 @@ func _body_of(source: String, name: String) -> String:
 	return source.substr(at, end - at if end >= 0 else -1)
 
 
+# The posture arm of a function: the text before " if posture_fight() else" on a ternary
+# line, and the indented block under an "if posture_fight():" line.
+func _posture_arm(body: String) -> String:
+	var arm := ""
+	var block_indent := -1
+	for line in body.split("\n"):
+		var indent := line.length() - line.lstrip("\t").length()
+		if block_indent >= 0:
+			if line.strip_edges() == "" or indent > block_indent:
+				arm += line + "\n"
+				continue
+			block_indent = -1
+		var code := line.strip_edges()
+		if code.ends_with("posture_fight():") and code.begins_with("if ") and not code.begins_with("if not "):
+			block_indent = indent
+		elif line.contains(" if posture_fight() else "):
+			arm += line.get_slice(" if posture_fight() else ", 0) + "\n"
+	return arm
+
+
 func _colour_sources() -> void:
 	var plate := FileAccess.get_file_as_string("res://src/ui/boss_plate.gd")
 	_t.check("boss_plate.gd is readable", plate.length() > 0)
@@ -149,6 +177,9 @@ func _run() -> void:
 	await _glance()
 	await _crack_and_shatter()
 	await _stagger_bar()
+	_warden._dead = true
+	_t.eq("a dead, unfreed posture Warden: no words", _plate.drawn_words(), [])
+	_t.check("a dead, unfreed posture Warden: not active", not _plate.active())
 	_plate.unbind()
 	_game.free()
 	await _plating_table()
@@ -202,10 +233,12 @@ func _crack_and_shatter() -> void:
 	await _frames(2)
 	_t.check("a lesser contact cracks the chunk", _warden.chunk_cracked())
 	_t.check("the current chunk shows the crack mark", _plate.pips()[3]["cracked"] and _plate.pips()[3]["filled"])
+	_t.check("open, the crack mark is the live colour", _plate.crack_color() == EventKinds.state_color("chunk_shatter") and _plate.crack_color() == EventKinds.role_color("live"))
 	_t.check("only the current chunk shows it", _plate.pips().filter(func(pip): return pip["cracked"]).size() == 1)
 	await _seconds(BossPosture.STAGGER_SECONDS + 0.5)
 	_t.check("the stagger ran out", not _warden.staggered())
 	_t.check("the crack waits for the next opening", _plate.pips()[3]["cracked"])
+	_t.check("closed, the crack mark is the neutral role colour", _plate.crack_color() == EventKinds.role_color("neutral") and _plate.crack_color() != EventKinds.state_color("chunk_shatter"))
 	await _fill()
 	await physics_frame
 	_combat.strike(_warden, "ram", _fast_force())
@@ -250,5 +283,6 @@ func _plating_table() -> void:
 	_t.check("a plating Warden: not active", not _plate.active() and _plate.glyph_id() == "" and _plate.bar_fraction() == 0.0)
 	warden.free()
 	_t.eq("a freed Warden: no words", _plate.drawn_words(), [])
+	_t.check("the plate lets go of a freed Warden", _plate._warden == null)
 	_plate.unbind()
 	_game.free()
