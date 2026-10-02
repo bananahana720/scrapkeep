@@ -53,4 +53,15 @@ func _initialize() -> void:
 			break
 	t.check("separate processes repeat every tick", not traces[0].is_empty() and traces[0] == traces[1],
 		"first differing tick %d; evidence %s" % [first, base])
+	if t.failures == 0:
+		_remove(base)
 	quit(t.verdict())
+
+
+# The two traces are evidence only when the check fails.
+func _remove(path: String) -> void:
+	for file in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	for folder in DirAccess.get_directories_at(path):
+		_remove(path.path_join(folder))
+	DirAccess.remove_absolute(path)

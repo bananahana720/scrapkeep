@@ -58,7 +58,7 @@ func _initialize() -> void:
 		printerr("bot_run: usage: -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4]")
 		quit(2)
 		return
-	_out = _settings["out"]
+	_out = _absolute(_settings["out"])
 	DirAccess.make_dir_recursive_absolute(_out)
 	for part in String(_settings.get("seeds", "1")).split(",", false):
 		_seeds.append(int(part))
@@ -70,13 +70,14 @@ func _initialize() -> void:
 
 # A fresh physics server and presentation caches for every seed, including list runs.
 func _run_children() -> void:
-	var forwarded := PackedStringArray()
+	# Each child has its own data folder, so --out goes to it as an absolute path the parent resolved.
+	var forwarded := PackedStringArray(["--out=" + _out])
 	for arg in OS.get_cmdline_user_args():
-		if not arg.begins_with("--seeds="):
+		if not arg.begins_with("--seeds=") and not arg.begins_with("--out="):
 			forwarded.append(arg)
 	for i in _seeds.size():
 		var previous := {}
-		var state_dir := ProjectSettings.globalize_path(_out).path_join("state-%d" % i)
+		var state_dir := _out.path_join("state-%d" % i)
 		for kind in ["DATA", "CONFIG", "CACHE"]:
 			var key: String = "XDG_%s_HOME" % kind
 			previous[key] = OS.get_environment(key)
@@ -97,8 +98,21 @@ func _run_children() -> void:
 		if code != 0:
 			quit(code)
 			return
+	var rows := FileAccess.get_file_as_string(_out.path_join("bots.ndjson")).split("\n", false).size()
+	if rows < _seeds.size():
+		printerr("bot_run: %d child run(s) but %d row(s) in %s" % [_seeds.size(), rows, _out.path_join("bots.ndjson")])
+		quit(1)
+		return
 	print("bot_run: %d isolated run(s) written to %s" % [_seeds.size(), _out])
 	quit(0)
+
+
+# res:// and user:// resolve in this process; a relative path resolves against the working folder.
+static func _absolute(path: String) -> String:
+	var global := ProjectSettings.globalize_path(path)
+	if global.is_absolute_path():
+		return global
+	return OS.get_environment("PWD").path_join(global)
 
 
 static func _parse(args: PackedStringArray) -> Dictionary:
