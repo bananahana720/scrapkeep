@@ -1883,3 +1883,42 @@ Renderer settings leave these gaps for later rounds, ranked by expected visual w
 5. A richer sky panorama and cloud treatment if aerial perspective alone leaves the sky shallow.
 
 The next round needs the six PNGs and both `frames.json` files. Judge the next 40 m of ground, hazard/mint separation, pilot shadow noise and the play median before changing settings. The writer leaves the scoped changes uncommitted for the coordinator.
+
+## Renderer and surface correction, unit LK round 2, 2026-10-02
+
+The coordinator's RTX 4080 captures at `artifacts/local/alpha/look/r1/` showed a worse play view under round-1 target: the ball lost its separate ground shadow, the dune lost its shaped shadow and haze washed out the dam. High measured 8.556 ms median and target 10.1895 ms, a 1.6335 ms difference. Both wall-time samples include simulation and were taken under host load 21–26 on 32 cores. They do not qualify either absolute frame budget. The writer verified all six PNG hashes against the two capture manifests and retained their metadata in [r1-source.json](../../artifacts/local/lk-r2/r1-source.json).
+
+Part A restores high's sun rotation (-36,-55,0), energy 2.35, fill 0.5, colour #ffd49a, two shadow splits, 180 m shadow distance, normal bias 0.65, angular size 0 and split 0.18. Exposure 1.1, AgX contrast 1.25, saturation 1.2 and all depth-fog properties also match high. SDFGI, SSIL, volumetric fog and aerial perspective are off. Global shafts are dropped because the first capture did not show a useful shaft worth its veil. SSAO remains a small contact improvement at radius 0.55, intensity 1.25 and detail 0.40. No additional light or fog node is created.
+
+The [headless shadow probe](../../artifacts/local/lk-r2/shadow-probe.log) isolates the changed sun elevation geometrically. At the play anchor, the ray from the ground toward the -36 degree sun is clear. At -28 degrees it intersects the western terrain rim at (-141.60,70.40,-49.86). That change puts the ground below the ball in the rim's shadow, so the ball cannot cast a separate direct-light shadow there. The row comment and preset test now pin the proven sun, distance, bias and split. The probe establishes light-path occlusion; a returned GPU still must confirm the ball's visible height cue.
+
+The site's hard dark edge is a renderer coverage artefact rather than the boundary of a real cast shadow at that location. Rays through site pixels x=1450–1900, y=550/750/950 meet the same western terrain occluder on both sides under the -28 degree sun; those ground points should all be shadowed. They lie well inside the 160 m fog length. A directional shadow cascade/frustum edge is the leading explanation, but the first images cannot isolate it from SDFGI coverage without a GPU ablation. Restoring high's directional shadow configuration and disabling SDFGI and volumetric fog removes the round-1 coverage changes. Exact subsystem attribution and disappearance in the image remain GPU checks.
+
+Part B adds procedural detail only under target. The original Palette file is preserved as a byte-identical prefix; all new construction is appended. The terrain edit adds one material-registration line after the original ground material selection. The preset binds scenery materials after the existing opaque merge, so shaders cannot prevent that merge or split its batch. It stores the original overrides and active materials, uses instance surface overrides on the imported dam, and restores the exact resources on high/low. It does not mutate original materials, mesh slots, vertices, colliders, transforms or shadow-caster flags.
+
+| Surface | Intended look in the returned stills | Readability guard |
+| --- | --- | --- |
+| Ground, `target_ground.gdshader` | Broad packed-sand variation, fine grain and shallow ripple relief; slope blends add small strata cavities on steep terrain faces. | Existing vertex colour carries the hue. Value modulation stays within 0.84–1.08; fine grain fades with screen footprint. No displacement or moving noise. |
+| Rock, `target_rock.gdshader` | Warped horizontal beds, dark thin cavities, a lighter worn lip and fine relief. | Desaturated stone #bca382, shallow relief, mild AO and filtered seams. No mint, amber or hazard pigment is introduced. |
+| Dam, `target_dam.gdshader` | World-space 3 x 2 m plate seams, vertical dirt variation and small worn/chipped seam edges. | Source vertex colours and material tint carry hue. The shared dressing batch applies seams only inside the authored dam envelope, z>=215, y>=60, abs(x)<146. Water, actors and telegraphs retain their materials. |
+
+The shaders share `target_surface.gdshaderinc`, use world metres and derivative normal relief, and add no texture file. `material_ground`, `material_rock` and `material_dam` are independent row switches that restore each surface's original material when disabled. `material_detail` and `material_relief` independently control visual detail and normal relief in the target resources.
+
+For the revised 3 ms incremental play budget, first turn off `material_relief` to cut derivative normal work. Then set `material_dam=false`, which removes the additional plate shader and its weathering calculations. Next set `material_rock=false`; keep the ground grain as long as it remains stable at speed. If necessary, restore high's SSAO radius/intensity/detail. GI, volumetric fog and PCSS are already off. These cuts need back-to-back GPU and wall-time captures; no incremental cost was measured here.
+
+The label leak was `WorldPrompt`, a screen-space Label outside the HUD layer, not Label3D. Capture now hides all CanvasItems, CanvasLayers and Label3D nodes, disables layer processing that can reveal prompts, and repeats the hide immediately before each still. The tool still measures the unfrozen scene and rebuilds a seeded frozen scene for the three stills.
+
+The engine's ClassDB dump printed these timing methods:
+
+```text
+METHOD RenderingServer.viewport_set_measure_render_time(viewport, enable)
+METHOD RenderingServer.viewport_get_measured_render_time_cpu(viewport)
+METHOD RenderingServer.viewport_get_measured_render_time_gpu(viewport)
+METHOD RenderingServer.get_frame_setup_time_cpu()
+```
+
+Capture enables measurement on the root viewport before warmup and retains 240 wall intervals beside 240 samples for each engine measure. `timing.gpu_render`, `timing.cpu_render` and `timing.cpu_frame_setup` each contain `median_ms`, `p95_ms`, `samples_ms`, `sample_count` and `available`. Any zero sample marks that summary unavailable rather than certifying a zero-cost renderer. GPU timestamps can arrive behind the corresponding wall sample. The CPU viewport timing excludes scripts and simulation; setup is recorded separately, so their medians must not be added as if they were one median. CPU scheduling and GPU clocks still respond to host conditions. See the [engine timing documentation](https://docs.godotengine.org/en/latest/classes/class_renderingserver.html#class-renderingserver-method-viewport-get-measured-render-time-cpu).
+
+The [base renderer comparison](../../artifacts/local/lk-r2/baseline-check.log) passes for fresh high/low and target-to-high/low against commit 79f62ab: 76 properties and six recorded server-setting groups. The [preparation check](../../artifacts/local/lk-r2/prepare_baseline.py) pins unchanged high/low rows, the original renderer setter body, all original Palette constructors and the one-line terrain fence. `target_material_test.gd` stages a live Warden and chaser, then checks 544 mesh instances and 568 active material slots. It also pins every unbound actor, prop and effect material under target. It verifies resource identity and every stored material value on high/low, all target roles, unchanged mesh/caster state, shader uniform/include parsing, label hiding, median/p95 calculation and unavailable timestamps. The target game also stages 120 physics frames headlessly without an error line.
+
+The round-1 smoke list plus `target_material_test` passes; lint reports zero findings. Headless capture still exits 2 without script error. The checks establish engine resource parsing and binding, not Forward+ shader execution or appearance. No rendered image was generated in the writer sandbox. Ball shadow visibility, absence of the site edge, dam colour at 150 m, fine-detail stability, actor/telegraph separation and the <=3 ms GPU increment remain coordinator checks. Changes are uncommitted for coordinator admission and capture.

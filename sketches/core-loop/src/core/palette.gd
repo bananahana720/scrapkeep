@@ -225,3 +225,31 @@ static func enamel_wear(mat: StandardMaterial3D) -> void:
 	mat.detail_albedo = _oxide
 	mat.detail_mask = _wear
 	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+
+
+static var _target_surfaces := {}
+
+# Target resources wrap the existing surface; original materials and mesh slots are
+# retained by GraphicsPreset so high/low can restore the exact resource identities.
+static func target_surface_material(role: String, original: Material) -> ShaderMaterial:
+	var key := role + ":" + str(original.get_instance_id())
+	if _target_surfaces.has(key):
+		return _target_surfaces[key]
+	var mat := ShaderMaterial.new()
+	match role:
+		"ground":
+			mat.shader = preload("res://assets/shaders/target_ground.gdshader")
+		"rock":
+			mat.shader = preload("res://assets/shaders/target_rock.gdshader")
+			mat.set_shader_parameter("stone_color", Color("bca382"))
+		"dam":
+			mat.shader = preload("res://assets/shaders/target_dam.gdshader")
+			if original is StandardMaterial3D:
+				mat.set_shader_parameter("base_color", original.albedo_color)
+				mat.set_shader_parameter("base_roughness", original.roughness)
+				mat.set_shader_parameter("has_base_map", original.albedo_texture != null)
+				if original.albedo_texture != null:
+					mat.set_shader_parameter("base_map", original.albedo_texture)
+	mat.resource_name = "target_" + role
+	_target_surfaces[key] = mat
+	return mat

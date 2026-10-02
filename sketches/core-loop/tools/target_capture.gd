@@ -39,23 +39,32 @@ func _initialize() -> void:
 func _run() -> void:
 	await _stage()
 	Cams.aim(camera, play_view.eye, play_view.target, play_view.fov)
+	var viewport_rid := root.get_viewport_rid()
+	RenderingServer.viewport_set_measure_render_time(viewport_rid, true)
 	# Measure the live scene, including simulation and presentation. Discard initial
 	# shader/GI warmup; intervals between presented draws are throughput, not GPU-only time.
 	for i in WARMUP_FRAMES:
 		await RenderingServer.frame_post_draw
 	var samples: Array[float] = []
+	var gpu_samples: Array[float] = []
+	var cpu_samples: Array[float] = []
+	var setup_samples: Array[float] = []
 	var previous := Time.get_ticks_usec()
 	for i in SAMPLE_FRAMES:
 		await RenderingServer.frame_post_draw
 		var now := Time.get_ticks_usec()
 		samples.append(float(now - previous) / 1000.0)
 		previous = now
-	var sorted := samples.duplicate()
-	sorted.sort()
+		gpu_samples.append(RenderingServer.viewport_get_measured_render_time_gpu(viewport_rid))
+		cpu_samples.append(RenderingServer.viewport_get_measured_render_time_cpu(viewport_rid))
+		setup_samples.append(RenderingServer.get_frame_setup_time_cpu())
+	var wall := _summary(samples)
 	timing = {"frames": SAMPLE_FRAMES, "warmup_frames": WARMUP_FRAMES,
-		"median_ms": (sorted[119] + sorted[120]) * 0.5, "p95_ms": sorted[227],
+		"median_ms": wall.median_ms, "p95_ms": wall.p95_ms,
+		"gpu_render": _summary(gpu_samples), "cpu_render": _summary(cpu_samples),
+		"cpu_frame_setup": _summary(setup_samples),
 		"samples_ms": samples, "vsync": "disabled", "max_fps": 0,
-		"method": "wall-clock intervals between frame_post_draw signals; live simulation, fixed play camera; not GPU-only time"}
+		"method": "wall-clock intervals between frame_post_draw signals; live simulation, fixed play camera; engine viewport GPU/CPU timestamps in milliseconds; CPU setup separate; asynchronous GPU timestamps can lag wall samples"}
 	# FPS changes how far simulation advances during measurement. Rebuild from the same
 	# seed and physics count, so the three stills compare identical staged scene state.
 	game.free()
@@ -111,10 +120,7 @@ func _stage() -> void:
 	for spot in play.enemies_xz:
 		game.ctx.spawner.spawn_enemy("chaser", game.ctx.terrain.drop_point(spot.x, spot.y, 1.2))
 	game.flow.warden._look._badge.visible = false
-	for node in root.find_children("*", "CanvasLayer", true, false):
-		node.visible = false
-	for label in root.find_children("*", "Label3D", true, false):
-		label.visible = false
+	_hide_labels()
 	camera = Camera3D.new()
 	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	game.add_child(camera)
@@ -128,6 +134,8 @@ func _shot(id: String, view: Dictionary) -> bool:
 	# simulation remains frozen. No animation or physics frames advance between stills.
 	for i in WARMUP_FRAMES:
 		await RenderingServer.frame_post_draw
+	_hide_labels()
+	await RenderingServer.frame_post_draw
 	var still := root.get_texture().get_image()
 	var path := out.path_join(id + ".png")
 	if still.get_size() != Cams.SIZE or still.save_png(path) != OK:
@@ -144,6 +152,34 @@ func _hashes() -> Dictionary:
 	var result := {}
 	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/hero_assets.gd",
 		"src/presentation/spillway_scenery.gd", "src/presentation/graphics_preset.gd",
-		"tools/capture_cameras.gd", "tools/target_capture.gd", "project.godot"]:
+		"tools/capture_cameras.gd", "tools/target_capture.gd", "project.godot",
+		"assets/shaders/target_ground.gdshader", "assets/shaders/target_rock.gdshader",
+		"assets/shaders/target_dam.gdshader", "assets/shaders/target_surface.gdshaderinc"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result
+
+
+# WorldPrompt is a screen-space Label, not Label3D. Hide all canvas items as well
+# as their HUD layers, and stop layer processing from revealing prompts again.
+func _hide_labels() -> void:
+	hide_labels(root)
+
+
+static func hide_labels(scene: Node) -> void:
+	for node in scene.find_children("*", "CanvasLayer", true, false):
+		node.visible = false
+		node.process_mode = Node.PROCESS_MODE_DISABLED
+	for node in scene.find_children("*", "CanvasItem", true, false):
+		node.visible = false
+	for node in scene.find_children("*", "Label3D", true, false):
+		node.visible = false
+
+
+static func _summary(samples: Array[float]) -> Dictionary:
+	var sorted: Array[float] = samples.duplicate()
+	sorted.sort()
+	var middle := sorted.size() / 2
+	var median: float = sorted[middle] if sorted.size() % 2 else (sorted[middle - 1] + sorted[middle]) * 0.5
+	var p95: float = sorted[maxi(0, ceili(sorted.size() * 0.95) - 1)]
+	return {"median_ms": median, "p95_ms": p95, "samples_ms": samples,
+		"available": sorted.front() > 0.0, "sample_count": sorted.size()}

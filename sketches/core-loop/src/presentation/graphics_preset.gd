@@ -8,45 +8,29 @@ const PRESETS := {
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
 		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.5},
-	"target": {"ssao": true, "glow": true, "shadow_distance": 160.0, "shadow_mode": 2,
+	# R1's -28 degree sun puts play ground in the western rim's shadow; the ball loses
+	# its separate height cue. Keep high's -36 degree sun, PSSM, bias and grade pinned.
+	# No global shaft veil: leave volumetric fog off until a bounded occluder test earns it.
+	"target": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
 		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.30, "sun": 2.15, "fog": 0.00015,
-		"sun_rotation": Vector3(-28.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.30,
-		"sdfgi": true, "ssil": true, "volumetric_fog": true,
-		"shadow_atlas": 4096, "sdfgi_rays": 3, "ssil_quality": 2,
-		"fog_volume_size": 96, "fog_volume_depth": 64,
-		"environment": {
-			"ambient_light_color": Color("b4c3d1"), "ambient_light_sky_contribution": 0.35,
-			"tonemap_exposure": 1.05, "tonemap_agx_contrast": 1.15,
-			"adjustment_saturation": 1.05,
-			"ssao_radius": 0.70, "ssao_intensity": 1.35, "ssao_power": 1.20,
-			"ssao_detail": 0.50, "ssao_light_affect": 0.08,
-			"sdfgi_cascades": 4, "sdfgi_min_cell_size": 1.0,
-			"sdfgi_use_occlusion": true, "sdfgi_read_sky_light": true,
-			"sdfgi_bounce_feedback": 0.35, "sdfgi_energy": 1.0,
-			"ssil_radius": 3.0, "ssil_intensity": 0.65,
-			"ssil_sharpness": 0.8, "ssil_normal_rejection": 1.0,
-			"fog_light_color": Color("c0c9cf"), "fog_light_energy": 0.60,
-			"fog_aerial_perspective": 0.20, "fog_sky_affect": 0.10,
-			"volumetric_fog_density": 0.0015, "volumetric_fog_albedo": Color("dfded8"),
-			"volumetric_fog_length": 160.0, "volumetric_fog_detail_spread": 2.0,
-			"volumetric_fog_anisotropy": 0.45, "volumetric_fog_gi_inject": 0.5,
-			"volumetric_fog_ambient_inject": 0.30, "volumetric_fog_sky_affect": 0.10,
-			"volumetric_fog_temporal_reprojection_enabled": true,
-			"volumetric_fog_temporal_reprojection_amount": 0.90,
-			"glow_intensity": 0.22, "glow_hdr_threshold": 1.8,
-		},
-		"sun_properties": {"light_color": Color("ffe4bf"), "light_angular_distance": 0.5,
-			"light_indirect_energy": 1.0, "light_volumetric_fog_energy": 1.2,
-			"directional_shadow_split_1": 0.10, "directional_shadow_split_2": 0.25,
-			"directional_shadow_split_3": 0.55, "shadow_normal_bias": 0.40},
-		"sky_properties": {"process_mode": 2, "radiance_size": 3},
+		"ambient": 0.28, "sun": 2.35, "fog": 0.0006,
+		"sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5,
+		"sdfgi": false, "ssil": false, "volumetric_fog": false,
+		"shadow_atlas": 4096, "sdfgi_rays": 1, "ssil_quality": 2,
+		"fog_volume_size": 64, "fog_volume_depth": 64,
+		"material_detail": true, "material_relief": true,
+		"material_ground": true, "material_rock": true, "material_dam": true,
+		"environment": {"ssao_radius": 0.55, "ssao_intensity": 1.25, "ssao_detail": 0.40},
+		"sun_properties": {"light_angular_distance": 0.0, "shadow_normal_bias": 0.65,
+			"directional_shadow_split_1": 0.18},
+		"sky_properties": {},
 	},
 }
 static var current := "high"
 static var _worlds: Array = []
 static var _scenery: Array = []
 static var _target_server_active := false
+static var _materials: Array = []
 
 static func apply(preset: String) -> bool:
 	if not PRESETS.has(preset):
@@ -58,6 +42,9 @@ static func apply(preset: String) -> bool:
 	_scenery = _scenery.filter(func(w): return w.get_ref() != null)
 	for ref in _scenery:
 		_apply_scenery(ref.get_ref())
+	_materials = _materials.filter(func(w): return w.view.get_ref() != null)
+	for binding in _materials:
+		_apply_material(binding)
 	return true
 
 static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Viewport) -> void:
@@ -71,6 +58,7 @@ static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Vi
 static func register_scenery(view: GeometryInstance3D) -> void:
 	_scenery.append(weakref(view))
 	_apply_scenery(view)
+	_bind_scenery_material.call_deferred(weakref(view))
 
 static func _apply_scenery(view: GeometryInstance3D) -> void:
 	view.visibility_range_end = PRESETS[current].scenery_distance
@@ -203,3 +191,52 @@ static func _restore_target_server() -> void:
 	var fog := "rendering/environment/volumetric_fog/"
 	RenderingServer.environment_set_volumetric_fog_volume_size(ProjectSettings.get_setting(fog + "volume_size"), ProjectSettings.get_setting(fog + "volume_depth"))
 	_target_server_active = false
+
+
+# Bind after the scenery builder's opaque merge. Changing the input materials before
+# that merge would split its batch and change the scene's geometry/draw structure.
+static func _bind_scenery_material(ref: WeakRef) -> void:
+	var view := ref.get_ref() as MeshInstance3D
+	if view == null:
+		return
+	match String(view.name):
+		"SandstoneShoulders":
+			_bind_material(view, "rock")
+		"DamAndLedgeDressing", "DamDetail":
+			_bind_material(view, "dam")
+
+
+static func register_ground(view: MeshInstance3D) -> void:
+	_bind_material(view, "ground")
+
+
+static func _bind_material(view: MeshInstance3D, role: String) -> void:
+	var surfaces := []
+	var originals := []
+	for i in view.mesh.get_surface_count():
+		surfaces.append(view.get_surface_override_material(i))
+		originals.append(view.get_active_material(i))
+	var binding := {"view": weakref(view), "role": role,
+		"override": view.material_override, "surfaces": surfaces, "originals": originals}
+	_materials.append(binding)
+	_apply_material(binding)
+
+
+static func _apply_material(binding: Dictionary) -> void:
+	var view := binding.view.get_ref() as MeshInstance3D
+	if view == null:
+		return
+	if current != "target" or not PRESETS.target["material_" + binding.role]:
+		view.material_override = binding.override
+		for i in binding.surfaces.size():
+			view.set_surface_override_material(i, binding.surfaces[i])
+		return
+	var palette := preload("res://src/core/palette.gd")
+	for i in binding.originals.size():
+		var material := palette.target_surface_material(binding.role, binding.originals[i])
+		material.set_shader_parameter("detail_enabled", PRESETS.target.material_detail)
+		material.set_shader_parameter("relief_enabled", PRESETS.target.material_relief)
+		if binding.override != null:
+			view.material_override = material
+			break
+		view.set_surface_override_material(i, material)
