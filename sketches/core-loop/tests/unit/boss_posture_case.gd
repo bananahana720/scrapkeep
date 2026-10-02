@@ -205,7 +205,7 @@ func _pure(t) -> void:
 
 # The kinds and ratios of 20 hits, each answered with the rule's original formula (base times
 # the clamped ratio, gain only outside a stagger, a core hit shattering for a smash or a ram of
-# tier 2 or better) written out here. Every third stagger is left open for the next hit, and the
+# tier 2 or better) written out here. A stagger filled on a hit whose index is a multiple of 3 stays open for the next hit, and the
 # gun hits at i = 4 and 14 are charging.
 func _defaults_unchanged(t) -> void:
 	var kinds := ["ram", "stomp", "slam", "ram", "runner"]

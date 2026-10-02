@@ -354,20 +354,20 @@ func _retry() -> void:
 	_t.check("the cache's wall stands again", _site("cracked_cache").wall.visible and not _site("cracked_cache").done, "wall")
 
 
-# A slam in front of the face: below cruise's strength it leaves the wall, at or above it the wall goes.
-# The strength of `slammed` is the fall speed in m/s, the same unit as a ram's speed.
+# A slam in front of the face, sent through the ball's own landing so the bus carries the strength the
+# game would: a landing slower than cruise leaves the wall, one at cruise or faster breaks it.
 func _slams() -> void:
 	var s = _site("cracked_cache")
 	var cruise: float = _game.ctx.tuning.f("cruise")
 	var at: Vector3 = s.global_position + s.global_basis.z * 3.0
 	_put(_ground(s.global_position + s.global_basis.z * 40.0))
 	await _hold(3)
-	_game.events.slammed.emit(at, cruise * RAM_BELOW, 1.0)
+	_game.player._on_slammed(at, cruise * RAM_BELOW, 1.0)
 	await _frames(2)
-	_t.check("a slam below cruise's strength leaves the wall standing", not s.done and s.wall.visible, "strength %.1f of cruise %.1f: done %s" % [cruise * RAM_BELOW, cruise, s.done])
-	_game.events.slammed.emit(at, cruise * RAM_AT, 1.0)
+	_t.check("a landing slower than cruise leaves the wall standing", not s.done and s.wall.visible, "landing %.1f m/s of cruise %.1f: done %s" % [cruise * RAM_BELOW, cruise, s.done])
+	_game.player._on_slammed(at, cruise * RAM_AT, 1.0)
 	await _frames(2)
-	_t.check("a slam above cruise's strength breaks it", s.done and not s.wall.visible, "strength %.1f: done %s" % [cruise * RAM_AT, s.done])
+	_t.check("a landing faster than cruise breaks it", s.done and not s.wall.visible, "landing %.1f m/s: done %s" % [cruise * RAM_AT, s.done])
 	_t.check("and one part waits on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5, "pickup %s" % [s.pickup])
 
 

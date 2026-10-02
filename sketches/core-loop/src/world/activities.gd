@@ -51,9 +51,9 @@ const WALL_HEIGHT := 6.0
 const WALL_SINK := 3.0
 const WALL_REACH := 3.0
 const SLAM_REACH := 7.0
-# `slammed` carries the landing's fall speed in m/s as its strength (augments.gd: slam_fall = -v.y),
-# the same unit as a ram's speed into the face. A slam breaks the wall at SLAM_MIN_PER_CRUISE times
-# the tuned cruise speed, so a fall as fast as the ram that breaks it breaks it too and a weaker one does not.
+# `slammed` carries the ball's own strength for the landing (player.slam_strength), not a speed.
+# A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
+# so a landing as fast as the ram that breaks it breaks it too and a slower one does not.
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 
@@ -280,7 +280,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 
 
 func _slammed(at: Vector3, strength: float) -> void:
-	if strength < ctx.tuning.f("cruise") * SLAM_MIN_PER_CRUISE:
+	if strength < ctx.player.slam_strength(ctx.tuning.f("cruise")) * SLAM_MIN_PER_CRUISE:
 		return
 	for s in sites:
 		if s.wall == null or s.done:

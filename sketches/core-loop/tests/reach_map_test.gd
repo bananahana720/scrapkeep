@@ -184,10 +184,11 @@ func _check_line_steps() -> void:
 
 
 # The spawn launch (unit ZL): from the spawn to each pilot's first ride (waypoint 2), no step of
-# 1 m rises more than 0.3 m, and the launch feature's own face is no steeper than 30 degrees.
+# 1 m rises more than 0.3 m, and the built ground on x = 0 under the launch has no face steeper
+# than 30 degrees.
 const FIRST_RIDE := 2
 const FACE_LIMIT_DEG := 30.0
-# The gorge's own rim falls from z -101.75 at x = 0; the launch's ground ends before it.
+# The gorge's own rim is a cliff between z -102 and -100 at x = 0; the launch's ground ends before it.
 const FACE_SAMPLE_END := -102.5
 
 

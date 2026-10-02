@@ -829,11 +829,17 @@ func _update_augment_visuals(at: Vector3) -> void:
 			_wings.global_basis = Basis.looking_at(heading.normalized(), Vector3.UP)
 
 
+# The strength the bus carries for a slam that lands at `speed` m/s: 1.0 at 30 m/s, never
+# under 0.4 or over 1.6, scaled by how flat the ground was.
+static func slam_strength(speed: float, flatness := 1.0) -> float:
+	return clampf(speed / 30.0, 0.4, 1.6) * flatness
+
+
 # The shockwave carries the same flatness as the plant: a full thump on flat ground,
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
-	var strength := clampf(speed / 30.0, 0.4, 1.6) * flatness
+	var strength := slam_strength(speed, flatness)
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
