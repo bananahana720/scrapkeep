@@ -260,6 +260,10 @@ Each is worded so he can veto it.
 44. The Warden's body does not carry its health count. Two rounds put four segments on its jaws, and both times a blind judge could not count them: the chase camera sees the jaws end-on from the front, and light bands on a dark striped body read as panel lines. Neither round is admitted; both branches are kept. The count moves to four lit arcs on the ground round the Warden's foot, which mirror the boss plate's pips and read their colours from it. The body keeps what reads: the jaws splay open, and a segment breaks off on a shatter.
 45. The plated brute and the mag trapper each draw one more piece than their old ceiling, for the arm links and the disc link. Cheap at slice enemy counts. Owner may veto.
 46. The slice Warden is plating 110, curve 2, and a ram cracks but never shatters an open core. Picked by the written sweep rule and confirmed on the merged wave with growth pays in: a class III ball breaks it in about 25 s, a class I ball in about 86 s, a ranged camper never. A later change to scrap or the map reruns the sweep; it does not move the bands.
+47. The beacon is slate while sealed and amber once open, on the ring, the bulb, the edge marker and the HUD row. Mint stays the one colour for "your verb works now".
+48. The slice offers twelve parts, each tied to one of its five synergies, and no generated or milestone parts. Reaching a new heft class for the first time opens one upgrade pick once the ball is grounded and no Warden fight is live. A retry keeps the picks and the rewarded class it paid for.
+49. Item 45 is half retired: the brute's arms are part of its body mesh, so it is back to three draws. The mag trapper keeps its extra draw for the disc link.
+50. The checkpoint script prints the plan lines it cannot check as by-hand rows, and its summary says "bots and fixed checks pass" rather than ADMIT, so it never claims a review or a play verdict.
 
 ## 11. What only Andrew can decide
 

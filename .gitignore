@@ -20,3 +20,6 @@ leads.lock
 native/.godot/
 native/**/*.import
 artifacts/anim-pilot/
+
+# Command receipts written by the pstack capture tool
+.pstack/
