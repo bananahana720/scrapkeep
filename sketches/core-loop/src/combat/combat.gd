@@ -17,7 +17,6 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Ground := preload("res://src/combat/ground.gd")
 const WearTrail := preload("res://src/combat/wear_trail.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
@@ -176,8 +175,8 @@ var _boss_add_ids := {}
 # strike()'s own `source` argument always wins over this when given.
 var _forced_source := ""
 # Where warden_spec reads a stage other than the current one. A test may swap in any
-# object with of(stage) -> Dictionary.
-var stage_defs = StageDefs
+# object with of(stage) -> Dictionary; null reads the context's table.
+var stage_defs = null
 
 var _patterns := {}
 var _part_map := {}
@@ -228,6 +227,10 @@ var _pulse_left := 0.0
 var _cloak_held := 0.0
 # UpgradeTree.ACTIONS name -> Callable(scale).
 var _actions := {}
+
+
+func _stage_table():
+	return stage_defs if stage_defs != null else ctx.stages
 
 
 func setup(ctx_ref) -> void:
@@ -1747,7 +1750,7 @@ func _threat() -> float:
 # (the vault's next one) from stage_defs.of(stage). A missing field falls back to the
 # spec's per-stage value.
 func warden_spec(stage: int) -> Dictionary:
-	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else stage_defs.of(stage)
+	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else _stage_table().of(stage)
 	var fallback: Dictionary = WARDEN_FALLBACK[clampi(stage, 1, 3) - 1]
 	return {
 		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
@@ -1788,7 +1791,7 @@ func _spec_for(kind: String) -> Dictionary:
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
 		"vault":
-			var next_plating: float = roundf(VAULT_TOP_SCALE * warden_spec(stage)["plating"]) if StageDefs.is_last(stage) \
+			var next_plating: float = roundf(VAULT_TOP_SCALE * warden_spec(stage)["plating"]) if ctx.stages.is_last(stage) \
 					else warden_spec(stage + 1)["plating"]
 			return {"stage": stage, "plating": next_plating, "hp": 400.0 * stage}
 	return {}

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const GameEvents := preload("res://src/core/game_events.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
@@ -36,6 +37,9 @@ var run_log: Node
 # The boss module (wave 4), set by src/boss/boss.gd's setup when that file exists.
 # Flow calls enter_arena(entry_velocity) on it after stage 3's launch.
 var boss: Node
+# The stage table the run reads: COUNT, BOSS, of(stage), is_last(stage). Game swaps it at
+# build time (--table=), so no module preloads a table of its own.
+var stages = StageDefs
 # The node modules add their world children to.
 var root: Node3D
 # One seeded stream per run for anything a module randomizes.

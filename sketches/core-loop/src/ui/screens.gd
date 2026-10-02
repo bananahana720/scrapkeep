@@ -2,7 +2,6 @@ extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
@@ -131,7 +130,7 @@ func _on_flow_changed(state: String) -> void:
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose class")
 			if game.flow.can_replay_final_stage():
-				_action("replay", "key_t", "Replay stage %d" % StageDefs.COUNT)
+				_action("replay", "key_t", "Replay stage %d" % game.ctx.stages.COUNT)
 			_guard = CLICK_GUARD
 		"victory":
 			_show("BRINDLE ROUTED", EventKinds.color("boss_defeated"), "The Requisition is scrap.")
@@ -208,7 +207,7 @@ func _summary_stats() -> void:
 	var s: Dictionary = game.run.summary()
 	var chips := [
 		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60]],
-		["obj_beacon", "%d/%d" % [s["stages"], StageDefs.COUNT]],
+		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT]],
 		["res_scrap", str(s["scrap"])],
 		["cat_transform", str((s["parts"] as Array).size())],
 		["thr_instant", str(s["kills"])],

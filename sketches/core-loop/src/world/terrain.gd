@@ -4,6 +4,9 @@ const Palette := preload("res://src/core/palette.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Weir := preload("res://src/world/map_weir.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
+
+const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir}
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #
@@ -38,8 +41,10 @@ var _heights: Array[PackedFloat32Array] = []
 var _parent: Node3D
 
 
-func _init() -> void:
-	maps = [Spillway.new(), Gorge.new(), Weir.new()]
+func _init(table = StageDefs) -> void:
+	for row in table.DEFS:
+		assert(MAPS.has(row["map"]), "terrain: stage %s names an unknown map '%s'" % [row["stage"], row["map"]])
+		maps.append(MAPS[row["map"]].new())
 
 
 func map() -> RefCounted:
