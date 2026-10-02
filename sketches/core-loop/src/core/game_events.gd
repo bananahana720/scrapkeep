@@ -157,6 +157,14 @@ signal warden_window_held(at: Vector3, seconds_left: float)
 signal warden_drop_landed(at: Vector3, speed: float, segments_left: int, segments: int)
 signal warden_pulse_dodged(at: Vector3, near: bool)
 
+# The legibility grammar (design-v3/LEGIBILITY.md). line_state_changed names a LINE_ROWS id,
+# verb_failed a Bindings.VERBS id, cause_fired a CAUSE_ROWS id; posture_changed carries the
+# Warden's posture bar.
+signal line_state_changed(state: String, target: Node3D, at: Vector3)
+signal verb_failed(verb: String, at: Vector3)
+signal cause_fired(id: String, target: Node3D, at: Vector3)
+signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

@@ -30,7 +30,7 @@ func _initialize() -> void:
 			malformed.append(kind)
 	var orphans: Array[String] = []
 	for kind in EventKinds.ROWS:
-		if not kind in names:
+		if not kind in names and not kind in EventKinds.POSTURE_FACTS:
 			orphans.append(kind)
 	var optional: Array[String] = []
 	for kind in EventKinds.ROWS:
