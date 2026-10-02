@@ -1,4 +1,4 @@
-extends SceneTree
+extends RefCounted
 
 const WardenDrop := preload("res://src/combat/warden_drop.gd")
 
@@ -16,23 +16,20 @@ class StubWarden:
 	var _open_left := 0.0
 
 
-var _failures := 0
-
-
-func _init() -> void:
+func run(t) -> void:
 	var cores := 1
 	var warden := StubWarden.new()
 	var drop := WardenDrop.new(warden, {"gun_role": "full", "cores": func(): return cores})
 	drop.staggered = true
 	warden._open_left = 3.0
 	var got := drop.opened(2.5)
-	_check("full: a stagger between base and fresh is replaced by the fresh window", is_equal_approx(got, 3.5) and drop.windows == 1,
+	t.check("full: a stagger between base and fresh is replaced by the fresh window", is_equal_approx(got, 3.5) and drop.windows == 1,
 		"opened returned %.2f, windows %d (needs 3.50, 1)" % [got, drop.windows])
 
 	warden._open_left = 5.0
 	drop.staggered = true
 	got = drop.opened(2.5)
-	_check("full: a longer stagger keeps its time", is_equal_approx(got, 5.0) and drop.windows == 1,
+	t.check("full: a longer stagger keeps its time", is_equal_approx(got, 5.0) and drop.windows == 1,
 		"opened returned %.2f, windows %d (needs 5.00, 1)" % [got, drop.windows])
 
 	cores = 2
@@ -43,27 +40,20 @@ func _init() -> void:
 	hold.held = 2.0
 	hold_warden._open_left = 0.5
 	got = hold.opened(2.5)
-	_check("hold: a standing window keeps the banked share", is_equal_approx(hold.banked, 3.0) and is_zero_approx(hold.damage["banked_lost"]),
+	t.check("hold: a standing window keeps the banked share", is_equal_approx(hold.banked, 3.0) and is_zero_approx(hold.damage["banked_lost"]),
 		"banked %.2f, banked_lost %.2f (needs 3.00, 0.00)" % [hold.banked, hold.damage["banked_lost"]])
-	_check("hold: a standing window is not counted again and keeps held time", hold.windows == 1 and is_equal_approx(hold.held, 2.0),
+	t.check("hold: a standing window is not counted again and keeps held time", hold.windows == 1 and is_equal_approx(hold.held, 2.0),
 		"windows %d, held %.2f (needs 1, 2.00)" % [hold.windows, hold.held])
-	_check("hold: a standing window is never cut short", got >= 0.5 and is_equal_approx(got, 4.5),
+	t.check("hold: a standing window is never cut short", got >= 0.5 and is_equal_approx(got, 4.5),
 		"opened returned %.2f (needs 4.50)" % got)
 
 	hold_warden._open_left = 9.0
 	got = hold.opened(2.5)
-	_check("hold: a window longer than a fresh one keeps its time", is_equal_approx(got, 9.0),
+	t.check("hold: a window longer than a fresh one keeps its time", is_equal_approx(got, 9.0),
 		"opened returned %.2f (needs 9.00)" % got)
 
 	hold_warden._open_left = 0.0
 	hold.banked = 1.0
 	hold.opened(2.5)
-	_check("hold: a closed window opens a new one and forfeits the leftover share", hold.windows == 2 and is_zero_approx(hold.banked),
+	t.check("hold: a closed window opens a new one and forfeits the leftover share", hold.windows == 2 and is_zero_approx(hold.banked),
 		"windows %d, banked %.2f (needs 2, 0.00)" % [hold.windows, hold.banked])
-	quit(1 if _failures > 0 else 0)
-
-
-func _check(label: String, ok: bool, detail: String) -> void:
-	print("%s %s: %s" % ["PASS" if ok else "FAIL", label, detail])
-	if not ok:
-		_failures += 1

@@ -1,4 +1,4 @@
-extends SceneTree
+extends RefCounted
 
 const Director := preload("res://src/world/director.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -18,23 +18,20 @@ const Roster := preload("res://src/combat/roster.gd")
 const H := 1.0 / 60.0
 const DRAWS := 3000
 
-var _failures := 0
+var _t
 
 
-func _initialize() -> void:
+func run(t) -> void:
+	_t = t
 	_clock_gate()
 	_weights_and_unlocks()
 	_pairs()
 	_ancients()
 	_build_tilt()
-	print("enemy_director_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-	quit(0 if _failures == 0 else 1)
 
 
 func _report(check: String, ok: bool, detail: String) -> void:
-	print("[%s] %s -> %s" % [check, detail, "PASS" if ok else "FAIL"])
-	if not ok:
-		_failures += 1
+	_t.check(check, ok, detail)
 
 
 func _clock_gate() -> void:
