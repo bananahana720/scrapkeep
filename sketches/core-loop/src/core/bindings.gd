@@ -10,7 +10,7 @@ const VERBS := {
 	"jump": {"intent": "jump_pressed", "fail": "verb_fail_jump"},
 	"fire": {"intent": "fire_pressed", "fail": "verb_fail_fire"},
 	"harpoon": {"intent": "harpoon_pressed", "fail": "dry_tick"},
-	"haul": {"intent": "reel_held", "fail": "verb_fail_haul"},
+	"haul": {"intent": "brake_held", "fail": "verb_fail_haul"},
 	"boost": {"intent": "boost_pressed", "fail": "verb_fail_boost"},
 	"special": {"intent": "special_pressed", "fail": "verb_fail_special"},
 	"interact": {"intent": "interact_pressed", "fail": "verb_fail_interact"},

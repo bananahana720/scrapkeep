@@ -56,13 +56,8 @@ const SPECS := [
 	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
-	# The harpoon feel prototype (DESIGN-NOTES, "Harpoon and winch"): RMB fires a line for every pilot.
-	# `shot` hits what the centre ray hits; `lock` prefers an enemy inside harpoon_lock_deg. `self` always
-	# flies you in; `heft` splits the closing by weight against heft. `shift` puts the class burst on
-	# Shift when its charge is ready, `keep` moves it to C. Lock is the default; off is the old base game.
-	{"key": "harpoon", "label": "Harpoon", "min": 0.0, "max": 2.0, "step": 1.0, "value": 2.0, "options": ["off", "shot", "lock"]},
-	{"key": "harpoon_pull", "label": "Harpoon pull", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["self", "heft"]},
-	{"key": "harpoon_keys", "label": "Harpoon keys", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["shift", "keep"]},
+	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
+	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
 	{"key": "harpoon_lock_deg", "label": "Harpoon lock (deg)", "min": 0.0, "max": 25.0, "step": 0.5, "value": 10.0},
 	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
@@ -109,7 +104,7 @@ func _init() -> void:
 #         so a bot or tool that builds a bare Tuning never sees them.
 # `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --loop=drop --gun=full
 # --music=ace --breath=gentle --discovery=cards --telegraph=haze --world-one-builds=on
-# --hotwire-shell=on --hotwire-tread=on --harpoon=lock --harpoon-pull=heft --harpoon-keys=keep`, from the engine args
+# --hotwire-shell=on --hotwire-tread=on`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
 # since the static-drawn floor marking has no tuning in reach; tuning_flags_test checks
@@ -128,9 +123,6 @@ const FLAGS := {
 	"world-one-builds": ["world_one_builds", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
-	"harpoon": ["harpoon", "option", "launch"],
-	"harpoon-pull": ["harpoon_pull", "option", "launch"],
-	"harpoon-keys": ["harpoon_keys", "option", "launch"],
 }
 
 
@@ -169,10 +161,6 @@ func apply_cmdline(when := "") -> Dictionary:
 
 func world_one() -> bool:
 	return option("world_one_builds") == "on"
-
-
-func harpoon_on() -> bool:
-	return option("harpoon") != "off"
 
 
 func armor() -> bool:

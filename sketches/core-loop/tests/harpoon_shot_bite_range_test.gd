@@ -6,16 +6,17 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-# A shot line and a lock line bitten into the same body at the same range must behave the same:
-# the latched auto-release counts the body's radius once, whatever anchor_offset the bite stored.
-#   bite    a chaser just outside the release range stays hooked after a bite, shot or lock
-#   winch   a winched line lets go at the same centre-to-centre range under shot and lock
+# A line bitten at the body's centre (the lock) and one bitten at its surface (the centre ray)
+# into the same body at the same range must behave the same: the latched auto-release counts
+# the body's radius once, whatever anchor_offset the bite stored.
+#   bite    a chaser just outside the release range stays hooked after a bite, centre or surface
+#   pass    a ball rolling in on a latched line lets go at the same centre-to-centre range
 # Evidence limit: one chaser kind on the Spillway's flat shelf; the feel of the release is unjudged.
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
 const MARGIN := 0.15
-const WINCH_TOLERANCE := 0.8
-const WINCH_LIMIT_SECONDS := 6.0
+const PASS_TOLERANCE := 0.8
+const PASS_LIMIT_SECONDS := 6.0
 
 var _failures := 0
 var _game
@@ -46,11 +47,8 @@ func _never() -> bool:
 	return false
 
 
-func _pilot(harpoon: String) -> void:
+func _pilot() -> void:
 	var def: Resource = ClassDef.by_id("pylon_engineer")
-	_game.tuning.set_option("harpoon", harpoon)
-	_game.tuning.set_option("harpoon_pull", "self")
-	_game.tuning.set_option("harpoon_keys", "shift")
 	_game.run.class_def = def
 	_player.fit_class(def)
 	_player.abilities.refill()
@@ -77,13 +75,17 @@ func _release_range(chaser: Node3D) -> float:
 	return Augments.MIN_ROPE + Tuning.RADIUS + float(chaser.get("radius"))
 
 
-# Bites the body the way a press does: the aim's surface point, or its centre under lock.
+# Bites the body at its centre the way a lock does, or at the surface point facing the ball the
+# way the centre ray does.
 func _bite(mode: String, ball: Vector3, chaser: Node3D) -> Dictionary:
-	_pilot(mode)
+	_pilot()
 	_player.reset_to(ball, Vector3.ZERO)
 	await physics_frame
 	var eye := ball + Vector3(0, 0.8, 4.0)
 	var aim: Dictionary = _game.aim_along(eye, (chaser.global_position - eye).normalized())
+	if mode == "surface":
+		var toward: Vector3 = (ball - chaser.global_position).normalized()
+		aim = {"body": chaser, "point": chaser.global_position + toward * float(chaser.get("radius")), "normal": toward}
 	if aim.get("body") == chaser:
 		_player.grapple_to(aim["point"], aim["normal"], aim["body"])
 	return aim
@@ -107,7 +109,7 @@ func _run() -> void:
 	await _sim(0.2)
 
 	await _bite_range()
-	await _winch_range()
+	await _pass_range()
 
 	print("harpoon_shot_bite_range_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
@@ -119,7 +121,7 @@ func _bite_range() -> void:
 	var chaser := _spawn_chaser(_point(0, -10, 1.5))
 	await _sim(0.3)
 	var gap := _release_range(chaser) + MARGIN
-	for mode in ["lock", "shot"]:
+	for mode in ["centre", "surface"]:
 		chaser.global_position = ball + Vector3(0, chaser.global_position.y - ball.y, -gap)
 		var aim: Dictionary = await _bite(mode, ball, chaser)
 		var kit = _player.kit
@@ -134,31 +136,33 @@ func _bite_range() -> void:
 	await _sim(0.1)
 
 
-# Winches from 12 m and reports the centre-to-centre range on the last tick the line was held.
+# Rolls in from 12 m at 8 m/s and reports the centre-to-centre range on the last tick the line was held, or -1 if the line never let go.
 func _drop_range(mode: String, ball: Vector3, chaser: Node3D) -> float:
 	chaser.global_position = ball + Vector3(0, chaser.global_position.y - ball.y, -12.0)
 	await _bite(mode, ball, chaser)
+	_player.body().linear_velocity = Vector3(0, 0, -8.0)
 	_source.hold = {"harpoon_held": true}
 	var last := -1.0
-	var ticks := roundi(WINCH_LIMIT_SECONDS * Engine.physics_ticks_per_second)
+	var ticks := roundi(PASS_LIMIT_SECONDS * Engine.physics_ticks_per_second)
 	for i in ticks:
 		if not _player.kit.hooked:
 			break
 		last = _player.body().global_position.distance_to(chaser.global_position)
 		await physics_frame
+	var let_go: bool = not _player.kit.hooked
 	_source.hold = {}
 	_player.release_grapple()
-	return last if not _player.kit.hooked or last >= 0.0 else -1.0
+	return last if let_go else -1.0
 
 
-func _winch_range() -> void:
+func _pass_range() -> void:
 	var ball := _point(0, 0, 1.6)
 	var chaser := _spawn_chaser(_point(0, -12, 1.5))
 	await _sim(0.3)
-	var lock := await _drop_range("lock", ball, chaser)
+	var centre := await _drop_range("centre", ball, chaser)
 	await _sim(0.2)
-	var shot := await _drop_range("shot", ball, chaser)
-	_check("winch: shot lets go where lock does", lock > 0.0 and shot > 0.0 and absf(shot - lock) <= WINCH_TOLERANCE,
-		"last held range lock %.2f m, shot %.2f m, release range %.2f m, tolerance %.1f m" % [
-			lock, shot, _release_range(chaser), WINCH_TOLERANCE])
+	var surface := await _drop_range("surface", ball, chaser)
+	_check("pass: a surface bite lets go where a centre bite does", centre > 0.0 and surface > 0.0 and absf(surface - centre) <= PASS_TOLERANCE,
+		"last held range centre %.2f m, surface %.2f m, release range %.2f m, tolerance %.1f m" % [
+			centre, surface, _release_range(chaser), PASS_TOLERANCE])
 	chaser.queue_free()

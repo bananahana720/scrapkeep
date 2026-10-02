@@ -132,7 +132,6 @@ func _drive() -> void:
 	if t % 50 == 0:
 		press["jump_pressed"] = true
 	hold["brake_held"] = t % 50 >= 22 and t % 50 < 30 and not _player.state.grounded
-	hold["reel_held"] = t % 150 >= 20 and t % 150 < 70
 	if t % 150 == 5:
 		press["mount_pressed"] = true
 	if t % 100 == 0:

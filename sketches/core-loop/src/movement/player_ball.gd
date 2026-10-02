@@ -47,6 +47,11 @@ const SKID_CONE := 0.35
 const SKID_REFUND := 0.5
 const AIM_CONE_LENGTH := 5.0
 const AIM_CONE_HALF := 0.3
+# How long a transient line state stands before the steady one is published again.
+const DRY_FIRE_HOLD := 0.25
+const LET_GO_HOLD := 0.15
+const BROKE_HOLD := 0.3
+const LANDS_HOLD := 0.1
 
 signal shockwave(position: Vector3, strength: float)
 # A physical contact the ball made, for combat to turn into damage. Local, not the bus:
@@ -109,6 +114,13 @@ var _was_hooked := false
 # Ctrl's raw state last tick, and whether a body line has claimed the press still held.
 var _brake_was_held := false
 var _ctrl_claimed := false
+# The line state last published (LINE_ROWS id), what it named, and how long a transient one
+# still stands. _line_standing says a latch or smash was published and has not ended yet.
+var _line_state := ""
+var _line_target = null
+var _line_anchor := Vector3.ZERO
+var _line_hold := 0.0
+var _line_standing := false
 var _hook_head: MeshInstance3D
 var _bow: Area3D
 var _crushing := {}
@@ -261,6 +273,10 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_was_hooked = false
 	_brake_was_held = false
 	_ctrl_claimed = false
+	_line_state = ""
+	_line_target = null
+	_line_hold = 0.0
+	_line_standing = false
 	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
@@ -268,7 +284,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 # A ride, a launch, a deflect or a throw sets the velocity outright, and a harpoon line
 # would fight it, so it lets go.
 func set_velocity_now(velocity: Vector3) -> void:
-	cut_line()
+	cut_line("launched")
 	_rigid.set_velocity_now(velocity)
 
 
@@ -290,14 +306,11 @@ func _on_tree_picked(n: Dictionary) -> void:
 
 # The movement kit the movement slot's row names, the smash flavour, the class colour.
 func _refit() -> void:
-	kit.harpoon_on = tuning != null and tuning.harpoon_on()
-	if not kit.harpoon_on and kit.on_body:
-		kit.drop_line()
 	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
 	else:
 		kit.fit(abilities.id_of(AbilityState.MOVEMENT), abilities.id_of(AbilityState.SMASH))
-	abilities.movement_key = Harpoon.movement_key(kit, tuning)
+	abilities.movement_key = _burst_key()
 	_paint_effects()
 
 
@@ -373,7 +386,6 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 	Augments.attach(kit, ball_position(), point, normal, body)
 	events.grapple_fired.emit(point)
 	if body != null:
-		_share_line()
 		if body.has_method("flash"):
 			body.flash()
 		events.harpoon_bit.emit(body, point)
@@ -383,28 +395,15 @@ func release_grapple() -> void:
 	kit.drop_line()
 
 
-# A hostile hold that lands cuts the harpoon line; the release cue is grapple_released.
-func cut_line() -> void:
-	if kit.harpoon_on:
-		kit.drop_line()
+# A hostile hold that lands, or a ride or launch, cuts the harpoon line; `cause` is what the
+# line_state_changed signal names, and the release cue is grapple_released.
+func cut_line(cause := "hold") -> void:
+	kit.drop_line(cause)
 
 
-# The line's split with its body, from heft and the body's weight, and the tow the winch
-# handed it last tick.
-func _share_line() -> void:
-	var body = kit.anchor_body
-	if not kit.hooked or not kit.on_body or not is_instance_valid(body):
-		return
-	kit.ball_share = Harpoon.ball_share(tuning.option("harpoon_pull"), heft(), Harpoon.weight_of(body))
-	if kit.tow != Vector3.ZERO and body.has_method("tow"):
-		body.tow(kit.tow)
-	kit.tow = Vector3.ZERO
-
-
-func reel_step(metres: float) -> void:
-	if not kit.hooked:
-		return
-	kit.rope = clampf(kit.rope - metres, Augments.MIN_ROPE, tuning.f("rope_range"))
+# Unused: the wheel does not move the line. game.gd's wheel handler still calls it.
+func reel_step(_metres: float) -> void:
+	pass
 
 
 func grapple_range() -> float:
@@ -413,9 +412,7 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	source.poll(intent)
-	if tuning != null and tuning.harpoon_on() != kit.harpoon_on:
-		_refit()
-	abilities.movement_key = Harpoon.movement_key(kit, tuning)
+	abilities.movement_key = _burst_key()
 	_read_mass()
 	_route_interact()
 	_read_grammar()
@@ -431,7 +428,7 @@ func _physics_process(delta: float) -> void:
 	if _was_hooked and not kit.hooked:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
-	_share_line()
+	_publish_line(delta)
 	_recheck_bow()
 	_tick_face_tags(delta)
 	_mark_slots()
@@ -447,63 +444,172 @@ func _mark_slots() -> void:
 	smash.available = smash.active or not state.grounded
 
 
-# RMB is the class movement, except while the special or the slingshot charges: then
-# its press cancels the charge and moves nothing. Kest's held throw is not included, or
-# holding LMB would swallow her blink. Sable's grapple rides RMB here like the other
-# classes' movement. Under --harpoon RMB is the harpoon for every pilot, the cancel rule
-# follows it, and the class movement moves to Shift or C.
-func _read_grammar() -> void:
+func _charging() -> bool:
 	var special = abilities.gauge(AbilityState.SPECIAL)
-	var charging: bool = (special != null and special.charging) or kit.slingshot.charging
-	if kit.harpoon_on:
-		_route_burst()
-		if intent.harpoon_pressed and charging:
-			intent.harpoon_pressed = false
-			intent.cancel_pressed = true
-		_read_ctrl()
-	elif intent.movement_pressed and charging:
-		intent.movement_pressed = false
+	return (special != null and special.charging) or kit.slingshot.charging
+
+
+# Right mouse is the line for every pilot, except while the special or the slingshot charges:
+# then its press cancels the charge and moves nothing. Shift is the one go verb of the
+# pilot (Sable's boost, Rivet's sprint, Kest's blink) and Ctrl hauls the line in.
+func _read_grammar() -> void:
+	_read_shift()
+	if intent.harpoon_pressed and _charging():
+		intent.harpoon_pressed = false
 		intent.cancel_pressed = true
+	_read_ctrl()
 	if _frozen or not kit.on(Augments.GRAPPLE):
 		return
-	var pressed: bool = intent.harpoon_pressed if kit.harpoon_on else intent.movement_pressed
-	var released: bool = intent.harpoon_released if kit.harpoon_on else intent.movement_released
-	if pressed and kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
-		if not kit.harpoon_on or kit.rewind_left <= 0.0:
-			grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
-	elif released:
+	if intent.harpoon_pressed:
+		_press_harpoon()
+	elif intent.harpoon_released and kit.hooked:
 		_fling()
 		release_grapple()
-	# Rope Anchor: winching up to the wall plants the pylon there.
-	if tree.knob("winch_mount") and kit.hooked and intent.reel_held and not kit.mounted \
+	# Rope Anchor: winching up to the wall with Ctrl plants the pylon there.
+	if tree.knob("winch_mount") and kit.hooked and kit.winching and not kit.mounted \
 			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
 		intent.mount_pressed = true
 
 
-# --harpoon-keys=shift: Shift fires the class burst (Rivet's sprint, Kest's blink) when
-# its charge is ready and is the plain boost otherwise, so the boost never waits on the
-# class charge. The keyboard reports Shift held as movement_held; the press is routed here.
-func _route_burst() -> void:
-	if tuning.option("harpoon_keys") == "shift" and intent.boost_pressed and Harpoon.burst_ready(kit):
-		intent.boost_pressed = false
-		intent.movement_pressed = true
+func _burst_key() -> String:
+	return AbilityState.KEYS[AbilityState.MOVEMENT] if kit.movement_id == Augments.GRAPPLE else "Shift"
 
 
-# Ctrl on a latched body line commits the smash haul. While a body line stands, and until
-# that press is let go, Ctrl is neither the brake nor the slam: the commit is all of it, so
-# a haul can never plant or brake inside the crowd it flew into.
+# The pilot's class burst is on Shift (Rivet's sprint, Kest's blink); Sable's Shift is the
+# boost. The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
+func _burst_pilot() -> bool:
+	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK)
+
+
+func _read_shift() -> void:
+	if _burst_pilot():
+		intent.movement_pressed = intent.movement_pressed or (intent.shift_pressed and Harpoon.burst_ready(kit))
+		intent.movement_held = intent.movement_held or intent.shift_held
+		intent.movement_released = intent.movement_released or intent.shift_released
+		if intent.shift_pressed and not Harpoon.burst_ready(kit):
+			_fail("boost", "busy" if Augments.holding(kit) else "uncharged")
+	else:
+		intent.boost_pressed = intent.boost_pressed or intent.shift_pressed
+		if intent.shift_pressed and state.boost_cooldown > 0.0:
+			_fail("boost", "cooldown")
+		elif intent.shift_pressed and kit.mounted:
+			_fail("boost", "busy")
+
+
+func _fail(verb: String, reason: String) -> void:
+	events.verb_failed.emit(verb, reason, ball_position())
+
+
+# Whether pressing the verb would succeed on this tick: "harpoon" bites, "haul" commits a
+# smash or winches, "boost" is Shift's verb for this pilot.
+func verb_ready(verb: String) -> bool:
+	match verb:
+		"harpoon":
+			return not _frozen and kit.on(Augments.GRAPPLE) and not kit.hooked and not _charging() \
+					and _harpoon_refusal() == ""
+		"haul":
+			return kit.hooked and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)
+		"boost":
+			if _burst_pilot():
+				return Harpoon.burst_ready(kit)
+			return state.boost_cooldown <= 0.0 and not Augments.holding(kit)
+	return false
+
+
+func _harpoon_refusal() -> String:
+	if kit.rewind_left > 0.0:
+		return "rewinding"
+	if kit.aim.get("state", Augments.AIM_NONE) == Augments.AIM_NONE:
+		return "no_aim"
+	return ""
+
+
+func _press_harpoon() -> void:
+	var reason := _harpoon_refusal()
+	if reason == "":
+		grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
+		return
+	if not kit.hooked:
+		_emit_line("dry_fire", null, ball_position(), "", DRY_FIRE_HOLD)
+	_fail("harpoon", reason)
+
+
+# Ctrl hauls the line in. On a latched body it commits the smash; on the world it winches
+# while held. While any line stands it is neither the brake nor the slam, until it is let
+# go: a haul can never plant or brake inside the crowd it flew into.
 func _read_ctrl() -> void:
 	var edge: bool = intent.brake_held and not _brake_was_held
 	_brake_was_held = intent.brake_held
 	var on_body: bool = kit.hooked and kit.on_body
-	if on_body and edge and kit.line_state == Augments.LINE_LATCHED:
-		Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
-	if on_body:
+	kit.winching = kit.hooked and not on_body and intent.brake_held
+	if edge and not _frozen:
+		if on_body and kit.line_state == Augments.LINE_LATCHED:
+			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
+		elif on_body:
+			_fail("haul", "committed")
+	if kit.hooked:
 		_ctrl_claimed = true
 	if not intent.brake_held:
 		_ctrl_claimed = false
 	if _ctrl_claimed:
 		intent.brake_held = false
+
+
+func _emit_line(id: String, target: Node3D, at: Vector3, cause := "", hold := 0.0) -> void:
+	_line_state = id
+	_line_target = target
+	_line_hold = hold
+	events.line_state_changed.emit(id, target, at, cause)
+
+
+# Publishes how the line that stood has ended: a let-go or a break with its cause. A landing
+# or a reset publishes nothing here.
+func _publish_end() -> void:
+	_line_standing = false
+	var end: String = kit.line_end
+	kit.line_end = ""
+	if end == "let_go":
+		_emit_line("let_go", _line_target_alive(), _line_anchor, "", LET_GO_HOLD)
+	elif end != "landed" and end != "reset" and end != "":
+		_emit_line("broke", _line_target_alive(), _line_anchor, end, BROKE_HOLD)
+
+
+func _line_target_alive() -> Node3D:
+	return _line_target if is_instance_valid(_line_target) else null
+
+
+# Publishes each change of the line's state. A standing line is read from the kit; its end
+# is read from kit.line_end, which the kit's own rules set when they cut it. A smash landing
+# publishes itself (_finish_landing). A transient state holds for its own beat before the
+# steady one comes back.
+func _publish_line(delta: float) -> void:
+	_line_hold = maxf(0.0, _line_hold - delta)
+	if kit.hooked:
+		if _line_standing and kit.line_end != "":
+			_publish_end()
+		var id := "smash_committed" if kit.line_state == Augments.LINE_SMASH \
+				else ("latched_body" if kit.on_body else "latched_world")
+		var target: Node3D = kit.anchor_body if kit.on_body else null
+		if id != _line_state or target != _line_target:
+			_emit_line(id, target, kit.anchor)
+		_line_anchor = kit.anchor
+		_line_standing = true
+		kit.line_end = ""
+		return
+	if _line_standing:
+		_publish_end()
+	if _line_hold > 0.0:
+		return
+	var steady := "searching"
+	var aimed = null
+	if kit.rewind_left > 0.0:
+		steady = "rewinding"
+	elif not _frozen and kit.on(Augments.GRAPPLE) and _harpoon_refusal() == "":
+		steady = "locked"
+		aimed = kit.aim.get("body")
+	var target: Node3D = aimed if is_instance_valid(aimed) else null
+	if steady != _line_state or target != _line_target:
+		_emit_line(steady, target, kit.aim.get("point", ball_position()))
 
 
 # E is interact everywhere (LOOP-REDESIGN section 9): the interactable E has locked takes
@@ -519,7 +625,7 @@ func _route_interact() -> void:
 
 
 func mobility_started() -> bool:
-	return (kit.hooked and (kit.on(Augments.PYLON) or not kit.harpoon_on)) or kit.plant_time > 0.0 or kit.slingshot.charging
+	return (kit.hooked and kit.on(Augments.PYLON)) or kit.plant_time > 0.0 or kit.slingshot.charging
 
 
 # The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
@@ -561,7 +667,7 @@ func _fling() -> void:
 	var flung := v + dir * fling
 	if kit.mass_on:
 		flung += dir * Augments.mass_spend(kit, flung.length())
-	set_velocity_now(flung)
+	_rigid.set_velocity_now(flung)
 
 
 func _process(_delta: float) -> void:
@@ -962,7 +1068,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 func _begin_landing(enemy: Node3D) -> bool:
 	if not kit.hooked or kit.line_state != Augments.LINE_SMASH or kit.anchor_body != enemy:
 		return false
-	kit.drop_line()
+	kit.drop_line("landed")
 	kit.rewind_left = tuning.f("harpoon_rewind")
 	return true
 
@@ -974,7 +1080,9 @@ func _finish_landing(enemy: Node3D, closing: float) -> void:
 	_landed_on = _spared_by_shockwave(enemy)
 	_on_slammed(ball_position(), closing, 1.0)
 	_landed_on = null
-	events.harpoon_smashed.emit(enemy if is_instance_valid(enemy) else null, ball_position(), closing)
+	var landed_on: Node3D = enemy if is_instance_valid(enemy) else null
+	events.harpoon_smashed.emit(landed_on, ball_position(), closing)
+	_emit_line("smash_lands", landed_on, ball_position(), "", LANDS_HOLD)
 
 
 # Only a body that says what it weighs can bounce you; a boss piece without a weight

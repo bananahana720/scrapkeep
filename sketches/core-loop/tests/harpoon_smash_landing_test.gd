@@ -81,7 +81,6 @@ func _run() -> void:
 	_player.source = _source
 	_game.tuning.set_option("loop_mode", "drop")
 	_game.tuning.set_option("gun_role", "hold")
-	_game.tuning.set_option("harpoon", "lock")
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, _speed: float): _smashed += 1)
@@ -93,8 +92,8 @@ func _run() -> void:
 	_game.ctx.spawner.heft_override = 1.0
 	_warden = _game.flow.warden
 	_drop = _warden.get("drop") if is_instance_valid(_warden) else null
-	if _drop == null or not _player.kit.harpoon_on:
-		print("harpoon_smash_landing_test: FAIL (no drop rules or harpoon)")
+	if _drop == null:
+		print("harpoon_smash_landing_test: FAIL (no drop rules)")
 		quit(1)
 		return
 	for enemy in get_nodes_in_group("enemy"):
