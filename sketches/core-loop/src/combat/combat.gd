@@ -216,9 +216,11 @@ var _echo := {}
 var _echoing := false
 var _marks := {}
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
-# presentation's edge flash. Both read only.
+# presentation's edge flash, and the last hit the ball dealt: its IMPACT key, the frame and
+# the enemy, because a blast publishes enemy_struck under a gun kind. All read only.
 var near_miss
 var last_player_hit := {}
+var last_impact := {}
 var _cloud := {}
 var _sentry := {}
 var _pulse_left := 0.0
@@ -907,6 +909,7 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * float(EventKinds.impact(impact if impact != "" else kind)["lift"]), knock)
 	enemy.flash()
+	last_impact = {"key": impact if impact != "" else kind, "frame": Engine.get_physics_frames(), "enemy": enemy.get_instance_id()}
 	strike(enemy, kind, damage, part, source)
 	# Death Mark: a marked enemy that dies here bursts like a charge.
 	var id := enemy.get_instance_id()

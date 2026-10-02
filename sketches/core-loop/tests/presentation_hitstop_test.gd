@@ -51,13 +51,13 @@ func _process(_delta: float) -> bool:
 		_plan.append([100, func():
 			_juice.reset_stops()
 			_dealt = 10.0
-			events.enemy_struck.emit(_target, "arc", 1.0)
+			events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["low"] = _last_sent()])
 		_plan.append([300, func():
 			_juice.reset_stops()
 			_dealt = 80.0
-			events.enemy_struck.emit(_target, "arc", 1.0)
+			events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["high"] = _last_sent()])
 		_plan.append([500, func():
@@ -79,7 +79,7 @@ func _process(_delta: float) -> bool:
 			_dealt = 20.0
 			var before: int = _sent().size()
 			for i in 5:
-				events.enemy_struck.emit(_target, "arc", 1.0)
+				events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["frame"] = [_sent().size() - before, _last_sent()]])
 		# Stacking: a crit ram, a dodge and a multi-kill beat 100 ms apart share one budget.
@@ -97,9 +97,19 @@ func _process(_delta: float) -> bool:
 		for i in 30:
 			_plan.append([1110 + i * 33, func():
 				_dealt = 30.0
-				events.enemy_struck.emit(_target, "runner", 1.0)
+				events.enemy_struck.emit(_target, "sticky", 1.0)
 				_juice.flush()])
 		_plan.append([2150, func(): _marks["rapid"] = _juice.hit_stop_log.slice(_marks["rapid_from"]).filter(func(e: Array): return e[1] > 0.0)])
+		# Guns never stop time: a burst of gun-kind hits sends nothing.
+		_plan.append([2200, func():
+			_juice.reset_stops()
+			_dealt = 80.0
+			var before: int = _sent().size()
+			for gun in ["runner", "arc", "turret"]:
+				for i in 4:
+					events.enemy_struck.emit(_target, gun, 1.0)
+					_juice.flush()
+			_marks["guns"] = _sent().size() - before])
 		# A real stop on the rolling ball.
 		_plan.append([2400, func():
 			_juice.reset_stops()
@@ -151,6 +161,7 @@ func _process(_delta: float) -> bool:
 	_check("rapid fire capped", rapid.size() >= 2 and total <= EventKinds.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
 		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), %d ms clear after each %s, %.0f ms per %d ms window %s"
 			% [rapid.size(), total, EventKinds.STOP_BUDGET_MS, EventKinds.STOP_GAP_MS, gaps_ok, EventKinds.STOP_WINDOW_BUDGET_MS, EventKinds.STOP_WINDOW_MS, window_ok])
+	_check("guns never stop", _marks["guns"] == 0, "twelve laser, arc and turret hits send %d stops" % _marks["guns"])
 	var flat_before := Vector2(_velocity_before.x, _velocity_before.z)
 	var drift := (Vector2(_velocity_after.x, _velocity_after.z) - flat_before).length()
 	_check("momentum kept", _stop_seen and drift < 0.05 and flat_before.length() > 10.0,

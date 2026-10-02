@@ -99,6 +99,24 @@ func _process(_delta: float) -> bool:
 			_check("bombs stop and shake", _sent_for("enemy_struck").size() >= 1 and bomb_shake > 0.0,
 				"a sticky hit sends a stop and shakes the camera %.2f" % bomb_shake)
 			_game.camera._shake = 0.0
+			for blast in ["overdrive", "burst", "spill"]:
+				_juice.reset_stops()
+				_game.camera._shake = 0.0
+				var blast_base := _sent().size()
+				_game.ctx.spawner.last_impact = {"key": blast, "frame": Engine.get_physics_frames(), "enemy": _enemy.get_instance_id()}
+				_game.events.enemy_struck.emit(_enemy, "runner" if blast == "overdrive" else "arc", 16.0)
+				_juice.flush()
+				_check("%s blast stops and shakes" % blast, _sent().size() > blast_base and _game.camera._shake > 0.0,
+					"a %s hit published under a gun kind sends %d stops and shakes the camera %.2f" % [blast, _sent().size() - blast_base, _game.camera._shake])
+			_juice.reset_stops()
+			_game.camera._shake = 0.0
+			var stale_base := _sent().size()
+			_game.ctx.spawner.last_impact = {"key": "overdrive", "frame": Engine.get_physics_frames() - 10, "enemy": _enemy.get_instance_id()}
+			_game.events.enemy_struck.emit(_enemy, "runner", 16.0)
+			_juice.flush()
+			_check("a stale record is ignored", _sent().size() == stale_base and _game.camera._shake == 0.0, "an impact record ten frames old leaves a runner bolt with no stop and no shake")
+			_game.ctx.spawner.last_impact = {}
+			_game.camera._shake = 0.0
 			_juice.reset_stops()
 			var rams_before := _sent().size()
 			_game.events.enemy_struck.emit(_enemy, "ram", 20.0)
