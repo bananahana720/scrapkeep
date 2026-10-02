@@ -228,6 +228,24 @@ static func enamel_wear(mat: StandardMaterial3D) -> void:
 
 
 static var _target_surfaces := {}
+static var _target_clutter := {}
+const CLUTTER_SHADER := preload("res://src/presentation/clutter.gdshader")
+
+# The clutter kit's slots carry their colour in vertex colours (the paint slot) and the
+# slot's albedo. The target copy is the clutter shader: albedo times vertex colour, fully
+# rough, a contact shade at the foot, and the screen-space protection every other dressing
+# piece has. It keeps the slot name; the kit's own resources stay untouched, and one copy
+# serves every instance.
+static func target_clutter_material(original: Material) -> ShaderMaterial:
+	var key := original.get_instance_id()
+	if _target_clutter.has(key):
+		return _target_clutter[key]
+	var mat := ShaderMaterial.new()
+	mat.shader = CLUTTER_SHADER
+	mat.set_shader_parameter("albedo", (original as StandardMaterial3D).albedo_color if original is StandardMaterial3D else Color.WHITE)
+	mat.resource_name = original.resource_name
+	_target_clutter[key] = mat
+	return mat
 
 # Target resources wrap the existing surface; original materials and mesh slots are
 # retained by GraphicsPreset so high/low can restore the exact resource identities.

@@ -120,3 +120,9 @@ const TARGET := {
 	"wide": {"eye": Vector3(145.0, 160.0, -240.0),
 		"target": Vector3(0.0, 44.0, 30.0), "fov": 65.0},
 }
+
+# TARGET_REACH is the chase view on the Cable Reach (the slice table), outside the default
+# set: target_capture.gd takes it when run with --table=slice. The ball stands on the west
+# shelf facing the sweeper; --ball=x,z and --face=x,z override it.
+const TARGET_REACH := {"ball_xz": Vector2(-34.0, -118.0), "face_xz": Vector2(-58.0, -116.8),
+	"clearance": 1.2, "fov": 70.0, "enemies_xz": []}

@@ -1,5 +1,11 @@
 extends SceneTree
 
+# GPU capture of the look views, one preset per run (always through claude-open):
+#   godot --path sketches/core-loop --script res://tools/target_capture.gd -- --out=<dir> --preset=high|target
+#     [--table=slice] [--ball=x,z] [--face=x,z]
+# --table=slice stages the Cable Reach on Cams.TARGET_REACH; --ball and --face move the ball and
+# turn the chase view. frames.json records the table, the ball and the placed clutter count.
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
@@ -10,6 +16,9 @@ const WARMUP_FRAMES := 180
 var game
 var out := ""
 var preset := "high"
+var table := "default"
+var ball_arg = null
+var face_arg = null
 var camera: Camera3D
 var records := []
 var timing := {}
@@ -22,6 +31,12 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		if arg.begins_with("--preset="):
 			preset = arg.trim_prefix("--preset=")
+		if arg.begins_with("--table="):
+			table = arg.trim_prefix("--table=")
+		if arg.begins_with("--ball="):
+			ball_arg = _pair(arg.trim_prefix("--ball="))
+		if arg.begins_with("--face="):
+			face_arg = _pair(arg.trim_prefix("--face="))
 	if out.is_empty() or DisplayServer.get_name() == "headless" or not Preset.PRESETS.has(preset):
 		quit(2)
 		return
@@ -85,7 +100,8 @@ func _run() -> void:
 		quit(3)
 		return
 	file.store_string(JSON.stringify({"schema": "scrapkeep-target-capture/1", "seed": SEED,
-		"staged_physics_frames": 120, "table": "default", "preset": preset,
+		"staged_physics_frames": 120, "table": table, "preset": preset,
+		"ball_xz": [play_ball.x, play_ball.z], "clutter_instances": _clutter_instances(),
 		"preset_values": Preset.PRESETS[preset], "size": [1920, 1080],
 		"adapter": RenderingServer.get_video_adapter_name(),
 		"rendering_method": RenderingServer.get_current_rendering_method(),
@@ -100,7 +116,7 @@ func _stage() -> void:
 	seed(SEED)
 	Preset.apply(preset)
 	game = Game.new()
-	game.table = "default"
+	game.table = table
 	game.test_mode = true
 	root.add_child(game)
 	await process_frame
@@ -113,7 +129,9 @@ func _stage() -> void:
 	for i in 120:
 		await physics_frame
 	var play: Dictionary = Cams.TARGET.play
-	var xz: Vector2 = play.ball_xz
+	if table == "slice":
+		play = Cams.TARGET_REACH
+	var xz: Vector2 = ball_arg if ball_arg != null else play.ball_xz
 	play_ball = game.ctx.terrain.drop_point(xz.x, xz.y, play.clearance)
 	game.player.reset_to(play_ball)
 	game.player._visual_root.global_position = play_ball
@@ -126,7 +144,15 @@ func _stage() -> void:
 	game.add_child(camera)
 	camera.current = true
 	camera.far = Cams.FAR
-	play_view = {"eye": play_ball + play.eye_offset, "target": play_ball + play.target_offset, "fov": play.fov}
+	# --face turns the chase view to look toward a ground point: the eye 8 m behind the ball and
+	# 3 m up, the target 24 m ahead and 1 m up, as the default row's offsets do looking +z.
+	var face = face_arg if face_arg != null else play.get("face_xz")
+	if face == null:
+		play_view = {"eye": play_ball + play.eye_offset, "target": play_ball + play.target_offset, "fov": play.fov}
+	else:
+		var heading: Vector2 = (face - xz).normalized()
+		var ahead := Vector3(heading.x, 0.0, heading.y)
+		play_view = {"eye": play_ball - ahead * 8.0 + Vector3.UP * 3.0, "target": play_ball + ahead * 24.0 + Vector3.UP, "fov": play.fov}
 
 func _shot(id: String, view: Dictionary) -> bool:
 	Cams.aim(camera, view.eye, view.target, view.fov)
@@ -150,6 +176,21 @@ func _shot(id: String, view: Dictionary) -> bool:
 		"ball": [play_ball.x, play_ball.y, play_ball.z], "sha256": FileAccess.get_sha256(path)})
 	return true
 
+# The clutter pieces the target preset placed on this table's stage, from the dressing's own batches.
+func _clutter_instances() -> int:
+	var count := 0
+	if is_instance_valid(game) and is_instance_valid(game.presentation.set_dressing):
+		for batch: MultiMeshInstance3D in game.presentation.set_dressing.batches:
+			if batch.has_meta("clutter"):
+				count += batch.multimesh.instance_count
+	return count
+
+
+static func _pair(text: String) -> Vector2:
+	var parts := text.split(",")
+	return Vector2(float(parts[0]), float(parts[1])) if parts.size() == 2 else Vector2.ZERO
+
+
 func _hashes() -> Dictionary:
 	var result := {}
 	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/hero_assets.gd",
@@ -159,7 +200,8 @@ func _hashes() -> Dictionary:
 		"assets/shaders/target_dam.gdshader", "assets/shaders/target_surface.gdshaderinc",
 		"src/presentation/presentation.gd", "src/presentation/set_dressing.gd",
 		"assets/shaders/target_dressing.gdshader", "assets/shaders/target_air.gdshader",
-		"assets/shaders/target_protection.gdshaderinc"]:
+		"assets/shaders/target_protection.gdshaderinc", "src/presentation/clutter.gdshader",
+		"src/world/reach_routes.json"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result
 

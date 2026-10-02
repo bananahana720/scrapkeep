@@ -19,6 +19,21 @@ func _run() -> void:
 	check(not _colour_source_valid("ALBEDO = vec3(-0.1, 1e-2, 0.5);"), "source scan rejects signed and exponential colour literals")
 	check(_colour_source_valid("uniform vec4 base : source_color = vec4(1.0);"), "source scan permits uniform defaults")
 	check(_shader_colour_scan(), "target shaders contain no colour literals outside uniform defaults")
+	var kit := (load("res://assets/models/world_one/clutter_kit.glb") as PackedScene).instantiate()
+	var kit_ok := true
+	var kit_surfaces := 0
+	for view: MeshInstance3D in kit.find_children("*", "MeshInstance3D", true, false):
+		for surface in view.mesh.get_surface_count():
+			var original := view.mesh.surface_get_material(surface)
+			var copy := Palette.target_clutter_material(original)
+			kit_surfaces += 1
+			kit_ok = kit_ok and copy != original and copy == Palette.target_clutter_material(original) \
+				and copy.shader.resource_path == "res://src/presentation/clutter.gdshader" \
+				and copy.get_shader_parameter("albedo") == (original as StandardMaterial3D).albedo_color \
+				and copy.resource_name == original.resource_name \
+				and copy.shader.get_shader_uniform_list().any(func(row): return row.name == "protected_rects")
+	check(kit_ok and kit_surfaces >= 10, "target clutter material is the clutter shader with the slot's albedo and protection, keeps its slot name and leaves the kit's own resources alone: " + str(kit_surfaces) + " surfaces")
+	kit.free()
 	Preset.apply("high")
 	var game := Game.new()
 	game.test_mode = true
