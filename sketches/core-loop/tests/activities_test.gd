@@ -1,0 +1,393 @@
+# smoke: solo (its sixty simulated seconds run at wall pace, so a loaded batch pushes it toward the 120 s limit)
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+
+# The three standing activities on the slice's Cable Reach (LEGIBILITY section 9, wave R3), on a
+# live slice game:
+# - at the stage's first frame three activity nodes stand at the sites' ground, each lit in the
+#   row's amber, and no device stands;
+# - the bounty: a plated brute stands at its site, off the director's cap; killing it leaves one
+#   pickup where it fell; a ball 60 m away for 300 frames finds it back within 10 m;
+# - the ambush: rolling into the ring brings exactly its three; two dead pays nothing, all three
+#   leave one part at the altar, and touching it adds exactly one part;
+# - the cache: a ram below cruise leaves the wall, a ram at cruise breaks it and one part waits on
+#   the pedestal; a slam of at least cruise's strength breaks it too and a weaker one does not;
+# - calm mode builds the cache alone;
+# - no activity changes the ball's planar speed beyond what the same line costs with none;
+# - with all three finished no timed event starts in 60 simulated seconds;
+# - a retry restores three unfinished activities, and the default three-stage table builds none.
+# Every wait is counted in physics frames; none reads the wall clock.
+
+const SEED := 11
+const SIM_RATE := 120
+const SIM_SECONDS := 60
+const LEASH_FRAMES := 300
+const SPEED_SLACK := 0.1
+const RAM_BELOW := 0.7
+const RAM_AT := 1.3
+const LINE_FRAMES := 24
+const PICKUP_FRAMES := 40
+const PICKUP_SPEED := 14.0
+const RAM_FRAMES := 150
+
+var _game
+var _t := preload("res://tests/support/t.gd").new("activities_test")
+var _source := Intent.Scripted.new()
+var _done: Array = []
+var _event_facts := 0
+
+
+func _initialize() -> void:
+	_run()
+
+
+func _frames(count: int) -> void:
+	for i in count:
+		await physics_frame
+
+
+func _boot(table: String) -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = table
+	root.add_child(_game)
+	while _game.flow == null:
+		await physics_frame
+	_game.ctx.rng.seed = SEED
+	_game.player.source = _source
+	_done.clear()
+	_event_facts = 0
+	_game.events.activity_done.connect(func(id: String, _at: Vector3): _done.append(id))
+	_game.events.event_announced.connect(func(_id: String, _seconds: float): _event_facts += 1)
+	_game.events.event_started.connect(func(_id: String): _event_facts += 1)
+	_game.events.event_ended.connect(func(_id: String, _outcome: String): _event_facts += 1)
+	_game.events.event_progress.connect(func(_id: String, _fraction: float): _event_facts += 1)
+	_game.events.milestone_won.connect(func(_id: String): _event_facts += 1)
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	_game.run.set_max_hp(99999.0)
+
+
+func _site(id: String):
+	return _game.world.activities.site(id)
+
+
+func _ground(at: Vector3, lift := 1.05) -> Vector3:
+	return _game.ctx.terrain.drop_point(at.x, at.z, lift)
+
+
+func _hold(count: int) -> void:
+	for i in count:
+		_game.player.set_velocity_now(Vector3.ZERO)
+		await physics_frame
+
+
+func _put(at: Vector3, velocity := Vector3.ZERO) -> void:
+	_game.player.reset_to(at, velocity)
+	_game.player.set_velocity_now(velocity)
+
+
+func _planar(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+# A ball rolled along a line from `start`: its planar speed on the first frame and after `frames`.
+func _line(start: Vector3, velocity: Vector3, frames: int) -> Dictionary:
+	_put(start, velocity)
+	await physics_frame
+	var before: float = _game.player.planar_velocity().length()
+	await _frames(frames)
+	return {"before": before, "after": _game.player.planar_velocity().length()}
+
+
+func _kill(enemy) -> void:
+	if is_instance_valid(enemy):
+		enemy.take_damage(100000.0)
+
+
+func _run() -> void:
+	await _boot("slice")
+	await physics_frame
+	_lit()
+	await _bounty()
+	await _ambush()
+	await _cache()
+	await _all_done_quiet()
+	await _retry()
+	await _calm()
+	_game.free()
+	await _frames(2)
+	await _default_table()
+	quit(_t.verdict())
+
+
+func _lit() -> void:
+	var world = _game.world
+	var map = _game.ctx.terrain.map()
+	_t.eq("three activity nodes stand at the first frame", world.activities.sites.size(), 3)
+	_t.eq("no device stands", world.interact.devices.size(), 0)
+	for spec in map.activity_sites:
+		var id := String(spec["id"])
+		var s = _site(id)
+		if s == null:
+			_t.check("%s stands" % id, false, "no node for it")
+			continue
+		var want: Vector3 = _game.ctx.terrain.drop_point(spec["at"].x, spec["at"].y, 0.0)
+		_t.check("%s stands on the site's ground" % id, s.global_position.distance_to(want) < 0.01, "at %s, want %s" % [s.global_position, want])
+		var color: Color = EventKinds.activity_color(id)
+		_t.check("%s is lit" % id, s.view.lit(), "column %s, glyph %s, ring %s" % [s.view.column.visible, s.view.glyph.visible, s.view.ring.visible])
+		_t.check("%s's column is the row's amber" % id, _rgb(s.view.column.material_override.albedo_color) == _rgb(color),
+			"column %s, row %s" % [s.view.column.material_override.albedo_color, color])
+		_t.check("%s's glyph is the row's amber" % id, _rgb(_first_mesh(s.view.glyph).material_override.albedo_color) == _rgb(color), "glyph colour")
+		_t.check("%s's ring is the row's amber" % id, _rgb(_first_mesh(s.view.ring).material_override.albedo_color) == _rgb(color), "ring colour")
+		_t.check("%s's word waits until the ball is near" % id, not s.view.word.visible, "word visible at the spawn")
+	var cap = _site("ambush_altar").cap
+	_t.check("the altar's cap is the row's amber", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(EventKinds.activity_color("ambush_altar")),
+		"cap %s" % [cap.material_override.albedo_color if cap != null else null])
+
+
+func _rgb(c: Color) -> Array:
+	return [snappedf(c.r, 0.001), snappedf(c.g, 0.001), snappedf(c.b, 0.001)]
+
+
+func _first_mesh(node: Node) -> MeshInstance3D:
+	for child in node.find_children("*", "MeshInstance3D", true, false):
+		return child
+	return null
+
+
+# ---- The bounty ----
+
+func _bounty() -> void:
+	var s = _site("hauler_bounty")
+	var brute = s.brute
+	_t.check("a plated brute stands at the bounty's site from the first frames", brute != null and is_instance_valid(brute) and String(brute.kind) == "plated_brute"
+		and _planar(brute.global_position, s.global_position) < 3.0, "brute %s" % [brute])
+	_t.eq("the director is given the enemy group's size less the bounty's brute",
+		_game.world.director_alive(), _game.get_tree().get_nodes_in_group("enemy").size() - 1)
+	_t.check("its crate wears the row's amber, apart from its plates", brute.get_node("BountyCrate").material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
+		and brute.get_node("BrutePlates") != null, "crate colour")
+	# Walked off and woken, with the ball 60 m away, it goes home inside 300 frames.
+	var near: Vector3 = _ground(s.global_position + Vector3(20.0, 0.0, 0.0))
+	_put(near)
+	await _hold(6)
+	var away: Vector3 = _ground(s.global_position + Vector3(0.0, 0.0, 60.0))
+	var out: Vector3 = _ground(s.global_position + Vector3(35.0, 0.0, 0.0), 2.4)
+	brute.global_position = out
+	_put(away)
+	await _hold(LEASH_FRAMES)
+	_t.check("with the ball 60 m off for 300 frames the brute is back within 10 m of its site", _planar(brute.global_position, s.global_position) <= 10.0,
+		"brute %.1f m from its site, started 35 m out" % _planar(brute.global_position, s.global_position))
+	_t.eq("no activity has finished yet", _done.size(), 0)
+	_put(_ground(s.global_position + Vector3(0.0, 0.0, 50.0)))
+	await _hold(2)
+	var fell: Vector3 = brute.global_position
+	_kill(brute)
+	await _frames(3)
+	_t.eq("the bounty finishes once", _done.count("hauler_bounty"), 1)
+	_t.check("one pickup lies where it fell", s.pickup != null and is_instance_valid(s.pickup) and _planar(s.pickup.global_position, fell) < 1.0,
+		"pickup %s, brute fell at %s" % [s.pickup, fell])
+	_t.eq("the bounty's column is gone", s.view.lit(), false)
+	var parts: int = _game.run.parts.size()
+	await _hold(3)
+	_t.eq("nothing is added until the ball touches the pickup", _game.run.parts.size(), parts)
+	var at: Vector3 = s.pickup.global_position
+	var line_start := _ground(at + Vector3(0.0, 0.0, 6.0))
+	var heading := Vector3(0.0, 0.0, -1.0) * PICKUP_SPEED
+	var through: Dictionary = await _line(line_start, heading, PICKUP_FRAMES)
+	_t.eq("touching the pickup adds exactly one part", _game.run.parts.size(), parts + 1)
+	var control: Dictionary = await _line(line_start, heading, PICKUP_FRAMES)
+	_t.eq("a second pass adds nothing", _game.run.parts.size(), parts + 1)
+	_t.check("the pickup does not take the ball's speed", through["after"] >= through["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
+		"through %.2f to %.2f, control %.2f to %.2f" % [through["before"], through["after"], control["before"], control["after"]])
+	_t.eq("the bounty still finished once", _done.count("hauler_bounty"), 1)
+
+
+# ---- The ambush ----
+
+func _ambush() -> void:
+	var s = _site("ambush_altar")
+	var ring := float(_game.world.activities.RULES["ambush_altar"]["ring"])
+	var outside: Vector3 = _ground(s.global_position + Vector3(ring + 6.0, 0.0, 0.0))
+	_put(outside)
+	await _hold(8)
+	_t.eq("outside the ring nothing arrives", s.pack.size(), 0)
+	_t.eq("and the altar stands unfinished", s.done, false)
+	var angle := deg_to_rad(60.0)
+	var dir := Vector3(cos(angle), 0.0, sin(angle))
+	var line_start := _ground(s.global_position + dir * (ring + 2.0))
+	var through: Dictionary = {}
+	_put(line_start, -dir * 10.0)
+	await physics_frame
+	var before: float = _game.player.planar_velocity().length()
+	var started_at := -1
+	var inside_at := -1
+	for i in LINE_FRAMES:
+		await physics_frame
+		var ball: Vector3 = _game.player.ball_position()
+		if inside_at < 0 and _planar(ball, s.global_position) <= ring:
+			inside_at = i
+		if started_at < 0 and s.started:
+			started_at = i
+	through = {"before": before, "after": _game.player.planar_velocity().length()}
+	_t.check("rolling into the ring starts it", s.started and started_at >= 0, "started at frame %d" % started_at)
+	_t.check("the pack starts within 10 frames of the ball entering the ring", inside_at >= 0 and started_at >= 0 and started_at - inside_at <= 10,
+		"ball inside at frame %d, pack at frame %d" % [inside_at, started_at])
+	var kinds: Array = s.pack.map(func(e): return String(e.kind))
+	_t.check("exactly the three named kinds arrive", s.pack.size() == 3 and kinds == ["chaser", "chaser", "lobber"], "kinds %s" % [kinds])
+	_t.eq("only the bounty has finished so far", _done.size(), 1)
+	_put(_ground(s.global_position + Vector3(5.0, 0.0, 0.0)))
+	await _hold(2)
+	_kill(s.pack[0])
+	_kill(s.pack[1])
+	await _hold(4)
+	_t.check("two of three dead pays nothing", s.pickup == null and not s.done and _done.count("ambush_altar") == 0,
+		"pickup %s, done %s, announced %d times" % [s.pickup, s.done, _done.count("ambush_altar")])
+	_kill(s.pack[2])
+	await _hold(4)
+	_t.eq("the ambush finishes once", _done.count("ambush_altar"), 1)
+	_t.check("the altar's cap goes dark with its column", not s.cap.visible and not s.view.lit(), "cap visible %s, lit %s" % [s.cap.visible, s.view.lit()])
+	_t.check("one pickup lies within 2 m of the altar", s.pickup != null and _planar(s.pickup.global_position, s.global_position) <= 2.0,
+		"pickup %s" % [s.pickup])
+	var parts: int = _game.run.parts.size()
+	await _hold(4)
+	_t.eq("nothing is added until the ball touches it", _game.run.parts.size(), parts)
+	var at: Vector3 = s.pickup.global_position
+	var start := _ground(at + dir * 6.0)
+	var pass_a: Dictionary = await _line(start, -dir * PICKUP_SPEED, PICKUP_FRAMES)
+	_t.eq("touching it adds exactly one part", _game.run.parts.size(), parts + 1)
+	var control: Dictionary = await _line(line_start, -dir * 10.0, LINE_FRAMES)
+	_t.eq("the ambush finished once", _done.count("ambush_altar"), 1)
+	_t.check("the ring start does not take the ball's speed", through["after"] >= through["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
+		"through %.2f to %.2f, control %.2f to %.2f" % [through["before"], through["after"], control["before"], control["after"]])
+	_t.check("the ring no longer stands", s.view.lit() == false and pass_a["before"] > 0.0, "lit %s" % s.view.lit())
+
+
+# ---- The cache ----
+
+func _cache() -> void:
+	var s = _site("cracked_cache")
+	var cruise: float = _game.ctx.tuning.f("cruise")
+	var back: Vector3 = s.global_basis.z
+	var heading: Vector3 = -back
+	var start := _ground(s.global_position + back * 14.0)
+	var slow: Dictionary = await _ram(s, start, heading * cruise * RAM_BELOW, RAM_FRAMES)
+	_t.check("a ram below cruise leaves the wall standing", not s.done and s.wall.visible and _done.count("cracked_cache") == 0,
+		"ram at %.1f m/s of cruise %.1f: done %s, wall visible %s" % [cruise * RAM_BELOW, cruise, s.done, s.wall.visible])
+	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_AT, RAM_FRAMES)
+	_t.check("a ram at cruise breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_AT, s.done])
+	_t.eq("the cache finishes once", _done.count("cracked_cache"), 1)
+	_t.check("one pickup stands on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5,
+		"pickup %s, pedestal %s" % [s.pickup, s.pedestal])
+	var control: Dictionary = await _ram(s, start, heading * cruise * RAM_AT, RAM_FRAMES)
+	_t.check("the wall does not take the ball's speed", fast["after"] >= fast["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
+		"ram %.2f to %.2f, same line with the wall gone %.2f to %.2f; slow ram stopped at %.2f" % [fast["before"], fast["after"], control["before"], control["after"], slow["after"]])
+	_put(_ground(s.pedestal + back * 3.0))
+	await _hold(3)
+	var parts: int = _game.run.parts.size()
+	var onto: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
+	_t.eq("touching the pedestal's pickup adds exactly one part", _game.run.parts.size(), parts + 1)
+	var onto_control: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
+	_t.eq("a second pass adds nothing", _game.run.parts.size(), parts + 1)
+	_t.check("the pickup cost no speed beyond the line", onto["after"] >= onto["before"] - (onto_control["before"] - onto_control["after"]) - SPEED_SLACK,
+		"through %.2f to %.2f, control %.2f to %.2f" % [onto["before"], onto["after"], onto_control["before"], onto_control["after"]])
+	_t.eq("the cache finished once", _done.count("cracked_cache"), 1)
+
+
+# The ball rolled at the wall until the first frame it has crossed the wall's plane or `frames` pass;
+# its speed on the first frame and at the frame it is one body length past the face.
+func _ram(s, start: Vector3, velocity: Vector3, frames: int) -> Dictionary:
+	_put(start, velocity)
+	await physics_frame
+	var before: float = _game.player.planar_velocity().length()
+	var after := before
+	for i in frames:
+		if s.to_local(_game.player.ball_position()).z > 6.0:
+			_game.player.set_velocity_now(velocity)
+		await physics_frame
+		var local: Vector3 = s.to_local(_game.player.ball_position())
+		after = _game.player.planar_velocity().length()
+		if local.z < -1.0:
+			break
+	return {"before": before, "after": after}
+
+
+# ---- All three done, a quiet minute ----
+
+func _all_done_quiet() -> void:
+	var finished: Array = ["ambush_altar", "cracked_cache", "hauler_bounty"].filter(func(id): return _done.has(id))
+	_t.eq("all three are finished", finished.size(), 3)
+	_game.ctx.calm = false
+	var starts := 0
+	var counter := func(_id: String): starts += 1
+	_game.events.event_started.connect(counter)
+	var normal := Engine.physics_ticks_per_second
+	Engine.physics_ticks_per_second = SIM_RATE
+	_event_facts = 0
+	_put(_ground(_site("hauler_bounty").global_position + Vector3(0.0, 0.0, 90.0)))
+	for tick in SIM_RATE * SIM_SECONDS:
+		if tick % 30 == 0:
+			_game.player.set_velocity_now(Vector3.ZERO)
+		await physics_frame
+	Engine.physics_ticks_per_second = normal
+	_t.eq("event_started fires 0 times in 60 simulated seconds", starts, 0)
+	_t.eq("no event row is published in those 60 seconds", _event_facts, 0)
+
+
+# ---- A retry and the default table ----
+
+func _retry() -> void:
+	_game.flow.retry_stage()
+	await _frames(3)
+	await _slams()
+	_game.flow.retry_stage()
+	await _frames(3)
+	var sites: Array = _game.world.activities.sites
+	_t.eq("a retry builds three activities", sites.size(), 3)
+	_t.check("each is unfinished and lit", sites.all(func(s): return not s.done and s.view.lit()), "done flags %s" % [sites.map(func(s): return s.done)])
+	var s = _site("hauler_bounty")
+	_t.check("the bounty's brute stands again", s != null and s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead(), "brute %s" % [s.brute if s != null else null])
+	_t.eq("no device stands", _game.world.interact.devices.size(), 0)
+	_t.check("the cache's wall stands again", _site("cracked_cache").wall.visible and not _site("cracked_cache").done, "wall")
+
+
+# A slam in front of the face: below cruise's strength it leaves the wall, at or above it the wall goes.
+# The strength of `slammed` is the fall speed in m/s, the same unit as a ram's speed.
+func _slams() -> void:
+	var s = _site("cracked_cache")
+	var cruise: float = _game.ctx.tuning.f("cruise")
+	var at: Vector3 = s.global_position + s.global_basis.z * 3.0
+	_put(_ground(s.global_position + s.global_basis.z * 40.0))
+	await _hold(3)
+	_game.events.slammed.emit(at, cruise * RAM_BELOW, 1.0)
+	await _frames(2)
+	_t.check("a slam below cruise's strength leaves the wall standing", not s.done and s.wall.visible, "strength %.1f of cruise %.1f: done %s" % [cruise * RAM_BELOW, cruise, s.done])
+	_game.events.slammed.emit(at, cruise * RAM_AT, 1.0)
+	await _frames(2)
+	_t.check("a slam above cruise's strength breaks it", s.done and not s.wall.visible, "strength %.1f: done %s" % [cruise * RAM_AT, s.done])
+	_t.check("and one part waits on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5, "pickup %s" % [s.pickup])
+
+
+# Calm mode builds only what it can pay: the cache, not the ambush or the bounty.
+func _calm() -> void:
+	_game.ctx.calm = true
+	_game.flow.retry_stage()
+	await _frames(3)
+	var ids: Array = _game.world.activities.sites.map(func(x): return x.id)
+	_game.ctx.calm = false
+	_t.check("calm mode builds the cache alone", ids == ["cracked_cache"], "sites %s" % [ids])
+
+
+func _default_table() -> void:
+	await _boot("")
+	await _frames(3)
+	var maps: Array = _game.ctx.terrain.maps
+	var counts: Array = maps.map(func(m): return m.activity_sites.size() if "activity_sites" in m else 0)
+	_t.check("the default table's maps carry no activity sites", counts.all(func(n): return n == 0), "sites per stage %s" % [counts])
+	_t.eq("the default table builds no activity on its first stage", _game.world.activities.sites.size(), 0)
+	_t.eq("its three Spillway devices stand", _game.world.interact.devices.size(), 3)
+	_game.free()
+	await _frames(2)

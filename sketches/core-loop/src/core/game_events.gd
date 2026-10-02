@@ -152,6 +152,9 @@ signal verb_failed(verb: String, reason: String, at: Vector3)
 signal cause_armed(id: String)
 signal cause_fired(id: String, target: Node3D, at: Vector3)
 signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
+# A standing activity (world/activities.gd) finished: id keys EventKinds.ACTIVITY_ROWS, at is
+# where its pay appears. Once per activity per stage attempt.
+signal activity_done(id: String, at: Vector3)
 
 
 static func signal_names() -> PackedStringArray:

@@ -146,6 +146,9 @@ const ROWS := {
 	"interact_fired": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
 	"ambush_ended": {"group": "combat", "color": Palette.HAZARD, "shape": "cross", "sound": "event_end", "hud": "", "objective": "", "priority": 2},
 	"bet_resolved": {"group": "economy", "color": Palette.COPPER, "shape": "star", "sound": "clank", "hud": "", "objective": "", "priority": 2},
+	# A standing activity finished (world/activities.gd). The site's own ACTIVITY_ROWS row says
+	# which shape and sound; this is the schema's stand-in. No toast: the pay appears at the spot.
+	"activity_done": {"group": "event", "color": Palette.AMBER, "shape": "diamond", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
 	# The legibility grammar's signals carry no presentation of their own: each reads its row in
 	# LINE_ROWS, STATE_ROWS, Bindings.VERBS or CAUSE_ROWS, so these are the quiet stand-ins the
 	# schema asks for.
