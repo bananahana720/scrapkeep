@@ -8,9 +8,93 @@ extends Node
 # gave up) gets one more line with outcome "abandoned" and where it was left
 # ("abandoned_in": "stage" or "arena"), so the loop sees runs that never finished. The
 # arena block (I3) is the boss-entry record: it rides in every line after entry.
+#
+# Each record also carries the traversal facts (design-v3/TRAVERSAL.md): flow_share and
+# dead_stops from the stage's spawn to the Warden's engagement, the harpoon's bites,
+# smashes, breaks by cause and failed verbs by verb, and prompts_shown (zero until a
+# prompt publishes a fact). events_joined holds only the opt-in events the ball entered:
+# the director publishes event_started for a participatory event when the ball reaches
+# its ring, but also for the ambient flood, squall and terrain changes, which the player
+# does not choose and which are left out.
 
 const LOG_FILE := "runs.ndjson"
 const LoopMode := preload("res://src/core/loop_mode.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
+const UNKNOWN_CAUSE := "unspecified"
+
+
+# The traversal measure's detector, fed one sample per physics tick. Flow share is the
+# fraction of ticks at speed tier 2 or better. A dead stop is more than 0.5 s under tier 1
+# with no brake, mount or interaction, or one contact that takes more than half of the
+# planar speed the ball had in the last CONTACT_WINDOW seconds. The slow clock arms once
+# the ball has first reached tier 1, so a standing start is not a stop.
+class Traversal:
+	extends RefCounted
+
+	const FLOW_TIER := 2
+	const MOVING_TIER := 1
+	const DEAD_SECONDS := 0.5
+	const HALVED := 0.5
+	const CONTACT_WINDOW := 0.1
+
+	var ticks := 0
+	var flow_ticks := 0
+	var dead_stops := 0
+	var _tps := 90
+	var _moving_speed := 0.0
+	var _armed := false
+	var _slow_ticks := 0
+	var _slow_counted := false
+	var _recent: Array[float] = []
+
+	func _init(ticks_per_second: int, cruise: float) -> void:
+		_tps = ticks_per_second
+		_moving_speed = SpeedTier.MULTIPLES[MOVING_TIER] * cruise
+
+	# One definition of a tick that neither counts toward a stop nor can start one.
+	static func is_exempt(player) -> bool:
+		var intent = player.intent
+		return player.frozen() or player.kit.mounted or intent.interact_pressed or intent.mount_held
+
+	# A stage was entered: the arming and the slow clock start over, the totals stay.
+	func restart() -> void:
+		_armed = false
+		_slow_ticks = 0
+		_slow_counted = false
+		_recent.clear()
+
+	func step(tier: int, planar_speed: float, braking: bool, exempt: bool) -> void:
+		ticks += 1
+		if tier >= FLOW_TIER:
+			flow_ticks += 1
+		if braking or exempt:
+			_slow_ticks = 0
+			_recent.clear()
+			return
+		var peak := 0.0
+		for earlier in _recent:
+			peak = maxf(peak, earlier)
+		_recent.append(planar_speed)
+		while _recent.size() > maxi(1, int(round(CONTACT_WINDOW * _tps))):
+			_recent.pop_front()
+		if tier >= MOVING_TIER:
+			_armed = true
+			_slow_ticks = 0
+			_slow_counted = false
+		elif _armed:
+			_slow_ticks += 1
+		if peak >= _moving_speed and planar_speed < peak * HALVED:
+			dead_stops += 1
+			_slow_counted = true
+			_recent.clear()
+			_recent.append(planar_speed)
+		elif _slow_ticks > DEAD_SECONDS * _tps and not _slow_counted:
+			dead_stops += 1
+			_slow_counted = true
+
+	func flow_share():
+		return float(flow_ticks) / float(ticks) if ticks > 0 else null
 
 var events
 var run
@@ -25,6 +109,9 @@ var _in_arena := false
 var _phase := 0
 # True when the run has moved on since its last line.
 var _dirty := false
+var _traversal: Traversal = null
+var _measuring := false
+var _stage_clock := -1.0
 
 
 func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
@@ -39,19 +126,25 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.warden_engaged.connect(_on_warden_engaged)
 	events.beacon_unsealed.connect(_on_beacon_unsealed)
 	events.stage_cleared.connect(_on_stage_cleared)
-	events.event_started.connect(func(id: String): _stage_list("events_joined").append(id))
+	events.event_started.connect(_on_event_started)
 	events.event_ended.connect(_on_event_ended)
 	events.player_died.connect(_on_player_died)
 	events.run_ended.connect(_on_run_ended)
 	events.boss_phase_changed.connect(_on_boss_phase)
 	events.stage_content_cleared.connect(_on_stage_content_cleared)
+	events.line_state_changed.connect(_on_line_state)
+	events.verb_failed.connect(_on_verb_failed)
 
 
 func _on_run_started(class_id: String) -> void:
 	_stages = {}
 	_in_arena = false
 	_phase = 0
-	_record = {"run_id": run.run_id, "class": class_id, "outcome": "running", "brindle_phase_reached": null}
+	_record = {"run_id": run.run_id, "class": class_id, "outcome": "running", "brindle_phase_reached": null,
+		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0}
+	_traversal = null
+	_measuring = false
+	_stage_clock = -1.0
 	_record.merge(_lab_tag())
 
 
@@ -89,6 +182,12 @@ func _ticks() -> int:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_in_arena = false
 	_dirty = true
+	if _traversal == null and player != null and player.get("tuning") != null:
+		_traversal = Traversal.new(Engine.physics_ticks_per_second, player.tuning.f("cruise"))
+	if _traversal != null:
+		_traversal.restart()
+	_measuring = _traversal != null
+	_stage_clock = -1.0
 	_stage(stage).merge(_lab_tag(), true)
 
 
@@ -96,6 +195,45 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 # last one, as a retry's break does.
 func _on_warden_engaged(stage: int) -> void:
 	_stage(stage)["ticks_to_warden_engaged"] = _ticks()
+	_measuring = false
+
+
+# One sample per tick the stage clock moved, so a paused or frozen game adds none.
+func _physics_process(_delta: float) -> void:
+	if not _measuring or not is_instance_valid(player) or run == null:
+		return
+	if run.stage_time <= _stage_clock:
+		return
+	_stage_clock = run.stage_time
+	var intent = player.intent
+	_traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, Traversal.is_exempt(player))
+
+
+func _on_event_started(id: String) -> void:
+	if id in EventDirector.PARTICIPATORY:
+		_stage_list("events_joined").append(id)
+
+
+func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String) -> void:
+	if _record.is_empty():
+		return
+	match state:
+		"latched_body":
+			_record["bites"] += 1
+		"smash_lands":
+			_record["smashes"] += 1
+		"broke":
+			_count_in("breaks", cause if cause != "" else UNKNOWN_CAUSE)
+
+
+func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
+	if not _record.is_empty():
+		_count_in("verb_fails", verb)
+
+
+func _count_in(key: String, name: String) -> void:
+	var counts: Dictionary = _record[key]
+	counts[name] = int(counts.get(name, 0)) + 1
 
 
 func _on_beacon_unsealed(stage: int) -> void:
@@ -170,6 +308,8 @@ func _write(outcome: String) -> void:
 		return
 	var line := _record.duplicate(true)
 	line["outcome"] = outcome
+	line["flow_share"] = _traversal.flow_share() if _traversal != null else null
+	line["dead_stops"] = _traversal.dead_stops if _traversal != null else 0
 	var stages: Array = []
 	var keys := _stages.keys()
 	keys.sort()

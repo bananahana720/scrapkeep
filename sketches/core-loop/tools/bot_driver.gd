@@ -41,6 +41,13 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 #                  the line's start, so every descent is a fast arrival on whatever the
 #                  core is doing, and its misses measure the recovery. In laps mode it
 #                  laps the course like the lapper.
+#   traversal      the Cable Reach's measuring pilot (design-v3/TRAVERSAL.md): it follows a
+#                  route from the drop to the beacon and never fights. It is human-shaped:
+#                  its whole stick and every press go out TRAVERSE_REACTION seconds after
+#                  they were decided, with at most one verb per TRAVERSE_PRESS_GAP seconds.
+#   camper         holds the gun on the Warden from CAMP_RANGE and never closes.
+# The fight profiles for the Warden bands, by name: brawler is the completionist (it
+# fights with every verb it has), skipper is the skipper, camper is the camper.
 # All of them fight Brindle the same way once a boss module exists (see _boss). In the
 # drop mode the skipper is the section 4 camper: it beelines, holds fire and rams laps
 # on the bowl floor, which is exactly what drop mode must not reward. In laps mode the
@@ -69,7 +76,12 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
 # limit ("stalled", "boss_stalled").
 
-const POLICIES := ["skipper", "completionist", "random", "lapper", "lapper_blind"]
+const POLICIES := ["skipper", "completionist", "random", "lapper", "lapper_blind", "camper", "traversal"]
+const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
+const CAMP_RANGE := 30.0
+const TRAVERSE_REACTION := 0.15
+const TRAVERSE_PRESS_GAP := 0.4
+const TRAVERSE_REACHED := 12.0
 # The lapper: reach a line's start within LAP_REACHED, then leave when the Warden's
 # published schedule says the core stands open LAP_SLACK either side of its arrival. The
 # descent starts as a guess of LAP_DESCENT seconds and learns from every arrival within
@@ -165,6 +177,9 @@ const CAP_REACH := 2.6
 var game
 var policy := "skipper"
 var seed_value := 1
+var profile := ""
+var route: Array[Vector2] = []
+var press_ticks: Array[int] = []
 var class_index := 0
 var rng := RandomNumberGenerator.new()
 var source := Intent.Scripted.new()
@@ -250,11 +265,16 @@ var _harpoon_held := false
 var _harpoon_commit := false
 # Seconds since the ball was last beyond the drop line of its fight target.
 var _off_line := 0.0
+var _out: Array[Dictionary] = []
+var _leg := 0
+var _last_press_tick := -1000000
 
 
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
 	game = game_ref
-	policy = policy_name if policy_name in POLICIES else "skipper"
+	profile = policy_name if policy_name in PROFILES else ""
+	var named: String = PROFILES.get(policy_name, policy_name)
+	policy = named if named in POLICIES else "skipper"
 	seed_value = seed_number
 	class_index = seed_number % ClassDef.all().size()
 	rng.seed = hash([policy, seed_number])
@@ -282,7 +302,9 @@ func start() -> void:
 		_note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01))
 		if _warden_hp_at >= 0.0:
 			_settle_warden_damage(0.0))
-	events.event_started.connect(func(id: String): _note_add("events_joined", id))
+	events.event_started.connect(func(id: String):
+		if id in EventDirector.PARTICIPATORY:
+			_note_add("events_joined", id))
 	events.lap_bell_rung.connect(func(_at: Vector3): _note_set("bell_s", snappedf(game.run.stage_time, 0.01)))
 	events.lap_completed.connect(func(lap: int, _required: int, seconds: float):
 		_note_set("laps", lap)
@@ -654,6 +676,10 @@ func _roam(delta: float) -> void:
 			_fight(warden, delta)
 		"completionist":
 			_completionist(warden, delta)
+		"camper":
+			_camper(warden, delta)
+		"traversal":
+			_traverse(delta)
 		"lapper", "lapper_blind":
 			_lapper(warden, delta)
 			var on_course: bool = game.world != null and game.world.course != null
@@ -663,6 +689,72 @@ func _roam(delta: float) -> void:
 			_note["lap_seconds"][phase] = snappedf(float(_note["lap_seconds"].get(phase, 0.0)) + delta, 0.01)
 		_:
 			_random(warden, delta)
+
+
+# --- the traversal pilot -----------------------------------------------------------------
+
+# Steers along the route, then to the beacon, and sends what it decided TRAVERSE_REACTION
+# seconds later: the whole stick and every press are held in a buffer for that long, so
+# nothing the steering reads (position, velocity, wall rays, the stuck check) is answered
+# sooner. Presses go through one gate: a second verb inside TRAVERSE_PRESS_GAP is dropped.
+# It never holds fire.
+func _traverse(delta: float) -> void:
+	_welcome_ring_at = Vector3.INF
+	var lag := int(ceil(TRAVERSE_REACTION * Engine.physics_ticks_per_second))
+	var ball: Vector3 = game.player.ball_position()
+	while _leg < route.size():
+		var leg: Vector2 = route[_leg]
+		if _flat(ball, game.ctx.terrain.drop_point(leg.x, leg.y, 1.0)) > TRAVERSE_REACHED:
+			break
+		_leg += 1
+	var point: Vector3 = game.ctx.terrain.beacon_point(_stage)
+	if _leg < route.size():
+		point = game.ctx.terrain.drop_point(route[_leg].x, route[_leg].y, 1.0)
+	_goal = "traverse leg %d" % _leg
+	source.hold = {}
+	source.press = {}
+	_act(point, null, delta)
+	source.hold.erase("fire_held")
+	_out.append({"hold": source.hold, "press": source.press})
+	source.hold = {}
+	source.press = {}
+	if _out.size() <= lag:
+		return
+	var sent: Dictionary = _out.pop_front()
+	source.hold = sent["hold"]
+	source.press = sent["press"]
+	_gate_presses()
+
+
+func _gate_presses() -> void:
+	var pressed: Array = []
+	for key in source.press:
+		if source.press[key]:
+			pressed.append(key)
+	if pressed.is_empty():
+		return
+	if ticks - _last_press_tick < int(ceil(TRAVERSE_PRESS_GAP * Engine.physics_ticks_per_second)):
+		source.press = {}
+		return
+	source.press = {pressed[0]: true}
+	_last_press_tick = ticks
+	press_ticks.append(ticks)
+
+
+# Holds the gun on the Warden from CAMP_RANGE: rolls up until in range, then stops
+# steering and holds the brake on the ground.
+func _camper(target: Node3D, delta: float) -> void:
+	_welcome_ring_at = Vector3.INF
+	if target == null or not is_instance_valid(target):
+		_goal = "beacon"
+		_act(game.flow.beacon.global_position, _nearest_enemy(), delta)
+		return
+	var ball: Vector3 = game.player.ball_position()
+	var in_range: bool = _flat(ball, target.global_position) <= CAMP_RANGE
+	_goal = "camp"
+	_act(ball if in_range else target.global_position, target, delta, target)
+	if in_range and game.player.state.grounded:
+		source.hold["brake_held"] = true
 
 
 # --- the lapper: the v3 loop's tight laps ------------------------------------------------
@@ -1606,7 +1698,7 @@ static func _flat(a: Vector3, b: Vector3) -> float:
 # The sidecar record: who drove, what happened, how long it took.
 func record(wall_seconds: float) -> Dictionary:
 	return {
-		"run_id": game.run.run_id, "policy": policy, "seed": seed_value, "class": class_id(),
+		"run_id": game.run.run_id, "policy": policy, "profile": profile, "seed": seed_value, "class": class_id(),
 		"outcome": outcome, "stage_reached": game.run.stage, "ticks": ticks,
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
