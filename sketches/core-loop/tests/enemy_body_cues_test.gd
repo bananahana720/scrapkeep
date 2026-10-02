@@ -15,12 +15,16 @@ const T := preload("res://tests/support/t.gd")
 class Ball extends RefCounted:
 	var at := Vector3.ZERO
 	var heading := Vector3.ZERO
+	var tier := 1
 
 	func ball_position() -> Vector3:
 		return at
 
 	func planar_velocity() -> Vector3:
 		return Vector3(heading.x, 0.0, heading.z)
+
+	func speed_tier() -> int:
+		return tier
 
 
 var _game
@@ -126,6 +130,11 @@ func _lobber() -> void:
 	var late: bool = shell.rim_visible() or shell.pings != 0
 	var late_ratio := Vector2(ball.at.x - to.x, ball.at.z - to.z).length() / 10.0
 	ball.at = to + Vector3(-10.0, 0.0, 0.0)
+	ball.tier = 0
+	shell._step_rim(0.016)
+	_t.check("BC-2 rim stays off below cruise, where a ball cannot bat", not shell.rim_visible() and shell.pings == 0,
+		"tier walk, rim %s, pings %d" % [shell.rim_visible(), shell.pings])
+	ball.tier = 1
 	var early_ratio := Vector2(ball.at.x - to.x, ball.at.z - to.z).length() / 10.0
 	shell._step_rim(0.016)
 	var want := EventKinds.state_color("will_break")
@@ -172,7 +181,7 @@ func _deflector() -> void:
 	var glyphs = _game.hud.key_glyphs
 	var ball: Vector3 = _game.player.ball_position()
 	var ready := {"harpoon": false, "haul": false, "boost": false, "interact": false, "jump": false}
-	var view := {"ready": ready, "line": "", "charging": false, "mounted": false, "airborne": false, "winching": false,
+	var view := {"ready": ready, "jump_possible": true, "line": "", "charging": false, "mounted": false, "airborne": false, "winching": false,
 		"points": {"harpoon": ball, "haul": ball, "boost": ball, "interact": ball, "jump": ball}}
 	glyphs.new_run()
 	glyphs.step(0.016, view)
@@ -180,6 +189,13 @@ func _deflector() -> void:
 	var near_dish: bool = glyphs.prompt_point("jump").is_equal_approx(dish) and "jump" in glyphs.shown_verbs()
 	_t.check("BC-3 jump prompt sits on the dish in the window", near_dish,
 		"prompt at %s, dish %s, ball %s, shown %s" % [glyphs.prompt_point("jump"), dish, ball, glyphs.shown_verbs()])
+	_t.check("BC-3 a vault-only tick spends none of the jump prompt's allowance", is_zero_approx(glyphs._free["jump"]),
+		"free %.3f" % glyphs._free["jump"])
+	view["jump_possible"] = false
+	glyphs.new_run()
+	glyphs.step(0.016, view)
+	_t.check("BC-3 no jump prompt in the window when a jump would not fire", "jump" not in glyphs.shown_verbs(),
+		"shown %s" % [glyphs.shown_verbs()])
 	enemy._window = 0.0
 	enemy._pose()
 	glyphs.step(0.016, view)

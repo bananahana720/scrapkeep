@@ -21,7 +21,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # (slingshot, only while mounted) come through the same table. The brake has no prompt.
 # Tab's field notes keep the full key list. A deflector in its vault window (0.45 s after a
 # rebound, deflector.gd vault_anchor) moves the jump prompt from the ball to the dish for that
-# window only, and shows it even when the slingshot would not: a jump there is a vault.
+# window only, and shows it whenever the ball can jump, even when the slingshot would not:
+# a jump there is a vault. Those vault-only ticks spend none of the jump prompt's allowance.
 # LET GO is the right-mouse prompt for a line standing on the world: the RMB keycap, a fling arrow and the words, at the anchor below
 # the winch prompt, on the first RETIRE_AFTER["letgo"] world latches of a profile only.
 
@@ -160,9 +161,11 @@ static func view_of(player) -> Dictionary:
 	for verb in PROMPT_VERBS:
 		ready[verb] = player.verb_ready(verb)
 	ready["interact"] = player.mount_ready()
+	var jump_possible: bool = ready["jump"]
 	ready["jump"] = ready["jump"] and kit.mounted
 	return {
 		"ready": ready,
+		"jump_possible": jump_possible,
 		"line": "" if not kit.hooked else ("body" if kit.on_body else "world"),
 		"charging": (special != null and special.charging) or kit.slingshot.charging,
 		"mounted": kit.mounted,
@@ -187,10 +190,12 @@ func step(delta: float, view: Dictionary) -> void:
 			_revived[verb] = true
 	_vault = vault_anchor()
 	var ready: Dictionary = view["ready"].duplicate()
-	if _vault != Vector3.INF:
+	var vault_open: bool = _vault != Vector3.INF and view.get("jump_possible", true)
+	var vault_only: bool = vault_open and not ready["jump"]
+	if vault_open:
 		ready["jump"] = true
 	for verb in PROMPT_VERBS:
-		if ready[verb]:
+		if ready[verb] and not (verb == "jump" and vault_only):
 			_forced[verb] = maxf(0.0, _forced[verb] - delta)
 	var line: String = view["line"]
 	if view["winching"] and not _winch_held:
@@ -209,7 +214,7 @@ func step(delta: float, view: Dictionary) -> void:
 		var open: bool = ready[verb] and (verb != "haul" or _stood >= LINE_STAND)
 		if not open:
 			continue
-		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line) or (verb == "jump" and _vault != Vector3.INF):
+		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line) or (verb == "jump" and vault_open):
 			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
 	if line == "world" and _letgo_latch >= 1 and _letgo_latch <= RETIRE_AFTER[LETGO]:
 		candidates.append({"verb": LETGO, "state": _state_of("haul", view), "word": LETGO_WORD})
@@ -222,7 +227,7 @@ func step(delta: float, view: Dictionary) -> void:
 	shown = candidates.slice(0, MAX_PROMPTS)
 	for prompt in shown:
 		var verb: String = prompt["verb"]
-		if verb != LETGO and (_first[verb] or _revived[verb]):
+		if verb != LETGO and not (verb == "jump" and vault_only) and (_first[verb] or _revived[verb]):
 			_free[verb] += delta
 			if _free[verb] >= FAIL_RETURN:
 				_first[verb] = false

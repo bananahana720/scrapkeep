@@ -6,6 +6,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The lobber's shell. Its landing ring is committed the moment it is fired, as a
 # PROJECTILE threat: a reticle whose brackets close as the shell falls, under a dotted
@@ -139,9 +140,12 @@ func _physics_process(delta: float) -> void:
 	queue_free()
 
 
-# Whether the ball, at its planar speed, reaches the landing point before the shell lands.
+# Whether the ball can bat this shell: at cruise or faster (combat._bat_by_ball's floor), and at its
+# planar speed it reaches the landing point before the shell lands.
 func ball_can_reach() -> bool:
 	if returned or target == null or _age >= flight or not target.has_method("planar_velocity"):
+		return false
+	if target.has_method("speed_tier") and target.speed_tier() < SpeedTier.CRUISE:
 		return false
 	var ball: Vector3 = target.ball_position()
 	var heading: Vector3 = target.planar_velocity()
@@ -161,7 +165,9 @@ func rim_visible() -> bool:
 
 
 func rim_color() -> Color:
-	return Color(_rim_material.albedo_color, 1.0)
+	var color := _rim_material.albedo_color
+	color.a = 1.0
+	return color
 
 
 func _build_rim() -> void:
@@ -189,11 +195,10 @@ func _step_rim(delta: float) -> void:
 		return
 	var row := EventKinds.state_row("will_break")
 	var color := EventKinds.state_color("will_break")
-	var swing := 1.0
 	if String(row.get("motion", "none")) == "pulse":
 		_rim_clock += delta
-		swing = 0.8 + 0.2 * sin(TAU * 2.0 * _rim_clock)
-	_rim_material.albedo_color = Color(color.r, color.g, color.b, swing)
+		color.a = 0.8 + 0.2 * sin(TAU * 2.0 * _rim_clock)
+	_rim_material.albedo_color = color
 	if not _pinged:
 		_pinged = true
 		pings += 1
