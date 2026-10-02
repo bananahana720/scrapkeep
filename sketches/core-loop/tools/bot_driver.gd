@@ -57,7 +57,8 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #
 # A run ends at stage-3 clear or a boss victory (outcome "won"), death ("died"), a
 # "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
-# limit ("stalled", "boss_stalled").
+# limit ("stalled", "boss_stalled"). The sweep adds "fight_capped" (the fight ran past
+# fight_limit) and "broken" (the Warden broke; it ends the run there).
 
 const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
@@ -160,12 +161,12 @@ var tree_picks: Array[String] = []
 var _tree_rng := RandomNumberGenerator.new()
 
 # The sweep's limits. stage_limit replaces STAGE_LIMIT. fight_limit, when above zero, ends the
-# run as "fight_capped" that many seconds after the bot's first strike on the Warden (or, for
-# a bot that never closes, after the Warden wakes) if the Warden is not broken by then.
+# run as "fight_capped" that many seconds after fight_start_of the stage note (the later of the
+# bot's turn to the Warden and the Warden's engagement) if the Warden is not broken by then.
 var stage_limit := STAGE_LIMIT
 var fight_limit := 0.0
 
-# "", then won, died, stalled, boss or boss_stalled.
+# "", then won, died, stalled, boss, boss_stalled, fight_capped or broken.
 var outcome := ""
 var ticks := 0
 # One row per stage the bot entered: what it tried, for the sidecar log.
@@ -349,9 +350,7 @@ func tick(delta: float) -> bool:
 		_note_set("stall_state", state)
 		_end("stalled")
 		return true
-	var fight_start = _note.get("warden_fight_s")
-	if fight_start == null:
-		fight_start = _note.get("warden_engaged_s")
+	var fight_start = fight_start_of(_note)
 	if fight_limit > 0.0 and fight_start != null and _note.get("warden_broken_s") == null \
 			and game.run.stage_time - float(fight_start) > fight_limit:
 		_end("fight_capped")
@@ -386,6 +385,23 @@ func tick(delta: float) -> bool:
 		_:
 			source.hold = {}
 	return outcome != ""
+
+
+# The fight clock starts at the later of the bot's turn to the Warden and the Warden's
+# engagement (first ring entry or strike), so a roll from spawn is not fight time. Null
+# until one of them is noted.
+static func fight_start_of(note: Dictionary):
+	var turned = note.get("warden_fight_s")
+	var engaged = note.get("warden_engaged_s")
+	if turned == null:
+		return engaged
+	if engaged == null:
+		return turned
+	return maxf(float(turned), float(engaged))
+
+
+func warden_broken() -> bool:
+	return _note.get("warden_broken_s") != null
 
 
 func _end(why: String) -> void:

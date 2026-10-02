@@ -1,6 +1,8 @@
 extends RefCounted
 
 const Posture := preload("res://src/combat/boss_posture.gd")
+const Sweep := preload("res://tools/posture_sweep.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
 
 # The Warden's posture rule on the bare rule object (LEGIBILITY section 4): gain, one gain
 # per frame from contacts, the glance floor, the stagger, the open core, one chunk per
@@ -39,6 +41,8 @@ func run(t) -> void:
 	_curve(t)
 	_ram_shatters(t)
 	_row_numbers(t)
+	_base_override(t)
+	_sweep_record(t)
 
 
 func _gain(t) -> void:
@@ -199,41 +203,57 @@ func _pure(t) -> void:
 	t.check("judge twenty times changes nothing and answers the same", same and after == snapshot, "before %s after %s" % [snapshot, after])
 
 
-# The kinds and ratios of 20 hits, each answered with the rule's original formula
-# (base times the clamped ratio) written out here.
+# The kinds and ratios of 20 hits, each answered with the rule's original formula (base times
+# the clamped ratio, gain only outside a stagger, a core hit shattering for a smash or a ram of
+# tier 2 or better) written out here. Every third stagger is left open for the next hit, and the
+# gun hits at i = 4 and 14 are charging.
 func _defaults_unchanged(t) -> void:
 	var kinds := ["ram", "stomp", "slam", "ram", "runner"]
-	var ratios := [0.05, 0.2, 0.5, 0.9, 1.0, 1.3, 1.5, 2.5]
+	var ratios := [1.5, 1.3, 2.5, 1.0, 0.9, 0.2, 0.5, 0.05]
 	var plain := Posture.new()
 	var explicit := Posture.new({"curve": 1.0, "ram_shatters": true})
 	var same := true
 	var detail := ""
+	var core_hits := 0
+	var charging_gun := 0
+	var shatters := 0
 	for i in 20:
 		var kind: String = kinds[i % kinds.size()]
 		var ratio: float = ratios[i % ratios.size()]
 		var smash := i % 4 == 3
-		var charging := i % 7 == 6
+		var charging := kind == "runner" and i % 10 == 4
 		var expected := 30.0
 		if kind == "runner":
 			expected = Posture.OTHER_BASE_CHARGING if charging else Posture.OTHER_BASE
 		elif smash:
 			expected = Posture.SMASH_BASE
 		expected *= clampf(ratio, 0.2, 1.5)
+		var was_open: bool = plain.staggered
+		var paid: bool = plain.cracked and plain.crack_stagger < plain.staggers
+		var expected_shatter := was_open and kind != "runner" and (smash or kind == "ram" or paid)
+		if was_open:
+			expected = 0.0
+			core_hits += 1
+			shatters += 1 if expected_shatter else 0
+		if charging:
+			charging_gun += 1
 		var extra := {"smash": smash, "charging": charging, "tier": 3}
 		_frame += 1
 		var hit := {"kind": kind, "punch": PLATING * ratio, "plating": PLATING, "frame": _frame, "hp": HP, "max_hp": HP}
 		hit.merge(extra, true)
 		var a: Dictionary = plain.judge(hit)
 		var b: Dictionary = explicit.judge(hit)
-		if a != b or not is_equal_approx(float(a["gain"]), expected):
+		if a != b or not is_equal_approx(float(a["gain"]), expected) or bool(a["shatter"]) != expected_shatter:
 			same = false
-			detail = "hit %d %s ratio %s: plain %s, explicit %s, expected %s" % [i, kind, ratio, a["gain"], b["gain"], expected]
+			detail = "hit %d %s ratio %s: plain %s, explicit %s, expected gain %s shatter %s" % [i, kind, ratio, a, b, expected, expected_shatter]
 		plain.apply(a, _frame)
 		explicit.apply(b, _frame)
-		if plain.staggered:
+		if plain.staggered and i % 3 != 0:
 			plain.step(10.0)
 			explicit.step(10.0)
-	t.check("curve 1.0 and ram_shatters true reproduce the original gain over 20 hits", same, detail)
+	t.check("the 20 hits include open-core hits, a shatter and a charging gun hit", core_hits >= 2 and shatters >= 1 and charging_gun >= 1,
+			"%d core hits (%d shatters), %d charging gun hits" % [core_hits, shatters, charging_gun])
+	t.check("curve 1.0 and ram_shatters true reproduce the original gain and shatter results over 20 hits", same, detail)
 	t.check("both rules end in the same state", plain.posture == explicit.posture and plain.staggers == explicit.staggers and plain.glances == explicit.glances,
 			"%s vs %s" % [plain.posture, explicit.posture])
 	var open := Posture.new({"curve": 1.0, "ram_shatters": true})
@@ -291,3 +311,28 @@ func _row_numbers(t) -> void:
 	var empty := Posture.new({})
 	t.check("an empty numbers dictionary keeps every constant", empty.curve == 1.0 and empty.ram_shatters and empty.stagger_seconds == Posture.STAGGER_SECONDS
 			and empty.mult_min == Posture.MULT_MIN and empty.drain_rate == Posture.DRAIN_RATE, "curve %s" % empty.curve)
+
+
+func _base_override(t) -> void:
+	var partial := Posture.new({"base": {"ram": 20.0}})
+	t.near("a base override for the ram changes the ram's gain", _hit("ram", PLATING, partial)["gain"], 20.0)
+	t.near("a kind the override leaves out keeps its base", _hit("stomp", PLATING, partial)["gain"], 30.0)
+	t.check("a kind the override leaves out is still a contact", partial.judge({"kind": "slam", "punch": PLATING, "plating": PLATING, "frame": 900})["contact"], "slam lost its contact")
+	t.check("the constant table is not changed by an override", Posture.BASE["ram"] == 30.0, "BASE ram %s" % Posture.BASE["ram"])
+
+
+# A made-up stage note stands in for a run: the sweep reads what the driver noted and nothing else.
+func _sweep_record(t) -> void:
+	var camper := {"warden_engaged_s": 14.0, "warden_fight_s": null, "warden_broken_s": 60.0}
+	var run: Dictionary = Sweep.measure(camper, 240.0)
+	t.check("a Warden that broke counts as broken even when the bot never engaged", run["broke"], "run %s" % run)
+	t.near("a break with no strike counts from the wake", run["fight"], 46.0)
+	var whole := {"warden_engaged_s": 1.0, "warden_fight_s": 0.5, "warden_broken_s": 40.0}
+	var skipper: Dictionary = Sweep.measure(whole, 240.0)
+	t.near("fight seconds start at the later of the turn and the engagement", skipper["fight"], 39.0)
+	t.near("the engaged second is reported", skipper["engaged"], 1.0)
+	var late := {"warden_engaged_s": 20.0, "warden_fight_s": 3.0, "warden_broken_s": 50.0}
+	t.near("a roll from spawn to the Warden is not fight time", Sweep.measure(late, 240.0)["fight"], 30.0)
+	t.check("a Warden that never broke counts as the cap", not Sweep.measure({"warden_engaged_s": 5.0}, 240.0)["broke"] and Sweep.measure({"warden_engaged_s": 5.0}, 240.0)["fight"] == 240.0, "never")
+	t.near("the driver's fight limit starts from the same later second", float(BotDriver.fight_start_of(late)), 20.0)
+	t.check("the driver's fight start is null before either is noted", BotDriver.fight_start_of({"warden_engaged_s": null, "warden_fight_s": null}) == null, "start")

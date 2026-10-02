@@ -27,7 +27,7 @@ const POLICIES := ["brawler", "skipper", "camper"]
 const HEADER := ["plating", "curve", "ram_shatters", "brawler_median_s", "brawler_min_s", "brawler_max_s",
 		"skipper_median_s", "skipper_min_s", "skipper_max_s", "skipper_to_brawler", "camper_broke",
 		"brawler_heft_median", "brawler_never", "skipper_never", "camper_never", "brawler_died", "skipper_died"]
-const RUN_HEADER := ["plating", "curve", "ram_shatters", "policy", "seed", "outcome", "broke", "fight_s", "heft", "game_s"]
+const RUN_HEADER := ["plating", "curve", "ram_shatters", "policy", "seed", "outcome", "broke", "engaged_s", "fight_s", "heft", "game_s", "note"]
 
 
 # The slice table with one Warden row changed. Every lookup the game makes on ctx.stages.
@@ -227,15 +227,16 @@ func _physics_process(delta: float) -> bool:
 			_table.posture = {"curve": float(job["cell"]["curve"]), "ram_shatters": bool(job["cell"]["ram_shatters"])}
 			_game.ctx.stages = _table
 			_swapped = true
-		_game.codex.storage_dir = "user://posture_sweep"
-		_game.run_log.storage_dir = "user://posture_sweep"
+		var home := _data_home()
+		_game.codex.storage_dir = home
+		_game.run_log.storage_dir = home
 		_driver = BotDriver.new(_game, String(job["policy"]), int(job["seed"]))
 		_driver.stage_limit = _cap * 4.0
 		_driver.fight_limit = _cap
 		_driver.start()
 		return false
 	var over: bool = _driver.tick(delta)
-	if not over and _driver._note.get("warden_broken_s") != null:
+	if not over and _driver.warden_broken():
 		_driver._end("broken")
 		over = true
 	if not over:
@@ -247,12 +248,30 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 
+static func measure(note: Dictionary, cap: float) -> Dictionary:
+	var broke: bool = note.get("warden_broken_s") != null
+	var start = BotDriver.fight_start_of(note)
+	var fight := cap
+	if broke and start != null:
+		fight = float(note["warden_broken_s"]) - float(start)
+	return {"broke": broke, "fight": fight, "engaged": note.get("warden_engaged_s")}
+
+
+func _data_home() -> String:
+	var home := "user://posture_sweep/part%s/job%d" % [String(_settings.get("part", "0")).replace("/", "of"), _job]
+	var dir := ProjectSettings.globalize_path(home)
+	if DirAccess.dir_exists_absolute(dir):
+		for file in DirAccess.get_files_at(dir):
+			DirAccess.remove_absolute(dir.path_join(file))
+	DirAccess.make_dir_recursive_absolute(dir)
+	return home
+
+
 func _record(job: Dictionary) -> void:
 	var note: Dictionary = _driver.stage_notes[_driver.stage_notes.size() - 1] if not _driver.stage_notes.is_empty() else {}
-	var broke: bool = note.get("warden_broken_s") != null and note.get("warden_fight_s") != null
-	var fight := _cap
-	if broke:
-		fight = float(note["warden_broken_s"]) - float(note["warden_fight_s"])
+	var run := measure(note, _cap)
+	var broke: bool = run["broke"]
+	var fight: float = run["fight"]
 	var cell: Dictionary = job["cell"]
 	var key := _key(cell)
 	if not _results.has(key):
@@ -262,10 +281,22 @@ func _record(job: Dictionary) -> void:
 	_results[key][job["policy"]].append({"broke": broke, "fight": fight, "heft": float(note.get("warden_fight_heft", 0.0)),
 			"died": _driver.outcome == "died"})
 	_run_rows.append("\t".join([str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"]), job["policy"],
-			str(job["seed"]), _driver.outcome, str(broke), "%.2f" % fight, str(note.get("warden_fight_heft", "")),
-			"%.2f" % (float(_driver.ticks) / float(Engine.physics_ticks_per_second))]))
+			str(job["seed"]), _driver.outcome, str(broke), str(run["engaged"]) if run["engaged"] != null else "", "%.2f" % fight,
+			str(note.get("warden_fight_heft", "")), "%.2f" % (float(_driver.ticks) / float(Engine.physics_ticks_per_second)),
+			_anomaly(note)]))
 	print("posture_sweep: %s plating %s curve %s shatter %s %s seed %d -> %s, fight %.1f s" % [key, cell["plating"], cell["curve"],
 			cell["ram_shatters"], job["policy"], job["seed"], _driver.outcome, fight])
+
+
+# The run's own anomaly notes (RunState.note_anomaly, such as warden_vanished) and the stall state,
+# so a seal that opened because the Warden left the tree is not read as a break.
+func _anomaly(note: Dictionary) -> String:
+	var parts: Array[String] = []
+	for anomaly in _game.run.anomalies:
+		parts.append(String(anomaly.get("kind", "")))
+	if note.get("stall_state") != null:
+		parts.append("stall_state=%s" % str(note["stall_state"]))
+	return ",".join(parts)
 
 
 func _key(cell: Dictionary) -> String:

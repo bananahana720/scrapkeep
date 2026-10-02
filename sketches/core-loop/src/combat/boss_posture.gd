@@ -22,7 +22,7 @@ const FULL := 100.0
 # The numbers this rule runs on. A stage row's "posture" dictionary overrides any of them
 # by key; a missing key keeps the constant above. "curve" is the exponent on the clamped
 # ratio and "ram_shatters" says whether a ram at SHATTER_TIER shatters an open core.
-var base := BASE
+var base := BASE.duplicate()
 var smash_base := SMASH_BASE
 var other_base := OTHER_BASE
 var other_base_charging := OTHER_BASE_CHARGING
@@ -53,7 +53,8 @@ var glances := 0
 
 
 func _init(numbers := {}) -> void:
-	base = numbers.get("base", BASE)
+	base = BASE.duplicate()
+	base.merge(numbers.get("base", {}), true)
 	smash_base = float(numbers.get("smash_base", SMASH_BASE))
 	other_base = float(numbers.get("other_base", OTHER_BASE))
 	other_base_charging = float(numbers.get("other_base_charging", OTHER_BASE_CHARGING))
