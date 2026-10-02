@@ -24,7 +24,7 @@ const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 const ELITE_ARRIVAL := 3
 
 const DEFS := [
-	{"stage": 1, "name": "The Cable Reach", "map": "gorge", "threat": 1.0,
+	{"stage": 1, "name": "The Cable Reach", "map": "reach", "threat": 1.0,
 		"event_mix": {}, "scrap_density": 1.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 45.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_fight": "posture", "warden_hint": "Break its guard, then smash the core."},
 ]

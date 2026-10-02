@@ -157,6 +157,9 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 # spot or approach sample rises above the ground under the ball.
 func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 	var count := maxi(1, _ids.size())
+	var fixed := _slot_plan(count)
+	if not fixed.is_empty():
+		return fixed
 	var ground: float = _terrain.height(ball.x, ball.z)
 	var base := Vector3(heading.x, 0.0, heading.z).normalized()
 	if base.length() < 0.5:
@@ -176,6 +179,25 @@ func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 		_warned_blocked = true
 		push_warning("reward_gates: every gate candidate is blocked by a static prop; using the least-blocked spot")
 	return best
+
+
+# A map with gate slots stands its gates there whatever the ball does. With fewer gates
+# than slots the outermost slots are used, and a single gate takes the middle one; more
+# gates than slots fall back to the ordinary placement.
+func _slot_plan(count: int) -> Dictionary:
+	var m = _terrain.map() if _terrain.has_method("map") else null
+	if m == null or not "gate_slots" in m or (m.gate_slots as Array).is_empty():
+		return {}
+	var slots: Array = m.gate_slots
+	if count > slots.size():
+		return {}
+	var spots: Array[Vector3] = []
+	for i in count:
+		var pick := (slots.size() - 1) / 2 if count == 1 else roundi(float(i) * (slots.size() - 1) / (count - 1))
+		var at: Vector2 = slots[mini(pick, slots.size() - 1)]["at"]
+		spots.append(_terrain.drop_point(at.x, at.y, 0.0))
+	var facing: Vector3 = slots[0]["facing"]
+	return {"facing": facing, "spots": spots, "climb": 0.0, "distance": 0.0, "blocked": false}
 
 
 func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int, exclude: Array) -> Dictionary:

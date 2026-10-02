@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
+const Reach := preload("res://src/world/map_reach.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Weir := preload("res://src/world/map_weir.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -67,8 +68,8 @@ func _slice_checks() -> void:
 
 	var flow = _game.flow
 	var stage_one: Dictionary = StageDefs.of(1)
-	_report("slice map", _game.ctx.terrain.maps.size() == 1 and _game.ctx.terrain.map().get_script() == Gorge,
-		"slice terrain holds %d map(s), the active one is the gorge: %s" % [_game.ctx.terrain.maps.size(), _game.ctx.terrain.map().get_script() == Gorge])
+	_report("slice map", _game.ctx.terrain.maps.size() == 1 and _game.ctx.terrain.map().get_script() == Reach,
+		"slice terrain holds %d map(s), the active one is the Reach: %s" % [_game.ctx.terrain.maps.size(), _game.ctx.terrain.map().get_script() == Reach])
 	_report("slice card", _game.hud.launch_card.title == "The Cable Reach",
 		"stage card reads '%s'" % _game.hud.launch_card.title)
 	_report("slice scenery", _game.ctx.terrain.geometry_root(1).get_node_or_null("SpillwayScenery") == null,
