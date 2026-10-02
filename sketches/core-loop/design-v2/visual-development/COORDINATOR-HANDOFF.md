@@ -22,6 +22,14 @@ The pre-Warden baseline passed all 165 sketch-smoke checks. Later affected hero,
 
 Native inspection covers all three kits at four angles, plus final open/closed Hive states, actual 1920×1080 on RTX 4080. The open support clears the 1.3 m hit sphere by at least 0.14 m. These short captures are ineligible for FPS qualification.
 
-The gorge material count falls from 227 to 173 with 374 meshes and 57 colliders unchanged. The earlier 120-second grown dense run passed 14.223 ms p99; the after-change run was interrupted, and another session continued occupying 100% GPU. No final performance gain or target pass is claimed. The remaining native gate is 120-second traversal, grown dense combat and boss coverage on the final code under a controlled load.
+The gorge material count falls from 227 to 173 with 374 meshes and 57 colliders unchanged. The earlier 120-second grown dense run passed 14.223 ms p99; the after-change run was interrupted, and competing work included Claude’s roughly three-minute vsync-off capture plus another project’s music-video Python job. No final performance gain or target pass is claimed. The remaining native gate is 120-second traversal, grown dense combat and boss coverage on the final code under a controlled load.
 
 This candidate is ready for coordinator review of these bounded fixes and Andrew's playtest. It is not a declaration that the complete visual plan or Style A fidelity is finished. See [integrated evidence](INTEGRATED-VERIFICATION.md) and [remaining fidelity work](FIDELITY-GAPS.md).
+
+The next 120-second run is gated by a fresh GPU-idle preflight before desktop startup and immediately before capture launch. Three samples must each be at most 5% utilization, with no non-desktop GPU processes; failed or unavailable telemetry blocks the run.
+
+## Incoming v3 lab coordination
+
+Further stage-1 scenery placement is held pending the merged base containing `proto/core-loop-v3-lab` and `proto/core-loop-v3-interact`. Reserved locations are the Warden bowl rim/top-shelf lift route, both chute mouths and kicker trajectories toward the mast, the east-line altar, the cracked wall/cache behind the vault plinth, and the crate near Moss's cradle. Existing scenery stays outside the x/z ±200 terrain square; final route and sightline clearance needs the merged geometry. No v3 branch has been merged into this candidate.
+
+The lab's Warden dome open/closed states and reactor crater await a later appearance pass against their published contracts. The lab leaves the hero, Warden look, palette and terrain sky/material seams untouched. Canonical records remain coordinator-owned.

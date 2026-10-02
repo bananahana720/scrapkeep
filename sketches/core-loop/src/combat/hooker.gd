@@ -22,7 +22,6 @@ const HP := 55.0
 var rating := RATING_BASE
 var rope := 0.0
 var snaps := 0
-var _post: MeshInstance3D
 
 
 func _configure(threat: float) -> void:
@@ -37,10 +36,79 @@ func _configure(threat: float) -> void:
 	rating = RATING_BASE + RATING_PER_THREAT * (threat - 1.0)
 
 
+# C14 dressing (enemy_hooker.glb). The counter's capsule crew is replaced by the glb's crew,
+# post and anchor crown (the collider _add_capsule laid stays); the harpoon rides its own
+# node at the cradle. The glb is read once; every hooker shares its meshes and adds only its
+# own flashing body material as a surface override. The resting body is the Fleet oxide
+# _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
+const COCK := 0.45
+const THRUST := 0.3
+
+static var _shared: Dictionary = {}
+
+var _harpoon: MeshInstance3D
+var _rest_z := 0.0
+
+
 func _build_tool() -> void:
-	_post = _cylinder(0.16, POST_HEIGHT, Palette.CHARCOAL, Vector3(0.9, POST_HEIGHT * 0.5 - CREW_HALF, 0.0))
-	_box(Vector3(0.3, 0.3, 1.5), Palette.BRASS, Vector3(0.9, POST_HEIGHT - CREW_HALF, 0.4), 0.3)
-	_cylinder(0.12, 0.5, Palette.HAZARD, Vector3(0.9, POST_HEIGHT - CREW_HALF, 1.2), 0.8)
+	_crew.free()
+	_crew = null
+	var parts := _parts()
+	var dress := Node3D.new()
+	dress.name = "HookerBody"
+	add_child(dress)
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	body.mesh = parts["body"]
+	body.set_surface_override_material(parts["flash"], _material)
+	dress.add_child(body)
+	_harpoon = MeshInstance3D.new()
+	_harpoon.name = "HookerHarpoon"
+	_harpoon.mesh = parts["harpoon"]
+	_harpoon.position = parts["pivot"]
+	_rest_z = _harpoon.position.z
+	dress.add_child(_harpoon)
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_hooker.glb") as PackedScene).instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var flash := 0
+	var meshes := {}
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		meshes[node.name] = mesh
+	var pivot := scene.find_child("HookerHarpoonMesh", true, false) as Node3D
+	_shared = {"body": meshes["HookerBody"], "harpoon": meshes["HookerHarpoonMesh"], "flash": flash,
+		"pivot": pivot.position + (pivot.get_parent() as Node3D).position}
+	scene.free()
+	return _shared
+
+
+# The harpoon cocks back along its own axis over the warning, easing with the warning's own
+# progress (WARN phase, _warn_progress()), lunges forward while the line is live and settles
+# in the roam. It reads existing state and adds no clock; anchor() and the tether do not move.
+func _pose() -> void:
+	if _harpoon == null:
+		return
+	var z := 0.0
+	match phase:
+		Phase.WARN:
+			var t := clampf(_warn_progress(), 0.0, 1.0)
+			z = -COCK * t * t * (3.0 - 2.0 * t)
+		Phase.LIVE:
+			z = THRUST
+		_:
+			z = lerpf(_harpoon.position.z - _rest_z, 0.0, 1.0 - exp(-10.0 * get_physics_process_delta_time()))
+	_harpoon.position.z = _rest_z + z
 
 
 func anchor() -> Vector3:

@@ -23,6 +23,8 @@ var _bola: MeshInstance3D
 var _launch := Vector3.ZERO
 var _bump := 0.0
 var _landed := false
+var _spin := 0.0
+var _flight_basis := Basis.IDENTITY
 
 
 func _configure(threat: float) -> void:
@@ -36,15 +38,63 @@ func _configure(threat: float) -> void:
 	keep_near = 14.0
 
 
+# C13 dressing (enemy_bola_thrower.glb). The counter's capsule crew is replaced by the glb's
+# crew and raised arm (the collider _add_capsule laid stays) and the bola is the glb's tilted
+# hoop with a weighted end each side. The glb is read once; every thrower shares its meshes and
+# adds only its own flashing body material as a surface override (the hoop's hazard material
+# is one shared resource, as the base gave every bola the same look).
+const SPIN := 0.25
+const WIND_SPIN := 0.35
+# The hoop's ring axis (the glb's local +Y) is seated 58 degrees off vertical toward a diagonal, so
+# front, side and rear cameras each look at the opening at about 0.6 of full face-on. The whirl is
+# about the ring's own axis, so the opening never rolls edge-on.
+const SEAT_AXIS := Vector3(0.6, 0.53, 0.6)
+
+static var _shared: Dictionary = {}
+
+
 func _build_tool() -> void:
+	_crew.free()
+	_crew = null
+	var parts := _parts()
+	var body := MeshInstance3D.new()
+	body.name = "BolaThrowerBody"
+	body.mesh = parts["body"]
+	body.set_surface_override_material(parts["flash"], _material)
+	add_child(body)
 	_bola = MeshInstance3D.new()
-	var mesh := TorusMesh.new()
-	mesh.inner_radius = 0.7
-	mesh.outer_radius = 0.9
-	_bola.mesh = mesh
-	_bola.material_override = Palette.solid(Palette.HAZARD, 0.6)
+	_bola.name = "BolaLoop"
+	_bola.mesh = parts["loop"]
 	_bola.position = Vector3(0.0, CREW_HALF + 1.1, 0.0)
+	_bola.basis = _seat()
 	add_child(_bola)
+
+
+static func _seat() -> Basis:
+	return Basis(Quaternion(Vector3.UP, SEAT_AXIS.normalized()))
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var scene := (load("res://assets/models/world_one/enemy_bola_thrower.glb") as PackedScene).instantiate()
+	var charcoal := Palette.solid(Palette.CHARCOAL)
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var hazard := Palette.solid(Palette.HAZARD, 0.6)
+	var flash := 0
+	var meshes := {}
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, hazard if slot == "class_accent" else (painted if slot == "paint" else charcoal))
+		meshes[node.name] = mesh
+	_shared = {"body": meshes["BolaThrowerBody"], "loop": meshes["BolaLoop"], "flash": flash}
+	scene.free()
+	return _shared
 
 
 func _commit(_to_ball: Vector3) -> Node3D:
@@ -66,12 +116,19 @@ func _go_live() -> void:
 	_landed = false
 
 
+# The loop leaves the crew keeping the seat it had, so it reads open in flight too.
+func _take_flight() -> void:
+	_flight_basis = global_basis * _seat()
+	_bola.top_level = true
+
+
 func _live(_delta: float) -> bool:
 	var ring := telegraph()
 	if ring == null:
 		return false
 	if _t < FLIGHT:
-		_bola.top_level = true
+		if not _bola.top_level:
+			_take_flight()
 		_bola.global_position = Threat.flight_point(_launch, ring.center, _bump, _t / FLIGHT)
 		ring.set_progress(_t / FLIGHT)
 		return true
@@ -79,6 +136,7 @@ func _live(_delta: float) -> bool:
 		_landed = true
 		_bola.top_level = false
 		_bola.position = Vector3(0.0, CREW_HALF + 1.1, 0.0)
+		_bola.basis = _seat() * Basis(Vector3.UP, _spin)
 		if not ring.contains(_real_ball()) or not _catch(WRAP):
 			return false
 		hit_player.emit(STING, Vector3.ZERO)
@@ -95,8 +153,16 @@ func _on_end() -> void:
 	if _bola != null:
 		_bola.top_level = false
 		_bola.position = Vector3(0.0, CREW_HALF + 1.1, 0.0)
+		_bola.basis = _seat() * Basis(Vector3.UP, _spin)
 
 
+# The loop whirls faster through the wind-up, easing with the warning's own progress
+# (WARN phase, _t / warn_seconds); it reads that clock and adds none. The whirl is about the
+# ring's own axis, in flight as well, so the opening stays open on every camera.
 func _pose() -> void:
-	if _bola != null and not _bola.top_level:
-		_bola.rotation.y += 0.25
+	if _bola != null:
+		var wind := clampf(_t / warn_seconds, 0.0, 1.0) if phase == Phase.WARN else 0.0
+		_spin = fposmod(_spin + lerpf(SPIN, WIND_SPIN, wind), TAU)
+		var seat := _flight_basis if _bola.top_level else _seat()
+		_bola.basis = seat * Basis(Vector3.UP, _spin)
+

@@ -1,5 +1,5 @@
 # Warden clamp (VISUAL-LANGUAGE.md sections 9 and 11): an awakened ancient, not Fleet
-# gear. A shared base (a seamless two-shell pivot housing round the beacon's foot, a
+# gear. A shared base (a four-piston support round the beacon's foot, a
 # cast pivot tower on its rim, and two massive C-jaws that hinge at the tower and close
 # round the beacon) plus one family kit per stage that sits on the tower and forms the
 # weak point: the reactor relic (stage 1), the swarm-remnant hive (stage 2) and the
@@ -7,8 +7,8 @@
 # lives only in thin ancient_light seams set in charcoal grooves twice their width, and
 # the enamel is dull petrol with sandstone dust on top faces, under the section 11 cap.
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Measured tris: base 4940; kits reactor 1452, hive 1248, mind
-# 1440 (targets 4000 to 6000 and 800 to 1500).
+# no external assets. Look pass 2: base 4492; kits reactor 1476, hive 1272, mind
+# 1464 (targets 4000 to 6000 and 800 to 1500).
 #
 # Frame and nodes (for W7 to wire; this sketch does not wire the Warden):
 #   warden_clamp_base.glb  WardenClampBase > Housing, Tower > KitMount, JawL, JawR
@@ -49,6 +49,15 @@ def dust(part):
     idx = part.slots.index("ancient_enamel") if "ancient_enamel" in part.slots else -1
     top = [f for f in part.bm.faces if f.material_index == idx and f.normal.z > 0.6]
     part.paint(top, "ancient_enamel", DUST)
+    for f in part.bm.faces:
+        if f.material_index != idx:
+            continue
+        edge = any(len(e.link_faces) == 2 and e.calc_face_angle(0) > 0.7 for e in f.edges)
+        center = f.calc_center_median()
+        if edge and math.sin(center.x*13.1+center.y*9.7+center.z*17.3) > 0.45:
+            part.paint([f], "ancient_enamel", common.mix(ENAMEL, "bone", 0.20))
+        elif f.normal.z < -0.15:
+            part.paint([f], "ancient_enamel", common.mix(ENAMEL, "charcoal", 0.4))
 
 
 def sweep(part, slot, profile, radius, a0, a1, segs, color=None, center=(0, 0), caps=True, taper=0.0, zc=0.0):
@@ -90,15 +99,19 @@ def seam_line(part, a, b, out, width=0.06):
 
 def housing():
     p = Part("Housing")
-    sweep(p, "ancient_enamel", [(-1.1, 0.0), (0.0, 0.0), (0.0, 1.25), (-0.12, 1.4), (-1.1, 1.4)],
-          2.75, 0, math.tau, 40, ENAMEL, caps=False)
-    sweep(p, "ancient_enamel", [(-1.0, 1.5), (-0.18, 1.5), (-0.24, 2.05), (-0.45, 2.2), (-1.0, 2.2)],
-          2.75, 0, math.tau, 40, ENAMEL, caps=False)
-    seam_ring(p, 2.66, 1.45, 40)
-    for k in range(6):
-        a = k * math.tau / 6 + 0.26
-        d = Vector((math.cos(a), math.sin(a), 0))
-        seam_line(p, d * 2.76 + Vector((0, 0, 0.12)), d * 2.76 + Vector((0, 0, 1.15)), d)
+    # Four squat piston legs remain inside the original 2.8 m lower envelope.
+    for k in range(4):
+        a = k * math.tau / 4 + math.pi / 4
+        foot = Vector((math.cos(a)*1.85, math.sin(a)*1.85, 0.35))
+        knee = Vector((math.cos(a)*1.7, math.sin(a)*1.7, 1.35))
+        hip = Vector((math.cos(a)*1.1, math.sin(a)*1.1, 2.2))
+        p.box("ancient_enamel", (0.95,0.85,0.55), loc=foot, rot=(0,0,a), color=ENAMEL)
+        p.rod("bare_metal", foot, knee, 0.18, 8)
+        p.rod("ancient_enamel", knee, hip, 0.42, 8, color=ENAMEL, r2=0.5)
+        p.ico("ancient_enamel", 0.48, 1, loc=knee, color=ENAMEL)
+        seam_line(p, knee+Vector((0,0,0.05)), hip, (math.cos(a),math.sin(a),0), width=0.045)
+    p.ico("ancient_enamel", 1.0, 2, loc=(0,0,2.05), scale=(2.0,2.0,0.85), color=ENAMEL)
+    seam_ring(p, 1.84, 2.12, 24, width=0.06)
     return p
 
 
@@ -155,6 +168,13 @@ def jaw(side):
         sweep(p, "ancient_enamel", [(-0.02, z), (0.34, z), (0.34, z + 0.9), (-0.02, z + 0.9)], 0.8,
               0, math.tau, 16, ENAMEL, center=(HINGE_X, 0.0), caps=False)
     seam_ring(p, 1.16, knuckles[0] + 0.45, 16, width=0.04)
+    p.ico("ancient_enamel", 1.0, 1, loc=(0.65, side*2.7, 5.1), scale=(1.9,1.15,1.1), color=ENAMEL)
+    p.beam("ancient_enamel", (1.8,side*1.5,5.2), (-0.8,side*2.5,5.8), 0.65, 0.7, color=ENAMEL)
+    for j in range(2):
+        a = (1.6,side*(1.5+j*0.36),4.6)
+        b = (1.0,side*(1.8+j*0.36),6.0)
+        p.rod("rubber", a, b, 0.12, 6)
+        p.rod("ancient_light", (1.05,side*(1.8+j*0.36),5.72), b, 0.045, 6)
     dust(p)
     return p
 
@@ -179,6 +199,8 @@ def kit_reactor(rng):
     for v in edge:
         v.co += Vector((rng.uniform(-0.09, 0.09), rng.uniform(-0.09, 0.09), rng.uniform(-0.06, 0.06)))
     seam_ring(p, 1.27, 1.2, 16, 0.8, math.tau - 0.8, width=0.05)
+    for side in [-1, 1]:
+        p.box("ancient_enamel", (0.7,0.35,0.55), loc=(-0.3,side*0.95,1.4), rot=(0.0,side*0.3,0.0), color=ENAMEL)
     dust(p)
     return p
 
@@ -224,6 +246,8 @@ def kit_hive(rng):
         if k % 2 == 0:
             p.cyl("rubber", r * 0.7, r * 0.7, 0.03, 6, loc=c + Vector((0, 0, h / 2)))
             p.cyl("ancient_light", r * 0.45, r * 0.45, 0.04, 6, loc=c + Vector((0, 0, h / 2 + 0.005)))
+    for side in [-1, 1]:
+        p.box("ancient_enamel", (0.7,0.3,0.5), loc=(-0.65,side*0.92,0.7), rot=(0.0,side*0.3,0.0), color=ENAMEL)
     dust(p)
     return p
 
@@ -252,6 +276,9 @@ def kit_mind(rng):
     p.cyl("ancient_enamel", 0.62, 0.5, 0.5, 20, loc=(0, 0, 0.25), color=ENAMEL)
     p.cyl("ancient_enamel", 0.24, 0.2, 1.4, 12, loc=(0, 0, 1.2), color=ENAMEL)
     seam_ring(p, 0.23, 1.2, 12, width=0.04)
+    for side in [-1, 1]:
+        p.prism("ancient_enamel", [(-0.65,0), (0.5,-0.3), (0.6,0.3), (-0.4,0.4)], 0.4,
+                matrix=common.mtx((-0.25,side*0.5,1.25)), color=ENAMEL)
     dust(p)
     return p
 

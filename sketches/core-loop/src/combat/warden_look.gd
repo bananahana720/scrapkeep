@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Enemy := preload("res://src/combat/enemy.gd")
 
 # The Warden's body as a landmark, visual only: nothing here collides, and every
 # number the fight uses stays in warden.gd. It has to answer "what do I break?" from
@@ -92,7 +93,7 @@ func build(owner_warden, half_height: float) -> void:
 	body_material = Palette.solid(Palette.CHARCOAL)
 	body_material.metallic = 0.5
 	body_material.roughness = 0.5
-	plate_material = warden._plate_material()
+	plate_material = warden._plate_material(Enemy.rim_frame_mask())
 	_build_collar()
 	_build_jaws()
 	_build_core()
