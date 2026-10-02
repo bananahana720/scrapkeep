@@ -438,8 +438,11 @@ func _fill_alpha(node: Node3D, layer: String) -> float:
 # Fills unioned in one stencil class draw once, so one class must mean one alpha (an
 # overlap shows whichever drew first, which flips with camera depth); and a live lane
 # batches after a pending one, a fill and a swept ring, so its band always wins. Under the
-# default haze every hostile fill alpha is scaled by HAZE_FILL (0.5): 0.175 pending, 0.4 live (the 8-bit vertex colour
-# truncates the pending alpha, so live is checked as the pending alpha times LIVE_ALPHA / RUN_ALPHA).
+# default haze every hostile fill alpha is scaled by HAZE_FILL (0.5): 0.175 pending, 0.4 live. The 8-bit vertex colour
+# truncates the pending alpha by up to one step (1/255), and the live alpha is that stored value times
+# LIVE_ALPHA / RUN_ALPHA, so live may miss its target by that step times the ratio (0.0090). Measured: haze
+# pending 0.1725 and live 0.3944 (one step and 0.0056 short of 0.175 and 0.4); classic pending 0.3490 and
+# live 0.7978 (against 0.35 and 0.8).
 func _check_fill_classes() -> void:
 	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
 	var wedge: Node3D = Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0)
@@ -481,10 +484,13 @@ func _check_fill_classes() -> void:
 		and live_priority > Threat.PRIORITY
 	lane.set_progress(0.5)
 	var back_to_run: bool = _stencil(lane, "stripe_motion") == pending_class
+	var step := 1.0 / 255.0
+	var pending_target: float = Threat.RUN_ALPHA * Threat.HAZE_FILL
+	var live_target: float = Threat.LIVE_ALPHA * Threat.HAZE_FILL
 	_report("fill classes", one_alpha and reach_apart and live_class != pending_class and after_all and back_to_run
-			and Threat.haze() and absf(pending_alpha - Threat.RUN_ALPHA * Threat.HAZE_FILL) < 0.005 and absf(live_alpha - pending_alpha * Threat.LIVE_ALPHA / Threat.RUN_ALPHA) < 0.001 and live_alpha > 0.38 and live_alpha < Threat.LIVE_ALPHA * Threat.HAZE_FILL + 0.001,
-		"stencil value -> alphas drawn %s (one alpha each: %s); the projectile's footprint is its own class (%s); a lane goes from class %d (alpha %.2f, sort %.0f) to class %d (alpha %.2f, sort %.0f, after the swept ring at %.0f, priority %d over the fills' %d) live, and back on a retarget (%s)"
-			% [alphas, one_alpha, reach_apart, pending_class, pending_alpha, pending_sort, live_class, live_alpha, live_sort, swept_sort, live_priority, Threat.PRIORITY, back_to_run])
+			and Threat.haze() and absf(pending_alpha - pending_target) < step + 0.0005 and absf(live_alpha - pending_alpha * Threat.LIVE_ALPHA / Threat.RUN_ALPHA) < 0.001 and absf(live_alpha - live_target) < step * Threat.LIVE_ALPHA / Threat.RUN_ALPHA + 0.0005,
+		"stencil value -> alphas drawn %s (one alpha each: %s); the projectile's footprint is its own class (%s); a lane goes from class %d (alpha %.2f, sort %.0f) to class %d (alpha %.2f, sort %.0f, after the swept ring at %.0f, priority %d over the fills' %d) live, and back on a retarget (%s); pending %.4f against %.4f and live %.4f against %.4f, bounds one 8-bit step (%.4f) and that step times LIVE_ALPHA / RUN_ALPHA (%.4f), each plus 0.0005"
+			% [alphas, one_alpha, reach_apart, pending_class, pending_alpha, pending_sort, live_class, live_alpha, live_sort, swept_sort, live_priority, Threat.PRIORITY, back_to_run, pending_alpha, pending_target, live_alpha, live_target, step, step * Threat.LIVE_ALPHA / Threat.RUN_ALPHA])
 	for node in nodes:
 		node.free()
 
