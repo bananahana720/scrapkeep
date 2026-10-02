@@ -12,8 +12,8 @@ const T := preload("res://tests/support/t.gd")
 # counts what the harpoon's bus signals report, on this same real game.
 
 const TICK_LIMIT := 90 * 40
-const FIELDS := ["seed", "flow_share", "dead_stops", "max_anchor_gap_m", "time_to_warden_s", "reached_warden", "outcome", "ticks"]
-const DOCUMENT_FIELDS := ["pilot", "table", "commit", "bar", "runs", "median_flow_share", "worst_seed", "dead_stops_total", "max_anchor_gap_m", "reached_warden"]
+const FIELDS := ["seed", "flow_share", "dead_stops", "max_anchor_gap_m", "time_to_warden_s", "reached_warden", "path_length_m", "rides", "uphill_m", "outcome", "ticks"]
+const DOCUMENT_FIELDS := ["pilot", "table", "commit", "bar", "runs", "median_flow_share", "worst_seed", "dead_stops_total", "max_anchor_gap_m", "reached_warden", "median_path_length_m", "median_uphill_m", "median_rides"]
 
 var _t := T.new("traversal_measure_test")
 var _game

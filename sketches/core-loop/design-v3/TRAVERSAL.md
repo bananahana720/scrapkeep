@@ -65,6 +65,22 @@ Median flow share at or above the larger of 0.70 and the pilot's baseline median
 
 **Provisional.** The map retrofit unit adds route measures: the authored line's length and the verbs it chains. A straight shot of 8 to 13 seconds to the beacon is itself what the owner called not fun to traverse, and flow share alone cannot see that.
 
+## The rebuilt Reach (unit Z3, 2026-10-02)
+
+The slice table's stage now plays `src/world/map_reach.gd`: the gorge's ground with an authored line from the spawn to the Warden for each pilot (waypoints in `tools/traversal_lines.json`; the three-stage game keeps the gorge). Same commands as above, 8 seeds each, run on the Z3 working tree. The baseline section above stays as history.
+
+Route measures, added to each seed's row and the summary: `path_length_m` (distance travelled from spawn to engage), `rides` (which of `ride_grapple_line`, `wall_crumbled`, `kicker_launch`, `thermal_ride` fired) and `uphill_m` (the most z the ball gave back from its furthest point toward the Warden). The summary holds `median_path_length_m`, `median_uphill_m` and `median_rides` (the count).
+
+| Pilot | Reached Warden | Median flow share (bar) | Worst seed | Dead stops | Max anchor gap | Time to Warden | Median path | Rides | Median uphill |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Sable | 8 of 8 | 0.7345 (0.8974) miss | 0.6625 (seed 1) | 12 over 8 seeds | 12.4 m | 20.3 to 22.3 s | 465.0 m | kicker only | 9.4 m |
+| Rivet | 8 of 8 | 0.8836 (0.8814) met | 0.8833 (seed 8) | 0 | 24.8 m | 16.0 to 16.1 s | 362.9 m | cable, wall, kicker on 8 of 8 | 0.0 m |
+| Kest | 8 of 8 | 0.9139 (0.9019) met | 0.9130 (seed 7) | 0 | 18.4 m | 16.7 to 17.5 s | 403.4 m | cable on 8 of 8 | 0.3 m |
+
+Rivet's and Kest's lines are 1.31 and 1.45 times the 278 m straight and meet the length floors (320 m and 350 m). Sable's line is the longest (465 m) and misses the bar: the bot leaves the marble run's second bend at 37 m/s, rides the west shelf for about four seconds, hits the satellite tower at (-72,-16) or the shelf, and lands in tunnel w1 hard enough to count as a stop (positions in the DESIGN-NOTES section). Her uphill figure is that detour, not the deck. The waypoint adjustment the layout allowed for a deck-leg miss (second waypoint 8 m downhill) was applied to Sable and Rivet: Rivet went from 0.866 to 0.884, Sable from 0.703 to 0.735.
+
+The seed 7 stop of the baseline does not appear on Rivet or Kest. On Sable seed 7 still stops once, in tunnel w1.
+
 ## What the baseline says
 
 - **Today's map fails the bar on one count: seed 7 stops every pilot once.** Each loses 2 to 7 seconds there. The measure does not say what stopped them; the retrofit unit finds it.

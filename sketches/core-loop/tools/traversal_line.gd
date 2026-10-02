@@ -16,6 +16,11 @@ const Augments := preload("res://src/movement/augments.gd")
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
+#
+# Route measures, per seed: path_length_m (the distance travelled from spawn to engage), rides
+# (which of ride_grapple_line, wall_crumbled, kicker_launch and thermal_ride fired, by name) and
+# uphill_m (the most z the ball gave back from its furthest point toward the Warden). The summary
+# holds each one's median.
 
 const TABLE := "slice"
 const ROUTES := "res://tools/traversal_lines.json"
@@ -26,6 +31,8 @@ const WORLD_AIMS := [Augments.AIM_REACH, Augments.AIM_ASSIST]
 const PROBE_SECONDS := 0.1
 const PROBE_SPOKES := 12
 const PROBE_PITCHES := [0.0, 0.4, 0.8]
+const RIDE_FACTS := ["ride_grapple_line", "wall_crumbled", "thermal_ride"]
+const KICKER_LAUNCH := "kicker_launch"
 
 
 # One seed's measurement, fed once per physics tick from the spawn until the Warden engages.
@@ -41,11 +48,20 @@ class Sampler:
 	var _last_anchor := 0.0
 	var _last_ball := Vector3.INF
 	var _clock := -1.0
+	var _rides: Array[String] = []
+	var _was_grounded := true
+	var _furthest_z := -INF
+	var _uphill := 0.0
 
 	func _init(game_ref) -> void:
 		game = game_ref
 		traversal = RunLog.Traversal.new(Engine.physics_ticks_per_second, game.player.tuning.f("cruise"))
 		game.events.warden_engaged.connect(_on_engaged)
+		game.events.world_fact.connect(_on_fact)
+
+	func _on_fact(kind: String, _at: Vector3) -> void:
+		if not engaged and kind in RIDE_FACTS and not kind in _rides:
+			_rides.append(kind)
 
 	func _on_engaged(_stage: int) -> void:
 		if engaged:
@@ -63,6 +79,12 @@ class Sampler:
 		if _last_ball != Vector3.INF:
 			_path += ball.distance_to(_last_ball)
 		_last_ball = ball
+		_furthest_z = maxf(_furthest_z, ball.z)
+		_uphill = maxf(_uphill, _furthest_z - ball.z)
+		var grounded: bool = player.state.grounded
+		if _was_grounded and not grounded and game.ctx.terrain.map().near_kicker_lip(Vector2(ball.x, ball.z)) and not KICKER_LAUNCH in _rides:
+			_rides.append(KICKER_LAUNCH)
+		_was_grounded = grounded
 		if _anchored(ball):
 			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 			_last_anchor = _path
@@ -100,6 +122,9 @@ class Sampler:
 			"max_anchor_gap_m": snappedf(max_anchor_gap, 0.1),
 			"time_to_warden_s": time_to_warden,
 			"reached_warden": engaged,
+			"path_length_m": snappedf(_path, 0.1),
+			"rides": _rides.duplicate(),
+			"uphill_m": snappedf(_uphill, 0.1),
 			"outcome": outcome,
 			"ticks": traversal.ticks,
 		}
@@ -112,8 +137,14 @@ static func document(pilot: String, table: String, commit: String, runs: Array, 
 	var dead := 0
 	var gap := 0.0
 	var reached := 0
+	var lengths: Array = []
+	var uphills: Array = []
+	var ride_counts: Array = []
 	for run in runs:
 		shares.append(float(run["flow_share"]))
+		lengths.append(float(run.get("path_length_m", 0.0)))
+		uphills.append(float(run.get("uphill_m", 0.0)))
+		ride_counts.append(float((run.get("rides", []) as Array).size()))
 		if worst.is_empty() or float(run["flow_share"]) < float(worst["flow_share"]):
 			worst = {"seed": run["seed"], "flow_share": run["flow_share"]}
 		dead += int(run["dead_stops"])
@@ -124,6 +155,8 @@ static func document(pilot: String, table: String, commit: String, runs: Array, 
 		"pilot": pilot, "table": table, "commit": commit, "bar": bar, "runs": runs,
 		"median_flow_share": snappedf(median(shares), 0.0001), "worst_seed": worst,
 		"dead_stops_total": dead, "max_anchor_gap_m": gap, "reached_warden": reached,
+		"median_path_length_m": snappedf(median(lengths), 0.1), "median_uphill_m": snappedf(median(uphills), 0.1),
+		"median_rides": median(ride_counts),
 	}
 
 
@@ -228,8 +261,9 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
 	_runs.append(run)
-	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s"
-		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"]])
+	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s, path %.1f m, rides %s, uphill %.1f m"
+		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],
+			run["path_length_m"], run["rides"], run["uphill_m"]])
 	_game.free()
 	_game = null
 	_next()
