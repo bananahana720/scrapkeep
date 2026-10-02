@@ -411,6 +411,8 @@ static func _prepare_chords(chords: Array, leads: Array, shift: int) -> void:
 			Synth.note("bell", midi + 12)
 			Synth.note("bell", midi + 24)
 	for midi in range(60 + shift, 87 + shift):
+		if SfxBank.bake_cancel:
+			return
 		for voice in leads:
 			Synth.note(voice, midi)
 

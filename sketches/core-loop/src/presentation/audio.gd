@@ -242,7 +242,7 @@ static func _poll_bake() -> bool:
 	if _bake_task >= 0 and WorkerThreadPool.is_task_completed(_bake_task):
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
-		_baked = true
+		_baked = _bake_done
 	return _baked
 
 
@@ -262,10 +262,10 @@ func bake_now() -> void:
 	if _bake_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
-		_baked = true
-	elif not _baked:
+		_baked = _bake_done
+	if not _baked:
 		_bake_everything(_sound_ids())
-		_baked = true
+		_baked = _bake_done
 	_on_ready()
 
 
@@ -378,6 +378,8 @@ func _process(_delta: float) -> void:
 		if _poll_bake():
 			_on_ready()
 		else:
+			# A cancelled bake leaves nobody running it; the survivor starts it again.
+			_start_bake()
 			return
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	if ace != null:
