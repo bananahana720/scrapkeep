@@ -19,12 +19,16 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # haul prompt waits for the line to stand LINE_STAND seconds without a Ctrl press and wears
 # the reel glyph on a world line, the smash glyph on a body. Sable's E (mount) and Space
 # (slingshot, only while mounted) come through the same table. The brake has no prompt.
-# Tab's field notes keep the full key list.
+# Tab's field notes keep the full key list. LET GO is the right-mouse prompt for a line
+# standing on the world: the RMB keycap, a fling arrow and the words, at the anchor below
+# the winch prompt, on the first RETIRE_AFTER["letgo"] world latches of a profile only.
 
 const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost"]
 const BALL_VERBS := ["boost", "interact", "jump"]
+const LETGO := "letgo"
+const LETGO_WORD := "LET GO"
 const MAX_PROMPTS := 2
-const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3}
+const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3, "letgo": 3}
 const LINE_STAND := 1.5
 const FAIL_RETURN := 3.0
 const IDLE_RETURN := 90.0
@@ -43,6 +47,7 @@ var _unused := {}
 var _revived := {}
 var _first := {}
 var _free := {}
+var _letgo_latch := 0
 var _stood := 0.0
 var _winch_held := false
 var _line := ""
@@ -78,6 +83,7 @@ func new_run() -> void:
 		_free[verb] = 0.0
 	_stood = 0.0
 	_winch_held = false
+	_letgo_latch = 0
 	shown = []
 
 
@@ -85,6 +91,8 @@ func _on_line_state(state: String, _target, _at: Vector3, _cause: String) -> voi
 	match state:
 		"latched_world", "latched_body":
 			record_use("harpoon")
+			if state == "latched_world" and game.flow.in_play():
+				_letgo_latch = profile.add_use(LETGO)
 		"smash_committed":
 			record_use("smash")
 
@@ -195,22 +203,42 @@ func step(delta: float, view: Dictionary) -> void:
 			continue
 		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line):
 			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
+	if line == "world" and _letgo_latch >= 1 and _letgo_latch <= RETIRE_AFTER[LETGO]:
+		candidates.append({"verb": LETGO, "state": _state_of("haul", view), "word": LETGO_WORD})
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ra: int = Bindings.STATES.find(a["state"])
 		var rb: int = Bindings.STATES.find(b["state"])
 		if ra != rb:
 			return ra < rb
-		return PROMPT_VERBS.find(a["verb"]) < PROMPT_VERBS.find(b["verb"]))
+		return _order(a["verb"]) < _order(b["verb"]))
 	shown = candidates.slice(0, MAX_PROMPTS)
 	for prompt in shown:
 		var verb: String = prompt["verb"]
-		if _first[verb] or _revived[verb]:
+		if verb != LETGO and (_first[verb] or _revived[verb]):
 			_free[verb] += delta
 			if _free[verb] >= FAIL_RETURN:
 				_first[verb] = false
 				_revived[verb] = false
 				_free[verb] = 0.0
 				_unused[verb] = 0.0
+
+
+# The slot a prompt sorts into among equals: the verbs in table order, LET GO after them.
+static func _order(verb: String) -> int:
+	return PROMPT_VERBS.size() if verb == LETGO else PROMPT_VERBS.find(verb)
+
+
+# The key glyph a prompt draws: LET GO is the harpoon's key.
+static func glyph_of(verb: String) -> String:
+	return Bindings.glyph("harpoon" if verb == LETGO else verb)
+
+
+# The glyphs of the prompts shown this tick, for the ability bar to leave its own caps off.
+func shown_glyphs() -> Array[String]:
+	var out: Array[String] = []
+	for prompt in shown:
+		out.append(glyph_of(prompt["verb"]))
+	return out
 
 
 func shown_verbs() -> Array[String]:
@@ -225,7 +253,7 @@ func drawn_words() -> PackedStringArray:
 	if not visible:
 		return out
 	for prompt in shown:
-		out.append_array(Keycap.words(Bindings.glyph(prompt["verb"])))
+		out.append_array(Keycap.words(glyph_of(prompt["verb"])))
 		if prompt["word"] != "":
 			out.append(prompt["word"])
 	return out
@@ -248,16 +276,19 @@ func _placements() -> Array:
 	var cam: Camera3D = game.camera.cam
 	var stacked := 0
 	for prompt in shown:
-		var world: Vector3 = _points.get(prompt["verb"], Vector3.INF)
+		var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
 		if world == Vector3.INF or cam.is_position_behind(world):
 			continue
 		var at := cam.unproject_position(world).round()
 		if prompt["verb"] in BALL_VERBS:
 			at += BALL_OFFSET + Vector2(0.0, STACK * stacked)
 			stacked += 1
+		elif prompt["verb"] == LETGO:
+			at += AIM_OFFSET + Vector2(0.0, STACK if "haul" in shown_verbs() else 0.0)
 		else:
 			at += AIM_OFFSET
-		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"], "icon": icon_of(prompt["verb"], _line)})
+		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"],
+			"icon": "" if prompt["verb"] == LETGO else icon_of(prompt["verb"], _line)})
 	return out
 
 
@@ -274,10 +305,14 @@ func _draw() -> void:
 	for placed in _placed:
 		var verb: String = placed["verb"]
 		var at: Vector2 = placed["at"]
-		var cap := Keycap.draw(self, at, Bindings.glyph(verb), cap_color, KEY_H)
+		var cap := Keycap.draw(self, at, glyph_of(verb), cap_color, KEY_H)
 		var icon_id: String = placed["icon"]
 		var edge := cap.end.x + 5.0
-		if icon_id != "":
+		if verb == LETGO:
+			var arrow := Rect2(Vector2(edge, at.y - KEY_H * 0.45), Vector2(KEY_H * 0.9, KEY_H * 0.9))
+			draw_texture_rect(Icons.shape("arrow"), arrow, false, live)
+			edge = arrow.end.x + 5.0
+		elif icon_id != "":
 			var icon := Rect2(Vector2(edge, at.y - KEY_H * 0.45), Vector2(KEY_H * 0.9, KEY_H * 0.9))
 			draw_texture_rect(Icons.texture(icon_id), icon, false, Icons.tint(icon_id, live))
 			edge = icon.end.x + 5.0

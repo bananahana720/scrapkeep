@@ -12,7 +12,8 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # unavailable is a faded icon struck through. A slot whose cooldown ends swells once,
 # with a rim flash and its class shape flaring in the class colour. State colours come
 # from event_kinds' v2 W1 UI rows; the icon's accent is the class colour
-# (VISUAL-LANGUAGE.md section 7).
+# (VISUAL-LANGUAGE.md section 7). A slot whose key a prompt on screen already shows draws
+# no keycap while it does (hide_keys), so one key is never drawn twice.
 
 const SLOT := 56.0
 const GAP := 14.0
@@ -29,6 +30,7 @@ var tint := Color.WHITE
 # The class row's shape (ring, chevron, burst): the ready swell and the charge pips wear
 # it, so the bar speaks in the class's motif.
 var motif := "ring"
+var _hidden: Array[String] = []
 var _pulses := {}
 var _last_state := {}
 var _shown: Array = []
@@ -80,6 +82,18 @@ func _ring_ready() -> void:
 		audio.play("ability_ready", 0.0, 1.0, "UI")
 
 
+# The key glyphs of the prompts on screen this tick: a slot on one of them hides its keycap.
+func hide_keys(glyphs: Array[String]) -> void:
+	if glyphs == _hidden:
+		return
+	_hidden = glyphs.duplicate()
+	queue_redraw()
+
+
+func key_hidden(entry: Dictionary) -> bool:
+	return entry["key"] in _hidden
+
+
 func pulse_left(id: String) -> float:
 	return _pulses.get(id, 0.0)
 
@@ -98,7 +112,8 @@ func _process(delta: float) -> void:
 func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()
 	for entry in slots:
-		out.append_array(Keycap.words(entry["key"]))
+		if not key_hidden(entry):
+			out.append_array(Keycap.words(entry["key"]))
 	return out
 
 
@@ -150,7 +165,8 @@ func _draw_slot(entry: Dictionary, rect: Rect2) -> void:
 		var t := 1.0 - left / PULSE_SECONDS
 		var reach := rect.size.x * (0.7 + 0.5 * t)
 		draw_texture_rect(Icons.shape(motif), Rect2(rect.get_center() - Vector2(reach, reach) * 0.5, Vector2(reach, reach)), false, Color(tint, 0.6 * (1.0 - t)))
-	Keycap.draw(self, key_centre, entry["key"], key_color, KEY_H)
+	if not key_hidden(entry):
+		Keycap.draw(self, key_centre, entry["key"], key_color, KEY_H)
 	var max_charges: int = entry["max_charges"]
 	if max_charges > 1:
 		var step := PIP * 3.0

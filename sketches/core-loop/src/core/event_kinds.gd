@@ -661,24 +661,6 @@ const UI_ROWS := {
 	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
 	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab}: notes", "objective": "", "priority": 2},
 }
-# The HUD's words for the three objective rows that stay flow's full readout (punch and
-# plating as numbers, which combat's and the arena's tests read). On screen the gauges
-# carry the numbers, so the objective shows only these words; every other row's wording
-# is short already.
-const OBJECTIVE_SHORT := {
-	"stage_entered": "Break the Warden",
-	"beacon_charge_changed": "Break the Warden",
-	"boss_arena_entered": "Break Brindle's Requisition",
-}
-# Each Warden lesson (stage_defs warden_lesson) as the objective once the Warden is near,
-# worded for the stage's family: stage 1's reactor opens its core as it vents, stage
-# 2's hive stands behind a guard rack.
-const LESSON_SHORT := {
-	"plate": "Ram it as it vents",
-	"caps": "Bowl its guard, slam caps",
-	"magnet": "Shoot its magnet while pulled",
-}
-
 # v2 W7 enemies
 # Each faction's fac_ icon, so the pack_arrived edge marker and any faction badge read
 # one table: the Fleet's requisition tag, or the ancient family's own mark.

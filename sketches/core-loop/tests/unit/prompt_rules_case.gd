@@ -12,7 +12,9 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # unused and at the first availability of each run, each return lasting 3 s of ready ticks, and
 # HOOK and SMASH ride it until the first bite and the first smash on the profile. The haul prompt
 # wears the reel on a world line and the smash glyph on a body, E and the slingshot come through
-# the same table. These are rule checks over a scripted view; the link from the player's
+# the same table. LET GO (the RMB keycap, a fling arrow and the words) rides a line standing on the
+# world for the first three world latches of a profile only, counts toward the two-prompt limit and
+# sorts below the Ctrl winch prompt. These are rule checks over a scripted view; the link from the player's
 # verb_ready to the view is checked in harpoon_canon_test.
 
 const DT := 1.0 / 60.0
@@ -51,6 +53,7 @@ func run(t) -> void:
 	_haul_waits(t, glyphs)
 	_returns_count_ready_ticks(t, glyphs, profile)
 	_icons_and_ball_verbs(t, glyphs)
+	_let_go(t, glyphs, profile, game)
 
 	glyphs.free()
 	game.events.free()
@@ -245,3 +248,28 @@ static func _icons_and_ball_verbs(t, glyphs) -> void:
 	glyphs.new_run()
 	glyphs.step(DT, _view(["jump"]))
 	t.eq("a ready slingshot is drawn", glyphs.shown_verbs(), ["jump"])
+
+
+static func _let_go(t, glyphs, profile, game) -> void:
+	_fresh(glyphs, profile)
+	var shown_on := []
+	for latch in 4:
+		game.events.line_state_changed.emit("latched_world", null, Vector3.ZERO, "")
+		glyphs.step(DT, _view([], "world"))
+		shown_on.append("letgo" in glyphs.shown_verbs())
+		glyphs.step(DT, _view([]))
+	t.eq("LET GO shows on the first three world latches and not the fourth", shown_on, [true, true, true, false])
+	_fresh(glyphs, profile)
+	game.events.line_state_changed.emit("latched_world", null, Vector3.ZERO, "")
+	glyphs.step(DT, _view([], "world"))
+	t.eq("LET GO is the RMB prompt with its words", [glyphs.shown_glyphs(), Array(glyphs.drawn_words())], [["key_rmb"], ["LET GO"]])
+	glyphs.step(DT, _view([]))
+	t.eq("it goes the tick the line lets go", glyphs.shown_verbs(), [])
+	game.events.line_state_changed.emit("latched_body", null, Vector3.ZERO, "")
+	glyphs.step(DT, _view([], "body"))
+	t.check("a line on a body never shows it", not "letgo" in glyphs.shown_verbs(), "shown %s" % [glyphs.shown_verbs()])
+	_fresh(glyphs, profile)
+	game.events.line_state_changed.emit("latched_world", null, Vector3.ZERO, "")
+	glyphs.step(2.0, _view(["haul", "harpoon", "boost"], "world"))
+	t.eq("with the winch prompt up, LET GO takes the second of two prompts, below it", glyphs.shown_verbs(), ["haul", "letgo"])
+	t.eq("the bar is told both glyphs", glyphs.shown_glyphs(), ["key_ctrl", "key_rmb"])

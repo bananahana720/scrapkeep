@@ -8,6 +8,7 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Callouts := preload("res://src/ui/callouts.gd")
+const Objectives := preload("res://src/core/objectives.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
@@ -97,16 +98,13 @@ func _check_wording() -> void:
 		if WordBudget.words_in(text) > Hud.TOAST_WORDS or text == "":
 			long_toasts.append("%s \"%s\"" % [kind, text])
 	var long_objectives := []
-	for key in EventKinds.OBJECTIVE_SHORT:
-		if WordBudget.words_in(EventKinds.OBJECTIVE_SHORT[key]) > Hud.OBJECTIVE_WORDS:
-			long_objectives.append(key)
-	for kind in ["beacon_unsealed", "reward_offered", "reward_chosen", "launched"]:
-		var shown := EventKinds.objective(kind)
-		if WordBudget.words_in(shown) == 0 or WordBudget.words_in(shown) > Hud.OBJECTIVE_WORDS:
-			long_objectives.append(kind)
+	for id in Objectives.ROWS:
+		var shown := Objectives.words(id)
+		if WordBudget.words_in(shown) == 0 or WordBudget.words_in(shown) > Hud.OBJECTIVE_WORDS or Objectives.glyph(id) == "":
+			long_objectives.append(id)
 	for i in StageDefs.COUNT:
 		var lesson: String = StageDefs.of(i + 1)["warden_lesson"]
-		if WordBudget.words_in(EventKinds.LESSON_SHORT.get(lesson, "")) == 0 or WordBudget.words_in(EventKinds.LESSON_SHORT[lesson]) > Hud.OBJECTIVE_WORDS:
+		if not Objectives.LESSON_ROWS.has(lesson):
 			long_objectives.append(lesson)
 	var bad_rows := []
 	for kind in EventKinds.UI_ROWS:

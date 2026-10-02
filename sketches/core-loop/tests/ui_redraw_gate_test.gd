@@ -5,9 +5,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The HUD redraws only when a shown value changes (perf-lab H4). In a calm, idle scene
-# the gauges, objective, ability bar, key glyphs and edge markers each draw (almost)
-# nothing over a second of frames; a reading that changes draws on the next frame; an
-# unchanged one, however often it is set, does not.
+# the gauges, objective, ability bar, key glyphs, edge markers and the part name each draw
+# (almost) nothing over a second of frames; a reading that changes draws on the next frame;
+# an unchanged one, however often it is set, does not; a mounted plate relays the top out.
 
 const WARM := 120
 const WINDOW := 60
@@ -19,6 +19,7 @@ var _started := false
 var _draws := {}
 var _watched := {}
 var _runs := 0
+var _plate: Control
 
 
 func _initialize() -> void:
@@ -62,7 +63,7 @@ func _process(_delta: float) -> bool:
 	var hud = _game.hud
 	if _frame == 1:
 		_watch("health", hud._health)
-		_watch("scrap", hud._scrap)
+		_watch("part_name", hud.part_name)
 		_watch("objective", hud._objective)
 		_watch("ability_bar", hud.ability_bar)
 		_watch("key_glyphs", hud.key_glyphs)
@@ -84,22 +85,23 @@ func _process(_delta: float) -> bool:
 		_report("idle layout", hud.layout_runs == _runs, "layout ran %d times over %d idle frames" % [hud.layout_runs - _runs, WINDOW])
 		_reset()
 		# Same reading set again and again: no draw.
-		var gauge = hud._scrap
+		var gauge = hud._health
 		for i in 5:
-			gauge.set_reading(-1.0, gauge.color, gauge.label, gauge.warn, gauge.warn_color)
+			gauge.set_reading(gauge.fraction, gauge.color, gauge.label, gauge.warn, gauge.warn_color)
 		return false
 	if _frame == WARM + WINDOW + 2:
-		_report("same reading", _count("scrap") == 0, "scrap drew %d times for 5 identical readings" % _count("scrap"))
-		var gauge = hud._scrap
+		_report("same reading", _count("health") == 0, "health drew %d times for 5 identical readings" % _count("health"))
 		_runs = hud.layout_runs
-		_game.run.scrap = 123456
+		hud.part_name.show_part("boost_coil")
+		_plate = Control.new()
+		_plate.custom_minimum_size = Vector2(420.0, 44.0)
+		hud.mount_plate(_plate)
 		return false
 	if _frame == WARM + WINDOW + 4:
-		_report("changed reading", _count("scrap") >= 1, "scrap drew %d times after its label changed" % _count("scrap"))
-		var scrap = hud._scrap
-		var heft_edge: float = hud._heft.position.x + hud._heft.size.x + hud.BOTTOM_GAP
-		_report("relayout on size", hud.layout_runs > _runs and absf(heft_edge - scrap.position.x) < 0.5,
-			"layout ran %d times, scrap at %.1f, heft edge %.1f" % [hud.layout_runs - _runs, scrap.position.x, heft_edge])
+		_report("changed reading", _count("part_name") >= 1, "the part name drew %d times after a pickup" % _count("part_name"))
+		var under: float = _plate.position.y + _plate.size.y
+		_report("relayout on size", hud.layout_runs > _runs and hud._objective.position.y >= under,
+			"layout ran %d times after a plate mounted, the objective at %.1f under the plate's end %.1f" % [hud.layout_runs - _runs, hud._objective.position.y, under])
 		var health = hud._health
 		health.set_reading(0.4, health.color, "", false, Color.WHITE)
 		return false
