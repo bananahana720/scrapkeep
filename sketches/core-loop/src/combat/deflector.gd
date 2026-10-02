@@ -25,6 +25,12 @@ var last_vault_speed := 0.0
 var _window := 0.0
 var _rebound_v := Vector3.ZERO
 var _dish: Node3D
+var _wall: MeshInstance3D
+var _body: MeshInstance3D
+var _wall_full := Transform3D.IDENTITY
+var _wall_rest := Transform3D.IDENTITY
+# Test seam: the carried pose remains, but the attack clock no longer moves any mesh.
+var windup_pose_enabled := true
 
 
 func _configure(threat: float) -> void:
@@ -57,11 +63,19 @@ func _build_tool() -> void:
 	_dish = Node3D.new()
 	_dish.name = "DeflectorBody"
 	_visual_parent().add_child(_dish)
-	var body := MeshInstance3D.new()
-	body.name = "Body"
-	body.mesh = parts["body"]
-	body.set_surface_override_material(parts["flash"], _material)
-	_dish.add_child(body)
+	_body = MeshInstance3D.new()
+	_body.name = "Body"
+	_body.mesh = parts["body"]
+	_body.set_surface_override_material(parts["flash"], _material)
+	_dish.add_child(_body)
+	_wall = MeshInstance3D.new()
+	_wall.name = "DishWall"
+	_wall.mesh = parts["wall"]
+	_dish.add_child(_wall)
+	_wall_full = parts["wall_transform"]
+	_wall_rest = Transform3D(Basis.from_euler(Vector3(deg_to_rad(-42.0), deg_to_rad(35.0), deg_to_rad(-12.0))),
+		_wall_full.origin + Vector3(0.6, 0.55, -0.15))
+	_pose()
 
 
 static func _parts() -> Dictionary:
@@ -76,9 +90,28 @@ static func _parts() -> Dictionary:
 		if mesh.surface_get_material(i).resource_name == "fleet_paint":
 			flash = i
 		mesh.surface_set_material(i, painted)
-	_shared = {"body": mesh, "flash": flash}
+	var wall := scene.find_child("DishWall", true, false) as MeshInstance3D
+	var wall_mesh: Mesh = wall.mesh.duplicate()
+	for i in wall_mesh.get_surface_count():
+		wall_mesh.surface_set_material(i, painted)
+	_shared = {"body": mesh, "flash": flash, "wall": wall_mesh, "wall_transform": wall.transform}
 	scene.free()
 	return _shared
+
+
+# E10 e10_dish_wall: only child meshes move. The counter advances WARN to LIVE before
+# calling this hook, so full travel first lands on the release frame and holds while live.
+func _pose() -> void:
+	var progress := 0.0
+	if windup_pose_enabled and not _dead and not is_queued_for_deletion():
+		if phase == Phase.WARN:
+			progress = clampf(_warn_progress(), 0.0, 1.0)
+		elif phase == Phase.LIVE:
+			progress = 1.0
+	var travel := smoothstep(0.0, 1.0, progress)
+	_wall.transform = _wall_rest.interpolate_with(_wall_full, travel)
+	_body.transform = Transform3D(Basis.from_scale(Vector3(1.0, lerpf(1.0, 0.85, travel), 1.0)),
+		Vector3(0.0, -0.165 * travel, 0.0))
 
 
 func _commit(to_ball: Vector3) -> Node3D:
@@ -144,6 +177,9 @@ func _on_end() -> void:
 
 
 func _exit_tree() -> void:
+	windup_pose_enabled = false
+	if is_instance_valid(_wall):
+		_pose()
 	if holds != null and is_instance_valid(holds) and holds.ctx.events.jumped.is_connected(_on_jumped):
 		holds.ctx.events.jumped.disconnect(_on_jumped)
 	super._exit_tree()
