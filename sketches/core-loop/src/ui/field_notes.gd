@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
 const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
@@ -44,20 +45,22 @@ const TRY_FIRST := [
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
-# The key list. A row with "caps" and "short" is drawn on the controls diagram (Tab's
-# Keys page and the title's Help page), as its keycaps and those one or two words.
-const CONTROLS := [
-	{"keys": "W A S D", "does": "drive, relative to where the camera looks", "caps": ["key_w", "key_a", "key_s", "key_d"], "short": "drive"},
-	{"keys": "mouse", "does": "look", "caps": ["key_mouse"], "short": "look"},
-	{"keys": "Space", "does": "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "caps": ["key_space"], "short": "jump"},
-	{"keys": "Shift", "does": "boost", "caps": ["key_shift"], "short": "boost"},
-	{"keys": "Ctrl", "does": "brake; airborne, the smash: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam", "caps": ["key_ctrl"], "short": "smash"},
-	{"keys": "left mouse", "does": "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw", "caps": ["key_lmb"], "short": "weapon"},
-	{"keys": "F (hold)", "does": "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "caps": ["key_f"], "short": "special"},
-	{"keys": "right mouse", "does": "the class movement: Sable's grapple, Rivet's sprint (hold), Kest's smoke blink. During a charge it cancels", "caps": ["key_rmb"], "short": "move"},
-	{"keys": "Q (hold)", "does": "Sable: winch toward the hook"},
-	{"keys": "E", "does": "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "caps": ["key_e"], "short": "use / ride"},
-	{"keys": "mouse wheel", "does": "Sable: down pays rope out, up notches it in"},
+# The key list. The nine verbs come first, their keys read from the bindings table; the rest
+# are menu and screen keys, which are not verbs. A row with "caps" and "short" is drawn on the
+# controls diagram (Tab's Keys page and the title's Help page), as its keycaps and those one
+# or two words.
+const VERB_ROWS := [
+	["roll", "drive, relative to where the camera looks", "drive"],
+	["look", "look", "look"],
+	["jump", "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "jump"],
+	["fire", "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw", "weapon"],
+	["harpoon", "Sable's harpoon: press bites the aim point, hold keeps the line, release flings. During a charge it cancels", "harpoon"],
+	["haul", "haul the line in: a smash on a body, a winch on the world. With no line: the brake on the ground, the slam in the air", "haul"],
+	["boost", "your go verb: Sable's boost, Rivet's sprint (hold), Kest's smoke blink", "boost"],
+	["special", "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "special"],
+	["interact", "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "use / ride"],
+]
+const MENU_ROWS := [
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
@@ -65,11 +68,12 @@ const CONTROLS := [
 	{"keys": "F6", "does": "boss tempo: 129, or 172 while held"},
 	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume, quit", "caps": ["key_p"], "short": "pause"},
 	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "caps": ["key_r"], "short": "hold retry"},
-	{"keys": "F1", "does": "tuning panel (frees the mouse)"},
-	{"keys": "F3", "does": "physics interpolation on/off (off by default)"},
-	{"keys": "F4", "does": "save every tuning value to user://tuning-<time>.json"},
+	{"keys": "F1", "does": "launched with --dev only: tuning panel (frees the mouse)"},
+	{"keys": "F3", "does": "launched with --dev only: physics interpolation on/off (off by default)"},
+	{"keys": "F4", "does": "launched with --dev only: save every tuning value to user://tuning-<time>.json"},
 	{"keys": "Esc", "does": "outside play: quit"},
 ]
+static var CONTROLS := controls()
 
 const SCREEN_KEYS := [
 	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
@@ -80,6 +84,26 @@ const SCREEN_KEYS := [
 	{"keys": "N", "does": "death or summary: new run, same class"},
 	{"keys": "C", "does": "death screen: choose a class"},
 ]
+
+# The key list in display order: a row per verb with its table keys and caps, then the menu keys.
+static func controls() -> Array:
+	var out := []
+	for spec in VERB_ROWS:
+		var verb: String = spec[0]
+		out.append({"keys": Bindings.label(verb), "does": spec[1], "caps": verb_caps(verb), "short": spec[2]})
+	out.append_array(MENU_ROWS)
+	return out
+
+
+# The caps a verb draws on the diagram: its glyph, or one cap per drive key for the roll.
+static func verb_caps(verb: String) -> Array:
+	if verb != "roll":
+		return [Bindings.glyph(verb)]
+	var caps := []
+	for action in ["cl_forward", "cl_left", "cl_back", "cl_right"]:
+		caps.append("key_" + OS.get_keycode_string(Bindings.VERBS["roll"]["actions"][action]["keys"][0]).to_lower())
+	return caps
+
 
 # A glyph per event_kinds shape, so a codex card wears its category's silhouette.
 const SHAPE_GLYPHS := {

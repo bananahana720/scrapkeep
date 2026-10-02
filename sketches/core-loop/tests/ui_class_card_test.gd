@@ -4,13 +4,14 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # The class cards that sell a pilot (v3 W12, playtest entry 8). On the real class
 # select, driven by pushed mouse and key events:
-#   - every card shows its class row's four slots (LMB, RMB, F, Ctrl) with the row's
+#   - every card shows its class row's four slots (LMB, then RMB or Shift by pilot, F, Ctrl) with the row's
 #     ability icons, plus its Space extra, and wears the row's colour;
 #   - at rest the whole screen reads in 40 words or fewer;
 #   - hovering a card opens that card alone: it lifts, its words fade in, its preview
@@ -130,7 +131,7 @@ func _check_rows(cards: Array) -> void:
 		var shown: Array = card.keys_shown()
 		var want := []
 		for slot in AbilityState.SLOTS:
-			want.append({"key": "key_" + String(AbilityState.KEYS[slot]).to_lower(),
+			want.append({"key": Bindings.glyph(ClassKit.slot_verb(slot, def)),
 				"icon": AbilityState.ABILITIES[def.get("%s_id" % slot)]["icon"]})
 		var slots_ok := shown.size() >= 4
 		for j in mini(4, shown.size()):

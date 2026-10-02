@@ -22,12 +22,12 @@ const World := preload("res://src/world/world.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
 # and the tuning dump. Modules never reach past the context; see CONTRACTS.md.
 
-const REEL_NOTCH := 1.2
 const RESTART_HOLD := 0.5
 const SUMMARY_GUARD := 0.75
 const DEAD_GUARD := 0.5
@@ -41,28 +41,14 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const TABLES := {"default": StageDefs, "slice": SliceDefs}
 
-const ACTIONS := {
-	"cl_forward": [KEY_W, KEY_UP],
-	"cl_back": [KEY_S, KEY_DOWN],
-	"cl_left": [KEY_A, KEY_LEFT],
-	"cl_right": [KEY_D, KEY_RIGHT],
-	"cl_jump": [KEY_SPACE],
-	"cl_boost": [KEY_SHIFT],
-	"cl_brake": [KEY_CTRL],
-	"cl_mount": [KEY_E],
-	"cl_reel": [KEY_Q],
-	"cl_special": [KEY_F],
-	"cl_dash": [KEY_C],
-}
-# RMB is every class's movement ability (Sable's grapple rides it through the intent). Under
-# --harpoon it is the harpoon and cl_dash (C) or Shift carries the class burst.
-const MOUSE_ACTIONS := {"cl_fire": MOUSE_BUTTON_LEFT, "cl_movement": MOUSE_BUTTON_RIGHT}
-
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
 # --table= from the launch args, and no argument is the default table.
 var table := ""
+# The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump) work only when the game was
+# launched with --dev; a test sets it directly.
+var dev := false
 
 var events
 var run
@@ -106,6 +92,7 @@ var hit_stops_skipped := 0
 
 
 func _ready() -> void:
+	dev = dev or _launch_flag("--dev")
 	_register_actions()
 	events = GameEvents.new()
 	events.name = "GameEvents"
@@ -402,17 +389,20 @@ func _on_flow_changed(_state: String) -> void:
 
 
 func _register_actions() -> void:
-	for action in ACTIONS:
+	var table_actions := Bindings.actions()
+	for action in table_actions:
 		_fresh_action(action)
-		for key in ACTIONS[action]:
+		var record: Dictionary = table_actions[action]
+		for key in record.get("keys", []):
 			var event := InputEventKey.new()
 			event.physical_keycode = key
 			InputMap.action_add_event(action, event)
-	for action in MOUSE_ACTIONS:
-		_fresh_action(action)
-		var button := InputEventMouseButton.new()
-		button.button_index = MOUSE_ACTIONS[action]
-		InputMap.action_add_event(action, button)
+		if record.has("button"):
+			var button := InputEventMouseButton.new()
+			button.button_index = record["button"]
+			InputMap.action_add_event(action, button)
+		if record.get("motion", false):
+			InputMap.action_add_event(action, InputEventMouseMotion.new())
 
 
 static func _fresh_action(action: String) -> void:
@@ -442,35 +432,46 @@ func _input(event: InputEvent) -> void:
 		camera.look(event.relative)
 		return
 	if event is InputEventMouseButton:
-		if not _mouse_captured():
-			if event.pressed and flow.in_play() and not panel.visible and not get_meta("menu_held", false):
-				_capture_mouse(true)
-			return
-		_mouse_button(event)
+		if not _mouse_captured() and event.pressed and flow.in_play() and not panel.visible and not get_meta("menu_held", false):
+			_capture_mouse(true)
 		return
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	if _screen_key(event.physical_keycode):
 		get_viewport().set_input_as_handled()
 		return
-	match event.physical_keycode:
+	if _dev_key(event.physical_keycode):
+		get_viewport().set_input_as_handled()
+		return
+	if event.physical_keycode == KEY_ESCAPE:
+		if _mouse_captured():
+			_capture_mouse(false)
+		else:
+			get_tree().quit()
+		get_viewport().set_input_as_handled()
+
+
+# F1, F3 and F4 are for whoever launched with --dev; without it they do nothing.
+func _dev_key(key: int) -> bool:
+	if not dev:
+		return false
+	match key:
 		KEY_F3:
 			toggle_interpolation()
-			get_viewport().set_input_as_handled()
+			return true
 		KEY_F4:
 			var saved := dump_tuning()
 			hud.toast("tuning saved: %s" % saved if saved != "" else "tuning dump failed (see console)")
-			get_viewport().set_input_as_handled()
+			return true
 		KEY_F1:
 			panel.visible = not panel.visible
 			_capture_mouse(not panel.visible and flow.in_play())
-			get_viewport().set_input_as_handled()
-		KEY_ESCAPE:
-			if _mouse_captured():
-				_capture_mouse(false)
-			else:
-				get_tree().quit()
-			get_viewport().set_input_as_handled()
+			return true
+	return false
+
+
+static func _launch_flag(flag: String) -> bool:
+	return flag in OS.get_cmdline_args() or flag in OS.get_cmdline_user_args()
 
 
 # One key per choice on every screen outside play. The screens' buttons press these
@@ -520,18 +521,6 @@ func _screen_key(key: int) -> bool:
 				flow.new_run()
 				return true
 	return false
-
-
-func _mouse_button(event: InputEventMouseButton) -> void:
-	if not flow.in_play():
-		return
-	match event.button_index:
-		MOUSE_BUTTON_WHEEL_UP:
-			if event.pressed:
-				player.reel_step(REEL_NOTCH)
-		MOUSE_BUTTON_WHEEL_DOWN:
-			if event.pressed:
-				player.reel_step(-REEL_NOTCH)
 
 
 func _on_shockwave(_at: Vector3, strength: float) -> void:
