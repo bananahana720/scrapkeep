@@ -221,3 +221,17 @@ Under `--script`, a `SCRIPT ERROR` inside an awaited part of a test (observed wi
 
 Nine tests were mended: `ace_stage_window_grid`, `ace_restart_state`, `ace_gentle_break_window`, `asset_capture`, `char_bot` (and `char_bot_sable` through it), `graphics_preset`, `spine_run`, `telegraph_slope` and `wear_fraction_debt`. Check counts are unchanged. `spine_run_test` prints its class on its own line and ends on `spine_run_test: PASS`; `char_full_run_test` reads that line with an anchored pattern and accepts trailing text after `PASS`.
 
+### After waves R3a and X2a, `proto/alpha` at `e48f114`
+
+Gate at `e48f114`: 250 runs, 0 failed, 1 quarantined red, 944 s (receipt `gate-4d51d79917cd-2026-10-02T14-45-04-208Z.json`). The machine was loaded by three writers and a capture job.
+
+The first gate on this batch (`8684ea2`, 250 runs, 945 s) failed `ui_boss_plate_mount_test`, which exits 0. Breaking two of the Warden's armour segments within 0.55 s connected `physics_frame` to the same method twice; a signal holds one connection per method whatever is bound to it, so the second flying copy never moved or freed and the engine printed an `ERROR` line. Cause: `writer` (WM), and a `verifier-miss`: the Opus read walked the fragment lifetime for one copy at a time. The unit's own test broke one segment per stagger, so two copies were never in flight together. What caught it was a different test striking every two frames, under the pass rule this same batch added (an error line fails a test at exit 0). A model unit's test now breaks two things at once where the rule allows it.
+
+Review findings by cause, first round then fix round. RV: 5 `writer` and 6 `brief`, then 3 `writer`, 3 `brief` and 1 `env`. HV: 6 `writer` and 7 `brief`, then 2 `writer` and 4 `brief`. SS: 4 `writer` and 5 `brief`, then 4 `writer` and 2 `brief`. More than half of the first-round findings were `brief`: two were fences that made the unit impossible to finish cleanly (a posture count with no public accessor; a parent test outside the file list that parses a child's verdict line).
+
+A check can lock in the fault. RV's fix round added a check that a repeat synergy "stays queued" in banner mode; the ruling was that a repeat draws nothing. The re-review caught it by reading the assertion against the ruling, not by running it.
+
+A tree child's stdout reaches the runner, so a child's `<child>: PASS` line can stand in for its parent's verdict. Not fixed: `judge()` should require the verdict line's name to equal the test's file stem. Owed.
+
+The Sol units' own tests passed in their sandboxes and again on the merged build; none has a rendered check.
+

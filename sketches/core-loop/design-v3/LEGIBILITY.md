@@ -252,6 +252,8 @@ Each is worded so he can veto it.
 38. No tunnel on an authored line has a roof (w1 and e1 on the Reach).
 39. The Reach is in with Kest under his flow-share bar, stated as a miss. The first three seconds on the east lines are a drop and a level roll; the spawn launch (unit ZL) is the fix, with all three lines retuned around it.
 40. Surge run is parked for the slice: three standing activities (altar, cache, bounty), not four.
+41. In a Warden fight a first find shows its name only. Its card waits for the shared gate. A repeat shows nothing in either discovery mode, and a card or banner that is up when the fight goes live closes.
+42. The enemy read sheet is rendered from built wind-up poses and shown after the wind-up wave, not drawn before it. Owner may veto any kind's pose.
 
 ## 11. What only Andrew can decide
 
