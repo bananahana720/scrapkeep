@@ -4,9 +4,10 @@ const Terrain := preload("res://src/world/terrain.gd")
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 var failures := 0
-# Recorded at base bcd0a7e; the round 2 slice changes neither.
+# Recorded at base bcd0a7e; the round 2 slice changes neither. The collider hash was re-pinned when
+# the deleted loops took the parked drop lips (extra trimesh colliders) out of the Spillway.
 const TERRAIN_HASH := 2887965403
-const COLLIDER_HASH := 2873548634
+const COLLIDER_HASH := 4000405538
 
 
 func _initialize() -> void:

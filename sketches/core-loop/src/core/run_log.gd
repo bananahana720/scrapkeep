@@ -179,6 +179,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 		_traversal.restart()
 	_measuring = _traversal != null
 	_stage_clock = -1.0
+	_stage(stage)
 
 
 # warden_engaged fires once per stage attempt, so a retry's engagement replaces the

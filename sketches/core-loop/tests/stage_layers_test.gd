@@ -76,7 +76,7 @@ func _physics_process(delta: float) -> bool:
 		"geyser":
 			_clock += delta
 			if _game.world.ride == null and not _heard.has("geyser_fired"):
-				_steer(Vector3(-22.0, 0.0, 30.0))
+				_steer(Vector3(-22.0, 0.0, 34.0))
 			else:
 				_source.hold = {}
 			if _heard.has("layer_sky"):

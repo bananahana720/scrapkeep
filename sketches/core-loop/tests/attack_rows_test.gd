@@ -15,10 +15,11 @@ const DOC := "res://design-v3/research/attack-reads/ATTACK-READS.md"
 # Hashes of var_to_str at base e05c1e3, before the attack rows were added. ROWS was re-pinned
 # for the harpoon prototype, which moves grapple_fired off Kest's amber onto the rope craft's
 # colour, and again for the legibility grammar, which moves harpoon_bit and harpoon_smashed into
-# LINE_ROWS and adds the five grammar signals' quiet rows.
+# LINE_ROWS and adds the five grammar signals' quiet rows, and again for the deleted laps and
+# drop loops, which takes their eight signals' rows out.
 const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
-const ROWS_HASH := 331608605
+const ROWS_HASH := 1267804815
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
