@@ -21,6 +21,7 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
+const BossPlate := preload("res://src/ui/boss_plate.gd")
 
 # The spine's HUD, built to a word budget (playtest entry 7): icons, gauges and keycaps
 # carry the facts, and words appear only where nothing else can say it. Top band: the
@@ -103,9 +104,11 @@ var _lower: Control
 var _restart: Control
 var _health: Control
 var _speed: Control
-# The boss plate in the top-centre slot, or null (mount_plate).
+# The plate in the top-centre slot, or null (mount_plate), and the HUD's own boss plate
+# while a posture Warden is engaged.
 var _plate: Control
 var _plate_floor := Vector2.ZERO
+var boss_plate: Control
 # Whether the Warden is engaged, from warden_engaged, and the tally of a build that is
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
@@ -266,6 +269,29 @@ func _on_fact(kind: String) -> void:
 func _begin_engagement(engaged: bool) -> void:
 	_engaged = engaged
 	_struggle.begin()
+	_seat_boss_plate()
+
+
+# The boss plate is up while a Warden on the posture rule is engaged, bound to it.
+func _seat_boss_plate() -> void:
+	var warden = game.flow.warden
+	if _engaged and is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
+		if boss_plate == null:
+			boss_plate = BossPlate.new()
+		boss_plate.bind(warden)
+		mount_plate(boss_plate)
+	elif boss_plate != null:
+		if _plate == boss_plate:
+			unmount_plate()
+		boss_plate.unbind()
+		boss_plate.queue_free()
+		boss_plate = null
+
+
+func _exit_tree() -> void:
+	if boss_plate != null and boss_plate.get_parent() == null:
+		boss_plate.free()
+		boss_plate = null
 
 
 func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:

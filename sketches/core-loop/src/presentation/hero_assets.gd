@@ -896,9 +896,10 @@ func _update_warden(rec: Dictionary) -> void:
 	enamel.emission_energy_multiplier = warden._look.body_material.emission_energy_multiplier
 	var rim: StandardMaterial3D = rec.materials.ancient_light_jaw
 	var plate: StandardMaterial3D = warden._look.plate_material
-	rim.emission = plate.emission if warden.tint_state == "amber" else Palette.ANCIENT
+	var cued: bool = warden.tint_state != ""
+	rim.emission = plate.emission if cued else Palette.ANCIENT
 	rim.albedo_color = rim.emission
-	rim.emission_energy_multiplier = plate.emission_energy_multiplier if warden.tint_state == "amber" else 0.8
+	rim.emission_energy_multiplier = plate.emission_energy_multiplier if cued else 0.8
 	for seam in rec.seams:
 		seam.node.visible = seam.source.visible
 	if not rec.jaws.is_empty():

@@ -7,7 +7,7 @@ const TravelDevice := preload("res://src/world/travel_device.gd")
 # The interact key's system (LOOP-REDESIGN section 9). Each physics tick it finds the
 # device E would reach, runs that device's consent and steps every device. The player
 # asks claims() before it lets E mount a pylon, so an interactable in reach always wins
-# over a face. World creates it; its devices are the stage's PLACEMENTS plus any a map
+# over a face. World creates it; its devices are the stage's map's PLACEMENTS plus any a map
 # module registers (the lift, writer L1).
 #
 # Consent, by the family row:
@@ -44,7 +44,7 @@ func setup(ctx_ref) -> void:
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	clear()
-	for spec in Interactables.PLACEMENTS.get(stage, []):
+	for spec in Interactables.PLACEMENTS.get(String(ctx.stages.of(stage).get("map", "")), []):
 		var device: Node3D = DEVICES[spec["device"]].new()
 		add_child(device)
 		var at: Vector2 = spec["at"]

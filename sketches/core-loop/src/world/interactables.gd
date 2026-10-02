@@ -63,13 +63,14 @@ const FAMILIES := {
 		"lost": {"sound": "womp", "sound_next": "dry_refusal"}},
 }
 
-# Where each stage's interactables stand, in map x and z. Stage 1's lab set: an ambush
+# Where each map's interactables stand, in that map's x and z, keyed by the stage row's
+# map id: a stage on another map gets none of them. The Spillway's lab set: an ambush
 # altar beside the east chute's head (the long line), a cracked wall behind the vault
 # plinth with a cache in its pocket, and a double-or-nothing crate on the bowl's south
 # bank, the rim where the loop leaves the bowl for the return. The lift (travel) is
 # writer L1's and registers itself through Interact.register().
 const PLACEMENTS := {
-	1: [
+	"spillway": [
 		{"id": "east_altar", "device": "ambush_altar", "at": Vector2(78.0, -96.0), "face": Vector2(-1.0, 0.0)},
 		{"id": "plinth_cache", "device": "cracked_cache", "at": Vector2(-5.0, -156.0), "face": Vector2(0.0, 1.0)},
 		{"id": "rim_crate", "device": "bet_crate", "at": Vector2(-14.0, 21.0), "face": Vector2(0.0, -1.0)},

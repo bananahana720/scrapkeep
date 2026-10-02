@@ -158,7 +158,7 @@ const ROWS := {
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list.
-const GRAMMAR_SIGNALS := ["posture_changed"]
+const GRAMMAR_SIGNALS := []
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,

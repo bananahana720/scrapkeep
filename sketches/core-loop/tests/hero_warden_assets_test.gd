@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
 
 var game
@@ -165,6 +166,12 @@ func check_family() -> void:
 	warden.set_tint("amber")
 	hook._update_warden(rec)
 	check("plating rim and crack", rec.materials.ancient_light_jaw.emission == warden.rim_color and rec.cracks[0].visible)
+	warden.set_tint("slate")
+	hook._update_warden(rec)
+	check("a glancing rim reads on the model as it does on the plate", rec.materials.ancient_light_jaw.emission == warden._look.plate_material.emission
+		and rec.materials.ancient_light_jaw.emission != Palette.ANCIENT)
+	warden.set_tint("amber")
+	hook._update_warden(rec)
 	warden.shred = warden.plating * 0.8
 	warden._look.update(0.0)
 	hook._update_warden(rec)
