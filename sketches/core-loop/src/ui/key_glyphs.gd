@@ -19,8 +19,10 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # haul prompt waits for the line to stand LINE_STAND seconds without a Ctrl press and wears
 # the reel glyph on a world line, the smash glyph on a body. Sable's E (mount) and Space
 # (slingshot, only while mounted) come through the same table. The brake has no prompt.
-# Tab's field notes keep the full key list. LET GO is the right-mouse prompt for a line
-# standing on the world: the RMB keycap, a fling arrow and the words, at the anchor below
+# Tab's field notes keep the full key list. A deflector in its vault window (0.45 s after a
+# rebound, deflector.gd vault_anchor) moves the jump prompt from the ball to the dish for that
+# window only, and shows it even when the slingshot would not: a jump there is a vault.
+# LET GO is the right-mouse prompt for a line standing on the world: the RMB keycap, a fling arrow and the words, at the anchor below
 # the winch prompt, on the first RETIRE_AFTER["letgo"] world latches of a profile only.
 
 const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost"]
@@ -52,6 +54,7 @@ var _stood := 0.0
 var _winch_held := false
 var _line := ""
 var _points := {}
+var _vault := Vector3.INF
 var _placed: Array = []
 
 
@@ -182,7 +185,10 @@ func step(delta: float, view: Dictionary) -> void:
 		_unused[verb] += delta
 		if _unused[verb] >= IDLE_RETURN:
 			_revived[verb] = true
-	var ready: Dictionary = view["ready"]
+	_vault = vault_anchor()
+	var ready: Dictionary = view["ready"].duplicate()
+	if _vault != Vector3.INF:
+		ready["jump"] = true
 	for verb in PROMPT_VERBS:
 		if ready[verb]:
 			_forced[verb] = maxf(0.0, _forced[verb] - delta)
@@ -194,14 +200,16 @@ func step(delta: float, view: Dictionary) -> void:
 		_stood = 0.0
 	elif ready["haul"]:
 		_stood += delta
-	_points = view["points"]
+	_points = view["points"].duplicate()
+	if _vault != Vector3.INF:
+		_points["jump"] = _vault
 	_line = line
 	var candidates: Array = []
 	for verb in PROMPT_VERBS:
 		var open: bool = ready[verb] and (verb != "haul" or _stood >= LINE_STAND)
 		if not open:
 			continue
-		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line):
+		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line) or (verb == "jump" and _vault != Vector3.INF):
 			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
 	if line == "world" and _letgo_latch >= 1 and _letgo_latch <= RETIRE_AFTER[LETGO]:
 		candidates.append({"verb": LETGO, "state": _state_of("haul", view), "word": LETGO_WORD})
@@ -221,6 +229,23 @@ func step(delta: float, view: Dictionary) -> void:
 				_revived[verb] = false
 				_free[verb] = 0.0
 				_unused[verb] = 0.0
+
+
+# The dish an open deflector vault window points the jump prompt at, or Vector3.INF.
+func vault_anchor() -> Vector3:
+	if not is_inside_tree():
+		return Vector3.INF
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if is_instance_valid(enemy) and enemy.has_method("vault_anchor"):
+			var at: Vector3 = enemy.vault_anchor()
+			if at != Vector3.INF:
+				return at
+	return Vector3.INF
+
+
+# Where a verb's prompt is anchored this tick, in the world: Vector3.INF with none.
+func prompt_point(verb: String) -> Vector3:
+	return _points.get(verb, Vector3.INF)
 
 
 # The slot a prompt sorts into among equals: the verbs in table order, LET GO after them.
@@ -304,7 +329,9 @@ func _placements() -> Array:
 			continue
 		var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
 		var at := cam.unproject_position(world).round()
-		if prompt["verb"] in BALL_VERBS:
+		if prompt["verb"] == "jump" and _vault != Vector3.INF:
+			at += AIM_OFFSET
+		elif prompt["verb"] in BALL_VERBS:
 			at += BALL_OFFSET + Vector2(0.0, STACK * stacked)
 			stacked += 1
 		elif prompt["verb"] == LETGO:

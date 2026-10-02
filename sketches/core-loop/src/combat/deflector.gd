@@ -31,6 +31,12 @@ var _wall_full := Transform3D.IDENTITY
 var _wall_rest := Transform3D.IDENTITY
 # Test seam: the carried pose remains, but the attack clock no longer moves any mesh.
 var windup_pose_enabled := true
+# The vault cue (LEGIBILITY section 6): while a jump would vault, the dish's rim wears the
+# will_break row and the jump prompt sits on the dish (vault_anchor, read by key_glyphs.gd).
+# Test seam: the cue off leaves the window, the rebound and the vault unchanged.
+var body_cue_enabled := true
+var _rim: MeshInstance3D
+var _rim_material: StandardMaterial3D
 
 
 func _configure(threat: float) -> void:
@@ -73,6 +79,7 @@ func _build_tool() -> void:
 	_wall.mesh = parts["wall"]
 	_dish.add_child(_wall)
 	_wall_full = parts["wall_transform"]
+	_build_rim(parts["wall"])
 	_wall_rest = Transform3D(Basis.from_euler(Vector3(deg_to_rad(-42.0), deg_to_rad(35.0), deg_to_rad(-12.0))),
 		_wall_full.origin + Vector3(0.6, 0.55, -0.15))
 	_pose()
@@ -112,6 +119,67 @@ func _pose() -> void:
 	_wall.transform = _wall_rest.interpolate_with(_wall_full, travel)
 	_body.transform = Transform3D(Basis.from_scale(Vector3(1.0, lerpf(1.0, 0.85, travel), 1.0)),
 		Vector3(0.0, -0.165 * travel, 0.0))
+	_paint_rim()
+
+
+# True from a rebound until VAULT_WINDOW has run out or the jump has vaulted.
+func vault_open() -> bool:
+	return phase == Phase.LIVE and _rebound_v != Vector3.ZERO and _window > 0.0 and not _dead
+
+
+# Where the jump prompt belongs while the vault is open: the dish. Vector3.INF otherwise.
+func vault_anchor() -> Vector3:
+	if not body_cue_enabled or not vault_open() or not is_instance_valid(_wall):
+		return Vector3.INF
+	return _wall.global_position
+
+
+func rim_visible() -> bool:
+	return is_instance_valid(_rim) and _rim.is_inside_tree()
+
+
+func vault_rim_color() -> Color:
+	return _rim_material.emission
+
+
+# A torus laid on the dish's rim: the wall mesh's thinnest axis is its normal and half its
+# widest is the rim radius. It is a child of the wall, so it travels with the dish, and it
+# is in the tree only in the vault window, so at rest it adds no mesh to the dressing.
+func _build_rim(wall_mesh: Mesh) -> void:
+	var box := wall_mesh.get_aabb()
+	var sizes := [box.size.x, box.size.y, box.size.z]
+	var thin := sizes.find(sizes.min())
+	var normal := Vector3.ZERO
+	normal[thin] = 1.0
+	var radius := 0.5 * float(sizes.max())
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - 0.2
+	torus.outer_radius = radius + 0.08
+	_rim_material = Palette.solid(EventKinds.state_color("will_break"), PLATE_GLOW_LIVE)
+	_rim = MeshInstance3D.new()
+	_rim.name = "VaultRim"
+	_rim.mesh = torus
+	_rim.material_override = _rim_material
+	_rim.transform = Transform3D(Basis(Quaternion(Vector3.UP, normal)), box.get_center())
+
+
+func _paint_rim() -> void:
+	if _rim == null:
+		return
+	var on := body_cue_enabled and vault_open()
+	if not on:
+		_rim_clock = 0.0
+		if _rim.get_parent() != null:
+			_wall.remove_child(_rim)
+		return
+	if _rim.get_parent() == null:
+		_wall.add_child(_rim)
+	_rim_clock += get_physics_process_delta_time()
+	var swing := 1.0
+	if _pulses():
+		swing += PULSE_DEPTH * sin(TAU * PULSE_HZ * _rim_clock)
+	_rim_material.emission = EventKinds.state_color("will_break")
+	_rim_material.emission_energy_multiplier = PLATE_GLOW_LIVE * swing
 
 
 func _commit(to_ball: Vector3) -> Node3D:
@@ -177,6 +245,8 @@ func _on_end() -> void:
 
 
 func _exit_tree() -> void:
+	if is_instance_valid(_rim) and not _rim.is_inside_tree():
+		_rim.free()
 	if is_instance_valid(_wall):
 		_wall.transform = _wall_rest
 		_body.transform = Transform3D.IDENTITY

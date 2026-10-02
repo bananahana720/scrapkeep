@@ -41,6 +41,15 @@ var _mesh: Node3D
 # Test seam: only the attack pose is disabled; facing and physics keep running.
 var windup_pose_enabled := true
 var _pose_parts: Dictionary = {}
+# The body cues (LEGIBILITY section 6): while the lunge can still be broken the back wears the
+# will_break state row, and a broken wind-up plays the interrupted row. Colour, motion and
+# glyph shape come from STATE_ROWS; only the body paint's emission and a reaction move. Test
+# seam: a cue disabled here leaves the pose, timings and AI untouched.
+const INTERRUPT_SHOWN := 0.9
+var body_cue_enabled := true
+var _interrupted_left := 0.0
+var _cue_clock := 0.0
+var _cue_painted := false
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -100,6 +109,7 @@ func state_name() -> String:
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
+	_cue_step(delta)
 	if not _in_play() or target == null:
 		_move(delta, Vector3.ZERO)
 		return
@@ -120,6 +130,8 @@ func _physics_process(delta: float) -> void:
 			if lane != null:
 				lane.set_progress(_clock / WINDUP)
 			if _knocked_speed() >= INTERRUPT or lane == null:
+				if _knocked_speed() >= INTERRUPT and lane != null:
+					_show_interrupted()
 				_end_attack(State.RECOVER)
 			elif _clock >= WINDUP:
 				state = State.LUNGE
@@ -140,6 +152,7 @@ func _physics_process(delta: float) -> void:
 				state = State.CHASE
 				_clock = 0.0
 	_pose()
+	_paint_cue()
 
 
 func _begin_windup(to_ball: Vector3) -> void:
@@ -209,3 +222,53 @@ func _pose() -> void:
 				node.transform = body_pose * rest * Transform3D(Basis(Vector3.RIGHT, flare), Vector3.ZERO)
 			_:
 				node.transform = rest
+
+
+# The state row the back shows now: "will_break" while winding up, "interrupted" for
+# INTERRUPT_SHOWN seconds after a hit broke the wind-up, "" at rest.
+func cue_state() -> String:
+	if not body_cue_enabled or _dead:
+		return ""
+	if state == State.WINDUP:
+		return "will_break"
+	if _interrupted_left > 0.0:
+		return "interrupted"
+	return ""
+
+
+func _show_interrupted() -> void:
+	if not body_cue_enabled:
+		return
+	_interrupted_left = INTERRUPT_SHOWN
+	# The broken lunge flips the wedge over: the launch reaction along the knock.
+	react("launch", _knock)
+
+
+func _cue_step(delta: float) -> void:
+	_interrupted_left = maxf(0.0, _interrupted_left - delta)
+	_cue_clock += delta
+	_paint_cue()
+
+
+# The cue is the body paint's emission. A flash and the rest look share that emission, so
+# _apply_rest_look hands it back here and an active cue wins over the flash's glow.
+func _paint_cue() -> void:
+	var row := cue_state()
+	if row == "":
+		if _cue_painted:
+			_cue_painted = false
+			if _flash <= 0.0:
+				_apply_rest_look()
+		return
+	_cue_painted = true
+	_material.emission_enabled = true
+	_material.emission = EventKinds.state_color(row)
+	var swing := 1.0
+	if String(EventKinds.state_row(row).get("motion", "none")) == "pulse":
+		swing += PULSE_DEPTH * sin(TAU * PULSE_HZ * _cue_clock)
+	_material.emission_energy_multiplier = PLATE_GLOW_LIVE * swing
+
+
+func _apply_rest_look() -> void:
+	super()
+	_paint_cue()
