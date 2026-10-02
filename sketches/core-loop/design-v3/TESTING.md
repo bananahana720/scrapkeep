@@ -156,3 +156,13 @@ Three review findings were tests that could not fail: a width check that used th
 
 `ui_word_budget_test` reads 34 words against 25 at this head (32 before the prompts). It stays quarantined to the HUD unit in wave R2.
 
+### After unit B0b, `proto/alpha` at `38d852b`
+
+The suite is 233 runs after the loop deletion (244 before): 12 tests and 2 unit cases went with the loops, 2 were added. Gate at b824c6c: 0 failed, 2 quarantined red, 380 s (receipt `artifacts/local/alpha/r1/gate-eba89c45b09e-2026-10-02T09-59-33-588Z.json`). The writer ran the gate twice; the first run failed on four tests the deletion had moved (two pinned hashes, one scripted route, one stage record), all fixed in the unit.
+
+Review failed on cause `writer`: two deleted drop tests also held the only checks that a landing's shockwave strikes the landed body and a bystander. Two more findings were cause `brief`: the packet named two drop-only tests as default-game tests, and its grep acceptance matched Godot's own `loop_mode` properties, so it could not return empty.
+
+For packets: when a unit deletes tests, the packet asks for each deleted test's checks to be listed one by one, with the rule each pinned and where that rule is pinned now.
+
+A smash landing on the Warden is four strikes: a stomp, the shockwave's slam and Rivet's skid slam in one physics frame, then a second stomp when the ball comes down from the rebound (`landing_shockwave_test`). The posture rule counts contacts per frame for this reason.
+
