@@ -9,7 +9,10 @@
 # the bolts carry vertex colour black (the amber cue mask); brows, caps and slabs are plain plate.
 # No draw is added.
 #
-# Two meshes, three surfaces (three colour-pass draws, the E ceiling), no alpha:
+# Two meshes, three surfaces (three colour-pass draws, the E ceiling), no alpha.
+# Four rigid glTF joint nodes preserve those surfaces: feet, rearing torso, and
+# SlamPadLeft/SlamPadRight, each containing the existing arm and fist. WB animates
+# the two pads independently of the plate group; all geometry stays unchanged.
 #   BruteBody    fleet_paint (torso, head, hump, shoulders, arms, legs; flashes with the enemy)
 #                and paint (vertex colour: snout, ears, fists, feet, strap, the one brass tag,
 #                worn on the chest so the plate hides it until it pops).
@@ -44,22 +47,57 @@ BRASS = "brass"
 
 # --- Body: a squat barrel torso, hump, arms hanging to fists, a low head --------------
 b = Part("BruteBody")
+weights = b.bm.verts.layers.deform.new()
+
+
+def bind_new(bone):
+    for vertex in b.bm.verts:
+        if not vertex[weights]:
+            vertex[weights][bone] = 1.0
+
 for s in (-1, 1):
     b.cyl("fleet_paint", 0.30, 0.34, 0.6, segs=8, loc=(s * 0.34, 0.0, -0.8))  # legs
     b.box("paint", (0.36, 0.52, 0.16), loc=(s * 0.34, -0.08, -1.02), color=CHAR)  # feet
+bind_new(0)  # Feet and legs stay planted.
 b.cyl("fleet_paint", 0.62, 0.78, 1.3, segs=12, loc=(0, 0, 0.05))  # torso
 b.cyl("paint", 0.79, 0.79, 0.10, segs=12, loc=(0, 0, -0.08), color=CHAR)  # strap
 b.uv("fleet_paint", 0.42, u=8, v=5, loc=(0, 0.36, 0.5), scale=(1.0, 0.85, 0.85))  # hump
+bind_new(1)
 for s in (-1, 1):
     b.uv("fleet_paint", 0.30, u=8, v=5, loc=(s * 0.46, 0.0, 0.66))  # shoulder
+    bind_new(1)  # The fixed shoulder remains with the torso.
     b.rod("fleet_paint", (s * 0.48, -0.02, 0.6), (s * 0.5, -0.12, -0.4), 0.14, segs=6)  # arm
     b.uv("paint", 0.19, u=6, v=4, loc=(s * 0.5, -0.12, -0.44), color=CHAR)  # fist
+    bind_new(2 if s < 0 else 3)
 b.uv("fleet_paint", 0.38, u=8, v=5, loc=(0, -0.12, 1.0))  # head
 b.box("paint", (0.30, 0.30, 0.22), loc=(0, -0.48, 0.92), color=CHAR)  # snout
 for s in (-1, 1):
     b.cyl("paint", 0.13, 0.0, 0.30, segs=6, loc=(s * 0.26, -0.05, 1.4), color=CHAR)  # ears
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.72, 0.22), color=BRASS)  # the one brass tag
+bind_new(1)
 body = b.to_object(parent=root)
+# Separate glTF joint nodes move the existing arms and fists without splitting their
+# two material surfaces into extra draws. No vertex, face, colour or plate changes.
+rig_data = bpy.data.armatures.new("BruteWindup")
+rig = bpy.data.objects.new("BruteWindup", rig_data)
+bpy.context.scene.collection.objects.link(rig)
+rig.parent = root
+bpy.context.view_layer.objects.active = rig
+rig.select_set(True)
+bpy.ops.object.mode_set(mode="EDIT")
+for name, head in (("BruteFeet", (0, 0, GROUND)),
+                   ("BruteRear", (0, 0, GROUND)),
+                   ("SlamPadLeft", (-0.5, -0.12, -0.44)),
+                   ("SlamPadRight", (0.5, -0.12, -0.44))):
+    bone = rig_data.edit_bones.new(name)
+    bone.head = head
+    bone.tail = (head[0], head[1], head[2] + 0.3)
+bpy.ops.object.mode_set(mode="OBJECT")
+for name in ("BruteFeet", "BruteRear", "SlamPadLeft", "SlamPadRight"):
+    body.vertex_groups.new(name=name)
+modifier = body.modifiers.new("Windup", "ARMATURE")
+modifier.object = rig
+body.parent = rig
 
 # --- Plate group: front slab, brow, ribs, bolts, shoulder and rear cladding ----------
 p = Part("BrutePlates")

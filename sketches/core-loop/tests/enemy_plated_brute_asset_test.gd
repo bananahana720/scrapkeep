@@ -97,6 +97,7 @@ func _run() -> void:
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
 	_check(not m["alpha"], "asset has no alpha surface")
+	_check_rig(scene)
 	scene.free()
 
 	game.ctx.calm = true
@@ -216,3 +217,37 @@ func _check_strip(brute: Node3D) -> void:
 	brute.on_struck("x", "y", {"full": true})
 	_check(brute.plates == 0 and brute.plates_popped == 1, "with no plate left a full result strips nothing more")
 	_check(is_equal_approx(brute.take_damage(10.0), 0.0), "the popped plate still takes the first hit whole")
+
+
+# Pin names and skin bindings, never file bytes. The rig adds no mesh/surface.
+func _check_rig(scene: Node) -> void:
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	var body := scene.find_child("BruteBody", true, false) as MeshInstance3D
+	var plate := scene.find_child("BrutePlates", true, false) as MeshInstance3D
+	_check(rig != null and body != null and plate != null, "named body, plate and wind-up skeleton exist")
+	if rig == null or body == null or plate == null:
+		return
+	var names := []
+	for index in rig.get_bone_count():
+		names.append(rig.get_bone_name(index))
+	_check(names == ["BruteFeet", "BruteRear", "SlamPadLeft", "SlamPadRight"], "joint nodes pinned: %s" % [names])
+	var slots := []
+	for mesh in [body.mesh, plate.mesh]:
+		for surface in mesh.get_surface_count():
+			slots.append(mesh.surface_get_material(surface).resource_name)
+	_check(slots == ["fleet_paint", "paint", "bare_metal"], "surface names pinned: %s" % [slots])
+	_check(body.skin != null and body.skin.get_bind_count() == 4 and body.get_node(body.skeleton) == rig,
+		"body skin binds the four joints to its skeleton")
+	var weighted := [0, 0, 0, 0]
+	var rigid := true
+	for surface in body.mesh.get_surface_count():
+		var arrays := body.mesh.surface_get_arrays(surface)
+		var joints: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		for vertex in weights.size() / 4:
+			rigid = rigid and weights[vertex * 4] == 1.0
+			for slot in 4:
+				if weights[vertex * 4 + slot] > 0.0:
+					weighted[joints[vertex * 4 + slot]] += 1
+	_check(rigid and not weighted.has(0), "each separate part has rigid skin weights: %s" % [weighted])
+	_check(is_equal_approx(float(_measure(scene)["tris"]), 996.0), "unchanged 996 triangles (0 percent difference from base)")
