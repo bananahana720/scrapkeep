@@ -18,7 +18,9 @@ const T := preload("res://tests/support/t.gd")
 #         when the stagger begins is stopped on that tick, and another enemy's charge cue is not. A glance keeps its clank, and a
 #         plating Warden's hit is pitched by its health as before.
 
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
+const CURVE: float = SliceDefs.DEFS[0]["posture"]["curve"]
 const FIGHT_SOUNDS := ["hit_thwack", "boss_weak_hit", "shatter", "chunk_low", "clank"]
 
 var _t := T.new("warden_posture_sound_test")
@@ -53,7 +55,7 @@ func _ground(out: float) -> Vector3:
 
 func _force_for(share: float) -> float:
 	var force := 1.0
-	while _combat.punch_of("ram", force) < PLATING * share:
+	while _combat.punch_of("ram", force) < PLATING * pow(share, 1.0 / CURVE):
 		force += 0.02
 	return force
 
@@ -214,6 +216,9 @@ func _stagger() -> void:
 func _shatter() -> void:
 	_audio.cue_log.clear()
 	_audio._last_start.clear()
+	# The slice row's rams do not shatter; this check is about the shatter's sound, so the rule
+	# on this Warden is told they do, as the default rule has it.
+	_warden._posture.ram_shatters = true
 	_combat.strike(_warden, "ram", _fast_force())
 	await _frames(2)
 	_t.eq("a chunk was lost", _warden.chunks_left(), 3)

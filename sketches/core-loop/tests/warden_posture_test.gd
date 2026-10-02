@@ -14,7 +14,8 @@ const Intent := preload("res://src/movement/intent.gd")
 
 const OUT := 58.0
 const NEAR := 5.0
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const HP := 800.0
 
 var _game

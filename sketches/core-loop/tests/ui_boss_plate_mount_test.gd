@@ -77,6 +77,9 @@ func _slice() -> void:
 	_t.eq("engaging again puts it back", _plates().size(), 1)
 	var guard := 0
 	while is_instance_valid(warden) and not warden.is_dead() and guard < 60:
+		# The slice row's rams do not shatter, so these are smashes: a smash fills the bar and, once it
+		# is open, shatters the chunk at once.
+		_game.player.smash_landing = warden
 		_game.ctx.spawner.strike(warden, "ram", 40.0)
 		await _frames(2)
 		guard += 1

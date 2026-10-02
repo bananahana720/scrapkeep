@@ -17,7 +17,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 
 const OUT := 58.0
 const NEAR := 5.0
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const SYNERGY := "wrecking_ball"
 
 var _game
@@ -186,6 +187,9 @@ func _run() -> void:
 	await _smash(_top())
 	await _frames(2)
 	var lost: int = left - _warden.chunks_left()
+	# The wrecking ball's own strikes sit under the glance line of a plating of 110 as well, so the
+	# Warden counts more than the one glancing ram; the record must carry the Warden's own count.
+	var glanced: int = _warden.glances()
 	_game.flow.new_run()
 	var line := _last_line()
 	var row: Dictionary = {}
@@ -196,7 +200,7 @@ func _run() -> void:
 	_report("the record names the table", line.get("table") == "slice", "table %s" % line.get("table"))
 	_report("two staggers", _staggers_seen == 2 and posture.get("staggers") == 2, "bus %d, record %s" % [_staggers_seen, posture.get("staggers")])
 	_report("one chunk lost", lost == 1 and posture.get("chunks_lost") == 1, "Warden lost %d, record %s" % [lost, posture.get("chunks_lost")])
-	_report("one glance is recorded", posture.get("glances") == 1, "record %s" % [posture.get("glances")])
+	_report("the glances are recorded", glanced >= 1 and posture.get("glances") == glanced, "record %s, Warden counted %d" % [posture.get("glances"), glanced])
 	_report("fight ticks", int(posture.get("fight_ticks", 0)) > 0, "posture %s" % [posture])
 	_report("a first try is attempt 1", row.get("attempts") == 1, "attempts %s" % [row.get("attempts")])
 	_report("the pack is in the row", not _packs_seen.is_empty() and row.get("packs") == _packs_seen, "bus %s, record %s" % [_packs_seen, row.get("packs")])

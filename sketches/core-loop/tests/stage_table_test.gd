@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Reach := preload("res://src/world/map_reach.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
@@ -67,7 +68,7 @@ func _slice_checks() -> void:
 	_game.flow.choose_class(0)
 
 	var flow = _game.flow
-	var stage_one: Dictionary = StageDefs.of(1)
+	var stage_one: Dictionary = SliceDefs.of(1)
 	_report("slice map", _game.ctx.terrain.maps.size() == 1 and _game.ctx.terrain.map().get_script() == Reach,
 		"slice terrain holds %d map(s), the active one is the Reach: %s" % [_game.ctx.terrain.maps.size(), _game.ctx.terrain.map().get_script() == Reach])
 	_report("slice card", _game.hud.launch_card.title == "The Cable Reach",

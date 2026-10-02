@@ -21,7 +21,8 @@ const T := preload("res://tests/support/t.gd")
 #         hero_assets.gd hold no Color( literal: every state colour is a STATE_ROWS row or a role.
 # The plate's own clock is stepped by hand (its process is off), never read from the wall.
 
-const PLATING := 45.0
+const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const ADDED_CODE := {
 	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams"],
 	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open", "_warden_chunk_mark", "_update_warden_chunks", "_throw_warden_segment", "_paint_warden_inner"],
