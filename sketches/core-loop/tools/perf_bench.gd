@@ -11,7 +11,7 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 
 # Frame-cost benchmark for the dense-fight scenes of tools/stress_capture.gd (perf-lab E0).
 # One scene per process:
-#   godot --headless --path sketches/core-loop --script res://tools/perf_bench.gd -- --scene=s3 --out=/abs/run.json [ablations]
+#   godot --headless --path sketches/core-loop --script res://tools/perf_bench.gd -- --scene=s3 [--table=slice] --out=/abs/run.json [ablations]
 # Native runs drop --headless and add --resolution 1920x1080; vsync is turned off.
 # The scene matches stress_capture: stage 1 as Rivet with every offered part, N packs
 # (controller, punisher, two chasers) in front of the ball, 4 committed telegraph types
@@ -130,6 +130,8 @@ var _probe_close := {}
 var _ablation_notes := {}
 # --series=<absolute .tsv>: every recorded frame's process, frame and physics time, for hunting a hitch.
 var _series := ""
+# --table=<id>: the stage table the game is built on (empty is the game's default; "slice" is the checkpoint's).
+var _table := ""
 # --warm-frames=N and --warm-seconds=S: the warm phase lasts N frames and at least S wall seconds. The
 # music engine bakes each instrument the first time a bar plays it, on the main thread (35 to 85 ms, see
 # the E1 ledger), so a warm phase measured in frames alone ends before those first bars once the
@@ -159,6 +161,7 @@ func _initialize() -> void:
 	_warm_frames = int(settings.get("warm-frames", str(WARM_FRAMES)))
 	_warm_seconds = float(settings.get("warm-seconds", "0"))
 	_out = settings.get("out", "")
+	_table = String(settings.get("table", ""))
 	if not SCENES.has(_scene_id) or not _out.is_absolute_path() or not _out.ends_with(".json"):
 		printerr("perf_bench: needs -- --scene=s1|s2|s3 --out=<absolute .json path>")
 		quit(2)
@@ -184,6 +187,7 @@ func _initialize() -> void:
 	seed(RIVET_SEED)
 	_game = Game.new()
 	_game.test_mode = true
+	_game.table = _table
 	root.add_child(_game)
 	_probe = Probe.new()
 	_probe.bench = self
@@ -668,7 +672,7 @@ func _finish() -> void:
 	var ablations: Array = _off.keys()
 	ablations.sort()
 	var info := {
-		"tool": "perf_bench", "scene": _scene_id, "scene_def": SCENES[_scene_id], "ablations": ablations,
+		"tool": "perf_bench", "scene": _scene_id, "table": _table, "scene_def": SCENES[_scene_id], "ablations": ablations,
 		"errors": _errors, "valid": _errors.is_empty(),
 		"godot": Engine.get_version_info()["string"], "display": DisplayServer.get_name(),
 		"adapter": RenderingServer.get_video_adapter_name(),

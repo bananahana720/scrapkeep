@@ -28,6 +28,7 @@
     "sketch:lint": "node scripts/sketch-lint.mjs --sketch core-loop",
     "sketch:gate": "npm run sketch:lint && node scripts/sketch-smoke.mjs --sketch core-loop --receipt gate",
     "play": "node scripts/play.mjs",
+    "sketch:checkpoint": "node scripts/checkpoint.mjs",
     "sketch:test": "node scripts/play.mjs test",
     "run:summary": "node scripts/run-summary.mjs",
     "jev:score": "node tools/jev-player/score.mjs",
