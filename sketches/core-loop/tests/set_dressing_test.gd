@@ -17,7 +17,44 @@ func check(ok: bool, what: String) -> void:
 func _initialize() -> void:
 	_run.call_deferred()
 
+func _baked_tuft_checks() -> void:
+	var source := FileAccess.get_file_as_string("res://src/presentation/set_dressing.gd")
+	check(not source.contains("_dry_grass") and not source.contains("Mesh.ARRAY_COLOR"), "KC-4 set dressing has no runtime tuft recolour")
+	var dressing := Dressing.new()
+	var meshes := dressing._kit_meshes()
+	var scene := (load(Dressing.KIT_PATH) as PackedScene).instantiate()
+	var tufts := 0
+	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if not String(view.name).begins_with("tuft_"):
+			continue
+		tufts += 1
+		var mesh: ArrayMesh = meshes[String(view.name)]
+		var same := mesh.get_surface_count() == view.mesh.get_surface_count()
+		var roots := 0.0
+		var tips := 0.0
+		var root_count := 0
+		var tip_count := 0
+		for surface in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(surface)
+			var baked := view.mesh.surface_get_arrays(surface)
+			var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var colours: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+			same = same and colours == baked[Mesh.ARRAY_COLOR] and colours.size() == points.size()
+			for i in mini(points.size(), colours.size()):
+				if points[i].y < 0.01:
+					roots += colours[i].get_luminance()
+					root_count += 1
+				elif points[i].y > mesh.get_aabb().size.y * 0.75:
+					tips += colours[i].get_luminance()
+					tip_count += 1
+		check(same, "KC-4 %s placed vertex colours exactly equal the baked colours" % view.name)
+		check(root_count > 0 and tip_count > 0 and tips / maxf(tip_count, 1) > roots / maxf(root_count, 1) + 0.01, "KC-4 %s baked straw has darker roots" % view.name)
+	check(tufts == 2, "KC-4 both baked tufts checked")
+	scene.free()
+	dressing.free()
+
 func _run() -> void:
+	_baked_tuft_checks()
 	Preset.apply("high")
 	var game := Game.new()
 	game.test_mode = true
