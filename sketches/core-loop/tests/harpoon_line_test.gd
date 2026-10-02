@@ -237,8 +237,11 @@ func _aim_shapes() -> void:
 
 	var floor_point := _point(0, -6, 0.0)
 	aim = _aim(eye, floor_point)
-	_check("walkable ground cannot be hooked", aim.get("state") == Augments.AIM_NONE,
-		"aimed at open ground: state %s" % aim.get("state"))
+	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
+	var plain := Augments.grapple_target(space, eye, (floor_point - eye).normalized(), _player.ball_position(),
+		_player.grapple_range(), _game.tuning.f("grapple_assist_deg"))
+	_check("walkable ground cannot be hooked", aim.get("state") == Augments.AIM_NONE and plain.get("state") != Augments.AIM_NONE,
+		"aimed at open ground: harpoon state %s, unfiltered ray state %s" % [aim.get("state"), plain.get("state")])
 	chaser.queue_free()
 	await _sim(0.1)
 

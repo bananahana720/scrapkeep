@@ -55,7 +55,7 @@ static func _lock(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array,
 
 # Whether the class movement burst can take a press this tick: Rivet's sprint with a
 # charge and not already running, Kest's blink with a charge (or her free blink out of the
-# cloak). A slam plant or a pylon mount stands the burst down, so Shift stays the boost.
+# cloak). A slam plant or a pylon mount stands the burst down.
 static func burst_ready(kit) -> bool:
 	if Augments.holding(kit):
 		return false

@@ -132,18 +132,6 @@ func knock(direction: Vector3, force: float) -> void:
 	_knock.y = maxf(_knock.y, maxf(push.y, force * 0.2 / weight))
 
 
-# The harpoon's tow: a winch's pull on this body, refreshed every tick while the line is
-# taut. It sets the planar knock and never calls knock(), so it counts no shove and the
-# pin rule does not re-key on it every tick.
-func tow(velocity: Vector3) -> void:
-	if _dead:
-		return
-	var pull := Vector3(velocity.x, 0.0, velocity.z)
-	if pull.length() > _knocked_speed():
-		_knock.x = pull.x
-		_knock.z = pull.z
-
-
 func flash() -> void:
 	_flash = 1.0
 

@@ -99,7 +99,7 @@ class Keyboard:
 	extends Source
 
 	var enabled := true
-	# Kept for the game's wiring; no key layout reads it now.
+	# Unused: no key layout reads it; the game still sets it.
 	var tuning
 
 	func poll(out) -> void:

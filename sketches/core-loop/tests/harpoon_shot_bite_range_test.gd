@@ -136,7 +136,7 @@ func _bite_range() -> void:
 	await _sim(0.1)
 
 
-# Rolls in from 12 m at 8 m/s and reports the centre-to-centre range on the last tick the line was held.
+# Rolls in from 12 m at 8 m/s and reports the centre-to-centre range on the last tick the line was held, or -1 if the line never let go.
 func _drop_range(mode: String, ball: Vector3, chaser: Node3D) -> float:
 	chaser.global_position = ball + Vector3(0, chaser.global_position.y - ball.y, -12.0)
 	await _bite(mode, ball, chaser)
@@ -149,9 +149,10 @@ func _drop_range(mode: String, ball: Vector3, chaser: Node3D) -> float:
 			break
 		last = _player.body().global_position.distance_to(chaser.global_position)
 		await physics_frame
+	var let_go: bool = not _player.kit.hooked
 	_source.hold = {}
 	_player.release_grapple()
-	return last if not _player.kit.hooked or last >= 0.0 else -1.0
+	return last if let_go else -1.0
 
 
 func _pass_range() -> void:

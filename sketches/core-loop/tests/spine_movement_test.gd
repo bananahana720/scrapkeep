@@ -256,7 +256,7 @@ func _finish() -> bool:
 			% [RAMP_DEG, steep.get("flat", -1.0), steep_held, flat_held, steep["exit"], along])
 	_report("slam fact", _facts["slammed"].size() == 2, "GameEvents.slammed published %d times for 2 slams" % _facts["slammed"].size())
 	_report("winch", _winch["end"] < _winch["start"] - 2.0 and _winch["rope"] > _winch["start"] + 1.0,
-		"rope paid out to %.1f m with the ball %.1f m away (slack); holding Q %.1f s hauled it to %.1f m"
+		"rope paid out to %.1f m with the ball %.1f m away (slack); Ctrl held %.1f s hauled it to %.1f m"
 			% [_winch["rope"], _winch["start"], WINCH_SECONDS, _winch["end"]])
 	var centre: Dictionary = _aims["centre"]
 	var assist: Dictionary = _aims["assist"]

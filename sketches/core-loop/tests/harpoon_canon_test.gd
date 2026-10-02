@@ -12,9 +12,10 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   states     every LINE_ROWS id reaches line_state_changed, in an order that makes sense, and a
 #              forced break names its cause
 #   failures   a right mouse press with no aim, one during the rewind, an uncharged Shift and a
-#              Ctrl with no line each emit verb_failed with a reason
+#              Shift while mounted each emit verb_failed with a reason; a Ctrl with no line is the
+#              brake or the slam and emits nothing
 #   momentum   planar speed just after a bite, a smash commit, a let-go and a forced break is
-#              never below its planar speed just before
+#              never below its planar speed just before; a smash commit never lowers total speed
 #   world line right mouse holds it, Ctrl winches it; the Rope Anchor knob plants from that winch
 #   ready      verb_ready is true and false at the right ticks on the ground, in the air, on a
 #              world line, on a body line, in a committed haul and in the rewind
@@ -190,6 +191,7 @@ func _run() -> void:
 
 	for name in PILOTS:
 		await _route(name)
+		await _body_reel(name)
 		await _world_line(name)
 		await _shift(name)
 		await _ready_walk(name)
@@ -319,6 +321,17 @@ func _smash(name: String) -> void:
 		kit.line_state == Augments.LINE_SMASH and "smash_committed" in _ids() and after >= before - SPEED_SLACK,
 		"states %s, planar %.3f -> %.3f m/s" % [_ids(), before, after])
 	_check("%s: a committed haul cannot haul again" % name, not _player.verb_ready("haul"), "verb_ready(haul) %s mid-haul" % _player.verb_ready("haul"))
+	if name != "sable":
+		_player.abilities.slot(AbilityState.MOVEMENT).charges = 0
+		_fails.clear()
+		_source.press = {"shift_pressed": true}
+		await physics_frame
+		_source.press = {}
+		await physics_frame
+		_check("%s: a refused Shift mid-haul leaves the smash committed" % name,
+			not _fails.is_empty() and kit.hooked and kit.line_state == Augments.LINE_SMASH,
+			"fails %s, hooked %s, line_state %s" % [_fails, kit.hooked, kit.line_state])
+		_player.abilities.refill()
 	for tick in roundi(1.6 * Engine.physics_ticks_per_second):
 		await physics_frame
 		if not kit.hooked:
@@ -339,14 +352,106 @@ func _smash(name: String) -> void:
 	_check("%s: after the rewind the aim state returns" % name, _last_state() in ["locked", "searching"] and kit.rewind_left == 0.0,
 		"last state %s, rewind left %.2f s" % [_last_state(), kit.rewind_left])
 
-	_mark()
-	_source.press = {"brake_held": true}
-	await _sim(0.05)
-	_check("%s: Ctrl with no line is a refused haul" % name, _failed("haul", "no_line"), "fails %s" % [_fails])
+	await _no_line_ctrl(name)
+	await _fast_commit(name)
 	_combat.heft_override = 1.0
 	if is_instance_valid(chaser):
 		chaser.queue_free()
 	await _sim(0.2)
+
+
+# A commit from above the smash floor: a level approach at 30 m/s keeps its total speed.
+func _fast_commit(name: String) -> void:
+	var kit = _player.kit
+	_pilot(name)
+	var chaser := _spawn("chaser", _point(0, -36, 1.5))
+	await _sim(0.1)
+	_mark()
+	var ground := _point(0, 0, 1.4)
+	_place(ground, Vector3(0, 0, -30))
+	_look(_point(0, 0, 2.2), chaser.global_position)
+	await _sim(0.05)
+	_source.press = {"harpoon_pressed": true}
+	_source.hold = {"harpoon_held": true}
+	await physics_frame
+	_source.press = {}
+	var before: float = _player.body().linear_velocity.length()
+	_source.hold = {"harpoon_held": true, "brake_held": true}
+	await physics_frame
+	await physics_frame
+	var after: float = _player.body().linear_velocity.length()
+	_check("%s: a commit from 30 m/s never lowers total speed" % name,
+		kit.line_state == Augments.LINE_SMASH and before > 25.0 and after >= before - SPEED_SLACK,
+		"line_state %s, total %.3f -> %.3f m/s" % [kit.line_state, before, after])
+	_source.hold = {}
+	_player.release_grapple()
+	if is_instance_valid(chaser):
+		chaser.queue_free()
+	await _sim(0.3)
+
+
+# Ctrl with no line stands is the brake on the ground, never a refused haul.
+func _no_line_ctrl(name: String) -> void:
+	_pilot(name)
+	var ground := _point(0, 0, 1.4)
+	_sky(ground)
+	_mark()
+	_place(ground, Vector3(0, 0, -10))
+	await _sim(0.3)
+	_place(ground, Vector3(0, 0, -10))
+	await _sim(0.4)
+	var coast := _planar()
+	_mark()
+	_place(ground, Vector3(0, 0, -10))
+	await _sim(0.3)
+	_place(ground, Vector3(0, 0, -10))
+	_source.hold = {"brake_held": true}
+	await _sim(0.4)
+	var braked := _planar()
+	_source.hold = {}
+	_check("%s: Ctrl with no line brakes and emits no verb_failed" % name,
+		_fails.is_empty() and braked < coast - 0.5,
+		"fails %s, planar after 0.4 s %.2f coasting, %.2f with Ctrl" % [_fails, coast, braked])
+
+
+# A held line on a body reels the ball in: from rest, the gap closes and planar speed only rises.
+func _body_reel(name: String) -> void:
+	var kit = _player.kit
+	_pilot(name)
+	var chaser := _spawn("chaser", _point(0, -22, 1.5))
+	_combat.heft_override = 0.4
+	await _sim(0.1)
+	var ball := _point(0, 0, 4.0)
+	_mark()
+	_place(ball)
+	_look(ball, chaser.global_position)
+	await _sim(0.05)
+	_source.press = {"harpoon_pressed": true}
+	_source.hold = {"harpoon_held": true}
+	await physics_frame
+	_source.press = {}
+	var latched: bool = kit.hooked and kit.on_body and kit.line_state == Augments.LINE_LATCHED
+	var gap_before: float = _player.ball_position().distance_to(chaser.global_position)
+	var start := _planar()
+	var prev := start
+	var drops := 0
+	for tick in 30:
+		await physics_frame
+		var now := _planar()
+		if now < prev - SPEED_SLACK:
+			drops += 1
+		prev = now
+	var gap_after: float = _player.ball_position().distance_to(chaser.global_position)
+	_check("%s: a held body line reels the ball in, planar speed never drops" % name,
+		latched and kit.hooked and gap_after < gap_before - 0.5 and prev > start + 0.5 and drops == 0,
+		"latched %s, gap %.2f -> %.2f m, planar %.3f -> %.3f m/s, drops %d" % [latched, gap_before, gap_after, start, prev, drops])
+	_source.hold = {}
+	_source.press = {"harpoon_released": true}
+	await _sim(0.1)
+	_combat.heft_override = 1.0
+	if is_instance_valid(chaser):
+		chaser.queue_free()
+	await _sim(0.3)
 
 
 # A world line: right mouse bites and holds it, Ctrl winches it, release lets go.
@@ -434,6 +539,16 @@ func _shift(name: String) -> void:
 	await _sim(0.1)
 	_check("%s: an uncharged Shift is refused" % name, not ready and _failed("boost", reason) and _counts[fired] == 0,
 		"verb_ready(boost) %s, fails %s, %s fired %d" % [ready, _fails, fired, _counts[fired]])
+	if name == "sable":
+		_pilot(name)
+		_mark()
+		_place(ball, Vector3(0, 0, -6))
+		_player.kit.mounted = true
+		_source.press = {"shift_pressed": true}
+		await physics_frame
+		_check("sable: Shift while mounted is refused as busy", _failed("boost", "busy"), "fails %s" % [_fails])
+		_player.kit.mounted = false
+		_source.press = {}
 
 
 # verb_ready on the ground, in the air, on a world line, on a body line, in a haul and in the rewind.
@@ -466,9 +581,16 @@ func _ready_walk(name: String) -> void:
 	_player.grapple_to(chaser.global_position, Vector3.UP, chaser)
 	await _sim(0.05)
 	row = [_player.verb_ready("harpoon"), _player.verb_ready("haul"), _player.verb_ready("boost")]
-	_check("%s: ready on a latched body line" % name, kit.on_body and kit.line_state == Augments.LINE_LATCHED and row[1] and row[2],
+	_check("%s: ready on a latched body line" % name, kit.on_body and kit.line_state == Augments.LINE_LATCHED and not row[0] and row[1] and row[2],
 		"harpoon/haul/boost %s" % [row])
 	_player.release_grapple()
+
+	_place(high)
+	kit.slamming = true
+	_player.grapple_to(chaser.global_position, Vector3.UP, chaser)
+	_check("%s: a bite ends a slam in flight" % name, kit.hooked and not kit.slamming, "hooked %s, slamming %s" % [kit.hooked, kit.slamming])
+	_player.release_grapple()
+	await _sim(0.05)
 
 	var wall_ball := _point(0, 0, 6.0)
 	_wall_at(wall_ball, 28.0)
@@ -476,8 +598,8 @@ func _ready_walk(name: String) -> void:
 	_place(wall_ball)
 	_player.grapple_to(_wall.global_position + Vector3(0, 0, 0.6), Vector3(0, 0, 1), null)
 	await _sim(0.05)
-	row = [_player.verb_ready("haul"), _player.verb_ready("boost")]
-	_check("%s: ready on a world line" % name, kit.hooked and not kit.on_body and row == [true, true], "haul/boost %s" % [row])
+	row = [_player.verb_ready("harpoon"), _player.verb_ready("haul"), _player.verb_ready("boost")]
+	_check("%s: ready on a world line" % name, kit.hooked and not kit.on_body and row == [false, true, true], "harpoon/haul/boost %s" % [row])
 	_player.release_grapple()
 	_drop_wall()
 
@@ -488,6 +610,13 @@ func _ready_walk(name: String) -> void:
 	row = [_player.verb_ready("harpoon"), _player.verb_ready("haul")]
 	_check("%s: not ready in the rewind" % name, row == [false, false], "harpoon/haul %s" % [row])
 	kit.rewind_left = 0.0
+
+	_place(high)
+	_look(high, chaser.global_position)
+	kit.slingshot.charging = true
+	await _sim(0.05)
+	_check("%s: not ready while a gauge charges" % name, not _player.verb_ready("harpoon"), "verb_ready(harpoon) %s" % _player.verb_ready("harpoon"))
+	kit.slingshot.charging = false
 
 	if name == "sable":
 		_player.state.boost_cooldown = 5.0
@@ -500,7 +629,7 @@ func _ready_walk(name: String) -> void:
 
 
 # Sable's Rope Anchor knob (winch_mount): winching a world line up to a wall with Ctrl plants the
-# pylon there. Q no longer reaches it. Off, the same winch plants nothing.
+# pylon there. Off, the same winch plants nothing.
 func _rope_anchor() -> void:
 	var kit = _player.kit
 	for knob_on in [false, true]:

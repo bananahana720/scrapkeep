@@ -19,11 +19,11 @@ const GLIDE := "glide"
 const SLAM := "slam"
 
 const SPECS := [
-	{"key": GRAPPLE, "label": "Grapple", "hint": "RMB fire/release · hold Q winches · wheel pays out"},
+	{"key": GRAPPLE, "label": "Grapple", "hint": "RMB fires and holds the line · release lets go · Ctrl hauls"},
 	{"key": PYLON, "label": "Pylon", "hint": "E near a steep face or a close wall hook; hold Space to slingshot"},
 	{"key": VAULT, "label": "Vault kick", "hint": "Space in the air at a steep face"},
-	{"key": SPRINT, "label": "Overdrive sprint", "hint": "hold RMB; crowd control slides off"},
-	{"key": BLINK, "label": "Smoke blink", "hint": "RMB; 8 m through your own smoke"},
+	{"key": SPRINT, "label": "Overdrive sprint", "hint": "hold Shift; crowd control slides off"},
+	{"key": BLINK, "label": "Smoke blink", "hint": "Shift; 8 m through your own smoke"},
 	{"key": GLIDE, "label": "Glide", "hint": "hold Space falling, after the air jump"},
 	{"key": SLAM, "label": "Smash", "hint": "Ctrl while airborne; plants on flat, launches on slopes"},
 ]
@@ -190,7 +190,7 @@ static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
 	kit.facts.append(["dashed", [dir]])
 
 
-# Rivet's overdrive sprint: RMB held spends a charge and runs up to its duration, or
+# Rivet's overdrive sprint: Shift held spends a charge and runs up to its duration, or
 # until released. While it runs the drive aims past cruise and crowd control slides off
 # (player_ball.crowd_control reads kit.sprinting).
 static func _sprint(kit, state, tuning, intent, body_state, step: float) -> void:
@@ -223,7 +223,7 @@ static func _sprint(kit, state, tuning, intent, body_state, step: float) -> void
 	state.cruise_boost = SPRINT_CRUISE if kit.sprinting else 1.0
 
 
-# Kest's smoke blink: RMB moves the ball BLINK_DISTANCE along the aim, stopping short of
+# Kest's smoke blink: Shift moves the ball BLINK_DISTANCE along the aim, stopping short of
 # the world, and turns its planar speed onto the aim, never slower than the dash
 # impulse. A fall is caught; a climb is kept. Dash Vane reaches further.
 static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
@@ -264,6 +264,7 @@ static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO, b
 	kit.anchor_offset = point - body.global_position if body != null else Vector3.ZERO
 	kit.line_state = LINE_LATCHED
 	kit.smash_left = 0.0
+	kit.slamming = false
 
 
 # Ctrl on a body line: the haul homes on the body at no less than the speed it starts at.
@@ -582,15 +583,14 @@ static func _keep_body_line(kit, tuning, body_state) -> void:
 static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	if not kit.hooked:
 		return
-	if not kit.on(GRAPPLE):
-		kit.drop_line("kit")
-		return
 	var origin: Vector3 = body_state.transform.origin
 	if kit.on_body:
 		if not _follow(kit, tuning, origin):
 			return
 		if kit.line_state == LINE_SMASH:
 			_haul(kit, tuning, intent, body_state, step)
+		elif intent.harpoon_held:
+			_winch_body(kit, tuning, body_state, step)
 		return
 	var to_anchor: Vector3 = kit.anchor - origin
 	var dist := to_anchor.length()
@@ -637,6 +637,20 @@ static func _follow(kit, tuning, origin: Vector3) -> bool:
 			kit.drop_line("passed")
 			return false
 	return true
+
+
+# Right mouse held on a latched body line reels the ball in. The line only pulls the ball.
+static func _winch_body(kit, tuning, body_state, step: float) -> void:
+	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
+	var dist := to_anchor.length()
+	if dist < 0.001:
+		return
+	var dir := to_anchor / dist
+	var v: Vector3 = body_state.linear_velocity
+	var head := clampf(1.0 - v.dot(dir) / tuning.f("reel_speed"), 0.0, 1.0)
+	v += dir * tuning.f("reel_force") * head * step
+	kit.rope = maxf(MIN_ROPE, minf(kit.rope, dist))
+	body_state.linear_velocity = v
 
 
 # The committed haul homes on the body and never slows the ball. A jump, boost or dash

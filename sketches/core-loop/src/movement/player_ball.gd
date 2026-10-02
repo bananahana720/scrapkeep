@@ -401,8 +401,7 @@ func cut_line(cause := "hold") -> void:
 	kit.drop_line(cause)
 
 
-# The wheel no longer reels: Ctrl is the only haul. game.gd's wheel handler still calls this
-# until the unit that removes the key registrations takes the call out.
+# Unused: the wheel does not move the line. game.gd's wheel handler still calls it.
 func reel_step(_metres: float) -> void:
 	pass
 
@@ -445,14 +444,17 @@ func _mark_slots() -> void:
 	smash.available = smash.active or not state.grounded
 
 
+func _charging() -> bool:
+	var special = abilities.gauge(AbilityState.SPECIAL)
+	return (special != null and special.charging) or kit.slingshot.charging
+
+
 # Right mouse is the line for every pilot, except while the special or the slingshot charges:
 # then its press cancels the charge and moves nothing. Shift is the one go verb of the
 # pilot (Sable's boost, Rivet's sprint, Kest's blink) and Ctrl hauls the line in.
 func _read_grammar() -> void:
-	var special = abilities.gauge(AbilityState.SPECIAL)
-	var charging: bool = (special != null and special.charging) or kit.slingshot.charging
 	_read_shift()
-	if intent.harpoon_pressed and charging:
+	if intent.harpoon_pressed and _charging():
 		intent.harpoon_pressed = false
 		intent.cancel_pressed = true
 	_read_ctrl()
@@ -481,7 +483,7 @@ func _burst_pilot() -> bool:
 
 func _read_shift() -> void:
 	if _burst_pilot():
-		intent.movement_pressed = intent.movement_pressed or intent.shift_pressed
+		intent.movement_pressed = intent.movement_pressed or (intent.shift_pressed and Harpoon.burst_ready(kit))
 		intent.movement_held = intent.movement_held or intent.shift_held
 		intent.movement_released = intent.movement_released or intent.shift_released
 		if intent.shift_pressed and not Harpoon.burst_ready(kit):
@@ -490,6 +492,8 @@ func _read_shift() -> void:
 		intent.boost_pressed = intent.boost_pressed or intent.shift_pressed
 		if intent.shift_pressed and state.boost_cooldown > 0.0:
 			_fail("boost", "cooldown")
+		elif intent.shift_pressed and kit.mounted:
+			_fail("boost", "busy")
 
 
 func _fail(verb: String, reason: String) -> void:
@@ -501,7 +505,8 @@ func _fail(verb: String, reason: String) -> void:
 func verb_ready(verb: String) -> bool:
 	match verb:
 		"harpoon":
-			return not _frozen and kit.on(Augments.GRAPPLE) and _harpoon_refusal() == ""
+			return not _frozen and kit.on(Augments.GRAPPLE) and not kit.hooked and not _charging() \
+					and _harpoon_refusal() == ""
 		"haul":
 			return kit.hooked and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)
 		"boost":
@@ -538,9 +543,7 @@ func _read_ctrl() -> void:
 	var on_body: bool = kit.hooked and kit.on_body
 	kit.winching = kit.hooked and not on_body and intent.brake_held
 	if edge and not _frozen:
-		if not kit.hooked:
-			_fail("haul", "no_line")
-		elif on_body and kit.line_state == Augments.LINE_LATCHED:
+		if on_body and kit.line_state == Augments.LINE_LATCHED:
 			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
 		elif on_body:
 			_fail("haul", "committed")
@@ -559,6 +562,18 @@ func _emit_line(id: String, target: Node3D, at: Vector3, cause := "", hold := 0.
 	events.line_state_changed.emit(id, target, at, cause)
 
 
+# Publishes how the line that stood has ended: a let-go or a break with its cause. A landing
+# or a reset publishes nothing here.
+func _publish_end() -> void:
+	_line_standing = false
+	var end: String = kit.line_end
+	kit.line_end = ""
+	if end == "let_go":
+		_emit_line("let_go", _line_target_alive(), _line_anchor, "", LET_GO_HOLD)
+	elif end != "landed" and end != "reset" and end != "":
+		_emit_line("broke", _line_target_alive(), _line_anchor, end, BROKE_HOLD)
+
+
 func _line_target_alive() -> Node3D:
 	return _line_target if is_instance_valid(_line_target) else null
 
@@ -570,6 +585,8 @@ func _line_target_alive() -> Node3D:
 func _publish_line(delta: float) -> void:
 	_line_hold = maxf(0.0, _line_hold - delta)
 	if kit.hooked:
+		if _line_standing and kit.line_end != "":
+			_publish_end()
 		var id := "smash_committed" if kit.line_state == Augments.LINE_SMASH \
 				else ("latched_body" if kit.on_body else "latched_world")
 		var target: Node3D = kit.anchor_body if kit.on_body else null
@@ -580,13 +597,7 @@ func _publish_line(delta: float) -> void:
 		kit.line_end = ""
 		return
 	if _line_standing:
-		_line_standing = false
-		var end: String = kit.line_end
-		kit.line_end = ""
-		if end == "let_go":
-			_emit_line("let_go", _line_target_alive(), _line_anchor, "", LET_GO_HOLD)
-		elif end != "landed" and end != "reset" and end != "":
-			_emit_line("broke", _line_target_alive(), _line_anchor, end, BROKE_HOLD)
+		_publish_end()
 	if _line_hold > 0.0:
 		return
 	var steady := "searching"
