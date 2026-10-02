@@ -100,8 +100,8 @@ func in_stage() -> bool:
 	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH
 
 
-# The boss module (ctx.boss, set by src/boss/boss.gd) runs the arena; without one the
-# run ends on the summary after stage 3, as it did before the boss existed.
+# The boss module (ctx.boss, set by src/boss/boss.gd) runs the arena; without one, or on
+# a stage table that names no boss, the run ends on the summary after the last stage.
 func _boss_module() -> Node:
 	if ctx.stages.BOSS == "":
 		return null

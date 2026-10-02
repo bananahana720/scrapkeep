@@ -161,7 +161,9 @@ func _ready() -> void:
 	ctx.run_log = run_log
 
 	world = _module(World)
-	preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(1))
+	for row in ctx.stages.DEFS:
+		if row["map"] == "spillway":
+			preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(row["stage"]))
 	combat = _module(Combat)
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
@@ -212,8 +214,6 @@ func _ready() -> void:
 	flow.show_title()
 
 
-# The fixed order: world first (it sets ctx.terrain), then combat (ctx.spawner), then
-# build and presentation, which only read.
 func _chosen_table():
 	var id := table
 	if id.is_empty():
@@ -230,6 +230,8 @@ func _chosen_table():
 	return TABLES[id]
 
 
+# The fixed order: world first (it sets ctx.terrain), then combat (ctx.spawner), then
+# build and presentation, which only read.
 func _module(script: GDScript) -> Node:
 	var module: Node = script.new()
 	add_child(module)
@@ -508,7 +510,7 @@ func _screen_key(key: int) -> bool:
 				flow.open_class_select()
 				return true
 			if key == KEY_T and flow.can_replay_final_stage():
-				flow.replay_stage(3)
+				flow.replay_stage(ctx.stages.COUNT)
 				return true
 		"summary":
 			if summary_guard_left > 0.0:

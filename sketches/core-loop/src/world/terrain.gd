@@ -43,6 +43,7 @@ var _parent: Node3D
 
 func _init(table = StageDefs) -> void:
 	for row in table.DEFS:
+		assert(MAPS.has(row["map"]), "terrain: stage %s names an unknown map '%s'" % [row["stage"], row["map"]])
 		maps.append(MAPS[row["map"]].new())
 
 

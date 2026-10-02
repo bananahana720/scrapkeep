@@ -71,9 +71,14 @@ func _slice_checks() -> void:
 		"slice terrain holds %d map(s), the active one is the gorge: %s" % [_game.ctx.terrain.maps.size(), _game.ctx.terrain.map().get_script() == Gorge])
 	_report("slice card", _game.hud.launch_card.title == "The Cable Reach",
 		"stage card reads '%s'" % _game.hud.launch_card.title)
+	_report("slice scenery", _game.ctx.terrain.geometry_root(1).get_node_or_null("SpillwayScenery") == null,
+		"the Reach's root carries no Spillway dam")
 	var warden: Node3D = flow.warden
-	_report("slice warden", is_instance_valid(warden) and warden.plating == stage_one["warden_plating"] and warden.max_hp == stage_one["warden_hp"],
-		"warden plating %.0f hp %.0f against stage 1's %.0f and %.0f" % [warden.plating, warden.max_hp, stage_one["warden_plating"], stage_one["warden_hp"]])
+	if is_instance_valid(warden):
+		_report("slice warden", warden.plating == stage_one["warden_plating"] and warden.max_hp == stage_one["warden_hp"],
+			"warden plating %.0f hp %.0f against stage 1's %.0f and %.0f" % [warden.plating, warden.max_hp, stage_one["warden_plating"], stage_one["warden_hp"]])
+	else:
+		_report("slice warden", false, "no Warden stands on the slice's stage")
 
 	flow._finish_stage()
 	_report("slice ends won", flow.state_name() == "summary" and _won and _game.run.over and _boss.entries == 0,
@@ -87,3 +92,5 @@ func _default_checks() -> void:
 	_report("default maps", order, "terrain maps are spillway, gorge, weir in order: %s" % order)
 	_report("default count", _game.ctx.stages.COUNT == 3 and _game.ctx.stages == StageDefs,
 		"ctx.stages.COUNT is %d" % _game.ctx.stages.COUNT)
+	_report("default scenery", _game.ctx.terrain.geometry_root(1).get_node_or_null("SpillwayScenery") != null,
+		"the Spillway's root carries its dam")
