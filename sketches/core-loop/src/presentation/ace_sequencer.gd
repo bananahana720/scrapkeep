@@ -110,15 +110,33 @@ var pause_level := 1.0
 var _serial := 0
 
 
-func _init(manifest_path := MANIFEST) -> void:
+# Where the manifest is on disk: the editor or source tree path first, then the sidecar
+# music_ace/ folder beside the executable (an exported game keeps res:// inside its pack,
+# so the stems ship beside it, scripts/sketch-export.mjs). "" when neither exists.
+static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
+	var source := ProjectSettings.globalize_path(manifest_path)
+	if FileAccess.file_exists(source):
+		return source
+	var prefix := "res://assets/music_ace/"
+	if manifest_path.begins_with(prefix):
+		var base := sidecar_dir if sidecar_dir != "" else OS.get_executable_path().get_base_dir()
+		var sidecar := base.path_join("music_ace").path_join(manifest_path.trim_prefix(prefix))
+		if FileAccess.file_exists(sidecar):
+			return sidecar
+	return ""
+
+
+func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	rate_scale = AudioServer.get_mix_rate() / float(RATE)
-	var path := ProjectSettings.globalize_path(manifest_path)
-	if not FileAccess.file_exists(path):
-		missing = path
+	var path := resolve_manifest(manifest_path, sidecar_dir)
+	if path == "":
+		missing = ProjectSettings.globalize_path(manifest_path)
+		_report()
 		return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not parsed is Dictionary or not parsed.has("clips"):
 		missing = path + " (unreadable)"
+		_report()
 		return
 	manifest = parsed
 	clips = manifest["clips"]
@@ -133,16 +151,25 @@ func _init(manifest_path := MANIFEST) -> void:
 			var file := dir.path_join(String(clip["files"][stem]))
 			if not FileAccess.file_exists(file):
 				missing = file
+				_report()
 				return
 			var stream := AudioStreamOggVorbis.load_from_file(file)
 			if stream == null:
 				missing = file + " (not Ogg Vorbis)"
+				_report()
 				return
 			stream.loop = bool(clip["loop"])
 			stream.loop_offset = float(clip["loop_offset"]) / RATE
 			streams[file] = stream
 			clip["paths"] = clip.get("paths", {})
 			clip["paths"][stem] = file
+	_report()
+
+
+# --ace-check: one line saying whether the band found its stems (the export proof reads it).
+func _report() -> void:
+	if "--ace-check" in OS.get_cmdline_args() or "--ace-check" in OS.get_cmdline_user_args():
+		print("ACE_CHECK ready=%s clips=%d streams=%d missing=%s" % [ready(), clips.size(), streams.size(), missing])
 
 
 func ready() -> bool:
