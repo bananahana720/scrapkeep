@@ -33,7 +33,7 @@ function git(cwd, ...args) {
 
 mkdirSync(main, { recursive: true });
 git(main, "init", "-q", "-b", "trunk");
-sketches(main, ["ball-lab", "core-loop"]);
+sketches(main, ["ball-lab", "core-loop", "cable-bench"]);
 cpSync(scripts, path.join(main, "scripts"), { recursive: true });
 git(main, "add", "-A");
 git(main, "commit", "-q", "-m", "fixture");
@@ -41,7 +41,9 @@ const v3 = path.join(scratch, "core-loop-v3");
 const plan = path.join(scratch, "plan-abc");
 git(main, "worktree", "add", "-q", "-b", "v3", v3);
 git(main, "worktree", "add", "-q", "-b", "plan", plan);
-for (const tree of [v3, plan]) {
+const job = path.join(scratch, "job-0123abcd");
+git(main, "worktree", "add", "-q", "-b", "job", job);
+for (const tree of [v3, plan, job]) {
   sketches(tree, ["core-loop", "ball-lab", "cable-bench"]);
 }
 
@@ -90,4 +92,31 @@ test("a name that matches nothing fails with a list", () => {
   assert.equal(result.status, 2);
   assert.match(result.stderr, /No sketch matches "no-such-sketch"/);
   assert.match(result.stderr, /plan-abc/);
+});
+
+test("<worktree>/core-loop opens that worktree's core-loop, as at the base", () => {
+  const { result, line } = opened(scratch, "plan-abc/core-loop");
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(line.includes(path.join(plan, "sketches", "core-loop")), line);
+});
+
+test("<main checkout>/core-loop opens the main checkout's core-loop", () => {
+  const { result, line } = opened(plan, "main/core-loop");
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(line.includes(path.join(main, "sketches", "core-loop")), line);
+});
+
+test("job-<hex>/core-loop opens that job's core-loop", () => {
+  const { result, line } = opened(scratch, "job-0123abcd/core-loop");
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(line.includes(path.join(job, "sketches", "core-loop")), line);
+});
+
+test("an ambiguous name suggests the nearest copy first", () => {
+  const inside = opened(plan, "cable");
+  assert.equal(inside.result.status, 2);
+  assert.match(inside.result.stderr, /Most likely: scrapkeep plan-abc\/cable-bench/);
+  const outside = opened(scratch, "cable");
+  assert.equal(outside.result.status, 2);
+  assert.match(outside.result.stderr, /Most likely: scrapkeep main\/cable-bench/);
 });

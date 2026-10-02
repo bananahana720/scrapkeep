@@ -179,7 +179,9 @@ export function currentTree(repoRoot, cwd) {
 // only when no sketch has that directory name anywhere.
 export function resolve(entries, name, cwdTree = null) {
   const term = name.toLowerCase();
-  const exact = entries.filter((entry) => entry.id.toLowerCase() === term);
+  const exact = entries.filter(
+    (entry) => entry.id.toLowerCase() === term || `${entry.tree}/${entry.sketch}`.toLowerCase() === term,
+  );
   const local = entries.filter(
     (entry) => entry.sketch.toLowerCase() === term && cwdTree !== null && entry.treePath === cwdTree,
   );
@@ -842,9 +844,21 @@ function reportAmbiguity(name, hits, entries = []) {
     }
   } else {
     const term = name.toLowerCase();
+    const here = currentTree(root, process.cwd());
+    const isExact = (entry) => entry.id.toLowerCase() === term || entry.sketch.toLowerCase() === term;
+    const nearness = (entry) => {
+      if (here !== null && entry.treePath === here) {
+        return 0;
+      } else if (entry.main) {
+        return 1;
+      } else {
+        return 2;
+      }
+    };
+    const byNearness = (a, b) => nearness(a) - nearness(b);
     const ranked = [
-      ...hits.filter((entry) => entry.id.toLowerCase() === term || entry.sketch.toLowerCase() === term),
-      ...hits.filter((entry) => entry.id.toLowerCase() !== term && entry.sketch.toLowerCase() !== term),
+      ...hits.filter(isExact).sort(byNearness),
+      ...hits.filter((entry) => !isExact(entry)).sort(byNearness),
     ];
     console.error(`"${name}" matches more than one sketch:`);
     for (const entry of ranked.slice(0, 6)) {

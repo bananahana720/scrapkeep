@@ -188,6 +188,7 @@ func _stage(index: int) -> Dictionary:
 			"events_won": [],
 			"packs": [],
 			"causes": {},
+			"attempts": 0,
 		}
 	return _stages[index]
 
@@ -200,9 +201,14 @@ func _ticks() -> int:
 	return int(round(run.stage_time * Engine.physics_ticks_per_second))
 
 
-func _on_stage_entered(stage: int, _retry: bool) -> void:
+func _on_stage_entered(stage: int, retry: bool) -> void:
 	_in_arena = false
 	_dirty = true
+	var row := _stage(stage)
+	row["attempts"] = int(row["attempts"]) + 1
+	if retry:
+		row["packs"] = []
+		row["causes"] = {}
 	if _traversal == null and player != null and player.get("tuning") != null:
 		_traversal = Traversal.new(Engine.physics_ticks_per_second, player.tuning.f("cruise"))
 	if _traversal != null:
@@ -266,12 +272,12 @@ func _on_beacon_unsealed(stage: int) -> void:
 
 
 func _on_pack_arrived(faction: String, _at: Vector3, _kinds: Array) -> void:
-	if not _record.is_empty():
+	if not _record.is_empty() and not _in_arena:
 		_stage_list("packs").append(faction)
 
 
 func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
-	if not _record.is_empty():
+	if not _record.is_empty() and not _in_arena:
 		var causes: Dictionary = _stage(run.stage)["causes"]
 		causes[id] = int(causes.get(id, 0)) + 1
 
@@ -295,7 +301,7 @@ func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> voi
 
 
 # Brings a stage's posture block up to date: chunks lost and glances from the Warden's
-# own state (glances are read from its posture, which no bus signal carries), and the
+# own accessors (glances move no bar, so no bus signal carries them), and the
 # fight's length from the first posture gain to the break, or to now while it is open.
 func _close_posture(stage: int) -> void:
 	var row := _stage(stage)
@@ -305,9 +311,7 @@ func _close_posture(stage: int) -> void:
 	var warden = _posture_wardens.get(stage)
 	if is_instance_valid(warden):
 		posture["chunks_lost"] = maxi(int(posture["chunks_lost"]), BossPosture.CHUNKS - warden.chunks_left())
-		var state = warden.get("_posture")
-		if state != null:
-			posture["glances"] = maxi(int(posture["glances"]), int(state.glances))
+		posture["glances"] = maxi(int(posture["glances"]), warden.glances())
 	var broke = row["ticks_to_warden_break"]
 	var end: int = int(broke) if broke != null else _ticks()
 	posture["fight_ticks"] = maxi(0, end - int(_posture_starts[stage]))

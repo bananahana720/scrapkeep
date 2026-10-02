@@ -536,6 +536,11 @@ func chunks_left() -> int:
 	return _posture.chunks if _posture != null else 0
 
 
+# Hits the rule counted as glances so far; 0 under the plating fight.
+func glances() -> int:
+	return _posture.glances if _posture != null else 0
+
+
 func chunk_cracked() -> bool:
 	return _posture != null and _posture.cracked
 

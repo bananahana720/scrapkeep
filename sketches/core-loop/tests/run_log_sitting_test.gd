@@ -70,6 +70,17 @@ func _matched_force() -> float:
 	return force
 
 
+# One ram whose punch sits under the glance line, so the rule counts a glance: a light
+# ball (the heft override), then the usual one back.
+func _glance() -> void:
+	_combat.heft_override = 0.05
+	var punch: float = _combat.punch_of("ram", 1.0)
+	_combat.strike(_warden, "ram", 1.0)
+	await physics_frame
+	_combat.heft_override = 1.0
+	_report("the glancing ram is under the line", punch <= PLATING * BossPosture.MULT_MIN, "punch %.2f of %.1f" % [punch, PLATING])
+
+
 func _ram() -> void:
 	_combat.strike(_warden, "ram", _matched_force())
 	await physics_frame
@@ -164,6 +175,7 @@ func _run() -> void:
 	_hold_synergy()
 	_combat.spawn_enemy("chaser", _warden.global_position + Vector3(0.0, 0.0, 3.0))
 	await _frames(2)
+	await _glance()
 	await _fill()
 	await _seconds(BossPosture.STAGGER_SECONDS + 0.5)
 	_player.reset_to(_ground(OUT))
@@ -184,13 +196,42 @@ func _run() -> void:
 	_report("the record names the table", line.get("table") == "slice", "table %s" % line.get("table"))
 	_report("two staggers", _staggers_seen == 2 and posture.get("staggers") == 2, "bus %d, record %s" % [_staggers_seen, posture.get("staggers")])
 	_report("one chunk lost", lost == 1 and posture.get("chunks_lost") == 1, "Warden lost %d, record %s" % [lost, posture.get("chunks_lost")])
-	_report("glances and fight ticks", posture.has("glances") and int(posture.get("fight_ticks", 0)) > 0, "posture %s" % [posture])
+	_report("one glance is recorded", posture.get("glances") == 1, "record %s" % [posture.get("glances")])
+	_report("fight ticks", int(posture.get("fight_ticks", 0)) > 0, "posture %s" % [posture])
+	_report("a first try is attempt 1", row.get("attempts") == 1, "attempts %s" % [row.get("attempts")])
 	_report("the pack is in the row", not _packs_seen.is_empty() and row.get("packs") == _packs_seen, "bus %s, record %s" % [_packs_seen, row.get("packs")])
 	_report("the synergy count matches the bus", _fired > 0 and int(row.get("causes", {}).get(SYNERGY, 0)) == _fired, "bus %d, record %s" % [_fired, row.get("causes")])
+	await _retry_row()
 	_game.free()
 	await _default_table()
 	print("run_log_sitting_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
+
+
+# A row describes its last attempt: a retry clears the packs and causes with the posture
+# block and counts the attempt, and what fires in the boss arena is not the stage's.
+func _retry_row() -> void:
+	var events = _game.events
+	events.pack_arrived.emit("fleet", Vector3.ZERO, [])
+	events.cause_fired.emit("old_cause", null, Vector3.ZERO)
+	_game.flow.retry_stage()
+	await _frames(2)
+	events.pack_arrived.emit("raid", Vector3.ZERO, [])
+	events.cause_fired.emit("new_cause", null, Vector3.ZERO)
+	events.stage_content_cleared.emit("arena")
+	events.pack_arrived.emit("arena_pack", Vector3.ZERO, [])
+	events.cause_fired.emit("arena_cause", null, Vector3.ZERO)
+	_game.flow.new_run()
+	var line := _last_line()
+	var row: Dictionary = {}
+	for one in line.get("stages", []):
+		row = one
+		break
+	_report("a retry clears the old packs and causes", row.get("packs") == ["raid"] and row.get("causes", {}).size() == 1 and int(row.get("causes", {}).get("new_cause", 0)) == 1,
+		"packs %s, causes %s" % [row.get("packs"), row.get("causes")])
+	_report("a retry is attempt 2", row.get("attempts") == 2, "attempts %s" % [row.get("attempts")])
+	_report("arena packs and causes stay out of the stage row", not ("arena_pack" in row.get("packs", [])) and not row.get("causes", {}).has("arena_cause"),
+		"packs %s, causes %s" % [row.get("packs"), row.get("causes")])
 
 
 func _default_table() -> void:
