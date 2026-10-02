@@ -6,7 +6,7 @@ const Bay := preload("res://src/world/bay.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # The workshop screens in Moss's real bay (v2 W8), armed as in play, through world's own
-# hooks: stage 2's Warden gates, the barge docked, the ball rolled into the cradle.
+# hooks: stage 1's Warden gates (world-one builds open the pick at the stage-1 visit), the barge docked, the ball rolled into the cradle.
 #   - The catch opens the next upgrade pick over the throw, paused, and Moss's greeting
 #     (world.bay_bark) is up in his bubble behind it.
 #   - A key takes the pick and the throw carries on aboard.
@@ -58,7 +58,7 @@ func _process(delta: float) -> bool:
 			_game.flow.choose_class(0)
 			player.tree.pick(player.tree.offered(player.tree.class_id, 1)[0]["id"])
 			_ws.armed = true
-			_game.flow.enter_stage(2, Vector3.ZERO, false)
+			_game.flow.enter_stage(1, Vector3.ZERO, false)
 			_next("beacon")
 		"beacon":
 			if _clock < 0.1:

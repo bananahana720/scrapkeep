@@ -15,7 +15,7 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - The reroll by keys and a sell by click change scrap and parts as their records say.
 #   - The waiting pick's plate opens the pick in the counter's place and hands back.
 #   - T plays the six beats with rising exasperation, then the restart, and once the ball
-#     is heavy enough the relent, which unlocks the hook.
+#     is heavy enough (scrap mass; under armour parts add no heft) the relent, which unlocks the hook.
 #   - Esc leaves: the ball rolls again; a counter closed mid slide-in keeps no focus.
 
 const CALM_BUDGET := 40
@@ -173,7 +173,7 @@ func _process(_delta: float) -> bool:
 				var locked: String = hook.state() if hook != null else "none"
 				var guard := 0
 				while _game.run.heft_class() < _shop.top["lock_class"] and guard < 60:
-					_game.run.add_part("boost_coil", "test")
+					_game.run.add_scrap(100, Vector3.ZERO)
 					guard += 1
 				Push.key(root, KEY_T)
 				hook = _ws.counter.tile_for("top")

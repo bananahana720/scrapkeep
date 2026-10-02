@@ -69,9 +69,9 @@ func _check_purchase() -> void:
 	var mass_before: float = run.mass
 	var spent: bool = run.spend_scrap(40)
 	run.add_part("slag_rounds", "fabricator")
-	_report("purchase compacts", spent and _build.accretion.chunk_count() >= chunks_before and run.heft() > heft_before
+	_report("purchase compacts", spent and _build.accretion.chunk_count() >= chunks_before and is_equal_approx(run.heft(), heft_before)
 			and is_equal_approx(run.mass, mass_before) and run.scrap == 80,
-		"add_scrap(120) then a 40-scrap purchase: chunks %d -> %d, heft %.3f -> %.3f, mass %.0f -> %.0f, wallet %d"
+		"add_scrap(120) then a 40-scrap purchase (a part adds no heft under armour): chunks %d -> %d, heft %.3f -> %.3f, mass %.0f -> %.0f, wallet %d"
 			% [chunks_before, _build.accretion.chunk_count(), heft_before, run.heft(), mass_before, run.mass, run.scrap])
 
 

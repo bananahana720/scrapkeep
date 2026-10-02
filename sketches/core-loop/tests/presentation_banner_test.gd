@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 
-# The discovery banner never outlives its moment (visual QA frames 19-26: it stayed
+# The discovery banner (--discovery=banner, the variant cards replaced) never outlives its moment (visual QA frames 19-26: it stayed
 # pinned across the arena, death, victory and the summary). Through the real game on
 # a fake clock: it is gone 4 s after it appears, even with the tree paused; it clears
 # at once on a flow change, arena entry, death and run end; quick discoveries queue
@@ -28,6 +28,7 @@ func _process(_delta: float) -> bool:
 	match _step:
 		0:
 			_banner = _game.presentation.banner
+			_banner.cards = false
 			_banner.now_ms = func() -> int: return _fake_ms
 			_game.ctx.calm = true
 			_game.flow.press_start()

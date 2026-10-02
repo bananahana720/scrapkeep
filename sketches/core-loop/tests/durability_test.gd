@@ -38,14 +38,14 @@ func _run(armor: bool, wear := false) -> RunState:
 func _initialize() -> void:
 	_unit_checks()
 	var t := Tuning.new()
-	_check("flag defaults", not t.armor() and not t.wear_on() and t.base("route_seed") == 0.0 and t.base("start_mass") == 0.0,
+	_check("flag defaults", t.armor() and t.wear_on() and t.base("route_seed") == 0.0 and t.base("start_mass") == 0.0,
 		"scrap_mode %s, wear %s" % [t.option("scrap_mode"), t.option("wear")])
 	var applied := t.apply_args(PackedStringArray(["--scrap=armor", "--wear=on", "--route-seed=7", "--start-mass=200", "--scrap=bogus"]))
 	_check("flag parse", t.armor() and t.wear_on() and t.base("route_seed") == 7.0 and t.base("start_mass") == 200.0 and applied.size() == 4,
 		"applied %s; an unknown value is refused" % [applied])
 	var off := Tuning.new()
-	off.apply_args(PackedStringArray(["--wear=on"]))
-	_check("wear needs armour", not off.wear_on(), "--wear=on alone does not wear")
+	off.apply_args(PackedStringArray(["--scrap=off", "--wear=on"]))
+	_check("wear needs armour", not off.wear_on(), "--wear=on without armour does not wear")
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -254,6 +254,7 @@ func _physics_process(_delta: float) -> bool:
 				return false
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
+			_game.tuning.apply_args(PackedStringArray(["--scrap=off", "--wear=off"]))
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
 			_phase = "off"

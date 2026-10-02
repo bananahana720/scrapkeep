@@ -37,30 +37,30 @@ const SPECS := [
 	{"key": "loop_mode", "label": "Loop mode", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["v2", "drop", "laps"]},
 	# The durability prototype (DESIGN-NOTES, "Scrap as armour"): `--scrap=armor` makes mass a
 	# temporary health layer over the hull, `--wear=on` lets rolling friction wear it. Both
-	# default off, and off is the base game. `--route-seed=<n>` reseeds the run's streams and
+	# default on; `--scrap=off --wear=off` brings back the old base game. `--route-seed=<n>` reseeds the run's streams and
 	# `--start-mass=<n>` opens the run with that mass, so the three variants share a route.
-	{"key": "scrap_mode", "label": "Scrap mode", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "armor"]},
-	{"key": "wear", "label": "Scrap wear", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "scrap_mode", "label": "Scrap mode", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "armor"]},
+	{"key": "wear", "label": "Scrap wear", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "start_mass", "label": "Start mass", "min": 0.0, "max": 3000.0, "step": 10.0, "value": 0.0},
 	{"key": "route_seed", "label": "Route seed (0 = off)", "min": 0.0, "max": 999999.0, "step": 1.0, "value": 0.0},
 	{"key": "gun_role", "label": "Gun role", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["hold", "full"]},
-	# The music lab: the synth band, or the ACE takes on stage 1 (presentation/ace_sequencer.gd),
-	# and the Warden open's held breath in the ACE music.
-	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["synth", "ace"]},
+	# The music lab: the ACE takes on stage 1 (presentation/ace_sequencer.gd, the default), or the
+	# synth band, and the Warden open's held breath in the ACE music.
+	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["synth", "ace"]},
 	{"key": "breath", "label": "Breath", "min": 0.0, "max": 2.0, "step": 1.0, "value": 1.0, "options": ["raw", "hard", "gentle"]},
-	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["banner", "cards"]},
-	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["classic", "haze"]},
+	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
-	# alone. The hot-wired flags are registered here; their effects belong to later units.
-	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
-	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
-	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# alone. All three default on. The hot-wired flags are registered here; their effects belong to later units.
+	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	# The harpoon feel prototype (DESIGN-NOTES, "Harpoon and winch"): RMB fires a line for every pilot.
 	# `shot` hits what the centre ray hits; `lock` prefers an enemy inside harpoon_lock_deg. `self` always
 	# flies you in; `heft` splits the closing by weight against heft. `shift` puts the class burst on
-	# Shift when its charge is ready, `keep` moves it to C. Off is the base game.
-	{"key": "harpoon", "label": "Harpoon", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "shot", "lock"]},
+	# Shift when its charge is ready, `keep` moves it to C. Lock is the default; off is the old base game.
+	{"key": "harpoon", "label": "Harpoon", "min": 0.0, "max": 2.0, "step": 1.0, "value": 2.0, "options": ["off", "shot", "lock"]},
 	{"key": "harpoon_pull", "label": "Harpoon pull", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["self", "heft"]},
 	{"key": "harpoon_keys", "label": "Harpoon keys", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["shift", "keep"]},
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},

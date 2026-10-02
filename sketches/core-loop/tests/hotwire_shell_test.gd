@@ -107,6 +107,8 @@ func _game_checks() -> void:
 	var tuning = _game.tuning
 	var build = _game.build
 	run.mitigation = 0.0
+	tuning.set_option("scrap_mode", "off")
+	tuning.set_option("hotwire_shell", "off")
 	build.recompute()
 	var air_off: float = tuning.f("air_control")
 	var others_off := _tuning_snapshot()

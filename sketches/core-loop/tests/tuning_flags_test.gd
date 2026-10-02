@@ -28,6 +28,10 @@ const EXPECTED := {
 	"harpoon-keys": ["harpoon_keys", "keep", "bogus", "launch"],
 }
 
+# The lab's winners are the shipping defaults: a bare Tuning reports each one.
+const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "discovery": "cards", "telegraph": "haze",
+	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on", "harpoon": "lock"}
+
 var _failures := 0
 
 
@@ -61,6 +65,13 @@ func _initialize() -> void:
 	_check("haze name", Threat.TELEGRAPH_FLAG == "telegraph" and Tuning.FLAGS.has(Threat.TELEGRAPH_FLAG)
 		and Tuning.FLAGS[Threat.TELEGRAPH_FLAG][0] == LoopMode.TELEGRAPH_KEY and Tuning.new().options_of(LoopMode.TELEGRAPH_KEY).has("haze"),
 		"Painter.haze_on() reads --%s=haze, a row in the table" % Threat.TELEGRAPH_FLAG)
+	var bare := Tuning.new()
+	var off_default: Array = []
+	for key in DEFAULTS:
+		if bare.option(key) != DEFAULTS[key]:
+			off_default.append("%s=%s" % [key, bare.option(key)])
+	_check("winning defaults", off_default.is_empty() and bare.armor() and bare.wear_on() and bare.world_one() and bare.harpoon_on(),
+		"a bare Tuning reports all %d winners; off default: %s" % [DEFAULTS.size(), off_default])
 	print("tuning_flags_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
