@@ -38,6 +38,27 @@ If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
 
+## 9. Lab builds on main, verdict before the alpha program
+
+- **Date.** 1 October 2026. Dictated in the Claude desktop app, then answered as multiple-choice questions in the same session. No timed sitting was run for this entry.
+- **Build.** `sketches/core-loop/` on `main` at `f5848c7`, the merge of core-loop v3, the harpoon prototype and the bug hunt, with every lab flag off by default. The verdict is about the lab builds as a whole, not one launch.
+- **What the run log shows.** `user://runs.ndjson` was last written on 28 September 2026 at 20:42. Its two newest records are abandoned demolitions-caster runs with `loop_mode` v2. No drop, laps, armour or harpoon run is on record. The rulings below on those features are direction, not play verdicts. The first alpha checkpoint puts each of them in front of Andrew.
+- **Verdict.** "all in all, it's okay. It just it just feels like hollow and shallow and the gameplay is just not clicking after trying out uh, the different like toggleable features and changes we made and testable features that were like doing and working in the lab." Asked what is missing: "player direction is still weak too, im having a hard time getting clear feedback on my objectives gameplay wise and game session wide - enemy status, indicators, visual coherency/clarity/aesthetic & appealing design, the engaging reason why im choosing to spend time playing this game like fun, fluid, responsive and snappy controls or easy to learn hard to master game mechanics or game/story progression, character customization systems, sought out abilities/items/weapons to hunt or find, enemy challenges. basically - everything :/". He also ticked every listed gap: runs feel the same, the map doesn't matter, fights lack pressure, no world or arc. On the core feel he chose "The core feel isn't there yet", and marked all four axes as off: controls and camera, impact and feedback, direction and readability, the fight loop itself. On the controls he marked all four complaints: too many keys, ball handling, aim and camera, abilities lack snap.
+- **On the Warden loop.** Offered drop, laps or a redesign, he chose none of the lab loops: "Let's improve both the map design and the like warden slash and just any other boss that would be applicable for a world. I think we should really just have different themes and setting specific gameplay mechanics and there should be a reason for me to want to explore and use the environment in different ways as I traverse and have the ability and the flexibility to test out specific character abilities". And: "I would just want the world to enable the player to approach things from an epic action RPG perspective", with "a zonal open world environment where you could do different things that can be self-explanatory with like other side mini games or quests or secret Easter eggs that the player can use and discover and have a reason to like traverse". Then: "this is still a a rogue like or a rogue light but yeah with that action RPG gameplay feeling and mechanics".
+- **Rulings, as direction.**
+  - Scope: a full early-access alpha with three worlds. Spillway Works, then the Dig, then the Highdraft. Two big zones plus a world boss each.
+  - Run: one run crosses all three worlds, saved at each zone entrance.
+  - Roster: Sable at start; Rivet, Kest and Tally unlock.
+  - Harpoon: every pilot's right-click verb, with soft-lock.
+  - Lab extras (ACE music, thin-haze telegraphs, discovery cards, scrap armour with wear, two-pick builds, hot-wired shell): all in, tuned as needed.
+  - References: Risk of Rain 2, Gunfire Reborn, Monster Hunter, Elden Ring.
+  - Side content: combat challenges, contraption puzzles and secrets, camp quests with characters.
+  - Input: keyboard and mouse first, gamepad later.
+  - Checkpoints: main is pushed to the private repository at each one.
+- **On testing.** "Make sure we pay close attention to the testing methodology and tools that we like use. as well as like how we approach testing because um, it ends up being a really big bottleneck, at least in past sessions." He wants "consistent developmental uh, implementation speed uh, yeah, without the sacrifice of quality. Or having buggy insurmountable tech debt."
+- **Decided.** The world-one scope lock of 28 September is lifted. The alpha is built in `sketches/core-loop` under the light play lane. The core feel comes first: one zone that clicks, judged by his play, before any world two or three map or encounter is built.
+- **Next action.** The alpha program in [ALPHA-PLAN.md](../../sketches/core-loop/design-v3/ALPHA-PLAN.md). Checkpoint 1 is a click slice on the Cable Reach with two things to compare by play: the boss fight structure (Hunt or Duel) and the harpoon input (hold to reel or auto-winch). Its verdict becomes entry 10.
+
 ## 8. Core-loop v2 alpha candidate, first human play
 
 - **Date.** 28 September 2026. Dictated in the Claude desktop app after about 10 minutes of play.
