@@ -915,7 +915,7 @@ func _update_warden(rec: Dictionary) -> void:
 	rim.albedo_color = rim.emission
 	rim.emission_energy_multiplier = plate.emission_energy_multiplier if cued else 0.8
 	for seam in rec.seams:
-		seam.node.visible = seam.source.visible and not rec.get("hide_guard", false)
+		seam.node.visible = seam.source.visible
 	if not rec.jaws.is_empty():
 		_update_warden_open(rec)
 	_update_warden_chunks(rec)
@@ -1006,14 +1006,14 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 		_own_warden_heart(rec)
 
 
-# The jaw's guard strokes are neutral on the neutral plates and drew a white X across the ring,
-# and its old open-crack glyph would draw over the plates, so a posture Warden hides both. The
-# jaw's own lit seams would sit in the gaps between bands as a fifth thing to count, so they go
-# dark; the HUD plate keeps the guard and the bands carry the health.
+# The guard strokes (pinned by warden_posture_look_test) sit on the jaw faces the bands now
+# cover, so they lift above the plates. The jaw's old open-crack glyph would draw over the
+# plates and the bands carry the crack, so the glyph leaves the enemy's list and stays hidden.
+# The jaw's own lit seams would sit in the gaps between bands as a fifth thing to count, so
+# they go dark.
 func _clear_warden_jaw_faces(rec: Dictionary) -> void:
-	rec.hide_guard = true
 	for seam in rec.seams:
-		seam.node.visible = false
+		seam.node.position.z += WARDEN_BAND_OUT + 0.02
 	for crack in rec.cracks:
 		crack.visible = false
 		rec.warden._cracks.erase(crack)
