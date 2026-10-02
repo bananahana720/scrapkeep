@@ -43,6 +43,19 @@ So the program makes one zone click first, proves it with his play, then scales 
 
 These replace the world-one scope lock (ROADMAP, 2026-09-28) and the Bible's four-world line. Both get amended in the records unit.
 
+### Update after his lab play (playtest entry 10, 2026-10-01 evening)
+
+He played drop, laps and the harpoon build that evening. His opinion of the whole did not change. Six things did sharpen. The first four reorder the slice; the last two add two units to it.
+
+| What he said | What changes |
+| --- | --- |
+| He liked the v2 loop but could not tell how the Warden fight works, how much health it has, or how to beat it. | The slice's default fight is the v2 structure made readable (the posture chassis, the boss plate, state on the body). Hunt and Duel are the arms compared against it, so the `--variant=` row has three fight values. The boss plate (B3) moves up to land with the chassis (B0). |
+| The grapple hook with the homing smash was "super fun". | The harpoon ruling is now a play verdict. |
+| He cannot tell when he is hooked, grappling does not feel satisfying, and no keys are shown. | The wave after A1 is the harpoon and readability wave: line states with a visible latch, bite feedback from the impact table, and on-screen prompts for the next action read from the bindings table. |
+| The map is not fun to traverse, and traversal at speed is the point of the game. | The zone retrofit (Z3) must show a measured traversal line per pilot: a bot holds speed tier 2 or better along it with no dead stop, and harpoon anchors are spaced for a swing chain. It also authors a bay dock at each Warden site, after the bay failed to dock in his third run. |
+| Synergies "just happen": he cannot tell what he did or what it means, and the same holds for map mechanics. "There's no why." | New unit WY in the readability wave. When a synergy or a map mechanic fires, the two causes and the effect are shown where it happens (two icons, an arrow, three words or fewer), read from the event table, and the first firing opens its discovery card. A test walks every synergy row and every map mechanic row and fails on one with no callout. |
+| He liked that the enemy mechanics are fuller, but the enemies read as "amorphous blobs" and he cannot tell what does what. He wants recognisable designs and better animation. | New unit ER in the slice, ahead of the wind-up rows (WU). A read sheet for the Cable Reach roster: one silhouette and one wind-up pose per mechanic, drawn first and shown to Andrew before any model is built (the storyboard gate). The models and clips then follow the existing Blender recipe template. |
+
 ## Program shape
 
 The vehicle is `sketches/core-loop` under the light play lane. Nothing is promoted to `native/`. The integration branch is `proto/alpha`, cut from `f5848c7`. The coordinator alone merges to main.
@@ -70,6 +83,8 @@ Worlds two and three go greybox first, then art by layer. Past asset batches acc
 | --- | --- | --- |
 | Fight structure | **Hunt.** The Warden roams between three lairs on a telegraphed route. Zone toys hurt it (drop a tank on it, scald it, collapse a floor). Activities arm more toys. | **Duel.** A fixed arena built for the ball with swing pillars, ramps and a lift. Pilot verbs build posture. Zone growth and armed arena toys decide the pace. |
 | Harpoon input | **Hold to reel.** Press fires, hold reels, release flings. | **Auto-winch.** Press fires and a body line winches by itself. |
+
+After entry 10 the fight axis has a third value and it is the default: the v2 structure (find the Warden at its beacon and break it) on the readable posture chassis. Hunt and Duel are compared against it.
 
 Every other choice ships as one opinionated default, logged in `docs/decisions.tsv`.
 

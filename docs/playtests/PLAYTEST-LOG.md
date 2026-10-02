@@ -38,6 +38,32 @@ If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
 
+## 10. Lab loops and the harpoon, played on record
+
+- **Date.** 1 October 2026, evening, Phoenix time. Three launches while alpha wave A0 ran. Verdict dictated in the Claude desktop app afterwards. No timed sitting.
+- **Builds.** `scrapkeep core-loop-v3` (`proto/core-loop-v3` at `41108be`) with `--loop=drop --gun=hold`, then with `--loop=laps`. `scrapkeep core-loop-v3-harpoon` (`proto/core-loop-v3-harpoon` at `03acb6c`) with `--loop=drop --harpoon=lock`.
+- **What the run log shows** (`user://runs.ndjson`, records 6 to 8).
+
+  | Run | Pilot | Loop recorded | Ended | Log facts |
+  | --- | --- | --- | --- | --- |
+  | `1790907903` | Sable | drop, gun hold | abandoned in stage 1 | Warden engaged at tick 13,138. No damage to the Warden and no drop landed. |
+  | `1790908292` | Rivet | laps, gun full | abandoned in the arena at Brindle phase 3 | Three stages cleared with no deaths. Warden engaged at ticks 14,212, 1,978 and 502. Heft 3.0 to 7.7. |
+  | `1790909342` | Kest | v2, gun full | abandoned in stage 2 | Launched with `--loop=drop`, recorded as v2. Warden engaged at tick 1,990 and broken at 19,521. Ramming is 1,174 of 2,151 damage. |
+
+  The run log has no harpoon field, so harpoon use is known only from his words below.
+- **Verdict.** "I don't know if my opinion changes too much." The one clear win: "I really did like the grapple hook with the homing smash. That was super fun. So if anything, I think that idea is even further solidified."
+- **On the Warden.** "I did like the V2 loop with, I don't know, I just don't understand how the warden fight works. Like, there's no indication of me being able to do health damage or how much health damage it has." And: "visually, there's no clear indication of how I'm supposed to defeat the boss."
+- **On the map.** "the map is just not fun to traverse, which is the whole point of the game is high speed traversal with high momentum."
+- **On the harpoon's feedback.** It needs refining: "I don't even know visually if I'm hooked up and it's not very clear. And not satisfying to grapple to anything and there's no keys."
+- **Request.** "more on display indicators and feedback would be great to just see in the moment instead of like guessing or remembering how mechanics works."
+- **On synergies.** "synergies have no meaning to me either. They just happen, but I don't know what the heck they mean other than, like, I guess there's an achievement, but I don't even know what I did." And: "There's no why, I guess. It just happens. And that's, like, a through line through a lot of the game, some of the game mechanics that are in the map."
+- **On enemies.** "The enemy mechanics seem more uh, filled up too, though. I, I did like that." He wants "the designs to be more engaging and have cooler animations and be something that I could like kind of like recognize in terms of mechanics. Because right now they're just like amorphous blobs everything, and I don't even I can't attribute what does what."
+- **Defects seen in his terminal** (third run).
+  - `bay: no clear dock beside these gates; the bay stays away this time`. Reward gates open at the ball's position when the Warden breaks (`src/build/build.gd:745`), so a kill near a ledge leaves the workshop no dock and the stage's shop is skipped without a word.
+  - `ERROR: BUG, indexing did not unpair geometries from light`, twice (Godot `renderer_scene_cull.cpp`). Renderer only; headless tests cannot see it.
+- **Decided.** The harpoon ruling of entry 9 is now a play verdict. The click slice keeps the v2 structure as its default fight, made readable, with Hunt and Duel as the arms to compare against it. Harpoon feedback (a visible latch, a satisfying bite, on-screen keys for the next action) and traversal flow on the Cable Reach move to the front of the slice. "No why" is treated as one problem across synergies, map mechanics and enemies: a thing that fires shows its cause and its effect where it happens, and an enemy's body says what it does.
+- **Next action.** Wave A1 as planned. The wave after it is the harpoon and readability wave: harpoon states and feedback, on-screen prompts from the bindings table, enemy and boss state on the body and the plate, and a cause-and-effect callout for synergies. The zone retrofit gains a measured traversal line per pilot and a guaranteed bay dock at each Warden site. The slice's enemy roster gets a read sheet (one silhouette and one wind-up per mechanic) that Andrew sees before any model is built. Checkpoint 1's verdict becomes entry 11.
+
 ## 9. Lab builds on main, verdict before the alpha program
 
 - **Date.** 1 October 2026. Dictated in the Claude desktop app, then answered as multiple-choice questions in the same session. No timed sitting was run for this entry.
@@ -57,7 +83,7 @@ After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.
   - Checkpoints: main is pushed to the private repository at each one.
 - **On testing.** "Make sure we pay close attention to the testing methodology and tools that we like use. as well as like how we approach testing because um, it ends up being a really big bottleneck, at least in past sessions." He wants "consistent developmental uh, implementation speed uh, yeah, without the sacrifice of quality. Or having buggy insurmountable tech debt."
 - **Decided.** The world-one scope lock of 28 September is lifted. The alpha is built in `sketches/core-loop` under the light play lane. The core feel comes first: one zone that clicks, judged by his play, before any world two or three map or encounter is built.
-- **Next action.** The alpha program in [ALPHA-PLAN.md](../../sketches/core-loop/design-v3/ALPHA-PLAN.md). Checkpoint 1 is a click slice on the Cable Reach with two things to compare by play: the boss fight structure (Hunt or Duel) and the harpoon input (hold to reel or auto-winch). Its verdict becomes entry 10.
+- **Next action.** The alpha program in [ALPHA-PLAN.md](../../sketches/core-loop/design-v3/ALPHA-PLAN.md). Checkpoint 1 is a click slice on the Cable Reach with two things to compare by play: the boss fight structure (Hunt or Duel) and the harpoon input (hold to reel or auto-winch). Its verdict becomes entry 11; entry 10 is the lab play of the same evening.
 
 ## 8. Core-loop v2 alpha candidate, first human play
 
