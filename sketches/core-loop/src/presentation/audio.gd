@@ -16,6 +16,7 @@ const Augments := preload("res://src/movement/augments.gd")
 # tells an ancient from the Fleet.
 const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
@@ -87,6 +88,12 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "kill_pop", "part_get", "c
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring"]
 # Event progress until the spine publishes event_progress(event_id, fraction): the
 # seconds each participatory event usually takes (REQUEST in the hand-back).
+# The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
+# hit plays the note of the guard's quarter, the stagger sounds all four with the open
+# row's sound, a shattered chunk plays its row's sound over a low hit.
+const POSTURE_QUARTER := 25.0
+const POSTURE_PHRASE := 0
+const SHATTER_LOW := "chunk_low"
 const EVENT_SECONDS := {"hold_the_relay": 18.0, "surge_run": 22.0, "scrap_stampede": 16.0}
 
 # v2 W3 characters: the class-ability facts, heard through their event rows.
@@ -101,6 +108,8 @@ const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
 	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
 
 var ctx
+# Per posture Warden, the stagger and chunk count the last posture_changed showed.
+var _posture_seen := {}
 var engine: MusicEngine
 # The ACE band (--music=ace): stage 1 plays the ACE takes through the sequencer and the
 # synth band stays muted; every other stage, and any missing file, plays the synth.
@@ -242,6 +251,8 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.TRIM_DB:
 		if not id in ids:
 			ids.append(id)
+	for midi in SfxBank.break_midis(POSTURE_PHRASE):
+		ids.append(SfxBank.cause_note_id(midi))
 	for cause in EventKinds.CAUSE_ROWS:
 		for note in EventKinds.cause_motif(cause):
 			var id := SfxBank.cause_note_id(Harmony.note_midi(String(note)))
@@ -844,6 +855,7 @@ func wire_optional() -> void:
 	_listen(events, "heft_class_dropped", _on_heft_dropped)
 	_listen(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
 	_listen(events, "strike_deflected", _on_deflected)
+	_listen(events, "posture_changed", _on_posture_changed)
 	_listen(events, "threat_rose", func(tier: int):
 		on_beat("threat_rose", minf(tier, 3) * 1.0)
 		engine.set_fleet_ticks(tier)
@@ -1522,7 +1534,56 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 		return
 	var contact := kind in ["stomp", "ram", "slam"]
 	var db := lerpf(-6.0, 1.0, clampf(force / 30.0, 0.0, 1.0)) if contact else -5.0
+	if _on_posture_fight(enemy):
+		play("enemy_struck", db, _posture_note_ratio(enemy))
+		return
 	play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+
+
+func _on_posture_fight(enemy: Node3D) -> bool:
+	return is_instance_valid(enemy) and enemy.has_method("fight") and enemy.fight() == "posture" \
+			and ctx.flow != null and ctx.flow.get("warden") == enemy
+
+
+# The pitch of the phrase's note for the guard's quarter: under 25 the first, 75 and over
+# the fourth, so each hit sounds one step higher than the last that stayed in its quarter.
+func _posture_note_ratio(enemy: Node3D) -> float:
+	var midis := SfxBank.break_midis(POSTURE_PHRASE)
+	var quarter := clampi(int(enemy.posture() / POSTURE_QUARTER), 0, midis.size() - 1)
+	return Harmony.ratio(midis[quarter] - Harmony.HOME)
+
+
+# The stagger lands the chord and cuts the charge it cancelled; a shattered chunk is its
+# row's sound over a low hit. A draining guard changes posture and makes no sound.
+func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
+	if not is_instance_valid(enemy):
+		return
+	var id := enemy.get_instance_id()
+	var seen: Array = _posture_seen.get(id, [false, BossPosture.CHUNKS])
+	var chunks: int = enemy.chunks_left()
+	_posture_seen[id] = [staggered, chunks]
+	if staggered and not seen[0]:
+		_stagger_chord()
+		_cut_charge()
+	if chunks < int(seen[1]):
+		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
+		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
+
+
+func _stagger_chord() -> void:
+	var key := Harmony.ratio(live_key())
+	for midi in SfxBank.break_midis(POSTURE_PHRASE):
+		play("posture_changed", 6.0, key, "SFX", SfxBank.cause_note_id(midi))
+	play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("open"), cue_context()))
+
+
+# A stagger cancels the pulse the Warden was charging, and vent_erupted never comes to end
+# the cue that began with it.
+func _cut_charge() -> void:
+	var sound := Rows.sound("vent_charging", cue_context())
+	stop(sound)
+	engine.set_reactor_pedal(false)
+	cue_log.append(["posture_changed", sound, "stop", engine.clock, 1.0, 0.0])
 
 
 # Hits on the Warden climb the pentatonic as its integrity falls; the unseal resolves

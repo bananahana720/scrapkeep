@@ -92,7 +92,18 @@ const TRIM_DB := {
 	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
+	"chunk_low": -2.0,
 }
+# The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
+# one per quarter, then the same notes together when it staggers. Variant 0 is wired in;
+# 1 and 2 are sketches for the owner's ear (tools/sound_sketches.gd). notes are note names
+# read through Harmony.note_midi; gaps are the seconds between one note and the next in
+# the sketch, and chord_gap the pause before the chord.
+const BREAK_PHRASES := [
+	{"notes": ["D4", "F4", "A4", "D5"], "gaps": [0.16, 0.16, 0.16], "chord_gap": 0.3},
+	{"notes": ["D4", "G4", "C5", "F5"], "gaps": [0.2, 0.2, 0.2], "chord_gap": 0.3},
+	{"notes": ["D4", "F4", "G4", "A4"], "gaps": [0.26, 0.17, 0.11], "chord_gap": 0.42},
+]
 # A synergy's motif is three of these, one baked note per midi number (cause_note_<midi>).
 const CAUSE_NOTE := "cause_note_"
 const CAUSE_NOTE_DB := -8.0
@@ -112,6 +123,14 @@ const THEMED := ["synergy_fanfare"]
 static var _streams := {}
 # Set on the main thread to abandon a startup bake; the worker checks it between ids.
 static var bake_cancel := false
+
+
+# The midi numbers of a break phrase's four notes, lowest first.
+static func break_midis(variant := 0) -> Array:
+	var midis: Array = []
+	for note in BREAK_PHRASES[variant]["notes"]:
+		midis.append(Harmony.note_midi(String(note)))
+	return midis
 
 
 static func has_recipe(id: String) -> bool:
@@ -356,6 +375,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _zap_hum()
 		"shatter":
 			return _shatter()
+		"chunk_low":
+			return _mix([[_tone(0.55, 120.0, 36.0, "sine", 7.0), 0, 1.0], [_tone(0.3, 75.0, 40.0, "square_dark", 12.0), 0, 0.3],
+				[_noise(0.08, 700.0, 200.0, 40.0), 0, 0.5]])
 		"stage_fade":
 			return _stage_fade()
 		"vault_rise":

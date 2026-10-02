@@ -16,6 +16,11 @@ const Synth := preload("res://src/presentation/synth.gd")
 const DEFAULT_OUT := "../../artifacts/local/harpoon/sounds"
 const NOTE_GAP := 0.2
 const HUM_SECONDS := 3.0
+# The break phrase's pauses: after the chord before the shatter, and the level at which the
+# phrase's hits sit under the priority of an enemy_struck cue in the game.
+const SHATTER_GAP := 0.38
+const HIT_PRIORITY_DB := -3.0
+const BREAK_PEAK := 0.95
 
 
 func _initialize() -> void:
@@ -41,6 +46,8 @@ func _sketches() -> Array:
 		var letter := char(97 + variant)
 		list.append(["bite-%s" % letter, _at_level(SfxBank.bite(variant), "line_bite")])
 		list.append(["crack-%s" % letter, _at_level(SfxBank.crack(variant), "smash_crack")])
+	for variant in SfxBank.BREAK_PHRASES.size():
+		list.append(["break-%s" % char(97 + variant), _break(variant)])
 	list.append(["clunk", _at_level(SfxBank.clunk(), "anchor_clunk")])
 	list.append(["dry-tick", _at_level(SfxBank.samples("dry_tick").duplicate(), "dry_tick")])
 	list.append(["zip", _at_level(SfxBank.zip(), "line_zip")])
@@ -70,6 +77,51 @@ static func _hum() -> PackedFloat32Array:
 		phase = fposmod(phase + ratio, cycle.size())
 		buf[i] = cycle[int(phase)]
 	return _at_level(buf, "line_hum")
+
+
+# A bank cue resampled to a pitch ratio, the way playing it at that pitch does.
+static func _pitched(buf: PackedFloat32Array, ratio: float) -> PackedFloat32Array:
+	var n := int(buf.size() / ratio)
+	var out := Synth.buffer(n)
+	for i in n:
+		var at := i * ratio
+		var low := int(at)
+		var next := mini(low + 1, buf.size() - 1)
+		out[i] = lerpf(buf[low], buf[next], at - low)
+	return out
+
+
+# The Warden's break phrase as the game plays it: a hit per quarter of the guard, each
+# one note higher, then the notes together with the open sound, then the chunk's shatter
+# over its low hit.
+static func _break(variant: int) -> PackedFloat32Array:
+	var phrase: Dictionary = SfxBank.BREAK_PHRASES[variant]
+	var midis := SfxBank.break_midis(variant)
+	var buf := Synth.buffer(Synth.seconds(4.0))
+	var at := 0.0
+	var thwack := SfxBank.samples("hit_thwack")
+	var hit_gain := db_to_linear(SfxBank.trim_db("hit_thwack") + HIT_PRIORITY_DB)
+	for i in midis.size():
+		Synth.add_into(buf, _pitched(thwack, Harmony.ratio(midis[i] - Harmony.HOME)), Synth.seconds(at), hit_gain)
+		if i < midis.size() - 1:
+			at += float(phrase["gaps"][i])
+	at += float(phrase["chord_gap"])
+	for midi in midis:
+		var id := SfxBank.cause_note_id(midi)
+		Synth.add_into(buf, SfxBank.samples(id), Synth.seconds(at), db_to_linear(SfxBank.trim_db(id)))
+	Synth.add_into(buf, SfxBank.samples("boss_weak_hit"), Synth.seconds(at), db_to_linear(SfxBank.trim_db("boss_weak_hit")))
+	at += SHATTER_GAP
+	for id in ["shatter", "chunk_low"]:
+		Synth.add_into(buf, SfxBank.samples(id), Synth.seconds(at), db_to_linear(SfxBank.trim_db(id)))
+	var end := buf.size()
+	while end > 0 and absf(buf[end - 1]) < 0.0005:
+		end -= 1
+	var out := buf.slice(0, end)
+	var peak := Synth.peak(out)
+	if peak > BREAK_PEAK:
+		for i in out.size():
+			out[i] *= BREAK_PEAK / peak
+	return out
 
 
 static func _motif(cause: String) -> PackedFloat32Array:
