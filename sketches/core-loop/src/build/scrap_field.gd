@@ -184,7 +184,8 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			item.queue_free()
 		else:
 			if distance < reach and not _caught.has(item):
-				_caught[item] = 1.0 if item.get_instance_id() % 2 == 0 else -1.0
+				# The bot supplies a spawn-order sign; player runs retain their existing swirl.
+				_caught[item] = float(item.get_meta("bot_side", 1.0 if item.get_instance_id() % 2 == 0 else -1.0))
 			if _caught.has(item):
 				var far := clampf(distance / reach, 0.0, 1.0)
 				var side := offset.cross(Vector3.UP)
