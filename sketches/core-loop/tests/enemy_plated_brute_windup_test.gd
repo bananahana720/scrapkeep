@@ -139,7 +139,7 @@ func _cycle() -> void:
 		pivot_identity = pivot_identity and enemy.reaction_pivot.transform == Transform3D.IDENTITY
 	# The warn tick before release has a clock a float32 ulp short of warn_seconds, and its pose is full to within TOLERANCE.
 	_t.check("WB-3 release", first_full >= 0 and first_attack - first_full in [0, 1],
-		"first full frame %d; first attack frame %d; difference %d physics frames" % [first_full, first_attack, first_full - first_attack])
+		"first full frame %d; first attack frame %d; difference %d physics frames" % [first_full, first_attack, first_attack - first_full])
 	_t.check("WB-6 unhit pivot", pivot_identity, "identity at every frame of a 140-frame live cycle")
 	_t.check("WB-4 live cycle", _rest(enemy), "rest after the real warn/live/roam cycle")
 	enemy.free()
@@ -256,6 +256,8 @@ func _run() -> void:
 func _skinned_pads(enemy) -> void:
 	var body: MeshInstance3D = enemy._crew
 	var rig: Skeleton3D = enemy._windup_rig
+	_t.check("live body skinned to the rig", not body.skeleton.is_empty() and body.get_node_or_null(body.skeleton) == rig,
+		"BruteBody.skeleton %s resolves to %s" % [body.skeleton, body.get_node_or_null(body.skeleton)])
 	rig.force_update_all_bone_transforms()
 	var minimum_travel := INF
 	var lowest := INF

@@ -89,6 +89,7 @@ func _build_tool() -> void:
 	_crew.set_surface_override_material(parts["flash"], _material)
 	_visual_parent().add_child(_crew)
 	_crew.skin = parts["skin"]
+	_crew.skeleton = _crew.get_path_to(_windup_rig)
 	# Both arm links are one mesh, so the pair costs one draw: two sleeves of unit height at the arms' x.
 	var sleeve := CylinderMesh.new()
 	sleeve.top_radius = LINK_RADIUS
