@@ -4,13 +4,14 @@
 # -Y and the cart trails behind at +Y. Origin is the trapper's collider centre, ground at
 # z = -1.1 (the 2.2 m capsule the collider keeps).
 #
-# Two meshes, four surfaces (four colour-pass draws, the ceiling Codex granted C12 alone), no alpha:
+# Three meshes, six surfaces after WG splits the top disc; no alpha or added geometry:
 #   MagTrapperBody  static: fleet_paint (crew body and head, flashes with the enemy) and
 #                   paint (vertex colour: cart, wheels, ears, strap, the brass chest tag).
-#   MagStack/MagDiscs  the tilting stack, pivot at the cart bed: paint (vertex colour:
-#                   three charcoal discs and spacers; the runtime gives it its own material
+#   MagStack/MagDiscs  the remaining stack, pivot at the cart bed: paint (vertex colour:
+#                   two charcoal discs and spacers; the runtime gives it its own material
 #                   so it flashes on a hit) and class_accent (the hazard cores; the runtime
 #                   swaps in the hazard colour at emission 0.6).
+#   MagStack/MagTopDisc  the independently hoisted third disc: paint and class_accent.
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
 #   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
@@ -30,7 +31,7 @@ common.reset()
 root = common.empty("MagTrapper")
 
 GROUND = -1.1
-PIVOT = (0.0, 1.95, -0.23)  # cart bed top, centre: the stack's tilt pivot
+PIVOT = (0.0, 1.95, -0.23)  # cart bed top, centre: the stack's rest pivot
 CHAR = "charcoal"
 CART = common.mix("charcoal", "oxide", 0.3)
 WORN = common.mix("charcoal", "bone", 0.18)
@@ -64,17 +65,21 @@ b.rod("paint", (-1.24, cy, GROUND + 0.56), (1.24, cy, GROUND + 0.56), 0.08, segs
 b.box("paint", (0.20, 0.60, 0.14), loc=(0, 0.98, PIVOT[2] - 0.20), color=CART)  # hitch
 body = b.to_object(parent=root)
 
-# --- Stack: three broad discs, hazard cores, spacers ---------------------------------
+# --- Stack: two stored discs and one independently hoisted disc ---------------------------------
 stack_pivot = common.empty("MagStack", PIVOT, root)
 s = Part("MagDiscs")
+top = Part("MagTopDisc")
 px, py, pz = PIVOT
 for i, dz in enumerate((0.10, 0.50, 0.90)):
     tone = (CHAR, common.mix("charcoal", "oxide", 0.22), WORN)[i]
-    s.cyl("paint", 1.05, 1.05, 0.20, segs=12, loc=(px, py, pz + dz), color=tone)
-    s.cyl("class_accent", 0.50, 0.50, 0.30, segs=8, loc=(px, py, pz + dz), color=HAZ)
+    disc = top if i == 2 else s
+    disc.cyl("paint", 1.05, 1.05, 0.20, segs=12, loc=(px, py, pz + dz), color=tone)
+    disc.cyl("class_accent", 0.50, 0.50, 0.30, segs=8, loc=(px, py, pz + dz), color=HAZ)
 for dz in (0.30, 0.70):
     s.cyl("paint", 0.26, 0.26, 0.24, segs=8, loc=(px, py, pz + dz), color=CHAR)
 discs = s.to_object(origin=PIVOT, parent=stack_pivot)
+top_origin = (px, py, pz + 0.90)
+top_disc = top.to_object(origin=top_origin, parent=stack_pivot)
 bpy.context.view_layer.update()
 
 tris = common.tri_total(root)
@@ -82,11 +87,11 @@ xs = [v.co.x for v in body.data.vertices]
 ys = [v.co.y for v in body.data.vertices]
 zs = [v.co.z for v in body.data.vertices]
 dzs = [v.co.z + PIVOT[2] for v in discs.data.vertices]
-surfaces = len(body.data.materials) + len(discs.data.materials)
+surfaces = len(body.data.materials) + len(discs.data.materials) + len(top_disc.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3),
-      "STACK_TOP", round(max(dzs), 3))
-if tris > 1200 or surfaces > 4 or max(abs(x) for x in xs) > 1.4 or min(ys) < -0.9 or max(ys) > 3.2 \
+      "STACK_TOP", round(max(v.co.z + top_origin[2] for v in top_disc.data.vertices), 3))
+if tris > 1200 or surfaces > 6 or max(abs(x) for x in xs) > 1.4 or min(ys) < -0.9 or max(ys) > 3.2 \
         or min(zs) < GROUND - 0.001 or max(zs) > 1.9:
     raise SystemExit("C12 limits exceeded")
 

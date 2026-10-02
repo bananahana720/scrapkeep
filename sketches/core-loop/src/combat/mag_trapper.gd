@@ -17,7 +17,11 @@ const RATING_PER_THREAT := 0.4
 const HP := 50.0
 
 var rating := RATING_BASE
+var pose_enabled := true # Test seam: presentation only.
 var _stack: Node3D
+var _body: MeshInstance3D
+var _top_disc: MeshInstance3D
+var _top_rest := Vector3.ZERO
 var _disc_material: StandardMaterial3D
 
 
@@ -36,8 +40,9 @@ func _configure(threat: float) -> void:
 # crew and cart (the collider _add_capsule laid stays), and the pit discs ride a pivot at the
 # cart bed. The glb is read once; every trapper shares its meshes and adds its own flashing body and disc materials as
 # surface overrides.
-const TILT := 0.42
-const SHUDDER := 0.012
+const BODY_LEAN := 0.22
+const HOIST := 1.4
+const SPIN := TAU * 1.25
 const CORE_EMISSION := 0.6
 
 static var _shared: Dictionary = {}
@@ -50,11 +55,11 @@ func _build_tool() -> void:
 	var dress := Node3D.new()
 	dress.name = "MagTrapperBody"
 	_visual_parent().add_child(dress)
-	var cart := MeshInstance3D.new()
-	cart.name = "Cart"
-	cart.mesh = parts["body"]
-	cart.set_surface_override_material(parts["flash"], _material)
-	dress.add_child(cart)
+	_body = MeshInstance3D.new()
+	_body.name = "Cart"
+	_body.mesh = parts["body"]
+	_body.set_surface_override_material(parts["flash"], _material)
+	dress.add_child(_body)
 	_stack = Node3D.new()
 	_stack.name = "MagStack"
 	_stack.position = parts["pivot"]
@@ -66,6 +71,13 @@ func _build_tool() -> void:
 	_disc_material.vertex_color_use_as_albedo = true
 	discs.set_surface_override_material(parts["disc_paint"], _disc_material)
 	_stack.add_child(discs)
+	_top_disc = MeshInstance3D.new()
+	_top_disc.name = "MagTopDisc"
+	_top_disc.mesh = parts["top"]
+	_top_rest = parts["top_position"]
+	_top_disc.position = _top_rest
+	_top_disc.set_surface_override_material(parts["top_paint"], _disc_material)
+	_stack.add_child(_top_disc)
 
 
 static func _parts() -> Dictionary:
@@ -78,6 +90,7 @@ static func _parts() -> Dictionary:
 	var core := Palette.solid(Palette.HAZARD, CORE_EMISSION)
 	var flash := 0
 	var disc_paint := 0
+	var top_paint := 0
 	var meshes := {}
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
@@ -87,9 +100,13 @@ static func _parts() -> Dictionary:
 				flash = i
 			elif slot == "paint" and node.name == "MagDiscs":
 				disc_paint = i
+			elif slot == "paint" and node.name == "MagTopDisc":
+				top_paint = i
 			mesh.surface_set_material(i, core if slot == "class_accent" else (painted if slot == "paint" else charcoal))
 		meshes[node.name] = mesh
 	_shared = {"body": meshes["MagTrapperBody"], "discs": meshes["MagDiscs"], "flash": flash, "disc_paint": disc_paint,
+		"top": meshes["MagTopDisc"], "top_paint": top_paint,
+		"top_position": (scene.find_child("MagTopDisc", true, false) as Node3D).position,
 		"pivot": (scene.find_child("MagStack", true, false) as Node3D).position}
 	scene.free()
 	return _shared
@@ -132,18 +149,23 @@ func _live(_delta: float) -> bool:
 	return true
 
 
-# The wind-up cocks the stack back on its pivot, easing with the warning's own progress
-# (WARN phase, _warn_progress()); it reads that clock and adds none. The discs are hidden
-# while the pit is live (the thrown disc has left), and come back upright.
+# E05 e05_stack_hoist: one disc rises clear and accelerates its spin on WARN's clock.
+# Counter resets _t before calling _pose on release: LIVE at _t == 0 is that same
+# endpoint, with the thrown disc hidden. No independent clock or pivot transform writes.
 func _pose() -> void:
-	if _stack == null:
+	if _top_disc == null:
 		return
-	_stack.visible = phase != Phase.LIVE
-	match phase:
-		Phase.WARN:
-			var t := clampf(_warn_progress(), 0.0, 1.0)
-			_stack.rotation.x = -TILT * t * t * (3.0 - 2.0 * t) + sin(_t * 38.0) * SHUDDER * t
-		Phase.LIVE:
-			_stack.rotation.x = 0.0
-		_:
-			_stack.rotation.x = lerpf(_stack.rotation.x, 0.0, 1.0 - exp(-10.0 * get_physics_process_delta_time()))
+	var t := 0.0
+	if pose_enabled and not is_dead() and not is_queued_for_deletion():
+		if phase == Phase.WARN:
+			t = clampf(_warn_progress(), 0.0, 1.0)
+		elif phase == Phase.LIVE and _t == 0.0:
+			t = 1.0
+	var ease := t * t * (3.0 - 2.0 * t)
+	# Keep the exact endpoint distinct from a WARN tick rounded just below one.
+	if t < 1.0:
+		ease = minf(ease, 1.0 - 0.000001)
+	_body.rotation.x = -BODY_LEAN * ease
+	_top_disc.position = _top_rest + Vector3.UP * HOIST * ease
+	_top_disc.rotation.y = SPIN * t * t
+	_top_disc.visible = not pose_enabled or phase != Phase.LIVE or is_dead() or is_queued_for_deletion()

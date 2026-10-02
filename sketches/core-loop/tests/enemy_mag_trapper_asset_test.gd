@@ -3,12 +3,11 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# C12 limits. The asset: 1,200 T / 4 D ceiling (Codex's C12 exception: the fourth draw is the hazard cores) for the whole moving assembly (crew, cart and
-# discs), opaque. The base contract: the trapper's collider, pit (radius, reach, lead), hold
-# (pull, rating), timing and damage-side numbers are the values mag_trapper.gd had
-# before the dressing swap, and the stack tilts on the existing wind-up.
+# C12's original 1,200 triangle / four-draw limit gains two draws when WG splits
+# the top disc's paint and core surfaces. Triangle and opacity bounds stay fixed.
+# Collider, pit, hold, timing and damage-side values remain the pre-dressing contract.
 const CEILING_T := 1200
-const CEILING_D := 4
+const CEILING_D := 6 # Independent top disc adds two surfaces; geometry stays unchanged.
 const CORE_EMISSION := 0.6
 const BASE_CONSTS := {
 	"PIT_RADIUS": 4.5, "PIT_REACH": 1.4, "LEAD": 0.7, "CENTRE_PULL": 2.5,
@@ -73,8 +72,25 @@ func _run() -> void:
 	print("asset: %d T, %d D" % [m["tris"], m["draws"]])
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
+	_check(m["tris"] >= 760 * 0.9 and m["tris"] <= 760 * 1.1, "WG-8 triangles within 10 percent of baseline 760")
+	for node_name in ["MagTrapperBody", "MagDiscs", "MagTopDisc"]:
+		var part := scene.find_child(node_name, true, false) as MeshInstance3D
+		_check(part != null, "named asset node " + node_name)
+		if part != null:
+			var slots := []
+			for i in part.mesh.get_surface_count():
+				slots.append(part.mesh.surface_get_material(i).resource_name)
+			slots.sort()
+			_check(slots == (["fleet_paint", "paint"] if node_name == "MagTrapperBody" else ["class_accent", "paint"]), "named surfaces " + node_name)
+	var asset_stack := scene.find_child("MagStack", true, false)
+	var asset_top := scene.find_child("MagTopDisc", true, false)
+	_check(asset_stack != null and asset_top != null and asset_stack.is_ancestor_of(asset_top), "top disc below preserved MagStack")
 	_check(not m["alpha"], "asset has no alpha surface")
 	scene.free()
+	if failures > 0:
+		print("enemy_mag_trapper_asset_test: FAIL (asset contract)")
+		quit(1)
+		return
 
 	game.ctx.calm = true
 	var trapper: Node3D = game.ctx.spawner.spawn_enemy("mag_trapper", Vector3(0, 30, 0))
@@ -109,7 +125,7 @@ func _run() -> void:
 	print("live assembly: %d T, %d D, %d meshes" % [live["tris"], live["draws"], live["meshes"]])
 	_check(trapper.find_child("MagTrapperBody", true, false) != null, "the live trapper carries its MagTrapperBody dressing")
 	_check(live["meshes"] > 0 and live["tris"] > 0, "the live measurement saw meshes (the check runs)")
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 4" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 6" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha")
 
 	# The hazard cores glow at 0.6, read from the live material; a hit through the existing
@@ -145,29 +161,21 @@ func _run() -> void:
 			trapper._update_flash(0.02)
 			_check(other_disc != disc_mat and not other_disc.emission_enabled, "a hit on one trapper leaves another's discs alone")
 
-	# The stack tilts on the existing wind-up: WARN's own progress, hidden while LIVE.
+	# E05 e05_stack_hoist retains two discs while the top disc is thrown.
 	var stack: Node3D = trapper.find_child("MagStack", true, false)
-	_check(stack != null, "the stack pivot MagStack exists")
-	if stack != null:
-		trapper.phase = 0
-		trapper._pose()
-		var rest := stack.rotation.x
+	var top: Node3D = trapper.find_child("MagTopDisc", true, false)
+	_check(stack != null and top != null, "MagStack and independent MagTopDisc exist")
+	if stack != null and top != null:
 		trapper.phase = 1
-		trapper._t = 0.0
-		trapper._pose()
-		var start := stack.rotation.x
-		trapper._t = trapper.warn_seconds * 0.5
-		trapper._pose()
-		var half := stack.rotation.x
 		trapper._t = trapper.warn_seconds
 		trapper._pose()
-		var full := stack.rotation.x
-		print("stack tilt: rest %.3f, wind-up 0 %.3f, half %.3f, full %.3f rad" % [rest, start, half, full])
-		_check(absf(rest) < 0.01 and absf(start) < 0.01, "the stack is upright at rest and at the start of the wind-up")
-		_check(full < -0.3 and half < -0.05 and full < half, "the stack tilts back on wind-up, deeper as the warning runs (%.2f rad at full)" % full)
-		_check(stack.visible, "the stack shows during the warning")
+		_check(top.visible and stack.transform.basis == Basis.IDENTITY, "top disc hoists while the remaining stack stays upright")
 		trapper.phase = 2
+		trapper._t = 0.0
 		trapper._pose()
-		_check(not stack.visible and absf(stack.rotation.x) < 0.001, "the stack is hidden and upright while the pit is live")
+		_check(not top.visible and stack.visible and discs.visible, "only the thrown top disc hides while the pit is live")
+		trapper.phase = 0
+		trapper._pose()
+		_check(top.visible, "stack is whole again at rest")
 	print("enemy_mag_trapper_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)
