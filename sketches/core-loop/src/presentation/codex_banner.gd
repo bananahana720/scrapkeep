@@ -272,13 +272,13 @@ func _next() -> void:
 	if _queue.is_empty():
 		return
 	var head: Array = _queue[0]
-	if head[4] == "auto":
-		if _was_seen(head[6]):
-			_queue.pop_front()
-			_next()
-			return
-		if not calm():
-			return
+	if head[4] == "auto" and _was_seen(head[6]):
+		_queue.pop_front()
+		_next()
+		return
+	# Every head asks the shared gate, whatever its style.
+	if not calm():
+		return
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
 	var color: Color = entry["color"]

@@ -30,9 +30,11 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 # calm, and no Warden engaged and alive. A first find that cannot yet is held, at most
 # MAX_HELD of them, and opens in the order found; a part is seen when its card is shown, so a
 # dropped one is still unseen. A repeat find shows no card; the name at the ball is all it
-# says. A ceremony also waits for calm(): in play (or the victory roll), no committed
+# says. A reveal card that is up when a Warden fight turns live closes at once; the part
+# stays seen. A ceremony also waits for calm(): in play (or the victory roll), no committed
 # threat or enemy near, on the ground and not launching, and it waits as long as that takes.
-# The ball's
+# A boss's own reward (source "boss") asks only calm() and the calm hold: the boss's death
+# ends the fight, and the victory roll is shorter than the damage clock. The ball's
 # velocity is exactly what it was when the pause began. Any key or click jumps to the
 # reveal, a second closes it. The pause menu's "Ceremonies: short" presents every find at
 # the rare tier. After a revealed or ceremonial part lands, the first time its effect
@@ -431,6 +433,8 @@ func _process(delta: float) -> void:
 		_step_queue(now)
 	if view.card.is_empty() and not _cards.is_empty() and _active.is_empty():
 		_next_card()
+	if not view.card.is_empty() and not view.card.get("ceremony", false) and WhyCallout.warden_fight_live(ctx.flow):
+		view.card = {}
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		var c: Dictionary = view.card
 		if now - int(c["start_ms"]) > int((float(c["in_s"]) + float(c["hold_s"]) + float(c["out_s"])) * 1000.0):
@@ -441,7 +445,9 @@ func _process(delta: float) -> void:
 
 func _step_queue(now: int) -> void:
 	var row := EventKinds.reward_row("ceremony")
-	if not may_show_card() or not calm():
+	# A boss's own reward does not wait on the damage clock: its death ends the fight.
+	var gate: bool = String(_queue[0]["source"]) == "boss" or may_show_card()
+	if not gate or not calm():
 		_calm_since = -1
 		return
 	if _calm_since < 0:

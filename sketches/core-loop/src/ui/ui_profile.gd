@@ -13,7 +13,7 @@ var path := ""
 var glyph_uses := {}
 var callouts_seen: Array = []
 # Ids of the synergies, parts and finds whose first-discovery picture card has shown
-# (--discovery=cards); a repeat only gets the quick glyph-and-name pop.
+# (--discovery=cards); a repeat draws no card.
 var discoveries_seen: Array = []
 var last_error := ""
 var _save_blocked := false

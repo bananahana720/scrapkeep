@@ -4,6 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
+const Flow := preload("res://src/core/flow.gd")
+const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 # A find never puts a card up during a fight (alpha R3, unit RV). A live slice game, a posture
 # Warden engaged by a real ram:
@@ -14,14 +16,18 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 #   - a repeat find, common or rare_plus, shows no card and no pop in the fight;
 #   - when the Warden dies the held card opens within 60 frames, once, and the part is seen in
 #     both records only then; a repeat out of the fight shows nothing either;
-#   - a second fight: three first finds are held and a fourth shows its name only; a retry drops
-#     them, they are still unseen, and the next first find out of a fight shows its card.
+#   - a second fight: three first finds are held and a fourth shows its name only; in the banner
+#     option a synergy found there draws nothing; a retry drops them, they are still unseen, and
+#     the next first find out of a fight shows its card;
+#   - a reveal card that is up when a Warden fight turns live closes at once, the part stays seen;
+#   - a boss's own reward (source "boss") never waits on the damage clock, only on the calm hold.
 # Frames are counted, never read from the clock.
 
 const SETTLE := 300
 const HOLD_FRAMES := 300
 const OPEN_WITHIN := 60
 const QUIET_FRAMES := 30
+const STEP_S := 1.0 / 60.0
 const PLATING := 45.0
 const SOURCES := ["res://src/presentation/reward_ceremony.gd", "res://src/presentation/codex_banner.gd"]
 
@@ -32,6 +38,7 @@ var _wait := 0
 var _first := ""
 var _repeat_common := ""
 var _repeat_rare := ""
+var _boss_part := ""
 var _held: Array = []
 var _stops := 0
 var _cards_before := 0
@@ -39,6 +46,8 @@ var _opened := -1
 var _marked_early := false
 var _words_in_hold := 0
 var _name_up := false
+var _clock_ms := 0
+var _calm_run := 0
 
 
 func _initialize() -> void:
@@ -61,6 +70,7 @@ func _pick_parts() -> void:
 			common.append(id)
 	_first = rare_plus[0]
 	_repeat_rare = rare_plus[1]
+	_boss_part = rare_plus[2]
 	_repeat_common = common[0]
 	_held = [common[1], common[2], common[3], common[4]]
 
@@ -120,7 +130,7 @@ func _engage() -> void:
 
 
 func _fight_on() -> bool:
-	return _game.flow.sealed and _game.flow._engaged and is_instance_valid(_game.flow.warden)
+	return _game.flow.sealed and _game.flow.engaged() and is_instance_valid(_game.flow.warden)
 
 
 func _physics_process(_delta: float) -> bool:
@@ -137,7 +147,7 @@ func _physics_process(_delta: float) -> bool:
 		"settle":
 			if _wait == SETTLE:
 				_engage()
-				_report("fight on", _fight_on() and _game.flow.warden.fight() == "posture", "a posture Warden engaged by a ram: sealed %s, engaged %s" % [_game.flow.sealed, _game.flow._engaged])
+				_report("fight on", _fight_on() and _game.flow.warden.fight() == "posture", "a posture Warden engaged by a ram: sealed %s, engaged %s" % [_game.flow.sealed, _game.flow.engaged()])
 				_stops = _rare_stops()
 				_cards_before = _banner().cards_shown
 				_game.run.add_part(_first, "pickup")
@@ -155,6 +165,9 @@ func _physics_process(_delta: float) -> bool:
 					"%s held %d frames behind a live Warden: card words %d, banner queued %d, name at the ball %s" % [_first, HOLD_FRAMES, _words_in_hold, _banner().queued(), _name_up])
 				_report("held and unseen", _unseen_both(_first), "%s unseen in the ceremony's record (%s) and the banner's (%s)" % [_first, _ceremony().seen(_first), _banner()._was_seen("part:" + _first)])
 				_report("no hit-stop while held", _rare_stops() == _stops, "reward_rare stops asked during the held find: %d" % (_rare_stops() - _stops))
+				_game.run.add_part(_first, "pickup")
+				_report("a second find of a held part queues nothing", _ceremony()._cards.size() == 1 and _ceremony().queued() == 0 and _banner().queued() == 1,
+					"%s found again while its card is held: ceremony holds %d (queue %d), banner holds %d" % [_first, _ceremony()._cards.size(), _ceremony().queued(), _banner().queued()])
 				_prime_repeats()
 				_game.run.add_part(_repeat_common, "pickup")
 				_game.run.add_part(_repeat_rare, "pickup")
@@ -165,7 +178,8 @@ func _physics_process(_delta: float) -> bool:
 				return _finish()
 			if _wait == QUIET_FRAMES:
 				var presented: Array = _ceremony().presented.filter(func(p: Array): return p[0] in [_repeat_common, _repeat_rare])
-				_report("a repeat in a fight shows nothing", _banner().cards_shown == _cards_before and _name_showing()
+				_report("a repeat in a fight shows nothing", _banner().cards_shown == _cards_before and _banner().queued() == 1
+						and _ceremony()._cards.size() == 1 and _ceremony().queued() == 0 and _name_showing()
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
 					"common and rare_plus repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
 				_game.flow.warden._die()
@@ -181,13 +195,22 @@ func _physics_process(_delta: float) -> bool:
 			if _wait == OPEN_WITHIN:
 				_report("opens within 60 frames, once", _opened >= 0 and not _marked_early and _banner().cards_shown == _cards_before + 1 and not _fight_on(),
 					"opened at frame %d, seen early %s, banner cards %d (was %d)" % [_opened, _marked_early, _banner().cards_shown, _cards_before])
+				# The first find's cards would hide a regressed repeat card behind them: clear both.
+				_ceremony().view.card = {}
+				_banner().dismiss(false)
 				_cards_before = _banner().cards_shown
+				var tiers_before: int = _ceremony().presented.size()
 				_game.run.add_part(_repeat_common, "pickup")
 				_game.run.add_part(_repeat_rare, "pickup")
+				var tiers: Array = _ceremony().presented.slice(tiers_before).map(func(p: Array): return p[1])
+				_report("a repeat out of a fight queues nothing", _ceremony()._cards.is_empty() and _ceremony().queued() == 0 and _banner().queued() == 0
+						and _banner().cards_shown == _cards_before and tiers.size() == 2 and tiers.all(func(t: String): return t in ["common", "rare"]),
+					"common and rare_plus repeats with the Warden dead: ceremony cards %d, queue %d, banner queued %d, presented tiers %s"
+						% [_ceremony()._cards.size(), _ceremony().queued(), _banner().queued(), tiers])
 				_next("repeat_calm")
 		"repeat_calm":
 			var shown: String = _ceremony().view.card.get("part", "")
-			if shown in [_repeat_common, _repeat_rare] or _banner().cards_shown != _cards_before:
+			if shown != "" or _banner().cards_shown != _cards_before or _banner().showing():
 				_report("a repeat out of a fight shows nothing", false, "a card for %s was up %d frames after a repeat find" % [shown, _wait])
 				return _finish()
 			if _wait == QUIET_FRAMES:
@@ -203,6 +226,20 @@ func _physics_process(_delta: float) -> bool:
 				var held_cards: int = _ceremony()._cards.size()
 				_report("at most three held", _fight_on() and held_cards == 3 and _banner().queued() == 3 and _unseen_both(_held[3]),
 					"four first finds in a fight: ceremony holds %d, banner holds %d, the fourth %s is unseen with its name only" % [held_cards, _banner().queued(), _held[3]])
+				_banner().dismiss(true)
+				_banner().cards = false
+				_banner().show_discovery("Test synergy", "synergy", "a body", "New synergy", "syn_a", "synergy_discovered")
+				_banner().show_discovery("Test synergy", "synergy", "a body", "Synergy", "syn_a", "synergy_discovered")
+				_next("banner_mode")
+		"banner_mode":
+			if _banner().showing() or _banner().visible:
+				_report("the banner option waits too", false, "a banner was drawn %d frames into a live Warden fight" % _wait)
+				_banner().cards = true
+				return _finish()
+			if _wait == QUIET_FRAMES:
+				_report("the banner option waits too", _banner().queued() == 2 and _fight_on(),
+					"a synergy and its repeat found in a live Warden fight with --discovery=banner: nothing drawn for %d frames, %d queued" % [QUIET_FRAMES, _banner().queued()])
+				_banner().cards = true
 				_game.flow.retry_stage()
 				_next("retried")
 		"retried":
@@ -218,9 +255,47 @@ func _physics_process(_delta: float) -> bool:
 			if _card_up():
 				_report("the next first find shows its card", _ceremony().view.card.get("part", "") == _held[0] and _seen_both(_held[0]) and not _fight_on(),
 					"%s found out of a fight after the retry shows its card at frame %d and is seen" % [_held[0], _wait])
-				return _finish()
+				_engage()
+				_next("engaged")
 			if _wait == OPEN_WITHIN:
 				_report("the next first find shows its card", false, "no card for %s within %d frames out of a fight" % [_held[0], OPEN_WITHIN])
+				return _finish()
+		"engaged":
+			if _wait == 2:
+				_report("a reveal card closes when the fight goes live", _fight_on() and _ceremony().view.card.is_empty() and _seen_both(_held[0]),
+					"a reveal card up as the Warden engages: card %s, %s still seen in both records" % [_ceremony().view.card.get("part", "none"), _held[0]])
+				_game.flow.retry_stage()
+				_next("boss_ready")
+		"boss_ready":
+			# The ball lands first: the ceremony's own calm() needs it on the ground.
+			if _wait == 1:
+				for node in get_nodes_in_group("enemy"):
+					node.queue_free()
+			if _wait > SETTLE:
+				_report("a boss reward is queued", false, "the ball never settled for the boss check within %d frames" % SETTLE)
+				return _finish()
+			_calm_run = _calm_run + 1 if _ceremony().calm() else 0
+			if _calm_run >= 60:
+				_game.presentation.ceremony.set_process(false)
+				_game.presentation.ceremony.pause_armed = true
+				_game.presentation.ceremony.now_ms = func() -> int: return _clock_ms
+				_game.events.player_hit.emit(1.0, "test")
+				_game.presentation.ceremony._calm_left = WhyCallout.CALM_SECONDS - 0.5
+				_game.run.add_part(_boss_part, "boss")
+				_report("a boss reward is queued", _ceremony().queued() == 1 and _ceremony().presented.back()[2] == "boss" and _ceremony().calm(),
+					"a boss-source ceremony 0.5 s after a hit: queued %d, calm %s" % [_ceremony().queued(), _ceremony().calm()])
+				_next("boss_wait")
+		"boss_wait":
+			_clock_ms += int(STEP_S * 1000.0)
+			# Only the damage clock is under test: the ball stays on the ground for the ceremony's own calm().
+			_game.player.state.grounded = true
+			_ceremony()._process(STEP_S)
+			if _ceremony().active():
+				_report("a boss reward ignores the damage clock", true, "opened %.2f s after the find, within the %.1f s victory roll" % [_wait * STEP_S, Flow.VICTORY_SECONDS])
+				return _finish()
+			if _wait * STEP_S >= Flow.VICTORY_SECONDS:
+				_report("a boss reward ignores the damage clock", false, "no ceremony within %.1f s of frames with a hit 0.5 s before the find (queued %d, calm %s, state %s, ball %s, grounded %s)"
+					% [Flow.VICTORY_SECONDS, _ceremony().queued(), _ceremony().calm(), _game.flow.state_name(), _game.player.ball_position(), _game.player.state.grounded])
 				return _finish()
 	return false
 

@@ -78,6 +78,11 @@ func state_name() -> String:
 	return NAMES[state]
 
 
+# Whether this stage attempt's Warden has been engaged (the ring or a strike).
+func engaged() -> bool:
+	return _engaged
+
+
 func in_play() -> bool:
 	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS
 
