@@ -10,6 +10,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -202,6 +203,8 @@ func wire_optional() -> void:
 	_listen(events, "strike_deflected", _on_deflected)
 	_listen(events, "core_gained", _on_core)
 	_listen(events, "synergy_discovered", _on_synergy)
+	_listen(events, "cause_armed", _on_cause_armed)
+	_listen(events, "cause_fired", _on_cause_fired)
 	_listen(events, "element_resolved", _on_element)
 	_listen(events, "interact_armed", _on_interact_armed)
 	_listen(events, "interact_fired", _on_interact_fired)
@@ -312,13 +315,40 @@ func _on_core(_source: String, at: Vector3, _count: int) -> void:
 	glyph("core_gained", at + Vector3.UP * 0.2, 0.6, 3.0, 0.45, Vector3.UP, "ring")
 
 
-# The discovery: a burst in the category's colour, and a ring that stays on the ball
-# for the rest of the run, one per synergy, so your build shows on the ball.
+# The discovery leaves a ring on the ball for the rest of the run, one per synergy, so your
+# build shows on the ball. The moment itself is the pulse on the struck body.
 func _on_synergy(id: String, category: String, _first_time: bool) -> void:
-	var tint := CodexStyle.category_color(category)
-	glyph("synergy_discovered", player.ball_position() + Vector3.UP * 2.4, 0.6, 1.8, 0.7, Vector3.ZERO, "burst", tint)
-	glyph("synergy_discovered", player.ball_position(), 1.0, 5.0, 0.5, Vector3.UP, "ring", tint)
-	add_ring(id, tint)
+	add_ring(id, CodexStyle.category_color(category))
+
+
+const ARMED_SECONDS := 0.6
+
+
+# A synergy goes live: its two cause glyphs link above the ball, no name and no banner.
+func _on_cause_armed(id: String) -> void:
+	var shapes: Array = EventKinds.cause_glyphs(Synergies.ROWS[id]["tags"]) if Synergies.ROWS.has(id) else []
+	if shapes.is_empty() or EventKinds.cause_row(id).is_empty():
+		return
+	var tint := EventKinds.cause_color(id)
+	var side := Vector3.RIGHT
+	if camera != null and camera.cam != null:
+		side = camera.cam.global_basis.x
+	var top: Vector3 = player.ball_position() + Vector3.UP * 2.4
+	glyph("cause_armed", top - side * 0.8, 0.7, 0.8, ARMED_SECONDS, Vector3.ZERO, shapes[0], tint, "P4")
+	glyph("cause_armed", top + side * 0.8, 0.7, 0.8, ARMED_SECONDS, Vector3.ZERO, shapes[1], tint, "P4")
+	glyph("cause_armed", top, 0.2, 1.2, ARMED_SECONDS, side, "bar", tint, "P4")
+
+
+# The effect resolves: a pulse in the row's own shape on the struck body, or where it
+# landed when nobody was in reach.
+func _on_cause_fired(id: String, target: Node3D, at: Vector3) -> void:
+	var shape := String(EventKinds.cause_row(id).get("shape", ""))
+	if shape == "":
+		return
+	var where := at
+	if target != null and is_instance_valid(target):
+		where = target.global_position + Vector3.UP * 0.8
+	glyph("cause_fired", where, 0.8, 3.2, 0.45, Vector3.ZERO, shape, EventKinds.cause_color(id), "P4")
 
 
 func _on_found() -> void:
@@ -422,6 +452,10 @@ func _build_meshes() -> void:
 	dot.radial_segments = 12
 	dot.rings = 6
 	_meshes["flash"] = dot
+	_meshes["disc"] = dot
+	var bolt := BoxMesh.new()
+	bolt.size = Vector3(0.14, 0.9, 0.14)
+	_meshes["bolt"] = bolt
 	_meshes["none"] = dot
 
 

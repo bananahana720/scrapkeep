@@ -5,6 +5,7 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
+const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
 # name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
@@ -16,6 +17,11 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 # a paused screen can pin it. Discoveries in quick succession queue and play one at a
 # time. dismiss() clears it at once (presentation calls it on flow changes, arena
 # entry, death and run end).
+#
+# A first-discovery card raised in a fight waits at the head of the queue and shows at the
+# next calm moment: CALM_SECONDS with no live telegraph (the "threat" group) and no damage
+# taken. One raised when already calm shows at once. The banner finds the bus through its
+# presentation ancestor, or a test hands it one with watch().
 #
 # `--discovery=cards` (cards = true, profile set by the owner): the first time an id is
 # discovered a picture card lands in the same slot: a larger panel with a looping
@@ -44,6 +50,7 @@ const CARD_LINES := 4
 const GLYPH_POP := 36.0
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
+const CALM_SECONDS := WhyCallout.CALM_SECONDS
 
 var shown := 0
 var last_title := ""
@@ -62,6 +69,8 @@ var pops_shown := 0
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
 
 var _queue: Array = []
+var _calm_left := 0.0
+var _events = null
 var _session_seen := {}
 var _style_name := "banner"
 var _hold := HOLD
@@ -132,6 +141,39 @@ func _init() -> void:
 	_body.add_theme_color_override("font_color", Color(0.86, 0.84, 0.78))
 	column.add_child(_body)
 	visible = false
+
+
+func _ready() -> void:
+	var node := get_parent()
+	while node != null and _events == null:
+		var ctx = node.get("ctx")
+		if ctx != null and ctx.get("events") != null:
+			watch(ctx.events)
+		node = node.get_parent()
+
+
+# Counts damage on this bus as a fight, so a card waits for CALM_SECONDS without it.
+func watch(events) -> void:
+	if _events == events or not events.has_signal("player_hit"):
+		return
+	_events = events
+	events.player_hit.connect(func(_amount: float, _source: String): _calm_left = CALM_SECONDS)
+	# A retry rewinds the stage and clears the codex record: a held card goes unseen.
+	if events.has_signal("stage_entered"):
+		events.stage_entered.connect(func(_stage: int, retry: bool):
+			if retry:
+				dismiss(true))
+
+
+# The callout's definition of calm (WhyCallout.is_calm): CALM_SECONDS since the last damage or
+# telegraph, and never while the tree is paused.
+func calm() -> bool:
+	return WhyCallout.is_calm(_calm_left, get_tree() if is_inside_tree() else null)
+
+
+# A card is waiting for a calm moment.
+func held() -> bool:
+	return not showing() and not _queue.is_empty()
 
 
 # kicker: "New synergy", "Synergy", "Found" or similar. While one is showing the next
@@ -235,6 +277,9 @@ func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 func _next() -> void:
 	if _queue.is_empty():
 		return
+	var head: Array = _queue[0]
+	if head[4] == "auto" and not _was_seen(head[6]) and not calm():
+		return
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
 	var color: Color = entry["color"]
@@ -264,8 +309,10 @@ func _next() -> void:
 	_place(0.0)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	if _started_ms < 0:
+		_next()
 		return
 	var t := (int(now_ms.call()) - _started_ms) / 1000.0
 	var total := _in_time + _hold + _out_time
