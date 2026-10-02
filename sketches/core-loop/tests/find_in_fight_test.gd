@@ -145,6 +145,13 @@ func _physics_process(_delta: float) -> bool:
 			_game.flow.choose_class(1)
 			_next("settle")
 		"settle":
+			if _wait == 1:
+				# The inputless ball rolls straight down the spawn launch past the hauler bounty, whose
+				# brute wakes and telegraphs; this test is about the find gate, so no activity stands.
+				for s in _game.world.activities.sites:
+					if s.brute != null and is_instance_valid(s.brute):
+						s.brute.queue_free()
+				_game.world.activities.clear()
 			if _wait == SETTLE:
 				_engage()
 				_report("fight on", _fight_on() and _game.flow.warden.fight() == "posture", "a posture Warden engaged by a ram: sealed %s, engaged %s" % [_game.flow.sealed, _game.flow.engaged()])
