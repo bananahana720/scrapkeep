@@ -922,7 +922,7 @@ async function main(argv) {
     // Each sketch owns its own keys (core-loop's Esc opens a pause menu), so
     // the launcher states only what holds for every sketch.
     console.log(dim("  Controls are in the game; closing its window quits.\n"));
-    // `scrapkeep core-loop-v3 --loop=drop` is the documented form, so words
+    // `scrapkeep core-loop --table=slice` is the documented form, so words
     // after the name reach Godot just as those after `--` do.
     const extra = [...launchWords, ...afterDashes];
     const result = spawnSync(binary, ["--path", entry.directory, ...extra], {
