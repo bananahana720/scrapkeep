@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Worlds := preload("res://src/core/worlds.gd")
+
 # The slice table: the Cable Reach played first and alone, ending the run at its gate.
 # Same shape as stage_defs.gd. It repeats that file's two lookups because a base script's
 # static functions would read the base's own DEFS, not this one's. The numbers are
@@ -39,7 +41,7 @@ const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 const ELITE_ARRIVAL := 3
 
 const DEFS := [
-	{"stage": 1, "name": "The Cable Reach", "map": "reach", "threat": 1.0,
+	{"stage": 1, "world": 1, "name": "The Cable Reach", "map": "reach", "threat": 1.0,
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_fight": "posture",
 		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core."},
@@ -52,6 +54,35 @@ static func of(stage: int) -> Dictionary:
 
 static func is_last(stage: int) -> bool:
 	return stage >= COUNT
+
+
+# World helpers (worlds.gd): which world a stage belongs to and where it ends.
+static func world_of(stage: int) -> int:
+	return Worlds.world_of(DEFS, stage)
+
+
+static func local(stage: int) -> int:
+	return Worlds.local(DEFS, stage)
+
+
+static func first_of(world: int) -> int:
+	return Worlds.first_of(DEFS, world)
+
+
+static func last_of(world: int) -> int:
+	return Worlds.last_of(DEFS, world)
+
+
+static func worlds() -> Array:
+	return Worlds.worlds(DEFS)
+
+
+static func is_world_last(stage: int) -> bool:
+	return Worlds.is_world_last(DEFS, stage)
+
+
+static func is_run_last(stage: int) -> bool:
+	return Worlds.is_run_last(DEFS, stage)
 
 
 static func synergy_in_play(synergy_id: String) -> bool:
