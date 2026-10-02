@@ -1941,5 +1941,26 @@ What was wrong, and what changed (posture Warden only; the plating Warden is unt
 - warden_states_capture.gd saves fresh, open, cracked, one_gone and two_gone from three sides
   and a shuffled blind set with its key.
 
-Open: the four shoulder pieces still sit in two overlapping pairs, so counting from one side
-depends on the camera. A shape change in warden_clamp.py would separate them.
+Round one's open item (shoulder pairs read as two from one side) is closed by WR fix round, below.
+
+### WR fix round: health as four stacked bands
+
+The posture Warden's four health segments are now four horizontal armour bands per jaw,
+`ArmourSegment0..3` with an `L` and an `R` half (0 on top), each a child of its own jaw. The
+recipe builds each half as a thin sheet 0.07 m proud of the jaw's outer face, cut into a plate
+row between two rim rows, with a 0.3 m gap between neighbours. `CrackAnchor<band><L|R><k>`
+empties mark three crack positions per half. The shoulder crowns are whole `CrownL`/`CrownR`
+meshes in the body's own material and never break off. Base 5628 triangles.
+
+- Bands are drawn only on the posture rule; a plating Warden hides them, so its look is the
+  base model's (default-table stills compared by eye, base against branch, same by eye).
+- Lost band: the same sheet sits 0.05 m lower in the rust role darkened (`ArmourWound`).
+- Open: the core is depth-tested (no `no_depth_test`, scale 3.2) and every band still on shows
+  a rim in the plate's open colour; closing returns it to the plate colour.
+- Crack: dark groove plus colour line on the top remaining band, three anchors per half.
+- Thrown bands wear the plate or rim material they had on the body.
+- The jaw's own lit seams are made dark and the guard strokes and old open-crack glyph are
+  hidden on a posture Warden: the strokes were neutral on neutral plate (the white X) and the
+  seam in the middle gap read as a fifth thing. The HUD plate still shows the guard.
+- Known limit: from the front the jaws are seen end-on, so about two bands show per jaw and the
+  crack anchors are not on the face the camera sees.
