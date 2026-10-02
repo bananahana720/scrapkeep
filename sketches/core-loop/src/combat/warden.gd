@@ -4,6 +4,7 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Habits := preload("res://src/combat/habits.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -39,6 +40,15 @@ const Habits := preload("res://src/combat/habits.gd")
 #     your class motif back wrong (mind_adapted) and shows the habit's trigger icon on
 #     its lens for ADAPT_WARN, then braces for BRACE: hits of that verb meet BRACE_MULT
 #     times its plating, and its lens stands open. Within a run only.
+#
+# Two fight rules, chosen by the stage row's warden_fight (spec "fight"). "plating" is
+# everything above and the default. "posture" (the slice table) hands the fight to
+# boss_posture.gd: hits fill a posture bar, a full bar staggers the Warden for
+# STAGGER_SECONDS and opens its core, and only a contact on the open core removes health,
+# one chunk of four per stagger. Under it the pulse still cycles but pauses in a stagger
+# and a charge in flight is cancelled, the reactor's own post-pulse window does not open,
+# shred does not build, the shell never tints amber and take_damage removes only the
+# chunk the last strike armed.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -121,6 +131,9 @@ var _adapt_clock := 0.0
 var _adapt_time := 0.0
 var _brace_left := 0.0
 var _charge_len := PULSE_TELEGRAPH
+var _fight := "plating"
+var _posture: BossPosture
+var _armed := 0.0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -130,6 +143,9 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	lesson = spec.get("lesson", "plate")
 	reach = spec.get("reach", DEFAULT_REACH)
 	family = spec.get("family", Roster.warden_family(stage))
+	_fight = String(spec.get("fight", "plating"))
+	if _fight == "posture":
+		_posture = BossPosture.new()
 	faction = family
 	fleet = spec.get("fleet")
 	plating = spec.get("plating", 30.0)
@@ -196,6 +212,8 @@ func weak_points() -> Array:
 
 # The kit's weak point: the reactor's core, the hive's queen cell, the Mind's lens.
 func family_point() -> String:
+	if _posture != null:
+		return "core"
 	return {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}.get(family, "core")
 
 
@@ -204,6 +222,8 @@ func family_point_at() -> Vector3:
 
 
 func family_open() -> bool:
+	if _posture != null:
+		return _posture.staggered
 	return _open_left > 0.0 or braced()
 
 
@@ -221,6 +241,8 @@ func on_guard_scattered(swarm, _at: Vector3) -> void:
 
 
 func _open(seconds: float) -> void:
+	if _posture != null:
+		return
 	_open_left = seconds
 	family_opens += 1
 	if fleet != null:
@@ -311,7 +333,9 @@ func contact_part(ball: Vector3, hit_kind: String) -> String:
 	return ""
 
 
-func on_struck(hit_kind: String, part: String, _result: Dictionary) -> void:
+func on_struck(hit_kind: String, part: String, result: Dictionary) -> void:
+	if _posture != null:
+		_apply_posture(result)
 	if part == "magnet" and hit_kind in WEAPON_KINDS and magnet_state == Magnet.TUG:
 		_unplated = UNPLATE_SECONDS
 		magnet_stuns += 1
@@ -328,6 +352,8 @@ func _physics_process(delta: float) -> void:
 	_since_pulse += delta
 	_unplated = maxf(0.0, _unplated - delta)
 	var inside := _flat_to_ball().length() <= reach
+	if _posture != null:
+		_step_posture(delta)
 	_step_family(delta, inside)
 	_step_pulse(delta, inside)
 	if lesson == "magnet":
@@ -337,6 +363,8 @@ func _physics_process(delta: float) -> void:
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
 # lands even if you leave, but only a ball its rings contain feels it.
 func _step_pulse(delta: float, inside: bool) -> void:
+	if staggered():
+		return
 	if _charging:
 		_charge_time += delta
 		var ring := telegraph()
@@ -486,6 +514,92 @@ func flat_to_ball() -> Vector3:
 	return _flat_to_ball() if target != null else Vector3.ZERO
 
 
+# --- The posture fight (boss_posture.gd) --------------------------------------------
+
+func fight() -> String:
+	return _fight
+
+
+func posture() -> float:
+	return _posture.posture if _posture != null else 0.0
+
+
+func staggered() -> bool:
+	return _posture != null and _posture.staggered
+
+
+func stagger_left() -> float:
+	return _posture.stagger_left if _posture != null else 0.0
+
+
+func chunks_left() -> int:
+	return _posture.chunks if _posture != null else 0
+
+
+func chunk_cracked() -> bool:
+	return _posture != null and _posture.cracked
+
+
+# What the rule says a hit does, or {} under the plating fight so combat's own rule runs.
+func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
+	if _posture == null:
+		return {}
+	return _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating, "smash": smash, "tier": tier,
+			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp})
+
+
+func _apply_posture(result: Dictionary) -> void:
+	var before := _posture_signature()
+	var was_staggered := _posture.staggered
+	_posture.apply(result, Engine.get_physics_frames())
+	if result.get("shatter", false):
+		_armed = float(result["dealt"])
+	if _posture.staggered and not was_staggered:
+		_begin_stagger()
+	_publish_posture(before)
+
+
+func _step_posture(delta: float) -> void:
+	var before := _posture_signature()
+	_posture.step(delta)
+	_publish_posture(before)
+
+
+func _begin_stagger() -> void:
+	_charging = false
+	_charge_time = 0.0
+	_pulse_clock = 0.0
+	_clear_telegraph()
+	if is_instance_valid(_core_ring):
+		_core_ring.queue_free()
+	_core_ring = null
+	family_opens += 1
+	if fleet != null:
+		fleet.events().weak_point_opened.emit("core", family_point_at(), BossPosture.STAGGER_SECONDS)
+
+
+func _posture_signature() -> Array:
+	return [floori(_posture.posture), _posture.staggered, _posture.chunks, _posture.cracked]
+
+
+func _publish_posture(before: Array) -> void:
+	if fleet != null and _posture_signature() != before:
+		fleet.events().posture_changed.emit(self, _posture.posture, _posture.staggered)
+
+
+# Under the posture fight health falls only by what the last shattering strike armed.
+func take_damage(amount: float) -> float:
+	if _posture == null:
+		return super.take_damage(amount)
+	var armed := _armed
+	_armed = 0.0
+	return super.take_damage(armed)
+
+
+func set_tint(state: String) -> void:
+	super.set_tint("slate" if _posture != null else state)
+
+
 func integrity() -> float:
 	return clampf(hp / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0
 
@@ -497,4 +611,6 @@ func set_shred(amount: float) -> void:
 
 # The share of the plating stripped right now, 0 to 1.
 func shred_fraction() -> float:
+	if _posture != null:
+		return 0.0
 	return clampf(shred / plating, 0.0, 1.0) if plating > 0.0 else 0.0

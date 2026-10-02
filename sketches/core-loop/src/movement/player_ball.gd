@@ -90,6 +90,8 @@ var _cc_ignored_at := {}
 var immune_left := 0.0
 # The landing each smash flavour adds to the shared slam.
 var _smashes := {}
+# The enemy a harpoon smash is landing on while that landing's strikes resolve; combat reads it.
+var smash_landing: Node3D
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -959,6 +961,8 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		return
 	var closing := kit.line_closing
 	var landing := _begin_landing(enemy)
+	if landing:
+		smash_landing = enemy
 	var to_enemy := enemy.global_position - ball_position()
 	var before := pre_contact_velocity(to_enemy.normalized() if to_enemy.length() > 0.01 else Vector3.DOWN)
 	var planar := Vector2(before.x, before.z).length()
@@ -984,6 +988,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		struck.emit(enemy, RAM, planar)
 	if landing:
 		_finish_landing(enemy, closing)
+	smash_landing = null
 
 
 # The first contact of a committed haul lets the line go, so the ordinary contact (stomp,

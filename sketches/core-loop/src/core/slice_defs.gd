@@ -15,7 +15,7 @@ const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom"
 const DEFS := [
 	{"stage": 1, "name": "The Cable Reach", "map": "gorge", "threat": 1.0,
 		"event_mix": {"flood": 1.0, "dust_squall": 0.6, "surge_run": 0.8, "cave_in": 1.0, "impact": 1.0}, "scrap_density": 1.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
-		"warden_plating": 45.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_hint": "Ram it hard, right after it vents."},
+		"warden_plating": 45.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_fight": "posture", "warden_hint": "Break its guard, then smash the core."},
 ]
 
 

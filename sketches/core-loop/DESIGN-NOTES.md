@@ -1737,3 +1737,13 @@ The owner played all three loops and ruled for `v2`, the loop the default game r
 - **What stayed.** The music, breath, discovery and telegraph rows keep their options, defaults and flags; their key names are constants on `Tuning` (`MUSIC_KEY`, `BREATH_KEY`, `DISCOVERY_KEY`, `TELEGRAPH_KEY`). The harpoon hand's two reads moved into `bot_driver.gd` as `LINE_REACH` (50.0) and `DROP_MEMORY` (6.0).
 - **Old records.** `balance_report.gd` still joins and reads a run log that carries `loop_mode`, `gun_role` and drop fields, and ignores them; `tests/balance_report_old_record_test.gd` holds one.
 - **Demand:** the Warden fight, which the next unit rebuilds on a posture bar.
+
+## The posture fight (wave R1b, unit B0a, 2026-10-02)
+
+On the slice table the Warden is fought on one rule: hit it until its guard bar fills and it cracks open, then smash the open core to shatter one of four health chunks. Every other table keeps the plating rule; the stage row's `warden_fight` picks which.
+
+- **The numbers** live in `boss_posture.gd`: gain is `base x clamp(punch / plating, 0.2, 1.5)`, base 30 for a ram, stomp or slam, 45 for a harpoon smash, 1.5 for any other kind and 3 while the Warden charges its pulse. Drain starts after 3 s without a gain, 12 a second. The stagger lasts 4 s. A shatter needs a smash, a ram at speed tier 2 or faster, or a chunk already cracked by an earlier stagger.
+- **One gain per frame from contacts.** A smash landing strikes twice or more in one physics frame; contact gains in a frame take the largest, so the landing counts once at 45.
+- **Chose where the packet was silent.** The hit carries `hp` and `max_hp` so the rule can price a shatter without scene access. A glance on the open core does nothing (no crack, no shatter). With plating 0 the multiplier reads as the 1.5 cap. The rule object also emits `posture_changed` from the drain, not only from hits.
+- **Not in the spec, kept on purpose.** A gun, blast or synergy strike on an open core deals 0 and cracks nothing, so holding fire cannot win.
+- **Demand:** the Warden fight on the slice, which the plate, cracks and sounds units will draw.

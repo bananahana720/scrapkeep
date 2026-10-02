@@ -6,7 +6,8 @@ extends RefCounted
 # may schedule, scrap_density scales the scrap build lays out, and beacon_seconds is
 # how long the beacon takes to charge with the ball inside its ring on the unsealed
 # path. The warden fields are the stage's one MUST (DEMO-SPEC): its plating and HP,
-# the lesson it teaches and the hint the objective line gives. Hints match the stage's
+# the lesson it teaches and the hint the objective line gives, and an optional
+# warden_fight, "plating" (the default, these rows) or "posture" (slice_defs.gd). Hints match the stage's
 # Warden family (roster WARDEN_FAMILIES): stage 1's reactor is the one that vents, and
 # stage 2's hive hides behind its guard rack. Every number here is a
 # starting value; tuning edits this table, the heft constants and the part catalogue.

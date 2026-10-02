@@ -581,6 +581,13 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 	if kind == SYNERGY:
 		part = ""
 	var punch := punch_of(kind, force)
+	if enemy.has_method("fight") and enemy.fight() == "posture":
+		var tier: int = SpeedTier.of(force, ctx.player.tuning.f("cruise")) if kind == "ram" else 0
+		var judged: Dictionary = enemy.judge_hit(kind, punch, ctx.player.smash_landing == enemy, tier)
+		if not judged.is_empty():
+			if part != "" and judged["part"] == "":
+				judged["part"] = part
+			return judged
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
@@ -1741,6 +1748,7 @@ func _spec_for(kind: String) -> Dictionary:
 			var w := warden_spec(stage)
 			w["stage"] = stage
 			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
+			w["fight"] = String(ctx.flow.stage_def().get("warden_fight", "plating"))
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}

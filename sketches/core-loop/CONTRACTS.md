@@ -80,7 +80,7 @@ Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `
 - `threat` (a multiplier) and `event_mix` (event id to weight).
 - `scrap_density` (a multiplier).
 - `beacon_seconds` and `beacon_radius`, used only by the unsealed presence path.
-- `warden_plating` (45, 80, 140), `warden_hp` (800, 2200, 7500), `warden_lesson` (`plate`, `caps`, `magnet`) and `warden_hint` (the objective line's last sentence).
+- `warden_plating` (45, 80, 140), `warden_hp` (800, 2200, 7500), `warden_lesson` (`plate`, `caps`, `magnet`) and `warden_hint` (the objective line's last sentence). An optional `warden_fight` (`plating`, the default, or `posture`) picks the Warden's rule; only `slice_defs.gd`'s row says `posture`.
 
 Every number there is a starting value; tuning edits `stage_defs.gd`, the heft constants in `run_state.gd` and the part catalogue.
 
@@ -260,6 +260,7 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 
   A foreseen shove is an allowed performance cost. To turn a velocity change into an acceleration, divide it by the physics step actually run (the `delta` your `_physics_process` receives), never by `physics_ticks_per_second`: hit-stop changes `Engine.time_scale`, which would otherwise scale the push.
 - `set_velocity_now(velocity)` sets velocity. Only D's launch uses it. The launch calls it every tick during the flight, as a rail, not once.
+- `smash_landing: Node3D` is the enemy a harpoon smash is landing on, set for the whole of that landing's contact and shockwave strikes and null otherwise. Combat reads it to tell a smash from an ordinary contact; nothing else writes it.
 - `crush_check` (a Callable) is wired by `game.gd` to `ctx.spawner.would_crush`. A bow sensor a metre past the shell asks it for each enemy met from the cruise tier up. On yes, the ball ignores that enemy for 0.3 s and reports one `ram` strike, with no knock, shockwave or hit-stop.
 
 ## Flow seams (`src/core/flow.gd`)
@@ -648,6 +649,7 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Packs.** The director times a pack's members on one arrival ring, so every reinforcement spawned in one physics frame is one pack; combat publishes `pack_arrived` once per faction in it. A lone chaser or lobber is not a pack.
 - **The director's inputs** (`src/world/director.gd`). World may set `director.stage` (1 to 3; 0 reads it from the threat dial) and `director.build` (the spawner's `build_read()`); both default safely, so the director works before world sets them. `KIND_NAMES` holds every spawnable reinforcement; `packs` records each pack composed.
 - **Warden family kits.** The stage Warden has `family` (`Roster.warden_family(stage)`), `family_point()` (`core`, `queen` or `lens`), `family_open()` and `braced()`. An open family point meets plating 0 through `plating_for(kind, part)`, is listed in `weak_points()`, and takes contacts near the top through `contact_part`. The lessons are unchanged.
+- **The posture fight** (`src/combat/boss_posture.gd`, a scene-free rule object). `spec["fight"]` is `plating` or `posture`; `combat._spec_for("warden")` reads it from the stage row's `warden_fight`. Under `posture`, `resolve()` asks the Warden's `judge_hit(kind, punch, smash, tier)` first and returns its answer (`{}` under `plating`, which falls through to the plating rule). `judge` is pure; `on_struck` calls `apply` once per strike; the Warden's `take_damage` removes only what a shattering strike armed, so no other path lowers its health. Readers: `fight()`, `posture()`, `staggered()`, `stagger_left()`, `chunks_left()`, `chunk_cracked()`. `posture_changed(enemy, posture, staggered)` goes out when the whole-number posture, the stagger, the chunk count or the crack changes. A stagger opens the core (`family_open()`, `weak_points()`, one `weak_point_opened("core", at, 4.0)`), pauses the pulse and cancels a charge in flight; the reactor's post-pulse window does not open, shred does not build and `set_tint` is always `slate`.
 - **The plating dress.** `set_tint("amber")` now means "breaks now": a class-colour rim (`Enemy.rim_color`, which fleet sets from the run's class row) and the open-crack glyphs; `"slate"` means closed dark plates. The state names are kept for their callers.
 
 ## Workshop UI (v2 W8)
