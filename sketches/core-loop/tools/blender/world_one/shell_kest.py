@@ -11,8 +11,10 @@
 #   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
 #     blender -b --factory-startup -P world_one/shell_kest.py -- --out <file.glb>
 
+import json
 import math
 import os
+import struct
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -34,8 +36,8 @@ VANE_HINGE = (0.0, -0.32, 1.02)
 
 def satchel(p, loc, yaw, canvas):
     m = common.mtx(loc, (0, 0, yaw))
-    p.box("paint", (0.3, 0.2, 0.26), loc=m @ Vector((0, 0, 0)), rot=(0, 0, yaw), color=canvas)
-    p.box("paint", (0.31, 0.12, 0.08), loc=m @ Vector((0, 0.05, 0.12)), rot=(0.3, 0, yaw), color="petrol")
+    body = p.box("paint", (0.3, 0.2, 0.26), loc=m @ Vector((0, 0, 0)), rot=(0, 0, yaw), color=canvas)
+    flap = p.box("paint", (0.31, 0.12, 0.08), loc=m @ Vector((0, 0.05, 0.12)), rot=(0.3, 0, yaw), color="petrol")
     for dz in (-0.07, 0.03):
         p.box("class_accent", (0.32, 0.22, 0.045), loc=m @ Vector((0, 0, dz)), rot=(0, 0, yaw))
     for dx in (-0.07, 0.07):
@@ -45,16 +47,20 @@ def satchel(p, loc, yaw, canvas):
         p.ico("class_accent", 0.028, 1, loc=tip)
     p.rod("rubber", m @ Vector((0, -0.1, 0.1)), (loc[0] * 0.7, loc[1] * 0.7, loc[2] + 0.12), 0.02, 5)
 
+    return m, body, flap
+
 
 def pod():
     p = Part("Pod")
     sb.saddle(p, center=(0.0, 0.14, 0.76), r_in=0.42, r_out=0.62, color="bone")
-    satchel(p, (0.8, -0.08, 0.66), math.pi / 2 + 0.2, "oxide")
-    satchel(p, (0.06, -0.8, 0.64), math.pi, "petrol")
-    satchel(p, (-0.74, 0.3, 0.62), -math.pi / 2 - 0.3, "oxide")
+    working = [
+        satchel(p, (0.8, -0.08, 0.66), math.pi / 2 + 0.2, "oxide"),
+        satchel(p, (0.06, -0.8, 0.64), math.pi, "petrol"),
+        satchel(p, (-0.74, 0.3, 0.62), -math.pi / 2 - 0.3, "oxide"),
+    ]
     base = Vector((-0.6, -0.42, 0.78))
     mouth = Vector((-0.66, -0.26, 1.2))
-    p.rod("paint", base, mouth, 0.09, 10, color="oxide")
+    tube_faces = p.rod("paint", base, mouth, 0.09, 10, color="oxide")
     p.rod("bare_metal", base - (mouth - base) * 0.12, base + (mouth - base) * 0.12, 0.11, 10)
     p.ring("class_accent", 0.065, 0.115, 0.05, 10, loc=mouth,
            rot=(Vector((0, 0, 1)).rotation_difference((mouth - base).normalized())).to_euler())
@@ -67,7 +73,32 @@ def pod():
     p.beam("bare_metal", (0, -0.2, 0.88), (0, -0.9, 0.9), 0.06, 0.05)
     p.beam("bare_metal", (0, -0.62, 0.9), (0, -0.62, 0.72), 0.05)
     wear(p)
+    rub_edges(p, working, base, mouth, tube_faces)
     return p
+
+
+def rub_edges(p, working, base, mouth, tube_faces):
+    """Rub the existing working edges with bone vertex colour (C09 correction).
+    Geometry and material slots stay intact; each build owns its face references.
+    """
+    bone = tuple(common.rgba("bone"))
+    for m, body, flap in working:
+        inv = m.inverted()
+        for f in body:
+            for loop in f.loops:
+                if (inv @ loop.vert.co).z > 0.06:
+                    loop[p.col] = bone
+        for f in flap:
+            for loop in f.loops:
+                c = inv @ loop.vert.co
+                if c.y > 0.09 or c.z > 0.19:
+                    loop[p.col] = bone
+    d = (mouth - base).normalized()
+    length = (mouth - base).length
+    for f in tube_faces:
+        for loop in f.loops:
+            if (loop.vert.co - base).dot(d) / length > 0.8:
+                loop[p.col] = bone
 
 
 def wear(p):
@@ -161,6 +192,36 @@ def pilot():
     return f
 
 
+def stable_pilot_normals(path):
+    """Two exports differed by 0.00009 in a static pilot smooth normal.
+    Round components to 0.001 and normalize; geometry and animated rigs stay intact.
+    """
+    with open(path, "rb") as f:
+        data = bytearray(f.read())
+    json_len = struct.unpack_from("<I", data, 12)[0]
+    gltf = json.loads(data[20:20 + json_len])
+    bin_start = 28 + json_len
+    for mesh in gltf["meshes"]:
+        if mesh["name"] != "Pilot":
+            continue
+        for primitive in mesh["primitives"]:
+            accessor = gltf["accessors"][primitive["attributes"]["NORMAL"]]
+            view = gltf["bufferViews"][accessor["bufferView"]]
+            assert accessor["componentType"] == 5126 and accessor["type"] == "VEC3"
+            start = bin_start + view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
+            stride = view.get("byteStride", 12)
+            for i in range(accessor["count"]):
+                offset = start + i * stride
+                normal = struct.unpack_from("<3f", data, offset)
+                rounded = tuple(round(x, 3) or 0.0 for x in normal)
+                length = math.sqrt(math.fsum(x * x for x in rounded))
+                struct.pack_into("<3f", data, offset, *(x / length for x in rounded))
+    with open(path, "wb") as f:
+        f.write(data)
+    common.canonical_indices(path)
+    print("STABLE_NORMALS Kest static Pilot, component precision 0.001")
+
+
 def main():
     common.reset()
     common.preview_class("amber")
@@ -171,6 +232,7 @@ def main():
     print("CORE_RADIUS Kest %.3f %s" % (radius, "ok" if radius <= 1.0 else "OUT"))
     out = common.args()["out"] or os.path.join(common.MODELS, "world_one", "shell_kest.glb")
     common.export(root, out)
+    stable_pilot_normals(out)
     if not ok or radius > 1.0:
         raise SystemExit("budget out of range for Kest")
 
