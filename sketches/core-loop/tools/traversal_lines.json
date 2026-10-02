@@ -1,9 +1,10 @@
 {
   "table": "slice",
   "stage": 1,
+  "baseline_commit": "0bb1f09ef0d31fe1870626c5806a7b5bd22feffa",
   "pilots": {
-    "sable": {"waypoints": [], "bar": {"median_flow_share": 0.70, "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}},
-    "rivet": {"waypoints": [], "bar": {"median_flow_share": 0.70, "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}},
-    "kest": {"waypoints": [], "bar": {"median_flow_share": 0.70, "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}}
+    "sable": {"waypoints": [], "bar": {"median_flow_share": 1.0, "median_flow_share_rule": 1.0483, "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}},
+    "rivet": {"waypoints": [], "bar": {"median_flow_share": 1.0, "median_flow_share_rule": 1.0393, "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}},
+    "kest": {"waypoints": [], "bar": {"median_flow_share": 1.0, "median_flow_share_rule": 1.0923, "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}}
   }
 }
