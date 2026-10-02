@@ -318,37 +318,23 @@ func check_chunk_asset(hook) -> void:
 	var ratio := (maximum - minimum) / before
 	print("WM_BASE_BOUNDS min=", minimum, " max=", maximum, " ratio=", ratio)
 	check("all armour on keeps base bounds within three percent", absf(ratio.x - 1.0) <= 0.03 and absf(ratio.y - 1.0) <= 0.03 and absf(ratio.z - 1.0) <= 0.03)
+	# WR: four stacked bands per jaw (0 on top), each half a child of its own jaw so it moves
+	# with it, and whole crowns that are no longer segments.
+	var centres := {"L": [], "R": []}
 	for i in 4:
-		var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
-		check("named armour segment %d" % i, segment != null and segment.mesh.get_aabb().size.y > 1.0)
+		for side in ["L", "R"]:
+			var band := base.find_child("ArmourSegment%d%s" % [i, side], true, false) as MeshInstance3D
+			check("named armour band %d%s under its own jaw" % [i, side], band != null and band.get_parent() == base.get_node("Jaw" + side) and band.mesh.get_aabb().size.y > 0.3)
+			check("band %d%s has a plate surface and a rim surface" % [i, side], band != null and band.mesh.get_surface_count() == 2)
+			var anchors := band.find_children("CrackAnchor*", "Node3D", false, false)
+			check("band %d%s names three crack anchors" % [i, side], anchors.size() == 3)
+			centres[side].append(band.mesh.get_aabb().get_center().y)
+	for side in ["L", "R"]:
+		var stacked := true
+		for i in 3:
+			stacked = stacked and centres[side][i] > centres[side][i + 1] + 0.3
+		check("bands stack top to bottom on jaw " + side, stacked)
+		check("whole crown stays on jaw " + side, base.get_node_or_null("Jaw%s/Crown%s" % [side, side]) is MeshInstance3D)
 	var core := base.get_node_or_null("CoreAssembly")
 	check("named caged heart with one emissive surface", core != null and core.get_child_count() == 2 and core.get_node("HeartSurface").mesh.get_surface_count() == 1 and (core.get_node("HeartSurface").global_basis.get_scale() * core.get_node("HeartSurface").mesh.get_aabb().size).is_equal_approx(Vector3.ONE))
-	# Exact triangle union projected from the facing gap. Each missing half removes area
-	# above both the fixed jaws and the inner structure, where only armour can occlude.
-	var silhouettes: Array = []
-	for lost in 5:
-		var mask := PackedByteArray()
-		mask.resize(160 * 60)
-		for i in range(lost, 4):
-			var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
-			var faces := segment.mesh.get_faces()
-			for triangle in range(0, faces.size(), 3):
-				var a: Vector3 = base.to_local(segment.to_global(faces[triangle]))
-				var b: Vector3 = base.to_local(segment.to_global(faces[triangle + 1]))
-				var c: Vector3 = base.to_local(segment.to_global(faces[triangle + 2]))
-				if maxf(a.y, maxf(b.y, c.y)) < 5.9:
-					continue
-				var polygon := PackedVector2Array([Vector2(a.z, a.y), Vector2(b.z, b.y), Vector2(c.z, c.y)])
-				for x in 160:
-					var z := -4.0 + (x + 0.5) * 0.05
-					if z < minf(a.z, minf(b.z, c.z)) or z > maxf(a.z, maxf(b.z, c.z)):
-						continue
-					for y in 60:
-						var height := 5.9 + (y + 0.5) * 0.01
-						if Geometry2D.is_point_in_polygon(Vector2(z, height), polygon):
-							mask[y * 160 + x] = 1
-		silhouettes.append(mask.count(1))
-	print("WM_CROWN_SILHOUETTE_SAMPLES ", silhouettes)
-	for i in 4:
-		check("loss %d changes the facing crown silhouette" % (i + 1), silhouettes[i] > silhouettes[i + 1])
 	base.free()

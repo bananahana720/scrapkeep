@@ -24,7 +24,7 @@ const T := preload("res://tests/support/t.gd")
 const PLATING := 45.0
 const ADDED_CODE := {
 	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams"],
-	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open", "_warden_chunk_mark", "_update_warden_chunks", "_throw_warden_segment", "_paint_warden_inner", "_paint_warden_segment", "_hide_warden_placeholder_core", "_own_warden_heart"],
+	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open", "_rig_warden_chunks", "_warden_chunk_marks", "_update_warden_chunks", "_throw_warden_segment", "_throw_warden_half", "_paint_warden_inner", "_paint_warden_segment", "_make_warden_band_materials", "_set_warden_rim", "_warden_wound", "_clear_warden_jaw_faces", "_hide_warden_placeholder_core", "_own_warden_heart"],
 }
 # Existing functions with a posture branch inside them: only the posture arm is scanned,
 # because the plating arm keeps its amber.

@@ -79,7 +79,8 @@ var _materials := {}
 var _scenes := {}
 var _meshes := {}
 var _players := {}
-const WARDEN_CORE_OPEN_SCALE := 2.6
+const WARDEN_CORE_OPEN_SCALE := 3.2
+const WARDEN_BAND_OUT := 0.07
 var _wardens := {}
 var _warden_fragments: Array[MeshInstance3D] = []
 var _mast := {}
@@ -644,7 +645,7 @@ func _dress_warden(warden) -> void:
 	base.add_child(kit)
 	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
 		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null,
-		"jaws": [], "light_rest": {}, "segments": [], "chunk_marks": [], "flights": [],
+		"jaws": [], "light_rest": {}, "segments": [], "wounds": [], "chunk_marks": [], "flights": [],
 		"chunks_seen": 4, "core": base.get_node("CoreAssembly")}
 	if warden.family == "swarm":
 		_split_queen_hatch(weak, rec)
@@ -685,6 +686,8 @@ func _dress_warden(warden) -> void:
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
 	_add_warden_strokes(base, warden._look, warden, rec)
+	if warden.fight() == "posture":
+		_clear_warden_jaw_faces(rec)
 	_wardens[warden.get_instance_id()] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
@@ -867,7 +870,7 @@ func _paint_warden(root: Node, rec: Dictionary, kit := false) -> void:
 			var key := slot
 			if slot == "ancient_light" and not kit:
 				if root.name != "HeartSurface":
-					key += "_jaw" if String(root.name).begins_with("Jaw") or String(root.name).begins_with("ArmourSegment") else "_base"
+					key += "_jaw" if String(root.name).begins_with("Jaw") or String(root.name).begins_with("Crown") or String(root.name).begins_with("ArmourSegment") else "_base"
 			if not rec.materials.has(key):
 				rec.materials[key] = material(slot).duplicate() if slot in ["ancient_light", "ancient_enamel"] else material(slot)
 			root.set_surface_override_material(i, rec.materials[key])
@@ -912,7 +915,7 @@ func _update_warden(rec: Dictionary) -> void:
 	rim.albedo_color = rim.emission
 	rim.emission_energy_multiplier = plate.emission_energy_multiplier if cued else 0.8
 	for seam in rec.seams:
-		seam.node.visible = seam.source.visible
+		seam.node.visible = seam.source.visible and not rec.get("hide_guard", false)
 	if not rec.jaws.is_empty():
 		_update_warden_open(rec)
 	_update_warden_chunks(rec)
@@ -938,8 +941,9 @@ func _update_warden_open(rec: Dictionary) -> void:
 	heart.emission_energy_multiplier = 1.0
 	heart.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	heart.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
-	heart.no_depth_test = open
-	heart.render_priority = 10 if open else 0
+	# The core is depth-tested: a jaw or a plate in front of it hides it.
+	heart.no_depth_test = false
+	heart.render_priority = 0
 	for key in rec.light_rest:
 		(rec.materials[key] as StandardMaterial3D).emission = EventKinds.state_color("open") if open else rec.light_rest[key]
 
@@ -957,34 +961,67 @@ func _warden_stage_entered(_stage: int, _retry: bool) -> void:
 
 
 func _has_warden_chunk_nodes(base: Node3D) -> bool:
-	for path in ["CoreAssembly", "JawL/InnerL", "JawR/InnerR"]:
+	for path in ["CoreAssembly", "JawL/InnerL", "JawR/InnerR", "JawL/CrownL", "JawR/CrownR"]:
 		if not base.has_node(path):
 			return false
 	for i in 4:
-		if base.find_child("ArmourSegment%d" % i, true, false) == null:
-			return false
+		for side in ["L", "R"]:
+			var band := base.get_node_or_null("Jaw%s/ArmourSegment%d%s" % [side, i, side])
+			if band == null or band.get_node_or_null("CrackAnchor%d%s0" % [i, side]) == null:
+				return false
 	return true
 
 
+# The four health bands are stacked on each jaw's outer face, two halves each, 0 on top. They
+# are drawn only on the posture rule; a plating Warden keeps the base model's look unchanged.
 func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 	var posture: bool = rec.warden.fight() == "posture"
 	rec.core.visible = false
 	for i in 4:
-		var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
-		rec.segments.append(segment)
-		if posture:
-			_paint_warden_segment(segment, rec)
-			rec.chunk_marks.append(_warden_chunk_mark(segment))
+		var halves: Array = []
+		for side in ["L", "R"]:
+			var band := base.get_node("Jaw%s/ArmourSegment%d%s" % [side, i, side]) as MeshInstance3D
+			band.visible = posture
+			halves.append(band)
+		rec.segments.append(halves)
 	for side in ["L", "R"]:
 		var inner := base.get_node("Jaw%s/Inner%s" % [side, side]) as MeshInstance3D
 		inner.visible = posture
 		if posture:
 			_paint_warden_inner(inner)
 	if posture:
+		_make_warden_band_materials(rec)
+		for i in 4:
+			var wounds: Array = []
+			var marks: Array = []
+			for band in rec.segments[i]:
+				_paint_warden_segment(band, rec)
+				wounds.append(_warden_wound(band, rec))
+				marks.append_array(_warden_chunk_marks(band, rec))
+			rec.wounds.append(wounds)
+			rec.chunk_marks.append(marks)
 		# The caged heart replaces the kit's visible weak point; both use ancient_light.
 		rec.weak.visible = false
 		_hide_warden_placeholder_core(rec)
 		_own_warden_heart(rec)
+
+
+# The jaw's guard strokes are neutral on the neutral plates and drew a white X across the ring,
+# and its old open-crack glyph would draw over the plates, so a posture Warden hides both. The
+# jaw's own lit seams would sit in the gaps between bands as a fifth thing to count, so they go
+# dark; the HUD plate keeps the guard and the bands carry the health.
+func _clear_warden_jaw_faces(rec: Dictionary) -> void:
+	rec.hide_guard = true
+	for seam in rec.seams:
+		seam.node.visible = false
+	for crack in rec.cracks:
+		crack.visible = false
+		rec.warden._cracks.erase(crack)
+	for side in ["JawL", "JawR"]:
+		var jaw := rec.base.get_node(side) as MeshInstance3D
+		for surface in jaw.mesh.get_surface_count():
+			if slot_of(jaw.mesh, surface) == "ancient_light":
+				jaw.set_surface_override_material(surface, rec.materials["warden_wound"])
 
 
 # The look's bone sphere is the functional placeholder core. It sat inside the ring in every
@@ -996,35 +1033,107 @@ func _hide_warden_placeholder_core(rec: Dictionary) -> void:
 			_hide_warden_mesh(child, rec)
 
 
-# The four armour segments are the HUD plate's four pips: the plate's neutral colour, with
-# dark seams. A lost segment leaves the dark inner structure, so the contrast counts them.
-func _paint_warden_segment(segment: MeshInstance3D, rec: Dictionary) -> void:
-	if not rec.materials.has("warden_plate"):
-		var plate := StandardMaterial3D.new()
-		plate.albedo_color = EventKinds.role_color("neutral")
-		plate.roughness = 0.85
-		var outline := StandardMaterial3D.new()
-		outline.albedo_color = Palette.CHARCOAL
-		outline.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		outline.cull_mode = BaseMaterial3D.CULL_FRONT
-		outline.grow = true
-		outline.grow_amount = 0.09
-		plate.next_pass = outline
-		rec.materials["warden_plate"] = plate
-		var seam := StandardMaterial3D.new()
-		seam.albedo_color = Palette.CHARCOAL
-		seam.roughness = 0.95
-		rec.materials["warden_plate_seam"] = seam
-	for surface in segment.mesh.get_surface_count():
-		match slot_of(segment.mesh, surface):
-			"ancient_enamel":
-				segment.set_surface_override_material(surface, rec.materials["warden_plate"])
-			"rubber":
-				segment.set_surface_override_material(surface, rec.materials["warden_plate_seam"])
+# Plate pip colour for the bands, a dark seam outline, a rim that goes live while open, and
+# the dark rusted wound a lost band leaves.
+func _make_warden_band_materials(rec: Dictionary) -> void:
+	var plate := StandardMaterial3D.new()
+	plate.albedo_color = EventKinds.role_color("neutral")
+	plate.roughness = 0.85
+	var outline := StandardMaterial3D.new()
+	outline.albedo_color = Palette.CHARCOAL
+	outline.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	outline.cull_mode = BaseMaterial3D.CULL_FRONT
+	outline.grow = true
+	outline.grow_amount = 0.09
+	plate.next_pass = outline
+	rec.materials["warden_plate"] = plate
+	var rim := StandardMaterial3D.new()
+	rim.roughness = 0.85
+	rec.materials["warden_rim"] = rim
+	var wound := StandardMaterial3D.new()
+	wound.albedo_color = EventKinds.role_color("rust").darkened(0.6)
+	wound.roughness = 0.95
+	rec.materials["warden_wound"] = wound
+	_set_warden_rim(rim, false)
 
 
-# The heart gets its own material: it draws through the armour while open, and the kit's
-# seams share the old one.
+# The band's rim is its plate colour while closed and the live colour, unshaded, while open.
+func _set_warden_rim(rim: StandardMaterial3D, open: bool) -> void:
+	var color := EventKinds.state_color("open") if open else EventKinds.role_color("neutral")
+	rim.albedo_color = color
+	rim.emission_enabled = open
+	rim.emission = color
+	rim.emission_energy_multiplier = 1.4
+	rim.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED if open else BaseMaterial3D.SHADING_MODE_PER_PIXEL
+
+
+func _paint_warden_segment(band: MeshInstance3D, rec: Dictionary) -> void:
+	for surface in band.mesh.get_surface_count():
+		var key := "warden_rim" if slot_of(band.mesh, surface) == "ancient_light" else "warden_plate"
+		band.set_surface_override_material(surface, rec.materials[key])
+
+
+# Where a band was, the same sheet sits a little lower and dark: the rusted inner structure,
+# set below its light neighbours and not a hole through the model.
+func _warden_wound(band: MeshInstance3D, rec: Dictionary) -> MeshInstance3D:
+	var wound := MeshInstance3D.new()
+	wound.name = band.name.replace("ArmourSegment", "ArmourWound")
+	wound.mesh = band.mesh
+	for surface in band.mesh.get_surface_count():
+		wound.set_surface_override_material(surface, rec.materials["warden_wound"])
+	var jaw := band.get_parent() as Node3D
+	var axis := Vector3(-jaw.position.x, 0.0, 0.0)
+	var shrink := 1.0 - 0.05 / 3.6
+	var scaling := Basis.from_scale(Vector3(shrink, 1.0, shrink))
+	wound.transform = Transform3D(scaling, axis - scaling * axis)
+	wound.visible = false
+	jaw.add_child(wound)
+	return wound
+
+
+# The crack on one band half: a dark groove under a colour line, at each anchor the recipe set
+# on the band's outward face, so it shows from the front, a side and the rear.
+func _warden_chunk_marks(band: MeshInstance3D, rec: Dictionary) -> Array:
+	if not rec.materials.has("warden_crack"):
+		var line := StandardMaterial3D.new()
+		line.albedo_color = EventKinds.role_color("neutral")
+		line.emission_enabled = true
+		line.emission = line.albedo_color
+		line.emission_energy_multiplier = 1.2
+		rec.materials["warden_crack"] = line
+		var groove := StandardMaterial3D.new()
+		groove.albedo_color = Palette.CHARCOAL
+		rec.materials["warden_groove"] = groove
+	var jaw := band.get_parent() as Node3D
+	var marks: Array = []
+	var points := [Vector2(-0.2, 0.22), Vector2(0.1, 0.07), Vector2(-0.1, -0.07), Vector2(0.2, -0.22)]
+	var sizes := [1.3, 1.1, 0.95]
+	for anchor in band.find_children("CrackAnchor*", "Node3D", false, false):
+		var mark := Node3D.new()
+		mark.name = "ChunkCrack"
+		var normal := Vector3(anchor.position.x + jaw.position.x, 0, anchor.position.z).normalized()
+		mark.position = anchor.position
+		mark.basis = Basis.looking_at(-normal).scaled(Vector3.ONE * sizes[marks.size() % 3])
+		for i in 6:
+			var groove := i >= 3
+			var stroke := MeshInstance3D.new()
+			var mesh := BoxMesh.new()
+			var from: Vector2 = points[i % 3]
+			var to: Vector2 = points[i % 3 + 1]
+			mesh.size = Vector3(0.34 if groove else 0.12, from.distance_to(to) + (0.08 if groove else 0.0), 0.02)
+			stroke.name = "Groove%d" % i if groove else "Crack%d" % i
+			stroke.mesh = mesh
+			stroke.material_override = rec.materials["warden_groove" if groove else "warden_crack"]
+			stroke.position = Vector3((from.x + to.x) * 0.5, (from.y + to.y) * 0.5, 0.02 if groove else 0.05)
+			stroke.rotation.z = -atan2(to.x - from.x, to.y - from.y)
+			mark.add_child(stroke)
+		mark.visible = false
+		band.add_child(mark)
+		marks.append(mark)
+	return marks
+
+
+# The heart gets its own material so its colour never drifts with the kit's seams.
 func _own_warden_heart(rec: Dictionary) -> void:
 	var heart := rec.core.get_node("HeartSurface") as MeshInstance3D
 	var mat := (rec.materials.ancient_light as StandardMaterial3D).duplicate() as StandardMaterial3D
@@ -1041,80 +1150,48 @@ func _paint_warden_inner(inner: MeshInstance3D) -> void:
 		inner.set_surface_override_material(surface, mat)
 
 
-func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
-	var mark := Node3D.new()
-	mark.name = "ChunkCrack"
-	var bounds := segment.mesh.get_aabb()
-	var centre := bounds.get_center()
-	var normal := Vector3(centre.x + 2.2, 0, centre.z).normalized()
-	mark.position = centre
-	mark.basis = Basis.looking_at(-normal)
-	segment.add_child(mark)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = EventKinds.role_color("neutral")
-	mat.emission_enabled = true
-	mat.emission = mat.albedo_color
-	mat.emission_energy_multiplier = 1.2
-	# A dark groove under the colour line, so the crack reads on the light plate at 12 m.
-	var groove_mat := StandardMaterial3D.new()
-	groove_mat.albedo_color = Palette.CHARCOAL
-	var points := [Vector2(-0.22, 0.5), Vector2(0.1, 0.17), Vector2(-0.1, -0.12), Vector2(0.2, -0.5)]
-	for i in 6:
-		var groove := i >= 3
-		var stroke := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.62 if groove else 0.2, points[i % 3].distance_to(points[i % 3 + 1]) + (0.1 if groove else 0.0), 0.03 if groove else 0.06)
-		stroke.name = "Groove%d" % i if groove else "Crack%d" % i
-		stroke.mesh = mesh
-		stroke.material_override = groove_mat if groove else mat
-		var mid: Vector2 = (points[i % 3] + points[i % 3 + 1]) * 0.5
-		stroke.position = Vector3(mid.x, mid.y, 0)
-		var direction: Vector2 = points[i % 3 + 1] - points[i % 3]
-		stroke.rotation.z = -atan2(direction.x, direction.y)
-		mark.add_child(stroke)
-		_fit_warden_stroke(stroke, segment, segment.mesh.get_faces())
-		if not groove:
-			# The colour line sits proud of its dark groove so the two never share a depth.
-			stroke.position.z += 0.05
-	mark.visible = false
-	return mark
-
-
 func _update_warden_chunks(rec: Dictionary) -> void:
 	var warden = rec.warden
 	if warden.fight() != "posture":
 		return
 	var lost: int = 4 - warden.chunks_left()
 	var seen: int = 4 - rec.chunks_seen
+	var open: bool = warden.staggered()
+	_set_warden_rim(rec.materials.warden_rim, open)
 	for i in range(seen, lost):
 		_throw_warden_segment(rec, i)
 	rec.chunks_seen = warden.chunks_left()
+	var color := EventKinds.state_color("chunk_shatter") if open else EventKinds.role_color("neutral")
+	var crack_mat: StandardMaterial3D = rec.materials.warden_crack
+	crack_mat.albedo_color = color
+	crack_mat.emission = color
 	for i in 4:
-		rec.segments[i].visible = i >= lost
-		var mark: Node3D = rec.chunk_marks[i]
-		mark.visible = i == lost and warden.chunk_cracked()
-		var color := EventKinds.state_color("chunk_shatter") if warden.staggered() else EventKinds.role_color("neutral")
-		for stroke in mark.get_children():
-			if String(stroke.name).begins_with("Groove"):
-				continue
-			var mat: StandardMaterial3D = stroke.material_override
-			mat.albedo_color = color
-			mat.emission = color
+		for band in rec.segments[i]:
+			band.visible = i >= lost
+		for wound in rec.wounds[i]:
+			wound.visible = i < lost
+		for mark in rec.chunk_marks[i]:
+			mark.visible = i == lost and warden.chunk_cracked()
 
 
+# Both halves of the lost band fly out, each in the colour it wore on the body.
 func _throw_warden_segment(rec: Dictionary, index: int) -> void:
-	var segment: MeshInstance3D = rec.segments[index]
+	for band in rec.segments[index]:
+		_throw_warden_half(rec, band, index)
+
+
+func _throw_warden_half(rec: Dictionary, segment: MeshInstance3D, index: int) -> void:
 	var fragment := MeshInstance3D.new()
 	fragment.name = "WardenFragment%d" % index
 	fragment.mesh = segment.mesh
+	var open: bool = rec.warden.staggered()
 	for surface in segment.mesh.get_surface_count():
 		# Keep fragment materials alive with the hook, including after a copy is freed.
-		var slot := slot_of(segment.mesh, surface)
-		var key := "warden_fragment:" + slot
+		var rim := slot_of(segment.mesh, surface) == "ancient_light"
+		var key := "warden_fragment:%s:%s" % ["rim" if rim else "plate", open]
 		if not _materials.has(key):
-			var mat := material(slot).duplicate() as StandardMaterial3D
-			mat.emission_enabled = false
-			_materials[key] = mat
+			var worn: StandardMaterial3D = rec.materials["warden_rim" if rim else "warden_plate"]
+			_materials[key] = worn.duplicate()
 		fragment.set_surface_override_material(surface, _materials[key])
 	add_child(fragment)
 	fragment.global_transform = segment.global_transform

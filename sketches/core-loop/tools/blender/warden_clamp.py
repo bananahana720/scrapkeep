@@ -9,8 +9,13 @@
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
 # no external assets. Look pass 2: base 4492; kits reactor 1476, hive 1272, mind
 # 1464 (targets 4000 to 6000 and 800 to 1500).
-# WM: the unchanged crown exterior is cut into ArmourSegment0..3; InnerL/InnerR
-# stay below it and CoreAssembly cages a 1 m HeartSurface. Base 4956 triangles.
+# WM: InnerL/InnerR stay below the crown and CoreAssembly cages a 1 m HeartSurface.
+# WR: the crown is two whole pieces, CrownL and CrownR. The health rule is four horizontal
+# armour bands stacked on each jaw's outer face, ArmourSegment0..3 with an L and an R half
+# (0 on top), each half a child of its jaw so it moves with it. A band is a thin sheet 0.07 m
+# proud of the jaw's outer envelope (body face or raised shell), cut into a plate row between
+# two lit-rim rows, with a gap between neighbours. CrackAnchor<band><side><k> empties mark
+# where a crack sits on each half's outward face.
 #
 # Frame and nodes (for W7 to wire; this sketch does not wire the Warden):
 #   warden_clamp_base.glb  WardenClampBase > Housing, Tower > KitMount, JawL, JawR
@@ -185,20 +190,79 @@ def shoulder(side):
     return p
 
 
-def segment_shoulder(side, half, name):
-    """Bisect the existing crown; the union keeps its exact exterior and bounds."""
+def crown(side):
+    """The whole shoulder crown of one jaw: body material in both fights, never broken off."""
     p = shoulder(side)
     dust(p)
-    p.name = name
-    normal = Vector((0, side * half, 0))
-    cut = bmesh.ops.bisect_plane(p.bm, geom=list(p.bm.verts) + list(p.bm.edges) + list(p.bm.faces),
-                               dist=1e-6, plane_co=Vector((0, side * 2.7, 0)), plane_no=normal,
-                               clear_inner=True, clear_outer=False)
-    edges = [e for e in cut["geom_cut"] if isinstance(e, bmesh.types.BMEdge) and e.is_boundary]
-    if edges:
-        caps = bmesh.ops.holes_fill(p.bm, edges=edges, sides=0)["faces"]
-        p.paint(caps, "rubber")
+    p.name = "CrownL" if side > 0 else "CrownR"
     return p
+
+
+BAND_OUT = 0.07
+BAND_RIM = 0.11
+BAND_GAP = 0.3
+BAND_ZONE = (JAW_Z[0] + 0.05, JAW_Z[1] - 0.05)
+SHELL_ARC = 1.1
+SHELL_FIRST = 0.8
+# (angle magnitude, shell included): the shell's two ends are doubled so each band steps up
+# and down over it with a wall; the raised shell only changes the envelope inside its arc.
+BAND_COLUMNS = [(0.5, 0), (0.65, 0), (0.8, 0)] + [(0.8 + k * 1.1 / 6, 1) for k in range(7)][:] \
+    + [(1.9, 0)] + [(1.9 + k * 0.95 / 5, 0) for k in range(1, 6)]
+BAND_ANCHORS = (0.8 + 1.1 / 6, 0.8 + 3 * 1.1 / 6, 1.9 + 0.95 / 5)
+
+
+def jaw_envelope(side, u, z, shell):
+    """How far (m) the jaw's outer face, or its raised shell, stands out of JAW_R at angle u
+    and height z. None where the jaw has no surface at that height."""
+    z0, z1 = JAW_Z
+    zc = (z0 + z1) / 2
+    a0, a1 = (0.5, 2.85) if side > 0 else (-0.5, -2.85)
+    s = 1.0 - 0.45 * (u - a0) / (a1 - a0)
+    zu = zc + (z - zc) / s
+    best = None
+    if z0 <= zu <= z1:
+        best = min(zu - z0, z1 - zu, 0.5) * s
+    if shell:
+        if z0 + 0.55 <= z <= z1 - 0.55:
+            shell_dr = min(0.42 + (z - (z0 + 0.55)), 0.42 + ((z1 - 0.55) - z), 0.62)
+            best = shell_dr if best is None else max(best, shell_dr)
+    return best
+
+
+def armour_band(side, index):
+    """Band index (0 on top) of one jaw as a thin open sheet over its outer envelope."""
+    name = "ArmourSegment%d%s" % (index, "L" if side > 0 else "R")
+    p = Part(name)
+    z0, z1 = JAW_Z
+    zc = (z0 + z1) / 2
+    a0, a1 = (0.5, 2.85) if side > 0 else (-0.5, -2.85)
+    height = (BAND_ZONE[1] - BAND_ZONE[0] - 3 * BAND_GAP) / 4
+    top = BAND_ZONE[1] - index * (height + BAND_GAP)
+    rows_u = [top - height, top - height + BAND_RIM, top - BAND_RIM, top]
+    columns = []
+    for mag, shell in BAND_COLUMNS:
+        u = side * mag
+        s = 1.0 - 0.45 * (u - a0) / (a1 - a0)
+        col = []
+        for zu in rows_u:
+            z = zc + (zu - zc) * s
+            dr = jaw_envelope(side, u, z, bool(shell))
+            if dr is None:
+                dr = 0.0
+            r = JAW_R + dr + BAND_OUT
+            col.append(p.bm.verts.new((r * math.cos(u), r * math.sin(u), z)))
+        columns.append(col)
+    for c in range(len(columns) - 1):
+        for r in range(3):
+            quad = (columns[c][r], columns[c + 1][r], columns[c + 1][r + 1], columns[c][r + 1])
+            face = p.bm.faces.new(quad if side > 0 else tuple(reversed(quad)))
+            p.paint([face], "ancient_enamel" if r == 1 else "ancient_light", ENAMEL if r == 1 else None)
+    anchors = []
+    for mag in BAND_ANCHORS:
+        c = next(i for i, (m, shell) in enumerate(BAND_COLUMNS) if abs(m - mag) < 1e-6 and (shell or mag > 1.9))
+        mid = (columns[c][1].co + columns[c][2].co) / 2
+        anchors.append(mid)
+    return p, anchors
 
 
 def shoulder_inner(side):
@@ -404,11 +468,13 @@ def main():
         j = jaw(side)
         dust(j)
         jaw_obj = j.to_object((HINGE_X, 0, 0), base)
-        # Alternating sides, then outer/inner halves: four distinct crown silhouettes.
-        for half in (1, -1):
-            index = (0 if side > 0 else 1) + (0 if half > 0 else 2)
-            segment = segment_shoulder(side, half, "ArmourSegment%d" % index).to_object((HINGE_X, 0, 0), jaw_obj)
-            segment.location = (0, 0, 0)
+        crown(side).to_object((HINGE_X, 0, 0), jaw_obj).location = (0, 0, 0)
+        for index in range(4):
+            band, anchors = armour_band(side, index)
+            band_obj = band.to_object((HINGE_X, 0, 0), jaw_obj)
+            band_obj.location = (0, 0, 0)
+            for k, at in enumerate(anchors):
+                common.empty("CrackAnchor%d%s%d" % (index, "L" if side > 0 else "R", k), at, band_obj)
         inner = shoulder_inner(side).to_object((HINGE_X, 0, 0), jaw_obj)
         inner.location = (0, 0, 0)
     core_assembly(base)

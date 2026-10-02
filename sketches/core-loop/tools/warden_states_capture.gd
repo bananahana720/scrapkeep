@@ -4,6 +4,12 @@ const Game := preload("res://src/game.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
+# One run on a table saves five states from three sides at about 12 m, plus the same fifteen
+# stills in a fixed shuffled order under blind/ with a key, for a judge who must count unaided.
+const SIDES := {"front": Vector3(12.0, 5.0, 0.0), "side": Vector3(0.0, 5.0, 12.0), "rear": Vector3(-8.5, 5.0, -8.5)}
+const ORDER := [4, 13, 7, 1, 10, 15, 3, 9, 12, 6, 2, 14, 8, 11, 5]
+
+var _tt := T.new()
 var _game
 var _warden
 var _hook
@@ -22,6 +28,10 @@ func _initialize() -> void:
 			_out = arg.trim_prefix("--out=")
 		if arg.begins_with("--table="):
 			_table = arg.trim_prefix("--table=")
+	if _out == "":
+		push_error("warden_states_capture: --out=<dir> is required")
+		quit(2)
+		return
 	root.size = Vector2i(1280, 720)
 	_run()
 
@@ -30,6 +40,8 @@ class T:
 	func check(n, ok, extra = ""):
 		print("check ", n, ": ", ok, " ", extra)
 		return ok
+
+
 	func eq(n, a, b):
 		print("eq ", n, ": ", a, " vs ", b)
 		return a == b
@@ -40,12 +52,8 @@ func _frames(count: int) -> void:
 		await physics_frame
 
 
-
-
 func _seconds(seconds: float) -> void:
 	await _frames(roundi(seconds * Engine.physics_ticks_per_second))
-
-
 
 
 func _start(table: String) -> void:
@@ -65,8 +73,6 @@ func _start(table: String) -> void:
 	_bind()
 
 
-
-
 func _bind() -> void:
 	_warden = _game.flow.warden
 	_hook = _game.presentation.hero_assets
@@ -79,12 +85,8 @@ func _bind() -> void:
 			enemy.queue_free()
 
 
-
-
 func _ground(out: float) -> Vector3:
 	return _game.ctx.terrain.drop_point(_warden.global_position.x + out, _warden.global_position.z, 1.5)
-
-
 
 
 func _fill() -> void:
@@ -98,8 +100,6 @@ func _fill() -> void:
 		await physics_frame
 	await _frames(2)
 	_tt.check("real fight opened", _warden.staggered())
-
-
 
 
 func _smash() -> void:
@@ -116,15 +116,6 @@ func _smash() -> void:
 			break
 	_source.hold = {}
 	_tt.eq("real harpoon contact landed", _smashed, 1)
-
-
-
-
-var _tt := T.new()
-
-
-const SIDES := {"front": Vector3(12.0, 5.0, 0.0), "side": Vector3(0.0, 5.0, 12.0), "rear": Vector3(-8.5, 5.0, -8.5)}
-const ORDER := [4, 13, 7, 1, 10, 15, 3, 9, 12, 6, 2, 14, 8, 11, 5]
 
 
 func _shot(state: String) -> void:
