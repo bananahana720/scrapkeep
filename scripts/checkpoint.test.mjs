@@ -6,6 +6,7 @@ import {
   atMost,
   evaluateBots,
   evaluatePerf,
+  BY_HAND,
   evaluateReceipt,
   evaluateSitting,
   evaluateSweep,
@@ -69,15 +70,17 @@ test("skipper must be slower, and the explorer bigger, than each other", () => {
   assert.equal(byBand(evaluateBots(fewParts), "explorer parts above skipper").pass, false);
 });
 
-test("summarizeRun reads the last stage row that carries a value", () => {
+test("summarizeRun reads the last stage row that carries a value, and the fight from its posture block", () => {
   const line = {
     stages: [
-      { heft_at_engage: 1.2, part_ids_at_exit: ["a"], ticks_to_warden_break: 900 },
+      { heft_at_engage: 1.2, part_ids_at_exit: ["a"], ticks_to_warden_break: 18000, posture: { fight_ticks: 900 } },
       { heft_at_engage: 2.0, part_ids_at_exit: ["a", "b", "c"], ticks_to_warden_break: null },
     ],
   };
   const s = summarizeRun({ policy: "skipper", seed: 4, outcome: "won" }, line);
   assert.deepEqual([s.heft, s.parts, s.fightSeconds], [2.0, 3, 10]);
+  const noPosture = summarizeRun({ policy: "skipper", seed: 5, outcome: "won" }, { stages: [{ ticks_to_warden_break: 900 }] });
+  assert.equal(noPosture.fightSeconds, null);
   assert.equal(summarizeRun({ policy: "camper", seed: 1, outcome: "stalled" }, null).heft, null);
 });
 
@@ -97,14 +100,16 @@ test("sweep line is the slice cell's pass column; the receipt must match HEAD", 
   assert.equal(evaluateSweep(tsv, cell).pass, true);
   assert.equal(evaluateSweep(tsv.replace("\tpass\n", "\tmiss\n"), cell).pass, false);
   assert.equal(evaluateSweep(tsv, { plating: 90, curve: 2, ram_shatters: "false" }).pass, false);
-  const receipts = [{ label: "gate", head: "abc", started_at: "2026-10-02T10", ok: true, totals: { failed: 0, runs: 9 } }, { label: "gate", head: "old", started_at: "2026-10-02T11", ok: true }];
+  const receipts = [{ label: "gate", head: "abc", started_at: "2026-10-02T10", ok: true, clean: true, totals: { failed: 0, runs: 9 } }, { label: "gate", head: "old", started_at: "2026-10-02T11", ok: true, clean: true }];
   assert.equal(evaluateReceipt(receipts, "abc").pass, true);
   assert.equal(evaluateReceipt(receipts, "new").pass, false);
   assert.equal(evaluateReceipt([{ ...receipts[0], ok: false }], "abc").pass, false);
+  assert.equal(evaluateReceipt([{ ...receipts[0], clean: false }], "abc").pass, false);
 });
 
-test("the table prints a pass, a miss and a skip", () => {
-  const text = formatTable([{ band: "a", measured: "1", threshold: "2", pass: true }, { band: "b", measured: "3", threshold: "4", pass: false }, { band: "c", measured: "-", threshold: "-", pass: null }]);
+test("the table prints a pass, a miss, a skip and a by-hand row", () => {
+  const text = formatTable([{ band: "a", measured: "1", threshold: "2", pass: true }, { band: "b", measured: "3", threshold: "4", pass: false }, { band: "c", measured: "-", threshold: "-", pass: null }, { band: "d", measured: "5", threshold: "6", pass: null, byHand: true }]);
+  assert.match(text, /d\s+5\s+6\s+by hand/);
   assert.match(text, /a\s+1\s+2\s+pass/);
   assert.match(text, /b\s+3\s+4\s+MISS/);
   assert.match(text, /c\s+-\s+-\s+skipped/);
@@ -115,7 +120,7 @@ test("the table prints a pass, a miss and a skip", () => {
 const line = (id, extra) => JSON.stringify({ table: "slice", outcome: "running", bites: 0, smashes: 0, stages: [], ...extra, run_id: id });
 const fixture = [
   line("r1", { smashes: 1, stages: [{ events_joined: ["surge_run"], ticks_to_warden_engaged: 1000, attempts: 1 }] }),
-  line("r1", { outcome: "lost", smashes: 6, bites: 8, stages: [{ events_joined: ["surge_run", "scrap_stampede"], ticks_to_warden_engaged: 6300, attempts: 2 }] }),
+  line("r1", { outcome: "lost", smashes: 6, bites: 8, stages: [{ events_joined: ["surge_run", "scrap_stampede", "surge_run"], ticks_to_warden_engaged: 6300, attempts: 2 }] }),
   line("r2", { outcome: "won", smashes: 2, stages: [{ events_joined: [], ticks_to_warden_engaged: 900, attempts: 1 }] }),
   JSON.stringify({ run_id: "old", table: "default", stages: [] }),
   "not json",
@@ -140,8 +145,13 @@ test("the sitting reader answers each question and reports one with no field as 
   assert.deepEqual([byId.activities, byId.zone, byId.second_run], ["miss", "miss", "miss"]);
 });
 
-test("a question with no reader and no reason is the caller's, so a custom list with one unreadable field still reports it", () => {
+test("a custom question with a reason reports not measurable", () => {
   const verdicts = evaluateSitting([], [{ id: "x", ask: "ask", fields: [], read: () => null, reason: "no field for x" }]);
   assert.equal(verdicts[0].verdict, "not measurable");
   assert.equal(verdicts[0].reason, "no field for x");
+});
+
+test("by-hand rows never count as a pass or a miss", () => {
+  assert.ok(BY_HAND.length >= 3);
+  for (const row of BY_HAND) assert.deepEqual([row.pass, row.byHand], [null, true]);
 });

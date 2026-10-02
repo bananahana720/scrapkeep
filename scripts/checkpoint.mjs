@@ -15,11 +15,11 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { binary as GODOT } from "./sketch-smoke.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
 const sketch = path.join(root, "sketches", "core-loop");
-const GODOT = process.env.GODOT_BIN || "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 
 // The thresholds, as written in ALPHA-PLAN before anything was built.
 export const BANDS = {
@@ -49,7 +49,9 @@ export function median(values) {
 const wins = (runs) => runs.filter((r) => r.outcome === "won");
 
 // A bot run joined to the game's own run-log line: what the band arithmetic reads.
-// heft, parts and the fight clock come from the last stage row that carries them.
+// heft and parts come from the last stage row that carries them. The fight is the posture
+// block's fight_ticks: first posture gain to the break, not the stage clock, which also
+// counts every second spent exploring before the fight.
 export function summarizeRun(bot, logLine) {
   const stages = (logLine?.stages ?? []).filter((s) => s);
   const last = (key) => {
@@ -57,14 +59,15 @@ export function summarizeRun(bot, logLine) {
     return null;
   };
   const parts = last("part_ids_at_exit");
-  const breakTicks = last("ticks_to_warden_break");
+  const posture = last("posture");
+  const fightTicks = typeof posture?.fight_ticks === "number" ? posture.fight_ticks : null;
   return {
     policy: bot.policy,
     seed: bot.seed,
     outcome: bot.outcome,
     heft: last("heft_at_engage"),
     parts: Array.isArray(parts) ? parts.length : null,
-    fightSeconds: breakTicks === null ? null : breakTicks / BANDS.ticksPerSecond,
+    fightSeconds: fightTicks === null ? null : fightTicks / BANDS.ticksPerSecond,
   };
 }
 
@@ -176,10 +179,19 @@ export function evaluateReceipt(receipts, head) {
   return {
     band: "smoke green on this commit",
     measured: `gate receipt ${newest.started_at}: ${newest.totals?.failed ?? "?"} failed of ${newest.totals?.runs ?? "?"}`,
-    threshold: "gate receipt ok",
-    pass: newest.ok === true,
+    threshold: "gate receipt ok on a clean tree",
+    pass: newest.ok === true && newest.clean === true,
   };
 }
+
+// ALPHA-PLAN lines this script does not check. They print as "by hand" and do not count
+// toward the bots-and-fixed-checks verdict, so an ADMIT here never claims them.
+export const BY_HAND = [
+  { band: "each band red on the rejected builds (v2 at 19fc173, drop, laps)", measured: "drop and laps are deleted from the code; v2 needs its own run", threshold: "coordinator records it" },
+  { band: "lair-chaser pays a measured cost", measured: "Hunt is parked (LEGIBILITY decision 4), so no lair-chaser exists on the slice", threshold: "not applicable while Hunt is parked" },
+  { band: "one Fable integrated read on the checkpoint SHA", measured: "a review, not a measurement", threshold: "coordinator records it" },
+  { band: "five sitting questions per arm", measured: "the slice ships one fight, no arms", threshold: "not applicable" },
+].map((row) => ({ ...row, pass: null, byHand: true }));
 
 // --- The sitting (--after) -----------------------------------------------------------------
 
@@ -198,7 +210,7 @@ export function readRunLog(text) {
   return [...byRun.values()].filter((r) => r.table === "slice");
 }
 
-const joinedEvents = (run) => (run.stages ?? []).reduce((n, s) => n + (Array.isArray(s.events_joined) ? s.events_joined.length : 0), 0);
+const joinedEvents = (run) => new Set((run.stages ?? []).flatMap((s) => (Array.isArray(s.events_joined) ? s.events_joined : []))).size;
 const engageTicks = (run) => {
   const values = (run.stages ?? []).map((s) => s.ticks_to_warden_engaged).filter((v) => typeof v === "number");
   return values.length ? Math.max(...values) : null;
@@ -214,7 +226,7 @@ export const QUESTIONS = [
     fields: ["stages[].events_joined"],
     read: joinedEvents,
     verdict: (values) => values.some((v) => v >= 2),
-    note: "counts the opt-in events the ball entered; prompts_shown is not tied to an event, so unprompted is read as entered",
+    note: "distinct opt-in events the ball entered in the run, so a retry's re-entry counts once; prompts_shown is not tied to an event, so unprompted is read as entered",
   },
   {
     id: "smashes",
@@ -232,7 +244,7 @@ export const QUESTIONS = [
       return t === null ? null : t / BANDS.ticksPerSecond;
     },
     verdict: (values) => values.some((v) => v !== null && v >= BANDS.zoneSeconds),
-    note: `seconds from stage start to the Warden's engagement; a run at ${BANDS.zoneSeconds} s or more passes (a knob, ALPHA-PLAN gives no number)`,
+    note: `seconds from stage start to the Warden's engagement on its latest attempt; a run at ${BANDS.zoneSeconds} s or more passes (a knob, ALPHA-PLAN gives no number). A run that never engages reads n/a`,
   },
   {
     id: "second_run",
@@ -269,7 +281,8 @@ export function runRows(runs) {
 // --- Printing ----------------------------------------------------------------------------
 
 export function formatTable(rows) {
-  const cells = [["band", "measured", "threshold", "result"], ...rows.map((r) => [r.band, r.measured, r.threshold, r.pass === null ? "skipped" : r.pass ? "pass" : "MISS"])];
+  const result = (r) => (r.byHand ? "by hand" : r.pass === null ? "skipped" : r.pass ? "pass" : "MISS");
+  const cells = [["band", "measured", "threshold", "result"], ...rows.map((r) => [r.band, r.measured, r.threshold, result(r)])];
   const widths = cells[0].map((_, i) => Math.max(...cells.map((row) => String(row[i]).length)));
   return cells.map((row) => row.map((c, i) => String(c).padEnd(widths[i])).join("  ").trimEnd()).join("\n");
 }
@@ -419,6 +432,7 @@ async function before(options) {
   rows.push(evaluateSweep(existsSync(sweepFile) ? readFileSync(sweepFile, "utf8") : "", sliceCell(defs)));
   const head = git(["rev-parse", "HEAD"]);
   rows.push(evaluateReceipt(readReceipts(), head));
+  rows.push(...BY_HAND);
 
   const table = formatTable(rows);
   const ok = rows.every((r) => r.pass !== false);
@@ -427,16 +441,17 @@ async function before(options) {
     seeds: seedCount, rows, bots: grouped, perf: perf?.bench ?? null,
   }, null, 2) + "\n");
   console.log(table);
-  console.log(`\nload at start ${loadAtStart.map((v) => v.toFixed(2)).join(" ")}; ${ok ? "ADMIT" : "NOT ADMITTED"}; ${path.relative(root, outDir)}/summary.json`);
+  const verdict = ok ? `bots and fixed checks pass, ${BY_HAND.length} rows by hand` : "NOT ADMITTED";
+  console.log(`\nload at start ${loadAtStart.map((v) => v.toFixed(2)).join(" ")}; ${verdict}; ${path.relative(root, outDir)}/summary.json`);
   return ok ? 0 : 1;
 }
 
 function after(file) {
-  const outDir = newestDirOutput();
   if (!file || !existsSync(file) || !statSync(file).isFile()) {
     console.error("checkpoint --after needs the path of a runs.ndjson");
     return 2;
   }
+  const outDir = newestDirOutput();
   const runs = readRunLog(readFileSync(file, "utf8"));
   const verdicts = evaluateSitting(runs);
   console.log(`${runs.length} slice run(s) in ${file}\n`);
