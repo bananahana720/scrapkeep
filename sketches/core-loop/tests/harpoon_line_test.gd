@@ -4,26 +4,20 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const Harpoon := preload("res://src/movement/harpoon.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 
-# The harpoon line (--harpoon=off|shot|lock, --harpoon-pull=self|heft, --harpoon-keys=shift|keep,
-# DESIGN-NOTES "Harpoon and winch"), through a real Game, real physics and scripted input:
-#   off         nothing changes: Rivet has no line, the aim ignores an enemy, harpoon presses do nothing
-#   every pilot RMB fires a line, and Rivet's sprint and Kest's blink stay reachable on Shift or C
-#   shot        the centre ray takes the enemy under it; 3 degrees off it does not
+# The harpoon line (DESIGN-NOTES "Harpoon and winch"), through a real Game, real physics and
+# scripted input:
+#   every pilot RMB fires a line at a body, and Rivet's sprint and Kest's blink stay in the kit
 #   lock        an enemy inside harpoon_lock_deg, seen from the ball; a wall refuses it
 #   the line    follows a moved body, lets go with the ball's velocity on release, death, stretch,
 #               a ride, a hold, and inside the minimum rope; walkable ground cannot be hooked
 #   the smash   Ctrl commits a haul that never slows, lands once (slammed and harpoon_smashed), and
 #               is never a brake or a slam; the rewind spends the hook until a kill re-seats it
-#   pull        self never tows; heft splits the closing by weight and heft, tows a chaser past the
-#               pin speed, and a tow through three victims pins each at most once
 # Evidence limit: rules through real contacts from placed starts and a fixed camera, not a player's
 # run; how the line feels is unjudged (the lab sheet's Part 3).
 
 const PILOTS := {"sable": "pylon_engineer", "rivet": "runner_gunner", "kest": "demolitions_caster"}
-const PIN_SPEED := 6.0
 # The Spillway's middle shelf: flat within 0.3 m over 45 m along -z, so a rolling ball keeps its line.
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
 
@@ -83,11 +77,8 @@ func _tally(kind: String) -> void:
 
 
 # Pilots share one Game: the class is refitted, its slots refilled and the line dropped.
-func _pilot(name: String, harpoon := "shot", pull := "self", keys := "shift") -> void:
+func _pilot(name: String) -> void:
 	var def: Resource = ClassDef.by_id(PILOTS[name])
-	_game.tuning.set_option("harpoon", harpoon)
-	_game.tuning.set_option("harpoon_pull", pull)
-	_game.tuning.set_option("harpoon_keys", keys)
 	_game.run.class_def = def
 	_player.fit_class(def)
 	_player.abilities.refill()
@@ -155,37 +146,26 @@ func _run() -> void:
 	_clear_field()
 	await _sim(0.2)
 
-	await _off_and_pilots()
+	await _pilots()
 	await _keys()
 	await _aim_shapes()
 	await _line_follows_and_exits()
 	await _smash()
-	await _pull()
 
 	print("harpoon_line_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
 
 
-func _off_and_pilots() -> void:
-	_pilot("rivet", "off")
+func _pilots() -> void:
 	var ball := _point(0, 0, 6.0)
 	var target := _spawn("chaser", _point(0, -20, 1.5))
 	await _sim(0.1)
-	var aim := _aim(ball, target.global_position)
-	_check("off: no line for Rivet", not _player.kit.on(Augments.GRAPPLE), "Rivet's kit has the grapple: %s" % _player.kit.on(Augments.GRAPPLE))
-	_check("off: aim ignores an enemy", aim.get("state") != Augments.AIM_BODY and aim.get("body") == null,
-		"centre ray on a chaser 20 m off reads state %s" % aim.get("state"))
-	_pilot("sable", "off")
-	_place(ball)
-	_source.press = {"harpoon_pressed": true}
-	await _sim(0.1)
-	_check("off: harpoon press does nothing", not _player.kit.hooked, "hooked %s" % _player.kit.hooked)
-
 	for name in PILOTS:
 		_pilot(name)
 		_place(ball)
 		_cam(ball + Vector3(0, 0.8, 4.0), target.global_position)
+		await _sim(0.05)
 		_source.press = {"harpoon_pressed": true}
 		_source.hold = {"harpoon_held": true}
 		await _sim(0.05)
@@ -203,47 +183,16 @@ func _off_and_pilots() -> void:
 	await _sim(0.1)
 
 
-# Shift is the class burst when its charge is ready and the plain boost when not; under keep the
-# burst is on C (movement_pressed) and Shift is always the boost.
+# The bar's movement key follows the pilot: Sable's rope is RMB, Rivet's sprint and Kest's blink
+# are Shift. E stays interact for a pilot on a line, and Sable's mount.
 func _keys() -> void:
 	var ball := _point(0, 0, 3.0)
-	for name in ["rivet", "kest"]:
-		var burst: String = "sprint_started" if name == "rivet" else "blink_used"
-		_pilot(name, "shot", "self", "shift")
-		_place(ball, Vector3(0, 0, -6))
-		_counts[burst] = 0
-		_counts["boosted"] = 0
-		_source.press = {"boost_pressed": true}
-		await _sim(0.1)
-		_check("shift: %s burst when ready" % name, _counts[burst] == 1 and _counts["boosted"] == 0,
-			"%s %d, plain boosts %d" % [burst, _counts[burst], _counts["boosted"]])
-		_player.abilities.slot(AbilityState.MOVEMENT).charges = 0
-		_place(ball, Vector3(0, 0, -6))
-		_counts[burst] = 0
-		_source.press = {"boost_pressed": true}
-		await _sim(0.1)
-		_check("shift: %s plain boost when not" % name, _counts[burst] == 0 and _counts["boosted"] == 1,
-			"%s %d, plain boosts %d" % [burst, _counts[burst], _counts["boosted"]])
-		_pilot(name, "shot", "self", "keep")
-		_place(ball, Vector3(0, 0, -6))
-		_counts[burst] = 0
-		_counts["boosted"] = 0
-		_source.press = {"movement_pressed": true, "boost_pressed": true}
-		await _sim(0.1)
-		_check("keep: %s burst on C, boost on Shift" % name, _counts[burst] == 1 and _counts["boosted"] == 1,
-			"%s %d, plain boosts %d" % [burst, _counts[burst], _counts["boosted"]])
 	var labels := []
-	for setup in [["rivet", "off", "shift"], ["rivet", "shot", "shift"], ["rivet", "shot", "keep"], ["kest", "shot", "keep"], ["sable", "shot", "keep"]]:
-		_pilot(setup[0], setup[1], "self", setup[2])
+	for name in ["sable", "rivet", "kest"]:
+		_pilot(name)
 		labels.append(_keys_of(AbilityState.MOVEMENT))
-	_check("the bar's movement key follows the layout", labels == ["RMB", "Shift", "C", "C", "RMB"],
-		"Rivet off, shift, keep; Kest keep; Sable keep: %s" % [labels])
-	_pilot("sable", "shot", "self", "shift")
-	_place(ball, Vector3(0, 0, -6))
-	_counts["boosted"] = 0
-	_source.press = {"boost_pressed": true}
-	await _sim(0.1)
-	_check("shift: Sable's Shift is the boost", _counts["boosted"] == 1, "plain boosts %d" % _counts["boosted"])
+	_check("the bar's movement key follows the pilot", labels == ["RMB", "Shift", "Shift"],
+		"Sable, Rivet, Kest: %s" % [labels])
 	_pilot("rivet")
 	_place(ball)
 	_player.grapple_to(ball + Vector3(0, 0, -8), Vector3(1, 0, 0))
@@ -256,20 +205,16 @@ func _keys() -> void:
 
 
 func _aim_shapes() -> void:
-	_pilot("sable", "shot")
+	_pilot("sable")
 	var ball := _point(0, 0, 6.0)
 	var chaser := _spawn("chaser", _point(0, -20, 1.5))
 	await _sim(0.1)
 	var eye := ball + Vector3(0, 0.8, 4.0)
 	var centre := chaser.global_position
 	var aim := _aim(eye, centre)
-	_check("shot: centre ray takes the body", aim.get("state") == Augments.AIM_BODY and aim.get("body") == chaser,
+	_check("lock: the centre ray takes the body", aim.get("state") == Augments.AIM_BODY and aim.get("body") == chaser,
 		"state %s (body = %s), body is the chaser %s" % [aim.get("state"), Augments.AIM_BODY, aim.get("body") == chaser])
 	var off := centre + (Vector3.RIGHT * (centre - eye).length() * tan(deg_to_rad(3.0)))
-	aim = _aim(eye, off)
-	_check("shot: 3 degrees off is a miss", aim.get("body") == null, "3 degrees off the centre reads state %s, body %s" % [aim.get("state"), aim.get("body")])
-
-	_pilot("sable", "lock")
 	aim = _aim(eye, off)
 	_check("lock: 3 degrees off locks it", aim.get("state") == Augments.AIM_BODY and aim.get("body") == chaser,
 		"state %s, locked the chaser %s" % [aim.get("state"), aim.get("body") == chaser])
@@ -290,19 +235,16 @@ func _aim_shapes() -> void:
 	_check("lock: a wall refuses it", aim.get("body") != chaser, "a chaser behind a wall: state %s, body %s" % [aim.get("state"), aim.get("body")])
 	wall.free()
 
-	_pilot("sable", "shot")
 	var floor_point := _point(0, -6, 0.0)
 	aim = _aim(eye, floor_point)
-	_pilot("sable", "off")
-	var plain := _aim(eye, floor_point)
-	_check("walkable ground cannot be hooked", aim.get("state") == Augments.AIM_NONE and plain.get("state") != Augments.AIM_NONE,
-		"aimed at open ground: harpoon state %s, base grapple state %s" % [aim.get("state"), plain.get("state")])
+	_check("walkable ground cannot be hooked", aim.get("state") == Augments.AIM_NONE,
+		"aimed at open ground: state %s" % aim.get("state"))
 	chaser.queue_free()
 	await _sim(0.1)
 
 
 func _line_follows_and_exits() -> void:
-	_pilot("sable", "shot")
+	_pilot("sable")
 	var ball := _point(0, 0, 6.0)
 	var chaser := _spawn("chaser", _point(0, -20, 1.5))
 	await _sim(0.1)
@@ -394,7 +336,7 @@ func _haul(chaser: Node3D, start: Vector3, hold_ctrl_first := false) -> Dictiona
 
 
 func _smash() -> void:
-	_pilot("sable", "shot")
+	_pilot("sable")
 	var kit = _player.kit
 	var chaser := _spawn("chaser", _point(0, -22, 1.5))
 	# A light ball, so the landing wounds the chaser without killing it and the rewind can be read.
@@ -456,7 +398,7 @@ func _smash() -> void:
 
 	# Escapes: a jump, a boost or a dash lets a committed haul go, keeping the speed.
 	for escape in ["jump_pressed", "boost_pressed", "movement_pressed"]:
-		_pilot("sable", "shot", "self", "keep")
+		_pilot("sable")
 		_place(_point(0, 0, 3.0), Vector3(0, 0, -6))
 		_player.grapple_to(next.global_position, Vector3.UP, next)
 		_source.hold = {"harpoon_held": true, "brake_held": true}
@@ -490,72 +432,3 @@ func _smash() -> void:
 	wall.queue_free()
 	next.queue_free()
 	await _sim(0.1)
-
-
-func _pull() -> void:
-	_check("ball_share table", Harpoon.ball_share("self", 3.2, 1.0) == 1.0 and is_equal_approx(Harpoon.ball_share("heft", 1.0, 1.0), 0.5)
-			and absf(Harpoon.ball_share("heft", 3.2, 1.0) - 0.238) < 0.001 and Harpoon.ball_share("heft", 1.0, 1000.0) == 1.0
-			and Harpoon.ball_share("heft", 1.0, Harpoon.IMMOVABLE) == 1.0,
-		"self 1; heft 1 vs chaser %.3f; heft 3.2 vs chaser %.3f; the Warden 1" % [Harpoon.ball_share("heft", 1.0, 1.0), Harpoon.ball_share("heft", 3.2, 1.0)])
-	for law in ["self", "heft"]:
-		_pilot("rivet", "shot", law)
-		_combat.heft_override = 3.2
-		var chaser := _spawn("chaser", _point(0, -16, 1.5))
-		await _sim(0.1)
-		_place(_point(0, 0, 1.4))
-		_player.grapple_to(chaser.global_position, Vector3.UP, chaser)
-		_source.hold = {"harpoon_held": true}
-		var fastest := 0.0
-		var share := 0.0
-		for tick in roundi(0.6 * Engine.physics_ticks_per_second):
-			await physics_frame
-			fastest = maxf(fastest, chaser._knocked_speed())
-			share = _player.kit.ball_share if tick == 20 else share
-		_source.hold = {}
-		if law == "heft":
-			_check("heft tows a chaser past the pin speed", fastest > PIN_SPEED and absf(share - 0.238) < 0.01,
-				"tow %.1f m/s (pin bar %.0f), ball share %.3f at heft 3.2" % [fastest, PIN_SPEED, share])
-		else:
-			_check("self never tows", fastest < 0.5 and share == 1.0, "tow %.2f m/s, ball share %.2f" % [fastest, share])
-		_player.release_grapple()
-		chaser.queue_free()
-		await _sim(0.1)
-
-	# The winch drone moves through its own mover, not the shared _move, so the tow must reach it too.
-	_pilot("rivet", "shot", "heft")
-	_combat.heft_override = 3.2
-	var drone := _spawn("winch_drone", _point(0, -16, 1.5))
-	await _sim(0.1)
-	_place(_point(0, 0, 1.4))
-	_player.grapple_to(drone.global_position, Vector3.UP, drone)
-	_source.hold = {"harpoon_held": true}
-	var drone_fastest := 0.0
-	for tick in roundi(0.6 * Engine.physics_ticks_per_second):
-		await physics_frame
-		if is_instance_valid(drone):
-			drone_fastest = maxf(drone_fastest, Vector2(drone.velocity.x, drone.velocity.z).length())
-	_source.hold = {}
-	_check("heft tows a winch drone past the pin speed", drone_fastest > PIN_SPEED,
-		"drone moved at %.1f m/s through its own mover (pin bar %.0f)" % [drone_fastest, PIN_SPEED])
-	_player.release_grapple()
-	if is_instance_valid(drone):
-		drone.queue_free()
-	await _sim(0.1)
-
-	# A tow through three victims pins each at most once: the tow is not a fresh knock() every tick.
-	_pilot("rivet", "shot", "heft")
-	_combat.heft_override = 3.2
-	var carrier := _spawn("chaser", _point(0, -16, 1.5))
-	var victims: Array = []
-	for i in 3:
-		victims.append(_spawn("chaser", _point(1.5 if i % 2 == 0 else -1.5, -12.0 + i * 3.5, 1.5)))
-	await _sim(0.1)
-	_place(_point(0, 0, 1.4))
-	_counts["enemy_pinned"] = 0
-	_player.grapple_to(carrier.global_position, Vector3.UP, carrier)
-	_source.hold = {"harpoon_held": true}
-	await _sim(1.2)
-	_source.hold = {}
-	_check("a tow pins each victim at most once", _counts["enemy_pinned"] >= 1 and _counts["enemy_pinned"] <= 3,
-		"%d pins through 3 victims (one per victim at most, and not none)" % _counts["enemy_pinned"])
-	_combat.heft_override = 1.0

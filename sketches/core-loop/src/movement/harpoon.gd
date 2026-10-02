@@ -4,46 +4,24 @@ const Augments := preload("res://src/movement/augments.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 
 # The harpoon's static rules (DESIGN-NOTES, "Harpoon and winch"): which body a press would
-# bite, and how a line's closing splits between the ball and the body. The line itself is
+# bite, and whether the class burst can take a press. The line itself is
 # the grapple's, on AugmentKit, and moves in Augments._grapple.
 
-# Weight from which a body cannot be towed: the Warden, the vault, a boss part.
-const IMMOVABLE := 100.0
 # A lock already held survives out to this many times the cone.
 const STICKY := 1.5
 
 
-# The ball's share of the closing, 0 to 1. `self` always flies you in; `heft` splits it by
-# weight against heft, so the lighter end travels: 0.5 for a chaser at heft 1, 0.24 at
-# heft 3.2. An immovable body is never towed. Heft stays the run's stat: the ball's
-# rigid mass is untouched (CONTRACTS, "Heft never changes RigidBody mass").
-static func ball_share(law: String, heft: float, weight: float) -> float:
-	if law != "heft" or weight >= IMMOVABLE:
-		return 1.0
-	return weight / (weight + heft)
-
-
-static func weight_of(body: Node3D) -> float:
-	var weight = body.get("weight")
-	return float(weight) if weight != null else IMMOVABLE
-
-
 # What a press would bite right now, in the record the reticle, the world marker and the
-# fire action share. Off is the grapple's own world-only aim. Shot lets the centre ray
-# take an enemy; lock prefers one inside the cone, seen from the ball, and otherwise
-# falls back to the shot. Walkable ground is refused either way.
+# fire action share. Lock prefers an enemy inside the cone, seen from the ball, and otherwise
+# falls back to the centre ray, which takes an enemy or the world. Walkable ground is refused.
 static func target(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array, from: Vector3,
 		forward: Vector3, ball: Vector3) -> Dictionary:
 	var reach: float = tuning.f("rope_range")
 	var assist: float = tuning.f("grapple_assist_deg")
-	var mode: String = tuning.option("harpoon")
-	if mode == "off":
-		return Augments.grapple_target(space, from, forward, ball, reach, assist)
 	forward = forward.normalized()
-	if mode == "lock":
-		var locked := _lock(kit, tuning, space, enemies, from, forward, ball, reach)
-		if not locked.is_empty():
-			return locked
+	var locked := _lock(kit, tuning, space, enemies, from, forward, ball, reach)
+	if not locked.is_empty():
+		return locked
 	return Augments.grapple_target(space, from, forward, ball, reach, assist,
 		Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
 
@@ -73,14 +51,6 @@ static func _lock(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array,
 				"normal": away.normalized() if away.length() > 0.01 else Vector3.UP, "body": enemy}
 	kit.lock_body = null
 	return {}
-
-
-# The key the movement slot shows: RMB when it is the rope or the harpoon is off, else
-# the burst's own key.
-static func movement_key(kit, tuning) -> String:
-	if not kit.harpoon_on or kit.movement_id == Augments.GRAPPLE:
-		return AbilityState.KEYS[AbilityState.MOVEMENT]
-	return "Shift" if tuning.option("harpoon_keys") == "shift" else "C"
 
 
 # Whether the class movement burst can take a press this tick: Rivet's sprint with a

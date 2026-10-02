@@ -264,14 +264,13 @@ static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO, b
 	kit.anchor_offset = point - body.global_position if body != null else Vector3.ZERO
 	kit.line_state = LINE_LATCHED
 	kit.smash_left = 0.0
-	kit.tow = Vector3.ZERO
 
 
 # Ctrl on a body line: the haul homes on the body at no less than the speed it starts at.
 static func commit_smash(kit, tuning, velocity: Vector3) -> void:
 	kit.line_state = LINE_SMASH
 	kit.smash_left = SMASH_MAX
-	kit.smash_floor = maxf(velocity.length(), tuning.f("harpoon_smash_speed") * kit.ball_share)
+	kit.smash_floor = maxf(velocity.length(), tuning.f("harpoon_smash_speed"))
 	kit.slamming = false
 
 
@@ -390,7 +389,7 @@ static func _slam(kit, state, tuning, intent, body_state, step: float) -> void:
 	elif state.grounded:
 		kit.brake_from_ground = true
 	if kit.on(SLAM) and intent.brake_held and not state.grounded and not kit.brake_from_ground \
-			and not (kit.hooked and kit.on_body):
+			and not kit.hooked:
 		kit.slamming = true
 		kit.slam_fall = maxf(0.0, -v.y)
 		kit.slam_velocity = v
@@ -508,7 +507,7 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: flo
 	kit.mounted = true
 	kit.mount_banked = body_state.linear_velocity.length()
 	# Pylon Relay: a plant made while winching banks more.
-	if kit.hooked and intent.reel_held:
+	if kit.hooked and kit.winching:
 		kit.mount_banked *= kit.knob("winch_bank")
 	kit.mount_face = spot["point"]
 	kit.mount_normal = spot["normal"]
@@ -584,7 +583,7 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	if not kit.hooked:
 		return
 	if not kit.on(GRAPPLE):
-		kit.drop_line()
+		kit.drop_line("kit")
 		return
 	var origin: Vector3 = body_state.transform.origin
 	if kit.on_body:
@@ -592,8 +591,6 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 			return
 		if kit.line_state == LINE_SMASH:
 			_haul(kit, tuning, intent, body_state, step)
-		else:
-			_winch_body(kit, tuning, intent, body_state, step)
 		return
 	var to_anchor: Vector3 = kit.anchor - origin
 	var dist := to_anchor.length()
@@ -601,7 +598,7 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 		return
 	var dir: Vector3 = to_anchor / dist
 	var v: Vector3 = body_state.linear_velocity
-	if _winching(kit, intent):
+	if kit.winching:
 		# A winch, not a shorter maximum: it hauls whether or not the rope is taut, and
 		# the rope follows you in so no slack builds up behind the haul.
 		kit.rope = maxf(MIN_ROPE, minf(kit.rope, dist))
@@ -619,15 +616,6 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	body_state.linear_velocity = v
 
 
-# Q winches every line. Under the harpoon RMB held winches a line on a body, and any
-# line for a pilot whose kit has no rope craft of its own; Sable's world lines keep the
-# swing and hold Q for the winch.
-static func _winching(kit, intent) -> bool:
-	if intent.reel_held:
-		return true
-	return kit.harpoon_on and intent.harpoon_held and (kit.on_body or kit.movement_id != GRAPPLE)
-
-
 # Moves the anchor with the body. The line lets go, keeping the ball's velocity, when
 # the body is gone, stretched past BREAK_STRETCH ranges, or (latched only) passed inside
 # the minimum rope and both radii, measured centre to centre whatever point the bite stored:
@@ -635,39 +623,20 @@ static func _winching(kit, intent) -> bool:
 static func _follow(kit, tuning, origin: Vector3) -> bool:
 	var body = kit.anchor_body
 	if not is_instance_valid(body) or not body.is_inside_tree() or (body.has_method("is_dead") and body.is_dead()):
-		kit.drop_line()
+		kit.drop_line("body_died")
 		return false
 	kit.anchor = body.global_position + kit.anchor_offset
 	var dist := origin.distance_to(kit.anchor)
 	if dist > BREAK_STRETCH * tuning.f("rope_range"):
-		kit.drop_line()
+		kit.drop_line("out_of_reach")
 		return false
 	if kit.line_state == LINE_LATCHED:
 		var radius = body.get("radius")
 		var centre_dist := origin.distance_to(body.global_position)
 		if centre_dist <= MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0):
-			kit.drop_line()
+			kit.drop_line("passed")
 			return false
 	return true
-
-
-# A latched body line only pulls: the ball takes its ball_share of the winch, and the body
-# is handed the rest as a tow toward the ball.
-static func _winch_body(kit, tuning, intent, body_state, step: float) -> void:
-	kit.tow = Vector3.ZERO
-	if not _winching(kit, intent):
-		return
-	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
-	var dist := to_anchor.length()
-	if dist < 0.001:
-		return
-	var dir := to_anchor / dist
-	var v: Vector3 = body_state.linear_velocity
-	var head := clampf(1.0 - v.dot(dir) / tuning.f("reel_speed"), 0.0, 1.0)
-	v += dir * tuning.f("reel_force") * head * step * kit.ball_share
-	kit.tow = -dir * tuning.f("reel_speed") * (1.0 - kit.ball_share)
-	kit.rope = maxf(MIN_ROPE, minf(kit.rope, dist))
-	body_state.linear_velocity = v
 
 
 # The committed haul homes on the body and never slows the ball. A jump, boost or dash
@@ -675,7 +644,10 @@ static func _winch_body(kit, tuning, intent, body_state, step: float) -> void:
 # releases the line before the landing resolves (player_ball._land_harpoon).
 static func _haul(kit, tuning, intent, body_state, step: float) -> void:
 	kit.smash_left -= step
-	if kit.smash_left <= 0.0 or intent.jump_pressed or intent.boost_pressed or intent.movement_pressed:
+	if kit.smash_left <= 0.0:
+		kit.drop_line("timeout")
+		return
+	if intent.jump_pressed or intent.boost_pressed or intent.movement_pressed:
 		kit.drop_line()
 		return
 	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
@@ -687,8 +659,7 @@ static func _haul(kit, tuning, intent, body_state, step: float) -> void:
 	var speed := maxf(v.length(), kit.smash_floor)
 	v = dir * speed
 	kit.rope = minf(kit.rope, dist)
-	kit.tow = -dir * tuning.f("harpoon_smash_speed") * (1.0 - kit.ball_share)
-	kit.line_closing = speed + kit.tow.length()
+	kit.line_closing = speed
 	body_state.linear_velocity = v
 
 

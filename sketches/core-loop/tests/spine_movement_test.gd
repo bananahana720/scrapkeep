@@ -166,10 +166,10 @@ func _watch_slam() -> void:
 func _start_winch() -> void:
 	_player.set_velocity_now(Vector3.ZERO)
 	_player.grapple_to(SKY)
-	_player.reel_step(-WINCH_PAYOUT)
+	_player.kit.rope = minf(_player.kit.rope + WINCH_PAYOUT, _player.grapple_range())
 	_winch["start"] = _player.ball_position().distance_to(SKY)
 	_winch["rope"] = _player.kit.rope
-	_source.hold = {"reel_held": true}
+	_source.hold = {"brake_held": true}
 
 
 func _end_winch() -> void:

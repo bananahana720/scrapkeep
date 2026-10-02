@@ -39,11 +39,8 @@ func _sim(seconds: float) -> void:
 func _never() -> bool:
 	return false
 
-func _pilot(name: String, harpoon := "shot", pull := "self", keys := "shift") -> void:
+func _pilot(name: String) -> void:
 	var def: Resource = ClassDef.by_id(PILOTS[name])
-	_game.tuning.set_option("harpoon", harpoon)
-	_game.tuning.set_option("harpoon_pull", pull)
-	_game.tuning.set_option("harpoon_keys", keys)
 	_game.run.class_def = def
 	_player.fit_class(def)
 	_player.abilities.refill()
@@ -107,8 +104,7 @@ func _run() -> void:
 # A body line held through a real mount (E at a steep face) follows its body and lets go
 # of it when the body dies, as it does unmounted.
 func _mounted_body_line() -> void:
-	_pilot("sable", "shot", "heft")
-	_combat.heft_override = 3.2
+	_pilot("sable")
 	var chaser := _spawn("chaser", _point(WALL_X - _origin.x + 4.0, -16, 1.5))
 	await _sim(0.4)
 	_place(_game.ctx.terrain.drop_point(WALL_X + 1.8, FLAT_SHELF.z, 1.4))
@@ -137,7 +133,6 @@ func _mounted_body_line() -> void:
 	await _sim(0.2)
 	_source.press = {}
 	_player.release_grapple()
-	_combat.heft_override = 1.0
 	if is_instance_valid(chaser):
 		chaser.queue_free()
 	await _sim(0.2)

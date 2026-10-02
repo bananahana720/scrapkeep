@@ -89,12 +89,14 @@ func _kits() -> void:
 			if kit.on(spec["key"]):
 				on.append(spec["key"])
 		var want: Array = AbilityState.ABILITIES[def.movement_id]["augments"] + Augments.SHARED
+		if not Augments.GRAPPLE in want:
+			want.append(Augments.GRAPPLE)
 		on.sort()
 		want.sort()
 		ok = ok and on == want
 		seen.append("%s %s" % [def.display_name, on])
 	var no_dash := Augments.SPECS.all(func(spec): return spec["key"] != "dash")
-	_report("own movement only", ok and no_dash, "%s; no shared air dash row" % ", ".join(seen))
+	_report("own movement only", ok and no_dash, "%s (every kit carries the harpoon line); no shared air dash row" % ", ".join(seen))
 
 
 func _slots() -> void:

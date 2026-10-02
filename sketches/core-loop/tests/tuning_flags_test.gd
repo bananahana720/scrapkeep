@@ -23,14 +23,11 @@ const EXPECTED := {
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
-	"harpoon": ["harpoon", "lock", "bogus", "launch"],
-	"harpoon-pull": ["harpoon_pull", "heft", "bogus", "launch"],
-	"harpoon-keys": ["harpoon_keys", "keep", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
 const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "discovery": "cards", "telegraph": "haze",
-	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on", "harpoon": "lock"}
+	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on"}
 
 var _failures := 0
 
@@ -70,7 +67,7 @@ func _initialize() -> void:
 	for key in DEFAULTS:
 		if bare.option(key) != DEFAULTS[key]:
 			off_default.append("%s=%s" % [key, bare.option(key)])
-	_check("winning defaults", off_default.is_empty() and bare.armor() and bare.wear_on() and bare.world_one() and bare.harpoon_on(),
+	_check("winning defaults", off_default.is_empty() and bare.armor() and bare.wear_on() and bare.world_one(),
 		"a bare Tuning reports all %d winners; off default: %s" % [DEFAULTS.size(), off_default])
 	print("tuning_flags_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

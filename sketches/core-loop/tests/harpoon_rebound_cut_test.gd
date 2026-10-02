@@ -37,11 +37,8 @@ func _sim(seconds: float) -> void:
 func _never() -> bool:
 	return false
 
-func _pilot(name: String, harpoon := "shot", pull := "self", keys := "shift") -> void:
+func _pilot(name: String) -> void:
 	var def: Resource = ClassDef.by_id(PILOTS[name])
-	_game.tuning.set_option("harpoon", harpoon)
-	_game.tuning.set_option("harpoon_pull", pull)
-	_game.tuning.set_option("harpoon_keys", keys)
 	_game.run.class_def = def
 	_player.fit_class(def)
 	_player.abilities.refill()
@@ -92,7 +89,7 @@ func _run() -> void:
 
 
 func _rebound_through() -> void:
-	_pilot("sable", "shot")
+	_pilot("sable")
 	_combat.heft_override = 1.0
 	var a := _spawn("chaser", _point(0, -26, 1.5))
 	var b := _spawn("lobber", _point(0, -12, 1.5))
@@ -130,7 +127,7 @@ func _rebound_through() -> void:
 
 # A stomp on a third body sets the velocity outright, so a line held on another body lets go.
 func _stomp_through() -> void:
-	_pilot("sable", "shot")
+	_pilot("sable")
 	var a := _spawn("chaser", _point(0, -30, 1.5))
 	var b := _spawn("chaser", _point(6, -4, 1.5))
 	await _sim(0.4)

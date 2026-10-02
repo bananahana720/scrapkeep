@@ -992,7 +992,7 @@ func _note_shred(target: Node3D, delta: float) -> void:
 		_note["stripped_half_s"] = snappedf(float(_note.get("stripped_half_s", 0.0)) + delta, 0.01)
 
 
-# With --harpoon on, the fight bites its target from the bowl floor when the reticle holds it
+# The fight bites its target from the bowl floor when the reticle holds it
 # and commits the smash once the line is on. RMB and Ctrl go through _drive's hold, which is
 # rebuilt every tick; the bite is a one-tick press. The hand's state is cleared at the top of
 # every tick, so only a tick that runs the hand carries it.
@@ -1002,9 +1002,6 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > WardenDrop.LINE_REACH else _off_line + delta
-	if not kit.harpoon_on:
-		_harpoon_held = false
-		return
 	if kit.hooked and kit.anchor_body == target:
 		_harpoon_held = true
 		_harpoon_commit = true

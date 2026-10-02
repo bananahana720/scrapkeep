@@ -292,4 +292,4 @@ func _grapple_start() -> void:
 func _check_grapple() -> void:
 	var hooked: bool = _player.kit.hooked
 	_source.press = {"harpoon_released": true}
-	_report("grapple on RMB", hooked, "Sable's RMB hooks the aimed wall through the harpoon intent (RMB is harpoon_pressed under the default harpoon)")
+	_report("grapple on RMB", hooked, "Sable's RMB hooks the aimed wall through the harpoon intent (RMB is harpoon_pressed)")

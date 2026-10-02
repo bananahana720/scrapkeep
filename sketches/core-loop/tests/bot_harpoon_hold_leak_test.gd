@@ -29,7 +29,6 @@ func _physics_process(delta: float) -> bool:
 	if _done or _game.flow == null:
 		return false
 	if _driver == null:
-		_game.tuning.set_option("harpoon", "lock")
 		_driver = BotDriver.new(_game, "skipper", 3)
 		_driver.start()
 		return false

@@ -623,7 +623,7 @@ func punch_of(kind: String, force: float) -> float:
 		if ctx != null and ctx.player.kit.sprinting:
 			scale = _knob("sprint_punch")
 		# Winch Ram: hauling in on the rope, you hit like a sprint.
-		elif ctx != null and ctx.player.kit.hooked and ctx.player.intent.reel_held:
+		elif ctx != null and ctx.player.kit.hooked and ctx.player.kit.winching:
 			scale = _knob("winch_punch")
 		return (row[0] + force * row[1]) * heft() * scale
 	return force

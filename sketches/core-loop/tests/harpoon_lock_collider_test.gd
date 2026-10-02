@@ -6,7 +6,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 
-# Under --harpoon=lock the soft-lock only bites a body the ball can touch: a Brindle crane magnet
+# The soft-lock only bites a body the ball can touch: a Brindle crane magnet
 # has no collider, so the line refuses it, while a normal enemy in the same cone still locks.
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
@@ -88,7 +88,6 @@ func _run() -> void:
 			enemy.queue_free()
 	await _sim(0.2)
 	var def: Resource = ClassDef.by_id("pylon_engineer")
-	_game.tuning.set_option("harpoon", "lock")
 	_game.run.class_def = def
 	_player.fit_class(def)
 	_player.abilities.refill()

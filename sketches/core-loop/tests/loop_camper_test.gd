@@ -10,7 +10,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 #         with every window nobody drops through.
 #   full  the same camping never staggers the Warden, and the gun deals 0 outside a
 #         stagger, so the camper opens nothing without a drop.
-#   harpoon  the hold arm again with --harpoon=lock: the bot's harpoon hand latches the Warden and
+#   harpoon  the hold arm again: the bot's harpoon hand latches the Warden and
 #         commits the haul from the bowl floor (DESIGN-NOTES "Harpoon and winch"), lands smashes on
 #         it, and still deals 0: a line smash from the bowl is `floor` like any other arrival.
 # The camper is given the HP to last the whole span, so the zero is measured over all of
@@ -106,7 +106,6 @@ func _judge() -> bool:
 			and d["stagger_gun"] == 0.0 and d["gun"] == 0.0 and drop.windows >= MIN_WINDOWS["full"], summary)
 		_role = "harpoon"
 		_game.tuning.set_option("gun_role", "hold")
-		_game.tuning.set_option("harpoon", "lock")
 		_game.flow.retry_stage()
 		_driver.outcome = ""
 		_sim = 0.0

@@ -2,8 +2,9 @@ extends RefCounted
 
 # One tick of what the player asked for. Input fills it; nothing else reads a key.
 # Combat reads fire and special from here, so a scripted source drives weapons too.
-# The grammar is the same for every class (DESIGN-V2 section 1): LMB weapon, RMB class
-# movement, F the hold-gauge-release special, Ctrl the smash, Space jump, Shift boost.
+# The grammar is the same for every class (design-v3/LEGIBILITY.md section 3): LMB weapon,
+# RMB the harpoon, F the hold-gauge-release special, Ctrl the haul, Space jump, Shift the
+# pilot's go verb.
 # A held key's release is its own one-tick field. A scripted press with no hold reads
 # as a tap.
 
@@ -18,7 +19,6 @@ var mount_pressed := false
 # only for Sable's pylon.
 var mount_held := false
 var interact_pressed := false
-var reel_held := false
 var fire_pressed := false
 var fire_held := false
 var fire_released := false
@@ -28,8 +28,13 @@ var special_released := false
 var movement_pressed := false
 var movement_held := false
 var movement_released := false
-# The harpoon's own key. With --harpoon off the keyboard leaves these false and RMB stays
-# the class movement; with it on RMB is here and movement_* moves to the burst key.
+# The harpoon's own key, right mouse, for every pilot. Shift is the pilot's one go verb: the
+# keyboard fills shift_*, and the player turns it into boost_pressed for Sable or movement_*
+# (the class burst) for Rivet and Kest. A scripted source may fill boost_* and movement_*
+# directly.
+var shift_pressed := false
+var shift_held := false
+var shift_released := false
 var harpoon_pressed := false
 var harpoon_held := false
 var harpoon_released := false
@@ -47,7 +52,6 @@ func clear() -> void:
 	mount_pressed = false
 	mount_held = false
 	interact_pressed = false
-	reel_held = false
 	fire_pressed = false
 	fire_held = false
 	fire_released = false
@@ -61,6 +65,9 @@ func clear() -> void:
 	harpoon_held = false
 	harpoon_released = false
 	cancel_pressed = false
+	shift_pressed = false
+	shift_held = false
+	shift_released = false
 
 
 # A source lets the headless test drive the same player with no input at all.
@@ -92,15 +99,8 @@ class Keyboard:
 	extends Source
 
 	var enabled := true
-	# Read live, so the F1 panel flips the layout: RMB is the class movement while
-	# --harpoon is off; on, RMB is the harpoon and the burst is Shift (routed by the ball,
-	# which knows whether its charge is ready) or C.
+	# Kept for the game's wiring; no key layout reads it now.
 	var tuning
-
-	# Whether C is the in-play burst key: the harpoon is on and the layout keeps the burst
-	# on C. The death screen's C guard reads it from here too.
-	static func burst_is_c(tuning) -> bool:
-		return tuning != null and tuning.harpoon_on() and tuning.option("harpoon_keys") == "keep"
 
 	func poll(out) -> void:
 		out.clear()
@@ -109,27 +109,18 @@ class Keyboard:
 		out.move = Input.get_vector("cl_left", "cl_right", "cl_back", "cl_forward")
 		out.jump_pressed = Input.is_action_just_pressed("cl_jump")
 		out.jump_held = Input.is_action_pressed("cl_jump")
-		out.boost_pressed = Input.is_action_just_pressed("cl_boost")
+		out.shift_pressed = Input.is_action_just_pressed("cl_boost")
+		out.shift_held = Input.is_action_pressed("cl_boost")
+		out.shift_released = Input.is_action_just_released("cl_boost")
 		out.brake_held = Input.is_action_pressed("cl_brake")
 		out.mount_pressed = Input.is_action_just_pressed("cl_mount")
 		out.mount_held = Input.is_action_pressed("cl_mount")
-		out.reel_held = Input.is_action_pressed("cl_reel")
 		out.fire_pressed = Input.is_action_just_pressed("cl_fire")
 		out.fire_held = Input.is_action_pressed("cl_fire")
 		out.fire_released = Input.is_action_just_released("cl_fire")
 		out.special_pressed = Input.is_action_just_pressed("cl_special")
 		out.special_held = Input.is_action_pressed("cl_special")
 		out.special_released = Input.is_action_just_released("cl_special")
-		if tuning == null or not tuning.harpoon_on():
-			out.movement_pressed = Input.is_action_just_pressed("cl_movement")
-			out.movement_held = Input.is_action_pressed("cl_movement")
-			out.movement_released = Input.is_action_just_released("cl_movement")
-			return
 		out.harpoon_pressed = Input.is_action_just_pressed("cl_movement")
 		out.harpoon_held = Input.is_action_pressed("cl_movement")
 		out.harpoon_released = Input.is_action_just_released("cl_movement")
-		var keep: bool = burst_is_c(tuning)
-		var burst := "cl_dash" if keep else "cl_boost"
-		out.movement_pressed = keep and Input.is_action_just_pressed(burst)
-		out.movement_held = Input.is_action_pressed(burst)
-		out.movement_released = Input.is_action_just_released(burst)

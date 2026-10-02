@@ -289,7 +289,7 @@ func restart_hold_fraction() -> float:
 # marker and the ball's RMB grapple all read the record this stores.
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
-		get_tree().get_nodes_in_group("enemy") if tuning.harpoon_on() else [], from, forward, player.ball_position())
+		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
 	return player.kit.aim
 
 
@@ -505,8 +505,6 @@ func _screen_key(key: int) -> bool:
 				flow.new_run()
 				return true
 			if key == KEY_C:
-				if dead_guard_left > 0.0 and Intent.Keyboard.burst_is_c(tuning):
-					return true
 				flow.open_class_select()
 				return true
 			if key == KEY_T and flow.can_replay_final_stage():

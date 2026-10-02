@@ -3,8 +3,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WardenDrop := preload("res://src/combat/warden_drop.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
-# The harpoon at the Warden (--loop=drop --gun=hold --harpoon=lock, DESIGN-NOTES "Harpoon and
+# The harpoon at the Warden (--loop=drop --gun=hold, DESIGN-NOTES "Harpoon and
 # winch"); warden.gd and warden_drop.gd are untouched, so this proves the drop rule reads a line
 # smash like any other arrival:
 #   camper      from the bowl floor the pilot latches the Warden and commits the haul across several
@@ -93,7 +94,6 @@ func _run() -> void:
 	_player.source = _source
 	_game.tuning.set_option("loop_mode", "drop")
 	_game.tuning.set_option("gun_role", "hold")
-	_game.tuning.set_option("harpoon", "lock")
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, _speed: float): _counts["harpoon_smashed"] += 1)
@@ -105,7 +105,7 @@ func _run() -> void:
 	_game.ctx.spawner.heft_override = 1.0
 	_warden = _game.flow.warden
 	_drop = _warden.get("drop") if is_instance_valid(_warden) else null
-	_report("drop rules", _drop != null and _player.kit.harpoon_on, "stage 1 Warden carries warden_drop.gd and Rivet fits the harpoon (%s)" % _player.kit.harpoon_on)
+	_report("drop rules", _drop != null and _player.kit.on(Augments.GRAPPLE), "stage 1 Warden carries warden_drop.gd and Rivet fits the harpoon (%s)" % _player.kit.on(Augments.GRAPPLE))
 	if _drop == null:
 		quit(1)
 		return

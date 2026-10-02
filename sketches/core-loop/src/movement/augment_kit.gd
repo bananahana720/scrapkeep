@@ -27,20 +27,20 @@ var aim := Augments.no_aim()
 # The harpoon's line record, on top of the grapple's fields above (one rope, in
 # Augments._grapple). on_body says the line is bitten into anchor_body, an enemy, and
 # anchor then follows it at anchor_offset; a freed body reads as null, so the flag is
-# its own. ball_share is the ball's share of the closing (1 flies you in, less tows the
-# body), smash_left the seconds a committed haul may still run and smash_floor the speed
-# it never drops below. tow is the velocity handed to the body this tick. lock_body is
-# the soft-lock's sticky pick; rewind_left the seconds the hook is spent after a line smash.
-var harpoon_on := false
+# its own. smash_left is the seconds a committed haul may still run and smash_floor the speed
+# it never drops below. winching is Ctrl held on a world line. line_end says how the line last
+# ended: "let_go" for the player's own release, "landed" for a smash, else the cause that cut
+# it. lock_body is the soft-lock's sticky pick; rewind_left the seconds the hook is spent
+# after a line smash.
 var on_body := false
 var anchor_body: Node3D = null
 var anchor_offset := Vector3.ZERO
 var line_state := Augments.LINE_IDLE
-var ball_share := 1.0
+var winching := false
+var line_end := ""
 var smash_left := 0.0
 var smash_floor := 0.0
 var line_closing := 0.0
-var tow := Vector3.ZERO
 var lock_body: Node3D = null
 var rewind_left := 0.0
 
@@ -105,8 +105,7 @@ func fit(movement: String, smash: String) -> void:
 	smash_id = smash
 	smash_flavour = AbilityState.ABILITIES.get(smash, {}).get("flavour", "")
 	var keys: Array = AbilityState.ABILITIES.get(movement, {}).get("augments", []) + Augments.SHARED
-	if harpoon_on:
-		keys = keys + [Augments.GRAPPLE]
+	keys = keys + [Augments.GRAPPLE]
 	for spec in Augments.SPECS:
 		set_on(spec["key"], spec["key"] in keys)
 
@@ -154,17 +153,19 @@ func release_holds() -> void:
 	slingshot.cancel()
 
 
-# The line ends and the ball keeps whatever velocity it has.
-func drop_line() -> void:
+# The line ends and the ball keeps whatever velocity it has. `end` is recorded for the
+# ball to publish, and only for a line that stood.
+func drop_line(end := "let_go") -> void:
+	if hooked:
+		line_end = end
 	hooked = false
 	on_body = false
 	anchor_body = null
 	line_state = Augments.LINE_IDLE
-	ball_share = 1.0
+	winching = false
 	smash_left = 0.0
 	smash_floor = 0.0
 	line_closing = 0.0
-	tow = Vector3.ZERO
 
 
 func clear_runtime() -> void:
@@ -189,7 +190,7 @@ func clear_runtime() -> void:
 func _stop(key: String) -> void:
 	match key:
 		Augments.GRAPPLE:
-			drop_line()
+			drop_line("reset")
 			aim = Augments.no_aim()
 		Augments.GLIDE:
 			gliding = false
