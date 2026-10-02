@@ -13,7 +13,9 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd \
 #     -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--trace=1]
 #
-# --trace prints the bot's goal and the ball every two game seconds. --fixed-fps 90 makes one frame one physics tick, so runs go faster than real time.
+# --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
+# writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
+# diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
 # same args (tuning.gd's FLAGS).
@@ -26,11 +28,10 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 #                        report can name entries no run discovered.
 # A run ends at stage-3 clear, death, a "boss" flow state or a stalled stage; a stalled
 # or boss run has no spine record (the run log writes only at death and run end), so
-# its bots.ndjson line is the only trace. Each seed seeds the global RNG, the run's
-# stream and the bot's own streams (bot_driver.gd), and the runner switches the hit-stop
-# gates to physics ticks (src/core/sim_clock.gd), so a seed replays the same run on the
-# same machine and build, CPU load included. With the wall-clock gates, CPU load changed
-# which hit-stops fired and so the physics: seed 1 drifted between runs.
+# its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
+# seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
+# completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
+# Replay evidence is specific to the checked machine, build, policy and table.
 
 var _settings := {}
 var _seeds: Array[int] = []
@@ -40,11 +41,19 @@ var _driver
 var _started_msec := 0
 var _out := ""
 var _results: Array[Dictionary] = []
+var _tick_trace: FileAccess
+var _scrap_serial := 0
+var _counter_serial := 0
+var _allocation_noise: Array[RefCounted] = []
 
 
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	# The repeat test perturbs object IDs without touching policy, seed or physics.
+	for i in int(_settings.get("allocation-noise", "0")):
+		_allocation_noise.append(RefCounted.new())
+	node_added.connect(_on_node_added)
 	if not _settings.has("out"):
 		printerr("bot_run: usage: -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4]")
 		quit(2)
@@ -53,7 +62,43 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(_out)
 	for part in String(_settings.get("seeds", "1")).split(",", false):
 		_seeds.append(int(part))
+	if _seeds.size() > 1:
+		_run_children()
+		return
 	_next()
+
+
+# A fresh physics server and presentation caches for every seed, including list runs.
+func _run_children() -> void:
+	var forwarded := PackedStringArray()
+	for arg in OS.get_cmdline_user_args():
+		if not arg.begins_with("--seeds="):
+			forwarded.append(arg)
+	for i in _seeds.size():
+		var previous := {}
+		var state_dir := ProjectSettings.globalize_path(_out).path_join("state-%d" % i)
+		for kind in ["DATA", "CONFIG", "CACHE"]:
+			var key: String = "XDG_%s_HOME" % kind
+			previous[key] = OS.get_environment(key)
+			OS.set_environment(key, state_dir.path_join(kind.to_lower()))
+		var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path",
+			ProjectSettings.globalize_path("res://"), "--script", "res://tools/bot_run.gd", "--"])
+		args.append_array(forwarded)
+		args.append("--seeds=%d" % _seeds[i])
+		var output := []
+		var code := OS.execute(OS.get_executable_path(), args, output, true)
+		for key in previous:
+			if previous[key].is_empty():
+				OS.unset_environment(key)
+			else:
+				OS.set_environment(key, previous[key])
+		for chunk in output:
+			print(String(chunk).strip_edges())
+		if code != 0:
+			quit(code)
+			return
+	print("bot_run: %d isolated run(s) written to %s" % [_seeds.size(), _out])
+	quit(0)
 
 
 static func _parse(args: PackedStringArray) -> Dictionary:
@@ -72,11 +117,15 @@ func _next() -> void:
 		return
 	# A hit-stop cut short by the previous game's free would leave time slowed.
 	Engine.time_scale = 1.0
+	_scrap_serial = 0
+	_counter_serial = 0
 	seed(_seeds[_index])
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	_driver = null
+	if _settings.has("trace-ticks"):
+		_tick_trace = FileAccess.open(_out.path_join("trace-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 
 
 func _physics_process(delta: float) -> bool:
@@ -88,10 +137,16 @@ func _physics_process(delta: float) -> bool:
 		_game.run_log.storage_dir = _out
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		_driver.trace = _settings.has("trace")
+		_game.presentation.audio.bake_now()
 		_started_msec = Time.get_ticks_msec()
 		_driver.start()
 		return false
+	if _tick_trace != null:
+		_tick_trace.store_line(JSON.stringify(_snapshot(delta)))
 	var over: bool = _driver.tick(delta)
+	if not over and _settings.has("ticks") and _driver.ticks >= int(_settings["ticks"]):
+		_driver._end("ticks_done")
+		over = true
 	if not over and _settings.has("stages") and _game.run.stage > int(_settings["stages"]):
 		_driver._end("stages_done")
 		over = true
@@ -111,8 +166,42 @@ func _physics_process(delta: float) -> bool:
 			record["ticks"], record["game_seconds"], wall])
 	_game.free()
 	_game = null
+	_tick_trace = null
 	_next()
 	return false
+
+
+static func _vector(v: Vector3) -> Array:
+	return [v.x, v.y, v.z]
+
+
+func _on_node_added(node: Node) -> void:
+	if _game == null or _game.build == null:
+		return
+	if "_strafe" in node:
+		node.set_meta("bot_strafe", 1.0 if (_counter_serial + _seeds[_index]) % 2 == 0 else -1.0)
+		_counter_serial += 1
+	if node.get_parent() == _game.build.scrap:
+		node.set_meta("bot_side", 1.0 if (_scrap_serial + _seeds[_index]) % 2 == 0 else -1.0)
+		_scrap_serial += 1
+
+
+func _snapshot(delta: float) -> Dictionary:
+	var enemies := []
+	for enemy in get_nodes_in_group("enemy"):
+		if enemy is Node3D and is_instance_valid(enemy):
+			enemies.append({"kind": enemy.get("kind"), "position": _vector(enemy.global_position),
+				"hp": enemy.get("hp"), "strafe": enemy.get("_strafe") if "_strafe" in enemy else null})
+	var caught := []
+	for item in _game.build.scrap._caught:
+		caught.append({"position": _vector(item.global_position), "side": _game.build.scrap._caught[item]})
+	return {"tick": _driver.ticks + 1, "delta": delta, "flow": _game.flow.state_name(),
+		"stage": _game.run.stage, "stage_time": _game.run.stage_time, "paused": paused,
+		"scale": Engine.time_scale, "position": _vector(_game.player.ball_position()),
+		"velocity": _vector(_game.player.body().linear_velocity), "hp": _game.run.hp,
+		"mass": _game.run.mass, "scrap": _game.run.scrap, "caught": caught,
+		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
+		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}
 
 
 func _write_entries() -> void:

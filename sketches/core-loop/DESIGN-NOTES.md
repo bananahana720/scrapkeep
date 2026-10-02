@@ -1921,3 +1921,32 @@ The exported base has 4,956 triangles, up from 4,492. Its bounds are unchanged: 
 `hero_warden_assets_test.gd` retains every existing check and adds named-piece, assembled-bound, caged-heart and triangle-projection checks. The sampled facing-crown silhouette loses area at each shatter: 1,170, 1,026, 882, 441, then zero covered samples in the band above the inner structure. `warden_chunks_look_test.gd` uses real harpoon contacts on a live slice game for all four shatters, including death. It checks chunk visibility, crack colours and placement, core visibility and tint, fragment motion and lifetime, callback cleanup, retries, stage changes, new runs, and plating Wardens through death on all three default stages. Deliberate implementation and GLB faults prove that the new assertions fail; the checks themselves are not edited for those red runs.
 
 The coordinator still renders the assembled and damaged states at the 8 m and 12 m chase distances. That check must include crack readability, the open heart and the existing harpoon brackets, whose gameplay anchor remains above the jaws. No rendered capture, GPU measurement or human readability verdict is claimed by this unit.
+
+## Unit SD: repeatable headless bot samples, 2026-10-02
+
+Checked base `85432aa9950321b2b9f30125fa06c580cfc1bf32`, Godot 4.7.2, brawler seed 3 on the slice. Gameplay directions depended on process-local object IDs: `src/build/scrap_field.gd` chose pickup swirl from ID parity, and `src/combat/counter.gd` chose Fleet circling direction the same way. Audio bakes allocate resources on worker threads while the game starts. Their allocation timing can change those IDs without changing the seeded bot or run stream. An in-process seed list also retains physics and presentation state between games.
+
+The first observed difference in the detailed concurrent reproduction was tick 2424: the same attracted pickup had side -1 in one process and +1 in the other. At tick 2437 the wallet was 21 versus 22 and mass was 12 versus 13. With pickup side pinned alone, the Mag trapper's circling side still differed at tick 2207, followed by different death-drop positions. Pinning both directions made a full concurrent pair agree. An in-process list retained an early velocity difference at tick 278, so list seeds now run in separate child processes with separate data folders. The experiment establishes process-state sensitivity; it does not identify a particular Jolt internal cache or prove general engine determinism.
+
+The runner supplies alternating signs by seed and spawn order, waits for the audio bake before play, and isolates list seeds. The two source hooks preserve their original ID-based defaults when bot metadata is absent, so ordinary player runs keep their existing behavior. No game rule, tuning value or existing test expectation changed. `--trace-ticks=1` writes full-precision pre-driver snapshots, and `--ticks=N` bounds diagnostic runs. `--allocation-noise=N` is a regression fixture that changes object allocation without changing the policy, seed or table.
+
+Fight seconds here follow `tools/balance_report.gd`: break minus the later of engagement and bot commitment, using spine ticks when available. Baseline concurrent runs measured 20.755556 versus 26.744444 seconds, a 28.9 percent spread relative to the shorter run. Final concurrent runs, and seed 3 after seeds 1 and 2 versus alone, all measured 20.755556 seconds and matched all 20,097 trace rows. Earlier session figures of 26.66 seconds used commitment alone; that is not the balance report's fight metric.
+
+| Experiment | Data folders | Execution | Seeds compared | Fight seconds | Result |
+| --- | --- | --- | --- | --- | --- |
+| Baseline | Fresh per process | Sequential | 3 / 3 | 26.744444 / 26.355556 | Different |
+| Baseline, full trace | Fresh per process | Sequential | 3 / 3 | 24.633333 / 24.633333 | Fight matched; enemy state differed |
+| Baseline, pickup trace | Fresh per process | Sequential | 3 / 3 | 26.355556 / 26.355556 | Fight matched; pickup state differed |
+| Audio bake wait only | Fresh per process | Sequential | 3 / 3 | 26.355556 / 26.355556 | Full trace matched |
+| Baseline | Fresh per process | Concurrent | 3 / 3 | 20.755556 / 26.744444 | Different |
+| Baseline, pickup trace | Fresh per process | Concurrent | 3 / 3 | 26.355556 / 24.633333 | Different |
+| Audio bake wait only | Fresh per process; list shared internally | Sequential | Third of 1,2,3 / alone | 22.577778 / 26.355556 | Different |
+| Stable pickup side only | Fresh per process | Concurrent | 3 / 3 | 26.744444 / 24.633333 | Different |
+| Both stable directions | Fresh per process | Concurrent | 3 / 3 | 20.755556 / 20.755556 | Full trace matched |
+| Both stable directions, cross-comparison | Fresh per process; list shared internally | List versus earlier standalone | Third of 1,2,3 / alone | 22.622222 / 20.755556 | Different |
+| Final runner | Fresh for every seed | Sequential | Third of 1,2,3 / alone | 20.755556 / 20.755556 | Full trace matched |
+| Final runner | Fresh per process | Concurrent | 3 / 3 | 20.755556 / 20.755556 | Full trace matched |
+
+`tests/bot_repeat_test.gd` runs two separate 6,000-tick children with fresh data folders and different allocation noise, then compares every trace row. It is marked `smoke: solo` and allows 40 seconds per child. With both source hooks disabled and the check unchanged, it exits 1 at differing tick 213. Restoring the hooks gives exit 0 and seven passing checks. The named smoke run passed all seven tests plus import, with zero skips; the repeat test took 43.4 seconds. Lint passed with zero findings. The six existing tests were not edited.
+
+Evidence is under `artifacts/local/sd/`, including the complete report, exact child commands, traces, red/green output and comparisons. Smoke receipt: `artifacts/local/receipts/sd-2df1e5543a0d-2026-10-02T16-18-31-661Z.json`. Re-sweep tuning bands after adopting this sampler. Repeatability evidence is limited to this build, machine, policy, seed and table; gyro phase and device luck still contain identity-dependent inputs and need separate coverage if later policies exercise them.
