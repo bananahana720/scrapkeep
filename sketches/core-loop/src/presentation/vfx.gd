@@ -10,7 +10,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
-const WhyCallout := preload("res://src/ui/why_callout.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -323,9 +323,10 @@ func _on_synergy(id: String, category: String, _first_time: bool) -> void:
 
 const ARMED_SECONDS := 0.6
 
+
 # A synergy goes live: its two cause glyphs link above the ball, no name and no banner.
 func _on_cause_armed(id: String) -> void:
-	var shapes := WhyCallout.cause_shapes(id)
+	var shapes: Array = EventKinds.cause_glyphs(Synergies.ROWS[id]["tags"]) if Synergies.ROWS.has(id) else []
 	if shapes.is_empty() or EventKinds.cause_row(id).is_empty():
 		return
 	var tint := EventKinds.cause_color(id)
@@ -451,6 +452,10 @@ func _build_meshes() -> void:
 	dot.radial_segments = 12
 	dot.rings = 6
 	_meshes["flash"] = dot
+	_meshes["disc"] = dot
+	var bolt := BoxMesh.new()
+	bolt.size = Vector3(0.14, 0.9, 0.14)
+	_meshes["bolt"] = bolt
 	_meshes["none"] = dot
 
 

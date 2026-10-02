@@ -5,7 +5,7 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const LoopMode := preload("res://src/core/loop_mode.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
-const Threat := preload("res://src/combat/threat_grammar.gd")
+const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
 # name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
@@ -50,7 +50,7 @@ const CARD_LINES := 4
 const GLYPH_POP := 36.0
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
-const CALM_SECONDS := 3.0
+const CALM_SECONDS := WhyCallout.CALM_SECONDS
 
 var shown := 0
 var last_title := ""
@@ -158,25 +158,22 @@ func watch(events) -> void:
 		return
 	_events = events
 	events.player_hit.connect(func(_amount: float, _source: String): _calm_left = CALM_SECONDS)
+	# A retry rewinds the stage and clears the codex record: a held card goes unseen.
+	if events.has_signal("stage_entered"):
+		events.stage_entered.connect(func(_stage: int, retry: bool):
+			if retry:
+				dismiss(true))
 
 
-# No live telegraph, and CALM_SECONDS since the last damage or telegraph.
+# The callout's definition of calm (WhyCallout.is_calm): CALM_SECONDS since the last damage or
+# telegraph, and never while the tree is paused.
 func calm() -> bool:
-	return _calm_left <= 0.0 and not _threat_live()
+	return WhyCallout.is_calm(_calm_left, get_tree() if is_inside_tree() else null)
 
 
 # A card is waiting for a calm moment.
 func held() -> bool:
 	return not showing() and not _queue.is_empty()
-
-
-func _threat_live() -> bool:
-	if not is_inside_tree():
-		return false
-	for node in get_tree().get_nodes_in_group(Threat.GROUP):
-		if is_instance_valid(node) and not node.is_queued_for_deletion():
-			return true
-	return false
 
 
 # kicker: "New synergy", "Synergy", "Found" or similar. While one is showing the next
@@ -313,10 +310,7 @@ func _next() -> void:
 
 
 func _process(delta: float) -> void:
-	if _threat_live():
-		_calm_left = CALM_SECONDS
-	else:
-		_calm_left = maxf(0.0, _calm_left - delta)
+	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	if _started_ms < 0:
 		_next()
 		return

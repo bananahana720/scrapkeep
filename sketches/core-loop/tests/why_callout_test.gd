@@ -56,7 +56,7 @@ func _steps(count: int) -> void:
 
 func _fresh() -> void:
 	_why.clear()
-	_why._hit_left = 0.0
+	_why._calm_left = 0.0
 
 
 func _threat() -> Node:
@@ -144,12 +144,40 @@ func _run() -> void:
 	events.cause_fired.emit("lightning_rod", null, AT)
 	_check("WY2-4 damage is a fight", _why.fight() and _why.callouts().size() == 1, "after a hit two rows drew %d callout" % _why.callouts().size())
 
+	_fresh()
+	_why.profile.glyph_uses.erase(WhyCallout.USE_PREFIX + "pinwheel")
+	events.cause_fired.emit("pinwheel", null, AT)
 	var counted := WordBudget.count(_game.hud)
-	var seen_in_budget := false
+	var budget_name := String(Synergies.ROWS["pinwheel"]["name"])
+	var budget_words := 0
 	for item in counted["items"]:
-		if item["node"] == "Callout":
-			seen_in_budget = true
-	_check("WY2 word budget", seen_in_budget or not _game.flow.in_play(), "a named callout is in the HUD's word count (%s), flow %s" % [seen_in_budget, _game.flow.state_name()])
+		if item["node"] == "Callout" and String(item["text"]) == budget_name:
+			budget_words += int(item["words"])
+	_check("WY2 word budget", _game.flow.in_play() and budget_words == WordBudget.words_in(budget_name) and budget_words > 0,
+		"flow in play (%s), the HUD's word count holds the name '%s' as %d words (wanted %d)" % [_game.flow.in_play(), budget_name, budget_words, WordBudget.words_in(budget_name)])
+
+	_fresh()
+	var body := Node3D.new()
+	_game.add_child(body)
+	var cam: Camera3D = _game.camera.cam
+	body.global_position = cam.global_position + (-cam.global_basis.z) * 12.0 + cam.global_basis.x * 3.0
+	var pulses_at_body: int = _vfx.spawned.get("cause_fired", 0)
+	events.cause_fired.emit("tesla_pylon", body, AT)
+	var body_piece = _why.callouts()[0] if _why.callouts().size() == 1 else null
+	var screen_size: Vector2 = _why.get_viewport_rect().size
+	var want_spot := WhyCallout.place(cam.unproject_position(body.global_position + Vector3.UP), WhyCallout.SIZE, screen_size)
+	var far_spot := WhyCallout.place(screen_size * 0.5, WhyCallout.SIZE, screen_size)
+	var beside_body: bool = body_piece != null and body_piece.position.is_equal_approx(want_spot) and not body_piece.position.is_equal_approx(far_spot)
+	var pulse_want: Vector3 = body.global_position + Vector3.UP * 0.8
+	var pulse_at := Vector3.INF
+	for slot in _vfx._glyphs:
+		if slot["t"] < 1.0 and slot["node"].visible and slot["node"].global_position.is_equal_approx(pulse_want):
+			pulse_at = slot["node"].global_position
+	var pulse_lands: bool = _vfx.spawned.get("cause_fired", 0) - pulses_at_body == 1 and pulse_at.is_equal_approx(pulse_want)
+	_check("WY2 real body", beside_body and pulse_lands,
+		"callout at %s (wanted %s, the reticle default would be %s), pulse at %s (wanted %s)" % [body_piece.position if body_piece != null else "none", want_spot, far_spot, pulse_at, pulse_want])
+	body.free()
+	_fresh()
 
 	_fresh()
 	var clear_all := true
@@ -173,7 +201,7 @@ func _run() -> void:
 	_banner.dismiss(true)
 	_banner.set_process(false)
 	_banner.cards = true
-	_banner.profile = UiProfile.new("user://why_callout_test_%d/" % OS.get_process_id())
+	_banner.profile = UiProfile.new(_game.storage_dir)
 	var hostile_two := _threat()
 	_banner._process(DT)
 	_banner.show_discovery("Held one", "build", "line", "New synergy", "wy2_a")
@@ -211,6 +239,68 @@ func _run() -> void:
 	var held_for_screen: bool = _banner.held()
 	_banner.dismiss(true)
 	_check("WY2-6 screens clear it", held_for_screen and _banner.queued() == 0 and not _banner.held(), "a held card (%s) is dropped by dismiss: %d queued" % [held_for_screen, _banner.queued()])
+
+	# A retry rewinds the stage: a held card goes without being marked seen.
+	_banner.dismiss(true)
+	_banner._calm_left = 0.0
+	events.player_hit.emit(1.0, "test")
+	_banner.show_discovery("Held retry", "build", "line", "New synergy", "wy2_retry")
+	var held_before_retry: bool = _banner.held()
+	events.stage_entered.emit(0, true)
+	var gone_after_retry: bool = not _banner.held() and _banner.queued() == 0 and not _banner.showing()
+	_banner._calm_left = 0.0
+	for i in 5:
+		_banner._process(DT)
+	var never_shown: bool = not _banner.showing() and not _banner.profile.discovered("wy2_retry")
+	_check("WY2 retry drops a held card", held_before_retry and gone_after_retry and never_shown,
+		"held (%s), gone after a retry stage (%s), never shown or marked seen (%s)" % [held_before_retry, gone_after_retry, never_shown])
+	_banner.dismiss(true)
+	_banner._calm_left = 0.0
+	events.player_hit.emit(1.0, "test")
+	_banner.show_discovery("Held next", "build", "line", "New synergy", "wy2_next")
+	events.stage_entered.emit(1, false)
+	_check("WY2 a new stage is not a retry", _banner.held(), "a first entry to a stage left the held card (%s)" % _banner.held())
+	_banner.dismiss(true)
+
+	# A held card never shows while the tree is paused.
+	_banner._calm_left = 0.0
+	paused = true
+	_banner.show_discovery("Paused one", "build", "line", "New synergy", "wy2_pause")
+	for i in 240:
+		_banner._process(DT)
+	var held_paused: bool = _banner.held() and not _banner.showing() and not _banner.profile.discovered("wy2_pause")
+	paused = false
+	_banner._process(DT)
+	_check("WY2 pause holds a card", held_paused and _banner.showing(),
+		"after 4 s of paused calm the card was held and unseen (%s); one frame after unpausing it showed (%s)" % [held_paused, _banner.showing()])
+	_banner.dismiss(true)
+
+	# One definition of calm: the callout's fight and the card's calm read the same fact.
+	_banner._calm_left = 0.0
+	_fresh()
+	var live_threat := _threat()
+	_why.step(DT)
+	_banner._process(DT)
+	var agree_live: bool = _why.fight() and not _banner.calm()
+	live_threat.free()
+	var agree_after := true
+	var detail_calm := ""
+	var elapsed := 0.0
+	for frames in [30, 60, 60, 60]:
+		for i in frames:
+			_why.step(DT)
+			_banner._process(DT)
+		elapsed += frames * DT
+		if _why.fight() == _banner.calm():
+			agree_after = false
+		detail_calm += " %.1fs:%s/%s" % [elapsed, _why.fight(), _banner.calm()]
+	var calm_at_end: bool = not _why.fight() and _banner.calm()
+	events.player_hit.emit(1.0, "test")
+	var agree_hit: bool = _why.fight() and not _banner.calm()
+	_check("WY2 one calm", agree_live and agree_after and calm_at_end and agree_hit,
+		"live telegraph agrees (%s); after it ends (fight/calm) %s; calm 3.5 s on (%s); a hit agrees (%s)" % [agree_live, detail_calm, calm_at_end, agree_hit])
+	_fresh()
+	_banner._calm_left = 0.0
 
 	var source := FileAccess.get_file_as_string("res://src/ui/why_callout.gd")
 	var literal := RegEx.create_from_string("Color\\(\\s*[-0-9.]+\\s*,\\s*[-0-9.]+\\s*,\\s*[-0-9.]+")

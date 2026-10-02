@@ -140,6 +140,37 @@ func run(t) -> void:
 	t.check("no two causes share a shape", shared_shape.is_empty(), "%s" % [shared_shape])
 	t.check("every cause has a three-note motif", bad_motif.is_empty(), "rows: %s" % [bad_motif])
 
+	var no_glyph: Array = []
+	var tag_owner := {}
+	var shared_tag_glyph: Array = []
+	var effect_clash: Array = []
+	var effect_shapes: Array = []
+	for id in EventKinds.CAUSE_ROWS:
+		effect_shapes.append(String(EventKinds.CAUSE_ROWS[id]["shape"]))
+	for id in EventKinds.CAUSE_ROWS:
+		if not Synergies.ROWS.has(id):
+			continue
+		for tag in Synergies.ROWS[id]["tags"]:
+			var glyph := EventKinds.tag_glyph(String(tag))
+			if glyph == "":
+				no_glyph.append("%s of %s" % [tag, id])
+				continue
+			if tag_owner.has(glyph) and tag_owner[glyph] != tag:
+				shared_tag_glyph.append("%s and %s share %s" % [tag, tag_owner[glyph], glyph])
+			tag_owner[glyph] = tag
+			if glyph in effect_shapes:
+				effect_clash.append("%s (%s) equals an effect shape" % [tag, glyph])
+	t.check("every tag of every cause has a glyph", no_glyph.is_empty(), "no glyph: %s" % [no_glyph])
+	t.check("no two slice tags share a cause glyph", shared_tag_glyph.is_empty(), "%s" % [shared_tag_glyph])
+	t.check("no tag glyph equals a row's effect shape", effect_clash.is_empty(), "%s" % [effect_clash])
+	var want_vocabulary := {"arc": "bolt", "kinetic": "disc", "mass": "core", "anchor": "bar", "speed": "chevron",
+		"spiral": "wave", "split": "diamond", "chain": "square", "frost": "diamond"}
+	var vocabulary_ok := true
+	for tag in want_vocabulary:
+		if EventKinds.tag_glyph(tag) != want_vocabulary[tag]:
+			vocabulary_ok = false
+	t.check("TAG_GLYPHS holds the coordinator's vocabulary", vocabulary_ok and EventKinds.TAG_GLYPHS.size() == want_vocabulary.size(), "table: %s" % [EventKinds.TAG_GLYPHS])
+
 	var activity_ids: Array = EventKinds.ACTIVITY_ROWS.keys()
 	activity_ids.sort()
 	t.check("ACTIVITY_ROWS holds the four standing activities", activity_ids == ["ambush_altar", "cracked_cache", "hauler_bounty", "surge_run"], "ids: %s" % [activity_ids])

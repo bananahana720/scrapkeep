@@ -25,20 +25,16 @@ const BESIDE := 34.0
 const GLYPH := 30.0
 const NAME_FONT := 15
 const USE_PREFIX := "why:"
+# The silhouettes the effect shapes lack: the element icons' bolt (arc) and disc (kinetic).
+const ELEMENT_ICONS := {"bolt": "el_arc", "disc": "el_kinetic"}
 
-# Each synergy tag's cause glyph, a silhouette from Icons.SHAPES. Presentation draws the
-# same shapes at the ball when a synergy arms.
-const TAG_SHAPES := {
-	"frost": "diamond", "arc": "wave", "kinetic": "square", "chain": "chevron", "split": "burst",
-	"spiral": "star", "anchor": "bar", "speed": "arrow", "mass": "core",
-}
 
 var game
 var profile
 
 var _pieces: Array = []
 var _since := {}
-var _hit_left := 0.0
+var _calm_left := 0.0
 
 
 # The two cause silhouettes of a synergy, the shown ingredient's first; empty when the
@@ -46,12 +42,7 @@ var _hit_left := 0.0
 static func cause_shapes(id: String) -> Array:
 	if not Synergies.ROWS.has(id):
 		return []
-	var out: Array = []
-	for tag in Synergies.ROWS[id]["tags"]:
-		if not TAG_SHAPES.has(tag):
-			return []
-		out.append(TAG_SHAPES[tag])
-	return out
+	return EventKinds.cause_glyphs(Synergies.ROWS[id]["tags"])
 
 
 # Where a callout of `part` goes for a body at `anchor` on a screen of `screen`: beside the
@@ -86,7 +77,7 @@ func setup(game_ref, profile_ref) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	game.events.cause_fired.connect(_on_fired)
-	game.events.player_hit.connect(func(_amount: float, _source: String): _hit_left = CALM_SECONDS)
+	game.events.player_hit.connect(func(_amount: float, _source: String): _calm_left = CALM_SECONDS)
 	game.events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 
 
@@ -102,16 +93,32 @@ func clear() -> void:
 	_since.clear()
 
 
-# A live telegraph, or damage taken in the last CALM_SECONDS.
-func fight() -> bool:
-	if _hit_left > 0.0:
-		return true
-	if not is_inside_tree():
+# The one definition of calm, read by this callout (as "fight") and by the discovery card:
+# CALM_SECONDS with no live telegraph (the threat group) and no damage taken, and play not paused. `left` counts the
+# seconds still owed since the last damage or telegraph.
+static func threat_live(tree: SceneTree) -> bool:
+	if tree == null:
 		return false
-	for node in get_tree().get_nodes_in_group(Threat.GROUP):
+	for node in tree.get_nodes_in_group(Threat.GROUP):
 		if is_instance_valid(node) and not node.is_queued_for_deletion():
 			return true
 	return false
+
+
+# `left` after delta seconds: a live telegraph holds it at CALM_SECONDS.
+static func calm_left_after(left: float, delta: float, tree: SceneTree) -> float:
+	if threat_live(tree):
+		return CALM_SECONDS
+	return maxf(0.0, left - delta)
+
+
+# A paused tree is never calm: a held card waits for play to resume.
+static func is_calm(left: float, tree: SceneTree) -> bool:
+	return left <= 0.0 and not threat_live(tree) and not (tree != null and tree.paused)
+
+
+func fight() -> bool:
+	return not is_calm(_calm_left, get_tree() if is_inside_tree() else null)
 
 
 func _on_fired(id: String, target: Node3D, at: Vector3) -> void:
@@ -148,7 +155,7 @@ func _process(delta: float) -> void:
 # Advances every clock by delta seconds; _process calls it each frame and a test steps it
 # by hand.
 func step(delta: float) -> void:
-	_hit_left = maxf(0.0, _hit_left - delta)
+	_calm_left = calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	for id in _since:
 		_since[id] += delta
 	for piece in _pieces.duplicate():
@@ -214,4 +221,10 @@ class Piece extends Control:
 	func _glyph(centre: Vector2, silhouette: String, scale_by: float, alpha: float) -> void:
 		var side := GLYPH * scale_by
 		draw_circle(centre, side * 0.62, Color(color.darkened(0.85), 0.7 * alpha))
-		draw_texture_rect(Icons.shape(silhouette), Rect2(centre - Vector2.ONE * side * 0.5, Vector2.ONE * side), false, Color(color, alpha))
+		draw_texture_rect(_silhouette(silhouette), Rect2(centre - Vector2.ONE * side * 0.5, Vector2.ONE * side), false, Color(color, alpha))
+
+	# A tag glyph is an effect-shape silhouette or one of the element icons' bolt and disc.
+	func _silhouette(name: String) -> Texture2D:
+		if Icons.SHAPES.has(name):
+			return Icons.shape(name)
+		return Icons.texture(ELEMENT_ICONS.get(name, "el_kinetic"))

@@ -562,6 +562,16 @@ const CAUSE_ROWS := {
 	"lightning_rod": {"color": "amber", "shape": "arrow", "motif": ["G4", "D5", "B4"]},
 }
 
+# The cause glyph of each synergy tag (LEGIBILITY section 5, Callout), one vocabulary for the
+# callout's two ingredients and the link at the ball. arc and kinetic wear the element icons'
+# bolt and disc (icons.gd). No tag glyph equals an effect shape in CAUSE_ROWS. Frost is not on
+# the slice and its element icon is a burst, an effect shape, so it borrows the diamond until
+# frost returns and is owed a glyph of its own.
+const TAG_GLYPHS := {
+	"arc": "bolt", "kinetic": "disc", "mass": "core", "anchor": "bar", "speed": "chevron",
+	"spiral": "wave", "split": "diamond", "chain": "square", "frost": "diamond",
+}
+
 # The four standing activities (LEGIBILITY section 9, wave R3): an amber beam and ring from stage
 # start with the family glyph on top. No timer and no toast.
 const ACTIVITY_FIELDS := ["color", "motion", "shape", "sound", "word"]
@@ -628,6 +638,21 @@ static func cause_color(id: String) -> Color:
 
 static func cause_motif(id: String) -> Array:
 	return cause_row(id).get("motif", [])
+
+
+static func tag_glyph(tag: String) -> String:
+	return String(TAG_GLYPHS.get(tag, ""))
+
+
+# The glyphs of a synergy's tags in order; empty when any tag has none.
+static func cause_glyphs(tags: Array) -> Array:
+	var out: Array = []
+	for tag in tags:
+		var glyph := tag_glyph(String(tag))
+		if glyph == "":
+			return []
+		out.append(glyph)
+	return out
 
 
 static func activity_row(id: String) -> Dictionary:
