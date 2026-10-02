@@ -17,7 +17,7 @@ const MAX_DRAWS := 15
 const CLIPS := ["drop_land", "big_cheer", "wince", "slump", "phew"]
 const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro"]
 const BASE := "res://assets/models/shell_rivet.glb"
-const RIG_SHA := "f0aec466357c4cdaeda1e030a8f48da51d698324a15ba4c8406ef2752fbeba84"
+const RIG_SHA := "90b2044887a45f33be14bb3552f2a2dea5dd54c9b8b5dfbf591222978057f14f"
 const GROW := 0.002
 # Pod kit mesh bounds of the base shell in shell space.
 const BASE_POD_MIN := Vector3(-0.94, -0.7735, -1.015634)

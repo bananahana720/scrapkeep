@@ -6,7 +6,7 @@ The models are in `sketches/core-loop/assets/models/pilot_{rivet,sable,kest}_ani
 
 ## Import
 
-All three GLBs contain exactly one action, `drop_land`, at 30 fps. Rivet and Sable span 0 to 2.166667 seconds; Kest spans 0 to 2.2 seconds. Play it once. The immutable pose tables retain their original 1–34 frame labels; `pilot_drop_timing.py` overlays the current 1–66/67 timing without changing pose values. GLB time starts at zero. No root motion is authored.
+All three GLBs contain seven one-shot actions at 30 fps: `drop_land`, `big_cheer` (2.8 s), `wince` (0.5 s), `slump` (1.5 s), `phew` (0.8 s), `brace` (0.6 s) and `heave` (0.8 s). Rivet and Sable's `drop_land` span 0 to 2.166667 seconds; Kest's spans 0 to 2.2 seconds. Play each once. The immutable pose tables retain their original 1–34 frame labels; `pilot_drop_timing.py` overlays the current 1–66/67 timing without changing pose values. GLB time starts at zero. No root motion is authored.
 
 Place the rig at identity under the existing upright cockpit parent, replacing the static pilot. The origin is the sphere centre. Keep scale at `(1, 1, 1)`, matching the existing 0.98-unit glass radius. Blender uses +Z up and +Y forward; glTF uses +Y up and -Z forward. One model unit is one engine unit. The pelvis remains at Blender `(0, 0, -0.3)`, or glTF `(0, -0.3, 0)`.
 

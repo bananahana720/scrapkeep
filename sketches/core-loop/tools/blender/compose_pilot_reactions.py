@@ -12,6 +12,8 @@ BEATS = {
     'wince': [('impact',2),('compress',4),('release',7),('recover',11),('seated',15)],
     'slump': [('deflate',6),('droop',14),('dejected',22),('hold',30),('seated',45)],
     'phew': [('inhale',4),('release',9),('relief',13),('exhale',18),('seated',24)],
+    'brace': [('bite',2),('brace',5),('hold',9),('release',13),('seated',18)],
+    'heave': [('impact',2),('heave',6),('hold',9),('release',14),('seated',24)],
 }
 BG = (35,39,38)
 FONT_PATH = subprocess.check_output(['fc-match','-f','%{file}','sans'],text=True).strip()
