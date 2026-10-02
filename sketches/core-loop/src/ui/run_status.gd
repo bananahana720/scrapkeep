@@ -5,15 +5,13 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The run at a glance, top left: one pip per stage (cleared, current, still ahead) and
-# the Fleet's tag for Brindle's arena, then the run clock in mono digits with the
-# difficulty as a notched bar under it, one notch per threat tier the director can
-# raise. Time is the self-challenge Andrew plays against.
+# the Fleet's tag for Brindle's arena, then the difficulty as a notched bar under them,
+# one notch per threat tier the director can raise. The run clock is not shown in play.
 
 const PIP := 18.0
 const PIP_STEP := 24.0
-const ICON := 22.0
-const FONT := 20
 const ROW_GAP := 8.0
+const BAR_X := 28.0
 const DIFFICULTY_BAR := Vector2(96.0, 7.0)
 const THREAT_TIERS := 2
 const PLATE_PAD := 6.0
@@ -22,32 +20,22 @@ var stage := 1
 var stages := 3
 var has_boss := false
 var in_arena := false
-var seconds := 0.0
 var threat := 0
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(150.0, PIP + ROW_GAP + ICON + ROW_GAP * 0.5 + DIFFICULTY_BAR.y + 2.0)
+	custom_minimum_size = Vector2(150.0, PIP + ROW_GAP + DIFFICULTY_BAR.y + 2.0)
 	size = custom_minimum_size
 
 
-func set_status(stage_now: int, stage_count: int, boss_exists: bool, arena: bool, run_seconds: float, threat_tier: int) -> void:
+func set_status(stage_now: int, stage_count: int, boss_exists: bool, arena: bool, threat_tier: int) -> void:
 	stage = stage_now
 	stages = stage_count
 	has_boss = boss_exists
 	in_arena = arena
-	seconds = run_seconds
 	threat = threat_tier
 	queue_redraw()
-
-
-func time_text() -> String:
-	return "%d:%02d" % [int(seconds) / 60, int(seconds) % 60]
-
-
-func drawn_words() -> PackedStringArray:
-	return PackedStringArray([time_text()])
 
 
 func _draw() -> void:
@@ -71,12 +59,8 @@ func _draw() -> void:
 		draw_texture_rect(Icons.texture("fac_fleet"), Rect2(Vector2(stages * PIP_STEP, -2.0), Vector2(PIP + 4.0, PIP + 4.0)), false,
 			Icons.tint("fac_fleet", boss_color if in_arena else Color(boss_color, 0.3)))
 
-	var y := PIP + ROW_GAP + ICON * 0.5
-	var timer_color: Color = EventKinds.UI_ROWS["run_timer"]["color"]
-	draw_texture_rect(Icons.texture("res_timer"), Rect2(Vector2(0.0, y - ICON * 0.5), Vector2(ICON, ICON)), false, Icons.tint("res_timer", timer_color))
-	UiDraw.text(self, ICON + 6.0, y, time_text(), FONT, timer_color, true)
 	var threat_color := EventKinds.color("threat_rose")
-	var bar := Rect2(Vector2(ICON + 6.0, y + ICON * 0.5 + ROW_GAP * 0.5), DIFFICULTY_BAR)
+	var bar := Rect2(Vector2(BAR_X, PIP + ROW_GAP), DIFFICULTY_BAR)
 	draw_texture_rect(Icons.texture("res_difficulty"), Rect2(Vector2(4.0, bar.position.y - 3.0), Vector2(14.0, 14.0)), false, Icons.tint("res_difficulty", threat_color))
 	UiDraw.bar(self, bar, float(threat) / THREAT_TIERS, threat_color)
 	for i in range(1, THREAT_TIERS):

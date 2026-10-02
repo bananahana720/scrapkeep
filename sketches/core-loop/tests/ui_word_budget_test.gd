@@ -1,88 +1,17 @@
 extends SceneTree
 
-const Game := preload("res://src/game.gd")
-const Intent := preload("res://src/movement/intent.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const Fight := preload("res://tests/support/word_budget_fight.gd")
 
-# The v2 word budget (playtest entry 7: "so much words"). A real stage-1 fight as the
-# runner, gun held, three chasers close, a part, a rare part's flare and reveal card and a
-# threat toast just landed and nothing held open: the words a player can read on the HUD
-# stay at or under 25.
-# World signs (Label3D, owned by other modules) are counted and reported beside it.
+# The word budget on the repeat-find fight: the shared fight in tests/support/word_budget_fight.gd
+# with the pickup a repeat find, so no reveal card opens. The HUD's words stay at or under 25.
+# The first-find fight is ui_word_budget_first_find_test.
 
-const BUDGET := 25
-const SETTLE_TICKS := 300
-const FIGHT_TICKS := 20
-
-var _game
-var _failures := 0
-var _phase := "boot"
-var _wait := 0
+var _fight
 
 
 func _initialize() -> void:
-	_game = Game.new()
-	_game.test_mode = true
-	root.add_child(_game)
-
-
-func _report(label: String, ok: bool, detail: String) -> void:
-	if not ok:
-		_failures += 1
-	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+	_fight = Fight.new(self, "ui_word_budget_test", true)
 
 
 func _physics_process(_delta: float) -> bool:
-	if _game.flow == null:
-		return false
-	_wait += 1
-	match _phase:
-		"boot":
-			var source := Intent.Scripted.new()
-			source.hold["fire_held"] = true
-			_game.player.source = source
-			_game.flow.press_start()
-			_game.flow.choose_class(1)
-			_phase = "settle"
-			_wait = 0
-		"settle":
-			if _wait == SETTLE_TICKS:
-				_stage_fight()
-				_phase = "fight"
-				_wait = 0
-		"fight":
-			if _wait == FIGHT_TICKS - 2:
-				# v3 W13: a rare find flares and, being a first find, shows its reveal card,
-				# presented without adding the part so the fight itself stays the same.
-				var ceremony = _game.presentation.ceremony
-				ceremony.present(ceremony.find_of("sunforged_core", "test"))
-			if _wait == FIGHT_TICKS:
-				_count()
-				print("ui_word_budget_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-				quit(0 if _failures == 0 else 1)
-				return true
-	return false
-
-
-func _stage_fight() -> void:
-	var ball: Vector3 = _game.player.ball_position()
-	var ahead: Vector3 = -_game.camera.cam.global_basis.z
-	ahead.y = 0.0
-	ahead = ahead.normalized()
-	for i in 3:
-		var side := ahead.cross(Vector3.UP) * (float(i) - 1.0) * 4.0
-		_game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x + ahead.x * 12.0 + side.x, ball.z + ahead.z * 12.0 + side.z, 1.0))
-	_game.run.add_scrap(30, ball)
-	_game.run.add_part("boost_coil", "test")
-	_game.events.threat_rose.emit(1)
-
-
-func _count() -> void:
-	var seen: Dictionary = WordBudget.count(_game, _game.camera.cam)
-	var listed := PackedStringArray()
-	for item in seen["items"]:
-		listed.append("%s %s %d \"%s\"" % [item["kind"], item["node"], item["words"], item["text"]])
-	print("  on screen: " + " | ".join(listed))
-	_report("word budget", seen["hud"] <= BUDGET and _game.flow.in_play(),
-		"%d HUD words in a stage-%d fight (budget %d); %d more on world signs in view"
-			% [seen["hud"], _game.run.stage, BUDGET, seen["world"]])
+	return _fight.tick()

@@ -1,3 +1,3 @@
 test	owner	reason	added	deadline
-ui_word_budget_test	O1	32 HUD words in a stage-1 fight against a budget of 25 once the shipping flags are the default; the objective board unit rebuilds that plate	2026-10-01	wave 3
 build_power_curve_test	M2 Warden conversion	punch 50 to 64 against bands of 80 to 120 under scrap-as-armour; the boss chassis unit replaces the plating rule those bands measure; the posture fight is on the slice table only until M2	2026-10-01	M2
+ui_word_budget_first_find_test	R3 reveal timing	a first find opens its reveal card during a fight; the card must wait for calm	2026-10-02	R3

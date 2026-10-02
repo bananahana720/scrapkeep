@@ -38,8 +38,8 @@ const QUESTIONS := [
 
 const TRY_FIRST := [
 	"Pick Sable, Rivet or Kest with a number key or a click. You drop in already rolling; the Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.",
-	"Roll the scrap lines on the way down: watch the heft dial's needle climb, and your punch bar grow under the objective.",
-	"Break the Warden (close to it, the objective says how); the gates open wherever you are. Roll through one to take its part.",
+	"Roll the scrap lines on the way down: scrap is your armour and your weight, and a heavier ball hits harder.",
+	"Break the Warden: the line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.",
 	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
 	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",

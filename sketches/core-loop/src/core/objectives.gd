@@ -1,0 +1,120 @@
+extends RefCounted
+
+# The objective plate's one source (design-v3/LEGIBILITY.md, "A goal exists"): each row is a
+# glyph and at most five words, and choose() picks the row from a reading of the game, so
+# the plate, the edge marker and the tests all read the same table. flow.objective_text()
+# and the long `objective` strings in event_kinds.gd stay the full readout the HUD does not show.
+
+const MAX_WORDS := 5
+# A plating Warden's lesson shows once the ball is this close, as it always has.
+const LESSON_RANGE := 40.0
+const LESSON_ROWS := {"plate": "lesson_plate", "caps": "lesson_caps", "magnet": "lesson_magnet"}
+
+const ROWS := {
+	"find_warden": {"glyph": "obj_warden", "words": "Find the Warden"},
+	"break_guard": {"glyph": "cat_defense", "words": "Break its guard"},
+	"smash_core": {"glyph": "cat_damage", "words": "Smash the core"},
+	"grow_return": {"glyph": "res_heft", "words": "Grow, then return"},
+	"break_warden": {"glyph": "obj_warden", "words": "Break the Warden"},
+	"lesson_plate": {"glyph": "obj_warden", "words": "Ram it as it vents"},
+	"lesson_caps": {"glyph": "obj_warden", "words": "Bowl its guard, slam caps"},
+	"lesson_magnet": {"glyph": "obj_warden", "words": "Shoot its magnet while pulled"},
+	"charge_beacon": {"glyph": "obj_beacon", "words": "Charge the beacon"},
+	"roll_gate": {"glyph": "obj_gate", "words": "Roll through a gate"},
+	"hold_line": {"glyph": "obj_gate", "words": "Hold your line"},
+	"break_brindle": {"glyph": "fac_fleet", "words": "Break Brindle's Requisition"},
+}
+
+# What choose() reads. state is flow.state_name(); card is true while the stage card owns
+# the launch moment; distance is the ball's metres to the Warden.
+const EMPTY_READING := {"state": "", "sealed": false, "engaged": false, "fight": "plating", "staggered": false,
+	"struggling": false, "lesson": "plate", "distance": INF, "card": false}
+
+
+static func glyph(id: String) -> String:
+	return ROWS[id]["glyph"] if ROWS.has(id) else ""
+
+
+static func words(id: String) -> String:
+	return ROWS[id]["words"] if ROWS.has(id) else ""
+
+
+# The row id the plate shows for this reading, or "" when it shows nothing.
+static func choose(reading: Dictionary) -> String:
+	var r: Dictionary = EMPTY_READING.duplicate()
+	r.merge(reading, true)
+	match r["state"]:
+		"stage", "beacon":
+			if not r["sealed"]:
+				return "charge_beacon"
+			if r["fight"] == "posture":
+				if not r["engaged"]:
+					return "find_warden"
+				if r["staggered"]:
+					return "smash_core"
+				return "grow_return" if r["struggling"] else "break_guard"
+			if r["distance"] < LESSON_RANGE:
+				return LESSON_ROWS.get(r["lesson"], "break_warden")
+			return "break_warden"
+		"gates":
+			return "roll_gate"
+		"launch":
+			return "" if r["card"] else "hold_line"
+		"boss":
+			return "break_brindle"
+	return ""
+
+
+# Counts the seconds a build spends trying against a posture Warden. A second counts while
+# the posture gained within the last GAIN_WINDOW seconds; GAIN_WINDOW seconds with no gain
+# drop the tally, so only sustained effort adds up. TRYING_SECONDS of it with posture never
+# at CLEAR_AT is struggling. Reaching CLEAR_AT or a stagger clears it for the engagement,
+# a gain after TRYING_SECONDS away (the player left, grew and came back) clears it and the
+# tally, and begin() starts the next engagement. It is fed by posture_changed and simulated
+# seconds, never a hit count or the wall clock.
+class Struggle:
+	extends RefCounted
+
+	const GAIN_WINDOW := 3.0
+	const TRYING_SECONDS := 10.0
+	const CLEAR_AT := 50.0
+
+	var tally := 0.0
+	var struggling := false
+	var _since_gain := INF
+	var _posture := 0.0
+	var _cleared := false
+
+	func begin() -> void:
+		tally = 0.0
+		struggling = false
+		_since_gain = INF
+		_posture = 0.0
+		_cleared = false
+
+	# posture_changed's reading: the bar now and whether the Warden is staggered.
+	func note_posture(posture: float, staggered: bool) -> void:
+		if staggered or posture >= CLEAR_AT:
+			_cleared = true
+			tally = 0.0
+			struggling = false
+			return
+		if posture > _posture:
+			if _since_gain >= TRYING_SECONDS:
+				tally = 0.0
+				struggling = false
+			_since_gain = 0.0
+		_posture = posture
+
+	func step(delta: float) -> void:
+		if _cleared:
+			return
+		_since_gain += delta
+		if struggling:
+			return
+		if _since_gain <= GAIN_WINDOW:
+			tally += delta
+		else:
+			tally = 0.0
+		if tally >= TRYING_SECONDS:
+			struggling = true

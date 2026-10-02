@@ -2,12 +2,14 @@ extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Objectives := preload("res://src/core/objectives.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
 # Edge markers: while the Warden (or the beacon, once it has no Warden) or an open
 # reward gate is off screen, a chevron on the edge of the play view points at it, with
-# its objective icon behind. Closer targets draw bigger. No words: the icon and the
-# colour are the target's own event_kinds row.
+# its objective glyph behind. Closer targets draw bigger. No words: the glyph is the
+# objective plate's own (objectives.gd, through objective_id) and the colour is the
+# target's event_kinds row.
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
@@ -17,6 +19,8 @@ const NEAR := 25.0
 const FAR := 180.0
 
 var game
+# The objective row the plate shows now, set by the HUD each frame.
+var objective_id := ""
 var gate_points: Array[Vector3] = []
 var _shown: Array[Dictionary] = []
 
@@ -34,20 +38,25 @@ func setup(game_ref) -> void:
 			gate_points.clear())
 
 
-# What the markers point at now: {at, kind, icon}, kind naming the event_kinds row.
+# What the markers point at now: {at, kind, icon}, kind naming the event_kinds row and
+# icon the plate's glyph for the row in force.
 func targets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var flow = game.flow
 	match flow.state_name():
 		"stage", "beacon":
 			if flow.sealed and is_instance_valid(flow.warden):
-				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": "obj_warden"})
+				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
-				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "icon": "obj_beacon"})
+				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "icon": _glyph("obj_beacon")})
 		"gates":
 			for at in gate_points:
-				out.append({"at": at, "kind": "reward_offered", "icon": "obj_gate"})
+				out.append({"at": at, "kind": "reward_offered", "icon": _glyph("obj_gate")})
 	return out
+
+
+func _glyph(fallback: String) -> String:
+	return Objectives.glyph(objective_id) if objective_id != "" else fallback
 
 
 # The play view markers stay inside: clear of the top, toast and bottom bands.

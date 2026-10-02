@@ -2,35 +2,36 @@ extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
-const RunState := preload("res://src/core/run_state.gd")
+const Objectives := preload("res://src/core/objectives.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Gauge := preload("res://src/ui/gauge.gd")
-const HeftDial := preload("res://src/ui/heft_dial.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const SpeedGlyph := preload("res://src/ui/speed_glyph.gd")
 const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
-const Callouts := preload("res://src/ui/callouts.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
+const PartName := preload("res://src/ui/part_name.gd")
 
 # The spine's HUD, built to a word budget (playtest entry 7): icons, gauges and keycaps
 # carry the facts, and words appear only where nothing else can say it. Top band: the
-# run status (stage pips, clock, threat) and the objective (icon, at most five words,
-# punch against plating as two bars, core pips). Toast band: one toast at a time or the
-# stage card, then a first-run callout or the hold-R meter. Bottom band: speed, health,
-# the ability bar, heft and scrap. The play view carries the reticle, contextual key
-# glyphs and edge markers. Colour, shape and wording come from event_kinds.gd, and
-# where each piece sits from screen_regions.gd.
+# run status (stage pips, threat), a boss plate when one is mounted (mount_plate) and the
+# objective: a glyph and at most five words from objectives.gd, the fight's state right
+# now. Toast band: one toast at a time or the stage card, then the hold-R meter. Bottom
+# band: speed, health, the armour gauge and the ability bar. The play view carries the
+# reticle, contextual key glyphs, the name of a part just gained above the ball and edge
+# markers. Colour and shape come from event_kinds.gd, and where each piece sits from
+# screen_regions.gd. Scrap, heft, the punch and plating bars, core pips and the run clock
+# are not shown in play; the workshop shows what scrap can buy.
 
 # Toast timing (VISUAL-LANGUAGE.md section 7): in over 0.12 s, held 2.4 s for a critical
 # fact and 1.6 s for a notable one, out over 0.2 s.
@@ -39,16 +40,31 @@ const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
 const TOAST_FONT := {3: 23, 2: 19}
 const TOAST_WORDS := 4
-const OBJECTIVE_WORDS := 5
+const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
 # Facts whose on-screen moment belongs to something else: presentation's banner, or the
 # stage card, which shows the stage it names.
 const PRESENTATION_OWNED := ["synergy_discovered"]
 const CARD_OWNED := ["run_started", "stage_entered", "stage_cleared", "launched", "boss_arena_entered"]
-# Notable (priority 2) facts that still toast, because the player acts on them: a part
-# gained outside a gate, and scrap torn loose to chase down. Every other toast is a
-# critical (priority 3) fact.
-const NOTABLE := ["part_gained", "scrap_lost"]
+# Notable (priority 2) facts that still toast, because the player acts on them: scrap
+# torn loose to chase down. Every other toast is a critical (priority 3) fact. A part
+# gained shows its name at the ball (part_name.gd), not as a toast.
+const NOTABLE := ["scrap_lost"]
+# Facts whose wording stays in event_kinds.gd but whose moment moved: a part gained shows its
+# name at the ball, a gate's reward is the part gained, and the heft class has no dial to flash.
+const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "heft_class_dropped"]
+# The event_kinds row whose colour each objective row wears.
+const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
+	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "lesson_plate": "warden_engaged",
+	"lesson_caps": "warden_engaged", "lesson_magnet": "warden_engaged", "charge_beacon": "beacon_charge_changed",
+	"roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered"}
+# The rows whose glyph is ringed by how much of the Warden is broken.
+const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "lesson_plate",
+	"lesson_caps", "lesson_magnet", "charge_beacon"]
+# The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
+# from the plate to the objective plate under it.
+const PLATE_TOP := 6.0
+const PLATE_GAP := 10.0
 const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
 const BOTTOM_GAP := 20.0
@@ -57,11 +73,9 @@ const LOW_HEALTH := 0.25
 # Facts whose wording needs a field from the signal, by argument position.
 const FIELD_ARGS := {
 	"stage_cleared": "stage",
-	"reward_chosen": "part",
 	"event_announced": "event",
 	"event_started": "event",
 	"milestone_won": "event",
-	"heft_class_changed": "class",
 }
 
 var game
@@ -70,7 +84,7 @@ var profile
 var ability_bar
 var key_glyphs
 var edge_markers
-var callouts
+var part_name
 var launch_card
 var why_callout
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
@@ -88,9 +102,14 @@ var _held_toast := {}
 var _lower: Control
 var _restart: Control
 var _health: Control
-var _heft: Control
-var _scrap: Control
 var _speed: Control
+# The boss plate in the top-centre slot, or null (mount_plate).
+var _plate: Control
+var _plate_floor := Vector2.ZERO
+# Whether the Warden is engaged, from warden_engaged, and the tally of a build that is
+# trying without getting anywhere (objectives.gd).
+var _engaged := false
+var _struggle := Objectives.Struggle.new()
 # The armour gauge (scrap mode `armor`): the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -150,10 +169,6 @@ func setup(game_ref) -> void:
 	_lower.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lower.custom_minimum_size = Vector2(0.0, 30.0)
 	_toasts.add_child(_lower)
-	callouts = Callouts.new()
-	_lower.add_child(callouts)
-	callouts.setup(game, profile)
-	callouts.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_restart = RestartMeter.new()
 	_lower.add_child(_restart)
 	_restart.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -164,10 +179,6 @@ func setup(game_ref) -> void:
 	add_child(_speed)
 	_health = Gauge.new("res_health", HEALTH_BAR, true)
 	add_child(_health)
-	_heft = HeftDial.new()
-	add_child(_heft)
-	_scrap = Gauge.new("res_scrap", 0.0)
-	add_child(_scrap)
 	_armor = Gauge.new("res_scrap", ARMOR_BAR, true)
 	add_child(_armor)
 	_armor.visible = false
@@ -179,14 +190,17 @@ func setup(game_ref) -> void:
 	why_callout = WhyCallout.new()
 	add_child(why_callout)
 	why_callout.setup(game, profile)
+	part_name = PartName.new()
+	add_child(part_name)
 
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
 	game.events.event_ended.connect(_on_event_ended)
-	game.events.part_gained.connect(_on_part_gained)
-	game.events.heft_class_changed.connect(func(_c: int, _h: float): _heft.flash(Color.WHITE))
-	game.events.heft_class_dropped.connect(func(_c: int, _h: float): _heft.flash(EventKinds.color("heft_class_dropped")))
+	game.events.part_gained.connect(func(part_id: String, _source: String): part_name.show_part(part_id))
+	game.events.warden_engaged.connect(func(_stage: int): _begin_engagement(true))
+	game.events.beacon_unsealed.connect(func(_stage: int): _begin_engagement(false))
+	game.events.posture_changed.connect(_on_posture)
 	game.events.launched.connect(_on_launched)
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.threat_rose.connect(func(tier: int): _threat = maxi(_threat, tier))
@@ -194,6 +208,7 @@ func setup(game_ref) -> void:
 		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
 		_threat = 0
+		_begin_engagement(false)
 		_armor_peak = ARMOR_PEAK_FLOOR)
 	layout(_screen_size())
 
@@ -202,7 +217,7 @@ func setup(game_ref) -> void:
 static func toast_kinds() -> Array[String]:
 	var out: Array[String] = []
 	for kind in EventKinds.ROWS:
-		if EventKinds.row(kind).get("hud", "") == "" or kind in CARD_OWNED or kind in PRESENTATION_OWNED:
+		if EventKinds.row(kind).get("hud", "") == "" or kind in CARD_OWNED or kind in PRESENTATION_OWNED or kind in RETIRED_TOASTS:
 			continue
 		if EventKinds.priority(kind) > EventKinds.TOAST_PRIORITY or kind in NOTABLE or kind == "event_ended":
 			out.append(kind)
@@ -216,7 +231,7 @@ static func toast_text(kind: String, fields := {}) -> String:
 
 func _connect_toasts(events) -> void:
 	for kind in toast_kinds():
-		if kind in ["boss_phase_changed", "event_ended", "part_gained"]:
+		if kind in ["boss_phase_changed", "event_ended"]:
 			continue
 		var argc: int = _arg_count(events, kind)
 		if FIELD_ARGS.has(kind):
@@ -238,9 +253,7 @@ static func _arg_count(events, kind: String) -> int:
 
 func _on_field_fact(value, kind: String) -> void:
 	var shown = value
-	if kind == "heft_class_changed":
-		shown = RunState.roman(int(value))
-	elif value is String:
+	if value is String:
 		shown = (value as String).replace("_", " ").capitalize()
 	toast_kind(kind, {FIELD_ARGS[kind]: shown})
 
@@ -249,10 +262,15 @@ func _on_fact(kind: String) -> void:
 	toast_kind(kind)
 
 
-# A gate's part already toasts through reward_chosen; any other source toasts here.
-func _on_part_gained(part_id: String, source: String) -> void:
-	if source != "gate":
-		toast_kind("part_gained", {"part": part_id.replace("_", " ").capitalize()})
+# A new engagement starts the struggle tally over; `engaged` is whether the Warden is awake.
+func _begin_engagement(engaged: bool) -> void:
+	_engaged = engaged
+	_struggle.begin()
+
+
+func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
+	if enemy == game.flow.warden:
+		_struggle.note_posture(posture, staggered)
 
 
 # Only a lost event gets a toast: a win already has its milestone toast.
@@ -312,6 +330,7 @@ func _on_launched(_velocity: Vector3) -> void:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_threat = 0
+	_begin_engagement(false)
 	if retry:
 		return
 	if launch_card.showing():
@@ -350,6 +369,13 @@ func layout(size: Vector2) -> void:
 	var objective_size: Vector2 = _objective.extent()
 	_objective.size = Vector2(minf(size.x * 0.5, maxf(objective_size.x, 420.0)), objective_size.y)
 	_objective.position = Vector2((size.x - _objective.size.x) * 0.5, top.position.y + 12.0)
+	if _plate != null:
+		var plate_size := _plate_size()
+		_plate.size = plate_size
+		_plate.position = Vector2((size.x - plate_size.x) * 0.5, top.position.y + PLATE_TOP)
+		_objective.position.y = _plate.position.y + plate_size.y + PLATE_GAP
+	part_name.position = Vector2.ZERO
+	part_name.size = size
 	_status.position = Vector2(MARGIN, top.position.y + 12.0)
 
 	var toast_width := minf(TOAST_WIDTH, size.x - 2.0 * MARGIN)
@@ -362,8 +388,6 @@ func layout(size: Vector2) -> void:
 	ability_bar.position = Vector2((size.x - bar_size.x) * 0.5, bar_y)
 	var slot_mid := bar_y + AbilityBar.SLOT * 0.5
 	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
-	_heft.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - _heft.size.y * 0.5)
-	_scrap.position = Vector2(_heft.position.x + _heft.size.x + BOTTOM_GAP, slot_mid - _scrap.size.y * 0.5)
 	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 
@@ -371,15 +395,42 @@ func layout(size: Vector2) -> void:
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
 # extent() call shapes text.
 func _piece_sizes() -> Array:
-	return [_objective.custom_minimum_size, _health.size, _armor.size, _heft.size, _scrap.size, maxi(ability_bar.slots.size(), 4)]
+	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), 4), _plate_size()]
+
+
+# The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
+# size is the larger of its minimum size and its size at mount, so any Control places. It
+# sits top-centre and the objective plate moves directly under it. unmount_plate gives
+# the layout back exactly as it was and leaves the plate for its owner to free.
+func mount_plate(plate: Control) -> void:
+	unmount_plate()
+	_plate = plate
+	_plate_floor = plate.size
+	if plate.get_parent() != null:
+		plate.get_parent().remove_child(plate)
+	add_child(plate)
+	layout(_screen_size())
+
+
+func unmount_plate() -> void:
+	if _plate == null:
+		return
+	remove_child(_plate)
+	_plate = null
+	_plate_floor = Vector2.ZERO
+	layout(_screen_size())
+
+
+func _plate_size() -> Vector2:
+	return _plate.get_combined_minimum_size().max(_plate.custom_minimum_size).max(_plate_floor) if _plate != null else Vector2.ZERO
 
 
 # The screen rect of each piece, for the layout test: {region: [Rect2, ...]}.
 func piece_rects() -> Dictionary:
 	return {
-		"top": [_rect_of(_objective), _rect_of(_status)],
+		"top": [_rect_of(_objective), _rect_of(_status)] + ([_rect_of(_plate)] if _plate != null else []),
 		"toasts": [_rect_of(_toasts)],
-		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_heft), _rect_of(_scrap), _rect_of(_speed)]
+		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed)]
 			+ ([_rect_of(_armor)] if _armor.visible else []),
 	}
 
@@ -389,51 +440,28 @@ static func _rect_of(control: Control) -> Rect2:
 	return Rect2(control.position, Vector2(maxf(s.x, control.size.x), maxf(s.y, control.size.y)))
 
 
-# The objective for the flow's state, in at most five words: what to do, with the
-# Warden's lesson once it is awake, and punch against plating while a lock stands.
+# The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
+# and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
-	var out := {"icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "punch": -1.0, "plating": -1.0}
-	match flow.state_name():
-		"stage", "beacon":
-			if flow.sealed:
-				var engaged: bool = is_instance_valid(flow.warden) and game.player.ball_position().distance_to(flow.warden.global_position) < 40.0
-				out["icon"] = "obj_warden"
-				out["words"] = EventKinds.LESSON_SHORT.get(flow.stage_def()["warden_lesson"], "") if engaged else EventKinds.OBJECTIVE_SHORT["stage_entered"]
-				out["color"] = EventKinds.color("warden_engaged")
-				out["progress"] = game.beacon.fraction()
-				out["punch"] = flow.punch_now()
-				out["plating"] = flow.warden_plating()
-			else:
-				out["icon"] = "obj_beacon"
-				out["words"] = EventKinds.objective("beacon_unsealed")
-				out["color"] = EventKinds.color("beacon_charge_changed")
-				out["progress"] = game.beacon.fraction()
-		"gates":
-			out["icon"] = "obj_gate"
-			out["words"] = EventKinds.objective("reward_offered")
-			out["color"] = EventKinds.color("reward_offered")
-		"launch":
-			if not launch_card.showing():
-				out["icon"] = "obj_gate"
-				out["words"] = EventKinds.objective("launched")
-				out["color"] = EventKinds.color("launched")
-		"boss":
-			out["icon"] = "fac_fleet"
-			out["words"] = EventKinds.OBJECTIVE_SHORT["boss_arena_entered"]
-			out["color"] = EventKinds.color("boss_arena_entered")
-			out["punch"] = flow.punch_now()
-			out["plating"] = flow.boss_plating_now()
-	return out
-
-
-# The heft dial's reading: the class, its numeral and the share of the way to the next.
-func heft_reading() -> Dictionary:
-	var run = game.run
-	var cls: int = run.heft_class()
-	var at_max: bool = cls >= RunState.HEFT_CLASS_AT.size()
-	return {"class": cls, "classes": RunState.HEFT_CLASS_AT.size(), "numeral": RunState.roman(cls),
-		"progress": 0.0 if at_max else run.heft_progress()}
+	var warden = flow.warden if is_instance_valid(flow.warden) else null
+	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var id := Objectives.choose({
+		"state": flow.state_name(),
+		"sealed": flow.sealed,
+		"engaged": _engaged,
+		"fight": warden.fight() if warden != null and warden.has_method("fight") else "plating",
+		"staggered": warden != null and warden.has_method("staggered") and warden.staggered(),
+		"struggling": _struggle.struggling,
+		"lesson": flow.stage_def()["warden_lesson"],
+		"distance": distance,
+		"card": launch_card.showing(),
+	})
+	if id == "":
+		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
+	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": EventKinds.color(ROW_COLOR[id]),
+		"progress": game.beacon.fraction() if id in RING_ROWS else -1.0,
+		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
 
 
 # Every world-attached prompt in front of the camera and within its reach goes in the
@@ -511,8 +539,11 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _heft, _scrap, _speed, reticle, key_glyphs, edge_markers, why_callout]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, reticle, key_glyphs, edge_markers, why_callout]:
 		piece.visible = playing
+	if _plate != null:
+		_plate.visible = playing
+	part_name.visible = playing and part_name.left > 0.0
 	_armor.visible = playing and game.run.armor_mode
 	if not playing:
 		_restart.set_fraction(0.0)
@@ -520,15 +551,12 @@ func _process(delta: float) -> void:
 
 	var run = game.run
 	var reading := objective_reading()
-	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"],
-		reading["punch"], reading["plating"], run.bonus_cores, RunState.CORE_TIER_CAP)
-	_status.set_status(run.stage, game.ctx.stages.COUNT, game.boss != null and game.ctx.stages.BOSS != "", flow.in_arena, run.run_time, _threat)
+	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"])
+	edge_markers.objective_id = reading["id"]
+	_status.set_status(run.stage, game.ctx.stages.COUNT, game.boss != null and game.ctx.stages.BOSS != "", flow.in_arena, _threat)
 
 	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)
 	_health.set_reading(hp_share, Palette.SAND, "", hp_share <= LOW_HEALTH, EventKinds.color("player_hit"))
-	var heft := heft_reading()
-	_heft.set_reading(heft["class"], heft["classes"], heft["progress"], heft["numeral"], EventKinds.color("heft_class_changed"))
-	_scrap.set_reading(-1.0, EventKinds.color("scrap_collected"), str(run.scrap))
 	if run.armor_mode:
 		_armor_peak = maxf(_armor_peak, run.mass)
 		_armor_flash = maxf(0.0, _armor_flash - delta)
@@ -540,6 +568,12 @@ func _process(delta: float) -> void:
 	var shape: String = run.class_def.shape if run.class_def != null else "ring"
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
+	ability_bar.hide_keys(key_glyphs.shown_glyphs())
+	if part_name.visible:
+		var cam: Camera3D = game.camera.cam
+		var ball: Vector3 = game.player.shown_position()
+		if not cam.is_position_behind(ball):
+			part_name.follow(cam.unproject_position(ball))
 	reticle.gauge = AbilitySlots.gauge_of(slots)
 	# An interactable's hold-to-arm fills the same class ring (LOOP-REDESIGN section 9).
 	var interact = game.world.get("interact") if game.world != null else null
@@ -552,7 +586,16 @@ func _process(delta: float) -> void:
 	var hold: float = game.restart_hold_fraction()
 	_restart.set_fraction(hold)
 	_restart.visible = hold > 0.0
-	callouts.suppressed = hold > 0.0
+
+
+# Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics
+# tick, never the wall clock.
+func _physics_process(delta: float) -> void:
+	if game == null:
+		return
+	if _engaged:
+		_struggle.step(delta)
+	part_name.step(delta)
 
 
 func _step_toast(delta: float) -> void:
