@@ -67,6 +67,8 @@ var _last_side := {}
 var _gates: Array[Node3D] = []
 var _spin := 0.0
 var _warned_blocked := false
+# Gates standing on the map's slots never move to follow the ball, so they open from both sides.
+var _fixed := false
 
 
 func setup(terrain) -> void:
@@ -96,7 +98,8 @@ func is_open() -> bool:
 	return not offers.is_empty()
 
 
-# Returns true when the gates moved, so the owner can publish the new offers.
+# Returns true when the gates moved, so the owner can publish the new offers. Gates on the
+# map's slots stay put when the ball passes them all.
 func step(ball: Vector3, heading: Vector3) -> bool:
 	if offers.is_empty():
 		return false
@@ -108,14 +111,17 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		var side: float = (rel - (offer["facing"] as Vector3) * along).length()
 		var was: float = _last_side.get(i, along)
 		_last_side[i] = along
-		if was < 0.0 and along >= 0.0 and side <= WIDTH * 0.5 + 1.0 and absf(rel.y) < HEIGHT + 4.0:
+		var through := was < 0.0 and along >= 0.0
+		if _fixed and was > 0.0 and along <= 0.0:
+			through = true
+		if through and side <= WIDTH * 0.5 + 1.0 and absf(rel.y) < HEIGHT + 4.0:
 			var id: String = offer["part_id"]
 			close()
 			chosen.emit(id)
 			return false
 		if along < MISSED_BEYOND and rel.length() < LOST_BEYOND:
 			passed_all = false
-	if passed_all:
+	if passed_all and not _fixed:
 		_place(ball, heading)
 		return true
 	return false
@@ -128,6 +134,7 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	offers = []
 	_last_side = {}
 	var plan := choose_placement(ball, heading)
+	_fixed = plan.get("fixed", false)
 	var facing: Vector3 = plan["facing"]
 	for i in _ids.size():
 		var at: Vector3 = plan["spots"][i]
@@ -197,7 +204,7 @@ func _slot_plan(count: int) -> Dictionary:
 		var at: Vector2 = slots[mini(pick, slots.size() - 1)]["at"]
 		spots.append(_terrain.drop_point(at.x, at.y, 0.0))
 	var facing: Vector3 = slots[0]["facing"]
-	return {"facing": facing, "spots": spots, "climb": 0.0, "distance": 0.0, "blocked": false}
+	return {"facing": facing, "spots": spots, "climb": 0.0, "distance": 0.0, "blocked": false, "fixed": true}
 
 
 func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, spread: float, count: int, exclude: Array) -> Dictionary:
