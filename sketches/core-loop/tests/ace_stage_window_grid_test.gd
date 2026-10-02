@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Ace := preload("res://src/presentation/ace_sequencer.gd")
+const T := preload("res://tests/support/t.gd")
 
 # Between start_level and the first commit the section is empty, but the calm that is
 # about to enter already owns the grid: a beat or bar asked in that window lands on it,
@@ -20,15 +21,9 @@ func _initialize() -> void:
 	seq.advance(1234)
 	var clip: Dictionary = seq.clips[seq.sections[String(seq.pending["section"])]["clip"]]
 	var calm_at: int = seq.pending["at"]
-	var failures := 0
+	var t := T.new("ace_stage_window_grid_test")
 	for pair in [["beat", seq.next_beat(), int(clip["beat"])], ["bar", seq.next_bar(), int(clip["bar"])]]:
 		var asked: int = pair[1]
-		if asked < seq.clock or posmod(calm_at - asked, int(pair[2])) != 0:
-			failures += 1
-			printerr("FAIL next_%s in the start_level window: asked %d at clock %d, calm enters at %d on a %d-frame grid" % [pair[0], asked, seq.clock, calm_at, pair[2]])
-	if failures > 0:
-		printerr("ace stage window grid: %d failure(s)" % failures)
-		quit(1)
-		return
-	print("ace stage window grid: ok")
-	quit(0)
+		t.check("next_%s in the start_level window" % pair[0], asked >= seq.clock and posmod(calm_at - asked, int(pair[2])) == 0,
+			"asked %d at clock %d, calm enters at %d on a %d-frame grid" % [asked, seq.clock, calm_at, pair[2]])
+	quit(t.verdict())

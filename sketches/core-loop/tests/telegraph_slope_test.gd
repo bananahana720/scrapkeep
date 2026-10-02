@@ -8,12 +8,13 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 
 const SLOPE := 0.2
 const TOLERANCE := 0.8
+const T := preload("res://tests/support/t.gd")
 
 class Slope:
 	func height(_x: float, z: float) -> float:
 		return SLOPE * z
 
-var _failures := 0
+var _t := T.new("telegraph_slope_test")
 
 
 func _initialize() -> void:
@@ -46,9 +47,7 @@ func _contained_top(lane, z: float) -> float:
 
 
 func _check(name: String, ok: bool, detail: String) -> void:
-	print("[%s] %s -> %s" % [name, detail, "PASS" if ok else "FAIL"])
-	if not ok:
-		_failures += 1
+	_t.check(name, ok, detail)
 
 
 func _run() -> void:
@@ -59,4 +58,4 @@ func _run() -> void:
 	for z in [0.0, 20.0]:
 		var gap := _drawn_gap(painter, lane, z)
 		_check("slope z=%.0f" % z, absf(gap) <= TOLERANCE, "highest drawn mark vs contains top: %.2f" % gap)
-	quit(1 if _failures > 0 else 0)
+	quit(_t.verdict())

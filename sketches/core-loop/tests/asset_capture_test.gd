@@ -4,8 +4,9 @@ extends SceneTree
 const Cap := preload("res://tools/asset_capture.gd")
 const Cams := preload("res://tools/capture_cameras.gd")
 const TMP := "user://asset_capture_test"
+const T := preload("res://tests/support/t.gd")
 
-var failures := 0
+var _t := T.new("asset_capture_test")
 
 
 class Spinner extends Node3D:
@@ -18,9 +19,7 @@ func _initialize() -> void:
 
 
 func _check(ok: bool, label: String) -> void:
-	if not ok:
-		failures += 1
-	print("%s %s" % ["PASS" if ok else "FAIL", label])
+	_t.check(label, ok)
 
 
 func _mesh(name: String, at: Vector3) -> MeshInstance3D:
@@ -269,7 +268,7 @@ func _run() -> void:
 	_check(rest_vertices.size() == 3 and rest_vertices[0] == Vector3(50, 0, 0), "filter_mesh with invert keeps exactly the triangles outside the box (the isolate-rest context)")
 	_check(Cap.filter_mesh(two, Transform3D.IDENTITY, AABB(Vector3(200, 0, 0), Vector3(1, 1, 1))).get_surface_count() == 0, "filter_mesh returns an empty mesh when nothing is inside")
 
-	quit(failures)
+	quit(_t.verdict())
 
 
 func _doc() -> Dictionary:

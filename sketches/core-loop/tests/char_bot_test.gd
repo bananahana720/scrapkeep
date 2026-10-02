@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const T := preload("res://tests/support/t.gd")
 
 # loop_bot_test for another class (v2 W3). The feedback loop's bot, end to end
 # (DEMO-SPEC, "Bot runs"): one seeded skipper run
@@ -21,13 +22,14 @@ const TICK_LIMIT := 90 * 100
 
 var _game
 var _driver
-var _failures := 0
+var _t: RefCounted
 var _ticks := 0
 var _cleared: Array[int] = []
 var _done := false
 
 
 func _initialize() -> void:
+	_t = T.new(get_script().resource_path.get_file().get_basename())
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -48,9 +50,7 @@ func _extra_checks() -> void:
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
-	if not ok:
-		_failures += 1
-	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+	_t.check(label, ok, detail)
 
 
 func _physics_process(delta: float) -> bool:
@@ -106,7 +106,7 @@ func _finish(reached: bool) -> bool:
 		and (second["deaths"] as Array).size() == 1
 	_report("death carried", death_logged, "%d stage record(s); stage 2 deaths %s" % [stages.size(), second.get("deaths", "none")])
 	_extra_checks()
-	print("char_bot_test (seed %d): %s" % [_seed(), "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
+	print("%s: seed %d" % [_t.suite, _seed()])
 	_game.free()
-	quit(0 if _failures == 0 else 1)
+	quit(_t.verdict())
 	return true

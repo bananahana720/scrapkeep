@@ -201,3 +201,11 @@ The Sol unit PR reported FAIL on itself for two whole-file hash pins that the br
 
 The 1189 s is not a regression in the suite. The runner chose a pool of 2 because the machine was at load 37 when it started (two Sol jobs, a map candidate's test run and five scouts), and the app had crashed and killed the previous attempt 54 tests in. On a quiet machine the same suite ran in 445 s an hour earlier (receipt `gate-670fd9eb7eb9`). A gate run should start when the load is low, or the wave should hold its other jobs for it.
 
+## A test ends with a verdict (unit HV)
+
+A test passes only by printing one verdict line, `<test file name>: PASS (N checks)` or `<test file name>: FAIL (F of N checks)`, through `support/t.gd`'s `verdict()`; a seed or class goes after it. The runner fails a test that exits 0 with neither a verdict line nor a skip line, and prints `no verdict line: the test ended early`. A test that prints the skip line is counted as skipped. `--strict-verdict` is still accepted and does nothing more.
+
+Under `--script`, a `SCRIPT ERROR` inside an awaited part of a test (observed with Godot 4.7.2) ends that part, prints the error with its backtrace, and lets the caller carry on, so a test that then calls `quit(0)` exits 0 with its remaining checks never run. The runner's error-line scan already failed that output; the missing-verdict rule fails it a second way, and the runner's unit tests pin both. The same error in a deferred coroutine with no caller waiting leaves the process running until the runner's timeout.
+
+Nine tests were mended: `ace_stage_window_grid`, `ace_restart_state`, `ace_gentle_break_window`, `asset_capture`, `char_bot` (and `char_bot_sable` through it), `graphics_preset`, `spine_run`, `telegraph_slope` and `wear_fraction_debt`. Check counts are unchanged. `spine_run_test` prints its class on its own line and ends on a bare `spine_run_test: PASS`, because `char_full_run_test` reads that line with `ends_with(": PASS")`.
+
