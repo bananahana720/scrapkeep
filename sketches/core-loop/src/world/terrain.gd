@@ -5,9 +5,10 @@ const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Weir := preload("res://src/world/map_weir.gd")
 const Reach := preload("res://src/world/map_reach.gd")
+const HighdraftProbe := preload("res://src/world/map_highdraft_probe.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
-const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir, "reach": Reach}
+const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir, "reach": Reach, "highdraft_probe": HighdraftProbe}
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #
@@ -116,13 +117,20 @@ func height(x: float, z: float) -> float:
 	return h
 
 
+# Probe P2: the lowest layer under (x, z), the heightmap alone. height() answers "what is
+# the highest thing here", which a floating island makes wrong for a ball swinging under it;
+# the fall rescue asks this instead.
+func floor_height(x: float, z: float) -> float:
+	return _grid_height(_heights[stage - 1], x, z)
+
+
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
 
 func spawn_point(index: int) -> Vector3:
 	var s: Vector2 = map_for(index).spawn
-	return Vector3(s.x, _grid_height(_heights[_index(index)], s.x, s.y) + 2.0, s.y)
+	return Vector3(s.x, _surface(index, s.x, s.y) + 2.0, s.y)
 
 
 func entry_heading(index: int) -> Vector3:
@@ -131,7 +139,7 @@ func entry_heading(index: int) -> Vector3:
 
 func beacon_point(index: int) -> Vector3:
 	var b: Vector2 = map_for(index).beacon
-	return Vector3(b.x, _grid_height(_heights[_index(index)], b.x, b.y), b.y)
+	return Vector3(b.x, _surface(index, b.x, b.y), b.y)
 
 
 func scrap_lines(index: int) -> Array:
@@ -194,6 +202,16 @@ func ground_callable(index: int) -> Callable:
 func vault_point(index: int) -> Vector3:
 	var v: Vector2 = map_for(index).vault
 	return Vector3(v.x, _grid_height(_heights[_index(index)], v.x, v.y), v.y)
+
+
+# Probe P2: the ground a stage's fixed points stand on, with a map's floating islands
+# (live overlay "islands") over the heightmap.
+func _surface(index: int, x: float, z: float) -> float:
+	var h := _grid_height(_heights[_index(index)], x, z)
+	var m = map_for(index)
+	if m.has_method("island_top"):
+		h = maxf(h, m.island_top(x, z))
+	return h
 
 
 func _index(index: int) -> int:
@@ -294,6 +312,10 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	body.name = "Ground"
 	var shape := CollisionShape3D.new()
 	shape.shape = mesh.create_trimesh_shape()
+	if "ground_bounce" in m and float(m.ground_bounce) > 0.0:
+		var pm := PhysicsMaterial.new()
+		pm.bounce = m.ground_bounce
+		body.physics_material_override = pm
 	body.add_child(shape)
 	body.add_child(view)
 	parent.add_child(body)

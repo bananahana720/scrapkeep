@@ -508,7 +508,8 @@ func _on_player_died() -> void:
 # A fall through the geometry is the map's fault, not the player's, so the rescue
 # costs nothing and keeps the horizontal speed.
 func _rescue_if_fallen(ball: Vector3) -> void:
-	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.height(ball.x, ball.z) - RESCUE_DEPTH:
+	var floor_y: float = ctx.terrain.floor_height(ball.x, ball.z) if ctx.terrain.has_method("floor_height") else ctx.terrain.height(ball.x, ball.z)
+	if ctx.terrain.contains(ball) and ball.y > floor_y - RESCUE_DEPTH:
 		return
 	var v: Vector3 = ctx.player.state.velocity
 	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
