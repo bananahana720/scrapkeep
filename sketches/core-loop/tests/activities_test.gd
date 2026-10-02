@@ -14,7 +14,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # - the ambush: rolling into the ring brings exactly its three; two dead pays nothing, all three
 #   leave one part at the altar, and touching it adds exactly one part;
 # - the cache: a ram below cruise leaves the wall, a ram at cruise breaks it and one part waits on
-#   the pedestal; a smash breaks it too;
+#   the pedestal; a slam of at least cruise's strength breaks it too and a weaker one does not;
+# - calm mode builds the cache alone;
 # - no activity changes the ball's planar speed beyond what the same line costs with none;
 # - with all three finished no timed event starts in 60 simulated seconds;
 # - a retry restores three unfinished activities, and the default three-stage table builds none.
@@ -116,6 +117,7 @@ func _run() -> void:
 	await _cache()
 	await _all_done_quiet()
 	await _retry()
+	await _calm()
 	_game.free()
 	await _frames(2)
 	await _default_table()
@@ -142,6 +144,9 @@ func _lit() -> void:
 		_t.check("%s's glyph is the row's amber" % id, _rgb(_first_mesh(s.view.glyph).material_override.albedo_color) == _rgb(color), "glyph colour")
 		_t.check("%s's ring is the row's amber" % id, _rgb(_first_mesh(s.view.ring).material_override.albedo_color) == _rgb(color), "ring colour")
 		_t.check("%s's word waits until the ball is near" % id, not s.view.word.visible, "word visible at the spawn")
+	var cap = _site("ambush_altar").cap
+	_t.check("the altar's cap is the row's amber", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(EventKinds.activity_color("ambush_altar")),
+		"cap %s" % [cap.material_override.albedo_color if cap != null else null])
 
 
 func _rgb(c: Color) -> Array:
@@ -161,7 +166,8 @@ func _bounty() -> void:
 	var brute = s.brute
 	_t.check("a plated brute stands at the bounty's site from the first frames", brute != null and is_instance_valid(brute) and String(brute.kind) == "plated_brute"
 		and _planar(brute.global_position, s.global_position) < 3.0, "brute %s" % [brute])
-	_t.eq("the director's cap does not count it", _game.world.activities.standing(), 1)
+	_t.eq("the director is given the enemy group's size less the bounty's brute",
+		_game.world.director_alive(), _game.get_tree().get_nodes_in_group("enemy").size() - 1)
 	_t.check("its crate wears the row's amber, apart from its plates", brute.get_node("BountyCrate").material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
 		and brute.get_node("BrutePlates") != null, "crate colour")
 	# Walked off and woken, with the ball 60 m away, it goes home inside 300 frames.
@@ -218,12 +224,18 @@ func _ambush() -> void:
 	await physics_frame
 	var before: float = _game.player.planar_velocity().length()
 	var started_at := -1
+	var inside_at := -1
 	for i in LINE_FRAMES:
 		await physics_frame
+		var ball: Vector3 = _game.player.ball_position()
+		if inside_at < 0 and _planar(ball, s.global_position) <= ring:
+			inside_at = i
 		if started_at < 0 and s.started:
 			started_at = i
 	through = {"before": before, "after": _game.player.planar_velocity().length()}
 	_t.check("rolling into the ring starts it", s.started and started_at >= 0, "started at frame %d" % started_at)
+	_t.check("the pack starts within 10 frames of the ball entering the ring", inside_at >= 0 and started_at >= 0 and started_at - inside_at <= 10,
+		"ball inside at frame %d, pack at frame %d" % [inside_at, started_at])
 	var kinds: Array = s.pack.map(func(e): return String(e.kind))
 	_t.check("exactly the three named kinds arrive", s.pack.size() == 3 and kinds == ["chaser", "chaser", "lobber"], "kinds %s" % [kinds])
 	_t.eq("only the bounty has finished so far", _done.size(), 1)
@@ -237,6 +249,7 @@ func _ambush() -> void:
 	_kill(s.pack[2])
 	await _hold(4)
 	_t.eq("the ambush finishes once", _done.count("ambush_altar"), 1)
+	_t.check("the altar's cap goes dark with its column", not s.cap.visible and not s.view.lit(), "cap visible %s, lit %s" % [s.cap.visible, s.view.lit()])
 	_t.check("one pickup lies within 2 m of the altar", s.pickup != null and _planar(s.pickup.global_position, s.global_position) <= 2.0,
 		"pickup %s" % [s.pickup])
 	var parts: int = _game.run.parts.size()
@@ -277,7 +290,10 @@ func _cache() -> void:
 	var parts: int = _game.run.parts.size()
 	var onto: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
 	_t.eq("touching the pedestal's pickup adds exactly one part", _game.run.parts.size(), parts + 1)
-	_t.check("the pickup cost no speed beyond the line", onto["before"] > 0.0, "line %.2f to %.2f" % [onto["before"], onto["after"]])
+	var onto_control: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
+	_t.eq("a second pass adds nothing", _game.run.parts.size(), parts + 1)
+	_t.check("the pickup cost no speed beyond the line", onto["after"] >= onto["before"] - (onto_control["before"] - onto_control["after"]) - SPEED_SLACK,
+		"through %.2f to %.2f, control %.2f to %.2f" % [onto["before"], onto["after"], onto_control["before"], onto_control["after"]])
 	_t.eq("the cache finished once", _done.count("cracked_cache"), 1)
 
 
@@ -326,6 +342,9 @@ func _all_done_quiet() -> void:
 func _retry() -> void:
 	_game.flow.retry_stage()
 	await _frames(3)
+	await _slams()
+	_game.flow.retry_stage()
+	await _frames(3)
 	var sites: Array = _game.world.activities.sites
 	_t.eq("a retry builds three activities", sites.size(), 3)
 	_t.check("each is unfinished and lit", sites.all(func(s): return not s.done and s.view.lit()), "done flags %s" % [sites.map(func(s): return s.done)])
@@ -333,6 +352,33 @@ func _retry() -> void:
 	_t.check("the bounty's brute stands again", s != null and s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead(), "brute %s" % [s.brute if s != null else null])
 	_t.eq("no device stands", _game.world.interact.devices.size(), 0)
 	_t.check("the cache's wall stands again", _site("cracked_cache").wall.visible and not _site("cracked_cache").done, "wall")
+
+
+# A slam in front of the face: below cruise's strength it leaves the wall, at or above it the wall goes.
+# The strength of `slammed` is the fall speed in m/s, the same unit as a ram's speed.
+func _slams() -> void:
+	var s = _site("cracked_cache")
+	var cruise: float = _game.ctx.tuning.f("cruise")
+	var at: Vector3 = s.global_position + s.global_basis.z * 3.0
+	_put(_ground(s.global_position + s.global_basis.z * 40.0))
+	await _hold(3)
+	_game.events.slammed.emit(at, cruise * RAM_BELOW, 1.0)
+	await _frames(2)
+	_t.check("a slam below cruise's strength leaves the wall standing", not s.done and s.wall.visible, "strength %.1f of cruise %.1f: done %s" % [cruise * RAM_BELOW, cruise, s.done])
+	_game.events.slammed.emit(at, cruise * RAM_AT, 1.0)
+	await _frames(2)
+	_t.check("a slam above cruise's strength breaks it", s.done and not s.wall.visible, "strength %.1f: done %s" % [cruise * RAM_AT, s.done])
+	_t.check("and one part waits on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5, "pickup %s" % [s.pickup])
+
+
+# Calm mode builds only what it can pay: the cache, not the ambush or the bounty.
+func _calm() -> void:
+	_game.ctx.calm = true
+	_game.flow.retry_stage()
+	await _frames(3)
+	var ids: Array = _game.world.activities.sites.map(func(x): return x.id)
+	_game.ctx.calm = false
+	_t.check("calm mode builds the cache alone", ids == ["cracked_cache"], "sites %s" % [ids])
 
 
 func _default_table() -> void:

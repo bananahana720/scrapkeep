@@ -16,7 +16,7 @@ const Parts := preload("res://src/build/parts.gd")
 # starts:   "ring" (the ball inside `ring` metres), "none" (nothing starts it) or
 #           "near_or_hit" (the ball inside `wake` metres, or the brute is hit).
 # finishes: "pack_dead" (every enemy the ring spawned is dead), "wall_broken" (the cache's wall
-#           goes to a ram at cruise or a smash) or "brute_dead".
+#           goes to a ram at cruise or a slam of at least that strength) or "brute_dead".
 # pay:      one part from `rarities`, as a pickup at `where`: the altar, the pedestal or the
 #           place the brute fell. part_gained carries `source`, which is not in
 #           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it.
@@ -51,6 +51,10 @@ const WALL_HEIGHT := 6.0
 const WALL_SINK := 3.0
 const WALL_REACH := 3.0
 const SLAM_REACH := 7.0
+# `slammed` carries the landing's fall speed in m/s as its strength (augments.gd: slam_fall = -v.y),
+# the same unit as a ram's speed into the face. A slam breaks the wall at SLAM_MIN_PER_CRUISE times
+# the tuned cruise speed, so a fall as fast as the ram that breaks it breaks it too and a weaker one does not.
+const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 
 var ctx
@@ -71,6 +75,7 @@ class Site extends Node3D:
 	var pedestal := Vector3.ZERO
 	var pickup: Node3D
 	var pickup_part := ""
+	var cap: Node3D
 	var pickup_taken := false
 	var inside_pickup := true
 
@@ -80,8 +85,7 @@ func setup(ctx_ref) -> void:
 	name = "Activities"
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
-	ctx.events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float): _smashed(at))
-	ctx.events.harpoon_smashed.connect(func(_enemy: Node3D, at: Vector3, _speed: float): _smashed(at))
+	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
@@ -92,6 +96,9 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	for spec in map.activity_sites:
 		var id := String(spec["id"])
 		if not RULES.has(id):
+			continue
+		# Calm mode spawns nothing, so the ambush and the bounty could never be paid there.
+		if ctx.calm and String(RULES[id]["finishes"]) != "wall_broken":
 			continue
 		sites.append(_build(id, spec["at"]))
 	_pending_stage = true
@@ -141,7 +148,7 @@ func _build(id: String, at: Vector2) -> Site:
 
 func _build_altar(s: Site) -> void:
 	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.COPPER))
-	_mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.AMBER, 1.2))
+	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(EventKinds.activity_color(s.id), 1.2))
 
 
 func _build_cache(s: Site) -> void:
@@ -272,7 +279,9 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 		_break_wall(s)
 
 
-func _smashed(at: Vector3) -> void:
+func _slammed(at: Vector3, strength: float) -> void:
+	if strength < ctx.tuning.f("cruise") * SLAM_MIN_PER_CRUISE:
+		return
 	for s in sites:
 		if s.wall == null or s.done:
 			continue
@@ -317,6 +326,8 @@ func _bounty_died(s: Site, where: Vector3) -> void:
 func _finish(s: Site, at: Vector3) -> void:
 	s.done = true
 	s.view.finish()
+	if s.cap != null:
+		s.cap.visible = false
 	var pay: Dictionary = s.rule["pay"]
 	s.pickup_part = _roll(s.id, pay["rarities"])
 	if s.pickup_part != "":

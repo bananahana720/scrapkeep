@@ -122,7 +122,7 @@ func _init() -> void:
 	]
 	activity_sites = [
 		{"id": "ambush_altar", "at": Vector2(-16.0, 44.0)},
-		{"id": "cracked_cache", "at": Vector2(70.0, -4.0)},
+		{"id": "cracked_cache", "at": Vector2(68.0, -4.0)},
 		{"id": "hauler_bounty", "at": Vector2(0.0, -88.0)},
 	]
 	_reach_specs()

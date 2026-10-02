@@ -393,10 +393,15 @@ func _author_director() -> void:
 	director.elite_arrival = ctx.stages.elite_arrival()
 
 
+# The enemy count the director is given: the group less the activities' standing enemies.
+func director_alive() -> int:
+	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
+
+
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
-	var alive := maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
+	var alive := director_alive()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = -ctx.camera.yaw_basis().z
