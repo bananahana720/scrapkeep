@@ -535,19 +535,29 @@ static func protection_rect(camera: Camera3D, at: Vector3, reach: float) -> Vect
 	if camera.is_position_behind(at):
 		return Vector4(-1.0, -1.0, -1.0, -1.0)
 	var size := camera.get_viewport().get_visible_rect().size
-	var low := Vector2(INF, INF)
-	var high := Vector2(-INF, -INF)
+	var low := camera.unproject_position(at) / size
+	var high := low
+	var straddles := false
 	for x in [-reach, reach]:
 		for y in [-0.5, reach * 2.0]:
 			for z in [-reach, reach]:
 				var corner := at + Vector3(x, y, z)
 				if camera.is_position_behind(corner):
-					# Near the camera the box covers the screen; far off, a box that only straddles the
-					# camera's plane lies 90 degrees off axis, out of view.
-					if camera.global_position.distance_to(at) > reach * 4.0:
-						return Vector4(-1.0, -1.0, -1.0, -1.0)
-					return Vector4(0.0, 0.0, 1.0, 1.0)
+					# A corner behind the camera has no screen point; the box runs off the frame on that side.
+					var side := camera.global_transform.affine_inverse() * corner
+					straddles = true
+					low.x = 0.0 if side.x < 0.0 else low.x
+					high.x = 1.0 if side.x > 0.0 else high.x
+					low.y = 0.0 if side.y > 0.0 else low.y
+					high.y = 1.0 if side.y < 0.0 else high.y
+					continue
 				var point := camera.unproject_position(corner) / size
 				low = low.min(point)
 				high = high.max(point)
-	return Vector4(low.x - 0.015, low.y - 0.015, high.x + 0.015, high.y + 0.015)
+	low -= Vector2(0.015, 0.015)
+	high += Vector2(0.015, 0.015)
+	if high.x < 0.0 or high.y < 0.0 or low.x > 1.0 or low.y > 1.0:
+		return Vector4(-1.0, -1.0, -1.0, -1.0)
+	if straddles:
+		return Vector4(maxf(low.x, 0.0), maxf(low.y, 0.0), minf(high.x, 1.0), minf(high.y, 1.0))
+	return Vector4(low.x, low.y, high.x, high.y)

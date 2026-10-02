@@ -126,10 +126,16 @@ func _run() -> void:
 	check(dressing.visible, "frozen camera refresh restores dressing after protection overflow clears")
 	var tiny := Dressing.protection_rect(cam, cam.global_position + -cam.global_basis.z, 2.5)
 	check(tiny == Vector4(0, 0, 1, 1), "near-camera overlap protects the entire screen")
-	# A far object whose box merely straddles the camera's plane sits about 90 degrees off axis,
-	# outside the view: it must not blank the whole screen (it hid all Reach clutter in a still).
 	var straddle := Dressing.protection_rect(cam, cam.global_position + cam.global_basis.x * 150.0 - cam.global_basis.z * 1.0, 2.5)
-	check(straddle.z < 0.0, "a far object straddling the camera plane protects nothing: " + str(straddle))
+	check(straddle.z < 0.0, "a box straddling the camera plane wholly outside the frame protects nothing: " + str(straddle))
+	var wide := Camera3D.new()
+	wide.fov = 88.0
+	game.add_child(wide)
+	wide.global_transform = Transform3D(Basis.IDENTITY, Vector3(0, 500, 0))
+	var edge := Dressing.protection_rect(wide, wide.global_position + Vector3(9.76, 0.0, -2.4), 2.5)
+	check(edge.z >= 1.0 and edge.x < 1.0 and edge.x >= 0.0 and edge.y >= 0.0 and edge.w <= 1.0,
+		"a box straddling the camera plane that enters the frame's edge is protected out to that edge: " + str(edge))
+	wide.free()
 	Preset.apply("high")
 	# The enemy is the only deliberately added gameplay node in this test.
 	enemy.free()
