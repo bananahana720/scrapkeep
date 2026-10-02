@@ -47,6 +47,7 @@ const WALL_LIMIT_S := 1500.0
 class Table extends RefCounted:
 	const BOSS := SliceDefs.BOSS
 	const COUNT := SliceDefs.COUNT
+	const PICK_ON_CLASS_UP := SliceDefs.PICK_ON_CLASS_UP
 	const DEFS := SliceDefs.DEFS
 	var plating := 45.0
 	var posture := {}
@@ -62,6 +63,12 @@ class Table extends RefCounted:
 
 	func synergy_in_play(id: String) -> bool:
 		return SliceDefs.synergy_in_play(id)
+
+	func part_in_play(id: String) -> bool:
+		return SliceDefs.part_in_play(id)
+
+	func parts_listed() -> bool:
+		return SliceDefs.parts_listed()
 
 	func packs() -> Array:
 		return SliceDefs.packs()

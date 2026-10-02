@@ -419,7 +419,14 @@ func _stock() -> Array:
 
 func _roll_one(rarities: Array) -> String:
 	var picks: Array = Parts.roll(_rng, rarities, ctx.run.class_id(), ctx.run.parts, 1)
-	return picks[0] if not picks.is_empty() else ItemGen.roll_id(_rng, rarities[0])
+	if not picks.is_empty():
+		return picks[0]
+	# A table that lists its parts never gets a generated recipe: the next rarity up the
+	# shelf's own list, else any listed part, is what the empty pool falls back to.
+	if Parts.listed_only():
+		var any: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
+		return any[0] if not any.is_empty() else ""
+	return ItemGen.roll_id(_rng, rarities[0])
 
 
 func _cheapest_price() -> int:
