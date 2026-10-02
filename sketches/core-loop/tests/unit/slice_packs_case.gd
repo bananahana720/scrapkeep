@@ -7,7 +7,8 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 # The slice's packs come from one list on the stage table (slice_defs.gd), drawn by a
 # director given them and nothing else:
 # - every arrival is exactly one authored pack, and only the six slice kinds appear;
-# - no pack repeats back to back; the third arrival is the elite, and it comes once;
+# - no pack repeats back to back, nor on either side of the elite; the third arrival is the
+#   elite, and it comes once;
 # - a pack never arrives when the cap lacks room for all of it, and waits instead;
 # - the default table answers "no packs" and a director without them draws as before:
 #   the arrival counts and positions below were recorded at the base for two seeds.
@@ -88,6 +89,17 @@ func _arrivals() -> void:
 	_t.check("arrivals: no pack repeats back to back", repeats == 0, "%d repeats" % repeats)
 	_t.check("arrivals: the third arrival is the elite, once", ids.size() > 3 and ids[2] == "elite" and ids.count("elite") == 1,
 		"first four %s, elites %d" % [ids.slice(0, 4), ids.count("elite")])
+	var same_round_elite := []
+	for seed_value in range(1, 21):
+		var e := _slice_director(seed_value)
+		var clock := 0.0
+		while e.packs.size() < 4 and clock < 600.0:
+			e.advance(H, 0, Vector2.ZERO, Vector2(0.0, 14.0), Vector2(0.0, 1.0))
+			clock += H
+		if e.packs.size() >= 4 and e.packs[1]["id"] == e.packs[3]["id"]:
+			same_round_elite.append(seed_value)
+	_t.check("arrivals: the pack after the elite is not the pack before it", same_round_elite.is_empty(),
+		"seeds 1 to 20 where the second and fourth arrivals match: %s" % [same_round_elite])
 	var ordinary := {}
 	for id in ids:
 		ordinary[id] = int(ordinary.get(id, 0)) + 1
