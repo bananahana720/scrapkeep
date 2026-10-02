@@ -19,7 +19,7 @@ const MAX_DRAWS := 21
 const CLIPS := ["drop_land", "big_cheer", "wince", "slump", "phew"]
 const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro", "VaneL", "VaneR"]
 const BASE := "res://assets/models/shell_kest.glb"
-const RIG_SHA := "c6ba29f531b86a54afe21bec4746ce5865b5e275810f0ff611b6a5914dd9ad9e"
+const RIG_SHA := "22b07e176f803cdcc1a9a306d40066d0c9716b06413bca6afc237c1d4adebce9"
 const GROW := 0.002
 # Pod kit mesh bounds of the base shell in shell space.
 const BASE_POD_MIN := Vector3(-0.94, -0.7735, -0.94)

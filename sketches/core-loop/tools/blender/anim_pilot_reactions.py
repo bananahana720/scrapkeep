@@ -24,6 +24,8 @@ KEYS = {
     'wince': [1, 3, 5, 8, 12, 16],
     'slump': [1, 7, 15, 23, 31, 39, 46],
     'phew': [1, 5, 10, 14, 19, 25],
+    'brace': [1, 3, 6, 10, 14, 19],
+    'heave': [1, 3, 7, 10, 15, 25],
 }
 NOTES = {
     'big_cheer': [
@@ -60,6 +62,22 @@ NOTES = {
         'Hold: visible profile, mole releases fist, bird fans one wing.',
         'Exhale: shoulders and hands sink, visibly lower head.',
         'Neutral: exact rig rest. Reject mole side row for fox and mirrored arm variants.',
+    ],
+    'brace': [
+        'Neutral: exact rig rest.',
+        'Bite: snap the whole torso forward, head down, both hands at the controls.',
+        'Brace: hold the compressed torso against the pull; ears or crest laid back.',
+        'Hold: both arms locked; Rivet clamps both claws.',
+        'Release: torso and head ease back toward seated rest.',
+        'Neutral: exact rig rest.',
+    ],
+    'heave': [
+        'Neutral: exact rig rest.',
+        'Impact: throw torso and head back into the seat, both elbows recoil.',
+        'Heave: one sharp forward torso punch, right arm raised, left arm counterbraces.',
+        'Hold: Rivet clamps, Sable tail whips, Kest fans flare.',
+        'Release: lower both arms and ease the torso toward the controls.',
+        'Neutral: exact rig rest.',
     ],
 }
 
@@ -134,7 +152,32 @@ def pose(arm, pilot, clip, k):
             right = (.53, .03, .30)
         if k == 4:
             right, left = (.47, .2, -.12), (-.47, .2, -.12)
-    drop.body(arm, pitch * .35, pitch, height, 1.0)
+    elif clip == 'brace':
+        strength = [0, 1, 1, .85, .35, 0][k]
+        height = 1 - .16 * strength
+        pitch = -32 * strength
+        shoulder = .025 * strength
+        # World-space hand targets stay at the controls while the torso pitches.
+        if pilot == 'sable':
+            rotate(arm, 'ear.R', (38 * strength, 12 * strength, 0))
+            rotate(arm, 'ear.L', (38 * strength, -12 * strength, 0))
+        if pilot == 'kest':
+            rotate(arm, 'crest', (38 * strength, 0, 0))
+    elif clip == 'heave':
+        strength = [0, .7, 1, .85, .35, 0][k]
+        height = [1, 1.12, .84, .87, .96, 1][k]
+        pitch = [0, 28, -34, -28, -10, 0][k]
+        shoulder = .035 * strength
+        if k == 1:
+            right, left = (.46, .16, .13), (-.46, .16, .13)
+        else:
+            right = (.32 + .22 * strength, .4 - .28 * strength, .05 + .38 * strength)
+            left = (-.32 - .14 * strength, .4 - .16 * strength, .05 + .12 * strength)
+        if pilot == 'sable':
+            tail = [0, -28, 48, -32, 12, 0][k]
+            rotate(arm, 'tail.01', (0, 0, tail))
+            rotate(arm, 'tail.02', (0, 0, -tail * .65))
+    drop.body(arm, pitch if clip in ('brace', 'heave') else pitch * .35, pitch, height, 1.0)
     rotate(arm, 'head', (pitch, roll, yaw))
     for side in ('R', 'L'):
         arm.pose.bones['shoulder.' + side].location.z = shoulder
@@ -146,6 +189,13 @@ def pose(arm, pilot, clip, k):
     if pilot == 'rivet' and clip == 'big_cheer':
         rotate(arm, 'curl.R', (-65, 0, 0))
         rotate(arm, 'curl.L', (-65, 0, 0))
+    if clip in ('brace', 'heave'):
+        if pilot == 'rivet':
+            rotate(arm, 'curl.R', (-65 * strength, 0, 0))
+            rotate(arm, 'curl.L', (-65 * strength, 0, 0))
+        if pilot == 'kest' and clip == 'heave':
+            shared.world_hand(arm, 'R', (0, -35 * strength, -25 - 35 * strength))
+            shared.world_hand(arm, 'L', (0, 35 * strength, 25 + 35 * strength))
 
 
 def snapshot(arm):
@@ -203,12 +253,16 @@ def author(pilot, reference):
     for clip, frames in KEYS.items():
         arm.animation_data.action = None
         rows = []
-        image = OUT / 'keys' / f'{clip}.png'
-        digest = hashlib.sha256(image.read_bytes()).hexdigest()
+        if clip in ('brace', 'heave'):
+            source = {'source': 'alpha-x1-PR harpoon reaction brief'}
+        else:
+            image = OUT / 'keys' / f'{clip}.png'
+            source = {'image': str(image.relative_to(rig.ROOT)),
+                      'image_sha256': hashlib.sha256(image.read_bytes()).hexdigest()}
         for index, frame in enumerate(frames):
             pose(arm, pilot, clip, index)
-            rows.append({'frame': frame, 'seconds': (frame-1)/30, 'image': str(image.relative_to(rig.ROOT)),
-                         'image_sha256': digest, 'observation': NOTES[clip][index], 'bones': snapshot(arm)})
+            rows.append({'frame': frame, 'seconds': (frame-1)/30, **source,
+                         'observation': NOTES[clip][index], 'bones': snapshot(arm)})
             key(arm, frame)
         act = arm.animation_data.action
         act.name = clip
