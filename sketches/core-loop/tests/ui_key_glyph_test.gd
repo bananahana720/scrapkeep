@@ -42,16 +42,16 @@ func _physics_process(_delta: float) -> bool:
 	if _wait < 3:
 		return false
 	var glyphs = _game.hud.key_glyphs
-	var ready := {"harpoon": true, "haul": false, "boost": true}
+	var ready := {"harpoon": true, "haul": false, "boost": true, "interact": false, "jump": false}
 	var view := {"ready": ready, "line": "", "charging": false, "mounted": false, "airborne": false, "winching": false,
-		"points": {"harpoon": Vector3.ONE, "haul": Vector3.ONE, "boost": Vector3.ONE}}
+		"points": {"harpoon": Vector3.ONE, "haul": Vector3.ONE, "boost": Vector3.ONE, "interact": Vector3.ONE, "jump": Vector3.ONE}}
 	glyphs.new_run()
 	glyphs.step(0.016, view)
 	var fresh: Array = glyphs.shown_verbs()
 	var words: Array = Array(glyphs.drawn_words())
 	for i in 3:
 		_game.events.line_state_changed.emit("latched_world", null, Vector3.ZERO, "")
-	glyphs.step(0.016, {"ready": {"harpoon": false, "haul": false, "boost": false}, "line": "", "charging": false, "mounted": false,
+	glyphs.step(0.016, {"ready": {"harpoon": false, "haul": false, "boost": false, "interact": false, "jump": false}, "line": "", "charging": false, "mounted": false,
 		"airborne": false, "winching": false, "points": view["points"]})
 	glyphs.step(0.016, view)
 	var after: Array = glyphs.shown_verbs()
@@ -60,10 +60,12 @@ func _physics_process(_delta: float) -> bool:
 
 	_game.events.line_state_changed.emit("smash_committed", null, Vector3.ZERO, "")
 	_game.events.boosted.emit(Vector3.ZERO)
+	_game.events.mounted.emit(Vector3.ZERO, 5.0)
 	_game.events.dismounted.emit(Vector3(0.0, 4.0, 9.0))
+	_game.events.dismounted.emit(Vector3.ZERO)
 	var profile = _game.hud.profile
-	_report("successes are counted per verb", profile.uses("smash") == 1 and profile.uses("boost") == 1 and profile.uses("slingshot") == 0,
-		"smash %d, boost %d, slingshot %d" % [profile.uses("smash"), profile.uses("boost"), profile.uses("slingshot")])
+	_report("successes are counted per verb", profile.uses("smash") == 1 and profile.uses("boost") == 1 and profile.uses("interact") == 1 and profile.uses("jump") == 1,
+		"smash %d, boost %d, interact %d, slingshot (jump) %d" % [profile.uses("smash"), profile.uses("boost"), profile.uses("interact"), profile.uses("jump")])
 
 	var reread := UiProfile.new(_game.storage_dir)
 	_report("persisted", reread.uses("harpoon") == 3 and reread.uses("smash") == 1 and reread.path.begins_with(_game.storage_dir),

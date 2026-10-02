@@ -1,15 +1,19 @@
 extends RefCounted
 
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
+const Icons := preload("res://src/ui/icons.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # The prompt rules of design-v3/LEGIBILITY.md section 5 over a scripted view of the ball: a
 # prompt shows only on a tick its verb is ready, two at most and the higher ball state first,
-# it retires after three successes (five for the smash), returns for 3 s after a failed
-# press, after 90 s unused and at the first availability of each run, and HOOK and SMASH ride
-# it until the first bite and the first smash on the profile.
+# it retires after three successes (five for the smash), returns after a failed press, after 90 s
+# unused and at the first availability of each run, each return lasting 3 s of ready ticks, and
+# HOOK and SMASH ride it until the first bite and the first smash on the profile. The haul prompt
+# wears the reel on a world line and the smash glyph on a body, E and the slingshot come through
+# the same table. These are rule checks over a scripted view; the link from the player's
+# verb_ready to the view is checked in harpoon_canon_test.
 
 const DT := 1.0 / 60.0
 
@@ -45,6 +49,8 @@ func run(t) -> void:
 	_smash_retires_at_five(t, glyphs, profile)
 	_words(t, glyphs, profile, game)
 	_haul_waits(t, glyphs)
+	_returns_count_ready_ticks(t, glyphs, profile)
+	_icons_and_ball_verbs(t, glyphs)
 
 	glyphs.free()
 	game.events.free()
@@ -100,10 +106,10 @@ static func _retire_and_return(t, glyphs, profile) -> void:
 	for i in 3:
 		profile.add_use("boost")
 	glyphs.step(DT, _view(["boost"]))
-	t.eq("the first availability of a run shows a retired prompt once", glyphs.shown_verbs(), ["boost"])
-	glyphs.step(DT, _view([]))
+	t.eq("the first availability of a run shows a retired prompt", glyphs.shown_verbs(), ["boost"])
+	glyphs.step(3.0, _view(["boost"]))
 	glyphs.step(DT, _view(["boost"]))
-	t.eq("three successes retire it", glyphs.shown_verbs(), [])
+	t.eq("three successes retire it, after its first return has run 3 s of ready ticks", glyphs.shown_verbs(), [])
 	glyphs.returned("boost")
 	glyphs.step(DT, _view(["boost"]))
 	t.eq("a failed press brings it back", glyphs.shown_verbs(), ["boost"])
@@ -120,20 +126,23 @@ static func _retire_and_return(t, glyphs, profile) -> void:
 	t.eq("it stays retired just short of 90 s unused", glyphs.shown_verbs(), [])
 	glyphs.step(2.0, _view(["boost"]))
 	t.eq("90 s unused brings it back", glyphs.shown_verbs(), ["boost"])
+	glyphs.step(1.0, _view(["boost"]))
+	glyphs.step(DT, _view(["boost"]))
+	t.eq("the 90 s return retires again after 3 s of ready ticks", glyphs.shown_verbs(), [])
 	glyphs.record_use("boost")
 	glyphs.step(DT, _view(["boost"]))
 	t.eq("a success clears the return", glyphs.shown_verbs(), [])
 	glyphs.new_run()
 	glyphs.step(DT, _view(["boost"]))
-	t.eq("a new run brings it back once", glyphs.shown_verbs(), ["boost"])
-	glyphs.step(DT, _view([]))
+	t.eq("a new run brings it back", glyphs.shown_verbs(), ["boost"])
+	glyphs.step(3.0, _view(["boost"]))
 	glyphs.step(DT, _view(["boost"]))
-	t.eq("and only once", glyphs.shown_verbs(), [])
+	t.eq("and it retires again after 3 s of ready ticks", glyphs.shown_verbs(), [])
 
 
 static func _smash_retires_at_five(t, glyphs, profile) -> void:
 	_fresh(glyphs, profile)
-	glyphs.step(2.0, _view(["haul"], "body"))
+	glyphs.step(3.0, _view(["haul"], "body"))
 	glyphs.step(DT, _view([]))
 	for i in 4:
 		profile.add_use("smash")
@@ -144,7 +153,7 @@ static func _smash_retires_at_five(t, glyphs, profile) -> void:
 	glyphs.step(2.0, _view(["haul"], "body"))
 	t.eq("five smashes do", glyphs.shown_verbs(), [])
 	_fresh(glyphs, profile)
-	glyphs.step(2.0, _view(["haul"], "world"))
+	glyphs.step(3.0, _view(["haul"], "world"))
 	glyphs.step(DT, _view([]))
 	for i in 3:
 		profile.add_use("haul")
@@ -189,3 +198,50 @@ static func _haul_waits(t, glyphs) -> void:
 	glyphs.step(DT, _view(["haul"], "world", false, true))
 	glyphs.step(1.0, _view(["haul"], "world"))
 	t.eq("a Ctrl press restarts the wait", glyphs.shown_verbs(), [])
+
+
+# A return counts down only on ticks the verb is ready; the first-availability and 90 s returns
+# last at most 3 s of ready ticks, so a ready-almost-always verb does not sit on screen.
+static func _returns_count_ready_ticks(t, glyphs, profile) -> void:
+	_fresh(glyphs, profile)
+	for i in 3:
+		profile.add_use("boost")
+	glyphs.step(3.0, _view(["boost"]))
+	glyphs.returned("boost")
+	for i in 600:
+		glyphs.step(DT, _view([]))
+	glyphs.step(DT, _view(["boost"]))
+	t.eq("a failed press is still owed after 10 s of the verb not being ready", glyphs.shown_verbs(), ["boost"])
+	for i in 170:
+		glyphs.step(DT, _view(["boost"]))
+	t.eq("it is still shown 2.8 s of ready ticks after the failure", glyphs.shown_verbs(), ["boost"])
+	for i in 20:
+		glyphs.step(DT, _view(["boost"]))
+	t.eq("it is gone after 3 s of ready ticks", glyphs.shown_verbs(), [])
+	_fresh(glyphs, profile)
+	for i in 3:
+		profile.add_use("boost")
+	for i in 100:
+		glyphs.step(DT, _view([]))
+	for i in 170:
+		glyphs.step(DT, _view(["boost"]))
+	t.eq("the first return is spent on ready ticks only: shown 2.8 s in", glyphs.shown_verbs(), ["boost"])
+	for i in 20:
+		glyphs.step(DT, _view(["boost"]))
+	t.eq("the first return retires at 3 s of ready ticks, not 3 s of the clock", glyphs.shown_verbs(), [])
+	t.eq("a ready prompt of a verb used and retired stays gone for good", glyphs.retired("boost"), true)
+
+
+static func _icons_and_ball_verbs(t, glyphs) -> void:
+	t.eq("the haul prompt wears the reel on a world line", glyphs.icon_of("haul", "world"), Icons.REEL)
+	t.eq("the haul prompt wears the smash glyph on a body", glyphs.icon_of("haul", "body"), "ab_sable_smash")
+	t.eq("the mount prompt keeps its turret icon", glyphs.icon_of("interact", ""), "ab_sable_mount")
+	t.eq("the slingshot prompt keeps its launch icon", glyphs.icon_of("jump", ""), "ab_sable_vault")
+	t.check("the reel glyph draws, apart from the smash glyph", Icons.glyph_of(Icons.REEL) == "reel" and Icons.glyph_of(Icons.REEL) != Icons.glyph_of("ab_sable_smash"),
+		"reel is %s, smash is %s" % [Icons.glyph_of(Icons.REEL), Icons.glyph_of("ab_sable_smash")])
+	glyphs.new_run()
+	glyphs.step(DT, _view(["interact", "harpoon", "boost"]))
+	t.eq("E at the face and the harpoon fit in two; the mount prompt is not crowded out by the boost", glyphs.shown_verbs(), ["interact", "harpoon"])
+	glyphs.new_run()
+	glyphs.step(DT, _view(["jump"]))
+	t.eq("a ready slingshot is drawn", glyphs.shown_verbs(), ["jump"])

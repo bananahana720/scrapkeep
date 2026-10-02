@@ -21,7 +21,7 @@ const VERBS := {
 		}},
 	"look": {"intent": "", "fail": "none", "glyph": "key_mouse", "label": "mouse", "icon": "",
 		"actions": {"cl_look": {"motion": true}}},
-	"jump": {"intent": "jump_pressed", "fail": "verb_fail_jump", "glyph": "key_space", "label": "Space", "icon": "trg_on_vault",
+	"jump": {"intent": "jump_pressed", "fail": "verb_fail_jump", "glyph": "key_space", "label": "Space", "icon": "ab_sable_vault",
 		"actions": {"cl_jump": {"keys": [KEY_SPACE]}}},
 	"fire": {"intent": "fire_pressed", "fail": "verb_fail_fire", "glyph": "key_lmb", "label": "LMB", "icon": "ab_sable_weapon",
 		"actions": {"cl_fire": {"button": MOUSE_BUTTON_LEFT}}},
@@ -43,14 +43,16 @@ const VERB_FIELDS := ["intent", "fail", "glyph", "label", "icon", "actions"]
 const STATES := ["line_body", "line_world", "charging", "mounted", "air", "ground"]
 
 # What each verb's key does in each state. "any" is the reading of every state not named.
+# "refused" is a press the ball answers with a failure cue; "brake or slam" is the ground and
+# air reading of Ctrl, which a charge does not change.
 const READS := {
 	"roll": {"any": "drive"},
 	"look": {"any": "look"},
 	"jump": {"any": "jump", "air": "double jump", "mounted": "slingshot"},
 	"fire": {"any": "fire"},
 	"harpoon": {"any": "bite", "line_body": "fling", "line_world": "fling", "charging": "cancel"},
-	"haul": {"any": "brake", "line_body": "smash", "line_world": "winch", "air": "slam"},
-	"boost": {"any": "go"},
+	"haul": {"any": "brake", "line_body": "smash", "line_world": "winch", "charging": "brake or slam", "mounted": "refused", "air": "slam"},
+	"boost": {"any": "go", "mounted": "refused"},
 	"special": {"any": "special", "charging": "release"},
 	"interact": {"any": "interact", "mounted": "dismount"},
 }

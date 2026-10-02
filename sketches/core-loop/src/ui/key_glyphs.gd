@@ -12,15 +12,19 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # where pressing the key would succeed (player.verb_ready). The keys come from the bindings
 # table. At most two show at once, the verb in the higher ball state first. A prompt retires
 # after RETIRE_AFTER successes on the profile (ui_profile.gd), five for the smash, and comes
-# back for FAIL_RETURN seconds after a failed press, after IDLE_RETURN seconds unused in a run,
-# and at its first availability in each run. HOOK rides the harpoon prompt until the first
-# bite on the profile and SMASH the haul prompt on a body until the first smash. The haul
-# prompt waits for the line to stand LINE_STAND seconds without a Ctrl press. The brake has no
-# prompt. Tab's field notes keep the full key list.
+# back after a failed press, after IDLE_RETURN seconds unused in a run, and at its first
+# availability in each run. Each return lasts at most FAIL_RETURN seconds of ticks on which
+# the verb is ready, then the prompt retires again. HOOK rides the harpoon prompt until the
+# first bite on the profile and SMASH the haul prompt on a body until the first smash. The
+# haul prompt waits for the line to stand LINE_STAND seconds without a Ctrl press and wears
+# the reel glyph on a world line, the smash glyph on a body. Sable's E (mount) and Space
+# (slingshot, only while mounted) come through the same table. The brake has no prompt.
+# Tab's field notes keep the full key list.
 
-const PROMPT_VERBS := ["haul", "harpoon", "boost"]
+const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost"]
+const BALL_VERBS := ["boost", "interact", "jump"]
 const MAX_PROMPTS := 2
-const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3}
+const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3}
 const LINE_STAND := 1.5
 const FAIL_RETURN := 3.0
 const IDLE_RETURN := 90.0
@@ -38,9 +42,10 @@ var _forced := {}
 var _unused := {}
 var _revived := {}
 var _first := {}
-var _pinned := {}
+var _free := {}
 var _stood := 0.0
 var _winch_held := false
+var _line := ""
 var _points := {}
 var _placed: Array = []
 
@@ -57,6 +62,10 @@ func setup(game_ref, profile_ref) -> void:
 	game.events.boosted.connect(func(_direction: Vector3): record_use("boost"))
 	game.events.sprint_started.connect(func(_direction: Vector3): record_use("boost"))
 	game.events.blink_used.connect(func(_from: Vector3, _to: Vector3): record_use("boost"))
+	game.events.mounted.connect(func(_at: Vector3, _banked: float): record_use("interact"))
+	game.events.dismounted.connect(func(velocity: Vector3):
+		if velocity.length() > 0.1:
+			record_use("jump"))
 
 
 # A new run: every prompt is owed its first availability, and nothing is overdue.
@@ -66,7 +75,7 @@ func new_run() -> void:
 		_unused[verb] = 0.0
 		_revived[verb] = false
 		_first[verb] = true
-		_pinned[verb] = false
+		_free[verb] = 0.0
 	_stood = 0.0
 	_winch_held = false
 	shown = []
@@ -92,13 +101,14 @@ func record_use(use: String) -> void:
 	var verb := verb_of_use(use)
 	_unused[verb] = 0.0
 	_revived[verb] = false
-	_pinned[verb] = false
+	_first[verb] = false
+	_free[verb] = 0.0
 	if verb == "haul":
 		_stood = 0.0
 
 
-# A failed press brings its prompt back for FAIL_RETURN seconds; a failed Ctrl also restarts the
-# haul prompt's wait.
+# A failed press brings its prompt back for FAIL_RETURN seconds of ready ticks; a failed Ctrl
+# also restarts the haul prompt's wait.
 func returned(verb: String) -> void:
 	if verb in PROMPT_VERBS:
 		_forced[verb] = FAIL_RETURN
@@ -113,6 +123,13 @@ func use_key(verb: String, line: String) -> String:
 func retired(verb: String, line := "") -> bool:
 	var use := use_key(verb, line)
 	return profile.uses(use) >= RETIRE_AFTER[use]
+
+
+# The icon on a prompt: the haul wears the reel on a world line and the smash on a body.
+func icon_of(verb: String, line: String) -> String:
+	if verb == "haul" and line == "world":
+		return Icons.REEL
+	return Bindings.icon(verb)
 
 
 # The word riding a prompt: HOOK until the first bite on the profile, SMASH until the first smash.
@@ -131,6 +148,10 @@ static func view_of(player) -> Dictionary:
 	var ready := {}
 	for verb in PROMPT_VERBS:
 		ready[verb] = player.verb_ready(verb)
+	var claim: Callable = player.interact_claim
+	var taken: bool = claim.is_valid() and claim.call(true) and not player.mobility_started()
+	ready["interact"] = ready["interact"] and not taken
+	ready["jump"] = ready["jump"] and kit.mounted
 	return {
 		"ready": ready,
 		"line": "" if not kit.hooked else ("body" if kit.on_body else "world"),
@@ -138,7 +159,8 @@ static func view_of(player) -> Dictionary:
 		"mounted": kit.mounted,
 		"airborne": not player.state.grounded,
 		"winching": kit.winching,
-		"points": {"harpoon": kit.aim.get("point", Vector3.INF), "haul": kit.anchor, "boost": player.shown_position()},
+		"points": {"harpoon": kit.aim.get("point", Vector3.INF), "haul": kit.anchor, "boost": player.shown_position(),
+			"interact": player.shown_position(), "jump": player.shown_position()},
 	}
 
 
@@ -151,11 +173,13 @@ func _state_of(verb: String, view: Dictionary) -> String:
 # One tick of the prompt rules over `view`; fills `shown`.
 func step(delta: float, view: Dictionary) -> void:
 	for verb in PROMPT_VERBS:
-		_forced[verb] = maxf(0.0, _forced[verb] - delta)
 		_unused[verb] += delta
 		if _unused[verb] >= IDLE_RETURN:
 			_revived[verb] = true
 	var ready: Dictionary = view["ready"]
+	for verb in PROMPT_VERBS:
+		if ready[verb]:
+			_forced[verb] = maxf(0.0, _forced[verb] - delta)
 	var line: String = view["line"]
 	if view["winching"] and not _winch_held:
 		record_use("haul")
@@ -165,13 +189,13 @@ func step(delta: float, view: Dictionary) -> void:
 	elif ready["haul"]:
 		_stood += delta
 	_points = view["points"]
+	_line = line
 	var candidates: Array = []
 	for verb in PROMPT_VERBS:
 		var open: bool = ready[verb] and (verb != "haul" or _stood >= LINE_STAND)
 		if not open:
-			_pinned[verb] = false
 			continue
-		if _first[verb] or _pinned[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line):
+		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line):
 			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ra: int = Bindings.STATES.find(a["state"])
@@ -181,9 +205,14 @@ func step(delta: float, view: Dictionary) -> void:
 		return PROMPT_VERBS.find(a["verb"]) < PROMPT_VERBS.find(b["verb"]))
 	shown = candidates.slice(0, MAX_PROMPTS)
 	for prompt in shown:
-		if _first[prompt["verb"]]:
-			_first[prompt["verb"]] = false
-			_pinned[prompt["verb"]] = true
+		var verb: String = prompt["verb"]
+		if _first[verb] or _revived[verb]:
+			_free[verb] += delta
+			if _free[verb] >= FAIL_RETURN:
+				_first[verb] = false
+				_revived[verb] = false
+				_free[verb] = 0.0
+				_unused[verb] = 0.0
 
 
 func shown_verbs() -> Array[String]:
@@ -225,12 +254,12 @@ func _placements() -> Array:
 		if world == Vector3.INF or cam.is_position_behind(world):
 			continue
 		var at := cam.unproject_position(world).round()
-		if prompt["verb"] == "boost":
+		if prompt["verb"] in BALL_VERBS:
 			at += BALL_OFFSET + Vector2(0.0, STACK * stacked)
 			stacked += 1
 		else:
 			at += AIM_OFFSET
-		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"]})
+		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"], "icon": icon_of(prompt["verb"], _line)})
 	return out
 
 
@@ -248,7 +277,7 @@ func _draw() -> void:
 		var verb: String = placed["verb"]
 		var at: Vector2 = placed["at"]
 		var cap := Keycap.draw(self, at, Bindings.glyph(verb), cap_color, KEY_H)
-		var icon_id := Bindings.icon(verb)
+		var icon_id: String = placed["icon"]
 		var edge := cap.end.x + 5.0
 		if icon_id != "":
 			var icon := Rect2(Vector2(edge, at.y - KEY_H * 0.45), Vector2(KEY_H * 0.9, KEY_H * 0.9))

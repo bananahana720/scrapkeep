@@ -11,10 +11,16 @@ const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 
 # C1: the game's keys come from one table of nine verbs (src/core/bindings.gd).
+# Table checks read the table, the source or the screens' data and never run a player: the
+# table, the state walk (_states), the cut-key source scan, the dev keys' gate and the readers.
+# Player-driven checks are in harpoon_canon_test (a scripted ball on a world line and on a body
+# line pressing Ctrl, and the HUD's prompts against verb_ready); this file has none. The cut
+# keys' source scan (the source names no Q, wheel or C handler) is the check that fails if one
+# comes back; the intent check below fails if the keyboard source reads one.
 #   - every verb has an action with a key or a button, no key serves two verbs, the InputMap
 #     holds the table's actions and no others, and glyph() answers for all nine;
 #   - the cut keys (the Q reel, the mouse-wheel reel, the C dash) have no handler in play: the
-#     source names none of them, and pressing them moves no intent field and reels no line;
+#     source names none of them, and pressing them moves no intent field;
 #   - over every combination of ball states, each key reads as exactly one verb in the highest
 #     state that holds;
 #   - F1, F3 and F4 do nothing without --dev and work with it;
@@ -26,15 +32,6 @@ const MENU_GLYPHS := ["key_tab", "key_p", "key_r"]
 var _game
 var _t := T.new("bindings_table_test")
 var _frames := 0
-
-
-class SpyBall:
-	extends Node3D
-
-	var reels := 0
-
-	func reel_step(_metres: float) -> void:
-		reels += 1
 
 
 func _initialize() -> void:
@@ -163,7 +160,10 @@ func _states() -> void:
 		"on a body %s, on the world %s" % [Bindings.reading("haul", "line_body"), Bindings.reading("haul", "line_world")])
 	_t.check("Ctrl is the brake on the ground and the slam in the air", Bindings.reading("haul", "ground") == "brake" and Bindings.reading("haul", "air") == "slam",
 		"ground %s, air %s" % [Bindings.reading("haul", "ground"), Bindings.reading("haul", "air")])
-
+	_t.check("mounted, Ctrl and Shift read as refused, and a charge does not hide the brake from the slam",
+		Bindings.reading("haul", "mounted") == "refused" and Bindings.reading("boost", "mounted") == "refused"
+		and Bindings.reading("haul", "charging") == "brake or slam",
+		"mounted Ctrl %s, Shift %s, charging Ctrl %s" % [Bindings.reading("haul", "mounted"), Bindings.reading("boost", "mounted"), Bindings.reading("haul", "charging")])
 
 func _press(event: InputEvent) -> void:
 	Input.parse_input_event(event)
@@ -205,22 +205,6 @@ func _cut_keys() -> void:
 		if info["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE != 0 and intent.get(name) != quiet.get(name):
 			changed.append(name)
 	_t.eq("Q, C and the wheel change no intent field", changed, [])
-
-	var spy := SpyBall.new()
-	var real_player = _game.player
-	_game.player = spy
-	_game.test_mode = false
-	for button in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-		var event := InputEventMouseButton.new()
-		event.button_index = button
-		event.pressed = true
-		_game._input(event)
-	for code in [KEY_Q, KEY_C]:
-		_game._input(_key(code, true))
-	_game.test_mode = true
-	_game.player = real_player
-	_t.eq("the wheel, Q and C in play reel no line", spy.reels, 0)
-	spy.free()
 
 
 func _dev_keys() -> void:

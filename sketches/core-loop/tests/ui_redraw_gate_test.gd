@@ -75,7 +75,6 @@ func _process(_delta: float) -> bool:
 		# The first availability of a run shows a retired prompt once, so spend it too.
 		for verb in hud.key_glyphs.PROMPT_VERBS:
 			hud.key_glyphs._first[verb] = false
-			hud.key_glyphs._pinned[verb] = false
 	if _frame == WARM:
 		_reset()
 		_runs = hud.layout_runs
