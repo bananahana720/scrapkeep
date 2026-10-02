@@ -83,6 +83,35 @@ Summed test time fell 28 percent and the wall 26 percent. What is left is the lo
 
 The wave cost one full run for three merged units (0.33 runs per unit) and 27 minutes from launch to verdict.
 
+## After wave A1, `proto/alpha` at `e407e37`
+
+Seven units, one fix round of three, then coordinator fixes. Receipt `gate-5a9b3baf0d9d-2026-10-02T05-54-31-482Z.json` (tree `5a9b3ba`, no lock wait).
+
+| Measure | After A0 | After A1 |
+| --- | --- | --- |
+| Full suite wall, 8 at a time | 339 s | 323 s |
+| Tests run, failed, skipped | 220, 0, 0 | 222, 0, 0 |
+| Quarantined red | none | 2 (`build_power_curve_test`, `ui_word_budget_test`) |
+| Six solo tests | 79 s | 77 s |
+| Lint | none | 0 findings, 88 ms, 22 baseline entries |
+| Tests with no verdict line | 9 | 9 |
+
+What the wave cost in gate runs: three full runs for ten units (the first gate, the flag flip's one discovery run, the final gate), so 0.3 runs per unit.
+
+First-gate results, by cause:
+
+| Unit | Result | Cause |
+| --- | --- | --- |
+| C4 | Gate failed 1 of 222 | `brief`: the test that drives stops with gun kinds was outside the unit's file list |
+| C4 | Blasts lost their stop | `brief`: blasts publish under gun kinds and the packet did not say so |
+| K0 | A removed check and a loosened bound | `writer`, then `verifier-miss` (the integrator passed them) |
+| A2 | Save before load overwrote the disk file | `writer` |
+| A2 | Two stores lost the first one's unlocks | `brief` |
+| F1 (fix) | The impact record leaked to later strikes for two frames | `writer` |
+| F2 (fix) | An upper bound widened, a pin removed unasked | `writer` |
+
+Three of seven units had a review finding of medium or above at the first gate, and two of three fix units failed their review. The flag-flip probe undercounted: launch flags reach only tests that build the whole game, so 15 failures measured became 20 after the defaults changed.
+
 ## Decisions the numbers settled
 
 | Question | Decision | Why |

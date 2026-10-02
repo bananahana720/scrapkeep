@@ -56,6 +56,10 @@ He played drop, laps and the harpoon build that evening. His opinion of the whol
 | Synergies "just happen": he cannot tell what he did or what it means, and the same holds for map mechanics. "There's no why." | New unit WY in the readability wave. When a synergy or a map mechanic fires, the two causes and the effect are shown where it happens (two icons, an arrow, three words or fewer), read from the event table, and the first firing opens its discovery card. A test walks every synergy row and every map mechanic row and fails on one with no callout. |
 | He liked that the enemy mechanics are fuller, but the enemies read as "amorphous blobs" and he cannot tell what does what. He wants recognisable designs and better animation. | New unit ER in the slice, ahead of the wind-up rows (WU). A read sheet for the Cable Reach roster: one silhouette and one wind-up pose per mechanic, drawn first and shown to Andrew before any model is built (the storyboard gate). The models and clips then follow the existing Blender recipe template. |
 
+### The legibility spec (2026-10-01 night)
+
+Andrew then gave the coordinator creative charge: decide, fill gaps and cut, and bring him a veto list. [LEGIBILITY.md](LEGIBILITY.md) is the result and is the build spec for the waves after A1. Where it differs from M1 below, it wins: one fight (the posture chassis) with no Hunt or Duel arm and no `--variant=` row, 9 verbs, 6 enemy kinds, standing activities in place of timed events, and its own unit list and gate order (the visual merge, G1, wave R1, B0b, B0a, wave R2, wave R3, then checkpoint 1). The read sheet (ER) covers only what the visual branch has not built: that branch holds nine enemy models, merged in unit AR.
+
 ## Program shape
 
 The vehicle is `sketches/core-loop` under the light play lane. Nothing is promoted to `native/`. The integration branch is `proto/alpha`, cut from `f5848c7`. The coordinator alone merges to main.
