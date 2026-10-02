@@ -186,7 +186,7 @@ func _sync() -> void:
 
 
 func _radius() -> float:
-	return float(WardenBody.CORE_RADIUS) + CLEARANCE + BAND * 0.5
+	return float(WardenBody.CORE_RADIUS) + CLEARANCE + BACKING * 0.5 + BAND * 0.5
 
 
 func _ground(x: float, z: float) -> float:

@@ -193,8 +193,10 @@ func _geometry(ring: Node3D) -> void:
 	_t.check("every arc has a backing wider than the band", backed)
 	var clear: float = WardenBody.CORE_RADIUS + 0.6
 	var inner := 1000.0
-	for arc in arcs:
-		inner = minf(inner, arc["r0"])
+	for i in BossPosture.CHUNKS:
+		inner = minf(inner, arcs[i]["r0"])
+		if ring.has_node("Backing%d" % i):
+			inner = minf(inner, _polar(ring.get_node("Backing%d" % i).mesh)["r0"])
 	_t.check("the inner edge clears the core telegraph radius by 0.6 m (inner %.2f, telegraph %.2f)" % [inner, WardenBody.CORE_RADIUS], inner >= clear - 0.01)
 
 
