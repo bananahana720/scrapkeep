@@ -26,6 +26,16 @@ var charge := 0.0
 var _clock := 0.0
 var _muzzle: MeshInstance3D
 var _muzzle_material: StandardMaterial3D
+# Test control: only the body pose is disabled; bulb, attack and reactions still run.
+var windup_pose_enabled := true
+var _cart: Node3D
+var _barrel: MeshInstance3D
+var _cart_rest := Transform3D.IDENTITY
+var _barrel_rest := Transform3D.IDENTITY
+
+const TUBE_RAISE := deg_to_rad(26.0)
+const CART_SETTLE := deg_to_rad(4.0)
+const POSE_RECOVERY := 0.28
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -53,8 +63,11 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	var dressing := Node3D.new()
 	dressing.name = "LobberBody"
 	_visual_parent().add_child(dressing)
+	_cart = dressing
+	_cart_rest = dressing.transform
 	for part in _parts():
 		var mi := MeshInstance3D.new()
+		mi.name = part.name
 		mi.mesh = part.mesh
 		mi.transform = part.xform
 		if part.bulb:
@@ -65,6 +78,9 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 		else:
 			mi.set_surface_override_material(part.body, _material)
 			dressing.add_child(mi)
+			if part.name == "LobberBarrel":
+				_barrel = mi
+				_barrel_rest = mi.transform
 
 
 static var _shared: Array = []
@@ -86,7 +102,7 @@ static func _parts() -> Array:
 			if slot == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, charcoal)
-		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "bulb": mi.name.begins_with("LobberBulb")})
+		_shared.append({"name": String(mi.name), "mesh": mesh, "xform": mi.transform, "body": body, "bulb": mi.name.begins_with("LobberBulb")})
 	scene.free()
 	return _shared
 
@@ -106,6 +122,7 @@ func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_move(delta, Vector3.ZERO)
 	if not _in_play() or target == null or not is_on_floor():
+		_pose(0.0)
 		return
 	var to_ball: Vector3 = _ball() - global_position
 	if to_ball.length() > SHOT_RANGE:
@@ -122,6 +139,9 @@ func _physics_process(delta: float) -> void:
 	var aim: Vector3 = _ball() + lead
 	var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 	shots += 1
+	# _show_charge(0) retains the bulb's original release behavior. The body reaches
+	# its full e02_tube_raise pose on this same frame, before either release signal.
+	_pose(1.0)
 	fired.emit(muzzle_point(), landing, FLIGHT)
 	released.emit(_shell_ring())
 
@@ -140,3 +160,41 @@ func _show_charge(value: float) -> void:
 	charge = value
 	_muzzle_material.emission_energy_multiplier = 0.8 + value * 5.0
 	_muzzle.scale = Vector3.ONE * (1.0 + value * 0.9)
+	_pose()
+
+
+# e02_tube_raise uses only the existing charge and cycle clock. The cart and barrel
+# are below ReactionPivot; their local transforms never replace its hit/line lean.
+func _pose(progress := -1.0) -> void:
+	if _cart == null or _barrel == null:
+		return
+	_cart.transform = _cart_rest
+	_barrel.transform = _barrel_rest
+	if not windup_pose_enabled or _dead or not _in_play() or not is_instance_valid(target) or not is_on_floor() or _line_lean_goal < 0.0:
+		return
+	if (_ball() - global_position).length() > SHOT_RANGE:
+		return
+	var lift := smoothstep(0.0, 1.0, charge if progress < 0.0 else progress)
+	var kick := 0.0
+	var rock := 0.0
+	if progress < 0.0 and charge == 0.0 and shots > 0 and _clock < POSE_RECOVERY:
+		var recovery := clampf(_clock / POSE_RECOVERY, 0.0, 1.0)
+		lift = 1.0 - smoothstep(0.0, 1.0, recovery)
+		kick = sin(PI * recovery) * 0.24
+		rock = sin(TAU * recovery) * deg_to_rad(5.0) * (1.0 - recovery)
+	# Rock about the rear wheel axle rather than sliding the enemy or its collider.
+	var axle := Vector3(0.0, -1.5, -0.68)
+	var cart_turn := Basis(Vector3.RIGHT, -CART_SETTLE * lift + rock)
+	_cart.transform = Transform3D(cart_turn, axle - cart_turn * axle) * _cart_rest
+	_barrel.transform = _barrel_rest * Transform3D(Basis(Vector3.RIGHT, -TUBE_RAISE * lift), Vector3.ZERO)
+	_barrel.position -= (_barrel.basis * Vector3(0.0, cos(0.35), sin(0.35))) * kick
+
+
+func _die() -> void:
+	_pose(0.0)
+	super._die()
+
+
+func _exit_tree() -> void:
+	_pose(0.0)
+	super._exit_tree()

@@ -6,7 +6,7 @@
 # Origin is the enemy origin: the cart sits in the 2.4 x 4 x 2.4 m collider box (wheels on
 # z = -2, platform at |xy| <= 1.2), the bulb centre is at z 2.6 (radius 0.9, the base
 # muzzle sphere) and the tube is the base 2.6 m barrel tilted 0.35 rad (centre z 3.6).
-# Two meshes, three surfaces, no alpha: LobberBody (fleet_paint, rubber) and LobberBulb (one
+# Three meshes, five surfaces, no alpha: LobberBody and LobberBarrel (fleet_paint, rubber) and LobberBulb (one
 # surface, the runtime muzzle material, so charge scales and lights it as before).
 # Slots: fleet_paint (flashes with the enemy), rubber (charcoal wheels, cradle, tube),
 # requisition_tag (the bulb; lit hazard at runtime).
@@ -95,15 +95,17 @@ for sx in (-1, 1):
 d = Vector((0.0, -math.sin(TILT), math.cos(TILT)))
 c = Vector((0.0, 0.0, 3.6))
 base, top = c - d * (TUBE_LEN / 2), c + d * (TUBE_LEN / 2)
-p.rod("rubber", tuple(base), tuple(top), 0.6, segs=12, r2=0.45)
+# WL: the same tube and bands become one hinged part, with its origin at the breech.
+tube = Part("LobberBarrel")
+tube.rod("rubber", tuple(base), tuple(top), 0.6, segs=12, r2=0.45)
 
 
 def band(t, r, depth):
     """A ring around the tube t (0 to 1 along its length) with radius r."""
     m, _ = common.aim(base + d * (TUBE_LEN * t - depth / 2), base + d * (TUBE_LEN * t + depth / 2))
-    res = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=12, radius1=r, radius2=r,
+    res = bmesh.ops.create_cone(tube.bm, cap_ends=True, cap_tris=False, segments=12, radius1=r, radius2=r,
                                 depth=depth, matrix=m)
-    return p.paint(p._faces(res["verts"]), "fleet_paint")
+    return tube.paint(tube._faces(res["verts"]), "fleet_paint")
 
 
 band(0.18, 0.68, 0.24)
@@ -111,6 +113,7 @@ band(0.55, 0.60, 0.16)
 band(0.97, 0.53, 0.14)
 
 body = p.to_object(parent=root)
+barrel = tube.to_object(origin=tuple(base), parent=root)
 
 # Loading bulb: its own mesh, origin at the bulb centre so the runtime charge scale swells it
 # in place.
@@ -120,15 +123,16 @@ bulb = b.to_object(origin=(0.0, 0.0, BULB_Z), parent=root)
 bpy.context.view_layer.update()
 
 tri_count = common.tri_total(root)
-surfaces = len(body.data.materials) + len(bulb.data.materials)
-half_x = max(abs(v.co.x) for v in body.data.vertices)
-half_y = max(abs(v.co.y) for v in body.data.vertices)
-zmin = min(v.co.z for v in body.data.vertices)
-zmax = max(v.co.z for v in body.data.vertices)
+surfaces = len(body.data.materials) + len(barrel.data.materials) + len(bulb.data.materials)
+assembly = [obj.matrix_world @ v.co for obj in (body, barrel) for v in obj.data.vertices]
+half_x = max(abs(v.x) for v in assembly)
+half_y = max(abs(v.y) for v in assembly)
+zmin = min(v.z for v in assembly)
+zmax = max(v.z for v in assembly)
 bulb_r = max((v.co).length for v in bulb.data.vertices)
 print("TRIS", tri_count, "SURFACES", surfaces, "HALF_XY", round(half_x, 4), round(half_y, 4),
       "Z", round(zmin, 4), round(zmax, 4), "BULB_R", round(bulb_r, 4))
-if tri_count > 1200 or surfaces > 3 or half_x > HALF + 1e-4 or half_y > HALF + 1e-4 \
+if tri_count > 1200 or surfaces > 5 or half_x > HALF + 1e-4 or half_y > HALF + 1e-4 \
         or zmin < Z_BOTTOM - 1e-4 or zmax > Z_TOP_BODY + 1e-4 or bulb_r > BULB_R + 1e-4:
     raise SystemExit("C11 limits exceeded")
 
