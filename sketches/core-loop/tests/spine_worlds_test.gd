@@ -4,6 +4,7 @@ const GameScript := preload("res://src/game.gd")
 const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 const T := preload("res://tests/support/t.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # A run across two worlds on the six-stage double: each world's last stage clears into
 # that world's boss, the next world's first stage follows, and the run ends won after
@@ -33,6 +34,7 @@ var _events: Array[String] = []
 var _ended := false
 var _won := false
 var _last_stage := -1
+var _replays: Array[int] = []
 
 
 func _initialize() -> void:
@@ -48,6 +50,7 @@ func _boot() -> void:
 	_worlds = []
 	_entered = []
 	_events = []
+	_replays = []
 	_ended = false
 	_won = false
 	_last_stage = -1
@@ -87,7 +90,9 @@ func _start() -> void:
 	events.stage_entered.connect(func(s: int, _retry: bool):
 		_entered.append(s)
 		_events.append("stage %d" % s))
-	events.boss_arena_entered.connect(func(): _events.append("arena"))
+	events.boss_arena_entered.connect(func():
+		_events.append("arena")
+		_replays.append(_game.flow.final_stage()))
 	events.run_ended.connect(func(won: bool):
 		_ended = true
 		_won = won)
@@ -96,13 +101,9 @@ func _start() -> void:
 	_boss.setup(_game.ctx)
 	_game.ctx.calm = true
 	if _built:
-		_game.flow.boss_row_override[2] = Worlds_boss(1)
+		_game.flow.boss_row_override[2] = Worlds.boss_of(1)
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
-
-
-static func Worlds_boss(world: int) -> Dictionary:
-	return preload("res://src/core/worlds.gd").boss_of(world)
 
 
 func _conclude() -> bool:
@@ -129,7 +130,7 @@ func _conclude() -> bool:
 			"world 1", "stage 1", "stage 2", "stage 3", "arena",
 			"world 2", "stage 4", "stage 5", "stage 6"])
 		_t.eq("unbuilt: one skip warning", warnings, 1)
-	_t.eq("%s: replay key is stage 6" % label, flow.final_stage(), 6)
+	_t.eq("%s: in each arena the replay key is that world's last stage" % label, _replays, [3, 6] if _built else [3])
 	_game.free()
 	_scenario += 1
 	if _scenario == 1:

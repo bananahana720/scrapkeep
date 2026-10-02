@@ -122,10 +122,10 @@ func _world_boss(world: int) -> Node:
 	return module
 
 
-# The run's last stage: the last stage of the last world.
+# The stage that leads into this world's boss arena: the current world's last stage. A death
+# in world one's arena replays stage 3, not the run's last stage.
 func final_stage() -> int:
-	var all: Array = ctx.stages.worlds()
-	return ctx.stages.last_of(int(all[all.size() - 1]))
+	return ctx.stages.last_of(ctx.stages.world_of(ctx.run.stage))
 
 
 func stage() -> int:
