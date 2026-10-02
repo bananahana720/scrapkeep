@@ -39,11 +39,6 @@ const PAD_RISE := 2.5
 const REAR_ANGLE := -30.0
 const PAD_DROP_SECONDS := 0.08
 const PAD_PLANT := -0.47
-# The arm's upper end sits at the shoulder joint (enemy space); the link spans from there to the
-# pad's arm top, so an arm stretches with its pad instead of letting go of the shoulder.
-const ARM_JOINT := Vector3(0.48, 0.6, 0.02)
-const LINK_RADIUS := 0.115
-var _arm_link: MeshInstance3D
 
 
 func _configure(threat: float) -> void:
@@ -90,26 +85,6 @@ func _build_tool() -> void:
 	_visual_parent().add_child(_crew)
 	_crew.skin = parts["skin"]
 	_crew.skeleton = _crew.get_path_to(_windup_rig)
-	# Both arm links are one mesh, so the pair costs one draw: two sleeves of unit height at the arms' x.
-	var sleeve := CylinderMesh.new()
-	sleeve.top_radius = LINK_RADIUS
-	sleeve.bottom_radius = LINK_RADIUS
-	sleeve.height = 1.0
-	sleeve.radial_segments = 6
-	sleeve.rings = 1
-	sleeve.cap_top = false
-	sleeve.cap_bottom = false
-	var pair := SurfaceTool.new()
-	for side in [-1.0, 1.0]:
-		pair.append_from(sleeve, 0, Transform3D(Basis.IDENTITY, Vector3(side * ARM_JOINT.x, 0.0, 0.0)))
-	_arm_link = MeshInstance3D.new()
-	_arm_link.name = "BruteArmLinks"
-	_arm_link.mesh = pair.commit()
-	_arm_link.material_override = _material
-	_arm_link.position = Vector3(0.0, ARM_JOINT.y, ARM_JOINT.z)
-	_arm_link.scale = Vector3(1.0, 0.0001, 1.0)
-	_arm_link.visible = false
-	_visual_parent().add_child(_arm_link)
 	_plate = MeshInstance3D.new()
 	_plate.name = "BrutePlates"
 	_plate.mesh = parts["plates"]
@@ -286,8 +261,3 @@ func _pose() -> void:
 	var rear_rest := _windup_rig.get_bone_rest(_rear_bone)
 	var tilt := Basis(Vector3.RIGHT, deg_to_rad(REAR_ANGLE) * rear)
 	_windup_rig.set_bone_pose_rotation(_rear_bone, (tilt * rear_rest.basis).get_rotation_quaternion())
-	# Each link runs from the shoulder joint to the pad's arm top, whichever way the pad moved.
-	var reach := PAD_RISE * lift
-	_arm_link.visible = absf(reach) > 0.001
-	_arm_link.scale = Vector3(1.0, maxf(absf(reach), 0.0001), 1.0)
-	_arm_link.position.y = ARM_JOINT.y + reach * 0.5

@@ -266,7 +266,11 @@ func _skinned_pads(enemy) -> void:
 		var arrays := body.mesh.surface_get_arrays(surface)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var joints: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
 		for vertex in vertices.size():
+			# Blended arm vertices bridge the shoulder; only the rigid pads travel the full rise.
+			if weights[vertex * 4] < 1.0:
+				continue
 			var bind := joints[vertex * 4]
 			var bone := body.skin.get_bind_bone(bind)
 			if bone < 0:
@@ -282,39 +286,65 @@ func _skinned_pads(enemy) -> void:
 		"actual pad vertices %s; minimum travel %.3f m; full-pose bottom %.3f m above resting shoulders" % [seen, minimum_travel, lowest])
 
 
-# PC-1: each arm stays joined to its shoulder and to its pad through the whole raise. The pad's
-# arm top is read from the skinned vertices; the arm link is the node that must span the shoulder
-# joint (the arm top at rest) to that arm top. The arm's top ring is tilted with the arm, so its
-# highest vertex sits 0.014 m above the ring centre the link meets; 0.02 m is that, not slack.
+# Apply every influence, including BruteRear, to a vertex of the live body.
+func _skinned_vertex(body: MeshInstance3D, rig: Skeleton3D, arrays: Array, vertex: int) -> Vector3:
+	var joints: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var moved := Vector3.ZERO
+	for slot in 4:
+		var weight := weights[vertex * 4 + slot]
+		if weight <= 0.0:
+			continue
+		var bind := joints[vertex * 4 + slot]
+		var bone := body.skin.get_bind_bone(bind)
+		if bone < 0:
+			bone = rig.find_bone(body.skin.get_bind_name(bind))
+		moved += (rig.get_bone_global_pose(bone) * body.skin.get_bind_pose(bind) * vertices[vertex]) * weight
+	return moved
+
+
+# PC-1: the shared arm/pad ring and shoulder ring are selected by their rest geometry,
+# never their weights. Wrong weights must fail, rather than remove vertices from the check.
+# Compare all three axes with the pad and reared torso's transformed contact positions.
 func _arms(enemy) -> void:
 	var rig: Skeleton3D = enemy._windup_rig
 	var body: MeshInstance3D = enemy._crew
 	var worst := 0.0
+	var axes := Vector3.ZERO
+	var seen := [0, 0]
 	var samples := 0
 	for side in 2:
-		var link: MeshInstance3D = enemy._arm_link
-		var joint := NAN
+		var sign_x := -1.0 if side == 0 else 1.0
+		var top_center := Vector3(sign_x * 0.48, 0.6, 0.02)
+		var axis := (Vector3(sign_x * 0.5, -0.4, 0.12) - top_center).normalized()
 		for progress in [0.0, 0.5, 1.0]:
 			enemy._t = enemy.warn_seconds * progress
 			enemy._pose()
 			rig.force_update_all_bone_transforms()
-			var top := -INF
+			var rings := [[], []]
 			for surface in body.mesh.get_surface_count():
+				if body.get_surface_override_material(surface) != enemy._material:
+					continue
 				var arrays := body.mesh.surface_get_arrays(surface)
 				var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-				var joints: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
 				for vertex in vertices.size():
-					var bind := joints[vertex * 4]
-					var bone := body.skin.get_bind_bone(bind)
-					if bone < 0:
-						bone = rig.find_bone(body.skin.get_bind_name(bind))
-					if bone == enemy._pad_bones[side]:
-						var moved: Vector3 = rig.get_bone_global_pose(bone) * body.skin.get_bind_pose(bind) * vertices[vertex]
-						top = maxf(top, moved.y)
-			if is_nan(joint):
-				joint = top
-			var box: AABB = link.transform * link.mesh.get_aabb()
-			worst = maxf(worst, maxf(absf(box.end.y - top), absf(box.position.y - joint)))
+					for ring in 2:
+						var center := top_center - Vector3.UP * (0.15 if ring == 1 else 0.0)
+						var offset := vertices[vertex] - center
+						if absf(offset.dot(axis)) > 0.0001 or absf(offset.length() - 0.14) > 0.0001:
+							continue
+						if not rings[ring].has(vertices[vertex]):
+							rings[ring].append(vertices[vertex])
+						var bone: int = enemy._pad_bones[side] if ring == 0 else enemy._rear_bone
+						var expected := rig.get_bone_global_pose(bone) * rig.get_bone_global_rest(bone).affine_inverse() * vertices[vertex]
+						var gap := (_skinned_vertex(body, rig, arrays, vertex) - expected).abs()
+						axes = axes.max(gap)
+						worst = maxf(worst, gap.length())
+			seen[side] = rings[0].size()
+			# At least six distinct ring positions, despite normal/material seam duplicates.
+			if rings[0].size() < 6 or rings[1].size() < 6:
+				worst = INF
 			samples += 1
 	_t.check("PC-1 arm joined", samples == 6 and worst < 0.02,
-		"each arm at progress 0/0.5/1: link top to pad arm top, link foot to shoulder joint; widest gap %.4f m" % worst)
+		"6 samples at progress 0/0.5/1, torso rear 0/7.5/30 degrees; arm top vertices %s; x/y/z gaps %.4f/%.4f/%.4f m; widest gap %.4f m" % [seen, axes.x, axes.y, axes.z, worst])

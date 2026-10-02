@@ -12,8 +12,7 @@ const Palette := preload("res://src/core/palette.gd")
 # not counted, and hide with the plate group.
 const CEILING_T := 1200
 const CEILING_D := 3
-# The live assembly adds BruteArmLinks, one mesh for both arm links (PC): one more draw than the asset.
-const LIVE_CEILING_D := 4
+const LIVE_CEILING_D := 3
 # Plate group share of the 1,200 T ceiling: 416 T with the six trim strips (12 T each) that carry the amber cue.
 const PLATE_T := 450
 const CREW_R := 0.8
@@ -132,9 +131,12 @@ func _run() -> void:
 	_check(same, "plating scale, slam radius, range, damage, shove and health constants equal base")
 
 	var live := _measure(brute)
+	# Measured at the Unit LN base b3d0703 with the same crack-excluding counter.
+	print("LN live assembly before: 1044 T, 4 D; after: %d T, %d D" % [live["tris"], live["draws"]])
 	print("live assembly intact: %d T, %d D" % [live["tris"], live["draws"]])
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within 1200 / 4" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(brute.find_child("BruteArmLinks", true, false) == null, "the live body needs no separate arm link mesh")
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_shape(brute)
 	_check_paint(brute)
@@ -241,15 +243,21 @@ func _check_rig(scene: Node) -> void:
 	_check(body.skin != null and body.skin.get_bind_count() == 4 and body.get_node(body.skeleton) == rig,
 		"body skin binds the four joints to its skeleton")
 	var weighted := [0, 0, 0, 0]
-	var rigid := true
+	var normalized := true
+	var blended := [0, 0]
 	for surface in body.mesh.get_surface_count():
 		var arrays := body.mesh.surface_get_arrays(surface)
 		var joints: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
 		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
 		for vertex in weights.size() / 4:
-			rigid = rigid and weights[vertex * 4] == 1.0
+			var total := 0.0
 			for slot in 4:
+				total += weights[vertex * 4 + slot]
 				if weights[vertex * 4 + slot] > 0.0:
 					weighted[joints[vertex * 4 + slot]] += 1
-	_check(rigid and not weighted.has(0), "each separate part has rigid skin weights: %s" % [weighted])
-	_check(is_equal_approx(float(_measure(scene)["tris"]), 996.0), "unchanged 996 triangles (0 percent difference from base)")
+					if weights[vertex * 4 + slot] < 1.0 and joints[vertex * 4 + slot] in [2, 3]:
+						blended[joints[vertex * 4 + slot] - 2] += 1
+			normalized = normalized and absf(total - 1.0) < 0.0001
+	_check(normalized and not weighted.has(0) and blended[0] > 0 and blended[1] > 0,
+		"each part has normalized skin weights, both arms blend torso to pad: weighted %s; blended %s" % [weighted, blended])
+	_check(is_equal_approx(float(_measure(scene)["tris"]), 1044.0), "1044 triangles (48 arm triangles added to the 996 base)")

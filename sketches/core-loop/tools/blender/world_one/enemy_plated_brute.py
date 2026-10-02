@@ -10,9 +10,9 @@
 # No draw is added.
 #
 # Two meshes, three surfaces (three colour-pass draws, the E ceiling), no alpha.
-# Four rigid glTF joint nodes preserve those surfaces: feet, rearing torso, and
-# SlamPadLeft/SlamPadRight, each containing the existing arm and fist. WB animates
-# the two pads independently of the plate group; all geometry stays unchanged.
+# Four glTF joints preserve those surfaces: feet, rearing torso, and
+# SlamPadLeft/SlamPadRight. The arms blend from torso to pad at the shoulder;
+# the existing rigid arm/fist pads and the plate group keep their geometry.
 #   BruteBody    fleet_paint (torso, head, hump, shoulders, arms, legs; flashes with the enemy)
 #                and paint (vertex colour: snout, ears, fists, feet, strap, the one brass tag,
 #                worn on the chest so the plate hides it until it pops).
@@ -30,6 +30,7 @@ import os
 import sys
 
 import bpy
+from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
@@ -66,7 +67,31 @@ bind_new(1)
 for s in (-1, 1):
     b.uv("fleet_paint", 0.30, u=8, v=5, loc=(s * 0.46, 0.0, 0.66))  # shoulder
     bind_new(1)  # The fixed shoulder remains with the torso.
-    b.rod("fleet_paint", (s * 0.48, -0.02, 0.6), (s * 0.5, -0.12, -0.4), 0.14, segs=6)  # arm
+    shoulder = Vector((s * 0.48, -0.02, 0.6))
+    fist = Vector((s * 0.5, -0.12, -0.4))
+    faces = b.rod("fleet_paint", shoulder, fist, 0.14, segs=6)  # rigid pad arm
+    pad_bone = 2 if s < 0 else 3
+    bind_new(pad_bone)
+    # Share the pad's actual top ring, rather than approximating its tilted plane.
+    axis = (fist - shoulder).normalized()
+    top = {v for face in faces for v in face.verts
+           if abs((v.co - shoulder).dot(axis)) < 0.00001}
+    top = sorted(top, key=lambda v: math.atan2(v.co.y - shoulder.y, v.co.x - shoulder.x))
+    rings = []
+    for offset, pad_weight in ((-0.15, 0.0), (-0.075, 0.5)):
+        ring = []
+        for vertex in top:
+            lower = b.bm.verts.new(vertex.co + Vector((0, 0, offset)))
+            lower[weights][1] = 1.0 - pad_weight
+            if pad_weight > 0.0:
+                lower[weights][pad_bone] = pad_weight
+            ring.append(lower)
+        rings.append(ring)
+    rings.append(top)
+    for lower, upper in zip(rings, rings[1:]):
+        sleeve = [b.bm.faces.new((lower[i], lower[(i + 1) % 6],
+                                upper[(i + 1) % 6], upper[i])) for i in range(6)]
+        b.paint(sleeve, "fleet_paint")
     b.uv("paint", 0.19, u=6, v=4, loc=(s * 0.5, -0.12, -0.44), color=CHAR)  # fist
     bind_new(2 if s < 0 else 3)
 b.uv("fleet_paint", 0.38, u=8, v=5, loc=(0, -0.12, 1.0))  # head
@@ -76,8 +101,7 @@ for s in (-1, 1):
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.72, 0.22), color=BRASS)  # the one brass tag
 bind_new(1)
 body = b.to_object(parent=root)
-# Separate glTF joint nodes move the existing arms and fists without splitting their
-# two material surfaces into extra draws. No vertex, face, colour or plate changes.
+# The blended arms and rigid pads share the body's two material surfaces.
 rig_data = bpy.data.armatures.new("BruteWindup")
 rig = bpy.data.objects.new("BruteWindup", rig_data)
 bpy.context.scene.collection.objects.link(rig)
