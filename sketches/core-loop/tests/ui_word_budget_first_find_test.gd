@@ -3,8 +3,8 @@ extends SceneTree
 const Fight := preload("res://tests/support/word_budget_fight.gd")
 
 # The word budget on the first-find fight: the shared fight in tests/support/word_budget_fight.gd
-# with the pickup a first find, which opens its reveal card during the fight. Quarantined red
-# (tests/QUARANTINE.tsv, owner R3 reveal timing) until the card waits for calm.
+# with the pickup a first find, whose card is held until the fight is over, so the part's name
+# at the ball is the only word it adds.
 
 var _fight
 

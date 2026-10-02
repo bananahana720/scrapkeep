@@ -9,8 +9,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 
 # --discovery=cards: the first time an id is discovered a picture card shows (a larger
 # panel, a looping glyph in the EventKinds shape and colour, name and one line) and
-# the id is recorded in the profile's discoveries_seen; the same id again is a pop
-# (glyph and name, under a second). The record survives a save and reload. Any input
+# the id is recorded in the profile's discoveries_seen; the same id again shows nothing. The record survives a save and reload. Any input
 # dismisses a card at once; Engine.time_scale and the pause state never change while
 # one shows; the card sits in the toasts band inside the calm-screen word budget. With
 # the flag off the banner is the old banner and the profile is untouched.
@@ -113,36 +112,24 @@ func _process(_delta: float) -> bool:
 				results.append(was and not _cards.showing())
 			_check("mouse and pad dismiss", results == [true, true], "mouse %s, pad %s" % [results[0], results[1]])
 			_check("time untouched on dismiss", Engine.time_scale == _scale_before and not paused, "time_scale %s paused %s" % [Engine.time_scale, paused])
-			# Repeat: a pop.
+			# Repeat: nothing.
+			var cards_before: int = _cards.cards_shown
 			_cards.show_discovery("Wrecking Ball", "build", LINE, "Synergy", "wrecking_ball")
-			_check("repeat pops", _cards.last_style == "pop" and _cards.pops_shown == 1 and not _cards._kicker.visible and not _cards._body.visible, "second discovery style '%s'" % _cards.last_style)
+			_check("repeat shows nothing", not _cards.showing() and _cards.queued() == 0 and _cards.cards_shown == cards_before, "showing %s, queued %d, cards %d" % [_cards.showing(), _cards.queued(), _cards.cards_shown])
 			_fake_ms += 200
 			_step = 3
 			_settle = 2
 		3:
-			var words: int = WordBudget.count(_cards)["hud"]
-			_check("pop is glyph and name", words == WordBudget.words_in("Wrecking Ball") and _cards._glyph.visible, "%d words on the pop" % words)
-			_check("pop under a second", Banner.POP_TIME < 1.0 and _cards._in_time + _cards._hold + _cards._out_time < 1.0, "pop lasts %.2f s" % (_cards._in_time + _cards._hold + _cards._out_time))
-			_fake_ms += 500
-			_step = 4
-			_settle = 2
-		4:
-			_check("pop still up at 0.7 s", _cards.showing(), "pop up at 0.7 s")
-			_fake_ms += 300
-			_step = 5
-			_settle = 2
-		5:
-			_check("pop gone by 1 s", not _cards.showing(), "pop cleared at 1.0 s")
 			# Persistence: reload the profile, a new banner treats the id as seen.
 			var text := FileAccess.get_file_as_string(DIR + UiProfile.FILE)
 			var reloaded = UiProfile.new(DIR)
 			_check("seen survives reload", reloaded.discovered("wrecking_ball") and "discoveries_seen" in text, "reloaded discoveries_seen %s" % [reloaded.discoveries_seen])
 			var fresh = _banner(true, reloaded)
 			fresh.show_discovery("Wrecking Ball", "build", LINE, "Synergy", "wrecking_ball")
-			var old_is_pop: bool = fresh.last_style == "pop"
+			var old_is_nothing: bool = not fresh.showing() and fresh.cards_shown == 0
 			fresh.dismiss()
 			fresh.show_discovery("Magnet Well", "build", LINE, "New synergy", "magnet_well")
-			_check("reloaded: old pops, new cards", old_is_pop and fresh.last_style == "card", "old '%s', new '%s'" % ["pop" if old_is_pop else "card", fresh.last_style])
+			_check("reloaded: old shows nothing, new cards", old_is_nothing and fresh.last_style == "card", "old shows nothing %s, new '%s'" % [old_is_nothing, fresh.last_style])
 			_check("flag off leaves profile", _off.profile == null and not _profile.discovered("nothing") and _profile.discoveries_seen == ["wrecking_ball", "boarding_party_0", "boarding_party_1"], "profile %s" % [_profile.discoveries_seen])
 			_check("flag parsed", _flag(["--music=ace", "--discovery=cards"]) == "cards" and _flag(["--discovery=banner"]) == "banner" and _flag([]) == "cards", "cards/banner/absent -> cards/banner/cards")
 			# Queued behind a card and dropped: not recorded, so its card still comes.
@@ -155,14 +142,14 @@ func _process(_delta: float) -> bool:
 			_check("queued then dropped stays unseen", queued == 1 and not recorded_early and not reloaded.discovered("behind_card") and reloaded.discovered("front_card"), "queued %d, behind recorded early %s, after drop %s" % [queued, recorded_early, reloaded.discovered("behind_card")])
 			dropped.show_discovery("Behind", "build", LINE, "New synergy", "behind_card")
 			_check("dropped one gets its card later", dropped.last_style == "card" and reloaded.discovered("behind_card"), "style '%s'" % dropped.last_style)
-			# The same id queued twice before either shows: card, then pop.
+			# The same id twice before the first is gone: one card, no second.
 			var twice = _banner(true, reloaded)
 			twice.show_discovery("A", "build", LINE, "New synergy", "twice_id")
 			twice.show_discovery("A", "build", LINE, "New synergy", "twice_id")
-			var first: String = twice.last_style
+			var queued_twice: int = twice.queued()
 			twice.dismiss(false)
 			twice._next()
-			_check("same id twice: card then pop", first == "card" and twice.last_style == "pop", "%s then %s" % [first, twice.last_style])
+			_check("same id twice: one card", twice.cards_shown == 1 and queued_twice == 0 and not twice.showing(), "cards %d, queued behind %d" % [twice.cards_shown, queued_twice])
 			# Two owners of one profile file keep each other's records.
 			var other = UiProfile.new(DIR)
 			other.mark_seen("callout_x")

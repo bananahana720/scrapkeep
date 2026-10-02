@@ -75,7 +75,7 @@ func _process(delta: float) -> bool:
 				_clock = 0.0
 		1:
 			if _clock > 3.0:
-				_ceremony.find_of("sunforged_core", "capture")
+				_ceremony._mark_seen("sunforged_core")
 				_game.run.add_part("sunforged_core", "capture")
 				_after(0.14, "rare-flare")
 				_after(1.2, "", func():

@@ -2,8 +2,8 @@ extends SceneTree
 
 const Banner := preload("res://src/presentation/codex_banner.gd")
 
-# Every card and every repeat pop must rest fully on screen, at each supported size, whether
-# it comes first, after a card or after another pop.
+# Every card must rest fully on screen, at each supported size, and a repeat of it shows
+# nothing, not even after the card or after another repeat.
 
 const LINE := "Ram fast and everything ahead of you breaks."
 const SIZES := [Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(1280, 720)]
@@ -48,14 +48,11 @@ func _initialize() -> void:
 		banner.show_discovery("Wrecking Ball", "build", LINE, "Synergy", "wb")
 		await process_frame
 		await process_frame
-		var pop := _rest(banner)
-		_check("%s pop after card on screen" % size, banner.last_style == "pop" and _on_screen(pop, size), "%s rect %s" % [banner.last_style, pop])
-		banner.dismiss(false)
+		_check("%s repeat after card shows nothing" % size, not banner.showing() and banner.queued() == 0 and banner.cards_shown == 1, "showing %s, queued %d, cards %d" % [banner.showing(), banner.queued(), banner.cards_shown])
 		banner.show_discovery("Wrecking Ball", "build", LINE, "Synergy", "wb")
 		await process_frame
 		await process_frame
-		var again := _rest(banner)
-		_check("%s pop after pop on screen" % size, banner.last_style == "pop" and _on_screen(again, size), "%s rect %s" % [banner.last_style, again])
+		_check("%s repeat after repeat shows nothing" % size, not banner.showing() and banner.queued() == 0 and banner.cards_shown == 1, "showing %s, queued %d, cards %d" % [banner.showing(), banner.queued(), banner.cards_shown])
 		view.free()
 	print("discovery_rest_onscreen_test: %s" % ["FAIL" if _failures > 0 else "PASS"])
 	quit(1 if _failures > 0 else 0)

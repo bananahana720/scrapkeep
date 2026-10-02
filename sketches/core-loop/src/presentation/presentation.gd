@@ -143,7 +143,8 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 	banner.show_discovery(title, category, String(entry.get("text", "")), "New synergy" if first_time else "Synergy", id, "synergy_discovered")
 
 
-# In cards mode a found part gets its first-time card, then the quick pop.
+# In cards mode a first-found part is queued as a banner card behind the shared find gate; a
+# repeat is dropped there and draws nothing.
 func _on_part(part_id: String, _source: String) -> void:
 	if not auto_banner or not banner.cards:
 		return

@@ -709,7 +709,7 @@ const LOOT_ROWS := {
 		"stamps": {"common": "COMMON", "uncommon": "UNCOMMON", "rare": "RARE", "rare_plus": "RARE+", "evolution": "EVOLVED", "first": "NEW"}},
 	"reward_ceremony": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "ceremony_build", "sound_burst": "ceremony_resolve", "hud": "", "objective": "", "priority": 3,
 		"tier": "ceremony", "pause": "calm", "burst_role": "class", "in_s": 0.25, "build_s": 1.4, "hold_s": 1.8, "out_s": 0.25,
-		"calm_hold_s": 0.4, "calm_wait_s": 10.0, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
+		"calm_hold_s": 0.4, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
 	"reward_payoff": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
 		"tier": "payoff", "pause": "never", "flash_s": 0.7},
 	# The durability prototype (--scrap=armor), facts that are not bus signals: run_state's

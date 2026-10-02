@@ -23,7 +23,7 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 #     table never at a synergy the slice cuts;
 #   - short plays a gate find at the rare tier with no pause, its stop drawn from the
 #     shared hit-stop budget (the fight word budget with a flare up is ui_word_budget_test);
-#   - a find that never calms plays in the flow as a reveal card after calm_wait_s.
+#   - a find that never calms waits as long as it takes: no card, no pause, never demoted.
 
 const SETTLE_MS := 1500
 const DEADLINE_MS := 45000
@@ -127,7 +127,6 @@ func _process(_delta: float) -> bool:
 				var ball: Vector3 = _game.player.ball_position()
 				_enemy = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x + 6.0, ball.z + 6.0, 1.0))
 				_game.run.add_part("sunforged_core", "vault")
-				_game.run.add_part("tempest_core", "milestone")
 				_game.ctx.spawner.strike(_enemy, "shell", 1.0)
 				_next("near")
 		"near":
@@ -139,6 +138,7 @@ func _process(_delta: float) -> bool:
 						and not _ceremony.armed().has("sunforged_core"),
 					"a strike while the vault find waits: payoffs %s, armed %s" % [_ceremony.payoffs, _ceremony.armed()])
 				_game.ctx.spawner.strike(_enemy, "ram", 9999.0)
+				_game.run.add_part("tempest_core", "milestone")
 				_game.player.set_velocity_now(Vector3(4.0, 0.0, 3.0))
 				_next("calming")
 		"calming":
@@ -218,10 +218,10 @@ func _process(_delta: float) -> bool:
 		"demoted":
 			if _elapsed() > 200:
 				var last: Array = _ceremony.presented.back()
-				_report("never calm plays in the flow", last[0] == "rime_heart" and last[1] == "reveal" and _ceremony.queued() == 0
-						and not _ceremony.active() and not paused and _ceremony.view.drawn_words().size() > 0,
-					"11 s with an enemy near: last %s, queued %d, paused %s, card words %s"
-						% [last, _ceremony.queued(), paused, _ceremony.view.drawn_words()])
+				_report("never calm keeps waiting", last[0] == "rime_heart" and last[1] == "ceremony" and _ceremony.queued() == 1
+						and not _ceremony.active() and not paused and _ceremony.view.card.get("part", "") != "rime_heart",
+					"11 s with an enemy near: last %s, queued %d, paused %s, card shows %s"
+						% [last, _ceremony.queued(), paused, _ceremony.view.card.get("part", "nothing")])
 				return _finish()
 	return false
 

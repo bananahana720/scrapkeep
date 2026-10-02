@@ -93,9 +93,9 @@ func clear() -> void:
 	_since.clear()
 
 
-# The one definition of calm, read by this callout (as "fight") and by the discovery card:
-# CALM_SECONDS with no live telegraph (the threat group) and no damage taken, and play not paused. `left` counts the
-# seconds still owed since the last damage or telegraph.
+# The one definition of calm, read by this callout (as "fight") and through find_may_speak by
+# the find cards: CALM_SECONDS with no live telegraph (the threat group) and no damage taken,
+# and play not paused. `left` counts the seconds still owed since the last damage or telegraph.
 static func threat_live(tree: SceneTree) -> bool:
 	if tree == null:
 		return false
@@ -115,6 +115,20 @@ static func calm_left_after(left: float, delta: float, tree: SceneTree) -> float
 # A paused tree is never calm: a held card waits for play to resume.
 static func is_calm(left: float, tree: SceneTree) -> bool:
 	return left <= 0.0 and not threat_live(tree) and not (tree != null and tree.paused)
+
+
+# A Warden that is awake and still standing: the flow seals the stage on it and has
+# seen the ring or a strike. A find never speaks across that fight.
+static func warden_fight_live(flow) -> bool:
+	if flow == null or not flow.sealed or not is_instance_valid(flow.warden) or not flow.engaged():
+		return false
+	return not (flow.warden.has_method("is_dead") and flow.warden.is_dead())
+
+
+# The one gate for a find's card, read by the reward ceremony and the discovery banner:
+# calm as is_calm defines it, and no Warden engaged and alive in `flow`.
+static func find_may_speak(left: float, tree: SceneTree, flow) -> bool:
+	return is_calm(left, tree) and not warden_fight_live(flow)
 
 
 func fight() -> bool:
