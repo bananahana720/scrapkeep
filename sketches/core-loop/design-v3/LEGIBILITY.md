@@ -256,6 +256,7 @@ Each is worded so he can veto it.
 40. Surge run is parked for the slice: three standing activities (altar, cache, bounty), not four.
 41. In a Warden fight a first find shows its name only. Its card waits for the shared gate. A repeat shows nothing in either discovery mode, and a card or banner that is up when the fight goes live closes.
 42. The enemy read sheet is rendered from built wind-up poses and shown after the wind-up wave, not drawn before it. Owner may veto any kind's pose.
+43. On the read sheet: the six poses go in as they are; the chaser gets a larger rear-up and, if a state row already means "a hit now breaks this attack", that mark; the warning walls and rings are judged at the sitting; the mag trapper's lifted disc gets a visible link; the brute's arms stay joined to its raised pads. Owner may veto any of these.
 
 ## 11. What only Andrew can decide
 

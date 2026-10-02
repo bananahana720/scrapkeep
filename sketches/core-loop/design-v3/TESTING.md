@@ -235,3 +235,15 @@ A tree child's stdout reaches the runner, so a child's `<child>: PASS` line can 
 
 The Sol units' own tests passed in their sandboxes and again on the merged build; none has a rendered check.
 
+### After waves X2b and R3b, `proto/alpha` at `e750d5b`
+
+Gate at `e750d5b`: 260 runs, 0 failed, 1 quarantined red, 505 s (receipt `gate-4d3b49c307cc-2026-10-02T16-30-41-299Z.json`).
+
+Two faults were found at merge, before the gate. `activities_test` reached for the plated brute's plates as a direct child, and the wind-up pose unit had moved them under a rig: a cross-unit break no single unit could see (cause: neither writer; the merge). The cache's slam threshold was in the wrong unit and its test sent strengths the bus never carries; the re-review found it by reading the bus formula (cause: `writer`, and the brief did not name the bus formula, so partly `brief`).
+
+The first gate (`12f2926`, 260 runs, 560 s, receipt `gate-ce1193f29c66-2026-10-02T16-14-12-532Z.json`) failed `find_in_fight_test` on 3 checks: a held card never opened within 60 frames of the Warden's break. A run of the test at each merge point put the cause in the standing activities: the test's inputless ball rolls straight down the spawn launch past the hauler bounty, whose brute wakes and telegraphs, and the telegraph holds the shared calm timer at 3 s. The bounty guards the straight drop to the Warden by design, about 90 m from every pilot's line; the test now clears the activities before its fight (`e750d5b`). Cause: the merge (two units built in parallel on the same map), not either writer.
+
+A test that sends a fact straight to the bus can pass while the game path is dead. Prefer driving the producer (here `player._on_slammed`) so the test carries the value the game would.
+
+The same bot seed is not repeatable across processes: one brawler seed gave a 28.6 s fight in one process and 22.0 s in another. Sweep bands need wide margins until this is found. A Sol unit is diagnosing it.
+
