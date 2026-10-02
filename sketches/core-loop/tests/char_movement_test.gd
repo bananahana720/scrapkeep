@@ -286,10 +286,10 @@ func _grapple_start() -> void:
 	_player.reset_to(at, Vector3.ZERO)
 	_player.body().global_position = at
 	_player.kit.aim = {"state": Augments.AIM_REACH, "point": Vector3(WALL_A, 10.0, 0.0), "normal": Vector3.RIGHT}
-	_source.press = {"movement_pressed": true}
+	_source.press = {"harpoon_pressed": true}
 
 
 func _check_grapple() -> void:
 	var hooked: bool = _player.kit.hooked
-	_source.press = {"movement_released": true}
-	_report("grapple on RMB", hooked, "Sable's RMB hooks the aimed wall through the intent")
+	_source.press = {"harpoon_released": true}
+	_report("grapple on RMB", hooked, "Sable's RMB hooks the aimed wall through the harpoon intent (RMB is harpoon_pressed under the default harpoon)")

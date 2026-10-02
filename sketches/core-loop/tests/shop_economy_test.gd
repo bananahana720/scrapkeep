@@ -14,7 +14,7 @@ const Items := preload("res://src/build/items.gd")
 #   - one reroll per visit at its price, then no more;
 #   - charge cells raise max_charges one at a time, cost more each time, and stop at
 #     the shop's cap;
-#   - sell-back refunds half, lowers heft and says "lighter"; a pattern part stays
+#   - sell-back refunds half and leaves heft where it was (parts add none under armour); a pattern part stays
 #     welded until run_state can take a part back;
 #   - the hook is locked a heft class up; the talk key walks the six beats, restarts,
 #     never repeats a variation inside a visit, and relents once the ball is heavy
@@ -153,9 +153,9 @@ func _check_sell() -> void:
 	var sold: Dictionary = _shop.sell("light_frame")
 	var welded: Dictionary = _shop.sell("cross_split")
 	_report("sell-back", sold["ok"] and quote > 0 and run.scrap == wallet + quote and run.parts.size() == parts - 1
-			and absf(run.heft() - (heft - 0.2)) < 0.001 and sold["bark"]["line_id"] == "moss.bark.sell"
+			and absf(run.heft() - heft) < 0.001 and sold["bark"]["line_id"] == "moss.bark.sell"
 			and not welded["ok"] and welded["reason"] == Shop.WELDED,
-		"sold Light Frame for %d (half of %d): heft %.2f -> %.2f, '%s'; Cross Split: %s"
+		"sold Light Frame for %d (half of %d): heft %.2f -> %.2f (unchanged under armour), '%s'; Cross Split: %s"
 			% [quote, _shop.price("light_frame"), heft, run.heft(), sold["bark"]["text"], welded["reason"]])
 
 

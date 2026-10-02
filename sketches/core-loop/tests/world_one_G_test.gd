@@ -65,17 +65,25 @@ func _physics_process(_delta: float) -> bool:
 
 func _flags() -> void:
 	var t := Tuning.new()
-	_check("flags default off", not t.world_one() and t.option("hotwire_shell") == "off" and t.option("hotwire_tread") == "off", "all three rows default off")
-	var only_shell := Tuning.new()
+	_check("flags default on", t.world_one() and t.option("hotwire_shell") == "on" and t.option("hotwire_tread") == "on", "all three rows default on")
+	var only_shell := _all_off()
 	only_shell.apply_args(PackedStringArray(["--hotwire-shell=on"]), "launch")
-	var only_tread := Tuning.new()
+	var only_tread := _all_off()
 	only_tread.apply_args(PackedStringArray(["--hotwire-tread=on"]), "launch")
-	var master := Tuning.new()
+	var master := _all_off()
 	master.apply_args(PackedStringArray(["--world-one-builds=on"]), "launch")
 	_check("flags independent", only_shell.option("hotwire_shell") == "on" and only_shell.option("hotwire_tread") == "off" and not only_shell.world_one()
 		and only_tread.option("hotwire_tread") == "on" and only_tread.option("hotwire_shell") == "off" and not only_tread.world_one()
 		and master.world_one() and master.option("hotwire_shell") == "off" and master.option("hotwire_tread") == "off",
 		"shell, tread and the master flag each switch alone")
+
+
+func _all_off() -> Tuning:
+	var t := Tuning.new()
+	t.set_option("world_one_builds", "off")
+	t.set_option("hotwire_shell", "off")
+	t.set_option("hotwire_tread", "off")
+	return t
 
 
 func _set_flag(on: bool) -> void:

@@ -17,6 +17,9 @@ const Icons := preload("res://src/ui/icons.gd")
 
 const PILOTS := ["sable", "rivet", "kest"]
 const KEYS := ["key_lmb", "key_rmb", "key_f", "key_ctrl"]
+# Under the harpoon RMB is the line, so Rivet's and Kest's movement slot reads Shift (--harpoon-keys=shift);
+# Sable's movement is the grapple and keeps RMB.
+const HARPOON_KEYS := ["key_lmb", "key_shift", "key_f", "key_ctrl"]
 const CHARGE_TICKS := 45
 
 var _game
@@ -58,7 +61,7 @@ func _physics_process(_delta: float) -> bool:
 				var list: Array = _adapter.slots(_game)
 				var pilot: String = PILOTS[_class]
 				var want := ["ab_%s_weapon" % pilot, "ab_%s_move" % pilot, "ab_%s_special" % pilot, "ab_%s_smash" % pilot]
-				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == KEYS
+				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == (KEYS if pilot == "sable" else HARPOON_KEYS)
 						and want.all(func(id): return Icons.has(id)),
 					"ids %s icons %s keys %s states %s" % [_field(list, "id"), _field(list, "icon"), _field(list, "key"), _field(list, "state")])
 				_class += 1

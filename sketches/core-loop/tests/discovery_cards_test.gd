@@ -145,7 +145,7 @@ func _process(_delta: float) -> bool:
 			fresh.show_discovery("Magnet Well", "build", LINE, "New synergy", "magnet_well")
 			_check("reloaded: old pops, new cards", old_is_pop and fresh.last_style == "card", "old '%s', new '%s'" % ["pop" if old_is_pop else "card", fresh.last_style])
 			_check("flag off leaves profile", _off.profile == null and not _profile.discovered("nothing") and _profile.discoveries_seen == ["wrecking_ball", "boarding_party_0", "boarding_party_1"], "profile %s" % [_profile.discoveries_seen])
-			_check("flag parsed", _flag(["--loop=drop", "--discovery=cards"]) == "cards" and _flag(["--discovery=banner"]) == "banner" and _flag([]) == "banner", "cards/banner/absent -> cards/banner/banner")
+			_check("flag parsed", _flag(["--loop=drop", "--discovery=cards"]) == "cards" and _flag(["--discovery=banner"]) == "banner" and _flag([]) == "cards", "cards/banner/absent -> cards/banner/cards")
 			# Queued behind a card and dropped: not recorded, so its card still comes.
 			var dropped = _banner(true, reloaded)
 			dropped.show_discovery("Front", "build", LINE, "New synergy", "front_card")

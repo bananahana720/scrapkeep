@@ -143,7 +143,7 @@ func _physics_process(delta: float) -> bool:
 			_game.flow.choose_class(0)
 			_phase = "enter"
 		"enter":
-			_game.flow.enter_stage(2, Vector3.ZERO, false)
+			_game.flow.enter_stage(1, Vector3.ZERO, false)
 			_phase = "beacon"
 			_clock = 0.0
 		"beacon":
@@ -230,20 +230,21 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 
-# One pick per between-stage visit: the stage's clear after a boarded bay opens none,
-# and a skipped bay's stage opens its pick once at the clear.
+# World-one builds (the default) open one pick at the stage-1 visit and none after it: the
+# boarded bay opened it, a repeat of that stage opens no second, and stages 2 and 3 open none
+# because the tree stops at two depths.
 func _check_picks() -> void:
 	var tree = _game.player.tree
 	var after_visit: int = tree.allowed
-	_game.world._open_pick(2)
+	_game.world._open_pick(1)
 	var again: int = tree.allowed
+	_game.world._open_pick(2)
+	var stage_two: int = tree.allowed
 	_game.world._open_pick(3)
-	var skipped: int = tree.allowed
-	_game.world._open_pick(3)
-	_report("one pick per visit, and a skipped bay still opens one", after_visit == _allowed_before + 1 and again == after_visit
-		and skipped == after_visit + 1 and tree.allowed == skipped,
-		"allowed %d after the visit (stage_cleared heard %s), %d on a second stage-2 open, %d for a skipped stage-3 bay, %d on its repeat"
-			% [after_visit, _cleared, again, skipped, tree.allowed])
+	_report("one pick per visit, and none past the two depths", after_visit == _allowed_before + 1 and after_visit == 2 and again == after_visit
+		and stage_two == after_visit and tree.allowed == after_visit,
+		"allowed %d after the visit (stage_cleared heard %s), %d on a second stage-1 open, %d for stage 2, %d for stage 3"
+			% [after_visit, _cleared, again, stage_two, tree.allowed])
 
 
 func _run_at_cradle() -> void:

@@ -90,11 +90,12 @@ func _mutator_checks() -> void:
 		"lose_scrap(20): mass %.1f, wallet %d, returned %d, scrap_lost fired %d time(s)" % [run.mass, run.scrap, took, _counts["scrap_lost"]])
 	var before: float = run.heft()
 	run.add_part("dash_vane", "test")
-	_report("part heft", is_equal_approx(run.heft() - before, 0.2),
-		"add_part raised heft from %.3f to %.3f" % [before, run.heft()])
+	_report("part heft", run.armor_mode and is_equal_approx(run.heft() - before, 0.0),
+		"under armour add_part leaves heft at %.3f (was %.3f): heft is 1 + mass/450 alone" % [run.heft(), before])
 	var class_before: int = run.heft_class()
-	# Mass 40 plus a part is heft 1.29 at 1 + mass/450; 100 more crosses 1.5 (10 did at 1/150).
-	run.add_scrap(100, Vector3.ZERO)
+	# Mass 40 is heft 1.089 at 1 + mass/450 (parts add none under armour); 190 more reaches
+	# mass 230 and crosses 1.5.
+	run.add_scrap(190, Vector3.ZERO)
 	_report("class change", class_before == 1 and run.heft_class() == 2 and _counts["heft_class_changed"] == 1,
 		"heft %.3f crossed 1.5: class %d to %d, heft_class_changed fired %d time(s) over the whole sequence" % [run.heft(), class_before, run.heft_class(), _counts["heft_class_changed"]])
 
