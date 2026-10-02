@@ -79,6 +79,7 @@ var _materials := {}
 var _scenes := {}
 var _meshes := {}
 var _players := {}
+const WARDEN_CORE_OPEN_SCALE := 2.6
 var _wardens := {}
 var _warden_fragments: Array[MeshInstance3D] = []
 var _mast := {}
@@ -928,6 +929,17 @@ func _update_warden_open(rec: Dictionary) -> void:
 	(rec.materials.ancient_enamel as StandardMaterial3D).emission = EventKinds.role_color("neutral")
 	var open: bool = warden.staggered()
 	rec.core.visible = open
+	# The open core is big enough to read from every side at fight distance.
+	rec.core.scale = Vector3.ONE * (WARDEN_CORE_OPEN_SCALE if open else 1.0)
+	var heart: StandardMaterial3D = rec.materials.warden_heart
+	var heart_color: Color = EventKinds.state_color("open") if open else rec.light_rest["ancient_light"]
+	heart.albedo_color = heart_color
+	heart.emission = heart_color
+	heart.emission_energy_multiplier = 1.0
+	heart.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	heart.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	heart.no_depth_test = open
+	heart.render_priority = 10 if open else 0
 	for key in rec.light_rest:
 		(rec.materials[key] as StandardMaterial3D).emission = EventKinds.state_color("open") if open else rec.light_rest[key]
 
@@ -961,6 +973,7 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 		var segment := base.find_child("ArmourSegment%d" % i, true, false) as MeshInstance3D
 		rec.segments.append(segment)
 		if posture:
+			_paint_warden_segment(segment, rec)
 			rec.chunk_marks.append(_warden_chunk_mark(segment))
 	for side in ["L", "R"]:
 		var inner := base.get_node("Jaw%s/Inner%s" % [side, side]) as MeshInstance3D
@@ -970,6 +983,54 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 	if posture:
 		# The caged heart replaces the kit's visible weak point; both use ancient_light.
 		rec.weak.visible = false
+		_hide_warden_placeholder_core(rec)
+		_own_warden_heart(rec)
+
+
+# The look's bone sphere is the functional placeholder core. It sat inside the ring in every
+# closed state as a pale mass that read as an open core, so a posture Warden hides it.
+func _hide_warden_placeholder_core(rec: Dictionary) -> void:
+	var look = rec.warden._look
+	for child in look.get_children():
+		if child is MeshInstance3D and child.material_override == look.core_material():
+			_hide_warden_mesh(child, rec)
+
+
+# The four armour segments are the HUD plate's four pips: the plate's neutral colour, with
+# dark seams. A lost segment leaves the dark inner structure, so the contrast counts them.
+func _paint_warden_segment(segment: MeshInstance3D, rec: Dictionary) -> void:
+	if not rec.materials.has("warden_plate"):
+		var plate := StandardMaterial3D.new()
+		plate.albedo_color = EventKinds.role_color("neutral")
+		plate.roughness = 0.85
+		var outline := StandardMaterial3D.new()
+		outline.albedo_color = Palette.CHARCOAL
+		outline.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		outline.cull_mode = BaseMaterial3D.CULL_FRONT
+		outline.grow = true
+		outline.grow_amount = 0.09
+		plate.next_pass = outline
+		rec.materials["warden_plate"] = plate
+		var seam := StandardMaterial3D.new()
+		seam.albedo_color = Palette.CHARCOAL
+		seam.roughness = 0.95
+		rec.materials["warden_plate_seam"] = seam
+	for surface in segment.mesh.get_surface_count():
+		match slot_of(segment.mesh, surface):
+			"ancient_enamel":
+				segment.set_surface_override_material(surface, rec.materials["warden_plate"])
+			"rubber":
+				segment.set_surface_override_material(surface, rec.materials["warden_plate_seam"])
+
+
+# The heart gets its own material: it draws through the armour while open, and the kit's
+# seams share the old one.
+func _own_warden_heart(rec: Dictionary) -> void:
+	var heart := rec.core.get_node("HeartSurface") as MeshInstance3D
+	var mat := (rec.materials.ancient_light as StandardMaterial3D).duplicate() as StandardMaterial3D
+	rec.materials["warden_heart"] = mat
+	for surface in heart.mesh.get_surface_count():
+		heart.set_surface_override_material(surface, mat)
 
 
 func _paint_warden_inner(inner: MeshInstance3D) -> void:
@@ -994,19 +1055,27 @@ func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
 	mat.emission_enabled = true
 	mat.emission = mat.albedo_color
 	mat.emission_energy_multiplier = 1.2
+	# A dark groove under the colour line, so the crack reads on the light plate at 12 m.
+	var groove_mat := StandardMaterial3D.new()
+	groove_mat.albedo_color = Palette.CHARCOAL
 	var points := [Vector2(-0.22, 0.5), Vector2(0.1, 0.17), Vector2(-0.1, -0.12), Vector2(0.2, -0.5)]
-	for i in 3:
+	for i in 6:
+		var groove := i >= 3
 		var stroke := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.09, points[i].distance_to(points[i + 1]), 0.03)
+		mesh.size = Vector3(0.62 if groove else 0.2, points[i % 3].distance_to(points[i % 3 + 1]) + (0.1 if groove else 0.0), 0.03 if groove else 0.06)
+		stroke.name = "Groove%d" % i if groove else "Crack%d" % i
 		stroke.mesh = mesh
-		stroke.material_override = mat
-		var mid: Vector2 = (points[i] + points[i + 1]) * 0.5
+		stroke.material_override = groove_mat if groove else mat
+		var mid: Vector2 = (points[i % 3] + points[i % 3 + 1]) * 0.5
 		stroke.position = Vector3(mid.x, mid.y, 0)
-		var direction: Vector2 = points[i + 1] - points[i]
+		var direction: Vector2 = points[i % 3 + 1] - points[i % 3]
 		stroke.rotation.z = -atan2(direction.x, direction.y)
 		mark.add_child(stroke)
 		_fit_warden_stroke(stroke, segment, segment.mesh.get_faces())
+		if not groove:
+			# The colour line sits proud of its dark groove so the two never share a depth.
+			stroke.position.z += 0.05
 	mark.visible = false
 	return mark
 
@@ -1026,6 +1095,8 @@ func _update_warden_chunks(rec: Dictionary) -> void:
 		mark.visible = i == lost and warden.chunk_cracked()
 		var color := EventKinds.state_color("chunk_shatter") if warden.staggered() else EventKinds.role_color("neutral")
 		for stroke in mark.get_children():
+			if String(stroke.name).begins_with("Groove"):
+				continue
 			var mat: StandardMaterial3D = stroke.material_override
 			mat.albedo_color = color
 			mat.emission = color

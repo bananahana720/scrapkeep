@@ -1921,3 +1921,25 @@ The exported base has 4,956 triangles, up from 4,492. Its bounds are unchanged: 
 `hero_warden_assets_test.gd` retains every existing check and adds named-piece, assembled-bound, caged-heart and triangle-projection checks. The sampled facing-crown silhouette loses area at each shatter: 1,170, 1,026, 882, 441, then zero covered samples in the band above the inner structure. `warden_chunks_look_test.gd` uses real harpoon contacts on a live slice game for all four shatters, including death. It checks chunk visibility, crack colours and placement, core visibility and tint, fragment motion and lifetime, callback cleanup, retries, stage changes, new runs, and plating Wardens through death on all three default stages. Deliberate implementation and GLB faults prove that the new assertions fail; the checks themselves are not edited for those red runs.
 
 The coordinator still renders the assembled and damaged states at the 8 m and 12 m chase distances. That check must include crack readability, the open heart and the existing harpoon brackets, whose gameplay anchor remains above the jaws. No rendered capture, GPU measurement or human readability verdict is claimed by this unit.
+
+## WR: the Warden's health reads on its body
+
+Rendered stills at 12 m showed the posture Warden's rule was right and its look was not.
+What was wrong, and what changed (posture Warden only; the plating Warden is untouched):
+
+- The four armour segments are the four shoulder pieces, two per jaw. They were charcoal on
+  charcoal, so a lost one changed nothing. They now wear the HUD plate's neutral colour with a
+  dark outline pass, so each reads as a separate light plate against the dark body. A lost
+  segment leaves the dark inner structure, which is the contrast that counts them.
+- The pale mass inside the ring in every closed state was the look's bone placeholder core
+  sphere (warden_look.gd), never hidden by the asset hook. A posture Warden now hides it.
+- The crack is the plate's crack colour (neutral closed, shatter while open) on a wider dark
+  groove, with the colour line proud of the groove.
+- The open core is the heart on its own material, the plate's open colour, unshaded, drawn
+  through the armour and 2.6 times larger while open, so it reads from every side. Closed, it
+  is hidden. The kit seams no longer share the heart's material.
+- warden_states_capture.gd saves fresh, open, cracked, one_gone and two_gone from three sides
+  and a shuffled blind set with its key.
+
+Open: the four shoulder pieces still sit in two overlapping pairs, so counting from one side
+depends on the camera. A shape change in warden_clamp.py would separate them.

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -111,7 +112,7 @@ func _core(rec: Dictionary, open: bool, state: String) -> void:
 	var mat := surface.get_surface_override_material(0) as StandardMaterial3D
 	_t.check("core colour follows stagger: " + state, mat.emission == EventKinds.state_color("open") if open else mat.emission != EventKinds.state_color("open"))
 	_t.eq("caged core revealed only while open: " + state, rec.core.visible, open)
-	_t.check("core shares the existing tint material", mat == rec.materials.ancient_light and mat.emission_enabled)
+	_t.check("core has its own tint material", mat == rec.materials.warden_heart and mat.emission_enabled)
 	var no_amber := true
 	var live_only_open := true
 	for segment in rec.segments:
@@ -132,9 +133,38 @@ func _marks(rec: Dictionary, next: int, cracked: bool, open: bool) -> void:
 		if mark.visible:
 			visible.append(i)
 		for stroke in mark.get_children():
+			if String(stroke.name).begins_with("Groove"):
+				continue
 			tinted = tinted and stroke.material_override.emission == want and stroke.material_override.albedo_color == want
 	_t.check("crack tint follows the HUD rule", tinted)
 	_t.eq("only the next armour segment has a crack", visible, [next] if cracked else [])
+
+
+# WR: the body and the HUD plate say one thing. Each colour is read from the plate's own
+# functions: the segment from the filled pip's neutral (the closed bar), the crack from
+# crack_color(), the core from the open bar colour.
+func _agree(rec: Dictionary, state: String) -> void:
+	var plate := BossPlate.new()
+	plate.bind(_warden)
+	var open: bool = _warden.staggered()
+	var neutral := EventKinds.role_color("neutral")
+	_t.check("plate pips are neutral when closed: " + state, open or plate.bar_color() == neutral)
+	_t.check("segment colour is the plate's filled-pip colour: " + state, (rec.materials.warden_plate as StandardMaterial3D).albedo_color == neutral)
+	for segment in rec.segments:
+		_t.check("every segment wears the plate colour: " + state, segment.get_surface_override_material(0) == rec.materials.warden_plate)
+	var crack_ok := true
+	for mark in rec.chunk_marks:
+		for stroke in mark.get_children():
+			if String(stroke.name).begins_with("Crack"):
+				crack_ok = crack_ok and stroke.material_override.emission == plate.crack_color()
+	_t.check("crack colour is the plate's crack colour: " + state, crack_ok)
+	var heart: StandardMaterial3D = rec.materials.warden_heart
+	if open:
+		_t.check("open core is the plate's open colour: " + state, heart.emission == plate.bar_color() and heart.no_depth_test)
+	else:
+		_t.check("closed core is not the plate's open colour: " + state, heart.emission != EventKinds.state_color("open") and not rec.core.visible)
+	plate.unbind()
+	plate.free()
 
 
 func _flight(rec: Dictionary, index: int) -> void:
@@ -179,20 +209,24 @@ func _fresh(state: String) -> void:
 	_segments(rec, 4, state)
 	_marks(rec, 0, false, false)
 	_core(rec, false, state)
+	_agree(rec, state)
 	_t.eq("fresh Warden has no flying debris", _hook.find_children("WardenFragment*", "MeshInstance3D", false, false).size(), 0)
 
 
 func _crack_and_wait(rec: Dictionary) -> void:
 	await _fill()
 	_core(rec, true, "open")
+	_agree(rec, "open")
 	_combat.strike(_warden, "ram", 1.0)
 	await _frames(2)
 	_t.check("lesser contact cracked the health chunk", _warden.chunk_cracked())
 	_marks(rec, 0, true, true)
+	_agree(rec, "cracked and open")
 	await _seconds(BossPosture.STAGGER_SECONDS + 0.3)
 	_t.check("crack survives closure", _warden.chunk_cracked() and not _warden.staggered())
 	_marks(rec, 0, true, false)
 	_core(rec, false, "cracked and closed")
+	_agree(rec, "cracked and closed")
 
 
 func _shatters() -> void:
