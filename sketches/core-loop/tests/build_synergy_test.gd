@@ -12,7 +12,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 # when its shown part is held with another part carrying its second tag; a different
 # part with the first tag does not stand in for the shown one. The codex hint cards name
 # one ingredient and clue the other. The first firing in a run is a discovery (going live
-# discovers nothing), and a retry does not repeat it. Offers carry "* completes X *" and
+# discovers nothing), and a retry does not add it to the build's discovered list twice. Offers carry "* completes X *" and
 # "* ingredient: ??? *", which names the synergy once it is discovered. Every live
 # synergy puts a ring on the ball.
 

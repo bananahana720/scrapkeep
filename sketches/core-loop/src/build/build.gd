@@ -147,8 +147,8 @@ var _live: Array = []
 # Discovered this run (id to true) and found this run (key to description). The codex
 # registry, when present, is the lasting record; these keep the run's view.
 var _discovered := {}
-# Armed once per run; fired and discovered once per activation (a synergy that leaves the
-# live set and returns fires and discovers again).
+# Armed once per run; fired once per activation. A retry clears the fired record, so a
+# discovery the codex rewound is found again at the next firing.
 var _armed := {}
 var _fired := {}
 var _found := {}

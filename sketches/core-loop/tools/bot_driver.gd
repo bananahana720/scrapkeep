@@ -110,6 +110,9 @@ const WALL_REACH := 4.0
 const WALL_TILT := 0.5
 const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
 const BOOST_GAP := 1.6
+# Shift is the pilot's go verb, pressed as the keyboard presses it: Sable boosts on the press,
+# Rivet sprints for as long as it is held, Kest blinks on the press.
+const SHIFT_HOLD := 1.2
 # The ram lap: charge until this close, then run up this far and charge again.
 const CHARGE_CLOSE := 3.8
 # The harpoon hand is the bowl-floor camper's: grounded on the floor (its radius, features.gd) and
@@ -213,6 +216,7 @@ var _slow_time := 0.0
 var _detour_time := 0.0
 var _detour := Vector3.ZERO
 var _boost_clock := 0.0
+var _shift_left := 0.0
 var _waypoints: Array[Vector3] = []
 var _waypoint_time := 0.0
 var _vault_time := 0.0
@@ -266,6 +270,8 @@ var _harpoon_commit := false
 # Seconds since the ball was last beyond the drop line of its fight target.
 var _off_line := 0.0
 var _out: Array[Dictionary] = []
+var _defer_look := false
+var _look_delta := Vector2.ZERO
 var _leg := 0
 var _last_press_tick := -1000000
 
@@ -694,10 +700,11 @@ func _roam(delta: float) -> void:
 # --- the traversal pilot -----------------------------------------------------------------
 
 # Steers along the route, then to the beacon, and sends what it decided TRAVERSE_REACTION
-# seconds later: the whole stick and every press are held in a buffer for that long, so
+# seconds later: the stick, the mouse and every press are held in a buffer for that long, so
 # nothing the steering reads (position, velocity, wall rays, the stuck check) is answered
-# sooner. Presses go through one gate: a second verb inside TRAVERSE_PRESS_GAP is dropped.
-# It never holds fire.
+# sooner. The stick is buffered as the world direction it meant and turned back into the
+# camera's frame when it goes out, because the camera has moved by then. Presses go through
+# one gate: a second verb inside TRAVERSE_PRESS_GAP is dropped. It never holds fire.
 func _traverse(delta: float) -> void:
 	_welcome_ring_at = Vector3.INF
 	var lag := int(ceil(TRAVERSE_REACTION * Engine.physics_ticks_per_second))
@@ -713,17 +720,35 @@ func _traverse(delta: float) -> void:
 	_goal = "traverse leg %d" % _leg
 	source.hold = {}
 	source.press = {}
+	_defer_look = true
+	_look_delta = Vector2.ZERO
 	_act(point, null, delta)
+	_defer_look = false
 	source.hold.erase("fire_held")
-	_out.append({"hold": source.hold, "press": source.press})
+	var stick: Vector2 = source.hold.get("move", Vector2.ZERO)
+	_out.append({"hold": source.hold, "press": source.press, "look": _look_delta, "wish": _stick_to_world(stick)})
 	source.hold = {}
 	source.press = {}
 	if _out.size() <= lag:
 		return
 	var sent: Dictionary = _out.pop_front()
+	var look: Vector2 = sent["look"]
+	game.camera.look(Vector2(-look.x / SENSITIVITY, -look.y / SENSITIVITY))
 	source.hold = sent["hold"]
+	if source.hold.has("move"):
+		source.hold["move"] = _world_to_stick(sent["wish"])
 	source.press = sent["press"]
 	_gate_presses()
+
+
+func _stick_to_world(stick: Vector2) -> Vector3:
+	var yaw: float = game.camera.yaw
+	return Vector3(cos(yaw), 0.0, -sin(yaw)) * stick.x + Vector3(-sin(yaw), 0.0, -cos(yaw)) * stick.y
+
+
+func _world_to_stick(wish: Vector3) -> Vector2:
+	var yaw: float = game.camera.yaw
+	return Vector2(wish.dot(Vector3(cos(yaw), 0.0, -sin(yaw))), wish.dot(Vector3(-sin(yaw), 0.0, -cos(yaw))))
 
 
 func _gate_presses() -> void:
@@ -1611,9 +1636,13 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var lined: float = v.normalized().dot(dir) if v.length() > 0.5 else 1.0
 		# No brake-carving: brake is also the slam key, and a carve held over a bump
 		# becomes a slam that plants the ball (seen on the Slag Bowl's bank).
-		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded:
+		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded and player.verb_ready("boost"):
 			_boost_clock = BOOST_GAP
-			source.press["boost_pressed"] = true
+			_shift_left = SHIFT_HOLD
+			source.press["shift_pressed"] = true
+	if _shift_left > 0.0:
+		_shift_left -= delta
+		hold["shift_held"] = true
 	if _harpoon_held:
 		hold["harpoon_held"] = true
 	if _harpoon_commit:
@@ -1639,18 +1668,30 @@ func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 	return heading
 
 
+# Turns the camera toward the point. The traversal pilot defers the turn: it is measured
+# from where the camera will be once the turns still waiting in the buffer have gone out,
+# and kept in _look_delta for _traverse to send late.
 func _look(ball: Vector3, point: Vector3, pitch_to: bool, delta: float) -> void:
 	var cam = game.camera
+	var yaw: float = cam.yaw
+	var pitch: float = cam.pitch
+	if _defer_look:
+		for waiting in _out:
+			yaw += waiting["look"].x
+			pitch += waiting["look"].y
 	var flat := Vector3(point.x - ball.x, 0.0, point.z - ball.z)
 	var dyaw := 0.0
 	if flat.length() > 0.3:
 		var want := atan2(-flat.x, -flat.z)
-		dyaw = clampf(wrapf(want - cam.yaw, -PI, PI), -TURN_RATE * delta, TURN_RATE * delta)
+		dyaw = clampf(wrapf(want - yaw, -PI, PI), -TURN_RATE * delta, TURN_RATE * delta)
 	var want_pitch := -0.30
 	if pitch_to and flat.length() > 0.5:
 		var pivot := ball + Vector3.UP * 0.8
 		want_pitch = clampf(atan2(point.y - pivot.y, flat.length()), -1.2, 0.5)
-	var dpitch := clampf(want_pitch - cam.pitch, -TURN_RATE * delta, TURN_RATE * delta)
+	var dpitch := clampf(want_pitch - pitch, -TURN_RATE * delta, TURN_RATE * delta)
+	if _defer_look:
+		_look_delta = Vector2(dyaw, dpitch)
+		return
 	# camera.look takes mouse pixels: yaw -= x * s, pitch -= y * s.
 	cam.look(Vector2(-dyaw / SENSITIVITY, -dpitch / SENSITIVITY))
 

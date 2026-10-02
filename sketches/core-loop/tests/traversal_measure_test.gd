@@ -96,9 +96,9 @@ func _check_limits() -> void:
 	_t.check("one verb per press", _driver.source.press.size() <= 1, "%s" % [_driver.source.press])
 
 
-# The stick the bot sends, with the route's point changed on one tick: nothing answers for 13
-# ticks, and the answer is out by tick 16. The state is frozen between calls, so only the
-# bot's own delay can separate the two.
+# What the bot sends, with the route's point changed on one tick: for 13 ticks neither the
+# camera nor the world direction the stick pushes in answers, and both are out by tick 16.
+# The ball does not move between calls, so only the bot's own delay can separate the two.
 func _check_reaction() -> void:
 	var tps := Engine.physics_ticks_per_second
 	var ball: Vector3 = _game.player.ball_position()
@@ -107,26 +107,32 @@ func _check_reaction() -> void:
 	_driver._leg = 0
 	_driver._out.clear()
 	var fired := 0
-	var last := Vector2.ZERO
+	var last := Vector3.ZERO
 	for i in 150:
 		_driver.ticks += 1
 		_driver._traverse(1.0 / tps)
-		last = _driver.source.hold.get("move", Vector2.ZERO)
+		last = _driver._stick_to_world(_driver.source.hold.get("move", Vector2.ZERO))
 		if _driver.source.hold.get("fire_held", false):
 			fired += 1
+	var yaw_before: float = _game.camera.yaw
 	_driver.route[0] = Vector2(ball.x - 80.0, ball.z)
 	_driver._leg = 0
 	var answered := -1
+	var turned := -1
 	for i in range(1, 31):
 		_driver.ticks += 1
 		_driver._traverse(1.0 / tps)
-		var move: Vector2 = _driver.source.hold.get("move", Vector2.ZERO)
+		var wish: Vector3 = _driver._stick_to_world(_driver.source.hold.get("move", Vector2.ZERO))
 		if _driver.source.hold.get("fire_held", false):
 			fired += 1
-		if answered < 0 and move.distance_to(last) > 0.3:
+		if answered < 0 and wish.distance_to(last) > 0.3:
 			answered = i
-	_t.check("the stick answers a changed target no sooner than 150 ms and by tick 16", answered >= 14 and answered <= 16,
-		"the stick first answered %d ticks after the change (stick before it %s)" % [answered, last])
+		if turned < 0 and absf(wrapf(_game.camera.yaw - yaw_before, -PI, PI)) > 0.001:
+			turned = i
+	_t.check("the push answers a changed target no sooner than 150 ms and by tick 16", answered >= 14 and answered <= 16,
+		"the world direction of the stick first answered %d ticks after the change (before it %s)" % [answered, last])
+	_t.check("the camera answers a changed target no sooner than 150 ms and by tick 16", turned >= 14 and turned <= 16,
+		"the camera first turned %d ticks after the change" % turned)
 	_t.eq("the traversal bot never holds fire", fired, 0)
 
 
