@@ -9,6 +9,9 @@ extends Node
 # Flow (spine).
 signal run_started(class_id: String)
 signal flow_changed(state: String)
+# Emitted at run start and whenever the stage entered is in a new world, before that
+# stage's stage_entered. Never on a retry.
+signal world_entered(world: int)
 signal stage_entered(stage: int, retry: bool)
 signal stage_cleared(stage: int)
 signal run_ended(won: bool)

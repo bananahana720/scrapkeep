@@ -3,6 +3,7 @@ extends Node
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -57,6 +58,9 @@ const SEALED_CAP := 0.99
 const WARDEN_MATCH := 6.0
 var _warned := {}
 
+# Test seam: a boss row per world standing in for Worlds.boss_of.
+var boss_row_override := {}
+var _world := 0
 var _launched := false
 var _flight := 0.0
 var _last_percent := -1
@@ -102,6 +106,28 @@ func _boss_module() -> Node:
 	return boss if boss != null and boss.has_method("enter_arena") else null
 
 
+# The boss that ends a world, or null when that world has none to run: its row is not
+# built, or the scene has no module. A one-world table that names no boss ends with the
+# summary as before. Tests set boss_row_override[world] to stand in for a row.
+func _world_boss(world: int) -> Node:
+	var module := _boss_module()
+	if ctx.stages.BOSS == "":
+		return null
+	var row: Dictionary = boss_row_override.get(world, Worlds.boss_of(world))
+	if not bool(row.get("built", false)):
+		warn_once("boss_unbuilt_%d" % world, "flow: world %d's boss is not built; skipping to the next world" % world)
+		return null
+	if module == null and ctx.stages.worlds().size() > 1:
+		warn_once("boss_module_%d" % world, "flow: no boss module in the scene for world %d; skipping to the next world" % world)
+	return module
+
+
+# The stage that leads into this world's boss arena: the current world's last stage. A death
+# in world one's arena replays stage 3, not the run's last stage.
+func final_stage() -> int:
+	return ctx.stages.last_of(ctx.stages.world_of(ctx.run.stage))
+
+
 func stage() -> int:
 	return ctx.run.stage
 
@@ -145,6 +171,7 @@ func new_run() -> void:
 func _begin_run(chosen: Resource) -> void:
 	in_arena = false
 	boss_active = false
+	_world = 0
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
 	ctx.run.begin(chosen)
@@ -157,6 +184,10 @@ func _begin_run(chosen: Resource) -> void:
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	ctx.run.enter_stage(index)
+	var world: int = ctx.stages.world_of(index)
+	if not retry and world != _world:
+		_world = world
+		ctx.events.world_entered.emit(world)
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
@@ -285,7 +316,7 @@ func discovery_burst(at: Vector3) -> void:
 
 
 func can_replay_final_stage() -> bool:
-	return boss_active and ctx.run.has_stage_start(ctx.stages.COUNT)
+	return boss_active and ctx.run.has_stage_start(final_stage())
 
 
 # What the death screen says about the fight that killed you: your punch against the
@@ -370,7 +401,7 @@ func physics_step(delta: float) -> void:
 	if state == VICTORY:
 		_victory_left -= delta
 		if _victory_left <= 0.0:
-			_end_run_won()
+			_advance_from(ctx.run.stage)
 		return
 	if not in_play():
 		return
@@ -411,10 +442,16 @@ func physics_step(delta: float) -> void:
 func _finish_stage() -> void:
 	var cleared: int = ctx.run.stage
 	ctx.events.stage_cleared.emit(cleared)
-	if ctx.stages.is_last(cleared):
-		if _boss_module() != null:
-			enter_boss(ctx.player.state.velocity)
-			return
+	if ctx.stages.is_world_last(cleared) and _world_boss(ctx.stages.world_of(cleared)) != null:
+		enter_boss(ctx.player.state.velocity)
+		return
+	_advance_from(cleared)
+
+
+# The next stage after a cleared one, which is the next world's first when the cleared
+# stage closed a world; the run ends won after the last world.
+func _advance_from(cleared: int) -> void:
+	if ctx.stages.is_run_last(cleared):
 		_end_run_won()
 		return
 	enter_stage(cleared + 1, ctx.player.state.velocity, false)
