@@ -185,7 +185,6 @@ func set_tint(state: String) -> void:
 		if is_instance_valid(crack):
 			crack.visible = now
 	_rim_clock = 0.0
-	set_process(now and _pulses())
 	if _flash <= 0.0:
 		_apply_rest_look()
 
@@ -456,8 +455,8 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PHYSICS_PROCESS:
 		_facts_poll()
-	elif what == NOTIFICATION_PROCESS and tint_state == "amber":
-		_pulse_rim(get_process_delta_time())
+		if tint_state == "amber" and _pulses():
+			_pulse_rim(get_physics_process_delta_time())
 
 
 # The open attack as a fact, with the geometry and progress it has right now; {} when

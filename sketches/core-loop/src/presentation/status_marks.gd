@@ -4,8 +4,11 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # A hit that breaks an enemy's wind-up answers with the STATE_ROWS row "interrupted" over the
 # body: a star in the live colour, so the break reads as yours. It listens to the enemy's own
-# attack facts and draws through the vfx glyph pool. A wind-up that ends because its owner died
-# or left, or that ran out, draws nothing. One star per enemy per second.
+# attack facts and draws through the vfx glyph pool. The star means a hit counted: when a
+# wind-up arrives it records that enemy's knocks, and a cancelled phase draws only if the
+# count rose since. A wind-up that ends because its owner died or left, that ran out, or that
+# lost its target (a lobber's ball walking out of range) draws nothing. One star per enemy per
+# second. Both records drop the enemy when it leaves the tree.
 
 const SHOWN_SECONDS := 0.5
 const COOLDOWN_SECONDS := 1.0
@@ -19,6 +22,7 @@ var drawn := 0
 
 var _clock := 0.0
 var _last := {}
+var _wound := {}
 
 
 func setup(ctx_ref, vfx_ref) -> void:
@@ -36,14 +40,27 @@ func _physics_process(delta: float) -> void:
 func _on_spawned(enemy: Node3D, _kind: String) -> void:
 	if enemy.has_signal("attack_phase"):
 		enemy.attack_phase.connect(_on_phase.bind(enemy))
+	enemy.tree_exiting.connect(_forget.bind(enemy.get_instance_id()))
+
+
+func _forget(id: int) -> void:
+	_last.erase(id)
+	_wound.erase(id)
 
 
 func _on_phase(facts: Dictionary, enemy: Node3D) -> void:
-	if facts.get("phase", "") != "cancelled":
+	var phase: String = facts.get("phase", "")
+	if phase == "windup" and is_instance_valid(enemy):
+		_wound[enemy.get_instance_id()] = int(enemy.knocks)
+		return
+	if phase != "cancelled":
 		return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or enemy.is_dead() or enemy.is_queued_for_deletion():
 		return
 	var id := enemy.get_instance_id()
+	if not _wound.has(id) or int(enemy.knocks) <= int(_wound[id]):
+		return
+	_wound.erase(id)
 	if _last.has(id) and _clock - float(_last[id]) < COOLDOWN_SECONDS:
 		return
 	_last[id] = _clock
