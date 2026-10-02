@@ -3,14 +3,13 @@ extends "res://src/combat/counter.gd"
 # The mag trapper (DESIGN-V2 section 10): a crew cart with a stack of pit discs on its
 # back. It throws a disc at where the ball will be, and the disc's instant ring closes
 # over the warning. Live, it is a magnetic pit: a ball inside it lighter than the
-# disc's heft rating is dragged, its speed bled and its line pulled toward the centre.
-# Heft at or above the rating rolls straight through, so growing is the counter. A jump
+# disc's heft rating has its line pulled toward the centre, through the hold bound
+# (holds.gd): the pull bends the path and never lowers the speed. Heft at or above the rating rolls straight through, so growing is the counter. A jump
 # or a smash shatters the disc.
 
 const PIT_RADIUS := 4.5
 const PIT_REACH := 1.4
 const LEAD := 0.7
-const DRAG := 2.4
 const CENTRE_PULL := 2.5
 const RATING_BASE := 1.6
 const RATING_PER_THREAT := 0.4
@@ -128,7 +127,7 @@ func _live(_delta: float) -> bool:
 		return true
 	var to_centre: Vector3 = pit.center - ball
 	to_centre.y = 0.0
-	_pull(-player.planar_velocity() * DRAG + to_centre * CENTRE_PULL)
+	_pull(to_centre * CENTRE_PULL)
 	return true
 
 

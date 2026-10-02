@@ -5,13 +5,13 @@ const Palette := preload("res://src/core/palette.gd")
 
 # C12 limits. The asset: 1,200 T / 4 D ceiling (Codex's C12 exception: the fourth draw is the hazard cores) for the whole moving assembly (crew, cart and
 # discs), opaque. The base contract: the trapper's collider, pit (radius, reach, lead), hold
-# (drag, pull, rating), timing and damage-side numbers are the values mag_trapper.gd had
+# (pull, rating), timing and damage-side numbers are the values mag_trapper.gd had
 # before the dressing swap, and the stack tilts on the existing wind-up.
 const CEILING_T := 1200
 const CEILING_D := 4
 const CORE_EMISSION := 0.6
 const BASE_CONSTS := {
-	"PIT_RADIUS": 4.5, "PIT_REACH": 1.4, "LEAD": 0.7, "DRAG": 2.4, "CENTRE_PULL": 2.5,
+	"PIT_RADIUS": 4.5, "PIT_REACH": 1.4, "LEAD": 0.7, "CENTRE_PULL": 2.5,
 	"RATING_BASE": 1.6, "RATING_PER_THREAT": 0.4, "HP": 50.0,
 }
 const BASE_LIVE := {

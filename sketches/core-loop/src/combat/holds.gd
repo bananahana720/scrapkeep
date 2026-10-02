@@ -19,6 +19,12 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 #   enough momentum) the hold ends, the ball gets a forward kick and a movement-ability
 #   refund: escaping is a momentum moment, not only relief.
 #
+# - The hold bound. A hold may bend the ball's path but never slow it or turn it faster
+#   than TURN_RATE: bound() strips the part of an acceleration that points against the
+#   planar velocity and caps the part across it. The mag pit and the winch cable (BOUNDED)
+#   go through it in pull and catch on every table; the other holding kinds take it when
+#   they return to a table.
+#
 # The binding each hold draws is a striped hazard line from its source to the ball,
 # and while immune the ball wears a broken-bracket flicker in the class colour
 # (VISUAL-LANGUAGE section 11).
@@ -40,6 +46,12 @@ const FLICKER_HZ := 9.0
 # layer (LINE_PRIORITY, 42), so it ties with no telegraph layer and is never covered by a
 # fill or a band. A hold's line is a hostile P1 line (FEEL-READABILITY section 1.1).
 const DRAW_PRIORITY := 43
+# The hold kinds (Roster mechanics) whose pulls and shoves go through bound().
+const BOUNDED := ["mag_pit", "winch_pull"]
+# The fastest a hold may turn the ball's heading, radians a second, and the planar speed
+# below which the ball has no heading to protect.
+const TURN_RATE := PI / 3.0
+const HEADING_SPEED := 1.0
 
 var ctx
 var player
@@ -132,6 +144,8 @@ func catch(source: Node3D, kind: String, breaks: Array, max_seconds := 0.0, shov
 	var id := source.get_instance_id()
 	if active.has(id):
 		return true
+	if kind in BOUNDED:
+		shove = bound(player.planar_velocity(), shove)
 	if not player.crowd_control(kind, shove, true):
 		ignored += 1
 		return false
@@ -149,11 +163,32 @@ func pull(source: Node3D, accel: Vector3) -> bool:
 	if not held(source):
 		return false
 	var hold: Dictionary = active[source.get_instance_id()]
+	if hold["kind"] in BOUNDED:
+		accel = bound(player.planar_velocity(), accel)
 	if not player.crowd_control(hold["kind"], accel, false):
 		ignored += 1
 		release(source, "ignored")
 		return false
 	return true
+
+
+# A hold's acceleration made safe for momentum: the part against the planar velocity is
+# removed, the part across it is capped at speed * TURN_RATE (a heading turn of at most
+# TURN_RATE a second), and the part along it and any vertical part pass whole. A ball
+# under HEADING_SPEED has no heading, so the acceleration passes unchanged.
+static func bound(velocity: Vector3, accel: Vector3) -> Vector3:
+	var flat := Vector3(velocity.x, 0.0, velocity.z)
+	var speed := flat.length()
+	if speed < HEADING_SPEED:
+		return accel
+	var heading := flat / speed
+	var planar := Vector3(accel.x, 0.0, accel.z)
+	var along := maxf(0.0, planar.dot(heading))
+	var across := planar - heading * planar.dot(heading)
+	var limit := speed * TURN_RATE
+	if across.length() > limit:
+		across = across.normalized() * limit
+	return heading * along + across + Vector3(0.0, accel.y, 0.0)
 
 
 func release(source: Node, reason: String) -> void:

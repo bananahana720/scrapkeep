@@ -97,6 +97,7 @@ func setup(ctx_ref) -> void:
 	interact.setup(ctx)
 	ctx.player.interact_claim = interact.claims
 	director = Director.new(ctx.rng.randi())
+	_author_director()
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
@@ -161,6 +162,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	var map = terrain.map()
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	director = Director.new(_stage_seed ^ 0x5eed)
+	_author_director()
 	director.threat = def["threat"]
 	director.play_rect = map.play_rect
 	flood.cycle = events.flood
@@ -179,7 +181,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	# Combat clears the stage's enemies in its own stage_entered handler, after this
 	# one, so the vault goes in on the first tick of play instead.
 	vault = null
-	_vault_pending = true
+	_vault_pending = ctx.stages.has_vault()
 	codex_world = CodexWorld.new()
 	view.set_vault(terrain.vault_point(stage), false)
 	_mark_landing(stage, retry)
@@ -368,13 +370,20 @@ func _discover(fired: Array) -> void:
 # The plated vault off the fall line. Never in calm, and a combat module without the
 # kind (a null return) simply leaves the spot empty.
 func _spawn_vault() -> void:
-	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if not ctx.stages.has_vault() or ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 		return
 	var at: Vector3 = terrain.vault_point(ctx.flow.stage()) + Vector3.UP * 2.4
 	var node = ctx.spawner.spawn_enemy(VAULT_KIND, at)
 	if node is Node3D:
 		vault = node
 		view.set_vault(at, true, ctx.spawner.plating_of(node) if ctx.spawner.has_method("plating_of") else -1.0)
+
+
+# The stage table's authored packs, if it has any; the director spawns nothing else then.
+func _author_director() -> void:
+	director.authored = ctx.stages.packs()
+	director.elite = ctx.stages.elite()
+	director.elite_arrival = ctx.stages.elite_arrival()
 
 
 func _step_director(delta: float) -> void:
