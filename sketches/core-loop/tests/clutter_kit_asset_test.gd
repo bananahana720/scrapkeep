@@ -7,7 +7,7 @@ const LIMITS := {
 	"rock_a": [0.25, 0.6, 40, 0.15], "rock_b": [0.25, 0.6, 40, 0.15],
 	"rock_c": [0.25, 0.6, 40, 0.15], "slab_a": [0.6, 1.2, 50, 0.08],
 	"slab_b": [0.6, 1.2, 50, 0.15], "plate_a": [0.4, 0.8, 60, 0.15],
-	"plate_b": [0.4, 0.8, 60, 0.15], "stub_a": [0.2, 0.35, 60, 0.15],
+	"plate_b": [0.4, 0.8, 60, 0.15], "stub_a": [0.45, 0.6, 72, 0.15],
 	"tuft_a": [0.25, 0.4, 24, 0.15], "tuft_b": [0.25, 0.4, 24, 0.15],
 }
 const SLOTS := ["paint", "fleet_paint", "bare_metal"]
@@ -95,6 +95,8 @@ func _inspect(node: MeshInstance3D) -> Vector3:
 	var up_area := 0.0
 	var down_area := 0.0
 	var paint_found := false
+	var nearest_signal := INF
+	var vertex_count := 0
 	var sand_luma := _luma(Palette.SAND.srgb_to_linear())
 	for surface in node.mesh.get_surface_count():
 		var mat := node.get_active_material(surface) as StandardMaterial3D
@@ -105,6 +107,10 @@ func _inspect(node: MeshInstance3D) -> Vector3:
 		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 		var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+		for col in colors:
+			vertex_count += 1
+			for signal_colour in [Palette.AMBER, Palette.ARC, Palette.HAZARD]:
+				nearest_signal = minf(nearest_signal, _lab(col).distance_to(_lab(signal_colour.srgb_to_linear())))
 		var is_paint := slot == "paint"
 		if is_paint:
 			paint_found = true
@@ -120,8 +126,8 @@ func _inspect(node: MeshInstance3D) -> Vector3:
 			colour_ok = not colors.is_empty()
 			for col in colors:
 				colour_ok = colour_ok and _luma(col) <= sand_luma + 0.0001 and col.a > 0.999
-				# Dry earth and straw have R >= G >= B. This excludes mint and amber/hazard reds.
-				colour_ok = colour_ok and col.r >= col.g and col.g >= col.b and col.r < 0.6
+				# Dry earth and straw keep R >= G >= B; KC-2 measures gameplay colour distance.
+				colour_ok = colour_ok and col.r >= col.g and col.g >= col.b
 		_check(colour_ok, "CK-3 %s surface %d stays below sand brightness in muted earth/metal colours" % [node.name, surface])
 		for v in pos:
 			var at := node.global_transform * v
@@ -144,6 +150,7 @@ func _inspect(node: MeshInstance3D) -> Vector3:
 				elif normal.y < -0.15:
 					down_sum += mean * area
 					down_area += area
+	_check(vertex_count > 0 and nearest_signal >= 20.0, "KC-2 %s nearest gameplay colour CIE76 %.6f >= 20" % [node.name, nearest_signal])
 	var size := box.size
 	var longest := maxf(size.x, maxf(size.y, size.z))
 	var limits: Array = LIMITS[str(node.name)]
@@ -157,8 +164,22 @@ func _inspect(node: MeshInstance3D) -> Vector3:
 	if str(node.name).begins_with("plate_"):
 		var thickness := _plate_thickness(triangles)
 		_check(thickness >= 0.03 - 0.00001, "CK-4 %s physical thickness %.6f m >= 0.030000 m" % [node.name, thickness])
+	if str(node.name) == "stub_a":
+		_check(size.y >= 0.45 and size.y <= 0.6, "KC-3 stub_a height %.6f within 0.45..0.6 m" % size.y)
+		var inside_sectors := {}
+		var rim_y := box.end.y
+		for face: Array in triangles:
+			var centre: Vector3 = (face[0] + face[1] + face[2]) / 3.0
+			var radial := Vector3(centre.x, 0.0, centre.z)
+			var normal: Vector3 = face[3]
+			var near_top := maxf(face[0].y, maxf(face[1].y, face[2].y)) >= rim_y - 0.04
+			if near_top and radial.length() > 0.025 and radial.length() < 0.06 and normal.dot(-radial.normalized()) > 0.8:
+				inside_sectors[int(floor(wrapf(atan2(centre.z, centre.x), 0.0, TAU) / (TAU / 6.0)))] = true
+		_check(inside_sectors.size() == 6, "KC-3 stub_a inward-facing inside ring near top covers %d/6 sectors" % inside_sectors.size())
+	var up := up_sum / up_area if up_area > 0.0 else 0.0
+	if str(node.name).begins_with("rock_") or str(node.name).begins_with("slab_") or str(node.name).begins_with("tuft_"):
+		_check(up_area > 0.0 and up / sand_luma >= 0.45 and up / sand_luma <= 0.95, "KC-1 %s up-facing mean luminance %.6f / sand %.6f = %.6f within 0.45..0.95" % [node.name, up, sand_luma, up / sand_luma])
 	if paint_found:
-		var up := up_sum / up_area if up_area > 0.0 else 0.0
 		var down := down_sum / down_area if down_area > 0.0 else 0.0
 		_check(up_area > 0.0 and down_area > 0.0 and up > down + 0.000001, "CK-6 %s area-weighted upward mean %.6f > downward mean %.6f" % [node.name, up, down])
 	return size / longest if longest > 0.0 else Vector3.ZERO
@@ -196,6 +217,17 @@ func _parallel_cap_gap(face: Array, triangles: Array) -> float:
 
 func _luma(c: Color) -> float:
 	return c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
+
+
+func _lab(c: Color) -> Vector3:
+	var x := (0.4124564 * c.r + 0.3575761 * c.g + 0.1804375 * c.b) / 0.95047
+	var y := (0.2126729 * c.r + 0.7151522 * c.g + 0.0721750 * c.b)
+	var z := (0.0193339 * c.r + 0.1191920 * c.g + 0.9503041 * c.b) / 1.08883
+	return Vector3(116.0 * _lab_curve(y) - 16.0, 500.0 * (_lab_curve(x) - _lab_curve(y)), 200.0 * (_lab_curve(y) - _lab_curve(z)))
+
+
+func _lab_curve(value: float) -> float:
+	return pow(value, 1.0 / 3.0) if value > 216.0 / 24389.0 else value * 841.0 / 108.0 + 4.0 / 29.0
 
 
 func _done() -> void:

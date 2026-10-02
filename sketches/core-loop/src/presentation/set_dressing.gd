@@ -114,27 +114,8 @@ func _kit_meshes() -> Dictionary:
 			if material not in _materials:
 				_materials.append(material)
 			mesh.surface_set_material(surface, material)
-		result[String(view.name)] = _dry_grass(mesh) if String(view.name).begins_with("tuft") else mesh
+		result[String(view.name)] = mesh
 	scene.free()
-	return result
-
-# The tufts' paint is the palette's dry grass: warm, a little darker at the root, through
-# the same vertex colours the other pieces use. The kit's own dark straw read as spikes.
-static func _dry_grass(mesh: ArrayMesh) -> ArrayMesh:
-	# Sandstone, lifted: the blades are thin and mostly lit by sky, so a plain sand tone reads grey-blue.
-	var tone := Palette.SANDSTONE.srgb_to_linear() * 1.4
-	var result := ArrayMesh.new()
-	var top := mesh.get_aabb().end.y
-	for surface in mesh.get_surface_count():
-		var arrays := mesh.surface_get_arrays(surface)
-		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var colours := PackedColorArray()
-		for point in points:
-			var shade := lerpf(0.85, 1.0, clampf(point.y / top, 0.0, 1.0))
-			colours.append(Color(tone.r * shade, tone.g * shade, tone.b * shade))
-		arrays[Mesh.ARRAY_COLOR] = colours
-		result.add_surface_from_arrays(mesh.surface_get_primitive_type(surface), arrays)
-		result.surface_set_material(result.get_surface_count() - 1, mesh.surface_get_material(surface))
 	return result
 
 # Where clutter gathers: the foot of a cliff, the base of a post, wall or tower, and the

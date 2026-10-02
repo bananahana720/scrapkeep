@@ -2499,3 +2499,29 @@ Base `f42b3cd4d07135b7b18c49dfab53b187ca2a251f`, Godot 4.7.2. Andrew said he cou
 - **Measured here, not assumed.** Mass at the first strike is above the start, not under it: the skipper picks up scrap on the roll faster than wear takes it (small 3, mid 226, grown 542; heft 1.01, 1.50, 2.20).
 - **Tool changes.** The arms are one table in the tool. Each run is its own process (the sweep's earlier in-process list did not repeat). Each sweep invocation has its own data folder, keyed by the parent process id and cleared per job. The fight clock starts at the later of the bot's turn and the first contact on the Warden (`struck_s`, its own column). The sweep's command writes under `artifacts/local/`.
 - **Tests that read the row.** Seven posture tests now take the plating (and, where a ram's gain is aimed, the curve) from the slice row instead of 45; three needed a change for rams that no longer shatter or a count the synergy strikes now move (the mount, sound and run-log sitting tests), and the stage table test now compares the slice Warden to the slice row.
+
+## Warm stone and baked straw clutter (unit KC, 2026-10-02)
+
+The clutter recipe now shades sandstone in linear light. Stones mix sandstone with 6–12% sand, and slabs with 8% sand. Their upward planes are lighter than their sides and undersides. The shared helper has no separate strata tone, so the directional shading supplies the darker strata planes without a new palette role. Scrap plates retain their original `fleet_paint` and `bare_metal` slots and geometry.
+
+Tufts bake sandstone lifted 1.32 times in linear light, with roots at 85% of the tip colour. This follows the former runtime treatment, whose 1.4 times lift exceeded KC's 95%-of-sand upper limit at the tips. The baked tip luminance is about 91.6% of sand. `_dry_grass` and its call are removed from `set_dressing.gd`; placement copies the imported vertex colours without changing them.
+
+`stub_a` is a 0.55 m six-sided pipe with a broken open rim, a dark inner wall and a foot flange. The flange preserves the existing 0.21 m horizontal footprint. The stub's longest-side bound changes from 0.20–0.35 m to 0.45–0.60 m, and its triangle cap changes from 60 to 72. It uses 72 triangles, up from 48; the kit totals 280, up from 256. Other geometry and size limits are unchanged.
+
+| Mesh | Mean upward linear luminance | Ratio to Palette.SAND |
+| --- | --- | --- |
+| rock_a | 0.337543 | 0.599004 |
+| rock_b | 0.319569 | 0.567107 |
+| rock_c | 0.332591 | 0.590216 |
+| slab_a | 0.380219 | 0.674736 |
+| slab_b | 0.360919 | 0.640486 |
+| tuft_a | 0.460396 | 0.817018 |
+| tuft_b | 0.460552 | 0.817295 |
+
+`clutter_kit_asset_test.gd` checks the area-weighted upward mean against 0.45–0.95 of sand and prints each mesh's value. Every stone, slab and tuft must provide measured paint faces, so changing its material slot cannot bypass that check. The test converts linear vertex colours to D65 CIE Lab and checks every vertex against the live palette's amber, mint and hazard colours. The minimum CIE76 distance is 26.774609, above 20. The former paint-channel cap `r < 0.6` is removed because it rejected the required lifted straw; the existing sand-luminance, opacity and warm-channel-order checks remain, and the explicit CIE76 check now excludes gameplay colours. No existing check is removed otherwise.
+
+Mutation evidence under `artifacts/local/kc/` includes a black baked `rock_a`, which exits 1 and prints `FAIL KC-1 rock_a up-facing mean luminance 0.000000 / sand 0.563508 = 0.000000 within 0.45..0.95 -> FAIL`. The restored asset exits 0 and prints `PASS KC-1 rock_a up-facing mean luminance 0.337543 / sand 0.563508 = 0.599004 within 0.45..0.95 -> PASS`. Bright stone, amber, mint, hazard, missing paint, short pipe and missing inner-wall mutations also fail the intended checks. Flattened tuft colours fail the darker-root checks. Restoring the original runtime recolour fails both the source and baked-colour preservation checks. A missing tuft fails the two-tuft count check through an isolated driver that inherits the unchanged test function. The full missing-tuft mutation run was interrupted after the game path assumed a complete kit; the shipped asset is restored and passes the full named suite. The checks stay unchanged during each mutation.
+
+Two recipe exports match byte for byte: SHA-256 `0c413a7ed2bda1e63e89317c98559504c702635273ff618d10017419bb43715f`. Blender 5.2.2 LTS rendered `artifacts/local/kc/contact-sheet.png` in Cycles on the CPU with ten meshes on Palette.SAND patches. I viewed it: warm tan stone, lighter upper facets, darker sides, tan dry straw, oxide scrap plates, and a pipe with a visible dark opening and foot flange. This does not establish chase-camera readability at 20 m; the coordinator's in-game stills remain the visual follow-up.
+
+Godot 4.7.2 initially could not save editor settings under home. The allowed retry with all XDG roots under `artifacts/local/kc/xdg/` passes import, `clutter_kit_asset_test`, `set_dressing_test` and the unchanged `target_material_test`, with zero skips and no error-prefixed lines. The final named receipt is `artifacts/local/receipts/kc-29391b12f821-2026-10-02T19-17-04-012Z.json`; later direct restored-asset runs retain full KC check output. Sketch lint reports 0 findings. Source changes are confined to the six authorized files. Evidence level 4 covers numeric asset checks, real imports, executable placement/material checks and CPU rendering; no GPU capture or human play acceptance is claimed.

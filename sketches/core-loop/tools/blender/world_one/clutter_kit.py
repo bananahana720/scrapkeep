@@ -17,7 +17,7 @@ SEED = 20261002
 PLATE_THICKNESS = 0.055
 
 
-def finish(part, tone=None, tilt=0.0):
+def finish(part, tone=None, tilt=0.0, straw=False):
     bm = part.bm
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
     rot = Matrix.Rotation(tilt, 3, "Y")
@@ -28,11 +28,16 @@ def finish(part, tone=None, tilt=0.0):
         v.co.z -= bottom
     bm.normal_update()
     if tone is not None:
-        # Loop colours keep the cut planes discrete. Up faces are lighter than the base,
-        # but even the lightest plane stays below the ground's bone/sand colour.
+        # Shade in linear light: multiplying sRGB first made the stone nearly black.
+        # Straw follows the former runtime lift, capped below sand, with darker roots.
+        linear = common.to_linear(tone)
+        top = max(v.co.z for v in bm.verts)
         for face in bm.faces:
-            gain = 0.64 + 0.26 * max(0.0, face.normal.z) + 0.12 * min(0.0, face.normal.z)
-            part.paint([face], "paint", tuple(c * gain for c in tone))
+            part.paint([face], "paint")
+            gain = 0.72 + 0.23 * max(0.0, face.normal.z) + 0.16 * min(0.0, face.normal.z)
+            for loop in face.loops:
+                shade = 1.32 * (0.85 + 0.15 * loop.vert.co.z / top) if straw else gain
+                loop[part.col] = (*[c * shade for c in linear], 1.0)
     return part.to_object()
 
 
@@ -54,7 +59,7 @@ def rock(name, size, seed):
         span = max(v.co[axis] for v in part.bm.verts) - low
         for v in part.bm.verts:
             v.co[axis] = ((v.co[axis] - low) / span - (0.5 if axis < 2 else 0.0)) * size[axis]
-    tone = common.mix("sandstone", "charcoal", 0.07 if name != "rock_b" else 0.18)
+    tone = common.mix("sandstone", "bone", 0.12 if name != "rock_b" else 0.06)
     return finish(part, tone)
 
 
@@ -65,7 +70,7 @@ def slab(name, size, tilt):
     outline = [(x * size[0], y * size[1]) for x, y in outline]
     part.prism("paint", outline, size[2])
     # Broad strata planes share the map's stone hue; darker than the smaller stones.
-    return finish(part, common.mix("sandstone", "charcoal", 0.16), tilt)
+    return finish(part, common.mix("sandstone", "bone", 0.08), tilt)
 
 
 def plate(name, flipped=False):
@@ -92,18 +97,22 @@ def plate(name, flipped=False):
 
 def stub():
     part = common.Part("stub_a")
-    # Six-sided open pipe: two rings, inner wall and annular broken rim, 48 triangles.
+    # Six-sided open pipe with a broad foot flange, narrow shaft and broken rim.
+    # The flange stays inside the existing 0.21 m placement footprint; 72 triangles.
     rings = []
-    for radius, top in [(0.105, False), (0.105, True), (0.070, False), (0.070, True)]:
+    for radius, height in [(0.105, 0.0), (0.105, 0.045), (0.080, 0.090),
+                           (0.080, 0.515), (0.050, 0.0), (0.050, 0.515)]:
         rings.append([part.bm.verts.new((radius * math.cos(i * math.tau / 6),
                                        radius * math.sin(i * math.tau / 6),
-                                       (0.26 + (0.035 if i in (1, 2) else 0.0)) if top else 0.0))
+                                       height + (0.035 if height > 0.5 and i in (1, 2) else 0.0)))
                       for i in range(6)])
     for i in range(6):
         j = (i + 1) % 6
-        for a, b, slot in [(0, 1, "fleet_paint"), (3, 2, "bare_metal"),
-                           (1, 3, "bare_metal"), (2, 0, "bare_metal")]:
-            part.paint([part.bm.faces.new((rings[a][i], rings[a][j], rings[b][j], rings[b][i]))], slot)
+        for a, b, slot in [(0, 1, "bare_metal"), (1, 2, "bare_metal"),
+                           (2, 3, "fleet_paint"), (5, 4, "bare_metal"),
+                           (3, 5, "bare_metal"), (4, 0, "bare_metal")]:
+            face = part.bm.faces.new((rings[a][i], rings[a][j], rings[b][j], rings[b][i]))
+            part.paint([face], slot, (0.55, 0.55, 0.55) if (a, b) == (5, 4) else None)
     return finish(part)
 
 
@@ -121,8 +130,7 @@ def tuft(name, height, blades, seed):
         vs = [part.bm.verts.new(rot @ Vector(v)) for v in coords]
         for f in [(3, 2, 1, 0), (0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4)]:
             part.paint([part.bm.faces.new([vs[k] for k in f])], "paint")
-    straw = tuple(c * 0.76 for c in common.mix("sandstone", "bone", 0.20))
-    return finish(part, straw)
+    return finish(part, common.srgb("sandstone"), straw=True)
 
 
 def main():
