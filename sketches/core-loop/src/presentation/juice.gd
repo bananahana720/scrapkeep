@@ -307,10 +307,20 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	var weak := String(result.get("part", "")) != "" and plating_of.is_valid() and is_instance_valid(enemy) \
 		and float(result.get("plating", 0.0)) < float(plating_of.call(enemy))
 	var crit := weak or dealt > float(result.get("punch", dealt)) * 1.01
-	var impact := EventKinds.impact(kind)
+	var impact := EventKinds.impact(_impact_key(enemy, kind))
 	_hits.append({"at": at + Vector3.UP * 0.6, "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
 		"stop": impact["stop"] != "none", "shake": float(impact["shake"])})
 	_queue_flush()
+
+
+# A blast publishes enemy_struck under a gun kind, so the row comes from the hit combat
+# just resolved on this enemy (last_impact) while that record is fresh, else from the kind.
+func _impact_key(enemy: Node3D, kind: String) -> String:
+	var last = ctx.spawner.get("last_impact") if ctx != null and ctx.spawner != null else null
+	if last is Dictionary and not last.is_empty() and is_instance_valid(enemy) \
+			and Engine.get_physics_frames() - int(last.get("frame", -100)) <= 2 and int(last.get("enemy", 0)) == enemy.get_instance_id():
+		return String(last["key"])
+	return kind
 
 
 # The stop a hit asks for, in ms, before the frame coalesces and the gate spaces it.
