@@ -85,7 +85,17 @@ const TRIM_DB := {
 	# The shell's air factor moved: a released spring, an up-and-settle boing (audio.gd plays it
 	# up a fifth for the rise and down a fourth for the return).
 	"shell_spring": -9.0,
+	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
+	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
+	# lock tick and the refusals under that, the world clunk under the bite.
+	"lock_tick": -22.0, "dry_tick": -25.0, "line_bite": -7.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
+	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
+	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
+	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
 }
+# A synergy's motif is three of these, one baked note per midi number (cause_note_<midi>).
+const CAUSE_NOTE := "cause_note_"
+const CAUSE_NOTE_DB := -8.0
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
 const BABBLE_ROOTS := [50, 52, 53, 55, 57, 48]
@@ -105,11 +115,28 @@ static var bake_cancel := false
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id)
+	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE)
 
 
 static func trim_db(id: String) -> float:
+	if id.begins_with(CAUSE_NOTE):
+		return CAUSE_NOTE_DB
 	return TRIM_DB.get(id, -8.0)
+
+
+static func cause_note_id(midi: int) -> String:
+	return CAUSE_NOTE + str(midi)
+
+
+# The hum is the one looping cue: a whole number of cycles in its buffer, so it tiles.
+static func hum_stream() -> AudioStreamWAV:
+	if not _streams.has("line_hum"):
+		var wav := Synth.to_wav(samples("line_hum"))
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = wav.data.size() / 2
+		_streams["line_hum"] = wav
+	return _streams["line_hum"]
 
 
 static func samples(id: String) -> PackedFloat32Array:
@@ -154,6 +181,8 @@ static func _n(instrument: String, midi: int) -> PackedFloat32Array:
 
 
 static func stream(id: String) -> AudioStreamWAV:
+	if id == "line_hum":
+		return hum_stream()
 	if not _streams.has(id):
 		_streams[id] = Synth.to_wav(samples(id))
 	return _streams[id]
@@ -186,6 +215,39 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _slam()
 		"grapple_clink":
 			return _fm(0.24, _hz(81), 3.5, 5.0, 16.0)
+		"line_bite":
+			return bite(0)
+		"smash_crack":
+			return crack(0)
+		"lock_tick":
+			return _fm(0.04, _hz(93), 1.0, 0.5, 80.0)
+		"dry_tick":
+			return _mix([[_tone(0.05, 320.0, 240.0, "sine", 70.0), 0, 1.0], [_noise(0.025, 700.0, 450.0, 120.0), 0, 0.5]])
+		"anchor_clunk":
+			return clunk()
+		"smash_whistle":
+			return _mix([[_tone(0.55, 700.0, 2400.0, "sine", 2.5), 0, 1.0], [_noise(0.55, 1500.0, 4800.0, 3.0, 0.05), 0, 0.35]])
+		"dock_click":
+			return _mix([[_noise(0.012, 3800.0, 2600.0, 260.0), 0, 0.8], [_tone(0.07, 600.0, 420.0, "square_dark", 55.0), 0, 1.0]])
+		"line_zip":
+			return zip()
+		"line_twang":
+			return twang()
+		"line_hum":
+			return _line_hum()
+		"verb_fail_jump":
+			return _mix([[_tone(0.06, _hz(70), _hz(70), "sine", 40.0), 0, 1.0], [_tone(0.08, _hz(65), _hz(64), "sine", 35.0), Synth.seconds(0.07), 0.9]])
+		"verb_fail_fire":
+			return _mix([[_noise(0.015, 2200.0, 1500.0, 200.0), 0, 1.0], [_noise(0.015, 2200.0, 1500.0, 200.0), Synth.seconds(0.07), 0.8],
+				[_tone(0.03, 900.0, 600.0, "square_dark", 80.0), 0, 0.4]])
+		"verb_fail_haul":
+			return _mix([[_tone(0.14, 110.0, 80.0, "square_dark", 20.0), 0, 1.0], [_noise(0.04, 500.0, 250.0, 60.0), 0, 0.5]])
+		"verb_fail_boost":
+			return _mix([[_tone(0.18, 420.0, 120.0, "saw_dark", 14.0), 0, 1.0], [_noise(0.16, 2500.0, 700.0, 18.0, 0.01), 0, 0.5]])
+		"verb_fail_special":
+			return _fm(0.2, _hz(67), 2.0, 2.0, 18.0, -3.0)
+		"verb_fail_interact":
+			return _mix([[_tone(0.09, 520.0, 330.0, "sine", 32.0), 0, 1.0], [_noise(0.01, 2500.0, 2000.0, 300.0), 0, 0.4]])
 		"grapple_release":
 			return _fm(0.15, _hz(76), 2.0, 1.5, 24.0, -2.0)
 		"pylon_plant":
@@ -421,9 +483,74 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _lift_hiss()
 		"crater_hold":
 			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
+	if id.begins_with(CAUSE_NOTE):
+		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	# A kind added after this bank still gets a sound: a small blip pitched from its
 	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
+
+
+# --- The harpoon line ------------------------------------------------------------------
+
+# The bite to a body, two layers: a knock that lands and a ring over it. Variant 0 is the
+# one wired in; 1 and 2 are sketches for the owner's ear (tools/sound_sketches.gd).
+static func bite(variant: int) -> PackedFloat32Array:
+	match variant:
+		1:
+			return _mix([[_tone(0.14, 260.0, 90.0, "saw_dark", 24.0), 0, 1.0], [_noise(0.025, 3500.0, 2000.0, 140.0), 0, 0.5],
+				[_fm(0.3, _hz(81), 2.0, 3.0, 10.0), 0, 0.8], [_fm(0.3, _hz(88), 2.0, 2.0, 10.0), Synth.seconds(0.02), 0.4]])
+		2:
+			return _mix([[_tone(0.1, 180.0, 70.0, "sine", 30.0), 0, 1.0], [_fm(0.22, _hz(81), 1.41, 5.0, 18.0), 0, 0.9],
+				[_noise(0.04, 5000.0, 2500.0, 80.0), 0, 0.35]])
+	return _mix([[_tone(0.12, 200.0, 90.0, "sine", 30.0), 0, 0.9], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.4],
+		[_fm(0.24, _hz(81), 3.5, 5.0, 16.0), 0, 1.0]])
+
+
+# The smash's crack, tuned a fifth under the bite's ring (A5 to D5) so the pair resolves.
+static func crack(variant: int) -> PackedFloat32Array:
+	match variant:
+		1:
+			return _mix([[_tone(0.3, _hz(74), _hz(74), "saw_dark", 9.0), 0, 0.8], [_noise(0.06, 5000.0, 1800.0, 60.0), 0, 0.9],
+				[_tone(0.16, 130.0, 55.0, "sine", 20.0), 0, 0.9]])
+		2:
+			return _mix([[_fm(0.34, _hz(74), 1.5, 4.0, 11.0), 0, 1.0], [_noise(0.05, 6000.0, 2500.0, 80.0), 0, 0.8],
+				[_tone(0.12, 150.0, 60.0, "sine", 26.0), 0, 0.6]])
+	return _mix([[_fm(0.3, _hz(74), 3.5, 4.0, 14.0), 0, 1.0], [_noise(0.05, 5500.0, 2000.0, 70.0), 0, 0.8],
+		[_tone(0.12, 120.0, 60.0, "sine", 24.0), 0, 0.8]])
+
+
+static func clunk() -> PackedFloat32Array:
+	return _mix([[_tone(0.2, 150.0, 60.0, "sine", 18.0), 0, 1.0], [_noise(0.06, 900.0, 350.0, 45.0), 0, 0.7],
+		[_tone(0.3, 200.0, 170.0, "saw_dark", 9.0), Synth.seconds(0.05), 0.35]])
+
+
+static func zip() -> PackedFloat32Array:
+	return _mix([[_noise(0.16, 5500.0, 800.0, 16.0, 0.004), 0, 1.0], [_tone(0.14, 1700.0, 500.0, "sine", 22.0), 0, 0.35]])
+
+
+# A cut cable: a plucked string settling from a sharp start, lower and longer than the zip.
+static func twang() -> PackedFloat32Array:
+	var n := Synth.seconds(0.6)
+	var buf := Synth.buffer(n)
+	var f := _hz(52)
+	var phase := 0.0
+	for i in n:
+		var t := i * Synth.INV_RATE
+		phase += TAU * f * (1.0 + 0.08 * exp(-t * 16.0)) * (1.0 + 0.012 * sin(TAU * 7.0 * t)) * Synth.INV_RATE
+		buf[i] = (sin(phase) + 0.5 * sin(2.0 * phase) + 0.25 * sin(3.0 * phase)) * minf(1.0, t * 1500.0) * exp(-t * 6.0)
+	return _mix([[Synth.declick(buf, 8, 300), 0, 1.0], [_noise(0.025, 3000.0, 1500.0, 120.0), 0, 0.5]])
+
+
+# Whole cycles of every partial and of the tremolo fit the buffer, so it tiles as a loop.
+static func _line_hum() -> PackedFloat32Array:
+	var length := 0.6
+	var n := Synth.seconds(length)
+	var buf := Synth.buffer(n)
+	var f := roundf(_hz(46) * length) / length
+	for i in n:
+		var t := i * Synth.INV_RATE
+		buf[i] = (sin(TAU * f * t) + 0.5 * sin(TAU * 2.0 * f * t) + 0.3 * sin(TAU * 3.0 * f * t)) * (0.85 + 0.15 * sin(TAU * 10.0 * t))
+	return buf
 
 
 # --- Scores ----------------------------------------------------------------------------

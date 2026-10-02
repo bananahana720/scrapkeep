@@ -148,7 +148,7 @@ func run(t) -> void:
 	t.check("harpoon_smashed left ROWS", not EventKinds.ROWS.has("harpoon_smashed"), "ROWS still holds harpoon_smashed")
 	var bite := EventKinds.row("harpoon_bit")
 	var smash := EventKinds.row("harpoon_smashed")
-	t.check("a bite reads as it did", bite.get("shape") == "diamond" and bite.get("sound") == "grapple_clink" and bite.get("color") == Palette.ARC and bite.get("priority") == 1 and bite.get("group") == "movement",
+	t.check("a bite reads as it did", bite.get("shape") == "diamond" and bite.get("sound") == "line_bite" and bite.get("color") == Palette.ARC and bite.get("priority") == 1 and bite.get("group") == "movement",
 		"bite row %s" % [bite])
 	t.check("a smash reads as it did", smash.get("shape") == "ring" and smash.get("sound") == "slam_boom" and smash.get("color") == Palette.ARC and smash.get("priority") == 1 and smash.get("group") == "movement",
 		"smash row %s" % [smash])
