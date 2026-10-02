@@ -10,6 +10,20 @@ const SHOULDER_UP := 0.7
 const SHOULDER_RATE := 12.0
 const KICK_RETURN := 14.0
 const MAX_PUNCH := 20.0
+# A wide lens at speed reads as a fisheye, so base, profile add and punch share one ceiling.
+const FOV_CAP := 88.0
+const FOV_REST := 65.0
+const FOV_FAST := 80.0
+const FALL_SPEED := -8.0
+const BIAS_LIMIT := 0.21
+const PROFILE_EASE := 5.0
+# Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
+# player's pitch; shake_cap is the most total shake allowed while the row is active.
+const PROFILES := {
+	"falling": {"arm": 12.0, "pitch_bias": -0.21, "fov_add": 6.0, "shake_cap": 1.2},
+	"locked": {"arm": 0.0, "pitch_bias": 0.035, "fov_add": 3.0, "shake_cap": 1.2},
+	"boss": {"arm": 12.0, "pitch_bias": 0.07, "fov_add": 0.0, "shake_cap": 0.6},
+}
 
 var target
 var tuning
@@ -35,7 +49,11 @@ var _shake_decay := 2.4
 var _punch := 0.0
 var _punch_decay := 0.0
 var _kick := Vector3.ZERO
-var _base_fov := 65.0
+var _base_fov := FOV_REST
+var _locked := false
+var _boss_reach := false
+var _pitch_bias := 0.0
+var _fov_add := 0.0
 
 
 func setup(target_ref, tuning_ref) -> void:
@@ -88,6 +106,27 @@ func snap(heading: Vector3, pitch_value := -0.30) -> void:
 	_kick = Vector3.ZERO
 
 
+# A harpoon lock point, or null to release. A lock changes the arm, pitch bias and lens
+# only; the player's yaw is never touched.
+func set_lock(point) -> void:
+	_locked = point != null
+
+
+func set_boss_reach(on: bool) -> void:
+	_boss_reach = on
+
+
+func active_profiles() -> Array:
+	var rows := []
+	if target != null and not target.state.grounded and target.state.velocity.y < FALL_SPEED:
+		rows.append("falling")
+	if _locked:
+		rows.append("locked")
+	if _boss_reach:
+		rows.append("boss")
+	return rows
+
+
 func aim_origin() -> Vector3:
 	return cam.global_position
 
@@ -129,12 +168,25 @@ func _process(delta: float) -> void:
 	global_position = global_position.lerp(anchor, lerpf(follow, 1.0, shoulder_blend * 0.5))
 	var ease := 1.0 - exp(-4.0 * delta)
 	var speed_arm := lerpf(7.5, 10.5, fraction)
+	var rows := active_profiles()
+	var bias_target := 0.0
+	var add_target := 0.0
+	var shake_cap := INF
+	for row in rows:
+		var profile: Dictionary = PROFILES[row]
+		speed_arm = maxf(speed_arm, profile["arm"])
+		bias_target += profile["pitch_bias"]
+		add_target = maxf(add_target, profile["fov_add"])
+		shake_cap = minf(shake_cap, profile["shake_cap"])
+	var profile_ease := 1.0 - exp(-PROFILE_EASE * delta)
+	_pitch_bias = lerpf(_pitch_bias, clampf(bias_target, -BIAS_LIMIT, BIAS_LIMIT), profile_ease)
+	_fov_add = lerpf(_fov_add, add_target, profile_ease)
 	arm.spring_length = lerpf(arm.spring_length, lerpf(speed_arm, SHOULDER_ARM, shoulder_blend), maxf(ease, shoulder_blend * 0.25))
 	_punch = move_toward(_punch, 0.0, _punch_decay * delta)
-	_base_fov = lerpf(_base_fov, lerpf(65.0, 82.0, fraction), ease)
+	_base_fov = lerpf(_base_fov, lerpf(FOV_REST, FOV_FAST, fraction), ease)
 
 	rotation = Vector3(0.0, yaw, 0.0)
-	arm.rotation = Vector3(pitch, 0.0, 0.0)
+	arm.rotation = Vector3(pitch + _pitch_bias, 0.0, 0.0)
 
 	var accel := (velocity - _previous_velocity) / maxf(delta, 0.0001)
 	_previous_velocity = velocity
@@ -142,9 +194,10 @@ func _process(delta: float) -> void:
 	_roll = lerpf(_roll, clampf(-lateral * 0.0022, -0.13, 0.13), 1.0 - exp(-8.0 * delta))
 
 	_shake = maxf(_shake, clampf(target.state.impact / 30.0, 0.0, 1.2) * motion_scale)
-	_shake = maxf(0.0, _shake - delta * maxf(_shake_decay, 2.4))
+	_shake = minf(maxf(0.0, _shake - delta * maxf(_shake_decay, 2.4)), shake_cap)
 	_kick = _kick.lerp(Vector3.ZERO, 1.0 - exp(-KICK_RETURN * delta))
 	var jitter := Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
 	cam.position = jitter + cam.get_parent().global_basis.inverse() * _kick
-	cam.rotation = Vector3(0.0, 0.0, _roll + jitter.x * 0.1)
-	cam.fov = _base_fov + _punch
+	# The lens turns back by the bias so the view direction, and with it the aim, stays the player's.
+	cam.rotation = Vector3(-_pitch_bias, 0.0, _roll + jitter.x * 0.1)
+	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
