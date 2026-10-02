@@ -182,6 +182,7 @@ var _virtual_usec := 0
 
 static var _bake_task := -1
 static var _baked := false
+static var _bake_done := false
 static var _rest_task := -1
 
 
@@ -225,11 +226,13 @@ static func _sound_ids() -> Array:
 static func _bake_everything(ids: Array) -> void:
 	SfxBank.bake_all(ids)
 	MusicEngine.prepare()
+	_bake_done = not SfxBank.bake_cancel
 
 
 func _start_bake() -> void:
 	if _baked or _bake_task >= 0:
 		return
+	_bake_done = false
 	_bake_task = WorkerThreadPool.add_task(_bake_everything.bind(_sound_ids()), false, "presentation audio bake")
 
 
@@ -275,9 +278,12 @@ func _exit_tree() -> void:
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
 	if _bake_task >= 0:
+		# A game that quits early abandons the bake; the next Audio bakes what is missing.
+		SfxBank.bake_cancel = true
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
+		SfxBank.bake_cancel = false
 		_bake_task = -1
-		_baked = true
+		_baked = _bake_done
 	if _ace_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_ace_task)
 		_ace_task = -1

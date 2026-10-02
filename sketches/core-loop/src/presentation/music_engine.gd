@@ -309,8 +309,12 @@ func _init() -> void:
 static func prepare() -> void:
 	_prepare_chords(Harmony.PROGRESSION + Harmony.CADENCE + [Harmony.MINOR_OF["G13"], Harmony.MINOR_OF["Cmaj9"], Harmony.MINOR_OF["Bbmaj9"]], ["lead"], 0)
 	for drum in Synth.DRUMS:
+		if SfxBank.bake_cancel:
+			return
 		Synth.drum(drum)
 	for chord in Harmony.PROGRESSION:
+		if SfxBank.bake_cancel:
+			return
 		Synth.note("reese", chord["root"] + 19)
 
 
@@ -396,6 +400,8 @@ static func _shift(voicing: Array, by: int) -> Array:
 
 static func _prepare_chords(chords: Array, leads: Array, shift: int) -> void:
 	for chord in chords:
+		if SfxBank.bake_cancel:
+			return
 		var voicing := _shift(chord["voicing"], shift)
 		Synth.note("sub", chord["root"] + shift)
 		Synth.note("reese", chord["root"] + 12 + shift)

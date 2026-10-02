@@ -100,6 +100,8 @@ static var _lock := Mutex.new()
 # Cues whose notes depend on the level (the synergy fanfare quotes its motif).
 const THEMED := ["synergy_fanfare"]
 static var _streams := {}
+# Set on the main thread to abandon a startup bake; the worker checks it between ids.
+static var bake_cancel := false
 
 
 static func has_recipe(id: String) -> bool:
@@ -159,8 +161,12 @@ static func stream(id: String) -> AudioStreamWAV:
 
 static func bake_all(ids: Array) -> void:
 	for id in ids:
+		if bake_cancel:
+			return
 		stream(id)
 	for id in STINGER_BEATS:
+		if bake_cancel:
+			return
 		samples_at(id, Harmony.BOSS_STEP)
 
 
