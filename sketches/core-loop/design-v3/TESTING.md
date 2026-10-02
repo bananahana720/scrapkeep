@@ -201,3 +201,15 @@ The Sol unit PR reported FAIL on itself for two whole-file hash pins that the br
 
 The 1189 s is not a regression in the suite. The runner chose a pool of 2 because the machine was at load 37 when it started (two Sol jobs, a map candidate's test run and five scouts), and the app had crashed and killed the previous attempt 54 tests in. On a quiet machine the same suite ran in 445 s an hour earlier (receipt `gate-670fd9eb7eb9`). A gate run should start when the load is low, or the wave should hold its other jobs for it.
 
+### After unit Z3, `proto/alpha` at `94fb9d6`
+
+Gate: 246 runs, 0 failed, 2 quarantined red (`build_power_curve_test`, `ui_word_budget_first_find_test`), 404 s (receipt `gate-a887bec09339-2026-10-02T13-55-04-659Z.json`).
+
+The first gate on the merged map (246 runs, 1002 s on a loaded machine, receipt `gate-19df5e199c5e-2026-10-02T13-33-06-389Z.json`) failed `slice_packs_test` for real: it wanted four packs inside 72 s, and on the Reach a ball that never fights lets the cap fill by 24 s, so the fourth cannot land. A Sol unit saw the same failure on its base, on the old map, so the check was fragile to how fast enemies thin out, not to the map. It now requires the elite third and once before the field is cleared at 30 s, and a fourth pack after, and prints each arrival's time. That print showed the same pack on both sides of the elite: the draw rule let the elite reset its no-repeat memory. Fixed with a unit check that was red on 8 of 20 seeds. Cause of the gate failure: `brief` (the coordinator ran the map's named tests before the gate and left this one out).
+
+Review failures by cause: the winner's Fable review failed it on two `writer` points (gates re-placed and republished their offer on every tick once the ball was past the fixed row; the control run could not fail), and named two `brief` gaps (the slice's event mix, and a device under a line that R2 had since removed).
+
+A measure can ride on a bug. The traversal bars were taken on a spawn that had a misplaced Spillway cache on it; every pilot landed on the cache and rolled off it faster. When R2 moved devices to their own map the same lines measured lower for two pilots with no change to the map. A baseline is retaken on the admission head before a bar is trusted.
+
+`npm test` was red at the R2 admission head: `tests/lab-verdicts.test.js` wants one `verdicts.ndjson` line per playtest entry and entry 11 had none. `check:docs` does not cover it. Two R3a reviewers found it. The coordinator now runs `npm test` before committing a playtest entry.
+

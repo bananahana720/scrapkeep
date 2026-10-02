@@ -248,6 +248,10 @@ Each is worded so he can veto it.
 34. The map retrofit is a new map file used by the slice only. The three-stage game keeps today's Reach until he has played the new one.
 35. Devices belong to a map. The Reach has none until the standing-activities unit places its own.
 36. Still owed after wave R2: a hooked enemy leaning toward the ball, hit reactions and each kind's wind-up pose (Sol, one unit per slice enemy).
+37. On the Reach the reward gates stand in three fixed slots south of the Warden and open from either side; the workshop bay always docks behind them.
+38. No tunnel on an authored line has a roof (w1 and e1 on the Reach).
+39. The Reach is in with Kest under his flow-share bar, stated as a miss. The first three seconds on the east lines are a drop and a level roll; the spawn launch (unit ZL) is the fix, with all three lines retuned around it.
+40. Surge run is parked for the slice: three standing activities (altar, cache, bounty), not four.
 
 ## 11. What only Andrew can decide
 
