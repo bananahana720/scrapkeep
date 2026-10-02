@@ -21,6 +21,7 @@ const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 # The spine's HUD, built to a word budget (playtest entry 7): icons, gauges and keycaps
 # carry the facts, and words appear only where nothing else can say it. Top band: the
@@ -71,6 +72,7 @@ var key_glyphs
 var edge_markers
 var callouts
 var launch_card
+var why_callout
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
 var prompt_rects := {}
 
@@ -174,6 +176,9 @@ func setup(game_ref) -> void:
 	reticle = AimReticle.new()
 	add_child(reticle)
 	reticle.setup(game.player, game.camera.cam)
+	why_callout = WhyCallout.new()
+	add_child(why_callout)
+	why_callout.setup(game, profile)
 
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
@@ -522,7 +527,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _heft, _scrap, _speed, reticle, key_glyphs, edge_markers]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _heft, _scrap, _speed, reticle, key_glyphs, edge_markers, why_callout]:
 		piece.visible = playing
 	_armor.visible = playing and game.run.armor_mode
 	if not playing:

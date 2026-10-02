@@ -1682,3 +1682,15 @@ The harpoon is one mode for every pilot, and it says every state it passes throu
 The slice keeps five synergies; `cause_armed` fires once per run when one goes live, and `cause_fired` fires wherever its effect resolves. The first firing is the discovery, and the discovery burst stays at the ball. A retry or arena retry clears the build's fired record, so a synergy still live across the rewind is found again at its next firing (the codex deduplicates within an attempt).
 
 - **Owed: Storm Lattice and Thermal Shock emit from approximate sites.** Storm Lattice's `cause_fired` comes from every `shot_fired` while it is live, and Thermal Shock's carries a null body and the ball position. Both are cut from the slice. They move to combat's chain resolve and `element_field._shatter` when a writer has combat and the element field in scope.
+
+## WY2: the callout that shows why a synergy fired
+
+When a synergy's effect resolves, the player sees its two causes and its effect where it struck, in one form for every row (LEGIBILITY section 5).
+
+- **Form.** `src/ui/why_callout.gd`, a HUD piece. On `cause_fired(id, target, at)` the two cause glyphs snap together, an arrow draws to the effect glyph in the row's `CAUSE_ROWS` shape, and the whole part runs 0.9 s beside the struck body, clamped between the toasts and prompts bands and off a 70 px square round the reticle. Every colour is `EventKinds.cause_color(id)`; the file holds no colour literal. The cause glyphs are the row's two tags (`Synergies.ROWS[id].tags`) through `WhyCallout.TAG_SHAPES`, a silhouette per tag from `Icons.SHAPES`.
+- **Pulse.** `vfx.gd` draws a pulse in the row's shape on the struck body (at `at` when the body is null) on every `cause_fired`, including the firings the callout skips. The discovery burst and ring at the ball are gone; the persistent ring per synergy stays.
+- **Name.** The synergy's name rides the callout on its first three firings per profile (`why:<id>` in `UiProfile.uses`), counted only when a callout is drawn. `drawn_words()` on the callout reports it.
+- **Limits.** One callout per row per 4 s; one on screen while a fight is on (a live node in the `threat` group, or damage in the last 3 s) and two when calm. Over a limit only the pulse draws.
+- **Armed.** `cause_armed(id)` links the two cause glyphs and a bar at the ball for 0.6 s, with no name and no banner.
+- **The card waits.** `codex_banner.gd` holds a first-discovery card (cards mode) at the head of its queue until `calm()`: no live telegraph and 3 s since damage or a telegraph. The banner finds the bus through its presentation ancestor (presentation.gd is another unit's), so damage is counted without a wire there. A card raised when calm shows at once; `dismiss(true)` still drops a held one.
+- **Test.** `tests/why_callout_test.gd` steps every clock by hand. A scratch change of `NAME_USES` from 3 to 4 fails its name check.
