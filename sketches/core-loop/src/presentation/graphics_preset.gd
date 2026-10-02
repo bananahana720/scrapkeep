@@ -19,6 +19,7 @@ const PRESETS := {
 		"shadow_atlas": 4096, "sdfgi_rays": 1, "ssil_quality": 2,
 		"fog_volume_size": 64, "fog_volume_depth": 64,
 		"material_detail": true, "material_relief": true,
+		"set_dressing": true, "air_motes": true, "air_streaks": true,
 		"material_ground": true, "material_rock": true, "material_dam": true,
 		"environment": {"ssao_radius": 0.55, "ssao_intensity": 1.25, "ssao_detail": 0.40},
 		"sun_properties": {"light_angular_distance": 0.0, "shadow_normal_bias": 0.65,
@@ -31,6 +32,7 @@ static var _worlds: Array = []
 static var _scenery: Array = []
 static var _target_server_active := false
 static var _materials: Array = []
+static var _dressing_hosts: Array[WeakRef] = []
 
 static func apply(preset: String) -> bool:
 	if not PRESETS.has(preset):
@@ -45,7 +47,14 @@ static func apply(preset: String) -> bool:
 	_materials = _materials.filter(func(w): return w.view.get_ref() != null)
 	for binding in _materials:
 		_apply_material(binding)
+	_dressing_hosts = _dressing_hosts.filter(func(ref): return ref.get_ref() != null)
+	for ref in _dressing_hosts:
+		ref.get_ref()._sync_dressing()
 	return true
+
+static func register_dressing_host(host: Node) -> void:
+	_dressing_hosts.append(weakref(host))
+	host._sync_dressing()
 
 static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Viewport) -> void:
 	for arg in OS.get_cmdline_user_args():

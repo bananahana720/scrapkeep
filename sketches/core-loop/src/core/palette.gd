@@ -241,7 +241,6 @@ static func target_surface_material(role: String, original: Material) -> ShaderM
 			mat.shader = preload("res://assets/shaders/target_ground.gdshader")
 		"rock":
 			mat.shader = preload("res://assets/shaders/target_rock.gdshader")
-			mat.set_shader_parameter("stone_color", Color("bca382"))
 		"dam":
 			mat.shader = preload("res://assets/shaders/target_dam.gdshader")
 			if original is StandardMaterial3D:
@@ -250,6 +249,19 @@ static func target_surface_material(role: String, original: Material) -> ShaderM
 				mat.set_shader_parameter("has_base_map", original.albedo_texture != null)
 				if original.albedo_texture != null:
 					mat.set_shader_parameter("base_map", original.albedo_texture)
+	mat.set_shader_parameter("base_color", target_base_color(role, original))
+	if role == "ground":
+		mat.set_shader_parameter("rock_color", SANDSTONE)
 	mat.resource_name = "target_" + role
 	_target_surfaces[key] = mat
 	return mat
+
+
+# Terrain's map tint comes from SAND/SANDSTONE. The dam is already a merged set
+# of vertex colours and imported paint slots: preserve that source's base and map.
+static func target_base_color(role: String, original: Material) -> Color:
+	if role == "ground":
+		return SAND
+	if role == "rock":
+		return SANDSTONE
+	return original.albedo_color if original is StandardMaterial3D else Color.WHITE

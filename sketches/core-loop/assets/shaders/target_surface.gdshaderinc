@@ -31,3 +31,12 @@ vec3 surface_bump(vec3 position, vec3 normal, float height) {
 	vec3 gradient = (across_x * dFdx(height) + across_y * dFdy(height)) / (divisor + 0.00000001);
 	return normalize(normal - gradient * relief_strength);
 }
+
+// Continuous macro field: no cell edges in broad albedo or relief. Fine grain
+// alone uses the interpolated lattice above and fades below the pixel footprint.
+float surface_macro(vec2 p) {
+	return 0.5 + 0.25 * sin(p.x + sin(p.y * 0.73)) + 0.25 * sin(p.y * 0.81 + sin(p.x * 0.61));
+}
+float surface_value(float tone) {
+	return mix(1.0, clamp(tone, 0.75, 1.2), detail_enabled ? clamp(detail_strength, 0.0, 1.0) : 0.0);
+}

@@ -16,6 +16,9 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	check(not _colour_source_valid("ALBEDO = vec3(-0.1, 1e-2, 0.5);"), "source scan rejects signed and exponential colour literals")
+	check(_colour_source_valid("uniform vec4 base : source_color = vec4(1.0);"), "source scan permits uniform defaults")
+	check(_shader_colour_scan(), "target shaders contain no colour literals outside uniform defaults")
 	Preset.apply("high")
 	var game := Game.new()
 	game.test_mode = true
@@ -59,6 +62,14 @@ func _run() -> void:
 			var material := view.get_active_material(i) as ShaderMaterial
 			check(material != null and material.resource_name == "target_" + binding.role, "target binds " + binding.role + " on " + str(view.name))
 			if material != null:
+				var expected: Color = Palette.SAND if binding.role == "ground" else Palette.SANDSTONE
+				if binding.role == "dam":
+					expected = binding.originals[i].albedo_color
+				check(material.get_shader_parameter("base_color") == expected, "target base uniform matches high palette/source colour for " + binding.role)
+				if binding.role == "ground":
+					check(material.get_shader_parameter("rock_color") == Palette.SANDSTONE, "ground slope uses sandstone palette uniform")
+				if binding.role == "dam":
+					check(material.get_shader_parameter("base_map") == binding.originals[i].albedo_texture, "dam keeps high source map and its rust hue")
 				roles[binding.role] += 1
 				check(material.get_shader_parameter("detail_enabled") == true and material.get_shader_parameter("relief_enabled") == true, "target detail and relief enabled")
 				var parameters := material.shader.get_shader_uniform_list()
@@ -114,5 +125,29 @@ func _matches(before: Array) -> bool:
 		for i in row.materials.size():
 			var material := view.get_active_material(i)
 			if material != row.materials[i] or _values(material) != row.values[i]:
+				return false
+	return true
+
+
+func _shader_colour_scan() -> bool:
+	for file in DirAccess.get_files_at("res://assets/shaders"):
+		if not file.begins_with("target_") or not (file.ends_with(".gdshader") or file.ends_with(".gdshaderinc")):
+			continue
+		if not _colour_source_valid(FileAccess.get_file_as_string("res://assets/shaders/" + file)):
+			print("Colour literal outside uniform: ", file)
+			return false
+	return true
+
+func _colour_source_valid(source: String) -> bool:
+	var vector := RegEx.new()
+	vector.compile("vec[34]\\([^)]*\\)")
+	for line in source.split("\n"):
+		var code := line.split("//")[0].strip_edges()
+		for match in vector.search_all(code):
+			var body: String = match.get_string().split("(")[1].trim_suffix(")")
+			var numeric := true
+			for token in body.split(","):
+				numeric = numeric and token.strip_edges().is_valid_float()
+			if numeric and not (code.begins_with("uniform ") and code.contains("=")):
 				return false
 	return true

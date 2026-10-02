@@ -1922,3 +1922,103 @@ Capture enables measurement on the root viewport before warmup and retains 240 w
 The [base renderer comparison](../../artifacts/local/lk-r2/baseline-check.log) passes for fresh high/low and target-to-high/low against commit 79f62ab: 76 properties and six recorded server-setting groups. The [preparation check](../../artifacts/local/lk-r2/prepare_baseline.py) pins unchanged high/low rows, the original renderer setter body, all original Palette constructors and the one-line terrain fence. `target_material_test.gd` stages a live Warden and chaser, then checks 544 mesh instances and 568 active material slots. It also pins every unbound actor, prop and effect material under target. It verifies resource identity and every stored material value on high/low, all target roles, unchanged mesh/caster state, shader uniform/include parsing, label hiding, median/p95 calculation and unavailable timestamps. The target game also stages 120 physics frames headlessly without an error line.
 
 The round-1 smoke list plus `target_material_test` passes; lint reports zero findings. Headless capture still exits 2 without script error. The checks establish engine resource parsing and binding, not Forward+ shader execution or appearance. No rendered image was generated in the writer sandbox. Ball shadow visibility, absence of the site edge, dam colour at 150 m, fine-detail stability, actor/telegraph separation and the <=3 ms GPU increment remain coordinator checks. Changes are uncommitted for coordinator admission and capture.
+
+## Colour, readable detail and dressing, unit LK round 3, 2026-10-02
+
+Base: `e1f734d`. The coordinator's RTX 4080 captures put GPU medians at 0.875 ms
+for high and 0.883 ms for target. Round 2 restored the ball's ground shadow and
+removed the site edge. This round leaves the accepted sun, shadow, fog and grade
+unchanged. All comparisons of rendered colour, detail and cost still require the
+coordinator's next capture. No GPU capture runs in the writer sandbox.
+
+### Part A: retain the surface colours
+
+Ground gets `Palette.SAND` through a `source_color` base uniform, with
+`Palette.SANDSTONE` for its slope blend. Rock gets `Palette.SANDSTONE` through the
+same uniform path. This replaces round 2's raw terrain vertex tint and separate
+pale stone colour. The dam keeps the original material's albedo colour, source map
+and baked linear vertex colours. Round 2 explicitly removed that map inside the
+dam envelope, losing the map's rust hue; this round samples it there too.
+
+The established ground and rock shaders do not expose one base-colour uniform,
+and the dam's merged material contains multiple authored vertex tints and a colour
+texture rather than one Palette constant. The target factory therefore uses the
+terrain's shared palette constants and copies the dam's actual source inputs.
+Changing the high constructors to invent a common constant would violate scope.
+The colour test independently compares ground/rock uniforms to those constants
+and every dam uniform/map to its original material. Procedural detail multiplies
+each source albedo by a scalar clamped to 0.75–1.2, with detail strength clamped to
+0–1. It adds no hue. For the dam this bound is relative to the original textured
+pixel, not its white material tint alone.
+
+The shader source scan rejects numeric vec3/vec4 literals outside uniform defaults,
+including signed and exponential literals. The red run deliberately set the ground
+base to white and exited 1. Restoring the palette base passed the same test.
+
+### Part B: patterns in world metres
+
+| Surface | Layers and scale |
+| --- | --- |
+| Sand | Ripples every 0.6 m, bent over 12 m; drift lines every 4 m, bent over 18 m; continuous packed-sand field with principal wavelengths 16 m and 19.75 m and phase-warp wavelengths 21.92 m and 26.23 m; non-repeating fine grain on a 0.026 m noise lattice. |
+| Ground slopes and rock | Strata every 1.2 m vertically, warped over 24 m in X and 18 m in Z; darker recesses and worn lips share that period. Rock erosion has principal wavelengths 8 m and 9.88 m, with phase-warp wavelengths 10.96 m and 13.11 m. Rock grain uses a non-repeating 0.083 m lattice. |
+| Dam | Panels 3 × 3 m, seams roughly 0.05–0.17 m wide after antialiasing; streak field has principal wavelengths 0.8 m horizontally and 9.88 m vertically, phase warps over 10.96 m vertically and 1.31 m horizontally; seam-edge chips use a non-repeating 0.111 m lattice. The existing source map repeats every 6 m. |
+
+The old broad field used a 4.17 m value-noise lattice. It already interpolated its
+samples, so missing interpolation was not the cause. That cell-shaped field, raw
+2 m terrain vertex tint and derivative relief from fine grain were the patch-producing
+paths present in round 2. The new macro field is continuous sine-based variation,
+uses palette uniforms instead of raw vertex tint and excludes fine-grain derivatives
+from relief. Pinning the exact contribution of each old path would require rendered
+ablation; removal of the pictured patches remains a GPU check. Ground and rock
+have no time input or displacement. Fine grain fades with pixel footprint.
+
+### Part C: deterministic dressing and air
+
+`set_dressing`, `air_motes` and `air_streaks` are independent target keys. High and
+low create none of their nodes. Presentation creates/frees one target-only root on
+preset changes. Stage entry rebuilds it from the map id's hash and a private RNG;
+no gameplay RNG, terrain, collision, player, enemy or camera state is written.
+
+Pebbles, charcoal scrap flakes and muted sand tufts use three MultiMesh batches.
+Their placement avoids the scrap lines, beacon bowl, spawn, vault and device sites.
+The height test transforms every vertex from the exact submitted instance buffer
+and compares it to the sampled terrain. It measured a maximum 0.170 m protrusion
+across 1,173 small props in the Spillway. Broken rocks use a fourth batch on
+unclimbable slopes outside the play rectangle plus an apron. Their actual mesh
+extents stay inside 0.5–2 m. There are 53 in the tested Spillway. No batch casts
+shadows or has a collider.
+
+Air uses 160 tiny camera-facing dust cards and one batch of low ground streaks.
+Motes are seeded 2–29 m ahead; fragment opacity fades to zero by 30 m radial camera
+distance. Streaks move along the common XZ wind `(0.93, 0.367)` and use the same
+30 m cutoff. Peak alphas are 0.025 and 0.018 respectively, with feathered edges,
+no emission and no depth writes. A simulation-driven effect clock freezes with the
+capture. These cards cannot establish volumetric shafts or long-distance haze.
+
+Each prop and air shader clears padded screen rectangles around the player,
+enemies, scrap pickups and committed telegraphs. More than 64 protected objects
+hides the entire dressing root. The active camera drives the masks and dust box;
+the capture tool explicitly refreshes them after a frozen camera change. This avoids
+masking the wrong view when the tool uses a camera separate from the chase camera.
+The tool hashes the new presentation sources and shaders too.
+
+The headless dummy server does not support MultiMesh transform readback. Production
+submits one packed instance buffer and retains that exact buffer on the batch for
+the test to decode. This proves placement heights and seed reproducibility from
+submitted instances; GPU execution and pixel coverage are separate evidence.
+
+### Cost estimates and cut order
+
+These are planning estimates for incremental GPU time at 1080p, not measurements:
+material changes 0.05–0.20 ms; four prop batches 0.15–0.50 ms; dust 0.02–0.10 ms;
+streaks 0.02–0.10 ms. The expected total increase is under 1 ms, with the actual
+acceptance cap at 3 ms above high. Live protection rectangles also add unmeasured
+CPU work; GPU headroom does not establish a wall-time improvement.
+
+First disable `air_streaks`, then `air_motes`, then reduce prop density or disable
+`set_dressing`. If materials are costly, disable `material_relief` before restoring
+the dam/rock materials. Keep the accepted sun/shadow/fog values and readable sand
+ripples. The coordinator checks hue/value against high, ripple/strata/seam scale,
+patch removal, masking around feet and pickups, mote/streak opacity, shimmer at
+speed and the target-versus-high GPU delta. Native shader backend compilation and
+all of those image/playing judgments remain outside headless acceptance.

@@ -130,6 +130,8 @@ func _stage() -> void:
 
 func _shot(id: String, view: Dictionary) -> bool:
 	Cams.aim(camera, view.eye, view.target, view.fov)
+	if is_instance_valid(game.presentation.set_dressing):
+		game.presentation.set_dressing.sync_camera(camera)
 	# SDFGI and volumetric temporal history must settle after a camera jump while the
 	# simulation remains frozen. No animation or physics frames advance between stills.
 	for i in WARMUP_FRAMES:
@@ -154,7 +156,10 @@ func _hashes() -> Dictionary:
 		"src/presentation/spillway_scenery.gd", "src/presentation/graphics_preset.gd",
 		"tools/capture_cameras.gd", "tools/target_capture.gd", "project.godot",
 		"assets/shaders/target_ground.gdshader", "assets/shaders/target_rock.gdshader",
-		"assets/shaders/target_dam.gdshader", "assets/shaders/target_surface.gdshaderinc"]:
+		"assets/shaders/target_dam.gdshader", "assets/shaders/target_surface.gdshaderinc",
+		"src/presentation/presentation.gd", "src/presentation/set_dressing.gd",
+		"assets/shaders/target_dressing.gdshader", "assets/shaders/target_air.gdshader",
+		"assets/shaders/target_protection.gdshaderinc"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result
 
