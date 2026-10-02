@@ -112,6 +112,10 @@ First-gate results, by cause:
 
 Three of seven units had a review finding of medium or above at the first gate, and two of three fix units failed their review. The flag-flip probe undercounted: launch flags reach only tests that build the whole game, so 15 failures measured became 20 after the defaults changed.
 
+### With the visual branch merged, `proto/alpha` at `ad78651`
+
+One gate run (receipt `gate-f817cf4e1b25-2026-10-02T06-03-11-287Z.json`): 241 runs, 0 failed, 2 quarantined red, 338 s, six solo tests 79 s. The 19 added tests cost 15 s of wall. Eleven tests now print no verdict line.
+
 ## Decisions the numbers settled
 
 | Question | Decision | Why |
