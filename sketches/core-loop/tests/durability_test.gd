@@ -306,8 +306,10 @@ func _armor_game_checks() -> void:
 			and build.scrap.recovery_value() == int(round((spill_from - run.mass) * 0.75)) and run.hp == 100.0,
 		"mass %.0f -> %.0f, %d clusters worth %d, hull %.0f" % [spill_from, run.mass, build.scrap.recovery_count(), build.scrap.recovery_value(), run.hp])
 	# Mass lost to the hit above must not lower the hull ceiling at the next recompute.
-	_check("hud armour readout", _game.hud._armor.visible and _game.hud._armor_flash > 0.0 and _game.hud._armor.label.is_valid_int(),
-		"armour gauge visible %s, flash %.2f, label %s" % [_game.hud._armor.visible, _game.hud._armor_flash, _game.hud._armor.label])
+	_check("hud armour readout", _game.hud._armor.visible and _game.hud._armor_flash > 0.0 and _game.hud._armor.label == ""
+			and _game.hud._armor.fraction > 0.0,
+		"armour gauge visible %s, flash %.2f, bar %.2f, no number (label \"%s\")" % [_game.hud._armor.visible, _game.hud._armor_flash,
+			_game.hud._armor.fraction, _game.hud._armor.label])
 	# Wear runs only in grounded stage play: not in flight, not paused.
 	var flow = _game.flow
 	_game.player.state.grounded = true

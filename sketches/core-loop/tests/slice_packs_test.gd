@@ -189,8 +189,11 @@ func _winch() -> void:
 	player.reset_to(ball)
 	var drone = ctx.spawner.spawn_enemy("winch_drone", ctx.terrain.drop_point(ball.x + 9.0, ball.z + 3.0, 1.8))
 	drone._rest = 0.3
+	# The spawn apron slopes, and a ball left alone rolls out of the 2.2 m lane during the
+	# wind-up. The catch under test is of a ball that stays in the lane, so it is held still.
 	var waited := 0
 	while is_instance_valid(drone) and not holds.held(drone) and waited < 1500:
+		player.set_velocity_now(Vector3.ZERO)
 		await physics_frame
 		waited += 1
 	_report("winch drone catches the ball", holds.held(drone), "held after %d frames" % waited)

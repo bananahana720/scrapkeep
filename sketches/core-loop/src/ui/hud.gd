@@ -116,7 +116,8 @@ var _struggle := Objectives.Struggle.new()
 # The armour gauge (scrap mode `armor`): the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
-# Wear draws nothing but the bar sinking. The bar is mass against the run's peak.
+# Wear draws nothing but the bar sinking. The bar is mass against the run's peak, with no
+# number: the scrap count is read where it is spent.
 const ARMOR_BAR := 120.0
 const ARMOR_FLASH := 0.35
 const ARMOR_PEAK_FLOOR := 100.0
@@ -587,7 +588,7 @@ func _process(delta: float) -> void:
 		_armor_peak = maxf(_armor_peak, run.mass)
 		_armor_flash = maxf(0.0, _armor_flash - delta)
 		_armor.set_reading(clampf(run.mass / _armor_peak, 0.0, 1.0), EventKinds.color("scrap_collected"),
-			str(int(round(run.mass))), _armor_flash > 0.0, Palette.AMBER)
+			"", _armor_flash > 0.0, Palette.AMBER)
 	_speed.set_tier(game.player.state.tier)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND
