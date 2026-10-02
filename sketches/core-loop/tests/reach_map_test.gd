@@ -187,6 +187,8 @@ func _check_line_steps() -> void:
 # 1 m rises more than 0.3 m, and the launch feature's own face is no steeper than 30 degrees.
 const FIRST_RIDE := 2
 const FACE_LIMIT_DEG := 30.0
+# The gorge's own rim falls from z -101.75 at x = 0; the launch's ground ends before it.
+const FACE_SAMPLE_END := -102.5
 
 
 func _check_first_legs() -> void:
@@ -210,15 +212,20 @@ func _check_first_legs() -> void:
 		_t.check("%s's first leg has no step up over 0.3 m" % pilot, worst <= STEP_RISE,
 			"largest rise in a 1 m step from the spawn to waypoint %d is %.3f m at %s (limit %.1f)" % [FIRST_RIDE, worst, at, STEP_RISE])
 	var steepest := 0.0
-	var z := Reach.LAUNCH_FROM
-	while z < Reach.LAUNCH_BACK_TO:
-		var a: float = Reach.LAUNCH_DROP * smoothstep(Reach.LAUNCH_FROM, Reach.LAUNCH_TO, z) * (1.0 - smoothstep(Reach.LAUNCH_BACK_FROM, Reach.LAUNCH_BACK_TO, z))
-		var b: float = Reach.LAUNCH_DROP * smoothstep(Reach.LAUNCH_FROM, Reach.LAUNCH_TO, z + 0.5) * (1.0 - smoothstep(Reach.LAUNCH_BACK_FROM, Reach.LAUNCH_BACK_TO, z + 0.5))
-		steepest = maxf(steepest, absf(b - a) / 0.5)
+	var steepest_z := Reach.LAUNCH_FROM
+	var z := -158.0
+	var last_h: float = _terrain().height(0.0, z)
+	while z < FACE_SAMPLE_END:
+		var h: float = _terrain().height(0.0, z + 0.5)
+		var slope := absf(h - last_h) / 0.5
+		if slope > steepest:
+			steepest = slope
+			steepest_z = z + 0.25
+		last_h = h
 		z += 0.5
 	var deg := rad_to_deg(atan(steepest))
-	_t.check("the spawn launch has no face steeper than 30 degrees", deg <= FACE_LIMIT_DEG,
-		"the launch's own slope peaks at %.1f degrees (limit %.0f); the ground under it adds its own slope" % [deg, FACE_LIMIT_DEG])
+	_t.check("the built ground under the spawn launch has no face steeper than 30 degrees", deg <= FACE_LIMIT_DEG,
+		"the steepest slope on x = 0 from z -158 to -102.5 (the gorge's rim starts at -101.75) is %.1f degrees at z %.2f (limit %.0f)" % [deg, steepest_z, FACE_LIMIT_DEG])
 
 
 func _in_flown(p: Vector2) -> bool:
