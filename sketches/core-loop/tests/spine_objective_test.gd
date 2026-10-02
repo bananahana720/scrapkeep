@@ -45,9 +45,6 @@ func _process(_delta: float) -> bool:
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
 		_stage_one = _game.flow.objective_text()
-		# 225 mass is heft 1.5, class II, at 1 + mass/450 (75 was, at the old 1/150).
-		_game.run.add_scrap(225, Vector3.ZERO)
-		_game.run.add_core("event", Vector3.ZERO)
 		return false
 	if _frames < 4:
 		return false

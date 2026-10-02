@@ -3,6 +3,9 @@ extends RefCounted
 const Objectives := preload("res://src/core/objectives.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
+const Hud := preload("res://src/ui/hud.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # The objective table (design-v3/LEGIBILITY.md, "A goal exists") and its chooser, walked on
 # bare readings with no scene: every row is reached by one reading, every row has a glyph
@@ -47,6 +50,8 @@ func _rows(t) -> void:
 	for stage in StageDefs.COUNT:
 		lessons.append(Objectives.LESSON_ROWS.has(StageDefs.of(stage + 1)["warden_lesson"]))
 	t.eq("every stage's lesson has a row", lessons.all(func(ok): return ok), true)
+	t.eq("the HUD colours every row from an event row that exists", Objectives.ROWS.keys().filter(func(id): return not Hud.ROW_COLOR.has(id) or EventKinds.row(Hud.ROW_COLOR[id]).is_empty()), [])
+	t.eq("the HUD rings only rows the table has", Hud.RING_ROWS.filter(func(id): return not Objectives.ROWS.has(id)), [])
 
 
 func _reached_once(t) -> void:
@@ -142,7 +147,7 @@ func _struggle(t) -> void:
 	var posture := 0.0
 	var struggled := false
 	for second in 60:
-		posture += 30.0
+		posture += BossPosture.BASE["ram"]
 		tally.note_posture(posture, posture >= 100.0)
 		for i in 10:
 			tally.step(DT)
@@ -150,6 +155,16 @@ func _struggle(t) -> void:
 		if posture >= 100.0:
 			posture = 0.0
 	t.eq("a matched build (30 a hit, a hit a second) never sees it", struggled, false)
+
+	tally = Objectives.Struggle.new()
+	_feed(tally, 12.0)
+	t.eq("a build that has been struggling reads it", tally.struggling, true)
+	for i in 100:
+		tally.step(DT)
+	tally.note_posture(30.0, false)
+	t.eq("a gain after leaving for 10 s clears the struggle and the tally", [tally.struggling, tally.tally], [false, 0.0])
+	_feed(tally, 6.0)
+	t.eq("and it counts afresh from the return", tally.struggling, false)
 
 	tally = Objectives.Struggle.new()
 	for i in 200:

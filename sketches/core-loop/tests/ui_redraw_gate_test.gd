@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Hud := preload("res://src/ui/hud.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -91,17 +92,18 @@ func _process(_delta: float) -> bool:
 		return false
 	if _frame == WARM + WINDOW + 2:
 		_report("same reading", _count("health") == 0, "health drew %d times for 5 identical readings" % _count("health"))
-		_runs = hud.layout_runs
 		hud.part_name.show_part("boost_coil")
 		_plate = Control.new()
 		_plate.custom_minimum_size = Vector2(420.0, 44.0)
 		hud.mount_plate(_plate)
+		_runs = hud.layout_runs
+		_plate.custom_minimum_size = Vector2(420.0, 60.0)
 		return false
 	if _frame == WARM + WINDOW + 4:
 		_report("changed reading", _count("part_name") >= 1, "the part name drew %d times after a pickup" % _count("part_name"))
-		var under: float = _plate.position.y + _plate.size.y
-		_report("relayout on size", hud.layout_runs > _runs and hud._objective.position.y >= under,
-			"layout ran %d times after a plate mounted, the objective at %.1f under the plate's end %.1f" % [hud.layout_runs - _runs, hud._objective.position.y, under])
+		var under: float = _plate.position.y + _plate.size.y + Hud.PLATE_GAP
+		_report("relayout on size", hud.layout_runs > _runs and absf(hud._objective.position.y - under) < 0.5,
+			"layout ran %d times after the plate's minimum size changed, the objective at %.1f against the plate's end plus the gap %.1f" % [hud.layout_runs - _runs, hud._objective.position.y, under])
 		var health = hud._health
 		health.set_reading(0.4, health.color, "", false, Color.WHITE)
 		return false

@@ -233,18 +233,38 @@ static func glyph_of(verb: String) -> String:
 	return Bindings.glyph("harpoon" if verb == LETGO else verb)
 
 
-# The glyphs of the prompts shown this tick, for the ability bar to leave its own caps off.
+# Whether the screen draws a prompt: its anchor is a real point and in front of the camera.
+func _drawn(prompt: Dictionary) -> bool:
+	var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
+	if world == Vector3.INF:
+		return false
+	var camera = game.get("camera")
+	return camera == null or not camera.cam.is_position_behind(world)
+
+
+# The glyphs of the prompts the screen draws this tick, for the ability bar to leave its own caps off.
 func shown_glyphs() -> Array[String]:
 	var out: Array[String] = []
 	for prompt in shown:
-		out.append(glyph_of(prompt["verb"]))
+		if _drawn(prompt):
+			out.append(glyph_of(prompt["verb"]))
 	return out
 
 
-func shown_verbs() -> Array[String]:
+# The ids of every prompt rules show this tick: the verbs and LET GO, which is a prompt and no verb.
+func shown_prompts() -> Array[String]:
 	var out: Array[String] = []
 	for prompt in shown:
 		out.append(prompt["verb"])
+	return out
+
+
+# The verbs shown this tick, each one a Bindings verb player.verb_ready answers.
+func shown_verbs() -> Array[String]:
+	var out: Array[String] = []
+	for prompt in shown:
+		if prompt["verb"] != LETGO:
+			out.append(prompt["verb"])
 	return out
 
 
@@ -276,15 +296,15 @@ func _placements() -> Array:
 	var cam: Camera3D = game.camera.cam
 	var stacked := 0
 	for prompt in shown:
-		var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
-		if world == Vector3.INF or cam.is_position_behind(world):
+		if not _drawn(prompt):
 			continue
+		var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
 		var at := cam.unproject_position(world).round()
 		if prompt["verb"] in BALL_VERBS:
 			at += BALL_OFFSET + Vector2(0.0, STACK * stacked)
 			stacked += 1
 		elif prompt["verb"] == LETGO:
-			at += AIM_OFFSET + Vector2(0.0, STACK if "haul" in shown_verbs() else 0.0)
+			at += AIM_OFFSET + Vector2(0.0, STACK if "haul" in shown_prompts() else 0.0)
 		else:
 			at += AIM_OFFSET
 		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"],

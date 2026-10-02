@@ -661,6 +661,7 @@ const UI_ROWS := {
 	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
 	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab}: notes", "objective": "", "priority": 2},
 }
+
 # v2 W7 enemies
 # Each faction's fac_ icon, so the pack_arrived edge marker and any faction badge read
 # one table: the Fleet's requisition tag, or the ancient family's own mark.

@@ -69,8 +69,9 @@ static func choose(reading: Dictionary) -> String:
 # the posture gained within the last GAIN_WINDOW seconds; GAIN_WINDOW seconds with no gain
 # drop the tally, so only sustained effort adds up. TRYING_SECONDS of it with posture never
 # at CLEAR_AT is struggling. Reaching CLEAR_AT or a stagger clears it for the engagement,
-# and begin() starts the next one. It is fed by posture_changed and simulated seconds, never
-# a hit count or the wall clock.
+# a gain after TRYING_SECONDS away (the player left, grew and came back) clears it and the
+# tally, and begin() starts the next engagement. It is fed by posture_changed and simulated
+# seconds, never a hit count or the wall clock.
 class Struggle:
 	extends RefCounted
 
@@ -99,13 +100,18 @@ class Struggle:
 			struggling = false
 			return
 		if posture > _posture:
+			if _since_gain >= TRYING_SECONDS:
+				tally = 0.0
+				struggling = false
 			_since_gain = 0.0
 		_posture = posture
 
 	func step(delta: float) -> void:
-		if _cleared or struggling:
+		if _cleared:
 			return
 		_since_gain += delta
+		if struggling:
+			return
 		if _since_gain <= GAIN_WINDOW:
 			tally += delta
 		else:

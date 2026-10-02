@@ -105,6 +105,7 @@ var _health: Control
 var _speed: Control
 # The boss plate in the top-centre slot, or null (mount_plate).
 var _plate: Control
+var _plate_floor := Vector2.ZERO
 # Whether the Warden is engaged, from warden_engaged, and the tally of a build that is
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
@@ -397,12 +398,14 @@ func _piece_sizes() -> Array:
 	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), 4), _plate_size()]
 
 
-# The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. It
+# The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
+# size is the larger of its minimum size and its size at mount, so any Control places. It
 # sits top-centre and the objective plate moves directly under it. unmount_plate gives
 # the layout back exactly as it was and leaves the plate for its owner to free.
 func mount_plate(plate: Control) -> void:
 	unmount_plate()
 	_plate = plate
+	_plate_floor = plate.size
 	if plate.get_parent() != null:
 		plate.get_parent().remove_child(plate)
 	add_child(plate)
@@ -414,11 +417,12 @@ func unmount_plate() -> void:
 		return
 	remove_child(_plate)
 	_plate = null
+	_plate_floor = Vector2.ZERO
 	layout(_screen_size())
 
 
 func _plate_size() -> Vector2:
-	return _plate.get_combined_minimum_size().max(_plate.custom_minimum_size) if _plate != null else Vector2.ZERO
+	return _plate.get_combined_minimum_size().max(_plate.custom_minimum_size).max(_plate_floor) if _plate != null else Vector2.ZERO
 
 
 # The screen rect of each piece, for the layout test: {region: [Rect2, ...]}.

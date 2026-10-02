@@ -259,6 +259,15 @@ func _plate() -> void:
 	_hud.unmount_plate()
 	var exact: bool = _hud.piece_rects() == real_before
 	other.free()
+	var sized := Control.new()
+	sized.size = PLATE_SIZE
+	_hud.mount_plate(sized)
+	var sized_rect := Rect2(sized.position, sized.size)
+	var sized_ok: bool = sized_rect.size == PLATE_SIZE and absf(sized_rect.get_center().x - _hud._screen_size().x * 0.5) < 0.5 \
+		and _hud._objective.position.y >= sized_rect.end.y
+	_hud.unmount_plate()
+	sized.free()
+	_report("O1-6 plate sized only by size", sized_ok, "a Control that sets only size %s is placed at %s with the objective under it at y %.1f" % [PLATE_SIZE, sized_rect, _hud._objective.position.y])
 	_report("O1-6 plate", bad.is_empty() and exact,
 		"a 420 by 44 plate at %s: top-centre, objective under it, inside the screen and the top band, no overlap with the other pieces, counted in the word budget, unmount restores %s; problems %s"
 			% [sizes, exact, bad])
@@ -268,9 +277,11 @@ func _bar_keys() -> void:
 	var glyphs = _hud.key_glyphs
 	glyphs.set_physics_process(false)
 	glyphs.new_run()
+	var cam: Camera3D = _game.camera.cam
+	var ahead: Vector3 = cam.global_position - cam.global_transform.basis.z * 5.0
 	var ready := {"harpoon": false, "haul": true, "boost": true, "interact": false, "jump": false}
 	var view := {"ready": ready, "line": "body", "charging": false, "mounted": false, "airborne": false, "winching": false,
-		"points": {"harpoon": Vector3.ONE, "haul": Vector3.ONE, "boost": Vector3.ONE, "interact": Vector3.ONE, "jump": Vector3.ONE}}
+		"points": {"harpoon": ahead, "haul": ahead, "boost": ahead, "interact": ahead, "jump": ahead}}
 	glyphs.step(2.0, view)
 	_hud._process(0.0)
 	var bar = _hud.ability_bar
@@ -285,4 +296,16 @@ func _bar_keys() -> void:
 	var hidden_after: Array = bar.slots.filter(func(slot): return bar.key_hidden(slot))
 	_report("O1-7 bar keys", shown.size() == 2 and not want.is_empty() and hidden_now == want and words_hidden and hidden_after.is_empty() and "Ctrl" in bar.drawn_words(),
 		"prompts on %s hide the bar's caps on %s; a tick with none shows all %d again" % [shown, hidden_now, bar.slots.size() - hidden_after.size()])
+	# A prompt whose anchor is behind the camera is not drawn, so the bar keeps its own cap.
+	var behind: Vector3 = cam.global_position + cam.global_transform.basis.z * 5.0
+	var behind_view: Dictionary = view.duplicate(true)
+	behind_view["points"]["haul"] = behind
+	glyphs.new_run()
+	glyphs.step(2.0, behind_view)
+	_hud._process(0.0)
+	var behind_glyphs: Array = glyphs.shown_glyphs()
+	var behind_hidden: Array = bar.slots.filter(func(slot): return bar.key_hidden(slot)).map(func(slot): return slot["key"])
+	_report("O1-7 bar keys behind the camera", behind_view["points"]["haul"] != Vector3.INF and cam.is_position_behind(behind) and not "key_ctrl" in behind_glyphs
+			and not "key_ctrl" in behind_hidden and "Ctrl" in bar.drawn_words(),
+		"the haul prompt anchored behind the camera: glyphs told to the bar %s, caps hidden %s, Ctrl drawn on the bar %s" % [behind_glyphs, behind_hidden, "Ctrl" in bar.drawn_words()])
 	glyphs.set_physics_process(true)

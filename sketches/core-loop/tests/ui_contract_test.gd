@@ -19,8 +19,7 @@ const EventDirector := preload("res://src/world/event_director.gd")
 #   - the two Noto faces load from the sketch with their licence beside them;
 #   - CONTRACTS.md's Ability slots section names every slot field and state;
 #   - every toast the HUD shows fits in 4 words with the longest part and event names,
-#     every objective it shows in 5 (the rows' own wording, bar the three readout rows
-#     flow keeps for combat's and the arena's tests), every callout in 4, and every UI row
+#     every objective it shows in 5 (the rows' own wording in objectives.gd), every callout in 4, and every UI row
 #     is well formed;
 #   - a world prompt's parsed title is at most 3 words, with the rest as its detail.
 
