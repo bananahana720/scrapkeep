@@ -2,7 +2,7 @@
 # capsule, torus visor and box fin that chaser.gd dressed it with. Blender +Z is up and
 # +Y is forward (the exporter turns +Y into Godot -Z, so the wedge leads along -Z).
 # The whole asset sits inside the 2 x 3 m core the collider gives it: |xy| <= 1 m from the
-# origin, |z| <= 1.5 m. One mesh, three surfaces (three colour-pass draws), no alpha.
+# origin, |z| <= 1.5 m. Body, hinged fin and planted claws; five surfaces, no alpha.
 # Slots: fleet_paint (welded oxide plate, flashes with the enemy), rubber (charcoal
 # haunches, fin, welds), requisition_tag (the single brass visor slit, lit at runtime).
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
@@ -70,25 +70,31 @@ hull("requisition_tag", [
 p.box("rubber", (1.72, 0.07, 0.10), loc=(0.0, -0.05, -0.80))
 p.box("rubber", (1.30, 0.07, 0.10), loc=(0.0, -0.58, 0.85))
 p.box("rubber", (1.10, 0.07, 0.09), loc=(0.0, 0.10, -1.13))
-# Dorsal fin: a raked blade off the hump, charcoal, leaning back.
-p.prism("rubber", [(-0.15, 0.95), (-0.62, 0.92), (-0.72, 1.48), (-0.40, 1.48)], 0.16,
+# Dorsal fin: its own hinged node for e01_brace_back, with unchanged rest geometry.
+fin_part = Part("ChaserFin")
+fin_part.prism("rubber", [(-0.15, 0.95), (-0.62, 0.92), (-0.72, 1.48), (-0.40, 1.48)], 0.16,
         matrix=Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1))))
 # Braced haunches: two rear struts planted behind, each on a flat foot, so the stance
 # already reads braced before the wind-up leans onto it.
+claw_part = Part("ChaserClaws")
 for s in (-1, 1):
-    p.rod("rubber", (s * 0.52, -0.20, 0.10), (s * 0.48, -0.58, -1.40), 0.13, segs=6)
-    p.box("rubber", (0.28, 0.32, 0.10), loc=(s * 0.48, -0.60, -1.45))
-    p.rod("rubber", (s * 0.80, 0.02, -1.20), (s * 0.66, 0.50, -1.40), 0.09, segs=5)
+    claw_part.rod("rubber", (s * 0.52, -0.20, 0.10), (s * 0.48, -0.58, -1.40), 0.13, segs=6)
+    claw_part.box("rubber", (0.28, 0.32, 0.10), loc=(s * 0.48, -0.60, -1.45))
+    claw_part.rod("rubber", (s * 0.80, 0.02, -1.20), (s * 0.66, 0.50, -1.40), 0.09, segs=5)
 
 body = p.to_object(parent=root)
+fin = fin_part.to_object(origin=(0.0, -0.40, 0.95), parent=root)
+claws = claw_part.to_object(parent=root)
 bpy.context.view_layer.update()
 
 tri_count = common.tri_total(root)
-radius = max(math.hypot(v.co.x, v.co.y) for v in body.data.vertices)
-zmax = max(abs(v.co.z) for v in body.data.vertices)
+points = [obj.matrix_world @ v.co for obj in (body, fin, claws) for v in obj.data.vertices]
+radius = max(math.hypot(v.x, v.y) for v in points)
+zmax = max(abs(v.z) for v in points)
+surfaces = sum(len(obj.data.materials) for obj in (body, fin, claws))
 print("TRIS", tri_count, "RADIUS", round(radius, 4), "ZMAX", round(zmax, 4),
-      "SURFACES", len(body.data.materials))
-if tri_count > 1200 or radius > R_MAX or zmax > Z_MAX or len(body.data.materials) > 3:
+      "SURFACES", surfaces)
+if tri_count > 1200 or radius > R_MAX or zmax > Z_MAX or surfaces > 5:
     raise SystemExit("C10 limits exceeded")
 
 opts = common.args()

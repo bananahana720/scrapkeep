@@ -33,7 +33,9 @@ var _clock := 0.0
 var _rest := 0.0
 var _landed := false
 var _mesh: Node3D
-var _lean := 0.0
+# Test seam: only the attack pose is disabled; facing and physics keep running.
+var windup_pose_enabled := true
+var _pose_parts: Dictionary = {}
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -55,10 +57,13 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	# body material as a surface override, so a spawn costs a few nodes, not a scene load.
 	for part in _parts():
 		var mi := MeshInstance3D.new()
+		mi.name = part.name
 		mi.mesh = part.mesh
 		mi.transform = part.xform
 		_mesh.add_child(mi)
-		mi.set_surface_override_material(part.body, _material)
+		_pose_parts[part.name] = {"node": mi, "rest": part.xform}
+		if part.body >= 0:
+			mi.set_surface_override_material(part.body, _material)
 
 
 static var _shared: Array = []
@@ -73,13 +78,13 @@ static func _parts() -> Array:
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		var mesh: Mesh = mi.mesh.duplicate()
-		var body := 0
+		var body := -1
 		for i in mesh.get_surface_count():
 			var slot := mesh.surface_get_material(i).resource_name
 			if slot == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, visor if slot == "requisition_tag" else charcoal)
-		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body})
+		_shared.append({"name": String(mi.name), "mesh": mesh, "xform": mi.transform, "body": body})
 	scene.free()
 	return _shared
 
@@ -161,10 +166,10 @@ func _end_attack(next: int) -> void:
 	_clear_telegraph()
 
 
-# The wind-up crouches and swells: a body read to match the ground read. The wedge turns to
-# face the ball (the lane while a lunge is committed), sits back on its haunches through the
-# wind-up (nose up, WINDUP state) and drives nose-down through the lunge (LUNGE state); it
-# reads the existing state and clock only, and adds no timer of its own.
+# e01_brace_back: the wedge loads back over planted claws and flares its hinged fin.
+# The state transition resets _clock before _pose(), so LUNGE at clock zero is the
+# release sample (full brace). The same clock then drives the 0.08 s forward snap.
+# Absolute rest-relative transforms prevent a cancelled wind-up retaining any pose.
 func _pose() -> void:
 	if _mesh == null:
 		return
@@ -173,16 +178,29 @@ func _pose() -> void:
 	var face: Vector3 = lane.dir if lane != null else _flat_to_ball()
 	if face.length() > 0.01:
 		_mesh.rotation.y = lerp_angle(_mesh.rotation.y, atan2(-face.x, -face.z), 1.0 - exp(-14.0 * dt))
-	var lean := 0.0
-	match state:
-		State.WINDUP:
-			var t := clampf(_clock / WINDUP, 0.0, 1.0)
-			_mesh.scale = Vector3(1.0 + 0.2 * t, 1.0 - 0.25 * t, 1.0 + 0.2 * t)
-			lean = 0.14 * t
-		State.LUNGE:
-			_mesh.scale = Vector3(0.85, 1.15, 0.85)
-			lean = -0.18
-		_:
-			_mesh.scale = Vector3.ONE
-	_lean = lerpf(_lean, lean, 1.0 - exp(-16.0 * dt))
-	_mesh.rotation.x = _lean
+	var shift := Vector3.ZERO
+	var pitch := 0.0
+	var flare := 0.0
+	if windup_pose_enabled and lane != null and not _dead and not is_queued_for_deletion():
+		if state == State.WINDUP:
+			var t := smoothstep(0.0, 1.0, clampf(_clock / WINDUP, 0.0, 1.0))
+			shift = Vector3(0.0, -0.22, 0.55) * t
+			pitch = deg_to_rad(18.0) * t
+			flare = deg_to_rad(32.0) * t
+		elif state == State.LUNGE:
+			var snap := smoothstep(0.0, 1.0, clampf(_clock / 0.08, 0.0, 1.0))
+			shift = Vector3(0.0, -0.22, 0.55).lerp(Vector3(0.0, -0.08, -0.25), snap)
+			pitch = lerpf(deg_to_rad(18.0), deg_to_rad(-12.0), snap)
+			flare = deg_to_rad(32.0) * (1.0 - snap)
+	var body_pose := Transform3D(Basis(Vector3.RIGHT, pitch), shift)
+	for part_name in _pose_parts:
+		var part: Dictionary = _pose_parts[part_name]
+		var node: Node3D = part.node
+		var rest: Transform3D = part.rest
+		match part_name:
+			"ChaserBody":
+				node.transform = body_pose * rest
+			"ChaserFin":
+				node.transform = body_pose * rest * Transform3D(Basis(Vector3.RIGHT, flare), Vector3.ZERO)
+			_:
+				node.transform = rest
