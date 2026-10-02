@@ -5,6 +5,7 @@ const Juice := preload("res://src/presentation/juice.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
+const LineView := preload("res://src/presentation/line_view.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const DropJuice := preload("res://src/presentation/drop_juice.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
@@ -22,6 +23,7 @@ const Parts := preload("res://src/build/parts.gd")
 #   harmony        tempo, key and scales, the one musical source
 #   juice          squash and stretch, camera punches and kicks, hit-stop, the pylon, and
 #                  how hits, kills, pickups, dodges and hits taken land (v3 W11)
+#   line_view      the harpoon line in the world: cable, lock brackets, barb and collar
 #   vfx            trails, speed lines, flashes, rings, sparkles, bursts and the edge flash
 #   streak         the pickup streak and the kill chain audio climbs and juice draws
 #   rows           event_kinds rows, with fallbacks for demo-spec kinds not yet landed
@@ -33,6 +35,7 @@ var ctx
 var audio
 var juice
 var vfx
+var line_view
 var banner
 var hero_assets
 # The v3 drop mode's own juice (drop_juice.gd), apart from the universal layer.
@@ -57,6 +60,10 @@ func setup(ctx_ref) -> void:
 	vfx = Vfx.new()
 	add_child(vfx)
 	vfx.setup(ctx)
+	line_view = LineView.new()
+	add_child(line_view)
+	if ctx.camera != null and ctx.camera.cam != null:
+		line_view.setup(ctx.player, ctx.camera.cam, ctx.events)
 	juice.audio = audio
 	juice.vfx = vfx
 	hero_assets = HeroAssets.new()

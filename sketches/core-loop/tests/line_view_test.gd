@@ -1,0 +1,242 @@
+extends SceneTree
+
+const T := preload("res://tests/support/t.gd")
+const LineView := preload("res://src/presentation/line_view.gd")
+const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const AimStyle := preload("res://src/movement/aim_style.gd")
+const AugmentKit := preload("res://src/movement/augment_kit.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+
+# The harpoon line's sights (HLv): the cable's width on screen, lock against latch, the dry
+# fire and the reticle's readiness ring. It steps the view with fixed deltas; no wall clock.
+
+const FRAME := 1.0 / 60.0
+const DEPTH := 45.0
+const SOURCES := ["res://src/presentation/line_view.gd", "res://src/movement/aim_style.gd"]
+const BLACK_BACKING := "Color(0.0, 0.0, 0.0, 0.55)"
+
+var _t
+
+
+class FakePlayer extends Node3D:
+	var kit := AugmentKit.new()
+	var events := GameEvents.new()
+	var tuning := Tuning.new()
+
+	func shown_position() -> Vector3:
+		return global_position
+
+	func ball_position() -> Vector3:
+		return global_position
+
+	func grapple_range() -> float:
+		return 60.0
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	_t = T.new("line_view_test")
+	var camera := Camera3D.new()
+	root.add_child(camera)
+	camera.position = Vector3(0.0, 0.0, DEPTH)
+	camera.current = true
+	var player := FakePlayer.new()
+	root.add_child(player)
+	player.position = Vector3(-4.0, 0.0, 0.0)
+	var view := LineView.new()
+	root.add_child(view)
+	view.setup(player, camera, player.events)
+	_cable(view, player, camera)
+	_latch(view, player, camera)
+	_lock(view, player)
+	_transients(view, player)
+	_reticle(player)
+	_colours()
+	view.free()
+	player.events.free()
+	player.free()
+	camera.free()
+	quit(_t.verdict())
+
+
+func _cable(view, player, camera) -> void:
+	var kit = player.kit
+	kit.hooked = true
+	kit.on_body = false
+	kit.anchor = Vector3(4.0, 0.0, 0.0)
+	kit.rope = 12.0
+	view.step(FRAME)
+	var slack_colour: Color = view._cable_material.albedo_color
+	var slack_radius: float = view.cable_radius
+	var slack_px := _measured_px(view, camera)
+	kit.rope = 8.0
+	view.step(FRAME)
+	var taut_colour: Color = view._cable_material.albedo_color
+	var taut_px := _measured_px(view, camera)
+	_t.check("HL-1 5 px at 45 m", slack_px >= 5.0 - 0.01 and taut_px >= 5.0 - 0.01,
+		"slack %.2f px and taut %.2f px wide at %.0f m at %.0f p" % [slack_px, taut_px, DEPTH, LineView.REF_HEIGHT])
+	_t.check("HL-1 slack differs from taut", view.cable_taut and not is_equal_approx(slack_radius, view.cable_radius)
+		and taut_colour.get_luminance() > slack_colour.get_luminance(),
+		"radius %.2f m slack, %.2f m taut; luminance %.2f slack, %.2f taut" % [slack_radius, view.cable_radius, slack_colour.get_luminance(), taut_colour.get_luminance()])
+	_t.check("HL-1 radii", is_equal_approx(slack_radius, 0.09) and is_equal_approx(view.cable_radius, 0.14), "0.09 and 0.14 m")
+	camera.position = Vector3(0.0, 0.0, 10.0)
+	kit.rope = 12.0
+	view.step(FRAME)
+	var near_slack := _measured_px(view, camera)
+	kit.rope = 8.0
+	view.step(FRAME)
+	var near_taut := _measured_px(view, camera)
+	_t.check("HL-1 radius shows near", near_taut > near_slack, "at 10 m %.1f px slack, %.1f px taut" % [near_slack, near_taut])
+	camera.position = Vector3(0.0, 0.0, DEPTH)
+	kit.line_state = Augments.LINE_SMASH
+	view.step(FRAME)
+	var flash: Color = view._cable_material.albedo_color
+	for i in 12:
+		view.step(FRAME)
+	_t.check("smash flashes white", flash.get_luminance() > taut_colour.get_luminance() and view._cable_material.albedo_color.get_luminance() <= flash.get_luminance(),
+		"luminance %.2f at the commit, %.2f after" % [flash.get_luminance(), view._cable_material.albedo_color.get_luminance()])
+	kit.line_state = Augments.LINE_LATCHED
+	kit.hooked = false
+	view.step(FRAME)
+
+
+# The widest cross-section of the cable's mesh, in pixels at the reference height.
+func _measured_px(view, camera) -> float:
+	var arrays: Array = view.cable.mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var widest := 0.0
+	for i in range(0, verts.size() - 1, 2):
+		var mid := (verts[i] + verts[i + 1]) * 0.5
+		var depth := absf(camera.global_position.z - mid.z)
+		widest = maxf(widest, verts[i].distance_to(verts[i + 1]) * view.focal_px() / depth)
+	return widest
+
+
+func _latch(view, player, camera) -> void:
+	var kit = player.kit
+	kit.hooked = true
+	kit.on_body = true
+	kit.line_state = Augments.LINE_LATCHED
+	kit.anchor = Vector3(4.0, 0.0, 0.0)
+	var seen_barb := true
+	var seen_collar := true
+	var radii: Array[float] = []
+	var scales: Array[float] = []
+	for i in 40:
+		player.position.x = -4.0 + float(i) * 0.15
+		view.step(FRAME)
+		seen_barb = seen_barb and view.barb != null and view.barb.visible
+		seen_collar = seen_collar and view.collar != null and view.collar.visible
+		radii.append(view.collar_radius)
+		scales.append(view.collar_scale)
+	_t.check("HL-2 barb and collar stand", seen_barb and seen_collar, "both present on all 40 ticks of a body latch")
+	_t.check("HL-2 collar tightens", radii[-1] < radii[0], "radius %.2f m at the bite, %.2f m with the gap closed" % [radii[0], radii[-1]])
+	_t.check("HL-2 collar steady", scales.min() == scales.max(), "scale %.3f to %.3f over 40 ticks" % [scales.min(), scales.max()])
+	_t.eq("HL-2 row motions", [EventKinds.line_row("latched_body")["motion"], EventKinds.line_row("locked")["motion"]], ["steady", "pulse"])
+	var barb = view.barb
+	var collar = view.collar
+	kit.hooked = false
+	kit.on_body = false
+	view.step(FRAME)
+	_t.check("HL-2 freed within one tick", view.barb == null and view.collar == null and not is_instance_valid(barb) and not is_instance_valid(collar),
+		"barb and collar freed on the first step after the line ended")
+	kit.hooked = true
+	kit.anchor = Vector3(4.0, 0.0, 0.0)
+	player.position = Vector3(-4.0, 0.0, 0.0)
+	view.step(FRAME)
+	_t.check("anchor ring on a world latch", view.post_ring.visible and view.barb == null, "ring up, no barb")
+	kit.hooked = false
+	view.step(FRAME)
+	_t.check("anchor ring gone", not view.post_ring.visible, "ring down with the line")
+
+
+func _lock(view, player) -> void:
+	player.kit.aim = {"state": Augments.AIM_REACH, "point": Vector3(4.0, 0.0, 0.0), "normal": Vector3.UP}
+	player.events.line_state_changed.emit("locked", null, Vector3(4.0, 0.0, 0.0), "")
+	var scales: Array[float] = []
+	for i in 60:
+		view.step(FRAME)
+		if i >= 10:
+			scales.append(view.lock_scale)
+	_t.check("HL-2 brackets pulse", view.brackets.visible and scales.max() - scales.min() > 0.1,
+		"scale %.3f to %.3f over a second after closing" % [scales.min(), scales.max()])
+	player.events.line_state_changed.emit("searching", null, Vector3.ZERO, "")
+	view.step(FRAME)
+	_t.check("brackets gone with the lock", not view.brackets.visible, "hidden once searching")
+
+
+func _transients(view, player) -> void:
+	player.events.line_state_changed.emit("dry_fire", null, player.global_position, "")
+	var visible_at := -1.0
+	var gone_at := -1.0
+	var clock := 0.0
+	for i in 30:
+		view.step(FRAME)
+		clock += FRAME
+		if view.cable.visible and visible_at < 0.0:
+			visible_at = clock
+		if visible_at >= 0.0 and not view.cable.visible and gone_at < 0.0:
+			gone_at = clock
+	_t.check("HL-5 dry fire gone in 0.35 s", visible_at > 0.0 and gone_at > 0.0 and gone_at <= 0.35,
+		"a slack line appeared at %.3f s and was gone at %.3f s" % [visible_at, gone_at])
+	player.events.line_state_changed.emit("broke", null, Vector3(4.0, 0.0, 0.0), "out_of_reach")
+	view.step(FRAME)
+	var pieces: int = view.cable.mesh.get_surface_count()
+	var rust: Color = view._cable_material.albedo_color
+	for i in 24:
+		view.step(FRAME)
+	_t.check("broke: two pieces in rust, then gone", pieces == 2 and is_equal_approx(rust.r, EventKinds.line_color("broke").r) and not view.cable.visible,
+		"%d pieces, red %.2f (rust %.2f), cable hidden after the beat" % [pieces, rust.r, EventKinds.line_color("broke").r])
+	player.events.line_state_changed.emit("let_go", null, Vector3(4.0, 0.0, 0.0), "")
+	view.step(FRAME)
+	var shown: bool = view.cable.visible
+	for i in 12:
+		view.step(FRAME)
+	_t.check("let go retracts in 0.15 s", shown and not view.cable.visible, "cable shown on the let-go, gone 0.2 s later")
+
+
+func _reticle(player) -> void:
+	var reticle := AimReticle.new()
+	root.add_child(reticle)
+	reticle.setup(player, null)
+	player.kit.rewind_left = 0.4
+	var fill: float = reticle.harpoon_readiness()
+	_t.near("HL-5 harpoon ring fill", fill, 1.0 - 0.4 / player.tuning.f("harpoon_rewind"))
+	player.kit.rewind_left = 0.0
+	_t.near("HL-5 a refund fills at once", reticle.harpoon_readiness(), 1.0)
+	_t.check("HL-5 own variable", reticle.gauge == 0.0 and reticle.get("harpoon_fill") != null and AimReticle.HARPOON_RING != AimReticle.GAUGE_RING,
+		"gauge untouched at %.1f; harpoon ring radius %.0f against the special's %.0f" % [reticle.gauge, AimReticle.HARPOON_RING, AimReticle.GAUGE_RING])
+	player.events.line_state_changed.emit("dry_fire", null, Vector3.ZERO, "")
+	var widest := 0.0
+	for i in 15:
+		reticle.step(FRAME)
+		widest = maxf(widest, reticle.shake_offset().length())
+	for i in 5:
+		reticle.step(FRAME)
+	_t.check("dry fire shakes 3 px", widest > 1.0 and widest <= 3.0 + 0.001 and reticle.shake_offset() == Vector2.ZERO,
+		"widest offset %.2f px, still after 0.33 s" % widest)
+	reticle.free()
+
+
+func _colours() -> void:
+	for path in SOURCES + ["res://src/ui/aim_reticle.gd"]:
+		var text := FileAccess.get_file_as_string(path)
+		var literal := RegEx.create_from_string("Color\\(\\s*[0-9.]+\\s*,|Color\\(\"|Color\\(0x")
+		var offenders := 0
+		for line in text.split("\n"):
+			if literal.search(line) != null and line.find(BLACK_BACKING) < 0:
+				offenders += 1
+		_t.check("HL-3 no colour literal in " + path.get_file(), offenders == 0 and text.find("Palette.") < 0 and text.find("Palette\"") < 0,
+			"%d colour literals, no Palette reads" % offenders)
+	var slate: Color = AimStyle.of({"state": Augments.AIM_NONE}, true)["color"]
+	_t.check("HL-3 out of range is slate", slate == EventKinds.role_color("slate") and AimStyle.of({"state": Augments.AIM_NONE}, true)["shape"] == "hollow_ring",
+		"hollow ring in the slate role colour")
+	_t.check("HL-3 searching is a neutral cross", AimStyle.of({"state": Augments.AIM_NONE})["color"] == EventKinds.line_color("searching")
+		and AimStyle.of({"state": Augments.AIM_NONE})["shape"] == "cross", "cross in the searching row's colour")
+	_t.check("HL-3 locked colour", AimStyle.of({"state": Augments.AIM_BODY})["color"] == EventKinds.line_color("locked"), "brackets in the locked row's colour")

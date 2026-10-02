@@ -9,7 +9,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
-const AimStyle := preload("res://src/movement/aim_style.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
@@ -102,12 +101,10 @@ var _visual_root: Node3D
 var _juice: Node3D
 var _mesh: MeshInstance3D
 var _roll_mount: Node3D
-var _rope: MeshInstance3D
 var _wings: Node3D
 var _wings_material: StandardMaterial3D
 var _pylon: Node3D
 var _plate: MeshInstance3D
-var _aim_marks := {}
 var _roll := Basis.IDENTITY
 var _frozen := false
 var _was_hooked := false
@@ -121,7 +118,6 @@ var _line_target = null
 var _line_anchor := Vector3.ZERO
 var _line_hold := 0.0
 var _line_standing := false
-var _hook_head: MeshInstance3D
 var _bow: Area3D
 var _crushing := {}
 
@@ -314,12 +310,10 @@ func _refit() -> void:
 	_paint_effects()
 
 
-# Everything the player's own action lights (rope, pylon plate, glide vane) glows in the
+# Everything the player's own action lights (pylon plate, glide vane) glows in the
 # class colour: class colour means yours (VISUAL-LANGUAGE section 2).
 func _paint_effects() -> void:
 	var color := class_color()
-	_rope.material_override = Palette.unshaded(color)
-	_hook_head.material_override = Palette.unshaded(color)
 	_wings_material.albedo_color = Color(color, 0.75)
 	_plate.material_override = Palette.solid(color, 1.2)
 
@@ -761,22 +755,6 @@ func _end_crush(id: int) -> void:
 
 
 func _build_augment_visuals() -> void:
-	_rope = MeshInstance3D.new()
-	_rope.mesh = ImmediateMesh.new()
-	_rope.material_override = Palette.unshaded(class_color())
-	_rope.visible = false
-	add_child(_rope)
-
-	# The harpoon's head, seated in the body the line is bitten into.
-	_hook_head = MeshInstance3D.new()
-	var head := BoxMesh.new()
-	head.size = Vector3.ONE * 0.8
-	_hook_head.mesh = head
-	_hook_head.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
-	_hook_head.material_override = Palette.unshaded(class_color())
-	_hook_head.visible = false
-	add_child(_hook_head)
-
 	_wings = Node3D.new()
 	var wing_material := Palette.unshaded(Color(class_color(), 0.75))
 	_wings_material = wing_material
@@ -816,24 +794,6 @@ func _build_augment_visuals() -> void:
 	_pylon.visible = false
 	add_child(_pylon)
 
-	for state_key in [Augments.AIM_REACH, Augments.AIM_ASSIST]:
-		var style: Dictionary = AimStyle.STYLES[state_key]
-		var mark := MeshInstance3D.new()
-		if style["shape"] == "ring":
-			var ball := SphereMesh.new()
-			ball.radius = 0.35
-			ball.height = 0.7
-			mark.mesh = ball
-		else:
-			var box := BoxMesh.new()
-			box.size = Vector3.ONE * 0.6
-			mark.mesh = box
-			mark.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
-		mark.material_override = Palette.unshaded(style["color"])
-		mark.visible = false
-		add_child(mark)
-		_aim_marks[state_key] = mark
-
 
 # The pylon node, so presentation can animate the plant and eject without owning it.
 func pylon_node() -> Node3D:
@@ -841,31 +801,9 @@ func pylon_node() -> Node3D:
 
 
 func _update_augment_visuals(at: Vector3) -> void:
-	_rope.visible = kit.hooked
-	_hook_head.visible = kit.hooked and kit.on_body
-	if _hook_head.visible:
-		_hook_head.global_position = kit.anchor
-	if kit.hooked:
-		# A committed haul draws its line brighter than a latched one.
-		(_rope.material_override as StandardMaterial3D).albedo_color = \
-			class_color().lightened(0.55) if kit.line_state == Augments.LINE_SMASH else class_color()
-		var line: ImmediateMesh = _rope.mesh
-		line.clear_surfaces()
-		line.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
-		line.surface_add_vertex(at)
-		line.surface_add_vertex(kit.anchor)
-		line.surface_end()
-
 	_pylon.visible = kit.mounted
 	if kit.mounted:
 		_pylon.global_transform = Transform3D(_align_up(kit.mount_normal), kit.mount_face)
-
-	var aim_state: int = kit.aim.get("state", Augments.AIM_NONE)
-	for state_key in _aim_marks:
-		var mark: MeshInstance3D = _aim_marks[state_key]
-		mark.visible = state_key == aim_state and not kit.hooked
-		if mark.visible:
-			mark.global_position = kit.aim["point"]
 
 	_wings.visible = kit.gliding
 	if kit.gliding:
