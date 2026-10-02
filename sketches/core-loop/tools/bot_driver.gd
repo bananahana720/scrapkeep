@@ -43,8 +43,8 @@ const WardenDrop := preload("res://src/combat/warden_drop.gd")
 #                  laps the course like the lapper.
 #   traversal      the Cable Reach's measuring pilot (design-v3/TRAVERSAL.md): it follows a
 #                  route from the drop to the beacon and never fights. It is human-shaped:
-#                  it steers from where the ball was TRAVERSE_REACTION seconds ago and
-#                  presses at most one verb per TRAVERSE_PRESS_GAP seconds.
+#                  its whole stick and every press go out TRAVERSE_REACTION seconds after
+#                  they were decided, with at most one verb per TRAVERSE_PRESS_GAP seconds.
 #   camper         holds the gun on the Warden from CAMP_RANGE and never closes.
 # The fight profiles for the Warden bands, by name: brawler is the completionist (it
 # fights with every verb it has), skipper is the skipper, camper is the camper.
@@ -180,7 +180,6 @@ var seed_value := 1
 var profile := ""
 var route: Array[Vector2] = []
 var press_ticks: Array[int] = []
-var reaction_ticks: Array[int] = []
 var class_index := 0
 var rng := RandomNumberGenerator.new()
 var source := Intent.Scripted.new()
@@ -266,7 +265,7 @@ var _harpoon_held := false
 var _harpoon_commit := false
 # Seconds since the ball was last beyond the drop line of its fight target.
 var _off_line := 0.0
-var _view: Array[Dictionary] = []
+var _out: Array[Dictionary] = []
 var _leg := 0
 var _last_press_tick := -1000000
 
@@ -303,7 +302,9 @@ func start() -> void:
 		_note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01))
 		if _warden_hp_at >= 0.0:
 			_settle_warden_damage(0.0))
-	events.event_started.connect(func(id: String): _note_add("events_joined", id))
+	events.event_started.connect(func(id: String):
+		if id in EventDirector.PARTICIPATORY:
+			_note_add("events_joined", id))
 	events.lap_bell_rung.connect(func(_at: Vector3): _note_set("bell_s", snappedf(game.run.stage_time, 0.01)))
 	events.lap_completed.connect(func(lap: int, _required: int, seconds: float):
 		_note_set("laps", lap)
@@ -692,33 +693,36 @@ func _roam(delta: float) -> void:
 
 # --- the traversal pilot -----------------------------------------------------------------
 
-# Steers along the route, then to the beacon, from the ball's position TRAVERSE_REACTION
-# seconds ago, so a change in the way ahead is answered no sooner than that. Presses go
-# through one gate: a second verb inside TRAVERSE_PRESS_GAP is dropped. It steers every tick.
+# Steers along the route, then to the beacon, and sends what it decided TRAVERSE_REACTION
+# seconds later: the whole stick and every press are held in a buffer for that long, so
+# nothing the steering reads (position, velocity, wall rays, the stuck check) is answered
+# sooner. Presses go through one gate: a second verb inside TRAVERSE_PRESS_GAP is dropped.
+# It never holds fire.
 func _traverse(delta: float) -> void:
 	_welcome_ring_at = Vector3.INF
 	var lag := int(ceil(TRAVERSE_REACTION * Engine.physics_ticks_per_second))
-	_view.append({"tick": ticks, "ball": game.player.ball_position()})
-	while _view.size() > 1 and ticks - int(_view[1]["tick"]) >= lag:
-		_view.pop_front()
-	var seen: Dictionary = _view[0]
-	var age: int = ticks - int(seen["tick"])
-	if age < lag:
-		source.hold = {}
-		return
-	var from: Vector3 = seen["ball"]
+	var ball: Vector3 = game.player.ball_position()
 	while _leg < route.size():
 		var leg: Vector2 = route[_leg]
-		if _flat(from, game.ctx.terrain.drop_point(leg.x, leg.y, 1.0)) > TRAVERSE_REACHED:
+		if _flat(ball, game.ctx.terrain.drop_point(leg.x, leg.y, 1.0)) > TRAVERSE_REACHED:
 			break
 		_leg += 1
 	var point: Vector3 = game.ctx.terrain.beacon_point(_stage)
 	if _leg < route.size():
 		point = game.ctx.terrain.drop_point(route[_leg].x, route[_leg].y, 1.0)
 	_goal = "traverse leg %d" % _leg
-	reaction_ticks.append(age)
-	var ball: Vector3 = game.player.ball_position()
-	_act(ball + (point - from), null, delta)
+	source.hold = {}
+	source.press = {}
+	_act(point, null, delta)
+	source.hold.erase("fire_held")
+	_out.append({"hold": source.hold, "press": source.press})
+	source.hold = {}
+	source.press = {}
+	if _out.size() <= lag:
+		return
+	var sent: Dictionary = _out.pop_front()
+	source.hold = sent["hold"]
+	source.press = sent["press"]
 	_gate_presses()
 
 

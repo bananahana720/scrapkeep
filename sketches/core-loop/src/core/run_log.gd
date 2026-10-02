@@ -52,6 +52,18 @@ class Traversal:
 		_tps = ticks_per_second
 		_moving_speed = SpeedTier.MULTIPLES[MOVING_TIER] * cruise
 
+	# One definition of a tick that neither counts toward a stop nor can start one.
+	static func is_exempt(player) -> bool:
+		var intent = player.intent
+		return player.frozen() or player.kit.mounted or intent.interact_pressed or intent.mount_held
+
+	# A stage was entered: the arming and the slow clock start over, the totals stay.
+	func restart() -> void:
+		_armed = false
+		_slow_ticks = 0
+		_slow_counted = false
+		_recent.clear()
+
 	func step(tier: int, planar_speed: float, braking: bool, exempt: bool) -> void:
 		ticks += 1
 		if tier >= FLOW_TIER:
@@ -172,6 +184,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_dirty = true
 	if _traversal == null and player != null and player.get("tuning") != null:
 		_traversal = Traversal.new(Engine.physics_ticks_per_second, player.tuning.f("cruise"))
+	if _traversal != null:
+		_traversal.restart()
 	_measuring = _traversal != null
 	_stage_clock = -1.0
 	_stage(stage).merge(_lab_tag(), true)
@@ -192,8 +206,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	_stage_clock = run.stage_time
 	var intent = player.intent
-	var exempt: bool = player.frozen() or player.kit.mounted or intent.interact_pressed or intent.mount_held
-	_traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, exempt)
+	_traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, Traversal.is_exempt(player))
 
 
 func _on_event_started(id: String) -> void:

@@ -67,8 +67,7 @@ class Sampler:
 			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 			_last_anchor = _path
 		var intent = player.intent
-		var exempt: bool = player.frozen() or player.kit.mounted or intent.interact_pressed or intent.mount_held
-		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, exempt)
+		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, RunLog.Traversal.is_exempt(player))
 
 	func _anchored(ball: Vector3) -> bool:
 		var reach: float = game.player.grapple_range()

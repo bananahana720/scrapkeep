@@ -49,6 +49,18 @@ func run(t) -> void:
 	_run(standing, 0.0, 90, false)
 	t.eq("a standing start is not a dead stop", standing.dead_stops, 0)
 
+	var staged := _tracker()
+	_run(staged, FAST, 90, false)
+	staged.restart()
+	_run(staged, 0.0, 90, false)
+	_run(staged, 3.0, 90, false)
+	t.eq("a stage's standing start after restart is not a dead stop", staged.dead_stops, 0)
+	var kept := _tracker()
+	_run(kept, FAST, 60, false)
+	_run(kept, 8.0, 60, false)
+	kept.restart()
+	t.eq("restart keeps the totals", [kept.dead_stops, kept.ticks], [1, 120])
+
 	var share := _tracker()
 	_run(share, FAST, 75, false)
 	_run(share, 10.0, 25, false)
@@ -70,8 +82,8 @@ func _ramp(tracker: RunLog.Traversal, from: float, to: float, ticks: int, brakin
 		tracker.step(SpeedTier.of(speed, CRUISE), speed, braking, false)
 
 
-# Down from a fast roll to just inside tier 1, slowly enough that no tick loses half of
-# the speed of the tick before it, so only the held crawl that follows can count.
+# Down from a fast roll to just inside tier 1, slowly enough that the speed never falls
+# under half of its peak within the last 0.1 s, so only the held crawl that follows can count.
 func _approach(tracker: RunLog.Traversal) -> void:
 	_run(tracker, FAST, 30, false)
 	_ramp(tracker, FAST, 7.8, 90, false)

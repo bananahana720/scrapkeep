@@ -80,11 +80,7 @@ func _check_limits() -> void:
 	var tps := Engine.physics_ticks_per_second
 	_t.check("reaction constant is at least 150 ms", BotDriver.TRAVERSE_REACTION >= 0.15, "%s s" % BotDriver.TRAVERSE_REACTION)
 	_t.check("press constant is at least 0.4 s", BotDriver.TRAVERSE_PRESS_GAP >= 0.4, "%s s" % BotDriver.TRAVERSE_PRESS_GAP)
-	var least := 1000000
-	for age in _driver.reaction_ticks:
-		least = mini(least, age)
-	_t.check("every steer used a view 150 ms old or older", _driver.reaction_ticks.size() > 0 and float(least) / float(tps) >= 0.15,
-		"%d steers, youngest view %d ticks (%.3f s)" % [_driver.reaction_ticks.size(), least, float(least) / float(tps)])
+	_check_reaction()
 	# The gate under a press on every tick: whatever the bot's own pace, the gaps hold.
 	var before: int = _driver.press_ticks.size()
 	for i in tps * 4:
@@ -98,6 +94,40 @@ func _check_limits() -> void:
 	_t.check("presses are at least 0.4 s apart", presses.size() - before >= 2 and float(smallest) / float(tps) >= 0.4,
 		"%d presses, smallest gap %d ticks (%.3f s)" % [presses.size(), smallest, float(smallest) / float(tps)])
 	_t.check("one verb per press", _driver.source.press.size() <= 1, "%s" % [_driver.source.press])
+
+
+# The stick the bot sends, with the route's point changed on one tick: nothing answers for 13
+# ticks, and the answer is out by tick 16. The state is frozen between calls, so only the
+# bot's own delay can separate the two.
+func _check_reaction() -> void:
+	var tps := Engine.physics_ticks_per_second
+	var ball: Vector3 = _game.player.ball_position()
+	_driver.route.clear()
+	_driver.route.append(Vector2(ball.x + 80.0, ball.z))
+	_driver._leg = 0
+	_driver._out.clear()
+	var fired := 0
+	var last := Vector2.ZERO
+	for i in 150:
+		_driver.ticks += 1
+		_driver._traverse(1.0 / tps)
+		last = _driver.source.hold.get("move", Vector2.ZERO)
+		if _driver.source.hold.get("fire_held", false):
+			fired += 1
+	_driver.route[0] = Vector2(ball.x - 80.0, ball.z)
+	_driver._leg = 0
+	var answered := -1
+	for i in range(1, 31):
+		_driver.ticks += 1
+		_driver._traverse(1.0 / tps)
+		var move: Vector2 = _driver.source.hold.get("move", Vector2.ZERO)
+		if _driver.source.hold.get("fire_held", false):
+			fired += 1
+		if answered < 0 and move.distance_to(last) > 0.3:
+			answered = i
+	_t.check("the stick answers a changed target no sooner than 150 ms and by tick 16", answered >= 14 and answered <= 16,
+		"the stick first answered %d ticks after the change (stick before it %s)" % [answered, last])
+	_t.eq("the traversal bot never holds fire", fired, 0)
 
 
 func _check_run_log() -> void:
