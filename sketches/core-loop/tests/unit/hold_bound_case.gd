@@ -7,6 +7,8 @@ const Holds := preload("res://src/combat/holds.gd")
 # - against the velocity: removed; along it: whole;
 # - across it: capped at speed * PI / 3;
 # - under 1 m/s there is no heading, and any pull passes whole;
+# - two holds in one tick share the bound: the summed sideways pull is capped once, so
+#   the mag pit and the winch cable together turn the heading 60 degrees a second at most;
 # - one second of the capped sideways pull turns the heading 60 degrees or less and
 #   never lowers the speed.
 
@@ -18,6 +20,7 @@ func run(t) -> void:
 	_directions()
 	_rest()
 	_second_of_pull()
+	_two_holds()
 
 
 func _close(a: Vector3, b: Vector3) -> bool:
@@ -58,3 +61,23 @@ func _second_of_pull() -> void:
 	var turned := rad_to_deg(start.angle_to(v))
 	_t.check("bound: a second of capped sideways pull turns at most 60 degrees", turned <= 60.0, "turned %.2f degrees" % turned)
 	_t.check("bound: speed is not lower after the pull", lowest >= start.length() - 0.0001, "lowest speed %.4f of %.1f" % [lowest, start.length()])
+
+
+# The mag pit and the winch cable on the ball in the same tick, each pulling hard to a
+# different side. Each pull asks bound() with what the tick has already granted.
+func _two_holds() -> void:
+	var v := Vector3(0.0, 0.0, -20.0)
+	var start := v
+	var step := 1.0 / 240.0
+	var lowest := v.length()
+	for i in 240:
+		var granted := Vector3.ZERO
+		var first := Holds.bound(v, Vector3(40.0, 0.0, 0.0), granted)
+		granted += first
+		var second := Holds.bound(v, Vector3(30.0, 0.0, 10.0), granted)
+		granted += second
+		v += granted * step
+		lowest = minf(lowest, v.length())
+	var turned := rad_to_deg(start.angle_to(v))
+	_t.check("bound: two holds in one tick turn the heading at most 60 degrees a second", turned <= 60.0, "turned %.2f degrees" % turned)
+	_t.check("bound: two holds in one tick never lower the speed", lowest >= start.length() - 0.0001, "lowest speed %.4f of %.1f" % [lowest, start.length()])

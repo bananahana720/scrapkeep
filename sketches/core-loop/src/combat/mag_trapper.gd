@@ -4,8 +4,9 @@ extends "res://src/combat/counter.gd"
 # back. It throws a disc at where the ball will be, and the disc's instant ring closes
 # over the warning. Live, it is a magnetic pit: a ball inside it lighter than the
 # disc's heft rating has its line pulled toward the centre, through the hold bound
-# (holds.gd): the pull bends the path and never lowers the speed. Heft at or above the rating rolls straight through, so growing is the counter. A jump
-# or a smash shatters the disc.
+# (holds.gd): the pull bends the path and never lowers the speed. Heft at or above the
+# rating rolls straight through, so growing is the counter. A jump or a smash shatters
+# the disc.
 
 const PIT_RADIUS := 4.5
 const PIT_REACH := 1.4

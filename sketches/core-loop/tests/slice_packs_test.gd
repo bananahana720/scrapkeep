@@ -5,20 +5,20 @@ const Intent := preload("res://src/movement/intent.gd")
 const Holds := preload("res://src/combat/holds.gd")
 
 # The slice's packs and holds on a live slice game (EN):
-# - 90 simulated seconds spawn only the six slice kinds (the stage's
+# - 72 simulated seconds spawn only the six slice kinds (the stage's
 #   Warden aside); no event starts, no vault and no miniboss appear;
-# - a ball driven at 20 m/s through a live mag pit leaves with planar speed not below its
-#   entry speed: the pit bends the path and never bleeds the ball;
+# - a ball driven at 20 m/s through a live mag pit leaves no slower than the same line with
+#   no pit, within 0.1 m/s: the pit bends the path and never bleeds the ball;
 # - a ball caught by the winch drone and then driven past 19 m/s snaps free with a forward
 #   kick, and strain() read above 0.9 on the tick before.
 # Every wait is counted in physics frames; none reads the wall clock.
 
-# A headless run is paced by the wall clock at the physics rate, so 90 simulated seconds
-# at the normal 90 Hz would take 90 s of the runner's 120 s. The spawning part runs at
+# A headless run is paced by the wall clock at the physics rate, so the simulated span is
+# kept to the shortest that shows the elite third and one arrival after it. The spawning part runs at
 # SPAWN_RATE; the director schedules in seconds and every wait counts physics ticks.
 const SEED := 11
 const SPAWN_RATE := 120
-const SIM_SECONDS := 90.0
+const SIM_SECONDS := 72.0
 const SLICE_KINDS := ["chaser", "lobber", "mag_trapper", "deflector", "plated_brute", "winch_drone"]
 const STAGE_KINDS := ["warden"]
 const ENTRY_SPEED := 20.0
@@ -66,7 +66,7 @@ func _boot(seed_value: int, calm: bool) -> void:
 
 func _run() -> void:
 	await _boot(SEED, false)
-	await _ninety_seconds(SEED)
+	await _sim_span(SEED)
 	_game.ctx.calm = true
 	await _mag_pit()
 	await _winch()
@@ -75,7 +75,7 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _ninety_seconds(seed_value: int) -> void:
+func _sim_span(seed_value: int) -> void:
 	var normal := Engine.physics_ticks_per_second
 	Engine.physics_ticks_per_second = SPAWN_RATE
 	var rate := SPAWN_RATE
@@ -91,7 +91,7 @@ func _ninety_seconds(seed_value: int) -> void:
 			vault = vault or kind == "vault"
 			miniboss = miniboss or kind == "miniboss"
 		var second := (tick + 1) / rate
-		if (tick + 1) % rate == 0 and second in [30, 60, 90]:
+		if (tick + 1) % rate == 0 and second in [24, 48, 72]:
 			live[second] = get_nodes_in_group("enemy").size()
 	Engine.physics_ticks_per_second = normal
 	var director = _game.world.director
@@ -102,8 +102,8 @@ func _ninety_seconds(seed_value: int) -> void:
 	var ids: Array = director.packs.map(func(p: Dictionary) -> String: return p["id"])
 	_report("seed %d: only the six slice kinds spawn" % seed_value, foreign.is_empty() and not seen.is_empty(),
 		"kinds seen %s, foreign %s" % [seen.keys(), foreign])
-	_report("seed %d: packs arrive by the table" % seed_value, ids.size() >= 3 and (ids.size() < 3 or ids[2] == "elite") and ids.count("elite") == 1,
-		"%d packs in 90 s: %s; live enemies at 30/60/90 s: %s/%s/%s" % [ids.size(), ids, live.get(30), live.get(60), live.get(90)])
+	_report("seed %d: packs arrive by the table" % seed_value, ids.size() >= 4 and ids[2] == "elite" and ids.count("elite") == 1,
+		"%d packs in 72 s: %s; live enemies at 24/48/72 s: %s/%s/%s" % [ids.size(), ids, live.get(24), live.get(48), live.get(72)])
 	_report("seed %d: no event, no vault, no miniboss" % seed_value, _events_started == 0 and not vault and not miniboss and _game.world.last_miniboss_at == Vector3.INF,
 		"%d events started, vault %s, miniboss %s" % [_events_started, vault, miniboss])
 
@@ -146,7 +146,7 @@ func _mag_pit() -> void:
 	await _frames(5)
 	var control: Dictionary = await _pass(centre, heading, holds, null, null)
 	_report("mag pit holds the ball", through["held"], "the pit's hold started: %s" % through["held"])
-	_report("a ball through a live mag pit leaves no slower than it entered", through["entry"] > 0.0 and through["exit"] >= through["entry"] - (control["entry"] - control["exit"]) - 0.1,
+	_report("a ball through a live mag pit leaves no slower than the same line with no pit, within 0.1 m/s", through["entry"] > 0.0 and through["exit"] >= through["entry"] - (control["entry"] - control["exit"]) - 0.1,
 		"entered at %.2f m/s, lowest inside %.2f, left at %.2f; the same line with no pit entered at %.2f and left at %.2f"
 			% [through["entry"], through["lowest"], through["exit"], control["entry"], control["exit"]])
 	holds.clear()

@@ -54,16 +54,22 @@ func _arrivals() -> void:
 	var bad: Array = []
 	var foreign: Array = []
 	var over := 0
+	var near_cap := 0
 	var d := _slice_director(11)
 	var seen := 0
 	var t := 0.0
 	while d.packs.size() < 200 and t < 20000.0:
-		var alive := int(t / 7.0) % 3
+		# Two of every three 7 s spans the live count is low; the third it sits three under the
+		# cap, so a pack of four does not fit and ignoring the room rule would overshoot.
+		var phase := int(t / 7.0) % 3
+		var alive := d.cap() - 3 if phase == 2 else phase
 		d.advance(H, alive, Vector2.ZERO, Vector2(0.0, 14.0), Vector2(0.0, 1.0))
 		t += H
 		if d.packs.size() > seen:
 			if alive + d.arrivals.size() > d.cap():
 				over += 1
+			if alive > 2:
+				near_cap += 1
 			seen = d.packs.size()
 	for p in d.packs:
 		ids.append(p["id"])
@@ -86,7 +92,8 @@ func _arrivals() -> void:
 	for id in ids:
 		ordinary[id] = int(ordinary.get(id, 0)) + 1
 	_t.check("arrivals: every ordinary pack is drawn", ordinary.has("run_down") and ordinary.has("grounded") and ordinary.has("rebound"), "counts %s" % [ordinary])
-	_t.check("arrivals: a pack never lands past the cap", over == 0, "%d arrivals over the cap" % over)
+	_t.check("arrivals: a pack never lands past the cap, with the live count held near it",
+		over == 0 and near_cap > 0, "%d arrivals over the cap, %d of them with the count three under it" % [over, near_cap])
 
 
 func _row_of(id: String) -> Dictionary:
