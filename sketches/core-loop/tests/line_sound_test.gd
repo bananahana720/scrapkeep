@@ -13,13 +13,13 @@ const T := preload("res://tests/support/t.gd")
 #   HLs-1  every line sound and every verb refusal resolves in the bank; bite, clunk and dry tick differ
 #   HLs-2  each line state requests its cue once on the bus; a bite is requested once, not twice
 #   HLs-3  the hum stands with the line, ends within a tick of any end, and climbs an octave in
-#   HLs-4  the dry tick sits 12 to 16 dB under the bite, measured from the baked samples
+#   HLs-4  the dry tick sits 12 to 16 dB under the bite, by the RMS of the baked samples and the trims
 #   HLs-5  a motif's first two notes on arming, its third on the first firing, then once per 4 s
 #   HLs-6  each verb's refusal plays its cue, once per 0.25 s per verb
 # The cue log and the audio clock, not speakers; the clock is stepped by hand, never read.
 
 const STATES_WITH_SOUND := ["locked", "dry_fire", "latched_world", "latched_body", "smash_committed", "smash_lands",
-	"rewinding", "let_go", "broke"]
+	"let_go", "broke"]
 
 var _t := T.new("line_sound_test")
 var _game
@@ -60,6 +60,11 @@ func _count(sound: String, status := "") -> int:
 
 func _level_db(id: String) -> float:
 	return linear_to_db(Synth.peak(SfxBank.samples(id))) + SfxBank.trim_db(id)
+
+
+# Loudness of a baked cue as the game plays it: the RMS of its samples plus its trim.
+func _rms_db(id: String) -> float:
+	return linear_to_db(Synth.rms(SfxBank.samples(id))) + SfxBank.trim_db(id)
 
 
 func _run() -> void:
@@ -119,8 +124,8 @@ func _resolves() -> void:
 
 func _levels() -> void:
 	var bite := _level_db(EventKinds.line_sound("latched_body"))
-	var dry := _level_db(EventKinds.line_sound("dry_fire"))
-	_t.check("HLs-4 dry tick 12 to 16 dB under the bite", bite - dry >= 12.0 and bite - dry <= 16.0, "bite %.1f dB, dry tick %.1f dB, gap %.1f dB" % [bite, dry, bite - dry])
+	var rms_gap := _rms_db(EventKinds.line_sound("latched_body")) - _rms_db(EventKinds.line_sound("dry_fire"))
+	_t.check("HLs-4 dry tick 12 to 16 dB under the bite", rms_gap >= 12.0 and rms_gap <= 16.0, "RMS gap %.1f dB (bite %.1f, dry tick %.1f)" % [rms_gap, _rms_db(EventKinds.line_sound("latched_body")), _rms_db(EventKinds.line_sound("dry_fire"))])
 	var clunk := _level_db(EventKinds.line_sound("latched_world"))
 	_t.check("the bite is louder than the world clunk", bite > clunk + 3.0, "bite %.1f dB, clunk %.1f dB" % [bite, clunk])
 	var quiet: Array = []
@@ -159,7 +164,17 @@ func _states() -> void:
 	events.grapple_fired.emit(Vector3.ZERO)
 	events.harpoon_bit.emit(null, Vector3.ZERO)
 	events.line_state_changed.emit("latched_body", null, Vector3.ZERO, "")
-	_t.check("HLs-2 bite once, not twice", _count("grapple_clink") == 1, "grapple_fired, harpoon_bit and latched_body request the bite %d times" % _count("grapple_clink"))
+	_t.check("HLs-2 bite once, not twice", _count("line_bite") == 1 and _count("grapple_clink") == 0, "grapple_fired, harpoon_bit and latched_body request the bite %d times, the old id %d" % [_count("line_bite"), _count("grapple_clink")])
+	_t.check("the bite has its own id", EventKinds.line_sound("latched_body") == "line_bite", "latched_body plays %s" % EventKinds.line_sound("latched_body"))
+	_t.check("grapple_clink is the old recipe", SfxBank._bake("grapple_clink") == SfxBank._fm(0.24, SfxBank._hz(81), 3.5, 5.0, 16.0), "grapple_clink changed")
+	_t.check("the crack and the bite stay in the live key", "smash_crack" in Audio.KEYED_SOUNDS and "line_bite" in Audio.KEYED_SOUNDS, "keyed: crack %s, bite %s" % ["smash_crack" in Audio.KEYED_SOUNDS, "line_bite" in Audio.KEYED_SOUNDS])
+	_fresh()
+	_step(0.3)
+	events.line_state_changed.emit("rewinding", null, Vector3.ZERO, "")
+	_t.check("the dock click waits for the dock", _count("dock_click") == 0, "rewinding entry played %d clicks" % _count("dock_click"))
+	_step(0.3)
+	events.line_state_changed.emit("searching", null, Vector3.ZERO, "")
+	_t.check("the dock click plays when the line leaves rewinding", _count("dock_click", "now") == 1, "%d clicks on leaving rewinding" % _count("dock_click"))
 	_fresh()
 	_step(0.3)
 	events.grapple_released.emit()
@@ -244,6 +259,18 @@ func _motifs() -> void:
 		events.cause_fired.emit(id, null, Vector3.ZERO)
 		if _logged("cause_fired") != [notes[2]]:
 			bad.append("%s first firing of a new run %s" % [id, _logged("cause_fired")])
+	_fresh()
+	events.run_started.emit("pylon_engineer")
+	_step(5.0)
+	var first_id: String = EventKinds.CAUSE_ROWS.keys()[0]
+	var phrase := _notes(first_id)
+	_fresh()
+	events.cause_armed.emit(first_id)
+	events.cause_fired.emit(first_id, null, Vector3.ZERO)
+	_step(0.5)
+	var order: Array = _audio.cue_log.filter(func(e): return (e[0] == "cause_armed" or e[0] == "cause_fired") and e[2] == "now").map(func(e): return e[1])
+	if order != phrase:
+		bad.append("%s armed and fired together played %s want %s" % [first_id, order, phrase])
 	_t.check("HLs-5 arm two notes, resolve on the first firing, then once per 4 s", bad.is_empty(), "%d motifs; off: %s" % [EventKinds.CAUSE_ROWS.size(), bad])
 
 
@@ -289,4 +316,21 @@ func _hum() -> void:
 	_player.kit.drop_line("reset")
 	await process_frame
 	_t.check("HLs-3 a silent reset stops the hum", not _audio.hum_on, "hum_on %s" % _audio.hum_on)
+	await _sim(2)
+	for route in ["frozen", "player_died", "run_ended"]:
+		_player.grapple_to(target.global_position, Vector3.UP, target)
+		await _sim(1)
+		var up: bool = _audio.hum_on
+		match route:
+			"frozen":
+				_player.set_frozen(true)
+			"player_died":
+				_game.events.player_died.emit()
+			"run_ended":
+				_game.events.run_ended.emit(true)
+		await _sim(1)
+		_t.check("HLs-3 the hum is down one tick after %s" % route, up and not _audio.hum_on, "up before %s, hum_on %s after" % [up, _audio.hum_on])
+		_player.set_frozen(false)
+		_player.release_grapple()
+		await _sim(2)
 	target.queue_free()

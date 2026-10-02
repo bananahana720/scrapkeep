@@ -39,7 +39,7 @@ const POLYPHONY := 32
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "grapple_clink": 60, "slam_boom": 60}
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
@@ -80,7 +80,7 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "kill_pop", "part_get", "c
 	"sable_break", "rivet_break", "kest_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "hold_pit", "hold_bola", "hold_tether", "hold_net",
 	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "reveal_clank", "ceremony_build",
-	"ceremony_resolve",
+	"ceremony_resolve", "line_bite", "smash_crack",
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
@@ -161,6 +161,8 @@ var _voices := {}
 var _last_start := {}
 var clock := 0.0
 var hum_on := false
+# The line state before the current one, so the dock click plays when the hook leaves rewinding.
+var _line_was := ""
 var hum_pitch := 1.0
 var _hum_voice := -1
 var _gates := {}
@@ -819,6 +821,7 @@ func _connect_all(events) -> void:
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
 	events.run_ended.connect(func(won: bool):
 		engine.set_reactor_pedal(false)
+		_stop_hum()
 		_flow_queue.append(["end", won]))
 	events.beacon_charge_changed.connect(_on_beacon)
 	events.scrap_collected.connect(_on_scrap)
@@ -1047,6 +1050,12 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String
 		_start_hum()
 	else:
 		_stop_hum()
+	var docked := _line_was == "rewinding" and state != "rewinding"
+	_line_was = state
+	if docked:
+		_grammar_cue("line_state_changed", EventKinds.line_sound("rewinding"))
+	if state == "rewinding":
+		return
 	var sound := EventKinds.line_sound(state)
 	if sound == EventKinds.NONE or sound == "":
 		return
@@ -1089,7 +1098,7 @@ func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
 func _on_cause_armed(id: String) -> void:
 	var motif := EventKinds.cause_motif(id)
 	for i in mini(2, motif.size()):
-		_notes.append([clock + NOTE_SPACING * i, "cause_armed", Harmony.note_midi(String(motif[i]))])
+		_notes.append([clock + NOTE_SPACING * i, "cause_armed", Harmony.note_midi(String(motif[i])), id])
 	_play_due_notes()
 
 
@@ -1105,7 +1114,11 @@ func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
 		_gates["cause:" + id] = clock + CAUSE_RESOLVE_GAP
 	elif not _gate("cause:" + id, CAUSE_RESOLVE_GAP):
 		return
-	_notes.append([clock, "cause_fired", Harmony.note_midi(String(motif[2]))])
+	var at := clock
+	for note in _notes:
+		if note.size() > 3 and note[3] == id:
+			at = maxf(at, float(note[0]) + NOTE_SPACING)
+	_notes.append([at, "cause_fired", Harmony.note_midi(String(motif[2])), id])
 	_play_due_notes()
 
 
@@ -1155,7 +1168,7 @@ func _tend_hum() -> void:
 	if player == null or player.get("kit") == null:
 		return
 	var kit = player.kit
-	if not kit.hooked:
+	if not kit.hooked or player.frozen():
 		_stop_hum()
 		return
 	hum_pitch = hum_ratio(player.ball_position().distance_to(kit.anchor)) if kit.on_body else 1.0
@@ -1386,6 +1399,7 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 
 
 func _on_died() -> void:
+	_stop_hum()
 	play("player_died")
 	_flow_queue.append(["dead"])
 
@@ -1722,6 +1736,11 @@ func _flush_flow() -> void:
 # --- Mixer keys ---------------------------------------------------------------------
 # - and = move the music, [ and ] move the effects, M mutes everything.
 
+# The dev keys answer only to a game launched with --dev.
+static func _dev_launch() -> bool:
+	return "--dev" in OS.get_cmdline_args() or "--dev" in OS.get_cmdline_user_args()
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
@@ -1740,6 +1759,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_apply_volumes()
 			_show_mixer()
 		KEY_F6:
+			if not _dev_launch():
+				return
 			engine.boss_pivot = not engine.boss_pivot
 			_show_text("Boss tempo: %s (F6)" % ("129 by metric modulation" if engine.boss_pivot else "four on the floor held at 172"))
 		_:

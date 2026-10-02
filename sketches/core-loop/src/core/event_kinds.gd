@@ -524,7 +524,7 @@ const LINE_ROWS := {
 	"locked": {"color": "live", "motion": "pulse", "shape": "ring", "sound": "lock_tick", "verb": "harpoon", "word": "HOOK"},
 	"dry_fire": {"color": "slate", "motion": "none", "shape": "bar", "sound": "dry_tick", "verb": "harpoon", "word": ""},
 	"latched_world": {"color": "live", "motion": "steady", "shape": "square", "sound": "anchor_clunk", "verb": "haul", "word": ""},
-	"latched_body": {"color": "live", "motion": "steady", "shape": "diamond", "sound": "grapple_clink", "verb": "haul", "word": "SMASH"},
+	"latched_body": {"color": "live", "motion": "steady", "shape": "diamond", "sound": "line_bite", "verb": "haul", "word": "SMASH"},
 	"smash_committed": {"color": "live", "motion": "none", "shape": "arrow", "sound": "smash_whistle", "verb": NONE, "word": ""},
 	"smash_lands": {"color": "live", "motion": "none", "shape": "ring", "sound": "slam_boom", "verb": NONE, "word": ""},
 	"rewinding": {"color": "live", "motion": "none", "shape": "chevron", "sound": "dock_click", "verb": NONE, "word": ""},

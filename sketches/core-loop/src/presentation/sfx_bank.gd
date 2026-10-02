@@ -86,9 +86,9 @@ const TRIM_DB := {
 	# up a fifth for the rise and down a fourth for the return).
 	"shell_spring": -9.0,
 	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
-	# verb. The bite (grapple_clink, -7) is the reference: the dry tick sits 14 dB under it, the
+	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
 	# lock tick and the refusals under that, the world clunk under the bite.
-	"lock_tick": -22.0, "dry_tick": -21.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
+	"lock_tick": -22.0, "dry_tick": -25.0, "line_bite": -7.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
 	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
@@ -214,6 +214,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"slam_boom":
 			return _slam()
 		"grapple_clink":
+			return _fm(0.24, _hz(81), 3.5, 5.0, 16.0)
+		"line_bite":
 			return bite(0)
 		"smash_crack":
 			return crack(0)

@@ -39,7 +39,7 @@ func _sketches() -> Array:
 	var list: Array = []
 	for variant in 3:
 		var letter := char(97 + variant)
-		list.append(["bite-%s" % letter, _at_level(SfxBank.bite(variant), "grapple_clink")])
+		list.append(["bite-%s" % letter, _at_level(SfxBank.bite(variant), "line_bite")])
 		list.append(["crack-%s" % letter, _at_level(SfxBank.crack(variant), "smash_crack")])
 	list.append(["clunk", _at_level(SfxBank.clunk(), "anchor_clunk")])
 	list.append(["dry-tick", _at_level(SfxBank.samples("dry_tick").duplicate(), "dry_tick")])
