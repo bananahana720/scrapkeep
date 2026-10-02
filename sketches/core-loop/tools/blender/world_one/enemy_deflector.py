@@ -14,9 +14,10 @@
 # the floor, so its lower half is squashed to 0.64 of the upper (bottom at z = -1.05): a flat-footed
 # shield rather than a buried circle.
 #
-# One mesh, two surfaces (two colour-pass draws), no alpha:
+# Two meshes, three surfaces (three colour-pass draws), no alpha:
 #   DeflectorBody   fleet_paint (crew barrel, chest and head; flashes with the enemy) and paint
-#                   (vertex colour: dish face, rim, back frame, arms, snout, ears, pack, one brass tag).
+#                   (vertex colour: snout, ears, pack, one brass tag).
+#   DishWall        paint (dish, rim, frame and grips); origin at the face centre for e10_dish_wall.
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
 #   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
@@ -84,6 +85,10 @@ b.cyl("paint", 0.73, 0.73, 0.10, segs=10, loc=(0, 0, -0.05), color=CHAR)  # stra
 b.box("paint", (0.56, 0.22, 0.56), loc=(0, 0.72, 0.30), color=CHAR)  # pack on the back
 b.box("paint", (0.28, 0.05, 0.18), loc=(0, 0.855, 0.30), color=BRASS)  # the one brass tag
 
+body = b.to_object(parent=root)
+b = Part("DishWall")
+bm = b.bm
+
 # --- The dish: two skins over 16 sectors and four rings --------------------------------
 step = 2 * math.pi / SECTORS
 centre_f = bm.verts.new(Vector((0.0, CEN_Y, CEN_Z)))
@@ -134,17 +139,18 @@ for s in (-1, 1):
 # The dish skins, lip and rim bead are wound by hand; make every closed shell face outward.
 import bmesh
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-body = b.to_object(parent=root)
+wall = b.to_object(origin=(0, CEN_Y, CEN_Z), parent=root)
 bpy.context.view_layer.update()
 
 tris = common.tri_total(root)
-xs = [v.co.x for v in body.data.vertices]
-ys = [v.co.y for v in body.data.vertices]
-zs = [v.co.z for v in body.data.vertices]
-surfaces = len(body.data.materials)
+points = [obj.matrix_world @ v.co for obj in (body, wall) for v in obj.data.vertices]
+xs = [v.x for v in points]
+ys = [v.y for v in points]
+zs = [v.z for v in points]
+surfaces = len(body.data.materials) + len(wall.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3))
-if tris > 1200 or surfaces > 2 or max(abs(x) for x in xs) > 2.0 or min(ys) < -1.75 or max(ys) > 0.9 \
+if tris > 1200 or surfaces > 3 or max(abs(x) for x in xs) > 2.0 or min(ys) < -1.75 or max(ys) > 0.9 \
         or min(zs) < GROUND - 0.001 or max(zs) > 2.3:
     raise SystemExit("C17 limits exceeded")
 

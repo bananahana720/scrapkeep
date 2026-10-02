@@ -89,8 +89,17 @@ func _run() -> void:
 		return
 	var scene := packed.instantiate()
 	root.add_child(scene)
+	for entry in [["DeflectorBody", ["fleet_paint", "paint"]], ["DishWall", ["paint"]]]:
+		var part := scene.find_child(entry[0], true, false) as MeshInstance3D
+		_check(part != null, "asset node " + entry[0])
+		if part != null:
+			var names := []
+			for surface in part.mesh.get_surface_count():
+				names.append(part.mesh.surface_get_material(surface).resource_name)
+			_check(names == entry[1], "asset surfaces %s: %s" % [entry[0], names])
 	var m := _measure(scene)
 	print("asset: %d T, %d D" % [m["tris"], m["draws"]])
+	_check(m["tris"] >= 844 * 0.9 and m["tris"] <= 844 * 1.1, "WF-8 triangles within 10 percent of 844")
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
 	_check(not m["alpha"], "asset has no alpha surface")
@@ -128,6 +137,9 @@ func _run() -> void:
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
 	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
 	_check(not live["alpha"], "live assembly has no alpha surface")
+	# The original dish footprint is the released wall; the carried angle deliberately swings out.
+	dish.phase = dish.Phase.LIVE
+	dish._pose()
 	var pts := _points(dish)
 	var lo := Vector3(INF, INF, INF)
 	var hi := Vector3(-INF, -INF, -INF)
@@ -164,10 +176,10 @@ func _check_dish(_dish: Node3D, pts: PackedVector3Array) -> void:
 
 
 # The dish turns with the enemy's existing facing (counter.gd _facing, set at commit): its
-# forward-most points lie on the ball's side, whatever the bearing. No clock, no new pose.
+# forward-most points lie on the ball's side, whatever the bearing, at full wall pose.
 func _check_facing(dish: Node3D) -> void:
 	var body := dish.find_child("Body", true, false) as Node3D
-	_check(body.transform.is_equal_approx(Transform3D.IDENTITY), "the body sits at the origin, unmoved")
+	_check(body.position.is_equal_approx(Vector3(0, -0.165, 0)) and body.scale.is_equal_approx(Vector3(1, 0.85, 1)), "the crew braces behind the released wall")
 	for bearing in [Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(-0.6, 0, 0.8)]:
 		dish._facing(bearing)
 		var centre := Vector3.ZERO

@@ -1921,3 +1921,65 @@ The exported base has 4,956 triangles, up from 4,492. Its bounds are unchanged: 
 `hero_warden_assets_test.gd` retains every existing check and adds named-piece, assembled-bound, caged-heart and triangle-projection checks. The sampled facing-crown silhouette loses area at each shatter: 1,170, 1,026, 882, 441, then zero covered samples in the band above the inner structure. `warden_chunks_look_test.gd` uses real harpoon contacts on a live slice game for all four shatters, including death. It checks chunk visibility, crack colours and placement, core visibility and tint, fragment motion and lifetime, callback cleanup, retries, stage changes, new runs, and plating Wardens through death on all three default stages. Deliberate implementation and GLB faults prove that the new assertions fail; the checks themselves are not edited for those red runs.
 
 The coordinator still renders the assembled and damaged states at the 8 m and 12 m chase distances. That check must include crack readability, the open heart and the existing harpoon brackets, whose gameplay anchor remains above the jaws. No rendered capture, GPU measurement or human readability verdict is claimed by this unit.
+
+## Unit WF: Deflector body wind-up, E10 `e10_dish_wall`
+
+The Deflector carries its dish raised and angled to one side. During its existing 0.9 s
+warning, the dish swings into the upright wall and the crew crouches behind it. The
+released wall keeps the original dish geometry and facing. It holds through `LIVE`
+and returns to the carried transform when the attack rests. This is a visual pose.
+The reflect, 0.45 s vault window, attack clock, lane, collider, movement and colours
+are unchanged.
+
+`deflector.gd` reads `_warn_progress()` during `WARN`, uses 1 during `LIVE`, and uses
+0 otherwise. `smoothstep(0, 1, progress)` gives eased travel without an extra clock.
+At 90% of the warning it has completed 97.2% of its travel. Its first full pose is on
+the existing transition to `LIVE`. The dish centre travels 0.828 m and its orientation
+turns 52.530 degrees, measured in enemy space. The crew compresses vertically to
+85% of its resting height with a 0.165 m downward offset that keeps its base planted.
+Both transforms are below `reaction_pivot`; the pose never assigns that pivot.
+`windup_pose_enabled` is the test seam. Setting it false restores the carried dish
+and the resting crew. The existing exit hook also uses that seam to restore both
+meshes before disposal, including death and stage retry.
+
+The Blender recipe separates the original mesh into `DeflectorBody`, with
+`fleet_paint` and `paint` surfaces, and `DishWall`, with one `paint` surface. The
+latter includes the dish, rim, frame, arms and grips. Its origin is the face centre.
+No triangles or colours were added. Blender 5.2.2 LTS regenerated
+`assets/models/world_one/enemy_deflector.glb` with **844 triangles**, equal to the
+base asset, and **3 draws**, within the existing 1200-triangle / 3-draw ceiling.
+Only this model changed. The asset test pins node and surface names, not a file hash.
+It checks the original dish footprint and facing at full pose. The old assertion
+that the crew stays at identity now asserts the specified braced transform. No
+footprint, health, collider, colour, timing or mechanic bounds were widened. The
+recipe's surface limit changed from 2 to 3 to permit the split; the asset test's
+existing draw ceiling remains 3.
+
+`enemy_deflector_windup_test.gd` boots the slice game and checks clock samples
+0 / 0.5 / 1, monotonic dish translation and rotation plus crew crouch and scale at
+101 samples, the full live cycle, release timing, ram reactions, interrupted
+warnings, death, `queue_free()` and the real stage retry. The observed samples are
+0.000000 / 0.499999 / 1.000000. Release and first full pose share physics frame 85
+in the standalone check. The unhit reaction pivot stays exactly at identity.
+The ram reaction reaches 89.699 degrees while the child pose resets. Disposal and
+retry restore the child transforms on exit, within two observation frames.
+
+The physics control compares 480 physics frames at seed 11 in two fresh Godot
+processes, with the pose enabled and disabled. It compares global position,
+velocity, local and global collider transforms, telegraph descriptor and progress,
+attack phase, warning duration and committed attack facts. Attack instance ids are
+excluded because they identify separate attacks. The largest measured numeric
+difference is **0.000000000** and the full snapshots match exactly. Both traces
+release on sample frame 81. A preliminary comparison that replaced games within
+one process found a 0.000025546 difference in velocity on the first walking frame
+after rest. Fresh processes give the runs the same Jolt body creation history;
+the zero-difference requirement was retained.
+
+For red/green evidence, the production pose temporarily ignored the clock and
+always used progress 1. The unchanged sample check printed
+`1.000000 / 1.000000 / 1.000000 -> FAIL`; release, resets and the disabled seam also
+failed. Restoring the clock printed
+`0.000000 / 0.499999 / 1.000000 -> PASS` and all 18 wind-up checks passed. Logs are
+under `artifacts/local/tasks/alpha-x2b-WF/` in this worktree. The named verification
+receipt is `wf`; the coordinator owns admission and any rendered range check.
+These are headless numeric checks, not chase-camera or human readability acceptance.
