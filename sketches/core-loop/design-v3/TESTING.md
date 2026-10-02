@@ -135,3 +135,14 @@ One gate run for two units (receipt `gate-f600d45526bf-2026-10-02T06-28-52-058Z.
 - A cold import in a fresh worktree.
 - The suite after TA, then at pool widths 8, 12 and 16.
 - Lock wait per run, once the runner records it (unit T1).
+
+### After wave R1a, `proto/alpha` at `abb1f80`
+
+Two gate runs for three units. The first, at `1ce63b7`, failed one test for a real reason: `int_arena_standdown_test` counts every `scrap_collected` in the boss arena, and discovery now pays at a synergy's first firing. Cause `brief`: the discovery burst's scrap was a reader of the change the WY1 packet did not name. The second (receipt `gate-e96b600bfbab-2026-10-02T08-00-36-533Z.json`): 240 runs, 0 failed, 2 quarantined red, 354 s.
+
+All three units failed their first review and took one fix round (cause split: C2 two `brief`, one `env`; WY1 one `writer`, one `brief`; TM one `writer`). TM failed its second review on one point, fixed by the coordinator with a check that fails without the fix.
+
+`loop_camper_test` failed once in a writer's 2-wide run and once in a coordinator's 2-wide run, in two different arms, and passed alone 6 of 6 and in three 8-wide gates. It is load-sensitive and nobody has found why. It tests the drop loop, which unit B0b deletes; until then a red there is rerun alone before it is read.
+
+A SCRIPT ERROR inside a check body left the test's own verdict line reading PASS; the runner's SCRIPT ERROR scan caught it. The check helper should fail the test itself.
+

@@ -57,7 +57,7 @@ Ten situations. Each has one source table.
 
 ## 3. The harpoon
 
-Two keys for every pilot. Right mouse is the line: press bites, hold keeps it, release flings. Ctrl hauls it in: a smash on a body, a winch on the world.
+Two keys for every pilot. Right mouse is the line: press bites, hold keeps it, release flings. A line held on a body reels the ball in, as it did in the build he played. Ctrl hauls it in: a smash on a body, a winch on the world. With no line standing, Ctrl is the brake on the ground and the slam in the air, and plays no refusal.
 
 | State | Sight | Sound | Prompt |
 | --- | --- | --- | --- |
@@ -160,7 +160,7 @@ Growth systems to learn drop from 11 built plus 2 planned to 5: scrap as size, t
 
 **The bar**, per pilot over 8 seeds: median flow share 0.70 or more, no seed under 0.60, zero dead stops, largest anchor gap 40 m or less against the 45 m rope.
 
-**Red first.** The measure runs on today's map before the retrofit. If today's map already clears 0.70 for a pilot, that pilot's bar becomes the baseline plus 0.15.
+**Red first.** The measure runs on today's map before the retrofit. Where today's map already clears 0.70 for a pilot, that pilot's bar is the larger of 0.70 and its baseline median minus 0.03: no regression. The first baseline came back at 0.89 to 0.94 for all three pilots, because the Reach is a nine-second straight shot from the spawn to the Warden. Flow share cannot tell a better Reach from that one, so the retrofit unit is judged on the authored line as well: how long it is and which verbs it chains. `TRAVERSAL.md` holds the numbers.
 
 The same number is written to the run log from Andrew's own play.
 
@@ -174,9 +174,11 @@ One owner per file within a wave. Every fence includes the tests that pin what t
 | --- | --- | --- | --- |
 | G1, opener, merged alone | The grammar as data, so every later unit reads frozen ids | `event_kinds.gd` (four row tables, harpoon rows moved into `LINE_ROWS`, the posture facts `posture_step`, `open`, `chunk_shatter` in `STATE_ROWS`), `game_events.gd` (`line_state_changed` with a break cause, `verb_failed` with a reason, `cause_armed`, `cause_fired`, `posture_changed`), `palette.gd` (`SLATE`, `live()`), `bindings.gd` (the verb ids and intent field names only). No stubs: the unit that draws a thing creates its file. | A unit case over the rows: the colour law, the distance rule, names of three words or fewer, no id with presentation in two tables. No behaviour change. |
 | C1 | Nine verbs and the prompt grammar | `bindings.gd`, `game.gd`, `key_glyphs.gd`, `ui_profile.gd`, `field_notes.gd` | The state table in priority order has one verb per key. A prompt shows only when the press would succeed. Removed keys have no handler. |
-| C2 | Harpoon canon: one mode, one grammar, every state published, no silent press | `harpoon.gd`, `player_ball.gd`, `augments.gd`, `augment_kit.gd`, `intent.gd`, `tuning.gd`, the harpoon tests | A scripted test sees every `LINE_ROWS` state. A press with no aim emits `verb_failed`. Total speed after a bite, a commit, a let-go and a break is never below total speed before it. |
-| HL, merged after C2 | The latch as a loud, persistent object | `line_view.gd`, `aim_reticle.gd`, `aim_style.gd`, `audio.gd`, `sfx_bank.gd` | The cable is at least 5 px wide at 45 m, computed. Lock and latch rows differ in motion. Bite, clunk and dry tick are three sound ids. Three stills for his glance. Two or three sketches of each motif as WAV files for his ear. |
-| WY | Cause and effect where a synergy fires | `synergies.gd`, `build.gd`, `why_callout.gd`, `codex_banner.gd`, `vfx.gd`, `accretion.gd`, `build_sheet.gd` | Five live rows. Each firing emits `cause_fired` at the struck body. No banner at pickup. A row with no emitter fails. |
+| C2 | Harpoon canon: one mode, one grammar, every state published, no silent press | `harpoon.gd`, `player_ball.gd`, `augments.gd`, `augment_kit.gd`, `intent.gd`, `tuning.gd`, the harpoon tests | A scripted test sees every `LINE_ROWS` state. A press with no aim emits `verb_failed`. Planar speed after a bite, a let-go and a break is never below planar speed before it, and total speed after a smash commit is never below total speed before it. The reel on a held body line is the rope's own pull. |
+| HLv, after C2 | The latch you can see | `line_view.gd` (new), `presentation.gd`, `juice.gd`, `aim_reticle.gd`, `aim_style.gd`, the drawing removed from `player_ball.gd` | The cable is at least 5 px wide at 45 m, computed. Lock pulses and latch is steady, read from the rows. The harpoon's readiness is its own reticle ring beside the special's. Three stills for his glance. |
+| HLs, after C2 and WY1 | The latch you can hear, the fail cue per verb, and the synergy notes | `audio.gd`, `sfx_bank.gd`, `tools/sound_sketches.gd` (new) | Bite, clunk and dry tick are three sounds. The hum stops within a tick of the line ending. Two notes on armed and the third at the first firing. Sketches as WAV files for his ear. |
+| WY1 | The slice's five synergies, and a fact for every firing | `synergies.gd`, `build.gd`, `build_sheet.gd`, `parts.gd`, the synergy list on both stage tables, `reward_ceremony.gd` | Five live rows on the slice. Each firing emits `cause_fired` at the struck body. Discovery at the first firing, and again after a retry rewinds it. |
+| WY2, after WY1 | The callout that shows why a synergy fired | `why_callout.gd` (new), `hud.gd` (create and count it), `vfx.gd`, `codex_banner.gd` | One form for every row, from the synergy data. The name on the first three firings. No banner at pickup. The card waits for a calm moment. |
 | TM | The traversal number, its baseline, the bots, the run-log fields | `tools/traversal_line.gd`, `tools/traversal_lines.json`, `tools/bot_driver.gd` (brawler, camper, skipper), `run_log.gd` | A baseline for three pilots on today's Reach with its commit. The rate limit is asserted. The dead-stop detector passes on synthetic traces. |
 | ST, replaces S1, runs beside G1 | A stage table chosen when the game is built, and a one-stage slice table: the Cable Reach as stage 1 with slot-1 numbers and no boss | `stage_defs.gd`, `slice_defs.gd` (new), `context.gd`, the context build in `game.gd`, the table reads in `flow.gd`, `terrain.gd`, `world.gd`, `combat.gd`, `hud.gd`, `screens.gd` | A game on the slice table plays the Reach first and ends won at its gate. A game with no table chosen is unchanged, and no existing test is edited. |
 
@@ -222,6 +224,9 @@ Each is worded so he can veto it.
 13. The cracked wall breaks for any pilot at cruise speed. The skylight door starts open.
 14. Shift is one go verb per pilot. Nothing changes for Sable.
 15. Cuts are unreachable now and deleted only after his verdict.
+16. A line held on a body reels the ball in, as in the build he played, and Ctrl commits the smash. The first build of the harpoon rules had dropped the reel; it is back so the approach to the move he called super fun is unchanged. The other choice is no pull until Ctrl.
+17. Ctrl with no line is the brake or the slam and plays no "can't" sound.
+18. The traversal bar is "no regression" on flow share, plus zero dead stops and anchors within 40 m. The retrofit is judged on the authored line's length and the verbs it chains, and on his play.
 
 ## 11. What only Andrew can decide
 
