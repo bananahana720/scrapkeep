@@ -177,9 +177,9 @@ func _on_end() -> void:
 
 
 func _exit_tree() -> void:
-	windup_pose_enabled = false
 	if is_instance_valid(_wall):
-		_pose()
+		_wall.transform = _wall_rest
+		_body.transform = Transform3D.IDENTITY
 	if holds != null and is_instance_valid(holds) and holds.ctx.events.jumped.is_connected(_on_jumped):
 		holds.ctx.events.jumped.disconnect(_on_jumped)
 	super._exit_tree()

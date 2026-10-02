@@ -11,6 +11,7 @@ var _game
 var _t := T.new("enemy_deflector_windup_test")
 var _release := -1
 var _exit_rest := false
+var _exit_seam := false
 
 
 func _initialize() -> void:
@@ -147,7 +148,9 @@ func _half_warn(enemy) -> void:
 
 func _watch_exit(enemy) -> void:
 	_exit_rest = false
-	enemy.tree_exiting.connect(func(): _exit_rest = _rest(enemy))
+	enemy.tree_exiting.connect(func():
+		_exit_rest = _rest(enemy)
+		_exit_seam = enemy.windup_pose_enabled)
 
 
 func _interruptions() -> void:
@@ -168,6 +171,7 @@ func _interruptions() -> void:
 	enemy.queue_free()
 	await _frames(2)
 	_t.check("WF-4 queue_free reset", not is_instance_valid(enemy) and _exit_rest, "exit hook restores both meshes before disposal")
+	_t.check("WF-4 exit leaves the seam on", _exit_seam, "the exit hook rests the meshes without switching the pose off")
 
 	enemy = _spawn()
 	_half_warn(enemy)
