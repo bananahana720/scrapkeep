@@ -38,6 +38,18 @@ If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/
 
 After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
 
+## 11. Direction on the look, the Codex lane and three pilot kits (no play)
+
+- **Date.** 2 October 2026, early morning, Phoenix time. Messages in the Claude desktop app while waves R1b to R2 ran. Nothing here is a play verdict.
+- **What he looked at.** Two pages opened in his Chrome: 13 Sol keyframes for the Dig, the Highdraft and three Tally candidates (`artifacts/local/alpha/keyframes/review/keyframes.html`), then three pilot kits with six concept paintings (`artifacts/local/alpha/kits/review/kits.html`). File cards sent earlier did not reach him.
+- **On who builds.** "we should still use Codex and GPT 6.1 Sol, maybe on high effort, and just run a bunch of parallel versions of it in waves as well to help with the assets and the animations and with anything else that you think should be delegated to it."
+- **On the keyframes.** "these concepts are amazing, much, much better. I would love to get to this level of visual fidelity and hopefully animation and game effects. This would be really epic." And: "I really like all the posed maps. And the enemy design, I would love to get as detailed as possible with this game without slowing things down too much."
+- **On characters.** "I like all three. I would just want to focus the character design around the way it plays in the game." He asked to consider a close-quarters melee character; a caster with "additional skills that can appear on the one two three bar", left click activating the selected one, "spell-like things" with "a mechanical, steampunk aspect"; and, for the character unlocked by defeating the final boss, "this ancient mind rebuilt robot", a "sharpshooter or a more cannon version in terms of ability and power to the final boss, but just in character format ... maybe it could mirror that."
+- **On the three kits.** "character designs are A plus and for now I agree with your decision so no vetoes from my end."
+- **Decided.** The keyframes are the look target, measured by rounds of stills and frame times. The melee kit is Tarn's; the caster is Tally the pack rat as a fifth pilot; the remembered cannon unlocks by beating the Mind and shares its attack rows. Six pilots, none in the build plan until their placeholder probes are played after checkpoint 1.
+- **Still unanswered.** Which bite and which crack he prefers on the sound page, and whether any synergy tune reads wrong.
+- **Next action.** Lighting round 2 stills; the map retrofit's second round; the posture bands sweep on the new map; then checkpoint 1.
+
 ## 10. Lab loops and the harpoon, played on record
 
 - **Date.** 1 October 2026, evening, Phoenix time. Three launches while alpha wave A0 ran. Verdict dictated in the Claude desktop app afterwards. No timed sitting.

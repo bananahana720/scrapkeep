@@ -240,6 +240,14 @@ Each is worded so he can veto it.
 26. A shatter closes the Warden at once, and breaking its guard cancels a pulse it was charging.
 27. A crack pays off only the next time the Warden opens. Bouncing on an open core twice does not shatter it; a smash or a fast ram does.
 28. The fight's numbers are not final. Bots show a starting ball breaks this Warden as fast as a grown one, so they will be tuned before he plays, after the new map exists.
+29. Enemies arrive as three whole packs drawn without repeats, with no hidden unlock clock. The plated brute and a winch drone arrive once per stage as the third arrival.
+30. A hold can bend the ball's path by at most 60 degrees a second and can never slow it. The winch drone's cable snaps past 19 m/s and kicks the ball forward.
+31. The slice has no timed events and no vault. Standing activities replace them in the wave after.
+32. The objective line reads "Find the Warden", "Break its guard", "Smash the core" or "Roll through a gate". "Grow, then return" shows only after ten seconds of trying leave the guard under half.
+33. The scrap number shows only where it is spent. The core pips and first-run sentence callouts are gone with the dial, bars and clock.
+34. The map retrofit is a new map file used by the slice only. The three-stage game keeps today's Reach until he has played the new one.
+35. Devices belong to a map. The Reach has none until the standing-activities unit places its own.
+36. Still owed after wave R2: a hooked enemy leaning toward the ball, hit reactions and each kind's wind-up pose (Sol, one unit per slice enemy).
 
 ## 11. What only Andrew can decide
 

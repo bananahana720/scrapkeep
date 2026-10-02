@@ -176,3 +176,28 @@ The bots measured the rule and found it does not reward growth. That is a design
 
 For packets: a rule object with a pure `judge` let the reviewer and the coordinator attack the rule with unit checks in under a second each. Ask for that shape whenever a rule can be separated from the scene.
 
+### After wave R2, `proto/alpha` at `221bb9b`
+
+Gate: 244 runs, 0 failed, 2 quarantined red, 1189 s (receipt `artifacts/local/alpha/r2/receipts/gate-37ddec822b1e-2026-10-02T12-45-42-812Z.json`).
+
+Quarantine changed. `ui_word_budget_test` is green again and left the file: the HUD cut brought a stage-1 fight under its budget. `ui_word_budget_first_find_test` joined it, owner R3: a first find opens its reveal card during a fight.
+
+Review failures by cause, both rounds:
+
+| Unit | Round one | Fix round |
+| --- | --- | --- |
+| B3 boss plate | FAIL: `writer` (amber leaked onto a posture Warden for each hit flash) | FAIL: `writer` (the new colour scan was dead code) |
+| O1 objective board | FAIL: `writer` (LET GO added as a verb) and `brief` (a reader test left out of the file list; a word-budget case primed to pass) | PASS+NOTES |
+| C5 enemy state | FAIL: `writer` (the tint change stopped the Warden processing) and `brief` (the star had no cause rule) | FAIL: `writer` (the pulse check could not fail) |
+| EN slice packs | PASS+NOTES | PASS+NOTES |
+
+Both fix-round failures were tests that pass with the rule removed, reported as PASS by the writer. From now on a packet asks for the red run by breaking the rule itself, and the report quotes the failing line.
+
+The first gate on the merged build failed twice for real, and both were merge effects no unit could have seen alone. The boss plate seated by the HUD and the armour number together broke the word budget. Moving devices to their own map removed walls a test was leaning on. Named runs after a merge are not a substitute for the gate.
+
+Found while merging: a `SCRIPT ERROR` inside an awaited test coroutine ended the coroutine and the test still exited 0 with no verdict line. The gate lists such tests under "lacks a verdict line"; ten are on that list. Owed: make a missing verdict line a failure, after giving those ten a verdict.
+
+The Sol unit PR reported FAIL on itself for two whole-file hash pins that the brief listed to run but not to edit (cause `brief`). Whole-file hash pins on generated rigs are owed a structural replacement.
+
+The 1189 s is not a regression in the suite. The runner chose a pool of 2 because the machine was at load 37 when it started (two Sol jobs, a map candidate's test run and five scouts), and the app had crashed and killed the previous attempt 54 tests in. On a quiet machine the same suite ran in 445 s an hour earlier (receipt `gate-670fd9eb7eb9`). A gate run should start when the load is low, or the wave should hold its other jobs for it.
+
