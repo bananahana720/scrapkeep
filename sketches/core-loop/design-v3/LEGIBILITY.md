@@ -24,6 +24,8 @@ One meaning per colour, enforced by a row test.
 | Slate (`Palette.SLATE`, new) | Not yet | Out of range, a glancing hit, a locked thing |
 | Rust (`Palette.RUST`) | You lost something | A forced line break, scrap knocked off, a hull hit |
 
+Sand (`Palette.SAND`) is neutral ink and carries no meaning: keycaps, the searching cross, a posture step. Rows name it as the role `neutral`.
+
 **The live colour is mint for every pilot in the slice.** The draft used each pilot's class colour. Both critics caught that this cannot hold. Measured colour distance (CIE76) from each class colour to the colours above and to the terrain:
 
 | Pilot colour | Amber | Rust | Hazard | Sandstone | Brass |
@@ -170,7 +172,7 @@ One owner per file within a wave. Every fence includes the tests that pin what t
 
 | Unit | Goal | Writes | Proof |
 | --- | --- | --- | --- |
-| G1, opener, merged alone | The grammar as data, so every later unit reads frozen ids | `event_kinds.gd` (four row tables, harpoon rows moved into `LINE_ROWS`, boss rows `posture_step`, `stagger`, `chunk_shatter`), `game_events.gd` (`line_state_changed`, `verb_failed`, `cause_fired`, `posture_changed`), `palette.gd` (`SLATE`, `live()`), `bindings.gd` (the verb ids and intent field names only), two presentation stubs | A unit case over the rows: the colour law, the distance rule, names of three words or fewer, no id with presentation in two tables. No behaviour change. |
+| G1, opener, merged alone | The grammar as data, so every later unit reads frozen ids | `event_kinds.gd` (four row tables, harpoon rows moved into `LINE_ROWS`, the posture facts `posture_step`, `open`, `chunk_shatter` in `STATE_ROWS`), `game_events.gd` (`line_state_changed` with a break cause, `verb_failed` with a reason, `cause_armed`, `cause_fired`, `posture_changed`), `palette.gd` (`SLATE`, `live()`), `bindings.gd` (the verb ids and intent field names only). No stubs: the unit that draws a thing creates its file. | A unit case over the rows: the colour law, the distance rule, names of three words or fewer, no id with presentation in two tables. No behaviour change. |
 | C1 | Nine verbs and the prompt grammar | `bindings.gd`, `game.gd`, `key_glyphs.gd`, `ui_profile.gd`, `field_notes.gd` | The state table in priority order has one verb per key. A prompt shows only when the press would succeed. Removed keys have no handler. |
 | C2 | Harpoon canon: one mode, one grammar, every state published, no silent press | `harpoon.gd`, `player_ball.gd`, `augments.gd`, `augment_kit.gd`, `intent.gd`, `tuning.gd`, the harpoon tests | A scripted test sees every `LINE_ROWS` state. A press with no aim emits `verb_failed`. Total speed after a bite, a commit, a let-go and a break is never below total speed before it. |
 | HL, merged after C2 | The latch as a loud, persistent object | `line_view.gd`, `aim_reticle.gd`, `aim_style.gd`, `audio.gd`, `sfx_bank.gd` | The cable is at least 5 px wide at 45 m, computed. Lock and latch rows differ in motion. Bite, clunk and dry tick are three sound ids. Three stills for his glance. Two or three sketches of each motif as WAV files for his ear. |
@@ -246,4 +248,6 @@ Each is worded so he can veto it.
 - The fight axis and the harpoon-input axis are gone. There is no `--variant=` row.
 - Units VH and VD are not built. PK is replaced by EN. TL is absorbed by TM. B0 splits into B0b and B0a. G1, HL, S1 and R3's units are new.
 - The order is the one in section 9.
+- Wave R1 runs as two waves. R1a is C2, WY1 and TM. R1b is HL, C1 and WY2. C1 follows C2 because a prompt shows only when the ball says the press would succeed (`verb_ready`), and a key is unregistered only after the intent stops reading it. WY is split by system: WY1 is the rules and the facts (the slice's five synergies, `cause_armed`, `cause_fired`, discovery at first firing), and WY2 draws the callout.
+- The slice table is the one seam for the slice's content cuts. The five synergies, and later the six enemy kinds, the packs and the event mix, are rows on that table. The default three-stage game keeps everything, so its tests stay intact until Andrew has played.
 - S1 (reorder the stages so the Reach is first) is replaced by ST (a slice table chosen at launch). The plan puts the Spillway back as zone 1-1 in M2, so a reorder would rewrite about 35 stage-order tests twice. The sitting launches with `--table=slice`.
