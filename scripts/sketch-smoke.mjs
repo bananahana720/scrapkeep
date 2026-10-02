@@ -233,6 +233,66 @@ export function receiptFileName(label, tree, startedAt) {
   return `${label}-${tree ? tree.slice(0, 12) : "nogit"}-${stamp}.json`;
 }
 
+// tests/QUARANTINE.tsv lets a known-red top-level test stay visible without failing the
+// run. The test still runs; the coordinator owns the file.
+export function parseQuarantine(text) {
+  return (text || "")
+    .split("\n")
+    .map((line) => line.replace(/\r$/, ""))
+    .filter((line) => line.trim() !== "")
+    .slice(1)
+    .map((line) => {
+      const [test, owner, reason, added, deadline] = line.split("\t");
+      return { test, owner, reason, added, deadline };
+    });
+}
+
+export function quarantinedNames(text) {
+  return new Set(parseQuarantine(text).map((entry) => entry.test));
+}
+
+export function readQuarantine(directory) {
+  const file = path.join(directory, "tests", "QUARANTINE.tsv");
+  if (!existsSync(file)) return new Set();
+  return quarantinedNames(readFileSync(file, "utf8"));
+}
+
+// A quarantined test never fails the run. Green, it is stale and listed for removal.
+export function quarantineVerdict(results) {
+  const label = (result) => result.label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "");
+  const quarantined = results.filter((result) => result.quarantined);
+  return {
+    failed: results.filter((result) => !result.ok && !result.quarantined),
+    quarantined_red: quarantined.filter((result) => !result.ok).map(label),
+    quarantine_stale: quarantined.filter((result) => result.ok).map(label),
+  };
+}
+
+export function runPasses(results) {
+  return quarantineVerdict(results).failed.length === 0;
+}
+
+// A gate runs the shipping defaults, so it takes no launch flags from anywhere.
+export function gateFlagsError(options) {
+  if (options.receipt === "gate" && options.flags.length > 0) {
+    return "sketch:smoke: a gate run (--receipt gate) refuses launch flags from --flags or SMOKE_FLAGS because a gate runs the shipping defaults";
+  }
+  return null;
+}
+
+// A run whose receipt could not be written is not evidence. Returns the exit code that
+// overrides the test result (3), or null when the receipt is on disk.
+export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
+  const target = path.join(root, "artifacts", "local", "receipts");
+  try {
+    log(`receipt ${write(receipt)}`);
+    return null;
+  } catch (error) {
+    log(`sketch:smoke could not write the receipt under ${target}: ${error.message}`);
+    return 3;
+  }
+}
+
 export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results }) {
   const rows = results.map((result) => ({
     label: result.label,
@@ -244,12 +304,16 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     fails: result.fails,
     verdict_line: result.verdict_line,
     skips: result.skips,
+    ...(result.quarantined ? { quarantined: true } : {}),
   }));
+  const verdict = quarantineVerdict(results);
   const totals = {
     runs: rows.length,
-    failed: rows.filter((row) => !row.ok).length,
+    failed: verdict.failed.length,
     skipped: rows.filter((row) => row.skips.length > 0).length,
     missing_verdict: rows.filter((row) => row.verdict_line === false).length,
+    quarantined_red: verdict.quarantined_red,
+    quarantine_stale: verdict.quarantine_stale,
   };
   return {
     schema: RECEIPT_SCHEMA,
@@ -279,12 +343,13 @@ function report(job, status, output, ms, strict) {
   const checks = job.test ? hasVerdictLine(output) : null;
   const clean = status === 0 && !errorLine.test(output);
   const ok = clean && !(strict && checks === false);
+  const quarantined = Boolean(job.quarantined);
   const skips = skipLines(output);
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
-  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: checks, skips, test: Boolean(job.test) };
+  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: checks, skips, test: Boolean(job.test), quarantined };
 }
 
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
@@ -325,7 +390,7 @@ async function pool(jobs, width, strict) {
   return results;
 }
 
-function writeReceipt(receipt) {
+export function writeReceipt(receipt) {
   const directory = path.join(root, "artifacts", "local", "receipts");
   mkdirSync(directory, { recursive: true });
   const file = path.join(directory, receiptFileName(receipt.label, receipt.tree, receipt.started_at));
@@ -336,6 +401,11 @@ function writeReceipt(receipt) {
 async function main() {
   const argv = process.argv.slice(2);
   const options = parseArgs(argv, process.env);
+  const refusal = gateFlagsError(options);
+  if (refusal) {
+    console.error(refusal);
+    process.exit(2);
+  }
   const all = sketchDirectories(path.join(root, "sketches"));
   const error = validateRun(options, all.map((directory) => path.basename(directory)));
   if (error) {
@@ -372,11 +442,12 @@ async function main() {
   for (const { directory, scripts } of plans) {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
+    const quarantine = readQuarantine(directory);
     results.push(runSync({ label: `${name} import`, args: [...base, "--import"] }, options.strict));
     if (!named) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
-      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: true, solo: isSoloJob };
+      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: true, solo: isSoloJob, quarantined: quarantine.has(path.posix.basename(script, ".gd")) };
       (isSoloJob ? solo : jobs).push(job);
     }
   }
@@ -384,7 +455,8 @@ async function main() {
   const soloStarted = Date.now();
   for (const job of solo) results.push(await runAsync(job, options.strict));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
-  const ok = results.every((result) => result.ok);
+  const verdict = quarantineVerdict(results);
+  const ok = runPasses(results);
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
   console.log(`slowest ${slowest.length}:`);
   for (const result of slowest) console.log(`  ${(result.ms / 1000).toFixed(1)}s ${result.label}`);
@@ -393,6 +465,14 @@ async function main() {
   for (const result of skipped) {
     console.log(`  ${result.label}`);
     for (const line of result.skips.slice(0, 3)) console.log(`    ${line}`);
+  }
+  if (verdict.quarantined_red.length > 0) {
+    console.log(`quarantined (red) ${verdict.quarantined_red.length} (known red; see tests/QUARANTINE.tsv for owner and deadline; not a failure):`);
+    for (const name of verdict.quarantined_red) console.log(`  ${name}`);
+  }
+  if (verdict.quarantine_stale.length > 0) {
+    console.log(`quarantined but green: remove from quarantine (${verdict.quarantine_stale.length}):`);
+    for (const name of verdict.quarantine_stale) console.log(`  ${name}`);
   }
   const unverdicted = results.filter((result) => result.verdict_line === false);
   const names = unverdicted.slice(0, 10).map((result) => result.label.replace(/^.* res:\/\/tests\//, ""));
@@ -417,8 +497,8 @@ async function main() {
     stems: Object.fromEntries(sketches.map((directory) => [path.relative(root, directory), countStems(directory)])),
     results,
   });
-  console.log(`receipt ${writeReceipt(receipt)}`);
-  process.exit(ok ? 0 : 1);
+  const receiptFailure = emitReceipt(receipt);
+  process.exit(receiptFailure ?? (ok ? 0 : 1));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
