@@ -72,7 +72,7 @@ export function worktrees(repoRoot) {
 // A worktree's primary sketch is the one named after it (spillway-drop holds
 // spillway-drop), else the longest sketch name the tree's name contains
 // (mobility-kit-v2 holds mobility-kit, scrapkeep-lab-cable-bench holds
-// cable-bench), else its only sketch. Copies of ball-lab carried along for
+// cable-bench), else its core-loop sketch, else its only sketch. Copies of ball-lab carried along for
 // reference stay addressable but never win a bare name match.
 export function pickPrimary(directories, treeName) {
   const named = directories.find((dir) => path.basename(dir) === treeName);
@@ -83,6 +83,8 @@ export function pickPrimary(directories, treeName) {
     return named;
   } else if (contained.length > 0) {
     return contained[0];
+  } else if (directories.some((dir) => path.basename(dir) === "core-loop")) {
+    return directories.find((dir) => path.basename(dir) === "core-loop");
   } else if (directories.length === 1) {
     return directories[0];
   } else {
@@ -147,6 +149,8 @@ export function catalogue(repoRoot) {
         branch: tree.branch,
         head: tree.head,
         primary: isPrimary,
+        main: tree.path === mainPath,
+        treePath: tree.path,
         question: questionOf(directory),
       });
     }
@@ -154,13 +158,51 @@ export function catalogue(repoRoot) {
   return entries.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-// Typed names are short and human: exact id, then a prefix, then a substring.
-// A primary sketch outranks a reference copy, so "spillway" is the stage and
-// not the ball lab sitting beside it.
-export function resolve(entries, name) {
+// The worktree the command was typed in: the deepest one whose path holds the
+// current directory, since linked worktrees may sit inside the main checkout.
+export function currentTree(repoRoot, cwd) {
+  let best = null;
+  for (const tree of worktrees(repoRoot)) {
+    const relative = path.relative(tree.path, cwd);
+    const inside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+    if (inside && (best === null || tree.path.length > best.length)) {
+      best = tree.path;
+    }
+  }
+  return best;
+}
+
+// Typed names are short and human. An exact id wins, except that a bare
+// sketch name typed inside another worktree means that worktree's sketch.
+// A name that is exactly a sketch's directory name then resolves in the
+// current worktree, else in the first one; prefixes and substrings are tried
+// only when no sketch has that directory name anywhere.
+export function resolve(entries, name, cwdTree = null) {
   const term = name.toLowerCase();
+  const exact = entries.filter(
+    (entry) => entry.id.toLowerCase() === term || `${entry.tree}/${entry.sketch}`.toLowerCase() === term,
+  );
+  const local = entries.filter(
+    (entry) => entry.sketch.toLowerCase() === term && cwdTree !== null && entry.treePath === cwdTree,
+  );
+  if (exact.length === 1 && !(exact[0].sketch.toLowerCase() === term && local.length === 1)) {
+    return { entry: exact[0] };
+  }
+  const named = entries.filter((entry) => entry.sketch.toLowerCase() === term);
+  if (named.length > 0) {
+    const inCurrent = named.filter((entry) => cwdTree !== null && entry.treePath === cwdTree);
+    const inMain = named.filter((entry) => entry.main);
+    if (inCurrent.length === 1) {
+      return { entry: inCurrent[0] };
+    } else if (inMain.length === 1) {
+      return { entry: inMain[0] };
+    } else if (named.length === 1) {
+      return { entry: named[0] };
+    } else {
+      return { ambiguous: named };
+    }
+  }
   const rounds = [
-    (entry) => entry.id.toLowerCase() === term,
     (entry) => entry.id.toLowerCase().startsWith(term),
     (entry) => entry.id.toLowerCase().includes(term),
     (entry) => entry.sketch.toLowerCase().includes(term),
@@ -791,16 +833,41 @@ function showList(entries, all) {
   );
 }
 
-function reportAmbiguity(name, hits) {
+function reportAmbiguity(name, hits, entries = []) {
   if (hits.length === 0) {
+    const known = entries.filter((entry) => entry.primary).slice(0, 6);
     console.error(
       `No sketch matches "${name}". Run with no arguments to list them.`,
     );
-  } else {
-    console.error(`"${name}" matches more than one sketch:`);
-    for (const entry of hits) {
+    for (const entry of known) {
       console.error(`  ${entry.id}`);
     }
+  } else {
+    const term = name.toLowerCase();
+    const here = currentTree(root, process.cwd());
+    const isExact = (entry) => entry.id.toLowerCase() === term || entry.sketch.toLowerCase() === term;
+    const nearness = (entry) => {
+      if (here !== null && entry.treePath === here) {
+        return 0;
+      } else if (entry.main) {
+        return 1;
+      } else {
+        return 2;
+      }
+    };
+    const byNearness = (a, b) => nearness(a) - nearness(b);
+    const ranked = [
+      ...hits.filter(isExact).sort(byNearness),
+      ...hits.filter((entry) => !isExact(entry)).sort(byNearness),
+    ];
+    console.error(`"${name}" matches more than one sketch:`);
+    for (const entry of ranked.slice(0, 6)) {
+      console.error(`  ${entry.id}`);
+    }
+    if (ranked.length > 6) {
+      console.error(`  ...and ${ranked.length - 6} more`);
+    }
+    console.error(`Most likely: scrapkeep ${ranked[0].id}`);
   }
   process.exit(2);
 }
@@ -810,11 +877,11 @@ function requireEntry(entries, name) {
     console.error("Name a sketch. Run with no arguments to list them.");
     process.exit(2);
   }
-  const found = resolve(entries, name);
+  const found = resolve(entries, name, currentTree(root, process.cwd()));
   if (found.entry !== undefined) {
     return found.entry;
   } else {
-    reportAmbiguity(name, found.ambiguous);
+    reportAmbiguity(name, found.ambiguous, entries);
   }
 }
 

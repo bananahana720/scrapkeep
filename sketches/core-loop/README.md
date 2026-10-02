@@ -6,7 +6,7 @@ This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep:
 
 Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code, and there are no assets: everything is built in script from primitives.
 
-Play it with `scrapkeep core-loop`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the field notes below, which keep the full list. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
+Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. Add `--table=slice` after the name for the slice table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the field notes below, which keep the full list. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
 
 ## The loop
 

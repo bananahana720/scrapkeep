@@ -16,10 +16,16 @@ extends Node
 # the director publishes event_started for a participatory event when the ball reaches
 # its ring, but also for the ambient flood, squall and terrain changes, which the player
 # does not choose and which are left out.
+#
+# The sitting (LEGIBILITY): the record carries the table the run was played on, and each
+# stage row carries the packs that arrived there in order, the synergies that fired there
+# by id and, for a posture Warden only, its posture fight: staggers, chunks lost, glanced
+# hits and the ticks from the first posture gain to the break or the stage's end.
 
 const LOG_FILE := "runs.ndjson"
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const UNKNOWN_CAUSE := "unspecified"
 
 
@@ -111,6 +117,9 @@ var _dirty := false
 var _traversal: Traversal = null
 var _measuring := false
 var _stage_clock := -1.0
+var _posture_starts := {}
+var _posture_wardens := {}
+var _posture_open := {}
 
 
 func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
@@ -133,17 +142,36 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.stage_content_cleared.connect(_on_stage_content_cleared)
 	events.line_state_changed.connect(_on_line_state)
 	events.verb_failed.connect(_on_verb_failed)
+	events.pack_arrived.connect(_on_pack_arrived)
+	events.cause_fired.connect(_on_cause_fired)
+	events.posture_changed.connect(_on_posture_changed)
 
 
 func _on_run_started(class_id: String) -> void:
 	_stages = {}
 	_in_arena = false
 	_phase = 0
-	_record = {"run_id": run.run_id, "class": class_id, "outcome": "running", "brindle_phase_reached": null,
+	_posture_starts = {}
+	_posture_wardens = {}
+	_posture_open = {}
+	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0}
 	_traversal = null
 	_measuring = false
 	_stage_clock = -1.0
+
+
+# The id of the stage table the game chose, read from the game's own TABLES so the name
+# is stated once; a game without one reads as the default.
+func _table_id() -> String:
+	var game = get_parent()
+	if game == null or game.get("ctx") == null or game.get_script() == null:
+		return "default"
+	var tables = game.get_script().get_script_constant_map().get("TABLES", {})
+	for id in tables:
+		if tables[id] == game.ctx.stages:
+			return String(id)
+	return "default"
 
 
 func _stage(index: int) -> Dictionary:
@@ -158,6 +186,9 @@ func _stage(index: int) -> Dictionary:
 			"deaths": [],
 			"events_joined": [],
 			"events_won": [],
+			"packs": [],
+			"causes": {},
+			"attempts": 0,
 		}
 	return _stages[index]
 
@@ -170,16 +201,24 @@ func _ticks() -> int:
 	return int(round(run.stage_time * Engine.physics_ticks_per_second))
 
 
-func _on_stage_entered(stage: int, _retry: bool) -> void:
+func _on_stage_entered(stage: int, retry: bool) -> void:
 	_in_arena = false
 	_dirty = true
+	var row := _stage(stage)
+	row["attempts"] = int(row["attempts"]) + 1
+	if retry:
+		row["packs"] = []
+		row["causes"] = {}
 	if _traversal == null and player != null and player.get("tuning") != null:
 		_traversal = Traversal.new(Engine.physics_ticks_per_second, player.tuning.f("cruise"))
 	if _traversal != null:
 		_traversal.restart()
 	_measuring = _traversal != null
 	_stage_clock = -1.0
-	_stage(stage)
+	_stage(stage).erase("posture")
+	_posture_starts.erase(stage)
+	_posture_wardens.erase(stage)
+	_posture_open.erase(stage)
 
 
 # warden_engaged fires once per stage attempt, so a retry's engagement replaces the
@@ -229,9 +268,57 @@ func _count_in(key: String, name: String) -> void:
 
 func _on_beacon_unsealed(stage: int) -> void:
 	_stage(stage)["ticks_to_warden_break"] = _ticks()
+	_close_posture(stage)
+
+
+func _on_pack_arrived(faction: String, _at: Vector3, _kinds: Array) -> void:
+	if not _record.is_empty() and not _in_arena:
+		_stage_list("packs").append(faction)
+
+
+func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
+	if not _record.is_empty() and not _in_arena:
+		var causes: Dictionary = _stage(run.stage)["causes"]
+		causes[id] = int(causes.get(id, 0)) + 1
+
+
+# The Warden's bar moved. A stagger is the bar going from open to staggered; the rest is
+# read from the Warden when the line is written, because a glance moves no bar.
+func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
+	if _record.is_empty() or not is_instance_valid(enemy):
+		return
+	var stage: int = run.stage
+	var row := _stage(stage)
+	if not row.has("posture"):
+		row["posture"] = {"staggers": 0, "chunks_lost": 0, "glances": 0, "fight_ticks": 0}
+		_posture_starts[stage] = _ticks()
+		_posture_open[stage] = false
+	if staggered and not _posture_open[stage]:
+		row["posture"]["staggers"] += 1
+	_posture_open[stage] = staggered
+	_posture_wardens[stage] = enemy
+	_close_posture(stage)
+
+
+# Brings a stage's posture block up to date: chunks lost and glances from the Warden's
+# own accessors (glances move no bar, so no bus signal carries them), and the
+# fight's length from the first posture gain to the break, or to now while it is open.
+func _close_posture(stage: int) -> void:
+	var row := _stage(stage)
+	if not row.has("posture"):
+		return
+	var posture: Dictionary = row["posture"]
+	var warden = _posture_wardens.get(stage)
+	if is_instance_valid(warden):
+		posture["chunks_lost"] = maxi(int(posture["chunks_lost"]), BossPosture.CHUNKS - warden.chunks_left())
+		posture["glances"] = maxi(int(posture["glances"]), warden.glances())
+	var broke = row["ticks_to_warden_break"]
+	var end: int = int(broke) if broke != null else _ticks()
+	posture["fight_ticks"] = maxi(0, end - int(_posture_starts[stage]))
 
 
 func _on_stage_cleared(stage: int) -> void:
+	_close_posture(stage)
 	var row := _stage(stage)
 	row["heft_at_exit"] = run.heft()
 	row["part_ids_at_exit"] = run.parts.duplicate()
@@ -305,6 +392,7 @@ func _write(outcome: String) -> void:
 	var keys := _stages.keys()
 	keys.sort()
 	for index in keys:
+		_close_posture(index)
 		stages.append(_stages[index])
 	line["stages"] = stages
 	line["codex"] = codex.discovered_this_run() if codex != null else []
