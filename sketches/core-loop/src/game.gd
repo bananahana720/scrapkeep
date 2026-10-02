@@ -482,7 +482,7 @@ func _screen_key(key: int) -> bool:
 				flow.open_class_select()
 				return true
 			if key == KEY_T and flow.can_replay_final_stage():
-				flow.replay_stage(ctx.stages.COUNT)
+				flow.replay_stage(flow.final_stage())
 				return true
 		"summary":
 			if summary_guard_left > 0.0:
