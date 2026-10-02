@@ -30,6 +30,8 @@ var beacon_floor := 0.0
 # Spots where the ball leaving the ground counts as a kicker launch (codex): each is
 # {"at": Vector2 lip, "dir": Vector2, "width": float}.
 var kickers: Array = []
+var gate_slots: Array = []
+var activity_sites := {}
 
 
 # How far p is from the fall line, the straight run from the spawn to the beacon. The

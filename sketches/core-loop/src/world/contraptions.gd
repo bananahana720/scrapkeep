@@ -636,10 +636,10 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "body": body, "home": body.position, "broken": false}
 
 
-# Only Rivet's overdrive sprint crumbles it, the tick before contact, so the ball never
-# meets it as a wall. Anyone else meets a plain wall, which they can see.
+# Cruise-break specs accept every pilot; other walls require Rivet's sprint.
 func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Array) -> void:
-	if w["broken"] or kit == null or not kit.sprinting:
+	var cruise_break: bool = w["spec"].get("break_at_cruise", false)
+	if w["broken"] or (not cruise_break and (kit == null or not kit.sprinting)):
 		return
 	var body: StaticBody3D = w["body"]
 	var centre: Vector3 = body.global_position
@@ -648,7 +648,7 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	var flat := Vector2(velocity.x, velocity.z).length()
 	var ahead := absf(rel.dot(along)) - float(w["spec"]["size"].z) * 0.5
 	var side := absf(rel.dot(body.global_basis.x))
-	if flat < WALL_SPEED or ahead > WALL_REACH + flat / 30.0 or side > float(w["spec"]["size"].x) * 0.5 + 1.0 or absf(rel.y) > 4.0:
+	if flat < (cruise if cruise_break else WALL_SPEED) or ahead > WALL_REACH + flat / 30.0 or side > float(w["spec"]["size"].x) * 0.5 + 1.0 or absf(rel.y) > 4.0:
 		return
 	w["broken"] = true
 	body.position = (w["home"] as Vector3) + Vector3.DOWN * 400.0

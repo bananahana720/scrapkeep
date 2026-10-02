@@ -12,8 +12,8 @@ const T := preload("res://tests/support/t.gd")
 # counts what the harpoon's bus signals report, on this same real game.
 
 const TICK_LIMIT := 90 * 40
-const FIELDS := ["seed", "flow_share", "dead_stops", "max_anchor_gap_m", "time_to_warden_s", "reached_warden", "outcome", "ticks"]
-const DOCUMENT_FIELDS := ["pilot", "table", "commit", "bar", "runs", "median_flow_share", "worst_seed", "dead_stops_total", "max_anchor_gap_m", "reached_warden"]
+const FIELDS := ["seed", "flow_share", "dead_stops", "max_anchor_gap_m", "time_to_warden_s", "reached_warden", "outcome", "ticks", "path_length_m", "rides", "uphill_m"]
+const DOCUMENT_FIELDS := ["pilot", "table", "commit", "bar", "runs", "median_flow_share", "worst_seed", "dead_stops_total", "max_anchor_gap_m", "reached_warden", "median_path_length_m", "median_uphill_m", "median_rides", "median_rides_count"]
 
 var _t := T.new("traversal_measure_test")
 var _game
@@ -41,6 +41,7 @@ func _physics_process(delta: float) -> bool:
 	var over: bool = _driver.tick(delta)
 	_sampler.sample()
 	if over or _sampler.engaged or _ticks > TICK_LIMIT:
+		_check_route_metrics()
 		_check_measure()
 		_check_limits()
 		_check_run_log()
@@ -167,3 +168,27 @@ func _check_run_log() -> void:
 		"flow share %s, dead stops %s" % [share, record.get("dead_stops")])
 	var stage: Dictionary = record["stages"][0] if record.get("stages") is Array and (record["stages"] as Array).size() > 0 else {}
 	_t.eq("only the opt-in event was joined", stage.get("events_joined"), ["surge_run"])
+
+
+func _check_route_metrics() -> void:
+	var sampler := TraversalLine.Sampler.new(_game)
+	sampler._last_ball = Vector3(0.0, 0.0, 0.0)
+	sampler._position(Vector3(3.0, 4.0, 0.0))
+	sampler._position(Vector3(3.0, 4.0, -4.0))
+	sampler._position(Vector3(3.0, 4.0, -7.0))
+	sampler._position(Vector3(3.0, 4.0, -6.0))
+	sampler._position(Vector3(3.0, 4.0, -8.0))
+	_t.near("path accumulates three-dimensional distance", sampler._path, 15.0)
+	_t.near("uphill counts largest continuous reverse-z stretch", sampler.uphill, 7.0)
+	_game.events.world_fact.emit("ride_grapple_line", Vector3.ZERO)
+	_game.events.world_fact.emit("ride_grapple_line", Vector3.ZERO)
+	_game.events.world_fact.emit("wall_crumbled", Vector3.ZERO)
+	_game.events.world_fact.emit("thermal_ride", Vector3(80.0, 30.0, -12.0))
+	_t.eq("named rides deduplicate bus facts", sampler.rides, ["ride_grapple_line", "wall_crumbled", "thermal_a_lift"])
+	var run := sampler.result(99, "test")
+	var doc := TraversalLine.document("sable", "slice", "test", [run], {})
+	_t.near("path median", doc["median_path_length_m"], 15.0)
+	_t.near("uphill median", doc["median_uphill_m"], 7.0)
+	_t.near("ride count median", doc["median_rides_count"], 3.0)
+	_t.near("thermal lift occurrence median", doc["median_rides"]["thermal_a_lift"], 1.0)
+	_t.near("absent kicker occurrence median", doc["median_rides"]["kicker_launch"], 0.0)

@@ -41,15 +41,25 @@ class Sampler:
 	var _last_anchor := 0.0
 	var _last_ball := Vector3.INF
 	var _clock := -1.0
+	var rides: Array[String] = []
+	var uphill := 0.0
+	var trace: Array = []
+	var trace_enabled := false
+	var _uphill_stretch := 0.0
+	var _grounded := false
 
 	func _init(game_ref) -> void:
 		game = game_ref
 		traversal = RunLog.Traversal.new(Engine.physics_ticks_per_second, game.player.tuning.f("cruise"))
 		game.events.warden_engaged.connect(_on_engaged)
+		game.events.world_fact.connect(_on_fact)
+		_last_ball = game.player.ball_position()
+		_grounded = game.player.state.grounded
 
 	func _on_engaged(_stage: int) -> void:
 		if engaged:
 			return
+		_position(game.player.ball_position())
 		engaged = true
 		time_to_warden = snappedf(game.run.stage_time, 0.01)
 		_close_gap()
@@ -60,14 +70,51 @@ class Sampler:
 		_clock = game.run.stage_time
 		var player = game.player
 		var ball: Vector3 = player.ball_position()
-		if _last_ball != Vector3.INF:
-			_path += ball.distance_to(_last_ball)
-		_last_ball = ball
+		_position(ball)
+		if _grounded and not player.state.grounded and game.ctx.terrain.map().near_kicker_lip(Vector2(ball.x, ball.z)):
+			_record_ride("kicker_launch")
+		_grounded = player.state.grounded
 		if _anchored(ball):
 			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 			_last_anchor = _path
 		var intent = player.intent
 		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, RunLog.Traversal.is_exempt(player))
+		if trace_enabled:
+			var contacts: Array = []
+			for body in player.body().get_colliding_bodies():
+				contacts.append(str(body.get_path()))
+			trace.append({"tick": traversal.ticks, "time": _clock, "at": [ball.x, ball.y, ball.z],
+				"velocity": [player.state.velocity.x, player.state.velocity.y, player.state.velocity.z],
+				"planar_speed": player.planar_velocity().length(), "tier": player.speed_tier(),
+				"grounded": player.state.grounded, "contacts": contacts,
+				"contact_normal": [player.state.contact_normal.x, player.state.contact_normal.y, player.state.contact_normal.z],
+				"dead_stops": traversal.dead_stops, "path_m": _path, "last_anchor_m": _last_anchor})
+
+	func _position(ball: Vector3) -> void:
+		if _last_ball != Vector3.INF:
+			_path += ball.distance_to(_last_ball)
+			_uphill_stretch = _uphill_stretch + _last_ball.z - ball.z if ball.z < _last_ball.z else 0.0
+			uphill = maxf(uphill, _uphill_stretch)
+		_last_ball = ball
+
+	func _record_ride(id: String) -> void:
+		if not engaged and not id in rides:
+			rides.append(id)
+
+	func _on_fact(kind: String, at: Vector3) -> void:
+		if kind in ["ride_grapple_line", "wall_crumbled"]:
+			_record_ride(kind)
+		elif kind == "thermal_ride":
+			var nearest := ""
+			var distance := INF
+			for spec in game.ctx.terrain.map().contraptions:
+				if spec["kind"] != "thermal":
+					continue
+				var gap := Vector2(at.x, at.z).distance_to(spec["at"])
+				if gap < distance:
+					distance = gap
+					nearest = spec["id"]
+			_record_ride(nearest + "_lift")
 
 	func _anchored(ball: Vector3) -> bool:
 		var reach: float = game.player.grapple_range()
@@ -95,6 +142,7 @@ class Sampler:
 		var share = traversal.flow_share()
 		return {
 			"seed": seed_number,
+			"path_length_m": snappedf(_path, 0.01), "rides": rides.duplicate(), "uphill_m": snappedf(uphill, 0.01),
 			"flow_share": snappedf(float(share), 0.0001) if share != null else 0.0,
 			"dead_stops": traversal.dead_stops,
 			"max_anchor_gap_m": snappedf(max_anchor_gap, 0.1),
@@ -108,19 +156,37 @@ class Sampler:
 # The file's content: the per-seed numbers, the median flow share, the worst seed and the totals.
 static func document(pilot: String, table: String, commit: String, runs: Array, bar: Dictionary) -> Dictionary:
 	var shares: Array = []
+	var lengths: Array = []
+	var climbs: Array = []
+	var ride_ids: Array = ["ride_grapple_line", "wall_crumbled", "kicker_launch", "thermal_a_lift", "thermal_b_lift"]
+	var ride_counts: Array = []
+	var median_rides := {}
 	var worst := {}
 	var dead := 0
 	var gap := 0.0
 	var reached := 0
 	for run in runs:
 		shares.append(float(run["flow_share"]))
+		lengths.append(float(run["path_length_m"]))
+		climbs.append(float(run["uphill_m"]))
+		ride_counts.append(run["rides"].size())
+		for id in run["rides"]:
+			if not id in ride_ids:
+				ride_ids.append(id)
 		if worst.is_empty() or float(run["flow_share"]) < float(worst["flow_share"]):
 			worst = {"seed": run["seed"], "flow_share": run["flow_share"]}
 		dead += int(run["dead_stops"])
 		gap = maxf(gap, float(run["max_anchor_gap_m"]))
 		if run["reached_warden"]:
 			reached += 1
+	for id in ride_ids:
+		var fired: Array = []
+		for run in runs:
+			fired.append(1.0 if id in run["rides"] else 0.0)
+		median_rides[id] = median(fired)
 	return {
+		"median_path_length_m": snappedf(median(lengths), 0.01), "median_uphill_m": snappedf(median(climbs), 0.01),
+		"median_rides": median_rides, "median_rides_count": median(ride_counts),
 		"pilot": pilot, "table": table, "commit": commit, "bar": bar, "runs": runs,
 		"median_flow_share": snappedf(median(shares), 0.0001), "worst_seed": worst,
 		"dead_stops_total": dead, "max_anchor_gap_m": gap, "reached_warden": reached,
@@ -221,6 +287,7 @@ func _physics_process(delta: float) -> bool:
 		_driver.route = route_of(_routes, _pilot)
 		_driver.start()
 		_sampler = Sampler.new(_game)
+		_sampler.trace_enabled = true
 		return false
 	var over: bool = _driver.tick(delta)
 	_sampler.sample()
@@ -228,6 +295,11 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
 	_runs.append(run)
+	var out := String(_settings.get("out", ProjectSettings.globalize_path(DEFAULT_OUT)))
+	if not write_document(out.path_join("%s-seed-%d-trace.json" % [_pilot, run["seed"]]), {"pilot": _pilot, "seed": run["seed"], "ticks": _sampler.trace}):
+		printerr("traversal_line: could not write tick trace")
+		quit(1)
+		return false
 	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s"
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"]])
 	_game.free()

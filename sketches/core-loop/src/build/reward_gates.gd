@@ -128,8 +128,8 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	offers = []
 	_last_side = {}
 	var plan := choose_placement(ball, heading)
-	var facing: Vector3 = plan["facing"]
 	for i in _ids.size():
+		var facing: Vector3 = plan["facings"][i] if plan.has("facings") else plan["facing"]
 		var at: Vector3 = plan["spots"][i]
 		var part_id: String = _ids[i]
 		var d: Resource = Parts.def(part_id)
@@ -157,6 +157,16 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 # spot or approach sample rises above the ground under the ball.
 func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 	var count := maxi(1, _ids.size())
+	var slots: Array = _terrain.map().gate_slots
+	if not slots.is_empty():
+		assert(slots.size() >= count, "reward_gates: map has fewer slots than offers")
+		var spots: Array[Vector3] = []
+		var facings: Array[Vector3] = []
+		for i in count:
+			var at: Vector2 = slots[i]["at"]
+			spots.append(Vector3(at.x, _terrain.height(at.x, at.y), at.y))
+			facings.append(slots[i]["facing"])
+		return {"spots": spots, "facings": facings, "facing": facings[0], "climb": 0.0, "blocked": false}
 	var ground: float = _terrain.height(ball.x, ball.z)
 	var base := Vector3(heading.x, 0.0, heading.z).normalized()
 	if base.length() < 0.5:

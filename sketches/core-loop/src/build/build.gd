@@ -772,7 +772,9 @@ func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
-	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
+	var slots: Array = ctx.terrain.map().gate_slots
+	var choices := slots.size() if not slots.is_empty() else GATE_CHOICES
+	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, choices, ctx.flow.stage(), _offered)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))

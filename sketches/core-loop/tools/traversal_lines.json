@@ -3,8 +3,196 @@
   "stage": 1,
   "provisional": "Bars follow the baseline taken on the merged wave R1a head. The map retrofit unit adds route measures (the authored line's length and the verbs it chains).",
   "pilots": {
-    "sable": {"waypoints": [], "bar": {"median_flow_share": 0.8974, "median_flow_share_rule": "max(0.70, baseline median - 0.03)", "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}},
-    "rivet": {"waypoints": [], "bar": {"median_flow_share": 0.8814, "median_flow_share_rule": "max(0.70, baseline median - 0.03)", "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}},
-    "kest": {"waypoints": [], "bar": {"median_flow_share": 0.9019, "median_flow_share_rule": "max(0.70, baseline median - 0.03)", "worst_seed_flow_share": 0.60, "dead_stops": 0, "max_anchor_gap_m": 40.0}}
+    "sable": {
+      "waypoints": [
+        [
+          0,
+          -160
+        ],
+        [
+          -36,
+          -145
+        ],
+        [
+          -79,
+          -136
+        ],
+        [
+          -94,
+          -122
+        ],
+        [
+          -120,
+          -98
+        ],
+        [
+          -122,
+          -72
+        ],
+        [
+          -100,
+          -54
+        ],
+        [
+          -78,
+          -44
+        ],
+        [
+          -66,
+          -30
+        ],
+        [
+          -58,
+          -10
+        ],
+        [
+          -24,
+          20
+        ],
+        [
+          -7,
+          40
+        ],
+        [
+          -1,
+          59
+        ],
+        [
+          0,
+          74
+        ],
+        [
+          0,
+          86
+        ]
+      ],
+      "bar": {
+        "median_flow_share": 0.8974,
+        "median_flow_share_rule": "max(0.70, baseline median - 0.03)",
+        "worst_seed_flow_share": 0.6,
+        "dead_stops": 0,
+        "max_anchor_gap_m": 40.0,
+        "min_path_length_m": 350,
+        "reached_warden": 8
+      }
+    },
+    "rivet": {
+      "waypoints": [
+        [
+          0,
+          -160
+        ],
+        [
+          44,
+          -126
+        ],
+        [
+          96,
+          -104
+        ],
+        [
+          103,
+          -100
+        ],
+        [
+          84,
+          -34
+        ],
+        [
+          58,
+          -4
+        ],
+        [
+          22,
+          26
+        ],
+        [
+          6,
+          44
+        ],
+        [
+          1,
+          60
+        ],
+        [
+          0,
+          74
+        ],
+        [
+          0,
+          86
+        ]
+      ],
+      "bar": {
+        "median_flow_share": 0.8814,
+        "median_flow_share_rule": "max(0.70, baseline median - 0.03)",
+        "worst_seed_flow_share": 0.6,
+        "dead_stops": 0,
+        "max_anchor_gap_m": 40.0,
+        "min_path_length_m": 320,
+        "reached_warden": 8
+      }
+    },
+    "kest": {
+      "waypoints": [
+        [
+          0,
+          -160
+        ],
+        [
+          48,
+          -132
+        ],
+        [
+          96,
+          -104
+        ],
+        [
+          103,
+          -100
+        ],
+        [
+          84,
+          -34
+        ],
+        [
+          74.5,
+          26
+        ],
+        [
+          74,
+          60
+        ],
+        [
+          74,
+          86
+        ],
+        [
+          73.8,
+          93.9
+        ],
+        [
+          69.8,
+          109
+        ],
+        [
+          60.8,
+          121.8
+        ],
+        [
+          50.1,
+          129.7
+        ]
+      ],
+      "bar": {
+        "median_flow_share": 0.9019,
+        "median_flow_share_rule": "max(0.70, baseline median - 0.03)",
+        "worst_seed_flow_share": 0.6,
+        "dead_stops": 0,
+        "max_anchor_gap_m": 40.0,
+        "min_path_length_m": 350,
+        "reached_warden": 8
+      }
+    }
   }
 }

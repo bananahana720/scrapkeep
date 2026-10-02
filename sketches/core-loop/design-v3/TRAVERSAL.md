@@ -80,3 +80,28 @@ Median flow share at or above the larger of 0.70 and the pilot's baseline median
 Every `runs.ndjson` record gains: `flow_share` (null before any measured tick), `dead_stops`, `bites`, `smashes`, `breaks` (count per cause, `unspecified` when the signal's cause is empty), `verb_fails` (count per verb) and `prompts_shown` (0 until the prompt unit lands). Bites are `line_state_changed` with state `latched_body`, smashes are `smash_lands`, breaks are `broke`, verb fails are `verb_failed`. The flow share and dead stops use the same detector as the measure, from each stage's start to its Warden engagement, accumulated across a run's stages and retries. The detector restarts at each stage entry (`Traversal.restart()` clears the arming and the slow clock, keeps the totals), so a stage boundary is not a stop. The exemption for a tick (frozen, mounted, interact pressed or mount held) is the static `RunLog.Traversal.is_exempt(player)`, used by the measure and the run log alike.
 
 **Joined events.** `events_joined` now lists an event only when the ball entered it. The director publishes `event_started` for a participatory event (`scrap_stampede`, `surge_run`, `hold_the_relay`) at the tick the ball reaches its ring, so those count. It also publishes it for the flood, the dust squall and the terrain changes, which start on a timer whatever the player does, so those no longer count. The altar and the cache publish `interact_fired` and `ambush_ended` rather than `event_started`; they are not counted, and whether pressing interact on them is "entering" is left open.
+
+
+## Z3X rebuilt Reach: one permitted fix round
+
+Measured on the Z3X working candidate based at `37bc501f674a8229fbdef70256fec530cd0a9184`, Godot 4.7.2, slice table, fixed 90 Hz, seeds 1 through 8. `map_reach.gd` extends the unchanged gorge, explicitly calls its initializer, extends the marble channel into w1, retargets the cable, opens the skylight, adds the berm and north kicker, and keeps the specified swing pillars. The slice event mix is empty.
+
+**Verdict: FAIL.** Rivet and Kest meet their traversal and route bars. Sable reaches the Warden on all seeds and exceeds the route-length minimum, but misses flow share, zero dead stops and the 5 m uphill limit. These are bot measurements; Andrew's traversal and fight feel remain untested.
+
+| Pilot | Reached | Median flow / bar | Worst flow | Stops total | Largest anchor gap m | Warden time s | Median path m / minimum | Median / largest uphill m |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 8/8 | 0.7345 / 0.8974 | 0.6625 | 12 | 12.4 | 20.30 to 22.30 | 464.97 / 350 | 9.34 / 11.17 |
+| rivet | 8/8 | 0.8836 / 0.8814 | 0.8833 | 0 | 24.8 | 16.00 to 16.07 | 362.87 / 320 | 0.00 / 0.05 |
+| kest | 8/8 | 0.9139 / 0.9019 | 0.9130 | 0 | 18.4 | 16.74 to 17.49 | 403.42 / 350 | 0.34 / 1.97 |
+
+Rivet fires the cable, wall break and kicker on 8/8 seeds. Kest fires the cable on 8/8. Sable fires the kicker on 8/8 after the adjustment. No thermal lift fires: the traversal bot does not perform the optional glide action.
+
+The permitted deck adjustment changed Sable's second waypoint from (-40,-152) to (-36,-145), and Rivet's from (48,-132) to (44,-126). Their initial median flow shares were 0.7030 and 0.8660; the final medians are 0.7345 and 0.8836. Kest's waypoints remain exactly those in the sheet. No other layout tuning was used. All measured anchor gaps are below 40 m, so no fallback anchor was added.
+
+The route tool now records `path_length_m` as the 3D distance the ball travels, including the last movement into engagement; `rides` as unique named facts or a departure from the ground at the kicker lip; and `uphill_m` as the largest continuous decrease in world z. The summary includes median path and uphill distance, median number of distinct rides, and a per-name median occurrence, where 0 means absent and 1 means present in at least half the runs. A per-seed tick trace records position, velocity, contact bodies, tier, dead stops and anchor distance.
+
+Sable seed 7 stops at tick 1523, time 16.9117 s, position (-50.466,24.401,-1.013), in contact with `TunnelRoof_w1`. Planar speed drops from a preceding 0.1-second peak of 18.665 to 4.547 m/s. Other seeds hit the kept satellite at (-72,-16) after leaving the marble channel. The authored last-segment sweeps at 4 m to either side clear that satellite; the bot's path does not stay within that corridor. No tower or roof was moved.
+
+The full static line sweeps fail at the existing `plinth_cache` overlapping spawn and each deck approach. `interact.gd` still uses the stage-1 entries in `interactables.gd`; the new map only publishes activity points for the later activity unit. Those files are outside Z3X scope. No collider was excluded to hide this failure.
+
+Receipts and all 24 per-seed rows are under `artifacts/local/alpha/r2/Z3X/` at the repository root, with final measurements in `traversal-final/`. The historical baseline above is unchanged.
