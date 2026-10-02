@@ -65,6 +65,8 @@ func _process(_delta: float) -> bool:
 	var presentation: Node = _game.presentation
 	var unheard: Array = []
 	for signal_name in GameEvents.signal_names():
+		if signal_name in EventKinds.GRAMMAR_SIGNALS:
+			continue
 		var heard := false
 		for connection in _game.events.get_signal_connection_list(signal_name):
 			var owner: Object = (connection["callable"] as Callable).get_object()

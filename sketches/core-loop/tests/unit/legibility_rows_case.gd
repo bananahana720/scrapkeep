@@ -1,0 +1,207 @@
+extends RefCounted
+
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Palette := preload("res://src/core/palette.gd")
+const Bindings := preload("res://src/core/bindings.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
+const Synergies := preload("res://src/build/synergies.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+
+# The legibility grammar's rows (design-v3/LEGIBILITY.md sections 1 to 3): every colour is one
+# of the five roles, words stay short, the live colour stays clear of every other meaning, no
+# id is dressed by two tables, and the verb and intent names the rows point at exist.
+
+const MIN_LIVE_DISTANCE := 35.0
+const MIN_SLATE_DISTANCE := 35.0
+const VOCAB_TABLES := {"LINE_ROWS": EventKinds.LINE_ROWS, "STATE_ROWS": EventKinds.STATE_ROWS,
+	"CAUSE_ROWS": EventKinds.CAUSE_ROWS, "ACTIVITY_ROWS": EventKinds.ACTIVITY_ROWS}
+const OTHER_TABLES := {"ROWS": EventKinds.ROWS, "UI_ROWS": EventKinds.UI_ROWS, "LOOT_ROWS": EventKinds.LOOT_ROWS,
+	"WORLD_ROWS": EventKinds.WORLD_ROWS, "THREAT_ROWS": EventKinds.THREAT_ROWS}
+
+
+func run(t) -> void:
+	var new_rows := VOCAB_TABLES
+
+	var bad_roles: Array = []
+	var bad_motions: Array = []
+	var long_words: Array = []
+	var bad_shapes: Array = []
+	for name in new_rows:
+		var table: Dictionary = new_rows[name]
+		for id in table:
+			var row: Dictionary = table[id]
+			if not String(row.get("color", "")) in EventKinds.COLOR_ROLES:
+				bad_roles.append("%s.%s" % [name, id])
+			if row.has("motion") and not String(row["motion"]) in EventKinds.MOTIONS:
+				bad_motions.append("%s.%s" % [name, id])
+			if _word_count(String(row.get("word", ""))) > EventKinds.MAX_WORDS:
+				long_words.append("%s.%s" % [name, id])
+			if not String(row.get("shape", "")) in EventKinds.SHAPES:
+				bad_shapes.append("%s.%s" % [name, id])
+	t.check("every colour role is one of the five meanings or neutral", bad_roles.is_empty(), "rows with another role: %s" % [bad_roles])
+	t.check("every motion is a known word", bad_motions.is_empty(), "rows with another motion: %s" % [bad_motions])
+	t.check("every word is three words or fewer", long_words.is_empty(), "rows over %d words: %s" % [EventKinds.MAX_WORDS, long_words])
+	t.check("every shape is a known shape", bad_shapes.is_empty(), "rows with another shape: %s" % [bad_shapes])
+
+	var live := Palette.live()
+	var rivals := {"amber": Palette.AMBER, "rust": Palette.RUST, "hazard": Palette.HAZARD, "slate": Palette.SLATE,
+		"ancient blue": Palette.ANCIENT, "sandstone": Palette.SANDSTONE}
+	var too_close: Array = []
+	for name in rivals:
+		var gap := _cie76(live, rivals[name])
+		if gap < MIN_LIVE_DISTANCE:
+			too_close.append("%s %.1f" % [name, gap])
+	t.check("the live colour sits clear of every other meaning", too_close.is_empty(),
+		"live is under %.0f CIE76 from: %s" % [MIN_LIVE_DISTANCE, too_close])
+	var slate_close: Array = []
+	for name in ["amber", "rust", "hazard", "ancient blue", "sandstone"]:
+		var gap := _cie76(Palette.SLATE, rivals[name])
+		if gap < MIN_SLATE_DISTANCE:
+			slate_close.append("%s %.1f" % [name, gap])
+	t.check("slate sits clear of the warm colours and the ancients' blue", slate_close.is_empty(),
+		"slate is under %.0f CIE76 from: %s" % [MIN_SLATE_DISTANCE, slate_close])
+	var not_mint: Array = []
+	for class_def in ClassDef.all():
+		var pilot_live: Color = Palette.live(class_def)
+		if pilot_live != Color("8bf0d3"):
+			not_mint.append("%s is %s" % [class_def.id, pilot_live.to_html(false)])
+		for name in rivals:
+			if _cie76(pilot_live, rivals[name]) < MIN_LIVE_DISTANCE:
+				not_mint.append("%s is close to %s" % [class_def.id, name])
+	t.check("the live colour is mint for every pilot", not_mint.is_empty() and ClassDef.all().size() >= 3, "%s" % [not_mint])
+	t.check("the live role resolves to the live colour", EventKinds.role_color("live") == live and EventKinds.state_color("open") == live and EventKinds.state_color("chunk_shatter") == live,
+		"role %s, open %s, chunk_shatter %s" % [EventKinds.role_color("live").to_html(false), EventKinds.state_color("open").to_html(false), EventKinds.state_color("chunk_shatter").to_html(false)])
+
+	var seen := {}
+	var twice: Array = []
+	var every_table := OTHER_TABLES.duplicate()
+	every_table.merge(VOCAB_TABLES)
+	for name in every_table:
+		var table: Dictionary = every_table[name]
+		for id in table:
+			if seen.has(id):
+				twice.append("%s in %s and %s" % [id, seen[id], name])
+			seen[id] = name
+	t.check("no id has presentation in two tables", twice.is_empty(), "ids in two tables: %s" % [twice])
+
+	var missing_verbs: Array = []
+	for id in EventKinds.LINE_ROWS:
+		var verb := String(EventKinds.LINE_ROWS[id]["verb"])
+		if verb != EventKinds.NONE and not Bindings.VERBS.has(verb):
+			missing_verbs.append("%s names %s" % [id, verb])
+	for id in EventKinds.STATE_ROWS:
+		var verb := String(EventKinds.STATE_ROWS[id]["verb"])
+		if verb != EventKinds.NONE and not Bindings.VERBS.has(verb):
+			missing_verbs.append("%s names %s" % [id, verb])
+	t.check("every prompt verb id exists in Bindings.VERBS", missing_verbs.is_empty(), "unknown verbs: %s" % [missing_verbs])
+
+	var intent := Intent.new()
+	var props := {}
+	for info in intent.get_property_list():
+		props[info["name"]] = true
+	var missing_fields: Array = []
+	for id in Bindings.VERBS:
+		var row: Dictionary = Bindings.VERBS[id]
+		var field := String(row.get("intent", ""))
+		if field != "" and not props.has(field):
+			missing_fields.append("%s names %s" % [id, field])
+		if String(row.get("fail", "")) == "":
+			missing_fields.append("%s has no fail cue" % id)
+	t.check("every VERBS intent field exists on Intent", missing_fields.is_empty(), "unknown fields: %s" % [missing_fields])
+	t.check("nine verbs", Bindings.VERBS.size() == 9, "%d verbs" % Bindings.VERBS.size())
+
+	var states: Array = EventKinds.LINE_ROWS.keys()
+	states.sort()
+	var want_states := ["searching", "locked", "dry_fire", "latched_world", "latched_body", "smash_committed", "smash_lands", "rewinding", "let_go", "broke"]
+	want_states.sort()
+	t.check("LINE_ROWS holds the ten harpoon states", states == want_states, "states: %s" % [states])
+
+	var cause_ids: Array = EventKinds.CAUSE_ROWS.keys()
+	cause_ids.sort()
+	var kept := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
+	kept.sort()
+	t.check("CAUSE_ROWS holds the five kept synergies", cause_ids == kept, "ids: %s" % [cause_ids])
+	var unknown_synergy: Array = []
+	var shapes := {}
+	var shared_shape: Array = []
+	var bad_motif: Array = []
+	for id in EventKinds.CAUSE_ROWS:
+		if not Synergies.ROWS.has(id):
+			unknown_synergy.append(id)
+		var shape := String(EventKinds.CAUSE_ROWS[id]["shape"])
+		if shapes.has(shape):
+			shared_shape.append("%s and %s share %s" % [id, shapes[shape], shape])
+		shapes[shape] = id
+		var motif: Array = EventKinds.CAUSE_ROWS[id]["motif"]
+		if motif.size() != 3:
+			bad_motif.append(id)
+	t.check("cause ids are synergy ids", unknown_synergy.is_empty(), "not in synergies.gd: %s" % [unknown_synergy])
+	t.check("no two causes share a shape", shared_shape.is_empty(), "%s" % [shared_shape])
+	t.check("every cause has a three-note motif", bad_motif.is_empty(), "rows: %s" % [bad_motif])
+
+	var activity_ids: Array = EventKinds.ACTIVITY_ROWS.keys()
+	activity_ids.sort()
+	t.check("ACTIVITY_ROWS holds the four standing activities", activity_ids == ["ambush_altar", "cracked_cache", "hauler_bounty", "surge_run"], "ids: %s" % [activity_ids])
+
+	t.check("harpoon_bit left ROWS", not EventKinds.ROWS.has("harpoon_bit"), "ROWS still holds harpoon_bit")
+	t.check("harpoon_smashed left ROWS", not EventKinds.ROWS.has("harpoon_smashed"), "ROWS still holds harpoon_smashed")
+	var bite := EventKinds.row("harpoon_bit")
+	var smash := EventKinds.row("harpoon_smashed")
+	t.check("a bite reads as it did", bite.get("shape") == "diamond" and bite.get("sound") == "grapple_clink" and bite.get("color") == Palette.ARC and bite.get("priority") == 1 and bite.get("group") == "movement",
+		"bite row %s" % [bite])
+	t.check("a smash reads as it did", smash.get("shape") == "ring" and smash.get("sound") == "slam_boom" and smash.get("color") == Palette.ARC and smash.get("priority") == 1 and smash.get("group") == "movement",
+		"smash row %s" % [smash])
+
+	var missing_posture: Array = []
+	for id in ["posture_step", "open", "chunk_shatter"]:
+		if not EventKinds.STATE_ROWS.has(id) or EventKinds.ROWS.has(id):
+			missing_posture.append(id)
+	t.check("the Warden's posture facts are state rows with no amber", missing_posture.is_empty()
+			and EventKinds.STATE_ROWS["posture_step"]["color"] == "neutral" and EventKinds.STATE_ROWS["open"]["color"] == "live",
+		"not state rows: %s" % [missing_posture])
+
+	var arity := {"line_state_changed": 4, "verb_failed": 3, "cause_armed": 1, "cause_fired": 3, "posture_changed": 3}
+	var wrong: Array = []
+	for info in (GameEvents as Script).get_script_signal_list():
+		if arity.has(info["name"]):
+			if info["args"].size() != arity[info["name"]]:
+				wrong.append("%s takes %d" % [info["name"], info["args"].size()])
+			arity.erase(info["name"])
+	t.check("the five grammar signals exist with their arguments", wrong.is_empty() and arity.is_empty(), "wrong %s, missing %s" % [wrong, arity.keys()])
+	var unlisted: Array = []
+	for name in EventKinds.GRAMMAR_SIGNALS:
+		if not EventKinds.ROWS.has(name):
+			unlisted.append(name)
+	t.check("each unheard grammar signal has its quiet row", unlisted.is_empty(), "no row: %s" % [unlisted])
+
+
+static func _word_count(text: String) -> int:
+	return text.split(" ", false).size()
+
+
+static func _cie76(a: Color, b: Color) -> float:
+	var la := _lab(a)
+	var lb := _lab(b)
+	return la.distance_to(lb)
+
+
+static func _lab(c: Color) -> Vector3:
+	var r := _linear(c.r)
+	var g := _linear(c.g)
+	var b := _linear(c.b)
+	var x := (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) / 0.95047
+	var y := r * 0.2126729 + g * 0.7151522 + b * 0.0721750
+	var z := (b * 0.9503041 + g * 0.1191920 + r * 0.0193339) / 1.08883
+	var fx := _lab_f(x)
+	var fy := _lab_f(y)
+	var fz := _lab_f(z)
+	return Vector3(116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz))
+
+
+static func _linear(v: float) -> float:
+	return pow((v + 0.055) / 1.055, 2.4) if v > 0.04045 else v / 12.92
+
+
+static func _lab_f(v: float) -> float:
+	return pow(v, 1.0 / 3.0) if v > 0.008856 else 7.787 * v + 16.0 / 116.0

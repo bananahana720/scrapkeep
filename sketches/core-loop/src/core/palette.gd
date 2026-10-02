@@ -15,6 +15,14 @@ const ANCIENT := Color("3d8bff")
 const HAZARD := Color("ff5a3c")
 # Admiral Brindle's brass: every boss fact wears it.
 const BRASS := Color("d9b44a")
+# "Not yet": out of range, a glancing hit, a locked thing. Cool, so no warm colour shares it.
+const SLATE := Color("6f7f8f")
+
+
+# The colour of "your verb works on this right now". Mint for every pilot until a swatch
+# card lets Rivet and Kest have their own; the pilot's class colour stays for identity.
+static func live(_class_def = null) -> Color:
+	return ARC
 
 
 static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> ImageTexture:

@@ -56,10 +56,6 @@ const ROWS := {
 	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
 	"grapple_fired": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
 	"grapple_released": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "grapple_release", "hud": "", "objective": "", "priority": 1},
-	# The harpoon is yours, so its facts wear the class colour where they draw (vfx.gd passes the live
-	# class); the row holds the rope craft's, Sable's. Never the Hooker's HAZARD and never its atk_e06 cues.
-	"harpoon_bit": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
-	"harpoon_smashed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
 	"mounted": {"group": "movement", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
 	"dismounted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "pylon_eject", "hud": "", "objective": "", "priority": 1},
 	"enemy_spawned": {"group": "combat", "color": Palette.RUST, "shape": "chevron", "sound": "enemy_arrive", "hud": "", "objective": "", "priority": 1},
@@ -170,7 +166,19 @@ const ROWS := {
 	"lap_ring_passed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "found_chime", "sound_next": "checkpoint_pop", "hud": "", "objective": "", "priority": 1},
 	"lap_completed": {"group": "flow", "color": Palette.ARC, "shape": "bar", "sound": "core_socket", "sound_next": "beacon_notch_chime", "hud": "", "objective": "", "priority": 2},
 	"warden_stripped": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "shatter", "sound_next": "plate_shear_clang", "hud": "Warden plating stripped", "objective": "", "priority": 3},
+	# The legibility grammar's signals carry no presentation of their own: each reads its row in
+	# LINE_ROWS, STATE_ROWS, Bindings.VERBS or CAUSE_ROWS, so these are the quiet stand-ins the
+	# schema asks for.
+	"line_state_changed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"verb_failed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"cause_armed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"cause_fired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"posture_changed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 }
+
+# The grammar's bus signals that have no presentation listener. A unit that wires a listener
+# for one removes it from this list.
+const GRAMMAR_SIGNALS := ["line_state_changed", "verb_failed", "cause_armed", "cause_fired", "posture_changed"]
 
 # The laps mode's objective before the bell: the lap_bell_rung row carries it after.
 const LAP_BELL_OBJECTIVE := "Roll into the Warden's bowl to ring its bell, then lap the course: {lap} of {required}."
@@ -407,10 +415,12 @@ const CODEX_CATEGORIES := {
 
 
 static func has(kind: String) -> bool:
-	return ROWS.has(kind)
+	return ROWS.has(kind) or LINE_SIGNALS.has(kind)
 
 
 static func row(kind: String) -> Dictionary:
+	if LINE_SIGNALS.has(kind):
+		return line_as_row(LINE_SIGNALS[kind])
 	return ROWS.get(kind, {})
 
 
@@ -489,6 +499,143 @@ static func attack_floor(id: String) -> String:
 # The fields of a row still on a stand-in value.
 static func attack_open(id: String) -> Array:
 	return attack_row(id).get("open", [])
+
+
+# The legibility grammar (design-v3/LEGIBILITY.md). Four tables, each id presented in exactly
+# one of them; a test fails when an id shows up in two. A colour is a role name, never a
+# Color, and role_color is the one place a role becomes one.
+#
+# color     hazard | live | amber | slate | rust, the colour law's five meanings, or neutral
+#           for ink that carries none (COLOR_ROLES).
+# motion    pulse | steady | none (MOTIONS). A lock pulses and a latch is steady on purpose.
+# shape     a SHAPES entry.
+# sound     the cue id, or "none". Ids a later unit bakes are reserved names.
+# verb      the Bindings.VERBS id whose prompt rides this state, or "none".
+# word      the first-times wording, three words or fewer, or "".
+const COLOR_ROLES := ["hazard", "live", "amber", "slate", "rust", "neutral"]
+const MOTIONS := ["pulse", "steady", "none"]
+const MAX_WORDS := 3
+const STATE_FIELDS := ["color", "motion", "shape", "sound", "verb", "word"]
+const LINE_FIELDS := STATE_FIELDS
+
+# Each harpoon state of LEGIBILITY section 3.
+const LINE_ROWS := {
+	"searching": {"color": "neutral", "motion": "none", "shape": "cross", "sound": NONE, "verb": NONE, "word": ""},
+	"locked": {"color": "live", "motion": "pulse", "shape": "ring", "sound": "lock_tick", "verb": "harpoon", "word": "HOOK"},
+	"dry_fire": {"color": "slate", "motion": "none", "shape": "bar", "sound": "dry_tick", "verb": "harpoon", "word": ""},
+	"latched_world": {"color": "live", "motion": "steady", "shape": "square", "sound": "anchor_clunk", "verb": "haul", "word": ""},
+	"latched_body": {"color": "live", "motion": "steady", "shape": "diamond", "sound": "grapple_clink", "verb": "haul", "word": "SMASH"},
+	"smash_committed": {"color": "live", "motion": "none", "shape": "arrow", "sound": "smash_whistle", "verb": NONE, "word": ""},
+	"smash_lands": {"color": "live", "motion": "none", "shape": "ring", "sound": "slam_boom", "verb": NONE, "word": ""},
+	"rewinding": {"color": "live", "motion": "none", "shape": "chevron", "sound": "dock_click", "verb": NONE, "word": ""},
+	"let_go": {"color": "live", "motion": "none", "shape": "chevron", "sound": "line_zip", "verb": "harpoon", "word": ""},
+	"broke": {"color": "rust", "motion": "none", "shape": "burst", "sound": "line_twang", "verb": NONE, "word": ""},
+}
+# Bus signals whose presentation is a LINE_ROWS state; row() and has() answer for them.
+const LINE_SIGNALS := {"harpoon_bit": "latched_body", "harpoon_smashed": "smash_lands"}
+const LINE_SIGNAL_GROUP := "movement"
+const LINE_SIGNAL_PRIORITY := 1
+
+# Target and ball states of LEGIBILITY section 2, and the Warden's posture facts of section 4:
+# a step of its guard, the open core a stagger leaves, a health chunk shattering. No amber on
+# the Warden, and the live colour only while it is open.
+const STATE_ROWS := {
+	"posture_step": {"color": "neutral", "motion": "none", "shape": "chevron", "sound": "hit_thwack", "verb": NONE, "word": ""},
+	"chunk_shatter": {"color": "live", "motion": "none", "shape": "burst", "sound": "shatter", "verb": NONE, "word": ""},
+	"latched": {"color": "live", "motion": "steady", "shape": "diamond", "sound": NONE, "verb": NONE, "word": ""},
+	"will_break": {"color": "live", "motion": "pulse", "shape": "bar", "sound": NONE, "verb": NONE, "word": ""},
+	"open": {"color": "live", "motion": "steady", "shape": "core", "sound": "boss_weak_hit", "verb": NONE, "word": ""},
+	"glancing": {"color": "slate", "motion": "none", "shape": "burst", "sound": "clank", "verb": NONE, "word": ""},
+	"interrupted": {"color": "live", "motion": "none", "shape": "star", "sound": NONE, "verb": NONE, "word": ""},
+	"held": {"color": "hazard", "motion": "steady", "shape": "bar", "sound": "hold_pit", "verb": NONE, "word": ""},
+	"wearing": {"color": "rust", "motion": "steady", "shape": "chevron", "sound": NONE, "verb": NONE, "word": ""},
+}
+
+# The five synergies the slice keeps, keyed by their ids in build/synergies.gd, which owns the
+# names. Presentation only: each has its own shape and a three-note motif as note names.
+const CAUSE_FIELDS := ["color", "shape", "motif"]
+const CAUSE_ROWS := {
+	"wrecking_ball": {"color": "amber", "shape": "ring", "motif": ["C3", "G3", "C4"]},
+	"tesla_pylon": {"color": "amber", "shape": "cross", "motif": ["D4", "A4", "F4"]},
+	"pinwheel": {"color": "amber", "shape": "star", "motif": ["E4", "G4", "B4"]},
+	"shrapnel_bloom": {"color": "amber", "shape": "burst", "motif": ["A3", "E4", "A4"]},
+	"lightning_rod": {"color": "amber", "shape": "arrow", "motif": ["G4", "D5", "B4"]},
+}
+
+# The four standing activities (LEGIBILITY section 9, wave R3): an amber beam and ring from stage
+# start with the family glyph on top. No timer and no toast.
+const ACTIVITY_FIELDS := ["color", "motion", "shape", "sound", "word"]
+const ACTIVITY_ROWS := {
+	"surge_run": {"color": "amber", "motion": "steady", "shape": "chevron", "sound": "found_chime", "word": "Surge"},
+	"ambush_altar": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Ambush"},
+	"cracked_cache": {"color": "amber", "motion": "steady", "shape": "diamond", "sound": "found_chime", "word": "Cache"},
+	"hauler_bounty": {"color": "amber", "motion": "steady", "shape": "square", "sound": "found_chime", "word": "Bounty"},
+}
+
+
+static func role_color(role: String) -> Color:
+	match role:
+		"hazard":
+			return Palette.HAZARD
+		"live":
+			return Palette.live()
+		"amber":
+			return Palette.AMBER
+		"slate":
+			return Palette.SLATE
+		"rust":
+			return Palette.RUST
+		"neutral":
+			return Palette.SAND
+	push_error("EventKinds.role_color: no colour role named '%s'" % role)
+	return Palette.SAND
+
+
+static func line_row(state: String) -> Dictionary:
+	return LINE_ROWS.get(state, {})
+
+
+static func line_color(state: String) -> Color:
+	return role_color(String(line_row(state).get("color", "")))
+
+
+static func line_sound(state: String) -> String:
+	return String(line_row(state).get("sound", NONE))
+
+
+# A LINE_ROWS row in the ROWS schema, for a bus signal whose presentation lives there.
+static func line_as_row(state: String) -> Dictionary:
+	var entry := line_row(state)
+	return {"group": LINE_SIGNAL_GROUP, "color": line_color(state), "shape": entry.get("shape", "none"), "sound": entry.get("sound", NONE),
+		"hud": "", "objective": "", "priority": LINE_SIGNAL_PRIORITY}
+
+
+static func state_row(id: String) -> Dictionary:
+	return STATE_ROWS.get(id, {})
+
+
+static func state_color(id: String) -> Color:
+	return role_color(String(state_row(id).get("color", "")))
+
+
+static func cause_row(id: String) -> Dictionary:
+	return CAUSE_ROWS.get(id, {})
+
+
+static func cause_color(id: String) -> Color:
+	return role_color(String(cause_row(id).get("color", "")))
+
+
+static func cause_motif(id: String) -> Array:
+	return cause_row(id).get("motif", [])
+
+
+static func activity_row(id: String) -> Dictionary:
+	return ACTIVITY_ROWS.get(id, {})
+
+
+static func activity_color(id: String) -> Color:
+	return role_color(String(activity_row(id).get("color", "")))
 
 
 # v2 W1 UI
