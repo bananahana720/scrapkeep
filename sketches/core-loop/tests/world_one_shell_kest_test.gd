@@ -16,11 +16,21 @@ const RIG := "res://assets/models/pilot_kest_anim.glb"
 const MAX_V := 15000
 const MAX_T := 16000
 const MAX_DRAWS := 21
-const CLIPS := ["drop_land", "big_cheer", "wince", "slump", "phew"]
+const CLIPS := {"drop_land": 2.2, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
+const RIG_BONES := [
+	"root", "pelvis", "spine_01", "spine_02", "neck", "head", "crest", "ear.L", "ear.R",
+	"goggles", "jaw", "snout", "shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "curl.L",
+	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
+]
+# The triangle range allows one percent of export variation; pod ceilings above stay fixed.
+const RIG_TRIS := Vector2i(4447, 4537)
+const RIG_MESHES := {"Pilot": ["pilot"], "WingFan_L": ["pilot"], "WingFan_R": ["pilot"], "WingUpper_L": ["pilot"], "WingUpper_R": ["pilot"]}
 const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro", "VaneL", "VaneR"]
 const BASE := "res://assets/models/shell_kest.glb"
-const RIG_SHA := "22b07e176f803cdcc1a9a306d40066d0c9716b06413bca6afc237c1d4adebce9"
 const GROW := 0.002
+# Counts at this branch's base before the correction.
+const NO_GROWTH_V := 11596
+const NO_GROWTH_T := 10788
 # Pod kit mesh bounds of the base shell in shell space.
 const BASE_POD_MIN := Vector3(-0.94, -0.7735, -0.94)
 const BASE_POD_MAX := Vector3(0.94, 0.133, 0.94)
@@ -157,11 +167,116 @@ func _kept(base: Node, shell: Node, node_name: String, region: AABB) -> String:
 	return "%d of %d base vertices" % [lost, want.size()] if lost > 0 or want.is_empty() else ""
 
 
+# C09 correction 1: the wear on the working edges. The working faces are the Pod paint
+# triangles of the satchels (canvas bodies and flaps) and the mortar tube: paint triangles in
+# the region whose base colour is not already bone. Over them, the share that reads as worn
+# in the shell: bone on any vertex, with the original material slot intact. Triangles are matched to
+# the base by centroid (the wear adds no geometry, so the centroids are identical).
+const WEAR_MIN := {"satchel right": 0.4, "satchel rear": 0.4, "satchel left": 0.4, "mortar": 0.2}
+const WEAR_REGIONS := {
+	"satchel right": AABB(Vector3(0.376, -0.52, -0.106), Vector3(0.32, 0.32, 0.32)),
+	"satchel rear": AABB(Vector3(-0.12, -0.53, 0.376), Vector3(0.32, 0.32, 0.32)),
+	"satchel left": AABB(Vector3(-0.656, -0.54, -0.36), Vector3(0.32, 0.32, 0.32)),
+	"mortar": AABB(Vector3(-0.56, -0.36, 0.05), Vector3(0.3, 0.45, 0.4)),
+}
+
+
+# Pod triangles by rounded centroid: {key: [slot, has_bone_vertex, centroid]}.
+static func pod_tris(scene: Node) -> Dictionary:
+	var bone: Color = Palette.SAND.srgb_to_linear()
+	var out := {}
+	for mi in meshes(scene):
+		if String(mi.name) != "Pod":
+			continue
+		var t := to_root(mi, scene)
+		for i in mi.mesh.get_surface_count():
+			var slot := HeroAssets.slot_of(mi.mesh, i)
+			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
+			var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var cs = arrays[Mesh.ARRAY_COLOR]
+			var index = arrays[Mesh.ARRAY_INDEX]
+			var n: int = index.size() if index != null else vs.size()
+			for k in range(0, n, 3):
+				var ids: Array = [index[k], index[k + 1], index[k + 2]] if index != null else [k, k + 1, k + 2]
+				var centre: Vector3 = t * ((vs[ids[0]] + vs[ids[1]] + vs[ids[2]]) / 3.0)
+				var has_bone := false
+				if cs != null:
+					for id in ids:
+						var c: Color = cs[id]
+						has_bone = has_bone or (absf(c.r - bone.r) < 0.01 and absf(c.g - bone.g) < 0.01 and absf(c.b - bone.b) < 0.01)
+				out[Vector3i((centre * 1000.0).round())] = [slot, has_bone, centre]
+	return out
+
+
+# [worn, working, missing]: working = base paint triangles in the region with no bone vertex.
+static func wear_share(base_tris: Dictionary, shell_tris: Dictionary, region: AABB) -> Array:
+	var worn := 0
+	var working := 0
+	var missing := 0
+	for key in base_tris:
+		var b: Array = base_tris[key]
+		if b[0] != "paint" or b[1] or not region.has_point(b[2]):
+			continue
+		working += 1
+		if not shell_tris.has(key):
+			missing += 1
+			continue
+		var s: Array = shell_tris[key]
+		if s[0] == "paint" and s[1]:
+			worn += 1
+	return [worn, working, missing]
+
+
+# Scratch GLBs are read directly, so a red run never overwrites a delivered asset or its import.
+func _load_asset(path: String, environment: String) -> Node:
+	var scratch := OS.get_environment(environment)
+	if not scratch.is_empty():
+		var document := GLTFDocument.new()
+		var state := GLTFState.new()
+		var error := document.append_from_file(scratch, state)
+		_report("kest scratch load", error == OK, "GLTF load error %d" % error)
+		return document.generate_scene(state) if error == OK else Node.new()
+	return (load(path) as PackedScene).instantiate()
+
+
+func _check_rig(rig: Node) -> void:
+	var skeletons := rig.find_children("*", "Skeleton3D", true, false)
+	var names := []
+	if skeletons.size() == 1:
+		var skeleton := skeletons[0] as Skeleton3D
+		for i in skeleton.get_bone_count():
+			names.append(skeleton.get_bone_name(i))
+	_report("kest rig bones", skeletons.size() == 1 and names == RIG_BONES,
+		"%d skeleton, %d bones; expected 1 skeleton and 25 ordered names, got %s" % [skeletons.size(), names.size(), names])
+	var actual := {}
+	for mi in meshes(rig):
+		var materials := []
+		for i in mi.mesh.get_surface_count():
+			var material: Material = mi.mesh.surface_get_material(i)
+			materials.append(material.resource_name if material != null else "<missing>")
+		actual[String(mi.name)] = materials
+	_report("kest rig meshes", actual == RIG_MESHES, "mesh material names %s, expected %s" % [actual, RIG_MESHES])
+	var triangles: int = counts(rig).t
+	_report("kest rig triangles", triangles >= RIG_TRIS.x and triangles <= RIG_TRIS.y,
+		"%d triangles, range %d..%d (1 percent around delivered geometry)" % [triangles, RIG_TRIS.x, RIG_TRIS.y])
+	var player := rig.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var clips := []
+	if player != null:
+		clips = Array(player.get_animation_list())
+	var lost := CLIPS.keys().filter(func(c): return not (c in clips))
+	_report("kest rig clips", player != null and lost.is_empty(), "seven pilot clips present (missing %s)" % [lost])
+	for clip in CLIPS:
+		var length := player.get_animation(clip).length if clip in clips else -1.0
+		_report("kest rig length " + clip, absf(length - CLIPS[clip]) <= 0.001,
+			"%.6f seconds, expected %.6f +/-0.001" % [length, CLIPS[clip]])
+
+
 func _initialize() -> void:
-	var shell: Node = (load(SHELL) as PackedScene).instantiate()
-	var rig: Node = (load(RIG) as PackedScene).instantiate()
+	var shell: Node = _load_asset(SHELL, "SCRAPKEEP_TEST_SHELL")
+	var rig: Node = _load_asset(RIG, "SCRAPKEEP_TEST_RIG")
 	var a := counts(shell)
 	var b := counts(rig)
+	_report("kest no growth", a.v <= NO_GROWTH_V and a.t <= NO_GROWTH_T, "shell %d V and %d T, no more than %d V and %d T before the wear correction" % [a.v, a.t, NO_GROWTH_V, NO_GROWTH_T])
 	_report("kest pod V", a.v + b.v <= MAX_V, "%d + %d = %d vertices, ceiling %d" % [a.v, b.v, a.v + b.v, MAX_V])
 	_report("kest pod T", a.t + b.t <= MAX_T, "%d + %d = %d triangles, ceiling %d" % [a.t, b.t, a.t + b.t, MAX_T])
 	_report("kest pod draws", a.s + b.s <= MAX_DRAWS, "%d + %d = %d surfaces, ceiling %d" % [a.s, b.s, a.s + b.s, MAX_DRAWS])
@@ -224,6 +339,17 @@ func _initialize() -> void:
 	# the pilot with its crest (the Pilot mesh is not edited at all). Every base vertex in a
 	# region must still exist in the new shell.
 	var base: Node = (load(BASE) as PackedScene).instantiate()
+	var base_tris := pod_tris(base)
+	var shell_tris := pod_tris(shell)
+	for key in WEAR_REGIONS:
+		var w := wear_share(base_tris, shell_tris, WEAR_REGIONS[key])
+		var share := float(w[0]) / maxf(1.0, float(w[1]))
+		_report("kest wear " + key, w[1] > 0 and w[2] == 0 and share >= WEAR_MIN[key], "%d of %d working paint triangles read as worn = %.2f, minimum %.2f (%d not matched to base)" % [w[0], w[1], share, WEAR_MIN[key], w[2]])
+	var moved := 0
+	for key in base_tris:
+		if shell_tris.has(key) and base_tris[key][0] != shell_tris[key][0]:
+			moved += 1
+	_report("kest working slots", moved == 0, "%d base triangles changed material slot, want 0" % moved)
 	var everything := AABB(Vector3(-3, -3, -3), Vector3(6, 6, 6))
 	var features := {
 		"satchel right": ["Pod", AABB(Vector3(0.376, -0.52, -0.106), Vector3(0.32, 0.32, 0.32))],
@@ -252,14 +378,8 @@ func _initialize() -> void:
 	for name in stray:
 		_report("kest extent " + name, stray[name] == 0, "%d %s vertices sit in space the base shell leaves empty" % [stray[name], name])
 	base.free()
-	var rig_sha := FileAccess.get_sha256(RIG)
-	_report("kest rig file", rig_sha == RIG_SHA, "pilot_kest_anim.glb sha256 %s" % rig_sha.substr(0, 12))
-	var player := rig.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	var clips := []
-	if player != null:
-		clips = Array(player.get_animation_list())
-	var lost := CLIPS.filter(func(c): return not (c in clips))
-	_report("kest rig clips", player != null and lost.is_empty(), "five pilot clips present (missing %s)" % [lost])
+	_check_rig(rig)
+
 	shell.free()
 	rig.free()
 	print("world_one_shell_kest_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
