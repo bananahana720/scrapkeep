@@ -99,3 +99,9 @@ Reading it: below plating 110 the grown ball arrives with so much heft (2.20) th
 The first sweep (brawler against skipper, plating 45 to 90, no data kept) is superseded. It started the fight clock at the bot's turn, counted a camper break only when the bot had struck, and its "grown" bot reached the Warden at heft 1.04 to 1.10 because the bot does not know the map's activities. Its figures are not evidence for any pick. This sweep takes growth as given by starting the ball with the scrap a grown player would hold.
 
 The first sweep's repeatability note is also superseded: unit SD found the cause (a scrap pickup's swirl side and a counter's strafe came from object-id parity) and fixed it for bot runs.
+
+## Rerun on the merged wave, 2026-10-02
+
+The first pick was made before growth pays (`kill_scrap` 4.0 on the slice row) joined it. With both in, kills during the fight pay four times the scrap, so a small ball grows mid-fight, and the picked cell's small median fell from 91.8 s to 85.8 s. The same grid was rerun on the merged build (320 runs, six processes, the machine otherwise idle). The pick rule chose the same cell, plating 110, `curve` 2, `ram_shatters` false: grown 25.5 s, mid 54.5 s, small 85.8 s, camper 0 of 5, ratio 3.36. The two tables in `tools/` are this rerun's.
+
+Grown seed 2 broke the Warden only after 94.1 s, against 23.6 to 36.1 s for the other four seeds, so three-seed medians that include it sit under the 25 s floor. `tests/posture_bands_test.gd` therefore checks the bands on this five-seed table and pins its live seeds 1 to 3 to this rerun's medians for the same seeds (small 73.75 s, grown 24.66 s). Why grown seed 2 is slow is not yet traced.

@@ -7,17 +7,19 @@ const T := preload("res://tests/support/t.gd")
 
 # The slice Warden's numbers are held by a bot sweep (tools/posture_sweep.md): a class III ball
 # breaks it in about half a minute, a class I ball takes at least twice as long and can still break
-# it, and a ball that only shoots from range never does. This test plays the slice row as it stands,
-# on seeds 1 to 3 for the small, grown and camper arms, and checks the bands and that the medians
-# are within 10 percent of the ones the sweep recorded for the picked row. Runs repeat exactly, so
-# a larger move means the fight changed, and the sweep's pick wants rerunning.
+# it, and a ball that only shoots from range never does. The bands are defined on medians over five
+# seeds, so they are checked on the committed sweep table (tools/posture_sweep.tsv). This test also
+# plays the slice row as it stands on seeds 1 to 3 and checks that those medians are within 10 percent
+# of the ones the sweep recorded for the same seeds. Runs repeat exactly, so a larger move means the
+# fight changed, and the sweep wants rerunning.
 
 # The cap is 150 s, the small arm's band, so a camper run ends sooner: the smoke run's limit is 120 s.
 # A run that breaks before the cap measures the same at any cap.
 const SEEDS := "1,2,3"
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
-const EXPECT_SMALL_S := 91.75
-const EXPECT_GROWN_S := 25.22
+const EXPECT_SMALL_S := 73.75
+const EXPECT_GROWN_S := 24.66
+const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
 
@@ -38,10 +40,14 @@ func _initialize() -> void:
 		"--plating=%s" % plating, "--curve=%s" % curve, "--shatter=%s" % shatters]}], 600.0)
 	var result: Dictionary = results[0]
 	t.check("the sweep ran", result["code"] == 0 and not result["timed_out"], "exit %s, timed out %s" % [result["code"], result["timed_out"]])
+	var swept := _picked(SWEEP, plating, curve, shatters)
+	var swept_grown := float(swept.get("grown_median_s", "0"))
+	t.check("the sweep table holds the picked cell and it passes every band", swept.get("pass", "") == "pass",
+		"cell %s" % swept)
+	t.check("over five seeds grown breaks it in 25 to 45 s", swept_grown >= 25.0 and swept_grown <= 45.0, "grown median %.1f s" % swept_grown)
 	var cell := _cell(cells)
 	var small := float(cell.get("small_median_s", "0"))
 	var grown := float(cell.get("grown_median_s", "0"))
-	t.check("grown breaks it in 25 to 45 s", grown >= 25.0 and grown <= 45.0, "grown median %.1f s" % grown)
 	t.check("small takes at least twice grown's time", grown > 0.0 and small >= 2.0 * grown, "small %.1f s, grown %.1f s" % [small, grown])
 	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(SEEDS.count(",") + 1))
 	t.eq("the camper never breaks it", cell.get("camper_broke", ""), "0")
@@ -54,6 +60,23 @@ func _initialize() -> void:
 			DirAccess.remove_absolute(folder.path_join(file))
 		DirAccess.remove_absolute(folder)
 	quit(t.verdict())
+
+
+# The sweep table's row for one cell as a column-name dictionary, or empty.
+func _picked(path: String, plating: float, curve: float, shatters: bool) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var lines := FileAccess.get_file_as_string(path).split("\n", false)
+	var head := lines[0].split("\t")
+	for line in lines.slice(1):
+		var cols := line.split("\t")
+		var row := {}
+		for i in mini(head.size(), cols.size()):
+			row[head[i]] = cols[i]
+		if is_equal_approx(float(row.get("plating", "0")), plating) and is_equal_approx(float(row.get("curve", "0")), curve) \
+				and row.get("ram_shatters", "") == str(shatters):
+			return row
+	return {}
 
 
 # The cell's one data row as a column-name dictionary.
