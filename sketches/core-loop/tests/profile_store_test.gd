@@ -6,6 +6,7 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const FIXTURES := "res://tests/fixtures/profile/"
 const DIR := "user://profile_store_test/"
+const KNOWN_FIELDS := ["schema", "generation", "pilots", "worlds", "achievements", "cosmetics", "equipped", "stats", "last_pilot"]
 
 var _t := T.new("profile_store_test")
 var _n := 0
@@ -20,8 +21,15 @@ func _initialize() -> void:
 	_rule_4_older()
 	_rule_5_unknown_kept()
 	_rule_6_wrong_type()
+	_rule_6_every_known_field()
 	_interrupted_save()
 	_earn_and_idempotence()
+	_save_needs_a_load()
+	_two_stores_one_path()
+	_merge_is_pure()
+	_second_backup_kept()
+	_numbers_round_trip()
+	_errors_name_their_cause()
 	_fixtures()
 	_source_is_clean()
 	quit(_t.verdict())
@@ -51,6 +59,7 @@ func _bytes(file_path: String) -> PackedByteArray:
 func _round_trip() -> void:
 	var path := _fresh_path()
 	var p := Profile.new(path)
+	p.load_profile()
 	p.unlock_pilot("runner_gunner")
 	p.unlock_world("orchard")
 	p.unlock_cosmetic("paint_verdigris")
@@ -119,10 +128,12 @@ func _rule_4_older() -> void:
 	_t.check("A2-2 rule 4 no backup before save", not FileAccess.file_exists(path + ".v0"))
 	_t.check("A2-2 rule 4 saves", p.save())
 	_t.check("A2-2 rule 4 backup holds original", _bytes(path + ".v0") == original)
+	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
+	_t.check("A2-2 rule 4 file is schema 1", saved is Dictionary and saved.get("schema") == Profile.SCHEMA and saved.get("generation") == 1 and not FileAccess.file_exists(path + ".v1"), str(saved))
+	_t.check("A2-2 rule 4 resave keeps the same backup", p.save() and _bytes(path + ".v0") == original and not FileAccess.file_exists(path + ".v0.1"))
 	var q := Profile.new(path)
 	q.load_profile()
-	_t.check("A2-2 rule 4 file is schema 1", q.has_pilot("runner_gunner") and q.generation() == 1 and not FileAccess.file_exists(path + ".v1"))
-	_t.check("A2-2 rule 4 backup kept once", q.save() and _bytes(path + ".v0") == original)
+	_t.check("A2-2 rule 4 current file needs no backup", q.save() and not FileAccess.file_exists(path + ".v1") and _bytes(path + ".v0") == original and not FileAccess.file_exists(path + ".v0.1"))
 
 
 func _rule_5_unknown_kept() -> void:
@@ -155,9 +166,27 @@ func _rule_6_wrong_type() -> void:
 	_t.check("A2-2 rule 6 last_pilot type", not q.load_profile() and FileAccess.file_exists(text_path + ".bad"))
 
 
+func _rule_6_every_known_field() -> void:
+	var wrong := {
+		"schema": "one", "generation": "two", "pilots": "runner_gunner", "worlds": [4], "cosmetics": {"a": "b"},
+		"achievements": {"a": "late"}, "equipped": {"a": 4}, "stats": {"a": "many"}, "last_pilot": 4,
+	}
+	for field in KNOWN_FIELDS:
+		_t.check("F3-4 rule 6 has a case for %s" % field, wrong.has(field))
+		var doc := {"schema": Profile.SCHEMA}
+		doc[field] = wrong.get(field)
+		var path := _fresh_path()
+		var bytes := JSON.stringify(doc).to_utf8_buffer()
+		_write(path, bytes)
+		var p := Profile.new(path)
+		_t.check("F3-4 rule 6 %s refused" % field, not p.load_profile() and p.can_save and not p.last_error.is_empty(), p.last_error)
+		_t.check("F3-4 rule 6 %s quarantined whole" % field, not FileAccess.file_exists(path) and _bytes(path + ".bad") == bytes)
+
+
 func _interrupted_save() -> void:
 	var path := _fresh_path()
 	var p := Profile.new(path)
+	p.load_profile()
 	p.unlock_pilot("runner_gunner")
 	p.save()
 	_write(SafeStore.tmp_path(path), "{half a sav".to_utf8_buffer())
@@ -172,6 +201,7 @@ func _interrupted_save() -> void:
 
 func _earn_and_idempotence() -> void:
 	var p := Profile.new(_fresh_path())
+	p.load_profile()
 	_t.check("A2-4 first earn", p.earn("rout_brindle", 10.0))
 	_t.check("A2-4 second earn", not p.earn("rout_brindle", 20.0))
 	_t.check("A2-4 first time kept", p.earn("other", 1.0) and p._doc["achievements"]["rout_brindle"] == 10.0)
@@ -181,6 +211,162 @@ func _earn_and_idempotence() -> void:
 		p.unlock_cosmetic("paint_verdigris")
 		p.equip("runner_gunner", "paint", "paint_verdigris")
 	_t.check("A2-4 lists do not grow", p._doc["pilots"].size() == 1 and p._doc["worlds"].size() == 1 and p._doc["cosmetics"].size() == 1 and p._doc["equipped"].size() == 1)
+
+
+func _save_needs_a_load() -> void:
+	var cases := {
+		"newer-schema": _bytes(FIXTURES + "future.json"),
+		"unparseable": _bytes(FIXTURES + "broken.json"),
+		"good": JSON.stringify({"schema": 1, "generation": 7, "pilots": ["keeper"]}).to_utf8_buffer(),
+	}
+	for label in cases:
+		var path := _fresh_path()
+		_write(path, cases[label])
+		var files := DirAccess.get_files_at(DIR).size()
+		var p := Profile.new(path)
+		p.unlock_pilot("runner_gunner")
+		p.earn("rout_brindle", 5.0)
+		p.add_stat("runs")
+		p.equip("runner_gunner", "paint", "paint_verdigris")
+		p.set_last_pilot("runner_gunner")
+		_t.check("F3-1 %s: save before load refused" % label, not p.save() and not p.last_error.is_empty(), p.last_error)
+		_t.check("F3-1 %s: bytes unchanged" % label, _bytes(path) == cases[label])
+		_t.check("F3-1 %s: nothing else written" % label, DirAccess.get_files_at(DIR).size() == files, str(DirAccess.get_files_at(DIR)))
+	var fresh := Profile.new(_fresh_path())
+	_t.check("F3-1 missing file: save before load refused", not fresh.save() and not FileAccess.file_exists(fresh.path))
+
+
+func _two_stores_one_path() -> void:
+	var path := _fresh_path()
+	var seed_store := Profile.new(path)
+	seed_store.load_profile()
+	seed_store.unlock_pilot("base")
+	seed_store.set_stat("runs", 3.0)
+	seed_store.save()
+	var start := seed_store.generation()
+	var a := Profile.new(path)
+	var b := Profile.new(path)
+	a.load_profile()
+	b.load_profile()
+	a.unlock_pilot("pilot_x")
+	a.earn("shared_deed", 40.0)
+	a.set_stat("runs", 9.0)
+	a.set_last_pilot("pilot_x")
+	_t.check("F3-2 A saves", a.save(), a.last_error)
+	b.unlock_cosmetic("paint_y")
+	b.earn("shared_deed", 70.0)
+	b.set_stat("runs", 5.0)
+	b.set_last_pilot("base")
+	_t.check("F3-2 B saves", b.save(), b.last_error)
+	var c := Profile.new(path)
+	c.load_profile()
+	_t.check("F3-2 third store has both unlocks", c.has_pilot("pilot_x") and c.has_cosmetic("paint_y") and c.has_pilot("base"))
+	_t.eq("F3-2 generation is 2 above start", c.generation(), start + 2)
+	_t.check("F3-2 earlier achievement time kept", c._doc["achievements"]["shared_deed"] == 40, str(c._doc["achievements"]))
+	_t.near("F3-2 larger stat kept", c.stat("runs"), 9.0)
+	_t.eq("F3-2 saver's last pilot wins", c.last_pilot(), "base")
+	_t.check("F3-2 B holds the merged result", b.has_pilot("pilot_x") and b.generation() == start + 2)
+	var d := Profile.new(path)
+	d.load_profile()
+	d.unlock_world("orchard")
+	var future_bytes := _bytes(FIXTURES + "future.json")
+	_write(path, future_bytes)
+	_t.check("F3-2 newer schema since load refuses", not d.save() and _bytes(path) == future_bytes and d.last_error.contains("newer build"), d.last_error)
+	var broken_bytes := _bytes(FIXTURES + "broken.json")
+	_write(path, broken_bytes)
+	_t.check("F3-2 unreadable since load refuses", not d.save() and _bytes(path) == broken_bytes and d.last_error.contains("cannot be read"), d.last_error)
+	_t.check("F3-2 refusal leaves no quarantine", not FileAccess.file_exists(path + ".bad"))
+	var late := _fresh_path()
+	var e := Profile.new(late)
+	e.load_profile()
+	e.unlock_pilot("mine")
+	_write(late, _bytes(FIXTURES + "v0.json"))
+	_t.check("F3-2 older file that appeared since load is merged", e.save() and e.has_pilot("runner_gunner") and e.has_pilot("mine"), e.last_error)
+	_t.check("F3-2 and its bytes are kept as a backup", _bytes(late + ".v0") == _bytes(FIXTURES + "v0.json"))
+
+
+func _merge_is_pure() -> void:
+	var ours := {
+		"schema": 1, "generation": 4, "pilots": ["a"], "worlds": [], "cosmetics": ["c1"], "achievements": {"x": 10, "y": 50},
+		"equipped": {"a/paint": "c1"}, "stats": {"runs": 2, "wins": 9}, "last_pilot": "a", "shared": "ours",
+	}
+	var theirs := {
+		"schema": 1, "generation": 6, "pilots": ["b", "a"], "worlds": ["w"], "cosmetics": ["c2"], "achievements": {"x": 20, "y": 30, "z": 5},
+		"equipped": {"b/paint": "c2"}, "stats": {"runs": 7, "wins": 1, "kills": 3}, "last_pilot": "b", "shared": "theirs", "only_theirs": {"k": 1},
+	}
+	var ours_before := ours.duplicate(true)
+	var theirs_before := theirs.duplicate(true)
+	var merged := Profile.merge(ours, theirs)
+	_t.check("F3-2 merge leaves its inputs alone", ours == ours_before and theirs == theirs_before)
+	_t.eq("F3-2 merge lists are the union", [merged["pilots"], merged["worlds"], merged["cosmetics"]], [["a", "b"], ["w"], ["c1", "c2"]])
+	_t.eq("F3-2 merge keeps the earliest time", merged["achievements"], {"x": 10, "y": 30, "z": 5})
+	_t.eq("F3-2 merge keeps the larger stat", merged["stats"], {"runs": 7, "wins": 9, "kills": 3})
+	_t.check("F3-2 merge takes the saver's equipped and last pilot", merged["equipped"] == {"a/paint": "c1"} and merged["last_pilot"] == "a")
+	_t.check("F3-2 merge keeps their unknown key but not over ours", merged["only_theirs"] == {"k": 1} and merged["shared"] == "ours")
+	_t.eq("F3-2 merge generation is the larger", merged["generation"], 6)
+	_t.eq("F3-2 merge is the same both times", Profile.merge(ours, theirs), merged)
+
+
+func _second_backup_kept() -> void:
+	var path := _copy_fixture("v0.json")
+	var first := _bytes(path)
+	var p := Profile.new(path)
+	p.load_profile()
+	p.save()
+	var second := '{"pilots": ["someone_else"], "legacy_note": "different"}'.to_utf8_buffer()
+	_write(path, second)
+	var q := Profile.new(path)
+	q.load_profile()
+	_t.check("F3-3 second v0 saves", q.save(), q.last_error)
+	_t.check("F3-3 both originals recoverable", _bytes(path + ".v0") == first and _bytes(path + ".v0.1") == second)
+	_write(path, second)
+	var r := Profile.new(path)
+	r.load_profile()
+	r.save()
+	_t.check("F3-3 identical backup is not repeated", not FileAccess.file_exists(path + ".v0.2"))
+	var third := '{"pilots": ["third"]}'.to_utf8_buffer()
+	_write(path, third)
+	var s := Profile.new(path)
+	s.load_profile()
+	s.save()
+	_t.check("F3-3 third different file counts up", _bytes(path + ".v0.2") == third)
+
+
+func _numbers_round_trip() -> void:
+	var path := _fresh_path()
+	var p := Profile.new(path)
+	p.load_profile()
+	p.earn("deed", 1790000000.9)
+	p.set_stat("big", 1790000000.0)
+	p.set_stat("fraction", 0.1 + 0.2)
+	p.set_stat("long_fraction", 1234567.891234567)
+	p.save()
+	var q := Profile.new(path)
+	q.load_profile()
+	var stored = q._doc["achievements"]["deed"]
+	_t.check("F3-5 time is whole seconds, rounded down", typeof(stored) == TYPE_INT and stored == 1790000000, var_to_str(stored))
+	var text := FileAccess.get_file_as_string(path)
+	_t.check("F3-5 time is written without a fraction", text.contains('"deed": 1790000000\n'), text)
+	_t.check("F3-5 whole stat equal", q.stat("big") == 1790000000.0)
+	_t.check("F3-5 fractional stats equal", q.stat("fraction") == 0.1 + 0.2 and q.stat("long_fraction") == 1234567.891234567, "%s %s" % [q.stat("fraction"), q.stat("long_fraction")])
+
+
+func _errors_name_their_cause() -> void:
+	var never := Profile.new(_fresh_path())
+	never.save()
+	_t.check("F3-5 never loaded names itself", never.last_error.contains("not been loaded"), never.last_error)
+	var future := Profile.new(_copy_fixture("future.json"))
+	future.load_profile()
+	future.save()
+	_t.check("F3-5 newer build named", future.last_error.contains("newer build"), future.last_error)
+	var good := Profile.new(_fresh_path())
+	good.load_profile()
+	good.last_error = "old load error"
+	_t.check("F3-5 successful save clears the error", good.save() and good.last_error.is_empty(), good.last_error)
+	var blocked := Profile.new(_fresh_path())
+	blocked.load_profile()
+	DirAccess.make_dir_recursive_absolute(blocked.path)
+	_t.check("F3-5 failed write names the write", not blocked.save() and not blocked.last_error.contains("newer build") and not blocked.last_error.is_empty(), blocked.last_error)
 
 
 func _fixtures() -> void:
