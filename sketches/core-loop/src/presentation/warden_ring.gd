@@ -2,6 +2,7 @@ extends Node3D
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const WardenBody := preload("res://src/combat/warden.gd")
 
 # The posture Warden's health as a ring on the ground round its foot (LEGIBILITY section 4):
 # four arcs, one per chunk, lit for each chunk left and lost in a fixed order from the start
@@ -12,23 +13,31 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 # so it is freed with it; it reads fight(), chunks_left(), chunk_cracked() and staggered().
 
 const ARCS := BossPosture.CHUNKS
-const GAP_DEGREES := 12.0
+# The ring's inner edge sits CLEARANCE beyond the Warden's own core telegraph radius, read from
+# warden.gd, so the ring and the pulse's hazard ring never overlap. Gaps are centred on the
+# camera's front, back, left and right axes, so from any side the nearest seam faces the
+# camera; each arc sits on a dark backing a little wider than its band, so a lit arc reads on
+# sand and a seam reads as a dark cut.
+const GAP_DEGREES := 20.0
 const START_DEGREES := 0.0
-const OFFSET := 3.4
-const BAND := 1.1
+const CLEARANCE := 0.6
+const BAND := 1.0
+const BACKING := 0.5
 const LIFT := 0.12
 const STEPS := 14
-const CRACK_REACH := 0.9
-const CRACK_SWING := 0.7
-const CRACK_BACKING := 0.75
-const CRACK_MARK := 0.45
-const OUTLINE := 0.22
-const CRACK_AT := [0.12, 0.5, 0.88]
-const PRIORITY := -2
+const CRACK_REACH := 0.55
+const CRACK_SWING := 0.45
+const CRACK_BACKING := 0.5
+const CRACK_MARK := 0.2
+const OUTLINE := 0.2
+const CRACK_AT := [0.08, 0.5, 0.92]
+const PRIORITY := -3
 
 var _warden: Node3D
 var _arc_meshes: Array[MeshInstance3D] = []
 var _edge_meshes: Array[MeshInstance3D] = []
+var _backing_meshes: Array[MeshInstance3D] = []
+var _backing_material: StandardMaterial3D
 var _arc_materials: Array[StandardMaterial3D] = []
 var _crack_back: MeshInstance3D
 var _crack_mark: MeshInstance3D
@@ -42,7 +51,14 @@ func bind(warden: Node3D) -> void:
 	_warden = warden
 	name = "WardenRing"
 	top_level = true
+	_backing_material = _material()
+	_backing_material.render_priority = PRIORITY - 1
 	for i in ARCS:
+		var backing := MeshInstance3D.new()
+		backing.name = "Backing%d" % i
+		backing.material_override = _backing_material
+		add_child(backing)
+		_backing_meshes.append(backing)
 		var mesh := MeshInstance3D.new()
 		mesh.name = "Arc%d" % i
 		var material := _material()
@@ -56,6 +72,7 @@ func bind(warden: Node3D) -> void:
 		add_child(edge)
 		_edge_meshes.append(edge)
 	_back_material = _material()
+	_back_material.render_priority = PRIORITY + 1
 	_mark_material = _material()
 	_crack_back = MeshInstance3D.new()
 	_crack_back.name = "CrackBacking"
@@ -64,7 +81,7 @@ func bind(warden: Node3D) -> void:
 	_crack_mark = MeshInstance3D.new()
 	_crack_mark.name = "CrackMark"
 	_crack_mark.material_override = _mark_material
-	_mark_material.render_priority = PRIORITY + 1
+	_mark_material.render_priority = PRIORITY + 2
 	add_child(_crack_mark)
 	_sync()
 
@@ -153,6 +170,7 @@ func _sync() -> void:
 	var foot := Vector3(_warden.global_position.x, 0.0, _warden.global_position.z)
 	if _built_at.distance_to(foot) > 0.05:
 		_build(foot)
+	_backing_material.albedo_color = crack_backing()
 	for i in ARCS:
 		_arc_materials[i].albedo_color = arc_color(i)
 		_arc_meshes[i].visible = lit(i)
@@ -168,7 +186,7 @@ func _sync() -> void:
 
 
 func _radius() -> float:
-	return float(_warden.radius) + OFFSET
+	return float(WardenBody.CORE_RADIUS) + CLEARANCE + BAND * 0.5
 
 
 func _ground(x: float, z: float) -> float:
@@ -212,8 +230,30 @@ func _build(foot: Vector3) -> void:
 			for v in [p0, p1, q1, p0, q1, q0]:
 				tool.add_vertex(v)
 		_arc_meshes[i].mesh = tool.commit()
+		_backing_meshes[i].mesh = _backing(foot, span, mid)
 		_edge_meshes[i].mesh = _edge(foot, span, mid)
 	_crack_index = -2
+
+
+# The dark plate under an arc: a little wider than the band all round, square ended, so the
+# arc's ends read as a dark cut between two lit pieces.
+func _backing(foot: Vector3, span: Vector2, mid: float) -> ArrayMesh:
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var pad := BACKING * 0.5
+	var turn := pad / mid
+	var from := span.x - turn
+	var to := span.y + turn
+	for s in STEPS:
+		var a0: float = lerpf(from, to, float(s) / STEPS)
+		var a1: float = lerpf(from, to, float(s + 1) / STEPS)
+		var p0 := _point(foot, a0, mid - BAND * 0.5 - pad)
+		var p1 := _point(foot, a0, mid + BAND * 0.5 + pad)
+		var q0 := _point(foot, a1, mid - BAND * 0.5 - pad)
+		var q1 := _point(foot, a1, mid + BAND * 0.5 + pad)
+		for v in [p0, p1, q1, p0, q1, q0]:
+			tool.add_vertex(v)
+	return tool.commit()
 
 
 # A lost arc: only its outline, the plate's empty-pip look.
@@ -239,9 +279,8 @@ func _edge(foot: Vector3, span: Vector2, mid: float) -> ArrayMesh:
 	return tool.commit()
 
 
-# A zigzag across the band at the middle and near both ends of the cracked arc, so one shows
-# from any side even when the body hides the rest, with a wider dark backing strip under it,
-# as the plate's crack mark.
+# A zigzag across the band at the middle of the cracked arc, a thin line in the plate's crack
+# colour on a wider dark strip, as the plate's crack mark. No white.
 func _build_crack() -> void:
 	if _crack_index < 0:
 		return

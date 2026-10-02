@@ -3,6 +3,7 @@ extends SceneTree
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Game := preload("res://src/game.gd")
+const WardenBody := preload("res://src/combat/warden.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
@@ -106,7 +107,7 @@ func _start(table: String) -> bool:
 
 
 # The ring against the warden's facts and the plate's readers, after the ring has run a frame.
-func _state(label: String) -> void:
+func _state(label: String, want_left: int, want_crack: int) -> void:
 	await process_frame
 	await process_frame
 	var ring = _warden.get_node_or_null("WardenRing")
@@ -116,8 +117,8 @@ func _state(label: String) -> void:
 	var open: bool = _warden.staggered()
 	var pips: Array = _plate.pips()
 	_t.eq("%s: lit arcs equal chunks_left" % label, ring.lit_count(), left)
-	var cracked_at: int = left - 1 if _warden.chunk_cracked() else -1
-	_t.eq("%s: the crack sits on the next arc to go exactly when cracked" % label, ring.cracked_arc(), cracked_at)
+	_t.eq("%s: chunks_left is the expected count" % label, left, want_left)
+	_t.eq("%s: the crack sits on the expected arc" % label, ring.cracked_arc(), want_crack)
 	_t.eq("%s: the crack is drawn exactly when cracked" % label, ring.crack_visible(), _warden.chunk_cracked())
 	var colours_ok := true
 	var shown_ok := true
@@ -136,6 +137,65 @@ func _state(label: String) -> void:
 	_t.check("%s: every arc's material holds that colour" % label, shown_ok)
 	_t.check("%s: lit arcs take the open colour exactly while staggered" % label, open == (left > 0 and ring.shown_arc_color(0) == _plate.bar_color() and _plate.bar_color() != BossPlate.pip_color(true)))
 	_t.check("%s: the crack mark is the plate's crack colour" % label, ring.shown_crack_color() == _plate.crack_color() and ring.shown_backing_color() == BossPlate.crack_backing())
+	_t.check("%s: the crack uses no white" % label, not _whitish(ring.shown_crack_color()) and not _whitish(ring.shown_backing_color()))
+	_t.check("%s: the crack's colours are the plate's readers" % label, ring.shown_crack_color() == BossPlate.crack_color_for(open) and ring.shown_backing_color() == BossPlate.crack_backing())
+
+
+func _whitish(c: Color) -> bool:
+	return c.r > 0.9 and c.g > 0.9 and c.b > 0.9
+
+
+# The angles (degrees, 0 to 360) and radii of a mesh's vertices about the ring's origin.
+func _polar(mesh: Mesh) -> Dictionary:
+	var out := {"a0": 1000.0, "a1": -1000.0, "r0": 1000.0, "r1": -1000.0}
+	if mesh == null or mesh.get_surface_count() == 0:
+		return out
+	for v in mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+		var a := fposmod(rad_to_deg(atan2(v.z, v.x)), 360.0)
+		var r := Vector2(v.x, v.z).length()
+		out["a0"] = minf(out["a0"], a)
+		out["a1"] = maxf(out["a1"], a)
+		out["r0"] = minf(out["r0"], r)
+		out["r1"] = maxf(out["r1"], r)
+	return out
+
+
+# The ring's geometry, read from its meshes: four gaps of 20 degrees centred on the camera's
+# axes, a dark backing wider than the band under every arc and every outline, and an inner edge
+# that clears the Warden's own core telegraph by at least 0.6 m.
+func _geometry(ring: Node3D) -> void:
+	var arcs: Array = []
+	for i in BossPosture.CHUNKS:
+		arcs.append(_polar(ring.get_node("Arc%d" % i).mesh))
+	var gaps_ok := true
+	var centred_ok := true
+	for i in BossPosture.CHUNKS:
+		var next: int = (i + 1) % BossPosture.CHUNKS
+		var gap: float = arcs[next]["a0"] - arcs[i]["a1"] + (360.0 if next == 0 else 0.0)
+		if absf(gap - 20.0) > 0.6:
+			gaps_ok = false
+		var mid_gap: float = fposmod(arcs[i]["a1"] + gap * 0.5, 90.0)
+		if mid_gap > 0.5 and mid_gap < 89.5:
+			centred_ok = false
+	_t.check("four gaps of 20 degrees between the arcs", gaps_ok)
+	_t.check("each gap is centred on a camera axis", centred_ok)
+	var backed := true
+	for i in BossPosture.CHUNKS:
+		var back: Dictionary = _polar(ring.get_node_or_null("Backing%d" % i).mesh if ring.has_node("Backing%d" % i) else null)
+		var band: Dictionary = arcs[i]
+		var edge: Dictionary = _polar(ring.get_node("Edge%d" % i).mesh)
+		var wider: bool = back["r0"] < band["r0"] - 0.05 and back["r1"] > band["r1"] + 0.05
+		wider = wider and back["r0"] < edge["r0"] - 0.05 and back["r1"] > edge["r1"] + 0.05
+		wider = wider and back["a0"] < band["a0"] and back["a1"] > band["a1"]
+		if not wider:
+			backed = false
+		_t.check("arc %d has a backing wider than its band and outline" % i, wider)
+	_t.check("every arc has a backing wider than the band", backed)
+	var clear: float = WardenBody.CORE_RADIUS + 0.6
+	var inner := 1000.0
+	for arc in arcs:
+		inner = minf(inner, arc["r0"])
+	_t.check("the inner edge clears the core telegraph radius by 0.6 m (inner %.2f, telegraph %.2f)" % [inner, WardenBody.CORE_RADIUS], inner >= clear - 0.01)
 
 
 func _run() -> void:
@@ -149,28 +209,29 @@ func _run() -> void:
 	_plate.bind(_warden)
 	_player.reset_to(_game.ctx.terrain.drop_point(_warden.global_position.x + 58.0, _warden.global_position.z, 1.5))
 	await _seconds(0.3)
-	await _state("fresh")
+	await _state("fresh", 4, -1)
+	_geometry(_warden.get_node("WardenRing"))
 	await _fill()
 	_t.check("the fight opened", _warden.staggered())
-	await _state("open")
+	await _state("open", 4, -1)
 	_combat.strike(_warden, "stomp", _matched_force())
 	await _frames(2)
-	await _state("cracked and open")
+	await _state("cracked and open", 4, 3)
 	await _seconds(BossPosture.STAGGER_SECONDS + 0.5)
 	_t.check("the stagger ran out", not _warden.staggered())
-	await _state("cracked and closed")
+	await _state("cracked and closed", 4, 3)
 	await _fill()
 	await physics_frame
 	_combat.strike(_warden, "ram", _fast_force())
 	await _frames(2)
 	_t.eq("a shatter leaves three chunks", _warden.chunks_left(), 3)
-	await _state("after one shatter")
+	await _state("after one shatter", 3, -1)
 	await _seconds(0.5)
 	await _fill()
 	await _smash()
 	await _seconds(1.0)
 	_t.eq("a harpoon smash leaves two chunks", _warden.chunks_left(), 2)
-	await _state("after two shatters")
+	await _state("after two shatters", 2, -1)
 	var ring = _warden.get_node_or_null("WardenRing")
 	var warden: Node3D = _warden
 	_plate.unbind()

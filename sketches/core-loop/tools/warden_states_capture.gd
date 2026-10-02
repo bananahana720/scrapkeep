@@ -87,6 +87,10 @@ func _start(table: String) -> void:
 	_game.flow.choose_class(1)
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, _speed: float): _smashed += 1)
 	await _seconds(0.4)
+	if not is_instance_valid(_game.flow.warden):
+		print("warden_states_capture: FAIL (no Warden on the table)")
+		quit(1)
+		return
 	_bind()
 
 
@@ -174,11 +178,30 @@ func _blind() -> void:
 	f.close()
 
 
+# One still from the front while a pulse charges: the ring and the hazard telegraph together.
+# Not part of the blind set. The ball stands inside the Warden's reach so the pulse charges.
+func _charge_shot() -> void:
+	_game.player.reset_to(_ground(14.0))
+	var waited := 0
+	while not _warden._charging and waited < 600:
+		await physics_frame
+		waited += 1
+	_tt.check("a pulse is charging", _warden._charging)
+	await _seconds(0.9)
+	var w: Vector3 = _warden.global_position
+	_cam.global_position = w + SIDES["front"]
+	_cam.look_at(w, Vector3.UP)
+	_cam.current = true
+	for i in 6:
+		await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(_out.path_join("charging_front.png"))
+	print("saved charging_front.png charging=", _warden._charging)
+
+
 func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(_out)
 	await _start(_table)
-	if not _tt.check("a Warden stands on the table", is_instance_valid(_game.flow.warden)):
-		quit(1)
+	if not is_instance_valid(_warden):
 		return
 	for node in root.find_children("*", "CanvasLayer", true, false):
 		node.visible = false
@@ -186,8 +209,6 @@ func _run() -> void:
 	_cam.fov = 56.0
 	_cam.far = 600.0
 	_game.add_child(_cam)
-	if _warden._look != null and "_badge" in _warden._look:
-		_warden._look._badge.visible = false
 	await _shot("fresh")
 	await _fill()
 	await _shot("open")
@@ -204,5 +225,6 @@ func _run() -> void:
 	await _seconds(1.0)
 	await _shot("two_gone")
 	_blind()
+	await _charge_shot()
 	print("warden_states_capture: ", "PASS" if _tt.failures == 0 else "FAIL (%d)" % _tt.failures)
 	quit(1 if _tt.failures > 0 else 0)
