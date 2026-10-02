@@ -79,6 +79,15 @@ func _run() -> void:
 			for i in multi.instance_count:
 				var tr := _instance(batch, i)
 				check(tr.basis.x.normalized().dot(Vector3(Dressing.WIND.x, 0.0, Dressing.WIND.y).normalized()) > 0.999, "all streaks follow one wind direction")
+	var near_ball := 0
+	var near_warden := 0
+	for batch: MultiMeshInstance3D in dressing.batches:
+		if batch.name in ["Pebbles", "ScrapFlakes", "SandTufts"]:
+			for i in batch.multimesh.instance_count:
+				var origin := _instance(batch, i).origin
+				near_ball += 1 if Vector2(origin.x, origin.z).distance_to(Vector2(-80.0, -93.0)) < 20.0 else 0
+				near_warden += 1 if Vector2(origin.x, origin.z).distance_to(game.ctx.terrain.map().beacon) < 20.0 else 0
+	check(near_ball >= 12 and near_warden >= 12, "clutter is dense where the camera looks: " + str(near_ball) + " within 20 m of the play ball, " + str(near_warden) + " of the Warden")
 	check(small_count > 500 and maximum <= 0.20001, "actual placed mesh vertices protrude at most 0.2 m above rollable ground")
 	check(large_count > 0, "broken rocks exist on steep slopes")
 	print("Placed ", small_count, " small props; highest actual protrusion ", maximum, " m; ", large_count, " broken rocks")

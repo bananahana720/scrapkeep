@@ -65,16 +65,30 @@ func _build_props(map, stage: int) -> void:
 	var meshes: Array[Mesh] = [pebble, flake, tuft]
 	var lists := [[], [], []]
 	var rect: Rect2 = map.play_rect
-	for i in 1600:
+	# Debris gathers in drifts around seeded centres, so a stone or a plate reads as a
+	# group at chase range instead of one speck on open sand.
+	var centres: Array[Vector2] = []
+	for i in 800:
+		centres.append(Vector2(_rng.randf_range(rect.position.x, rect.end.x), _rng.randf_range(rect.position.y, rect.end.y)))
+	for i in 18000:
 		var x := _rng.randf_range(rect.position.x, rect.end.x)
 		var z := _rng.randf_range(rect.position.y, rect.end.y)
+		if i % 4 != 0:
+			var centre := centres[_rng.randi() % centres.size()]
+			x = clampf(centre.x + _rng.randfn(0.0, 4.5), rect.position.x, rect.end.x)
+			z = clampf(centre.y + _rng.randfn(0.0, 4.5), rect.position.y, rect.end.y)
 		var at := Vector2(x, z)
-		if _normal(x, z).y < 0.75 or _reserved(at, map, stage):
+		if _normal(x, z).y < 0.72 or _reserved(at, map, stage):
 			continue
 		var kind := i % 3
-		var height := _rng.randf_range(0.045, 0.17) if kind != 1 else _rng.randf_range(0.01, 0.025)
-		var width := _rng.randf_range(0.10, 0.26)
-		var basis := Basis(Vector3.UP, _rng.randf_range(0.0, TAU)).scaled(Vector3(width, height, width))
+		# Low and wide so a stone, plate or tuft still reads at chase-camera range yet
+		# stays under the 0.2 m protrusion ceiling the test pins.
+		var height := _rng.randf_range(0.07, 0.16) if kind != 1 else _rng.randf_range(0.015, 0.03)
+		var width := _rng.randf_range(0.45, 1.0) if kind != 2 else _rng.randf_range(0.3, 0.55)
+		var basis := Basis(Vector3.UP, _rng.randf_range(0.0, TAU))
+		if kind == 1:
+			basis = basis * Basis(Vector3.RIGHT, _rng.randf_range(-0.2, 0.2))
+		basis = basis.scaled(Vector3(width, height, width * (_rng.randf_range(0.5, 1.0) if kind != 2 else 1.0)))
 		var tr := Transform3D(basis, _ground.call(x, z, 0.0))
 		# Bury the bottom on slopes. Check actual mesh vertices, not the nominal size.
 		var protrusion := -INF
@@ -84,18 +98,18 @@ func _build_props(map, stage: int) -> void:
 		tr.origin.y += height - protrusion
 		lists[kind].append(tr)
 	for i in 3:
-		var color: Color = Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.38)
+		var color: Color = Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.10)
 		if i == 1:
-			color = Palette.CHARCOAL.lerp(Palette.SAND, 0.25)
+			color = Palette.CHARCOAL.lerp(Palette.SANDSTONE, 0.45)
 		elif i == 2:
-			color = Palette.SAND.lerp(Palette.CHARCOAL, 0.22)
+			color = Palette.SAND.lerp(Palette.CHARCOAL, 0.18)
 		_batch(["Pebbles", "ScrapFlakes", "SandTufts"][i], meshes[i], lists[i], color, false)
 	var rocks := []
 	for i in 700:
 		var x := _rng.randf_range(-192.0, 192.0)
 		var z := _rng.randf_range(-192.0, 192.0)
 		var at := Vector2(x, z)
-		if rect.grow(10.0).has_point(at) or _normal(x, z).y >= Tuning.MAX_SLOPE_DOT:
+		if rect.grow(10.0).has_point(at) or _normal(x, z).y >= Tuning.MAX_SLOPE_DOT or not _near_flat(at):
 			continue
 		var size := _rng.randf_range(0.75, 1.9)
 		var tr := Transform3D(Basis(Vector3.UP, _rng.randf_range(0.0, TAU)) * Basis.from_scale(Vector3(size, size * 0.7, size * 0.8)), _ground.call(x, z, size * 0.15))
@@ -103,14 +117,23 @@ func _build_props(map, stage: int) -> void:
 	_batch("BrokenRock", _broken_mesh(pebble), rocks, Palette.SANDSTONE.lerp(Palette.CHARCOAL, 0.28), false)
 
 func _reserved(at: Vector2, map, stage: int) -> bool:
-	if at.distance_to(map.beacon) < 34.0 or at.distance_to(map.spawn) < 12.0 or at.distance_to(map.vault) < 10.0:
+	if at.distance_to(map.beacon) < 4.0 or at.distance_to(map.spawn) < 6.0 or at.distance_to(map.vault) < 8.0:
 		return true
 	for line in map.scrap_lines:
-		if at.distance_to(Geometry2D.get_closest_point_to_segment(at, line[0], line[1])) < 7.0:
+		if at.distance_to(Geometry2D.get_closest_point_to_segment(at, line[0], line[1])) < 2.5:
 			return true
 	for row in Interactables.PLACEMENTS.get(stage, []):
-		if at.distance_to(row.at) < 12.0:
+		if at.distance_to(row.at) < 7.0:
 			return true
+	return false
+
+# Broken rock belongs at the foot of a cliff, never up on its face.
+func _near_flat(at: Vector2) -> bool:
+	for k in 12:
+		for reach: float in [3.0, 6.0]:
+			var probe: Vector2 = at + Vector2.from_angle(k * TAU / 12.0) * reach
+			if _normal(probe.x, probe.y).y > 0.8:
+				return true
 	return false
 
 func _normal(x: float, z: float) -> Vector3:
@@ -168,7 +191,10 @@ func _batch(label: String, mesh: Mesh, transforms: Array, color: Color, air: boo
 	view.set_meta("instance_buffer", buffer)
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	view.visibility_range_end = 50.0 if label != "BrokenRock" else 130.0
+	# A visibility range is measured to the batch's bounds centre, not to each instance,
+	# so one range hid every prop batch whose bounds span the whole map. Frustum culling
+	# alone limits these batches; only the camera-anchored motes keep a range.
+	view.visibility_range_end = 50.0 if air and label == "DustMotes" else 0.0
 	add_child(view)
 	batches.append(view)
 	_materials.append(material)
@@ -190,7 +216,7 @@ func _build_streaks(map) -> void:
 	var transforms := []
 	var rect: Rect2 = map.play_rect
 	var wind_angle := atan2(-WIND.y, WIND.x)
-	for i in 260:
+	for i in 800:
 		var x := _rng.randf_range(rect.position.x, rect.end.x)
 		var z := _rng.randf_range(rect.position.y, rect.end.y)
 		# Both ends of the 3 m drift remain on open, almost level ground.
@@ -232,26 +258,58 @@ func _update_protection(camera: Camera3D = null) -> void:
 	var objects := get_tree().get_nodes_in_group("enemy")
 	objects.append_array(get_tree().get_nodes_in_group("telegraph"))
 	objects.append(ctx.player.body())
+	var scrap := []
 	if ctx.build != null and ctx.build.get("scrap") != null:
-		objects.append_array(ctx.build.scrap.get_children())
+		scrap = ctx.build.scrap.get_children()
 	for object in objects:
-		if not object is Node3D or not object.is_visible_in_tree():
-			continue
-		var reach := 2.5
-		if object.is_in_group("telegraph"):
-			reach = maxf(3.0, maxf(object.radius, object.length + object.width))
-		var area := protection_rect(camera, object.global_position, reach)
-		if area.z >= 0.0:
-			rects.append(area)
+		_add_rect(rects, camera, object)
+	# Actors and threats are never dropped: if they alone overflow, hide the dressing.
 	if rects.size() > 64:
 		visible = false
 		return
+	# Scrap fills the remaining slots nearest the camera first, so a long scrap line
+	# cannot hide the whole ground dressing.
+	scrap = scrap.filter(func(piece): return piece is Node3D and piece.is_visible_in_tree())
+	scrap.sort_custom(func(a, b): return a.global_position.distance_squared_to(camera.global_position) < b.global_position.distance_squared_to(camera.global_position))
+	for piece in scrap:
+		if rects.size() >= 64:
+			break
+		_add_rect(rects, camera, piece)
 	var count := rects.size()
 	while rects.size() < 64:
 		rects.append(Vector4(-1.0, -1.0, -1.0, -1.0))
 	for material in _materials:
 		material.set_shader_parameter("protected_count", count)
 		material.set_shader_parameter("protected_rects", rects)
+
+func _add_rect(rects: Array[Vector4], camera: Camera3D, object: Node) -> void:
+	if not object is Node3D or not object.is_visible_in_tree():
+		return
+	if object.is_in_group("telegraph"):
+		_add_telegraph(rects, camera, object)
+		return
+	var area := protection_rect(camera, object.global_position, 2.5)
+	if area.z >= 0.0:
+		rects.append(area)
+
+# A telegraph's node origin is not where it is drawn: use its centre. A hostile threat
+# keeps its whole footprint clear. A harmless field (the Warden's lift) clears only its
+# edge, so the ground inside it keeps its clutter.
+func _add_telegraph(rects: Array[Vector4], camera: Camera3D, object: Node) -> void:
+	var middle: Vector3 = object.center
+	var reach := 3.0
+	var points: Array[Vector3] = []
+	if object.is_hostile() or object.shape != 0:
+		reach = maxf(3.0, maxf(object.radius, object.length + object.width))
+		points.append(middle)
+	else:
+		var steps := clampi(int(TAU * object.radius / 5.0), 8, 20)
+		for k in steps:
+			points.append(middle + Vector3(cos(k * TAU / steps), 0.0, sin(k * TAU / steps)) * object.radius)
+	for point in points:
+		var area := protection_rect(camera, point, reach)
+		if area.z >= 0.0:
+			rects.append(area)
 
 static func protection_rect(camera: Camera3D, at: Vector3, reach: float) -> Vector4:
 	if camera.is_position_behind(at):

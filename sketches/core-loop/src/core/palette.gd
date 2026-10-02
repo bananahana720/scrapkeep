@@ -252,6 +252,10 @@ static func target_surface_material(role: String, original: Material) -> ShaderM
 	mat.set_shader_parameter("base_color", target_base_color(role, original))
 	if role == "ground":
 		mat.set_shader_parameter("rock_color", SANDSTONE)
+		var floor_map = original.get_shader_parameter("floor_map") if original is ShaderMaterial else null
+		if floor_map != null:
+			mat.set_shader_parameter("floor_map", floor_map)
+			mat.set_shader_parameter("has_floor_map", true)
 	mat.resource_name = "target_" + role
 	_target_surfaces[key] = mat
 	return mat

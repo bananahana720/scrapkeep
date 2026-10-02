@@ -2022,3 +2022,14 @@ ripples. The coordinator checks hue/value against high, ripple/strata/seam scale
 patch removal, masking around feet and pickups, mote/streak opacity, shimmer at
 speed and the target-versus-high GPU delta. Native shader backend compilation and
 all of those image/playing judgments remain outside headless acceptance.
+
+## Target look, round 4 (rendered and viewed)
+
+Round 4's writer could render. The causes found by looking, not by test:
+
+- Every prop batch was invisible. A `visibility_range_end` is measured to the batch's bounds centre, and a map-wide batch's centre sat over 100 m from the camera. Props now rely on frustum culling; only the camera-anchored motes keep a range.
+- Sand was pale and blue-grey in shadow because `target_ground` ignored the floor map and the baked vertex tint. It now uses both (the floor map comes from the original ground material) so the mean colour sits within CIE76 1.3 of `high`.
+- Ripples and drift are weighted by flatness (zero at 15 degrees and above); steep faces take strata that follow height (bright lip, dark undercut, cracks).
+- Debris gathers in seeded drifts, is wide and low (protrusion stays under 0.2 m), and broken rock only stands at a cliff foot.
+- Scrap protection rects fill the slots actors and threats leave, nearest the camera first; actor and threat overflow still hides the dressing. A harmless telegraph protects its edge, not its whole disc.
+- `tools/still_compare.gd` prints per-rectangle mean colour and CIE76 distance between two stills.
