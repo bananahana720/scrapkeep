@@ -274,6 +274,9 @@ static func target_surface_material(role: String, original: Material) -> ShaderM
 				mat.set_shader_parameter("stone_dark", SANDSTONE.lerp(RUST, 0.38))
 				mat.set_shader_parameter("iron_color", RUST.lerp(SANDSTONE, 0.4))
 				mat.set_shader_parameter("varnish_color", RUST.lerp(CHARCOAL, 0.6))
+				if variant == 4:
+					mat.set_shader_parameter("tex_tone", load("res://assets/textures/ground/lkg_tone_c.png"))
+					mat.set_shader_parameter("tex_grain", load("res://assets/textures/ground/lkg_grain_d.png"))
 			else:
 				mat.shader = preload("res://assets/shaders/target_ground.gdshader")
 		"rock":
