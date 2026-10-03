@@ -2637,3 +2637,15 @@ Base `d939492`. Each stage row (`stage_defs.gd`, `slice_defs.gd`, `two_world_def
 - **`Roster.is_boss_piece(kind)`** is true when `kind` begins with a `Worlds.BOSSES` row's `kind` plus `_`. `combat.gd` `_target_class_of_kind` and `enemy.gd` `_ordinary_reaction` call it. `enemy.gd` preloads roster inline because its subclasses each declare a `Roster` constant.
 - **Test.** `tests/combat_worlds_test.gd` (36 checks). With `warden_spec` ignoring the row, the stage-4 and stage-5 checks fail; restored, it passes.
 - **Not done here.** `director.gd`'s `FAMILY_ANCIENT` array still indexes by stage without a clamp; `boss_target.gd` still builds `brindle_` kinds.
+
+## Unit P1: achievements earn themselves from what happens in play, 2026-10-02
+
+Base `d939492`. `src/core/progress.gd` is a Node like `run_log.gd`: `setup(events, run, profile, now := Callable())`. It connects once to each signal an `Achievements.ROWS` row names, plus `world_entered`, `run_started`, `player_died` and `run_ended`, with a handler of the signal's arity, and packs the arguments by the names in `get_signal_list()`.
+
+- **Match and count.** Every `where` key must equal the fact's value. `sum` adds the named argument instead of 1. Counts are lifetime, in profile stats as `ach.<id>` through `add_stat`. A row already earned is skipped.
+- **Need, min, max.** Read `run.summary()` at the moment of the fact (`parts` by size) or an evaluator key: `class` is `run.class_id()`, `won` is `run_ended`'s argument (false before it and after), `world` is the last `world_entered` (0 before one). A `need` with no bound passes when the value is non-empty, true or non-zero.
+- **Earn.** `profile.earn(id, now)` once, reward applied (`pilot`, `cosmetic`, `world`), `save()`, then `achievement_earned(id)` on the bus. A failed save keeps the earn in memory, `push_warning`s `profile.last_error`, counts in `Progress.warnings` and still emits. `player_died` and `run_ended` also save when the profile can.
+- **Event row.** `achievement_earned` has a quiet amber star row (priority 0, `ui_tick`) and sits in `GRAMMAR_SIGNALS` until the toast unit gives it a listener and a tune. This changes `EventKinds.ROWS`, so `attack_rows_test`'s `ROWS_HASH` was re-pinned (3685590879 to 2505535723).
+- **Test seam.** `Progress.rows` (default `Achievements.ROWS`) can be set before `setup`; the shipped table has no `sum`, `class` or `world` row, so `progress_bus_test` supplies its own for those.
+- **Not wired.** `game.gd` and the context do not hold a profile or a Progress yet. `enemy_killed` carries `kind == "brindle"` when Brindle dies: `boss.gd` calls `ctx.run.record_kill("brindle", at, 0)`.
+- **Test.** `tests/progress_bus_test.gd` (30 checks) on a real `Game` bus, profiles under `storage_dir`. Red: with the once-only guards removed the second `beacon_unsealed` announces `warden_broken` twice and P1-1 fails; restored, it passes.
