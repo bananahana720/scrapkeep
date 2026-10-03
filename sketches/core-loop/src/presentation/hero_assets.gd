@@ -10,6 +10,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
 const PILOTS := {
 	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
 	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
@@ -75,6 +76,8 @@ const SLOTS := {
 }
 
 var ctx
+# The profile whose equipped paint colours the player's shell; null means no paint anywhere.
+var profile = null
 var _materials := {}
 var _scenes := {}
 var _meshes := {}
@@ -90,6 +93,8 @@ var _reaction_connections: Array = []
 
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
+	if ctx != null and ctx.get("profile") != null:
+		profile = ctx.get("profile")
 	name = "HeroAssets"
 	_connect_pilot_events()
 	_prewarm_warden_strokes()
@@ -160,6 +165,7 @@ void fragment() {
 		return glass
 	var spec: Dictionary = SLOTS[slot]
 	var color: Color = tint if spec.has("from") else spec["color"]
+	var paint_tint := slot == "paint" and tint != Color.WHITE
 	color = color.lerp(Color.WHITE, spec.get("lighten", 0.0))
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = slot
@@ -194,7 +200,8 @@ void fragment() {
 			# Plate maps average darker than the old neutral value noise; lift them once here
 			# instead of tinting twice.
 			if slot == "paint":  # lift once, not a second tint
-				mat.albedo_color = Color(1.2, 1.2, 1.2, mat.albedo_color.a)
+				var lift := Color(1.2, 1.2, 1.2) * (tint if paint_tint else Color.WHITE)
+				mat.albedo_color = Color(lift.r, lift.g, lift.b, mat.albedo_color.a)
 		else:
 			mat.albedo_texture = Palette.painted_texture(128)
 			mat.uv1_triplanar = true
@@ -231,6 +238,8 @@ func paint(root: Node, tints: Dictionary) -> void:
 					_warn_once(slot, "hero_assets: unknown material slot '%s'" % slot)
 					continue
 				var from: String = SLOTS[slot].get("from", "")
+				if slot == "paint":
+					from = "paint"
 				mi.set_surface_override_material(i, material(slot, tints.get(from, Color.WHITE)))
 				if slot == "glass":
 					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -281,10 +290,41 @@ static func class_id(player: Node) -> String:
 	return def.id if def != null and SHELLS.has(def.id) else DEFAULT_CLASS
 
 
+# The tint an equipped paint gives a pilot's shell, or null for none. A paint applies only
+# when its row is a paint for this pilot (or any) with a tint, and the profile owns it or the
+# row is a starter. Anything else warns once per id and leaves the shell as it is.
+func paint_tint(pilot: String, paint_id: String):
+	var row: Dictionary = Cosmetics.row(paint_id)
+	var why := ""
+	if paint_id == "":
+		why = "no id"
+	elif row.is_empty():
+		why = "unknown id"
+	elif row.get("slot", "") != "paint":
+		why = "not a paint slot"
+	elif row.get("pilot", "") != "" and row.get("pilot", "") != pilot:
+		why = "belongs to another pilot"
+	elif not row.has("tint"):
+		why = "no tint"
+	elif profile != null and not (row.get("starter", false) or profile.has_cosmetic(paint_id)):
+		why = "not owned"
+	if why != "":
+		_warn_once("paint:" + paint_id, "hero_assets: paint '%s' ignored (%s)" % [paint_id, why])
+		return null
+	return row["tint"]
+
+
+func _equipped_paint(id: String) -> String:
+	if profile == null:
+		return ""
+	return profile.equipped(id, "paint")
+
+
 func _fit(rec: Dictionary) -> void:
 	var player: Node3D = rec["player"]
 	var id := class_id(player)
-	if rec["class"] == id:
+	var paint_id := _equipped_paint(id)
+	if rec["class"] == id and rec.get("paint", "") == paint_id:
 		return
 	for key in ["core", "pod"]:
 		var old = rec[key]
@@ -302,11 +342,16 @@ func _fit(rec: Dictionary) -> void:
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
 	var tints := {"class": player.class_color()}
+	if paint_id != "":
+		var tint = paint_tint(id, paint_id)
+		if tint != null:
+			tints["paint"] = tint
 	paint(core, tints)
 	paint(pod, tints)
 	rolling.add_child(core)
 	player.juice_node().add_child(pod)
 	rec["class"] = id
+	rec["paint"] = paint_id
 	rec["core"] = core
 	rec["pod"] = pod
 	_fit_pilot(rec)

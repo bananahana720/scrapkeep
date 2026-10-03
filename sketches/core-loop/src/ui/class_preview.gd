@@ -40,6 +40,12 @@ var def: Resource
 var open := 0.0
 var clock := 0.0
 var ball: Node3D
+# An equipped paint's cosmetic id; colours only the shell's paint slot, never the class accent.
+var paint_id := "":
+	set(value):
+		paint_id = value
+		if _core != null:
+			_paint_shell()
 
 var _viewport: SubViewport
 var _camera: Camera3D
@@ -129,11 +135,21 @@ func _build_shell() -> void:
 		var node := shell.find_child(part, true, false) as Node3D
 		node.get_parent().remove_child(node)
 		node.owner = null
-		_painter.paint(node, {"class": def.color})
 		ball.add_child(node)
 	_core = ball.get_node("Core")
 	_pod = ball.get_node("Pod")
 	shell.free()
+	_paint_shell()
+
+
+func _paint_shell() -> void:
+	var tints := {"class": def.color}
+	if paint_id != "":
+		var tint = _painter.paint_tint(def.id, paint_id)
+		if tint != null:
+			tints["paint"] = tint
+	_painter.paint(_core, tints)
+	_painter.paint(_pod, tints)
 
 
 func _build_props() -> void:
