@@ -15,6 +15,7 @@ const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
@@ -42,6 +43,13 @@ const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
 const TOAST_FONT := {3: 23, 2: 19}
 const TOAST_WORDS := 4
+# An earned achievement's toast: an amber star, "Achievement" and the row's name, 3 s in all
+# (in, hold, out). It sits at the top right, clear of the objective, above the menu screens (layer 8), so one earned as a run ends
+# still reads. While a Warden fight is live it waits, and the queue shows in order.
+const ACH_LAYER := 8
+const ACH_TOTAL := 3.0
+const ACH_TOP := 14.0
+const ACH_WORD := "Achievement"
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
 # How long a world card stands alone before its first stage card replaces it.
@@ -104,6 +112,10 @@ var _toast_icon: TextureRect
 var _toast_label: Label
 var _toast := {}
 var _held_toast := {}
+var _ach_panel: PanelContainer
+var _ach_name: Label
+var _ach_queue: Array[String] = []
+var _ach_entry := {}
 var _lower: Control
 var _restart: Control
 var _health: Control
@@ -201,6 +213,8 @@ func setup(game_ref) -> void:
 	part_name = PartName.new()
 	add_child(part_name)
 
+	_build_ach_toast()
+	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(String(Achievements.row(id).get("name", id))))
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
@@ -220,6 +234,79 @@ func setup(game_ref) -> void:
 		_begin_engagement(false)
 		_armor_peak = ARMOR_PEAK_FLOOR)
 	layout(_screen_size())
+
+
+func _build_ach_toast() -> void:
+	var layer_node := CanvasLayer.new()
+	layer_node.layer = ACH_LAYER
+	add_child(layer_node)
+	_ach_panel = PanelContainer.new()
+	_ach_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ach_panel.visible = false
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
+	plate.border_color = Palette.AMBER
+	plate.set_border_width_all(2)
+	plate.set_corner_radius_all(8)
+	plate.content_margin_left = 16.0
+	plate.content_margin_right = 20.0
+	plate.content_margin_top = 8.0
+	plate.content_margin_bottom = 8.0
+	_ach_panel.add_theme_stylebox_override("panel", plate)
+	layer_node.add_child(_ach_panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ach_panel.add_child(row)
+	var star := TextureRect.new()
+	star.texture = Icons.shape("star")
+	star.modulate = Palette.AMBER
+	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	star.custom_minimum_size = Vector2(TOAST_ICON, TOAST_ICON)
+	star.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(star)
+	var word := _label(18)
+	word.text = ACH_WORD
+	word.add_theme_color_override("font_color", Palette.AMBER)
+	row.add_child(word)
+	_ach_name = _label(TOAST_FONT[3])
+	_ach_name.add_theme_color_override("font_color", Palette.SAND)
+	row.add_child(_ach_name)
+
+
+# The achievement toast on screen (its row's name), then the names still waiting.
+func ach_toasts() -> Array[String]:
+	var out: Array[String] = []
+	if not _ach_entry.is_empty():
+		out.append(_ach_entry["text"])
+	return out
+
+
+func ach_waiting() -> Array[String]:
+	return _ach_queue.duplicate()
+
+
+# A fight is live while the Warden is engaged and still standing.
+func _fight_live() -> bool:
+	return game.flow != null and game.flow.engaged() and game.flow.sealed
+
+
+func _step_ach(delta: float) -> void:
+	if _ach_entry.is_empty() and not _ach_queue.is_empty() and not _fight_live():
+		_ach_entry = {"text": _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
+		_ach_name.text = _ach_entry["text"]
+		_ach_panel.visible = true
+	if _ach_entry.is_empty():
+		return
+	_ach_entry["left"] -= delta
+	_ach_entry["age"] += delta
+	_ach_panel.modulate.a = clampf(minf(_ach_entry["age"] / TOAST_IN, _ach_entry["left"] / TOAST_OUT), 0.0, 1.0)
+	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, ACH_TOP)
+	if _ach_entry["left"] <= 0.0:
+		_ach_entry = {}
+		_ach_panel.visible = false
 
 
 # Every kind the HUD may toast, for the wording check.
@@ -594,6 +681,7 @@ func _process(delta: float) -> void:
 	if size != _laid_out:
 		layout(size)
 	_step_toast(delta)
+	_step_ach(delta)
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()

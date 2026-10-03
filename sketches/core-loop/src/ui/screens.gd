@@ -9,6 +9,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
+const AchievementsPage := preload("res://src/ui/achievements_page.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
@@ -41,6 +43,7 @@ var _stats: HBoxContainer
 var _choices: HBoxContainer
 var _actions: HBoxContainer
 var _help
+var _achievements
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
@@ -79,6 +82,10 @@ func setup(game_ref) -> void:
 	_help.visible = false
 	_help.back.pressed.connect(_press.bind("key_h"))
 	_content.add_child(_help)
+	_achievements = AchievementsPage.new()
+	_achievements.visible = false
+	_achievements.back.pressed.connect(_press.bind("key_a"))
+	_content.add_child(_achievements)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 
@@ -103,6 +110,7 @@ func _row(separation: int) -> HBoxContainer:
 func _on_flow_changed(state: String) -> void:
 	_state = state
 	_help.visible = false
+	_achievements.visible = false
 	_actions.visible = true
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
@@ -113,6 +121,7 @@ func _on_flow_changed(state: String) -> void:
 			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 			_action("start", "key_space", "Start")
 			_action("help", "key_h", "Help")
+			_action("achievements", "key_a", "Achievements")
 			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
 				_action("breath", "key_b", "")
 			refresh_lab_row()
@@ -124,6 +133,8 @@ func _on_flow_changed(state: String) -> void:
 				var card := ClassCard.new(classes[i], "key_%d" % (i + 1), width)
 				card.pressed.connect(_press.bind(card.key))
 				_choices.add_child(card)
+				card.bind_profile(game.ctx.profile)
+				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
 			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
@@ -152,7 +163,7 @@ func _on_flow_changed(state: String) -> void:
 
 # H on the title swaps its body and actions for the how-to-play page, and back.
 func toggle_help() -> void:
-	if _state != "title":
+	if _state != "title" or _achievements.visible:
 		return
 	_help.visible = not _help.visible
 	_actions.visible = not _help.visible
@@ -167,6 +178,34 @@ func help_open() -> bool:
 	return _help.visible
 
 
+# A on the title swaps its body and actions for the achievements page, and back.
+func toggle_achievements() -> void:
+	if _state != "title" or _help.visible:
+		return
+	_achievements.visible = not _achievements.visible
+	_actions.visible = not _achievements.visible
+	if _achievements.visible:
+		_achievements.refresh(game.ctx.profile, game.progress)
+		_show("ACHIEVEMENTS", Palette.AMBER, "")
+	else:
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_fade(true)
+
+
+func achievements_open() -> bool:
+	return _achievements.visible
+
+
+func achievements_page():
+	return _achievements
+
+
+# The words on a locked pilot's card: what unlocks it, from the achievement row.
+func _unlock_hint(def) -> String:
+	var id := Achievements.for_pilot(def.id)
+	return "Unlock: %s" % Achievements.row(id)["text"] if id != "" else ""
+
+
 # With --music=ace the title's B cycles the Warden open's held breath; the button
 # names what the next run plays.
 func refresh_lab_row() -> void:
@@ -176,10 +215,13 @@ func refresh_lab_row() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not _help.visible or not (event is InputEventKey) or not event.pressed or event.echo:
+	if not (_help.visible or _achievements.visible) or not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	if event.physical_keycode == KEY_ESCAPE:
-		toggle_help()
+		if _help.visible:
+			toggle_help()
+		else:
+			toggle_achievements()
 		get_viewport().set_input_as_handled()
 
 
@@ -279,7 +321,7 @@ func _update_enabled() -> void:
 
 func button_for(action: String) -> Button:
 	if action == "back":
-		return _help.back
+		return _achievements.back if _achievements.visible else _help.back
 	for child in _actions.get_children():
 		if child.action == action:
 			return child

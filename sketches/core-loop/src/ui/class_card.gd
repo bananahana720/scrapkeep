@@ -8,6 +8,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 
 # A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
 # the class colour, the role glyph (the row's shape) and name, the fantasy line, a
@@ -18,6 +20,13 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # Colour and shape come from the class row, keys and icons from class_kit.gd. The frame
 # is scrap (scrap_frame.gd): a riveted plate taped at the top, the role line on a stamped
 # tag, keycaps from mismatched sets; the words, icons and letters stay crisp.
+#
+# A locked pilot (set_locked) keeps the card clickable but wears a slate plate, a dimmed
+# grey preview and a lock where the role glyph sits; its hint, the achievement that
+# unlocks it, shows with the other details when the card is open, and a click shakes it.
+# An unlocked card also shows its paint (bind_profile): a swatch and name over the
+# preview's foot, cycled by a click on the swatch or P while the card is open. The cycle
+# holds only paints this profile owns, plus none, and each pick is saved.
 #
 # The mouse opens a card by hovering it (hover takes focus, so there is one open card).
 # The arrows move focus and Enter or Space picks it; the number keys pick at once
@@ -34,6 +43,45 @@ const CELL_ICON := 40.0
 const CELL_CAP := 26.0
 const MOUSE_CAP := 36.0
 const PIP := 9.0
+const SHAKE := 0.25
+const LOCK_DIM := 0.4
+const NO_PAINT := "No paint"
+const GREY := """shader_type canvas_item;
+uniform float level = 0.4;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	COLOR = vec4(vec3(dot(c.rgb, vec3(0.299, 0.587, 0.114)) * level), c.a);
+}
+"""
+
+
+# A small padlock in the role glyph's slot.
+class LockGlyph extends Control:
+	var tint := Color.WHITE
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		draw_arc(Vector2(w * 0.5, h * 0.4), w * 0.24, PI, TAU, 16, tint, 3.0)
+		draw_line(Vector2(w * 0.26, h * 0.4), Vector2(w * 0.26, h * 0.5), tint, 3.0)
+		draw_line(Vector2(w * 0.74, h * 0.4), Vector2(w * 0.74, h * 0.5), tint, 3.0)
+		draw_rect(Rect2(w * 0.14, h * 0.48, w * 0.72, h * 0.44), tint)
+
+
+# The square paint swatch; a click on it cycles the paint.
+class Swatch extends Control:
+	var color := Color.WHITE
+	var edge := Color.WHITE
+	signal clicked
+
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), color)
+		draw_rect(Rect2(Vector2.ZERO, size), edge, false, 2.0)
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			clicked.emit()
+			accept_event()
 
 var def: Resource
 var key := ""
@@ -43,6 +91,17 @@ var preview
 var _details: Array[CanvasItem] = []
 var _cells: Array = []
 var _serial := 0
+var locked := false
+var hint_text := ""
+var _glyph: TextureRect
+var _lock
+var _hint: Label
+var _paint_row: HBoxContainer
+var _swatch
+var _paint_label: Label
+var _profile
+var _shake := 0.0
+var _styles := {}
 
 
 func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
@@ -60,6 +119,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	add_theme_stylebox_override("focus", _frame(color.lightened(0.35), 4, false))
 	add_theme_stylebox_override("disabled", _frame(Color(color, 0.3), 2))
 	mouse_entered.connect(_on_hover)
+	pressed.connect(_on_pressed)
 	if def == null:
 		return
 	var box := VBoxContainer.new()
@@ -74,6 +134,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	preview = ClassPreview.new(def, Vector2(width - 2.0 * PAD, PREVIEW_H))
 	box.add_child(preview)
 	add_child(_fade(width))
+	_build_overlay(width, color)
 	box.add_child(_name_row(color))
 	var role := _tagged(_text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.8)), color, _serial + 1)
 	box.add_child(role)
@@ -109,12 +170,151 @@ func words() -> String:
 	return "%s, %s. %s" % [def.display_name, ClassKit.role_line(def), ClassKit.fantasy(def)] if def != null else ""
 
 
+# The foot of the preview: the locked hint, or the paint swatch and name. Both are card
+# details, so they read only on the open card and the calm screen keeps its word count.
+func _build_overlay(width: float, color: Color) -> void:
+	var top := PAD + KEY_H + 8.0 + PREVIEW_H - 40.0
+	var span := Vector2(width - 2.0 * PAD, 34.0)
+	_hint = _text("", 15, Color(Palette.SAND, 0.9))
+	_hint.position = Vector2(PAD, top)
+	_hint.size = span
+	_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_hint.visible = false
+	add_child(_hint)
+	_details.append(_hint)
+	_paint_row = HBoxContainer.new()
+	_paint_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_paint_row.add_theme_constant_override("separation", 10)
+	_paint_row.position = Vector2(PAD, top)
+	_paint_row.size = span
+	_paint_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_paint_row.visible = false
+	add_child(_paint_row)
+	_swatch = Swatch.new()
+	_swatch.custom_minimum_size = Vector2(26.0, 26.0)
+	_swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_swatch.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_swatch.clicked.connect(func(): if openness > 0.5: cycle_paint())
+	_paint_row.add_child(_swatch)
+	_paint_label = _text("", 17, Palette.SAND)
+	_paint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_paint_row.add_child(_paint_label)
+	_details.append(_paint_row)
+
+
+# A locked pilot's card: still clickable (the gate refuses it), but slate, grey and quiet.
+func set_locked(is_locked: bool, hint := "") -> void:
+	locked = is_locked
+	hint_text = hint
+	if def == null:
+		return
+	var color: Color = def.color
+	var edge := Palette.SLATE if locked else color
+	if _styles.is_empty():
+		for state in ["normal", "hover", "pressed", "focus"]:
+			_styles[state] = get_theme_stylebox(state)
+	if locked:
+		add_theme_stylebox_override("normal", _frame(Color(edge, 0.7), 2))
+		add_theme_stylebox_override("hover", _frame(edge, 3))
+		add_theme_stylebox_override("pressed", _frame(edge, 3))
+		add_theme_stylebox_override("focus", _frame(edge.lightened(0.3), 4, false))
+	else:
+		for state in _styles:
+			add_theme_stylebox_override(state, _styles[state])
+	_glyph.visible = not locked
+	_lock.visible = locked
+	_hint.text = hint_text if hint_text != "" else "Locked"
+	_hint.visible = locked
+	if locked:
+		var shade := ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = GREY
+		shade.shader = shader
+		shade.set_shader_parameter("level", LOCK_DIM)
+		preview.material = shade
+	else:
+		preview.material = null
+	_paint_row.visible = not locked and _profile != null
+	_apply()
+
+
+# The profile whose owned paints this card may offer. The preview wears the equipped one.
+func bind_profile(profile) -> void:
+	_profile = profile
+	if def == null:
+		return
+	_paint_row.visible = not locked and _profile != null
+	_show_paint()
+
+
+# Paint ids this profile may wear on this pilot, none first: a starter row or a saved one.
+func paint_options() -> Array:
+	var out: Array = [""]
+	for id in Cosmetics.for_slot("paint", def.id):
+		if owns(_profile, id):
+			out.append(id)
+	return out
+
+
+static func owns(profile, id: String) -> bool:
+	var row := Cosmetics.row(id)
+	if row.is_empty() or profile == null:
+		return false
+	return bool(row.get("starter", false)) or profile.has_cosmetic(id)
+
+
+# The equipped paint id, or "" when none or one this profile does not own.
+func paint_shown() -> String:
+	if _profile == null:
+		return ""
+	var id: String = _profile.equipped(def.id, "paint")
+	return id if id != "" and owns(_profile, id) else ""
+
+
+# The next owned paint (or none), equipped and saved.
+func cycle_paint() -> String:
+	if _profile == null or locked:
+		return ""
+	var options := paint_options()
+	var next: String = options[(options.find(paint_shown()) + 1) % options.size()]
+	_profile.equip(def.id, "paint", next)
+	_profile.save()
+	_show_paint()
+	return next
+
+
+func _show_paint() -> void:
+	var id := paint_shown()
+	preview.paint_id = id
+	if id == "":
+		_swatch.color = Color(Palette.SAND, 0.15)
+		_swatch.edge = Color(Palette.SAND, 0.7)
+		_paint_label.text = NO_PAINT
+	else:
+		_swatch.color = Cosmetics.row(id)["tint"]
+		_swatch.edge = Palette.SAND
+		_paint_label.text = Cosmetics.row(id)["name"]
+	_swatch.queue_redraw()
+
+
+func _on_pressed() -> void:
+	if locked:
+		_shake = SHAKE
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P and is_open() and not locked:
+		cycle_paint()
+		accept_event()
+
+
 func _name_row(color: Color) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var glyph := TextureRect.new()
+	_glyph = glyph
 	glyph.texture = Icons.shape(def.shape)
 	glyph.modulate = color
 	glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -122,6 +322,12 @@ func _name_row(color: Color) -> HBoxContainer:
 	glyph.custom_minimum_size = Vector2(28.0, 28.0)
 	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(glyph)
+	_lock = LockGlyph.new()
+	_lock.tint = Palette.SLATE
+	_lock.custom_minimum_size = Vector2(28.0, 28.0)
+	_lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lock.visible = false
+	row.add_child(_lock)
 	var name_label := _text(def.display_name, 30, color)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	row.add_child(name_label)
@@ -248,6 +454,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_shake = maxf(0.0, _shake - delta)
+	rotation = sin(_shake * 70.0) * 0.035 * (_shake / SHAKE)
 	openness = move_toward(openness, 1.0 if is_open() else 0.0, delta * RATE * (0.35 + openness))
 	_apply()
 	queue_redraw()

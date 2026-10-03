@@ -483,6 +483,9 @@ func _screen_key(key: int) -> bool:
 			if key == KEY_H:
 				screens.toggle_help()
 				return true
+			if key == KEY_A:
+				screens.toggle_achievements()
+				return true
 			if key == KEY_B and tuning.option(Tuning.MUSIC_KEY) == "ace":
 				cycle_breath()
 				screens.refresh_lab_row()

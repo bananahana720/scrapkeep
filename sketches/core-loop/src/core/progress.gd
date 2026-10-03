@@ -58,6 +58,19 @@ func setup(events, run, profile, now := Callable()) -> void:
 			_connect(signal_name, arg_names[signal_name])
 
 
+# The saved count toward a row (read-only), for the achievements page.
+func count_of(id: String) -> float:
+	return _profile.stat(STAT_PREFIX + id) if _profile != null else 0.0
+
+
+# When a row was earned, as unix seconds, or 0 if it has not been. profile.gd has no reader
+# for the date, so this reaches its saved document; a profile reader would replace it.
+func earned_at(id: String) -> int:
+	if _profile == null or not _profile.earned(id):
+		return 0
+	return int(_profile.get("_doc")["achievements"].get(id, 0))
+
+
 func _connect(signal_name: String, names: Array) -> void:
 	var sig: Signal = Signal(_events, signal_name)
 	match names.size():
