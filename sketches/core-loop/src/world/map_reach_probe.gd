@@ -65,6 +65,84 @@ func _tunnel_roofs(parent: Node3D, ground: Callable, mat: Material) -> void:
 		body.basis = Basis.looking_at(along.normalized(), Vector3.UP)
 
 
+# Unit LKP: the four sculpted sandstone pieces on the probe ground, behind `--kit=1` (user args).
+# Without the flag build_props is today's. Every piece loads from KIT_PIECES, so a new round of
+# the glbs at the same paths needs no code change. Rows are [piece, x, z, yaw in degrees, scale];
+# the yaw turns the piece's front (-z) to that heading, so yaw 270 faces +x and 180 faces +z.
+# A piece's base sits KIT_SINK below the lowest ground under its footprint. Each piece has a
+# static trimesh collider built from its own mesh at its scale.
+const KIT_PIECES := {
+	"cliff_strata": "res://assets/models/world_one/landforms/sculpted/cliff_strata.glb",
+	"alcove": "res://assets/models/world_one/landforms/sculpted/alcove.glb",
+	"fin_spire": "res://assets/models/world_one/landforms/sculpted/fin_spire.glb",
+	"arch": "res://assets/models/world_one/landforms/sculpted/arch.glb",
+}
+const KIT_SINK := 0.6
+const KIT := [
+	["cliff_strata", -56.0, -91.0, 270.0, 0.62],
+	["cliff_strata", -58.0, -78.0, 266.0, 0.7],
+	["cliff_strata", -57.0, -66.0, 276.0, 0.6],
+	["cliff_strata", -56.5, -57.0, 268.0, 0.55],
+	["alcove", -171.0, -72.0, 270.0, 0.7],
+	["alcove", -170.0, -42.0, 262.0, 0.65],
+	["fin_spire", 108.0, -24.0, 20.0, 0.8],
+	["fin_spire", 109.0, -10.0, 130.0, 1.0],
+	["fin_spire", 107.0, 2.0, 250.0, 0.65],
+	["arch", -52.0, 104.0, 290.0, 1.0],
+	["fin_spire", -58.0, 90.0, 70.0, 0.6],
+	["fin_spire", -46.0, 122.0, 200.0, 0.75],
+]
+
+var _kit_faces := {}
+
+
+static func kit_enabled() -> bool:
+	return "--kit=1" in OS.get_cmdline_args() or "--kit=1" in OS.get_cmdline_user_args()
+
+
+func build_props(parent: Node3D, ground: Callable) -> void:
+	super(parent, ground)
+	if not kit_enabled():
+		return
+	var holder := Node3D.new()
+	holder.name = "Kit"
+	parent.add_child(holder)
+	for i in KIT.size():
+		var row: Array = KIT[i]
+		_place_piece(holder, ground, i, row[0], Vector2(row[1], row[2]), row[3], row[4])
+
+
+func _place_piece(holder: Node3D, ground: Callable, index: int, piece: String, at: Vector2, yaw_deg: float, size: float) -> void:
+	var scene := (load(KIT_PIECES[piece]) as PackedScene).instantiate() as Node3D
+	var views := scene.find_children("*", "MeshInstance3D", true, false)
+	var mesh: Mesh = (views[0] as MeshInstance3D).mesh
+	var box := mesh.get_aabb()
+	var basis := Basis(Vector3.UP, deg_to_rad(yaw_deg))
+	var low := INF
+	for u in range(-2, 3):
+		for v in range(-2, 3):
+			var local := Vector3(u * 0.25 * box.size.x, 0.0, v * 0.25 * box.size.z) * size
+			var w := at + Vector2((basis * local).x, (basis * local).z)
+			low = minf(low, (ground.call(w.x, w.y, 0.0) as Vector3).y)
+	var body := StaticBody3D.new()
+	body.name = "Kit%02d_%s" % [index, piece]
+	body.position = Vector3(at.x, low - KIT_SINK, at.y)
+	body.basis = basis
+	scene.scale = Vector3.ONE * size
+	body.add_child(scene)
+	if not _kit_faces.has(piece):
+		_kit_faces[piece] = mesh.get_faces()
+	var faces := PackedVector3Array(_kit_faces[piece])
+	for k in faces.size():
+		faces[k] *= size
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(faces)
+	var collider := CollisionShape3D.new()
+	collider.shape = shape
+	body.add_child(collider)
+	holder.add_child(body)
+
+
 # A quick strata tint so the stills read as banded rock rather than flat clay: bands by height.
 func _strata(base: Color, h: float, owned: float) -> Color:
 	var band := 0.5 + 0.5 * sin(h * 1.9)
