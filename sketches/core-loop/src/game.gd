@@ -399,6 +399,11 @@ func _on_flow_changed(_state: String) -> void:
 	if keyboard != null:
 		keyboard.enabled = playing
 	_capture_mouse(playing)
+	if playing:
+		# A is jump in play and ui_accept in a menu: nothing may keep focus into play.
+		var holder := get_viewport().gui_get_focus_owner()
+		if holder != null:
+			holder.release_focus()
 
 
 func _register_actions() -> void:
@@ -425,6 +430,17 @@ func _register_actions() -> void:
 			motion.axis = record["axis"][0]
 			motion.axis_value = float(record["axis"][1])
 			InputMap.action_add_event(action, motion)
+	for ui_action in Bindings.UI_PAD:
+		if not InputMap.has_action(ui_action):
+			continue
+		var held := false
+		for old in InputMap.action_get_events(ui_action):
+			if old is InputEventJoypadButton and old.button_index == Bindings.UI_PAD[ui_action]:
+				held = true
+		if not held:
+			var ui_pad := InputEventJoypadButton.new()
+			ui_pad.button_index = Bindings.UI_PAD[ui_action]
+			InputMap.action_add_event(ui_action, ui_pad)
 
 
 # A saved binding replaces only the kinds of input it names: keys and mouse buttons together,
@@ -505,18 +521,31 @@ func set_fullscreen(on: bool) -> void:
 
 
 # The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
-# the screen's primary key (Space; R on death), B on the death screen is N.
+# the screen's primary key (Space; R on death), B on the death screen is N, Y there opens class
+# select and X replays, B on the summary starts a new run. On the title a focused Control or an
+# open overlay keeps A for the GUI (ui_accept presses the focused button; an overlay swallows it).
 func pad_screen_key(event: InputEvent) -> int:
 	if not (event is InputEventJoypadButton) or not event.pressed:
 		return KEY_NONE
 	var state: String = flow.state_name()
 	if event.button_index == JOY_BUTTON_A:
-		if state == "title" or state == "summary":
+		if state == "title":
+			if screens != null and screens.overlay_open():
+				return KEY_NONE
+			if get_viewport().gui_get_focus_owner() != null:
+				return KEY_NONE
+			return KEY_SPACE
+		if state == "summary":
 			return KEY_SPACE
 		if state == "dead":
 			return KEY_R
-	elif event.button_index == JOY_BUTTON_B and state == "dead":
-		return KEY_N
+	elif event.button_index == JOY_BUTTON_B:
+		if state == "dead" or state == "summary":
+			return KEY_N
+	elif event.button_index == JOY_BUTTON_Y and state == "dead":
+		return KEY_C
+	elif event.button_index == JOY_BUTTON_X and state == "dead":
+		return KEY_T
 	return KEY_NONE
 
 

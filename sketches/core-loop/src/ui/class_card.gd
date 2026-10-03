@@ -303,6 +303,10 @@ func _on_pressed() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_X and is_open() and not locked:
+		cycle_paint()
+		accept_event()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P and is_open() and not locked:
 		cycle_paint()
 		accept_event()

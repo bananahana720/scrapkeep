@@ -35,3 +35,12 @@ static func key(root: Window, code: Key) -> void:
 		event.physical_keycode = code
 		event.pressed = pressed
 		root.push_input(event)
+
+
+# A pad button press and release, pushed into the viewport as a real pad would send it.
+static func pad(root: Window, button: int) -> void:
+	for pressed in [true, false]:
+		var event := InputEventJoypadButton.new()
+		event.button_index = button
+		event.pressed = pressed
+		root.push_input(event)

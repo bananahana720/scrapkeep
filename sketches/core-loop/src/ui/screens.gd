@@ -247,10 +247,27 @@ func refresh_lab_row() -> void:
 		breath.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
 
 
+func overlay_open() -> bool:
+	return _help.visible or _achievements.visible
+
+
 func _input(event: InputEvent) -> void:
 	if _settings.visible:
 		if _settings.handle(event):
 			get_viewport().set_input_as_handled()
+		return
+	if overlay_open() and event is InputEventJoypadButton and event.pressed:
+		# B closes the page; A and the rest do nothing, so no press leaks to the title behind.
+		if event.button_index == JOY_BUTTON_B:
+			if _help.visible:
+				toggle_help()
+			else:
+				toggle_achievements()
+		if event.button_index == JOY_BUTTON_A or event.button_index == JOY_BUTTON_B:
+			get_viewport().set_input_as_handled()
+		return
+	if _pad_enters_title(event):
+		get_viewport().set_input_as_handled()
 		return
 	if not (_help.visible or _achievements.visible) or not (event is InputEventKey) or not event.pressed or event.echo:
 		return
@@ -260,6 +277,22 @@ func _input(event: InputEvent) -> void:
 		else:
 			toggle_achievements()
 		get_viewport().set_input_as_handled()
+
+
+# On the title with nothing focused, a pad's d-pad or stick lands on the first button so A
+# can press it. Pad events only: the keyboard's arrows keep doing what they did.
+func _pad_enters_title(event: InputEvent) -> bool:
+	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion) or overlay_open():
+		return false
+	if game.flow.state_name() != "title" or get_viewport().gui_get_focus_owner() != null:
+		return false
+	for action in ["ui_down", "ui_up", "ui_left", "ui_right"]:
+		if event.is_action_pressed(action):
+			for child in _actions.get_children():
+				if child is Button and child.focus_mode != Control.FOCUS_NONE:
+					child.grab_focus()
+					return true
+	return false
 
 
 func _show(title: String, color: Color, body: String) -> void:

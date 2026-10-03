@@ -407,6 +407,9 @@ func _input(event: InputEvent) -> void:
 	if talk.visible and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == TALK_KEY:
 		say_next()
 		get_viewport().set_input_as_handled()
+	elif talk.visible and event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:
+		say_next()
+		get_viewport().set_input_as_handled()
 
 
 func _pick_key(event: InputEvent) -> bool:
@@ -436,7 +439,10 @@ func _pick_key(event: InputEvent) -> bool:
 		pick.step_focus(1)
 		return true
 	if event.is_action_pressed("ui_accept"):
-		pick.confirm()
+		if event is InputEventJoypadButton:
+			pick.confirm_pad()
+		else:
+			pick.confirm()
 		return true
 	return false
 
@@ -459,6 +465,9 @@ func _counter_key(event: InputEvent) -> bool:
 			KEY_D:
 				counter.step_focus(1, 0)
 				return true
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:
+		say_next()
+		return true
 	if event.is_action_pressed("ui_cancel"):
 		close_counter()
 		return true

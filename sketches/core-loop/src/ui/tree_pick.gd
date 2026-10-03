@@ -160,6 +160,18 @@ func confirm() -> void:
 	chosen.emit(0 if at < 0 else at)
 
 
+# The pad's A: with no card focused it lands on card 0 and picks nothing, a second A picks.
+func confirm_pad() -> void:
+	if not _open:
+		return
+	if focused_index() < 0 and not _later.has_focus():
+		var list := cards()
+		if not list.is_empty():
+			list[0].grab_focus()
+		return
+	confirm()
+
+
 func _set_live(live: bool) -> void:
 	_veil.mouse_filter = Control.MOUSE_FILTER_STOP if live else Control.MOUSE_FILTER_IGNORE
 	var buttons: Array = cards()

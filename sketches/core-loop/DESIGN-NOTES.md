@@ -2799,3 +2799,25 @@ Every `.glb` under `assets/` and every texture under `assets/textures/` is liste
 - **Exceptions.** enemy_chaser and enemy_lobber 5 draws, enemy_winch_drone 4, enemy_mag_trapper 6; world_one/shell_kest 16 draws; dam 2,400 T / 4,600 V / 3 D; moss_workshop 4,400 T / 7,900 V / 3 D.
 - **Test.** Red: an unregistered copy of `dam.glb` under `assets/models/` fails naming it; removed, it passes. Enemy triangle cap lowered to 800 fails naming the lobber (and deflector, brute); restored, it passes. `SCRAPKEEP_AB_MEASURE=1` prints the table without cap checks, for deriving a cap.
 - **Follow-up.** `scenery` mixes a 120-triangle strip with a 2,400-triangle landmark, so it is two sizes under one name; split it when world two adds scenery.
+
+## A gamepad through every menu (alpha R13, S5)
+
+The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Escape, so a pad moved focus (d-pad and stick are in `ui_up/down/left/right`) but could not press or go back. `Bindings.UI_PAD` holds the two rows (`ui_accept` gets pad A, `ui_cancel` pad B); `game._register_actions` adds them once at boot and keeps the engine's key events.
+
+| Screen | Pad | Does |
+| --- | --- | --- |
+| Title | d-pad or stick | focuses the first button (`screens._pad_enters_title`, pad events only) |
+| Title | A | presses the focused button; with nothing focused, starts the run as before; with help or achievements open, nothing |
+| Help, achievements | B | closes the page |
+| Class select | d-pad, A | moves between cards, picks (the same gate as keys and clicks; a locked card shakes) |
+| Class select | X | cycles the open card's paint (`cycle_paint`, as P) |
+| Dead | A, B, Y, X | retry, new run, class select (C), replay (T) |
+| Summary | A, B | continue, new run (N) |
+| Workshop counter | Y | talks (as T) |
+| Upgrade pick | A | first A with no card focused focuses card 0 (`TreePick.confirm_pad`), second picks; keys keep `confirm` |
+| Field notes | Back held, d-pad left/right | shows them (as Tab), turns pages (as Q/E) |
+
+- **Focus out of play.** `game._on_flow_changed` releases GUI focus when play starts, so A (jump) can never press a button left focused. Menus that close inside play (pick, counter) hide their controls, which drops focus.
+- **`ui_accept` / `ui_cancel` readers, all gated by an open menu.** `pause_menu.gd:373,376` inside `_menu_key`, reached only when `_open` (line 309). `workshop.gd:432,441` inside `_pick_key`, reached only when `pick.is_open()`; `workshop.gd:471,478` inside `_counter_key`, only when `counter.is_open()`; both after `armed`. `class_card.gd:452` in `_unhandled_input`, only for the visible card 0 with no focus owner, so it needs the class-select screen on. `settings_pages.gd:245,247` inside `handle`, only while the page is visible. Plus the GUI's own button press, which needs a focused Control.
+- **Not changed.** The play pad table, keyboard and mouse behaviour, the pause menu, settings pages, reward ceremony and discovery cards (a discovery card still passes its dismissing A through, as Space does).
+- **Test.** `tests/input_pad_menus_test.gd`. Red: with `UI_PAD` empty, 16 checks fail (S5-1, the title press, class select A, the screens that follow); restored, 44 pass.

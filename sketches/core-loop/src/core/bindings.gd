@@ -47,6 +47,9 @@ const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
 }
+# The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
+# back. Boot adds these two rows to ui_accept and ui_cancel and keeps the engine's key events.
+const UI_PAD := {"ui_accept": JOY_BUTTON_A, "ui_cancel": JOY_BUTTON_B}
 const VERB_FIELDS := ["intent", "fail", "glyph", "label", "icon", "actions"]
 
 # The ball states a key can be read in, highest first (LEGIBILITY section 3): a key means one

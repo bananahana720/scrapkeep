@@ -401,6 +401,16 @@ func _input(event: InputEvent) -> void:
 		show_page(_page + MOUSE_STEPS[event.button_index])
 		get_viewport().set_input_as_handled()
 		return
+	if event is InputEventJoypadButton:
+		if event.button_index == JOY_BUTTON_BACK:
+			game.hold_notes(event.pressed)
+			if event.pressed:
+				show_page(_page)
+			get_viewport().set_input_as_handled()
+		elif event.pressed and game != null and game.notes_held() and (event.button_index == JOY_BUTTON_DPAD_LEFT or event.button_index == JOY_BUTTON_DPAD_RIGHT):
+			show_page(_page + (1 if event.button_index == JOY_BUTTON_DPAD_RIGHT else -1))
+			get_viewport().set_input_as_handled()
+		return
 	if not (event is InputEventKey) or event.echo:
 		return
 	if event.pressed and game != null and game.notes_held() and (event.physical_keycode == KEY_Q or event.physical_keycode == KEY_E):
