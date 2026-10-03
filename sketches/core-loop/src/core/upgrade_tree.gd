@@ -105,10 +105,21 @@ func _init(events_ref = null) -> void:
 	events = events_ref
 
 
+# Pilot ids with no tree, already warned about this session.
+static var unknown_warned := {}
+
+
 static func nodes(for_class: String, world_one := false) -> Array:
 	if world_one and WORLD_ONE_TABLES.has(for_class):
 		return WORLD_ONE_TABLES[for_class].NODES_WORLD_ONE
-	return TREES.get(for_class, [])
+	if not TREES.has(for_class):
+		if for_class == "":
+			return []
+		if not unknown_warned.has(for_class):
+			unknown_warned[for_class] = true
+			push_warning("upgrade_tree: no tree for '%s'; it offers no picks" % for_class)
+		return []
+	return TREES[for_class]
 
 
 static func depth_of(index: int) -> int:
@@ -260,7 +271,8 @@ func open_checkpoint() -> void:
 
 
 func pending() -> bool:
-	return picks.size() < allowed and picks.size() < max_depth
+	# A pilot with no tree has nothing to offer, so no pick is ever owed.
+	return picks.size() < allowed and picks.size() < max_depth and not nodes(class_id, world_one).is_empty()
 
 
 # The two choices at this depth for the path this run has taken: the children of the
@@ -269,6 +281,8 @@ func offered(for_class: String, depth: int) -> Array:
 	if for_class != class_id or depth < 1 or depth > max_depth or depth > picks.size() + 1:
 		return []
 	var list := nodes(for_class, world_one)
+	if list.is_empty():
+		return []
 	var pair := [0, 1]
 	if depth > 1:
 		pair = children_of(index_of(for_class, picks[depth - 2], world_one))

@@ -1119,7 +1119,7 @@ static func _kest_release() -> PackedFloat32Array:
 # The ready pulse: the motif's first note on the class instrument, 120 ms, an octave up
 # so it reads over the band ("F is back").
 static func _ready_pulse(id: String) -> PackedFloat32Array:
-	var first: int = int(Harmony.motif(id)["cells"][0][1])
+	var first: int = int(Harmony.motif_or_first(id)["cells"][0][1])
 	match id:
 		"rivet":
 			return _mix([[Synth.drum("hat"), 0, 0.8], [_cut(_n("clav", first + 12), 0.08), 0, 0.7]])
@@ -1131,10 +1131,11 @@ static func _ready_pulse(id: String) -> PackedFloat32Array:
 # Breaking free: a bright burst in the class colour, then the class's first interval
 # an octave up (Rivet's is the fourth its sprint arrives on).
 static func _break_free(id: String) -> PackedFloat32Array:
-	var cells: Array = Harmony.motif(id)["cells"]
+	var row := Harmony.motif_or_first(id)
+	var cells: Array = row["cells"]
 	var a: int = int(cells[0][1]) + 12
 	var b: int = int(cells[cells.size() - 1][1] if id == "rivet" else cells[1][1]) + 12
-	var voice: String = Harmony.motif(id)["voice"]
+	var voice: String = row["voice"]
 	var gap := Synth.score_step
 	return _mix([[_noise(0.18, 5200.0, 2600.0, 14.0, 0.001), 0, 0.55], [_cut(_n(voice, a), 0.2), 0, 0.85],
 		[_cut(_n(voice, b), 0.35), gap, 0.9], [_cut(_n("bell", b + 12), 0.4), gap, 0.3]])
@@ -1361,8 +1362,9 @@ static func _fight_arm_stamp() -> PackedFloat32Array:
 # The class-colour whip: a rising sweep plus the class motif's first interval, an
 # octave up, on the class's own voice (SOUND-STORY section 5, "a reward, not a threat").
 static func _near_miss_whip(class_id: String) -> PackedFloat32Array:
-	var cells: Array = Harmony.motif(class_id)["cells"]
-	var voice: String = Harmony.motif(class_id)["voice"]
+	var row := Harmony.motif_or_first(class_id)
+	var cells: Array = row["cells"]
+	var voice: String = row["voice"]
 	var a: int = int(cells[0][1]) + 12
 	var b: int = int(cells[1][1]) + 12
 	return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.85],
