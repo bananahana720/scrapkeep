@@ -1,4 +1,4 @@
-"""Seed 811: pinched sandstone neck beneath an asymmetric eroded cap.
+"""Seed 811: preserved pinched neck and eroded cap, with six soft baked sandstone beds.
 
 Run Blender -b -t 8 -P this.py -- --render DIR [--seed 811] [--out FILE].
 """

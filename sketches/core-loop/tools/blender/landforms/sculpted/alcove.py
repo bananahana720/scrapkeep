@@ -1,4 +1,4 @@
-"""Seed 927: continuous eroded arch and deep rounded sandstone recess.
+"""Seed 927: preserved sculpt and deep recess, with six soft baked sandstone beds.
 
 Run Blender -b -t 8 -P this.py -- --render DIR [--seed 927] [--out FILE].
 """

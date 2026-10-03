@@ -1,7 +1,7 @@
-"""Seeded LKR2 sandstone sculpt, CPU selected-to-active bakes, and previews.
+"""Seeded LKR3 sandstone: preserved LKR2 geometry, CPU UV colour bakes, previews.
 
 Run Blender -b -t 8 -P this.py -- --render DIR [--seed 613] [--out FILE].
-The sibling recipes share this pipeline; no external assets are used.
+Sources: local LKT a/c maps; immutable dbd612b game meshes for the three existing pieces.
 """
 import argparse
 import hashlib
@@ -10,6 +10,10 @@ import math
 import os
 import sys
 import time
+import struct
+import subprocess
+import tempfile
+import signal
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -19,8 +23,8 @@ import numpy as np
 from mathutils import Vector
 
 NAME = "cliff_strata"
-BUDGETS = {"cliff_strata": 8000, "alcove": 4000, "fin_spire": 2500}
-SEEDS = {"cliff_strata": 613, "alcove": 927, "fin_spire": 811}
+BUDGETS = {"cliff_strata": 8000, "alcove": 4000, "fin_spire": 2500, "arch": 5000}
+SEEDS = {"cliff_strata": 613, "alcove": 927, "fin_spire": 811, "arch": 1203}
 
 
 def noise(p, scale, seed):
@@ -80,7 +84,32 @@ def relief(p, seed):
 def make_surface(name):
     """Continuous quad silhouettes matching the first kit's overall proportions."""
     verts, faces = [], []
-    if name != "alcove":
+    if name == "arch":
+        # One continuous eroded shell with bowed feet and an uneven broad crown.
+        n, m = 81, 48
+        for i in range(n):
+            a = math.pi * i / (n - 1)
+            ca, sa = math.cos(a), math.sin(a)
+            for j in range(m):
+                b = 2 * math.pi * j / m
+                thickness = 1.26 + .38 * sa ** 6 + .16 * math.sin(a * 3 + .7)
+                radial = thickness * math.cos(b)
+                rx = 5.48 + radial + .34 * math.sin(a * 3 + .5) * sa
+                rz = 7.35 + 1.18 * math.cos(b)
+                x = rx * math.copysign(abs(ca) ** .79, ca)
+                x += .26 * math.sin(a * 4 + .2) * sa
+                exponent = .43 + .17 * (1 - math.cos(b))
+                z = .20 + rz * sa ** exponent
+                z += (.30 * math.sin(a * 5 + .4) + .24 * ca) * sa ** 2
+                y = 2.05 * math.sin(b) * (1 + .16 * math.cos(a * 3))
+                y += .23 * math.sin(a * 4 + .5) + .10 * math.sin(b * 3 + a)
+                verts.append((x, y, z))
+        for i in range(n - 1):
+            for j in range(m):
+                a, b = i * m + j, i * m + (j + 1) % m
+                faces.append((a, a + m, b + m, b))
+        faces += [tuple(reversed(range(m))), tuple(range((n - 1) * m, n * m))]
+    elif name != "alcove":
         n, rows = 32, 65
         for k in range(rows):
             t = k / (rows - 1)
@@ -145,6 +174,13 @@ def make_surface(name):
     mesh = bpy.data.meshes.new(name + "_continuous_silhouette")
     mesh.from_pydata(verts, [], faces)
     mesh.update()
+    if name == "arch":
+        import bmesh
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+        bm.to_mesh(mesh)
+        bm.free()
     obj = bpy.data.objects.new(name + "_high", mesh)
     bpy.context.collection.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
@@ -165,6 +201,8 @@ def sculpt(obj, seed):
     d = relief(p, seed)
     if obj.name.startswith("cliff"):
         d *= 2.4
+    elif obj.name.startswith("arch"):
+        d *= .65
     p += normals * d[:, None]
     lo, hi = p.min(axis=0), p.max(axis=0)
     p[:, :2] -= (lo[:2] + hi[:2]) / 2
@@ -445,31 +483,269 @@ def render_views(high, low, name, directory):
         bpy.ops.render.render(write_still=True)
 
 
+BASE_REV = "dbd612b5722f38e85fe057ff90398ad5288e4daa"
+SOURCE_ROOT = "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/x9"
+CROPS = {"cliff_strata": "striped_wall", "alcove": "alcove", "fin_spire": "spire", "arch": "arch"}
+BED_EDGES = np.array([0., .24, .28, .60, .69, .96, 1.])
+
+
+def read_rgb(path):
+    shape = subprocess.check_output(["magick", "identify", "-format", "%w %h", path]).decode().split()
+    w, h = map(int, shape)
+    raw = subprocess.check_output(["magick", path, "-alpha", "off", "-depth", "8", "RGB:-"])
+    return np.frombuffer(raw, np.uint8).reshape(h, w, 3).astype(np.float64) / 255
+
+
+def decode_glb(payload):
+    length = struct.unpack_from("<I", payload, 12)[0]
+    return json.loads(payload[20:20 + length]), bytearray(payload[28 + length:])
+
+
+def accessor(doc, binary, index):
+    a = doc["accessors"][index]
+    v = doc["bufferViews"][a["bufferView"]]
+    dtype = {5126: "<f4", 5125: "<u4", 5123: "<u2", 5121: "u1"}[a["componentType"]]
+    count = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[a["type"]]
+    dt = np.dtype(dtype)
+    return np.ndarray((a["count"], count), dtype=dt, buffer=binary,
+                      offset=v.get("byteOffset", 0) + a.get("byteOffset", 0),
+                      strides=(v.get("byteStride", count * dt.itemsize), dt.itemsize)).copy()
+
+
+def image_bytes(doc, binary, index):
+    view = doc["bufferViews"][doc["images"][index]["bufferView"]]
+    offset = view.get("byteOffset", 0)
+    return bytes(binary[offset:offset + view["byteLength"]])
+
+
+def raster_positions(p, normals, uv, triangles):
+    # Bake world position and surface direction into the accepted UV layout.
+    size = 1024
+    points = np.zeros((size, size, 3))
+    directions = np.zeros_like(points)
+    mask = np.zeros((size, size), dtype=bool)
+    for tri in triangles:
+        q = uv[tri] * size - .5
+        lo = np.maximum(np.ceil(q.min(axis=0)).astype(int), 0)
+        hi = np.minimum(np.floor(q.max(axis=0)).astype(int), size - 1)
+        if np.any(hi < lo):
+            continue
+        x, y = np.meshgrid(np.arange(lo[0], hi[0] + 1), np.arange(lo[1], hi[1] + 1))
+        e0, e1 = q[1] - q[0], q[2] - q[0]
+        det = e0[0] * e1[1] - e0[1] * e1[0]
+        if abs(det) < 1e-8:
+            continue
+        dx, dy = x - q[0, 0], y - q[0, 1]
+        b = (dx * e1[1] - dy * e1[0]) / det
+        c = (e0[0] * dy - e0[1] * dx) / det
+        a = 1 - b - c
+        inside = (a >= -1e-6) & (b >= -1e-6) & (c >= -1e-6)
+        w = np.stack([a[inside], b[inside], c[inside]], axis=1)
+        points[y[inside], x[inside]] = w @ p[tri]
+        directions[y[inside], x[inside]] = w @ normals[tri]
+        mask[y[inside], x[inside]] = True
+    return points, directions, mask
+
+
+def band_colours(p, n, seed, height, source_a, source_c):
+    # Six nonrepeating beds; both cream beds occupy only 4% of the height.
+    h = beds(p, seed) / height
+    h += .006 * np.sin(p[:, 0] * .12 + p[:, 1] * .16 + seed)
+    colours = np.array([[.64, .414, .278], [.742, .572, .401], [.657, .437, .298],
+                        [.585, .370, .257], [.687, .471, .329], [.752, .584, .419]])
+    idx = np.clip(np.searchsorted(BED_EDGES, h, side="right") - 1, 0, 5)
+    tone = colours[idx].copy()
+    for k in range(1, 6):
+        t = np.clip((h - BED_EDGES[k] + .012) / .024, 0, 1)
+        t = t * t * (3 - 2 * t)
+        near = np.abs(h - BED_EDGES[k]) <= .012
+        tone[near] = colours[k - 1] * (1 - t[near, None]) + colours[k] * t[near, None]
+    fraction = np.clip((h - BED_EDGES[idx]) / (BED_EDGES[idx + 1] - BED_EDGES[idx]), 0, 1)
+    def sample(img, u, v):
+        return img[(np.mod(v, 1) * img.shape[0]).astype(int),
+                   (np.mod(u, 1) * img.shape[1]).astype(int)]
+    # Remove each source row's large colour step before sampling its grain.
+    a_grain = source_a - source_a.mean(axis=1, keepdims=True)
+    c_grain = source_c - source_c.mean(axis=1, keepdims=True)
+    u = p[:, 0] * .085 + p[:, 1] * .051 + seed * .017
+    tone += .24 * sample(a_grain, u, .12 + fraction * .16 + idx * .11)
+    tone += .12 * sample(c_grain, u * 1.47, p[:, 2] * .027 + fraction * .12)
+    nz = np.abs(n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-8))
+    steep = np.clip((.46 - nz) / .28, 0, 1)
+    axis = p[:, 0] + .37 * p[:, 1]
+    lo, hi = axis.min(), axis.max()
+    streaks = np.zeros(len(p))
+    for f in (.18, .57, .83):
+        centre = lo + f * (hi - lo) + .07 * np.sin(p[:, 2] * .12 + seed)
+        streaks += np.exp(-((axis - centre) / .13) ** 2)
+    lifetime = np.clip((np.sin(p[:, 2] * .21 + seed) + .25) * 1.3, 0, 1)
+    tone *= (1 - .15 * np.clip(streaks, 0, 1) * steep * lifetime)[:, None]
+    return np.clip(tone, .01, .95)
+
+
+def rebake_colour(payload, name, seed, source_root):
+    doc, binary = decode_glb(payload)
+    prim = doc["meshes"][0]["primitives"][0]
+    attrs = prim["attributes"]
+    positions = accessor(doc, binary, attrs["POSITION"]).astype(float)
+    normals = accessor(doc, binary, attrs["NORMAL"]).astype(float)
+    # glTF Y-up -> the sculpt's Z-up bedding coordinate.
+    p = positions[:, [0, 2, 1]] * [1, -1, 1]
+    n = normals[:, [0, 2, 1]] * [1, -1, 1]
+    uv = accessor(doc, binary, attrs["TEXCOORD_0"])
+    triangles = accessor(doc, binary, prim["indices"]).reshape(-1, 3)
+    points, directions, mask = raster_positions(p, n, uv, triangles)
+    root = os.path.join(source_root, "LKT", "final")
+    source_a, source_c = read_rgb(os.path.join(root, "a.png")), read_rgb(os.path.join(root, "c.png"))
+    target = read_rgb(os.path.join(source_root, "crops", CROPS[name] + ".png")).mean(axis=(0, 1))
+    colours = band_colours(points[mask], directions[mask], seed, p[:, 2].max(), source_a, source_c)
+    with tempfile.TemporaryDirectory(prefix="lkr3-") as temp:
+        factors = []
+        for label in ("ao", "cavity"):
+            ii = next(i for i, im in enumerate(doc["images"]) if im["name"] == label + "_1024")
+            path = os.path.join(temp, label + ".png")
+            open(path, "wb").write(image_bytes(doc, binary, ii))
+            raw = read_rgb(path)[:, :, 0]
+            factor = raw if label == "ao" else np.clip(.90 + (raw - .5) * .24, .78, 1)
+            factors.append(factor[mask])
+        colours *= (factors[0] * factors[1])[:, None]
+        # Full supplied crop means include lighting/props: report that method explicitly.
+        colours *= target / colours.mean(axis=0)
+        colours = np.clip(colours, 0, 1)
+        atlas = np.zeros((1024, 1024, 3))
+        atlas[mask] = colours
+        occupied = mask.copy()
+        # UV gutters are extended 12 pixels so far-camera mipmaps cannot expose black seams.
+        for _ in range(12):
+            old = occupied.copy()
+            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                valid = np.roll(old, (dy, dx), axis=(0, 1)) & ~occupied
+                if dy == 1: valid[0] = False
+                if dy == -1: valid[-1] = False
+                if dx == 1: valid[:, 0] = False
+                if dx == -1: valid[:, -1] = False
+                atlas[valid] = np.roll(atlas, (dy, dx), axis=(0, 1))[valid]
+                occupied[valid] = True
+        mean = np.rint(atlas[mask] * 255).mean(axis=0)
+        assert np.max(np.abs(mean / (target * 255) - 1)) < .10, "Albedo mean exceeds crop tolerance"
+        raw_path, png_path = os.path.join(temp, "rgb.raw"), os.path.join(temp, "albedo.png")
+        np.rint(atlas * 255).astype(np.uint8).tofile(raw_path)
+        subprocess.run(["magick", "-size", "1024x1024", "-depth", "8", "RGB:" + raw_path,
+                        "-strip", "-define", "png:color-type=2", png_path], check=True)
+        image = doc["textures"][doc["materials"][0]["pbrMetallicRoughness"]["baseColorTexture"]["index"]]["source"]
+        replace_view = doc["images"][image]["bufferView"]
+        colour_png = open(png_path, "rb").read()
+    packed = bytearray()
+    for i, v in enumerate(doc["bufferViews"]):
+        offset = v.get("byteOffset", 0)
+        chunk = colour_png if i == replace_view else binary[offset:offset + v["byteLength"]]
+        packed += bytes((-len(packed)) % 4)
+        v["byteOffset"], v["byteLength"] = len(packed), len(chunk)
+        packed += chunk
+    doc["buffers"][0]["byteLength"] = len(packed)
+    doc.setdefault("extras", {})["LKR3"] = {"seed": seed, "bands": 6, "bed_edges": BED_EDGES.tolist(),
+        "albedo_mean_rgb8": mean.tolist(), "crop_mean_rgb8": (target * 255).tolist(),
+        "colour_bake": "CPU UV raster using sculpt beds; AO and cavity multiplied; local LKT a/c grain",
+        "source_revision": BASE_REV if name != "arch" else "new continuous high-to-low sculpt"}
+    j = json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()
+    j += b" " * ((-len(j)) % 4)
+    packed += bytes((-len(packed)) % 4)
+    out = struct.pack("<III", 0x46546c67, 2, 28 + len(j) + len(packed))
+    out += struct.pack("<II", len(j), 0x4e4f534a) + j
+    out += struct.pack("<II", len(packed), 0x004e4942) + packed
+    return out, doc["extras"]["LKR3"]
+
+
+def render_game(path, name, directory, labels=("three-quarter", "near", "far")):
+    common.reset()
+    bpy.ops.import_scene.gltf(filepath=path)
+    low = next(o for o in bpy.context.scene.objects if o.type == "MESH")
+    # Imported nodes use a parent rotation; evaluate world bounds for the camera.
+    bpy.context.view_layer.update()
+    pts = [low.matrix_world @ v.co for v in low.data.vertices]
+    lo = Vector([min(p[i] for p in pts) for i in range(3)])
+    hi = Vector([max(p[i] for p in pts) for i in range(3)])
+    import importlib.util
+    oldpath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cliff_strata.py")
+    spec = importlib.util.spec_from_file_location("first_kit_preview", oldpath)
+    old = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(old)
+    cam = old.stage()
+    sphere = old.sphere(hi.x + 2, lo.y - 1.2)
+    center = Vector((1.2, 0, hi.z * .44))
+    width = max(hi.x - lo.x + 7, hi.z * 1.777 + 6) * 1.16
+    os.makedirs(directory, exist_ok=True)
+    for label in labels:
+        sphere.location = (hi.x + 2, lo.y - 1.2, 1)
+        if label == "three-quarter":
+            cam.data.type = "ORTHO"
+            cam.data.ortho_scale = width
+            cam.location = center + Vector((.72, -1, .43)).normalized() * width * 2
+            common._look(cam, center)
+        elif label == "near":
+            cam.data.type = "PERSP"
+            cam.data.lens = 15.9
+            target = Vector((0, lo.y, min(hi.z * .42, 4)))
+            sphere.location = (-3, lo.y - 2.2, 1)
+            cam.location = target + Vector((2.1, -7.72, 1))
+            common._look(cam, target)
+        else:
+            cam.data.type = "PERSP"
+            cam.data.lens = 15.9
+            direction = Vector((.22, -1, .08)).normalized()
+            # Eye is 60 m beyond the frontmost face, with a chase-height position.
+            cam.location = Vector((direction.x * 60, lo.y + direction.y * 60, 3.3))
+            common._look(cam, Vector((0, 0, hi.z * .43)))
+        bpy.context.scene.render.filepath = os.path.join(directory, name + "-" + label + ".png")
+        signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError("15 minute render cap")))
+        signal.alarm(895)
+        start = time.monotonic()
+        bpy.ops.render.render(write_still=True)
+        signal.alarm(0)
+        print("RENDER_DONE", name, label, round(time.monotonic() - start, 2), flush=True)
+
+
 def run(name=NAME):
     parser = argparse.ArgumentParser()
     parser.add_argument("--out")
     parser.add_argument("--render")
+    parser.add_argument("--source-root", default=SOURCE_ROOT)
     parser.add_argument("--seed", type=int, default=SEEDS[name])
     opt = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
-    common.reset()
-    high = make_surface(name)
-    sculpt(high, opt.seed)
-    paint_beds(high, opt.seed)
-    source, color, curvature = sandstone_material(opt.seed)
-    high.data.materials.append(source)
-    print("HIGH_POLY", name, common.tris(high), flush=True)
-    low, mat = low_mesh(high, BUDGETS[name])
-    maps, times = bake(high, low, mat, source, color, curvature, opt.seed)
-    center_game_base(high, low)
-    high.hide_render = True
     path = opt.out or os.path.join(common.MODELS, "world_one", "landforms", "sculpted", name + ".glb")
-    common.export(low, path)
-    append_maps(path, maps)
-    print("LKR2_RESULT", json.dumps({"piece": name, "seed": opt.seed, "high_triangles": common.tris(high),
-          "triangles": common.tris(low), "bake_seconds": times, "size": os.path.getsize(path),
-          "sha256": hashlib.sha256(open(path, "rb").read()).hexdigest()}), flush=True)
+    if name == "arch":
+        common.reset()
+        high = make_surface(name)
+        sculpt(high, opt.seed)
+        # Match the requested envelope after erosion, without squared-off jambs.
+        p = np.array([v.co[:] for v in high.data.vertices])
+        p[:, 0] *= 14 / np.ptp(p[:, 0])
+        p[:, 2] *= 9 / p[:, 2].max()
+        high.data.vertices.foreach_set("co", p.astype(np.float32).ravel())
+        high.data.update()
+        paint_beds(high, opt.seed)
+        source, color, curvature = sandstone_material(opt.seed)
+        high.data.materials.append(source)
+        low, mat = low_mesh(high, BUDGETS[name])
+        maps, times = bake(high, low, mat, source, color, curvature, opt.seed)
+        center_game_base(high, low)
+        with tempfile.TemporaryDirectory(prefix="lkr3-arch-") as temp:
+            intermediate = os.path.join(temp, "arch.glb")
+            common.export(low, intermediate)
+            append_maps(intermediate, maps)
+            payload = open(intermediate, "rb").read()
+        print("ARCH_BAKES", json.dumps(times), flush=True)
+    else:
+        relative = "sketches/core-loop/assets/models/world_one/landforms/sculpted/" + name + ".glb"
+        repo = subprocess.check_output(["git", "-C", os.path.dirname(__file__), "rev-parse", "--show-toplevel"]).decode().strip()
+        payload = subprocess.check_output(["git", "-C", repo, "show", BASE_REV + ":" + relative])
+    payload, report = rebake_colour(payload, name, opt.seed, opt.source_root)
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    open(path, "wb").write(payload)
+    print("LKR3_RESULT", json.dumps({"piece": name, "size": len(payload),
+          "sha256": hashlib.sha256(payload).hexdigest(), **report}), flush=True)
     if opt.render:
-        render_views(high, low, name, opt.render)
+        render_game(path, name, opt.render)
 
 
 if __name__ == "__main__":
