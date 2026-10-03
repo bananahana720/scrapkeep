@@ -10,6 +10,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -31,6 +32,7 @@ const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 const TITLE := "SCRAPKEEP: FIRST RUN"
 
 var game
+var _victory_boss := {}
 
 var _veil: ColorRect
 var _content: VBoxContainer
@@ -124,16 +126,23 @@ func _on_flow_changed(state: String) -> void:
 				_choices.add_child(card)
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
-			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.run.stage)
+			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose class")
 			if game.flow.can_replay_final_stage():
-				_action("replay", "key_t", "Replay stage %d" % game.ctx.stages.COUNT)
+				_action("replay", "key_t", "Replay stage %d" % game.ctx.stages.local(game.flow.final_stage()))
 			_guard = CLICK_GUARD
 		"victory":
-			_show("BRINDLE ROUTED", EventKinds.color("boss_defeated"), "The Requisition is scrap.")
+			var boss := _beaten_boss()
+			_victory_boss = boss
+			_show(String(boss.get("title", "BOSS ROUTED")), EventKinds.color("boss_defeated"), String(boss.get("victory", "")))
 		"summary":
-			_show("RUN COMPLETE", EventKinds.color("run_ended"), String(game.run.summary()["class"]))
+			var body := String(game.run.summary()["class"])
+			var epitaph := String(_victory_boss.get("epitaph", ""))
+			if epitaph != "":
+				body += "\n" + epitaph
+			_victory_boss = {}
+			_show("RUN COMPLETE", EventKinds.color("run_ended"), body)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
 			_action("class", "key_space", "Choose class")
@@ -190,6 +199,13 @@ func _action(id: String, key: String, words: String) -> void:
 # A button presses its key: the same route, the same guards, the same result.
 func _press(key: String) -> void:
 	game._screen_key(OS.find_keycode_from_string(Keycap.label(key)))
+
+
+# The boss row of the world the run is in: on the victory screen, the world whose boss was
+# just beaten. The summary reads the row the victory screen showed, so a run that ends with
+# no boss beaten (a table with no boss, an unbuilt world) shows no epitaph.
+func _beaten_boss() -> Dictionary:
+	return Worlds.boss_of(game.ctx.stages.world_of(game.run.stage))
 
 
 # The summary as icons and numbers: time, stages, scrap, parts, kills, events won and

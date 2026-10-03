@@ -2649,3 +2649,14 @@ Base `d939492`. `src/core/progress.gd` is a Node like `run_log.gd`: `setup(event
 - **Test seam.** `Progress.rows` (default `Achievements.ROWS`) can be set before `setup`; the shipped table has no `sum`, `class` or `world` row, so `progress_bus_test` supplies its own for those.
 - **Not wired.** `game.gd` and the context do not hold a profile or a Progress yet. `enemy_killed` carries `kind == "brindle"` when Brindle dies: `boss.gd` calls `ctx.run.record_kill("brindle", at, 0)`.
 - **Test.** `tests/progress_bus_test.gd` (30 checks) on a real `Game` bus, profiles under `storage_dir`. Red: with the once-only guards removed the second `beacon_unsealed` announces `warden_broken` twice and P1-1 fails; restored, it passes.
+
+## Unit W6: the HUD and screens know which world you are in, 2026-10-02
+
+Base `d939492`. On a table of more than one world, `world_entered` raises a launch card titled with `Worlds.row(world).name`; the first stage's card replaces it after `Hud.WORLD_CARD_BEAT` (1.2 s). One-world tables show no world card, so their stage cards are as before.
+
+- **Status pips.** `hud.gd` passes the stage's number within its world (`local`), the world's stage count (`last_of - first_of + 1`) and a boss tag that follows `Worlds.boss_of(world).built`. Pips only; no HUD words added. `_on_launched` previews the next stage's card only while that stage is in the same world.
+- **Dead screen.** "Retry stage N" uses `local`; the replay label reads `flow.final_stage()` through `local`, so it reads "Replay stage 3" in each world of the double and on the default table.
+- **Victory and summary.** `BOSSES` gains `title` ("BRINDLE ROUTED", "THE WAKING STILLED", "THE MIND IS QUIET"). The victory screen shows the beaten world's `title` and `victory`; the won summary adds that boss's `epitaph` under the class line (no epitaph when no boss was beaten). The old hardcoded "The Requisition is scrap." is gone.
+- **`GRAMMAR_SIGNALS`.** `world_entered` stays in it: `presentation_sfx_test` counts only presentation listeners, and the HUD is not one.
+- **Test.** `tests/ui_worlds_test.gd` (19 checks) on the double, default and slice tables. `UI_WORLDS_DISABLE_CARD=1` disconnects the world card, which is how the red run is shown (3 W6-1 checks fail).
+- **Not done.** `field_notes.gd` and the summary's stage chip stay world-one text and the global count.

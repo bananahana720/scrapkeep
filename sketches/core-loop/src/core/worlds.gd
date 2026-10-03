@@ -15,13 +15,13 @@ const ROWS := [
 ]
 
 # One row per boss. kind is the prefix of the boss's piece kinds ("brindle_hull"); music
-# is the music engine's id. built false means the script does not exist yet.
+# is the music engine's id. title is the victory screen's heading; victory its body. built false means the script does not exist yet.
 const BOSSES := {
-	"brindle": {"name": "Admiral Brindle", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
+	"brindle": {"name": "Admiral Brindle", "title": "BRINDLE ROUTED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
 		"built": true, "victory": "Brindle is routed.", "epitaph": "Brindle, routed in the Slag Bowl."},
-	"waking": {"name": "The Waking", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
+	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
 		"built": false, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig."},
-	"mind": {"name": "The Mind", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
+	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
 		"built": false, "victory": "The Mind is quiet.", "epitaph": "The Mind, quieted in the Highdraft."},
 }
 
