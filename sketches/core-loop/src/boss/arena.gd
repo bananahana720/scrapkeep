@@ -48,12 +48,12 @@ var _vent_ready_at := [0.0, 0.0, 0.0, 0.0]
 var _crusts := {}
 
 
-# Above stage 3's beacon, pulled inward until the whole bowl is inside the map, and
-# high enough that no ground pokes through it.
-static func place(terrain) -> Vector3:
+# Above the finished stage's beacon, pulled inward until the whole bowl is inside the
+# map, and high enough that no ground pokes through it.
+static func place(terrain, stage: int) -> Vector3:
 	var at := Vector3.ZERO
 	if terrain != null and terrain.has_method("beacon_point"):
-		at = terrain.beacon_point(3)
+		at = terrain.beacon_point(stage)
 	var reach := BANK_R + WALL_THICK + 2.0
 	var flat := Vector2(at.x, at.z)
 	for _i in 20:

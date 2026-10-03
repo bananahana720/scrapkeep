@@ -105,7 +105,7 @@ func active() -> bool:
 func enter_arena(entry_velocity: Vector3) -> void:
 	exit_arena()
 	arena = Arena.new()
-	arena.position = Arena.place(ctx.terrain)
+	arena.position = Arena.place(ctx.terrain, ctx.run.stage)
 	ctx.root.add_child(arena)
 	ship = Requisition.new()
 	arena.add_child(ship)
