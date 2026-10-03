@@ -7,12 +7,15 @@ extends RefCounted
 # UI profile does.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 
 const FILE := "settings.json"
 
 var path := ""
 var volumes := {}
 var comfort := {}
+# Action name to a comma-separated token list (Bindings.encode); only actions a player rebound.
+var bindings := {}
 var last_error := ""
 var _save_blocked := false
 
@@ -25,9 +28,10 @@ func _init(storage_dir := "user://") -> void:
 func load_saved() -> void:
 	volumes = {}
 	comfort = {}
+	bindings = {}
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"volumes": SafeStore.NUMBERS, "comfort": SafeStore.NUMBERS})
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"volumes": SafeStore.NUMBERS, "comfort": SafeStore.NUMBERS, "bindings": SafeStore.STRING_MAP})
 	if parsed == null:
 		var kept := SafeStore.quarantine(path)
 		if kept.is_empty():
@@ -43,6 +47,9 @@ func load_saved() -> void:
 	var feel: Dictionary = parsed.get("comfort", {})
 	for id in feel:
 		comfort[String(id)] = clampf(float(feel[id]), 0.0, 1.0)
+	var rebound: Dictionary = parsed.get("bindings", {})
+	for action in rebound:
+		bindings[String(action)] = String(rebound[action])
 
 
 func set_volume(bus: String, level: float) -> void:
@@ -55,9 +62,33 @@ func set_comfort(id: String, level: float) -> void:
 	save()
 
 
+func binding(action: String) -> String:
+	return String(bindings.get(action, ""))
+
+
+# The decoded events of `action`; [] for an action this build does not hold.
+func binding_events(action: String) -> Array:
+	if not Bindings.actions().has(action):
+		return []
+	return Bindings.decode(binding(action))
+
+
+func set_binding(action: String, events: Array) -> void:
+	bindings[action] = Bindings.encode(events)
+	save()
+
+
+func clear_binding(action: String) -> void:
+	bindings.erase(action)
+	save()
+
+
 func save() -> void:
 	if _save_blocked:
 		return
-	var err := SafeStore.write_atomic(path, JSON.stringify({"volumes": volumes, "comfort": comfort}, "  "))
+	var data := {"volumes": volumes, "comfort": comfort}
+	if not bindings.is_empty():
+		data["bindings"] = bindings
+	var err := SafeStore.write_atomic(path, JSON.stringify(data, "  "))
 	if err != OK:
 		last_error = error_string(err)

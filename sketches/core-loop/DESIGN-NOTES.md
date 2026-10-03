@@ -2669,3 +2669,12 @@ Base `8244add`. `Game.setup` builds `Profile.new(storage_dir/profile.json)`, loa
 - **Gate.** `Game.pilot_unlocked(def)` is `def.starter or ctx.profile.has_pilot(def.id)`. The class-select branch of `_screen_key` consumes the key for a locked pilot and starts nothing; card clicks share it through `screens._press`. `flow.choose_class` stays ungated, so bots and tests are unaffected. The locked-card look is a later unit.
 - **Purity.** `profile_purity_test` scans movement, combat, build, world and boss for `ctx.profile`, `Profile`, `Progress`, `Achievements`, `Cosmetics` and preloads of their files (whole identifiers), and runs `Achievements.validate()`.
 - **Test.** `tests/profile_unlock_gate_test.gd` (18 checks). Red: with `pilot_unlocked` returning true the locked key starts a run and P2-2 fails; restored, it passes.
+
+## Unit S2: key bindings are saved with the other settings, 2026-10-02
+
+Base `8244add`. `settings.json` gains an optional top-level `bindings` map, `SafeStore.STRING_MAP`: action name (a `Bindings.actions()` key) to a comma-separated token list. A token is `key:<name>` (`OS.get_keycode_string` of the physical keycode) or `mouse:<button index>`; `pad:` is reserved for the gamepad unit and is not decoded. `Bindings.encode(events)` and `Bindings.decode(text)` are the codec; a token that does not parse is skipped with one warning per token text. Mouse motion (`cl_look`) cannot be bound.
+
+- **Store.** `SettingsStore` keeps `bindings` and offers `binding`, `binding_events`, `set_binding` and `clear_binding`; each setter saves. An entry for an action this build does not hold is kept and written back, and `binding_events` returns `[]` for it.
+- **Unchanged files.** `save()` writes `bindings` only when the map is not empty, so a file with no overrides is byte for byte what it was. No version field; a file without `bindings` means no overrides. A wrong-typed `bindings` quarantines the file like the other keys (a fifth case in `persistence_truncation_test`).
+- **Test.** `tests/unit/settings_bindings_case.gd`. Red: `save()` dropping `bindings` fails the round-trip case; restored, it passes.
+- **Not done.** `game.gd` does not apply saved bindings at boot and the pause menu has no rebind page.

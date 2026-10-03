@@ -76,6 +76,7 @@ func _wrong_typed() -> void:
 		'{"volumes": {"music": "loud"}, "comfort": {"shake": 0.3}}',
 		'{"volumes": {"music": 0.2}, "comfort": {"shake": null}}',
 		'{"volumes": [0.2], "comfort": {"shake": 0.3}}',
+		'{"volumes": {"music": 0.2}, "bindings": {"cl_jump": 5}}',
 	]
 	for i in settings_cases.size():
 		var dir := _fresh_dir("settings.json", settings_cases[i])
