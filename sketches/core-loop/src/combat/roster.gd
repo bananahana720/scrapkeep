@@ -2,6 +2,7 @@ extends RefCounted
 
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # The enemy roster (DESIGN-V2 sections 10, 11 and 15): one row per spawnable kind, and
 # the one source for what each enemy is. The spawner, the director's pack names, the
@@ -152,6 +153,14 @@ static func is_reinforcement(id: String) -> bool:
 
 static func warden_family(stage: int) -> String:
 	return WARDEN_FAMILIES[clampi(stage, 1, WARDEN_FAMILIES.size()) - 1]
+
+
+# A boss piece kind ("brindle_hull") begins with a Worlds.BOSSES row's kind plus "_".
+static func is_boss_piece(kind: String) -> bool:
+	for row in Worlds.BOSSES.values():
+		if kind.begins_with(String(row["kind"]) + "_"):
+			return true
+	return false
 
 
 # A sound id as the player hears it: "mind_quote" is the Mind playing your class motif

@@ -169,6 +169,7 @@ var _boss_add_ids := {}
 var _forced_source := ""
 # Where warden_spec reads a stage other than the current one. A test may swap in any
 # object with of(stage) -> Dictionary; null reads the context's table.
+var _warden_warned := {}
 var stage_defs = null
 
 var _patterns := {}
@@ -505,7 +506,7 @@ func _spawn_kind_of(enemy: Node3D) -> String:
 func _target_class_of_kind(kind: String) -> String:
 	if kind == "warden":
 		return "Warden"
-	if kind.begins_with("brindle_"):
+	if Roster.is_boss_piece(kind):
 		return "boss"
 	# The vault (roster.gd role "cache") never moves and never attacks (vault.gd's own
 	# header); it is the one static, non-combatant damageable in the game, so it earns
@@ -1731,10 +1732,29 @@ func _threat() -> float:
 # A stage's Warden numbers: the current stage from flow's stage_def(), any other stage
 # (the vault's next one) from stage_defs.of(stage). A missing field falls back to the
 # spec's per-stage value.
+func _warn_warden_once(stage: int, text: String) -> void:
+	if not _warden_warned.has(stage):
+		_warden_warned[stage] = true
+		push_warning("warden_spec: " + text)
+
+
 func warden_spec(stage: int) -> Dictionary:
 	var def: Dictionary = ctx.flow.stage_def() if stage == ctx.flow.stage() else _stage_table().of(stage)
 	var fallback: Dictionary = WARDEN_FALLBACK[clampi(stage, 1, 3) - 1]
+	var uses_fallback := false
+	for key in fallback:
+		uses_fallback = uses_fallback or not def.has(key)
+	if stage > WARDEN_FALLBACK.size() and uses_fallback:
+		_warn_warden_once(stage, "WARDEN_FALLBACK clamps stage %d to %d" % [stage, WARDEN_FALLBACK.size()])
+	var family: String
+	if def.has("warden_family"):
+		family = String(def["warden_family"])
+	else:
+		family = Roster.warden_family(stage)
+		if stage > Roster.WARDEN_FAMILIES.size():
+			_warn_warden_once(stage, "stage %d row has no warden_family; Roster clamps it to %s" % [stage, family])
 	return {
+		"family": family,
 		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
 		"hp": float(def.get("warden_hp", fallback["warden_hp"])),
 		"lesson": String(def.get("warden_lesson", fallback["warden_lesson"])),

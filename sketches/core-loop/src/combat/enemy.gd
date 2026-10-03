@@ -129,7 +129,7 @@ func _visual_parent() -> Node3D:
 
 
 func _ordinary_reaction() -> bool:
-	return kind not in ["warden", "vault", "miniboss"] and not kind.begins_with("brindle_")
+	return kind not in ["warden", "vault", "miniboss"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
 
 
 func react(reaction: String, direction: Vector3, handed := false) -> void:

@@ -2628,3 +2628,12 @@ Base `b7882b5`. `flow.gd` routes by world. `_finish_stage` enters the boss when 
 - **Replay.** `flow.final_stage()` is the last stage of the last world; `can_replay_final_stage` and `game.gd`'s T key use it instead of `COUNT`. A world-one arena death screen on a multi-world table therefore offers no replay (stage 6 has no start yet).
 - **Test.** `tests/spine_worlds_test.gd` subclasses `Game` to choose `two_world_defs.gd`. Built: `world 1, stage 1-3, arena, world 2, stage 4-6, arena`, ends won. Unbuilt world two: one arena, one warning. Red: `_finish_stage` on `is_last` fails 4 of 14 checks; restored, it passes.
 - **Not done here.** `screens.gd` and `hud.gd` still read `COUNT` ("Replay stage 3", stage counters); `boss.gd` does not yet tear down its arena for a second entry.
+
+## Unit W4: a stage row names its Warden family, boss pieces come from the boss table, 2026-10-02
+
+Base `d939492`. Each stage row (`stage_defs.gd`, `slice_defs.gd`, `two_world_defs.gd`) carries `warden_family`, the Roster strings as literals (core files do not import combat). Default table: reactor, swarm, mind. Slice: reactor. Two-world double: reactor, swarm, mind, reactor, swarm, mind.
+
+- **`warden_spec(stage)`** returns `family` from the row, which `warden.gd` already prefers. A row without it falls back to `Roster.warden_family(stage)`; a stage past the fallback's range (families or `WARDEN_FALLBACK`, when the row lacks a Warden number) logs one `push_warning` per stage.
+- **`Roster.is_boss_piece(kind)`** is true when `kind` begins with a `Worlds.BOSSES` row's `kind` plus `_`. `combat.gd` `_target_class_of_kind` and `enemy.gd` `_ordinary_reaction` call it. `enemy.gd` preloads roster inline because its subclasses each declare a `Roster` constant.
+- **Test.** `tests/combat_worlds_test.gd` (36 checks). With `warden_spec` ignoring the row, the stage-4 and stage-5 checks fail; restored, it passes.
+- **Not done here.** `director.gd`'s `FAMILY_ANCIENT` array still indexes by stage without a clamp; `boss_target.gd` still builds `brindle_` kinds.
