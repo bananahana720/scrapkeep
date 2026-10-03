@@ -6,6 +6,7 @@ extends RefCounted
 # tests read one record.
 
 const Bindings := preload("res://src/core/bindings.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 
 const WEAPON := "weapon"
 const MOVEMENT := "movement"
@@ -303,6 +304,17 @@ func state_of(name: String) -> String:
 	return READY if s.charges > 0 else COOLING
 
 
+# The key a slot publishes now, read through the glyph lookup: the table's label while the
+# keyboard keeps its default key (LMB, F), else the lookup's glyph id (key_g, pad_rt).
+func slot_key(name: String) -> String:
+	var label: String = movement_key if name == MOVEMENT else KEYS[name]
+	for verb in Bindings.VERBS:
+		if Bindings.label(verb) == label:
+			var glyph := Glyphs.of(verb)
+			return label if glyph == Bindings.glyph(verb) else glyph
+	return label
+
+
 # W1's Ability slots contract: one record per slot, in bar order. cooldown_frac is the
 # share of the recharging charge still to go, 0 when every charge is in.
 func slots() -> Array:
@@ -313,7 +325,7 @@ func slots() -> Array:
 		var frac := 0.0
 		if s.charges < s.max_charges and cd > 0.0:
 			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
-		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": movement_key if name == MOVEMENT else KEYS[name], "cooldown_frac": frac,
+		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": slot_key(name), "cooldown_frac": frac,
 			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
 			"gauge": s.gauge.fraction() if s.gauge != null else 0.0})
 	return out

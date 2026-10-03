@@ -2763,3 +2763,12 @@ Each stage row gains `"music": {"theme": int, "ace": String}`. Theme stays 0 to 
 - **Display.** Two comfort numbers, `fullscreen` (0 or 1) and `quality` (0 High, 1 Low), default 0, so an older file loads as today. `Game.apply_saved_display()` runs after the presentation is built: the saved quality applies unless a `--preset=` flag was given, and fullscreen (borderless, `WINDOW_MODE_FULLSCREEN`) only when `_windowed()` is true, and at boot only when saved on.
 - **Test.** `tests/ui_settings_pages_test.gd` (44 checks). Red: with the `game.apply_binding` call removed from the rebind, the "G is on cl_jump at once" check fails (plus three that read the InputMap after it); restored, all pass.
 - **Follow-up.** The cap on a rebind row reads the InputMap; the HUD and ability bar glyphs still read the table default until the glyph unit lands.
+
+## On-screen caps follow the device and the bound keys (alpha R12, S4)
+
+`src/ui/glyphs.gd` is the one lookup. `Glyphs.device` is `"kbm"` or `"pad"`, set by `Game.note_device`. `Glyphs.of(verb)` reads the verb's main action from the InputMap for that device (a key gives `key_<name>` from `OS.get_keycode_string`, so Space is `key_space` and Ctrl `key_ctrl`; left and right mouse give `key_lmb` and `key_rmb`). Roll and look keep `key_w` and `key_mouse` on the keyboard. `Glyphs.of_action(action, fallback)` covers actions that are no verb (`cl_retry`). With no such action in the InputMap, the table glyph answers.
+
+- **Pad ids.** `pad_a`, `pad_b`, `pad_x`, `pad_y`, `pad_lb`, `pad_rb`, `pad_lt`, `pad_rt`, `pad_ls` (roll), `pad_rs` (look), `pad_start`. Jump A, haul X, boost B, special LB, interact Y, fire RT, harpoon LT, retry RB. `Keycap` draws them with today's cap colours: face buttons and sticks as round caps, the rest as rounded caps; label and words are A, LB, RT, L and so on.
+- **Surfaces.** Prompts (`KeyGlyphs.glyph_of`, and the glyph id is part of `_placements()`, so a device switch or a rebinding redraws), the ability bar (`AbilityState.slot_key`: the table label while the keyboard keeps its default key, else the glyph id; `AbilitySlots.normalized` passes `pad_` ids through) and the restart meter.
+- **Not yet.** Field notes, the controls diagram, the class card and the tree and shop cards still read `Bindings.glyph`; `AbilityState.KEYS` stays a label table for them.
+- **Test.** `tests/glyph_device_test.gd`. Red: with `note_device` not setting `Glyphs.device`, the S4-4 checks fail; restored, they pass.

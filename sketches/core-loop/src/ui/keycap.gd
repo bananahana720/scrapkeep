@@ -10,12 +10,21 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # other key is a drawn keycap (a charcoal cap with a thicker bottom lip and its label).
 
 const MOUSE := ["key_lmb", "key_rmb"]
-const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab"}
+const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab",
+	"pad_a": "A", "pad_b": "B", "pad_x": "X", "pad_y": "Y", "pad_lb": "LB", "pad_rb": "RB",
+	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start"}
+# Pad caps drawn round: the face buttons and the sticks. The shoulders, triggers and Start
+# are rounded caps like the keys.
+const PAD_ROUND := ["pad_a", "pad_b", "pad_x", "pad_y", "pad_ls", "pad_rs"]
 const PAD := 7.0
 
 
 static func is_mouse(key: String) -> bool:
 	return key in MOUSE
+
+
+static func is_pad(key: String) -> bool:
+	return key.begins_with("pad_")
 
 
 static func from_svg(key: String) -> bool:
@@ -34,6 +43,8 @@ static func font_size(height: float) -> int:
 static func size_of(key: String, height := 24.0) -> Vector2:
 	if is_mouse(key):
 		return Vector2(height * 0.8, height)
+	if key in PAD_ROUND:
+		return Vector2(height, height)
 	var w := UiFonts.width(label(key), font_size(height))
 	return Vector2(maxf(height, w + PAD * 2.0), height)
 
@@ -54,7 +65,7 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 	box.border_color = color
 	box.set_border_width_all(2)
 	box.border_width_bottom = 4
-	box.set_corner_radius_all(int(height * 0.2))
+	box.set_corner_radius_all(int(height * 0.5) if key in PAD_ROUND else int(height * 0.2))
 	canvas.draw_style_box(box, rect)
 	var fs := font_size(height)
 	var text := label(key)
