@@ -1,7 +1,7 @@
-"""Seeded LKR3 sandstone: preserved LKR2 geometry, CPU UV colour bakes, previews.
+"""Seeded LKR4 continuous sandstone: shallow cracks, curved beds, CPU rebakes.
 
 Run Blender -b -t 8 -P this.py -- --render DIR [--seed 613] [--out FILE].
-Sources: local LKT a/c maps; immutable dbd612b game meshes for the three existing pieces.
+Sources: local LKT a/c grain and supplied keyframe crops; continuous high sculpts.
 """
 import argparse
 import hashlib
@@ -13,7 +13,7 @@ import time
 import struct
 import subprocess
 import tempfile
-import signal
+import threading
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -45,65 +45,85 @@ def noise(p, scale, seed):
     return result
 
 
-def beds(p, seed):
+def beds(p, seed, name=None):
+    """One bedding coordinate shared by sculpt and colour, in metres."""
+    name = name or next(k for k, v in SEEDS.items() if v == seed)
     x, y, z = p.T
-    return z + .22 * np.sin(x * .21 + seed) + .11 * np.sin(y * .37) + .045 * x
+    if name in ("cliff_strata", "alcove"):
+        width = 24 if name == "cliff_strata" else 20
+        return z - math.tan(math.radians(8)) * x + .45 * np.sin(x * math.pi * 2 / width + .4) + .035 * y
+    if name == "fin_spire":
+        radial = np.sqrt((x - .24 * np.sin(z * .25)) ** 2 + (y / .63) ** 2)
+        # A bowl-shaped field makes every bed wrap and rise along the widening foot.
+        return z + .48 * radial + .34 * np.sin(np.arctan2(y / .63, x) + z * .075)
+    leg = np.clip((np.abs(x) - 2.2) / 4.8, 0, 1)
+    return z + 1.65 * leg ** 2 + .09 * np.sin(x * .4)
 
 
-def relief(p, seed):
-    """Unequal rounded bed lips, soft-bed joint erosion, ridges and fine pitting."""
-    h = beds(p, seed)
-    edges = np.array([0, 1.3, 3.6, 6.1, 7.0, 10.5, 13.8, 15.0, 18.4, 21.3, 24, 27])
-    k = np.clip(np.searchsorted(edges, h) - 1, 0, len(edges) - 2)
-    f = (h - edges[k]) / (edges[k + 1] - edges[k])
-    # Rounded inward recess at each bedding boundary, never a boxed terrace.
-    seam = np.exp(-((f - .07) / .105) ** 2)
-    soft = .42 + .58 * ((k * 7) % 5) / 4
-    coarse = noise(p, .42, seed)
-    ridge = 1 - np.abs(noise(p, 1.25, seed + 11))
-    fine = noise(p, 5.8, seed + 31)
-    # Voronoi distance difference creates non-grid, oblique cell-fracture joints.
-    q = p * np.array([.24, .28, .105])
-    cell = np.floor(q)
-    d1 = np.full(len(p), 100.)
-    d2 = d1.copy()
-    for dx in (-1, 0, 1):
-        for dy in (-1, 0, 1):
-            for dz in (-1, 0, 1):
-                c = cell + (dx, dy, dz)
-                jitter = np.stack([np.sin(c @ v + seed) * 43758.5453 for v in
-                                   ([127.1, 311.7, 74.7], [269.5, 183.3, 246.1], [113.5, 271.9, 124.6])], axis=1)
-                jitter -= np.floor(jitter)
-                d = np.sum((q - c - .2 - .6 * jitter) ** 2, axis=1)
-                d2 = np.minimum(d2, np.maximum(d1, d))
-                d1 = np.minimum(d1, d)
-    joint = np.exp(-((np.sqrt(d2) - np.sqrt(d1)) / .036) ** 2)
-    return -.20 * seam + .21 * coarse + .085 * ridge + .024 * fine - .19 * joint * soft
+def cracks(p, name):
+    """Two short, disjoint natural cracks: maximum combined groove depth 18 mm."""
+    length = 1.3 if name == "arch" else 2.0
+    height = {"cliff_strata": 26, "alcove": 12, "fin_spire": 22, "arch": 9}[name]
+    width = {"cliff_strata": 24, "alcove": 20, "fin_spire": 7, "arch": 14}[name]
+    x, y, z = p.T
+    depth = np.zeros(len(p))
+    for cx, cz in ((-.25 * width, .36 * height), (.20 * width, .73 * height)):
+        along = (z - cz) / length
+        taper = np.maximum(1 - along ** 2, 0) ** 2
+        cross = x - cx - .23 * (z - cz) - .035 * np.sin((z - cz) * 5)
+        front = np.clip(-y / .8, 0, 1)
+        depth = np.maximum(depth, .018 * np.exp(-(cross / .055) ** 2) * taper * front)
+    return depth
+
+
+def relief(p, seed, name=None):
+    """Broad weathering and grain, with no bedding grooves or fracture-cell grid."""
+    name = name or next(k for k, v in SEEDS.items() if v == seed)
+    scale = 2.4 if name == "cliff_strata" else .65 if name == "arch" else 1
+    broad = .21 * noise(p, .42, seed) + .06 * (1 - np.abs(noise(p, 1.25, seed + 11)))
+    grain = .007 * noise(p, 5.8, seed + 31)
+    return scale * broad + grain - cracks(p, name)
 
 
 def make_surface(name):
     """Continuous quad silhouettes matching the first kit's overall proportions."""
     verts, faces = [], []
     if name == "arch":
-        # One continuous eroded shell with bowed feet and an uneven broad crown.
-        n, m = 81, 48
+        # A single extruded U-shaped slab. Dense contour samples preserve the flat
+        # deck and square shoulders through subdivision without separate blocks.
+        outer = [(-7, 0), (-6.8, 3), (-6.55, 7.7), (-6.15, 8.96),
+                 (-3.8, 9), (0, 9), (3.5, 9), (6.2, 8.96),
+                 (6.55, 7.7), (6.8, 3), (7, 0)]
+        inner = [(-3.55, 0), (-3.6, 3), (-3.45, 5.5), (-3.05, 6.2),
+                 (-1.8, 6.5), (0, 6.5), (1.8, 6.45), (3.05, 6.2),
+                 (3.45, 5.5), (3.6, 3), (3.55, 0)]
+        n, m = 121, 48
         for i in range(n):
-            a = math.pi * i / (n - 1)
-            ca, sa = math.cos(a), math.sin(a)
+            t = i / (n - 1)
+            q = t * (len(outer) - 1)
+            k = min(int(q), len(outer) - 2)
+            f = q - k
+            ox, oz = np.array(outer[k]) * (1 - f) + np.array(outer[k + 1]) * f
+            ix, iz = np.array(inner[k]) * (1 - f) + np.array(inner[k + 1]) * f
             for j in range(m):
-                b = 2 * math.pi * j / m
-                thickness = 1.26 + .38 * sa ** 6 + .16 * math.sin(a * 3 + .7)
-                radial = thickness * math.cos(b)
-                rx = 5.48 + radial + .34 * math.sin(a * 3 + .5) * sa
-                rz = 7.35 + 1.18 * math.cos(b)
-                x = rx * math.copysign(abs(ca) ** .79, ca)
-                x += .26 * math.sin(a * 4 + .2) * sa
-                exponent = .43 + .17 * (1 - math.cos(b))
-                z = .20 + rz * sa ** exponent
-                z += (.30 * math.sin(a * 5 + .4) + .24 * ca) * sa ** 2
-                y = 2.05 * math.sin(b) * (1 + .16 * math.cos(a * 3))
-                y += .23 * math.sin(a * 4 + .5) + .10 * math.sin(b * 3 + a)
-                verts.append((x, y, z))
+                # Rectangle perimeter: outside, front face, underside, rear face.
+                u = j / m * 4
+                if u < 1:
+                    blend, depth = 0, 2.4 - 4.8 * u
+                elif u < 2:
+                    blend, depth = u - 1, -2.4
+                elif u < 3:
+                    blend, depth = 1, -2.4 + 4.8 * (u - 2)
+                else:
+                    blend, depth = 4 - u, 2.4
+                x = ox * (1 - blend) + ix * blend
+                z = oz * (1 - blend) + iz * blend
+                front = math.exp(-((depth + 2.4) / .55) ** 2)
+                crown = max(0, min(1, (z - 7.5) / 1.5))
+                z -= front * crown * (.13 + .16 * (math.sin(x * 1.15 + .5) * .5 + .5) ** 3)
+                x += .14 * math.sin(z * .68 + .4) + .09 * math.sin(z * 1.8 + x * .22)
+                depth += .14 * math.sin(x * .8 + z * .6) + .08 * math.sin(z * 1.3 + x * .37)
+                verts.append((x, depth, z))
         for i in range(n - 1):
             for j in range(m):
                 a, b = i * m + j, i * m + (j + 1) % m
@@ -186,7 +206,7 @@ def make_surface(name):
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
     sub = obj.modifiers.new("Sculpt subdivision", "SUBSURF")
-    sub.levels = 4
+    sub.levels = 3
     bpy.ops.object.modifier_apply(modifier=sub.name)
     return obj
 
@@ -198,11 +218,7 @@ def sculpt(obj, seed):
     normals = np.empty(p.size, dtype=np.float32)
     obj.data.vertices.foreach_get("normal", normals)
     normals = normals.reshape(-1, 3)
-    d = relief(p, seed)
-    if obj.name.startswith("cliff"):
-        d *= 2.4
-    elif obj.name.startswith("arch"):
-        d *= .65
+    d = relief(p, seed, obj.name.removesuffix("_high"))
     p += normals * d[:, None]
     lo, hi = p.min(axis=0), p.max(axis=0)
     p[:, :2] -= (lo[:2] + hi[:2]) / 2
@@ -217,7 +233,7 @@ def paint_beds(obj, seed):
     p = np.empty(len(obj.data.vertices) * 3, dtype=np.float32)
     obj.data.vertices.foreach_get("co", p)
     p = p.reshape(-1, 3)
-    h = beds(p, seed)
+    h = beds(p, seed, obj.name.removesuffix("_high"))
     boundaries = np.array([0, 1.3, 3.6, 6.1, 7, 10.5, 13.8, 15, 18.4, 21.3, 24, 28])
     idx = np.clip(np.searchsorted(boundaries, h) - 1, 0, len(boundaries) - 2)
     tones = np.array([common.mix("sandstone", "bone", .18), common.srgb("sandstone"),
@@ -367,12 +383,27 @@ def bake(high, low, mat, source_mat, color, curvature, seed):
         high.select_set(True)
         start = time.monotonic()
         print("BAKE_START", low.name, label, flush=True)
+        watchdog = threading.Timer(895, lambda: os._exit(124))
+        watchdog.start()
         bpy.ops.object.bake(type=kind)
+        watchdog.cancel()
         elapsed = time.monotonic() - start
         assert elapsed < 900, "Bake exceeded 15-minute cap"
         maps[label], times[label] = img, round(elapsed, 2)
         print("BAKE_DONE", label, elapsed, flush=True)
     source_mat.node_tree.links.new(source_mat.node_tree.nodes.get("Principled BSDF").outputs[0], out.inputs["Surface"])
+    # Decimated lip triangles can produce extreme tangent corrections. Keep the
+    # rebaked small relief, but cap slopes at 37 degrees instead of black slivers.
+    normal = np.array(maps["normal"].pixels[:], dtype=np.float32).reshape(-1, 4)
+    vector = normal[:, :3] * 2 - 1
+    invalid = (normal[:, :3].max(axis=1) < .1) | (vector[:, 2] <= 0)
+    vector[invalid] = (0, 0, 1)
+    vector /= np.maximum(np.linalg.norm(vector, axis=1), 1e-8)[:, None]
+    xy = np.linalg.norm(vector[:, :2], axis=1)
+    vector[:, :2] *= np.minimum(1, .6 / np.maximum(xy, 1e-8))[:, None]
+    vector[:, 2] = np.sqrt(1 - np.sum(vector[:, :2] ** 2, axis=1))
+    normal[:, :3] = vector * .5 + .5
+    maps["normal"].pixels.foreach_set(normal.ravel())
     # ORM carries AO in red and cavity-derived roughness in green. Preserve the
     # unmodified cavity map as an embedded glTF image as well.
     ao = np.array(maps["ao"].pixels[:], dtype=np.float32).reshape(-1, 4)
@@ -483,10 +514,10 @@ def render_views(high, low, name, directory):
         bpy.ops.render.render(write_still=True)
 
 
-BASE_REV = "dbd612b5722f38e85fe057ff90398ad5288e4daa"
+BASE_REV = "7e6b16bb789600411c3857726d2d4212db25f5d3"
 SOURCE_ROOT = "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/x9"
 CROPS = {"cliff_strata": "striped_wall", "alcove": "alcove", "fin_spire": "spire", "arch": "arch"}
-BED_EDGES = np.array([0., .24, .28, .60, .69, .96, 1.])
+BED_EDGES = np.array([0., 8/27, 9/27, 17/27, 18/27, 26/27, 1.])
 
 
 def read_rgb(path):
@@ -547,12 +578,12 @@ def raster_positions(p, normals, uv, triangles):
     return points, directions, mask
 
 
-def band_colours(p, n, seed, height, source_a, source_c):
-    # Six nonrepeating beds; both cream beds occupy only 4% of the height.
-    h = beds(p, seed) / height
+def band_colours(p, n, seed, height, source_a, source_c, name):
+    # Three broad beds and three narrow pale beds, exactly 8:1 in bedding space.
+    h = beds(p, seed, name) / height
     h += .006 * np.sin(p[:, 0] * .12 + p[:, 1] * .16 + seed)
     colours = np.array([[.64, .414, .278], [.742, .572, .401], [.657, .437, .298],
-                        [.585, .370, .257], [.687, .471, .329], [.752, .584, .419]])
+                        [.752, .584, .419], [.687, .471, .329], [.752, .584, .419]])
     idx = np.clip(np.searchsorted(BED_EDGES, h, side="right") - 1, 0, 5)
     tone = colours[idx].copy()
     for k in range(1, 6):
@@ -570,16 +601,6 @@ def band_colours(p, n, seed, height, source_a, source_c):
     u = p[:, 0] * .085 + p[:, 1] * .051 + seed * .017
     tone += .24 * sample(a_grain, u, .12 + fraction * .16 + idx * .11)
     tone += .12 * sample(c_grain, u * 1.47, p[:, 2] * .027 + fraction * .12)
-    nz = np.abs(n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-8))
-    steep = np.clip((.46 - nz) / .28, 0, 1)
-    axis = p[:, 0] + .37 * p[:, 1]
-    lo, hi = axis.min(), axis.max()
-    streaks = np.zeros(len(p))
-    for f in (.18, .57, .83):
-        centre = lo + f * (hi - lo) + .07 * np.sin(p[:, 2] * .12 + seed)
-        streaks += np.exp(-((axis - centre) / .13) ** 2)
-    lifetime = np.clip((np.sin(p[:, 2] * .21 + seed) + .25) * 1.3, 0, 1)
-    tone *= (1 - .15 * np.clip(streaks, 0, 1) * steep * lifetime)[:, None]
     return np.clip(tone, .01, .95)
 
 
@@ -598,15 +619,15 @@ def rebake_colour(payload, name, seed, source_root):
     root = os.path.join(source_root, "LKT", "final")
     source_a, source_c = read_rgb(os.path.join(root, "a.png")), read_rgb(os.path.join(root, "c.png"))
     target = read_rgb(os.path.join(source_root, "crops", CROPS[name] + ".png")).mean(axis=(0, 1))
-    colours = band_colours(points[mask], directions[mask], seed, p[:, 2].max(), source_a, source_c)
-    with tempfile.TemporaryDirectory(prefix="lkr3-") as temp:
+    colours = band_colours(points[mask], directions[mask], seed, p[:, 2].max(), source_a, source_c, name)
+    with tempfile.TemporaryDirectory(prefix="lkr4-") as temp:
         factors = []
         for label in ("ao", "cavity"):
             ii = next(i for i, im in enumerate(doc["images"]) if im["name"] == label + "_1024")
             path = os.path.join(temp, label + ".png")
             open(path, "wb").write(image_bytes(doc, binary, ii))
             raw = read_rgb(path)[:, :, 0]
-            factor = raw if label == "ao" else np.clip(.90 + (raw - .5) * .24, .78, 1)
+            factor = .85 + .15 * raw if label == "ao" else 1 - .20 * np.clip((.5 - raw) * 2, 0, 1)
             factors.append(factor[mask])
         colours *= (factors[0] * factors[1])[:, None]
         # Full supplied crop means include lighting/props: report that method explicitly.
@@ -643,17 +664,19 @@ def rebake_colour(payload, name, seed, source_root):
         v["byteOffset"], v["byteLength"] = len(packed), len(chunk)
         packed += chunk
     doc["buffers"][0]["byteLength"] = len(packed)
-    doc.setdefault("extras", {})["LKR3"] = {"seed": seed, "bands": 6, "bed_edges": BED_EDGES.tolist(),
+    doc.setdefault("extras", {})["LKR4"] = {"seed": seed, "bands": 6, "bed_edges": BED_EDGES.tolist(),
         "albedo_mean_rgb8": mean.tolist(), "crop_mean_rgb8": (target * 255).tolist(),
-        "colour_bake": "CPU UV raster using sculpt beds; AO and cavity multiplied; local LKT a/c grain",
-        "source_revision": BASE_REV if name != "arch" else "new continuous high-to-low sculpt"}
+        "colour_bake": "CPU UV raster of curved bedding; AO 15%, cavity 20%; local LKT a/c grain",
+        "source_revision": BASE_REV, "crack_count": 2, "max_crack_depth_m": .018,
+        "broad_to_pale_bed_ratio": 8, "cavity_multiply_strength": .20,
+        "bedding": "8 degree dip plus one undulation" if name in ("cliff_strata", "alcove") else "radial bowl around tapered column" if name == "fin_spire" else "horizontal deck turning down legs"}
     j = json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()
     j += b" " * ((-len(j)) % 4)
     packed += bytes((-len(packed)) % 4)
     out = struct.pack("<III", 0x46546c67, 2, 28 + len(j) + len(packed))
     out += struct.pack("<II", len(j), 0x4e4f534a) + j
     out += struct.pack("<II", len(packed), 0x004e4942) + packed
-    return out, doc["extras"]["LKR3"]
+    return out, doc["extras"]["LKR4"]
 
 
 def render_game(path, name, directory, labels=("three-quarter", "near", "far")):
@@ -697,11 +720,11 @@ def render_game(path, name, directory, labels=("three-quarter", "near", "far")):
             cam.location = Vector((direction.x * 60, lo.y + direction.y * 60, 3.3))
             common._look(cam, Vector((0, 0, hi.z * .43)))
         bpy.context.scene.render.filepath = os.path.join(directory, name + "-" + label + ".png")
-        signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError("15 minute render cap")))
-        signal.alarm(895)
+        watchdog = threading.Timer(895, lambda: os._exit(124))
+        watchdog.start()
         start = time.monotonic()
         bpy.ops.render.render(write_still=True)
-        signal.alarm(0)
+        watchdog.cancel()
         print("RENDER_DONE", name, label, round(time.monotonic() - start, 2), flush=True)
 
 
@@ -713,36 +736,31 @@ def run(name=NAME):
     parser.add_argument("--seed", type=int, default=SEEDS[name])
     opt = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     path = opt.out or os.path.join(common.MODELS, "world_one", "landforms", "sculpted", name + ".glb")
+    common.reset()
+    high = make_surface(name)
+    sculpt(high, opt.seed)
     if name == "arch":
-        common.reset()
-        high = make_surface(name)
-        sculpt(high, opt.seed)
-        # Match the requested envelope after erosion, without squared-off jambs.
         p = np.array([v.co[:] for v in high.data.vertices])
         p[:, 0] *= 14 / np.ptp(p[:, 0])
         p[:, 2] *= 9 / p[:, 2].max()
         high.data.vertices.foreach_set("co", p.astype(np.float32).ravel())
         high.data.update()
-        paint_beds(high, opt.seed)
-        source, color, curvature = sandstone_material(opt.seed)
-        high.data.materials.append(source)
-        low, mat = low_mesh(high, BUDGETS[name])
-        maps, times = bake(high, low, mat, source, color, curvature, opt.seed)
-        center_game_base(high, low)
-        with tempfile.TemporaryDirectory(prefix="lkr3-arch-") as temp:
-            intermediate = os.path.join(temp, "arch.glb")
-            common.export(low, intermediate)
-            append_maps(intermediate, maps)
-            payload = open(intermediate, "rb").read()
-        print("ARCH_BAKES", json.dumps(times), flush=True)
-    else:
-        relative = "sketches/core-loop/assets/models/world_one/landforms/sculpted/" + name + ".glb"
-        repo = subprocess.check_output(["git", "-C", os.path.dirname(__file__), "rev-parse", "--show-toplevel"]).decode().strip()
-        payload = subprocess.check_output(["git", "-C", repo, "show", BASE_REV + ":" + relative])
+    paint_beds(high, opt.seed)
+    source, color, curvature = sandstone_material(opt.seed)
+    high.data.materials.append(source)
+    low, mat = low_mesh(high, BUDGETS[name])
+    maps, times = bake(high, low, mat, source, color, curvature, opt.seed)
+    center_game_base(high, low)
+    with tempfile.TemporaryDirectory(prefix="lkr4-" + name + "-") as temp:
+        intermediate = os.path.join(temp, name + ".glb")
+        common.export(low, intermediate)
+        append_maps(intermediate, maps)
+        payload = open(intermediate, "rb").read()
+    print("LKR4_BAKES", json.dumps(times), flush=True)
     payload, report = rebake_colour(payload, name, opt.seed, opt.source_root)
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     open(path, "wb").write(payload)
-    print("LKR3_RESULT", json.dumps({"piece": name, "size": len(payload),
+    print("LKR4_RESULT", json.dumps({"piece": name, "size": len(payload),
           "sha256": hashlib.sha256(payload).hexdigest(), **report}), flush=True)
     if opt.render:
         render_game(path, name, opt.render)

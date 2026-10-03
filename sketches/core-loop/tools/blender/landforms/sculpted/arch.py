@@ -1,4 +1,4 @@
-"""Seed 1203: continuous 14 m by 9 m eroded arch, high-to-low CPU bakes.
+"""Seed 1203: 14 m by 9 m flat slab bridge; 2.5 m crown, CPU high-to-low bakes.
 
 Run Blender -b -t 8 -P this.py -- --render DIR [--seed 1203] [--out FILE].
 """

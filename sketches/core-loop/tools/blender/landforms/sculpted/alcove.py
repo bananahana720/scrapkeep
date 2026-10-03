@@ -1,4 +1,4 @@
-"""Seed 927: preserved sculpt and deep recess, with six soft baked sandstone beds.
+"""Seed 927: continuous recessed rock; shallow cracks and gently dipping 8:1 beds.
 
 Run Blender -b -t 8 -P this.py -- --render DIR [--seed 927] [--out FILE].
 """
