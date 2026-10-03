@@ -73,8 +73,15 @@ func binding_events(action: String) -> Array:
 	return Bindings.decode(binding(action))
 
 
+# Mouse look is not rebindable, and an empty binding means no override, so it clears.
 func set_binding(action: String, events: Array) -> void:
-	bindings[action] = Bindings.encode(events)
+	if Bindings.actions().get(action, {}).get("motion", false):
+		return
+	var text := Bindings.encode(events)
+	if text.is_empty():
+		clear_binding(action)
+		return
+	bindings[action] = text
 	save()
 
 

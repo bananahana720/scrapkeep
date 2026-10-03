@@ -50,8 +50,10 @@ func _process(_delta: float) -> bool:
 	_wait += 1
 	if _wait < 20:
 		return false
-	_wait = 0
 	var flow = _game.flow
+	if STEPS[_step] in ["click_locked", "key_unlocked"] and _game.screens.class_cards()[1].disabled:
+		return false
+	_wait = 0
 	match STEPS[_step]:
 		"key_locked":
 			_game._screen_key(KEY_2)
@@ -59,6 +61,7 @@ func _process(_delta: float) -> bool:
 		"click_locked":
 			var cards: Array = _game.screens.class_cards()
 			_t.eq("P2-2 one card per row", cards.size(), flow.classes.size())
+			_t.check("P2-2 the locked card takes clicks", not cards[1].disabled, "disabled %s" % cards[1].disabled)
 			_click(cards[1])
 			_t.check("P2-2 locked click starts nothing", flow.state_name() == "class_select" and not flow.in_play(), "state %s" % flow.state_name())
 		"direct":
@@ -71,8 +74,8 @@ func _process(_delta: float) -> bool:
 			_t.eq("P2-2 back at class select", flow.state_name(), "class_select")
 			_game.ctx.profile.unlock_pilot(_locked.id)
 		"key_unlocked":
-			_game._screen_key(KEY_2)
-			_t.check("P2-2 unlocked key starts the pilot", flow.in_play() and _game.run.class_def == _locked, "state %s" % flow.state_name())
+			_click(_game.screens.class_cards()[1])
+			_t.check("P2-2 a click on the unlocked card starts the pilot", flow.in_play() and _game.run.class_def == _locked, "state %s" % flow.state_name())
 		"die_b":
 			_game.run.damage(99999.0, "test")
 		"back_b":

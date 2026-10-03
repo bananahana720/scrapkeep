@@ -324,7 +324,8 @@ func _fit(rec: Dictionary) -> void:
 	var player: Node3D = rec["player"]
 	var id := class_id(player)
 	var paint_id := _equipped_paint(id)
-	if rec["class"] == id and rec.get("paint", "") == paint_id:
+	var tint = paint_tint(id, paint_id) if paint_id != "" else null
+	if rec["class"] == id and rec.get("tint") == tint:
 		return
 	for key in ["core", "pod"]:
 		var old = rec[key]
@@ -342,16 +343,14 @@ func _fit(rec: Dictionary) -> void:
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
 	var tints := {"class": player.class_color()}
-	if paint_id != "":
-		var tint = paint_tint(id, paint_id)
-		if tint != null:
-			tints["paint"] = tint
+	if tint != null:
+		tints["paint"] = tint
 	paint(core, tints)
 	paint(pod, tints)
 	rolling.add_child(core)
 	player.juice_node().add_child(pod)
 	rec["class"] = id
-	rec["paint"] = paint_id
+	rec["tint"] = tint
 	rec["core"] = core
 	rec["pod"] = pod
 	_fit_pilot(rec)

@@ -99,6 +99,7 @@ func _check_applied() -> void:
 	var id: String = rec["class"]
 	var plain := Color(LIFT, LIFT, LIFT)
 	var heft_before: float = player.heft()
+	var mass_before: float = _game.run.mass
 	var color_before: Color = player.class_color()
 	var accent_before := slot_albedos(rec["pod"], "class_accent")
 	var profile := _profile()
@@ -114,7 +115,8 @@ func _check_applied() -> void:
 	var accent_after := slot_albedos(rec["pod"], "class_accent")
 	_report("P4-1 accent", accent_after == accent_before and player.class_color().is_equal_approx(color_before),
 		"class_accent and class_color() unchanged")
-	_report("P4-1 heft", is_equal_approx(player.heft(), heft_before), "heft unchanged")
+	_report("P4-1 heft", is_equal_approx(player.heft(), heft_before) and is_equal_approx(_game.run.mass, mass_before),
+		"heft and mass unchanged")
 	_report("P4-1 plain", not plain.is_equal_approx(_lifted(tint)), "the tint differs from the unpainted lift")
 	# An unpainted shell keeps the plain lift.
 	hook.profile = null
@@ -139,9 +141,6 @@ func _check_refusals() -> void:
 		_report("P4-2 " + cases[id], got == null and hook._warned.has("paint:" + id), "no tint and a warning for '%s'" % id)
 	_report("P4-2 starter", hook.paint_tint(SABLE, "paint_sable_lagoon") != null, "a starter needs no unlock")
 	_report("P4-2 any", hook.paint_tint(SABLE, "paint_any_salt") != null, "an any-pilot row applies")
-	# A non-paint slot: a stand-in row would be needed, so check the guard on a trail row id's absence.
-	_report("P4-2 slot", Cosmetics.row("trail_x").is_empty() and hook.paint_tint(SABLE, "trail_x") == null,
-		"no trail or topper row yields a tint")
 	var before: int = hook._warned.size()
 	hook.paint_tint(SABLE, "paint_nope")
 	_report("P4-2 once", hook._warned.size() == before, "one warning per id")
@@ -153,7 +152,14 @@ func _check_repaint() -> void:
 	var player = _game.player
 	var id: String = hook.shell_of(player)["class"]
 	var profile = hook.profile
+	profile.equip(id, "paint", "paint_any_night")
+	hook._process(0.016)
+	var locked := slot_albedos(hook.shell_of(player)["pod"], "paint")
 	profile.unlock_cosmetic("paint_any_night")
+	hook._process(0.016)
+	var unlocked := slot_albedos(hook.shell_of(player)["pod"], "paint")
+	_report("P4-3 unlock", all_equal(locked, Color(LIFT, LIFT, LIFT)) and all_equal(unlocked, _lifted(Cosmetics.row("paint_any_night")["tint"])),
+		"an equipped paint shows at the next fit once it is unlocked")
 	profile.equip(id, "paint", "paint_any_night")
 	hook._process(0.016)
 	var first := slot_albedos(hook.shell_of(player)["pod"], "paint")

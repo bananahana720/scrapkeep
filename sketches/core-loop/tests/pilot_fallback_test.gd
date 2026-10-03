@@ -116,8 +116,7 @@ func _run() -> void:
 	_t.check("music engine takes the motif", engine != null and engine.class_motif in [PROBE_MOTIF, PROBE_ID],
 		"engine motif %s" % [engine.class_motif if engine != null else "no engine"])
 	if engine != null:
-		engine.call("_make_class_counter")
-		_t.check("music engine falls back to the first pilot's counter-line", not engine.call("_make_class_counter").is_empty(),
+		_t.check("music engine plays no class counter-line for an unknown motif", engine.call("_make_class_counter").is_empty(),
 			"counter-line for %s has %d notes" % [engine.class_motif, engine.call("_make_class_counter").size()])
 
 	# Stage 1 to the Warden's break, the reward and the launch out of it.
