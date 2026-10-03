@@ -1,0 +1,246 @@
+{
+ "assets": [
+  {
+   "path": "res://assets/models/chunks.glb",
+   "class": "chunk",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:43"
+  },
+  {
+   "path": "res://assets/models/moss_shelter.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:1257"
+  },
+  {
+   "path": "res://assets/models/moss_workshop.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:1280",
+   "exception": {
+    "tris": 4400,
+    "verts": 7900,
+    "draws": 3
+   },
+   "exception_why": "recipe assert tris < 6,500"
+  },
+  {
+   "path": "res://assets/models/pilot_kest_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:17"
+  },
+  {
+   "path": "res://assets/models/pilot_rivet_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:15"
+  },
+  {
+   "path": "res://assets/models/pilot_sable_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:16"
+  },
+  {
+   "path": "res://assets/models/reward_gate.glb",
+   "class": "gate",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:44"
+  },
+  {
+   "path": "res://assets/models/shell_kest.glb",
+   "class": "shell",
+   "ships": false,
+   "loader": "none (no loader in src/; the loaded shells are under world_one/)"
+  },
+  {
+   "path": "res://assets/models/shell_rivet.glb",
+   "class": "shell",
+   "ships": false,
+   "loader": "none (no loader in src/; the loaded shells are under world_one/)"
+  },
+  {
+   "path": "res://assets/models/shell_sable.glb",
+   "class": "shell",
+   "ships": false,
+   "loader": "none (no loader in src/; the loaded shells are under world_one/)"
+  },
+  {
+   "path": "res://assets/models/warden_clamp_base.glb",
+   "class": "warden_base",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:6"
+  },
+  {
+   "path": "res://assets/models/warden_kit_hive.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:663 (format string warden_kit_%s.glb)"
+  },
+  {
+   "path": "res://assets/models/warden_kit_mind.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:663 (format string warden_kit_%s.glb)"
+  },
+  {
+   "path": "res://assets/models/warden_kit_reactor.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:663 (format string warden_kit_%s.glb)"
+  },
+  {
+   "path": "res://assets/models/world_one/clutter_kit.glb",
+   "class": "clutter",
+   "ships": true,
+   "loader": "src/presentation/set_dressing.gd:9"
+  },
+  {
+   "path": "res://assets/models/world_one/dam.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/spillway_scenery.gd:218",
+   "exception": {
+    "tris": 2400,
+    "verts": 4600,
+    "draws": 3
+   },
+   "exception_why": "landmark dam: ceilings 3,000 T / 9,000 V / 3 D in dam_asset_test"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_bola_thrower.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/bola_thrower.gd (load of this path)"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_chaser.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/chaser.gd (load of this path)",
+   "exception": {
+    "draws": 5
+   },
+   "exception_why": "chaser test ceiling 5 draws"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_deflector.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/deflector.gd (load of this path)"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_hooker.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/hooker.gd (load of this path)"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_lobber.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/lobber.gd (load of this path)",
+   "exception": {
+    "draws": 5
+   },
+   "exception_why": "lobber test ceiling 5 draws"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_mag_trapper.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/mag_trapper.gd (load of this path)",
+   "exception": {
+    "draws": 6
+   },
+   "exception_why": "mag trapper test ceiling 6 draws (independent top disc adds two surfaces)"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_netcaster.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/netcaster.gd (load of this path)"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_plated_brute.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/plated_brute.gd (load of this path)"
+  },
+  {
+   "path": "res://assets/models/world_one/enemy_winch_drone.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/winch_drone.gd (load of this path)",
+   "exception": {
+    "draws": 4
+   },
+   "exception_why": "winch drone test ceiling 4 draws"
+  },
+  {
+   "path": "res://assets/models/world_one/shell_kest.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:38-40",
+   "exception": {
+    "draws": 16
+   },
+   "exception_why": "Kest pod ceiling 21 draws; its pilot takes 5"
+  },
+  {
+   "path": "res://assets/models/world_one/shell_rivet.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:38-40"
+  },
+  {
+   "path": "res://assets/models/world_one/shell_sable.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd:38-40"
+  },
+  {
+   "path": "res://assets/models/world_one/water_edges.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/spillway_scenery.gd:204"
+  },
+  {
+   "path": "res://assets/textures/packed-sand-floor.webp",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  },
+  {
+   "path": "res://assets/textures/riveted-gyro-metal.webp",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  },
+  {
+   "path": "res://assets/textures/rusted-salvaged-plate-worn.webp",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  },
+  {
+   "path": "res://assets/textures/rusted-salvaged-plate.webp",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  },
+  {
+   "path": "res://assets/textures/sandstone-strata.webp",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  },
+  {
+   "path": "res://assets/textures/wet-spill-stone.webp",
+   "class": "texture",
+   "ships": true,
+   "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  }
+ ]
+}
