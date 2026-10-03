@@ -5,6 +5,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # The prompt (design-v3/LEGIBILITY.md sections 2, 3 and 5): a sand keycap about 28 px tall plus
@@ -260,7 +261,7 @@ static func _order(verb: String) -> int:
 
 # The key glyph a prompt draws: LET GO is the harpoon's key.
 static func glyph_of(verb: String) -> String:
-	return Bindings.glyph("harpoon" if verb == LETGO else verb)
+	return Glyphs.of("harpoon" if verb == LETGO else verb)
 
 
 # Whether the screen draws a prompt: its anchor is a real point, in front of the camera
@@ -344,6 +345,7 @@ func _placements() -> Array:
 		else:
 			at += AIM_OFFSET
 		out.append({"verb": prompt["verb"], "at": at, "word": prompt["word"],
+			"glyph": glyph_of(prompt["verb"]),
 			"icon": "" if prompt["verb"] == LETGO else icon_of(prompt["verb"], _line)})
 	return out
 
@@ -361,7 +363,7 @@ func _draw() -> void:
 	for placed in _placed:
 		var verb: String = placed["verb"]
 		var at: Vector2 = placed["at"]
-		var cap := Keycap.draw(self, at, glyph_of(verb), cap_color, KEY_H)
+		var cap := Keycap.draw(self, at, placed["glyph"], cap_color, KEY_H)
 		var icon_id: String = placed["icon"]
 		var edge := cap.end.x + 5.0
 		if verb == LETGO:

@@ -36,7 +36,7 @@ static func normalized(record: Dictionary, def) -> Dictionary:
 	if not Icons.has(String(out.get("icon", ""))):
 		out["icon"] = "ab_%s_%s" % [pilot_of(def), ROLES.get(out.get("slot", ""), "weapon")]
 	var key := String(out.get("key", ""))
-	if not key.begins_with("key_"):
+	if not (key.begins_with("key_") or key.begins_with("pad_")):
 		out["key"] = "key_" + key.to_lower()
 	out["gauge"] = float(out.get("gauge", 0.0))
 	return out

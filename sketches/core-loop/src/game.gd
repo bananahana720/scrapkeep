@@ -473,6 +473,7 @@ func note_device(event: InputEvent) -> void:
 		last_device = "kbm"
 	elif event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.2):
 		last_device = "pad"
+	preload("res://src/ui/glyphs.gd").device = last_device
 
 
 static func _fresh_action(action: String) -> void:
