@@ -282,17 +282,20 @@ func _cancel() -> void:
 	rows[verb].text = verb.capitalize()
 
 
-# True when another verb's action already holds this key or button in the InputMap.
+# True when an action other than this verb's already holds this key or button in the
+# InputMap, the pause and retry actions included.
 func _held_elsewhere(verb: String, event: InputEvent) -> bool:
-	for other in Bindings.VERBS:
-		if other == verb:
+	var own: Dictionary = Bindings.VERBS[verb]["actions"]
+	for action in Bindings.actions():
+		if own.has(action):
 			continue
-		for action in Bindings.VERBS[other]["actions"]:
-			for held in InputMap.action_get_events(action):
-				if event is InputEventKey and held is InputEventKey and held.physical_keycode == event.physical_keycode:
-					return true
-				if event is InputEventMouseButton and held is InputEventMouseButton and held.button_index == event.button_index:
-					return true
+		for held in InputMap.action_get_events(action):
+			if event is InputEventKey and held is InputEventKey and held.physical_keycode == event.physical_keycode:
+				return true
+			if event is InputEventMouseButton and held is InputEventMouseButton and held.button_index == event.button_index:
+				return true
+			if event is InputEventJoypadButton and held is InputEventJoypadButton and held.button_index == event.button_index:
+				return true
 	return false
 
 

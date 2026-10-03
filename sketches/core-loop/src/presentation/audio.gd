@@ -1770,7 +1770,7 @@ func _flush_flow() -> void:
 				engine.cancel_pending()
 				var start := on_beat("run_started", 0.0, true)
 				if start >= 0:
-					engine.schedule_restart(start, MusicEngine.PLAY, 0)
+					engine.schedule_restart(start, MusicEngine.PLAY, _stage_theme(1))
 				_ace_stage(1, start)
 			"stage":
 				var stage: int = item[1]

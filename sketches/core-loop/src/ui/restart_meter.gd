@@ -5,7 +5,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 
-# Hold R to retry: the R keycap and a bar that fills over the hold. No words beyond the
+# Hold to retry: the retry key's cap and a bar that fills over the hold. No words beyond the
 # key, so a retry reads as the key the hand is already on.
 
 const KEY_H := 24.0
@@ -17,13 +17,18 @@ var fraction := 0.0
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(Keycap.size_of("key_r", KEY_H).x + GAP + BAR.x, KEY_H)
+	_fit()
 	size = custom_minimum_size
 
 
 func set_fraction(value: float) -> void:
 	fraction = value
+	_fit()
 	queue_redraw()
+
+
+func _fit() -> void:
+	custom_minimum_size = Vector2(Keycap.size_of(_glyph(), KEY_H).x + GAP + BAR.x, KEY_H)
 
 
 func drawn_words() -> PackedStringArray:

@@ -479,13 +479,13 @@ func settings_store():
 	return _settings_store
 
 
-# The saved quality and fullscreen, after the presentation exists. A --preset= flag beats
-# the saved quality; the window mode is only touched on a real window. `args` stands in
-# for the launch arguments in a test.
+# The saved quality and fullscreen, after the presentation exists. A valid --preset= user
+# argument beats the saved quality, as in GraphicsPreset.bind; the window mode is only
+# touched on a real window. `args` stands in for the user arguments in a test.
 func apply_saved_display(args: Array = []) -> void:
-	var launch: Array = args if not args.is_empty() else Array(OS.get_cmdline_user_args()) + Array(OS.get_cmdline_args())
+	var launch: Array = args if not args.is_empty() else Array(OS.get_cmdline_user_args())
 	var saved := SettingsStore.new(storage_dir)
-	if not launch.any(func(arg): return String(arg).begins_with("--preset=")):
+	if not launch.any(func(arg): return String(arg).begins_with("--preset=") and GraphicsPreset.PRESETS.has(String(arg).trim_prefix("--preset="))):
 		set_quality(saved.quality())
 	if saved.fullscreen():
 		set_fullscreen(true)

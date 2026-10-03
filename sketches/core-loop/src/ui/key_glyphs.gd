@@ -323,7 +323,7 @@ func _physics_process(delta: float) -> void:
 	step(delta, view_of(game.player))
 
 
-# Where each shown prompt sits on screen: [{verb, at, word}]. Redraw only when it changes.
+# Where each shown prompt sits on screen: [{verb, at, word, glyph, icon}]. Redraw only when it changes.
 func _placements() -> Array:
 	var out := []
 	if game == null or not game.flow.in_play():

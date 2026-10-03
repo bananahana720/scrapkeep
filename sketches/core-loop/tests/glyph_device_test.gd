@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
@@ -44,6 +45,7 @@ func _physics_process(_delta: float) -> bool:
 	_defaults_and_pad()
 	_live_and_rebind()
 	_device_switch()
+	_meter()
 	quit(_t.verdict())
 	return true
 
@@ -119,6 +121,17 @@ func _live_and_rebind() -> void:
 		if event is InputEventKey:
 			InputMap.action_add_event("cl_jump", event)
 	_t.eq("S4-3 restored", Glyphs.of("jump"), "key_space")
+
+
+func _meter() -> void:
+	var meter := RestartMeter.new()
+	root.add_child(meter)
+	Glyphs.device = "pad"
+	meter.set_fraction(0.5)
+	var need := Keycap.size_of("pad_rb", RestartMeter.KEY_H).x + RestartMeter.GAP + RestartMeter.BAR.x
+	_t.check("S4-6 the restart meter covers the RB cap on the pad", meter.custom_minimum_size.x >= need, "min %.1f need %.1f" % [meter.custom_minimum_size.x, need])
+	Glyphs.device = "kbm"
+	meter.free()
 
 
 func _bar_keys() -> Array:

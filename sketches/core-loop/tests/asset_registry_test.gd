@@ -73,7 +73,7 @@ func _run() -> void:
 
 	var found: Array = []
 	_scan(ROOT, ["glb"], found)
-	_scan(ROOT + "/textures", ["webp", "png", "jpg", "jpeg"], found)
+	_scan(ROOT, ["webp", "png", "jpg", "jpeg"], found)
 	found.sort()
 	for path in found:
 		_check(entries.has(path), "%s is in the registry" % path)
@@ -99,6 +99,8 @@ func _run() -> void:
 			var side := maxi(img.get_width(), img.get_height()) if img != null else -1
 			print("%-48s %-12s %-5s longest side %d, cap %d" % [path.trim_prefix(ROOT + "/"), "texture", str(e["ships"]), side, max_side])
 			_check(side > 0 and side <= max_side, "%s longest side %d within %d" % [path, side, max_side])
+			continue
+		if not classes.has(e["class"]):
 			continue
 		var m := _measure(path)
 		_check(not m.is_empty(), "%s imports as a scene" % path)

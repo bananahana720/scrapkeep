@@ -23,10 +23,6 @@ static func is_mouse(key: String) -> bool:
 	return key in MOUSE
 
 
-static func is_pad(key: String) -> bool:
-	return key.begins_with("pad_")
-
-
 static func from_svg(key: String) -> bool:
 	return is_mouse(key)
 

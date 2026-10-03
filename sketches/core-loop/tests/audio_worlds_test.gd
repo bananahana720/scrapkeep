@@ -102,6 +102,11 @@ func _row_checks() -> void:
 	_t.eq("W5-4 a boss row naming mind plays brindle", arena._boss_track(), "brindle")
 	arena._boss_track()
 	_t.eq("W5-4 one warning for that id", arena.warnings.size(), 1)
+	if arena.sound_ready:
+		arena.ctx.events.boss_arena_entered.emit()
+		_t.eq("W5-4 entering that arena starts the brindle track", arena.engine.track, "brindle")
+	else:
+		print("[audio] sound is not ready headless; the arena start check -> SKIP")
 
 
 # A stage table whose rows name packages the module does not have.
