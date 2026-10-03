@@ -32,6 +32,9 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 # grid-locked wobble is kept only inside the Warden and Brindle drops.
 
 enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET }
+# The boss tracks this engine has content for; a world row naming another plays Brindle's.
+const BOSS_TRACKS := ["brindle"]
+
 const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
 # The bass figure (layer 5) has a floor: it never leaves.

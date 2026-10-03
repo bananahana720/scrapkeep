@@ -213,6 +213,24 @@ func _maybe_turn_phase() -> void:
 		_begin_eject()
 
 
+# What the music follows in the fight: how far through this phase's hp band the boss is,
+# whether it sits on the band's floor, and how much of the phase's minimum time has run.
+# Empty outside phases 1 to 3.
+func music_state() -> Dictionary:
+	if phase < 1 or phase > 3:
+		return {}
+	var floors: Array = Rules.PHASE_FLOORS
+	var mins: Array = Rules.PHASE_MIN_SECONDS
+	var ratio := hp / maxf(max_hp, 1.0)
+	var top := 1.0 if phase == 1 else float(floors[phase - 2])
+	var floor_hp := float(floors[phase - 1])
+	return {
+		"in_phase": clampf((top - ratio) / maxf(top - floor_hp, 0.01), 0.0, 1.0),
+		"held": ratio <= floor_hp + 0.001,
+		"phase_seconds": phase_clock / maxf(float(mins[phase - 1]), 1.0),
+	}
+
+
 func _floor_hp() -> float:
 	return Rules.PHASE_FLOORS[phase - 1] * max_hp
 

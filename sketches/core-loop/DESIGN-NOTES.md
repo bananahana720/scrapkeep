@@ -2735,3 +2735,21 @@ Stage rows gain `unlock_base` (int) and `ancient` (a Roster kind id): 2, 4, 6 wi
 - **Tests.** `terrain_worlds_test` (standalone terrain) and `director_rows_test`. Red: with `use_row` not called on entry, stages 4, 5 and 6 read the guess and the unlock and ancient checks fail; restored, they pass.
 - **Timing (headless, ms, three runs, a loaded shared machine, two-world double).** Before: building all six stages at setup 2568, 2558, 2556. After: world one at setup 2022, 1817, 2700; world two on first read 1320, 1312, 2120. World two's first use is over 250 ms, a hitch for a later unit to hide (build it behind a loading beat or ahead of the world's last stage).
 - **Follow-up.** `game.gd:152-154` calls `geometry_root` for every Spillway row at setup, which builds world two at boot for the two-world double; left alone because two other writers are in that file.
+
+## Music from the stage row and the boss row (R12 W5)
+
+Each stage row gains `"music": {"theme": int, "ace": String}`. Theme stays 0 to 2 (the engine's tables are three long). `ace` names a package `audio.gd` can load (`ACE_PACKAGES`, today `"spillway"`); `""` is the synth band, silently; any other id plays the synth and warns once per id.
+
+| Table | Stage | theme | ace |
+| --- | --- | --- | --- |
+| stage_defs | 1 | 0 | spillway |
+| stage_defs | 2 | 1 | "" |
+| stage_defs | 3 | 2 | "" |
+| slice_defs | 1 | 0 | spillway |
+| two_world_defs | 1-3 | 0, 1, 2 | spillway, "", "" |
+| two_world_defs | 4-6 | 0, 1, 2 | spillway, "", "" |
+
+- **Boss track.** `audio.gd` reads `flow.boss_row(world).music` for the world being fought (`_boss_track`). A track not in `MusicEngine.BOSS_TRACKS` (`["brindle"]`) plays `"brindle"` and warns once per id, so `waking` and `mind` sound as Brindle until their music is written. `_follow_brindle` still dispatches on the engine's track, which is always `"brindle"` today.
+- **`Boss.music_state()`** returns `{in_phase, held, phase_seconds}` (empty outside phases 1 to 3). Audio calls it when the boss module has it and keeps the Rules reflection for a module without it.
+- **Left alone.** The stage-entry stinger argument `clampi(stage, 1, 4)`; the engine's own theme clamps.
+- **Tests.** `audio_worlds_test`. Red: with the slice row's `ace` set to `""`, its slice check fails; restored, it passes.

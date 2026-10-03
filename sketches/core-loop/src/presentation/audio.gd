@@ -7,6 +7,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Streak := preload("res://src/presentation/streak.gd")
 const Bindings := preload("res://src/core/bindings.gd")
@@ -607,10 +608,72 @@ func ace_ready() -> bool:
 	return true
 
 
-# Stage 1 starts the ACE band at transport sample at; any other stage hands back to the
-# synth, except that the band held through a launch's flight waits for the landing.
+# The ACE packages this module can load, by the id a stage row's music.ace names.
+const ACE_PACKAGES := ["spillway"]
+# Without a stage table in the context (a test's stand-in), today's picks stand.
+const FALLBACK_ACE_STAGE := 1
+
+var _music_warned := {}
+
+
+func _warn_music_once(key: String, message: String) -> void:
+	if _music_warned.has(key):
+		return
+	_music_warned[key] = true
+	_emit_music_warning(message)
+
+
+func _emit_music_warning(message: String) -> void:
+	push_warning(message)
+
+
+# The music row of a stage: {"theme": int, "ace": String}.
+func _music_row(stage: int) -> Dictionary:
+	var stages = ctx.get("stages") if ctx != null else null
+	if stages != null:
+		var row: Dictionary = stages.of(stage)
+		if row.has("music"):
+			return row["music"]
+	return {"theme": clampi(stage - 1, 0, 2), "ace": "spillway" if stage == FALLBACK_ACE_STAGE else ""}
+
+
+func _stage_theme(stage: int) -> int:
+	return clampi(int(_music_row(stage).get("theme", 0)), 0, 2)
+
+
+# The boss track for the world being fought: its row's music, or Brindle's when the
+# engine has no such track yet.
+func _boss_track() -> String:
+	var track := "brindle"
+	var stages = ctx.get("stages") if ctx != null else null
+	var run = ctx.get("run") if ctx != null else null
+	if stages == null or run == null:
+		return track
+	var world: int = stages.world_of(int(run.stage))
+	var flow = ctx.get("flow")
+	var row: Dictionary = flow.boss_row(world) if flow != null and flow.has_method("boss_row") else Worlds.boss_of(world)
+	track = str(row.get("music", "brindle"))
+	if not track in MusicEngine.BOSS_TRACKS:
+		_warn_music_once("boss_track_" + track, "music: boss track '%s' has no music yet; playing brindle" % track)
+		return "brindle"
+	return track
+
+
+# The stage's row names the ACE package to play, or "" for the synth band.
+func _ace_package_for(stage: int) -> String:
+	var package := str(_music_row(stage).get("ace", ""))
+	if package == "":
+		return ""
+	if not package in ACE_PACKAGES:
+		_warn_music_once("ace_" + package, "music: ACE package '%s' is not loadable; playing the synth band" % package)
+		return ""
+	return package
+
+
+# A stage whose row names an ACE package starts the ACE band at transport sample at; any
+# other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
 func _ace_stage(stage: int, at: int) -> void:
-	if stage == 1 and ace_ready():
+	if _ace_package_for(stage) != "" and ace_ready():
 		_ace_flight = false
 		_handover_at = -1
 		ace.start_level(at if at >= 0 else engine.clock)
@@ -925,7 +988,7 @@ func wire_optional() -> void:
 	_listen(events, "boss_arena_entered", func():
 		_boss_phase = 1
 		_disarm_launch()
-		_begin_boss("boss_arena_entered", "brindle"), true)
+		_begin_boss("boss_arena_entered", _boss_track()), true)
 	var phase_args := _argc(events, "boss_phase_changed")
 	if phase_args >= 1:
 		_listen(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1) if phase_args > 1 else _on_boss_phase_with)
@@ -944,15 +1007,15 @@ func wire_optional() -> void:
 		if reason == "arena_retry" and sound_ready:
 			# R in the arena: Brindle's music from phase 1, out of DEAD mode, with a pickup.
 			engine.cancel_pending()
-			engine.fill_into(engine.restart_boss("brindle"))
+			engine.fill_into(engine.restart_boss(_boss_track()))
 		# The stage's bonus cores stay with the stage; a restore may have moved heft.
 		engine.set_overcharge(0)
 		if ctx.run.has_method("heft_class"):
 			_heft_class = int(ctx.run.heft_class())
 			engine.set_heft_lift(_heft_class - 1)
-		if reason != "arena_retry" and sound_ready and engine.mode != MusicEngine.PLAY and engine.track == "brindle":
+		if reason != "arena_retry" and sound_ready and engine.mode != MusicEngine.PLAY and engine.track == _boss_track():
 			engine.cancel_pending()
-			engine.restart_boss("brindle")
+			engine.restart_boss(_boss_track())
 		play("stage_content_cleared"))
 	# v2 W9: a hold sounds the holding unit's loop, and a pack its faction's arrival (the
 	# Fleet stamp, the reactor tick, the swarm lock, the Mind's quote of your motif).
@@ -1211,7 +1274,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_disarm_launch()
 	elif _launch_armed:
 		# The stage the launch was flying to: its theme arrives with the landing drop.
-		_landing_theme = clampi(stage - 1, 0, 2)
+		_landing_theme = _stage_theme(stage)
 		_entered_ms = Time.get_ticks_msec()
 		_launch_stage = true
 	if ctx.run.has_method("heft_class"):
@@ -1397,7 +1460,7 @@ func _on_launched(_velocity: Vector3) -> void:
 	play("launched")
 	# From the level, a miniboss or the Warden's drop (players take the gate inside
 	# the unseal drop); never out of Brindle's arena.
-	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == "brindle":
+	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
 		return
 	# A launch out of the Warden's break is directed from A to B: the piece plays through
 	# the flight and the landing hands it to the synth on a beat (_land_drop). Any other
@@ -1482,7 +1545,6 @@ func _follow_brindle() -> void:
 	var boss = ctx.get("boss")
 	if boss == null or not is_instance_valid(boss):
 		return
-	var rules := _boss_rules(boss)
 	var phase := int(_num(boss, "phase", 0.0))
 	if engine.section == "chase":
 		var scooter = boss.get("scooter")
@@ -1492,6 +1554,12 @@ func _follow_brindle() -> void:
 				_chase_lead0 = maxf(lead, 1.0)
 			engine.chase(clampf(1.0 - lead / _chase_lead0, 0.0, 1.0))
 		return
+	if boss.has_method("music_state"):
+		var state: Dictionary = boss.music_state()
+		if not state.is_empty():
+			engine.brindle_hp(float(state["in_phase"]), bool(state["held"]), float(state["phase_seconds"]))
+		return
+	var rules := _boss_rules(boss)
 	if rules.is_empty() or phase < 1 or phase > 3:
 		return
 	var floors: Array = rules["PHASE_FLOORS"]
@@ -1717,14 +1785,14 @@ func _flush_flow() -> void:
 				if retry:
 					# A pickup fill back into the groove, then the stage hit on its beat.
 					engine.cancel_pending()
-					var back := engine.retry_restart(MusicEngine.PLAY, clampi(stage - 1, 0, 2))
+					var back := engine.retry_restart(MusicEngine.PLAY, _stage_theme(stage))
 					_ace_stage(stage, back)
 					engine.schedule_stinger_at(Rows.sound("stage_entered"), back)
 					cue_log.append(["stage_entered", Rows.sound("stage_entered"), "beat", back, 1.0])
 					continue
 				var start := on_beat("stage_entered", 0.0, true, clampi(stage, 1, 4))
 				if start >= 0:
-					engine.schedule_restart(start, MusicEngine.PLAY, clampi(stage - 1, 0, 2))
+					engine.schedule_restart(start, MusicEngine.PLAY, _stage_theme(stage))
 				_ace_stage(stage, start)
 			"clear":
 				if "end" in kinds:
