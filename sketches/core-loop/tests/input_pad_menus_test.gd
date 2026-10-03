@@ -16,7 +16,8 @@ const T := preload("res://tests/support/t.gd")
 #        run, B closes help or achievements and A does not start a run;
 #   S5-4 class select by pad: d-pad, A picks (a locked card only shakes), X cycles the paint;
 #   S5-5 dead and summary: Y class select, X replay, B new run;
-#   S5-6 workshop: Y talks; the upgrade pick's first A focuses card 0, the second picks;
+#   S5-6 workshop: Y talks while the counter is open; the upgrade pick's first A picks
+#        nothing and the second picks, unless the d-pad moved focus first;
 #   S5-7 field notes: Back held shows them, d-pad right turns a page, release hides them.
 
 var _t := T.new("input_pad_menus_test")
@@ -100,8 +101,7 @@ func _run() -> void:
 		Push.pad(root, JOY_BUTTON_A)
 		await _frames(2)
 		_t.eq("S5-3 A presses the focused title button", presses[0], 1)
-	
-	# Back to the title with nothing focused: A starts the run.
+	# Leave the title with nothing focused before class select.
 	if _focus() != null:
 		_focus().release_focus()
 	# S5-4: class select with a locked second pilot.
@@ -186,10 +186,10 @@ func _run() -> void:
 	await _settle(0.5)
 	var picks: Array = ws.pick.cards()
 	_t.check("S5-6 the start pick is open", ws.pick.is_open() and picks.size() == 2, "open %s" % ws.pick.is_open())
+	var offered: Array = tree.offered(tree.class_id, tree.path().size() + 1)
 	if ws.pick.is_open():
 		var before: Array = tree.path()
-		if _focus() != null:
-			_focus().release_focus()
+		# The pick focuses card 0 as it opens, so the guard must hold with focus already there.
 		Push.pad(root, JOY_BUTTON_A)
 		await _frames(2)
 		_t.check("S5-6 a first A focuses card 0 and picks nothing", ws.pick.is_open() and picks[0].has_focus() and tree.path() == before, "open %s path %s" % [ws.pick.is_open(), tree.path()])
@@ -198,6 +198,17 @@ func _run() -> void:
 		_t.check("S5-6 a second A picks it", not ws.pick.is_open() and tree.path().size() == before.size() + 1, "path %s" % [tree.path()])
 		await _frames(2)
 		_t.check("S5-2 no focus after the pick closes", _focus() == null, "focus %s" % _focus())
+	# Moving focus is a deliberate press, so the A after it picks at once.
+	var spare = ws.pick.get_script().new()
+	root.add_child(spare)
+	var chosen := []
+	spare.chosen.connect(func(i): chosen.append(i))
+	spare.open(tree.class_id, 1, offered, [], Color.WHITE)
+	await _frames(2)
+	spare.step_focus(1)
+	spare.confirm_pad()
+	_t.eq("S5-6 d-pad then A picks the focused card at once", chosen, [1])
+	spare.queue_free()
 	var shop = _game.build.shop
 	shop.enter()
 	ws.open_counter()
@@ -205,10 +216,17 @@ func _run() -> void:
 	var beat_before: String = ws.bubble.text
 	Push.pad(root, JOY_BUTTON_Y)
 	await _frames(2)
-	_t.check("S5-6 Y advances the shopkeeper's talk", ws.bubble.text != "" and (ws.bubble.text != beat_before or ws.bubble.visible), "bubble \"%s\" was \"%s\"" % [ws.bubble.text, beat_before])
+	_t.check("S5-6 Y advances the shopkeeper's talk", ws.bubble.text != "" and ws.bubble.text != beat_before, "bubble \"%s\" was \"%s\"" % [ws.bubble.text, beat_before])
 	ws.close_counter()
 	await _frames(3)
 	_t.check("S5-2 no focus after the counter closes", _focus() == null, "focus %s" % _focus())
+	# At Moss's hatch with the counter closed, Y is the play verb (interact), so it does not
+	# also talk. The talk key is shown by hand for the ball standing there; the push is
+	# read at once, before the next frame recomputes it.
+	var beat_closed: String = ws.bubble.text
+	ws.talk.visible = true
+	Push.pad(root, JOY_BUTTON_Y)
+	_t.check("S5-6 Y with the counter closed does not talk", ws.bubble.text == beat_closed, "bubble \"%s\" was \"%s\"" % [ws.bubble.text, beat_closed])
 	# S5-7: field notes.
 	_t.check("S5-7 notes start hidden", not _game.notes_held(), "")
 	root.push_input(_pad(JOY_BUTTON_BACK))

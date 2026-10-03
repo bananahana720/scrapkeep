@@ -29,6 +29,9 @@ var _row: HBoxContainer
 var _later: Button
 var _tween: Tween
 var _open := false
+# False from each open until the pad's first A or a focus move, so an A mashed as the
+# pick appears picks nothing.
+var _pad_ready := false
 # Bumped by every open and close, so a tween callback from an older transition can
 # never hide a screen that has since reopened.
 var _generation := 0
@@ -82,6 +85,7 @@ func later_button() -> Button:
 func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: Color) -> void:
 	_generation += 1
 	_open = true
+	_pad_ready = false
 	depth = pick_depth
 	visible = true
 	for child in _row.get_children():
@@ -147,6 +151,7 @@ func step_focus(direction: int) -> void:
 	if at < 0:
 		next = 0 if direction >= 0 else list.size() - 1
 	list[next].grab_focus()
+	_pad_ready = true
 
 
 # Enter, Space or the pad's confirm on whatever has focus.
@@ -160,13 +165,15 @@ func confirm() -> void:
 	chosen.emit(0 if at < 0 else at)
 
 
-# The pad's A: with no card focused it lands on card 0 and picks nothing, a second A picks.
+# The pad's A: the first press after the pick opens only lands focus (card 0 if none) and
+# picks nothing; the next press picks. A d-pad move before it counts as that first press.
 func confirm_pad() -> void:
 	if not _open:
 		return
-	if focused_index() < 0 and not _later.has_focus():
+	if not _pad_ready:
+		_pad_ready = true
 		var list := cards()
-		if not list.is_empty():
+		if focused_index() < 0 and not _later.has_focus() and not list.is_empty():
 			list[0].grab_focus()
 		return
 	confirm()

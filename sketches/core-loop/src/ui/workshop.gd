@@ -407,9 +407,6 @@ func _input(event: InputEvent) -> void:
 	if talk.visible and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == TALK_KEY:
 		say_next()
 		get_viewport().set_input_as_handled()
-	elif talk.visible and event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:
-		say_next()
-		get_viewport().set_input_as_handled()
 
 
 func _pick_key(event: InputEvent) -> bool:

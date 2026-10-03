@@ -257,7 +257,8 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if overlay_open() and event is InputEventJoypadButton and event.pressed:
-		# B closes the page; A and the rest do nothing, so no press leaks to the title behind.
+		# B closes the page and A does nothing; both are consumed so neither reaches the title
+		# behind. Other pad buttons pass through.
 		if event.button_index == JOY_BUTTON_B:
 			if _help.visible:
 				toggle_help()

@@ -2813,8 +2813,8 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 | Class select | X | cycles the open card's paint (`cycle_paint`, as P) |
 | Dead | A, B, Y, X | retry, new run, class select (C), replay (T) |
 | Summary | A, B | continue, new run (N) |
-| Workshop counter | Y | talks (as T) |
-| Upgrade pick | A | first A with no card focused focuses card 0 (`TreePick.confirm_pad`), second picks; keys keep `confirm` |
+| Workshop counter | Y | talks (as T) while the counter is open; at the hatch with it closed, Y stays the interact verb and does not also talk |
+| Upgrade pick | A | the first A after the pick opens picks nothing (the pick already focuses card 0); the second picks; a d-pad move counts as the first (`TreePick.confirm_pad`, `_pad_ready`); keys keep `confirm` |
 | Field notes | Back held, d-pad left/right | shows them (as Tab), turns pages (as Q/E) |
 
 - **Focus out of play.** `game._on_flow_changed` releases GUI focus when play starts, so A (jump) can never press a button left focused. Menus that close inside play (pick, counter) hide their controls, which drops focus.
