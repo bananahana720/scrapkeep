@@ -10,6 +10,9 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 
 const FILE := "settings.json"
+# Comfort numbers the settings page keeps: fullscreen 0 off, 1 on; quality 0 High, 1 Low.
+const FULLSCREEN := "fullscreen"
+const QUALITY := "quality"
 
 var path := ""
 var volumes := {}
@@ -60,6 +63,15 @@ func set_volume(bus: String, level: float) -> void:
 func set_comfort(id: String, level: float) -> void:
 	comfort[id] = clampf(level, 0.0, 1.0)
 	save()
+
+
+func fullscreen() -> bool:
+	return float(comfort.get(FULLSCREEN, 0.0)) >= 0.5
+
+
+# 0 for High, 1 for Low.
+func quality() -> int:
+	return 1 if float(comfort.get(QUALITY, 0.0)) >= 0.5 else 0
 
 
 func binding(action: String) -> String:
