@@ -246,7 +246,7 @@ func _run() -> void:
 	events.player_hit.emit(1.0, "test")
 	_banner.show_discovery("Held retry", "build", "line", "New synergy", "wy2_retry")
 	var held_before_retry: bool = _banner.held()
-	events.stage_entered.emit(0, true)
+	events.stage_entered.emit(1, true)
 	var gone_after_retry: bool = not _banner.held() and _banner.queued() == 0 and not _banner.showing()
 	_banner._calm_left = 0.0
 	for i in 5:

@@ -253,7 +253,7 @@ func _run() -> void:
 	_bind()
 	_fresh("retry")
 	await _crack_and_wait(_hook.warden_of(_warden))
-	_game.flow.enter_stage(2, Vector3.ZERO, false)
+	_game.flow.enter_stage(1, Vector3.ZERO, false)
 	await _seconds(0.4)
 	_bind()
 	_fresh("stage change")
