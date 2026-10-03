@@ -2660,3 +2660,12 @@ Base `d939492`. On a table of more than one world, `world_entered` raises a laun
 - **`GRAMMAR_SIGNALS`.** `world_entered` stays in it: `presentation_sfx_test` counts only presentation listeners, and the HUD is not one.
 - **Test.** `tests/ui_worlds_test.gd` (19 checks) on the double, default and slice tables. `UI_WORLDS_DISABLE_CARD=1` disconnects the world card, which is how the red run is shown (3 W6-1 checks fail).
 - **Not done.** `field_notes.gd` and the summary's stage chip stay world-one text and the global count.
+
+## Unit P2: the profile lives in the game, a locked pilot cannot start a run, 2026-10-02
+
+Base `8244add`. `Game.setup` builds `Profile.new(storage_dir/profile.json)`, loads it (a failed or refused load logs `profile.last_error` once and the game runs on) and stores it as `ctx.profile`. The game owns one `Progress` node on its own bus; it joins the bus on the game's first physics frame, so a test that builds its own `Progress` in its first frame hears each fact once (`progress_bus_test` runs unedited).
+
+- **Starters.** `ClassDef.starter` (default false); Sable, Rivet and Kest are all starters until an achievement row rewards a pilot (Rivet's lands with world one's content).
+- **Gate.** `Game.pilot_unlocked(def)` is `def.starter or ctx.profile.has_pilot(def.id)`. The class-select branch of `_screen_key` consumes the key for a locked pilot and starts nothing; card clicks share it through `screens._press`. `flow.choose_class` stays ungated, so bots and tests are unaffected. The locked-card look is a later unit.
+- **Purity.** `profile_purity_test` scans movement, combat, build, world and boss for `ctx.profile`, `Profile`, `Progress`, `Achievements`, `Cosmetics` and preloads of their files (whole identifiers), and runs `Achievements.validate()`.
+- **Test.** `tests/profile_unlock_gate_test.gd` (18 checks). Red: with `pilot_unlocked` returning true the locked key starts a run and P2-2 fails; restored, it passes.

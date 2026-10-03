@@ -7,6 +7,8 @@ const Flow := preload("res://src/core/flow.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const Profile := preload("res://src/core/profile.gd")
+const Progress := preload("res://src/core/progress.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
@@ -69,6 +71,8 @@ var panel
 var keyboard
 var codex
 var run_log
+var progress
+var _progress_ready := false
 # Where the codex and the run log write: user:// in play, a per-process folder the
 # tests clean up when the game leaves the tree.
 var storage_dir := "user://"
@@ -137,6 +141,12 @@ func _ready() -> void:
 	add_child(run_log)
 	run_log.setup(events, run, player, codex, storage_dir)
 	ctx.run_log = run_log
+	ctx.profile = Profile.new(storage_dir.path_join("profile.json"))
+	if not ctx.profile.load_profile():
+		push_warning("profile: %s" % ctx.profile.last_error)
+	progress = Progress.new()
+	progress.name = "Progress"
+	add_child(progress)
 
 	world = _module(World)
 	for row in ctx.stages.DEFS:
@@ -217,6 +227,12 @@ func _module(script: GDScript) -> Node:
 	return module
 
 
+# A pilot is playable when it is a starter or the profile holds it. Only the keys and card
+# clicks ask; flow.choose_class stays ungated for bots and tests.
+func pilot_unlocked(def) -> bool:
+	return def.starter or ctx.profile.has_pilot(def.id)
+
+
 func _exit_tree() -> void:
 	if not test_mode:
 		return
@@ -229,6 +245,11 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# The listener joins the bus after the first frame, once the scene is built, so a test that
+	# builds its own Progress on this bus in its first frame hears each fact once.
+	if not _progress_ready:
+		_progress_ready = true
+		progress.setup(events, run, ctx.profile)
 	player.drive_basis = camera.yaw_basis()
 	flow.physics_step(delta)
 	if flow.in_play():
@@ -468,7 +489,8 @@ func _screen_key(key: int) -> bool:
 				return true
 		"class_select":
 			if key >= KEY_1 and key < KEY_1 + mini(flow.classes.size(), 9):
-				flow.choose_class(key - KEY_1)
+				if pilot_unlocked(flow.classes[key - KEY_1]):
+					flow.choose_class(key - KEY_1)
 				return true
 		"dead":
 			if key == KEY_R:
