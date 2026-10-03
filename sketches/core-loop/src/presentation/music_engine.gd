@@ -2147,7 +2147,7 @@ func _play_counter(phrase_bar: int, s: int) -> void:
 	var seeded: bool = not _class_counter.is_empty() and (rot.get("class_counter", false) or _rotation % ROTATIONS.size() == CLASS_ROTATION)
 	if seeded:
 		line = _class_counter
-		voice = rot["counter"] if rot.get("class_counter", false) else Harmony.motif(class_motif)["band"]
+		voice = rot["counter"] if rot.get("class_counter", false) else Harmony.motif_or_first(class_motif)["band"]
 		gain = CLASS_COUNTER_GAIN
 	for event in line:
 		if event[0] == at:
@@ -2181,7 +2181,7 @@ func _make_counter(lead: Array) -> Array:
 # next call, moved to the chord tone nearest its first note and snapped into that
 # chord's scale, so its shape survives and it never clashes.
 func _make_class_counter() -> Array:
-	var row := Harmony.motif(class_motif)
+	var row := Harmony.motif_or_first(class_motif)
 	if row.get("family", "") != "class":
 		return []
 	var cells: Array = row["cells"]

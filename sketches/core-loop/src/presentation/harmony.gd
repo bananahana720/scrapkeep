@@ -141,6 +141,22 @@ static func motif(id: String) -> Dictionary:
 	return MOTIFS.get(id, {})
 
 
+# Motif ids already warned about this session, so a pilot row beyond the first three
+# warns once rather than every cue.
+static var unknown_warned := {}
+
+
+# The row a cue indexes directly: the id's own, else the first pilot's, warned once per
+# unknown id. A pilot added later gets its own row and never reaches the fallback.
+static func motif_or_first(id: String) -> Dictionary:
+	if MOTIFS.has(id):
+		return MOTIFS[id]
+	if not unknown_warned.has(id):
+		unknown_warned[id] = true
+		push_warning("harmony: no motif row for '%s'; cues use %s's" % [id, CLASS_MOTIFS[0]])
+	return MOTIFS[CLASS_MOTIFS[0]]
+
+
 static func motif_notes(id: String) -> Array:
 	var notes: Array = []
 	for cell in motif(id).get("cells", []):
