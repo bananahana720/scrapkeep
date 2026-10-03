@@ -15,6 +15,8 @@ const Worlds := preload("res://src/core/worlds.gd")
 # no world card. UI_WORLDS_DISABLE_CARD=1 turns the world card off, which is how the red
 # run is shown.
 
+const STAND_IN := {"name": "The Stand-in", "title": "STAND-IN ROUTED", "script": "res://src/boss/boss.gd", "kind": "standin",
+	"music": "brindle", "built": true, "victory": "The stand-in is routed.", "epitaph": "The stand-in, routed in a test."}
 const TICK_LIMIT := 60 * 60
 const CARD_WAIT := 240
 
@@ -80,7 +82,7 @@ func _start() -> void:
 		_boss = BossDouble.new()
 		_game.add_child(_boss)
 		_boss.setup(_game.ctx)
-		_game.flow.boss_row_override[2] = Worlds.boss_of(1)
+		_game.flow.boss_row_override[2] = STAND_IN
 	_game.ctx.calm = true
 	_game.flow.force_warden = true
 	_game.player.source = Intent.Scripted.new()
@@ -155,6 +157,8 @@ func _five_checks() -> void:
 
 func _dead_checks() -> void:
 	var flow = _game.flow
+	_game.hud._process(0.0)
+	_t.check("W6-4 the HUD shows a boss in world two's arena when its stand-in row runs", _game.hud._status.has_boss, "has_boss false")
 	_game.screens._on_flow_changed("dead")
 	var text: String = _game.screens.body_text()
 	_t.check("W6-3 world two's arena names the replay stage 3", text.contains("T   replay stage 3"), text.replace("\n", " | "))
@@ -163,14 +167,16 @@ func _dead_checks() -> void:
 
 
 func _victory_checks() -> void:
-	var boss := Worlds.boss_of(2)
-	_t.eq("W6-4 victory title is the beaten boss's", _game.screens._title.text, String(boss["title"]))
-	_t.eq("W6-4 victory body is the boss's victory line", _game.screens._body.text, String(boss["victory"]))
+	_t.eq("W6-4 victory title is the row that ran", _game.screens._title.text, String(STAND_IN["title"]))
+	_t.eq("W6-4 victory body is that row's victory line", _game.screens._body.text, String(STAND_IN["victory"]))
 
 
 func _summary_checks() -> void:
-	var epitaph := String(Worlds.boss_of(2)["epitaph"])
+	var epitaph := String(STAND_IN["epitaph"])
 	_t.check("W6-4 the won summary shows the epitaph", _game.screens._body.text.contains(epitaph), _game.screens._body.text)
+	_game.screens._victory_boss = STAND_IN
+	_game.events.run_started.emit("runner_gunner")
+	_t.check("W6-4 a new run forgets the last run's beaten boss", _game.screens._victory_boss.is_empty(), "%s" % [_game.screens._victory_boss])
 
 
 func _single_step(label: String, stage: int) -> bool:

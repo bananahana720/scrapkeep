@@ -10,7 +10,6 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const Worlds := preload("res://src/core/worlds.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -81,6 +80,7 @@ func setup(game_ref) -> void:
 	_help.back.pressed.connect(_press.bind("key_h"))
 	_content.add_child(_help)
 	game.events.flow_changed.connect(_on_flow_changed)
+	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 
 
 func _label(font_size: int) -> Label:
@@ -205,7 +205,7 @@ func _press(key: String) -> void:
 # just beaten. The summary reads the row the victory screen showed, so a run that ends with
 # no boss beaten (a table with no boss, an unbuilt world) shows no epitaph.
 func _beaten_boss() -> Dictionary:
-	return Worlds.boss_of(game.ctx.stages.world_of(game.run.stage))
+	return game.flow.boss_row(game.ctx.stages.world_of(game.run.stage))
 
 
 # The summary as icons and numbers: time, stages, scrap, parts, kills, events won and

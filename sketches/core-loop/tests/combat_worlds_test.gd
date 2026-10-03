@@ -80,6 +80,15 @@ func _pieces() -> void:
 	for kind in ["chaser", "warden", "mind", "brindle"]:
 		_t.check("%s is not a boss piece" % kind, not Roster.is_boss_piece(kind), kind)
 		_t.check("%s does not class as boss" % kind, combat._target_class_of_kind(kind) != "boss", kind)
+	var claimed: Array = []
+	for kind in Roster.ROWS:
+		if Roster.is_boss_piece(kind) or combat._target_class_of_kind(kind) == "boss":
+			claimed.append(kind)
+	_t.check("no roster enemy kind reads as a boss piece", claimed.is_empty(), "claimed %s" % [claimed])
+	var hand = load("res://src/combat/enemy.gd").new()
+	hand.kind = "mind_hand"
+	_t.check("mind_hand is an ordinary reaction", hand._ordinary_reaction(), "mind_hand")
+	hand.free()
 	var Enemy := load("res://src/combat/enemy.gd")
 	for kind in ["brindle_hull", "waking_core", "mind_lens", "warden"]:
 		var e = Enemy.new()

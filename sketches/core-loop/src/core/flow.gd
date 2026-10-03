@@ -106,14 +106,20 @@ func _boss_module() -> Node:
 	return boss if boss != null and boss.has_method("enter_arena") else null
 
 
+# The boss row that runs at the end of a world. Tests set boss_row_override[world] to stand
+# in for a row; the screens and the HUD read this same row.
+func boss_row(world: int) -> Dictionary:
+	return boss_row_override.get(world, Worlds.boss_of(world))
+
+
 # The boss that ends a world, or null when that world has none to run: its row is not
 # built, or the scene has no module. A one-world table that names no boss ends with the
-# summary as before. Tests set boss_row_override[world] to stand in for a row.
+# summary as before.
 func _world_boss(world: int) -> Node:
 	var module := _boss_module()
 	if ctx.stages.BOSS == "":
 		return null
-	var row: Dictionary = boss_row_override.get(world, Worlds.boss_of(world))
+	var row: Dictionary = boss_row(world)
 	if not bool(row.get("built", false)):
 		warn_once("boss_unbuilt_%d" % world, "flow: world %d's boss is not built; skipping to the next world" % world)
 		return null

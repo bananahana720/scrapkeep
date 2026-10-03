@@ -615,7 +615,7 @@ func _process(delta: float) -> void:
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1
-	var has_boss: bool = game.boss != null and tbl.BOSS != "" and bool(Worlds.boss_of(world).get("built", false))
+	var has_boss: bool = game.boss != null and tbl.BOSS != "" and bool(flow.boss_row(world).get("built", false))
 	_status.set_status(tbl.local(run.stage), world_stages, has_boss, flow.in_arena, _threat)
 
 	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)

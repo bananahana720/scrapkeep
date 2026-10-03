@@ -155,8 +155,11 @@ static func warden_family(stage: int) -> String:
 	return WARDEN_FAMILIES[clampi(stage, 1, WARDEN_FAMILIES.size()) - 1]
 
 
-# A boss piece kind ("brindle_hull") begins with a Worlds.BOSSES row's kind plus "_".
+# A boss piece kind ("brindle_hull") begins with a Worlds.BOSSES row's kind plus "_". A
+# roster enemy is never a piece, even when it shares a boss's prefix (mind_hand and "mind").
 static func is_boss_piece(kind: String) -> bool:
+	if ROWS.has(kind):
+		return false
 	for row in Worlds.BOSSES.values():
 		if kind.begins_with(String(row["kind"]) + "_"):
 			return true
