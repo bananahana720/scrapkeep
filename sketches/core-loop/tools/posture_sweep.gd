@@ -61,6 +61,27 @@ class Table extends RefCounted:
 	func is_last(stage: int) -> bool:
 		return SliceDefs.is_last(stage)
 
+	func world_of(stage: int) -> int:
+		return SliceDefs.world_of(stage)
+
+	func local(stage: int) -> int:
+		return SliceDefs.local(stage)
+
+	func first_of(world: int) -> int:
+		return SliceDefs.first_of(world)
+
+	func last_of(world: int) -> int:
+		return SliceDefs.last_of(world)
+
+	func worlds() -> Array:
+		return SliceDefs.worlds()
+
+	func is_world_last(stage: int) -> bool:
+		return SliceDefs.is_world_last(stage)
+
+	func is_run_last(stage: int) -> bool:
+		return SliceDefs.is_run_last(stage)
+
 	func synergy_in_play(id: String) -> bool:
 		return SliceDefs.synergy_in_play(id)
 
