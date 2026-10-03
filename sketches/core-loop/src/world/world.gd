@@ -130,14 +130,7 @@ func setup(ctx_ref) -> void:
 func _setup_gorge() -> void:
 	var g: float = ctx.tuning.f("gravity")
 	var cruise: float = ctx.tuning.f("cruise")
-	for i in terrain.maps.size():
-		var m = terrain.maps[i]
-		if not "contraptions" in m or m.contraptions.is_empty():
-			continue
-		var c := Contraptions.new()
-		terrain.geometry_root(i + 1).add_child(c)
-		c.setup(m, terrain.ground_callable(i + 1), cruise, g)
-		contraptions[i + 1] = c
+	_add_contraptions()
 	terrain_view = TerrainEventView.new()
 	terrain_view.name = "TerrainEvents"
 	ctx.root.add_child(terrain_view)
@@ -146,6 +139,24 @@ func _setup_gorge() -> void:
 	ctx.root.add_child(bay)
 	bay.setup(g, cruise)
 	terrain.bay = bay
+
+
+# Contraptions for every stage whose ground is built and that has none yet. Setup covers
+# the first world; a later world's are added on the entry that builds its ground, so
+# asking for them never forces a build.
+func _add_contraptions() -> void:
+	var g: float = ctx.tuning.f("gravity")
+	var cruise: float = ctx.tuning.f("cruise")
+	for i in terrain.maps.size():
+		var m = terrain.maps[i]
+		if contraptions.has(i + 1) or not terrain.is_built(i + 1):
+			continue
+		if not "contraptions" in m or m.contraptions.is_empty():
+			continue
+		var c := Contraptions.new()
+		terrain.geometry_root(i + 1).add_child(c)
+		c.setup(m, terrain.ground_callable(i + 1), cruise, g)
+		contraptions[i + 1] = c
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -161,6 +172,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	bay.undock()
 	_bay_calm = false
 	terrain.use(stage)
+	_add_contraptions()
 	var m = terrain.map()
 	if "swaps" in m:
 		for id in m.swaps:
@@ -177,6 +189,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	director = Director.new(_stage_seed ^ 0x5eed)
 	_author_director()
+	director.use_row(def)
 	director.threat = def["threat"]
 	director.play_rect = map.play_rect
 	flood.cycle = events.flood

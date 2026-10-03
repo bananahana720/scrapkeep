@@ -42,6 +42,7 @@ const ELITE_ARRIVAL := 3
 
 const DEFS := [
 	{"stage": 1, "world": 1, "warden_family": "reactor", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
+		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_fight": "posture",
 		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core."},
