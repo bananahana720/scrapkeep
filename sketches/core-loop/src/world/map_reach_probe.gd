@@ -35,7 +35,13 @@ func sample(x: float, z: float) -> Array:
 		return [s[0], s[1]]
 	var b := _grid(_bake, x, z)
 	var h := lerpf(b, float(s[0]), w)
-	return [h, _strata(s[1], h, 1.0 - w)]
+	var tint: Color = _strata(s[1], h, 1.0 - w)
+	# Unit LKM: the slickrock region (the bake's dome rectangle, x 90..164, z -99..99, 14 m
+	# feather) rides in vertex alpha as 1 - mask; the rock ground shader reads it, nothing else does.
+	var dx := minf(x - 90.0, 164.0 - x)
+	var dz := minf(z + 99.0, 99.0 - z)
+	tint.a = 1.0 - clampf(minf(dx, dz) / 14.0, 0.0, 1.0) * (1.0 - w)
+	return [h, tint]
 
 
 # map_reach's roofs (w2 only on this map) without e2's.

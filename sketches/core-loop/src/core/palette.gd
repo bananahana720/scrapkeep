@@ -247,6 +247,15 @@ static func target_clutter_material(original: Material) -> ShaderMaterial:
 	_target_clutter[key] = mat
 	return mat
 
+# Unit LKM probe switch: `--ground=1|2|3` (user args) or LKM_GROUND picks a rock-strata
+# ground variant; absent or 0 keeps today's target ground shader.
+static func _ground_variant() -> int:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--ground="):
+			return int(arg.trim_prefix("--ground="))
+	return int(OS.get_environment("LKM_GROUND"))
+
+
 # Target resources wrap the existing surface; original materials and mesh slots are
 # retained by GraphicsPreset so high/low can restore the exact resource identities.
 static func target_surface_material(role: String, original: Material) -> ShaderMaterial:
@@ -256,7 +265,17 @@ static func target_surface_material(role: String, original: Material) -> ShaderM
 	var mat := ShaderMaterial.new()
 	match role:
 		"ground":
-			mat.shader = preload("res://assets/shaders/target_ground.gdshader")
+			var variant := _ground_variant()
+			if variant > 0:
+				mat.shader = preload("res://assets/shaders/target_ground_rock.gdshader")
+				mat.set_shader_parameter("variant", variant)
+				mat.set_shader_parameter("sand_color", SAND)
+				mat.set_shader_parameter("stone_light", SANDSTONE)
+				mat.set_shader_parameter("stone_dark", SANDSTONE.lerp(RUST, 0.38))
+				mat.set_shader_parameter("iron_color", RUST.lerp(SANDSTONE, 0.4))
+				mat.set_shader_parameter("varnish_color", RUST.lerp(CHARCOAL, 0.6))
+			else:
+				mat.shader = preload("res://assets/shaders/target_ground.gdshader")
 		"rock":
 			mat.shader = preload("res://assets/shaders/target_rock.gdshader")
 		"dam":
