@@ -158,6 +158,8 @@ signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
 # A standing activity (world/activities.gd) finished: id keys EventKinds.ACTIVITY_ROWS, at is
 # where its pay appears. Once per activity per stage attempt.
 signal activity_done(id: String, at: Vector3)
+# progress.gd earned an achievement and saved the profile (or tried to). id keys Achievements.ROWS.
+signal achievement_earned(id: String)
 
 
 static func signal_names() -> PackedStringArray:
