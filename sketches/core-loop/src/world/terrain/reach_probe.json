@@ -1,0 +1,265 @@
+{
+ "unit": "TP",
+ "args": {
+  "smooth": "S1",
+  "s_dome": 0.33,
+  "e_dome": 0.5,
+  "dome_rmax": 9.0,
+  "s_horse": 0.09,
+  "s_wall": 0.15,
+  "hs_u": 90.0,
+  "hs_v": 415.0,
+  "gamma": 0.8,
+  "tag": null,
+  "null": false
+ },
+ "params": {
+  "smooth": "S1",
+  "sigma_m": 3.0,
+  "relax": false,
+  "lo": 952.8948974609375,
+  "hi": 1277.4893510706117,
+  "wlo": 955.4945935418244,
+  "whi": 1298.8477614314902
+ },
+ "stats": {
+  "domes": {
+   "raw": {
+    "cells": 2730,
+    "launch_share": 12.0,
+    "slope_p50": 6.9,
+    "slope_p95": 33.1,
+    "over_30": 15.6,
+    "over_63": 0.0,
+    "relief_m": 42.9
+   },
+   "smoothed": {
+    "cells": 2730,
+    "launch_share": 8.4,
+    "slope_p50": 6.3,
+    "slope_p95": 33.0,
+    "over_30": 15.9,
+    "over_63": 0.0,
+    "relief_m": 42.9
+   },
+   "raw_outside_corridors": {
+    "cells": 1431,
+    "launch_share": 6.1,
+    "slope_p50": 6.1,
+    "slope_p95": 32.6,
+    "over_30": 14.3,
+    "over_63": 0.0,
+    "relief_m": 36.7
+   },
+   "smoothed_outside_corridors": {
+    "cells": 1431,
+    "launch_share": 2.7,
+    "slope_p50": 5.7,
+    "slope_p95": 32.7,
+    "over_30": 14.0,
+    "over_63": 0.0,
+    "relief_m": 36.6
+   }
+  },
+  "forks_butte": {
+   "raw": {
+    "cells": 1593,
+    "launch_share": 30.3,
+    "slope_p50": 20.1,
+    "slope_p95": 65.0,
+    "over_30": 34.8,
+    "over_63": 8.3,
+    "relief_m": 33.5
+   },
+   "smoothed": {
+    "cells": 1593,
+    "launch_share": 23.6,
+    "slope_p50": 19.9,
+    "slope_p95": 63.7,
+    "over_30": 29.3,
+    "over_63": 6.2,
+    "relief_m": 31.3
+   },
+   "raw_outside_corridors": {
+    "cells": 1212,
+    "launch_share": 25.0,
+    "slope_p50": 19.5,
+    "slope_p95": 65.6,
+    "over_30": 35.4,
+    "over_63": 9.5,
+    "relief_m": 33.5
+   },
+   "smoothed_outside_corridors": {
+    "cells": 1212,
+    "launch_share": 17.4,
+    "slope_p50": 20.8,
+    "slope_p95": 64.0,
+    "over_30": 31.8,
+    "over_63": 7.7,
+    "relief_m": 31.3
+   }
+  },
+  "lower_walls": {
+   "raw": {
+    "cells": 1970,
+    "launch_share": 43.5,
+    "slope_p50": 21.0,
+    "slope_p95": 63.5,
+    "over_30": 32.6,
+    "over_63": 5.4,
+    "relief_m": 29.1
+   },
+   "smoothed": {
+    "cells": 1970,
+    "launch_share": 39.3,
+    "slope_p50": 23.0,
+    "slope_p95": 53.2,
+    "over_30": 38.1,
+    "over_63": 0.5,
+    "relief_m": 28.8
+   },
+   "raw_outside_corridors": {
+    "cells": 116,
+    "launch_share": 61.2,
+    "slope_p50": 36.8,
+    "slope_p95": 73.0,
+    "over_30": 53.4,
+    "over_63": 16.4,
+    "relief_m": 25.6
+   },
+   "smoothed_outside_corridors": {
+    "cells": 116,
+    "launch_share": 59.5,
+    "slope_p50": 43.0,
+    "slope_p95": 65.1,
+    "over_30": 69.0,
+    "over_63": 8.6,
+    "relief_m": 24.8
+   }
+  },
+  "composed_outside_corridors": {
+   "raw": {
+    "cells": 2706,
+    "launch_share": 15.8,
+    "slope_p50": 10.0,
+    "slope_p95": 61.8,
+    "over_30": 24.3,
+    "over_63": 4.4,
+    "relief_m": 40.5
+   },
+   "smoothed": {
+    "cells": 2706,
+    "launch_share": 10.6,
+    "slope_p50": 11.4,
+    "slope_p95": 60.0,
+    "over_30": 23.1,
+    "over_63": 3.4,
+    "relief_m": 38.5
+   }
+  },
+  "crater": {
+   "raw": {
+    "cells": 6349,
+    "launch_share": 23.2,
+    "slope_p50": 13.6,
+    "slope_p95": 41.3,
+    "over_30": 21.7,
+    "over_63": 0.0,
+    "relief_m": 22.5
+   },
+   "smoothed": {
+    "cells": 6349,
+    "launch_share": 19.3,
+    "slope_p50": 11.5,
+    "slope_p95": 38.0,
+    "over_30": 19.7,
+    "over_63": 0.0,
+    "relief_m": 21.3
+   },
+   "whole_grid_raw": {
+    "cells": 40401,
+    "launch_share": 4.5,
+    "slope_p50": 1.1,
+    "slope_p95": 23.1,
+    "over_30": 3.4,
+    "over_63": 0.0,
+    "relief_m": 22.5
+   },
+   "whole_grid_smoothed": {
+    "cells": 40401,
+    "launch_share": 3.0,
+    "slope_p50": 1.0,
+    "slope_p95": 22.1,
+    "over_30": 3.1,
+    "over_63": 0.0,
+    "relief_m": 21.3
+   },
+   "floor_ref_m": 1563.503610350846,
+   "rim_height_m": 21.3
+  },
+  "spec_rows_reproduced": {
+   "meteor_crater": {
+    "raw": {
+     "cells": 40401,
+     "launch_share": 4.7,
+     "slope_p50": 1.1,
+     "slope_p95": 23.1,
+     "over_30": 3.4,
+     "over_63": 0.0,
+     "relief_m": 22.4
+    },
+    "blur3": {
+     "cells": 40401,
+     "launch_share": 3.0,
+     "slope_p50": 1.0,
+     "slope_p95": 21.9,
+     "over_30": 3.1,
+     "over_63": 0.0,
+     "relief_m": 21.3
+    }
+   },
+   "horseshoe_bend": {
+    "raw": {
+     "cells": 40401,
+     "launch_share": 10.6,
+     "slope_p50": 2.7,
+     "slope_p95": 42.7,
+     "over_30": 6.8,
+     "over_63": 2.5,
+     "relief_m": 61.6
+    },
+    "blur3": {
+     "cells": 40401,
+     "launch_share": 6.6,
+     "slope_p50": 2.5,
+     "slope_p95": 48.2,
+     "over_30": 8.1,
+     "over_63": 2.5,
+     "relief_m": 61.5
+    }
+   },
+   "coyote_buttes_wave": {
+    "raw": {
+     "cells": 40401,
+     "launch_share": 22.2,
+     "slope_p50": 11.1,
+     "slope_p95": 30.3,
+     "over_30": 5.3,
+     "over_63": 0.1,
+     "relief_m": 48.3
+    },
+    "blur3": {
+     "cells": 40401,
+     "launch_share": 9.8,
+     "slope_p50": 9.8,
+     "slope_p95": 26.0,
+     "over_30": 2.5,
+     "over_63": 0.0,
+     "relief_m": 48.0
+    }
+   }
+  }
+ },
+ "hash_reach": "39bf4139928cd6759e52e1d6949461f012eb42f3bd5bbece817b9f8823fb3304",
+ "hash_crater": "7f59b2c577d59e7b72e8330c68be6df63d16bb47c382d272171882108b247b09"
+}

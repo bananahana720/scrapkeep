@@ -34,7 +34,8 @@ const SEED := 20260926
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
-const TABLES := {"default": StageDefs, "slice": SliceDefs}
+const ProbeDefs := preload("res://src/core/probe_defs.gd")
+const TABLES := {"default": StageDefs, "slice": SliceDefs, "reach_probe": ProbeDefs, "crater_probe": ProbeDefs}
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false
@@ -205,6 +206,8 @@ func _chosen_table():
 	if not TABLES.has(id):
 		push_warning("game: unknown stage table '%s'; using the default" % id)
 		return StageDefs
+	if id == "reach_probe" or id == "crater_probe":
+		ProbeDefs.use(id)
 	return TABLES[id]
 
 
