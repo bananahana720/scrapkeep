@@ -15,6 +15,7 @@ const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RestartMeter := preload("res://src/ui/restart_meter.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
@@ -43,10 +44,12 @@ const TOAST_FONT := {3: 23, 2: 19}
 const TOAST_WORDS := 4
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
+# How long a world card stands alone before its first stage card replaces it.
+const WORLD_CARD_BEAT := 1.2
 # Facts whose on-screen moment belongs to something else: presentation's banner, or the
 # stage card, which shows the stage it names.
 const PRESENTATION_OWNED := ["synergy_discovered"]
-const CARD_OWNED := ["run_started", "stage_entered", "stage_cleared", "launched", "boss_arena_entered"]
+const CARD_OWNED := ["run_started", "world_entered", "stage_entered", "stage_cleared", "launched", "boss_arena_entered"]
 # Notable (priority 2) facts that still toast, because the player acts on them: scrap
 # torn loose to chase down. Every other toast is a critical (priority 3) fact. A part
 # gained shows its name at the ball (part_name.gd), not as a toast.
@@ -87,6 +90,7 @@ var key_glyphs
 var edge_markers
 var part_name
 var launch_card
+var _world_card_at := -1
 var why_callout
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
 var prompt_rects := {}
@@ -206,6 +210,7 @@ func setup(game_ref) -> void:
 	game.events.beacon_unsealed.connect(func(_stage: int): _begin_engagement(false))
 	game.events.posture_changed.connect(_on_posture)
 	game.events.launched.connect(_on_launched)
+	game.events.world_entered.connect(_on_world_entered)
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.threat_rose.connect(func(tier: int): _threat = maxi(_threat, tier))
 	game.events.boss_arena_entered.connect(func():
@@ -351,8 +356,22 @@ func toast_texts() -> Array[String]:
 
 func _on_launched(_velocity: Vector3) -> void:
 	var next: int = game.run.stage + 1
-	if next <= game.ctx.stages.COUNT:
+	var stages = game.ctx.stages
+	if next <= stages.last_of(stages.world_of(game.run.stage)):
 		_card_for_stage(next)
+
+
+# On a table of more than one world, a new world is announced by name before its first
+# stage's card, which follows after the world card has been up for a beat. A one-world
+# table shows no world card.
+func _on_world_entered(world: int) -> void:
+	if game.ctx.stages.worlds().size() <= 1:
+		return
+	var row := Worlds.row(world)
+	if row.is_empty():
+		return
+	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"))
+	_world_card_at = Time.get_ticks_msec()
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -360,7 +379,12 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_begin_engagement(false)
 	if retry:
 		return
-	if launch_card.showing():
+	if _world_card_at >= 0:
+		_world_card_at = -1
+		get_tree().create_timer(WORLD_CARD_BEAT).timeout.connect(func():
+			if game != null and game.run != null and game.run.stage == stage:
+				_card_for_stage(stage))
+	elif launch_card.showing():
 		launch_card.extend()
 	else:
 		_card_for_stage(stage)
@@ -588,7 +612,11 @@ func _process(delta: float) -> void:
 	var reading := objective_reading()
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"])
 	edge_markers.objective_id = reading["id"]
-	_status.set_status(run.stage, game.ctx.stages.COUNT, game.boss != null and game.ctx.stages.BOSS != "", flow.in_arena, _threat)
+	var tbl = game.ctx.stages
+	var world: int = tbl.world_of(run.stage)
+	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1
+	var has_boss: bool = game.boss != null and tbl.BOSS != "" and bool(Worlds.boss_of(world).get("built", false))
+	_status.set_status(tbl.local(run.stage), world_stages, has_boss, flow.in_arena, _threat)
 
 	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)
 	_health.set_reading(hp_share, Palette.SAND, "", hp_share <= LOW_HEALTH, EventKinds.color("player_hit"))

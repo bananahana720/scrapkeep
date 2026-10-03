@@ -2628,3 +2628,14 @@ Base `b7882b5`. `flow.gd` routes by world. `_finish_stage` enters the boss when 
 - **Replay.** `flow.final_stage()` is the last stage of the last world; `can_replay_final_stage` and `game.gd`'s T key use it instead of `COUNT`. A world-one arena death screen on a multi-world table therefore offers no replay (stage 6 has no start yet).
 - **Test.** `tests/spine_worlds_test.gd` subclasses `Game` to choose `two_world_defs.gd`. Built: `world 1, stage 1-3, arena, world 2, stage 4-6, arena`, ends won. Unbuilt world two: one arena, one warning. Red: `_finish_stage` on `is_last` fails 4 of 14 checks; restored, it passes.
 - **Not done here.** `screens.gd` and `hud.gd` still read `COUNT` ("Replay stage 3", stage counters); `boss.gd` does not yet tear down its arena for a second entry.
+
+## Unit W6: the HUD and screens know which world you are in, 2026-10-02
+
+Base `d939492`. On a table of more than one world, `world_entered` raises a launch card titled with `Worlds.row(world).name`; the first stage's card replaces it after `Hud.WORLD_CARD_BEAT` (1.2 s). One-world tables show no world card, so their stage cards are as before.
+
+- **Status pips.** `hud.gd` passes the stage's number within its world (`local`), the world's stage count (`last_of - first_of + 1`) and a boss tag that follows `Worlds.boss_of(world).built`. Pips only; no HUD words added. `_on_launched` previews the next stage's card only while that stage is in the same world.
+- **Dead screen.** "Retry stage N" uses `local`; the replay label reads `flow.final_stage()` through `local`, so it reads "Replay stage 3" in each world of the double and on the default table.
+- **Victory and summary.** `BOSSES` gains `title` ("BRINDLE ROUTED", "THE WAKING STILLED", "THE MIND IS QUIET"). The victory screen shows the beaten world's `title` and `victory`; the won summary adds that boss's `epitaph` under the class line (no epitaph when no boss was beaten). The old hardcoded "The Requisition is scrap." is gone.
+- **`GRAMMAR_SIGNALS`.** `world_entered` stays in it: `presentation_sfx_test` counts only presentation listeners, and the HUD is not one.
+- **Test.** `tests/ui_worlds_test.gd` (19 checks) on the double, default and slice tables. `UI_WORLDS_DISABLE_CARD=1` disconnects the world card, which is how the red run is shown (3 W6-1 checks fail).
+- **Not done.** `field_notes.gd` and the summary's stage chip stay world-one text and the global count.

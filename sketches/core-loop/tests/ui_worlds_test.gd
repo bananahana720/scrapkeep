@@ -1,0 +1,200 @@
+extends SceneTree
+
+const GameScript := preload("res://src/game.gd")
+const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
+const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const T := preload("res://tests/support/t.gd")
+const Worlds := preload("res://src/core/worlds.gd")
+
+# The HUD and screens on a two-world run (the six-stage double), then on the default and
+# slice tables. Entering world two raises a card titled with the world's name before its
+# first stage's card; the status pips count the current world's stages; the dead screen
+# counts stages within the world and the replay label names the world's last stage; the
+# victory and summary words come from the beaten world's boss row. A one-world table shows
+# no world card. UI_WORLDS_DISABLE_CARD=1 turns the world card off, which is how the red
+# run is shown.
+
+const TICK_LIMIT := 60 * 60
+const CARD_WAIT := 240
+
+class TwoWorldGame extends "res://src/game.gd":
+	func _chosen_table():
+		return TwoWorld
+
+var _t := T.new("ui_worlds_test")
+var _game
+var _boss
+var _phase := "double"
+var _started := false
+var _ticks := 0
+var _last_stage := -1
+var _titles: Array[String] = []
+var _wait := 0
+var _checked_five := false
+var _checked_dead := false
+var _checked_victory := false
+var _victory_seen := false
+
+
+func _initialize() -> void:
+	_boot(TwoWorldGame.new())
+
+
+func _boot(game) -> void:
+	_game = game
+	_game.test_mode = true
+	root.add_child(_game)
+	_started = false
+	_ticks = 0
+	_last_stage = -1
+	_titles = []
+	_wait = 0
+
+
+func _physics_process(_delta: float) -> bool:
+	if _game.flow == null:
+		return false
+	if not _started:
+		_start()
+		return false
+	_ticks += 1
+	var card = _game.hud.launch_card
+	if card.showing() and (_titles.is_empty() or _titles[-1] != card.title):
+		_titles.append(card.title)
+	match _phase:
+		"double":
+			return _double_step()
+		"default":
+			return _single_step("default", 2)
+		"slice":
+			return _single_step("slice", 1)
+	return false
+
+
+func _start() -> void:
+	_started = true
+	if os_flag("UI_WORLDS_DISABLE_CARD"):
+		_game.events.world_entered.disconnect(_game.hud._on_world_entered)
+	if _phase == "double":
+		_boss = BossDouble.new()
+		_game.add_child(_boss)
+		_boss.setup(_game.ctx)
+		_game.flow.boss_row_override[2] = Worlds.boss_of(1)
+	_game.ctx.calm = true
+	_game.flow.force_warden = true
+	_game.player.source = Intent.Scripted.new()
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+
+
+func os_flag(name: String) -> bool:
+	return OS.get_environment(name) == "1"
+
+
+func _double_step() -> bool:
+	if _ticks > TICK_LIMIT * 2:
+		_t.check("double: timeout", false, "stalled in %s at stage %d" % [_game.flow.state_name(), _game.run.stage])
+		return _finish()
+	var flow = _game.flow
+	var stage: int = _game.run.stage
+	var name: String = flow.state_name()
+	if name == "victory":
+		if stage == 6 and not _checked_victory:
+			_checked_victory = true
+			_victory_checks()
+		return false
+	if name == "summary":
+		_summary_checks()
+		_phase = "default"
+		_game.free()
+		_boot(GameScript.new())
+		return false
+	if name == "boss":
+		if stage == 6 and not _checked_dead:
+			_checked_dead = true
+			_dead_checks()
+		_boss.defeat()
+		return false
+	if stage == 4 and not _carded:
+		_wait += 1
+		if _titles.has("Double: the top shelf") or _wait >= CARD_WAIT:
+			_card_checks()
+		return false
+	if stage == 5 and not _checked_five:
+		_checked_five = true
+		_five_checks()
+	if name in ["stage", "beacon", "gates", "launch"] and stage != _last_stage:
+		_last_stage = stage
+		flow._finish_stage()
+	return false
+
+
+var _carded := false
+
+
+func _card_checks() -> void:
+	_carded = true
+	var dig := _titles.find("The Dig")
+	var stage_four := _titles.find("Double: the top shelf")
+	_t.check("W6-1 world two raises a card titled The Dig", dig >= 0, "cards seen %s" % [_titles])
+	_t.check("W6-1 The Dig comes before the stage-4 card", dig >= 0 and stage_four > dig, "cards seen %s" % [_titles])
+	_t.check("W6-1 world one is announced too on a two-world table", _titles.has("Spillway Works"), "cards seen %s" % [_titles])
+
+
+func _five_checks() -> void:
+	var status = _game.hud._status
+	_game.hud._process(0.0)
+	_t.eq("W6-2 stage 5 of the double: three pips", status.stages, 3)
+	_t.eq("W6-2 stage 5 of the double: the second is current", status.stage, 2)
+	_game.screens._on_flow_changed("dead")
+	var text: String = _game.screens.body_text()
+	_t.check("W6-3 dead screen at stage 5 reads Retry stage 2", text.contains("R   retry stage 2"), text.replace("\n", " | "))
+	_game.screens._on_flow_changed(_game.flow.state_name())
+
+
+func _dead_checks() -> void:
+	var flow = _game.flow
+	_game.screens._on_flow_changed("dead")
+	var text: String = _game.screens.body_text()
+	_t.check("W6-3 world two's arena names the replay stage 3", text.contains("T   replay stage 3"), text.replace("\n", " | "))
+	_t.eq("W6-3 the replay goes to stage 6", flow.final_stage(), 6)
+	_game.screens._on_flow_changed(flow.state_name())
+
+
+func _victory_checks() -> void:
+	var boss := Worlds.boss_of(2)
+	_t.eq("W6-4 victory title is the beaten boss's", _game.screens._title.text, String(boss["title"]))
+	_t.eq("W6-4 victory body is the boss's victory line", _game.screens._body.text, String(boss["victory"]))
+
+
+func _summary_checks() -> void:
+	var epitaph := String(Worlds.boss_of(2)["epitaph"])
+	_t.check("W6-4 the won summary shows the epitaph", _game.screens._body.text.contains(epitaph), _game.screens._body.text)
+
+
+func _single_step(label: String, stage: int) -> bool:
+	if _ticks == 3:
+		_game.flow.enter_stage(stage, Vector3(0.0, 0.0, 14.0), false)
+	if _ticks == 6:
+		_game.hud._process(0.0)
+		var status = _game.hud._status
+		_t.eq("%s: the pips read stage %d" % [label, stage], status.stage, stage)
+		_t.eq("%s: the pips count the table's stages" % label, status.stages, _game.ctx.stages.COUNT)
+		_t.check("%s: no world card" % label, not _titles.has("Spillway Works"), "cards seen %s" % [_titles])
+	if _ticks == 20:
+		_t.check("%s: a stage card shows" % label, not _titles.is_empty() and _titles[0] == _game.ctx.stages.of(1)["name"], "cards seen %s" % [_titles])
+		_game.free()
+		if _phase == "default":
+			_phase = "slice"
+			var g = GameScript.new()
+			g.table = "slice"
+			_boot(g)
+			return false
+		return _finish()
+	return false
+
+
+func _finish() -> bool:
+	quit(_t.verdict())
+	return true

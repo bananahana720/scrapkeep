@@ -4,8 +4,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
-# The run at a glance, top left: one pip per stage (cleared, current, still ahead) and
-# the Fleet's tag for Brindle's arena, then the difficulty as a notched bar under them,
+# The run at a glance, top left: one pip per stage of the current world (cleared, current, still ahead) and
+# the Fleet's tag for that world's boss arena, then the difficulty as a notched bar under them,
 # one notch per threat tier the director can raise. The run clock is not shown in play.
 
 const PIP := 18.0
