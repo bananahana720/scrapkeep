@@ -78,13 +78,17 @@ const KIT_PIECES := {
 	"arch": "res://assets/models/world_one/landforms/sculpted/arch.glb",
 }
 const KIT_SINK := 0.6
+# Unit LKP2: the piece shader colours each piece with the ground's beds (target_bed4.gdshaderinc);
+# a piece's own maps keep only the normal map and the ambient-occlusion and cavity terms.
+const KIT_SHADER := preload("res://assets/shaders/target_piece_rock.gdshader")
+const KIT_DIR := "res://assets/models/world_one/landforms/sculpted/"
 const KIT := [
 	["cliff_strata", -56.0, -91.0, 270.0, 0.62],
 	["cliff_strata", -58.0, -78.0, 266.0, 0.7],
 	["cliff_strata", -57.0, -66.0, 276.0, 0.6],
 	["cliff_strata", -56.5, -57.0, 268.0, 0.55],
-	["alcove", -171.0, -72.0, 270.0, 0.7],
-	["alcove", -170.0, -42.0, 262.0, 0.65],
+	["alcove", -167.0, -72.0, 270.0, 0.8],
+	["alcove", -167.0, -42.0, 270.0, 0.75],
 	["fin_spire", 108.0, -24.0, 20.0, 0.8],
 	["fin_spire", 109.0, -10.0, 130.0, 1.0],
 	["fin_spire", 107.0, 2.0, 250.0, 0.65],
@@ -94,6 +98,7 @@ const KIT := [
 ]
 
 var _kit_faces := {}
+var _kit_mats := {}
 
 
 static func kit_enabled() -> bool:
@@ -116,6 +121,7 @@ func _place_piece(holder: Node3D, ground: Callable, index: int, piece: String, a
 	var scene := (load(KIT_PIECES[piece]) as PackedScene).instantiate() as Node3D
 	var views := scene.find_children("*", "MeshInstance3D", true, false)
 	var mesh: Mesh = (views[0] as MeshInstance3D).mesh
+	(views[0] as MeshInstance3D).material_override = _kit_material(piece)
 	var box := mesh.get_aabb()
 	var basis := Basis(Vector3.UP, deg_to_rad(yaw_deg))
 	var low := INF
@@ -141,6 +147,24 @@ func _place_piece(holder: Node3D, ground: Callable, index: int, piece: String, a
 	collider.shape = shape
 	body.add_child(collider)
 	holder.add_child(body)
+
+
+func _kit_material(piece: String) -> ShaderMaterial:
+	if _kit_mats.has(piece):
+		return _kit_mats[piece]
+	var mat := ShaderMaterial.new()
+	mat.shader = KIT_SHADER
+	mat.resource_name = "kit_" + piece
+	mat.set_shader_parameter("varnish_color", Palette.RUST.lerp(Palette.CHARCOAL, 0.6))
+	mat.set_shader_parameter("tex_tone", load("res://assets/textures/ground/lkg_tone_c.png"))
+	mat.set_shader_parameter("tex_grain", load("res://assets/textures/ground/lkg_grain_d.png"))
+	mat.set_shader_parameter("tex_normal", load("%s%s_%s_game_normal.png" % [KIT_DIR, piece, piece]))
+	mat.set_shader_parameter("tex_ao", load("%s%s_ao_1024.png" % [KIT_DIR, piece]))
+	mat.set_shader_parameter("tex_cavity", load("%s%s_cavity_1024.png" % [KIT_DIR, piece]))
+	if piece == "alcove":
+		mat.set_shader_parameter("hollow", Vector4(8.0, -4.1, 1.0, 9.0))
+	_kit_mats[piece] = mat
+	return mat
 
 
 # A quick strata tint so the stills read as banded rock rather than flat clay: bands by height.
