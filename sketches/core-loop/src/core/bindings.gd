@@ -5,8 +5,8 @@ extends RefCounted
 #            reads the mouse itself)
 #   fail     the cue id of the answer to a press that cannot succeed
 #   actions  the InputMap actions the verb registers, each with its default "keys" (physical
-#            keycodes), its mouse "button", or "motion" for the mouse look. Keyboard and
-#            mouse only: a pad column joins this table with the gamepad milestone.
+#            keycodes), its mouse "button", or "motion" for the mouse look, and its gamepad
+#            defaults: "pad" (a JOY_BUTTON_* index) and "axis" ([JOY_AXIS_*, sign]).
 #   glyph    the key glyph id a prompt, a card or a diagram draws for the verb
 #   label    what that glyph spells in words
 #   icon     the verb's icon id ("" where the verb has no prompt picture)
@@ -14,27 +14,38 @@ extends RefCounted
 const VERBS := {
 	"roll": {"intent": "move", "fail": "none", "glyph": "key_w", "label": "W A S D", "icon": "",
 		"actions": {
-			"cl_forward": {"keys": [KEY_W, KEY_UP]},
-			"cl_back": {"keys": [KEY_S, KEY_DOWN]},
-			"cl_left": {"keys": [KEY_A, KEY_LEFT]},
-			"cl_right": {"keys": [KEY_D, KEY_RIGHT]},
+			"cl_forward": {"keys": [KEY_W, KEY_UP], "axis": [JOY_AXIS_LEFT_Y, -1]},
+			"cl_back": {"keys": [KEY_S, KEY_DOWN], "axis": [JOY_AXIS_LEFT_Y, 1]},
+			"cl_left": {"keys": [KEY_A, KEY_LEFT], "axis": [JOY_AXIS_LEFT_X, -1]},
+			"cl_right": {"keys": [KEY_D, KEY_RIGHT], "axis": [JOY_AXIS_LEFT_X, 1]},
 		}},
 	"look": {"intent": "", "fail": "none", "glyph": "key_mouse", "label": "mouse", "icon": "",
-		"actions": {"cl_look": {"motion": true}}},
+		"actions": {
+			"cl_look": {"motion": true},
+			"cl_look_left": {"axis": [JOY_AXIS_RIGHT_X, -1]},
+			"cl_look_right": {"axis": [JOY_AXIS_RIGHT_X, 1]},
+			"cl_look_up": {"axis": [JOY_AXIS_RIGHT_Y, -1]},
+			"cl_look_down": {"axis": [JOY_AXIS_RIGHT_Y, 1]},
+		}},
 	"jump": {"intent": "jump_pressed", "fail": "verb_fail_jump", "glyph": "key_space", "label": "Space", "icon": "ab_sable_vault",
-		"actions": {"cl_jump": {"keys": [KEY_SPACE]}}},
+		"actions": {"cl_jump": {"keys": [KEY_SPACE], "pad": JOY_BUTTON_A}}},
 	"fire": {"intent": "fire_pressed", "fail": "verb_fail_fire", "glyph": "key_lmb", "label": "LMB", "icon": "ab_sable_weapon",
-		"actions": {"cl_fire": {"button": MOUSE_BUTTON_LEFT}}},
+		"actions": {"cl_fire": {"button": MOUSE_BUTTON_LEFT, "axis": [JOY_AXIS_TRIGGER_RIGHT, 1]}}},
 	"harpoon": {"intent": "harpoon_pressed", "fail": "dry_tick", "glyph": "key_rmb", "label": "RMB", "icon": "ab_sable_move",
-		"actions": {"cl_harpoon": {"button": MOUSE_BUTTON_RIGHT}}},
+		"actions": {"cl_harpoon": {"button": MOUSE_BUTTON_RIGHT, "axis": [JOY_AXIS_TRIGGER_LEFT, 1]}}},
 	"haul": {"intent": "brake_held", "fail": "verb_fail_haul", "glyph": "key_ctrl", "label": "Ctrl", "icon": "ab_sable_smash",
-		"actions": {"cl_haul": {"keys": [KEY_CTRL]}}},
+		"actions": {"cl_haul": {"keys": [KEY_CTRL], "pad": JOY_BUTTON_X}}},
 	"boost": {"intent": "boost_pressed", "fail": "verb_fail_boost", "glyph": "key_shift", "label": "Shift", "icon": "cat_mobility",
-		"actions": {"cl_boost": {"keys": [KEY_SHIFT]}}},
+		"actions": {"cl_boost": {"keys": [KEY_SHIFT], "pad": JOY_BUTTON_B}}},
 	"special": {"intent": "special_pressed", "fail": "verb_fail_special", "glyph": "key_f", "label": "F", "icon": "ab_sable_special",
-		"actions": {"cl_special": {"keys": [KEY_F]}}},
+		"actions": {"cl_special": {"keys": [KEY_F], "pad": JOY_BUTTON_LEFT_SHOULDER}}},
 	"interact": {"intent": "interact_pressed", "fail": "verb_fail_interact", "glyph": "key_e", "label": "E", "icon": "ab_sable_mount",
-		"actions": {"cl_interact": {"keys": [KEY_E]}}},
+		"actions": {"cl_interact": {"keys": [KEY_E], "pad": JOY_BUTTON_Y}}},
+}
+# Actions that belong to no verb: the retry hold (R, RB) and the pause (P and Escape, Start).
+const EXTRA_ACTIONS := {
+	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
+	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
 }
 const VERB_FIELDS := ["intent", "fail", "glyph", "label", "icon", "actions"]
 
@@ -63,6 +74,7 @@ static func actions() -> Dictionary:
 	var out := {}
 	for verb in VERBS:
 		out.merge(VERBS[verb]["actions"])
+	out.merge(EXTRA_ACTIONS)
 	return out
 
 
@@ -119,8 +131,8 @@ static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 
 
 # One token per event, comma separated: "key:<name>" (OS.get_keycode_string of the physical
-# keycode) or "mouse:<button index>". "pad:" is reserved for a later gamepad unit and is not
-# decoded. Mouse motion cannot be bound.
+# keycode), "mouse:<button index>" or "pad:<JOY_BUTTON index>". encode writes the first two;
+# decode reads all three, so a file may carry a pad button. Mouse motion cannot be bound.
 static var _warned_tokens := {}
 
 
@@ -152,6 +164,12 @@ static func decode(text: String) -> Array:
 				var click := InputEventMouseButton.new()
 				click.button_index = index
 				event = click
+		elif token.begins_with("pad:") and token.substr(4).is_valid_int():
+			var index := token.substr(4).to_int()
+			if index >= 0 and index < JOY_BUTTON_SDL_MAX:
+				var pad := InputEventJoypadButton.new()
+				pad.button_index = index
+				event = pad
 		if event != null:
 			out.append(event)
 		elif not _warned_tokens.has(token):

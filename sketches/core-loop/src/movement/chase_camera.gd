@@ -2,6 +2,8 @@ extends Node3D
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const SENSITIVITY := 0.0022
+const STICK_YAW := 2.6
+const STICK_PITCH := 1.6
 # The shoulder view: a shorter arm with the ball off to the left of the crosshair, so
 # a mounted turret can see what it is shooting (entry 6).
 const SHOULDER_ARM := 4.2
@@ -88,6 +90,15 @@ func setup(target_ref, tuning_ref) -> void:
 func look(relative: Vector2) -> void:
 	yaw -= relative.x * SENSITIVITY
 	pitch = clampf(pitch - relative.y * SENSITIVITY, -1.25, 0.55)
+
+
+# The right stick, read each frame: `stick` is the look vector (x right, y down, as the mouse),
+# each axis cubed so a small push aims finely; full deflection turns STICK_YAW and STICK_PITCH
+# rad/s. Up is a negative y and looks up, as the mouse does (not inverted).
+func look_stick(stick: Vector2, delta: float) -> void:
+	var shaped := Vector2(pow(stick.x, 3.0), pow(stick.y, 3.0))
+	yaw -= shaped.x * STICK_YAW * delta
+	pitch = clampf(pitch - shaped.y * STICK_PITCH * delta, -1.25, 0.55)
 
 
 func yaw_basis() -> Basis:

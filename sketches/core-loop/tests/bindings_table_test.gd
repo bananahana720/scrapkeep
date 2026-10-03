@@ -71,8 +71,13 @@ func _table() -> void:
 			bare.append(verb)
 		for action in row["actions"]:
 			var record: Dictionary = row["actions"][action]
-			if not (record.has("keys") or record.has("button") or record.has("motion")):
+			if not (record.has("keys") or record.has("button") or record.has("motion") or record.has("pad") or record.has("axis")):
 				bare.append(action)
+			if record.has("pad"):
+				var pad_id := "pad%d" % record["pad"]
+				if seen_keys.has(pad_id) and seen_keys[pad_id] != verb:
+					duplicated.append("%s: %s and %s" % [pad_id, seen_keys[pad_id], verb])
+				seen_keys[pad_id] = verb
 			for key in record.get("keys", []):
 				if seen_keys.has(key):
 					duplicated.append("%s: %s and %s" % [OS.get_keycode_string(key), seen_keys[key], verb])

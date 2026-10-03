@@ -257,6 +257,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _toggles(event: InputEvent) -> bool:
+	# The game registers cl_pause (P and Escape, Start); without it, the fixed keys and button.
+	if InputMap.has_action("cl_pause"):
+		return event.is_action_pressed("cl_pause", false)
 	if event is InputEventKey:
 		return event.pressed and not event.echo and (event.physical_keycode == KEY_P or event.physical_keycode == KEY_ESCAPE)
 	if event is InputEventJoypadButton:

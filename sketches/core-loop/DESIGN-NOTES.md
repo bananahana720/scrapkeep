@@ -2690,3 +2690,29 @@ Base `8244add`. A pilot row the per-pilot tables do not know can be selected, pl
 ## Equipped paint on the shell (alpha R10, P4)
 
 `HeroAssets.profile` (set from `ctx.get("profile")`, or directly) names the equipped paint for the player's class (`equipped(class_def.id, "paint")`). `paint_tint(pilot, id)` accepts a row only if its slot is `paint`, its pilot is "" or this pilot, it has a `tint`, and the profile owns it or the row is a starter; anything else warns once per id and gives no tint. The tint multiplies the paint slot's existing 1.2 plate lift, so `class_accent`, the pilot slot and every other slot keep their colours, and `class_color()` never reads the profile. The material cache key already carries the tint, so enemy, gate and Warden paint stay untinted. `_fit` compares the equipped id as well as the class, so a new paint repaints a live shell at its next fit. `ClassPreview.paint_id` applies the same rule (no ownership check: the preview holds no profile); its rim light and floor ring stay the class colour. Only Pod has paint surfaces today (Core is glass), so the tint shows on the gyro ring and cockpit trim. Trail and topper slots are not wired.
+
+## Unit S1: saved bindings apply at boot, a gamepad plays the game (alpha R11)
+
+Base `ef709ba`. `Game.apply_saved_bindings()` runs in `_ready` once `storage_dir` is settled: it reads `SettingsStore` and, for each action with a saved override, replaces that action's keyboard and mouse events with the decoded ones. Pad events stay, unless the file names a `pad:<index>` token (`decode` now reads it; `encode` still writes only `key:` and `mouse:`, and rebinding a pad button has no screen). A text that decodes to nothing keeps the defaults; `decode` warns once per token.
+
+| Action | Pad default |
+| --- | --- |
+| `cl_forward/back/left/right` | left stick axes |
+| `cl_jump` | A |
+| `cl_fire` | right trigger (axis, positive) |
+| `cl_harpoon` | left trigger (axis, positive) |
+| `cl_haul` | X |
+| `cl_boost` | B |
+| `cl_special` | LB |
+| `cl_interact` | Y |
+| `cl_look_left/right/up/down` | right stick axes (pad only, no key) |
+| `cl_retry` | RB (key R) |
+| `cl_pause` | Start (keys P, Escape) |
+
+- **Table.** `pad` and `axis` sit on the action record, not the verb. `cl_retry` and `cl_pause` belong to no verb, so they live in `Bindings.EXTRA_ACTIONS`, which `Bindings.actions()` merges; `VERBS` still holds nine verbs. The four look actions are in the `look` verb.
+- **Look.** `Game.step_stick_look(delta)` reads `Input.get_vector` on the look actions every frame, captured mouse or not; `ChaseCamera.look_stick` cubes each axis and turns 2.6 rad/s of yaw and 1.6 rad/s of pitch at full deflection. Up looks up. Mouse look and its sensitivity are unchanged.
+- **Retry.** The hold reads `Input.is_action_pressed("cl_retry")`, so R and RB both fill it; still 0.5 s, one retry per press.
+- **Pause.** `pause_menu._toggles` reads `cl_pause` when the action exists, else the old fixed keys and Start. Start never quits; Escape's quit path in `game._input` is untouched.
+- **Screens.** `Game.pad_screen_key(event)` maps a pad A press to Space (title, summary) or R (death), and B on death to N; `_input` feeds it to `_screen_key`, which is unchanged.
+- **Last device.** `Game.last_device` is `"kbm"` or `"pad"`, set by `note_device` from every input event (stick past 0.2 counts as pad).
+- **Test.** `tests/input_pad_test.gd` (49 checks). Red: with the `apply_saved_bindings()` call removed from `_ready`, three S1-2 checks fail; restored, all pass. `bindings_table_test` changed in two rules: "every verb has an action with a key or a button" now also accepts a pad button or an axis, and the no-shared-key check also covers pad buttons across verbs.

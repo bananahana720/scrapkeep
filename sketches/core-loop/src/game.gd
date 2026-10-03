@@ -23,6 +23,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const SettingsStore := preload("res://src/ui/settings_store.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -85,6 +86,8 @@ var _restart_latched := false
 # still be pressing Space to jump, and the run's only summary must stay readable.
 var summary_guard_left := 0.0
 var _hit_stopped := false
+# The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
+var last_device := "kbm"
 
 
 func _ready() -> void:
@@ -133,6 +136,7 @@ func _ready() -> void:
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
+	apply_saved_bindings()
 	codex = Codex.new()
 	add_child(codex)
 	codex.setup(events, run, flow, storage_dir)
@@ -260,7 +264,15 @@ func _process(delta: float) -> void:
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
 	if test_mode:
 		return
-	step_restart_hold(delta, Input.is_physical_key_pressed(KEY_R))
+	step_restart_hold(delta, Input.is_action_pressed("cl_retry"))
+	step_stick_look(delta)
+
+
+# The right stick turns the camera every frame, captured mouse or not.
+func step_stick_look(delta: float) -> void:
+	var stick := Input.get_vector("cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down")
+	if stick != Vector2.ZERO:
+		camera.look_stick(stick, delta)
 
 
 # Hold R in play to retry. One retry per press: after any retry, from the hold or from
@@ -401,6 +413,61 @@ func _register_actions() -> void:
 			InputMap.action_add_event(action, button)
 		if record.get("motion", false):
 			InputMap.action_add_event(action, InputEventMouseMotion.new())
+		if record.has("pad"):
+			var pad := InputEventJoypadButton.new()
+			pad.button_index = record["pad"]
+			InputMap.action_add_event(action, pad)
+		if record.has("axis"):
+			var motion := InputEventJoypadMotion.new()
+			motion.axis = record["axis"][0]
+			motion.axis_value = float(record["axis"][1])
+			InputMap.action_add_event(action, motion)
+
+
+# Saved key bindings replace each rebound action's keyboard and mouse events; pad events stay,
+# unless the file names a pad button. A saved text that decodes to nothing keeps the defaults
+# (decode warns once per token). Runs once at boot, after storage_dir is settled.
+func apply_saved_bindings() -> void:
+	var store := SettingsStore.new(storage_dir)
+	for action in Bindings.actions():
+		if store.binding(action).is_empty() or not InputMap.has_action(action):
+			continue
+		var decoded := store.binding_events(action)
+		if decoded.is_empty():
+			continue
+		var has_pad := false
+		for event in decoded:
+			if event is InputEventJoypadButton:
+				has_pad = true
+		for old in InputMap.action_get_events(action):
+			if old is InputEventKey or old is InputEventMouseButton or (has_pad and old is InputEventJoypadButton):
+				InputMap.action_erase_event(action, old)
+		for event in decoded:
+			InputMap.action_add_event(action, event)
+
+
+# The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
+# the screen's primary key (Space; R on death), B on the death screen is N.
+func pad_screen_key(event: InputEvent) -> int:
+	if not (event is InputEventJoypadButton) or not event.pressed:
+		return KEY_NONE
+	var state: String = flow.state_name()
+	if event.button_index == JOY_BUTTON_A:
+		if state == "title" or state == "summary":
+			return KEY_SPACE
+		if state == "dead":
+			return KEY_R
+	elif event.button_index == JOY_BUTTON_B and state == "dead":
+		return KEY_N
+	return KEY_NONE
+
+
+# Any key, mouse button or mouse motion is kbm; any pad button or stick past the deadzone is pad.
+func note_device(event: InputEvent) -> void:
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
+		last_device = "kbm"
+	elif event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.2):
+		last_device = "pad"
 
 
 static func _fresh_action(action: String) -> void:
@@ -424,6 +491,7 @@ func _mouse_captured() -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	note_device(event)
 	if test_mode:
 		return
 	if event is InputEventMouseMotion and _mouse_captured():
@@ -432,6 +500,11 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if not _mouse_captured() and event.pressed and flow.in_play() and not panel.visible and not get_meta("menu_held", false):
 			_capture_mouse(true)
+		return
+	if event is InputEventJoypadButton:
+		var pad_key := pad_screen_key(event)
+		if pad_key != KEY_NONE and _screen_key(pad_key):
+			get_viewport().set_input_as_handled()
 		return
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
