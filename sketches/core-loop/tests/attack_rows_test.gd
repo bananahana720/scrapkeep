@@ -17,10 +17,10 @@ const DOC := "res://design-v3/research/attack-reads/ATTACK-READS.md"
 # colour, and again for the legibility grammar, which moves harpoon_bit and harpoon_smashed into
 # LINE_ROWS and adds the five grammar signals' quiet rows, and again for the deleted laps and
 # drop loops, which takes their eight signals' rows out, and again for the standing activities,
-# which add the activity_done row.
+# which add the activity_done row, and again for the cross-world flow's world_entered row.
 const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
-const ROWS_HASH := 1367218244
+const ROWS_HASH := 3685590879
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
