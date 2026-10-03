@@ -39,9 +39,9 @@ var bay
 # rubble standing before a cave-in), by the map's overlay ids.
 var overlays: Array[String] = []
 
-# A stage number outside the table is logged once through this (a test sets a sink so the
-# count can be read; with none set it is a push_error), then clamped as before.
-var range_errors := 0
+# Each stage number outside the table is logged once through this (a test sets a sink so the
+# errors can be read; with none set it is a push_error), then clamped as before.
+var range_errors := {}
 var error_sink: Callable
 
 # Per global stage (index stage - 1): the stage's root (null until built) and its grid
@@ -247,9 +247,9 @@ func _index(index: int) -> int:
 
 
 func _range_error(index: int) -> void:
-	range_errors += 1
-	if range_errors > 1:
+	if range_errors.has(index):
 		return
+	range_errors[index] = true
 	var text := "terrain: stage %d is outside the table (1 to %d); reading the nearest stage" % [index, maps.size()]
 	if error_sink.is_valid():
 		error_sink.call(text)

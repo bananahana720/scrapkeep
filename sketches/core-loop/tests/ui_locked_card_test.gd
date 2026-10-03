@@ -109,8 +109,10 @@ func _run() -> void:
 	profile.equip(sable.def.id, "paint", "paint_sable_violet")
 	sable.bind_profile(profile)
 	_t.check("P3-4 an equipped paint the profile does not own shows as none", sable.paint_shown() == "" and sable.preview.paint_id == "", "shown %s preview %s" % [sable.paint_shown(), sable.preview.paint_id])
+	_t.check("P3-4 at rest the hidden swatch lets clicks through to the card", sable._swatch.mouse_filter == Control.MOUSE_FILTER_IGNORE, "filter %s" % sable._swatch.mouse_filter)
 	Push.hover(root, sable)
 	await _settle(0.7)
+	_t.check("P3-4 on the open card the swatch takes clicks", sable._swatch.mouse_filter == Control.MOUSE_FILTER_STOP, "filter %s" % sable._swatch.mouse_filter)
 	var picked := []
 	Push.key(root, KEY_P)
 	await _frames(2)

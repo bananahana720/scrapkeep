@@ -63,12 +63,11 @@ func count_of(id: String) -> float:
 	return _profile.stat(STAT_PREFIX + id) if _profile != null else 0.0
 
 
-# When a row was earned, as unix seconds, or 0 if it has not been. profile.gd has no reader
-# for the date, so this reaches its saved document; a profile reader would replace it.
+# When a row was earned, as unix seconds, or 0 if it has not been.
 func earned_at(id: String) -> int:
-	if _profile == null or not _profile.earned(id):
+	if _profile == null:
 		return 0
-	return int(_profile.get("_doc")["achievements"].get(id, 0))
+	return _profile.earned_at(id)
 
 
 func _connect(signal_name: String, names: Array) -> void:

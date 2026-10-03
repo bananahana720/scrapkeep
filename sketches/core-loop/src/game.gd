@@ -424,9 +424,10 @@ func _register_actions() -> void:
 			InputMap.action_add_event(action, motion)
 
 
-# Saved key bindings replace each rebound action's keyboard and mouse events; pad events stay,
-# unless the file names a pad button. A saved text that decodes to nothing keeps the defaults
-# (decode warns once per token). Runs once at boot, after storage_dir is settled.
+# A saved binding replaces only the kinds of input it names: keys and mouse buttons together,
+# pad buttons on their own; stick and trigger axes always stay. A saved text that decodes to
+# nothing keeps the defaults (decode warns once per token). Runs once at boot, after
+# storage_dir is settled.
 func apply_saved_bindings() -> void:
 	var store := SettingsStore.new(storage_dir)
 	for action in Bindings.actions():
@@ -436,11 +437,15 @@ func apply_saved_bindings() -> void:
 		if decoded.is_empty():
 			continue
 		var has_pad := false
+		var has_desk := false
 		for event in decoded:
 			if event is InputEventJoypadButton:
 				has_pad = true
+			else:
+				has_desk = true
 		for old in InputMap.action_get_events(action):
-			if old is InputEventKey or old is InputEventMouseButton or (has_pad and old is InputEventJoypadButton):
+			var desk: bool = old is InputEventKey or old is InputEventMouseButton
+			if (has_desk and desk) or (has_pad and old is InputEventJoypadButton):
 				InputMap.action_erase_event(action, old)
 		for event in decoded:
 			InputMap.action_add_event(action, event)

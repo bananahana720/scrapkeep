@@ -167,6 +167,10 @@ func earned(id: String) -> bool:
 	return _doc["achievements"].has(id)
 
 
+func earned_at(id: String) -> int:
+	return int(_doc["achievements"].get(id, 0))
+
+
 func earn(id: String, at: float) -> bool:
 	if earned(id):
 		return false

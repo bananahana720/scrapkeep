@@ -29,7 +29,7 @@ func _initialize() -> void:
 	var dir := "user://test-%d" % OS.get_process_id()
 	DirAccess.make_dir_recursive_absolute(dir)
 	var file := FileAccess.open(dir.path_join("settings.json"), FileAccess.WRITE)
-	file.store_string('{"bindings": {"cl_jump": "key:G", "cl_fire": "key:NoSuchKeyZ"}}')
+	file.store_string('{"bindings": {"cl_jump": "key:G", "cl_fire": "key:NoSuchKeyZ", "cl_boost": "pad:3"}}')
 	file.close()
 	_game = Game.new()
 	_game.test_mode = true
@@ -175,6 +175,15 @@ func _saved() -> void:
 	_t.eq("S1-2 a token that decodes to nothing keeps cl_fire's defaults", _kinds("cl_fire"), ["mouse", "axis"])
 	_t.check("S1-2 and warns once", Bindings._warned_tokens.has("key:NoSuchKeyZ"), "warned %s" % [Bindings._warned_tokens.keys()])
 	_t.eq("S1-2 a file may carry a pad token", Bindings.decode("pad:3")[0].button_index, 3)
+	var boost_keys: Array = []
+	var boost_pads: Array = []
+	for event in InputMap.action_get_events("cl_boost"):
+		if event is InputEventKey:
+			boost_keys.append(event.physical_keycode)
+		elif event is InputEventJoypadButton:
+			boost_pads.append(event.button_index)
+	_t.eq("S1-2 a pad-only override keeps the keyboard key", boost_keys, [KEY_SHIFT])
+	_t.eq("S1-2 and replaces only the pad button", boost_pads, [3])
 
 
 func _key(code: int) -> InputEventKey:
