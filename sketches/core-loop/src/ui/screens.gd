@@ -10,6 +10,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
+const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
@@ -44,6 +45,7 @@ var _choices: HBoxContainer
 var _actions: HBoxContainer
 var _help
 var _achievements
+var _settings
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
@@ -86,6 +88,11 @@ func setup(game_ref) -> void:
 	_achievements.visible = false
 	_achievements.back.pressed.connect(_press.bind("key_a"))
 	_content.add_child(_achievements)
+	_settings = SettingsPages.new()
+	_settings.visible = false
+	_settings.setup(game, "key_esc")
+	_settings.back_requested.connect(toggle_settings)
+	_content.add_child(_settings)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 
@@ -111,6 +118,7 @@ func _on_flow_changed(state: String) -> void:
 	_state = state
 	_help.visible = false
 	_achievements.visible = false
+	_settings.visible = false
 	_actions.visible = true
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
@@ -122,6 +130,7 @@ func _on_flow_changed(state: String) -> void:
 			_action("start", "key_space", "Start")
 			_action("help", "key_h", "Help")
 			_action("achievements", "key_a", "Achievements")
+			_action("settings", "key_s", "Settings")
 			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
 				_action("breath", "key_b", "")
 			refresh_lab_row()
@@ -163,7 +172,7 @@ func _on_flow_changed(state: String) -> void:
 
 # H on the title swaps its body and actions for the how-to-play page, and back.
 func toggle_help() -> void:
-	if _state != "title" or _achievements.visible:
+	if _state != "title" or _achievements.visible or _settings.visible:
 		return
 	_help.visible = not _help.visible
 	_actions.visible = not _help.visible
@@ -180,7 +189,7 @@ func help_open() -> bool:
 
 # A on the title swaps its body and actions for the achievements page, and back.
 func toggle_achievements() -> void:
-	if _state != "title" or _help.visible:
+	if _state != "title" or _help.visible or _settings.visible:
 		return
 	_achievements.visible = not _achievements.visible
 	_actions.visible = not _achievements.visible
@@ -190,6 +199,30 @@ func toggle_achievements() -> void:
 	else:
 		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 	_fade(true)
+
+
+# S on the title swaps its body and actions for the settings page, and back. It never
+# pauses the game or touches the mouse; Esc only goes back.
+func toggle_settings() -> void:
+	if _state != "title" or _help.visible or _achievements.visible:
+		return
+	_settings.visible = not _settings.visible
+	_actions.visible = not _settings.visible
+	if _settings.visible:
+		_settings.refresh()
+		_show("SETTINGS", Palette.AMBER, "")
+		_settings.focus("fullscreen")
+	else:
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_fade(true)
+
+
+func settings_open() -> bool:
+	return _settings.visible
+
+
+func settings_page():
+	return _settings
 
 
 func achievements_open() -> bool:
@@ -215,6 +248,10 @@ func refresh_lab_row() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if _settings.visible:
+		if _settings.handle(event):
+			get_viewport().set_input_as_handled()
+		return
 	if not (_help.visible or _achievements.visible) or not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	if event.physical_keycode == KEY_ESCAPE:
@@ -321,6 +358,8 @@ func _update_enabled() -> void:
 
 func button_for(action: String) -> Button:
 	if action == "back":
+		if _settings.visible:
+			return _settings.back
 		return _achievements.back if _achievements.visible else _help.back
 	for child in _actions.get_children():
 		if child.action == action:

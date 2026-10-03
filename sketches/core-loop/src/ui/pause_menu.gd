@@ -8,6 +8,7 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const SettingsPages := preload("res://src/ui/settings_pages.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
 # opens it in play and closes it again. Each row is a ChoiceButton with its key's cap,
@@ -23,6 +24,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # and punch, Hit-stop every freeze, through juice.set_comfort(), saved beside the volumes.
 # With --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
 # gentle, and the open sounding now changes with it, so it can be judged mid-fight.
+# The Settings row (O) swaps the column for settings_pages.gd (fullscreen, quality, key
+# rebinding) and Back, Esc or P returns to the column with Settings focused.
 
 const LAYER := 6
 const FADE_IN := 0.16
@@ -38,6 +41,7 @@ const ROWS := [
 	{"id": "hitstop", "comfort": "hitstop", "glyph": "hitstop", "words": "Hit-stop"},
 	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
 	{"id": "breath", "key": "key_b", "words": "Breath: hard"},
+	{"id": "settings", "key": "key_o", "words": "Settings"},
 	{"id": "quit", "key": "key_q", "words": "Quit"},
 ]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
@@ -48,6 +52,9 @@ var store
 
 var _root: Control
 var _content: VBoxContainer
+var _title: Label
+var _page
+var _in_settings := false
 var _rows := {}
 var _order: Array = []
 var _open := false
@@ -70,7 +77,7 @@ func setup(game_ref) -> void:
 	layer = LAYER
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
-	store = SettingsStore.new(game.storage_dir)
+	store = game.settings_store()
 	apply_saved()
 
 	_root = Control.new()
@@ -89,14 +96,14 @@ func setup(game_ref) -> void:
 	_content.add_theme_constant_override("separation", 12)
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_content)
-	var title := Label.new()
-	title.text = "PAUSED"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_override("font", UiFonts.bold())
-	title.add_theme_font_size_override("font_size", 56)
-	title.add_theme_color_override("font_color", Palette.AMBER)
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_content.add_child(title)
+	_title = Label.new()
+	_title.text = "PAUSED"
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.add_theme_font_override("font", UiFonts.bold())
+	_title.add_theme_font_size_override("font_size", 56)
+	_title.add_theme_color_override("font_color", Palette.AMBER)
+	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_content.add_child(_title)
 	for spec in ROWS:
 		var row: Control
 		if spec.has("bus"):
@@ -113,6 +120,11 @@ func setup(game_ref) -> void:
 		_content.add_child(row)
 		_rows[spec["id"]] = row
 		_order.append(spec["id"])
+	_page = SettingsPages.new()
+	_page.visible = false
+	_page.setup(game, "key_esc")
+	_page.back_requested.connect(_leave_settings.bind(true))
+	_content.add_child(_page)
 	_set_live(false)
 	game.events.flow_changed.connect(func(_state: String):
 		if _open and not game.flow.in_play():
@@ -138,6 +150,14 @@ func notes_pinned() -> bool:
 
 func row(id: String) -> Control:
 	return _rows.get(id)
+
+
+func settings_page():
+	return _page
+
+
+func settings_open() -> bool:
+	return _in_settings
 
 
 func focused_id() -> String:
@@ -171,6 +191,7 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	_leave_settings(false)
 	if _notes_pinned:
 		_unpin_notes()
 	if game.pause_toggled():
@@ -200,6 +221,8 @@ func press(id: String) -> void:
 			_notes_pinned = true
 			game.hold_notes(true)
 			game.notes.show_page(0)
+		"settings":
+			_enter_settings()
 		"quit":
 			get_tree().quit()
 		"ceremony":
@@ -211,6 +234,30 @@ func press(id: String) -> void:
 				_rows["breath"].grab_focus()
 		_:
 			_rows[id].grab_focus()
+
+
+# The settings page takes the column's place; the first page's rows stay built, only hidden.
+func _enter_settings() -> void:
+	_in_settings = true
+	_title.text = "SETTINGS"
+	for id in _order:
+		_rows[id].visible = false
+	_page.refresh()
+	_page.visible = true
+	_page.focus("fullscreen")
+
+
+func _leave_settings(focus_settings: bool) -> void:
+	if not _in_settings:
+		return
+	_in_settings = false
+	_title.text = "PAUSED"
+	_page.visible = false
+	for id in _order:
+		_rows[id].visible = true
+	_show_breath()
+	if focus_settings:
+		_rows["settings"].grab_focus()
 
 
 # v3 W13: C or the row flips reward ceremonies between full and short (every find at the
@@ -241,6 +288,13 @@ func _input(event: InputEvent) -> void:
 	if _open and game.notes_held():
 		if _notes_pinned and _unpins(event):
 			_unpin_notes()
+			get_viewport().set_input_as_handled()
+		return
+	if _open and _in_settings:
+		if not _page.capturing() and _toggles(event):
+			_leave_settings(true)
+			get_viewport().set_input_as_handled()
+		elif _page.handle(event):
 			get_viewport().set_input_as_handled()
 		return
 	if _toggles(event):
@@ -291,6 +345,9 @@ func _menu_key(event: InputEvent) -> bool:
 		match code:
 			KEY_N:
 				press("restart")
+				return true
+			KEY_O:
+				press("settings")
 				return true
 			KEY_Q:
 				press("quit")

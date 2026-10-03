@@ -23,6 +23,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
@@ -77,6 +78,7 @@ var _progress_ready := false
 # Where the codex and the run log write: user:// in play, a per-process folder the
 # tests clean up when the game leaves the tree.
 var storage_dir := "user://"
+var _settings_store
 
 var _pause_toggled := false
 var _notes_held := false
@@ -162,6 +164,7 @@ func _ready() -> void:
 	if ResourceLoader.exists(BOSS_PATH):
 		boss = _module(load(BOSS_PATH))
 	presentation = _module(Presentation)
+	apply_saved_display()
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
 	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
@@ -436,19 +439,69 @@ func apply_saved_bindings() -> void:
 		var decoded := store.binding_events(action)
 		if decoded.is_empty():
 			continue
-		var has_pad := false
-		var has_desk := false
-		for event in decoded:
-			if event is InputEventJoypadButton:
-				has_pad = true
-			else:
-				has_desk = true
-		for old in InputMap.action_get_events(action):
-			var desk: bool = old is InputEventKey or old is InputEventMouseButton
-			if (has_desk and desk) or (has_pad and old is InputEventJoypadButton):
-				InputMap.action_erase_event(action, old)
-		for event in decoded:
-			InputMap.action_add_event(action, event)
+		apply_binding(action, decoded)
+
+
+# Puts `events` on `action` in the InputMap: keys and mouse buttons together replace the
+# desk events, pad buttons replace the pad events, axes stay. Boot and the settings page
+# both call this, so a live rebind and a saved one cannot differ.
+func apply_binding(action: String, events: Array) -> void:
+	if events.is_empty() or not InputMap.has_action(action):
+		return
+	var has_pad := false
+	var has_desk := false
+	for event in events:
+		if event is InputEventJoypadButton:
+			has_pad = true
+		else:
+			has_desk = true
+	for old in InputMap.action_get_events(action):
+		var desk: bool = old is InputEventKey or old is InputEventMouseButton
+		if (has_desk and desk) or (has_pad and old is InputEventJoypadButton):
+			InputMap.action_erase_event(action, old)
+	for event in events:
+		InputMap.action_add_event(action, event)
+
+
+# Clears every saved binding and puts the table's defaults back at once.
+func reset_bindings() -> void:
+	var store = settings_store()
+	for action in store.bindings.keys():
+		store.clear_binding(action)
+	_register_actions()
+
+
+# One settings store for the pause menu and the settings page, so neither saves over the
+# other's changes with a stale copy.
+func settings_store():
+	if _settings_store == null:
+		_settings_store = SettingsStore.new(storage_dir)
+	return _settings_store
+
+
+# The saved quality and fullscreen, after the presentation exists. A --preset= flag beats
+# the saved quality; the window mode is only touched on a real window. `args` stands in
+# for the launch arguments in a test.
+func apply_saved_display(args: Array = []) -> void:
+	var launch: Array = args if not args.is_empty() else Array(OS.get_cmdline_user_args()) + Array(OS.get_cmdline_args())
+	var saved := SettingsStore.new(storage_dir)
+	if not launch.any(func(arg): return String(arg).begins_with("--preset=")):
+		set_quality(saved.quality())
+	if saved.fullscreen():
+		set_fullscreen(true)
+
+
+# 0 High, 1 Low.
+func set_quality(level: int) -> void:
+	var preset := "low" if level == 1 else "high"
+	if GraphicsPreset.current != preset:
+		GraphicsPreset.apply(preset)
+
+
+func set_fullscreen(on: bool) -> void:
+	if not _windowed():
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
 
 
 # The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
@@ -563,6 +616,9 @@ func _screen_key(key: int) -> bool:
 				return true
 			if key == KEY_A:
 				screens.toggle_achievements()
+				return true
+			if key == KEY_S:
+				screens.toggle_settings()
 				return true
 			if key == KEY_B and tuning.option(Tuning.MUSIC_KEY) == "ace":
 				cycle_breath()
