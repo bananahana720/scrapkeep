@@ -2660,3 +2660,12 @@ Base `d939492`. On a table of more than one world, `world_entered` raises a laun
 - **`GRAMMAR_SIGNALS`.** `world_entered` stays in it: `presentation_sfx_test` counts only presentation listeners, and the HUD is not one.
 - **Test.** `tests/ui_worlds_test.gd` (19 checks) on the double, default and slice tables. `UI_WORLDS_DISABLE_CARD=1` disconnects the world card, which is how the red run is shown (3 W6-1 checks fail).
 - **Not done.** `field_notes.gd` and the summary's stage chip stay world-one text and the global count.
+
+## Unit S2: key bindings are saved with the other settings, 2026-10-02
+
+Base `8244add`. `settings.json` gains an optional top-level `bindings` map, `SafeStore.STRING_MAP`: action name (a `Bindings.actions()` key) to a comma-separated token list. A token is `key:<name>` (`OS.get_keycode_string` of the physical keycode) or `mouse:<button index>`; `pad:` is reserved for the gamepad unit and is not decoded. `Bindings.encode(events)` and `Bindings.decode(text)` are the codec; a token that does not parse is skipped with one warning per token text. Mouse motion (`cl_look`) cannot be bound.
+
+- **Store.** `SettingsStore` keeps `bindings` and offers `binding`, `binding_events`, `set_binding` and `clear_binding`; each setter saves. An entry for an action this build does not hold is kept and written back, and `binding_events` returns `[]` for it.
+- **Unchanged files.** `save()` writes `bindings` only when the map is not empty, so a file with no overrides is byte for byte what it was. No version field; a file without `bindings` means no overrides. A wrong-typed `bindings` quarantines the file like the other keys (a fifth case in `persistence_truncation_test`).
+- **Test.** `tests/unit/settings_bindings_case.gd`. Red: `save()` dropping `bindings` fails the round-trip case; restored, it passes.
+- **Not done.** `game.gd` does not apply saved bindings at boot and the pause menu has no rebind page.

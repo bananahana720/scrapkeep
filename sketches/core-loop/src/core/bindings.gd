@@ -116,3 +116,45 @@ static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 				if not verb in out:
 					out.append(verb)
 	return out
+
+
+# One token per event, comma separated: "key:<name>" (OS.get_keycode_string of the physical
+# keycode) or "mouse:<button index>". "pad:" is reserved for a later gamepad unit and is not
+# decoded. Mouse motion cannot be bound.
+static var _warned_tokens := {}
+
+
+static func encode(events: Array) -> String:
+	var tokens: PackedStringArray = []
+	for event in events:
+		if event is InputEventKey and event.physical_keycode != KEY_NONE:
+			tokens.append("key:" + OS.get_keycode_string(event.physical_keycode))
+		elif event is InputEventMouseButton and event.button_index != 0:
+			tokens.append("mouse:%d" % event.button_index)
+	return ",".join(tokens)
+
+
+# The events `text` names. A token that does not parse is skipped and warns once per token text.
+static func decode(text: String) -> Array:
+	var out := []
+	for raw in text.split(",", false):
+		var token := raw.strip_edges()
+		var event: InputEvent = null
+		if token.begins_with("key:"):
+			var code := OS.find_keycode_from_string(token.substr(4))
+			if code != KEY_NONE:
+				var key := InputEventKey.new()
+				key.physical_keycode = code
+				event = key
+		elif token.begins_with("mouse:") and token.substr(6).is_valid_int():
+			var index := token.substr(6).to_int()
+			if index > 0:
+				var click := InputEventMouseButton.new()
+				click.button_index = index
+				event = click
+		if event != null:
+			out.append(event)
+		elif not _warned_tokens.has(token):
+			_warned_tokens[token] = true
+			push_warning("bindings: skipped token \"%s\"" % token)
+	return out
