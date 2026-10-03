@@ -101,8 +101,10 @@ var paused := false
 # Spawns whose ground ring is showing: {"kind": int, "at": Vector2, "left": float}.
 var arrivals: Array[Dictionary] = []
 # The stage (1 to 3), for the unlock base and the ancient family; 0 reads it from the
-# threat dial, which stage_defs sets per stage.
+# threat dial, which stage_defs sets per stage. A row given to use_row() wins over both.
 var stage := 0
+# The stage row's unlock_base and ancient, once use_row() has been called; {} reads the guess.
+var _row := {}
 # combat's build_read(): {class, habits: {habit: share}, branch_tags: [axis]}.
 var build := {}
 # Every pack composed, in order: {id, kinds, tests}. For tests and the balance read.
@@ -254,6 +256,26 @@ func _draw_authored() -> Dictionary:
 
 # --- v2 W7 enemies: pack composition -------------------------------------------------
 
+# The world hands the director the stage's table row on stage entry: its counter unlock
+# level and its ancient enemy come from the row, so a stage past the third reads its own.
+func use_row(row: Dictionary) -> void:
+	_row = {}
+	if row.has("unlock_base") and row.has("ancient"):
+		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
+
+
+func _unlock_base() -> int:
+	if not _row.is_empty():
+		return _row["unlock_base"]
+	return UNLOCK_BASE[stage_now() - 1]
+
+
+func _ancient() -> String:
+	if not _row.is_empty():
+		return _row["ancient"]
+	return FAMILY_ANCIENT[stage_now() - 1]
+
+
 func stage_now() -> int:
 	if stage > 0:
 		return clampi(stage, 1, 3)
@@ -277,7 +299,7 @@ func reinforcement_weight() -> float:
 
 
 func unlocked_counters() -> Array:
-	var n := clampi(UNLOCK_BASE[stage_now() - 1] + UNLOCK_PER_TICK * effective_tier(), 0, COUNTERS.size())
+	var n := clampi(_unlock_base() + UNLOCK_PER_TICK * effective_tier(), 0, COUNTERS.size())
 	return COUNTERS.slice(0, n)
 
 
@@ -329,7 +351,7 @@ func compose() -> Array:
 	if open.is_empty() and effective_tier() <= 0:
 		return []
 	if open.is_empty() or _rng.randf() < ANCIENT_SHARE:
-		var ancient: String = FAMILY_ANCIENT[stage_now() - 1]
+		var ancient: String = _ancient()
 		packs.append({"id": ancient, "kinds": [ancient], "tests": "ancient"})
 		return [ancient]
 	var axes := build_axes()

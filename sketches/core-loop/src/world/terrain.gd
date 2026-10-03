@@ -11,8 +11,10 @@ const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir, "reach": Reac
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #
-# Each stage is its own map. All three are built once at setup, so a stage change is
-# a cheap swap inside the stage_entered handler and never a hitch in the launch. Height
+# Each stage is its own map. The first world's stages are built once at setup (every
+# stage of a one-world table), so a stage change is a cheap swap inside the stage_entered
+# handler and never a hitch in the launch. A later world's stages are built, all together,
+# the first time anything reads one of them (_ensure). Height
 # queries read the built grid and interpolate the same two triangles per cell the
 # collider uses, so what the spine, combat and build ask about the ground is exactly
 # the ground the ball rolls on.
@@ -37,15 +39,27 @@ var bay
 # rubble standing before a cave-in), by the map's overlay ids.
 var overlays: Array[String] = []
 
-var _roots: Array[Node3D] = []
+# A stage number outside the table is logged once through this (a test sets a sink so the
+# count can be read; with none set it is a push_error), then clamped as before.
+var range_errors := 0
+var error_sink: Callable
+
+# Per global stage (index stage - 1): the stage's root (null until built) and its grid
+# (empty until built). The world of each row, so a read can build its whole world.
+var _roots: Array = []
 var _heights: Array[PackedFloat32Array] = []
+var _worlds: Array[int] = []
 var _parent: Node3D
+var _arena := false
 
 
 func _init(table = StageDefs) -> void:
 	for row in table.DEFS:
 		assert(MAPS.has(row["map"]), "terrain: stage %s names an unknown map '%s'" % [row["stage"], row["map"]])
 		maps.append(MAPS[row["map"]].new())
+		_worlds.append(int(row.get("world", 1)))
+		_roots.append(null)
+		_heights.append(PackedFloat32Array())
 
 
 func map() -> RefCounted:
@@ -59,15 +73,39 @@ func map_for(index: int) -> RefCounted:
 func build(parent: Node3D) -> void:
 	_parent = parent
 	_build_sky(parent)
-	for m in maps:
-		var holder := Node3D.new()
-		holder.name = "Stage%d" % (_roots.size() + 1)
-		var heights := _build_ground(holder, m)
-		m.build_props(holder, _ground_at.bind(heights))
-		_roots.append(holder)
-		_heights.append(heights)
-		parent.add_child(holder)
-		_park(holder, _roots.size() != stage)
+	for i in maps.size():
+		if _worlds[i] == _worlds[0]:
+			_build_stage(i)
+
+
+# True once this stage's ground and props exist.
+func is_built(index: int) -> bool:
+	return _roots[_index(index)] != null
+
+
+func _build_stage(i: int) -> void:
+	var m = maps[i]
+	var holder := Node3D.new()
+	holder.name = "Stage%d" % (i + 1)
+	var heights := _build_ground(holder, m)
+	m.build_props(holder, _ground_at.bind(heights))
+	_roots[i] = holder
+	_heights[i] = heights
+	_parent.add_child(holder)
+	_park(holder, _arena or i != stage - 1)
+	holder.process_mode = Node.PROCESS_MODE_DISABLED if _arena else Node.PROCESS_MODE_INHERIT
+
+
+# Builds the whole world a stage belongs to, if any of it is not built yet, and returns
+# the stage's clamped index. Every read of the ground goes through here.
+func _ensure(index: int) -> int:
+	var i := _index(index)
+	if _roots[i] == null:
+		assert(_parent != null, "terrain: build() has not run")
+		for j in maps.size():
+			if _worlds[j] == _worlds[i] and _roots[j] == null:
+				_build_stage(j)
+	return i
 
 
 # Swap the active stage's geometry in. Synchronous, so the flow's spawn and beacon
@@ -75,12 +113,15 @@ func build(parent: Node3D) -> void:
 # physics world, hidden and parked far below: moving a body is cheap, while adding a
 # trimesh back to the world rebuilds its tree (measured at about 34 ms a swap).
 func use(index: int) -> void:
-	stage = _index(index) + 1
+	stage = _ensure(index) + 1
+	_arena = false
 	var m = map()
 	overlays.clear()
 	if "start_overlays" in m:
 		overlays.append_array(m.start_overlays)
 	for i in _roots.size():
+		if _roots[i] == null:
+			continue
 		_park(_roots[i], i != stage - 1)
 		_roots[i].process_mode = Node.PROCESS_MODE_INHERIT
 
@@ -89,7 +130,10 @@ func use(index: int) -> void:
 # world until the next use(). Putting a trimesh back rebuilds its tree, which an arena
 # entry or a T replay can afford and a launch swap cannot, so only this path does it.
 func park_all() -> void:
+	_arena = true
 	for root in _roots:
+		if root == null:
+			continue
 		_park(root, true)
 		root.process_mode = Node.PROCESS_MODE_DISABLED
 
@@ -100,13 +144,13 @@ static func _park(root: Node3D, parked: bool) -> void:
 
 
 func geometry_root(index: int) -> Node3D:
-	return _roots[_index(index)]
+	return _roots[_ensure(index)]
 
 
 # The terrain API the spine and the other modules read through ctx.terrain (see
 # CONTRACTS.md).
 func height(x: float, z: float) -> float:
-	var h := _grid_height(_heights[stage - 1], x, z)
+	var h := _grid_height(_heights[_ensure(stage)], x, z)
 	if overlays.is_empty():
 		return h
 	var ground := h
@@ -122,7 +166,7 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 
 func spawn_point(index: int) -> Vector3:
 	var s: Vector2 = map_for(index).spawn
-	return Vector3(s.x, _grid_height(_heights[_index(index)], s.x, s.y) + 2.0, s.y)
+	return Vector3(s.x, _grid_height(_heights[_ensure(index)], s.x, s.y) + 2.0, s.y)
 
 
 func entry_heading(index: int) -> Vector3:
@@ -131,7 +175,7 @@ func entry_heading(index: int) -> Vector3:
 
 func beacon_point(index: int) -> Vector3:
 	var b: Vector2 = map_for(index).beacon
-	return Vector3(b.x, _grid_height(_heights[_index(index)], b.x, b.y), b.y)
+	return Vector3(b.x, _grid_height(_heights[_ensure(index)], b.x, b.y), b.y)
 
 
 func scrap_lines(index: int) -> Array:
@@ -188,16 +232,29 @@ func near_moss(point: Vector3) -> bool:
 
 
 func ground_callable(index: int) -> Callable:
-	return _ground_at.bind(_heights[_index(index)])
+	return _ground_at.bind(_heights[_ensure(index)])
 
 
 func vault_point(index: int) -> Vector3:
 	var v: Vector2 = map_for(index).vault
-	return Vector3(v.x, _grid_height(_heights[_index(index)], v.x, v.y), v.y)
+	return Vector3(v.x, _grid_height(_heights[_ensure(index)], v.x, v.y), v.y)
 
 
 func _index(index: int) -> int:
+	if index < 1 or index > maps.size():
+		_range_error(index)
 	return clampi(index, 1, maps.size()) - 1
+
+
+func _range_error(index: int) -> void:
+	range_errors += 1
+	if range_errors > 1:
+		return
+	var text := "terrain: stage %d is outside the table (1 to %d); reading the nearest stage" % [index, maps.size()]
+	if error_sink.is_valid():
+		error_sink.call(text)
+	else:
+		push_error(text)
 
 
 static func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
