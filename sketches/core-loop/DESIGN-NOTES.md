@@ -2735,3 +2735,30 @@ Stage rows gain `unlock_base` (int) and `ancient` (a Roster kind id): 2, 4, 6 wi
 - **Tests.** `terrain_worlds_test` (standalone terrain) and `director_rows_test`. Red: with `use_row` not called on entry, stages 4, 5 and 6 read the guess and the unlock and ancient checks fail; restored, they pass.
 - **Timing (headless, ms, three runs, a loaded shared machine, two-world double).** Before: building all six stages at setup 2568, 2558, 2556. After: world one at setup 2022, 1817, 2700; world two on first read 1320, 1312, 2120. World two's first use is over 250 ms, a hitch for a later unit to hide (build it behind a loading beat or ahead of the world's last stage).
 - **Follow-up.** `game.gd:152-154` calls `geometry_root` for every Spillway row at setup, which builds world two at boot for the two-world double; left alone because two other writers are in that file.
+
+## Asset registry and budget classes (alpha R12, AB)
+
+Every `.glb` under `assets/` and every texture under `assets/textures/` is listed in `assets/registry.json` with a class, whether it ships, its loader (`file:line` or the format string) and any exception. The caps live in `tools/asset_budgets.json`: a triangle, a vertex and a draw (surface) cap per class, and 2,048 px on the longest side for a texture. `tests/asset_registry_test.gd` fails on a model or texture that is unlisted or listed but absent, and on any shipped model over its class or exception; it prints one table of every asset against its caps. New models for worlds two and three register a class first.
+
+- **Counts.** Taken after Godot import over the whole file, as the per-asset tests take them (index count / 3, vertex count, one draw per surface). A fresh checkout needs `godot --import` first; `sketch:smoke` does it.
+- **Rule.** Cap = smallest round number (100 from 1,000 up, 10 below) at or above the largest member, never above the tightest existing per-asset ceiling of any member. A member over its class carries an exception (`exception` plus `exception_why`) instead of raising the class. The old per-asset tests are untouched and still own their finer checks; where a file holds several variants (chunks, gate), the old band is per variant and the file total is the registry's number.
+- **Shipped.** 29 models (14 at the top of `assets/models/`, 15 under `world_one/`), 6 textures. The three top-level `shell_*.glb` have no loader in `src/` (`hero_assets.gd:38-40` loads the `world_one/` shells), so they are `ships: false` and not counted.
+
+| Class | Triangles | Vertices | Draws | Set by |
+| --- | ---: | ---: | ---: | --- |
+| enemy | 1,100 | 2,100 | 3 | plated brute (1,044 / 2,063); 3-draw ceiling of five enemy tests |
+| clutter | 280 | 650 | 13 | clutter_kit |
+| chunk | 2,900 | 8,500 | 23 | chunks |
+| gate | 2,700 | 5,300 | 20 | reward_gate |
+| warden_base | 5,000 | 9,600 | 32 | warden_clamp_base |
+| warden_kit | 1,500 | 2,800 | 18 | reactor (T), mind (V), hive and mind (D) |
+| shell | 11,000 | 11,600 | 10 | sable (T), kest (V), rivet and sable (D); leaves room for a pilot under the 16,000 T / 15,000 V pod |
+| pilot | 4,600 | 3,100 | 5 | sable (T), kest (V and D) |
+| scenery | 120 | 110 | 2 | water_edges and its ceiling |
+| landform | 8,000 | 24,000 | 1 | LKR4 sculpted rock; no member yet; V is 3 per triangle |
+| prop | 270 | 610 | 1 | moss_shelter |
+| texture | 2,048 px | | | written cap; today 512 or 1,024 |
+
+- **Exceptions.** enemy_chaser and enemy_lobber 5 draws, enemy_winch_drone 4, enemy_mag_trapper 6; world_one/shell_kest 16 draws; dam 2,400 T / 4,600 V / 3 D; moss_workshop 4,400 T / 7,900 V / 3 D.
+- **Test.** Red: an unregistered copy of `dam.glb` under `assets/models/` fails naming it; removed, it passes. Enemy triangle cap lowered to 800 fails naming the lobber (and deflector, brute); restored, it passes. `SCRAPKEEP_AB_MEASURE=1` prints the table without cap checks, for deriving a cap.
+- **Follow-up.** `scenery` mixes a 120-triangle strip with a 2,400-triangle landmark, so it is two sizes under one name; split it when world two adds scenery.
