@@ -17,6 +17,7 @@ const RescueSite := preload("res://src/world/rescue_site.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
+const Breach := preload("res://src/world/breach.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -63,6 +64,8 @@ var bay_bark := {}
 # The height band the ball last settled in, and each terrain swap's cost.
 var layer := ""
 var swap_log: Array[Dictionary] = []
+# The stage map's breakable floors (breach.gd), or null on a map without them.
+var breach
 
 var _stage_seed := 0
 var _chute_clock := 0.0
@@ -183,6 +186,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	if "swaps" in m:
 		for id in m.swaps:
 			m.apply_swap(id, false)
+	breach = Breach.new(m.breach_plates) if "breach_plates" in m else null
 	if contraptions.has(stage):
 		contraptions[stage].reset()
 	layer = ""
@@ -377,6 +381,12 @@ func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
 		contraptions[ctx.flow.stage()].note_slam(at)
 	if ctx.flow.in_stage():
 		_discover(codex_world.note("slam", {"at": at}))
+	# A slam landing breaks the plate under it. No world_fact: the kind has no
+	# WORLD_ROWS row yet, so its cue waits for one (audio.gd would play the generic tick).
+	if breach != null and ctx.flow.in_stage():
+		for id in breach.slam(at):
+			_swap(id)
+			_mark("breach_plate", at)
 
 
 func _on_jumped(_air: bool) -> void:
