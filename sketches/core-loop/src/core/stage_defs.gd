@@ -47,36 +47,34 @@ static func is_run_last(stage: int) -> bool:
 	return Worlds.is_run_last(DEFS, stage)
 
 
-static func synergy_in_play(_synergy_id: String) -> bool:
-	return true
+# 2026-10-04: the default table takes the whole alpha ruleset. Every helper and constant below
+# answers from AlphaDefs so the two tables cannot drift.
+static func synergy_in_play(synergy_id: String) -> bool:
+	return AlphaDefs.synergy_in_play(synergy_id)
 
 
-# Every part is in play on this table; parts_listed false keeps the loot rules as they were.
-static func part_in_play(_part_id: String) -> bool:
-	return true
+static func part_in_play(part_id: String) -> bool:
+	return AlphaDefs.part_in_play(part_id)
 
 
 static func parts_listed() -> bool:
-	return false
+	return AlphaDefs.parts_listed()
 
 
-# The slice table opens an upgrade pick on each new heft class (slice_defs.gd); this one does not.
-const PICK_ON_CLASS_UP := false
+const PICK_ON_CLASS_UP := AlphaDefs.PICK_ON_CLASS_UP
 
 
-# The slice table authors its packs (slice_defs.gd); this table has none, so the
-# director uses its own rules.
 static func packs() -> Array:
-	return []
+	return AlphaDefs.packs()
 
 
 static func elite() -> Dictionary:
-	return {}
+	return AlphaDefs.elite()
 
 
 static func elite_arrival() -> int:
-	return 0
+	return AlphaDefs.elite_arrival()
 
 
 static func has_vault() -> bool:
-	return true
+	return AlphaDefs.has_vault()

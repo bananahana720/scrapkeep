@@ -133,12 +133,13 @@ func _check_hints() -> void:
 		var hint: String = ClassCard.unlock_hint(def, _game.progress)
 		var id := Achievements.for_pilot(def.id)
 		if def.starter:
-			_report("hint %s" % def.display_name, hint == "" and id == "", "starter hint \"%s\"" % hint)
+			_report("hint %s" % def.display_name, hint == "", "starter hint \"%s\"" % hint)
 		else:
 			_report("hint %s" % def.display_name, id != "" and hint == Achievements.row(id)["text"], "hint \"%s\" for row %s" % [hint, id])
 		_report("screen hint %s" % def.display_name, _game.screens._unlock_hint(def) == hint, "screens agree")
 	_report("hint with no row", ClassCard.unlock_hint(_stub("no_such_pilot"), null) == "", "unknown pilot")
-	_report("hint Rivet text", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "Rescue the stranded runner in world one.", "row text")
+	_report("hint Rivet starter", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "", "Rivet is a starter until a rescue emitter exists")
+	_report("hint Kest text", ClassCard.unlock_hint(_game.flow.classes[2], _game.progress) == Achievements.row(Achievements.for_pilot("demolitions_caster"))["text"], "row text")
 	_report("hint Tarn text", ClassCard.unlock_hint(_game.flow.classes[3], _game.progress) == "Rout Admiral Brindle.", "row text")
 
 

@@ -301,6 +301,8 @@ func _show_paint() -> void:
 # needs more than one. Empty when no row rewards the pilot or the row is hidden, so the card
 # says only "Locked" and never something false. progress may be null (count 0).
 static func unlock_hint(def, progress) -> String:
+	if def.starter:
+		return ""
 	var id := Achievements.for_pilot(def.id)
 	if id == "":
 		return ""

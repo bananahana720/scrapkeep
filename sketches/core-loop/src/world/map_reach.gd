@@ -131,7 +131,7 @@ func _init() -> void:
 		{"at": Vector2(14.0, 134.0), "facing": Vector3(0.0, 0.0, 1.0)},
 	]
 	activity_sites = [
-		{"id": "enemy_camp", "at": Vector2(-80.0, 40.0), "pack": ["lobber", "lobber", "lobber"], "pay": {"named": "long_spool"}},
+		{"id": "enemy_camp", "at": Vector2(-80.0, 40.0), "pack": ["lobber", "lobber", "lobber"], "pay": {"named": "loose_trigger"}},
 		{"id": "ambush_altar", "at": Vector2(-16.0, 44.0)},
 		{"id": "cracked_cache", "at": Vector2(68.0, -4.0)},
 		{"id": "hauler_bounty", "at": Vector2(0.0, -88.0)},

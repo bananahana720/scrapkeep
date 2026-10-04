@@ -653,7 +653,8 @@ func _end_run(won: bool) -> void:
 	run_won = won
 	ctx.player.set_frozen(true)
 	_entrance = {}
-	if store != null and not store.clear():
+	# A save this build never owned (store refused it: newer_schema) is not ours to delete.
+	if store != null and store.refusal == "" and not store.clear():
 		store_error = "clear_failed"
 		push_warning("flow: run save not cleared: %s" % store.last_error)
 	_set_state(SUMMARY)

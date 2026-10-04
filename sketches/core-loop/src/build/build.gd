@@ -603,12 +603,31 @@ func _on_warden_broken_hotwire(_stage: int) -> void:
 	if _hotwire_spent:
 		return
 	_hotwire_spent = true
+	_hotwire_save()
 	var ids := Parts.hotwire_offer(ctx.run.armor_mode, ctx.run.parts)
 	if ids.is_empty():
 		return
 	_hotwire_id = ids[0]
 	_hotwire_state = "open"
+	_hotwire_save()
 	hotwire_offered.emit(_hotwire_id, Parts.hotwire_recycle(_hotwire_id))
+
+
+# The offer's three fields ride the run's extra so the entrance doc carries them: resume_run
+# emits run_started (which clears them) before it applies the doc, so _hotwire_restore puts
+# them back on the first stage_entered.
+func _hotwire_save() -> void:
+	if ctx != null and ctx.run != null:
+		ctx.run.extra["hotwire"] = {"id": _hotwire_id, "state": _hotwire_state, "spent": _hotwire_spent}
+
+
+func _hotwire_restore() -> void:
+	if _hotwire_spent or ctx == null or ctx.run == null or not ctx.run.extra.has("hotwire"):
+		return
+	var saved: Dictionary = ctx.run.extra["hotwire"]
+	_hotwire_id = String(saved.get("id", ""))
+	_hotwire_state = String(saved.get("state", ""))
+	_hotwire_spent = bool(saved.get("spent", false))
 
 
 # {part_id, state, recycle}; part_id "" when nothing was offered this run.
@@ -622,6 +641,7 @@ func hotwire_fit() -> bool:
 	if _hotwire_state != "open":
 		return false
 	_hotwire_state = "fit"
+	_hotwire_save()
 	if gates.is_open():
 		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
 		ids.append(_hotwire_id)
@@ -636,6 +656,7 @@ func hotwire_recycle() -> int:
 	if _hotwire_state != "open":
 		return 0
 	_hotwire_state = "recycle"
+	_hotwire_save()
 	var cogs := Parts.hotwire_recycle(_hotwire_id)
 	ctx.run.add_cogs(cogs)
 	hotwire_resolved.emit(_hotwire_id, "recycle", cogs)
@@ -822,6 +843,7 @@ func _on_run_started(_class_id_value: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	_hotwire_restore()
 	if retry:
 		_fired.clear()
 	gates.close()

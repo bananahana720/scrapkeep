@@ -3,6 +3,7 @@ extends RefCounted
 const Director := preload("res://src/world/director.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 
 # The slice's packs come from one list on the stage table (slice_defs.gd), drawn by a
 # director given them and nothing else:
@@ -46,8 +47,9 @@ func _tables() -> void:
 		SliceDefs.packs().size() == 3 and SliceDefs.elite()["id"] == "elite" and SliceDefs.elite_arrival() == 3 and not SliceDefs.has_vault(),
 		"%d packs, elite arrival %d" % [SliceDefs.packs().size(), SliceDefs.elite_arrival()])
 	_t.check("table: the slice has no timed events", SliceDefs.of(1)["event_mix"].is_empty(), "event_mix %s" % [SliceDefs.of(1)["event_mix"]])
-	_t.check("table: the default table has no packs, no elite and keeps its vault",
-		StageDefs.packs().is_empty() and StageDefs.elite().is_empty() and StageDefs.has_vault(), "default answers use the director's own rules")
+	# 2026-10-04: the default table answers from AlphaDefs, so it carries the alpha packs and elite and no vault.
+	_t.check("table: the default table answers as the alpha table (packs, elite, no vault)",
+		StageDefs.packs() == AlphaDefs.packs() and StageDefs.elite() == AlphaDefs.elite() and not StageDefs.has_vault(), "default answers follow AlphaDefs")
 
 
 func _arrivals() -> void:
