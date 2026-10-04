@@ -119,6 +119,8 @@ func _on_node_added(node: Node) -> void:
 func _read_windups(enemy) -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
+	if not enemy.has_signal("attack_phase") or not enemy.has_method("attack_facts"):
+		return
 	var listener := _on_windup_phase.bind(enemy)
 	if not enemy.is_connected("attack_phase", listener):
 		enemy.connect("attack_phase", listener)
@@ -150,7 +152,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	var active := {}
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if enemy.get("kind") not in ["warden", "swarm_remnant"] or enemy.is_dead():
+		if enemy.get("kind") not in ["warden", "swarm_remnant"] or not enemy.has_method("is_dead") or enemy.is_dead():
 			continue
 		for facts in WindupRows.state_facts(enemy):
 			var key := "%d:%s" % [enemy.get_instance_id(), facts.row]
