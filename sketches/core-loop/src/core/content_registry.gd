@@ -66,6 +66,7 @@ const TABLES := {
 }
 
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
+# 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "c427ff324f2a2f1eeafd67036438e50b928ffe2b455639f06446b11048639795",
 	"cosmetics.ROWS": "168acf8b01f15d1c573cfc4c696c41cc439e167ca137ad81174b532519cd7f08",
@@ -78,14 +79,14 @@ const GOLDEN_HASHES := {
 	"event_kinds.UI_ROWS": "75e0ca77eefc9ef9fcaf372e6f184f84709cdfb5e3da7f962574da86153b6f2b",
 	"event_kinds.WORLD_ROWS": "0942b5cf4f760f0137e0af0ae509822abbdffb4d410bc7ad349c7df77a3c9300",
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
-	"event_kinds.ATTACK_ROWS": "3a381817c78a120fc98d8e5cd9822f12add6a0836959178cfeed6f5a0e7bab70",
+	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
 	"event_kinds.IMPACT": "480bce14f4ace39fb09b787961787a72362ffc1455125222dbb310a02eb83f1e",
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
 	"lore_rows.ROWS": "30da687b1495dfca3232cd4b2829e30acfad8841e9bdf9c5da36a9e82f268238",
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
-	"windup_rows.ROWS": "1d0ebedba754d12522d67186713dda39f355bc6030d65b335e001b83875f2b39",
+	"windup_rows.ROWS": "32c77ced0cdae335ad031baa2c744bc830377ab9ceffe9916c9955d010d12df1",
 	"upgrade_tree.TREES": "30202fb50a25f663f44faf5e70a5de0aeea8f37614ac8cbef68d9005334d1412",
 	"upgrade_tree.WORLD_ONE_NODES": "4b06d53525e04c05ca15dcc4c857b3f26ee13fd08b8f103910d1d7b360e37cb0",
 	"combat.codex_entries.ENTRIES": "d56cd29fc0aa3dce7deb0037d8dd702b8fd1beb90758c48f1e84f713e4356e40",

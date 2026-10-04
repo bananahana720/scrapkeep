@@ -42,11 +42,18 @@ func _walk() -> void:
 		_report("row " + kind, present, "every roster kind is explicit")
 		if not present:
 			continue
-		var enemy = _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(-70.0, -70.0, 2.0))
-		enemy.set_physics_process(false)
 		var spec: Dictionary = WindupRows.ROWS[kind]
 		_report("vocab " + kind, spec.color_role in EventKinds.COLOR_ROLES and spec.shape in EventKinds.SHAPES
 			and (spec.sound == EventKinds.NONE or SfxBank.has_recipe(spec.sound)), "colour, shape and sound use the existing vocabularies")
+		# A declared kind without its script yet cannot spawn; its attacks are reserved ids.
+		if not Roster.built(kind):
+			_reserved(kind, spec)
+			continue
+		var enemy = _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(-70.0, -70.0, 2.0))
+		_report("spawn " + kind, enemy != null and enemy.kind == kind, "a built kind spawns as itself")
+		if enemy == null:
+			continue
+		enemy.set_physics_process(false)
 		for attack in spec.attacks:
 			var cue := WindupRows.row(kind, enemy, attack)
 			_report("resolved " + attack, not cue.is_empty(), kind)
@@ -74,6 +81,20 @@ func _walk() -> void:
 				drone.free()
 		else:
 			enemy.free()
+
+
+# An unbuilt kind's reserved attack ids: each is its own, its ATTACK_ROWS row is owned by
+# this kind (2026-10-04, alpha wave 8: the rows are declared ahead of the scripts), and the
+# row's glyph is the wind-up shape the built kind will draw.
+func _reserved(kind: String, spec: Dictionary) -> void:
+	for attack in spec.attacks:
+		var holders: Array = []
+		for other in WindupRows.ROWS:
+			if WindupRows.ROWS[other].attacks.has(attack):
+				holders.append(other)
+		var row := EventKinds.attack_row(attack)
+		_report("reserved " + attack, holders == [kind] and row.get("owner_kind", "") == "roster" and row.get("owner", "") == kind
+			and spec.shape == EventKinds.attack_glyph(attack), "%s reserves it; held by %s, owner %s" % [kind, holders, row.get("owner", "")])
 
 
 func _glyphs() -> int:
