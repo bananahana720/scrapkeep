@@ -4,6 +4,8 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const SENSITIVITY := 0.0022
 const STICK_YAW := 2.6
 const STICK_PITCH := 1.6
+# The most the stick turn slows over a target, at aim assist 1.
+const AIM_ASSIST_SLOW := 0.8
 # The shoulder view: a shorter arm with the ball off to the left of the crosshair, so
 # a mounted turret can see what it is shooting (entry 6).
 const SHOULDER_ARM := 4.2
@@ -35,6 +37,8 @@ var pitch := -0.30
 var stick_sensitivity := STICK_YAW
 var mouse_sensitivity := SENSITIVITY
 var invert_y := false
+# 0..1, scaled by AIM_ASSIST_SLOW in look_stick; the stick only.
+var aim_assist := 0.5
 
 # Hooks for the modules; see CONTRACTS.md. Combat sets shoulder_target (0..1) while
 # mounted, presentation calls punch_fov, kick and shake. Nothing else writes the rig.
@@ -94,6 +98,7 @@ func apply_look_settings(store) -> void:
 	stick_sensitivity = store.stick_sensitivity()
 	mouse_sensitivity = store.mouse_sensitivity()
 	invert_y = store.invert_y()
+	aim_assist = store.aim_assist()
 	# Input.get_vector applies the radial deadzone once, before look_stick cubes the axes.
 	for action in ["cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down"]:
 		if InputMap.has_action(action):
@@ -107,13 +112,21 @@ func look(relative: Vector2) -> void:
 
 # The right stick, read each frame: `stick` is the look vector (x right, y down, as the mouse),
 # each axis cubed so a small push aims finely; full deflection turns STICK_YAW and STICK_PITCH
-# rad/s at the default sensitivity. Invert Y reverses stick pitch only.
-func look_stick(stick: Vector2, delta: float) -> void:
+# rad/s at the default sensitivity. Invert Y reverses stick pitch only. `on_target` is true while
+# the crosshair is on a hookable surface or enemy (the harpoon's aim record): the turn then
+# slows by aim_assist * AIM_ASSIST_SLOW. Mouse look is never slowed.
+func look_stick(stick: Vector2, delta: float, on_target := false) -> void:
 	var shaped := Vector2(pow(stick.x, 3.0), pow(stick.y, 3.0))
+	if on_target:
+		shaped *= 1.0 - assist_friction()
 	yaw -= shaped.x * stick_sensitivity * delta
 	var pitch_rate := STICK_PITCH * (stick_sensitivity / STICK_YAW)
 	var pitch_sign := -1.0 if invert_y else 1.0
 	pitch = clampf(pitch - shaped.y * pitch_rate * delta * pitch_sign, -1.25, 0.55)
+
+
+func assist_friction() -> float:
+	return clampf(aim_assist, 0.0, 1.0) * AIM_ASSIST_SLOW
 
 
 func yaw_basis() -> Basis:

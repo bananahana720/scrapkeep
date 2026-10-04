@@ -134,9 +134,19 @@ static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 
 
 # One token per event, comma separated: "key:<name>" (OS.get_keycode_string of the physical
-# keycode), "mouse:<button index>" or "pad:<JOY_BUTTON index>". encode writes the first two;
-# decode reads all three, so a file may carry a pad button. Mouse motion cannot be bound.
+# keycode), "mouse:<button index>", "pad:<JOY_BUTTON index>" or "axis:<trigger JOY_AXIS index>".
+# Mouse motion and the sticks cannot be bound.
 static var _warned_tokens := {}
+const TRIGGER_AXES := [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
+
+
+# "desk" for a key or mouse button, "pad" for a pad button, "axis" for a trigger.
+static func kind_of(event: InputEvent) -> String:
+	if event is InputEventJoypadButton:
+		return "pad"
+	if event is InputEventJoypadMotion:
+		return "axis"
+	return "desk"
 
 
 static func encode(events: Array) -> String:
@@ -146,6 +156,10 @@ static func encode(events: Array) -> String:
 			tokens.append("key:" + OS.get_keycode_string(event.physical_keycode))
 		elif event is InputEventMouseButton and event.button_index != 0:
 			tokens.append("mouse:%d" % event.button_index)
+		elif event is InputEventJoypadButton and event.button_index >= 0:
+			tokens.append("pad:%d" % event.button_index)
+		elif event is InputEventJoypadMotion and event.axis in TRIGGER_AXES:
+			tokens.append("axis:%d" % event.axis)
 	return ",".join(tokens)
 
 
@@ -173,6 +187,11 @@ static func decode(text: String) -> Array:
 				var pad := InputEventJoypadButton.new()
 				pad.button_index = index
 				event = pad
+		elif token.begins_with("axis:") and token.substr(5).is_valid_int() and token.substr(5).to_int() in TRIGGER_AXES:
+			var trigger := InputEventJoypadMotion.new()
+			trigger.axis = token.substr(5).to_int()
+			trigger.axis_value = 1.0
+			event = trigger
 		if event != null:
 			out.append(event)
 		elif not _warned_tokens.has(token):
