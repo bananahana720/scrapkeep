@@ -5,7 +5,8 @@ const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
-# World two's boss is the stub (a posture Warden on a flat pad). It reads like a fight: the
+# World two's boss, the Waking (waking.gd), runs the stub's fight (a posture Warden on a flat
+# pad) until its own lands. It reads like a fight: the
 # HUD seats the boss plate on ctx.boss's Warden (named for the world's row, four pips), the
 # Warden's posture reaches the bus so the ring draws its arcs and the stagger chord plays,
 # a stagger shows open, and a lost chunk updates the pips and the arcs. The run is the
