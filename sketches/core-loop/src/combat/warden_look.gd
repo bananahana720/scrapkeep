@@ -14,22 +14,16 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 # - Four heavy jaw plates carry the plating tint, large and lit: amber means your
 #   punch breaks through, slate means not yet (enemy.gd _paint_plate).
 # - A glowing core sits in the clamp's mouth, visible through the gaps. It brightens
-#   as the pulse charges and flickers while the magnet has the plating off.
+#   as the pulse charges and goes live while the Warden is staggered.
 # - Above it floats one badge, turned to face the camera: an integrity ring that
 #   fills with the beacon charge (the share of the Warden broken), and inside it the
 #   objective's diamond. Both wear beacon_charge_changed's colour from event_kinds,
 #   the row the objective line reads once the fight starts, so the line and the world
 #   agree. The badge keeps a readable size out to the drop; the diamond fades out
 #   inside 20 m, where the Warden itself fills the view.
-# - Shred shows as glowing seams cracked across the jaw plates: none below SEAM_SHOW of
-#   the plating stripped, then more of them and brighter as the strip deepens, in the
-#   amber the plates turn once your punch beats what is left.
-# - On the posture rule the look changes: the cracks are the guard, in the neutral colour,
+# - The posture rule drives the look: the cracks are the guard, in the neutral colour,
 #   the jaws lean open and the core goes live while staggered, and the ring is hidden.
-# - Stage 2's brood cells have hexagonal rims and amber membranes, with matching
-#   hex markers above the jaws; stage 3's magnet is a lit arm and head that burn amber while the
-#   tug is on, the moment a shot on them counts.
-#
+
 # A rolling ball never reaches above 2 m, and below 2 m nothing here extends past the
 # collider's 2.8 m radius, so the body the player sees is the body the ball meets.
 
@@ -52,12 +46,10 @@ const MARKER_SIZE := 1.9
 const MARKER_FADE_FAR := 20.0
 const MARKER_FADE_NEAR := 12.0
 const BADGE_PRIORITY := 30
-const BROOD_MARKER_HEIGHT := 8.1
 const TURN_RATE := 3.0
-const SEAM_SHOW := 0.25
 # Each seam is a zigzag of strokes across a jaw's outer face: [x, y, tilt] in the
 # plate's frame, the plate's centre at 0. A seam lights once the strip passes its
-# threshold, from SEAM_SHOW to fully stripped.
+# threshold.
 const SEAM_STROKES := [
 	[[-0.5, 1.4, 0.7], [0.1, 0.9, -0.5], [0.55, 0.3, 0.6]],
 	[[0.6, -0.4, -0.8], [0.0, -1.0, 0.4], [-0.55, -1.6, -0.6]],
@@ -65,8 +57,6 @@ const SEAM_STROKES := [
 ]
 const SEAM_WIDTH := 0.1
 const SEAM_LENGTH := 0.9
-const SEAM_GLOW_MIN := 1.4
-const SEAM_GLOW_MAX := 4.5
 # On the posture rule the seams are the guard: level n lights at SEAM_STEP times n and
 # seals again as the guard drains below it, in the neutral role colour.
 const SEAM_STEP := 25.0
@@ -92,10 +82,6 @@ var _segments: Array = []
 var _lit_material: StandardMaterial3D
 var _dim_material: StandardMaterial3D
 var _marker_material: StandardMaterial3D
-var _cap_material: StandardMaterial3D
-var _arm: MeshInstance3D
-var _head: Node3D
-var _magnet_material: StandardMaterial3D
 var _seam_material: StandardMaterial3D
 # Per seam level, the stroke nodes on every jaw.
 var _seams: Array = []
@@ -117,14 +103,6 @@ func build(owner_warden, half_height: float) -> void:
 	_build_jaws()
 	_build_core()
 	_build_badge()
-	if warden.lesson == "caps":
-		_build_caps()
-	if warden.lesson == "magnet":
-		_build_magnet()
-
-
-func cap_material() -> StandardMaterial3D:
-	return _cap_material
 
 
 # True when this Warden fights on the posture rule (the plate carries its health).
@@ -189,8 +167,7 @@ func _build_collar() -> void:
 	_mesh(band, body_material, Vector3.UP * (_ground + JAW_BOTTOM + 0.3))
 
 
-# The jaws turn as one, so a gap (and the core behind it) faces you, and the magnet
-# arm swings out through a gap rather than through a plate.
+# The jaws turn as one, so a gap (and the core behind it) faces you.
 func _build_jaws() -> void:
 	_jaws = Node3D.new()
 	_jaws.name = "Jaws"
@@ -217,7 +194,7 @@ func _build_jaws() -> void:
 # The plate's +z is its outer face; strokes sit just proud of it, so they never clip.
 func _build_seams(jaw: Node3D) -> void:
 	if _seam_material == null:
-		_seam_material = _glow(EventKinds.role_color("neutral") if posture_fight() else Palette.AMBER, SEAM_GLOW_MIN)
+		_seam_material = _glow(EventKinds.role_color("neutral"), POSTURE_SEAM_GLOW_MIN)
 		for i in SEAM_STROKES.size():
 			_seams.append([])
 	for level in SEAM_STROKES.size():
@@ -287,72 +264,6 @@ func _badge_material(color: Color, alpha: float) -> StandardMaterial3D:
 	return mat
 
 
-func _build_caps() -> void:
-	_cap_material = _glow(Palette.AMBER, 2.2)
-	var enamel := Palette.solid(Roster.ANCIENT_ENAMEL)
-	enamel.roughness = 0.8
-	var brood := Node3D.new()
-	brood.name = "BroodCells"
-	add_child(brood)
-	var index := 0
-	for cap in warden.cap_points():
-		var local: Vector3 = cap - warden.global_position
-		var cell := Node3D.new()
-		cell.name = "BroodCap_%d" % index
-		cell.position = local
-		brood.add_child(cell)
-		var membrane := CylinderMesh.new()
-		membrane.radial_segments = 6
-		membrane.top_radius = 0.72
-		membrane.bottom_radius = warden.CAP_RADIUS
-		membrane.height = 0.28
-		_mesh(membrane, _cap_material, Vector3.ZERO, cell).name = "Membrane"
-		_hex_rim(cell, 0.92, 0.14, enamel, false)
-		# The deck is hidden from a ground approach. An open hex glyph marks each
-		# cell's x/z without drawing a solid heat column through the family kit.
-		var marker := Node3D.new()
-		marker.name = "BroodMarker_%d" % index
-		marker.position = Vector3(local.x, _ground + BROOD_MARKER_HEIGHT, local.z)
-		brood.add_child(marker)
-		_hex_rim(marker, 0.45, 0.075, _cap_material, true)
-		index += 1
-
-
-func _hex_rim(parent: Node3D, radius: float, width: float, mat: Material, upright: bool) -> void:
-	for side in 6:
-		var a := TAU * float(side) / 6.0
-		var b := TAU * float(side + 1) / 6.0
-		var from := Vector3(cos(a), sin(a), 0.0) * radius if upright else Vector3(cos(a), 0.0, sin(a)) * radius
-		var to := Vector3(cos(b), sin(b), 0.0) * radius if upright else Vector3(cos(b), 0.0, sin(b)) * radius
-		var edge := BoxMesh.new()
-		edge.size = Vector3(width, width, from.distance_to(to))
-		var node := _mesh(edge, mat, (from + to) * 0.5, parent)
-		node.basis = Basis.looking_at(to - from, Vector3.FORWARD if upright else Vector3.UP)
-
-
-func _build_magnet() -> void:
-	_magnet_material = _glow(Palette.SAND, 0.4)
-	_arm = MeshInstance3D.new()
-	var beam := BoxMesh.new()
-	beam.size = Vector3(0.6, 0.6, 1.0)
-	_arm.mesh = beam
-	_arm.material_override = body_material
-	add_child(_arm)
-	_head = Node3D.new()
-	add_child(_head)
-	var disc := CylinderMesh.new()
-	disc.top_radius = warden.MAGNET_RADIUS
-	disc.bottom_radius = warden.MAGNET_RADIUS
-	disc.height = 0.9
-	var face := _mesh(disc, _magnet_material, Vector3.ZERO, _head)
-	face.rotation.x = PI * 0.5
-	var horn := TorusMesh.new()
-	horn.inner_radius = warden.MAGNET_RADIUS * 0.55
-	horn.outer_radius = warden.MAGNET_RADIUS * 1.05
-	var ring := _mesh(horn, _magnet_material, Vector3.ZERO, _head)
-	ring.rotation.x = PI * 0.5
-
-
 func update(delta: float) -> void:
 	if warden == null:
 		return
@@ -360,14 +271,12 @@ func update(delta: float) -> void:
 	_update_open(delta)
 	_update_core()
 	_update_badge()
-	_update_caps(delta)
-	_update_magnet()
 	_update_seams()
 	_update_body_glow()
 
 
 func _turn_jaws(delta: float) -> void:
-	var facing: Vector3 = warden.magnet_dir() if warden.magnet_out() > 0.0 else warden.flat_to_ball()
+	var facing: Vector3 = warden.flat_to_ball()
 	if facing.length() < 0.5:
 		return
 	# Gaps sit at angle 0 in the jaw frame; turn that gap toward the facing.
@@ -378,8 +287,6 @@ func _turn_jaws(delta: float) -> void:
 func _update_core() -> void:
 	# Kept low enough that the core keeps its colour instead of blowing out to white.
 	var energy: float = 1.2 + 2.0 * warden.charge_fraction()
-	if warden.unplated_by_magnet():
-		energy = 0.4 + 2.6 * absf(sin(Time.get_ticks_msec() * 0.02))
 	if posture_fight():
 		var live := EventKinds.state_color("open")
 		var shown := live if warden.staggered() else _rest_core_color()
@@ -428,53 +335,8 @@ func _update_badge() -> void:
 	_marker_material.albedo_color.a = 0.95 * fade
 
 
-func _update_caps(delta: float) -> void:
-	if _cap_material == null:
-		return
-	_cap_material.emission_energy_multiplier = move_toward(_cap_material.emission_energy_multiplier, 2.2, delta * 8.0)
-	var camera := get_viewport().get_camera_3d()
-	if camera != null:
-		for marker in get_node("BroodCells").get_children():
-			if String(marker.name).begins_with("BroodMarker_"):
-				var facing: Vector3 = camera.global_position - marker.global_position
-				facing.y = 0.0
-				if facing.length_squared() > 0.001:
-					marker.basis = Basis.looking_at(-facing, Vector3.UP)
-
-
-func _update_magnet() -> void:
-	if _head == null:
-		return
-	var out: float = warden.magnet_out()
-	var base := Vector3.UP * (_ground + JAW_BOTTOM + JAW_SIZE.y - 0.4)
-	var tip: Vector3 = warden.magnet_point() - warden.global_position if out > 0.0 else base + Vector3.UP * 0.8
-	_head.position = tip
-	var dir: Vector3 = warden.magnet_dir()
-	_head.basis = Basis.looking_at(dir, Vector3.UP) if dir.length() > 0.1 else Basis.IDENTITY
-	var span := tip - base
-	_arm.visible = span.length() > 0.3
-	if _arm.visible:
-		_arm.position = base + span * 0.5
-		_arm.basis = Basis.looking_at(span.normalized(), Vector3.UP if absf(span.normalized().y) < 0.95 else Vector3.FORWARD)
-		_arm.scale = Vector3(1.0, 1.0, span.length())
-	# Amber while the tug is on: the one moment a shot on the magnet counts.
-	var tugging: bool = warden.state_name() == "tug"
-	_magnet_material.albedo_color = Palette.AMBER if tugging else Palette.SAND
-	_magnet_material.emission = Palette.AMBER if tugging else Palette.SAND
-	_magnet_material.emission_energy_multiplier = 2.4 if tugging else 0.4 + 1.2 * out
-
-
 func _update_seams() -> void:
-	if posture_fight():
-		_update_guard_seams()
-		return
-	var strip: float = warden.shred_fraction()
-	var depth := clampf((strip - SEAM_SHOW) / (1.0 - SEAM_SHOW), 0.0, 1.0)
-	for level in _seams.size():
-		var lit: bool = strip > SEAM_SHOW and depth >= float(level) / _seams.size()
-		for seam in _seams[level]:
-			(seam as MeshInstance3D).visible = lit
-	_seam_material.emission_energy_multiplier = lerpf(SEAM_GLOW_MIN, SEAM_GLOW_MAX, depth)
+	_update_guard_seams()
 
 
 # The guard as cracks: one more level at each quarter, sealing as the guard drains.

@@ -71,8 +71,7 @@ func _run() -> void:
 	_game.add_child(_warden)
 	_warden.position = _reactor.position + Vector3(80.0, 0.0, 0.0)
 	_warden.setup(_game.player, _game.ctx.terrain, _game, Callable(_game.flow, "in_play"), 1.0,
-		{"stage": row["stage"], "family": row["warden_family"], "fight": row["warden_fight"],
-		"lesson": row["warden_lesson"], "plating": row["warden_plating"], "hp": row["warden_hp"],
+		{"stage": row["stage"], "family": row["warden_family"], "plating": row["warden_plating"], "hp": row["warden_hp"],
 		"posture": row["posture"], "fleet": _combat.fleet})
 	_warden.set_physics_process(false)
 	_game.events.posture_changed.connect(func(enemy: Node3D, _p: float, _s: bool):
@@ -140,9 +139,8 @@ func _run() -> void:
 	_game.player._on_enemy_touched(contact, Vector3.LEFT)
 	_report("player ram contact earns the burst", _warden.guard.following()
 		and is_equal_approx(_warden.posture(), Warden.GUARD_RACK_POSTURE), "posture %.1f" % _warden.posture())
-	_reactor._step_family(Warden.GUARD_RESPAWN, true)
+	_reactor._step_guard(Warden.GUARD_RESPAWN)
 	_reactor.on_guard_scattered(_warden.guard, Vector3.ZERO)
-	_reactor._open(Warden.CORE_WINDOW)
 	_report("reactor is unchanged without a rack", _reactor.guard == null and _reactor.posture() == 0.0
 		and not _reactor.family_open() and _reactor.family_opens == 0, "guard %s, posture %.1f" % [_reactor.guard, _reactor.posture()])
 	_game.free()

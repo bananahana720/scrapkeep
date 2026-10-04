@@ -3,55 +3,27 @@ extends "res://src/combat/enemy.gd"
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
-# sideways. Its whole kit is:
+# sideways. Every Warden fights on posture (boss_posture.gd): hits fill a posture bar, a
+# full bar staggers the Warden for STAGGER_SECONDS and opens its core, and only a contact
+# on the open core removes health, one chunk of four per stagger. Plating is the stage's
+# number, read by the posture rule for its glance line. The plating fight (caps, magnet,
+# mind brace, shred, the 20% chip) was retired once every Warden fought on posture.
 #
-# - Plating. Plating and health come from the stage (spec "plating", "hp"). Punch below
-#   the plating chips 20%; the tint on its shell says which side of the line you are.
 # - The pulse. While you are inside its reach (the beacon ring), it charges for
 #   PULSE_TELEGRAPH seconds every PULSE_CYCLE, showing a ring the size of its reach and
 #   a small core ring. Then it pulses: a ball the reach ring contains gains PULSE_LIFT
 #   m/s straight up for one tick, horizontal speed untouched, and a ball the core ring
-#   contains also takes PULSE_DAMAGE.
-# - One lesson per stage, as data (spec "lesson"):
-#   - "plate": nothing more.
-#   - "caps": three vent caps on top. A stomp or slam that lands on one meets plating 0
-#     and hits for CAP_MULT times its punch.
-#   - "magnet": every MAGNET_CYCLE it swings a magnet arm toward you and lays a wedge
-#     from the arm toward the ball for MAGNET_TELEGRAPH, then tugs a ball the wedge
-#     contains toward it at MAGNET_PULL m/s^2 for MAGNET_TUG. The magnet is a weak
-#     point only in the tug: a weapon hit on it then drops the Warden's plating to 0
-#     for UNPLATE_SECONDS and ends the tug. An earlier shot meets the body.
-#
-# v2 W7 enemies: the clamp is a shared ancient base with one family kit per stage
-# (DESIGN-V2 section 11), on top of the lesson. The body's plating, the 20% chip, the
-# gate and breaking it anywhere are untouched; each kit adds a weak point with plating
-# 0 that opens only when the family's own mechanic is answered:
-#   - reactor (stage 1): the pulse is the reactor venting. The pulse charge publishes
-#     vent_charging, the pulse vent_erupted, and the core stands open for CORE_WINDOW.
-#   - swarm (stage 2): the hive keeps a guard rack of drones between itself and you.
-#     Bowl through the rack and it scatters: the queen cell opens for QUEEN_WINDOW. A
-#     guard that dies out is rebuilt after GUARD_RESPAWN.
-#   - mind (stage 3): every ADAPT_CYCLE in reach it reads your most-used habit, quotes
-#     your class motif back wrong (mind_adapted) and shows the habit's trigger icon on
-#     its lens for ADAPT_WARN, then braces for BRACE: hits of that verb meet BRACE_MULT
-#     times its plating, and its lens stands open. Within a run only.
-#
-# Two fight rules, chosen by the stage row's warden_fight (spec "fight"). "plating" is
-# everything above and the default. "posture" (the slice table) hands the fight to
-# boss_posture.gd: hits fill a posture bar, a full bar staggers the Warden for
-# STAGGER_SECONDS and opens its core, and only a contact on the open core removes health,
-# one chunk of four per stagger. Under it the pulse still cycles but pauses in a stagger
-# and a charge in flight is cancelled, the reactor's own post-pulse window does not open,
-# shred does not build, the shell never tints amber and take_damage removes only the
-# chunk the last strike armed.
-# The swarm's rack instead pays GUARD_RACK_POSTURE once for the cruise-or-faster
-# ram that scatters it. It keeps its existing reform and respawn clocks.
+#   contains also takes PULSE_DAMAGE. The pulse pauses in a stagger and a charge in
+#   flight is cancelled.
+# - The family kit (DESIGN-V2 section 11) is the shared clamp's look: reactor vents on the
+#   pulse, the swarm keeps a guard rack of drones that pays GUARD_RACK_POSTURE once for
+#   the cruise-or-faster ram that scatters it (reform and respawn on GUARD_RESPAWN), the
+#   mind's lens follows you and opens on a stagger.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -62,80 +34,33 @@ const PULSE_LIFT := 10.0
 const PULSE_DAMAGE := 10.0
 const CORE_RADIUS := 6.0
 const LIFT_REACH_UP := 8.0
-const CAP_COUNT := 3
-const CAP_RING := 1.6
-const CAP_RADIUS := 0.9
-const CAP_REACH := 2.6
-const CAP_MULT := 1.5
-const MAGNET_CYCLE := 8.0
-const MAGNET_TELEGRAPH := 1.5
-const MAGNET_TUG := 1.5
-# The change request said 6 m/s^2; at 6 a ball driving away fell to 10.4 m/s against
-# its own 0.8 x cruise (11.2) floor (a no-tug control run: 12.9); 4 cleared it by only
-# 0.2 m/s, so the pull is 3.5.
-const MAGNET_PULL := 3.5
-const MAGNET_ARM := 3.2
-# The magnet rides high over the clamp, out of the straight line from the ball to the
-# body, so shooting it is a choice you aim for rather than an accident of body fire.
-const MAGNET_RISE := 3.6
-const MAGNET_RADIUS := 1.1
-# The pull telegraphs as a wedge from the arm toward the ball, this wide either side, so
-# it never reads as the pulse ring; the tug pulls only a ball the wedge contains.
-const MAGNET_WEDGE_DEG := 35.0
-const UNPLATE_SECONDS := 3.0
-const WEAPON_KINDS := ["runner", "arc", "turret"]
-const CORE_WINDOW := 2.5
-const QUEEN_WINDOW := 4.0
 const GUARD_RESPAWN := 10.0
 const GUARD_OFFSET := 9.0
 const GUARD_RACK_POSTURE := 25.0
-const ADAPT_CYCLE := 10.0
-const ADAPT_WARN := 1.2
-const BRACE := 5.0
-const BRACE_MULT := 1.4
 const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
 const CONTACT_KINDS := ["stomp", "slam"]
 
-enum Magnet { IDLE, TELEGRAPH, TUG }
-
 var stage := 1
-var lesson := "plate"
 var reach := DEFAULT_REACH
 var pulses := 0
 # Whether the last pulse's reach ring contained the ball (and so lifted it).
 var last_pulse_lifted := false
 var min_pulse_telegraph := INF
-var magnet_stuns := 0
-var magnet_state := Magnet.IDLE
-var shred := 0.0
 var family := Roster.REACTOR
 var fleet
 var guard
 var family_opens := 0
-var adapt_habit := ""
-var braced_kinds: Array = []
 
 var _pulse_clock := 0.0
 var _charging := false
 var _charge_time := 0.0
 var _core_ring: Node3D
 var _since_pulse := INF
-var _magnet_clock := 0.0
-var _magnet_time := 0.0
-var _magnet_dir := Vector3.FORWARD
-var _magnet_ring: Node3D
-var _unplated := 0.0
-var _cap_material: StandardMaterial3D
 var _look: Node3D
 var _kit: Node3D
-var _open_left := 0.0
 var _guard_wait := 0.0
-var _adapt_clock := 0.0
-var _adapt_time := 0.0
-var _brace_left := 0.0
 var _charge_len := PULSE_TELEGRAPH
-var _fight := "plating"
 var _posture: BossPosture
 var _armed := 0.0
 var _guard_scatter_frame := -1
@@ -146,15 +71,12 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	_setup_common(target_ref, terrain_ref, root_ref, live_ref, spec_ref)
 	kind = "warden"
 	stage = spec.get("stage", 1)
-	lesson = spec.get("lesson", "plate")
 	reach = spec.get("reach", DEFAULT_REACH)
 	family = spec.get("family", Roster.warden_family(stage))
-	_fight = String(spec.get("fight", "plating"))
-	if _fight == "posture":
-		_posture = BossPosture.new(spec.get("posture", {}))
+	_posture = BossPosture.new(spec.get("posture", {}))
 	faction = family
 	fleet = spec.get("fleet")
-	if _posture != null and family == Roster.SWARM and fleet != null:
+	if family == Roster.SWARM and fleet != null:
 		fleet.events().enemy_struck.connect(_on_guard_struck)
 	plating = spec.get("plating", 30.0)
 	_set_health(spec.get("hp", 400.0))
@@ -168,10 +90,6 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 
 
 func state_name() -> String:
-	if magnet_state == Magnet.TUG:
-		return "tug"
-	if magnet_state == Magnet.TELEGRAPH:
-		return "magnet_telegraph"
 	return "charging" if _charging else "idle"
 
 
@@ -179,38 +97,23 @@ func knock(_direction: Vector3, _force: float) -> void:
 	pass
 
 
-func plating_now() -> float:
-	return 0.0 if _unplated > 0.0 else plating
-
-
+# The boss TARGET contract's member (boss_contract.gd); no Warden is ever unplated.
 func unplated_by_magnet() -> bool:
-	return _unplated > 0.0
+	return false
 
 
 func seconds_since_pulse() -> float:
 	return _since_pulse
 
 
-func plating_for(hit_kind: String, part: String) -> float:
-	if part == "cap" and hit_kind in CONTACT_KINDS:
-		return 0.0
+func plating_for(_hit_kind: String, part: String) -> float:
 	if part == family_point() and family_open():
 		return 0.0
-	if braced() and hit_kind in braced_kinds:
-		return plating_now() * BRACE_MULT
-	if part == "magnet" and hit_kind in WEAPON_KINDS and magnet_state == Magnet.TUG:
-		return 0.0
-	return plating_now()
-
-
-func hit_mult(hit_kind: String, part: String) -> float:
-	return CAP_MULT if part == "cap" and hit_kind in CONTACT_KINDS else 1.0
+	return plating
 
 
 func weak_points() -> Array:
 	var points := []
-	if lesson == "magnet" and magnet_state == Magnet.TUG:
-		points.append({"id": "magnet", "at": magnet_point(), "radius": MAGNET_RADIUS})
 	if family_open():
 		points.append({"id": family_point(), "at": family_point_at(), "radius": FAMILY_POINT_RADIUS})
 	return points
@@ -218,11 +121,9 @@ func weak_points() -> Array:
 
 # --- The family kit (v2 W7) ---------------------------------------------------------
 
-# The kit's weak point: the reactor's core, the hive's queen cell, the Mind's lens.
+# The kit's weak point: the core, open for the length of a stagger.
 func family_point() -> String:
-	if _posture != null:
-		return "core"
-	return {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}.get(family, "core")
+	return "core"
 
 
 func family_point_at() -> Vector3:
@@ -230,27 +131,16 @@ func family_point_at() -> Vector3:
 
 
 func family_open() -> bool:
-	if _posture != null:
-		return _posture.staggered
-	return _open_left > 0.0 or braced()
-
-
-func braced() -> bool:
-	return _brace_left > 0.0
-
-
-func adapting() -> bool:
-	return adapt_habit != "" and _brace_left <= 0.0
+	return _posture.staggered
 
 
 func on_guard_scattered(swarm, _at: Vector3) -> void:
 	if swarm == guard and family == Roster.SWARM:
 		_guard_scatter_frame = Engine.get_physics_frames()
-		_open(QUEEN_WINDOW)
 
 
 # Both ball contacts and weapon knocks scatter before enemy_struck. Only the ram
-# on that scatter's frame earns the lesson, never a later hit on following drones.
+# on that scatter's frame pays the rack, never a later hit on following drones.
 func _on_guard_struck(enemy: Node3D, hit_kind: String, force: float) -> void:
 	if hit_kind != "ram" or guard == null or not is_instance_valid(enemy):
 		return
@@ -261,24 +151,6 @@ func _on_guard_struck(enemy: Node3D, hit_kind: String, force: float) -> void:
 		return
 	_guard_paid_scatters = guard.scatters
 	_apply_posture(judge_hit("guard_rack", 0.0, false, 0))
-
-
-func _open(seconds: float) -> void:
-	if _posture != null:
-		return
-	_open_left = seconds
-	family_opens += 1
-	if fleet != null:
-		fleet.events().weak_point_opened.emit(family_point(), family_point_at(), seconds)
-
-
-func _step_family(delta: float, inside: bool) -> void:
-	_open_left = maxf(0.0, _open_left - delta)
-	match family:
-		Roster.SWARM:
-			_step_guard(delta)
-		Roster.MIND:
-			_step_mind(delta, inside)
 
 
 func _step_guard(delta: float) -> void:
@@ -297,76 +169,15 @@ func _step_guard(delta: float) -> void:
 	_guard_paid_scatters = 0
 
 
-func _step_mind(delta: float, inside: bool) -> void:
-	if fleet == null:
-		return
-	if _brace_left > 0.0:
-		_brace_left -= delta
-		if _brace_left <= 0.0:
-			adapt_habit = ""
-			braced_kinds = []
-			_kit.show_icon("")
-		return
-	if adapt_habit != "":
-		_adapt_time += delta
-		if _adapt_time >= ADAPT_WARN:
-			_brace_left = BRACE
-			if fleet != null:
-				fleet.events().weak_point_opened.emit("lens", family_point_at(), BRACE)
-			family_opens += 1
-		return
-	if not inside:
-		return
-	_adapt_clock += delta
-	if _adapt_clock < ADAPT_CYCLE:
-		return
-	var habit: String = fleet.habits.top()
-	if habit == "":
-		return
-	_adapt_clock = 0.0
-	_adapt_time = 0.0
-	adapt_habit = habit
-	var brace: Dictionary = Habits.BRACES[habit]
-	braced_kinds = brace["kinds"]
-	_kit.show_icon(String(brace["icon"]))
-	fleet.mind_adapt(habit, String(brace["icon"]), family_point_at())
-
-
-func cap_points() -> Array:
-	var points := []
-	if lesson != "caps":
-		return points
-	for i in CAP_COUNT:
-		var angle := TAU * i / CAP_COUNT
-		points.append(global_position + Vector3(cos(angle) * CAP_RING, HALF_HEIGHT + 0.3, sin(angle) * CAP_RING))
-	return points
-
-
-func magnet_point() -> Vector3:
-	return global_position + _magnet_dir * MAGNET_ARM + Vector3.UP * MAGNET_RISE
-
-
 func contact_part(ball: Vector3, hit_kind: String) -> String:
 	if family_open() and family != Roster.MIND and hit_kind in CONTACT_KINDS \
 			and Vector2(ball.x - global_position.x, ball.z - global_position.z).length() <= FAMILY_REACH:
 		return family_point()
-	if lesson != "caps" or not hit_kind in CONTACT_KINDS:
-		return ""
-	for cap in cap_points():
-		if Vector2(ball.x - cap.x, ball.z - cap.z).length() <= CAP_REACH:
-			return "cap"
 	return ""
 
 
-func on_struck(hit_kind: String, part: String, result: Dictionary) -> void:
-	if _posture != null:
-		_apply_posture(result)
-	if part == "magnet" and hit_kind in WEAPON_KINDS and magnet_state == Magnet.TUG:
-		_unplated = UNPLATE_SECONDS
-		magnet_stuns += 1
-		_end_magnet()
-	if part == "cap" and _cap_material != null:
-		_cap_material.emission_energy_multiplier = 5.0
+func on_struck(_hit_kind: String, _part: String, result: Dictionary) -> void:
+	_apply_posture(result)
 
 
 func _physics_process(delta: float) -> void:
@@ -375,14 +186,11 @@ func _physics_process(delta: float) -> void:
 	if not _in_play() or target == null:
 		return
 	_since_pulse += delta
-	_unplated = maxf(0.0, _unplated - delta)
 	var inside := _flat_to_ball().length() <= reach
-	if _posture != null:
-		_step_posture(delta)
-	_step_family(delta, inside)
+	_step_posture(delta)
+	if family == Roster.SWARM:
+		_step_guard(delta)
 	_step_pulse(delta, inside)
-	if lesson == "magnet":
-		_step_magnet(delta, inside)
 
 
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
@@ -426,7 +234,6 @@ func _pulse() -> void:
 	if family == Roster.REACTOR:
 		if fleet != null:
 			fleet.events().vent_erupted.emit(global_position)
-		_open(CORE_WINDOW)
 	min_pulse_telegraph = minf(min_pulse_telegraph, _charge_time)
 	_since_pulse = 0.0
 	_charging = false
@@ -437,51 +244,10 @@ func _pulse() -> void:
 	_core_ring = null
 
 
-func _step_magnet(delta: float, inside: bool) -> void:
-	match magnet_state:
-		Magnet.IDLE:
-			if not inside:
-				return
-			_magnet_clock += delta
-			if _magnet_clock >= MAGNET_CYCLE - MAGNET_TELEGRAPH:
-				var to := _flat_to_ball()
-				_magnet_dir = to.normalized() if to.length() > 0.1 else Vector3.FORWARD
-				magnet_state = Magnet.TELEGRAPH
-				_magnet_time = 0.0
-				_magnet_ring = Telegraph.wedge(world_root, terrain, Threat.Type.LANE, global_position + _magnet_dir * MAGNET_ARM, _magnet_dir,
-						reach, MAGNET_WEDGE_DEG, LIFT_REACH_UP)
-		Magnet.TELEGRAPH:
-			_magnet_time += delta
-			if is_instance_valid(_magnet_ring):
-				_magnet_ring.set_progress(_magnet_time / MAGNET_TELEGRAPH)
-			if _magnet_time >= MAGNET_TELEGRAPH:
-				magnet_state = Magnet.TUG
-				_magnet_time = 0.0
-		Magnet.TUG:
-			_magnet_time += delta
-			var ball := _ball()
-			if is_instance_valid(_magnet_ring) and _magnet_ring.contains(ball):
-				var to := -_flat_to_ball()
-				if to.length() > 0.5:
-					target.crowd_control("warden_magnet", to.normalized() * MAGNET_PULL, false)
-			if _magnet_time >= MAGNET_TUG:
-				_end_magnet()
-
-
-func _end_magnet() -> void:
-	magnet_state = Magnet.IDLE
-	_magnet_clock = 0.0
-	_magnet_time = 0.0
-	if is_instance_valid(_magnet_ring):
-		_magnet_ring.queue_free()
-	_magnet_ring = null
-
-
 func _exit_tree() -> void:
 	super._exit_tree()
-	for node in [_core_ring, _magnet_ring]:
-		if is_instance_valid(node):
-			node.queue_free()
+	if is_instance_valid(_core_ring):
+		_core_ring.queue_free()
 
 
 func _build_body() -> void:
@@ -501,7 +267,6 @@ func _build_body() -> void:
 	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
-	_cap_material = _look.cap_material()
 
 
 func _pose(_delta: float) -> void:
@@ -521,20 +286,6 @@ func charge_fraction() -> float:
 	return clampf(_charge_time / _charge_len, 0.0, 1.0) if _charging else 0.0
 
 
-# 0 when the magnet is stowed, rising to 1 through its telegraph, 1 through the tug.
-func magnet_out() -> float:
-	match magnet_state:
-		Magnet.TELEGRAPH:
-			return clampf(_magnet_time / MAGNET_TELEGRAPH, 0.0, 1.0)
-		Magnet.TUG:
-			return 1.0
-	return 0.0
-
-
-func magnet_dir() -> Vector3:
-	return _magnet_dir
-
-
 func flat_to_ball() -> Vector3:
 	return _flat_to_ball() if target != null else Vector3.ZERO
 
@@ -542,38 +293,36 @@ func flat_to_ball() -> Vector3:
 # --- The posture fight (boss_posture.gd) --------------------------------------------
 
 func fight() -> String:
-	return _fight
+	return "posture"
 
 
 func posture() -> float:
-	return _posture.posture if _posture != null else 0.0
+	return _posture.posture
 
 
 func staggered() -> bool:
-	return _posture != null and _posture.staggered
+	return _posture.staggered
 
 
 func stagger_left() -> float:
-	return _posture.stagger_left if _posture != null else 0.0
+	return _posture.stagger_left
 
 
 func chunks_left() -> int:
-	return _posture.chunks if _posture != null else 0
+	return _posture.chunks
 
 
-# Hits the rule counted as glances so far; 0 under the plating fight.
+# Hits the rule counted as glances so far.
 func glances() -> int:
-	return _posture.glances if _posture != null else 0
+	return _posture.glances
 
 
 func chunk_cracked() -> bool:
-	return _posture != null and _posture.cracked
+	return _posture.cracked
 
 
-# What the rule says a hit does, or {} under the plating fight so combat's own rule runs.
+# What the rule says a hit does.
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
-	if _posture == null:
-		return {}
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating, "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp})
 	if hit_kind == "guard_rack":
@@ -625,30 +374,16 @@ func _publish_posture(before: Array) -> void:
 		fleet.events().posture_changed.emit(self, _posture.posture, _posture.staggered)
 
 
-# Under the posture fight health falls only by what the last shattering strike armed.
-func take_damage(amount: float) -> float:
-	if _posture == null:
-		return super.take_damage(amount)
+# Health falls only by what the last shattering strike armed.
+func take_damage(_amount: float) -> float:
 	var armed := _armed
 	_armed = 0.0
 	return super.take_damage(armed)
 
 
-func set_tint(state: String) -> void:
-	super.set_tint("" if _posture != null else state)
+func set_tint(_state: String) -> void:
+	super.set_tint("")
 
 
 func integrity() -> float:
 	return clampf(hp / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0
-
-
-# Combat's shred on this Warden (combat.gd owns the number and pushes it every tick).
-func set_shred(amount: float) -> void:
-	shred = amount
-
-
-# The share of the plating stripped right now, 0 to 1.
-func shred_fraction() -> float:
-	if _posture != null:
-		return 0.0
-	return clampf(shred / plating, 0.0, 1.0) if plating > 0.0 else 0.0

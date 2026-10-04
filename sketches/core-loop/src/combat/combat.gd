@@ -59,8 +59,8 @@ const Roster := preload("res://src/combat/roster.gd")
 # strip in proportion to its damage per second: the base kit's gun barely dents Warden
 # III and an engaged build's strips it bare. SHRED_GRACE after the last hit the plate
 # knits back at SHRED_REST_DECAY. The strip is kept per enemy instance and subtracted
-# from whatever plating_for answers, so Wardens, the miniboss, vaults and Brindle's
-# pieces shed alike, and a weak point already at 0 stays 0.
+# from whatever plating_for answers, so the miniboss, vaults and Brindle's pieces shed
+# (a Warden fights on posture and never sheds), and a weak point already at 0 stays 0.
 
 const MUZZLE := 1.25
 const AIM_SLACK := 14.0
@@ -76,9 +76,9 @@ const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
 # The spec's values, used only for a warden field a stage def is missing.
 const WARDEN_FALLBACK := [
-	{"warden_plating": 30.0, "warden_hp": 400.0, "warden_lesson": "plate"},
-	{"warden_plating": 60.0, "warden_hp": 700.0, "warden_lesson": "caps"},
-	{"warden_plating": 95.0, "warden_hp": 1000.0, "warden_lesson": "magnet"},
+	{"warden_plating": 30.0, "warden_hp": 400.0},
+	{"warden_plating": 60.0, "warden_hp": 700.0},
+	{"warden_plating": 95.0, "warden_hp": 1000.0},
 ]
 # The last stage's vault has no next Warden, so it sits this far above its own.
 const VAULT_TOP_SCALE := 1.2
@@ -795,6 +795,8 @@ func _tint() -> void:
 
 func _add_shred(enemy: Node3D, punch: float) -> void:
 	if enemy.has_method("is_dead") and enemy.is_dead():
+		return
+	if enemy.get("kind") == "warden":
 		return
 	var id := enemy.get_instance_id()
 	var entry: Dictionary = _shred.get(id, {"amount": 0.0, "cap": 0.0, "idle": 0.0})
@@ -1758,7 +1760,6 @@ func warden_spec(stage: int) -> Dictionary:
 		"family": family,
 		"plating": float(def.get("warden_plating", fallback["warden_plating"])),
 		"hp": float(def.get("warden_hp", fallback["warden_hp"])),
-		"lesson": String(def.get("warden_lesson", fallback["warden_lesson"])),
 		"posture": def.get("posture", {}),
 	}
 
@@ -1770,7 +1771,6 @@ func _spec_for(kind: String) -> Dictionary:
 			var w := warden_spec(stage)
 			w["stage"] = stage
 			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
-			w["fight"] = String(ctx.flow.stage_def().get("warden_fight", "plating"))
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
@@ -1839,8 +1839,6 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 			_discover("crush_chain", at)
 	if kind in ["runner", "arc", "turret", "sticky", "line"] and _since_slingshot <= PARTING_WINDOW:
 		_discover("parting_shot", at)
-	if enemy.get("kind") == "warden" and enemy.unplated_by_magnet():
-		_discover("magnet_break", at)
 
 
 # --- Stage reset --------------------------------------------------------------------

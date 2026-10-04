@@ -2,7 +2,6 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const Icons := preload("res://src/ui/icons.gd")
 
 # The family kit on the Warden's shared clamp (DESIGN-V2 section 11, VISUAL-LANGUAGE
 # section 11), visual only: nothing here collides. The clamp is one base; the kit says
@@ -10,11 +9,11 @@ const Icons := preload("res://src/ui/icons.gd")
 # the Cherenkov seams glow; a weak point opening is its seam blazing.
 #
 # - reactor: three vent stacks round the deck and the core dome on top. The dome's seam
-#   blazes while the core is vented open after a pulse.
+#   blazes while the core stands open in a stagger.
 # - swarm: a crown of hive cells and the queen cell in the middle, dark behind its
-#   shutters until the guard swarm scatters, then lit and swollen.
+#   shutters until the guard swarm scatters, then lit and swollen in a stagger.
 # - mind: a jointed arm rising from the deck to a lens cluster that always follows the
-#   ball, showing the trigger icon it read, and opening wide while it braces.
+#   ball and opening wide while the core stands open.
 
 const DECK := 2.2
 const SEAM_DIM := 0.8
@@ -25,7 +24,6 @@ var family := ""
 var _seam_material: StandardMaterial3D
 var _open_node: Node3D
 var _lens: Node3D
-var _icon: Sprite3D
 
 
 func build(owner_warden, fam: String) -> void:
@@ -115,14 +113,6 @@ func _build_mind() -> void:
 	glass.radius = 0.9
 	glass.height = 1.8
 	_open_node = _mesh(glass, _seam_material, Vector3.ZERO, _lens)
-	_icon = Sprite3D.new()
-	_icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_icon.no_depth_test = true
-	_icon.pixel_size = 0.03
-	_icon.position = Vector3.UP * 1.8
-	_icon.modulate = Palette.HAZARD
-	_icon.visible = false
-	_lens.add_child(_icon)
 
 
 # Where the kit's weak point sits, relative to the Warden.
@@ -135,14 +125,6 @@ func point_offset() -> Vector3:
 		Roster.MIND:
 			return Vector3.UP * (DECK + 5.4)
 	return Vector3.UP * DECK
-
-
-func show_icon(id: String) -> void:
-	if _icon == null:
-		return
-	_icon.visible = id != ""
-	if id != "":
-		_icon.texture = Icons.texture(id)
 
 
 func update(_delta: float) -> void:
