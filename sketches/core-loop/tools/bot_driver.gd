@@ -1821,8 +1821,9 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		hold["harpoon_held"] = true
 	if _harpoon_commit:
 		hold["brake_held"] = true
-	# Jump, boost and movement abilities cancel a committed body-line haul.
-	if _harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH):
+	# Jump, boost and movement abilities cancel a committed body-line haul. Only the boss
+	# hull needs the haul kept whole; elsewhere the explorer's two-hook hand jumps off a bite.
+	if _in_boss() and (_harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)):
 		source.press.erase("jump_pressed")
 		source.press.erase("shift_pressed")
 		source.press.erase("movement_pressed")
