@@ -107,6 +107,12 @@ func _run() -> void:
 	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == ["Event Won", "Full Rack"], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
 	_game.flow._unseal()
 	await _settle(0.5)
+	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
+	# Fit / Recycle screen opens over the paused tree as the gates open, freezing the HUD's
+	# toast clock. Recycle it here so the earn queue runs; the toast order is unchanged.
+	if hud.hotwire_screen != null and hud.hotwire_screen.is_open():
+		hud.hotwire_screen.choose("recycle")
+		await _frames(3)
 	_t.eq("P3-5 after the fight the first shows", hud.ach_toasts(), ["Event Won"])
 	await _settle(3.4)
 	_t.eq("P3-5 then the next, in order", hud.ach_toasts(), ["Full Rack"])

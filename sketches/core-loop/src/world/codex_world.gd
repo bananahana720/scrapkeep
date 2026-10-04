@@ -52,7 +52,19 @@ const ENTRIES := [
 		"hint": "The barge's rim is a track. There is a par.",
 		"clue": "Moss's rim track under par",
 		"text": "A lap of the workshop barge's rim under par. The nomads build every camp as a marble run: streets banked, tiers joined by chutes."},
+	# The Reach's secret cache (SC2): map_reach.gd's valve spec carries this row.
+	{"id": "reach_pressure_cache", "category": "world", "name": "Pressure keeps the change",
+		"hint": "A cracked wheel beside a copper door.",
+		"clue": "Ram the valve on the Reach's west shelf + the copper door",
+		"text": "A rolling ram turns the old valve. Behind the sinking door, the crew's spare parts wait."},
 ]
+
+
+static func entry(id: String) -> Dictionary:
+	for row in ENTRIES:
+		if row["id"] == id:
+			return row
+	return {}
 
 const LIVE_WIRE_SECONDS := 4.0
 const LIVE_WIRE_REACH := 16.0

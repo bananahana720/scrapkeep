@@ -122,6 +122,9 @@ var engine: MusicEngine
 # no pack, or any missing file, plays the synth.
 var ace: AceSequencer
 var ace_manifest := ""
+# The manifest the zone rows last selected. A caller that sets ace_manifest away from it
+# (a test's missing package) keeps its pick across stage entries (fix round D, 2026-10-04).
+var _ace_row_manifest := ""
 var _ace_from := ""
 # The file a failed load named, "" when the package loaded or was never asked for.
 var ace_missing := ""
@@ -243,6 +246,7 @@ func setup(ctx_ref) -> void:
 	_connect_all(ctx.events)
 	_start_bake()
 	ace_manifest = _music_row(1)["ace_manifest"]
+	_ace_row_manifest = ace_manifest
 	_start_ace_load()
 
 
@@ -683,10 +687,12 @@ func _ace_package_for(stage: int) -> String:
 # other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
 func _ace_stage(stage: int, at: int) -> void:
 	var manifest: String = _music_row(stage)["ace_manifest"]
-	if manifest != ace_manifest:
-		ace_manifest = manifest
-		_ace_failed = false
-		ace_missing = ""
+	if manifest != _ace_row_manifest:
+		if ace_manifest == _ace_row_manifest:
+			ace_manifest = manifest
+			_ace_failed = false
+			ace_missing = ""
+		_ace_row_manifest = manifest
 	if _ace_package_for(stage) != "" and ace_ready():
 		_ace_flight = false
 		_handover_at = -1
