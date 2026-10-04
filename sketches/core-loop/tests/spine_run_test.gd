@@ -9,14 +9,16 @@ const T := preload("res://tests/support/t.gd")
 # A scripted full run through the real flow: title, class, then for each stage the
 # beacon, a reward gate and the launch, ending on the summary. The ball is placed at
 # the beacon and aimed at a gate rather than steered across the map, and ctx.calm
-# keeps enemies and the flood out, so the speed checks measure the seams alone.
+# keeps enemies and the flood out, so the speed checks measure the seams alone. All six
+# stages run in one pass; the first boss also takes the death, retry and victory checks,
+# the other two are defeated on a settle delay.
 
 const BEACON_SECONDS := 0.6
 const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
 const TOLERANCE := 0.15
 const SETTLE_TICKS := 9
-const TICK_LIMIT := 90 * 90
+const TICK_LIMIT := 90 * 150
 
 var _game
 var _source := Intent.Scripted.new()
@@ -74,7 +76,7 @@ func _start() -> void:
 	_boss = BossDouble.new()
 	_game.add_child(_boss)
 	_boss.setup(_game.ctx)
-	events.stage_cleared.connect(func(stage: int): if stage == StageDefs.COUNT: _arena["before"] = _planar())
+	events.stage_cleared.connect(func(_stage: int): if not _arena.has("after"): _arena["before"] = _planar())
 	_game.ctx.calm = true
 	_game.flow.beacon_seconds_override = BEACON_SECONDS
 	_game.player.source = _source
@@ -126,7 +128,11 @@ func _step() -> void:
 				_phase = "to_beacon"
 				_wait = 0
 		"flight":
-			if flow.state_name() == "boss" and _boss.entries == 1:
+			if flow.state_name() == "boss" and _arena.has("after_defeat"):
+				_wait += 1
+				if _wait == SETTLE_TICKS:
+					_boss.defeat()
+			elif flow.state_name() == "boss" and _boss.entries == 1:
 				_wait += 1
 				if _wait == SETTLE_TICKS:
 					_arena["after"] = _planar()
@@ -198,10 +204,13 @@ func _finish() -> bool:
 			missing.append(s)
 	_report("flow states", missing.is_empty() and _states[0] == "title" and _states[-1] == "summary",
 		"reached %s in order %s; missing %s" % [wanted, " > ".join(_states), missing])
-	_report("stages", _entered == [1, 2] and _cleared == [1, 2] and _ended,
+	var every: Array[int] = []
+	for i in StageDefs.COUNT:
+		every.append(i + 1)
+	_report("stages", _entered == every and _cleared == every and _ended,
 		"entered %s, cleared %s, run_ended %s" % [_entered, _cleared, _ended])
-	_report("summary", _game.flow.state_name() == "summary" and _game.run.parts.size() == StageDefs.COUNT,
-		"flow ends in %s with %d gate parts %s" % [_game.flow.state_name(), _game.run.parts.size(), _game.run.parts])
+	_report("summary", _game.flow.state_name() == "summary" and _game.run.parts.size() >= StageDefs.COUNT,
+		"flow ends in %s with %d parts (one per gate, plus any evolution) %s" % [_game.flow.state_name(), _game.run.parts.size(), _game.run.parts])
 	for g in _gates:
 		_report("gate momentum stage %d" % g["stage"], g.has("after") and _kept(g["before"], g["after"]),
 			"rolled through the %s gate at %.2f m/s horizontal, %.2f m/s after (within %d%%)"
