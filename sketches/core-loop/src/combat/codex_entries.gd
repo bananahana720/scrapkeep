@@ -65,7 +65,50 @@ const ENTRIES := [
 		"clue": "one of the Mind's hands + your favourite move",
 		"text": "The Mind's hands brace against the move you use most this run, and show you which. Change verbs while its lens is open.",
 	},
+	# The Dig and Highdraft tricks are detector-pending; declarations show their hints.
+	{
+		"id": "burrow_lane", "name": "Off the Bulge",
+		"hint": "The floor gives away what is coming through it.",
+		"clue": "a burrower's bulging lane + a sideways roll",
+		"text": "Tunnels under the floor along a lane and bursts up under you; roll off the bulging line before it breaks.",
+	},
+	{
+		"id": "bore_breach", "name": "Stop the Bore",
+		"hint": "A drill making a hole cannot brace for a falling ball.",
+		"clue": "a drill crew mid-bore + a smash",
+		"text": "Bores a breach where you will be and the floor caves in; smash the rig mid-bore to stop it.",
+	},
+	{
+		"id": "lure_bloom", "name": "Through the Light",
+		"hint": "The lamps want your steering. Give them your speed.",
+		"clue": "a lamp swarm's blooming ring + a straight boost",
+		"text": "Blooms a ring of lure lamps that bends your steering toward the light; boost straight through the wave.",
+	},
+	{
+		"id": "line_cut", "name": "Under the Cutter",
+		"hint": "A spinning blade leaves room beneath its arc.",
+		"clue": "a cutter crossing your air path + a low glide or early landing",
+		"text": "Throws a spinning cutter across your air path that severs your line; glide under its arc or land early.",
+	},
+	{
+		"id": "deck_winch", "name": "Slip the Hook",
+		"hint": "A deck crew needs you on its cable before it can reel.",
+		"clue": "an anchor crew's cable lane + a jump before the cinch",
+		"text": "Hooks you down a cable lane and winches you onto its deck; jump to slip the hook before it cinches.",
+	},
+	{
+		"id": "thermal_dive", "name": "Leave the Mark",
+		"hint": "The kite commits to a spot. You do not have to.",
+		"clue": "a circling kite + a shot, or a dive mark + a roll away",
+		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
+	},
 ]
+
+
+# 2026-10-04 (wave 9): entries whose in-play detector has not landed yet. Their hints show in
+# the codex; combat_codex_test's "every entry discovered in one run" check skips them until the
+# enemy that fires each one exists. Remove an id here when its detector lands.
+const DETECTOR_PENDING := ["burrow_lane", "bore_breach", "lure_bloom", "line_cut", "deck_winch", "thermal_dive"]
 
 
 static func all() -> Array:
