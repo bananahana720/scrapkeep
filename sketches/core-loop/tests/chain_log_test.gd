@@ -35,6 +35,23 @@ func _link(combo: int) -> void:
 	_game.events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
 
 
+# A strike worth `amount`: the ledger total grows after enemy_struck, as combat's does. A smash
+# sets player.smash_landing for the contact and publishes smash_lands once it is done.
+func _smash(amount: float, is_smash: bool) -> void:
+	var enemy := Node3D.new()
+	root.add_child(enemy)
+	if is_smash:
+		_game.player.smash_landing = enemy
+	_game.events.enemy_struck.emit(enemy, "stomp", amount)
+	var ledger: Dictionary = _game.run.get_meta("delivered_damage", {})
+	ledger["total"] = float(ledger.get("total", 0.0)) + amount
+	_game.run.set_meta("delivered_damage", ledger)
+	if is_smash:
+		_game.events.line_state_changed.emit("smash_lands", enemy, Vector3.ZERO, "")
+		_game.player.smash_landing = null
+	enemy.queue_free()
+
+
 func _physics_process(_delta: float) -> bool:
 	if _game.flow == null:
 		return false
@@ -78,6 +95,29 @@ func _physics_process(_delta: float) -> bool:
 	var line: Dictionary = JSON.parse_string(lines[lines.size() - 1]) if lines.size() > 0 else {}
 	_report("(f) written line", line.has("chains") and line.has("best_combo") and line.has("misses") and int(line["best_combo"]) == 4 and int(line["misses"]) == 3 and line["chains"].size() == 3,
 		"chains %s, best_combo %s, misses %s" % [line.get("chains"), line.get("best_combo"), line.get("misses")])
+	# (h) smash damage per fight (HOOK-CHAIN.md measurement line). The bus carries the strike
+	# (enemy_struck while player.smash_landing is set) and the line state smash_lands; the damage
+	# is read from combat's delivered-damage ledger in the run meta, which the test grows by hand.
+	_game.events.run_started.emit("runner_gunner")
+	rec = log._record
+	_report("(h) start", rec.get("smash_damage") == 0.0 and rec.get("smash_damage_by_fight") == [], "smash_damage %s, by fight %s" % [rec.get("smash_damage"), rec.get("smash_damage_by_fight")])
+	_game.events.warden_engaged.emit(0)
+	_smash(10.0, true)
+	_smash(7.5, true)
+	_report("(h) two smashes in one fight", rec["smash_damage_by_fight"] == [17.5] and rec["smash_damage"] == 17.5, "by fight %s, total %s" % [rec["smash_damage_by_fight"], rec["smash_damage"]])
+	_smash(5.0, false)
+	_report("(h) a plain strike adds nothing", rec["smash_damage_by_fight"] == [17.5] and rec["smash_damage"] == 17.5, "by fight %s, total %s" % [rec["smash_damage_by_fight"], rec["smash_damage"]])
+	_game.events.warden_engaged.emit(1)
+	_smash(4.0, true)
+	_report("(h) a second fight starts a new slot", rec["smash_damage_by_fight"] == [17.5, 4.0] and rec["smash_damage"] == 21.5, "by fight %s, total %s" % [rec["smash_damage_by_fight"], rec["smash_damage"]])
+	_game.events.stage_cleared.emit(1)
+	_smash(2.0, true)
+	_report("(h) outside a fight counts in the total only", rec["smash_damage_by_fight"] == [17.5, 4.0] and rec["smash_damage"] == 23.5, "by fight %s, total %s" % [rec["smash_damage_by_fight"], rec["smash_damage"]])
+	log._write("died")
+	lines = FileAccess.get_file_as_string(log.storage_dir.path_join(log.LOG_FILE)).strip_edges().split("\n")
+	line = JSON.parse_string(lines[lines.size() - 1]) if lines.size() > 0 else {}
+	_report("(h) written line", line.has("smash_damage") and float(line["smash_damage"]) == 23.5 and line.get("smash_damage_by_fight") == [17.5, 4.0],
+		"smash_damage %s, by fight %s" % [line.get("smash_damage"), line.get("smash_damage_by_fight")])
 	# (g) below three: a fresh codex run state
 	_game.events.run_started.emit("runner_gunner")
 	_game.player.chain.reset()
